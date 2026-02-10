@@ -37,7 +37,7 @@ export default function ZoeInfinityAuth() {
   // Redirect if already authenticated
   useEffect(() => {
     if (user && !authLoading) {
-      navigate('/zoe-infinity', { replace: true });
+      navigate('/', { replace: true });
     }
   }, [user, authLoading, navigate]);
 
@@ -115,7 +115,7 @@ export default function ZoeInfinityAuth() {
           toast.success('Welcome back', {
             description: 'Entering Zoe Infinity...',
           });
-          navigate('/zoe-infinity', { replace: true });
+          navigate('/', { replace: true });
         }
       }
     } catch (err) {
