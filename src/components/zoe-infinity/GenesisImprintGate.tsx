@@ -12,7 +12,8 @@ import { SafeQuantumShard as QuantumShard } from '@/components/zoe-infinity/Safe
 import { BiometricAuthButton } from '@/components/quantum/BiometricAuthButton';
 import { useGenesisImprint, ImprintState } from '@/hooks/useGenesisImprint';
 import { useHapticFeedback } from '@/hooks/useHapticFeedback';
-import { isZoeInfinityStandaloneDomain } from '@/hooks/useDomainRouter';
+// This IS the standalone Zoe domain now
+const isZoeInfinityStandaloneDomain = () => true;
 import { cn } from '@/lib/utils';
 
 interface GenesisImprintGateProps {
