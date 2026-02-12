@@ -25,7 +25,7 @@ serve(async (req) => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: model || "llama3",
+        model: model || "zoe",
         prompt,
         stream: stream ?? false,
       }),
