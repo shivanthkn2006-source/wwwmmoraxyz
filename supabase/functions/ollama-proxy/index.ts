@@ -5,8 +5,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const OLLAMA_ENDPOINT = Deno.env.get("OLLAMA_ENDPOINT") || "https://aff4dd5e383c2a.lhr.life";
-const NGROK_BASIC_AUTH = Deno.env.get("NGROK_BASIC_AUTH") || "";
+const OLLAMA_ENDPOINT = Deno.env.get("OLLAMA_ENDPOINT") || "";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -19,20 +18,9 @@ serve(async (req) => {
     console.log(`🚀 Proxying to M1 Pro at ${OLLAMA_ENDPOINT}...`);
     console.log(`📦 Model: ${model} | Prompt length: ${prompt?.length || 0}`);
 
-    const fetchHeaders: { [key: string]: string } = {
-      "Content-Type": "application/json",
-      "ngrok-skip-browser-warning": "true",
-      "User-Agent": "ZoeSovereignProxy/1.0",
-    };
-
-    if (NGROK_BASIC_AUTH) {
-      fetchHeaders["Authorization"] = `Basic ${btoa(NGROK_BASIC_AUTH)}`;
-      console.log("🔑 Using Basic Auth for ngrok tunnel");
-    }
-
     const response = await fetch(`${OLLAMA_ENDPOINT}/api/generate`, {
       method: "POST",
-      headers: fetchHeaders,
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         model: model || "llama3",
         prompt,
