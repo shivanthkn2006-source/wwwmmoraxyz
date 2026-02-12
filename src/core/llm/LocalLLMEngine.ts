@@ -468,6 +468,7 @@ const generateOllamaResponse = async (
     const startTime = performance.now();
     const systemPrompt = buildSystemPrompt(context);
 
+    console.log(`[LLM] 🧪 Attempting to hit Local Brain at ${endpoint}...`);
     const response = await fetch(`${endpoint}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -527,7 +528,7 @@ export const generateResponse = async (
     context,
     forceLocal = false,
     forceScripted = false,
-    forceOllama = false,
+    forceOllama = true, // 🧪 TEST MODE: Force Ollama local brain
     ollamaModel,
     ollamaEndpoint,
     timeout = 10000,
@@ -576,29 +577,27 @@ export const generateResponse = async (
   // ═══════════════════════════════════════════════════════════════════════
   // PATH 2b: CLOUD (if online and not forced local)
   // ═══════════════════════════════════════════════════════════════════════
-  if (network.isOnline && !forceLocal && cloudFn) {
-    try {
-      console.log('[LLM] ☁️ Trying cloud brain...');
-      
-      const cloudPromise = cloudFn(prompt);
-      const timeoutPromise = new Promise<never>((_, reject) => 
-        setTimeout(() => reject(new Error('Cloud timeout')), timeout)
-      );
-      
-      const cloudResponse = await Promise.race([cloudPromise, timeoutPromise]);
-      
-      return {
-        text: cloudResponse,
-        provider: 'cloud',
-        latencyMs: performance.now() - startTime,
-        confidence: 0.95,
-        cached: false,
-      };
-      
-    } catch (err) {
-      console.warn('[LLM] ⚠️ Cloud failed, falling back to local:', err);
-    }
-  }
+  // 🧪 TEST MODE: Cloud fallback DISABLED — must reach local MacBook or fail
+  // if (network.isOnline && !forceLocal && cloudFn) {
+  //   try {
+  //     console.log('[LLM] ☁️ Trying cloud brain...');
+  //     const cloudPromise = cloudFn(prompt);
+  //     const timeoutPromise = new Promise<never>((_, reject) =>
+  //       setTimeout(() => reject(new Error('Cloud timeout')), timeout)
+  //     );
+  //     const cloudResponse = await Promise.race([cloudPromise, timeoutPromise]);
+  //     return {
+  //       text: cloudResponse,
+  //       provider: 'cloud',
+  //       latencyMs: performance.now() - startTime,
+  //       confidence: 0.95,
+  //       cached: false,
+  //     };
+  //   } catch (err) {
+  //     console.warn('[LLM] ⚠️ Cloud failed, falling back to local:', err);
+  //   }
+  // }
+  console.log('[LLM] ☁️ Cloud fallback is DISABLED for local testing');
   
   // ═══════════════════════════════════════════════════════════════════════
   // PATH 3: LOCAL LLM (if available)
