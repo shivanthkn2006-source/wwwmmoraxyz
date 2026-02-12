@@ -464,27 +464,29 @@ const generateOllamaResponse = async (
   model: string = DEFAULT_OLLAMA_MODEL,
   endpoint: string = DEFAULT_OLLAMA_ENDPOINT
 ): Promise<LLMResponse | null> => {
-  try {
-    const startTime = performance.now();
-    const systemPrompt = buildSystemPrompt(context);
+  // FORCE LOCAL OR DIE TRYING
+  const startTime = performance.now();
 
-    console.log(`[LLM] 🧪 Attempting to hit Local Brain at ${endpoint}...`);
+  console.log("🚀 Attempting to hit M1 Pro...");
+
+  try {
     const response = await fetch(`${endpoint}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model,
-        prompt: `${systemPrompt}\n\nUser: ${prompt}\n\nZoe:`,
+        prompt: "System: You are Zoe on M1 Pro. User: " + prompt,
         stream: false,
       }),
     });
 
     if (!response.ok) {
-      console.warn('[LocalLLM] Ollama request failed:', response.status);
-      return null;
+      throw new Error(`Server Error: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
+    console.log("✅ SUCCESS:", data);
+
     const text = cleanLLMResponse(data.response || '');
 
     return {
@@ -494,9 +496,15 @@ const generateOllamaResponse = async (
       confidence: 0.85,
       cached: false,
     };
-  } catch (err) {
-    console.warn('[LocalLLM] Ollama generation error:', err);
-    return null;
+  } catch (error) {
+    console.error("❌ LOCAL FAILED:", error);
+    return {
+      text: "ERROR: Could not reach M1 Pro. Check Console for details.",
+      provider: 'ollama',
+      latencyMs: performance.now() - startTime,
+      confidence: 0,
+      cached: false,
+    };
   }
 };
 
