@@ -1,8 +1,3 @@
-// ═══════════════════════════════════════════════════════════════════════════════
-// SOVEREIGN CONNECTION PROXY — Routes requests to M1 Pro via ngrok tunnel
-// Bypasses browser CORS restrictions by proxying through edge function
-// ═══════════════════════════════════════════════════════════════════════════════
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
@@ -10,8 +5,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// The Sovereign Connection — M1 Pro ngrok tunnel
 const OLLAMA_ENDPOINT = Deno.env.get("OLLAMA_ENDPOINT") || "https://aff4dd5e383c2a.lhr.life";
+const NGROK_BASIC_AUTH = Deno.env.get("NGROK_BASIC_AUTH") || "";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -24,13 +19,20 @@ serve(async (req) => {
     console.log(`🚀 Proxying to M1 Pro at ${OLLAMA_ENDPOINT}...`);
     console.log(`📦 Model: ${model} | Prompt length: ${prompt?.length || 0}`);
 
+    const fetchHeaders: { [key: string]: string } = {
+      "Content-Type": "application/json",
+      "ngrok-skip-browser-warning": "true",
+      "User-Agent": "ZoeSovereignProxy/1.0",
+    };
+
+    if (NGROK_BASIC_AUTH) {
+      fetchHeaders["Authorization"] = `Basic ${btoa(NGROK_BASIC_AUTH)}`;
+      console.log("🔑 Using Basic Auth for ngrok tunnel");
+    }
+
     const response = await fetch(`${OLLAMA_ENDPOINT}/api/generate`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "ngrok-skip-browser-warning": "true",
-        "User-Agent": "ZoeSovereignProxy/1.0",
-      },
+      headers: fetchHeaders,
       body: JSON.stringify({
         model: model || "llama3",
         prompt,
