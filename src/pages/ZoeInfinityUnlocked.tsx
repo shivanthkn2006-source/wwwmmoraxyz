@@ -719,17 +719,20 @@ function ZoeInfinityUnlocked() {
   const offlineCore = useZoeOfflineCore(user?.id || null);
   
   // Auto-hydrate Life Pattern on app mount when online (GAP #2 FIX)
-  // BUG FIX: Removed downloadLifePattern from deps to prevent infinite loop
+  // BUG FIX: Run only once per mount using ref to prevent infinite re-trigger loop
+  const hasTriggeredHydration = useRef(false);
   const downloadLifePatternFn = offlineCore.downloadLifePattern;
   useEffect(() => {
+    if (hasTriggeredHydration.current) return;
     if (!user?.id || !offlineCore.isOnline) return;
     
     // Check if we already have a cached pattern (don't re-download if recent)
     if (hasCachedPattern()) {
-      console.log('[ZoeInfinity] 📦 Life Pattern already cached');
+      hasTriggeredHydration.current = true;
       return;
     }
     
+    hasTriggeredHydration.current = true;
     // Trigger Life Pattern download via background sync
     console.log('[ZoeInfinity] 📥 Auto-hydrating Life Pattern for offline use...');
     downloadLifePatternFn();

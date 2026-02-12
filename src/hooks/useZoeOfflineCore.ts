@@ -196,6 +196,11 @@ export function useZoeOfflineCore(userId: string | null) {
   // UPDATE STATE ON NETWORK CHANGES
   // ═══════════════════════════════════════════════════════════════════════════
 
+  // BUG FIX: Destructure backgroundSync values to avoid new object ref causing infinite loop
+  const bsDownloadProgress = backgroundSync.downloadProgress;
+  const bsQueueSize = backgroundSync.queueSize;
+  const bsLastSyncAt = backgroundSync.lastSyncAt;
+  
   useEffect(() => {
     setState(prev => ({
       ...prev,
@@ -204,11 +209,11 @@ export function useZoeOfflineCore(userId: string | null) {
       connectionQuality: getConnectionQuality(),
       offlineCapability: getOfflineCapability(),
       localLLMReady,
-      lifePatternProgress: backgroundSync.downloadProgress,
-      pendingSyncCount: backgroundSync.queueSize,
-      lastSyncAt: backgroundSync.lastSyncAt,
+      lifePatternProgress: bsDownloadProgress,
+      pendingSyncCount: bsQueueSize,
+      lastSyncAt: bsLastSyncAt,
     }));
-  }, [networkStatus, localLLMReady, backgroundSync, getConnectionQuality, getOfflineCapability]);
+  }, [networkStatus.isOnline, networkStatus.isSlowConnection, localLLMReady, bsDownloadProgress, bsQueueSize, bsLastSyncAt, getConnectionQuality, getOfflineCapability]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // LOAD CACHED MESSAGE COUNT
