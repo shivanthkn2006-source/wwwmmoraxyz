@@ -89,14 +89,14 @@ serve(async (req) => {
     const DEEPGRAM_KEY = Deno.env.get("DEEPGRAM_API_KEY");
     
     if (!DEEPGRAM_KEY) {
-      console.error('[ZoeVoice] DEEPGRAM_API_KEY not configured');
+      console.warn('[ZoeVoice] DEEPGRAM_API_KEY not configured, using browser fallback');
       return new Response(
         JSON.stringify({ 
           error: 'TTS service not configured',
           useBrowserFallback: true 
         }),
         { 
-          status: 503,
+          status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
       );
