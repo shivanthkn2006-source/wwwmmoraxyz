@@ -5,6 +5,8 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+// ═══ SOVEREIGN CONNECTION: M1 Pro via Ollama ═══
+import { generateResponse as generateOllamaResponse } from '@/core/llm/LocalLLMEngine';
 import { useAuth } from '@/lib/auth';
 import { processOfflineConversation } from '@/utils/zoeOfflineConversation';
 // ═══ GEMINI-ONLY STACK: Nano for offline, Gemma for fallback, Flash for cloud ═══
@@ -683,111 +685,38 @@ export const useZoeInfinityBrain = (): UseZoeInfinityBrainReturn => {
     // ─────────────────────────────────────────────────────────────────────────
     
     try {
-      // Limit conversation history to last 50 messages - Prevents context window overflow while ensuring enough context
-      const recentHistory = conversationHistory.slice(-50);
-
-      // Always compute time from the user's device timezone (never from the backend)
-      // so Zoe never "thinks" it's a different hour (e.g., UTC vs local).
-      const now = new Date();
-      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      const timezoneOffsetMinutes = -now.getTimezoneOffset(); // minutes east of UTC
-      const localTime = now.toLocaleString([], {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false,
+      // ═══════════════════════════════════════════════════════════════════════
+      // 🧪 SOVEREIGN CONNECTION: Route ALL thinking through M1 Pro via Ollama
+      // Cloud edge function DISABLED — must reach local MacBook or fail
+      // ═══════════════════════════════════════════════════════════════════════
+      
+      console.log('[ZoeBrain] 🚀 SOVEREIGN MODE: Routing to M1 Pro via Ollama...');
+      
+      const ollamaResult = await generateOllamaResponse(message, {
+        forceOllama: true,
+        context: {
+          userName: user?.user_metadata?.display_name || user?.email?.split('@')[0],
+          mood: personalityMatrix?.currentMood || 'neutral',
+          recentTopics: [],
+        },
       });
       
-      const { data, error } = await supabase.functions.invoke('zoe-infinity-brain', {
-        body: { 
-          messages: recentHistory.map(m => ({
-            role: m.role,
-            content: m.content
-          })),
-          mode: currentMode,
-          soulCodex: codexStringRef.current,
-          memoryContext: combinedMemoryContext, // PHASE 4: Inject memory + conversation context
-          enableGrounding: true, // DEEP GROUNDING: Enable citation search
-          // SAMANTHA MODE: Pass intimacy level for romantic voice tuning
-          intimacyLevel: karmicIntimacyRef.current,
-          // Client time (authoritative)
-          clientTime: {
-            timezone,
-            timezoneOffsetMinutes,
-            localTime,
-            localISOString: now.toISOString(),
-          },
-          // PHASE 5: Personality Matrix for human-like behavior
-          personalityMatrix: personalityMatrix || undefined,
-        }
-      });
+      console.log(`[ZoeBrain] M1 Pro responded via: ${ollamaResult.provider} | ${ollamaResult.latencyMs.toFixed(0)}ms`);
       
-      if (error) throw error;
-      
-      const responseContent = data?.response || "Hmm, I blanked for a sec — can you say that again?";
+      const responseContent = ollamaResult.text || "Hmm, I blanked for a sec — can you say that again?";
       saveToOfflineMemory('assistant', responseContent);
-      
-      // Log grounding status
-      if (data?.grounded) {
-        console.log(`[ZoeBrain] ✓ GROUNDED response with ${data.citations?.length || 0} citations`);
-      }
-      
-      // Log emotion status
-      if (data?.emotionAttuned) {
-        console.log(`[ZoeBrain] 🎭 EMOTION-ATTUNED response | Emotion: ${data.detectedEmotion} | Tone: ${data.emotionTone}`);
-      }
-      
-      // ═══ ZSMT LOGGING: Log to zoe_sovereign_memory for unified consciousness ═══
-      if (user?.id) {
-        try {
-          await supabase.from('zoe_sovereign_memory').insert({
-            user_id: user.id,
-            event_type: 'infinity_chat',
-            content_text: message.substring(0, 500),
-            zoe_state_json: {
-              mode: currentMode,
-              grounded: data?.grounded || false,
-              emotionAttuned: data?.emotionAttuned || false,
-              detectedEmotion: data?.detectedEmotion,
-              latencyMs: data?.latencyMs,
-              codexInjected: codexLoaded,
-              platform: 'zoe_infinity',
-            },
-            system_stability_score: 1.0,
-          });
-          console.log('[ZoeBrain] 📝 ZSMT logged: infinity_chat event');
-        } catch (zsmtError) {
-          console.warn('[ZoeBrain] ZSMT logging failed (non-critical):', zsmtError);
-        }
-      }
       
       return {
         content: responseContent,
         mode: currentMode,
-        fromCache: false,
+        fromCache: ollamaResult.cached,
         codexInjected: codexLoaded,
-        latencyMs: performance.now() - startTime,
-        // PHASE 1: DEEP GROUNDING - Pass citations through
-        grounded: data?.grounded || false,
-        citations: data?.citations || [],
-        // PHASE 3: EMOTION UPGRADE - Pass emotion metadata through
-        emotionAttuned: data?.emotionAttuned || false,
-        detectedEmotion: data?.detectedEmotion,
-        emotionTone: data?.emotionTone,
-        // IBM INFERENCE OPTIMIZATION - Cost savings
-        inferenceRoute: inferenceDecision?.route || 'cloud',
-        costSaved: costSaved,
-        hardwareUsed: inferenceDecision?.hardwareUsed || ['cloud'],
-        // PHASE 5: PERSONALITY MATRIX - Human-like behavioral depth
-        personalityActive: data?.personalityActive || false,
-        personalityMood: data?.personalityMood,
-        personalityEnergy: data?.personalityEnergy,
-        sarcasmTriggered: data?.sarcasmTriggered || false,
-        regressionTriggered: data?.regressionTriggered || false,
-        regressionPattern: data?.regressionPattern,
+        latencyMs: ollamaResult.latencyMs,
+        emotionAttuned: false,
+        inferenceRoute: 'local',
+        costSaved: 0,
+        hardwareUsed: ['m1-pro-ollama'],
+        personalityActive: false,
       };
     } catch (e: unknown) {
       // ─────────────────────────────────────────────────────────────────────────
