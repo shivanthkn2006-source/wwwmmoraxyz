@@ -432,8 +432,8 @@ const cleanLLMResponse = (response: string): string => {
 // OLLAMA LOCAL SERVER SUPPORT (llama3:8b etc.)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const DEFAULT_OLLAMA_ENDPOINT = 'http://127.0.0.1:11434';
-const DEFAULT_OLLAMA_MODEL = 'llama3:8b';
+const DEFAULT_OLLAMA_ENDPOINT = 'https://aff4dd5e383c2a.lhr.life';
+const DEFAULT_OLLAMA_MODEL = 'llama3';
 
 let ollamaAvailable: boolean | null = null; // null = not checked yet
 
