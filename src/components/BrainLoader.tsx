@@ -225,8 +225,8 @@ export function BrainLoader({
     init();
   }, [checkBrainCache, downloadBrain, autoDownload, onReady]);
 
-  // Don't render if UI is hidden or brain is ready
-  if (!showUI || status === 'offline-ready' || status === 'ready') {
+  // Don't render if UI is hidden, brain is ready, not supported, or just checking (no auto-download prompt)
+  if (!showUI || status === 'offline-ready' || status === 'ready' || status === 'not-supported' || (status === 'checking' && !autoDownload)) {
     return null;
   }
 
@@ -235,14 +235,13 @@ export function BrainLoader({
     checking: Brain,
     downloading: Download,
     error: AlertCircle,
-    'not-supported': AlertCircle,
   }[status] || Brain;
 
   return (
     <div className={cn(
-      "fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80",
-      "bg-background/95 backdrop-blur-xl border border-border/50 rounded-xl p-4",
-      "shadow-lg z-50",
+      "fixed bottom-32 left-4 right-4 md:left-auto md:right-4 md:w-80",
+      "bg-background/95 backdrop-blur-xl border border-border/50 rounded-xl p-3",
+      "shadow-lg z-30",
       className
     )}>
       <div className="flex items-center gap-3 mb-3">
@@ -250,7 +249,6 @@ export function BrainLoader({
           "p-2 rounded-lg",
           status === 'downloading' && "bg-primary/20 animate-pulse",
           status === 'error' && "bg-destructive/20",
-          status === 'not-supported' && "bg-muted",
           status === 'checking' && "bg-primary/10"
         )}>
           <StatusIcon className={cn(
