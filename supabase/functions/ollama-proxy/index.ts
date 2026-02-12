@@ -26,7 +26,11 @@ serve(async (req) => {
 
     const response = await fetch(`${OLLAMA_ENDPOINT}/api/generate`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "ngrok-skip-browser-warning": "true",
+        "User-Agent": "ZoeSovereignProxy/1.0",
+      },
       body: JSON.stringify({
         model: model || "llama3",
         prompt,
