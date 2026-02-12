@@ -18,6 +18,30 @@ serve(async (req) => {
     console.log(`🚀 Proxying to M1 Pro at ${OLLAMA_ENDPOINT}...`);
     console.log(`📦 Model: ${model} | Prompt length: ${prompt?.length || 0}`);
 
+    // First, try a GET to check if the tunnel is alive and capture any redirect/auth page
+    const healthCheck = await fetch(`${OLLAMA_ENDPOINT}/api/version`, {
+      method: "GET",
+      headers: {
+        "Accept": "application/json",
+        "User-Agent": "ZoeSovereignProxy/1.0",
+      },
+    });
+    console.log(`🏥 Health check: ${healthCheck.status}`);
+    const healthBody = await healthCheck.text();
+    console.log(`🏥 Health body: ${healthBody.substring(0, 500)}`);
+
+    // If health check fails, report the actual issue
+    if (!healthCheck.ok) {
+      return new Response(
+        JSON.stringify({ 
+          error: `Tunnel returned ${healthCheck.status}`, 
+          details: healthBody.substring(0, 1000),
+          hint: "Serveo may require browser verification. Try visiting the tunnel URL in your browser first, or use a different tunnel (e.g., cloudflared)."
+        }),
+        { status: healthCheck.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const response = await fetch(`${OLLAMA_ENDPOINT}/api/generate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
