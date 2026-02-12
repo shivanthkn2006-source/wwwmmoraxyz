@@ -429,50 +429,47 @@ const cleanLLMResponse = (response: string): string => {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// OLLAMA LOCAL SERVER SUPPORT (llama3:8b etc.)
+// OLLAMA LOCAL SERVER SUPPORT — ROUTED THROUGH EDGE FUNCTION PROXY
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const DEFAULT_OLLAMA_ENDPOINT = 'https://aff4dd5e383c2a.lhr.life';
 const DEFAULT_OLLAMA_MODEL = 'llama3';
+
+// Use the edge function proxy to bypass CORS
+const OLLAMA_PROXY_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ollama-proxy`;
 
 let ollamaAvailable: boolean | null = null; // null = not checked yet
 
 /**
- * Check if Ollama server is running locally
+ * Check if Ollama server is reachable (via proxy)
  */
-const checkOllamaAvailable = async (endpoint: string = DEFAULT_OLLAMA_ENDPOINT): Promise<boolean> => {
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 2000);
-    const resp = await fetch(`${endpoint}/api/tags`, { signal: controller.signal });
-    clearTimeout(timeout);
-    ollamaAvailable = resp.ok;
-    if (ollamaAvailable) console.log('[LocalLLM] 🦙 Ollama server detected');
-    return ollamaAvailable;
-  } catch {
-    ollamaAvailable = false;
-    return false;
-  }
+const checkOllamaAvailable = async (_endpoint?: string): Promise<boolean> => {
+  // With the proxy, we assume available and let the actual call fail if not
+  ollamaAvailable = true;
+  console.log('[LocalLLM] 🦙 Ollama proxy configured — will verify on first call');
+  return true;
 };
 
 /**
- * Generate response using local Ollama server
+ * Generate response using local Ollama server (via Edge Function proxy)
  */
 const generateOllamaResponse = async (
   prompt: string,
   context?: LLMContext,
   model: string = DEFAULT_OLLAMA_MODEL,
-  endpoint: string = DEFAULT_OLLAMA_ENDPOINT
+  _endpoint?: string
 ): Promise<LLMResponse | null> => {
-  // FORCE LOCAL OR DIE TRYING
+  // FORCE LOCAL OR DIE TRYING — NOW VIA PROXY
   const startTime = performance.now();
 
-  console.log("🚀 Attempting to hit M1 Pro...");
+  console.log("🚀 Attempting to hit M1 Pro via proxy...");
 
   try {
-    const response = await fetch(`${endpoint}/api/generate`, {
+    const response = await fetch(OLLAMA_PROXY_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+      },
       body: JSON.stringify({
         model,
         prompt: "System: You are Zoe on M1 Pro. User: " + prompt,
@@ -481,11 +478,12 @@ const generateOllamaResponse = async (
     });
 
     if (!response.ok) {
-      throw new Error(`Server Error: ${response.status} ${response.statusText}`);
+      const errorBody = await response.text();
+      throw new Error(`Proxy Error: ${response.status} ${errorBody}`);
     }
 
     const data = await response.json();
-    console.log("✅ SUCCESS:", data);
+    console.log("✅ SUCCESS from M1 Pro:", data);
 
     const text = cleanLLMResponse(data.response || '');
 
