@@ -21,7 +21,7 @@ import {
 interface UseLocalLLMState {
   isGenerating: boolean;
   lastResponse: LLMResponse | null;
-  lastProvider: 'cloud' | 'local' | 'scripted' | null;
+  lastProvider: 'cloud' | 'ollama' | 'local' | 'scripted' | null;
   localLLMReady: boolean;
   localLLMLoading: boolean;
   supportsWebGPU: boolean;

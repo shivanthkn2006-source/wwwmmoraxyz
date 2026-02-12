@@ -22,7 +22,7 @@ import { checkNetworkStatus } from '@/hooks/useNetworkStatus';
 // TYPES
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export type LLMProvider = 'cloud' | 'local' | 'scripted';
+export type LLMProvider = 'cloud' | 'ollama' | 'local' | 'scripted';
 
 export interface LLMResponse {
   text: string;
@@ -429,6 +429,77 @@ const cleanLLMResponse = (response: string): string => {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// OLLAMA LOCAL SERVER SUPPORT (llama3:8b etc.)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const DEFAULT_OLLAMA_ENDPOINT = 'http://127.0.0.1:11434';
+const DEFAULT_OLLAMA_MODEL = 'llama3:8b';
+
+let ollamaAvailable: boolean | null = null; // null = not checked yet
+
+/**
+ * Check if Ollama server is running locally
+ */
+const checkOllamaAvailable = async (endpoint: string = DEFAULT_OLLAMA_ENDPOINT): Promise<boolean> => {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 2000);
+    const resp = await fetch(`${endpoint}/api/tags`, { signal: controller.signal });
+    clearTimeout(timeout);
+    ollamaAvailable = resp.ok;
+    if (ollamaAvailable) console.log('[LocalLLM] 🦙 Ollama server detected');
+    return ollamaAvailable;
+  } catch {
+    ollamaAvailable = false;
+    return false;
+  }
+};
+
+/**
+ * Generate response using local Ollama server
+ */
+const generateOllamaResponse = async (
+  prompt: string,
+  context?: LLMContext,
+  model: string = DEFAULT_OLLAMA_MODEL,
+  endpoint: string = DEFAULT_OLLAMA_ENDPOINT
+): Promise<LLMResponse | null> => {
+  try {
+    const startTime = performance.now();
+    const systemPrompt = buildSystemPrompt(context);
+
+    const response = await fetch(`${endpoint}/api/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model,
+        prompt: `${systemPrompt}\n\nUser: ${prompt}\n\nZoe:`,
+        stream: false,
+      }),
+    });
+
+    if (!response.ok) {
+      console.warn('[LocalLLM] Ollama request failed:', response.status);
+      return null;
+    }
+
+    const data = await response.json();
+    const text = cleanLLMResponse(data.response || '');
+
+    return {
+      text: text || "I'm here, but I couldn't form a thought. Try again?",
+      provider: 'ollama',
+      latencyMs: performance.now() - startTime,
+      confidence: 0.85,
+      cached: false,
+    };
+  } catch (err) {
+    console.warn('[LocalLLM] Ollama generation error:', err);
+    return null;
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // MAIN API: GENERATE RESPONSE (FALLBACK CHAIN)
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -437,6 +508,9 @@ export interface GenerateOptions {
   context?: LLMContext;
   forceLocal?: boolean;
   forceScripted?: boolean;
+  forceOllama?: boolean;
+  ollamaModel?: string;
+  ollamaEndpoint?: string;
   timeout?: number;
 }
 
@@ -453,6 +527,9 @@ export const generateResponse = async (
     context,
     forceLocal = false,
     forceScripted = false,
+    forceOllama = false,
+    ollamaModel,
+    ollamaEndpoint,
     timeout = 10000,
   } = options;
   
@@ -474,7 +551,30 @@ export const generateResponse = async (
   }
   
   // ═══════════════════════════════════════════════════════════════════════
-  // PATH 2: CLOUD (if online and not forced local)
+  // PATH 2a: OLLAMA (local server, if forced or available)
+  // ═══════════════════════════════════════════════════════════════════════
+  if (forceOllama || ollamaAvailable === null) {
+    // Check availability on first call
+    if (ollamaAvailable === null) await checkOllamaAvailable(ollamaEndpoint);
+  }
+
+  if (forceOllama || ollamaAvailable) {
+    console.log('[LLM] 🦙 Trying Ollama local server...');
+    const ollamaResponse = await generateOllamaResponse(prompt, context, ollamaModel, ollamaEndpoint);
+    if (ollamaResponse) return ollamaResponse;
+    if (forceOllama) {
+      return {
+        text: "Ollama server isn't running. Start it with `ollama serve` and try again.",
+        provider: 'scripted',
+        latencyMs: performance.now() - startTime,
+        confidence: 0.5,
+        cached: false,
+      };
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // PATH 2b: CLOUD (if online and not forced local)
   // ═══════════════════════════════════════════════════════════════════════
   if (network.isOnline && !forceLocal && cloudFn) {
     try {
