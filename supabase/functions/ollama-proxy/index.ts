@@ -18,29 +18,8 @@ serve(async (req) => {
     console.log(`🚀 Proxying to M1 Pro at ${OLLAMA_ENDPOINT}...`);
     console.log(`📦 Model: ${model} | Prompt length: ${prompt?.length || 0}`);
 
-    // First, try a GET to check if the tunnel is alive and capture any redirect/auth page
-    const healthCheck = await fetch(`${OLLAMA_ENDPOINT}/api/version`, {
-      method: "GET",
-      headers: {
-        "Accept": "application/json",
-        "User-Agent": "ZoeSovereignProxy/1.0",
-      },
-    });
-    console.log(`🏥 Health check: ${healthCheck.status}`);
-    const healthBody = await healthCheck.text();
-    console.log(`🏥 Health body: ${healthBody.substring(0, 500)}`);
-
-    // If health check fails, report the actual issue
-    if (!healthCheck.ok) {
-      return new Response(
-        JSON.stringify({ 
-          error: `Tunnel returned ${healthCheck.status}`, 
-          details: healthBody.substring(0, 1000),
-          hint: "Serveo may require browser verification. Try visiting the tunnel URL in your browser first, or use a different tunnel (e.g., cloudflared)."
-        }),
-        { status: healthCheck.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 55000); // 55s timeout
 
     const response = await fetch(`${OLLAMA_ENDPOINT}/api/generate`, {
       method: "POST",
@@ -50,7 +29,10 @@ serve(async (req) => {
         prompt,
         stream: stream ?? false,
       }),
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -69,6 +51,12 @@ serve(async (req) => {
     });
   } catch (error) {
     console.error("❌ Proxy error:", error);
+    if (error.name === "AbortError") {
+      return new Response(
+        JSON.stringify({ error: "Request timed out — M1 Pro took too long to respond", details: "Try a shorter prompt or ensure the model is loaded (run: ollama pull llama3)" }),
+        { status: 504, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
     return new Response(
       JSON.stringify({ error: error.message || "Failed to reach M1 Pro" }),
       { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
