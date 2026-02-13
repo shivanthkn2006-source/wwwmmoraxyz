@@ -23,7 +23,11 @@ serve(async (req) => {
 
     const response = await fetch(`${OLLAMA_ENDPOINT}/api/generate`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+        "Content-Type": "application/json",
+        "Bypass-Tunnel-Reminder": "true",
+        "User-Agent": "ZoeProxy/1.0",
+      },
       body: JSON.stringify({
         model: model || "zoe",
         prompt,
@@ -36,9 +40,9 @@ serve(async (req) => {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`❌ Ollama error: ${response.status} ${errorText}`);
+      console.error(`❌ Ollama error: ${response.status} | Headers: ${JSON.stringify(Object.fromEntries(response.headers))} | Body: ${errorText.substring(0, 500)}`);
       return new Response(
-        JSON.stringify({ error: `Ollama error: ${response.status}`, details: errorText }),
+        JSON.stringify({ error: `Ollama error: ${response.status}`, details: errorText.substring(0, 500) }),
         { status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
