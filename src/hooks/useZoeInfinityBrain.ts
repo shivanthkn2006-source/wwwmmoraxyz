@@ -686,37 +686,58 @@ export const useZoeInfinityBrain = (): UseZoeInfinityBrainReturn => {
     
     try {
       // ═══════════════════════════════════════════════════════════════════════
-      // 🧪 SOVEREIGN CONNECTION: Route ALL thinking through M1 Pro via Ollama
-      // Cloud edge function DISABLED — must reach local MacBook or fail
+      // CLOUD-FIRST: Route through zoe-infinity-brain edge function (Gemini)
+      // Sovereign M1 Pro mode available as future option when DNS resolves
       // ═══════════════════════════════════════════════════════════════════════
       
-      console.log('[ZoeBrain] 🚀 SOVEREIGN MODE: Routing to M1 Pro via Ollama...');
+      console.log(`[ZoeBrain] ☁️ CLOUD MODE: Routing to zoe-infinity-brain (${currentMode})...`);
       
-      const ollamaResult = await generateOllamaResponse(message, {
-        forceOllama: true,
-        context: {
-          userName: user?.user_metadata?.display_name || user?.email?.split('@')[0],
-          mood: personalityMatrix?.currentMood || 'neutral',
-          recentTopics: [],
+      const brainPayload: Record<string, unknown> = {
+        messages: [
+          ...conversationHistory.slice(-20),
+          { role: 'user', content: message },
+        ],
+        mode: currentMode,
+        soulCodex: codexLoaded ? codexStringRef.current : undefined,
+        memoryContext: combinedMemoryContext || undefined,
+        enableGrounding: true,
+        intimacyLevel: undefined,
+        clientTime: {
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          localTime: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
+          localISOString: new Date().toISOString(),
         },
+      };
+
+      if (personalityMatrix) {
+        brainPayload.personalityMatrix = personalityMatrix;
+      }
+      // Emotion context is handled server-side via text detection
+
+      const { data, error } = await supabase.functions.invoke('zoe-infinity-brain', {
+        body: brainPayload,
       });
+
+      if (error) throw error;
       
-      console.log(`[ZoeBrain] M1 Pro responded via: ${ollamaResult.provider} | ${ollamaResult.latencyMs.toFixed(0)}ms`);
+      const responseContent = data?.response || data?.text || "Hmm, I blanked for a sec — can you say that again?";
+      const latencyMs = performance.now() - startTime;
       
-      const responseContent = ollamaResult.text || "Hmm, I blanked for a sec — can you say that again?";
+      console.log(`[ZoeBrain] ☁️ Cloud responded in ${latencyMs.toFixed(0)}ms | Mode: ${currentMode}`);
       saveToOfflineMemory('assistant', responseContent);
       
       return {
         content: responseContent,
         mode: currentMode,
-        fromCache: ollamaResult.cached,
+        fromCache: false,
         codexInjected: codexLoaded,
-        latencyMs: ollamaResult.latencyMs,
-        emotionAttuned: false,
-        inferenceRoute: 'local',
-        costSaved: 0,
-        hardwareUsed: ['m1-pro-ollama'],
-        personalityActive: false,
+        latencyMs,
+        emotionAttuned: true,
+        inferenceRoute: 'cloud' as const,
+        costSaved,
+        hardwareUsed: ['lovable-cloud-gemini'],
+        personalityActive: !!personalityMatrix,
+        citations: data?.citations,
       };
     } catch (e: unknown) {
       // ─────────────────────────────────────────────────────────────────────────
