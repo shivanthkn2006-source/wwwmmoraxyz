@@ -206,6 +206,8 @@ export default function ZoeInfinityAuth() {
               <Input
                 id="email"
                 type="email"
+                name="email"
+                autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
@@ -228,6 +230,8 @@ export default function ZoeInfinityAuth() {
               <Input
                 id="password"
                 type={showPassword ? 'text' : 'password'}
+                name="password"
+                autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
@@ -296,21 +300,50 @@ export default function ZoeInfinityAuth() {
           </Button>
         </motion.form>
 
-        {/* Mode Toggle */}
-        <div className="mt-6 text-center">
-          <button
-            type="button"
-            onClick={() => {
-              setMode(mode === 'signin' ? 'signup' : 'signin');
-              setErrors({});
-            }}
-            className="text-white/40 text-sm hover:text-cyan-400 transition-colors"
-            disabled={isSubmitting}
-          >
-            {mode === 'signin' 
-              ? "Don't have an account? Create one" 
-              : 'Already have an account? Sign in'}
-          </button>
+        {/* Forgot Password + Mode Toggle */}
+        <div className="mt-6 text-center space-y-3">
+          {mode === 'signin' && (
+            <button
+              type="button"
+              onClick={async () => {
+                if (!email) {
+                  toast.error('Enter your email first');
+                  return;
+                }
+                try {
+                  const { supabase } = await import('@/integrations/supabase/client');
+                  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                    redirectTo: `${window.location.origin}/auth`,
+                  });
+                  if (error) throw error;
+                  toast.success('Password reset email sent', {
+                    description: 'Check your inbox and follow the link',
+                  });
+                } catch {
+                  toast.error('Could not send reset email');
+                }
+              }}
+              className="text-cyan-400/60 text-xs hover:text-cyan-400 transition-colors"
+              disabled={isSubmitting}
+            >
+              Forgot password?
+            </button>
+          )}
+          <div>
+            <button
+              type="button"
+              onClick={() => {
+                setMode(mode === 'signin' ? 'signup' : 'signin');
+                setErrors({});
+              }}
+              className="text-white/40 text-sm hover:text-cyan-400 transition-colors"
+              disabled={isSubmitting}
+            >
+              {mode === 'signin' 
+                ? "Don't have an account? Create one" 
+                : 'Already have an account? Sign in'}
+            </button>
+          </div>
         </div>
 
         {/* Genesis Imprint Link */}
