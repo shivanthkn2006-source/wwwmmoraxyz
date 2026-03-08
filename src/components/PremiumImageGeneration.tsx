@@ -19,6 +19,8 @@ interface PremiumImageGenerationProps {
   onClose: () => void;
 }
 
+type ImageEngine = 'gemini' | 'pollinations';
+
 const PremiumImageGeneration = ({ isOpen, onClose }: PremiumImageGenerationProps) => {
   const [prompt, setPrompt] = useState('');
   const [attachedImage, setAttachedImage] = useState<File | null>(null);
@@ -26,6 +28,7 @@ const PremiumImageGeneration = ({ isOpen, onClose }: PremiumImageGenerationProps
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [mode, setMode] = useState<'generate' | 'edit'>('generate');
+  const [engine, setEngine] = useState<ImageEngine>('pollinations');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -86,18 +89,29 @@ const PremiumImageGeneration = ({ isOpen, onClose }: PremiumImageGenerationProps
         };
         reader.readAsDataURL(attachedImage);
       } else {
-        // Generate new image
-        const { data, error } = await supabase.functions.invoke('generate-image', {
-          body: { prompt: prompt.trim() }
-        });
-
-        if (error) throw error;
-
-        if (data?.imageUrl) {
-          setGeneratedImage(data.imageUrl);
-          toast.success('Image generated successfully!');
-        } else if (data?.error) {
-          toast.error(data.error);
+        // Generate new image - choose engine
+        if (engine === 'pollinations') {
+          const { data, error } = await supabase.functions.invoke('generate-image-pollinations', {
+            body: { prompt: prompt.trim(), width: 1024, height: 1024 }
+          });
+          if (error) throw error;
+          if (data?.imageUrl) {
+            setGeneratedImage(data.imageUrl);
+            toast.success('Image generated with Pollinations (Free)!');
+          } else if (data?.error) {
+            toast.error(data.error);
+          }
+        } else {
+          const { data, error } = await supabase.functions.invoke('generate-image', {
+            body: { prompt: prompt.trim() }
+          });
+          if (error) throw error;
+          if (data?.imageUrl) {
+            setGeneratedImage(data.imageUrl);
+            toast.success('Image generated with Gemini!');
+          } else if (data?.error) {
+            toast.error(data.error);
+          }
         }
         setIsGenerating(false);
       }
@@ -201,6 +215,33 @@ const PremiumImageGeneration = ({ isOpen, onClose }: PremiumImageGenerationProps
                     Edit Image
                   </Button>
                 </div>
+
+                {/* Engine Selector (Generate mode only) */}
+                {mode === 'generate' && (
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">AI Engine</Label>
+                    <div className="flex gap-2">
+                      <Button
+                        variant={engine === 'pollinations' ? 'default' : 'outline'}
+                        onClick={() => setEngine('pollinations')}
+                        className={engine === 'pollinations' ? 'bg-gradient-to-r from-green-500 to-emerald-500' : ''}
+                        size="sm"
+                      >
+                        🌸 Pollinations
+                        <Badge className="ml-2 bg-green-500/20 text-green-300 text-[9px]">FREE</Badge>
+                      </Button>
+                      <Button
+                        variant={engine === 'gemini' ? 'default' : 'outline'}
+                        onClick={() => setEngine('gemini')}
+                        className={engine === 'gemini' ? 'bg-gradient-to-r from-blue-500 to-indigo-500' : ''}
+                        size="sm"
+                      >
+                        ✨ Gemini
+                        <Badge className="ml-2 bg-blue-500/20 text-blue-300 text-[9px]">PREMIUM</Badge>
+                      </Button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Image Upload (Edit Mode) */}
                 {mode === 'edit' && (
