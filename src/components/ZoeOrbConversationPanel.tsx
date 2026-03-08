@@ -2944,6 +2944,7 @@ Want me to dive deeper into any aspect?`;
                       <CheckCheck className="h-3 w-3 md:h-3.5 md:w-3.5 lg:h-4 lg:w-4 text-primary/60" />
                     )}
                   </div>
+                  </div>
                 </motion.div>
               ))}
               {(isProcessing || isPerceptionProcessing) && (
