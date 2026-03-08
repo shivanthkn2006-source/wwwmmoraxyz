@@ -216,6 +216,33 @@ const PremiumImageGeneration = ({ isOpen, onClose }: PremiumImageGenerationProps
                   </Button>
                 </div>
 
+                {/* Engine Selector (Generate mode only) */}
+                {mode === 'generate' && (
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">AI Engine</Label>
+                    <div className="flex gap-2">
+                      <Button
+                        variant={engine === 'pollinations' ? 'default' : 'outline'}
+                        onClick={() => setEngine('pollinations')}
+                        className={engine === 'pollinations' ? 'bg-gradient-to-r from-green-500 to-emerald-500' : ''}
+                        size="sm"
+                      >
+                        🌸 Pollinations
+                        <Badge className="ml-2 bg-green-500/20 text-green-300 text-[9px]">FREE</Badge>
+                      </Button>
+                      <Button
+                        variant={engine === 'gemini' ? 'default' : 'outline'}
+                        onClick={() => setEngine('gemini')}
+                        className={engine === 'gemini' ? 'bg-gradient-to-r from-blue-500 to-indigo-500' : ''}
+                        size="sm"
+                      >
+                        ✨ Gemini
+                        <Badge className="ml-2 bg-blue-500/20 text-blue-300 text-[9px]">PREMIUM</Badge>
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 {/* Image Upload (Edit Mode) */}
                 {mode === 'edit' && (
                   <div className="space-y-2">
