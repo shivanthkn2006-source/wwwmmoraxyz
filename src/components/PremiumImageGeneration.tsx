@@ -19,6 +19,8 @@ interface PremiumImageGenerationProps {
   onClose: () => void;
 }
 
+type ImageEngine = 'gemini' | 'pollinations';
+
 const PremiumImageGeneration = ({ isOpen, onClose }: PremiumImageGenerationProps) => {
   const [prompt, setPrompt] = useState('');
   const [attachedImage, setAttachedImage] = useState<File | null>(null);
@@ -26,6 +28,7 @@ const PremiumImageGeneration = ({ isOpen, onClose }: PremiumImageGenerationProps
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [mode, setMode] = useState<'generate' | 'edit'>('generate');
+  const [engine, setEngine] = useState<ImageEngine>('pollinations');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
