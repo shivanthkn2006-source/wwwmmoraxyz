@@ -76,6 +76,7 @@ import { useVedicEngine } from '@/hooks/useVedicEngine';
 import { useAtmanArchive } from '@/hooks/useAtmanArchive';
 import { useMmoraAgent } from '@/hooks/useMmoraAgent';
 import { loadDestinySeed, saveDestinySeed } from '@/core/soul/AtmanArchive';
+import ZoeAvatarEmotions, { detectEmotionFromText } from '@/components/ZoeAvatarEmotions';
 
 // Relationship command patterns that should be executed as commands, not chat
 const RELATIONSHIP_COMMAND_PATTERNS = [
