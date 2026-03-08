@@ -89,18 +89,29 @@ const PremiumImageGeneration = ({ isOpen, onClose }: PremiumImageGenerationProps
         };
         reader.readAsDataURL(attachedImage);
       } else {
-        // Generate new image
-        const { data, error } = await supabase.functions.invoke('generate-image', {
-          body: { prompt: prompt.trim() }
-        });
-
-        if (error) throw error;
-
-        if (data?.imageUrl) {
-          setGeneratedImage(data.imageUrl);
-          toast.success('Image generated successfully!');
-        } else if (data?.error) {
-          toast.error(data.error);
+        // Generate new image - choose engine
+        if (engine === 'pollinations') {
+          const { data, error } = await supabase.functions.invoke('generate-image-pollinations', {
+            body: { prompt: prompt.trim(), width: 1024, height: 1024 }
+          });
+          if (error) throw error;
+          if (data?.imageUrl) {
+            setGeneratedImage(data.imageUrl);
+            toast.success('Image generated with Pollinations (Free)!');
+          } else if (data?.error) {
+            toast.error(data.error);
+          }
+        } else {
+          const { data, error } = await supabase.functions.invoke('generate-image', {
+            body: { prompt: prompt.trim() }
+          });
+          if (error) throw error;
+          if (data?.imageUrl) {
+            setGeneratedImage(data.imageUrl);
+            toast.success('Image generated with Gemini!');
+          } else if (data?.error) {
+            toast.error(data.error);
+          }
         }
         setIsGenerating(false);
       }
