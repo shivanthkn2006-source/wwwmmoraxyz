@@ -2756,10 +2756,24 @@ Want me to dive deeper into any aspect?`;
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3 }}
                   className={cn(
-                    'flex flex-col group',
-                    msg.role === 'user' ? 'items-end' : 'items-start'
+                    'flex group',
+                    msg.role === 'user' ? 'flex-col items-end' : 'flex-row items-start gap-2'
                   )}
                 >
+                  {/* Zoe Avatar with real-time emotion from user's message */}
+                  {msg.role === 'zoe' && (
+                    <div className="flex-shrink-0 mt-1">
+                      <ZoeAvatarEmotions
+                        chatText={messages.slice(0, index).reverse().find(m => m.role === 'user')?.content}
+                        size="sm"
+                        showLabel={false}
+                        showGlow={false}
+                        showBreathing={true}
+                      />
+                    </div>
+                  )}
+                  <div className="flex flex-col">
+
                   <div
                     className={cn(
                       'max-w-[85%] rounded-xl px-2.5 py-1.5 md:px-3 md:py-2 lg:px-3.5 lg:py-2.5 text-xs md:text-sm lg:text-base relative',
