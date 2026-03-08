@@ -1,55 +1,65 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// ZOE INFINITY - HYBRID VOICE ENGINE (Deepgram Aura-2)
+// ZOE INFINITY - HYBRID VOICE ENGINE (Deepgram Aura-2 + Aura-2 Janus)
 // "HER" Samantha Experience - Premium Neural TTS with Free Fallback
 // ═══════════════════════════════════════════════════════════════════════════════
 // 
 // COST: $0.030 per 1K characters (~$30 per 1M chars)
 // FREE CREDITS: $200 = ~6.6M characters = 26 days for 50 users
 // 
-// ⭐ SAMANTHA "HER" VOICE: aura-luna-en (calm, intimate, soothing) - DEFAULT
+// ⭐ SAMANTHA "HER" VOICE: aura-2-thalia-en (next-gen Janus, warm & natural) - DEFAULT
 // 
-// Voices Available:
-// - aura-luna-en      (Female, calm & soothing) ⭐ DEFAULT ZOE "SAMANTHA"
+// === AURA-2 JANUS VOICES (Next-Gen, English) ===
+// - aura-2-thalia-en    (Female, warm & natural) ⭐ DEFAULT ZOE "SAMANTHA"
+// - aura-2-andromeda-en (Female, confident & clear)
+// - aura-2-aurora-en    (Female, bright & energetic)
+// - aura-2-luna-en      (Female, calm & soothing)
+// - aura-2-harmonia-en  (Female, balanced & smooth)
+// - aura-2-janus-en     (Male, warm & versatile) ⭐ DEFAULT SMITH
+// - aura-2-orpheus-en   (Male, deep & resonant)
+// - aura-2-arcas-en     (Male, energetic)
+// - aura-2-atlas-en     (Male, authoritative)
+// - aura-2-helios-en    (Male, bright & confident)
+// 
+// === LEGACY AURA VOICES (Still Available) ===
+// - aura-luna-en      (Female, calm & soothing) 
 // - aura-asteria-en   (Female, warm & engaging)
-// - aura-stella-en    (Female, friendly)
-// - aura-athena-en    (Female, confident)
-// - aura-hera-en      (Female, elegant)
-// - aura-orion-en     (Male, warm) ⭐ DEFAULT SMITH
-// - aura-arcas-en     (Male, energetic)
-// - aura-perseus-en   (Male, calm)
-// - aura-angus-en     (Male, deep)
-// - aura-orpheus-en   (Male, smooth)
-// - aura-helios-en    (Male, authoritative)
+// - aura-orion-en     (Male, warm)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-// Voice mapping for Zoe/Smith personas
-// ⭐ SAMANTHA "HER" VOICE = aura-luna-en (calm, intimate, soothing)
+// Voice mapping — Aura-2 Janus (next-gen) as primary, legacy Aura as fallback
+// ⭐ SAMANTHA "HER" VOICE = aura-2-thalia-en (next-gen warm & natural)
 const VOICE_MAP: Record<string, string> = {
-  // Female voices (Zoe personas) - Luna is the "HER" Samantha voice
-  'zoe': 'aura-luna-en',              // ⭐ SAMANTHA - Calm, intimate, soothing
-  'zoe-warm': 'aura-asteria-en',      // Warm, engaging (alternate)
-  'zoe-calm': 'aura-luna-en',         // Same as default - calm, soothing
-  'zoe-friendly': 'aura-stella-en',   // Friendly, approachable
-  'zoe-confident': 'aura-athena-en',  // Confident, articulate
-  'zoe-elegant': 'aura-hera-en',      // Elegant, refined
+  // ═══ AURA-2 JANUS — Next-Gen Female (Zoe personas) ═══
+  'zoe': 'aura-2-thalia-en',              // ⭐ SAMANTHA - Warm, natural, intimate
+  'zoe-warm': 'aura-2-thalia-en',         // Warm & natural (default Janus)
+  'zoe-calm': 'aura-2-luna-en',           // Calm & soothing (Janus)
+  'zoe-confident': 'aura-2-andromeda-en', // Confident & clear (Janus)
+  'zoe-bright': 'aura-2-aurora-en',       // Bright & energetic (Janus)
+  'zoe-smooth': 'aura-2-harmonia-en',     // Balanced & smooth (Janus)
+  'zoe-friendly': 'aura-2-aurora-en',     // Friendly (maps to bright)
+  'zoe-elegant': 'aura-2-andromeda-en',   // Elegant (maps to confident)
   
-  // Male voices (Smith personas)
-  'smith': 'aura-orion-en',           // Warm, trustworthy - PRIMARY SMITH
-  'smith-deep': 'aura-angus-en',      // Deep, resonant
-  'smith-calm': 'aura-perseus-en',    // Calm, measured
-  'smith-energetic': 'aura-arcas-en', // Energetic, dynamic
-  'smith-smooth': 'aura-orpheus-en',  // Smooth, melodic
-  'smith-authority': 'aura-helios-en', // Authoritative
+  // ═══ AURA-2 JANUS — Next-Gen Male (Smith personas) ═══
+  'smith': 'aura-2-janus-en',             // ⭐ Warm & versatile - PRIMARY SMITH
+  'smith-deep': 'aura-2-orpheus-en',      // Deep & resonant (Janus)
+  'smith-energetic': 'aura-2-arcas-en',   // Energetic (Janus)
+  'smith-authority': 'aura-2-atlas-en',   // Authoritative (Janus)
+  'smith-calm': 'aura-2-orpheus-en',      // Calm (maps to deep)
+  'smith-smooth': 'aura-2-helios-en',     // Bright & confident (Janus)
   
-  // Default - SAMANTHA voice
-  'default': 'aura-luna-en',
+  // ═══ LEGACY AURA (backward compat) ═══
+  'zoe-legacy': 'aura-luna-en',
+  'smith-legacy': 'aura-orion-en',
+  
+  // Default — SAMANTHA Janus voice
+  'default': 'aura-2-thalia-en',
 };
 
 interface VoiceRequest {
