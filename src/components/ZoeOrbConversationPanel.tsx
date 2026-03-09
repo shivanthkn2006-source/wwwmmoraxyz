@@ -1725,8 +1725,8 @@ Want me to dive deeper into any aspect?`;
           wisdomPassed: wisdomResult.passed,
           wisdomConfidence: wisdomResult.confidenceScore,
           alignedGoals: alignedGoalTitles,
-          classifiedIntent: userMessage.content.includes('?') ? 'question' : 'statement',
-          extractedEmotions: ['engaged'],
+          classifiedIntent: metacognitiveBrain.cognitiveState?.userIntent || (userMessage.content.includes('?') ? 'question' : 'statement'),
+          extractedEmotions: metacognitiveBrain.cognitiveState ? [metacognitiveBrain.cognitiveState.currentEmotion, metacognitiveBrain.cognitiveState.mirroredEmotion] : ['engaged'],
           codexInjected: true,
         },
       };
