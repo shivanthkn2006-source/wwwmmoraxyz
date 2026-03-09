@@ -77,6 +77,7 @@ import { useAtmanArchive } from '@/hooks/useAtmanArchive';
 import { useMmoraAgent } from '@/hooks/useMmoraAgent';
 import { loadDestinySeed, saveDestinySeed } from '@/core/soul/AtmanArchive';
 import ZoeAvatarEmotions, { detectEmotionFromText } from '@/components/ZoeAvatarEmotions';
+import { useZoeMetacognitiveBrain } from '@/hooks/useZoeMetacognitiveBrain';
 
 // Relationship command patterns that should be executed as commands, not chat
 const RELATIONSHIP_COMMAND_PATTERNS = [
@@ -234,6 +235,9 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
   const vedicEngine = useVedicEngine();
   const atmanArchive = useAtmanArchive();
   const { geocodeLocation } = useMmoraAgent();
+  
+  // METACOGNITIVE BRAIN - Human-like reasoning & 500-message memory
+  const metacognitiveBrain = useZoeMetacognitiveBrain();
 
   // --- Helpers: capture follow-up birth time / place after Zoe prompts ---
   const parseTimeToHHMM = useCallback((input: string): string | null => {
@@ -1545,12 +1549,24 @@ Want me to dive deeper into any aspect?`;
       // Use API if no local response was generated
       if (!responseText) {
         if (isOnline) {
-          console.log('[ZoeOrb] Calling zoe-chat (online)...');
-          // Use online API
-          const conversationHistory = messages.slice(-5).map(m => ({
-            role: m.role === 'zoe' ? 'assistant' : m.role,
-            content: m.content,
-          }));
+          console.log('[ZoeOrb] Calling zoe-chat (online) with metacognitive brain...');
+          
+          // ═══ METACOGNITIVE BRAIN: Process user message through cognitive layers ═══
+          const brainResult = await metacognitiveBrain.process(userMessage.content, messages.slice(-10).map(m => ({ role: m.role === 'zoe' ? 'assistant' : 'user', content: m.content })));
+          
+          // Save user message to 500-message memory
+          metacognitiveBrain.remember('user', userMessage.content, brainResult.cognitiveState.currentEmotion);
+          
+          console.log('[ZoeOrb] Brain state:', {
+            emotion: brainResult.cognitiveState.currentEmotion,
+            intent: brainResult.cognitiveState.userIntent,
+            strategy: brainResult.cognitiveState.responseStrategy,
+            phase: brainResult.cognitiveState.conversationPhase,
+            innerMonologue: brainResult.innerMonologue,
+          });
+          
+          // Use brain's memory context (up to 30 messages) instead of just last 5
+          const conversationHistory = brainResult.memoryContext.slice(-20);
           
           // Get user's local timezone and time
           const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -1581,21 +1597,40 @@ Want me to dive deeper into any aspect?`;
                 intimacy: 60, 
                 selfHarmony: 70, 
                 loveEnergy: 65,
-                ...chatVision.getVisionContext(), // Include vision context if camera is active
+                ...chatVision.getVisionContext(),
               },
-              enableASI: true, // Always enable ASI 7.5x processing
+              enableASI: true,
+              // ═══ METACOGNITIVE CONTEXT — Human-like brain state ═══
+              metacognitive: {
+                emotion: brainResult.cognitiveState.currentEmotion,
+                emotionIntensity: brainResult.cognitiveState.emotionIntensity,
+                intent: brainResult.cognitiveState.userIntent,
+                sentiment: brainResult.cognitiveState.userSentiment,
+                urgency: brainResult.cognitiveState.urgency,
+                responseStrategy: brainResult.cognitiveState.responseStrategy,
+                conversationPhase: brainResult.cognitiveState.conversationPhase,
+                mirroredEmotion: brainResult.cognitiveState.mirroredEmotion,
+                empathyLevel: brainResult.cognitiveState.empathyLevel,
+                toneProfile: brainResult.cognitiveState.toneProfile,
+                shouldAskFollowUp: brainResult.cognitiveState.shouldAskFollowUp,
+                adaptiveSystemPrompt: brainResult.suggestedSystemPrompt,
+                innerMonologue: brainResult.innerMonologue,
+                memoryStats: {
+                  totalMessages: metacognitiveBrain.chatMemory.messageCount,
+                  conversationMood: metacognitiveBrain.chatMemory.getMemorySummary().conversationMood,
+                },
+              },
               replyContext: userMessage.replyTo ? {
                 role: userMessage.replyTo.role,
                 content: userMessage.replyTo.content
               } : undefined,
-              // Real-time feeds context for seamless connectivity
               realtimeContext: {
                 onlineFriends: feedsSummary.onlineFriendsCount,
                 recentFriendActivities: feedsSummary.recentFriendActivities,
                 topBrandDeals: feedsSummary.topBrandDeals,
                 exclusiveOffers: feedsSummary.exclusiveOffers,
                 hasNewUpdates: feedsSummary.hasFreshUpdates,
-                newUserNotification: newUserNotification, // New user sign-ups/sign-ins
+                newUserNotification: newUserNotification,
               }
             },
           });
@@ -1690,17 +1725,20 @@ Want me to dive deeper into any aspect?`;
           wisdomPassed: wisdomResult.passed,
           wisdomConfidence: wisdomResult.confidenceScore,
           alignedGoals: alignedGoalTitles,
-          classifiedIntent: userMessage.content.includes('?') ? 'question' : 'statement',
-          extractedEmotions: ['engaged'],
+          classifiedIntent: metacognitiveBrain.cognitiveState?.userIntent || (userMessage.content.includes('?') ? 'question' : 'statement'),
+          extractedEmotions: metacognitiveBrain.cognitiveState ? [metacognitiveBrain.cognitiveState.currentEmotion, metacognitiveBrain.cognitiveState.mirroredEmotion] : ['engaged'],
           codexInjected: true,
         },
       };
 
       setMessages(prev => [...prev, zoeMessage]);
       
-      // Store Zoe's response in cache AND database
+      // Store Zoe's response in cache, database AND metacognitive memory
       offlineDataSync.addConversation('zoe', responseText);
       saveMessageToDb('assistant', responseText, undefined, undefined, zoeMessage.id);
+      
+      // Save Zoe's response to 500-message brain memory
+      metacognitiveBrain.remember('assistant', responseText, metacognitiveBrain.cognitiveState?.mirroredEmotion);
 
       // Speak if not muted
       if (!isMuted && responseText) {
