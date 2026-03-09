@@ -1733,9 +1733,12 @@ Want me to dive deeper into any aspect?`;
 
       setMessages(prev => [...prev, zoeMessage]);
       
-      // Store Zoe's response in cache AND database
+      // Store Zoe's response in cache, database AND metacognitive memory
       offlineDataSync.addConversation('zoe', responseText);
       saveMessageToDb('assistant', responseText, undefined, undefined, zoeMessage.id);
+      
+      // Save Zoe's response to 500-message brain memory
+      metacognitiveBrain.remember('assistant', responseText, metacognitiveBrain.cognitiveState?.mirroredEmotion);
 
       // Speak if not muted
       if (!isMuted && responseText) {
