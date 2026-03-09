@@ -126,11 +126,21 @@ export const InfinityStream = memo(function InfinityStream({
             <div
               key={message.id}
               className={`
-                flex flex-col
-                ${message.role === 'user' ? 'items-end' : 'items-start'}
+                flex
+                ${message.role === 'user' ? 'flex-col items-end' : 'flex-row items-start gap-3'}
                 animate-fade-in
               `}
             >
+              {/* Real human avatar for assistant messages */}
+              {message.role === 'assistant' && (
+                <div className="flex-shrink-0 mt-1">
+                  <ZoeAvatarEmotions
+                    chatText={messages.slice(0, messages.indexOf(message)).reverse().find(m => m.role === 'user')?.content}
+                    size="sm"
+                  />
+                </div>
+              )}
+              <div className="flex flex-col">{/* wrapper for text + extras */}
               {/* PHASE 3: Emotion Indicator for assistant messages */}
               {message.role === 'assistant' && hasEmotion && (
                 <div className="mb-2">
