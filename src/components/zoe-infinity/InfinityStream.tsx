@@ -2,6 +2,7 @@ import { memo, useRef, useEffect, useState } from 'react';
 import { ArtifactDisplay, Artifact } from './ArtifactDisplay';
 import { CitationPanel, Citation, parseContentWithCitations } from './CitationPanel';
 import { EmotionIndicator } from './EmotionIndicator';
+import ZoeAvatarEmotions, { detectEmotionFromText } from '@/components/ZoeAvatarEmotions';
 
 /**
  * Strip SSML/XML tags from text for display
