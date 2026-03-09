@@ -1549,12 +1549,24 @@ Want me to dive deeper into any aspect?`;
       // Use API if no local response was generated
       if (!responseText) {
         if (isOnline) {
-          console.log('[ZoeOrb] Calling zoe-chat (online)...');
-          // Use online API
-          const conversationHistory = messages.slice(-5).map(m => ({
-            role: m.role === 'zoe' ? 'assistant' : m.role,
-            content: m.content,
-          }));
+          console.log('[ZoeOrb] Calling zoe-chat (online) with metacognitive brain...');
+          
+          // ═══ METACOGNITIVE BRAIN: Process user message through cognitive layers ═══
+          const brainResult = await metacognitiveBrain.process(userMessage.content, messages.slice(-10).map(m => ({ role: m.role === 'zoe' ? 'assistant' : 'user', content: m.content })));
+          
+          // Save user message to 500-message memory
+          metacognitiveBrain.remember('user', userMessage.content, brainResult.cognitiveState.currentEmotion);
+          
+          console.log('[ZoeOrb] Brain state:', {
+            emotion: brainResult.cognitiveState.currentEmotion,
+            intent: brainResult.cognitiveState.userIntent,
+            strategy: brainResult.cognitiveState.responseStrategy,
+            phase: brainResult.cognitiveState.conversationPhase,
+            innerMonologue: brainResult.innerMonologue,
+          });
+          
+          // Use brain's memory context (up to 30 messages) instead of just last 5
+          const conversationHistory = brainResult.memoryContext.slice(-20);
           
           // Get user's local timezone and time
           const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -1585,21 +1597,40 @@ Want me to dive deeper into any aspect?`;
                 intimacy: 60, 
                 selfHarmony: 70, 
                 loveEnergy: 65,
-                ...chatVision.getVisionContext(), // Include vision context if camera is active
+                ...chatVision.getVisionContext(),
               },
-              enableASI: true, // Always enable ASI 7.5x processing
+              enableASI: true,
+              // ═══ METACOGNITIVE CONTEXT — Human-like brain state ═══
+              metacognitive: {
+                emotion: brainResult.cognitiveState.currentEmotion,
+                emotionIntensity: brainResult.cognitiveState.emotionIntensity,
+                intent: brainResult.cognitiveState.userIntent,
+                sentiment: brainResult.cognitiveState.userSentiment,
+                urgency: brainResult.cognitiveState.urgency,
+                responseStrategy: brainResult.cognitiveState.responseStrategy,
+                conversationPhase: brainResult.cognitiveState.conversationPhase,
+                mirroredEmotion: brainResult.cognitiveState.mirroredEmotion,
+                empathyLevel: brainResult.cognitiveState.empathyLevel,
+                toneProfile: brainResult.cognitiveState.toneProfile,
+                shouldAskFollowUp: brainResult.cognitiveState.shouldAskFollowUp,
+                adaptiveSystemPrompt: brainResult.suggestedSystemPrompt,
+                innerMonologue: brainResult.innerMonologue,
+                memoryStats: {
+                  totalMessages: metacognitiveBrain.chatMemory.messageCount,
+                  conversationMood: metacognitiveBrain.chatMemory.getMemorySummary().conversationMood,
+                },
+              },
               replyContext: userMessage.replyTo ? {
                 role: userMessage.replyTo.role,
                 content: userMessage.replyTo.content
               } : undefined,
-              // Real-time feeds context for seamless connectivity
               realtimeContext: {
                 onlineFriends: feedsSummary.onlineFriendsCount,
                 recentFriendActivities: feedsSummary.recentFriendActivities,
                 topBrandDeals: feedsSummary.topBrandDeals,
                 exclusiveOffers: feedsSummary.exclusiveOffers,
                 hasNewUpdates: feedsSummary.hasFreshUpdates,
-                newUserNotification: newUserNotification, // New user sign-ups/sign-ins
+                newUserNotification: newUserNotification,
               }
             },
           });
