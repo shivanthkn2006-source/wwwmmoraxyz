@@ -235,6 +235,9 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
   const vedicEngine = useVedicEngine();
   const atmanArchive = useAtmanArchive();
   const { geocodeLocation } = useMmoraAgent();
+  
+  // METACOGNITIVE BRAIN - Human-like reasoning & 500-message memory
+  const metacognitiveBrain = useZoeMetacognitiveBrain();
 
   // --- Helpers: capture follow-up birth time / place after Zoe prompts ---
   const parseTimeToHHMM = useCallback((input: string): string | null => {
