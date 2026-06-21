@@ -2311,6 +2311,45 @@ export type Database = {
         }
         Relationships: []
       }
+      feed_diagnostics_log: {
+        Row: {
+          code: string | null
+          created_at: string
+          duration_ms: number | null
+          id: string
+          message: string | null
+          metadata: Json
+          query: string | null
+          row_count: number | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          code?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          id?: string
+          message?: string | null
+          metadata?: Json
+          query?: string | null
+          row_count?: number | null
+          status: string
+          user_id: string
+        }
+        Update: {
+          code?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          id?: string
+          message?: string | null
+          metadata?: Json
+          query?: string | null
+          row_count?: number | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       friend_requests: {
         Row: {
           created_at: string
@@ -2939,6 +2978,13 @@ export type Database = {
             foreignKeyName: "notifications_post_id_fkey"
             columns: ["post_id"]
             isOneToOne: false
+            referencedRelation: "feed_posts_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
             referencedRelation: "posts"
             referencedColumns: ["id"]
           },
@@ -3357,6 +3403,13 @@ export type Database = {
             foreignKeyName: "comments_post_id_fkey"
             columns: ["post_id"]
             isOneToOne: false
+            referencedRelation: "feed_posts_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
             referencedRelation: "posts"
             referencedColumns: ["id"]
           },
@@ -3365,6 +3418,13 @@ export type Database = {
             columns: ["parent_comment_id"]
             isOneToOne: false
             referencedRelation: "post_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "post_comments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "feed_posts_safe"
             referencedColumns: ["id"]
           },
           {
@@ -3421,6 +3481,13 @@ export type Database = {
             foreignKeyName: "post_likes_post_id_fkey"
             columns: ["post_id"]
             isOneToOne: false
+            referencedRelation: "feed_posts_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "post_likes_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
             referencedRelation: "posts"
             referencedColumns: ["id"]
           },
@@ -3449,6 +3516,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "post_preferences_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "feed_posts_safe"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "post_preferences_post_id_fkey"
             columns: ["post_id"]
@@ -3488,6 +3562,13 @@ export type Database = {
             foreignKeyName: "post_ratings_post_id_fkey"
             columns: ["post_id"]
             isOneToOne: false
+            referencedRelation: "feed_posts_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "post_ratings_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
             referencedRelation: "posts"
             referencedColumns: ["id"]
           },
@@ -3516,6 +3597,13 @@ export type Database = {
           tagged_user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "post_tags_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "feed_posts_safe"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "post_tags_post_id_fkey"
             columns: ["post_id"]
@@ -4141,6 +4229,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "saved_posts_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "feed_posts_safe"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "saved_posts_post_id_fkey"
             columns: ["post_id"]
@@ -8479,6 +8574,80 @@ export type Database = {
           user_id: string | null
         }
         Relationships: []
+      }
+      feed_posts_safe: {
+        Row: {
+          comments_count: number | null
+          content: string | null
+          created_at: string | null
+          has_deferred_media: boolean | null
+          id: string | null
+          likes_count: number | null
+          media_size: number | null
+          media_type: string | null
+          media_url: string | null
+          private_timeline_id: string | null
+          user_id: string | null
+          visibility: string | null
+        }
+        Insert: {
+          comments_count?: number | null
+          content?: string | null
+          created_at?: string | null
+          has_deferred_media?: never
+          id?: string | null
+          likes_count?: number | null
+          media_size?: never
+          media_type?: string | null
+          media_url?: never
+          private_timeline_id?: string | null
+          user_id?: string | null
+          visibility?: string | null
+        }
+        Update: {
+          comments_count?: number | null
+          content?: string | null
+          created_at?: string | null
+          has_deferred_media?: never
+          id?: string | null
+          likes_count?: number | null
+          media_size?: never
+          media_type?: string | null
+          media_url?: never
+          private_timeline_id?: string | null
+          user_id?: string | null
+          visibility?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "posts_private_timeline_id_fkey"
+            columns: ["private_timeline_id"]
+            isOneToOne: false
+            referencedRelation: "private_timelines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "posts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "leaderboard_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "posts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "posts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "safe_public_profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       leaderboard_stats: {
         Row: {
