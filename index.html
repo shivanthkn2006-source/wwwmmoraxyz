@@ -1,0 +1,868 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
+    <title>Universe of ai - www.mmora.xyz</title>
+    <meta name="description" content="Next-generation AI platform powered by Zoe - available at mmora.xyz">
+    <meta name="author" content="Universe of Life Platform" />
+    <meta name="keywords" content="mmora, universe of life, zoe ai, social platform, ai assistant" />
+    
+    <!-- Preload critical resources to reduce render delay -->
+    <link rel="preload" href="/src/main.tsx" as="script" />
+    <link rel="preload" href="/src/index.css" as="style" />
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Quicksand:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- PWA Configuration - Cross-Browser Compatible -->
+    <meta name="theme-color" content="#000000" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#000000" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000" />
+    
+    <!-- iOS Safari PWA -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Zoe Infinity" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icon-192.png" />
+    <link rel="apple-touch-startup-image" href="/icon-512.png" />
+    
+    <!-- Android Chrome PWA -->
+    <meta name="application-name" content="Zoe Infinity" />
+    <meta name="msapplication-TileColor" content="#000000" />
+    <meta name="msapplication-TileImage" content="/icon-192.png" />
+    
+    <!-- Web App Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+    
+    <!-- Disable auto-formatting on iOS -->
+    <meta name="format-detection" content="telephone=no" />
+    
+    <!-- Performance hints for browsers -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    
+    <link rel="icon" type="image/png" href="/icon-192.png">
+    
+    <!-- Open Graph / Social Media -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://mmora.xyz" />
+    
+    
+    <meta property="og:image" content="https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/ee5e2820-d202-4ed3-899d-40b9ee60ecd5">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@mmora_platform" />
+    
+    
+    <meta name="twitter:image" content="https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/ee5e2820-d202-4ed3-899d-40b9ee60ecd5">
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://mmora.xyz" />
+  <meta property="og:title" content="Universe of ai - www.mmora.xyz">
+  <meta name="twitter:title" content="Universe of ai - www.mmora.xyz">
+  <meta property="og:description" content="Next-generation AI platform powered by Zoe - available at mmora.xyz">
+  <meta name="twitter:description" content="Next-generation AI platform powered by Zoe - available at mmora.xyz">
+</head>
+
+  <body>
+    <style>
+      #__startup_shell__{position:fixed;inset:0;z-index:2147483646;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#000;color:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;gap:14px;padding:24px;text-align:center;transition:opacity .25s ease}
+      #__startup_shell__ .ss-spin{width:34px;height:34px;border:3px solid rgba(255,255,255,.18);border-top-color:#10b981;border-radius:50%;animation:ss-spin .9s linear infinite}
+      #__startup_shell__ .ss-title{font-size:15px;font-weight:600;letter-spacing:.2px}
+      #__startup_shell__ .ss-sub{font-size:12px;opacity:.6}
+      #__startup_error__{position:fixed;inset:0;z-index:2147483647;display:none;flex-direction:column;align-items:flex-start;justify-content:flex-start;background:#0a0a0a;color:#fff;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;padding:24px;overflow:auto}
+      #__startup_error__ h2{font-family:system-ui,sans-serif;font-size:18px;margin:0 0 6px;color:#ef4444}
+      #__startup_error__ .se-sub{font-family:system-ui,sans-serif;font-size:12px;opacity:.7;margin-bottom:14px}
+      #__startup_error__ pre{white-space:pre-wrap;word-break:break-word;background:#111;border:1px solid #222;border-radius:8px;padding:12px;font-size:12px;width:100%;max-width:900px;margin:0 0 10px}
+      #__startup_error__ .se-actions{display:flex;gap:8px;margin-top:6px;font-family:system-ui,sans-serif;flex-wrap:wrap}
+      #__startup_error__ button{background:#10b981;color:#000;border:0;border-radius:6px;padding:8px 14px;font-weight:600;cursor:pointer;font-size:13px}
+      #__startup_error__ button.secondary{background:#1f2937;color:#fff}
+      #__integration_checks__{font-family:system-ui,sans-serif;background:#0d0d0d;border:1px solid #222;border-radius:8px;padding:12px;width:100%;max-width:900px;margin:10px 0 0;font-size:12px;color:#ddd}
+      #__integration_checks__ .ic-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid #1a1a1a}
+      #__integration_checks__ .ic-row:last-child{border-bottom:0}
+      #__integration_checks__ .ic-name{font-weight:600}
+      #__integration_checks__ .ic-status{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;padding:2px 8px;border-radius:99px}
+      #__integration_checks__ .ic-pass{background:#064e3b;color:#6ee7b7}
+      #__integration_checks__ .ic-fail{background:#450a0a;color:#fca5a5}
+      #__integration_checks__ .ic-pending{background:#1f2937;color:#9ca3af}
+      #__integration_checks__ .ic-err{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#fca5a5;font-size:11px;white-space:pre-wrap;margin:4px 0 0;opacity:.85}
+      @keyframes ss-spin{to{transform:rotate(360deg)}}
+    </style>
+    <div id="root"></div>
+    <div id="__startup_shell__" role="status" aria-live="polite">
+      <div class="ss-spin"></div>
+      <div class="ss-title">Loading M'mora…</div>
+      <div class="ss-sub" id="__startup_shell_sub__">Preparing your universe</div>
+    </div>
+    <div id="__startup_error__" role="alert" aria-live="assertive">
+      <h2>Startup failed</h2>
+      <div class="se-sub">A required script or asset failed to load. Details below — share these with support if it persists.</div>
+      <div class="se-sub" id="__startup_error_ver__">APP_VERSION: unknown</div>
+      <pre id="__startup_error_log__">Collecting diagnostics…</pre>
+      <div class="se-actions">
+        <button id="__startup_retry__">Hard refresh</button>
+        <button class="secondary" id="__startup_run_checks__">Run integration checks</button>
+        <button class="secondary" id="__startup_copy__">Copy diagnostics</button>
+        <button class="secondary" id="__startup_copy_json__">Copy JSON</button>
+        <button class="secondary" id="__startup_download_json__">Download JSON</button>
+        <button class="secondary" id="__startup_share__">Copy share link</button>
+        <button class="secondary" id="__startup_view_last__" style="display:none">View last run</button>
+      </div>
+      <div id="__integration_checks__" style="display:none"></div>
+    </div>
+    <script>
+      (function () {
+        var BOOT_TIMEOUT_MS = 30000;
+        var LATE_MOUNT_POLL_MS = 15000;
+        var AUTO_RETRY_KEY = '__mmora_boot_retry__';
+        var failures = [];
+        var earlyLogs = [];
+        var booted = false;
+        var autoRetried = false;
+        try { autoRetried = sessionStorage.getItem(AUTO_RETRY_KEY) === '1'; } catch (_) {}
+
+        // ── Capture early console.error / console.warn ─────────────────────
+        ['error', 'warn'].forEach(function (level) {
+          var orig = console[level];
+          console[level] = function () {
+            try {
+              var args = Array.prototype.slice.call(arguments).map(function (a) {
+                if (a instanceof Error) return (a.stack || a.message);
+                if (typeof a === 'object') { try { return JSON.stringify(a); } catch (_) { return String(a); } }
+                return String(a);
+              });
+              if (earlyLogs.length < 200) {
+                earlyLogs.push({ level: level, t: Date.now(), msg: args.join(' ') });
+              }
+            } catch (_) {}
+            return orig.apply(console, arguments);
+          };
+        });
+
+        function appVersion() {
+          // Set by src/main.tsx as soon as module evaluates.
+          return (window.__APP_VERSION__ || 'unknown');
+        }
+
+        function isChunkFailure() {
+          for (var i = 0; i < failures.length; i++) {
+            var f = failures[i];
+            var m = (f.message || '') + ' ' + (f.url || '');
+            if (
+              f.type === 'asset' && (f.url || '').indexOf('.js') !== -1 ||
+              /Importing a module script failed/i.test(m) ||
+              /Failed to fetch dynamically imported module/i.test(m) ||
+              /ChunkLoadError/i.test(m)
+            ) return true;
+          }
+          return false;
+        }
+
+        function attemptAutoRetry(reason) {
+          if (autoRetried || booted) return false;
+          try { sessionStorage.setItem(AUTO_RETRY_KEY, '1'); } catch (_) {}
+          autoRetried = true;
+          try {
+            if ('caches' in window) caches.keys().then(function (k) { k.forEach(function (n) { caches.delete(n); }); });
+            if ('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations().then(function (rs) { rs.forEach(function (r) { r.unregister(); }); });
+          } catch (_) {}
+          var sub = document.getElementById('__startup_shell_sub__');
+          if (sub) sub.textContent = 'Recovering — retrying once…';
+          setTimeout(function () {
+            try {
+              var u = new URL(location.href);
+              u.searchParams.set('boot_retry', String(Date.now()));
+              location.replace(u.toString());
+            } catch (_) { location.reload(); }
+          }, 250);
+          return true;
+        }
+
+        window.__MMORA_BOOT__ = {
+          markBooted: function () {
+            booted = true;
+            try { sessionStorage.removeItem(AUTO_RETRY_KEY); } catch (_) {}
+            var s = document.getElementById('__startup_shell__');
+            if (s) { s.style.opacity = '0'; setTimeout(function(){ s && s.parentNode && s.parentNode.removeChild(s); }, 260); }
+          },
+          updateStatus: function (msg) {
+            var el = document.getElementById('__startup_shell_sub__');
+            if (el && msg) el.textContent = msg;
+          },
+          recordFailure: function (entry) { failures.push(entry); maybeShowError(); },
+          getFailures: function () { return failures.slice(); },
+          getEarlyLogs: function () { return earlyLogs.slice(); }
+        };
+
+        function detectBrowser(ua) {
+          ua = ua || '';
+          var b = { name: 'Unknown', version: '' };
+          var m;
+          if ((m = ua.match(/Edg\/([\d.]+)/))) { b.name = 'Edge'; b.version = m[1]; }
+          else if ((m = ua.match(/OPR\/([\d.]+)/))) { b.name = 'Opera'; b.version = m[1]; }
+          else if ((m = ua.match(/Firefox\/([\d.]+)/))) { b.name = 'Firefox'; b.version = m[1]; }
+          else if ((m = ua.match(/Chrome\/([\d.]+)/))) { b.name = 'Chrome'; b.version = m[1]; }
+          else if ((m = ua.match(/Version\/([\d.]+).*Safari/))) { b.name = 'Safari'; b.version = m[1]; }
+          else if ((m = ua.match(/Safari\/([\d.]+)/))) { b.name = 'Safari'; b.version = m[1]; }
+          return b;
+        }
+        function detectOS(ua) {
+          ua = ua || '';
+          var m;
+          if ((m = ua.match(/Windows NT ([\d.]+)/))) return { name: 'Windows', version: m[1] };
+          if ((m = ua.match(/Mac OS X ([\d_\.]+)/))) return { name: 'macOS', version: m[1].replace(/_/g, '.') };
+          if ((m = ua.match(/Android ([\d.]+)/))) return { name: 'Android', version: m[1] };
+          if ((m = ua.match(/(?:iPhone|iPad|iPod).*OS ([\d_]+)/))) return { name: 'iOS', version: m[1].replace(/_/g, '.') };
+          if (/Linux/.test(ua)) return { name: 'Linux', version: '' };
+          return { name: 'Unknown', version: '' };
+        }
+        function getBuildHash() {
+          try {
+            var v = appVersion() || '';
+            var m = v.match(/[-_.](\w{7,40})$/);
+            if (m) return m[1];
+            // Fallback: parse main bundle script src for hash
+            var scripts = document.querySelectorAll('script[src]');
+            for (var i = 0; i < scripts.length; i++) {
+              var src = scripts[i].getAttribute('src') || '';
+              var hm = src.match(/[-.]([a-f0-9]{8,})\.js/i);
+              if (hm) return hm[1];
+            }
+          } catch (_) {}
+          return null;
+        }
+        function getEnvironmentMeta() {
+          var ua = navigator.userAgent || '';
+          var env = window.__MMORA_ENV__ || {};
+          var browser = detectBrowser(ua);
+          var os = detectOS(ua);
+          var conn = (navigator.connection || navigator.mozConnection || navigator.webkitConnection || null);
+          var meta = {
+            app_version: appVersion(),
+            build_hash: getBuildHash(),
+            mode: (location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? 'development' : 'production',
+            host: location.hostname,
+            origin: location.origin,
+            url: location.href,
+            pathname: location.pathname,
+            referrer: document.referrer || null,
+            user_agent: ua,
+            browser: browser,
+            os: os,
+            platform: navigator.platform,
+            vendor: navigator.vendor || '',
+            language: navigator.language,
+            languages: (navigator.languages || []).slice(0, 5),
+            timezone: (function () { try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch (_) { return null; } })(),
+            timezone_offset_min: new Date().getTimezoneOffset(),
+            screen: { w: screen.width, h: screen.height, avail_w: screen.availWidth, avail_h: screen.availHeight, color_depth: screen.colorDepth },
+            viewport: { w: window.innerWidth, h: window.innerHeight, dpr: window.devicePixelRatio || 1 },
+            hardware: {
+              cpu_cores: navigator.hardwareConcurrency || null,
+              device_memory_gb: navigator.deviceMemory || null,
+              touch_points: navigator.maxTouchPoints || 0
+            },
+            network: conn ? {
+              effective_type: conn.effectiveType || null,
+              downlink_mbps: conn.downlink || null,
+              rtt_ms: conn.rtt || null,
+              save_data: !!conn.saveData
+            } : null,
+            online: !!navigator.onLine,
+            cookies_enabled: !!navigator.cookieEnabled,
+            supabase: {
+              url: env.VITE_SUPABASE_URL || null,
+              project_id: env.VITE_SUPABASE_PROJECT_ID || null,
+              has_anon_key: !!env.VITE_SUPABASE_PUBLISHABLE_KEY,
+              auth_endpoint: env.VITE_SUPABASE_URL ? (env.VITE_SUPABASE_URL + '/auth/v1') : null,
+              rest_endpoint: env.VITE_SUPABASE_URL ? (env.VITE_SUPABASE_URL + '/rest/v1') : null,
+              functions_endpoint: env.VITE_SUPABASE_URL ? (env.VITE_SUPABASE_URL + '/functions/v1') : null
+            }
+          };
+          return meta;
+        }
+        function buildPayload() {
+          var meta = getEnvironmentMeta();
+          return {
+            app_version: meta.app_version,
+            build_hash: meta.build_hash,
+            url: meta.url,
+            referrer: meta.referrer,
+            user_agent: meta.user_agent,
+            platform: meta.platform,
+            language: meta.language,
+            viewport: meta.viewport,
+            time: new Date().toISOString(),
+            booted: booted,
+            auto_retried: autoRetried,
+            environment: meta,
+            failures: failures,
+            early_logs: earlyLogs,
+            integration_checks: (window.__MMORA_BOOT__ && window.__MMORA_BOOT__._integrationResults) || []
+          };
+        }
+
+        function diagText() {
+          var p = buildPayload();
+          var lines = [
+            'APP_VERSION: ' + p.app_version,
+            'URL: ' + p.url,
+            'UA:  ' + p.user_agent,
+            'Time: ' + p.time,
+            'Booted: ' + p.booted + '   AutoRetried: ' + p.auto_retried,
+            'Viewport: ' + p.viewport.w + 'x' + p.viewport.h + ' @' + p.viewport.dpr + 'x',
+            '',
+            '── Failures (' + failures.length + ') ──'
+          ];
+          failures.forEach(function (f, i) {
+            lines.push('[' + (i+1) + '] ' + (f.type || '?') + (f.url ? '  ' + f.url : ''));
+            if (f.message) lines.push('    msg:    ' + f.message);
+            if (f.filename) lines.push('    file:   ' + f.filename + ':' + (f.lineno||'?') + ':' + (f.colno||'?'));
+            if (f.stack) lines.push('    stack:\n' + f.stack.split('\n').map(function (l) { return '      ' + l; }).join('\n'));
+          });
+          if (earlyLogs.length) {
+            lines.push('', '── Early console (' + earlyLogs.length + ') ──');
+            earlyLogs.slice(-50).forEach(function (l) {
+              lines.push('[' + l.level + '] ' + l.msg);
+            });
+          }
+          var ic = (window.__MMORA_BOOT__ && window.__MMORA_BOOT__._integrationResults) || [];
+          if (ic.length) {
+            lines.push('', '── Integration checks (' + ic.length + ') ──');
+            ic.forEach(function (r) {
+              lines.push('[' + (r.status || '?').toUpperCase() + '] ' + r.name + (r.detail ? '  ' + r.detail : ''));
+              if (r.error) lines.push('    err: ' + String(r.error).split('\n').slice(0, 4).join(' | '));
+            });
+          }
+          return lines.join('\n');
+        }
+
+        function shareUrl() {
+          try {
+            var json = JSON.stringify((window.__MMORA_BOOT__ && window.__MMORA_BOOT__.getRedactedPayload) ? window.__MMORA_BOOT__.getRedactedPayload() : buildPayload());
+            // base64 (utf-8 safe)
+            var b64 = btoa(unescape(encodeURIComponent(json)));
+            var u = new URL(location.origin + location.pathname);
+            u.searchParams.set('mmora_diag', b64.slice(0, 6000)); // cap URL length
+            return u.toString();
+          } catch (_) { return location.href; }
+        }
+
+        function maybeShowError() {
+          // Try one silent retry first if we look like a chunk/asset failure.
+          if (!autoRetried && !booted && isChunkFailure()) {
+            if (attemptAutoRetry('chunk')) return;
+          }
+          renderError();
+        }
+
+        function renderError() {
+          var box = document.getElementById('__startup_error__');
+          var pre = document.getElementById('__startup_error_log__');
+          if (!box || !pre) return;
+          pre.textContent = diagText();
+          box.style.display = 'flex';
+          var shell = document.getElementById('__startup_shell__');
+          if (shell) shell.style.display = 'none';
+          var ver = document.getElementById('__startup_error_ver__');
+          if (ver) ver.textContent = 'APP_VERSION: ' + appVersion() + (autoRetried ? '  •  retried once' : '');
+        }
+
+        // Capture asset/script load errors + full error event details
+        window.addEventListener('error', function (ev) {
+          var t = ev.target;
+          if (t && t !== window && (t.tagName === 'SCRIPT' || t.tagName === 'LINK' || t.tagName === 'IMG')) {
+            failures.push({ type: 'asset', url: t.src || t.href, message: t.tagName + ' failed to load' });
+            if (t.tagName === 'SCRIPT') maybeShowError();
+          } else if (ev.message) {
+            failures.push({
+              type: 'error',
+              url: ev.filename,
+              filename: ev.filename,
+              lineno: ev.lineno, colno: ev.colno,
+              message: ev.message,
+              stack: (ev.error && ev.error.stack) || null
+            });
+          }
+        }, true);
+
+        window.addEventListener('unhandledrejection', function (ev) {
+          var r = ev.reason;
+          failures.push({
+            type: 'promise',
+            message: (r && (r.message || String(r))) || 'unknown',
+            stack: (r && r.stack) || null
+          });
+        });
+
+        // If React never mounts within timeout, retry once then show error.
+        // Also keep polling after error UI shows — if React mounts late (Safari/slow CPU),
+        // silently dismiss the error UI instead of trapping the user.
+        setTimeout(function () {
+          if (booted) return;
+          var root = document.getElementById('root');
+          var hasContent = root && (root.childElementCount > 0 || (root.textContent || '').trim().length > 0);
+          if (hasContent) { window.__MMORA_BOOT__.markBooted(); return; }
+          failures.push({ type: 'timeout', message: 'App did not mount within ' + BOOT_TIMEOUT_MS + 'ms' });
+          if (!autoRetried && attemptAutoRetry('timeout')) return;
+          renderError();
+          // Late-mount rescue: poll for up to LATE_MOUNT_POLL_MS more; if React renders, hide error.
+          var lateStart = Date.now();
+          var lateIv = setInterval(function () {
+            if (booted) { clearInterval(lateIv); return; }
+            var r = document.getElementById('root');
+            var has = r && (r.childElementCount > 0 || (r.textContent || '').trim().length > 0);
+            if (has) {
+              clearInterval(lateIv);
+              var box = document.getElementById('__startup_error__');
+              if (box) box.style.display = 'none';
+              window.__MMORA_BOOT__.markBooted();
+            } else if (Date.now() - lateStart > LATE_MOUNT_POLL_MS) {
+              clearInterval(lateIv);
+            }
+          }, 500);
+        }, BOOT_TIMEOUT_MS);
+
+        // ── Integration health checks ──────────────────────────────────────
+        // Pulls VITE_SUPABASE_* from the meta tag injected at build time, OR
+        // falls back to window globals exposed by main.tsx. Each check is
+        // sandboxed: failures are reported as fail rows, never thrown.
+        function getEnv(key) {
+          try {
+            // Vite replaces import.meta.env at build; not accessible from inline script.
+            // We read from window.__MMORA_ENV__ which main.tsx populates.
+            var env = window.__MMORA_ENV__ || {};
+            return env[key] || '';
+          } catch (_) { return ''; }
+        }
+
+        // Per-check timeout helper. Each check has its own timeoutMs (5–10s)
+        // so a single stalled integration cannot freeze the whole panel.
+        function withTimeout(promise, ms, label) {
+          return new Promise(function (resolve, reject) {
+            var done = false;
+            var timer = setTimeout(function () {
+              if (done) return;
+              done = true;
+              reject(new Error('Timed out after ' + ms + 'ms (' + (label || 'check') + ')'));
+            }, ms);
+            Promise.resolve(promise).then(function (v) {
+              if (done) return; done = true; clearTimeout(timer); resolve(v);
+            }, function (e) {
+              if (done) return; done = true; clearTimeout(timer); reject(e);
+            });
+          });
+        }
+
+        // Helper: locate stored Supabase auth session (sb-<ref>-auth-token in localStorage).
+        function getStoredAuthSession() {
+          try {
+            for (var i = 0; i < localStorage.length; i++) {
+              var k = localStorage.key(i);
+              if (k && k.indexOf('sb-') === 0 && k.indexOf('-auth-token') !== -1) {
+                var raw = localStorage.getItem(k);
+                if (!raw) continue;
+                var parsed = JSON.parse(raw);
+                if (parsed && parsed.access_token) return parsed;
+              }
+            }
+          } catch (_) {}
+          return null;
+        }
+
+        var INTEGRATION_CHECKS = [
+          {
+            name: 'Network / DNS',
+            timeoutMs: 6000,
+            run: function () {
+              return fetch('https://www.cloudflare.com/cdn-cgi/trace', { cache: 'no-store' })
+                .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+                .then(function () { return { ok: true, detail: 'reachable' }; });
+            }
+          },
+          {
+            name: 'Supabase Auth (REST /settings)',
+            timeoutMs: 7000,
+            run: function () {
+              var url = getEnv('VITE_SUPABASE_URL');
+              var key = getEnv('VITE_SUPABASE_PUBLISHABLE_KEY');
+              if (!url || !key) throw new Error('Supabase env not exposed yet (boot too early)');
+              return fetch(url + '/auth/v1/settings', { headers: { apikey: key }, cache: 'no-store' })
+                .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+                .then(function (j) { return { ok: true, detail: 'external_email_enabled=' + !!j.external }; });
+            }
+          },
+          {
+            name: 'Supabase Database (REST root)',
+            timeoutMs: 7000,
+            run: function () {
+              var url = getEnv('VITE_SUPABASE_URL');
+              var key = getEnv('VITE_SUPABASE_PUBLISHABLE_KEY');
+              if (!url || !key) throw new Error('Supabase env not exposed');
+              return fetch(url + '/rest/v1/', { headers: { apikey: key }, cache: 'no-store' })
+                .then(function (r) { if (!(r.status === 200 || r.status === 404)) throw new Error('HTTP ' + r.status); return { ok: true, detail: 'reachable (' + r.status + ')' }; });
+            }
+          },
+          {
+            name: 'Edge Function: zoe-health-check',
+            timeoutMs: 8000,
+            run: function () {
+              var url = getEnv('VITE_SUPABASE_URL');
+              var key = getEnv('VITE_SUPABASE_PUBLISHABLE_KEY');
+              if (!url || !key) throw new Error('Supabase env not exposed');
+              return fetch(url + '/functions/v1/zoe-health-check', { headers: { apikey: key, Authorization: 'Bearer ' + key }, cache: 'no-store' })
+                .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json().catch(function(){ return {}; }); })
+                .then(function (j) { return { ok: true, detail: j && j.status ? j.status : 'ok' }; });
+            }
+          },
+          {
+            name: 'Storage (public bucket list)',
+            timeoutMs: 7000,
+            run: function () {
+              var url = getEnv('VITE_SUPABASE_URL');
+              var key = getEnv('VITE_SUPABASE_PUBLISHABLE_KEY');
+              if (!url || !key) throw new Error('Supabase env not exposed');
+              return fetch(url + '/storage/v1/bucket', { headers: { apikey: key, Authorization: 'Bearer ' + key }, cache: 'no-store' })
+                .then(function (r) { if (!(r.status === 200 || r.status === 401 || r.status === 403)) throw new Error('HTTP ' + r.status); return { ok: true, detail: 'reachable (' + r.status + ')' }; });
+            }
+          },
+          {
+            name: 'localStorage (analytics + auth cache)',
+            timeoutMs: 5000,
+            run: function () {
+              var k = '__mmora_health_' + Date.now();
+              localStorage.setItem(k, '1'); var v = localStorage.getItem(k); localStorage.removeItem(k);
+              if (v !== '1') throw new Error('write/read mismatch');
+              return Promise.resolve({ ok: true, detail: 'rw ok' });
+            }
+          },
+          {
+            name: 'Service Worker registration',
+            timeoutMs: 5000,
+            run: function () {
+              if (!('serviceWorker' in navigator)) return Promise.resolve({ ok: true, detail: 'unsupported (skipped)' });
+              return navigator.serviceWorker.getRegistrations()
+                .then(function (rs) { return { ok: true, detail: rs.length + ' registration(s)' }; });
+            }
+          },
+          {
+            name: 'Static asset (manifest.json)',
+            timeoutMs: 6000,
+            run: function () {
+              return fetch('/manifest.json', { cache: 'no-store' })
+                .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return { ok: true, detail: 'served' }; });
+            }
+          },
+          {
+            name: 'Lovable AI Gateway (reachability)',
+            timeoutMs: 8000,
+            run: function () {
+              return fetch('https://ai.gateway.lovable.dev/v1/models', { method: 'GET', cache: 'no-store' })
+                .then(function (r) { if (!(r.status === 200 || r.status === 401 || r.status === 403)) throw new Error('HTTP ' + r.status); return { ok: true, detail: 'reachable (' + r.status + ')' }; });
+            }
+          },
+          {
+            name: 'Auth: current session (getUser)',
+            timeoutMs: 7000,
+            run: function () {
+              var url = getEnv('VITE_SUPABASE_URL');
+              var key = getEnv('VITE_SUPABASE_PUBLISHABLE_KEY');
+              if (!url || !key) throw new Error('Supabase env not exposed');
+              var sess = getStoredAuthSession();
+              if (!sess || !sess.access_token) {
+                return Promise.resolve({ ok: true, detail: 'no session (anonymous) — skipped' });
+              }
+              return fetch(url + '/auth/v1/user', {
+                headers: { apikey: key, Authorization: 'Bearer ' + sess.access_token },
+                cache: 'no-store'
+              }).then(function (r) {
+                if (r.status === 401) throw new Error('Token rejected (401) — session likely expired');
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.json();
+              }).then(function (u) {
+                return { ok: true, detail: 'user ' + (u && u.id ? u.id.slice(0, 8) + '…' : 'unknown') };
+              });
+            }
+          },
+          {
+            name: 'Auth: token refresh (refresh_token grant)',
+            timeoutMs: 9000,
+            run: function () {
+              var url = getEnv('VITE_SUPABASE_URL');
+              var key = getEnv('VITE_SUPABASE_PUBLISHABLE_KEY');
+              if (!url || !key) throw new Error('Supabase env not exposed');
+              var sess = getStoredAuthSession();
+              if (!sess || !sess.refresh_token) {
+                return Promise.resolve({ ok: true, detail: 'no refresh_token — skipped' });
+              }
+              return fetch(url + '/auth/v1/token?grant_type=refresh_token', {
+                method: 'POST',
+                headers: { apikey: key, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ refresh_token: sess.refresh_token }),
+                cache: 'no-store'
+              }).then(function (r) {
+                if (r.status === 400 || r.status === 401) throw new Error('Refresh rejected (' + r.status + ') — refresh_token invalid/expired');
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.json();
+              }).then(function (j) {
+                if (!j || !j.access_token) throw new Error('No access_token in refresh response');
+                return { ok: true, detail: 'refreshed; expires_in=' + (j.expires_in || '?') + 's' };
+              });
+            }
+          },
+          {
+            name: 'Auth: sign-out endpoint reachability',
+            timeoutMs: 6000,
+            run: function () {
+              // Probe with HEAD-style POST without a token. We expect 401 (endpoint
+              // alive, just unauthenticated) or 204 (no-op). Do NOT use the user's
+              // real token here — that would log them out from the diagnostics panel.
+              var url = getEnv('VITE_SUPABASE_URL');
+              var key = getEnv('VITE_SUPABASE_PUBLISHABLE_KEY');
+              if (!url || !key) throw new Error('Supabase env not exposed');
+              return fetch(url + '/auth/v1/logout', {
+                method: 'POST',
+                headers: { apikey: key },
+                cache: 'no-store'
+              }).then(function (r) {
+                if (r.status === 204 || r.status === 401 || r.status === 403) {
+                  return { ok: true, detail: 'reachable (' + r.status + ')' };
+                }
+                throw new Error('HTTP ' + r.status);
+              });
+            }
+          }
+        ];
+
+        function rowHtml(name, status, detail, errStack) {
+          var cls = status === 'pass' ? 'ic-pass' : status === 'fail' ? 'ic-fail' : 'ic-pending';
+          var label = status === 'pass' ? 'PASS' : status === 'fail' ? 'FAIL' : '…';
+          var html = '<div class="ic-row"><div><div class="ic-name">' + name + '</div>';
+          if (detail) html += '<div style="opacity:.7;font-size:11px">' + detail + '</div>';
+          if (errStack) html += '<pre class="ic-err">' + (errStack + '').replace(/[<>&]/g, function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;'}[c];}) + '</pre>';
+          html += '</div><span class="ic-status ' + cls + '">' + label + '</span></div>';
+          return html;
+        }
+
+        var LAST_RUN_KEY = '__mmora_diag_last__';
+        var CONCURRENCY = 3;
+        var RETRY_ON_TIMEOUT = 1;
+
+        function runOne(c) {
+          var started = Date.now();
+          var timeoutMs = c.timeoutMs || 8000;
+          var attempts = 0;
+          function attempt() {
+            attempts++;
+            var p;
+            try { p = withTimeout(Promise.resolve(c.run()), timeoutMs, c.name); }
+            catch (err) { p = Promise.reject(err); }
+            return p.then(function (res) {
+              return { status: 'pass', detail: (res && res.detail ? res.detail : '') + '  ·  ' + (Date.now() - started) + 'ms' + (attempts > 1 ? ' (retry ' + (attempts-1) + ')' : ''), error: null, attempts: attempts };
+            }).catch(function (err) {
+              var msg = (err && err.message) || String(err);
+              var isTimeout = /Timed out/i.test(msg);
+              if (isTimeout && attempts <= RETRY_ON_TIMEOUT) {
+                return attempt();
+              }
+              return {
+                status: 'fail',
+                detail: (Date.now() - started) + 'ms (timeout=' + timeoutMs + 'ms, attempts=' + attempts + ')',
+                error: (err && (err.stack || err.message)) || String(err),
+                attempts: attempts
+              };
+            });
+          }
+          return attempt();
+        }
+
+        function runWithConcurrency(items, limit, worker, onProgress) {
+          var idx = 0; var active = 0; var done = 0;
+          var results = new Array(items.length);
+          return new Promise(function (resolve) {
+            function next() {
+              if (done === items.length) return resolve(results);
+              while (active < limit && idx < items.length) {
+                (function (i) {
+                  active++;
+                  worker(items[i], i).then(function (r) {
+                    results[i] = r; active--; done++;
+                    if (onProgress) onProgress(i, r);
+                    next();
+                  });
+                })(idx++);
+              }
+            }
+            next();
+          });
+        }
+
+        var lastIntegrationResults = [];
+
+        function runIntegrationChecks() {
+          var state = INTEGRATION_CHECKS.map(function (c) { return { name: c.name, status: 'pending', detail: '', error: null }; });
+          renderChecks(state);
+          return runWithConcurrency(INTEGRATION_CHECKS, CONCURRENCY, function (c, i) {
+            return runOne(c).then(function (r) {
+              state[i].status = r.status;
+              state[i].detail = r.detail;
+              state[i].error = r.error;
+              renderChecks(state);
+              return r;
+            });
+          }).then(function () {
+            lastIntegrationResults = state.slice();
+            try { window.__MMORA_BOOT__._integrationResults = lastIntegrationResults; } catch (_) {}
+            try {
+              var snapshot = { saved_at: new Date().toISOString(), payload: redactPayload(buildPayload()) };
+              localStorage.setItem(LAST_RUN_KEY, JSON.stringify(snapshot));
+              var btn = document.getElementById('__startup_view_last__');
+              if (btn) btn.style.display = '';
+            } catch (_) {}
+            return state;
+          });
+        }
+        window.__MMORA_BOOT__.runIntegrationChecks = runIntegrationChecks;
+
+        // ── Redaction of sensitive fields for safe sharing ──
+        function redactString(s) {
+          if (typeof s !== 'string' || !s) return s;
+          // emails
+          s = s.replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, '[EMAIL]');
+          // JWT-like tokens
+          s = s.replace(/eyJ[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+/g, '[JWT]');
+          // bearer tokens
+          s = s.replace(/(Bearer\s+)[A-Za-z0-9._\-]+/gi, '$1[TOKEN]');
+          // sb-*-auth-token cookie/key payloads
+          s = s.replace(/("?access_token"?\s*[:=]\s*")[^"]+(")/gi, '$1[TOKEN]$2');
+          s = s.replace(/("?refresh_token"?\s*[:=]\s*")[^"]+(")/gi, '$1[TOKEN]$2');
+          // UUIDs (likely user IDs)
+          s = s.replace(/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi, '[UUID]');
+          return s;
+        }
+        function redactPayload(obj) {
+          try {
+            var json = JSON.stringify(obj);
+            return JSON.parse(redactString(json));
+          } catch (_) { return obj; }
+        }
+        window.__MMORA_BOOT__.getRedactedPayload = function () { return redactPayload(buildPayload()); };
+
+        function downloadJson(filename, data) {
+          try {
+            var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url; a.download = filename;
+            document.body.appendChild(a); a.click();
+            document.body.removeChild(a);
+            setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
+          } catch (_) {}
+        }
+
+        // Show "View last run" if a saved snapshot exists
+        try {
+          if (localStorage.getItem(LAST_RUN_KEY)) {
+            var vlb = document.getElementById('__startup_view_last__');
+            if (vlb) vlb.style.display = '';
+          }
+        } catch (_) {}
+
+        // ── Auto-run integration checks on startup (throttled) ──
+        // Throttle: skip if a saved run is younger than AUTO_RUN_THROTTLE_MS.
+        // Opt-out via ?auto_diag=0; force via ?auto_diag=1.
+        var AUTO_RUN_THROTTLE_MS = 5 * 60 * 1000; // 5 min
+        function shouldAutoRun() {
+          try {
+            var qs = new URLSearchParams(location.search);
+            var flag = qs.get('auto_diag');
+            if (flag === '0') return false;
+            if (flag === '1') return true;
+            var raw = localStorage.getItem(LAST_RUN_KEY);
+            if (!raw) return true;
+            var snap = JSON.parse(raw);
+            var age = Date.now() - new Date(snap.saved_at).getTime();
+            return !(age >= 0 && age < AUTO_RUN_THROTTLE_MS);
+          } catch (_) { return true; }
+        }
+        var autoRanOnce = false;
+        function maybeAutoRun(reason) {
+          if (autoRanOnce) return;
+          if (!shouldAutoRun()) return;
+          autoRanOnce = true;
+          try { runIntegrationChecks().catch(function(){}); } catch (_) {}
+        }
+        // 1) If startup error UI appears, run immediately
+        var errEl = document.getElementById('__startup_error__');
+        if (errEl) {
+          var mo = new MutationObserver(function () {
+            if (errEl.style.display && errEl.style.display !== 'none') maybeAutoRun('error');
+          });
+          try { mo.observe(errEl, { attributes: true, attributeFilter: ['style'] }); } catch (_) {}
+        }
+        // 2) After successful boot, run quietly during idle time
+        window.addEventListener('load', function () {
+          var fire = function () { maybeAutoRun('idle'); };
+          if ('requestIdleCallback' in window) {
+            window.requestIdleCallback(fire, { timeout: 8000 });
+          } else {
+            setTimeout(fire, 4000);
+          }
+        });
+
+
+        document.addEventListener('click', function (e) {
+          var t = e.target;
+          if (!t) return;
+          if (t.id === '__startup_retry__') {
+            try {
+              if ('caches' in window) caches.keys().then(function (k) { k.forEach(function (n) { caches.delete(n); }); });
+              if ('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations().then(function (rs) { rs.forEach(function (r) { r.unregister(); }); });
+            } catch (_) {}
+            try { sessionStorage.removeItem(AUTO_RETRY_KEY); } catch (_) {}
+            var u = new URL(location.href); u.searchParams.set('hard_refresh', String(Date.now())); location.replace(u.toString());
+          } else if (t.id === '__startup_copy__') {
+            try { navigator.clipboard.writeText(diagText()); t.textContent = 'Copied!'; setTimeout(function(){ t.textContent = 'Copy diagnostics'; }, 1500); } catch (_) {}
+          } else if (t.id === '__startup_copy_json__') {
+            try { navigator.clipboard.writeText(JSON.stringify(redactPayload(buildPayload()), null, 2)); t.textContent = 'JSON copied (redacted)!'; setTimeout(function(){ t.textContent = 'Copy JSON'; }, 1800); } catch (_) {}
+          } else if (t.id === '__startup_download_json__') {
+            var ts = new Date().toISOString().replace(/[:.]/g, '-');
+            downloadJson('mmora-diagnostics-' + ts + '.json', redactPayload(buildPayload()));
+            t.textContent = 'Downloaded!'; setTimeout(function(){ t.textContent = 'Download JSON'; }, 1500);
+          } else if (t.id === '__startup_share__') {
+            var url = shareUrl();
+            try { navigator.clipboard.writeText(url); t.textContent = 'Share link copied!'; setTimeout(function(){ t.textContent = 'Copy share link'; }, 1800); } catch (_) {
+              prompt('Share link:', url);
+            }
+          } else if (t.id === '__startup_view_last__') {
+            try {
+              var raw = localStorage.getItem(LAST_RUN_KEY);
+              if (!raw) { t.textContent = 'No saved run'; return; }
+              var snap = JSON.parse(raw);
+              var checks = (snap.payload && snap.payload.integration_checks) || [];
+              var box = document.getElementById('__integration_checks__');
+              if (box) {
+                box.style.display = 'block';
+                var html = '<div style="font-weight:600;margin-bottom:8px">Last run · ' + snap.saved_at + ' <span style="opacity:.6;font-weight:400">(redacted)</span></div>';
+                checks.forEach(function (s) { html += rowHtml(s.name, s.status, s.detail, s.error); });
+                box.innerHTML = html;
+              }
+            } catch (_) {}
+          } else if (t.id === '__startup_run_checks__') {
+            t.disabled = true; var orig = t.textContent; t.textContent = 'Running…';
+            runIntegrationChecks().then(function () {
+              t.disabled = false; t.textContent = 'Re-run integration checks';
+            }).catch(function () { t.disabled = false; t.textContent = orig; });
+          }
+        });
+      })();
+    </script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

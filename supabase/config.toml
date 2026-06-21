@@ -1,0 +1,332 @@
+project_id = "qwufiqkeoyvqasimcmbd"
+
+[functions.edge-tts]
+verify_jwt = false
+
+[functions.analyze-youtube]
+verify_jwt = true
+
+[functions.geo-stream-optimizer]
+verify_jwt = false
+
+[functions.zoe-genesis-cron-batch]
+verify_jwt = false
+
+[functions.zoe-security-validator]
+verify_jwt = true
+
+[functions.zoe-sentinel]
+verify_jwt = false
+
+[functions.zoe-identity-calibration]
+verify_jwt = true
+
+[functions.pce-agent-nightly]
+verify_jwt = true
+
+[functions.request-ai-audit]
+verify_jwt = true
+
+[functions.run-ai-audit-job]
+verify_jwt = true
+
+[functions.analyze-face-emotion]
+verify_jwt = true
+
+[functions.apply-ai-filter]
+verify_jwt = true
+
+[functions.moderate-content]
+verify_jwt = true
+
+[functions.score-post-relevance]
+verify_jwt = true
+
+[functions.generate-text]
+verify_jwt = true
+
+[functions.generate-image]
+verify_jwt = true
+
+[functions.ai-companion-chat]
+verify_jwt = true
+
+[functions.transcribe-audio]
+verify_jwt = true
+
+[functions.lovable-tts]
+verify_jwt = true
+
+[functions.assemblyai-tts]
+verify_jwt = true
+
+[functions.realtime-voice]
+verify_jwt = true
+
+[functions.zoe-chat]
+verify_jwt = true
+
+[functions.zoe-god-mode]
+verify_jwt = false
+
+[functions.track-activity]
+verify_jwt = true
+
+[functions.zoe-notification-analyzer]
+verify_jwt = true
+
+[functions.zoe-romantic-companion]
+verify_jwt = true
+
+[functions.zoe-universal-architect]
+verify_jwt = true
+
+[functions.zoe-agent]
+verify_jwt = true
+
+[functions.platform-diagnostics]
+verify_jwt = true
+
+[functions.security-operations]
+verify_jwt = true
+
+[functions.face-verification]
+verify_jwt = true
+
+[functions.zoe-multiagent]
+verify_jwt = true
+
+[functions.edit-image]
+verify_jwt = true
+
+[functions.zoe-service-ai]
+verify_jwt = false
+
+[functions.zoe-core-intelligence]
+verify_jwt = true
+
+[functions.zoe-core-executor]
+verify_jwt = true
+
+[functions.process-dhf-asset]
+verify_jwt = true
+
+[functions.veto-embedding-check]
+verify_jwt = true
+
+[functions.behavioral-event-stream]
+verify_jwt = false
+
+[functions.ecn-analysis-processor]
+verify_jwt = false
+
+[functions.admin-send-notice]
+verify_jwt = true
+
+[functions.check-reminders]
+verify_jwt = true
+
+[functions.execute-scheduled-macros]
+verify_jwt = true
+
+[functions.get-audit-report]
+verify_jwt = true
+
+[functions.get-job-status]
+verify_jwt = true
+
+[functions.ai-video-transform]
+verify_jwt = true
+
+[functions.zoe-perception]
+verify_jwt = true
+
+[functions.zoe-profile-analyzer]
+verify_jwt = true
+
+[functions.process-live-video]
+verify_jwt = true
+
+[functions.raa-code-debugger]
+verify_jwt = true
+
+[functions.dhf-visualization]
+verify_jwt = true
+
+[functions.raa-conversion-audit]
+verify_jwt = true
+
+[functions.zoe-self-awareness-core]
+verify_jwt = true
+
+[functions.zoe-external-sync]
+verify_jwt = true
+
+[functions.zoe-send-message]
+verify_jwt = true
+
+[functions.identify-song]
+verify_jwt = true
+
+[functions.quadrillion-audit]
+verify_jwt = false
+
+[functions.zoe-quantum-anka]
+verify_jwt = true
+
+[functions.zoe-pentarchy-core]
+verify_jwt = true
+
+[functions.process-zoe-thought]
+verify_jwt = true
+
+[functions.get-mapbox-token]
+verify_jwt = false
+
+[functions.zoe-chain-of-thought]
+verify_jwt = true
+
+[functions.quantum-asi-loop]
+verify_jwt = true
+
+[functions.zoe-sovereign-heartbeat]
+verify_jwt = false
+
+[functions.quantum-pentarchy-swarm]
+verify_jwt = true
+
+[functions.zoe-nexus-oversoul]
+verify_jwt = true
+
+[functions.zoe-matter-bridge]
+verify_jwt = true
+
+[functions.zoe-dreamer-agent]
+verify_jwt = false
+
+[functions.zoe-truth-scribe]
+verify_jwt = true
+
+[functions.zoe-genesis-cron]
+verify_jwt = false
+
+[functions.selfie-city-vision]
+verify_jwt = true
+
+[functions.selfie-city-post]
+verify_jwt = true
+
+[functions.selfie-city-on-route]
+verify_jwt = true
+
+[functions.selfie-city-brand-learning]
+verify_jwt = true
+
+[functions.selfie-city-premium-detect]
+verify_jwt = true
+
+[functions.selfie-city-search]
+verify_jwt = false
+
+[functions.get-user-location]
+verify_jwt = false
+
+[functions.selfie-value-calculator]
+verify_jwt = true
+
+[functions.divine-notification]
+verify_jwt = true
+
+[functions.phantom-router]
+verify_jwt = false
+
+[functions.genesis-launch-nudge]
+verify_jwt = false
+
+[functions.parent-zoe-executor]
+verify_jwt = false
+
+[functions.dream-foundry]
+verify_jwt = false
+
+[functions.storage-cleaner]
+verify_jwt = false
+
+[functions.zoe-walk-talk]
+verify_jwt = true
+
+[functions.zoe-realtime-voice]
+verify_jwt = false
+
+[functions.atlas-gatekeeper]
+verify_jwt = true
+
+[functions.zoe-infinity-chat]
+verify_jwt = false
+
+[functions.zoe-silent-scribe]
+verify_jwt = false
+
+[functions.zoe-infinity-brain]
+verify_jwt = false
+
+[functions.zoe-infinity-deep-research]
+verify_jwt = false
+
+[functions.zoe-artifact-generator]
+verify_jwt = false
+
+[functions.ironclad-relay]
+verify_jwt = false
+
+[functions.mail-sentinel]
+verify_jwt = false
+
+[functions.zoe-system2-cortex]
+verify_jwt = true
+
+[functions.zoe-document-xray]
+verify_jwt = false
+
+[functions.zoe-infinity-vision]
+verify_jwt = false
+
+[functions.zoe-voice]
+verify_jwt = false
+
+[functions.zoe-auto-mail-generator]
+verify_jwt = false
+
+[functions.evolution-sandbox]
+verify_jwt = false
+
+[functions.capture-baseline]
+verify_jwt = true
+
+[functions.verify-regression]
+verify_jwt = true
+
+[functions.visual-regression-check]
+verify_jwt = true
+
+[functions.lisa-assistant]
+verify_jwt = false
+
+[functions.zoe-omega-chat]
+verify_jwt = false
+
+[functions.zoe-omega-vision]
+verify_jwt = false
+
+[functions.generate-regional-avatar]
+verify_jwt = false
+
+[functions.pollinations-image]
+verify_jwt = false
+
+[functions.zoe-infinity-quota-monitor]
+verify_jwt = false
+
+[functions.zoe-infinity-quota-prune]
+verify_jwt = false
+

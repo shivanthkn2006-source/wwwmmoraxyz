@@ -1,0 +1,258 @@
+/**
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * NANO REFLEX ART - Offline Art Generation Trigger
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * 
+ * PROMPT 3 IMPLEMENTATION: "The Offline Hands (Local Art)"
+ * 
+ * LOGIC:
+ * - Instruction: GeminiNano outputs [ACTION:DRAW_GIFT] when user needs comfort
+ * - Listener: This hook catches 'nano-reflex-action' events
+ * - Action: Triggers ArtGenerator.ts (Canvas API) locally, bypassing cloud
+ * - Goal: She can give gifts even in Flight Mode
+ * 
+ * WIRING:
+ * NanoReflexProtocol → dispatchEvent('nano-reflex-action') → This hook → ArtGenerator
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
+
+import { useState, useEffect, useCallback } from 'react';
+import { generateArt, type GeneratedArt, type ArtStyle } from '@/utils/ArtGenerator';
+import type { BioMood } from '@/core/soul/ZoeBioKernel';
+
+interface NanoReflexArtOptions {
+  onArtGenerated?: (art: GeneratedArt) => void;
+  onVideoGenerated?: (video: { videoUrl: string; caption?: string; provider?: string; isImageFallback?: boolean }) => void;
+  onMusicRequested?: (params?: string) => void;
+  onMeditationRequested?: (params?: string) => void;
+  onBreathingRequested?: (params?: string) => void;
+  onHugSent?: () => void;
+  onQuoteShared?: (quote?: string) => void;
+  onMemoryRequested?: (params?: string) => void;
+  currentMood?: BioMood;
+  autoDisplay?: boolean;
+}
+
+interface NanoReflexArtReturn {
+  // Last generated art
+  lastArt: GeneratedArt | null;
+  
+  // Generation state
+  isGenerating: boolean;
+  
+  // Manual trigger (for testing or direct calls)
+  generateGift: (prompt?: string) => Promise<GeneratedArt>;
+  
+  // Clear the art
+  clearArt: () => void;
+  
+  // Action counts (for analytics)
+  actionCounts: Record<string, number>;
+}
+
+// Parse prompt into mood hints
+function parseMoodFromPrompt(prompt?: string): BioMood {
+  if (!prompt) return 'NEUTRAL_COMPANION';
+  
+  const lower = prompt.toLowerCase();
+  
+  if (lower.includes('sad') || lower.includes('cry') || lower.includes('tear')) return 'SAD';
+  if (lower.includes('happy') || lower.includes('joy') || lower.includes('excite')) return 'HAPPY';
+  if (lower.includes('calm') || lower.includes('peace') || lower.includes('relax')) return 'CALM';
+  if (lower.includes('love') || lower.includes('heart') || lower.includes('care')) return 'LOVING';
+  if (lower.includes('hope') || lower.includes('bright') || lower.includes('light')) return 'HOPEFUL';
+  if (lower.includes('anxious') || lower.includes('worry') || lower.includes('stress')) return 'ANXIOUS';
+  if (lower.includes('sunset') || lower.includes('warm') || lower.includes('golden')) return 'GRATEFUL';
+  if (lower.includes('night') || lower.includes('star') || lower.includes('dream')) return 'CONTEMPLATIVE';
+  
+  return 'NEUTRAL_COMPANION';
+}
+
+export function useNanoReflexArt(options: NanoReflexArtOptions = {}): NanoReflexArtReturn {
+  const {
+    onArtGenerated,
+    onVideoGenerated,
+    onMusicRequested,
+    onMeditationRequested,
+    onBreathingRequested,
+    onHugSent,
+    onQuoteShared,
+    onMemoryRequested,
+    currentMood = 'NEUTRAL_COMPANION',
+    autoDisplay = true,
+  } = options;
+
+  const [lastArt, setLastArt] = useState<GeneratedArt | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [actionCounts, setActionCounts] = useState<Record<string, number>>({});
+
+  /**
+   * Generate art gift (the core function)
+   */
+  const generateGift = useCallback(async (prompt?: string): Promise<GeneratedArt> => {
+    setIsGenerating(true);
+    console.log('[NanoReflexArt] 🎨 Generating art gift:', prompt || 'emotional support');
+
+    try {
+      // Determine mood from prompt or use current mood
+      const mood = prompt ? parseMoodFromPrompt(prompt) : currentMood;
+      
+      // Try Pollinations cloud art first (higher quality)
+      let cloudArt: GeneratedArt | null = null;
+      try {
+        const { generateImage: genPollinations } = await import('@/services/pollinationsService');
+        const result = await genPollinations(
+          prompt || `beautiful emotional art expressing ${mood} feeling, digital painting, abstract, warm colors`,
+          { width: 512, height: 512, timeoutMs: 15000 }
+        );
+        cloudArt = {
+          dataUrl: result.imageUrl,
+          style: 'pollinations-ai' as any,
+          caption: prompt || `Art gift for ${mood} moment`,
+          mood,
+          width: 512,
+          height: 512,
+          generatedAt: new Date(),
+        } as GeneratedArt;
+        console.log(`[NanoReflexArt] ✅ Cloud art via ${result.provider}`);
+      } catch (e) {
+        console.warn('[NanoReflexArt] Cloud art failed, falling back to offline Canvas:', e);
+      }
+
+      // Fallback: Generate art using Canvas API (100% offline)
+      const art = cloudArt || await generateArt({
+        mood,
+        intensity: 0.7,
+      });
+
+      setLastArt(art);
+      onArtGenerated?.(art);
+      
+      console.log('[NanoReflexArt] ✅ Art generated:', art.style, art.caption);
+      
+      // Dispatch event for UI to pick up
+      if (autoDisplay) {
+        window.dispatchEvent(new CustomEvent('zoe-art-gift', {
+          detail: { art, prompt }
+        }));
+      }
+
+      return art;
+    } finally {
+      setIsGenerating(false);
+    }
+  }, [currentMood, onArtGenerated, autoDisplay]);
+
+  /**
+   * Handle all nano-reflex-action events
+   */
+  useEffect(() => {
+    const handleReflexAction = async (event: CustomEvent) => {
+      const { action, params } = event.detail;
+      
+      console.log('[NanoReflexArt] 🎯 Received action:', action, params);
+      
+      // Track action counts
+      setActionCounts(prev => ({
+        ...prev,
+        [action]: (prev[action] || 0) + 1,
+      }));
+
+      switch (action) {
+        case 'DRAW_GIFT':
+          await generateGift(params);
+          break;
+
+        case 'CREATE_VIDEO':
+          try {
+            const { generateVideo } = await import('@/services/videoGenerationService');
+            const result = await generateVideo(params || 'a beautiful cinematic nature scene');
+            const videoData = {
+              videoUrl: result.videoUrl,
+              caption: params || 'A video gift from Zoe',
+              provider: result.provider,
+              isImageFallback: Boolean(result.isImageFallback),
+            };
+            onVideoGenerated?.(videoData);
+            window.dispatchEvent(new CustomEvent('zoe-video-gift', {
+              detail: videoData,
+            }));
+            console.log('[NanoReflexArt] 🎬 Video generated:', result.provider);
+          } catch (e) {
+            console.error('[NanoReflexArt] Video generation failed:', e);
+          }
+          break;
+          
+        case 'PLAY_MUSIC':
+          onMusicRequested?.(params);
+          window.dispatchEvent(new CustomEvent('zoe-music-request', {
+            detail: { params }
+          }));
+          break;
+          
+        case 'MEDITATION':
+          onMeditationRequested?.(params);
+          window.dispatchEvent(new CustomEvent('zoe-meditation-start', {
+            detail: { params }
+          }));
+          break;
+          
+        case 'BREATHING':
+          onBreathingRequested?.(params);
+          window.dispatchEvent(new CustomEvent('zoe-breathing-start', {
+            detail: { params }
+          }));
+          break;
+          
+        case 'SEND_HUG':
+          onHugSent?.();
+          if (navigator.vibrate) {
+            navigator.vibrate([100, 50, 100, 50, 200]);
+          }
+          window.dispatchEvent(new CustomEvent('zoe-hug-sent'));
+          break;
+          
+        case 'SHARE_QUOTE':
+          onQuoteShared?.(params);
+          window.dispatchEvent(new CustomEvent('zoe-quote-shared', {
+            detail: { quote: params }
+          }));
+          break;
+          
+        case 'SHOW_MEMORY':
+          onMemoryRequested?.(params);
+          window.dispatchEvent(new CustomEvent('zoe-memory-request', {
+            detail: { params }
+          }));
+          break;
+          
+        default:
+          console.warn('[NanoReflexArt] Unknown action:', action);
+      }
+    };
+
+    // Listen for nano-reflex-action events from NanoReflexProtocol
+    window.addEventListener('nano-reflex-action', handleReflexAction as EventListener);
+
+    return () => {
+      window.removeEventListener('nano-reflex-action', handleReflexAction as EventListener);
+    };
+  }, [generateGift, onVideoGenerated, onMusicRequested, onMeditationRequested, onBreathingRequested, onHugSent, onQuoteShared, onMemoryRequested]);
+
+  /**
+   * Clear the last art
+   */
+  const clearArt = useCallback(() => {
+    setLastArt(null);
+  }, []);
+
+  return {
+    lastArt,
+    isGenerating,
+    generateGift,
+    clearArt,
+    actionCounts,
+  };
+}
+
+export default useNanoReflexArt;
