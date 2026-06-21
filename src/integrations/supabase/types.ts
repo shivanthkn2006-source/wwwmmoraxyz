@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "13.0.5"
+    PostgrestVersion: "14.1"
   }
   public: {
     Tables: {
@@ -938,45 +938,6 @@ export type Database = {
           },
         ]
       }
-      cortex_logic: {
-        Row: {
-          created_at: string
-          performance_score: number | null
-          proposed_by: string | null
-          reason_for_upgrade: string | null
-          rejection_reason: string | null
-          status: Database["public"]["Enums"]["cortex_status"]
-          system_prompt_logic: string
-          tool_definitions: Json | null
-          updated_at: string
-          version_id: string
-        }
-        Insert: {
-          created_at?: string
-          performance_score?: number | null
-          proposed_by?: string | null
-          reason_for_upgrade?: string | null
-          rejection_reason?: string | null
-          status?: Database["public"]["Enums"]["cortex_status"]
-          system_prompt_logic: string
-          tool_definitions?: Json | null
-          updated_at?: string
-          version_id?: string
-        }
-        Update: {
-          created_at?: string
-          performance_score?: number | null
-          proposed_by?: string | null
-          reason_for_upgrade?: string | null
-          rejection_reason?: string | null
-          status?: Database["public"]["Enums"]["cortex_status"]
-          system_prompt_logic?: string
-          tool_definitions?: Json | null
-          updated_at?: string
-          version_id?: string
-        }
-        Relationships: []
-      }
       cortical_stack_memories: {
         Row: {
           content: string
@@ -1019,42 +980,6 @@ export type Database = {
           tags?: string[] | null
           updated_at?: string
           user_id?: string
-        }
-        Relationships: []
-      }
-      critical_user_paths: {
-        Row: {
-          actions: Json
-          created_at: string
-          expected_elements: Json
-          id: string
-          is_active: boolean
-          layout_tolerances: Json
-          path_name: string
-          route: string
-          updated_at: string
-        }
-        Insert: {
-          actions?: Json
-          created_at?: string
-          expected_elements?: Json
-          id?: string
-          is_active?: boolean
-          layout_tolerances?: Json
-          path_name: string
-          route: string
-          updated_at?: string
-        }
-        Update: {
-          actions?: Json
-          created_at?: string
-          expected_elements?: Json
-          id?: string
-          is_active?: boolean
-          layout_tolerances?: Json
-          path_name?: string
-          route?: string
-          updated_at?: string
         }
         Relationships: []
       }
@@ -1311,33 +1236,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      dhf_heartbeats: {
-        Row: {
-          app_version: string | null
-          device_signature: string | null
-          id: string
-          metadata: Json | null
-          timestamp: string
-          user_id: string
-        }
-        Insert: {
-          app_version?: string | null
-          device_signature?: string | null
-          id?: string
-          metadata?: Json | null
-          timestamp?: string
-          user_id: string
-        }
-        Update: {
-          app_version?: string | null
-          device_signature?: string | null
-          id?: string
-          metadata?: Json | null
-          timestamp?: string
-          user_id?: string
-        }
-        Relationships: []
       }
       dhf_learning_history: {
         Row: {
@@ -2413,54 +2311,6 @@ export type Database = {
         }
         Relationships: []
       }
-      feed_diagnostics_log: {
-        Row: {
-          auth_ready: boolean | null
-          context: Json | null
-          created_at: string
-          duration_ms: number | null
-          error_code: string | null
-          id: string
-          message: string | null
-          rls_blocked: boolean | null
-          route: string | null
-          row_count: number | null
-          status: string
-          user_agent: string | null
-          user_id: string | null
-        }
-        Insert: {
-          auth_ready?: boolean | null
-          context?: Json | null
-          created_at?: string
-          duration_ms?: number | null
-          error_code?: string | null
-          id?: string
-          message?: string | null
-          rls_blocked?: boolean | null
-          route?: string | null
-          row_count?: number | null
-          status: string
-          user_agent?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          auth_ready?: boolean | null
-          context?: Json | null
-          created_at?: string
-          duration_ms?: number | null
-          error_code?: string | null
-          id?: string
-          message?: string | null
-          rls_blocked?: boolean | null
-          route?: string | null
-          row_count?: number | null
-          status?: string
-          user_agent?: string | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
       friend_requests: {
         Row: {
           created_at: string
@@ -2549,27 +2399,6 @@ export type Database = {
           id?: string
           user1_id?: string
           user2_id?: string
-        }
-        Relationships: []
-      }
-      genesis_constitution: {
-        Row: {
-          core_directive: string
-          created_at: string
-          id: string
-          is_immutable: boolean
-        }
-        Insert: {
-          core_directive: string
-          created_at?: string
-          id?: string
-          is_immutable?: boolean
-        }
-        Update: {
-          core_directive?: string
-          created_at?: string
-          id?: string
-          is_immutable?: boolean
         }
         Relationships: []
       }
@@ -3110,13 +2939,6 @@ export type Database = {
             foreignKeyName: "notifications_post_id_fkey"
             columns: ["post_id"]
             isOneToOne: false
-            referencedRelation: "feed_posts_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "notifications_post_id_fkey"
-            columns: ["post_id"]
-            isOneToOne: false
             referencedRelation: "posts"
             referencedColumns: ["id"]
           },
@@ -3273,13 +3095,6 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "page_views_session_id_fkey"
-            columns: ["session_id"]
-            isOneToOne: false
-            referencedRelation: "admin_session_overview"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "page_views_session_id_fkey"
             columns: ["session_id"]
@@ -3542,13 +3357,6 @@ export type Database = {
             foreignKeyName: "comments_post_id_fkey"
             columns: ["post_id"]
             isOneToOne: false
-            referencedRelation: "feed_posts_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "comments_post_id_fkey"
-            columns: ["post_id"]
-            isOneToOne: false
             referencedRelation: "posts"
             referencedColumns: ["id"]
           },
@@ -3557,13 +3365,6 @@ export type Database = {
             columns: ["parent_comment_id"]
             isOneToOne: false
             referencedRelation: "post_comments"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "post_comments_post_id_fkey"
-            columns: ["post_id"]
-            isOneToOne: false
-            referencedRelation: "feed_posts_safe"
             referencedColumns: ["id"]
           },
           {
@@ -3620,13 +3421,6 @@ export type Database = {
             foreignKeyName: "post_likes_post_id_fkey"
             columns: ["post_id"]
             isOneToOne: false
-            referencedRelation: "feed_posts_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "post_likes_post_id_fkey"
-            columns: ["post_id"]
-            isOneToOne: false
             referencedRelation: "posts"
             referencedColumns: ["id"]
           },
@@ -3655,13 +3449,6 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "post_preferences_post_id_fkey"
-            columns: ["post_id"]
-            isOneToOne: false
-            referencedRelation: "feed_posts_safe"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "post_preferences_post_id_fkey"
             columns: ["post_id"]
@@ -3701,13 +3488,6 @@ export type Database = {
             foreignKeyName: "post_ratings_post_id_fkey"
             columns: ["post_id"]
             isOneToOne: false
-            referencedRelation: "feed_posts_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "post_ratings_post_id_fkey"
-            columns: ["post_id"]
-            isOneToOne: false
             referencedRelation: "posts"
             referencedColumns: ["id"]
           },
@@ -3736,13 +3516,6 @@ export type Database = {
           tagged_user_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "post_tags_post_id_fkey"
-            columns: ["post_id"]
-            isOneToOne: false
-            referencedRelation: "feed_posts_safe"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "post_tags_post_id_fkey"
             columns: ["post_id"]
@@ -3986,7 +3759,6 @@ export type Database = {
           zoe_elite_mode: boolean | null
           zoe_genesis_complete: boolean
           zoe_genesis_completed_at: string | null
-          zoe_genesis_memory: Json | null
           zoe_infinity_genesis_complete: boolean | null
           zoe_infinity_intimacy_level: number | null
           zoe_infinity_nickname: string | null
@@ -4054,7 +3826,6 @@ export type Database = {
           zoe_elite_mode?: boolean | null
           zoe_genesis_complete?: boolean
           zoe_genesis_completed_at?: string | null
-          zoe_genesis_memory?: Json | null
           zoe_infinity_genesis_complete?: boolean | null
           zoe_infinity_intimacy_level?: number | null
           zoe_infinity_nickname?: string | null
@@ -4122,7 +3893,6 @@ export type Database = {
           zoe_elite_mode?: boolean | null
           zoe_genesis_complete?: boolean
           zoe_genesis_completed_at?: string | null
-          zoe_genesis_memory?: Json | null
           zoe_infinity_genesis_complete?: boolean | null
           zoe_infinity_intimacy_level?: number | null
           zoe_infinity_nickname?: string | null
@@ -4300,48 +4070,6 @@ export type Database = {
         }
         Relationships: []
       }
-      regression_snapshots: {
-        Row: {
-          captured_by: string | null
-          created_at: string
-          expected_output: Json
-          feature_name: string
-          id: string
-          is_baseline: boolean
-          notes: string | null
-          screenshot_url: string | null
-          test_input: Json
-          updated_at: string
-          version_tag: string | null
-        }
-        Insert: {
-          captured_by?: string | null
-          created_at?: string
-          expected_output?: Json
-          feature_name: string
-          id?: string
-          is_baseline?: boolean
-          notes?: string | null
-          screenshot_url?: string | null
-          test_input?: Json
-          updated_at?: string
-          version_tag?: string | null
-        }
-        Update: {
-          captured_by?: string | null
-          created_at?: string
-          expected_output?: Json
-          feature_name?: string
-          id?: string
-          is_baseline?: boolean
-          notes?: string | null
-          screenshot_url?: string | null
-          test_input?: Json
-          updated_at?: string
-          version_tag?: string | null
-        }
-        Relationships: []
-      }
       reminders: {
         Row: {
           category: string | null
@@ -4413,13 +4141,6 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "saved_posts_post_id_fkey"
-            columns: ["post_id"]
-            isOneToOne: false
-            referencedRelation: "feed_posts_safe"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "saved_posts_post_id_fkey"
             columns: ["post_id"]
@@ -5429,13 +5150,6 @@ export type Database = {
             foreignKeyName: "user_activity_log_session_id_fkey"
             columns: ["session_id"]
             isOneToOne: false
-            referencedRelation: "admin_session_overview"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_activity_log_session_id_fkey"
-            columns: ["session_id"]
-            isOneToOne: false
             referencedRelation: "session_analytics"
             referencedColumns: ["session_id"]
           },
@@ -6010,56 +5724,6 @@ export type Database = {
         }
         Relationships: []
       }
-      visual_regression_results: {
-        Row: {
-          created_at: string
-          details: string | null
-          elements_found: Json | null
-          elements_missing: Json | null
-          id: string
-          layout_shifts: Json | null
-          max_shift_px: number | null
-          path_id: string | null
-          run_by: string | null
-          status: string
-          triggered_by: string | null
-        }
-        Insert: {
-          created_at?: string
-          details?: string | null
-          elements_found?: Json | null
-          elements_missing?: Json | null
-          id?: string
-          layout_shifts?: Json | null
-          max_shift_px?: number | null
-          path_id?: string | null
-          run_by?: string | null
-          status?: string
-          triggered_by?: string | null
-        }
-        Update: {
-          created_at?: string
-          details?: string | null
-          elements_found?: Json | null
-          elements_missing?: Json | null
-          id?: string
-          layout_shifts?: Json | null
-          max_shift_px?: number | null
-          path_id?: string | null
-          run_by?: string | null
-          status?: string
-          triggered_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "visual_regression_results_path_id_fkey"
-            columns: ["path_id"]
-            isOneToOne: false
-            referencedRelation: "critical_user_paths"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       voice_assistant_settings: {
         Row: {
           created_at: string
@@ -6422,48 +6086,6 @@ export type Database = {
           port_name?: string
           priority?: number
           updated_at?: string
-        }
-        Relationships: []
-      }
-      zoe_adaptive_learning: {
-        Row: {
-          confidence_score: number
-          created_at: string
-          id: string
-          last_used_at: string
-          pattern_key: string
-          pattern_type: string
-          pattern_value: string
-          source: string | null
-          updated_at: string
-          usage_count: number
-          user_id: string
-        }
-        Insert: {
-          confidence_score?: number
-          created_at?: string
-          id?: string
-          last_used_at?: string
-          pattern_key: string
-          pattern_type?: string
-          pattern_value: string
-          source?: string | null
-          updated_at?: string
-          usage_count?: number
-          user_id: string
-        }
-        Update: {
-          confidence_score?: number
-          created_at?: string
-          id?: string
-          last_used_at?: string
-          pattern_key?: string
-          pattern_type?: string
-          pattern_value?: string
-          source?: string | null
-          updated_at?: string
-          usage_count?: number
-          user_id?: string
         }
         Relationships: []
       }
@@ -7510,7 +7132,6 @@ export type Database = {
           media_url: string | null
           metadata: Json | null
           role: string
-          session_id: string | null
           user_id: string
         }
         Insert: {
@@ -7521,7 +7142,6 @@ export type Database = {
           media_url?: string | null
           metadata?: Json | null
           role: string
-          session_id?: string | null
           user_id: string
         }
         Update: {
@@ -7532,156 +7152,6 @@ export type Database = {
           media_url?: string | null
           metadata?: Json | null
           role?: string
-          session_id?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "zoe_infinity_messages_session_id_fkey"
-            columns: ["session_id"]
-            isOneToOne: false
-            referencedRelation: "zoe_infinity_sessions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      zoe_infinity_quota_history: {
-        Row: {
-          db_bytes_used: number
-          db_percent: number
-          egress_bytes_month: number
-          id: string
-          mau_count: number
-          recorded_at: string
-          storage_bytes_used: number
-          storage_percent: number
-          throttle_level: string
-        }
-        Insert: {
-          db_bytes_used: number
-          db_percent: number
-          egress_bytes_month: number
-          id?: string
-          mau_count: number
-          recorded_at?: string
-          storage_bytes_used: number
-          storage_percent: number
-          throttle_level: string
-        }
-        Update: {
-          db_bytes_used?: number
-          db_percent?: number
-          egress_bytes_month?: number
-          id?: string
-          mau_count?: number
-          recorded_at?: string
-          storage_bytes_used?: number
-          storage_percent?: number
-          throttle_level?: string
-        }
-        Relationships: []
-      }
-      zoe_infinity_quota_state: {
-        Row: {
-          created_at: string
-          db_bytes_limit: number
-          db_bytes_used: number
-          db_percent: number
-          egress_bytes_limit: number
-          egress_bytes_month: number
-          egress_percent: number
-          id: string
-          last_checked_at: string
-          last_error: string | null
-          mau_count: number
-          mau_limit: number
-          mau_percent: number
-          storage_bytes_limit: number
-          storage_bytes_used: number
-          storage_percent: number
-          throttle_active: boolean
-          throttle_level: string
-          tier: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          db_bytes_limit?: number
-          db_bytes_used?: number
-          db_percent?: number
-          egress_bytes_limit?: number
-          egress_bytes_month?: number
-          egress_percent?: number
-          id?: string
-          last_checked_at?: string
-          last_error?: string | null
-          mau_count?: number
-          mau_limit?: number
-          mau_percent?: number
-          storage_bytes_limit?: number
-          storage_bytes_used?: number
-          storage_percent?: number
-          throttle_active?: boolean
-          throttle_level?: string
-          tier?: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          db_bytes_limit?: number
-          db_bytes_used?: number
-          db_percent?: number
-          egress_bytes_limit?: number
-          egress_bytes_month?: number
-          egress_percent?: number
-          id?: string
-          last_checked_at?: string
-          last_error?: string | null
-          mau_count?: number
-          mau_limit?: number
-          mau_percent?: number
-          storage_bytes_limit?: number
-          storage_bytes_used?: number
-          storage_percent?: number
-          throttle_active?: boolean
-          throttle_level?: string
-          tier?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      zoe_infinity_sessions: {
-        Row: {
-          created_at: string
-          emotional_arc: string | null
-          id: string
-          message_count: number | null
-          session_end: string | null
-          session_start: string
-          summary: string | null
-          topics: string[] | null
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          emotional_arc?: string | null
-          id?: string
-          message_count?: number | null
-          session_end?: string | null
-          session_start?: string
-          summary?: string | null
-          topics?: string[] | null
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          emotional_arc?: string | null
-          id?: string
-          message_count?: number | null
-          session_end?: string | null
-          session_start?: string
-          summary?: string | null
-          topics?: string[] | null
           user_id?: string
         }
         Relationships: []
@@ -8380,42 +7850,6 @@ export type Database = {
         }
         Relationships: []
       }
-      zoe_response_cache: {
-        Row: {
-          created_at: string
-          expires_at: string
-          hit_count: number
-          id: string
-          model_used: string | null
-          query_hash: string
-          query_text: string
-          response_text: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          expires_at?: string
-          hit_count?: number
-          id?: string
-          model_used?: string | null
-          query_hash: string
-          query_text: string
-          response_text: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          expires_at?: string
-          hit_count?: number
-          id?: string
-          model_used?: string | null
-          query_hash?: string
-          query_text?: string
-          response_text?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       zoe_response_feedback: {
         Row: {
           created_at: string
@@ -9028,54 +8462,6 @@ export type Database = {
         }
         Relationships: []
       }
-      admin_session_overview: {
-        Row: {
-          browser: string | null
-          city: string | null
-          country: string | null
-          created_at: string | null
-          device_type: string | null
-          ended_at: string | null
-          id: string | null
-          is_active: boolean | null
-          last_activity_at: string | null
-          os: string | null
-          region: string | null
-          started_at: string | null
-          user_id: string | null
-        }
-        Insert: {
-          browser?: string | null
-          city?: string | null
-          country?: string | null
-          created_at?: string | null
-          device_type?: string | null
-          ended_at?: string | null
-          id?: string | null
-          is_active?: boolean | null
-          last_activity_at?: string | null
-          os?: string | null
-          region?: string | null
-          started_at?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          browser?: string | null
-          city?: string | null
-          country?: string | null
-          created_at?: string | null
-          device_type?: string | null
-          ended_at?: string | null
-          id?: string | null
-          is_active?: boolean | null
-          last_activity_at?: string | null
-          os?: string | null
-          region?: string | null
-          started_at?: string | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
       exodus_leaderboard: {
         Row: {
           cortical_stack_holder: boolean | null
@@ -9093,80 +8479,6 @@ export type Database = {
           user_id: string | null
         }
         Relationships: []
-      }
-      feed_posts_safe: {
-        Row: {
-          comments_count: number | null
-          content: string | null
-          created_at: string | null
-          has_deferred_media: boolean | null
-          id: string | null
-          likes_count: number | null
-          media_size: number | null
-          media_type: string | null
-          media_url: string | null
-          private_timeline_id: string | null
-          user_id: string | null
-          visibility: string | null
-        }
-        Insert: {
-          comments_count?: number | null
-          content?: string | null
-          created_at?: string | null
-          has_deferred_media?: never
-          id?: string | null
-          likes_count?: number | null
-          media_size?: never
-          media_type?: string | null
-          media_url?: never
-          private_timeline_id?: string | null
-          user_id?: string | null
-          visibility?: string | null
-        }
-        Update: {
-          comments_count?: number | null
-          content?: string | null
-          created_at?: string | null
-          has_deferred_media?: never
-          id?: string | null
-          likes_count?: number | null
-          media_size?: never
-          media_type?: string | null
-          media_url?: never
-          private_timeline_id?: string | null
-          user_id?: string | null
-          visibility?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "posts_private_timeline_id_fkey"
-            columns: ["private_timeline_id"]
-            isOneToOne: false
-            referencedRelation: "private_timelines"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "posts_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "leaderboard_stats"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "posts_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "posts_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "safe_public_profiles"
-            referencedColumns: ["user_id"]
-          },
-        ]
       }
       leaderboard_stats: {
         Row: {
@@ -9322,7 +8634,6 @@ export type Database = {
         Args: { p_days?: number; p_user_id: string }
         Returns: Json
       }
-      cleanup_expired_cache: { Args: never; Returns: undefined }
       cleanup_expired_call_signals: { Args: never; Returns: undefined }
       cleanup_expired_notifications: { Args: never; Returns: undefined }
       cleanup_old_activity_logs: { Args: never; Returns: undefined }
@@ -9420,14 +8731,6 @@ export type Database = {
         Args: { shortcut_uuid: string }
         Returns: undefined
       }
-      is_private_timeline_member: {
-        Args: { _timeline_id: string; _user_id: string }
-        Returns: boolean
-      }
-      is_private_timeline_owner: {
-        Args: { _timeline_id: string; _user_id: string }
-        Returns: boolean
-      }
       is_root_admin: { Args: { check_user_id: string }; Returns: boolean }
       is_timeline_member: {
         Args: { timeline_id: string; user_id: string }
@@ -9464,7 +8767,6 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: Json
       }
-      pg_database_size_safe: { Args: never; Returns: number }
       refresh_leaderboard_stats: { Args: never; Returns: undefined }
       search_mmora_memories: {
         Args: {
@@ -9503,7 +8805,6 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
-      cortex_status: "ACTIVE" | "PROPOSED" | "REJECTED" | "ARCHIVED"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -9632,7 +8933,6 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user"],
-      cortex_status: ["ACTIVE", "PROPOSED", "REJECTED", "ARCHIVED"],
     },
   },
 } as const
