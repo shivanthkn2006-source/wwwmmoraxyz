@@ -1237,6 +1237,33 @@ export type Database = {
           },
         ]
       }
+      dhf_heartbeats: {
+        Row: {
+          app_version: string | null
+          device_signature: string | null
+          id: string
+          metadata: Json | null
+          timestamp: string
+          user_id: string
+        }
+        Insert: {
+          app_version?: string | null
+          device_signature?: string | null
+          id?: string
+          metadata?: Json | null
+          timestamp?: string
+          user_id: string
+        }
+        Update: {
+          app_version?: string | null
+          device_signature?: string | null
+          id?: string
+          metadata?: Json | null
+          timestamp?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       dhf_learning_history: {
         Row: {
           behavioral_shifts: Json | null
@@ -1500,6 +1527,7 @@ export type Database = {
           energy_cycles: Json | null
           ethical_framework: string | null
           formative_memories: Json | null
+          genesis_completed: boolean | null
           humor_style: string | null
           id: string
           is_complete: boolean | null
@@ -1517,6 +1545,7 @@ export type Database = {
           vocabulary_tier: string | null
           voice_characteristics: Json | null
           voice_latent_space: Json | null
+          voice_preference: string | null
         }
         Insert: {
           belief_anchors?: Json | null
@@ -1532,6 +1561,7 @@ export type Database = {
           energy_cycles?: Json | null
           ethical_framework?: string | null
           formative_memories?: Json | null
+          genesis_completed?: boolean | null
           humor_style?: string | null
           id?: string
           is_complete?: boolean | null
@@ -1549,6 +1579,7 @@ export type Database = {
           vocabulary_tier?: string | null
           voice_characteristics?: Json | null
           voice_latent_space?: Json | null
+          voice_preference?: string | null
         }
         Update: {
           belief_anchors?: Json | null
@@ -1564,6 +1595,7 @@ export type Database = {
           energy_cycles?: Json | null
           ethical_framework?: string | null
           formative_memories?: Json | null
+          genesis_completed?: boolean | null
           humor_style?: string | null
           id?: string
           is_complete?: boolean | null
@@ -1581,6 +1613,7 @@ export type Database = {
           vocabulary_tier?: string | null
           voice_characteristics?: Json | null
           voice_latent_space?: Json | null
+          voice_preference?: string | null
         }
         Relationships: []
       }
@@ -6184,6 +6217,48 @@ export type Database = {
         }
         Relationships: []
       }
+      zoe_adaptive_learning: {
+        Row: {
+          confidence_score: number
+          created_at: string
+          id: string
+          last_used_at: string
+          pattern_key: string
+          pattern_type: string
+          pattern_value: string
+          source: string | null
+          updated_at: string
+          usage_count: number
+          user_id: string
+        }
+        Insert: {
+          confidence_score?: number
+          created_at?: string
+          id?: string
+          last_used_at?: string
+          pattern_key: string
+          pattern_type?: string
+          pattern_value: string
+          source?: string | null
+          updated_at?: string
+          usage_count?: number
+          user_id: string
+        }
+        Update: {
+          confidence_score?: number
+          created_at?: string
+          id?: string
+          last_used_at?: string
+          pattern_key?: string
+          pattern_type?: string
+          pattern_value?: string
+          source?: string | null
+          updated_at?: string
+          usage_count?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       zoe_agent_deployments: {
         Row: {
           actual_success: boolean | null
@@ -7227,6 +7302,7 @@ export type Database = {
           media_url: string | null
           metadata: Json | null
           role: string
+          session_id: string | null
           user_id: string
         }
         Insert: {
@@ -7237,6 +7313,7 @@ export type Database = {
           media_url?: string | null
           metadata?: Json | null
           role: string
+          session_id?: string | null
           user_id: string
         }
         Update: {
@@ -7247,6 +7324,51 @@ export type Database = {
           media_url?: string | null
           metadata?: Json | null
           role?: string
+          session_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "zoe_infinity_messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "zoe_infinity_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      zoe_infinity_sessions: {
+        Row: {
+          created_at: string
+          emotional_arc: string | null
+          id: string
+          message_count: number | null
+          session_end: string | null
+          session_start: string
+          summary: string | null
+          topics: string[] | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          emotional_arc?: string | null
+          id?: string
+          message_count?: number | null
+          session_end?: string | null
+          session_start?: string
+          summary?: string | null
+          topics?: string[] | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          emotional_arc?: string | null
+          id?: string
+          message_count?: number | null
+          session_end?: string | null
+          session_start?: string
+          summary?: string | null
+          topics?: string[] | null
           user_id?: string
         }
         Relationships: []
