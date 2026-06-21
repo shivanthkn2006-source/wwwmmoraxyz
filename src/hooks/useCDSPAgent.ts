@@ -354,7 +354,7 @@ export const useCDSPAgent = () => {
           .eq('user_id', user.id)
           .order('created_at', { ascending: false })
           .limit(1)
-          .single();
+          .maybeSingle();
         
         if (data) {
           setState(prev => ({

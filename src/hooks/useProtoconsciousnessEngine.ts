@@ -111,7 +111,7 @@ export function useProtoconsciousnessEngine() {
         .from('profiles')
         .select('pce_enabled, proactive_initiative_ready')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (profile) {
         setPceEnabled(profile.pce_enabled ?? true);

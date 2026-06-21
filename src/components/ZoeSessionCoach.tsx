@@ -114,7 +114,7 @@ export const ZoeSessionCoach: React.FC<{
         .from('profiles')
         .select('display_name')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
       if (data?.display_name) setUserName(data.display_name);
     };
     loadUserName();

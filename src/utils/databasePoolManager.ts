@@ -284,7 +284,7 @@ export async function batchInsert<T extends Record<string, unknown>>(
   await Promise.all(
     chunks.map(chunk =>
       pool.queueRequest(async () => {
-        const { error } = await (supabase.from(table as any).insert(chunk) as any);
+        const { error } = await (supabase as any).from(table).insert(chunk);
         if (error) {
           failed += chunk.length;
           throw error;

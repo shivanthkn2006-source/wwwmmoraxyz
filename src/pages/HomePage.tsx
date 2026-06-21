@@ -491,7 +491,7 @@ const HomePage = () => {
       .from('profiles')
       .select('display_name, profile_photo_url, event_date, event_recurring, status, bio, hobbies')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
 
     if (data) {
       setUserProfile(data);

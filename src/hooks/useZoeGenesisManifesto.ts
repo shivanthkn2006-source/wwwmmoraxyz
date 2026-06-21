@@ -147,13 +147,13 @@ export function useZoeGenesisManifesto() {
         .from('profiles')
         .select('identity_calibration_complete, proactive_initiative_ready, pce_enabled')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       const { data: zoeSettings } = await supabase
         .from('zoe_settings')
         .select('sync_percentage')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       const atlasSync100 = (zoeSettings?.sync_percentage || 0) >= 100;
       const identityCalibrated = profile?.identity_calibration_complete || false;

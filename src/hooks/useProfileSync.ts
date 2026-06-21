@@ -32,7 +32,7 @@ export const useProfileSync = () => {
     }
 
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('profiles')
         .update({ [field]: value })
         .eq('user_id', user.id);
@@ -66,7 +66,7 @@ export const useProfileSync = () => {
     }
 
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('profiles')
         .update(fields)
         .eq('user_id', user.id);

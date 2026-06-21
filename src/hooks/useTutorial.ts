@@ -30,7 +30,7 @@ export const useTutorial = () => {
         .from('tutorial_progress')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       // Show tutorial if no progress exists or if not completed/skipped
       if (!progress || (!progress.completed && !progress.skipped)) {

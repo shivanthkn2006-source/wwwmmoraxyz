@@ -43,7 +43,7 @@ export const useSmartNotifications = () => {
         .from('profiles')
         .select('hobbies, city, status')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (!userProfile) return;
 
@@ -192,10 +192,7 @@ export const useSmartNotifications = () => {
 
     const { data } = await supabase
       .from('notifications')
-      .select(`
-        *,
-        from_user:profiles!notifications_from_user_id_fkey(display_name, profile_photo_url, city, hobbies, status)
-      `)
+      .select('*')
       .eq('user_id', user.id)
       .not('suggestion_type', 'is', null)
       .order('priority', { ascending: false })
@@ -203,7 +200,19 @@ export const useSmartNotifications = () => {
       .limit(10);
 
     if (data) {
-      setContextAwareNotifications(data as any);
+      const fromUserIds = Array.from(new Set(data.map((n: any) => n.from_user_id).filter(Boolean)));
+      const { data: profiles } = fromUserIds.length
+        ? await supabase
+            .from('profiles')
+            .select('user_id, display_name, profile_photo_url, city, hobbies, status')
+            .in('user_id', fromUserIds)
+        : { data: [] as any[] };
+
+      const profilesById = new Map((profiles || []).map((profile: any) => [profile.user_id, profile]));
+      setContextAwareNotifications(data.map((notification: any) => ({
+        ...notification,
+        from_user: profilesById.get(notification.from_user_id) || null,
+      })) as any);
     }
   }, [user]);
 

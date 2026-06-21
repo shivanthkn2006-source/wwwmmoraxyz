@@ -721,7 +721,7 @@ export const GlobalZoeAssistant = ({ config = DEFAULT_CONFIG }: { config?: Parti
           .from('profiles')
           .select('display_name')
           .eq('user_id', user?.id)
-          .single();
+          .maybeSingle();
         
         const hour = new Date().getHours();
         const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';

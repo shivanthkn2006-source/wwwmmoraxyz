@@ -188,7 +188,7 @@ export class SovereignContextRegistry {
         .from('dhf_learning_history')
         .select('*')
         .eq('user_id', this.userId)
-        .single();
+        .maybeSingle();
       
       if (dhfHistory?.emotional_trends) {
         // Update ECN with historical data

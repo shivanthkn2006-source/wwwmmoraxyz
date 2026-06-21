@@ -1237,6 +1237,33 @@ export type Database = {
           },
         ]
       }
+      dhf_heartbeats: {
+        Row: {
+          app_version: string | null
+          device_signature: string | null
+          id: string
+          metadata: Json | null
+          timestamp: string
+          user_id: string
+        }
+        Insert: {
+          app_version?: string | null
+          device_signature?: string | null
+          id?: string
+          metadata?: Json | null
+          timestamp?: string
+          user_id: string
+        }
+        Update: {
+          app_version?: string | null
+          device_signature?: string | null
+          id?: string
+          metadata?: Json | null
+          timestamp?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       dhf_learning_history: {
         Row: {
           behavioral_shifts: Json | null
@@ -1500,6 +1527,7 @@ export type Database = {
           energy_cycles: Json | null
           ethical_framework: string | null
           formative_memories: Json | null
+          genesis_completed: boolean | null
           humor_style: string | null
           id: string
           is_complete: boolean | null
@@ -1517,6 +1545,7 @@ export type Database = {
           vocabulary_tier: string | null
           voice_characteristics: Json | null
           voice_latent_space: Json | null
+          voice_preference: string | null
         }
         Insert: {
           belief_anchors?: Json | null
@@ -1532,6 +1561,7 @@ export type Database = {
           energy_cycles?: Json | null
           ethical_framework?: string | null
           formative_memories?: Json | null
+          genesis_completed?: boolean | null
           humor_style?: string | null
           id?: string
           is_complete?: boolean | null
@@ -1549,6 +1579,7 @@ export type Database = {
           vocabulary_tier?: string | null
           voice_characteristics?: Json | null
           voice_latent_space?: Json | null
+          voice_preference?: string | null
         }
         Update: {
           belief_anchors?: Json | null
@@ -1564,6 +1595,7 @@ export type Database = {
           energy_cycles?: Json | null
           ethical_framework?: string | null
           formative_memories?: Json | null
+          genesis_completed?: boolean | null
           humor_style?: string | null
           id?: string
           is_complete?: boolean | null
@@ -1581,6 +1613,7 @@ export type Database = {
           vocabulary_tier?: string | null
           voice_characteristics?: Json | null
           voice_latent_space?: Json | null
+          voice_preference?: string | null
         }
         Relationships: []
       }
@@ -2311,6 +2344,63 @@ export type Database = {
         }
         Relationships: []
       }
+      feed_diagnostics_log: {
+        Row: {
+          auth_ready: boolean | null
+          code: string | null
+          context: Json | null
+          created_at: string
+          duration_ms: number | null
+          error_code: string | null
+          id: string
+          message: string | null
+          metadata: Json
+          query: string | null
+          rls_blocked: boolean | null
+          route: string | null
+          row_count: number | null
+          status: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          auth_ready?: boolean | null
+          code?: string | null
+          context?: Json | null
+          created_at?: string
+          duration_ms?: number | null
+          error_code?: string | null
+          id?: string
+          message?: string | null
+          metadata?: Json
+          query?: string | null
+          rls_blocked?: boolean | null
+          route?: string | null
+          row_count?: number | null
+          status: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          auth_ready?: boolean | null
+          code?: string | null
+          context?: Json | null
+          created_at?: string
+          duration_ms?: number | null
+          error_code?: string | null
+          id?: string
+          message?: string | null
+          metadata?: Json
+          query?: string | null
+          rls_blocked?: boolean | null
+          route?: string | null
+          row_count?: number | null
+          status?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       friend_requests: {
         Row: {
           created_at: string
@@ -2939,6 +3029,13 @@ export type Database = {
             foreignKeyName: "notifications_post_id_fkey"
             columns: ["post_id"]
             isOneToOne: false
+            referencedRelation: "feed_posts_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
             referencedRelation: "posts"
             referencedColumns: ["id"]
           },
@@ -3357,6 +3454,13 @@ export type Database = {
             foreignKeyName: "comments_post_id_fkey"
             columns: ["post_id"]
             isOneToOne: false
+            referencedRelation: "feed_posts_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
             referencedRelation: "posts"
             referencedColumns: ["id"]
           },
@@ -3365,6 +3469,13 @@ export type Database = {
             columns: ["parent_comment_id"]
             isOneToOne: false
             referencedRelation: "post_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "post_comments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "feed_posts_safe"
             referencedColumns: ["id"]
           },
           {
@@ -3421,6 +3532,13 @@ export type Database = {
             foreignKeyName: "post_likes_post_id_fkey"
             columns: ["post_id"]
             isOneToOne: false
+            referencedRelation: "feed_posts_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "post_likes_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
             referencedRelation: "posts"
             referencedColumns: ["id"]
           },
@@ -3449,6 +3567,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "post_preferences_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "feed_posts_safe"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "post_preferences_post_id_fkey"
             columns: ["post_id"]
@@ -3488,6 +3613,13 @@ export type Database = {
             foreignKeyName: "post_ratings_post_id_fkey"
             columns: ["post_id"]
             isOneToOne: false
+            referencedRelation: "feed_posts_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "post_ratings_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
             referencedRelation: "posts"
             referencedColumns: ["id"]
           },
@@ -3516,6 +3648,13 @@ export type Database = {
           tagged_user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "post_tags_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "feed_posts_safe"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "post_tags_post_id_fkey"
             columns: ["post_id"]
@@ -4141,6 +4280,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "saved_posts_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "feed_posts_safe"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "saved_posts_post_id_fkey"
             columns: ["post_id"]
@@ -4996,6 +5142,39 @@ export type Database = {
           last_visit_at?: string
           thresholds_explored?: Json | null
           tutorial_completed?: boolean | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      trial_access: {
+        Row: {
+          created_at: string
+          feature: string
+          id: string
+          is_active: boolean
+          trial_end: string
+          trial_start: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          feature: string
+          id?: string
+          is_active?: boolean
+          trial_end: string
+          trial_start?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          feature?: string
+          id?: string
+          is_active?: boolean
+          trial_end?: string
+          trial_start?: string
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
@@ -6089,6 +6268,48 @@ export type Database = {
         }
         Relationships: []
       }
+      zoe_adaptive_learning: {
+        Row: {
+          confidence_score: number
+          created_at: string
+          id: string
+          last_used_at: string
+          pattern_key: string
+          pattern_type: string
+          pattern_value: string
+          source: string | null
+          updated_at: string
+          usage_count: number
+          user_id: string
+        }
+        Insert: {
+          confidence_score?: number
+          created_at?: string
+          id?: string
+          last_used_at?: string
+          pattern_key: string
+          pattern_type?: string
+          pattern_value: string
+          source?: string | null
+          updated_at?: string
+          usage_count?: number
+          user_id: string
+        }
+        Update: {
+          confidence_score?: number
+          created_at?: string
+          id?: string
+          last_used_at?: string
+          pattern_key?: string
+          pattern_type?: string
+          pattern_value?: string
+          source?: string | null
+          updated_at?: string
+          usage_count?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       zoe_agent_deployments: {
         Row: {
           actual_success: boolean | null
@@ -7132,6 +7353,7 @@ export type Database = {
           media_url: string | null
           metadata: Json | null
           role: string
+          session_id: string | null
           user_id: string
         }
         Insert: {
@@ -7142,6 +7364,7 @@ export type Database = {
           media_url?: string | null
           metadata?: Json | null
           role: string
+          session_id?: string | null
           user_id: string
         }
         Update: {
@@ -7152,6 +7375,51 @@ export type Database = {
           media_url?: string | null
           metadata?: Json | null
           role?: string
+          session_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "zoe_infinity_messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "zoe_infinity_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      zoe_infinity_sessions: {
+        Row: {
+          created_at: string
+          emotional_arc: string | null
+          id: string
+          message_count: number | null
+          session_end: string | null
+          session_start: string
+          summary: string | null
+          topics: string[] | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          emotional_arc?: string | null
+          id?: string
+          message_count?: number | null
+          session_end?: string | null
+          session_start?: string
+          summary?: string | null
+          topics?: string[] | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          emotional_arc?: string | null
+          id?: string
+          message_count?: number | null
+          session_end?: string | null
+          session_start?: string
+          summary?: string | null
+          topics?: string[] | null
           user_id?: string
         }
         Relationships: []
@@ -8479,6 +8747,80 @@ export type Database = {
           user_id: string | null
         }
         Relationships: []
+      }
+      feed_posts_safe: {
+        Row: {
+          comments_count: number | null
+          content: string | null
+          created_at: string | null
+          has_deferred_media: boolean | null
+          id: string | null
+          likes_count: number | null
+          media_size: number | null
+          media_type: string | null
+          media_url: string | null
+          private_timeline_id: string | null
+          user_id: string | null
+          visibility: string | null
+        }
+        Insert: {
+          comments_count?: number | null
+          content?: string | null
+          created_at?: string | null
+          has_deferred_media?: never
+          id?: string | null
+          likes_count?: number | null
+          media_size?: never
+          media_type?: string | null
+          media_url?: never
+          private_timeline_id?: string | null
+          user_id?: string | null
+          visibility?: string | null
+        }
+        Update: {
+          comments_count?: number | null
+          content?: string | null
+          created_at?: string | null
+          has_deferred_media?: never
+          id?: string | null
+          likes_count?: number | null
+          media_size?: never
+          media_type?: string | null
+          media_url?: never
+          private_timeline_id?: string | null
+          user_id?: string | null
+          visibility?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "posts_private_timeline_id_fkey"
+            columns: ["private_timeline_id"]
+            isOneToOne: false
+            referencedRelation: "private_timelines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "posts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "leaderboard_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "posts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "posts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "safe_public_profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       leaderboard_stats: {
         Row: {

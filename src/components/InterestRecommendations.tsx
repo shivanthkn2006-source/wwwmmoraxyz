@@ -59,7 +59,7 @@ const InterestRecommendations = () => {
       .from('profiles')
       .select('hobbies')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
 
     if (!currentProfile?.hobbies || currentProfile.hobbies.length === 0) {
       setLoading(false);

@@ -93,7 +93,7 @@ export const useProactiveGreeting = () => {
         .from('profiles')
         .select('display_name, city')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       // Fetch weather and traffic information
       let weatherInfo = null;
@@ -176,7 +176,7 @@ export const useProactiveGreeting = () => {
         .from('user_activity_patterns')
         .select('last_huddle_visit')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
       
       let huddleActivity = '';
       if (huddleViews?.last_huddle_visit) {

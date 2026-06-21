@@ -61,7 +61,7 @@ const flushTelemetryQueue = async () => {
   const eventsToWrite = telemetryQueue.splice(0, 50); // Max 50 per batch
   
   try {
-    const { error } = await supabase.from('behavioral_events').insert(eventsToWrite);
+    const { error } = await (supabase as any).from('behavioral_events').insert(eventsToWrite);
     if (error) {
       console.error('[GOD_MODE_TELEMETRY] Batch write failed:', error);
       // Put back failed events
@@ -115,7 +115,7 @@ const queueTelemetryEvent = async (
   if (isCritical) {
     // Write immediately for critical events
     try {
-      await supabase.from('behavioral_events').insert(event);
+      await (supabase as any).from('behavioral_events').insert(event);
       console.log(`[GOD_MODE_TELEMETRY] CRITICAL event written: ${eventType}`);
     } catch (err) {
       console.error('[GOD_MODE_TELEMETRY] Critical write failed:', err);

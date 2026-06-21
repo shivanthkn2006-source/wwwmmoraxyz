@@ -178,7 +178,7 @@ export class QuantumASIEngine {
         .from('dhf_phoenix_profile')
         .select('decision_patterns, emotional_baseline')
         .eq('user_id', this.userId)
-        .single();
+        .maybeSingle();
       
       if (profile?.decision_patterns) {
         // Restore autonomy level from learned patterns

@@ -64,7 +64,7 @@ export const ExodusProtocolPage: React.FC = () => {
         .from('exodus_players')
         .select('*')
         .eq('user_id', user?.id)
-        .single();
+        .maybeSingle();
 
       if (error && error.code !== 'PGRST116') {
         console.error('Error fetching player stats:', error);
