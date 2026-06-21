@@ -50,7 +50,7 @@ export const usePlatformVoiceNotifications = () => {
           .from('profiles')
           .select('voice_notifications_enabled, notification_voice_style')
           .eq('user_id', user.id)
-          .single();
+          .maybeSingle();
         
         if (data) {
           configRef.current = {

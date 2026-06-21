@@ -52,7 +52,7 @@ export default function ZoeVoiceSettings() {
       .from('profiles')
       .select('voice_notifications_enabled, notification_voice_style, zoe_personality_tone, zoe_conversation_style, zoe_proactive_suggestions')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
 
     if (data) {
       setSettings(prev => ({
