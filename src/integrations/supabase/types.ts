@@ -2346,39 +2346,57 @@ export type Database = {
       }
       feed_diagnostics_log: {
         Row: {
+          auth_ready: boolean | null
           code: string | null
+          context: Json | null
           created_at: string
           duration_ms: number | null
+          error_code: string | null
           id: string
           message: string | null
           metadata: Json
           query: string | null
+          rls_blocked: boolean | null
+          route: string | null
           row_count: number | null
           status: string
+          user_agent: string | null
           user_id: string
         }
         Insert: {
+          auth_ready?: boolean | null
           code?: string | null
+          context?: Json | null
           created_at?: string
           duration_ms?: number | null
+          error_code?: string | null
           id?: string
           message?: string | null
           metadata?: Json
           query?: string | null
+          rls_blocked?: boolean | null
+          route?: string | null
           row_count?: number | null
           status: string
+          user_agent?: string | null
           user_id: string
         }
         Update: {
+          auth_ready?: boolean | null
           code?: string | null
+          context?: Json | null
           created_at?: string
           duration_ms?: number | null
+          error_code?: string | null
           id?: string
           message?: string | null
           metadata?: Json
           query?: string | null
+          rls_blocked?: boolean | null
+          route?: string | null
           row_count?: number | null
           status?: string
+          user_agent?: string | null
           user_id?: string
         }
         Relationships: []
@@ -5124,6 +5142,39 @@ export type Database = {
           last_visit_at?: string
           thresholds_explored?: Json | null
           tutorial_completed?: boolean | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      trial_access: {
+        Row: {
+          created_at: string
+          feature: string
+          id: string
+          is_active: boolean
+          trial_end: string
+          trial_start: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          feature: string
+          id?: string
+          is_active?: boolean
+          trial_end: string
+          trial_start?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          feature?: string
+          id?: string
+          is_active?: boolean
+          trial_end?: string
+          trial_start?: string
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
