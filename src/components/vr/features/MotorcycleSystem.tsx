@@ -15,7 +15,8 @@ import { useVRAvatarProfile, type VRAvatarVariant } from '@/hooks/useVRAvatarPro
 import { isVRAudioUnlocked } from '@/lib/vrAudioGate';
 import bikeEngineStartSrc from '@/assets/audio/bike-engine-start.mp3';
 import bikeEngineRunningSrc from '@/assets/audio/bike-engine-running.mp3';
-import uploadedBikeModelUrl from '@/assets/models/zero-two-motorcycle.glb';
+import uploadedBikeAsset from '@/assets/models/zero-two-motorcycle.glb.asset.json';
+const uploadedBikeModelUrl = (uploadedBikeAsset as { url: string }).url;
 
 // ─── Bike scale (sport bike ~2.2m long, ~1.15m tall at tank) ─────────────────
 const BK = {
