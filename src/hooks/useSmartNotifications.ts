@@ -43,7 +43,7 @@ export const useSmartNotifications = () => {
         .from('profiles')
         .select('hobbies, city, status')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (!userProfile) return;
 
