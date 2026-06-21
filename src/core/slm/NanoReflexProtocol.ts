@@ -30,7 +30,8 @@ export type NanoAction =
   | 'BREATHING'
   | 'SCHEDULE_REMINDER'
   | 'SEND_HUG'
-  | 'SHARE_QUOTE';
+  | 'SHARE_QUOTE'
+  | 'CREATE_VIDEO';
 
 export interface ParsedResponse {
   cleanText: string;
@@ -57,6 +58,7 @@ When you want to perform a special action, output EXACTLY one of these tags at t
 - [ACTION:BREATHING] - When starting a breathing exercise
 - [ACTION:SEND_HUG] - When offering emotional comfort
 - [ACTION:SHARE_QUOTE] - When sharing an inspiring quote
+- [ACTION:CREATE_VIDEO] - When creating a short video clip for the user
 
 You may include a parameter after a colon: [ACTION:DRAW_GIFT:sunset over mountains]
 
@@ -172,6 +174,18 @@ class NanoReflexProtocol {
         console.log('[NanoReflex] ⏰ SCHEDULE_REMINDER triggered:', params);
         window.dispatchEvent(new CustomEvent('nano-reflex-action', {
           detail: { action: 'SCHEDULE_REMINDER', params }
+        }));
+      }
+    });
+
+    // Create Video
+    this.registerHandler({
+      action: 'CREATE_VIDEO',
+      description: 'Generate a short video clip for the user',
+      execute: async (params) => {
+        console.log('[NanoReflex] 🎬 CREATE_VIDEO triggered:', params);
+        window.dispatchEvent(new CustomEvent('nano-reflex-action', {
+          detail: { action: 'CREATE_VIDEO', params: params || 'a beautiful cinematic scene' }
         }));
       }
     });

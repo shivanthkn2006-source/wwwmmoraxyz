@@ -1,23 +1,18 @@
 /**
- * Zoe Voice - Hybrid Neural TTS (Deepgram Aura-2 + Browser Fallback)
- * ===================================================================
- * 
- * PRIORITY ORDER:
- * 1. Deepgram Aura-2 (Premium "HER" quality) via edge function
- * 2. Browser-native SpeechSynthesis (FREE fallback)
- * 
+ * Zoe Voice - Deepgram Aura 2 TTS (Primary) + Browser Fallback
+ * ==============================================================
+ * Primary: Deepgram Aura 2 "aura-2-janus-en" (feminine, warm, expressive)
+ * Fallback: Browser SpeechSynthesis API
  * Features:
- * - Seamless failover from Deepgram to browser TTS
+ * - Deepgram Aura 2 premium voice as primary
+ * - Automatic fallback to browser TTS on failure
  * - Chrome keep-alive workaround for long utterances
  * - Text chunking for reliability
- * - Proper async cancellation
  */
 
-import { supabase } from '@/integrations/supabase/client';
-import { getEffectiveVoiceExperience } from '@/utils/voiceExperienceLock';
-import { applyVoiceSettingsToAudio } from '@/stores/zoeInfinityVoiceSettings';
+import { speakWithDeepgram, stopDeepgramSpeech, isDeepgramPlaying } from './deepgramTTS';
 
-// Voice preference priority for browser fallback
+// Voice preference priority
 const VOICE_PRIORITIES = [
   'Samantha',           // Mac/iOS - Premium quality
   'Google US English',  // Android/Chrome
@@ -29,7 +24,7 @@ const VOICE_PRIORITIES = [
 ];
 
 /**
- * CALM SOOTHING VOICE FORMULA (Browser fallback):
+ * CALM SOOTHING VOICE FORMULA:
  * - Lower pitch (0.95) = Warmer, more mature
  * - Slower rate (0.9) = Relaxed, meditative
  * - Slightly lower volume (0.85) = Intimate, gentle
@@ -46,11 +41,11 @@ export const SMITH_VOICE_CONFIG = {
   volume: 0.9,
 };
 
-// Cached voice reference for browser fallback
+// Cached voice reference
 let cachedVoice: SpeechSynthesisVoice | null = null;
 let voicesInitialized = false;
 let voiceInitTimestamp = 0;
-const VOICE_CACHE_EXPIRY_MS = 60000; // BUG FIX: Re-check voices every 60 seconds
+const VOICE_CACHE_EXPIRY_MS = 60000;
 
 // Chrome bug workaround
 let chromeKeepAliveInterval: ReturnType<typeof setInterval> | null = null;
@@ -61,25 +56,8 @@ let currentChunkIndex = 0;
 let isSpeakingActive = false;
 let speechCancelled = false;
 
-// Audio element for Deepgram playback
-let currentAudioElement: HTMLAudioElement | null = null;
-
-// Track if Deepgram is available (set to false on first failure)
-let deepgramAvailable = true;
-let lastDeepgramCheck = 0;
-const DEEPGRAM_RETRY_INTERVAL = 60000; // Retry Deepgram every 60 seconds after failure
-
-/**
- * Reset Deepgram availability flag - call on page load to ensure fresh attempts
- */
-export const resetDeepgramAvailability = (): void => {
-  console.log('[ZoeVoice] 🔄 Resetting Deepgram availability flag');
-  deepgramAvailable = true;
-  lastDeepgramCheck = 0;
-};
-
 // ═══════════════════════════════════════════════════════════════════════════════
-// CHROME KEEP-ALIVE (for browser fallback)
+// CHROME KEEP-ALIVE
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const startChromeKeepAlive = () => {
@@ -146,7 +124,6 @@ const findBestZoeVoice = (voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice 
 };
 
 export const initializeZoeVoices = async (): Promise<void> => {
-  // BUG FIX: Re-initialize if cache expired (handles voice changes during session)
   const now = Date.now();
   if (voicesInitialized && now - voiceInitTimestamp < VOICE_CACHE_EXPIRY_MS) {
     return;
@@ -162,7 +139,6 @@ export const initializeZoeVoices = async (): Promise<void> => {
       const voices = window.speechSynthesis.getVoices();
       if (voices.length > 0) {
         const newVoice = findBestZoeVoice(voices);
-        // BUG FIX: Only log if voice actually changed
         if (newVoice?.name !== cachedVoice?.name) {
           console.log('[ZoeVoice] Voice initialized:', newVoice?.name || 'default');
         }
@@ -190,157 +166,7 @@ export const initializeZoeVoices = async (): Promise<void> => {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// DEEPGRAM AURA-2 TTS (Premium Neural Voice)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-const speakWithDeepgram = async (
-  text: string,
-  voice: 'zoe' | 'smith' = 'zoe',
-  onStart?: () => void,
-  onEnd?: () => void,
-  onError?: (error?: any) => void
-): Promise<boolean> => {
-  // Check if we should retry Deepgram
-  const now = Date.now();
-  if (!deepgramAvailable && now - lastDeepgramCheck < DEEPGRAM_RETRY_INTERVAL) {
-    return false;
-  }
-  
-  try {
-    console.log('[ZoeVoice] 🎙️ Attempting Deepgram Aura-2...');
-    
-    // IMPORTANT: request binary. Without responseType, supabase-js may try JSON parsing
-    // and we end up with "Unexpected Deepgram response format".
-    const { data, error } = await supabase.functions.invoke('zoe-voice', {
-      body: { 
-        text, 
-        voice,
-        encoding: 'mp3'
-      },
-      // @ts-expect-error - supabase-js supports this at runtime
-      responseType: 'arraybuffer',
-    });
-    
-    if (error) {
-      console.warn('[ZoeVoice] ⚠️ Deepgram error:', error.message);
-      deepgramAvailable = false;
-      lastDeepgramCheck = now;
-      return false;
-    }
-    
-    // Deepgram function may return JSON fallback; with responseType=arraybuffer it arrives as bytes.
-    try {
-      if (data instanceof ArrayBuffer) {
-        const text = new TextDecoder().decode(new Uint8Array(data)).trim();
-        if (text.startsWith('{') || text.startsWith('[')) {
-          const maybeJson = JSON.parse(text);
-          if (maybeJson?.fallback || maybeJson?.useBrowserFallback) {
-            console.log('[ZoeVoice] 📱 Deepgram returned fallback signal, using browser TTS');
-            deepgramAvailable = false;
-            lastDeepgramCheck = now;
-            return false;
-          }
-        }
-      } else if ((data as any)?.fallback || (data as any)?.useBrowserFallback) {
-        console.log('[ZoeVoice] 📱 Deepgram returned fallback signal, using browser TTS');
-        deepgramAvailable = false;
-        lastDeepgramCheck = now;
-        return false;
-      }
-    } catch {
-      // ignore JSON decode errors
-    }
-    
-    // If we got audio data, play it
-    if (data instanceof Blob || (data && typeof data === 'object' && data.type)) {
-      const audioBlob = data instanceof Blob ? data : new Blob([data], { type: 'audio/mp3' });
-      await playAudioBlob(audioBlob, onStart, onEnd, onError);
-      deepgramAvailable = true;
-      return true;
-    }
-    
-    // Handle ArrayBuffer response
-    if (data instanceof ArrayBuffer) {
-      const audioBlob = new Blob([data], { type: 'audio/mp3' });
-      await playAudioBlob(audioBlob, onStart, onEnd, onError);
-      deepgramAvailable = true;
-      return true;
-    }
-    
-    console.warn('[ZoeVoice] ⚠️ Unexpected Deepgram response format');
-    return false;
-    
-  } catch (err) {
-    console.warn('[ZoeVoice] ⚠️ Deepgram failed:', err);
-    deepgramAvailable = false;
-    lastDeepgramCheck = now;
-    return false;
-  }
-};
-
-const playAudioBlob = async (
-  blob: Blob,
-  onStart?: () => void,
-  onEnd?: () => void,
-  onError?: (error?: any) => void
-): Promise<void> => {
-  return new Promise((resolve, reject) => {
-    // Stop any existing audio
-    stopCurrentAudio();
-    
-    const audioUrl = URL.createObjectURL(blob);
-    const audio = new Audio(audioUrl);
-    currentAudioElement = audio;
-    
-    // Apply Zoe Infinity voice settings (cinematic playback rate)
-    applyVoiceSettingsToAudio(audio);
-    
-    audio.onplay = () => {
-      console.log('[ZoeVoice] 🔊 Deepgram audio playing');
-      isSpeakingActive = true;
-      onStart?.();
-      window.dispatchEvent(new CustomEvent('zoe-speak'));
-    };
-    
-    audio.onended = () => {
-      console.log('[ZoeVoice] ✅ Deepgram audio complete');
-      isSpeakingActive = false;
-      URL.revokeObjectURL(audioUrl);
-      currentAudioElement = null;
-      onEnd?.();
-      window.dispatchEvent(new CustomEvent('zoe-speak-end'));
-      resolve();
-    };
-    
-    audio.onerror = (e) => {
-      console.error('[ZoeVoice] ❌ Audio playback error:', e);
-      isSpeakingActive = false;
-      URL.revokeObjectURL(audioUrl);
-      currentAudioElement = null;
-      onError?.(e);
-      reject(e);
-    };
-    
-    audio.play().catch((err) => {
-      console.error('[ZoeVoice] ❌ Audio play failed:', err);
-      URL.revokeObjectURL(audioUrl);
-      currentAudioElement = null;
-      onError?.(err);
-      reject(err);
-    });
-  });
-};
-
-const stopCurrentAudio = () => {
-  if (currentAudioElement) {
-    currentAudioElement.pause();
-    currentAudioElement.src = '';
-    currentAudioElement = null;
-  }
-};
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// BROWSER FALLBACK TTS
+// BROWSER TTS
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const speakNextChunk = (
@@ -450,7 +276,7 @@ const speakWithBrowserTTS = (
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// MAIN PUBLIC API - HYBRID VOICE (Deepgram → Browser Fallback)
+// MAIN PUBLIC API
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const cleanText = (text: string): string => {
@@ -464,9 +290,7 @@ const cleanText = (text: string): string => {
 };
 
 /**
- * SPEAK AS ZOE - Hybrid Neural Voice
- * 1. Try Deepgram Aura-2 (Premium "HER" quality)
- * 2. Fallback to browser SpeechSynthesis (FREE)
+ * SPEAK AS ZOE - Browser Native Voice
  */
 export const speakAsZoe = async (
   text: string,
@@ -489,27 +313,25 @@ export const speakAsZoe = async (
   // Stop any current speech
   stopZoeSpeech();
   
-  // Try Deepgram first
-  const deepgramSuccess = await speakWithDeepgram(cleaned, 'zoe', onStart, onEnd, onError);
+  // Try Deepgram Aura 2 first (premium voice)
+  console.log('[ZoeVoice] 🎙️ Attempting Deepgram Aura 2 (aura-2-janus-en)...');
+  const deepgramSuccess = await speakWithDeepgram(cleaned, onStart, onEnd, (err) => {
+    console.warn('[ZoeVoice] Deepgram failed, falling back to browser TTS:', err?.message);
+  });
   
-  if (!deepgramSuccess) {
-    // Zoe Infinity requirement: DO NOT use browser-native fallback.
-    if (getEffectiveVoiceExperience() === 'zoe-infinity') {
-      console.warn('[ZoeVoice] Deepgram unavailable (Infinity mode; no browser fallback)');
-      onError?.(new Error('Deepgram voice unavailable'));
-      onEnd?.();
-      window.dispatchEvent(new CustomEvent('zoe-speak-end'));
-      return;
-    }
-
-    // Fallback to browser TTS (classic/MMORA only)
-    console.log('[ZoeVoice] 📱 Falling back to browser TTS');
-    speakWithBrowserTTS(cleaned, ZOE_VOICE_CONFIG, cachedVoice, onStart, onEnd, onError);
+  if (deepgramSuccess) {
+    console.log('[ZoeVoice] ✅ Deepgram Aura 2 playing');
+    return;
   }
+  
+  // Fallback to browser TTS
+  console.log('[ZoeVoice] 📱 Falling back to browser TTS');
+  await initializeZoeVoices();
+  speakWithBrowserTTS(cleaned, ZOE_VOICE_CONFIG, cachedVoice, onStart, onEnd, onError);
 };
 
 /**
- * SPEAK AS SMITH - Hybrid Neural Voice (Male persona)
+ * SPEAK AS SMITH - Browser Native Voice (Male persona)
  */
 export const speakAsSmithVoice = async (
   text: string,
@@ -531,28 +353,15 @@ export const speakAsSmithVoice = async (
   
   stopZoeSpeech();
   
-  // Try Deepgram first
-  const deepgramSuccess = await speakWithDeepgram(cleaned, 'smith', onStart, onEnd, onError);
+  // Find male voice
+  const voices = window.speechSynthesis?.getVoices() || [];
+  const maleVoice = voices.find(v => 
+    ['Daniel', 'Alex', 'David', 'Male', 'Fred', 'Thomas', 'James'].some(name => 
+      v.name.toLowerCase().includes(name.toLowerCase())
+    ) && v.lang.startsWith('en')
+  ) || voices.find(v => v.lang.startsWith('en')) || voices[0];
   
-  if (!deepgramSuccess) {
-    if (getEffectiveVoiceExperience() === 'zoe-infinity') {
-      console.warn('[ZoeVoice] Deepgram unavailable (Infinity mode; no browser fallback)');
-      onError?.(new Error('Deepgram voice unavailable'));
-      onEnd?.();
-      window.dispatchEvent(new CustomEvent('zoe-speak-end'));
-      return;
-    }
-
-    // Find male voice for fallback
-    const voices = window.speechSynthesis?.getVoices() || [];
-    const maleVoice = voices.find(v => 
-      ['Daniel', 'Alex', 'David', 'Male', 'Fred', 'Thomas', 'James'].some(name => 
-        v.name.toLowerCase().includes(name.toLowerCase())
-      ) && v.lang.startsWith('en')
-    ) || voices.find(v => v.lang.startsWith('en')) || voices[0];
-    
-    speakWithBrowserTTS(cleaned, SMITH_VOICE_CONFIG, maleVoice, onStart, onEnd, onError);
-  }
+  speakWithBrowserTTS(cleaned, SMITH_VOICE_CONFIG, maleVoice, onStart, onEnd, onError);
 };
 
 export const speakAsSmith = speakAsSmithVoice;
@@ -563,7 +372,7 @@ export const speakAsSmith = speakAsSmithVoice;
 
 export const stopZoeSpeech = (): void => {
   // Stop Deepgram audio
-  stopCurrentAudio();
+  stopDeepgramSpeech();
   
   // Stop browser TTS
   if ('speechSynthesis' in window) {
@@ -579,17 +388,13 @@ export const stopZoeSpeech = (): void => {
 export const stopSpeaking = stopZoeSpeech;
 
 export const isZoeSpeaking = (): boolean => {
-  const audioPlaying = currentAudioElement && !currentAudioElement.paused;
   const browserSpeaking = 'speechSynthesis' in window && window.speechSynthesis.speaking;
-  return isSpeakingActive || audioPlaying || browserSpeaking;
+  return isSpeakingActive || browserSpeaking || isDeepgramPlaying();
 };
 
 export const isAssistantSpeaking = isZoeSpeaking;
 
 export const pauseZoeSpeech = (): void => {
-  if (currentAudioElement) {
-    currentAudioElement.pause();
-  }
   if ('speechSynthesis' in window) {
     window.speechSynthesis.pause();
   }
@@ -598,9 +403,6 @@ export const pauseZoeSpeech = (): void => {
 export const pauseSpeaking = pauseZoeSpeech;
 
 export const resumeZoeSpeech = (): void => {
-  if (currentAudioElement) {
-    currentAudioElement.play();
-  }
   if ('speechSynthesis' in window) {
     window.speechSynthesis.resume();
   }
@@ -615,12 +417,10 @@ export const getZoeSpeechState = () => ({
   isPaused: 'speechSynthesis' in window ? window.speechSynthesis.paused : false,
   voiceName: cachedVoice?.name || null,
   chunksRemaining: currentUtteranceQueue.length - currentChunkIndex,
-  deepgramAvailable,
-  usingDeepgram: currentAudioElement !== null,
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// LEGACY COMPATIBILITY
+// LEGACY COMPATIBILITY STUBS
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export const getCurrentAssistant = () => 'zoe' as const;

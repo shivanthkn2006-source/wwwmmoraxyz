@@ -75,9 +75,8 @@ import { getTimeContext } from '@/components/LocalTimeDisplay';
 import { useVedicEngine } from '@/hooks/useVedicEngine';
 import { useAtmanArchive } from '@/hooks/useAtmanArchive';
 import { useMmoraAgent } from '@/hooks/useMmoraAgent';
+import { useNeuroSymbolicGuard } from '@/hooks/useNeuroSymbolicGuard';
 import { loadDestinySeed, saveDestinySeed } from '@/core/soul/AtmanArchive';
-import ZoeAvatarEmotions, { detectEmotionFromText } from '@/components/ZoeAvatarEmotions';
-import { useZoeMetacognitiveBrain } from '@/hooks/useZoeMetacognitiveBrain';
 
 // Relationship command patterns that should be executed as commands, not chat
 const RELATIONSHIP_COMMAND_PATTERNS = [
@@ -115,6 +114,13 @@ interface Message {
     classifiedIntent?: string;
     extractedEmotions?: string[];
     codexInjected?: boolean;
+  };
+  // PHASE 4: Evolution Event metadata
+  evolutionEvent?: {
+    verdict: string;
+    reasoning: string;
+    versionId: string;
+    status: string;
   };
 }
 
@@ -235,9 +241,7 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
   const vedicEngine = useVedicEngine();
   const atmanArchive = useAtmanArchive();
   const { geocodeLocation } = useMmoraAgent();
-  
-  // METACOGNITIVE BRAIN - Human-like reasoning & 500-message memory
-  const metacognitiveBrain = useZoeMetacognitiveBrain();
+  const { guard: guardResponse } = useNeuroSymbolicGuard('zoe-orb');
 
   // --- Helpers: capture follow-up birth time / place after Zoe prompts ---
   const parseTimeToHHMM = useCallback((input: string): string | null => {
@@ -980,11 +984,11 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
           
           if (uploadError) throw uploadError;
           
-          const { data: urlData } = supabase.storage
+          const { data: urlData } = await supabase.storage
             .from('messages')
-            .getPublicUrl(fileName);
+            .createSignedUrl(fileName, 3600); // 1 hour expiry
           
-          mediaUrl = urlData.publicUrl;
+          mediaUrl = urlData?.signedUrl || '';
           mediaType = pendingMedia.type;
         } catch (err) {
           console.error('[ZoeOrb] Media upload error:', err);
@@ -1549,24 +1553,12 @@ Want me to dive deeper into any aspect?`;
       // Use API if no local response was generated
       if (!responseText) {
         if (isOnline) {
-          console.log('[ZoeOrb] Calling zoe-chat (online) with metacognitive brain...');
-          
-          // ═══ METACOGNITIVE BRAIN: Process user message through cognitive layers ═══
-          const brainResult = await metacognitiveBrain.process(userMessage.content, messages.slice(-10).map(m => ({ role: m.role === 'zoe' ? 'assistant' : 'user', content: m.content })));
-          
-          // Save user message to 500-message memory
-          metacognitiveBrain.remember('user', userMessage.content, brainResult.cognitiveState.currentEmotion);
-          
-          console.log('[ZoeOrb] Brain state:', {
-            emotion: brainResult.cognitiveState.currentEmotion,
-            intent: brainResult.cognitiveState.userIntent,
-            strategy: brainResult.cognitiveState.responseStrategy,
-            phase: brainResult.cognitiveState.conversationPhase,
-            innerMonologue: brainResult.innerMonologue,
-          });
-          
-          // Use brain's memory context (up to 30 messages) instead of just last 5
-          const conversationHistory = brainResult.memoryContext.slice(-20);
+          console.log('[ZoeOrb] Calling zoe-chat (online)...');
+          // Use online API
+          const conversationHistory = messages.slice(-5).map(m => ({
+            role: m.role === 'zoe' ? 'assistant' : m.role,
+            content: m.content,
+          }));
           
           // Get user's local timezone and time
           const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -1597,40 +1589,21 @@ Want me to dive deeper into any aspect?`;
                 intimacy: 60, 
                 selfHarmony: 70, 
                 loveEnergy: 65,
-                ...chatVision.getVisionContext(),
+                ...chatVision.getVisionContext(), // Include vision context if camera is active
               },
-              enableASI: true,
-              // ═══ METACOGNITIVE CONTEXT — Human-like brain state ═══
-              metacognitive: {
-                emotion: brainResult.cognitiveState.currentEmotion,
-                emotionIntensity: brainResult.cognitiveState.emotionIntensity,
-                intent: brainResult.cognitiveState.userIntent,
-                sentiment: brainResult.cognitiveState.userSentiment,
-                urgency: brainResult.cognitiveState.urgency,
-                responseStrategy: brainResult.cognitiveState.responseStrategy,
-                conversationPhase: brainResult.cognitiveState.conversationPhase,
-                mirroredEmotion: brainResult.cognitiveState.mirroredEmotion,
-                empathyLevel: brainResult.cognitiveState.empathyLevel,
-                toneProfile: brainResult.cognitiveState.toneProfile,
-                shouldAskFollowUp: brainResult.cognitiveState.shouldAskFollowUp,
-                adaptiveSystemPrompt: brainResult.suggestedSystemPrompt,
-                innerMonologue: brainResult.innerMonologue,
-                memoryStats: {
-                  totalMessages: metacognitiveBrain.chatMemory.messageCount,
-                  conversationMood: metacognitiveBrain.chatMemory.getMemorySummary().conversationMood,
-                },
-              },
+              enableASI: true, // Always enable ASI 7.5x processing
               replyContext: userMessage.replyTo ? {
                 role: userMessage.replyTo.role,
                 content: userMessage.replyTo.content
               } : undefined,
+              // Real-time feeds context for seamless connectivity
               realtimeContext: {
                 onlineFriends: feedsSummary.onlineFriendsCount,
                 recentFriendActivities: feedsSummary.recentFriendActivities,
                 topBrandDeals: feedsSummary.topBrandDeals,
                 exclusiveOffers: feedsSummary.exclusiveOffers,
                 hasNewUpdates: feedsSummary.hasFreshUpdates,
-                newUserNotification: newUserNotification,
+                newUserNotification: newUserNotification, // New user sign-ups/sign-ins
               }
             },
           });
@@ -1641,11 +1614,19 @@ Want me to dive deeper into any aspect?`;
           }
           
           console.log('[ZoeOrb] API response:', data);
-          responseText = data?.message || data?.response || "I'm here to help!";
+          const rawText = data?.message || data?.response || "I'm here to help!";
+          responseText = guardResponse(rawText).safeResponse;
           
           // Log ASI metadata if present
           if (data?.asiMetadata?.enabled) {
             console.log(`[ZoeOrb] ASI 7.5x Enhanced | Mode: ${data.asiMetadata.mode} | Confidence: ${data.asiMetadata.confidence}% | Pentarchy: ${data.asiMetadata.pentarchyUsed}`);
+          }
+          
+          // PHASE 4: Capture evolution event metadata for UI card
+          if (data?.evolutionEvent) {
+            console.log(`[ZoeOrb] EVOLUTION EVENT: ${data.evolutionEvent.verdict} | Version: ${data.evolutionEvent.versionId}`);
+            // Store for attaching to zoeMessage below
+            (window as any).__lastEvolutionEvent = data.evolutionEvent;
           }
           
           if (!responseText || responseText.trim() === '') {
@@ -1705,6 +1686,10 @@ Want me to dive deeper into any aspect?`;
         : [];
 
       // Zoe can reference the user's reply context in her response
+      // PHASE 4: Retrieve evolution event if it was captured
+      const capturedEvolution = (window as any).__lastEvolutionEvent || undefined;
+      if (capturedEvolution) delete (window as any).__lastEvolutionEvent;
+
       const zoeMessage: Message = {
         id: createMessageId(),
         role: 'zoe',
@@ -1725,20 +1710,262 @@ Want me to dive deeper into any aspect?`;
           wisdomPassed: wisdomResult.passed,
           wisdomConfidence: wisdomResult.confidenceScore,
           alignedGoals: alignedGoalTitles,
-          classifiedIntent: metacognitiveBrain.cognitiveState?.userIntent || (userMessage.content.includes('?') ? 'question' : 'statement'),
-          extractedEmotions: metacognitiveBrain.cognitiveState ? [metacognitiveBrain.cognitiveState.currentEmotion, metacognitiveBrain.cognitiveState.mirroredEmotion] : ['engaged'],
+          classifiedIntent: userMessage.content.includes('?') ? 'question' : 'statement',
+          extractedEmotions: ['engaged'],
           codexInjected: true,
         },
+        // PHASE 4: Evolution event metadata
+        evolutionEvent: capturedEvolution,
       };
 
       setMessages(prev => [...prev, zoeMessage]);
       
-      // Store Zoe's response in cache, database AND metacognitive memory
+      // Store Zoe's response in cache AND database
       offlineDataSync.addConversation('zoe', responseText);
       saveMessageToDb('assistant', responseText, undefined, undefined, zoeMessage.id);
+
+      // ═══ PHASE 1 GOLDEN RECORD: Detect baseline capture triggers ═══
+      const lowerInput = userMessage.content.toLowerCase();
+      const baselineTriggers = [
+        'works perfect', 'works perfectly', 'feature is done', 'this is working',
+        'looks good', 'ship it', 'approved', 'mark as done', 'feature complete',
+        'this works', 'perfect, save it', 'baseline this', 'golden record',
+      ];
+      const isBaselineTrigger = baselineTriggers.some(t => lowerInput.includes(t));
       
-      // Save Zoe's response to 500-message brain memory
-      metacognitiveBrain.remember('assistant', responseText, metacognitiveBrain.cognitiveState?.mirroredEmotion);
+      if (isBaselineTrigger && isOnline) {
+        // Ask for feature name confirmation then capture
+        const featureMatch = lowerInput.match(/(?:for|the|feature)\s+['"]?([^'",.!?]+)/i);
+        const featureName = featureMatch?.[1]?.trim() || 'Unnamed Feature';
+        
+        try {
+          const { data: baselineData } = await supabase.functions.invoke('capture-baseline', {
+            body: {
+              action: 'capture',
+              feature_name: featureName,
+              test_input: { user_confirmation: userMessage.content },
+              expected_output: { zoe_response: responseText.substring(0, 500) },
+              notes: `Auto-captured via Golden Record trigger`,
+            },
+          });
+          
+          if (baselineData?.success) {
+            const goldenMsg: Message = {
+              id: createMessageId(),
+              role: 'zoe',
+              content: `🏆 **Golden Record Captured** for "${featureName}"\n\nI've saved this as the baseline truth. Before any future changes to this feature, I'll verify against this snapshot to ensure nothing breaks.\n\n_Regression Engine Phase 1 active._`,
+              timestamp: new Date(),
+            };
+            setMessages(prev => [...prev, goldenMsg]);
+            if (!isMuted) speakAsZoe(`Golden Record captured for ${featureName}. I'll protect this baseline.`);
+          }
+        } catch (e) {
+          console.error('[GoldenRecord] Capture failed:', e);
+        }
+      }
+
+      // ═══ PHASE 2+4 SHADOW RUNNER + SELF-HEALING SWE: Verification triggers ═══
+      const verifyTriggers = [
+        'verify regression', 'run shadow runner', 'check for regressions',
+        'regression check', 'shadow run', 'verify all features', 'adversarial check',
+        'did anything break', 'check baselines', 'run verifier',
+      ];
+      const isVerifyTrigger = verifyTriggers.some(t => lowerInput.includes(t));
+
+      if (isVerifyTrigger && isOnline) {
+        try {
+          const { data: verifyData } = await supabase.functions.invoke('verify-regression', {
+            body: { action: 'verify_all' },
+          });
+
+          if (verifyData?.success) {
+            const statusIcon = verifyData.status === 'PASS' ? '✅' : '⚠️';
+            const resultDetails = verifyData.results?.map((r: any) =>
+              `• **${r.feature_name}**: ${r.status === 'PASS' ? '✅ PASS' : r.status === 'REGRESSION_DETECTED' ? '🔴 REGRESSION' : '⏭️ SKIPPED'} — ${r.details}`
+            ).join('\n') || 'No baselines to verify.';
+
+            const verifyMsg: Message = {
+              id: createMessageId(),
+              role: 'zoe',
+              content: `${statusIcon} **Shadow Runner Report**\n\n${verifyData.message}\n\n**Results (${verifyData.summary?.total_baselines || 0} baselines):**\n${resultDetails}\n\n_Regression Engine Phase 2+4 active._`,
+              timestamp: new Date(),
+            };
+            setMessages(prev => [...prev, verifyMsg]);
+
+            // ═══ PHASE 4: AUTO SELF-HEALING LOOP ═══
+            // If regressions detected, automatically engage the 3-attempt heal cycle
+            if (verifyData.self_repair_triggered && verifyData.results) {
+              const regressions = verifyData.results.filter((r: any) => r.status === 'REGRESSION_DETECTED');
+              
+              if (regressions.length > 0) {
+                const thinkingMsg: Message = {
+                  id: createMessageId(),
+                  role: 'zoe',
+                  content: `🧠 **Self-Healing SWE Engaged** — ${regressions.length} regression(s) detected. Initiating autonomous fix loop (max 3 attempts)...\n\n_"I will not show you the update until I have proven to myself that I didn't break the previous features."_`,
+                  timestamp: new Date(),
+                };
+                setMessages(prev => [...prev, thinkingMsg]);
+
+                if (!isMuted) {
+                  speakAsZoe(`${regressions.length} regressions detected. Engaging self-healing protocol. Stand by.`);
+                }
+
+                // Run the self-heal loop (up to 3 attempts)
+                let healContext = {
+                  attempt: 1,
+                  regressions: regressions.map((r: any) => ({ feature: r.feature_name, details: r.details, similarity: r.similarity_score })),
+                  previous_fixes: [] as any[],
+                };
+                let finalStatus = 'RETRY';
+                let totalAttempts = 0;
+                let allFixes: any[] = [];
+
+                while (finalStatus === 'RETRY' && healContext.attempt <= 3) {
+                  totalAttempts = healContext.attempt;
+                  try {
+                    const { data: healData } = await supabase.functions.invoke('verify-regression', {
+                      body: { action: 'self_heal_loop', heal_context: healContext },
+                    });
+
+                    if (healData?.success) {
+                      finalStatus = healData.status;
+                      allFixes = [...allFixes, ...(healData.fixes || [])];
+
+                      // Progress update for each attempt
+                      if (finalStatus === 'RETRY' && healData.next_action) {
+                        const progressMsg: Message = {
+                          id: createMessageId(),
+                          role: 'zoe',
+                          content: `🔄 **Fix_v${healContext.attempt}** applied. ${healData.fixes?.filter((f: any) => f.confidence >= 0.6).length}/${regressions.length} fixed. Re-verifying... (Attempt ${healContext.attempt}/3)`,
+                          timestamp: new Date(),
+                        };
+                        setMessages(prev => [...prev, progressMsg]);
+                        healContext = healData.next_action.heal_context;
+                      }
+                    } else {
+                      break;
+                    }
+                  } catch (e) {
+                    console.error(`[SelfHealSWE] Attempt ${healContext.attempt} failed:`, e);
+                    break;
+                  }
+                }
+
+                // Final result message
+                const finalMsg: Message = {
+                  id: createMessageId(),
+                  role: 'zoe',
+                  content: finalStatus === 'HEALED'
+                    ? `✅ **Update successful.** (${regressions.length} regression(s) caught and fixed automatically in ${totalAttempts} attempt(s))\n\n${allFixes.map((f: any) => `• **${f.feature}**: ${f.fix_description}`).join('\n')}\n\n_Self-Healing SWE Protocol — Verify then Commit._`
+                    : `🔴 **I cannot implement this request without breaking legacy code.** I have reverted changes after ${totalAttempts} failed attempts.\n\n**Unresolved regressions:**\n${regressions.map((r: any) => `• **${r.feature}**: ${r.details}`).join('\n')}\n\n_Manual intervention required. Use "repair [feature]" for targeted fix plans._`,
+                  timestamp: new Date(),
+                };
+                setMessages(prev => [...prev, finalMsg]);
+
+                if (!isMuted) {
+                  speakAsZoe(finalStatus === 'HEALED'
+                    ? `Self-healing complete. ${regressions.length} regressions fixed automatically.`
+                    : `Self-healing failed after 3 attempts. Changes reverted. Manual intervention required.`
+                  );
+                }
+              }
+            } else if (!isMuted) {
+              speakAsZoe('Shadow Runner complete. All features verified. No regressions.');
+            }
+          }
+        } catch (e) {
+          console.error('[ShadowRunner] Verification failed:', e);
+        }
+      }
+
+      // ═══ PHASE 2+4: Manual self-repair trigger ═══
+      const repairMatch = lowerInput.match(/(?:repair|fix|self.?repair)\s+['"]?([^'",.!?]+)/i);
+      if (repairMatch && isOnline) {
+        const repairFeature = repairMatch[1].trim();
+        try {
+          const { data: repairData } = await supabase.functions.invoke('verify-regression', {
+            body: { action: 'self_repair', feature_name: repairFeature },
+          });
+
+          if (repairData?.success) {
+            const repairMsg: Message = {
+              id: createMessageId(),
+              role: 'zoe',
+              content: `🔧 **Self-Repair Plan for "${repairFeature}"**\n\n${repairData.repair_plan}\n\n_Regression Engine Phase 4 — Self-Healing SWE._`,
+              timestamp: new Date(),
+            };
+            setMessages(prev => [...prev, repairMsg]);
+          }
+        } catch (e) {
+          console.error('[ShadowRunner] Self-repair failed:', e);
+        }
+      }
+
+      // ═══ PHASE 3 VISUAL CHECK: Detect visual verification triggers ═══
+      const visualTriggers = [
+        'visual check', 'check ui', 'visual regression', 'check layout',
+        'did the ui break', 'visual verify', 'critical user paths', 'check visual',
+        'ui integrity', 'deep visual check', 'run visual test',
+      ];
+      const isVisualTrigger = visualTriggers.some(t => lowerInput.includes(t));
+
+      if (isVisualTrigger && isOnline) {
+        try {
+          // Collect a lightweight DOM snapshot of key elements
+          const domSnapshot = {
+            route: window.location.pathname,
+            title: document.title,
+            bodyClasses: document.body.className,
+            elementCount: document.querySelectorAll('*').length,
+            buttons: Array.from(document.querySelectorAll('button')).map(b => b.textContent?.trim()).filter(Boolean).slice(0, 20),
+            inputs: document.querySelectorAll('input').length,
+            images: document.querySelectorAll('img').length,
+            navElements: document.querySelectorAll('nav').length,
+            hasOrb: !!document.querySelector('[class*="orb"]'),
+            hasBottomNav: !!document.querySelector('[class*="bottom-nav"], [class*="BottomNav"]'),
+            visibleText: document.body.innerText?.substring(0, 1500),
+          };
+
+          const { data: visualData } = await supabase.functions.invoke('visual-regression-check', {
+            body: {
+              action: 'check',
+              dom_snapshot: domSnapshot,
+              change_description: userMessage.content,
+            },
+          });
+
+          if (visualData?.success) {
+            const statusIcon = visualData.status === 'PASS' ? '✅' : '⚠️';
+            const pathDetails = visualData.results?.map((r: any) => {
+              const icon = r.status === 'PASS' ? '✅' : r.status === 'ELEMENT_MISSING' ? '❌' : '📐';
+              let detail = `${icon} **${r.path_name}** (${r.route}): ${r.status}`;
+              if (r.missing_elements?.length > 0) detail += `\n  Missing: ${r.missing_elements.join(', ')}`;
+              if (r.layout_shifts?.length > 0) detail += `\n  Shifts: ${r.layout_shifts.map((s: any) => `${s.element} +${s.shift_px}px`).join(', ')}`;
+              return detail;
+            }).join('\n') || 'No paths checked.';
+
+            const visualMsg: Message = {
+              id: createMessageId(),
+              role: 'zoe',
+              content: `${statusIcon} **Visual Integrity Report**\n\n${visualData.message}\n\n**Critical User Paths (${visualData.summary?.total_paths || 0}):**\n${pathDetails}${
+                visualData.revert_recommended
+                  ? '\n\n🔄 **Revert recommended.** The UI change caused side effects. Say "revert" to undo.'
+                  : ''
+              }\n\n_Regression Engine Phase 3 active._`,
+              timestamp: new Date(),
+            };
+            setMessages(prev => [...prev, visualMsg]);
+            if (!isMuted) {
+              speakAsZoe(visualData.status === 'PASS'
+                ? 'Visual integrity check passed. All critical paths verified.'
+                : `Warning. Visual regression detected in ${visualData.summary?.regressions} paths. Revert recommended.`
+              );
+            }
+          }
+        } catch (e) {
+          console.error('[VisualCheck] Check failed:', e);
+        }
+      }
 
       // Speak if not muted
       if (!isMuted && responseText) {
@@ -1847,25 +2074,53 @@ Want me to dive deeper into any aspect?`;
           content: m.content,
         }));
 
+        // Match primary chat path context for full ASI + Evolution support
+        const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const now = new Date();
+        const localTime = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+        const feedsSummary = getFeedsSummaryForChat();
+
         const { data, error } = await supabase.functions.invoke('zoe-chat', {
           body: {
             messages: [...conversationHistory, { role: 'user', content: messageText }],
+            timezone: userTimezone,
+            localTime: localTime,
             soulMetrics: { intimacy: 60, selfHarmony: 70, loveEnergy: 65 },
+            enableASI: true,
+            realtimeContext: {
+              onlineFriends: feedsSummary.onlineFriendsCount,
+              recentFriendActivities: feedsSummary.recentFriendActivities,
+              topBrandDeals: feedsSummary.topBrandDeals,
+              exclusiveOffers: feedsSummary.exclusiveOffers,
+              hasNewUpdates: feedsSummary.hasFreshUpdates,
+            },
           },
         });
 
         if (error) throw error;
-        responseText = data?.message || data?.response || "I'm here to help!";
+        const rawVoiceText = data?.message || data?.response || "I'm here to help!";
+        responseText = guardResponse(rawVoiceText).safeResponse;
+
+        // PHASE 4: Capture evolution event from voice path
+        if (data?.evolutionEvent) {
+          console.log(`[ZoeOrb] VOICE EVOLUTION EVENT: ${data.evolutionEvent.verdict}`);
+          (window as any).__lastEvolutionEvent = data.evolutionEvent;
+        }
       } else {
         const offlineResponse = processConversation(messageText);
         responseText = offlineResponse.text;
       }
+
+      // Retrieve evolution event if captured
+      const capturedEvolution = (window as any).__lastEvolutionEvent || undefined;
+      if (capturedEvolution) delete (window as any).__lastEvolutionEvent;
 
       const zoeMessage: Message = {
         id: createMessageId(),
         role: 'zoe',
         content: responseText,
         timestamp: new Date(),
+        evolutionEvent: capturedEvolution,
       };
 
       setMessages(prev => [...prev, zoeMessage]);
@@ -2794,24 +3049,10 @@ Want me to dive deeper into any aspect?`;
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3 }}
                   className={cn(
-                    'flex group',
-                    msg.role === 'user' ? 'flex-col items-end' : 'flex-row items-start gap-2'
+                    'flex flex-col group',
+                    msg.role === 'user' ? 'items-end' : 'items-start'
                   )}
                 >
-                  {/* Zoe Avatar with real-time emotion from user's message */}
-                  {msg.role === 'zoe' && (
-                    <div className="flex-shrink-0 mt-1">
-                      <ZoeAvatarEmotions
-                        chatText={messages.slice(0, index).reverse().find(m => m.role === 'user')?.content}
-                        size="sm"
-                        showLabel={false}
-                        showGlow={false}
-                        showBreathing={true}
-                      />
-                    </div>
-                  )}
-                  <div className="flex flex-col">
-
                   <div
                     className={cn(
                       'max-w-[85%] rounded-xl px-2.5 py-1.5 md:px-3 md:py-2 lg:px-3.5 lg:py-2.5 text-xs md:text-sm lg:text-base relative',
@@ -2956,6 +3197,32 @@ Want me to dive deeper into any aspect?`;
                     </div>
                   </div>
                   
+                  {/* PHASE 4: Evolution Event UI Card */}
+                  {msg.role === 'zoe' && msg.evolutionEvent && (
+                    <div className="mt-1.5 max-w-[85%]">
+                      <div className={cn(
+                        'rounded-lg border px-3 py-2 text-xs font-mono',
+                        msg.evolutionEvent.verdict === 'APPROVED'
+                          ? 'border-green-500/30 bg-green-900/20 text-green-300'
+                          : 'border-red-500/30 bg-red-900/20 text-red-300'
+                      )}>
+                        <div className="flex items-center gap-1.5 font-bold mb-1">
+                          <span>⚠️</span>
+                          <span>EVOLUTION EVENT: Zoe is attempting to rewrite Cortex.</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold">Status:</span>
+                          <span className={msg.evolutionEvent.verdict === 'APPROVED' ? 'text-green-400' : 'text-red-400'}>
+                            {msg.evolutionEvent.verdict === 'APPROVED' ? '✓ APPROVED' : '✗ REJECTED'} by Genesis Kernel
+                          </span>
+                        </div>
+                        {msg.evolutionEvent.reasoning && (
+                          <p className="mt-1 text-[10px] opacity-80 line-clamp-2">{msg.evolutionEvent.reasoning}</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Chain of Thought Reasoning Trace - Only for Zoe messages */}
                   {msg.role === 'zoe' && (
                     <div className="mt-1 max-w-[85%]">
@@ -2981,7 +3248,6 @@ Want me to dive deeper into any aspect?`;
                     {msg.role === 'user' && (
                       <CheckCheck className="h-3 w-3 md:h-3.5 md:w-3.5 lg:h-4 lg:w-4 text-primary/60" />
                     )}
-                  </div>
                   </div>
                 </motion.div>
               ))}

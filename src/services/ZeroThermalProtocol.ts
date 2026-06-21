@@ -26,7 +26,8 @@ export interface AnimationRegistration {
 }
 
 // ═══ CONSTANTS - THE 3 LAWS ═══
-const IDLE_SLEEP_TIMEOUT_MS = 5000; // 5 seconds of no interaction
+const IDLE_SLEEP_TIMEOUT_MS = 30000; // 30 seconds of no interaction (was 5s - too aggressive, killed VR world)
+const VR_EXEMPT_PATHS = ['/zoe-omega']; // Routes where idle sleep is disabled entirely
 const MOBILE_FPS_CAP = 30;
 const DESKTOP_FPS_CAP = 60;
 const FRAME_SKIP_INTERVAL = 2; // Skip every 2nd frame on mobile
@@ -117,8 +118,19 @@ class ZeroThermalProtocolService {
     }, IDLE_SLEEP_TIMEOUT_MS);
   }
 
+  private isVRExemptRoute(): boolean {
+    if (typeof window === 'undefined') return false;
+    return VR_EXEMPT_PATHS.some(path => window.location.pathname.startsWith(path));
+  }
+
   private enterIdleSleep(): void {
     if (this.state.isIdleSleeping) return;
+
+    // CRITICAL: Never idle-sleep on VR routes - it kills the 3D world
+    if (this.isVRExemptRoute()) {
+      this.resetIdleTimer(); // Just restart the timer
+      return;
+    }
 
     console.log('[ZeroThermal] 😴 Entering Idle Sleep - Pausing all animations');
     this.state.isIdleSleeping = true;
@@ -238,11 +250,11 @@ class ZeroThermalProtocolService {
       window.addEventListener(event, () => this.recordInteraction(), { passive: true });
     });
 
-    // Listen for visibility changes
+    // Listen for visibility changes (exempt VR routes from sleep on hidden)
     document.addEventListener('visibilitychange', () => {
-      if (document.hidden) {
+      if (document.hidden && !this.isVRExemptRoute()) {
         this.enterIdleSleep();
-      } else {
+      } else if (!document.hidden) {
         this.recordInteraction();
       }
     });

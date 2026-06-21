@@ -50,32 +50,54 @@ export const useMultiplayerPresence = ({
 
   // Interpolation function for smooth movement
   const interpolatePlayers = useCallback(() => {
-    setPlayers(prev => {
+    setPlayers((prev) => {
+      if (prev.size === 0) return prev;
+
       const now = Date.now();
+      let changed = false;
       const updated = new Map(prev);
-      
-      updated.forEach((player, id) => {
+
+      prev.forEach((player, id) => {
         if (id === user?.id) return;
-        
+
         // Lerp factor based on time delta
         const dt = Math.min((now - player.lastUpdate) / broadcastInterval, 1);
         const lerpFactor = Math.min(dt * 0.15, 1);
-        
-        // Smooth interpolation
-        player.position = {
+        if (lerpFactor <= 0) return;
+
+        const nextPosition = {
           x: player.position.x + (player.targetPosition.x - player.position.x) * lerpFactor,
           y: player.position.y + (player.targetPosition.y - player.position.y) * lerpFactor,
           z: player.position.z + (player.targetPosition.z - player.position.z) * lerpFactor,
         };
-        
-        player.rotation = {
+
+        const nextRotation = {
           x: player.rotation.x + (player.targetRotation.x - player.rotation.x) * lerpFactor,
           y: player.rotation.y + (player.targetRotation.y - player.rotation.y) * lerpFactor,
           z: player.rotation.z + (player.targetRotation.z - player.rotation.z) * lerpFactor,
         };
+
+        const positionDelta =
+          Math.abs(nextPosition.x - player.position.x) +
+          Math.abs(nextPosition.y - player.position.y) +
+          Math.abs(nextPosition.z - player.position.z);
+
+        const rotationDelta =
+          Math.abs(nextRotation.x - player.rotation.x) +
+          Math.abs(nextRotation.y - player.rotation.y) +
+          Math.abs(nextRotation.z - player.rotation.z);
+
+        if (positionDelta < 0.0005 && rotationDelta < 0.0005) return;
+
+        changed = true;
+        updated.set(id, {
+          ...player,
+          position: nextPosition,
+          rotation: nextRotation,
+        });
       });
-      
-      return updated;
+
+      return changed ? updated : prev;
     });
   }, [user?.id, broadcastInterval]);
 

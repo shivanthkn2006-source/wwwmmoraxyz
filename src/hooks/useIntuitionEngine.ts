@@ -19,7 +19,7 @@ import type { BehavioralTelemetry } from './useBehavioralTelemetry';
 // TYPES
 // ═══════════════════════════════════════════════════════════════════════════════
 
-// 🎭 VOICE TONE DATA - From Deepgram STT sentiment analysis
+// 🎭 VOICE TONE DATA - From STT sentiment analysis
 export interface VoiceToneData {
   sentiment: 'positive' | 'negative' | 'neutral';
   confidence: number;
@@ -39,7 +39,7 @@ export interface IntuitionSignals {
   sentimentMismatch: boolean;
   subtextOverride: string | null;
   
-  // PROMPT 2B: Voice Tone Analysis (from Deepgram)
+  // PROMPT 2B: Voice Tone Analysis
   voiceTone: VoiceToneData | null;
   voiceMismatch: boolean; // True if voice sentiment != text sentiment
   
@@ -299,7 +299,7 @@ export const useIntuitionEngine = () => {
     // PROMPT 2: Vibe Check (behavioral)
     const vibes = checkVibes(text, telemetry);
     
-    // PROMPT 2B: Voice Tone Mismatch (from Deepgram STT)
+    // PROMPT 2B: Voice Tone Mismatch (from STT sentiment)
     // "Your words say you're great, but your voice sounds so heavy"
     let voiceMismatch = false;
     let enhancedOverride = vibes.override;
@@ -382,7 +382,7 @@ export const useIntuitionEngine = () => {
       parts.push(`→ Intuitive opener available: "${signals.intuitiveSuggestion}"`);
     }
     
-    // PROMPT 2B: Voice Tone Mismatch (from Deepgram)
+    // PROMPT 2B: Voice Tone Mismatch
     if (signals.voiceMismatch && signals.voiceTone) {
       parts.push(`🎤 VOICE TONE MISMATCH: Text says "${signals.textSentiment}" but voice sounds "${signals.voiceTone.sentiment}"`);
       parts.push(`→ Voice indicators: ${signals.voiceTone.emotionalIndicators.join(', ') || 'none'}`);

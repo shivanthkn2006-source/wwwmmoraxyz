@@ -1,4 +1,4 @@
-// A tiny, explicit “one voice at a time” lock.
+// A tiny, explicit "one voice at a time" lock.
 // Purpose: prevent MMORA/Orb voice and Zoe Infinity voice from speaking over each other.
 
 import { stopZoeSpeech } from '@/utils/zoeVoice';
@@ -23,8 +23,6 @@ export const getActiveVoiceExperience = (): VoiceExperience => {
   return window.__activeVoiceExperience || 'unknown';
 };
 
-// Some hooks initialize before the ZoeInfinity page's first useEffect runs.
-// This makes the experience detection robust on first render.
 export const getEffectiveVoiceExperience = (): VoiceExperience => {
   if (typeof window === 'undefined') return 'unknown';
 
@@ -38,17 +36,16 @@ export const getEffectiveVoiceExperience = (): VoiceExperience => {
 
 export const stopAllVoices = () => {
   try {
-    stopZoeSpeech(); // Deepgram+browser fallback voice in MMORA stack
+    stopZoeSpeech();
   } catch {
     // ignore
   }
   try {
-    stopSpeaking(); // assistantVoice WebSpeech queue
+    stopSpeaking();
   } catch {
     // ignore
   }
   try {
-    // Some subsystems listen to these events.
     window.dispatchEvent(new CustomEvent('zoe-stop-all-voices'));
     window.dispatchEvent(new CustomEvent('zoe-speak-end'));
   } catch {

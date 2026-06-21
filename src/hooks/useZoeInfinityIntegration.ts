@@ -811,6 +811,8 @@ export const useZoeInfinityIntegration = () => {
     walkTalk: {
       start: startWalkTalkMode,
       stop: stopWalkTalkMode,
+      changeMode: walkTalk.changeMode,
+      askAboutLocation: walkTalk.askAboutLocation,
       isActive: walkTalk.isActive,
       currentMode: walkTalk.currentMode,
       lastInsight: walkTalk.lastInsight,

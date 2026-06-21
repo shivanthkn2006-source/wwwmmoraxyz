@@ -94,6 +94,13 @@ class ZoeAutoMailService {
    */
   public async generateAndSendMail(direction?: 'moksh_to_shivanth' | 'shivanth_to_moksh'): Promise<boolean> {
     try {
+      // Check auth before calling edge function
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.warn('[ZoeAutoMail] No active session - skipping mail generation');
+        return false;
+      }
+
       // Alternate direction or use provided
       const actualDirection = direction || (this.mailsSentThisSession % 2 === 0 
         ? 'shivanth_to_moksh' 
@@ -141,6 +148,13 @@ class ZoeAutoMailService {
     priority?: string;
   }): Promise<boolean> {
     try {
+      // Check auth before calling edge function
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.warn('[ZoeAutoMail] No active session - skipping custom mail');
+        return false;
+      }
+
       const senderId = params.from === 'shivanth_kn' ? TEST_USERS.SHIVANTH_KN : TEST_USERS.MOKSH50;
       const recipientId = params.from === 'shivanth_kn' ? TEST_USERS.MOKSH50 : TEST_USERS.SHIVANTH_KN;
 

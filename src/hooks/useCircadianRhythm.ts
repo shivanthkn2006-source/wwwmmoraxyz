@@ -10,7 +10,7 @@
 //
 // ═══════════════════════════════════════════════════════════════════════════════
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { VoiceSettings } from '@/hooks/useEmotionalVoice';
 import { useTimeSimulationSafe } from '@/contexts/TimeSimulationContext';
 
@@ -86,12 +86,12 @@ const PHASE_CONFIGS: Record<CircadianPhase, {
       volume: 0.65,
     },
     background: {
-      primaryColor: 'hsl(220, 50%, 8%)',
-      secondaryColor: 'hsl(280, 40%, 15%)',   // Dawn purple
-      glowColor: 'rgba(255, 180, 100, 0.1)',  // Warm dawn glow
-      opacity: 0.9,
-      blur: 5,
-      saturation: 0.5,
+      primaryColor: 'hsl(220, 50%, 18%)',      // Pre-dawn deep blue
+      secondaryColor: 'hsl(280, 40%, 25%)',    // Dawn purple
+      glowColor: 'rgba(255, 180, 100, 0.15)',  // Warm dawn glow
+      opacity: 1.0,
+      blur: 0,
+      saturation: 0.8,
     },
   },
   MORNING: {
@@ -104,12 +104,12 @@ const PHASE_CONFIGS: Record<CircadianPhase, {
       volume: 0.85,
     },
     background: {
-      primaryColor: 'hsl(210, 30%, 12%)',
-      secondaryColor: 'hsl(200, 40%, 15%)',
-      glowColor: 'rgba(100, 200, 255, 0.15)',
-      opacity: 0.7,
-      blur: 10,
-      saturation: 0.7,
+      primaryColor: 'hsl(205, 85%, 78%)',      // Bright sky blue
+      secondaryColor: 'hsl(190, 75%, 70%)',    // Fresh teal
+      glowColor: 'rgba(45, 95, 78, 0.15)',     // Warm accent
+      opacity: 1.0,
+      blur: 0,
+      saturation: 1.0,
     },
   },
   AFTERNOON: {
@@ -122,12 +122,12 @@ const PHASE_CONFIGS: Record<CircadianPhase, {
       volume: 0.9,
     },
     background: {
-      primaryColor: 'hsl(210, 25%, 14%)',
-      secondaryColor: 'hsl(200, 30%, 18%)',
+      primaryColor: 'hsl(210, 90%, 68%)',      // Vivid blue
+      secondaryColor: 'hsl(195, 85%, 60%)',    // Bright cyan-blue
       glowColor: 'rgba(0, 255, 255, 0.1)',
-      opacity: 0.6,
-      blur: 15,
-      saturation: 0.8,
+      opacity: 1.0,
+      blur: 0,
+      saturation: 1.0,
     },
   },
   EVENING: {
@@ -140,12 +140,12 @@ const PHASE_CONFIGS: Record<CircadianPhase, {
       volume: 0.8,
     },
     background: {
-      primaryColor: 'hsl(25, 60%, 10%)',      // Warm sunset
-      secondaryColor: 'hsl(280, 50%, 12%)',   // Purple dusk
-      glowColor: 'rgba(255, 150, 50, 0.15)',  // Golden hour
-      opacity: 0.75,
-      blur: 8,
-      saturation: 0.6,
+      primaryColor: 'hsl(252, 85%, 64%)',      // Rich purple sunset
+      secondaryColor: 'hsl(330, 80%, 68%)',    // Warm pink dusk
+      glowColor: 'rgba(255, 150, 50, 0.15)',   // Golden hour
+      opacity: 1.0,
+      blur: 4,
+      saturation: 1.0,
     },
   },
   NIGHT: {
@@ -209,6 +209,7 @@ export interface UseCircadianRhythmReturn {
 export const useCircadianRhythm = (): UseCircadianRhythmReturn => {
   // Get simulation context (safe version that works outside provider)
   const { getEffectiveHour, simulationEnabled } = useTimeSimulationSafe();
+  const circadianLoggedRef = useRef(false);
   
   const [state, setState] = useState<CircadianState>(() => {
     const hour = getEffectiveHour();
@@ -254,11 +255,14 @@ export const useCircadianRhythm = (): UseCircadianRhythmReturn => {
     // Check every minute for real time, or more frequently for simulation
     const interval = setInterval(updateCircadian, simulationEnabled ? 500 : 60000);
 
-    // Log initial state with timezone info for debugging
-    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    const currentHour = getEffectiveHour();
-    const simLabel = simulationEnabled ? ' [SIMULATED]' : '';
-    console.log(`[CircadianRhythm] ⏰ TZ: ${timezone} | Hour: ${currentHour}${simLabel} | Phase: ${state.phase} | NightMode: ${state.isNightMode} | Empathy: ${(state.empathyWeight * 100).toFixed(0)}%`);
+    // Log initial state once (deduped via ref)
+    if (!circadianLoggedRef.current) {
+      circadianLoggedRef.current = true;
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const currentHour = getEffectiveHour();
+      const simLabel = simulationEnabled ? ' [SIMULATED]' : '';
+      console.log(`[CircadianRhythm] ⏰ TZ: ${timezone} | Hour: ${currentHour}${simLabel} | Phase: ${state.phase} | NightMode: ${state.isNightMode} | Empathy: ${(state.empathyWeight * 100).toFixed(0)}%`);
+    }
 
     return () => clearInterval(interval);
   }, [getEffectiveHour, simulationEnabled]);

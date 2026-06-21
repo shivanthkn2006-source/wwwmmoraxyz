@@ -1,4 +1,5 @@
 import { useEffect, useCallback } from 'react';
+import { quickValidate } from '@/core/neurosymbolic/CodeValidationLayer';
 
 interface Issue {
   type: string;
@@ -25,11 +26,11 @@ export const useAutoFix = () => {
       console.warn('AutoFix: localStorage check failed');
     }
 
-    // Check for stale event listeners (memory leak prevention)
+    // Check for excessive DOM nodes (memory/performance indicator)
     try {
-      const eventCount = (window as any).__eventListenerCount || 0;
-      if (eventCount > 100) {
-        issues.push({ type: 'memory', description: 'High event listener count detected', fixed: false });
+      const domNodeCount = document.querySelectorAll('*').length;
+      if (domNodeCount > 3000) {
+        issues.push({ type: 'memory', description: `High DOM node count: ${domNodeCount}`, fixed: false });
       }
     } catch (e) {}
 
@@ -41,6 +42,24 @@ export const useAutoFix = () => {
         sessionStorage.removeItem('autofix-errors');
         issues.push({ type: 'errors', description: 'Cleared accumulated error log', fixed: true });
       }
+    }
+
+    // Code validation gate — validate any cached code patches before applying
+    const pendingPatches = sessionStorage.getItem('autofix-pending-patches');
+    if (pendingPatches) {
+      try {
+        const patches = JSON.parse(pendingPatches);
+        const validatedPatches = patches.filter((patch: { code: string }) => {
+          const validation = quickValidate(patch.code);
+          if (!validation.valid) {
+            issues.push({ type: 'code', description: `Blocked unsafe patch: ${validation.errors[0]}`, fixed: true });
+          }
+          return validation.valid;
+        });
+        if (validatedPatches.length < patches.length) {
+          sessionStorage.setItem('autofix-pending-patches', JSON.stringify(validatedPatches));
+        }
+      } catch { /* ignore parse errors */ }
     }
 
     return issues;

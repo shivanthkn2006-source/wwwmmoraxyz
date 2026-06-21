@@ -423,6 +423,65 @@ const SeasonalBuilding: React.FC<SeasonalBuildingProps> = ({
   );
 };
 
+const CITY_ROAD_SPACING = 400;
+const ROAD_CLEARANCE = 95;
+
+const pushOffRoadAxis = (value: number, clearance: number = ROAD_CLEARANCE): number => {
+  const nearestRoad = Math.round(value / CITY_ROAD_SPACING) * CITY_ROAD_SPACING;
+  const delta = value - nearestRoad;
+
+  if (Math.abs(delta) < clearance) {
+    const direction = delta === 0 ? 1 : Math.sign(delta);
+    return nearestRoad + direction * clearance;
+  }
+
+  return value;
+};
+
+const isNearRoadAxis = (value: number, clearance: number = ROAD_CLEARANCE): boolean => {
+  const nearestRoad = Math.round(value / CITY_ROAD_SPACING) * CITY_ROAD_SPACING;
+  return Math.abs(value - nearestRoad) < clearance;
+};
+
+const ensureOffRoadPosition = (x: number, z: number, clearance: number): [number, number] => {
+  return [pushOffRoadAxis(x, clearance), pushOffRoadAxis(z, clearance)];
+};
+
+const randomOffRoadPosition = (areaSize: number, clearance: number): [number, number, number] => {
+  for (let i = 0; i < 36; i++) {
+    const x = (Math.random() - 0.5) * areaSize;
+    const z = (Math.random() - 0.5) * areaSize;
+    const [safeX, safeZ] = ensureOffRoadPosition(x, z, clearance);
+
+    if (!isNearRoadAxis(safeX, clearance - 4) && !isNearRoadAxis(safeZ, clearance - 4)) {
+      return [safeX, 0, safeZ];
+    }
+  }
+
+  const fallback = Math.max(80, areaSize * 0.42);
+  const [safeFallbackX, safeFallbackZ] = ensureOffRoadPosition(fallback, -fallback, clearance + 8);
+  return [safeFallbackX, 0, safeFallbackZ];
+};
+
+const BUILDING_FOOTPRINT_RADIUS: Record<SeasonalBuildingType, number> = {
+  ice_castle: 14,
+  snow_cabin: 9,
+  igloo: 8,
+  ski_lodge: 12,
+  cottage: 10,
+  flower_shop: 10,
+  greenhouse: 12,
+  garden_pavilion: 11,
+  beach_house: 12,
+  tiki_bar: 10,
+  lifeguard_tower: 9,
+  pool_house: 11,
+  harvest_barn: 16,
+  pumpkin_patch: 13,
+  cider_mill: 13,
+  haunted_house: 14,
+};
+
 // Generate seasonal buildings for a season
 export const generateSeasonalBuildings = (season: Season, count: number = 10, areaSize: number = 200): SeasonalBuildingProps[] => {
   const buildingTypes: Record<Season, SeasonalBuildingType[]> = {
@@ -436,26 +495,37 @@ export const generateSeasonalBuildings = (season: Season, count: number = 10, ar
   const buildings: SeasonalBuildingProps[] = [];
 
   for (let i = 0; i < count; i++) {
+    const type = types[Math.floor(Math.random() * types.length)];
+    const scale = 0.8 + Math.random() * 0.4;
+    const footprint = (BUILDING_FOOTPRINT_RADIUS[type] ?? 12) * scale;
+    const clearance = Math.max(ROAD_CLEARANCE + 10, footprint + 22);
+
     buildings.push({
-      type: types[Math.floor(Math.random() * types.length)],
-      position: [
-        (Math.random() - 0.5) * areaSize,
-        0,
-        (Math.random() - 0.5) * areaSize,
-      ],
+      type,
+      position: randomOffRoadPosition(areaSize, clearance),
       rotation: Math.random() * Math.PI * 2,
-      scale: 0.8 + Math.random() * 0.4,
+      scale,
     });
   }
 
-  // Add one main landmark
+  const landmarkType = season === 'winter'
+    ? 'ice_castle'
+    : season === 'spring'
+      ? 'cottage'
+      : season === 'summer'
+        ? 'beach_house'
+        : 'harvest_barn';
+
+  const landmarkScale = 1.5;
+  const landmarkFootprint = (BUILDING_FOOTPRINT_RADIUS[landmarkType] ?? 14) * landmarkScale;
+  const landmarkClearance = Math.max(ROAD_CLEARANCE + 14, landmarkFootprint + 30);
+  const landmarkBase = randomOffRoadPosition(Math.max(areaSize, 280), landmarkClearance);
+
   buildings.push({
-    type: season === 'winter' ? 'ice_castle' : 
-          season === 'spring' ? 'cottage' :
-          season === 'summer' ? 'beach_house' : 'harvest_barn',
-    position: [0, 0, -50],
+    type: landmarkType,
+    position: [landmarkBase[0], 0, landmarkBase[2]],
     rotation: 0,
-    scale: 1.5,
+    scale: landmarkScale,
   });
 
   return buildings;

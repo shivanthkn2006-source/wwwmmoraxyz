@@ -196,24 +196,41 @@ export function useZoeOfflineCore(userId: string | null) {
   // UPDATE STATE ON NETWORK CHANGES
   // ═══════════════════════════════════════════════════════════════════════════
 
-  // BUG FIX: Destructure backgroundSync values to avoid new object ref causing infinite loop
-  const bsDownloadProgress = backgroundSync.downloadProgress;
-  const bsQueueSize = backgroundSync.queueSize;
-  const bsLastSyncAt = backgroundSync.lastSyncAt;
-  
+  // BUG FIX: Destructure stable primitives from backgroundSync to prevent infinite re-render loop.
+  // backgroundSync is a new object every render, causing setState → re-render → setState.
+  const syncDownloadProgress = backgroundSync.downloadProgress;
+  const syncQueueSize = backgroundSync.queueSize;
+  const syncLastSyncAt = backgroundSync.lastSyncAt;
+
   useEffect(() => {
-    setState(prev => ({
-      ...prev,
-      isOnline: networkStatus.isOnline,
-      isSlowConnection: networkStatus.isSlowConnection,
-      connectionQuality: getConnectionQuality(),
-      offlineCapability: getOfflineCapability(),
-      localLLMReady,
-      lifePatternProgress: bsDownloadProgress,
-      pendingSyncCount: bsQueueSize,
-      lastSyncAt: bsLastSyncAt,
-    }));
-  }, [networkStatus.isOnline, networkStatus.isSlowConnection, localLLMReady, bsDownloadProgress, bsQueueSize, bsLastSyncAt, getConnectionQuality, getOfflineCapability]);
+    setState(prev => {
+      const next = {
+        ...prev,
+        isOnline: networkStatus.isOnline,
+        isSlowConnection: networkStatus.isSlowConnection,
+        connectionQuality: getConnectionQuality(),
+        offlineCapability: getOfflineCapability(),
+        localLLMReady,
+        lifePatternProgress: syncDownloadProgress,
+        pendingSyncCount: syncQueueSize,
+        lastSyncAt: syncLastSyncAt,
+      };
+      // Only update if something actually changed (prevents render loops)
+      if (
+        prev.isOnline === next.isOnline &&
+        prev.isSlowConnection === next.isSlowConnection &&
+        prev.connectionQuality === next.connectionQuality &&
+        prev.offlineCapability === next.offlineCapability &&
+        prev.localLLMReady === next.localLLMReady &&
+        prev.lifePatternProgress === next.lifePatternProgress &&
+        prev.pendingSyncCount === next.pendingSyncCount &&
+        prev.lastSyncAt === next.lastSyncAt
+      ) {
+        return prev;
+      }
+      return next;
+    });
+  }, [networkStatus.isOnline, networkStatus.isSlowConnection, localLLMReady, syncDownloadProgress, syncQueueSize, syncLastSyncAt, getConnectionQuality, getOfflineCapability]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // LOAD CACHED MESSAGE COUNT

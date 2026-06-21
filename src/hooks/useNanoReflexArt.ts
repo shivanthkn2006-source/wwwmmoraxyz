@@ -22,6 +22,7 @@ import type { BioMood } from '@/core/soul/ZoeBioKernel';
 
 interface NanoReflexArtOptions {
   onArtGenerated?: (art: GeneratedArt) => void;
+  onVideoGenerated?: (video: { videoUrl: string; caption?: string; provider?: string; isImageFallback?: boolean }) => void;
   onMusicRequested?: (params?: string) => void;
   onMeditationRequested?: (params?: string) => void;
   onBreathingRequested?: (params?: string) => void;
@@ -29,7 +30,7 @@ interface NanoReflexArtOptions {
   onQuoteShared?: (quote?: string) => void;
   onMemoryRequested?: (params?: string) => void;
   currentMood?: BioMood;
-  autoDisplay?: boolean; // Auto-display art in a modal/overlay
+  autoDisplay?: boolean;
 }
 
 interface NanoReflexArtReturn {
@@ -70,6 +71,7 @@ function parseMoodFromPrompt(prompt?: string): BioMood {
 export function useNanoReflexArt(options: NanoReflexArtOptions = {}): NanoReflexArtReturn {
   const {
     onArtGenerated,
+    onVideoGenerated,
     onMusicRequested,
     onMeditationRequested,
     onBreathingRequested,
@@ -89,14 +91,36 @@ export function useNanoReflexArt(options: NanoReflexArtOptions = {}): NanoReflex
    */
   const generateGift = useCallback(async (prompt?: string): Promise<GeneratedArt> => {
     setIsGenerating(true);
-    console.log('[NanoReflexArt] 🎨 Generating offline art gift:', prompt || 'emotional support');
+    console.log('[NanoReflexArt] 🎨 Generating art gift:', prompt || 'emotional support');
 
     try {
       // Determine mood from prompt or use current mood
       const mood = prompt ? parseMoodFromPrompt(prompt) : currentMood;
       
-      // Generate art using Canvas API (100% offline)
-      const art = await generateArt({
+      // Try Pollinations cloud art first (higher quality)
+      let cloudArt: GeneratedArt | null = null;
+      try {
+        const { generateImage: genPollinations } = await import('@/services/pollinationsService');
+        const result = await genPollinations(
+          prompt || `beautiful emotional art expressing ${mood} feeling, digital painting, abstract, warm colors`,
+          { width: 512, height: 512, timeoutMs: 15000 }
+        );
+        cloudArt = {
+          dataUrl: result.imageUrl,
+          style: 'pollinations-ai' as any,
+          caption: prompt || `Art gift for ${mood} moment`,
+          mood,
+          width: 512,
+          height: 512,
+          generatedAt: new Date(),
+        } as GeneratedArt;
+        console.log(`[NanoReflexArt] ✅ Cloud art via ${result.provider}`);
+      } catch (e) {
+        console.warn('[NanoReflexArt] Cloud art failed, falling back to offline Canvas:', e);
+      }
+
+      // Fallback: Generate art using Canvas API (100% offline)
+      const art = cloudArt || await generateArt({
         mood,
         intensity: 0.7,
       });
@@ -138,10 +162,29 @@ export function useNanoReflexArt(options: NanoReflexArtOptions = {}): NanoReflex
         case 'DRAW_GIFT':
           await generateGift(params);
           break;
+
+        case 'CREATE_VIDEO':
+          try {
+            const { generateVideo } = await import('@/services/videoGenerationService');
+            const result = await generateVideo(params || 'a beautiful cinematic nature scene');
+            const videoData = {
+              videoUrl: result.videoUrl,
+              caption: params || 'A video gift from Zoe',
+              provider: result.provider,
+              isImageFallback: Boolean(result.isImageFallback),
+            };
+            onVideoGenerated?.(videoData);
+            window.dispatchEvent(new CustomEvent('zoe-video-gift', {
+              detail: videoData,
+            }));
+            console.log('[NanoReflexArt] 🎬 Video generated:', result.provider);
+          } catch (e) {
+            console.error('[NanoReflexArt] Video generation failed:', e);
+          }
+          break;
           
         case 'PLAY_MUSIC':
           onMusicRequested?.(params);
-          // Emit event for music player to pick up
           window.dispatchEvent(new CustomEvent('zoe-music-request', {
             detail: { params }
           }));
@@ -163,7 +206,6 @@ export function useNanoReflexArt(options: NanoReflexArtOptions = {}): NanoReflex
           
         case 'SEND_HUG':
           onHugSent?.();
-          // Trigger haptic feedback if available
           if (navigator.vibrate) {
             navigator.vibrate([100, 50, 100, 50, 200]);
           }
@@ -195,7 +237,7 @@ export function useNanoReflexArt(options: NanoReflexArtOptions = {}): NanoReflex
     return () => {
       window.removeEventListener('nano-reflex-action', handleReflexAction as EventListener);
     };
-  }, [generateGift, onMusicRequested, onMeditationRequested, onBreathingRequested, onHugSent, onQuoteShared, onMemoryRequested]);
+  }, [generateGift, onVideoGenerated, onMusicRequested, onMeditationRequested, onBreathingRequested, onHugSent, onQuoteShared, onMemoryRequested]);
 
   /**
    * Clear the last art

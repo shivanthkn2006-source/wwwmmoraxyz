@@ -9,7 +9,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/lib/auth';
-import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,7 +20,7 @@ import { z } from 'zod';
 const emailSchema = z.string().email('Please enter a valid email address');
 const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
 
-type AuthMode = 'signin' | 'signup' | 'reset';
+type AuthMode = 'signin' | 'signup';
 
 export default function ZoeInfinityAuth() {
   const navigate = useNavigate();
@@ -35,22 +34,12 @@ export default function ZoeInfinityAuth() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string; confirm?: string }>({});
 
-  // Listen for PASSWORD_RECOVERY event
+  // Redirect if already authenticated
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        setMode('reset');
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, []);
-
-  // Redirect if already authenticated (but not during password reset)
-  useEffect(() => {
-    if (user && !authLoading && mode !== 'reset') {
-      navigate('/', { replace: true });
+    if (user && !authLoading) {
+      navigate('/zoe-infinity', { replace: true });
     }
-  }, [user, authLoading, navigate, mode]);
+  }, [user, authLoading, navigate]);
 
   const validateForm = (): boolean => {
     const newErrors: { email?: string; password?: string; confirm?: string } = {};
@@ -87,17 +76,7 @@ export default function ZoeInfinityAuth() {
     setIsSubmitting(true);
     
     try {
-      if (mode === 'reset') {
-        // Update password via recovery session
-        const { error } = await supabase.auth.updateUser({ password });
-        if (error) {
-          toast.error('Password reset failed', { description: error.message });
-        } else {
-          toast.success('Password updated!', { description: 'You can now sign in with your new password.' });
-          setMode('signin');
-          setPassword('');
-        }
-      } else if (mode === 'signup') {
+      if (mode === 'signup') {
         const { error } = await signUp(email, password, {
           source: 'zoe_infinity',
           platform: 'standalone',
@@ -136,7 +115,7 @@ export default function ZoeInfinityAuth() {
           toast.success('Welcome back', {
             description: 'Entering Zoe Infinity...',
           });
-          navigate('/', { replace: true });
+          navigate('/zoe-infinity', { replace: true });
         }
       }
     } catch (err) {
@@ -205,7 +184,7 @@ export default function ZoeInfinityAuth() {
             </h1>
           </motion.div>
           <p className="text-white/40 text-sm tracking-wider">
-            {mode === 'reset' ? 'Set your new password' : mode === 'signup' ? 'Create your digital bond' : 'Welcome back, companion'}
+            {mode === 'signup' ? 'Create your digital bond' : 'Welcome back, companion'}
           </p>
         </div>
 
@@ -217,31 +196,27 @@ export default function ZoeInfinityAuth() {
           onSubmit={handleSubmit}
           className="space-y-5"
         >
-          {/* Email Field (hidden during password reset) */}
-          {mode !== 'reset' && (
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-white/60 text-sm">
-                Email
-              </Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
-                <Input
-                  id="email"
-                  type="email"
-                  name="email"
-                  autoComplete="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
-                  className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/20 focus:border-cyan-500/50 focus:ring-cyan-500/20"
-                  disabled={isSubmitting}
-                />
-              </div>
-              {errors.email && (
-                <p className="text-red-400 text-xs">{errors.email}</p>
-              )}
+          {/* Email Field */}
+          <div className="space-y-2">
+            <Label htmlFor="email" className="text-white/60 text-sm">
+              Email
+            </Label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/20 focus:border-cyan-500/50 focus:ring-cyan-500/20"
+                disabled={isSubmitting}
+              />
             </div>
-          )}
+            {errors.email && (
+              <p className="text-red-400 text-xs">{errors.email}</p>
+            )}
+          </div>
 
           {/* Password Field */}
           <div className="space-y-2">
@@ -253,8 +228,6 @@ export default function ZoeInfinityAuth() {
               <Input
                 id="password"
                 type={showPassword ? 'text' : 'password'}
-                name="password"
-                autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
@@ -316,59 +289,29 @@ export default function ZoeInfinityAuth() {
               <Loader2 className="w-5 h-5 animate-spin" />
             ) : (
               <>
-                {mode === 'reset' ? 'Update Password' : mode === 'signup' ? 'Create Bond' : 'Enter Zoe'}
+                {mode === 'signup' ? 'Create Bond' : 'Enter Zoe'}
                 <ArrowRight className="w-4 h-4 ml-2" />
               </>
             )}
           </Button>
         </motion.form>
 
-        {/* Forgot Password + Mode Toggle */}
-        {mode !== 'reset' && (
-          <div className="mt-6 text-center space-y-3">
-            {mode === 'signin' && (
-              <button
-                type="button"
-                onClick={async () => {
-                  if (!email) {
-                    toast.error('Enter your email first');
-                    return;
-                  }
-                  try {
-                    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-                      redirectTo: `${window.location.origin}/auth`,
-                    });
-                    if (error) throw error;
-                    toast.success('Password reset email sent', {
-                      description: 'Check your inbox and follow the link',
-                    });
-                  } catch {
-                    toast.error('Could not send reset email');
-                  }
-                }}
-                className="text-cyan-400/60 text-xs hover:text-cyan-400 transition-colors"
-                disabled={isSubmitting}
-              >
-                Forgot password?
-              </button>
-            )}
-            <div>
-              <button
-                type="button"
-                onClick={() => {
-                  setMode(mode === 'signin' ? 'signup' : 'signin');
-                  setErrors({});
-                }}
-                className="text-white/40 text-sm hover:text-cyan-400 transition-colors"
-                disabled={isSubmitting}
-              >
-                {mode === 'signin' 
-                  ? "Don't have an account? Create one" 
-                  : 'Already have an account? Sign in'}
-              </button>
-            </div>
-          </div>
-        )}
+        {/* Mode Toggle */}
+        <div className="mt-6 text-center">
+          <button
+            type="button"
+            onClick={() => {
+              setMode(mode === 'signin' ? 'signup' : 'signin');
+              setErrors({});
+            }}
+            className="text-white/40 text-sm hover:text-cyan-400 transition-colors"
+            disabled={isSubmitting}
+          >
+            {mode === 'signin' 
+              ? "Don't have an account? Create one" 
+              : 'Already have an account? Sign in'}
+          </button>
+        </div>
 
         {/* Genesis Imprint Link */}
         <div className="mt-8 text-center">

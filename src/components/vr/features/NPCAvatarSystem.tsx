@@ -84,23 +84,33 @@ const NPCAvatarMesh: React.FC<{
   showLabels?: boolean;
 }> = ({ npc, onInteract, showLabels = true }) => {
   const groupRef = useRef<THREE.Group>(null);
-  const [animPhase, setAnimPhase] = useState(0);
+  const leftArmRef = useRef<THREE.Mesh>(null);
+  const rightArmRef = useRef<THREE.Mesh>(null);
+  const leftLegRef = useRef<THREE.Mesh>(null);
+  const rightLegRef = useRef<THREE.Mesh>(null);
   const [hovered, setHovered] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   
-  useFrame((state, delta) => {
+  useFrame((state) => {
     if (!groupRef.current || npc.state === 'driving') return;
     
     const time = state.clock.elapsedTime;
-    
-    // Movement animation
-    if (npc.state === 'walking' || npc.state === 'running') {
-      const animSpeed = npc.state === 'running' ? 10 : 5;
-      setAnimPhase(Math.sin(time * animSpeed) * 0.3);
-    } else {
+    const isMoving = npc.state === 'walking' || npc.state === 'running';
+    const phase = isMoving
+      ? Math.sin(time * (npc.state === 'running' ? 10 : 5)) * 0.3
+      : 0;
+
+    if (!isMoving) {
       // Idle breathing
       groupRef.current.position.y = npc.position[1] + Math.sin(time * 2) * 0.02;
+    } else {
+      groupRef.current.position.y = npc.position[1];
     }
+
+    if (leftArmRef.current) leftArmRef.current.rotation.x = phase;
+    if (rightArmRef.current) rightArmRef.current.rotation.x = -phase;
+    if (leftLegRef.current) leftLegRef.current.rotation.x = phase;
+    if (rightLegRef.current) rightLegRef.current.rotation.x = -phase;
   });
 
   // Handle speaking to Zoe when interacted with
@@ -182,29 +192,39 @@ const NPCAvatarMesh: React.FC<{
         <meshStandardMaterial color={customization.shirtColor} />
       </Box>
       
-      {/* Arms with animation */}
-      {[[-0.4, 1, 0], [0.4, 1, 0]].map((pos, i) => (
-        <Cylinder 
-          key={i} 
-          args={[0.08, 0.08, 0.5, 8]} 
-          position={[pos[0], pos[1], pos[2]]}
-          rotation={[animPhase * (i === 0 ? 1 : -1), 0, i === 0 ? 0.15 : -0.15]}
-        >
-          <meshStandardMaterial color={customization.skinTone} />
-        </Cylinder>
-      ))}
+      {/* Arms (animated imperatively in useFrame to avoid per-frame React state updates) */}
+      <Cylinder
+        ref={leftArmRef}
+        args={[0.08, 0.08, 0.5, 8]}
+        position={[-0.4, 1, 0]}
+        rotation={[0, 0, 0.15]}
+      >
+        <meshStandardMaterial color={customization.skinTone} />
+      </Cylinder>
+      <Cylinder
+        ref={rightArmRef}
+        args={[0.08, 0.08, 0.5, 8]}
+        position={[0.4, 1, 0]}
+        rotation={[0, 0, -0.15]}
+      >
+        <meshStandardMaterial color={customization.skinTone} />
+      </Cylinder>
       
-      {/* Legs with walking animation */}
-      {[[-0.15, 0.35, 0], [0.15, 0.35, 0]].map((pos, i) => (
-        <Cylinder 
-          key={i} 
-          args={[0.1, 0.1, 0.7, 8]} 
-          position={[pos[0], pos[1], pos[2]]}
-          rotation={[animPhase * (i === 0 ? 1 : -1), 0, 0]}
-        >
-          <meshStandardMaterial color={customization.pantsColor} />
-        </Cylinder>
-      ))}
+      {/* Legs (animated imperatively in useFrame) */}
+      <Cylinder
+        ref={leftLegRef}
+        args={[0.1, 0.1, 0.7, 8]}
+        position={[-0.15, 0.35, 0]}
+      >
+        <meshStandardMaterial color={customization.pantsColor} />
+      </Cylinder>
+      <Cylinder
+        ref={rightLegRef}
+        args={[0.1, 0.1, 0.7, 8]}
+        position={[0.15, 0.35, 0]}
+      >
+        <meshStandardMaterial color={customization.pantsColor} />
+      </Cylinder>
       
       {/* Shoes */}
       {[[-0.15, 0, 0.04], [0.15, 0, 0.04]].map((pos, i) => (
@@ -228,24 +248,24 @@ const NPCAvatarMesh: React.FC<{
       
       {/* Speaking indicator */}
       {isSpeaking && (
-        <Html position={[0, 2.3, 0]} center distanceFactor={15} style={{ pointerEvents: 'none' }}>
-          <div className="px-2 py-1 rounded-full bg-cyan-500/90 text-white text-[8px] animate-pulse whitespace-nowrap">
-            💬 Speaking to Zoe...
-          </div>
-        </Html>
-      )}
-      
-      {/* Name tag */}
-      {showLabels && (
-        <Html position={[0, 2, 0]} center distanceFactor={20} style={{ pointerEvents: 'none' }}>
-          <div className={`
-            px-2 py-1 rounded text-[9px] whitespace-nowrap transition-all
+         <Html position={[0, 2.3, 0]} center distanceFactor={40} style={{ pointerEvents: 'none' }}>
+           <div className="px-1 py-0 rounded-full bg-cyan-500/70 text-white text-[4px] animate-pulse whitespace-nowrap">
+             💬 Speaking...
+           </div>
+         </Html>
+       )}
+       
+       {/* Name tag */}
+       {showLabels && (
+         <Html position={[0, 2, 0]} center distanceFactor={60} style={{ pointerEvents: 'none' }}>
+           <div className={`
+             px-1 py-0 rounded text-[4px] whitespace-nowrap transition-all
             ${hovered ? 'bg-purple-600/90 border border-purple-400/50 scale-110' : 'bg-black/60 border border-white/10'}
             text-white
           `}>
             {npc.name}
             {hovered && (
-              <div className="text-[7px] text-white/60 mt-0.5">
+              <div className="text-[3px] text-white/60 mt-0.5">
                 {npc.state} | {npc.personality}
               </div>
             )}
@@ -311,10 +331,10 @@ export const useNPCSystem = (count: number = 50) => {
           rotation: Math.atan2(dx, dz),
         };
       }));
-    }, 50);
+    }, Math.max(90, count * 3));
 
     return () => clearInterval(interval);
-  }, [npcs.length]);
+  }, [npcs.length, count]);
 
   // Enter vehicle
   const enterVehicle = useCallback((npcId: string, vehicleId: string) => {
@@ -356,7 +376,7 @@ export const NPCAvatarSystem: React.FC<{
   count?: number;
   showLabels?: boolean;
   onNPCInteract?: (npc: NPCAvatar) => void;
-}> = ({ count = 50, showLabels = true, onNPCInteract }) => {
+}> = ({ count = 50, showLabels = false, onNPCInteract }) => {
   const { npcs } = useNPCSystem(count);
 
   return (

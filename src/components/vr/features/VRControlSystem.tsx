@@ -72,36 +72,36 @@ export const getGraphicsSettings = (tier: GPUTier): GraphicsSettings => {
     },
     medium: {
       shadowQuality: 'low',
-      particleCount: 2000,
+      particleCount: 1500,
       drawDistance: 100,
       textureQuality: 'medium',
       postProcessing: false,
       antialias: true,
       maxFPS: 45,
-      npcCount: 25,
-      animalCount: 15,
+      npcCount: 16,
+      animalCount: 8,
     },
     high: {
       shadowQuality: 'medium',
-      particleCount: 5000,
+      particleCount: 3200,
       drawDistance: 200,
       textureQuality: 'high',
       postProcessing: true,
       antialias: true,
       maxFPS: 60,
-      npcCount: 50,
-      animalCount: 25,
+      npcCount: 30,
+      animalCount: 14,
     },
     ultra: {
       shadowQuality: 'high',
-      particleCount: 10000,
+      particleCount: 6000,
       drawDistance: 500,
       textureQuality: 'high',
       postProcessing: true,
       antialias: true,
       maxFPS: 120,
-      npcCount: 100,
-      animalCount: 50,
+      npcCount: 45,
+      animalCount: 22,
     },
   };
   
@@ -265,87 +265,119 @@ export const VirtualJoystick: React.FC<{
   );
 };
 
-// 360° Rotation Buttons
+// 360° Rotation Buttons - Turn Left / Right / 180°
 export const RotationButtons: React.FC = () => {
   const handleRotate = (direction: string, degrees: number) => {
     window.dispatchEvent(new CustomEvent('vr-rotate-360', {
       detail: { direction, degrees }
     }));
   };
-  
+
   return (
-    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 z-50">
+    <div className="absolute bottom-6 sm:bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-1.5 z-50" data-exclude-phantom-tap>
       <button
         onClick={() => handleRotate('left', 45)}
-        className="w-10 h-10 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white flex items-center justify-center hover:bg-white/20 transition-colors"
+        className="w-11 h-11 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white flex flex-col items-center justify-center hover:bg-white/20 transition-colors"
+        title="Turn Left 45°"
       >
-        ↺
+        <span className="text-base leading-none">↺</span>
+        <span className="text-[6px] text-white/50 leading-none mt-0.5">LEFT</span>
       </button>
+
       <button
         onClick={() => handleRotate('around', 180)}
-        className="w-12 h-12 rounded-full bg-purple-600/80 backdrop-blur-md border border-purple-400/50 text-white flex items-center justify-center hover:bg-purple-500 transition-colors"
+        className="w-12 h-12 rounded-full bg-purple-600/80 backdrop-blur-md border border-purple-400/50 text-white flex flex-col items-center justify-center hover:bg-purple-500 transition-colors"
+        title="Turn Around 180°"
       >
-        ⟲
+        <span className="text-lg leading-none">↩</span>
+        <span className="text-[6px] text-white/60 leading-none mt-0.5">180°</span>
       </button>
+
       <button
         onClick={() => handleRotate('right', 45)}
-        className="w-10 h-10 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white flex items-center justify-center hover:bg-white/20 transition-colors"
+        className="w-11 h-11 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white flex flex-col items-center justify-center hover:bg-white/20 transition-colors"
+        title="Turn Right 45°"
       >
-        ↻
+        <span className="text-base leading-none">↻</span>
+        <span className="text-[6px] text-white/50 leading-none mt-0.5">RIGHT</span>
       </button>
     </div>
   );
 };
 
+// Look Buttons - up/down/left/right/full scan
+export const LookButtons: React.FC = () => {
+  const dispatchLook = (action: string) => {
+    window.dispatchEvent(new CustomEvent('vr-camera', { detail: { action } }));
+  };
+
+  return (
+    <div className="absolute bottom-[90px] right-2 sm:right-4 z-50 grid grid-cols-3 gap-1.5" data-exclude-phantom-tap>
+      <div />
+      <button
+        onClick={() => dispatchLook('look_up')}
+        className="w-9 h-9 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white text-xs"
+        title="Look Up"
+      >
+        ▲
+      </button>
+      <div />
+
+      <button
+        onClick={() => dispatchLook('look_left')}
+        className="w-9 h-9 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white text-xs"
+        title="Look Left"
+      >
+        ◄
+      </button>
+      <button
+        onClick={() => dispatchLook('look_around')}
+        className="w-9 h-9 rounded-full bg-cyan-600/70 backdrop-blur-md border border-cyan-400/50 text-white text-[10px]"
+        title="Scan 360"
+      >
+        360
+      </button>
+      <button
+        onClick={() => dispatchLook('look_right')}
+        className="w-9 h-9 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white text-xs"
+        title="Look Right"
+      >
+        ►
+      </button>
+
+      <div />
+      <button
+        onClick={() => dispatchLook('look_down')}
+        className="w-9 h-9 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white text-xs"
+        title="Look Down"
+      >
+        ▼
+      </button>
+      <div />
+    </div>
+  );
+};
+
 // Hardware Optimization Provider
+// NOTE: Keep this hook state-light to avoid forcing whole VR trees to re-render every second.
 export const useHardwareOptimization = () => {
   const [gpuTier, setGpuTier] = useState<GPUTier>('medium');
   const [settings, setSettings] = useState<GraphicsSettings>(getGraphicsSettings('medium'));
-  const [fps, setFps] = useState(60);
-  
+
   useEffect(() => {
     const tier = detectGPUTier();
     setGpuTier(tier);
     setSettings(getGraphicsSettings(tier));
-    
+
     console.log(`[VR Control] GPU Tier detected: ${tier}`);
   }, []);
-  
-  // FPS monitoring
-  useEffect(() => {
-    let frameCount = 0;
-    let lastTime = performance.now();
-    
-    const measureFPS = () => {
-      frameCount++;
-      const now = performance.now();
-      
-      if (now - lastTime >= 1000) {
-        setFps(frameCount);
-        frameCount = 0;
-        lastTime = now;
-        
-        // Auto-downgrade if FPS too low
-        if (frameCount < 20 && gpuTier !== 'low') {
-          const tiers: GPUTier[] = ['ultra', 'high', 'medium', 'low'];
-          const currentIndex = tiers.indexOf(gpuTier);
-          if (currentIndex < tiers.length - 1) {
-            const newTier = tiers[currentIndex + 1];
-            setGpuTier(newTier);
-            setSettings(getGraphicsSettings(newTier));
-            console.log(`[VR Control] Auto-downgrading to ${newTier} tier`);
-          }
-        }
-      }
-      
-      requestAnimationFrame(measureFPS);
-    };
-    
-    const animId = requestAnimationFrame(measureFPS);
-    return () => cancelAnimationFrame(animId);
-  }, [gpuTier]);
-  
-  return { gpuTier, settings, fps, setGpuTier };
+
+  const updateTier = useCallback((nextTier: GPUTier) => {
+    setGpuTier(nextTier);
+    setSettings(getGraphicsSettings(nextTier));
+  }, []);
+
+  return { gpuTier, settings, setGpuTier: updateTier };
 };
 
 export default RotationController;

@@ -1,54 +1,72 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// LEVEL 3: CIRCADIAN BACKGROUND - Night Mode Visuals
+// LEVEL 3: CIRCADIAN BACKGROUND - Location-Aware Weather + Day/Night
 // ═══════════════════════════════════════════════════════════════════════════════
 //
-// The background shifts based on time of day:
-// - Night: Deep OLED black with subtle midnight blue
-// - Day: Standard dynamic colors from the design system
+// Background is driven by REAL location data:
+// - Day/Night: via useSkyPhase (sunrise-sunset.org API + geolocation)
+// - Weather: via Open-Meteo API (rain, snow, thunder, clouds, clear, fog)
+// - Colors shift based on actual weather + time at user's location
+// - Night: 5000 stars, 5 shooting stars, moon, nebulas, planets
+// - Weather overlays: rain drops, snow particles, lightning, clouds, fog
 //
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import { memo, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useCircadianRhythm, type CircadianBackgroundStyle } from '@/hooks/useCircadianRhythm';
+import { NightSkyOverlay } from './NightSkyOverlay';
+import { WeatherOverlay } from './WeatherOverlay';
+import { useWeatherBackground } from '@/hooks/useWeatherBackground';
 import { useTimeSimulationSafe } from '@/contexts/TimeSimulationContext';
+import type { AvatarEmotionState } from '@/utils/avatarEmotionClassifier';
 
 interface CircadianBackgroundProps {
-  // Allow override for testing or special modes
-  forceStyle?: CircadianBackgroundStyle;
   className?: string;
+  currentTime?: string;
+  emotion?: AvatarEmotionState;
+  kernelHeartRate?: number;
 }
 
 export const CircadianBackground = memo(function CircadianBackground({
-  forceStyle,
   className = '',
+  currentTime,
+  emotion = 'idle',
+  kernelHeartRate,
 }: CircadianBackgroundProps) {
-  const { state, isNightMode, isDeepNight, phase } = useCircadianRhythm();
+  const {
+    skyPhase,
+    isNight,
+    hour,
+    weather,
+    temperature,
+    locationName,
+    backgroundColor,
+    backgroundColorEnd,
+    overlayType,
+    weatherLoaded,
+  } = useWeatherBackground();
+
   const { simulationEnabled, simulatedHour } = useTimeSimulationSafe();
-  
+
+  // Derive night mode flags from skyPhase
+  const isNightMode = isNight;
+  const isDeepNight = skyPhase === 'night' && (hour >= 0 && hour < 4);
+
   // Live-updating local time (refreshes every minute)
   const [localTime, setLocalTime] = useState(() =>
     new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
   );
-  
+
   useEffect(() => {
     const interval = setInterval(() => {
       setLocalTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }));
-    }, 30000); // Update every 30 seconds
+    }, 30000);
     return () => clearInterval(interval);
   }, []);
-  
-  const style = forceStyle || state.backgroundStyle;
-  
-  // Generate ambient particles for night mode
-  const particles = isNightMode ? Array.from({ length: 12 }, (_, i) => ({
-    id: i,
-    x: Math.random() * 100,
-    y: Math.random() * 100,
-    size: Math.random() * 2 + 1,
-    delay: Math.random() * 5,
-    duration: Math.random() * 10 + 10,
-  })) : [];
+
+  // Glow color based on weather
+  const glowColor = isNightMode
+    ? weather === 'thunderstorm' ? 'rgba(150, 130, 255, 0.15)' : 'rgba(100, 120, 255, 0.1)'
+    : 'rgba(255, 200, 50, 0.08)';
 
   return (
     <motion.div
@@ -57,109 +75,68 @@ export const CircadianBackground = memo(function CircadianBackground({
       animate={{ opacity: 1 }}
       transition={{ duration: 2 }}
     >
-      {/* Primary gradient background */}
+      {/* Primary gradient background — driven by weather + location day/night */}
       <motion.div
         className="absolute inset-0"
         animate={{
-          background: `linear-gradient(180deg, ${style.primaryColor} 0%, ${style.secondaryColor} 100%)`,
+          background: `linear-gradient(180deg, ${backgroundColor} 0%, ${backgroundColorEnd} 100%)`,
         }}
         transition={{ duration: 3, ease: 'easeInOut' }}
-        style={{
-          filter: `blur(${style.blur}px) saturate(${style.saturation})`,
-        }}
       />
-      
-      {/* Night mode: Subtle glow orbs */}
-      {/* Night mode: Subtle glow orbs - NO SCALING to prevent mask-like visual */}
+
+      {/* Night glow orbs — OPACITY ONLY, NO SCALE */}
       <AnimatePresence>
-        {isNightMode && (
+        {isNightMode && weather === 'clear' && (
           <>
-            {/* Primary glow orb - top right - OPACITY ONLY, NO SCALE */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: [0.15, 0.25, 0.15] }}
               exit={{ opacity: 0 }}
-              transition={{ 
-                duration: 10, 
-                repeat: Infinity,
-                ease: 'easeInOut',
-                delay: 2, // Delay to prevent load-time flash
-              }}
+              transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut', delay: 2 }}
               className="absolute top-1/4 right-1/4"
               style={{
-                width: '300px',
-                height: '300px',
-                borderRadius: '50%',
-                background: `radial-gradient(circle, ${style.glowColor} 0%, transparent 70%)`,
+                width: '300px', height: '300px', borderRadius: '50%',
+                background: `radial-gradient(circle, ${glowColor} 0%, transparent 70%)`,
                 filter: 'blur(40px)',
               }}
             />
-            
-            {/* Secondary glow orb - bottom left - OPACITY ONLY, NO SCALE */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: [0.1, 0.2, 0.1] }}
               exit={{ opacity: 0 }}
-              transition={{ 
-                duration: 14, 
-                repeat: Infinity,
-                ease: 'easeInOut',
-                delay: 4, // Longer delay
-              }}
+              transition={{ duration: 14, repeat: Infinity, ease: 'easeInOut', delay: 4 }}
               className="absolute bottom-1/4 left-1/4"
               style={{
-                width: '400px',
-                height: '400px',
-                borderRadius: '50%',
-                background: `radial-gradient(circle, ${style.glowColor} 0%, transparent 70%)`,
+                width: '400px', height: '400px', borderRadius: '50%',
+                background: `radial-gradient(circle, ${glowColor} 0%, transparent 70%)`,
                 filter: 'blur(60px)',
               }}
             />
           </>
         )}
       </AnimatePresence>
-      
-      {/* Deep night: Floating particles (stars) */}
-      <AnimatePresence>
-        {isDeepNight && particles.map(particle => (
-          <motion.div
-            key={particle.id}
-            initial={{ opacity: 0 }}
-            animate={{ 
-              opacity: [0, 0.6, 0],
-              y: [particle.y + '%', (particle.y - 20) + '%'],
-            }}
-            exit={{ opacity: 0 }}
-            transition={{
-              duration: particle.duration,
-              repeat: Infinity,
-              delay: particle.delay,
-              ease: 'easeInOut',
-            }}
-            className="absolute"
-            style={{
-              left: particle.x + '%',
-              top: particle.y + '%',
-              width: particle.size + 'px',
-              height: particle.size + 'px',
-              borderRadius: '50%',
-              background: 'rgba(200, 220, 255, 0.8)',
-              boxShadow: '0 0 4px rgba(200, 220, 255, 0.5)',
-            }}
-          />
-        ))}
-      </AnimatePresence>
-      
-      {/* Vignette overlay - subtle bottom darkening for design */}
-      <div 
+
+      {/* Vignette overlay */}
+      <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: `linear-gradient(to top, rgba(0,0,0,${isNightMode ? 0.6 : 0.4}) 0%, transparent 30%)`,
+          background: `linear-gradient(to top, rgba(0,0,0,${isNightMode ? 0.4 : 0.15}) 0%, transparent 25%)`,
           transition: 'all 3s ease-in-out',
         }}
       />
-      
-      {/* SIMULATION INDICATOR - Shows when time is being simulated */}
+
+      {/* Night Sky: keep the night shell stable even after weather/background sync */}
+      <NightSkyOverlay
+        isNightMode={isNightMode}
+        isDeepNight={isDeepNight}
+        currentTime={currentTime}
+        phase={skyPhase}
+      />
+
+      {/* Weather overlay: rain, snow, thunder, clouds, fog */}
+      <WeatherOverlay weather={overlayType} isNight={isNightMode} />
+
+      {/* SIMULATION INDICATOR */}
       {simulationEnabled && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
@@ -170,11 +147,11 @@ export const CircadianBackground = memo(function CircadianBackground({
           <span className="text-white font-mono text-sm">{simulatedHour.toString().padStart(2, '0')}:00</span>
         </motion.div>
       )}
-      
-      {/* Phase indicator (dev only) */}
+
+      {/* Phase + weather indicator (dev only) */}
       {import.meta.env.DEV && (
         <div className="absolute bottom-4 left-4 text-xs text-white/30 font-mono">
-          {phase} | {simulationEnabled ? `SIM:${simulatedHour}:00` : localTime} | E:{(state.empathyWeight * 100).toFixed(0)}%
+          {skyPhase} | {weather}{temperature !== null ? ` ${temperature}°C` : ''} | {locationName || '...'} | {simulationEnabled ? `SIM:${simulatedHour}:00` : localTime}
         </div>
       )}
     </motion.div>

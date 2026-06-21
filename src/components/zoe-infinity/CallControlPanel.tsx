@@ -165,34 +165,27 @@ export const CallControlPanel: React.FC<CallControlPanelProps> = ({
 
   return (
     <>
-      {/* Floating Call Button */}
+      {/* Floating Call Button - phone icon only, no outer circle */}
       <motion.div
-        className="fixed bottom-24 right-4 z-40"
+        className="fixed bottom-20 right-4 z-40"
         initial={{ scale: 0, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ delay: 0.5 }}
       >
         {isInCall ? (
-          <Button
-            size="lg"
-            className="w-14 h-14 rounded-full bg-red-500 hover:bg-red-600 shadow-lg shadow-red-500/30"
+          <button
+            className="p-1.5 flex items-center justify-center"
             onClick={onEndCall}
           >
-            <PhoneOff className="w-6 h-6" />
-          </Button>
+            <PhoneOff className="w-5 h-5 text-red-400 drop-shadow-lg" />
+          </button>
         ) : (
-          <Button
-            size="lg"
-            className={cn(
-              "w-14 h-14 rounded-full shadow-lg transition-all",
-              isOpen 
-                ? "bg-primary/80 shadow-primary/30" 
-                : "bg-gradient-to-br from-cyan-500 to-blue-600 shadow-cyan-500/30 hover:shadow-cyan-500/50"
-            )}
+          <button
+            className="p-1.5 flex items-center justify-center"
             onClick={() => setIsOpen(!isOpen)}
           >
-            {isOpen ? <X className="w-6 h-6" /> : <Phone className="w-6 h-6" />}
-          </Button>
+            {isOpen ? <X className="w-5 h-5 text-white/60" /> : <Phone className="w-5 h-5 text-white/50 drop-shadow-lg" />}
+          </button>
         )}
       </motion.div>
 

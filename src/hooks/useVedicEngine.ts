@@ -48,7 +48,8 @@ interface UseVedicEngineReturn extends VedicEngineState {
 /**
  * Hook to manage Vedic Engine calculations and integration
  */
-export function useVedicEngine(): UseVedicEngineReturn {
+export function useVedicEngine(options?: { enabled?: boolean }): UseVedicEngineReturn {
+  const enabled = options?.enabled ?? true;
   const [state, setState] = useState<VedicEngineState>({
     isCalculating: false,
     profile: null,
@@ -60,8 +61,10 @@ export function useVedicEngine(): UseVedicEngineReturn {
   
   const [enhancedSeed, setEnhancedSeed] = useState<VedicEnhancedDestinySeed | null>(null);
 
-  // Load existing profile on mount
+  // Load existing profile ONLY when enabled (on-demand, not on mount)
   useEffect(() => {
+    if (!enabled) return;
+    
     const loadExistingProfile = async () => {
       const existingSeed = loadDestinySeed();
       if (existingSeed?.birthCoordinates && existingSeed.birthDate) {
@@ -81,7 +84,7 @@ export function useVedicEngine(): UseVedicEngineReturn {
     };
     
     loadExistingProfile();
-  }, []);
+  }, [enabled]);
 
   /**
    * Calculate complete Jathakam chart

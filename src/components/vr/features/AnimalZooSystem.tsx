@@ -35,7 +35,6 @@ const ANIMAL_COLORS: Record<string, { body: string; accent: string }> = {
 // Single Animal Component
 const AnimalMesh: React.FC<{ animal: Animal; onInteract?: (animal: Animal) => void }> = ({ animal, onInteract }) => {
   const groupRef = useRef<THREE.Group>(null);
-  const [animPhase, setAnimPhase] = useState(0);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [hovered, setHovered] = useState(false);
   
@@ -43,15 +42,14 @@ const AnimalMesh: React.FC<{ animal: Animal; onInteract?: (animal: Animal) => vo
   
   useFrame((state) => {
     if (!groupRef.current) return;
-    
+
     const time = state.clock.elapsedTime;
-    
-    if (animal.state === 'walking' || animal.state === 'running') {
-      const speed = animal.state === 'running' ? 8 : 4;
-      setAnimPhase(Math.sin(time * speed) * 0.2);
-    } else if (animal.state === 'idle') {
+
+    if (animal.state === 'idle') {
       // Breathing
       groupRef.current.position.y = animal.position[1] + Math.sin(time * 1.5) * 0.01;
+    } else {
+      groupRef.current.position.y = animal.position[1];
     }
   });
 
@@ -108,11 +106,11 @@ const AnimalMesh: React.FC<{ animal: Animal; onInteract?: (animal: Animal) => vo
             <Box args={[0.08, 0.03, 0.03]} position={[0.22, 0.2, 0]}>
               <meshStandardMaterial color={colors.accent} />
             </Box>
-            {/* Wings */}
-            <Box args={[0.02, 0.1, 0.2]} position={[0, 0.15, -0.12]} rotation={[0, 0, animPhase]}>
+            {/* Wings (static for performance stability) */}
+            <Box args={[0.02, 0.1, 0.2]} position={[0, 0.15, -0.12]} rotation={[0, 0, 0]}>
               <meshStandardMaterial color={colors.body} />
             </Box>
-            <Box args={[0.02, 0.1, 0.2]} position={[0, 0.15, 0.12]} rotation={[0, 0, -animPhase]}>
+            <Box args={[0.02, 0.1, 0.2]} position={[0, 0.15, 0.12]} rotation={[0, 0, 0]}>
               <meshStandardMaterial color={colors.body} />
             </Box>
           </group>
@@ -136,11 +134,11 @@ const AnimalMesh: React.FC<{ animal: Animal; onInteract?: (animal: Animal) => vo
             <Cylinder args={[0.02, 0.03, 0.15, 8]} position={[0.2, 0.48, 0.05]} rotation={[-0.2, 0, 0]}>
               <meshStandardMaterial color={colors.accent} />
             </Cylinder>
-            {/* Legs with hop animation */}
-            <Cylinder args={[0.03, 0.03, 0.12, 8]} position={[-0.08, 0.06 + animPhase * 0.1, 0.08]} rotation={[0.3, 0, 0]}>
+            {/* Legs (static for performance stability) */}
+            <Cylinder args={[0.03, 0.03, 0.12, 8]} position={[-0.08, 0.06, 0.08]} rotation={[0.3, 0, 0]}>
               <meshStandardMaterial color={colors.body} />
             </Cylinder>
-            <Cylinder args={[0.03, 0.03, 0.12, 8]} position={[-0.08, 0.06 + animPhase * 0.1, -0.08]} rotation={[0.3, 0, 0]}>
+            <Cylinder args={[0.03, 0.03, 0.12, 8]} position={[-0.08, 0.06, -0.08]} rotation={[0.3, 0, 0]}>
               <meshStandardMaterial color={colors.body} />
             </Cylinder>
           </group>
@@ -175,7 +173,7 @@ const AnimalMesh: React.FC<{ animal: Animal; onInteract?: (animal: Animal) => vo
                 <meshStandardMaterial color={colors.body} />
               </Cylinder>
             )}
-            {/* Legs with walking animation */}
+            {/* Legs (static for performance stability) */}
             {[
               [-0.2, 0.12, 0.1], [-0.2, 0.12, -0.1],
               [0.2, 0.12, 0.1], [0.2, 0.12, -0.1]
@@ -185,7 +183,7 @@ const AnimalMesh: React.FC<{ animal: Animal; onInteract?: (animal: Animal) => vo
                 args={[0.05, 0.05, 0.25, 8]} 
                 position={[
                   pos[0], 
-                  pos[1] + (i < 2 ? animPhase * 0.05 : -animPhase * 0.05), 
+                  pos[1], 
                   pos[2]
                 ]}
               >
@@ -318,10 +316,10 @@ export const useAnimalSystem = (initialCount: number = 20) => {
           rotation: Math.atan2(dx, dz),
         };
       }));
-    }, 80);
+    }, Math.max(120, initialCount * 5));
 
     return () => clearInterval(interval);
-  }, [animals.length]);
+  }, [animals.length, initialCount]);
 
   return { animals, animalCount: animals.length };
 };

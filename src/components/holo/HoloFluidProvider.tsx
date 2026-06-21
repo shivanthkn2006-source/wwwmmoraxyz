@@ -10,7 +10,7 @@ import { ZoeFloatingOrb, ZoeState } from './ZoeFloatingOrb';
 import { AdaptiveScreenGlow, GlowState } from './AdaptiveScreenGlow';
 import { NeuralHUD, HUDItem } from './NeuralHUD';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, MessageCircle, Shield, Settings, Globe, Activity, Sparkles, Camera, Users, Share2, Crown, User, ChevronUp, ChevronDown, Play, Pause, Zap, MapPin, Shirt, Coffee, Cpu, Heart, ShoppingBag } from 'lucide-react';
+import { Home, MessageCircle, Shield, Settings, Globe, Activity, Sparkles, Camera, Users, Share2, Crown, User, ChevronUp, ChevronDown, Play, Pause, Zap, MapPin, Shirt, Coffee, Cpu, Heart, ShoppingBag, Satellite } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/integrations/supabase/client';
 import { useDevMode } from '@/components/security/DevModeContext';
@@ -322,6 +322,7 @@ export const HoloFluidProvider: React.FC<HoloFluidProviderProps> = ({
     { id: 'sovereign', icon: Crown, label: 'Sovereign', color: 'text-amber-500', onClick: () => navigate('/sovereign-control') },
     { id: 'evolution', icon: Sparkles, label: 'Evolution', color: 'text-amber-400', onClick: () => navigate('/omega-evolution') },
     { id: 'vr', icon: Globe, label: 'VR World', color: 'text-omega-pink', onClick: () => navigate('/zoe-omega') },
+    { id: 'sentinel', icon: Satellite, label: 'Sentinel', color: 'text-cyan-400', onClick: () => navigate('/sentinel') },
     { id: 'health', icon: Activity, label: 'Health', color: integrationHealth.database && integrationHealth.ecn ? 'text-green-400' : 'text-amber-400', onClick: runHealthCheck },
     { id: 'security', icon: Shield, label: 'Security', color: 'text-amber-400', onClick: () => navigate('/security') },
     { id: 'settings', icon: Settings, label: 'Settings', color: 'text-slate-400', onClick: () => navigate('/profile') },

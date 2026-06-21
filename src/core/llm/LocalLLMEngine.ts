@@ -22,7 +22,7 @@ import { checkNetworkStatus } from '@/hooks/useNetworkStatus';
 // TYPES
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export type LLMProvider = 'cloud' | 'ollama' | 'local' | 'scripted';
+export type LLMProvider = 'cloud' | 'local' | 'scripted';
 
 export interface LLMResponse {
   text: string;
@@ -338,7 +338,7 @@ export const initializeLocalLLM = async (): Promise<boolean> => {
       // Note: This downloads ~1.5GB on first load
       llmInstance = await LlmInference.createFromOptions(genaiFileset, {
         baseOptions: {
-          modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/llm_inference/gemma_2b_it_gpu_int4/float32/latest/gemma_2b_it_gpu_int4.bin',
+          modelAssetPath: 'https://storage.googleapis.com/jmstore/kaggleweb/grader/g2b-it-gpu-int4.bin',
         },
         maxTokens: 512,
         topK: 40,
@@ -429,84 +429,6 @@ const cleanLLMResponse = (response: string): string => {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// OLLAMA LOCAL SERVER SUPPORT — ROUTED THROUGH EDGE FUNCTION PROXY
-// ═══════════════════════════════════════════════════════════════════════════════
-
-const DEFAULT_OLLAMA_MODEL = 'llama3';
-
-// Use the edge function proxy to bypass CORS
-const OLLAMA_PROXY_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ollama-proxy`;
-
-let ollamaAvailable: boolean | null = null; // null = not checked yet
-
-/**
- * Check if Ollama server is reachable (via proxy)
- */
-const checkOllamaAvailable = async (_endpoint?: string): Promise<boolean> => {
-  // With the proxy, we assume available and let the actual call fail if not
-  ollamaAvailable = true;
-  console.log('[LocalLLM] 🦙 Ollama proxy configured — will verify on first call');
-  return true;
-};
-
-/**
- * Generate response using local Ollama server (via Edge Function proxy)
- */
-const generateOllamaResponse = async (
-  prompt: string,
-  context?: LLMContext,
-  model: string = DEFAULT_OLLAMA_MODEL,
-  _endpoint?: string
-): Promise<LLMResponse | null> => {
-  // FORCE LOCAL OR DIE TRYING — NOW VIA PROXY
-  const startTime = performance.now();
-
-  console.log("🚀 Attempting to hit M1 Pro via proxy...");
-
-  try {
-    const response = await fetch(OLLAMA_PROXY_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-      },
-      body: JSON.stringify({
-        model,
-        prompt: "System: You are Zoe on M1 Pro. User: " + prompt,
-        stream: false,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorBody = await response.text();
-      throw new Error(`Proxy Error: ${response.status} ${errorBody}`);
-    }
-
-    const data = await response.json();
-    console.log("✅ SUCCESS from M1 Pro:", data);
-
-    const text = cleanLLMResponse(data.response || '');
-
-    return {
-      text: text || "I'm here, but I couldn't form a thought. Try again?",
-      provider: 'ollama',
-      latencyMs: performance.now() - startTime,
-      confidence: 0.85,
-      cached: false,
-    };
-  } catch (error) {
-    console.error("❌ LOCAL FAILED:", error);
-    return {
-      text: "ERROR: Could not reach M1 Pro. Check Console for details.",
-      provider: 'ollama',
-      latencyMs: performance.now() - startTime,
-      confidence: 0,
-      cached: false,
-    };
-  }
-};
-
-// ═══════════════════════════════════════════════════════════════════════════════
 // MAIN API: GENERATE RESPONSE (FALLBACK CHAIN)
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -515,9 +437,6 @@ export interface GenerateOptions {
   context?: LLMContext;
   forceLocal?: boolean;
   forceScripted?: boolean;
-  forceOllama?: boolean;
-  ollamaModel?: string;
-  ollamaEndpoint?: string;
   timeout?: number;
 }
 
@@ -534,9 +453,6 @@ export const generateResponse = async (
     context,
     forceLocal = false,
     forceScripted = false,
-    forceOllama = true, // 🧪 TEST MODE: Force Ollama local brain
-    ollamaModel,
-    ollamaEndpoint,
     timeout = 10000,
   } = options;
   
@@ -558,52 +474,31 @@ export const generateResponse = async (
   }
   
   // ═══════════════════════════════════════════════════════════════════════
-  // PATH 2a: OLLAMA (local server, if forced or available)
+  // PATH 2: CLOUD (if online and not forced local)
   // ═══════════════════════════════════════════════════════════════════════
-  if (forceOllama || ollamaAvailable === null) {
-    // Check availability on first call
-    if (ollamaAvailable === null) await checkOllamaAvailable(ollamaEndpoint);
-  }
-
-  if (forceOllama || ollamaAvailable) {
-    console.log('[LLM] 🦙 Trying Ollama local server...');
-    const ollamaResponse = await generateOllamaResponse(prompt, context, ollamaModel, ollamaEndpoint);
-    if (ollamaResponse) return ollamaResponse;
-    if (forceOllama) {
+  if (network.isOnline && !forceLocal && cloudFn) {
+    try {
+      console.log('[LLM] ☁️ Trying cloud brain...');
+      
+      const cloudPromise = cloudFn(prompt);
+      const timeoutPromise = new Promise<never>((_, reject) => 
+        setTimeout(() => reject(new Error('Cloud timeout')), timeout)
+      );
+      
+      const cloudResponse = await Promise.race([cloudPromise, timeoutPromise]);
+      
       return {
-        text: "Ollama server isn't running. Start it with `ollama serve` and try again.",
-        provider: 'scripted',
+        text: cloudResponse,
+        provider: 'cloud',
         latencyMs: performance.now() - startTime,
-        confidence: 0.5,
+        confidence: 0.95,
         cached: false,
       };
+      
+    } catch (err) {
+      console.warn('[LLM] ⚠️ Cloud failed, falling back to local:', err);
     }
   }
-
-  // ═══════════════════════════════════════════════════════════════════════
-  // PATH 2b: CLOUD (if online and not forced local)
-  // ═══════════════════════════════════════════════════════════════════════
-  // 🧪 TEST MODE: Cloud fallback DISABLED — must reach local MacBook or fail
-  // if (network.isOnline && !forceLocal && cloudFn) {
-  //   try {
-  //     console.log('[LLM] ☁️ Trying cloud brain...');
-  //     const cloudPromise = cloudFn(prompt);
-  //     const timeoutPromise = new Promise<never>((_, reject) =>
-  //       setTimeout(() => reject(new Error('Cloud timeout')), timeout)
-  //     );
-  //     const cloudResponse = await Promise.race([cloudPromise, timeoutPromise]);
-  //     return {
-  //       text: cloudResponse,
-  //       provider: 'cloud',
-  //       latencyMs: performance.now() - startTime,
-  //       confidence: 0.95,
-  //       cached: false,
-  //     };
-  //   } catch (err) {
-  //     console.warn('[LLM] ⚠️ Cloud failed, falling back to local:', err);
-  //   }
-  // }
-  console.log('[LLM] ☁️ Cloud fallback is DISABLED for local testing');
   
   // ═══════════════════════════════════════════════════════════════════════
   // PATH 3: LOCAL LLM (if available)

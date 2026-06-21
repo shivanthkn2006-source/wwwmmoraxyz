@@ -8,7 +8,7 @@ import {
   type AssistantVoiceType 
 } from '@/utils/assistantVoice';
 
-export type AssistantName = 'Zoe' | 'Smith';
+export type AssistantName = string;
 
 interface AssistantConfig {
   name: AssistantName;
@@ -61,10 +61,9 @@ export function useAssistantName() {
   }, []);
 
   useEffect(() => {
-    const fetchUserGender = async () => {
+    const fetchUserPreference = async () => {
       if (!user?.id) {
         setIsLoading(false);
-        // Default to Zoe for entire platform
         setCurrentAssistant('Zoe');
         return;
       }
@@ -72,28 +71,55 @@ export function useAssistantName() {
       try {
         const { data, error } = await supabase
           .from('profiles')
-          .select('gender')
+          .select('gender, assistant_name')
           .eq('user_id', user.id)
           .single();
 
         if (error) {
-          console.error('Failed to fetch user gender:', error);
-          // Default to Zoe
+          console.error('Failed to fetch user profile:', error);
           setAssistantName('Zoe');
           setCurrentAssistant('Zoe');
           return;
         }
 
-        // Gender-based initial preference:
-        // Male users get Zoe (female), Female users get Smith (male)
-        // Default to Zoe for unset gender
-        const gender = data?.gender?.toLowerCase();
-        const initialAssistant: AssistantName = gender === 'female' ? 'Smith' : 'Zoe';
-        
-        setAssistantName(initialAssistant);
-        setCurrentAssistant(initialAssistant);
+        // If user chose a custom assistant name during Genesis, use it
+        if (data?.assistant_name) {
+          const customName = data.assistant_name as AssistantName;
+          // Register custom name in configs if not already there
+          if (!ASSISTANT_CONFIGS[customName]) {
+            ASSISTANT_CONFIGS[customName] = {
+              name: customName,
+              pronoun: data.gender?.toLowerCase() === 'male' ? 'she' : 'he',
+              title: customName.toUpperCase() as any,
+              description: `${customName} — your personal AI companion`,
+            };
+          }
+          setAssistantName(customName);
+          setCurrentAssistant(customName as AssistantVoiceType);
+          
+          // Set voice persona based on user's gender from profile
+          const userGender = data.gender?.toLowerCase();
+          if (userGender === 'female') {
+            localStorage.setItem('zoe_voice_persona', 'male');
+          } else if (userGender === 'male') {
+            localStorage.setItem('zoe_voice_persona', 'female');
+          }
+        } else {
+          // Fallback: Gender-based default
+          const gender = data?.gender?.toLowerCase();
+          const initialAssistant: AssistantName = gender === 'female' ? 'Smith' : 'Zoe';
+          setAssistantName(initialAssistant);
+          setCurrentAssistant(initialAssistant as AssistantVoiceType);
+          
+          // Set voice persona
+          if (gender === 'female') {
+            localStorage.setItem('zoe_voice_persona', 'male');
+          } else {
+            localStorage.setItem('zoe_voice_persona', 'female');
+          }
+        }
       } catch (err) {
-        console.error('Error fetching gender:', err);
+        console.error('Error fetching profile:', err);
         setAssistantName('Zoe');
         setCurrentAssistant('Zoe');
       } finally {
@@ -101,7 +127,7 @@ export function useAssistantName() {
       }
     };
 
-    fetchUserGender();
+    fetchUserPreference();
   }, [user?.id]);
 
   const config = ASSISTANT_CONFIGS[assistantName];
@@ -111,7 +137,7 @@ export function useAssistantName() {
    */
   const switchAssistant = useCallback((name: AssistantName) => {
     setAssistantName(name);
-    setCurrentAssistant(name);
+    setCurrentAssistant(name as AssistantVoiceType);
   }, []);
 
   /**

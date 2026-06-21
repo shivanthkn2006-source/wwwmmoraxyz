@@ -102,7 +102,6 @@ class OfflineSLMEngineClass {
     const BRAIN_CACHE_NAME = 'zoe-brain-v1';
     const BRAIN_MODELS = [
       'https://storage.googleapis.com/jmstore/kaggleweb/grader/g2b-it-gpu-int4.bin',
-      'https://storage.googleapis.com/mediapipe-models/llm_inference/gemma_2b_it_gpu_int4/float32/latest/gemma_2b_it_gpu_int4.bin',
     ];
     
     try {
@@ -335,6 +334,10 @@ class OfflineSLMEngineClass {
   ): string {
     const lower = message.toLowerCase();
     const name = context?.userName ? `, ${context.userName}` : '';
+
+    if (/\b(face\s*to\s*face|video|avatar|new avatar|see you|show yourself|show your face|talk to me face)\b/i.test(lower)) {
+      return `I'm here face to face${name}. If you ask to see me, I open my avatar and speak with you through it.`;
+    }
     
     // FIX: Use device local time for accurate time-based responses
     const now = new Date();
@@ -376,16 +379,16 @@ class OfflineSLMEngineClass {
       return `Traffic is typically light at this time${name}. Roads should be clear.`;
     }
     
-    // Market/Store queries
-    if (lower.match(/market|store|shop|supermarket|grocery|pharmacy|mall|open|close/)) {
+    // Market/Store queries (avoid matching generic words like "shop" or "store")
+    if (lower.match(/\b(supermarket|grocery|pharmacy|mall)\b/) || lower.match(/\b(nearest|nearby|closest)\s+(store|shop|market)/)) {
       if (hour >= 8 && hour < 22) {
         return `Most stores are open right now${name}. Supermarkets typically run 8 AM to 10 PM, pharmacies often stay open later.`;
       }
       return `Most stores are closed at this hour${name}. 24-hour pharmacies and some convenience stores may still be open.`;
     }
     
-    // Amazon/Product queries
-    if (lower.match(/amazon|product|buy|order|shop|price|delivery|trending/)) {
+    // Amazon/Product queries (narrowed to avoid false positives)
+    if (lower.match(/\bamazon\b/) || lower.match(/buy\s+online|trending\s+products?/)) {
       return `For Amazon shopping${name}, trending items include earbuds, smartwatches, and phone accessories. Most items have same-day or next-day delivery in metro areas.`;
     }
     

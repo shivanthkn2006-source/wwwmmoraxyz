@@ -4,11 +4,12 @@
 // PROTOCOL PHANTOM: Integrates with Ghost Mode for battery savings
 // ═══════════════════════════════════════════════════════════════════════════════
 
-import React, { useRef, useEffect, useMemo } from 'react';
+import React, { useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Html, Float } from '@react-three/drei';
 import * as THREE from 'three';
-import { dispatchVRSpeaking, dispatchVRSpeakingEnd, type VRSpeakerInfo } from '@/hooks/useVRSpeakingToOrb';
+import { dispatchVRSpeaking, dispatchVRSpeakingEnd } from '@/hooks/useVRSpeakingToOrb';
+import { speakAsZoe } from '@/utils/zoeVoice';
 import { usePhantomVisible } from '@/stores/usePhantomStore';
 
 interface LocalPlayerAvatarProps {
@@ -21,63 +22,64 @@ const ZoeOrbFollower: React.FC<{ playerRef: React.RefObject<THREE.Group> }> = ({
   const targetPosition = useRef(new THREE.Vector3(1.5, 2, 0));
   const glowRef = useRef<THREE.Mesh>(null);
   const isListening = useRef(false);
+  const tempForward = useRef(new THREE.Vector3());
+  const tempRight = useRef(new THREE.Vector3());
+  const tempTarget = useRef(new THREE.Vector3());
+  const { camera } = useThree();
   
   // PROTOCOL PHANTOM: Check ghost mode
   const isPhantomVisible = usePhantomVisible();
 
-  // Orb floats around the player like a companion
+  // Keep orb in front of camera so orientation is always clear to user
   useFrame((state) => {
     if (!orbRef.current || !playerRef.current) return;
-    
-    // PROTOCOL PHANTOM: Skip animations in ghost mode
-    if (!isPhantomVisible) {
-      // Just maintain position without animation
-      orbRef.current.position.set(
-        playerRef.current.position.x + 1.5,
-        playerRef.current.position.y + 2,
-        playerRef.current.position.z
-      );
-      return;
-    }
 
-    // Calculate position relative to player - orbits around them
     const time = state.clock.elapsedTime;
-    const orbitRadius = 1.5;
-    const orbitSpeed = 0.3;
-    
-    // Orbit position with gentle bobbing
-    targetPosition.current.set(
-      playerRef.current.position.x + Math.sin(time * orbitSpeed) * orbitRadius,
-      playerRef.current.position.y + 2 + Math.sin(time * 1.5) * 0.2,
-      playerRef.current.position.z + Math.cos(time * orbitSpeed) * orbitRadius
-    );
 
-    // Smooth follow
-    orbRef.current.position.lerp(targetPosition.current, 0.05);
+    tempForward.current.set(0, 0, -1).applyQuaternion(camera.quaternion).normalize();
+    tempRight.current.set(1, 0, 0).applyQuaternion(camera.quaternion).normalize();
 
-    // Orb rotation and glow pulse
+    // Front-right conversational anchor in camera space
+    const forwardOffset = 1.25;
+    const sideOffset = 0.75;
+    const verticalOffset = 0.15 + (isPhantomVisible ? Math.sin(time * 1.2) * 0.08 : 0);
+
+    tempTarget.current
+      .copy(camera.position)
+      .addScaledVector(tempForward.current, forwardOffset)
+      .addScaledVector(tempRight.current, sideOffset);
+    tempTarget.current.y += verticalOffset;
+
+    targetPosition.current.copy(tempTarget.current);
+    orbRef.current.position.lerp(targetPosition.current, isPhantomVisible ? 0.14 : 0.3);
+
+    // Lightweight pulse only when visible to save GPU
     if (glowRef.current) {
-      glowRef.current.rotation.y += 0.02;
-      glowRef.current.rotation.z += 0.01;
-      const pulse = Math.sin(time * 3) * 0.1 + 0.9;
+      const pulse = isPhantomVisible ? Math.sin(time * 2.2) * 0.08 + 0.92 : 0.88;
       glowRef.current.scale.setScalar(pulse);
+      if (isPhantomVisible) {
+        glowRef.current.rotation.y += 0.012;
+      }
     }
   });
 
   // Click to talk to Zoe
   const handleClick = () => {
     isListening.current = !isListening.current;
-    
+    const orbPos = orbRef.current?.position || new THREE.Vector3(0, 2, 0);
+
     if (isListening.current) {
       dispatchVRSpeaking({
         speakerId: 'zoe-orb',
         speakerType: 'character',
         speakerName: 'Zoe Orb',
-        worldPosition: { x: 0, y: 2, z: 0 },
+        worldPosition: { x: orbPos.x, y: orbPos.y, z: orbPos.z },
         isSpeaking: true
       });
+      speakAsZoe('I am in front of you. Ask for satellite view, mountains, or summit view and I will guide you.');
     } else {
       dispatchVRSpeakingEnd('zoe-orb');
+      speakAsZoe('Voice guide paused. Tap me anytime to continue exploring.');
     }
   };
 
@@ -123,19 +125,19 @@ const ZoeOrbFollower: React.FC<{ playerRef: React.RefObject<THREE.Group> }> = ({
       <Html
         position={[0, 0.35, 0]}
         center
-        distanceFactor={8}
-        occlude={false}
-        style={{ pointerEvents: 'none' }}
-      >
-        <div 
-          className="px-2 py-0.5 rounded-full backdrop-blur-sm text-center whitespace-nowrap"
-          style={{
-            backgroundColor: 'rgba(0, 212, 255, 0.3)',
-            border: '1px solid rgba(0, 212, 255, 0.5)',
-            boxShadow: '0 0 10px rgba(0, 212, 255, 0.5)',
-          }}
-        >
-          <span className="text-[10px] font-mono font-bold text-cyan-300">
+         distanceFactor={30}
+         occlude={false}
+         style={{ pointerEvents: 'none' }}
+       >
+         <div 
+           className="px-1 py-0 rounded-full backdrop-blur-sm text-center whitespace-nowrap"
+           style={{
+             backgroundColor: 'rgba(0, 212, 255, 0.2)',
+             border: '1px solid rgba(0, 212, 255, 0.4)',
+             boxShadow: '0 0 6px rgba(0, 212, 255, 0.3)',
+           }}
+         >
+           <span className="text-[4px] font-mono font-bold text-cyan-300">
             ZOE ✦
           </span>
         </div>

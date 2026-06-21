@@ -134,10 +134,10 @@ export const VR_COMMANDS: VRCommand[] = [
   { pattern: /^(?:zoe\s+)?(?:drop|release|put\s+down)$/i, action: 'drop', category: 'interaction', description: 'Drop object', voiceResponse: 'Dropping.' },
   { pattern: /^(?:zoe\s+)?(?:open|enter)\s+(?:the\s+)?door$/i, action: 'open_door', category: 'interaction', description: 'Open door', voiceResponse: 'Opening door.' },
   { pattern: /^(?:zoe\s+)?(?:close)\s+(?:the\s+)?door$/i, action: 'close_door', category: 'interaction', description: 'Close door', voiceResponse: 'Closing door.' },
-  { pattern: /^(?:zoe\s+)?sit\s+down$/i, action: 'sit', category: 'interaction', description: 'Sit down', voiceResponse: 'Taking a seat.' },
-  { pattern: /^(?:zoe\s+)?stand\s+up$/i, action: 'stand', category: 'interaction', description: 'Stand up', voiceResponse: 'Standing up.' },
-  { pattern: /^(?:zoe\s+)?crouch$/i, action: 'crouch', category: 'interaction', description: 'Crouch', voiceResponse: 'Crouching.' },
-  { pattern: /^(?:zoe\s+)?lie\s+down$/i, action: 'lie_down', category: 'interaction', description: 'Lie down', voiceResponse: 'Lying down.' },
+  { pattern: /^(?:zoe\s+)?sit(?:\s+down)?$/i, action: 'sit', category: 'interaction', description: 'Sit down', voiceResponse: 'Taking a seat.' },
+  { pattern: /^(?:zoe\s+)?stand(?:\s+up)?$/i, action: 'stand', category: 'interaction', description: 'Stand up', voiceResponse: 'Standing up.' },
+  { pattern: /^(?:zoe\s+)?crouch(?:\s+down)?$/i, action: 'crouch', category: 'interaction', description: 'Crouch', voiceResponse: 'Crouching.' },
+  { pattern: /^(?:zoe\s+)?lie(?:\s+down)?$/i, action: 'lie_down', category: 'interaction', description: 'Lie down', voiceResponse: 'Lying down.' },
 
   // ═══════════════════════════════════════════════════════════════════════════
   // ENVIRONMENT COMMANDS - Weather, Seasons, Real-World Integration
@@ -180,6 +180,16 @@ export const VR_COMMANDS: VRCommand[] = [
   { pattern: /^(?:zoe\s+)?(?:drive|take)\s+me\s+to\s+(.+)$/i, action: 'drive_to', category: 'movement', description: 'Drive to location', voiceResponse: 'Navigating to destination. Creating road if needed.' },
   { pattern: /^(?:zoe\s+)?auto[\s-]?pilot$/i, action: 'autopilot', category: 'movement', description: 'Enable autopilot', voiceResponse: 'Engaging autopilot mode.' },
   { pattern: /^(?:zoe\s+)?manual\s+(?:drive|mode)$/i, action: 'manual_drive', category: 'movement', description: 'Manual driving mode', voiceResponse: 'Switching to manual driving mode.' },
+  
+  // F1 Circuit interaction
+  { pattern: /^(?:zoe\s+)?(?:take\s+me\s+to|go\s+to|navigate\s+to)\s+(?:the\s+)?(?:f1|formula\s*1|race\s*track|omega\s*circuit|circuit)$/i, action: 'navigate_to_f1', category: 'navigation', description: 'Navigate to F1 circuit', voiceResponse: 'Taking you to the F1 Omega Circuit.' },
+  { pattern: /^(?:zoe\s+)?(?:enter|get\s+in(?:to)?)\s+(?:the\s+)?(?:f1\s+)?car$/i, action: 'enter_f1_car', category: 'interaction', description: 'Enter F1 car', voiceResponse: 'Entering the F1 car.' },
+  { pattern: /^(?:zoe\s+)?(?:exit|get\s+out(?:\s+of)?)\s+(?:the\s+)?(?:f1\s+)?car$/i, action: 'exit_f1_car', category: 'interaction', description: 'Exit F1 car', voiceResponse: 'Exiting the F1 car.' },
+  { pattern: /^(?:zoe\s+)?(?:start|begin)\s+(?:the\s+)?(?:f1\s+)?race$/i, action: 'start_f1_race', category: 'movement', description: 'Start F1 race', voiceResponse: 'Starting the F1 race.' },
+  { pattern: /^(?:zoe\s+)?(?:pit\s*stop|box\s+box)$/i, action: 'f1_pit_stop', category: 'interaction', description: 'F1 pit stop', voiceResponse: 'Initiating pit stop.' },
+  { pattern: /^(?:zoe\s+)?(?:f1\s+)?standings?$/i, action: 'f1_standings', category: 'control', description: 'F1 standings', voiceResponse: 'Fetching race standings.' },
+  { pattern: /^(?:zoe\s+)?(?:f1\s+)?lap\s*time$/i, action: 'f1_lap_time', category: 'control', description: 'F1 lap time', voiceResponse: 'Fetching lap time.' },
+  { pattern: /^(?:zoe\s+)?(?:f1\s+)?(?:car\s+status|tire\s+wear|tyre\s+wear)$/i, action: 'f1_car_status', category: 'control', description: 'F1 car status', voiceResponse: 'Fetching F1 car status.' },
   
   // Door interactions
   { pattern: /^(?:zoe\s+)?open\s+(?:the\s+)?(?:car\s+)?door$/i, action: 'open_car_door', category: 'interaction', description: 'Open car door', voiceResponse: 'Opening the car door.' },
@@ -224,6 +234,20 @@ export const VR_COMMANDS: VRCommand[] = [
   { pattern: /^(?:zoe\s+)?(?:show|view)\s+memories?$/i, action: 'show_memories', category: 'interaction', description: 'Show memories', voiceResponse: 'Displaying memory engrams.' },
   { pattern: /^(?:zoe\s+)?(?:select|view)\s+engram$/i, action: 'select_engram', category: 'interaction', description: 'Select memory engram', voiceResponse: 'Focusing on memory engram.' },
   { pattern: /^(?:zoe\s+)?(?:show|view)\s+holo[\s-]?wall$/i, action: 'show_holowall', category: 'interaction', description: 'Show Holo-Wall', voiceResponse: 'Displaying ECN timeline on Holo-Wall.' },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // METRO / TRAIN COMMANDS
+  // ═══════════════════════════════════════════════════════════════════════════
+  { pattern: /^(?:zoe\s+)?(?:take\s+me\s+to|go\s+to|navigate\s+to)\s+(?:the\s+)?(?:metro|train|railway|station)$/i, action: 'navigate_to_metro', category: 'navigation', description: 'Navigate to metro station', voiceResponse: 'Taking you to the nearest metro station.' },
+  { pattern: /^(?:zoe\s+)?(?:board|enter|get\s+(?:on|in(?:to)?))\s+(?:the\s+)?(?:metro|train)$/i, action: 'board_train', category: 'interaction', description: 'Board the metro train', voiceResponse: 'Boarding the metro train. Please mind the gap.' },
+  { pattern: /^(?:zoe\s+)?(?:exit|leave|get\s+(?:off|out(?:\s+of)?))\s+(?:the\s+)?(?:metro|train)$/i, action: 'exit_train', category: 'interaction', description: 'Exit the metro train', voiceResponse: 'Exiting the train at this station.' },
+  { pattern: /^(?:zoe\s+)?(?:next|which)\s+(?:metro\s+)?station$/i, action: 'next_station', category: 'control', description: 'Ask next station', voiceResponse: 'Checking the next station on this line.' },
+  { pattern: /^(?:zoe\s+)?(?:metro|train)\s+(?:schedule|timetable|status)$/i, action: 'metro_status', category: 'control', description: 'Metro status', voiceResponse: 'All five metro trains are running on schedule across fourteen stations.' },
+  { pattern: /^(?:zoe\s+)?(?:toggle|switch)\s+(?:day|night)(?:\s+(?:mode|cycle))?$/i, action: 'toggle_day_night', category: 'environment', description: 'Toggle day/night cycle', voiceResponse: 'Toggling day and night cycle.' },
+  { pattern: /^(?:zoe\s+)?(?:sound|play)\s+(?:train\s+)?horn$/i, action: 'force_train_horn', category: 'environment', description: 'Force train horn', voiceResponse: 'Sounding the metro horn.' },
+  { pattern: /^(?:zoe\s+)?(?:teleport|go)\s+(?:to|into)\s+train\s*(?:#?\s*)?1$/i, action: 'teleport_to_train_1', category: 'navigation', description: 'Teleport into Train #1', voiceResponse: 'Teleporting you into Metro Train number one.' },
+  { pattern: /^(?:zoe\s+)?(?:take\s+me\s+to|go\s+to)\s+(?:the\s+)?(?:metro\s+)?(?:stairs|escalator|elevator|entrance)$/i, action: 'navigate_to_metro_entrance', category: 'navigation', description: 'Navigate to metro entrance', voiceResponse: 'Taking you to the metro station entrance.' },
+  { pattern: /^(?:zoe\s+)?(?:download|generate|export)\s+(?:vr\s+)?(?:audit|report|pdf)$/i, action: 'download_vr_audit', category: 'control', description: 'Download VR audit PDF', voiceResponse: 'Generating and downloading the VR World audit report.' },
 
   // ═══════════════════════════════════════════════════════════════════════════
   // PANEL CONTROL COMMANDS - Open/Close/Toggle Windows

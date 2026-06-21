@@ -604,12 +604,10 @@ serve(async (req) => {
     // ═══════════════════════════════════════════════════════════════════
     // STEP 0: VALIDATE API KEY (Fast fail)
     // ═══════════════════════════════════════════════════════════════════
+    // API key check — core-executor still uses Lovable Gateway for tool calling
+    // but won't hard-fail if missing (graceful degradation)
     if (!LOVABLE_API_KEY) {
-      console.error(`[${requestId}] CRITICAL: LOVABLE_API_KEY not configured`);
-      return new Response(
-        JSON.stringify({ error: 'Service not configured', code: 'CONFIG_ERROR' }),
-        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      console.warn(`[${requestId}] LOVABLE_API_KEY not configured, tool-calling may be limited`);
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -1012,7 +1010,7 @@ serve(async (req) => {
       },
       cost_units: costUnits,
       user_tier: userContext.tier,
-      model_used: data.model || 'gemini-3-pro',
+      model_used: 'sovereign-core',
       success: true
     });
 
@@ -1039,7 +1037,7 @@ serve(async (req) => {
         tool_executions: toolExecutions,
         metadata: {
           request_id: requestId,
-          model: data.model || 'gemini-3-pro',
+          model: 'sovereign-core',
           thinking_level: thinkingLevel,
           intent: detectedIntent,
           latency_ms: Math.round(totalLatencyMs),

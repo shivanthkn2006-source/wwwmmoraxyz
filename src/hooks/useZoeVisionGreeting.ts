@@ -6,7 +6,6 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import { useCallback, useEffect, useRef } from 'react';
-import { speakAs } from '@/utils/assistantVoice';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 
@@ -230,8 +229,9 @@ export const useZoeVisionGreeting = (config: Partial<VisionGreetingConfig> = {})
     
     console.log(`[VisionGreeting] Speaking ${type} greeting:`, text);
     
-    // Use speakAs from assistantVoice for Zoe's voice (capitalized 'Zoe')
-    speakAs(text, 'Zoe');
+    // Route through global voice event so ZoeInfinityUnlocked's voiceOrchestrator handles it
+    // This prevents dual-speech-path audio conflicts
+    window.dispatchEvent(new CustomEvent('zoe-vision-speak', { detail: { text, type } }));
     
     // Log to DHF behavioral events
     if (user?.id) {
@@ -289,7 +289,9 @@ export const useZoeVisionGreeting = (config: Partial<VisionGreetingConfig> = {})
   useEffect(() => {
     if (!mergedConfig.enabled) return;
     
-    const handleGodEyeActivated = () => {
+    const handleGodEyeActivated = (event: Event) => {
+      const customEvent = event as CustomEvent<{ psychologistMode?: boolean }>;
+      if (customEvent.detail?.psychologistMode) return;
       console.log('[VisionGreeting] God Eye activated event received');
       // Reset analysis flag for new session
       hasSpokenAnalysisRef.current = false;

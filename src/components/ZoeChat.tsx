@@ -22,6 +22,7 @@ import {
   stopSpeechRecognition 
 } from '@/utils/micPermissionManager';
 import { useZoeOrbSelfieCitySearch } from '@/hooks/useZoeOrbSelfieCitySearch';
+import { useNeuroSymbolicGuard } from '@/hooks/useNeuroSymbolicGuard';
 
 interface Message {
   id?: string;
@@ -51,6 +52,7 @@ export const ZoeChat = () => {
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
+  const { guard: guardResponse } = useNeuroSymbolicGuard('zoe-chat');
 
   // Listen for Selfie City search results and display in chat
   useEffect(() => {
@@ -262,8 +264,9 @@ export const ZoeChat = () => {
         throw new Error(chatError.message || 'Failed to get response');
       }
 
-      // Handle response
-      const responseContent = data?.message || data?.response || "I'm here to help. Could you please try again?";
+      // Handle response - filter through NeuroSymbolic Guard
+      const rawContent = data?.message || data?.response || "I'm here to help. Could you please try again?";
+      const responseContent = guardResponse(rawContent).safeResponse;
       
       if (!responseContent || responseContent.trim() === '') {
         throw new Error('Empty response from Zoe');

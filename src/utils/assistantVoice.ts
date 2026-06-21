@@ -1,17 +1,13 @@
 /**
- * ZOE INFINITY - BIOLOGICAL VOICE PROTOCOL
- * Unified Assistant Voice Configuration (Zero Cost)
+ * ZOE - Deepgram Aura 2 + Browser-Native Voice System
+ * Unified Assistant Voice Configuration
  * 
- * Supports dynamic switching between Zoe (female) and Smith (male) voices
- * Using browser-native Web Speech API with Persona Tuning
- * 
- * The Physics:
- * - Pitch shift hacks human brain to perceive personality
- * - Rate shift creates emotional intelligence perception
- * 
- * Zoe (Female): Pitch 1.15 (Bright), Rate 1.05 (Quick-witted)
- * Smith (Male): Pitch 0.85 (Deep), Rate 0.95 (Calculated)
+ * Primary: Deepgram Aura 2 "aura-2-janus-en" (feminine, warm, expressive)
+ * Fallback: Browser Web Speech API
+ * Supports dynamic switching between Zoe (female) and Smith (male) voices.
  */
+
+import { speakWithDeepgram, stopDeepgramSpeech, isDeepgramPlaying } from './deepgramTTS';
 
 export type AssistantVoiceType = 'Zoe' | 'Smith';
 
@@ -21,50 +17,31 @@ interface VoiceSettings {
   volume: number;
 }
 
-/**
- * ZOE PROTOCOL: "BIOLOGICAL VOICE" (Zero Cost)
- * 
- * Persona Tuning via Web Speech API physics:
- * - Pitch: Creates perceived gender/personality
- * - Rate: Creates perceived intelligence/emotion
- * - Volume: Creates perceived confidence
- */
 export const VOICE_CONFIGS: Record<AssistantVoiceType, VoiceSettings> = {
   Zoe: {
-    rate: 1.0,       // Normal speed (natural pacing)
-    pitch: 1.1,      // Slightly higher (warm personality)
-    volume: 0.95,    // Clear presence
+    rate: 1.0,
+    pitch: 1.1,
+    volume: 0.95,
   },
   Smith: {
-    rate: 1.0,       // Normal speed (natural pacing)
-    pitch: 0.9,      // Slightly lower (authoritative)
-    volume: 1.0,     // Confident presence
+    rate: 1.0,
+    pitch: 0.9,
+    volume: 1.0,
   }
 };
 
 // Preferred voice patterns for each assistant
 const ZOE_VOICE_PATTERNS = [
-  'Samantha',
-  'Google UK English Female',
-  'Microsoft Zira',
-  'Karen',
-  'Victoria',
-  'Tessa',
-  'Susan',
+  'Samantha', 'Google UK English Female', 'Microsoft Zira',
+  'Karen', 'Victoria', 'Tessa', 'Susan',
 ];
 
 const SMITH_VOICE_PATTERNS = [
-  'Daniel',
-  'Alex',
-  'Google UK English Male',
-  'Microsoft David',
-  'Fred',
-  'Thomas',
-  'Oliver',
-  'James',
+  'Daniel', 'Alex', 'Google UK English Male', 'Microsoft David',
+  'Fred', 'Thomas', 'Oliver', 'James',
 ];
 
-// Current active assistant (global state for voice system)
+// Current active assistant
 let currentAssistant: AssistantVoiceType = 'Zoe';
 let isSpeakingActive = false;
 let currentUtterance: SpeechSynthesisUtterance | null = null;
@@ -76,7 +53,6 @@ let utteranceQueue: SpeechSynthesisUtterance[] = [];
 let currentChunkIndex = 0;
 let speechCancelled = false;
 
-// Split text into chunks at sentence boundaries for reliable playback
 const splitIntoChunks = (text: string, maxLength = 200): string[] => {
   const chunks: string[] = [];
   const sentences = text.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [text];
@@ -98,65 +74,43 @@ const splitIntoChunks = (text: string, maxLength = 200): string[] => {
   return chunks.length > 0 ? chunks : [text];
 };
 
-/**
- * Get the current active assistant
- */
 export const getCurrentAssistant = (): AssistantVoiceType => currentAssistant;
 
-/**
- * Set the active assistant (Zoe or Smith)
- */
 export const setCurrentAssistant = (assistant: AssistantVoiceType): void => {
   if (currentAssistant !== assistant) {
     console.log(`[Voice] Switching assistant: ${currentAssistant} → ${assistant}`);
     currentAssistant = assistant;
-    // Dispatch event for UI updates
     window.dispatchEvent(new CustomEvent('assistant-changed', { detail: { assistant } }));
   }
 };
 
-/**
- * Detect which assistant the user is addressing from input text
- * Returns the detected assistant name or null if no wake word found
- */
 export const detectAssistantFromInput = (text: string): AssistantVoiceType | null => {
   const lower = text.toLowerCase();
-  
-  // Check for explicit name mentions
   const zoePatterns = [/\bzoe\b/, /\bzoey\b/, /\bzo\b/];
   const smithPatterns = [/\bsmith\b/, /\bsmyth\b/];
   
   for (const pattern of smithPatterns) {
     if (pattern.test(lower)) return 'Smith';
   }
-  
   for (const pattern of zoePatterns) {
     if (pattern.test(lower)) return 'Zoe';
   }
-  
-  return null; // No explicit mention - use current assistant
+  return null;
 };
 
-/**
- * Find the best available voice for the specified assistant
- */
 export const findBestVoice = (assistant: AssistantVoiceType): SpeechSynthesisVoice | null => {
   if (!('speechSynthesis' in window)) return null;
-
   const voices = window.speechSynthesis.getVoices();
   if (voices.length === 0) return null;
   
   const patterns = assistant === 'Smith' ? SMITH_VOICE_PATTERNS : ZOE_VOICE_PATTERNS;
 
-  // Try preferred voices first
   for (const preferred of patterns) {
     const voice = voices.find(v => v.name.includes(preferred));
     if (voice) return voice;
   }
 
-  // Fallback: find any English voice that sounds appropriate
   if (assistant === 'Smith') {
-    // Look for male-sounding voices
     const maleVoice = voices.find(v => 
       v.lang.startsWith('en') && 
       (v.name.toLowerCase().includes('male') || 
@@ -166,7 +120,6 @@ export const findBestVoice = (assistant: AssistantVoiceType): SpeechSynthesisVoi
     );
     if (maleVoice) return maleVoice;
   } else {
-    // Look for female-sounding voices
     const femaleVoice = voices.find(v => 
       v.lang.startsWith('en') && 
       (v.name.toLowerCase().includes('female') || 
@@ -178,13 +131,9 @@ export const findBestVoice = (assistant: AssistantVoiceType): SpeechSynthesisVoi
     if (femaleVoice) return femaleVoice;
   }
 
-  // Ultimate fallback
   return voices.find(v => v.lang.startsWith('en')) || voices[0] || null;
 };
 
-/**
- * Complete cleanup of speech state
- */
 const cleanupSpeechState = () => {
   if (keepAliveInterval) {
     clearInterval(keepAliveInterval);
@@ -201,67 +150,39 @@ const cleanupSpeechState = () => {
   speechCancelled = false;
 };
 
-/**
- * Chrome bug workaround
- */
 const chromeKeepAlive = () => {
   if (!isSpeakingActive) return;
-  
   const synth = window.speechSynthesis;
-  
   if (synth.paused) {
-    console.log('[Voice] Detected pause, resuming...');
     synth.resume();
     return;
   }
-  
   if (synth.speaking) {
     synth.pause();
     synth.resume();
   }
 };
 
-/**
- * STEP 4 CONNECTION: Get pre-warmed AudioContext from AuthPage
- * This prevents garbage collection on M05/low-end devices
- */
-const getPreWarmedAudioContext = (): AudioContext | null => {
-  return (window as any).__zoeAudioContext || null;
-};
-
-/**
- * Wake up audio engine if not already done (fallback for direct voice calls)
- */
 const ensureAudioEngineAwake = (): void => {
-  if ((window as any).__zoeAudioContext) return; // Already awake
-  
+  if ((window as any).__zoeAudioContext) return;
   try {
     const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
     if (!AudioContextClass) return;
-    
     const audioCtx = new AudioContextClass();
     const buffer = audioCtx.createBuffer(1, 1, 22050);
     const source = audioCtx.createBufferSource();
     source.buffer = buffer;
     source.connect(audioCtx.destination);
     source.start(0);
-    
     (window as any).__zoeAudioContext = audioCtx;
-    console.log('[Voice] Audio engine wake-up (fallback)');
   } catch (e) {
     console.warn('[Voice] Audio wake-up fallback failed:', e);
   }
 };
 
-/**
- * Ensure speech synthesis is ready before speaking
- */
 const ensureSynthesisReady = async (): Promise<boolean> => {
   if (!('speechSynthesis' in window)) return false;
-  
-  // STEP 4: Ensure audio engine is awake for M05/low-end devices
   ensureAudioEngineAwake();
-  
   const voices = window.speechSynthesis.getVoices();
   if (voices.length === 0) {
     await new Promise<void>(resolve => {
@@ -273,13 +194,9 @@ const ensureSynthesisReady = async (): Promise<boolean> => {
       };
     });
   }
-  
   return window.speechSynthesis.getVoices().length > 0;
 };
 
-/**
- * Speak next chunk in queue
- */
 const speakNextChunk = (
   assistant: AssistantVoiceType,
   onStart?: () => void,
@@ -335,9 +252,7 @@ const speakNextChunk = (
 };
 
 /**
- * Speaks text with the current assistant's voice
- * Auto-detects assistant from text if wake word is present
- * Uses chunking for reliable long-text playback
+ * Speaks text with the current assistant's voice (browser-native only)
  */
 export const speakAs = async (
   text: string,
@@ -346,18 +261,11 @@ export const speakAs = async (
   onEnd?: () => void,
   onError?: (error?: Error | any) => void
 ): Promise<void> => {
-  if (!('speechSynthesis' in window)) {
-    console.warn('[Voice] Speech synthesis not supported');
-    onError?.(new Error('Speech synthesis not supported'));
-    return;
-  }
-
   if (!text || !text.trim()) {
     onEnd?.();
     return;
   }
 
-  // Clean the text
   const cleanText = text
     .replace(/\[\[(PATTERN|MEMORY):[^\]]+\]\]/g, '')
     .replace(/<[^>]+>/g, '')
@@ -371,7 +279,6 @@ export const speakAs = async (
     return;
   }
 
-  // Determine which assistant to use
   const detectedAssistant = detectAssistantFromInput(cleanText);
   const assistant = overrideAssistant || detectedAssistant || currentAssistant;
   
@@ -382,23 +289,41 @@ export const speakAs = async (
   // Stop any existing speech
   speechCancelled = true;
   stopSpeaking();
-  
   await new Promise(resolve => setTimeout(resolve, 50));
-  await ensureSynthesisReady();
-  
-  // Reset state
-  speechCancelled = false;
-  isSpeakingActive = true;
-  currentChunkIndex = 0;
 
   localStorage.setItem('assistant-last-spoken', cleanText);
   window.dispatchEvent(new CustomEvent('assistant-speak', { detail: { text: cleanText, assistant } }));
 
-  // Split into chunks for reliability
-  const chunks = splitIntoChunks(cleanText, 200);
-  console.log(`[Voice] Speaking as ${assistant}:`, chunks.length, 'chunk(s)', cleanText.substring(0, 50));
+  // For Zoe: Try Deepgram Aura 2 first (premium voice)
+  if (assistant === 'Zoe') {
+    console.log('[Voice] 🎙️ Attempting Deepgram Aura 2 (aura-2-janus-en) for Zoe...');
+    const deepgramSuccess = await speakWithDeepgram(cleanText, onStart, onEnd, (err) => {
+      console.warn('[Voice] Deepgram failed, falling back to browser TTS:', err?.message);
+    });
+    
+    if (deepgramSuccess) {
+      console.log('[Voice] ✅ Deepgram Aura 2 playing as Zoe');
+      return;
+    }
+    console.log('[Voice] 📱 Deepgram unavailable, falling back to browser TTS');
+  }
 
-  // Get voice settings
+  // Browser Native Web Speech API (fallback for Zoe, primary for Smith)
+  if (!('speechSynthesis' in window)) {
+    console.warn('[Voice] Speech synthesis not supported');
+    onError?.(new Error('Speech synthesis not supported'));
+    return;
+  }
+
+  await ensureSynthesisReady();
+  
+  speechCancelled = false;
+  isSpeakingActive = true;
+  currentChunkIndex = 0;
+
+  const chunks = splitIntoChunks(cleanText, 200);
+  console.log(`[Voice] 📱 Browser TTS as ${assistant}:`, chunks.length, 'chunk(s)');
+
   const settings = VOICE_CONFIGS[assistant];
   const voice = findBestVoice(assistant);
   
@@ -406,7 +331,6 @@ export const speakAs = async (
     console.log(`[Voice] Using voice: ${voice.name}`);
   }
 
-  // Create utterances for each chunk
   utteranceQueue = chunks.map(chunk => {
     const utterance = new SpeechSynthesisUtterance(chunk);
     utterance.rate = settings.rate;
@@ -416,7 +340,6 @@ export const speakAs = async (
     return utterance;
   });
 
-  // Chrome keep-alive: pause/resume to prevent 15s cutoff
   keepAliveInterval = setInterval(() => {
     if (isSpeakingActive && window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
       window.speechSynthesis.pause();
@@ -424,25 +347,19 @@ export const speakAs = async (
     }
   }, 10000);
   
-  // Monitor for unexpected pauses
   pauseMonitorInterval = setInterval(() => {
     if (!isSpeakingActive) return;
     if (window.speechSynthesis.paused && isSpeakingActive) {
-      console.log('[Voice] Force resuming from unexpected pause');
       window.speechSynthesis.resume();
     }
   }, 500);
 
-  // Begin speaking chunks
   speakNextChunk(assistant, onStart, onEnd, onError);
 };
 
-/**
- * Stops any ongoing speech
- */
 export const stopSpeaking = (): void => {
+  stopDeepgramSpeech();
   cleanupSpeechState();
-  
   if ('speechSynthesis' in window) {
     try {
       window.speechSynthesis.cancel();
@@ -452,35 +369,23 @@ export const stopSpeaking = (): void => {
   }
 };
 
-/**
- * Checks if assistant is currently speaking
- */
 export const isAssistantSpeaking = (): boolean => {
-  if (!('speechSynthesis' in window)) return false;
-  return isSpeakingActive || window.speechSynthesis.speaking;
+  if (!('speechSynthesis' in window)) return isDeepgramPlaying();
+  return isSpeakingActive || window.speechSynthesis.speaking || isDeepgramPlaying();
 };
 
-/**
- * Pauses speech
- */
 export const pauseSpeaking = (): void => {
   if ('speechSynthesis' in window) {
     window.speechSynthesis.pause();
   }
 };
 
-/**
- * Resumes speech
- */
 export const resumeSpeaking = (): void => {
   if ('speechSynthesis' in window) {
     window.speechSynthesis.resume();
   }
 };
 
-/**
- * Get current speech state for debugging
- */
 export const getAssistantSpeechState = () => ({
   isSpeakingActive,
   hasSynthesis: 'speechSynthesis' in window,
@@ -490,9 +395,6 @@ export const getAssistantSpeechState = () => ({
   chunksRemaining: utteranceQueue.length - currentChunkIndex,
 });
 
-/**
- * Initialize voice system
- */
 export const initializeAssistantVoices = (): Promise<void> => {
   return new Promise((resolve) => {
     if (!('speechSynthesis' in window)) {
@@ -502,9 +404,7 @@ export const initializeAssistantVoices = (): Promise<void> => {
     }
 
     cleanupSpeechState();
-    try {
-      window.speechSynthesis.cancel();
-    } catch (e) {}
+    try { window.speechSynthesis.cancel(); } catch (e) {}
 
     const voices = window.speechSynthesis.getVoices();
     if (voices.length > 0) {
@@ -528,14 +428,12 @@ export const initializeAssistantVoices = (): Promise<void> => {
 
     setTimeout(() => {
       window.speechSynthesis.onvoiceschanged = null;
-      const voiceCount = window.speechSynthesis.getVoices().length;
-      console.log(`[Voice] Init timeout, voices: ${voiceCount}`);
       resolve();
     }, 2000);
   });
 };
 
-// Backwards compatibility exports (alias to old names)
+// Backwards compatibility
 export const speakAsZoe = (
   text: string,
   options?: Partial<VoiceSettings>,

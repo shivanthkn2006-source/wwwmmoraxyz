@@ -28,7 +28,7 @@ export const useUserOnlineNotifications = () => {
 
       // Subscribe to profile status changes for friends
       const channel = supabase
-        .channel('friend-status-changes')
+        .channel(`friend-status-changes:${user.id}`)
         .on(
           'postgres_changes',
           {

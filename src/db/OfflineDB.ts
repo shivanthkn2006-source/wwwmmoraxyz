@@ -5,7 +5,10 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  */
 
-import Dexie, { Table } from 'dexie';
+import Dexie from 'dexie/dist/dexie.mjs';
+
+const DexieRuntime = Dexie as any;
+type Table<T, Key> = any;
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TYPE DEFINITIONS
@@ -74,7 +77,7 @@ export interface OfflineSettings {
 // DATABASE SCHEMA
 // ═══════════════════════════════════════════════════════════════════════════════
 
-class ZoeOfflineDB extends Dexie {
+class ZoeOfflineDB extends DexieRuntime {
   messages!: Table<OfflineMessage, string>;
   profiles!: Table<OfflineProfile, string>;
   mail!: Table<OfflineMail, string>;
@@ -140,7 +143,7 @@ export const offlineMessages = {
   async getByUser(userId: string, limit = 100): Promise<OfflineMessage[]> {
     return offlineDB.messages
       .where('[userId+createdAt]')
-      .between([userId, Dexie.minKey], [userId, Dexie.maxKey])
+      .between([userId, DexieRuntime.minKey], [userId, DexieRuntime.maxKey])
       .reverse()
       .limit(limit)
       .toArray();

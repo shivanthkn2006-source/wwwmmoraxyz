@@ -1,7 +1,12 @@
 import { memo, useState, useRef, useEffect, useCallback, KeyboardEvent } from 'react';
-import { Send, Mic, MicOff, Volume2, Shield } from 'lucide-react';
+import { Send, Mic, MicOff, Volume2, Shield, Microscope } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getVADFirewall, type VADCallbacks } from '@/core/audio/VADCostFirewall';
+import {
+  isDeepResearchEnabled,
+  setDeepResearchEnabled,
+  subscribeDeepResearch,
+} from '@/stores/zoeInfinityDeepResearchToggle';
 
 interface InfinityInputProps {
   onSend: (message: string) => void;
@@ -22,7 +27,7 @@ export const InfinityInput = memo(function InfinityInput({
   onVoiceEnd,
   voiceEnabled = true,
   wakeWordActive = false,
-  enableVAD = true, // VAD enabled by default to protect Deepgram costs
+  enableVAD = true,
 }: InfinityInputProps) {
   const [value, setValue] = useState('');
   const [isFocused, setIsFocused] = useState(false);
@@ -32,13 +37,25 @@ export const InfinityInput = memo(function InfinityInput({
   const recognitionRef = useRef<any>(null);
   
   // ═══════════════════════════════════════════════════════════════════════════
-  // PROMPT 1: VAD COST FIREWALL
-  // Only send audio to Deepgram when speech is detected (saves 95% cost)
+  // VAD COST FIREWALL
+  // Only process audio when speech is detected (saves resources)
   // ═══════════════════════════════════════════════════════════════════════════
   const [vadActive, setVadActive] = useState(false);
   const [vadGateOpen, setVadGateOpen] = useState(false);
   const [audioLevel, setAudioLevel] = useState(0);
   const vadRef = useRef(getVADFirewall());
+
+  // ═══ DEEP RESEARCH TOGGLE — manual override of pattern detection ═══
+  const [deepResearch, setDeepResearch] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return isDeepResearchEnabled();
+  });
+  useEffect(() => subscribeDeepResearch(setDeepResearch), []);
+  const toggleDeepResearch = useCallback(() => {
+    const next = !deepResearch;
+    setDeepResearchEnabled(next);
+    setDeepResearch(next);
+  }, [deepResearch]);
 
   const getMoodGlow = () => {
     switch (mood) {
@@ -86,11 +103,11 @@ export const InfinityInput = memo(function InfinityInput({
           },
           onGateOpen: () => {
             setVadGateOpen(true);
-            console.log('[InfinityInput] 🔓 VAD: Gate OPEN - Deepgram can receive');
+            console.log('[InfinityInput] 🔓 VAD: Gate OPEN - Audio processing active');
           },
           onGateClose: () => {
             setVadGateOpen(false);
-            console.log('[InfinityInput] 🔒 VAD: Gate CLOSED - Protecting Deepgram');
+            console.log('[InfinityInput] 🔒 VAD: Gate CLOSED - Audio gated');
           },
           onAudioLevel: (level) => {
             setAudioLevel(level);
@@ -309,11 +326,31 @@ export const InfinityInput = memo(function InfinityInput({
                     : 'text-yellow-400/60 bg-yellow-400/10'
                   }
                 `}
-                title={vadGateOpen ? "Speech detected - Deepgram active" : "VAD active - Deepgram protected"}
+                title={vadGateOpen ? "Speech detected - Processing active" : "VAD active - Audio gated"}
               >
                 <Shield className="w-4 h-4" />
               </motion.div>
             )}
+            
+            {/* Deep Research toggle - manual override for Gemini 2.5 Pro 3-step reasoning */}
+            <motion.button
+              type="button"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={toggleDeepResearch}
+              disabled={disabled}
+              className={`
+                p-2 rounded-full transition-all duration-200
+                ${deepResearch
+                  ? 'text-emerald-300 bg-emerald-400/20 ring-2 ring-emerald-400/50'
+                  : 'text-white/40 hover:text-white/70 hover:bg-white/10'
+                }
+              `}
+              aria-label={deepResearch ? 'Deep Research ON' : 'Deep Research OFF'}
+              title={deepResearch ? 'Deep Research ON — Zoe will think harder (slower, smarter)' : 'Deep Research OFF — normal chat'}
+            >
+              <Microscope className="w-4 h-4" />
+            </motion.button>
             
             {/* Voice input toggle */}
             {voiceEnabled && (

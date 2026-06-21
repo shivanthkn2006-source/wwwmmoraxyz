@@ -134,10 +134,46 @@ serve(async (req) => {
       });
     }
 
-    console.log(`[ECN Processor] Analyzing ${events.length} events for user ${user.id}`);
+    // Keep only high-value events when annotation exists (backward compatible for legacy payloads)
+    const eventsForAnalysis = events.filter((event: any) => {
+      const annotation = event?.metadata?.mmora_annotation;
+      if (!annotation) return true;
+      if (annotation.queue_for_ecn === true) return true;
+      return annotation.data_value_score >= 0.55 || annotation.emotional_weight >= 0.6;
+    });
+
+    if (eventsForAnalysis.length === 0) {
+      if (queue_id) {
+        await supabase
+          .from('ecn_analysis_queue')
+          .update({
+            status: 'processed',
+            processed_at: new Date().toISOString(),
+            analysis_result: {
+              skipped: true,
+              reason: 'low_signal_batch',
+              events_received: events.length,
+              events_analyzed: 0,
+            },
+          })
+          .eq('id', queue_id);
+      }
+
+      return new Response(JSON.stringify({
+        success: true,
+        skipped: true,
+        reason: 'low_signal_batch',
+        events_received: events.length,
+        events_processed: 0,
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    console.log(`[ECN Processor] Analyzing ${eventsForAnalysis.length}/${events.length} events for user ${user.id}`);
 
     // Build context from events for analysis
-    const eventSummary = events.map(e => {
+    const eventSummary = eventsForAnalysis.map(e => {
       return `Event: ${e.event_type} (${e.event_category}) - Context: "${e.context_snippet || 'N/A'}"${
         e.metadata?.ecn_emotion ? ` - Emotion: ${e.metadata.ecn_emotion}` : ''
       }${
@@ -227,11 +263,11 @@ Respond in JSON format only.`;
       
       // Fallback if AI failed
       if (!aiSuccess) {
-        analysisResult = performRuleBasedAnalysis(events);
+        analysisResult = performRuleBasedAnalysis(eventsForAnalysis);
       }
     } else {
       // Fallback to rule-based analysis if no API key
-      analysisResult = performRuleBasedAnalysis(events);
+      analysisResult = performRuleBasedAnalysis(eventsForAnalysis);
     }
 
     // Ensure all values are proper integers for database (scale 0-1 to 0-100)
@@ -266,7 +302,8 @@ Respond in JSON format only.`;
           arousal: analysisResult.arousal,
           patterns_detected: analysisResult.patterns_detected || [],
           learning_style_indicators: analysisResult.learning_style_indicators,
-          events_analyzed: events.length,
+          events_analyzed: eventsForAnalysis.length,
+          events_received: events.length,
         },
       });
 
@@ -287,7 +324,7 @@ Respond in JSON format only.`;
     }
 
     // Mark events as ECN processed
-    const eventIds = events.map((e: any) => e.id).filter(Boolean);
+    const eventIds = eventsForAnalysis.map((e: any) => e.id).filter(Boolean);
     if (eventIds.length > 0) {
       await supabase
         .from('behavioral_events')
@@ -316,7 +353,8 @@ Respond in JSON format only.`;
     return new Response(JSON.stringify({
       success: true,
       analysis: analysisResult,
-      events_processed: events.length,
+      events_processed: eventsForAnalysis.length,
+      events_received: events.length,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

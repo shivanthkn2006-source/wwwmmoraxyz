@@ -154,22 +154,35 @@ serve(async (req) => {
     
     result.processingTimeMs = performance.now() - startTime;
     
-    // Log heartbeat completion
-    await supabase.from('behavioral_events').insert({
-      user_id: eligibleUsers?.[0]?.user_id || '00000000-0000-0000-0000-000000000000',
-      event_type: 'sovereign_heartbeat',
-      event_category: 'quantum_asi',
-      context_snippet: `Heartbeat ${heartbeatId}: ${result.thoughtsGenerated} thoughts, ${result.notificationsSent} notifications`,
-      metadata: {
-        heartbeatId,
-        usersProcessed: result.usersProcessed,
-        thoughtsGenerated: result.thoughtsGenerated,
-        notificationsSent: result.notificationsSent,
-        environmentScan: result.environmentScan,
-        processingTimeMs: result.processingTimeMs,
-      },
-      dhf_logged: true,
-    });
+    // Log heartbeat completion only when real user-context work happened.
+    // This prevents low-signal synthetic heartbeat spam from flooding behavioral_events.
+    if (result.usersProcessed > 0 && (result.thoughtsGenerated > 0 || result.notificationsSent > 0)) {
+      await supabase.from('behavioral_events').insert({
+        user_id: eligibleUsers?.[0]?.user_id,
+        event_type: 'sovereign_heartbeat',
+        event_category: 'quantum_asi',
+        context_snippet: `Heartbeat ${heartbeatId}: ${result.thoughtsGenerated} thoughts, ${result.notificationsSent} notifications`,
+        metadata: {
+          heartbeatId,
+          usersProcessed: result.usersProcessed,
+          thoughtsGenerated: result.thoughtsGenerated,
+          notificationsSent: result.notificationsSent,
+          environmentScan: result.environmentScan,
+          processingTimeMs: result.processingTimeMs,
+          mmora_annotation: {
+            version: '2026.03.heartbeat-v1',
+            semantic_tags: ['system', 'heartbeat', 'autonomy'],
+            data_value_score: result.thoughtsGenerated > 0 ? 0.72 : 0.35,
+            tier: result.thoughtsGenerated > 0 ? 'high' : 'low',
+            queue_for_ecn: false,
+            annotated_at: new Date().toISOString(),
+          },
+        },
+        dhf_logged: true,
+      });
+    } else {
+      console.log(`[Sovereign Heartbeat ${heartbeatId}] Skipping behavioral_events write (low-signal heartbeat)`);
+    }
     
     console.log(`[Sovereign Heartbeat ${heartbeatId}] ═══════════════════════════════════════`);
     console.log(`[Sovereign Heartbeat ${heartbeatId}] Heartbeat complete!`);

@@ -117,6 +117,14 @@ serve(async (req) => {
   }
 
   try {
+    // ─── AUTH GATE: require valid JWT, derive user_id from token (never trust body) ───
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const { messages, soulMetrics, timezone, localTime, platformContext } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
@@ -139,32 +147,35 @@ serve(async (req) => {
       hobbies?: string[];
       relationshipStyle?: string;
     } | null = null;
-    
-    const authHeader = req.headers.get('authorization');
-    
-    if (authHeader) {
-      const token = authHeader.replace('Bearer ', '');
-      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-      
-      if (user && !authError) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('display_name, bio, city, profession, hobbies, zoe_relationship_style')
-          .eq('user_id', user.id)
-          .single();
-        
-        if (profile) {
-          userProfile = {
-            firstName: profile.display_name?.split(' ')[0] || null,
-            displayName: profile.display_name,
-            bio: profile.bio,
-            city: profile.city,
-            profession: profile.profession,
-            hobbies: profile.hobbies,
-            relationshipStyle: profile.zoe_relationship_style,
-          };
-          console.log('[ZoeInfinity] Profile loaded:', userProfile.firstName, '| Relationship:', profile.zoe_relationship_style);
-        }
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // user_id is now guaranteed from JWT, not request body
+    {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('display_name, bio, city, profession, hobbies, zoe_relationship_style')
+        .eq('user_id', user.id)
+        .single();
+
+      if (profile) {
+        userProfile = {
+          firstName: profile.display_name?.split(' ')[0] || null,
+          displayName: profile.display_name,
+          bio: profile.bio,
+          city: profile.city,
+          profession: profile.profession,
+          hobbies: profile.hobbies,
+          relationshipStyle: profile.zoe_relationship_style,
+        };
+        console.log('[ZoeInfinity] Profile loaded:', userProfile.firstName, '| Relationship:', profile.zoe_relationship_style);
       }
     }
 

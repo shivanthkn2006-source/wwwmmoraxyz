@@ -298,6 +298,22 @@ export const useZoeCoreUnified = () => {
         .eq('status', 'failed')
         .lt('created_at', new Date(Date.now() - 3600000).toISOString());
 
+      // Mark stale pending items as failed so queue does not get permanently clogged
+      await supabase
+        .from('ecn_analysis_queue')
+        .update({
+          status: 'failed',
+          processed_at: new Date().toISOString(),
+          analysis_result: {
+            skipped: true,
+            reason: 'stale_pending_timeout',
+            marked_at: new Date().toISOString(),
+          },
+        })
+        .eq('status', 'pending')
+        .eq('user_id', user.id)
+        .lt('created_at', new Date(Date.now() - 30 * 60 * 1000).toISOString());
+
       // Get pending queue items for this user - limit to 5 to prevent rate limiting
       const { data: queueItems } = await supabase
         .from('ecn_analysis_queue')

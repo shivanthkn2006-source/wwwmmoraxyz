@@ -194,23 +194,7 @@ export const useZoeSovereignCommand = () => {
 
     const params = styleParams[voiceStyle] || styleParams.calm;
 
-    try {
-      // Try edge function TTS first
-      const { data, error } = await supabase.functions.invoke('lovable-tts', {
-        body: { text, voice: 'shimmer', speed: params.rate }
-      });
-
-      if (!error && data?.audio) {
-        const audio = new Audio(`data:audio/mp3;base64,${data.audio}`);
-        audio.playbackRate = params.rate;
-        await audio.play();
-        return;
-      }
-    } catch (e) {
-      console.log('[TTS] Edge function failed, using Web Speech');
-    }
-
-    // Fallback to Web Speech API
+    // Use Web Speech API directly
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);

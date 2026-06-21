@@ -2,7 +2,7 @@
 // EMOTIONAL VOICE - The $0 API Hack
 // ═══════════════════════════════════════════════════════════════════════════════
 //
-// Makes the robotic "Browser Voice" sound emotional without paying ElevenLabs.
+// Makes the browser voice sound emotional using Web Speech API physics.
 // We manipulate the Physics of the Web Speech API based on the BioKernel state.
 //
 // STRATEGY: "Persona Tuning" - Shift pitch, rate, volume to simulate emotion

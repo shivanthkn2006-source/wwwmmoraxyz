@@ -133,28 +133,18 @@ export const GlassPyramidAvatar: React.FC<GlassPyramidAvatarProps> = ({
         <Html
           position={[0, 0.6, 0]}
           center
-          distanceFactor={8}
+          sprite
+          distanceFactor={80}
           occlude={false}
           style={{ pointerEvents: 'none' }}
         >
-          <div 
-            className="px-2 py-0.5 rounded-full backdrop-blur-sm text-center whitespace-nowrap"
-            style={{
-              backgroundColor: 'rgba(0, 0, 0, 0.7)',
-              border: `1px solid ${roleColor}40`,
-              boxShadow: player.is_speaking ? `0 0 10px ${roleColor}` : 'none',
-            }}
+          <span
+            className="whitespace-nowrap rounded-full bg-background/40 px-0.5 text-[3px] font-mono font-medium leading-none"
+            style={{ color: roleColor }}
           >
-            <span 
-              className="text-[10px] font-mono font-medium"
-              style={{ color: roleColor }}
-            >
-              {player.display_name}
-            </span>
-            {player.role === 'admin' && (
-              <span className="ml-1 text-[8px] text-magenta-400">★</span>
-            )}
-          </div>
+            {player.display_name}
+            {player.role === 'admin' && ' ★'}
+          </span>
         </Html>
 
         {/* Speaking Indicator Rings */}

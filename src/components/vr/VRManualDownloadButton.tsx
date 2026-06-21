@@ -22,17 +22,18 @@ export const VRManualDownloadButton: React.FC<VRManualDownloadButtonProps> = ({
 }) => {
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const handleDownload = async () => {
+  const handleDownload = () => {
+    if (isGenerating) return;
     setIsGenerating(true);
-    
+
     try {
-      await generateVRUserManual();
+      generateVRUserManual();
       toast.success('VR User Manual downloaded successfully!');
     } catch (error) {
       console.error('Failed to generate manual:', error);
       toast.error('Failed to generate manual. Please try again.');
     } finally {
-      setIsGenerating(false);
+      window.setTimeout(() => setIsGenerating(false), 250);
     }
   };
 

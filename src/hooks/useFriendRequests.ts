@@ -221,7 +221,7 @@ export const useFriendRequests = () => {
     if (!user) return;
 
     const channel = supabase
-      .channel('friend_requests_changes')
+      .channel(`friend_requests_changes:${user.id}`)
       .on(
         'postgres_changes',
         {

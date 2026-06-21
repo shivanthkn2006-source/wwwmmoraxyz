@@ -8,6 +8,7 @@ import {
   estimateCost,
   getLatencyTarget
 } from "../_shared/ai-telemetry.ts";
+import { cascadeInfer, hardenZoeIdentity } from "../_shared/cascading-provider.ts";
 
 const messageSchema = z.object({
   role: z.enum(['user', 'assistant', 'system']),
@@ -27,11 +28,7 @@ serve(async (req) => {
   try {
     const body = await req.json();
     const { messages, includeHistory } = requestSchema.parse(body);
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    
-    if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY is not configured');
-    }
+    // API keys checked per-provider in cascade
 
     // Get comprehensive user profile for personalization
     const authHeader = req.headers.get('Authorization');
@@ -298,45 +295,27 @@ Remember: ${userName} isn't just a user - they're someone you deeply care about,
       ...messages
     ];
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: allMessages,
-        stream: true,
-      }),
-    });
-
-    if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ 
-          error: 'Rate limit exceeded, please try again later.',
-          code: 'RATE_LIMITED',
-          retryAfter: 5
-        }), {
-          status: 429,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Retry-After': '5' },
-        });
-      }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ 
-          error: 'AI credits exhausted, please add credits to your workspace.',
-          code: 'CREDITS_EXHAUSTED'
-        }), {
-          status: 402,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-      const errorText = await response.text();
-      console.error('AI companion gateway error:', response.status, errorText);
-      throw new Error(`AI gateway error: ${response.status}`);
+    // ═══════════════════════════════════════════════════════════════════════
+    // SMART AUTO-ROUTING: Gemini → Groq → OpenRouter → Lovable (non-streaming fallback)
+    // ═══════════════════════════════════════════════════════════════════════
+    const cascadeResult = await cascadeInfer(allMessages, { maxTokens: 1000, temperature: 0.7 });
+    
+    if (!cascadeResult.success) {
+      return new Response(
+        JSON.stringify({ error: 'All AI providers unavailable', code: 'SERVICE_UNAVAILABLE' }),
+        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
-
-    return new Response(response.body, {
+    
+    const hardenedContent = hardenZoeIdentity(cascadeResult.content);
+    
+    // Return as SSE-compatible format for client compatibility
+    const ssePayload = JSON.stringify({
+      choices: [{ delta: { content: hardenedContent }, finish_reason: 'stop' }]
+    });
+    const sseResponse = `data: ${ssePayload}\n\ndata: [DONE]\n\n`;
+    
+    return new Response(sseResponse, {
       headers: { ...corsHeaders, 'Content-Type': 'text/event-stream' },
     });
   } catch (error) {

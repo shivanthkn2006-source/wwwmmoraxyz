@@ -237,15 +237,11 @@ export function generateAcknowledgment(entities: ExtractedEntity[]): string | un
   }
 
   if (relation && event) {
-    const eventName = event.value.replace('_', ' ');
-    if (event.value === 'birthday') {
-      return `I have noted the ${eventName}. Shall I help plan something special?`;
-    }
-    return `I have remembered this ${eventName}. Would you like me to set a reminder?`;
+    return undefined;
   }
 
   if (event && date) {
-    return `Noted. I will remember this.`;
+    return undefined;
   }
 
   return undefined;

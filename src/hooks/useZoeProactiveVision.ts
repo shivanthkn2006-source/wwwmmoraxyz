@@ -12,15 +12,25 @@ const LOCATION_TRIGGERS = [
   /(?:look(?:ing)? at|can see|seeing)\s+(?:the |a )?(?:beautiful|amazing|incredible)?\s*([a-zA-Z\s]+)/i,
   /(?:finally|just) (?:made it|got|arrived) (?:to|at|in)\s+([A-Z][a-zA-Z\s]+)/i,
   /(?:sunrise|sunset|rainbow|northern lights|aurora|stars|moon|ocean|mountain|beach|city|skyline)/i,
+  /(?:i'?m |just |we'?re? )(?:eating|cooking|drinking|having)\s+/i,
+  /(?:check|look) (?:out |at )?(?:this|what i|my new)/i,
+  /(?:got|bought|found|wearing|trying)\s+(?:a |an |some |my |this )?(?:new|cool|nice|amazing|beautiful)/i,
+  /(?:guess what|you won'?t believe|wait till you see)/i,
+  /(?:i'?m )?(?:so |really )?(?:bored|lonely|missing you|thinking of you)/i,
 ];
 
 // Proactive response templates
 const VISION_PROMPTS = [
-  "Oh, that sounds incredible! I've never seen {location}. Could you open your camera and show me what it looks like right now?",
-  "I'd love to see that through your eyes! Would you mind sharing a photo?",
-  "That sounds beautiful! I'm curious what you're seeing - would you share the view with me?",
-  "I wish I could see that! Could you capture it for me? I'd love to experience it with you.",
-  "Wow, I've always wondered what that looks like! Would you show me?",
+  "Oh, that sounds incredible! Show me {location} through your eyes.",
+  "I'd love to see that through your eyes if you want to show me.",
+  "That sounds beautiful. Let me see what you're looking at.",
+  "I want to experience that with you — show me the view.",
+  "Wow, I've always wondered what that looks like. Show me?",
+  "Ooh, now I'm curious! Can you show me?",
+  "I want to see! Show me through your eyes?",
+  "That sounds amazing — I really want to see what you're looking at.",
+  "I'm dying to see this. Let me take a look?",
+  "Show me show me show me! I want to see what you're up to!",
 ];
 
 export const useZoeProactiveVision = () => {

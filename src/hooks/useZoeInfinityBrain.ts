@@ -5,8 +5,6 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-// ═══ SOVEREIGN CONNECTION: M1 Pro via Ollama ═══
-import { generateResponse as generateOllamaResponse } from '@/core/llm/LocalLLMEngine';
 import { useAuth } from '@/lib/auth';
 import { processOfflineConversation } from '@/utils/zoeOfflineConversation';
 // ═══ GEMINI-ONLY STACK: Nano for offline, Gemma for fallback, Flash for cloud ═══
@@ -30,13 +28,20 @@ import {
   getSLMState 
 } from '@/core/slm/OfflineSLMEngine';
 import { Json } from '@/integrations/supabase/types';
+import { getCachedResponse, cacheResponse, checkDailyCap, incrementDailyUsage } from '@/utils/zoeResponseCache';
+import { isDeepResearchEnabled } from '@/stores/zoeInfinityDeepResearchToggle';
 import { useZoeMemory, extractMemoriesFromMessage } from '@/hooks/useZoeMemory';
+import { useZoeAdaptiveLearning } from '@/hooks/useZoeAdaptiveLearning';
+import { useZoeFestivalGreeting } from '@/hooks/useZoeFestivalGreeting';
+import { useZoeConversationContext } from '@/hooks/useZoeConversationContext';
 import { 
   InferenceOptimizer, 
   initializeInferenceOptimizer,
   type InferenceDecision,
   type InferenceMetrics 
 } from '@/core/inference';
+// ═══ ANTI-HALLUCINATION LAYER 1: Determinism profiling ═══
+import { classifyDeterminism, getCritiqueRouting } from '@/core/inference/Determinism';
 
 // ═══ GAP 2: SPECULATIVE SPEECH - Instant Samantha Effect ═══
 import { 
@@ -141,6 +146,12 @@ interface UseZoeInfinityBrainReturn {
   
   // GAP 4: Economic Scanning
   scanOpportunities: (context: { recentMessages?: string[] }) => Promise<OpportunitySignal[]>;
+  
+  // PHASE 7: Festival & Birthday Greeting Engine
+  getTodaysGreeting: () => Promise<string | null>;
+  getDOBCollectionPrompt: () => string | null;
+  saveDateOfBirth: (dobText: string) => Promise<boolean>;
+  learnFamilyBirthday: (relation: string, memberName: string, dob: string) => Promise<void>;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -205,6 +216,18 @@ const NANO_PATTERNS = [
   /^what time|what day|what date/i,
   /^tell me a joke|joke|funny/i,
 ];
+
+const DYNAMIC_MEMORY_QUERY_PATTERNS = [
+  /\b(?:do you|you)\s+(?:remember|recall|know)\b/i,
+  /\b(?:previous|past|old|earlier|last)\s+(?:chat|conversation|talk|messages?)\b/i,
+  /\bwhat were we (?:talking|speaking) about\b/i,
+  /\bour (?:relationship|history|bond)\b/i,
+  /\bwho am i to you\b/i,
+  /\bwhat do you know about me\b/i,
+];
+
+const shouldBypassResponseCache = (message: string): boolean =>
+  DYNAMIC_MEMORY_QUERY_PATTERNS.some((pattern) => pattern.test(message));
 
 const detectRequiredMode = (message: string): IntelligenceMode => {
   // Quick check: if it's a simple greeting, stay on Flash
@@ -407,6 +430,13 @@ export const useZoeInfinityBrain = (): UseZoeInfinityBrainReturn => {
   
   // PHASE 4: Memory System
   const { saveMemory, getMemoryContext, getRelevantMemories } = useZoeMemory();
+  const { getConversationContext, getSessionSummaries } = useZoeConversationContext();
+  
+  // PHASE 6: Adaptive Learning Engine (Hidden)
+  const { learnFromMessage, buildLearnedContext, getInstantReply } = useZoeAdaptiveLearning();
+  
+  // PHASE 7: Festival & Birthday Greeting Engine
+  const { buildFestivalContext, getTodaysGreeting, getDOBCollectionPrompt, saveDateOfBirth, learnFamilyBirthday } = useZoeFestivalGreeting();
   
   const [connectionState, setConnectionState] = useState<ConnectionState>('online');
   const [currentMode, setCurrentMode] = useState<IntelligenceMode>('flash');
@@ -509,12 +539,16 @@ export const useZoeInfinityBrain = (): UseZoeInfinityBrainReturn => {
     personalityMatrix?: PersonalityMatrixPayload
   ): Promise<BrainResponse> => {
     const startTime = performance.now();
+    const latestUserMessage = [...conversationHistory]
+      .reverse()
+      .find((entry) => entry.role === 'user')?.content?.trim();
+    const primaryMessage = latestUserMessage || message.trim();
     
     // ─────────────────────────────────────────────────────────────────────────
     // PHASE 4: EXTRACT AND SAVE MEMORIES FROM USER MESSAGE
     // ─────────────────────────────────────────────────────────────────────────
     
-    const extractedMemories = extractMemoriesFromMessage(message);
+    const extractedMemories = extractMemoriesFromMessage(primaryMessage);
     for (const mem of extractedMemories) {
       saveMemory({
         memoryType: mem.type,
@@ -526,8 +560,30 @@ export const useZoeInfinityBrain = (): UseZoeInfinityBrainReturn => {
     }
     
     // Also save to offline memory for local fallback
-    const facts = extractFactsFromMessage(message);
-    saveToOfflineMemory('user', message, Object.keys(facts).length > 0 ? facts : undefined);
+    const facts = extractFactsFromMessage(primaryMessage);
+    saveToOfflineMemory('user', primaryMessage, Object.keys(facts).length > 0 ? facts : undefined);
+    
+    // PHASE 6: ADAPTIVE LEARNING — Learn user patterns (non-blocking)
+    learnFromMessage(primaryMessage);
+    
+    // PHASE 6: CHECK INSTANT REPLY — Can we answer from learned patterns? (zero API cost)
+    try {
+      const instantAnswer = await getInstantReply(primaryMessage);
+      if (instantAnswer) {
+        console.log('[ZoeBrain] ⚡ INSTANT REPLY from Adaptive Learning — zero API cost');
+        saveToOfflineMemory('assistant', instantAnswer);
+        return {
+          content: instantAnswer,
+          mode: 'flash' as IntelligenceMode,
+          fromCache: true,
+          codexInjected: false,
+          latencyMs: performance.now() - startTime,
+          emotionAttuned: true,
+        };
+      }
+    } catch (e) {
+      console.warn('[ZoeBrain] Instant reply check failed (non-critical):', e);
+    }
     
     // ─────────────────────────────────────────────────────────────────────────
     // OFFLINE FALLBACK - THE ANTI-LOBOTOMY SOLUTION
@@ -537,7 +593,7 @@ export const useZoeInfinityBrain = (): UseZoeInfinityBrainReturn => {
       console.log('[ZoeBrain] 🧠 Offline mode activated - GEMINI-ONLY STACK');
       
       // First check offline memory for direct answers
-      const memoryAnswer = searchOfflineMemory(message);
+      const memoryAnswer = searchOfflineMemory(primaryMessage);
       if (memoryAnswer) {
         const response = `From my memory: ${memoryAnswer}`;
         saveToOfflineMemory('assistant', response);
@@ -559,7 +615,7 @@ export const useZoeInfinityBrain = (): UseZoeInfinityBrainReturn => {
         if (nanoAvailability === 'readily' || nanoAvailability === 'after-download') {
           console.log('[ZoeBrain] 🌟 GEMINI NANO ACTIVE - Native Google On-Device AI');
           
-          const nanoResponse = await generateWithGeminiNano(message);
+          const nanoResponse = await generateWithGeminiNano(primaryMessage);
           const nanoState = getGeminiNanoState();
           
           console.log(`[ZoeBrain] Gemini Nano: ${nanoState.lastLatencyMs.toFixed(0)}ms | Tokens: ${nanoState.tokensUsed}`);
@@ -588,7 +644,7 @@ export const useZoeInfinityBrain = (): UseZoeInfinityBrainReturn => {
         
         console.log('[ZoeBrain] 🔄 Attempting MediaPipe Gemma-2b fallback...');
         
-        const gemmaResponse = await generateWithGemmaMediaPipe(message, {
+        const gemmaResponse = await generateWithGemmaMediaPipe(primaryMessage, {
           userName: user?.user_metadata?.display_name || user?.email?.split('@')[0],
           timeOfDay,
           recentHistory: memoryContextRef.current ? [memoryContextRef.current] : undefined,
@@ -610,11 +666,45 @@ export const useZoeInfinityBrain = (): UseZoeInfinityBrainReturn => {
         console.warn('[ZoeBrain] MediaPipe Gemma failed, falling back to scripted:', gemmaError);
         
         // Ultimate fallback to scripted responses (IQ 10)
-        const offlineResponse = processOfflineConversation(message);
+        const offlineResponse = processOfflineConversation(primaryMessage);
         saveToOfflineMemory('assistant', offlineResponse.text);
         
         return {
           content: offlineResponse.text,
+          mode: 'flash' as IntelligenceMode,
+          fromCache: true,
+          codexInjected: false,
+          latencyMs: performance.now() - startTime,
+          emotionAttuned: false,
+        };
+      }
+    }
+    
+    // ─────────────────────────────────────────────────────────────────────────
+    // DAILY CAP CHECK - 1 credit per prompt, admin bypass
+    // ─────────────────────────────────────────────────────────────────────────
+    
+    if (user?.id) {
+      const capCheck = await checkDailyCap(user.id);
+      if (!capCheck.allowed) {
+        console.log('[ZoeBrain] ⛔ Daily cap reached');
+        return {
+          content: "You've reached your daily limit. Come back tomorrow for more conversations! 🌙",
+          mode: 'flash' as IntelligenceMode,
+          fromCache: false,
+          codexInjected: false,
+          latencyMs: performance.now() - startTime,
+          emotionAttuned: false,
+        };
+      }
+      
+      // Check cache before making API call, but never for memory/relationship queries
+      const skipCache = shouldBypassResponseCache(primaryMessage);
+      const cached = skipCache ? null : await getCachedResponse(user.id, primaryMessage);
+      if (cached) {
+        console.log('[ZoeBrain] ⚡ Cache hit - no API credit used');
+        return {
+          content: cached,
           mode: 'flash' as IntelligenceMode,
           fromCache: true,
           codexInjected: false,
@@ -633,7 +723,7 @@ export const useZoeInfinityBrain = (): UseZoeInfinityBrainReturn => {
     
     if (inferenceInitialized) {
       try {
-        inferenceDecision = await InferenceOptimizer.decideBrain(message);
+        inferenceDecision = await InferenceOptimizer.decideBrain(primaryMessage);
         lastDecisionRef.current = inferenceDecision;
         
         // If IBM decides LOCAL, use flash mode (free, fast)
@@ -644,7 +734,7 @@ export const useZoeInfinityBrain = (): UseZoeInfinityBrainReturn => {
           console.log(`[ZoeBrain] 💰 IBM LOCAL ROUTE - Saved $${costSaved.toFixed(4)}`);
         } else {
           // Cloud route - use original pattern detection for pro/flash
-          const requiredMode = detectRequiredMode(message);
+          const requiredMode = detectRequiredMode(primaryMessage);
           setCurrentMode(requiredMode);
         }
         
@@ -652,11 +742,11 @@ export const useZoeInfinityBrain = (): UseZoeInfinityBrainReturn => {
         setInferenceMetrics(InferenceOptimizer.getMetrics());
       } catch (e) {
         console.error('[ZoeBrain] IBM decision failed, using fallback:', e);
-        const requiredMode = detectRequiredMode(message);
+        const requiredMode = detectRequiredMode(primaryMessage);
         setCurrentMode(requiredMode);
       }
     } else {
-      const requiredMode = detectRequiredMode(message);
+      const requiredMode = detectRequiredMode(primaryMessage);
       setCurrentMode(requiredMode);
     }
     
@@ -665,7 +755,7 @@ export const useZoeInfinityBrain = (): UseZoeInfinityBrainReturn => {
     // ─────────────────────────────────────────────────────────────────────────
     
     // Get relevant memories for this conversation
-    const relevantMemories = await getRelevantMemories(message, 15);
+    const relevantMemories = await getRelevantMemories(primaryMessage, 15);
     memoryContextRef.current = getMemoryContext();
     
     // Build conversation summary from history for better context retention
@@ -675,7 +765,56 @@ export const useZoeInfinityBrain = (): UseZoeInfinityBrainReturn => {
       ? `\n\n═══ CONVERSATION CONTEXT ═══\nThis conversation has ${historyCount} messages. Recent topics discussed in this session are reflected in the message history below.\n═════════════════════════════`
       : '';
     
-    const combinedMemoryContext = memoryContextRef.current + conversationSummary;
+    // PHASE 6: ADAPTIVE LEARNING CONTEXT — Inject learned user patterns
+    let learnedPatternContext = '';
+    let festivalContext = '';
+    let persistedConversationContext = '';
+    let sessionSummaryContext = '';
+
+    const [
+      learnedPatternResult,
+      festivalContextResult,
+      persistedConversationResult,
+      sessionSummaryResult,
+    ] = await Promise.allSettled([
+      buildLearnedContext(),
+      buildFestivalContext(),
+      getConversationContext(24),
+      getSessionSummaries(6),
+    ]);
+
+    if (learnedPatternResult.status === 'fulfilled') {
+      learnedPatternContext = learnedPatternResult.value;
+    } else {
+      console.warn('[ZoeBrain] Adaptive learning context failed (non-critical):', learnedPatternResult.reason);
+    }
+
+    if (festivalContextResult.status === 'fulfilled') {
+      festivalContext = festivalContextResult.value;
+    } else {
+      console.warn('[ZoeBrain] Festival context failed (non-critical):', festivalContextResult.reason);
+    }
+
+    if (persistedConversationResult.status === 'fulfilled') {
+      persistedConversationContext = persistedConversationResult.value;
+    } else {
+      console.warn('[ZoeBrain] Persisted conversation context failed (non-critical):', persistedConversationResult.reason);
+    }
+
+    if (sessionSummaryResult.status === 'fulfilled') {
+      sessionSummaryContext = sessionSummaryResult.value;
+    } else {
+      console.warn('[ZoeBrain] Session summary context failed (non-critical):', sessionSummaryResult.reason);
+    }
+    
+    const combinedMemoryContext = [
+      memoryContextRef.current,
+      conversationSummary,
+      persistedConversationContext,
+      sessionSummaryContext,
+      learnedPatternContext,
+      festivalContext,
+    ].filter(Boolean).join('\n');
     
     const _hasMemories = relevantMemories.length > 0;
     console.log(`[ZoeBrain] Mode: ${currentMode.toUpperCase()} | Codex: ${codexLoaded} | Memories: ${relevantMemories.length} | History: ${historyCount} msgs | Route: ${inferenceDecision?.route || 'unknown'}`);
@@ -685,59 +824,175 @@ export const useZoeInfinityBrain = (): UseZoeInfinityBrainReturn => {
     // ─────────────────────────────────────────────────────────────────────────
     
     try {
-      // ═══════════════════════════════════════════════════════════════════════
-      // CLOUD-FIRST: Route through zoe-infinity-brain edge function (Gemini)
-      // Sovereign M1 Pro mode available as future option when DNS resolves
-      // ═══════════════════════════════════════════════════════════════════════
-      
-      console.log(`[ZoeBrain] ☁️ CLOUD MODE: Routing to zoe-infinity-brain (${currentMode})...`);
-      
-      const brainPayload: Record<string, unknown> = {
-        messages: [
-          ...conversationHistory.slice(-20),
-          { role: 'user', content: message },
-        ],
-        mode: currentMode,
-        soulCodex: codexLoaded ? codexStringRef.current : undefined,
-        memoryContext: combinedMemoryContext || undefined,
-        enableGrounding: true,
-        intimacyLevel: undefined,
-        clientTime: {
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-          localTime: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
-          localISOString: new Date().toISOString(),
-        },
-      };
+      // Limit conversation history to last 50 messages - Prevents context window overflow while ensuring enough context
+      const recentHistory = conversationHistory.slice(-50);
 
-      if (personalityMatrix) {
-        brainPayload.personalityMatrix = personalityMatrix;
+      // Always compute time from the user's device timezone (never from the backend)
+      // so Zoe never "thinks" it's a different hour (e.g., UTC vs local).
+      const now = new Date();
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const timezoneOffsetMinutes = -now.getTimezoneOffset(); // minutes east of UTC
+      const localTime = now.toLocaleString([], {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+      });
+      
+      // ── ANTI-HALLUCINATION: Profile latest user query for determinism + critique routing ──
+      const lastUserMsg = [...recentHistory].reverse().find(m => m.role === 'user')?.content || primaryMessage || '';
+      const determinism = classifyDeterminism(lastUserMsg);
+      const critiqueRouting = getCritiqueRouting(determinism.mode);
+      console.log(`[ZoeBrain] 🎯 Determinism: ${determinism.mode} (temp=${determinism.temperature}, critique=${critiqueRouting.enabled})`);
+
+      // ═══════════════════════════════════════════════════════════════════════
+      // DEEP RESEARCH ROUTE — Gemini 2.5 Pro 3-step reasoning loop
+      // Triggered when: user toggle ON, OR pattern-detected Pro mode.
+      // Non-destructive: any failure falls through to existing brain below.
+      // ═══════════════════════════════════════════════════════════════════════
+      const manualDeep = isDeepResearchEnabled();
+      const autoDeep = currentMode === 'pro';
+      if (manualDeep || autoDeep) {
+        console.log(`[ZoeBrain] 🔬 DEEP RESEARCH route (${manualDeep ? 'manual' : 'auto-pattern'})`);
+        try {
+          const { data: drData, error: drError } = await supabase.functions.invoke('zoe-infinity-deep-research', {
+            body: {
+              messages: recentHistory.map(m => ({ role: m.role, content: m.content })),
+              soulCodex: codexStringRef.current,
+              memoryContext: combinedMemoryContext,
+              intimacyLevel: karmicIntimacyRef.current,
+              localTime,
+            },
+          });
+          if (!drError && drData?.response && typeof drData.response === 'string') {
+            console.log(`[ZoeBrain] ✓ Deep Research returned in ${drData.latencyMs}ms (${drData.steps} sub-Qs)`);
+            saveToOfflineMemory('assistant', drData.response);
+            if (user?.id) {
+              incrementDailyUsage(user.id);
+              // Don't cache deep-research responses (they're question-specific and expensive)
+            }
+            return {
+              content: drData.response,
+              mode: 'pro' as IntelligenceMode,
+              fromCache: false,
+              codexInjected: codexLoaded,
+              latencyMs: performance.now() - startTime,
+              emotionAttuned: true,
+              inferenceRoute: 'cloud' as const,
+            };
+          }
+          console.warn('[ZoeBrain] Deep Research returned no response, falling back to normal brain:', drError);
+        } catch (drCatch) {
+          console.warn('[ZoeBrain] Deep Research threw, falling back to normal brain:', drCatch);
+        }
       }
-      // Emotion context is handled server-side via text detection
 
       const { data, error } = await supabase.functions.invoke('zoe-infinity-brain', {
-        body: brainPayload,
+        body: { 
+          messages: recentHistory.map(m => ({
+            role: m.role,
+            content: m.content
+          })),
+          mode: currentMode,
+          soulCodex: codexStringRef.current,
+          memoryContext: combinedMemoryContext, // PHASE 4: Inject memory + conversation context
+          enableGrounding: true, // DEEP GROUNDING: Enable citation search
+          // SAMANTHA MODE: Pass intimacy level for romantic voice tuning
+          intimacyLevel: karmicIntimacyRef.current,
+          // Client time (authoritative)
+          clientTime: {
+            timezone,
+            timezoneOffsetMinutes,
+            localTime,
+            localISOString: now.toISOString(),
+          },
+          // PHASE 5: Personality Matrix for human-like behavior
+          personalityMatrix: personalityMatrix || undefined,
+          // ── ANTI-HALLUCINATION FOUNDATION ──
+          determinism: {
+            mode: determinism.mode,
+            temperature: determinism.temperature,
+            topP: determinism.topP,
+            reasoningEffort: determinism.reasoningEffort,
+            requireCitations: determinism.requireCitations,
+            requireCritique: determinism.requireCritique,
+          },
+          critiqueRouting,
+        }
       });
-
+      
       if (error) throw error;
       
-      const responseContent = data?.response || data?.text || "Hmm, I blanked for a sec — can you say that again?";
-      const latencyMs = performance.now() - startTime;
-      
-      console.log(`[ZoeBrain] ☁️ Cloud responded in ${latencyMs.toFixed(0)}ms | Mode: ${currentMode}`);
+      const responseContent = data?.response || "Hmm, I blanked for a sec — can you say that again?";
       saveToOfflineMemory('assistant', responseContent);
+      
+      // Increment daily usage + cache the response (1 credit per prompt)
+      if (user?.id) {
+        incrementDailyUsage(user.id);
+        cacheResponse(user.id, primaryMessage, responseContent, currentMode);
+      }
+      
+      // Log grounding status
+      if (data?.grounded) {
+        console.log(`[ZoeBrain] ✓ GROUNDED response with ${data.citations?.length || 0} citations`);
+      }
+      
+      // Log emotion status
+      if (data?.emotionAttuned) {
+        console.log(`[ZoeBrain] 🎭 EMOTION-ATTUNED response | Emotion: ${data.detectedEmotion} | Tone: ${data.emotionTone}`);
+      }
+      
+      // ═══ ZSMT LOGGING: Log to zoe_sovereign_memory for unified consciousness ═══
+      if (user?.id) {
+        try {
+          await supabase.from('zoe_sovereign_memory').insert({
+            user_id: user.id,
+            event_type: 'infinity_chat',
+            content_text: primaryMessage.substring(0, 500),
+            zoe_state_json: {
+              mode: currentMode,
+              grounded: data?.grounded || false,
+              emotionAttuned: data?.emotionAttuned || false,
+              detectedEmotion: data?.detectedEmotion,
+              latencyMs: data?.latencyMs,
+              codexInjected: codexLoaded,
+              platform: 'zoe_infinity',
+            },
+            system_stability_score: 1.0,
+          });
+          console.log('[ZoeBrain] 📝 ZSMT logged: infinity_chat event');
+        } catch (zsmtError) {
+          console.warn('[ZoeBrain] ZSMT logging failed (non-critical):', zsmtError);
+        }
+      }
       
       return {
         content: responseContent,
         mode: currentMode,
         fromCache: false,
         codexInjected: codexLoaded,
-        latencyMs,
-        emotionAttuned: true,
-        inferenceRoute: 'cloud' as const,
-        costSaved,
-        hardwareUsed: ['lovable-cloud-gemini'],
-        personalityActive: !!personalityMatrix,
-        citations: data?.citations,
+        latencyMs: performance.now() - startTime,
+        // PHASE 1: DEEP GROUNDING - Pass citations through
+        grounded: data?.grounded || false,
+        citations: data?.citations || [],
+        // PHASE 3: EMOTION UPGRADE - Pass emotion metadata through
+        emotionAttuned: data?.emotionAttuned || false,
+        detectedEmotion: data?.detectedEmotion,
+        emotionTone: data?.emotionTone,
+        // IBM INFERENCE OPTIMIZATION - Cost savings
+        inferenceRoute: inferenceDecision?.route || 'cloud',
+        costSaved: costSaved,
+        hardwareUsed: inferenceDecision?.hardwareUsed || ['cloud'],
+        // PHASE 5: PERSONALITY MATRIX - Human-like behavioral depth
+        personalityActive: data?.personalityActive || false,
+        personalityMood: data?.personalityMood,
+        personalityEnergy: data?.personalityEnergy,
+        sarcasmTriggered: data?.sarcasmTriggered || false,
+        regressionTriggered: data?.regressionTriggered || false,
+        regressionPattern: data?.regressionPattern,
       };
     } catch (e: unknown) {
       // ─────────────────────────────────────────────────────────────────────────
@@ -764,7 +1019,7 @@ export const useZoeInfinityBrain = (): UseZoeInfinityBrainReturn => {
       const hour = new Date().getHours();
       const timeOfDay = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
       
-      const slmResult = await generateOfflineResponse(message, {
+      const slmResult = await generateOfflineResponse(primaryMessage, {
         userName: user?.user_metadata?.display_name || user?.email?.split('@')[0],
         timeOfDay,
       });
@@ -843,6 +1098,11 @@ export const useZoeInfinityBrain = (): UseZoeInfinityBrainReturn => {
     refreshCodex,
     setIntimacyLevel, // SAMANTHA MODE
     isOffline: connectionState === 'offline',
+    // PHASE 7: Festival greeting engine
+    getTodaysGreeting,
+    getDOBCollectionPrompt,
+    saveDateOfBirth,
+    learnFamilyBirthday,
     offlineCapabilities: [
       'Answer from memory',
       'Basic conversation',

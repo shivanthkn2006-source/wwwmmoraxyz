@@ -259,30 +259,59 @@ OUTPUT FORMAT (RESPOND ONLY WITH VALID JSON):
       }
     }
 
-    // ═══ IMAGE GENERATION ═══
+    // ═══ IMAGE GENERATION (Pollinations Primary, Gemini Fallback) ═══
     const imagePrompt = `Ultra high resolution cinematic visualization: "${productionPlan.themeTitle}". ${productionPlan.visualDesign}. Setting: ${productionPlan.environmentContext}. Style: Professional film production concept art, dramatic cinematic lighting, 16:9 aspect ratio, photorealistic.`;
 
-    console.log('[ZUA] Generating visual with Gemini 3 Pro Image...');
+    let generatedImage: string | null = null;
 
-    const imageResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-3-pro-image-preview',
-        messages: [{ role: 'user', content: imagePrompt }],
-        modalities: ['image', 'text']
-      }),
-    });
+    // 1. Try Pollinations first
+    try {
+      console.log('[ZUA] Trying Pollinations for image...');
+      const encoded = encodeURIComponent(imagePrompt);
+      const pollinationsUrl = `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=576&model=flux&nologo=true&enhance=true`;
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 20000);
+      const polResp = await fetch(pollinationsUrl, { signal: controller.signal, headers: { 'Accept': 'image/*' } });
+      clearTimeout(timeout);
+      if (polResp.ok) {
+        const buf = await polResp.arrayBuffer();
+        if (buf.byteLength > 1000) {
+          const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+          const ct = polResp.headers.get('content-type') || 'image/jpeg';
+          generatedImage = `data:${ct};base64,${b64}`;
+          console.log(`[ZUA] ✅ Pollinations image success (${(buf.byteLength / 1024).toFixed(1)}KB)`);
+        }
+      }
+    } catch (e) {
+      console.warn('[ZUA] Pollinations failed:', e);
+    }
 
-    let generatedImage = null;
-    if (imageResponse.ok) {
-      const imageData = await imageResponse.json();
-      generatedImage = imageData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-    } else {
-      console.log('[ZUA] Image generation skipped:', imageResponse.status);
+    // 2. Fallback to Gemini
+    if (!generatedImage) {
+      try {
+        console.log('[ZUA] Trying Gemini fallback for image...');
+        const imageResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'google/gemini-3.1-flash-image-preview',
+            messages: [{ role: 'user', content: imagePrompt }],
+            modalities: ['image', 'text']
+          }),
+        });
+        if (imageResponse.ok) {
+          const imageData = await imageResponse.json();
+          generatedImage = imageData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+          if (generatedImage) console.log('[ZUA] ✅ Gemini fallback image success');
+        } else {
+          console.log('[ZUA] Gemini image generation failed:', imageResponse.status);
+        }
+      } catch (e) {
+        console.warn('[ZUA] Gemini image fallback error:', e);
+      }
     }
 
     const processingTime = Date.now() - startTime;

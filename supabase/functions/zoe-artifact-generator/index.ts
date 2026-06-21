@@ -4,10 +4,11 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 interface ArtifactRequest {
@@ -27,6 +28,18 @@ serve(async (req) => {
   console.log(`[Artifact ${requestId}] Request received`);
 
   try {
+    // Validate authentication
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, { global: { headers: { Authorization: authHeader } } });
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
     const body: ArtifactRequest = await req.json();
     const { type, prompt, conversationHistory, subject } = body;
 
@@ -45,43 +58,71 @@ serve(async (req) => {
         Dramatic lighting, photorealistic detail, museum quality artwork, 8K resolution.
         Style: Epic cinematic visualization, otherworldly beauty.`;
 
-      console.log(`[Artifact ${requestId}] Generating vision...`);
+      console.log(`[Artifact ${requestId}] Generating vision (Pollinations → Gemini)...`);
 
-      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-3-pro-image-preview',
-          messages: [{ role: 'user', content: enhancedPrompt }],
-          modalities: ['image', 'text'],
-        }),
-      });
+      let imageUrl: string | null = null;
+      let visionDescription = 'A glimpse into the infinite.';
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`[Artifact ${requestId}] Vision error:`, response.status, errorText);
-        
-        if (response.status === 429) {
-          return new Response(
-            JSON.stringify({ error: 'RATE_LIMIT', message: 'Vision manifesting too fast. Please wait a moment.' }),
-            { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+      // 1. Try Pollinations first
+      try {
+        const encoded = encodeURIComponent(enhancedPrompt);
+        const polUrl = `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=1024&model=flux&nologo=true&enhance=true`;
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 20000);
+        const polResp = await fetch(polUrl, { signal: controller.signal, headers: { 'Accept': 'image/*' } });
+        clearTimeout(timeout);
+        if (polResp.ok) {
+          const buf = await polResp.arrayBuffer();
+          if (buf.byteLength > 1000) {
+            const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+            const ct = polResp.headers.get('content-type') || 'image/jpeg';
+            imageUrl = `data:${ct};base64,${b64}`;
+            console.log(`[Artifact ${requestId}] ✅ Vision via Pollinations (${(buf.byteLength / 1024).toFixed(1)}KB)`);
+          }
         }
-        if (response.status === 402) {
-          return new Response(
-            JSON.stringify({ error: 'NO_CREDITS', message: 'Vision requires credits. Please top up.' }),
-            { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-        
-        throw new Error(`Vision generation failed: ${response.status}`);
+      } catch (e) {
+        console.warn(`[Artifact ${requestId}] Pollinations vision failed:`, e);
       }
 
-      const data = await response.json();
-      const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+      // 2. Fallback to Gemini
+      if (!imageUrl) {
+        const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'google/gemini-3.1-flash-image-preview',
+            messages: [{ role: 'user', content: enhancedPrompt }],
+            modalities: ['image', 'text'],
+          }),
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`[Artifact ${requestId}] Gemini vision error:`, response.status, errorText);
+          
+          if (response.status === 429) {
+            return new Response(
+              JSON.stringify({ error: 'RATE_LIMIT', message: 'Vision manifesting too fast. Please wait a moment.' }),
+              { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          if (response.status === 402) {
+            return new Response(
+              JSON.stringify({ error: 'NO_CREDITS', message: 'Vision requires credits. Please top up.' }),
+              { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          
+          throw new Error(`Vision generation failed: ${response.status}`);
+        }
+
+        const data = await response.json();
+        imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+        visionDescription = data.choices?.[0]?.message?.content || visionDescription;
+      }
 
       if (!imageUrl) {
         throw new Error('No image generated');
@@ -94,7 +135,7 @@ serve(async (req) => {
           type: 'vision',
           content: imageUrl,
           title: subject || 'Vision',
-          description: data.choices?.[0]?.message?.content || 'A glimpse into the infinite.',
+          description: visionDescription,
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -118,37 +159,63 @@ serve(async (req) => {
         
         Style: Clean, minimalist, professional educational material design.`;
 
-      console.log(`[Artifact ${requestId}] Generating worksheet...`);
+      console.log(`[Artifact ${requestId}] Generating worksheet (Pollinations → Gemini)...`);
 
-      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-3-pro-image-preview',
-          messages: [{ role: 'user', content: worksheetPrompt }],
-          modalities: ['image', 'text'],
-        }),
-      });
+      let imageUrl: string | null = null;
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`[Artifact ${requestId}] Worksheet error:`, response.status, errorText);
-        
-        if (response.status === 429) {
-          return new Response(
-            JSON.stringify({ error: 'RATE_LIMIT', message: 'Worksheet generation too fast. Please wait.' }),
-            { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+      // 1. Try Pollinations first
+      try {
+        const encoded = encodeURIComponent(worksheetPrompt);
+        const polUrl = `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=1024&model=flux&nologo=true&enhance=true`;
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 20000);
+        const polResp = await fetch(polUrl, { signal: controller.signal, headers: { 'Accept': 'image/*' } });
+        clearTimeout(timeout);
+        if (polResp.ok) {
+          const buf = await polResp.arrayBuffer();
+          if (buf.byteLength > 1000) {
+            const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+            const ct = polResp.headers.get('content-type') || 'image/jpeg';
+            imageUrl = `data:${ct};base64,${b64}`;
+            console.log(`[Artifact ${requestId}] ✅ Worksheet via Pollinations (${(buf.byteLength / 1024).toFixed(1)}KB)`);
+          }
         }
-        
-        throw new Error(`Worksheet generation failed: ${response.status}`);
+      } catch (e) {
+        console.warn(`[Artifact ${requestId}] Pollinations worksheet failed:`, e);
       }
 
-      const data = await response.json();
-      const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+      // 2. Fallback to Gemini
+      if (!imageUrl) {
+        const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'google/gemini-3.1-flash-image-preview',
+            messages: [{ role: 'user', content: worksheetPrompt }],
+            modalities: ['image', 'text'],
+          }),
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`[Artifact ${requestId}] Worksheet error:`, response.status, errorText);
+          
+          if (response.status === 429) {
+            return new Response(
+              JSON.stringify({ error: 'RATE_LIMIT', message: 'Worksheet generation too fast. Please wait.' }),
+              { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          
+          throw new Error(`Worksheet generation failed: ${response.status}`);
+        }
+
+        const data = await response.json();
+        imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+      }
 
       if (!imageUrl) {
         throw new Error('No worksheet generated');

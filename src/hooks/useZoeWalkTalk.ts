@@ -42,8 +42,8 @@ interface UseZoeWalkTalkReturn extends WalkTalkState {
   toggleEnergySaver: () => void;
   
   // Manual triggers
-  askAboutLocation: (question?: string) => Promise<void>;
-  shareCamera: (imageData: string) => Promise<void>;
+  askAboutLocation: (question?: string) => Promise<LocationInsight | null>;
+  shareCamera: (imageData: string) => Promise<LocationInsight | null>;
   
   // Speech controls
   pauseSpeech: () => void;
@@ -84,7 +84,7 @@ export const useZoeWalkTalk = (): UseZoeWalkTalkReturn => {
     query?: string,
     imageData?: string
   ) => {
-    if (state.isProcessing) return;
+    if (state.isProcessing) return null;
 
     setState(prev => ({ ...prev, isProcessing: true, error: null }));
 
@@ -135,6 +135,8 @@ export const useZoeWalkTalk = (): UseZoeWalkTalkReturn => {
           ...prev,
           lastSpokenTopic: insight.place_name,
         }));
+
+        return insight;
       }
     } catch (error) {
       console.error('[WalkTalk] Error:', error);
@@ -144,6 +146,7 @@ export const useZoeWalkTalk = (): UseZoeWalkTalkReturn => {
         error: 'Lost connection to Zoe\'s awareness...',
       }));
     }
+    return null;
   }, [state.currentMode, state.energySaverMode, state.lastSpokenTopic, state.isProcessing]);
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -336,14 +339,14 @@ export const useZoeWalkTalk = (): UseZoeWalkTalkReturn => {
     const position = await new Promise<GeolocationPosition>((resolve, reject) => {
       navigator.geolocation.getCurrentPosition(resolve, reject);
     });
-    await getLocationInsight(position, question || 'What can you tell me about this place?');
+    return getLocationInsight(position, question || 'What can you tell me about this place?');
   }, [getLocationInsight]);
 
   const shareCamera = useCallback(async (imageData: string) => {
     const position = await new Promise<GeolocationPosition>((resolve, reject) => {
       navigator.geolocation.getCurrentPosition(resolve, reject);
     });
-    await getLocationInsight(position, 'What am I looking at?', imageData);
+    return getLocationInsight(position, 'What am I looking at?', imageData);
   }, [getLocationInsight]);
 
   // ═══════════════════════════════════════════════════════════════════════════

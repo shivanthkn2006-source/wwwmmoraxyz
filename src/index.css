@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap');
+
 @tailwind base;
 
 /* ═══════════════════════════════════════════════════════════════════════════════
@@ -243,6 +245,20 @@ html.phantom-mode [class*="animate-"] {
   0% { transform: scale(1); opacity: 0.5; }
   50% { transform: scale(1.2); opacity: 0; }
   100% { transform: scale(1); opacity: 0.5; }
+}
+
+@keyframes zoe-heart-beat {
+  0%, 100% { transform: scale(0.96) translateZ(0); }
+  18% { transform: scale(1.12) translateZ(0); }
+  34% { transform: scale(0.98) translateZ(0); }
+  50% { transform: scale(1.08) translateZ(0); }
+  66% { transform: scale(0.99) translateZ(0); }
+}
+
+@keyframes zoe-heart-meter {
+  0% { stroke-dashoffset: 50; opacity: 0.72; }
+  50% { opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 0.78; }
 }
 
 /* Protocol Zero-G utility classes */
@@ -1101,8 +1117,6 @@ html.phantom-mode [class*="animate-"] {
  * DESIGN SYSTEM V1.0
  * Dark theme with semantic tokens + ONI Altered Carbon Aesthetic
  */
-
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap');
 
 :root {
   /* ═══ OMEGA 2120 BASE COLORS ═══ */
@@ -5725,4 +5739,10 @@ body.form-watch .auto-heal-text {
 
 .animate-glitch-text {
   animation: glitch-text 0.5s linear infinite;
+}
+
+/* Holographic border rotation for Zoe Avatar Viewer */
+@keyframes holoBorderSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }

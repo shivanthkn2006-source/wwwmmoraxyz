@@ -189,6 +189,18 @@ export const LivingAtmosphereWrapper: React.FC<{ children: React.ReactNode }> = 
     window.dispatchEvent(new CustomEvent('ecn-emotion-change', {
       detail: { emotion: newMood, timestamp: Date.now() }
     }));
+
+    // Dispatch mood-adaptive-ui-change for Living UI (Upgrade #4)
+    // Maps atmosphere mood → UI mode for navigation adaptation
+    const moodToUIMode: Record<string, string> = {
+      stressed: 'calm', calm: 'calm',
+      joy: 'creative', energetic: 'creative',
+      sad: 'supportive',
+      neutral: 'default',
+    };
+    window.dispatchEvent(new CustomEvent('mood-adaptive-ui-change', {
+      detail: { uiMode: moodToUIMode[newMood] || 'default', emotion: newMood, stressLevel: 0 }
+    }));
     
     setTimeout(() => setIsTransitioning(false), 2000);
   };

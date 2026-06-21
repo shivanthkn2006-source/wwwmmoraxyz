@@ -3,15 +3,8 @@
  * NANO STREAM VOICE - Zero-Latency Speaking While Thinking
  * ═══════════════════════════════════════════════════════════════════════════════
  * 
- * PROMPT 2 IMPLEMENTATION: "The Hybrid Bridge (Speed)"
- * 
- * LOGIC:
- * - Chunking: Do NOT wait for full Nano response
- * - Streaming: Every time Nano generates 4 words, push to Deepgram immediately
- * - Goal: Zero latency - She speaks while she thinks
- * 
- * WIRING:
- * geminiNano.chatStream() → StreamToStreamBridge → Deepgram/BrowserTTS
+ * Chunks Gemini Nano output every 4-5 words → Browser TTS speaks immediately.
+ * Result: Zoe starts speaking within ~200ms instead of waiting for full response.
  * ═══════════════════════════════════════════════════════════════════════════════
  */
 
@@ -28,20 +21,13 @@ interface NanoStreamVoiceOptions {
   onSpeechEnd?: () => void;
   onChunkSpoken?: (chunk: string) => void;
   onError?: (error: Error) => void;
-  processReflexActions?: boolean; // Enable [ACTION:*] processing
+  processReflexActions?: boolean;
 }
 
 interface NanoStreamVoiceReturn {
-  // Speak with streaming - zero latency
   speakStreaming: (userMessage: string) => Promise<string>;
-  
-  // Regular Nano chat (non-streaming)
   chat: (message: string) => Promise<string>;
-  
-  // Abort current speech
   abort: () => void;
-  
-  // State
   isThinking: boolean;
   isSpeaking: boolean;
   isStreaming: boolean;
@@ -66,58 +52,37 @@ export function useNanoStreamVoice(options: NanoStreamVoiceOptions = {}): NanoSt
   const [lastResponse, setLastResponse] = useState<string | null>(null);
   const abortedRef = useRef(false);
 
-  /**
-   * 🎙️ SPEAK STREAMING - The Zero-Latency Pipeline
-   * 
-   * GeminiNano generates tokens → StreamBridge chunks every 4-5 words
-   * → Deepgram TTS (or browser fallback) speaks immediately
-   * 
-   * Result: Zoe starts speaking within ~200ms instead of waiting for full response
-   */
   const speakStreaming = useCallback(async (userMessage: string): Promise<string> => {
     abortedRef.current = false;
     let fullResponse = '';
     
-    console.log('[NanoStreamVoice] 🌊 Starting zero-latency speech pipeline');
+    console.log('[NanoStreamVoice] 🌊 Starting zero-latency speech pipeline (Browser TTS)');
     
     setIsThinking(true);
     setIsStreaming(true);
     onThinkingStart?.();
 
     try {
-      // Check if Gemini Nano is available
       const nanoAvailable = await geminiNano.isAvailable();
       
       if (!nanoAvailable) {
-        console.log('[NanoStreamVoice] Nano unavailable, using regular chat');
         fullResponse = await geminiNano.chat(userMessage);
         setIsThinking(false);
         onThinkingEnd?.();
         
-        // Process reflex actions if enabled
-        if (processReflexActions) {
-          fullResponse = await processNanoResponse(fullResponse);
-        }
-        
+        if (processReflexActions) fullResponse = await processNanoResponse(fullResponse);
         setLastResponse(fullResponse);
         return fullResponse;
       }
 
-      // Get the stream generator from Nano
       const textStream = geminiNano.chatStream(userMessage);
       
-      // Create a wrapped generator that accumulates the response
       async function* wrappedStream(): AsyncGenerator<string> {
         for await (const chunk of textStream) {
           if (abortedRef.current) break;
-          
-          // Nano returns cumulative text, we need deltas
           const delta = chunk.slice(fullResponse.length);
           fullResponse = chunk;
-          
-          if (delta) {
-            yield delta;
-          }
+          if (delta) yield delta;
         }
       }
 
@@ -126,24 +91,13 @@ export function useNanoStreamVoice(options: NanoStreamVoiceOptions = {}): NanoSt
       onThinkingEnd?.();
       onSpeechStart?.();
 
-      // Connect to StreamBridge for chunked TTS
       await getStreamBridge().connectStream(wrappedStream(), {
         voice,
-        onChunkSpoken: (chunk) => {
-          onChunkSpoken?.(chunk);
-        },
-        onAllSpoken: () => {
-          setIsSpeaking(false);
-          setIsStreaming(false);
-          onSpeechEnd?.();
-        },
-        onError: (err) => {
-          console.error('[NanoStreamVoice] Stream error:', err);
-          onError?.(err);
-        },
+        onChunkSpoken: (chunk) => onChunkSpoken?.(chunk),
+        onAllSpoken: () => { setIsSpeaking(false); setIsStreaming(false); onSpeechEnd?.(); },
+        onError: (err) => { console.error('[NanoStreamVoice] Stream error:', err); onError?.(err); },
       });
 
-      // Process reflex actions after speech completes
       if (processReflexActions && fullResponse) {
         const cleanResponse = await processNanoResponse(fullResponse);
         setLastResponse(cleanResponse);
@@ -164,20 +118,12 @@ export function useNanoStreamVoice(options: NanoStreamVoiceOptions = {}): NanoSt
     }
   }, [voice, onThinkingStart, onThinkingEnd, onSpeechStart, onSpeechEnd, onChunkSpoken, onError, processReflexActions]);
 
-  /**
-   * Regular Nano chat (non-streaming, for when you don't need TTS)
-   */
   const chat = useCallback(async (message: string): Promise<string> => {
     setIsThinking(true);
     onThinkingStart?.();
-
     try {
       let response = await geminiNano.chat(message);
-      
-      if (processReflexActions) {
-        response = await processNanoResponse(response);
-      }
-      
+      if (processReflexActions) response = await processNanoResponse(response);
       setLastResponse(response);
       return response;
     } finally {
@@ -186,9 +132,6 @@ export function useNanoStreamVoice(options: NanoStreamVoiceOptions = {}): NanoSt
     }
   }, [onThinkingStart, onThinkingEnd, processReflexActions]);
 
-  /**
-   * Abort current streaming speech
-   */
   const abort = useCallback(() => {
     abortedRef.current = true;
     getStreamBridge().abort();
@@ -197,15 +140,7 @@ export function useNanoStreamVoice(options: NanoStreamVoiceOptions = {}): NanoSt
     setIsStreaming(false);
   }, []);
 
-  return {
-    speakStreaming,
-    chat,
-    abort,
-    isThinking,
-    isSpeaking,
-    isStreaming,
-    lastResponse,
-  };
+  return { speakStreaming, chat, abort, isThinking, isSpeaking, isStreaming, lastResponse };
 }
 
 export default useNanoStreamVoice;

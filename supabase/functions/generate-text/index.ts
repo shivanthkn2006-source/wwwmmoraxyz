@@ -50,7 +50,45 @@ serve(async (req) => {
                            model === 'google/gemini-3-pro-image-preview' ||
                            generateImage;
 
-    const selectedModel = isImageRequest ? 'google/gemini-3-pro-image-preview' : (model || 'google/gemini-2.5-flash');
+    // For image requests: try Pollinations first, then Gemini fallback
+    if (isImageRequest) {
+      console.log(`[generate-text:${requestId}] Image request - trying Pollinations first...`);
+      
+      // 1. Try Pollinations
+      try {
+        const encoded = encodeURIComponent(prompt);
+        const polUrl = `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=1024&model=flux&nologo=true&enhance=true`;
+        const controller = new AbortController();
+        const polTimeout = setTimeout(() => controller.abort(), 20000);
+        const polResp = await fetch(polUrl, { signal: controller.signal, headers: { 'Accept': 'image/*' } });
+        clearTimeout(polTimeout);
+        if (polResp.ok) {
+          const buf = await polResp.arrayBuffer();
+          if (buf.byteLength > 1000) {
+            const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+            const ct = polResp.headers.get('content-type') || 'image/jpeg';
+            const imageUrl = `data:${ct};base64,${b64}`;
+            const latency = Math.round(performance.now() - startTime);
+            console.log(`[generate-text:${requestId}] ✅ Pollinations image (${(buf.byteLength / 1024).toFixed(1)}KB) in ${latency}ms`);
+            return createSuccessResponse({
+              text: 'Image generated successfully via Pollinations',
+              images: [{ type: 'image_url', image_url: { url: imageUrl } }],
+              latency,
+              slaMet: true,
+              model: 'pollinations-flux',
+              estimatedCost: 0,
+            });
+          }
+        }
+      } catch (e) {
+        console.warn(`[generate-text:${requestId}] Pollinations failed:`, e);
+      }
+
+      // 2. Fallback to Gemini
+      console.log(`[generate-text:${requestId}] Falling back to Gemini for image...`);
+    }
+
+    const selectedModel = isImageRequest ? 'google/gemini-3.1-flash-image-preview' : (model || 'google/gemini-2.5-flash');
     const latencyTarget = getLatencyTarget(selectedModel);
 
     console.log(`[generate-text:${requestId}] model=${selectedModel}, prompt_length=${prompt.length}`);
@@ -121,11 +159,10 @@ serve(async (req) => {
       errorCode: error instanceof z.ZodError ? 'VALIDATION_ERROR' : 'EXCEPTION',
     });
     
+    // Return generic error to client - details are logged server-side only
     const errorMessage = error instanceof z.ZodError
-      ? 'Invalid request format'
-      : error instanceof Error 
-        ? error.message 
-        : 'Unknown error';
+      ? 'Invalid request format. Please check your input.'
+      : 'An internal error occurred. Please try again later.';
 
     return createErrorResponse({ code: 'INTERNAL_ERROR', message: errorMessage });
   }

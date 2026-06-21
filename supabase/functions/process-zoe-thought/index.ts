@@ -258,48 +258,63 @@ serve(async (req) => {
       reply = data.choices[0].message.content;
     }
 
-    // IMAGE GENERATION PHASE (if requested)
+    // IMAGE GENERATION PHASE (Pollinations Primary, Gemini Fallback)
     if (requiresImage && imagePrompt) {
       console.log('[ZOE-DHF] Image generation requested:', imagePrompt.substring(0, 100));
+      const fullImagePrompt = `${imagePrompt}. Style: futuristic, cyberpunk aesthetic with neon accents, high quality digital art.`;
       
+      // 1. Try Pollinations first
       try {
-        const imageResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'google/gemini-3-pro-image-preview',
-            messages: [
-              {
-                role: 'user',
-                content: `Generate an image: ${imagePrompt}. Style: futuristic, cyberpunk aesthetic with neon accents, high quality digital art.`
-              }
-            ],
-            modalities: ['image', 'text']
-          }),
-        });
-
-        if (imageResponse.ok) {
-          const imageData = await imageResponse.json();
-          console.log('[ZOE-DHF] Image response received');
-          
-          // Extract base64 image from the response
-          const imageContent = imageData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-          if (imageContent) {
-            generatedImageUrl = imageContent; // This will be a data:image/png;base64,... URL
-            console.log('[ZOE-DHF] Image generated successfully (base64)');
-          } else {
-            console.warn('[ZOE-DHF] No image in response:', JSON.stringify(imageData).substring(0, 200));
+        const encoded = encodeURIComponent(fullImagePrompt);
+        const polUrl = `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=1024&model=flux&nologo=true&enhance=true`;
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 20000);
+        const polResp = await fetch(polUrl, { signal: controller.signal, headers: { 'Accept': 'image/*' } });
+        clearTimeout(timeout);
+        if (polResp.ok) {
+          const buf = await polResp.arrayBuffer();
+          if (buf.byteLength > 1000) {
+            const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+            const ct = polResp.headers.get('content-type') || 'image/jpeg';
+            generatedImageUrl = `data:${ct};base64,${b64}`;
+            console.log(`[ZOE-DHF] ✅ Pollinations image success (${(buf.byteLength / 1024).toFixed(1)}KB)`);
           }
-        } else {
-          const errorText = await imageResponse.text();
-          console.warn('[ZOE-DHF] Image generation failed:', imageResponse.status, errorText);
-          reply += " Visual rendering encountered interference, Envoy. Text tactical only for now.";
         }
-      } catch (imgError) {
-        console.error('[ZOE-DHF] Image generation error:', imgError);
+      } catch (e) {
+        console.warn('[ZOE-DHF] Pollinations image failed:', e);
+      }
+
+      // 2. Fallback to Gemini
+      if (!generatedImageUrl) {
+        try {
+          const imageResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'google/gemini-3.1-flash-image-preview',
+              messages: [{ role: 'user', content: `Generate an image: ${fullImagePrompt}` }],
+              modalities: ['image', 'text']
+            }),
+          });
+
+          if (imageResponse.ok) {
+            const imageData = await imageResponse.json();
+            const imageContent = imageData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+            if (imageContent) {
+              generatedImageUrl = imageContent;
+              console.log('[ZOE-DHF] ✅ Gemini fallback image success');
+            }
+          } else {
+            const errorText = await imageResponse.text();
+            console.warn('[ZOE-DHF] Gemini image fallback failed:', imageResponse.status, errorText);
+            reply += " Visual rendering encountered interference, Envoy. Text tactical only for now.";
+          }
+        } catch (imgError) {
+          console.error('[ZOE-DHF] Gemini image error:', imgError);
+        }
       }
     }
 

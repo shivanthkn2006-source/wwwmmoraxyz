@@ -6,7 +6,8 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { jsPDF } from 'jspdf';
-import { detectArtifactIntent, ArtifactType } from './useArtifactDetector';
+import { detectArtifactIntent, ArtifactType, enhanceVisionPrompt, type VisionPromptContext } from './useArtifactDetector';
+import { generateImage as generatePollinationsImage } from '@/services/pollinationsService';
 import { toast } from 'sonner';
 
 export interface GeneratedArtifact {
@@ -22,6 +23,10 @@ export interface GeneratedArtifact {
 interface ConversationMessage {
   role: 'user' | 'assistant';
   content: string;
+}
+
+interface ArtifactGenerationOptions {
+  visionContext?: VisionPromptContext;
 }
 
 export function useArtifactGenerator() {
@@ -180,9 +185,10 @@ export function useArtifactGenerator() {
       prompt: string;
       subject?: string;
       conversationHistory?: ConversationMessage[];
+      visionContext?: VisionPromptContext;
     }
   ): Promise<GeneratedArtifact | null> => {
-    const { type, prompt, subject, conversationHistory } = params;
+    const { type, prompt, subject, conversationHistory, visionContext } = params;
 
     setIsGenerating(true);
 
@@ -200,6 +206,32 @@ export function useArtifactGenerator() {
     setCurrentArtifact(loadingArtifact);
 
     try {
+      if (type === 'vision') {
+        const imagePrompt = enhanceVisionPrompt(prompt, visionContext);
+        const imageResult = await generatePollinationsImage(imagePrompt, {
+          width: 1024,
+          height: 1024,
+          timeoutMs: 20000,
+        });
+
+        console.log('[ArtifactGenerator] Vision generated via', imageResult.provider);
+
+        const artifact: GeneratedArtifact = {
+          id: `artifact-${Date.now()}`,
+          type,
+          content: imageResult.imageUrl,
+          title: subject ? `${subject}` : 'Zoe Vision',
+          description: `Generated via ${imageResult.provider}`,
+          timestamp: new Date(),
+          isLoading: false,
+        };
+
+        setBackgroundImage(imageResult.imageUrl);
+        setTimeout(() => setBackgroundImage(null), 30000);
+        setCurrentArtifact(artifact);
+        return artifact;
+      }
+
       const { data, error } = await supabase.functions.invoke('zoe-artifact-generator', {
         body: {
           type,
@@ -267,7 +299,8 @@ export function useArtifactGenerator() {
   // ═══════════════════════════════════════════════════════════════════════════
   const generateArtifact = useCallback(async (
     message: string,
-    conversationHistory?: ConversationMessage[]
+    conversationHistory?: ConversationMessage[],
+    options?: ArtifactGenerationOptions
   ): Promise<GeneratedArtifact | null> => {
     const intent = detectArtifactIntent(message);
     
@@ -287,6 +320,12 @@ export function useArtifactGenerator() {
       prompt: cleanedPrompt,
       subject: intent.extractedSubject,
       conversationHistory,
+      visionContext: intent.type === 'vision'
+        ? {
+            originalPrompt: message,
+            ...options?.visionContext,
+          }
+        : undefined,
     });
   }, [invokeArtifact]);
 
@@ -294,13 +333,19 @@ export function useArtifactGenerator() {
   const generateArtifactForced = useCallback(async (
     type: Exclude<ArtifactType, 'none'>,
     prompt: string,
-    opts?: { subject?: string; conversationHistory?: ConversationMessage[] }
+    opts?: { subject?: string; conversationHistory?: ConversationMessage[]; visionContext?: VisionPromptContext }
   ) => {
     return invokeArtifact({
       type,
       prompt,
       subject: opts?.subject,
       conversationHistory: opts?.conversationHistory,
+      visionContext: type === 'vision'
+        ? {
+            originalPrompt: prompt,
+            ...opts?.visionContext,
+          }
+        : undefined,
     });
   }, [invokeArtifact]);
 

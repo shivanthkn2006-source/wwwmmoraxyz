@@ -174,13 +174,15 @@ export const usePrivateTimelines = () => {
   };
 
   useEffect(() => {
+    if (!user) return;
+
     fetchTimelines();
 
     const channel = supabase
-      .channel('private_timelines_changes')
+      .channel(`private_timelines_changes:${user.id}`)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'private_timeline_members', filter: `user_id=eq.${user?.id}` },
+        { event: '*', schema: 'public', table: 'private_timeline_members', filter: `user_id=eq.${user.id}` },
         () => {
           fetchTimelines();
         }

@@ -56,15 +56,20 @@ export const requestMicPermission = async (): Promise<boolean> => {
     // Try to resume AudioContext first (may require gesture; not fatal)
     resumeAudioContext().catch(() => {});
 
-    // Request with optimal audio settings for voice recognition
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true,
-        sampleRate: 16000,
-      },
-    });
+    // Request with broadly compatible settings (avoid strict constraints that break on some devices)
+    let stream: MediaStream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      });
+    } catch {
+      // Fallback for older/quirky browsers
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    }
 
     // Release the stream immediately - we just needed permission
     stream.getTracks().forEach((track) => track.stop());

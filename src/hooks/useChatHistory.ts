@@ -46,12 +46,13 @@ export const useChatHistory = (options: UseChatHistoryOptions) => {
       let query;
       if (table === 'zoe_infinity_messages') {
         // Zoe Infinity has its own dedicated table (no variant column needed)
+        // Fetch most recent 50 messages (descending), then reverse for display order
         query = supabase
           .from('zoe_infinity_messages')
           .select('id, content, role, created_at')
           .eq('user_id', user.id)
-          .order('created_at', { ascending: true })
-          .limit(maxHistory);
+          .order('created_at', { ascending: false })
+          .limit(50);
       } else if (table === 'ai_companion_messages' || table === 'zoe_messages') {
         query = supabase
           .from(table)
@@ -82,7 +83,9 @@ export const useChatHistory = (options: UseChatHistoryOptions) => {
       }
       
       if (data) {
-        const loadedMessages: ChatMessage[] = data.map((msg: any) => ({
+        // Reverse if fetched descending (zoe_infinity_messages) for oldest-first display
+        const orderedData = table === 'zoe_infinity_messages' ? [...data].reverse() : data;
+        const loadedMessages: ChatMessage[] = orderedData.map((msg: any) => ({
           id: msg.id,
           role: msg.role as 'user' | 'assistant' | 'system',
           content: msg.content || '',

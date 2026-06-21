@@ -22,6 +22,14 @@ serve(async (req: Request) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // ─── AUTH GATE ───
+  const authHeader = req.headers.get('authorization');
+  if (!authHeader?.startsWith('Bearer ')) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
   console.log('[Zoe Vision] ═══ VISION ANALYSIS REQUEST ═══');
 
   try {
@@ -40,6 +48,25 @@ serve(async (req: Request) => {
 
     const request: VisionRequest = await req.json();
     const { imageUrl, prompt, inputType, extractStructuredData } = request;
+
+    // ─── INPUT GUARDS ───
+    if (!imageUrl || typeof imageUrl !== 'string') {
+      return new Response(JSON.stringify({ error: 'imageUrl required' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    // Allow only data: URIs or https URLs (block file:, javascript:, etc.)
+    if (!/^(data:image\/|https:\/\/)/.test(imageUrl)) {
+      return new Response(JSON.stringify({ error: 'imageUrl must be data:image/* or https://' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    // Cap base64 payload size at ~6MB (~8M base64 chars) to prevent abuse
+    if (imageUrl.startsWith('data:') && imageUrl.length > 8_000_000) {
+      return new Response(JSON.stringify({ error: 'image too large (max ~6MB)' }), {
+        status: 413, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     console.log(`[Zoe Vision] Analyzing ${inputType} image...`);
 

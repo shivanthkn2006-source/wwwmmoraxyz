@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -6,15 +6,14 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/lib/auth';
-import { Eye, EyeOff, ScanFace, Shield, Mic, Fingerprint } from 'lucide-react';
+import { Eye, EyeOff, ScanFace, Mic } from 'lucide-react';
 import { z } from 'zod';
 import { cn } from '@/lib/utils';
 import FaceLoginModal from '@/components/FaceLoginModal';
 import LoginQueueSystem from '@/components/LoginQueueSystem';
-import { initializeUserEncryption } from '@/core/security/SoulEncryption';
 import PermissionActivationModal from '@/components/PermissionActivationModal';
 import { hasActivatedPermissions } from '@/utils/unifiedPermissionManager';
-import { supabase } from '@/integrations/supabase/client';
+
 
 // Validation schemas
 const signUpSchema = z.object({
@@ -90,64 +89,10 @@ const AuthPage = () => {
     username: '',
   });
 
-  const { signIn, signUp, user } = useAuth();
+  const { signIn, signUp } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // STEP 4: SAMANTHA VOICE FIX - Force Audio Engine Awake on M05/Low-End Devices
-  useEffect(() => {
-    const wakeUpAudioEngine = () => {
-      try {
-        // Create an empty buffer to force the Audio Chip to wake up
-        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-        if (!AudioContextClass) return;
-        
-        const audioCtx = new AudioContextClass();
-        const buffer = audioCtx.createBuffer(1, 1, 22050);
-        const source = audioCtx.createBufferSource();
-        source.buffer = buffer;
-        source.connect(audioCtx.destination);
-        source.start(0);
-        
-        // High Priority for Voice on Low End Devices
-        console.log('[Zoe Voice] Audio Engine Forced Awake for M05/Low-End Device');
-        
-        // Store context globally for Samantha voice to use
-        (window as any).__zoeAudioContext = audioCtx;
-      } catch (err) {
-        console.warn('[Zoe Voice] Audio wake-up failed:', err);
-      }
-    };
-
-    // Trigger on the very first "Touch" anywhere on the screen (mobile)
-    document.addEventListener('touchstart', wakeUpAudioEngine, { once: true });
-    // Also trigger on click for desktop testing
-    document.addEventListener('click', wakeUpAudioEngine, { once: true });
-
-    return () => {
-      document.removeEventListener('touchstart', wakeUpAudioEngine);
-      document.removeEventListener('click', wakeUpAudioEngine);
-    };
-  }, []);
-
-  // GENESIS LAUNCH: Auto-activate Protocol Ironclad when user logs in + Permissions
-  useEffect(() => {
-    if (user) {
-      // Initialize encryption for the user (Protocol Ironclad)
-      initializeUserEncryption(user.id).then(() => {
-        console.log('[GENESIS LAUNCH] Protocol Ironclad activated for user');
-      }).catch(err => {
-        console.warn('[GENESIS LAUNCH] Encryption init skipped:', err);
-      });
-      
-      // Show permission modal if not already activated this session
-      if (!hasActivatedPermissions()) {
-        setShowPermissionModal(true);
-      } else {
-        navigate('/home');
-      }
-    }
-  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -167,18 +112,18 @@ const AuthPage = () => {
           setLoading(false);
           return;
         }
-        
+
         const { error } = await signUp(formData.email, formData.password, {
           display_name: formData.displayName,
           username: formData.username,
         });
 
         if (error) {
-          const isConnectionError = error.name === 'ConnectionError' || error.message?.includes('Failed to fetch') || error.message?.includes('Connection failed');
+          const isConnectionError = error?.name === 'ConnectionError' || /failed to fetch|load failed|network request failed|connection failed/i.test(error?.message || '');
           toast({
-            title: isConnectionError ? "Backend Connection Failed" : "Sign up failed",
+            title: isConnectionError ? "Connection Interrupted" : "Sign up failed",
             description: isConnectionError 
-              ? "Your backend is currently paused or unavailable. Please wait a moment and try again."
+              ? "Connection issue detected. Please retry in a few seconds."
               : error.message,
             variant: "destructive",
             duration: isConnectionError ? 10000 : 5000,
@@ -203,15 +148,15 @@ const AuthPage = () => {
           setLoading(false);
           return;
         }
-        
+
         const { error } = await signIn(formData.email, formData.password);
 
         if (error) {
-          const isConnectionError = error.name === 'ConnectionError' || error.message?.includes('Failed to fetch') || error.message?.includes('Connection failed');
+          const isConnectionError = error?.name === 'ConnectionError' || /failed to fetch|load failed|network request failed|connection failed/i.test(error?.message || '');
           toast({
-            title: isConnectionError ? "Backend Connection Failed" : "Sign in failed",
+            title: isConnectionError ? "Connection Interrupted" : "Sign in failed",
             description: isConnectionError 
-              ? "Your backend is currently paused or unavailable. Please wait a moment and try again."
+              ? "Connection issue detected. Please retry in a few seconds."
               : error.message,
             variant: "destructive",
             duration: isConnectionError ? 10000 : 5000,
@@ -221,6 +166,7 @@ const AuthPage = () => {
             title: "Welcome back!",
             description: "Signed in successfully",
           });
+          navigate('/home');
         }
       }
     } catch (error) {

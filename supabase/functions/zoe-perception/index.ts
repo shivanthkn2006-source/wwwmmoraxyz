@@ -203,7 +203,22 @@ Respond ONLY with valid JSON.`;
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         analysis = JSON.parse(jsonMatch[0]);
-        console.log('[Zoe Perception] ✓ Parsed analysis:', analysis.scene, '| Objects:', analysis.objects?.slice(0, 3).join(', '));
+        // Normalize fields so downstream code is bulletproof
+        const normStr = (v: any): string => {
+          if (typeof v === 'string') return v;
+          if (v && typeof v === 'object') return String(v.name ?? v.label ?? v.value ?? v.text ?? JSON.stringify(v));
+          return String(v ?? '');
+        };
+        analysis.objects = Array.isArray(analysis.objects) ? analysis.objects.map(normStr).filter(Boolean) : [];
+        analysis.entities = Array.isArray(analysis.entities) ? analysis.entities.map(normStr).filter(Boolean) : [];
+        analysis.colors = Array.isArray(analysis.colors) ? analysis.colors.map(normStr).filter(Boolean) : [];
+        analysis.visual_tags = Array.isArray(analysis.visual_tags) ? analysis.visual_tags.map(normStr).filter(Boolean) : [];
+        analysis.summary = normStr(analysis.summary) || normStr(analysis.scene) || 'I see what you shared.';
+        analysis.scene = normStr(analysis.scene);
+        analysis.context = normStr(analysis.context);
+        analysis.emotional_sentiment = normStr(analysis.emotional_sentiment) || 'neutral';
+        analysis.text_extracted = analysis.text_extracted ? normStr(analysis.text_extracted) : null;
+        console.log('[Zoe Perception] ✓ Parsed analysis:', analysis.scene, '| Objects:', analysis.objects.slice(0, 3).join(', '));
       } else {
         console.error('[Zoe Perception] No valid JSON in response:', content.substring(0, 200));
         throw new Error('No valid JSON in response');
@@ -270,10 +285,23 @@ Respond ONLY with valid JSON.`;
     let zoeSays = analysis.summary;
     
     // Cross-reference past memories for "Samantha Effect"
+    // Coerce anything (string | {name} | object) into a lowercase string
+    const toStr = (v: any): string => {
+      if (typeof v === 'string') return v.toLowerCase();
+      if (v && typeof v === 'object') {
+        return String(v.name ?? v.label ?? v.value ?? v.text ?? JSON.stringify(v)).toLowerCase();
+      }
+      return String(v ?? '').toLowerCase();
+    };
+
     if (pastVisuals.length > 0 && analysis.objects.length > 0) {
-      const pastObjects = pastVisuals.flatMap(m => m.zoe_state_json?.objects_detected || []);
-      const matchingObjects = analysis.objects.filter(obj => 
-        pastObjects.some(past => past.toLowerCase().includes(obj.toLowerCase()) || obj.toLowerCase().includes(past.toLowerCase()))
+      const pastObjects: string[] = pastVisuals
+        .flatMap((m: any) => m.zoe_state_json?.objects_detected || [])
+        .map(toStr)
+        .filter((s: string) => s.length > 0);
+      const currentObjects: string[] = analysis.objects.map(toStr).filter((s: string) => s.length > 0);
+      const matchingObjects = currentObjects.filter(obj =>
+        pastObjects.some(past => past.includes(obj) || obj.includes(past))
       );
       
       if (matchingObjects.length > 0) {

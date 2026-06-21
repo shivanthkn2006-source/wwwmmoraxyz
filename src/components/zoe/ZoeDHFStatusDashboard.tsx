@@ -221,9 +221,9 @@ export function ZoeDHFStatusDashboard({ compact = false }: ZoeDHFStatusDashboard
             </div>
             <Badge 
               variant="outline" 
-              className={`text-[10px] ${dhfHealth?.geminiConnection === 'connected' ? 'bg-green-500/20 text-green-300 border-green-500/30' : 'bg-red-500/20 text-red-300 border-red-500/30'}`}
+              className={`text-[10px] ${dhfHealth?.sovereignConnection === 'connected' ? 'bg-green-500/20 text-green-300 border-green-500/30' : 'bg-red-500/20 text-red-300 border-red-500/30'}`}
             >
-              {dhfHealth?.geminiConnection || 'checking...'}
+              {dhfHealth?.sovereignConnection || 'checking...'}
             </Badge>
           </div>
 

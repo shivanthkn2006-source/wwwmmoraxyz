@@ -1,17 +1,14 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 // ADMIN ROUTE COMPONENT
-// Restricts access to admin users only (@moksh50)
+// Restricts access to admin users only (verified server-side)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import React, { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
-import { supabase } from '@/integrations/supabase/client';
+import { checkRootAdminStatusServerSide } from '@/components/security/securityConfig';
 import { motion } from 'framer-motion';
 import { Shield, Lock, AlertTriangle } from 'lucide-react';
-
-// Admin usernames with full quantum access
-const QUANTUM_ADMIN_USERS = ['moksh50', 'Moksh50'];
 
 interface AdminRouteProps {
   children: React.ReactNode;
@@ -32,17 +29,8 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children, featureName = 'this f
       }
 
       try {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('username')
-          .eq('user_id', user.id)
-          .single();
-
-        const hasAccess = profile?.username && 
-          QUANTUM_ADMIN_USERS.some(admin => 
-            admin.toLowerCase() === profile.username.toLowerCase()
-          );
-
+        // Server-side admin verification via edge function
+        const { isAdmin: hasAccess } = await checkRootAdminStatusServerSide();
         setIsAdmin(hasAccess);
       } catch (error) {
         console.error('[AdminRoute] Access check failed:', error);

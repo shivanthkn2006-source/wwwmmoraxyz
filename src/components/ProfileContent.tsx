@@ -17,7 +17,6 @@ import DayPlannerDiary from '@/components/DayPlannerDiary';
 import { RemindersManager } from '@/components/RemindersManager';
 import { CalendarView } from '@/components/CalendarView';
 import { EmotionTracker } from '@/components/EmotionTracker';
-import { EmotionAnalytics } from '@/components/EmotionAnalytics';
 import { BriefingPreferences } from '@/components/BriefingPreferences';
 import { VoiceMacroManager } from '@/components/VoiceMacroManager';
 import StatusSelector from '@/components/StatusSelector';
@@ -42,11 +41,17 @@ import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import AppArchitectureBlueprint from '@/components/AppArchitectureBlueprint';
-import { UserActivityDashboard } from '@/components/UserActivityDashboard';
 import { UniversalDocumentHub } from '@/components/UniversalDocumentHub';
 import { ComprehensiveDocumentationCenter } from '@/components/ComprehensiveDocumentationCenter';
 import { Progress } from '@/components/ui/progress';
 import { useVelvetRopeOptional } from '@/contexts/VelvetRopeContext';
+
+const EmotionAnalytics = React.lazy(() =>
+  import('@/components/EmotionAnalytics').then((module) => ({ default: module.EmotionAnalytics }))
+);
+const UserActivityDashboard = React.lazy(() =>
+  import('@/components/UserActivityDashboard').then((module) => ({ default: module.UserActivityDashboard }))
+);
 
 interface Profile {
   display_name: string;
@@ -510,7 +515,9 @@ const ProfileContent = () => {
         <RemindersManager />
         <CalendarView />
         <EmotionTracker />
-        <EmotionAnalytics />
+        <React.Suspense fallback={<div className="py-4 text-center text-sm text-muted-foreground">Loading analytics…</div>}>
+          <EmotionAnalytics />
+        </React.Suspense>
         <BriefingPreferences />
         <VoiceMacroManager />
       </div>
@@ -659,7 +666,9 @@ const ProfileContent = () => {
       {/* User Activity Dashboard - Only for Saraswati moksh */}
       {profile?.display_name === 'Saraswati moksh' && (
         <div className="p-4">
-          <UserActivityDashboard />
+          <React.Suspense fallback={<div className="py-4 text-center text-sm text-muted-foreground">Loading activity…</div>}>
+            <UserActivityDashboard />
+          </React.Suspense>
         </div>
       )}
 

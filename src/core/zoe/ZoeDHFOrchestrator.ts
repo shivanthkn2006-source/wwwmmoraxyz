@@ -1,6 +1,6 @@
 /**
  * ZOE DHF ORCHESTRATOR - THE QUANTUM GOD MODE
- * Gemini-Native Architecture - Root Access to All Zoe Systems
+ * Sovereign-Native Architecture - Root Access to All Zoe Systems
  * 
  * NOW POWERED BY: IBM INFERENCE OPTIMIZATION STACK
  * - Hardware Layer: Edge AI Protocol (NPU/WebGPU/WASM)
@@ -73,7 +73,7 @@ export interface SystemHealth {
   activeSubZoes: number;
   totalSubZoes: number;
   lastHealthCheck: Date;
-  geminiConnection: 'connected' | 'disconnected';
+  sovereignConnection: 'connected' | 'disconnected';
   // IBM INFERENCE OPTIMIZATION
   inferenceOptimizer: 'online' | 'degraded' | 'offline';
   hardwareCapabilities?: HardwareCapabilities;
@@ -95,7 +95,7 @@ class ZoeDHFOrchestrator {
       enableRewardModel: true,
       enableSyntheticData: true,
       maxConcurrentSubZoes: 5,
-      parentZoeModel: 'google/gemini-2.5-pro',
+      parentZoeModel: 'sovereign-core-v3',
     };
 
     this.healthStatus = {
@@ -104,7 +104,7 @@ class ZoeDHFOrchestrator {
       activeSubZoes: 10,
       totalSubZoes: 10,
       lastHealthCheck: new Date(),
-      geminiConnection: 'connected',
+      sovereignConnection: 'connected',
       inferenceOptimizer: 'offline',
     };
 
@@ -140,7 +140,7 @@ class ZoeDHFOrchestrator {
       }
 
       // Verify Gemini connection
-      this.healthStatus.geminiConnection = 'connected';
+      this.healthStatus.sovereignConnection = 'connected';
       this.healthStatus.parentZoe = 'online';
       this.healthStatus.subZoeSwarm = 'online';
 
@@ -155,7 +155,7 @@ class ZoeDHFOrchestrator {
       console.log('[ZOE DHF ORCHESTRATOR] Initialization complete');
       console.log(`  - Parent Zoe: ${this.healthStatus.parentZoe}`);
       console.log(`  - Sub-Zoe Swarm: ${this.healthStatus.activeSubZoes} active`);
-      console.log(`  - Gemini Connection: ${this.healthStatus.geminiConnection}`);
+      console.log(`  - Sovereign Connection: ${this.healthStatus.sovereignConnection}`);
       console.log(`  - IBM Inference: ${this.healthStatus.inferenceOptimizer}`);
 
       return true;

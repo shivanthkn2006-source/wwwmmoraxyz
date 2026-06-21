@@ -112,10 +112,12 @@ const CommentSection: React.FC<CommentSectionProps> = ({ postId, onUpdate }) => 
   };
 
   useEffect(() => {
+    if (!user) return;
+
     fetchComments();
 
     const channel = supabase
-      .channel(`comments_${postId}`)
+      .channel(`comments_${postId}:${user.id}`)
       .on(
         'postgres_changes',
         {
@@ -134,7 +136,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({ postId, onUpdate }) => 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [postId]);
+  }, [postId, user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

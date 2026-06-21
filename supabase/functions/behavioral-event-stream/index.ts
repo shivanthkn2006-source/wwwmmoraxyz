@@ -20,9 +20,107 @@ interface BehavioralEvent {
   sentiment_score?: number;
 }
 
+interface AnnotationPayload {
+  version: string;
+  semantic_tags: string[];
+  emotional_weight: number;
+  data_value_score: number;
+  tier: 'high' | 'medium' | 'low';
+  queue_for_ecn: boolean;
+  needs_user_validation: boolean;
+  annotated_at: string;
+}
+
 interface BatchEventRequest {
   events: BehavioralEvent[];
   process_ecn?: boolean;
+}
+
+const ANNOTATION_VERSION = '2026.03.edge-v1';
+const HIGH_SIGNAL_CATEGORIES = new Set([
+  'voice_interaction',
+  'biometric_input',
+  'emotional_computation',
+  'security_violation',
+  'chat',
+  'response',
+  'vr_activity',
+]);
+
+const LOW_SIGNAL_EVENT_TYPES = new Set([
+  'sovereign_heartbeat',
+  'dhf_health_sync',
+  'self_heal_scan',
+  'background_harvest',
+  'memory_cleanup',
+]);
+
+const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+
+function inferSemanticTags(event: BehavioralEvent): string[] {
+  const source = `${event.event_type} ${event.event_category} ${event.context_snippet ?? ''}`.toLowerCase();
+  const tags = new Set<string>();
+
+  if (/voice|mic|audio|speech|transcribe/.test(source)) tags.add('voice');
+  if (/face|emotion|sentiment|mood|feeling|ecn/.test(source)) tags.add('emotion');
+  if (/vr|avatar|bike|vehicle|teleport|world|camera/.test(source)) tags.add('vr');
+  if (/security|intrusion|attack|violation|lockdown|threat/.test(source)) tags.add('security');
+  if (/chat|conversation|reply|message|prompt/.test(source)) tags.add('conversation');
+  if (/payment|billing|credit|subscription|purchase/.test(source)) tags.add('monetization');
+  if (/error|fail|exception|timeout|degraded/.test(source)) tags.add('incident');
+  if (/profile|identity|behavior|fingerprint|dhf/.test(source)) tags.add('identity');
+
+  if (tags.size === 0) tags.add('general');
+  return [...tags].slice(0, 6);
+}
+
+function computeEmotionalWeight(sentimentScore: number | undefined, tags: string[]): number {
+  const sentimentDistance = typeof sentimentScore === 'number'
+    ? Math.abs(clamp(sentimentScore, 0, 1) - 0.5) * 2
+    : 0.25;
+
+  let boost = 0;
+  if (tags.includes('emotion')) boost += 0.2;
+  if (tags.includes('security')) boost += 0.15;
+  if (tags.includes('incident')) boost += 0.1;
+
+  return Number(clamp(sentimentDistance + boost, 0, 1).toFixed(3));
+}
+
+function computeDataValueScore(event: BehavioralEvent, tags: string[]): number {
+  let score = 0.2;
+  const category = (event.event_category || '').toLowerCase();
+  const type = (event.event_type || '').toLowerCase();
+  const contextLength = (event.context_snippet || '').trim().length;
+
+  if (HIGH_SIGNAL_CATEGORIES.has(category)) score += 0.35;
+  if (LOW_SIGNAL_EVENT_TYPES.has(type)) score -= 0.25;
+  if (contextLength >= 20) score += 0.15;
+  if (contextLength >= 60) score += 0.1;
+  if (tags.includes('security')) score += 0.2;
+  if (tags.includes('conversation')) score += 0.1;
+  if (tags.includes('emotion')) score += 0.1;
+
+  return Number(clamp(score, 0, 1).toFixed(3));
+}
+
+function buildAnnotation(event: BehavioralEvent): AnnotationPayload {
+  const semanticTags = inferSemanticTags(event);
+  const emotionalWeight = computeEmotionalWeight(event.sentiment_score, semanticTags);
+  const dataValueScore = computeDataValueScore(event, semanticTags);
+  const isLowSignalEvent = LOW_SIGNAL_EVENT_TYPES.has((event.event_type || '').toLowerCase());
+  const queueForEcn = !isLowSignalEvent && (dataValueScore >= 0.55 || emotionalWeight >= 0.6);
+
+  return {
+    version: ANNOTATION_VERSION,
+    semantic_tags: semanticTags,
+    emotional_weight: emotionalWeight,
+    data_value_score: dataValueScore,
+    tier: dataValueScore >= 0.75 ? 'high' : dataValueScore >= 0.45 ? 'medium' : 'low',
+    queue_for_ecn: queueForEcn,
+    needs_user_validation: semanticTags.includes('security') || dataValueScore >= 0.85,
+    annotated_at: new Date().toISOString(),
+  };
 }
 
 serve(async (req) => {
@@ -77,15 +175,20 @@ serve(async (req) => {
 
     console.log(`[Behavioral Stream] Processing ${events.length} events for user ${user.id}`);
 
-    // Prepare events with user_id and truncated context_snippet (max 50 chars)
+    // Prepare events with deterministic edge annotation and normalized metadata
     const preparedEvents = events.map(event => ({
       user_id: user.id,
-      event_type: event.event_type,
-      event_category: event.event_category,
-      context_snippet: event.context_snippet?.substring(0, 50) || null,
-      metadata: event.metadata || {},
+      event_type: (event.event_type || 'unknown_event').trim().slice(0, 80),
+      event_category: (event.event_category || 'uncategorized').trim().slice(0, 80),
+      context_snippet: event.context_snippet?.substring(0, 120) || null,
+      metadata: {
+        ...(event.metadata || {}),
+        mmora_annotation: buildAnnotation(event),
+      },
       session_id: event.session_id || null,
-      sentiment_score: event.sentiment_score || null,
+      sentiment_score: typeof event.sentiment_score === 'number'
+        ? clamp(event.sentiment_score, 0, 1)
+        : null,
       ecn_processed: false,
       dhf_logged: false,
     }));
@@ -94,7 +197,7 @@ serve(async (req) => {
     const { data: insertedEvents, error: insertError } = await supabase
       .from('behavioral_events')
       .insert(preparedEvents)
-      .select('id');
+      .select('id, event_type, event_category, context_snippet, metadata, session_id, sentiment_score');
 
     if (insertError) {
       console.error('[Behavioral Stream] Insert error:', insertError);
@@ -105,12 +208,12 @@ serve(async (req) => {
 
     // Also log to DHF asset logs for long-term memory
     // Use 'completed' status which is in the allowed check constraint values
-    const dhfLogs = events.map(event => ({
+    const dhfLogs = (insertedEvents || []).map((event: any, index: number) => ({
       user_id: user.id,
-      file_url: `event://${event.event_type}/${Date.now()}`,
+      file_url: `event://${event.event_type}/${Date.now()}-${index}`,
       data_type: 'behavioral_event',
-      dhf_stack_hash: `${user.id}-${event.event_type}-${Date.now()}`,
-      content_summary: event.context_snippet?.substring(0, 50) || event.event_type,
+      dhf_stack_hash: `${user.id}-${event.event_type}-${Date.now()}-${index}`,
+      content_summary: event.context_snippet?.substring(0, 80) || event.event_type,
       extracted_entities: event.metadata || {},
       sensitivity_level: 'low',
       processing_status: 'completed', // Must be: pending, processing, completed, or failed
@@ -123,22 +226,73 @@ serve(async (req) => {
     if (dhfError) {
       console.error('[Behavioral Stream] DHF logging error:', dhfError);
       // Non-fatal - continue processing
+    } else if (insertedEvents && insertedEvents.length > 0) {
+      const insertedIds = insertedEvents.map((event: any) => event.id);
+      const { error: dhfMarkError } = await supabase
+        .from('behavioral_events')
+        .update({ dhf_logged: true })
+        .in('id', insertedIds);
+
+      if (dhfMarkError) {
+        console.error('[Behavioral Stream] Failed to mark dhf_logged=true:', dhfMarkError);
+      }
     }
 
-    // Queue for ECN analysis if requested and batch size warrants it
-    if (process_ecn && events.length >= 5) {
-      const { error: queueError } = await supabase
-        .from('ecn_analysis_queue')
-        .insert({
-          user_id: user.id,
-          events_batch: preparedEvents,
-          status: 'pending',
-          model_used: 'gemini-2.5-flash-lite',
-          processing_cost_estimate: events.length * 0.001, // Estimated cost per event
-        });
+    // Queue only high-value events for ECN analysis and merge with recent pending batch to avoid queue bloat
+    const queueCandidates = (insertedEvents || []).filter((event: any) => {
+      const annotation = event?.metadata?.mmora_annotation;
+      return Boolean(annotation?.queue_for_ecn);
+    });
 
-      if (queueError) {
-        console.error('[Behavioral Stream] ECN queue error:', queueError);
+    let queueAction: 'inserted' | 'merged' | 'skipped' = 'skipped';
+
+    if (process_ecn && queueCandidates.length >= 3) {
+      const mergeWindowStart = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+      const { data: existingPending } = await supabase
+        .from('ecn_analysis_queue')
+        .select('id, events_batch, created_at')
+        .eq('user_id', user.id)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (existingPending && existingPending.created_at && existingPending.created_at >= mergeWindowStart) {
+        const existingBatch = Array.isArray(existingPending.events_batch)
+          ? existingPending.events_batch
+          : [];
+        const mergedBatch = [...existingBatch, ...queueCandidates].slice(-60);
+
+        const { error: mergeError } = await supabase
+          .from('ecn_analysis_queue')
+          .update({
+            events_batch: mergedBatch,
+            model_used: 'gemini-2.5-flash-lite',
+            processing_cost_estimate: mergedBatch.length * 0.001,
+          })
+          .eq('id', existingPending.id);
+
+        if (mergeError) {
+          console.error('[Behavioral Stream] ECN merge error:', mergeError);
+        } else {
+          queueAction = 'merged';
+        }
+      } else {
+        const { error: queueError } = await supabase
+          .from('ecn_analysis_queue')
+          .insert({
+            user_id: user.id,
+            events_batch: queueCandidates,
+            status: 'pending',
+            model_used: 'gemini-2.5-flash-lite',
+            processing_cost_estimate: queueCandidates.length * 0.001,
+          });
+
+        if (queueError) {
+          console.error('[Behavioral Stream] ECN queue error:', queueError);
+        } else {
+          queueAction = 'inserted';
+        }
       }
     }
 
@@ -152,6 +306,8 @@ serve(async (req) => {
     return new Response(JSON.stringify({
       success: true,
       events_processed: insertedEvents?.length || 0,
+      ecn_candidates: queueCandidates.length,
+      ecn_queue_action: queueAction,
       sync_status: {
         event_count: settings?.event_count || 0,
         sync_percentage: settings?.sync_percentage || 0,
@@ -164,7 +320,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('[Behavioral Stream] Error:', error);
     return new Response(JSON.stringify({ 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+      error: 'An internal error occurred processing your request.' 
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

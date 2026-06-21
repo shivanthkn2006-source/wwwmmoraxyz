@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { toast } from 'sonner';
+import { requestMicPermission } from '@/utils/micPermissionManager';
 
 // The "Zoe Omega" Command Structure - Ready Player One Style
 export interface VRCoreCommand {
@@ -293,6 +294,7 @@ export const useZoeVoiceCore = () => {
   const [systemStatus, setSystemStatus] = useState<SystemStatus>('idle');
   const [confidenceScore, setConfidenceScore] = useState(0);
   const recognitionRef = useRef<any>(null);
+  const shouldKeepListeningRef = useRef(false);
 
   // Browser Compatibility Check
   const SpeechRecognition = typeof window !== 'undefined' 
@@ -379,7 +381,7 @@ export const useZoeVoiceCore = () => {
   }, [logCommandToDHF]);
 
   // Start listening for voice commands
-  const startListening = useCallback(() => {
+  const startListening = useCallback(async () => {
     if (!SpeechRecognition) {
       console.error("Zoe VR: Voice hardware not detected on this cortical stack.");
       toast.error('Voice not supported', {
@@ -388,12 +390,27 @@ export const useZoeVoiceCore = () => {
       return;
     }
 
+    const micGranted = await requestMicPermission();
+    if (!micGranted) {
+      toast.error('Microphone permission required', {
+        description: 'Please allow microphone access to use Zoe voice commands.'
+      });
+      return;
+    }
+
+    window.dispatchEvent(new CustomEvent('zoe-voice-system-activated'));
+    shouldKeepListeningRef.current = true;
+
     if (recognitionRef.current) {
-      recognitionRef.current.stop();
+      try {
+        recognitionRef.current.stop();
+      } catch {
+        // ignore stale recognition stop errors
+      }
     }
 
     const recognition = new SpeechRecognition();
-    recognition.continuous = false; // Command -> Action style
+    recognition.continuous = true;
     recognition.lang = 'en-US';
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
@@ -408,8 +425,17 @@ export const useZoeVoiceCore = () => {
       const result = event.results[current][0];
       const commandText = result.transcript.toLowerCase();
       const confidence = result.confidence || 0.9;
-      
+
       setTranscript(commandText);
+
+      // Bridge transcript into universal VR voice buses used by world-specific handlers
+      window.dispatchEvent(new CustomEvent('zoe-voice-command', {
+        detail: { transcript: commandText, confidence, source: 'zoe-voice-core' }
+      }));
+      window.dispatchEvent(new CustomEvent('vr-voice-input', {
+        detail: { transcript: commandText, confidence, source: 'zoe-voice-core' }
+      }));
+
       processCommand(commandText, confidence);
     };
 
@@ -417,21 +443,35 @@ export const useZoeVoiceCore = () => {
       console.error('Speech recognition error:', event.error);
       setSystemStatus('error');
       setIsListening(false);
+
+      if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+        shouldKeepListeningRef.current = false;
+      }
     };
 
     recognition.onend = () => {
       setIsListening(false);
-      if (systemStatus === 'listening') {
+
+      if (shouldKeepListeningRef.current) {
+        setTimeout(() => {
+          try {
+            recognition.start();
+          } catch {
+            // ignore transient restarts
+          }
+        }, 180);
+      } else {
         setSystemStatus('idle');
       }
     };
 
     recognitionRef.current = recognition;
     recognition.start();
-  }, [SpeechRecognition, processCommand, systemStatus]);
+  }, [SpeechRecognition, processCommand]);
 
   // Stop listening
   const stopListening = useCallback(() => {
+    shouldKeepListeningRef.current = false;
     if (recognitionRef.current) {
       recognitionRef.current.stop();
       recognitionRef.current = null;

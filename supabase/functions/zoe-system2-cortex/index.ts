@@ -417,10 +417,14 @@ async function generateDraft(
 
 async function runCritique(
   draft: string,
-  userId: string
+  userId: string,
+  tier: 'standard' | 'heavy' = 'standard',
 ): Promise<{ result: CritiqueResult; latencyMs: number; model: string }> {
   const startTime = performance.now();
-  const model = 'google/gemini-2.5-flash'; // Fast but capable for critique
+  // CROSS-MODEL CRITIQUE (anti-hallucination layer 2):
+  // - 'heavy' (factual queries) → Gemini 2.5 Pro reviews drafts written by Flash
+  // - 'standard' → Flash critiques Flash (cheaper)
+  const model = tier === 'heavy' ? 'google/gemini-2.5-pro' : 'google/gemini-2.5-flash';
   
   const response = await callAIGateway(
     'zoe-system2-cortex',

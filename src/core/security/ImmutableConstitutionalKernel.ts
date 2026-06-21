@@ -243,6 +243,7 @@ export class ImmutableConstitutionalKernel {
   private readonly rules = IMMUTABLE_CONSTITUTIONAL_RULES;
   private readonly integrityHash = KERNEL_INTEGRITY_HASH;
   private state: KernelState;
+  private static readonly MAX_LISTENERS = 50;
   private violationListeners: ((violation: ConstitutionalViolation) => void)[] = [];
 
   private constructor() {
@@ -503,6 +504,11 @@ export class ImmutableConstitutionalKernel {
    * Returns an unsubscribe function
    */
   onViolation(listener: (violation: ConstitutionalViolation) => void): () => void {
+    // Guard against unbounded listener growth (memory leak prevention)
+    if (this.violationListeners.length >= ImmutableConstitutionalKernel.MAX_LISTENERS) {
+      console.warn('[CONSTITUTIONAL KERNEL] Max violation listeners reached, removing oldest');
+      this.violationListeners.shift();
+    }
     this.violationListeners.push(listener);
     return () => {
       this.violationListeners = this.violationListeners.filter(l => l !== listener);

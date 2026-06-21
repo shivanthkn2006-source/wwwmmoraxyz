@@ -26,6 +26,18 @@ interface UseOfflineMessagesReturn {
   isOffline: boolean;
 }
 
+const createOfflineMessageId = (): string => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (char) => {
+    const random = Math.random() * 16 | 0;
+    const value = char === 'x' ? random : (random & 0x3 | 0x8);
+    return value.toString(16);
+  });
+};
+
 export function useOfflineMessages(options: UseOfflineMessagesOptions): UseOfflineMessagesReturn {
   const { userId, limit = 100, autoSync = true } = options;
 
@@ -110,7 +122,7 @@ export function useOfflineMessages(options: UseOfflineMessagesOptions): UseOffli
   const addMessage = useCallback(async (
     message: Omit<OfflineMessage, 'id' | 'syncStatus' | 'createdAt'> & { id?: string }
   ): Promise<string> => {
-    const id = message.id || `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    const id = message.id || createOfflineMessageId();
     const now = new Date();
 
     const newMessage: OfflineMessage = {

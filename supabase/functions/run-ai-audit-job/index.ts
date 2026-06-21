@@ -50,9 +50,9 @@ Deno.serve(async (req) => {
       },
       edgeFunctions: [
         "ai-audit-endpoint", "ai-companion-chat", "ai-video-transform", "analyze-face-emotion",
-        "apply-ai-filter", "assemblyai-tts", "check-reminders",
+        "apply-ai-filter", "check-reminders",
         "execute-scheduled-macros", "face-verification", "generate-image", "generate-text",
-        "lovable-tts", "moderate-content", "platform-diagnostics", "realtime-voice",
+        "moderate-content", "platform-diagnostics", "realtime-voice",
         "score-post-relevance", "security-operations", "track-activity", "transcribe-audio",
         "zoe-agent", "zoe-chat", "zoe-dance-architect", "zoe-multiagent", "run-ai-audit-job"
       ],

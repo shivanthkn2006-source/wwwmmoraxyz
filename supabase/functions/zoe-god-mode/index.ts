@@ -56,12 +56,42 @@ serve(async (req) => {
   const requestId = crypto.randomUUID();
 
   try {
-    const { action, userId, options } = await req.json();
-    
+    // Validate JWT authentication
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const anonClient = createClient(SUPABASE_URL, Deno.env.get('SUPABASE_ANON_KEY')!, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claimsData, error: claimsError } = await anonClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // Create service role client for full access
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
       auth: { persistSession: false }
     });
+
+    // Verify caller is admin
+    const { data: isAdmin } = await supabase.rpc('is_root_admin', { check_user_id: claimsData.claims.sub });
+    if (!isAdmin) {
+      return new Response(JSON.stringify({ error: 'Forbidden: Admin access required' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const { action, userId, options } = await req.json();
 
     const results: ScanResult[] = [];
     const fixDetails: string[] = [];
@@ -82,7 +112,7 @@ serve(async (req) => {
         results.push({
           category: 'Database - Behavioral Events',
           status: 'critical',
-          message: `Table access error: ${eventsError.message}`,
+          message: 'Table access error: unable to query behavioral events',
           autoFixable: false
         });
       } else {

@@ -16,8 +16,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { cleanAndSplitForVoice, PACING_DELAY_MS, logRemovedMarkers } from '@/utils/voiceTextCleaner';
 
-// Voice preference priority for "Zoe" persona
-const VOICE_PRIORITIES = [
+// Voice preference priority for "Zoe" persona (female)
+const VOICE_PRIORITIES_FEMALE = [
   'Samantha',           // Mac/iOS - Premium quality
   'Google US English',  // Android/Chrome
   'Microsoft Zira',     // Windows
@@ -26,6 +26,17 @@ const VOICE_PRIORITIES = [
   'Fiona',              // macOS
   'Victoria',           // macOS
   'Female',             // Generic female
+];
+
+// Voice preference priority for "Smith" persona (male)
+const VOICE_PRIORITIES_MALE = [
+  'Daniel',             // Mac/iOS - Premium male
+  'Alex',               // macOS
+  'Google UK English Male', // Chrome
+  'Microsoft David',    // Windows
+  'Fred',               // macOS
+  'Thomas',             // macOS
+  'Male',               // Generic male
 ];
 
 export interface NativeZoeVoiceState {
@@ -39,6 +50,7 @@ export interface NativeZoeVoiceOptions {
   pitch?: number;     // 0-2, default 1.0
   rate?: number;      // 0.1-10, default 1.05
   volume?: number;    // 0-1, default 1.0
+  lang?: string;      // BCP-47 language code for multilingual TTS (e.g. 'hi-IN', 'fr-FR')
   onStart?: () => void;
   onEnd?: () => void;
   onError?: (error: string) => void;
@@ -57,12 +69,18 @@ export const useNativeZoeVoice = () => {
   const queueRef = useRef<Array<{ text: string; options?: NativeZoeVoiceOptions }>>([]);
   const isProcessingRef = useRef(false);
   
-  // Find the best "Zoe-like" voice from available voices
+  // Find the best voice based on current persona
   const findBestVoice = useCallback((voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null => {
     if (!voices.length) return null;
     
+    // Check stored voice persona preference
+    let isMalePersona = false;
+    try { isMalePersona = localStorage.getItem('zoe_voice_persona') === 'male'; } catch {}
+    
+    const priorities = isMalePersona ? VOICE_PRIORITIES_MALE : VOICE_PRIORITIES_FEMALE;
+    
     // Priority 1: Named premium voices
-    for (const preferredName of VOICE_PRIORITIES) {
+    for (const preferredName of priorities) {
       const match = voices.find(v => 
         v.name.toLowerCase().includes(preferredName.toLowerCase()) &&
         v.lang.startsWith('en')
@@ -70,13 +88,13 @@ export const useNativeZoeVoice = () => {
       if (match) return match;
     }
     
-    // Priority 2: Any female English voice
-    const femaleEnglish = voices.find(v => 
+    // Priority 2: Gender-matched English voice
+    const genderKeyword = isMalePersona ? 'male' : 'female';
+    const genderMatch = voices.find(v => 
       v.lang.startsWith('en') && 
-      (v.name.toLowerCase().includes('female') || 
-       v.name.toLowerCase().includes('woman'))
+      v.name.toLowerCase().includes(genderKeyword)
     );
-    if (femaleEnglish) return femaleEnglish;
+    if (genderMatch) return genderMatch;
     
     // Priority 3: en-US default
     const englishUS = voices.find(v => v.lang === 'en-US');
@@ -142,19 +160,26 @@ export const useNativeZoeVoice = () => {
     const utterance = new SpeechSynthesisUtterance(text);
     utteranceRef.current = utterance;
     
-    if (voice) {
+    // If a specific language is requested, find a voice for that language
+    if (options?.lang) {
+      const voices = window.speechSynthesis.getVoices();
+      const langVoice = voices.find(v => v.lang.startsWith(options.lang!.split('-')[0]));
+      if (langVoice) {
+        utterance.voice = langVoice;
+        utterance.lang = options.lang;
+      } else if (voice) {
+        utterance.voice = voice;
+      }
+    } else if (voice) {
       utterance.voice = voice;
     }
     
     // ═══════════════════════════════════════════════════════════════════════════
     // SAMANTHA "HER" TUNING - Native Browser Voice
     // ═══════════════════════════════════════════════════════════════════════════
-    // Pitch: 0.92 - Warmer, intimate (not high-pitched AI)
-    // Rate: 0.85 - Slower, contemplative, "held in the moment"
-    // Volume: 0.9 - Present but not aggressive
-    utterance.pitch = options?.pitch ?? 0.92;   // Warm, intimate tone
-    utterance.rate = options?.rate ?? 0.85;     // Slow, contemplative (like HER)
-    utterance.volume = options?.volume ?? 0.9;  // Soft but clear presence
+    utterance.pitch = options?.pitch ?? 0.92;
+    utterance.rate = options?.rate ?? 0.85;
+    utterance.volume = options?.volume ?? 0.9;
     
     utterance.onstart = () => {
       setState(prev => ({ ...prev, isSpeaking: true, isPaused: false }));
@@ -326,7 +351,10 @@ const initializeGlobalVoice = () => {
   const voices = window.speechSynthesis.getVoices();
   if (voices.length === 0) return;
   
-  for (const name of VOICE_PRIORITIES) {
+  let isMalePersona = false;
+  try { isMalePersona = localStorage.getItem('zoe_voice_persona') === 'male'; } catch {}
+  const priorities = isMalePersona ? VOICE_PRIORITIES_MALE : VOICE_PRIORITIES_FEMALE;
+  for (const name of priorities) {
     const match = voices.find(v => 
       v.name.toLowerCase().includes(name.toLowerCase()) && v.lang.startsWith('en')
     );

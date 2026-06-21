@@ -23,6 +23,9 @@ interface Post {
   user_id: string;
   content: string | null;
   media_url: string | null;
+  full_media_url?: string | null;
+  has_deferred_media?: boolean;
+  media_size?: number;
   media_type: string | null;
   likes_count: number;
   comments_count: number;
@@ -64,6 +67,9 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
   const [averageRating, setAverageRating] = useState<number | null>(null);
   const [showLikeAnimation, setShowLikeAnimation] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
+  const [revealHeavyMedia, setRevealHeavyMedia] = useState(false);
+  const [loadedHeavyMediaUrl, setLoadedHeavyMediaUrl] = useState<string | null>(null);
+  const [loadingHeavyMedia, setLoadingHeavyMedia] = useState(false);
   const [sharingToTimeline, setSharingToTimeline] = useState(false);
 
   const hasEvent = useEventGlow(post.profile?.event_date, post.profile?.event_recurring);
@@ -71,6 +77,33 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
   const { timelines, loading: timelinesLoading } = usePrivateTimelines();
   
   const isOwnPost = user?.id === post.user_id;
+  const displayMediaUrl = post.media_url || loadedHeavyMediaUrl || (revealHeavyMedia ? post.full_media_url || null : null);
+  const isDeferredHeavyMedia = !post.media_url && (post.has_deferred_media || !!post.full_media_url) && !displayMediaUrl;
+
+  const revealDeferredMedia = async () => {
+    if (loadingHeavyMedia) return;
+    if (post.full_media_url) {
+      setRevealHeavyMedia(true);
+      return;
+    }
+
+    try {
+      setLoadingHeavyMedia(true);
+      const { data, error } = await supabase
+        .from('posts')
+        .select('media_url')
+        .eq('id', post.id)
+        .maybeSingle();
+
+      if (error) throw error;
+      setLoadedHeavyMediaUrl(data?.media_url || null);
+      setRevealHeavyMedia(true);
+    } catch (error) {
+      toast({ title: 'Media unavailable', description: 'Could not load this large media file.', variant: 'destructive' });
+    } finally {
+      setLoadingHeavyMedia(false);
+    }
+  };
 
   // Sync state with post prop when it changes
   useEffect(() => {
@@ -168,8 +201,10 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
 
   // Set up real-time subscription for post updates and ratings
   useEffect(() => {
+    if (!user) return;
+
     const channel = supabase
-      .channel(`post_updates_${post.id}`)
+      .channel(`post_updates_${post.id}:${user.id}`)
       .on(
         'postgres_changes',
         {
@@ -216,7 +251,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [post.id]);
+  }, [post.id, user]);
 
   const handleLike = async () => {
     if (!user) return;
@@ -562,24 +597,33 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
           <p className="text-foreground mb-3">{post.content}</p>
         )}
 
-        {post.media_url && (
+        {(displayMediaUrl || isDeferredHeavyMedia) && (
           <div className="mb-3 rounded-lg overflow-hidden">
-            {post.media_type === 'image' || post.media_url.startsWith('data:image/') ? (
+            {isDeferredHeavyMedia ? (
+              <button
+                type="button"
+                onClick={revealDeferredMedia}
+                className="flex aspect-square w-full flex-col items-center justify-center gap-2 bg-muted/70 p-4 text-center text-sm text-muted-foreground hover:bg-muted"
+              >
+                <span className="font-medium text-foreground">Large media</span>
+                <span>{loadingHeavyMedia ? 'Opening…' : 'Tap to open without slowing the feed'}</span>
+              </button>
+            ) : post.media_type === 'image' || displayMediaUrl.startsWith('data:image/') ? (
               <img
-                src={post.media_url}
+                src={displayMediaUrl}
                 alt="Post media"
                 className="w-full h-auto object-cover cursor-pointer hover:opacity-90 transition-opacity"
                 onClick={() => setShowImageViewer(true)}
               />
-            ) : post.media_type === 'video' || post.media_url.startsWith('data:video/') ? (
+            ) : post.media_type === 'video' || displayMediaUrl.startsWith('data:video/') ? (
               <video
-                src={post.media_url}
+                src={displayMediaUrl}
                 controls
                 className="w-full h-auto"
               />
             ) : (
               <img
-                src={post.media_url}
+                src={displayMediaUrl}
                 alt="Post media"
                 className="w-full h-auto object-cover cursor-pointer hover:opacity-90 transition-opacity"
                 onClick={() => setShowImageViewer(true)}
@@ -588,9 +632,9 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
           </div>
         )}
 
-        {showImageViewer && post.media_url && (
+        {showImageViewer && displayMediaUrl && (
           <ImageViewer
-            imageUrl={post.media_url}
+            imageUrl={displayMediaUrl}
             onClose={() => setShowImageViewer(false)}
           />
         )}

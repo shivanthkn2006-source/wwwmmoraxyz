@@ -316,6 +316,8 @@ const RECALL_TEMPLATES: Record<KarmicKeyword, string[]> = {
   ],
 };
 
+const RECALL_BLOCKLIST = new Set<KarmicKeyword>(['dad', 'mom', 'family', 'trauma', 'secret']);
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // LOCAL STORAGE KEYS
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -522,7 +524,7 @@ export const useKarmicMemory = (): UseKarmicMemoryReturn => {
     // Check if we should trigger a recall (every 10th message)
     const messagesSinceLastRecall = state.messageCount - state.lastRecallMessage;
     
-    if (messagesSinceLastRecall < 10) {
+    if (messagesSinceLastRecall < 25) {
       return null;
     }
     
@@ -530,14 +532,24 @@ export const useKarmicMemory = (): UseKarmicMemoryReturn => {
     if (state.coreMemories.length === 0) {
       return null;
     }
+
+    const eligibleMemories = state.coreMemories.filter(memory =>
+      !RECALL_BLOCKLIST.has(memory.keyword) &&
+      memory.content.trim().length >= 18 &&
+      memory.recallCount < 2
+    );
+
+    if (eligibleMemories.length === 0) {
+      return null;
+    }
     
     // 70% chance to actually recall (feel more natural)
-    if (Math.random() > 0.7) {
+    if (Math.random() > 0.1) {
       return null;
     }
     
     // Pick a random memory
-    const memory = state.coreMemories[Math.floor(Math.random() * state.coreMemories.length)];
+    const memory = eligibleMemories[Math.floor(Math.random() * eligibleMemories.length)];
     const templates = RECALL_TEMPLATES[memory.keyword];
     const template = templates[Math.floor(Math.random() * templates.length)];
     

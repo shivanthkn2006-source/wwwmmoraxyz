@@ -192,7 +192,7 @@ export function useMobileOfflineOptimizations() {
     // Android works well with longer chunks
     if (platform === 'android') {
       return {
-        preferNativeTTS: false, // Prefer Deepgram when online
+        preferNativeTTS: true, // Browser native TTS
         maxChunkLength: 200,
         pauseBetweenChunks: 100,
         rate: 0.92,

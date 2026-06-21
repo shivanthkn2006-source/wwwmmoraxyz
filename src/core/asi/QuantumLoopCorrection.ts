@@ -6,6 +6,7 @@
 
 import { pentarchySynthesize, PentarchySynthesis } from './PentarchySwarmCore';
 import { neuroSymbolicProcess, NeuroSymbolicOutput } from './NeuroSymbolicTruthEngine';
+import { quickValidate } from '@/core/neurosymbolic/CodeValidationLayer';
 
 export type LoopPhase = 'GENERATE' | 'CHECK' | 'CORRECT' | 'VERIFY' | 'OUTPUT';
 
@@ -249,17 +250,36 @@ function correctPhase(previousOutput: string, errors: string[], iteration: numbe
 
 /**
  * Verify corrections are valid
+ * Includes Code Sandbox validation for any code-like content
  */
 function verifyPhase(correctedOutput: string, iteration: number): LoopIteration {
+  const errors: string[] = [];
+  
+  // Code Sandbox validation: if output contains code patterns, validate it
+  const codeBlockMatch = correctedOutput.match(/```[\s\S]*?```/g);
+  if (codeBlockMatch) {
+    for (const block of codeBlockMatch) {
+      const code = block.replace(/```\w*\n?/g, '').replace(/```$/g, '');
+      const validation = quickValidate(code);
+      if (!validation.valid) {
+        errors.push(`Code validation failed: ${validation.errors[0]}`);
+      }
+      if (validation.dangerousPatterns.length > 0) {
+        errors.push(`Dangerous code pattern: ${validation.dangerousPatterns[0]}`);
+      }
+    }
+  }
+
   // Run through Neuro-Symbolic engine in strict mode
   const verification = neuroSymbolicProcess(correctedOutput, {}, true);
+  if (verification.blocked) errors.push('Verification failed');
   
   return {
     iteration,
     phase: 'VERIFY',
     input: correctedOutput,
     output: verification.finalOutput,
-    errors: verification.blocked ? ['Verification failed'] : [],
+    errors,
     corrections: [],
     confidenceDelta: verification.truthValidation.validationScore / 10,
     timestamp: Date.now()

@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { toast } from 'sonner';
 import { cleanupManager } from '@/utils/platformCleanupManager';
+import { quickValidate } from '@/core/neurosymbolic/CodeValidationLayer';
 
 interface SystemHealthReport {
   overall_score: number;
@@ -297,7 +298,7 @@ export const useZoeUnifiedSelfHealer = () => {
     return { name: 'DHF Data Flow', healthy: score >= 70, score, issues, fixes_applied: fixes };
   }, [user?.id]);
 
-  // UI performance check
+  // UI performance check + Code validation gate
   const checkUIPerformance = useCallback(async (): Promise<SubsystemStatus> => {
     const issues: string[] = [];
     const fixes: string[] = [];
@@ -326,6 +327,26 @@ export const useZoeUnifiedSelfHealer = () => {
       if (performance.getEntriesByType('mark').length > 100) {
         performance.clearMarks();
         fixes.push('Cleared performance marks');
+      }
+
+      // Code Validation Gate: validate any cached patches before they get applied
+      const pendingPatches = sessionStorage.getItem('selfhealer-pending-patches');
+      if (pendingPatches) {
+        try {
+          const patches = JSON.parse(pendingPatches);
+          const validPatches = patches.filter((p: { code: string }) => {
+            const result = quickValidate(p.code);
+            if (!result.valid) {
+              issues.push(`Blocked unsafe self-heal patch: ${result.errors[0]}`);
+              fixes.push(`Rejected patch with ${result.dangerousPatterns.length} dangerous patterns`);
+            }
+            return result.valid;
+          });
+          if (validPatches.length < patches.length) {
+            sessionStorage.setItem('selfhealer-pending-patches', JSON.stringify(validPatches));
+            score -= 5;
+          }
+        } catch { /* ignore parse errors */ }
       }
 
     } catch (e) {

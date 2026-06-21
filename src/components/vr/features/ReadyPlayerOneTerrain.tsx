@@ -9,10 +9,13 @@ import { Box, Sphere, Cylinder, Html, Stars, Cloud } from '@react-three/drei';
 import * as THREE from 'three';
 import { Season, SEASON_CONFIGS } from './SeasonsSystem';
 
+type TerrainDetailLevel = 'low' | 'medium' | 'high';
+
 interface ReadyPlayerOneTerrainProps {
   season: Season;
   entryMode?: 'satellite' | 'aerial' | 'ground';
   onEntryComplete?: () => void;
+  detailLevel?: TerrainDetailLevel;
 }
 
 // Epic Mountain Component
@@ -252,44 +255,68 @@ export const SatelliteEntryController: React.FC<{
   const [progress, setProgress] = useState(0);
   const startTime = useRef(Date.now());
   const [enabled, setEnabled] = useState(true);
-  
+  const completedRef = useRef(false);
+  const lastProgressUpdateRef = useRef(0);
+  const completionTimeoutRef = useRef<number | null>(null);
+
   const handleComplete = () => {
+    if (completedRef.current) return;
+    completedRef.current = true;
     setEnabled(false);
+    setProgress(1);
     onEntryComplete();
   };
-  
+
   useEffect(() => {
-    if (enabled) {
-      startTime.current = Date.now();
-      camera.position.set(0, 500, 500);
-      camera.lookAt(0, 0, 0);
-    }
-  }, [enabled, camera]);
-  
-  useFrame(() => {
     if (!enabled) return;
-    
+
+    startTime.current = Date.now();
+    completedRef.current = false;
+    lastProgressUpdateRef.current = 0;
+    setProgress(0);
+    camera.position.set(0, 500, 500);
+    camera.lookAt(0, 0, 0);
+
+    completionTimeoutRef.current = window.setTimeout(() => {
+      handleComplete();
+    }, 4200);
+
+    return () => {
+      if (completionTimeoutRef.current !== null) {
+        window.clearTimeout(completionTimeoutRef.current);
+        completionTimeoutRef.current = null;
+      }
+    };
+  }, [enabled, camera]);
+
+  useFrame(() => {
+    if (!enabled || completedRef.current) return;
+
     const elapsed = (Date.now() - startTime.current) / 1000;
-    const duration = 8; // 8 second entry animation
+    const duration = 3.2; // Shorter entry to avoid long gate lock
     const t = Math.min(elapsed / duration, 1);
-    
+
     // Easing function for smooth deceleration
     const easeOut = 1 - Math.pow(1 - t, 3);
-    
+
     // Animate from high altitude to ground level
     const startY = 500;
     const endY = 5;
     const startZ = 500;
     const endZ = 30;
-    
+
     camera.position.y = startY + (endY - startY) * easeOut;
     camera.position.z = startZ + (endZ - startZ) * easeOut;
     camera.position.x = Math.sin(t * Math.PI * 0.5) * 50 * (1 - easeOut);
-    
+
     camera.lookAt(0, 0, -50);
-    
-    setProgress(t);
-    
+
+    const now = Date.now();
+    if (now - lastProgressUpdateRef.current > 90 || t >= 1) {
+      setProgress(t);
+      lastProgressUpdateRef.current = now;
+    }
+
     if (t >= 1) {
       handleComplete();
     }
@@ -304,7 +331,7 @@ export const SatelliteEntryController: React.FC<{
           <div className="bg-black/80 px-6 py-3 rounded-lg border border-cyan-500/50">
             <div className="text-cyan-400 text-lg font-bold mb-2">ENTERING OMEGA WORLD</div>
             <div className="w-64 h-2 bg-gray-800 rounded-full overflow-hidden">
-              <div 
+              <div
                 className="h-full bg-gradient-to-r from-cyan-500 to-purple-500 transition-all duration-100"
                 style={{ width: `${progress * 100}%` }}
               />
@@ -314,7 +341,7 @@ export const SatelliteEntryController: React.FC<{
             </div>
           </div>
         </div>
-        
+
         {/* HUD elements during entry */}
         <div className="absolute bottom-10 left-10 text-green-400 font-mono text-sm">
           <div>ALT: {Math.floor(500 - progress * 495)}m</div>
@@ -322,12 +349,12 @@ export const SatelliteEntryController: React.FC<{
           <div>LAT: 0.000° N</div>
           <div>LON: 0.000° E</div>
         </div>
-        
+
         {/* Scan lines effect */}
         <div className="absolute inset-0 pointer-events-none opacity-10">
           {Array.from({ length: 50 }).map((_, i) => (
-            <div 
-              key={i} 
+            <div
+              key={i}
               className="h-px bg-cyan-500 w-full"
               style={{ marginTop: `${i * 20}px` }}
             />
@@ -343,9 +370,45 @@ const ReadyPlayerOneTerrain: React.FC<ReadyPlayerOneTerrainProps> = ({
   season,
   entryMode = 'satellite',
   onEntryComplete,
+  detailLevel = 'medium',
 }) => {
   const [isEntering, setIsEntering] = useState(entryMode !== 'ground');
   const config = SEASON_CONFIGS[season];
+  const renderingProfile = useMemo(() => {
+    if (detailLevel === 'low') {
+      return {
+        northMountains: 6,
+        eastMountains: 5,
+        westMountains: 5,
+        cloudCount: 8,
+        cloudSegments: 10,
+        starCount: 1400,
+        floatingIslands: 2,
+      };
+    }
+
+    if (detailLevel === 'high') {
+      return {
+        northMountains: 20,
+        eastMountains: 15,
+        westMountains: 15,
+        cloudCount: 24,
+        cloudSegments: 18,
+        starCount: 7000,
+        floatingIslands: 5,
+      };
+    }
+
+    return {
+      northMountains: 12,
+      eastMountains: 9,
+      westMountains: 9,
+      cloudCount: 14,
+      cloudSegments: 14,
+      starCount: 3200,
+      floatingIslands: 3,
+    };
+  }, [detailLevel]);
 
   const handleEntryComplete = () => {
     setIsEntering(false);
@@ -361,8 +424,9 @@ const ReadyPlayerOneTerrain: React.FC<ReadyPlayerOneTerrainProps> = ({
     }> = [];
 
     // Northern range
-    for (let i = 0; i < 20; i++) {
-      const x = (i - 10) * 60 + (Math.random() - 0.5) * 30;
+    for (let i = 0; i < renderingProfile.northMountains; i++) {
+      const normalized = i / Math.max(renderingProfile.northMountains - 1, 1);
+      const x = (normalized - 0.5) * 1200 + (Math.random() - 0.5) * 30;
       mountains.push({
         position: [x, 0, -300 + (Math.random() - 0.5) * 100],
         height: 80 + Math.random() * 100,
@@ -371,8 +435,9 @@ const ReadyPlayerOneTerrain: React.FC<ReadyPlayerOneTerrainProps> = ({
     }
 
     // Eastern range
-    for (let i = 0; i < 15; i++) {
-      const z = (i - 7) * 50;
+    for (let i = 0; i < renderingProfile.eastMountains; i++) {
+      const normalized = i / Math.max(renderingProfile.eastMountains - 1, 1);
+      const z = (normalized - 0.5) * 700;
       mountains.push({
         position: [350 + (Math.random() - 0.5) * 50, 0, z],
         height: 60 + Math.random() * 80,
@@ -381,8 +446,9 @@ const ReadyPlayerOneTerrain: React.FC<ReadyPlayerOneTerrainProps> = ({
     }
 
     // Western range
-    for (let i = 0; i < 15; i++) {
-      const z = (i - 7) * 50;
+    for (let i = 0; i < renderingProfile.westMountains; i++) {
+      const normalized = i / Math.max(renderingProfile.westMountains - 1, 1);
+      const z = (normalized - 0.5) * 700;
       mountains.push({
         position: [-350 + (Math.random() - 0.5) * 50, 0, z],
         height: 60 + Math.random() * 80,
@@ -391,7 +457,7 @@ const ReadyPlayerOneTerrain: React.FC<ReadyPlayerOneTerrainProps> = ({
     }
 
     return mountains;
-  }, []);
+  }, [renderingProfile]);
 
   return (
     <group>
@@ -418,17 +484,19 @@ const ReadyPlayerOneTerrain: React.FC<ReadyPlayerOneTerrainProps> = ({
         [80, 120, 50, 18],
         [-60, 90, 100, 10],
         [0, 150, -150, 20],
-      ].map(([x, y, z, size], i) => (
-        <FloatingIsland
-          key={i}
-          position={[x, y, z]}
-          size={size}
-          season={season}
-        />
-      ))}
+      ]
+        .slice(0, renderingProfile.floatingIslands)
+        .map(([x, y, z, size], i) => (
+          <FloatingIsland
+            key={i}
+            position={[x, y, z]}
+            size={size}
+            season={season}
+          />
+        ))}
       
       {/* Atmospheric clouds */}
-      {Array.from({ length: 30 }).map((_, i) => (
+      {Array.from({ length: renderingProfile.cloudCount }).map((_, i) => (
         <Cloud
           key={i}
           position={[
@@ -438,7 +506,7 @@ const ReadyPlayerOneTerrain: React.FC<ReadyPlayerOneTerrainProps> = ({
           ]}
           opacity={0.4}
           speed={0.1}
-          segments={20}
+          segments={renderingProfile.cloudSegments}
         />
       ))}
       
@@ -446,7 +514,7 @@ const ReadyPlayerOneTerrain: React.FC<ReadyPlayerOneTerrainProps> = ({
       <Stars 
         radius={400} 
         depth={100} 
-        count={8000} 
+        count={renderingProfile.starCount} 
         factor={6} 
         saturation={0} 
         fade 

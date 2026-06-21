@@ -35,10 +35,10 @@ export interface SeasonConfig {
 // Season configurations
 export const SEASON_CONFIGS: Record<Season, SeasonConfig> = {
   winter: {
-    skyColor: '#b0c4de',
+    skyColor: '#4a6a8a',
     groundColor: '#f0f8ff',
-    fogColor: '#e8f4f8',
-    fogDensity: 0.02,
+    fogColor: '#8aa4be',
+    fogDensity: 0.004,
     sunPosition: [100, 30, 100],
     sunIntensity: 0.6,
     ambientIntensity: 0.4,
@@ -49,10 +49,10 @@ export const SEASON_CONFIGS: Record<Season, SeasonConfig> = {
     waterColor: '#a5c8d4',
   },
   spring: {
-    skyColor: '#87ceeb',
+    skyColor: '#5a9ebe',
     groundColor: '#90ee90',
-    fogColor: '#e0f0e0',
-    fogDensity: 0.008,
+    fogColor: '#7aaa8a',
+    fogDensity: 0.002,
     sunPosition: [100, 60, 100],
     sunIntensity: 0.9,
     ambientIntensity: 0.5,
@@ -63,10 +63,10 @@ export const SEASON_CONFIGS: Record<Season, SeasonConfig> = {
     waterColor: '#4169e1',
   },
   summer: {
-    skyColor: '#1e90ff',
+    skyColor: '#1e70cc',
     groundColor: '#228b22',
-    fogColor: '#f0f8ff',
-    fogDensity: 0.003,
+    fogColor: '#5a8aaa',
+    fogDensity: 0.0015,
     sunPosition: [100, 80, 100],
     sunIntensity: 1.2,
     ambientIntensity: 0.6,
@@ -77,10 +77,10 @@ export const SEASON_CONFIGS: Record<Season, SeasonConfig> = {
     waterColor: '#00ced1',
   },
   fall: {
-    skyColor: '#deb887',
+    skyColor: '#9a7852',
     groundColor: '#d2691e',
-    fogColor: '#f5deb3',
-    fogDensity: 0.01,
+    fogColor: '#8a7a5a',
+    fogDensity: 0.003,
     sunPosition: [100, 45, 100],
     sunIntensity: 0.8,
     ambientIntensity: 0.45,
@@ -111,6 +111,31 @@ export const getCurrentRealSeason = (hemisphere: 'north' | 'south' = 'north'): S
     return opposite[season];
   }
   return season;
+};
+
+const isNightHour = (hour: number): boolean => hour < 6 || hour >= 18;
+
+const useCurrentVRHour = (): number => {
+  const [hour, setHour] = useState(() => new Date().getHours());
+
+  useEffect(() => {
+    const onHourChange = (e: Event) => {
+      const h = (e as CustomEvent).detail?.hour;
+      if (typeof h === 'number') {
+        setHour(h);
+      }
+    };
+
+    window.addEventListener('vr-sun-hour-change', onHourChange);
+    const interval = window.setInterval(() => setHour(new Date().getHours()), 60_000);
+
+    return () => {
+      window.removeEventListener('vr-sun-hour-change', onHourChange);
+      window.clearInterval(interval);
+    };
+  }, []);
+
+  return hour;
 };
 
 // Seasonal Ground Component
@@ -206,6 +231,53 @@ const FallenLeaves: React.FC<{ count: number; areaSize: number }> = ({ count, ar
   );
 };
 
+const CITY_ROAD_SPACING = 400;
+const CITY_ROAD_CLEARANCE = 95;
+const CITY_OFFSET_X = 60;
+const CITY_OFFSET_Z = 45;
+
+const distanceToNearestRoadAxis = (value: number, axisOffset: number): number => {
+  const normalized = value - axisOffset;
+  const nearestRoad = Math.round(normalized / CITY_ROAD_SPACING) * CITY_ROAD_SPACING + axisOffset;
+  return Math.abs(value - nearestRoad);
+};
+
+const pushOffRoadAxis = (value: number, axisOffset: number, clearance: number): number => {
+  const normalized = value - axisOffset;
+  const nearestRoad = Math.round(normalized / CITY_ROAD_SPACING) * CITY_ROAD_SPACING + axisOffset;
+  const delta = value - nearestRoad;
+
+  if (Math.abs(delta) < clearance) {
+    const direction = delta === 0 ? 1 : Math.sign(delta);
+    return nearestRoad + direction * clearance;
+  }
+
+  return value;
+};
+
+const createOffRoadTreePosition = (areaSize: number, treeRadius: number): { x: number; z: number } => {
+  const clearance = CITY_ROAD_CLEARANCE + treeRadius + 8;
+
+  for (let i = 0; i < 36; i++) {
+    const x = (Math.random() - 0.5) * areaSize;
+    const z = (Math.random() - 0.5) * areaSize;
+
+    const safeX = pushOffRoadAxis(x, CITY_OFFSET_X, clearance);
+    const safeZ = pushOffRoadAxis(z, CITY_OFFSET_Z, clearance);
+
+    const xDistance = distanceToNearestRoadAxis(safeX, CITY_OFFSET_X);
+    const zDistance = distanceToNearestRoadAxis(safeZ, CITY_OFFSET_Z);
+
+    if (xDistance >= clearance && zDistance >= clearance) {
+      return { x: safeX, z: safeZ };
+    }
+  }
+
+  const fallbackX = CITY_OFFSET_X + CITY_ROAD_CLEARANCE + treeRadius + 24;
+  const fallbackZ = CITY_OFFSET_Z - (CITY_ROAD_CLEARANCE + treeRadius + 24);
+  return { x: fallbackX, z: fallbackZ };
+};
+
 // Seasonal Trees Component
 export const SeasonalTrees: React.FC<{ 
   season: Season; 
@@ -216,12 +288,18 @@ export const SeasonalTrees: React.FC<{
   const treesRef = useRef<THREE.Group>(null);
   
   const treePositions = useMemo(() => {
-    return Array.from({ length: count }, () => ({
-      x: (Math.random() - 0.5) * areaSize,
-      z: (Math.random() - 0.5) * areaSize,
-      scale: 0.8 + Math.random() * 0.6,
-      colorIndex: Math.floor(Math.random() * config.treeColors.length),
-    }));
+    return Array.from({ length: count }, () => {
+      const scale = 0.8 + Math.random() * 0.6;
+      const treeRadius = scale * 2.2;
+      const position = createOffRoadTreePosition(areaSize, treeRadius);
+
+      return {
+        x: position.x,
+        z: position.z,
+        scale,
+        colorIndex: Math.floor(Math.random() * config.treeColors.length),
+      };
+    });
   }, [count, areaSize, config.treeColors.length]);
 
   return (
@@ -311,17 +389,23 @@ const SeasonalTree: React.FC<{
 export const SeasonLighting: React.FC<{ season: Season }> = ({ season }) => {
   const config = SEASON_CONFIGS[season];
   const lightRef = useRef<THREE.DirectionalLight>(null);
+  const currentHour = useCurrentVRHour();
+  const night = isNightHour(currentHour);
+
+  const ambientIntensity = night ? 0.03 : config.ambientIntensity;
+  const directionalIntensity = night ? 0 : config.sunIntensity;
+  const hemisphereIntensity = night ? 0.04 : 0.3;
 
   return (
     <>
       {/* Ambient Light */}
-      <ambientLight intensity={config.ambientIntensity} color={config.skyColor} />
+      <ambientLight intensity={ambientIntensity} color={night ? '#0a1628' : config.skyColor} />
       
       {/* Sun/Directional Light */}
       <directionalLight
         ref={lightRef}
         position={config.sunPosition}
-        intensity={config.sunIntensity}
+        intensity={directionalIntensity}
         castShadow
         shadow-mapSize={[2048, 2048]}
         shadow-camera-far={500}
@@ -329,12 +413,12 @@ export const SeasonLighting: React.FC<{ season: Season }> = ({ season }) => {
         shadow-camera-right={100}
         shadow-camera-top={100}
         shadow-camera-bottom={-100}
-        color={season === 'winter' ? '#e8e8ff' : season === 'fall' ? '#ffe4b5' : '#ffffff'}
+        color={night ? '#1e3a5f' : season === 'winter' ? '#e8e8ff' : season === 'fall' ? '#ffe4b5' : '#ffffff'}
       />
       
       {/* Hemisphere Light for more natural lighting */}
       <hemisphereLight
-        args={[config.skyColor, config.groundColor, 0.3]}
+        args={[night ? '#0a1628' : config.skyColor, night ? '#050a14' : config.groundColor, hemisphereIntensity]}
       />
     </>
   );
@@ -342,7 +426,9 @@ export const SeasonLighting: React.FC<{ season: Season }> = ({ season }) => {
 
 // Season Sky Component
 export const SeasonSky: React.FC<{ season: Season }> = ({ season }) => {
+  const currentHour = useCurrentVRHour();
   const config = SEASON_CONFIGS[season];
+  const night = isNightHour(currentHour);
   
   const skyParams = useMemo(() => {
     switch (season) {
@@ -356,6 +442,10 @@ export const SeasonSky: React.FC<{ season: Season }> = ({ season }) => {
         return { turbidity: 12, rayleigh: 1, mieCoefficient: 0.02, mieDirectionalG: 0.7 };
     }
   }, [season]);
+
+  if (night) {
+    return null;
+  }
 
   return (
     <>
@@ -392,17 +482,48 @@ export const SeasonSky: React.FC<{ season: Season }> = ({ season }) => {
   );
 };
 
-// Season Fog Component
+// Season Fog Component - uses linear fog to prevent satellite-altitude whitewash
 export const SeasonFog: React.FC<{ season: Season }> = ({ season }) => {
   const { scene } = useThree();
   const config = SEASON_CONFIGS[season];
   
   useEffect(() => {
-    scene.fog = new THREE.FogExp2(config.fogColor, config.fogDensity);
-    scene.background = new THREE.Color(config.skyColor);
+    // Use linear fog with far enough near/far to keep satellite entry clear
+    const currentHour = new Date().getHours();
+    const isNight = currentHour < 6 || currentHour >= 18;
+    
+    scene.fog = new THREE.Fog(
+      isNight ? '#050a14' : config.fogColor,
+      isNight ? 100 : 200,
+      isNight ? 3000 : 6000,
+    );
+    // Only set daytime sky — NightSkySystem handles night background
+    if (!isNight) {
+      scene.background = new THREE.Color(config.skyColor);
+    }
+    
+    // Listen for sky-phase-change — use detail.isNight from API
+    const onHourChange = (e: Event) => {
+      const detail = (e as CustomEvent).detail || {};
+      const hour = typeof detail.hour === 'number' ? detail.hour : new Date().getHours();
+      const night = typeof detail.isNight === 'boolean' ? detail.isNight : (hour < 6 || hour >= 18);
+      scene.fog = new THREE.Fog(
+        night ? '#050a14' : config.fogColor,
+        night ? 100 : 200,
+        night ? 3000 : 6000,
+      );
+      // Only set daytime background — NightSkySystem owns night background
+      if (!night) {
+        scene.background = new THREE.Color(config.skyColor);
+      }
+    };
+    window.addEventListener('vr-sun-hour-change', onHourChange);
+    window.addEventListener('sky-phase-change', onHourChange);
     
     return () => {
       scene.fog = null;
+      window.removeEventListener('vr-sun-hour-change', onHourChange);
+      window.removeEventListener('sky-phase-change', onHourChange);
     };
   }, [scene, config]);
 

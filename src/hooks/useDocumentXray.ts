@@ -5,6 +5,7 @@
 
 import { useState, useCallback } from 'react';
 import { useAuth } from '@/lib/auth';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 export interface DocumentAnalysis {
@@ -54,7 +55,7 @@ const SUPPORTED_FORMATS = [
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 export function useDocumentXray(): UseDocumentXrayReturn {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const [isUploading, setIsUploading] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [uploadedDocuments, setUploadedDocuments] = useState<UploadedDocument[]>([]);
@@ -80,6 +81,15 @@ export function useDocumentXray(): UseDocumentXrayReturn {
     setIsAnalyzing(true);
 
     try {
+      // Force refresh to avoid expired JWT
+      const { data: refreshed, error: refreshErr } = await supabase.auth.refreshSession();
+      const accessToken = refreshed?.session?.access_token
+        || session?.access_token
+        || (await supabase.auth.getSession()).data.session?.access_token;
+      if (!accessToken) {
+        throw new Error('Please sign in again to scan files.');
+      }
+
       const formData = new FormData();
       formData.append('file', file);
       formData.append('analysisType', 'full');
@@ -94,7 +104,7 @@ export function useDocumentXray(): UseDocumentXrayReturn {
         {
           method: 'POST',
           headers: {
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            Authorization: `Bearer ${accessToken}`,
           },
           body: formData,
         }
@@ -141,7 +151,7 @@ export function useDocumentXray(): UseDocumentXrayReturn {
       setIsUploading(false);
       setIsAnalyzing(false);
     }
-  }, [user?.id]);
+  }, [session?.access_token, user?.id]);
 
   const clearActiveDocument = useCallback(() => {
     setActiveDocument(null);

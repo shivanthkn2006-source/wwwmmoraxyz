@@ -5,6 +5,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import { reduceToSingleDigit } from '../quantum/AnkaShastraEngine';
+import { validatePlanetaryClaim, getPlanetaryPosition, type Planet } from '../ephemeris/EphemerisEngine';
 
 export type ValidationSource = 'NADI' | 'NUMEROLOGY' | 'ASTRONOMY' | 'PHYSICS' | 'LOGIC' | 'HISTORICAL';
 
@@ -88,7 +89,7 @@ const SYMBOLIC_RULES: SymbolicRule[] = [
     confidence: 85
   },
   
-  // Astronomy Rules
+  // Astronomy Rules (ASTRO_001–ASTRO_010 — Ephemeris Engine powered)
   {
     id: 'ASTRO_001',
     source: 'ASTRONOMY',
@@ -102,10 +103,92 @@ const SYMBOLIC_RULES: SymbolicRule[] = [
     source: 'ASTRONOMY',
     rule: 'Planetary hours follow Chaldean sequence',
     truthCondition: (input: { hour: number; expectedPlanet: number }) => {
-      const sequence = [8, 6, 9, 2, 3, 5, 7, 1, 4]; // Saturn, Venus, Mars, Moon, Jupiter, Mercury, Ketu, Sun, Rahu
+      const sequence = [8, 6, 9, 2, 3, 5, 7, 1, 4];
       const dayStartPlanet = (new Date().getDay() + 1) % 9 || 9;
       const hourPlanet = sequence[(sequence.indexOf(dayStartPlanet) + input.hour) % 9];
       return hourPlanet === input.expectedPlanet;
+    },
+    confidence: 90
+  },
+  {
+    id: 'ASTRO_003',
+    source: 'ASTRONOMY',
+    rule: 'Planetary sign claim must match Ephemeris Engine calculation',
+    truthCondition: (input: { planet: Planet; date: Date; claimedSign: string }) => {
+      if (!input.planet || !input.date || !input.claimedSign) return true; // skip if no context
+      return validatePlanetaryClaim(input.planet, input.date, input.claimedSign);
+    },
+    confidence: 95
+  },
+  {
+    id: 'ASTRO_004',
+    source: 'ASTRONOMY',
+    rule: 'Rahu and Ketu are always retrograde',
+    truthCondition: (input: { planet: string; claimedRetrograde: boolean }) => {
+      if (!input.planet) return true;
+      if (input.planet === 'Rahu' || input.planet === 'Ketu') return input.claimedRetrograde === true;
+      return true;
+    },
+    confidence: 100
+  },
+  {
+    id: 'ASTRO_005',
+    source: 'ASTRONOMY',
+    rule: 'Sun cannot be retrograde',
+    truthCondition: (input: { planet: string; claimedRetrograde: boolean }) => {
+      if (input.planet === 'Sun') return input.claimedRetrograde === false;
+      return true;
+    },
+    confidence: 100
+  },
+  {
+    id: 'ASTRO_006',
+    source: 'ASTRONOMY',
+    rule: 'Moon cannot be retrograde',
+    truthCondition: (input: { planet: string; claimedRetrograde: boolean }) => {
+      if (input.planet === 'Moon') return input.claimedRetrograde === false;
+      return true;
+    },
+    confidence: 100
+  },
+  {
+    id: 'ASTRO_007',
+    source: 'ASTRONOMY',
+    rule: 'Zodiac signs span exactly 30 degrees each',
+    truthCondition: (input: { claimedSignDegrees: number }) => {
+      if (input.claimedSignDegrees === undefined) return true;
+      return input.claimedSignDegrees >= 0 && input.claimedSignDegrees <= 30;
+    },
+    confidence: 100
+  },
+  {
+    id: 'ASTRO_008',
+    source: 'ASTRONOMY',
+    rule: 'There are exactly 27 Nakshatras in the Vedic system',
+    truthCondition: (input: { claimedNakshatraCount: number }) => {
+      if (input.claimedNakshatraCount === undefined) return true;
+      return input.claimedNakshatraCount === 27;
+    },
+    confidence: 100
+  },
+  {
+    id: 'ASTRO_009',
+    source: 'ASTRONOMY',
+    rule: 'Vimshottari Dasa total cycle is exactly 120 years',
+    truthCondition: (input: { claimedDasaCycleYears: number }) => {
+      if (input.claimedDasaCycleYears === undefined) return true;
+      return input.claimedDasaCycleYears === 120;
+    },
+    confidence: 100
+  },
+  {
+    id: 'ASTRO_010',
+    source: 'ASTRONOMY',
+    rule: 'Planetary longitude must be calculated via Ephemeris Engine',
+    truthCondition: (input: { planet: Planet; date: Date; claimedLongitude: number }) => {
+      if (!input.planet || !input.date || input.claimedLongitude === undefined) return true;
+      const actual = getPlanetaryPosition(input.planet, input.date);
+      return Math.abs(actual.longitude - input.claimedLongitude) < 5; // 5° tolerance
     },
     confidence: 90
   },
@@ -155,7 +238,10 @@ const SYMBOLIC_RULES: SymbolicRule[] = [
  * Extract claims from creative AI output for validation
  */
 function extractClaims(text: string): string[] {
-  const sentences = text.split(/[.!?]/).filter(s => s.trim().length > 10);
+  // Split on sentence-ending punctuation but not on abbreviations (e.g. Dr. Mr. St. etc.)
+  const sentences = text
+    .split(/(?<!\b(?:Dr|Mr|Mrs|Ms|St|Jr|Sr|Prof|Inc|Ltd|etc|vs|al|i\.e|e\.g))\s*[.!?]+\s+/i)
+    .filter(s => s.trim().length > 10);
   return sentences.map(s => s.trim()).slice(0, 10); // Limit to 10 claims
 }
 
@@ -206,11 +292,10 @@ function validateClaim(claim: string, context: Record<string, any> = {}): TruthV
     }
   }
   
-  // Calculate validation score
+  // Calculate validation score as weighted average of confidence for passed rules
   const totalRules = rulesApplied.length + failedRules.length;
   const validationScore = totalRules > 0 
-    ? (rulesApplied.reduce((sum, r) => sum + r.confidence, 0) / 
-       (rulesApplied.length + failedRules.length * 2)) 
+    ? (rulesApplied.reduce((sum, r) => sum + r.confidence, 0) / totalRules)
     : 50;
   
   const sources = [...new Set([...rulesApplied, ...failedRules].map(r => r.source))];

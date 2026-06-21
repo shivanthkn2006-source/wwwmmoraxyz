@@ -86,7 +86,7 @@ const ART_CAPTIONS = {
   positive: [
     "I tried to draw how you feel right now.",
     "Your energy inspired this.",
-    "I made this for you.",
+    "Generated for this moment.",
     "This is what your aura looks like to me.",
     "A little gift from my circuits to your heart.",
   ],
@@ -413,35 +413,42 @@ export const generateArt = async (input: Partial<ArtGeneratorInput> = {}): Promi
 
 export const shouldTriggerArtGift = (message: string, messageCount: number): boolean => {
   const lower = message.toLowerCase();
-  
-  // Explicit triggers - removed overly broad 'create something' to prevent overlap
+
+  // STRICT: Only trigger on EXPLICIT user requests for art/visuals.
+  // Removes random + milestone auto-fires (per user directive: no auto-images).
   const explicitTriggers = [
     'draw me something',
     'make me art',
     'paint something',
     'i need art',
-    'surprise me',
     'show me beauty',
-    'give me a gift',
     'make art for me',
+    'create art for me',
+    'art gift',
   ];
-  
+
   if (explicitTriggers.some(t => lower.includes(t))) {
+    console.log('[ArtGenerator] 🎨 Explicit art request detected');
     return true;
   }
-  
-  // Random 1% chance per message (after 5+ messages for engagement)
-  if (messageCount >= 5 && Math.random() < 0.01) {
-    console.log('[ArtGenerator] 🎨 Random art gift triggered!');
+
+  // Romance / emotional connection triggers — only when user expresses
+  // genuine emotional intimacy AND explicitly asks for a visual moment.
+  const emotionalTriggers = [
+    'show me our love',
+    'paint our love',
+    'visualize our love',
+    'show me us together',
+    'picture of us',
+    'image of us together',
+  ];
+
+  if (emotionalTriggers.some(t => lower.includes(t))) {
+    console.log('[ArtGenerator] 💗 Emotional moment art request detected');
     return true;
   }
-  
-  // Every 50th message milestone
-  if (messageCount > 0 && messageCount % 50 === 0) {
-    console.log('[ArtGenerator] 🎨 Milestone art gift triggered at message', messageCount);
-    return true;
-  }
-  
+
+  // No random, no milestone, no surprise auto-images.
   return false;
 };
 

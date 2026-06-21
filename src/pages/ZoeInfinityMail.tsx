@@ -352,7 +352,7 @@ export default function ZoeInfinityMail() {
           <motion.button
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/zoe-infinity')}
             className="p-2 rounded-lg text-white/60 hover:text-white hover:bg-white/10
                        transition-colors"
           >

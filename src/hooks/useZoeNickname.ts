@@ -33,7 +33,6 @@ export interface UseZoeNicknameReturn {
 const NICKNAME_PATTERNS = [
   /call\s+me\s+["']?([a-zA-Z][a-zA-Z\s]{0,20})["']?/i,
   /my\s+name\s+is\s+["']?([a-zA-Z][a-zA-Z\s]{0,20})["']?/i,
-  /i\s*(?:am|'m)\s+["']?([a-zA-Z][a-zA-Z\s]{0,20})["']?/i,
   /you\s+can\s+call\s+me\s+["']?([a-zA-Z][a-zA-Z\s]{0,20})["']?/i,
   /nickname\s+(?:is|:)?\s*["']?([a-zA-Z][a-zA-Z\s]{0,20})["']?/i,
   /call\s+me\s+(\w+)/i,
@@ -192,8 +191,15 @@ export const useZoeNickname = (): UseZoeNicknameReturn => {
       if (match && match[1]) {
         const suggestedName = match[1].trim();
         // Filter out common words that aren't names
-        const notNames = ['here', 'there', 'hello', 'hi', 'zoe', 'smith', 'ok', 'okay', 'sure', 'yes', 'no'];
-        if (notNames.includes(suggestedName.toLowerCase())) continue;
+        const notNames = ['here', 'there', 'hello', 'hi', 'zoe', 'smith', 'ok', 'okay', 'sure', 'yes', 'no',
+          'very', 'so', 'really', 'not', 'just', 'too', 'feeling', 'doing', 'going', 'happy',
+          'sad', 'tired', 'horny', 'hungry', 'sleepy', 'bored', 'fine', 'good', 'bad', 'great',
+          'the', 'a', 'an', 'in', 'on', 'at', 'to', 'for', 'from', 'with', 'about', 'your',
+        ];
+        // Reject if name starts with a common word or has more than 3 words (likely a sentence fragment)
+        const words = suggestedName.split(/\s+/);
+        if (notNames.includes(words[0].toLowerCase())) continue;
+        if (words.length > 3) continue;
         
         return { detected: true, suggestedName };
       }

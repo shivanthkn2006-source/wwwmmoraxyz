@@ -96,10 +96,10 @@ const ENCODING_ATTACK_PATTERNS = [
   { pattern: /javascript\s*:/gi, name: 'JavaScript Protocol' },
   // Data URIs
   { pattern: /data:(?!image\/)[^;,]+;base64,/gi, name: 'Non-Image Data URI' },
-  // Hex encoded content
-  { pattern: /\x[0-9A-Fa-f]{2}(?:\x[0-9A-Fa-f]{2}){5,}/g, name: 'Hex Encoding Chain' },
-  // Unicode escape sequences
-  { pattern: /\u[0-9A-Fa-f]{4}(?:\u[0-9A-Fa-f]{4}){3,}/g, name: 'Unicode Escape Chain' },
+  // Hex encoded content (literal \xNN sequences)
+  { pattern: /\\x[0-9A-Fa-f]{2}(?:\\x[0-9A-Fa-f]{2}){5,}/g, name: 'Hex Encoding Chain' },
+  // Unicode escape sequences (literal \uNNNN sequences)
+  { pattern: /\\u[0-9A-Fa-f]{4}(?:\\u[0-9A-Fa-f]{4}){3,}/g, name: 'Unicode Escape Chain' },
 ];
 
 /**

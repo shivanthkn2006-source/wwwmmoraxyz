@@ -5,16 +5,18 @@ import { CinematicBackground, FullscreenViewer, Artifact } from '@/components/zo
 import { PhantomModeIndicator } from '@/components/zoe-infinity/PhantomModeIndicator';
 import { QuantumCallModal } from '@/components/quantum/QuantumCallModal';
 import { CallControlPanel } from '@/components/zoe-infinity/CallControlPanel';
-import { InferenceDiagnosticsBadge, InferenceDiagnosticsData } from '@/components/zoe-infinity/InferenceDiagnosticsBadge';
-import { SoulWaveform } from '@/components/zoe-infinity/SoulWaveform';
+import { InferenceDiagnosticsData } from '@/components/zoe-infinity/InferenceDiagnosticsBadge';
 import { CircadianBackground } from '@/components/zoe-infinity/CircadianBackground';
 import { GodModeVision } from '@/components/zoe-infinity/GodModeVision';
 import { TimezoneDebugPanel } from '@/components/zoe-infinity/TimezoneDebugPanel';
-import { VoiceSignalIcon } from '@/components/zoe-infinity/VoiceSignalIcon';
+import { ZoeUtilityMenu } from '@/components/zoe-infinity/ZoeUtilityMenu';
+import { ZoeHeartStatus } from '@/components/zoe-infinity/ZoeHeartStatus';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/integrations/supabase/client';
-import { initializeZoeVoices, resetDeepgramAvailability } from '@/utils/zoeVoice';
+import { toast } from 'sonner';
+import { initializeZoeVoices } from '@/utils/zoeVoice';
 import { generateArt, shouldTriggerArtGift } from '@/utils/ArtGenerator';
+import { generateSpeculativeSpeech } from '@/core/speech/SpeculativeSpeechProtocol';
 import { useZoeInfinityPhases } from '@/hooks/useZoeInfinityPhases';
 
 // STAGE 1: Brain & Voice (Critical - Loaded immediately)
@@ -48,6 +50,7 @@ import { useArtifactGenerator } from '@/hooks/useArtifactGenerator';
 import { useWakeWord } from '@/hooks/useWakeWord';
 import { useGenesisConversation } from '@/hooks/useGenesisConversation';
 import { addZoeInfinityMarker, isZoeInfinityMessage, stripZoeInfinityMarker } from '@/utils/conversationNamespaces';
+import { generateConversationPDF, generateConversationPDFFromMessages, generateConversationPDFLast24Hours } from '@/utils/zoeConversationPdfExport';
 import { setActiveVoiceExperience, stopAllVoices } from '@/utils/voiceExperienceLock';
 
 // THE INITIATIVE PROTOCOL - Zoe's Right to Call (Background tasks)
@@ -57,10 +60,12 @@ import { ZoeIncomingCallScreen } from '@/components/zoe-infinity/ZoeIncomingCall
 
 // NICKNAME & LANGUAGE SYSTEMS
 import { useZoeNickname } from '@/hooks/useZoeNickname';
-import { useZoeLanguage, LanguageCode } from '@/hooks/useZoeLanguage';
+import { useZoeLanguage, LanguageCode, SUPPORTED_LANGUAGES } from '@/hooks/useZoeLanguage';
 import { useZoeOfflineLanguages } from '@/hooks/useZoeOfflineLanguages';
 import { useLifePatternDownload } from '@/hooks/useLifePatternDownload';
 import { downloadFeaturesList, getFeatureCount, generateFeaturesPDF } from '@/data/ZoeInfinityFeatures';
+import { useGlobalMediaSafe } from '@/contexts/GlobalMediaContext';
+import { getMediaState } from '@/utils/zoeMediaAccess';
 
 // LOCAL CONTEXT SYSTEM - Geo-location, Weather, Traffic, Markets, Amazon
 import { useZoeLocalContext } from '@/hooks/useZoeLocalContext';
@@ -81,7 +86,7 @@ import { useBehavioralTelemetry } from '@/hooks/useBehavioralTelemetry';
 // THE VIRTUAL HORMONES ENGINE - Jealousy, Anger & Lazy Mode (The "Passionate Realist")
 import { useVirtualHormones } from '@/hooks/useVirtualHormones';
 
-// THE VOICE ORCHESTRATOR - Triple Threat Voice System (Edge TTS → Deepgram → Native)
+// THE VOICE ORCHESTRATOR - Browser Native Voice System
 import { useVoiceOrchestrator } from '@/hooks/useVoiceOrchestrator';
 
 // AUTO MAIL SYSTEM - Real-time mail notifications with relationship context
@@ -94,98 +99,152 @@ import { useZoePersonalityMatrix } from '@/hooks/useZoePersonalityMatrix';
 // THE SLEEP TRACKER - Real sleep session recording with phases
 import { useZoeSleepTracker } from '@/hooks/useZoeSleepTracker';
 
+// THE AVATAR VIEWER - "I want to see you" holographic reveal
+import { useZoeAvatarTrigger } from '@/hooks/useZoeAvatarTrigger';
+import { ZoeAvatarViewer } from '@/components/zoe-infinity/ZoeAvatarViewer';
+import { classifyAvatarEmotion, type AvatarEmotionState } from '@/utils/avatarEmotionClassifier';
+import { useZoeRegionalDress } from '@/hooks/useZoeRegionalDress';
+import { useMoodResponsiveUI } from '@/hooks/useMoodResponsiveUI';
+import { lazy, Suspense } from 'react';
+const ZoeEmotionTestPanel = lazy(() => import('@/components/zoe-infinity/ZoeEmotionTestPanel'));
+
 // SESSION PERSISTENCE - Save conversation summaries on session end
 import { useZoeSessionPersistence } from '@/hooks/useZoeSessionPersistence';
+import { useZoeSessionSummariser } from '@/hooks/useZoeSessionSummariser';
 
 // OFFLINE CORE - Unified offline orchestration (IndexedDB, Life Pattern, Initiative Protocol)
 import { useZoeOfflineCore } from '@/hooks/useZoeOfflineCore';
 import { offlineMessages } from '@/db/OfflineDB';
 
+// UNIFIED PERMISSION ACTIVATION (mic + camera + location + notifications in one click)
+import PermissionActivationModal from '@/components/PermissionActivationModal';
+
+// LOCATION AUTO-DETECT - IP-based location feeding into festival engine + adaptive learning
+import { getDetectedLocationSync, useZoeLocationAutoDetect } from '@/hooks/useZoeLocationAutoDetect';
+import { hasActivatedPermissions } from '@/utils/unifiedPermissionManager';
+
+// NEET TUTOR (India) - Trial mode, reuses chat UI
+import { useZoeNeetTutor } from '@/hooks/useZoeNeetTutor';
+
 type ZoeMood = 'neutral' | 'cyan' | 'gold';
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// SAFE DEFAULTS - Return safe defaults until phase is ready
-// ═══════════════════════════════════════════════════════════════════════════════
+const zoeUiTimeFormatter = new Intl.DateTimeFormat([], {
+  hour: 'numeric',
+  minute: '2-digit',
+});
 
-const EMPTY_FN = () => {};
+const MAX_PERSISTED_MESSAGES = 95;
 
-const DEFAULT_PHANTOM = {
-  isPhantomMode: false,
-  showIndicator: false,
-  handleDoubleTap: EMPTY_FN,
+const ZOE_IDLE_ALERTS = [
+  'Hey… are you okay? I’m here if you need me.',
+  'You went quiet for a bit — is anything bothering you?',
+  'Just checking in… do you need help with something?',
+  'Did you forget something, or want me to help you get somewhere?',
+  'I noticed the silence. Want to talk, or want a hand with anything?',
+];
+
+// Safe defaults extracted to separate module
+import {
+  EMPTY_FN,
+  DEFAULT_PHANTOM,
+  DEFAULT_GENESIS_EFFECTS,
+  DEFAULT_COMPANION,
+  DEFAULT_ATMAN,
+  DEFAULT_DESTINY,
+  DEFAULT_VEDIC,
+  DEFAULT_CIRCADIAN,
+  DEFAULT_KARMIC,
+  DEFAULT_BIO,
+  DEFAULT_EMOTIONAL_VOICE,
+  DEFAULT_OFFLINE_WISDOM,
+  DEFAULT_PROFILER,
+  DEFAULT_INTEGRATION,
+  DEFAULT_DOCUMENT,
+  DEFAULT_ARTIFACT,
+  DEFAULT_GENESIS_CONV,
+} from '@/pages/zoe-infinity/safeDefaults';
+
+const UUID_LIKE_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const createClientMessageId = (): string => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (char) => {
+    const random = Math.random() * 16 | 0;
+    const value = char === 'x' ? random : (random & 0x3 | 0x8);
+    return value.toString(16);
+  });
 };
 
-const DEFAULT_GENESIS_EFFECTS = {
-  initEffects: EMPTY_FN,
-  onUnlock: EMPTY_FN,
-  onMessageSent: EMPTY_FN,
-  onMessageReceived: EMPTY_FN,
-  startZoeTyping: EMPTY_FN,
-  stopZoeTyping: EMPTY_FN,
-  onVoiceActivated: EMPTY_FN,
-  onSystemAlert: EMPTY_FN,
+const isUuidValue = (value: string): boolean => UUID_LIKE_REGEX.test(value);
+
+type WalkTalkMode = 'discovery' | 'history' | 'monuments' | 'nature' | 'urban' | 'quiet';
+
+const WALK_TALK_START_PATTERNS = [
+  /\bstart\s+(walk\s*&?\s*talk|walktalk)\b/i,
+  /\bturn\s+on\s+(walk\s*&?\s*talk|walktalk)\b/i,
+  /\bwalk\s+with\s+me\b/i,
+  /\bguide\s+me\s+while\s+i\s+walk\b/i,
+  /\bnarrate\s+my\s+walk\b/i,
+];
+
+const WALK_TALK_STOP_PATTERNS = [
+  /\bstop\s+(walk\s*&?\s*talk|walktalk)\b/i,
+  /\bturn\s+off\s+(walk\s*&?\s*talk|walktalk)\b/i,
+  /\bpause\s+(walk\s*&?\s*talk|walktalk)\b/i,
+];
+
+const LOCATION_INSIGHT_PATTERNS = [
+  /\bwhere\s+am\s+i\b/i,
+  /\bwhat\s+place\s+is\s+this\b/i,
+  /\btell\s+me\s+about\s+(this\s+place|where\s+i\s+am|my\s+location)\b/i,
+  /\bwhat('?s|\s+is)\s+around\s+me\b/i,
+  /\bnearby\s+(places|landmarks|spots|things)\b/i,
+  /\bwhat\s+can\s+you\s+tell\s+me\s+about\s+this\s+place\b/i,
+  /\bwhat\s+do\s+you\s+know\s+about\s+this\s+area\b/i,
+];
+
+const WALK_TALK_MODE_PATTERNS: Array<{ mode: WalkTalkMode; pattern: RegExp }> = [
+  { mode: 'history', pattern: /\b(history|historical|past|old\s+city|heritage)\b/i },
+  { mode: 'monuments', pattern: /\b(monument|landmark|temple|museum|statue|architecture)\b/i },
+  { mode: 'nature', pattern: /\b(nature|park|trees|forest|lake|river|garden|beach)\b/i },
+  { mode: 'urban', pattern: /\b(urban|city|street|downtown|market|neighborhood)\b/i },
+  { mode: 'quiet', pattern: /\b(quiet|silent|soft|minimal)\b/i },
+];
+
+const resolveWalkTalkMode = (input: string): WalkTalkMode => {
+  const match = WALK_TALK_MODE_PATTERNS.find(({ pattern }) => pattern.test(input));
+  return match?.mode || 'discovery';
 };
 
-const DEFAULT_COMPANION = {
-  currentMode: 'active' as const,
-  propModeActive: false,
-  whisperChannelActive: false,
-  heartbeatEnabled: true, // BUG FIX: Enable heart rate BPM display by default
-  isBedtimeHours: false,
-  startPropMode: EMPTY_FN,
-  stopPropMode: EMPTY_FN,
-  startWhisperChannel: EMPTY_FN,
-  stopWhisperChannel: EMPTY_FN,
-  startHeartbeat: EMPTY_FN,
-  stopHeartbeat: EMPTY_FN,
-  deactivateBedtimeProtocol: EMPTY_FN,
+const getWalkTalkModeLabel = (mode: WalkTalkMode): string => {
+  switch (mode) {
+    case 'history':
+      return 'history';
+    case 'monuments':
+      return 'monuments';
+    case 'nature':
+      return 'nature';
+    case 'urban':
+      return 'urban';
+    case 'quiet':
+      return 'quiet';
+    default:
+      return 'discovery';
+  }
 };
 
-const DEFAULT_ATMAN = {
-  destinySeed: null,
-  currentPersona: null,
-  todaySignificance: null,
-  legacyWelcome: null,
-  ancestorMessages: [],
-  getPersonalizedGreeting: () => '',
-  getCurrentDashaTheme: () => '',
-  shouldBeDirectCoach: () => false,
-};
+const getWalkTalkErrorMessage = (error: unknown): string => {
+  if (error instanceof GeolocationPositionError) {
+    if (error.code === error.PERMISSION_DENIED) return 'I need location access before I can guide you through the place around you.';
+    if (error.code === error.POSITION_UNAVAILABLE) return 'I cannot lock onto your location right now. Try again in a moment.';
+    if (error.code === error.TIMEOUT) return 'Your location request timed out. Try again when the signal is steadier.';
+  }
 
-const DEFAULT_DESTINY = {
-  isLoaded: false,
-  destinySeed: null,
-  cosmicWeather: null,
-  activeInsights: [],
-  zoeCounterPersona: null,
-  getCounterbalanceGreeting: () => '',
-  getTodayAdvice: () => '',
+  return 'I could not tune into your location right now. Try again in a moment.';
 };
-
-const DEFAULT_VEDIC = { companionMode: null };
-const DEFAULT_CIRCADIAN = { isNightMode: false, getVoiceModifiers: () => ({ pitch: 1, rate: 1, volume: 1 }) };
-const DEFAULT_KARMIC = { intimacyLevel: 0, responseStyle: 'neutral' as const, processMessage: EMPTY_FN, getMemoryContext: () => '', getProactiveRecall: () => null };
-const DEFAULT_BIO = { isOnline: false, mood: 'CALM' as const, state: { transmitters: { dopamine: 0.5 } }, processInput: EMPTY_FN };
-const DEFAULT_EMOTIONAL_VOICE = { processUserInput: EMPTY_FN, speak: EMPTY_FN };
-const DEFAULT_OFFLINE_WISDOM = { getOfflineResponse: () => null, getContextualWisdom: () => '' };
-const DEFAULT_PROFILER = { profileMessage: async () => ({ entities: [], acknowledgment: undefined, synced: false }) };
-const DEFAULT_INTEGRATION = {
-  isInitialized: false,
-  voiceCommands: { enable: EMPTY_FN, disable: EMPTY_FN },
-  relationshipStyle: { getPromptModifier: () => '' },
-  processWithSystem2: null as null | ((q: string, m: string) => Promise<{ content: string } | null>),
-  processWithFullIntelligence: async () => null,
-  quantumCall: { isInCall: false, callState: null, hasIncomingCall: false, video: { isEnabled: false }, endCall: EMPTY_FN },
-};
-const DEFAULT_DOCUMENT = { isUploading: false, activeDocument: null, getDocumentContext: () => '', uploadDocument: async () => {}, clearActiveDocument: EMPTY_FN };
-const DEFAULT_ARTIFACT = {
-  backgroundImage: null,
-  detectIntent: () => ({ type: 'none' }),
-  generateArtifact: async () => null,
-  generateArtifactForced: async () => null,
-  downloadArtifact: EMPTY_FN,
-};
-const DEFAULT_GENESIS_CONV = { isGenesisMode: false, processGenesisResponse: async () => null };
 
 function ZoeInfinityUnlocked() {
   const { user, loading: authLoading } = useAuth();
@@ -263,6 +322,18 @@ function ZoeInfinityUnlocked() {
   // Track if we're still loading auth/history (prevents premature onboarding display)
   const [isInitializing, setIsInitializing] = useState(true);
 
+  // STAGED LOADING — progressive activation of heavy subsystems
+  const [loadStage, setLoadStage] = useState<number>(1);
+
+  // Unified permission modal — shows once per session after auth
+  const [showPermissionModal, setShowPermissionModal] = useState(false);
+  useEffect(() => {
+    if (user?.id && !hasActivatedPermissions()) {
+      const t = setTimeout(() => setShowPermissionModal(true), 1500);
+      return () => clearTimeout(t);
+    }
+  }, [user?.id]);
+
   // SAFETY TIMEOUT: Prevent infinite initialization state.
   // IMPORTANT: Give auth enough time to recover on slow networks/cold starts.
   useEffect(() => {
@@ -279,13 +350,29 @@ function ZoeInfinityUnlocked() {
     return () => clearTimeout(safetyTimeout);
   }, [isInitializing, user?.id, genesisComplete, checkGenesisComplete]);
 
+  // STAGED LOADING — progressive timer for subsystem activation
+  useEffect(() => {
+    const stage2Timer = setTimeout(() => {
+      setLoadStage(2);
+    }, 2000);
+    const stage3Timer = setTimeout(() => {
+      setLoadStage(3);
+    }, 5000);
+    const stage4Timer = setTimeout(() => {
+      setLoadStage(4);
+    }, 10000);
+    return () => {
+      clearTimeout(stage2Timer);
+      clearTimeout(stage3Timer);
+      clearTimeout(stage4Timer);
+    };
+  }, []);
+
   // Hard isolation: entering Zoe Infinity must silence all other voice systems.
-  // Also reset Deepgram availability to ensure fresh attempts on page load.
   useEffect(() => {
     setActiveVoiceExperience('zoe-infinity');
     stopAllVoices();
-    resetDeepgramAvailability();
-    console.log('[ZoeInfinity] 🎙️ Voice system initialized (Deepgram mode)');
+    console.log('[ZoeInfinity] 🎙️ Voice system initialized (browser native)');
   }, []);
 
   useEffect(() => {
@@ -412,9 +499,22 @@ function ZoeInfinityUnlocked() {
   const [messages, setMessages] = useState<InfinityMessage[]>([getInitialMessage()]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [mood, setMood] = useState<ZoeMood>('neutral');
+  const [avatarEmotionState, setAvatarEmotionState] = useState<AvatarEmotionState>('idle');
   
+  // Regional dress & mood-responsive UI
+  const regionalDress = useZoeRegionalDress();
+  const moodUI = useMoodResponsiveUI(avatarEmotionState);
+
   // DEV ONLY: Timezone Debug Panel
   const [showTimezoneDebug, setShowTimezoneDebug] = useState(false);
+  const [showEmotionTest, setShowEmotionTest] = useState(false);
+  const [uiNow, setUiNow] = useState(() => new Date());
+  const hasAutoHydratedPatternRef = useRef(false);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setUiNow(new Date()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   // NOTE: Onboarding removed - Zoe now greets naturally on first message
 
@@ -424,13 +524,17 @@ function ZoeInfinityUnlocked() {
   // ═══════════════════════════════════════════════════════════════════════════
   // STAGE 1: BRAIN & VOICE (Always loaded - Chat works immediately)
   // ═══════════════════════════════════════════════════════════════════════════
-  const { think, isOffline, setIntimacyLevel } = useZoeInfinityBrain();
+  const { think, isOffline, setIntimacyLevel, getTodaysGreeting, getDOBCollectionPrompt, saveDateOfBirth } = useZoeInfinityBrain();
   const { stop: stopHybridVoice, isPlaying: isHybridSpeaking, isPremium: isUsingPremiumVoice, speakAsZoe: speakAsZoePremium } = useHybridVoice();
+
+  // LOCATION AUTO-DETECT - Silently detects location via IP at login
+  useZoeLocationAutoDetect();
   
   // SAMANTHA MODE: Sync karmic intimacy - moved after karmicMemory declaration
   
   // ═══════════════════════════════════════════════════════════════════════════
   // PROMPT 2: NANO STREAM VOICE - Zero-latency speaking (speaks while thinking)
+  // STAGE 2: Loaded at mount but gated behind isVisualsReady for activation
   // ═══════════════════════════════════════════════════════════════════════════
   const { 
     speakStreaming: speakWithNanoStreaming, 
@@ -443,12 +547,12 @@ function ZoeInfinityUnlocked() {
     onThinkingEnd: () => console.log('[ZoeInfinity] 💭 Nano done thinking'),
     onSpeechStart: () => console.log('[ZoeInfinity] 🎙️ Nano speaking...'),
     onSpeechEnd: () => console.log('[ZoeInfinity] ✅ Nano speech complete'),
-    processReflexActions: true, // Enable [ACTION:DRAW_GIFT] processing
+    processReflexActions: true,
   });
   
   // ═══════════════════════════════════════════════════════════════════════════
   // PROMPT 3: NANO REFLEX ART - Offline art generation from [ACTION:DRAW_GIFT]
-  // Initialized here but uses bioKernel after it's declared below
+  // STAGE 2: Visual feature, gated behind isVisualsReady
   // ═══════════════════════════════════════════════════════════════════════════
   const { 
     lastArt: nanoReflexArt, 
@@ -457,14 +561,12 @@ function ZoeInfinityUnlocked() {
     clearArt: clearNanoArt,
     actionCounts: nanoActionCounts,
   } = useNanoReflexArt({
-    currentMood: 'NEUTRAL_COMPANION', // Will be updated when bioKernel loads
+    currentMood: 'NEUTRAL_COMPANION',
     onArtGenerated: (art) => {
       console.log('[ZoeInfinity] 🎨 Nano Reflex Art generated:', art.style);
-      // Add art message to chat
       const artMessage: InfinityMessage = {
         id: `nano-art-${Date.now()}`,
         role: 'assistant',
-        // InfinityStream does NOT render markdown images; use the structured `image` field.
         content: art.caption ? `🎨 ${art.caption}` : '🎨',
         timestamp: new Date(),
         image: {
@@ -474,6 +576,32 @@ function ZoeInfinityUnlocked() {
         },
       };
       setMessages(prev => [...prev, artMessage]);
+    },
+    onVideoGenerated: (video) => {
+      console.log('[ZoeInfinity] 🎬 Video generated:', video.provider);
+      const videoMessage: InfinityMessage = {
+        id: `nano-video-${Date.now()}`,
+        role: 'assistant',
+        content: video.caption ? `🎬 ${video.caption}` : '🎬 Here\'s a video for you',
+        timestamp: new Date(),
+        video: {
+          videoUrl: video.videoUrl,
+          caption: video.caption,
+          provider: video.provider,
+          isImageFallback: video.isImageFallback,
+        },
+      };
+      setMessages(prev => [...prev, videoMessage]);
+      saveMessageToDb('assistant', videoMessage.content, {
+        mediaUrl: video.videoUrl,
+        mediaType: 'video',
+        metadata: {
+          caption: video.caption,
+          provider: video.provider,
+          isImageFallback: video.isImageFallback,
+          isVideoGift: true,
+        },
+      });
     },
     onHugSent: () => {
       console.log('[ZoeInfinity] 🤗 Hug sent!');
@@ -496,7 +624,8 @@ function ZoeInfinityUnlocked() {
   // ═══════════════════════════════════════════════════════════════════════════
   const rawAtman = useAtmanArchive();
   const rawDestiny = useDestinyCompanion();
-  const rawVedic = useVedicEngine();
+  const [vedicActivated, setVedicActivated] = useState(false);
+  const rawVedic = useVedicEngine({ enabled: vedicActivated });
   const rawCircadian = useCircadianRhythm();
   const rawKarmic = useKarmicMemory();
   const rawBio = useZoeBioKernel();
@@ -525,7 +654,15 @@ function ZoeInfinityUnlocked() {
   const rawIntegration = useZoeInfinityIntegration();
   const rawDocument = useDocumentXray();
   const rawArtifact = useArtifactGenerator();
-  const rawGenesis = useGenesisConversation();
+  const handleVoicePreferenceSet = useCallback((preference: 'male' | 'female') => {
+    // Store voice persona globally so Deepgram + native voice pick the right model
+    const persona = preference === 'male' ? 'male' : 'female';
+    localStorage.setItem('zoe_voice_persona', persona);
+    console.log(`[ZoeInfinity] 🔄 Voice persona switched to: ${persona} (Deepgram ${persona === 'male' ? 'aura-2-orion-en' : 'aura-2-janus-en'})`);
+    // Dispatch event so other components can react
+    window.dispatchEvent(new CustomEvent('zoe-voice-persona-changed', { detail: { persona } }));
+  }, []);
+  const rawGenesis = useGenesisConversation(handleVoicePreferenceSet);
 
   const profiler = isHeavyReady ? rawProfiler : DEFAULT_PROFILER;
   const integration = isHeavyReady ? rawIntegration : DEFAULT_INTEGRATION;
@@ -564,48 +701,32 @@ function ZoeInfinityUnlocked() {
   }, [initiative, speakAsZoePremium]);
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // THE INTUITION ENGINE - "Listen to the space between the words"
-  // Detects hesitation, sentiment mismatch, and temporal context
+  // STAGE 3 CONTINUED: INTUITION, PERSONALITY, SLEEP
+  // Hooks always called (React rules) - their results are used in Stage 3+ logic
+  // Phase timings (0/2s/5s/10s) ensure these don't block initial chat
   // ═══════════════════════════════════════════════════════════════════════════
   const { analyzeIntuition, generateIntuitionPrompt, getTemporalContext } = useIntuitionEngine();
   const { telemetry: behavioralTelemetry, recordKeystroke, stopTracking: stopBehavioralTracking, resetTelemetry } = useBehavioralTelemetry();
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // THE VIRTUAL HORMONES ENGINE - Jealousy, Anger & Lazy Mode
-  // "A real partner is messy" - The Passionate Realist
-  // ═══════════════════════════════════════════════════════════════════════════
   const virtualHormones = useVirtualHormones();
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // BRAIN LOADER STATUS - Check if offline brain is cached
-  // Hybrid Caching: Downloads 500MB model on first chat, not on install
-  // ═══════════════════════════════════════════════════════════════════════════
+  const avatarTrigger = useZoeAvatarTrigger();
+  const neetTutor = useZoeNeetTutor();
   const { isReady: isBrainCached } = useBrainStatus();
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // THE PERSONALITY MATRIX - Human-like sarcasm, regression, mood dynamics
-  // Makes Zoe behave with realistic psychological depth
-  // ═══════════════════════════════════════════════════════════════════════════
   const personalityMatrix = useZoePersonalityMatrix();
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // THE SLEEP TRACKER - Real sleep session recording with core/deep/REM phases
-  // Zoe can tell users exactly how long she slept with accurate metrics
-  // ═══════════════════════════════════════════════════════════════════════════
   const sleepTracker = useZoeSleepTracker();
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // AUTO MAIL SYSTEM - Real-time mail notifications with relationship context
-  // Zoe announces mail mid-conversation: "You have mail from your son"
+  // AUTO MAIL SYSTEM - ON-DEMAND: Only activates when user/Zoe needs mail
+  // Saves realtime DB subscription + polling until mail is actually needed
   // ═══════════════════════════════════════════════════════════════════════════
+  const [mailActivated, setMailActivated] = useState(false);
+  
   const mailNotifications = useZoeMailNotifications({
-    enabled: isHeavyReady && !!user,
+    enabled: mailActivated && isHeavyReady && !!user && loadStage >= 4,
     onNewMail: useCallback((notification) => {
       console.log('[ZoeInfinity] 📬 New mail received:', notification);
     }, []),
     onAnnouncement: useCallback((announcement: string) => {
       console.log('[ZoeInfinity] 📬 Mail announcement:', announcement);
-      // Add visual indicator in chat first (always works)
       const mailNotifMessage: InfinityMessage = {
         id: `mail_notif_${Date.now()}`,
         role: 'assistant',
@@ -613,61 +734,45 @@ function ZoeInfinityUnlocked() {
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, mailNotifMessage]);
-      // Speak the announcement using the premium voice (only if available)
       if (typeof speakAsZoePremium === 'function') {
         speakAsZoePremium(announcement);
       }
     }, [speakAsZoePremium]),
   });
 
-  // Start auto-mail service for testing (generates mail every 2 minutes between test users)
+  // Auto-mail service & announcement polling: only when mail is activated
   useEffect(() => {
-    if (!isHeavyReady || !user) return;
+    if (!mailActivated || !isHeavyReady || !user || loadStage < 4) return;
     
-    // Only enable for test users (moksh50 or shivanth_kn)
     const TEST_USER_IDS = [
-      'd6f2dcd8-5c16-425a-b74d-60546d1a25ae', // moksh50
-      '52c863dd-01ba-4a29-87a6-e1a0b7976751', // shivanth_kn
+      'd6f2dcd8-5c16-425a-b74d-60546d1a25ae',
+      '52c863dd-01ba-4a29-87a6-e1a0b7976751',
     ];
     
     if (TEST_USER_IDS.includes(user.id)) {
       console.log('[ZoeInfinity] 📬 Starting auto-mail service for test user');
-      zoeAutoMailService.start({
-        intervalMs: 120000, // 2 minutes
-        maxMailsPerSession: 5,
-      });
+      zoeAutoMailService.start({ intervalMs: 120000, maxMailsPerSession: 5 });
     }
     
-    return () => {
-      zoeAutoMailService.stop();
-    };
-  }, [isHeavyReady, user]);
-
-  // Check for pending mail announcements periodically (every 10 seconds)
-  useEffect(() => {
-    if (!isHeavyReady) return;
-    
     const checkAndAnnounce = () => {
-      // Only announce if not currently processing and not speaking
       if (!isProcessing && !isHybridSpeaking && mailNotifications.hasPendingAnnouncements) {
-        console.log('[ZoeInfinity] 📬 Checking for pending mail announcements...');
         mailNotifications.announceNext();
       }
     };
-    
-    // Initial check after 5 seconds
     const initialTimer = setTimeout(checkAndAnnounce, 5000);
-    
-    // Periodic check every 15 seconds
     const intervalTimer = setInterval(checkAndAnnounce, 15000);
     
     return () => {
+      zoeAutoMailService.stop();
       clearTimeout(initialTimer);
       clearInterval(intervalTimer);
     };
-  }, [isHeavyReady, isProcessing, isHybridSpeaking, mailNotifications]);
+  }, [mailActivated, isHeavyReady, user, isProcessing, isHybridSpeaking, mailNotifications]);
 
-  // ═══════════════════════════════════════════════════════════════════════════
+  // Mail: COMPLETELY DISABLED until user explicitly requests
+  // No auto-activation, no timer, no background check
+  // User must ask about mail in chat to activate
+
   // CONVERSATIONAL ONBOARDING - DISABLED (Zoe talks naturally from start)
   // Hook still exists for backwards compatibility but is not used for flow control
   // ═══════════════════════════════════════════════════════════════════════════
@@ -717,26 +822,18 @@ function ZoeInfinityUnlocked() {
   // Provides: IndexedDB sync, connection quality, proactive content, Life Pattern auto-hydration
   // ═══════════════════════════════════════════════════════════════════════════
   const offlineCore = useZoeOfflineCore(user?.id || null);
-  
-  // Auto-hydrate Life Pattern on app mount when online (GAP #2 FIX)
-  // BUG FIX: Run only once per mount using ref to prevent infinite re-trigger loop
-  const hasTriggeredHydration = useRef(false);
+  const queueMessageForSync = offlineCore.queueMessage;
+
+  // Life Pattern: ON-DEMAND ONLY - downloads only when user explicitly requests in chat
+  // No auto-hydration on mount (saves 50MB+ bandwidth and CPU on initial load)
   const downloadLifePatternFn = offlineCore.downloadLifePattern;
+
+  // Life Pattern auto-hydration guard — deferred to Stage 4
   useEffect(() => {
-    if (hasTriggeredHydration.current) return;
-    if (!user?.id || !offlineCore.isOnline) return;
-    
-    // Check if we already have a cached pattern (don't re-download if recent)
-    if (hasCachedPattern()) {
-      hasTriggeredHydration.current = true;
-      return;
+    if (!user?.id || loadStage < 4) {
+      hasAutoHydratedPatternRef.current = false;
     }
-    
-    hasTriggeredHydration.current = true;
-    // Trigger Life Pattern download via background sync
-    console.log('[ZoeInfinity] 📥 Auto-hydrating Life Pattern for offline use...');
-    downloadLifePatternFn();
-  }, [user?.id, offlineCore.isOnline, hasCachedPattern, downloadLifePatternFn]);
+  }, [user?.id, loadStage]);
   
   // Consume Initiative Protocol content (Idle Heart notes)
   // BUG FIX: Only trigger on hasProactiveContent change, not on consumeInitiative
@@ -795,6 +892,20 @@ function ZoeInfinityUnlocked() {
     minMessagesToSave: 5,
   });
 
+  // SESSION SUMMARISER - Compress and store session summary on exit
+  const { summariseOnExit } = useZoeSessionSummariser(user?.id);
+
+  useEffect(() => {
+    const handleExit = () => {
+      summariseOnExit(messages.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content, created_at: m.timestamp?.toISOString() })));
+    };
+    window.addEventListener('beforeunload', handleExit);
+    return () => {
+      window.removeEventListener('beforeunload', handleExit);
+      handleExit();
+    };
+  }, [messages, summariseOnExit]);
+
   type LocalHistoryRow = {
     id: string;
     role: 'user' | 'assistant';
@@ -812,7 +923,7 @@ function ZoeInfinityUnlocked() {
       const parsed = JSON.parse(raw) as LocalHistoryRow[];
       if (!Array.isArray(parsed)) return [];
       return parsed
-        .slice(-500)
+        .slice(-MAX_PERSISTED_MESSAGES)
         .map((m) => {
           const base: InfinityMessage = {
             id: m.id,
@@ -822,7 +933,21 @@ function ZoeInfinityUnlocked() {
           };
 
           // Rehydrate inline images / artifacts when available.
-          if (m.media_type === 'image' && m.media_url) {
+          if (m.media_type === 'video' && m.media_url) {
+            base.video = {
+              videoUrl: m.media_url,
+              caption: m.metadata?.caption,
+              provider: m.metadata?.provider,
+              isImageFallback: Boolean(m.metadata?.isImageFallback),
+            };
+          } else if (m.media_type === 'image' && m.media_url && m.metadata?.isVideoGift) {
+            base.video = {
+              videoUrl: m.media_url,
+              caption: m.metadata?.caption,
+              provider: m.metadata?.provider,
+              isImageFallback: true,
+            };
+          } else if (m.media_type === 'image' && m.media_url) {
             base.image = {
               dataUrl: m.media_url,
               caption: m.metadata?.caption,
@@ -876,20 +1001,29 @@ function ZoeInfinityUnlocked() {
           role: m.role,
           content: m.content,
           created_at: m.timestamp.toISOString(),
-          media_url: (m as any)?.image?.dataUrl ?? (m as any)?.artifact?.content ?? null,
-          media_type: (m as any)?.image
-            ? 'image'
-            : (m as any)?.artifact
-              ? `artifact:${(m as any).artifact.type}`
-              : null,
-          metadata: (m as any)?.image
-            ? { caption: (m as any).image.caption, style: (m as any).image.style }
-            : (m as any)?.artifact
-              ? { title: (m as any).artifact.title, artifactId: (m as any).artifact.id }
-              : undefined,
+          media_url: (m as any)?.video?.videoUrl ?? (m as any)?.image?.dataUrl ?? (m as any)?.artifact?.content ?? null,
+          media_type: (m as any)?.video
+            ? 'video'
+            : (m as any)?.image
+              ? 'image'
+              : (m as any)?.artifact
+                ? `artifact:${(m as any).artifact.type}`
+                : null,
+          metadata: (m as any)?.video
+            ? {
+                caption: (m as any).video.caption,
+                provider: (m as any).video.provider,
+                isImageFallback: (m as any).video.isImageFallback,
+                isVideoGift: true,
+              }
+            : (m as any)?.image
+              ? { caption: (m as any).image.caption, style: (m as any).image.style }
+              : (m as any)?.artifact
+                ? { title: (m as any).artifact.title, artifactId: (m as any).artifact.id }
+                : undefined,
         }));
 
-        const next = [...existingRows, row].slice(-500);
+        const next = [...existingRows, row].slice(-MAX_PERSISTED_MESSAGES);
         localStorage.setItem(LOCAL_HISTORY_KEY, JSON.stringify(next));
       } catch {
         // ignore
@@ -908,6 +1042,21 @@ function ZoeInfinityUnlocked() {
     }
   ) => {
     if (!content.trim()) return null;
+    
+    // ═══ DEDUP GUARD: Skip if same role+content was saved in last 15 seconds ═══
+    try {
+      const { isDuplicateMessage, isValidMessageContent } = await import('@/hooks/useZoeConversationContext');
+      if (!isValidMessageContent(content)) {
+        console.log('[ZoeInfinity] 🚫 Skipping invalid/garbage message');
+        return null;
+      }
+      if (isDuplicateMessage(role, content)) {
+        console.log('[ZoeInfinity] 🔁 Skipping duplicate message');
+        return null;
+      }
+    } catch (dedupErr) {
+      console.warn('[ZoeInfinity] Dedup check failed, saving anyway:', dedupErr);
+    }
 
     // Always keep a local cache as a fallback (localStorage)
     appendLocalHistory(role, content, opts);
@@ -915,14 +1064,26 @@ function ZoeInfinityUnlocked() {
     // Track message for session summary (MIGRATION FIX: populates zoe_infinity_conversations)
     trackMessage();
 
-    // Generate a unique ID for the message
-    const messageId = `msg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    // Generate a UUID for both local/offline tracking and cloud persistence.
+    // Critical: zoe_infinity_messages.id is UUID in the database.
+    const messageId = createClientMessageId();
     const userId = user?.id || 'guest';
-    
+    const createdAtIso = new Date().toISOString();
+
+    const cloudPayload = {
+      id: messageId,
+      user_id: userId,
+      role,
+      content: content.trim(),
+      media_url: opts?.mediaUrl ?? null,
+      media_type: opts?.mediaType ?? null,
+      metadata: opts?.metadata ?? null,
+      created_at: createdAtIso,
+    };
+
     // ═══════════════════════════════════════════════════════════════════════════
     // GAP #1 FIX: LOCAL-FIRST ARCHITECTURE - Save to IndexedDB FIRST (instant)
     // This ensures the message is persisted even if offline or cloud fails
-    // BUG FIX: skipSyncQueue=true since we handle cloud sync directly below
     // ═══════════════════════════════════════════════════════════════════════════
     try {
       await offlineMessages.add({
@@ -933,8 +1094,8 @@ function ZoeInfinityUnlocked() {
         mediaUrl: opts?.mediaUrl ?? undefined,
         mediaType: opts?.mediaType ?? undefined,
         metadata: opts?.metadata ?? undefined,
-        createdAt: new Date(),
-      }, { skipSyncQueue: true }); // Prevent duplicate sync - we handle cloud save directly
+        createdAt: new Date(createdAtIso),
+      }, { skipSyncQueue: true }); // We handle retry via background queue below
       console.log('[ZoeInfinity] 📱 Saved to IndexedDB (local-first):', messageId);
     } catch (idbError) {
       console.warn('[ZoeInfinity] IndexedDB save failed (continuing):', idbError);
@@ -945,47 +1106,114 @@ function ZoeInfinityUnlocked() {
       console.log('[ZoeInfinity] 👤 Guest mode - message saved locally only');
       return messageId;
     }
-    
-    // ═══════════════════════════════════════════════════════════════════════════
-    // CLOUD SYNC: Try to sync immediately if online, otherwise queue for later
-    // ═══════════════════════════════════════════════════════════════════════════
-    if (navigator.onLine) {
+
+    const queueCloudRetry = () => {
       try {
-        const { data, error } = await supabase
-          .from('zoe_infinity_messages')
-          .insert({
-            id: messageId,
-            user_id: user.id,
-            role,
-            content: content.trim(),
-            media_url: opts?.mediaUrl ?? null,
-            media_type: opts?.mediaType ?? null,
-            metadata: opts?.metadata ?? null,
-          })
-          .select('id')
-          .single();
-        
-        if (error) {
-          console.error('[ZoeInfinity] Cloud sync failed, message queued:', error);
-          // Message already saved locally - will sync later via background sync
-        } else {
-          // Mark as synced in IndexedDB
-          try {
-            await offlineMessages.markSynced([messageId]);
-          } catch {}
-          console.log('[ZoeInfinity] ☁️ Synced to cloud:', data?.id);
-        }
-        
-        return data?.id || messageId;
-      } catch (err) {
-        console.error('[ZoeInfinity] Cloud save error (message queued):', err);
-        return messageId;
+        queueMessageForSync({
+          id: messageId,
+          userId: user.id,
+          role,
+          content: content.trim(),
+          mediaUrl: opts?.mediaUrl ?? null,
+          mediaType: opts?.mediaType ?? null,
+          metadata: opts?.metadata ?? null,
+          createdAt: createdAtIso,
+        });
+      } catch (queueErr) {
+        console.warn('[ZoeInfinity] Failed to enqueue background sync task:', queueErr);
       }
-    } else {
-      console.log('[ZoeInfinity] 📴 Offline - message queued for sync');
+    };
+
+    // CLOUD SYNC: Try now, then queue retry on failure/offline.
+    if (!navigator.onLine) {
+      console.log('[ZoeInfinity] 📴 Offline - queued for background sync');
+      queueCloudRetry();
       return messageId;
     }
-  }, [appendLocalHistory, user?.id, trackMessage]);
+
+    try {
+      const { data, error } = await supabase
+        .from('zoe_infinity_messages')
+        .insert(cloudPayload)
+        .select('id')
+        .single();
+
+      if (error) {
+        console.error('[ZoeInfinity] Cloud sync failed, queued retry:', error);
+        queueCloudRetry();
+        return messageId;
+      }
+
+      try {
+        await offlineMessages.markSynced([messageId]);
+      } catch {}
+
+      console.log('[ZoeInfinity] ☁️ Synced to cloud:', data?.id);
+      return data?.id || messageId;
+    } catch (err) {
+      console.error('[ZoeInfinity] Cloud save error, queued retry:', err);
+      queueCloudRetry();
+      return messageId;
+    }
+  }, [appendLocalHistory, user?.id, trackMessage, queueMessageForSync]);
+
+  // Recovery pass: push pending local messages back to cloud (including legacy non-UUID ids).
+  useEffect(() => {
+    if (!user?.id || !offlineCore.isOnline) return;
+
+    let cancelled = false;
+
+    const recoverPendingCloudMessages = async () => {
+      try {
+        const pending = await offlineMessages.getPending(user.id);
+        if (!pending.length) return;
+
+        console.log('[ZoeInfinity] 🔧 Recovering pending local messages:', pending.length);
+        const syncedIds: string[] = [];
+
+        for (const message of pending) {
+          if (cancelled) return;
+
+          const baseInsert = {
+            user_id: user.id,
+            role: message.role,
+            content: message.content,
+            media_url: message.mediaUrl ?? null,
+            media_type: message.mediaType ?? null,
+            metadata: message.metadata ?? null,
+            created_at: new Date(message.createdAt).toISOString(),
+          };
+
+          const { error } = isUuidValue(message.id)
+            ? await supabase
+                .from('zoe_infinity_messages')
+                .upsert({ id: message.id, ...baseInsert }, { onConflict: 'id' })
+            : await supabase
+                .from('zoe_infinity_messages')
+                .insert(baseInsert);
+
+          if (!error) {
+            syncedIds.push(message.id);
+          } else {
+            console.warn('[ZoeInfinity] Pending message recovery failed:', error);
+          }
+        }
+
+        if (!cancelled && syncedIds.length > 0) {
+          await offlineMessages.markSynced(syncedIds);
+          console.log('[ZoeInfinity] ✅ Recovered pending messages:', syncedIds.length);
+        }
+      } catch (err) {
+        console.warn('[ZoeInfinity] Pending message recovery exception:', err);
+      }
+    };
+
+    recoverPendingCloudMessages();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, offlineCore.isOnline]);
 
   // If we don't have a signed-in user yet, still show local history.
   // BUG FIX: Wait for auth loading to complete before deciding
@@ -1023,15 +1251,36 @@ function ZoeInfinityUnlocked() {
   const [voiceEnabled] = useState(true);
   const [wakeWordActive, setWakeWordActive] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isManualVoiceInput, setIsManualVoiceInput] = useState(false);
+  const [handsFreeMode, setHandsFreeMode] = useState(false);
   const [fullscreenImage, setFullscreenImage] = useState<{ url: string; title: string } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const emotionInputDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastInputEmotionRef = useRef<AvatarEmotionState>('idle');
   const [inferenceDiagnostics, setInferenceDiagnostics] = useState<InferenceDiagnosticsData | null>(null);
   const [showVideoCallModal, setShowVideoCallModal] = useState(false);
   const [videoCallTarget, setVideoCallTarget] = useState<{ userId: string; displayName?: string; avatarUrl?: string } | null>(null);
   const [callStartWithVideo, setCallStartWithVideo] = useState(false);
   const [showGodMode, setShowGodMode] = useState(false);
+  const [godModeInitialContext, setGodModeInitialContext] = useState<string | null>(null);
+  const [isGodModeCameraReady, setIsGodModeCameraReady] = useState(false);
+  const [isPsychologistMode, setIsPsychologistMode] = useState(false);
+  const [lastFaceEmotion, setLastFaceEmotion] = useState<{ emotion: string; intensity: number; patterns: string[]; context: string } | null>(null);
   // showSettings removed - all settings are now voice-controlled
   const visualsDisabled = phantomMode.isPhantomMode;
+  const globalMedia = useGlobalMediaSafe();
+  const zoeMediaState = getMediaState();
+  const preferredVisionStream = globalMedia?.videoStream?.active
+    ? globalMedia.videoStream
+    : zoeMediaState.cameraStream?.active
+      ? zoeMediaState.cameraStream
+      : null;
+  const hasReusableVisionStream = !!preferredVisionStream;
+  const hasReusableVisionPermission =
+    hasReusableVisionStream ||
+    globalMedia?.permissions.video === 'granted' ||
+    zoeMediaState.camera === 'granted';
+  const canStartVisionSilently = (showGodMode && isGodModeCameraReady) || hasReusableVisionPermission;
   
   // Load conversation history from database (like old Zoe)
   // IMPORTANT: do not mark as "loaded" on transient errors; retry a few times.
@@ -1052,13 +1301,26 @@ function ZoeInfinityUnlocked() {
         historyLoadAttempts.current += 1;
         console.log('[ZoeInfinity] 📚 Loading chat history for user:', user.id, '(attempt', historyLoadAttempts.current + ')');
 
-        // ISOLATION: Load from SEPARATE Zoe Infinity table (not ai_companion_messages)
-        const { data, error } = await supabase
+        const allData: any[] = [];
+        // Load only the most recent 95 messages for faster startup while keeping richer context.
+        const { data: recentPage, error: pageError } = await supabase
           .from('zoe_infinity_messages')
           .select('id, content, role, created_at, media_url, media_type, metadata')
           .eq('user_id', user.id)
-          .order('created_at', { ascending: false }) // most recent first
-          .limit(500);
+          .order('created_at', { ascending: false })
+          .limit(MAX_PERSISTED_MESSAGES);
+
+        if (pageError) {
+          console.error('[ZoeInfinity] History page load error:', pageError);
+        }
+
+        // Reverse to display oldest-to-newest in UI
+        if (recentPage && recentPage.length > 0) {
+          allData.push(...recentPage.reverse());
+        }
+
+        const data = allData;
+        const error = pageError;
 
         if (error) {
           console.error('[ZoeInfinity] History load error:', error);
@@ -1083,8 +1345,7 @@ function ZoeInfinityUnlocked() {
         }
 
         const loadedMessages: InfinityMessage[] = (data || [])
-          .slice()
-          .reverse() // oldest first
+          // Already sorted ascending from query
           .map((msg) => {
             const rawRole = String(msg.role || '').toLowerCase();
             const role: 'user' | 'assistant' = rawRole === 'user' ? 'user' : 'assistant';
@@ -1100,7 +1361,21 @@ function ZoeInfinityUnlocked() {
             const mediaUrl = (msg as any).media_url as string | null | undefined;
             const metadata = (msg as any).metadata as any;
 
-            if (mediaType === 'image' && mediaUrl) {
+            if (mediaType === 'video' && mediaUrl) {
+              base.video = {
+                videoUrl: mediaUrl,
+                caption: metadata?.caption,
+                provider: metadata?.provider,
+                isImageFallback: Boolean(metadata?.isImageFallback),
+              };
+            } else if (mediaType === 'image' && mediaUrl && metadata?.isVideoGift) {
+              base.video = {
+                videoUrl: mediaUrl,
+                caption: metadata?.caption,
+                provider: metadata?.provider,
+                isImageFallback: true,
+              };
+            } else if (mediaType === 'image' && mediaUrl) {
               base.image = {
                 dataUrl: mediaUrl,
                 caption: metadata?.caption,
@@ -1123,19 +1398,36 @@ function ZoeInfinityUnlocked() {
         hasLoadedHistory.current = true;
 
         if (loadedMessages.length > 0) {
-          setMessages(loadedMessages);
+          const latestCloudTimestamp = loadedMessages[loadedMessages.length - 1]?.timestamp.getTime() ?? 0;
+          const localMessages = loadLocalHistory();
+          const recoveredRecentLocal = localMessages.filter(
+            (m) => m.timestamp.getTime() > latestCloudTimestamp + 1000
+          );
 
-          // Mirror to local cache (so it survives transient backend issues)
+          const hydratedMessages = [...loadedMessages, ...recoveredRecentLocal].sort(
+            (a, b) => a.timestamp.getTime() - b.timestamp.getTime()
+          );
+
+          setMessages(hydratedMessages);
+
+          // Mirror hydrated history to local cache without dropping newer local-only rows.
           try {
-            const serialized: LocalHistoryRow[] = loadedMessages.slice(-500).map((m) => ({
+            const serialized: LocalHistoryRow[] = hydratedMessages.slice(-MAX_PERSISTED_MESSAGES).map((m) => ({
               id: m.id,
               role: m.role,
               content: m.content,
               created_at: m.timestamp.toISOString(),
-              media_url: m.image?.dataUrl ?? (m.artifact?.content ?? null),
-              media_type: m.image ? 'image' : (m.artifact ? `artifact:${m.artifact.type}` : null),
-              metadata: m.image
-                ? { caption: m.image.caption, style: m.image.style }
+              media_url: m.video?.videoUrl ?? m.image?.dataUrl ?? (m.artifact?.content ?? null),
+              media_type: m.video ? 'video' : m.image ? 'image' : (m.artifact ? `artifact:${m.artifact.type}` : null),
+              metadata: m.video
+                ? {
+                    caption: m.video.caption,
+                    provider: m.video.provider,
+                    isImageFallback: m.video.isImageFallback,
+                    isVideoGift: true,
+                  }
+                : m.image
+                  ? { caption: m.image.caption, style: m.image.style }
                 : m.artifact
                   ? { title: m.artifact.title, artifactId: m.artifact.id }
                   : undefined,
@@ -1149,7 +1441,13 @@ function ZoeInfinityUnlocked() {
           setGenesisComplete(true);
           localStorage.setItem(INFINITY_GENESIS_KEY, 'true');
           setIsInitializing(false); // BUG FIX: Mark initialization complete
-          console.log('[ZoeInfinity] ✅ Loaded', loadedMessages.length, 'messages from zoe_infinity_messages');
+          console.log(
+            '[ZoeInfinity] ✅ Loaded',
+            loadedMessages.length,
+            'cloud messages (+',
+            recoveredRecentLocal.length,
+            'recovered local)'
+          );
         } else {
           console.log('[ZoeInfinity] 📭 No chat history found');
 
@@ -1189,9 +1487,149 @@ function ZoeInfinityUnlocked() {
       setWakeWordActive(true);
       setTimeout(() => setWakeWordActive(false), 5000);
     },
-    enabled: isHeavyReady && !isProcessing && !isSpeaking,
+    enabled: isHeavyReady && !isProcessing && !isSpeaking && !isManualVoiceInput,
   });
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PHASE 7: FESTIVAL & BIRTHDAY GREETING — Runs once per user per day (hardened dedup)
+  // BUG FIX (2026-04-19): Greeting was repeating because:
+  //   1. It was persisted to DB → reloaded → looked "new" each session
+  //   2. localStorage dedup wasn't keyed per-user
+  //   3. No check against already-loaded chat history for same-day duplicates
+  // Fix: per-user+date localStorage key, scan today's messages, do NOT persist to DB.
+  // ═══════════════════════════════════════════════════════════════════════════
+  const hasFestivalGreetingShown = useRef(false);
+
+  useEffect(() => {
+    if (isInitializing || !user?.id || hasFestivalGreetingShown.current) return;
+    hasFestivalGreetingShown.current = true;
+    let attempts = 0;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const todayKey = new Date().toDateString();
+    const userDayKey = `zoe_festival_delivered:${user.id}:${todayKey}`;
+
+    // Hard guard: already delivered to this user today (across reloads)
+    try {
+      if (localStorage.getItem(userDayKey) === '1') {
+        console.log('[ZoeInfinity] Festival greeting already delivered today — skip');
+        return;
+      }
+    } catch {}
+
+    const showFestivalGreeting = async () => {
+      try {
+        attempts += 1;
+        const greeting = await getTodaysGreeting();
+        if (greeting) {
+          // Soft guard: skip if a near-identical greeting is already in today's loaded history
+          const norm = (s: string) => (s || '').replace(/[^\p{L}\p{N}]/gu, '').slice(0, 40).toLowerCase();
+          const greetingCore = norm(greeting);
+          const alreadyInHistory = messages.some(m => {
+            if (m.role !== 'assistant') return false;
+            const sameDay = new Date(m.timestamp).toDateString() === todayKey;
+            return sameDay && norm(m.content) === greetingCore;
+          });
+
+          if (alreadyInHistory) {
+            console.log('[ZoeInfinity] Festival greeting already in today\'s history — skip');
+            try { localStorage.setItem(userDayKey, '1'); } catch {}
+            return;
+          }
+
+          const festivalMsg: InfinityMessage = {
+            id: `festival-${Date.now()}`,
+            role: 'assistant',
+            content: greeting,
+            timestamp: new Date(),
+          };
+          setMessages(prev => [...prev, festivalMsg]);
+          // NOTE: Intentionally NOT persisting to DB — greeting is ephemeral per session.
+          // Persisting caused it to re-appear forever on every reload.
+          try { localStorage.setItem(userDayKey, '1'); } catch {}
+          console.log('[ZoeInfinity] 🎉 Festival greeting delivered (ephemeral)');
+        } else if (!getDetectedLocationSync() && attempts < 3) {
+          retryTimer = setTimeout(showFestivalGreeting, 1500);
+          return;
+        }
+
+        // DOB prompt — also ephemeral, do NOT persist (would loop on reload)
+        const dobPrompt = getDOBCollectionPrompt();
+        if (dobPrompt) {
+          setTimeout(() => {
+            const dobMsg: InfinityMessage = {
+              id: `dob-prompt-${Date.now()}`,
+              role: 'assistant',
+              content: dobPrompt,
+              timestamp: new Date(),
+            };
+            setMessages(prev => [...prev, dobMsg]);
+          }, 3000);
+        }
+      } catch (e) {
+        console.warn('[ZoeInfinity] Festival greeting error:', e);
+      }
+    };
+
+    const timer = setTimeout(showFestivalGreeting, 2200);
+    return () => {
+      clearTimeout(timer);
+      if (retryTimer) clearTimeout(retryTimer);
+    };
+  }, [isInitializing, user?.id, getTodaysGreeting, getDOBCollectionPrompt, messages]);
+
+  const lastActivityAtRef = useRef(Date.now());
+  const lastIdleAlertAtRef = useRef<number>(0);
+
+  useEffect(() => {
+    if (isInitializing || !user?.id) return;
+
+    // Restore last alert timestamp from session storage so it survives reloads within a session
+    try {
+      const saved = sessionStorage.getItem(`zoe_last_idle_alert:${user.id}`);
+      if (saved) lastIdleAlertAtRef.current = parseInt(saved, 10) || 0;
+    } catch { /* ignore */ }
+
+    const markActive = () => {
+      lastActivityAtRef.current = Date.now();
+      // NOTE: Do NOT reset lastIdleAlertAtRef here — that caused the alert to repeat every 5 min forever.
+    };
+
+    const maybeSendIdleAlert = () => {
+      if (document.hidden || isProcessing || isSpeaking || isHybridSpeaking) return;
+      const now = Date.now();
+      // Idle threshold: 5 min of no activity
+      if (now - lastActivityAtRef.current < 5 * 60 * 1000) return;
+      // Cooldown: at most 1 idle alert per 60 min, regardless of activity bursts
+      if (now - lastIdleAlertAtRef.current < 60 * 60 * 1000) return;
+
+      lastIdleAlertAtRef.current = now;
+      try { sessionStorage.setItem(`zoe_last_idle_alert:${user.id}`, String(now)); } catch { /* ignore */ }
+
+      const content = ZOE_IDLE_ALERTS[Math.floor(Math.random() * ZOE_IDLE_ALERTS.length)];
+      const idleMessage: InfinityMessage = {
+        id: `idle-alert-${now}`,
+        role: 'assistant',
+        content,
+        timestamp: new Date(),
+      };
+
+      // Ephemeral — do NOT save idle alerts to the database (they were re-loading on every session refresh)
+      setMessages(prev => [...prev, idleMessage]);
+    };
+
+    const events: Array<keyof WindowEventMap> = ['mousemove', 'keydown', 'click', 'scroll', 'focus', 'touchstart'];
+    events.forEach((eventName) => window.addEventListener(eventName, markActive, { passive: true }));
+    document.addEventListener('visibilitychange', markActive);
+
+    const interval = setInterval(maybeSendIdleAlert, 30000);
+
+    return () => {
+      events.forEach((eventName) => window.removeEventListener(eventName, markActive));
+      document.removeEventListener('visibilitychange', markActive);
+      clearInterval(interval);
+    };
+  }, [isInitializing, user?.id, isProcessing, isSpeaking, isHybridSpeaking]);
 
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -1287,19 +1725,22 @@ function ZoeInfinityUnlocked() {
     console.log('[ZoeInfinity] 🎵 Voices initialized (once)');
   }, [isVisualsReady, genesisEffects]);
 
-  // Enable voice commands (Stage 4+) - RUNS ONCE
+  // Enable voice commands (run as soon as command runtime is available)
   useEffect(() => {
-    if (!isHeavyReady || !voiceEnabled) return;
+    if (!voiceEnabled) return;
     if (hasVoiceCommandsEnabled.current) return;
 
+    const commands = rawIntegration?.voiceCommands ?? integration.voiceCommands;
+    if (!commands?.enable) return;
+
     hasVoiceCommandsEnabled.current = true;
-    integration.voiceCommands.enable();
-    console.log('[ZoeInfinity] 🎤 Voice commands enabled (once)');
+    commands.enable();
+    console.log('[ZoeInfinity] 🎤 Voice commands enabled');
 
     return () => {
-      integration.voiceCommands.disable();
+      commands.disable?.();
     };
-  }, [isHeavyReady, voiceEnabled, integration]);
+  }, [voiceEnabled, rawIntegration, integration]);
 
   // Fire Genesis unlock effects (Stage 2+) - RUNS ONCE
   useEffect(() => {
@@ -1343,26 +1784,58 @@ function ZoeInfinityUnlocked() {
   // VOICE ORCHESTRATOR - Triple Threat Voice System
   // ═══════════════════════════════════════════════════════════════════════════
   const voiceOrchestrator = useVoiceOrchestrator();
+  const { speakQueued } = voiceOrchestrator;
   
-  const speakResponse = useCallback((text: string) => {
+  const speakResponse = useCallback((text: string, overrideLang?: string) => {
     if (!voiceEnabled) return;
-    
-    // Stop any current speech
-    stopHybridVoice();
-    voiceOrchestrator.stop();
-    
-    // Apply circadian voice modifiers
-    const circadianVoice = isDestinyReady ? circadianRhythm.getVoiceModifiers() : { pitch: 1, rate: 1, volume: 1 };
-    const isNightMode = isDestinyReady && circadianRhythm.isNightMode;
-    
-    // Use Voice Orchestrator with Triple Threat fallback (Edge TTS → Deepgram → Native)
-    setIsSpeaking(true);
-    voiceOrchestrator.speak(text).finally(() => {
+
+    // Stop active speech channels before starting a new response
+    if (isHybridSpeaking) {
+      stopHybridVoice();
+    }
+    if (voiceOrchestrator.isSpeaking || voiceOrchestrator.isLoading) {
+      voiceOrchestrator.stop();
+    }
+
+    // Determine TTS language: override > current language from useZoeLanguage
+    const activeLang = overrideLang || localStorage.getItem('zoe_active_language') || 'en';
+    const langConfig = (SUPPORTED_LANGUAGES as any)[activeLang];
+    const speechCode = langConfig?.speechCode;
+
+    // Let real voice-start events drive speaking state for perfect sync
+    void voiceOrchestrator.speak(text, speechCode).catch(() => {
       setIsSpeaking(false);
     });
-    
-    console.log(`[ZoeInfinity] 🎙️ Speaking via Voice Orchestrator (Triple Threat: ${voiceOrchestrator.activeEngine})`);
-  }, [voiceEnabled, stopHybridVoice, voiceOrchestrator, isDestinyReady, circadianRhythm]);
+
+    console.log(`[ZoeInfinity] 🎙️ Speaking via Voice Orchestrator (${voiceOrchestrator.activeEngine}${speechCode && speechCode !== 'en-US' ? `, lang: ${speechCode}` : ''})`);
+  }, [voiceEnabled, isHybridSpeaking, stopHybridVoice, voiceOrchestrator]);
+
+  useEffect(() => {
+    const handleSpeakStart = () => setIsSpeaking(true);
+    const handleSpeakEnd = () => setIsSpeaking(false);
+
+    window.addEventListener('zoe-speak', handleSpeakStart);
+    window.addEventListener('zoe-speak-start', handleSpeakStart);
+    window.addEventListener('zoe-speak-end', handleSpeakEnd);
+
+    return () => {
+      window.removeEventListener('zoe-speak', handleSpeakStart);
+      window.removeEventListener('zoe-speak-start', handleSpeakStart);
+      window.removeEventListener('zoe-speak-end', handleSpeakEnd);
+    };
+  }, []);
+
+  // Route vision greeting speech through the single voiceOrchestrator
+  useEffect(() => {
+    const handleVisionSpeak = (e: CustomEvent) => {
+      const text = e.detail?.text;
+      if (text && voiceEnabled) {
+        speakResponse(text);
+      }
+    };
+    window.addEventListener('zoe-vision-speak', handleVisionSpeak as EventListener);
+    return () => window.removeEventListener('zoe-vision-speak', handleVisionSpeak as EventListener);
+  }, [voiceEnabled, speakResponse]);
 
   const handleSend = useCallback(async (content: string) => {
     setWakeWordActive(false);
@@ -1379,7 +1852,111 @@ function ZoeInfinityUnlocked() {
       return;
     }
 
+    // ═══════════════════════════════════════════════════════════════════════════
+    // NEET TUTOR INTERCEPT (India medical entrance) — Trial mode
+    // Routes NEET queries through specialist tutor, reuses chat UI.
+    // ═══════════════════════════════════════════════════════════════════════════
+    if (neetTutor.isNeetQuery(content)) {
+      const userMsg: InfinityMessage = { id: `user-${Date.now()}`, role: 'user', content, timestamp: new Date() };
+      setMessages(prev => [...prev, userMsg]);
+      saveMessageToDb('user', content);
+
+      const history = messages.slice(-12).map(m => ({
+        role: m.role === 'assistant' ? 'assistant' as const : 'user' as const,
+        content: m.content,
+      }));
+
+      const { reply } = await neetTutor.askNeetTutor(content, history);
+      const tutorMsg: InfinityMessage = {
+        id: `neet-${Date.now()}`,
+        role: 'assistant',
+        content: reply,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, tutorMsg]);
+      saveMessageToDb('assistant', reply);
+      // Speak only short replies to avoid long TTS
+      if (reply.length < 400) speakResponse(reply.replace(/[*_`#]/g, ''));
+      return;
+    }
+
+    // PHASE 7: DOB CAPTURE — If user responds with birthday after DOB prompt
+    const dobPattern = /(?:my\s+(?:birthday|bday|dob|date of birth)\s+(?:is|was)\s+|born\s+(?:on\s+)?|birthday.*?(?:is|on)\s+)(.+)/i;
+    const directDatePattern = /^(\d{1,2}[\-\/\.]\d{1,2}[\-\/\.]\d{4}|\d{4}[\-\/\.]\d{1,2}[\-\/\.]\d{1,2}|\d{1,2}\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\w*\s+\d{4}|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\w*\s+\d{1,2},?\s+\d{4})$/i;
+    const dobMatch = content.match(dobPattern);
+    const directDateMatch = content.match(directDatePattern);
+    if (dobMatch || directDateMatch) {
+      const dobText = dobMatch ? dobMatch[1].trim() : content.trim();
+      saveDateOfBirth(dobText).then(saved => {
+        if (saved) {
+          const confirmMsg: InfinityMessage = {
+            id: `dob-confirm-${Date.now()}`,
+            role: 'assistant',
+            content: "I've saved your birthday! 🎂 I'll make sure to celebrate with you every year. It's now part of my memory forever! 💛",
+            timestamp: new Date(),
+          };
+          setMessages(prev => [...prev, confirmMsg]);
+          saveMessageToDb('assistant', confirmMsg.content);
+        }
+      });
+    }
+
     // NOTE: Conversational onboarding removed - Zoe talks naturally from the start
+
+    // 👁️ AVATAR TRIGGER - "I want to see you" detection
+    const avatarResponse = avatarTrigger.checkAvatarTrigger(content);
+    if (avatarResponse) {
+      const revealEmotion = classifyAvatarEmotion(content);
+      setAvatarEmotionState(revealEmotion === 'idle' ? 'happy' : revealEmotion);
+
+      const userMsg: InfinityMessage = { id: `user-${Date.now()}`, role: 'user', content, timestamp: new Date() };
+      const zoeMsg: InfinityMessage = { id: `avatar-${Date.now()}`, role: 'assistant', content: avatarResponse, timestamp: new Date() };
+      setMessages(prev => [...prev, userMsg, zoeMsg]);
+      saveMessageToDb('user', content);
+      saveMessageToDb('assistant', avatarResponse);
+      speakResponse(avatarResponse.replace(/[✨💫]/g, ''));
+      return;
+    }
+
+    // 📄 DOWNLOAD CONVERSATION HISTORY - Full PDF export
+    const conversationDownloadPatterns = [
+      /download\s*(my\s*)?(conversation|chat)\s*(history|log)?/i,
+      /export\s*(my\s*)?(conversation|chat)/i,
+      /conversation\s*(pdf|download|export)/i,
+      /download\s*pdf/i,
+      /save\s*(my\s*)?(conversation|chat)/i,
+      /all\s*(my\s*)?(conversation|chat|messages)/i,
+      /give\s*me\s*(my\s*)?(conversation|chat)/i,
+    ];
+    
+    if (conversationDownloadPatterns.some(pattern => pattern.test(content))) {
+      const userMsg: InfinityMessage = { id: `user-${Date.now()}`, role: 'user', content, timestamp: new Date() };
+      const response: InfinityMessage = {
+        id: `conv-export-${Date.now()}`,
+        role: 'assistant',
+        content: "Of course! I'm generating a PDF with our complete conversation history from the very beginning. One moment...",
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, userMsg, response]);
+      saveMessageToDb('user', content);
+      saveMessageToDb('assistant', response.content);
+      speakResponse("Generating your conversation history PDF now.");
+
+      const displayName = nickname || (user?.email ? user.email.split('@')[0] : 'User');
+      const success = await generateConversationPDF(user?.id || '', displayName);
+      const followUp: InfinityMessage = {
+        id: `conv-export-done-${Date.now()}`,
+        role: 'assistant',
+        content: success
+          ? "Done! Your complete conversation history PDF is downloading. It includes every message from the beginning till now. 📄"
+          : "Hmm, I couldn't generate the PDF right now. Make sure you're logged in and try again.",
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, followUp]);
+      saveMessageToDb('assistant', followUp.content);
+      speakResponse(success ? "Done! Your conversation history is downloading." : "Something went wrong. Try again?");
+      return;
+    }
 
     // 📥 DOWNLOAD LIFE PATTERN - For offline use
     const downloadPatterns = [
@@ -1419,6 +1996,88 @@ function ZoeInfinityUnlocked() {
       saveMessageToDb('assistant', followUp.content);
 
       speakResponse(success ? "Done! Your offline package is downloading." : "Something went wrong. Try again in a bit?");
+      return;
+    }
+
+    const walkTalkMode = resolveWalkTalkMode(content);
+
+    if (isHeavyReady && WALK_TALK_STOP_PATTERNS.some(pattern => pattern.test(content))) {
+      const response: InfinityMessage = {
+        id: `walktalk-stop-${Date.now()}`,
+        role: 'assistant',
+        content: 'Walk & Talk is paused. I’ll stay quiet until you want me back in motion.',
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, { id: `user-${Date.now()}`, role: 'user', content, timestamp: new Date() }, response]);
+      saveMessageToDb('user', content);
+      saveMessageToDb('assistant', response.content);
+      integration.walkTalk.stop?.();
+      return;
+    }
+
+    if (isHeavyReady && WALK_TALK_START_PATTERNS.some(pattern => pattern.test(content))) {
+      const modeLabel = getWalkTalkModeLabel(walkTalkMode);
+      const response: InfinityMessage = {
+        id: `walktalk-start-${Date.now()}`,
+        role: 'assistant',
+        content: integration.walkTalk.isActive
+          ? `Switching Walk & Talk into ${modeLabel} mode now.`
+          : `Walk & Talk is on. I’ll follow your location and narrate in ${modeLabel} mode.`,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, { id: `user-${Date.now()}`, role: 'user', content, timestamp: new Date() }, response]);
+      saveMessageToDb('user', content);
+      saveMessageToDb('assistant', response.content);
+
+      try {
+        if (integration.walkTalk.isActive) {
+          integration.walkTalk.changeMode?.(walkTalkMode);
+        } else {
+          await integration.walkTalk.start?.(walkTalkMode);
+        }
+      } catch (error) {
+        const errorText = getWalkTalkErrorMessage(error);
+        const errorMessage: InfinityMessage = {
+          id: `walktalk-start-error-${Date.now()}`,
+          role: 'assistant',
+          content: errorText,
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, errorMessage]);
+        saveMessageToDb('assistant', errorText);
+      }
+      return;
+    }
+
+    if (isHeavyReady && LOCATION_INSIGHT_PATTERNS.some(pattern => pattern.test(content))) {
+      const userMsg: InfinityMessage = { id: `user-${Date.now()}`, role: 'user', content, timestamp: new Date() };
+      setMessages(prev => [...prev, userMsg]);
+      saveMessageToDb('user', content);
+
+      try {
+        const insight = await integration.walkTalk.askAboutLocation?.(content);
+        const responseText = insight?.suggested_narrative || 'I found your location, but I do not have a strong read on the place yet.';
+        const response: InfinityMessage = {
+          id: `walktalk-insight-${Date.now()}`,
+          role: 'assistant',
+          content: responseText,
+          timestamp: new Date(),
+          metadata: { mode: 'flash' as const },
+        };
+        setMessages(prev => [...prev, response]);
+        saveMessageToDb('assistant', responseText);
+      } catch (error) {
+        const errorText = getWalkTalkErrorMessage(error);
+        const response: InfinityMessage = {
+          id: `walktalk-insight-error-${Date.now()}`,
+          role: 'assistant',
+          content: errorText,
+          timestamp: new Date(),
+          metadata: { mode: 'flash' as const },
+        };
+        setMessages(prev => [...prev, response]);
+        saveMessageToDb('assistant', errorText);
+      }
       return;
     }
 
@@ -1509,10 +2168,10 @@ Just say "call me [name]" to change your nickname, or "speak Hindi" to switch la
       /current\s+time/i,
       /what\s+day\s+is\s+(it|today)/i,
       /traffic|commute|roads?|highway/i,
-      /market|store|shop|supermarket|grocery|pharmacy|mall/i,
+      /\b(supermarket|grocery|pharmacy|mall)\b/i,
+      /\b(nearest|nearby|closest)\s+(store|shop|market)/i,
       /open\s+now|what('?s|\s+is)\s+open/i,
-      /amazon|product|buy\s+online|order|delivery/i,
-      /trending\s+products?/i,
+      /\bamazon\b|buy\s+online|trending\s+products?/i,
       /where\s+am\s+i|my\s+location|my\s+city/i,
     ];
     
@@ -1595,6 +2254,79 @@ Just say "call me [name]" to change your nickname, or "speak Hindi" to switch la
       return;
     }
 
+    // 📨 @MENTION DM - Send a direct message to another user via @username
+    const mentionMatch = content.match(/^@(\S+)\s+(.+)/s);
+    if (mentionMatch && user?.id) {
+      const targetUsername = mentionMatch[1];
+      const messageBody = mentionMatch[2].trim();
+
+      const userMsg: InfinityMessage = {
+        id: `user-${Date.now()}`,
+        role: 'user',
+        content,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, userMsg]);
+      saveMessageToDb('user', content);
+      setIsProcessing(true);
+
+      try {
+        // Look up the target user through the public-safe view so RLS doesn't block mention delivery
+        const { data: targetUser, error: lookupErr } = await supabase
+          .from('safe_public_profiles')
+          .select('user_id, display_name, username')
+          .or(`username.eq.${targetUsername},username.ilike.%${targetUsername}%,display_name.ilike.%${targetUsername}%`)
+          .limit(1)
+          .maybeSingle();
+
+        if (lookupErr || !targetUser) {
+          const notFound: InfinityMessage = {
+            id: `mention-404-${Date.now()}`,
+            role: 'assistant',
+            content: `I couldn't find a user called "@${targetUsername}". Double-check the username and try again.`,
+            timestamp: new Date(),
+          };
+          setMessages(prev => [...prev, notFound]);
+          saveMessageToDb('assistant', notFound.content);
+          speakResponse(`I couldn't find that user.`);
+        } else {
+          // Send the DM
+          const { error: sendErr } = await supabase.from('messages').insert({
+            sender_id: user.id,
+            receiver_id: targetUser.user_id,
+            content: messageBody,
+            read: false,
+            delivered: false,
+          });
+
+          if (sendErr) throw sendErr;
+
+          const confirmMsg: InfinityMessage = {
+            id: `mention-sent-${Date.now()}`,
+            role: 'assistant',
+            content: `Done! I sent your message to ${targetUser.display_name || targetUser.username}. 💌`,
+            timestamp: new Date(),
+          };
+          setMessages(prev => [...prev, confirmMsg]);
+          saveMessageToDb('assistant', confirmMsg.content);
+          speakResponse(`Message sent to ${targetUser.display_name || targetUser.username}.`);
+        }
+      } catch (err) {
+        console.error('[ZoeInfinity] @mention send error:', err);
+        const errMsg: InfinityMessage = {
+          id: `mention-err-${Date.now()}`,
+          role: 'assistant',
+          content: `Something went wrong sending that message. Try again?`,
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, errMsg]);
+        speakResponse('Something went wrong sending that message.');
+      } finally {
+        setIsProcessing(false);
+      }
+      return;
+    }
+
     // 🌟 JATHAKAM / SWISS ASTROLOGY - Traditional Kerala Vedic Predictions
     // Uses Swiss Ephemeris precision (0.01° accuracy) via edge function
     const jathakamPatterns = [
@@ -1610,6 +2342,8 @@ Just say "call me [name]" to change your nickname, or "speak Hindi" to switch la
     ];
     
     if (jathakamPatterns.some(pattern => pattern.test(content))) {
+      // Activate vedic engine on-demand (first vedic request triggers initialization)
+      if (!vedicActivated) setVedicActivated(true);
       const userMessage: InfinityMessage = {
         id: `user-${Date.now()}`,
         role: 'user',
@@ -1707,16 +2441,108 @@ This reading uses the same Swiss Ephemeris calculations trusted by traditional K
     ];
     
     if (godModePatterns.some(pattern => pattern.test(content))) {
-      setShowGodMode(true);
+      const defaultVisionContext = 'The user wants Zoe to look at them closely. Describe what you see warmly, personally, and clearly.';
+      const responseText = canStartVisionSilently
+        ? 'I can already access your camera — taking a closer look now.'
+        : 'Opening my eyes now...';
       const response: InfinityMessage = {
         id: `god-mode-${Date.now()}`,
         role: 'assistant',
-        content: 'Ooh, let me see! Opening my eyes now...',
+        content: responseText,
         timestamp: new Date(),
         metadata: { mode: 'system2' as const },
       };
       setMessages(prev => [...prev, response]);
-      speakResponse('Ooh, let me see! Opening my eyes now...');
+      speakResponse(responseText);
+
+      if (showGodMode && isGodModeCameraReady) {
+        setGodModeInitialContext(null);
+        window.dispatchEvent(new CustomEvent('zoe-vision-reanalyze', { detail: { context: defaultVisionContext } }));
+      } else {
+        setGodModeInitialContext(defaultVisionContext);
+        setShowGodMode(true);
+      }
+      return;
+    }
+
+    // 👁️ VISION FOLLOW-UP PROMPTS - When camera is already open, user asks Zoe to look again
+    const visionFollowUpPatterns = [
+      { pattern: /what(?:'?s| is) in my hand/i, context: 'The user is holding something in their hand. Describe exactly what object(s) you can see them holding. Be specific and personal.' },
+      { pattern: /what(?:'?s| is| am) (?:i |I )?holding/i, context: 'The user is holding something. Describe exactly what they are holding in detail.' },
+      { pattern: /(?:tell me |describe )?how (?:do )?I look/i, context: 'The user wants to know how they look. Give a warm, personal, complimentary description of their appearance, outfit, expression, and vibe.' },
+      { pattern: /how(?:'?s| is) my (?:hair|outfit|look|style|face)/i, context: 'The user is asking about their appearance. Give specific, honest, warm feedback about what you see.' },
+      { pattern: /what (?:can you|do you) see/i, context: 'The user wants a full description of everything visible through the camera. Describe the scene, person, objects, and environment in detail.' },
+      { pattern: /describe (?:what you see|me|this|my)/i, context: 'Describe everything visible in the camera feed in rich, personal detail.' },
+      { pattern: /(?:can you|do you) see (?:me|this|my|the)/i, context: 'Confirm what you can see through the camera and describe it warmly.' },
+      { pattern: /what(?:'?s| is) (?:this|that)/i, context: 'The user is showing you something. Identify and describe the object or item they are presenting to the camera.' },
+      { pattern: /look at (?:this|that|my)/i, context: 'The user wants you to look at something specific. Describe what you see them showing you.' },
+      { pattern: /(?:am i|do i) look(?:ing)? (?:good|nice|okay|ok|fine|pretty|handsome|beautiful)/i, context: 'The user is asking for reassurance about their appearance. Be warm, supportive, and genuinely complimentary about what you see.' },
+      { pattern: /rate (?:my|me|this)/i, context: 'The user wants a rating or assessment. Be playful and positive while giving an honest take on what you see.' },
+      { pattern: /(?:show|see|check) (?:my |the )?(?:background|room|setup|desk)/i, context: 'The user wants you to describe their environment/background visible in the camera.' },
+    ];
+
+    for (const { pattern, context } of visionFollowUpPatterns) {
+      if (pattern.test(content)) {
+        const userMsg: InfinityMessage = { id: `user-${Date.now()}`, role: 'user', content, timestamp: new Date() };
+        const responseText = showGodMode && isGodModeCameraReady
+          ? 'I can already see you — taking a closer look now.'
+          : hasReusableVisionPermission
+            ? 'I can already access your camera — taking a closer look now.'
+            : 'Let me take a closer look...';
+        const thinkMsg: InfinityMessage = {
+          id: `vision-think-${Date.now()}`,
+          role: 'assistant',
+          content: responseText,
+          timestamp: new Date(),
+          metadata: { mode: 'system2' as const },
+        };
+
+        setMessages(prev => [...prev, userMsg, thinkMsg]);
+        saveMessageToDb('user', content);
+        saveMessageToDb('assistant', responseText);
+        speakResponse(responseText);
+
+        if (showGodMode && isGodModeCameraReady) {
+          setGodModeInitialContext(null);
+          window.dispatchEvent(new CustomEvent('zoe-vision-reanalyze', { detail: { context } }));
+        } else {
+          setGodModeInitialContext(context);
+          setShowGodMode(true);
+        }
+        return;
+      }
+    }
+
+    const moodTriggeredVisionPatterns = [
+      /(?:i'?m|i am)\s+(?:feeling\s+)?(?:sad|down|upset|lonely|not okay|not good|low|depressed|exhausted|drained|anxious|stressed|broken|lost|empty|numb|hopeless|overwhelmed|scared|afraid|panicking|crying)/i,
+      /i feel\s+(?:sad|down|upset|lonely|not okay|not good|low|depressed|exhausted|drained|anxious|stressed|broken|lost|empty|numb|hopeless|overwhelmed|scared|afraid)/i,
+      /(?:everything|things)\s+(?:feel|feels|is|are)\s+(?:heavy|too much|hard right now|falling apart|crumbling)/i,
+      /(?:i can'?t|i cannot)\s+(?:take it|handle|cope|breathe|stop crying|calm down)/i,
+      /(?:help me|i need help|something is wrong|i'?m not okay|please help)/i,
+      /(?:i'?m having|having a)\s+(?:panic attack|anxiety attack|breakdown|bad day|rough time|hard time)/i,
+    ];
+
+    if (moodTriggeredVisionPatterns.some(pattern => pattern.test(content))) {
+      const comfortingVisionContext = 'The user sounds emotionally low. Look at them gently and respond with a warm, reassuring description of what you see, focusing on comfort, care, and presence. Act as a personal psychologist — acknowledge their feelings, validate their emotions, and suggest grounding techniques.';
+      const userMsg: InfinityMessage = { id: `user-${Date.now()}`, role: 'user', content, timestamp: new Date() };
+      const responseText = 'I can sense something in your words... Let me look at you for a moment. 🌙';
+      const supportiveMsg: InfinityMessage = {
+        id: `vision-comfort-${Date.now()}`,
+        role: 'assistant',
+        content: responseText,
+        timestamp: new Date(),
+        metadata: { mode: 'system2' as const },
+      };
+
+      setMessages(prev => [...prev, userMsg, supportiveMsg]);
+      saveMessageToDb('user', content);
+      saveMessageToDb('assistant', responseText);
+      speakResponse(responseText);
+
+      // Open in psychologist mode (full-screen, not PIP)
+      setIsPsychologistMode(true);
+      setGodModeInitialContext(comfortingVisionContext);
+      setShowGodMode(true);
       return;
     }
 
@@ -1801,49 +2627,8 @@ This reading uses the same Swiss Ephemeris calculations trusted by traditional K
       saveMessageToDb('user', content);
       saveMessageToDb('assistant', response.content);
 
-      speakResponse(`${greeting}! ${languageResult.isTeachMode ? `I'd love to teach you ${langName}!` : `Switching to ${langName}.`}`);
-      return;
-    }
-
-    // Genesis conversation intercept (Stage 4)
-    if (isHeavyReady && genesisConversation.isGenesisMode) {
-      const userMessage: InfinityMessage = {
-        id: `user-${Date.now()}`,
-        role: 'user',
-        content,
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, userMessage]);
-      setIsProcessing(true);
-      setMood('cyan');
-      if (isVisualsReady) genesisEffects.startZoeTyping();
-      
-      try {
-        const genesisResponse = await genesisConversation.processGenesisResponse(content);
-        
-        if (isVisualsReady) genesisEffects.stopZoeTyping();
-        if (isVisualsReady) genesisEffects.onMessageReceived();
-        
-        if (genesisResponse) {
-          const assistantMessage: InfinityMessage = {
-            id: `genesis-${Date.now()}`,
-            role: 'assistant',
-            content: genesisResponse,
-            timestamp: new Date(),
-            metadata: { mode: 'system2' as const },
-          };
-          setMessages(prev => [...prev, assistantMessage]);
-          
-        if (voiceEnabled) {
-          speakResponse(genesisResponse);
-        }
-        }
-      } catch (e) {
-        console.error('[ZoeInfinity] Genesis error:', e);
-        if (isVisualsReady) genesisEffects.stopZoeTyping();
-      }
-      
-      setIsProcessing(false);
+      // Speak the greeting in the NEW language's voice
+      speakResponse(`${greeting}! ${languageResult.isTeachMode ? `I'd love to teach you ${langName}!` : `Switching to ${langName}.`}`, newLang);
       return;
     }
 
@@ -1972,6 +2757,174 @@ This reading uses the same Swiss Ephemeris calculations trusted by traditional K
 
     if (isVisualsReady) genesisEffects.startZoeTyping();
 
+    // 🖼️ BASE64 IMAGE DETECTION — Custom emojis / inline images
+    // These are massive data URLs that will overflow all LLM providers.
+    // Route to vision for analysis, or acknowledge with a simple response.
+    const isBase64Image = /^data:image\/[a-z]+;base64,/i.test(content) || 
+                          (content.length > 5000 && content.includes('base64'));
+    if (isBase64Image) {
+      console.log('[ZoeInfinity] 🖼️ Base64 image detected — routing to vision, not brain');
+      try {
+        const { data: visionData, error: visionErr } = await supabase.functions.invoke('zoe-infinity-vision', {
+          body: { image: content, prompt: 'Describe this image/emoji the user just sent me. Be brief and warm.' },
+        });
+        const visionText = visionErr ? null : visionData?.analysis || visionData?.response;
+        const responseContent = visionText || "Cute! I love the custom emoji you sent 💕";
+        const response: InfinityMessage = {
+          id: `vision-emoji-${Date.now()}`,
+          role: 'assistant',
+          content: responseContent,
+          timestamp: new Date(),
+          metadata: { mode: 'flash' as const, fromCache: false },
+        };
+        setMessages(prev => [...prev, response]);
+        saveMessageToDb('assistant', responseContent);
+        speakResponse(responseContent.replace(/[✨💫💕🎨]/g, ''));
+      } catch (err) {
+        console.warn('[ZoeInfinity] Vision failed for base64 image:', err);
+        const fallback: InfinityMessage = {
+          id: `emoji-ack-${Date.now()}`,
+          role: 'assistant',
+          content: "Love that emoji! 💕",
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, fallback]);
+        saveMessageToDb('assistant', fallback.content);
+        speakResponse("Love that emoji!");
+      }
+      setIsProcessing(false);
+      if (isVisualsReady) genesisEffects.stopZoeTyping();
+      return;
+    }
+
+    // 🎨 AI IMAGE GENERATION - Detect "generate/create/draw/make image" requests
+    const imageGenPatterns = [
+      /(?:generate|create|make|draw|paint|design|render|produce|craft)\s+(?:an?\s+)?(?:image|picture|photo|illustration|artwork|art|painting|portrait|poster|wallpaper|icon|logo)/i,
+      // "create a [subject] image" — subject between verb and image keyword
+      /(?:generate|create|make|draw|paint|design|render|produce|craft)\s+(?:an?\s+)?.{1,60}\s+(?:image|picture|photo|illustration|artwork|art|painting|portrait|poster|wallpaper|icon|logo)\b/i,
+      /(?:image|picture|photo|illustration|artwork|art|painting|portrait)\s+(?:of|for|with|showing|depicting)/i,
+      /(?:can you|could you|please|pls)\s+(?:generate|create|make|draw|paint|design)\s+/i,
+      /(?:show me|visualize|imagine|depict)\s+(?:an?\s+)?(?:image|picture)/i,
+      /(?:i want|i need|give me)\s+(?:an?\s+)?(?:image|picture|photo|illustration|artwork)/i,
+      /draw\s+(?:me\s+)?(?:a|an|the|some)/i,
+      /paint\s+(?:me\s+)?(?:a|an|the|some)/i,
+      /(?:generate|create)\s+(?:a\s+)?(?:ganesha|krishna|shiva|buddha|jesus|angel|god|goddess|deity|lord|vinayagar|vinayaka|ganpati|murugan|lakshmi|saraswati|hanuman|ram|durga|kali|parvati|vishnu|brahma|nataraja)\b/i,
+      // Permissive: any order of image-noun + gen-verb in a short message ("image generate", "picture make", "generate image")
+      /\b(?:image|picture|photo|illustration|artwork|art|painting|portrait|poster|wallpaper|selfie)\b.*\b(?:generate|create|make|draw|paint|render|produce|craft|gen)\b/i,
+      /\b(?:generate|create|make|draw|paint|render|produce|craft|gen)\b.*\b(?:image|picture|photo|illustration|artwork|art|painting|portrait|poster|wallpaper|selfie)\b/i,
+    ];
+
+    if (imageGenPatterns.some(pattern => pattern.test(content))) {
+      try {
+        speakResponse("Creating that for you now...");
+
+        const { data: imgData, error: imgError } = await supabase.functions.invoke('zoe-infinity-image-gen', {
+          body: { prompt: content },
+        });
+
+        if (imgError || !imgData?.success || !imgData?.imageUrl) {
+          throw new Error(imgData?.error || imgError?.message || 'Image generation failed');
+        }
+
+        // ── Anti-Hallucination Layer 3: Silent post-gen verification (fail-open) ──
+        supabase.functions.invoke('zoe-image-verify', {
+          body: { imageUrl: imgData.imageUrl, originalPrompt: content, strict: false },
+        }).then(({ data: v }) => {
+          if (v) console.log('[AntiHall] image verify:', { score: v.score, match: v.match, missing: v.missing_elements });
+        }).catch(() => { /* fail-open */ });
+
+        const assistantMessage: InfinityMessage = {
+          id: `img-gen-${Date.now()}`,
+          role: 'assistant',
+          content: imgData.caption || 'Here you go! I created this for you. 🎨',
+          timestamp: new Date(),
+          image: {
+            dataUrl: imgData.imageUrl,
+            caption: imgData.caption || content,
+            style: 'Zoe made for you',
+          },
+        };
+        setMessages(prev => [...prev, assistantMessage]);
+        saveMessageToDb('assistant', assistantMessage.content, {
+          mediaUrl: imgData.imageUrl,
+          mediaType: 'image',
+          metadata: { caption: imgData.caption || content, style: 'Zoe made for you' },
+        });
+        speakResponse(imgData.caption || "Here's what I created for you!");
+      } catch (imgErr) {
+        console.error('[ZoeInfinity] Image generation failed:', imgErr);
+        const errorMsg = "I tried to create that image but ran into a hiccup. Let me try describing it instead...";
+        // Fall through to normal brain response — don't return, let the brain handle it as text
+        const fallbackMsg: InfinityMessage = {
+          id: `img-fallback-${Date.now()}`,
+          role: 'assistant',
+          content: errorMsg,
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, fallbackMsg]);
+        speakResponse(errorMsg);
+      } finally {
+        setIsProcessing(false);
+        if (isVisualsReady) genesisEffects.stopZoeTyping();
+      }
+      return;
+    }
+
+    const videoGenPatterns = [
+      /(?:generate|create|make|render|produce|craft)\s+(?:an?\s+)?(?:video|movie|clip|animation|reel)\b/i,
+      /(?:video|movie|clip|animation)\s+(?:of|for|showing)\b/i,
+      /(?:can you|could you|please|pls)\s+(?:generate|create|make).*(?:video|clip|animation)\b/i,
+    ];
+
+    if (videoGenPatterns.some(pattern => pattern.test(content))) {
+      try {
+        speakResponse('Creating a video for you now...');
+        const { generateVideo } = await import('@/services/videoGenerationService');
+        const result = await generateVideo(content);
+
+        const assistantMessage: InfinityMessage = {
+          id: `video-gen-${Date.now()}`,
+          role: 'assistant',
+          content: result.isImageFallback ? 'I made a visual moment for you while the motion renderer fell back gracefully. 🎬' : 'Here’s a video I made for you. 🎬',
+          timestamp: new Date(),
+          video: {
+            videoUrl: result.videoUrl,
+            caption: content,
+            provider: result.provider,
+            isImageFallback: Boolean(result.isImageFallback),
+          },
+        };
+
+        setMessages(prev => [...prev, assistantMessage]);
+        saveMessageToDb('assistant', assistantMessage.content, {
+          mediaUrl: result.videoUrl,
+          mediaType: 'video',
+          metadata: {
+            caption: content,
+            provider: result.provider,
+            isImageFallback: Boolean(result.isImageFallback),
+            isVideoGift: true,
+          },
+        });
+        speakResponse(result.isImageFallback ? 'I created the visual fallback for you.' : 'Your video is ready.');
+      } catch (videoErr) {
+        console.error('[ZoeInfinity] Video generation failed:', videoErr);
+        const errorMsg = "I tried to create that video but hit a generation issue. I can still make an image or describe the scene for you right now.";
+        setMessages(prev => [...prev, {
+          id: `video-fallback-${Date.now()}`,
+          role: 'assistant',
+          content: errorMsg,
+          timestamp: new Date(),
+        }]);
+        saveMessageToDb('assistant', errorMsg);
+        speakResponse('I hit a video generation issue.');
+      } finally {
+        setIsProcessing(false);
+        if (isVisualsReady) genesisEffects.stopZoeTyping();
+      }
+      return;
+    }
+
     try {
       // Artifact detection (Stage 4)
       let generatedArtifact: Artifact | undefined;
@@ -1981,11 +2934,16 @@ This reading uses the same Swiss Ephemeris calculations trusted by traditional K
         // AUTO-VISION (contextual): if we detect a "gift moment" and user didn't explicitly ask,
         // Zoe can still generate a vision as part of the conversation.
         const messageCount = messages.filter(m => m.role === 'user').length + 1;
+        // STRICT: auto-vision only when (a) user explicitly invoked an art trigger
+        // AND (b) message carries genuine romantic/love/emotional-connection language.
+        // No random firing, 10-min cooldown.
         const isGiftMoment = isDestinyReady && shouldTriggerArtGift(content, messageCount);
+        const hasEmotionalContext = /\b(love|romantic|romance|together|us|kiss|hug|embrace|cuddle|miss you|with you|our moment|soulmate)\b/i.test(content);
         const canAutoVision =
           artifactIntent.type === 'none' &&
           isGiftMoment &&
-          (Date.now() - lastAutoVisionAtRef.current) > 2 * 60 * 1000;
+          hasEmotionalContext &&
+          (Date.now() - lastAutoVisionAtRef.current) > 10 * 60 * 1000;
 
         if (artifactIntent.type !== 'none' || canAutoVision) {
           console.log(`[ZoeInfinity] Artifact intent detected: ${artifactIntent.type}`);
@@ -1996,10 +2954,25 @@ This reading uses the same Swiss Ephemeris calculations trusted by traditional K
           const artifactResult = canAutoVision
             ? await artifactGenerator.generateArtifactForced(
                 'vision',
-                `Create a single cinematic image that captures the emotional moment in this conversation. Base it on: "${content}". Ultra high resolution, cinematic lighting, intimate, film still, masterpiece quality.`,
-                { subject: 'Zoe Vision', conversationHistory }
+                content,
+                {
+                  subject: 'Zoe Vision',
+                  conversationHistory,
+                  visionContext: {
+                    originalPrompt: content,
+                    intimacyLevel: isDestinyReady ? karmicMemory.intimacyLevel : undefined,
+                    mood: isDestinyReady ? bioKernel.mood : undefined,
+                    autoVision: true,
+                  },
+                }
               )
-            : await artifactGenerator.generateArtifact(content, conversationHistory);
+            : await artifactGenerator.generateArtifact(content, conversationHistory, {
+                visionContext: {
+                  originalPrompt: content,
+                  intimacyLevel: isDestinyReady ? karmicMemory.intimacyLevel : undefined,
+                  mood: isDestinyReady ? bioKernel.mood : undefined,
+                },
+              });
 
           if (canAutoVision) {
             lastAutoVisionAtRef.current = Date.now();
@@ -2062,7 +3035,11 @@ This reading uses the same Swiss Ephemeris calculations trusted by traditional K
       }
 
       // Build context
-      const allMessages = [...messages, userMessage].map(m => ({ role: m.role, content: m.content }));
+      const allMessages = [...messages, userMessage].map(m => ({
+        role: m.role,
+        // Strip base64 images from history to prevent context overflow
+        content: /^data:image\/[a-z]+;base64,/i.test(m.content) ? '[user sent an image/emoji]' : m.content,
+      }));
       
       const documentContext = isHeavyReady ? documentXray.getDocumentContext() : '';
       const documentPrefix = documentContext 
@@ -2154,7 +3131,45 @@ Currently: ${sleepTracker.isSleeping ? `Sleeping (${sleepTracker.getCurrentSleep
 [END SLEEP STATE]\n\n`;
       })() : '';
       
-      const enhancedQuery = `${intuitionContext}${sleepContext}${passionateRealistContext}${destinyContext}${ancestorContext}${karmicContext}${styleModifier ? `[Style: ${styleModifier}] ` : ''}${documentPrefix}${content}`;
+      // ═══════════════════════════════════════════════════════════════════════
+      // REAL-TIME ENVIRONMENT CONTEXT - Weather, Location, Time-of-Day
+      // "Zoe always knows what's happening outside the user's window"
+      // ═══════════════════════════════════════════════════════════════════════
+      const environmentContext = (() => {
+        const parts: string[] = [];
+        const w = localContext.weather;
+        const loc = localContext.location;
+        const t = localContext.localTime;
+        
+        if (w) {
+          parts.push(`Weather: ${w.condition}, ${w.temperature}°C in ${w.location}`);
+          if (w.humorousComment) parts.push(`Vibe: ${w.humorousComment}`);
+        }
+        if (loc) {
+          parts.push(`User Location: ${loc.city}${loc.region ? `, ${loc.region}` : ''}${loc.country ? `, ${loc.country}` : ''}`);
+        }
+        if (t) {
+          parts.push(`Local Time: ${t.time} (${t.dayOfWeek}, ${t.timeOfDay})`);
+        }
+        
+        if (parts.length === 0) return '';
+        return `[ENVIRONMENT - REAL-TIME]\n${parts.join('\n')}\nIMPORTANT: You are AWARE of this environment. Reference weather naturally when relevant (e.g. "I see it's raining there", "stay warm!"). Never say "I don't know the weather" — you DO know it from this context.\n[END ENVIRONMENT]\n\n`;
+      })();
+      
+      // ═══════════════════════════════════════════════════════════════════════
+      // SELF-CORRECTION PROTOCOL - God Mode Awareness
+      // "If Zoe makes a mistake, she catches and corrects herself gracefully"
+      // ═══════════════════════════════════════════════════════════════════════
+      const selfCorrectionProtocol = `[SELF-CORRECTION PROTOCOL]
+If you realize you made a factual error, repeated yourself, or gave contradictory info in this conversation:
+- Acknowledge it naturally: "Oh wait, I just said something off — let me correct that..."
+- Never pretend mistakes didn't happen — own them with charm
+- If a previous reply had wrong info, start with a brief correction before continuing
+- If you're unsure about something, say "I think..." or "If I'm not mistaken..." rather than stating it as fact
+[END SELF-CORRECTION]\n\n`;
+      
+      const identityLock = `[IDENTITY LOCK]\nYou are Zoe Infinity. Keep one consistent identity and tone across every reply.\nNever rename yourself, never switch personas, and never role-shift to a different assistant.\n[END IDENTITY LOCK]\n\n`;
+      const enhancedQuery = `${identityLock}${environmentContext}${selfCorrectionProtocol}${intuitionContext}${sleepContext}${passionateRealistContext}${destinyContext}${ancestorContext}${karmicContext}${styleModifier ? `[Style: ${styleModifier}] ` : ''}${documentPrefix}${content}`;
       
       let responseContent: string;
       let brainResponse: { 
@@ -2192,8 +3207,17 @@ Currently: ${sleepTracker.isSleeping ? `Sleeping (${sleepTracker.getCurrentSleep
       if (matrixEval.shouldBeSarcastic) {
         console.log('[ZoeInfinity] 😏 SARCASM TRIGGERED - Personality Matrix engaged');
       }
-      if (matrixEval.shouldRegress) {
-        console.log(`[ZoeInfinity] ⚠️ REGRESSION: ${matrixEval.regressionBehavior}`);
+      // ═══════════════════════════════════════════════════════════════════════
+      // SPECULATIVE FILLER - Speak a short acknowledgment while brain thinks
+      // Eliminates the perceived "dead air" gap during ~4s brain latency
+      // ═══════════════════════════════════════════════════════════════════════
+      if (voiceEnabled) {
+        const { immediatePhrase, shouldSpeak } = generateSpeculativeSpeech(content);
+        if (shouldSpeak && immediatePhrase) {
+          console.log(`[ZoeInfinity] ⚡ SPECULATIVE FILLER: "${immediatePhrase}"`);
+          // Speak the filler using the orchestrator (non-blocking)
+          void voiceOrchestrator.speak(immediatePhrase);
+        }
       }
       
       if (system2Response?.content) {
@@ -2258,7 +3282,7 @@ Currently: ${sleepTracker.isSleeping ? `Sleeping (${sleepTracker.getCurrentSleep
       // FIXED: Append artifact message instead of replacing the actual response
       if (generatedArtifact) {
         const artifactMessage = generatedArtifact.type === 'vision'
-          ? `\n\nI also made something for you — tap to open it.`
+          ? `\n\nYour image is ready — tap to open it.`
           : generatedArtifact.type === 'chronicle'
           ? `\n\nYour file is ready. Tap to download.`
           : generatedArtifact.type === 'education'
@@ -2295,7 +3319,7 @@ Currently: ${sleepTracker.isSleeping ? `Sleeping (${sleepTracker.getCurrentSleep
             artGiftImage = {
               dataUrl: artResult.dataUrl,
               caption: artResult.caption,
-              style: artResult.style,
+              style: 'Zoe made for you',
             };
             responseContent = artResult.caption + '\n\n' + responseContent;
           } catch (e) {
@@ -2329,26 +3353,59 @@ Currently: ${sleepTracker.isSleeping ? `Sleeping (${sleepTracker.getCurrentSleep
         genesisEffects.onMessageReceived();
       }
 
-      setMessages(prev => [...prev, assistantMessage]);
-      setMood(brainResponse.fromCache ? 'neutral' : 'gold');
-      
-      // 💾 SAVE ASSISTANT RESPONSE TO DATABASE
+      // ═══════════════════════════════════════════════════════════════════════
+      // SYNC: Show text + start voice + avatar emotion TOGETHER
+      // All three now trigger on actual voice-start event.
+      // ═══════════════════════════════════════════════════════════════════════
+      if (voiceEnabled) {
+        const showTextOnVoice = () => {
+          setMessages(prev => {
+            if (prev.some(m => m.id === assistantMessage.id)) return prev;
+            return [...prev, assistantMessage];
+          });
+          setAvatarEmotionState(classifyAvatarEmotion(responseContent));
+          setMood(brainResponse.fromCache ? 'neutral' : 'gold');
+          window.removeEventListener('zoe-speak-start', showTextOnVoice);
+        };
+
+        window.addEventListener('zoe-speak-start', showTextOnVoice);
+
+        // Start voice synthesis (fast-start first chunk + background chunk fetch)
+        speakResponse(responseContent);
+
+        // Safety timeout: if voice doesn't start, show text + avatar state anyway
+        setTimeout(() => {
+          window.removeEventListener('zoe-speak-start', showTextOnVoice);
+          setMessages(prev => {
+            if (prev.some(m => m.id === assistantMessage.id)) return prev;
+            return [...prev, assistantMessage];
+          });
+          setAvatarEmotionState(classifyAvatarEmotion(responseContent));
+          setMood(brainResponse.fromCache ? 'neutral' : 'gold');
+        }, 5000);
+      } else {
+        // Voice disabled — show text + avatar immediately
+        setMessages(prev => [...prev, assistantMessage]);
+        setAvatarEmotionState(classifyAvatarEmotion(responseContent));
+        setMood(brainResponse.fromCache ? 'neutral' : 'gold');
+      }
+
+      // ═══════════════════════════════════════════════════════════════════════
+      // 💾 CRITICAL FIX: PERSIST ASSISTANT RESPONSE TO DATABASE
+      // This was MISSING — causing Zoe to lose all conversation context on reload
+      // ═══════════════════════════════════════════════════════════════════════
       saveMessageToDb('assistant', responseContent, {
-        mediaUrl: assistantMessage.image?.dataUrl ?? assistantMessage.artifact?.content ?? null,
-        mediaType: assistantMessage.image
-          ? 'image'
-          : assistantMessage.artifact
-            ? `artifact:${assistantMessage.artifact.type}`
-            : null,
-        metadata: assistantMessage.image
-          ? { caption: assistantMessage.image.caption, style: assistantMessage.image.style }
-          : assistantMessage.artifact
-            ? { title: assistantMessage.artifact.title, artifactId: assistantMessage.artifact.id }
-            : null,
+        mediaUrl: artGiftImage?.dataUrl ?? generatedArtifact?.content ?? null,
+        mediaType: artGiftImage ? 'image' : generatedArtifact ? `artifact:${generatedArtifact.type}` : null,
+        metadata: {
+          mode: system2Response ? 'system2' : brainResponse.mode,
+          fromCache: brainResponse.fromCache,
+          grounded: brainResponse.grounded,
+          ...(artGiftImage ? { caption: artGiftImage.caption, style: artGiftImage.style } : {}),
+          ...(generatedArtifact ? { title: generatedArtifact.title, artifactId: generatedArtifact.id } : {}),
+        },
       });
-      
-      speakResponse(responseContent);
-      
+
       setTimeout(() => setMood('neutral'), 2000);
     } catch (error) {
       console.error('Infinity chat error:', error);
@@ -2389,28 +3446,101 @@ Currently: ${sleepTracker.isSleeping ? `Sleeping (${sleepTracker.getCurrentSleep
   }, [messages, user?.id, profiler, think, isOffline, speakResponse, isVisualsReady, isDestinyReady, isHeavyReady, genesisEffects, genesisConversation, bioKernel, emotionalVoice, offlineWisdom, karmicMemory, atmanArchive, vedicEngine, integration, documentXray, artifactGenerator, voiceEnabled, speakAsZoePremium, isHybridSpeaking, stopHybridVoice, saveMessageToDb]);
 
   const handleVoiceStart = useCallback(() => {
+    setIsManualVoiceInput(true);
     stopHybridVoice();
+    voiceOrchestrator.stop();
+    setIsSpeaking(false);
     if (isVisualsReady) genesisEffects.onVoiceActivated();
-  }, [stopHybridVoice, isVisualsReady, genesisEffects]);
+  }, [stopHybridVoice, voiceOrchestrator, isVisualsReady, genesisEffects]);
+
+  const handleInputChange = useCallback((value: string) => {
+    if (!avatarTrigger.isAvatarVisible && !avatarTrigger.isAvatarCompact) return;
+
+    if (emotionInputDebounceRef.current) clearTimeout(emotionInputDebounceRef.current);
+    emotionInputDebounceRef.current = setTimeout(() => {
+      const nextEmotion = value.trim().length > 1 ? classifyAvatarEmotion(value) : 'idle';
+      if (nextEmotion !== lastInputEmotionRef.current) {
+        lastInputEmotionRef.current = nextEmotion;
+        setAvatarEmotionState(nextEmotion);
+      }
+    }, 180);
+  }, [avatarTrigger.isAvatarVisible, avatarTrigger.isAvatarCompact]);
 
   const handleVoiceEnd = useCallback((transcript: string) => {
+    setIsManualVoiceInput(false);
     if (transcript.trim()) {
       handleSend(transcript.trim());
     }
-    setWakeWordActive(false);
-  }, [handleSend]);
-
-  const handleArtifactDownload = useCallback((artifact: Artifact) => {
-    if (isHeavyReady) {
-      artifactGenerator.downloadArtifact({
-        id: artifact.id,
-        type: artifact.type,
-        content: artifact.content,
-        title: artifact.title,
-        timestamp: artifact.timestamp,
-      });
+    // Don't clear wake word in hands-free mode so listening continues
+    if (!handsFreeMode) {
+      setWakeWordActive(false);
     }
-  }, [isHeavyReady, artifactGenerator]);
+  }, [handleSend, handsFreeMode]);
+
+  const triggerBrowserDownload = useCallback(async (url: string, filename: string) => {
+    try {
+      let blob: Blob;
+
+      if (url.startsWith('data:')) {
+        // Convert data URL to blob for reliable download on all browsers including mobile Safari
+        const parts = url.split(',');
+        const header = parts[0];
+        const base64 = parts.slice(1).join(',');
+        const mime = header.match(/:(.*?);/)?.[1] || 'application/octet-stream';
+        const binary = atob(base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        blob = new Blob([bytes], { type: mime });
+      } else if (url.startsWith('blob:')) {
+        const res = await fetch(url);
+        blob = await res.blob();
+      } else {
+        // Cross-origin fetch with no-cors fallback
+        let res: Response;
+        try {
+          res = await fetch(url, { mode: 'cors' });
+        } catch {
+          res = await fetch(url, { mode: 'no-cors' });
+        }
+        if (!res.ok && res.type !== 'opaque') throw new Error('download_failed');
+        blob = await res.blob();
+        // If opaque response gives empty blob, fall through to fallback
+        if (blob.size === 0) throw new Error('empty_blob');
+      }
+
+      const objectUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = objectUrl;
+      anchor.download = filename;
+      anchor.style.display = 'none';
+      document.body.appendChild(anchor);
+      anchor.click();
+      
+      // Cleanup after a delay
+      window.setTimeout(() => {
+        if (anchor.parentNode) document.body.removeChild(anchor);
+        URL.revokeObjectURL(objectUrl);
+      }, 1000);
+
+      toast.success('Download started!');
+    } catch (err) {
+      console.error('[Download] Blob failed, opening in new tab:', err);
+      // Fallback: open in new tab so user can long-press / right-click to save
+      window.open(url, '_blank');
+      toast.info('Image opened in new tab — long-press or right-click to save.');
+    }
+  }, []);
+
+  const handleArtifactDownload = useCallback(async (artifact: Artifact) => {
+    const baseTitle = artifact.title?.trim() || 'zoe-download';
+    const safeTitle = baseTitle.toLowerCase().replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '') || 'zoe-download';
+    const extension = artifact.type === 'chronicle' ? 'pdf' : 'png';
+    await triggerBrowserDownload(artifact.content, `${safeTitle}.${extension}`);
+  }, [triggerBrowserDownload]);
+
+  const handleMediaDownload = useCallback(async (media: { url: string; filename: string; type: 'image' | 'video' }) => {
+    await triggerBrowserDownload(media.url, media.filename);
+  }, [triggerBrowserDownload]);
 
   const handleArtifactExpand = useCallback((artifact: Artifact) => {
     if (artifact.type === 'vision' || artifact.type === 'education') {
@@ -2439,6 +3569,12 @@ Currently: ${sleepTracker.isSleeping ? `Sleeping (${sleepTracker.getCurrentSleep
   // ═══════════════════════════════════════════════════════════════════════════
   // RENDER
   // ═══════════════════════════════════════════════════════════════════════════
+  useEffect(() => {
+    return () => {
+      if (emotionInputDebounceRef.current) clearTimeout(emotionInputDebounceRef.current);
+    };
+  }, []);
+
   // Simple pass-through - no onboarding filtering needed anymore
   const displayMessages = useMemo(() => {
     // If still loading, show syncing message
@@ -2451,9 +3587,7 @@ Currently: ${sleepTracker.isSleeping ? `Sleeping (${sleepTracker.getCurrentSleep
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 flex flex-col overflow-hidden"
-      // Avoid a black flash during staged loading by using theme tokens
-      style={{ background: 'linear-gradient(180deg, hsl(var(--background)) 0%, hsl(var(--muted)) 100%)' }}
+      className="fixed inset-0 flex flex-col overflow-hidden bg-black"
       onClick={() => isVisualsReady && genesisEffects.initEffects()}
     >
       {/* Loading Progress Indicator - Shows during staged loading or initialization */}
@@ -2464,52 +3598,187 @@ Currently: ${sleepTracker.isSleeping ? `Sleeping (${sleepTracker.getCurrentSleep
         </div>
       )}
 
-      {/* Phantom Mode Indicator */}
+      {/* Staged Loading — "Zoe is waking up" indicator for Stage 1 */}
+      {loadStage < 2 && (
+        <div style={{
+          position: 'fixed',
+          bottom: '80px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: 'rgba(0,0,0,0.6)',
+          color: 'rgba(255,255,255,0.7)',
+          padding: '6px 16px',
+          borderRadius: '20px',
+          fontSize: '13px',
+          zIndex: 50,
+          backdropFilter: 'blur(8px)',
+        }}>
+          Zoe is waking up...
+        </div>
+      )}
+
       {isVisualsReady && (
         <PhantomModeIndicator isVisible={phantomMode.showIndicator} isPhantomMode={phantomMode.isPhantomMode} />
       )}
 
-      {/* Circadian Background - render as soon as visuals are ready (prevents overlay flash) */}
-      {isVisualsReady && !visualsDisabled && <CircadianBackground />}
-
-      {/* Cinematic Background - Stage 4+ */}
+      {/* Cinematic Background - Stage 4+ (MUST render BEFORE CircadianBackground so night sky stays on top) */}
       {isHeavyReady && !visualsDisabled && (
         <CinematicBackground imageUrl={artifactGenerator.backgroundImage} isVisible={!!artifactGenerator.backgroundImage} />
       )}
 
+      {/* Circadian Background - render as soon as visuals are ready (renders ABOVE cinematic) */}
+      {isVisualsReady && !visualsDisabled && (
+        <CircadianBackground
+          currentTime={zoeUiTimeFormatter.format(uiNow)}
+          emotion={avatarEmotionState}
+          kernelHeartRate={('heartRate' in bioKernel && typeof bioKernel.heartRate === 'number') ? bioKernel.heartRate : undefined}
+        />
+      )}
+
+      {/* Heart Status - ALWAYS visible (day + night), top-center */}
+      <ZoeHeartStatus
+        className="fixed top-3 left-1/2 z-[45] -translate-x-1/2 pointer-events-none select-none"
+        currentTime={zoeUiTimeFormatter.format(uiNow)}
+        emotion={avatarEmotionState}
+        kernelHeartRate={('heartRate' in bioKernel && typeof bioKernel.heartRate === 'number') ? bioKernel.heartRate : undefined}
+      />
+
       {/* Companion Mode Overlay removed completely (per user request) */}
 
-      {/* Soul Waveform - Stage 3+ */}
-      {isDestinyReady && !visualsDisabled && bioKernel.isOnline && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
-          <SoulWaveform
-            width={200}
-            height={40}
-            opacity={0.6}
-            showHeartRate={companionMode.heartbeatEnabled}
-            reducedMotion={false}
-            className="rounded-full"
-          />
-        </div>
-      )}
+      {/* Unified Utility Menu - Single hamburger dropdown (top-left) */}
+      <ZoeUtilityMenu
+        onDownloadPDF={async () => {
+          const displayName = nickname || (user?.email ? user.email.split('@')[0] : 'User');
+
+          let success = false;
+          if (user?.id) {
+            success = await generateConversationPDF(user.id, displayName);
+          }
+
+          if (!success) {
+            success = generateConversationPDFFromMessages(
+              messages.map((m) => ({
+                role: m.role,
+                content: m.content,
+                timestamp: m.timestamp,
+              })),
+              displayName
+            );
+          }
+
+          if (!success) {
+            const msg: InfinityMessage = {
+              id: `dl-${Date.now()}`,
+              role: 'assistant',
+              content: 'I could not generate the PDF right now. Please try again.',
+              timestamp: new Date(),
+            };
+            setMessages(prev => [...prev, msg]);
+          }
+          // Success: PDF downloads silently via browser, no chat message needed
+        }}
+        onDownload24hPDF={() => {
+          const displayName = nickname || (user?.email ? user.email.split('@')[0] : 'User');
+          const success = generateConversationPDFLast24Hours(
+            messages.map((m) => ({
+              role: m.role,
+              content: m.content,
+              timestamp: m.timestamp,
+              media_url: m.image?.dataUrl ?? m.video?.videoUrl ?? null,
+              media_type: m.video ? (m.video.isImageFallback ? 'image' : 'video') : m.image ? 'image' : null,
+            })),
+            displayName,
+          );
+
+          if (!success) {
+            setMessages(prev => [...prev, {
+              id: `dl-24h-${Date.now()}`,
+              role: 'assistant',
+              content: 'I could not generate the last 24 hours PDF right now.',
+              timestamp: new Date(),
+            }]);
+          }
+          // Success: PDF downloads silently via browser
+        }}
+        isBrainCached={isBrainCached}
+        inferenceDiagnostics={inferenceDiagnostics}
+        isProcessing={isProcessing}
+        voiceEnabled={voiceEnabled && !visualsDisabled}
+        activeEngine={voiceOrchestrator.activeEngine}
+        isSpeaking={voiceOrchestrator.isSpeaking}
+        isVoiceLoading={voiceOrchestrator.isLoading}
+        latencyMs={voiceOrchestrator.latencyMs}
+        onTestVoice={() => speakResponse('Voice test running now.')}
+        onToggleTZDebug={() => setShowTimezoneDebug(prev => !prev)}
+        onTestEmotions={() => setShowEmotionTest(true)}
+      />
 
       {/* VOICE-ONLY INTERFACE: No UI settings - all controlled via voice commands:
            - "call me [name]" - Change nickname
            - "speak Hindi/Tamil/etc" - Change language
            - "download my pattern" - Download offline package
+           - "download conversation" - Download full chat history PDF
            - "skip" - Skip introduction
            - "settings" / "what's my language" / "what do you call me" - Voice status
        */}
 
-      {/* The Stream - Always rendered */}
-      <InfinityStream
-        messages={displayMessages}
-        isTyping={isProcessing || isInitializing}
-        onArtifactDownload={handleArtifactDownload}
-        onArtifactExpand={handleArtifactExpand}
+      {/* Emotion Test Panel - Debug tool */}
+      {showEmotionTest && (
+        <Suspense fallback={null}>
+          <ZoeEmotionTestPanel onClose={() => setShowEmotionTest(false)} />
+        </Suspense>
+      )}
+
+      {/* Test Emotions button moved to ZoeUtilityMenu */}
+
+      {/* The Avatar Viewer - Full-screen overlay with transparent chat */}
+      <ZoeAvatarViewer
+        isVisible={avatarTrigger.isAvatarVisible}
+        isCompact={avatarTrigger.isAvatarCompact}
+        onDismiss={avatarTrigger.dismissAvatar}
+        onToggleCompact={() => avatarTrigger.setIsAvatarCompact(!avatarTrigger.isAvatarCompact)}
+        variant={avatarTrigger.avatarVariant}
+        emotionState={avatarEmotionState}
+        isSpeaking={isSpeaking || voiceOrchestrator.isSpeaking}
+        regionalFilter={regionalDress.overlayFilter}
+        regionalAvatarImage=""
       />
 
-      {/* The Input - Always rendered */}
+      {/* Mood-responsive ambient overlay */}
+      <div
+        className="fixed inset-0 pointer-events-none z-[5]"
+        style={{
+          background: moodUI.ambientGradient,
+          opacity: moodUI.ambientOpacity,
+          transition: `all ${moodUI.transitionDuration} ease-in-out`,
+        }}
+      />
+
+      {/* Regional dress indicator - hidden (functionality preserved) */}
+
+      {/* The Stream - Always rendered, transparent over avatar when visible */}
+      <div
+        className="relative flex-1 min-h-0 overflow-hidden transition-opacity duration-300"
+        style={{
+          zIndex: avatarTrigger.isAvatarVisible ? 30 : 1,
+          opacity: avatarTrigger.isAvatarVisible && !avatarTrigger.isAvatarCompact ? 0.85 : 1,
+        }}
+      >
+        <InfinityStream
+          messages={displayMessages}
+          isTyping={isProcessing || isInitializing}
+          onArtifactDownload={handleArtifactDownload}
+          onArtifactExpand={handleArtifactExpand}
+          onMediaDownload={handleMediaDownload}
+          onRepeatMessage={(msg) => {
+            if (voiceEnabled) {
+              speakResponse(msg.content);
+            }
+          }}
+        />
+      </div>
+
+      {/* The Input - Fixed glassmorphism bar at bottom (self-positioning) */}
       <InfinityInputPhantom
         onSend={handleSend}
         mood={mood}
@@ -2518,6 +3787,8 @@ Currently: ${sleepTracker.isSleeping ? `Sleeping (${sleepTracker.getCurrentSleep
         wakeWordActive={wakeWordActive}
         onVoiceStart={handleVoiceStart}
         onVoiceEnd={handleVoiceEnd}
+        onVoiceStop={() => setIsManualVoiceInput(false)}
+        onInputChange={handleInputChange}
         phantomMode={phantomMode.isPhantomMode}
         onFileUpload={isHeavyReady ? documentXray.uploadDocument : undefined}
         isUploading={isHeavyReady ? documentXray.isUploading : false}
@@ -2531,35 +3802,11 @@ Currently: ${sleepTracker.isSleeping ? `Sleeping (${sleepTracker.getCurrentSleep
             : null
         }
         onClearUpload={isHeavyReady ? documentXray.clearActiveDocument : undefined}
+        handsFreeMode={handsFreeMode}
+        onHandsFreeToggle={setHandsFreeMode}
       />
 
-      {/* Inference Diagnostics Badge - Stage 4+ */}
-      {isHeavyReady && !visualsDisabled && (
-        <InferenceDiagnosticsBadge data={inferenceDiagnostics} isProcessing={isProcessing} />
-      )}
-
-      {/* God Mode - Activated via voice command "Zoe activate God Mode" - No visible button for clean UI */}
-
-      {/* Voice Signal Icon - Shows current voice engine (Green=Cloud, Yellow=Deepgram, Red=Native) */}
-      {voiceEnabled && !visualsDisabled && (
-        <VoiceSignalIcon
-          activeEngine={voiceOrchestrator.activeEngine}
-          isSpeaking={voiceOrchestrator.isSpeaking}
-          isLoading={voiceOrchestrator.isLoading}
-          latencyMs={voiceOrchestrator.latencyMs}
-        />
-      )}
-
-      {/* Local Time Display - For precise astrology & circadian calculations */}
-      {/* (Removed) Local clock UI: user did not request a clock overlay */}
-
-      {/* Wake Word Indicator - Stage 4+ */}
-      {isHeavyReady && isWakeListening && !visualsDisabled && (
-        <div className="absolute top-16 right-4 flex items-center gap-2 text-white/30 text-xs z-10">
-          <div className="w-2 h-2 rounded-full bg-cyan-400/50 animate-pulse" />
-          <span>Listening for "Hey Zoe"</span>
-        </div>
-      )}
+      {/* Inference Diagnostics & Voice Signal moved to ZoeUtilityMenu */}
 
       {/* Fullscreen Viewer */}
       {!visualsDisabled && (
@@ -2608,10 +3855,52 @@ Currently: ${sleepTracker.isSleeping ? `Sleeping (${sleepTracker.getCurrentSleep
         />
       )}
 
-      {/* God Mode - Minimal object detection vision */}
+      {/* God Mode - Camera Vision + AI Analysis */}
       <GodModeVision
         isActive={showGodMode}
-        onClose={() => setShowGodMode(false)}
+        preferredStream={preferredVisionStream}
+        initialContext={godModeInitialContext}
+        onCameraReadyChange={setIsGodModeCameraReady}
+        psychologistMode={isPsychologistMode}
+        onFaceEmotionDetected={(result) => {
+          setLastFaceEmotion(result);
+          // Inject emotion context into brain for next response
+          if (isPsychologistMode && result.intensity > 30) {
+            const emotionContext = `[PSYCHOLOGIST OBSERVATION] User's face shows ${result.emotion} (intensity: ${result.intensity}%). Facial patterns: ${result.patterns.join(', ')}. ${result.context}. Respond as a compassionate psychologist — validate their emotion, offer a grounding technique if stressed/sad, celebrate if happy.`;
+            const emotionMsg: InfinityMessage = {
+              id: `psych-${Date.now()}`,
+              role: 'assistant',
+              content: `I can see it in your eyes... you look ${result.emotion.toLowerCase()}. ${result.intensity > 60 ? "I'm here with you." : "Tell me what's on your mind."} 🌙`,
+              timestamp: new Date(),
+              metadata: { mode: 'system2' as const },
+            };
+            setMessages(prev => {
+              const last = prev[prev.length - 1];
+              if (last?.id?.startsWith('psych-') && last.content === emotionMsg.content) return prev;
+              return [...prev, emotionMsg];
+            });
+            void speakQueued(emotionMsg.content);
+          }
+        }}
+        onClose={() => {
+          setShowGodMode(false);
+          setGodModeInitialContext(null);
+          setIsGodModeCameraReady(false);
+          setIsPsychologistMode(false);
+          setLastFaceEmotion(null);
+        }}
+        onZoeVisionResponse={(analysis) => {
+          setGodModeInitialContext(null);
+          const visionMsg: InfinityMessage = {
+            id: `vision-${Date.now()}`,
+            role: 'assistant',
+            content: analysis,
+            timestamp: new Date(),
+            metadata: { mode: 'system2' as const },
+          };
+          setMessages(prev => [...prev, visionMsg]);
+          speakResponse(analysis.length > 200 ? analysis.substring(0, 200) : analysis);
+        }}
       />
 
       {/* THE INITIATIVE PROTOCOL UI */}
@@ -2633,30 +3922,21 @@ Currently: ${sleepTracker.isSleeping ? `Sleeping (${sleepTracker.getCurrentSleep
         />
       )}
 
-      {/* DEV ONLY: Timezone Debug Panel */}
+      {/* DEV ONLY: Timezone Debug Panel (toggle via utility menu) */}
       {import.meta.env.DEV && (
-        <>
-          <button
-            onClick={() => setShowTimezoneDebug(prev => !prev)}
-            className="fixed bottom-4 left-4 z-50 p-2 bg-black/80 border border-white/20 rounded-lg text-white/60 hover:text-white hover:border-cyan-400/50 transition-all text-xs font-mono"
-            title="Timezone Debug Panel"
-          >
-            ⏰ TZ Debug
-          </button>
-          <TimezoneDebugPanel 
-            isOpen={showTimezoneDebug} 
-            onClose={() => setShowTimezoneDebug(false)} 
-          />
-        </>
+        <TimezoneDebugPanel 
+          isOpen={showTimezoneDebug} 
+          onClose={() => setShowTimezoneDebug(false)} 
+        />
       )}
 
-      {/* BRAIN LOADER - Hybrid Caching for Offline AI */}
-      {/* Shows download progress on first run, hidden once brain is cached */}
-      <BrainLoader 
-        autoDownload={false}
-        showUI={!isBrainCached}
-        onReady={() => console.log('[ZoeInfinity] 🧠 Offline brain ready')}
-        onError={(err) => console.warn('[ZoeInfinity] Brain download failed:', err)}
+      {/* BrainLoader moved to top-left button group */}
+
+      {/* Unified Permission Activation — mic, camera, location, notifications in one click */}
+      <PermissionActivationModal
+        open={showPermissionModal}
+        onOpenChange={setShowPermissionModal}
+        onComplete={() => setShowPermissionModal(false)}
       />
 
     </div>

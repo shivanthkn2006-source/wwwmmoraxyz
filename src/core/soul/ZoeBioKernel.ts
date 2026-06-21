@@ -89,7 +89,7 @@ export class ZoeBioKernel {
   
   // BATTERY OPTIMIZATION: Throttle updates to max 1 per second
   private lastUpdateTime: number = 0;
-  private readonly UPDATE_THROTTLE_MS = 1000;
+  private readonly UPDATE_THROTTLE_MS = 300;
 
   constructor() {
     this.state = this.getDefaultState();
@@ -288,7 +288,7 @@ export class ZoeBioKernel {
     if (this.isActive) return;
     this.isActive = true;
 
-    // BATTERY OPTIMIZATION: Slow decay interval (every 30 seconds, not every second)
+    // Decay interval — recalculate vitals regularly for visible BPM changes
     this.decayInterval = setInterval(() => {
       if (!this.isActive) return;
       
@@ -312,7 +312,7 @@ export class ZoeBioKernel {
       this.state.breathingRate = this.calculateBreathingRate();
       
       this.notifyListeners();
-    }, 30000); // Every 30 seconds for battery optimization
+    }, 8000); // Every 8 seconds for visible heart rate changes
 
     console.log('[ZoeBioKernel] 💓 Soul activated');
   }

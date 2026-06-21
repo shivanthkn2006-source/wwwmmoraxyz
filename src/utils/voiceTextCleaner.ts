@@ -60,7 +60,7 @@ export function cleanForVoice(text: string): { text: string; removedMarkers: str
       return '';
     })
     // === SSML TAG CLEANUP (AI sometimes hallucinates these) ===
-    // <break time="1.4s"/> → "" (Deepgram doesn't support SSML)
+    // <break time="1.4s"/> → "" (not supported by browser TTS)
     .replace(/<break[^>]*\/?>/gi, '')
     // Remove any other SSML tags: <speak>, <prosody>, etc.
     .replace(/<\/?(speak|prosody|emphasis|say-as|sub|phoneme|audio|mark|desc|voice|lang|p|s|w)\b[^>]*>/gi, '')

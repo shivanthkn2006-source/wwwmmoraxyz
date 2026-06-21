@@ -12,7 +12,7 @@ export const useRealtimeBadgeNotifications = () => {
 
     // Listen for friend badge notifications
     const badgeChannel = supabase
-      .channel('friend-badge-notifications')
+      .channel(`friend-badge-notifications:${user.id}`)
       .on(
         'postgres_changes',
         {

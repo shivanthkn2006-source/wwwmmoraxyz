@@ -254,10 +254,10 @@ export const generateBlueprintData = (): BlueprintData => {
         ]
       },
       backend: {
-        platform: 'Lovable Cloud (Supabase)',
+        platform: 'Sovereign Cloud Infrastructure',
         database: 'PostgreSQL',
-        authentication: 'Supabase Auth (Email + WebAuthn)',
-        storage: 'Supabase Storage',
+        authentication: 'Sovereign Auth (Email + WebAuthn)',
+        storage: 'Sovereign Storage',
         realtimeEnabled: true,
         edgeFunctions: [
           { name: 'zoe-chat', verifyJwt: true, purpose: 'Main Zoe AI chat with profile context + telemetry' },
@@ -280,7 +280,7 @@ export const generateBlueprintData = (): BlueprintData => {
           { name: 'face-verification', verifyJwt: true, purpose: 'Biometric authentication' },
           { name: 'behavioral-event-stream', verifyJwt: false, purpose: 'ECN event processing' },
           { name: 'ecn-analysis-processor', verifyJwt: false, purpose: 'Emotional state analysis' },
-          { name: 'lovable-tts', verifyJwt: true, purpose: 'Text-to-speech synthesis' },
+          { name: 'transcribe-audio', verifyJwt: true, purpose: 'Speech-to-text (Sovereign AI)' },
           { name: 'transcribe-audio', verifyJwt: true, purpose: 'Speech-to-text' },
           { name: 'generate-image', verifyJwt: true, purpose: 'AI image generation' },
           { name: 'generate-text', verifyJwt: true, purpose: 'AI text generation' },
@@ -450,12 +450,11 @@ export const generateBlueprintData = (): BlueprintData => {
       {
         name: 'Zoe Voice',
         type: 'voice',
-        description: 'Voice synthesis and speech recognition AI',
-        edgeFunction: 'lovable-tts',
+        description: 'Browser-native voice synthesis (Web Speech API)',
+        edgeFunction: 'transcribe-audio',
         capabilities: [
-          'Text-to-speech',
-          'Speech-to-text',
-          'Voice cloning (premium)',
+          'Text-to-speech (Browser native)',
+          'Speech-to-text (Sovereign AI)',
           'Multi-language support'
         ],
         integrations: ['voice_assistant_settings', 'zoe_command_history']
@@ -476,12 +475,12 @@ export const generateBlueprintData = (): BlueprintData => {
     ],
     
     apis: [
-      { name: 'Lovable AI Gateway', type: 'external', purpose: 'Primary AI model access (Gemini, GPT-5)', authentication: 'LOVABLE_API_KEY' },
-      { name: 'Supabase Auth', type: 'internal', purpose: 'User authentication', authentication: 'JWT' },
-      { name: 'Supabase Database', type: 'internal', purpose: 'PostgreSQL database', authentication: 'JWT + RLS' },
-      { name: 'Supabase Storage', type: 'internal', purpose: 'File storage', authentication: 'JWT' },
-      { name: 'Supabase Realtime', type: 'internal', purpose: 'Real-time subscriptions', authentication: 'JWT' },
-      { name: 'AssemblyAI', type: 'external', purpose: 'Speech transcription', authentication: 'API Key' },
+      { name: 'Sovereign AI Core', type: 'internal', purpose: 'Primary AI cognition engine', authentication: 'Sovereign Key' },
+      { name: 'Sovereign Auth', type: 'internal', purpose: 'User authentication', authentication: 'JWT' },
+      { name: 'Sovereign Database', type: 'internal', purpose: 'PostgreSQL database', authentication: 'JWT + RLS' },
+      { name: 'Sovereign Storage', type: 'internal', purpose: 'File storage', authentication: 'JWT' },
+      { name: 'Sovereign Realtime', type: 'internal', purpose: 'Real-time subscriptions', authentication: 'JWT' },
+      { name: 'Voice Engine', type: 'internal', purpose: 'Speech transcription', authentication: 'JWT' },
       { name: 'OpenStreetMap', type: 'external', purpose: 'Map data', authentication: 'None' },
       { name: 'D3.js Geo', type: 'external', purpose: '3D globe rendering', authentication: 'None' }
     ],

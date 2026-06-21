@@ -176,8 +176,17 @@ export function initializeKernel(): void {
   console.log('═══════════════════════════════════════════════════════════════');
 }
 
-// Auto-initialize on import
-initializeKernel();
+// Lazy initialization - only log in development, not on every import
+let _kernelInitialized = false;
+export function ensureKernelInitialized(): void {
+  if (!_kernelInitialized) {
+    _kernelInitialized = true;
+    if (typeof window !== 'undefined' && import.meta.env?.DEV) {
+      initializeKernel();
+    }
+  }
+}
+ensureKernelInitialized();
 
 export default {
   CONSTITUTIONAL_ARTICLES,

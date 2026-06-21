@@ -8,10 +8,9 @@ import { Progress } from "@/components/ui/progress";
 import { Brain, Wifi, WifiOff, Check, Download, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-// Model URLs - matches runtimeCaching rules in vite.config.ts
+// Model URLs - matches runtimeCaching rules in vite.config.ts (MediaPipe URL deprecated)
 const BRAIN_MODELS = {
   gemma: 'https://storage.googleapis.com/jmstore/kaggleweb/grader/g2b-it-gpu-int4.bin',
-  mediapipe: 'https://storage.googleapis.com/mediapipe-models/llm_inference/gemma_2b_it_gpu_int4/float32/latest/gemma_2b_it_gpu_int4.bin',
 };
 
 const BRAIN_CACHE_NAME = 'zoe-brain-v1';
@@ -71,8 +70,8 @@ export function BrainLoader({
     setStatusText("Downloading Neural Pathways (This happens once)...");
     
     try {
-      // Use the MediaPipe model URL
-      const modelUrl = BRAIN_MODELS.mediapipe;
+      // Use the Gemma model URL (MediaPipe deprecated)
+      const modelUrl = BRAIN_MODELS.gemma;
       
       const response = await fetch(modelUrl, {
         method: 'GET',
@@ -225,8 +224,8 @@ export function BrainLoader({
     init();
   }, [checkBrainCache, downloadBrain, autoDownload, onReady]);
 
-  // Don't render if UI is hidden, brain is ready, not supported, or just checking (no auto-download prompt)
-  if (!showUI || status === 'offline-ready' || status === 'ready' || status === 'not-supported' || (status === 'checking' && !autoDownload)) {
+  // Don't render if UI is hidden or brain is ready
+  if (!showUI || status === 'offline-ready' || status === 'ready') {
     return null;
   }
 
@@ -235,57 +234,65 @@ export function BrainLoader({
     checking: Brain,
     downloading: Download,
     error: AlertCircle,
+    'not-supported': AlertCircle,
   }[status] || Brain;
 
-  return (
-    <div className={cn(
-      "fixed bottom-32 left-4 right-4 md:left-auto md:right-4 md:w-80",
-      "bg-background/95 backdrop-blur-xl border border-border/50 rounded-xl p-3",
-      "shadow-lg z-30",
-      className
-    )}>
-      <div className="flex items-center gap-3 mb-3">
-        <div className={cn(
-          "p-2 rounded-lg",
-          status === 'downloading' && "bg-primary/20 animate-pulse",
-          status === 'error' && "bg-destructive/20",
-          status === 'checking' && "bg-primary/10"
-        )}>
-          <StatusIcon className={cn(
-            "w-5 h-5",
-            status === 'downloading' && "text-primary animate-bounce",
-            status === 'error' && "text-destructive",
-            status === 'checking' && "text-muted-foreground"
-          )} />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium truncate">{statusText}</p>
-          {status === 'downloading' && totalMB > 0 && (
-            <p className="text-xs text-muted-foreground">
+  // Compact icon button mode - matches PDF download button style
+  if (status === 'downloading') {
+    // Show progress overlay only while actively downloading
+    return (
+      <>
+        <button
+          className={cn(
+            "w-7 h-7 rounded-md flex items-center justify-center bg-white/5 border border-white/10 text-white/40",
+            className
+          )}
+          title={`Downloading brain: ${progress}%`}
+          disabled
+        >
+          <Download className="w-3.5 h-3.5 text-primary animate-bounce" />
+        </button>
+        <div className="fixed top-14 left-3 z-50 bg-background/95 backdrop-blur-xl border border-border/50 rounded-lg p-3 shadow-lg w-56">
+          <div className="flex items-center gap-2 mb-2">
+            <Download className="w-4 h-4 text-primary animate-bounce flex-shrink-0" />
+            <p className="text-xs font-medium truncate">{statusText}</p>
+          </div>
+          {totalMB > 0 && (
+            <p className="text-[10px] text-muted-foreground mb-1">
               {downloadedMB} MB / {totalMB} MB
             </p>
           )}
+          <Progress value={progress} className="h-1.5" />
         </div>
-        {navigator.onLine ? (
-          <Wifi className="w-4 h-4 text-primary flex-shrink-0" />
-        ) : (
-          <WifiOff className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-        )}
-      </div>
+      </>
+    );
+  }
 
-      {status === 'downloading' && (
-        <Progress value={progress} className="h-2" />
+  // Tiny icon button - same size as the PDF download button
+  return (
+    <button
+      onClick={status === 'checking' && navigator.onLine ? downloadBrain : undefined}
+      title={
+        status === 'checking' ? 'Download Offline Brain (~500MB)' :
+        status === 'error' ? 'Download failed - tap to retry' :
+        status === 'not-supported' ? 'Offline brain not supported on this device' :
+        'Brain status'
+      }
+      className={cn(
+        "w-7 h-7 rounded-md flex items-center justify-center transition-all",
+        "bg-white/5 hover:bg-white/15 border border-white/10 hover:border-white/30",
+        status === 'checking' && navigator.onLine && "cursor-pointer text-white/40 hover:text-white/80",
+        status === 'error' && "border-destructive/30 hover:bg-destructive/20 cursor-pointer text-destructive",
+        status === 'not-supported' && "opacity-50 cursor-not-allowed text-white/20",
+        className
       )}
-
-      {status === 'checking' && !autoDownload && navigator.onLine && (
-        <button
-          onClick={downloadBrain}
-          className="w-full mt-2 py-2 px-4 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
-        >
-          Download Offline Brain (~500MB)
-        </button>
+    >
+      {status === 'error' ? (
+        <AlertCircle className="w-3.5 h-3.5" />
+      ) : (
+        <Brain className="w-3.5 h-3.5" />
       )}
-    </div>
+    </button>
   );
 }
 
@@ -297,31 +304,52 @@ export function useBrainStatus(): { status: BrainStatus; isReady: boolean } {
   const [status, setStatus] = useState<BrainStatus>('checking');
   const [isReady, setIsReady] = useState(false);
 
-  useEffect(() => {
-    const checkStatus = async () => {
-      if (!('caches' in window)) {
-        setStatus('not-supported');
-        return;
-      }
+  const checkStatus = useCallback(async () => {
+    if (!('caches' in window)) {
+      setStatus('not-supported');
+      setIsReady(false);
+      return;
+    }
 
-      try {
-        const cache = await caches.open(BRAIN_CACHE_NAME);
-        for (const modelUrl of Object.values(BRAIN_MODELS)) {
-          const existing = await cache.match(modelUrl);
-          if (existing) {
-            setStatus('offline-ready');
-            setIsReady(true);
-            return;
-          }
+    try {
+      const cache = await caches.open(BRAIN_CACHE_NAME);
+      for (const modelUrl of Object.values(BRAIN_MODELS)) {
+        const existing = await cache.match(modelUrl);
+        if (existing) {
+          setStatus('offline-ready');
+          setIsReady(true);
+          return;
         }
-        setStatus('checking');
-      } catch {
-        setStatus('error');
       }
+      setStatus('checking');
+      setIsReady(false);
+    } catch {
+      setStatus('error');
+      setIsReady(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    checkStatus();
+
+    const handleBrainUpdated = () => {
+      void checkStatus();
     };
 
-    checkStatus();
-  }, []);
+    const handleVisibility = () => {
+      if (!document.hidden) void checkStatus();
+    };
+
+    window.addEventListener('zoe-brain-cache-updated', handleBrainUpdated);
+    window.addEventListener('online', handleBrainUpdated);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      window.removeEventListener('zoe-brain-cache-updated', handleBrainUpdated);
+      window.removeEventListener('online', handleBrainUpdated);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [checkStatus]);
 
   return { status, isReady };
 }

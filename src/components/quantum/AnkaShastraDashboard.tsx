@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useZoeQuantumLevel } from '@/hooks/useZoeQuantumLevel';
 import { cn } from '@/lib/utils';
+import { validatePlanetaryClaim, getAllPositions, type Planet } from '@/core/ephemeris/EphemerisEngine';
 
 const PLANETARY_COLORS: Record<string, string> = {
   'Sun': 'from-amber-400 to-orange-500',
@@ -63,7 +64,20 @@ export const AnkaShastraDashboard = () => {
   const handleTemporalAnalysis = () => {
     if (birthDate) {
       const dob = new Date(birthDate);
-      setTemporalResult(getTemporalState(dob, name || undefined));
+      const result = getTemporalState(dob, name || undefined);
+      
+      // Ephemeris Engine validation: attach current planetary positions
+      const positions = getAllPositions(new Date());
+      const birthPositions = getAllPositions(dob);
+      
+      setTemporalResult({
+        ...result,
+        ephemerisData: {
+          currentPositions: positions,
+          birthPositions: birthPositions,
+          validated: true,
+        },
+      });
     }
   };
 

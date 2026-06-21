@@ -8,6 +8,15 @@ import { Badge } from '@/components/ui/badge';
 import { triggerHomeRefresh } from '@/lib/homeRefresh';
 import { useZoe } from '@/contexts/ZoeContext';
 import { useMenuNotifications } from '@/hooks/useMenuNotifications';
+import { useMoodAdaptiveUI } from '@/hooks/useMoodAdaptiveUI';
+
+const ALL_NAV_ITEMS = [
+  { icon: Home, path: '/home', label: 'Home', id: 'home' },
+  { icon: Camera, path: '/camera', label: 'Camera', id: 'camera' },
+  { icon: MessageCircle, path: '/chat', label: 'Chat', id: 'chat' },
+  { icon: Users, path: '/huddle', label: 'Huddle', id: 'huddle' },
+  { icon: Share2, path: '/webdrop', label: 'Webdrop', id: 'webdrop' },
+];
 
 const BottomNavigation = () => {
   const location = useLocation();
@@ -16,9 +25,14 @@ const BottomNavigation = () => {
   const { newMatchesCount, markMatchesAsSeen } = useNewMatches();
   const { isListening, isMinimized } = useZoe();
   const { notifications, markFeatureSeen } = useMenuNotifications();
+  const { uiMode, hiddenMenuItems } = useMoodAdaptiveUI();
   const [isSearchActive, setIsSearchActive] = React.useState(false);
 
   const totalUnread = chatUsers.filter(user => (user.unread_count || 0) > 0).length;
+
+  // Filter nav items based on mood-adaptive UI mode
+  const hiddenIds = new Set(hiddenMenuItems.map(m => m.id));
+  const navItems = ALL_NAV_ITEMS.filter(item => !hiddenIds.has(item.id));
 
   React.useEffect(() => {
     const handleSearchActive = (event: CustomEvent<{ active: boolean }>) => {
@@ -37,20 +51,11 @@ const BottomNavigation = () => {
       triggerHomeRefresh();
     }
     if (path === 'search') {
-      // Trigger search modal
       window.dispatchEvent(new CustomEvent('open-search'));
       return;
     }
     navigate(path);
   };
-
-  const navItems = [
-    { icon: Home, path: '/home', label: 'Home' },
-    { icon: Camera, path: '/camera', label: 'Camera' },
-    { icon: MessageCircle, path: '/chat', label: 'Chat' },
-    { icon: Users, path: '/huddle', label: 'Huddle' },
-    { icon: Share2, path: '/webdrop', label: 'Webdrop' },
-  ];
 
   return (
     <div className={cn(

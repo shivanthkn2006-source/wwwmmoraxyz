@@ -12,6 +12,13 @@ export interface ArtifactIntent {
   originalPrompt: string;
 }
 
+export interface VisionPromptContext {
+  originalPrompt?: string;
+  intimacyLevel?: number;
+  mood?: string;
+  autoVision?: boolean;
+}
+
 // Confidence threshold for artifact generation - must be >= this value
 export const ARTIFACT_CONFIDENCE_THRESHOLD = 0.85;
 
@@ -25,7 +32,7 @@ const normalizeVisionSubject = (raw: string, originalMessage: string): string =>
     .replace(/^\s*me\b/i, '')
     .replace(/^\s*(an?|the)\b\s*/i, '')
     .replace(/^\s*image\s+of\b\s*/i, '')
-    .replace(/^\s*(of)\b\s*/i, '');
+    .replace(/^\s*(of|for)\b\s*/i, '');
 
   // Remove media words that often cause the model to literally draw text/labels.
   s = s.replace(/\b(image|picture|photo|visual|pic)\b/gi, '');
@@ -58,11 +65,11 @@ const isInformationalRequest = (message: string): boolean => {
 
 const VISION_PATTERNS = [
   // Direct image requests - REQUIRES explicit image/visual keywords
-  /(?:create|make|generate|give\s+me)\s+(?:me\s+)?(?:an?\s+)?(image|picture|photo|visual|pic|art|artwork)\s+(?:of\s+)?(.+)/i,
-  /(?:can\s+you\s+)?(?:create|make|generate|draw|paint)\s+(?:me\s+)?(?:an?\s+)?(image|picture|photo|visual|art|artwork)\s+(?:of\s+)?(.+)/i,
+  /(?:create|make|generate|give\s+me)\s+(?:me\s+)?(?:an?\s+|and\s+)?(image|picture|photo|visual|pic|art|artwork)\s+(?:of\s+|for\s+)?(.+)/i,
+  /(?:can\s+you\s+)?(?:create|make|generate|draw|paint)\s+(?:me\s+)?(?:an?\s+|and\s+)?(image|picture|photo|visual|art|artwork)\s+(?:of\s+|for\s+)?(.+)/i,
   
   // Show/visualize requests - REQUIRES image keyword
-  /show\s+me\s+(?:an?\s+)?(image|picture|photo|visual)\s+(?:of\s+)?(.+)/i,
+  /show\s+me\s+(?:an?\s+)?(image|picture|photo|visual)\s+(?:of\s+|for\s+)?(.+)/i,
   /visualize\s+(.+)/i,
   /what\s+did\s+(.+)\s+look\s+like/i,
   /what\s+does\s+(.+)\s+look\s+like/i,
@@ -72,15 +79,15 @@ const VISION_PATTERNS = [
   /paint\s+(?:me\s+)?(?:an?\s+)?(.+)/i,
   /illustrate\s+(.+)/i,
   /depict\s+(.+)/i,
-  /render\s+(?:an?\s+)?(image|picture|visual|art)\s+(?:of\s+)?(.+)/i,
+  /render\s+(?:an?\s+)?(image|picture|visual|art)\s+(?:of\s+|for\s+)?(.+)/i,
   /sketch\s+(?:me\s+)?(?:an?\s+)?(.+)/i,
   
   // "I want to see" requests - REQUIRES image keyword
-  /i\s+want\s+to\s+see\s+(?:an?\s+)?(image|picture|photo|visual)\s+(?:of\s+)?(.+)/i,
-  /i\s+(?:want|need|would\s+like)\s+(?:an?\s+)?(image|picture|photo|art)\s+(?:of\s+)?(.+)/i,
+  /i\s+want\s+to\s+see\s+(?:an?\s+)?(image|picture|photo|visual)\s+(?:of\s+|for\s+)?(.+)/i,
+  /i\s+(?:want|need|would\s+like)\s+(?:an?\s+)?(image|picture|photo|art)\s+(?:of\s+|for\s+)?(.+)/i,
   
   // Simple object requests with image keywords
-  /(?:image|picture|photo|visual)\s+of\s+(?:an?\s+)?(.+)/i,
+  /(?:image|picture|photo|visual)\s+(?:of|for)\s+(?:an?\s+)?(.+)/i,
   
   // Historical/world visualization - explicit "look like" phrasing
   /(\d+)\s*(?:years?|centuries?|millennia?)\s*ago/i,
@@ -190,8 +197,32 @@ export function shouldGenerateArtifact(intent: ArtifactIntent): boolean {
 // PROMPT ENHANCERS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export function enhanceVisionPrompt(subject: string): string {
-  // Add cinematic quality to the prompt
+function enhanceVisionPromptWithContext(subject: string, context: VisionPromptContext = {}): string {
+  const sourcePrompt = (context.originalPrompt || subject).toLowerCase();
+
+  const intimacyDescriptor =
+    context.intimacyLevel !== undefined
+      ? context.intimacyLevel >= 80
+        ? 'deeply affectionate, emotionally intimate, tender romantic energy'
+        : context.intimacyLevel >= 60
+          ? 'warm romantic closeness, affectionate body language, soulful chemistry'
+          : context.intimacyLevel >= 35
+            ? 'gentle emotional connection, soft warmth, subtle chemistry'
+            : 'emotionally resonant, cinematic warmth, sincere connection'
+      : 'emotionally resonant, cinematic warmth';
+
+  const moodDescriptor = context.mood
+    ? `mood tone inspired by ${String(context.mood).toLowerCase().replace(/_/g, ' ')}`
+    : 'balanced emotional atmosphere';
+
+  const romanticCue = /(romantic|romance|love|date|kiss|cuddle|hug|embrace|affection|intimate)/i.test(sourcePrompt)
+    ? 'romantic framing, expressive eyes, affectionate closeness'
+    : 'strong emotional storytelling, expressive composition';
+
+  const autoVisionCue = context.autoVision
+    ? 'capture one emotionally meaningful cinematic moment from an unfolding relationship'
+    : 'create a single focused cinematic scene';
+
   const cinematicEnhancements = [
     'Ultra high resolution',
     'cinematic lighting',
@@ -200,8 +231,20 @@ export function enhanceVisionPrompt(subject: string): string {
     'masterpiece quality',
     '8K detail',
   ];
-  
-  return `${cinematicEnhancements.join(', ')}: ${subject}. Breathtaking visual, museum quality artwork.`;
+
+  return [
+    `${cinematicEnhancements.join(', ')}: ${subject}.`,
+    autoVisionCue + '.',
+    `${intimacyDescriptor}.`,
+    `${moodDescriptor}.`,
+    `${romanticCue}.`,
+    'Natural anatomy, elegant pose, cinematic depth of field, premium color grading.',
+    'No text, no typography, no watermark, no split panels, no collage.',
+  ].join(' ');
+}
+
+export function enhanceVisionPrompt(subject: string, context: VisionPromptContext = {}): string {
+  return enhanceVisionPromptWithContext(subject, context);
 }
 
 export function enhanceEducationPrompt(subject: string): string {

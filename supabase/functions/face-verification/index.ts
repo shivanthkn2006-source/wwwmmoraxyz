@@ -65,73 +65,93 @@ serve(async (req) => {
     // For all other operations, we require JWT authentication
     let verifiedUserId: string | null = null;
 
-    if (operation === 'login_with_face') {
-      // Login with face - find user by email, then verify face
-      if (!email) {
-        return new Response(
-          JSON.stringify({ error: 'Email is required for face login' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+    if (operation === 'login_with_face' || operation === 'check_face_enrolled') {
+      if (operation === 'login_with_face') {
+        // Login with face - find user by email, then verify face
+        if (!email) {
+          return new Response(
+            JSON.stringify({ error: 'Email is required for face login' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Get client IP for rate limiting
+        const clientIP = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
+                         req.headers.get('x-real-ip') || 
+                         'unknown';
+
+        // Check rate limit BEFORE any user lookup (prevents timing attacks)
+        const { data: rateLimitCheck, error: rateLimitError } = await supabase
+          .rpc('check_face_login_rate_limit', { 
+            p_email: email.toLowerCase(),
+            p_ip_address: clientIP
+          });
+
+        if (rateLimitError) {
+          console.error('Rate limit check error:', rateLimitError);
+        }
+
+        if (rateLimitCheck && !rateLimitCheck.allowed) {
+          console.log('Rate limit exceeded for:', email, 'IP:', clientIP);
+          // Log the blocked attempt
+          await supabase.from('face_login_attempts').insert({
+            email: email.toLowerCase(),
+            ip_address: clientIP,
+            success: false,
+            failure_reason: 'rate_limit_exceeded'
+          });
+          
+          return new Response(
+            JSON.stringify({ 
+              error: 'Too many login attempts. Please try again later.',
+              locked_until: rateLimitCheck.locked_until,
+              remaining_attempts: 0
+            }),
+            { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Find user by email - use generic error to prevent user enumeration
+        const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
+        if (authError) throw authError;
+
+        const user = authData.users.find(u => u.email?.toLowerCase() === email.toLowerCase());
+        if (!user) {
+          // Log failed attempt (user not found)
+          await supabase.from('face_login_attempts').insert({
+            email: email.toLowerCase(),
+            ip_address: clientIP,
+            success: false,
+            failure_reason: 'user_not_found'
+          });
+          
+          // Return generic error to prevent user enumeration attacks
+          return new Response(
+            JSON.stringify({ error: 'Face verification failed' }),
+            { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        verifiedUserId = user.id;
+      } else {
+        // Public pre-check for login screen (optional auth context if token exists)
+        const checkEmail = email?.toLowerCase().trim();
+
+        if (checkEmail) {
+          const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
+          if (authError) throw authError;
+
+          const user = authData.users.find(u => u.email?.toLowerCase() === checkEmail);
+          verifiedUserId = user?.id ?? null;
+        } else {
+          const authHeader = req.headers.get('Authorization');
+          if (authHeader) {
+            const token = authHeader.replace('Bearer ', '');
+            const { data: { user } } = await supabase.auth.getUser(token);
+            verifiedUserId = user?.id ?? null;
+          }
+        }
       }
-
-      // Get client IP for rate limiting
-      const clientIP = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
-                       req.headers.get('x-real-ip') || 
-                       'unknown';
-
-      // Check rate limit BEFORE any user lookup (prevents timing attacks)
-      const { data: rateLimitCheck, error: rateLimitError } = await supabase
-        .rpc('check_face_login_rate_limit', { 
-          p_email: email.toLowerCase(),
-          p_ip_address: clientIP
-        });
-
-      if (rateLimitError) {
-        console.error('Rate limit check error:', rateLimitError);
-      }
-
-      if (rateLimitCheck && !rateLimitCheck.allowed) {
-        console.log('Rate limit exceeded for:', email, 'IP:', clientIP);
-        // Log the blocked attempt
-        await supabase.from('face_login_attempts').insert({
-          email: email.toLowerCase(),
-          ip_address: clientIP,
-          success: false,
-          failure_reason: 'rate_limit_exceeded'
-        });
-        
-        return new Response(
-          JSON.stringify({ 
-            error: 'Too many login attempts. Please try again later.',
-            locked_until: rateLimitCheck.locked_until,
-            remaining_attempts: 0
-          }),
-          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      // Find user by email - use generic error to prevent user enumeration
-      const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
-      if (authError) throw authError;
-
-      const user = authData.users.find(u => u.email?.toLowerCase() === email.toLowerCase());
-      if (!user) {
-        // Log failed attempt (user not found)
-        await supabase.from('face_login_attempts').insert({
-          email: email.toLowerCase(),
-          ip_address: clientIP,
-          success: false,
-          failure_reason: 'user_not_found'
-        });
-        
-        // Return generic error to prevent user enumeration attacks
-        return new Response(
-          JSON.stringify({ error: 'Face verification failed' }),
-          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      verifiedUserId = user.id;
     } else {
       // All other operations require JWT authentication
       const authHeader = req.headers.get('Authorization');
@@ -469,30 +489,32 @@ serve(async (req) => {
       }
 
       case 'check_face_enrolled': {
-        // Check if face verification is set up for a user (by email, no auth needed)
-        const checkEmail = (await req.json()).email;
-        
-        if (!checkEmail) {
-          // If no email provided but we have verifiedUserId from JWT, use that
+        const checkEmail = email?.toLowerCase().trim();
+
+        if (checkEmail) {
+          const { data: authData } = await supabase.auth.admin.listUsers();
+          const user = authData?.users.find(u => u.email?.toLowerCase() === checkEmail);
+
+          if (!user) {
+            return new Response(
+              JSON.stringify({ enrolled: false }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+
           const { data: settings } = await supabase
             .from('user_security_settings')
             .select('face_verification_enabled')
-            .eq('user_id', verifiedUserId)
-            .single();
+            .eq('user_id', user.id)
+            .maybeSingle();
 
           return new Response(
-            JSON.stringify({ 
-              enrolled: settings?.face_verification_enabled === true 
-            }),
+            JSON.stringify({ enrolled: settings?.face_verification_enabled === true }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
-        // Find user by email
-        const { data: authData } = await supabase.auth.admin.listUsers();
-        const user = authData?.users.find(u => u.email?.toLowerCase() === checkEmail.toLowerCase());
-        
-        if (!user) {
+        if (!verifiedUserId) {
           return new Response(
             JSON.stringify({ enrolled: false }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -502,13 +524,11 @@ serve(async (req) => {
         const { data: settings } = await supabase
           .from('user_security_settings')
           .select('face_verification_enabled')
-          .eq('user_id', user.id)
-          .single();
+          .eq('user_id', verifiedUserId)
+          .maybeSingle();
 
         return new Response(
-          JSON.stringify({ 
-            enrolled: settings?.face_verification_enabled === true 
-          }),
+          JSON.stringify({ enrolled: settings?.face_verification_enabled === true }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
