@@ -234,7 +234,7 @@ class SyncQueueManager {
   private async syncProfile(payload: any): Promise<void> {
     const { supabase } = await import('@/integrations/supabase/client');
     
-    const { error } = await supabase.from('profiles')
+    const { error } = await (supabase as any).from('profiles')
       .update({
         display_name: payload.displayName,
         nickname: payload.nickname,

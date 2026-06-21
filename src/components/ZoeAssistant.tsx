@@ -1974,7 +1974,7 @@ const ZoeAssistant: React.FC<ZoeAssistantProps> = ({ onNavigate }) => {
     setCurrentTask(`Updating your ${field.replace('_', ' ')}`);
     
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('profiles')
         .update({ [field]: value })
         .eq('user_id', user.id);
