@@ -35,7 +35,7 @@ export const SmartFeatureRecommendations = () => {
           .from('profiles')
           .select('city')
           .eq('user_id', user.id)
-          .single();
+          .maybeSingle();
 
         // Get feature analytics
         const { data: analytics } = await supabase

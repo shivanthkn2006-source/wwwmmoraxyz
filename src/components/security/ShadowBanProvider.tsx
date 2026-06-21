@@ -29,7 +29,7 @@ export const ShadowBanProvider: React.FC<ShadowBanProviderProps> = ({ children }
         .from('shadow_ban_status')
         .select('is_shadow_banned')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       const banned = data?.is_shadow_banned || false;
       setIsShadowBanned(banned);

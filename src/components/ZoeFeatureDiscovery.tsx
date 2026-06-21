@@ -395,7 +395,7 @@ export const ZoeFeatureDiscovery: React.FC<{
           .from('profiles')
           .select('display_name')
           .eq('user_id', user.id)
-          .single();
+          .maybeSingle();
         
         if (profile?.display_name) {
           setUserName(profile.display_name);
@@ -407,7 +407,7 @@ export const ZoeFeatureDiscovery: React.FC<{
           .from('dhf_phoenix_profile')
           .select('vocabulary_signature')
           .eq('user_id', user.id)
-          .single();
+          .maybeSingle();
         
         if (dhfProfile?.vocabulary_signature && typeof dhfProfile.vocabulary_signature === 'object') {
           const vocabSig = dhfProfile.vocabulary_signature as Record<string, unknown>;
