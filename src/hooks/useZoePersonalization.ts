@@ -153,7 +153,7 @@ export const useZoePersonalization = () => {
         [interactionType]: ((behavior.daily_usage_patterns as any)?.[interactionType] || 0) + 1
       };
 
-      await supabase
+      await (supabase as any)
         .from('zoe_user_behavior')
         .update({
           daily_usage_patterns: updatedPatterns,

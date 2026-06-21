@@ -150,7 +150,7 @@ export const useZeroFrictionFreemium = () => {
         .from('profiles')
         .select('username')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
       
       if (profile?.username && ['moksh50', 'Justmkbhd'].includes(profile.username)) {
         setCurrentTier('premium');
@@ -237,7 +237,7 @@ export const useZeroFrictionFreemium = () => {
       });
       
       // Update ZSMT
-      await supabase.from('zoe_sovereign_memory').insert({
+      await (supabase as any).from('zoe_sovereign_memory').insert({
         user_id: user.id,
         event_type: 'trial_started',
         content_text: `${days}-day trial started for ${feature}`,
@@ -292,7 +292,7 @@ export const useZeroFrictionFreemium = () => {
     if (!user) return;
     
     try {
-      await supabase.from('zoe_sovereign_memory').insert({
+      await (supabase as any).from('zoe_sovereign_memory').insert({
         user_id: user.id,
         event_type: 'feature_gate_hit',
         content_text: `User attempted to access ${feature} - conversion gate shown`,

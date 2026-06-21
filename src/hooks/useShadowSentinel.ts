@@ -125,7 +125,7 @@ export const useShadowSentinel = () => {
 
       // Log to database
       if (user) {
-        supabase.from('security_logs').insert({
+        (supabase as any).from('security_logs').insert({
           user_id: user.id,
           event_type: 'kill_switch_activation',
           severity: 'critical',
@@ -202,7 +202,7 @@ export const useShadowSentinel = () => {
 
     // Log to database
     if (user) {
-      await supabase.from('security_logs').insert({
+      await (supabase as any).from('security_logs').insert({
         user_id: user.id,
         event_type: 'stealth_mode_activation',
         severity: 'critical',
