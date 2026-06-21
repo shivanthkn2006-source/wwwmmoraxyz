@@ -74,7 +74,7 @@ export const useZoeNickname = (): UseZoeNicknameReturn => {
             .from('profiles')
             .select('display_name')
             .eq('user_id', user.id)
-            .single();
+            .maybeSingle();
 
           if (isMounted && profile?.display_name && !storedNickname) {
             const firstName = profile.display_name.split(' ')[0];

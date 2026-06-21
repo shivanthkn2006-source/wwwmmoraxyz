@@ -89,14 +89,14 @@ export const useCDSPPaymentRails = () => {
         .from('profiles')
         .select('total_points')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       // Get karma from exodus_players
       const { data: player } = await supabase
         .from('exodus_players')
         .select('resonance_points')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       // Calculate credits from total points
       const karmaPoints = player?.resonance_points || 0;
