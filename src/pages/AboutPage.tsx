@@ -259,7 +259,7 @@ Enterprise: enterprise@universeoflife.app`
 
         {/* Copyright */}
         <div className="text-center mt-12 text-sm text-muted-foreground">
-          <p>© 2024-2025 Universe of Life. All Rights Reserved.</p>
+          <p>© 2023-2026 Universe of Life. All Rights Reserved.</p>
           <p className="mt-2">Powered by Zoe AI Architect</p>
         </div>
       </div>
