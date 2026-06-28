@@ -449,6 +449,9 @@ export const useZoeInfinityBrain = (): UseZoeInfinityBrainReturn => {
   const memoryContextRef = useRef<string>('');
   const lastDecisionRef = useRef<InferenceDecision | null>(null);
   const karmicIntimacyRef = useRef<number>(50); // SAMANTHA MODE: Track intimacy for romantic voice
+  // ── #12 ABORT CONTROLLER: cancel stale brain fetches when a new send arrives ──
+  const brainAbortRef = useRef<AbortController | null>(null);
+  useEffect(() => () => { try { brainAbortRef.current?.abort(); } catch {} }, []);
   
   // ═══════════════════════════════════════════════════════════════════════════
   // IBM INFERENCE OPTIMIZER INITIALIZATION
