@@ -58,48 +58,39 @@ interface Message {
 
 // --- Gemma 4 (Primary Brain) ---
 async function tryGemma4(systemPrompt: string, messages: Message[], mode: IntelligenceMode): Promise<ProviderResult | null> {
-  const apiKey = Deno.env.get("GEMMA4_API_KEY");
+  // PRIMARY: Gemma2-9b-it via Groq (free tier ~14.4k req/day, fast TTFT)
+  const apiKey = Deno.env.get("GROQ_API_KEY");
   if (!apiKey) return null;
-  
+
   try {
-    const model = 'gemma-4-27b-it';
-    const geminiMessages = messages.map(m => ({
-      role: m.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: m.content }],
-    }));
-    
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+    const model = 'gemma2-9b-it';
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({
-        systemInstruction: { parts: [{ text: systemPrompt + '\n\nIMPORTANT: Reply with ONLY your final answer. No reasoning, no drafts, no bullet points, no self-talk.' }] },
-        contents: geminiMessages,
-        generationConfig: {
-          maxOutputTokens: mode === 'pro' ? 1500 : 800,
-          temperature: mode === 'pro' ? 0.7 : 0.8,
-        },
-        // NOTE: Gemma 4 does NOT support thinkingConfig — omitted intentionally
+        model,
+        messages: [
+          { role: "system", content: systemPrompt + '\n\nIMPORTANT: Reply with ONLY your final answer. No reasoning, no drafts, no bullet points, no self-talk.' },
+          ...messages,
+        ],
+        max_tokens: mode === 'pro' ? 1500 : 800,
+        temperature: mode === 'pro' ? 0.7 : 0.8,
       }),
     });
-    
+
     if (!response.ok) {
       const errText = await response.text();
       console.warn(`[provider:gemma4] Failed ${response.status}: ${errText.substring(0, 200)}`);
       return null;
     }
-    
+
     const data = await response.json();
-    // Gemma 4 may return multiple parts — get the last text part (skip thinking parts if any)
-    const parts = data.candidates?.[0]?.content?.parts;
-    let content = '';
-    if (Array.isArray(parts)) {
-      // Prefer the last text part (final answer)
-      for (let i = parts.length - 1; i >= 0; i--) {
-        if (parts[i]?.text) { content = parts[i].text; break; }
-      }
-    }
+    const content = data.choices?.[0]?.message?.content;
     if (!content) return null;
-    
+
     return { content, provider: 'gemma4', model };
   } catch (e) {
     console.warn("[provider:gemma4] Error:", e);
