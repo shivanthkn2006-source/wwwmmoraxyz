@@ -932,6 +932,10 @@ export const useZoeInfinityBrain = (): UseZoeInfinityBrainReturn => {
         }
       });
       
+      if (abortCtrl.signal.aborted) {
+        console.log('[ZoeBrain] 🛑 Stale brain response discarded (newer send superseded it)');
+        throw new Error('aborted');
+      }
       if (error) throw error;
       
       const responseContent = data?.response || "Hmm, I blanked for a sec — can you say that again?";
