@@ -187,46 +187,44 @@ export async function cascadeInfer(
   lovableModel?: string
 ): Promise<CascadeResult> {
   const providers = [
-    { name: 'P1', fn: () => tryGemini(messages, opts) },
-    { name: 'P2', fn: () => tryGroq(messages, opts) },
-    { name: 'P3', fn: () => tryOpenRouter(messages, opts) },
-    { name: 'P4', fn: () => tryLovable(messages, opts, lovableModel) },
+    { name: 'P1-gemma2-9b', fn: () => tryGemmaPrimary(messages, opts) },
+    { name: 'P2-gemini-2.0-flash', fn: () => tryGemini(messages, opts) },
+    { name: 'P3-groq-llama', fn: () => tryGroq(messages, opts) },
+    { name: 'P4-openrouter', fn: () => tryOpenRouter(messages, opts) },
+    { name: 'P5-lovable', fn: () => tryLovable(messages, opts, lovableModel) },
   ];
-  
   for (const p of providers) {
     const result = await p.fn();
     if (result) {
       console.log(`[cascade] ✅ ${p.name} succeeded`);
-      return { content: result, success: true };
+      return { content: hardenZoeIdentity(result), success: true };
     }
     console.log(`[cascade] ⚠️ ${p.name} unavailable`);
   }
-  
   return { content: "I'm having trouble thinking right now. Try again in a moment?", success: false };
 }
 
 /**
- * Speed-first cascade for simple tasks: Secondary → Primary → Tertiary → Quaternary
+ * Speed-first cascade for simple tasks: Groq Llama → Gemma → Gemini → OpenRouter → Lovable
  */
 export async function cascadeInferFast(
   messages: Message[],
   opts: CascadeOptions = {}
 ): Promise<CascadeResult> {
   const providers = [
-    { name: 'P2', fn: () => tryGroq(messages, opts) },
-    { name: 'P1', fn: () => tryGemini(messages, opts) },
-    { name: 'P3', fn: () => tryOpenRouter(messages, opts) },
-    { name: 'P4', fn: () => tryLovable(messages, opts) },
+    { name: 'P1-groq-llama', fn: () => tryGroq(messages, opts) },
+    { name: 'P2-gemma2-9b', fn: () => tryGemmaPrimary(messages, opts) },
+    { name: 'P3-gemini-2.0-flash', fn: () => tryGemini(messages, opts) },
+    { name: 'P4-openrouter', fn: () => tryOpenRouter(messages, opts) },
+    { name: 'P5-lovable', fn: () => tryLovable(messages, opts) },
   ];
-  
   for (const p of providers) {
     const result = await p.fn();
     if (result) {
       console.log(`[cascade-fast] ✅ ${p.name} succeeded`);
-      return { content: result, success: true };
+      return { content: hardenZoeIdentity(result), success: true };
     }
   }
-  
   return { content: "I'm having trouble thinking right now. Try again in a moment?", success: false };
 }
 
