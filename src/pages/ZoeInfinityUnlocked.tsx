@@ -3656,7 +3656,14 @@ If you realize you made a factual error, repeated yourself, or gave contradictor
         kernelHeartRate={('heartRate' in bioKernel && typeof bioKernel.heartRate === 'number') ? bioKernel.heartRate : undefined}
       />
 
+      {/* #9 Urgent Call Protocol — fullscreen crisis surface */}
+      <UrgentCallProtocol />
+
+      {/* Spec-gap status panel — open with Ctrl+Shift+Z */}
+      <ZoeFeatureStatusPanelMount />
+
       {/* Companion Mode Overlay removed completely (per user request) */}
+
 
       {/* Unified Utility Menu - Single hamburger dropdown (top-left) */}
       <ZoeUtilityMenu
