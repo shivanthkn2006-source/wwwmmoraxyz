@@ -7080,6 +7080,60 @@ export type Database = {
         }
         Relationships: []
       }
+      zoe_genesis_memory: {
+        Row: {
+          age: number | null
+          completed_at: string | null
+          created_at: string
+          dob: string | null
+          id: string
+          life_stage: string | null
+          location: Json | null
+          name: string | null
+          nickname: string | null
+          payload: Json
+          stage: string
+          updated_at: string
+          user_id: string
+          zoe_gender: string | null
+          zoe_name: string | null
+        }
+        Insert: {
+          age?: number | null
+          completed_at?: string | null
+          created_at?: string
+          dob?: string | null
+          id?: string
+          life_stage?: string | null
+          location?: Json | null
+          name?: string | null
+          nickname?: string | null
+          payload?: Json
+          stage?: string
+          updated_at?: string
+          user_id: string
+          zoe_gender?: string | null
+          zoe_name?: string | null
+        }
+        Update: {
+          age?: number | null
+          completed_at?: string | null
+          created_at?: string
+          dob?: string | null
+          id?: string
+          life_stage?: string | null
+          location?: Json | null
+          name?: string | null
+          nickname?: string | null
+          payload?: Json
+          stage?: string
+          updated_at?: string
+          user_id?: string
+          zoe_gender?: string | null
+          zoe_name?: string | null
+        }
+        Relationships: []
+      }
       zoe_goal_tracking: {
         Row: {
           completed_at: string | null

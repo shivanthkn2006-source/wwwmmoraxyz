@@ -18,6 +18,11 @@ import { initializeKernel, isLive } from "@/core/security/ConstitutionalKernel";
 import { zoeBackgroundProcessor } from "./services/ZoeBackgroundProcessor"; // ZOE BACKGROUND PROCESSOR
 import { zeroThermalProtocol } from "./services/ZeroThermalProtocol"; // PROTOCOL ZERO-THERMAL
 import { initSafariFixes } from "./utils/safariBrowserFixes"; // SAFARI CROSS-BROWSER FIXES
+import { installServiceWorkerDevGuard } from "@/lib/serviceWorkerDevGuard"; // #11 Zoe Infinity SW dev guard
+
+// #11 Block service worker registration in dev/preview before anything else
+// touches navigator.serviceWorker.
+installServiceWorkerDevGuard();
 
 // Expose APP_VERSION + safe env to the startup shell so its diagnostics
 // panel and integration health checks can read Supabase URL/key without

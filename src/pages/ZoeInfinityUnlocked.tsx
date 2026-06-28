@@ -11,6 +11,8 @@ import { GodModeVision } from '@/components/zoe-infinity/GodModeVision';
 import { TimezoneDebugPanel } from '@/components/zoe-infinity/TimezoneDebugPanel';
 import { ZoeUtilityMenu } from '@/components/zoe-infinity/ZoeUtilityMenu';
 import { ZoeHeartStatus } from '@/components/zoe-infinity/ZoeHeartStatus';
+import UrgentCallProtocol from '@/components/zoe-infinity/UrgentCallProtocol';
+import ZoeFeatureStatusPanel from '@/components/zoe-infinity/ZoeFeatureStatusPanel';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -1298,8 +1300,19 @@ function ZoeInfinityUnlocked() {
 
     const loadHistory = async () => {
       try {
+        // ── #6 500ms auth race-retry: if the supabase session hasn't hydrated
+        // yet (auth context returns user but supabase.auth.getSession() is null),
+        // wait 500ms once before reading messages. Prevents RLS 401s on cold start.
+        try {
+          const s0 = await supabase.auth.getSession();
+          if (!s0.data.session?.access_token) {
+            await new Promise(r => setTimeout(r, 500));
+          }
+        } catch {}
+
         historyLoadAttempts.current += 1;
         console.log('[ZoeInfinity] 📚 Loading chat history for user:', user.id, '(attempt', historyLoadAttempts.current + ')');
+
 
         const allData: any[] = [];
         // Load only the most recent 95 messages for faster startup while keeping richer context.
@@ -3643,7 +3656,14 @@ If you realize you made a factual error, repeated yourself, or gave contradictor
         kernelHeartRate={('heartRate' in bioKernel && typeof bioKernel.heartRate === 'number') ? bioKernel.heartRate : undefined}
       />
 
+      {/* #9 Urgent Call Protocol — fullscreen crisis surface */}
+      <UrgentCallProtocol />
+
+      {/* Spec-gap status panel — open with Ctrl+Shift+Z */}
+      <ZoeFeatureStatusPanelMount />
+
       {/* Companion Mode Overlay removed completely (per user request) */}
+
 
       {/* Unified Utility Menu - Single hamburger dropdown (top-left) */}
       <ZoeUtilityMenu
@@ -3946,6 +3966,21 @@ If you realize you made a factual error, repeated yourself, or gave contradictor
 // ═══════════════════════════════════════════════════════════════════════════════
 // WRAPPED EXPORT - Includes TimeSimulationProvider in DEV mode only
 // ═══════════════════════════════════════════════════════════════════════════════
+
+function ZoeFeatureStatusPanelMount() {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && (e.key === 'Z' || e.key === 'z')) {
+        e.preventDefault();
+        setOpen(v => !v);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+  return <ZoeFeatureStatusPanel open={open} onClose={() => setOpen(false)} />;
+}
 
 function ZoeInfinityUnlockedWrapped() {
   // In DEV mode, wrap with TimeSimulationProvider for simulation testing

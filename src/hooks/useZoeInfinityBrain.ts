@@ -449,6 +449,9 @@ export const useZoeInfinityBrain = (): UseZoeInfinityBrainReturn => {
   const memoryContextRef = useRef<string>('');
   const lastDecisionRef = useRef<InferenceDecision | null>(null);
   const karmicIntimacyRef = useRef<number>(50); // SAMANTHA MODE: Track intimacy for romantic voice
+  // ── #12 ABORT CONTROLLER: cancel stale brain fetches when a new send arrives ──
+  const brainAbortRef = useRef<AbortController | null>(null);
+  useEffect(() => () => { try { brainAbortRef.current?.abort(); } catch {} }, []);
   
   // ═══════════════════════════════════════════════════════════════════════════
   // IBM INFERENCE OPTIMIZER INITIALIZATION
@@ -890,6 +893,11 @@ export const useZoeInfinityBrain = (): UseZoeInfinityBrainReturn => {
         }
       }
 
+      // ── #12 Abort any in-flight brain fetch before issuing a new one ──
+      try { brainAbortRef.current?.abort(); } catch {}
+      const abortCtrl = new AbortController();
+      brainAbortRef.current = abortCtrl;
+
       const { data, error } = await supabase.functions.invoke('zoe-infinity-brain', {
         body: { 
           messages: recentHistory.map(m => ({
@@ -924,6 +932,10 @@ export const useZoeInfinityBrain = (): UseZoeInfinityBrainReturn => {
         }
       });
       
+      if (abortCtrl.signal.aborted) {
+        console.log('[ZoeBrain] 🛑 Stale brain response discarded (newer send superseded it)');
+        throw new Error('aborted');
+      }
       if (error) throw error;
       
       const responseContent = data?.response || "Hmm, I blanked for a sec — can you say that again?";
