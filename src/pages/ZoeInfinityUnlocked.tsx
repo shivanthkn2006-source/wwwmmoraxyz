@@ -11,6 +11,8 @@ import { GodModeVision } from '@/components/zoe-infinity/GodModeVision';
 import { TimezoneDebugPanel } from '@/components/zoe-infinity/TimezoneDebugPanel';
 import { ZoeUtilityMenu } from '@/components/zoe-infinity/ZoeUtilityMenu';
 import { ZoeHeartStatus } from '@/components/zoe-infinity/ZoeHeartStatus';
+import UrgentCallProtocol from '@/components/zoe-infinity/UrgentCallProtocol';
+import ZoeFeatureStatusPanel from '@/components/zoe-infinity/ZoeFeatureStatusPanel';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
