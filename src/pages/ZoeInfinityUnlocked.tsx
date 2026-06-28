@@ -1298,8 +1298,19 @@ function ZoeInfinityUnlocked() {
 
     const loadHistory = async () => {
       try {
+        // ── #6 500ms auth race-retry: if the supabase session hasn't hydrated
+        // yet (auth context returns user but supabase.auth.getSession() is null),
+        // wait 500ms once before reading messages. Prevents RLS 401s on cold start.
+        try {
+          const s0 = await supabase.auth.getSession();
+          if (!s0.data.session?.access_token) {
+            await new Promise(r => setTimeout(r, 500));
+          }
+        } catch {}
+
         historyLoadAttempts.current += 1;
         console.log('[ZoeInfinity] 📚 Loading chat history for user:', user.id, '(attempt', historyLoadAttempts.current + ')');
+
 
         const allData: any[] = [];
         // Load only the most recent 95 messages for faster startup while keeping richer context.
