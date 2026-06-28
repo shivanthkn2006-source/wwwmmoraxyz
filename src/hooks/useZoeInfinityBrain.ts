@@ -893,6 +893,11 @@ export const useZoeInfinityBrain = (): UseZoeInfinityBrainReturn => {
         }
       }
 
+      // ── #12 Abort any in-flight brain fetch before issuing a new one ──
+      try { brainAbortRef.current?.abort(); } catch {}
+      const abortCtrl = new AbortController();
+      brainAbortRef.current = abortCtrl;
+
       const { data, error } = await supabase.functions.invoke('zoe-infinity-brain', {
         body: { 
           messages: recentHistory.map(m => ({
