@@ -3967,6 +3967,21 @@ If you realize you made a factual error, repeated yourself, or gave contradictor
 // WRAPPED EXPORT - Includes TimeSimulationProvider in DEV mode only
 // ═══════════════════════════════════════════════════════════════════════════════
 
+function ZoeFeatureStatusPanelMount() {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && (e.key === 'Z' || e.key === 'z')) {
+        e.preventDefault();
+        setOpen(v => !v);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+  return <ZoeFeatureStatusPanel open={open} onClose={() => setOpen(false)} />;
+}
+
 function ZoeInfinityUnlockedWrapped() {
   // In DEV mode, wrap with TimeSimulationProvider for simulation testing
   if (import.meta.env.DEV) {
