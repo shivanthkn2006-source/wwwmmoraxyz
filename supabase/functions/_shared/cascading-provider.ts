@@ -22,47 +22,59 @@ interface Message {
   content: string;
 }
 
-// --- Provider A (Primary Vision+Reasoning) ---
+// --- Provider A (Primary: Gemma2-9b-it via Groq — identity/reasoning) ---
+async function tryGemmaPrimary(messages: Message[], opts: CascadeOptions): Promise<string | null> {
+  const apiKey = Deno.env.get("GROQ_API_KEY");
+  if (!apiKey) return null;
+  try {
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "gemma2-9b-it",
+        messages,
+        max_tokens: opts.maxTokens || 500,
+        temperature: opts.temperature ?? 0.7,
+      }),
+    });
+    if (!response.ok) {
+      console.warn(`[cascade:P1-gemma] ${response.status}`);
+      return null;
+    }
+    const data = await response.json();
+    return data.choices?.[0]?.message?.content || null;
+  } catch (e) {
+    console.warn("[cascade:P1-gemma] Error:", e);
+    return null;
+  }
+}
+
+// --- Provider B (Secondary: Gemini 2.0 Flash direct) ---
 async function tryGemini(messages: Message[], opts: CascadeOptions): Promise<string | null> {
   const apiKey = Deno.env.get("GOOGLE_AI_STUDIO_KEY");
   if (!apiKey) return null;
-  
   try {
     const geminiMessages = messages
       .filter(m => m.role !== 'system')
-      .map(m => ({
-        role: m.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: m.content }],
-      }));
-    
+      .map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] }));
     const systemMsg = opts.systemPrompt || messages.find(m => m.role === 'system')?.content;
-    
     const body: any = {
       contents: geminiMessages,
-      generationConfig: {
-        maxOutputTokens: opts.maxTokens || 500,
-        temperature: opts.temperature ?? 0.7,
-      },
+      generationConfig: { maxOutputTokens: opts.maxTokens || 500, temperature: opts.temperature ?? 0.7 },
     };
-    if (systemMsg) {
-      body.systemInstruction = { parts: [{ text: systemMsg }] };
-    }
-    
+    if (systemMsg) body.systemInstruction = { parts: [{ text: systemMsg }] };
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
       { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }
     );
-    
     if (!response.ok) {
-      const err = await response.text();
-      console.warn(`[cascade:A] ${response.status}: ${err.substring(0, 150)}`);
+      console.warn(`[cascade:P2-gemini] ${response.status}`);
       return null;
     }
-    
     const data = await response.json();
     return data.candidates?.[0]?.content?.parts?.[0]?.text || null;
   } catch (e) {
-    console.warn("[cascade:A] Error:", e);
+    console.warn("[cascade:P2-gemini] Error:", e);
     return null;
   }
 }
