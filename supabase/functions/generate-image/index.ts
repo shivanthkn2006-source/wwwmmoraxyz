@@ -113,42 +113,50 @@ Deno.serve(async (req) => {
 
     let imageUrl: string | null = null;
     let usedProvider = 'unknown';
+    const attempts: Array<{ provider: string; ok: boolean; reason?: string }> = [];
 
-    // Provider routing: auto (default) = pollinations → gemini
-    if (provider !== 'gemini') {
-      imageUrl = await tryPollinations(prompt, width || 1024, height || 1024);
-      if (imageUrl) usedProvider = 'pollinations';
-    }
-
-    if (!imageUrl && LOVABLE_API_KEY) {
+    // Provider routing — PRIMARY: Gemini 3.1 Flash (Lovable AI Gateway)
+    //                   SECONDARY: Pollinations (free, no key required)
+    // `provider=pollinations` forces pollinations-only; otherwise cascade Gemini → Pollinations.
+    if (provider !== 'pollinations' && LOVABLE_API_KEY) {
       try {
         imageUrl = await tryGemini(prompt, LOVABLE_API_KEY);
-        if (imageUrl) usedProvider = 'gemini-fallback';
+        if (imageUrl) {
+          usedProvider = 'gemini-3.1-flash';
+          attempts.push({ provider: 'gemini-3.1-flash', ok: true });
+        } else {
+          attempts.push({ provider: 'gemini-3.1-flash', ok: false, reason: 'empty_response' });
+        }
       } catch (e: any) {
+        attempts.push({ provider: 'gemini-3.1-flash', ok: false, reason: e?.error ?? String(e?.message ?? e) });
         if (e.status === 429) {
-          return new Response(
-            JSON.stringify({ error: 'RATE_LIMIT', message: 'Rate limit exceeded.' }),
-            { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          // soft-fail to Pollinations on rate limit instead of bouncing the caller
+          console.warn('[generate-image] Gemini rate-limited → falling back to Pollinations');
+        } else if (e.status === 402) {
+          console.warn('[generate-image] Gemini credits exhausted → falling back to Pollinations');
         }
-        if (e.status === 402) {
-          return new Response(
-            JSON.stringify({ error: 'NO_CREDITS', message: 'AI credits exhausted.' }),
-            { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
+      }
+    }
+
+    if (!imageUrl && provider !== 'gemini') {
+      imageUrl = await tryPollinations(prompt, width || 1024, height || 1024);
+      if (imageUrl) {
+        usedProvider = 'pollinations-fallback';
+        attempts.push({ provider: 'pollinations', ok: true });
+      } else {
+        attempts.push({ provider: 'pollinations', ok: false, reason: 'unreachable' });
       }
     }
 
     if (!imageUrl) {
       return new Response(
-        JSON.stringify({ error: 'All image providers failed', fallback: true }),
+        JSON.stringify({ error: 'All image providers failed', fallback: true, attempts }),
         { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     return new Response(
-      JSON.stringify({ imageUrl, provider: usedProvider }),
+      JSON.stringify({ imageUrl, provider: usedProvider, attempts }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {

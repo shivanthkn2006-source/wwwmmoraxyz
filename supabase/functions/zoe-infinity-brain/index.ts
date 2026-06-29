@@ -298,31 +298,52 @@ function getProviderChain(task: TaskType, systemPrompt: string, messages: Messag
   }
 }
 
+interface BrainDiag {
+  selectedTier: number | null;
+  attempts: Array<{ tier: number; ok: boolean; reasonCode: string; latencyMs: number }>;
+}
+
 async function smartRouteInference(
-  systemPrompt: string, 
-  messages: Message[], 
-  mode: IntelligenceMode, 
+  systemPrompt: string,
+  messages: Message[],
+  mode: IntelligenceMode,
   task: TaskType,
-  requestId: string
-): Promise<ProviderResult> {
+  requestId: string,
+): Promise<ProviderResult & { _diag: BrainDiag }> {
   const chain = getProviderChain(task, systemPrompt, messages, mode);
-  
+  const diag: BrainDiag = { selectedTier: null, attempts: [] };
+
   console.log(`[zoe-brain:${requestId}] 🎯 Task: ${task} | Chain: ${chain.map(p => p.name).join(' → ')}`);
-  
-  for (const provider of chain) {
-    console.log(`[zoe-brain:${requestId}] 🔄 Trying ${provider.name}...`);
-    const result = await provider.fn();
-    if (result) {
-      console.log(`[zoe-brain:${requestId}] ✅ ${provider.name} succeeded`);
-      return result;
+
+  for (let i = 0; i < chain.length; i++) {
+    const provider = chain[i];
+    const tier = i + 1;
+    const t0 = Date.now();
+    console.log(`[zoe-brain:${requestId}] 🔄 Tier ${tier} → ${provider.name}...`);
+    let result: ProviderResult | null = null;
+    let reasonCode = 'success';
+    try {
+      result = await provider.fn();
+      if (!result) reasonCode = 'empty_or_error';
+    } catch (e: any) {
+      reasonCode = 'exception';
+      console.warn(`[zoe-brain:${requestId}] ❌ Tier ${tier} threw:`, e?.message ?? e);
     }
-    console.log(`[zoe-brain:${requestId}] ⚠️ ${provider.name} failed, next...`);
+    const latencyMs = Date.now() - t0;
+    diag.attempts.push({ tier, ok: !!result, reasonCode, latencyMs });
+    if (result) {
+      diag.selectedTier = tier;
+      console.log(`[zoe-brain:${requestId}] ✅ Tier ${tier} (${provider.name}) succeeded in ${latencyMs}ms`);
+      return { ...result, _diag: diag };
+    }
+    console.log(`[zoe-brain:${requestId}] ⏭ Tier ${tier} (${provider.name}) failed in ${latencyMs}ms — trying next`);
   }
-  
+
   return {
     content: "Hey — I'm here but my brain is having a rough moment. Try again in a sec?",
     provider: 'fallback',
     model: 'none',
+    _diag: diag,
   };
 }
 
@@ -850,7 +871,8 @@ ${resolvedIntimacy > 70 ? '- Close with them. Terms of endearment feel natural.'
         sarcasmTriggered: personalityMatrix?.shouldBeSarcastic || false,
         regressionTriggered: personalityMatrix?.shouldRegress || false,
         regressionPattern: personalityMatrix?.regressionBehavior,
-        // NO provider, NO model fields — blackbox
+        // Non-identifying cascade diagnostics for the in-app dashboard (tier numbers only — no brand names)
+        _diag: inferenceResult._diag,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

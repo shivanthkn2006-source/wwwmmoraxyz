@@ -940,6 +940,22 @@ export const useZoeInfinityBrain = (): UseZoeInfinityBrainReturn => {
       
       const responseContent = data?.response || "Hmm, I blanked for a sec — can you say that again?";
       saveToOfflineMemory('assistant', responseContent);
+
+      // Record cascade diagnostics for the on-screen dashboard panel.
+      if (data?._diag) {
+        try {
+          const { recordCascadeAttempt } = await import('@/utils/cascadeMetrics');
+          recordCascadeAttempt({
+            surface: 'zoe-infinity-brain',
+            selectedTier: data._diag.selectedTier ?? null,
+            attempts: data._diag.attempts ?? [],
+            latencyMs: data?.latencyMs ?? null,
+            at: Date.now(),
+          });
+        } catch (metricsErr) {
+          console.warn('[ZoeBrain] cascadeMetrics record failed (non-critical):', metricsErr);
+        }
+      }
       
       // Increment daily usage + cache the response (1 credit per prompt)
       if (user?.id) {
