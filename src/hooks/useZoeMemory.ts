@@ -467,7 +467,13 @@ export const useZoeMemory = (): UseZoeMemoryReturn => {
     };
     
     memories.slice(0, 30).forEach(m => {
-      groups[m.memoryType].push(m);
+      const bucket = groups[m.memoryType];
+      if (bucket) {
+        bucket.push(m);
+      } else {
+        // Unknown/legacy memory type from DB — bucket under "fact" so it still contributes context
+        groups.fact.push(m);
+      }
     });
     
     const sections: string[] = [];
