@@ -6,11 +6,11 @@
  *          ok / latency / reasonCode for every one.
  *
  * Body shape (POST, all optional):
- *   { ping?: boolean (default true), prompt?: string }
+ *   { ping?: boolean (default true), prompt?: string, mode?: 'default' | 't1-primary' }
  *
  * No JWT required — same diagnostics surface the in-app settings panel needs.
  */
-import { getDefaultTiers, type AttemptLog } from "../_shared/cascading-provider.ts";
+import { getDefaultTiers, type AttemptLog, type CascadeMode } from "../_shared/cascading-provider.ts";
 
 // deno-lint-ignore no-explicit-any
 declare const Deno: any;
