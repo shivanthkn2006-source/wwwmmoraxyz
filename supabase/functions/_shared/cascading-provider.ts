@@ -282,18 +282,20 @@ export async function cascadeInfer(
   opts: CascadeOptions = {},
   lovableModel?: string,
 ): Promise<CascadeResult> {
-  const tiers = getDefaultTiers(lovableModel);
-  return runCascade(tiers, messages, opts);
+  const tiers = getDefaultTiers(opts.mode ?? 'default', lovableModel);
+  const optsWithBoost = opts.mode === 't1-primary'
+    ? { ...opts, timeoutMs: Math.round((opts.timeoutMs ?? 25_000) * 1.5) }
+    : opts;
+  return runCascade(tiers, messages, optsWithBoost);
 }
 
 export async function cascadeInferFast(
   messages: Message[],
   opts: CascadeOptions = {},
 ): Promise<CascadeResult> {
-  // Speed-first: Groq Llama → Gemma → Gemini → OpenRouter → Lovable
-  const base = getDefaultTiers();
-  const order = [base[2], base[0], base[1], base[3], base[4]].map((t, i) => ({ ...t, tier: i + 1 }));
-  return runCascade(order, messages, opts);
+  // Speed-first still honors T1 as primary: T1 → T2 → T3 → T4 → T5.
+  const base = getDefaultTiers(opts.mode ?? 'default');
+  return runCascade(base, messages, opts);
 }
 
 async function runCascade(tiers: TierSpec[], messages: Message[], opts: CascadeOptions): Promise<CascadeResult> {
