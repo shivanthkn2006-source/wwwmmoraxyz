@@ -871,7 +871,8 @@ ${resolvedIntimacy > 70 ? '- Close with them. Terms of endearment feel natural.'
         sarcasmTriggered: personalityMatrix?.shouldBeSarcastic || false,
         regressionTriggered: personalityMatrix?.shouldRegress || false,
         regressionPattern: personalityMatrix?.regressionBehavior,
-        // NO provider, NO model fields — blackbox
+        // Non-identifying cascade diagnostics for the in-app dashboard (tier numbers only — no brand names)
+        _diag: inferenceResult._diag,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
