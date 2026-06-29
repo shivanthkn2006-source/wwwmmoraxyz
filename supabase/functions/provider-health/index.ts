@@ -114,6 +114,9 @@ Deno.serve(async (req: Request) => {
     tiers: tierDescriptors,
     attempts,
     summary,
+    mode,
+    cascadeOrder: tiers.map(t => `T${t.tier}:${t.provider}`).join(' → '),
+    strategy: mode === 't1-primary' ? 'T1 primary, T5 last-resort fallback' : 'Full T1→T5 fallback',
     checkedAt: new Date().toISOString(),
   }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 });
