@@ -58,8 +58,10 @@ export interface CascadeOptions {
   maxTokens?: number;
   temperature?: number;
   systemPrompt?: string;
-  /** Per-provider timeout in ms (default 25_000) */
+  /** Per-provider timeout in ms (default 25_000). T1 gets a 1.5x boost in t1-primary mode. */
   timeoutMs?: number;
+  /** Cascade strategy: default keeps T1→T5 order; t1-primary boosts T1 and keeps T5 as last-resort fallback. */
+  mode?: CascadeMode;
 }
 
 interface Message {
