@@ -97,9 +97,9 @@ async function callGemmaPrimary(messages: Message[], opts: CascadeOptions): Prom
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        // NOTE: Groq decommissioned `gemma2-9b-it` (Jun 2026). `openai/gpt-oss-20b` is
-        // Groq's current open identity/reasoning model and is the supported replacement.
-        model: 'openai/gpt-oss-20b',
+        // NOTE: Groq decommissioned `gemma2-9b-it` (Jun 2026). `llama-3.1-8b-instant`
+        // is Groq's currently-supported instant tier and is the supported P1 replacement.
+        model: 'llama-3.1-8b-instant',
         messages,
         max_tokens: opts.maxTokens ?? 500,
         temperature: opts.temperature ?? 0.7,
@@ -257,7 +257,7 @@ export interface TierSpec {
 
 export function getDefaultTiers(lovableModel?: string): TierSpec[] {
   return [
-    { tier: 1, name: 'P1-gpt-oss-20b (Groq)',      provider: 'gemma',      model: 'openai/gpt-oss-20b',                 envKey: 'GROQ_API_KEY',           call: callGemmaPrimary },
+    { tier: 1, name: 'P1-llama-3.1-8b-instant (Groq)', provider: 'gemma',  model: 'llama-3.1-8b-instant',               envKey: 'GROQ_API_KEY',           call: callGemmaPrimary },
     { tier: 2, name: 'P2-gemini-2.0-flash',        provider: 'gemini',     model: 'gemini-2.0-flash',                   envKey: 'GOOGLE_AI_STUDIO_KEY',   call: callGemini },
     { tier: 3, name: 'P3-llama-3.3-70b (Groq)',    provider: 'groq',       model: 'llama-3.3-70b-versatile',            envKey: 'GROQ_API_KEY',           call: callGroqLlama },
     { tier: 4, name: 'P4-llama-3.3-70b (OpenRouter)', provider: 'openrouter', model: 'meta-llama/llama-3.3-70b-instruct:free', envKey: 'OPENROUTER_API_KEY', call: callOpenRouter },
