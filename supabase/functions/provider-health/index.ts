@@ -37,6 +37,11 @@ function keyPresenceMap() {
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
+  // Parse body early so GET and POST can both read mode.
+  let body: any = {};
+  if (req.method !== 'GET') {
+    try { body = await req.json(); } catch { /* empty body OK */ }
+  }
   const mode: CascadeMode = (body?.mode as CascadeMode) ?? 't1-primary';
   const tiers = getDefaultTiers(mode);
   const keys = keyPresenceMap();
@@ -62,8 +67,6 @@ Deno.serve(async (req: Request) => {
   }
 
   // POST → live ping
-  let body: any = {};
-  try { body = await req.json(); } catch { /* empty body OK */ }
   const ping: boolean = body?.ping !== false;
   const prompt: string = (body?.prompt ?? 'Reply with the single word: pong').slice(0, 200);
 
