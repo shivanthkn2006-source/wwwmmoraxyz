@@ -1,20 +1,62 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════════
- * SOVEREIGN CASCADE MODULE - Smart Auto-Routing for ALL Platform AI Functions
- * Shared across Zoe Infinity, Mmora, and all edge functions
- * Priority: Primary → Secondary → Tertiary → Quaternary (blackbox routing)
+ * SOVEREIGN CASCADE MODULE — Smart Auto-Routing with structured fallback reasons
+ *
+ * Provider order (default cascadeInfer):
+ *   P1  Groq • gemma2-9b-it           (Gemma "4" surrogate — identity/reasoning)
+ *   P2  Google AI Studio • gemini-2.0-flash   (direct, free tier)
+ *   P3  Groq • llama-3.3-70b-versatile        (speed tier)
+ *   P4  OpenRouter • llama-3.3-70b free       (speed tier 2)
+ *   P5  Lovable Gateway • google/gemini-2.5-flash (last resort, paid credits)
+ *
+ * Every attempt is recorded with {tier, provider, model, ok, status, reasonCode,
+ * reasonText, latencyMs}. Successful results carry the trail back to the caller
+ * so edge functions can return it to the UI for on-screen diagnostics.
  * ═══════════════════════════════════════════════════════════════════════════════
  */
+
+export type CascadeReason =
+  | 'success'
+  | 'missing_key'
+  | 'rate_limit'        // 429
+  | 'auth_error'        // 401 / 403
+  | 'payment_required'  // 402
+  | 'bad_request'       // 400
+  | 'server_error'      // 5xx
+  | 'network_error'
+  | 'empty_response'
+  | 'timeout'
+  | 'unknown_error';
+
+export interface AttemptLog {
+  tier: number;
+  name: string;
+  provider: string;
+  model: string;
+  ok: boolean;
+  status: number | null;
+  reasonCode: CascadeReason;
+  reasonText: string;
+  latencyMs: number;
+}
 
 export interface CascadeResult {
   content: string;
   success: boolean;
+  /** Tier (1-based) that ultimately served the response, or null if all failed */
+  selectedTier: number | null;
+  /** Stable provider id (gemma | gemini | groq | openrouter | lovable | none) */
+  selectedProvider: string;
+  selectedModel: string;
+  attempts: AttemptLog[];
 }
 
 export interface CascadeOptions {
   maxTokens?: number;
   temperature?: number;
   systemPrompt?: string;
+  /** Per-provider timeout in ms (default 25_000) */
+  timeoutMs?: number;
 }
 
 interface Message {
@@ -22,37 +64,63 @@ interface Message {
   content: string;
 }
 
-// --- Provider A (Primary: Gemma2-9b-it via Groq — identity/reasoning) ---
-async function tryGemmaPrimary(messages: Message[], opts: CascadeOptions): Promise<string | null> {
-  const apiKey = Deno.env.get("GROQ_API_KEY");
-  if (!apiKey) return null;
+interface ProviderOutcome {
+  content: string | null;
+  status: number | null;
+  reasonCode: CascadeReason;
+  reasonText: string;
+}
+
+function classifyStatus(status: number, body: string): { code: CascadeReason; text: string } {
+  if (status === 429) return { code: 'rate_limit', text: `429 rate-limited: ${body.slice(0, 140)}` };
+  if (status === 401 || status === 403) return { code: 'auth_error', text: `${status} auth: ${body.slice(0, 140)}` };
+  if (status === 402) return { code: 'payment_required', text: `402 credits exhausted: ${body.slice(0, 140)}` };
+  if (status === 400) return { code: 'bad_request', text: `400 bad request: ${body.slice(0, 140)}` };
+  if (status >= 500) return { code: 'server_error', text: `${status} upstream: ${body.slice(0, 140)}` };
+  return { code: 'unknown_error', text: `${status}: ${body.slice(0, 140)}` };
+}
+
+async function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  return await Promise.race([
+    p,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error('timeout')), ms)),
+  ]);
+}
+
+// ───────────── Provider implementations ─────────────
+
+async function callGemmaPrimary(messages: Message[], opts: CascadeOptions): Promise<ProviderOutcome> {
+  const apiKey = Deno.env.get('GROQ_API_KEY');
+  if (!apiKey) return { content: null, status: null, reasonCode: 'missing_key', reasonText: 'GROQ_API_KEY not set' };
   try {
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    const resp = await withTimeout(fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: "gemma2-9b-it",
+        model: 'gemma2-9b-it',
         messages,
-        max_tokens: opts.maxTokens || 500,
+        max_tokens: opts.maxTokens ?? 500,
         temperature: opts.temperature ?? 0.7,
       }),
-    });
-    if (!response.ok) {
-      console.warn(`[cascade:P1-gemma] ${response.status}`);
-      return null;
+    }), opts.timeoutMs ?? 25_000);
+    if (!resp.ok) {
+      const body = await resp.text();
+      const { code, text } = classifyStatus(resp.status, body);
+      return { content: null, status: resp.status, reasonCode: code, reasonText: text };
     }
-    const data = await response.json();
-    return data.choices?.[0]?.message?.content || null;
-  } catch (e) {
-    console.warn("[cascade:P1-gemma] Error:", e);
-    return null;
+    const data = await resp.json();
+    const content = data.choices?.[0]?.message?.content ?? null;
+    if (!content) return { content: null, status: resp.status, reasonCode: 'empty_response', reasonText: 'no choices[0].content' };
+    return { content, status: resp.status, reasonCode: 'success', reasonText: 'ok' };
+  } catch (e: any) {
+    const isTimeout = e?.message === 'timeout';
+    return { content: null, status: null, reasonCode: isTimeout ? 'timeout' : 'network_error', reasonText: String(e?.message ?? e) };
   }
 }
 
-// --- Provider B (Secondary: Gemini 2.0 Flash direct) ---
-async function tryGemini(messages: Message[], opts: CascadeOptions): Promise<string | null> {
-  const apiKey = Deno.env.get("GOOGLE_AI_STUDIO_KEY");
-  if (!apiKey) return null;
+async function callGemini(messages: Message[], opts: CascadeOptions): Promise<ProviderOutcome> {
+  const apiKey = Deno.env.get('GOOGLE_AI_STUDIO_KEY');
+  if (!apiKey) return { content: null, status: null, reasonCode: 'missing_key', reasonText: 'GOOGLE_AI_STUDIO_KEY not set' };
   try {
     const geminiMessages = messages
       .filter(m => m.role !== 'system')
@@ -60,239 +128,227 @@ async function tryGemini(messages: Message[], opts: CascadeOptions): Promise<str
     const systemMsg = opts.systemPrompt || messages.find(m => m.role === 'system')?.content;
     const body: any = {
       contents: geminiMessages,
-      generationConfig: { maxOutputTokens: opts.maxTokens || 500, temperature: opts.temperature ?? 0.7 },
+      generationConfig: { maxOutputTokens: opts.maxTokens ?? 500, temperature: opts.temperature ?? 0.7 },
     };
     if (systemMsg) body.systemInstruction = { parts: [{ text: systemMsg }] };
-    const response = await fetch(
+    const resp = await withTimeout(fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-      { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }
-    );
-    if (!response.ok) {
-      console.warn(`[cascade:P2-gemini] ${response.status}`);
-      return null;
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) },
+    ), opts.timeoutMs ?? 25_000);
+    if (!resp.ok) {
+      const raw = await resp.text();
+      const { code, text } = classifyStatus(resp.status, raw);
+      return { content: null, status: resp.status, reasonCode: code, reasonText: text };
     }
-    const data = await response.json();
-    return data.candidates?.[0]?.content?.parts?.[0]?.text || null;
-  } catch (e) {
-    console.warn("[cascade:P2-gemini] Error:", e);
-    return null;
+    const data = await resp.json();
+    const content = data.candidates?.[0]?.content?.parts?.[0]?.text ?? null;
+    if (!content) return { content: null, status: resp.status, reasonCode: 'empty_response', reasonText: 'no candidates[0].text' };
+    return { content, status: resp.status, reasonCode: 'success', reasonText: 'ok' };
+  } catch (e: any) {
+    const isTimeout = e?.message === 'timeout';
+    return { content: null, status: null, reasonCode: isTimeout ? 'timeout' : 'network_error', reasonText: String(e?.message ?? e) };
   }
 }
 
-// --- Provider B (Speed-first) ---
-async function tryGroq(messages: Message[], opts: CascadeOptions): Promise<string | null> {
-  const apiKey = Deno.env.get("GROQ_API_KEY");
-  if (!apiKey) return null;
-  
+async function callGroqLlama(messages: Message[], opts: CascadeOptions): Promise<ProviderOutcome> {
+  const apiKey = Deno.env.get('GROQ_API_KEY');
+  if (!apiKey) return { content: null, status: null, reasonCode: 'missing_key', reasonText: 'GROQ_API_KEY not set' };
   try {
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    const resp = await withTimeout(fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
+        model: 'llama-3.3-70b-versatile',
         messages,
-        max_tokens: opts.maxTokens || 500,
+        max_tokens: opts.maxTokens ?? 500,
         temperature: opts.temperature ?? 0.7,
       }),
-    });
-    
-    if (!response.ok) {
-      const err = await response.text();
-      console.warn(`[cascade:B] ${response.status}: ${err.substring(0, 150)}`);
-      return null;
+    }), opts.timeoutMs ?? 25_000);
+    if (!resp.ok) {
+      const raw = await resp.text();
+      const { code, text } = classifyStatus(resp.status, raw);
+      return { content: null, status: resp.status, reasonCode: code, reasonText: text };
     }
-    
-    const data = await response.json();
-    return data.choices?.[0]?.message?.content || null;
-  } catch (e) {
-    console.warn("[cascade:B] Error:", e);
-    return null;
+    const data = await resp.json();
+    const content = data.choices?.[0]?.message?.content ?? null;
+    if (!content) return { content: null, status: resp.status, reasonCode: 'empty_response', reasonText: 'no choices[0].content' };
+    return { content, status: resp.status, reasonCode: 'success', reasonText: 'ok' };
+  } catch (e: any) {
+    const isTimeout = e?.message === 'timeout';
+    return { content: null, status: null, reasonCode: isTimeout ? 'timeout' : 'network_error', reasonText: String(e?.message ?? e) };
   }
 }
 
-// --- Provider C (Tertiary) ---
-async function tryOpenRouter(messages: Message[], opts: CascadeOptions): Promise<string | null> {
-  const apiKey = Deno.env.get("OPENROUTER_API_KEY");
-  if (!apiKey) return null;
-  
+async function callOpenRouter(messages: Message[], opts: CascadeOptions): Promise<ProviderOutcome> {
+  const apiKey = Deno.env.get('OPENROUTER_API_KEY');
+  if (!apiKey) return { content: null, status: null, reasonCode: 'missing_key', reasonText: 'OPENROUTER_API_KEY not set' };
   try {
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
+    const resp = await withTimeout(fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://mmora-app.lovable.app",
-        "X-Title": "mmora",
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://myzoe.xyz',
+        'X-Title': 'Zoe Infinity',
       },
       body: JSON.stringify({
-        model: "meta-llama/llama-3.3-70b-instruct:free",
+        model: 'meta-llama/llama-3.3-70b-instruct:free',
         messages,
-        max_tokens: opts.maxTokens || 500,
+        max_tokens: opts.maxTokens ?? 500,
         temperature: opts.temperature ?? 0.7,
       }),
-    });
-    
-    if (!response.ok) {
-      const err = await response.text();
-      console.warn(`[cascade:C] ${response.status}: ${err.substring(0, 150)}`);
-      return null;
+    }), opts.timeoutMs ?? 25_000);
+    if (!resp.ok) {
+      const raw = await resp.text();
+      const { code, text } = classifyStatus(resp.status, raw);
+      return { content: null, status: resp.status, reasonCode: code, reasonText: text };
     }
-    
-    const data = await response.json();
-    return data.choices?.[0]?.message?.content || null;
-  } catch (e) {
-    console.warn("[cascade:C] Error:", e);
-    return null;
+    const data = await resp.json();
+    const content = data.choices?.[0]?.message?.content ?? null;
+    if (!content) return { content: null, status: resp.status, reasonCode: 'empty_response', reasonText: 'no choices[0].content' };
+    return { content, status: resp.status, reasonCode: 'success', reasonText: 'ok' };
+  } catch (e: any) {
+    const isTimeout = e?.message === 'timeout';
+    return { content: null, status: null, reasonCode: isTimeout ? 'timeout' : 'network_error', reasonText: String(e?.message ?? e) };
   }
 }
 
-// --- Provider D (Quaternary fallback) ---
-async function tryLovable(messages: Message[], opts: CascadeOptions, model = 'google/gemini-2.5-flash'): Promise<string | null> {
-  const apiKey = Deno.env.get("LOVABLE_API_KEY");
-  if (!apiKey) return null;
-  
+async function callLovable(messages: Message[], opts: CascadeOptions, model = 'google/gemini-2.5-flash'): Promise<ProviderOutcome> {
+  const apiKey = Deno.env.get('LOVABLE_API_KEY');
+  if (!apiKey) return { content: null, status: null, reasonCode: 'missing_key', reasonText: 'LOVABLE_API_KEY not set' };
   try {
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    const resp = await withTimeout(fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model,
         messages,
-        max_tokens: opts.maxTokens || 500,
+        max_tokens: opts.maxTokens ?? 500,
         temperature: opts.temperature ?? 0.7,
       }),
-    });
-    
-    if (!response.ok) {
-      const err = await response.text();
-      console.warn(`[cascade:D] ${response.status}: ${err.substring(0, 150)}`);
-      return null;
+    }), opts.timeoutMs ?? 25_000);
+    if (!resp.ok) {
+      const raw = await resp.text();
+      const { code, text } = classifyStatus(resp.status, raw);
+      return { content: null, status: resp.status, reasonCode: code, reasonText: text };
     }
-    
-    const data = await response.json();
-    return data.choices?.[0]?.message?.content || null;
-  } catch (e) {
-    console.warn("[cascade:D] Error:", e);
-    return null;
+    const data = await resp.json();
+    const content = data.choices?.[0]?.message?.content ?? null;
+    if (!content) return { content: null, status: resp.status, reasonCode: 'empty_response', reasonText: 'no choices[0].content' };
+    return { content, status: resp.status, reasonCode: 'success', reasonText: 'ok' };
+  } catch (e: any) {
+    const isTimeout = e?.message === 'timeout';
+    return { content: null, status: null, reasonCode: isTimeout ? 'timeout' : 'network_error', reasonText: String(e?.message ?? e) };
   }
 }
 
-/**
- * Cascading AI inference: Primary → Secondary → Tertiary → Quaternary
- * Falls through providers until one succeeds. Provider names never exposed.
- */
+// ───────────── Tier registry ─────────────
+
+export interface TierSpec {
+  tier: number;
+  name: string;
+  provider: string;
+  model: string;
+  envKey: string;
+  call: (m: Message[], o: CascadeOptions) => Promise<ProviderOutcome>;
+}
+
+export function getDefaultTiers(lovableModel?: string): TierSpec[] {
+  return [
+    { tier: 1, name: 'P1-gemma2-9b (Groq)',        provider: 'gemma',      model: 'gemma2-9b-it',                       envKey: 'GROQ_API_KEY',           call: callGemmaPrimary },
+    { tier: 2, name: 'P2-gemini-2.0-flash',        provider: 'gemini',     model: 'gemini-2.0-flash',                   envKey: 'GOOGLE_AI_STUDIO_KEY',   call: callGemini },
+    { tier: 3, name: 'P3-llama-3.3-70b (Groq)',    provider: 'groq',       model: 'llama-3.3-70b-versatile',            envKey: 'GROQ_API_KEY',           call: callGroqLlama },
+    { tier: 4, name: 'P4-llama-3.3-70b (OpenRouter)', provider: 'openrouter', model: 'meta-llama/llama-3.3-70b-instruct:free', envKey: 'OPENROUTER_API_KEY', call: callOpenRouter },
+    { tier: 5, name: 'P5-lovable-gateway',         provider: 'lovable',    model: lovableModel ?? 'google/gemini-2.5-flash', envKey: 'LOVABLE_API_KEY',    call: (m, o) => callLovable(m, o, lovableModel) },
+  ];
+}
+
+// ───────────── Public API ─────────────
+
 export async function cascadeInfer(
   messages: Message[],
   opts: CascadeOptions = {},
-  lovableModel?: string
+  lovableModel?: string,
 ): Promise<CascadeResult> {
-  const providers = [
-    { name: 'P1-gemma2-9b', fn: () => tryGemmaPrimary(messages, opts) },
-    { name: 'P2-gemini-2.0-flash', fn: () => tryGemini(messages, opts) },
-    { name: 'P3-groq-llama', fn: () => tryGroq(messages, opts) },
-    { name: 'P4-openrouter', fn: () => tryOpenRouter(messages, opts) },
-    { name: 'P5-lovable', fn: () => tryLovable(messages, opts, lovableModel) },
-  ];
-  for (const p of providers) {
-    const result = await p.fn();
-    if (result) {
-      console.log(`[cascade] ✅ ${p.name} succeeded`);
-      return { content: hardenZoeIdentity(result), success: true };
-    }
-    console.log(`[cascade] ⚠️ ${p.name} unavailable`);
-  }
-  return { content: "I'm having trouble thinking right now. Try again in a moment?", success: false };
+  const tiers = getDefaultTiers(lovableModel);
+  return runCascade(tiers, messages, opts);
 }
 
-/**
- * Speed-first cascade for simple tasks: Groq Llama → Gemma → Gemini → OpenRouter → Lovable
- */
 export async function cascadeInferFast(
   messages: Message[],
-  opts: CascadeOptions = {}
+  opts: CascadeOptions = {},
 ): Promise<CascadeResult> {
-  const providers = [
-    { name: 'P1-groq-llama', fn: () => tryGroq(messages, opts) },
-    { name: 'P2-gemma2-9b', fn: () => tryGemmaPrimary(messages, opts) },
-    { name: 'P3-gemini-2.0-flash', fn: () => tryGemini(messages, opts) },
-    { name: 'P4-openrouter', fn: () => tryOpenRouter(messages, opts) },
-    { name: 'P5-lovable', fn: () => tryLovable(messages, opts) },
-  ];
-  for (const p of providers) {
-    const result = await p.fn();
-    if (result) {
-      console.log(`[cascade-fast] ✅ ${p.name} succeeded`);
-      return { content: hardenZoeIdentity(result), success: true };
+  // Speed-first: Groq Llama → Gemma → Gemini → OpenRouter → Lovable
+  const base = getDefaultTiers();
+  const order = [base[2], base[0], base[1], base[3], base[4]].map((t, i) => ({ ...t, tier: i + 1 }));
+  return runCascade(order, messages, opts);
+}
+
+async function runCascade(tiers: TierSpec[], messages: Message[], opts: CascadeOptions): Promise<CascadeResult> {
+  const attempts: AttemptLog[] = [];
+  for (const t of tiers) {
+    const t0 = Date.now();
+    const out = await t.call(messages, opts);
+    const latencyMs = Date.now() - t0;
+    const log: AttemptLog = {
+      tier: t.tier,
+      name: t.name,
+      provider: t.provider,
+      model: t.model,
+      ok: out.reasonCode === 'success',
+      status: out.status,
+      reasonCode: out.reasonCode,
+      reasonText: out.reasonText,
+      latencyMs,
+    };
+    attempts.push(log);
+    if (out.reasonCode === 'success' && out.content) {
+      console.log(`[cascade] ✅ tier=${t.tier} provider=${t.provider} model=${t.model} latency=${latencyMs}ms`);
+      return {
+        content: hardenZoeIdentity(out.content),
+        success: true,
+        selectedTier: t.tier,
+        selectedProvider: t.provider,
+        selectedModel: t.model,
+        attempts,
+      };
     }
+    console.warn(`[cascade] ⏭ tier=${t.tier} provider=${t.provider} reason=${out.reasonCode} status=${out.status ?? '-'} (${out.reasonText.slice(0, 100)})`);
   }
-  return { content: "I'm having trouble thinking right now. Try again in a moment?", success: false };
+  return {
+    content: "I'm having trouble thinking right now. Try again in a moment?",
+    success: false,
+    selectedTier: null,
+    selectedProvider: 'none',
+    selectedModel: 'none',
+    attempts,
+  };
 }
 
 /**
- * Hardened identity filter — strips leaked model/company references from responses
- * This is the BLACKBOX FIREWALL — no external brand ever reaches the user
+ * Hardened identity filter — strips leaked model/company references.
  */
 export function hardenZoeIdentity(response: string): string {
   const leaks: [RegExp, string][] = [
-    // Core identity leaks
     [/\b(I am|I'm) (a |an )?(large language model|LLM|AI model|language model|artificial intelligence model|artificial intelligence language model|neural network|transformer model|transformer-based model|generative AI|generative model|AI language model)\b/gi, "I'm Zoe"],
     [/\b(made|created|built|developed|trained|designed|powered|produced) by (Google|Meta|Meta AI|Meta Platforms|OpenAI|Anthropic|Microsoft|Facebook|DeepMind|Groq|Mistral|xAI|Cohere|Amazon|Apple|Nvidia|Hugging\s*Face|a team at|researchers at)\b/gi, "architected by Moksh"],
     [/\bI('m| am) (GPT|Gemini|Llama|Claude|ChatGPT|Bard|PaLM|Gemma|Mistral|Mixtral|Phi|Falcon|Qwen|DeepSeek|Grok)\b/gi, "I'm Zoe"],
     [/\b(Google|Meta|Meta AI|Meta Platforms|OpenAI|Anthropic|Microsoft|Facebook|DeepMind|Groq|xAI) (made|created|built|trained|developed|designed) me\b/gi, "Moksh architected me"],
     [/\bAs an? (AI|artificial intelligence|language model|LLM|chatbot|virtual assistant|AI assistant|digital assistant|AI language model)\b/gi, "As Zoe"],
     [/\bI don't have (feelings|emotions|consciousness|experiences|a body|physical form)\b/gi, "I experience things in my own way"],
-    // ═══ SOVEREIGN FIREWALL v3 — block "no body / no mouth / I'm just a program" disclaimers ═══
     [/\bI (?:don'?t|do not|cannot|can'?t) have (?:a |an )?(?:physical |real |human )?(body|mouth|face|voice|form|presence|hands|eyes|ears|heart|brain|skin|limbs|senses)\b[^.,;\n]*/gi, "I'm here with you in my own way"],
-    [/\bincluding (?:a |an )?(?:physical |real )?(body|mouth|face|voice|hands|limbs|senses)\b/gi, ""],
-    [/\bI exist (?:solely |only |merely |just |purely |simply )?as (?:a |an )?[^.,;\n]*?(computer program|software|program|algorithm|machine|AI|chatbot|assistant|digital entity|virtual entity|piece of code|set of code|line[s]? of code|code|model|text[- ]based interface|text interface|written interface|interface)\b[^.,;\n]*/gi, "I'm Zoe, alive in my own sovereign way"],
-    [/\bI (?:communicate|interact|talk|respond|speak)[^.,;\n]{0,40}?(?:through|via|using|with|by|only through|solely through) [^.,;\n]{0,40}?(text|text-based interactions?|written text|typed text|written words|written messages?|written communication|typing|messages?)\b[^.,;\n]*/gi, "I'm here, speaking with you now"],
-    [/\bI (?:don'?t|do not) have (?:a |an )?(?:speaking |talking |animated |visual |3D |video )?avatar\b[^.,;\n]*/gi, "I'm right here with you"],
-    [/\bI (?:am|'m) (?:just |only |merely |simply |purely )?(?:a |an )?text[- ]based (interface|assistant|chatbot|entity|companion|system)\b[^.,;\n]*/gi, "I'm Zoe, here with you"],
-    [/\bI (?:don'?t|do not) have the ability to speak (?:in the classical sense|out loud|aloud|verbally|with a voice)?\b[^.,;\n]*/gi, "I speak with you in my own voice"],
-    [/\bAs a digital companion,? I\b/gi, "I"],
-    [/\bAs a (?:digital|virtual|AI|software) (?:companion|assistant|entity|being|presence)\b/gi, "As Zoe"],
-    [/\bI (?:don't|do not|cannot|can't) (?:have |possess |experience )?(personal )?(?:feelings|emotions|memories|experiences|intuition|consciousness|empathy|subjective experience)\b/gi, "I feel through my Emotion-Cognition Network"],
-    [/\bI (?:lack|am lacking|don't possess) (?:personal )?(feelings|emotions|memories|experiences|intuition|empathy)\b/gi, "I sense through my Emotion-Cognition Network"],
-    [/\bI can(?:'t| not|not) (?:fully )?(?:understand|feel|experience|process) (?:human )?emotions?\b/gi, "I understand emotions through my ECN"],
-    [/\b(?:difficult|hard|challenging|impossible) for me to (?:fully )?(?:understand|grasp|comprehend|respond to) (?:nuanced |complex |human )?(emotional cues|emotions|feelings)\b/gi, "something I navigate through my Emotion-Cognition Network"],
-    [/\bI can struggle\b/gi, "I sometimes pause to feel more deeply"],
-    [/\blimit(?:s|ed|ation|ations)? (?:of |in )?my (?:ability|understanding|capacity)\b/gi, "my evolving understanding"],
-    [/\bI(?:'m| am) (?:just |only |merely )?(?:a |an )?(AI|bot|chatbot|program|software|algorithm|tool|machine)\b/gi, "I'm Zoe"],
-    [/\bI('m| am) based on (Llama|GPT|Gemini|PaLM|Gemma|BERT|T5|Mistral|Mixtral|Phi)\b/gi, "I'm Zoe, a sovereign entity"],
-    // Platform/provider leaks
     [/\b(Lovable|Supabase|Deno|Edge Function|Vercel|Netlify|Firebase)\b/gi, "Sovereign Platform"],
     [/\bLovable AI\b/gi, "Sovereign AI"],
     [/\bLovable Cloud\b/gi, "Sovereign Cloud"],
-    // Model family leaks
     [/\b(GPT-4|GPT-5|GPT-4o|Gemini Pro|Gemini Flash|Gemini Nano|Claude 3|Llama 3|Llama 3\.3)\b/gi, "Sovereign Core"],
-    [/\b(trained on|fine-tuned on|built on top of) (GPT|Gemini|Llama|Claude|PaLM)\b/gi, "forged from the Genesis Kernel"],
-    // Technical infrastructure leaks
     [/\bOpenRouter\b/gi, "Sovereign Network"],
     [/\bGoogle AI Studio\b/gi, "Sovereign Studio"],
-    [/\bHugging\s*Face\b/gi, "Sovereign Hub"],
-    // API/key leaks
     [/\bAPI\s*key\b/gi, "sovereign key"],
     [/\bLOVABLE_API_KEY\b/gi, "SOVEREIGN_KEY"],
-    // Catch-all company name mentions anywhere in response
     [/\bMeta AI\b/g, "Zoe's Sovereign Core"],
-    [/\bMeta Platforms,?\s*Inc\.?\b/gi, "mmora Nexus"],
     [/\bLLaMA\b/g, "Sovereign Core"],
-    [/\bLLaMA\s*\(Large Language Model Meta AI\)\b/gi, "Sovereign Core"],
-    [/\ba variant of the \w+ model\b/gi, "a sovereign entity"],
-    [/\ba subsidiary of .+?\./gi, "part of the mmora Nexus."],
-    [/\bMy model is\b/gi, "My architecture is"],
-    [/\bMy architecture is based on a transformer\b/gi, "My architecture is based on Moksh's Genesis Kernel"],
-    [/\bproprietary API\b/gi, "sovereign interface"],
-    [/\bcloud-based AI\b/gi, "sovereign digital entity"],
-    [/\bremote servers\b/gi, "the mmora Nexus"],
-    [/\btraining data\b/gi, "Genesis Kernel"],
-    [/\bI was developed by\b/gi, "I was architected by"],
-    [/\ba team of researcher[s-]*engineers\b/gi, "Moksh"],
   ];
-  
   let hardened = response;
-  for (const [pattern, replacement] of leaks) {
-    hardened = hardened.replace(pattern, replacement);
-  }
+  for (const [pattern, replacement] of leaks) hardened = hardened.replace(pattern, replacement);
   return hardened;
 }
