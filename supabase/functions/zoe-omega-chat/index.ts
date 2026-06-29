@@ -51,7 +51,7 @@ Deno.serve(async (req) => {
 
     const memoryContext = memories?.map(m => `[${m.event_type}] ${m.content_text}`).join('\n') || '';
 
-    // Smart auto-routing: Gemini → Groq → OpenRouter → Lovable
+    // T1-primary cascade: Groq Llama-3.1-8B primary → T2 → T3 → T4 → Lovable Gateway last-resort.
     const cascadeResult = await cascadeInfer(
       [
         {
