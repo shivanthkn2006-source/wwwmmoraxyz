@@ -2,18 +2,21 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  * SOVEREIGN CASCADE MODULE — Smart Auto-Routing with structured fallback reasons
  *
- * Provider order (default cascadeInfer):
- *   P1  Groq • gemma2-9b-it           (Gemma "4" surrogate — identity/reasoning)
- *   P2  Google AI Studio • gemini-2.0-flash   (direct, free tier)
- *   P3  Groq • llama-3.3-70b-versatile        (speed tier)
- *   P4  OpenRouter • llama-3.3-70b free       (speed tier 2)
- *   P5  Lovable Gateway • google/gemini-2.5-flash (last resort, paid credits)
+ * Default provider order (T1 primary, T5 absolute last-resort):
+ *   T1  Groq • llama-3.1-8b-instant      (primary, free, lowest latency)
+ *   T2  Google AI Studio • gemini-2.0-flash   (direct, free tier)
+ *   T3  Groq • llama-3.3-70b-versatile        (quality speed tier)
+ *   T4  OpenRouter • llama-3.3-70b free       (backup speed tier)
+ *   T5  Lovable Gateway • google/gemini-2.5-flash (paid credits, last-resort only)
  *
+ * Use mode: 't1-primary' to boost T1 timeout and keep T5 as the true fallback.
  * Every attempt is recorded with {tier, provider, model, ok, status, reasonCode,
  * reasonText, latencyMs}. Successful results carry the trail back to the caller
  * so edge functions can return it to the UI for on-screen diagnostics.
  * ═══════════════════════════════════════════════════════════════════════════════
  */
+
+export type CascadeMode = 'default' | 't1-primary';
 
 export type CascadeReason =
   | 'success'
