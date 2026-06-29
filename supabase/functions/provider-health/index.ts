@@ -37,7 +37,8 @@ function keyPresenceMap() {
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
-  const tiers = getDefaultTiers();
+  const mode: CascadeMode = (body?.mode as CascadeMode) ?? 't1-primary';
+  const tiers = getDefaultTiers(mode);
   const keys = keyPresenceMap();
   const tierDescriptors = tiers.map(t => ({
     tier: t.tier,
@@ -53,7 +54,9 @@ Deno.serve(async (req: Request) => {
       ok: true,
       keys,
       tiers: tierDescriptors,
+      mode,
       cascadeOrder: tiers.map(t => `T${t.tier}:${t.provider}`).join(' → '),
+      strategy: mode === 't1-primary' ? 'T1 primary, T5 last-resort fallback' : 'Full T1→T5 fallback',
       checkedAt: new Date().toISOString(),
     }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
