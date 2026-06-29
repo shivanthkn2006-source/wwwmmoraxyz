@@ -202,8 +202,6 @@ export default function ZoeFeatureStatusPanel({ open, onClose }: { open: boolean
           ))}
         </ul>
 
-        <div className="mt-6 border-t border-white/10 pt-4">
-          <h3 className="mb-3 text-sm font-semibold">AI Provider Cascade — Settings & Diagnostics</h3>
         <div className="mt-6 space-y-4 border-t border-white/10 pt-4">
           <GenesisProgressWidget />
           <GenesisInspectorPanel />
