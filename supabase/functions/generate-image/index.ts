@@ -67,7 +67,7 @@ async function tryGemini(prompt: string, apiKey: string): Promise<string | null>
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-3.1-flash-image-preview',
+        model: 'google/gemini-3.1-flash-image',
         messages: [{ role: 'user', content: prompt }],
         modalities: ['image', 'text'],
       }),
