@@ -929,6 +929,30 @@ export const useZoeInfinityBrain = (): UseZoeInfinityBrainReturn => {
             requireCritique: determinism.requireCritique,
           },
           critiqueRouting,
+          // ── Runtime signals: hormones + fusion (always present) ──
+          ...(() => {
+            try {
+              // eslint-disable-next-line @typescript-eslint/no-var-requires
+              const { getRuntimeSignals } = require('@/utils/zoeRuntimeSignalBus');
+              const s = getRuntimeSignals();
+              return {
+                hormones: {
+                  phase: s.hormones.phase,
+                  dopamine: s.hormones.dopamine,
+                  oxytocin: s.hormones.oxytocin,
+                  cortisol: s.hormones.cortisol,
+                  melatonin: s.hormones.melatonin,
+                  lazyMode: s.hormones.lazyMode,
+                },
+                fusion: {
+                  emotion: s.fusion.emotion,
+                  intensity: s.fusion.intensity,
+                  source: s.fusion.source,
+                },
+                urgentCall: s.urgentCall,
+              };
+            } catch { return {}; }
+          })(),
         }
       });
       
