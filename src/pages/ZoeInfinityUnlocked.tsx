@@ -2213,32 +2213,14 @@ Just say "call me [name]" to change your nickname, or "speak Hindi" to switch la
       }
     }
 
-    // 🌡️ CONTEXTUAL GREETING - Include weather/location in greeting
-    const greetingPatterns = [
-      /^(hi|hello|hey|good\s+morning|good\s+afternoon|good\s+evening|good\s+night)$/i,
-      /^(hi|hello|hey)\s+zoe$/i,
-      /^(morning|evening|afternoon)$/i,
-    ];
-    
-    if (greetingPatterns.some(pattern => pattern.test(content.trim()))) {
-      const contextualGreeting = localContext.getContextualGreeting();
-      const response: InfinityMessage = {
-        id: `greeting-${Date.now()}`,
-        role: 'assistant',
-        content: contextualGreeting,
-        timestamp: new Date(),
-        metadata: { mode: 'flash' as const },
-      };
-      setMessages(prev => [...prev, { id: `user-${Date.now()}`, role: 'user', content, timestamp: new Date() }, response]);
+    // 🌡️ CONTEXTUAL GREETING — DISABLED
+    // Short greetings like "hi"/"hello"/"hey" used to short-circuit to a canned
+    // weather/location string from localContext.getContextualGreeting(), which
+    // caused Zoe to reply with the *same* "Good afternoon! It's 32°C with clear
+    // skies in Chennai…" line for every greeting and never reach T1 (Groq Gemma)
+    // or the rest of the cascade. We now let greetings flow through to the
+    // brain cascade so the actual model answers naturally each turn.
 
-      // Persist both sides so refresh doesn't drop this interaction.
-      saveMessageToDb('user', content);
-      saveMessageToDb('assistant', contextualGreeting);
-      
-      // Speak via Voice Orchestrator (PRIMARY is the free cloud voice).
-      speakResponse(contextualGreeting);
-      return;
-    }
 
     const homePatterns = [
       /^(go\s*)?home$/i,
