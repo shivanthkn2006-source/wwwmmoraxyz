@@ -119,7 +119,7 @@ export function ZoeAvatarViewer({ isVisible, isCompact, onDismiss, onToggleCompa
         }
       >
         {useGLB ? (
-          <GLBLipSyncCanvas isSpeaking={isSpeaking} emotionState={emotionState} fallback={fallback2D} />
+          <GLBLipSyncCanvas isSpeaking={isSpeaking} emotionState={liveEmotion} fallback={fallback2D} />
         ) : (
           fallback2D
         )}
