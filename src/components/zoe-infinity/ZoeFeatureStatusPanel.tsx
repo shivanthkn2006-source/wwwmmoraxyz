@@ -16,6 +16,7 @@ import ProviderHealthPanel from '@/components/zoe-infinity/ProviderHealthPanel';
 import GenesisProgressWidget from '@/components/zoe-infinity/GenesisProgressWidget';
 import GenesisInspectorPanel from '@/components/zoe-infinity/GenesisInspectorPanel';
 import DeepRootScanHistory from '@/components/zoe-infinity/DeepRootScanHistory';
+import PlatformAuditExport from '@/components/zoe-infinity/PlatformAuditExport';
 
 type Status = 'ok' | 'warn' | 'fail';
 interface Row { id: string; label: string; status: Status; detail: string; action?: () => void; actionLabel?: string; }
@@ -203,6 +204,7 @@ export default function ZoeFeatureStatusPanel({ open, onClose }: { open: boolean
         </ul>
 
         <div className="mt-6 space-y-4 border-t border-white/10 pt-4">
+          <PlatformAuditExport />
           <GenesisProgressWidget />
           <GenesisInspectorPanel />
           <DeepRootScanHistory />
