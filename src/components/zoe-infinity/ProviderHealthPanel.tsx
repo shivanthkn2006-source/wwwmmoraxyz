@@ -31,6 +31,9 @@ interface HealthResponse {
   tiers: HealthTier[];
   attempts?: HealthAttempt[];
   summary?: { healthyTiers: number[]; degradedTiers: number[]; missingKeyTiers: number[]; primaryHealthy: number | null; };
+  mode?: 'default' | 't1-primary';
+  strategy?: string;
+  cascadeOrder?: string;
   checkedAt: string;
 }
 
