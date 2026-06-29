@@ -3989,6 +3989,11 @@ function ZoeFeatureStatusPanelMount() {
   return <ZoeFeatureStatusPanel open={open} onClose={() => setOpen(false)} />;
 }
 
+function BackgroundSchedulers() {
+  useProviderHealthScheduler({ ping: true });
+  useDeepRootScanScheduler();
+  return null;
+
 function ZoeInfinityUnlockedWrapped() {
   // In DEV mode, wrap with TimeSimulationProvider for simulation testing
   if (import.meta.env.DEV) {
