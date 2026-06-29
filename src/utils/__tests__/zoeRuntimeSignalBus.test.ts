@@ -1,8 +1,9 @@
 /**
+ * @vitest-environment jsdom
+ *
  * Integration test: runtime signal bus → fusion → urgent-call propagation.
- * Asserts that recomputeFusion({ urgentCall: true }) publishes a 'concerned'
- * fusion result that subscribers receive.
  */
+
 import { describe, it, expect } from 'vitest';
 import {
   subscribeRuntimeSignals,
