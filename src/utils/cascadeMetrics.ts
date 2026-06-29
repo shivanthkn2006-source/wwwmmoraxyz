@@ -141,9 +141,9 @@ export function summarizeCascade(lookbackHours = 24): CascadeSummary {
 }
 
 export const TIER_LABELS: Record<number, string> = {
-  1: 'T1 · Gemma (primary)',
+  1: 'T1 · Groq Llama-3.1-8B (primary)',
   2: 'T2 · Gemini 2.0 Flash',
   3: 'T3 · Llama-70B speed',
   4: 'T4 · OpenRouter Llama',
-  5: 'T5 · Lovable Gateway (paid)',
+  5: 'T5 · Lovable Gateway (last-resort fallback)',
 };

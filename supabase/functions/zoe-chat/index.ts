@@ -733,7 +733,7 @@ ${cortexPromptAddition}`;
       ...messages.map(m => ({ ...m, content: truncateMessageIfNeeded(m.content) })),
     ];
     
-    const cascadeResult = await cascadeInfer(cascadeMessages, { maxTokens: 1500, temperature: 0.7 });
+    const cascadeResult = await cascadeInfer(cascadeMessages, { maxTokens: 1500, temperature: 0.7, mode: 't1-primary' });
     
     if (!cascadeResult.success) {
       console.error('All providers failed');

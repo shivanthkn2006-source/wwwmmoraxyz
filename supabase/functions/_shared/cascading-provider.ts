@@ -2,18 +2,21 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  * SOVEREIGN CASCADE MODULE — Smart Auto-Routing with structured fallback reasons
  *
- * Provider order (default cascadeInfer):
- *   P1  Groq • gemma2-9b-it           (Gemma "4" surrogate — identity/reasoning)
- *   P2  Google AI Studio • gemini-2.0-flash   (direct, free tier)
- *   P3  Groq • llama-3.3-70b-versatile        (speed tier)
- *   P4  OpenRouter • llama-3.3-70b free       (speed tier 2)
- *   P5  Lovable Gateway • google/gemini-2.5-flash (last resort, paid credits)
+ * Default provider order (T1 primary, T5 absolute last-resort):
+ *   T1  Groq • llama-3.1-8b-instant      (primary, free, lowest latency)
+ *   T2  Google AI Studio • gemini-2.0-flash   (direct, free tier)
+ *   T3  Groq • llama-3.3-70b-versatile        (quality speed tier)
+ *   T4  OpenRouter • llama-3.3-70b free       (backup speed tier)
+ *   T5  Lovable Gateway • google/gemini-2.5-flash (paid credits, last-resort only)
  *
+ * Use mode: 't1-primary' to boost T1 timeout and keep T5 as the true fallback.
  * Every attempt is recorded with {tier, provider, model, ok, status, reasonCode,
  * reasonText, latencyMs}. Successful results carry the trail back to the caller
  * so edge functions can return it to the UI for on-screen diagnostics.
  * ═══════════════════════════════════════════════════════════════════════════════
  */
+
+export type CascadeMode = 'default' | 't1-primary';
 
 export type CascadeReason =
   | 'success'
@@ -55,8 +58,10 @@ export interface CascadeOptions {
   maxTokens?: number;
   temperature?: number;
   systemPrompt?: string;
-  /** Per-provider timeout in ms (default 25_000) */
+  /** Per-provider timeout in ms (default 25_000). T1 gets a 1.5x boost in t1-primary mode. */
   timeoutMs?: number;
+  /** Cascade strategy: default keeps T1→T5 order; t1-primary boosts T1 and keeps T5 as last-resort fallback. */
+  mode?: CascadeMode;
 }
 
 interface Message {
@@ -255,14 +260,19 @@ export interface TierSpec {
   call: (m: Message[], o: CascadeOptions) => Promise<ProviderOutcome>;
 }
 
-export function getDefaultTiers(lovableModel?: string): TierSpec[] {
-  return [
-    { tier: 1, name: 'P1-llama-3.1-8b-instant (Groq)', provider: 'gemma',  model: 'llama-3.1-8b-instant',               envKey: 'GROQ_API_KEY',           call: callGemmaPrimary },
-    { tier: 2, name: 'P2-gemini-2.0-flash',        provider: 'gemini',     model: 'gemini-2.0-flash',                   envKey: 'GOOGLE_AI_STUDIO_KEY',   call: callGemini },
-    { tier: 3, name: 'P3-llama-3.3-70b (Groq)',    provider: 'groq',       model: 'llama-3.3-70b-versatile',            envKey: 'GROQ_API_KEY',           call: callGroqLlama },
-    { tier: 4, name: 'P4-llama-3.3-70b (OpenRouter)', provider: 'openrouter', model: 'meta-llama/llama-3.3-70b-instruct:free', envKey: 'OPENROUTER_API_KEY', call: callOpenRouter },
-    { tier: 5, name: 'P5-lovable-gateway',         provider: 'lovable',    model: lovableModel ?? 'google/gemini-2.5-flash', envKey: 'LOVABLE_API_KEY',    call: (m, o) => callLovable(m, o, lovableModel) },
+export function getDefaultTiers(mode: CascadeMode = 'default', lovableModel?: string): TierSpec[] {
+  const base: TierSpec[] = [
+    { tier: 1, name: 'T1 · Groq Llama-3.1-8B (primary)', provider: 'groq',     model: 'llama-3.1-8b-instant',               envKey: 'GROQ_API_KEY',           call: callGemmaPrimary },
+    { tier: 2, name: 'T2 · Gemini 2.0 Flash',            provider: 'gemini',   model: 'gemini-2.0-flash',                   envKey: 'GOOGLE_AI_STUDIO_KEY',   call: callGemini },
+    { tier: 3, name: 'T3 · Llama-3.3-70B (Groq)',        provider: 'groq',     model: 'llama-3.3-70b-versatile',            envKey: 'GROQ_API_KEY',           call: callGroqLlama },
+    { tier: 4, name: 'T4 · Llama-3.3-70B (OpenRouter)',  provider: 'openrouter', model: 'meta-llama/llama-3.3-70b-instruct:free', envKey: 'OPENROUTER_API_KEY',   call: callOpenRouter },
+    { tier: 5, name: 'T5 · Lovable Gateway (last-resort fallback)', provider: 'lovable', model: lovableModel ?? 'google/gemini-2.5-flash', envKey: 'LOVABLE_API_KEY', call: (m, o) => callLovable(m, o, lovableModel) },
   ];
+  if (mode === 't1-primary') {
+    // Keep T1→T5 order, but T1 is the explicit preferred primary and T5 is the absolute last resort.
+    return base;
+  }
+  return base;
 }
 
 // ───────────── Public API ─────────────
@@ -272,18 +282,20 @@ export async function cascadeInfer(
   opts: CascadeOptions = {},
   lovableModel?: string,
 ): Promise<CascadeResult> {
-  const tiers = getDefaultTiers(lovableModel);
-  return runCascade(tiers, messages, opts);
+  const tiers = getDefaultTiers(opts.mode ?? 'default', lovableModel);
+  const optsWithBoost = opts.mode === 't1-primary'
+    ? { ...opts, timeoutMs: Math.round((opts.timeoutMs ?? 25_000) * 1.5) }
+    : opts;
+  return runCascade(tiers, messages, optsWithBoost);
 }
 
 export async function cascadeInferFast(
   messages: Message[],
   opts: CascadeOptions = {},
 ): Promise<CascadeResult> {
-  // Speed-first: Groq Llama → Gemma → Gemini → OpenRouter → Lovable
-  const base = getDefaultTiers();
-  const order = [base[2], base[0], base[1], base[3], base[4]].map((t, i) => ({ ...t, tier: i + 1 }));
-  return runCascade(order, messages, opts);
+  // Speed-first still honors T1 as primary: T1 → T2 → T3 → T4 → T5.
+  const base = getDefaultTiers(opts.mode ?? 'default');
+  return runCascade(base, messages, opts);
 }
 
 async function runCascade(tiers: TierSpec[], messages: Message[], opts: CascadeOptions): Promise<CascadeResult> {

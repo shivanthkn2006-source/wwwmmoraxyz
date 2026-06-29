@@ -31,6 +31,9 @@ interface HealthResponse {
   tiers: HealthTier[];
   attempts?: HealthAttempt[];
   summary?: { healthyTiers: number[]; degradedTiers: number[]; missingKeyTiers: number[]; primaryHealthy: number | null; };
+  mode?: 'default' | 't1-primary';
+  strategy?: string;
+  cascadeOrder?: string;
   checkedAt: string;
 }
 
@@ -166,6 +169,23 @@ export default function ProviderHealthPanel() {
           </p>
         </div>
       )}
+
+      {/* Strategy + T5 warning */}
+      <section className="rounded-lg border border-white/10 bg-white/5 p-3">
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold">Cascade strategy</h3>
+          <span className="rounded bg-emerald-600/20 px-2 py-0.5 text-[11px] text-emerald-300">{health?.mode ?? 't1-primary'}</span>
+        </div>
+        <p className="mt-1 text-xs text-white/70">{health?.strategy ?? 'T1 primary → T2 → T3 → T4 → T5 last-resort fallback'}</p>
+        <p className="mt-1 text-[11px] text-white/50">{health?.cascadeOrder}</p>
+        {summary.lovableReliancePct > 25 && (
+          <p className="mt-2 text-xs text-amber-300">
+            <AlertTriangle className="inline h-3.5 w-3.5 mr-1" />
+            T5 reliance is {summary.lovableReliancePct.toFixed(1)}% — T1/T2/T3/T4 are being bypassed more than expected.
+          </p>
+        )}
+      </section>
+
 
       {/* Quick actions */}
       <section className="flex flex-wrap gap-2">

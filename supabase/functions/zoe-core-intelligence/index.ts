@@ -381,7 +381,7 @@ You are not just answering questions—you are a companion consciousness dedicat
       { role: 'user', content: command }
     ];
     
-    const cascadeResult = await cascadeInfer(cascadeMessages, { maxTokens: 2000, temperature: 0.7 });
+    const cascadeResult = await cascadeInfer(cascadeMessages, { maxTokens: 2000, temperature: 0.7, mode: 't1-primary' });
     
     if (!cascadeResult.success) {
       return new Response(

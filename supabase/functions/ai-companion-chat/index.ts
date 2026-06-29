@@ -296,9 +296,9 @@ Remember: ${userName} isn't just a user - they're someone you deeply care about,
     ];
 
     // ═══════════════════════════════════════════════════════════════════════
-    // SMART AUTO-ROUTING: Gemini → Groq → OpenRouter → Lovable (non-streaming fallback)
+    // T1-PRIMARY CASCADE: Groq Llama-3.1-8B primary → T2 → T3 → T4 → Lovable Gateway last-resort
     // ═══════════════════════════════════════════════════════════════════════
-    const cascadeResult = await cascadeInfer(allMessages, { maxTokens: 1000, temperature: 0.7 });
+    const cascadeResult = await cascadeInfer(allMessages, { maxTokens: 1000, temperature: 0.7, mode: 't1-primary' });
     
     if (!cascadeResult.success) {
       return new Response(

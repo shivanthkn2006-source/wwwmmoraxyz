@@ -6,11 +6,11 @@
  *          ok / latency / reasonCode for every one.
  *
  * Body shape (POST, all optional):
- *   { ping?: boolean (default true), prompt?: string }
+ *   { ping?: boolean (default true), prompt?: string, mode?: 'default' | 't1-primary' }
  *
  * No JWT required — same diagnostics surface the in-app settings panel needs.
  */
-import { getDefaultTiers, type AttemptLog } from "../_shared/cascading-provider.ts";
+import { getDefaultTiers, type AttemptLog, type CascadeMode } from "../_shared/cascading-provider.ts";
 
 // deno-lint-ignore no-explicit-any
 declare const Deno: any;
@@ -37,7 +37,13 @@ function keyPresenceMap() {
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
-  const tiers = getDefaultTiers();
+  // Parse body early so GET and POST can both read mode.
+  let body: any = {};
+  if (req.method !== 'GET') {
+    try { body = await req.json(); } catch { /* empty body OK */ }
+  }
+  const mode: CascadeMode = (body?.mode as CascadeMode) ?? 't1-primary';
+  const tiers = getDefaultTiers(mode);
   const keys = keyPresenceMap();
   const tierDescriptors = tiers.map(t => ({
     tier: t.tier,
@@ -53,14 +59,14 @@ Deno.serve(async (req: Request) => {
       ok: true,
       keys,
       tiers: tierDescriptors,
+      mode,
       cascadeOrder: tiers.map(t => `T${t.tier}:${t.provider}`).join(' → '),
+      strategy: mode === 't1-primary' ? 'T1 primary, T5 last-resort fallback' : 'Full T1→T5 fallback',
       checkedAt: new Date().toISOString(),
     }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 
   // POST → live ping
-  let body: any = {};
-  try { body = await req.json(); } catch { /* empty body OK */ }
   const ping: boolean = body?.ping !== false;
   const prompt: string = (body?.prompt ?? 'Reply with the single word: pong').slice(0, 200);
 
@@ -108,6 +114,9 @@ Deno.serve(async (req: Request) => {
     tiers: tierDescriptors,
     attempts,
     summary,
+    mode,
+    cascadeOrder: tiers.map(t => `T${t.tier}:${t.provider}`).join(' → '),
+    strategy: mode === 't1-primary' ? 'T1 primary, T5 last-resort fallback' : 'Full T1→T5 fallback',
     checkedAt: new Date().toISOString(),
   }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 });
