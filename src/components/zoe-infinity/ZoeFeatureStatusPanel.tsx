@@ -12,6 +12,7 @@ import { GENESIS_STAGES } from '@/hooks/useZoeGenesisStateMachine';
 import { RECALL_THRESHOLD, RECALL_BLOCKLIST, isBlockedRecall, canProactivelyRecall } from '@/utils/zoeRecallPolicy';
 import { isOnZoeInfinityRoute, shouldShowPlatformUpgrade } from '@/utils/zoeInfinityUpgradeExclusion';
 import { triggerZoeUrgentCall } from '@/components/zoe-infinity/UrgentCallProtocol';
+import ProviderHealthPanel from '@/components/zoe-infinity/ProviderHealthPanel';
 
 type Status = 'ok' | 'warn' | 'fail';
 interface Row { id: string; label: string; status: Status; detail: string; action?: () => void; actionLabel?: string; }
@@ -178,6 +179,11 @@ export default function ZoeFeatureStatusPanel({ open, onClose }: { open: boolean
             </li>
           ))}
         </ul>
+
+        <div className="mt-6 border-t border-white/10 pt-4">
+          <h3 className="mb-3 text-sm font-semibold">AI Provider Cascade — Settings & Diagnostics</h3>
+          <ProviderHealthPanel />
+        </div>
       </div>
     </div>
   );
