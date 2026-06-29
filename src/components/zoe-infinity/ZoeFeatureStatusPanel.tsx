@@ -13,6 +13,9 @@ import { RECALL_THRESHOLD, RECALL_BLOCKLIST, isBlockedRecall, canProactivelyReca
 import { isOnZoeInfinityRoute, shouldShowPlatformUpgrade } from '@/utils/zoeInfinityUpgradeExclusion';
 import { triggerZoeUrgentCall } from '@/components/zoe-infinity/UrgentCallProtocol';
 import ProviderHealthPanel from '@/components/zoe-infinity/ProviderHealthPanel';
+import GenesisProgressWidget from '@/components/zoe-infinity/GenesisProgressWidget';
+import GenesisInspectorPanel from '@/components/zoe-infinity/GenesisInspectorPanel';
+import DeepRootScanHistory from '@/components/zoe-infinity/DeepRootScanHistory';
 
 type Status = 'ok' | 'warn' | 'fail';
 interface Row { id: string; label: string; status: Status; detail: string; action?: () => void; actionLabel?: string; }
@@ -201,7 +204,14 @@ export default function ZoeFeatureStatusPanel({ open, onClose }: { open: boolean
 
         <div className="mt-6 border-t border-white/10 pt-4">
           <h3 className="mb-3 text-sm font-semibold">AI Provider Cascade — Settings & Diagnostics</h3>
-          <ProviderHealthPanel />
+        <div className="mt-6 space-y-4 border-t border-white/10 pt-4">
+          <GenesisProgressWidget />
+          <GenesisInspectorPanel />
+          <DeepRootScanHistory />
+          <div>
+            <h3 className="mb-3 text-sm font-semibold">AI Provider Cascade — Settings & Diagnostics</h3>
+            <ProviderHealthPanel />
+          </div>
         </div>
       </div>
     </div>
