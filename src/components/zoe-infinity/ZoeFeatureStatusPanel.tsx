@@ -16,6 +16,8 @@ import ProviderHealthPanel from '@/components/zoe-infinity/ProviderHealthPanel';
 import GenesisProgressWidget from '@/components/zoe-infinity/GenesisProgressWidget';
 import GenesisInspectorPanel from '@/components/zoe-infinity/GenesisInspectorPanel';
 import DeepRootScanHistory from '@/components/zoe-infinity/DeepRootScanHistory';
+import DeepRootScanSummaryCard from '@/components/zoe-infinity/DeepRootScanSummaryCard';
+import MissingPromptsWidget from '@/components/zoe-infinity/MissingPromptsWidget';
 import PlatformAuditExport from '@/components/zoe-infinity/PlatformAuditExport';
 
 type Status = 'ok' | 'warn' | 'fail';
@@ -207,6 +209,8 @@ export default function ZoeFeatureStatusPanel({ open, onClose }: { open: boolean
           <PlatformAuditExport />
           <GenesisProgressWidget />
           <GenesisInspectorPanel />
+          <DeepRootScanSummaryCard />
+          <MissingPromptsWidget />
           <DeepRootScanHistory />
           <div>
             <h3 className="mb-3 text-sm font-semibold">AI Provider Cascade — Settings & Diagnostics</h3>
