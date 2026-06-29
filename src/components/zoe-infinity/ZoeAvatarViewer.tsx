@@ -4,9 +4,20 @@
  * Supports minimize to corner + voice commands for show/hide.
  */
 
-import { useEffect, useCallback, useRef, useState, Suspense, lazy, Component, ReactNode } from 'react';
+import { useEffect, useCallback, useRef, useState, useMemo, Suspense, lazy, Component, ReactNode } from 'react';
 import { motion, AnimatePresence, useMotionValue, useDragControls } from 'framer-motion';
 import { type AvatarEmotionState } from '@/utils/avatarEmotionClassifier';
+import { subscribeRuntimeSignals, getRuntimeSignals, type RuntimeSignals } from '@/utils/zoeRuntimeSignalBus';
+import type { FusedEmotion } from '@/core/zoe/EmotionalFusionLayer';
+
+// Map FusedEmotion → AvatarEmotionState (avatar classifier vocabulary).
+const FUSED_TO_AVATAR: Record<FusedEmotion, AvatarEmotionState> = {
+  idle: 'idle', happy: 'happy', sad: 'sad', crying: 'crying', angry: 'angry',
+  surprised: 'surprised', loving: 'loving', thinking: 'thinking',
+  nostalgic: 'nostalgic', focused: 'focused', joyful: 'joyful',
+  concerned: 'sympathetic', flirty: 'flirty', sleepy: 'peaceful', restless: 'anxious',
+};
+
 
 const PIP_POS_KEY = 'zoe_pip_position_v1';
 const PIP_MIN_KEY = 'zoe_pip_minimized_v1';
@@ -76,9 +87,21 @@ export function ZoeAvatarViewer({ isVisible, isCompact, onDismiss, onToggleCompa
     const unsub = subscribeLipSyncSettings((s) => setUseGLB(s.enabled));
     return () => { unsub(); };
   }, []);
+  // Live emotion-driver: fuse runtime signals (hormones · sentiment · urgent call)
+  // into the avatar emotion. Caller-supplied emotionState wins when fusion is weak.
+  const [runtime, setRuntime] = useState<RuntimeSignals>(() => getRuntimeSignals());
+  useEffect(() => subscribeRuntimeSignals(setRuntime), []);
+  const liveEmotion = useMemo<AvatarEmotionState>(() => {
+    const fused = runtime.fusion;
+    if (runtime.urgentCall) return 'sympathetic';
+    if (fused && fused.intensity >= 0.5) return FUSED_TO_AVATAR[fused.emotion] ?? emotionState;
+    return emotionState;
+  }, [runtime, emotionState]);
+
   const fallback2D = (
-    <AvatarCanvas variant={variant} emotionState={emotionState} isSpeaking={isSpeaking} regionalFilter={regionalFilter} regionalAvatarImage={regionalAvatarImage} />
+    <AvatarCanvas variant={variant} emotionState={liveEmotion} isSpeaking={isSpeaking} regionalFilter={regionalFilter} regionalAvatarImage={regionalAvatarImage} />
   );
+
 
   const avatarContent = (
     <AvatarErrorBoundary
@@ -96,7 +119,7 @@ export function ZoeAvatarViewer({ isVisible, isCompact, onDismiss, onToggleCompa
         }
       >
         {useGLB ? (
-          <GLBLipSyncCanvas isSpeaking={isSpeaking} emotionState={emotionState} fallback={fallback2D} />
+          <GLBLipSyncCanvas isSpeaking={isSpeaking} emotionState={liveEmotion} fallback={fallback2D} />
         ) : (
           fallback2D
         )}

@@ -163,7 +163,26 @@ export default function ZoeFeatureStatusPanel({ open, onClose }: { open: boolean
         <p className="mt-1 text-xs text-white/60">
           Screen-tests the 13 spec-gap fixes. ✅ {okCount} · ⚠️ {warnCount} · ❌ {failCount}
         </p>
+        <div className="mt-3 flex items-center gap-2">
+          <button
+            onClick={() => {
+              const summary = rows.map(r => `${r.status === 'ok' ? '✅' : r.status === 'warn' ? '⚠️' : '❌'} ${r.label} — ${r.detail}`).join('\n');
+              const blob = new Blob([`Zoe Infinity — 13-Check Status (${new Date().toISOString()})\n\n${summary}\n\nOK:${okCount} WARN:${warnCount} FAIL:${failCount}\n`], { type: 'text/plain' });
+              const a = document.createElement('a');
+              a.href = URL.createObjectURL(blob);
+              a.download = `zoe-13-checks-${Date.now()}.txt`;
+              a.click();
+              URL.revokeObjectURL(a.href);
+            }}
+            className="rounded-md bg-cyan-600/30 px-3 py-1 text-xs hover:bg-cyan-600/50"
+          >
+            Run all 13 checks → export
+          </button>
+          {failCount > 0 && <span className="text-xs text-rose-300">{failCount} failing</span>}
+          {failCount === 0 && warnCount === 0 && <span className="text-xs text-emerald-300">All checks green</span>}
+        </div>
         <ul className="mt-4 space-y-2">
+
           {rows.map(r => (
             <li key={r.id} className="rounded-lg border border-white/5 bg-white/5 px-3 py-2 text-sm">
               <div className="flex items-center gap-2">
