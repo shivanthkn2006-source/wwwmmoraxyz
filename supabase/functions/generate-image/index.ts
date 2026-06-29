@@ -156,7 +156,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ imageUrl, provider: usedProvider }),
+      JSON.stringify({ imageUrl, provider: usedProvider, attempts }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
