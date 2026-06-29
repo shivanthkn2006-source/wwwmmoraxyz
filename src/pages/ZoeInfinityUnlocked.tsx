@@ -13,6 +13,9 @@ import { ZoeUtilityMenu } from '@/components/zoe-infinity/ZoeUtilityMenu';
 import { ZoeHeartStatus } from '@/components/zoe-infinity/ZoeHeartStatus';
 import UrgentCallProtocol from '@/components/zoe-infinity/UrgentCallProtocol';
 import ZoeFeatureStatusPanel from '@/components/zoe-infinity/ZoeFeatureStatusPanel';
+import ProviderHealthBanner from '@/components/zoe-infinity/ProviderHealthBanner';
+import useProviderHealthScheduler from '@/hooks/useProviderHealthScheduler';
+import useDeepRootScanScheduler from '@/hooks/useDeepRootScanScheduler';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -3661,6 +3664,10 @@ If you realize you made a factual error, repeated yourself, or gave contradictor
 
       {/* Spec-gap status panel — open with Ctrl+Shift+Z */}
       <ZoeFeatureStatusPanelMount />
+
+      {/* Provider-health degraded-tier banner + background schedulers */}
+      <ProviderHealthBanner />
+      <BackgroundSchedulers />
 
       {/* Companion Mode Overlay removed completely (per user request) */}
 
