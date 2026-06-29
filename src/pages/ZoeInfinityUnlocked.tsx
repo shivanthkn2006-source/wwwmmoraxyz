@@ -3993,6 +3993,8 @@ function BackgroundSchedulers() {
   useProviderHealthScheduler({ ping: true });
   useDeepRootScanScheduler();
   return null;
+}
+
 
 function ZoeInfinityUnlockedWrapped() {
   // In DEV mode, wrap with TimeSimulationProvider for simulation testing
