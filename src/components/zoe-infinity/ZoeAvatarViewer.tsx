@@ -4,9 +4,20 @@
  * Supports minimize to corner + voice commands for show/hide.
  */
 
-import { useEffect, useCallback, useRef, useState, Suspense, lazy, Component, ReactNode } from 'react';
+import { useEffect, useCallback, useRef, useState, useMemo, Suspense, lazy, Component, ReactNode } from 'react';
 import { motion, AnimatePresence, useMotionValue, useDragControls } from 'framer-motion';
 import { type AvatarEmotionState } from '@/utils/avatarEmotionClassifier';
+import { subscribeRuntimeSignals, getRuntimeSignals, type RuntimeSignals } from '@/utils/zoeRuntimeSignalBus';
+import type { FusedEmotion } from '@/core/zoe/EmotionalFusionLayer';
+
+// Map FusedEmotion → AvatarEmotionState (avatar classifier vocabulary).
+const FUSED_TO_AVATAR: Record<FusedEmotion, AvatarEmotionState> = {
+  idle: 'idle', happy: 'happy', sad: 'sad', crying: 'crying', angry: 'angry',
+  surprised: 'surprised', loving: 'loving', thinking: 'thinking',
+  nostalgic: 'nostalgic', focused: 'focused', joyful: 'joyful',
+  concerned: 'sympathetic', flirty: 'flirty', sleepy: 'peaceful', restless: 'anxious',
+};
+
 
 const PIP_POS_KEY = 'zoe_pip_position_v1';
 const PIP_MIN_KEY = 'zoe_pip_minimized_v1';
