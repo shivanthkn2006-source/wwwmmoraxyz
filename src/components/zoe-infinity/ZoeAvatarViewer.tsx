@@ -87,9 +87,21 @@ export function ZoeAvatarViewer({ isVisible, isCompact, onDismiss, onToggleCompa
     const unsub = subscribeLipSyncSettings((s) => setUseGLB(s.enabled));
     return () => { unsub(); };
   }, []);
+  // Live emotion-driver: fuse runtime signals (hormones · sentiment · urgent call)
+  // into the avatar emotion. Caller-supplied emotionState wins when fusion is weak.
+  const [runtime, setRuntime] = useState<RuntimeSignals>(() => getRuntimeSignals());
+  useEffect(() => subscribeRuntimeSignals(setRuntime), []);
+  const liveEmotion = useMemo<AvatarEmotionState>(() => {
+    const fused = runtime.fusion;
+    if (runtime.urgentCall) return 'sympathetic';
+    if (fused && fused.intensity >= 0.5) return FUSED_TO_AVATAR[fused.emotion] ?? emotionState;
+    return emotionState;
+  }, [runtime, emotionState]);
+
   const fallback2D = (
-    <AvatarCanvas variant={variant} emotionState={emotionState} isSpeaking={isSpeaking} regionalFilter={regionalFilter} regionalAvatarImage={regionalAvatarImage} />
+    <AvatarCanvas variant={variant} emotionState={liveEmotion} isSpeaking={isSpeaking} regionalFilter={regionalFilter} regionalAvatarImage={regionalAvatarImage} />
   );
+
 
   const avatarContent = (
     <AvatarErrorBoundary
