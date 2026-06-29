@@ -28,7 +28,7 @@ export function getLastHealthSnapshot(): HealthSnapshot | null {
 
 async function poll(ping: boolean) {
   try {
-    const { data, error } = await supabase.functions.invoke('provider-health', { body: { ping } });
+    const { data, error } = await supabase.functions.invoke('provider-health', { body: { ping, mode: 't1-primary' } });
     if (error || !data) return;
     const snap = data as HealthSnapshot;
     try { localStorage.setItem(LS_KEY, JSON.stringify(snap)); } catch {}

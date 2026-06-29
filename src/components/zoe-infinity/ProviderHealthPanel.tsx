@@ -74,7 +74,7 @@ export default function ProviderHealthPanel() {
   const runHealthCheck = useCallback(async (ping: boolean) => {
     setLoading(true); setPingError(null);
     try {
-      const { data, error } = await supabase.functions.invoke('provider-health', { body: { ping } });
+      const { data, error } = await supabase.functions.invoke('provider-health', { body: { ping, mode: 't1-primary' } });
       if (error) throw error;
       setHealth(data as HealthResponse);
     } catch (e: any) { setPingError(e?.message ?? String(e)); }
