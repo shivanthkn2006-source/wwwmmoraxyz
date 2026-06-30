@@ -42,6 +42,13 @@ import {
 } from '@/core/inference';
 // ═══ ANTI-HALLUCINATION LAYER 1: Determinism profiling ═══
 import { classifyDeterminism, getCritiqueRouting } from '@/core/inference/Determinism';
+// ═══ GENESIS DHF + Swiss Ephemeris snapshot (immutable identity for the brain) ═══
+import {
+  getLockedGenesisIdentity,
+  getEphemerisSnapshot,
+  isAstrologyQuery,
+  buildGenesisDHFContextBlock,
+} from '@/utils/zoeGenesisDHF';
 
 // ═══ GAP 2: SPECULATIVE SPEECH - Instant Samantha Effect ═══
 import { 
@@ -851,6 +858,23 @@ export const useZoeInfinityBrain = (): UseZoeInfinityBrainReturn => {
       const critiqueRouting = getCritiqueRouting(determinism.mode);
       console.log(`[ZoeBrain] 🎯 Determinism: ${determinism.mode} (temp=${determinism.temperature}, critique=${critiqueRouting.enabled})`);
 
+      // ── GENESIS DHF + Swiss Ephemeris (immutable identity context) ──
+      let genesisIdentity: Awaited<ReturnType<typeof getLockedGenesisIdentity>> = null;
+      let ephemerisSnapshot: ReturnType<typeof getEphemerisSnapshot> | null = null;
+      try {
+        if (user?.id) genesisIdentity = await getLockedGenesisIdentity(user.id);
+        if (isAstrologyQuery(lastUserMsg)) {
+          ephemerisSnapshot = getEphemerisSnapshot(genesisIdentity?.dob ?? null);
+          console.log('[ZoeBrain] 🪐 Ephemeris snapshot attached (DOB locked?', !!genesisIdentity?.dob, ')');
+        }
+      } catch (e) {
+        console.warn('[ZoeBrain] DHF/ephemeris attach failed:', e);
+      }
+      const genesisDHFBlock = buildGenesisDHFContextBlock(genesisIdentity, ephemerisSnapshot);
+      const combinedMemoryWithDHF = genesisDHFBlock
+        ? `${genesisDHFBlock}\n\n${combinedMemoryContext}`
+        : combinedMemoryContext;
+
       // ═══════════════════════════════════════════════════════════════════════
       // DEEP RESEARCH ROUTE — Gemini 2.5 Pro 3-step reasoning loop
       // Triggered when: user toggle ON, OR pattern-detected Pro mode.
@@ -865,7 +889,9 @@ export const useZoeInfinityBrain = (): UseZoeInfinityBrainReturn => {
             body: {
               messages: recentHistory.map(m => ({ role: m.role, content: m.content })),
               soulCodex: codexStringRef.current,
-              memoryContext: combinedMemoryContext,
+              memoryContext: combinedMemoryWithDHF,
+              genesisDHF: genesisIdentity || undefined,
+              ephemerisSnapshot: ephemerisSnapshot || undefined,
               intimacyLevel: karmicIntimacyRef.current,
               localTime,
             },
@@ -906,7 +932,9 @@ export const useZoeInfinityBrain = (): UseZoeInfinityBrainReturn => {
           })),
           mode: currentMode,
           soulCodex: codexStringRef.current,
-          memoryContext: combinedMemoryContext, // PHASE 4: Inject memory + conversation context
+          memoryContext: combinedMemoryWithDHF, // PHASE 4: memory + DHF identity + ephemeris
+          genesisDHF: genesisIdentity || undefined,
+          ephemerisSnapshot: ephemerisSnapshot || undefined,
           enableGrounding: true, // DEEP GROUNDING: Enable citation search
           // SAMANTHA MODE: Pass intimacy level for romantic voice tuning
           intimacyLevel: karmicIntimacyRef.current,
