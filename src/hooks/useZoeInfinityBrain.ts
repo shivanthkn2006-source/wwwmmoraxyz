@@ -42,6 +42,13 @@ import {
 } from '@/core/inference';
 // ═══ ANTI-HALLUCINATION LAYER 1: Determinism profiling ═══
 import { classifyDeterminism, getCritiqueRouting } from '@/core/inference/Determinism';
+// ═══ GENESIS DHF + Swiss Ephemeris snapshot (immutable identity for the brain) ═══
+import {
+  getLockedGenesisIdentity,
+  getEphemerisSnapshot,
+  isAstrologyQuery,
+  buildGenesisDHFContextBlock,
+} from '@/utils/zoeGenesisDHF';
 
 // ═══ GAP 2: SPECULATIVE SPEECH - Instant Samantha Effect ═══
 import { 
