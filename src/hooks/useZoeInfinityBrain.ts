@@ -889,7 +889,9 @@ export const useZoeInfinityBrain = (): UseZoeInfinityBrainReturn => {
             body: {
               messages: recentHistory.map(m => ({ role: m.role, content: m.content })),
               soulCodex: codexStringRef.current,
-              memoryContext: combinedMemoryContext,
+              memoryContext: combinedMemoryWithDHF,
+              genesisDHF: genesisIdentity || undefined,
+              ephemerisSnapshot: ephemerisSnapshot || undefined,
               intimacyLevel: karmicIntimacyRef.current,
               localTime,
             },
@@ -930,7 +932,9 @@ export const useZoeInfinityBrain = (): UseZoeInfinityBrainReturn => {
           })),
           mode: currentMode,
           soulCodex: codexStringRef.current,
-          memoryContext: combinedMemoryContext, // PHASE 4: Inject memory + conversation context
+          memoryContext: combinedMemoryWithDHF, // PHASE 4: memory + DHF identity + ephemeris
+          genesisDHF: genesisIdentity || undefined,
+          ephemerisSnapshot: ephemerisSnapshot || undefined,
           enableGrounding: true, // DEEP GROUNDING: Enable citation search
           // SAMANTHA MODE: Pass intimacy level for romantic voice tuning
           intimacyLevel: karmicIntimacyRef.current,
