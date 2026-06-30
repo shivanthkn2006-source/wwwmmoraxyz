@@ -130,6 +130,7 @@ import { hasActivatedPermissions } from '@/utils/unifiedPermissionManager';
 
 // NEET TUTOR (India) - Trial mode, reuses chat UI
 import { useZoeNeetTutor } from '@/hooks/useZoeNeetTutor';
+import { ZoeDecoratorMount } from '@/features/zoe-decorator/ZoeDecoratorMount';
 
 type ZoeMood = 'neutral' | 'cyan' | 'gold';
 
@@ -3646,6 +3647,9 @@ If you realize you made a factual error, repeated yourself, or gave contradictor
 
       {/* Spec-gap status panel — open with Ctrl+Shift+Z */}
       <ZoeFeatureStatusPanelMount />
+
+      {/* Zoe Decorator — self-contained, voice/chat-triggered */}
+      <ZoeDecoratorMount />
 
       {/* Provider-health degraded-tier banner + background schedulers */}
       <ProviderHealthBanner />
