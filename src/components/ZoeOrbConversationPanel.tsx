@@ -933,6 +933,25 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
 
     console.log('[ZoeOrb] Sending message:', textToSend.trim(), 'mode:', messagingMode, 'with media:', hasPendingMedia);
 
+    // ═══ ZOE DECORATOR INTENT (self-contained feature) ═══
+    if (messagingMode === 'zoe' && !hasPendingMedia) {
+      try {
+        const { detectDecoratorIntent, emitOpenDecorator } = await import('@/features/zoe-decorator/intent');
+        const di = detectDecoratorIntent(textToSend.trim());
+        if (di.matched) {
+          setInput('');
+          const userMessage: Message = { id: Date.now().toString(), role: 'user', content: textToSend.trim(), timestamp: new Date() };
+          const zoeMessage: Message = {
+            id: (Date.now() + 1).toString(), role: 'zoe', timestamp: new Date(),
+            content: `Opening the Decorator for your ${di.space ?? 'space'}${di.theme ? ` in ${di.theme} style` : ''}. Snap or upload a photo and I'll redesign it.`,
+          };
+          setMessages(prev => [...prev, userMessage, zoeMessage]);
+          emitOpenDecorator({ space: di.space, theme: di.theme, prompt: di.raw });
+          return;
+        }
+      } catch (e) { console.warn('[ZoeOrb] decorator intent check failed', e); }
+    }
+
     // ═══ CHECK FOR RELATIONSHIP COMMANDS FIRST ═══
     // Route relationship commands through voice command processor instead of chat API
     if (messagingMode === 'zoe' && !hasPendingMedia && isRelationshipCommand(textToSend.trim())) {
