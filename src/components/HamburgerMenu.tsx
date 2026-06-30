@@ -1,6 +1,14 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, Camera, MessageCircle, Users, Globe, Bell, Heart, Search, Dna, MapPin, Sparkles, Star, Orbit, Scale } from 'lucide-react';
+import {
+  Home, Camera, MessageCircle, Users, Globe, Bell, Heart, Search, Dna, MapPin,
+  Sparkles, Star, Orbit, Scale, Brain, Zap, Shield, User, Settings, BookOpen,
+  Eye, Mic, Activity, BarChart3, Clock, FileText, Compass, Rocket, Crown,
+  Atom, Infinity, Telescope, Building2, Briefcase, GraduationCap, Map,
+  Wand2, Layers, Cpu, Network, Database, Radar, Flame, Gem, TreePine,
+  Sunrise, Mountain, Waves, CircuitBoard, ScrollText, BadgeCheck, Wrench,
+  ShieldCheck, BellRing, History, Download, Hammer
+} from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
