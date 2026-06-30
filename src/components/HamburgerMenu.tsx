@@ -12,6 +12,31 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
+/**
+ * Shared menu palette — all colors come from `--menu-*` tokens in index.css.
+ * Update those tokens to re-skin every navigation surface in one place.
+ */
+const MENU_TOKENS = {
+  // Surfaces
+  panelBg: 'bg-[hsl(var(--menu-bg-overlay)/0.78)] backdrop-blur-2xl',
+  panelBorder: 'border border-[hsl(var(--menu-border)/0.25)]',
+  divider: 'bg-[hsl(var(--menu-border)/0.18)]',
+  // Text
+  itemFg: 'text-[hsl(var(--menu-fg))]',
+  itemFgMuted: 'text-[hsl(var(--menu-fg-muted))]',
+  sectionFg: 'text-[hsl(var(--menu-section-fg)/0.7)]',
+  accent: 'text-[hsl(var(--menu-accent))]',
+  highlight: 'text-[hsl(var(--menu-highlight))]',
+  // States
+  hover: 'hover:bg-[hsl(var(--menu-hover-bg)/0.12)] hover:text-[hsl(var(--menu-accent))]',
+  active: 'bg-[hsl(var(--menu-active-bg)/0.18)] text-[hsl(var(--menu-highlight))] ring-1 ring-[hsl(var(--menu-highlight)/0.4)]',
+  // Badge
+  badge:
+    'bg-[hsl(var(--menu-badge-bg))] text-[hsl(var(--menu-badge-fg))] ring-1 ring-[hsl(var(--menu-accent)/0.4)]',
+} as const;
+
+type MenuTone = 'default' | 'accent' | 'highlight';
+
 interface HamburgerMenuProps {
   isOpen: boolean;
   onClose: () => void;
@@ -52,8 +77,13 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
 
   if (!isOpen) return null;
 
-  const navItems: Array<{ icon: any; label: string; path: string; badge?: number; section?: string; color?: string }> = [
-    // Core
+  const toneClass = (tone: MenuTone = 'default') =>
+    tone === 'highlight' ? MENU_TOKENS.highlight
+    : tone === 'accent' ? MENU_TOKENS.accent
+    : MENU_TOKENS.itemFg;
+
+  const navItems: Array<{ icon: any; label: string; path: string; badge?: number; section?: string; tone?: MenuTone }> = [
+    // Core (default = blue)
     { icon: Home, label: 'Home', path: '/home', section: 'Core' },
     { icon: Camera, label: 'Camera', path: '/camera' },
     { icon: Atom, label: 'Quantum Camera', path: '/quantum-camera' },
@@ -63,37 +93,37 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
     { icon: MapPin, label: 'Selfie City', path: '/selfie-city' },
     { icon: User, label: 'Profile', path: '/profile' },
 
-    // Zoe Universe
-    { icon: Sparkles, label: 'Zoe Infinity', path: '/zoe-infinity', section: 'Zoe Universe', color: 'text-blue-400' },
-    { icon: Brain, label: 'Zoe AI', path: '/zoe-ai', color: 'text-blue-400' },
-    { icon: Infinity, label: 'Zoe Omega', path: '/zoe-omega', color: 'text-blue-400' },
-    { icon: Network, label: 'Zoe Nexus', path: '/zoe-nexus', color: 'text-blue-400' },
-    { icon: CircuitBoard, label: 'Nexus Control', path: '/zoe-nexus-control', color: 'text-blue-400' },
-    { icon: Layers, label: 'Zoe Architecture', path: '/zoe-architecture', color: 'text-blue-400' },
-    { icon: Crown, label: 'God Mode', path: '/god-mode', color: 'text-amber-400' },
-    { icon: Zap, label: 'God Mode Evolution', path: '/god-mode/evolution', color: 'text-amber-400' },
-    { icon: Rocket, label: 'Omega Evolution', path: '/omega-evolution', color: 'text-blue-400' },
-    { icon: Flame, label: 'Phoenix Core', path: '/phoenix-core', color: 'text-orange-400' },
-    { icon: Gem, label: 'Genesis Imprint', path: '/genesis-imprint', color: 'text-blue-400' },
+    // Zoe Universe (blue accent; God Mode tier = yellow highlight)
+    { icon: Sparkles, label: 'Zoe Infinity', path: '/zoe-infinity', section: 'Zoe Universe', tone: 'accent' },
+    { icon: Brain, label: 'Zoe AI', path: '/zoe-ai', tone: 'accent' },
+    { icon: Infinity, label: 'Zoe Omega', path: '/zoe-omega', tone: 'accent' },
+    { icon: Network, label: 'Zoe Nexus', path: '/zoe-nexus', tone: 'accent' },
+    { icon: CircuitBoard, label: 'Nexus Control', path: '/zoe-nexus-control', tone: 'accent' },
+    { icon: Layers, label: 'Zoe Architecture', path: '/zoe-architecture', tone: 'accent' },
+    { icon: Crown, label: 'God Mode', path: '/god-mode', tone: 'highlight' },
+    { icon: Zap, label: 'God Mode Evolution', path: '/god-mode/evolution', tone: 'highlight' },
+    { icon: Rocket, label: 'Omega Evolution', path: '/omega-evolution', tone: 'accent' },
+    { icon: Flame, label: 'Phoenix Core', path: '/phoenix-core', tone: 'highlight' },
+    { icon: Gem, label: 'Genesis Imprint', path: '/genesis-imprint', tone: 'accent' },
 
     // Companion & Wellness
-    { icon: Heart, label: 'AI Companion', path: '/ai-companion', section: 'Companion', color: 'text-yellow-400' },
-    { icon: Dna, label: 'Bio-Sync (Vitruvian)', path: '/vitruvian', color: 'text-cyan-400' },
+    { icon: Heart, label: 'AI Companion', path: '/ai-companion', section: 'Companion', tone: 'highlight' },
+    { icon: Dna, label: 'Bio-Sync (Vitruvian)', path: '/vitruvian', tone: 'accent' },
     { icon: BookOpen, label: 'Universal Timeline', path: '/universal-timeline' },
     { icon: Clock, label: 'Kronos Anima', path: '/kronos-anima' },
-    { icon: Sunrise, label: 'M\'mora', path: '/mmora' },
+    { icon: Sunrise, label: "M'mora", path: '/mmora' },
 
     // Career & Life
-    { icon: Sparkles, label: 'Re-Sleeve', path: '/resleeve', section: 'Career & Life', color: 'text-blue-400' },
-    { icon: Star, label: 'Career Divinity', path: '/career-divinity', color: 'text-amber-400' },
+    { icon: Sparkles, label: 'Re-Sleeve', path: '/resleeve', section: 'Career & Life', tone: 'accent' },
+    { icon: Star, label: 'Career Divinity', path: '/career-divinity', tone: 'highlight' },
     { icon: Briefcase, label: 'Merchant Center', path: '/merchant' },
 
     // Legal & Scan
-    { icon: Scale, label: 'Legal Nexus', path: '/legal-nexus', section: 'Legal & Scan', color: 'text-emerald-400' },
-    { icon: ScrollText, label: 'Contract Scanner', path: '/contract-scanner', color: 'text-emerald-400' },
+    { icon: Scale, label: 'Legal Nexus', path: '/legal-nexus', section: 'Legal & Scan', tone: 'accent' },
+    { icon: ScrollText, label: 'Contract Scanner', path: '/contract-scanner', tone: 'accent' },
     { icon: BookOpen, label: 'Anka Shastra', path: '/anka-shastra' },
     { icon: Building2, label: 'Vastu Scan', path: '/vastu-scan' },
-    { icon: Eye, label: 'Agasthya Vision', path: '/agasthya-vision' },
+    { icon: Eye, label: 'Agasthya Vision', path: '/agasthya-vision', tone: 'highlight' },
 
     // Exodus & Maps
     { icon: Compass, label: 'Exodus', path: '/exodus', section: 'Exodus' },
@@ -107,8 +137,8 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
     { icon: Bell, label: 'Notification History', path: '/notification-history', badge: unreadNotifications },
 
     // Diagnostics & Security
-    { icon: ShieldCheck, label: 'Security', path: '/security', section: 'Diagnostics', color: 'text-emerald-400' },
-    { icon: Shield, label: 'Sentinel', path: '/sentinel', color: 'text-emerald-400' },
+    { icon: ShieldCheck, label: 'Security', path: '/security', section: 'Diagnostics', tone: 'accent' },
+    { icon: Shield, label: 'Sentinel', path: '/sentinel', tone: 'accent' },
     { icon: Database, label: 'DHF Dashboard', path: '/dhf-dashboard' },
     { icon: BarChart3, label: 'Analytics Dashboard', path: '/analytics-dashboard' },
     { icon: Activity, label: 'Platform Audit', path: '/platform-audit' },
@@ -124,20 +154,24 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
     { icon: BadgeCheck, label: 'About', path: '/about', section: 'About' },
   ];
 
+  const itemBase =
+    'w-full flex items-center gap-2 px-2 py-1.5 rounded-md transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--menu-highlight)/0.6)]';
+
   return (
     <>
       {/* Backdrop */}
-      <div 
+      <div
         className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100]"
         onClick={onClose}
       />
-      
+
       {/* Menu Panel */}
       <div
         className={cn(
-          "fixed top-14 left-4 z-[101] w-56 max-h-[80vh] overflow-y-auto",
-          "bg-black/70 backdrop-blur-2xl rounded-lg border border-white/10 shadow-2xl",
-          "animate-in slide-in-from-top-2 fade-in duration-200"
+          'fixed top-14 left-4 z-[101] w-56 max-h-[80vh] overflow-y-auto rounded-lg shadow-2xl',
+          'animate-in slide-in-from-top-2 fade-in duration-200',
+          MENU_TOKENS.panelBg,
+          MENU_TOKENS.panelBorder
         )}
       >
         <div className="p-2 space-y-0.5">
@@ -147,14 +181,13 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
               window.dispatchEvent(new CustomEvent('open-search'));
               onClose();
             }}
-            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-white/70 hover:bg-white/10 hover:text-white transition-all duration-200"
+            className={cn(itemBase, MENU_TOKENS.itemFg, MENU_TOKENS.hover)}
           >
             <Search className="w-4 h-4" />
             <span className="text-xs font-medium">Search</span>
           </button>
 
-          {/* Divider */}
-          <div className="h-px bg-white/10 my-1" />
+          <div className={cn('h-px my-1', MENU_TOKENS.divider)} />
 
           {/* Navigation Items */}
           {navItems.map((item) => {
@@ -162,23 +195,26 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
             return (
               <React.Fragment key={item.path}>
                 {item.section && (
-                  <div className="px-2 pt-2 pb-1 text-[9px] uppercase tracking-wider text-white/30">
+                  <div className={cn('px-2 pt-2 pb-1 text-[9px] uppercase tracking-wider', MENU_TOKENS.sectionFg)}>
                     {item.section}
                   </div>
                 )}
                 <button
                   onClick={() => handleNavigation(item.path)}
                   className={cn(
-                    "w-full flex items-center gap-2 px-2 py-1.5 rounded-md transition-all duration-200",
-                    isActive
-                      ? "bg-white/20 text-white"
-                      : cn("hover:bg-white/10 hover:text-white", item.color || "text-white/70")
+                    itemBase,
+                    isActive ? MENU_TOKENS.active : cn(toneClass(item.tone), MENU_TOKENS.hover)
                   )}
                 >
                   <item.icon className="w-4 h-4 flex-shrink-0" />
                   <span className="text-xs font-medium truncate">{item.label}</span>
                   {item.badge && item.badge > 0 && (
-                    <Badge className="ml-auto h-4 min-w-[16px] px-1 flex items-center justify-center text-[9px] bg-primary text-primary-foreground rounded-full">
+                    <Badge
+                      className={cn(
+                        'ml-auto h-4 min-w-[16px] px-1 flex items-center justify-center text-[9px] rounded-full',
+                        MENU_TOKENS.badge
+                      )}
+                    >
                       {item.badge > 99 ? '99+' : item.badge}
                     </Badge>
                   )}
@@ -187,115 +223,99 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
             );
           })}
 
-          {/* Divider */}
-          <div className="h-px bg-white/10 my-1" />
+          <div className={cn('h-px my-1', MENU_TOKENS.divider)} />
 
-          {/* Feed Selector - Text Only Highlight */}
+          {/* Feed Selector */}
           <div className="flex items-center gap-1 px-2 py-0.5">
-            <span className="text-[10px] text-white/40">Feed:</span>
+            <span className={cn('text-[10px]', MENU_TOKENS.itemFgMuted)}>Feed:</span>
             <div className="flex gap-1">
-              <button
-                onClick={() => handleFeedChange('global')}
-                className={cn(
-                  "px-1 text-xs transition-all",
-                  activeTab === 'global'
-                    ? "text-white font-semibold"
-                    : "text-white/40 hover:text-white/70"
-                )}
-              >
-                Global
-              </button>
-              <span className="text-white/30 text-xs">/</span>
-              <button
-                onClick={() => handleFeedChange('personal')}
-                className={cn(
-                  "px-1 text-xs transition-all",
-                  activeTab === 'personal'
-                    ? "text-white font-semibold"
-                    : "text-white/40 hover:text-white/70"
-                )}
-              >
-                Friends
-              </button>
-              <span className="text-white/30 text-xs">/</span>
-              <button
-                onClick={() => handleFeedChange('selfiecity')}
-                className={cn(
-                  "px-1 text-xs transition-all flex items-center gap-0.5",
-                    activeTab === 'selfiecity'
-                      ? "text-yellow-400 font-semibold"
-                      : "text-white/40 hover:text-yellow-300"
-                )}
-              >
-                <MapPin className="w-3 h-3" />
-                Selfie City
-              </button>
+              {(['global', 'personal', 'selfiecity'] as const).map((tab, idx) => (
+                <React.Fragment key={tab}>
+                  {idx > 0 && <span className={cn('text-xs', MENU_TOKENS.itemFgMuted)}>/</span>}
+                  <button
+                    onClick={() => handleFeedChange(tab)}
+                    className={cn(
+                      'px-1 text-xs transition-all flex items-center gap-0.5',
+                      activeTab === tab
+                        ? cn(MENU_TOKENS.highlight, 'font-semibold')
+                        : cn(MENU_TOKENS.itemFgMuted, 'hover:text-[hsl(var(--menu-accent))]')
+                    )}
+                  >
+                    {tab === 'selfiecity' && <MapPin className="w-3 h-3" />}
+                    {tab === 'global' ? 'Global' : tab === 'personal' ? 'Friends' : 'Selfie City'}
+                  </button>
+                </React.Fragment>
+              ))}
             </div>
           </div>
 
-          {/* Divider */}
-          <div className="h-px bg-white/10 my-1" />
+          <div className={cn('h-px my-1', MENU_TOKENS.divider)} />
 
-          {/* ATLAS (Smith HUD) */}
+          {/* ATLAS */}
           {onOpenAtlas && (
             <button
               onClick={() => {
                 onOpenAtlas();
                 onClose();
               }}
-              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-atlas-cyan/80 hover:bg-atlas-cyan/10 hover:text-atlas-cyan transition-all duration-200"
+              className={cn(itemBase, MENU_TOKENS.accent, MENU_TOKENS.hover)}
             >
               <Orbit className="w-4 h-4" />
               <span className="text-xs font-medium">ATLAS</span>
             </button>
           )}
 
-          {/* Divider */}
-          <div className="h-px bg-white/10 my-1" />
+          <div className={cn('h-px my-1', MENU_TOKENS.divider)} />
+
+          {/* Notifications */}
           <button
             onClick={() => {
               onNotificationClick();
               onClose();
             }}
-            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-white/70 hover:bg-white/10 hover:text-white transition-all duration-200"
+            className={cn(itemBase, MENU_TOKENS.itemFg, MENU_TOKENS.hover)}
           >
             <Bell className="w-4 h-4" />
             <span className="text-xs font-medium">Notifications</span>
             {unreadNotifications > 0 && (
-              <Badge className="ml-auto h-4 min-w-[16px] px-1 flex items-center justify-center text-[9px] bg-rose-500 text-white rounded-full">
+              <Badge
+                className={cn(
+                  'ml-auto h-4 min-w-[16px] px-1 flex items-center justify-center text-[9px] rounded-full',
+                  MENU_TOKENS.badge
+                )}
+              >
                 {unreadNotifications > 99 ? '99+' : unreadNotifications}
               </Badge>
             )}
           </button>
 
-          {/* Private Timelines */}
+          {/* Private Feed */}
           <button
             onClick={() => {
               onPrivateTimelineClick();
               onClose();
             }}
-            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-white/70 hover:bg-white/10 hover:text-white transition-all duration-200"
+            className={cn(itemBase, MENU_TOKENS.itemFg, MENU_TOKENS.hover)}
           >
-            <Heart className="w-4 h-4 text-blue-400 fill-blue-400" />
+            <Heart className="w-4 h-4 text-[hsl(var(--menu-accent))] fill-[hsl(var(--menu-accent))]" />
             <span className="text-xs font-medium">Private Feed</span>
           </button>
 
-          {/* Bio-Sync / Vitruvian */}
+          {/* Bio-Sync */}
           <button
             onClick={() => handleNavigation('/vitruvian')}
-            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-cyan-400/70 hover:bg-cyan-500/10 hover:text-cyan-400 transition-all duration-200"
+            className={cn(itemBase, MENU_TOKENS.accent, MENU_TOKENS.hover)}
           >
             <Dna className="w-4 h-4" />
             <span className="text-xs font-medium">Bio-Sync</span>
           </button>
 
-          {/* Divider */}
-          <div className="h-px bg-white/10 my-1" />
+          <div className={cn('h-px my-1', MENU_TOKENS.divider)} />
 
-          {/* Re-Sleeve - Career Transformation */}
+          {/* Re-Sleeve */}
           <button
             onClick={() => handleNavigation('/resleeve')}
-            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-blue-400/70 hover:bg-blue-500/10 hover:text-blue-400 transition-all duration-200"
+            className={cn(itemBase, MENU_TOKENS.accent, MENU_TOKENS.hover)}
           >
             <Sparkles className="w-4 h-4" />
             <span className="text-xs font-medium">Re-Sleeve</span>
@@ -304,7 +324,7 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
           {/* Career Divinity */}
           <button
             onClick={() => handleNavigation('/career-divinity')}
-            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-amber-400/70 hover:bg-amber-500/10 hover:text-amber-400 transition-all duration-200"
+            className={cn(itemBase, MENU_TOKENS.highlight, MENU_TOKENS.hover)}
           >
             <Star className="w-4 h-4" />
             <span className="text-xs font-medium">Career Divinity</span>
@@ -313,16 +333,16 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
           {/* Legal Nexus */}
           <button
             onClick={() => handleNavigation('/legal-nexus')}
-            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-emerald-400/70 hover:bg-emerald-500/10 hover:text-emerald-400 transition-all duration-200"
+            className={cn(itemBase, MENU_TOKENS.accent, MENU_TOKENS.hover)}
           >
             <Scale className="w-4 h-4" />
             <span className="text-xs font-medium">Legal Nexus</span>
           </button>
 
-          {/* Zoe Infinity - LAST MENU ITEM */}
+          {/* Zoe Infinity */}
           <button
             onClick={() => handleNavigation('/zoe-infinity')}
-            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-blue-400/70 hover:bg-blue-500/10 hover:text-blue-400 transition-all duration-200"
+            className={cn(itemBase, MENU_TOKENS.accent, MENU_TOKENS.hover)}
           >
             <Sparkles className="w-4 h-4" />
             <span className="text-xs font-medium">Zoe Infinity</span>
