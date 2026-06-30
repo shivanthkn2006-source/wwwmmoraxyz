@@ -207,22 +207,27 @@ const NotificationMenu: React.FC<NotificationMenuProps> = ({ open, onOpenChange 
   };
 
   const getNotificationIcon = (type: string) => {
+    // Shared blue + yellow palette via --menu-* tokens (see index.css)
+    const accent = 'text-[hsl(var(--menu-accent))]';
+    const accentFill = 'text-[hsl(var(--menu-accent))] fill-[hsl(var(--menu-accent))]';
+    const highlight = 'text-[hsl(var(--menu-highlight))]';
+    const highlightFill = 'text-[hsl(var(--menu-highlight))] fill-[hsl(var(--menu-highlight))]';
     switch (type) {
       case 'post_like':
       case 'comment_like':
-        return <Heart className="w-4 h-4 text-red-500 fill-red-500" />;
+        return <Heart className={`w-4 h-4 ${highlightFill}`} />;
       case 'post_comment':
       case 'comment_reply':
-        return <MessageCircle className="w-4 h-4 text-blue-500" />;
+        return <MessageCircle className={`w-4 h-4 ${accent}`} />;
       case 'post_tag':
-        return <MessageCircle className="w-4 h-4 text-purple-500" />;
+        return <MessageCircle className={`w-4 h-4 ${highlight}`} />;
       case 'friend_request':
-        return <Heart className="w-4 h-4 text-green-500" />;
+        return <Heart className={`w-4 h-4 ${accent}`} />;
       case 'tier_upgrade':
-        return <Award className="w-4 h-4 text-yellow-400 fill-yellow-400" />;
+        return <Award className={`w-4 h-4 ${highlightFill}`} />;
       case 'friend_badge_earned':
       case 'friend_challenge_completed':
-        return <Award className="w-4 h-4 text-primary fill-primary" />;
+        return <Award className={`w-4 h-4 ${accentFill}`} />;
       default:
         return null;
     }
