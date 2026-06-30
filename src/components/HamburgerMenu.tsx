@@ -52,12 +52,76 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
 
   if (!isOpen) return null;
 
-  const navItems = [
-    { icon: Home, label: 'Home', path: '/home' },
+  const navItems: Array<{ icon: any; label: string; path: string; badge?: number; section?: string; color?: string }> = [
+    // Core
+    { icon: Home, label: 'Home', path: '/home', section: 'Core' },
     { icon: Camera, label: 'Camera', path: '/camera' },
+    { icon: Atom, label: 'Quantum Camera', path: '/quantum-camera' },
     { icon: MessageCircle, label: 'Chat', path: '/chat', badge: unreadMessages },
     { icon: Users, label: 'Huddle', path: '/huddle', badge: newMatches },
     { icon: Globe, label: 'Webdrop', path: '/webdrop' },
+    { icon: MapPin, label: 'Selfie City', path: '/selfie-city' },
+    { icon: User, label: 'Profile', path: '/profile' },
+
+    // Zoe Universe
+    { icon: Sparkles, label: 'Zoe Infinity', path: '/zoe-infinity', section: 'Zoe Universe', color: 'text-purple-400' },
+    { icon: Brain, label: 'Zoe AI', path: '/zoe-ai', color: 'text-purple-400' },
+    { icon: Infinity, label: 'Zoe Omega', path: '/zoe-omega', color: 'text-purple-400' },
+    { icon: Network, label: 'Zoe Nexus', path: '/zoe-nexus', color: 'text-purple-400' },
+    { icon: CircuitBoard, label: 'Nexus Control', path: '/zoe-nexus-control', color: 'text-purple-400' },
+    { icon: Layers, label: 'Zoe Architecture', path: '/zoe-architecture', color: 'text-purple-400' },
+    { icon: Crown, label: 'God Mode', path: '/god-mode', color: 'text-amber-400' },
+    { icon: Zap, label: 'God Mode Evolution', path: '/god-mode/evolution', color: 'text-amber-400' },
+    { icon: Rocket, label: 'Omega Evolution', path: '/omega-evolution', color: 'text-purple-400' },
+    { icon: Flame, label: 'Phoenix Core', path: '/phoenix-core', color: 'text-orange-400' },
+    { icon: Gem, label: 'Genesis Imprint', path: '/genesis-imprint', color: 'text-purple-400' },
+
+    // Companion & Wellness
+    { icon: Heart, label: 'AI Companion', path: '/ai-companion', section: 'Companion', color: 'text-rose-400' },
+    { icon: Dna, label: 'Bio-Sync (Vitruvian)', path: '/vitruvian', color: 'text-cyan-400' },
+    { icon: BookOpen, label: 'Universal Timeline', path: '/universal-timeline' },
+    { icon: Clock, label: 'Kronos Anima', path: '/kronos-anima' },
+    { icon: Sunrise, label: 'M\'mora', path: '/mmora' },
+
+    // Career & Life
+    { icon: Sparkles, label: 'Re-Sleeve', path: '/resleeve', section: 'Career & Life', color: 'text-violet-400' },
+    { icon: Star, label: 'Career Divinity', path: '/career-divinity', color: 'text-amber-400' },
+    { icon: Briefcase, label: 'Merchant Center', path: '/merchant' },
+
+    // Legal & Scan
+    { icon: Scale, label: 'Legal Nexus', path: '/legal-nexus', section: 'Legal & Scan', color: 'text-emerald-400' },
+    { icon: ScrollText, label: 'Contract Scanner', path: '/contract-scanner', color: 'text-emerald-400' },
+    { icon: BookOpen, label: 'Anka Shastra', path: '/anka-shastra' },
+    { icon: Building2, label: 'Vastu Scan', path: '/vastu-scan' },
+    { icon: Eye, label: 'Agasthya Vision', path: '/agasthya-vision' },
+
+    // Exodus & Maps
+    { icon: Compass, label: 'Exodus', path: '/exodus', section: 'Exodus' },
+    { icon: Map, label: 'Exodus Map', path: '/exodus-map' },
+    { icon: Telescope, label: 'Orbital Command', path: '/orbital-command' },
+
+    // Voice & Notifications
+    { icon: Mic, label: 'Voice Commands', path: '/voice-commands', section: 'Voice & Alerts' },
+    { icon: History, label: 'Voice History', path: '/voice-command-history' },
+    { icon: BellRing, label: 'Notification Prefs', path: '/notification-preferences' },
+    { icon: Bell, label: 'Notification History', path: '/notification-history', badge: unreadNotifications },
+
+    // Diagnostics & Security
+    { icon: ShieldCheck, label: 'Security', path: '/security', section: 'Diagnostics', color: 'text-emerald-400' },
+    { icon: Shield, label: 'Sentinel', path: '/sentinel', color: 'text-emerald-400' },
+    { icon: Database, label: 'DHF Dashboard', path: '/dhf-dashboard' },
+    { icon: BarChart3, label: 'Analytics Dashboard', path: '/analytics-dashboard' },
+    { icon: Activity, label: 'Platform Audit', path: '/platform-audit' },
+    { icon: Radar, label: 'Root Scan', path: '/root-scan' },
+    { icon: Cpu, label: 'VR World Audit', path: '/vr-audit' },
+    { icon: Wrench, label: 'Integration Test', path: '/integration-test' },
+    { icon: Hammer, label: 'ASI Test', path: '/asi-test' },
+    { icon: FileText, label: 'Activity Export', path: '/activity-export' },
+    { icon: Download, label: 'Blueprint Download', path: '/blueprint-download' },
+    { icon: Wand2, label: 'Ear-Link Blueprint', path: '/ear-link-blueprint' },
+
+    // About
+    { icon: BadgeCheck, label: 'About', path: '/about', section: 'About' },
   ];
 
   return (
