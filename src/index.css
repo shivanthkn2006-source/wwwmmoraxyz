@@ -1210,7 +1210,27 @@ html.phantom-mode [class*="animate-"] {
   --glass-glow: hsla(185, 100%, 50%, 0.15);
   --holo-gradient: linear-gradient(135deg, hsla(185, 100%, 50%, 0.1), hsla(280, 100%, 54%, 0.05), hsla(320, 100%, 60%, 0.03));
   --data-stream-opacity: 0.03;
+
+  /* ═══ NAVIGATION / MENU TOKENS (blue + yellow palette) ═══
+     Used by HamburgerMenu, AnimatedHamburgerButton, NotificationMenu,
+     BottomNavigation, and any nav links. Update here, propagates everywhere. */
+  --menu-accent: 210 100% 62%;            /* primary blue */
+  --menu-accent-soft: 210 100% 72%;
+  --menu-highlight: 48 100% 58%;          /* primary yellow */
+  --menu-highlight-soft: 48 100% 68%;
+  --menu-fg: 210 90% 78%;                 /* default blue-tinted label */
+  --menu-fg-muted: 210 30% 65%;
+  --menu-section-fg: 210 60% 70%;
+  --menu-bg: 240 20% 4%;
+  --menu-bg-overlay: 240 15% 2%;
+  --menu-border: 210 80% 50%;             /* used with low alpha */
+  --menu-hover-bg: 210 100% 62%;          /* used with low alpha */
+  --menu-active-bg: 48 100% 58%;          /* yellow active */
+  --menu-active-fg: 240 20% 4%;
+  --menu-badge-bg: 48 100% 58%;           /* yellow badge */
+  --menu-badge-fg: 240 20% 4%;
 }
+
 
 /* ... keep existing code (dark mode, base styles, all existing classes) ... */
 
@@ -1234,6 +1254,23 @@ html.phantom-mode [class*="animate-"] {
   --border: 240 3.7% 15.9%;
   --input: 240 3.7% 15.9%;
   --ring: 240 4.9% 83.9%;
+
+  /* Menu tokens — dark-mode-tuned for AA readability on near-black surfaces */
+  --menu-accent: 210 100% 70%;
+  --menu-accent-soft: 210 100% 80%;
+  --menu-highlight: 48 100% 65%;
+  --menu-highlight-soft: 48 100% 75%;
+  --menu-fg: 210 95% 85%;
+  --menu-fg-muted: 210 35% 72%;
+  --menu-section-fg: 210 70% 78%;
+  --menu-bg: 240 10% 3.9%;
+  --menu-bg-overlay: 0 0% 0%;
+  --menu-border: 210 80% 60%;
+  --menu-hover-bg: 210 100% 70%;
+  --menu-active-bg: 48 100% 60%;
+  --menu-active-fg: 240 10% 3.9%;
+  --menu-badge-bg: 48 100% 60%;
+  --menu-badge-fg: 240 10% 3.9%;
 }
 
 * {
