@@ -858,6 +858,23 @@ export const useZoeInfinityBrain = (): UseZoeInfinityBrainReturn => {
       const critiqueRouting = getCritiqueRouting(determinism.mode);
       console.log(`[ZoeBrain] 🎯 Determinism: ${determinism.mode} (temp=${determinism.temperature}, critique=${critiqueRouting.enabled})`);
 
+      // ── GENESIS DHF + Swiss Ephemeris (immutable identity context) ──
+      let genesisIdentity: Awaited<ReturnType<typeof getLockedGenesisIdentity>> = null;
+      let ephemerisSnapshot: ReturnType<typeof getEphemerisSnapshot> | null = null;
+      try {
+        if (user?.id) genesisIdentity = await getLockedGenesisIdentity(user.id);
+        if (isAstrologyQuery(lastUserMsg)) {
+          ephemerisSnapshot = getEphemerisSnapshot(genesisIdentity?.dob ?? null);
+          console.log('[ZoeBrain] 🪐 Ephemeris snapshot attached (DOB locked?', !!genesisIdentity?.dob, ')');
+        }
+      } catch (e) {
+        console.warn('[ZoeBrain] DHF/ephemeris attach failed:', e);
+      }
+      const genesisDHFBlock = buildGenesisDHFContextBlock(genesisIdentity, ephemerisSnapshot);
+      const combinedMemoryWithDHF = genesisDHFBlock
+        ? `${genesisDHFBlock}\n\n${combinedMemoryContext}`
+        : combinedMemoryContext;
+
       // ═══════════════════════════════════════════════════════════════════════
       // DEEP RESEARCH ROUTE — Gemini 2.5 Pro 3-step reasoning loop
       // Triggered when: user toggle ON, OR pattern-detected Pro mode.
