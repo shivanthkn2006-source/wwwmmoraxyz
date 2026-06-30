@@ -3647,6 +3647,9 @@ If you realize you made a factual error, repeated yourself, or gave contradictor
       {/* Spec-gap status panel — open with Ctrl+Shift+Z */}
       <ZoeFeatureStatusPanelMount />
 
+      {/* Zoe Decorator — self-contained, voice/chat-triggered */}
+      <ZoeDecoratorMount />
+
       {/* Provider-health degraded-tier banner + background schedulers */}
       <ProviderHealthBanner />
       <BackgroundSchedulers />
