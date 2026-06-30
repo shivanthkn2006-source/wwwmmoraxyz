@@ -133,10 +133,10 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
       />
       
       {/* Menu Panel */}
-      <div 
+      <div
         className={cn(
-          "fixed top-14 left-4 z-[101] w-40",
-          "bg-transparent backdrop-blur-2xl rounded-lg",
+          "fixed top-14 left-4 z-[101] w-56 max-h-[80vh] overflow-y-auto",
+          "bg-black/70 backdrop-blur-2xl rounded-lg border border-white/10 shadow-2xl",
           "animate-in slide-in-from-top-2 fade-in duration-200"
         )}
       >
@@ -160,24 +160,30 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
             return (
-              <button
-                key={item.path}
-                onClick={() => handleNavigation(item.path)}
-                className={cn(
-                  "w-full flex items-center gap-2 px-2 py-1.5 rounded-md transition-all duration-200",
-                  isActive 
-                    ? "bg-white/20 text-white" 
-                    : "text-white/70 hover:bg-white/10 hover:text-white"
+              <React.Fragment key={item.path}>
+                {item.section && (
+                  <div className="px-2 pt-2 pb-1 text-[9px] uppercase tracking-wider text-white/30">
+                    {item.section}
+                  </div>
                 )}
-              >
-                <item.icon className="w-4 h-4" />
-                <span className="text-xs font-medium">{item.label}</span>
-                {item.badge && item.badge > 0 && (
-                  <Badge className="ml-auto h-4 min-w-[16px] px-1 flex items-center justify-center text-[9px] bg-primary text-primary-foreground rounded-full">
-                    {item.badge > 99 ? '99+' : item.badge}
-                  </Badge>
-                )}
-              </button>
+                <button
+                  onClick={() => handleNavigation(item.path)}
+                  className={cn(
+                    "w-full flex items-center gap-2 px-2 py-1.5 rounded-md transition-all duration-200",
+                    isActive
+                      ? "bg-white/20 text-white"
+                      : cn("hover:bg-white/10 hover:text-white", item.color || "text-white/70")
+                  )}
+                >
+                  <item.icon className="w-4 h-4 flex-shrink-0" />
+                  <span className="text-xs font-medium truncate">{item.label}</span>
+                  {item.badge && item.badge > 0 && (
+                    <Badge className="ml-auto h-4 min-w-[16px] px-1 flex items-center justify-center text-[9px] bg-primary text-primary-foreground rounded-full">
+                      {item.badge > 99 ? '99+' : item.badge}
+                    </Badge>
+                  )}
+                </button>
+              </React.Fragment>
             );
           })}
 
