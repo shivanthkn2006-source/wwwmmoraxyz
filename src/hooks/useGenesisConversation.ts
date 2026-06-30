@@ -7,6 +7,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
+import { lockGenesisToDHF } from '@/utils/zoeGenesisDHF';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -668,10 +669,32 @@ export const useGenesisConversation = (
           metadata: genesisMemory,
         });
         
+        // 🔐 DHF LOCK — persist to zoe_genesis_memory as immutable identity.
+        // Once locked, later attempts (new DOB / new name) will be silently ignored.
+        try {
+          await lockGenesisToDHF(user.id, {
+            name: finalProfile.userName,
+            nickname: finalProfile.userName,
+            age: finalProfile.userAge,
+            dob: finalProfile.userDOB,
+            location: {
+              city: finalProfile.userLocation,
+              region: finalProfile.userRegion,
+              country: finalProfile.userCountry,
+            },
+            life_stage: finalProfile.lifeStage,
+            zoe_name: finalProfile.acceptedName,
+            zoe_gender: finalProfile.voicePreference === 'female' ? 'female' : 'male',
+            payload: { source: 'genesis_conversation', genesisMemory },
+          });
+        } catch (lockErr) {
+          console.warn('[GenesisConversation] DHF lock skipped:', lockErr);
+        }
+
         // Set unlock flag
         localStorage.setItem('zoe_infinity_genesis_complete', 'true');
         
-        console.log('[GenesisConversation] ✅ Genesis saved to DB + memory box');
+        console.log('[GenesisConversation] ✅ Genesis saved to DB + memory box + DHF lock');
       } catch (e) {
         console.error('[GenesisConversation] DB save failed:', e);
       }
