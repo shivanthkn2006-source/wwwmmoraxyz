@@ -64,27 +64,27 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
     { icon: User, label: 'Profile', path: '/profile' },
 
     // Zoe Universe
-    { icon: Sparkles, label: 'Zoe Infinity', path: '/zoe-infinity', section: 'Zoe Universe', color: 'text-purple-400' },
-    { icon: Brain, label: 'Zoe AI', path: '/zoe-ai', color: 'text-purple-400' },
-    { icon: Infinity, label: 'Zoe Omega', path: '/zoe-omega', color: 'text-purple-400' },
-    { icon: Network, label: 'Zoe Nexus', path: '/zoe-nexus', color: 'text-purple-400' },
-    { icon: CircuitBoard, label: 'Nexus Control', path: '/zoe-nexus-control', color: 'text-purple-400' },
-    { icon: Layers, label: 'Zoe Architecture', path: '/zoe-architecture', color: 'text-purple-400' },
+    { icon: Sparkles, label: 'Zoe Infinity', path: '/zoe-infinity', section: 'Zoe Universe', color: 'text-blue-400' },
+    { icon: Brain, label: 'Zoe AI', path: '/zoe-ai', color: 'text-blue-400' },
+    { icon: Infinity, label: 'Zoe Omega', path: '/zoe-omega', color: 'text-blue-400' },
+    { icon: Network, label: 'Zoe Nexus', path: '/zoe-nexus', color: 'text-blue-400' },
+    { icon: CircuitBoard, label: 'Nexus Control', path: '/zoe-nexus-control', color: 'text-blue-400' },
+    { icon: Layers, label: 'Zoe Architecture', path: '/zoe-architecture', color: 'text-blue-400' },
     { icon: Crown, label: 'God Mode', path: '/god-mode', color: 'text-amber-400' },
     { icon: Zap, label: 'God Mode Evolution', path: '/god-mode/evolution', color: 'text-amber-400' },
-    { icon: Rocket, label: 'Omega Evolution', path: '/omega-evolution', color: 'text-purple-400' },
+    { icon: Rocket, label: 'Omega Evolution', path: '/omega-evolution', color: 'text-blue-400' },
     { icon: Flame, label: 'Phoenix Core', path: '/phoenix-core', color: 'text-orange-400' },
-    { icon: Gem, label: 'Genesis Imprint', path: '/genesis-imprint', color: 'text-purple-400' },
+    { icon: Gem, label: 'Genesis Imprint', path: '/genesis-imprint', color: 'text-blue-400' },
 
     // Companion & Wellness
-    { icon: Heart, label: 'AI Companion', path: '/ai-companion', section: 'Companion', color: 'text-rose-400' },
+    { icon: Heart, label: 'AI Companion', path: '/ai-companion', section: 'Companion', color: 'text-yellow-400' },
     { icon: Dna, label: 'Bio-Sync (Vitruvian)', path: '/vitruvian', color: 'text-cyan-400' },
     { icon: BookOpen, label: 'Universal Timeline', path: '/universal-timeline' },
     { icon: Clock, label: 'Kronos Anima', path: '/kronos-anima' },
     { icon: Sunrise, label: 'M\'mora', path: '/mmora' },
 
     // Career & Life
-    { icon: Sparkles, label: 'Re-Sleeve', path: '/resleeve', section: 'Career & Life', color: 'text-violet-400' },
+    { icon: Sparkles, label: 'Re-Sleeve', path: '/resleeve', section: 'Career & Life', color: 'text-blue-400' },
     { icon: Star, label: 'Career Divinity', path: '/career-divinity', color: 'text-amber-400' },
     { icon: Briefcase, label: 'Merchant Center', path: '/merchant' },
 
@@ -222,9 +222,9 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
                 onClick={() => handleFeedChange('selfiecity')}
                 className={cn(
                   "px-1 text-xs transition-all flex items-center gap-0.5",
-                  activeTab === 'selfiecity'
-                    ? "text-pink-400 font-semibold"
-                    : "text-white/40 hover:text-pink-300"
+                    activeTab === 'selfiecity'
+                      ? "text-yellow-400 font-semibold"
+                      : "text-white/40 hover:text-yellow-300"
                 )}
               >
                 <MapPin className="w-3 h-3" />
@@ -295,7 +295,7 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
           {/* Re-Sleeve - Career Transformation */}
           <button
             onClick={() => handleNavigation('/resleeve')}
-            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-violet-400/70 hover:bg-violet-500/10 hover:text-violet-400 transition-all duration-200"
+            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-blue-400/70 hover:bg-blue-500/10 hover:text-blue-400 transition-all duration-200"
           >
             <Sparkles className="w-4 h-4" />
             <span className="text-xs font-medium">Re-Sleeve</span>
@@ -322,7 +322,7 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
           {/* Zoe Infinity - LAST MENU ITEM */}
           <button
             onClick={() => handleNavigation('/zoe-infinity')}
-            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-purple-400/70 hover:bg-purple-500/10 hover:text-purple-400 transition-all duration-200"
+            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-blue-400/70 hover:bg-blue-500/10 hover:text-blue-400 transition-all duration-200"
           >
             <Sparkles className="w-4 h-4" />
             <span className="text-xs font-medium">Zoe Infinity</span>
