@@ -51,7 +51,7 @@ export async function getLockedGenesisIdentity(
       console.warn('[GenesisDHF] read failed:', error.message);
       return null;
     }
-    const row = data as LockedGenesisIdentity | null;
+    const row = (data as unknown) as LockedGenesisIdentity | null;
     if (row?.stage === 'COMPLETE' && row?.completed_at) return row;
     return null;
   } catch (e) {
