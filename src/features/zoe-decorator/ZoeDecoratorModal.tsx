@@ -27,6 +27,7 @@ export function ZoeDecoratorModal({ open, initial, onClose }: Props) {
   const [notes, setNotes] = useState(initial?.prompt ?? '');
   const [originalPhoto, setOriginalPhoto] = useState<string | undefined>();
   const [isCameraOn, setIsCameraOn] = useState(false);
+  const [facing, setFacing] = useState<'user' | 'environment'>('environment');
   const [isGenerating, setIsGenerating] = useState(false);
   const [designs, setDesigns] = useState<DecoratorDesign[]>(() => loadDesigns());
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -50,20 +51,24 @@ export function ZoeDecoratorModal({ open, initial, onClose }: Props) {
     setIsCameraOn(false);
   }, []);
 
-  const startCamera = useCallback(async () => {
+  const startCamera = useCallback(async (mode: 'user' | 'environment' = facing) => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      stopCamera();
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: mode } });
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
       }
       setIsCameraOn(true);
+      setFacing(mode);
     } catch (e) {
       console.error('[ZoeDecorator] camera error', e);
       alert('Camera unavailable. Use Upload instead.');
     }
-  }, []);
+  }, [facing, stopCamera]);
+
+  const flipCamera = useCallback(() => startCamera(facing === 'user' ? 'environment' : 'user'), [facing, startCamera]);
 
   const capturePhoto = useCallback(() => {
     if (!videoRef.current) return;
