@@ -1874,6 +1874,45 @@ function ZoeInfinityUnlocked() {
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
+    // ZOE PRIORITY ROUTER — "Zoe Run/End" + Decorator + Hairstyle intents
+    // Runs BEFORE Omega Vision/NEET/brain to prevent hijack.
+    // ═══════════════════════════════════════════════════════════════════════════
+    try {
+      const cmd = detectZoeCommand(content);
+      if (cmd.matched) {
+        const userMsg: InfinityMessage = { id: `user-${Date.now()}`, role: 'user', content, timestamp: new Date() };
+        if (cmd.action === 'end') {
+          emitZoeEnd();
+          setMessages(prev => [...prev, userMsg, { id: `z-${Date.now()}`, role: 'assistant', content: 'Zoe End acknowledged. Closing active feature.', timestamp: new Date() }]);
+          return;
+        }
+        if (cmd.action === 'run' && cmd.feature) {
+          emitZoeRun(cmd.feature);
+          setMessages(prev => [...prev, userMsg, { id: `z-${Date.now()}`, role: 'assistant', content: `Zoe Run: launching ${cmd.feature}.`, timestamp: new Date() }]);
+          return;
+        }
+      }
+
+      const dec = detectDecoratorIntent(content);
+      if (dec.matched) {
+        const userMsg: InfinityMessage = { id: `user-${Date.now()}`, role: 'user', content, timestamp: new Date() };
+        emitOpenDecorator({ space: dec.space, theme: dec.theme, prompt: dec.raw });
+        setMessages(prev => [...prev, userMsg, { id: `z-${Date.now()}`, role: 'assistant', content: `Opening the Decorator for your ${dec.space ?? 'space'}${dec.theme ? ` in ${dec.theme} style` : ''}. Snap or upload a photo and I'll redesign it.`, timestamp: new Date() }]);
+        return;
+      }
+
+      const hair = detectHairstyleIntent(content);
+      if (hair.matched) {
+        const userMsg: InfinityMessage = { id: `user-${Date.now()}`, role: 'user', content, timestamp: new Date() };
+        emitOpenHairstyle({ gender: hair.gender, prompt: hair.raw });
+        setMessages(prev => [...prev, userMsg, { id: `z-${Date.now()}`, role: 'assistant', content: `Opening Hairstyle Studio${hair.gender && hair.gender !== 'any' ? ` for ${hair.gender}` : ''}. Take a selfie and pick a cut and color.`, timestamp: new Date() }]);
+        return;
+      }
+    } catch (e) { console.warn('[ZoePriorityRouter] failed', e); }
+
+
+
+    // ═══════════════════════════════════════════════════════════════════════════
     // NEET TUTOR INTERCEPT (India medical entrance) — Trial mode
     // Routes NEET queries through specialist tutor, reuses chat UI.
     // ═══════════════════════════════════════════════════════════════════════════
