@@ -5,7 +5,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { X, Camera, Upload, Sparkles, Download, Trash2, Loader2, FileDown, Image as ImageIcon } from 'lucide-react';
+import { X, Camera, Upload, Sparkles, Download, Trash2, Loader2, FileDown, Image as ImageIcon, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { generateDecoratorImage } from './pollinations';
 import { saveDesign, loadDesigns, deleteDesign, type DecoratorDesign } from './gallery';
@@ -27,6 +27,7 @@ export function ZoeDecoratorModal({ open, initial, onClose }: Props) {
   const [notes, setNotes] = useState(initial?.prompt ?? '');
   const [originalPhoto, setOriginalPhoto] = useState<string | undefined>();
   const [isCameraOn, setIsCameraOn] = useState(false);
+  const [facing, setFacing] = useState<'user' | 'environment'>('environment');
   const [isGenerating, setIsGenerating] = useState(false);
   const [designs, setDesigns] = useState<DecoratorDesign[]>(() => loadDesigns());
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -50,20 +51,24 @@ export function ZoeDecoratorModal({ open, initial, onClose }: Props) {
     setIsCameraOn(false);
   }, []);
 
-  const startCamera = useCallback(async () => {
+  const startCamera = useCallback(async (mode: 'user' | 'environment' = facing) => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      stopCamera();
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: mode } });
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
       }
       setIsCameraOn(true);
+      setFacing(mode);
     } catch (e) {
       console.error('[ZoeDecorator] camera error', e);
       alert('Camera unavailable. Use Upload instead.');
     }
-  }, []);
+  }, [facing, stopCamera]);
+
+  const flipCamera = useCallback(() => startCamera(facing === 'user' ? 'environment' : 'user'), [facing, startCamera]);
 
   const capturePhoto = useCallback(() => {
     if (!videoRef.current) return;
@@ -118,9 +123,12 @@ export function ZoeDecoratorModal({ open, initial, onClose }: Props) {
         <div className="p-4 grid md:grid-cols-2 gap-4">
           {/* LEFT: source + controls */}
           <div className="space-y-3">
-            <div className="aspect-video rounded-xl bg-black/60 border border-white/10 flex items-center justify-center overflow-hidden">
+            <div className="relative aspect-video rounded-xl bg-black/60 border border-white/10 flex items-center justify-center overflow-hidden">
               {isCameraOn ? (
-                <video ref={videoRef} className="w-full h-full object-cover" muted playsInline />
+                <>
+                  <video ref={videoRef} className={`w-full h-full object-cover ${facing === 'user' ? 'scale-x-[-1]' : ''}`} muted playsInline />
+                  <button onClick={flipCamera} title="Flip camera" className="absolute bottom-2 right-2 p-2 rounded-full bg-black/70 text-white hover:bg-black/90"><RefreshCw className="w-4 h-4" /></button>
+                </>
               ) : originalPhoto ? (
                 <img src={originalPhoto} alt="source" className="w-full h-full object-cover" />
               ) : (
@@ -129,7 +137,7 @@ export function ZoeDecoratorModal({ open, initial, onClose }: Props) {
             </div>
             <div className="flex flex-wrap gap-2">
               {!isCameraOn ? (
-                <Button size="sm" onClick={startCamera} className="bg-cyan-600 hover:bg-cyan-500"><Camera className="w-4 h-4 mr-1" />Camera</Button>
+                <Button size="sm" onClick={() => startCamera('environment')} className="bg-cyan-600 hover:bg-cyan-500"><Camera className="w-4 h-4 mr-1" />Camera</Button>
               ) : (
                 <Button size="sm" onClick={capturePhoto} className="bg-emerald-600 hover:bg-emerald-500">Capture</Button>
               )}
