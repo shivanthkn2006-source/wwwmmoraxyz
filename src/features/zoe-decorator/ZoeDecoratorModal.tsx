@@ -123,9 +123,12 @@ export function ZoeDecoratorModal({ open, initial, onClose }: Props) {
         <div className="p-4 grid md:grid-cols-2 gap-4">
           {/* LEFT: source + controls */}
           <div className="space-y-3">
-            <div className="aspect-video rounded-xl bg-black/60 border border-white/10 flex items-center justify-center overflow-hidden">
+            <div className="relative aspect-video rounded-xl bg-black/60 border border-white/10 flex items-center justify-center overflow-hidden">
               {isCameraOn ? (
-                <video ref={videoRef} className="w-full h-full object-cover" muted playsInline />
+                <>
+                  <video ref={videoRef} className={`w-full h-full object-cover ${facing === 'user' ? 'scale-x-[-1]' : ''}`} muted playsInline />
+                  <button onClick={flipCamera} title="Flip camera" className="absolute bottom-2 right-2 p-2 rounded-full bg-black/70 text-white hover:bg-black/90"><RefreshCw className="w-4 h-4" /></button>
+                </>
               ) : originalPhoto ? (
                 <img src={originalPhoto} alt="source" className="w-full h-full object-cover" />
               ) : (
@@ -134,7 +137,7 @@ export function ZoeDecoratorModal({ open, initial, onClose }: Props) {
             </div>
             <div className="flex flex-wrap gap-2">
               {!isCameraOn ? (
-                <Button size="sm" onClick={startCamera} className="bg-cyan-600 hover:bg-cyan-500"><Camera className="w-4 h-4 mr-1" />Camera</Button>
+                <Button size="sm" onClick={() => startCamera('environment')} className="bg-cyan-600 hover:bg-cyan-500"><Camera className="w-4 h-4 mr-1" />Camera</Button>
               ) : (
                 <Button size="sm" onClick={capturePhoto} className="bg-emerald-600 hover:bg-emerald-500">Capture</Button>
               )}
