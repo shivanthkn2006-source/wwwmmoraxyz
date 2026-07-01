@@ -3654,6 +3654,7 @@ If you realize you made a factual error, repeated yourself, or gave contradictor
 
       {/* Zoe Decorator — self-contained, voice/chat-triggered */}
       <ZoeDecoratorMount />
+      <ZoeHairstyleMount />
 
       {/* Provider-health degraded-tier banner + background schedulers */}
       <ProviderHealthBanner />
