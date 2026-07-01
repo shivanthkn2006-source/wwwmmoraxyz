@@ -131,6 +131,10 @@ import { hasActivatedPermissions } from '@/utils/unifiedPermissionManager';
 // NEET TUTOR (India) - Trial mode, reuses chat UI
 import { useZoeNeetTutor } from '@/hooks/useZoeNeetTutor';
 import { ZoeDecoratorMount } from '@/features/zoe-decorator/ZoeDecoratorMount';
+import { ZoeHairstyleMount } from '@/features/zoe-hairstyle/ZoeHairstyleMount';
+import { detectDecoratorIntent, emitOpenDecorator } from '@/features/zoe-decorator/intent';
+import { detectHairstyleIntent, emitOpenHairstyle } from '@/features/zoe-hairstyle/intent';
+import { detectZoeCommand, emitZoeRun, emitZoeEnd } from '@/features/zoe-command-bus';
 
 type ZoeMood = 'neutral' | 'cyan' | 'gold';
 
