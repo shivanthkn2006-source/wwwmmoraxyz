@@ -5,7 +5,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { X, Camera, Upload, Sparkles, Download, Trash2, Loader2, FileDown, Image as ImageIcon } from 'lucide-react';
+import { X, Camera, Upload, Sparkles, Download, Trash2, Loader2, FileDown, Image as ImageIcon, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { generateDecoratorImage } from './pollinations';
 import { saveDesign, loadDesigns, deleteDesign, type DecoratorDesign } from './gallery';
