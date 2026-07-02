@@ -1,5 +1,8 @@
-// Pollinations image generation for Zoe Hairstyle
-// Face-preserving via kontext model when a source selfie is provided.
+// Pollinations image generation for Zoe Hairstyle.
+// IMPORTANT: when a selfie is supplied this must run as true image-editing via
+// our Supabase Edge Function. Text-to-image fallbacks create a random model face,
+// which is the exact bug users are reporting.
+import { supabase } from '@/integrations/supabase/client';
 export interface HairGenOpts {
   cut: string;
   color: string;
@@ -7,18 +10,20 @@ export interface HairGenOpts {
   notes?: string;
   seed?: number;
   /** Base64 data URL or public URL of the user's selfie. If provided, we use
-   *  Pollinations `kontext` (image-to-image) so the user's actual face is kept. */
+   *  the server-side Pollinations image-edit endpoint so the user's face is kept. */
   sourceImage?: string;
 }
 
 export function buildHairPrompt(o: HairGenOpts, faceMode: boolean): string {
   if (faceMode) {
-    // Instruction-style prompt for image editing (kontext)
+    // Instruction-style prompt for image editing. Keep this very explicit so the
+    // provider edits hair only instead of regenerating the whole person.
     return [
-      `Keep the same person, same face, same skin tone, same identity`,
-      `Restyle ONLY the hair to a ${o.cut} hairstyle`,
-      `Change hair color to ${o.color}`,
-      `Professional salon photograph, sharp focus, natural lighting, photo-realistic`,
+      `Edit the uploaded selfie, preserve the exact same person and identity`,
+      `Do not change the face, eyes, nose, lips, jawline, skin tone, age, gender, expression, pose, or background`,
+      `Only replace/restyle the hair area into a ${o.cut} hairstyle`,
+      `Only change the hair color to ${o.color}`,
+      `Realistic salon preview, natural hairline, photorealistic, no new person, no model face`,
       o.notes || '',
     ].filter(Boolean).join('. ');
   }
@@ -31,35 +36,6 @@ export function buildHairPrompt(o: HairGenOpts, faceMode: boolean): string {
   ].filter(Boolean).join(', ');
 }
 
-/** Upload a data URL / blob URL to catbox.moe (free, no key) → public https URL. */
-async function uploadSelfieToPublicHost(dataUrl: string): Promise<string | null> {
-  try {
-    // Convert data URL → Blob
-    let blob: Blob;
-    if (dataUrl.startsWith('data:')) {
-      const [meta, b64] = dataUrl.split(',');
-      const mime = /data:([^;]+)/.exec(meta)?.[1] ?? 'image/jpeg';
-      const bin = atob(b64);
-      const arr = new Uint8Array(bin.length);
-      for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-      blob = new Blob([arr], { type: mime });
-    } else {
-      const r = await fetch(dataUrl);
-      blob = await r.blob();
-    }
-    const fd = new FormData();
-    fd.append('reqtype', 'fileupload');
-    fd.append('fileToUpload', blob, 'selfie.jpg');
-    const resp = await fetch('https://catbox.moe/user/api.php', { method: 'POST', body: fd });
-    if (!resp.ok) return null;
-    const url = (await resp.text()).trim();
-    return url.startsWith('http') ? url : null;
-  } catch (e) {
-    console.warn('[ZoeHair] selfie upload failed', e);
-    return null;
-  }
-}
-
 export function hairstyleUrl(prompt: string, seed?: number, sourceUrl?: string): string {
   const s = seed ?? Math.floor(Math.random() * 1_000_000);
   const base = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt.trim())}`;
@@ -70,18 +46,60 @@ export function hairstyleUrl(prompt: string, seed?: number, sourceUrl?: string):
   return `${base}?width=768&height=1024&model=flux&enhance=true&nologo=true&seed=${s}`;
 }
 
-export async function generateHairstyleImage(o: HairGenOpts): Promise<{ imageUrl: string; prompt: string; seed: number; provider: string; usedFace: boolean }> {
-  // 1. If we have a selfie, host it publicly so kontext can read it.
-  let publicSourceUrl: string | undefined;
-  if (o.sourceImage) {
-    const uploaded = await uploadSelfieToPublicHost(o.sourceImage);
-    if (uploaded) publicSourceUrl = uploaded;
-    else console.warn('[ZoeHair] falling back to text-only (host upload failed)');
+async function readInvokeErrorMessage(error: any): Promise<string> {
+  try {
+    const context = error?.context;
+    if (context instanceof Response) {
+      const payload = await context.clone().json().catch(() => null);
+      return payload?.message || payload?.error || error.message || 'Pollinations image edit failed';
+    }
+  } catch {
+    // ignore and use generic message below
   }
-  const faceMode = !!publicSourceUrl;
+  return error?.message || 'Pollinations image edit failed';
+}
+
+export async function generateHairstyleImage(o: HairGenOpts): Promise<{ imageUrl: string; prompt: string; seed: number; provider: string; usedFace: boolean }> {
+  const faceMode = !!o.sourceImage;
   const prompt = buildHairPrompt(o, faceMode);
   const seed = o.seed ?? Math.floor(Math.random() * 1_000_000);
-  const url = hairstyleUrl(prompt, seed, publicSourceUrl);
+
+  // Selfie flow: server-side Pollinations image edit. Never silently fall back
+  // to text-to-image because that returns somebody else's face.
+  if (o.sourceImage) {
+    const { data, error } = await supabase.functions.invoke('pollinations-image', {
+      body: {
+        mode: 'hairstyle-edit',
+        prompt,
+        sourceImage: o.sourceImage,
+        width: 768,
+        height: 1024,
+        model: 'p-image-edit',
+        seed,
+        nologo: true,
+      },
+    });
+
+    if (error) {
+      throw new Error(await readInvokeErrorMessage(error));
+    }
+    if (!data?.imageUrl) {
+      throw new Error(data?.message || data?.error || 'No edited hairstyle image returned');
+    }
+    if (data.usedFace === false) {
+      throw new Error('Face-preserving edit was unavailable; refusing to create a random face. Please check Pollinations image-edit API key/quota.');
+    }
+
+    return {
+      imageUrl: data.imageUrl,
+      prompt,
+      seed: data.seed ?? seed,
+      provider: data.provider ?? data.model ?? 'pollinations-image-edit',
+      usedFace: true,
+    };
+  }
+
+  const url = hairstyleUrl(prompt, seed);
 
   try {
     const ctrl = new AbortController();
@@ -94,9 +112,9 @@ export async function generateHairstyleImage(o: HairGenOpts): Promise<{ imageUrl
         const bytes = new Uint8Array(buf); let bin = ''; const C = 0x8000;
         for (let i = 0; i < bytes.length; i += C) bin += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + C)));
         const ct = r.headers.get('content-type') || 'image/jpeg';
-        return { imageUrl: `data:${ct};base64,${btoa(bin)}`, prompt, seed, provider: faceMode ? 'pollinations-kontext' : 'pollinations-flux', usedFace: faceMode };
+        return { imageUrl: `data:${ct};base64,${btoa(bin)}`, prompt, seed, provider: 'pollinations-flux', usedFace: false };
       }
     }
   } catch (e) { console.warn('[ZoeHair] fetch failed, using direct URL', e); }
-  return { imageUrl: url, prompt, seed, provider: faceMode ? 'pollinations-kontext-direct' : 'pollinations-flux-direct', usedFace: faceMode };
+  return { imageUrl: url, prompt, seed, provider: 'pollinations-flux-direct', usedFace: false };
 }
