@@ -10,7 +10,7 @@ export interface HairGenOpts {
   notes?: string;
   seed?: number;
   /** Base64 data URL or public URL of the user's selfie. If provided, we use
-   *  Pollinations `kontext` (image-to-image) so the user's actual face is kept. */
+   *  the server-side Pollinations image-edit endpoint so the user's face is kept. */
   sourceImage?: string;
 }
 
