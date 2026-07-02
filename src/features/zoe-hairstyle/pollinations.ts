@@ -46,6 +46,19 @@ export function hairstyleUrl(prompt: string, seed?: number, sourceUrl?: string):
   return `${base}?width=768&height=1024&model=flux&enhance=true&nologo=true&seed=${s}`;
 }
 
+async function readInvokeErrorMessage(error: any): Promise<string> {
+  try {
+    const context = error?.context;
+    if (context instanceof Response) {
+      const payload = await context.clone().json().catch(() => null);
+      return payload?.message || payload?.error || error.message || 'Pollinations image edit failed';
+    }
+  } catch {
+    // ignore and use generic message below
+  }
+  return error?.message || 'Pollinations image edit failed';
+}
+
 export async function generateHairstyleImage(o: HairGenOpts): Promise<{ imageUrl: string; prompt: string; seed: number; provider: string; usedFace: boolean }> {
   const faceMode = !!o.sourceImage;
   const prompt = buildHairPrompt(o, faceMode);
@@ -68,7 +81,7 @@ export async function generateHairstyleImage(o: HairGenOpts): Promise<{ imageUrl
     });
 
     if (error) {
-      throw new Error(error.message || 'Pollinations image edit failed');
+      throw new Error(await readInvokeErrorMessage(error));
     }
     if (!data?.imageUrl) {
       throw new Error(data?.message || data?.error || 'No edited hairstyle image returned');
