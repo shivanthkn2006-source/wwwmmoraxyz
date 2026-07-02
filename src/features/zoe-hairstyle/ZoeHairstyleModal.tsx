@@ -64,7 +64,7 @@ export function ZoeHairstyleModal({ open, initialGender = 'any', onClose }: Prop
     if (!selectedCut) return;
     setIsGen(true);
     try {
-      const { imageUrl, prompt } = await generateHairstyleImage({ cut: selectedCut.name, color, gender });
+      const { imageUrl, prompt } = await generateHairstyleImage({ cut: selectedCut.name, color, gender, sourceImage: source });
       setDesigns(saveHairDesign({
         id: `hair_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
         createdAt: Date.now(), cut: selectedCut.name, color, gender, prompt,
