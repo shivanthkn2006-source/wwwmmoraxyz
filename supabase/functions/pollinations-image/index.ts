@@ -25,7 +25,7 @@ interface PollinationsRequest {
   seed?: number;
   enhance?: boolean;
   nologo?: boolean;
-  mode?: 'text-to-image' | 'hairstyle-edit' | 'image-edit';
+  mode?: 'text-to-image' | 'hairstyle-edit' | 'image-edit' | 'health';
   sourceImage?: string;
   // For avatar/regional use cases
   style?: string;
