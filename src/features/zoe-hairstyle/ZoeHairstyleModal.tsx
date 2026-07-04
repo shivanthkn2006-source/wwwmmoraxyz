@@ -22,6 +22,8 @@ export function ZoeHairstyleModal({ open, initialGender = 'any', onClose }: Prop
   const [facing, setFacing] = useState<'user' | 'environment'>('user');
   const [isGen, setIsGen] = useState(false);
   const [designs, setDesigns] = useState<HairDesign[]>(() => loadHairDesigns());
+  const [health, setHealth] = useState<{ status: 'checking' | 'ok' | 'missing' | 'error'; message?: string }>({ status: 'checking' });
+  const [confirmPreview, setConfirmPreview] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
@@ -30,6 +32,24 @@ export function ZoeHairstyleModal({ open, initialGender = 'any', onClose }: Prop
 
   useEffect(() => { if (!open) stop(); /* eslint-disable-next-line */ }, [open]);
   useEffect(() => { if (initialGender && initialGender !== 'any') setGender(initialGender); }, [initialGender]);
+
+  // Health check on open — verify the face-preserving image-edit backend is ready.
+  useEffect(() => {
+    if (!open) return;
+    let alive = true;
+    setHealth({ status: 'checking' });
+    (async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('pollinations-image', { body: { mode: 'health', prompt: 'health' } });
+        if (!alive) return;
+        if (error) { setHealth({ status: 'error', message: error.message || 'Health check failed' }); return; }
+        setHealth({ status: data?.hasKey ? 'ok' : 'missing', message: data?.message });
+      } catch (e: any) {
+        if (alive) setHealth({ status: 'error', message: e?.message || 'Health check failed' });
+      }
+    })();
+    return () => { alive = false; };
+  }, [open]);
 
   const stop = useCallback(() => {
     streamRef.current?.getTracks().forEach(t => t.stop());
