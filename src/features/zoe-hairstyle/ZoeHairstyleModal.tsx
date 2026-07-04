@@ -81,8 +81,9 @@ export function ZoeHairstyleModal({ open, initialGender = 'any', onClose }: Prop
     const r = new FileReader(); r.onload = () => setSource(typeof r.result === 'string' ? r.result : undefined); r.readAsDataURL(f);
   }, []);
 
-  const generate = useCallback(async () => {
+  const runGenerate = useCallback(async () => {
     if (!selectedCut) return;
+    setConfirmPreview(false);
     setIsGen(true);
     try {
       const { imageUrl, prompt } = await generateHairstyleImage({ cut: selectedCut.name, color, gender, sourceImage: source });
@@ -94,6 +95,18 @@ export function ZoeHairstyleModal({ open, initialGender = 'any', onClose }: Prop
     } catch (e: any) { alert(`Generation failed: ${e?.message ?? 'unknown'}`); }
     finally { setIsGen(false); }
   }, [selectedCut, color, gender, source]);
+
+  const generate = useCallback(() => {
+    if (!selectedCut) return;
+    // Face-preserving path needs a healthy backend key.
+    if (source && health.status === 'missing') {
+      alert(health.message || 'Face-preserving hairstyle edit is disabled: POLLINATIONS_API_KEY is missing in the backend.');
+      return;
+    }
+    // Preview step: confirm the uploaded selfie before generating.
+    if (source) { setConfirmPreview(true); return; }
+    runGenerate();
+  }, [selectedCut, source, health, runGenerate]);
 
   const downloadOne = (d: HairDesign) => {
     const a = document.createElement('a');
