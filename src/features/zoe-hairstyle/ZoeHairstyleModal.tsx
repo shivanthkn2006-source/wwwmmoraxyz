@@ -2,11 +2,12 @@
 // ZOE HAIRSTYLE MODAL — self-contained, isolated
 // ═══════════════════════════════════════════════════════════════════════════════
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { X, Camera, Upload, Sparkles, Download, Trash2, Loader2, FileDown, Image as ImageIcon, RefreshCw } from 'lucide-react';
+import { X, Camera, Upload, Sparkles, Download, Trash2, Loader2, FileDown, Image as ImageIcon, RefreshCw, ShieldCheck, ShieldAlert, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MEN_CUTS, WOMEN_CUTS, HAIR_COLORS, type HairCut } from './catalog';
 import { generateHairstyleImage } from './pollinations';
 import { loadHairDesigns, saveHairDesign, deleteHairDesign, type HairDesign } from './gallery';
+import { supabase } from '@/integrations/supabase/client';
 import jsPDF from 'jspdf';
 import type { Gender } from './intent';
 
