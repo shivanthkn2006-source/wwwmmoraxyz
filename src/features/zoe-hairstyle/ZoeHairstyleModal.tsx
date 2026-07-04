@@ -2,11 +2,12 @@
 // ZOE HAIRSTYLE MODAL — self-contained, isolated
 // ═══════════════════════════════════════════════════════════════════════════════
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { X, Camera, Upload, Sparkles, Download, Trash2, Loader2, FileDown, Image as ImageIcon, RefreshCw } from 'lucide-react';
+import { X, Camera, Upload, Sparkles, Download, Trash2, Loader2, FileDown, Image as ImageIcon, RefreshCw, ShieldCheck, ShieldAlert, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MEN_CUTS, WOMEN_CUTS, HAIR_COLORS, type HairCut } from './catalog';
 import { generateHairstyleImage } from './pollinations';
 import { loadHairDesigns, saveHairDesign, deleteHairDesign, type HairDesign } from './gallery';
+import { supabase } from '@/integrations/supabase/client';
 import jsPDF from 'jspdf';
 import type { Gender } from './intent';
 
@@ -21,6 +22,8 @@ export function ZoeHairstyleModal({ open, initialGender = 'any', onClose }: Prop
   const [facing, setFacing] = useState<'user' | 'environment'>('user');
   const [isGen, setIsGen] = useState(false);
   const [designs, setDesigns] = useState<HairDesign[]>(() => loadHairDesigns());
+  const [health, setHealth] = useState<{ status: 'checking' | 'ok' | 'missing' | 'error'; message?: string }>({ status: 'checking' });
+  const [confirmPreview, setConfirmPreview] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
@@ -29,6 +32,24 @@ export function ZoeHairstyleModal({ open, initialGender = 'any', onClose }: Prop
 
   useEffect(() => { if (!open) stop(); /* eslint-disable-next-line */ }, [open]);
   useEffect(() => { if (initialGender && initialGender !== 'any') setGender(initialGender); }, [initialGender]);
+
+  // Health check on open — verify the face-preserving image-edit backend is ready.
+  useEffect(() => {
+    if (!open) return;
+    let alive = true;
+    setHealth({ status: 'checking' });
+    (async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('pollinations-image', { body: { mode: 'health', prompt: 'health' } });
+        if (!alive) return;
+        if (error) { setHealth({ status: 'error', message: error.message || 'Health check failed' }); return; }
+        setHealth({ status: data?.hasKey ? 'ok' : 'missing', message: data?.message });
+      } catch (e: any) {
+        if (alive) setHealth({ status: 'error', message: e?.message || 'Health check failed' });
+      }
+    })();
+    return () => { alive = false; };
+  }, [open]);
 
   const stop = useCallback(() => {
     streamRef.current?.getTracks().forEach(t => t.stop());
@@ -60,8 +81,9 @@ export function ZoeHairstyleModal({ open, initialGender = 'any', onClose }: Prop
     const r = new FileReader(); r.onload = () => setSource(typeof r.result === 'string' ? r.result : undefined); r.readAsDataURL(f);
   }, []);
 
-  const generate = useCallback(async () => {
+  const runGenerate = useCallback(async () => {
     if (!selectedCut) return;
+    setConfirmPreview(false);
     setIsGen(true);
     try {
       const { imageUrl, prompt } = await generateHairstyleImage({ cut: selectedCut.name, color, gender, sourceImage: source });
@@ -73,6 +95,18 @@ export function ZoeHairstyleModal({ open, initialGender = 'any', onClose }: Prop
     } catch (e: any) { alert(`Generation failed: ${e?.message ?? 'unknown'}`); }
     finally { setIsGen(false); }
   }, [selectedCut, color, gender, source]);
+
+  const generate = useCallback(() => {
+    if (!selectedCut) return;
+    // Face-preserving path needs a healthy backend key.
+    if (source && health.status === 'missing') {
+      alert(health.message || 'Face-preserving hairstyle edit is disabled: POLLINATIONS_API_KEY is missing in the backend.');
+      return;
+    }
+    // Preview step: confirm the uploaded selfie before generating.
+    if (source) { setConfirmPreview(true); return; }
+    runGenerate();
+  }, [selectedCut, source, health, runGenerate]);
 
   const downloadOne = (d: HairDesign) => {
     const a = document.createElement('a');
@@ -102,6 +136,38 @@ export function ZoeHairstyleModal({ open, initialGender = 'any', onClose }: Prop
           <h2 className="text-lg font-semibold text-pink-300 flex items-center gap-2"><Sparkles className="w-5 h-5" /> Zoe Hairstyle Studio</h2>
           <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/10 text-white"><X className="w-5 h-5" /></button>
         </div>
+        {/* Backend health banner */}
+        <div className={`px-4 py-2 text-xs flex items-center gap-2 border-b ${
+          health.status === 'ok' ? 'bg-emerald-950/40 border-emerald-500/20 text-emerald-300'
+          : health.status === 'missing' ? 'bg-red-950/40 border-red-500/30 text-red-300'
+          : health.status === 'error' ? 'bg-amber-950/40 border-amber-500/30 text-amber-300'
+          : 'bg-slate-800/40 border-white/10 text-white/60'
+        }`}>
+          {health.status === 'ok' && <><ShieldCheck className="w-3.5 h-3.5" /> Face-preserving hairstyle edit is ready.</>}
+          {health.status === 'missing' && <><ShieldAlert className="w-3.5 h-3.5" /> POLLINATIONS_API_KEY missing — selfie-based hairstyle edit is blocked. Add the secret in the backend.</>}
+          {health.status === 'error' && <><ShieldAlert className="w-3.5 h-3.5" /> Health check error: {health.message}</>}
+          {health.status === 'checking' && <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Checking image-edit backend…</>}
+        </div>
+        {/* Preview confirmation overlay */}
+        {confirmPreview && source && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/80 p-4" onClick={() => setConfirmPreview(false)}>
+            <div className="w-full max-w-sm rounded-xl bg-slate-900 border border-pink-500/40 p-4 space-y-3" onClick={e => e.stopPropagation()}>
+              <h3 className="text-sm font-semibold text-pink-300">Confirm your selfie</h3>
+              <p className="text-xs text-white/60">This is the photo Zoe will restyle. Face and identity are preserved — only hair changes.</p>
+              <div className="aspect-[3/4] rounded-lg overflow-hidden border border-white/10 bg-black">
+                <img src={source} alt="preview" className="w-full h-full object-cover" />
+              </div>
+              <div className="text-xs text-white/70 space-y-0.5">
+                <div>Style: <span className="text-pink-300">{selectedCut?.name}</span></div>
+                <div>Color: <span className="text-amber-300">{color}</span></div>
+              </div>
+              <div className="flex gap-2">
+                <Button size="sm" variant="ghost" onClick={() => setConfirmPreview(false)} className="flex-1 text-white/70">Retake / Change</Button>
+                <Button size="sm" onClick={runGenerate} className="flex-1 bg-gradient-to-r from-pink-500 to-amber-500 text-black"><Check className="w-4 h-4 mr-1" />Looks good — Generate</Button>
+              </div>
+            </div>
+          </div>
+        )}
         <div className="p-4 grid md:grid-cols-2 gap-4">
           <div className="space-y-3">
             <div className="relative aspect-[3/4] rounded-xl bg-black/60 border border-white/10 flex items-center justify-center overflow-hidden">

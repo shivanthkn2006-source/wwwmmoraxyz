@@ -25,7 +25,7 @@ interface PollinationsRequest {
   seed?: number;
   enhance?: boolean;
   nologo?: boolean;
-  mode?: 'text-to-image' | 'hairstyle-edit' | 'image-edit';
+  mode?: 'text-to-image' | 'hairstyle-edit' | 'image-edit' | 'health';
   sourceImage?: string;
   // For avatar/regional use cases
   style?: string;
@@ -184,6 +184,21 @@ Deno.serve(async (req: Request) => {
   try {
     const body: PollinationsRequest = await req.json();
     let { prompt, width, height, model, seed, enhance, nologo, style, mood, sourceImage, mode } = body;
+
+    // Health check — verify POLLINATIONS_API_KEY is present for image-edit flows.
+    if (mode === 'health') {
+      const key = getPollinationsKey();
+      return new Response(
+        JSON.stringify({
+          ok: !!key,
+          hasKey: !!key,
+          message: key
+            ? 'Pollinations image-edit is ready.'
+            : 'POLLINATIONS_API_KEY is missing. Face-preserving hairstyle edit is disabled until this secret is set in the backend.',
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // If style is provided, use regional prompt
     if (style && REGIONAL_PROMPTS[style]) {
