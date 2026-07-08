@@ -1502,7 +1502,18 @@ function ZoeInfinityUnlocked() {
 
   // Wake word (Stage 4) - must be after state declarations
   const { isListening: isWakeListening } = useWakeWord({
-    wakeWords: ['hey zoe', 'hey zoey', 'ok zoe', 'okay zoe'],
+    wakeWords: [
+      // Zoe wake phrases (Siri/Alexa-style)
+      'hey zoe', 'hey zoey', 'ok zoe', 'okay zoe',
+      'zoe you there', 'zoe are you there', 'zoey you there',
+      'zoe listen', 'zoe wake up', 'wake up zoe',
+      'zoe',
+      // Smith wake phrases (mirrors Zoe)
+      'hey smith', 'ok smith', 'okay smith',
+      'smith you there', 'smith are you there',
+      'smith listen', 'smith wake up', 'wake up smith',
+      'smith',
+    ],
     onWakeWordDetected: () => {
       console.log('[ZoeInfinity] Wake word detected!');
       setWakeWordActive(true);
