@@ -1506,18 +1506,23 @@ function ZoeInfinityUnlocked() {
   const { isListening: isWakeListening } = useWakeWord({
     wakeWords: [
       // Zoe wake phrases (Siri/Alexa-style)
-      'hey zoe', 'hey zoey', 'ok zoe', 'okay zoe',
-      'zoe you there', 'zoe are you there', 'zoey you there',
-      'zoe listen', 'zoe wake up', 'wake up zoe',
+      'hey zoe', 'hey zoey', 'hi zoe', 'hello zoe',
+      'ok zoe', 'okay zoe', 'yo zoe',
+      'zoe you there', 'zoe are you there', 'you there zoe', 'zoey you there',
+      'zoe listen', 'listen zoe', 'zoe wake up', 'wake up zoe',
+      'zoe come here', 'zoe hello',
       'zoe',
-      // Smith wake phrases (mirrors Zoe)
-      'hey smith', 'ok smith', 'okay smith',
-      'smith you there', 'smith are you there',
-      'smith listen', 'smith wake up', 'wake up smith',
+      // Smith wake phrases (mirrors Zoe — expanded)
+      'hey smith', 'hi smith', 'hello smith',
+      'ok smith', 'okay smith', 'yo smith',
+      'smith you there', 'smith are you there', 'you there smith',
+      'smith listen', 'listen smith', 'smith wake up', 'wake up smith',
+      'smith come here', 'smith hello',
+      'mr smith', 'mister smith', 'agent smith',
       'smith',
     ],
     onWakeWordDetected: () => {
-      console.log('[ZoeInfinity] 🎙️ Wake word detected — entering hands-free mode');
+      zoeDebugLog('wake', 'wake word detected → entering hands-free');
       setHandsFreeMode(true);
       setWakeWordActive(true);
       // Keep the wake pulse visible briefly; hands-free keeps listening after.
@@ -1525,6 +1530,40 @@ function ZoeInfinityUnlocked() {
     },
     enabled: isHeavyReady && !isProcessing && !isSpeaking && !isManualVoiceInput,
   });
+
+  // Stop / pause phrases — exit hands-free without touching the UI
+  useWakeWord({
+    wakeWords: [
+      'zoe stop', 'stop zoe', 'zoe end', 'end zoe',
+      'zoe pause', 'pause zoe', 'zoe quiet', 'zoe silent',
+      'zoe sleep', 'go to sleep zoe', 'zoe exit', 'zoe close',
+      'zoe dismiss', 'zoe cancel', 'zoe shut up', 'zoe be quiet',
+      'smith stop', 'stop smith', 'smith end', 'end smith',
+      'smith pause', 'smith quiet', 'smith sleep', 'smith exit',
+      'smith dismiss', 'smith cancel', 'smith shut up', 'smith be quiet',
+    ],
+    onWakeWordDetected: () => {
+      zoeDebugLog('wake', 'stop phrase detected → exiting hands-free');
+      setHandsFreeMode(false);
+      setWakeWordActive(false);
+      setIsManualVoiceInput(false);
+      try { stopHybridVoice(); } catch { /* noop */ }
+    },
+    enabled: isHeavyReady,
+  });
+
+  // Auto mic timeout: if hands-free is on and nothing is happening, close after silence
+  useEffect(() => {
+    if (!handsFreeMode) return;
+    if (isProcessing || isSpeaking || isManualVoiceInput || wakeWordActive) return;
+    const timer = setTimeout(() => {
+      zoeDebugLog('info', 'hands-free idle timeout (12s silence) → auto-exit');
+      setHandsFreeMode(false);
+      setWakeWordActive(false);
+    }, 12000);
+    return () => clearTimeout(timer);
+  }, [handsFreeMode, isProcessing, isSpeaking, isManualVoiceInput, wakeWordActive]);
+
 
   // ═══════════════════════════════════════════════════════════════════════════
   // PHASE 7: FESTIVAL & BIRTHDAY GREETING — Runs once per user per day (hardened dedup)
