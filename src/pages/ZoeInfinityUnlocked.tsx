@@ -3921,7 +3921,18 @@ If you realize you made a factual error, repeated yourself, or gave contradictor
         onHandsFreeToggle={setHandsFreeMode}
       />
 
+      {/* Hands-free debug + status panel (bottom-left, collapsible) */}
+      <ZoeHandsFreeDebugPanel
+        handsFreeMode={handsFreeMode}
+        wakeWordActive={wakeWordActive}
+        isListening={isManualVoiceInput}
+        isProcessing={isProcessing}
+        isSpeaking={isSpeaking}
+        isWakeListening={isWakeListening}
+      />
+
       {/* Inference Diagnostics & Voice Signal moved to ZoeUtilityMenu */}
+
 
       {/* Fullscreen Viewer */}
       {!visualsDisabled && (
