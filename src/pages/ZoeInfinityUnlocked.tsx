@@ -1515,8 +1515,10 @@ function ZoeInfinityUnlocked() {
       'smith',
     ],
     onWakeWordDetected: () => {
-      console.log('[ZoeInfinity] Wake word detected!');
+      console.log('[ZoeInfinity] 🎙️ Wake word detected — entering hands-free mode');
+      setHandsFreeMode(true);
       setWakeWordActive(true);
+      // Keep the wake pulse visible briefly; hands-free keeps listening after.
       setTimeout(() => setWakeWordActive(false), 5000);
     },
     enabled: isHeavyReady && !isProcessing && !isSpeaking && !isManualVoiceInput,
