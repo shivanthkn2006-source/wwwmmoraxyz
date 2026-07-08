@@ -3542,6 +3542,7 @@ If you realize you made a factual error, repeated yourself, or gave contradictor
   }, [messages, user?.id, profiler, think, isOffline, speakResponse, isVisualsReady, isDestinyReady, isHeavyReady, genesisEffects, genesisConversation, bioKernel, emotionalVoice, offlineWisdom, karmicMemory, atmanArchive, vedicEngine, integration, documentXray, artifactGenerator, voiceEnabled, speakAsZoePremium, isHybridSpeaking, stopHybridVoice, saveMessageToDb]);
 
   const handleVoiceStart = useCallback(() => {
+    zoeDebugLog('voice', 'handleVoiceStart → startVoiceInput');
     setIsManualVoiceInput(true);
     stopHybridVoice();
     voiceOrchestrator.stop();
@@ -3563,15 +3564,18 @@ If you realize you made a factual error, repeated yourself, or gave contradictor
   }, [avatarTrigger.isAvatarVisible, avatarTrigger.isAvatarCompact]);
 
   const handleVoiceEnd = useCallback((transcript: string) => {
+    const t = transcript.trim();
+    zoeDebugLog('voice', `handleVoiceEnd (${t.length} chars)${t ? ': ' + t.slice(0, 60) : ' — empty'}`);
     setIsManualVoiceInput(false);
-    if (transcript.trim()) {
-      handleSend(transcript.trim());
+    if (t) {
+      handleSend(t);
     }
     // Don't clear wake word in hands-free mode so listening continues
     if (!handsFreeMode) {
       setWakeWordActive(false);
     }
   }, [handleSend, handsFreeMode]);
+
 
   const triggerBrowserDownload = useCallback(async (url: string, filename: string) => {
     try {
