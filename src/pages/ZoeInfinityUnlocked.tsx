@@ -53,6 +53,8 @@ import { useZoeInfinityIntegration } from '@/hooks/useZoeInfinityIntegration';
 import { useDocumentXray } from '@/hooks/useDocumentXray';
 import { useArtifactGenerator } from '@/hooks/useArtifactGenerator';
 import { useWakeWord } from '@/hooks/useWakeWord';
+import { zoeDebugLog } from '@/features/zoe-handsfree/debugBus';
+import { ZoeHandsFreeDebugPanel } from '@/features/zoe-handsfree/ZoeHandsFreeDebugPanel';
 import { useGenesisConversation } from '@/hooks/useGenesisConversation';
 import { addZoeInfinityMarker, isZoeInfinityMessage, stripZoeInfinityMarker } from '@/utils/conversationNamespaces';
 import { generateConversationPDF, generateConversationPDFFromMessages, generateConversationPDFLast24Hours } from '@/utils/zoeConversationPdfExport';
