@@ -15,6 +15,7 @@ import {
   claimSpeechRecognition,
   releaseSpeechRecognition,
   stopSpeechRecognition,
+  isPermissionCached,
 } from '@/utils/micPermissionManager';
 import { EmojiPicker } from './EmojiPicker';
 import { findHandsFreePhrase, HANDS_FREE_STOP_PHRASES } from '@/features/zoe-handsfree/phrases';
@@ -236,7 +237,7 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
       await new Promise((resolve) => setTimeout(resolve, 140));
     }
 
-    if (!fromUserGesture) {
+    if (fromUserGesture || !isPermissionCached()) {
       const hasPermission = await requestMicPermission();
       if (!hasPermission) {
         isStartingRef.current = false;
@@ -358,6 +359,14 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
         if (recognitionRef.current === recognition) recognitionRef.current = null;
         setIsListening(false);
         onVoiceStop?.();
+        if (manualStopSessionRef.current !== sessionId && handsFreeRef.current && !voicePausedRef.current) {
+          restartTimeoutRef.current = setTimeout(() => {
+            if (handsFreeRef.current && !voicePausedRef.current) {
+              zoeDebugSpeechStart('voice-input', 'hands-free restart after transient abort');
+              startListening(true, false);
+            }
+          }, 650);
+        }
         return;
       }
       const shouldRestart = handsFreeRef.current && err !== 'aborted' && err !== 'not-allowed' && err !== 'service-not-allowed';
