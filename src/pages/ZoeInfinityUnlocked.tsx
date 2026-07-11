@@ -1560,6 +1560,16 @@ function ZoeInfinityUnlocked() {
   }, [handsFreeMode, isManualVoiceInput, isProcessing, isSpeaking, isVoiceMicListening, isWakeListening, wakeWordActive]);
 
   useEffect(() => {
+    if (!handsFreeMode || isProcessing || isSpeaking || isVoiceMicListening || isManualVoiceInput) return;
+    const restartTimer = window.setTimeout(() => {
+      if (!handsFreeMode || isProcessing || isSpeaking || isVoiceMicListening || isManualVoiceInput) return;
+      zoeDebugLog('voice', 'hands-free resume after Zoe finished');
+      try { window.dispatchEvent(new CustomEvent('zoe-start-handsfree-listening')); } catch { /* noop */ }
+    }, 250);
+    return () => window.clearTimeout(restartTimer);
+  }, [handsFreeMode, isManualVoiceInput, isProcessing, isSpeaking, isVoiceMicListening]);
+
+  useEffect(() => {
     const handleHandsFreeStop = (event: Event) => {
       const reason = (event as CustomEvent<{ reason?: string }>).detail?.reason || 'stop phrase requested';
       stopHandsFreeMode(reason);
