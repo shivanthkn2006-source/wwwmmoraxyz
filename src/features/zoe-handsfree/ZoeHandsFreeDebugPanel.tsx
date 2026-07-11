@@ -12,6 +12,7 @@ import {
   type ZoeDebugEntry,
   type ZoeHandsFreeDebugState,
 } from './debugBus';
+import { runHandsFreeSelfTest, type SelfTestProgress, type SelfTestReport } from './handsFreeSelfTest';
 
 export interface ZoeHandsFreeDebugPanelProps {
   handsFreeMode: boolean;
@@ -50,6 +51,21 @@ export const ZoeHandsFreeDebugPanel: React.FC<ZoeHandsFreeDebugPanelProps> = ({
     updatedAt: Date.now(),
   });
   const [open, setOpen] = useState(false);
+  const [selfTest, setSelfTest] = useState<SelfTestProgress | null>(null);
+  const [selfTestReport, setSelfTestReport] = useState<SelfTestReport | null>(null);
+
+  const startSelfTest = useCallback(async () => {
+    setSelfTestReport(null);
+    try {
+      const report = await runHandsFreeSelfTest((p) => {
+        setSelfTest(p);
+        if (p.report) setSelfTestReport(p.report);
+      });
+      setSelfTestReport(report);
+    } catch (err) {
+      console.error('[Zoe self-test]', err);
+    }
+  }, []);
   const [position, setPosition] = useState(() => {
     if (typeof window === 'undefined') return { x: 12, y: 12 };
     try {
@@ -167,6 +183,15 @@ export const ZoeHandsFreeDebugPanel: React.FC<ZoeHandsFreeDebugPanelProps> = ({
               )}
               <button
                 type="button"
+                onClick={() => { void startSelfTest(); }}
+                disabled={selfTest?.phase === 'running'}
+                className={`text-[9px] px-1.5 py-0.5 rounded border ${selfTest?.phase === 'running' ? 'bg-amber-500/20 border-amber-400/40 text-amber-200' : 'bg-cyan-500/15 border-cyan-400/40 text-cyan-200 hover:bg-cyan-500/25'}`}
+                title="Run 30-second hands-free self-test"
+              >
+                {selfTest?.phase === 'running' ? `⏱ ${Math.ceil((selfTest.totalMs - selfTest.elapsedMs) / 1000)}s` : '⚙ self-test'}
+              </button>
+              <button
+                type="button"
                 onClick={clearZoeDebug}
                 className="text-[9px] opacity-70 hover:opacity-100 underline"
               >
@@ -174,6 +199,39 @@ export const ZoeHandsFreeDebugPanel: React.FC<ZoeHandsFreeDebugPanelProps> = ({
               </button>
             </div>
           </div>
+          {(selfTest || selfTestReport) && (
+            <div className="px-2.5 py-1.5 border-b border-white/10 bg-white/[0.04] space-y-1">
+              {selfTest?.phase === 'running' && (
+                <>
+                  <div className="flex items-center justify-between">
+                    <span className="opacity-70">self-test running…</span>
+                    <span className="opacity-60">{Math.ceil((selfTest.totalMs - selfTest.elapsedMs) / 1000)}s left</span>
+                  </div>
+                  <div className="h-1 rounded bg-white/10 overflow-hidden">
+                    <div className="h-full bg-cyan-400 transition-all" style={{ width: `${Math.min(100, (selfTest.elapsedMs / selfTest.totalMs) * 100)}%` }} />
+                  </div>
+                  <div className="opacity-70">hf: {selfTest.currentHfState} · mic: {selfTest.micPermission} · starts: {selfTest.recognizerStarts} · errs: {selfTest.errors}</div>
+                </>
+              )}
+              {selfTestReport && (
+                <>
+                  <div className={`font-semibold ${selfTestReport.pass ? 'text-emerald-300' : 'text-red-300'}`}>
+                    {selfTestReport.pass ? '✓ PASS' : '✗ FAIL'} · {(selfTestReport.durationMs / 1000).toFixed(1)}s
+                  </div>
+                  <div className="opacity-80">{selfTestReport.summary}</div>
+                  <div className="space-y-0.5">
+                    {selfTestReport.checks.map((c, i) => (
+                      <div key={i} className="flex items-start gap-1.5">
+                        <span className={c.ok ? 'text-emerald-400' : 'text-red-400'}>{c.ok ? '✓' : '✗'}</span>
+                        <span className="opacity-90">{c.label}</span>
+                        {c.detail && <span className="opacity-50">· {c.detail}</span>}
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
           <div className="flex-1 overflow-y-auto px-2.5 py-1 space-y-0.5">
             {entries.length === 0 && (
               <div className="opacity-50 py-2">No events yet — say "hey Zoe".</div>
