@@ -262,8 +262,6 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
     recognitionSessionRef.current = sessionId;
     manualStopSessionRef.current = null;
 
-    recognition.continuous = !!activeHandsFree;
-    recognition.interimResults = !!activeHandsFree;
     recognition.lang = 'en-US';
     recognition.maxAlternatives = 1;
 
@@ -400,6 +398,7 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
     recognitionRef.current = recognition;
     try {
       claimSpeechRecognition('voice-input', recognition);
+      setIsListening(true);
       recognition.start();
     } catch {
       isStartingRef.current = false;
