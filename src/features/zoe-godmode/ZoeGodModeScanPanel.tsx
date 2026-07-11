@@ -4,7 +4,7 @@
 // a live checklist + copy-to-clipboard markdown report.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   runGodModePlatformScan,
   formatReportMarkdown,
@@ -21,6 +21,10 @@ const badge: Record<CheckStatus, { icon: string; color: string; bg: string }> = 
   skip: { icon: '–', color: 'text-white/50', bg: 'bg-white/5 border-white/10' },
 };
 
+const GAP = 16; // px from viewport edges
+const BTN_W = 96; // approximate button width
+const BTN_H = 36; // approximate button height
+
 export const ZoeGodModeScanPanel: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [running, setRunning] = useState(false);
@@ -28,7 +32,48 @@ export const ZoeGodModeScanPanel: React.FC = () => {
   const [report, setReport] = useState<PlatformScanReport | null>(null);
   const [copied, setCopied] = useState(false);
 
+  const [pos, setPos] = useState<{ left: number; bottom: number }>({ left: GAP, bottom: GAP });
+  const dragRef = useRef<{ dragging: boolean; startX: number; startY: number; initialLeft: number; initialBottom: number; movedPx: number } | null>(null);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+
+  const clampPos = useCallback((nextLeft: number, nextBottom: number) => {
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    return {
+      left: Math.max(GAP, Math.min(vw - BTN_W - GAP, nextLeft)),
+      bottom: Math.max(GAP, Math.min(vh - BTN_H - GAP, nextBottom)),
+    };
+  }, []);
+
+  useEffect(() => {
+    const onPointerMove = (e: PointerEvent) => {
+      if (!dragRef.current?.dragging) return;
+      e.preventDefault();
+      const dx = e.clientX - dragRef.current.startX;
+      const dy = e.clientY - dragRef.current.startY;
+      dragRef.current.movedPx = Math.hypot(dx, dy);
+      setPos(clampPos(dragRef.current.initialLeft + dx, dragRef.current.initialBottom - dy));
+    };
+    const onPointerUp = (e: PointerEvent) => {
+      if (!dragRef.current?.dragging) return;
+      e.preventDefault();
+      dragRef.current.dragging = false;
+      // Keep the ref so onClick can inspect movedPx; clear it after click has fired.
+      setTimeout(() => { dragRef.current = null; }, 50);
+    };
+    window.addEventListener('pointermove', onPointerMove, { passive: false });
+    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointercancel', onPointerUp);
+    return () => {
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('pointercancel', onPointerUp);
+    };
+  }, [clampPos]);
+
   const startScan = useCallback(async () => {
+
+
     setRunning(true);
     setReport(null);
     setProgress({ completed: 0, total: 0, results: [] });
@@ -72,17 +117,38 @@ export const ZoeGodModeScanPanel: React.FC = () => {
 
   return (
     <>
-      {/* Floating trigger — bottom-left, out of the way of the bottom-right call controls */}
+      {/* Floating trigger — draggable, bottom-left by default, out of the way of the bottom-right call controls */}
       <button
+        ref={buttonRef}
         type="button"
-        onClick={() => setOpen(true)}
-        className="fixed bottom-4 left-4 z-[9997] flex items-center gap-1.5 rounded-full bg-black/70 backdrop-blur border border-fuchsia-400/40 text-fuchsia-200 hover:bg-black/85 hover:border-fuchsia-300/60 px-3 py-1.5 text-[11px] font-mono shadow-lg pointer-events-auto"
-        title="Zoe God Mode — full platform scan"
-        aria-label="Open Zoe God Mode platform scan"
+        onClick={() => {
+          // Only open if the user didn't just drag.
+          if (!dragRef.current?.dragging && (dragRef.current ? dragRef.current.movedPx < 4 : true)) {
+            setOpen(true);
+          }
+        }}
+        onPointerDown={(e) => {
+          // Left button only.
+          if (e.button !== 0) return;
+          (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+          dragRef.current = {
+            dragging: true,
+            startX: e.clientX,
+            startY: e.clientY,
+            initialLeft: pos.left,
+            initialBottom: pos.bottom,
+            movedPx: 0,
+          };
+        }}
+        style={{ left: pos.left, bottom: pos.bottom }}
+        className="fixed z-[9997] flex items-center gap-1.5 rounded-full bg-black/70 backdrop-blur border border-fuchsia-400/40 text-fuchsia-200 hover:bg-black/85 hover:border-fuchsia-300/60 px-3 py-1.5 text-[11px] font-mono shadow-lg pointer-events-auto cursor-move select-none touch-none"
+        title="Drag to reposition. Tap to open Zoe God Mode scan."
+        aria-label="Open Zoe God Mode platform scan (draggable)"
       >
         <span className="text-sm leading-none">🛰</span>
         <span>god-mode</span>
       </button>
+
 
       {open && (
         <div
