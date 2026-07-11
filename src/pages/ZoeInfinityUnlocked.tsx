@@ -1512,8 +1512,7 @@ function ZoeInfinityUnlocked() {
     setIsVoiceMicListening(false);
     try { stopAllVoices(); } catch { /* noop */ }
     try { stopHybridVoice(); } catch { /* noop */ }
-    try { voiceOrchestrator.stop(); } catch { /* noop */ }
-  }, [stopHybridVoice, voiceOrchestrator]);
+  }, [stopHybridVoice]);
 
   // Wake word (Stage 4) - must be after state declarations
   const { isListening: isWakeListening } = useWakeWord({
@@ -1855,6 +1854,16 @@ function ZoeInfinityUnlocked() {
   // ═══════════════════════════════════════════════════════════════════════════
   const voiceOrchestrator = useVoiceOrchestrator();
   const { speakQueued } = voiceOrchestrator;
+
+  useEffect(() => {
+    const handleStopAllVoices = () => {
+      try { voiceOrchestrator.stop(); } catch { /* noop */ }
+      setIsSpeaking(false);
+    };
+
+    window.addEventListener('zoe-stop-all-voices', handleStopAllVoices);
+    return () => window.removeEventListener('zoe-stop-all-voices', handleStopAllVoices);
+  }, [voiceOrchestrator]);
   
   const speakResponse = useCallback((text: string, overrideLang?: string) => {
     if (!voiceEnabled) return;
