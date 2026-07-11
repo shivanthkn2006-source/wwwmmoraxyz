@@ -1527,7 +1527,6 @@ function ZoeInfinityUnlocked() {
       setWakeWordActive(true);
       // Keep the wake pulse visible briefly; hands-free keeps listening after.
       setTimeout(() => setWakeWordActive(false), 5000);
-    },
       if (transcript && transcript !== wakeWord) {
         zoeDebugLog('voice', `wake transcript: ${transcript.slice(0, 80)}`);
       }
