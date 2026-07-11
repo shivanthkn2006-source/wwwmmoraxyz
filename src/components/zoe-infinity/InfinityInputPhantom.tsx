@@ -90,6 +90,7 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
   const isStartingRef = useRef(false);
   const recognitionSessionRef = useRef(0);
   const manualStopSessionRef = useRef<number | null>(null);
+  const startWatchdogRef = useRef<NodeJS.Timeout | null>(null);
   const plusMenuRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -210,6 +211,10 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
       clearTimeout(restartTimeoutRef.current);
       restartTimeoutRef.current = null;
     }
+    if (startWatchdogRef.current) {
+      clearTimeout(startWatchdogRef.current);
+      startWatchdogRef.current = null;
+    }
     if (handsFreeSilenceTimeoutRef.current) {
       clearTimeout(handsFreeSilenceTimeoutRef.current);
       handsFreeSilenceTimeoutRef.current = null;
@@ -294,6 +299,10 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
 
     recognition.onstart = () => {
       if (sessionId !== recognitionSessionRef.current) return;
+      if (startWatchdogRef.current) {
+        clearTimeout(startWatchdogRef.current);
+        startWatchdogRef.current = null;
+      }
       isStartingRef.current = false;
       setIsListening(true);
       onVoiceStart?.();
@@ -329,6 +338,10 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
     recognition.onerror = (event: any) => {
       if (sessionId !== recognitionSessionRef.current) return;
       const err = String(event?.error || 'unknown');
+      if (err === 'no-speech') {
+        zoeDebugLog('voice', 'voice input no-speech; waiting for recognition end/restart');
+        return;
+      }
       if (err === 'aborted') {
         zoeDebugLog('voice', 'voice input aborted/handed off');
         isStartingRef.current = false;
@@ -364,6 +377,10 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
 
     recognition.onend = () => {
       if (sessionId !== recognitionSessionRef.current) return;
+      if (startWatchdogRef.current) {
+        clearTimeout(startWatchdogRef.current);
+        startWatchdogRef.current = null;
+      }
       isStartingRef.current = false;
       releaseSpeechRecognition('voice-input', recognition);
       if (recognitionRef.current === recognition) recognitionRef.current = null;
@@ -399,8 +416,27 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
     try {
       claimSpeechRecognition('voice-input', recognition);
       setIsListening(true);
+      startWatchdogRef.current = setTimeout(() => {
+        if (sessionId !== recognitionSessionRef.current || !isStartingRef.current) return;
+        zoeDebugLog('error', 'voice input start timed out; resetting mic state');
+        isStartingRef.current = false;
+        setIsListening(false);
+        releaseSpeechRecognition('voice-input', recognition);
+        if (recognitionRef.current === recognition) recognitionRef.current = null;
+        if (handsFreeRef.current && !voicePausedRef.current) {
+          restartTimeoutRef.current = setTimeout(() => {
+            if (handsFreeRef.current && !voicePausedRef.current) startListening(true, false);
+          }, 650);
+        } else {
+          onVoiceStop?.();
+        }
+      }, 2500);
       recognition.start();
     } catch {
+      if (startWatchdogRef.current) {
+        clearTimeout(startWatchdogRef.current);
+        startWatchdogRef.current = null;
+      }
       isStartingRef.current = false;
       setIsListening(false);
       releaseSpeechRecognition('voice-input', recognition);
@@ -414,6 +450,10 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
     if (restartTimeoutRef.current) {
       clearTimeout(restartTimeoutRef.current);
       restartTimeoutRef.current = null;
+    }
+    if (startWatchdogRef.current) {
+      clearTimeout(startWatchdogRef.current);
+      startWatchdogRef.current = null;
     }
     if (handsFreeSilenceTimeoutRef.current) {
       clearTimeout(handsFreeSilenceTimeoutRef.current);
@@ -468,6 +508,7 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
   useEffect(() => {
     return () => {
       if (restartTimeoutRef.current) clearTimeout(restartTimeoutRef.current);
+      if (startWatchdogRef.current) clearTimeout(startWatchdogRef.current);
       if (handsFreeSilenceTimeoutRef.current) clearTimeout(handsFreeSilenceTimeoutRef.current);
       isStartingRef.current = false;
       if (recognitionRef.current) {
