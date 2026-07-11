@@ -36,6 +36,7 @@ const transcriptIncludesWakePhrase = (transcript: string, phrase: string) => {
 export const useWakeWord = ({ wakeWords, onWakeWordDetected, onError, enabled }: WakeWordOptions) => {
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<any>(null);
+  const restartTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isListeningRef = useRef(false);
   const hasStartedRef = useRef(false); // Prevent double-start
   const enabledRef = useRef(enabled);
@@ -55,6 +56,11 @@ export const useWakeWord = ({ wakeWords, onWakeWordDetected, onError, enabled }:
   });
 
   const startWakeWordDetection = useCallback(async () => {
+    if (restartTimeoutRef.current) {
+      clearTimeout(restartTimeoutRef.current);
+      restartTimeoutRef.current = null;
+    }
+
     // Guard: prevent multiple starts
     if (hasStartedRef.current || recognitionRef.current) {
       console.log('[WakeWord] Already running, skipping start');
@@ -148,6 +154,13 @@ export const useWakeWord = ({ wakeWords, onWakeWordDetected, onError, enabled }:
       hasStartedRef.current = false;
       recognitionRef.current = null;
       releaseSpeechRecognition('wake-word', recognition);
+      if (enabledRef.current) {
+        restartTimeoutRef.current = setTimeout(() => {
+          if (enabledRef.current && !recognitionRef.current && !hasStartedRef.current) {
+            void startWakeWordDetection();
+          }
+        }, 900);
+      }
     };
 
     recognition.onend = () => {
@@ -158,6 +171,14 @@ export const useWakeWord = ({ wakeWords, onWakeWordDetected, onError, enabled }:
       releaseSpeechRecognition('wake-word', recognition);
       if (!isListeningRef.current) {
         setIsListening(false);
+      }
+      if (enabledRef.current) {
+        restartTimeoutRef.current = setTimeout(() => {
+          if (enabledRef.current && !recognitionRef.current && !hasStartedRef.current) {
+            zoeDebugSpeechStart('wake-word', 'restart after browser wake segment ended');
+            void startWakeWordDetection();
+          }
+        }, 450);
       }
     };
 
@@ -178,10 +199,21 @@ export const useWakeWord = ({ wakeWords, onWakeWordDetected, onError, enabled }:
       hasStartedRef.current = false;
       recognitionRef.current = null;
       releaseSpeechRecognition('wake-word', recognition);
+      if (enabledRef.current) {
+        restartTimeoutRef.current = setTimeout(() => {
+          if (enabledRef.current && !recognitionRef.current && !hasStartedRef.current) {
+            void startWakeWordDetection();
+          }
+        }, 1200);
+      }
     }
   }, []); // No dependencies - uses refs
 
   const stopWakeWordDetection = useCallback(() => {
+    if (restartTimeoutRef.current) {
+      clearTimeout(restartTimeoutRef.current);
+      restartTimeoutRef.current = null;
+    }
     if (!recognitionRef.current) return; // Skip if nothing to stop
     
     isListeningRef.current = false;
