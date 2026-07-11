@@ -51,6 +51,21 @@ export const ZoeHandsFreeDebugPanel: React.FC<ZoeHandsFreeDebugPanelProps> = ({
     updatedAt: Date.now(),
   });
   const [open, setOpen] = useState(false);
+  const [selfTest, setSelfTest] = useState<SelfTestProgress | null>(null);
+  const [selfTestReport, setSelfTestReport] = useState<SelfTestReport | null>(null);
+
+  const startSelfTest = useCallback(async () => {
+    setSelfTestReport(null);
+    try {
+      const report = await runHandsFreeSelfTest((p) => {
+        setSelfTest(p);
+        if (p.report) setSelfTestReport(p.report);
+      });
+      setSelfTestReport(report);
+    } catch (err) {
+      console.error('[Zoe self-test]', err);
+    }
+  }, []);
   const [position, setPosition] = useState(() => {
     if (typeof window === 'undefined') return { x: 12, y: 12 };
     try {
