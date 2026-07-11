@@ -24,6 +24,20 @@ const badge: Record<CheckStatus, { icon: string; color: string; bg: string }> = 
 const GAP = 16; // px from viewport edges
 const BTN_W = 96; // approximate button width
 const BTN_H = 36; // approximate button height
+const GOD_MODE_POSITION_KEY = 'zoe-godmode-trigger-position-v1';
+
+const readSavedPosition = () => {
+  if (typeof window === 'undefined') return { left: GAP, bottom: GAP };
+  try {
+    const saved = localStorage.getItem(GOD_MODE_POSITION_KEY);
+    if (!saved) return { left: GAP, bottom: GAP };
+    const parsed = JSON.parse(saved) as { left?: number; bottom?: number };
+    if (typeof parsed.left === 'number' && typeof parsed.bottom === 'number') {
+      return { left: parsed.left, bottom: parsed.bottom };
+    }
+  } catch { /* noop */ }
+  return { left: GAP, bottom: GAP };
+};
 
 export const ZoeGodModeScanPanel: React.FC = () => {
   const [open, setOpen] = useState(false);
@@ -32,18 +46,40 @@ export const ZoeGodModeScanPanel: React.FC = () => {
   const [report, setReport] = useState<PlatformScanReport | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const [pos, setPos] = useState<{ left: number; bottom: number }>({ left: GAP, bottom: GAP });
+  const [pos, setPos] = useState<{ left: number; bottom: number }>(readSavedPosition);
   const dragRef = useRef<{ dragging: boolean; startX: number; startY: number; initialLeft: number; initialBottom: number; movedPx: number } | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
 
   const clampPos = useCallback((nextLeft: number, nextBottom: number) => {
     const vw = window.innerWidth;
     const vh = window.innerHeight;
+    const width = buttonRef.current?.offsetWidth || BTN_W;
+    const height = buttonRef.current?.offsetHeight || BTN_H;
     return {
-      left: Math.max(GAP, Math.min(vw - BTN_W - GAP, nextLeft)),
-      bottom: Math.max(GAP, Math.min(vh - BTN_H - GAP, nextBottom)),
+      left: Math.max(GAP, Math.min(vw - width - GAP, nextLeft)),
+      bottom: Math.max(GAP, Math.min(vh - height - GAP, nextBottom)),
     };
   }, []);
+
+  useEffect(() => {
+    setPos((current) => clampPos(current.left, current.bottom));
+    const onResize = () => setPos((current) => clampPos(current.left, current.bottom));
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [clampPos]);
+
+  useEffect(() => {
+    try { localStorage.setItem(GOD_MODE_POSITION_KEY, JSON.stringify(pos)); } catch { /* noop */ }
+  }, [pos]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [open]);
 
   useEffect(() => {
     const onPointerMove = (e: PointerEvent) => {
@@ -127,6 +163,12 @@ export const ZoeGodModeScanPanel: React.FC = () => {
             setOpen(true);
           }
         }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            setOpen(true);
+          }
+        }}
         onPointerDown={(e) => {
           // Left button only.
           if (e.button !== 0) return;
@@ -141,9 +183,12 @@ export const ZoeGodModeScanPanel: React.FC = () => {
           };
         }}
         style={{ left: pos.left, bottom: pos.bottom }}
-        className="fixed z-[9997] flex items-center gap-1.5 rounded-full bg-black/70 backdrop-blur border border-fuchsia-400/40 text-fuchsia-200 hover:bg-black/85 hover:border-fuchsia-300/60 px-3 py-1.5 text-[11px] font-mono shadow-lg pointer-events-auto cursor-move select-none touch-none"
+        className="fixed z-[9997] flex items-center gap-1.5 rounded-full bg-black/70 backdrop-blur border border-fuchsia-400/40 text-fuchsia-200 hover:bg-black/85 hover:border-fuchsia-300/60 px-3 py-1.5 text-[11px] font-mono shadow-lg pointer-events-auto cursor-move select-none touch-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fuchsia-200 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
         title="Drag to reposition. Tap to open Zoe God Mode scan."
-        aria-label="Open Zoe God Mode platform scan (draggable)"
+        aria-label="Open Zoe God Mode platform scan. Draggable trigger."
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-controls="zoe-godmode-scan-dialog"
       >
         <span className="text-sm leading-none">🛰</span>
         <span>god-mode</span>
@@ -152,6 +197,10 @@ export const ZoeGodModeScanPanel: React.FC = () => {
 
       {open && (
         <div
+          id="zoe-godmode-scan-dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="zoe-godmode-scan-title"
           className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 font-mono"
           onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}
         >
@@ -159,7 +208,7 @@ export const ZoeGodModeScanPanel: React.FC = () => {
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-gradient-to-r from-fuchsia-500/10 to-cyan-500/10">
               <div>
-                <div className="text-sm font-semibold text-fuchsia-200">🛰 Zoe God Mode — Platform Scan</div>
+                <div id="zoe-godmode-scan-title" className="text-sm font-semibold text-fuchsia-200">🛰 Zoe God Mode — Platform Scan</div>
                 <div className="text-[10px] opacity-60">End-to-end check across browser, cloud, AI, hands-free, runtime</div>
               </div>
               <div className="flex items-center gap-2">
@@ -168,6 +217,7 @@ export const ZoeGodModeScanPanel: React.FC = () => {
                   onClick={() => { void startScan(); }}
                   disabled={running}
                   className={`text-[11px] px-2.5 py-1 rounded border ${running ? 'bg-amber-500/20 border-amber-400/40 text-amber-200' : 'bg-fuchsia-500/20 border-fuchsia-400/40 text-fuchsia-100 hover:bg-fuchsia-500/30'}`}
+                  aria-label={running ? 'Zoe God Mode scan running' : report ? 'Run Zoe God Mode scan again' : 'Run Zoe God Mode scan'}
                 >
                   {running ? '⏳ scanning…' : report ? '↻ re-scan' : '▶ run scan'}
                 </button>
@@ -175,6 +225,7 @@ export const ZoeGodModeScanPanel: React.FC = () => {
                   type="button"
                   onClick={() => setOpen(false)}
                   className="text-[11px] px-2 py-1 rounded border border-white/15 hover:bg-white/10"
+                  aria-label="Close Zoe God Mode scan dialog"
                 >
                   close
                 </button>
@@ -194,10 +245,10 @@ export const ZoeGodModeScanPanel: React.FC = () => {
                       <span className="opacity-50">{report.durationMs}ms</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <button type="button" onClick={() => { void copyReport(); }} className="text-[10px] px-1.5 py-0.5 rounded border border-white/15 hover:bg-white/10">
+                      <button type="button" onClick={() => { void copyReport(); }} className="text-[10px] px-1.5 py-0.5 rounded border border-white/15 hover:bg-white/10" aria-label="Copy Zoe God Mode scan report as Markdown">
                         {copied ? '✓ copied' : 'copy md'}
                       </button>
-                      <button type="button" onClick={downloadJson} className="text-[10px] px-1.5 py-0.5 rounded border border-white/15 hover:bg-white/10">
+                      <button type="button" onClick={downloadJson} className="text-[10px] px-1.5 py-0.5 rounded border border-white/15 hover:bg-white/10" aria-label="Download Zoe God Mode scan report JSON">
                         json
                       </button>
                     </div>
