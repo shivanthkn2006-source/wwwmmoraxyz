@@ -1795,22 +1795,20 @@ function ZoeInfinityUnlocked() {
     console.log('[ZoeInfinity] 🎵 Voices initialized (once)');
   }, [isVisualsReady, genesisEffects]);
 
-  // Enable voice commands (run as soon as command runtime is available)
+  // Keep the legacy always-on voice-command recognizer disabled in Zoe Infinity.
+  // Infinity already owns wake-word + manual voice input; starting this second
+  // SpeechRecognition instance causes desktop/mobile mic collisions where
+  // listening/speaking wakes for a second, then falls back.
   useEffect(() => {
-    if (!voiceEnabled) return;
-    if (hasVoiceCommandsEnabled.current) return;
-
     const commands = rawIntegration?.voiceCommands ?? integration.voiceCommands;
-    if (!commands?.enable) return;
-
-    hasVoiceCommandsEnabled.current = true;
-    commands.enable();
-    console.log('[ZoeInfinity] 🎤 Voice commands enabled');
+    commands?.disable?.();
+    hasVoiceCommandsEnabled.current = false;
+    console.log('[ZoeInfinity] 🎤 Legacy voice command recognizer disabled; Infinity voice owns mic');
 
     return () => {
       commands.disable?.();
     };
-  }, [voiceEnabled, rawIntegration, integration]);
+  }, [rawIntegration, integration]);
 
   // Fire Genesis unlock effects (Stage 2+) - RUNS ONCE
   useEffect(() => {
