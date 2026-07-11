@@ -116,7 +116,12 @@ export const ZoeHeartStatus = memo(function ZoeHeartStatus({
           <svg
             viewBox="0 0 64 64"
             className="relative h-8 w-8"
-            style={{ animation: `zoe-heart-beat ${heart.beatDuration}s ease-in-out infinite` }}
+            style={{
+              animationName: 'zoe-heart-beat',
+              animationDuration: `${heart.beatDuration}s`,
+              animationTimingFunction: 'ease-in-out',
+              animationIterationCount: 'infinite',
+            }}
             aria-hidden="true"
           >
             <defs>
@@ -168,7 +173,10 @@ export const ZoeHeartStatus = memo(function ZoeHeartStatus({
                     height: `${6 + (height * 6)}px`,
                     background: heart.color,
                     boxShadow: `0 0 8px ${heart.glow}`,
-                    animation: `zoe-heart-meter ${Math.max(0.92, heart.beatDuration * (1.45 + (index * 0.08)))}s ease-in-out infinite`,
+                    animationName: 'zoe-heart-meter',
+                    animationDuration: `${Math.max(0.92, heart.beatDuration * (1.45 + (index * 0.08)))}s`,
+                    animationTimingFunction: 'ease-in-out',
+                    animationIterationCount: 'infinite',
                     animationDelay: `${index * 0.08}s`,
                     opacity: 0.95 - (index * 0.1),
                   }}
