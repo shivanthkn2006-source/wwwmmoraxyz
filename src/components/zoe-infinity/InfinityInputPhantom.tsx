@@ -12,6 +12,8 @@ import {
   isSpeechRecognitionSupported,
 } from '@/utils/micPermissionManager';
 import { EmojiPicker } from './EmojiPicker';
+import { findHandsFreePhrase, HANDS_FREE_STOP_PHRASES } from '@/features/zoe-handsfree/phrases';
+import { zoeDebugLog } from '@/features/zoe-handsfree/debugBus';
 import {
   isDeepResearchEnabled,
   setDeepResearchEnabled,
@@ -73,6 +75,7 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
   const restartTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const handsFreeSilenceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const handsFreeRef = useRef(handsFreeMode);
   const recognitionSessionRef = useRef(0);
   const manualStopSessionRef = useRef<number | null>(null);
@@ -179,6 +182,10 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
       clearTimeout(restartTimeoutRef.current);
       restartTimeoutRef.current = null;
     }
+    if (handsFreeSilenceTimeoutRef.current) {
+      clearTimeout(handsFreeSilenceTimeoutRef.current);
+      handsFreeSilenceTimeoutRef.current = null;
+    }
 
     if (recognitionRef.current) {
       try { recognitionRef.current.stop(); } catch { /* */ }
@@ -210,21 +217,59 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
     recognition.maxAlternatives = 1;
 
     let finalTranscript = '';
+    let latestTranscript = '';
+
+    const disableHandsFreeAndStop = (reason: string) => {
+      zoeDebugLog('voice', reason);
+      handsFreeRef.current = false;
+      setIsHandsFree(false);
+      onHandsFreeToggle?.(false);
+      if (handsFreeSilenceTimeoutRef.current) {
+        clearTimeout(handsFreeSilenceTimeoutRef.current);
+        handsFreeSilenceTimeoutRef.current = null;
+      }
+      try { recognition.stop(); } catch { /* noop */ }
+    };
+
+    const armHandsFreeSilenceTimeout = () => {
+      if (!handsFreeRef.current) return;
+      if (handsFreeSilenceTimeoutRef.current) clearTimeout(handsFreeSilenceTimeoutRef.current);
+      handsFreeSilenceTimeoutRef.current = setTimeout(() => {
+        if (sessionId !== recognitionSessionRef.current || !handsFreeRef.current) return;
+        disableHandsFreeAndStop('hands-free silence timeout → stopping mic');
+      }, latestTranscript.trim() ? 6500 : 8500);
+    };
 
     recognition.onstart = () => {
       if (sessionId !== recognitionSessionRef.current) return;
       setIsListening(true);
       onVoiceStart?.();
       window.dispatchEvent(new CustomEvent('zoe-voice-system-activated'));
+      if (activeHandsFree) armHandsFreeSilenceTimeout();
     };
 
     recognition.onresult = (event: any) => {
       if (sessionId !== recognitionSessionRef.current) return;
+      let interimTranscript = '';
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const result = event.results[i];
         if (result?.isFinal) {
           finalTranscript += `${result[0]?.transcript || ''} `;
+        } else {
+          interimTranscript += `${result[0]?.transcript || ''} `;
         }
+      }
+      latestTranscript = `${finalTranscript} ${interimTranscript}`.trim();
+
+      if (activeHandsFree) {
+        const stopPhrase = findHandsFreePhrase(latestTranscript, HANDS_FREE_STOP_PHRASES);
+        if (stopPhrase) {
+          finalTranscript = '';
+          latestTranscript = '';
+          disableHandsFreeAndStop(`hands-free stop phrase (${stopPhrase}) → stopping mic`);
+          return;
+        }
+        armHandsFreeSilenceTimeout();
       }
     };
 
@@ -232,6 +277,7 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
       if (sessionId !== recognitionSessionRef.current) return;
       const err = String(event?.error || 'unknown');
       const shouldRestart = handsFreeRef.current && err !== 'aborted' && err !== 'not-allowed' && err !== 'service-not-allowed';
+      zoeDebugLog('error', `voice input error: ${err}`);
       if (shouldRestart) {
         restartTimeoutRef.current = setTimeout(() => {
           if (handsFreeRef.current) startListening(true);
@@ -251,6 +297,10 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
         return;
       }
       const cleaned = finalTranscript.trim();
+      if (handsFreeSilenceTimeoutRef.current) {
+        clearTimeout(handsFreeSilenceTimeoutRef.current);
+        handsFreeSilenceTimeoutRef.current = null;
+      }
       if (cleaned) onVoiceEnd?.(cleaned);
       if (handsFreeRef.current) {
         restartTimeoutRef.current = setTimeout(() => {
@@ -270,12 +320,16 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
       onVoiceStop?.();
       toast.error('Could not start voice input');
     }
-  }, [onVoiceStart, onVoiceEnd, onVoiceStop]);
+  }, [onVoiceStart, onVoiceEnd, onVoiceStop, onHandsFreeToggle]);
 
   const stopListening = useCallback(() => {
     if (restartTimeoutRef.current) {
       clearTimeout(restartTimeoutRef.current);
       restartTimeoutRef.current = null;
+    }
+    if (handsFreeSilenceTimeoutRef.current) {
+      clearTimeout(handsFreeSilenceTimeoutRef.current);
+      handsFreeSilenceTimeoutRef.current = null;
     }
     manualStopSessionRef.current = recognitionSessionRef.current;
     if (recognitionRef.current) {
@@ -285,6 +339,12 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
     setIsListening(false);
     onVoiceStop?.();
   }, [onVoiceStop]);
+
+  useEffect(() => {
+    if (!handsFreeMode && isListening && handsFreeRef.current === false) {
+      stopListening();
+    }
+  }, [handsFreeMode, isListening, stopListening]);
 
   const toggleHandsFree = useCallback(() => {
     const newState = !isHandsFree;
@@ -302,6 +362,7 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
   useEffect(() => {
     return () => {
       if (restartTimeoutRef.current) clearTimeout(restartTimeoutRef.current);
+      if (handsFreeSilenceTimeoutRef.current) clearTimeout(handsFreeSilenceTimeoutRef.current);
       if (recognitionRef.current) recognitionRef.current.stop();
     };
   }, []);
