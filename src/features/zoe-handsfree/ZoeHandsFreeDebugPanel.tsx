@@ -12,6 +12,7 @@ import {
   type ZoeDebugEntry,
   type ZoeHandsFreeDebugState,
 } from './debugBus';
+import { runHandsFreeSelfTest, type SelfTestProgress, type SelfTestReport } from './handsFreeSelfTest';
 
 export interface ZoeHandsFreeDebugPanelProps {
   handsFreeMode: boolean;
