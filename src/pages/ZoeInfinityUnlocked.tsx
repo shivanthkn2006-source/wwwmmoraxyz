@@ -3943,6 +3943,9 @@ If you realize you made a factual error, repeated yourself, or gave contradictor
         voicePaused={isProcessing || isSpeaking}
       />
 
+      {/* God-mode end-to-end platform scan (bottom-left floating trigger) */}
+      <ZoeGodModeScanPanel />
+
       {/* Hands-free debug + status panel (bottom-left, collapsible) */}
       <ZoeHandsFreeDebugPanel
         handsFreeMode={handsFreeMode}
