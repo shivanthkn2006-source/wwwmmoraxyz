@@ -87,11 +87,16 @@ export const useWakeWord = ({ wakeWords, onWakeWordDetected, onError, enabled }:
       const reason = permissionState === 'denied'
         ? 'microphone permission denied — enable mic access, then tap the mic once'
         : 'microphone permission needed — tap the mic once to enable wake words';
-      if (lastBlockedReasonRef.current !== reason) {
+      if (permissionState === 'denied' && lastBlockedReasonRef.current !== reason) {
         onErrorRef.current?.(reason);
-        lastBlockedReasonRef.current = reason;
       }
-      zoeDebugSetState({ hfState: 'error', micPermission: permissionState, lastStopReason: reason });
+      lastBlockedReasonRef.current = reason;
+      zoeDebugSetState({
+        hfState: permissionState === 'denied' ? 'error' : 'off',
+        micPermission: permissionState,
+        lastStopReason: reason,
+        lastError: permissionState === 'denied' ? reason : null,
+      });
       setIsListening(false);
       isListeningRef.current = false;
       hasStartedRef.current = false;
