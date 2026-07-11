@@ -42,7 +42,7 @@ export const ZoeHandsFreeDebugPanel: React.FC<ZoeHandsFreeDebugPanelProps> = ({
         if (typeof parsed.x === 'number' && typeof parsed.y === 'number') return parsed as { x: number; y: number };
       }
     } catch { /* noop */ }
-    return { x: 12, y: Math.max(12, window.innerHeight - 54) };
+    return { x: 12, y: Math.max(12, window.innerHeight - 110) };
   });
   const dragRef = useRef<{ startX: number; startY: number; originX: number; originY: number; moved: boolean; pointerId: number } | null>(null);
 
