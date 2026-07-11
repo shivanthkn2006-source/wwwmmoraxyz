@@ -3949,9 +3949,24 @@ If you realize you made a factual error, repeated yourself, or gave contradictor
             return;
           }
           // MOBILE-CRITICAL: start recognition directly from this tap path.
-          // Awaiting getUserMedia first breaks the gesture chain on mobile and
-          // causes the mic/listening state to wake for a moment, then fall back.
+          // Do not await anything before dispatching the start event; that breaks
+          // the gesture chain on mobile and causes the mic to wake then fall back.
           zoeDebugLog('info', 'manual HF start: starting recognition from tap');
+          try {
+            const streamPromise = navigator.mediaDevices?.getUserMedia?.({ audio: true });
+            if (streamPromise) {
+              void streamPromise
+                .then((stream) => {
+                  stream.getTracks().forEach((t) => t.stop());
+                  window.dispatchEvent(new CustomEvent('zoe-mic-permission-changed', { detail: { state: 'granted' } }));
+                })
+                .catch((err: any) => {
+                  zoeDebugLog('error', `manual HF mic prime failed (${err?.name || err?.message || 'unknown'})`);
+                });
+            }
+          } catch (err: any) {
+            zoeDebugLog('error', `manual HF mic prime failed (${err?.name || err?.message || 'unknown'})`);
+          }
           setHandsFreeMode(true);
           setWakeWordActive(true);
           try { window.dispatchEvent(new CustomEvent('zoe-start-handsfree-listening')); } catch { /* noop */ }
