@@ -8,6 +8,7 @@ import {
   releaseSpeechRecognition,
   getActiveSpeechRecognitionOwner,
 } from '@/utils/micPermissionManager';
+import { zoeDebugSetState, zoeDebugSpeechError, zoeDebugSpeechStart, zoeDebugSpeechStop } from '@/features/zoe-handsfree/debugBus';
 
 interface WakeWordOptions {
   wakeWords: string[];
@@ -61,12 +62,14 @@ export const useWakeWord = ({ wakeWords, onWakeWordDetected, onError, enabled }:
     }
     
     if (!isSpeechRecognitionSupported()) {
+      zoeDebugSetState({ hfState: 'error', lastError: 'SpeechRecognition unsupported' });
       onErrorRef.current?.('Speech recognition is not supported in this browser');
       return;
     }
 
     const activeOwner = getActiveSpeechRecognitionOwner();
     if (activeOwner && activeOwner !== 'wake-word') {
+      zoeDebugSpeechStop('wake-word', `blocked by active owner: ${activeOwner}`);
       setIsListening(false);
       isListeningRef.current = false;
       hasStartedRef.current = false;
@@ -82,6 +85,7 @@ export const useWakeWord = ({ wakeWords, onWakeWordDetected, onError, enabled }:
         onErrorRef.current?.(reason);
         lastBlockedReasonRef.current = reason;
       }
+      zoeDebugSetState({ hfState: 'error', micPermission: permissionState, lastStopReason: reason });
       setIsListening(false);
       isListeningRef.current = false;
       hasStartedRef.current = false;
@@ -109,6 +113,8 @@ export const useWakeWord = ({ wakeWords, onWakeWordDetected, onError, enabled }:
       for (const wakeWord of sortedWakeWords) {
         if (transcriptIncludesWakePhrase(transcript, wakeWord)) {
           console.log('[WakeWord] Detected:', wakeWord);
+          zoeDebugSetState({ hfState: 'wake-detected' });
+          zoeDebugSpeechStop('wake-word', `wake phrase detected: ${wakeWord}`);
           isListeningRef.current = false;
           hasStartedRef.current = false;
           setIsListening(false);
@@ -122,6 +128,7 @@ export const useWakeWord = ({ wakeWords, onWakeWordDetected, onError, enabled }:
 
     recognition.onerror = (event: any) => {
       if (event.error === 'aborted') {
+        zoeDebugSpeechError('wake-word', 'aborted', 'handoff or explicit stop');
         setIsListening(false);
         isListeningRef.current = false;
         hasStartedRef.current = false;
@@ -129,8 +136,12 @@ export const useWakeWord = ({ wakeWords, onWakeWordDetected, onError, enabled }:
         releaseSpeechRecognition('wake-word', recognition);
         return;
       }
-      if (event.error === 'no-speech') return;
+      if (event.error === 'no-speech') {
+        zoeDebugSpeechError('wake-word', 'no-speech', 'silent wake segment ended');
+        return;
+      }
       console.error('[WakeWord] Error:', event.error);
+      zoeDebugSpeechError('wake-word', String(event.error || 'unknown'), 'wake-word recognizer error');
       onErrorRef.current?.(String(event.error || 'unknown'));
       setIsListening(false);
       isListeningRef.current = false;
@@ -143,6 +154,7 @@ export const useWakeWord = ({ wakeWords, onWakeWordDetected, onError, enabled }:
       // Mark as stopped - micPermissionManager handles keepAlive restarts
       hasStartedRef.current = false;
       recognitionRef.current = null;
+      zoeDebugSpeechStop('wake-word', enabledRef.current ? 'native onend · waiting for next wake segment' : 'native onend · disabled');
       releaseSpeechRecognition('wake-word', recognition);
       if (!isListeningRef.current) {
         setIsListening(false);
@@ -151,6 +163,8 @@ export const useWakeWord = ({ wakeWords, onWakeWordDetected, onError, enabled }:
 
     try {
       claimSpeechRecognition('wake-word', recognition);
+      zoeDebugSetState({ hfState: 'awaiting-wake', micPermission: 'granted' });
+      zoeDebugSpeechStart('wake-word', 'wake-word detection requested');
       recognition.start();
       recognitionRef.current = recognition;
       hasStartedRef.current = true;
@@ -159,6 +173,7 @@ export const useWakeWord = ({ wakeWords, onWakeWordDetected, onError, enabled }:
       console.log('[WakeWord] Detection started');
     } catch (e) {
       console.error('[WakeWord] Failed to start:', e);
+      zoeDebugSpeechError('wake-word', e instanceof Error ? e.message : 'Failed to start wake word detection', 'recognition.start threw');
       onErrorRef.current?.(e instanceof Error ? e.message : 'Failed to start wake word detection');
       hasStartedRef.current = false;
       recognitionRef.current = null;
@@ -172,6 +187,7 @@ export const useWakeWord = ({ wakeWords, onWakeWordDetected, onError, enabled }:
     isListeningRef.current = false;
     hasStartedRef.current = false;
     setIsListening(false);
+    zoeDebugSpeechStop('wake-word', 'stopWakeWordDetection called');
     stopSpeechRecognition(recognitionRef.current);
     releaseSpeechRecognition('wake-word', recognitionRef.current);
     recognitionRef.current = null;
