@@ -21,6 +21,7 @@ export const SMITH_WAKE_PHRASES = [
 ];
 
 export const HANDS_FREE_STOP_PHRASES = [
+  'stop', 'quiet', 'sleep', 'cancel', 'pause', 'end', 'exit', 'dismiss', 'be quiet', 'shut up',
   'zoe stop', 'stop zoe', 'zoe end', 'end zoe', 'zoe pause', 'pause zoe',
   'zoe quiet', 'zoe silent', 'zoe sleep', 'go to sleep zoe', 'zoe exit',
   'zoe close', 'zoe dismiss', 'zoe cancel', 'zoe shut up', 'zoe be quiet',

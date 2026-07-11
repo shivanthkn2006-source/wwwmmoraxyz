@@ -108,12 +108,11 @@ export const ZoeHandsFreeDebugPanel: React.FC<ZoeHandsFreeDebugPanelProps> = ({
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
-        className="relative flex h-8 w-8 items-center justify-center rounded-full bg-black/70 backdrop-blur border border-white/10 shadow-lg text-[9px] text-white/90 hover:bg-black/80 cursor-grab active:cursor-grabbing"
+        className="relative flex h-6 w-6 items-center justify-center rounded-full bg-black/60 backdrop-blur border border-white/10 shadow-lg text-[11px] text-white/90 hover:bg-black/80 cursor-grab active:cursor-grabbing"
         aria-label={`Zoe hands-free status: ${status.label}. Drag to move, tap to open debug.`}
         title={`HF · ${status.label}`}
       >
-        <span className="tracking-wide">HF</span>
-        <span className={`absolute right-0.5 top-0.5 h-2 w-2 rounded-full ${status.color} ${handsFreeMode || wakeWordActive || isListening ? 'animate-pulse' : ''}`} />
+        <span className={`h-2.5 w-2.5 rounded-full ${status.color} ${handsFreeMode || wakeWordActive || isListening || isProcessing || isSpeaking ? 'animate-pulse' : ''}`} />
       </button>
 
       {open && (
