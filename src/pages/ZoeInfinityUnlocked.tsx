@@ -55,6 +55,7 @@ import { useArtifactGenerator } from '@/hooks/useArtifactGenerator';
 import { useWakeWord } from '@/hooks/useWakeWord';
 import { zoeDebugLog, zoeDebugSetState } from '@/features/zoe-handsfree/debugBus';
 import { ZoeHandsFreeDebugPanel } from '@/features/zoe-handsfree/ZoeHandsFreeDebugPanel';
+import { ZoeGodModeScanPanel } from '@/features/zoe-godmode/ZoeGodModeScanPanel';
 import { ALL_HANDS_FREE_PHRASES, HANDS_FREE_STOP_PHRASES, findHandsFreePhrase, normalizeVoicePhrase } from '@/features/zoe-handsfree/phrases';
 import { useGenesisConversation } from '@/hooks/useGenesisConversation';
 import { addZoeInfinityMarker, isZoeInfinityMessage, stripZoeInfinityMarker } from '@/utils/conversationNamespaces';
@@ -3941,6 +3942,9 @@ If you realize you made a factual error, repeated yourself, or gave contradictor
         onHandsFreeToggle={setHandsFreeMode}
         voicePaused={isProcessing || isSpeaking}
       />
+
+      {/* God-mode end-to-end platform scan (bottom-left floating trigger) */}
+      <ZoeGodModeScanPanel />
 
       {/* Hands-free debug + status panel (bottom-left, collapsible) */}
       <ZoeHandsFreeDebugPanel
