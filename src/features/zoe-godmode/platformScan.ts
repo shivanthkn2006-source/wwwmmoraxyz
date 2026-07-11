@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import { supabase } from '@/integrations/supabase/client';
+import { subscribeZoeDebugState, type ZoeHandsFreeDebugState } from '@/features/zoe-handsfree/debugBus';
 import { getRuntimeIssues, type RuntimeIssue } from './runtimeIssueCollector';
 
 export type CheckStatus = 'pass' | 'warn' | 'fail' | 'skip';
