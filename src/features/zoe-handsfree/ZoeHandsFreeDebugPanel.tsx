@@ -4,7 +4,7 @@
 // Additive UI only — does not touch existing chrome.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { subscribeZoeDebug, clearZoeDebug, type ZoeDebugEntry } from './debugBus';
 
 export interface ZoeHandsFreeDebugPanelProps {
@@ -33,8 +33,61 @@ export const ZoeHandsFreeDebugPanel: React.FC<ZoeHandsFreeDebugPanelProps> = ({
 }) => {
   const [entries, setEntries] = useState<ZoeDebugEntry[]>([]);
   const [open, setOpen] = useState(false);
+  const [position, setPosition] = useState(() => {
+    if (typeof window === 'undefined') return { x: 12, y: 12 };
+    try {
+      const saved = localStorage.getItem('zoe-hf-debug-position');
+      if (saved) {
+        const parsed = JSON.parse(saved) as { x?: number; y?: number };
+        if (typeof parsed.x === 'number' && typeof parsed.y === 'number') return parsed as { x: number; y: number };
+      }
+    } catch { /* noop */ }
+    return { x: 12, y: Math.max(12, window.innerHeight - 110) };
+  });
+  const dragRef = useRef<{ startX: number; startY: number; originX: number; originY: number; moved: boolean; pointerId: number } | null>(null);
 
   useEffect(() => subscribeZoeDebug(setEntries), []);
+
+  useEffect(() => {
+    try { localStorage.setItem('zoe-hf-debug-position', JSON.stringify(position)); } catch { /* noop */ }
+  }, [position]);
+
+  const clampPosition = useCallback((x: number, y: number) => {
+    if (typeof window === 'undefined') return { x, y };
+    return {
+      x: Math.min(Math.max(6, x), Math.max(6, window.innerWidth - 40)),
+      y: Math.min(Math.max(6, y), Math.max(6, window.innerHeight - 40)),
+    };
+  }, []);
+
+  const handlePointerDown = useCallback((event: React.PointerEvent<HTMLButtonElement>) => {
+    dragRef.current = {
+      startX: event.clientX,
+      startY: event.clientY,
+      originX: position.x,
+      originY: position.y,
+      moved: false,
+      pointerId: event.pointerId,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }, [position.x, position.y]);
+
+  const handlePointerMove = useCallback((event: React.PointerEvent<HTMLButtonElement>) => {
+    const drag = dragRef.current;
+    if (!drag) return;
+    const dx = event.clientX - drag.startX;
+    const dy = event.clientY - drag.startY;
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) drag.moved = true;
+    setPosition(clampPosition(drag.originX + dx, drag.originY + dy));
+  }, [clampPosition]);
+
+  const handlePointerUp = useCallback((event: React.PointerEvent<HTMLButtonElement>) => {
+    const drag = dragRef.current;
+    if (!drag) return;
+    try { event.currentTarget.releasePointerCapture(drag.pointerId); } catch { /* noop */ }
+    dragRef.current = null;
+    if (!drag.moved) setOpen((v) => !v);
+  }, []);
 
   const status =
     isSpeaking ? { label: 'SPEAKING', color: 'bg-purple-500' }
@@ -46,16 +99,21 @@ export const ZoeHandsFreeDebugPanel: React.FC<ZoeHandsFreeDebugPanelProps> = ({
     : { label: 'OFFLINE', color: 'bg-slate-600' };
 
   return (
-    <div className="fixed bottom-3 left-3 z-[9998] pointer-events-auto select-none font-mono">
+    <div
+      className="fixed z-[9998] pointer-events-auto select-none font-mono"
+      style={{ left: position.x, top: position.y, touchAction: 'none' }}
+    >
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-black/70 backdrop-blur border border-white/10 shadow-lg text-[10px] text-white/90 hover:bg-black/80"
-        aria-label="Toggle Zoe hands-free debug"
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        className="relative flex h-8 w-8 items-center justify-center rounded-full bg-black/70 backdrop-blur border border-white/10 shadow-lg text-[9px] text-white/90 hover:bg-black/80 cursor-grab active:cursor-grabbing"
+        aria-label={`Zoe hands-free status: ${status.label}. Drag to move, tap to open debug.`}
+        title={`HF · ${status.label}`}
       >
-        <span className={`w-2 h-2 rounded-full ${status.color} ${handsFreeMode || wakeWordActive ? 'animate-pulse' : ''}`} />
-        <span className="tracking-wide">HF · {status.label}</span>
-        <span className="opacity-50">{open ? '▾' : '▸'}</span>
+        <span className="tracking-wide">HF</span>
+        <span className={`absolute right-0.5 top-0.5 h-2 w-2 rounded-full ${status.color} ${handsFreeMode || wakeWordActive || isListening ? 'animate-pulse' : ''}`} />
       </button>
 
       {open && (
