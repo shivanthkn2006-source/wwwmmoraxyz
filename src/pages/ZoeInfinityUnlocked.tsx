@@ -53,7 +53,7 @@ import { useZoeInfinityIntegration } from '@/hooks/useZoeInfinityIntegration';
 import { useDocumentXray } from '@/hooks/useDocumentXray';
 import { useArtifactGenerator } from '@/hooks/useArtifactGenerator';
 import { useWakeWord } from '@/hooks/useWakeWord';
-import { zoeDebugLog } from '@/features/zoe-handsfree/debugBus';
+import { zoeDebugLog, zoeDebugSetState } from '@/features/zoe-handsfree/debugBus';
 import { ZoeHandsFreeDebugPanel } from '@/features/zoe-handsfree/ZoeHandsFreeDebugPanel';
 import { ALL_HANDS_FREE_PHRASES, HANDS_FREE_STOP_PHRASES, findHandsFreePhrase, normalizeVoicePhrase } from '@/features/zoe-handsfree/phrases';
 import { useGenesisConversation } from '@/hooks/useGenesisConversation';
@@ -1506,6 +1506,7 @@ function ZoeInfinityUnlocked() {
 
   const stopHandsFreeMode = useCallback((reason: string) => {
     zoeDebugLog('wake', `${reason} → exiting hands-free`);
+    zoeDebugSetState({ hfState: 'off', lastStopReason: reason });
     setHandsFreeMode(false);
     setWakeWordActive(false);
     setIsManualVoiceInput(false);
@@ -1526,6 +1527,7 @@ function ZoeInfinityUnlocked() {
       }
 
       zoeDebugLog('wake', `wake word detected (${wakeWord}) → entering hands-free`);
+      zoeDebugSetState({ hfState: 'wake-detected', lastStartReason: `wake word detected: ${wakeWord}` });
       setHandsFreeMode(true);
       setWakeWordActive(true);
       // Keep the wake pulse visible briefly; hands-free keeps listening after.
@@ -1546,19 +1548,6 @@ function ZoeInfinityUnlocked() {
     window.addEventListener('zoe-handsfree-stop-requested', handleHandsFreeStop);
     return () => window.removeEventListener('zoe-handsfree-stop-requested', handleHandsFreeStop);
   }, [stopHandsFreeMode]);
-
-  // Auto mic timeout: if hands-free is on and nothing is happening, close after silence
-  useEffect(() => {
-    if (!handsFreeMode) return;
-    if (isProcessing || isSpeaking || isManualVoiceInput || wakeWordActive) return;
-    const timer = setTimeout(() => {
-      zoeDebugLog('info', 'hands-free idle timeout (12s silence) → auto-exit');
-      setHandsFreeMode(false);
-      setWakeWordActive(false);
-    }, 12000);
-    return () => clearTimeout(timer);
-  }, [handsFreeMode, isProcessing, isSpeaking, isManualVoiceInput, wakeWordActive]);
-
 
   // ═══════════════════════════════════════════════════════════════════════════
   // PHASE 7: FESTIVAL & BIRTHDAY GREETING — Runs once per user per day (hardened dedup)
@@ -3958,15 +3947,18 @@ If you realize you made a factual error, repeated yourself, or gave contradictor
               void streamPromise
                 .then((stream) => {
                   stream.getTracks().forEach((t) => t.stop());
+                  zoeDebugSetState({ micPermission: 'granted' });
                   window.dispatchEvent(new CustomEvent('zoe-mic-permission-changed', { detail: { state: 'granted' } }));
                 })
                 .catch((err: any) => {
+                  zoeDebugSetState({ micPermission: err?.name === 'NotAllowedError' ? 'denied' : 'prompt', lastError: `manual HF mic prime failed (${err?.name || err?.message || 'unknown'})` });
                   zoeDebugLog('error', `manual HF mic prime failed (${err?.name || err?.message || 'unknown'})`);
                 });
             }
           } catch (err: any) {
             zoeDebugLog('error', `manual HF mic prime failed (${err?.name || err?.message || 'unknown'})`);
           }
+          zoeDebugSetState({ hfState: 'starting', lastStartReason: 'manual HF start button' });
           setHandsFreeMode(true);
           setWakeWordActive(true);
           try { window.dispatchEvent(new CustomEvent('zoe-start-handsfree-listening')); } catch { /* noop */ }
