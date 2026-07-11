@@ -1510,6 +1510,7 @@ function ZoeInfinityUnlocked() {
     setWakeWordActive(false);
     setIsManualVoiceInput(false);
     setIsVoiceMicListening(false);
+    try { window.dispatchEvent(new CustomEvent('zoe-stop-handsfree-listening', { detail: { reason } })); } catch { /* noop */ }
     try { stopAllVoices(); } catch { /* noop */ }
     try { stopHybridVoice(); } catch { /* noop */ }
   }, [stopHybridVoice]);
@@ -3933,6 +3934,7 @@ If you realize you made a factual error, repeated yourself, or gave contradictor
         onClearUpload={isHeavyReady ? documentXray.clearActiveDocument : undefined}
         handsFreeMode={handsFreeMode}
         onHandsFreeToggle={setHandsFreeMode}
+        voicePaused={isProcessing || isSpeaking}
       />
 
       {/* Hands-free debug + status panel (bottom-left, collapsible) */}
@@ -3948,21 +3950,13 @@ If you realize you made a factual error, repeated yourself, or gave contradictor
             stopHandsFreeMode('manual toggle off');
             return;
           }
-          // MOBILE-CRITICAL: call getUserMedia inside the tap gesture so
-          // Chrome Android / iOS Safari actually prompt for mic permission.
-          try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            stream.getTracks().forEach((t) => t.stop());
-            zoeDebugLog('info', 'manual HF start: mic permission granted');
-            try {
-              window.dispatchEvent(new CustomEvent('zoe-mic-permission-changed', { detail: { state: 'granted' } }));
-            } catch { /* noop */ }
-          } catch (err: any) {
-            zoeDebugLog('error', `manual HF start: mic denied (${err?.name || err?.message || 'unknown'})`);
-            return;
-          }
+          // MOBILE-CRITICAL: start recognition directly from this tap path.
+          // Awaiting getUserMedia first breaks the gesture chain on mobile and
+          // causes the mic/listening state to wake for a moment, then fall back.
+          zoeDebugLog('info', 'manual HF start: starting recognition from tap');
           setHandsFreeMode(true);
           setWakeWordActive(true);
+          try { window.dispatchEvent(new CustomEvent('zoe-start-handsfree-listening')); } catch { /* noop */ }
           setTimeout(() => setWakeWordActive(false), 3000);
         }}
       />
