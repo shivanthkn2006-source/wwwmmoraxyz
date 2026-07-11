@@ -3914,7 +3914,7 @@ If you realize you made a factual error, repeated yourself, or gave contradictor
       <InfinityInputPhantom
         onSend={handleSend}
         mood={mood}
-        disabled={isProcessing}
+        disabled={isProcessing && !handsFreeMode}
         voiceEnabled={voiceEnabled}
         wakeWordActive={wakeWordActive}
         onVoiceStart={handleVoiceStart}
