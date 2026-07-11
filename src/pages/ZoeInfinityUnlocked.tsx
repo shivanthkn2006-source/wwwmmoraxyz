@@ -55,6 +55,7 @@ import { useArtifactGenerator } from '@/hooks/useArtifactGenerator';
 import { useWakeWord } from '@/hooks/useWakeWord';
 import { zoeDebugLog, zoeDebugSetState } from '@/features/zoe-handsfree/debugBus';
 import { ZoeHandsFreeDebugPanel } from '@/features/zoe-handsfree/ZoeHandsFreeDebugPanel';
+import { ZoeGodModeScanPanel } from '@/features/zoe-godmode/ZoeGodModeScanPanel';
 import { ALL_HANDS_FREE_PHRASES, HANDS_FREE_STOP_PHRASES, findHandsFreePhrase, normalizeVoicePhrase } from '@/features/zoe-handsfree/phrases';
 import { useGenesisConversation } from '@/hooks/useGenesisConversation';
 import { addZoeInfinityMarker, isZoeInfinityMessage, stripZoeInfinityMarker } from '@/utils/conversationNamespaces';
