@@ -1541,6 +1541,24 @@ function ZoeInfinityUnlocked() {
   });
 
   useEffect(() => {
+    zoeDebugSetState({
+      hfState: isSpeaking
+        ? 'speaking'
+        : isProcessing
+          ? 'processing'
+          : wakeWordActive
+            ? 'wake-detected'
+            : (isVoiceMicListening || isManualVoiceInput)
+              ? 'listening'
+              : handsFreeMode
+                ? 'paused'
+                : isWakeListening
+                  ? 'awaiting-wake'
+                  : 'off',
+    });
+  }, [handsFreeMode, isManualVoiceInput, isProcessing, isSpeaking, isVoiceMicListening, isWakeListening, wakeWordActive]);
+
+  useEffect(() => {
     const handleHandsFreeStop = (event: Event) => {
       const reason = (event as CustomEvent<{ reason?: string }>).detail?.reason || 'stop phrase requested';
       stopHandsFreeMode(reason);
