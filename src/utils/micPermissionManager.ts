@@ -16,6 +16,54 @@ const PERMISSION_CACHE_MS = 60000; // Cache for 60 seconds
 // Global AudioContext reference
 let globalAudioContext: AudioContext | null = null;
 
+type SpeechRecognitionOwner = 'wake-word' | 'voice-input' | string;
+
+let activeSpeechRecognition: { owner: SpeechRecognitionOwner; recognition: any } | null = null;
+let speechRecognitionReservedBy: SpeechRecognitionOwner | null = null;
+
+const stopRecognitionInstanceForHandoff = (recognition: any | null) => {
+  if (!recognition) return;
+  try { (recognition as any).__keepAlive = false; } catch { /* noop */ }
+  try { stopRecognitionKeepAlive(recognition); } catch { /* noop */ }
+  try {
+    if (typeof recognition.abort === 'function') recognition.abort();
+    else recognition.stop();
+  } catch { /* noop */ }
+};
+
+export const reserveSpeechRecognition = (owner: SpeechRecognitionOwner): boolean => {
+  speechRecognitionReservedBy = owner;
+  const current = activeSpeechRecognition;
+  if (!current || current.owner === owner) return false;
+
+  stopRecognitionInstanceForHandoff(current.recognition);
+  activeSpeechRecognition = null;
+  return true;
+};
+
+export const claimSpeechRecognition = (owner: SpeechRecognitionOwner, recognition: any): boolean => {
+  const interrupted = reserveSpeechRecognition(owner);
+  activeSpeechRecognition = { owner, recognition };
+  return interrupted;
+};
+
+export const releaseSpeechRecognition = (owner: SpeechRecognitionOwner, recognition?: any | null): void => {
+  if (
+    activeSpeechRecognition?.owner === owner &&
+    (!recognition || activeSpeechRecognition.recognition === recognition)
+  ) {
+    activeSpeechRecognition = null;
+  }
+
+  if (speechRecognitionReservedBy === owner) {
+    speechRecognitionReservedBy = null;
+  }
+};
+
+export const getActiveSpeechRecognitionOwner = (): SpeechRecognitionOwner | null => {
+  return activeSpeechRecognition?.owner ?? speechRecognitionReservedBy;
+};
+
 const notifyMicPermissionChanged = (state: 'granted' | 'denied' | 'prompt') => {
   if (typeof window === 'undefined') return;
   window.dispatchEvent(new CustomEvent('zoe-mic-permission-changed', { detail: { state } }));
@@ -452,6 +500,10 @@ export const startSpeechRecognition = async (
  */
 export const stopSpeechRecognition = (recognition: any | null): void => {
   if (!recognition) return;
+
+  if (activeSpeechRecognition?.recognition === recognition) {
+    activeSpeechRecognition = null;
+  }
 
   // Disable auto-restart
   (recognition as any).__keepAlive = false;

@@ -4,6 +4,9 @@ import {
   createSpeechRecognition,
   stopSpeechRecognition,
   checkMicPermission,
+  claimSpeechRecognition,
+  releaseSpeechRecognition,
+  getActiveSpeechRecognitionOwner,
 } from '@/utils/micPermissionManager';
 
 interface WakeWordOptions {
@@ -62,6 +65,14 @@ export const useWakeWord = ({ wakeWords, onWakeWordDetected, onError, enabled }:
       return;
     }
 
+    const activeOwner = getActiveSpeechRecognitionOwner();
+    if (activeOwner && activeOwner !== 'wake-word') {
+      setIsListening(false);
+      isListeningRef.current = false;
+      hasStartedRef.current = false;
+      return;
+    }
+
     const permissionState = await checkMicPermission();
     if (permissionState !== 'granted') {
       const reason = permissionState === 'denied'
@@ -98,6 +109,11 @@ export const useWakeWord = ({ wakeWords, onWakeWordDetected, onError, enabled }:
       for (const wakeWord of sortedWakeWords) {
         if (transcriptIncludesWakePhrase(transcript, wakeWord)) {
           console.log('[WakeWord] Detected:', wakeWord);
+          isListeningRef.current = false;
+          hasStartedRef.current = false;
+          setIsListening(false);
+          recognitionRef.current = null;
+          stopSpeechRecognition(recognition);
           onWakeWordDetectedRef.current({ wakeWord, transcript });
           break;
         }
@@ -105,25 +121,36 @@ export const useWakeWord = ({ wakeWords, onWakeWordDetected, onError, enabled }:
     };
 
     recognition.onerror = (event: any) => {
-      if (event.error === 'aborted' || event.error === 'no-speech') return;
+      if (event.error === 'aborted') {
+        setIsListening(false);
+        isListeningRef.current = false;
+        hasStartedRef.current = false;
+        recognitionRef.current = null;
+        releaseSpeechRecognition('wake-word', recognition);
+        return;
+      }
+      if (event.error === 'no-speech') return;
       console.error('[WakeWord] Error:', event.error);
       onErrorRef.current?.(String(event.error || 'unknown'));
       setIsListening(false);
       isListeningRef.current = false;
       hasStartedRef.current = false;
       recognitionRef.current = null;
+      releaseSpeechRecognition('wake-word', recognition);
     };
 
     recognition.onend = () => {
       // Mark as stopped - micPermissionManager handles keepAlive restarts
       hasStartedRef.current = false;
       recognitionRef.current = null;
+      releaseSpeechRecognition('wake-word', recognition);
       if (!isListeningRef.current) {
         setIsListening(false);
       }
     };
 
     try {
+      claimSpeechRecognition('wake-word', recognition);
       recognition.start();
       recognitionRef.current = recognition;
       hasStartedRef.current = true;
@@ -135,6 +162,7 @@ export const useWakeWord = ({ wakeWords, onWakeWordDetected, onError, enabled }:
       onErrorRef.current?.(e instanceof Error ? e.message : 'Failed to start wake word detection');
       hasStartedRef.current = false;
       recognitionRef.current = null;
+      releaseSpeechRecognition('wake-word', recognition);
     }
   }, []); // No dependencies - uses refs
 
@@ -145,6 +173,7 @@ export const useWakeWord = ({ wakeWords, onWakeWordDetected, onError, enabled }:
     hasStartedRef.current = false;
     setIsListening(false);
     stopSpeechRecognition(recognitionRef.current);
+    releaseSpeechRecognition('wake-word', recognitionRef.current);
     recognitionRef.current = null;
     console.log('[WakeWord] Detection stopped');
   }, []); // No dependencies
