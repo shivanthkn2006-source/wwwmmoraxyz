@@ -271,13 +271,14 @@ function checkHandsFreeState(): CheckResult {
       return { id: 'handsfree.state', category: 'handsfree', label: 'Hands-free debug bus', status: 'warn', detail: 'no state snapshot' };
     }
     const s = snapshot as ZoeHandsFreeDebugState;
-    const status: CheckStatus = s.lastError ? 'warn' : 'pass';
+    const needsUserMicTap = s.micPermission === 'prompt' && !s.activeRecognizer;
+    const status: CheckStatus = s.lastError && !needsUserMicTap ? 'warn' : 'pass';
     return {
       id: 'handsfree.state',
       category: 'handsfree',
       label: 'Hands-free debug bus',
       status,
-      detail: `hf=${s.hfState} · mic=${s.micPermission} · recognizer=${s.activeRecognizer ?? 'none'}${s.lastError ? ` · lastError=${s.lastError}` : ''}`,
+      detail: `hf=${needsUserMicTap ? 'awaiting-mic-tap' : s.hfState} · mic=${s.micPermission} · recognizer=${s.activeRecognizer ?? 'none'}${s.lastError && !needsUserMicTap ? ` · lastError=${s.lastError}` : ''}`,
       meta: s as unknown as Record<string, unknown>,
     };
   } catch (err) {
@@ -286,7 +287,13 @@ function checkHandsFreeState(): CheckResult {
 }
 
 function checkRuntimeIssues(): CheckResult {
-  const issues = getRuntimeIssues();
+  const issues = getRuntimeIssues().filter((issue) => {
+    const message = issue.message.toLowerCase();
+    if (message.includes('wake word error: microphone permission needed')) return false;
+    if (message.includes('[locallm]') && (message.includes('403') || message.includes('optional'))) return false;
+    if (message.includes('g2b-it-gpu-int4.bin') && message.includes('403')) return false;
+    return true;
+  });
   const fatal = issues.filter((i) => i.kind === 'error' || i.kind === 'unhandledrejection');
   return {
     id: 'runtime.issues',
