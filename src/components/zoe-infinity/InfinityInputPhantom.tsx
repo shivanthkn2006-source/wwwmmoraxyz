@@ -8,6 +8,7 @@ import { Send, Mic, Paperclip, X, FileText, Loader2, Plus, Smile, Microscope } f
 import { toast } from 'sonner';
 import {
   getSpeechRecognition,
+  createSpeechRecognition,
   requestMicPermission,
   isSpeechRecognitionSupported,
   reserveSpeechRecognition,
@@ -48,6 +49,7 @@ interface InfinityInputPhantomProps {
   onClearUpload?: () => void;
   handsFreeMode?: boolean;
   onHandsFreeToggle?: (enabled: boolean) => void;
+  voicePaused?: boolean;
 }
 
 export const InfinityInputPhantom = memo(function InfinityInputPhantom({
@@ -68,6 +70,7 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
   onClearUpload,
   handsFreeMode = false,
   onHandsFreeToggle,
+  voicePaused = false,
 }: InfinityInputPhantomProps) {
   const [input, setInput] = useState('');
   const [pendingCustomEmoji, setPendingCustomEmoji] = useState<string | null>(null);
@@ -83,6 +86,8 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
   const restartTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const handsFreeSilenceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const handsFreeRef = useRef(handsFreeMode);
+  const voicePausedRef = useRef(voicePaused);
+  const isStartingRef = useRef(false);
   const recognitionSessionRef = useRef(0);
   const manualStopSessionRef = useRef<number | null>(null);
   const plusMenuRef = useRef<HTMLDivElement>(null);
@@ -92,6 +97,10 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
     onListeningChange?.(isListening);
   }, [isListening, onListeningChange]);
 
+  useEffect(() => {
+    voicePausedRef.current = voicePaused;
+  }, [voicePaused]);
+
   // Sync hands-free mode from props
   useEffect(() => {
     setIsHandsFree(handsFreeMode);
@@ -100,11 +109,11 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
 
   // Auto-start listening when wake word detected OR hands-free mode is on
   useEffect(() => {
-    if ((wakeWordActive || isHandsFree) && voiceEnabled && !isListening) {
-      startListening(true);
+    if ((wakeWordActive || isHandsFree) && voiceEnabled && !isListening && !isStartingRef.current && !voicePaused) {
+      startListening(true, false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wakeWordActive, voiceEnabled, isListening, isHandsFree]);
+  }, [wakeWordActive, voiceEnabled, isListening, isHandsFree, voicePaused]);
 
   // Close plus menu on outside click
   useEffect(() => {
@@ -180,14 +189,21 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
   const hasSendableContent = input.trim().length > 0 || !!pendingCustomEmoji;
 
   // Voice input
-  const startListening = useCallback(async (forceHandsFree?: boolean) => {
+  const startListening = useCallback(async (forceHandsFree?: boolean, fromUserGesture = false) => {
     if (!isSpeechRecognitionSupported()) {
       toast.error('Voice input not supported in this browser');
       return;
     }
 
+    if (isStartingRef.current || recognitionRef.current) return;
+
     const activeHandsFree = forceHandsFree ?? handsFreeRef.current;
-    onVoiceStart?.();
+    if (activeHandsFree && voicePausedRef.current) {
+      zoeDebugLog('voice', 'hands-free start deferred while Zoe is processing/speaking');
+      return;
+    }
+
+    isStartingRef.current = true;
     const wakeWasPaused = reserveSpeechRecognition('voice-input');
 
     if (restartTimeoutRef.current) {
@@ -205,21 +221,30 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
       recognitionRef.current = null;
     }
 
-    if (wakeWasPaused) {
+    if (wakeWasPaused && !fromUserGesture) {
       await new Promise((resolve) => setTimeout(resolve, 140));
     }
 
-    const hasPermission = await requestMicPermission();
-    if (!hasPermission) {
-      setIsListening(false);
-      releaseSpeechRecognition('voice-input');
-      onVoiceStop?.();
-      toast.error('Microphone permission required');
-      return;
+    if (!fromUserGesture) {
+      const hasPermission = await requestMicPermission();
+      if (!hasPermission) {
+        isStartingRef.current = false;
+        setIsListening(false);
+        if (activeHandsFree) {
+          handsFreeRef.current = false;
+          setIsHandsFree(false);
+          onHandsFreeToggle?.(false);
+        }
+        releaseSpeechRecognition('voice-input');
+        onVoiceStop?.();
+        toast.error('Microphone permission required');
+        return;
+      }
     }
 
     const SpeechRecognitionCtor = getSpeechRecognition();
     if (!SpeechRecognitionCtor) {
+      isStartingRef.current = false;
       setIsListening(false);
       releaseSpeechRecognition('voice-input');
       onVoiceStop?.();
@@ -227,7 +252,12 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
       return;
     }
 
-    const recognition = new SpeechRecognitionCtor();
+    const recognition = createSpeechRecognition({
+      continuous: !!activeHandsFree,
+      interimResults: !!activeHandsFree,
+      lang: 'en-US',
+      keepAlive: false,
+    }) || new SpeechRecognitionCtor();
     const sessionId = recognitionSessionRef.current + 1;
     recognitionSessionRef.current = sessionId;
     manualStopSessionRef.current = null;
@@ -266,7 +296,9 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
 
     recognition.onstart = () => {
       if (sessionId !== recognitionSessionRef.current) return;
+      isStartingRef.current = false;
       setIsListening(true);
+      onVoiceStart?.();
       window.dispatchEvent(new CustomEvent('zoe-voice-system-activated'));
       if (activeHandsFree) armHandsFreeSilenceTimeout();
     };
@@ -301,6 +333,7 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
       const err = String(event?.error || 'unknown');
       if (err === 'aborted') {
         zoeDebugLog('voice', 'voice input aborted/handed off');
+        isStartingRef.current = false;
         releaseSpeechRecognition('voice-input', recognition);
         if (recognitionRef.current === recognition) recognitionRef.current = null;
         setIsListening(false);
@@ -311,16 +344,24 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
       zoeDebugLog('error', `voice input error: ${err}`);
       if (shouldRestart) {
         restartTimeoutRef.current = setTimeout(() => {
-          if (handsFreeRef.current) startListening(true);
+          if (handsFreeRef.current && !voicePausedRef.current) startListening(true, false);
         }, 450);
       } else {
+        isStartingRef.current = false;
         setIsListening(false);
+        if (activeHandsFree && (err === 'not-allowed' || err === 'service-not-allowed')) {
+          handsFreeRef.current = false;
+          setIsHandsFree(false);
+          onHandsFreeToggle?.(false);
+          toast.error('Microphone permission required');
+        }
         onVoiceStop?.();
       }
     };
 
     recognition.onend = () => {
       if (sessionId !== recognitionSessionRef.current) return;
+      isStartingRef.current = false;
       releaseSpeechRecognition('voice-input', recognition);
       if (recognitionRef.current === recognition) recognitionRef.current = null;
       if (manualStopSessionRef.current === sessionId) {
@@ -336,8 +377,14 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
       }
       if (cleaned) onVoiceEnd?.(cleaned);
       if (handsFreeRef.current) {
+        if (voicePausedRef.current) {
+          zoeDebugLog('voice', 'hands-free restart deferred while Zoe is processing/speaking');
+          setIsListening(false);
+          onVoiceStop?.();
+          return;
+        }
         restartTimeoutRef.current = setTimeout(() => {
-          if (handsFreeRef.current) startListening(true);
+          if (handsFreeRef.current && !voicePausedRef.current) startListening(true, false);
         }, 300);
       } else {
         setIsListening(false);
@@ -350,6 +397,7 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
       claimSpeechRecognition('voice-input', recognition);
       recognition.start();
     } catch {
+      isStartingRef.current = false;
       setIsListening(false);
       releaseSpeechRecognition('voice-input', recognition);
       if (recognitionRef.current === recognition) recognitionRef.current = null;
@@ -368,6 +416,7 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
       handsFreeSilenceTimeoutRef.current = null;
     }
     manualStopSessionRef.current = recognitionSessionRef.current;
+    isStartingRef.current = false;
     if (recognitionRef.current) {
       stopSpeechRecognition(recognitionRef.current);
       releaseSpeechRecognition('voice-input', recognitionRef.current);
@@ -389,18 +438,38 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
     handsFreeRef.current = newState;
     onHandsFreeToggle?.(newState);
     if (newState) {
-      startListening(true);
+      startListening(true, true);
     } else {
       stopListening();
     }
   }, [isHandsFree, onHandsFreeToggle, startListening, stopListening]);
+
+  useEffect(() => {
+    const handleStartHandsFree = () => {
+      setIsHandsFree(true);
+      handsFreeRef.current = true;
+      onHandsFreeToggle?.(true);
+      void startListening(true, true);
+    };
+    const handleStopHandsFree = () => stopListening();
+    window.addEventListener('zoe-start-handsfree-listening', handleStartHandsFree);
+    window.addEventListener('zoe-stop-handsfree-listening', handleStopHandsFree);
+    return () => {
+      window.removeEventListener('zoe-start-handsfree-listening', handleStartHandsFree);
+      window.removeEventListener('zoe-stop-handsfree-listening', handleStopHandsFree);
+    };
+  }, [onHandsFreeToggle, startListening, stopListening]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (restartTimeoutRef.current) clearTimeout(restartTimeoutRef.current);
       if (handsFreeSilenceTimeoutRef.current) clearTimeout(handsFreeSilenceTimeoutRef.current);
-      if (recognitionRef.current) recognitionRef.current.stop();
+      isStartingRef.current = false;
+      if (recognitionRef.current) {
+        stopSpeechRecognition(recognitionRef.current);
+        releaseSpeechRecognition('voice-input', recognitionRef.current);
+      }
     };
   }, []);
 
@@ -574,7 +643,7 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
                       if (isListening) {
                         stopListening();
                       } else {
-                        startListening(isHandsFree);
+                        startListening(isHandsFree, true);
                       }
                       setShowPlusMenu(false);
                     }}
