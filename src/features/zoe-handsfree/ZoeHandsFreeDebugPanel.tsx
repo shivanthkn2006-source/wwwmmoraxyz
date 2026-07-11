@@ -31,6 +31,7 @@ export const ZoeHandsFreeDebugPanel: React.FC<ZoeHandsFreeDebugPanelProps> = ({
   isProcessing,
   isSpeaking,
   isWakeListening,
+  onToggleHandsFree,
 }) => {
   const [entries, setEntries] = useState<ZoeDebugEntry[]>([]);
   const [open, setOpen] = useState(false);
