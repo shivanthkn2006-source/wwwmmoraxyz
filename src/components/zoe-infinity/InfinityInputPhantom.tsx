@@ -101,7 +101,7 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
   // Auto-start listening when wake word detected OR hands-free mode is on
   useEffect(() => {
     if ((wakeWordActive || isHandsFree) && voiceEnabled && !isListening) {
-      startListening();
+      startListening(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wakeWordActive, voiceEnabled, isListening, isHandsFree]);
