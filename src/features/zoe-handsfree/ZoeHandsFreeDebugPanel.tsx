@@ -5,7 +5,13 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { subscribeZoeDebug, clearZoeDebug, type ZoeDebugEntry } from './debugBus';
+import {
+  subscribeZoeDebug,
+  subscribeZoeDebugState,
+  clearZoeDebug,
+  type ZoeDebugEntry,
+  type ZoeHandsFreeDebugState,
+} from './debugBus';
 
 export interface ZoeHandsFreeDebugPanelProps {
   handsFreeMode: boolean;
@@ -34,6 +40,15 @@ export const ZoeHandsFreeDebugPanel: React.FC<ZoeHandsFreeDebugPanelProps> = ({
   onToggleHandsFree,
 }) => {
   const [entries, setEntries] = useState<ZoeDebugEntry[]>([]);
+  const [debugState, setDebugState] = useState<ZoeHandsFreeDebugState>({
+    hfState: 'off',
+    micPermission: 'unknown',
+    activeRecognizer: null,
+    lastStartReason: null,
+    lastStopReason: null,
+    lastError: null,
+    updatedAt: Date.now(),
+  });
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState(() => {
     if (typeof window === 'undefined') return { x: 12, y: 12 };
@@ -49,6 +64,7 @@ export const ZoeHandsFreeDebugPanel: React.FC<ZoeHandsFreeDebugPanelProps> = ({
   const dragRef = useRef<{ startX: number; startY: number; originX: number; originY: number; moved: boolean; pointerId: number } | null>(null);
 
   useEffect(() => subscribeZoeDebug(setEntries), []);
+  useEffect(() => subscribeZoeDebugState(setDebugState), []);
 
   useEffect(() => {
     try { localStorage.setItem('zoe-hf-debug-position', JSON.stringify(position)); } catch { /* noop */ }
@@ -127,6 +143,14 @@ export const ZoeHandsFreeDebugPanel: React.FC<ZoeHandsFreeDebugPanelProps> = ({
             <StateLine label="speaking" ok={isSpeaking} />
             <StateLine label="wakeMic" ok={isWakeListening} />
           </div>
+          <div className="px-2.5 py-2 border-b border-white/10 bg-white/[0.03] space-y-1 leading-tight">
+            <DebugLine label="HF state" value={debugState.hfState} />
+            <DebugLine label="mic permission" value={debugState.micPermission} tone={debugState.micPermission === 'granted' ? 'good' : debugState.micPermission === 'denied' ? 'bad' : 'warn'} />
+            <DebugLine label="recognizer" value={debugState.activeRecognizer || 'none'} />
+            <DebugLine label="last start" value={debugState.lastStartReason || '—'} />
+            <DebugLine label="last stop" value={debugState.lastStopReason || '—'} />
+            <DebugLine label="last error" value={debugState.lastError || '—'} tone={debugState.lastError ? 'bad' : 'muted'} />
+          </div>
           <div className="flex items-center justify-between px-2.5 py-1 border-b border-white/10 bg-white/[0.03]">
             <span className="opacity-60">events · {entries.length}</span>
             <div className="flex items-center gap-2">
@@ -174,5 +198,22 @@ const StateLine: React.FC<{ label: string; ok: boolean }> = ({ label, ok }) => (
     <span className="opacity-80">{label}</span>
   </div>
 );
+
+const DebugLine: React.FC<{ label: string; value: string; tone?: 'good' | 'warn' | 'bad' | 'muted' }> = ({ label, value, tone = 'muted' }) => {
+  const toneClass = tone === 'good'
+    ? 'text-emerald-300'
+    : tone === 'warn'
+      ? 'text-amber-300'
+      : tone === 'bad'
+        ? 'text-red-300'
+        : 'text-white/80';
+
+  return (
+    <div className="grid grid-cols-[82px_1fr] gap-2">
+      <span className="text-white/45">{label}</span>
+      <span className={`${toneClass} truncate`} title={value}>{value}</span>
+    </div>
+  );
+};
 
 export default ZoeHandsFreeDebugPanel;

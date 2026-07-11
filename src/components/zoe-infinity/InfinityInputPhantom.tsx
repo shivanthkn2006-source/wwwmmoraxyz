@@ -18,7 +18,7 @@ import {
 } from '@/utils/micPermissionManager';
 import { EmojiPicker } from './EmojiPicker';
 import { findHandsFreePhrase, HANDS_FREE_STOP_PHRASES } from '@/features/zoe-handsfree/phrases';
-import { zoeDebugLog } from '@/features/zoe-handsfree/debugBus';
+import { zoeDebugLog, zoeDebugSetState, zoeDebugSpeechError, zoeDebugSpeechStart, zoeDebugSpeechStop } from '@/features/zoe-handsfree/debugBus';
 import {
   isDeepResearchEnabled,
   setDeepResearchEnabled,
@@ -196,15 +196,21 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
       return;
     }
 
-    if (isStartingRef.current || recognitionRef.current) return;
+    if (isStartingRef.current || recognitionRef.current) {
+      zoeDebugLog('voice', `voice start skipped · already ${isStartingRef.current ? 'starting' : 'running'}`);
+      return;
+    }
 
     const activeHandsFree = forceHandsFree ?? handsFreeRef.current;
     if (activeHandsFree && voicePausedRef.current) {
+      zoeDebugSetState({ hfState: 'paused' });
       zoeDebugLog('voice', 'hands-free start deferred while Zoe is processing/speaking');
       return;
     }
 
     isStartingRef.current = true;
+    zoeDebugSetState({ hfState: 'starting' });
+    zoeDebugSpeechStart('voice-input', activeHandsFree ? 'hands-free start requested' : 'manual voice start requested');
     const wakeWasPaused = reserveSpeechRecognition('voice-input');
 
     if (restartTimeoutRef.current) {
@@ -235,6 +241,7 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
       if (!hasPermission) {
         isStartingRef.current = false;
         setIsListening(false);
+        zoeDebugSetState({ hfState: 'error', micPermission: 'denied', lastStopReason: 'mic permission missing' });
         if (activeHandsFree) {
           handsFreeRef.current = false;
           setIsHandsFree(false);
@@ -251,6 +258,7 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
     if (!SpeechRecognitionCtor) {
       isStartingRef.current = false;
       setIsListening(false);
+      zoeDebugSetState({ hfState: 'error', lastError: 'SpeechRecognition constructor missing' });
       releaseSpeechRecognition('voice-input');
       onVoiceStop?.();
       toast.error('Could not start voice input');
@@ -275,6 +283,7 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
 
     const disableHandsFreeAndStop = (reason: string) => {
       zoeDebugLog('voice', reason);
+      zoeDebugSetState({ hfState: 'off', lastStopReason: reason });
       handsFreeRef.current = false;
       setIsHandsFree(false);
       onHandsFreeToggle?.(false);
@@ -288,13 +297,11 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
       if (recognitionRef.current === recognition) recognitionRef.current = null;
     };
 
-    const armHandsFreeSilenceTimeout = () => {
-      if (!handsFreeRef.current) return;
-      if (handsFreeSilenceTimeoutRef.current) clearTimeout(handsFreeSilenceTimeoutRef.current);
-      handsFreeSilenceTimeoutRef.current = setTimeout(() => {
-        if (sessionId !== recognitionSessionRef.current || !handsFreeRef.current) return;
-        disableHandsFreeAndStop('hands-free silence timeout → stopping mic');
-      }, latestTranscript.trim() ? 6500 : 8500);
+    const clearHandsFreeSilenceTimeout = () => {
+      if (handsFreeSilenceTimeoutRef.current) {
+        clearTimeout(handsFreeSilenceTimeoutRef.current);
+        handsFreeSilenceTimeoutRef.current = null;
+      }
     };
 
     recognition.onstart = () => {
@@ -305,9 +312,11 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
       }
       isStartingRef.current = false;
       setIsListening(true);
+      zoeDebugSetState({ hfState: activeHandsFree ? 'listening' : 'listening' });
+      zoeDebugSpeechStart('voice-input', `native onstart · session=${sessionId}`);
       onVoiceStart?.();
       window.dispatchEvent(new CustomEvent('zoe-voice-system-activated'));
-      if (activeHandsFree) armHandsFreeSilenceTimeout();
+      if (activeHandsFree) clearHandsFreeSilenceTimeout();
     };
 
     recognition.onresult = (event: any) => {
@@ -331,7 +340,7 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
           disableHandsFreeAndStop(`hands-free stop phrase (${stopPhrase}) → stopping mic`);
           return;
         }
-        armHandsFreeSilenceTimeout();
+        clearHandsFreeSilenceTimeout();
       }
     };
 
@@ -339,11 +348,11 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
       if (sessionId !== recognitionSessionRef.current) return;
       const err = String(event?.error || 'unknown');
       if (err === 'no-speech') {
-        zoeDebugLog('voice', 'voice input no-speech; waiting for recognition end/restart');
+        zoeDebugSpeechError('voice-input', err, 'browser ended a silent segment; hands-free will restart');
         return;
       }
       if (err === 'aborted') {
-        zoeDebugLog('voice', 'voice input aborted/handed off');
+        zoeDebugSpeechError('voice-input', err, 'aborted/handed off');
         isStartingRef.current = false;
         releaseSpeechRecognition('voice-input', recognition);
         if (recognitionRef.current === recognition) recognitionRef.current = null;
@@ -352,7 +361,7 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
         return;
       }
       const shouldRestart = handsFreeRef.current && err !== 'aborted' && err !== 'not-allowed' && err !== 'service-not-allowed';
-      zoeDebugLog('error', `voice input error: ${err}`);
+      zoeDebugSpeechError('voice-input', err, shouldRestart ? 'will restart hands-free' : 'fatal for current mic session');
       if (shouldRestart) {
         releaseSpeechRecognition('voice-input', recognition);
         if (recognitionRef.current === recognition) recognitionRef.current = null;
@@ -364,6 +373,7 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
         isStartingRef.current = false;
         setIsListening(false);
         if (activeHandsFree && (err === 'not-allowed' || err === 'service-not-allowed')) {
+          zoeDebugSetState({ hfState: 'error', micPermission: 'denied' });
           handsFreeRef.current = false;
           setIsHandsFree(false);
           onHandsFreeToggle?.(false);
@@ -384,9 +394,11 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
       isStartingRef.current = false;
       releaseSpeechRecognition('voice-input', recognition);
       if (recognitionRef.current === recognition) recognitionRef.current = null;
+      zoeDebugSpeechStop('voice-input', `native onend · session=${sessionId}${handsFreeRef.current ? ' · restart pending' : ''}`);
       if (manualStopSessionRef.current === sessionId) {
         manualStopSessionRef.current = null;
         setIsListening(false);
+        zoeDebugSetState({ hfState: handsFreeRef.current ? 'paused' : 'off', lastStopReason: 'manual stop' });
         onVoiceStop?.();
         return;
       }
@@ -399,15 +411,20 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
       if (handsFreeRef.current) {
         if (voicePausedRef.current) {
           zoeDebugLog('voice', 'hands-free restart deferred while Zoe is processing/speaking');
+          zoeDebugSetState({ hfState: 'paused', lastStopReason: 'paused while Zoe is processing/speaking' });
           setIsListening(false);
           onVoiceStop?.();
           return;
         }
         restartTimeoutRef.current = setTimeout(() => {
-          if (handsFreeRef.current && !voicePausedRef.current) startListening(true, false);
+          if (handsFreeRef.current && !voicePausedRef.current) {
+            zoeDebugSpeechStart('voice-input', 'hands-free restart after recognition end');
+            startListening(true, false);
+          }
         }, 300);
       } else {
         setIsListening(false);
+        zoeDebugSetState({ hfState: 'off' });
         onVoiceStop?.();
       }
     };
@@ -419,6 +436,7 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
       startWatchdogRef.current = setTimeout(() => {
         if (sessionId !== recognitionSessionRef.current || !isStartingRef.current) return;
         zoeDebugLog('error', 'voice input start timed out; resetting mic state');
+        zoeDebugSetState({ hfState: 'error', lastError: 'voice input start timed out' });
         isStartingRef.current = false;
         setIsListening(false);
         releaseSpeechRecognition('voice-input', recognition);
@@ -432,13 +450,14 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
         }
       }, 2500);
       recognition.start();
-    } catch {
+    } catch (err: any) {
       if (startWatchdogRef.current) {
         clearTimeout(startWatchdogRef.current);
         startWatchdogRef.current = null;
       }
       isStartingRef.current = false;
       setIsListening(false);
+      zoeDebugSpeechError('voice-input', err?.name || err?.message || 'start failed', 'recognition.start threw');
       releaseSpeechRecognition('voice-input', recognition);
       if (recognitionRef.current === recognition) recognitionRef.current = null;
       onVoiceStop?.();
@@ -461,7 +480,9 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
     }
     manualStopSessionRef.current = recognitionSessionRef.current;
     isStartingRef.current = false;
+    zoeDebugSetState({ hfState: handsFreeRef.current ? 'paused' : 'off', lastStopReason: 'stopListening called' });
     if (recognitionRef.current) {
+      zoeDebugSpeechStop('voice-input', 'stopListening called');
       stopSpeechRecognition(recognitionRef.current);
       releaseSpeechRecognition('voice-input', recognitionRef.current);
       recognitionRef.current = null;
