@@ -214,11 +214,12 @@ export const useWakeWord = ({ wakeWords, onWakeWordDetected, onError, enabled }:
       clearTimeout(restartTimeoutRef.current);
       restartTimeoutRef.current = null;
     }
-    if (!recognitionRef.current) return; // Skip if nothing to stop
-    
+
     isListeningRef.current = false;
     hasStartedRef.current = false;
     setIsListening(false);
+    if (!recognitionRef.current) return; // Skip if nothing to stop
+
     zoeDebugSpeechStop('wake-word', 'stopWakeWordDetection called');
     stopSpeechRecognition(recognitionRef.current);
     releaseSpeechRecognition('wake-word', recognitionRef.current);
