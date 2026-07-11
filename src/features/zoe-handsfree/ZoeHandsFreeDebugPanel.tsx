@@ -14,6 +14,7 @@ export interface ZoeHandsFreeDebugPanelProps {
   isProcessing: boolean;
   isSpeaking: boolean;
   isWakeListening: boolean;
+  onToggleHandsFree?: (next: boolean) => void | Promise<void>;
 }
 
 const levelColor: Record<ZoeDebugEntry['level'], string> = {
