@@ -33,7 +33,7 @@ export const ZoeGodModeScanPanel: React.FC = () => {
   const [copied, setCopied] = useState(false);
 
   const [pos, setPos] = useState<{ left: number; bottom: number }>({ left: GAP, bottom: GAP });
-  const dragRef = useRef<{ dragging: boolean; startX: number; startY: number; initialLeft: number; initialBottom: number } | null>(null);
+  const dragRef = useRef<{ dragging: boolean; startX: number; startY: number; initialLeft: number; initialBottom: number; movedPx: number } | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
 
   const clampPos = useCallback((nextLeft: number, nextBottom: number) => {
@@ -51,12 +51,15 @@ export const ZoeGodModeScanPanel: React.FC = () => {
       e.preventDefault();
       const dx = e.clientX - dragRef.current.startX;
       const dy = e.clientY - dragRef.current.startY;
+      dragRef.current.movedPx = Math.hypot(dx, dy);
       setPos(clampPos(dragRef.current.initialLeft + dx, dragRef.current.initialBottom - dy));
     };
     const onPointerUp = (e: PointerEvent) => {
       if (!dragRef.current?.dragging) return;
       e.preventDefault();
       dragRef.current.dragging = false;
+      // Keep the ref so onClick can inspect movedPx; clear it after click has fired.
+      setTimeout(() => { dragRef.current = null; }, 50);
     };
     window.addEventListener('pointermove', onPointerMove, { passive: false });
     window.addEventListener('pointerup', onPointerUp);
@@ -69,6 +72,7 @@ export const ZoeGodModeScanPanel: React.FC = () => {
   }, [clampPos]);
 
   const startScan = useCallback(async () => {
+
 
     setRunning(true);
     setReport(null);
