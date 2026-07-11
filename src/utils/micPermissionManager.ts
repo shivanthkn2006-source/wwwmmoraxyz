@@ -9,6 +9,8 @@
  */
 
 // Permission state cache
+import { zoeDebugLog, zoeDebugSetState, zoeDebugSpeechStart, zoeDebugSpeechStop } from '@/features/zoe-handsfree/debugBus';
+
 let permissionGranted = false;
 let lastPermissionCheck = 0;
 const PERMISSION_CACHE_MS = 60000; // Cache for 60 seconds
@@ -23,6 +25,7 @@ let speechRecognitionReservedBy: SpeechRecognitionOwner | null = null;
 
 const stopRecognitionInstanceForHandoff = (recognition: any | null) => {
   if (!recognition) return;
+  zoeDebugSpeechStop(activeSpeechRecognition?.owner || 'unknown', 'handoff to another SpeechRecognition owner');
   try { (recognition as any).__keepAlive = false; } catch { /* noop */ }
   try { stopRecognitionKeepAlive(recognition); } catch { /* noop */ }
   try {
@@ -36,6 +39,7 @@ export const reserveSpeechRecognition = (owner: SpeechRecognitionOwner): boolean
   const current = activeSpeechRecognition;
   if (!current || current.owner === owner) return false;
 
+  zoeDebugLog('voice', `SpeechRecognition handoff · ${current.owner} → ${owner}`);
   stopRecognitionInstanceForHandoff(current.recognition);
   activeSpeechRecognition = null;
   return true;
@@ -53,6 +57,7 @@ export const releaseSpeechRecognition = (owner: SpeechRecognitionOwner, recognit
     (!recognition || activeSpeechRecognition.recognition === recognition)
   ) {
     activeSpeechRecognition = null;
+    zoeDebugSetState({ activeRecognizer: null });
   }
 
   if (speechRecognitionReservedBy === owner) {
@@ -65,6 +70,8 @@ export const getActiveSpeechRecognitionOwner = (): SpeechRecognitionOwner | null
 };
 
 const notifyMicPermissionChanged = (state: 'granted' | 'denied' | 'prompt') => {
+  zoeDebugSetState({ micPermission: state });
+  zoeDebugLog(state === 'granted' ? 'info' : state === 'denied' ? 'error' : 'info', `mic permission: ${state}`);
   if (typeof window === 'undefined') return;
   window.dispatchEvent(new CustomEvent('zoe-mic-permission-changed', { detail: { state } }));
 };
@@ -100,6 +107,7 @@ export const requestMicPermission = async (): Promise<boolean> => {
   if (permissionGranted && (now - lastPermissionCheck) < PERMISSION_CACHE_MS) {
     // Try to resume AudioContext (non-fatal if blocked)
     resumeAudioContext().catch(() => {});
+      notifyMicPermissionChanged('granted');
     return true;
   }
 
@@ -158,6 +166,13 @@ export const checkMicPermission = async (): Promise<'granted' | 'denied' | 'prom
     // Try Permissions API first (modern browsers)
     if ('permissions' in navigator) {
       const result = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+      if (result.state === 'granted') {
+        permissionGranted = true;
+        lastPermissionCheck = Date.now();
+      } else if (result.state === 'denied') {
+        permissionGranted = false;
+      }
+      notifyMicPermissionChanged(result.state as 'granted' | 'denied' | 'prompt');
       return result.state as 'granted' | 'denied' | 'prompt';
     }
   } catch {
@@ -166,6 +181,7 @@ export const checkMicPermission = async (): Promise<'granted' | 'denied' | 'prom
 
   // Fallback: check cache
   if (permissionGranted) return 'granted';
+  notifyMicPermissionChanged('prompt');
   return 'prompt';
 };
 
@@ -365,6 +381,8 @@ export const createSpeechRecognition = (options?: {
   
   const recognition = new SpeechRec();
   const platform = getPlatformInfo();
+  const recognitionId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+  (recognition as any).__zoeRecognitionId = recognitionId;
   
   // Platform-specific settings for Safari/iOS stability
   if (platform.isIOS) {
@@ -404,6 +422,8 @@ export const createSpeechRecognition = (options?: {
   recognition.onstart = function(event: any) {
     console.log('[MicManager] Recognition started');
     (recognition as any).__lastResultTime = Date.now();
+    const owner = activeSpeechRecognition?.recognition === recognition ? activeSpeechRecognition.owner : 'unclaimed';
+    zoeDebugSpeechStart(owner, `native onstart · continuous=${Boolean(recognition.continuous)} interim=${Boolean(recognition.interimResults)} id=${recognitionId}`);
     if ((recognition as any).__keepAlive) {
       startRecognitionKeepAlive(recognition);
     }
@@ -449,6 +469,8 @@ export const createSpeechRecognition = (options?: {
           tracking.count++;
           tracking.lastRestart = Date.now();
           console.log('[MicManager] Auto-restart #' + tracking.count + ' (delay: ' + Math.round(backoffDelay) + 'ms)');
+          const owner = activeSpeechRecognition?.recognition === recognition ? activeSpeechRecognition.owner : 'unclaimed';
+          zoeDebugSpeechStart(owner, `manager auto-restart #${tracking.count} after ${Math.round(backoffDelay)}ms`);
           
           if ((recognition as any).__onAutoRestart) {
             (recognition as any).__onAutoRestart();
@@ -501,6 +523,9 @@ export const startSpeechRecognition = async (
 export const stopSpeechRecognition = (recognition: any | null): void => {
   if (!recognition) return;
 
+  const owner = activeSpeechRecognition?.recognition === recognition ? activeSpeechRecognition.owner : 'unknown';
+  zoeDebugSpeechStop(owner, 'stopSpeechRecognition called');
+
   if (activeSpeechRecognition?.recognition === recognition) {
     activeSpeechRecognition = null;
   }
@@ -518,6 +543,8 @@ export const stopSpeechRecognition = (recognition: any | null): void => {
 
 // Export permission state for components that need to check without async
 export const isPermissionCached = (): boolean => permissionGranted;
+
+export const getCachedMicPermission = (): 'granted' | 'prompt' => permissionGranted ? 'granted' : 'prompt';
 
 // Backward-compat no-ops (older code may still import these)
 export const setCurrentUser = (_username?: string | null): void => {
