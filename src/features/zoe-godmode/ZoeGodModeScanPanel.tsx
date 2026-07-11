@@ -36,8 +36,40 @@ export const ZoeGodModeScanPanel: React.FC = () => {
   const dragRef = useRef<{ dragging: boolean; startX: number; startY: number; initialLeft: number; initialBottom: number } | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
 
+  const clampPos = useCallback((nextLeft: number, nextBottom: number) => {
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    return {
+      left: Math.max(GAP, Math.min(vw - BTN_W - GAP, nextLeft)),
+      bottom: Math.max(GAP, Math.min(vh - BTN_H - GAP, nextBottom)),
+    };
+  }, []);
+
+  useEffect(() => {
+    const onPointerMove = (e: PointerEvent) => {
+      if (!dragRef.current?.dragging) return;
+      e.preventDefault();
+      const dx = e.clientX - dragRef.current.startX;
+      const dy = e.clientY - dragRef.current.startY;
+      setPos(clampPos(dragRef.current.initialLeft + dx, dragRef.current.initialBottom - dy));
+    };
+    const onPointerUp = (e: PointerEvent) => {
+      if (!dragRef.current?.dragging) return;
+      e.preventDefault();
+      dragRef.current.dragging = false;
+    };
+    window.addEventListener('pointermove', onPointerMove, { passive: false });
+    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointercancel', onPointerUp);
+    return () => {
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('pointercancel', onPointerUp);
+    };
+  }, [clampPos]);
 
   const startScan = useCallback(async () => {
+
     setRunning(true);
     setReport(null);
     setProgress({ completed: 0, total: 0, results: [] });
