@@ -16,6 +16,11 @@ const PERMISSION_CACHE_MS = 60000; // Cache for 60 seconds
 // Global AudioContext reference
 let globalAudioContext: AudioContext | null = null;
 
+const notifyMicPermissionChanged = (state: 'granted' | 'denied' | 'prompt') => {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent('zoe-mic-permission-changed', { detail: { state } }));
+};
+
 /**
  * Resume AudioContext if suspended (often requires user gesture)
  */
@@ -76,12 +81,14 @@ export const requestMicPermission = async (): Promise<boolean> => {
 
     permissionGranted = true;
     lastPermissionCheck = now;
+    notifyMicPermissionChanged('granted');
 
     console.log('[MicManager] Microphone permission granted');
     return true;
   } catch (err: any) {
     console.error('[MicManager] Microphone permission denied:', err?.name || err);
     permissionGranted = false;
+    notifyMicPermissionChanged(err?.name === 'NotAllowedError' ? 'denied' : 'prompt');
 
     if (err?.name === 'NotAllowedError') {
       console.warn('[MicManager] User denied microphone access');
@@ -124,6 +131,7 @@ export const initializeMicPermission = async (): Promise<void> => {
     if (status === 'granted') {
       permissionGranted = true;
       lastPermissionCheck = Date.now();
+      notifyMicPermissionChanged('granted');
       console.log('[MicManager] Mic already permitted');
 
       // Attempt resume (non-fatal if blocked without gesture)
