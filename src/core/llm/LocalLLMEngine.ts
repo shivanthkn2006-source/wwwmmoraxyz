@@ -18,6 +18,9 @@
 
 import { checkNetworkStatus } from '@/hooks/useNetworkStatus';
 
+const LOCAL_LLM_CACHE_NAME = 'zoe-brain-v1';
+const LOCAL_LLM_MODEL_URL = 'https://storage.googleapis.com/jmstore/kaggleweb/grader/g2b-it-gpu-int4.bin';
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // TYPES
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -286,6 +289,16 @@ let localLLMState: LocalLLMState = {
 let llmInstance: any = null;
 let initPromise: Promise<boolean> | null = null;
 
+const isLocalLLMModelCached = async (): Promise<boolean> => {
+  try {
+    if (typeof window === 'undefined' || !('caches' in window)) return false;
+    const cache = await caches.open(LOCAL_LLM_CACHE_NAME);
+    return !!(await cache.match(LOCAL_LLM_MODEL_URL));
+  } catch {
+    return false;
+  }
+};
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // LOCAL LLM INITIALIZATION
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -323,6 +336,15 @@ export const initializeLocalLLM = async (): Promise<boolean> => {
         initPromise = null; // BUG FIX: Clear promise on failure to allow retry
         return false;
       }
+
+      const hasCachedModel = await isLocalLLMModelCached();
+      if (!hasCachedModel) {
+        console.info('[LocalLLM] Optional offline model not installed; using scripted/cloud fallback');
+        localLLMState.isLoading = false;
+        localLLMState.error = 'Optional offline model not installed';
+        initPromise = null;
+        return false;
+      }
       
       console.log('[LocalLLM] 🚀 Initializing MediaPipe GenAI...');
       
@@ -338,7 +360,7 @@ export const initializeLocalLLM = async (): Promise<boolean> => {
       // Note: This downloads ~1.5GB on first load
       llmInstance = await LlmInference.createFromOptions(genaiFileset, {
         baseOptions: {
-          modelAssetPath: 'https://storage.googleapis.com/jmstore/kaggleweb/grader/g2b-it-gpu-int4.bin',
+          modelAssetPath: LOCAL_LLM_MODEL_URL,
         },
         maxTokens: 512,
         topK: 40,
@@ -356,7 +378,7 @@ export const initializeLocalLLM = async (): Promise<boolean> => {
       return true;
       
     } catch (err) {
-      console.error('[LocalLLM] ❌ Initialization failed:', err);
+      console.warn('[LocalLLM] Optional initialization skipped:', err);
       localLLMState.isLoading = false;
       localLLMState.error = err instanceof Error ? err.message : 'Unknown error';
       initPromise = null; // Clear promise to allow retry
@@ -590,8 +612,11 @@ export const cleanupLocalLLM = (): void => {
  * Pre-warm the LLM for faster first response
  */
 export const prewarmLocalLLM = (): void => {
-  // Start initialization in background
-  initializeLocalLLM().catch(() => {
-    // Silently fail - will use scripted fallback
+  // Start initialization only when the optional model is already installed.
+  void isLocalLLMModelCached().then((cached) => {
+    if (!cached) return;
+    initializeLocalLLM().catch(() => {
+      // Silently fail - will use scripted fallback
+    });
   });
 };
