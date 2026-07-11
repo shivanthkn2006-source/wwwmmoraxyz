@@ -4,7 +4,7 @@
 // a live checklist + copy-to-clipboard markdown report.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   runGodModePlatformScan,
   formatReportMarkdown,
@@ -21,12 +21,21 @@ const badge: Record<CheckStatus, { icon: string; color: string; bg: string }> = 
   skip: { icon: '–', color: 'text-white/50', bg: 'bg-white/5 border-white/10' },
 };
 
+const GAP = 16; // px from viewport edges
+const BTN_W = 96; // approximate button width
+const BTN_H = 36; // approximate button height
+
 export const ZoeGodModeScanPanel: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState<ScanProgress | null>(null);
   const [report, setReport] = useState<PlatformScanReport | null>(null);
   const [copied, setCopied] = useState(false);
+
+  const [pos, setPos] = useState<{ left: number; bottom: number }>({ left: GAP, bottom: GAP });
+  const dragRef = useRef<{ dragging: boolean; startX: number; startY: number; initialLeft: number; initialBottom: number } | null>(null);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+
 
   const startScan = useCallback(async () => {
     setRunning(true);
