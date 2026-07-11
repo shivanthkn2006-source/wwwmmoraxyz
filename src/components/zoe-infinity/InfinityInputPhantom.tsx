@@ -343,6 +343,9 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
       const shouldRestart = handsFreeRef.current && err !== 'aborted' && err !== 'not-allowed' && err !== 'service-not-allowed';
       zoeDebugLog('error', `voice input error: ${err}`);
       if (shouldRestart) {
+        releaseSpeechRecognition('voice-input', recognition);
+        if (recognitionRef.current === recognition) recognitionRef.current = null;
+        isStartingRef.current = false;
         restartTimeoutRef.current = setTimeout(() => {
           if (handsFreeRef.current && !voicePausedRef.current) startListening(true, false);
         }, 450);
@@ -353,6 +356,8 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
           handsFreeRef.current = false;
           setIsHandsFree(false);
           onHandsFreeToggle?.(false);
+          toast.error('Microphone permission required');
+        } else if (!activeHandsFree && (err === 'not-allowed' || err === 'service-not-allowed')) {
           toast.error('Microphone permission required');
         }
         onVoiceStop?.();
