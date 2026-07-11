@@ -2,7 +2,8 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { 
   isSpeechRecognitionSupported, 
   createSpeechRecognition,
-  stopSpeechRecognition 
+  stopSpeechRecognition,
+  checkMicPermission,
 } from '@/utils/micPermissionManager';
 
 interface WakeWordOptions {
@@ -33,6 +34,8 @@ export const useWakeWord = ({ wakeWords, onWakeWordDetected, onError, enabled }:
   const recognitionRef = useRef<any>(null);
   const isListeningRef = useRef(false);
   const hasStartedRef = useRef(false); // Prevent double-start
+  const enabledRef = useRef(enabled);
+  const lastBlockedReasonRef = useRef<string | null>(null);
   
   // Store callbacks in refs to avoid re-running effects
   const wakeWordsRef = useRef(wakeWords);
@@ -44,9 +47,10 @@ export const useWakeWord = ({ wakeWords, onWakeWordDetected, onError, enabled }:
     wakeWordsRef.current = wakeWords;
     onWakeWordDetectedRef.current = onWakeWordDetected;
     onErrorRef.current = onError;
+    enabledRef.current = enabled;
   });
 
-  const startWakeWordDetection = useCallback(() => {
+  const startWakeWordDetection = useCallback(async () => {
     // Guard: prevent multiple starts
     if (hasStartedRef.current || recognitionRef.current) {
       console.log('[WakeWord] Already running, skipping start');
@@ -57,6 +61,23 @@ export const useWakeWord = ({ wakeWords, onWakeWordDetected, onError, enabled }:
       onErrorRef.current?.('Speech recognition is not supported in this browser');
       return;
     }
+
+    const permissionState = await checkMicPermission();
+    if (permissionState !== 'granted') {
+      const reason = permissionState === 'denied'
+        ? 'microphone permission denied — enable mic access, then tap the mic once'
+        : 'microphone permission needed — tap the mic once to enable wake words';
+      if (lastBlockedReasonRef.current !== reason) {
+        onErrorRef.current?.(reason);
+        lastBlockedReasonRef.current = reason;
+      }
+      setIsListening(false);
+      isListeningRef.current = false;
+      hasStartedRef.current = false;
+      return;
+    }
+
+    lastBlockedReasonRef.current = null;
 
     const recognition = createSpeechRecognition({
       continuous: true,
@@ -90,11 +111,13 @@ export const useWakeWord = ({ wakeWords, onWakeWordDetected, onError, enabled }:
       setIsListening(false);
       isListeningRef.current = false;
       hasStartedRef.current = false;
+      recognitionRef.current = null;
     };
 
     recognition.onend = () => {
       // Mark as stopped - micPermissionManager handles keepAlive restarts
       hasStartedRef.current = false;
+      recognitionRef.current = null;
       if (!isListeningRef.current) {
         setIsListening(false);
       }
@@ -111,6 +134,7 @@ export const useWakeWord = ({ wakeWords, onWakeWordDetected, onError, enabled }:
       console.error('[WakeWord] Failed to start:', e);
       onErrorRef.current?.(e instanceof Error ? e.message : 'Failed to start wake word detection');
       hasStartedRef.current = false;
+      recognitionRef.current = null;
     }
   }, []); // No dependencies - uses refs
 
@@ -138,6 +162,18 @@ export const useWakeWord = ({ wakeWords, onWakeWordDetected, onError, enabled }:
       stopWakeWordDetection();
     };
   }, [enabled, startWakeWordDetection, stopWakeWordDetection]); // Callbacks are stable via useCallback with no deps
+
+  useEffect(() => {
+    const handlePermissionChanged = (event: Event) => {
+      const state = (event as CustomEvent<{ state?: string }>).detail?.state;
+      if (state === 'granted' && enabledRef.current) {
+        startWakeWordDetection();
+      }
+    };
+
+    window.addEventListener('zoe-mic-permission-changed', handlePermissionChanged);
+    return () => window.removeEventListener('zoe-mic-permission-changed', handlePermissionChanged);
+  }, [startWakeWordDetection]);
 
   return {
     isListening,

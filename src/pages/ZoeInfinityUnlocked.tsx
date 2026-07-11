@@ -1532,7 +1532,7 @@ function ZoeInfinityUnlocked() {
       }
     },
     onError: (error) => zoeDebugLog('error', `wake word error: ${error}`),
-    enabled: isBrainReady && !isProcessing && !isSpeaking && !isManualVoiceInput,
+    enabled: isBrainReady && !isProcessing && !isSpeaking && !isManualVoiceInput && !handsFreeMode && !wakeWordActive,
   });
 
   // Auto mic timeout: if hands-free is on and nothing is happening, close after silence
