@@ -264,16 +264,13 @@ async function checkProviderHealth(): Promise<CheckResult> {
 
 function checkHandsFreeState(): CheckResult {
   try {
-    // Import lazily to avoid circular deps at module load
-    const bus = require('@/features/zoe-handsfree/debugBus') as typeof import('@/features/zoe-handsfree/debugBus');
-    // No public getter — inspect via subscribe snapshot
-    let snapshot: import('@/features/zoe-handsfree/debugBus').ZoeHandsFreeDebugState | null = null;
-    const unsub = bus.subscribeZoeDebugState((s) => { snapshot = s; });
+    let snapshot: ZoeHandsFreeDebugState | null = null;
+    const unsub = subscribeZoeDebugState((s) => { snapshot = s; });
     unsub();
     if (!snapshot) {
       return { id: 'handsfree.state', category: 'handsfree', label: 'Hands-free debug bus', status: 'warn', detail: 'no state snapshot' };
     }
-    const s = snapshot as import('@/features/zoe-handsfree/debugBus').ZoeHandsFreeDebugState;
+    const s = snapshot as ZoeHandsFreeDebugState;
     const status: CheckStatus = s.lastError ? 'warn' : 'pass';
     return {
       id: 'handsfree.state',
