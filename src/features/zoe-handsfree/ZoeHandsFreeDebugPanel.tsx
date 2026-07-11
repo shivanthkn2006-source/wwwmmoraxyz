@@ -90,13 +90,13 @@ export const ZoeHandsFreeDebugPanel: React.FC<ZoeHandsFreeDebugPanelProps> = ({
   }, []);
 
   const status =
-    isSpeaking ? { label: 'SPEAKING', color: 'bg-purple-500' }
-    : isProcessing ? { label: 'PROCESSING', color: 'bg-amber-500' }
-    : isListening ? { label: 'LISTENING', color: 'bg-emerald-500' }
-    : wakeWordActive ? { label: 'WAKE', color: 'bg-emerald-400' }
-    : handsFreeMode ? { label: 'HANDS-FREE IDLE', color: 'bg-cyan-500' }
-    : isWakeListening ? { label: 'AWAITING WAKE', color: 'bg-slate-400' }
-    : { label: 'OFFLINE', color: 'bg-slate-600' };
+    isSpeaking ? { label: 'SPEAKING', color: 'bg-purple-500', glyph: '●' }
+    : isProcessing ? { label: 'PROCESSING', color: 'bg-amber-500', glyph: '●' }
+    : isListening ? { label: 'LISTENING', color: 'bg-emerald-500', glyph: '●' }
+    : wakeWordActive ? { label: 'WAKE', color: 'bg-emerald-400', glyph: '●' }
+    : handsFreeMode ? { label: 'HANDS-FREE IDLE', color: 'bg-cyan-500', glyph: '●' }
+    : isWakeListening ? { label: 'AWAITING WAKE', color: 'bg-slate-400', glyph: '●' }
+    : { label: 'OFFLINE', color: 'bg-slate-600', glyph: '○' };
 
   return (
     <div
@@ -108,12 +108,11 @@ export const ZoeHandsFreeDebugPanel: React.FC<ZoeHandsFreeDebugPanelProps> = ({
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
-        className="relative flex h-8 w-8 items-center justify-center rounded-full bg-black/70 backdrop-blur border border-white/10 shadow-lg text-[9px] text-white/90 hover:bg-black/80 cursor-grab active:cursor-grabbing"
+        className="relative flex h-6 w-6 items-center justify-center rounded-full bg-black/60 backdrop-blur border border-white/10 shadow-lg text-[11px] text-white/90 hover:bg-black/80 cursor-grab active:cursor-grabbing"
         aria-label={`Zoe hands-free status: ${status.label}. Drag to move, tap to open debug.`}
         title={`HF · ${status.label}`}
       >
-        <span className="tracking-wide">HF</span>
-        <span className={`absolute right-0.5 top-0.5 h-2 w-2 rounded-full ${status.color} ${handsFreeMode || wakeWordActive || isListening ? 'animate-pulse' : ''}`} />
+        <span className={`${status.color.replace('bg-', 'text-')} ${handsFreeMode || wakeWordActive || isListening || isProcessing || isSpeaking ? 'animate-pulse' : ''}`}>{status.glyph}</span>
       </button>
 
       {open && (

@@ -55,7 +55,7 @@ import { useArtifactGenerator } from '@/hooks/useArtifactGenerator';
 import { useWakeWord } from '@/hooks/useWakeWord';
 import { zoeDebugLog } from '@/features/zoe-handsfree/debugBus';
 import { ZoeHandsFreeDebugPanel } from '@/features/zoe-handsfree/ZoeHandsFreeDebugPanel';
-import { ALL_HANDS_FREE_PHRASES, HANDS_FREE_STOP_PHRASES, normalizeVoicePhrase } from '@/features/zoe-handsfree/phrases';
+import { ALL_HANDS_FREE_PHRASES, HANDS_FREE_STOP_PHRASES, findHandsFreePhrase, normalizeVoicePhrase } from '@/features/zoe-handsfree/phrases';
 import { useGenesisConversation } from '@/hooks/useGenesisConversation';
 import { addZoeInfinityMarker, isZoeInfinityMessage, stripZoeInfinityMarker } from '@/utils/conversationNamespaces';
 import { generateConversationPDF, generateConversationPDFFromMessages, generateConversationPDFLast24Hours } from '@/utils/zoeConversationPdfExport';
@@ -1263,6 +1263,7 @@ function ZoeInfinityUnlocked() {
   // (local state + onboarding sync moved near top so setMessages exists before any hook callbacks)
   const [voiceEnabled] = useState(true);
   const [wakeWordActive, setWakeWordActive] = useState(false);
+  const [isVoiceMicListening, setIsVoiceMicListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isManualVoiceInput, setIsManualVoiceInput] = useState(false);
   const [handsFreeMode, setHandsFreeMode] = useState(false);
@@ -1508,17 +1509,19 @@ function ZoeInfinityUnlocked() {
     setHandsFreeMode(false);
     setWakeWordActive(false);
     setIsManualVoiceInput(false);
+    setIsVoiceMicListening(false);
+    try { stopAllVoices(); } catch { /* noop */ }
     try { stopHybridVoice(); } catch { /* noop */ }
-  }, [stopHybridVoice]);
+    try { voiceOrchestrator.stop(); } catch { /* noop */ }
+  }, [stopHybridVoice, voiceOrchestrator]);
 
   // Wake word (Stage 4) - must be after state declarations
   const { isListening: isWakeListening } = useWakeWord({
     wakeWords: ALL_HANDS_FREE_PHRASES,
     onWakeWordDetected: ({ wakeWord, transcript }) => {
-      const normalizedWakeWord = normalizeVoicePhrase(wakeWord);
-      const isStopPhrase = HANDS_FREE_STOP_PHRASES.some((phrase) => normalizeVoicePhrase(phrase) === normalizedWakeWord);
-      if (isStopPhrase) {
-        stopHandsFreeMode(`stop phrase detected (${wakeWord})`);
+      const stopPhrase = findHandsFreePhrase(transcript || wakeWord, HANDS_FREE_STOP_PHRASES);
+      if (stopPhrase) {
+        stopHandsFreeMode(`stop phrase detected (${stopPhrase})`);
         return;
       }
 
@@ -1534,6 +1537,15 @@ function ZoeInfinityUnlocked() {
     onError: (error) => zoeDebugLog('error', `wake word error: ${error}`),
     enabled: isBrainReady && !isProcessing && !isSpeaking && !isManualVoiceInput && !handsFreeMode && !wakeWordActive,
   });
+
+  useEffect(() => {
+    const handleHandsFreeStop = (event: Event) => {
+      const reason = (event as CustomEvent<{ reason?: string }>).detail?.reason || 'stop phrase requested';
+      stopHandsFreeMode(reason);
+    };
+    window.addEventListener('zoe-handsfree-stop-requested', handleHandsFreeStop);
+    return () => window.removeEventListener('zoe-handsfree-stop-requested', handleHandsFreeStop);
+  }, [stopHandsFreeMode]);
 
   // Auto mic timeout: if hands-free is on and nothing is happening, close after silence
   useEffect(() => {
@@ -3550,6 +3562,12 @@ If you realize you made a factual error, repeated yourself, or gave contradictor
     const t = transcript.trim();
     zoeDebugLog('voice', `handleVoiceEnd (${t.length} chars)${t ? ': ' + t.slice(0, 60) : ' — empty'}`);
     setIsManualVoiceInput(false);
+    setIsVoiceMicListening(false);
+    const stopPhrase = findHandsFreePhrase(t, HANDS_FREE_STOP_PHRASES);
+    if (stopPhrase && handsFreeMode) {
+      stopHandsFreeMode(`stop phrase detected (${stopPhrase})`);
+      return;
+    }
     if (t) {
       handleSend(t);
     }
@@ -3557,7 +3575,7 @@ If you realize you made a factual error, repeated yourself, or gave contradictor
     if (!handsFreeMode) {
       setWakeWordActive(false);
     }
-  }, [handleSend, handsFreeMode]);
+  }, [handleSend, handsFreeMode, stopHandsFreeMode]);
 
 
   const triggerBrowserDownload = useCallback(async (url: string, filename: string) => {
@@ -3885,7 +3903,11 @@ If you realize you made a factual error, repeated yourself, or gave contradictor
         wakeWordActive={wakeWordActive}
         onVoiceStart={handleVoiceStart}
         onVoiceEnd={handleVoiceEnd}
-        onVoiceStop={() => setIsManualVoiceInput(false)}
+        onVoiceStop={() => {
+          setIsManualVoiceInput(false);
+          setIsVoiceMicListening(false);
+        }}
+        onListeningChange={setIsVoiceMicListening}
         onInputChange={handleInputChange}
         phantomMode={phantomMode.isPhantomMode}
         onFileUpload={isHeavyReady ? documentXray.uploadDocument : undefined}
@@ -3908,7 +3930,7 @@ If you realize you made a factual error, repeated yourself, or gave contradictor
       <ZoeHandsFreeDebugPanel
         handsFreeMode={handsFreeMode}
         wakeWordActive={wakeWordActive}
-        isListening={isManualVoiceInput}
+        isListening={isVoiceMicListening || isManualVoiceInput}
         isProcessing={isProcessing}
         isSpeaking={isSpeaking}
         isWakeListening={isWakeListening}

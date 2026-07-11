@@ -35,6 +35,7 @@ interface InfinityInputPhantomProps {
   onVoiceStart?: () => void;
   onVoiceEnd?: (transcript: string) => void;
   onVoiceStop?: () => void;
+  onListeningChange?: (listening: boolean) => void;
   onInputChange?: (value: string) => void;
   phantomMode?: boolean;
   onFileUpload?: (file: File) => Promise<unknown>;
@@ -54,6 +55,7 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
   onVoiceStart,
   onVoiceEnd,
   onVoiceStop,
+  onListeningChange,
   onInputChange,
   phantomMode = false,
   onFileUpload,
@@ -81,6 +83,10 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
   const manualStopSessionRef = useRef<number | null>(null);
   const plusMenuRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    onListeningChange?.(isListening);
+  }, [isListening, onListeningChange]);
 
   // Sync hands-free mode from props
   useEffect(() => {
@@ -224,6 +230,7 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
       handsFreeRef.current = false;
       setIsHandsFree(false);
       onHandsFreeToggle?.(false);
+      window.dispatchEvent(new CustomEvent('zoe-handsfree-stop-requested', { detail: { reason } }));
       if (handsFreeSilenceTimeoutRef.current) {
         clearTimeout(handsFreeSilenceTimeoutRef.current);
         handsFreeSilenceTimeoutRef.current = null;
