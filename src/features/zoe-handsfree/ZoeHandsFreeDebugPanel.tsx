@@ -14,6 +14,7 @@ export interface ZoeHandsFreeDebugPanelProps {
   isProcessing: boolean;
   isSpeaking: boolean;
   isWakeListening: boolean;
+  onToggleHandsFree?: (next: boolean) => void | Promise<void>;
 }
 
 const levelColor: Record<ZoeDebugEntry['level'], string> = {
@@ -30,6 +31,7 @@ export const ZoeHandsFreeDebugPanel: React.FC<ZoeHandsFreeDebugPanelProps> = ({
   isProcessing,
   isSpeaking,
   isWakeListening,
+  onToggleHandsFree,
 }) => {
   const [entries, setEntries] = useState<ZoeDebugEntry[]>([]);
   const [open, setOpen] = useState(false);
@@ -127,13 +129,26 @@ export const ZoeHandsFreeDebugPanel: React.FC<ZoeHandsFreeDebugPanelProps> = ({
           </div>
           <div className="flex items-center justify-between px-2.5 py-1 border-b border-white/10 bg-white/[0.03]">
             <span className="opacity-60">events · {entries.length}</span>
-            <button
-              type="button"
-              onClick={clearZoeDebug}
-              className="text-[9px] opacity-70 hover:opacity-100 underline"
-            >
-              clear
-            </button>
+            <div className="flex items-center gap-2">
+              {onToggleHandsFree && (
+                <button
+                  type="button"
+                  onClick={() => { void onToggleHandsFree(!handsFreeMode); }}
+                  className={`text-[9px] px-1.5 py-0.5 rounded border ${handsFreeMode ? 'bg-emerald-500/20 border-emerald-400/40 text-emerald-200' : 'bg-white/5 border-white/15 hover:bg-white/10'}`}
+                  aria-pressed={handsFreeMode}
+                  title={handsFreeMode ? 'Stop hands-free' : 'Start hands-free (grants mic on mobile)'}
+                >
+                  {handsFreeMode ? '■ stop HF' : '▶ start HF'}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={clearZoeDebug}
+                className="text-[9px] opacity-70 hover:opacity-100 underline"
+              >
+                clear
+              </button>
+            </div>
           </div>
           <div className="flex-1 overflow-y-auto px-2.5 py-1 space-y-0.5">
             {entries.length === 0 && (

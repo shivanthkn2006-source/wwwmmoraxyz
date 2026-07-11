@@ -3943,6 +3943,28 @@ If you realize you made a factual error, repeated yourself, or gave contradictor
         isProcessing={isProcessing}
         isSpeaking={isSpeaking}
         isWakeListening={isWakeListening}
+        onToggleHandsFree={async (next) => {
+          if (!next) {
+            stopHandsFreeMode('manual toggle off');
+            return;
+          }
+          // MOBILE-CRITICAL: call getUserMedia inside the tap gesture so
+          // Chrome Android / iOS Safari actually prompt for mic permission.
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            stream.getTracks().forEach((t) => t.stop());
+            zoeDebugLog('info', 'manual HF start: mic permission granted');
+            try {
+              window.dispatchEvent(new CustomEvent('zoe-mic-permission-changed', { detail: { state: 'granted' } }));
+            } catch { /* noop */ }
+          } catch (err: any) {
+            zoeDebugLog('error', `manual HF start: mic denied (${err?.name || err?.message || 'unknown'})`);
+            return;
+          }
+          setHandsFreeMode(true);
+          setWakeWordActive(true);
+          setTimeout(() => setWakeWordActive(false), 3000);
+        }}
       />
 
       {/* Inference Diagnostics & Voice Signal moved to ZoeUtilityMenu */}
