@@ -1510,6 +1510,7 @@ function ZoeInfinityUnlocked() {
     setWakeWordActive(false);
     setIsManualVoiceInput(false);
     setIsVoiceMicListening(false);
+    try { window.dispatchEvent(new CustomEvent('zoe-stop-handsfree-listening', { detail: { reason } })); } catch { /* noop */ }
     try { stopAllVoices(); } catch { /* noop */ }
     try { stopHybridVoice(); } catch { /* noop */ }
   }, [stopHybridVoice]);
@@ -1794,22 +1795,20 @@ function ZoeInfinityUnlocked() {
     console.log('[ZoeInfinity] 🎵 Voices initialized (once)');
   }, [isVisualsReady, genesisEffects]);
 
-  // Enable voice commands (run as soon as command runtime is available)
+  // Keep the legacy always-on voice-command recognizer disabled in Zoe Infinity.
+  // Infinity already owns wake-word + manual voice input; starting this second
+  // SpeechRecognition instance causes desktop/mobile mic collisions where
+  // listening/speaking wakes for a second, then falls back.
   useEffect(() => {
-    if (!voiceEnabled) return;
-    if (hasVoiceCommandsEnabled.current) return;
-
     const commands = rawIntegration?.voiceCommands ?? integration.voiceCommands;
-    if (!commands?.enable) return;
-
-    hasVoiceCommandsEnabled.current = true;
-    commands.enable();
-    console.log('[ZoeInfinity] 🎤 Voice commands enabled');
+    commands?.disable?.();
+    hasVoiceCommandsEnabled.current = false;
+    console.log('[ZoeInfinity] 🎤 Legacy voice command recognizer disabled; Infinity voice owns mic');
 
     return () => {
       commands.disable?.();
     };
-  }, [voiceEnabled, rawIntegration, integration]);
+  }, [rawIntegration, integration]);
 
   // Fire Genesis unlock effects (Stage 2+) - RUNS ONCE
   useEffect(() => {
@@ -3933,6 +3932,7 @@ If you realize you made a factual error, repeated yourself, or gave contradictor
         onClearUpload={isHeavyReady ? documentXray.clearActiveDocument : undefined}
         handsFreeMode={handsFreeMode}
         onHandsFreeToggle={setHandsFreeMode}
+        voicePaused={isProcessing || isSpeaking}
       />
 
       {/* Hands-free debug + status panel (bottom-left, collapsible) */}
@@ -3948,21 +3948,13 @@ If you realize you made a factual error, repeated yourself, or gave contradictor
             stopHandsFreeMode('manual toggle off');
             return;
           }
-          // MOBILE-CRITICAL: call getUserMedia inside the tap gesture so
-          // Chrome Android / iOS Safari actually prompt for mic permission.
-          try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            stream.getTracks().forEach((t) => t.stop());
-            zoeDebugLog('info', 'manual HF start: mic permission granted');
-            try {
-              window.dispatchEvent(new CustomEvent('zoe-mic-permission-changed', { detail: { state: 'granted' } }));
-            } catch { /* noop */ }
-          } catch (err: any) {
-            zoeDebugLog('error', `manual HF start: mic denied (${err?.name || err?.message || 'unknown'})`);
-            return;
-          }
+          // MOBILE-CRITICAL: start recognition directly from this tap path.
+          // Awaiting getUserMedia first breaks the gesture chain on mobile and
+          // causes the mic/listening state to wake for a moment, then fall back.
+          zoeDebugLog('info', 'manual HF start: starting recognition from tap');
           setHandsFreeMode(true);
           setWakeWordActive(true);
+          try { window.dispatchEvent(new CustomEvent('zoe-start-handsfree-listening')); } catch { /* noop */ }
           setTimeout(() => setWakeWordActive(false), 3000);
         }}
       />
