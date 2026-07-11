@@ -113,17 +113,38 @@ export const ZoeGodModeScanPanel: React.FC = () => {
 
   return (
     <>
-      {/* Floating trigger — bottom-left, out of the way of the bottom-right call controls */}
+      {/* Floating trigger — draggable, bottom-left by default, out of the way of the bottom-right call controls */}
       <button
+        ref={buttonRef}
         type="button"
-        onClick={() => setOpen(true)}
-        className="fixed bottom-4 left-4 z-[9997] flex items-center gap-1.5 rounded-full bg-black/70 backdrop-blur border border-fuchsia-400/40 text-fuchsia-200 hover:bg-black/85 hover:border-fuchsia-300/60 px-3 py-1.5 text-[11px] font-mono shadow-lg pointer-events-auto"
-        title="Zoe God Mode — full platform scan"
-        aria-label="Open Zoe God Mode platform scan"
+        onClick={() => {
+          // Only open if the user didn't just drag.
+          if (!dragRef.current?.dragging && (dragRef.current ? dragRef.current.movedPx < 4 : true)) {
+            setOpen(true);
+          }
+        }}
+        onPointerDown={(e) => {
+          // Left button only.
+          if (e.button !== 0) return;
+          (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+          dragRef.current = {
+            dragging: true,
+            startX: e.clientX,
+            startY: e.clientY,
+            initialLeft: pos.left,
+            initialBottom: pos.bottom,
+            movedPx: 0,
+          };
+        }}
+        style={{ left: pos.left, bottom: pos.bottom }}
+        className="fixed z-[9997] flex items-center gap-1.5 rounded-full bg-black/70 backdrop-blur border border-fuchsia-400/40 text-fuchsia-200 hover:bg-black/85 hover:border-fuchsia-300/60 px-3 py-1.5 text-[11px] font-mono shadow-lg pointer-events-auto cursor-move select-none touch-none"
+        title="Drag to reposition. Tap to open Zoe God Mode scan."
+        aria-label="Open Zoe God Mode platform scan (draggable)"
       >
         <span className="text-sm leading-none">🛰</span>
         <span>god-mode</span>
       </button>
+
 
       {open && (
         <div
