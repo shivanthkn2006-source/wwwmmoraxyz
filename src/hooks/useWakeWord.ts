@@ -154,9 +154,9 @@ export const useWakeWord = ({ wakeWords, onWakeWordDetected, onError, enabled }:
       hasStartedRef.current = false;
       recognitionRef.current = null;
       releaseSpeechRecognition('wake-word', recognition);
-      if (enabledRef.current) {
+      if (enabledRef.current && !getActiveSpeechRecognitionOwner()) {
         restartTimeoutRef.current = setTimeout(() => {
-          if (enabledRef.current && !recognitionRef.current && !hasStartedRef.current) {
+          if (enabledRef.current && !recognitionRef.current && !hasStartedRef.current && !getActiveSpeechRecognitionOwner()) {
             void startWakeWordDetection();
           }
         }, 900);
@@ -172,9 +172,9 @@ export const useWakeWord = ({ wakeWords, onWakeWordDetected, onError, enabled }:
       if (!isListeningRef.current) {
         setIsListening(false);
       }
-      if (enabledRef.current) {
+      if (enabledRef.current && !getActiveSpeechRecognitionOwner()) {
         restartTimeoutRef.current = setTimeout(() => {
-          if (enabledRef.current && !recognitionRef.current && !hasStartedRef.current) {
+          if (enabledRef.current && !recognitionRef.current && !hasStartedRef.current && !getActiveSpeechRecognitionOwner()) {
             zoeDebugSpeechStart('wake-word', 'restart after browser wake segment ended');
             void startWakeWordDetection();
           }
@@ -199,9 +199,9 @@ export const useWakeWord = ({ wakeWords, onWakeWordDetected, onError, enabled }:
       hasStartedRef.current = false;
       recognitionRef.current = null;
       releaseSpeechRecognition('wake-word', recognition);
-      if (enabledRef.current) {
+      if (enabledRef.current && !getActiveSpeechRecognitionOwner()) {
         restartTimeoutRef.current = setTimeout(() => {
-          if (enabledRef.current && !recognitionRef.current && !hasStartedRef.current) {
+          if (enabledRef.current && !recognitionRef.current && !hasStartedRef.current && !getActiveSpeechRecognitionOwner()) {
             void startWakeWordDetection();
           }
         }, 1200);

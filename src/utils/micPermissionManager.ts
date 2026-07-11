@@ -22,6 +22,8 @@ type SpeechRecognitionOwner = 'wake-word' | 'voice-input' | string;
 
 let activeSpeechRecognition: { owner: SpeechRecognitionOwner; recognition: any } | null = null;
 let speechRecognitionReservedBy: SpeechRecognitionOwner | null = null;
+let lastVoiceInputClaimAt = 0;
+const VOICE_INPUT_HANDOFF_GRACE_MS = 1500;
 
 const stopRecognitionInstanceForHandoff = (recognition: any | null) => {
   if (!recognition) return;
@@ -47,6 +49,7 @@ export const reserveSpeechRecognition = (owner: SpeechRecognitionOwner): boolean
 
 export const claimSpeechRecognition = (owner: SpeechRecognitionOwner, recognition: any): boolean => {
   const interrupted = reserveSpeechRecognition(owner);
+  if (owner === 'voice-input') lastVoiceInputClaimAt = Date.now();
   activeSpeechRecognition = { owner, recognition };
   return interrupted;
 };
@@ -66,6 +69,13 @@ export const releaseSpeechRecognition = (owner: SpeechRecognitionOwner, recognit
 };
 
 export const getActiveSpeechRecognitionOwner = (): SpeechRecognitionOwner | null => {
+  if (
+    !activeSpeechRecognition &&
+    !speechRecognitionReservedBy &&
+    Date.now() - lastVoiceInputClaimAt < VOICE_INPUT_HANDOFF_GRACE_MS
+  ) {
+    return 'voice-input';
+  }
   return activeSpeechRecognition?.owner ?? speechRecognitionReservedBy;
 };
 
@@ -101,13 +111,13 @@ export const resumeAudioContext = async (): Promise<boolean> => {
  * Request microphone permission.
  * Returns true if permission is granted, false otherwise.
  */
-export const requestMicPermission = async (): Promise<boolean> => {
+export const requestMicPermission = async (forceRefresh = false): Promise<boolean> => {
   // Check cache first
   const now = Date.now();
-  if (permissionGranted && (now - lastPermissionCheck) < PERMISSION_CACHE_MS) {
+  if (!forceRefresh && permissionGranted && (now - lastPermissionCheck) < PERMISSION_CACHE_MS) {
     // Try to resume AudioContext (non-fatal if blocked)
     resumeAudioContext().catch(() => {});
-      notifyMicPermissionChanged('granted');
+    notifyMicPermissionChanged('granted');
     return true;
   }
 
@@ -238,9 +248,10 @@ export const getSpeechRecognition = (): any | null => {
  */
 export const getPlatformInfo = () => {
   const ua = navigator.userAgent;
+  const maxTouchPoints = navigator.maxTouchPoints || 0;
   // Enhanced iOS detection including iPad in desktop mode
   const isIOS = /iPad|iPhone|iPod/.test(ua) || 
-    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    (navigator.platform === 'MacIntel' && maxTouchPoints > 1);
   // Safari detection excluding Chrome/Edge/etc that include "Safari" in UA
   const isSafari = /^((?!chrome|android|crios|fxios|edgios).)*safari/i.test(ua);
   const isChrome = /Chrome/.test(ua) && !/Edge|Edg/.test(ua);
@@ -248,6 +259,7 @@ export const getPlatformInfo = () => {
   const isFirefox = /Firefox/.test(ua);
   const isEdge = /Edge|Edg/.test(ua);
   const isWebKit = /AppleWebKit/.test(ua) && !/Chrome/.test(ua);
+  const isTouchSafariLike = isSafari && maxTouchPoints > 0;
   
   // Parse versions
   let iosVersion: number | null = null;
@@ -270,6 +282,7 @@ export const getPlatformInfo = () => {
     isFirefox, 
     isEdge, 
     isWebKit,
+    isTouchSafariLike,
     iosVersion,
     safariVersion,
   };
@@ -385,12 +398,11 @@ export const createSpeechRecognition = (options?: {
   (recognition as any).__zoeRecognitionId = recognitionId;
   
   // Platform-specific settings for Safari/iOS stability
-  if (platform.isIOS) {
-    // iOS Safari has severe bugs with continuous mode - must disable
+  if (platform.isIOS || platform.isAndroid || platform.isTouchSafariLike) {
+    // Mobile Web Speech has severe continuous-mode bugs; restart short segments instead.
     recognition.continuous = false;
-    // iOS Safari crashes with interimResults - must disable
     recognition.interimResults = false;
-    console.log('[MicManager] iOS Safari mode: continuous=false, interim=false');
+    console.log('[MicManager] Mobile speech mode: continuous=false, interim=false');
   } else if (platform.isSafari) {
     // Desktop Safari - more stable but still needs care
     recognition.continuous = options?.continuous ?? true;

@@ -1560,6 +1560,16 @@ function ZoeInfinityUnlocked() {
   }, [handsFreeMode, isManualVoiceInput, isProcessing, isSpeaking, isVoiceMicListening, isWakeListening, wakeWordActive]);
 
   useEffect(() => {
+    if (!handsFreeMode || isProcessing || isSpeaking || isVoiceMicListening || isManualVoiceInput) return;
+    const restartTimer = window.setTimeout(() => {
+      if (!handsFreeMode || isProcessing || isSpeaking || isVoiceMicListening || isManualVoiceInput) return;
+      zoeDebugLog('voice', 'hands-free resume after Zoe finished');
+      try { window.dispatchEvent(new CustomEvent('zoe-start-handsfree-listening')); } catch { /* noop */ }
+    }, 250);
+    return () => window.clearTimeout(restartTimer);
+  }, [handsFreeMode, isManualVoiceInput, isProcessing, isSpeaking, isVoiceMicListening]);
+
+  useEffect(() => {
     const handleHandsFreeStop = (event: Event) => {
       const reason = (event as CustomEvent<{ reason?: string }>).detail?.reason || 'stop phrase requested';
       stopHandsFreeMode(reason);
@@ -3914,7 +3924,7 @@ If you realize you made a factual error, repeated yourself, or gave contradictor
       <InfinityInputPhantom
         onSend={handleSend}
         mood={mood}
-        disabled={isProcessing}
+        disabled={isProcessing && !handsFreeMode}
         voiceEnabled={voiceEnabled}
         wakeWordActive={wakeWordActive}
         onVoiceStart={handleVoiceStart}
@@ -3959,27 +3969,9 @@ If you realize you made a factual error, repeated yourself, or gave contradictor
             stopHandsFreeMode('manual toggle off');
             return;
           }
-          // MOBILE-CRITICAL: start recognition directly from this tap path.
-          // Do not await anything before dispatching the start event; that breaks
-          // the gesture chain on mobile and causes the mic to wake then fall back.
+          // MOBILE-CRITICAL: let the input component request mic permission and
+          // start SpeechRecognition inside this tap-triggered event path.
           zoeDebugLog('info', 'manual HF start: starting recognition from tap');
-          try {
-            const streamPromise = navigator.mediaDevices?.getUserMedia?.({ audio: true });
-            if (streamPromise) {
-              void streamPromise
-                .then((stream) => {
-                  stream.getTracks().forEach((t) => t.stop());
-                  zoeDebugSetState({ micPermission: 'granted' });
-                  window.dispatchEvent(new CustomEvent('zoe-mic-permission-changed', { detail: { state: 'granted' } }));
-                })
-                .catch((err: any) => {
-                  zoeDebugSetState({ micPermission: err?.name === 'NotAllowedError' ? 'denied' : 'prompt', lastError: `manual HF mic prime failed (${err?.name || err?.message || 'unknown'})` });
-                  zoeDebugLog('error', `manual HF mic prime failed (${err?.name || err?.message || 'unknown'})`);
-                });
-            }
-          } catch (err: any) {
-            zoeDebugLog('error', `manual HF mic prime failed (${err?.name || err?.message || 'unknown'})`);
-          }
           zoeDebugSetState({ hfState: 'starting', lastStartReason: 'manual HF start button' });
           setHandsFreeMode(true);
           setWakeWordActive(true);

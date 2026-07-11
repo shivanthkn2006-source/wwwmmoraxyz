@@ -15,6 +15,7 @@ import {
   claimSpeechRecognition,
   releaseSpeechRecognition,
   stopSpeechRecognition,
+  isPermissionCached,
 } from '@/utils/micPermissionManager';
 import { EmojiPicker } from './EmojiPicker';
 import { findHandsFreePhrase, HANDS_FREE_STOP_PHRASES } from '@/features/zoe-handsfree/phrases';
@@ -236,8 +237,8 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
       await new Promise((resolve) => setTimeout(resolve, 140));
     }
 
-    if (!fromUserGesture) {
-      const hasPermission = await requestMicPermission();
+    if (fromUserGesture || !isPermissionCached()) {
+      const hasPermission = await requestMicPermission(fromUserGesture);
       if (!hasPermission) {
         isStartingRef.current = false;
         setIsListening(false);
@@ -409,19 +410,10 @@ export const InfinityInputPhantom = memo(function InfinityInputPhantom({
       }
       if (cleaned) onVoiceEnd?.(cleaned);
       if (handsFreeRef.current) {
-        if (voicePausedRef.current) {
-          zoeDebugLog('voice', 'hands-free restart deferred while Zoe is processing/speaking');
-          zoeDebugSetState({ hfState: 'paused', lastStopReason: 'paused while Zoe is processing/speaking' });
-          setIsListening(false);
-          onVoiceStop?.();
-          return;
-        }
-        restartTimeoutRef.current = setTimeout(() => {
-          if (handsFreeRef.current && !voicePausedRef.current) {
-            zoeDebugSpeechStart('voice-input', 'hands-free restart after recognition end');
-            startListening(true, false);
-          }
-        }, 300);
+        zoeDebugLog('voice', voicePausedRef.current ? 'hands-free waiting for Zoe to finish' : 'hands-free segment ended; awaiting state-driven restart');
+        zoeDebugSetState({ hfState: voicePausedRef.current ? 'paused' : 'listening', lastStopReason: voicePausedRef.current ? 'paused while Zoe is processing/speaking' : 'recognition segment ended' });
+        setIsListening(false);
+        onVoiceStop?.();
       } else {
         setIsListening(false);
         zoeDebugSetState({ hfState: 'off' });
