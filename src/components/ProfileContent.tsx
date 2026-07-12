@@ -145,11 +145,16 @@ const ProfileContent = () => {
       user.email?.split('@')[0] ||
       'New User';
 
+    const fallbackUsername = (user.email?.split('@')[0] || `user_${user.id.slice(0, 8)}`)
+      .toLowerCase()
+      .replace(/[^a-z0-9_]/g, '_');
+
     const { data: created, error: insertError } = await supabase
       .from('profiles')
-      .insert({ user_id: user.id, display_name: fallbackName })
+      .insert({ user_id: user.id, display_name: fallbackName, username: fallbackUsername })
       .select('*')
       .maybeSingle();
+
 
     if (insertError) {
       console.error('[ProfileContent] auto-create profile failed:', insertError);
