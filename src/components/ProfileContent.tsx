@@ -124,14 +124,49 @@ const ProfileContent = () => {
       .from('profiles')
       .select('*')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
 
-    if (!error && data) {
+    if (error) {
+      console.error('[ProfileContent] fetchProfile error:', error);
+      return;
+    }
+
+    if (data) {
       setProfile(data);
       setTotalPoints(data.total_points || 0);
       setCurrentTier(data.current_tier || null);
+      return;
+    }
+
+    // No profile row yet — auto-create a minimal one so the page renders.
+    const fallbackName =
+      (user.user_metadata as any)?.display_name ||
+      (user.user_metadata as any)?.full_name ||
+      user.email?.split('@')[0] ||
+      'New User';
+
+    const fallbackUsername = (user.email?.split('@')[0] || `user_${user.id.slice(0, 8)}`)
+      .toLowerCase()
+      .replace(/[^a-z0-9_]/g, '_');
+
+    const { data: created, error: insertError } = await supabase
+      .from('profiles')
+      .insert({ user_id: user.id, display_name: fallbackName, username: fallbackUsername })
+      .select('*')
+      .maybeSingle();
+
+
+    if (insertError) {
+      console.error('[ProfileContent] auto-create profile failed:', insertError);
+      return;
+    }
+    if (created) {
+      setProfile(created);
+      setTotalPoints(created.total_points || 0);
+      setCurrentTier(created.current_tier || null);
     }
   };
+
 
   const handleStatusChange = async (newStatus: string) => {
     if (!user) return;
