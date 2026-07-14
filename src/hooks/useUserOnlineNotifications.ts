@@ -9,12 +9,16 @@ import { toast } from 'sonner';
 export const useUserOnlineNotifications = () => {
   const { user } = useAuth();
   const processedFriends = useRef<Set<string>>(new Set());
+  const cleanupRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     if (!user) return;
 
     // Get user's friends
     const fetchFriendsAndSubscribe = async () => {
+      cleanupRef.current?.();
+      cleanupRef.current = null;
+
       const { data: friendships } = await supabase
         .from('friendships')
         .select('user1_id, user2_id')
@@ -88,9 +92,12 @@ export const useUserOnlineNotifications = () => {
         )
         .subscribe();
 
-      return () => {
+      const cleanup = () => {
         supabase.removeChannel(channel);
       };
+
+      cleanupRef.current = cleanup;
+      return cleanup;
     };
 
     const cleanup = fetchFriendsAndSubscribe();
@@ -106,6 +113,8 @@ export const useUserOnlineNotifications = () => {
     
     return () => {
       cleanup?.then(cleanupFn => cleanupFn?.());
+      cleanupRef.current?.();
+      cleanupRef.current = null;
       window.removeEventListener('friendship-updated', handleFriendshipUpdate);
     };
   }, [user]);
