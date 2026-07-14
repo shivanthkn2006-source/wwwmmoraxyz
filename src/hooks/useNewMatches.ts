@@ -22,7 +22,7 @@ export const useNewMatches = () => {
         .from('profiles')
         .select('hobbies, user_id')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (!myProfile?.hobbies || myProfile.hobbies.length === 0) {
         setNewMatchesCount(0);
@@ -38,11 +38,16 @@ export const useNewMatches = () => {
         f.user1_id === user.id ? f.user2_id : f.user1_id
       ) || [];
 
-      const { data: allProfiles } = await supabase
+      let profilesQuery = supabase
         .from('public_profiles')
         .select('user_id, hobbies:profiles!inner(hobbies)')
-        .neq('user_id', user.id)
-        .not('user_id', 'in', `(${friendIds.join(',')})`);
+        .neq('user_id', user.id);
+
+      if (friendIds.length > 0) {
+        profilesQuery = profilesQuery.not('user_id', 'in', `(${friendIds.join(',')})`);
+      }
+
+      const { data: allProfiles } = await profilesQuery;
 
       if (!allProfiles) {
         setNewMatchesCount(0);

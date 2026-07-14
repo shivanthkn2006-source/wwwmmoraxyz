@@ -90,7 +90,7 @@ export const useImportantNotificationAnnouncements = () => {
     }
 
     const channel = supabase
-      .channel('important-notifications')
+      .channel(`important-notifications:${user.id}:${Math.random().toString(36).slice(2, 8)}`)
       .on(
         'postgres_changes',
         {

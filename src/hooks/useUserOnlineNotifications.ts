@@ -9,12 +9,16 @@ import { toast } from 'sonner';
 export const useUserOnlineNotifications = () => {
   const { user } = useAuth();
   const processedFriends = useRef<Set<string>>(new Set());
+  const cleanupRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     if (!user) return;
 
     // Get user's friends
     const fetchFriendsAndSubscribe = async () => {
+      cleanupRef.current?.();
+      cleanupRef.current = null;
+
       const { data: friendships } = await supabase
         .from('friendships')
         .select('user1_id, user2_id')
@@ -28,7 +32,7 @@ export const useUserOnlineNotifications = () => {
 
       // Subscribe to profile status changes for friends
       const channel = supabase
-        .channel(`friend-status-changes:${user.id}`)
+        .channel(`friend-status-changes:${user.id}:online:${Math.random().toString(36).slice(2, 8)}`)
         .on(
           'postgres_changes',
           {
@@ -46,7 +50,6 @@ export const useUserOnlineNotifications = () => {
               const friendProfile = payload.new;
               
               // Prevent duplicate processing in this session
-              const friendKey = `${friendProfile.user_id}_${Date.now()}`;
               if (processedFriends.current.has(friendProfile.user_id)) {
                 console.log('[UserOnlineNotifications] Skipping already processed friend:', friendProfile.display_name);
                 return;
@@ -89,9 +92,16 @@ export const useUserOnlineNotifications = () => {
         )
         .subscribe();
 
-      return () => {
+      let removed = false;
+      const cleanup = () => {
+        if (removed) return;
+        removed = true;
         supabase.removeChannel(channel);
+        if (cleanupRef.current === cleanup) cleanupRef.current = null;
       };
+
+      cleanupRef.current = cleanup;
+      return cleanup;
     };
 
     const cleanup = fetchFriendsAndSubscribe();
@@ -107,6 +117,8 @@ export const useUserOnlineNotifications = () => {
     
     return () => {
       cleanup?.then(cleanupFn => cleanupFn?.());
+      cleanupRef.current?.();
+      cleanupRef.current = null;
       window.removeEventListener('friendship-updated', handleFriendshipUpdate);
     };
   }, [user]);

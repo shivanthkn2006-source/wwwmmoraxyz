@@ -59,7 +59,7 @@ const NotificationMenu: React.FC<NotificationMenuProps> = ({ open, onOpenChange 
 
     // Set up real-time subscription for notifications
     const channel = supabase
-      .channel(`notifications-changes:${user.id}`)
+      .channel(`notifications-changes:${user.id}:${Math.random().toString(36).slice(2, 8)}`)
       .on(
         'postgres_changes',
         {

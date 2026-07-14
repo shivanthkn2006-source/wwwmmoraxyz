@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 
@@ -40,6 +40,7 @@ export interface ChatUser {
 
 export const useRealTimeChat = () => {
   const { user } = useAuth();
+  const channelNameRef = useRef(`messages_changes:${Math.random().toString(36).slice(2, 8)}`);
   const [chatUsers, setChatUsers] = useState<ChatUser[]>([]);
   const [messages, setMessages] = useState<Record<string, Message[]>>({});
   const [loading, setLoading] = useState(true);
@@ -206,7 +207,7 @@ export const useRealTimeChat = () => {
       .from('messages')
       .select('deleted_by')
       .eq('id', messageId)
-      .single();
+      .maybeSingle();
 
     const deletedBy = message?.deleted_by || [];
     if (!deletedBy.includes(user.id)) {
@@ -252,7 +253,7 @@ export const useRealTimeChat = () => {
       .from('messages')
       .select('reactions')
       .eq('id', messageId)
-      .single();
+      .maybeSingle();
 
     const reactions = (message?.reactions as Record<string, string[]>) || {};
     if (!reactions[emoji]) {
@@ -309,7 +310,7 @@ export const useRealTimeChat = () => {
       .from('messages')
       .select('created_at, sender_id')
       .eq('id', messageId)
-      .single();
+      .maybeSingle();
 
     if (fetchError || !message || message.sender_id !== user.id) {
       return false;
@@ -350,7 +351,7 @@ export const useRealTimeChat = () => {
         .from('messages')
         .select('deleted_by')
         .eq('id', messageId)
-        .single();
+        .maybeSingle();
 
       const deletedBy = message?.deleted_by || [];
       if (!deletedBy.includes(user.id)) {
@@ -405,7 +406,7 @@ export const useRealTimeChat = () => {
     if (!user) return;
 
     const channel = supabase
-      .channel('messages_changes')
+      .channel(channelNameRef.current)
       .on(
         'postgres_changes',
         {
@@ -440,7 +441,7 @@ export const useRealTimeChat = () => {
             .from('profiles')
             .select('display_name')
             .eq('user_id', newMessage.sender_id)
-            .single();
+            .maybeSingle();
           
           const senderName = senderProfile?.display_name || 'Someone';
           const event = new CustomEvent('lisa-response', {
