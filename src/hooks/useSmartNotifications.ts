@@ -150,7 +150,7 @@ export const useSmartNotifications = () => {
     if (!user) return;
 
     const channel = supabase
-      .channel(`friend-status-changes:${user.id}`)
+      .channel(`friend-status-changes:${user.id}:smart:${Math.random().toString(36).slice(2, 8)}`)
       .on(
         'postgres_changes',
         {

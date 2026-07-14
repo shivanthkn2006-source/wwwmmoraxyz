@@ -38,7 +38,7 @@ export const useTimelineNotifications = () => {
 
     // Subscribe to timeline activities
     const channel = supabase
-      .channel('timeline-activities')
+      .channel(`timeline-activities:${user.id}:${Math.random().toString(36).slice(2, 8)}`)
       .on(
         'postgres_changes',
         {

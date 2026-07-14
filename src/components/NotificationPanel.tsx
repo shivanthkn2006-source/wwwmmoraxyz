@@ -39,7 +39,7 @@ const NotificationPanel = () => {
 
   const setupRealtimeSubscription = () => {
     return supabase
-      .channel('notifications-panel')
+      .channel(`notifications-panel:${Math.random().toString(36).slice(2, 8)}`)
       .on(
         'postgres_changes',
         {

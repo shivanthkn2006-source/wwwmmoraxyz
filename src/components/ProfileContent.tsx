@@ -319,7 +319,7 @@ const ProfileContent = () => {
     if (!user) return;
 
     const channel = supabase
-      .channel(`profile_points_${user.id}`)
+      .channel(`profile_points_${user.id}:${Math.random().toString(36).slice(2, 8)}`)
       .on(
         'postgres_changes',
         {

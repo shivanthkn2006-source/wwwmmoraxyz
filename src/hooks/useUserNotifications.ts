@@ -22,7 +22,7 @@ export const useUserNotifications = (userId: string) => {
     
     // Subscribe to real-time updates
     const channel = supabase
-      .channel(`user-notifications-${userId}`)
+      .channel(`user-notifications-${userId}:${Math.random().toString(36).slice(2, 8)}`)
       .on(
         'postgres_changes',
         {
@@ -149,7 +149,7 @@ export const useUserNotifications = (userId: string) => {
         .from('profiles')
         .select('event_date, event_type')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
 
       if (profile?.event_type === 'birthday' && profile.event_date) {
         const eventDate = new Date(profile.event_date);

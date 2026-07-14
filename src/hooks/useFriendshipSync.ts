@@ -24,7 +24,7 @@ export const useFriendshipSync = (onFriendshipChange?: () => void) => {
     if (!user?.id) return;
 
     const channel = supabase
-      .channel('friendship-sync')
+      .channel(`friendship-sync:${user.id}:${Math.random().toString(36).slice(2, 8)}`)
       .on(
         'postgres_changes',
         {

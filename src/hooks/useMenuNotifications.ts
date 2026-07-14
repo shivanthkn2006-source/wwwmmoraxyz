@@ -113,11 +113,11 @@ export const useMenuNotifications = () => {
 
     // Subscribe to realtime changes
     const channel = supabase
-      .channel('menu-notifications')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, () => {
+      .channel(`menu-notifications:${user.id}:${Math.random().toString(36).slice(2, 8)}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, () => {
         fetchNotifications();
       })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, () => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `receiver_id=eq.${user.id}` }, () => {
         fetchNotifications();
       })
       .subscribe();
