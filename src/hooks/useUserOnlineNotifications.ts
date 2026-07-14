@@ -92,8 +92,12 @@ export const useUserOnlineNotifications = () => {
         )
         .subscribe();
 
+      let removed = false;
       const cleanup = () => {
+        if (removed) return;
+        removed = true;
         supabase.removeChannel(channel);
+        if (cleanupRef.current === cleanup) cleanupRef.current = null;
       };
 
       cleanupRef.current = cleanup;
