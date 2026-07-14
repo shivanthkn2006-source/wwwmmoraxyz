@@ -79,7 +79,7 @@ const UserProfileView = () => {
         .from('profiles')
         .select('user_id, username, display_name, profile_photo_url, bio, status, profile_visibility, hobbies, total_points, current_tier')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
 
       if (data) {
         setProfile(data as SafeProfileData);
@@ -90,7 +90,7 @@ const UserProfileView = () => {
         .from('safe_public_profiles')
         .select('*')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
 
       if (data) {
         setProfile(data as SafeProfileData);
@@ -119,14 +119,14 @@ const UserProfileView = () => {
       .from('profiles')
       .select('hobbies')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
 
     // Fetch viewed user's hobbies using safe view
     const { data: viewedUserProfile } = await supabase
       .from('safe_public_profiles')
       .select('hobbies')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
 
     if (currentUserProfile?.hobbies && viewedUserProfile?.hobbies) {
       const common = (currentUserProfile.hobbies as string[]).filter((hobby: string) =>

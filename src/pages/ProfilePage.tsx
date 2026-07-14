@@ -33,7 +33,7 @@ const ProfilePage = () => {
         .from('profiles')
         .select('username')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
       
       if (data) {
         setUsername(data.username);
@@ -53,7 +53,7 @@ const ProfilePage = () => {
           .from('onboarding_progress')
           .select('completed')
           .eq('user_id', user.id)
-          .single();
+          .maybeSingle();
 
         // Show onboarding if not completed
         if (!progress || !progress.completed) {

@@ -207,7 +207,7 @@ export const useRealTimeChat = () => {
       .from('messages')
       .select('deleted_by')
       .eq('id', messageId)
-      .single();
+      .maybeSingle();
 
     const deletedBy = message?.deleted_by || [];
     if (!deletedBy.includes(user.id)) {
@@ -253,7 +253,7 @@ export const useRealTimeChat = () => {
       .from('messages')
       .select('reactions')
       .eq('id', messageId)
-      .single();
+      .maybeSingle();
 
     const reactions = (message?.reactions as Record<string, string[]>) || {};
     if (!reactions[emoji]) {
@@ -310,7 +310,7 @@ export const useRealTimeChat = () => {
       .from('messages')
       .select('created_at, sender_id')
       .eq('id', messageId)
-      .single();
+      .maybeSingle();
 
     if (fetchError || !message || message.sender_id !== user.id) {
       return false;
@@ -351,7 +351,7 @@ export const useRealTimeChat = () => {
         .from('messages')
         .select('deleted_by')
         .eq('id', messageId)
-        .single();
+        .maybeSingle();
 
       const deletedBy = message?.deleted_by || [];
       if (!deletedBy.includes(user.id)) {
