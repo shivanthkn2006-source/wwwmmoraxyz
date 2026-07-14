@@ -28,7 +28,7 @@ export const useUserOnlineNotifications = () => {
 
       // Subscribe to profile status changes for friends
       const channel = supabase
-        .channel(`friend-status-changes:${user.id}`)
+        .channel(`friend-status-changes:${user.id}:online:${Math.random().toString(36).slice(2, 8)}`)
         .on(
           'postgres_changes',
           {
@@ -46,7 +46,6 @@ export const useUserOnlineNotifications = () => {
               const friendProfile = payload.new;
               
               // Prevent duplicate processing in this session
-              const friendKey = `${friendProfile.user_id}_${Date.now()}`;
               if (processedFriends.current.has(friendProfile.user_id)) {
                 console.log('[UserOnlineNotifications] Skipping already processed friend:', friendProfile.display_name);
                 return;

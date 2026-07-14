@@ -408,7 +408,6 @@ const RouteAwareShell = () => {
               <Route path="/root-scan" element={<RootScanPage />} />
               <Route path="/vr-audit" element={<VRWorldAuditPage />} />
               <Route path="/install" element={<InstallAppPage />} />
-              <Route path="/install" element={<InstallAppPage />} />
               <Route path="/" element={<RootRedirect />} />
               <Route path="*" element={<NotFound />} />
             </Routes>

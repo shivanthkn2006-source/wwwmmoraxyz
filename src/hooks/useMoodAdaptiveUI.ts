@@ -3,7 +3,7 @@
 // Reads ECN emotional state and maps to UI mode for dynamic menu adaptation
 // ═══════════════════════════════════════════════════════════════════════════════
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import {
@@ -50,6 +50,7 @@ function suggestAction(emotion: string): string | null {
  */
 export function useMoodAdaptiveUI(): MoodAdaptiveState {
   const { user } = useAuth();
+  const channelNameRef = useRef(`ecn-mood-ui:${Math.random().toString(36).slice(2, 8)}`);
   const [state, setState] = useState<MoodAdaptiveState>(() => {
     const defaultValidation = validateUIMode('default');
     return {
@@ -105,7 +106,7 @@ export function useMoodAdaptiveUI(): MoodAdaptiveState {
 
     // Subscribe to real-time ECN changes
     const channel = supabase
-      .channel('ecn-mood-ui')
+      .channel(channelNameRef.current)
       .on(
         'postgres_changes',
         {
