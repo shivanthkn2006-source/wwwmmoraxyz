@@ -1039,6 +1039,105 @@ const HomePage = () => {
     if (lastUploadFile) handleLoopsUpload(lastUploadFile);
   }, [lastUploadFile, handleLoopsUpload]);
 
+  const handleLoopDecodeStatus = React.useCallback((postId: string, status: string) => {
+    setLoopDecodeStatus(prev => (prev[postId] === status ? prev : { ...prev, [postId]: status }));
+    if (status === 'decode-failed' || status === 'timeout' || status === 'missing-source') {
+      const post = loopPosts.find(p => p.id === postId);
+      logFeedIssue({
+        step: 'loops:decode-status',
+        postId,
+        mediaUrl: post?.media_url || null,
+        posterUrl: post?.media_preview_url || null,
+        mediaType: post?.media_type || null,
+        decodeStatus: status,
+        errorMessage: `Loop video ${status}`,
+      });
+    }
+  }, [loopPosts, logFeedIssue]);
+
+  const regenerateLoopPoster = React.useCallback(async (postId: string) => {
+    if (!user) return;
+    const post = loopPosts.find(p => p.id === postId);
+    if (!post?.media_url) {
+      toast({ title: 'Poster unavailable', description: 'This loop has no video URL to read.', variant: 'destructive' });
+      return;
+    }
+
+    try {
+      toast({ title: 'Regenerating poster…' });
+      const versionedMediaUrl = appendMediaVersion(post.media_url, post.updated_at || post.created_at || Date.now());
+      const posterDataUrl = await captureVideoPreviewFromUrl(versionedMediaUrl || post.media_url) || makeFallbackVideoPoster();
+      if (!posterDataUrl) throw new Error('Could not create a poster image.');
+
+      let posterUrl = posterDataUrl;
+      const posterFile = dataUrlToFile(posterDataUrl, `${postId}.jpg`);
+      const posterPath = `${user.id}/loops/posters/${postId}-${Date.now()}.jpg`;
+      const { error: uploadError } = await supabase.storage.from('posts').upload(posterPath, posterFile, {
+        contentType: 'image/jpeg',
+        upsert: false,
+      });
+      if (!uploadError) {
+        const { data: pub } = supabase.storage.from('posts').getPublicUrl(posterPath);
+        posterUrl = pub.publicUrl;
+      } else {
+        console.warn('[Loops] poster storage upload failed; using inline fallback', uploadError);
+      }
+
+      const { error: updateError } = await supabase
+        .from('posts')
+        .update({ media_preview_url: posterUrl, media_type: 'video' })
+        .eq('id', postId)
+        .eq('user_id', user.id);
+      if (updateError) throw updateError;
+
+      setLoopPosts(prev => prev.map(p => p.id === postId ? { ...p, media_preview_url: posterUrl, media_type: 'video', updated_at: new Date().toISOString() } : p));
+      setBrokenLoopPreviewIds(prev => {
+        const next = new Set(prev);
+        next.delete(postId);
+        return next;
+      });
+      setLoopDecodeStatus(prev => ({ ...prev, [postId]: 'poster-regenerated' }));
+      toast({ title: 'Poster regenerated', description: 'The loop preview has been refreshed.' });
+    } catch (err: any) {
+      const msg = err?.message || 'Could not regenerate this poster.';
+      logFeedIssue({
+        step: 'loops:poster-regenerate',
+        postId,
+        mediaUrl: post.media_url,
+        posterUrl: post.media_preview_url || null,
+        mediaType: post.media_type,
+        errorMessage: msg,
+      });
+      toast({ title: 'Poster failed', description: msg, variant: 'destructive' });
+    }
+  }, [loopPosts, logFeedIssue, user]);
+
+  const retrySinglePost = React.useCallback(async (postId: string) => {
+    try {
+      const { data, error } = await (supabase as any)
+        .from('feed_posts_safe')
+        .select('id, user_id, content, media_url, media_type, likes_count, comments_count, created_at, updated_at, visibility, has_deferred_media, media_size, media_preview_url')
+        .eq('id', postId)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) return;
+
+      const [profileResult, likedResult] = await Promise.all([
+        supabase.from('safe_public_profiles').select('user_id, display_name, username, profile_photo_url, status, hobbies').eq('user_id', data.user_id).maybeSingle(),
+        user ? supabase.from('post_likes').select('post_id').eq('user_id', user.id).eq('post_id', postId).maybeSingle() : Promise.resolve({ data: null }),
+      ]);
+      const refreshed = prepareFeedPostMedia({
+        ...data,
+        profile: profileResult.data || null,
+        user_liked: !!likedResult.data,
+      });
+      setGlobalPosts(prev => prev.map(p => p.id === postId ? refreshed : p));
+      setPersonalPosts(prev => prev.map(p => p.id === postId ? refreshed : p));
+    } catch (err: any) {
+      logFeedIssue({ step: 'posts:single-retry', postId, errorMessage: err?.message || String(err) });
+    }
+  }, [logFeedIssue, user]);
+
 
 
   const scrollToTop = () => {
