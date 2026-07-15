@@ -302,6 +302,17 @@ const FullScreenVideoPlayer: React.FC<FullScreenVideoPlayerProps> = ({
             </div>
           )}
 
+          {/* Hidden neighbour preloads to avoid stutter on swipe */}
+          <div aria-hidden className="hidden">
+            {preloadUrls.map((p, i) => (
+              <React.Fragment key={i}>
+                {p.media && <video src={p.media} preload="auto" muted playsInline />}
+                {p.poster && <img src={p.poster} alt="" />}
+              </React.Fragment>
+            ))}
+          </div>
+
+
           {/* Play/Pause Overlay */}
           {paused && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
