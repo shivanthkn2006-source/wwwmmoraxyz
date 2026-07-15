@@ -274,7 +274,7 @@ const HomePage = () => {
   // Atlas HUD State - Smith AI Interface (separate from Zoe Infinity, user toggles via menu)
   // NOTE: Atlas Boot and Prime Objective are ONLY for Atlas HUD, NOT Zoe Infinity main flow
   const [atlasHUDActive, setAtlasHUDActive] = useState(false);
-  const videoPosts = (loopPosts.length > 0 ? loopPosts : globalPosts).filter((post) =>
+  const videoPosts = loopPosts.filter((post) =>
     !!post.media_url && !brokenLoopPreviewIds.has(post.id) && inferMediaType(post.media_url, post.media_type) === 'video'
   );
 
@@ -548,7 +548,13 @@ const HomePage = () => {
       }
 
       const loopRows = ((postsResult.data || []) as any[])
-        .filter((post) => inferMediaType(typeof post.media_url === 'string' ? post.media_url : null, post.media_type) === 'video');
+        .filter((post) => {
+          const mediaUrl = typeof post.media_url === 'string' ? post.media_url : null;
+          // Do not surface old inline video rows in Loops: they were produced by the
+          // previous upload bug and can fail browser demuxing, creating black previews.
+          if (!mediaUrl || mediaUrl.startsWith('data:')) return false;
+          return inferMediaType(mediaUrl, post.media_type) === 'video';
+        });
 
       if (loopRows.length === 0) {
         setLoopPosts([]);
