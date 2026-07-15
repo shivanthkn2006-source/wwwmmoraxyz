@@ -63,7 +63,9 @@ const FullScreenVideoPlayer: React.FC<FullScreenVideoPlayerProps> = ({
 }) => {
   const { user } = useAuth();
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
-  const [muted, setMuted] = useState(true);
+  // Try unmuted first — the player is opened by a user gesture (tile tap), so
+  // browsers allow sound. Fallback to muted only if autoplay-with-sound is rejected.
+  const [muted, setMuted] = useState(false);
   const [paused, setPaused] = useState(false);
   const [duetStitchMode, setDuetStitchMode] = useState<{
     type: 'duet' | 'stitch';
@@ -85,11 +87,32 @@ const FullScreenVideoPlayer: React.FC<FullScreenVideoPlayerProps> = ({
   const currentMediaUrl = appendMediaVersion(currentVideo?.media_url, mediaVersion) || '';
   const currentPosterUrl = appendMediaVersion(currentVideo?.media_preview_url, mediaVersion);
 
+  // Preload neighbour videos + posters to avoid stutter on swipe.
+  const preloadUrls = React.useMemo(() => {
+    const around = [currentIndex - 1, currentIndex + 1]
+      .filter((i) => i >= 0 && i < videos.length)
+      .map((i) => {
+        const v = videos[i];
+        const ver = v?.updated_at || v?.created_at || v?.id;
+        return {
+          media: appendMediaVersion(v?.media_url, ver) || '',
+          poster: appendMediaVersion(v?.media_preview_url, ver) || '',
+        };
+      });
+    return around;
+  }, [currentIndex, videos]);
+
   useEffect(() => {
     setDecodeFailed(false);
-    if (videoRef.current) {
-      videoRef.current.play().catch(console.error);
-    }
+    const v = videoRef.current;
+    if (!v) return;
+    v.muted = muted;
+    v.play().catch(() => {
+      // Autoplay-with-sound blocked; fall back to muted autoplay.
+      setMuted(true);
+      v.muted = true;
+      v.play().catch(console.error);
+    });
   }, [currentIndex]);
 
   useEffect(() => {
