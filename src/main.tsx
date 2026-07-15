@@ -20,11 +20,14 @@ import { zeroThermalProtocol } from "./services/ZeroThermalProtocol"; // PROTOCO
 import { initSafariFixes } from "./utils/safariBrowserFixes"; // SAFARI CROSS-BROWSER FIXES
 import { installServiceWorkerDevGuard } from "@/lib/serviceWorkerDevGuard"; // #11 Zoe Infinity SW dev guard
 import { installRuntimeIssueCollector } from "@/features/zoe-godmode/runtimeIssueCollector"; // God-mode error capture
+import { installFetchPerfLogger, recordPageLoad } from "@/utils/perfLogger"; // Perf logging
 
 // #11 Block service worker registration in dev/preview before anything else
 // touches navigator.serviceWorker.
 installServiceWorkerDevGuard();
 installRuntimeIssueCollector();
+installFetchPerfLogger();
+recordPageLoad();
 
 // Expose APP_VERSION + safe env to the startup shell so its diagnostics
 // panel and integration health checks can read Supabase URL/key without
