@@ -44,7 +44,10 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({
   const [decodeFailureReason, setDecodeFailureReason] = useState('');
   const [debugOpen, setDebugOpen] = useState(false);
   const [resolvedPosterSrc, setResolvedPosterSrc] = useState<string | undefined>();
-  const [soundUnlocked, setSoundUnlocked] = useState(true);
+  const [soundUnlocked, setSoundUnlocked] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return Boolean((window as any).__mmoraAudioUnlocked);
+  });
   const { soundEnabled, setSoundEnabled } = usePersistentMediaSound(true);
 
   const version = post.updated_at || post.created_at || post.id;
