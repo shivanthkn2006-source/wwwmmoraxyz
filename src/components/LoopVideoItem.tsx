@@ -85,12 +85,13 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({ post, index, onVideoClick
   };
 
   const handleError = () => {
-    console.error('[LoopVideoItem] preview failed', { postId: post.id, src: post.media_url, error: videoRef.current?.error });
     setIsLoading(false);
     if (post.media_preview_url) {
+      console.warn('[LoopVideoItem] video decode failed; showing poster fallback', { postId: post.id });
       setHasError(false);
       return;
     }
+    console.error('[LoopVideoItem] preview failed', { postId: post.id, src: post.media_url, error: videoRef.current?.error });
     setHasError(true);
     onPreviewError?.(post.id);
   };

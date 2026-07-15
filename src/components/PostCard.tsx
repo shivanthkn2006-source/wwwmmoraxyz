@@ -636,7 +636,13 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
                       const v = e.currentTarget;
                       if (v.currentTime === 0) { try { v.currentTime = 0.1; } catch {} }
                     }}
-                    onError={(e) => console.error('[PostCard][video]', post.id, e.currentTarget.error)}
+                    onError={(e) => {
+                      if (post.media_preview_url) {
+                        console.warn('[PostCard][video] decode failed; poster fallback available', post.id);
+                        return;
+                      }
+                      console.error('[PostCard][video]', post.id, e.currentTarget.error);
+                    }}
                   />
                 </div>
               ) : (
