@@ -813,7 +813,11 @@ const HomePage = () => {
                               // Convert file to base64 for direct upload
                               const reader = new FileReader();
                               reader.onloadend = async () => {
-                                let base64 = reader.result as string;
+                                let base64 = reader.result as string | null;
+                                if (!base64) {
+                                  toast({ title: "Upload failed", description: "Could not read file. Please try again.", variant: "destructive" });
+                                  return;
+                                }
                                 const mediaType = file.type.startsWith('video/') ? 'video' : 'image';
 
                                 const MAX_DIRECT_MEDIA_BYTES = 2 * 1024 * 1024;
