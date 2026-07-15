@@ -477,7 +477,8 @@ const HomePage = () => {
     };
   }, [activeTab, globalPosts, personalPosts, filteredLoops, preloadPostMedia]);
 
-  // Auto-advance the active feed (global/friends) after content finishes or after 5s for non-video posts.
+  // Auto-advance the active feed after the current clip's real duration finishes.
+  // Event-driven per video (handles buffering/stalls); non-video posts fall back to 5s.
   useEffect(() => {
     if (loading || loopRailInView || (activeTab !== 'global' && activeTab !== 'personal')) return;
     const posts = Array.from(document.querySelectorAll<HTMLElement>(`[data-feed-tab="${activeTab}"] [data-post-card]`));
@@ -485,18 +486,50 @@ const HomePage = () => {
 
     const targetIndex = feedAutoIndex % posts.length;
     const target = posts[targetIndex];
-    const video = target?.querySelector('video') as HTMLVideoElement | null;
-    const durationMs = video && Number.isFinite(video.duration) && video.duration > 0
-      ? Math.max(5000, Math.min(120000, video.duration * 1000))
-      : 5000;
+    if (!target) return;
+    const video = target.querySelector('video') as HTMLVideoElement | null;
 
-    if (feedAutoTimerRef.current) window.clearTimeout(feedAutoTimerRef.current);
-    feedAutoTimerRef.current = window.setTimeout(() => {
-      target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const advance = () => {
+      const next = posts[(targetIndex + 1) % posts.length];
+      next?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       setFeedAutoIndex((idx) => (idx + 1) % posts.length);
-    }, durationMs);
+    };
+
+    // Safety-net timer: caps wait even if `ended` never fires (buffer stall, decode failure).
+    const safetyMs = (() => {
+      const d = video && Number.isFinite(video.duration) && video.duration > 0 ? video.duration * 1000 : 5000;
+      return Math.max(5000, Math.min(180000, d + 4000)); // duration + 4s stall grace
+    })();
+    if (feedAutoTimerRef.current) window.clearTimeout(feedAutoTimerRef.current);
+    feedAutoTimerRef.current = window.setTimeout(advance, safetyMs);
+
+    if (!video) {
+      return () => {
+        if (feedAutoTimerRef.current) window.clearTimeout(feedAutoTimerRef.current);
+        feedAutoTimerRef.current = null;
+      };
+    }
+
+    const onEnded = () => advance();
+    // Some browsers don't fire `ended` on looped videos — detect near-end via timeupdate as backup.
+    const onTimeUpdate = () => {
+      if (!video.duration || !Number.isFinite(video.duration)) return;
+      if (video.duration - video.currentTime < 0.25 && !video.loop) advance();
+    };
+    // Recompute safety-net once real duration is known.
+    const onLoadedMetadata = () => {
+      if (!Number.isFinite(video.duration) || video.duration <= 0) return;
+      if (feedAutoTimerRef.current) window.clearTimeout(feedAutoTimerRef.current);
+      feedAutoTimerRef.current = window.setTimeout(advance, Math.max(5000, Math.min(180000, video.duration * 1000 + 4000)));
+    };
+    video.addEventListener('ended', onEnded);
+    video.addEventListener('timeupdate', onTimeUpdate);
+    video.addEventListener('loadedmetadata', onLoadedMetadata);
 
     return () => {
+      video.removeEventListener('ended', onEnded);
+      video.removeEventListener('timeupdate', onTimeUpdate);
+      video.removeEventListener('loadedmetadata', onLoadedMetadata);
       if (feedAutoTimerRef.current) window.clearTimeout(feedAutoTimerRef.current);
       feedAutoTimerRef.current = null;
     };
