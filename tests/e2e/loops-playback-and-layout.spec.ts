@@ -88,4 +88,36 @@ test.describe('Loops playback and responsive media', () => {
       expect(objectFit).toBe('contain');
     });
   }
+
+  for (const viewport of [
+    { name: 'mobile portrait large preview', width: 390, height: 844 },
+    { name: 'mobile landscape large preview', width: 844, height: 390 },
+    { name: 'desktop large preview', width: 1280, height: 800 },
+  ]) {
+    test(`PostCard large/deferred preview renders a poster or skeleton on ${viewport.name}`, async ({ page }, testInfo) => {
+      const signedIn = await signIn(page);
+      test.skip(!signedIn, 'No injected session or E2E credentials available');
+      await page.setViewportSize({ width: viewport.width, height: viewport.height });
+      await page.goto('/home', { waitUntil: 'domcontentloaded' });
+
+      const deferredFrame = page.locator('[data-testid="post-deferred-media-preview"]').first();
+      const genericFrame = page.locator('[data-testid="post-media-frame"]').first();
+      const frame = (await deferredFrame.isVisible({ timeout: 20_000 }).catch(() => false)) ? deferredFrame : genericFrame;
+      const hasFrame = await frame.isVisible({ timeout: 20_000 }).catch(() => false);
+      test.skip(!hasFrame, 'No PostCard media preview available to capture');
+
+      await frame.screenshot({ path: testInfo.outputPath(`postcard-large-preview-${viewport.width}x${viewport.height}.png`) });
+      const box = await frame.boundingBox();
+      expect(box, 'preview frame box').not.toBeNull();
+      expect(box!.width).toBeLessThanOrEqual(viewport.width + 1);
+      expect(box!.height).toBeLessThanOrEqual(Math.ceil(viewport.height * 0.9));
+
+      if (await deferredFrame.isVisible().catch(() => false)) {
+        const hasPoster = await deferredFrame.locator('[data-testid="post-deferred-poster"]').isVisible().catch(() => false);
+        const hasSkeleton = await deferredFrame.locator('.animate-pulse').first().isVisible().catch(() => false);
+        await expect(deferredFrame.getByText(/Preview ready|Creating preview/i)).toBeVisible();
+        expect(hasPoster || hasSkeleton, 'large preview should show poster or loading skeleton').toBeTruthy();
+      }
+    });
+  }
 });
