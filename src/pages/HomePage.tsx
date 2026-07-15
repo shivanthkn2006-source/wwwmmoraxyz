@@ -403,7 +403,7 @@ const HomePage = () => {
       el.removeEventListener('mouseenter', onEnter);
       el.removeEventListener('mouseleave', onLeave);
     };
-  }, [filteredLoops.length]);
+  }, [filteredLoops, activeLoopRailIndex, loopDurations]);
 
   useEffect(() => {
     const el = loopRailRef.current;
