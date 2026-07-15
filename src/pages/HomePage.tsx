@@ -602,9 +602,7 @@ const HomePage = () => {
       const loopRows = ((postsResult.data || []) as any[])
         .filter((post) => {
           const mediaUrl = typeof post.media_url === 'string' ? post.media_url : null;
-          // Do not surface old inline video rows in Loops: they were produced by the
-          // previous upload bug and can fail browser demuxing, creating black previews.
-          if (!mediaUrl || mediaUrl.startsWith('data:')) return false;
+          if (!mediaUrl) return false;
           return inferMediaType(mediaUrl, post.media_type) === 'video';
         });
 
