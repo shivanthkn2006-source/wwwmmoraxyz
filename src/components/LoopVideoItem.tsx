@@ -57,11 +57,17 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({
   // Preload enough data to paint the first frame on mount / when src changes.
   // Metadata alone often leaves mobile browsers with a black tile.
   useEffect(() => {
-    if (!videoRef.current || !post.media_url) {
+    if (!post.media_url) {
       setIsLoading(false);
       setHasError(true);
       setDecodeFailureReason('Missing media source URL');
       onDecodeStatus?.(post.id, 'missing-source');
+      return;
+    }
+    if (!videoRef.current) {
+      setIsLoading(false);
+      setDecodeFailureReason('Video element was not ready; preview poster is shown instead');
+      onDecodeStatus?.(post.id, 'poster-only');
       return;
     }
     setIsLoading(true);
