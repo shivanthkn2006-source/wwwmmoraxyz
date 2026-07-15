@@ -102,6 +102,7 @@ const VRWorldAuditPage = lazy(() => import("./pages/VRWorldAuditPage")); // VR O
 const InstallAppPage = lazy(() => import("./pages/InstallApp")); // PWA INSTALL PAGE
 const GodModeEvolution = lazy(() => import("./pages/GodModeEvolution")); // ASI GENESIS KERNEL
 const SentinelPage = lazy(() => import("./pages/SentinelPage")); // M'MORA SENTINEL
+const AdminHealthPage = lazy(() => import("./pages/AdminHealthPage")); // ADMIN HEALTH & STATUS
 
 // Loading fallback component — never render a silent black screen.
 const PageLoader = () => (
@@ -633,6 +634,14 @@ const RouteAwareShell = () => {
                             element={
                               <ProtectedRoute>
                                 <AnalyticsDashboard />
+                              </ProtectedRoute>
+                            }
+                          />
+                          <Route
+                            path="/admin/health"
+                            element={
+                              <ProtectedRoute>
+                                <AdminHealthPage />
                               </ProtectedRoute>
                             }
                           />
