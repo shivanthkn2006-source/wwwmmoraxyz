@@ -33,6 +33,7 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [canPaintVideo, setCanPaintVideo] = useState(false);
   const version = post.updated_at || post.created_at || post.id;
   const mediaSrc = appendMediaVersion(post.media_url, version);
   const posterSrc = appendMediaVersion(post.media_preview_url, version);
@@ -48,6 +49,7 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({
     }
     setIsLoading(true);
     setHasError(false);
+    setCanPaintVideo(false);
     onDecodeStatus?.(post.id, 'loading');
     const video = videoRef.current;
     video.load();
@@ -69,7 +71,7 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({
   }, [post.media_url, post.id, onDecodeStatus]);
 
   const handleMouseEnter = () => {
-    if (videoRef.current && !hasError) {
+    if (videoRef.current && !hasError && canPaintVideo) {
       videoRef.current.currentTime = 0;
       videoRef.current.play().then(() => {
         setIsPlaying(true);
@@ -103,6 +105,7 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({
   const handleLoadedData = () => {
     setIsLoading(false);
     setHasError(false);
+    setCanPaintVideo(true);
     onDecodeStatus?.(post.id, 'ready');
   };
 
@@ -110,6 +113,7 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({
     setIsLoading(false);
     console.error('[LoopVideoItem] preview failed', { postId: post.id, src: post.media_url, error: videoRef.current?.error });
     setHasError(true);
+    setCanPaintVideo(false);
     onDecodeStatus?.(post.id, 'decode-failed');
     onPreviewError?.(post.id);
   };
@@ -140,7 +144,7 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({
         <img
           src={posterSrc}
           alt="Loop preview"
-          className="absolute inset-0 h-full w-full object-cover"
+          className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-150 ${isPlaying && canPaintVideo && !hasError ? 'opacity-0' : 'opacity-100'}`}
           loading="lazy"
         />
       )}
@@ -149,7 +153,7 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({
           ref={videoRef}
           src={mediaSrc}
           poster={posterSrc}
-          className="w-full h-full object-cover"
+          className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-150 ${isPlaying && canPaintVideo ? 'opacity-100' : 'opacity-0'}`}
           muted
           loop
           playsInline
@@ -220,7 +224,7 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({
       )}
       
       {/* Play indicator on hover (when not playing) */}
-      {!isPlaying && !isLoading && !hasError && (
+      {!isPlaying && !isLoading && !hasError && canPaintVideo && (
         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
           <div className="w-8 h-8 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center">
             <Play className="w-4 h-4 text-white fill-white ml-0.5" />
