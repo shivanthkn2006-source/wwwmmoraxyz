@@ -1125,25 +1125,25 @@ html.phantom-mode [class*="animate-"] {
   
   /* Brand Colors - Glass-Holo 2120 */
   --card: 240 20% 4%;                /* Slightly lighter void */
-  --card-foreground: 185 60% 90%;
+  --card-foreground: 213 60% 92%;
   --popover: 240 25% 5%;
-  --popover-foreground: 185 60% 90%;
+  --popover-foreground: 213 60% 92%;
   
-  --primary: 185 100% 50%;           /* Omega Cyan */
+  --primary: 217 91% 60%;            /* M'mora Blue (matches reference screenshot) */
   --primary-foreground: 240 15% 2%;
-  --secondary: 280 80% 60%;          /* Omega Purple */
+  --secondary: 280 80% 60%;          /* Accent Purple */
   --secondary-foreground: 0 0% 98%;
   --muted: 240 10% 12%;
-  --muted-foreground: 185 30% 60%;
-  --accent: 320 100% 60%;            /* Omega Pink */
+  --muted-foreground: 213 30% 65%;
+  --accent: 217 91% 60%;             /* M'mora Blue accent */
   --accent-foreground: 0 0% 98%;
   
   --destructive: 0 72% 51%;
   --destructive-foreground: 0 0% 98%;
   
-  --border: 185 50% 15%;             /* Cyan-tinted border */
+  --border: 217 50% 18%;             /* Blue-tinted border */
   --input: 240 15% 8%;
-  --ring: 185 100% 50%;
+  --ring: 217 91% 60%;
   
   /* Brand Status Colors */
   --brand-green: 142 76% 36%;
