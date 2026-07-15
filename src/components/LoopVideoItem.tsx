@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { AlertTriangle, Loader2, Play, RotateCcw } from 'lucide-react';
+import { Loader2, Play, RotateCcw } from 'lucide-react';
 import { appendMediaVersion, makeFallbackVideoPoster } from '@/lib/mediaUtils';
 
 interface LoopVideoItemProps {
@@ -30,11 +30,14 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hoverTimeoutRef = useRef<NodeJS.Timeout>();
-  const [isLoading, setIsLoading] = useState(true);
+  const longPressTimerRef = useRef<number>();
   const [hasError, setHasError] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [canPaintVideo, setCanPaintVideo] = useState(false);
+  const [isStalling, setIsStalling] = useState(false);
   const [decodeFailureReason, setDecodeFailureReason] = useState('');
+  const [debugOpen, setDebugOpen] = useState(false);
+
   const version = post.updated_at || post.created_at || post.id;
   const mediaSrc = appendMediaVersion(post.media_url, version);
   const backendPosterSrc = appendMediaVersion(post.media_preview_url, version);
@@ -54,62 +57,25 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({
     return error.message || names[error.code] || `Media error ${error.code}`;
   };
 
-  // Preload enough data to paint the first frame on mount / when src changes.
-  // Metadata alone often leaves mobile browsers with a black tile.
   useEffect(() => {
     if (!post.media_url) {
-      setIsLoading(false);
       setHasError(true);
       setDecodeFailureReason('Missing media source URL');
       onDecodeStatus?.(post.id, 'missing-source');
       return;
     }
-    if (!videoRef.current) {
-      const retry = window.setTimeout(() => {
-        if (!videoRef.current) {
-          setIsLoading(false);
-          setDecodeFailureReason('Video element was not ready; preview poster is shown instead');
-          onDecodeStatus?.(post.id, 'poster-only');
-        }
-      }, 0);
-      return () => window.clearTimeout(retry);
-    }
-    setIsLoading(true);
     setHasError(false);
     setCanPaintVideo(false);
     setDecodeFailureReason('');
     onDecodeStatus?.(post.id, 'loading');
-    const video = videoRef.current;
-    video.load();
-
-    if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
-      setIsLoading(false);
-    }
-
-    // If nothing loads within 12s on very slow networks, mark as error so the user
-    // sees the fallback instead of an endless spinner. Reopening will retry on next mount.
-    const stallTimer = setTimeout(() => {
-      if (videoRef.current && videoRef.current.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
-        setIsLoading(false);
-        setHasError(true);
-        setDecodeFailureReason('Preview timed out before the browser decoded a frame');
-        onDecodeStatus?.(post.id, 'timeout');
-      }
-    }, 12000);
-    return () => clearTimeout(stallTimer);
+    const v = videoRef.current;
+    if (v) v.load();
   }, [post.media_url, post.id, onDecodeStatus]);
 
   const handleMouseEnter = () => {
     if (videoRef.current && !hasError && canPaintVideo) {
       videoRef.current.currentTime = 0;
-      videoRef.current.play().then(() => {
-        setIsPlaying(true);
-      }).catch(() => {
-        // Autoplay failed - show play button
-        setIsPlaying(false);
-      });
-      
-      // Stop after 2 seconds
+      videoRef.current.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
       hoverTimeoutRef.current = setTimeout(() => {
         if (videoRef.current) {
           videoRef.current.pause();
@@ -121,9 +87,7 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({
   };
 
   const handleMouseLeave = () => {
-    if (hoverTimeoutRef.current) {
-      clearTimeout(hoverTimeoutRef.current);
-    }
+    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
     if (videoRef.current) {
       videoRef.current.pause();
       videoRef.current.currentTime = 0;
@@ -132,35 +96,38 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({
   };
 
   const handleLoadedData = () => {
-    setIsLoading(false);
     setHasError(false);
     setCanPaintVideo(true);
+    setIsStalling(false);
     setDecodeFailureReason('');
     onDecodeStatus?.(post.id, 'ready');
   };
 
   const handleError = () => {
     const reason = getVideoErrorReason();
-    setIsLoading(false);
-    console.error('[LoopVideoItem] preview failed', { postId: post.id, src: post.media_url, poster: post.media_preview_url, reason, error: videoRef.current?.error });
+    console.error('[LoopVideoItem] preview failed', { postId: post.id, src: post.media_url, poster: post.media_preview_url, reason });
     setHasError(true);
     setCanPaintVideo(false);
+    setIsStalling(false);
     setDecodeFailureReason(reason);
     onDecodeStatus?.(post.id, 'decode-failed');
     onPreviewError?.(post.id);
   };
 
-  // Force the first frame to render as a poster preview.
-  // iOS Safari (and some Android browsers) don't paint a frame with just
-  // preload="metadata"; seeking to 0.1s once metadata is ready forces it.
   const handleLoadedMetadata = () => {
     if (videoRef.current && videoRef.current.currentTime === 0) {
       try {
-        const duration = Number.isFinite(videoRef.current.duration) ? videoRef.current.duration : 1;
-        videoRef.current.currentTime = Math.min(0.12, Math.max(0.01, duration / 20));
+        const d = Number.isFinite(videoRef.current.duration) ? videoRef.current.duration : 1;
+        videoRef.current.currentTime = Math.min(0.12, Math.max(0.01, d / 20));
       } catch { /* noop */ }
     }
   };
+
+  const startLongPress = () => {
+    window.clearTimeout(longPressTimerRef.current);
+    longPressTimerRef.current = window.setTimeout(() => setDebugOpen(true), 550);
+  };
+  const cancelLongPress = () => window.clearTimeout(longPressTimerRef.current);
 
   return (
     <button
@@ -169,6 +136,10 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({
       onClick={() => onVideoClick(index)}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
+      onPointerDown={startLongPress}
+      onPointerUp={cancelLongPress}
+      onPointerLeave={cancelLongPress}
+      onContextMenu={(e) => { e.preventDefault(); setDebugOpen(true); }}
       data-testid="loop-video-item"
       data-post-id={post.id}
     >
@@ -177,7 +148,8 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({
           src={posterSrc}
           alt="Loop preview"
           className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-150 ${isPlaying && canPaintVideo && !hasError ? 'opacity-0' : 'opacity-100'}`}
-          loading="lazy"
+          loading="eager"
+          decoding="async"
           data-testid="loop-poster-image"
         />
       )}
@@ -190,14 +162,18 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({
           muted
           loop
           playsInline
-          preload="auto"
+          preload="metadata"
           onLoadedMetadata={handleLoadedMetadata}
           onLoadedData={handleLoadedData}
           onCanPlay={handleLoadedData}
           onSeeked={handleLoadedData}
+          onWaiting={() => setIsStalling(true)}
+          onStalled={() => setIsStalling(true)}
+          onPlaying={() => setIsStalling(false)}
           onError={handleError}
         />
       )}
+
       {canRegeneratePoster && onRegeneratePoster && !hasError && (
         <span
           role="button"
@@ -205,73 +181,53 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({
           aria-label="Re-generate poster"
           title="Re-generate poster"
           className="absolute right-1 top-1 z-10 inline-flex h-6 w-6 items-center justify-center rounded-full border border-border/60 bg-background/70 text-primary opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100 focus:opacity-100"
-          onClick={(e) => {
-            e.stopPropagation();
-            onRegeneratePoster(post.id);
-          }}
+          onClick={(e) => { e.stopPropagation(); onRegeneratePoster(post.id); }}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              e.stopPropagation();
-              onRegeneratePoster(post.id);
+              e.preventDefault(); e.stopPropagation(); onRegeneratePoster(post.id);
             }
           }}
         >
           <RotateCcw className="h-3 w-3" />
         </span>
       )}
-      
-      {/* Loading State */}
-      {isLoading && !hasError && !posterSrc && (
-        <div className="absolute inset-0 flex items-center justify-center bg-muted animate-pulse">
-          <Loader2 className="w-5 h-5 text-muted-foreground animate-spin" />
+
+      {/* Buffering skeleton — only while playback is stalling */}
+      {isStalling && !hasError && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/25 backdrop-blur-[1px]">
+          <Loader2 className="w-4 h-4 text-white/80 animate-spin" />
         </div>
       )}
-      
-      {/* Error State */}
-      {hasError && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-background/35 p-1 text-center backdrop-blur-[1px]">
-          <AlertTriangle className="h-4 w-4 text-destructive" />
-          <span className="rounded bg-background/80 px-1 text-[8px] leading-tight text-foreground">Playback not supported</span>
-          <span className="max-w-full truncate rounded bg-background/80 px-1 text-[7px] leading-tight text-muted-foreground" title={decodeFailureReason || 'No decode reason reported'}>
-            {decodeFailureReason || 'No decode reason reported'}
-          </span>
-          <span className="max-w-full truncate rounded bg-background/80 px-1 text-[7px] leading-tight text-muted-foreground" title={backendPosterSrc || 'No backend poster URL'}>
-            Poster: {backendPosterSrc ? 'available' : 'generated fallback'}
-          </span>
-          {canRegeneratePoster && onRegeneratePoster && (
-            <span
-              role="button"
-              tabIndex={0}
-              className="mt-1 inline-flex items-center gap-1 rounded border border-border/60 px-1 py-0.5 text-[8px] text-primary"
-              onClick={(e) => {
-                e.stopPropagation();
-                onRegeneratePoster(post.id);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onRegeneratePoster(post.id);
-                }
-              }}
-            >
-              <RotateCcw className="h-2.5 w-2.5" /> Poster
-            </span>
-          )}
-        </div>
-      )}
-      
-      {/* Play indicator on hover (when not playing) */}
-      {!isPlaying && !isLoading && !hasError && canPaintVideo && (
+
+      {/* Play indicator on hover */}
+      {!isPlaying && !isStalling && !hasError && canPaintVideo && (
         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
           <div className="w-8 h-8 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center">
             <Play className="w-4 h-4 text-white fill-white ml-0.5" />
           </div>
         </div>
       )}
-      
+
       <div className="absolute inset-0 bg-gradient-to-t from-background/70 via-transparent to-transparent pointer-events-none" />
+
+      {/* Hidden debug popover — long-press or right-click to reveal */}
+      {debugOpen && (
+        <div
+          className="absolute inset-x-1 bottom-1 z-20 rounded-md bg-background/95 p-1.5 text-left text-[8px] leading-tight text-foreground shadow-lg ring-1 ring-border"
+          onClick={(e) => { e.stopPropagation(); setDebugOpen(false); }}
+        >
+          <div className="font-semibold">Debug</div>
+          <div className="truncate" title={hasError ? decodeFailureReason : 'No decode errors'}>
+            {hasError ? decodeFailureReason || 'Decode failed' : 'OK'}
+          </div>
+          <div className="truncate opacity-80" title={backendPosterSrc || 'generated fallback'}>
+            poster: {backendPosterSrc ? backendPosterSrc.slice(-28) : 'fallback'}
+          </div>
+          <div className="truncate opacity-80" title={mediaSrc || 'missing'}>
+            media: {mediaSrc ? mediaSrc.slice(-28) : 'missing'}
+          </div>
+        </div>
+      )}
     </button>
   );
 };
