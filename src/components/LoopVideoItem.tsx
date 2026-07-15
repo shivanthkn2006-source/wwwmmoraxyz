@@ -73,7 +73,6 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({
         }
       }, 0);
       return () => window.clearTimeout(retry);
-      return;
     }
     setIsLoading(true);
     setHasError(false);
