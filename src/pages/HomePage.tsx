@@ -31,7 +31,7 @@ import { useTutorial } from '@/hooks/useTutorial';
 import { useDailyBriefing } from '@/hooks/useDailyBriefing';
 import { OnboardingTour } from '@/components/OnboardingTour';
 import { SovereignQuickAccess } from '@/components/SovereignQuickAccess';
-import { appendMediaVersion, captureVideoPreviewFromUrl, dataUrlToFile, getPostsStorageObjectPath, inferMediaType, makeFallbackVideoPoster, transcodeVideoForPreview } from '@/lib/mediaUtils';
+import { appendMediaVersion, captureVideoPreviewFromUrl, dataUrlToFile, getPostsStorageObjectPath, inferMediaType, makeFallbackVideoPoster, resolvePrivateStorageUrl, transcodeVideoForPreview } from '@/lib/mediaUtils';
 import PostsGrid from "@/components/PostsGrid";
 import PostModal from "@/components/PostModal";
 import FriendRequestCard from "@/components/FriendRequestCard";
@@ -258,7 +258,10 @@ const HomePage = () => {
   const [loopDecodeStatus, setLoopDecodeStatus] = useState<Record<string, string>>({});
   const [activeLoopRailIndex, setActiveLoopRailIndex] = useState(0);
   const [loopDurations, setLoopDurations] = useState<Record<string, number>>({});
+  const [loopRailInView, setLoopRailInView] = useState(false);
+  const [feedAutoIndex, setFeedAutoIndex] = useState(0);
   const loopRailRef = useRef<HTMLDivElement | null>(null);
+  const feedAutoTimerRef = useRef<number | null>(null);
 
   // Loops upload UI state
   const [uploadState, setUploadState] = useState<'idle' | 'validating' | 'uploading' | 'saving' | 'error' | 'success'>('idle');
@@ -335,40 +338,51 @@ const HomePage = () => {
 
   const filteredLoops = React.useMemo(() => {
     let filtered = [...videoPosts];
+    const publicLoops = filtered.filter(post => post.visibility === 'global');
     
     switch (loopsFilter) {
       case 'trending':
         // Trending = most engagement (likes + comments) in recent time
-        return filtered.sort((a, b) => {
+        return publicLoops.sort((a, b) => {
           const scoreA = (a.likes_count || 0) + (a.comments_count || 0);
           const scoreB = (b.likes_count || 0) + (b.comments_count || 0);
           return scoreB - scoreA;
         });
       case 'liked':
-        return filtered.sort((a, b) => (b.likes_count || 0) - (a.likes_count || 0));
+        return publicLoops.sort((a, b) => (b.likes_count || 0) - (a.likes_count || 0));
       case 'friends':
         return filtered.filter(post => 
           friendships.some(f => f.user1_id === post.user_id || f.user2_id === post.user_id)
         );
       case 'recent':
       default:
-        return filtered.sort((a, b) => 
+        return publicLoops.sort((a, b) => 
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         );
     }
   }, [videoPosts, loopsFilter, friendships]);
 
-  // Auto-scroll the loop rail by each active video's real duration.
   useEffect(() => {
     const el = loopRailRef.current;
-    if (!el || filteredLoops.length <= 5) return;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([entry]) => setLoopRailInView(entry.isIntersecting && entry.intersectionRatio > 0.25),
+      { threshold: [0, 0.25, 0.6, 1], rootMargin: '120px 0px' }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [filteredLoops.length]);
+
+  // Auto-scroll the loop rail by each active video's real duration while the rail is visible.
+  useEffect(() => {
+    const el = loopRailRef.current;
+    if (!el || filteredLoops.length <= 1 || !loopRailInView) return;
     let hoverPause = false;
     const onEnter = () => { hoverPause = true; };
     const onLeave = () => { hoverPause = false; };
     el.addEventListener('mouseenter', onEnter);
     el.addEventListener('mouseleave', onLeave);
-    const current = filteredLoops[activeLoopRailIndex % filteredLoops.length];
-    const durationMs = Math.max(1500, Math.min(120000, ((current && loopDurations[current.id]) || 5) * 1000));
+    const durationMs = 5000;
     const timer = window.setTimeout(() => {
       if (hoverPause || !el.isConnected) return;
       setActiveLoopRailIndex((idx) => (idx + 1) % filteredLoops.length);
@@ -378,18 +392,108 @@ const HomePage = () => {
       el.removeEventListener('mouseenter', onEnter);
       el.removeEventListener('mouseleave', onLeave);
     };
-  }, [filteredLoops, activeLoopRailIndex, loopDurations]);
+  }, [filteredLoops, activeLoopRailIndex, loopDurations, loopRailInView]);
 
   useEffect(() => {
     const el = loopRailRef.current;
-    if (!el || filteredLoops.length <= 5) return;
-    const tile = el.querySelector<HTMLElement>(`[data-loop-index="${activeLoopRailIndex}"]`);
-    tile?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
+    if (!el || filteredLoops.length <= 1) return;
+    const tile = el.querySelector<HTMLElement>(`[data-loop-index="${activeLoopRailIndex % filteredLoops.length}"]`);
+    if (tile) {
+      const maxLeft = Math.max(0, el.scrollWidth - el.clientWidth);
+      el.scrollTo({ left: Math.min(tile.offsetLeft, maxLeft), behavior: 'smooth' });
+    }
   }, [activeLoopRailIndex, filteredLoops.length]);
 
   useEffect(() => {
     setActiveLoopRailIndex(0);
   }, [loopsFilter]);
+
+  useEffect(() => {
+    setFeedAutoIndex(0);
+  }, [activeTab]);
+
+  const preloadPostMedia = React.useCallback(async (post: Post | undefined) => {
+    if (!post) return;
+    const version = post.updated_at || post.created_at || post.id;
+    const media = appendMediaVersion(post.media_url || post.full_media_url, version);
+    const poster = await resolvePrivateStorageUrl(supabase, post.media_preview_url).catch(() => post.media_preview_url || undefined);
+
+    if (poster) {
+      const img = new Image();
+      img.decoding = 'async';
+      img.loading = 'eager';
+      img.src = appendMediaVersion(poster, version) || poster;
+    }
+
+    if (media && inferMediaType(media, post.media_type) === 'video') {
+      const video = document.createElement('video');
+      video.preload = 'auto';
+      video.muted = true;
+      video.playsInline = true;
+      video.src = media;
+      video.load();
+    }
+  }, []);
+
+  // Progressive preload adjacent feed and loop media as their tiles approach the viewport.
+  useEffect(() => {
+    const feedPosts = activeTab === 'personal' ? personalPosts : globalPosts;
+    const observed: Element[] = [];
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        const node = entry.target as HTMLElement;
+        const loopIndex = node.dataset.loopIndex ? Number(node.dataset.loopIndex) : null;
+        const postId = node.dataset.postId;
+
+        if (Number.isFinite(loopIndex)) {
+          const index = loopIndex as number;
+          preloadPostMedia(filteredLoops[index - 1]);
+          preloadPostMedia(filteredLoops[index]);
+          preloadPostMedia(filteredLoops[index + 1]);
+        } else if (postId) {
+          const index = feedPosts.findIndex((post) => post.id === postId);
+          preloadPostMedia(feedPosts[index - 1]);
+          preloadPostMedia(feedPosts[index]);
+          preloadPostMedia(feedPosts[index + 1]);
+        }
+      });
+    }, { rootMargin: '900px 0px', threshold: 0.01 });
+
+    document.querySelectorAll<HTMLElement>(`[data-feed-tab="${activeTab}"] [data-post-card], [data-testid="loops-rail"] [data-loop-index]`).forEach((el) => {
+      io.observe(el);
+      observed.push(el);
+    });
+    return () => {
+      observed.forEach((el) => io.unobserve(el));
+      io.disconnect();
+    };
+  }, [activeTab, globalPosts, personalPosts, filteredLoops, preloadPostMedia]);
+
+  // Auto-advance the active feed (global/friends) after content finishes or after 5s for non-video posts.
+  useEffect(() => {
+    if (loading || loopRailInView || (activeTab !== 'global' && activeTab !== 'personal')) return;
+    const posts = Array.from(document.querySelectorAll<HTMLElement>(`[data-feed-tab="${activeTab}"] [data-post-card]`));
+    if (posts.length <= 1) return;
+
+    const targetIndex = feedAutoIndex % posts.length;
+    const target = posts[targetIndex];
+    const video = target?.querySelector('video') as HTMLVideoElement | null;
+    const durationMs = video && Number.isFinite(video.duration) && video.duration > 0
+      ? Math.max(5000, Math.min(120000, video.duration * 1000))
+      : 5000;
+
+    if (feedAutoTimerRef.current) window.clearTimeout(feedAutoTimerRef.current);
+    feedAutoTimerRef.current = window.setTimeout(() => {
+      target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setFeedAutoIndex((idx) => (idx + 1) % posts.length);
+    }, durationMs);
+
+    return () => {
+      if (feedAutoTimerRef.current) window.clearTimeout(feedAutoTimerRef.current);
+      feedAutoTimerRef.current = null;
+    };
+  }, [activeTab, loading, loopRailInView, globalPosts.length, personalPosts.length, feedAutoIndex]);
 
 
   
@@ -512,7 +616,7 @@ const HomePage = () => {
       const postsResult = await (supabase as any)
         .from('feed_posts_safe')
         .select('id, user_id, content, media_url, media_type, likes_count, comments_count, created_at, updated_at, visibility, has_deferred_media, media_size, media_preview_url')
-        .eq('visibility', 'global')
+        .in('visibility', ['global', 'personal'])
         .is('private_timeline_id', null)
         .order('created_at', { ascending: false })
         .limit(50);
@@ -623,7 +727,7 @@ const HomePage = () => {
       const postsResult = await (supabase as any)
         .from('posts')
         .select('id, user_id, content, media_url, media_type, likes_count, comments_count, created_at, updated_at, visibility, private_timeline_id, media_preview_url')
-        .eq('visibility', 'global')
+        .in('visibility', ['global', 'personal'])
         .is('private_timeline_id', null)
         .not('media_url', 'is', null)
         .or('media_type.eq.video,media_url.like.data:video/%,media_url.ilike.%.mp4%,media_url.ilike.%.webm%,media_url.ilike.%.mov%,media_url.ilike.%.ogg%,media_url.ilike.%.m4v%')
@@ -1311,7 +1415,7 @@ const HomePage = () => {
         <div className="h-[140px]"></div>
 
         <TabsContent value="global" className="mt-0 pb-24 xxs:pb-24 xs:pb-20">
-              <div className="space-y-4 p-4">
+              <div className="space-y-2 p-3" data-feed-tab="global">
                 <FeedDiagnosticsBanner
                   diag={feedDiag}
                   consecutiveFailures={consecutiveFailures}
@@ -1520,14 +1624,14 @@ const HomePage = () => {
 
                   {filteredLoops.length > 0 ? (
                     <FeedErrorBoundary section="loops" onRetry={handleUpdate}>
-                      <div ref={loopRailRef} className="flex gap-2 overflow-x-auto pb-1 scroll-smooth snap-x">
+                      <div ref={loopRailRef} className="flex gap-2 overflow-x-auto pb-1 scroll-smooth snap-x" data-testid="loops-rail">
                         {filteredLoops.map((post, index) => (
                           <FeedErrorBoundary key={post.id} section="loops" postId={post.id} onRetry={() => retrySingleLoop(post.id)}>
-                            <div data-loop-index={index}>
+                            <div data-loop-index={index} className="snap-start">
                               <LoopVideoItem
                                 post={post}
                                 index={index}
-                                active={index === activeLoopRailIndex}
+                                active={index === activeLoopRailIndex % filteredLoops.length}
                                 onDuration={(postId, duration) => setLoopDurations(prev => prev[postId] === duration ? prev : { ...prev, [postId]: duration })}
                                 onVideoClick={openLoopsPlayer}
                                 onDecodeStatus={handleLoopDecodeStatus}
@@ -1582,7 +1686,7 @@ const HomePage = () => {
             </TabsContent>
 
             <TabsContent value="personal" className="mt-0 pb-24 xxs:pb-24 xs:pb-20">
-              <div className="space-y-4 p-4">
+              <div className="space-y-2 p-3" data-feed-tab="personal">
                 {loading ? (
                   <p className="text-center text-muted-foreground py-8">Loading posts...</p>
                 ) : personalPosts.length === 0 ? (
@@ -1600,7 +1704,7 @@ const HomePage = () => {
             </TabsContent>
 
             <TabsContent value="selfiecity" className="mt-0 pb-24 xxs:pb-24 xs:pb-20">
-              <div className="space-y-4 p-4">
+              <div className="space-y-2 p-3">
                 {/* Selfie City Feed Header */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">

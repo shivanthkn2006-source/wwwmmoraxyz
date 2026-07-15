@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, Heart, Loader2, MessageCircle, Share2, Trash2, Bookmark, MoreVertical, Star } from 'lucide-react';
+import { AlertTriangle, Heart, Loader2, MessageCircle, Share2, Trash2, Bookmark, MoreVertical, Star, Volume2, VolumeX } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
@@ -17,7 +17,8 @@ import StatusIconBadge from '@/components/StatusIconBadge';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePrivateTimelines } from '@/hooks/usePrivateTimelines';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { appendMediaVersion, inferMediaType, makeFallbackVideoPoster, resolvePrivateStorageUrl } from '@/lib/mediaUtils';
+import { appendMediaVersion, inferMediaType, isPrivateStorageUrl, makeFallbackVideoPoster, resolvePrivateStorageUrl } from '@/lib/mediaUtils';
+import { usePersistentMediaSound } from '@/hooks/usePersistentMediaSound';
 
 interface Post {
   id: string;
@@ -74,10 +75,11 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
   const [sharingToTimeline, setSharingToTimeline] = useState(false);
   const [isVideoPlaying, setIsVideoPlaying] = useState(true);
   const [videoInView, setVideoInView] = useState(false);
-  const [soundUnlocked, setSoundUnlocked] = useState(false);
+  const [soundUnlocked, setSoundUnlocked] = useState(true);
   const [resolvedPreviewSrc, setResolvedPreviewSrc] = useState<string | undefined>();
   const videoRef = React.useRef<HTMLVideoElement | null>(null);
   const mediaFrameRef = React.useRef<HTMLDivElement | null>(null);
+  const { soundEnabled, setSoundEnabled } = usePersistentMediaSound(true);
 
   const hasEvent = useEventGlow(post.profile?.event_date, post.profile?.event_recurring);
   const glowClass = getAvatarGlowClass(hasEvent, post.profile?.status);
@@ -90,7 +92,9 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
   const displayMediaSrc = appendMediaVersion(displayMediaUrl, mediaVersion);
   const previewSrc = appendMediaVersion(post.media_preview_url, mediaVersion);
   const fallbackPosterSrc = React.useMemo(() => makeFallbackVideoPoster(), []);
-  const posterSrc = resolvedPreviewSrc || previewSrc || (post.media_type === 'video' ? fallbackPosterSrc || undefined : undefined);
+  const pendingPrivatePreview = isPrivateStorageUrl(post.media_preview_url) && !resolvedPreviewSrc;
+  const posterSrc = resolvedPreviewSrc || (!pendingPrivatePreview ? previewSrc : undefined) || (post.media_type === 'video' ? fallbackPosterSrc || undefined : undefined);
+  const shouldPlayWithSound = soundEnabled && soundUnlocked;
 
   const getVideoErrorReason = (video: HTMLVideoElement) => {
     const error = video.error;
@@ -132,7 +136,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
           const v = videoRef.current;
           if (!v) return;
           if (inView) {
-            v.muted = !soundUnlocked;
+            v.muted = !shouldPlayWithSound;
             v.play().then(() => setIsVideoPlaying(true)).catch(() => {
               v.muted = true;
               v.play().then(() => setIsVideoPlaying(true)).catch(() => {});
@@ -146,7 +150,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
     );
     io.observe(frame);
     return () => io.disconnect();
-  }, [isDeferredHeavyMedia, revealDeferredMedia, displayMediaSrc, soundUnlocked]);
+  }, [isDeferredHeavyMedia, revealDeferredMedia, displayMediaSrc, shouldPlayWithSound]);
 
   useEffect(() => {
     let alive = true;
@@ -525,8 +529,8 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
 
   return (
     <Card className="bg-card border-border overflow-hidden">
-      <div className="p-4">
-        <div className="flex items-center space-x-3 mb-3">
+      <div className="p-3">
+        <div className="flex items-center space-x-3 mb-2">
           <div className="relative">
             <Avatar 
               className={`w-10 h-10 cursor-pointer hover:opacity-90 transition-opacity ${glowClass}`}
@@ -658,7 +662,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
         </div>
 
         {post.content && (
-          <p className="text-foreground mb-3">{post.content}</p>
+          <p className="text-foreground mb-2">{post.content}</p>
         )}
 
         {(displayMediaUrl || isDeferredHeavyMedia) && (() => {
@@ -666,7 +670,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
           return (
             <div
               ref={mediaFrameRef}
-              className="mb-3 overflow-hidden rounded-lg bg-black flex items-center justify-center relative"
+              className="mb-2 overflow-hidden rounded-lg bg-muted flex items-center justify-center relative"
               data-testid="post-media-frame"
               style={{ maxHeight: '85svh' }}
             >
@@ -674,11 +678,12 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
                 <div className="w-full aspect-[9/16] max-h-[85svh] bg-muted animate-pulse" data-testid="post-deferred-media-preview" />
               ) : isVideo ? (
                 <div
-                  className="relative w-full flex items-center justify-center bg-black"
+                  className="relative w-full flex items-center justify-center bg-muted"
                   onClick={() => {
                     const v = videoRef.current;
                     if (!v) return;
-                    if (v.paused) { v.muted = false; v.play().catch(() => { v.muted = true; v.play().catch(() => {}); }); setIsVideoPlaying(true); }
+                    setSoundUnlocked(true);
+                    if (v.paused) { v.muted = !soundEnabled; v.play().catch(() => { v.muted = true; v.play().catch(() => {}); }); setIsVideoPlaying(true); }
                     else { v.pause(); setIsVideoPlaying(false); }
                   }}
                 >
@@ -687,7 +692,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
                     src={displayMediaSrc}
                     poster={posterSrc}
                     playsInline
-                    muted={!soundUnlocked}
+                    muted={!shouldPlayWithSound}
                     loop
                     preload="metadata"
                     className="h-auto w-full max-h-[85svh] object-contain"
@@ -698,6 +703,25 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
                       console.warn('[PostCard][video]', post.id, getVideoErrorReason(e.currentTarget));
                     }}
                   />
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="secondary"
+                    aria-label={soundEnabled ? 'Mute video audio' : 'Unmute video audio'}
+                    className="absolute right-2 top-2 h-8 w-8 rounded-full bg-background/75 text-foreground backdrop-blur-sm hover:bg-background/90"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSoundUnlocked(true);
+                      const next = !soundEnabled;
+                      setSoundEnabled(next);
+                      if (videoRef.current) {
+                        videoRef.current.muted = !next;
+                        if (next) videoRef.current.play().catch(() => {});
+                      }
+                    }}
+                  >
+                    {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+                  </Button>
                   {!isVideoPlaying && (
                     <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
                       <div className="rounded-full bg-black/50 p-4 backdrop-blur-sm">

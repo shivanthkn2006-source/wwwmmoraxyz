@@ -20,7 +20,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { toast } from 'sonner';
 import VideoCreationModal from './VideoCreationModal';
-import { appendMediaVersion, resolvePrivateStorageUrl } from '@/lib/mediaUtils';
+import { appendMediaVersion, isPrivateStorageUrl, makeFallbackVideoPoster, resolvePrivateStorageUrl } from '@/lib/mediaUtils';
+import { usePersistentMediaSound } from '@/hooks/usePersistentMediaSound';
 
 interface Post {
   id: string;
@@ -63,9 +64,8 @@ const FullScreenVideoPlayer: React.FC<FullScreenVideoPlayerProps> = ({
 }) => {
   const { user } = useAuth();
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
-  // Try unmuted first — the player is opened by a user gesture (tile tap), so
-  // browsers allow sound. Fallback to muted only if autoplay-with-sound is rejected.
-  const [muted, setMuted] = useState(false);
+  const { soundEnabled, setSoundEnabled } = usePersistentMediaSound(true);
+  const [autoplayMutedFallback, setAutoplayMutedFallback] = useState(false);
   const [paused, setPaused] = useState(false);
   const [duetStitchMode, setDuetStitchMode] = useState<{
     type: 'duet' | 'stitch';
@@ -87,7 +87,10 @@ const FullScreenVideoPlayer: React.FC<FullScreenVideoPlayerProps> = ({
   const currentMediaUrl = appendMediaVersion(currentVideo?.media_url, mediaVersion) || '';
   const currentPosterUrl = appendMediaVersion(currentVideo?.media_preview_url, mediaVersion);
   const [signedPosterUrls, setSignedPosterUrls] = useState<Record<string, string>>({});
-  const displayedPosterUrl = signedPosterUrls[currentVideo?.id || ''] || currentPosterUrl;
+  const fallbackPosterUrl = React.useMemo(() => makeFallbackVideoPoster(), []);
+  const pendingPrivatePoster = isPrivateStorageUrl(currentVideo?.media_preview_url) && !signedPosterUrls[currentVideo?.id || ''];
+  const displayedPosterUrl = signedPosterUrls[currentVideo?.id || ''] || (!pendingPrivatePoster ? currentPosterUrl : undefined) || fallbackPosterUrl || undefined;
+  const muted = !soundEnabled || autoplayMutedFallback;
 
   // Preload neighbour videos + posters to avoid stutter on swipe.
   const preloadUrls = React.useMemo(() => {
@@ -107,16 +110,17 @@ const FullScreenVideoPlayer: React.FC<FullScreenVideoPlayerProps> = ({
 
   useEffect(() => {
     setDecodeFailed(false);
+    setAutoplayMutedFallback(false);
     const v = videoRef.current;
     if (!v) return;
-    v.muted = muted;
+    v.muted = !soundEnabled;
     v.play().catch(() => {
       // Autoplay-with-sound blocked; fall back to muted autoplay.
-      setMuted(true);
+      setAutoplayMutedFallback(true);
       v.muted = true;
       v.play().catch(console.error);
     });
-  }, [currentIndex]);
+  }, [currentIndex, soundEnabled]);
 
   useEffect(() => {
     let alive = true;
@@ -203,12 +207,11 @@ const FullScreenVideoPlayer: React.FC<FullScreenVideoPlayerProps> = ({
   const togglePlayPause = () => {
     if (videoRef.current) {
       if (paused) {
-        videoRef.current.muted = false;
-        setMuted(false);
+        videoRef.current.muted = !soundEnabled;
         videoRef.current.play().catch(() => {
           if (!videoRef.current) return;
           videoRef.current.muted = true;
-          setMuted(true);
+          setAutoplayMutedFallback(true);
           videoRef.current.play().catch(() => {});
         });
       } else {
@@ -458,7 +461,15 @@ const FullScreenVideoPlayer: React.FC<FullScreenVideoPlayerProps> = ({
 
                     {/* Mute Toggle */}
                     <button
-                      onClick={() => setMuted(!muted)}
+                      onClick={() => {
+                        const next = muted ? true : false;
+                        setSoundEnabled(next);
+                        setAutoplayMutedFallback(false);
+                        if (videoRef.current) {
+                          videoRef.current.muted = !next;
+                          if (next) videoRef.current.play().catch(() => setAutoplayMutedFallback(true));
+                        }
+                      }}
                       className="shrink-0 h-10 w-10 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 transition-all active:scale-95 flex items-center justify-center"
                       aria-label={muted ? 'Unmute' : 'Mute'}
                     >
