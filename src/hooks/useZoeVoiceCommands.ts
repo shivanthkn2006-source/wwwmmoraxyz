@@ -525,6 +525,50 @@ export const useZoeVoiceCommands = (userId: string | undefined) => {
       description: 'Post [your message]'
     },
 
+    // Zoe: generate image and auto-post to a timeline.
+    // Examples:
+    //   "create an image of a red elephant and post to general timeline"
+    //   "create image for friends day and post it to my friends timeline"
+    //   "generate a picture of paris at sunset and share to my timeline"
+    {
+      pattern: /^(?:create|generate|make)\s+(?:an?\s+)?(?:image|picture|photo)\s+(?:of|for|about)\s+(.+?)(?:\s+and\s+(?:post|share|publish)(?:\s+it)?\s+(?:to|on)\s+(?:my\s+)?(general|friends?|personal|private|public)\s+timeline)?\s*$/i,
+      action: async (matches) => {
+        if (!userId) { speakResponse('You need to be signed in first'); return; }
+        const subject = (matches[1] || '').trim();
+        const audience = (matches[2] || 'general').toLowerCase();
+        const visibility = audience.startsWith('friend') || audience === 'personal' || audience === 'private' ? 'friends' : 'global';
+        speakResponse(`Creating an image of ${subject} — one moment.`);
+        try {
+          const { data, error } = await supabase.functions.invoke('generate-image', {
+            body: { prompt: subject, width: 1024, height: 1024 },
+          });
+          if (error || !data?.imageUrl) {
+            console.error('[Zoe] image generation failed', error, data);
+            speakResponse('Sorry, I could not generate that image right now.');
+            return;
+          }
+          const { error: postErr } = await supabase.from('posts').insert({
+            user_id: userId,
+            content: subject,
+            media_url: data.imageUrl,
+            media_type: 'image/generated',
+            visibility,
+          });
+          if (postErr) {
+            console.error('[Zoe] post insert failed', postErr);
+            speakResponse('The image was created but I could not post it.');
+            return;
+          }
+          speakResponse(`Done. I posted the image to your ${visibility === 'friends' ? 'friends' : 'general'} timeline.`);
+          navigate('/home');
+        } catch (e) {
+          console.error('[Zoe] create-image-and-post threw', e);
+          speakResponse('Something went wrong while creating the image.');
+        }
+      },
+      description: 'Create an image and post to a timeline',
+    },
+
     // Quick profile updates
     {
       pattern: /^(?:bio|update\s+bio|set\s+bio|change\s+bio)\s+(.+)/i,
