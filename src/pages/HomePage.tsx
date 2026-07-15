@@ -992,7 +992,7 @@ const HomePage = () => {
         // Auth token for XHR upload with real progress
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
-        const ext = (file.name.split('.').pop() || (mediaType === 'video' ? 'mp4' : 'jpg')).toLowerCase();
+        const ext = (uploadFile.name.split('.').pop() || (mediaType === 'video' ? 'webm' : 'jpg')).toLowerCase();
         const path = `${user.id}/loops/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
 
         // 2. Retry with exponential backoff (3 attempts)
@@ -1002,11 +1002,10 @@ const HomePage = () => {
             toast({ title: `Retrying upload (attempt ${attempt}/3)…` });
           }
           if (token) {
-            await xhrUploadToPosts(file, path, token, setUploadProgress);
+            await xhrUploadToPosts(uploadFile, path, token, setUploadProgress);
           } else {
-            // Fallback to SDK if no token (won't report granular progress)
-            const { error } = await supabase.storage.from('posts').upload(path, file, {
-              contentType: file.type, upsert: false,
+            const { error } = await supabase.storage.from('posts').upload(path, uploadFile, {
+              contentType: uploadFile.type, upsert: false,
             });
             if (error) throw error;
             setUploadProgress(100);
