@@ -125,6 +125,16 @@ const ProfilePage = () => {
           
           {/* Action Buttons Row */}
           <div className="px-4 pb-3 flex items-center justify-end gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/voice-commands')}
+              className="gap-2"
+              title='Say "Zoe help" anytime to open this'
+            >
+              <Mic className="w-4 h-4" />
+              <span className="text-xs">Voice Commands</span>
+            </Button>
             <Sheet open={showFeedback} onOpenChange={setShowFeedback}>
               <SheetTrigger asChild>
                 <Button variant="outline" size="sm" className="gap-2">
