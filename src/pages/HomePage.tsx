@@ -1155,6 +1155,40 @@ const HomePage = () => {
     }
   }, [logFeedIssue, user]);
 
+  const retrySingleLoop = React.useCallback(async (postId: string) => {
+    if (!user) return;
+    try {
+      const { data, error } = await (supabase as any)
+        .from('posts')
+        .select('id, user_id, content, media_url, media_type, likes_count, comments_count, created_at, updated_at, visibility, private_timeline_id, media_preview_url')
+        .eq('id', postId)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data || inferMediaType(data.media_url, data.media_type) !== 'video') return;
+
+      const [profileResult, likedResult] = await Promise.all([
+        supabase.from('safe_public_profiles').select('user_id, display_name, username, profile_photo_url, status, hobbies').eq('user_id', data.user_id).maybeSingle(),
+        supabase.from('post_likes').select('post_id').eq('user_id', user.id).eq('post_id', postId).maybeSingle(),
+      ]);
+      const refreshed = {
+        ...data,
+        media_type: 'video',
+        profile: profileResult.data || null,
+        user_liked: !!likedResult.data,
+        has_deferred_media: false,
+      } as Post;
+      setLoopPosts(prev => prev.some(p => p.id === postId) ? prev.map(p => p.id === postId ? refreshed : p) : [refreshed, ...prev]);
+      setBrokenLoopPreviewIds(prev => {
+        const next = new Set(prev);
+        next.delete(postId);
+        return next;
+      });
+      setLoopDecodeStatus(prev => ({ ...prev, [postId]: 'retried' }));
+    } catch (err: any) {
+      logFeedIssue({ step: 'loops:single-retry', postId, errorMessage: err?.message || String(err) });
+    }
+  }, [logFeedIssue, user]);
+
 
 
   const scrollToTop = () => {
@@ -1439,7 +1473,7 @@ const HomePage = () => {
                     <FeedErrorBoundary section="loops" onRetry={handleUpdate}>
                       <div className="flex gap-2 overflow-x-auto pb-1">
                         {filteredLoops.map((post, index) => (
-                          <FeedErrorBoundary key={post.id} section="loops" postId={post.id} onRetry={() => fetchLoopPosts()}>
+                          <FeedErrorBoundary key={post.id} section="loops" postId={post.id} onRetry={() => retrySingleLoop(post.id)}>
                             <LoopVideoItem
                               post={post}
                               index={index}
