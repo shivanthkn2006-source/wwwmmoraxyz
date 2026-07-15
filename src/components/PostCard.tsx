@@ -92,6 +92,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
   const fallbackPosterSrc = React.useMemo(() => makeFallbackVideoPoster(), []);
   const fallbackPreviewSrc = previewSrc || (post.media_type === 'video' ? fallbackPosterSrc || undefined : undefined);
   const hasRealPoster = !!previewSrc && !posterLoadFailed;
+  const hasAnyPoster = !!fallbackPreviewSrc && !posterLoadFailed;
   const getVideoErrorReason = (video: HTMLVideoElement) => {
     const error = video.error;
     if (!error) return 'Unknown decode error';
@@ -653,13 +654,13 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
                       }}
                     />
                   )}
-                  {!hasRealPoster && (
+                  {!hasAnyPoster && (
                     <div className="absolute inset-0 flex items-center justify-center">
                       <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                     </div>
                   )}
                   <span className="relative rounded-md bg-background/80 px-2 py-1 font-medium text-foreground backdrop-blur-sm">
-                    {hasRealPoster ? 'Preview ready' : 'Creating preview'}
+                    {hasRealPoster ? 'Preview ready' : 'Preview pending'}
                   </span>
                   <span className="relative rounded-md bg-background/80 px-2 py-1 backdrop-blur-sm">{loadingHeavyMedia ? 'Opening…' : 'Tap to open media'}</span>
                   {(posterLoadFailed || !previewSrc) && (
