@@ -121,25 +121,17 @@ const validateBrowserCanPreviewFile = (file: File, mediaType: 'video' | 'image')
 
     if (mediaType === 'video') {
       const video = document.createElement('video');
-      video.preload = 'metadata';
-      video.muted = true;
-      video.playsInline = true;
       if (file.type && video.canPlayType(file.type) === '') {
         done();
         reject(new Error('This video format is not previewable here. Export as MP4/H.264, WebM, or MOV/H.264.'));
         return;
       }
-      video.onloadedmetadata = () => {
-        done();
-        video.videoWidth > 0 && video.videoHeight > 0
-          ? resolve()
-          : reject(new Error('This video has no readable video track. Export it again and retry.'));
-      };
-      video.onerror = () => {
-        done();
-        reject(new Error('This video cannot be decoded for preview. Export as MP4/H.264 and upload again.'));
-      };
-      video.src = objectUrl;
+      // Do not require a full local decode here: the Lovable preview browser can lack
+      // proprietary MP4 codecs even when user browsers play the same H.264 file.
+      // MIME + canPlayType prevents obvious bypasses; the Loop tile still hides rows
+      // that fail after upload so broken media does not poison the rail.
+      done();
+      resolve();
       return;
     }
 
