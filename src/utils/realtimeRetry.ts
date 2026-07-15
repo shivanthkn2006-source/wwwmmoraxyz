@@ -84,8 +84,7 @@ export function subscribeWithBackoff(opts: Options): () => void {
     const uniqueName = `${name}:${Date.now().toString(36)}:${Math.random().toString(36).slice(2, 8)}`;
     let ch: RealtimeChannel = supabase.channel(uniqueName);
     for (const b of bindings) {
-      // @ts-expect-error supabase-js typing for postgres_changes is loose
-      ch = ch.on('postgres_changes', b.filter, b.handler);
+      ch = (ch as any).on('postgres_changes', b.filter, b.handler);
     }
     currentChannel = ch.subscribe((status) => {
       if (disposed) return;
