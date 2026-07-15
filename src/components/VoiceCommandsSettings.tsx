@@ -177,10 +177,10 @@ const VoiceCommandsSettings = () => {
             <Mic className="w-5 h-5 text-primary animate-pulse" />
             Zoe Sovereign Voice Commands
           </CardTitle>
-          <CardDescription className="flex items-center gap-2">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Badge variant="secondary" className="text-xs">{totalCommands}+ Commands</Badge>
             <span>Say "Hey Zoe" followed by any command</span>
-          </CardDescription>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
