@@ -8818,6 +8818,7 @@ export type Database = {
           media_type: string | null
           media_url: string | null
           private_timeline_id: string | null
+          updated_at: string | null
           user_id: string | null
           visibility: string | null
         }
@@ -8833,6 +8834,7 @@ export type Database = {
           media_type?: string | null
           media_url?: never
           private_timeline_id?: string | null
+          updated_at?: string | null
           user_id?: string | null
           visibility?: string | null
         }
@@ -8848,6 +8850,7 @@ export type Database = {
           media_type?: string | null
           media_url?: never
           private_timeline_id?: string | null
+          updated_at?: string | null
           user_id?: string | null
           visibility?: string | null
         }
