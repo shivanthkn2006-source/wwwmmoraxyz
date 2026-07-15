@@ -699,14 +699,22 @@ export const useZoeVoiceCommands = (userId: string | undefined) => {
       description: 'Refresh'
     },
 
-    // Voice commands reference
+    // Voice commands reference — "Zoe help", "help", "what can you do", etc.
     {
-      pattern: /^(?:show|view|open)\s+commands$/i,
+      pattern: /^(?:zoe\s+)?(?:help|help\s+me|show\s+help|voice\s+help)$/i,
       action: () => {
-        navigate('/profile');
-        speakResponse('Opening commands reference');
+        navigate('/voice-commands');
+        speakResponse('Opening the complete voice commands list');
       },
-      description: 'Show commands reference'
+      description: 'Open complete voice commands list',
+    },
+    {
+      pattern: /^(?:(?:show|view|open|list|see|display)\s+(?:me\s+)?(?:all\s+)?(?:voice\s+)?commands?|what\s+can\s+(?:you|i)\s+do|what\s+commands?(?:\s+(?:do\s+you\s+have|are\s+available))?)$/i,
+      action: () => {
+        navigate('/voice-commands');
+        speakResponse('Here are all the voice commands available');
+      },
+      description: 'Show commands reference',
     },
 
     // Zoe Orb User Messaging Commands
