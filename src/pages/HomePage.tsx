@@ -960,7 +960,21 @@ const HomePage = () => {
 
     try {
       await validateBrowserCanPreviewFile(file, mediaType);
-      let mediaPreviewUrl = mediaType === 'video' ? await captureVideoPreview(file) : null;
+      // Auto-transcode large videos into small preview variants for smoother Reel/Shorts playback.
+      let uploadFile: File = file;
+      if (mediaType === 'video') {
+        try {
+          setUploadState('validating');
+          const smaller = await transcodeVideoForPreview(file);
+          if (smaller && smaller !== file && smaller.size < file.size) {
+            uploadFile = smaller;
+            toast({ title: 'Optimized for fast playback', description: `Reduced from ${(file.size/1e6).toFixed(1)}MB to ${(smaller.size/1e6).toFixed(1)}MB` });
+          }
+        } catch (transErr) {
+          console.warn('[Loops upload] transcode skipped', transErr);
+        }
+      }
+      let mediaPreviewUrl = mediaType === 'video' ? await captureVideoPreview(uploadFile) : null;
       setUploadState('uploading');
       let mediaUrl: string;
 
