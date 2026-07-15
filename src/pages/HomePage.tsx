@@ -1627,7 +1627,7 @@ const HomePage = () => {
                       <div ref={loopRailRef} className="flex gap-2 overflow-x-auto pb-1 scroll-smooth snap-x" data-testid="loops-rail">
                         {filteredLoops.map((post, index) => (
                           <FeedErrorBoundary key={post.id} section="loops" postId={post.id} onRetry={() => retrySingleLoop(post.id)}>
-                            <div data-loop-index={index} className="snap-start">
+                            <div data-loop-index={index} className="snap-start shrink-0">
                               <LoopVideoItem
                                 post={post}
                                 index={index}
