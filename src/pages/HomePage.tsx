@@ -376,7 +376,7 @@ const HomePage = () => {
   // Auto-scroll the loop rail by each active video's real duration while the rail is visible.
   useEffect(() => {
     const el = loopRailRef.current;
-    if (!el || filteredLoops.length <= 1 || !loopRailInView) return;
+    if (!el || filteredLoops.length <= 1) return;
     let hoverPause = false;
     const onEnter = () => { hoverPause = true; };
     const onLeave = () => { hoverPause = false; };
@@ -392,7 +392,7 @@ const HomePage = () => {
       el.removeEventListener('mouseenter', onEnter);
       el.removeEventListener('mouseleave', onLeave);
     };
-  }, [filteredLoops, activeLoopRailIndex, loopDurations, loopRailInView]);
+  }, [filteredLoops, activeLoopRailIndex, loopDurations]);
 
   useEffect(() => {
     const el = loopRailRef.current;
