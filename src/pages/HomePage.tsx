@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import PostCard from '@/components/PostCard';
+import { FeedErrorBoundary } from '@/components/FeedErrorBoundary';
 import NotificationMenu from '@/components/NotificationMenu';
 import AnimatedHamburgerButton from '@/components/AnimatedHamburgerButton';
 import HamburgerMenu from '@/components/HamburgerMenu';
