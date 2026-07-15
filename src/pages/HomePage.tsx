@@ -806,58 +806,57 @@ const HomePage = () => {
                         className="hidden"
                         onChange={async (e) => {
                           const file = e.target.files?.[0];
-                          if (file && user) {
-                            try {
-                              toast({ title: "Uploading...", description: "Processing your video" });
-                              
-                              // Convert file to base64 for direct upload
-                              const reader = new FileReader();
-                              reader.onloadend = async () => {
-                                let base64 = reader.result as string | null;
-                                if (!base64) {
-                                  toast({ title: "Upload failed", description: "Could not read file. Please try again.", variant: "destructive" });
-                                  return;
-                                }
-                                const mediaType = file.type.startsWith('video/') ? 'video' : 'image';
-
-                                const MAX_DIRECT_MEDIA_BYTES = 2 * 1024 * 1024;
-                                if (base64.length > MAX_DIRECT_MEDIA_BYTES) {
-                                  const { dataUrlToImageThumbnail, videoFileToPosterThumbnail } = await import('@/utils/oversizedMediaGuard');
-                                  const thumb = mediaType === 'image'
-                                    ? await dataUrlToImageThumbnail(base64)
-                                    : await videoFileToPosterThumbnail(file);
-                                  if (!thumb) {
-                                    toast({
-                                      title: "File too large",
-                                      description: "Could not auto-thumbnail. Please use a smaller file (<2MB).",
-                                      variant: "destructive"
-                                    });
-                                    return;
-                                  }
-                                  base64 = thumb;
-                                  toast({ title: "Auto-thumbnailed", description: "Large media reduced before saving." });
-                                }
-
-                                // Direct insert to posts table
-                                const { error } = await supabase.from('posts').insert({
-                                  user_id: user.id,
-                                  content: '',
-                                  media_url: base64,
-                                  media_type: mediaType === 'video' ? 'image' : mediaType,
-                                  visibility: 'global'
-                                });
-                                
-                                if (error) throw error;
-                                
-                                toast({ title: "Posted!", description: "Your loop is now live" });
-                                triggerHomeRefresh();
-                              };
-                              reader.readAsDataURL(file);
-                            } catch (err) {
-                              toast({ title: "Error", description: "Failed to upload", variant: "destructive" });
-                            }
+                          if (!file || !user) { e.target.value = ''; return; }
+                          const MAX_FILE_BYTES = 50 * 1024 * 1024; // 50MB hard cap
+                          if (file.size > MAX_FILE_BYTES) {
+                            toast({ title: "File too large", description: "Please pick a file under 50MB.", variant: "destructive" });
+                            e.target.value = '';
+                            return;
                           }
-                          e.target.value = ''; // Reset input
+                          const mediaType: 'video' | 'image' = file.type.startsWith('video/') ? 'video' : 'image';
+                          try {
+                            toast({ title: "Uploading...", description: `Processing your ${mediaType}` });
+
+                            let mediaUrl: string;
+
+                            // Small images (<2MB) can go inline as base64 for instant preview.
+                            // Everything else (all videos + large images) goes to Storage.
+                            const INLINE_LIMIT = 2 * 1024 * 1024;
+                            if (mediaType === 'image' && file.size < INLINE_LIMIT) {
+                              mediaUrl = await new Promise<string>((resolve, reject) => {
+                                const reader = new FileReader();
+                                reader.onloadend = () => resolve(reader.result as string);
+                                reader.onerror = () => reject(new Error('read failed'));
+                                reader.readAsDataURL(file);
+                              });
+                            } else {
+                              const ext = file.name.split('.').pop()?.toLowerCase() || (mediaType === 'video' ? 'mp4' : 'jpg');
+                              const path = `${user.id}/loops/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+                              const { error: upErr } = await supabase.storage
+                                .from('posts')
+                                .upload(path, file, { contentType: file.type, upsert: false });
+                              if (upErr) throw upErr;
+                              const { data: pub } = supabase.storage.from('posts').getPublicUrl(path);
+                              mediaUrl = pub.publicUrl;
+                            }
+
+                            const { error } = await supabase.from('posts').insert({
+                              user_id: user.id,
+                              content: '',
+                              media_url: mediaUrl,
+                              media_type: mediaType,
+                              visibility: 'global'
+                            });
+                            if (error) throw error;
+
+                            toast({ title: "Posted!", description: "Your loop is now live" });
+                            triggerHomeRefresh();
+                          } catch (err: any) {
+                            console.error('[Loops upload]', err);
+                            toast({ title: "Upload failed", description: err?.message || "Please try again.", variant: "destructive" });
+                          } finally {
+                            e.target.value = '';
+                          }
                         }}
                       />
                       <label
