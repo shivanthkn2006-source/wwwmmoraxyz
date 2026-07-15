@@ -25,6 +25,7 @@ import { useSmartNotifications } from '@/hooks/useSmartNotifications';
 import { useRealtimeBadgeNotifications } from '@/hooks/useRealtimeBadgeNotifications';
 import { useUserOnlineNotifications } from '@/hooks/useUserOnlineNotifications';
 import { useDesktopNotifications } from '@/hooks/useDesktopNotifications';
+import { useNewPostNotifications } from '@/hooks/useNewPostNotifications';
 import { useZoeProactiveNotifications } from '@/hooks/useZoeProactiveNotifications';
 import { TutorialOverlay } from '@/components/TutorialOverlay';
 import { useTutorial } from '@/hooks/useTutorial';
