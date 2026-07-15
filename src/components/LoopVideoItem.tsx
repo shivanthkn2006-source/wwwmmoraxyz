@@ -1,23 +1,41 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Loader2, Play } from 'lucide-react';
+import { AlertTriangle, Loader2, Play, RotateCcw } from 'lucide-react';
+import { appendMediaVersion } from '@/lib/mediaUtils';
 
 interface LoopVideoItemProps {
   post: {
     id: string;
     media_url: string | null;
     media_preview_url?: string | null;
+    media_type?: string | null;
+    updated_at?: string | null;
+    created_at?: string | null;
   };
   index: number;
   onVideoClick: (index: number) => void;
   onPreviewError?: (postId: string) => void;
+  onDecodeStatus?: (postId: string, status: string) => void;
+  onRegeneratePoster?: (postId: string) => void;
+  canRegeneratePoster?: boolean;
 }
 
-const LoopVideoItem: React.FC<LoopVideoItemProps> = ({ post, index, onVideoClick, onPreviewError }) => {
+const LoopVideoItem: React.FC<LoopVideoItemProps> = ({
+  post,
+  index,
+  onVideoClick,
+  onPreviewError,
+  onDecodeStatus,
+  onRegeneratePoster,
+  canRegeneratePoster = false,
+}) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hoverTimeoutRef = useRef<NodeJS.Timeout>();
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const version = post.updated_at || post.created_at || post.id;
+  const mediaSrc = appendMediaVersion(post.media_url, version);
+  const posterSrc = appendMediaVersion(post.media_preview_url, version);
 
   // Preload enough data to paint the first frame on mount / when src changes.
   // Metadata alone often leaves mobile browsers with a black tile.
@@ -25,10 +43,12 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({ post, index, onVideoClick
     if (!videoRef.current || !post.media_url) {
       setIsLoading(false);
       setHasError(true);
+      onDecodeStatus?.(post.id, 'missing-source');
       return;
     }
     setIsLoading(true);
     setHasError(false);
+    onDecodeStatus?.(post.id, 'loading');
     const video = videoRef.current;
     video.load();
 
@@ -42,10 +62,11 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({ post, index, onVideoClick
       if (videoRef.current && videoRef.current.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
         setIsLoading(false);
         setHasError(true);
+        onDecodeStatus?.(post.id, 'timeout');
       }
     }, 12000);
     return () => clearTimeout(stallTimer);
-  }, [post.media_url]);
+  }, [post.media_url, post.id, onDecodeStatus]);
 
   const handleMouseEnter = () => {
     if (videoRef.current && !hasError) {
@@ -82,17 +103,14 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({ post, index, onVideoClick
   const handleLoadedData = () => {
     setIsLoading(false);
     setHasError(false);
+    onDecodeStatus?.(post.id, 'ready');
   };
 
   const handleError = () => {
     setIsLoading(false);
-    if (post.media_preview_url) {
-      console.warn('[LoopVideoItem] video decode failed; showing poster fallback', { postId: post.id });
-      setHasError(false);
-      return;
-    }
     console.error('[LoopVideoItem] preview failed', { postId: post.id, src: post.media_url, error: videoRef.current?.error });
     setHasError(true);
+    onDecodeStatus?.(post.id, 'decode-failed');
     onPreviewError?.(post.id);
   };
 
@@ -115,20 +133,22 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({ post, index, onVideoClick
       onClick={() => onVideoClick(index)}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
+      data-testid="loop-video-item"
+      data-post-id={post.id}
     >
-      {post.media_preview_url && (
+      {posterSrc && (
         <img
-          src={post.media_preview_url}
+          src={posterSrc}
           alt="Loop preview"
           className="absolute inset-0 h-full w-full object-cover"
           loading="lazy"
         />
       )}
-      {post.media_url && (
+      {mediaSrc && !hasError && (
         <video
           ref={videoRef}
-          src={post.media_url}
-          poster={post.media_preview_url || undefined}
+          src={mediaSrc}
+          poster={posterSrc}
           className="w-full h-full object-cover"
           muted
           loop
@@ -141,6 +161,28 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({ post, index, onVideoClick
           onError={handleError}
         />
       )}
+      {canRegeneratePoster && onRegeneratePoster && !hasError && (
+        <span
+          role="button"
+          tabIndex={0}
+          aria-label="Re-generate poster"
+          title="Re-generate poster"
+          className="absolute right-1 top-1 z-10 inline-flex h-6 w-6 items-center justify-center rounded-full border border-border/60 bg-background/70 text-primary opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100 focus:opacity-100"
+          onClick={(e) => {
+            e.stopPropagation();
+            onRegeneratePoster(post.id);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              e.stopPropagation();
+              onRegeneratePoster(post.id);
+            }
+          }}
+        >
+          <RotateCcw className="h-3 w-3" />
+        </span>
+      )}
       
       {/* Loading State */}
       {isLoading && !hasError && !post.media_preview_url && (
@@ -150,9 +192,30 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({ post, index, onVideoClick
       )}
       
       {/* Error State */}
-      {hasError && !post.media_preview_url && (
-        <div className="absolute inset-0 flex items-center justify-center bg-muted/80">
-          <span className="text-[8px] text-muted-foreground text-center px-1">Unable to preview</span>
+      {hasError && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-background/70 p-1 text-center backdrop-blur-[1px]">
+          <AlertTriangle className="h-4 w-4 text-destructive" />
+          <span className="text-[8px] leading-tight text-foreground">Playback not supported for this format</span>
+          {canRegeneratePoster && onRegeneratePoster && (
+            <span
+              role="button"
+              tabIndex={0}
+              className="mt-1 inline-flex items-center gap-1 rounded border border-border/60 px-1 py-0.5 text-[8px] text-primary"
+              onClick={(e) => {
+                e.stopPropagation();
+                onRegeneratePoster(post.id);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onRegeneratePoster(post.id);
+                }
+              }}
+            >
+              <RotateCcw className="h-2.5 w-2.5" /> Poster
+            </span>
+          )}
         </div>
       )}
       

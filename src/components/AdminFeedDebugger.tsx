@@ -13,6 +13,11 @@ export interface FeedDebugEntry {
   errorMessage?: string;
   rlsBlocked?: boolean;
   mediaLoadMs?: number;
+  postId?: string;
+  mediaUrl?: string | null;
+  posterUrl?: string | null;
+  mediaType?: string | null;
+  decodeStatus?: string;
   timestamp: string;
 }
 
@@ -48,13 +53,18 @@ const AdminFeedDebugger: React.FC<Props> = ({ entries, isAdmin }) => {
                 <span className="opacity-60">{new Date(e.timestamp).toLocaleTimeString()}</span>
               </div>
               {e.query && <div className="opacity-80 break-all">{e.query}</div>}
+              {e.postId && <div className="opacity-80 break-all">post:{e.postId}</div>}
               <div className="opacity-70 flex gap-2 flex-wrap">
                 {typeof e.durationMs === 'number' && <span>{e.durationMs}ms</span>}
                 {typeof e.rowCount === 'number' && <span>{e.rowCount} rows</span>}
                 {typeof e.mediaLoadMs === 'number' && <span>media:{e.mediaLoadMs}ms</span>}
+                {e.mediaType && <span>{e.mediaType}</span>}
+                {e.decodeStatus && <span>{e.decodeStatus}</span>}
                 {e.rlsBlocked && <span className="text-red-500">RLS BLOCKED</span>}
                 {e.errorCode && <span className="text-red-500">{e.errorCode}</span>}
               </div>
+              {e.mediaUrl && <a href={e.mediaUrl} target="_blank" rel="noreferrer" className="block break-all text-primary">media</a>}
+              {e.posterUrl && <a href={e.posterUrl} target="_blank" rel="noreferrer" className="block break-all text-primary">poster</a>}
               {e.errorMessage && <div className="text-red-500">{e.errorMessage}</div>}
             </div>
           ))}

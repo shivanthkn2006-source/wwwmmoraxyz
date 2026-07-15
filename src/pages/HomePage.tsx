@@ -31,6 +31,7 @@ import { useTutorial } from '@/hooks/useTutorial';
 import { useDailyBriefing } from '@/hooks/useDailyBriefing';
 import { OnboardingTour } from '@/components/OnboardingTour';
 import { SovereignQuickAccess } from '@/components/SovereignQuickAccess';
+import { appendMediaVersion, captureVideoPreviewFromUrl, dataUrlToFile, getPostsStorageObjectPath, inferMediaType, makeFallbackVideoPoster } from '@/lib/mediaUtils';
 import PostsGrid from "@/components/PostsGrid";
 import PostModal from "@/components/PostModal";
 import FriendRequestCard from "@/components/FriendRequestCard";
@@ -60,6 +61,7 @@ interface Post {
   media_preview_url?: string | null;
   full_media_url?: string | null;
   media_type: string | null;
+  updated_at?: string | null;
   has_deferred_media?: boolean;
   media_size?: number;
   likes_count: number;
@@ -79,18 +81,6 @@ const DATA_URL_PREVIEW_LIMIT = 900_000;
 // Loops upload whitelist
 const ALLOWED_VIDEO_MIME = ['video/mp4', 'video/webm', 'video/quicktime', 'video/ogg'];
 const ALLOWED_IMAGE_MIME = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-
-// Infer real media type from the URL when the DB media_type column is wrong
-// (legacy rows saved videos with media_type='image' — see loops upload bug).
-const inferMediaType = (url: string | null, declared: string | null): 'video' | 'image' | null => {
-  if (!url) return declared === 'video' ? 'video' : declared === 'image' ? 'image' : null;
-  if (url.startsWith('data:video/')) return 'video';
-  if (url.startsWith('data:image/')) return 'image';
-  const clean = url.split('?')[0].toLowerCase();
-  if (/\.(mp4|webm|mov|ogg|m4v)$/.test(clean)) return 'video';
-  if (/\.(jpe?g|png|webp|gif|avif|heic)$/.test(clean)) return 'image';
-  return declared === 'video' ? 'video' : declared === 'image' ? 'image' : null;
-};
 
 const prepareFeedPostMedia = (post: any): Post => {
   const mediaUrl = typeof post.media_url === 'string' ? post.media_url : null;
@@ -149,32 +139,6 @@ const validateBrowserCanPreviewFile = (file: File, mediaType: 'video' | 'image')
     };
     img.src = objectUrl;
   });
-
-const makeFallbackVideoPoster = () => {
-  const canvas = document.createElement('canvas');
-  canvas.width = 360;
-  canvas.height = 640;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return null;
-  const gradient = ctx.createLinearGradient(0, 0, 360, 640);
-  gradient.addColorStop(0, '#020617');
-  gradient.addColorStop(0.55, '#111827');
-  gradient.addColorStop(1, '#0f172a');
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, 360, 640);
-  ctx.fillStyle = 'rgba(255,255,255,0.16)';
-  ctx.beginPath();
-  ctx.arc(180, 320, 54, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = 'rgba(255,255,255,0.86)';
-  ctx.beginPath();
-  ctx.moveTo(164, 290);
-  ctx.lineTo(164, 350);
-  ctx.lineTo(216, 320);
-  ctx.closePath();
-  ctx.fill();
-  return canvas.toDataURL('image/jpeg', 0.72);
-};
 
 const captureVideoPreview = (file: File) =>
   new Promise<string | null>((resolve) => {
@@ -291,6 +255,7 @@ const HomePage = () => {
   const [feedDiag, setFeedDiag] = useState<FeedDiagnostics | null>(null);
   const [debugEntries, setDebugEntries] = useState<Array<import('@/components/AdminFeedDebugger').FeedDebugEntry>>([]);
   const [consecutiveFailures, setConsecutiveFailures] = useState(0);
+  const [loopDecodeStatus, setLoopDecodeStatus] = useState<Record<string, string>>({});
 
   // Loops upload UI state
   const [uploadState, setUploadState] = useState<'idle' | 'validating' | 'uploading' | 'saving' | 'error' | 'success'>('idle');
@@ -301,6 +266,28 @@ const HomePage = () => {
   const isAdminUser = !!user && ['moksh50','justmkbhd','john','shivanth_kn'].includes(((userProfile?.username||'') as string).toLowerCase());
   const pushDebug = (e: Omit<import('@/components/AdminFeedDebugger').FeedDebugEntry,'timestamp'>) =>
     setDebugEntries(prev => [{...e, timestamp: new Date().toISOString()}, ...prev].slice(0, 50));
+
+  const logFeedIssue = React.useCallback(async (entry: Omit<import('@/components/AdminFeedDebugger').FeedDebugEntry,'timestamp'>) => {
+    pushDebug(entry);
+    try {
+      await (supabase as any).from('feed_diagnostics_log').insert({
+        user_id: user?.id || null,
+        status: 'error',
+        message: entry.errorMessage || entry.step,
+        error_code: entry.errorCode || null,
+        route: '/home',
+        context: {
+          step: entry.step,
+          post_id: entry.postId,
+          media_url: entry.mediaUrl,
+          poster_url: entry.posterUrl,
+          media_type: entry.mediaType,
+          decode_status: entry.decodeStatus,
+          storage_path: getPostsStorageObjectPath(entry.mediaUrl),
+        },
+      });
+    } catch { /* diagnostics must never break the feed */ }
+  }, [user?.id]);
 
   const logFeedDiagnostic = React.useCallback(async (d: FeedDiagnostics, rlsBlocked = false) => {
     try {
@@ -340,7 +327,7 @@ const HomePage = () => {
   // NOTE: Atlas Boot and Prime Objective are ONLY for Atlas HUD, NOT Zoe Infinity main flow
   const [atlasHUDActive, setAtlasHUDActive] = useState(false);
   const videoPosts = loopPosts.filter((post) =>
-    !!post.media_url && !brokenLoopPreviewIds.has(post.id) && inferMediaType(post.media_url, post.media_type) === 'video'
+    !!post.media_url && inferMediaType(post.media_url, post.media_type) === 'video'
   );
 
   const filteredLoops = React.useMemo(() => {
@@ -486,7 +473,7 @@ const HomePage = () => {
       // SIMPLIFIED: Fetch posts first without complex joins to avoid JSON parse errors
       const postsResult = await (supabase as any)
         .from('feed_posts_safe')
-        .select('id, user_id, content, media_url, media_type, likes_count, comments_count, created_at, visibility, has_deferred_media, media_size, media_preview_url')
+        .select('id, user_id, content, media_url, media_type, likes_count, comments_count, created_at, updated_at, visibility, has_deferred_media, media_size, media_preview_url')
         .eq('visibility', 'global')
         .is('private_timeline_id', null)
         .order('created_at', { ascending: false })
@@ -597,7 +584,7 @@ const HomePage = () => {
       // large data URLs, which makes valid uploaded videos disappear from Loops.
       const postsResult = await (supabase as any)
         .from('posts')
-        .select('id, user_id, content, media_url, media_type, likes_count, comments_count, created_at, visibility, private_timeline_id, media_preview_url')
+        .select('id, user_id, content, media_url, media_type, likes_count, comments_count, created_at, updated_at, visibility, private_timeline_id, media_preview_url')
         .eq('visibility', 'global')
         .is('private_timeline_id', null)
         .not('media_url', 'is', null)
@@ -615,9 +602,7 @@ const HomePage = () => {
       const loopRows = ((postsResult.data || []) as any[])
         .filter((post) => {
           const mediaUrl = typeof post.media_url === 'string' ? post.media_url : null;
-          // Do not surface old inline video rows in Loops: they were produced by the
-          // previous upload bug and can fail browser demuxing, creating black previews.
-          if (!mediaUrl || mediaUrl.startsWith('data:')) return false;
+          if (!mediaUrl) return false;
           return inferMediaType(mediaUrl, post.media_type) === 'video';
         });
 
@@ -683,7 +668,7 @@ const HomePage = () => {
       // SIMPLIFIED: Fetch posts first without complex joins to avoid JSON parse errors
       const postsResult = await (supabase as any)
         .from('feed_posts_safe')
-        .select('id, user_id, content, media_url, media_type, likes_count, comments_count, created_at, visibility, has_deferred_media, media_size, media_preview_url')
+        .select('id, user_id, content, media_url, media_type, likes_count, comments_count, created_at, updated_at, visibility, has_deferred_media, media_size, media_preview_url')
         .eq('visibility', 'personal')
         .is('private_timeline_id', null)
         .in('user_id', [...friendIds, user.id])
@@ -755,7 +740,7 @@ const HomePage = () => {
 
     const { data } = await supabase
       .from('profiles')
-      .select('display_name, profile_photo_url, event_date, event_recurring, status, bio, hobbies')
+        .select('display_name, username, profile_photo_url, event_date, event_recurring, status, bio, hobbies')
       .eq('user_id', user.id)
       .maybeSingle();
 
@@ -975,7 +960,7 @@ const HomePage = () => {
 
     try {
       await validateBrowserCanPreviewFile(file, mediaType);
-      const mediaPreviewUrl = mediaType === 'video' ? await captureVideoPreview(file) : null;
+      let mediaPreviewUrl = mediaType === 'video' ? await captureVideoPreview(file) : null;
       setUploadState('uploading');
       let mediaUrl: string;
 
@@ -1016,6 +1001,23 @@ const HomePage = () => {
 
         const { data: pub } = supabase.storage.from('posts').getPublicUrl(path);
         mediaUrl = pub.publicUrl;
+
+        if (mediaType === 'video' && mediaPreviewUrl) {
+          try {
+            const posterPath = `${user.id}/loops/posters/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
+            const posterFile = dataUrlToFile(mediaPreviewUrl, 'loop-poster.jpg');
+            const { error: posterError } = await supabase.storage.from('posts').upload(posterPath, posterFile, {
+              contentType: 'image/jpeg',
+              upsert: false,
+            });
+            if (!posterError) {
+              const { data: posterPub } = supabase.storage.from('posts').getPublicUrl(posterPath);
+              mediaPreviewUrl = posterPub.publicUrl;
+            }
+          } catch (posterErr) {
+            console.warn('[Loops upload] poster storage upload failed; using inline poster', posterErr);
+          }
+        }
       }
 
       setUploadState('saving');
@@ -1051,6 +1053,139 @@ const HomePage = () => {
   const retryLastUpload = React.useCallback(() => {
     if (lastUploadFile) handleLoopsUpload(lastUploadFile);
   }, [lastUploadFile, handleLoopsUpload]);
+
+  const handleLoopDecodeStatus = React.useCallback((postId: string, status: string) => {
+    setLoopDecodeStatus(prev => (prev[postId] === status ? prev : { ...prev, [postId]: status }));
+    if (status === 'decode-failed' || status === 'timeout' || status === 'missing-source') {
+      const post = loopPosts.find(p => p.id === postId);
+      logFeedIssue({
+        step: 'loops:decode-status',
+        postId,
+        mediaUrl: post?.media_url || null,
+        posterUrl: post?.media_preview_url || null,
+        mediaType: post?.media_type || null,
+        decodeStatus: status,
+        errorMessage: `Loop video ${status}`,
+      });
+    }
+  }, [loopPosts, logFeedIssue]);
+
+  const regenerateLoopPoster = React.useCallback(async (postId: string) => {
+    if (!user) return;
+    const post = loopPosts.find(p => p.id === postId);
+    if (!post?.media_url) {
+      toast({ title: 'Poster unavailable', description: 'This loop has no video URL to read.', variant: 'destructive' });
+      return;
+    }
+
+    try {
+      toast({ title: 'Regenerating poster…' });
+      const versionedMediaUrl = appendMediaVersion(post.media_url, post.updated_at || post.created_at || Date.now());
+      const posterDataUrl = await captureVideoPreviewFromUrl(versionedMediaUrl || post.media_url) || makeFallbackVideoPoster();
+      if (!posterDataUrl) throw new Error('Could not create a poster image.');
+
+      let posterUrl = posterDataUrl;
+      const posterFile = dataUrlToFile(posterDataUrl, `${postId}.jpg`);
+      const posterPath = `${user.id}/loops/posters/${postId}-${Date.now()}.jpg`;
+      const { error: uploadError } = await supabase.storage.from('posts').upload(posterPath, posterFile, {
+        contentType: 'image/jpeg',
+        upsert: false,
+      });
+      if (!uploadError) {
+        const { data: pub } = supabase.storage.from('posts').getPublicUrl(posterPath);
+        posterUrl = pub.publicUrl;
+      } else {
+        console.warn('[Loops] poster storage upload failed; using inline fallback', uploadError);
+      }
+
+      const { error: updateError } = await supabase
+        .from('posts')
+        .update({ media_preview_url: posterUrl, media_type: 'video' })
+        .eq('id', postId)
+        .eq('user_id', user.id);
+      if (updateError) throw updateError;
+
+      setLoopPosts(prev => prev.map(p => p.id === postId ? { ...p, media_preview_url: posterUrl, media_type: 'video', updated_at: new Date().toISOString() } : p));
+      setBrokenLoopPreviewIds(prev => {
+        const next = new Set(prev);
+        next.delete(postId);
+        return next;
+      });
+      setLoopDecodeStatus(prev => ({ ...prev, [postId]: 'poster-regenerated' }));
+      toast({ title: 'Poster regenerated', description: 'The loop preview has been refreshed.' });
+    } catch (err: any) {
+      const msg = err?.message || 'Could not regenerate this poster.';
+      logFeedIssue({
+        step: 'loops:poster-regenerate',
+        postId,
+        mediaUrl: post.media_url,
+        posterUrl: post.media_preview_url || null,
+        mediaType: post.media_type,
+        errorMessage: msg,
+      });
+      toast({ title: 'Poster failed', description: msg, variant: 'destructive' });
+    }
+  }, [loopPosts, logFeedIssue, user]);
+
+  const retrySinglePost = React.useCallback(async (postId: string) => {
+    try {
+      const { data, error } = await (supabase as any)
+        .from('feed_posts_safe')
+        .select('id, user_id, content, media_url, media_type, likes_count, comments_count, created_at, updated_at, visibility, has_deferred_media, media_size, media_preview_url')
+        .eq('id', postId)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) return;
+
+      const [profileResult, likedResult] = await Promise.all([
+        supabase.from('safe_public_profiles').select('user_id, display_name, username, profile_photo_url, status, hobbies').eq('user_id', data.user_id).maybeSingle(),
+        user ? supabase.from('post_likes').select('post_id').eq('user_id', user.id).eq('post_id', postId).maybeSingle() : Promise.resolve({ data: null }),
+      ]);
+      const refreshed = prepareFeedPostMedia({
+        ...data,
+        profile: profileResult.data || null,
+        user_liked: !!likedResult.data,
+      });
+      setGlobalPosts(prev => prev.map(p => p.id === postId ? refreshed : p));
+      setPersonalPosts(prev => prev.map(p => p.id === postId ? refreshed : p));
+    } catch (err: any) {
+      logFeedIssue({ step: 'posts:single-retry', postId, errorMessage: err?.message || String(err) });
+    }
+  }, [logFeedIssue, user]);
+
+  const retrySingleLoop = React.useCallback(async (postId: string) => {
+    if (!user) return;
+    try {
+      const { data, error } = await (supabase as any)
+        .from('posts')
+        .select('id, user_id, content, media_url, media_type, likes_count, comments_count, created_at, updated_at, visibility, private_timeline_id, media_preview_url')
+        .eq('id', postId)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data || inferMediaType(data.media_url, data.media_type) !== 'video') return;
+
+      const [profileResult, likedResult] = await Promise.all([
+        supabase.from('safe_public_profiles').select('user_id, display_name, username, profile_photo_url, status, hobbies').eq('user_id', data.user_id).maybeSingle(),
+        supabase.from('post_likes').select('post_id').eq('user_id', user.id).eq('post_id', postId).maybeSingle(),
+      ]);
+      const refreshed = {
+        ...data,
+        media_type: 'video',
+        profile: profileResult.data || null,
+        user_liked: !!likedResult.data,
+        has_deferred_media: false,
+      } as Post;
+      setLoopPosts(prev => prev.some(p => p.id === postId) ? prev.map(p => p.id === postId ? refreshed : p) : [refreshed, ...prev]);
+      setBrokenLoopPreviewIds(prev => {
+        const next = new Set(prev);
+        next.delete(postId);
+        return next;
+      });
+      setLoopDecodeStatus(prev => ({ ...prev, [postId]: 'retried' }));
+    } catch (err: any) {
+      logFeedIssue({ step: 'loops:single-retry', postId, errorMessage: err?.message || String(err) });
+    }
+  }, [logFeedIssue, user]);
 
 
 
@@ -1298,19 +1433,64 @@ const HomePage = () => {
                     </div>
                   )}
 
+                  {isAdminUser && filteredLoops.length > 0 && (
+                    <details className="rounded-md border border-border/50 bg-muted/20 px-3 py-2 text-[11px]" data-testid="loops-diagnostics-panel">
+                      <summary className="cursor-pointer font-medium text-foreground">Loops preview diagnostics</summary>
+                      <div className="mt-2 space-y-2">
+                        {filteredLoops.map((post) => {
+                          const version = post.updated_at || post.created_at || post.id;
+                          const mediaUrl = appendMediaVersion(post.media_url, version) || null;
+                          const posterUrl = appendMediaVersion(post.media_preview_url, version) || null;
+                          return (
+                            <div key={post.id} className="rounded border border-border/40 bg-background/50 p-2 font-mono">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="font-semibold">{post.id.slice(0, 8)}</span>
+                                <span>{post.media_type || 'unknown'}</span>
+                                <span>{brokenLoopPreviewIds.has(post.id) ? 'fallback' : (loopDecodeStatus[post.id] || 'pending')}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => regenerateLoopPoster(post.id)}
+                                  className="rounded border border-border/60 px-2 py-0.5 text-primary hover:bg-muted"
+                                >
+                                  Re-generate poster
+                                </button>
+                              </div>
+                              <div className="mt-1 break-all text-muted-foreground">media: {mediaUrl || 'missing'}</div>
+                              <div className="break-all text-muted-foreground">poster: {posterUrl || 'missing'}</div>
+                              {mediaUrl && <a href={mediaUrl} target="_blank" rel="noreferrer" className="mr-3 text-primary">Open media</a>}
+                              {posterUrl && <a href={posterUrl} target="_blank" rel="noreferrer" className="text-primary">Open poster</a>}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </details>
+                  )}
+
 
                   {filteredLoops.length > 0 ? (
                     <FeedErrorBoundary section="loops" onRetry={handleUpdate}>
                       <div className="flex gap-2 overflow-x-auto pb-1">
                         {filteredLoops.map((post, index) => (
-                          <FeedErrorBoundary key={post.id} section="loops" postId={post.id}>
+                          <FeedErrorBoundary key={post.id} section="loops" postId={post.id} onRetry={() => retrySingleLoop(post.id)}>
                             <LoopVideoItem
                               post={post}
                               index={index}
                               onVideoClick={openLoopsPlayer}
+                              onDecodeStatus={handleLoopDecodeStatus}
+                              onRegeneratePoster={regenerateLoopPoster}
+                              canRegeneratePoster={isAdminUser || user?.id === post.user_id}
                               onPreviewError={(postId) => {
+                                const failed = loopPosts.find(p => p.id === postId);
                                 setBrokenLoopPreviewIds(prev => new Set(prev).add(postId));
-                                pushDebug({ step: 'loops:preview-error', errorMessage: `Preview decode failed for ${postId}` });
+                                logFeedIssue({
+                                  step: 'loops:preview-error',
+                                  postId,
+                                  mediaUrl: failed?.media_url || null,
+                                  posterUrl: failed?.media_preview_url || null,
+                                  mediaType: failed?.media_type || null,
+                                  decodeStatus: 'decode-failed',
+                                  errorMessage: `Preview decode failed for ${postId}`,
+                                });
                               }}
                             />
                           </FeedErrorBoundary>
@@ -1337,7 +1517,7 @@ const HomePage = () => {
                 ) : (
                   globalPosts.map(post => (
                     <div key={post.id} data-post-card data-post-id={post.id}>
-                      <FeedErrorBoundary section="post-card" postId={post.id}>
+                      <FeedErrorBoundary section="post-card" postId={post.id} onRetry={() => retrySinglePost(post.id)}>
                         <PostCard post={post} onUpdate={handleUpdate} />
                       </FeedErrorBoundary>
                     </div>
@@ -1355,7 +1535,9 @@ const HomePage = () => {
                 ) : (
                   personalPosts.map(post => (
                     <div key={post.id} data-post-card data-post-id={post.id}>
-                      <PostCard post={post} onUpdate={handleUpdate} />
+                      <FeedErrorBoundary section="post-card" postId={post.id} onRetry={() => retrySinglePost(post.id)}>
+                        <PostCard post={post} onUpdate={handleUpdate} />
+                      </FeedErrorBoundary>
                     </div>
                   ))
                 )}
