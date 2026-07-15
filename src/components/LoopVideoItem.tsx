@@ -161,6 +161,28 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({
           onError={handleError}
         />
       )}
+      {canRegeneratePoster && onRegeneratePoster && !hasError && (
+        <span
+          role="button"
+          tabIndex={0}
+          aria-label="Re-generate poster"
+          title="Re-generate poster"
+          className="absolute right-1 top-1 z-10 inline-flex h-6 w-6 items-center justify-center rounded-full border border-border/60 bg-background/70 text-primary opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100 focus:opacity-100"
+          onClick={(e) => {
+            e.stopPropagation();
+            onRegeneratePoster(post.id);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              e.stopPropagation();
+              onRegeneratePoster(post.id);
+            }
+          }}
+        >
+          <RotateCcw className="h-3 w-3" />
+        </span>
+      )}
       
       {/* Loading State */}
       {isLoading && !hasError && !post.media_preview_url && (
