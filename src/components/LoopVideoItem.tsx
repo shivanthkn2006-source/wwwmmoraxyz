@@ -44,7 +44,10 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({
   const [decodeFailureReason, setDecodeFailureReason] = useState('');
   const [debugOpen, setDebugOpen] = useState(false);
   const [resolvedPosterSrc, setResolvedPosterSrc] = useState<string | undefined>();
-  const [soundUnlocked, setSoundUnlocked] = useState(true);
+  const [soundUnlocked, setSoundUnlocked] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return Boolean((window as any).__mmoraAudioUnlocked);
+  });
   const { soundEnabled, setSoundEnabled } = usePersistentMediaSound(true);
 
   const version = post.updated_at || post.created_at || post.id;
@@ -93,12 +96,23 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({
   }, [post.media_preview_url, post.id]);
 
   useEffect(() => {
-    const unlock = () => setSoundUnlocked(true);
+    if (typeof window === 'undefined') return;
+    if ((window as any).__mmoraAudioUnlocked) { setSoundUnlocked(true); return; }
+    const unlock = () => {
+      (window as any).__mmoraAudioUnlocked = true;
+      setSoundUnlocked(true);
+      window.dispatchEvent(new CustomEvent('mmora:audio-unlocked'));
+    };
+    const onGlobalUnlock = () => setSoundUnlocked(true);
     window.addEventListener('pointerdown', unlock, { once: true, passive: true });
+    window.addEventListener('touchstart', unlock, { once: true, passive: true });
     window.addEventListener('keydown', unlock, { once: true });
+    window.addEventListener('mmora:audio-unlocked', onGlobalUnlock);
     return () => {
       window.removeEventListener('pointerdown', unlock);
+      window.removeEventListener('touchstart', unlock);
       window.removeEventListener('keydown', unlock);
+      window.removeEventListener('mmora:audio-unlocked', onGlobalUnlock);
     };
   }, []);
 
