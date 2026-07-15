@@ -52,9 +52,18 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({
 
   const version = post.updated_at || post.created_at || post.id;
   const mediaSrc = appendMediaVersion(post.media_url, version);
-  const backendPosterSrc = appendMediaVersion(post.media_preview_url, version);
+  // Guard against truncated/invalid data-URI previews stored in older posts.
+  const isInvalidDataPreview = React.useMemo(() => {
+    const p = post.media_preview_url;
+    if (!p || typeof p !== 'string') return false;
+    if (!p.startsWith('data:')) return false;
+    // A real base64 poster/video is thousands of chars; anything under 1KB is truncated garbage.
+    return p.length < 1024;
+  }, [post.media_preview_url]);
+  const safePreviewUrl = isInvalidDataPreview ? null : post.media_preview_url;
+  const backendPosterSrc = appendMediaVersion(safePreviewUrl, version);
   const generatedPosterSrc = React.useMemo(() => makeFallbackVideoPoster(), []);
-  const pendingPrivatePoster = isPrivateStorageUrl(post.media_preview_url) && !resolvedPosterSrc;
+  const pendingPrivatePoster = isPrivateStorageUrl(safePreviewUrl) && !resolvedPosterSrc;
   const posterSrc = resolvedPosterSrc || (!pendingPrivatePoster ? backendPosterSrc : undefined) || generatedPosterSrc || undefined;
   const shouldShowVideoPreview = canPaintVideo && isPlaying && (active || !posterSrc);
   const shouldPlayWithSound = soundEnabled && soundUnlocked;
@@ -89,11 +98,11 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({
   useEffect(() => {
     let alive = true;
     setResolvedPosterSrc(undefined);
-    resolvePrivateStorageUrl(supabase, post.media_preview_url)
+    resolvePrivateStorageUrl(supabase, safePreviewUrl)
       .then((url) => { if (alive) setResolvedPosterSrc(url); })
       .catch((e) => console.warn('[LoopVideoItem] signed poster failed', post.id, e));
     return () => { alive = false; };
-  }, [post.media_preview_url, post.id]);
+  }, [safePreviewUrl, post.id]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
