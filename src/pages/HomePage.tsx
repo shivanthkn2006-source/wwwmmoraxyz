@@ -1133,7 +1133,9 @@ const HomePage = () => {
                 ) : (
                   globalPosts.map(post => (
                     <div key={post.id} data-post-card data-post-id={post.id}>
-                      <PostCard post={post} onUpdate={handleUpdate} />
+                      <FeedErrorBoundary section="post-card" postId={post.id}>
+                        <PostCard post={post} onUpdate={handleUpdate} />
+                      </FeedErrorBoundary>
                     </div>
                   ))
                 )}
