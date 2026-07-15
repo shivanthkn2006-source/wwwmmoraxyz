@@ -138,3 +138,107 @@ export const captureVideoPreviewFromUrl = (src: string) =>
     };
     video.src = src;
   });
+
+/**
+ * Attempt to transcode a large video into a smaller preview variant (max ~480px,
+ * ~900kbps) using MediaRecorder + captureStream. Runs in real-time (playback
+ * speed) so it's only worthwhile for short clips. Returns the original file if
+ * anything fails or produces a bigger result.
+ */
+export const transcodeVideoForPreview = (file: File, opts?: { maxDurationSec?: number; minBytes?: number; maxHeight?: number; bitrate?: number }): Promise<File> => {
+  const maxDurationSec = opts?.maxDurationSec ?? 90;
+  const minBytes = opts?.minBytes ?? 5 * 1024 * 1024;
+  const maxHeight = opts?.maxHeight ?? 480;
+  const bitrate = opts?.bitrate ?? 900_000;
+
+  return new Promise((resolve) => {
+    if (typeof window === 'undefined' || file.size < minBytes) return resolve(file);
+    const HAS_MR = typeof (window as any).MediaRecorder !== 'undefined';
+    if (!HAS_MR) return resolve(file);
+
+    const video = document.createElement('video');
+    video.muted = true; video.playsInline = true; video.preload = 'auto';
+    const blobUrl = URL.createObjectURL(file);
+    let settled = false;
+    const done = (out: File) => {
+      if (settled) return;
+      settled = true;
+      try { URL.revokeObjectURL(blobUrl); } catch {}
+      try { video.src = ''; video.load(); } catch {}
+      resolve(out);
+    };
+    const fail = () => done(file);
+
+    video.onerror = fail;
+    video.onloadedmetadata = () => {
+      const dur = Number.isFinite(video.duration) ? video.duration : 0;
+      if (!dur || dur > maxDurationSec) return done(file);
+
+      const srcW = video.videoWidth || 720;
+      const srcH = video.videoHeight || 1280;
+      const scale = Math.min(1, maxHeight / srcH);
+      const w = Math.max(2, Math.round(srcW * scale / 2) * 2);
+      const h = Math.max(2, Math.round(srcH * scale / 2) * 2);
+
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return fail();
+
+      // Pick supported mime
+      const candidates = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
+      const mimeType = candidates.find((m) => (window as any).MediaRecorder?.isTypeSupported?.(m)) || '';
+      if (!mimeType) return fail();
+
+      let stream: MediaStream;
+      try {
+        stream = (canvas as any).captureStream(30) as MediaStream;
+      } catch { return fail(); }
+
+      // Attach audio track from original if available
+      try {
+        const anyVid = video as any;
+        const aStream: MediaStream | undefined = anyVid.captureStream?.() || anyVid.mozCaptureStream?.();
+        aStream?.getAudioTracks().forEach((t) => stream.addTrack(t));
+      } catch {}
+
+      let recorder: MediaRecorder;
+      try {
+        recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: bitrate });
+      } catch { return fail(); }
+
+      const chunks: Blob[] = [];
+      recorder.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: mimeType });
+        if (!blob.size || blob.size >= file.size * 0.9) return done(file);
+        const base = file.name.replace(/\.[^.]+$/, '') || 'video';
+        done(new File([blob], `${base}.preview.webm`, { type: 'video/webm' }));
+      };
+
+      let raf = 0;
+      const draw = () => {
+        try { ctx.drawImage(video, 0, 0, w, h); } catch {}
+        if (!video.paused && !video.ended) raf = requestAnimationFrame(draw);
+      };
+
+      video.onended = () => {
+        cancelAnimationFrame(raf);
+        try { recorder.stop(); } catch { fail(); }
+      };
+
+      // Safety timeout: never longer than 2x duration
+      const guard = window.setTimeout(() => {
+        try { recorder.state !== 'inactive' && recorder.stop(); } catch {}
+      }, Math.max(15000, dur * 2000));
+      const originalOnstop = recorder.onstop!;
+      recorder.onstop = (ev) => { window.clearTimeout(guard); (originalOnstop as any)?.(ev); };
+
+      video.play().then(() => {
+        try { recorder.start(250); } catch { return fail(); }
+        draw();
+      }).catch(fail);
+    };
+    video.src = blobUrl;
+  });
+};

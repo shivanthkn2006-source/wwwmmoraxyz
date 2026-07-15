@@ -1,5 +1,5 @@
 // HomePage - Main feed component
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -31,7 +31,7 @@ import { useTutorial } from '@/hooks/useTutorial';
 import { useDailyBriefing } from '@/hooks/useDailyBriefing';
 import { OnboardingTour } from '@/components/OnboardingTour';
 import { SovereignQuickAccess } from '@/components/SovereignQuickAccess';
-import { appendMediaVersion, captureVideoPreviewFromUrl, dataUrlToFile, getPostsStorageObjectPath, inferMediaType, makeFallbackVideoPoster } from '@/lib/mediaUtils';
+import { appendMediaVersion, captureVideoPreviewFromUrl, dataUrlToFile, getPostsStorageObjectPath, inferMediaType, makeFallbackVideoPoster, transcodeVideoForPreview } from '@/lib/mediaUtils';
 import PostsGrid from "@/components/PostsGrid";
 import PostModal from "@/components/PostModal";
 import FriendRequestCard from "@/components/FriendRequestCard";
@@ -256,6 +256,7 @@ const HomePage = () => {
   const [debugEntries, setDebugEntries] = useState<Array<import('@/components/AdminFeedDebugger').FeedDebugEntry>>([]);
   const [consecutiveFailures, setConsecutiveFailures] = useState(0);
   const [loopDecodeStatus, setLoopDecodeStatus] = useState<Record<string, string>>({});
+  const loopRailRef = useRef<HTMLDivElement | null>(null);
 
   // Loops upload UI state
   const [uploadState, setUploadState] = useState<'idle' | 'validating' | 'uploading' | 'saving' | 'error' | 'success'>('idle');
@@ -354,6 +355,32 @@ const HomePage = () => {
         );
     }
   }, [videoPosts, loopsFilter, friendships]);
+
+  // Auto-scroll the loop rail when there are more than 5 videos to showcase hot trending content.
+  useEffect(() => {
+    const el = loopRailRef.current;
+    if (!el || filteredLoops.length <= 5) return;
+    let hoverPause = false;
+    const onEnter = () => { hoverPause = true; };
+    const onLeave = () => { hoverPause = false; };
+    el.addEventListener('mouseenter', onEnter);
+    el.addEventListener('mouseleave', onLeave);
+    const interval = window.setInterval(() => {
+      if (hoverPause || !el.isConnected) return;
+      const step = 104; // 96px tile + 8px gap
+      const max = el.scrollWidth - el.clientWidth;
+      if (max <= 0) return;
+      const next = el.scrollLeft + step >= max - 4 ? 0 : el.scrollLeft + step;
+      el.scrollTo({ left: next, behavior: 'smooth' });
+    }, 3500);
+    return () => {
+      window.clearInterval(interval);
+      el.removeEventListener('mouseenter', onEnter);
+      el.removeEventListener('mouseleave', onLeave);
+    };
+  }, [filteredLoops.length]);
+
+
   
   const hasEvent = useEventGlow(userProfile?.event_date, userProfile?.event_recurring);
   const glowClass = getAvatarGlowClass(hasEvent, userProfile?.status);
@@ -960,7 +987,21 @@ const HomePage = () => {
 
     try {
       await validateBrowserCanPreviewFile(file, mediaType);
-      let mediaPreviewUrl = mediaType === 'video' ? await captureVideoPreview(file) : null;
+      // Auto-transcode large videos into small preview variants for smoother Reel/Shorts playback.
+      let uploadFile: File = file;
+      if (mediaType === 'video') {
+        try {
+          setUploadState('validating');
+          const smaller = await transcodeVideoForPreview(file);
+          if (smaller && smaller !== file && smaller.size < file.size) {
+            uploadFile = smaller;
+            toast({ title: 'Optimized for fast playback', description: `Reduced from ${(file.size/1e6).toFixed(1)}MB to ${(smaller.size/1e6).toFixed(1)}MB` });
+          }
+        } catch (transErr) {
+          console.warn('[Loops upload] transcode skipped', transErr);
+        }
+      }
+      let mediaPreviewUrl = mediaType === 'video' ? await captureVideoPreview(uploadFile) : null;
       setUploadState('uploading');
       let mediaUrl: string;
 
@@ -978,7 +1019,7 @@ const HomePage = () => {
         // Auth token for XHR upload with real progress
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
-        const ext = (file.name.split('.').pop() || (mediaType === 'video' ? 'mp4' : 'jpg')).toLowerCase();
+        const ext = (uploadFile.name.split('.').pop() || (mediaType === 'video' ? 'webm' : 'jpg')).toLowerCase();
         const path = `${user.id}/loops/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
 
         // 2. Retry with exponential backoff (3 attempts)
@@ -988,11 +1029,10 @@ const HomePage = () => {
             toast({ title: `Retrying upload (attempt ${attempt}/3)…` });
           }
           if (token) {
-            await xhrUploadToPosts(file, path, token, setUploadProgress);
+            await xhrUploadToPosts(uploadFile, path, token, setUploadProgress);
           } else {
-            // Fallback to SDK if no token (won't report granular progress)
-            const { error } = await supabase.storage.from('posts').upload(path, file, {
-              contentType: file.type, upsert: false,
+            const { error } = await supabase.storage.from('posts').upload(path, uploadFile, {
+              contentType: uploadFile.type, upsert: false,
             });
             if (error) throw error;
             setUploadProgress(100);
@@ -1469,7 +1509,7 @@ const HomePage = () => {
 
                   {filteredLoops.length > 0 ? (
                     <FeedErrorBoundary section="loops" onRetry={handleUpdate}>
-                      <div className="flex gap-2 overflow-x-auto pb-1">
+                      <div ref={loopRailRef} className="flex gap-2 overflow-x-auto pb-1 scroll-smooth snap-x">
                         {filteredLoops.map((post, index) => (
                           <FeedErrorBoundary key={post.id} section="loops" postId={post.id} onRetry={() => retrySingleLoop(post.id)}>
                             <LoopVideoItem
