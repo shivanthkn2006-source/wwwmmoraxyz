@@ -78,6 +78,15 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({ post, index, onVideoClick
     setHasError(true);
   };
 
+  // Force the first frame to render as a poster preview.
+  // iOS Safari (and some Android browsers) don't paint a frame with just
+  // preload="metadata"; seeking to 0.1s once metadata is ready forces it.
+  const handleLoadedMetadata = () => {
+    if (videoRef.current && videoRef.current.currentTime === 0) {
+      try { videoRef.current.currentTime = 0.1; } catch { /* noop */ }
+    }
+  };
+
   return (
     <button
       type="button"
@@ -95,6 +104,7 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({ post, index, onVideoClick
           loop
           playsInline
           preload="metadata"
+          onLoadedMetadata={handleLoadedMetadata}
           onLoadedData={handleLoadedData}
           onError={handleError}
         />
