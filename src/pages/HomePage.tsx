@@ -385,6 +385,13 @@ const HomePage = () => {
     const durationMs = 5000;
     const timer = window.setTimeout(() => {
       if (hoverPause || !el.isConnected) return;
+      const maxLeft = Math.max(0, el.scrollWidth - el.clientWidth);
+      if (maxLeft > 0) {
+        const firstTile = el.querySelector<HTMLElement>('[data-loop-index]');
+        const step = (firstTile?.offsetWidth || 96) + 8;
+        const nextLeft = el.scrollLeft >= maxLeft - 2 ? 0 : Math.min(el.scrollLeft + step, maxLeft);
+        el.scrollTo({ left: nextLeft, behavior: 'smooth' });
+      }
       setActiveLoopRailIndex((idx) => (idx + 1) % filteredLoops.length);
     }, durationMs);
     return () => {
@@ -396,7 +403,7 @@ const HomePage = () => {
 
   useEffect(() => {
     const el = loopRailRef.current;
-    if (!el || filteredLoops.length <= 1) return;
+    if (!el || filteredLoops.length <= 1 || el.scrollWidth > el.clientWidth) return;
     const tile = el.querySelector<HTMLElement>(`[data-loop-index="${activeLoopRailIndex % filteredLoops.length}"]`);
     if (tile) {
       const maxLeft = Math.max(0, el.scrollWidth - el.clientWidth);
