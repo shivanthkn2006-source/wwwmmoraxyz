@@ -98,11 +98,11 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({
   useEffect(() => {
     let alive = true;
     setResolvedPosterSrc(undefined);
-    resolvePrivateStorageUrl(supabase, post.media_preview_url)
+    resolvePrivateStorageUrl(supabase, safePreviewUrl)
       .then((url) => { if (alive) setResolvedPosterSrc(url); })
       .catch((e) => console.warn('[LoopVideoItem] signed poster failed', post.id, e));
     return () => { alive = false; };
-  }, [post.media_preview_url, post.id]);
+  }, [safePreviewUrl, post.id]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
