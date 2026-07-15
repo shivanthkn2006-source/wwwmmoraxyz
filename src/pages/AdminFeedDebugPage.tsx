@@ -50,11 +50,13 @@ const AdminFeedDebugPage = () => {
       const { data, error } = await (supabase as any)
         .from('feed_diagnostics_log')
         .select('id, created_at, status, message, error_code, route, context')
-        .or('route.eq./home,context->>step.ilike.%loops%,context->>step.ilike.%posts%,context->>step.ilike.%post%')
         .order('created_at', { ascending: false })
         .limit(100);
       if (error) throw error;
-      setRows((data || []) as FeedLogRow[]);
+      setRows(((data || []) as FeedLogRow[]).filter((row) => {
+        const step = String(row.context?.step || '').toLowerCase();
+        return row.route === '/home' || step.includes('loop') || step.includes('post') || step.includes('feed');
+      }));
     } catch (err: any) {
       toast.error(err?.message || 'Could not load feed diagnostics');
     } finally {
