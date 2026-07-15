@@ -78,12 +78,26 @@ const DATA_URL_PREVIEW_LIMIT = 900_000;
 const ALLOWED_VIDEO_MIME = ['video/mp4', 'video/webm', 'video/quicktime', 'video/ogg'];
 const ALLOWED_IMAGE_MIME = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
+// Infer real media type from the URL when the DB media_type column is wrong
+// (legacy rows saved videos with media_type='image' — see loops upload bug).
+const inferMediaType = (url: string | null, declared: string | null): 'video' | 'image' | null => {
+  if (!url) return declared === 'video' ? 'video' : declared === 'image' ? 'image' : null;
+  if (url.startsWith('data:video/')) return 'video';
+  if (url.startsWith('data:image/')) return 'image';
+  const clean = url.split('?')[0].toLowerCase();
+  if (/\.(mp4|webm|mov|ogg|m4v)$/.test(clean)) return 'video';
+  if (/\.(jpe?g|png|webp|gif|avif|heic)$/.test(clean)) return 'image';
+  return declared === 'video' ? 'video' : declared === 'image' ? 'image' : null;
+};
+
 const prepareFeedPostMedia = (post: any): Post => {
   const mediaUrl = typeof post.media_url === 'string' ? post.media_url : null;
+  const realType = inferMediaType(mediaUrl, post.media_type);
   const isHeavyDataUrl = post.has_deferred_media || (!!mediaUrl && mediaUrl.startsWith('data:') && mediaUrl.length > DATA_URL_PREVIEW_LIMIT);
 
   return {
     ...post,
+    media_type: realType ?? post.media_type,
     full_media_url: null,
     media_url: isHeavyDataUrl ? null : mediaUrl,
     has_deferred_media: !!isHeavyDataUrl,
