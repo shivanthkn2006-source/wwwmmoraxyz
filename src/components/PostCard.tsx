@@ -70,29 +70,25 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
   const [averageRating, setAverageRating] = useState<number | null>(null);
   const [showLikeAnimation, setShowLikeAnimation] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
-  const [revealHeavyMedia, setRevealHeavyMedia] = useState(false);
   const [loadedHeavyMediaUrl, setLoadedHeavyMediaUrl] = useState<string | null>(null);
-  const [loadingHeavyMedia, setLoadingHeavyMedia] = useState(false);
-  const [videoDecodeFailed, setVideoDecodeFailed] = useState(false);
-  const [videoDecodeFailureReason, setVideoDecodeFailureReason] = useState('');
-  const [posterLoadFailed, setPosterLoadFailed] = useState(false);
-  const [posterFailureReason, setPosterFailureReason] = useState('');
   const [sharingToTimeline, setSharingToTimeline] = useState(false);
+  const [isVideoPlaying, setIsVideoPlaying] = useState(true);
+  const [videoInView, setVideoInView] = useState(false);
+  const videoRef = React.useRef<HTMLVideoElement | null>(null);
+  const mediaFrameRef = React.useRef<HTMLDivElement | null>(null);
 
   const hasEvent = useEventGlow(post.profile?.event_date, post.profile?.event_recurring);
   const glowClass = getAvatarGlowClass(hasEvent, post.profile?.status);
   const { timelines, loading: timelinesLoading } = usePrivateTimelines();
   
   const isOwnPost = user?.id === post.user_id;
-  const displayMediaUrl = post.media_url || loadedHeavyMediaUrl || (revealHeavyMedia ? post.full_media_url || null : null);
-  const isDeferredHeavyMedia = !post.media_url && (post.has_deferred_media || !!post.full_media_url) && !displayMediaUrl;
+  const displayMediaUrl = post.media_url || loadedHeavyMediaUrl || post.full_media_url || null;
+  const isDeferredHeavyMedia = !post.media_url && (post.has_deferred_media || !!post.full_media_url) && !loadedHeavyMediaUrl && !post.full_media_url;
   const mediaVersion = post.updated_at || post.created_at || post.id;
   const displayMediaSrc = appendMediaVersion(displayMediaUrl, mediaVersion);
   const previewSrc = appendMediaVersion(post.media_preview_url, mediaVersion);
   const fallbackPosterSrc = React.useMemo(() => makeFallbackVideoPoster(), []);
-  const fallbackPreviewSrc = previewSrc || (post.media_type === 'video' ? fallbackPosterSrc || undefined : undefined);
-  const hasRealPoster = !!previewSrc && !posterLoadFailed;
-  const hasAnyPoster = !!fallbackPreviewSrc && !posterLoadFailed;
+  const posterSrc = previewSrc || (post.media_type === 'video' ? fallbackPosterSrc || undefined : undefined);
   const getVideoErrorReason = (video: HTMLVideoElement) => {
     const error = video.error;
     if (!error) return 'Unknown decode error';
