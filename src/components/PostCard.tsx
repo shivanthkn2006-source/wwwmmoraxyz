@@ -70,29 +70,26 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
   const [averageRating, setAverageRating] = useState<number | null>(null);
   const [showLikeAnimation, setShowLikeAnimation] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
-  const [revealHeavyMedia, setRevealHeavyMedia] = useState(false);
   const [loadedHeavyMediaUrl, setLoadedHeavyMediaUrl] = useState<string | null>(null);
-  const [loadingHeavyMedia, setLoadingHeavyMedia] = useState(false);
-  const [videoDecodeFailed, setVideoDecodeFailed] = useState(false);
-  const [videoDecodeFailureReason, setVideoDecodeFailureReason] = useState('');
-  const [posterLoadFailed, setPosterLoadFailed] = useState(false);
-  const [posterFailureReason, setPosterFailureReason] = useState('');
   const [sharingToTimeline, setSharingToTimeline] = useState(false);
+  const [isVideoPlaying, setIsVideoPlaying] = useState(true);
+  const [videoInView, setVideoInView] = useState(false);
+  const videoRef = React.useRef<HTMLVideoElement | null>(null);
+  const mediaFrameRef = React.useRef<HTMLDivElement | null>(null);
 
   const hasEvent = useEventGlow(post.profile?.event_date, post.profile?.event_recurring);
   const glowClass = getAvatarGlowClass(hasEvent, post.profile?.status);
   const { timelines, loading: timelinesLoading } = usePrivateTimelines();
   
   const isOwnPost = user?.id === post.user_id;
-  const displayMediaUrl = post.media_url || loadedHeavyMediaUrl || (revealHeavyMedia ? post.full_media_url || null : null);
-  const isDeferredHeavyMedia = !post.media_url && (post.has_deferred_media || !!post.full_media_url) && !displayMediaUrl;
+  const displayMediaUrl = post.media_url || loadedHeavyMediaUrl || post.full_media_url || null;
+  const isDeferredHeavyMedia = !post.media_url && (post.has_deferred_media || !!post.full_media_url) && !loadedHeavyMediaUrl && !post.full_media_url;
   const mediaVersion = post.updated_at || post.created_at || post.id;
   const displayMediaSrc = appendMediaVersion(displayMediaUrl, mediaVersion);
   const previewSrc = appendMediaVersion(post.media_preview_url, mediaVersion);
   const fallbackPosterSrc = React.useMemo(() => makeFallbackVideoPoster(), []);
-  const fallbackPreviewSrc = previewSrc || (post.media_type === 'video' ? fallbackPosterSrc || undefined : undefined);
-  const hasRealPoster = !!previewSrc && !posterLoadFailed;
-  const hasAnyPoster = !!fallbackPreviewSrc && !posterLoadFailed;
+  const posterSrc = previewSrc || (post.media_type === 'video' ? fallbackPosterSrc || undefined : undefined);
+
   const getVideoErrorReason = (video: HTMLVideoElement) => {
     const error = video.error;
     if (!error) return 'Unknown decode error';
@@ -105,40 +102,53 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
     return error.message || names[error.code] || `Media error ${error.code}`;
   };
 
-  const revealDeferredMedia = async () => {
-    if (loadingHeavyMedia) return;
-    if (post.full_media_url) {
-      setRevealHeavyMedia(true);
-      return;
-    }
-
+  const revealDeferredMedia = React.useCallback(async () => {
+    if (loadedHeavyMediaUrl || post.full_media_url) return;
     try {
-      setLoadingHeavyMedia(true);
       const { data, error } = await supabase
         .from('posts')
         .select('media_url')
         .eq('id', post.id)
         .maybeSingle();
-
       if (error) throw error;
-      setLoadedHeavyMediaUrl(data?.media_url || null);
-      setRevealHeavyMedia(true);
-    } catch (error) {
-      toast({ title: 'Media unavailable', description: 'Could not load this large media file.', variant: 'destructive' });
-    } finally {
-      setLoadingHeavyMedia(false);
+      if (data?.media_url) setLoadedHeavyMediaUrl(data.media_url);
+    } catch (e) {
+      console.warn('[PostCard] deferred media load failed', post.id, e);
     }
-  };
+  }, [post.id, post.full_media_url, loadedHeavyMediaUrl]);
+
+  // Reels-style: autoplay video when in view, pause when out. Auto-reveal deferred media on scroll into view.
+  useEffect(() => {
+    const frame = mediaFrameRef.current;
+    if (!frame) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const inView = entry.isIntersecting && entry.intersectionRatio >= 0.6;
+          setVideoInView(inView);
+          if (inView && isDeferredHeavyMedia) revealDeferredMedia();
+          const v = videoRef.current;
+          if (!v) return;
+          if (inView) {
+            v.play().then(() => setIsVideoPlaying(true)).catch(() => {});
+          } else {
+            v.pause();
+          }
+        });
+      },
+      { threshold: [0, 0.6, 1] }
+    );
+    io.observe(frame);
+    return () => io.disconnect();
+  }, [isDeferredHeavyMedia, revealDeferredMedia, displayMediaSrc]);
+
 
   // Sync state with post prop when it changes
   useEffect(() => {
     setLiked(post.user_liked || false);
     setLikesCount(post.likes_count);
     setCommentsCount(post.comments_count);
-    setVideoDecodeFailed(false);
-    setVideoDecodeFailureReason('');
-    setPosterLoadFailed(false);
-    setPosterFailureReason('');
+
     
     // Check if post is saved
     const checkSaved = async () => {
@@ -627,113 +637,64 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
         )}
 
         {(displayMediaUrl || isDeferredHeavyMedia) && (() => {
-          // Route by real media type inferred from the URL (data-URL prefix or file ext),
-          // falling back to the declared media_type. Legacy rows saved videos with
-          // media_type='image', so trusting the column alone renders <img> for videos.
           const isVideo = !!displayMediaUrl && inferMediaType(displayMediaUrl, post.media_type) === 'video';
           return (
-            <div className="mb-3 overflow-hidden rounded-lg bg-background" data-testid="post-media-frame">
+            <div
+              ref={mediaFrameRef}
+              className="mb-3 overflow-hidden rounded-lg bg-black flex items-center justify-center relative"
+              data-testid="post-media-frame"
+              style={{ maxHeight: '85svh' }}
+            >
               {isDeferredHeavyMedia ? (
-                <button
-                  type="button"
-                  onClick={revealDeferredMedia}
-                  className="relative flex min-h-[52svh] w-full flex-col items-center justify-center gap-2 overflow-hidden bg-muted/70 p-4 text-center text-sm text-muted-foreground hover:bg-muted sm:min-h-[48vh]"
-                  data-testid="post-deferred-media-preview"
-                >
-                  <div className="absolute inset-0 bg-muted animate-pulse" />
-                  {fallbackPreviewSrc && !posterLoadFailed && (
-                    <img
-                      src={fallbackPreviewSrc}
-                      alt="Post media preview"
-                      className="absolute inset-0 h-full w-full object-contain"
-                      loading="lazy"
-                      data-testid="post-deferred-poster"
-                      onError={() => {
-                        setPosterLoadFailed(true);
-                        setPosterFailureReason('Poster thumbnail URL failed to load');
-                      }}
-                    />
-                  )}
-                  {!hasAnyPoster && (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                    </div>
-                  )}
-                  <span className="relative rounded-md bg-background/80 px-2 py-1 font-medium text-foreground backdrop-blur-sm">
-                    {hasRealPoster ? 'Preview ready' : 'Preview pending'}
-                  </span>
-                  <span className="relative rounded-md bg-background/80 px-2 py-1 backdrop-blur-sm">{loadingHeavyMedia ? 'Opening…' : 'Tap to open media'}</span>
-                  {(posterLoadFailed || !previewSrc) && (
-                    <span className="relative max-w-full rounded-md bg-background/80 px-2 py-1 text-xs text-muted-foreground backdrop-blur-sm">
-                      {posterFailureReason || 'Poster thumbnail missing'} · Poster URL: {previewSrc ? 'available but failed' : 'missing'}
-                    </span>
-                  )}
-                </button>
+                <div className="w-full aspect-[9/16] max-h-[85svh] bg-muted animate-pulse" data-testid="post-deferred-media-preview" />
               ) : isVideo ? (
-                // YouTube/Shorts-style responsive video: fits any orientation, never crops.
-                // Uses svh so mobile browser chrome doesn't clip. Caps height by viewport.
-                <div className="relative flex w-full items-center justify-center bg-background min-h-[42svh] max-h-[85svh] sm:min-h-[38vh] sm:max-h-[75vh] lg:max-h-[70vh]">
-                  {videoDecodeFailed && fallbackPreviewSrc ? (
-                    <div className="relative flex w-full items-center justify-center">
-                      <div className="absolute inset-0 bg-muted animate-pulse" />
-                      <img
-                        src={fallbackPreviewSrc}
-                        alt="Post video preview"
-                        className="relative h-auto w-full max-h-[85svh] object-contain sm:max-h-[75vh] lg:max-h-[70vh]"
-                        onError={() => {
-                          setPosterLoadFailed(true);
-                          setPosterFailureReason('Poster thumbnail URL failed to load');
-                        }}
-                      />
-                      <div className="absolute inset-x-4 bottom-4 space-y-1 rounded-md bg-background/85 px-3 py-2 text-center text-sm text-foreground backdrop-blur-sm">
-                        <div className="font-medium">Playback not supported for this format</div>
-                        <div className="text-xs text-muted-foreground">Reason: {videoDecodeFailureReason || 'No browser decode reason reported'}</div>
-                        <div className="truncate text-xs text-muted-foreground" title={fallbackPreviewSrc}>Poster URL: {fallbackPreviewSrc}</div>
+                <div
+                  className="relative w-full flex items-center justify-center bg-black"
+                  onClick={() => {
+                    const v = videoRef.current;
+                    if (!v) return;
+                    if (v.paused) { v.play().catch(() => {}); setIsVideoPlaying(true); }
+                    else { v.pause(); setIsVideoPlaying(false); }
+                  }}
+                >
+                  <video
+                    ref={videoRef}
+                    src={displayMediaSrc}
+                    poster={posterSrc}
+                    playsInline
+                    muted
+                    loop
+                    preload="metadata"
+                    className="h-auto w-full max-h-[85svh] object-contain"
+                    data-testid="post-video"
+                    onPlay={() => setIsVideoPlaying(true)}
+                    onPause={() => setIsVideoPlaying(false)}
+                    onError={(e) => {
+                      console.warn('[PostCard][video]', post.id, getVideoErrorReason(e.currentTarget));
+                    }}
+                  />
+                  {!isVideoPlaying && (
+                    <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                      <div className="rounded-full bg-black/50 p-4 backdrop-blur-sm">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
                       </div>
                     </div>
-                  ) : (
-                    <video
-                      src={displayMediaSrc}
-                      poster={fallbackPreviewSrc}
-                      controls
-                      playsInline
-                      preload="metadata"
-                      className="h-auto w-full max-h-[85svh] object-contain sm:max-h-[75vh] lg:max-h-[70vh]"
-                      data-testid="post-video"
-                      onLoadedMetadata={(e) => {
-                        // Force first-frame poster on iOS Safari.
-                        const v = e.currentTarget;
-                        if (v.currentTime === 0) { try { v.currentTime = 0.1; } catch {} }
-                      }}
-                      onCanPlay={() => setVideoDecodeFailed(false)}
-                      onError={(e) => {
-                        const reason = getVideoErrorReason(e.currentTarget);
-                        setVideoDecodeFailed(true);
-                        setVideoDecodeFailureReason(reason);
-                        if (post.media_preview_url) {
-                          console.warn('[PostCard][video] decode failed; poster fallback available', { postId: post.id, poster: post.media_preview_url, reason });
-                          return;
-                        }
-                        console.error('[PostCard][video]', post.id, reason, e.currentTarget.error);
-                      }}
-                    />
                   )}
                 </div>
               ) : (
-                <div className="relative flex w-full items-center justify-center bg-background max-h-[85svh] sm:max-h-[75vh] lg:max-h-[70vh]">
-                  <img
-                    src={displayMediaSrc}
-                    alt="Post media"
-                    className="h-auto w-full max-h-[85svh] cursor-pointer object-contain transition-opacity hover:opacity-90 sm:max-h-[75vh] lg:max-h-[70vh]"
-                    data-testid="post-image"
-                    onClick={() => setShowImageViewer(true)}
-                    onError={() => console.error('[PostCard][image] failed to load', post.id)}
-                  />
-                </div>
+                <img
+                  src={displayMediaSrc}
+                  alt="Post media"
+                  className="h-auto w-full max-h-[85svh] cursor-pointer object-contain"
+                  data-testid="post-image"
+                  onClick={() => setShowImageViewer(true)}
+                  onError={() => console.warn('[PostCard][image] failed to load', post.id)}
+                />
               )}
             </div>
           );
         })()}
+
 
         {showImageViewer && displayMediaUrl && (
           <ImageViewer
