@@ -20,13 +20,16 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { toast } from 'sonner';
 import VideoCreationModal from './VideoCreationModal';
+import { appendMediaVersion } from '@/lib/mediaUtils';
 
 interface Post {
   id: string;
   user_id: string;
   content: string | null;
   media_url: string | null;
+  media_preview_url?: string | null;
   media_type: string | null;
+  updated_at?: string | null;
   likes_count: number;
   comments_count: number;
   created_at: string;
@@ -77,8 +80,13 @@ const FullScreenVideoPlayer: React.FC<FullScreenVideoPlayerProps> = ({
   const touchStartY = useRef<number>(0);
 
   const currentVideo = videos[currentIndex];
+  const [decodeFailed, setDecodeFailed] = useState(false);
+  const mediaVersion = currentVideo?.updated_at || currentVideo?.created_at || currentVideo?.id;
+  const currentMediaUrl = appendMediaVersion(currentVideo?.media_url, mediaVersion) || '';
+  const currentPosterUrl = appendMediaVersion(currentVideo?.media_preview_url, mediaVersion);
 
   useEffect(() => {
+    setDecodeFailed(false);
     if (videoRef.current) {
       videoRef.current.play().catch(console.error);
     }
@@ -251,13 +259,25 @@ const FullScreenVideoPlayer: React.FC<FullScreenVideoPlayerProps> = ({
         <main className="relative flex-1 min-w-0 h-full flex items-center justify-center">
           <video
             ref={videoRef}
-            src={currentVideo.media_url || ''}
-            className="w-full h-full object-contain"
+            src={currentMediaUrl}
+            poster={currentPosterUrl}
+            className={`w-full h-full object-contain ${decodeFailed ? 'hidden' : ''}`}
             loop
             muted={muted}
             playsInline
             onClick={togglePlayPause}
+            onCanPlay={() => setDecodeFailed(false)}
+            onError={() => setDecodeFailed(true)}
           />
+
+          {decodeFailed && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black text-center text-white">
+              {currentPosterUrl && <img src={currentPosterUrl} alt="Loop poster" className="max-h-full max-w-full object-contain" />}
+              <div className="absolute inset-x-4 bottom-24 rounded-lg bg-black/70 px-4 py-3 backdrop-blur-sm">
+                <p className="text-sm font-medium">Playback not supported for this format</p>
+              </div>
+            </div>
+          )}
 
           {/* Play/Pause Overlay */}
           {paused && (

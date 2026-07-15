@@ -962,7 +962,7 @@ const HomePage = () => {
 
     try {
       await validateBrowserCanPreviewFile(file, mediaType);
-      const mediaPreviewUrl = mediaType === 'video' ? await captureVideoPreview(file) : null;
+      let mediaPreviewUrl = mediaType === 'video' ? await captureVideoPreview(file) : null;
       setUploadState('uploading');
       let mediaUrl: string;
 
@@ -1003,6 +1003,23 @@ const HomePage = () => {
 
         const { data: pub } = supabase.storage.from('posts').getPublicUrl(path);
         mediaUrl = pub.publicUrl;
+
+        if (mediaType === 'video' && mediaPreviewUrl) {
+          try {
+            const posterPath = `${user.id}/loops/posters/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
+            const posterFile = dataUrlToFile(mediaPreviewUrl, 'loop-poster.jpg');
+            const { error: posterError } = await supabase.storage.from('posts').upload(posterPath, posterFile, {
+              contentType: 'image/jpeg',
+              upsert: false,
+            });
+            if (!posterError) {
+              const { data: posterPub } = supabase.storage.from('posts').getPublicUrl(posterPath);
+              mediaPreviewUrl = posterPub.publicUrl;
+            }
+          } catch (posterErr) {
+            console.warn('[Loops upload] poster storage upload failed; using inline poster', posterErr);
+          }
+        }
       }
 
       setUploadState('saving');
@@ -1397,7 +1414,7 @@ const HomePage = () => {
                               <div className="flex flex-wrap items-center gap-2">
                                 <span className="font-semibold">{post.id.slice(0, 8)}</span>
                                 <span>{post.media_type || 'unknown'}</span>
-                                <span>{loopDecodeStatus[post.id] || 'pending'}</span>
+                                <span>{brokenLoopPreviewIds.has(post.id) ? 'fallback' : (loopDecodeStatus[post.id] || 'pending')}</span>
                                 <button
                                   type="button"
                                   onClick={() => regenerateLoopPoster(post.id)}
