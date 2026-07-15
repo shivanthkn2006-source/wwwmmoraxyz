@@ -614,10 +614,18 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
                 <button
                   type="button"
                   onClick={revealDeferredMedia}
-                    className="flex min-h-[52svh] w-full flex-col items-center justify-center gap-2 bg-muted/70 p-4 text-center text-sm text-muted-foreground hover:bg-muted sm:min-h-[48vh]"
+                  className="relative flex min-h-[52svh] w-full flex-col items-center justify-center gap-2 overflow-hidden bg-muted/70 p-4 text-center text-sm text-muted-foreground hover:bg-muted sm:min-h-[48vh]"
                 >
-                  <span className="font-medium text-foreground">Large media</span>
-                  <span>{loadingHeavyMedia ? 'Opening…' : 'Tap to open without slowing the feed'}</span>
+                  {previewSrc && (
+                    <img
+                      src={previewSrc}
+                      alt="Post media preview"
+                      className="absolute inset-0 h-full w-full object-contain"
+                      loading="lazy"
+                    />
+                  )}
+                  <span className="relative rounded-md bg-background/75 px-2 py-1 font-medium text-foreground backdrop-blur-sm">Large media</span>
+                  <span className="relative rounded-md bg-background/75 px-2 py-1 backdrop-blur-sm">{loadingHeavyMedia ? 'Opening…' : 'Tap to open without slowing the feed'}</span>
                 </button>
               ) : isVideo ? (
                 // YouTube/Shorts-style responsive video: fits any orientation, never crops.

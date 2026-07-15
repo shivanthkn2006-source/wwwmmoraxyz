@@ -31,6 +31,7 @@ import { useTutorial } from '@/hooks/useTutorial';
 import { useDailyBriefing } from '@/hooks/useDailyBriefing';
 import { OnboardingTour } from '@/components/OnboardingTour';
 import { SovereignQuickAccess } from '@/components/SovereignQuickAccess';
+import { appendMediaVersion, captureVideoPreviewFromUrl, dataUrlToFile, getPostsStorageObjectPath, inferMediaType, makeFallbackVideoPoster } from '@/lib/mediaUtils';
 import PostsGrid from "@/components/PostsGrid";
 import PostModal from "@/components/PostModal";
 import FriendRequestCard from "@/components/FriendRequestCard";
@@ -60,6 +61,7 @@ interface Post {
   media_preview_url?: string | null;
   full_media_url?: string | null;
   media_type: string | null;
+  updated_at?: string | null;
   has_deferred_media?: boolean;
   media_size?: number;
   likes_count: number;
@@ -79,18 +81,6 @@ const DATA_URL_PREVIEW_LIMIT = 900_000;
 // Loops upload whitelist
 const ALLOWED_VIDEO_MIME = ['video/mp4', 'video/webm', 'video/quicktime', 'video/ogg'];
 const ALLOWED_IMAGE_MIME = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-
-// Infer real media type from the URL when the DB media_type column is wrong
-// (legacy rows saved videos with media_type='image' — see loops upload bug).
-const inferMediaType = (url: string | null, declared: string | null): 'video' | 'image' | null => {
-  if (!url) return declared === 'video' ? 'video' : declared === 'image' ? 'image' : null;
-  if (url.startsWith('data:video/')) return 'video';
-  if (url.startsWith('data:image/')) return 'image';
-  const clean = url.split('?')[0].toLowerCase();
-  if (/\.(mp4|webm|mov|ogg|m4v)$/.test(clean)) return 'video';
-  if (/\.(jpe?g|png|webp|gif|avif|heic)$/.test(clean)) return 'image';
-  return declared === 'video' ? 'video' : declared === 'image' ? 'image' : null;
-};
 
 const prepareFeedPostMedia = (post: any): Post => {
   const mediaUrl = typeof post.media_url === 'string' ? post.media_url : null;
@@ -149,32 +139,6 @@ const validateBrowserCanPreviewFile = (file: File, mediaType: 'video' | 'image')
     };
     img.src = objectUrl;
   });
-
-const makeFallbackVideoPoster = () => {
-  const canvas = document.createElement('canvas');
-  canvas.width = 360;
-  canvas.height = 640;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return null;
-  const gradient = ctx.createLinearGradient(0, 0, 360, 640);
-  gradient.addColorStop(0, '#020617');
-  gradient.addColorStop(0.55, '#111827');
-  gradient.addColorStop(1, '#0f172a');
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, 360, 640);
-  ctx.fillStyle = 'rgba(255,255,255,0.16)';
-  ctx.beginPath();
-  ctx.arc(180, 320, 54, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = 'rgba(255,255,255,0.86)';
-  ctx.beginPath();
-  ctx.moveTo(164, 290);
-  ctx.lineTo(164, 350);
-  ctx.lineTo(216, 320);
-  ctx.closePath();
-  ctx.fill();
-  return canvas.toDataURL('image/jpeg', 0.72);
-};
 
 const captureVideoPreview = (file: File) =>
   new Promise<string | null>((resolve) => {
@@ -291,6 +255,7 @@ const HomePage = () => {
   const [feedDiag, setFeedDiag] = useState<FeedDiagnostics | null>(null);
   const [debugEntries, setDebugEntries] = useState<Array<import('@/components/AdminFeedDebugger').FeedDebugEntry>>([]);
   const [consecutiveFailures, setConsecutiveFailures] = useState(0);
+  const [loopDecodeStatus, setLoopDecodeStatus] = useState<Record<string, string>>({});
 
   // Loops upload UI state
   const [uploadState, setUploadState] = useState<'idle' | 'validating' | 'uploading' | 'saving' | 'error' | 'success'>('idle');
@@ -301,6 +266,28 @@ const HomePage = () => {
   const isAdminUser = !!user && ['moksh50','justmkbhd','john','shivanth_kn'].includes(((userProfile?.username||'') as string).toLowerCase());
   const pushDebug = (e: Omit<import('@/components/AdminFeedDebugger').FeedDebugEntry,'timestamp'>) =>
     setDebugEntries(prev => [{...e, timestamp: new Date().toISOString()}, ...prev].slice(0, 50));
+
+  const logFeedIssue = React.useCallback(async (entry: Omit<import('@/components/AdminFeedDebugger').FeedDebugEntry,'timestamp'>) => {
+    pushDebug(entry);
+    try {
+      await (supabase as any).from('feed_diagnostics_log').insert({
+        user_id: user?.id || null,
+        status: 'error',
+        message: entry.errorMessage || entry.step,
+        error_code: entry.errorCode || null,
+        route: '/home',
+        context: {
+          step: entry.step,
+          post_id: entry.postId,
+          media_url: entry.mediaUrl,
+          poster_url: entry.posterUrl,
+          media_type: entry.mediaType,
+          decode_status: entry.decodeStatus,
+          storage_path: getPostsStorageObjectPath(entry.mediaUrl),
+        },
+      });
+    } catch { /* diagnostics must never break the feed */ }
+  }, [user?.id]);
 
   const logFeedDiagnostic = React.useCallback(async (d: FeedDiagnostics, rlsBlocked = false) => {
     try {
@@ -340,7 +327,7 @@ const HomePage = () => {
   // NOTE: Atlas Boot and Prime Objective are ONLY for Atlas HUD, NOT Zoe Infinity main flow
   const [atlasHUDActive, setAtlasHUDActive] = useState(false);
   const videoPosts = loopPosts.filter((post) =>
-    !!post.media_url && !brokenLoopPreviewIds.has(post.id) && inferMediaType(post.media_url, post.media_type) === 'video'
+    !!post.media_url && inferMediaType(post.media_url, post.media_type) === 'video'
   );
 
   const filteredLoops = React.useMemo(() => {
@@ -486,7 +473,7 @@ const HomePage = () => {
       // SIMPLIFIED: Fetch posts first without complex joins to avoid JSON parse errors
       const postsResult = await (supabase as any)
         .from('feed_posts_safe')
-        .select('id, user_id, content, media_url, media_type, likes_count, comments_count, created_at, visibility, has_deferred_media, media_size, media_preview_url')
+        .select('id, user_id, content, media_url, media_type, likes_count, comments_count, created_at, updated_at, visibility, has_deferred_media, media_size, media_preview_url')
         .eq('visibility', 'global')
         .is('private_timeline_id', null)
         .order('created_at', { ascending: false })
@@ -597,7 +584,7 @@ const HomePage = () => {
       // large data URLs, which makes valid uploaded videos disappear from Loops.
       const postsResult = await (supabase as any)
         .from('posts')
-        .select('id, user_id, content, media_url, media_type, likes_count, comments_count, created_at, visibility, private_timeline_id, media_preview_url')
+        .select('id, user_id, content, media_url, media_type, likes_count, comments_count, created_at, updated_at, visibility, private_timeline_id, media_preview_url')
         .eq('visibility', 'global')
         .is('private_timeline_id', null)
         .not('media_url', 'is', null)
@@ -683,7 +670,7 @@ const HomePage = () => {
       // SIMPLIFIED: Fetch posts first without complex joins to avoid JSON parse errors
       const postsResult = await (supabase as any)
         .from('feed_posts_safe')
-        .select('id, user_id, content, media_url, media_type, likes_count, comments_count, created_at, visibility, has_deferred_media, media_size, media_preview_url')
+        .select('id, user_id, content, media_url, media_type, likes_count, comments_count, created_at, updated_at, visibility, has_deferred_media, media_size, media_preview_url')
         .eq('visibility', 'personal')
         .is('private_timeline_id', null)
         .in('user_id', [...friendIds, user.id])
@@ -755,7 +742,7 @@ const HomePage = () => {
 
     const { data } = await supabase
       .from('profiles')
-      .select('display_name, profile_photo_url, event_date, event_recurring, status, bio, hobbies')
+        .select('display_name, username, profile_photo_url, event_date, event_recurring, status, bio, hobbies')
       .eq('user_id', user.id)
       .maybeSingle();
 
