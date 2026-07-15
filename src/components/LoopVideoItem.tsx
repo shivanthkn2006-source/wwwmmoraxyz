@@ -17,18 +17,27 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({ post, index, onVideoClick
   const [hasError, setHasError] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
 
-  // Preload video metadata on mount / when src changes.
-  // Adds a stall guard so slow networks don't leave the tile stuck on the spinner forever.
+  // Preload enough data to paint the first frame on mount / when src changes.
+  // Metadata alone often leaves mobile browsers with a black tile.
   useEffect(() => {
-    if (!videoRef.current || !post.media_url) return;
+    if (!videoRef.current || !post.media_url) {
+      setIsLoading(false);
+      setHasError(true);
+      return;
+    }
     setIsLoading(true);
     setHasError(false);
-    videoRef.current.load();
+    const video = videoRef.current;
+    video.load();
+
+    if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+      setIsLoading(false);
+    }
 
     // If nothing loads within 12s on very slow networks, mark as error so the user
     // sees the fallback instead of an endless spinner. Reopening will retry on next mount.
     const stallTimer = setTimeout(() => {
-      if (videoRef.current && videoRef.current.readyState === 0) {
+      if (videoRef.current && videoRef.current.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
         setIsLoading(false);
         setHasError(true);
       }
@@ -74,6 +83,7 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({ post, index, onVideoClick
   };
 
   const handleError = () => {
+    console.error('[LoopVideoItem] preview failed', { postId: post.id, src: post.media_url, error: videoRef.current?.error });
     setIsLoading(false);
     setHasError(true);
   };
@@ -83,7 +93,10 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({ post, index, onVideoClick
   // preload="metadata"; seeking to 0.1s once metadata is ready forces it.
   const handleLoadedMetadata = () => {
     if (videoRef.current && videoRef.current.currentTime === 0) {
-      try { videoRef.current.currentTime = 0.1; } catch { /* noop */ }
+      try {
+        const duration = Number.isFinite(videoRef.current.duration) ? videoRef.current.duration : 1;
+        videoRef.current.currentTime = Math.min(0.12, Math.max(0.01, duration / 20));
+      } catch { /* noop */ }
     }
   };
 
@@ -103,9 +116,11 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({ post, index, onVideoClick
           muted
           loop
           playsInline
-          preload="metadata"
+          preload="auto"
           onLoadedMetadata={handleLoadedMetadata}
           onLoadedData={handleLoadedData}
+          onCanPlay={handleLoadedData}
+          onSeeked={handleLoadedData}
           onError={handleError}
         />
       )}

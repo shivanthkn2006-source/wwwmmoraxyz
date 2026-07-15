@@ -155,6 +155,7 @@ const HomePage = () => {
   const { receivedRequests, acceptFriendRequest, rejectFriendRequest } = useFriendRequests();
   const [globalPosts, setGlobalPosts] = useState<Post[]>([]);
   const [personalPosts, setPersonalPosts] = useState<Post[]>([]);
+  const [loopPosts, setLoopPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -222,7 +223,7 @@ const HomePage = () => {
   // Atlas HUD State - Smith AI Interface (separate from Zoe Infinity, user toggles via menu)
   // NOTE: Atlas Boot and Prime Objective are ONLY for Atlas HUD, NOT Zoe Infinity main flow
   const [atlasHUDActive, setAtlasHUDActive] = useState(false);
-  const videoPosts = globalPosts.filter((post) =>
+  const videoPosts = (loopPosts.length > 0 ? loopPosts : globalPosts).filter((post) =>
     !!post.media_url && inferMediaType(post.media_url, post.media_type) === 'video'
   );
 
@@ -469,6 +470,74 @@ const HomePage = () => {
     }
   };
 
+  const fetchLoopPosts = async () => {
+    if (!user) {
+      setLoopPosts([]);
+      return;
+    }
+
+    try {
+      // Loops must use the real posts table, not feed_posts_safe: that view strips
+      // large data URLs, which makes valid uploaded videos disappear from Loops.
+      const postsResult = await (supabase as any)
+        .from('posts')
+        .select('id, user_id, content, media_url, media_type, likes_count, comments_count, created_at, visibility, private_timeline_id')
+        .eq('visibility', 'global')
+        .is('private_timeline_id', null)
+        .not('media_url', 'is', null)
+        .or('media_type.eq.video,media_url.like.data:video/%,media_url.ilike.%.mp4%,media_url.ilike.%.webm%,media_url.ilike.%.mov%,media_url.ilike.%.ogg%,media_url.ilike.%.m4v%')
+        .order('created_at', { ascending: false })
+        .limit(30);
+
+      if (postsResult.error) {
+        console.error('[Loops] Error fetching video posts:', postsResult.error);
+        setLoopPosts([]);
+        pushDebug({ step: 'loops:posts-select', errorCode: postsResult.error.code, errorMessage: postsResult.error.message });
+        return;
+      }
+
+      const loopRows = ((postsResult.data || []) as any[])
+        .filter((post) => inferMediaType(typeof post.media_url === 'string' ? post.media_url : null, post.media_type) === 'video');
+
+      if (loopRows.length === 0) {
+        setLoopPosts([]);
+        pushDebug({ step: 'loops:posts-select', rowCount: 0 });
+        return;
+      }
+
+      const userIds = [...new Set(loopRows.map(p => p.user_id))];
+      const [profilesResult, userLikesResult] = await Promise.all([
+        supabase
+          .from('safe_public_profiles')
+          .select('user_id, display_name, username, profile_photo_url, status, hobbies')
+          .in('user_id', userIds),
+        supabase
+          .from('post_likes')
+          .select('post_id')
+          .eq('user_id', user.id)
+      ]);
+
+      const profileMap = new Map<string, any>();
+      if (profilesResult.data) {
+        profilesResult.data.forEach((p: any) => profileMap.set(p.user_id, p));
+      }
+      const likedPostIds = new Set(userLikesResult.data?.map(p => p.post_id) || []);
+
+      setLoopPosts(loopRows.map((post: any) => ({
+        ...post,
+        media_type: 'video',
+        profile: profileMap.get(post.user_id) || null,
+        user_liked: likedPostIds.has(post.id),
+        has_deferred_media: false,
+      })) as any);
+      pushDebug({ step: 'loops:posts-select', rowCount: loopRows.length });
+    } catch (err: any) {
+      console.error('[Loops] Error in fetchLoopPosts:', err);
+      setLoopPosts([]);
+      pushDebug({ step: 'loops:exception', errorMessage: err?.message || String(err) });
+    }
+  };
+
   const fetchPersonalPosts = async () => {
     if (!user) return;
 
@@ -659,7 +728,7 @@ const HomePage = () => {
       try {
         // Critical path: wait for the actual fetch (with a generous safety cap)
         // so the empty state never flashes before posts arrive on slow networks.
-        await settleWithin(fetchGlobalPosts(), 12000);
+        await settleWithin(Promise.all([fetchGlobalPosts(), fetchLoopPosts()]), 12000);
       } finally {
         setLoading(false);
       }
@@ -738,6 +807,7 @@ const HomePage = () => {
   const handleUpdate = () => {
     fetchGlobalPosts();
     fetchPersonalPosts();
+    fetchLoopPosts();
   };
 
   const openLoopsPlayer = (index: number) => {
