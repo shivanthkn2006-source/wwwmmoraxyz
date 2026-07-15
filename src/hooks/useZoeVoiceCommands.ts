@@ -717,6 +717,29 @@ export const useZoeVoiceCommands = (userId: string | undefined) => {
       description: 'Show commands reference',
     },
 
+    // Voice-triggered camera capture: "Zoe take my picture / selfie / photo"
+    {
+      pattern: /^(?:zoe\s+)?(?:take|snap|capture)\s+(?:my\s+|a\s+)?(?:picture|photo|selfie|snapshot)(?:\s+of\s+me)?$/i,
+      action: () => {
+        speakResponse('Opening camera. Smile!');
+        navigate('/camera');
+        // Give the camera time to initialize, then fire capture
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('zoe:auto-capture', { detail: { source: 'voice' } }));
+        }, 2500);
+      },
+      description: 'Take a picture with the camera',
+    },
+    {
+      pattern: /^(?:zoe\s+)?(?:open|show|launch|start)\s+(?:the\s+)?camera$/i,
+      action: () => {
+        navigate('/camera');
+        speakResponse('Opening camera');
+      },
+      description: 'Open camera',
+    },
+
+
     // Zoe Orb User Messaging Commands
     {
       pattern: /^(?:open|show|switch\s+to)\s+(?:zoe|zoe\s+orb|ai\s+chat)$/i,
