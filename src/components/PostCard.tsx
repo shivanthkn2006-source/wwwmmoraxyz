@@ -610,113 +610,64 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
         )}
 
         {(displayMediaUrl || isDeferredHeavyMedia) && (() => {
-          // Route by real media type inferred from the URL (data-URL prefix or file ext),
-          // falling back to the declared media_type. Legacy rows saved videos with
-          // media_type='image', so trusting the column alone renders <img> for videos.
           const isVideo = !!displayMediaUrl && inferMediaType(displayMediaUrl, post.media_type) === 'video';
           return (
-            <div className="mb-3 overflow-hidden rounded-lg bg-background" data-testid="post-media-frame">
+            <div
+              ref={mediaFrameRef}
+              className="mb-3 overflow-hidden rounded-lg bg-black flex items-center justify-center relative"
+              data-testid="post-media-frame"
+              style={{ maxHeight: '85svh' }}
+            >
               {isDeferredHeavyMedia ? (
-                <button
-                  type="button"
-                  onClick={revealDeferredMedia}
-                  className="relative flex min-h-[52svh] w-full flex-col items-center justify-center gap-2 overflow-hidden bg-muted/70 p-4 text-center text-sm text-muted-foreground hover:bg-muted sm:min-h-[48vh]"
-                  data-testid="post-deferred-media-preview"
-                >
-                  <div className="absolute inset-0 bg-muted animate-pulse" />
-                  {fallbackPreviewSrc && !posterLoadFailed && (
-                    <img
-                      src={fallbackPreviewSrc}
-                      alt="Post media preview"
-                      className="absolute inset-0 h-full w-full object-contain"
-                      loading="lazy"
-                      data-testid="post-deferred-poster"
-                      onError={() => {
-                        setPosterLoadFailed(true);
-                        setPosterFailureReason('Poster thumbnail URL failed to load');
-                      }}
-                    />
-                  )}
-                  {!hasAnyPoster && (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                    </div>
-                  )}
-                  <span className="relative rounded-md bg-background/80 px-2 py-1 font-medium text-foreground backdrop-blur-sm">
-                    {hasRealPoster ? 'Preview ready' : 'Preview pending'}
-                  </span>
-                  <span className="relative rounded-md bg-background/80 px-2 py-1 backdrop-blur-sm">{loadingHeavyMedia ? 'Opening…' : 'Tap to open media'}</span>
-                  {(posterLoadFailed || !previewSrc) && (
-                    <span className="relative max-w-full rounded-md bg-background/80 px-2 py-1 text-xs text-muted-foreground backdrop-blur-sm">
-                      {posterFailureReason || 'Poster thumbnail missing'} · Poster URL: {previewSrc ? 'available but failed' : 'missing'}
-                    </span>
-                  )}
-                </button>
+                <div className="w-full aspect-[9/16] max-h-[85svh] bg-muted animate-pulse" data-testid="post-deferred-media-preview" />
               ) : isVideo ? (
-                // YouTube/Shorts-style responsive video: fits any orientation, never crops.
-                // Uses svh so mobile browser chrome doesn't clip. Caps height by viewport.
-                <div className="relative flex w-full items-center justify-center bg-background min-h-[42svh] max-h-[85svh] sm:min-h-[38vh] sm:max-h-[75vh] lg:max-h-[70vh]">
-                  {videoDecodeFailed && fallbackPreviewSrc ? (
-                    <div className="relative flex w-full items-center justify-center">
-                      <div className="absolute inset-0 bg-muted animate-pulse" />
-                      <img
-                        src={fallbackPreviewSrc}
-                        alt="Post video preview"
-                        className="relative h-auto w-full max-h-[85svh] object-contain sm:max-h-[75vh] lg:max-h-[70vh]"
-                        onError={() => {
-                          setPosterLoadFailed(true);
-                          setPosterFailureReason('Poster thumbnail URL failed to load');
-                        }}
-                      />
-                      <div className="absolute inset-x-4 bottom-4 space-y-1 rounded-md bg-background/85 px-3 py-2 text-center text-sm text-foreground backdrop-blur-sm">
-                        <div className="font-medium">Playback not supported for this format</div>
-                        <div className="text-xs text-muted-foreground">Reason: {videoDecodeFailureReason || 'No browser decode reason reported'}</div>
-                        <div className="truncate text-xs text-muted-foreground" title={fallbackPreviewSrc}>Poster URL: {fallbackPreviewSrc}</div>
+                <div
+                  className="relative w-full flex items-center justify-center bg-black"
+                  onClick={() => {
+                    const v = videoRef.current;
+                    if (!v) return;
+                    if (v.paused) { v.play().catch(() => {}); setIsVideoPlaying(true); }
+                    else { v.pause(); setIsVideoPlaying(false); }
+                  }}
+                >
+                  <video
+                    ref={videoRef}
+                    src={displayMediaSrc}
+                    poster={posterSrc}
+                    playsInline
+                    muted
+                    loop
+                    preload="metadata"
+                    className="h-auto w-full max-h-[85svh] object-contain"
+                    data-testid="post-video"
+                    onPlay={() => setIsVideoPlaying(true)}
+                    onPause={() => setIsVideoPlaying(false)}
+                    onError={(e) => {
+                      console.warn('[PostCard][video]', post.id, getVideoErrorReason(e.currentTarget));
+                    }}
+                  />
+                  {!isVideoPlaying && (
+                    <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                      <div className="rounded-full bg-black/50 p-4 backdrop-blur-sm">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
                       </div>
                     </div>
-                  ) : (
-                    <video
-                      src={displayMediaSrc}
-                      poster={fallbackPreviewSrc}
-                      controls
-                      playsInline
-                      preload="metadata"
-                      className="h-auto w-full max-h-[85svh] object-contain sm:max-h-[75vh] lg:max-h-[70vh]"
-                      data-testid="post-video"
-                      onLoadedMetadata={(e) => {
-                        // Force first-frame poster on iOS Safari.
-                        const v = e.currentTarget;
-                        if (v.currentTime === 0) { try { v.currentTime = 0.1; } catch {} }
-                      }}
-                      onCanPlay={() => setVideoDecodeFailed(false)}
-                      onError={(e) => {
-                        const reason = getVideoErrorReason(e.currentTarget);
-                        setVideoDecodeFailed(true);
-                        setVideoDecodeFailureReason(reason);
-                        if (post.media_preview_url) {
-                          console.warn('[PostCard][video] decode failed; poster fallback available', { postId: post.id, poster: post.media_preview_url, reason });
-                          return;
-                        }
-                        console.error('[PostCard][video]', post.id, reason, e.currentTarget.error);
-                      }}
-                    />
                   )}
                 </div>
               ) : (
-                <div className="relative flex w-full items-center justify-center bg-background max-h-[85svh] sm:max-h-[75vh] lg:max-h-[70vh]">
-                  <img
-                    src={displayMediaSrc}
-                    alt="Post media"
-                    className="h-auto w-full max-h-[85svh] cursor-pointer object-contain transition-opacity hover:opacity-90 sm:max-h-[75vh] lg:max-h-[70vh]"
-                    data-testid="post-image"
-                    onClick={() => setShowImageViewer(true)}
-                    onError={() => console.error('[PostCard][image] failed to load', post.id)}
-                  />
-                </div>
+                <img
+                  src={displayMediaSrc}
+                  alt="Post media"
+                  className="h-auto w-full max-h-[85svh] cursor-pointer object-contain"
+                  data-testid="post-image"
+                  onClick={() => setShowImageViewer(true)}
+                  onError={() => console.warn('[PostCard][image] failed to load', post.id)}
+                />
               )}
             </div>
           );
         })()}
+
 
         {showImageViewer && displayMediaUrl && (
           <ImageViewer
