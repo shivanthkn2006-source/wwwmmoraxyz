@@ -355,6 +355,32 @@ const HomePage = () => {
         );
     }
   }, [videoPosts, loopsFilter, friendships]);
+
+  // Auto-scroll the loop rail when there are more than 5 videos to showcase hot trending content.
+  useEffect(() => {
+    const el = loopRailRef.current;
+    if (!el || filteredLoops.length <= 5) return;
+    let hoverPause = false;
+    const onEnter = () => { hoverPause = true; };
+    const onLeave = () => { hoverPause = false; };
+    el.addEventListener('mouseenter', onEnter);
+    el.addEventListener('mouseleave', onLeave);
+    const interval = window.setInterval(() => {
+      if (hoverPause || !el.isConnected) return;
+      const step = 104; // 96px tile + 8px gap
+      const max = el.scrollWidth - el.clientWidth;
+      if (max <= 0) return;
+      const next = el.scrollLeft + step >= max - 4 ? 0 : el.scrollLeft + step;
+      el.scrollTo({ left: next, behavior: 'smooth' });
+    }, 3500);
+    return () => {
+      window.clearInterval(interval);
+      el.removeEventListener('mouseenter', onEnter);
+      el.removeEventListener('mouseleave', onLeave);
+    };
+  }, [filteredLoops.length]);
+
+
   
   const hasEvent = useEventGlow(userProfile?.event_date, userProfile?.event_recurring);
   const glowClass = getAvatarGlowClass(hasEvent, userProfile?.status);
