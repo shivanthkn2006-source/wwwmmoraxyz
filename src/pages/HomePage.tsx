@@ -1384,19 +1384,64 @@ const HomePage = () => {
                     </div>
                   )}
 
+                  {isAdminUser && filteredLoops.length > 0 && (
+                    <details className="rounded-md border border-border/50 bg-muted/20 px-3 py-2 text-[11px]" data-testid="loops-diagnostics-panel">
+                      <summary className="cursor-pointer font-medium text-foreground">Loops preview diagnostics</summary>
+                      <div className="mt-2 space-y-2">
+                        {filteredLoops.map((post) => {
+                          const version = post.updated_at || post.created_at || post.id;
+                          const mediaUrl = appendMediaVersion(post.media_url, version) || null;
+                          const posterUrl = appendMediaVersion(post.media_preview_url, version) || null;
+                          return (
+                            <div key={post.id} className="rounded border border-border/40 bg-background/50 p-2 font-mono">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="font-semibold">{post.id.slice(0, 8)}</span>
+                                <span>{post.media_type || 'unknown'}</span>
+                                <span>{loopDecodeStatus[post.id] || 'pending'}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => regenerateLoopPoster(post.id)}
+                                  className="rounded border border-border/60 px-2 py-0.5 text-primary hover:bg-muted"
+                                >
+                                  Re-generate poster
+                                </button>
+                              </div>
+                              <div className="mt-1 break-all text-muted-foreground">media: {mediaUrl || 'missing'}</div>
+                              <div className="break-all text-muted-foreground">poster: {posterUrl || 'missing'}</div>
+                              {mediaUrl && <a href={mediaUrl} target="_blank" rel="noreferrer" className="mr-3 text-primary">Open media</a>}
+                              {posterUrl && <a href={posterUrl} target="_blank" rel="noreferrer" className="text-primary">Open poster</a>}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </details>
+                  )}
+
 
                   {filteredLoops.length > 0 ? (
                     <FeedErrorBoundary section="loops" onRetry={handleUpdate}>
                       <div className="flex gap-2 overflow-x-auto pb-1">
                         {filteredLoops.map((post, index) => (
-                          <FeedErrorBoundary key={post.id} section="loops" postId={post.id}>
+                          <FeedErrorBoundary key={post.id} section="loops" postId={post.id} onRetry={() => fetchLoopPosts()}>
                             <LoopVideoItem
                               post={post}
                               index={index}
                               onVideoClick={openLoopsPlayer}
+                              onDecodeStatus={handleLoopDecodeStatus}
+                              onRegeneratePoster={regenerateLoopPoster}
+                              canRegeneratePoster={isAdminUser || user?.id === post.user_id}
                               onPreviewError={(postId) => {
+                                const failed = loopPosts.find(p => p.id === postId);
                                 setBrokenLoopPreviewIds(prev => new Set(prev).add(postId));
-                                pushDebug({ step: 'loops:preview-error', errorMessage: `Preview decode failed for ${postId}` });
+                                logFeedIssue({
+                                  step: 'loops:preview-error',
+                                  postId,
+                                  mediaUrl: failed?.media_url || null,
+                                  posterUrl: failed?.media_preview_url || null,
+                                  mediaType: failed?.media_type || null,
+                                  decodeStatus: 'decode-failed',
+                                  errorMessage: `Preview decode failed for ${postId}`,
+                                });
                               }}
                             />
                           </FeedErrorBoundary>
@@ -1423,7 +1468,7 @@ const HomePage = () => {
                 ) : (
                   globalPosts.map(post => (
                     <div key={post.id} data-post-card data-post-id={post.id}>
-                      <FeedErrorBoundary section="post-card" postId={post.id}>
+                      <FeedErrorBoundary section="post-card" postId={post.id} onRetry={() => retrySinglePost(post.id)}>
                         <PostCard post={post} onUpdate={handleUpdate} />
                       </FeedErrorBoundary>
                     </div>
@@ -1441,7 +1486,9 @@ const HomePage = () => {
                 ) : (
                   personalPosts.map(post => (
                     <div key={post.id} data-post-card data-post-id={post.id}>
-                      <PostCard post={post} onUpdate={handleUpdate} />
+                      <FeedErrorBoundary section="post-card" postId={post.id} onRetry={() => retrySinglePost(post.id)}>
+                        <PostCard post={post} onUpdate={handleUpdate} />
+                      </FeedErrorBoundary>
                     </div>
                   ))
                 )}
