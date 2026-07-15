@@ -101,40 +101,27 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
     return error.message || names[error.code] || `Media error ${error.code}`;
   };
 
-  const revealDeferredMedia = async () => {
-    if (loadingHeavyMedia) return;
-    if (post.full_media_url) {
-      setRevealHeavyMedia(true);
-      return;
-    }
-
+  const revealDeferredMedia = React.useCallback(async () => {
+    if (loadedHeavyMediaUrl || post.full_media_url) return;
     try {
-      setLoadingHeavyMedia(true);
       const { data, error } = await supabase
         .from('posts')
         .select('media_url')
         .eq('id', post.id)
         .maybeSingle();
-
       if (error) throw error;
-      setLoadedHeavyMediaUrl(data?.media_url || null);
-      setRevealHeavyMedia(true);
-    } catch (error) {
-      toast({ title: 'Media unavailable', description: 'Could not load this large media file.', variant: 'destructive' });
-    } finally {
-      setLoadingHeavyMedia(false);
+      if (data?.media_url) setLoadedHeavyMediaUrl(data.media_url);
+    } catch (e) {
+      console.warn('[PostCard] deferred media load failed', post.id, e);
     }
-  };
+  }, [post.id, post.full_media_url, loadedHeavyMediaUrl]);
 
   // Sync state with post prop when it changes
   useEffect(() => {
     setLiked(post.user_liked || false);
     setLikesCount(post.likes_count);
     setCommentsCount(post.comments_count);
-    setVideoDecodeFailed(false);
-    setVideoDecodeFailureReason('');
-    setPosterLoadFailed(false);
-    setPosterFailureReason('');
+
     
     // Check if post is saved
     const checkSaved = async () => {
