@@ -31,7 +31,7 @@ import { useTutorial } from '@/hooks/useTutorial';
 import { useDailyBriefing } from '@/hooks/useDailyBriefing';
 import { OnboardingTour } from '@/components/OnboardingTour';
 import { SovereignQuickAccess } from '@/components/SovereignQuickAccess';
-import { appendMediaVersion, captureVideoPreviewFromUrl, dataUrlToFile, getPostsStorageObjectPath, inferMediaType, makeFallbackVideoPoster } from '@/lib/mediaUtils';
+import { appendMediaVersion, captureVideoPreviewFromUrl, dataUrlToFile, getPostsStorageObjectPath, inferMediaType, makeFallbackVideoPoster, transcodeVideoForPreview } from '@/lib/mediaUtils';
 import PostsGrid from "@/components/PostsGrid";
 import PostModal from "@/components/PostModal";
 import FriendRequestCard from "@/components/FriendRequestCard";
