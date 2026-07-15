@@ -90,31 +90,6 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
   const fallbackPosterSrc = React.useMemo(() => makeFallbackVideoPoster(), []);
   const posterSrc = previewSrc || (post.media_type === 'video' ? fallbackPosterSrc || undefined : undefined);
 
-  // Reels-style: autoplay video when in view, pause when out. Auto-reveal deferred media on scroll into view.
-  useEffect(() => {
-    const frame = mediaFrameRef.current;
-    if (!frame) return;
-    const io = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          const inView = entry.isIntersecting && entry.intersectionRatio >= 0.6;
-          setVideoInView(inView);
-          if (inView && isDeferredHeavyMedia) revealDeferredMedia();
-          const v = videoRef.current;
-          if (!v) return;
-          if (inView) {
-            v.play().then(() => setIsVideoPlaying(true)).catch(() => {});
-          } else {
-            v.pause();
-          }
-        });
-      },
-      { threshold: [0, 0.6, 1] }
-    );
-    io.observe(frame);
-    return () => io.disconnect();
-  }, [isDeferredHeavyMedia, revealDeferredMedia, displayMediaSrc]);
-
   const getVideoErrorReason = (video: HTMLVideoElement) => {
     const error = video.error;
     if (!error) return 'Unknown decode error';
@@ -141,6 +116,32 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
       console.warn('[PostCard] deferred media load failed', post.id, e);
     }
   }, [post.id, post.full_media_url, loadedHeavyMediaUrl]);
+
+  // Reels-style: autoplay video when in view, pause when out. Auto-reveal deferred media on scroll into view.
+  useEffect(() => {
+    const frame = mediaFrameRef.current;
+    if (!frame) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const inView = entry.isIntersecting && entry.intersectionRatio >= 0.6;
+          setVideoInView(inView);
+          if (inView && isDeferredHeavyMedia) revealDeferredMedia();
+          const v = videoRef.current;
+          if (!v) return;
+          if (inView) {
+            v.play().then(() => setIsVideoPlaying(true)).catch(() => {});
+          } else {
+            v.pause();
+          }
+        });
+      },
+      { threshold: [0, 0.6, 1] }
+    );
+    io.observe(frame);
+    return () => io.disconnect();
+  }, [isDeferredHeavyMedia, revealDeferredMedia, displayMediaSrc]);
+
 
   // Sync state with post prop when it changes
   useEffect(() => {
