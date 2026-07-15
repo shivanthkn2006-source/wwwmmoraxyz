@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import PostCard from '@/components/PostCard';
+import { FeedErrorBoundary } from '@/components/FeedErrorBoundary';
 import NotificationMenu from '@/components/NotificationMenu';
 import AnimatedHamburgerButton from '@/components/AnimatedHamburgerButton';
 import HamburgerMenu from '@/components/HamburgerMenu';
@@ -78,12 +79,26 @@ const DATA_URL_PREVIEW_LIMIT = 900_000;
 const ALLOWED_VIDEO_MIME = ['video/mp4', 'video/webm', 'video/quicktime', 'video/ogg'];
 const ALLOWED_IMAGE_MIME = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
+// Infer real media type from the URL when the DB media_type column is wrong
+// (legacy rows saved videos with media_type='image' — see loops upload bug).
+const inferMediaType = (url: string | null, declared: string | null): 'video' | 'image' | null => {
+  if (!url) return declared === 'video' ? 'video' : declared === 'image' ? 'image' : null;
+  if (url.startsWith('data:video/')) return 'video';
+  if (url.startsWith('data:image/')) return 'image';
+  const clean = url.split('?')[0].toLowerCase();
+  if (/\.(mp4|webm|mov|ogg|m4v)$/.test(clean)) return 'video';
+  if (/\.(jpe?g|png|webp|gif|avif|heic)$/.test(clean)) return 'image';
+  return declared === 'video' ? 'video' : declared === 'image' ? 'image' : null;
+};
+
 const prepareFeedPostMedia = (post: any): Post => {
   const mediaUrl = typeof post.media_url === 'string' ? post.media_url : null;
+  const realType = inferMediaType(mediaUrl, post.media_type);
   const isHeavyDataUrl = post.has_deferred_media || (!!mediaUrl && mediaUrl.startsWith('data:') && mediaUrl.length > DATA_URL_PREVIEW_LIMIT);
 
   return {
     ...post,
+    media_type: realType ?? post.media_type,
     full_media_url: null,
     media_url: isHeavyDataUrl ? null : mediaUrl,
     has_deferred_media: !!isHeavyDataUrl,
@@ -208,7 +223,7 @@ const HomePage = () => {
   // NOTE: Atlas Boot and Prime Objective are ONLY for Atlas HUD, NOT Zoe Infinity main flow
   const [atlasHUDActive, setAtlasHUDActive] = useState(false);
   const videoPosts = globalPosts.filter((post) =>
-    post.media_url && (post.media_type === 'video' || post.media_url.startsWith('data:video/'))
+    !!post.media_url && inferMediaType(post.media_url, post.media_type) === 'video'
   );
 
   const filteredLoops = React.useMemo(() => {
@@ -1085,16 +1100,19 @@ const HomePage = () => {
 
 
                   {filteredLoops.length > 0 ? (
-                    <div className="flex gap-2 overflow-x-auto pb-1">
-                      {filteredLoops.map((post, index) => (
-                        <LoopVideoItem
-                          key={post.id}
-                          post={post}
-                          index={index}
-                          onVideoClick={openLoopsPlayer}
-                        />
-                      ))}
-                    </div>
+                    <FeedErrorBoundary section="loops" onRetry={handleUpdate}>
+                      <div className="flex gap-2 overflow-x-auto pb-1">
+                        {filteredLoops.map((post, index) => (
+                          <FeedErrorBoundary key={post.id} section="loops" postId={post.id}>
+                            <LoopVideoItem
+                              post={post}
+                              index={index}
+                              onVideoClick={openLoopsPlayer}
+                            />
+                          </FeedErrorBoundary>
+                        ))}
+                      </div>
+                    </FeedErrorBoundary>
                   ) : (
                     <div className="flex items-center justify-between rounded-lg border border-dashed border-border/50 px-3 py-2 text-xs text-muted-foreground">
                       <span>No loop videos yet. Post a short video to see Loops here.</span>
@@ -1115,7 +1133,9 @@ const HomePage = () => {
                 ) : (
                   globalPosts.map(post => (
                     <div key={post.id} data-post-card data-post-id={post.id}>
-                      <PostCard post={post} onUpdate={handleUpdate} />
+                      <FeedErrorBoundary section="post-card" postId={post.id}>
+                        <PostCard post={post} onUpdate={handleUpdate} />
+                      </FeedErrorBoundary>
                     </div>
                   ))
                 )}
