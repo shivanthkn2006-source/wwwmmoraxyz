@@ -256,6 +256,8 @@ const HomePage = () => {
   const [debugEntries, setDebugEntries] = useState<Array<import('@/components/AdminFeedDebugger').FeedDebugEntry>>([]);
   const [consecutiveFailures, setConsecutiveFailures] = useState(0);
   const [loopDecodeStatus, setLoopDecodeStatus] = useState<Record<string, string>>({});
+  const [activeLoopRailIndex, setActiveLoopRailIndex] = useState(0);
+  const [loopDurations, setLoopDurations] = useState<Record<string, number>>({});
   const loopRailRef = useRef<HTMLDivElement | null>(null);
 
   // Loops upload UI state
@@ -356,7 +358,7 @@ const HomePage = () => {
     }
   }, [videoPosts, loopsFilter, friendships]);
 
-  // Auto-scroll the loop rail when there are more than 5 videos to showcase hot trending content.
+  // Auto-scroll the loop rail by each active video's real duration.
   useEffect(() => {
     const el = loopRailRef.current;
     if (!el || filteredLoops.length <= 5) return;
@@ -365,20 +367,29 @@ const HomePage = () => {
     const onLeave = () => { hoverPause = false; };
     el.addEventListener('mouseenter', onEnter);
     el.addEventListener('mouseleave', onLeave);
-    const interval = window.setInterval(() => {
+    const current = filteredLoops[activeLoopRailIndex % filteredLoops.length];
+    const durationMs = Math.max(1500, Math.min(120000, ((current && loopDurations[current.id]) || 5) * 1000));
+    const timer = window.setTimeout(() => {
       if (hoverPause || !el.isConnected) return;
-      const step = 104; // 96px tile + 8px gap
-      const max = el.scrollWidth - el.clientWidth;
-      if (max <= 0) return;
-      const next = el.scrollLeft + step >= max - 4 ? 0 : el.scrollLeft + step;
-      el.scrollTo({ left: next, behavior: 'smooth' });
-    }, 3500);
+      setActiveLoopRailIndex((idx) => (idx + 1) % filteredLoops.length);
+    }, durationMs);
     return () => {
-      window.clearInterval(interval);
+      window.clearTimeout(timer);
       el.removeEventListener('mouseenter', onEnter);
       el.removeEventListener('mouseleave', onLeave);
     };
-  }, [filteredLoops.length]);
+  }, [filteredLoops, activeLoopRailIndex, loopDurations]);
+
+  useEffect(() => {
+    const el = loopRailRef.current;
+    if (!el || filteredLoops.length <= 5) return;
+    const tile = el.querySelector<HTMLElement>(`[data-loop-index="${activeLoopRailIndex}"]`);
+    tile?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
+  }, [activeLoopRailIndex, filteredLoops.length]);
+
+  useEffect(() => {
+    setActiveLoopRailIndex(0);
+  }, [loopsFilter]);
 
 
   
@@ -1512,27 +1523,31 @@ const HomePage = () => {
                       <div ref={loopRailRef} className="flex gap-2 overflow-x-auto pb-1 scroll-smooth snap-x">
                         {filteredLoops.map((post, index) => (
                           <FeedErrorBoundary key={post.id} section="loops" postId={post.id} onRetry={() => retrySingleLoop(post.id)}>
-                            <LoopVideoItem
-                              post={post}
-                              index={index}
-                              onVideoClick={openLoopsPlayer}
-                              onDecodeStatus={handleLoopDecodeStatus}
-                              onRegeneratePoster={regenerateLoopPoster}
-                              canRegeneratePoster={isAdminUser || user?.id === post.user_id}
-                              onPreviewError={(postId) => {
-                                const failed = loopPosts.find(p => p.id === postId);
-                                setBrokenLoopPreviewIds(prev => new Set(prev).add(postId));
-                                logFeedIssue({
-                                  step: 'loops:preview-error',
-                                  postId,
-                                  mediaUrl: failed?.media_url || null,
-                                  posterUrl: failed?.media_preview_url || null,
-                                  mediaType: failed?.media_type || null,
-                                  decodeStatus: 'decode-failed',
-                                  errorMessage: `Preview decode failed for ${postId}`,
-                                });
-                              }}
-                            />
+                            <div data-loop-index={index}>
+                              <LoopVideoItem
+                                post={post}
+                                index={index}
+                                active={index === activeLoopRailIndex}
+                                onDuration={(postId, duration) => setLoopDurations(prev => prev[postId] === duration ? prev : { ...prev, [postId]: duration })}
+                                onVideoClick={openLoopsPlayer}
+                                onDecodeStatus={handleLoopDecodeStatus}
+                                onRegeneratePoster={regenerateLoopPoster}
+                                canRegeneratePoster={isAdminUser || user?.id === post.user_id}
+                                onPreviewError={(postId) => {
+                                  const failed = loopPosts.find(p => p.id === postId);
+                                  setBrokenLoopPreviewIds(prev => new Set(prev).add(postId));
+                                  logFeedIssue({
+                                    step: 'loops:preview-error',
+                                    postId,
+                                    mediaUrl: failed?.media_url || null,
+                                    posterUrl: failed?.media_preview_url || null,
+                                    mediaType: failed?.media_type || null,
+                                    decodeStatus: 'decode-failed',
+                                    errorMessage: `Preview decode failed for ${postId}`,
+                                  });
+                                }}
+                              />
+                            </div>
                           </FeedErrorBoundary>
                         ))}
                       </div>

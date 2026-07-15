@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Loader2, Play, RotateCcw } from 'lucide-react';
-import { appendMediaVersion, makeFallbackVideoPoster } from '@/lib/mediaUtils';
+import { appendMediaVersion, makeFallbackVideoPoster, resolvePrivateStorageUrl } from '@/lib/mediaUtils';
+import { supabase } from '@/integrations/supabase/client';
 
 interface LoopVideoItemProps {
   post: {
@@ -16,6 +17,8 @@ interface LoopVideoItemProps {
   onPreviewError?: (postId: string) => void;
   onDecodeStatus?: (postId: string, status: string) => void;
   onRegeneratePoster?: (postId: string) => void;
+  active?: boolean;
+  onDuration?: (postId: string, duration: number) => void;
   canRegeneratePoster?: boolean;
 }
 
@@ -26,6 +29,8 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({
   onPreviewError,
   onDecodeStatus,
   onRegeneratePoster,
+  active = false,
+  onDuration,
   canRegeneratePoster = false,
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -37,13 +42,15 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({
   const [isStalling, setIsStalling] = useState(false);
   const [decodeFailureReason, setDecodeFailureReason] = useState('');
   const [debugOpen, setDebugOpen] = useState(false);
+  const [resolvedPosterSrc, setResolvedPosterSrc] = useState<string | undefined>();
+  const [soundUnlocked, setSoundUnlocked] = useState(false);
 
   const version = post.updated_at || post.created_at || post.id;
   const mediaSrc = appendMediaVersion(post.media_url, version);
   const backendPosterSrc = appendMediaVersion(post.media_preview_url, version);
   const generatedPosterSrc = React.useMemo(() => makeFallbackVideoPoster(), []);
-  const posterSrc = backendPosterSrc || generatedPosterSrc || undefined;
-  const shouldShowVideoPreview = canPaintVideo && (!backendPosterSrc || isPlaying);
+  const posterSrc = resolvedPosterSrc || backendPosterSrc || generatedPosterSrc || undefined;
+  const shouldShowVideoPreview = canPaintVideo && (active || !posterSrc || isPlaying);
 
   const getVideoErrorReason = () => {
     const error = videoRef.current?.error;
@@ -72,10 +79,52 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({
     if (v) v.load();
   }, [post.media_url, post.id, onDecodeStatus]);
 
+  useEffect(() => {
+    let alive = true;
+    setResolvedPosterSrc(undefined);
+    resolvePrivateStorageUrl(supabase, post.media_preview_url)
+      .then((url) => { if (alive) setResolvedPosterSrc(url); })
+      .catch((e) => console.warn('[LoopVideoItem] signed poster failed', post.id, e));
+    return () => { alive = false; };
+  }, [post.media_preview_url, post.id]);
+
+  useEffect(() => {
+    const unlock = () => setSoundUnlocked(true);
+    window.addEventListener('pointerdown', unlock, { once: true, passive: true });
+    window.addEventListener('keydown', unlock, { once: true });
+    return () => {
+      window.removeEventListener('pointerdown', unlock);
+      window.removeEventListener('keydown', unlock);
+    };
+  }, []);
+
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v || !canPaintVideo || hasError) return;
+    if (!active) {
+      v.pause();
+      setIsPlaying(false);
+      return;
+    }
+    v.currentTime = Number.isFinite(v.currentTime) ? v.currentTime : 0;
+    v.muted = !soundUnlocked;
+    v.play()
+      .then(() => setIsPlaying(true))
+      .catch(() => {
+        v.muted = true;
+        v.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+      });
+  }, [active, canPaintVideo, hasError, soundUnlocked]);
+
   const handleMouseEnter = () => {
     if (videoRef.current && !hasError && canPaintVideo) {
       videoRef.current.currentTime = 0;
-      videoRef.current.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+      videoRef.current.muted = !soundUnlocked;
+      videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {
+        if (!videoRef.current) return;
+        videoRef.current.muted = true;
+        videoRef.current.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+      });
       hoverTimeoutRef.current = setTimeout(() => {
         if (videoRef.current) {
           videoRef.current.pause();
@@ -115,6 +164,10 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({
   };
 
   const handleLoadedMetadata = () => {
+    if (videoRef.current) {
+      const d = Number.isFinite(videoRef.current.duration) ? videoRef.current.duration : 0;
+      if (d > 0) onDuration?.(post.id, d);
+    }
     if (videoRef.current && videoRef.current.currentTime === 0) {
       try {
         const d = Number.isFinite(videoRef.current.duration) ? videoRef.current.duration : 1;
@@ -159,7 +212,7 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({
           src={mediaSrc}
           poster={posterSrc}
           className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-150 ${shouldShowVideoPreview ? 'opacity-100' : 'opacity-0'}`}
-          muted
+          muted={!soundUnlocked}
           loop
           playsInline
           preload="metadata"
