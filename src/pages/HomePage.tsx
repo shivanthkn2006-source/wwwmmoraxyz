@@ -332,9 +332,9 @@ const HomePage = () => {
   // Atlas HUD State - Smith AI Interface (separate from Zoe Infinity, user toggles via menu)
   // NOTE: Atlas Boot and Prime Objective are ONLY for Atlas HUD, NOT Zoe Infinity main flow
   const [atlasHUDActive, setAtlasHUDActive] = useState(false);
-  const videoPosts = loopPosts.filter((post) =>
+  const videoPosts = React.useMemo(() => loopPosts.filter((post) =>
     !!post.media_url && inferMediaType(post.media_url, post.media_type) === 'video'
-  );
+  ), [loopPosts]);
 
   const filteredLoops = React.useMemo(() => {
     let filtered = [...videoPosts];
@@ -399,7 +399,7 @@ const HomePage = () => {
       el.removeEventListener('mouseenter', onEnter);
       el.removeEventListener('mouseleave', onLeave);
     };
-  }, [filteredLoops, activeLoopRailIndex, loopDurations]);
+  }, [filteredLoops.length]);
 
   useEffect(() => {
     const el = loopRailRef.current;
