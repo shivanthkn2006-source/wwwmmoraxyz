@@ -96,7 +96,7 @@ export const WorldStateController: React.FC<WorldStateControllerProps> = ({
       case 'Abyss Mode':
         return 'from-red-900/50 via-black/50 to-purple-900/50';
       case 'Zen Garden Mode':
-        return 'from-emerald-800/40 via-teal-800/40 to-cyan-800/40';
+        return 'from-emerald-800/40 via-blue-800/40 to-cyan-800/40';
       case 'Fury Storm Mode':
         return 'from-orange-600/40 via-red-600/40 to-yellow-600/40';
       default:

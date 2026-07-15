@@ -537,7 +537,7 @@ const AnimaUserGuide: React.FC = () => {
       title: 'Privacy & Consent',
       subtitle: 'Zero-Knowledge Architecture',
       icon: <Shield className="w-5 h-5" />,
-      color: 'from-green-500/20 to-teal-500/20',
+      color: 'from-green-500/20 to-blue-500/20',
       content: (
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">

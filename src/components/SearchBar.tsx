@@ -206,7 +206,7 @@ const SearchResultItem = ({ result, onClick }: { result: SearchResult; onClick: 
         </>
       ) : result.type === 'dictionary' ? (
         <>
-          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500/20 to-teal-500/20 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500/20 to-blue-500/20 flex items-center justify-center">
             <Book className="w-5 h-5 text-green-400" />
           </div>
           <div className="flex-1 min-w-0">
