@@ -256,6 +256,7 @@ const HomePage = () => {
   const [debugEntries, setDebugEntries] = useState<Array<import('@/components/AdminFeedDebugger').FeedDebugEntry>>([]);
   const [consecutiveFailures, setConsecutiveFailures] = useState(0);
   const [loopDecodeStatus, setLoopDecodeStatus] = useState<Record<string, string>>({});
+  const loopRailRef = useRef<HTMLDivElement | null>(null);
 
   // Loops upload UI state
   const [uploadState, setUploadState] = useState<'idle' | 'validating' | 'uploading' | 'saving' | 'error' | 'success'>('idle');
