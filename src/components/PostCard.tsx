@@ -23,6 +23,7 @@ interface Post {
   user_id: string;
   content: string | null;
   media_url: string | null;
+  media_preview_url?: string | null;
   full_media_url?: string | null;
   has_deferred_media?: boolean;
   media_size?: number;
@@ -625,6 +626,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
                 <div className="relative w-full max-h-[85svh] sm:max-h-[75vh] lg:max-h-[70vh] flex items-center justify-center">
                   <video
                     src={displayMediaUrl}
+                    poster={post.media_preview_url || undefined}
                     controls
                     playsInline
                     preload="metadata"
@@ -634,7 +636,13 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
                       const v = e.currentTarget;
                       if (v.currentTime === 0) { try { v.currentTime = 0.1; } catch {} }
                     }}
-                    onError={(e) => console.error('[PostCard][video]', post.id, e.currentTarget.error)}
+                    onError={(e) => {
+                      if (post.media_preview_url) {
+                        console.warn('[PostCard][video] decode failed; poster fallback available', post.id);
+                        return;
+                      }
+                      console.error('[PostCard][video]', post.id, e.currentTarget.error);
+                    }}
                   />
                 </div>
               ) : (

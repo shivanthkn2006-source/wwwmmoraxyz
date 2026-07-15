@@ -3674,6 +3674,7 @@ export type Database = {
           location_lat: number | null
           location_lng: number | null
           location_name: string | null
+          media_preview_url: string | null
           media_type: string | null
           media_url: string | null
           private_timeline_id: string | null
@@ -3690,6 +3691,7 @@ export type Database = {
           location_lat?: number | null
           location_lng?: number | null
           location_name?: string | null
+          media_preview_url?: string | null
           media_type?: string | null
           media_url?: string | null
           private_timeline_id?: string | null
@@ -3706,6 +3708,7 @@ export type Database = {
           location_lat?: number | null
           location_lng?: number | null
           location_name?: string | null
+          media_preview_url?: string | null
           media_type?: string | null
           media_url?: string | null
           private_timeline_id?: string | null
@@ -8810,6 +8813,7 @@ export type Database = {
           has_deferred_media: boolean | null
           id: string | null
           likes_count: number | null
+          media_preview_url: string | null
           media_size: number | null
           media_type: string | null
           media_url: string | null
@@ -8824,6 +8828,7 @@ export type Database = {
           has_deferred_media?: never
           id?: string | null
           likes_count?: number | null
+          media_preview_url?: string | null
           media_size?: never
           media_type?: string | null
           media_url?: never
@@ -8838,6 +8843,7 @@ export type Database = {
           has_deferred_media?: never
           id?: string | null
           likes_count?: number | null
+          media_preview_url?: string | null
           media_size?: never
           media_type?: string | null
           media_url?: never

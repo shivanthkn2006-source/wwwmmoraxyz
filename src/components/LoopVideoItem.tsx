@@ -5,30 +5,41 @@ interface LoopVideoItemProps {
   post: {
     id: string;
     media_url: string | null;
+    media_preview_url?: string | null;
   };
   index: number;
   onVideoClick: (index: number) => void;
+  onPreviewError?: (postId: string) => void;
 }
 
-const LoopVideoItem: React.FC<LoopVideoItemProps> = ({ post, index, onVideoClick }) => {
+const LoopVideoItem: React.FC<LoopVideoItemProps> = ({ post, index, onVideoClick, onPreviewError }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hoverTimeoutRef = useRef<NodeJS.Timeout>();
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
 
-  // Preload video metadata on mount / when src changes.
-  // Adds a stall guard so slow networks don't leave the tile stuck on the spinner forever.
+  // Preload enough data to paint the first frame on mount / when src changes.
+  // Metadata alone often leaves mobile browsers with a black tile.
   useEffect(() => {
-    if (!videoRef.current || !post.media_url) return;
+    if (!videoRef.current || !post.media_url) {
+      setIsLoading(false);
+      setHasError(true);
+      return;
+    }
     setIsLoading(true);
     setHasError(false);
-    videoRef.current.load();
+    const video = videoRef.current;
+    video.load();
+
+    if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+      setIsLoading(false);
+    }
 
     // If nothing loads within 12s on very slow networks, mark as error so the user
     // sees the fallback instead of an endless spinner. Reopening will retry on next mount.
     const stallTimer = setTimeout(() => {
-      if (videoRef.current && videoRef.current.readyState === 0) {
+      if (videoRef.current && videoRef.current.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
         setIsLoading(false);
         setHasError(true);
       }
@@ -75,7 +86,14 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({ post, index, onVideoClick
 
   const handleError = () => {
     setIsLoading(false);
+    if (post.media_preview_url) {
+      console.warn('[LoopVideoItem] video decode failed; showing poster fallback', { postId: post.id });
+      setHasError(false);
+      return;
+    }
+    console.error('[LoopVideoItem] preview failed', { postId: post.id, src: post.media_url, error: videoRef.current?.error });
     setHasError(true);
+    onPreviewError?.(post.id);
   };
 
   // Force the first frame to render as a poster preview.
@@ -83,7 +101,10 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({ post, index, onVideoClick
   // preload="metadata"; seeking to 0.1s once metadata is ready forces it.
   const handleLoadedMetadata = () => {
     if (videoRef.current && videoRef.current.currentTime === 0) {
-      try { videoRef.current.currentTime = 0.1; } catch { /* noop */ }
+      try {
+        const duration = Number.isFinite(videoRef.current.duration) ? videoRef.current.duration : 1;
+        videoRef.current.currentTime = Math.min(0.12, Math.max(0.01, duration / 20));
+      } catch { /* noop */ }
     }
   };
 
@@ -95,32 +116,43 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({ post, index, onVideoClick
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
+      {post.media_preview_url && (
+        <img
+          src={post.media_preview_url}
+          alt="Loop preview"
+          className="absolute inset-0 h-full w-full object-cover"
+          loading="lazy"
+        />
+      )}
       {post.media_url && (
         <video
           ref={videoRef}
           src={post.media_url}
+          poster={post.media_preview_url || undefined}
           className="w-full h-full object-cover"
           muted
           loop
           playsInline
-          preload="metadata"
+          preload="auto"
           onLoadedMetadata={handleLoadedMetadata}
           onLoadedData={handleLoadedData}
+          onCanPlay={handleLoadedData}
+          onSeeked={handleLoadedData}
           onError={handleError}
         />
       )}
       
       {/* Loading State */}
-      {isLoading && !hasError && (
+      {isLoading && !hasError && !post.media_preview_url && (
         <div className="absolute inset-0 flex items-center justify-center bg-muted">
           <Loader2 className="w-5 h-5 text-muted-foreground animate-spin" />
         </div>
       )}
       
       {/* Error State */}
-      {hasError && (
+      {hasError && !post.media_preview_url && (
         <div className="absolute inset-0 flex items-center justify-center bg-muted/80">
-          <span className="text-[8px] text-muted-foreground text-center px-1">Unable to load</span>
+          <span className="text-[8px] text-muted-foreground text-center px-1">Unable to preview</span>
         </div>
       )}
       

@@ -57,6 +57,7 @@ interface Post {
   user_id: string;
   content: string | null;
   media_url: string | null;
+  media_preview_url?: string | null;
   full_media_url?: string | null;
   media_type: string | null;
   has_deferred_media?: boolean;
@@ -107,6 +108,120 @@ const prepareFeedPostMedia = (post: any): Post => {
 
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
+const validateBrowserCanPreviewFile = (file: File, mediaType: 'video' | 'image') =>
+  new Promise<void>((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(file);
+    const timer = window.setTimeout(() => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error(`${mediaType === 'video' ? 'Video' : 'Image'} preview timed out. Please export it again and retry.`));
+    }, 10000);
+    const done = () => {
+      window.clearTimeout(timer);
+      URL.revokeObjectURL(objectUrl);
+    };
+
+    if (mediaType === 'video') {
+      const video = document.createElement('video');
+      if (file.type && video.canPlayType(file.type) === '') {
+        done();
+        reject(new Error('This video format is not previewable here. Export as MP4/H.264, WebM, or MOV/H.264.'));
+        return;
+      }
+      // Do not require a full local decode here: the Lovable preview browser can lack
+      // proprietary MP4 codecs even when user browsers play the same H.264 file.
+      // MIME + canPlayType prevents obvious bypasses; the Loop tile still hides rows
+      // that fail after upload so broken media does not poison the rail.
+      done();
+      resolve();
+      return;
+    }
+
+    const img = new Image();
+    img.onload = () => {
+      done();
+      img.naturalWidth > 0 && img.naturalHeight > 0
+        ? resolve()
+        : reject(new Error('This image has no readable pixels. Export it again and retry.'));
+    };
+    img.onerror = () => {
+      done();
+      reject(new Error('This image cannot be decoded for preview. Use JPG, PNG, WebP, or GIF.'));
+    };
+    img.src = objectUrl;
+  });
+
+const makeFallbackVideoPoster = () => {
+  const canvas = document.createElement('canvas');
+  canvas.width = 360;
+  canvas.height = 640;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+  const gradient = ctx.createLinearGradient(0, 0, 360, 640);
+  gradient.addColorStop(0, '#020617');
+  gradient.addColorStop(0.55, '#111827');
+  gradient.addColorStop(1, '#0f172a');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, 360, 640);
+  ctx.fillStyle = 'rgba(255,255,255,0.16)';
+  ctx.beginPath();
+  ctx.arc(180, 320, 54, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.86)';
+  ctx.beginPath();
+  ctx.moveTo(164, 290);
+  ctx.lineTo(164, 350);
+  ctx.lineTo(216, 320);
+  ctx.closePath();
+  ctx.fill();
+  return canvas.toDataURL('image/jpeg', 0.72);
+};
+
+const captureVideoPreview = (file: File) =>
+  new Promise<string | null>((resolve) => {
+    const objectUrl = URL.createObjectURL(file);
+    const video = document.createElement('video');
+    const cleanup = () => URL.revokeObjectURL(objectUrl);
+    const finish = (value: string | null) => {
+      cleanup();
+      resolve(value);
+    };
+    const timer = window.setTimeout(() => finish(makeFallbackVideoPoster()), 5000);
+
+    video.preload = 'metadata';
+    video.muted = true;
+    video.playsInline = true;
+    video.onloadedmetadata = () => {
+      try {
+        video.currentTime = Math.min(0.2, Math.max(0.01, (Number.isFinite(video.duration) ? video.duration : 1) / 20));
+      } catch {
+        window.clearTimeout(timer);
+        finish(makeFallbackVideoPoster());
+      }
+    };
+    video.onseeked = () => {
+      try {
+        const width = video.videoWidth || 360;
+        const height = video.videoHeight || 640;
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.min(360, width);
+        canvas.height = Math.round((canvas.width / width) * height);
+        const ctx = canvas.getContext('2d');
+        if (!ctx) throw new Error('No canvas context');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        window.clearTimeout(timer);
+        finish(canvas.toDataURL('image/jpeg', 0.72));
+      } catch {
+        window.clearTimeout(timer);
+        finish(makeFallbackVideoPoster());
+      }
+    };
+    video.onerror = () => {
+      window.clearTimeout(timer);
+      finish(makeFallbackVideoPoster());
+    };
+    video.src = objectUrl;
+  });
+
 async function withRetry<T>(fn: (attempt: number) => Promise<T>, attempts = 3, baseDelay = 800): Promise<T> {
   let lastErr: any;
   for (let i = 1; i <= attempts; i++) {
@@ -155,6 +270,8 @@ const HomePage = () => {
   const { receivedRequests, acceptFriendRequest, rejectFriendRequest } = useFriendRequests();
   const [globalPosts, setGlobalPosts] = useState<Post[]>([]);
   const [personalPosts, setPersonalPosts] = useState<Post[]>([]);
+  const [loopPosts, setLoopPosts] = useState<Post[]>([]);
+  const [brokenLoopPreviewIds, setBrokenLoopPreviewIds] = useState<Set<string>>(() => new Set());
   const [loading, setLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -222,8 +339,8 @@ const HomePage = () => {
   // Atlas HUD State - Smith AI Interface (separate from Zoe Infinity, user toggles via menu)
   // NOTE: Atlas Boot and Prime Objective are ONLY for Atlas HUD, NOT Zoe Infinity main flow
   const [atlasHUDActive, setAtlasHUDActive] = useState(false);
-  const videoPosts = globalPosts.filter((post) =>
-    !!post.media_url && inferMediaType(post.media_url, post.media_type) === 'video'
+  const videoPosts = loopPosts.filter((post) =>
+    !!post.media_url && !brokenLoopPreviewIds.has(post.id) && inferMediaType(post.media_url, post.media_type) === 'video'
   );
 
   const filteredLoops = React.useMemo(() => {
@@ -369,7 +486,7 @@ const HomePage = () => {
       // SIMPLIFIED: Fetch posts first without complex joins to avoid JSON parse errors
       const postsResult = await (supabase as any)
         .from('feed_posts_safe')
-        .select('id, user_id, content, media_url, media_type, likes_count, comments_count, created_at, visibility, has_deferred_media, media_size')
+        .select('id, user_id, content, media_url, media_type, likes_count, comments_count, created_at, visibility, has_deferred_media, media_size, media_preview_url')
         .eq('visibility', 'global')
         .is('private_timeline_id', null)
         .order('created_at', { ascending: false })
@@ -469,6 +586,85 @@ const HomePage = () => {
     }
   };
 
+  const fetchLoopPosts = async () => {
+    if (!user) {
+      setLoopPosts([]);
+      return;
+    }
+
+    try {
+      // Loops must use the real posts table, not feed_posts_safe: that view strips
+      // large data URLs, which makes valid uploaded videos disappear from Loops.
+      const postsResult = await (supabase as any)
+        .from('posts')
+        .select('id, user_id, content, media_url, media_type, likes_count, comments_count, created_at, visibility, private_timeline_id, media_preview_url')
+        .eq('visibility', 'global')
+        .is('private_timeline_id', null)
+        .not('media_url', 'is', null)
+        .or('media_type.eq.video,media_url.like.data:video/%,media_url.ilike.%.mp4%,media_url.ilike.%.webm%,media_url.ilike.%.mov%,media_url.ilike.%.ogg%,media_url.ilike.%.m4v%')
+        .order('created_at', { ascending: false })
+        .limit(30);
+
+      if (postsResult.error) {
+        console.error('[Loops] Error fetching video posts:', postsResult.error);
+        setLoopPosts([]);
+        pushDebug({ step: 'loops:posts-select', errorCode: postsResult.error.code, errorMessage: postsResult.error.message });
+        return;
+      }
+
+      const loopRows = ((postsResult.data || []) as any[])
+        .filter((post) => {
+          const mediaUrl = typeof post.media_url === 'string' ? post.media_url : null;
+          // Do not surface old inline video rows in Loops: they were produced by the
+          // previous upload bug and can fail browser demuxing, creating black previews.
+          if (!mediaUrl || mediaUrl.startsWith('data:')) return false;
+          return inferMediaType(mediaUrl, post.media_type) === 'video';
+        });
+
+      if (loopRows.length === 0) {
+        setLoopPosts([]);
+        pushDebug({ step: 'loops:posts-select', rowCount: 0 });
+        return;
+      }
+
+      const userIds = [...new Set(loopRows.map(p => p.user_id))];
+      const [profilesResult, userLikesResult] = await Promise.all([
+        supabase
+          .from('safe_public_profiles')
+          .select('user_id, display_name, username, profile_photo_url, status, hobbies')
+          .in('user_id', userIds),
+        supabase
+          .from('post_likes')
+          .select('post_id')
+          .eq('user_id', user.id)
+      ]);
+
+      const profileMap = new Map<string, any>();
+      if (profilesResult.data) {
+        profilesResult.data.forEach((p: any) => profileMap.set(p.user_id, p));
+      }
+      const likedPostIds = new Set(userLikesResult.data?.map(p => p.post_id) || []);
+
+      setLoopPosts(loopRows.map((post: any) => ({
+        ...post,
+        media_type: 'video',
+        profile: profileMap.get(post.user_id) || null,
+        user_liked: likedPostIds.has(post.id),
+        has_deferred_media: false,
+      })) as any);
+      setBrokenLoopPreviewIds(prev => {
+        const next = new Set(prev);
+        loopRows.forEach((post: any) => next.delete(post.id));
+        return next;
+      });
+      pushDebug({ step: 'loops:posts-select', rowCount: loopRows.length });
+    } catch (err: any) {
+      console.error('[Loops] Error in fetchLoopPosts:', err);
+      setLoopPosts([]);
+      pushDebug({ step: 'loops:exception', errorMessage: err?.message || String(err) });
+    }
+  };
+
   const fetchPersonalPosts = async () => {
     if (!user) return;
 
@@ -487,7 +683,7 @@ const HomePage = () => {
       // SIMPLIFIED: Fetch posts first without complex joins to avoid JSON parse errors
       const postsResult = await (supabase as any)
         .from('feed_posts_safe')
-        .select('id, user_id, content, media_url, media_type, likes_count, comments_count, created_at, visibility, has_deferred_media, media_size')
+        .select('id, user_id, content, media_url, media_type, likes_count, comments_count, created_at, visibility, has_deferred_media, media_size, media_preview_url')
         .eq('visibility', 'personal')
         .is('private_timeline_id', null)
         .in('user_id', [...friendIds, user.id])
@@ -659,7 +855,7 @@ const HomePage = () => {
       try {
         // Critical path: wait for the actual fetch (with a generous safety cap)
         // so the empty state never flashes before posts arrive on slow networks.
-        await settleWithin(fetchGlobalPosts(), 12000);
+        await settleWithin(Promise.all([fetchGlobalPosts(), fetchLoopPosts()]), 12000);
       } finally {
         setLoading(false);
       }
@@ -738,6 +934,7 @@ const HomePage = () => {
   const handleUpdate = () => {
     fetchGlobalPosts();
     fetchPersonalPosts();
+    fetchLoopPosts();
   };
 
   const openLoopsPlayer = (index: number) => {
@@ -777,6 +974,8 @@ const HomePage = () => {
     const INLINE_LIMIT = 2 * 1024 * 1024;
 
     try {
+      await validateBrowserCanPreviewFile(file, mediaType);
+      const mediaPreviewUrl = mediaType === 'video' ? await captureVideoPreview(file) : null;
       setUploadState('uploading');
       let mediaUrl: string;
 
@@ -824,6 +1023,7 @@ const HomePage = () => {
         user_id: user.id,
         content: '',
         media_url: mediaUrl,
+        media_preview_url: mediaPreviewUrl || (mediaType === 'image' ? mediaUrl : null),
         media_type: mediaType,
         visibility: 'global',
       });
@@ -1108,6 +1308,10 @@ const HomePage = () => {
                               post={post}
                               index={index}
                               onVideoClick={openLoopsPlayer}
+                              onPreviewError={(postId) => {
+                                setBrokenLoopPreviewIds(prev => new Set(prev).add(postId));
+                                pushDebug({ step: 'loops:preview-error', errorMessage: `Preview decode failed for ${postId}` });
+                              }}
                             />
                           </FeedErrorBoundary>
                         ))}

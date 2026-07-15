@@ -73,11 +73,12 @@ const PlanetaryIntentSelector: React.FC = () => {
     dismissIntentSelector();
   }, [dismissIntentSelector]);
 
-  // Prevent VR command flow from being blocked by onboarding overlay on /zoe-omega
+  // Prevent critical app surfaces from being blocked by the optimization overlay.
   useEffect(() => {
     if (!showIntentSelector) return;
     if (typeof window === 'undefined') return;
-    if (!window.location.pathname.startsWith('/zoe-omega')) return;
+    const path = window.location.pathname;
+    if (!path.startsWith('/zoe-omega') && path !== '/home') return;
 
     const timer = window.setTimeout(() => {
       dismissIntentSelector();
@@ -86,7 +87,8 @@ const PlanetaryIntentSelector: React.FC = () => {
     return () => window.clearTimeout(timer);
   }, [showIntentSelector, dismissIntentSelector]);
 
-  if (!showIntentSelector || !mvdScore.isBasicComplete) {
+  const path = typeof window !== 'undefined' ? window.location.pathname : '';
+  if (!showIntentSelector || !mvdScore.isBasicComplete || path === '/home') {
     return null;
   }
 
