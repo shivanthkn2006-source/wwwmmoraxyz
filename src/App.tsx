@@ -103,6 +103,7 @@ const InstallAppPage = lazy(() => import("./pages/InstallApp")); // PWA INSTALL 
 const GodModeEvolution = lazy(() => import("./pages/GodModeEvolution")); // ASI GENESIS KERNEL
 const SentinelPage = lazy(() => import("./pages/SentinelPage")); // M'MORA SENTINEL
 const AdminHealthPage = lazy(() => import("./pages/AdminHealthPage")); // ADMIN HEALTH & STATUS
+const AdminFeedDebugPage = lazy(() => import("./pages/AdminFeedDebugPage")); // FEED/LOOPS DEBUGGER
 
 // Loading fallback component — never render a silent black screen.
 const PageLoader = () => (
@@ -642,6 +643,14 @@ const RouteAwareShell = () => {
                             element={
                               <ProtectedRoute>
                                 <AdminHealthPage />
+                              </ProtectedRoute>
+                            }
+                          />
+                          <Route
+                            path="/admin/feed-debug"
+                            element={
+                              <ProtectedRoute>
+                                <AdminFeedDebugPage />
                               </ProtectedRoute>
                             }
                           />
