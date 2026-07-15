@@ -965,70 +965,30 @@ const HomePage = () => {
                       {/* Direct Video Upload Button - Hidden Input */}
                       <input
                         type="file"
-                        accept="video/*,image/*"
+                        accept={[...ALLOWED_VIDEO_MIME, ...ALLOWED_IMAGE_MIME].join(',')}
                         id="loops-video-upload"
                         className="hidden"
+                        disabled={uploadState === 'uploading' || uploadState === 'saving' || uploadState === 'validating'}
                         onChange={async (e) => {
                           const file = e.target.files?.[0];
-                          if (!file || !user) { e.target.value = ''; return; }
-                          const MAX_FILE_BYTES = 50 * 1024 * 1024; // 50MB hard cap
-                          if (file.size > MAX_FILE_BYTES) {
-                            toast({ title: "File too large", description: "Please pick a file under 50MB.", variant: "destructive" });
-                            e.target.value = '';
-                            return;
-                          }
-                          const mediaType: 'video' | 'image' = file.type.startsWith('video/') ? 'video' : 'image';
-                          try {
-                            toast({ title: "Uploading...", description: `Processing your ${mediaType}` });
-
-                            let mediaUrl: string;
-
-                            // Small images (<2MB) can go inline as base64 for instant preview.
-                            // Everything else (all videos + large images) goes to Storage.
-                            const INLINE_LIMIT = 2 * 1024 * 1024;
-                            if (mediaType === 'image' && file.size < INLINE_LIMIT) {
-                              mediaUrl = await new Promise<string>((resolve, reject) => {
-                                const reader = new FileReader();
-                                reader.onloadend = () => resolve(reader.result as string);
-                                reader.onerror = () => reject(new Error('read failed'));
-                                reader.readAsDataURL(file);
-                              });
-                            } else {
-                              const ext = file.name.split('.').pop()?.toLowerCase() || (mediaType === 'video' ? 'mp4' : 'jpg');
-                              const path = `${user.id}/loops/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-                              const { error: upErr } = await supabase.storage
-                                .from('posts')
-                                .upload(path, file, { contentType: file.type, upsert: false });
-                              if (upErr) throw upErr;
-                              const { data: pub } = supabase.storage.from('posts').getPublicUrl(path);
-                              mediaUrl = pub.publicUrl;
-                            }
-
-                            const { error } = await supabase.from('posts').insert({
-                              user_id: user.id,
-                              content: '',
-                              media_url: mediaUrl,
-                              media_type: mediaType,
-                              visibility: 'global'
-                            });
-                            if (error) throw error;
-
-                            toast({ title: "Posted!", description: "Your loop is now live" });
-                            triggerHomeRefresh();
-                          } catch (err: any) {
-                            console.error('[Loops upload]', err);
-                            toast({ title: "Upload failed", description: err?.message || "Please try again.", variant: "destructive" });
-                          } finally {
-                            e.target.value = '';
-                          }
+                          if (file) await handleLoopsUpload(file);
+                          e.target.value = '';
                         }}
                       />
                       <label
                         htmlFor="loops-video-upload"
-                        className="group relative flex items-center justify-center w-6 h-6 rounded-md bg-foreground/5 backdrop-blur-md border border-foreground/10 hover:border-purple-400/50 hover:bg-foreground/10 transition-all duration-300 shadow-[0_0_8px_rgba(139,92,246,0.2)] hover:shadow-[0_0_12px_rgba(139,92,246,0.4)] cursor-pointer"
+                        aria-disabled={uploadState === 'uploading' || uploadState === 'saving' || uploadState === 'validating'}
+                        className={`group relative flex items-center justify-center w-6 h-6 rounded-md bg-foreground/5 backdrop-blur-md border border-foreground/10 hover:border-purple-400/50 hover:bg-foreground/10 transition-all duration-300 shadow-[0_0_8px_rgba(139,92,246,0.2)] hover:shadow-[0_0_12px_rgba(139,92,246,0.4)] ${uploadState === 'uploading' || uploadState === 'saving' || uploadState === 'validating' ? 'cursor-wait opacity-70' : 'cursor-pointer'}`}
                         title="Upload Video/Photo"
                       >
-                        <Video className="w-3 h-3 text-purple-300 group-hover:text-purple-200 transition-colors" />
+                        {uploadState === 'uploading' || uploadState === 'saving' || uploadState === 'validating' ? (
+                          <svg className="w-3 h-3 text-purple-300 animate-spin" viewBox="0 0 24 24" fill="none">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" opacity="0.25" />
+                            <path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+                          </svg>
+                        ) : (
+                          <Video className="w-3 h-3 text-purple-300 group-hover:text-purple-200 transition-colors" />
+                        )}
                         <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse" />
                       </label>
                       {/* Selfie City Navigation Button */}
