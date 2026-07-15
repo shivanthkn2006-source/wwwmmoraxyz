@@ -253,6 +253,7 @@ const AuthPage = () => {
                     placeholder="Display Name"
                     value={formData.displayName}
                     onChange={handleInputChange}
+                    autoComplete="name"
                     required={isSignUp}
                     className={cn(
                       "bg-input border-border",
@@ -268,6 +269,7 @@ const AuthPage = () => {
                     placeholder="Username"
                     value={formData.username}
                     onChange={handleInputChange}
+                    autoComplete="username"
                     required={isSignUp}
                     className={cn(
                       "bg-input border-border",
@@ -286,6 +288,7 @@ const AuthPage = () => {
                 placeholder="Email"
                 value={formData.email}
                 onChange={handleInputChange}
+                autoComplete="email"
                 required
                 className={cn(
                   "bg-input border-border",
@@ -303,6 +306,7 @@ const AuthPage = () => {
                   placeholder="Password"
                   value={formData.password}
                   onChange={handleInputChange}
+                  autoComplete={isSignUp ? 'new-password' : 'current-password'}
                   required
                   className={cn(
                     "bg-input border-border pr-10",

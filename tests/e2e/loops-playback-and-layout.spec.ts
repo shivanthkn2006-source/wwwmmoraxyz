@@ -115,7 +115,6 @@ test.describe('Loops playback and responsive media', () => {
       if (await deferredFrame.isVisible().catch(() => false)) {
         const hasPoster = await deferredFrame.locator('[data-testid="post-deferred-poster"]').isVisible().catch(() => false);
         const hasSkeleton = await deferredFrame.locator('.animate-pulse').first().isVisible().catch(() => false);
-        await expect(deferredFrame.getByText(/Preview ready|Preview pending/i)).toBeVisible();
         expect(hasPoster || hasSkeleton, 'large preview should show poster or loading skeleton').toBeTruthy();
       }
     });

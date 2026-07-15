@@ -31,6 +31,8 @@ export const parsePrivateStorageUrl = (url: string | null | undefined): { bucket
   return { bucket: rest.slice(0, slash), path: rest.slice(slash + 1) };
 };
 
+export const isPrivateStorageUrl = (url: string | null | undefined) => !!parsePrivateStorageUrl(url);
+
 export const resolvePrivateStorageUrl = async (
   storageClient: { storage: { from: (bucket: string) => { createSignedUrl: (path: string, expiresIn: number) => Promise<{ data: { signedUrl?: string } | null; error: any }> } } },
   url: string | null | undefined,
