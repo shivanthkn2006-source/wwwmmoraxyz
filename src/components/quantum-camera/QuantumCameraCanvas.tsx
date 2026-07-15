@@ -186,6 +186,17 @@ const QuantumCameraCanvas: React.FC<QuantumCameraCanvasProps> = ({
     }
   };
 
+  // Voice-triggered auto capture (e.g. "Zoe take my picture")
+  useEffect(() => {
+    const onAutoCapture = () => {
+      // Wait a moment for camera stream to be ready if just mounted
+      setTimeout(() => handleCapture(), 300);
+    };
+    window.addEventListener('zoe:auto-capture', onAutoCapture as EventListener);
+    return () => window.removeEventListener('zoe:auto-capture', onAutoCapture as EventListener);
+  }, [onCapture]);
+
+
   // Config update helper
   const updateConfig = (key: keyof QuantumCameraConfig, value: number) => {
     setConfig(prev => ({ ...prev, [key]: value }));
