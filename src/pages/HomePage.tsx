@@ -159,6 +159,14 @@ const HomePage = () => {
   const [feedDiag, setFeedDiag] = useState<FeedDiagnostics | null>(null);
   const [debugEntries, setDebugEntries] = useState<Array<import('@/components/AdminFeedDebugger').FeedDebugEntry>>([]);
   const [consecutiveFailures, setConsecutiveFailures] = useState(0);
+
+  // Loops upload UI state
+  const [uploadState, setUploadState] = useState<'idle' | 'validating' | 'uploading' | 'saving' | 'error' | 'success'>('idle');
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadFileName, setUploadFileName] = useState<string>('');
+  const [uploadError, setUploadError] = useState<string>('');
+  const [lastUploadFile, setLastUploadFile] = useState<File | null>(null);
+  const [consecutiveFailures, setConsecutiveFailures] = useState(0);
   const isAdminUser = !!user && ['moksh50','justmkbhd','john','shivanth_kn'].includes(((userProfile?.username||'') as string).toLowerCase());
   const pushDebug = (e: Omit<import('@/components/AdminFeedDebugger').FeedDebugEntry,'timestamp'>) =>
     setDebugEntries(prev => [{...e, timestamp: new Date().toISOString()}, ...prev].slice(0, 50));
