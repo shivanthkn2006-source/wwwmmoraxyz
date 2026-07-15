@@ -150,6 +150,32 @@ const validateBrowserCanPreviewFile = (file: File, mediaType: 'video' | 'image')
     img.src = objectUrl;
   });
 
+const makeFallbackVideoPoster = () => {
+  const canvas = document.createElement('canvas');
+  canvas.width = 360;
+  canvas.height = 640;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+  const gradient = ctx.createLinearGradient(0, 0, 360, 640);
+  gradient.addColorStop(0, '#020617');
+  gradient.addColorStop(0.55, '#111827');
+  gradient.addColorStop(1, '#0f172a');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, 360, 640);
+  ctx.fillStyle = 'rgba(255,255,255,0.16)';
+  ctx.beginPath();
+  ctx.arc(180, 320, 54, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.86)';
+  ctx.beginPath();
+  ctx.moveTo(164, 290);
+  ctx.lineTo(164, 350);
+  ctx.lineTo(216, 320);
+  ctx.closePath();
+  ctx.fill();
+  return canvas.toDataURL('image/jpeg', 0.72);
+};
+
 const captureVideoPreview = (file: File) =>
   new Promise<string | null>((resolve) => {
     const objectUrl = URL.createObjectURL(file);
@@ -159,7 +185,7 @@ const captureVideoPreview = (file: File) =>
       cleanup();
       resolve(value);
     };
-    const timer = window.setTimeout(() => finish(null), 5000);
+    const timer = window.setTimeout(() => finish(makeFallbackVideoPoster()), 5000);
 
     video.preload = 'metadata';
     video.muted = true;
@@ -169,7 +195,7 @@ const captureVideoPreview = (file: File) =>
         video.currentTime = Math.min(0.2, Math.max(0.01, (Number.isFinite(video.duration) ? video.duration : 1) / 20));
       } catch {
         window.clearTimeout(timer);
-        finish(null);
+        finish(makeFallbackVideoPoster());
       }
     };
     video.onseeked = () => {
@@ -186,12 +212,12 @@ const captureVideoPreview = (file: File) =>
         finish(canvas.toDataURL('image/jpeg', 0.72));
       } catch {
         window.clearTimeout(timer);
-        finish(null);
+        finish(makeFallbackVideoPoster());
       }
     };
     video.onerror = () => {
       window.clearTimeout(timer);
-      finish(null);
+      finish(makeFallbackVideoPoster());
     };
     video.src = objectUrl;
   });
