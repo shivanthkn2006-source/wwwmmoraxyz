@@ -1042,6 +1042,48 @@ const HomePage = () => {
                     </div>
                   </div>
 
+                  {/* Loops upload progress / status */}
+                  {uploadState !== 'idle' && (
+                    <div
+                      className="rounded-md border border-border/50 bg-muted/30 px-3 py-2 text-xs"
+                      role="status"
+                      aria-live="polite"
+                    >
+                      <div className="flex items-center justify-between mb-1.5 gap-2">
+                        <span className="truncate">
+                          {uploadState === 'validating' && `Checking ${uploadFileName}…`}
+                          {uploadState === 'uploading' && `Uploading ${uploadFileName}… ${uploadProgress}%`}
+                          {uploadState === 'saving' && `Saving post…`}
+                          {uploadState === 'success' && `Posted!`}
+                          {uploadState === 'error' && (uploadError || 'Upload failed')}
+                        </span>
+                        {uploadState === 'error' && lastUploadFile && (
+                          <button
+                            onClick={retryLastUpload}
+                            className="shrink-0 text-primary hover:text-primary/80 underline underline-offset-2"
+                          >
+                            Try again
+                          </button>
+                        )}
+                      </div>
+                      {(uploadState === 'uploading' || uploadState === 'saving' || uploadState === 'validating') && (
+                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                          <div
+                            className="h-full bg-primary transition-[width] duration-200"
+                            style={{
+                              width: uploadState === 'saving'
+                                ? '100%'
+                                : uploadState === 'validating'
+                                  ? '5%'
+                                  : `${uploadProgress}%`,
+                            }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+
                   {filteredLoops.length > 0 ? (
                     <div className="flex gap-2 overflow-x-auto pb-1">
                       {filteredLoops.map((post, index) => (
