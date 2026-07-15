@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { AlertTriangle, Loader2, Play, RotateCcw } from 'lucide-react';
-import { appendMediaVersion } from '@/lib/mediaUtils';
+import { appendMediaVersion, makeFallbackVideoPoster } from '@/lib/mediaUtils';
 
 interface LoopVideoItemProps {
   post: {
@@ -37,8 +37,10 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({
   const [decodeFailureReason, setDecodeFailureReason] = useState('');
   const version = post.updated_at || post.created_at || post.id;
   const mediaSrc = appendMediaVersion(post.media_url, version);
-  const posterSrc = appendMediaVersion(post.media_preview_url, version);
-  const shouldShowVideoPreview = canPaintVideo && (!posterSrc || isPlaying);
+  const backendPosterSrc = appendMediaVersion(post.media_preview_url, version);
+  const generatedPosterSrc = React.useMemo(() => makeFallbackVideoPoster(), []);
+  const posterSrc = backendPosterSrc || generatedPosterSrc || undefined;
+  const shouldShowVideoPreview = canPaintVideo && (!backendPosterSrc || isPlaying);
 
   const getVideoErrorReason = () => {
     const error = videoRef.current?.error;
@@ -166,6 +168,7 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({
           alt="Loop preview"
           className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-150 ${isPlaying && canPaintVideo && !hasError ? 'opacity-0' : 'opacity-100'}`}
           loading="lazy"
+          data-testid="loop-poster-image"
         />
       )}
       {mediaSrc && !hasError && (
@@ -209,7 +212,7 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({
       )}
       
       {/* Loading State */}
-      {isLoading && !hasError && !post.media_preview_url && (
+      {isLoading && !hasError && !posterSrc && (
         <div className="absolute inset-0 flex items-center justify-center bg-muted animate-pulse">
           <Loader2 className="w-5 h-5 text-muted-foreground animate-spin" />
         </div>
@@ -217,14 +220,14 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({
       
       {/* Error State */}
       {hasError && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-background/70 p-1 text-center backdrop-blur-[1px]">
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-background/35 p-1 text-center backdrop-blur-[1px]">
           <AlertTriangle className="h-4 w-4 text-destructive" />
-          <span className="text-[8px] leading-tight text-foreground">Playback not supported for this format</span>
-          <span className="max-w-full truncate text-[7px] leading-tight text-muted-foreground" title={decodeFailureReason || 'No decode reason reported'}>
+          <span className="rounded bg-background/80 px-1 text-[8px] leading-tight text-foreground">Playback not supported</span>
+          <span className="max-w-full truncate rounded bg-background/80 px-1 text-[7px] leading-tight text-muted-foreground" title={decodeFailureReason || 'No decode reason reported'}>
             {decodeFailureReason || 'No decode reason reported'}
           </span>
-          <span className="max-w-full truncate text-[7px] leading-tight text-muted-foreground" title={posterSrc || 'No poster URL'}>
-            Poster: {posterSrc ? 'available' : 'missing'}
+          <span className="max-w-full truncate rounded bg-background/80 px-1 text-[7px] leading-tight text-muted-foreground" title={backendPosterSrc || 'No backend poster URL'}>
+            Poster: {backendPosterSrc ? 'available' : 'generated fallback'}
           </span>
           {canRegeneratePoster && onRegeneratePoster && (
             <span
