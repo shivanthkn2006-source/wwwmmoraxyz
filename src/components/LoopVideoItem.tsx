@@ -34,10 +34,23 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({
   const [hasError, setHasError] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [canPaintVideo, setCanPaintVideo] = useState(false);
+  const [decodeFailureReason, setDecodeFailureReason] = useState('');
   const version = post.updated_at || post.created_at || post.id;
   const mediaSrc = appendMediaVersion(post.media_url, version);
   const posterSrc = appendMediaVersion(post.media_preview_url, version);
   const shouldShowVideoPreview = canPaintVideo && (!posterSrc || isPlaying);
+
+  const getVideoErrorReason = () => {
+    const error = videoRef.current?.error;
+    if (!error) return 'Unknown decode error';
+    const names: Record<number, string> = {
+      1: 'Playback aborted while loading',
+      2: 'Network error while loading media',
+      3: 'Decode failed in this browser',
+      4: 'Media source or format is not supported',
+    };
+    return error.message || names[error.code] || `Media error ${error.code}`;
+  };
 
   // Preload enough data to paint the first frame on mount / when src changes.
   // Metadata alone often leaves mobile browsers with a black tile.
@@ -45,12 +58,14 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({
     if (!videoRef.current || !post.media_url) {
       setIsLoading(false);
       setHasError(true);
+      setDecodeFailureReason('Missing media source URL');
       onDecodeStatus?.(post.id, 'missing-source');
       return;
     }
     setIsLoading(true);
     setHasError(false);
     setCanPaintVideo(false);
+    setDecodeFailureReason('');
     onDecodeStatus?.(post.id, 'loading');
     const video = videoRef.current;
     video.load();
@@ -65,6 +80,7 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({
       if (videoRef.current && videoRef.current.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
         setIsLoading(false);
         setHasError(true);
+        setDecodeFailureReason('Preview timed out before the browser decoded a frame');
         onDecodeStatus?.(post.id, 'timeout');
       }
     }, 12000);
@@ -107,14 +123,17 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({
     setIsLoading(false);
     setHasError(false);
     setCanPaintVideo(true);
+    setDecodeFailureReason('');
     onDecodeStatus?.(post.id, 'ready');
   };
 
   const handleError = () => {
+    const reason = getVideoErrorReason();
     setIsLoading(false);
-    console.error('[LoopVideoItem] preview failed', { postId: post.id, src: post.media_url, error: videoRef.current?.error });
+    console.error('[LoopVideoItem] preview failed', { postId: post.id, src: post.media_url, poster: post.media_preview_url, reason, error: videoRef.current?.error });
     setHasError(true);
     setCanPaintVideo(false);
+    setDecodeFailureReason(reason);
     onDecodeStatus?.(post.id, 'decode-failed');
     onPreviewError?.(post.id);
   };
@@ -191,7 +210,7 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({
       
       {/* Loading State */}
       {isLoading && !hasError && !post.media_preview_url && (
-        <div className="absolute inset-0 flex items-center justify-center bg-muted">
+        <div className="absolute inset-0 flex items-center justify-center bg-muted animate-pulse">
           <Loader2 className="w-5 h-5 text-muted-foreground animate-spin" />
         </div>
       )}
@@ -201,6 +220,12 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-background/70 p-1 text-center backdrop-blur-[1px]">
           <AlertTriangle className="h-4 w-4 text-destructive" />
           <span className="text-[8px] leading-tight text-foreground">Playback not supported for this format</span>
+          <span className="max-w-full truncate text-[7px] leading-tight text-muted-foreground" title={decodeFailureReason || 'No decode reason reported'}>
+            {decodeFailureReason || 'No decode reason reported'}
+          </span>
+          <span className="max-w-full truncate text-[7px] leading-tight text-muted-foreground" title={posterSrc || 'No poster URL'}>
+            Poster: {posterSrc ? 'available' : 'missing'}
+          </span>
           {canRegeneratePoster && onRegeneratePoster && (
             <span
               role="button"
