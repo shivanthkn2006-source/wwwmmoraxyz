@@ -597,52 +597,60 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
           <p className="text-foreground mb-3">{post.content}</p>
         )}
 
-        {(displayMediaUrl || isDeferredHeavyMedia) && (
-          <div className="mb-3 rounded-lg overflow-hidden bg-black">
-            {isDeferredHeavyMedia ? (
-              <button
-                type="button"
-                onClick={revealDeferredMedia}
-                className="flex aspect-square w-full flex-col items-center justify-center gap-2 bg-muted/70 p-4 text-center text-sm text-muted-foreground hover:bg-muted"
-              >
-                <span className="font-medium text-foreground">Large media</span>
-                <span>{loadingHeavyMedia ? 'Opening…' : 'Tap to open without slowing the feed'}</span>
-              </button>
-            ) : post.media_type === 'image' || displayMediaUrl.startsWith('data:image/') ? (
-              // Responsive image container: preserves aspect ratio, caps at 85vh on mobile
-              // and 70vh on desktop so tall portrait shots don't take over the screen.
-              <div className="relative w-full max-h-[85vh] sm:max-h-[70vh] flex items-center justify-center">
-                <img
-                  src={displayMediaUrl}
-                  alt="Post media"
-                  className="w-full max-h-[85vh] sm:max-h-[70vh] object-contain cursor-pointer hover:opacity-90 transition-opacity"
-                  onClick={() => setShowImageViewer(true)}
-                />
-              </div>
-            ) : post.media_type === 'video' || displayMediaUrl.startsWith('data:video/') ? (
-              // YouTube-style responsive video: fits the viewport in any orientation.
-              // Portrait (Shorts-like) shows tall with letterboxing; landscape fills width.
-              <div className="relative w-full max-h-[85vh] sm:max-h-[70vh] flex items-center justify-center">
-                <video
-                  src={displayMediaUrl}
-                  controls
-                  playsInline
-                  preload="metadata"
-                  className="w-full max-h-[85vh] sm:max-h-[70vh] object-contain"
-                />
-              </div>
-            ) : (
-              <div className="relative w-full max-h-[85vh] sm:max-h-[70vh] flex items-center justify-center">
-                <img
-                  src={displayMediaUrl}
-                  alt="Post media"
-                  className="w-full max-h-[85vh] sm:max-h-[70vh] object-contain cursor-pointer hover:opacity-90 transition-opacity"
-                  onClick={() => setShowImageViewer(true)}
-                />
-              </div>
-            )}
-          </div>
-        )}
+        {(displayMediaUrl || isDeferredHeavyMedia) && (() => {
+          // Route by real media type inferred from the URL (data-URL prefix or file ext),
+          // falling back to the declared media_type. Legacy rows saved videos with
+          // media_type='image', so trusting the column alone renders <img> for videos.
+          const url = displayMediaUrl || '';
+          const clean = url.split('?')[0].toLowerCase();
+          const isVideo = !!displayMediaUrl && (
+            url.startsWith('data:video/') ||
+            /\.(mp4|webm|mov|ogg|m4v)$/.test(clean) ||
+            (post.media_type === 'video' && !url.startsWith('data:image/'))
+          );
+          return (
+            <div className="mb-3 rounded-lg overflow-hidden bg-black">
+              {isDeferredHeavyMedia ? (
+                <button
+                  type="button"
+                  onClick={revealDeferredMedia}
+                  className="flex aspect-square w-full flex-col items-center justify-center gap-2 bg-muted/70 p-4 text-center text-sm text-muted-foreground hover:bg-muted"
+                >
+                  <span className="font-medium text-foreground">Large media</span>
+                  <span>{loadingHeavyMedia ? 'Opening…' : 'Tap to open without slowing the feed'}</span>
+                </button>
+              ) : isVideo ? (
+                // YouTube/Shorts-style responsive video: fits any orientation, never crops.
+                // Uses svh so mobile browser chrome doesn't clip. Caps height by viewport.
+                <div className="relative w-full max-h-[85svh] sm:max-h-[75vh] lg:max-h-[70vh] flex items-center justify-center">
+                  <video
+                    src={displayMediaUrl}
+                    controls
+                    playsInline
+                    preload="metadata"
+                    className="w-full max-h-[85svh] sm:max-h-[75vh] lg:max-h-[70vh] object-contain"
+                    onLoadedMetadata={(e) => {
+                      // Force first-frame poster on iOS Safari.
+                      const v = e.currentTarget;
+                      if (v.currentTime === 0) { try { v.currentTime = 0.1; } catch {} }
+                    }}
+                    onError={(e) => console.error('[PostCard][video]', post.id, e.currentTarget.error)}
+                  />
+                </div>
+              ) : (
+                <div className="relative w-full max-h-[85svh] sm:max-h-[75vh] lg:max-h-[70vh] flex items-center justify-center">
+                  <img
+                    src={displayMediaUrl}
+                    alt="Post media"
+                    className="w-full max-h-[85svh] sm:max-h-[75vh] lg:max-h-[70vh] object-contain cursor-pointer hover:opacity-90 transition-opacity"
+                    onClick={() => setShowImageViewer(true)}
+                    onError={() => console.error('[PostCard][image] failed to load', post.id)}
+                  />
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {showImageViewer && displayMediaUrl && (
           <ImageViewer
