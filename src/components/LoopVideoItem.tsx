@@ -5,6 +5,7 @@ interface LoopVideoItemProps {
   post: {
     id: string;
     media_url: string | null;
+    media_preview_url?: string | null;
   };
   index: number;
   onVideoClick: (index: number) => void;
@@ -86,6 +87,10 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({ post, index, onVideoClick
   const handleError = () => {
     console.error('[LoopVideoItem] preview failed', { postId: post.id, src: post.media_url, error: videoRef.current?.error });
     setIsLoading(false);
+    if (post.media_preview_url) {
+      setHasError(false);
+      return;
+    }
     setHasError(true);
     onPreviewError?.(post.id);
   };
@@ -110,10 +115,19 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({ post, index, onVideoClick
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
+      {post.media_preview_url && (
+        <img
+          src={post.media_preview_url}
+          alt="Loop preview"
+          className="absolute inset-0 h-full w-full object-cover"
+          loading="lazy"
+        />
+      )}
       {post.media_url && (
         <video
           ref={videoRef}
           src={post.media_url}
+          poster={post.media_preview_url || undefined}
           className="w-full h-full object-cover"
           muted
           loop
@@ -128,16 +142,16 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({ post, index, onVideoClick
       )}
       
       {/* Loading State */}
-      {isLoading && !hasError && (
+      {isLoading && !hasError && !post.media_preview_url && (
         <div className="absolute inset-0 flex items-center justify-center bg-muted">
           <Loader2 className="w-5 h-5 text-muted-foreground animate-spin" />
         </div>
       )}
       
       {/* Error State */}
-      {hasError && (
+      {hasError && !post.media_preview_url && (
         <div className="absolute inset-0 flex items-center justify-center bg-muted/80">
-          <span className="text-[8px] text-muted-foreground text-center px-1">Unable to load</span>
+          <span className="text-[8px] text-muted-foreground text-center px-1">Unable to preview</span>
         </div>
       )}
       

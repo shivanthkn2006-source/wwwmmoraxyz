@@ -57,6 +57,7 @@ interface Post {
   user_id: string;
   content: string | null;
   media_url: string | null;
+  media_preview_url?: string | null;
   full_media_url?: string | null;
   media_type: string | null;
   has_deferred_media?: boolean;
@@ -147,6 +148,52 @@ const validateBrowserCanPreviewFile = (file: File, mediaType: 'video' | 'image')
       reject(new Error('This image cannot be decoded for preview. Use JPG, PNG, WebP, or GIF.'));
     };
     img.src = objectUrl;
+  });
+
+const captureVideoPreview = (file: File) =>
+  new Promise<string | null>((resolve) => {
+    const objectUrl = URL.createObjectURL(file);
+    const video = document.createElement('video');
+    const cleanup = () => URL.revokeObjectURL(objectUrl);
+    const finish = (value: string | null) => {
+      cleanup();
+      resolve(value);
+    };
+    const timer = window.setTimeout(() => finish(null), 5000);
+
+    video.preload = 'metadata';
+    video.muted = true;
+    video.playsInline = true;
+    video.onloadedmetadata = () => {
+      try {
+        video.currentTime = Math.min(0.2, Math.max(0.01, (Number.isFinite(video.duration) ? video.duration : 1) / 20));
+      } catch {
+        window.clearTimeout(timer);
+        finish(null);
+      }
+    };
+    video.onseeked = () => {
+      try {
+        const width = video.videoWidth || 360;
+        const height = video.videoHeight || 640;
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.min(360, width);
+        canvas.height = Math.round((canvas.width / width) * height);
+        const ctx = canvas.getContext('2d');
+        if (!ctx) throw new Error('No canvas context');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        window.clearTimeout(timer);
+        finish(canvas.toDataURL('image/jpeg', 0.72));
+      } catch {
+        window.clearTimeout(timer);
+        finish(null);
+      }
+    };
+    video.onerror = () => {
+      window.clearTimeout(timer);
+      finish(null);
+    };
+    video.src = objectUrl;
   });
 
 async function withRetry<T>(fn: (attempt: number) => Promise<T>, attempts = 3, baseDelay = 800): Promise<T> {
@@ -413,7 +460,7 @@ const HomePage = () => {
       // SIMPLIFIED: Fetch posts first without complex joins to avoid JSON parse errors
       const postsResult = await (supabase as any)
         .from('feed_posts_safe')
-        .select('id, user_id, content, media_url, media_type, likes_count, comments_count, created_at, visibility, has_deferred_media, media_size')
+        .select('id, user_id, content, media_url, media_type, likes_count, comments_count, created_at, visibility, has_deferred_media, media_size, media_preview_url')
         .eq('visibility', 'global')
         .is('private_timeline_id', null)
         .order('created_at', { ascending: false })
@@ -524,7 +571,7 @@ const HomePage = () => {
       // large data URLs, which makes valid uploaded videos disappear from Loops.
       const postsResult = await (supabase as any)
         .from('posts')
-        .select('id, user_id, content, media_url, media_type, likes_count, comments_count, created_at, visibility, private_timeline_id')
+        .select('id, user_id, content, media_url, media_type, likes_count, comments_count, created_at, visibility, private_timeline_id, media_preview_url')
         .eq('visibility', 'global')
         .is('private_timeline_id', null)
         .not('media_url', 'is', null)
@@ -610,7 +657,7 @@ const HomePage = () => {
       // SIMPLIFIED: Fetch posts first without complex joins to avoid JSON parse errors
       const postsResult = await (supabase as any)
         .from('feed_posts_safe')
-        .select('id, user_id, content, media_url, media_type, likes_count, comments_count, created_at, visibility, has_deferred_media, media_size')
+        .select('id, user_id, content, media_url, media_type, likes_count, comments_count, created_at, visibility, has_deferred_media, media_size, media_preview_url')
         .eq('visibility', 'personal')
         .is('private_timeline_id', null)
         .in('user_id', [...friendIds, user.id])
@@ -902,6 +949,7 @@ const HomePage = () => {
 
     try {
       await validateBrowserCanPreviewFile(file, mediaType);
+      const mediaPreviewUrl = mediaType === 'video' ? await captureVideoPreview(file) : null;
       setUploadState('uploading');
       let mediaUrl: string;
 
@@ -949,6 +997,7 @@ const HomePage = () => {
         user_id: user.id,
         content: '',
         media_url: mediaUrl,
+        media_preview_url: mediaPreviewUrl || (mediaType === 'image' ? mediaUrl : null),
         media_type: mediaType,
         visibility: 'global',
       });
