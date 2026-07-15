@@ -38,7 +38,7 @@ export const AdaptiveLearningMeter: React.FC<AdaptiveLearningMeterProps> = ({
   const getProgressColor = () => {
     if (finetuningReady) return 'bg-gradient-to-r from-emerald-500 to-green-400';
     if (syncPercentage >= 75) return 'bg-gradient-to-r from-blue-500 to-cyan-400';
-    if (syncPercentage >= 50) return 'bg-gradient-to-r from-cyan-500 to-teal-400';
+    if (syncPercentage >= 50) return 'bg-gradient-to-r from-cyan-500 to-blue-400';
     if (syncPercentage >= 25) return 'bg-gradient-to-r from-amber-500 to-yellow-400';
     return 'bg-gradient-to-r from-gray-500 to-gray-400';
   };

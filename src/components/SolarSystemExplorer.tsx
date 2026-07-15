@@ -1444,7 +1444,7 @@ export const SolarSystemExplorer: React.FC = () => {
             exit={{ opacity: 0, scale: 0.95 }} 
             className="absolute top-12 left-1/2 -translate-x-1/2 z-[60] w-[300px] max-w-[90vw]"
           >
-            <Card className="bg-gradient-to-br from-emerald-900/98 to-teal-900/98 border-2 border-green-400 p-4 rounded-xl backdrop-blur-xl shadow-2xl shadow-green-500/30">
+            <Card className="bg-gradient-to-br from-emerald-900/98 to-blue-900/98 border-2 border-green-400 p-4 rounded-xl backdrop-blur-xl shadow-2xl shadow-green-500/30">
               <div className="flex justify-between items-center mb-3">
                 <h3 className="text-sm font-bold text-white flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-green-300" /> Zoe Narration Style

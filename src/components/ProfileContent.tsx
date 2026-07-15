@@ -642,7 +642,7 @@ const ProfileContent = () => {
           <Button 
             variant="outline" 
             onClick={() => navigate("/vitruvian")}
-            className="w-full backdrop-blur-sm bg-gradient-to-r from-cyan-500/20 to-teal-500/20 border-cyan-500/30 hover:from-cyan-500/30 hover:to-teal-500/30"
+            className="w-full backdrop-blur-sm bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border-cyan-500/30 hover:from-cyan-500/30 hover:to-blue-500/30"
           >
             <Dna className="h-4 w-4 mr-2" />
             Bio-Sync

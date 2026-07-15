@@ -32,7 +32,7 @@ const variantStyles = {
     glowColor: 'cyan-500/30',
   },
   evolution: {
-    gradient: 'from-emerald-950/80 via-teal-950/60 to-black',
+    gradient: 'from-emerald-950/80 via-blue-950/60 to-black',
     accent: 'emerald',
     icon: Sparkles,
     glowColor: 'emerald-500/30',

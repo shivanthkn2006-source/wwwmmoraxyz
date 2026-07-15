@@ -32,7 +32,7 @@ interface DreamEntry {
 // Dream stages for animated tour
 const dreamStages = [
   { id: 1, name: 'Stage 1: Light Sleep', emoji: '😴', duration: '5-10 min', description: 'Transitioning from wakefulness, easily awakened, muscle activity slows', color: 'from-blue-400 to-cyan-400' },
-  { id: 2, name: 'Stage 2: True Sleep', emoji: '💤', duration: '20 min', description: 'Heart rate slows, body temperature drops, brain produces sleep spindles', color: 'from-cyan-400 to-teal-400' },
+  { id: 2, name: 'Stage 2: True Sleep', emoji: '💤', duration: '20 min', description: 'Heart rate slows, body temperature drops, brain produces sleep spindles', color: 'from-cyan-400 to-blue-400' },
   { id: 3, name: 'Stage 3: Deep Sleep', emoji: '🌙', duration: '30-40 min', description: 'Most restorative stage, tissue repair, immune system strengthens', color: 'from-purple-500 to-indigo-500' },
   { id: 4, name: 'REM Sleep', emoji: '✨', duration: '10-60 min', description: 'Vivid dreams occur, brain activity increases, memory consolidation', color: 'from-pink-500 to-purple-500' },
   { id: 5, name: 'Lucid Dreaming', emoji: '🔮', duration: 'Variable', description: 'Awareness within dreams, ability to control dream narrative', color: 'from-amber-400 to-orange-500' }

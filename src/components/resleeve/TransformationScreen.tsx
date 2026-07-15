@@ -20,7 +20,7 @@ const SLEEVE_THEMES: Record<string, { gradient: string; accent: string }> = {
   'zoe-painter': { gradient: 'from-orange-500 via-pink-500 to-purple-500', accent: 'orange' },
   'zoe-coder': { gradient: 'from-cyan-500 via-blue-500 to-indigo-500', accent: 'cyan' },
   'zoe-entrepreneur': { gradient: 'from-amber-500 via-orange-500 to-red-500', accent: 'amber' },
-  'zoe-healer': { gradient: 'from-green-500 via-emerald-500 to-teal-500', accent: 'green' },
+  'zoe-healer': { gradient: 'from-green-500 via-emerald-500 to-blue-500', accent: 'green' },
   'zoe-connector': { gradient: 'from-purple-500 via-violet-500 to-fuchsia-500', accent: 'purple' }
 };
 
