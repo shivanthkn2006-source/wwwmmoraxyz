@@ -20,7 +20,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { toast } from 'sonner';
 import VideoCreationModal from './VideoCreationModal';
-import { appendMediaVersion } from '@/lib/mediaUtils';
+import { appendMediaVersion, resolvePrivateStorageUrl } from '@/lib/mediaUtils';
 
 interface Post {
   id: string;
@@ -86,6 +86,8 @@ const FullScreenVideoPlayer: React.FC<FullScreenVideoPlayerProps> = ({
   const mediaVersion = currentVideo?.updated_at || currentVideo?.created_at || currentVideo?.id;
   const currentMediaUrl = appendMediaVersion(currentVideo?.media_url, mediaVersion) || '';
   const currentPosterUrl = appendMediaVersion(currentVideo?.media_preview_url, mediaVersion);
+  const [signedPosterUrls, setSignedPosterUrls] = useState<Record<string, string>>({});
+  const displayedPosterUrl = signedPosterUrls[currentVideo?.id || ''] || currentPosterUrl;
 
   // Preload neighbour videos + posters to avoid stutter on swipe.
   const preloadUrls = React.useMemo(() => {
@@ -114,6 +116,27 @@ const FullScreenVideoPlayer: React.FC<FullScreenVideoPlayerProps> = ({
       v.play().catch(console.error);
     });
   }, [currentIndex]);
+
+  useEffect(() => {
+    let alive = true;
+    const current = videos[currentIndex];
+    const neighbours = [currentIndex - 1, currentIndex, currentIndex + 1]
+      .filter((i) => i >= 0 && i < videos.length)
+      .map((i) => videos[i]);
+    Promise.all(neighbours.map(async (item) => {
+      if (!item?.media_preview_url) return null;
+      const signed = await resolvePrivateStorageUrl(supabase, item.media_preview_url).catch(() => undefined);
+      return signed ? [item.id, signed] as const : null;
+    })).then((pairs) => {
+      if (!alive) return;
+      setSignedPosterUrls((prev) => {
+        const next = { ...prev };
+        pairs.forEach((pair) => { if (pair) next[pair[0]] = pair[1]; });
+        return next;
+      });
+    });
+    return () => { alive = false; };
+  }, [currentIndex, videos]);
 
   useEffect(() => {
     if (!leftHudOpen) return;
@@ -179,7 +202,14 @@ const FullScreenVideoPlayer: React.FC<FullScreenVideoPlayerProps> = ({
   const togglePlayPause = () => {
     if (videoRef.current) {
       if (paused) {
-        videoRef.current.play();
+        videoRef.current.muted = false;
+        setMuted(false);
+        videoRef.current.play().catch(() => {
+          if (!videoRef.current) return;
+          videoRef.current.muted = true;
+          setMuted(true);
+          videoRef.current.play().catch(() => {});
+        });
       } else {
         videoRef.current.pause();
       }
@@ -283,19 +313,23 @@ const FullScreenVideoPlayer: React.FC<FullScreenVideoPlayerProps> = ({
           <video
             ref={videoRef}
             src={currentMediaUrl}
-            poster={currentPosterUrl}
+            poster={displayedPosterUrl}
             className={`w-full h-full object-contain ${decodeFailed ? 'hidden' : ''}`}
-            loop
+            loop={false}
             muted={muted}
             playsInline
             onClick={togglePlayPause}
             onCanPlay={() => setDecodeFailed(false)}
             onError={() => setDecodeFailed(true)}
+            onEnded={() => {
+              if (currentIndex < videos.length - 1) setCurrentIndex((i) => i + 1);
+              else videoRef.current?.play().catch(() => {});
+            }}
           />
 
           {decodeFailed && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black text-center text-white">
-              {currentPosterUrl && <img src={currentPosterUrl} alt="Loop poster" className="max-h-full max-w-full object-contain" />}
+              {displayedPosterUrl && <img src={displayedPosterUrl} alt="Loop poster" className="max-h-full max-w-full object-contain" />}
               <div className="absolute inset-x-4 bottom-24 rounded-lg bg-black/70 px-4 py-3 backdrop-blur-sm">
                 <p className="text-sm font-medium">Playback not supported for this format</p>
               </div>
@@ -307,7 +341,7 @@ const FullScreenVideoPlayer: React.FC<FullScreenVideoPlayerProps> = ({
             {preloadUrls.map((p, i) => (
               <React.Fragment key={i}>
                 {p.media && <video src={p.media} preload="auto" muted playsInline />}
-                {p.poster && <img src={p.poster} alt="" />}
+                {(signedPosterUrls[videos[currentIndex + (i === 0 ? -1 : 1)]?.id || ''] || p.poster) && <img src={signedPosterUrls[videos[currentIndex + (i === 0 ? -1 : 1)]?.id || ''] || p.poster} alt="" />}
               </React.Fragment>
             ))}
           </div>

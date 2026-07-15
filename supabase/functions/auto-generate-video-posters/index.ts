@@ -1,6 +1,6 @@
-// Background job: scan posts for videos missing a poster (media_preview_url)
-// and generate + upload a branded SVG placeholder poster, then update the row.
-// Runs via pg_cron; does not touch frontend code paths.
+// Background job: scan posts for videos missing a poster and generate a private,
+// deterministic auto-poster. Storage writes are service-role only; clients read
+// through signed URLs gated by Storage RLS.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
@@ -11,8 +11,9 @@ const corsHeaders = {
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const BUCKET = "posts";
+const BUCKET = "post-auto-posters";
 const BATCH = 25;
+const PRIVATE_PREFIX = `private://${BUCKET}/`;
 
 function svgPoster(label = "Video") {
   const svg = `<?xml version="1.0" encoding="UTF-8"?>
@@ -27,10 +28,14 @@ function svgPoster(label = "Video") {
   <rect width="720" height="1280" fill="url(#g)"/>
   <circle cx="360" cy="580" r="120" fill="rgba(255,255,255,0.22)"/>
   <polygon points="326,510 326,650 450,580" fill="#fff"/>
-  <text x="360" y="820" text-anchor="middle" fill="#fff" font-family="system-ui,-apple-system,sans-serif" font-size="42" font-weight="700">${label}</text>
 </svg>`;
   return new TextEncoder().encode(svg);
 }
+
+const isDuplicateUpload = (error: { message?: string; statusCode?: string | number } | null) => {
+  const message = error?.message?.toLowerCase() || "";
+  return error?.statusCode === "409" || message.includes("already exists") || message.includes("duplicate");
+};
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -40,9 +45,9 @@ Deno.serve(async (req) => {
   try {
     const { data: rows, error } = await supabase
       .from("posts")
-      .select("id, media_url, full_media_url, media_type, media_preview_url, has_deferred_media")
-      .is("media_preview_url", null)
-      .or("media_type.eq.video,has_deferred_media.eq.true")
+      .select("id, media_url, media_type, media_preview_url")
+      .or("media_preview_url.is.null,media_preview_url.like.%/storage/v1/object/public/posts/auto-posters/%")
+      .or("media_type.eq.video,media_url.like.data:video/%,media_url.ilike.%.mp4%,media_url.ilike.%.webm%,media_url.ilike.%.mov%,media_url.ilike.%.ogg%,media_url.ilike.%.m4v%")
       .order("created_at", { ascending: false })
       .limit(BATCH);
 
@@ -51,7 +56,7 @@ Deno.serve(async (req) => {
     const results: Array<{ id: string; ok: boolean; error?: string; url?: string }> = [];
 
     for (const row of rows ?? []) {
-      const src = row.media_url || row.full_media_url;
+      const src = row.media_url;
       // Only process rows where the media is/looks like a video.
       const looksVideo =
         row.media_type === "video" ||
@@ -64,31 +69,34 @@ Deno.serve(async (req) => {
 
       const bytes = svgPoster("Preview");
       const path = `auto-posters/${row.id}.svg`;
+      const privateUrl = `${PRIVATE_PREFIX}${path}`;
+
+      if (row.media_preview_url === privateUrl) {
+        results.push({ id: row.id, ok: true, url: privateUrl });
+        continue;
+      }
 
       const { error: upErr } = await supabase.storage
         .from(BUCKET)
-        .upload(path, bytes, { contentType: "image/svg+xml", upsert: true });
+        .upload(path, bytes, { contentType: "image/svg+xml", upsert: false });
 
-      if (upErr) {
+      if (upErr && !isDuplicateUpload(upErr)) {
         results.push({ id: row.id, ok: false, error: `upload: ${upErr.message}` });
         continue;
       }
 
-      const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(path);
-      const publicUrl = pub.publicUrl;
-
       const { error: updErr } = await supabase
         .from("posts")
-        .update({ media_preview_url: publicUrl })
+        .update({ media_preview_url: privateUrl })
         .eq("id", row.id)
-        .is("media_preview_url", null); // avoid overwriting a real poster added meanwhile
+        .or("media_preview_url.is.null,media_preview_url.like.%/storage/v1/object/public/posts/auto-posters/%"); // avoid overwriting a real poster added meanwhile
 
       if (updErr) {
         results.push({ id: row.id, ok: false, error: `update: ${updErr.message}` });
         continue;
       }
 
-      results.push({ id: row.id, ok: true, url: publicUrl });
+      results.push({ id: row.id, ok: true, url: privateUrl });
     }
 
     console.log("[auto-generate-video-posters]", JSON.stringify({ processed: results.length, ok: results.filter(r => r.ok).length }));

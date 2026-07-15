@@ -17,7 +17,7 @@ import StatusIconBadge from '@/components/StatusIconBadge';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePrivateTimelines } from '@/hooks/usePrivateTimelines';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { appendMediaVersion, inferMediaType, makeFallbackVideoPoster } from '@/lib/mediaUtils';
+import { appendMediaVersion, inferMediaType, makeFallbackVideoPoster, resolvePrivateStorageUrl } from '@/lib/mediaUtils';
 
 interface Post {
   id: string;
@@ -74,6 +74,8 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
   const [sharingToTimeline, setSharingToTimeline] = useState(false);
   const [isVideoPlaying, setIsVideoPlaying] = useState(true);
   const [videoInView, setVideoInView] = useState(false);
+  const [soundUnlocked, setSoundUnlocked] = useState(false);
+  const [resolvedPreviewSrc, setResolvedPreviewSrc] = useState<string | undefined>();
   const videoRef = React.useRef<HTMLVideoElement | null>(null);
   const mediaFrameRef = React.useRef<HTMLDivElement | null>(null);
 
@@ -88,7 +90,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
   const displayMediaSrc = appendMediaVersion(displayMediaUrl, mediaVersion);
   const previewSrc = appendMediaVersion(post.media_preview_url, mediaVersion);
   const fallbackPosterSrc = React.useMemo(() => makeFallbackVideoPoster(), []);
-  const posterSrc = previewSrc || (post.media_type === 'video' ? fallbackPosterSrc || undefined : undefined);
+  const posterSrc = resolvedPreviewSrc || previewSrc || (post.media_type === 'video' ? fallbackPosterSrc || undefined : undefined);
 
   const getVideoErrorReason = (video: HTMLVideoElement) => {
     const error = video.error;
@@ -130,7 +132,11 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
           const v = videoRef.current;
           if (!v) return;
           if (inView) {
-            v.play().then(() => setIsVideoPlaying(true)).catch(() => {});
+            v.muted = !soundUnlocked;
+            v.play().then(() => setIsVideoPlaying(true)).catch(() => {
+              v.muted = true;
+              v.play().then(() => setIsVideoPlaying(true)).catch(() => {});
+            });
           } else {
             v.pause();
           }
@@ -140,7 +146,26 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
     );
     io.observe(frame);
     return () => io.disconnect();
-  }, [isDeferredHeavyMedia, revealDeferredMedia, displayMediaSrc]);
+  }, [isDeferredHeavyMedia, revealDeferredMedia, displayMediaSrc, soundUnlocked]);
+
+  useEffect(() => {
+    let alive = true;
+    setResolvedPreviewSrc(undefined);
+    resolvePrivateStorageUrl(supabase, post.media_preview_url)
+      .then((url) => { if (alive) setResolvedPreviewSrc(url); })
+      .catch((e) => console.warn('[PostCard] signed poster failed', post.id, e));
+    return () => { alive = false; };
+  }, [post.media_preview_url, post.id]);
+
+  useEffect(() => {
+    const unlock = () => setSoundUnlocked(true);
+    window.addEventListener('pointerdown', unlock, { once: true, passive: true });
+    window.addEventListener('keydown', unlock, { once: true });
+    return () => {
+      window.removeEventListener('pointerdown', unlock);
+      window.removeEventListener('keydown', unlock);
+    };
+  }, []);
 
 
   // Sync state with post prop when it changes
@@ -653,7 +678,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
                   onClick={() => {
                     const v = videoRef.current;
                     if (!v) return;
-                    if (v.paused) { v.play().catch(() => {}); setIsVideoPlaying(true); }
+                    if (v.paused) { v.muted = false; v.play().catch(() => { v.muted = true; v.play().catch(() => {}); }); setIsVideoPlaying(true); }
                     else { v.pause(); setIsVideoPlaying(false); }
                   }}
                 >
@@ -662,7 +687,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
                     src={displayMediaSrc}
                     poster={posterSrc}
                     playsInline
-                    muted
+                    muted={!soundUnlocked}
                     loop
                     preload="metadata"
                     className="h-auto w-full max-h-[85svh] object-contain"

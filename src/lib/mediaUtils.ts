@@ -12,7 +12,7 @@ export const inferMediaType = (url: string | null | undefined, declared?: string
 
 export const appendMediaVersion = (url: string | null | undefined, version?: string | number | null): string | undefined => {
   if (!url) return undefined;
-  if (!version || url.startsWith('data:') || url.startsWith('blob:')) return url;
+  if (!version || url.startsWith('data:') || url.startsWith('blob:') || url.startsWith('private://')) return url;
   try {
     const parsed = new URL(url, window.location.origin);
     parsed.searchParams.set('v', String(version));
@@ -21,6 +21,26 @@ export const appendMediaVersion = (url: string | null | undefined, version?: str
     const joiner = url.includes('?') ? '&' : '?';
     return `${url}${joiner}v=${encodeURIComponent(String(version))}`;
   }
+};
+
+export const parsePrivateStorageUrl = (url: string | null | undefined): { bucket: string; path: string } | null => {
+  if (!url?.startsWith('private://')) return null;
+  const rest = url.slice('private://'.length);
+  const slash = rest.indexOf('/');
+  if (slash <= 0 || slash === rest.length - 1) return null;
+  return { bucket: rest.slice(0, slash), path: rest.slice(slash + 1) };
+};
+
+export const resolvePrivateStorageUrl = async (
+  storageClient: { storage: { from: (bucket: string) => { createSignedUrl: (path: string, expiresIn: number) => Promise<{ data: { signedUrl?: string } | null; error: any }> } } },
+  url: string | null | undefined,
+  expiresIn = 3600,
+): Promise<string | undefined> => {
+  const ref = parsePrivateStorageUrl(url);
+  if (!ref) return url || undefined;
+  const { data, error } = await storageClient.storage.from(ref.bucket).createSignedUrl(ref.path, expiresIn);
+  if (error) throw error;
+  return data?.signedUrl;
 };
 
 export const getPostsStorageObjectPath = (url: string | null | undefined): string | null => {
@@ -71,13 +91,6 @@ export const makeFallbackVideoPoster = () => {
   ctx.lineTo(224, 286);
   ctx.closePath();
   ctx.fill();
-  ctx.fillStyle = 'rgba(255,255,255,0.94)';
-  ctx.font = '700 26px system-ui, -apple-system, BlinkMacSystemFont, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('Preview pending', 180, 390);
-  ctx.font = '500 18px system-ui, -apple-system, BlinkMacSystemFont, sans-serif';
-  ctx.fillStyle = 'rgba(255,255,255,0.82)';
-  ctx.fillText('Tap to open video', 180, 424);
   return canvas.toDataURL('image/jpeg', 0.72);
 };
 
