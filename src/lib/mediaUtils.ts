@@ -43,22 +43,41 @@ export const makeFallbackVideoPoster = () => {
   const ctx = canvas.getContext('2d');
   if (!ctx) return null;
   const gradient = ctx.createLinearGradient(0, 0, 360, 640);
-  gradient.addColorStop(0, '#020617');
-  gradient.addColorStop(0.55, '#111827');
-  gradient.addColorStop(1, '#0f172a');
+  gradient.addColorStop(0, '#123047');
+  gradient.addColorStop(0.48, '#0f766e');
+  gradient.addColorStop(1, '#f59e0b');
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, 360, 640);
-  ctx.fillStyle = 'rgba(255,255,255,0.16)';
+
+  ctx.fillStyle = 'rgba(255,255,255,0.12)';
+  for (let y = -80; y < 720; y += 84) {
+    ctx.save();
+    ctx.translate(180, y);
+    ctx.rotate(-0.35);
+    ctx.fillRect(-220, -2, 440, 4);
+    ctx.restore();
+  }
+
+  ctx.fillStyle = 'rgba(2,6,23,0.28)';
+  ctx.fillRect(0, 0, 360, 640);
+  ctx.fillStyle = 'rgba(255,255,255,0.24)';
   ctx.beginPath();
-  ctx.arc(180, 320, 54, 0, Math.PI * 2);
+  ctx.arc(180, 286, 64, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = 'rgba(255,255,255,0.86)';
+  ctx.fillStyle = 'rgba(255,255,255,0.94)';
   ctx.beginPath();
-  ctx.moveTo(164, 290);
-  ctx.lineTo(164, 350);
-  ctx.lineTo(216, 320);
+  ctx.moveTo(162, 250);
+  ctx.lineTo(162, 322);
+  ctx.lineTo(224, 286);
   ctx.closePath();
   ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.94)';
+  ctx.font = '700 26px system-ui, -apple-system, BlinkMacSystemFont, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Preview pending', 180, 390);
+  ctx.font = '500 18px system-ui, -apple-system, BlinkMacSystemFont, sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.82)';
+  ctx.fillText('Tap to open video', 180, 424);
   return canvas.toDataURL('image/jpeg', 0.72);
 };
 
