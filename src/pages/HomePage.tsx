@@ -1527,7 +1527,7 @@ const HomePage = () => {
                               <LoopVideoItem
                                 post={post}
                                 index={index}
-                                active={filteredLoops.length > 5 && index === activeLoopRailIndex}
+                                active={index === activeLoopRailIndex}
                                 onDuration={(postId, duration) => setLoopDurations(prev => prev[postId] === duration ? prev : { ...prev, [postId]: duration })}
                                 onVideoClick={openLoopsPlayer}
                                 onDecodeStatus={handleLoopDecodeStatus}
