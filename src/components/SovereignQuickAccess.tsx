@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Zap } from 'lucide-react';
 import { useDevMode } from '@/components/security/DevModeContext';
-import { SmartFeatureRecommendations } from './SmartFeatureRecommendations';
+// SmartFeatureRecommendations banner removed per user request.
 
 export const SovereignQuickAccess = () => {
   const { isAdmin } = useDevMode();
