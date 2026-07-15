@@ -17,11 +17,23 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({ post, index, onVideoClick
   const [hasError, setHasError] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
 
-  // Preload video metadata on mount
+  // Preload video metadata on mount / when src changes.
+  // Adds a stall guard so slow networks don't leave the tile stuck on the spinner forever.
   useEffect(() => {
-    if (videoRef.current && post.media_url) {
-      videoRef.current.load();
-    }
+    if (!videoRef.current || !post.media_url) return;
+    setIsLoading(true);
+    setHasError(false);
+    videoRef.current.load();
+
+    // If nothing loads within 12s on very slow networks, mark as error so the user
+    // sees the fallback instead of an endless spinner. Reopening will retry on next mount.
+    const stallTimer = setTimeout(() => {
+      if (videoRef.current && videoRef.current.readyState === 0) {
+        setIsLoading(false);
+        setHasError(true);
+      }
+    }, 12000);
+    return () => clearTimeout(stallTimer);
   }, [post.media_url]);
 
   const handleMouseEnter = () => {
