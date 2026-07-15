@@ -17,6 +17,7 @@ import StatusIconBadge from '@/components/StatusIconBadge';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePrivateTimelines } from '@/hooks/usePrivateTimelines';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { appendMediaVersion, inferMediaType } from '@/lib/mediaUtils';
 
 interface Post {
   id: string;
@@ -28,6 +29,7 @@ interface Post {
   has_deferred_media?: boolean;
   media_size?: number;
   media_type: string | null;
+  updated_at?: string | null;
   likes_count: number;
   comments_count: number;
   created_at: string;
@@ -80,6 +82,9 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
   const isOwnPost = user?.id === post.user_id;
   const displayMediaUrl = post.media_url || loadedHeavyMediaUrl || (revealHeavyMedia ? post.full_media_url || null : null);
   const isDeferredHeavyMedia = !post.media_url && (post.has_deferred_media || !!post.full_media_url) && !displayMediaUrl;
+  const mediaVersion = post.updated_at || post.created_at || post.id;
+  const displayMediaSrc = appendMediaVersion(displayMediaUrl, mediaVersion);
+  const previewSrc = appendMediaVersion(post.media_preview_url, mediaVersion);
 
   const revealDeferredMedia = async () => {
     if (loadingHeavyMedia) return;
@@ -602,20 +607,14 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
           // Route by real media type inferred from the URL (data-URL prefix or file ext),
           // falling back to the declared media_type. Legacy rows saved videos with
           // media_type='image', so trusting the column alone renders <img> for videos.
-          const url = displayMediaUrl || '';
-          const clean = url.split('?')[0].toLowerCase();
-          const isVideo = !!displayMediaUrl && (
-            url.startsWith('data:video/') ||
-            /\.(mp4|webm|mov|ogg|m4v)$/.test(clean) ||
-            (post.media_type === 'video' && !url.startsWith('data:image/'))
-          );
+          const isVideo = !!displayMediaUrl && inferMediaType(displayMediaUrl, post.media_type) === 'video';
           return (
-            <div className="mb-3 rounded-lg overflow-hidden bg-black">
+            <div className="mb-3 overflow-hidden rounded-lg bg-background" data-testid="post-media-frame">
               {isDeferredHeavyMedia ? (
                 <button
                   type="button"
                   onClick={revealDeferredMedia}
-                  className="flex aspect-square w-full flex-col items-center justify-center gap-2 bg-muted/70 p-4 text-center text-sm text-muted-foreground hover:bg-muted"
+                    className="flex min-h-[52svh] w-full flex-col items-center justify-center gap-2 bg-muted/70 p-4 text-center text-sm text-muted-foreground hover:bg-muted sm:min-h-[48vh]"
                 >
                   <span className="font-medium text-foreground">Large media</span>
                   <span>{loadingHeavyMedia ? 'Opening…' : 'Tap to open without slowing the feed'}</span>
@@ -623,14 +622,15 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
               ) : isVideo ? (
                 // YouTube/Shorts-style responsive video: fits any orientation, never crops.
                 // Uses svh so mobile browser chrome doesn't clip. Caps height by viewport.
-                <div className="relative w-full max-h-[85svh] sm:max-h-[75vh] lg:max-h-[70vh] flex items-center justify-center">
+                <div className="relative flex w-full items-center justify-center bg-background min-h-[42svh] max-h-[85svh] sm:min-h-[38vh] sm:max-h-[75vh] lg:max-h-[70vh]">
                   <video
-                    src={displayMediaUrl}
-                    poster={post.media_preview_url || undefined}
+                    src={displayMediaSrc}
+                    poster={previewSrc}
                     controls
                     playsInline
                     preload="metadata"
-                    className="w-full max-h-[85svh] sm:max-h-[75vh] lg:max-h-[70vh] object-contain"
+                    className="h-auto w-full max-h-[85svh] object-contain sm:max-h-[75vh] lg:max-h-[70vh]"
+                    data-testid="post-video"
                     onLoadedMetadata={(e) => {
                       // Force first-frame poster on iOS Safari.
                       const v = e.currentTarget;
@@ -646,11 +646,12 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
                   />
                 </div>
               ) : (
-                <div className="relative w-full max-h-[85svh] sm:max-h-[75vh] lg:max-h-[70vh] flex items-center justify-center">
+                <div className="relative flex w-full items-center justify-center bg-background max-h-[85svh] sm:max-h-[75vh] lg:max-h-[70vh]">
                   <img
-                    src={displayMediaUrl}
+                    src={displayMediaSrc}
                     alt="Post media"
-                    className="w-full max-h-[85svh] sm:max-h-[75vh] lg:max-h-[70vh] object-contain cursor-pointer hover:opacity-90 transition-opacity"
+                    className="h-auto w-full max-h-[85svh] cursor-pointer object-contain transition-opacity hover:opacity-90 sm:max-h-[75vh] lg:max-h-[70vh]"
+                    data-testid="post-image"
                     onClick={() => setShowImageViewer(true)}
                     onError={() => console.error('[PostCard][image] failed to load', post.id)}
                   />

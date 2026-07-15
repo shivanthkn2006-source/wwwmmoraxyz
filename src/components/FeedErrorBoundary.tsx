@@ -48,7 +48,7 @@ export class FeedErrorBoundary extends React.Component<Props, State> {
           onClick={this.handleRetry}
           className="mt-2 rounded border border-destructive/40 px-2 py-0.5 text-[11px] hover:bg-destructive/10"
         >
-          Try again
+          Retry this item
         </button>
       </div>
     );
