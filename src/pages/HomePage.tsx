@@ -74,6 +74,10 @@ interface Post {
 
 const DATA_URL_PREVIEW_LIMIT = 900_000;
 
+// Loops upload whitelist
+const ALLOWED_VIDEO_MIME = ['video/mp4', 'video/webm', 'video/quicktime', 'video/ogg'];
+const ALLOWED_IMAGE_MIME = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
 const prepareFeedPostMedia = (post: any): Post => {
   const mediaUrl = typeof post.media_url === 'string' ? post.media_url : null;
   const isHeavyDataUrl = post.has_deferred_media || (!!mediaUrl && mediaUrl.startsWith('data:') && mediaUrl.length > DATA_URL_PREVIEW_LIMIT);
@@ -85,6 +89,50 @@ const prepareFeedPostMedia = (post: any): Post => {
     has_deferred_media: !!isHeavyDataUrl,
   };
 };
+
+const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+
+async function withRetry<T>(fn: (attempt: number) => Promise<T>, attempts = 3, baseDelay = 800): Promise<T> {
+  let lastErr: any;
+  for (let i = 1; i <= attempts; i++) {
+    try { return await fn(i); }
+    catch (e) {
+      lastErr = e;
+      if (i < attempts) await sleep(baseDelay * Math.pow(2, i - 1));
+    }
+  }
+  throw lastErr;
+}
+
+/**
+ * Upload a file to the `posts` storage bucket via XHR to expose real progress.
+ * Falls back to Supabase JS SDK if session token isn't available.
+ */
+function xhrUploadToPosts(
+  file: File,
+  path: string,
+  accessToken: string,
+  onProgress: (pct: number) => void,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const url = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/posts/${path.split('/').map(encodeURIComponent).join('/')}`;
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', url, true);
+    xhr.setRequestHeader('Authorization', `Bearer ${accessToken}`);
+    xhr.setRequestHeader('x-upsert', 'false');
+    xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+    xhr.upload.onprogress = (ev) => {
+      if (ev.lengthComputable) onProgress(Math.round((ev.loaded / ev.total) * 100));
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) resolve();
+      else reject(new Error(`Upload failed (${xhr.status}): ${xhr.responseText?.slice(0, 200) || 'unknown'}`));
+    };
+    xhr.onerror = () => reject(new Error('Network error during upload'));
+    xhr.ontimeout = () => reject(new Error('Upload timed out'));
+    xhr.send(file);
+  });
+}
 
 const HomePage = () => {
   const { user } = useAuth();
