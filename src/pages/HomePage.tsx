@@ -107,6 +107,56 @@ const prepareFeedPostMedia = (post: any): Post => {
 
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
+const validateBrowserCanPreviewFile = (file: File, mediaType: 'video' | 'image') =>
+  new Promise<void>((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(file);
+    const timer = window.setTimeout(() => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error(`${mediaType === 'video' ? 'Video' : 'Image'} preview timed out. Please export it again and retry.`));
+    }, 10000);
+    const done = () => {
+      window.clearTimeout(timer);
+      URL.revokeObjectURL(objectUrl);
+    };
+
+    if (mediaType === 'video') {
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      video.muted = true;
+      video.playsInline = true;
+      if (file.type && video.canPlayType(file.type) === '') {
+        done();
+        reject(new Error('This video format is not previewable here. Export as MP4/H.264, WebM, or MOV/H.264.'));
+        return;
+      }
+      video.onloadedmetadata = () => {
+        done();
+        video.videoWidth > 0 && video.videoHeight > 0
+          ? resolve()
+          : reject(new Error('This video has no readable video track. Export it again and retry.'));
+      };
+      video.onerror = () => {
+        done();
+        reject(new Error('This video cannot be decoded for preview. Export as MP4/H.264 and upload again.'));
+      };
+      video.src = objectUrl;
+      return;
+    }
+
+    const img = new Image();
+    img.onload = () => {
+      done();
+      img.naturalWidth > 0 && img.naturalHeight > 0
+        ? resolve()
+        : reject(new Error('This image has no readable pixels. Export it again and retry.'));
+    };
+    img.onerror = () => {
+      done();
+      reject(new Error('This image cannot be decoded for preview. Use JPG, PNG, WebP, or GIF.'));
+    };
+    img.src = objectUrl;
+  });
+
 async function withRetry<T>(fn: (attempt: number) => Promise<T>, attempts = 3, baseDelay = 800): Promise<T> {
   let lastErr: any;
   for (let i = 1; i <= attempts; i++) {
@@ -156,6 +206,7 @@ const HomePage = () => {
   const [globalPosts, setGlobalPosts] = useState<Post[]>([]);
   const [personalPosts, setPersonalPosts] = useState<Post[]>([]);
   const [loopPosts, setLoopPosts] = useState<Post[]>([]);
+  const [brokenLoopPreviewIds, setBrokenLoopPreviewIds] = useState<Set<string>>(() => new Set());
   const [loading, setLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -224,7 +275,7 @@ const HomePage = () => {
   // NOTE: Atlas Boot and Prime Objective are ONLY for Atlas HUD, NOT Zoe Infinity main flow
   const [atlasHUDActive, setAtlasHUDActive] = useState(false);
   const videoPosts = (loopPosts.length > 0 ? loopPosts : globalPosts).filter((post) =>
-    !!post.media_url && inferMediaType(post.media_url, post.media_type) === 'video'
+    !!post.media_url && !brokenLoopPreviewIds.has(post.id) && inferMediaType(post.media_url, post.media_type) === 'video'
   );
 
   const filteredLoops = React.useMemo(() => {
@@ -530,6 +581,11 @@ const HomePage = () => {
         user_liked: likedPostIds.has(post.id),
         has_deferred_media: false,
       })) as any);
+      setBrokenLoopPreviewIds(prev => {
+        const next = new Set(prev);
+        loopRows.forEach((post: any) => next.delete(post.id));
+        return next;
+      });
       pushDebug({ step: 'loops:posts-select', rowCount: loopRows.length });
     } catch (err: any) {
       console.error('[Loops] Error in fetchLoopPosts:', err);
@@ -847,6 +903,7 @@ const HomePage = () => {
     const INLINE_LIMIT = 2 * 1024 * 1024;
 
     try {
+      await validateBrowserCanPreviewFile(file, mediaType);
       setUploadState('uploading');
       let mediaUrl: string;
 
@@ -1178,6 +1235,10 @@ const HomePage = () => {
                               post={post}
                               index={index}
                               onVideoClick={openLoopsPlayer}
+                              onPreviewError={(postId) => {
+                                setBrokenLoopPreviewIds(prev => new Set(prev).add(postId));
+                                pushDebug({ step: 'loops:preview-error', errorMessage: `Preview decode failed for ${postId}` });
+                              }}
                             />
                           </FeedErrorBoundary>
                         ))}

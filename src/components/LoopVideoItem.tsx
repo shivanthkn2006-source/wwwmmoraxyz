@@ -8,9 +8,10 @@ interface LoopVideoItemProps {
   };
   index: number;
   onVideoClick: (index: number) => void;
+  onPreviewError?: (postId: string) => void;
 }
 
-const LoopVideoItem: React.FC<LoopVideoItemProps> = ({ post, index, onVideoClick }) => {
+const LoopVideoItem: React.FC<LoopVideoItemProps> = ({ post, index, onVideoClick, onPreviewError }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hoverTimeoutRef = useRef<NodeJS.Timeout>();
   const [isLoading, setIsLoading] = useState(true);
@@ -86,6 +87,7 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({ post, index, onVideoClick
     console.error('[LoopVideoItem] preview failed', { postId: post.id, src: post.media_url, error: videoRef.current?.error });
     setIsLoading(false);
     setHasError(true);
+    onPreviewError?.(post.id);
   };
 
   // Force the first frame to render as a poster preview.
