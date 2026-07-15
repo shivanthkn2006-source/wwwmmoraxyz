@@ -730,6 +730,115 @@ const HomePage = () => {
     setLoopsPlayerOpen(true);
   };
 
+  const handleLoopsUpload = React.useCallback(async (file: File) => {
+    if (!user) return;
+
+    // 1. MIME whitelist
+    setUploadState('validating');
+    setUploadError('');
+    setUploadFileName(file.name);
+    setUploadProgress(0);
+    setLastUploadFile(file);
+
+    const isVideo = ALLOWED_VIDEO_MIME.includes(file.type);
+    const isImage = ALLOWED_IMAGE_MIME.includes(file.type);
+    if (!isVideo && !isImage) {
+      const msg = `Unsupported file type "${file.type || 'unknown'}". Allowed: MP4, WebM, MOV, OGG, JPG, PNG, WebP, GIF.`;
+      setUploadState('error');
+      setUploadError(msg);
+      toast({ title: 'Unsupported file', description: msg, variant: 'destructive' });
+      return;
+    }
+    const MAX_FILE_BYTES = 50 * 1024 * 1024;
+    if (file.size > MAX_FILE_BYTES) {
+      const msg = 'File too large. Please pick a file under 50MB.';
+      setUploadState('error');
+      setUploadError(msg);
+      toast({ title: 'File too large', description: msg, variant: 'destructive' });
+      return;
+    }
+
+    const mediaType: 'video' | 'image' = isVideo ? 'video' : 'image';
+    const INLINE_LIMIT = 2 * 1024 * 1024;
+
+    try {
+      setUploadState('uploading');
+      let mediaUrl: string;
+
+      if (mediaType === 'image' && file.size < INLINE_LIMIT) {
+        mediaUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onprogress = (ev) => {
+            if (ev.lengthComputable) setUploadProgress(Math.round((ev.loaded / ev.total) * 100));
+          };
+          reader.onloadend = () => { setUploadProgress(100); resolve(reader.result as string); };
+          reader.onerror = () => reject(new Error('Could not read file'));
+          reader.readAsDataURL(file);
+        });
+      } else {
+        // Auth token for XHR upload with real progress
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        const ext = (file.name.split('.').pop() || (mediaType === 'video' ? 'mp4' : 'jpg')).toLowerCase();
+        const path = `${user.id}/loops/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+
+        // 2. Retry with exponential backoff (3 attempts)
+        await withRetry(async (attempt) => {
+          setUploadProgress(0);
+          if (attempt > 1) {
+            toast({ title: `Retrying upload (attempt ${attempt}/3)…` });
+          }
+          if (token) {
+            await xhrUploadToPosts(file, path, token, setUploadProgress);
+          } else {
+            // Fallback to SDK if no token (won't report granular progress)
+            const { error } = await supabase.storage.from('posts').upload(path, file, {
+              contentType: file.type, upsert: false,
+            });
+            if (error) throw error;
+            setUploadProgress(100);
+          }
+        }, 3, 900);
+
+        const { data: pub } = supabase.storage.from('posts').getPublicUrl(path);
+        mediaUrl = pub.publicUrl;
+      }
+
+      setUploadState('saving');
+      const { error } = await supabase.from('posts').insert({
+        user_id: user.id,
+        content: '',
+        media_url: mediaUrl,
+        media_type: mediaType,
+        visibility: 'global',
+      });
+      if (error) throw error;
+
+      setUploadState('success');
+      toast({ title: 'Posted!', description: 'Your loop is now live' });
+      triggerHomeRefresh();
+      // Auto-clear success state after a moment
+      setTimeout(() => {
+        setUploadState('idle');
+        setUploadProgress(0);
+        setUploadFileName('');
+        setLastUploadFile(null);
+      }, 1500);
+    } catch (err: any) {
+      console.error('[Loops upload]', err);
+      const msg = err?.message || 'Upload failed. Please try again.';
+      setUploadState('error');
+      setUploadError(msg);
+      toast({ title: 'Upload failed', description: msg, variant: 'destructive' });
+    }
+  }, [user]);
+
+  const retryLastUpload = React.useCallback(() => {
+    if (lastUploadFile) handleLoopsUpload(lastUploadFile);
+  }, [lastUploadFile, handleLoopsUpload]);
+
+
+
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
