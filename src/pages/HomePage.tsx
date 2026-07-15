@@ -382,7 +382,11 @@ const HomePage = () => {
     const onLeave = () => { hoverPause = false; };
     el.addEventListener('mouseenter', onEnter);
     el.addEventListener('mouseleave', onLeave);
-    const durationMs = 5000;
+    const currentPost = filteredLoops[activeLoopRailIndex % filteredLoops.length];
+    const realDurationSec = currentPost ? loopDurations[currentPost.id] : undefined;
+    const durationMs = realDurationSec && realDurationSec > 0
+      ? Math.max(3000, Math.min(60000, realDurationSec * 1000))
+      : 5000;
     const timer = window.setTimeout(() => {
       if (hoverPause || !el.isConnected) return;
       const maxLeft = Math.max(0, el.scrollWidth - el.clientWidth);
