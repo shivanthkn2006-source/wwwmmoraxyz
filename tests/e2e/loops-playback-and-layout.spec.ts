@@ -115,9 +115,20 @@ test.describe('Loops playback and responsive media', () => {
       if (await deferredFrame.isVisible().catch(() => false)) {
         const hasPoster = await deferredFrame.locator('[data-testid="post-deferred-poster"]').isVisible().catch(() => false);
         const hasSkeleton = await deferredFrame.locator('.animate-pulse').first().isVisible().catch(() => false);
-        await expect(deferredFrame.getByText(/Preview ready|Creating preview/i)).toBeVisible();
+        await expect(deferredFrame.getByText(/Preview ready|Preview pending/i)).toBeVisible();
         expect(hasPoster || hasSkeleton, 'large preview should show poster or loading skeleton').toBeTruthy();
       }
     });
   }
+
+  test('LoopVideoItem shows generated fallback poster and decode reason when backend poster is missing', async ({ page }) => {
+    const signedIn = await signIn(page);
+    test.skip(!signedIn, 'No injected session or E2E credentials available');
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/home', { waitUntil: 'domcontentloaded' });
+
+    const loop = page.locator('[data-testid="loop-video-item"]').first();
+    await expect(loop).toBeVisible({ timeout: 30_000 });
+    await expect(loop.locator('[data-testid="loop-poster-image"]')).toBeVisible({ timeout: 20_000 });
+  });
 });
