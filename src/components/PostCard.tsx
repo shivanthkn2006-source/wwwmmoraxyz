@@ -598,7 +598,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
         )}
 
         {(displayMediaUrl || isDeferredHeavyMedia) && (
-          <div className="mb-3 rounded-lg overflow-hidden">
+          <div className="mb-3 rounded-lg overflow-hidden bg-black">
             {isDeferredHeavyMedia ? (
               <button
                 type="button"
@@ -609,25 +609,37 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
                 <span>{loadingHeavyMedia ? 'Opening…' : 'Tap to open without slowing the feed'}</span>
               </button>
             ) : post.media_type === 'image' || displayMediaUrl.startsWith('data:image/') ? (
-              <img
-                src={displayMediaUrl}
-                alt="Post media"
-                className="w-full h-auto object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                onClick={() => setShowImageViewer(true)}
-              />
+              // Responsive image container: preserves aspect ratio, caps at 85vh on mobile
+              // and 70vh on desktop so tall portrait shots don't take over the screen.
+              <div className="relative w-full max-h-[85vh] sm:max-h-[70vh] flex items-center justify-center">
+                <img
+                  src={displayMediaUrl}
+                  alt="Post media"
+                  className="w-full max-h-[85vh] sm:max-h-[70vh] object-contain cursor-pointer hover:opacity-90 transition-opacity"
+                  onClick={() => setShowImageViewer(true)}
+                />
+              </div>
             ) : post.media_type === 'video' || displayMediaUrl.startsWith('data:video/') ? (
-              <video
-                src={displayMediaUrl}
-                controls
-                className="w-full h-auto"
-              />
+              // YouTube-style responsive video: fits the viewport in any orientation.
+              // Portrait (Shorts-like) shows tall with letterboxing; landscape fills width.
+              <div className="relative w-full max-h-[85vh] sm:max-h-[70vh] flex items-center justify-center">
+                <video
+                  src={displayMediaUrl}
+                  controls
+                  playsInline
+                  preload="metadata"
+                  className="w-full max-h-[85vh] sm:max-h-[70vh] object-contain"
+                />
+              </div>
             ) : (
-              <img
-                src={displayMediaUrl}
-                alt="Post media"
-                className="w-full h-auto object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                onClick={() => setShowImageViewer(true)}
-              />
+              <div className="relative w-full max-h-[85vh] sm:max-h-[70vh] flex items-center justify-center">
+                <img
+                  src={displayMediaUrl}
+                  alt="Post media"
+                  className="w-full max-h-[85vh] sm:max-h-[70vh] object-contain cursor-pointer hover:opacity-90 transition-opacity"
+                  onClick={() => setShowImageViewer(true)}
+                />
+              </div>
             )}
           </div>
         )}
