@@ -225,11 +225,25 @@ class ErrorBoundary extends React.Component<
     // If caller provided a custom fallback, use it.
     if (this.props.fallback) return this.props.fallback;
 
+    const errMsg = String(this.state.error?.message || '');
+    const isRealtimeError =
+      errMsg.includes('postgres_changes') ||
+      errMsg.includes('realtime:') ||
+      errMsg.toLowerCase().includes('after `subscribe()`');
+
+    const softRetry = () => {
+      this.setState({ hasError: false, error: null, componentStack: undefined });
+    };
+
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4">
         <div className="text-center space-y-3 max-w-lg">
           <h1 className="text-xl font-semibold text-foreground">Something went wrong</h1>
-          <p className="text-muted-foreground">Please refresh the page to continue</p>
+          <p className="text-muted-foreground">
+            {isRealtimeError
+              ? 'A realtime connection hiccup occurred. Try again to reconnect without losing your session.'
+              : 'Please refresh the page to continue'}
+          </p>
 
           {this.state.error?.message && (
             <p className="text-xs text-destructive break-words">
@@ -239,8 +253,14 @@ class ErrorBoundary extends React.Component<
 
           <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
             <button
-              onClick={() => window.location.reload()}
+              onClick={softRetry}
               className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+            >
+              Try again
+            </button>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/90"
             >
               Refresh Page
             </button>
@@ -277,6 +297,7 @@ class ErrorBoundary extends React.Component<
     );
   }
 }
+
 
 // Optimized QueryClient with stale time to reduce refetches
 const queryClient = new QueryClient({
