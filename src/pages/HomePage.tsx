@@ -1100,16 +1100,19 @@ const HomePage = () => {
 
 
                   {filteredLoops.length > 0 ? (
-                    <div className="flex gap-2 overflow-x-auto pb-1">
-                      {filteredLoops.map((post, index) => (
-                        <LoopVideoItem
-                          key={post.id}
-                          post={post}
-                          index={index}
-                          onVideoClick={openLoopsPlayer}
-                        />
-                      ))}
-                    </div>
+                    <FeedErrorBoundary section="loops" onRetry={handleUpdate}>
+                      <div className="flex gap-2 overflow-x-auto pb-1">
+                        {filteredLoops.map((post, index) => (
+                          <FeedErrorBoundary key={post.id} section="loops" postId={post.id}>
+                            <LoopVideoItem
+                              post={post}
+                              index={index}
+                              onVideoClick={openLoopsPlayer}
+                            />
+                          </FeedErrorBoundary>
+                        ))}
+                      </div>
+                    </FeedErrorBoundary>
                   ) : (
                     <div className="flex items-center justify-between rounded-lg border border-dashed border-border/50 px-3 py-2 text-xs text-muted-foreground">
                       <span>No loop videos yet. Post a short video to see Loops here.</span>
