@@ -60,8 +60,7 @@ export const SovereignQuickAccess = () => {
         )}
       </AnimatePresence>
 
-      {/* Smart Recommendations */}
-      <SmartFeatureRecommendations />
+      {/* Smart Recommendations banner removed */}
     </div>
   );
 };
