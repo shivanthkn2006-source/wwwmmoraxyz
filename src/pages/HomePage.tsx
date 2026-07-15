@@ -74,6 +74,10 @@ interface Post {
 
 const DATA_URL_PREVIEW_LIMIT = 900_000;
 
+// Loops upload whitelist
+const ALLOWED_VIDEO_MIME = ['video/mp4', 'video/webm', 'video/quicktime', 'video/ogg'];
+const ALLOWED_IMAGE_MIME = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
 const prepareFeedPostMedia = (post: any): Post => {
   const mediaUrl = typeof post.media_url === 'string' ? post.media_url : null;
   const isHeavyDataUrl = post.has_deferred_media || (!!mediaUrl && mediaUrl.startsWith('data:') && mediaUrl.length > DATA_URL_PREVIEW_LIMIT);
@@ -85,6 +89,50 @@ const prepareFeedPostMedia = (post: any): Post => {
     has_deferred_media: !!isHeavyDataUrl,
   };
 };
+
+const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+
+async function withRetry<T>(fn: (attempt: number) => Promise<T>, attempts = 3, baseDelay = 800): Promise<T> {
+  let lastErr: any;
+  for (let i = 1; i <= attempts; i++) {
+    try { return await fn(i); }
+    catch (e) {
+      lastErr = e;
+      if (i < attempts) await sleep(baseDelay * Math.pow(2, i - 1));
+    }
+  }
+  throw lastErr;
+}
+
+/**
+ * Upload a file to the `posts` storage bucket via XHR to expose real progress.
+ * Falls back to Supabase JS SDK if session token isn't available.
+ */
+function xhrUploadToPosts(
+  file: File,
+  path: string,
+  accessToken: string,
+  onProgress: (pct: number) => void,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const url = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/posts/${path.split('/').map(encodeURIComponent).join('/')}`;
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', url, true);
+    xhr.setRequestHeader('Authorization', `Bearer ${accessToken}`);
+    xhr.setRequestHeader('x-upsert', 'false');
+    xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+    xhr.upload.onprogress = (ev) => {
+      if (ev.lengthComputable) onProgress(Math.round((ev.loaded / ev.total) * 100));
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) resolve();
+      else reject(new Error(`Upload failed (${xhr.status}): ${xhr.responseText?.slice(0, 200) || 'unknown'}`));
+    };
+    xhr.onerror = () => reject(new Error('Network error during upload'));
+    xhr.ontimeout = () => reject(new Error('Upload timed out'));
+    xhr.send(file);
+  });
+}
 
 const HomePage = () => {
   const { user } = useAuth();
@@ -111,6 +159,13 @@ const HomePage = () => {
   const [feedDiag, setFeedDiag] = useState<FeedDiagnostics | null>(null);
   const [debugEntries, setDebugEntries] = useState<Array<import('@/components/AdminFeedDebugger').FeedDebugEntry>>([]);
   const [consecutiveFailures, setConsecutiveFailures] = useState(0);
+
+  // Loops upload UI state
+  const [uploadState, setUploadState] = useState<'idle' | 'validating' | 'uploading' | 'saving' | 'error' | 'success'>('idle');
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadFileName, setUploadFileName] = useState<string>('');
+  const [uploadError, setUploadError] = useState<string>('');
+  const [lastUploadFile, setLastUploadFile] = useState<File | null>(null);
   const isAdminUser = !!user && ['moksh50','justmkbhd','john','shivanth_kn'].includes(((userProfile?.username||'') as string).toLowerCase());
   const pushDebug = (e: Omit<import('@/components/AdminFeedDebugger').FeedDebugEntry,'timestamp'>) =>
     setDebugEntries(prev => [{...e, timestamp: new Date().toISOString()}, ...prev].slice(0, 50));
@@ -675,6 +730,115 @@ const HomePage = () => {
     setLoopsPlayerOpen(true);
   };
 
+  const handleLoopsUpload = React.useCallback(async (file: File) => {
+    if (!user) return;
+
+    // 1. MIME whitelist
+    setUploadState('validating');
+    setUploadError('');
+    setUploadFileName(file.name);
+    setUploadProgress(0);
+    setLastUploadFile(file);
+
+    const isVideo = ALLOWED_VIDEO_MIME.includes(file.type);
+    const isImage = ALLOWED_IMAGE_MIME.includes(file.type);
+    if (!isVideo && !isImage) {
+      const msg = `Unsupported file type "${file.type || 'unknown'}". Allowed: MP4, WebM, MOV, OGG, JPG, PNG, WebP, GIF.`;
+      setUploadState('error');
+      setUploadError(msg);
+      toast({ title: 'Unsupported file', description: msg, variant: 'destructive' });
+      return;
+    }
+    const MAX_FILE_BYTES = 50 * 1024 * 1024;
+    if (file.size > MAX_FILE_BYTES) {
+      const msg = 'File too large. Please pick a file under 50MB.';
+      setUploadState('error');
+      setUploadError(msg);
+      toast({ title: 'File too large', description: msg, variant: 'destructive' });
+      return;
+    }
+
+    const mediaType: 'video' | 'image' = isVideo ? 'video' : 'image';
+    const INLINE_LIMIT = 2 * 1024 * 1024;
+
+    try {
+      setUploadState('uploading');
+      let mediaUrl: string;
+
+      if (mediaType === 'image' && file.size < INLINE_LIMIT) {
+        mediaUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onprogress = (ev) => {
+            if (ev.lengthComputable) setUploadProgress(Math.round((ev.loaded / ev.total) * 100));
+          };
+          reader.onloadend = () => { setUploadProgress(100); resolve(reader.result as string); };
+          reader.onerror = () => reject(new Error('Could not read file'));
+          reader.readAsDataURL(file);
+        });
+      } else {
+        // Auth token for XHR upload with real progress
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        const ext = (file.name.split('.').pop() || (mediaType === 'video' ? 'mp4' : 'jpg')).toLowerCase();
+        const path = `${user.id}/loops/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+
+        // 2. Retry with exponential backoff (3 attempts)
+        await withRetry(async (attempt) => {
+          setUploadProgress(0);
+          if (attempt > 1) {
+            toast({ title: `Retrying upload (attempt ${attempt}/3)…` });
+          }
+          if (token) {
+            await xhrUploadToPosts(file, path, token, setUploadProgress);
+          } else {
+            // Fallback to SDK if no token (won't report granular progress)
+            const { error } = await supabase.storage.from('posts').upload(path, file, {
+              contentType: file.type, upsert: false,
+            });
+            if (error) throw error;
+            setUploadProgress(100);
+          }
+        }, 3, 900);
+
+        const { data: pub } = supabase.storage.from('posts').getPublicUrl(path);
+        mediaUrl = pub.publicUrl;
+      }
+
+      setUploadState('saving');
+      const { error } = await supabase.from('posts').insert({
+        user_id: user.id,
+        content: '',
+        media_url: mediaUrl,
+        media_type: mediaType,
+        visibility: 'global',
+      });
+      if (error) throw error;
+
+      setUploadState('success');
+      toast({ title: 'Posted!', description: 'Your loop is now live' });
+      triggerHomeRefresh();
+      // Auto-clear success state after a moment
+      setTimeout(() => {
+        setUploadState('idle');
+        setUploadProgress(0);
+        setUploadFileName('');
+        setLastUploadFile(null);
+      }, 1500);
+    } catch (err: any) {
+      console.error('[Loops upload]', err);
+      const msg = err?.message || 'Upload failed. Please try again.';
+      setUploadState('error');
+      setUploadError(msg);
+      toast({ title: 'Upload failed', description: msg, variant: 'destructive' });
+    }
+  }, [user]);
+
+  const retryLastUpload = React.useCallback(() => {
+    if (lastUploadFile) handleLoopsUpload(lastUploadFile);
+  }, [lastUploadFile, handleLoopsUpload]);
+
+
+
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -801,70 +965,30 @@ const HomePage = () => {
                       {/* Direct Video Upload Button - Hidden Input */}
                       <input
                         type="file"
-                        accept="video/*,image/*"
+                        accept={[...ALLOWED_VIDEO_MIME, ...ALLOWED_IMAGE_MIME].join(',')}
                         id="loops-video-upload"
                         className="hidden"
+                        disabled={uploadState === 'uploading' || uploadState === 'saving' || uploadState === 'validating'}
                         onChange={async (e) => {
                           const file = e.target.files?.[0];
-                          if (!file || !user) { e.target.value = ''; return; }
-                          const MAX_FILE_BYTES = 50 * 1024 * 1024; // 50MB hard cap
-                          if (file.size > MAX_FILE_BYTES) {
-                            toast({ title: "File too large", description: "Please pick a file under 50MB.", variant: "destructive" });
-                            e.target.value = '';
-                            return;
-                          }
-                          const mediaType: 'video' | 'image' = file.type.startsWith('video/') ? 'video' : 'image';
-                          try {
-                            toast({ title: "Uploading...", description: `Processing your ${mediaType}` });
-
-                            let mediaUrl: string;
-
-                            // Small images (<2MB) can go inline as base64 for instant preview.
-                            // Everything else (all videos + large images) goes to Storage.
-                            const INLINE_LIMIT = 2 * 1024 * 1024;
-                            if (mediaType === 'image' && file.size < INLINE_LIMIT) {
-                              mediaUrl = await new Promise<string>((resolve, reject) => {
-                                const reader = new FileReader();
-                                reader.onloadend = () => resolve(reader.result as string);
-                                reader.onerror = () => reject(new Error('read failed'));
-                                reader.readAsDataURL(file);
-                              });
-                            } else {
-                              const ext = file.name.split('.').pop()?.toLowerCase() || (mediaType === 'video' ? 'mp4' : 'jpg');
-                              const path = `${user.id}/loops/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-                              const { error: upErr } = await supabase.storage
-                                .from('posts')
-                                .upload(path, file, { contentType: file.type, upsert: false });
-                              if (upErr) throw upErr;
-                              const { data: pub } = supabase.storage.from('posts').getPublicUrl(path);
-                              mediaUrl = pub.publicUrl;
-                            }
-
-                            const { error } = await supabase.from('posts').insert({
-                              user_id: user.id,
-                              content: '',
-                              media_url: mediaUrl,
-                              media_type: mediaType,
-                              visibility: 'global'
-                            });
-                            if (error) throw error;
-
-                            toast({ title: "Posted!", description: "Your loop is now live" });
-                            triggerHomeRefresh();
-                          } catch (err: any) {
-                            console.error('[Loops upload]', err);
-                            toast({ title: "Upload failed", description: err?.message || "Please try again.", variant: "destructive" });
-                          } finally {
-                            e.target.value = '';
-                          }
+                          if (file) await handleLoopsUpload(file);
+                          e.target.value = '';
                         }}
                       />
                       <label
                         htmlFor="loops-video-upload"
-                        className="group relative flex items-center justify-center w-6 h-6 rounded-md bg-foreground/5 backdrop-blur-md border border-foreground/10 hover:border-purple-400/50 hover:bg-foreground/10 transition-all duration-300 shadow-[0_0_8px_rgba(139,92,246,0.2)] hover:shadow-[0_0_12px_rgba(139,92,246,0.4)] cursor-pointer"
+                        aria-disabled={uploadState === 'uploading' || uploadState === 'saving' || uploadState === 'validating'}
+                        className={`group relative flex items-center justify-center w-6 h-6 rounded-md bg-foreground/5 backdrop-blur-md border border-foreground/10 hover:border-purple-400/50 hover:bg-foreground/10 transition-all duration-300 shadow-[0_0_8px_rgba(139,92,246,0.2)] hover:shadow-[0_0_12px_rgba(139,92,246,0.4)] ${uploadState === 'uploading' || uploadState === 'saving' || uploadState === 'validating' ? 'cursor-wait opacity-70' : 'cursor-pointer'}`}
                         title="Upload Video/Photo"
                       >
-                        <Video className="w-3 h-3 text-purple-300 group-hover:text-purple-200 transition-colors" />
+                        {uploadState === 'uploading' || uploadState === 'saving' || uploadState === 'validating' ? (
+                          <svg className="w-3 h-3 text-purple-300 animate-spin" viewBox="0 0 24 24" fill="none">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" opacity="0.25" />
+                            <path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+                          </svg>
+                        ) : (
+                          <Video className="w-3 h-3 text-purple-300 group-hover:text-purple-200 transition-colors" />
+                        )}
                         <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse" />
                       </label>
                       {/* Selfie City Navigation Button */}
@@ -917,6 +1041,48 @@ const HomePage = () => {
                       </span>
                     </div>
                   </div>
+
+                  {/* Loops upload progress / status */}
+                  {uploadState !== 'idle' && (
+                    <div
+                      className="rounded-md border border-border/50 bg-muted/30 px-3 py-2 text-xs"
+                      role="status"
+                      aria-live="polite"
+                    >
+                      <div className="flex items-center justify-between mb-1.5 gap-2">
+                        <span className="truncate">
+                          {uploadState === 'validating' && `Checking ${uploadFileName}…`}
+                          {uploadState === 'uploading' && `Uploading ${uploadFileName}… ${uploadProgress}%`}
+                          {uploadState === 'saving' && `Saving post…`}
+                          {uploadState === 'success' && `Posted!`}
+                          {uploadState === 'error' && (uploadError || 'Upload failed')}
+                        </span>
+                        {uploadState === 'error' && lastUploadFile && (
+                          <button
+                            onClick={retryLastUpload}
+                            className="shrink-0 text-primary hover:text-primary/80 underline underline-offset-2"
+                          >
+                            Try again
+                          </button>
+                        )}
+                      </div>
+                      {(uploadState === 'uploading' || uploadState === 'saving' || uploadState === 'validating') && (
+                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                          <div
+                            className="h-full bg-primary transition-[width] duration-200"
+                            style={{
+                              width: uploadState === 'saving'
+                                ? '100%'
+                                : uploadState === 'validating'
+                                  ? '5%'
+                                  : `${uploadProgress}%`,
+                            }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+
 
                   {filteredLoops.length > 0 ? (
                     <div className="flex gap-2 overflow-x-auto pb-1">
