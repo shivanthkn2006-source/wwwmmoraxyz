@@ -97,6 +97,7 @@ const FullScreenVideoPlayer: React.FC<FullScreenVideoPlayerProps> = ({
         const v = videos[i];
         const ver = v?.updated_at || v?.created_at || v?.id;
         return {
+          id: v.id,
           media: appendMediaVersion(v?.media_url, ver) || '',
           poster: appendMediaVersion(v?.media_preview_url, ver) || '',
         };
@@ -341,7 +342,7 @@ const FullScreenVideoPlayer: React.FC<FullScreenVideoPlayerProps> = ({
             {preloadUrls.map((p, i) => (
               <React.Fragment key={i}>
                 {p.media && <video src={p.media} preload="auto" muted playsInline />}
-                {(signedPosterUrls[videos[currentIndex + (i === 0 ? -1 : 1)]?.id || ''] || p.poster) && <img src={signedPosterUrls[videos[currentIndex + (i === 0 ? -1 : 1)]?.id || ''] || p.poster} alt="" />}
+                {(signedPosterUrls[p.id] || p.poster) && <img src={signedPosterUrls[p.id] || p.poster} alt="" />}
               </React.Fragment>
             ))}
           </div>
