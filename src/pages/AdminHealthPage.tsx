@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { Activity, Radio, AlertTriangle, RefreshCw, ArrowLeft } from 'lucide-react';
+import { Activity, Radio, AlertTriangle, RefreshCw, ArrowLeft, Download } from 'lucide-react';
 import { checkRootAdminStatus } from '@/components/security/securityConfig';
 import { subscribePerf, getPerfEntries, type PerfEntry } from '@/utils/perfLogger';
 
@@ -108,9 +108,38 @@ const AdminHealthPage = () => {
             <p className="text-sm text-muted-foreground">Admin-only realtime, API, and backend diagnostics</p>
           </div>
         </div>
-        <Button variant="outline" size="sm" onClick={refreshStats}>
-          <RefreshCw className="h-4 w-4 mr-2" /> Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => {
+            const snapshot = {
+              exportedAt: new Date().toISOString(),
+              route: window.location.pathname,
+              realtime: { state: rtState },
+              backendStats,
+              perf: {
+                totalEntries: entries.length,
+                avgApiMs: avgApi,
+                pageLoads: pageEntries,
+                apiCalls: apiEntries,
+                apiFailures,
+              },
+            };
+            const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `mmora-health-${Date.now()}.json`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+            toast.success('Health snapshot exported');
+          }}>
+            <Download className="h-4 w-4 mr-2" /> Export JSON
+          </Button>
+          <Button variant="outline" size="sm" onClick={refreshStats}>
+            <RefreshCw className="h-4 w-4 mr-2" /> Refresh
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
