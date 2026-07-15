@@ -222,7 +222,7 @@ const HomePage = () => {
   // NOTE: Atlas Boot and Prime Objective are ONLY for Atlas HUD, NOT Zoe Infinity main flow
   const [atlasHUDActive, setAtlasHUDActive] = useState(false);
   const videoPosts = globalPosts.filter((post) =>
-    post.media_url && (post.media_type === 'video' || post.media_url.startsWith('data:video/'))
+    !!post.media_url && inferMediaType(post.media_url, post.media_type) === 'video'
   );
 
   const filteredLoops = React.useMemo(() => {
