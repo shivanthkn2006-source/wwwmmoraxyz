@@ -556,6 +556,9 @@ const HomePage = () => {
   
   // Enable desktop push notifications for high-priority alerts
   useDesktopNotifications(user?.id);
+
+  // On-screen toast when other users publish new posts / loops.
+  useNewPostNotifications(user?.id);
   useZoeProactiveNotifications();
   
   // Initialize tutorial
