@@ -89,6 +89,32 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
   const previewSrc = appendMediaVersion(post.media_preview_url, mediaVersion);
   const fallbackPosterSrc = React.useMemo(() => makeFallbackVideoPoster(), []);
   const posterSrc = previewSrc || (post.media_type === 'video' ? fallbackPosterSrc || undefined : undefined);
+
+  // Reels-style: autoplay video when in view, pause when out. Auto-reveal deferred media on scroll into view.
+  useEffect(() => {
+    const frame = mediaFrameRef.current;
+    if (!frame) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const inView = entry.isIntersecting && entry.intersectionRatio >= 0.6;
+          setVideoInView(inView);
+          if (inView && isDeferredHeavyMedia) revealDeferredMedia();
+          const v = videoRef.current;
+          if (!v) return;
+          if (inView) {
+            v.play().then(() => setIsVideoPlaying(true)).catch(() => {});
+          } else {
+            v.pause();
+          }
+        });
+      },
+      { threshold: [0, 0.6, 1] }
+    );
+    io.observe(frame);
+    return () => io.disconnect();
+  }, [isDeferredHeavyMedia, revealDeferredMedia, displayMediaSrc]);
+
   const getVideoErrorReason = (video: HTMLVideoElement) => {
     const error = video.error;
     if (!error) return 'Unknown decode error';
