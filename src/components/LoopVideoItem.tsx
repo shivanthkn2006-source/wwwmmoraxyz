@@ -65,9 +65,14 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({
       return;
     }
     if (!videoRef.current) {
-      setIsLoading(false);
-      setDecodeFailureReason('Video element was not ready; preview poster is shown instead');
-      onDecodeStatus?.(post.id, 'poster-only');
+      const retry = window.setTimeout(() => {
+        if (!videoRef.current) {
+          setIsLoading(false);
+          setDecodeFailureReason('Video element was not ready; preview poster is shown instead');
+          onDecodeStatus?.(post.id, 'poster-only');
+        }
+      }, 0);
+      return () => window.clearTimeout(retry);
       return;
     }
     setIsLoading(true);
