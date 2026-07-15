@@ -37,6 +37,7 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({
   const version = post.updated_at || post.created_at || post.id;
   const mediaSrc = appendMediaVersion(post.media_url, version);
   const posterSrc = appendMediaVersion(post.media_preview_url, version);
+  const shouldShowVideoPreview = canPaintVideo && (!posterSrc || isPlaying);
 
   // Preload enough data to paint the first frame on mount / when src changes.
   // Metadata alone often leaves mobile browsers with a black tile.
@@ -153,7 +154,7 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({
           ref={videoRef}
           src={mediaSrc}
           poster={posterSrc}
-          className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-150 ${isPlaying && canPaintVideo ? 'opacity-100' : 'opacity-0'}`}
+          className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-150 ${shouldShowVideoPreview ? 'opacity-100' : 'opacity-0'}`}
           muted
           loop
           playsInline
