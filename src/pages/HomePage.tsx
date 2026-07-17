@@ -653,18 +653,18 @@ const HomePage = () => {
 
       if (import.meta.env.DEV) console.info('[HomePage] voice command received', { raw, cmd, loopsHidden, headerVisible, autoScrollEnabled, feedAutoPassCompleted, loopRailPassCompleted });
 
-      if (cmd === 'hide-loops' || cmd === 'hide loops' || (has('hide') && cmd.includes('loop'))) {
-        setLoopsHidden(true);
-        try { localStorage.setItem('mmora.home.loopsHidden', 'true'); } catch {}
-        if (import.meta.env.DEV) console.info('[HomePage] loopsHidden ← true', { source: 'voice', cmd });
-        trackEvent({ name: 'loop_mute_toggle', postId: 'section-visibility', muted: true, persisted: true } as any);
-        return;
-      }
       if (cmd === 'unhide-loops' || cmd === 'unhide loops' || cmd === 'show-loops' || cmd === 'show loops' || ((cmd.includes('unhide') || cmd.includes('show') || cmd.includes('open')) && cmd.includes('loop'))) {
         setLoopsHidden(false);
         try { localStorage.setItem('mmora.home.loopsHidden', 'false'); } catch {}
         if (import.meta.env.DEV) console.info('[HomePage] loopsHidden ← false', { source: 'voice', cmd });
         trackEvent({ name: 'loop_mute_toggle', postId: 'section-visibility', muted: false, persisted: true } as any);
+        return;
+      }
+      if (cmd === 'hide-loops' || cmd === 'hide loops' || (!cmd.includes('unhide') && has('hide') && cmd.includes('loop'))) {
+        setLoopsHidden(true);
+        try { localStorage.setItem('mmora.home.loopsHidden', 'true'); } catch {}
+        if (import.meta.env.DEV) console.info('[HomePage] loopsHidden ← true', { source: 'voice', cmd });
+        trackEvent({ name: 'loop_mute_toggle', postId: 'section-visibility', muted: true, persisted: true } as any);
         return;
       }
       if (cmd === 'toggle-loops' || cmd === 'toggle loops') {
@@ -708,8 +708,8 @@ const HomePage = () => {
       if (!text) return;
       const stripped = text.replace(/^(hey|ok|okay|hi|hello)?\s*zoe\s+/, '');
       if (!text.includes('zoe') && !isHomeSurfaceCommand(stripped)) return;
-      if (stripped.includes('hide') && stripped.includes('loop')) applyCommand('hide-loops');
-      else if ((stripped.includes('unhide') || stripped.includes('show') || stripped.includes('open')) && stripped.includes('loop')) applyCommand('unhide-loops');
+      if ((stripped.includes('unhide') || stripped.includes('show') || stripped.includes('open')) && stripped.includes('loop')) applyCommand('unhide-loops');
+      else if (stripped.includes('hide') && stripped.includes('loop')) applyCommand('hide-loops');
       else if (stripped.includes('stop') && (stripped.includes('scroll') || stripped.includes('timeline') || stripped.includes('feed'))) applyCommand('stop-scrolling');
       else if ((stripped.includes('start') || stripped.includes('resume') || stripped.includes('play')) && (stripped.includes('scroll') || stripped.includes('timeline') || stripped.includes('feed'))) applyCommand('start-scrolling');
       else if (stripped.includes('pause') && (stripped.includes('scroll') || stripped.includes('timeline') || stripped.includes('feed'))) applyCommand('pause');
