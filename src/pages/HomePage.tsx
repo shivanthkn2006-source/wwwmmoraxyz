@@ -284,6 +284,30 @@ const HomePage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
+  // Hide the top header while the user is scrolling (auto or manual), reveal
+  // it ~900ms after scrolling stops — Instagram / YouTube Shorts style. Uses
+  // transform+opacity so it never reflows the underlying layout.
+  const [headerVisible, setHeaderVisible] = useState(true);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    let idleTimer: number | null = null;
+    let lastY = window.scrollY;
+    const onScroll = () => {
+      const y = window.scrollY;
+      // Always reveal near the very top so the profile/menu are reachable.
+      if (y < 24) { setHeaderVisible(true); }
+      else if (Math.abs(y - lastY) > 4) { setHeaderVisible(false); }
+      lastY = y;
+      if (idleTimer) window.clearTimeout(idleTimer);
+      idleTimer = window.setTimeout(() => setHeaderVisible(true), 900);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      if (idleTimer) window.clearTimeout(idleTimer);
+    };
+  }, []);
+
   // Loops upload UI state
   const [uploadState, setUploadState] = useState<'idle' | 'validating' | 'uploading' | 'saving' | 'error' | 'success'>('idle');
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -1530,7 +1554,10 @@ const HomePage = () => {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <div className="max-w-2xl mx-auto">
           {/* Fixed header - Clean minimal version (profile now in HUD) */}
-          <div className="fixed top-0 left-0 right-0 z-50">
+          <div
+            className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ease-out will-change-transform ${headerVisible ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'}`}
+            aria-hidden={!headerVisible}
+          >
             <div className="max-w-2xl mx-auto">
             <div className="flex items-center justify-between p-4">
               <div className="flex items-center gap-2">
