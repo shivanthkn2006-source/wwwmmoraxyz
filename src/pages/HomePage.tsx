@@ -286,29 +286,40 @@ const HomePage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
-  // Hide the top header while the user is scrolling (auto or manual), reveal
-  // it ~900ms after scrolling stops — Instagram / YouTube Shorts style. Uses
-  // transform+opacity so it never reflows the underlying layout.
+  // Hide the top header on scroll-down; reveal on scroll-up or when the user
+  // reaches the top. While a visible video is actively playing, keep the
+  // header hidden so viewing area stays full (IG Reels / Shorts style).
   const [headerVisible, setHeaderVisible] = useState(true);
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    let idleTimer: number | null = null;
     let lastY = window.scrollY;
+    let ticking = false;
+    const isVideoPlayingOnScreen = () => {
+      const vids = Array.from(document.querySelectorAll('video')) as HTMLVideoElement[];
+      const vh = window.innerHeight;
+      return vids.some((v) => {
+        if (v.paused || v.ended || v.readyState < 2) return false;
+        const r = v.getBoundingClientRect();
+        return r.bottom > 0 && r.top < vh && r.height > 40;
+      });
+    };
     const onScroll = () => {
-      const y = window.scrollY;
-      // Always reveal near the very top so the profile/menu are reachable.
-      if (y < 24) { setHeaderVisible(true); }
-      else if (Math.abs(y - lastY) > 4) { setHeaderVisible(false); }
-      lastY = y;
-      if (idleTimer) window.clearTimeout(idleTimer);
-      idleTimer = window.setTimeout(() => setHeaderVisible(true), 900);
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        const y = window.scrollY;
+        const dy = y - lastY;
+        if (y < 24) setHeaderVisible(true);
+        else if (dy > 4) setHeaderVisible(false);            // scrolling down → hide
+        else if (dy < -4 && !isVideoPlayingOnScreen()) setHeaderVisible(true); // scroll up while nothing playing → reveal
+        lastY = y;
+        ticking = false;
+      });
     };
     window.addEventListener('scroll', onScroll, { passive: true });
-    return () => {
-      window.removeEventListener('scroll', onScroll);
-      if (idleTimer) window.clearTimeout(idleTimer);
-    };
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
+
 
   // Loops upload UI state
   const [uploadState, setUploadState] = useState<'idle' | 'validating' | 'uploading' | 'saving' | 'error' | 'success'>('idle');
