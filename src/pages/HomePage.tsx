@@ -273,6 +273,17 @@ const HomePage = () => {
   const loopRailRef = useRef<HTMLDivElement | null>(null);
   const feedAutoTimerRef = useRef<number | null>(null);
 
+  // Reset loop-rail one-pass flag and timeline index when the signed-in user
+  // changes (sign-in / sign-out / account switch) so the rail replays exactly
+  // once per session and never unexpectedly loops for a returning user.
+  useEffect(() => {
+    if (import.meta.env.DEV) console.info('[HomePage] auth change → resetting loop-rail pass + feed index', { userId: user?.id ?? null });
+    setLoopRailPassCompleted(false);
+    setActiveLoopRailIndex(0);
+    setFeedAutoIndex(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
   // Loops upload UI state
   const [uploadState, setUploadState] = useState<'idle' | 'validating' | 'uploading' | 'saving' | 'error' | 'success'>('idle');
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -414,6 +425,8 @@ const HomePage = () => {
       if (wrapped || atEnd) {
         // Finished one full pass — stop auto-scrolling the rail so the main
         // timeline can take over. User can still interact / swipe manually.
+        if (import.meta.env.DEV) console.info('[HomePage] loop-rail pass completed → handing off to timeline autoscroll', { activeLoopRailIndex, total: filteredLoops.length });
+        try { window.dispatchEvent(new CustomEvent('mmora:analytics', { detail: { name: 'loop_rail_pass_completed', total: filteredLoops.length } })); } catch {}
         setLoopRailPassCompleted(true);
       } else {
         setActiveLoopRailIndex(nextIndex);
@@ -506,7 +519,9 @@ const HomePage = () => {
   // Auto-advance the active feed after the current clip's real duration finishes.
   // Event-driven per video (handles buffering/stalls); non-video posts fall back to 5s.
   useEffect(() => {
-    if (loading || (loopRailInView && !loopRailPassCompleted) || !autoScrollEnabled || (activeTab !== 'global' && activeTab !== 'personal')) return;
+    const blocked = loading || (loopRailInView && !loopRailPassCompleted) || !autoScrollEnabled || (activeTab !== 'global' && activeTab !== 'personal');
+    if (import.meta.env.DEV) console.info('[HomePage] timeline-autoscroll guards', { blocked, loading, loopRailInView, loopRailPassCompleted, autoScrollEnabled, activeTab });
+    if (blocked) return;
     const posts = Array.from(document.querySelectorAll<HTMLElement>(`[data-feed-tab="${activeTab}"] [data-post-card]`));
     if (posts.length <= 1) return;
 
