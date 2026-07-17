@@ -2,6 +2,8 @@ import React, { useRef, useState, useEffect } from 'react';
 import { Loader2, Play, RotateCcw, Volume2, VolumeX } from 'lucide-react';
 import { appendMediaVersion, isPrivateStorageUrl, makeFallbackVideoPoster, resolvePrivateStorageUrl } from '@/lib/mediaUtils';
 import { supabase } from '@/integrations/supabase/client';
+import { readLoopSoundEnabled, writeLoopSoundEnabled } from '@/lib/loopSoundPreference';
+import { trackEvent } from '@/lib/analytics';
 
 
 interface LoopVideoItemProps {
