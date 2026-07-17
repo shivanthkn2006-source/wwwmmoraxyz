@@ -1811,6 +1811,9 @@ export const useZoeSovereignVoice = (userId?: string) => {
         }
 
         if (command) {
+          window.dispatchEvent(new CustomEvent('zoe-voice-command', {
+            detail: { command, transcript: command, source: 'zoe-sovereign-voice' }
+          }));
           await processCommand(command);
         }
       }
