@@ -13,7 +13,8 @@ import NotificationMenu from '@/components/NotificationMenu';
 import AnimatedHamburgerButton from '@/components/AnimatedHamburgerButton';
 import HamburgerMenu from '@/components/HamburgerMenu';
 import SearchBar from '@/components/SearchBar';
-import { ArrowDown, Mail, Search, Video, TrendingUp, ArrowUp, Camera } from 'lucide-react';
+import { ArrowDown, Mail, Search, Video, TrendingUp, ArrowUp, Camera, ChevronUp, ChevronDown } from 'lucide-react';
+import { trackEvent } from '@/lib/analytics';
 import FuturisticCounter from '@/components/FuturisticCounter';
 import { useNavigate } from 'react-router-dom';
 import { onHomeRefresh, triggerHomeRefresh } from '@/lib/homeRefresh';
@@ -249,6 +250,12 @@ const HomePage = () => {
   const [loopsPlayerOpen, setLoopsPlayerOpen] = useState(false);
   const [loopsInitialIndex, setLoopsInitialIndex] = useState(0);
   const [loopsFilter, setLoopsFilter] = useState<'recent' | 'liked' | 'friends' | 'trending'>('trending');
+  const [loopsHidden, setLoopsHidden] = useState<boolean>(() => {
+    try { return typeof window !== 'undefined' && window.localStorage.getItem('mmora.home.loopsHidden') === 'true'; } catch { return false; }
+  });
+  const [autoScrollEnabled, setAutoScrollEnabled] = useState<boolean>(() => {
+    try { return !(typeof window !== 'undefined' && window.localStorage.getItem('mmora.home.autoScroll') === 'false'); } catch { return true; }
+  });
   const [friendships, setFriendships] = useState<Array<{user1_id: string, user2_id: string}>>([]);
   const [privateTimelinesOpen, setPrivateTimelinesOpen] = useState(false);
   const [hamburgerMenuOpen, setHamburgerMenuOpen] = useState(false);
