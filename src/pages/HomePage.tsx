@@ -268,6 +268,7 @@ const HomePage = () => {
   const [activeLoopRailIndex, setActiveLoopRailIndex] = useState(0);
   const [loopDurations, setLoopDurations] = useState<Record<string, number>>({});
   const [loopRailInView, setLoopRailInView] = useState(false);
+  const [loopRailPassCompleted, setLoopRailPassCompleted] = useState(false);
   const [feedAutoIndex, setFeedAutoIndex] = useState(0);
   const loopRailRef = useRef<HTMLDivElement | null>(null);
   const feedAutoTimerRef = useRef<number | null>(null);
