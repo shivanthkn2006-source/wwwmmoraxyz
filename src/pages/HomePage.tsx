@@ -282,6 +282,7 @@ const HomePage = () => {
     setLoopRailPassCompleted(false);
     setActiveLoopRailIndex(0);
     setFeedAutoIndex(0);
+    setFeedAutoPassCompleted(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
