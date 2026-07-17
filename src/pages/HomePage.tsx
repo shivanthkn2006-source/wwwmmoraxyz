@@ -1551,7 +1551,7 @@ const HomePage = () => {
                         className="group relative flex items-center justify-center w-6 h-6 rounded-md bg-foreground/5 backdrop-blur-md border border-foreground/10 hover:border-pink-400/50 hover:bg-foreground/10 transition-all duration-300 shadow-[0_0_8px_rgba(236,72,153,0.2)] hover:shadow-[0_0_12px_rgba(236,72,153,0.4)] cursor-pointer"
                         title="Selfie City"
                       >
-                        <MapPin className="w-3 h-3 text-pink-300 group-hover:text-pink-200 transition-colors" />
+                        <Camera className="w-3 h-3 text-pink-300 group-hover:text-pink-200 transition-colors" />
                       </button>
                     </div>
                     <div className="flex items-center gap-3">
@@ -1765,7 +1765,7 @@ const HomePage = () => {
                 {/* Selfie City Feed Header */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <MapPin className="w-5 h-5 text-pink-400" />
+                    <Camera className="w-5 h-5 text-pink-400" />
                     <h2 className="text-lg font-semibold">Selfie City Feed</h2>
                   </div>
                   <Button
