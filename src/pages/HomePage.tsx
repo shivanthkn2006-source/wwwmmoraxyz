@@ -1554,47 +1554,49 @@ const HomePage = () => {
                         <MapPin className="w-3 h-3 text-pink-300 group-hover:text-pink-200 transition-colors" />
                       </button>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <div className="flex gap-0.5 bg-muted/50 rounded-full p-0.5">
-                        <Button
-                          variant={loopsFilter === 'trending' ? 'default' : 'ghost'}
-                          size="sm"
-                          onClick={() => setLoopsFilter('trending')}
-                          className="h-5 min-w-[40px] px-2 text-[9px] rounded-full flex items-center justify-center gap-0.5"
-                        >
-                          <TrendingUp className="w-2.5 h-2.5" />
-                          Hot
-                        </Button>
-                        <Button
-                          variant={loopsFilter === 'recent' ? 'default' : 'ghost'}
-                          size="sm"
-                          onClick={() => setLoopsFilter('recent')}
-                          className="h-5 min-w-[40px] px-2 text-[9px] rounded-full flex items-center justify-center"
-                        >
-                          Recent
-                        </Button>
-                        <Button
-                          variant={loopsFilter === 'liked' ? 'default' : 'ghost'}
-                          size="sm"
-                          onClick={() => setLoopsFilter('liked')}
-                          className="h-5 min-w-[40px] px-2 text-[9px] rounded-full flex items-center justify-center"
-                        >
-                          Liked
-                        </Button>
-                        <Button
-                          variant={loopsFilter === 'friends' ? 'default' : 'ghost'}
-                          size="sm"
-                          onClick={() => setLoopsFilter('friends')}
-                          className="h-5 min-w-[40px] px-2 text-[9px] rounded-full flex items-center justify-center"
-                        >
-                          Friends
-                        </Button>
+                    <div className="flex items-center gap-3">
+                      {/* Flat segmented control — IG/Shorts style: text-only tabs with a thin animated underline */}
+                      <div
+                        role="tablist"
+                        aria-label="Loops filter"
+                        className="relative flex items-center gap-4"
+                      >
+                        {([
+                          { key: 'trending', label: 'Hot' },
+                          { key: 'recent', label: 'Recent' },
+                          { key: 'liked', label: 'Liked' },
+                          { key: 'friends', label: 'Friends' },
+                        ] as const).map(({ key, label }) => {
+                          const active = loopsFilter === key;
+                          return (
+                            <button
+                              key={key}
+                              role="tab"
+                              aria-selected={active}
+                              onClick={() => setLoopsFilter(key)}
+                              className={`relative py-1 text-[11px] tracking-wide transition-colors duration-200 ${
+                                active
+                                  ? 'text-foreground font-medium'
+                                  : 'text-muted-foreground/70 hover:text-foreground/90'
+                              }`}
+                            >
+                              {label}
+                              <span
+                                aria-hidden
+                                className={`absolute left-1/2 -bottom-0.5 h-[1.5px] rounded-full bg-foreground transition-all duration-300 ease-out ${
+                                  active ? 'w-4 -translate-x-1/2 opacity-100' : 'w-0 -translate-x-1/2 opacity-0'
+                                }`}
+                              />
+                            </button>
+                          );
+                        })}
                       </div>
-                      <span className="text-[9px] text-muted-foreground">
+                      <span className="text-[10px] tabular-nums text-muted-foreground/60">
                         {filteredLoops.length}
                       </span>
                     </div>
                   </div>
+
 
                   {/* Loops upload progress / status */}
                   {uploadState !== 'idle' && (
