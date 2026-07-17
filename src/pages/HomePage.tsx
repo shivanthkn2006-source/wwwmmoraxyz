@@ -13,7 +13,7 @@ import NotificationMenu from '@/components/NotificationMenu';
 import AnimatedHamburgerButton from '@/components/AnimatedHamburgerButton';
 import HamburgerMenu from '@/components/HamburgerMenu';
 import SearchBar from '@/components/SearchBar';
-import { ArrowDown, Mail, Search, Video, TrendingUp, ArrowUp, MapPin } from 'lucide-react';
+import { ArrowDown, Mail, Search, Video, TrendingUp, ArrowUp, Camera } from 'lucide-react';
 import FuturisticCounter from '@/components/FuturisticCounter';
 import { useNavigate } from 'react-router-dom';
 import { onHomeRefresh, triggerHomeRefresh } from '@/lib/homeRefresh';
