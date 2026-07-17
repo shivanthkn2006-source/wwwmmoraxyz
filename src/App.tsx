@@ -56,6 +56,7 @@ const NotificationHistoryPage = lazy(() => import("./pages/NotificationHistoryPa
 const ActivityExportPage = lazy(() => import("./pages/ActivityExportPage"));
 const VoiceCommandHistoryPage = lazy(() => import("./pages/VoiceCommandHistoryPage"));
 const VoiceCommandsPage = lazy(() => import("./pages/VoiceCommandsPage"));
+const VoiceCommandTestPage = lazy(() => import("./pages/VoiceCommandTestPage"));
 const ZoeAIPage = lazy(() => import("./pages/ZoeAIPage"));
 const UniversalTimelinePage = lazy(() => import("./pages/UniversalTimelinePage"));
 const AboutPage = lazy(() => import("./pages/AboutPage"));
@@ -606,6 +607,14 @@ const RouteAwareShell = () => {
                             element={
                               <ProtectedRoute>
                                 <VoiceCommandHistoryPage />
+                              </ProtectedRoute>
+                            }
+                          />
+                          <Route
+                            path="/voice-command-test"
+                            element={
+                              <ProtectedRoute>
+                                <VoiceCommandTestPage />
                               </ProtectedRoute>
                             }
                           />
