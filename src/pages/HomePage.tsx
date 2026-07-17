@@ -633,27 +633,45 @@ const HomePage = () => {
   // Supported: 'hide-loops' | 'unhide-loops' | 'toggle-loops' | 'stop-scrolling'
   //            | 'start-scrolling' | 'pause' | 'resume' | 'pause-timeline' | 'resume-timeline'
   useEffect(() => {
+    const normalizeVoiceText = (value: string) => String(value || '')
+      .toLowerCase()
+      .replace(/[’']/g, '')
+      .replace(/[^a-z0-9\s-]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    const isHomeSurfaceCommand = (cmd: string) => {
+      const mentionsHomeSurface = /\b(loop|loops|rail|timeline|feed|scroll|scrolling|header|home)\b/.test(cmd);
+      const hasAction = /\b(hide|unhide|show|open|close|toggle|stop|pause|start|resume|play)\b/.test(cmd);
+      return mentionsHomeSurface && hasAction;
+    };
+
     const applyCommand = (raw: string) => {
-      const cmd = String(raw || '').toLowerCase().trim();
+      const cmd = normalizeVoiceText(raw).replace(/^(hey|ok|okay|hi|hello)?\s*zoe\s+/, '');
       if (!cmd) return;
       const has = (...tokens: string[]) => tokens.every((t) => cmd.includes(t));
 
-      if (cmd === 'hide-loops' || (has('hide') && cmd.includes('loop'))) {
+      if (import.meta.env.DEV) console.info('[HomePage] voice command received', { raw, cmd, loopsHidden, headerVisible, autoScrollEnabled, feedAutoPassCompleted, loopRailPassCompleted });
+
+      if (cmd === 'hide-loops' || cmd === 'hide loops' || (has('hide') && cmd.includes('loop'))) {
         setLoopsHidden(true);
         try { localStorage.setItem('mmora.home.loopsHidden', 'true'); } catch {}
+        if (import.meta.env.DEV) console.info('[HomePage] loopsHidden ← true', { source: 'voice', cmd });
         trackEvent({ name: 'loop_mute_toggle', postId: 'section-visibility', muted: true, persisted: true } as any);
         return;
       }
-      if (cmd === 'unhide-loops' || cmd === 'show-loops' || ((cmd.includes('unhide') || cmd.includes('show') || cmd.includes('open')) && cmd.includes('loop'))) {
+      if (cmd === 'unhide-loops' || cmd === 'unhide loops' || cmd === 'show-loops' || cmd === 'show loops' || ((cmd.includes('unhide') || cmd.includes('show') || cmd.includes('open')) && cmd.includes('loop'))) {
         setLoopsHidden(false);
         try { localStorage.setItem('mmora.home.loopsHidden', 'false'); } catch {}
+        if (import.meta.env.DEV) console.info('[HomePage] loopsHidden ← false', { source: 'voice', cmd });
         trackEvent({ name: 'loop_mute_toggle', postId: 'section-visibility', muted: false, persisted: true } as any);
         return;
       }
-      if (cmd === 'toggle-loops') {
+      if (cmd === 'toggle-loops' || cmd === 'toggle loops') {
         setLoopsHidden((p) => {
           const next = !p;
           try { localStorage.setItem('mmora.home.loopsHidden', next ? 'true' : 'false'); } catch {}
+          if (import.meta.env.DEV) console.info('[HomePage] loopsHidden ← toggled', { source: 'voice', loopsHidden: next, cmd });
           return next;
         });
         return;
@@ -662,6 +680,7 @@ const HomePage = () => {
         || has('stop', 'scroll') || has('pause', 'timeline') || cmd === 'pause timeline' || cmd === 'stop scrolling') {
         setAutoScrollEnabled(false);
         try { localStorage.setItem('mmora.home.autoScroll', 'false'); } catch {}
+        if (import.meta.env.DEV) console.info('[HomePage] autoScrollEnabled ← false', { source: 'voice', cmd });
         trackEvent({ name: 'home_autoscroll_scope', scope: 'fallback', count: 0 } as any);
         return;
       }
@@ -670,6 +689,7 @@ const HomePage = () => {
         setAutoScrollEnabled(true);
         setFeedAutoPassCompleted(false); // resume also restarts a fresh pass
         try { localStorage.setItem('mmora.home.autoScroll', 'true'); } catch {}
+        if (import.meta.env.DEV) console.info('[HomePage] autoScrollEnabled ← true', { source: 'voice', cmd });
         return;
       }
     };
@@ -684,14 +704,16 @@ const HomePage = () => {
       return String(d.text ?? d.transcript ?? d.command ?? d.query ?? d.message ?? '').toLowerCase();
     };
     const onTranscript = (e: Event) => {
-      const text = extractText(e);
-      if (!text || !text.includes('zoe')) return;
-      if (text.includes('hide') && text.includes('loop')) applyCommand('hide-loops');
-      else if ((text.includes('unhide') || text.includes('show') || text.includes('open')) && text.includes('loop')) applyCommand('unhide-loops');
-      else if (text.includes('stop') && text.includes('scroll')) applyCommand('stop-scrolling');
-      else if (text.includes('start') && text.includes('scroll')) applyCommand('start-scrolling');
-      else if (text.includes('pause')) applyCommand('pause');
-      else if (text.includes('resume') || text.includes('play')) applyCommand('resume');
+      const text = normalizeVoiceText(extractText(e));
+      if (!text) return;
+      const stripped = text.replace(/^(hey|ok|okay|hi|hello)?\s*zoe\s+/, '');
+      if (!text.includes('zoe') && !isHomeSurfaceCommand(stripped)) return;
+      if (stripped.includes('hide') && stripped.includes('loop')) applyCommand('hide-loops');
+      else if ((stripped.includes('unhide') || stripped.includes('show') || stripped.includes('open')) && stripped.includes('loop')) applyCommand('unhide-loops');
+      else if (stripped.includes('stop') && (stripped.includes('scroll') || stripped.includes('timeline') || stripped.includes('feed'))) applyCommand('stop-scrolling');
+      else if ((stripped.includes('start') || stripped.includes('resume') || stripped.includes('play')) && (stripped.includes('scroll') || stripped.includes('timeline') || stripped.includes('feed'))) applyCommand('start-scrolling');
+      else if (stripped.includes('pause') && (stripped.includes('scroll') || stripped.includes('timeline') || stripped.includes('feed'))) applyCommand('pause');
+      else if (stripped.includes('resume') || stripped.includes('play')) applyCommand('resume');
     };
 
     // Subscribe to every event name known to carry a Zoe transcript / spoken
@@ -699,45 +721,20 @@ const HomePage = () => {
     // which voice pipeline the user has active.
     const TRANSCRIPT_EVENTS = [
       'zoe:transcript', 'zoe-transcript', 'zoe:command', 'zoe-command',
-      'zoe-navigate', 'zoe-speak', 'zoe-heard', 'zoe-user-said',
+      'zoe-voice-command', 'zoe-global-voice-command', 'vr-voice-input',
+      'zoe-navigate', 'zoe-heard', 'zoe-user-said',
       'mmora:transcript', 'mmora:voice-transcript', 'speech:transcript',
     ];
     window.addEventListener('mmora:home-command', onCommand as EventListener);
     TRANSCRIPT_EVENTS.forEach((n) => window.addEventListener(n, onTranscript as EventListener));
     (window as any).mmoraHomeCommand = applyCommand;
 
-    // Native SpeechRecognition fallback so voice control works even when no
-    // upstream pipeline is emitting transcript events. Continuous + restarting.
-    const SR: any = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    let recognition: any = null;
-    let stopped = false;
-    if (SR) {
-      try {
-        recognition = new SR();
-        recognition.continuous = true;
-        recognition.interimResults = true;
-        recognition.lang = navigator.language || 'en-US';
-        recognition.onresult = (ev: any) => {
-          for (let i = ev.resultIndex; i < ev.results.length; i++) {
-            const t = String(ev.results[i][0]?.transcript || '').toLowerCase();
-            if (!t.includes('zoe')) continue;
-            window.dispatchEvent(new CustomEvent('mmora:transcript', { detail: { text: t } }));
-          }
-        };
-        recognition.onend = () => { if (!stopped) { try { recognition.start(); } catch {} } };
-        recognition.onerror = () => { /* silent — restart on end */ };
-        try { recognition.start(); if (import.meta.env.DEV) console.info('[HomePage] SpeechRecognition fallback started'); } catch {}
-      } catch { recognition = null; }
-    }
-
     return () => {
-      stopped = true;
       window.removeEventListener('mmora:home-command', onCommand as EventListener);
       TRANSCRIPT_EVENTS.forEach((n) => window.removeEventListener(n, onTranscript as EventListener));
       if ((window as any).mmoraHomeCommand === applyCommand) delete (window as any).mmoraHomeCommand;
-      if (recognition) { try { recognition.stop(); } catch {} }
     };
-  }, []);
+  }, [autoScrollEnabled, feedAutoPassCompleted, headerVisible, loopRailPassCompleted, loopsHidden]);
 
 
   
