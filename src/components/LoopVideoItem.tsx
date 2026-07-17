@@ -48,7 +48,10 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({
     if (typeof window === 'undefined') return false;
     return Boolean((window as any).__mmoraAudioUnlocked);
   });
-  const { soundEnabled, setSoundEnabled } = usePersistentMediaSound(true);
+  // Loops are ALWAYS muted by default (independent from timeline sound preference)
+  // to avoid audio collision with the home-feed auto-scrolling posts.
+  // User can still unmute per-session with the speaker toggle.
+  const [soundEnabled, setSoundEnabled] = useState(false);
 
   const version = post.updated_at || post.created_at || post.id;
   const mediaSrc = appendMediaVersion(post.media_url, version);
