@@ -1836,6 +1836,7 @@ const HomePage = () => {
         </button>
       )}
       </div>
+      <AutoScrollDebugOverlay />
     </>
   );
 };
