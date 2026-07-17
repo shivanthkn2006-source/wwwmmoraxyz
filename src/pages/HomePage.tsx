@@ -728,6 +728,7 @@ const HomePage = () => {
       window.removeEventListener('mmora:home-command', onCommand as EventListener);
       TRANSCRIPT_EVENTS.forEach((n) => window.removeEventListener(n, onTranscript as EventListener));
       if ((window as any).mmoraHomeCommand === applyCommand) delete (window as any).mmoraHomeCommand;
+      if (recognition) { try { recognition.stop(); } catch {} }
     };
   }, []);
 
