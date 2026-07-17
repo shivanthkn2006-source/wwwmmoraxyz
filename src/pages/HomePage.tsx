@@ -273,6 +273,17 @@ const HomePage = () => {
   const loopRailRef = useRef<HTMLDivElement | null>(null);
   const feedAutoTimerRef = useRef<number | null>(null);
 
+  // Reset loop-rail one-pass flag and timeline index when the signed-in user
+  // changes (sign-in / sign-out / account switch) so the rail replays exactly
+  // once per session and never unexpectedly loops for a returning user.
+  useEffect(() => {
+    if (import.meta.env.DEV) console.info('[HomePage] auth change → resetting loop-rail pass + feed index', { userId: user?.id ?? null });
+    setLoopRailPassCompleted(false);
+    setActiveLoopRailIndex(0);
+    setFeedAutoIndex(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
   // Loops upload UI state
   const [uploadState, setUploadState] = useState<'idle' | 'validating' | 'uploading' | 'saving' | 'error' | 'success'>('idle');
   const [uploadProgress, setUploadProgress] = useState(0);
