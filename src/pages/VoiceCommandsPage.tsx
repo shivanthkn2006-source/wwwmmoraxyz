@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, History } from 'lucide-react';
+import { ArrowLeft, Bug, History } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import VoiceCommandsSettings from '@/components/VoiceCommandsSettings';
 
@@ -27,6 +27,15 @@ const VoiceCommandsPage = () => {
           >
             <History className="w-4 h-4" />
             History
+          </Button>
+          <Button 
+            variant="outline"
+            size="sm"
+            onClick={() => navigate('/voice-command-test')}
+            className="gap-2"
+          >
+            <Bug className="w-4 h-4" />
+            Test
           </Button>
         </div>
 

@@ -78,7 +78,7 @@ const PlanetaryIntentSelector: React.FC = () => {
     if (!showIntentSelector) return;
     if (typeof window === 'undefined') return;
     const path = window.location.pathname;
-    if (!path.startsWith('/zoe-omega') && path !== '/home') return;
+    if (!path.startsWith('/zoe-omega') && path !== '/home' && path !== '/voice-command-test') return;
 
     const timer = window.setTimeout(() => {
       dismissIntentSelector();
@@ -88,7 +88,7 @@ const PlanetaryIntentSelector: React.FC = () => {
   }, [showIntentSelector, dismissIntentSelector]);
 
   const path = typeof window !== 'undefined' ? window.location.pathname : '';
-  if (!showIntentSelector || !mvdScore.isBasicComplete || path === '/home') {
+  if (!showIntentSelector || !mvdScore.isBasicComplete || path === '/home' || path === '/voice-command-test') {
     return null;
   }
 

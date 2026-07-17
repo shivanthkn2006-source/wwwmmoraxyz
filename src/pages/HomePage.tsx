@@ -46,6 +46,16 @@ import LoopVideoItem from '@/components/LoopVideoItem';
 import SelfieCityFeed from '@/components/selfiecity/SelfieCityFeed';
 import FeedDiagnosticsBanner, { FeedDiagnostics } from '@/components/FeedDiagnosticsBanner';
 import AdminFeedDebugger from '@/components/AdminFeedDebugger';
+import {
+  detectZoeHomeCommand,
+  extractZoeHomeEventText,
+  logZoeHomeCommand,
+  ZOE_HOME_STATE_EVENT,
+  ZOE_HOME_DEBUG_EVENT,
+  ZOE_HOME_TRANSCRIPT_EVENTS,
+  type ZoeHomeDebugDetail,
+  type ZoeHomeDetectedCommand,
+} from '@/lib/zoeHomeCommands';
 
 const ProfileContent = React.lazy(() => import('@/components/ProfileContent'));
 
@@ -271,6 +281,9 @@ const HomePage = () => {
   const [loopRailPassCompleted, setLoopRailPassCompleted] = useState(false);
   const [feedAutoIndex, setFeedAutoIndex] = useState(0);
   const [feedAutoPassCompleted, setFeedAutoPassCompleted] = useState(false);
+  const [showZoeHomeDebug, setShowZoeHomeDebug] = useState<boolean>(() => {
+    try { return typeof window !== 'undefined' && window.localStorage.getItem('mmora.home.zoeDebugOverlay') !== 'false'; } catch { return true; }
+  });
   const loopRailRef = useRef<HTMLDivElement | null>(null);
   const feedAutoTimerRef = useRef<number | null>(null);
 
@@ -322,9 +335,82 @@ const HomePage = () => {
 
   // DEV visibility debug: log every change so we can verify voice + chevron
   // stay in sync and header hit-testing behaves correctly during auto-scroll.
+  const [zoeHomeDebug, setZoeHomeDebug] = useState<ZoeHomeDebugDetail>({
+    stage: 'state',
+    handler: 'home-mounted',
+    loopsHidden,
+    headerVisible,
+    autoScrollEnabled,
+    feedAutoPassCompleted,
+    loopRailPassCompleted,
+    at: Date.now(),
+  });
+
+  useEffect(() => {
+    const onDebug = (e: Event) => {
+      const detail = (e as CustomEvent<ZoeHomeDebugDetail>).detail;
+      if (!detail) return;
+      setZoeHomeDebug((prev) => ({ ...prev, ...detail }));
+    };
+    window.addEventListener(ZOE_HOME_DEBUG_EVENT, onDebug as EventListener);
+    return () => window.removeEventListener(ZOE_HOME_DEBUG_EVENT, onDebug as EventListener);
+  }, []);
+
   useEffect(() => {
     if (import.meta.env.DEV) console.info('[HomePage] state', { loopsHidden, headerVisible, feedAutoPassCompleted, loopRailPassCompleted, autoScrollEnabled });
+    const detail: ZoeHomeDebugDetail = {
+      stage: 'state',
+      loopsHidden,
+      headerVisible,
+      autoScrollEnabled,
+      feedAutoPassCompleted,
+      loopRailPassCompleted,
+      at: Date.now(),
+    };
+    setZoeHomeDebug((prev) => ({ ...prev, ...detail }));
+    try { window.dispatchEvent(new CustomEvent(ZOE_HOME_STATE_EVENT, { detail })); } catch {}
   }, [loopsHidden, headerVisible, feedAutoPassCompleted, loopRailPassCompleted, autoScrollEnabled]);
+
+  const setLoopsSectionHidden = React.useCallback((hidden: boolean, source: string, transcript?: string, detectedCommand?: ZoeHomeDetectedCommand) => {
+    setLoopsHidden(hidden);
+    try { localStorage.setItem('mmora.home.loopsHidden', hidden ? 'true' : 'false'); } catch {}
+    try { trackEvent({ name: 'loop_mute_toggle', postId: 'section-visibility', muted: hidden, persisted: true } as any); } catch {}
+    logZoeHomeCommand({
+      stage: 'handler',
+      transcript,
+      detectedCommand,
+      handler: hidden ? 'hide-loops' : 'unhide-loops',
+      source,
+      loopsHidden: hidden,
+      headerVisible,
+      autoScrollEnabled,
+      feedAutoPassCompleted,
+      loopRailPassCompleted,
+      reason: 'loops-ui-updated',
+    });
+  }, [autoScrollEnabled, feedAutoPassCompleted, headerVisible, loopRailPassCompleted]);
+
+  const toggleLoopsSection = React.useCallback((source: string, transcript?: string, detectedCommand: ZoeHomeDetectedCommand = 'toggle-loops') => {
+    setLoopsHidden((prev) => {
+      const next = !prev;
+      try { localStorage.setItem('mmora.home.loopsHidden', next ? 'true' : 'false'); } catch {}
+      try { trackEvent({ name: 'loop_mute_toggle', postId: 'section-visibility', muted: next, persisted: true } as any); } catch {}
+      logZoeHomeCommand({
+        stage: 'handler',
+        transcript,
+        detectedCommand,
+        handler: 'toggle-loops',
+        source,
+        loopsHidden: next,
+        headerVisible,
+        autoScrollEnabled,
+        feedAutoPassCompleted,
+        loopRailPassCompleted,
+        reason: 'loops-ui-updated',
+      });
+      return next;
+    });
+  }, [autoScrollEnabled, feedAutoPassCompleted, headerVisible, loopRailPassCompleted]);
 
 
 
@@ -630,111 +716,141 @@ const HomePage = () => {
   // Voice / programmatic command bus for the Home surface.
   // Fire `window.dispatchEvent(new CustomEvent('mmora:home-command', { detail: { command: '...' } }))`
   // or call `window.mmoraHomeCommand('hide loops')` from Zoe's voice pipeline.
-  // Supported: 'hide-loops' | 'unhide-loops' | 'toggle-loops' | 'stop-scrolling'
-  //            | 'start-scrolling' | 'pause' | 'resume' | 'pause-timeline' | 'resume-timeline'
   useEffect(() => {
-    const normalizeVoiceText = (value: string) => String(value || '')
-      .toLowerCase()
-      .replace(/[’']/g, '')
-      .replace(/[^a-z0-9\s-]/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-
-    const isHomeSurfaceCommand = (cmd: string) => {
-      const mentionsHomeSurface = /\b(loop|loops|rail|timeline|feed|scroll|scrolling|header|home)\b/.test(cmd);
-      const hasAction = /\b(hide|unhide|show|open|close|toggle|stop|pause|start|resume|play)\b/.test(cmd);
-      return mentionsHomeSurface && hasAction;
-    };
-
-    const applyCommand = (raw: string) => {
-      const cmd = normalizeVoiceText(raw).replace(/^(hey|ok|okay|hi|hello)?\s*zoe\s+/, '');
-      if (!cmd) return;
-      const has = (...tokens: string[]) => tokens.every((t) => cmd.includes(t));
-
-      if (import.meta.env.DEV) console.info('[HomePage] voice command received', { raw, cmd, loopsHidden, headerVisible, autoScrollEnabled, feedAutoPassCompleted, loopRailPassCompleted });
-
-      if (cmd === 'unhide-loops' || cmd === 'unhide loops' || cmd === 'show-loops' || cmd === 'show loops' || ((cmd.includes('unhide') || cmd.includes('show') || cmd.includes('open')) && cmd.includes('loop'))) {
-        setLoopsHidden(false);
-        try { localStorage.setItem('mmora.home.loopsHidden', 'false'); } catch {}
-        if (import.meta.env.DEV) console.info('[HomePage] loopsHidden ← false', { source: 'voice', cmd });
-        trackEvent({ name: 'loop_mute_toggle', postId: 'section-visibility', muted: false, persisted: true } as any);
-        return;
-      }
-      if (cmd === 'hide-loops' || cmd === 'hide loops' || (!cmd.includes('unhide') && has('hide') && cmd.includes('loop'))) {
-        setLoopsHidden(true);
-        try { localStorage.setItem('mmora.home.loopsHidden', 'true'); } catch {}
-        if (import.meta.env.DEV) console.info('[HomePage] loopsHidden ← true', { source: 'voice', cmd });
-        trackEvent({ name: 'loop_mute_toggle', postId: 'section-visibility', muted: true, persisted: true } as any);
-        return;
-      }
-      if (cmd === 'toggle-loops' || cmd === 'toggle loops') {
-        setLoopsHidden((p) => {
-          const next = !p;
-          try { localStorage.setItem('mmora.home.loopsHidden', next ? 'true' : 'false'); } catch {}
-          if (import.meta.env.DEV) console.info('[HomePage] loopsHidden ← toggled', { source: 'voice', loopsHidden: next, cmd });
-          return next;
+    const applyCommand = (raw: string, source = 'home-command-bus', eventName = 'direct') => {
+      const detection = detectZoeHomeCommand(raw);
+      logZoeHomeCommand({
+        stage: 'parse',
+        transcript: detection.raw,
+        normalized: detection.normalized,
+        detectedCommand: detection.command,
+        source,
+        eventName,
+        reason: detection.reason,
+        loopsHidden,
+        headerVisible,
+        autoScrollEnabled,
+        feedAutoPassCompleted,
+        loopRailPassCompleted,
+      });
+      if (!detection.normalized) return false;
+      if (detection.command === 'unknown') {
+        logZoeHomeCommand({
+          stage: 'route',
+          transcript: detection.raw,
+          normalized: detection.normalized,
+          detectedCommand: 'unknown',
+          source,
+          eventName,
+          reason: detection.homeSurface ? 'home-command-not-mapped' : 'ignored-not-home-command',
+          loopsHidden,
+          headerVisible,
+          autoScrollEnabled,
+          feedAutoPassCompleted,
+          loopRailPassCompleted,
         });
-        return;
+        return false;
       }
-      if (cmd === 'stop-scrolling' || cmd === 'pause' || cmd === 'pause-timeline'
-        || has('stop', 'scroll') || has('pause', 'timeline') || cmd === 'pause timeline' || cmd === 'stop scrolling') {
+
+      logZoeHomeCommand({
+        stage: 'route',
+        transcript: detection.raw,
+        normalized: detection.normalized,
+        detectedCommand: detection.command,
+        handler: detection.command,
+        source,
+        eventName,
+        reason: 'routing-to-home-handler',
+        loopsHidden,
+        headerVisible,
+        autoScrollEnabled,
+        feedAutoPassCompleted,
+        loopRailPassCompleted,
+      });
+
+      if (detection.command === 'unhide-loops') {
+        setLoopsSectionHidden(false, source, detection.raw, detection.command);
+        return true;
+      }
+      if (detection.command === 'hide-loops') {
+        setLoopsSectionHidden(true, source, detection.raw, detection.command);
+        return true;
+      }
+      if (detection.command === 'toggle-loops') {
+        toggleLoopsSection(source, detection.raw, detection.command);
+        return true;
+      }
+      if (detection.command === 'stop-scrolling') {
         setAutoScrollEnabled(false);
         try { localStorage.setItem('mmora.home.autoScroll', 'false'); } catch {}
-        if (import.meta.env.DEV) console.info('[HomePage] autoScrollEnabled ← false', { source: 'voice', cmd });
-        trackEvent({ name: 'home_autoscroll_scope', scope: 'fallback', count: 0 } as any);
-        return;
+        try { trackEvent({ name: 'home_autoscroll_scope', scope: 'fallback', count: 0 } as any); } catch {}
+        logZoeHomeCommand({
+          stage: 'handler',
+          transcript: detection.raw,
+          normalized: detection.normalized,
+          detectedCommand: detection.command,
+          handler: 'stop-scrolling',
+          source,
+          eventName,
+          reason: 'timeline-paused',
+          loopsHidden,
+          headerVisible,
+          autoScrollEnabled: false,
+          feedAutoPassCompleted,
+          loopRailPassCompleted,
+        });
+        return true;
       }
-      if (cmd === 'start-scrolling' || cmd === 'resume' || cmd === 'resume-timeline'
-        || has('start', 'scroll') || has('resume', 'timeline') || has('play', 'timeline')) {
+      if (detection.command === 'start-scrolling') {
         setAutoScrollEnabled(true);
-        setFeedAutoPassCompleted(false); // resume also restarts a fresh pass
+        setFeedAutoPassCompleted(false);
         try { localStorage.setItem('mmora.home.autoScroll', 'true'); } catch {}
-        if (import.meta.env.DEV) console.info('[HomePage] autoScrollEnabled ← true', { source: 'voice', cmd });
-        return;
+        logZoeHomeCommand({
+          stage: 'handler',
+          transcript: detection.raw,
+          normalized: detection.normalized,
+          detectedCommand: detection.command,
+          handler: 'start-scrolling',
+          source,
+          eventName,
+          reason: 'timeline-resumed',
+          loopsHidden,
+          headerVisible,
+          autoScrollEnabled: true,
+          feedAutoPassCompleted: false,
+          loopRailPassCompleted,
+        });
+        return true;
       }
+      return false;
     };
 
     const onCommand = (e: Event) => {
-      const detail = (e as CustomEvent).detail as { command?: string } | undefined;
-      if (detail?.command) applyCommand(detail.command);
-    };
-    const extractText = (e: Event): string => {
-      const d = (e as CustomEvent).detail as any;
-      if (!d) return '';
-      return String(d.text ?? d.transcript ?? d.command ?? d.query ?? d.message ?? '').toLowerCase();
+      const detail = (e as CustomEvent).detail as any;
+      const text = extractZoeHomeEventText(detail);
+      applyCommand(text, String(detail?.source || 'mmora:home-command'), 'mmora:home-command');
     };
     const onTranscript = (e: Event) => {
-      const text = normalizeVoiceText(extractText(e));
+      const detail = (e as CustomEvent).detail;
+      const text = extractZoeHomeEventText(detail);
       if (!text) return;
-      const stripped = text.replace(/^(hey|ok|okay|hi|hello)?\s*zoe\s+/, '');
-      if (!text.includes('zoe') && !isHomeSurfaceCommand(stripped)) return;
-      if ((stripped.includes('unhide') || stripped.includes('show') || stripped.includes('open')) && stripped.includes('loop')) applyCommand('unhide-loops');
-      else if (stripped.includes('hide') && stripped.includes('loop')) applyCommand('hide-loops');
-      else if (stripped.includes('stop') && (stripped.includes('scroll') || stripped.includes('timeline') || stripped.includes('feed'))) applyCommand('stop-scrolling');
-      else if ((stripped.includes('start') || stripped.includes('resume') || stripped.includes('play')) && (stripped.includes('scroll') || stripped.includes('timeline') || stripped.includes('feed'))) applyCommand('start-scrolling');
-      else if (stripped.includes('pause') && (stripped.includes('scroll') || stripped.includes('timeline') || stripped.includes('feed'))) applyCommand('pause');
-      else if (stripped.includes('resume') || stripped.includes('play')) applyCommand('resume');
+      const eventName = e.type;
+      const source = typeof detail === 'object' && detail ? String((detail as any).source || eventName) : eventName;
+      const detection = detectZoeHomeCommand(text);
+      if (!detection.transcript.includes('zoe') && !detection.homeSurface) return;
+      applyCommand(text, source, eventName);
     };
 
-    // Subscribe to every event name known to carry a Zoe transcript / spoken
-    // command so hide/unhide + timeline voice control works regardless of
-    // which voice pipeline the user has active.
-    const TRANSCRIPT_EVENTS = [
-      'zoe:transcript', 'zoe-transcript', 'zoe:command', 'zoe-command',
-      'zoe-voice-command', 'zoe-global-voice-command', 'vr-voice-input',
-      'zoe-navigate', 'zoe-heard', 'zoe-user-said',
-      'mmora:transcript', 'mmora:voice-transcript', 'speech:transcript',
-    ];
     window.addEventListener('mmora:home-command', onCommand as EventListener);
-    TRANSCRIPT_EVENTS.forEach((n) => window.addEventListener(n, onTranscript as EventListener));
-    (window as any).mmoraHomeCommand = applyCommand;
+    ZOE_HOME_TRANSCRIPT_EVENTS.forEach((n) => window.addEventListener(n, onTranscript as EventListener));
+    (window as any).mmoraHomeCommand = (command: string) => applyCommand(command, 'window.mmoraHomeCommand', 'global-function');
 
     return () => {
       window.removeEventListener('mmora:home-command', onCommand as EventListener);
-      TRANSCRIPT_EVENTS.forEach((n) => window.removeEventListener(n, onTranscript as EventListener));
-      if ((window as any).mmoraHomeCommand === applyCommand) delete (window as any).mmoraHomeCommand;
+      ZOE_HOME_TRANSCRIPT_EVENTS.forEach((n) => window.removeEventListener(n, onTranscript as EventListener));
+      if ((window as any).mmoraHomeCommand) delete (window as any).mmoraHomeCommand;
     };
-  }, [autoScrollEnabled, feedAutoPassCompleted, headerVisible, loopRailPassCompleted, loopsHidden]);
+  }, [autoScrollEnabled, feedAutoPassCompleted, headerVisible, loopRailPassCompleted, loopsHidden, setLoopsSectionHidden, toggleLoopsSection]);
 
 
   
@@ -1796,15 +1912,7 @@ const HomePage = () => {
                       {/* Hide / Unhide Loops section — one-tap toggle, also voice-controllable */}
                       <button
                         type="button"
-                        onClick={() => {
-                          setLoopsHidden((prev) => {
-                            const next = !prev;
-                            try { localStorage.setItem('mmora.home.loopsHidden', next ? 'true' : 'false'); } catch {}
-                            try { trackEvent({ name: 'loop_mute_toggle', postId: 'section-visibility', muted: next, persisted: true } as any); } catch {}
-                            if (import.meta.env.DEV) console.info('[HomePage] loops toggle (chevron)', { loopsHidden: next });
-                            return next;
-                          });
-                        }}
+                        onClick={() => toggleLoopsSection('manual-chevron', undefined, 'toggle-loops')}
                         onKeyDown={(e) => {
                           // Native <button> already handles Enter/Space, but
                           // guard against synthetic wrappers that swallow them.
@@ -1822,6 +1930,34 @@ const HomePage = () => {
                       >
                         {loopsHidden ? <ChevronDown className="w-3 h-3" aria-hidden="true" /> : <ChevronUp className="w-3 h-3" aria-hidden="true" />}
                         <span className="leading-none">{loopsHidden ? 'Show' : 'Hide'}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2 rounded-md border border-border/50 bg-muted/25 px-2 py-2" role="group" aria-label="Manual loops visibility controls">
+                    <span className="text-[11px] font-medium text-muted-foreground">
+                      Loops are {loopsHidden ? 'hidden' : 'visible'}
+                    </span>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setLoopsSectionHidden(true, 'manual-hide-button', undefined, 'hide-loops')}
+                        disabled={loopsHidden}
+                        className="min-h-7 rounded-md border border-border bg-background px-2.5 text-[11px] font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
+                        aria-pressed={loopsHidden}
+                        aria-controls="loops-section-body"
+                      >
+                        Hide loops
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setLoopsSectionHidden(false, 'manual-show-button', undefined, 'unhide-loops')}
+                        disabled={!loopsHidden}
+                        className="min-h-7 rounded-md border border-border bg-background px-2.5 text-[11px] font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
+                        aria-pressed={!loopsHidden}
+                        aria-controls="loops-section-body"
+                      >
+                        Show loops
                       </button>
                     </div>
                   </div>
@@ -2071,6 +2207,42 @@ const HomePage = () => {
         </button>
       )}
       </div>
+      {showZoeHomeDebug && (
+        <div className="pointer-events-none fixed left-2 top-16 z-[60] w-[calc(100vw-1rem)] max-w-sm md:left-4 md:top-20" data-testid="zoe-home-debug-overlay">
+          <div className="pointer-events-auto rounded-lg border border-border bg-background/95 p-3 text-foreground shadow-lg backdrop-blur">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-primary">Zoe home debug</div>
+              <button
+                type="button"
+                className="rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                onClick={() => {
+                  setShowZoeHomeDebug(false);
+                  try { localStorage.setItem('mmora.home.zoeDebugOverlay', 'false'); } catch {}
+                }}
+                aria-label="Hide Zoe home debug overlay"
+              >
+                ×
+              </button>
+            </div>
+            <div className="grid grid-cols-[86px_1fr] gap-x-2 gap-y-1 text-[11px] leading-4">
+              <span className="text-muted-foreground">transcript</span>
+              <span className="truncate font-mono" data-testid="zoe-debug-transcript">{zoeHomeDebug.transcript || '—'}</span>
+              <span className="text-muted-foreground">command</span>
+              <span className="font-mono" data-testid="zoe-debug-command">{zoeHomeDebug.detectedCommand || '—'}</span>
+              <span className="text-muted-foreground">handler</span>
+              <span className="font-mono" data-testid="zoe-debug-handler">{zoeHomeDebug.handler || '—'}</span>
+              <span className="text-muted-foreground">source</span>
+              <span className="truncate font-mono">{zoeHomeDebug.source || zoeHomeDebug.eventName || '—'}</span>
+              <span className="text-muted-foreground">loops</span>
+              <span className="font-mono" data-testid="zoe-debug-loops-hidden">{loopsHidden ? 'hidden' : 'visible'}</span>
+              <span className="text-muted-foreground">header</span>
+              <span className="font-mono" data-testid="zoe-debug-header-visible">{headerVisible ? 'visible' : 'hidden'}</span>
+              <span className="text-muted-foreground">scroll</span>
+              <span className="font-mono" data-testid="zoe-debug-autoscroll">{autoScrollEnabled ? 'on' : 'off'}</span>
+            </div>
+          </div>
+        </div>
+      )}
       <AutoScrollDebugOverlay />
     </>
   );
