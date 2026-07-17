@@ -414,6 +414,8 @@ const HomePage = () => {
       if (wrapped || atEnd) {
         // Finished one full pass — stop auto-scrolling the rail so the main
         // timeline can take over. User can still interact / swipe manually.
+        if (import.meta.env.DEV) console.info('[HomePage] loop-rail pass completed → handing off to timeline autoscroll', { activeLoopRailIndex, total: filteredLoops.length });
+        try { window.dispatchEvent(new CustomEvent('mmora:analytics', { detail: { name: 'loop_rail_pass_completed', total: filteredLoops.length } })); } catch {}
         setLoopRailPassCompleted(true);
       } else {
         setActiveLoopRailIndex(nextIndex);
