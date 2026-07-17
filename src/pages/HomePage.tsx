@@ -1823,6 +1823,7 @@ const HomePage = () => {
                   </div>
 
 
+                  <div id="loops-section-body" aria-live="polite" hidden={loopsHidden} />
                   {!loopsHidden && (<>
                   {/* Loops upload progress / status */}
                   {uploadState !== 'idle' && (
