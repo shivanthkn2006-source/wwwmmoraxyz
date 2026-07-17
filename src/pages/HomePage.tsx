@@ -1623,6 +1623,7 @@ const HomePage = () => {
                   </div>
 
 
+                  {!loopsHidden && (<>
                   {/* Loops upload progress / status */}
                   {uploadState !== 'idle' && (
                     <div
