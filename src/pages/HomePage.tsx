@@ -13,7 +13,8 @@ import NotificationMenu from '@/components/NotificationMenu';
 import AnimatedHamburgerButton from '@/components/AnimatedHamburgerButton';
 import HamburgerMenu from '@/components/HamburgerMenu';
 import SearchBar from '@/components/SearchBar';
-import { ArrowDown, Mail, Search, Video, TrendingUp, ArrowUp, Camera } from 'lucide-react';
+import { ArrowDown, Mail, Search, Video, TrendingUp, ArrowUp, Camera, ChevronUp, ChevronDown } from 'lucide-react';
+import { trackEvent } from '@/lib/analytics';
 import FuturisticCounter from '@/components/FuturisticCounter';
 import { useNavigate } from 'react-router-dom';
 import { onHomeRefresh, triggerHomeRefresh } from '@/lib/homeRefresh';
@@ -249,6 +250,12 @@ const HomePage = () => {
   const [loopsPlayerOpen, setLoopsPlayerOpen] = useState(false);
   const [loopsInitialIndex, setLoopsInitialIndex] = useState(0);
   const [loopsFilter, setLoopsFilter] = useState<'recent' | 'liked' | 'friends' | 'trending'>('trending');
+  const [loopsHidden, setLoopsHidden] = useState<boolean>(() => {
+    try { return typeof window !== 'undefined' && window.localStorage.getItem('mmora.home.loopsHidden') === 'true'; } catch { return false; }
+  });
+  const [autoScrollEnabled, setAutoScrollEnabled] = useState<boolean>(() => {
+    try { return !(typeof window !== 'undefined' && window.localStorage.getItem('mmora.home.autoScroll') === 'false'); } catch { return true; }
+  });
   const [friendships, setFriendships] = useState<Array<{user1_id: string, user2_id: string}>>([]);
   const [privateTimelinesOpen, setPrivateTimelinesOpen] = useState(false);
   const [hamburgerMenuOpen, setHamburgerMenuOpen] = useState(false);
@@ -486,7 +493,7 @@ const HomePage = () => {
   // Auto-advance the active feed after the current clip's real duration finishes.
   // Event-driven per video (handles buffering/stalls); non-video posts fall back to 5s.
   useEffect(() => {
-    if (loading || loopRailInView || (activeTab !== 'global' && activeTab !== 'personal')) return;
+    if (loading || loopRailInView || !autoScrollEnabled || (activeTab !== 'global' && activeTab !== 'personal')) return;
     const posts = Array.from(document.querySelectorAll<HTMLElement>(`[data-feed-tab="${activeTab}"] [data-post-card]`));
     if (posts.length <= 1) return;
 
@@ -539,7 +546,79 @@ const HomePage = () => {
       if (feedAutoTimerRef.current) window.clearTimeout(feedAutoTimerRef.current);
       feedAutoTimerRef.current = null;
     };
-  }, [activeTab, loading, loopRailInView, globalPosts.length, personalPosts.length, feedAutoIndex]);
+  }, [activeTab, loading, loopRailInView, globalPosts.length, personalPosts.length, feedAutoIndex, autoScrollEnabled]);
+
+  // Voice / programmatic command bus for the Home surface.
+  // Fire `window.dispatchEvent(new CustomEvent('mmora:home-command', { detail: { command: '...' } }))`
+  // or call `window.mmoraHomeCommand('hide loops')` from Zoe's voice pipeline.
+  // Supported: 'hide-loops' | 'unhide-loops' | 'toggle-loops' | 'stop-scrolling'
+  //            | 'start-scrolling' | 'pause' | 'resume' | 'pause-timeline' | 'resume-timeline'
+  useEffect(() => {
+    const applyCommand = (raw: string) => {
+      const cmd = String(raw || '').toLowerCase().trim();
+      if (!cmd) return;
+      const has = (...tokens: string[]) => tokens.every((t) => cmd.includes(t));
+
+      if (cmd === 'hide-loops' || (has('hide') && cmd.includes('loop'))) {
+        setLoopsHidden(true);
+        try { localStorage.setItem('mmora.home.loopsHidden', 'true'); } catch {}
+        trackEvent({ name: 'loop_mute_toggle', postId: 'section-visibility', muted: true, persisted: true } as any);
+        return;
+      }
+      if (cmd === 'unhide-loops' || cmd === 'show-loops' || ((cmd.includes('unhide') || cmd.includes('show') || cmd.includes('open')) && cmd.includes('loop'))) {
+        setLoopsHidden(false);
+        try { localStorage.setItem('mmora.home.loopsHidden', 'false'); } catch {}
+        trackEvent({ name: 'loop_mute_toggle', postId: 'section-visibility', muted: false, persisted: true } as any);
+        return;
+      }
+      if (cmd === 'toggle-loops') {
+        setLoopsHidden((p) => {
+          const next = !p;
+          try { localStorage.setItem('mmora.home.loopsHidden', next ? 'true' : 'false'); } catch {}
+          return next;
+        });
+        return;
+      }
+      if (cmd === 'stop-scrolling' || cmd === 'pause' || cmd === 'pause-timeline'
+        || has('stop', 'scroll') || has('pause', 'timeline') || cmd === 'pause timeline' || cmd === 'stop scrolling') {
+        setAutoScrollEnabled(false);
+        try { localStorage.setItem('mmora.home.autoScroll', 'false'); } catch {}
+        trackEvent({ name: 'home_autoscroll_scope', scope: 'fallback', count: 0 } as any);
+        return;
+      }
+      if (cmd === 'start-scrolling' || cmd === 'resume' || cmd === 'resume-timeline'
+        || has('start', 'scroll') || has('resume', 'timeline') || has('play', 'timeline')) {
+        setAutoScrollEnabled(true);
+        try { localStorage.setItem('mmora.home.autoScroll', 'true'); } catch {}
+        return;
+      }
+    };
+
+    const onCommand = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { command?: string } | undefined;
+      if (detail?.command) applyCommand(detail.command);
+    };
+    const onTranscript = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { text?: string; transcript?: string } | undefined;
+      const text = (detail?.text ?? detail?.transcript ?? '').toLowerCase();
+      if (!text || !text.includes('zoe')) return;
+      if (text.includes('hide') && text.includes('loop')) applyCommand('hide-loops');
+      else if ((text.includes('unhide') || text.includes('show') || text.includes('open')) && text.includes('loop')) applyCommand('unhide-loops');
+      else if (text.includes('stop') && text.includes('scroll')) applyCommand('stop-scrolling');
+      else if (text.includes('start') && text.includes('scroll')) applyCommand('start-scrolling');
+      else if (text.includes('pause')) applyCommand('pause');
+      else if (text.includes('resume') || text.includes('play')) applyCommand('resume');
+    };
+
+    window.addEventListener('mmora:home-command', onCommand as EventListener);
+    window.addEventListener('zoe:transcript', onTranscript as EventListener);
+    (window as any).mmoraHomeCommand = applyCommand;
+    return () => {
+      window.removeEventListener('mmora:home-command', onCommand as EventListener);
+      window.removeEventListener('zoe:transcript', onTranscript as EventListener);
+      if ((window as any).mmoraHomeCommand === applyCommand) delete (window as any).mmoraHomeCommand;
+    };
+  }, []);
 
 
   
@@ -1460,8 +1539,8 @@ const HomePage = () => {
 
         </div>
 
-        {/* Spacer for fixed header */}
-        <div className="h-[140px]"></div>
+        {/* Spacer for fixed header — minimized to maximize usable screen area */}
+        <div className="h-16"></div>
 
         <TabsContent value="global" className="mt-0 pb-24 xxs:pb-24 xs:pb-20">
               <div className="space-y-2 p-3" data-feed-tab="global">
@@ -1532,26 +1611,26 @@ const HomePage = () => {
                       <label
                         htmlFor="loops-video-upload"
                         aria-disabled={uploadState === 'uploading' || uploadState === 'saving' || uploadState === 'validating'}
-                        className={`group relative flex items-center justify-center w-6 h-6 rounded-md bg-foreground/5 backdrop-blur-md border border-foreground/10 hover:border-purple-400/50 hover:bg-foreground/10 transition-all duration-300 shadow-[0_0_8px_rgba(139,92,246,0.2)] hover:shadow-[0_0_12px_rgba(139,92,246,0.4)] ${uploadState === 'uploading' || uploadState === 'saving' || uploadState === 'validating' ? 'cursor-wait opacity-70' : 'cursor-pointer'}`}
+                        className={`group relative flex items-center justify-center w-6 h-6 rounded-md bg-foreground/5 backdrop-blur-md border border-foreground/20 hover:border-foreground/40 hover:bg-foreground/10 transition-all duration-300 ${uploadState === 'uploading' || uploadState === 'saving' || uploadState === 'validating' ? 'cursor-wait opacity-70' : 'cursor-pointer'}`}
                         title="Upload Video/Photo"
                       >
                         {uploadState === 'uploading' || uploadState === 'saving' || uploadState === 'validating' ? (
-                          <svg className="w-3 h-3 text-purple-300 animate-spin" viewBox="0 0 24 24" fill="none">
+                          <svg className="w-3 h-3 text-foreground animate-spin" viewBox="0 0 24 24" fill="none">
                             <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" opacity="0.25" />
                             <path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
                           </svg>
                         ) : (
-                          <Video className="w-3 h-3 text-purple-300 group-hover:text-purple-200 transition-colors" />
+                          <Video className="w-3 h-3 text-foreground" />
                         )}
                         <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse" />
                       </label>
-                      {/* Selfie City Navigation Button */}
+                      {/* Selfie City Navigation Button — matches Loops upload button exactly */}
                       <button
                         onClick={() => navigate('/selfie-city')}
-                        className="group relative flex items-center justify-center w-6 h-6 rounded-md bg-foreground/5 backdrop-blur-md border border-foreground/10 hover:border-pink-400/50 hover:bg-foreground/10 transition-all duration-300 shadow-[0_0_8px_rgba(236,72,153,0.2)] hover:shadow-[0_0_12px_rgba(236,72,153,0.4)] cursor-pointer"
+                        className="group relative flex items-center justify-center w-6 h-6 rounded-md bg-foreground/5 backdrop-blur-md border border-foreground/20 hover:border-foreground/40 hover:bg-foreground/10 transition-all duration-300 cursor-pointer"
                         title="Selfie City"
                       >
-                        <Camera className="w-3 h-3 text-pink-300 group-hover:text-pink-200 transition-colors" />
+                        <Camera className="w-3 h-3 text-foreground" />
                       </button>
                     </div>
                     <div className="flex items-center gap-3">
@@ -1594,10 +1673,29 @@ const HomePage = () => {
                       <span className="text-[10px] tabular-nums text-muted-foreground/60">
                         {filteredLoops.length}
                       </span>
+                      {/* Hide / Unhide Loops section — one-tap toggle, also voice-controllable */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLoopsHidden((prev) => {
+                            const next = !prev;
+                            try { localStorage.setItem('mmora.home.loopsHidden', next ? 'true' : 'false'); } catch {}
+                            try { trackEvent({ name: 'loop_mute_toggle', postId: 'section-visibility', muted: next, persisted: true } as any); } catch {}
+                            return next;
+                          });
+                        }}
+                        className="flex items-center justify-center w-6 h-6 rounded-md border border-foreground/20 hover:border-foreground/40 hover:bg-foreground/10 transition-all"
+                        aria-label={loopsHidden ? 'Show loops section' : 'Hide loops section'}
+                        aria-pressed={loopsHidden}
+                        title={loopsHidden ? 'Show loops' : 'Hide loops'}
+                      >
+                        {loopsHidden ? <ChevronDown className="w-3 h-3 text-foreground" /> : <ChevronUp className="w-3 h-3 text-foreground" />}
+                      </button>
                     </div>
                   </div>
 
 
+                  {!loopsHidden && (<>
                   {/* Loops upload progress / status */}
                   {uploadState !== 'idle' && (
                     <div
@@ -1718,6 +1816,7 @@ const HomePage = () => {
                       </button>
                     </div>
                   )}
+                  </>)}
                 </section>
                 
                 {loading ? (
