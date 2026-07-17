@@ -320,6 +320,13 @@ const HomePage = () => {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  // DEV visibility debug: log every change so we can verify voice + chevron
+  // stay in sync and header hit-testing behaves correctly during auto-scroll.
+  useEffect(() => {
+    if (import.meta.env.DEV) console.info('[HomePage] state', { loopsHidden, headerVisible, feedAutoPassCompleted, loopRailPassCompleted, autoScrollEnabled });
+  }, [loopsHidden, headerVisible, feedAutoPassCompleted, loopRailPassCompleted, autoScrollEnabled]);
+
+
 
   // Loops upload UI state
   const [uploadState, setUploadState] = useState<'idle' | 'validating' | 'uploading' | 'saving' | 'error' | 'success'>('idle');
