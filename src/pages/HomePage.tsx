@@ -284,6 +284,30 @@ const HomePage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
+  // Hide the top header while the user is scrolling (auto or manual), reveal
+  // it ~900ms after scrolling stops — Instagram / YouTube Shorts style. Uses
+  // transform+opacity so it never reflows the underlying layout.
+  const [headerVisible, setHeaderVisible] = useState(true);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    let idleTimer: number | null = null;
+    let lastY = window.scrollY;
+    const onScroll = () => {
+      const y = window.scrollY;
+      // Always reveal near the very top so the profile/menu are reachable.
+      if (y < 24) { setHeaderVisible(true); }
+      else if (Math.abs(y - lastY) > 4) { setHeaderVisible(false); }
+      lastY = y;
+      if (idleTimer) window.clearTimeout(idleTimer);
+      idleTimer = window.setTimeout(() => setHeaderVisible(true), 900);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      if (idleTimer) window.clearTimeout(idleTimer);
+    };
+  }, []);
+
   // Loops upload UI state
   const [uploadState, setUploadState] = useState<'idle' | 'validating' | 'uploading' | 'saving' | 'error' | 'success'>('idle');
   const [uploadProgress, setUploadProgress] = useState(0);
