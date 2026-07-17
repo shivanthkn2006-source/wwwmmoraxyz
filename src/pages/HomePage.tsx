@@ -1540,7 +1540,7 @@ const HomePage = () => {
         </div>
 
         {/* Spacer for fixed header — minimized to maximize usable screen area */}
-        <div className="h-16"></div>
+        <div className="h-14"></div>
 
         <TabsContent value="global" className="mt-0 pb-24 xxs:pb-24 xs:pb-20">
               <div className="space-y-2 p-3" data-feed-tab="global">
@@ -1611,7 +1611,7 @@ const HomePage = () => {
                       <label
                         htmlFor="loops-video-upload"
                         aria-disabled={uploadState === 'uploading' || uploadState === 'saving' || uploadState === 'validating'}
-                        className={`group relative flex items-center justify-center w-6 h-6 rounded-md bg-foreground/5 backdrop-blur-md border border-foreground/20 hover:border-foreground/40 hover:bg-foreground/10 transition-all duration-300 ${uploadState === 'uploading' || uploadState === 'saving' || uploadState === 'validating' ? 'cursor-wait opacity-70' : 'cursor-pointer'}`}
+                        className={`group relative flex items-center justify-center w-6 h-6 rounded-md bg-foreground/5 backdrop-blur-md border border-foreground/20 hover:border-foreground/40 hover:bg-foreground/10 transition-all duration-300 focus:outline-none focus-visible:ring-0 focus-visible:border-foreground/40 shadow-none ${uploadState === 'uploading' || uploadState === 'saving' || uploadState === 'validating' ? 'cursor-wait opacity-70' : 'cursor-pointer'}`}
                         title="Upload Video/Photo"
                       >
                         {uploadState === 'uploading' || uploadState === 'saving' || uploadState === 'validating' ? (
@@ -1626,8 +1626,9 @@ const HomePage = () => {
                       </label>
                       {/* Selfie City Navigation Button — matches Loops upload button exactly */}
                       <button
+                        type="button"
                         onClick={() => navigate('/selfie-city')}
-                        className="group relative flex items-center justify-center w-6 h-6 rounded-md bg-foreground/5 backdrop-blur-md border border-foreground/20 hover:border-foreground/40 hover:bg-foreground/10 transition-all duration-300 cursor-pointer"
+                        className="group relative flex items-center justify-center w-6 h-6 rounded-md bg-foreground/5 backdrop-blur-md border border-foreground/20 hover:border-foreground/40 hover:bg-foreground/10 transition-all duration-300 cursor-pointer focus:outline-none focus-visible:ring-0 focus-visible:border-foreground/40 shadow-none"
                         title="Selfie City"
                       >
                         <Camera className="w-3 h-3 text-foreground" />
