@@ -235,6 +235,40 @@ export const useZoeVoiceCommands = (userId: string | undefined) => {
       description: 'Quick page access'
     },
 
+    // Home timeline / loops controls
+    {
+      pattern: /^(?:hide|close)\s+(?:the\s+)?(?:home\s+)?loops?(?:\s+(?:section|rail))?$/i,
+      action: () => {
+        window.dispatchEvent(new CustomEvent('mmora:home-command', { detail: { command: 'hide-loops', source: 'zoe-voice-commands' } }));
+        speakResponse('Loops hidden');
+      },
+      description: 'Hide home loops'
+    },
+    {
+      pattern: /^(?:unhide|show|open)\s+(?:the\s+)?(?:home\s+)?loops?(?:\s+(?:section|rail))?$/i,
+      action: () => {
+        window.dispatchEvent(new CustomEvent('mmora:home-command', { detail: { command: 'unhide-loops', source: 'zoe-voice-commands' } }));
+        speakResponse('Loops shown');
+      },
+      description: 'Show home loops'
+    },
+    {
+      pattern: /^(?:stop|pause)\s+(?:home\s+)?(?:auto\s*)?(?:scrolling|scroll|timeline|feed)$/i,
+      action: () => {
+        window.dispatchEvent(new CustomEvent('mmora:home-command', { detail: { command: 'stop-scrolling', source: 'zoe-voice-commands' } }));
+        speakResponse('Timeline auto scroll paused');
+      },
+      description: 'Pause home timeline auto scroll'
+    },
+    {
+      pattern: /^(?:start|resume|play)\s+(?:home\s+)?(?:auto\s*)?(?:scrolling|scroll|timeline|feed)$/i,
+      action: () => {
+        window.dispatchEvent(new CustomEvent('mmora:home-command', { detail: { command: 'start-scrolling', source: 'zoe-voice-commands' } }));
+        speakResponse('Timeline auto scroll resumed');
+      },
+      description: 'Resume home timeline auto scroll'
+    },
+
     // Weather commands
     {
       pattern: /^(?:what(?:'s| is)?|tell me|get|show|check)\s+(?:the\s+)?weather(?:\s+today)?$/i,
