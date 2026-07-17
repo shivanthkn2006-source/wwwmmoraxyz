@@ -556,8 +556,8 @@ const HomePage = () => {
   // Auto-advance the active feed after the current clip's real duration finishes.
   // Event-driven per video (handles buffering/stalls); non-video posts fall back to 5s.
   useEffect(() => {
-    const blocked = loading || (loopRailInView && !loopRailPassCompleted) || !autoScrollEnabled || (activeTab !== 'global' && activeTab !== 'personal');
-    if (import.meta.env.DEV) console.info('[HomePage] timeline-autoscroll guards', { blocked, loading, loopRailInView, loopRailPassCompleted, autoScrollEnabled, activeTab });
+    const blocked = loading || (loopRailInView && !loopRailPassCompleted) || !autoScrollEnabled || feedAutoPassCompleted || (activeTab !== 'global' && activeTab !== 'personal');
+    if (import.meta.env.DEV) console.info('[HomePage] timeline-autoscroll guards', { blocked, loading, loopRailInView, loopRailPassCompleted, feedAutoPassCompleted, autoScrollEnabled, activeTab });
     if (blocked) return;
     const posts = Array.from(document.querySelectorAll<HTMLElement>(`[data-feed-tab="${activeTab}"] [data-post-card]`));
     if (posts.length <= 1) return;
@@ -568,15 +568,23 @@ const HomePage = () => {
     const video = target.querySelector('video') as HTMLVideoElement | null;
 
     const advance = () => {
-      const next = posts[(targetIndex + 1) % posts.length];
-      next?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      setFeedAutoIndex((idx) => (idx + 1) % posts.length);
+      const nextIdx = targetIndex + 1;
+      if (nextIdx >= posts.length) {
+        // One full pass done → scroll back to the first post and stop.
+        posts[0]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        setFeedAutoIndex(0);
+        setFeedAutoPassCompleted(true);
+        if (import.meta.env.DEV) console.info('[HomePage] timeline one-pass complete → auto-scroll stopped');
+        try { window.dispatchEvent(new CustomEvent('mmora:analytics', { detail: { name: 'feed_autoscroll_pass_completed' } })); } catch {}
+        return;
+      }
+      posts[nextIdx]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setFeedAutoIndex(nextIdx);
     };
 
-    // Safety-net timer: caps wait even if `ended` never fires (buffer stall, decode failure).
     const safetyMs = (() => {
       const d = video && Number.isFinite(video.duration) && video.duration > 0 ? video.duration * 1000 : 5000;
-      return Math.max(5000, Math.min(180000, d + 4000)); // duration + 4s stall grace
+      return Math.max(5000, Math.min(180000, d + 4000));
     })();
     if (feedAutoTimerRef.current) window.clearTimeout(feedAutoTimerRef.current);
     feedAutoTimerRef.current = window.setTimeout(advance, safetyMs);
@@ -589,12 +597,10 @@ const HomePage = () => {
     }
 
     const onEnded = () => advance();
-    // Some browsers don't fire `ended` on looped videos — detect near-end via timeupdate as backup.
     const onTimeUpdate = () => {
       if (!video.duration || !Number.isFinite(video.duration)) return;
       if (video.duration - video.currentTime < 0.25 && !video.loop) advance();
     };
-    // Recompute safety-net once real duration is known.
     const onLoadedMetadata = () => {
       if (!Number.isFinite(video.duration) || video.duration <= 0) return;
       if (feedAutoTimerRef.current) window.clearTimeout(feedAutoTimerRef.current);
@@ -611,7 +617,8 @@ const HomePage = () => {
       if (feedAutoTimerRef.current) window.clearTimeout(feedAutoTimerRef.current);
       feedAutoTimerRef.current = null;
     };
-  }, [activeTab, loading, loopRailInView, loopRailPassCompleted, globalPosts.length, personalPosts.length, feedAutoIndex, autoScrollEnabled]);
+  }, [activeTab, loading, loopRailInView, loopRailPassCompleted, feedAutoPassCompleted, globalPosts.length, personalPosts.length, feedAutoIndex, autoScrollEnabled]);
+
 
   // Voice / programmatic command bus for the Home surface.
   // Fire `window.dispatchEvent(new CustomEvent('mmora:home-command', { detail: { command: '...' } }))`
