@@ -268,6 +268,7 @@ const HomePage = () => {
   const [activeLoopRailIndex, setActiveLoopRailIndex] = useState(0);
   const [loopDurations, setLoopDurations] = useState<Record<string, number>>({});
   const [loopRailInView, setLoopRailInView] = useState(false);
+  const [loopRailPassCompleted, setLoopRailPassCompleted] = useState(false);
   const [feedAutoIndex, setFeedAutoIndex] = useState(0);
   const loopRailRef = useRef<HTMLDivElement | null>(null);
   const feedAutoTimerRef = useRef<number | null>(null);
@@ -382,10 +383,12 @@ const HomePage = () => {
     return () => io.disconnect();
   }, [filteredLoops.length]);
 
-  // Auto-scroll the loop rail by each active video's real duration while the rail is visible.
+  // Auto-scroll the loop rail ONCE (single pass) on first load / after filter change.
+  // After one full cycle we stop and hand off to the main timeline auto-scroll.
   useEffect(() => {
     const el = loopRailRef.current;
     if (!el || filteredLoops.length <= 1) return;
+    if (loopRailPassCompleted) return;
     let hoverPause = false;
     const onEnter = () => { hoverPause = true; };
     const onLeave = () => { hoverPause = false; };
@@ -399,20 +402,29 @@ const HomePage = () => {
     const timer = window.setTimeout(() => {
       if (hoverPause || !el.isConnected) return;
       const maxLeft = Math.max(0, el.scrollWidth - el.clientWidth);
-      if (maxLeft > 0) {
+      const atEnd = maxLeft === 0 || el.scrollLeft >= maxLeft - 2;
+      const nextIndex = activeLoopRailIndex + 1;
+      const wrapped = nextIndex >= filteredLoops.length;
+      if (maxLeft > 0 && !atEnd) {
         const firstTile = el.querySelector<HTMLElement>('[data-loop-index]');
         const step = (firstTile?.offsetWidth || 96) + 8;
-        const nextLeft = el.scrollLeft >= maxLeft - 2 ? 0 : Math.min(el.scrollLeft + step, maxLeft);
+        const nextLeft = Math.min(el.scrollLeft + step, maxLeft);
         el.scrollTo({ left: nextLeft, behavior: 'smooth' });
       }
-      setActiveLoopRailIndex((idx) => (idx + 1) % filteredLoops.length);
+      if (wrapped || atEnd) {
+        // Finished one full pass — stop auto-scrolling the rail so the main
+        // timeline can take over. User can still interact / swipe manually.
+        setLoopRailPassCompleted(true);
+      } else {
+        setActiveLoopRailIndex(nextIndex);
+      }
     }, durationMs);
     return () => {
       window.clearTimeout(timer);
       el.removeEventListener('mouseenter', onEnter);
       el.removeEventListener('mouseleave', onLeave);
     };
-  }, [filteredLoops, activeLoopRailIndex, loopDurations]);
+  }, [filteredLoops, activeLoopRailIndex, loopDurations, loopRailPassCompleted]);
 
   useEffect(() => {
     const el = loopRailRef.current;
@@ -426,6 +438,7 @@ const HomePage = () => {
 
   useEffect(() => {
     setActiveLoopRailIndex(0);
+    setLoopRailPassCompleted(false);
   }, [loopsFilter]);
 
   useEffect(() => {
@@ -493,7 +506,7 @@ const HomePage = () => {
   // Auto-advance the active feed after the current clip's real duration finishes.
   // Event-driven per video (handles buffering/stalls); non-video posts fall back to 5s.
   useEffect(() => {
-    if (loading || loopRailInView || !autoScrollEnabled || (activeTab !== 'global' && activeTab !== 'personal')) return;
+    if (loading || (loopRailInView && !loopRailPassCompleted) || !autoScrollEnabled || (activeTab !== 'global' && activeTab !== 'personal')) return;
     const posts = Array.from(document.querySelectorAll<HTMLElement>(`[data-feed-tab="${activeTab}"] [data-post-card]`));
     if (posts.length <= 1) return;
 
@@ -546,7 +559,7 @@ const HomePage = () => {
       if (feedAutoTimerRef.current) window.clearTimeout(feedAutoTimerRef.current);
       feedAutoTimerRef.current = null;
     };
-  }, [activeTab, loading, loopRailInView, globalPosts.length, personalPosts.length, feedAutoIndex, autoScrollEnabled]);
+  }, [activeTab, loading, loopRailInView, loopRailPassCompleted, globalPosts.length, personalPosts.length, feedAutoIndex, autoScrollEnabled]);
 
   // Voice / programmatic command bus for the Home surface.
   // Fire `window.dispatchEvent(new CustomEvent('mmora:home-command', { detail: { command: '...' } }))`
