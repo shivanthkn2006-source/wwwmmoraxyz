@@ -348,8 +348,9 @@ export const useZoeSelfieCityCommands = () => {
 
   // Listen for voice commands from other systems (e.g., ZoeCoreUnifiedProvider)
   useEffect(() => {
-    const handleExternalCommand = (e: CustomEvent<{ command: string }>) => {
-      const cmd = e.detail.command.toLowerCase();
+    const handleExternalCommand = (e: CustomEvent<{ command?: string; transcript?: string }>) => {
+      const cmd = String(e.detail?.command ?? e.detail?.transcript ?? '').toLowerCase();
+      if (!cmd) return;
       
       // Only process if it's a Selfie City related command
       if (
@@ -363,7 +364,7 @@ export const useZoeSelfieCityCommands = () => {
         cmd.includes('premium') ||
         cmd.includes('track')
       ) {
-        processCommand(e.detail.command);
+        processCommand(cmd);
       }
     };
 

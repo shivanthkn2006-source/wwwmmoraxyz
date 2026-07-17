@@ -389,8 +389,9 @@ export const ZoeCoreUnifiedProvider: React.FC<ZoeCoreUnifiedProviderProps> = ({
   // ═══════════════════════════════════════════════════════════════════════════════
   
   useEffect(() => {
-    const handleVoiceCommand = (e: CustomEvent<{ command: string }>) => {
-      const cmd = e.detail.command.toLowerCase();
+    const handleVoiceCommand = (e: CustomEvent<{ command?: string; transcript?: string }>) => {
+      const cmd = String(e.detail?.command ?? e.detail?.transcript ?? '').toLowerCase();
+      if (!cmd) return;
       
       // Core commands
       if (cmd.includes('core scan') || cmd.includes('unified scan')) {

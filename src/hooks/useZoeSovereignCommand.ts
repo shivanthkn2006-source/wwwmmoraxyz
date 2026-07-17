@@ -85,6 +85,7 @@ const COMMAND_PATTERNS: Array<{
   { pattern: /\b(summarize|summary)\s+(?:my\s+)?(?:day|activity|data)\b/i, priority: 105, handler: 'summarize_activity', category: 'dhf' },
   
   // High priority - specific commands
+  { pattern: /\b(hide|unhide|show|open|close|stop|pause|start|resume|play)\b.*\b(loop|loops|timeline|feed|scroll|scrolling)\b/i, priority: 106, handler: 'home_surface', category: 'timeline' },
   { pattern: /\b(weather|temperature|forecast)\b/i, priority: 100, handler: 'weather', category: 'info' },
   { pattern: /\b(time|clock|hour)\b/i, priority: 100, handler: 'time', category: 'info' },
   { pattern: /\b(date|today|day)\b/i, priority: 100, handler: 'date', category: 'info' },
@@ -914,6 +915,31 @@ export const useZoeSovereignCommand = () => {
             case 'summarize_activity':
               result = await handleSummarizeActivity();
               break;
+            case 'home_surface': {
+              const normalized = commandText.toLowerCase();
+              let homeCommand: string | null = null;
+              if (normalized.includes('loop') && normalized.includes('hide') && !normalized.includes('unhide')) homeCommand = 'hide-loops';
+              else if (normalized.includes('loop') && (normalized.includes('unhide') || normalized.includes('show') || normalized.includes('open'))) homeCommand = 'unhide-loops';
+              else if ((normalized.includes('stop') || normalized.includes('pause')) && (normalized.includes('scroll') || normalized.includes('timeline') || normalized.includes('feed'))) homeCommand = 'stop-scrolling';
+              else if ((normalized.includes('start') || normalized.includes('resume') || normalized.includes('play')) && (normalized.includes('scroll') || normalized.includes('timeline') || normalized.includes('feed'))) homeCommand = 'start-scrolling';
+
+              if (homeCommand) {
+                window.dispatchEvent(new CustomEvent('mmora:home-command', { detail: { command: homeCommand, source: 'zoe-sovereign-command' } }));
+                result = {
+                  success: true,
+                  response: homeCommand === 'hide-loops' ? 'Loops hidden.'
+                    : homeCommand === 'unhide-loops' ? 'Loops shown.'
+                    : homeCommand === 'stop-scrolling' ? 'Timeline auto scroll paused.'
+                    : 'Timeline auto scroll resumed.',
+                  action: homeCommand,
+                  shouldSpeak: true,
+                  voiceStyle: 'calm'
+                };
+              } else {
+                result = await handleAIProcess(commandText);
+              }
+              break;
+            }
             case 'weather':
               result = await handleWeather();
               break;

@@ -64,9 +64,10 @@ export const GenesisEngineProvider: React.FC<GenesisEngineProviderProps> = ({
 
   // Listen for voice commands
   useEffect(() => {
-    const handleVoiceCommand = (e: CustomEvent<{ command: string; params?: any }>) => {
-      const { command, params } = e.detail;
-      const cmd = command.toLowerCase();
+    const handleVoiceCommand = (e: CustomEvent<{ command?: string; transcript?: string; params?: any }>) => {
+      const { params } = e.detail || {};
+      const cmd = String(e.detail?.command ?? e.detail?.transcript ?? '').toLowerCase();
+      if (!cmd) return;
 
       if (cmd.includes('diagnostic') || cmd.includes('scan')) {
         genesis.Zoe_System_Diagnostic();
