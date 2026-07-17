@@ -1539,26 +1539,26 @@ const HomePage = () => {
                       <label
                         htmlFor="loops-video-upload"
                         aria-disabled={uploadState === 'uploading' || uploadState === 'saving' || uploadState === 'validating'}
-                        className={`group relative flex items-center justify-center w-6 h-6 rounded-md bg-foreground/5 backdrop-blur-md border border-foreground/10 hover:border-purple-400/50 hover:bg-foreground/10 transition-all duration-300 shadow-[0_0_8px_rgba(139,92,246,0.2)] hover:shadow-[0_0_12px_rgba(139,92,246,0.4)] ${uploadState === 'uploading' || uploadState === 'saving' || uploadState === 'validating' ? 'cursor-wait opacity-70' : 'cursor-pointer'}`}
+                        className={`group relative flex items-center justify-center w-6 h-6 rounded-md bg-foreground/5 backdrop-blur-md border border-foreground/20 hover:border-foreground/40 hover:bg-foreground/10 transition-all duration-300 ${uploadState === 'uploading' || uploadState === 'saving' || uploadState === 'validating' ? 'cursor-wait opacity-70' : 'cursor-pointer'}`}
                         title="Upload Video/Photo"
                       >
                         {uploadState === 'uploading' || uploadState === 'saving' || uploadState === 'validating' ? (
-                          <svg className="w-3 h-3 text-purple-300 animate-spin" viewBox="0 0 24 24" fill="none">
+                          <svg className="w-3 h-3 text-foreground animate-spin" viewBox="0 0 24 24" fill="none">
                             <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" opacity="0.25" />
                             <path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
                           </svg>
                         ) : (
-                          <Video className="w-3 h-3 text-purple-300 group-hover:text-purple-200 transition-colors" />
+                          <Video className="w-3 h-3 text-foreground" />
                         )}
                         <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse" />
                       </label>
-                      {/* Selfie City Navigation Button */}
+                      {/* Selfie City Navigation Button — matches Loops upload button exactly */}
                       <button
                         onClick={() => navigate('/selfie-city')}
-                        className="group relative flex items-center justify-center w-6 h-6 rounded-md bg-foreground/5 backdrop-blur-md border border-foreground/10 hover:border-pink-400/50 hover:bg-foreground/10 transition-all duration-300 shadow-[0_0_8px_rgba(236,72,153,0.2)] hover:shadow-[0_0_12px_rgba(236,72,153,0.4)] cursor-pointer"
+                        className="group relative flex items-center justify-center w-6 h-6 rounded-md bg-foreground/5 backdrop-blur-md border border-foreground/20 hover:border-foreground/40 hover:bg-foreground/10 transition-all duration-300 cursor-pointer"
                         title="Selfie City"
                       >
-                        <Camera className="w-3 h-3 text-pink-300 group-hover:text-pink-200 transition-colors" />
+                        <Camera className="w-3 h-3 text-foreground" />
                       </button>
                     </div>
                     <div className="flex items-center gap-3">
