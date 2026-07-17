@@ -1467,8 +1467,8 @@ const HomePage = () => {
 
         </div>
 
-        {/* Spacer for fixed header */}
-        <div className="h-[140px]"></div>
+        {/* Spacer for fixed header — minimized to maximize usable screen area */}
+        <div className="h-16"></div>
 
         <TabsContent value="global" className="mt-0 pb-24 xxs:pb-24 xs:pb-20">
               <div className="space-y-2 p-3" data-feed-tab="global">
