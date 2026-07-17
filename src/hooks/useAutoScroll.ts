@@ -14,9 +14,15 @@ export const useAutoScroll = (options: UseAutoScrollOptions = {}) => {
   const postElementsRef = useRef<HTMLElement[]>([]);
 
   // Update post elements reference
+  // Auto-scroll ONLY through today's posts. If none tagged today, fall back to
+  // all posts so behavior degrades gracefully. Loops / non-post-card items are
+  // never auto-scrolled here.
   const updatePostElements = useCallback(() => {
-    const posts = Array.from(document.querySelectorAll('[data-post-card]')) as HTMLElement[];
-    postElementsRef.current = posts;
+    const todaysPosts = Array.from(
+      document.querySelectorAll('[data-post-card][data-today="true"]')
+    ) as HTMLElement[];
+    const allPosts = Array.from(document.querySelectorAll('[data-post-card]')) as HTMLElement[];
+    postElementsRef.current = todaysPosts.length > 0 ? todaysPosts : allPosts;
   }, []);
 
   // Scroll to specific post index

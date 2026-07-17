@@ -1722,13 +1722,16 @@ const HomePage = () => {
                 ) : globalPosts.length === 0 ? (
                   <p className="text-center text-muted-foreground py-8">No posts yet</p>
                 ) : (
-                  globalPosts.map(post => (
-                    <div key={post.id} data-post-card data-post-id={post.id}>
-                      <FeedErrorBoundary section="post-card" postId={post.id} onRetry={() => retrySinglePost(post.id)}>
-                        <PostCard post={post} onUpdate={handleUpdate} />
-                      </FeedErrorBoundary>
-                    </div>
-                  ))
+                  globalPosts.map(post => {
+                    const isToday = post.created_at && new Date(post.created_at).toDateString() === new Date().toDateString();
+                    return (
+                      <div key={post.id} data-post-card data-post-id={post.id} data-today={isToday ? 'true' : 'false'}>
+                        <FeedErrorBoundary section="post-card" postId={post.id} onRetry={() => retrySinglePost(post.id)}>
+                          <PostCard post={post} onUpdate={handleUpdate} />
+                        </FeedErrorBoundary>
+                      </div>
+                    );
+                  })
                 )}
               </div>
             </TabsContent>
@@ -1740,13 +1743,16 @@ const HomePage = () => {
                 ) : personalPosts.length === 0 ? (
                   <p className="text-center text-muted-foreground py-8">No posts from friends yet</p>
                 ) : (
-                  personalPosts.map(post => (
-                    <div key={post.id} data-post-card data-post-id={post.id}>
-                      <FeedErrorBoundary section="post-card" postId={post.id} onRetry={() => retrySinglePost(post.id)}>
-                        <PostCard post={post} onUpdate={handleUpdate} />
-                      </FeedErrorBoundary>
-                    </div>
-                  ))
+                  personalPosts.map(post => {
+                    const isToday = post.created_at && new Date(post.created_at).toDateString() === new Date().toDateString();
+                    return (
+                      <div key={post.id} data-post-card data-post-id={post.id} data-today={isToday ? 'true' : 'false'}>
+                        <FeedErrorBoundary section="post-card" postId={post.id} onRetry={() => retrySinglePost(post.id)}>
+                          <PostCard post={post} onUpdate={handleUpdate} />
+                        </FeedErrorBoundary>
+                      </div>
+                    );
+                  })
                 )}
               </div>
             </TabsContent>
