@@ -364,7 +364,7 @@ export const useZoeSelfieCityCommands = () => {
         cmd.includes('premium') ||
         cmd.includes('track')
       ) {
-        processCommand(e.detail.command);
+        processCommand(cmd);
       }
     };
 
