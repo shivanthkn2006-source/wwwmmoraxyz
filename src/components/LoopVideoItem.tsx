@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { Loader2, Play, RotateCcw, Volume2, VolumeX } from 'lucide-react';
 import { appendMediaVersion, isPrivateStorageUrl, makeFallbackVideoPoster, resolvePrivateStorageUrl } from '@/lib/mediaUtils';
 import { supabase } from '@/integrations/supabase/client';
-import { usePersistentMediaSound } from '@/hooks/usePersistentMediaSound';
+
 
 interface LoopVideoItemProps {
   post: {
