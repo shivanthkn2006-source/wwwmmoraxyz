@@ -383,10 +383,12 @@ const HomePage = () => {
     return () => io.disconnect();
   }, [filteredLoops.length]);
 
-  // Auto-scroll the loop rail by each active video's real duration while the rail is visible.
+  // Auto-scroll the loop rail ONCE (single pass) on first load / after filter change.
+  // After one full cycle we stop and hand off to the main timeline auto-scroll.
   useEffect(() => {
     const el = loopRailRef.current;
     if (!el || filteredLoops.length <= 1) return;
+    if (loopRailPassCompleted) return;
     let hoverPause = false;
     const onEnter = () => { hoverPause = true; };
     const onLeave = () => { hoverPause = false; };
@@ -400,20 +402,29 @@ const HomePage = () => {
     const timer = window.setTimeout(() => {
       if (hoverPause || !el.isConnected) return;
       const maxLeft = Math.max(0, el.scrollWidth - el.clientWidth);
-      if (maxLeft > 0) {
+      const atEnd = maxLeft === 0 || el.scrollLeft >= maxLeft - 2;
+      const nextIndex = activeLoopRailIndex + 1;
+      const wrapped = nextIndex >= filteredLoops.length;
+      if (maxLeft > 0 && !atEnd) {
         const firstTile = el.querySelector<HTMLElement>('[data-loop-index]');
         const step = (firstTile?.offsetWidth || 96) + 8;
-        const nextLeft = el.scrollLeft >= maxLeft - 2 ? 0 : Math.min(el.scrollLeft + step, maxLeft);
+        const nextLeft = Math.min(el.scrollLeft + step, maxLeft);
         el.scrollTo({ left: nextLeft, behavior: 'smooth' });
       }
-      setActiveLoopRailIndex((idx) => (idx + 1) % filteredLoops.length);
+      if (wrapped || atEnd) {
+        // Finished one full pass — stop auto-scrolling the rail so the main
+        // timeline can take over. User can still interact / swipe manually.
+        setLoopRailPassCompleted(true);
+      } else {
+        setActiveLoopRailIndex(nextIndex);
+      }
     }, durationMs);
     return () => {
       window.clearTimeout(timer);
       el.removeEventListener('mouseenter', onEnter);
       el.removeEventListener('mouseleave', onLeave);
     };
-  }, [filteredLoops, activeLoopRailIndex, loopDurations]);
+  }, [filteredLoops, activeLoopRailIndex, loopDurations, loopRailPassCompleted]);
 
   useEffect(() => {
     const el = loopRailRef.current;
@@ -427,6 +438,7 @@ const HomePage = () => {
 
   useEffect(() => {
     setActiveLoopRailIndex(0);
+    setLoopRailPassCompleted(false);
   }, [loopsFilter]);
 
   useEffect(() => {
