@@ -546,7 +546,79 @@ const HomePage = () => {
       if (feedAutoTimerRef.current) window.clearTimeout(feedAutoTimerRef.current);
       feedAutoTimerRef.current = null;
     };
-  }, [activeTab, loading, loopRailInView, globalPosts.length, personalPosts.length, feedAutoIndex]);
+  }, [activeTab, loading, loopRailInView, globalPosts.length, personalPosts.length, feedAutoIndex, autoScrollEnabled]);
+
+  // Voice / programmatic command bus for the Home surface.
+  // Fire `window.dispatchEvent(new CustomEvent('mmora:home-command', { detail: { command: '...' } }))`
+  // or call `window.mmoraHomeCommand('hide loops')` from Zoe's voice pipeline.
+  // Supported: 'hide-loops' | 'unhide-loops' | 'toggle-loops' | 'stop-scrolling'
+  //            | 'start-scrolling' | 'pause' | 'resume' | 'pause-timeline' | 'resume-timeline'
+  useEffect(() => {
+    const applyCommand = (raw: string) => {
+      const cmd = String(raw || '').toLowerCase().trim();
+      if (!cmd) return;
+      const has = (...tokens: string[]) => tokens.every((t) => cmd.includes(t));
+
+      if (cmd === 'hide-loops' || (has('hide') && cmd.includes('loop'))) {
+        setLoopsHidden(true);
+        try { localStorage.setItem('mmora.home.loopsHidden', 'true'); } catch {}
+        trackEvent({ name: 'loop_mute_toggle', postId: 'section-visibility', muted: true, persisted: true } as any);
+        return;
+      }
+      if (cmd === 'unhide-loops' || cmd === 'show-loops' || ((cmd.includes('unhide') || cmd.includes('show') || cmd.includes('open')) && cmd.includes('loop'))) {
+        setLoopsHidden(false);
+        try { localStorage.setItem('mmora.home.loopsHidden', 'false'); } catch {}
+        trackEvent({ name: 'loop_mute_toggle', postId: 'section-visibility', muted: false, persisted: true } as any);
+        return;
+      }
+      if (cmd === 'toggle-loops') {
+        setLoopsHidden((p) => {
+          const next = !p;
+          try { localStorage.setItem('mmora.home.loopsHidden', next ? 'true' : 'false'); } catch {}
+          return next;
+        });
+        return;
+      }
+      if (cmd === 'stop-scrolling' || cmd === 'pause' || cmd === 'pause-timeline'
+        || has('stop', 'scroll') || has('pause', 'timeline') || cmd === 'pause timeline' || cmd === 'stop scrolling') {
+        setAutoScrollEnabled(false);
+        try { localStorage.setItem('mmora.home.autoScroll', 'false'); } catch {}
+        trackEvent({ name: 'home_autoscroll_scope', scope: 'fallback', count: 0 } as any);
+        return;
+      }
+      if (cmd === 'start-scrolling' || cmd === 'resume' || cmd === 'resume-timeline'
+        || has('start', 'scroll') || has('resume', 'timeline') || has('play', 'timeline')) {
+        setAutoScrollEnabled(true);
+        try { localStorage.setItem('mmora.home.autoScroll', 'true'); } catch {}
+        return;
+      }
+    };
+
+    const onCommand = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { command?: string } | undefined;
+      if (detail?.command) applyCommand(detail.command);
+    };
+    const onTranscript = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { text?: string; transcript?: string } | undefined;
+      const text = (detail?.text ?? detail?.transcript ?? '').toLowerCase();
+      if (!text || !text.includes('zoe')) return;
+      if (text.includes('hide') && text.includes('loop')) applyCommand('hide-loops');
+      else if ((text.includes('unhide') || text.includes('show') || text.includes('open')) && text.includes('loop')) applyCommand('unhide-loops');
+      else if (text.includes('stop') && text.includes('scroll')) applyCommand('stop-scrolling');
+      else if (text.includes('start') && text.includes('scroll')) applyCommand('start-scrolling');
+      else if (text.includes('pause')) applyCommand('pause');
+      else if (text.includes('resume') || text.includes('play')) applyCommand('resume');
+    };
+
+    window.addEventListener('mmora:home-command', onCommand as EventListener);
+    window.addEventListener('zoe:transcript', onTranscript as EventListener);
+    (window as any).mmoraHomeCommand = applyCommand;
+    return () => {
+      window.removeEventListener('mmora:home-command', onCommand as EventListener);
+      window.removeEventListener('zoe:transcript', onTranscript as EventListener);
+      if ((window as any).mmoraHomeCommand === applyCommand) delete (window as any).mmoraHomeCommand;
+    };
+  }, []);
 
 
   
