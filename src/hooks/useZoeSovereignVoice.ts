@@ -322,6 +322,58 @@ export const useZoeSovereignVoice = (userId?: string) => {
     },
     {
       patterns: [
+        /^(?:hide|close)\s+(?:the\s+)?loops?(?:\s+(?:section|rail))?$/i,
+        /^(?:hide|close)\s+(?:home\s+)?loops?$/i
+      ],
+      action: () => {
+        window.dispatchEvent(new CustomEvent('mmora:home-command', { detail: { command: 'hide-loops', source: 'zoe-sovereign-voice' } }));
+        speak('Loops hidden');
+      },
+      description: 'Hide home loops',
+      category: 'timeline',
+      examples: ['hide loops', 'close loops']
+    },
+    {
+      patterns: [
+        /^(?:unhide|show|open)\s+(?:the\s+)?loops?(?:\s+(?:section|rail))?$/i,
+        /^(?:unhide|show|open)\s+(?:home\s+)?loops?$/i
+      ],
+      action: () => {
+        window.dispatchEvent(new CustomEvent('mmora:home-command', { detail: { command: 'unhide-loops', source: 'zoe-sovereign-voice' } }));
+        speak('Loops shown');
+      },
+      description: 'Show home loops',
+      category: 'timeline',
+      examples: ['show loops', 'unhide loops']
+    },
+    {
+      patterns: [
+        /^(?:stop|pause)\s+(?:home\s+)?(?:auto\s*)?(?:scrolling|scroll|timeline|feed)$/i,
+        /^(?:stop|pause)\s+(?:the\s+)?(?:home\s+)?timeline$/i
+      ],
+      action: () => {
+        window.dispatchEvent(new CustomEvent('mmora:home-command', { detail: { command: 'stop-scrolling', source: 'zoe-sovereign-voice' } }));
+        speak('Timeline auto scroll paused');
+      },
+      description: 'Pause home timeline auto scroll',
+      category: 'timeline',
+      examples: ['stop scrolling', 'pause timeline']
+    },
+    {
+      patterns: [
+        /^(?:start|resume|play)\s+(?:home\s+)?(?:auto\s*)?(?:scrolling|scroll|timeline|feed)$/i,
+        /^(?:resume|play)\s+(?:the\s+)?(?:home\s+)?timeline$/i
+      ],
+      action: () => {
+        window.dispatchEvent(new CustomEvent('mmora:home-command', { detail: { command: 'start-scrolling', source: 'zoe-sovereign-voice' } }));
+        speak('Timeline auto scroll resumed');
+      },
+      description: 'Resume home timeline auto scroll',
+      category: 'timeline',
+      examples: ['resume scrolling', 'start timeline']
+    },
+    {
+      patterns: [
         /^(?:open|show|go\s+to)\s+(?:my\s+)?profile$/i,
         /^profile$/i
       ],
