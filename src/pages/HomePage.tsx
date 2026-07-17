@@ -1744,6 +1744,7 @@ const HomePage = () => {
                       </button>
                     </div>
                   )}
+                  </>)}
                 </section>
                 
                 {loading ? (
