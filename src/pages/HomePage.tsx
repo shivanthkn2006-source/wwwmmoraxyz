@@ -270,6 +270,7 @@ const HomePage = () => {
   const [loopRailInView, setLoopRailInView] = useState(false);
   const [loopRailPassCompleted, setLoopRailPassCompleted] = useState(false);
   const [feedAutoIndex, setFeedAutoIndex] = useState(0);
+  const [feedAutoPassCompleted, setFeedAutoPassCompleted] = useState(false);
   const loopRailRef = useRef<HTMLDivElement | null>(null);
   const feedAutoTimerRef = useRef<number | null>(null);
 
@@ -281,32 +282,44 @@ const HomePage = () => {
     setLoopRailPassCompleted(false);
     setActiveLoopRailIndex(0);
     setFeedAutoIndex(0);
+    setFeedAutoPassCompleted(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
-  // Hide the top header while the user is scrolling (auto or manual), reveal
-  // it ~900ms after scrolling stops — Instagram / YouTube Shorts style. Uses
-  // transform+opacity so it never reflows the underlying layout.
+  // Hide the top header on scroll-down; reveal on scroll-up or when the user
+  // reaches the top. While a visible video is actively playing, keep the
+  // header hidden so viewing area stays full (IG Reels / Shorts style).
   const [headerVisible, setHeaderVisible] = useState(true);
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    let idleTimer: number | null = null;
     let lastY = window.scrollY;
+    let ticking = false;
+    const isVideoPlayingOnScreen = () => {
+      const vids = Array.from(document.querySelectorAll('video')) as HTMLVideoElement[];
+      const vh = window.innerHeight;
+      return vids.some((v) => {
+        if (v.paused || v.ended || v.readyState < 2) return false;
+        const r = v.getBoundingClientRect();
+        return r.bottom > 0 && r.top < vh && r.height > 40;
+      });
+    };
     const onScroll = () => {
-      const y = window.scrollY;
-      // Always reveal near the very top so the profile/menu are reachable.
-      if (y < 24) { setHeaderVisible(true); }
-      else if (Math.abs(y - lastY) > 4) { setHeaderVisible(false); }
-      lastY = y;
-      if (idleTimer) window.clearTimeout(idleTimer);
-      idleTimer = window.setTimeout(() => setHeaderVisible(true), 900);
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        const y = window.scrollY;
+        const dy = y - lastY;
+        if (y < 24) setHeaderVisible(true);
+        else if (dy > 4) setHeaderVisible(false);            // scrolling down → hide
+        else if (dy < -4 && !isVideoPlayingOnScreen()) setHeaderVisible(true); // scroll up while nothing playing → reveal
+        lastY = y;
+        ticking = false;
+      });
     };
     window.addEventListener('scroll', onScroll, { passive: true });
-    return () => {
-      window.removeEventListener('scroll', onScroll);
-      if (idleTimer) window.clearTimeout(idleTimer);
-    };
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
+
 
   // Loops upload UI state
   const [uploadState, setUploadState] = useState<'idle' | 'validating' | 'uploading' | 'saving' | 'error' | 'success'>('idle');
@@ -543,8 +556,8 @@ const HomePage = () => {
   // Auto-advance the active feed after the current clip's real duration finishes.
   // Event-driven per video (handles buffering/stalls); non-video posts fall back to 5s.
   useEffect(() => {
-    const blocked = loading || (loopRailInView && !loopRailPassCompleted) || !autoScrollEnabled || (activeTab !== 'global' && activeTab !== 'personal');
-    if (import.meta.env.DEV) console.info('[HomePage] timeline-autoscroll guards', { blocked, loading, loopRailInView, loopRailPassCompleted, autoScrollEnabled, activeTab });
+    const blocked = loading || (loopRailInView && !loopRailPassCompleted) || !autoScrollEnabled || feedAutoPassCompleted || (activeTab !== 'global' && activeTab !== 'personal');
+    if (import.meta.env.DEV) console.info('[HomePage] timeline-autoscroll guards', { blocked, loading, loopRailInView, loopRailPassCompleted, feedAutoPassCompleted, autoScrollEnabled, activeTab });
     if (blocked) return;
     const posts = Array.from(document.querySelectorAll<HTMLElement>(`[data-feed-tab="${activeTab}"] [data-post-card]`));
     if (posts.length <= 1) return;
@@ -555,15 +568,23 @@ const HomePage = () => {
     const video = target.querySelector('video') as HTMLVideoElement | null;
 
     const advance = () => {
-      const next = posts[(targetIndex + 1) % posts.length];
-      next?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      setFeedAutoIndex((idx) => (idx + 1) % posts.length);
+      const nextIdx = targetIndex + 1;
+      if (nextIdx >= posts.length) {
+        // One full pass done → scroll back to the first post and stop.
+        posts[0]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        setFeedAutoIndex(0);
+        setFeedAutoPassCompleted(true);
+        if (import.meta.env.DEV) console.info('[HomePage] timeline one-pass complete → auto-scroll stopped');
+        try { window.dispatchEvent(new CustomEvent('mmora:analytics', { detail: { name: 'feed_autoscroll_pass_completed' } })); } catch {}
+        return;
+      }
+      posts[nextIdx]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setFeedAutoIndex(nextIdx);
     };
 
-    // Safety-net timer: caps wait even if `ended` never fires (buffer stall, decode failure).
     const safetyMs = (() => {
       const d = video && Number.isFinite(video.duration) && video.duration > 0 ? video.duration * 1000 : 5000;
-      return Math.max(5000, Math.min(180000, d + 4000)); // duration + 4s stall grace
+      return Math.max(5000, Math.min(180000, d + 4000));
     })();
     if (feedAutoTimerRef.current) window.clearTimeout(feedAutoTimerRef.current);
     feedAutoTimerRef.current = window.setTimeout(advance, safetyMs);
@@ -576,12 +597,10 @@ const HomePage = () => {
     }
 
     const onEnded = () => advance();
-    // Some browsers don't fire `ended` on looped videos — detect near-end via timeupdate as backup.
     const onTimeUpdate = () => {
       if (!video.duration || !Number.isFinite(video.duration)) return;
       if (video.duration - video.currentTime < 0.25 && !video.loop) advance();
     };
-    // Recompute safety-net once real duration is known.
     const onLoadedMetadata = () => {
       if (!Number.isFinite(video.duration) || video.duration <= 0) return;
       if (feedAutoTimerRef.current) window.clearTimeout(feedAutoTimerRef.current);
@@ -598,7 +617,8 @@ const HomePage = () => {
       if (feedAutoTimerRef.current) window.clearTimeout(feedAutoTimerRef.current);
       feedAutoTimerRef.current = null;
     };
-  }, [activeTab, loading, loopRailInView, loopRailPassCompleted, globalPosts.length, personalPosts.length, feedAutoIndex, autoScrollEnabled]);
+  }, [activeTab, loading, loopRailInView, loopRailPassCompleted, feedAutoPassCompleted, globalPosts.length, personalPosts.length, feedAutoIndex, autoScrollEnabled]);
+
 
   // Voice / programmatic command bus for the Home surface.
   // Fire `window.dispatchEvent(new CustomEvent('mmora:home-command', { detail: { command: '...' } }))`
@@ -641,6 +661,7 @@ const HomePage = () => {
       if (cmd === 'start-scrolling' || cmd === 'resume' || cmd === 'resume-timeline'
         || has('start', 'scroll') || has('resume', 'timeline') || has('play', 'timeline')) {
         setAutoScrollEnabled(true);
+        setFeedAutoPassCompleted(false); // resume also restarts a fresh pass
         try { localStorage.setItem('mmora.home.autoScroll', 'true'); } catch {}
         return;
       }
@@ -650,9 +671,13 @@ const HomePage = () => {
       const detail = (e as CustomEvent).detail as { command?: string } | undefined;
       if (detail?.command) applyCommand(detail.command);
     };
+    const extractText = (e: Event): string => {
+      const d = (e as CustomEvent).detail as any;
+      if (!d) return '';
+      return String(d.text ?? d.transcript ?? d.command ?? d.query ?? d.message ?? '').toLowerCase();
+    };
     const onTranscript = (e: Event) => {
-      const detail = (e as CustomEvent).detail as { text?: string; transcript?: string } | undefined;
-      const text = (detail?.text ?? detail?.transcript ?? '').toLowerCase();
+      const text = extractText(e);
       if (!text || !text.includes('zoe')) return;
       if (text.includes('hide') && text.includes('loop')) applyCommand('hide-loops');
       else if ((text.includes('unhide') || text.includes('show') || text.includes('open')) && text.includes('loop')) applyCommand('unhide-loops');
@@ -662,13 +687,48 @@ const HomePage = () => {
       else if (text.includes('resume') || text.includes('play')) applyCommand('resume');
     };
 
+    // Subscribe to every event name known to carry a Zoe transcript / spoken
+    // command so hide/unhide + timeline voice control works regardless of
+    // which voice pipeline the user has active.
+    const TRANSCRIPT_EVENTS = [
+      'zoe:transcript', 'zoe-transcript', 'zoe:command', 'zoe-command',
+      'zoe-navigate', 'zoe-speak', 'zoe-heard', 'zoe-user-said',
+      'mmora:transcript', 'mmora:voice-transcript', 'speech:transcript',
+    ];
     window.addEventListener('mmora:home-command', onCommand as EventListener);
-    window.addEventListener('zoe:transcript', onTranscript as EventListener);
+    TRANSCRIPT_EVENTS.forEach((n) => window.addEventListener(n, onTranscript as EventListener));
     (window as any).mmoraHomeCommand = applyCommand;
+
+    // Native SpeechRecognition fallback so voice control works even when no
+    // upstream pipeline is emitting transcript events. Continuous + restarting.
+    const SR: any = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    let recognition: any = null;
+    let stopped = false;
+    if (SR) {
+      try {
+        recognition = new SR();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = navigator.language || 'en-US';
+        recognition.onresult = (ev: any) => {
+          for (let i = ev.resultIndex; i < ev.results.length; i++) {
+            const t = String(ev.results[i][0]?.transcript || '').toLowerCase();
+            if (!t.includes('zoe')) continue;
+            window.dispatchEvent(new CustomEvent('mmora:transcript', { detail: { text: t } }));
+          }
+        };
+        recognition.onend = () => { if (!stopped) { try { recognition.start(); } catch {} } };
+        recognition.onerror = () => { /* silent — restart on end */ };
+        try { recognition.start(); if (import.meta.env.DEV) console.info('[HomePage] SpeechRecognition fallback started'); } catch {}
+      } catch { recognition = null; }
+    }
+
     return () => {
+      stopped = true;
       window.removeEventListener('mmora:home-command', onCommand as EventListener);
-      window.removeEventListener('zoe:transcript', onTranscript as EventListener);
+      TRANSCRIPT_EVENTS.forEach((n) => window.removeEventListener(n, onTranscript as EventListener));
       if ((window as any).mmoraHomeCommand === applyCommand) delete (window as any).mmoraHomeCommand;
+      if (recognition) { try { recognition.stop(); } catch {} }
     };
   }, []);
 
@@ -1740,12 +1800,13 @@ const HomePage = () => {
                             return next;
                           });
                         }}
-                        className="flex items-center justify-center w-6 h-6 rounded-md border border-foreground/20 hover:border-foreground/40 hover:bg-foreground/10 transition-all"
+                        className="flex items-center gap-1 px-2 h-6 rounded-md border border-foreground/30 bg-background/60 text-foreground text-[10px] font-medium hover:bg-foreground/10 hover:border-foreground/50 transition-all"
                         aria-label={loopsHidden ? 'Show loops section' : 'Hide loops section'}
                         aria-pressed={loopsHidden}
-                        title={loopsHidden ? 'Show loops' : 'Hide loops'}
+                        title={loopsHidden ? 'Show loops (Zoe: "unhide loops")' : 'Hide loops (Zoe: "hide loops")'}
                       >
-                        {loopsHidden ? <ChevronDown className="w-3 h-3 text-foreground" /> : <ChevronUp className="w-3 h-3 text-foreground" />}
+                        {loopsHidden ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />}
+                        <span className="leading-none">{loopsHidden ? 'Show' : 'Hide'}</span>
                       </button>
                     </div>
                   </div>
