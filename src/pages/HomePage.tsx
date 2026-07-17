@@ -1601,6 +1601,24 @@ const HomePage = () => {
                       <span className="text-[10px] tabular-nums text-muted-foreground/60">
                         {filteredLoops.length}
                       </span>
+                      {/* Hide / Unhide Loops section — one-tap toggle, also voice-controllable */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLoopsHidden((prev) => {
+                            const next = !prev;
+                            try { localStorage.setItem('mmora.home.loopsHidden', next ? 'true' : 'false'); } catch {}
+                            try { trackEvent({ name: 'loop_mute_toggle', postId: 'section-visibility', muted: next, persisted: true } as any); } catch {}
+                            return next;
+                          });
+                        }}
+                        className="flex items-center justify-center w-6 h-6 rounded-md border border-foreground/20 hover:border-foreground/40 hover:bg-foreground/10 transition-all"
+                        aria-label={loopsHidden ? 'Show loops section' : 'Hide loops section'}
+                        aria-pressed={loopsHidden}
+                        title={loopsHidden ? 'Show loops' : 'Hide loops'}
+                      >
+                        {loopsHidden ? <ChevronDown className="w-3 h-3 text-foreground" /> : <ChevronUp className="w-3 h-3 text-foreground" />}
+                      </button>
                     </div>
                   </div>
 
