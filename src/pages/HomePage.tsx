@@ -661,6 +661,7 @@ const HomePage = () => {
       if (cmd === 'start-scrolling' || cmd === 'resume' || cmd === 'resume-timeline'
         || has('start', 'scroll') || has('resume', 'timeline') || has('play', 'timeline')) {
         setAutoScrollEnabled(true);
+        setFeedAutoPassCompleted(false); // resume also restarts a fresh pass
         try { localStorage.setItem('mmora.home.autoScroll', 'true'); } catch {}
         return;
       }
@@ -670,9 +671,13 @@ const HomePage = () => {
       const detail = (e as CustomEvent).detail as { command?: string } | undefined;
       if (detail?.command) applyCommand(detail.command);
     };
+    const extractText = (e: Event): string => {
+      const d = (e as CustomEvent).detail as any;
+      if (!d) return '';
+      return String(d.text ?? d.transcript ?? d.command ?? d.query ?? d.message ?? '').toLowerCase();
+    };
     const onTranscript = (e: Event) => {
-      const detail = (e as CustomEvent).detail as { text?: string; transcript?: string } | undefined;
-      const text = (detail?.text ?? detail?.transcript ?? '').toLowerCase();
+      const text = extractText(e);
       if (!text || !text.includes('zoe')) return;
       if (text.includes('hide') && text.includes('loop')) applyCommand('hide-loops');
       else if ((text.includes('unhide') || text.includes('show') || text.includes('open')) && text.includes('loop')) applyCommand('unhide-loops');
@@ -682,12 +687,46 @@ const HomePage = () => {
       else if (text.includes('resume') || text.includes('play')) applyCommand('resume');
     };
 
+    // Subscribe to every event name known to carry a Zoe transcript / spoken
+    // command so hide/unhide + timeline voice control works regardless of
+    // which voice pipeline the user has active.
+    const TRANSCRIPT_EVENTS = [
+      'zoe:transcript', 'zoe-transcript', 'zoe:command', 'zoe-command',
+      'zoe-navigate', 'zoe-speak', 'zoe-heard', 'zoe-user-said',
+      'mmora:transcript', 'mmora:voice-transcript', 'speech:transcript',
+    ];
     window.addEventListener('mmora:home-command', onCommand as EventListener);
-    window.addEventListener('zoe:transcript', onTranscript as EventListener);
+    TRANSCRIPT_EVENTS.forEach((n) => window.addEventListener(n, onTranscript as EventListener));
     (window as any).mmoraHomeCommand = applyCommand;
+
+    // Native SpeechRecognition fallback so voice control works even when no
+    // upstream pipeline is emitting transcript events. Continuous + restarting.
+    const SR: any = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    let recognition: any = null;
+    let stopped = false;
+    if (SR) {
+      try {
+        recognition = new SR();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = navigator.language || 'en-US';
+        recognition.onresult = (ev: any) => {
+          for (let i = ev.resultIndex; i < ev.results.length; i++) {
+            const t = String(ev.results[i][0]?.transcript || '').toLowerCase();
+            if (!t.includes('zoe')) continue;
+            window.dispatchEvent(new CustomEvent('mmora:transcript', { detail: { text: t } }));
+          }
+        };
+        recognition.onend = () => { if (!stopped) { try { recognition.start(); } catch {} } };
+        recognition.onerror = () => { /* silent — restart on end */ };
+        try { recognition.start(); if (import.meta.env.DEV) console.info('[HomePage] SpeechRecognition fallback started'); } catch {}
+      } catch { recognition = null; }
+    }
+
     return () => {
+      stopped = true;
       window.removeEventListener('mmora:home-command', onCommand as EventListener);
-      window.removeEventListener('zoe:transcript', onTranscript as EventListener);
+      TRANSCRIPT_EVENTS.forEach((n) => window.removeEventListener(n, onTranscript as EventListener));
       if ((window as any).mmoraHomeCommand === applyCommand) delete (window as any).mmoraHomeCommand;
     };
   }, []);
