@@ -559,7 +559,7 @@ const HomePage = () => {
       if (feedAutoTimerRef.current) window.clearTimeout(feedAutoTimerRef.current);
       feedAutoTimerRef.current = null;
     };
-  }, [activeTab, loading, loopRailInView, globalPosts.length, personalPosts.length, feedAutoIndex, autoScrollEnabled]);
+  }, [activeTab, loading, loopRailInView, loopRailPassCompleted, globalPosts.length, personalPosts.length, feedAutoIndex, autoScrollEnabled]);
 
   // Voice / programmatic command bus for the Home surface.
   // Fire `window.dispatchEvent(new CustomEvent('mmora:home-command', { detail: { command: '...' } }))`
