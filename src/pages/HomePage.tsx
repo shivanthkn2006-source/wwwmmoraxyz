@@ -506,7 +506,7 @@ const HomePage = () => {
   // Auto-advance the active feed after the current clip's real duration finishes.
   // Event-driven per video (handles buffering/stalls); non-video posts fall back to 5s.
   useEffect(() => {
-    if (loading || loopRailInView || !autoScrollEnabled || (activeTab !== 'global' && activeTab !== 'personal')) return;
+    if (loading || (loopRailInView && !loopRailPassCompleted) || !autoScrollEnabled || (activeTab !== 'global' && activeTab !== 'personal')) return;
     const posts = Array.from(document.querySelectorAll<HTMLElement>(`[data-feed-tab="${activeTab}"] [data-post-card]`));
     if (posts.length <= 1) return;
 
