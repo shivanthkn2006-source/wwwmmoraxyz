@@ -270,6 +270,7 @@ const HomePage = () => {
   const [loopRailInView, setLoopRailInView] = useState(false);
   const [loopRailPassCompleted, setLoopRailPassCompleted] = useState(false);
   const [feedAutoIndex, setFeedAutoIndex] = useState(0);
+  const [feedAutoPassCompleted, setFeedAutoPassCompleted] = useState(false);
   const loopRailRef = useRef<HTMLDivElement | null>(null);
   const feedAutoTimerRef = useRef<number | null>(null);
 
