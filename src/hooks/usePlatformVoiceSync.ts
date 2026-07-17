@@ -83,7 +83,10 @@ export const usePlatformVoiceSync = () => {
 
   useEffect(() => {
     const handleVoiceCommand = (event: CustomEvent) => {
-      const { command, confidence } = event.detail || {};
+      const detail = event.detail || {};
+      const command = String(detail.command ?? detail.transcript ?? '').trim();
+      const { confidence } = detail;
+      if (!command) return;
       
       setSyncState(prev => ({
         ...prev,
