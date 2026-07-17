@@ -1800,12 +1800,13 @@ const HomePage = () => {
                             return next;
                           });
                         }}
-                        className="flex items-center justify-center w-6 h-6 rounded-md border border-foreground/20 hover:border-foreground/40 hover:bg-foreground/10 transition-all"
+                        className="flex items-center gap-1 px-2 h-6 rounded-md border border-foreground/30 bg-background/60 text-foreground text-[10px] font-medium hover:bg-foreground/10 hover:border-foreground/50 transition-all"
                         aria-label={loopsHidden ? 'Show loops section' : 'Hide loops section'}
                         aria-pressed={loopsHidden}
-                        title={loopsHidden ? 'Show loops' : 'Hide loops'}
+                        title={loopsHidden ? 'Show loops (Zoe: "unhide loops")' : 'Hide loops (Zoe: "hide loops")'}
                       >
-                        {loopsHidden ? <ChevronDown className="w-3 h-3 text-foreground" /> : <ChevronUp className="w-3 h-3 text-foreground" />}
+                        {loopsHidden ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />}
+                        <span className="leading-none">{loopsHidden ? 'Show' : 'Hide'}</span>
                       </button>
                     </div>
                   </div>
