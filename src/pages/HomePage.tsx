@@ -320,6 +320,13 @@ const HomePage = () => {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  // DEV visibility debug: log every change so we can verify voice + chevron
+  // stay in sync and header hit-testing behaves correctly during auto-scroll.
+  useEffect(() => {
+    if (import.meta.env.DEV) console.info('[HomePage] state', { loopsHidden, headerVisible, feedAutoPassCompleted, loopRailPassCompleted, autoScrollEnabled });
+  }, [loopsHidden, headerVisible, feedAutoPassCompleted, loopRailPassCompleted, autoScrollEnabled]);
+
+
 
   // Loops upload UI state
   const [uploadState, setUploadState] = useState<'idle' | 'validating' | 'uploading' | 'saving' | 'error' | 'success'>('idle');
@@ -1797,21 +1804,33 @@ const HomePage = () => {
                             const next = !prev;
                             try { localStorage.setItem('mmora.home.loopsHidden', next ? 'true' : 'false'); } catch {}
                             try { trackEvent({ name: 'loop_mute_toggle', postId: 'section-visibility', muted: next, persisted: true } as any); } catch {}
+                            if (import.meta.env.DEV) console.info('[HomePage] loops toggle (chevron)', { loopsHidden: next });
                             return next;
                           });
                         }}
-                        className="flex items-center gap-1 px-2 h-6 rounded-md border border-foreground/30 bg-background/60 text-foreground text-[10px] font-medium hover:bg-foreground/10 hover:border-foreground/50 transition-all"
+                        onKeyDown={(e) => {
+                          // Native <button> already handles Enter/Space, but
+                          // guard against synthetic wrappers that swallow them.
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            (e.currentTarget as HTMLButtonElement).click();
+                          }
+                        }}
+                        className="flex items-center gap-1 px-2 min-h-6 h-6 rounded-md border border-foreground/30 bg-background/60 text-foreground text-[10px] font-medium hover:bg-foreground/10 hover:border-foreground/50 transition-all outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
                         aria-label={loopsHidden ? 'Show loops section' : 'Hide loops section'}
                         aria-pressed={loopsHidden}
+                        aria-controls="loops-section-body"
+                        aria-expanded={!loopsHidden}
                         title={loopsHidden ? 'Show loops (Zoe: "unhide loops")' : 'Hide loops (Zoe: "hide loops")'}
                       >
-                        {loopsHidden ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />}
+                        {loopsHidden ? <ChevronDown className="w-3 h-3" aria-hidden="true" /> : <ChevronUp className="w-3 h-3" aria-hidden="true" />}
                         <span className="leading-none">{loopsHidden ? 'Show' : 'Hide'}</span>
                       </button>
                     </div>
                   </div>
 
 
+                  <div id="loops-section-body" aria-live="polite" hidden={loopsHidden} />
                   {!loopsHidden && (<>
                   {/* Loops upload progress / status */}
                   {uploadState !== 'idle' && (
