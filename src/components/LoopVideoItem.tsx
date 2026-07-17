@@ -171,6 +171,8 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({
     setSoundUnlocked(true);
     const next = !soundEnabled;
     setSoundEnabled(next);
+    writeLoopSoundEnabled(next);
+    trackEvent({ name: 'loop_mute_toggle', postId: post.id, muted: !next, persisted: true });
     if (videoRef.current) {
       videoRef.current.muted = !next;
       if (next && active) videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
