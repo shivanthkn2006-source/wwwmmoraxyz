@@ -357,6 +357,15 @@ export const HoloFluidProvider: React.FC<HoloFluidProviderProps> = ({
 
   // Auto-scroll state for HUD controls
   const [isAutoScrolling, setIsAutoScrolling] = React.useState(false);
+  const zoeChatOpen = useZoeChatOpen();
+
+  // Auto-pause the HUD-driven auto-scroll while the Zoe chat panel is open.
+  React.useEffect(() => {
+    if (zoeChatOpen && isAutoScrolling) {
+      clearInterval((window as any).__autoScrollInterval);
+      setIsAutoScrolling(false);
+    }
+  }, [zoeChatOpen, isAutoScrolling]);
 
   // Auto scroll controls for RIGHT HUD utility panel (compact, above Sovereign Control)
   const autoScrollHUDItems: HUDItem[] = [
