@@ -17,6 +17,7 @@ import { useDevMode } from '@/components/security/DevModeContext';
 import { useMenuNotifications } from '@/hooks/useMenuNotifications';
 import { useRealTimeChat } from '@/hooks/useRealTimeChat';
 import { useNewMatches } from '@/hooks/useNewMatches';
+import { useZoeChatOpen } from '@/hooks/useZoeChatOpen';
 
 interface HoloFluidContextType {
   // Zoe Orb State
