@@ -541,7 +541,7 @@ const HomePage = () => {
   useEffect(() => {
     const el = loopRailRef.current;
     if (!el || filteredLoops.length <= 1) return;
-    if (loopRailPassCompleted) return;
+    if (loopRailPassCompleted || zoeChatOpen) return;
     let hoverPause = false;
     const onEnter = () => { hoverPause = true; };
     const onLeave = () => { hoverPause = false; };
