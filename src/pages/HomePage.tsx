@@ -579,7 +579,7 @@ const HomePage = () => {
       el.removeEventListener('mouseenter', onEnter);
       el.removeEventListener('mouseleave', onLeave);
     };
-  }, [filteredLoops, activeLoopRailIndex, loopDurations, loopRailPassCompleted]);
+  }, [filteredLoops, activeLoopRailIndex, loopDurations, loopRailPassCompleted, zoeChatOpen]);
 
   useEffect(() => {
     const el = loopRailRef.current;
