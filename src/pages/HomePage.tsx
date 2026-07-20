@@ -661,8 +661,8 @@ const HomePage = () => {
   // Auto-advance the active feed after the current clip's real duration finishes.
   // Event-driven per video (handles buffering/stalls); non-video posts fall back to 5s.
   useEffect(() => {
-    const blocked = loading || (loopRailInView && !loopRailPassCompleted) || !autoScrollEnabled || feedAutoPassCompleted || (activeTab !== 'global' && activeTab !== 'personal');
-    if (import.meta.env.DEV) console.info('[HomePage] timeline-autoscroll guards', { blocked, loading, loopRailInView, loopRailPassCompleted, feedAutoPassCompleted, autoScrollEnabled, activeTab });
+    const blocked = loading || zoeChatOpen || (loopRailInView && !loopRailPassCompleted) || !autoScrollEnabled || feedAutoPassCompleted || (activeTab !== 'global' && activeTab !== 'personal');
+    if (import.meta.env.DEV) console.info('[HomePage] timeline-autoscroll guards', { blocked, loading, zoeChatOpen, loopRailInView, loopRailPassCompleted, feedAutoPassCompleted, autoScrollEnabled, activeTab });
     if (blocked) return;
     const posts = Array.from(document.querySelectorAll<HTMLElement>(`[data-feed-tab="${activeTab}"] [data-post-card]`));
     if (posts.length <= 1) return;
