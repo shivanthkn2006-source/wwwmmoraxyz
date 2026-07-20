@@ -90,9 +90,22 @@ export const useAutoScroll = (options: UseAutoScrollOptions = {}) => {
     }
   }, [isScrolling, startScrolling, stopScrolling]);
 
+  // Pause auto-scroll while the Zoe orb chat window is open anywhere in the app
+  const [zoeChatOpen, setZoeChatOpen] = useState<boolean>(
+    typeof window !== 'undefined' && Boolean((window as any).__mmoraZoeChatOpen)
+  );
+  useEffect(() => {
+    const onToggle = (e: Event) => {
+      const open = Boolean((e as CustomEvent).detail?.open);
+      setZoeChatOpen(open);
+    };
+    window.addEventListener('mmora:zoe-chat-toggle', onToggle);
+    return () => window.removeEventListener('mmora:zoe-chat-toggle', onToggle);
+  }, []);
+
   // Auto-scroll effect
   useEffect(() => {
-    if (!isScrolling) return;
+    if (!isScrolling || zoeChatOpen) return;
 
     scrollTimerRef.current = setTimeout(() => {
       scrollToNext();
@@ -103,7 +116,7 @@ export const useAutoScroll = (options: UseAutoScrollOptions = {}) => {
         clearTimeout(scrollTimerRef.current);
       }
     };
-  }, [isScrolling, currentPostIndex, scrollInterval, scrollToNext]);
+  }, [isScrolling, currentPostIndex, scrollInterval, scrollToNext, zoeChatOpen]);
 
   // Update post elements when component mounts
   useEffect(() => {

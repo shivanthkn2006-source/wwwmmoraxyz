@@ -513,6 +513,19 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
     }
   }, [isOpen]);
 
+  // Broadcast chat open/close so features like homepage auto-scroll can pause
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    (window as any).__mmoraZoeChatOpen = isOpen;
+    window.dispatchEvent(new CustomEvent('mmora:zoe-chat-toggle', { detail: { open: isOpen } }));
+    return () => {
+      if (isOpen) {
+        (window as any).__mmoraZoeChatOpen = false;
+        window.dispatchEvent(new CustomEvent('mmora:zoe-chat-toggle', { detail: { open: false } }));
+      }
+    };
+  }, [isOpen]);
+
   // Listen for background task completions to inject messages into chat
   useEffect(() => {
     const handleTaskCompleted = (e: CustomEvent<any>) => {

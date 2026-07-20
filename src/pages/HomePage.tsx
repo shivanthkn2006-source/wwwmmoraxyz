@@ -284,6 +284,18 @@ const HomePage = () => {
   const [showZoeHomeDebug, setShowZoeHomeDebug] = useState<boolean>(() => {
     try { return typeof window !== 'undefined' && window.localStorage.getItem('mmora.home.zoeDebugOverlay') !== 'false'; } catch { return true; }
   });
+  const [zoeChatOpen, setZoeChatOpen] = useState<boolean>(
+    typeof window !== 'undefined' && Boolean((window as any).__mmoraZoeChatOpen)
+  );
+  useEffect(() => {
+    const onToggle = (e: Event) => {
+      const open = Boolean((e as CustomEvent).detail?.open);
+      setZoeChatOpen(open);
+      if (import.meta.env.DEV) console.info('[HomePage] Zoe chat toggle → autoscroll pause =', open);
+    };
+    window.addEventListener('mmora:zoe-chat-toggle', onToggle);
+    return () => window.removeEventListener('mmora:zoe-chat-toggle', onToggle);
+  }, []);
   const loopRailRef = useRef<HTMLDivElement | null>(null);
   const feedAutoTimerRef = useRef<number | null>(null);
 
@@ -529,7 +541,7 @@ const HomePage = () => {
   useEffect(() => {
     const el = loopRailRef.current;
     if (!el || filteredLoops.length <= 1) return;
-    if (loopRailPassCompleted) return;
+    if (loopRailPassCompleted || zoeChatOpen) return;
     let hoverPause = false;
     const onEnter = () => { hoverPause = true; };
     const onLeave = () => { hoverPause = false; };
@@ -567,7 +579,7 @@ const HomePage = () => {
       el.removeEventListener('mouseenter', onEnter);
       el.removeEventListener('mouseleave', onLeave);
     };
-  }, [filteredLoops, activeLoopRailIndex, loopDurations, loopRailPassCompleted]);
+  }, [filteredLoops, activeLoopRailIndex, loopDurations, loopRailPassCompleted, zoeChatOpen]);
 
   useEffect(() => {
     const el = loopRailRef.current;
@@ -649,8 +661,8 @@ const HomePage = () => {
   // Auto-advance the active feed after the current clip's real duration finishes.
   // Event-driven per video (handles buffering/stalls); non-video posts fall back to 5s.
   useEffect(() => {
-    const blocked = loading || (loopRailInView && !loopRailPassCompleted) || !autoScrollEnabled || feedAutoPassCompleted || (activeTab !== 'global' && activeTab !== 'personal');
-    if (import.meta.env.DEV) console.info('[HomePage] timeline-autoscroll guards', { blocked, loading, loopRailInView, loopRailPassCompleted, feedAutoPassCompleted, autoScrollEnabled, activeTab });
+    const blocked = loading || zoeChatOpen || (loopRailInView && !loopRailPassCompleted) || !autoScrollEnabled || feedAutoPassCompleted || (activeTab !== 'global' && activeTab !== 'personal');
+    if (import.meta.env.DEV) console.info('[HomePage] timeline-autoscroll guards', { blocked, loading, zoeChatOpen, loopRailInView, loopRailPassCompleted, feedAutoPassCompleted, autoScrollEnabled, activeTab });
     if (blocked) return;
     const posts = Array.from(document.querySelectorAll<HTMLElement>(`[data-feed-tab="${activeTab}"] [data-post-card]`));
     if (posts.length <= 1) return;
@@ -710,7 +722,7 @@ const HomePage = () => {
       if (feedAutoTimerRef.current) window.clearTimeout(feedAutoTimerRef.current);
       feedAutoTimerRef.current = null;
     };
-  }, [activeTab, loading, loopRailInView, loopRailPassCompleted, feedAutoPassCompleted, globalPosts.length, personalPosts.length, feedAutoIndex, autoScrollEnabled]);
+  }, [activeTab, loading, loopRailInView, loopRailPassCompleted, feedAutoPassCompleted, globalPosts.length, personalPosts.length, feedAutoIndex, autoScrollEnabled, zoeChatOpen]);
 
 
   // Voice / programmatic command bus for the Home surface.
