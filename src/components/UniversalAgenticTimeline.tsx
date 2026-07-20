@@ -28,6 +28,7 @@ import { speakAsZoe } from '@/utils/zoeVoice';
 import { toast } from 'sonner';
 import { TimelineThresholdNode } from '@/components/TimelineThresholdNode';
 import { UserPersonalTimeline } from '@/components/UserPersonalTimeline';
+import { useZoeChatOpen } from '@/hooks/useZoeChatOpen';
 import { cn } from '@/lib/utils';
 
 /**
@@ -72,14 +73,17 @@ export const UniversalAgenticTimeline: React.FC = React.memo(() => {
   // Enable voice command handling
   useUniversalTimelineVoice();
 
+  // Pause the horizontal auto-scroll while the global Zoe chat panel is open.
+  const zoeChatOpen = useZoeChatOpen();
+
   // Auto-scroll animation with speed control - MOBILE OPTIMIZED
   useEffect(() => {
-    if (!isPlaying || selectedThreshold) return;
-    
+    if (!isPlaying || selectedThreshold || zoeChatOpen) return;
+
     // MOBILE OPTIMIZATION: Use 100ms interval instead of 50ms to reduce CPU usage
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     const intervalMs = isMobile ? 100 : 50;
-    
+
     let intervalId: NodeJS.Timeout | null = null;
     intervalId = setInterval(() => {
       setScrollPosition(prev => (prev + (0.02 * speedMultiplier * (isMobile ? 2 : 1))) % 100);
@@ -88,7 +92,7 @@ export const UniversalAgenticTimeline: React.FC = React.memo(() => {
     return () => {
       if (intervalId) clearInterval(intervalId);
     };
-  }, [isPlaying, selectedThreshold, speedMultiplier]);
+  }, [isPlaying, selectedThreshold, speedMultiplier, zoeChatOpen]);
 
   // Sync scroll position
   useEffect(() => {
