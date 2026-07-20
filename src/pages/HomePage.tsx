@@ -284,6 +284,18 @@ const HomePage = () => {
   const [showZoeHomeDebug, setShowZoeHomeDebug] = useState<boolean>(() => {
     try { return typeof window !== 'undefined' && window.localStorage.getItem('mmora.home.zoeDebugOverlay') !== 'false'; } catch { return true; }
   });
+  const [zoeChatOpen, setZoeChatOpen] = useState<boolean>(
+    typeof window !== 'undefined' && Boolean((window as any).__mmoraZoeChatOpen)
+  );
+  useEffect(() => {
+    const onToggle = (e: Event) => {
+      const open = Boolean((e as CustomEvent).detail?.open);
+      setZoeChatOpen(open);
+      if (import.meta.env.DEV) console.info('[HomePage] Zoe chat toggle → autoscroll pause =', open);
+    };
+    window.addEventListener('mmora:zoe-chat-toggle', onToggle);
+    return () => window.removeEventListener('mmora:zoe-chat-toggle', onToggle);
+  }, []);
   const loopRailRef = useRef<HTMLDivElement | null>(null);
   const feedAutoTimerRef = useRef<number | null>(null);
 
