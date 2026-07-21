@@ -19,6 +19,8 @@ const FaceVerificationSetup: React.FC<FaceVerificationSetupProps> = ({ onComplet
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [capturing, setCapturing] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [requesting, setRequesting] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
   const [step, setStep] = useState<'instructions' | 'camera' | 'processing' | 'success'>('instructions');
 
   useEffect(() => {
@@ -39,47 +41,69 @@ const FaceVerificationSetup: React.FC<FaceVerificationSetupProps> = ({ onComplet
   }, [step, stream]);
 
   const startCamera = async () => {
-    console.log('[FaceVerification] Start Camera clicked');
+    console.log('[FaceVerification] Start Camera clicked. secureContext=', window.isSecureContext, 'inIframe=', window.self !== window.top);
+    setCameraError(null);
+
     try {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         const isSecure = window.isSecureContext;
         const msg = isSecure
-          ? 'Camera API is not available in this browser.'
+          ? 'Camera API not available in this browser. Try Safari, Chrome, or Edge.'
           : 'Camera requires HTTPS. Open the site over https:// and try again.';
         console.error('[FaceVerification] getUserMedia missing. secureContext=', isSecure);
+        setCameraError(msg);
         toast.error(msg);
         return;
       }
 
-      // Move to camera step BEFORE requesting, so <video> is mounted when stream arrives.
+      // Show the camera step with a loading indicator BEFORE requesting.
       setStep('camera');
+      setRequesting(true);
 
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          facingMode: 'user'
-        },
-        audio: false
-      });
+      // Watchdog: if the browser never resolves the prompt (common inside iframes
+      // without camera allow), surface a clear error instead of a black screen.
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('CameraPromptTimeout')), 15000)
+      );
+
+      const mediaStream = await Promise.race([
+        navigator.mediaDevices.getUserMedia({
+          video: {
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            facingMode: 'user'
+          },
+          audio: false
+        }),
+        timeout,
+      ]);
 
       console.log('[FaceVerification] Camera stream acquired', mediaStream.getVideoTracks().map(t => t.label));
       setStream(mediaStream);
+      setRequesting(false);
     } catch (error: any) {
       console.error('[FaceVerification] getUserMedia error:', error?.name, error?.message, error);
       const name = error?.name || '';
+      const inIframe = window.self !== window.top;
       let msg = 'Failed to access camera.';
       if (name === 'NotAllowedError' || name === 'SecurityError') {
-        msg = 'Camera permission denied. Allow camera access in your browser settings (and, in preview, allow the iframe camera permission), then try again.';
+        msg = inIframe
+          ? 'Camera blocked in the Lovable preview iframe. Open your published site (myzoe.xyz / mmora.xyz) and try again — Face ID enrollment works there.'
+          : 'Camera permission denied. Click the camera icon in your browser address bar and allow access, then try again.';
       } else if (name === 'NotFoundError' || name === 'OverconstrainedError') {
         msg = 'No camera found on this device.';
       } else if (name === 'NotReadableError') {
-        msg = 'Camera is in use by another app. Close it and retry.';
+        msg = 'Camera is in use by another app (Zoom, FaceTime, Photo Booth). Close it and retry.';
+      } else if (error?.message === 'CameraPromptTimeout') {
+        msg = inIframe
+          ? 'The preview iframe blocked the camera prompt. Open the site on your published domain (myzoe.xyz) to enroll Face ID.'
+          : 'Camera prompt timed out. Check your browser permissions and try again.';
       } else if (error?.message) {
         msg = `Camera error: ${error.message}`;
       }
+      setCameraError(msg);
+      setRequesting(false);
       toast.error(msg);
-      setStep('instructions');
     }
   };
 
@@ -182,7 +206,7 @@ const FaceVerificationSetup: React.FC<FaceVerificationSetupProps> = ({ onComplet
           exit={{ opacity: 0, scale: 0.95 }}
           className="space-y-4"
         >
-          <div className="relative rounded-lg overflow-hidden border-2 border-primary/30">
+          <div className="relative rounded-lg overflow-hidden border-2 border-primary/30 bg-black min-h-[240px]">
             <video
               ref={videoRef}
               autoPlay
@@ -193,24 +217,46 @@ const FaceVerificationSetup: React.FC<FaceVerificationSetupProps> = ({ onComplet
             <div className="absolute inset-0 border-4 border-primary/30 rounded-lg pointer-events-none">
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-80 border-2 border-primary rounded-full"></div>
             </div>
+
+            {requesting && !stream && !cameraError && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/70 text-center px-4">
+                <Loader2 className="w-6 h-6 text-primary animate-spin" />
+                <p className="text-sm text-foreground">Requesting camera access…</p>
+                <p className="text-xs text-muted-foreground">Allow the browser prompt to continue.</p>
+              </div>
+            )}
+
+            {cameraError && !stream && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/80 text-center px-4">
+                <AlertCircle className="w-6 h-6 text-destructive" />
+                <p className="text-sm text-foreground max-w-sm">{cameraError}</p>
+              </div>
+            )}
           </div>
-          
+
           <canvas ref={canvasRef} className="hidden" />
-          
+
           <div className="flex gap-2">
-            <Button 
-              onClick={captureAndEnroll} 
-              disabled={capturing}
-              className="flex-1 gap-2"
-            >
-              {capturing ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
+            {cameraError ? (
+              <Button onClick={startCamera} className="flex-1 gap-2">
                 <Camera className="w-4 h-4" />
-              )}
-              Capture & Enroll
-            </Button>
-            <Button onClick={onCancel} variant="outline">
+                Retry Camera
+              </Button>
+            ) : (
+              <Button
+                onClick={captureAndEnroll}
+                disabled={capturing || !stream || requesting}
+                className="flex-1 gap-2"
+              >
+                {capturing ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Camera className="w-4 h-4" />
+                )}
+                Capture & Enroll
+              </Button>
+            )}
+            <Button onClick={() => { setCameraError(null); setStep('instructions'); }} variant="outline">
               <X className="w-4 h-4" />
             </Button>
           </div>
