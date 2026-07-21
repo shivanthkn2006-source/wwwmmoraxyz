@@ -30,24 +30,56 @@ const FaceVerificationSetup: React.FC<FaceVerificationSetupProps> = ({ onComplet
     };
   }, [stream]);
 
+  // Attach the stream to the video element once it's mounted (step === 'camera')
+  useEffect(() => {
+    if (step === 'camera' && stream && videoRef.current && videoRef.current.srcObject !== stream) {
+      videoRef.current.srcObject = stream;
+      videoRef.current.play?.().catch((e) => console.warn('[FaceVerification] video.play() blocked:', e));
+    }
+  }, [step, stream]);
+
   const startCamera = async () => {
+    console.log('[FaceVerification] Start Camera clicked');
     try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        const isSecure = window.isSecureContext;
+        const msg = isSecure
+          ? 'Camera API is not available in this browser.'
+          : 'Camera requires HTTPS. Open the site over https:// and try again.';
+        console.error('[FaceVerification] getUserMedia missing. secureContext=', isSecure);
+        toast.error(msg);
+        return;
+      }
+
+      // Move to camera step BEFORE requesting, so <video> is mounted when stream arrives.
+      setStep('camera');
+
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: {
           width: { ideal: 1280 },
           height: { ideal: 720 },
           facingMode: 'user'
-        }
+        },
+        audio: false
       });
-      
+
+      console.log('[FaceVerification] Camera stream acquired', mediaStream.getVideoTracks().map(t => t.label));
       setStream(mediaStream);
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
+    } catch (error: any) {
+      console.error('[FaceVerification] getUserMedia error:', error?.name, error?.message, error);
+      const name = error?.name || '';
+      let msg = 'Failed to access camera.';
+      if (name === 'NotAllowedError' || name === 'SecurityError') {
+        msg = 'Camera permission denied. Allow camera access in your browser settings (and, in preview, allow the iframe camera permission), then try again.';
+      } else if (name === 'NotFoundError' || name === 'OverconstrainedError') {
+        msg = 'No camera found on this device.';
+      } else if (name === 'NotReadableError') {
+        msg = 'Camera is in use by another app. Close it and retry.';
+      } else if (error?.message) {
+        msg = `Camera error: ${error.message}`;
       }
-      setStep('camera');
-    } catch (error) {
-      console.error('Error accessing camera:', error);
-      toast.error('Failed to access camera. Please check permissions.');
+      toast.error(msg);
+      setStep('instructions');
     }
   };
 
