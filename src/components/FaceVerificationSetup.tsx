@@ -19,6 +19,8 @@ const FaceVerificationSetup: React.FC<FaceVerificationSetupProps> = ({ onComplet
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [capturing, setCapturing] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [requesting, setRequesting] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
   const [step, setStep] = useState<'instructions' | 'camera' | 'processing' | 'success'>('instructions');
 
   useEffect(() => {
@@ -39,47 +41,69 @@ const FaceVerificationSetup: React.FC<FaceVerificationSetupProps> = ({ onComplet
   }, [step, stream]);
 
   const startCamera = async () => {
-    console.log('[FaceVerification] Start Camera clicked');
+    console.log('[FaceVerification] Start Camera clicked. secureContext=', window.isSecureContext, 'inIframe=', window.self !== window.top);
+    setCameraError(null);
+
     try {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         const isSecure = window.isSecureContext;
         const msg = isSecure
-          ? 'Camera API is not available in this browser.'
+          ? 'Camera API not available in this browser. Try Safari, Chrome, or Edge.'
           : 'Camera requires HTTPS. Open the site over https:// and try again.';
         console.error('[FaceVerification] getUserMedia missing. secureContext=', isSecure);
+        setCameraError(msg);
         toast.error(msg);
         return;
       }
 
-      // Move to camera step BEFORE requesting, so <video> is mounted when stream arrives.
+      // Show the camera step with a loading indicator BEFORE requesting.
       setStep('camera');
+      setRequesting(true);
 
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          facingMode: 'user'
-        },
-        audio: false
-      });
+      // Watchdog: if the browser never resolves the prompt (common inside iframes
+      // without camera allow), surface a clear error instead of a black screen.
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('CameraPromptTimeout')), 15000)
+      );
+
+      const mediaStream = await Promise.race([
+        navigator.mediaDevices.getUserMedia({
+          video: {
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            facingMode: 'user'
+          },
+          audio: false
+        }),
+        timeout,
+      ]);
 
       console.log('[FaceVerification] Camera stream acquired', mediaStream.getVideoTracks().map(t => t.label));
       setStream(mediaStream);
+      setRequesting(false);
     } catch (error: any) {
       console.error('[FaceVerification] getUserMedia error:', error?.name, error?.message, error);
       const name = error?.name || '';
+      const inIframe = window.self !== window.top;
       let msg = 'Failed to access camera.';
       if (name === 'NotAllowedError' || name === 'SecurityError') {
-        msg = 'Camera permission denied. Allow camera access in your browser settings (and, in preview, allow the iframe camera permission), then try again.';
+        msg = inIframe
+          ? 'Camera blocked in the Lovable preview iframe. Open your published site (myzoe.xyz / mmora.xyz) and try again — Face ID enrollment works there.'
+          : 'Camera permission denied. Click the camera icon in your browser address bar and allow access, then try again.';
       } else if (name === 'NotFoundError' || name === 'OverconstrainedError') {
         msg = 'No camera found on this device.';
       } else if (name === 'NotReadableError') {
-        msg = 'Camera is in use by another app. Close it and retry.';
+        msg = 'Camera is in use by another app (Zoom, FaceTime, Photo Booth). Close it and retry.';
+      } else if (error?.message === 'CameraPromptTimeout') {
+        msg = inIframe
+          ? 'The preview iframe blocked the camera prompt. Open the site on your published domain (myzoe.xyz) to enroll Face ID.'
+          : 'Camera prompt timed out. Check your browser permissions and try again.';
       } else if (error?.message) {
         msg = `Camera error: ${error.message}`;
       }
+      setCameraError(msg);
+      setRequesting(false);
       toast.error(msg);
-      setStep('instructions');
     }
   };
 
