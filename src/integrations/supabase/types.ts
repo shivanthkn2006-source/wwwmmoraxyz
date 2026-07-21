@@ -3208,6 +3208,54 @@ export type Database = {
           },
         ]
       }
+      passkey_auth_challenges: {
+        Row: {
+          challenge: string
+          consumed_at: string | null
+          created_at: string
+          credential_id: string | null
+          expires_at: string
+          failure_reason: string | null
+          id: string
+          metadata: Json
+          operation: string
+          origin: string | null
+          platform: string | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          challenge: string
+          consumed_at?: string | null
+          created_at?: string
+          credential_id?: string | null
+          expires_at?: string
+          failure_reason?: string | null
+          id?: string
+          metadata?: Json
+          operation: string
+          origin?: string | null
+          platform?: string | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          challenge?: string
+          consumed_at?: string | null
+          created_at?: string
+          credential_id?: string | null
+          expires_at?: string
+          failure_reason?: string | null
+          id?: string
+          metadata?: Json
+          operation?: string
+          origin?: string | null
+          platform?: string | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       phoenix_legacy_messages: {
         Row: {
           channel_type: string | null

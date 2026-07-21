@@ -23,6 +23,7 @@ import {
   History
 } from 'lucide-react';
 import FaceVerificationSetup from './FaceVerificationSetup';
+import { useWebAuthn } from '@/hooks/useWebAuthn';
 
 interface SecuritySettings {
   two_factor_enabled: boolean;
@@ -58,13 +59,23 @@ const SecuritySettingsPage = () => {
   const [recoveryPhone, setRecoveryPhone] = useState('');
   const [savingEmail, setSavingEmail] = useState(false);
   const [savingPhone, setSavingPhone] = useState(false);
+  const {
+    isSupported: passkeySupported,
+    isLoading: passkeyLoading,
+    registeredDevices,
+    registerDevice,
+    removeDevice,
+    checkEnrollment,
+    deviceType,
+  } = useWebAuthn();
 
   useEffect(() => {
     if (user) {
       fetchSecuritySettings();
       fetchAuditLogs();
+      checkEnrollment();
     }
-  }, [user]);
+  }, [user, checkEnrollment]);
 
   const fetchSecuritySettings = async () => {
     try {
@@ -163,6 +174,19 @@ const SecuritySettingsPage = () => {
       case 'suspicious': return 'text-amber-400';
       default: return 'text-muted-foreground';
     }
+  };
+
+  const handlePasskeyEnrollment = async () => {
+    const label = deviceType === 'faceid'
+      ? 'Apple Face ID'
+      : deviceType === 'touchid'
+        ? 'Mac Touch ID'
+        : deviceType === 'fingerprint'
+          ? 'Android Fingerprint'
+          : 'Device Passkey';
+
+    const success = await registerDevice(label);
+    if (success) fetchSecuritySettings();
   };
 
   if (loading) {
@@ -269,6 +293,68 @@ const SecuritySettingsPage = () => {
                 }}
                 onCancel={() => setShowFaceSetup(false)}
               />
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Native Device Biometrics */}
+        <Card className="bg-card/40 backdrop-blur-xl border-border/50">
+          <CardHeader>
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Fingerprint className="w-5 h-5" />
+                  Native Biometrics / Passkeys
+                </CardTitle>
+                <CardDescription>
+                  Face ID, Touch ID, Android fingerprint, and browser passkeys
+                </CardDescription>
+              </div>
+              {(settings.webauthn_enabled || registeredDevices.length > 0) && (
+                <Badge variant="default" className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
+                  <CheckCircle2 className="w-3 h-3 mr-1" />
+                  Enrolled
+                </Badge>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <p className="text-sm text-muted-foreground">
+                Use the secure biometric sensor built into this device for login.
+              </p>
+              <Button
+                onClick={handlePasskeyEnrollment}
+                disabled={!passkeySupported || passkeyLoading}
+                variant="outline"
+                size="sm"
+                className="gap-2"
+              >
+                {passkeyLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Fingerprint className="w-4 h-4" />}
+                {passkeySupported ? 'Enroll This Device' : 'Passkeys Unavailable'}
+              </Button>
+            </div>
+
+            {registeredDevices.length > 0 && (
+              <div className="space-y-2">
+                {registeredDevices.map((device) => (
+                  <div key={device.id} className="flex items-center justify-between gap-3 p-3 bg-background/50 rounded-lg">
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{device.deviceName}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Last used {new Date(device.lastUsed).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => removeDevice(device.credentialId)}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                ))}
+              </div>
             )}
           </CardContent>
         </Card>

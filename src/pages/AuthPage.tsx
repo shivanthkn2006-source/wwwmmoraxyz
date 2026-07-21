@@ -6,13 +6,14 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/lib/auth';
-import { Eye, EyeOff, ScanFace, Mic } from 'lucide-react';
+import { Eye, EyeOff, ScanFace, Mic, Fingerprint, Loader2 } from 'lucide-react';
 import { z } from 'zod';
 import { cn } from '@/lib/utils';
 import FaceLoginModal from '@/components/FaceLoginModal';
 import LoginQueueSystem from '@/components/LoginQueueSystem';
 import PermissionActivationModal from '@/components/PermissionActivationModal';
 import { hasActivatedPermissions } from '@/utils/unifiedPermissionManager';
+import { useWebAuthn } from '@/hooks/useWebAuthn';
 
 
 // Validation schemas
@@ -90,9 +91,37 @@ const AuthPage = () => {
   });
 
   const { signIn, signUp } = useAuth();
+  const { authenticateWithEmail, isLoading: passkeyLoading, isSupported: passkeySupported, deviceType } = useWebAuthn();
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  const handlePasskeyLogin = async () => {
+    if (!formData.email.trim()) {
+      toast({
+        title: 'Email required',
+        description: 'Enter your email before using Face ID, Touch ID, or fingerprint login.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const success = await authenticateWithEmail(formData.email);
+    if (success) {
+      toast({
+        title: 'Biometric login successful',
+        description: 'Signed in with your device passkey.',
+      });
+      navigate('/home');
+    }
+  };
+
+  const passkeyLabel = deviceType === 'faceid'
+    ? 'Sign in with Face ID / Passkey'
+    : deviceType === 'touchid'
+      ? 'Sign in with Touch ID / Passkey'
+      : deviceType === 'fingerprint'
+        ? 'Sign in with Fingerprint / Passkey'
+        : 'Sign in with Passkey';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -373,6 +402,30 @@ const AuthPage = () => {
                       "md:w-6 md:h-6 lg:w-5 lg:h-5 xl:w-6 xl:h-6"
                     )} />
                     Sign in with Face ID
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={cn(
+                      "w-full gap-2 border-primary/30 hover:bg-primary/10",
+                      "h-10 xxs:h-10 xs:h-11 sm:h-12 md:h-14",
+                      "lg:h-12 xl:h-14 2xl:h-16 4k:h-20",
+                      "text-sm xxs:text-sm xs:text-base sm:text-base md:text-lg",
+                      "lg:text-base xl:text-lg 2xl:text-xl 4k:text-2xl"
+                    )}
+                    onClick={handlePasskeyLogin}
+                    disabled={passkeyLoading || !passkeySupported}
+                  >
+                    {passkeyLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Fingerprint className={cn(
+                        "w-4 h-4 xxs:w-4 xxs:h-4 xs:w-5 xs:h-5 sm:w-5 sm:h-5",
+                        "md:w-6 md:h-6 lg:w-5 lg:h-5 xl:w-6 xl:h-6"
+                      )} />
+                    )}
+                    {passkeySupported ? passkeyLabel : 'Passkeys unavailable in this browser'}
                   </Button>
                   
                   <Button

@@ -16,8 +16,9 @@ import { useZeroKnowledgeVault } from '@/hooks/useZeroKnowledgeVault';
 import { useVoiceCitadelOrchestrator } from '@/hooks/useVoiceCitadelOrchestrator';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
+import { useWebAuthn } from '@/hooks/useWebAuthn';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Fingerprint, Shield, Wifi, WifiOff, Lock, Unlock, Activity, Loader2, CheckCircle2, AlertCircle, Radio } from 'lucide-react';
+import { ArrowLeft, Fingerprint, Shield, Wifi, WifiOff, Lock, Unlock, Activity, Loader2, CheckCircle2, AlertCircle, Radio, Mail } from 'lucide-react';
 
 type AuthState = 'idle' | 'listening' | 'processing' | 'success' | 'error';
 type AuthMode = 'online' | 'offline';
@@ -142,6 +143,7 @@ const VoiceCitadelLoginComponent: React.FC<VoiceCitadelLoginProps> = ({
     useCount: number;
     lastUsed: string | null;
   } | null>(null);
+  const [loginEmail, setLoginEmail] = useState('');
   
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animationFrameRef = useRef<number | null>(null);
@@ -154,6 +156,7 @@ const VoiceCitadelLoginComponent: React.FC<VoiceCitadelLoginProps> = ({
   const { analyzeVoiceDNA, matchVoiceDNA, getSecurityContext, registerKnownDevice, serializeVoiceDNA, deserializeVoiceDNA } = useVoiceBioResonance();
   const { encryptToken, decryptToken, getVaultStatus, isLocked, failedAttempts, resetVaultLock } = useZeroKnowledgeVault();
   const { user } = useAuth();
+  const { authenticateWithEmail, isLoading: passkeyLoading, isSupported: passkeySupported, deviceType } = useWebAuthn();
   const navigate = useNavigate();
   
   // Master Orchestrator - handles all background checks and auto-alignment
@@ -176,6 +179,7 @@ const VoiceCitadelLoginComponent: React.FC<VoiceCitadelLoginProps> = ({
       if (!user) {
         setHasEnrolledVoice(false);
         setEnrollmentDetails(null);
+        setFlowMode('login');
         return;
       }
 
@@ -214,6 +218,15 @@ const VoiceCitadelLoginComponent: React.FC<VoiceCitadelLoginProps> = ({
 
     checkEnrollment();
   }, [user]);
+
+  const handlePasskeyLogin = useCallback(async () => {
+    const success = await authenticateWithEmail(loginEmail);
+    if (success) {
+      setAuthState('success');
+      onAuthSuccess?.('passkey-auth-verified');
+      setTimeout(() => navigate('/home'), 500);
+    }
+  }, [authenticateWithEmail, loginEmail, navigate, onAuthSuccess]);
 
   // Calculate voice quality from audio data
   const calculateVoiceQuality = useCallback((dataArray: Float32Array): VoiceQualityMetrics => {
@@ -379,7 +392,7 @@ const VoiceCitadelLoginComponent: React.FC<VoiceCitadelLoginProps> = ({
         console.log('[VoiceCitadel] 📝 Processing voice enrollment with Bio-Resonance...');
         
         if (!user) {
-          throw new Error('Please log in first to enroll your voice');
+          throw new Error('Sign in with password or passkey first, then enroll Voice Citadel for this account.');
         }
 
         // Extract Voice DNA using Bio-Resonance Engine (if we have audio context)
@@ -481,7 +494,7 @@ const VoiceCitadelLoginComponent: React.FC<VoiceCitadelLoginProps> = ({
         console.log('[VoiceCitadel] 🌐 Mode: ONLINE - Bio-Resonance Cloud Verification');
 
         if (!user) {
-          throw new Error('Please log in first');
+          throw new Error('Enter your email and use Passkey Login, or sign in once to enroll voice authentication.');
         }
 
         // Check enrolled voice prints
@@ -574,7 +587,7 @@ const VoiceCitadelLoginComponent: React.FC<VoiceCitadelLoginProps> = ({
         console.log('[VoiceCitadel] 📴 Mode: OFFLINE - Zero-Knowledge Vault Verification');
 
         if (!user) {
-          throw new Error('Please log in online first to enable offline mode');
+          throw new Error('Sign in online first to enable offline Voice Citadel mode.');
         }
         
         // Check vault lock status
@@ -633,6 +646,52 @@ const VoiceCitadelLoginComponent: React.FC<VoiceCitadelLoginProps> = ({
       setTimeout(() => setAuthState('idle'), 3000);
     }
   }, [onAuthSuccess, onAuthError, authMode, flowMode, user, capturedAudioData, navigate, analyzeVoiceDNA, matchVoiceDNA, getSecurityContext, registerKnownDevice, serializeVoiceDNA, deserializeVoiceDNA, encryptToken, decryptToken, isLocked, failedAttempts, calculateSimilarity]);
+
+  const passkeyLabel = deviceType === 'faceid'
+    ? 'FACE ID / PASSKEY LOGIN'
+    : deviceType === 'touchid'
+      ? 'TOUCH ID / PASSKEY LOGIN'
+      : deviceType === 'fingerprint'
+        ? 'FINGERPRINT / PASSKEY LOGIN'
+        : 'PASSKEY LOGIN';
+
+  const PasskeyLoginPanel = ({ compact = false }: { compact?: boolean }) => (
+    <motion.div
+      className={cn('w-full space-y-3 rounded-2xl bg-black/30 border border-white/10', compact ? 'p-3' : 'p-4')}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.28 }}
+    >
+      <div className="flex items-center gap-2 text-white/50">
+        <Mail className="w-3.5 h-3.5" />
+        <span className="text-[10px] tracking-widest" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+          LOGIN EMAIL
+        </span>
+      </div>
+      <input
+        type="email"
+        value={loginEmail}
+        onChange={(event) => setLoginEmail(event.target.value)}
+        autoComplete="email webauthn"
+        inputMode="email"
+        placeholder="you@example.com"
+        className="w-full h-10 rounded-xl bg-white/5 border border-white/10 px-3 text-sm text-white placeholder:text-white/25 outline-none focus:border-cyan-400/60"
+      />
+      <button
+        type="button"
+        onClick={handlePasskeyLogin}
+        disabled={passkeyLoading || !passkeySupported}
+        className={cn(
+          'w-full h-10 rounded-xl border border-cyan-400/30 bg-cyan-400/10 text-cyan-100 flex items-center justify-center gap-2 text-[10px] tracking-widest transition-colors',
+          'hover:bg-cyan-400/20 disabled:opacity-50 disabled:cursor-not-allowed'
+        )}
+        style={{ fontFamily: "'JetBrains Mono', monospace" }}
+      >
+        {passkeyLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Fingerprint className="w-4 h-4" />}
+        {passkeySupported ? passkeyLabel : 'PASSKEYS UNAVAILABLE'}
+      </button>
+    </motion.div>
+  );
 
   const handleOrbClick = useCallback(() => {
     if (authState === 'idle') {
@@ -744,6 +803,9 @@ const VoiceCitadelLoginComponent: React.FC<VoiceCitadelLoginProps> = ({
                 ))}
               </motion.div>
             )}
+
+            {/* Mode Toggle */}
+            {!user && <PasskeyLoginPanel />}
 
             {/* Mode Toggle */}
             <motion.div 
@@ -1021,7 +1083,9 @@ const VoiceCitadelLoginComponent: React.FC<VoiceCitadelLoginProps> = ({
               transition={{ delay: 0.55 }}
             >
               <p className="text-[10px] text-white/30" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                {flowMode === 'enroll' 
+                    {!user
+                      ? 'Use a device passkey above, or sign in with password first to enroll voice authentication.'
+                      : flowMode === 'enroll' 
                   ? 'Speak a phrase clearly. Your unique voice pattern will be encrypted and stored securely.'
                   : hasEnrolledVoice 
                     ? 'Speak the same phrase you used during enrollment for verification.'
@@ -1090,6 +1154,9 @@ const VoiceCitadelLoginComponent: React.FC<VoiceCitadelLoginProps> = ({
                 {flowMode === 'enroll' ? 'Voice Enrollment' : 'Biometric Authentication'}
               </p>
             </div>
+
+            {/* Mobile System Status Bar */}
+            {!user && <PasskeyLoginPanel compact />}
 
             {/* Mobile System Status Bar */}
             <div className="w-full flex items-center justify-center gap-4 py-2 px-4 rounded-xl bg-black/30 border border-white/10">
