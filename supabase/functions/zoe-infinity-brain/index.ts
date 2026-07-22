@@ -218,42 +218,9 @@ async function tryOpenRouter(systemPrompt: string, messages: Message[], mode: In
   }
 }
 
-// --- Lovable AI Gateway - EMERGENCY FALLBACK ---
-async function tryLovableAI(systemPrompt: string, messages: Message[], mode: IntelligenceMode): Promise<ProviderResult | null> {
-  const apiKey = Deno.env.get("LOVABLE_API_KEY");
-  if (!apiKey) return null;
-  
-  try {
-    const model = mode === 'pro' ? 'google/gemini-3-flash-preview' : 'google/gemini-2.5-flash';
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model,
-        messages: [{ role: "system", content: systemPrompt }, ...messages],
-        max_tokens: mode === 'pro' ? 1500 : 500,
-        temperature: mode === 'pro' ? 0.7 : 0.8,
-      }),
-    });
-    
-    if (!response.ok) {
-      const errText = await response.text();
-      console.warn(`[provider:lovable] Failed ${response.status}: ${errText.substring(0, 200)}`);
-      return null;
-    }
-    
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
-    if (!content) return null;
-    
-    return { content, provider: 'lovable-ai', model };
-  } catch (e) {
-    console.warn("[provider:lovable] Error:", e);
-    return null;
-  }
+// --- Lovable AI Gateway REMOVED (sovereign-only) ---
+async function tryLovableAI(_systemPrompt: string, _messages: Message[], _mode: IntelligenceMode): Promise<ProviderResult | null> {
+  return null;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
