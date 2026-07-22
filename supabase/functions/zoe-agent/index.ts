@@ -162,9 +162,9 @@ serve(async (req) => {
     const body = await req.json();
     const { command, userId, context } = requestSchema.parse(body);
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY is not configured');
+    const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY');
+    if (!GROQ_API_KEY) {
+      throw new Error('GROQ_API_KEY is not configured');
     }
 
     console.log('Zoe Agent v2.0 request:', { command, userId });
@@ -266,44 +266,38 @@ Execute tools proactively when they would improve your response quality.
 
 Remember: You are not just answering questions—you are genuinely helping someone achieve their goals. Make every interaction count.`;
 
-    // Use Gemini 3 Pro Preview for maximum intelligence (with fallback)
-    let response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-3-pro-preview',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: command }
-        ],
-        tools: advancedTools,
-        tool_choice: 'auto',
-      }),
+    // Sovereign Groq call (supports OpenAI-style tool calling). Falls back to 8B on 70B failure.
+    const groqBody = (model: string) => JSON.stringify({
+      model,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: command }
+      ],
+      tools: advancedTools,
+      tool_choice: 'auto',
     });
 
-    // Fallback to Gemini 2.5 Pro if Gemini 3 is unavailable
-    if (!response.ok && (response.status === 400 || response.status === 404)) {
-      console.log('Gemini 3 Pro unavailable, falling back to Gemini 2.5 Pro...');
-      response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    let response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${GROQ_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: groqBody('llama-3.3-70b-versatile'),
+    });
+
+    if (!response.ok && (response.status === 400 || response.status === 404 || response.status === 503)) {
+      console.log('Groq 70B unavailable, falling back to llama-3.1-8b-instant...');
+      response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+          'Authorization': `Bearer ${GROQ_API_KEY}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          model: 'google/gemini-2.5-pro',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: command }
-          ],
-          tools: advancedTools,
-          tool_choice: 'auto',
-        }),
+        body: groqBody('llama-3.1-8b-instant'),
       });
     }
+
 
     if (!response.ok) {
       const errorText = await response.text();

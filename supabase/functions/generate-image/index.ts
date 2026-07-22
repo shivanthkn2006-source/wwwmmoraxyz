@@ -54,44 +54,8 @@ async function tryPollinations(prompt: string, width = 1024, height = 1024): Pro
   }
 }
 
-/**
- * Fallback: Lovable AI Gateway (Gemini)
- */
-async function tryGemini(prompt: string, apiKey: string): Promise<string | null> {
-  try {
-    console.log('[generate-image] Trying Gemini fallback...');
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-3.1-flash-image',
-        messages: [{ role: 'user', content: prompt }],
-        modalities: ['image', 'text'],
-      }),
-    });
+// Lovable Gateway removed — Pollinations is the sole provider (free, unlimited).
 
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error(`[generate-image] Gemini error [${response.status}]: ${errText}`);
-
-      if (response.status === 429) throw { status: 429, error: 'RATE_LIMIT' };
-      if (response.status === 402) throw { status: 402, error: 'NO_CREDITS' };
-      return null;
-    }
-
-    const data = await response.json();
-    const imageUrl = data?.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-    if (imageUrl) console.log('[generate-image] ✅ Gemini success');
-    return imageUrl || null;
-  } catch (e: any) {
-    if (e.status) throw e; // Re-throw rate limit / credit errors
-    console.error('[generate-image] Gemini failed:', e);
-    return null;
-  }
-}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -108,45 +72,21 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { prompt, width, height, provider } = parsed.data;
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    const { prompt, width, height } = parsed.data;
 
     let imageUrl: string | null = null;
     let usedProvider = 'unknown';
     const attempts: Array<{ provider: string; ok: boolean; reason?: string }> = [];
 
-    // Provider routing — PRIMARY: Gemini 3.1 Flash (Lovable AI Gateway)
-    //                   SECONDARY: Pollinations (free, no key required)
-    // `provider=pollinations` forces pollinations-only; otherwise cascade Gemini → Pollinations.
-    if (provider !== 'pollinations' && LOVABLE_API_KEY) {
-      try {
-        imageUrl = await tryGemini(prompt, LOVABLE_API_KEY);
-        if (imageUrl) {
-          usedProvider = 'gemini-3.1-flash';
-          attempts.push({ provider: 'gemini-3.1-flash', ok: true });
-        } else {
-          attempts.push({ provider: 'gemini-3.1-flash', ok: false, reason: 'empty_response' });
-        }
-      } catch (e: any) {
-        attempts.push({ provider: 'gemini-3.1-flash', ok: false, reason: e?.error ?? String(e?.message ?? e) });
-        if (e.status === 429) {
-          // soft-fail to Pollinations on rate limit instead of bouncing the caller
-          console.warn('[generate-image] Gemini rate-limited → falling back to Pollinations');
-        } else if (e.status === 402) {
-          console.warn('[generate-image] Gemini credits exhausted → falling back to Pollinations');
-        }
-      }
+    // Sovereign image gen — Pollinations only (free, no Lovable credits).
+    imageUrl = await tryPollinations(prompt, width || 1024, height || 1024);
+    if (imageUrl) {
+      usedProvider = 'pollinations';
+      attempts.push({ provider: 'pollinations', ok: true });
+    } else {
+      attempts.push({ provider: 'pollinations', ok: false, reason: 'unreachable' });
     }
 
-    if (!imageUrl && provider !== 'gemini') {
-      imageUrl = await tryPollinations(prompt, width || 1024, height || 1024);
-      if (imageUrl) {
-        usedProvider = 'pollinations-fallback';
-        attempts.push({ provider: 'pollinations', ok: true });
-      } else {
-        attempts.push({ provider: 'pollinations', ok: false, reason: 'unreachable' });
-      }
-    }
 
     if (!imageUrl) {
       return new Response(

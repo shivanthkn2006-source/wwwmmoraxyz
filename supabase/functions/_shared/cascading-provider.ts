@@ -260,19 +260,14 @@ export interface TierSpec {
   call: (m: Message[], o: CascadeOptions) => Promise<ProviderOutcome>;
 }
 
-export function getDefaultTiers(mode: CascadeMode = 'default', lovableModel?: string): TierSpec[] {
-  const base: TierSpec[] = [
+export function getDefaultTiers(_mode: CascadeMode = 'default', _lovableModel?: string): TierSpec[] {
+  // Lovable Gateway (T5) REMOVED — sovereign free-provider cascade only.
+  return [
     { tier: 1, name: 'T1 · Groq Llama-3.1-8B (primary)', provider: 'groq',     model: 'llama-3.1-8b-instant',               envKey: 'GROQ_API_KEY',           call: callGemmaPrimary },
     { tier: 2, name: 'T2 · Gemini 2.0 Flash',            provider: 'gemini',   model: 'gemini-2.0-flash',                   envKey: 'GOOGLE_AI_STUDIO_KEY',   call: callGemini },
     { tier: 3, name: 'T3 · Llama-3.3-70B (Groq)',        provider: 'groq',     model: 'llama-3.3-70b-versatile',            envKey: 'GROQ_API_KEY',           call: callGroqLlama },
     { tier: 4, name: 'T4 · Llama-3.3-70B (OpenRouter)',  provider: 'openrouter', model: 'meta-llama/llama-3.3-70b-instruct:free', envKey: 'OPENROUTER_API_KEY',   call: callOpenRouter },
-    { tier: 5, name: 'T5 · Lovable Gateway (last-resort fallback)', provider: 'lovable', model: lovableModel ?? 'google/gemini-2.5-flash', envKey: 'LOVABLE_API_KEY', call: (m, o) => callLovable(m, o, lovableModel) },
   ];
-  if (mode === 't1-primary') {
-    // Keep T1→T5 order, but T1 is the explicit preferred primary and T5 is the absolute last resort.
-    return base;
-  }
-  return base;
 }
 
 // ───────────── Public API ─────────────

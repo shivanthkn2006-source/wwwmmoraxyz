@@ -12,7 +12,7 @@ const corsHeaders = {
 };
 
 // Pre-initialize environment variables (read once at module load)
-const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
@@ -238,21 +238,21 @@ function verifyConstitutionalLaw(
   };
 }
 
-// Model selection based on thinking level (SOC 2 Compliant)
+// Model selection — sovereign Groq only (Lovable Gateway removed)
 const MODEL_SELECTION: Record<ThinkingLevel, { primary: string; fallbacks: string[]; latencyTarget: number }> = {
   'low': {
-    primary: 'google/gemini-2.5-flash',
-    fallbacks: ['google/gemini-2.5-flash-lite'],
+    primary: 'llama-3.1-8b-instant',
+    fallbacks: ['llama-3.3-70b-versatile'],
     latencyTarget: 500
   },
   'medium': {
-    primary: 'google/gemini-2.5-flash',
-    fallbacks: ['google/gemini-2.5-flash-lite', 'google/gemini-2.5-pro'],
+    primary: 'llama-3.3-70b-versatile',
+    fallbacks: ['llama-3.1-8b-instant'],
     latencyTarget: 1000
   },
   'high': {
-    primary: 'google/gemini-3-pro-preview',
-    fallbacks: ['google/gemini-2.5-pro', 'google/gemini-2.5-flash'],
+    primary: 'llama-3.3-70b-versatile',
+    fallbacks: ['llama-3.1-8b-instant'],
     latencyTarget: 5000
   }
 };
@@ -606,8 +606,8 @@ serve(async (req) => {
     // ═══════════════════════════════════════════════════════════════════
     // API key check — core-executor still uses Lovable Gateway for tool calling
     // but won't hard-fail if missing (graceful degradation)
-    if (!LOVABLE_API_KEY) {
-      console.warn(`[${requestId}] LOVABLE_API_KEY not configured, tool-calling may be limited`);
+    if (!GROQ_API_KEY) {
+      console.warn(`[${requestId}] GROQ_API_KEY not configured, tool-calling may be limited`);
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -876,10 +876,10 @@ serve(async (req) => {
       const currentModel = allModels[i];
       
       try {
-        response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+            'Authorization': `Bearer ${GROQ_API_KEY}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({

@@ -126,9 +126,8 @@ serve(async (req) => {
     }
 
     const { messages, soulMetrics, timezone, localTime, platformContext } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    // Lovable Gateway removed — using sovereign cascade below.
+
 
     // ═══════════════════════════════════════════════════════════════════════════
     // FETCH USER PROFILE WITH RELATIONSHIP STYLE
@@ -233,50 +232,27 @@ ${endearment ? `- You may occasionally call them "${endearment}"` : ''}
 
     console.log('[ZoeInfinity] Relationship:', relationshipType, '| Intimacy:', intimacy);
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: systemPrompt },
-          ...messages,
-        ],
-        max_tokens: 400,
-        temperature: 0.85,
-      }),
-    });
+    // Sovereign cascade — Groq → Gemini direct → Groq 70B → OpenRouter free. No Lovable.
+    const { cascadeInfer } = await import("../_shared/cascading-provider.ts");
+    const cascade = await cascadeInfer(
+      [{ role: "system", content: systemPrompt }, ...messages],
+      { maxTokens: 400, temperature: 0.85, systemPrompt },
+    );
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("AI Gateway error:", response.status, errorText);
-      
-      if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Gimme a sec to catch my breath... try again?" }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "Hmm, something's up with the connection. Let me check..." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      
-      throw new Error(`AI Gateway error: ${response.status}`);
+    if (!cascade.success) {
+      return new Response(
+        JSON.stringify({ error: "Hey, all my brains are napping. Try again in a sec?", attempts: cascade.attempts }),
+        { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content || "Hey, I'm here. What's up?";
+    const content = cascade.content;
 
     return new Response(
-      JSON.stringify({ response: content }),
+      JSON.stringify({ response: content, provider: cascade.selectedProvider, model: cascade.selectedModel }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
+
   } catch (error: unknown) {
     console.error("Zoe Infinity error:", error);
     const errorMessage = error instanceof Error ? error.message : "Something went sideways";
