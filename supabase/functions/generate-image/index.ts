@@ -72,45 +72,21 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { prompt, width, height, provider } = parsed.data;
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    const { prompt, width, height } = parsed.data;
 
     let imageUrl: string | null = null;
     let usedProvider = 'unknown';
     const attempts: Array<{ provider: string; ok: boolean; reason?: string }> = [];
 
-    // Provider routing — PRIMARY: Gemini 3.1 Flash (Lovable AI Gateway)
-    //                   SECONDARY: Pollinations (free, no key required)
-    // `provider=pollinations` forces pollinations-only; otherwise cascade Gemini → Pollinations.
-    if (provider !== 'pollinations' && LOVABLE_API_KEY) {
-      try {
-        imageUrl = await tryGemini(prompt, LOVABLE_API_KEY);
-        if (imageUrl) {
-          usedProvider = 'gemini-3.1-flash';
-          attempts.push({ provider: 'gemini-3.1-flash', ok: true });
-        } else {
-          attempts.push({ provider: 'gemini-3.1-flash', ok: false, reason: 'empty_response' });
-        }
-      } catch (e: any) {
-        attempts.push({ provider: 'gemini-3.1-flash', ok: false, reason: e?.error ?? String(e?.message ?? e) });
-        if (e.status === 429) {
-          // soft-fail to Pollinations on rate limit instead of bouncing the caller
-          console.warn('[generate-image] Gemini rate-limited → falling back to Pollinations');
-        } else if (e.status === 402) {
-          console.warn('[generate-image] Gemini credits exhausted → falling back to Pollinations');
-        }
-      }
+    // Sovereign image gen — Pollinations only (free, no Lovable credits).
+    imageUrl = await tryPollinations(prompt, width || 1024, height || 1024);
+    if (imageUrl) {
+      usedProvider = 'pollinations';
+      attempts.push({ provider: 'pollinations', ok: true });
+    } else {
+      attempts.push({ provider: 'pollinations', ok: false, reason: 'unreachable' });
     }
 
-    if (!imageUrl && provider !== 'gemini') {
-      imageUrl = await tryPollinations(prompt, width || 1024, height || 1024);
-      if (imageUrl) {
-        usedProvider = 'pollinations-fallback';
-        attempts.push({ provider: 'pollinations', ok: true });
-      } else {
-        attempts.push({ provider: 'pollinations', ok: false, reason: 'unreachable' });
-      }
-    }
 
     if (!imageUrl) {
       return new Response(
