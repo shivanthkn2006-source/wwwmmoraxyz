@@ -1,8 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Camera, CheckCircle2, Loader2, AlertCircle, X } from 'lucide-react';
+import { Camera, CheckCircle2, Loader2, AlertCircle, X, Bug, Copy, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -11,6 +11,31 @@ interface FaceVerificationSetupProps {
   onComplete: () => void;
   onCancel: () => void;
 }
+
+interface DiagEntry {
+  t: number;
+  level: 'info' | 'warn' | 'error';
+  tag: string;
+  msg: string;
+  data?: any;
+}
+
+const suggestFix = (errName: string, errMsg: string, inIframe: boolean, secure: boolean): string => {
+  if (!secure) return 'Open the site over HTTPS (myzoe.xyz / mmora.xyz). Camera APIs are disabled on plain http.';
+  if (errName === 'NotAllowedError' || errName === 'SecurityError') {
+    return inIframe
+      ? 'The Lovable preview iframe blocks camera. Open the published domain (myzoe.xyz / mmora.xyz) and retry — Face ID enrollment works there.'
+      : 'Click the camera icon in your browser address bar, choose "Allow", then hit Retry Camera. On macOS also check System Settings → Privacy & Security → Camera → your browser.';
+  }
+  if (errName === 'NotFoundError' || errName === 'OverconstrainedError') return 'No camera detected. Connect a webcam or use a device with a built-in camera.';
+  if (errName === 'NotReadableError') return 'Camera is busy in another app (FaceTime, Zoom, Photo Booth, Meet). Close it and retry.';
+  if (errName === 'AbortError') return 'Camera start was aborted. Retry, and don\'t switch tabs during the prompt.';
+  if (errMsg === 'CameraPromptTimeout') return inIframe
+    ? 'Prompt never appeared — the iframe is blocking it. Open the published domain on the same device.'
+    : 'The browser never showed the permission prompt. Check site permissions in the address bar and Retry.';
+  if (!navigator.mediaDevices) return 'Your browser exposes no MediaDevices API. Use Safari 14+, Chrome, Edge, or Firefox on a modern OS.';
+  return 'Check browser console for the raw error, verify camera permission, then Retry.';
+};
 
 const FaceVerificationSetup: React.FC<FaceVerificationSetupProps> = ({ onComplete, onCancel }) => {
   const { user } = useAuth();
@@ -22,6 +47,67 @@ const FaceVerificationSetup: React.FC<FaceVerificationSetupProps> = ({ onComplet
   const [requesting, setRequesting] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [step, setStep] = useState<'instructions' | 'camera' | 'processing' | 'success'>('instructions');
+  const [diag, setDiag] = useState<DiagEntry[]>([]);
+  const [diagOpen, setDiagOpen] = useState(false);
+  const [permState, setPermState] = useState<string>('unknown');
+  const [suggestion, setSuggestion] = useState<string>('');
+
+  const inIframe = typeof window !== 'undefined' && window.self !== window.top;
+  const secure = typeof window !== 'undefined' && window.isSecureContext;
+
+  const log = useCallback((level: DiagEntry['level'], tag: string, msg: string, data?: any) => {
+    const entry: DiagEntry = { t: Date.now(), level, tag, msg, data };
+    setDiag(prev => [...prev.slice(-49), entry]);
+    const fn = level === 'error' ? console.error : level === 'warn' ? console.warn : console.log;
+    fn(`[FaceVerification][${tag}]`, msg, data ?? '');
+  }, []);
+
+  // Probe environment + permission state on mount
+  useEffect(() => {
+    log('info', 'env', 'Environment probe', {
+      userAgent: navigator.userAgent,
+      platform: (navigator as any).userAgentData?.platform || navigator.platform,
+      secureContext: secure,
+      inIframe,
+      hasMediaDevices: !!navigator.mediaDevices,
+      hasGetUserMedia: !!navigator.mediaDevices?.getUserMedia,
+      protocol: location.protocol,
+      host: location.host,
+    });
+    (async () => {
+      try {
+        // @ts-ignore
+        const p = await navigator.permissions?.query?.({ name: 'camera' as PermissionName });
+        if (p) {
+          setPermState(p.state);
+          log('info', 'perm', `camera permission: ${p.state}`);
+          p.onchange = () => { setPermState(p.state); log('info', 'perm', `permission changed: ${p.state}`); };
+        }
+      } catch (e: any) {
+        log('warn', 'perm', 'permissions.query unsupported', e?.message);
+      }
+      try {
+        const devs = await navigator.mediaDevices?.enumerateDevices?.();
+        const cams = devs?.filter(d => d.kind === 'videoinput') || [];
+        log('info', 'devices', `${cams.length} video input(s)`, cams.map(c => ({ label: c.label || '(hidden until granted)', id: c.deviceId.slice(0, 6) })));
+      } catch (e: any) {
+        log('warn', 'devices', 'enumerateDevices failed', e?.message);
+      }
+    })();
+  }, [log, secure, inIframe]);
+
+  const copyDiag = () => {
+    const payload = {
+      when: new Date().toISOString(),
+      env: { ua: navigator.userAgent, secure, inIframe, protocol: location.protocol, host: location.host, permState },
+      lastError: cameraError,
+      suggestion,
+      entries: diag,
+    };
+    navigator.clipboard?.writeText(JSON.stringify(payload, null, 2))
+      .then(() => toast.success('Diagnostics copied'))
+      .catch(() => toast.error('Copy failed — long-press to select instead'));
+  };
 
   useEffect(() => {
     return () => {
