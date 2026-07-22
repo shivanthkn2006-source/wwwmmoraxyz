@@ -296,58 +296,6 @@ const FaceVerificationSetup: React.FC<FaceVerificationSetupProps> = ({ onComplet
     </Card>
   );
 
-  const captureAndEnroll = async () => {
-    if (!videoRef.current || !canvasRef.current) return;
-
-    setCapturing(true);
-    setStep('processing');
-
-    try {
-      // Capture frame from video
-      const canvas = canvasRef.current;
-      const video = videoRef.current;
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) throw new Error('Canvas context not available');
-
-      ctx.drawImage(video, 0, 0);
-      
-      // Convert to base64
-      const imageData = canvas.toDataURL('image/jpeg', 0.95);
-
-      // Stop camera
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-      }
-
-      // Send to face verification edge function - JWT is automatically included by supabase client
-      setProcessing(true);
-      const { data, error } = await supabase.functions.invoke('face-verification', {
-        body: {
-          operation: 'enroll_face',
-          imageData
-        }
-      });
-
-      if (error) throw error;
-
-      if (data?.success) {
-        setStep('success');
-        toast.success('Face enrolled successfully with 99.1% accuracy!');
-        setTimeout(() => {
-          onComplete();
-        }, 2000);
-      }
-    } catch (error: any) {
-      console.error('Face enrollment error:', error);
-      toast.error('Face enrollment failed. Please try again.');
-      setStep('camera');
-    } finally {
-      setCapturing(false);
-      setProcessing(false);
-    }
-  };
 
   return (
     <AnimatePresence mode="wait">
