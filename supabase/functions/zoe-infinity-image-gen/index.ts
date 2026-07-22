@@ -176,28 +176,11 @@ Deno.serve(async (req: Request) => {
     let imageUrl: string | null = null;
     let usedProvider = 'unknown';
 
-    // 1. Try Gemini FIRST (high quality, actual images)
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (LOVABLE_API_KEY) {
-      try {
-        imageUrl = await tryGemini(enhancedPrompt, LOVABLE_API_KEY);
-        if (imageUrl) usedProvider = 'gemini';
-      } catch (e: any) {
-        if (e.status === 429) {
-          return new Response(JSON.stringify({ error: 'RATE_LIMIT', message: 'Rate limit exceeded.' }), {
-            status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
-        }
-        if (e.status === 402) {
-          return new Response(JSON.stringify({ error: 'NO_CREDITS', message: 'AI credits exhausted.' }), {
-            status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
-        }
-      }
-    }
+    // Sovereign image gen — Pollinations only (Lovable Gateway removed).
+    imageUrl = await tryPollinations(enhancedPrompt);
+    if (imageUrl) usedProvider = 'pollinations';
 
-    // 2. Fallback to Pollinations (free, lower quality)
-    if (!imageUrl) {
+
       imageUrl = await tryPollinations(enhancedPrompt);
       if (imageUrl) usedProvider = 'pollinations-fallback';
     }
