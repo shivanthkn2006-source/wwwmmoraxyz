@@ -54,44 +54,8 @@ async function tryPollinations(prompt: string, width = 1024, height = 1024): Pro
   }
 }
 
-/**
- * Fallback: Lovable AI Gateway (Gemini)
- */
-async function tryGemini(prompt: string, apiKey: string): Promise<string | null> {
-  try {
-    console.log('[generate-image] Trying Gemini fallback...');
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-3.1-flash-image',
-        messages: [{ role: 'user', content: prompt }],
-        modalities: ['image', 'text'],
-      }),
-    });
+// Lovable Gateway removed — Pollinations is the sole provider (free, unlimited).
 
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error(`[generate-image] Gemini error [${response.status}]: ${errText}`);
-
-      if (response.status === 429) throw { status: 429, error: 'RATE_LIMIT' };
-      if (response.status === 402) throw { status: 402, error: 'NO_CREDITS' };
-      return null;
-    }
-
-    const data = await response.json();
-    const imageUrl = data?.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-    if (imageUrl) console.log('[generate-image] ✅ Gemini success');
-    return imageUrl || null;
-  } catch (e: any) {
-    if (e.status) throw e; // Re-throw rate limit / credit errors
-    console.error('[generate-image] Gemini failed:', e);
-    return null;
-  }
-}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
