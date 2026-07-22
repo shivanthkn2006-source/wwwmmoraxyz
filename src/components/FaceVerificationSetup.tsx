@@ -298,6 +298,7 @@ const FaceVerificationSetup: React.FC<FaceVerificationSetupProps> = ({ onComplet
 
 
   return (
+    <div>
     <AnimatePresence mode="wait">
       {step === 'instructions' && (
         <motion.div
