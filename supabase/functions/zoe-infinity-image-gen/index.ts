@@ -181,9 +181,6 @@ Deno.serve(async (req: Request) => {
     if (imageUrl) usedProvider = 'pollinations';
 
 
-      imageUrl = await tryPollinations(enhancedPrompt);
-      if (imageUrl) usedProvider = 'pollinations-fallback';
-    }
 
     const latencyMs = Math.round(performance.now() - startTime);
 
