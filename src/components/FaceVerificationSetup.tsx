@@ -445,6 +445,8 @@ const FaceVerificationSetup: React.FC<FaceVerificationSetupProps> = ({ onComplet
         </motion.div>
       )}
     </AnimatePresence>
+    {DiagnosticsPanel}
+    </div>
   );
 };
 
