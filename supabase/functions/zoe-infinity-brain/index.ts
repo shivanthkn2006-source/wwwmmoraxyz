@@ -479,7 +479,7 @@ Be factual. Use real, plausible URLs from authoritative sources. Return ONLY the
   // Try Gemini first for search (best quality), then Groq (fastest)
   const googleKey = Deno.env.get("GOOGLE_AI_STUDIO_KEY");
   const groqKey = Deno.env.get("GROQ_API_KEY");
-  const lovableKey = Deno.env.get("LOVABLE_API_KEY");
+  const lovableKey = null; // Lovable Gateway removed
   
   let responseData: any = null;
   

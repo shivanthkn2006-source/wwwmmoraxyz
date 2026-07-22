@@ -126,9 +126,8 @@ serve(async (req) => {
     }
 
     const { messages, soulMetrics, timezone, localTime, platformContext } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    // Lovable Gateway removed — using sovereign cascade below.
+
 
     // ═══════════════════════════════════════════════════════════════════════════
     // FETCH USER PROFILE WITH RELATIONSHIP STYLE
