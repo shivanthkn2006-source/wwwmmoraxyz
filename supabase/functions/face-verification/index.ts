@@ -193,14 +193,14 @@ serve(async (req) => {
     switch (operation) {
       case 'enroll_face': {
         // Store face enrollment data using Gemini 2.5 Pro Vision for analysis
-        const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        const aiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${lovableApiKey}`,
+            ...geminiHeaders,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'google/gemini-2.5-pro',
+            model: GEMINI_MODEL,
             messages: [
               {
                 role: 'system',
@@ -282,14 +282,14 @@ serve(async (req) => {
         }
 
         // Use Gemini 2.5 Pro Vision to verify face match
-        const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        const aiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${lovableApiKey}`,
+            ...geminiHeaders,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'google/gemini-2.5-pro',
+            model: GEMINI_MODEL,
             messages: [
               {
                 role: 'system',
@@ -375,14 +375,14 @@ serve(async (req) => {
         }
 
         // Use Gemini 2.5 Pro Vision to verify face match
-        const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        const aiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${lovableApiKey}`,
+            ...geminiHeaders,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'google/gemini-2.5-pro',
+            model: GEMINI_MODEL,
             messages: [
               {
                 role: 'system',
