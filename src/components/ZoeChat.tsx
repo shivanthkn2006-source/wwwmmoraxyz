@@ -273,6 +273,7 @@ export const ZoeChat = () => {
       }
       
       const assistantMessage: Message = {
+        id: (globalThis.crypto?.randomUUID?.() ?? `zoe-${Date.now()}-${Math.random().toString(36).slice(2)}`),
         role: 'assistant',
         content: responseContent,
         timestamp: new Date()
@@ -285,8 +286,9 @@ export const ZoeChat = () => {
 
       // Speak the response if voice mode is enabled
       if (voiceMode && responseContent) {
-        await speakResponse(responseContent);
+        await speakResponse(responseContent, assistantMessage.id);
       }
+
 
     } catch (err) {
       console.error('Chat error:', err);
