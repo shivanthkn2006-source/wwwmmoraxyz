@@ -313,12 +313,17 @@ const cleanText = (text: string): string => {
     .trim();
 };
 
+export interface ZoeSpeakOptions {
+  /** Message id used to sync the teleprompter highlight in the chat UI. */
+  messageId?: string;
+}
+
 /**
  * SPEAK AS ZOE - Browser Native Voice
  */
 export const speakAsZoe = async (
   text: string,
-  _options?: any,
+  options?: ZoeSpeakOptions | any,
   onStart?: () => void,
   onEnd?: () => void,
   onError?: (error?: any) => void
@@ -337,9 +342,23 @@ export const speakAsZoe = async (
   // Stop any current speech
   stopZoeSpeech();
   
+  const messageId: string | undefined = options?.messageId;
+  const handleStart = () => {
+    if (messageId) startSpokenSession(messageId, cleaned);
+    onStart?.();
+  };
+  const handleEnd = () => {
+    if (messageId) endSpokenSession(messageId);
+    onEnd?.();
+  };
+  const handleError = (err?: any) => {
+    if (messageId) endSpokenSession(messageId);
+    onError?.(err);
+  };
+  
   // Try Deepgram Aura 2 first (premium voice)
   console.log('[ZoeVoice] 🎙️ Attempting Deepgram Aura 2 (aura-2-janus-en)...');
-  const deepgramSuccess = await speakWithDeepgram(cleaned, onStart, onEnd, (err) => {
+  const deepgramSuccess = await speakWithDeepgram(cleaned, handleStart, handleEnd, (err) => {
     console.warn('[ZoeVoice] Deepgram failed, falling back to browser TTS:', err?.message);
   });
   
@@ -351,8 +370,9 @@ export const speakAsZoe = async (
   // Fallback to browser TTS
   console.log('[ZoeVoice] 📱 Falling back to browser TTS');
   await initializeZoeVoices();
-  speakWithBrowserTTS(cleaned, ZOE_VOICE_CONFIG, cachedVoice, onStart, onEnd, onError);
+  speakWithBrowserTTS(cleaned, ZOE_VOICE_CONFIG, cachedVoice, handleStart, handleEnd, handleError);
 };
+
 
 /**
  * SPEAK AS SMITH - Browser Native Voice (Male persona)
