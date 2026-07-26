@@ -11,6 +11,11 @@
  */
 
 import { speakWithDeepgram, stopDeepgramSpeech, isDeepgramPlaying } from './deepgramTTS';
+import {
+  startSpokenSession,
+  endSpokenSession,
+  publishSpokenProgress,
+} from './zoeSpokenWordBus';
 
 // Voice preference priority
 const VOICE_PRIORITIES = [
