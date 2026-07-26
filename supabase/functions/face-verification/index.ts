@@ -39,7 +39,20 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY')!;
+    const googleApiKey = Deno.env.get('GOOGLE_AI_STUDIO_KEY');
+    if (!googleApiKey) {
+      console.error('[face-verification] GOOGLE_AI_STUDIO_KEY is not set');
+      return new Response(
+        JSON.stringify({ error: 'Face verification service is not configured (missing GOOGLE_AI_STUDIO_KEY). Ask an admin to add the key in backend secrets.' }),
+        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
+    const GEMINI_MODEL = 'gemini-2.5-flash';
+    const geminiHeaders = {
+      'Authorization': `Bearer ${googleApiKey}`,
+      'Content-Type': 'application/json',
+    };
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Validate and parse input
@@ -180,14 +193,14 @@ serve(async (req) => {
     switch (operation) {
       case 'enroll_face': {
         // Store face enrollment data using Gemini 2.5 Pro Vision for analysis
-        const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        const aiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${lovableApiKey}`,
+            ...geminiHeaders,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'google/gemini-2.5-pro',
+            model: GEMINI_MODEL,
             messages: [
               {
                 role: 'system',
@@ -216,7 +229,7 @@ serve(async (req) => {
         if (!aiResponse.ok) {
           const errorText = await aiResponse.text();
           console.error('Gemini API error:', aiResponse.status, errorText);
-          throw new Error(`Gemini API error: ${aiResponse.status}`);
+          throw new Error(`Gemini API error ${aiResponse.status}: ${errorText.slice(0,300)}`);
         }
 
         const aiResult = await aiResponse.json();
@@ -269,14 +282,14 @@ serve(async (req) => {
         }
 
         // Use Gemini 2.5 Pro Vision to verify face match
-        const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        const aiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${lovableApiKey}`,
+            ...geminiHeaders,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'google/gemini-2.5-pro',
+            model: GEMINI_MODEL,
             messages: [
               {
                 role: 'system',
@@ -303,7 +316,7 @@ serve(async (req) => {
         });
 
         if (!aiResponse.ok) {
-          throw new Error('Face verification AI error');
+          const errBody = await aiResponse.text().catch(()=>""); throw new Error(`Gemini API error ${aiResponse.status}: ${errBody.slice(0,300)}`);
         }
 
         const aiResult = await aiResponse.json();
@@ -362,14 +375,14 @@ serve(async (req) => {
         }
 
         // Use Gemini 2.5 Pro Vision to verify face match
-        const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        const aiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${lovableApiKey}`,
+            ...geminiHeaders,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'google/gemini-2.5-pro',
+            model: GEMINI_MODEL,
             messages: [
               {
                 role: 'system',
@@ -396,7 +409,7 @@ serve(async (req) => {
         });
 
         if (!aiResponse.ok) {
-          throw new Error('Face verification AI error');
+          const errBody = await aiResponse.text().catch(()=>""); throw new Error(`Gemini API error ${aiResponse.status}: ${errBody.slice(0,300)}`);
         }
 
         const aiResult = await aiResponse.json();
