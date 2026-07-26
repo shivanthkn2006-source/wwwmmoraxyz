@@ -415,6 +415,9 @@ export const speakAsSmith = speakAsSmithVoice;
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export const stopZoeSpeech = (): void => {
+  // Clear teleprompter highlight
+  endSpokenSession();
+  
   // Stop Deepgram audio
   stopDeepgramSpeech();
   
@@ -428,6 +431,7 @@ export const stopZoeSpeech = (): void => {
   isSpeakingActive = false;
   window.dispatchEvent(new CustomEvent('zoe-speak-end'));
 };
+
 
 export const stopSpeaking = stopZoeSpeech;
 
