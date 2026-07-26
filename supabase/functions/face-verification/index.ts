@@ -39,7 +39,20 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY')!;
+    const googleApiKey = Deno.env.get('GOOGLE_AI_STUDIO_KEY');
+    if (!googleApiKey) {
+      console.error('[face-verification] GOOGLE_AI_STUDIO_KEY is not set');
+      return new Response(
+        JSON.stringify({ error: 'Face verification service is not configured (missing GOOGLE_AI_STUDIO_KEY). Ask an admin to add the key in backend secrets.' }),
+        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
+    const GEMINI_MODEL = 'gemini-2.5-flash';
+    const geminiHeaders = {
+      'Authorization': `Bearer ${googleApiKey}`,
+      'Content-Type': 'application/json',
+    };
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Validate and parse input
