@@ -5783,3 +5783,54 @@ body.form-watch .auto-heal-text {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+/* ═══════════════════════════════════════════════════════════════════════
+   ZOE TELEPROMPTER — spoken word highlighting
+   ═══════════════════════════════════════════════════════════════════════ */
+:root {
+  --zoe-transcript-active-bg: 217 91% 60%;
+  --zoe-transcript-active-fg: 0 0% 100%;
+  --zoe-transcript-spoken: 0 0% 55%;
+  --zoe-transcript-pending: 0 0% 45%;
+}
+
+.dark {
+  --zoe-transcript-active-bg: 190 95% 55%;
+  --zoe-transcript-active-fg: 220 40% 8%;
+  --zoe-transcript-spoken: 0 0% 78%;
+  --zoe-transcript-pending: 0 0% 52%;
+}
+
+.zoe-transcript-word {
+  border-radius: 0.25rem;
+  transition: color 140ms ease-out, background-color 140ms ease-out, opacity 140ms ease-out;
+}
+
+.zoe-transcript-word--spoken {
+  color: hsl(var(--zoe-transcript-spoken));
+}
+
+.zoe-transcript-word--pending {
+  color: hsl(var(--zoe-transcript-pending));
+}
+
+.zoe-transcript-word--active {
+  background-color: hsl(var(--zoe-transcript-active-bg) / 0.92);
+  color: hsl(var(--zoe-transcript-active-fg));
+  box-shadow:
+    0 0 0 0.15em hsl(var(--zoe-transcript-active-bg) / 0.92),
+    0 0 14px hsl(var(--zoe-transcript-active-bg) / 0.45);
+  animation: zoeTranscriptPulse 1.1s ease-in-out infinite;
+}
+
+@keyframes zoeTranscriptPulse {
+  0%, 100% { box-shadow: 0 0 0 0.15em hsl(var(--zoe-transcript-active-bg) / 0.92), 0 0 12px hsl(var(--zoe-transcript-active-bg) / 0.35); }
+  50%      { box-shadow: 0 0 0 0.15em hsl(var(--zoe-transcript-active-bg) / 0.92), 0 0 20px hsl(var(--zoe-transcript-active-bg) / 0.6); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zoe-transcript-word,
+  .zoe-transcript-word--active {
+    transition: none;
+    animation: none;
+  }
+}
