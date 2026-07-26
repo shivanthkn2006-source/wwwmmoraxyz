@@ -1110,7 +1110,7 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
           if (!isMuted) {
             speakAsZoe(
               result.zoe_response,
-              undefined,
+              { messageId: zoeMessage.id },
               () => setIsSpeaking(true),
               () => setIsSpeaking(false)
             );
@@ -1197,7 +1197,7 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
         if (!isMuted) {
           speakAsZoe(
             zoeMessage.content,
-            undefined,
+            { messageId: zoeMessage.id },
             () => setIsSpeaking(true),
             () => setIsSpeaking(false)
           );
@@ -1228,7 +1228,7 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
         if (!isMuted) {
           speakAsZoe(
             zoeMessage.content,
-            undefined,
+            { messageId: zoeMessage.id },
             () => setIsSpeaking(true),
             () => setIsSpeaking(false)
           );
@@ -1290,7 +1290,7 @@ This allows me to calculate your Rasi chart, Navamsa, Dasha periods, and planeta
             if (!isMuted) {
               speakAsZoe(
                 "To calculate your Jathakam with Swiss Ephemeris precision, I need your birth date, exact time, and location. Please share these details.",
-                undefined,
+                { messageId: zoeMessage.id },
                 () => setIsSpeaking(true),
                 () => setIsSpeaking(false)
               );
@@ -1444,7 +1444,7 @@ Want me to dive deeper into any aspect?`;
             if (!isMuted) {
               speakAsZoe(
                 `Your Jathakam shows ${moonNakshatra} as your Moon mansion, ${ascendantSign} as ascendant, currently in ${currentDasha} with a ${currentVibe} energy. Shall I explain any aspect in more detail?`,
-                undefined,
+                { messageId: zoeMessage.id },
                 () => setIsSpeaking(true),
                 () => setIsSpeaking(false)
               );
@@ -1495,7 +1495,7 @@ Want me to dive deeper into any aspect?`;
               const spokenSummary = `I watched the video${analysis.title ? ` called ${analysis.title}` : ''}. ${analysis.analysis.split('\n')[0]}`;
               speakAsZoe(
                 spokenSummary.substring(0, 500),
-                undefined,
+                { messageId: zoeMessage.id },
                 () => setIsSpeaking(true),
                 () => setIsSpeaking(false)
               );
@@ -2003,7 +2003,7 @@ Want me to dive deeper into any aspect?`;
       if (!isMuted && responseText) {
         speakAsZoe(
           responseText,
-          undefined,
+          { messageId: zoeMessage.id },
           () => setIsSpeaking(true),
           () => setIsSpeaking(false),
           (err) => {
@@ -2052,7 +2052,7 @@ Want me to dive deeper into any aspect?`;
       if (!isMuted) {
         speakAsZoe(
           fallbackText,
-          undefined,
+          { messageId: zoeMessage.id },
           () => setIsSpeaking(true),
           () => setIsSpeaking(false)
         );
@@ -2160,7 +2160,7 @@ Want me to dive deeper into any aspect?`;
       saveMessageToDb('assistant', responseText, undefined, undefined, zoeMessage.id);
 
       if (!isMuted && responseText) {
-        speakAsZoe(responseText, undefined, () => setIsSpeaking(true), () => setIsSpeaking(false));
+        speakAsZoe(responseText, { messageId: zoeMessage.id }, () => setIsSpeaking(true), () => setIsSpeaking(false));
       }
     } catch (error) {
       console.error('[ZoeOrb] API error:', error);
@@ -2194,7 +2194,7 @@ Want me to dive deeper into any aspect?`;
       setMessages(prev => [...prev, zoeMessage]);
       offlineDataSync.addConversation('zoe', fallbackText);
       saveMessageToDb('assistant', fallbackText, undefined, undefined, zoeMessage.id);
-      if (!isMuted) speakAsZoe(fallbackText, undefined, () => setIsSpeaking(true), () => setIsSpeaking(false));
+      if (!isMuted) speakAsZoe(fallbackText, { messageId: zoeMessage.id }, () => setIsSpeaking(true), () => setIsSpeaking(false));
     } finally {
       setIsProcessing(false);
     }
