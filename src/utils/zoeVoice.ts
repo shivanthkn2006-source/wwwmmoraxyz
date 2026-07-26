@@ -259,7 +259,18 @@ const speakWithBrowserTTS = (
   const chunks = splitIntoChunks(text, 200);
   console.log('[ZoeVoice] 📱 Browser TTS:', chunks.length, 'chunk(s)');
   
-  currentUtteranceQueue = chunks.map(chunk => {
+  // Map each chunk back onto its absolute offset inside the full text so that
+  // word-boundary events can drive the teleprompter highlight accurately.
+  const chunkOffsets: number[] = [];
+  let searchCursor = 0;
+  for (const chunk of chunks) {
+    const found = text.indexOf(chunk.trim(), searchCursor);
+    const offset = found >= 0 ? found : searchCursor;
+    chunkOffsets.push(offset);
+    searchCursor = offset + chunk.trim().length;
+  }
+  
+  currentUtteranceQueue = chunks.map((chunk, chunkIdx) => {
     const utterance = new SpeechSynthesisUtterance(chunk);
     
     if (voiceOverride) {
@@ -272,8 +283,16 @@ const speakWithBrowserTTS = (
     utterance.rate = config.rate;
     utterance.volume = config.volume;
     
+    const baseOffset = chunkOffsets[chunkIdx] ?? 0;
+    utterance.onboundary = (event: SpeechSynthesisEvent) => {
+      if (speechCancelled) return;
+      if (event.name && event.name !== 'word') return;
+      publishSpokenProgress(baseOffset + (event.charIndex ?? 0), event.charLength ?? 0);
+    };
+    
     return utterance;
   });
+
   
   currentChunkIndex = 0;
   startChromeKeepAlive();
