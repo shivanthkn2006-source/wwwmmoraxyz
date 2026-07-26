@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { ZoeCompactChatInput } from '@/components/ZoeCompactChatInput';
 import zoeAvatar from '@/assets/zoe-avatar.png';
 import { speakAsZoe, stopZoeSpeech } from '@/utils/zoeVoice';
+import SpokenTranscript from '@/components/zoe-infinity/SpokenTranscript';
 import { isZoeInfinityMessage, stripZoeInfinityMarker } from '@/utils/conversationNamespaces';
 import { setActiveVoiceExperience } from '@/utils/voiceExperienceLock';
 import { useZoe } from '@/contexts/ZoeContext';
@@ -300,13 +301,13 @@ export const ZoeChat = () => {
     }
   }, [user, messages, voiceMode, saveMessageToDb]);
 
-  const speakResponse = useCallback(async (text: string) => {
+  const speakResponse = useCallback(async (text: string, messageId?: string) => {
     setIsSpeaking(true);
 
     try {
       speakAsZoe(
         text,
-        undefined,
+        messageId ? { messageId } : undefined,
         () => setIsSpeaking(true),
         () => setIsSpeaking(false),
         (err) => {
@@ -496,7 +497,12 @@ export const ZoeChat = () => {
                       : 'bg-muted'
                   }`}
                 >
-                  <p className="text-sm whitespace-pre-wrap pr-6">{msg.content}</p>
+                  <p className="text-sm whitespace-pre-wrap pr-6">
+                    <SpokenTranscript
+                      messageId={msg.role === 'assistant' ? msg.id : undefined}
+                      text={msg.content}
+                    />
+                  </p>
                   <p className="text-xs opacity-70 mt-1">
                     {msg.timestamp.toLocaleTimeString()}
                   </p>
