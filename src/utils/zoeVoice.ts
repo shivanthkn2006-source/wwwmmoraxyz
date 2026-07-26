@@ -484,10 +484,12 @@ export const VOICE_CONFIGS = {
 export const replayAsZoe = async (
   text: string,
   onStart?: () => void,
-  onEnd?: () => void
+  onEnd?: () => void,
+  messageId?: string
 ): Promise<void> => {
   if (!text?.trim()) return;
-  await speakAsZoe(text, undefined, onStart, onEnd);
+  await speakAsZoe(text, messageId ? { messageId } : undefined, onStart, onEnd);
+
 };
 
 export const initializeAssistantVoices = initializeZoeVoices;
