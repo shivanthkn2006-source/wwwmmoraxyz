@@ -1,159 +1,65 @@
+## Teleprompter-Style Word Highlighting for Zoe Infinity
 
+Add karaoke/teleprompter-style word highlighting synced to Zoe's spoken response in the Zoe Infinity chat panel — words highlight as Zoe reads them, and the container auto-scrolls to keep the active word visible.
 
-# Exporting Zoe Infinity to a New Lovable Project
+### Scope
 
-## Why This is Needed
+- **Where:** Zoe Infinity chat surface only — `src/components/ZoeOrbConversationPanel.tsx` (and `ZoeChat.tsx` if it shares the same render path). Not applied to `TypewriterText` intro or other Zoe surfaces.
+- **What syncs:** The currently-speaking assistant message bubble.
+- **When active:** Only while Zoe is actually speaking that specific message. Idle messages render as normal text.
 
-Lovable redirects all non-primary domains to the primary domain at the edge/CDN level. Since `mmora.xyz` is primary, `myzoe.xyz` always redirects there before any JavaScript runs. The **only fix** is a separate Lovable project for `myzoe.xyz`.
+### How word timing is derived
 
-## What Needs to Be Copied
+Zoe uses `speakAsZoe` → `SpeechSynthesisUtterance` (Web Speech API), which natively emits `onboundary` events with `charIndex` + `charLength` per word. That is the source of truth — no guessing, no estimating.
 
-Zoe Infinity is deeply embedded in the M'mora codebase. Here is the complete dependency map:
+Fallback path (when boundary events are not fired — some Chromium builds on Android, or non-native audio playback via the audio bus): compute an even-timed schedule from `audio.duration` (or an estimate: `words * ~350ms`) and advance via `requestAnimationFrame` synced to `audio.currentTime` when an HTMLAudioElement is available on `zoeTTSAudioBus`.
 
-### Pages (2 files)
-- `src/pages/ZoeInfinity.tsx` (gate entry)
-- `src/pages/ZoeInfinityUnlocked.tsx` (main 2683-line page)
-- `src/pages/ZoeInfinityAuth.tsx` (standalone auth)
+### Implementation
 
-### Components
-- `src/components/zoe-infinity/` (entire folder -- 24+ files including mail/)
-- `src/components/quantum/QuantumCallModal.tsx` + related quantum components
-- `src/components/BrainLoader.tsx`
-- `src/components/SystemFailureBoundary.tsx`
-- `src/components/resleeve/` (if Re-Sleeve panel is used)
-- `src/components/ui/` (all shadcn UI primitives -- button, input, toast, etc.)
+1. **New hook `src/hooks/useSpokenWordSync.ts`**
+   - Input: the message id + text currently being spoken.
+   - Subscribes to a new lightweight event bus emitting `{ messageId, charIndex, charLength }` frames.
+   - Returns `{ activeWordIndex, words }` where `words` is the pre-tokenized array (preserving whitespace/punctuation offsets so indices map back to the original text).
 
-### Hooks (~60+ Zoe Infinity-specific hooks)
-Key ones include:
-- `useZoeInfinityBrain`, `useHybridVoice`, `useNanoStreamVoice`, `useNanoReflexArt`
-- `usePhantomMode`, `useGenesisEffects`, `useAtmanArchive`, `useDestinyCompanion`
-- `useVedicEngine`, `useCircadianRhythm`, `useKarmicMemory`, `useZoeBioKernel`
-- `useVirtualHormones`, `useVoiceOrchestrator`, `useZoePersonalityMatrix`
-- `useZoeOfflineCore`, `useZoeInitiative`, `useZoeNickname`, `useZoeLanguage`
-- `useZoeLocalContext`, `useIntuitionEngine`, `useBehavioralTelemetry`
-- `useConversationalOnboarding`, `useWakeWord`, `useAutoProfiler`
-- Plus ~40 more referenced in ZoeInfinityUnlocked.tsx
+2. **Wire boundary events in `src/utils/zoeVoice.ts`**
+   - Extend `speakAsZoe` signature to optionally accept `{ messageId }`.
+   - Attach `utterance.onboundary` and publish `{ messageId, charIndex, charLength, chunkOffset }` to the new bus. Track cumulative `chunkOffset` across the chunked utterance queue so char indices map to the full message text, not the current chunk.
+   - Publish `end` on `utterance.onend` for the final chunk.
 
-### Core Modules
-- `src/core/inference/` (GeminiNano, InferenceOptimizer)
-- `src/core/speech/` (StreamToStreamBridge, SpeculativeSpeechProtocol)
-- `src/core/slm/` (OfflineSLMEngine, GemmaMediaPipeEngine, NanoReflexProtocol)
-- `src/core/ports/` (LLMInferencePort, TTSServicePort)
-- `src/core/security/ConstitutionalKernel.ts`
-- `src/core/soul/`, `src/core/memory/`, `src/core/zoe/`, etc.
+3. **New bus `src/utils/zoeSpokenWordBus.ts`** — minimal publish/subscribe (mirrors `zoeTTSAudioBus` style already used in the project).
 
-### Services
-- `src/services/ZoeAutoMailService.ts`
-- `src/services/ZoeBackgroundProcessor.ts`
-- `src/services/ZeroThermalProtocol.ts`
-- `src/services/HapticSymbiosis.ts`
+4. **New component `src/components/zoe-infinity/SpokenTranscript.tsx`**
+   - Renders the message text as a sequence of `<span>` tokens.
+   - The active token gets a highlight class (soft yellow background like the reference, but tuned to Zoe's dark aesthetic — semantic tokens only, no hard-coded colors).
+   - Recently-spoken tokens dim slightly; unspoken tokens are muted; active token pops.
+   - Uses `IntersectionObserver` (or `scrollIntoView({ block: 'center', behavior: 'smooth' })` throttled) inside the message's scroll container to keep the active word centered.
+   - Respects `prefers-reduced-motion` — disables smooth scroll and pulse animation.
 
-### Utilities (~30+ files)
-- `src/utils/zoeVoice.ts`, `voiceExperienceLock.ts`, `conversationNamespaces.ts`
-- `src/utils/ArtGenerator.ts`, `nameGenerator.ts`, `weatherHelpers.ts`
-- `src/utils/crossBrowserCompat.ts`, `safariBrowserFixes.ts`
-- `src/utils/assistantVoice.ts`, `offlineVoice.ts`, and more
+5. **Message rendering integration**
+   - In `ZoeOrbConversationPanel.tsx` (and `ZoeChat.tsx` if applicable), swap the plain-text render of assistant messages for `<SpokenTranscript messageId={m.id} text={m.content} />`.
+   - Pass `messageId` into every `speakAsZoe(...)` call site in those components so the bus knows which message is active.
 
-### Data
-- `src/data/ZoeInfinityFeatures.ts`
-- `src/data/offline_wisdom.json`
+6. **Design tokens (in `index.css`)**
+   - Add `--zoe-transcript-active-bg`, `--zoe-transcript-active-fg`, `--zoe-transcript-spoken`, `--zoe-transcript-unspoken` mapped to existing HSL tokens (no hard-coded hex). Highlight uses a subtle glow, not the loud yellow from the reference, to match Zoe's design system.
 
-### Database (IndexedDB)
-- `src/db/OfflineDB.ts` (Dexie.js offline storage)
+### Technical details
 
-### Auth & Supabase
-- `src/lib/auth.tsx` (AuthProvider)
-- `src/integrations/supabase/client.ts` (auto-generated in new project)
-- `src/integrations/supabase/types.ts` (auto-generated)
+- **Tokenization:** split by whitespace but retain a `[start, end)` char range per token so `charIndex` from the boundary event lands in the right token via a binary search.
+- **Chunk offset math:** `zoeVoice.ts` already splits long text into multiple utterances. Before enqueuing chunk N, record `chunkStart = sum(lengths of chunks 0..N-1) + separatorLength`. The bus publishes `absoluteCharIndex = chunkStart + event.charIndex`.
+- **Fallback estimator:** if no boundary fires within 400ms of `onstart`, switch to time-based advance using `words.length` and utterance start timestamp; recover to boundary-driven mode if a real event later arrives.
+- **Stop/cancel:** on `stopZoeSpeech`, bus publishes `{ messageId, ended: true }` so highlight clears.
+- **Multi-message safety:** only the message whose id matches the last-published event highlights; all others render flat.
 
-### Contexts
-- `src/contexts/TimeSimulationContext.tsx`
-- `src/contexts/DeviceTierContext.tsx`
-- `src/contexts/AutoHealContext.tsx`
-- `src/contexts/LiquidUniverseContext.tsx`
-- `src/contexts/ShapeShifterContext.tsx`
+### Acceptance criteria
 
-### Edge Functions (Zoe Infinity specific)
-- `supabase/functions/zoe-infinity-brain/`
-- `supabase/functions/zoe-infinity-chat/`
-- `supabase/functions/zoe-infinity-vision/`
-- `supabase/functions/edge-tts/`
-- `supabase/functions/lovable-tts/`
-- `supabase/functions/realtime-voice/`
-- `supabase/functions/zoe-realtime-voice/`
-- `supabase/functions/mail-sentinel/`
-- `supabase/functions/ironclad-relay/`
-- `supabase/functions/zoe-artifact-generator/`
-- `supabase/functions/zoe-document-xray/`
-- `supabase/functions/zoe-god-mode/`
-- `supabase/functions/_shared/` (shared utilities)
+- Speaking a long Zoe reply on desktop Chrome/Safari: each word highlights in sync with speech; container auto-scrolls to keep the active word centered.
+- On Android Chrome (where `onboundary` is unreliable): the estimator drives smooth, roughly-in-sync highlighting instead of nothing.
+- Stopping Zoe mid-sentence clears the highlight immediately.
+- Non-speaking messages render as normal text with no layout shift when a message starts/stops speaking.
+- Reduced-motion users get instant scroll and no pulse.
+- No changes to Zoe brain/backend; no new credits or API calls.
 
-### Database Tables Required
-- `zoe_infinity_messages`
-- `profiles` (for user data)
-- Any other tables referenced by edge functions
+### Risks
 
----
-
-## Step-by-Step Export Process
-
-### Step 1: Create New Lovable Project
-- Go to your Lovable workspace
-- Click "New Project"
-- Name it "Zoe Infinity" or "MyZoe"
-- Enable Lovable Cloud on it
-
-### Step 2: Copy the Codebase
-Since Lovable doesn't have a built-in "extract module" feature, the fastest approach:
-
-**Option A -- GitHub Export (Recommended)**
-1. Connect this M'mora project to GitHub (Settings > GitHub)
-2. Clone the repo locally
-3. Remove all non-Zoe-Infinity files
-4. Simplify `App.tsx` to only have the Zoe Infinity route as `/`
-5. Push to a new GitHub repo
-6. Connect the new Lovable project to that repo
-
-**Option B -- Remix + Delete**
-1. Remix this entire project (Settings > Remix)
-2. In the remixed project, delete all M'mora-specific pages, components, and routes
-3. Simplify the router to show Zoe Infinity as the root `/`
-
-**Option C -- Prompt-Based (if no GitHub)**
-1. In the new project, paste the key files one at a time via prompts
-2. This will take many credits given the volume (~200+ files)
-
-### Step 3: Simplify Routing in New Project
-The new project's `App.tsx` becomes extremely simple:
-
-```text
-/ --> ZoeInfinityAuth (if not logged in)
-/ --> ZoeInfinity (if logged in)
-```
-
-No domain router needed. No M'mora routes. Just Zoe.
-
-### Step 4: Recreate Database Schema
-Run the same migrations for `zoe_infinity_messages` and `profiles` tables in the new project's Cloud backend.
-
-### Step 5: Recreate Edge Functions
-Copy the Zoe-specific edge functions into the new project's `supabase/functions/` directory.
-
-### Step 6: Connect Domain
-In the new project: Settings > Domains > Add `myzoe.xyz` and `www.myzoe.xyz` as Primary domain.
-
-### Step 7: Configure Secrets
-Copy over any secrets (Deepgram API key, etc.) to the new project's Cloud secrets.
-
----
-
-## Recommendation
-
-**Option B (Remix + Delete)** is the fastest path that doesn't require GitHub or spending credits copying files manually. You remix the project in one click, then strip out everything that isn't Zoe Infinity. The database schema, edge functions, and secrets carry over automatically with the remix.
-
-After the remix:
-1. Delete all non-Zoe pages and M'mora components
-2. Simplify App.tsx to root = Zoe Infinity
-3. Connect `myzoe.xyz` as the Primary domain
-4. Done -- `myzoe.xyz` loads only Zoe Infinity
-
+- Some browsers fire `onboundary` per sentence, not per word — the fallback estimator covers this but sync will be approximate.
+- If the TTS path ever shifts off `SpeechSynthesisUtterance` (e.g., server-side audio), only the estimator applies — sync remains visually acceptable but not exact.

@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import React, { useState, useRef, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
+import SpokenTranscript from '@/components/zoe-infinity/SpokenTranscript';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, Volume2, VolumeX, Minimize2, Maximize2, Paperclip, Image, FileText, Video, Loader2, Download, Upload, Mic, Circle, Square, Camera, StopCircle, Copy, Check, Users, MessageCircle, Search, ArrowLeft, User, Plus, Sparkles, CheckCheck, Reply, CornerUpLeft, ChevronDown, Brain, Cloud, CloudDownload, CloudUpload, Shield, FileDown, Activity, Phone, PhoneOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -1110,7 +1111,7 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
           if (!isMuted) {
             speakAsZoe(
               result.zoe_response,
-              undefined,
+              { messageId: zoeMessage.id },
               () => setIsSpeaking(true),
               () => setIsSpeaking(false)
             );
@@ -1197,7 +1198,7 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
         if (!isMuted) {
           speakAsZoe(
             zoeMessage.content,
-            undefined,
+            { messageId: zoeMessage.id },
             () => setIsSpeaking(true),
             () => setIsSpeaking(false)
           );
@@ -1228,7 +1229,7 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
         if (!isMuted) {
           speakAsZoe(
             zoeMessage.content,
-            undefined,
+            { messageId: zoeMessage.id },
             () => setIsSpeaking(true),
             () => setIsSpeaking(false)
           );
@@ -1290,7 +1291,7 @@ This allows me to calculate your Rasi chart, Navamsa, Dasha periods, and planeta
             if (!isMuted) {
               speakAsZoe(
                 "To calculate your Jathakam with Swiss Ephemeris precision, I need your birth date, exact time, and location. Please share these details.",
-                undefined,
+                { messageId: zoeMessage.id },
                 () => setIsSpeaking(true),
                 () => setIsSpeaking(false)
               );
@@ -1444,7 +1445,7 @@ Want me to dive deeper into any aspect?`;
             if (!isMuted) {
               speakAsZoe(
                 `Your Jathakam shows ${moonNakshatra} as your Moon mansion, ${ascendantSign} as ascendant, currently in ${currentDasha} with a ${currentVibe} energy. Shall I explain any aspect in more detail?`,
-                undefined,
+                { messageId: zoeMessage.id },
                 () => setIsSpeaking(true),
                 () => setIsSpeaking(false)
               );
@@ -1495,7 +1496,7 @@ Want me to dive deeper into any aspect?`;
               const spokenSummary = `I watched the video${analysis.title ? ` called ${analysis.title}` : ''}. ${analysis.analysis.split('\n')[0]}`;
               speakAsZoe(
                 spokenSummary.substring(0, 500),
-                undefined,
+                { messageId: zoeMessage.id },
                 () => setIsSpeaking(true),
                 () => setIsSpeaking(false)
               );
@@ -2003,7 +2004,7 @@ Want me to dive deeper into any aspect?`;
       if (!isMuted && responseText) {
         speakAsZoe(
           responseText,
-          undefined,
+          { messageId: zoeMessage.id },
           () => setIsSpeaking(true),
           () => setIsSpeaking(false),
           (err) => {
@@ -2052,7 +2053,7 @@ Want me to dive deeper into any aspect?`;
       if (!isMuted) {
         speakAsZoe(
           fallbackText,
-          undefined,
+          { messageId: zoeMessage.id },
           () => setIsSpeaking(true),
           () => setIsSpeaking(false)
         );
@@ -2160,7 +2161,7 @@ Want me to dive deeper into any aspect?`;
       saveMessageToDb('assistant', responseText, undefined, undefined, zoeMessage.id);
 
       if (!isMuted && responseText) {
-        speakAsZoe(responseText, undefined, () => setIsSpeaking(true), () => setIsSpeaking(false));
+        speakAsZoe(responseText, { messageId: zoeMessage.id }, () => setIsSpeaking(true), () => setIsSpeaking(false));
       }
     } catch (error) {
       console.error('[ZoeOrb] API error:', error);
@@ -2194,7 +2195,7 @@ Want me to dive deeper into any aspect?`;
       setMessages(prev => [...prev, zoeMessage]);
       offlineDataSync.addConversation('zoe', fallbackText);
       saveMessageToDb('assistant', fallbackText, undefined, undefined, zoeMessage.id);
-      if (!isMuted) speakAsZoe(fallbackText, undefined, () => setIsSpeaking(true), () => setIsSpeaking(false));
+      if (!isMuted) speakAsZoe(fallbackText, { messageId: zoeMessage.id }, () => setIsSpeaking(true), () => setIsSpeaking(false));
     } finally {
       setIsProcessing(false);
     }
@@ -3153,8 +3154,12 @@ Want me to dive deeper into any aspect?`;
                     )}
                     {/* Message content */}
                     <div className="pr-5">
-                      {msg.content.replace(/\[\[(PATTERN|MEMORY):[^\]]+\]\]/g, '').trim()}
+                      <SpokenTranscript
+                        messageId={msg.role === 'zoe' ? msg.id : undefined}
+                        text={msg.content.replace(/\[\[(PATTERN|MEMORY):[^\]]+\]\]/g, '').trim()}
+                      />
                     </div>
+
                     {/* Action buttons */}
                     <div className="absolute top-1 right-1 flex gap-0.5">
                       {/* Reply button */}

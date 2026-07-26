@@ -11,6 +11,11 @@
  */
 
 import { speakWithDeepgram, stopDeepgramSpeech, isDeepgramPlaying } from './deepgramTTS';
+import {
+  startSpokenSession,
+  endSpokenSession,
+  publishSpokenProgress,
+} from './zoeSpokenWordBus';
 
 // Voice preference priority
 const VOICE_PRIORITIES = [
@@ -254,7 +259,18 @@ const speakWithBrowserTTS = (
   const chunks = splitIntoChunks(text, 200);
   console.log('[ZoeVoice] 📱 Browser TTS:', chunks.length, 'chunk(s)');
   
-  currentUtteranceQueue = chunks.map(chunk => {
+  // Map each chunk back onto its absolute offset inside the full text so that
+  // word-boundary events can drive the teleprompter highlight accurately.
+  const chunkOffsets: number[] = [];
+  let searchCursor = 0;
+  for (const chunk of chunks) {
+    const found = text.indexOf(chunk.trim(), searchCursor);
+    const offset = found >= 0 ? found : searchCursor;
+    chunkOffsets.push(offset);
+    searchCursor = offset + chunk.trim().length;
+  }
+  
+  currentUtteranceQueue = chunks.map((chunk, chunkIdx) => {
     const utterance = new SpeechSynthesisUtterance(chunk);
     
     if (voiceOverride) {
@@ -267,8 +283,16 @@ const speakWithBrowserTTS = (
     utterance.rate = config.rate;
     utterance.volume = config.volume;
     
+    const baseOffset = chunkOffsets[chunkIdx] ?? 0;
+    utterance.onboundary = (event: SpeechSynthesisEvent) => {
+      if (speechCancelled) return;
+      if (event.name && event.name !== 'word') return;
+      publishSpokenProgress(baseOffset + (event.charIndex ?? 0), event.charLength ?? 0);
+    };
+    
     return utterance;
   });
+
   
   currentChunkIndex = 0;
   startChromeKeepAlive();
@@ -289,12 +313,17 @@ const cleanText = (text: string): string => {
     .trim();
 };
 
+export interface ZoeSpeakOptions {
+  /** Message id used to sync the teleprompter highlight in the chat UI. */
+  messageId?: string;
+}
+
 /**
  * SPEAK AS ZOE - Browser Native Voice
  */
 export const speakAsZoe = async (
   text: string,
-  _options?: any,
+  options?: ZoeSpeakOptions | any,
   onStart?: () => void,
   onEnd?: () => void,
   onError?: (error?: any) => void
@@ -313,9 +342,23 @@ export const speakAsZoe = async (
   // Stop any current speech
   stopZoeSpeech();
   
+  const messageId: string | undefined = options?.messageId;
+  const handleStart = () => {
+    if (messageId) startSpokenSession(messageId, cleaned);
+    onStart?.();
+  };
+  const handleEnd = () => {
+    if (messageId) endSpokenSession(messageId);
+    onEnd?.();
+  };
+  const handleError = (err?: any) => {
+    if (messageId) endSpokenSession(messageId);
+    onError?.(err);
+  };
+  
   // Try Deepgram Aura 2 first (premium voice)
   console.log('[ZoeVoice] 🎙️ Attempting Deepgram Aura 2 (aura-2-janus-en)...');
-  const deepgramSuccess = await speakWithDeepgram(cleaned, onStart, onEnd, (err) => {
+  const deepgramSuccess = await speakWithDeepgram(cleaned, handleStart, handleEnd, (err) => {
     console.warn('[ZoeVoice] Deepgram failed, falling back to browser TTS:', err?.message);
   });
   
@@ -327,8 +370,9 @@ export const speakAsZoe = async (
   // Fallback to browser TTS
   console.log('[ZoeVoice] 📱 Falling back to browser TTS');
   await initializeZoeVoices();
-  speakWithBrowserTTS(cleaned, ZOE_VOICE_CONFIG, cachedVoice, onStart, onEnd, onError);
+  speakWithBrowserTTS(cleaned, ZOE_VOICE_CONFIG, cachedVoice, handleStart, handleEnd, handleError);
 };
+
 
 /**
  * SPEAK AS SMITH - Browser Native Voice (Male persona)
@@ -371,6 +415,9 @@ export const speakAsSmith = speakAsSmithVoice;
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export const stopZoeSpeech = (): void => {
+  // Clear teleprompter highlight
+  endSpokenSession();
+  
   // Stop Deepgram audio
   stopDeepgramSpeech();
   
@@ -384,6 +431,7 @@ export const stopZoeSpeech = (): void => {
   isSpeakingActive = false;
   window.dispatchEvent(new CustomEvent('zoe-speak-end'));
 };
+
 
 export const stopSpeaking = stopZoeSpeech;
 
@@ -436,10 +484,12 @@ export const VOICE_CONFIGS = {
 export const replayAsZoe = async (
   text: string,
   onStart?: () => void,
-  onEnd?: () => void
+  onEnd?: () => void,
+  messageId?: string
 ): Promise<void> => {
   if (!text?.trim()) return;
-  await speakAsZoe(text, undefined, onStart, onEnd);
+  await speakAsZoe(text, messageId ? { messageId } : undefined, onStart, onEnd);
+
 };
 
 export const initializeAssistantVoices = initializeZoeVoices;
