@@ -104,12 +104,22 @@ function fractionToWord(cumulative: number[], total: number, fraction: number): 
 }
 
 export function useSpokenWordSync(messageId: string | undefined, text: string) {
-  const tokens = useMemo(() => tokenizeForSpeech(text ?? ''), [text]);
-  const segments = useMemo(() => buildSegments(text ?? '', tokens), [text, tokens]);
-  const weights = useMemo(() => buildWeights(tokens), [tokens]);
+  // Rendered tokens (what the user sees)
+  const displayTokens = useMemo(() => tokenizeForSpeech(text ?? ''), [text]);
+  const segments = useMemo(() => buildSegments(text ?? '', displayTokens), [text, displayTokens]);
 
   const [isActive, setIsActive] = useState(false);
   const [activeWordIndex, setActiveWordIndex] = useState(-1);
+  // Spoken tokens (what the TTS engine actually reads — markdown stripped).
+  // Word indices are matched by ordinal, so both lists stay aligned.
+  const [spokenText, setSpokenText] = useState('');
+
+  const spokenTokens = useMemo(
+    () => (spokenText ? tokenizeForSpeech(spokenText) : displayTokens),
+    [spokenText, displayTokens]
+  );
+  const weights = useMemo(() => buildWeights(spokenTokens), [spokenTokens]);
+  const tokens = spokenTokens;
 
   const boundarySeenRef = useRef(false);
   const startedAtRef = useRef(0);
@@ -127,12 +137,14 @@ export function useSpokenWordSync(messageId: string | undefined, text: string) {
         boundarySeenRef.current = false;
         startedAtRef.current = session!.startedAt;
         lastIndexRef.current = -1;
+        setSpokenText(session!.text);
         setActiveWordIndex(0);
       } else {
         lastIndexRef.current = -1;
         setActiveWordIndex(-1);
       }
     });
+
   }, [messageId]);
 
   // ── Source 1: exact word boundaries from the Web Speech API ─────────────
