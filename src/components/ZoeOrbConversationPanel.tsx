@@ -3153,8 +3153,12 @@ Want me to dive deeper into any aspect?`;
                     )}
                     {/* Message content */}
                     <div className="pr-5">
-                      {msg.content.replace(/\[\[(PATTERN|MEMORY):[^\]]+\]\]/g, '').trim()}
+                      <SpokenTranscript
+                        messageId={msg.role === 'zoe' ? msg.id : undefined}
+                        text={msg.content.replace(/\[\[(PATTERN|MEMORY):[^\]]+\]\]/g, '').trim()}
+                      />
                     </div>
+
                     {/* Action buttons */}
                     <div className="absolute top-1 right-1 flex gap-0.5">
                       {/* Reply button */}
