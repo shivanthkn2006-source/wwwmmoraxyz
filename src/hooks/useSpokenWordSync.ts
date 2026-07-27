@@ -13,6 +13,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   subscribeSpokenSession,
   subscribeSpokenProgress,
+  getSpokenSpeechRate,
 } from '@/utils/zoeSpokenWordBus';
 import { subscribeTTSAudio } from '@/utils/zoeTTSAudioBus';
 
@@ -29,9 +30,15 @@ export interface TranscriptSegment {
   index: number;
 }
 
-/** Speech pacing used by the estimator (Zoe speaks at rate 0.9 ≈ 13 chars/sec). */
-const ESTIMATOR_BASE_MS = 90;
-const ESTIMATOR_PER_CHAR_MS = 62;
+/**
+ * Speech pacing used by the estimator.
+ * Calibrated against Zoe's default browser voice (rate 0.9 ≈ 145 wpm):
+ * an average 5-char word lands near 470ms, and punctuation adds a pause.
+ */
+const ESTIMATOR_BASE_MS = 150;
+const ESTIMATOR_PER_CHAR_MS = 68;
+const ESTIMATOR_COMMA_PAUSE_MS = 180;
+const ESTIMATOR_SENTENCE_PAUSE_MS = 380;
 /** How long we wait for a real boundary event before trusting other sources. */
 const BOUNDARY_GRACE_MS = 600;
 
