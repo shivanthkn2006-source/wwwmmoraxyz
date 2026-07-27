@@ -202,8 +202,10 @@ export function useSpokenWordSync(messageId: string | undefined, text: string) {
       if (audio && isFinite(audio.duration) && audio.duration > 0) {
         fraction = audio.currentTime / audio.duration;
       } else if (elapsed > BOUNDARY_GRACE_MS) {
-        // Estimator: total time derived from the same per-word weights.
-        fraction = elapsed / weights.total;
+        // Estimator: total time derived from the same per-word weights,
+        // stretched by the actual voice rate so it never outruns the speech.
+        const rate = getSpokenSpeechRate();
+        fraction = elapsed / (weights.total / rate);
       }
 
       if (fraction === null) return;
