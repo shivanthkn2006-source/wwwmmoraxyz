@@ -13,6 +13,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   subscribeSpokenSession,
   subscribeSpokenProgress,
+  getSpokenSpeechRate,
 } from '@/utils/zoeSpokenWordBus';
 import { subscribeTTSAudio } from '@/utils/zoeTTSAudioBus';
 
@@ -29,9 +30,15 @@ export interface TranscriptSegment {
   index: number;
 }
 
-/** Speech pacing used by the estimator (Zoe speaks at rate 0.9 ≈ 13 chars/sec). */
-const ESTIMATOR_BASE_MS = 90;
-const ESTIMATOR_PER_CHAR_MS = 62;
+/**
+ * Speech pacing used by the estimator.
+ * Calibrated against Zoe's default browser voice (rate 0.9 ≈ 145 wpm):
+ * an average 5-char word lands near 470ms, and punctuation adds a pause.
+ */
+const ESTIMATOR_BASE_MS = 150;
+const ESTIMATOR_PER_CHAR_MS = 68;
+const ESTIMATOR_COMMA_PAUSE_MS = 180;
+const ESTIMATOR_SENTENCE_PAUSE_MS = 380;
 /** How long we wait for a real boundary event before trusting other sources. */
 const BOUNDARY_GRACE_MS = 600;
 
@@ -85,6 +92,8 @@ function buildWeights(tokens: SpokenToken[]): { cumulative: number[]; total: num
   let running = 0;
   for (const token of tokens) {
     running += ESTIMATOR_BASE_MS + token.text.length * ESTIMATOR_PER_CHAR_MS;
+    if (/[.!?…]["')\]]*$/.test(token.text)) running += ESTIMATOR_SENTENCE_PAUSE_MS;
+    else if (/[,;:—-]$/.test(token.text)) running += ESTIMATOR_COMMA_PAUSE_MS;
     cumulative.push(running);
   }
   return { cumulative, total: running || 1 };
@@ -193,8 +202,10 @@ export function useSpokenWordSync(messageId: string | undefined, text: string) {
       if (audio && isFinite(audio.duration) && audio.duration > 0) {
         fraction = audio.currentTime / audio.duration;
       } else if (elapsed > BOUNDARY_GRACE_MS) {
-        // Estimator: total time derived from the same per-word weights.
-        fraction = elapsed / weights.total;
+        // Estimator: total time derived from the same per-word weights,
+        // stretched by the actual voice rate so it never outruns the speech.
+        const rate = getSpokenSpeechRate();
+        fraction = elapsed / (weights.total / rate);
       }
 
       if (fraction === null) return;

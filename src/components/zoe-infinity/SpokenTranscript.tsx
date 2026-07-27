@@ -42,13 +42,31 @@ export const SpokenTranscript: React.FC<SpokenTranscriptProps> = ({
     const node = activeRef.current;
     if (!node) return;
 
+    const reduced = prefersReducedMotion();
+
+    if (reduced) {
+      // Reduced motion: never animate. Jump only when the active word has
+      // actually left the visible area, so highlighting stays accurate
+      // while the page stays visually still.
+      const rect = node.getBoundingClientRect();
+      const vh = window.innerHeight || document.documentElement.clientHeight;
+      const outOfView = rect.bottom > vh - 24 || rect.top < 24;
+      if (!outOfView) return;
+      try {
+        node.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'nearest' });
+      } catch {
+        /* older browsers – ignore */
+      }
+      return;
+    }
+
     const now = Date.now();
     if (now - lastScrollRef.current < SCROLL_THROTTLE_MS) return;
     lastScrollRef.current = now;
 
     try {
       node.scrollIntoView({
-        behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+        behavior: 'smooth',
         block: 'center',
         inline: 'nearest',
       });
