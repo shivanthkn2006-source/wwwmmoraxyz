@@ -256,6 +256,8 @@ const speakWithBrowserTTS = (
   
   speechCancelled = false;
   isSpeakingActive = true;
+  // Keep the teleprompter estimator in step with the actual voice speed.
+  setSpokenSpeechRate(config.rate ?? 1);
   
   const chunks = splitIntoChunks(text, 200);
   console.log('[ZoeVoice] 📱 Browser TTS:', chunks.length, 'chunk(s)');
