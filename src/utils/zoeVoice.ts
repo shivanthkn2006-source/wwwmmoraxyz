@@ -15,6 +15,7 @@ import {
   startSpokenSession,
   endSpokenSession,
   publishSpokenProgress,
+  setSpokenSpeechRate,
 } from './zoeSpokenWordBus';
 
 // Voice preference priority
