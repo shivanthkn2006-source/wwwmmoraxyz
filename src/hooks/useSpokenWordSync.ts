@@ -16,6 +16,7 @@ import {
   getSpokenSpeechRate,
 } from '@/utils/zoeSpokenWordBus';
 import { subscribeTTSAudio } from '@/utils/zoeTTSAudioBus';
+import type { TTSAudioMetadata } from '@/utils/zoeTTSAudioBus';
 
 export interface SpokenToken {
   text: string;
@@ -33,12 +34,12 @@ export interface TranscriptSegment {
 /**
  * Speech pacing used by the estimator.
  * Calibrated against Zoe's default browser voice (rate 0.9 ≈ 145 wpm):
- * an average 5-char word lands near 470ms, and punctuation adds a pause.
+ * an average 5-char word lands near 595ms, and punctuation adds a pause.
  */
-const ESTIMATOR_BASE_MS = 150;
-const ESTIMATOR_PER_CHAR_MS = 68;
-const ESTIMATOR_COMMA_PAUSE_MS = 180;
-const ESTIMATOR_SENTENCE_PAUSE_MS = 380;
+const ESTIMATOR_BASE_MS = 185;
+const ESTIMATOR_PER_CHAR_MS = 82;
+const ESTIMATOR_COMMA_PAUSE_MS = 260;
+const ESTIMATOR_SENTENCE_PAUSE_MS = 650;
 /** How long we wait for a real boundary event before trusting other sources. */
 const BOUNDARY_GRACE_MS = 600;
 
@@ -118,6 +119,7 @@ export function useSpokenWordSync(messageId: string | undefined, text: string) {
   const segments = useMemo(() => buildSegments(text ?? '', displayTokens), [text, displayTokens]);
 
   const [isActive, setIsActive] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [activeWordIndex, setActiveWordIndex] = useState(-1);
   // Spoken tokens (what the TTS engine actually reads — markdown stripped).
   // Word indices are matched by ordinal, so both lists stay aligned.
@@ -133,8 +135,10 @@ export function useSpokenWordSync(messageId: string | undefined, text: string) {
   const boundarySeenRef = useRef(false);
   const startedAtRef = useRef(0);
   const audioRef = useRef<HTMLMediaElement | null>(null);
+  const audioMetadataRef = useRef<TTSAudioMetadata | null>(null);
   const rafRef = useRef<number | null>(null);
   const lastIndexRef = useRef(-1);
+  const activeSessionIdRef = useRef<string | null>(null);
 
   // ── Session tracking ────────────────────────────────────────────────────
   useEffect(() => {
@@ -143,13 +147,24 @@ export function useSpokenWordSync(messageId: string | undefined, text: string) {
       const active = !!session && session.messageId === messageId;
       setIsActive(active);
       if (active) {
-        boundarySeenRef.current = false;
-        startedAtRef.current = session!.startedAt;
-        lastIndexRef.current = -1;
-        setSpokenText(session!.text);
-        setActiveWordIndex(0);
+        const activeSession = session;
+        const isNewSession = activeSessionIdRef.current !== activeSession.messageId;
+        activeSessionIdRef.current = activeSession.messageId;
+        startedAtRef.current = activeSession.startedAt;
+        setIsPaused(Boolean(activeSession.isPaused));
+
+        if (isNewSession) {
+          boundarySeenRef.current = false;
+          lastIndexRef.current = -1;
+          audioRef.current = null;
+          audioMetadataRef.current = null;
+          setSpokenText(activeSession.text);
+          setActiveWordIndex(0);
+        }
       } else {
+        activeSessionIdRef.current = null;
         lastIndexRef.current = -1;
+        setIsPaused(false);
         setActiveWordIndex(-1);
       }
     });
@@ -174,10 +189,12 @@ export function useSpokenWordSync(messageId: string | undefined, text: string) {
   useEffect(() => {
     if (!isActive) {
       audioRef.current = null;
+      audioMetadataRef.current = null;
       return;
     }
-    return subscribeTTSAudio((audio) => {
+    return subscribeTTSAudio((audio, metadata) => {
       audioRef.current = audio;
+      audioMetadataRef.current = metadata;
     });
   }, [isActive]);
 
@@ -192,15 +209,35 @@ export function useSpokenWordSync(messageId: string | undefined, text: string) {
     const tick = () => {
       rafRef.current = requestAnimationFrame(tick);
 
+      if (isPaused) return;
+
       // Real boundary events win — nothing to compute here.
       if (boundarySeenRef.current) return;
 
       const elapsed = Date.now() - startedAtRef.current;
       const audio = audioRef.current;
+      const audioMetadata = audioMetadataRef.current;
       let fraction: number | null = null;
 
       if (audio && isFinite(audio.duration) && audio.duration > 0) {
-        fraction = audio.currentTime / audio.duration;
+        const audioFraction = Math.max(0, Math.min(1, audio.currentTime / audio.duration));
+        if (
+          audioMetadata &&
+          Number.isFinite(audioMetadata.charStart) &&
+          Number.isFinite(audioMetadata.charEnd) &&
+          audioMetadata.charEnd > audioMetadata.charStart
+        ) {
+          const charIndex = audioMetadata.charStart +
+            (audioMetadata.charEnd - audioMetadata.charStart) * audioFraction;
+          const index = charIndexToWord(tokens, charIndex);
+          if (index !== lastIndexRef.current) {
+            lastIndexRef.current = index;
+            setActiveWordIndex(index);
+          }
+          return;
+        }
+
+        fraction = audioFraction;
       } else if (elapsed > BOUNDARY_GRACE_MS) {
         // Estimator: total time derived from the same per-word weights,
         // stretched by the actual voice rate so it never outruns the speech.
@@ -221,9 +258,9 @@ export function useSpokenWordSync(messageId: string | undefined, text: string) {
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     };
-  }, [isActive, tokens.length, weights]);
+  }, [isActive, isPaused, tokens.length, weights]);
 
-  return { isActive, activeWordIndex, tokens, segments };
+  return { isActive, isPaused, activeWordIndex, tokens, segments };
 }
 
 export default useSpokenWordSync;

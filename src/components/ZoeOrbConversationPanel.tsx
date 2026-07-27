@@ -8,7 +8,7 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
 import SpokenTranscript from '@/components/zoe-infinity/SpokenTranscript';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, Volume2, VolumeX, Minimize2, Maximize2, Paperclip, Image, FileText, Video, Loader2, Download, Upload, Mic, Circle, Square, Camera, StopCircle, Copy, Check, Users, MessageCircle, Search, ArrowLeft, User, Plus, Sparkles, CheckCheck, Reply, CornerUpLeft, ChevronDown, Brain, Cloud, CloudDownload, CloudUpload, Shield, FileDown, Activity, Phone, PhoneOff } from 'lucide-react';
+import { X, Send, Volume2, VolumeX, Minimize2, Maximize2, Paperclip, Image, FileText, Video, Loader2, Download, Upload, Mic, Circle, Square, Camera, StopCircle, Copy, Check, Users, MessageCircle, Search, ArrowLeft, User, Plus, Sparkles, CheckCheck, Reply, CornerUpLeft, ChevronDown, Brain, Cloud, CloudDownload, CloudUpload, Shield, FileDown, Activity, Phone, PhoneOff, Pause, Play } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useZoeOmegaCoreIntegration } from '@/hooks/useZoeOmegaCoreIntegration';
 import { format, isToday, isYesterday } from 'date-fns';
@@ -38,7 +38,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
-import { speakAsZoe, stopZoeSpeech, isZoeSpeaking, initializeZoeVoices, replayAsZoe } from '@/utils/zoeVoice';
+import { speakAsZoe, stopZoeSpeech, isZoeSpeaking, initializeZoeVoices, replayAsZoe, pauseZoeSpeech, resumeZoeSpeech } from '@/utils/zoeVoice';
 import { isZoeInfinityMessage, stripZoeInfinityMarker } from '@/utils/conversationNamespaces';
 import { setActiveVoiceExperience } from '@/utils/voiceExperienceLock';
 import { processOfflineConversation } from '@/utils/zoeOfflineConversation';
@@ -300,6 +300,7 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
   const [input, setInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isSpeechPaused, setIsSpeechPaused] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
@@ -501,9 +502,28 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
     replayAsZoe(
       cleanContent,
       () => setIsSpeaking(true),
-      () => setIsSpeaking(false)
+      () => setIsSpeaking(false),
+      msg.id
     );
   }, [isMuted]);
+
+  useEffect(() => {
+    const handleStart = () => setIsSpeechPaused(false);
+    const handleEnd = () => setIsSpeechPaused(false);
+    const handlePause = () => setIsSpeechPaused(true);
+    const handleResume = () => setIsSpeechPaused(false);
+
+    window.addEventListener('zoe-speak-start', handleStart);
+    window.addEventListener('zoe-speak-end', handleEnd);
+    window.addEventListener('zoe-speak-pause', handlePause);
+    window.addEventListener('zoe-speak-resume', handleResume);
+    return () => {
+      window.removeEventListener('zoe-speak-start', handleStart);
+      window.removeEventListener('zoe-speak-end', handleEnd);
+      window.removeEventListener('zoe-speak-pause', handlePause);
+      window.removeEventListener('zoe-speak-resume', handleResume);
+    };
+  }, []);
 
   // Initialize voices when panel opens
   useEffect(() => {
@@ -2073,8 +2093,20 @@ Want me to dive deeper into any aspect?`;
   const toggleMute = () => {
     if (isSpeaking) {
       stopZoeSpeech();
+      setIsSpeechPaused(false);
     }
     setIsMuted(!isMuted);
+  };
+
+  const toggleSpeechPause = () => {
+    if (!isSpeaking) return;
+    if (isSpeechPaused) {
+      resumeZoeSpeech();
+      setIsSpeechPaused(false);
+    } else {
+      pauseZoeSpeech();
+      setIsSpeechPaused(true);
+    }
   };
 
 
@@ -3660,6 +3692,24 @@ Want me to dive deeper into any aspect?`;
                       <p className="text-[8px] text-foreground/40 uppercase tracking-wider px-1.5 mb-0.5 sticky top-0 bg-background/95">
                         Audio
                       </p>
+                      {isSpeaking && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full justify-start gap-1.5 h-6 text-[10px] px-1.5"
+                          onClick={() => {
+                            toggleSpeechPause();
+                            setShowAttachMenu(false);
+                          }}
+                        >
+                          {isSpeechPaused ? (
+                            <Play className="h-3 w-3 text-primary" />
+                          ) : (
+                            <Pause className="h-3 w-3 text-amber-400" />
+                          )}
+                          {isSpeechPaused ? 'Resume speech' : 'Pause speech'}
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="sm"

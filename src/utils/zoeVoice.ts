@@ -10,12 +10,13 @@
  * - Text chunking for reliability
  */
 
-import { speakWithDeepgram, stopDeepgramSpeech, isDeepgramPlaying } from './deepgramTTS';
+import { speakWithDeepgram, stopDeepgramSpeech, isDeepgramPlaying, pauseDeepgramSpeech, resumeDeepgramSpeech, isDeepgramPaused } from './deepgramTTS';
 import {
   startSpokenSession,
   endSpokenSession,
   publishSpokenProgress,
   setSpokenSpeechRate,
+  setSpokenSessionPaused,
 } from './zoeSpokenWordBus';
 
 // Voice preference priority
@@ -360,6 +361,7 @@ export const speakAsZoe = async (
   };
   
   // Try Deepgram Aura 2 first (premium voice)
+  setSpokenSpeechRate(ZOE_VOICE_CONFIG.rate ?? 1);
   console.log('[ZoeVoice] 🎙️ Attempting Deepgram Aura 2 (aura-2-janus-en)...');
   const deepgramSuccess = await speakWithDeepgram(cleaned, handleStart, handleEnd, (err) => {
     console.warn('[ZoeVoice] Deepgram failed, falling back to browser TTS:', err?.message);
@@ -446,17 +448,23 @@ export const isZoeSpeaking = (): boolean => {
 export const isAssistantSpeaking = isZoeSpeaking;
 
 export const pauseZoeSpeech = (): void => {
+  setSpokenSessionPaused(true);
+  pauseDeepgramSpeech();
   if ('speechSynthesis' in window) {
     window.speechSynthesis.pause();
   }
+  window.dispatchEvent(new CustomEvent('zoe-speak-pause'));
 };
 
 export const pauseSpeaking = pauseZoeSpeech;
 
 export const resumeZoeSpeech = (): void => {
+  setSpokenSessionPaused(false);
+  resumeDeepgramSpeech();
   if ('speechSynthesis' in window) {
     window.speechSynthesis.resume();
   }
+  window.dispatchEvent(new CustomEvent('zoe-speak-resume'));
 };
 
 export const resumeSpeaking = resumeZoeSpeech;
@@ -465,7 +473,7 @@ export const getZoeSpeechState = () => ({
   isSpeakingActive: isZoeSpeaking(),
   hasSynthesis: 'speechSynthesis' in window,
   isSynthesisSpeaking: 'speechSynthesis' in window ? window.speechSynthesis.speaking : false,
-  isPaused: 'speechSynthesis' in window ? window.speechSynthesis.paused : false,
+  isPaused: ('speechSynthesis' in window ? window.speechSynthesis.paused : false) || isDeepgramPaused(),
   voiceName: cachedVoice?.name || null,
   chunksRemaining: currentUtteranceQueue.length - currentChunkIndex,
 });

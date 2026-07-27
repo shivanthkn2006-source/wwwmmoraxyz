@@ -5787,22 +5787,29 @@ body.form-watch .auto-heal-text {
    ZOE TELEPROMPTER — spoken word highlighting
    ═══════════════════════════════════════════════════════════════════════ */
 :root {
-  --zoe-transcript-active-bg: 217 91% 60%;
-  --zoe-transcript-active-fg: 0 0% 100%;
+  --zoe-transcript-active-bg: 47 96% 58%;
+  --zoe-transcript-active-fg: 222 47% 8%;
+  --zoe-transcript-sentence-bg: 47 96% 58%;
+  --zoe-transcript-sentence-fg: 222 47% 10%;
   --zoe-transcript-spoken: 0 0% 55%;
   --zoe-transcript-pending: 0 0% 45%;
 }
 
 .dark {
-  --zoe-transcript-active-bg: 190 95% 55%;
-  --zoe-transcript-active-fg: 220 40% 8%;
+  --zoe-transcript-active-bg: 47 96% 62%;
+  --zoe-transcript-active-fg: 222 47% 8%;
+  --zoe-transcript-sentence-bg: 47 96% 62%;
+  --zoe-transcript-sentence-fg: 48 100% 88%;
   --zoe-transcript-spoken: 0 0% 78%;
   --zoe-transcript-pending: 0 0% 52%;
 }
 
 .zoe-transcript-word {
   border-radius: 0.25rem;
-  transition: color 140ms ease-out, background-color 140ms ease-out, opacity 140ms ease-out;
+  padding: 0.02em 0.08em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  transition: color 120ms ease-out, background-color 120ms ease-out, opacity 120ms ease-out, box-shadow 120ms ease-out;
 }
 
 .zoe-transcript-word--spoken {
@@ -5813,18 +5820,24 @@ body.form-watch .auto-heal-text {
   color: hsl(var(--zoe-transcript-pending));
 }
 
+.zoe-transcript-word--sentence {
+  background-color: hsl(var(--zoe-transcript-sentence-bg) / 0.16);
+  color: hsl(var(--zoe-transcript-sentence-fg));
+  box-shadow: 0 0 0 0.12em hsl(var(--zoe-transcript-sentence-bg) / 0.16);
+}
+
 .zoe-transcript-word--active {
-  background-color: hsl(var(--zoe-transcript-active-bg) / 0.92);
+  background-color: hsl(var(--zoe-transcript-active-bg) / 0.96);
   color: hsl(var(--zoe-transcript-active-fg));
   box-shadow:
-    0 0 0 0.15em hsl(var(--zoe-transcript-active-bg) / 0.92),
-    0 0 14px hsl(var(--zoe-transcript-active-bg) / 0.45);
+    0 0 0 0.16em hsl(var(--zoe-transcript-active-bg) / 0.96),
+    0 0 12px hsl(var(--zoe-transcript-active-bg) / 0.38);
   animation: zoeTranscriptPulse 1.1s ease-in-out infinite;
 }
 
 @keyframes zoeTranscriptPulse {
-  0%, 100% { box-shadow: 0 0 0 0.15em hsl(var(--zoe-transcript-active-bg) / 0.92), 0 0 12px hsl(var(--zoe-transcript-active-bg) / 0.35); }
-  50%      { box-shadow: 0 0 0 0.15em hsl(var(--zoe-transcript-active-bg) / 0.92), 0 0 20px hsl(var(--zoe-transcript-active-bg) / 0.6); }
+  0%, 100% { box-shadow: 0 0 0 0.16em hsl(var(--zoe-transcript-active-bg) / 0.96), 0 0 10px hsl(var(--zoe-transcript-active-bg) / 0.32); }
+  50%      { box-shadow: 0 0 0 0.16em hsl(var(--zoe-transcript-active-bg) / 0.96), 0 0 16px hsl(var(--zoe-transcript-active-bg) / 0.52); }
 }
 
 @media (prefers-reduced-motion: reduce) {
