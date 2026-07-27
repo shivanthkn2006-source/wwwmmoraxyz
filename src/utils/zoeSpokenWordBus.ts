@@ -31,6 +31,21 @@ const progressListeners = new Set<ProgressListener>();
 
 let currentSession: SpokenSession | null = null;
 
+/**
+ * Current speech rate (1 = normal). The estimator divides its pacing by this
+ * so a slower voice highlights words more slowly instead of racing ahead.
+ */
+let speechRate = 1;
+
+export function setSpokenSpeechRate(rate: number): void {
+  if (!Number.isFinite(rate) || rate <= 0) return;
+  speechRate = Math.max(0.4, Math.min(2.5, rate));
+}
+
+export function getSpokenSpeechRate(): number {
+  return speechRate;
+}
+
 export function startSpokenSession(messageId: string, text: string): void {
   if (!messageId || !text) return;
   currentSession = { messageId, text, startedAt: Date.now() };
