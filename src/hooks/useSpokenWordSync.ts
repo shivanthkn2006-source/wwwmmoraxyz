@@ -92,6 +92,8 @@ function buildWeights(tokens: SpokenToken[]): { cumulative: number[]; total: num
   let running = 0;
   for (const token of tokens) {
     running += ESTIMATOR_BASE_MS + token.text.length * ESTIMATOR_PER_CHAR_MS;
+    if (/[.!?…]["')\]]*$/.test(token.text)) running += ESTIMATOR_SENTENCE_PAUSE_MS;
+    else if (/[,;:—-]$/.test(token.text)) running += ESTIMATOR_COMMA_PAUSE_MS;
     cumulative.push(running);
   }
   return { cumulative, total: running || 1 };
