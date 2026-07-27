@@ -15,6 +15,8 @@ export interface SpokenSession {
   messageId: string;
   text: string;
   startedAt: number;
+  isPaused?: boolean;
+  pausedAt?: number;
 }
 
 export interface SpokenProgress {
@@ -48,10 +50,43 @@ export function getSpokenSpeechRate(): number {
 
 export function startSpokenSession(messageId: string, text: string): void {
   if (!messageId || !text) return;
-  currentSession = { messageId, text, startedAt: Date.now() };
+  currentSession = { messageId, text, startedAt: Date.now(), isPaused: false };
   sessionListeners.forEach((l) => {
     try { l(currentSession); } catch (err) { console.warn('[zoeSpokenWordBus] session listener error', err); }
   });
+}
+
+export function setSpokenSessionPaused(paused: boolean): void {
+  if (!currentSession) return;
+  const now = Date.now();
+
+  if (paused) {
+    if (currentSession.isPaused) return;
+    currentSession = { ...currentSession, isPaused: true, pausedAt: now };
+  } else {
+    if (!currentSession.isPaused) return;
+    const pausedAt = currentSession.pausedAt ?? now;
+    currentSession = {
+      ...currentSession,
+      isPaused: false,
+      pausedAt: undefined,
+      // Shift the start time forward by the paused duration so estimator
+      // progress freezes instead of jumping ahead after resume.
+      startedAt: currentSession.startedAt + Math.max(0, now - pausedAt),
+    };
+  }
+
+  sessionListeners.forEach((l) => {
+    try { l(currentSession); } catch (err) { console.warn('[zoeSpokenWordBus] session listener error', err); }
+  });
+}
+
+export function pauseSpokenSession(): void {
+  setSpokenSessionPaused(true);
+}
+
+export function resumeSpokenSession(): void {
+  setSpokenSessionPaused(false);
 }
 
 export function endSpokenSession(messageId?: string): void {

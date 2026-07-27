@@ -9,7 +9,7 @@
  * identical layout (no shift when speech starts or stops).
  */
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { useSpokenWordSync } from '@/hooks/useSpokenWordSync';
 
@@ -33,12 +33,28 @@ export const SpokenTranscript: React.FC<SpokenTranscriptProps> = ({
   className,
   autoScroll = true,
 }) => {
-  const { isActive, activeWordIndex, segments } = useSpokenWordSync(messageId, text);
+  const { isActive, isPaused, activeWordIndex, segments } = useSpokenWordSync(messageId, text);
   const activeRef = useRef<HTMLSpanElement | null>(null);
   const lastScrollRef = useRef(0);
 
+  const activeSentenceRange = useMemo(() => {
+    if (!isActive || activeWordIndex < 0) return null;
+    const words = segments.filter((segment) => segment.type === 'word');
+    if (activeWordIndex >= words.length) return null;
+
+    const endsSentence = (word: string) => /[.!?…]["')\]]*$/.test(word);
+
+    let start = activeWordIndex;
+    while (start > 0 && !endsSentence(words[start - 1]?.text ?? '')) start--;
+
+    let end = activeWordIndex;
+    while (end < words.length - 1 && !endsSentence(words[end]?.text ?? '')) end++;
+
+    return { start, end };
+  }, [activeWordIndex, isActive, segments]);
+
   useEffect(() => {
-    if (!isActive || !autoScroll || activeWordIndex < 0) return;
+    if (!isActive || isPaused || !autoScroll || activeWordIndex < 0) return;
     const node = activeRef.current;
     if (!node) return;
 
@@ -73,7 +89,7 @@ export const SpokenTranscript: React.FC<SpokenTranscriptProps> = ({
     } catch {
       /* older browsers – ignore */
     }
-  }, [isActive, activeWordIndex, autoScroll]);
+  }, [isActive, isPaused, activeWordIndex, autoScroll]);
 
   if (!isActive) {
     return <span className={cn('whitespace-pre-wrap', className)}>{text}</span>;
@@ -88,13 +104,18 @@ export const SpokenTranscript: React.FC<SpokenTranscriptProps> = ({
 
         const isCurrent = segment.index === activeWordIndex;
         const isSpoken = segment.index < activeWordIndex;
+        const isInActiveSentence = !!activeSentenceRange &&
+          segment.index >= activeSentenceRange.start &&
+          segment.index <= activeSentenceRange.end;
 
         return (
           <span
             key={`w-${i}`}
             ref={isCurrent ? activeRef : undefined}
+            aria-current={isCurrent ? 'true' : undefined}
             className={cn(
               'zoe-transcript-word',
+              isInActiveSentence && 'zoe-transcript-word--sentence',
               isCurrent && 'zoe-transcript-word--active',
               isSpoken && 'zoe-transcript-word--spoken',
               !isCurrent && !isSpoken && 'zoe-transcript-word--pending'

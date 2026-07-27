@@ -9,6 +9,7 @@
  */
 
 import { supabase } from '@/integrations/supabase/client';
+import type { TTSAudioMetadata } from './zoeTTSAudioBus';
 
 /** Resolve current user's access token (or null if unauthenticated). */
 async function getActiveAccessToken(): Promise<string | null> {
@@ -40,6 +41,24 @@ let isQueuePlaying = false;
 let aborted = false;
 let currentOnEnd: (() => void) | undefined;
 let currentOnError: ((error: Error) => void) | undefined;
+
+function buildChunkMetadata(fullText: string, chunks: string[]): TTSAudioMetadata[] {
+  let cursor = 0;
+  return chunks.map((chunk, index) => {
+    const trimmed = chunk.trim();
+    const found = fullText.indexOf(trimmed, cursor);
+    const charStart = found >= 0 ? found : cursor;
+    const charEnd = Math.min(fullText.length, charStart + trimmed.length);
+    cursor = charEnd;
+    return {
+      charStart,
+      charEnd,
+      chunkText: trimmed,
+      chunkIndex: index,
+      totalChunks: chunks.length,
+    };
+  });
+}
 
 /**
  * Split text into sentence-level chunks for reliable and fast playback.
@@ -114,7 +133,11 @@ async function fetchChunk(text: string, model?: string): Promise<Blob> {
 /**
  * Play a single audio blob and resolve when it completes.
  */
-function playBlob(blob: Blob, onPlaybackStart?: () => void): Promise<boolean> {
+function playBlob(
+  blob: Blob,
+  onPlaybackStart?: () => void,
+  metadata: TTSAudioMetadata | null = null
+): Promise<boolean> {
   return new Promise<boolean>((resolve) => {
     const audioUrl = URL.createObjectURL(blob);
     const audio = new Audio(audioUrl);
@@ -139,7 +162,7 @@ function playBlob(blob: Blob, onPlaybackStart?: () => void): Promise<boolean> {
       if (started) return;
       started = true;
       // Lip-sync: publish active audio so 3D avatar can tap amplitude
-      import('./zoeTTSAudioBus').then(bus => bus.publishTTSAudio(audio)).catch(() => {});
+      import('./zoeTTSAudioBus').then(bus => bus.publishTTSAudio(audio, metadata)).catch(() => {});
       onPlaybackStart?.();
     };
 
@@ -214,18 +237,20 @@ export const speakWithDeepgram = async (
   try {
     const sentences = splitIntoSentences(text);
     if (sentences.length === 0) throw new Error('No valid chunks to synthesize');
+    const chunkMetadata = buildChunkMetadata(text, sentences);
 
     const startedAt = performance.now();
     const activeModel = getActiveModel();
     console.log(`[DeepgramTTS] 🎙️ Fast-start synthesis: ${sentences.length} chunks (${activeModel})`);
 
     const [firstText, ...remainingText] = sentences;
+    const [firstMetadata, ...remainingMetadata] = chunkMetadata;
 
     // Start fetching the first chunk + remaining chunks in parallel.
     const firstChunkPromise = fetchChunk(firstText, activeModel);
-    const remainingChunkPromises = remainingText.map((sentence) =>
+    const remainingChunkPromises = remainingText.map((sentence, index) =>
       fetchChunk(sentence, activeModel).then(
-        (blob) => ({ ok: true as const, blob }),
+        (blob) => ({ ok: true as const, blob, metadata: remainingMetadata[index] ?? null }),
         (error) => ({ ok: false as const, error })
       )
     );
@@ -242,7 +267,7 @@ export const speakWithDeepgram = async (
       onStart?.();
       window.dispatchEvent(new CustomEvent('zoe-speak'));
       window.dispatchEvent(new CustomEvent('zoe-speak-start'));
-    });
+    }, firstMetadata ?? null);
 
     if (!firstOk || aborted) {
       window.dispatchEvent(new CustomEvent('zoe-speak-end'));
@@ -260,7 +285,7 @@ export const speakWithDeepgram = async (
         continue;
       }
 
-      const ok = await playBlob(result.blob);
+      const ok = await playBlob(result.blob, undefined, result.metadata);
       if (!ok || aborted) break;
     }
 
@@ -299,6 +324,22 @@ export const stopDeepgramSpeech = (): void => {
   }
 
   isDeepgramSpeaking = false;
+};
+
+export const pauseDeepgramSpeech = (): void => {
+  if (!currentAudio || currentAudio.paused) return;
+  currentAudio.pause();
+};
+
+export const resumeDeepgramSpeech = (): void => {
+  if (!currentAudio || !currentAudio.paused) return;
+  currentAudio.play().catch((err) => {
+    console.warn('[DeepgramTTS] audio.resume() rejected:', err?.message || err);
+  });
+};
+
+export const isDeepgramPaused = (): boolean => {
+  return isDeepgramSpeaking && currentAudio !== null && currentAudio.paused;
 };
 
 export const isDeepgramPlaying = (): boolean => {
