@@ -33,7 +33,7 @@ export const SpokenTranscript: React.FC<SpokenTranscriptProps> = ({
   className,
   autoScroll = true,
 }) => {
-  const { isActive, isPaused, activeWordIndex, sentenceRange } = useSpokenWordSync(messageId, text);
+  const { isActive, isPaused, activeWordIndex, sentenceRange, segments } = useSpokenWordSync(messageId, text);
   const activeRef = useRef<HTMLSpanElement | null>(null);
   const lastScrollRef = useRef(0);
 
