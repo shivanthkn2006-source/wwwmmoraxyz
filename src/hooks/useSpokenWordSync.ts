@@ -113,6 +113,27 @@ function fractionToWord(cumulative: number[], total: number, fraction: number): 
   return lo;
 }
 
+const endsSentence = (word: string) => /[.!?…]["')\]]*$/.test(word);
+
+/** Range of word indices belonging to the sentence containing `wordIndex`. */
+export function computeSentenceRange(
+  tokens: SpokenToken[],
+  wordIndex: number
+): { start: number; end: number; index: number } | null {
+  if (wordIndex < 0 || wordIndex >= tokens.length) return null;
+  let start = wordIndex;
+  while (start > 0 && !endsSentence(tokens[start - 1]?.text ?? '')) start--;
+  let end = wordIndex;
+  while (end < tokens.length - 1 && !endsSentence(tokens[end]?.text ?? '')) end++;
+
+  // Ordinal sentence number (0-based) of the sentence we landed on.
+  let index = 0;
+  for (let i = 0; i < start; i++) {
+    if (endsSentence(tokens[i].text)) index++;
+  }
+  return { start, end, index };
+}
+
 export function useSpokenWordSync(messageId: string | undefined, text: string) {
   // Rendered tokens (what the user sees)
   const displayTokens = useMemo(() => tokenizeForSpeech(text ?? ''), [text]);
@@ -260,7 +281,20 @@ export function useSpokenWordSync(messageId: string | undefined, text: string) {
     };
   }, [isActive, isPaused, tokens.length, weights]);
 
-  return { isActive, isPaused, activeWordIndex, tokens, segments };
+  const sentenceRange = useMemo(
+    () => (isActive ? computeSentenceRange(displayTokens, activeWordIndex) : null),
+    [isActive, displayTokens, activeWordIndex]
+  );
+
+  return {
+    isActive,
+    isPaused,
+    activeWordIndex,
+    activeSentenceIndex: sentenceRange?.index ?? -1,
+    sentenceRange,
+    tokens,
+    segments,
+  };
 }
 
 export default useSpokenWordSync;

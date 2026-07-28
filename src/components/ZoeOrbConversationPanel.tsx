@@ -7,6 +7,7 @@
 
 import React, { useState, useRef, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
 import SpokenTranscript from '@/components/zoe-infinity/SpokenTranscript';
+import TeleprompterDebugOverlay from '@/components/zoe-infinity/TeleprompterDebugOverlay';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, Volume2, VolumeX, Minimize2, Maximize2, Paperclip, Image, FileText, Video, Loader2, Download, Upload, Mic, Circle, Square, Camera, StopCircle, Copy, Check, Users, MessageCircle, Search, ArrowLeft, User, Plus, Sparkles, CheckCheck, Reply, CornerUpLeft, ChevronDown, Brain, Cloud, CloudDownload, CloudUpload, Shield, FileDown, Activity, Phone, PhoneOff, Pause, Play } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -2273,6 +2274,8 @@ Want me to dive deeper into any aspect?`;
   return (
     <AnimatePresence>
       {isOpen && (
+        <>
+        <TeleprompterDebugOverlay />
         <div data-orb-conversation-panel="true" data-exclude-phantom-tap="true" className="fixed left-1/2 bottom-6 z-[9998] -translate-x-1/2 pointer-events-none">
           <motion.div
             drag
@@ -3777,6 +3780,7 @@ Want me to dive deeper into any aspect?`;
           </div>
           </motion.div>
         </div>
+        </>
       )}
     </AnimatePresence>
   );
