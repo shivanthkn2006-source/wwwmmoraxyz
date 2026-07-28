@@ -2273,6 +2273,8 @@ Want me to dive deeper into any aspect?`;
   return (
     <AnimatePresence>
       {isOpen && (
+        <>
+        <TeleprompterDebugOverlay />
         <div data-orb-conversation-panel="true" data-exclude-phantom-tap="true" className="fixed left-1/2 bottom-6 z-[9998] -translate-x-1/2 pointer-events-none">
           <motion.div
             drag
