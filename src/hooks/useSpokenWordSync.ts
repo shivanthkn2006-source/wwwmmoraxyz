@@ -281,7 +281,20 @@ export function useSpokenWordSync(messageId: string | undefined, text: string) {
     };
   }, [isActive, isPaused, tokens.length, weights]);
 
-  return { isActive, isPaused, activeWordIndex, tokens, segments };
+  const sentenceRange = useMemo(
+    () => (isActive ? computeSentenceRange(displayTokens, activeWordIndex) : null),
+    [isActive, displayTokens, activeWordIndex]
+  );
+
+  return {
+    isActive,
+    isPaused,
+    activeWordIndex,
+    activeSentenceIndex: sentenceRange?.index ?? -1,
+    sentenceRange,
+    tokens,
+    segments,
+  };
 }
 
 export default useSpokenWordSync;
