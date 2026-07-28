@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * Teleprompter regression — pause/resume freeze, replay and sentence tracking
  * ===========================================================================
