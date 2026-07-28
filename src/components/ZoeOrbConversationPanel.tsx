@@ -3779,6 +3779,7 @@ Want me to dive deeper into any aspect?`;
           </div>
           </motion.div>
         </div>
+        </>
       )}
     </AnimatePresence>
   );
