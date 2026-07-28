@@ -33,25 +33,11 @@ export const SpokenTranscript: React.FC<SpokenTranscriptProps> = ({
   className,
   autoScroll = true,
 }) => {
-  const { isActive, isPaused, activeWordIndex, segments } = useSpokenWordSync(messageId, text);
+  const { isActive, isPaused, activeWordIndex, sentenceRange } = useSpokenWordSync(messageId, text);
   const activeRef = useRef<HTMLSpanElement | null>(null);
   const lastScrollRef = useRef(0);
 
-  const activeSentenceRange = useMemo(() => {
-    if (!isActive || activeWordIndex < 0) return null;
-    const words = segments.filter((segment) => segment.type === 'word');
-    if (activeWordIndex >= words.length) return null;
-
-    const endsSentence = (word: string) => /[.!?…]["')\]]*$/.test(word);
-
-    let start = activeWordIndex;
-    while (start > 0 && !endsSentence(words[start - 1]?.text ?? '')) start--;
-
-    let end = activeWordIndex;
-    while (end < words.length - 1 && !endsSentence(words[end]?.text ?? '')) end++;
-
-    return { start, end };
-  }, [activeWordIndex, isActive, segments]);
+  const activeSentenceRange = sentenceRange;
 
   useEffect(() => {
     if (!isActive || isPaused || !autoScroll || activeWordIndex < 0) return;
