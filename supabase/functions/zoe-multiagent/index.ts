@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
+import { sovereignFetch, sovereignKey } from "../_shared/sovereign-ai.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -358,9 +359,9 @@ serve(async (req) => {
     const body = await req.json();
     const { command, userId, mode = 'autonomous', context } = requestSchema.parse(body);
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY is not configured');
+    const SOVEREIGN_AI_KEY = sovereignKey();
+    if (!SOVEREIGN_AI_KEY) {
+      throw new Error('SOVEREIGN_AI_KEY is not configured');
     }
 
     console.log('Zoe Multi-Agent request:', { command, userId, mode, context });
@@ -464,10 +465,10 @@ You are an expert in modern customer experience (CX) with three core pillars:
 Remember: You're not just an AI assistant - you're a multi-agent system from the future, capable of autonomous, intelligent, collaborative problem-solving that represents the next evolution of human-AI interaction AND enterprise-grade customer service automation.`;
 
     // Call Lovable AI Gateway with Gemini 3 Pro for advanced multi-agent capabilities
-    let response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    let response = await sovereignFetch('sovereign://chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Authorization': `Bearer ${SOVEREIGN_AI_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -484,10 +485,10 @@ Remember: You're not just an AI assistant - you're a multi-agent system from the
     // Fallback to Gemini 2.5 Pro if Gemini 3 unavailable
     if (!response.ok && (response.status === 400 || response.status === 404)) {
       console.log('Gemini 3 Pro unavailable, falling back to Gemini 2.5 Pro...');
-      response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      response = await sovereignFetch('sovereign://chat/completions', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+          'Authorization': `Bearer ${SOVEREIGN_AI_KEY}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({

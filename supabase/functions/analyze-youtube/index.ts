@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sovereignFetch, sovereignKey } from "../_shared/sovereign-ai.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -183,10 +184,10 @@ function decodeHtmlEntities(text: string): string {
 
 // Analyze content with Gemini via Lovable AI Gateway
 async function analyzeWithZoe(content: string, contentType: 'transcript' | 'metadata', metadata?: { title: string; author: string }): Promise<string> {
-  const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+  const SOVEREIGN_AI_KEY = sovereignKey();
   
-  if (!LOVABLE_API_KEY) {
-    throw new Error('LOVABLE_API_KEY not configured');
+  if (!SOVEREIGN_AI_KEY) {
+    throw new Error('SOVEREIGN_AI_KEY not configured');
   }
   
   const systemPrompt = contentType === 'transcript' 
@@ -214,10 +215,10 @@ Based on this title and creator, provide your intuition about:
 
 Be honest that you can't "see" the actual content, but share your intuitive read.`;
 
-  const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+  const response = await sovereignFetch('sovereign://chat/completions', {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+      'Authorization': `Bearer ${SOVEREIGN_AI_KEY}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({

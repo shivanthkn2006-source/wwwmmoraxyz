@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { sovereignFetch, sovereignKey } from "../_shared/sovereign-ai.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -28,13 +29,12 @@ serve(async (req) => {
       .join('\n');
 
     // Call Lovable AI Gateway to summarise
-    const response = await fetch(
-      'https://ai.gateway.lovable.dev/v1/chat/completions',
+    const response = await sovereignFetch('sovereign://chat/completions',
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${Deno.env.get('LOVABLE_API_KEY')}`,
+          'Authorization': `Bearer ${sovereignKey()}`,
         },
         body: JSON.stringify({
           model: 'google/gemini-2.5-flash',

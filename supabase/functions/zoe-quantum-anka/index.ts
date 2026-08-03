@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { sovereignFetch, sovereignKey } from "../_shared/sovereign-ai.ts";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ZOE QUANTUM LEVEL: UNIFIED ANKA-VASTU PROTOCOL
@@ -13,7 +14,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+const SOVEREIGN_AI_KEY = sovereignKey();
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
@@ -346,8 +347,8 @@ serve(async (req) => {
 
     console.log('[Quantum-Anka] Request:', { queryType, userId: userId?.substring(0, 8) });
 
-    if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY not configured');
+    if (!SOVEREIGN_AI_KEY) {
+      throw new Error('SOVEREIGN_AI_KEY not configured');
     }
 
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
@@ -512,10 +513,10 @@ Provide a complete Quantum reading with:
 `;
 
     // Call AI Gateway
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const response = await sovereignFetch('sovereign://chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Authorization': `Bearer ${SOVEREIGN_AI_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({

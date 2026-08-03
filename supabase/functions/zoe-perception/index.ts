@@ -5,6 +5,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sovereignFetch, sovereignKey } from "../_shared/sovereign-ai.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -50,10 +51,10 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const lovableKey = Deno.env.get('LOVABLE_API_KEY');
+    const lovableKey = sovereignKey();
     
     if (!lovableKey) {
-      console.error('[Zoe Perception] LOVABLE_API_KEY not configured');
+      console.error('[Zoe Perception] SOVEREIGN_AI_KEY not configured');
       return new Response(JSON.stringify({ error: 'AI service not configured' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -153,7 +154,7 @@ Respond ONLY with valid JSON.`;
     try {
       console.log('[Zoe Perception] Calling Gemini 2.5 Flash for vision analysis...');
       
-      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      const response = await sovereignFetch('sovereign://chat/completions', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${lovableKey}`,

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { sovereignFetch, sovereignKey } from "../_shared/sovereign-ai.ts";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // PROCESS DHF ASSET - File Upload & DHF Enrichment Function
@@ -14,7 +15,7 @@ const corsHeaders = {
 // Pre-initialize environment variables
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+const SOVEREIGN_AI_KEY = sovereignKey();
 
 // Singleton Supabase client
 let supabaseClient: SupabaseClient | null = null;
@@ -132,7 +133,7 @@ async function analyzeContentWithAI(
   dataType: string,
   mimeType: string
 ): Promise<{ summary: string; entities: any[]; vetoKeywords: string[] }> {
-  if (!LOVABLE_API_KEY) {
+  if (!SOVEREIGN_AI_KEY) {
     console.log('No AI key available, using basic analysis');
     return {
       summary: `${dataType} file: ${fileName}`,
@@ -160,10 +161,10 @@ Respond in JSON format:
   "veto_keywords": ["keyword1", "keyword2"]
 }`;
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const response = await sovereignFetch('sovereign://chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Authorization': `Bearer ${SOVEREIGN_AI_KEY}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({

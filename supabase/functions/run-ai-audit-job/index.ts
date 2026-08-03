@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import { sovereignKey } from "../_shared/sovereign-ai.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -100,9 +101,9 @@ Deno.serve(async (req) => {
     if (analyze) {
       console.log('[Worker] Running AI analysis...');
       
-      const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+      const lovableApiKey = sovereignKey();
       if (!lovableApiKey) {
-        throw new Error('LOVABLE_API_KEY not configured');
+        throw new Error('SOVEREIGN_AI_KEY not configured');
       }
 
       const systemPrompt = `You are an expert platform architect analyzing the "Universe of Life" platform. 

@@ -1,3 +1,4 @@
+import { sovereignFetch } from "../_shared/sovereign-ai.ts";
 // ═══════════════════════════════════════════════════════════════════════════════
 // ZOE INFINITY IMAGE GENERATION - Pollinations Primary, Gemini Fallback
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -88,7 +89,7 @@ async function tryPollinations(prompt: string, width = 1024, height = 1024): Pro
 async function tryGemini(prompt: string, apiKey: string): Promise<string | null> {
   try {
     console.log('[zoe-image-gen] Trying Gemini fallback...');
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const response = await sovereignFetch('sovereign://chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,

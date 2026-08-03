@@ -8,6 +8,7 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
+import { sovereignFetch, sovereignKey } from "../_shared/sovereign-ai.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -54,9 +55,9 @@ serve(async (req) => {
     const body = await req.json();
     const { userInput, userInterests, viralMode = false, includeCodeCheck = false } = requestSchema.parse(body);
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY is not configured');
+    const SOVEREIGN_AI_KEY = sovereignKey();
+    if (!SOVEREIGN_AI_KEY) {
+      throw new Error('SOVEREIGN_AI_KEY is not configured');
     }
 
     console.log('[ZUA] Request:', { input: userInput.substring(0, 50), viralMode, includeCodeCheck });
@@ -164,10 +165,10 @@ OUTPUT FORMAT (RESPOND ONLY WITH VALID JSON):
 
     // Call Gemini 3 Pro for UPP + Viral workflow
     console.log('[ZUA] Calling Gemini 3 Pro for UPP + Viral workflow...');
-    const textResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const textResponse = await sovereignFetch('sovereign://chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Authorization': `Bearer ${SOVEREIGN_AI_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -290,10 +291,10 @@ OUTPUT FORMAT (RESPOND ONLY WITH VALID JSON):
     if (!generatedImage) {
       try {
         console.log('[ZUA] Trying Gemini fallback for image...');
-        const imageResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        const imageResponse = await sovereignFetch('sovereign://chat/completions', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+            'Authorization': `Bearer ${SOVEREIGN_AI_KEY}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({

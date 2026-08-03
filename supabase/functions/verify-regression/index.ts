@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sovereignFetch, sovereignKey } from "../_shared/sovereign-ai.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -20,7 +21,7 @@ serve(async (req) => {
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
   const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-  const lovableKey = Deno.env.get('LOVABLE_API_KEY');
+  const lovableKey = sovereignKey();
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   try {
@@ -102,7 +103,7 @@ BASELINE (Golden Record):
 
 Respond ONLY in JSON: {"status": "PASS" or "REGRESSION_DETECTED", "confidence": 0.0-1.0, "reasoning": "..."}`;
 
-            const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+            const response = await sovereignFetch('sovereign://chat/completions', {
               method: 'POST',
               headers: { 'Authorization': `Bearer ${lovableKey}`, 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -208,7 +209,7 @@ Current broken output: ${JSON.stringify(current_output || 'Not provided')}
 
 Generate a concise repair plan: 1) What broke 2) Steps to fix 3) How to verify. Under 200 words.`;
 
-          const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          const response = await sovereignFetch('sovereign://chat/completions', {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${lovableKey}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -299,7 +300,7 @@ Provide:
 Respond in JSON: {"root_cause": "...", "fix_description": "...", "fix_code_hint": "...", "confidence": 0.0-1.0, "verification": "..."}`;
 
         try {
-          const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          const response = await sovereignFetch('sovereign://chat/completions', {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${lovableKey}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({

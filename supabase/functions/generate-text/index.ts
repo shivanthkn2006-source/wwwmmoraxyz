@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
+import { sovereignKey } from "../_shared/sovereign-ai.ts";
 import { 
   callAIGateway, 
   corsHeaders, 
@@ -11,7 +12,7 @@ import {
 } from "../_shared/ai-telemetry.ts";
 
 // Pre-fetch API key at module load for faster cold starts
-const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+const SOVEREIGN_AI_KEY = sovereignKey();
 
 const requestSchema = z.object({
   prompt: z.string()
@@ -33,8 +34,8 @@ serve(async (req) => {
 
   try {
     // Validate API key early
-    if (!LOVABLE_API_KEY) {
-      console.error(`[generate-text:${requestId}] LOVABLE_API_KEY not configured`);
+    if (!SOVEREIGN_AI_KEY) {
+      console.error(`[generate-text:${requestId}] SOVEREIGN_AI_KEY not configured`);
       return createErrorResponse({ code: 'SERVICE_UNAVAILABLE', message: 'AI service not configured' }, 503);
     }
 

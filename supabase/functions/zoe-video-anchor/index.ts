@@ -1,3 +1,4 @@
+import { sovereignFetch, sovereignKey } from "../_shared/sovereign-ai.ts";
 // ═══════════════════════════════════════════════════════════════════════════════
 // ZOE VIDEO ANCHOR — Anti-Hallucination Layer 4
 // Locks video generation to a verified first-frame reference image
@@ -21,7 +22,7 @@ interface AnchorBody {
 
 async function generateAnchorFrame(prompt: string, apiKey: string): Promise<string | null> {
   try {
-    const resp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const resp = await sovereignFetch('sovereign://chat/completions', {
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -46,7 +47,7 @@ async function generateAnchorFrame(prompt: string, apiKey: string): Promise<stri
 
 async function verifyFrame(imageUrl: string, prompt: string, apiKey: string): Promise<number> {
   try {
-    const resp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const resp = await sovereignFetch('sovereign://chat/completions', {
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -82,9 +83,9 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      return new Response(JSON.stringify({ error: 'LOVABLE_API_KEY missing' }), {
+    const SOVEREIGN_AI_KEY = sovereignKey();
+    if (!SOVEREIGN_AI_KEY) {
+      return new Response(JSON.stringify({ error: 'SOVEREIGN_AI_KEY missing' }), {
         status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -92,13 +93,13 @@ Deno.serve(async (req: Request) => {
     // 1. Anchor frame
     let anchorFrame = referenceImageUrl ?? null;
     if (!anchorFrame) {
-      anchorFrame = await generateAnchorFrame(prompt, LOVABLE_API_KEY);
+      anchorFrame = await generateAnchorFrame(prompt, SOVEREIGN_AI_KEY);
     }
 
     // 2. Verify frame
     let frameScore = 0.5;
     if (anchorFrame) {
-      frameScore = await verifyFrame(anchorFrame, prompt, LOVABLE_API_KEY);
+      frameScore = await verifyFrame(anchorFrame, prompt, SOVEREIGN_AI_KEY);
     }
 
     // 3. Compose motion-only prompt

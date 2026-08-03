@@ -4,6 +4,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+import { sovereignFetch, sovereignKey } from "../_shared/sovereign-ai.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -33,10 +34,10 @@ serve(async (req: Request) => {
   console.log('[Zoe Vision] ═══ VISION ANALYSIS REQUEST ═══');
 
   try {
-    const lovableKey = Deno.env.get('LOVABLE_API_KEY');
+    const lovableKey = sovereignKey();
     
     if (!lovableKey) {
-      console.error('[Zoe Vision] LOVABLE_API_KEY not configured');
+      console.error('[Zoe Vision] SOVEREIGN_AI_KEY not configured');
       return new Response(JSON.stringify({ 
         error: 'Vision service not configured',
         description: 'I can see you shared an image, but my vision is temporarily unavailable.',
@@ -94,7 +95,7 @@ also provide a JSON object with the extracted data.`;
     // Call Gemini Vision
     // ═══════════════════════════════════════════════════════════════════════════
     
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const response = await sovereignFetch('sovereign://chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${lovableKey}`,

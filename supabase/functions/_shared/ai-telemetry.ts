@@ -6,6 +6,7 @@
  */
 
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { sovereignFetch, sovereignKey } from "./sovereign-ai.ts";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TYPES & INTERFACES
@@ -187,11 +188,11 @@ export async function callAIGateway(
   const model = options.model || 'google/gemini-2.5-flash';
   const latencyTarget = getLatencyTarget(model);
   
-  const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-  if (!LOVABLE_API_KEY) {
+  const SOVEREIGN_AI_KEY = sovereignKey();
+  if (!SOVEREIGN_AI_KEY) {
     return {
       success: false,
-      error: { code: 'SERVICE_UNAVAILABLE', message: 'LOVABLE_API_KEY not configured' },
+      error: { code: 'SERVICE_UNAVAILABLE', message: 'SOVEREIGN_AI_KEY not configured' },
       telemetry: { latencyMs: 0, model, estimatedCost: 0, slaMet: false },
     };
   }
@@ -209,10 +210,10 @@ export async function callAIGateway(
     if (options.maxTokens !== undefined) payload.max_tokens = options.maxTokens;
     if (options.modalities) payload.modalities = options.modalities;
     
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const response = await sovereignFetch('sovereign://chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Authorization': `Bearer ${SOVEREIGN_AI_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(payload),

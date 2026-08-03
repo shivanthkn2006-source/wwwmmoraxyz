@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sovereignKey, sovereignFetch } from "../_shared/sovereign-ai.ts";
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════════
@@ -22,8 +23,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const LOVABLE_API_KEY = () => Deno.env.get("LOVABLE_API_KEY");
-const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const SOVEREIGN_AI_KEY = () => sovereignKey();
+const AI_GATEWAY = "sovereign://chat/completions";
 
 // Email classification categories
 type EmailCategory = 'urgent' | 'finance' | 'social' | 'work' | 'newsletter' | 'meeting' | 'spam' | 'personal';
@@ -116,9 +117,9 @@ async function analyzeEmail(payload: {
   receivedAt: string;
   isVerifiedSender?: boolean;
 }): Promise<Response> {
-  const apiKey = LOVABLE_API_KEY();
+  const apiKey = SOVEREIGN_AI_KEY();
   if (!apiKey) {
-    throw new Error("LOVABLE_API_KEY not configured");
+    throw new Error("SOVEREIGN_AI_KEY not configured");
   }
 
   const systemPrompt = `You are the Mail Sentinel - Zoe's autonomous inbox guardian.
@@ -175,7 +176,7 @@ SUBJECT: ${payload.subject}
 BODY:
 ${payload.body.substring(0, 2000)}`;
 
-  const response = await fetch(AI_GATEWAY, {
+  const response = await sovereignFetch(AI_GATEWAY, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -253,9 +254,9 @@ async function generateBriefing(payload: {
   }>;
   timeRange: string;
 }): Promise<Response> {
-  const apiKey = LOVABLE_API_KEY();
+  const apiKey = SOVEREIGN_AI_KEY();
   if (!apiKey) {
-    throw new Error("LOVABLE_API_KEY not configured");
+    throw new Error("SOVEREIGN_AI_KEY not configured");
   }
 
   const { emails, timeRange } = payload;
@@ -294,7 +295,7 @@ Return JSON:
   "highlights": ["key point 1", "key point 2", "key point 3"]
 }`;
 
-  const response = await fetch(AI_GATEWAY, {
+  const response = await sovereignFetch(AI_GATEWAY, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -365,9 +366,9 @@ async function generateAutoResponse(payload: {
     preferences?: string;
   };
 }): Promise<Response> {
-  const apiKey = LOVABLE_API_KEY();
+  const apiKey = SOVEREIGN_AI_KEY();
   if (!apiKey) {
-    throw new Error("LOVABLE_API_KEY not configured");
+    throw new Error("SOVEREIGN_AI_KEY not configured");
   }
 
   const { originalEmail, responseType, userContext } = payload;
@@ -406,7 +407,7 @@ Body: ${originalEmail.body.substring(0, 1000)}
 
 ${userContext?.schedule ? `USER SCHEDULE:\n${JSON.stringify(userContext.schedule)}` : ''}`;
 
-  const response = await fetch(AI_GATEWAY, {
+  const response = await sovereignFetch(AI_GATEWAY, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -459,9 +460,9 @@ async function batchProcessEmails(payload: {
     bodyPreview: string;
   }>;
 }): Promise<Response> {
-  const apiKey = LOVABLE_API_KEY();
+  const apiKey = SOVEREIGN_AI_KEY();
   if (!apiKey) {
-    throw new Error("LOVABLE_API_KEY not configured");
+    throw new Error("SOVEREIGN_AI_KEY not configured");
   }
 
   const { emails } = payload;
@@ -484,7 +485,7 @@ Be fast and accurate. Focus on obvious classifications.`;
     `ID: ${e.id}\nFROM: ${e.sender} <${e.senderEmail}>\nSUBJECT: ${e.subject}\nPREVIEW: ${e.bodyPreview?.substring(0, 200) || 'No preview'}`
   ).join('\n\n---\n\n');
 
-  const response = await fetch(AI_GATEWAY, {
+  const response = await sovereignFetch(AI_GATEWAY, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,

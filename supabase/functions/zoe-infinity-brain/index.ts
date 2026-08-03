@@ -7,6 +7,7 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { compressMemories } from '../_shared/memory-compressor.ts';
+import { sovereignFetch } from "../_shared/sovereign-ai.ts";
 import {
   buildRelationshipSystemPrompt,
   parseRelationshipStyle,
@@ -518,7 +519,7 @@ Be factual. Use real, plausible URLs from authoritative sources. Return ONLY the
   
   if (!responseData && lovableKey) {
     try {
-      const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      const resp = await sovereignFetch("sovereign://chat/completions", {
         method: "POST",
         headers: { Authorization: `Bearer ${lovableKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({

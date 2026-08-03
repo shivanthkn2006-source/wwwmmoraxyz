@@ -1,3 +1,4 @@
+import { sovereignFetch, sovereignKey } from "../_shared/sovereign-ai.ts";
 // ═══════════════════════════════════════════════════════════════════════════════
 // ZOE IMAGE VERIFY — Anti-Hallucination Layer 3
 // Reverse-checks generated images against the original prompt using Gemini Vision.
@@ -31,10 +32,10 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
+    const SOVEREIGN_AI_KEY = sovereignKey();
+    if (!SOVEREIGN_AI_KEY) {
       return new Response(
-        JSON.stringify({ error: 'LOVABLE_API_KEY missing' }),
+        JSON.stringify({ error: 'SOVEREIGN_AI_KEY missing' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -57,10 +58,10 @@ Score guide:
 - 0.4-0.6 = partial match, key elements missing
 - 0.0-0.3 = wrong subject / completely off`;
 
-    const resp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const resp = await sovereignFetch('sovereign://chat/completions', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${SOVEREIGN_AI_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
