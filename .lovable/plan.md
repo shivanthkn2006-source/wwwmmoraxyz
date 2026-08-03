@@ -1,65 +1,58 @@
-## Teleprompter-Style Word Highlighting for Zoe Infinity
+# What still costs Lovable credits, and how to switch it off
 
-Add karaoke/teleprompter-style word highlighting synced to Zoe's spoken response in the Zoe Infinity chat panel — words highlight as Zoe reads them, and the container auto-scrolls to keep the active word visible.
+## Findings (verified against the codebase and usage logs)
 
-### Scope
+Three separate things bill credits on this project:
 
-- **Where:** Zoe Infinity chat surface only — `src/components/ZoeOrbConversationPanel.tsx` (and `ZoeChat.tsx` if it shares the same render path). Not applied to `TypewriterText` intro or other Zoe surfaces.
-- **What syncs:** The currently-speaking assistant message bubble.
-- **When active:** Only while Zoe is actually speaking that specific message. Idle messages render as normal text.
+1. **Build/plan messages** — every prompt you send me. Unavoidable.
+2. **Lovable Cloud** (database, auth, storage, edge functions) — this is the backend the whole app runs on. It cannot be disabled without rebuilding the app on an external backend, so it stays.
+3. **Lovable AI Gateway** — this is the one you thought was gone. It is **not** gone. The gateway log shows **142 requests in the last 7 days**, most recently 2026-08-01 09:14 UTC (e.g. log_id `019fbc9a-5b12-742f-a509-2c0e3bd6ed5e`, `google/gemini-2.5-flash`, chat_completions). Cost per call is small (0.001–0.01 credits) but it is continuous.
 
-### How word timing is derived
+### Where the Lovable AI calls still live
 
-Zoe uses `speakAsZoe` → `SpeechSynthesisUtterance` (Web Speech API), which natively emits `onboundary` events with `charIndex` + `charLength` per word. That is the source of truth — no guessing, no estimating.
+**60 edge functions** still call `ai.gateway.lovable.dev` / read `LOVABLE_API_KEY`. The earlier cleanup only covered Zoe's chat/brain path (`zoe-agent`, `zoe-infinity-chat`, `zoe-infinity-brain`, `zoe-core-executor`) — everything else was left untouched.
 
-Fallback path (when boundary events are not fired — some Chromium builds on Android, or non-native audio playback via the audio bus): compute an even-timed schedule from `audio.duration` (or an estimate: `words * ~350ms`) and advance via `requestAnimationFrame` synced to `audio.currentTime` when an HTMLAudioElement is available on `zoeTTSAudioBus`.
+Grouped by what they do:
 
-### Implementation
+- **Shared helpers (highest priority — many functions route through these):** `_shared/ai-telemetry.ts`, `_shared/cascading-provider.ts`
+- **Zoe subsystems:** `zoe-infinity-vision`, `zoe-infinity-image-gen`, `zoe-infinity-deep-research`, `zoe-omega-vision`, `zoe-perception`, `zoe-multiagent`, `zoe-pentarchy-core`, `zoe-god-mode`, `zoe-dreamer-agent`, `zoe-self-awareness-core`, `zoe-truth-scribe`, `zoe-silent-scribe`, `zoe-session-summariser`, `zoe-walk-talk`, `zoe-neet-tutor`, `zoe-service-ai`, `zoe-profile-analyzer`, `zoe-quantum-anka`, `zoe-document-xray`, `zoe-artifact-generator`, `zoe-video-anchor`, `zoe-image-verify`, `zoe-universal-architect`, `zoe-external-sync`, `zoe-realtime-voice`, `zoe-health-check`
+- **Media / vision:** `generate-text`, `generate-image`, `generate-video`, `apply-ai-filter`, `analyze-face-emotion`, `ai-video-transform`, `process-live-video`, `generate-regional-avatar`, `selfie-city-vision`, `selfie-city-search`, `selfie-value-calculator`, `transcribe-audio`
+- **Platform/ops jobs (these can run on schedules, so they bill quietly):** `platform-diagnostics`, `provider-health`, `run-ai-audit-job`, `pce-agent-nightly`, `verify-regression`, `visual-regression-check`, `raa-code-debugger`, `raa-conversion-audit`, `evolution-sandbox`, `ecn-analysis-processor`, `process-zoe-thought`, `process-dhf-asset`, `dhf-visualization`, `dream-foundry`, `moderate-content`, `mail-sentinel`, `lisa-assistant`, `analyze-legal-doc`, `analyze-youtube`, `parent-zoe-executor`, `quantum-pentarchy-swarm`, `realtime-voice`
+- **Frontend references:** `src/components/zoe-infinity/ProviderHealthPanel.tsx`, `src/hooks/useZoeDiagnostics.ts`, `index.html`
 
-1. **New hook `src/hooks/useSpokenWordSync.ts`**
-   - Input: the message id + text currently being spoken.
-   - Subscribes to a new lightweight event bus emitting `{ messageId, charIndex, charLength }` frames.
-   - Returns `{ activeWordIndex, words }` where `words` is the pre-tokenized array (preserving whitespace/punctuation offsets so indices map back to the original text).
+Your own keys are already in place and can cover all of it: `GROQ_API_KEY`, `GOOGLE_AI_STUDIO_KEY`, `OPENROUTER_API_KEY`, `POLLINATIONS_API_KEY`, `DEEPGRAM_API_KEY`, `ASSEMBLYAI_API_KEY`, `OLLAMA_ENDPOINT`.
 
-2. **Wire boundary events in `src/utils/zoeVoice.ts`**
-   - Extend `speakAsZoe` signature to optionally accept `{ messageId }`.
-   - Attach `utterance.onboundary` and publish `{ messageId, charIndex, charLength, chunkOffset }` to the new bus. Track cumulative `chunkOffset` across the chunked utterance queue so char indices map to the full message text, not the current chunk.
-   - Publish `end` on `utterance.onend` for the final chunk.
+## Proposed work
 
-3. **New bus `src/utils/zoeSpokenWordBus.ts`** — minimal publish/subscribe (mirrors `zoeTTSAudioBus` style already used in the project).
+Because this is 60 functions, I'd do it in ordered passes so each prompt stays cheap and verifiable.
 
-4. **New component `src/components/zoe-infinity/SpokenTranscript.tsx`**
-   - Renders the message text as a sequence of `<span>` tokens.
-   - The active token gets a highlight class (soft yellow background like the reference, but tuned to Zoe's dark aesthetic — semantic tokens only, no hard-coded colors).
-   - Recently-spoken tokens dim slightly; unspoken tokens are muted; active token pops.
-   - Uses `IntersectionObserver` (or `scrollIntoView({ block: 'center', behavior: 'smooth' })` throttled) inside the message's scroll container to keep the active word centered.
-   - Respects `prefers-reduced-motion` — disables smooth scroll and pulse animation.
+**Pass 1 — kill the shared path + add a hard guard**
+- Rewrite `_shared/cascading-provider.ts` and `_shared/ai-telemetry.ts` so the provider chain is Groq → Google AI Studio → OpenRouter → Ollama, with the Lovable branch removed entirely.
+- Add a shared `assertNoLovableGateway()` guard so any future call to `ai.gateway.lovable.dev` throws instead of silently billing.
+- Every function that already routes through these helpers stops billing immediately.
 
-5. **Message rendering integration**
-   - In `ZoeOrbConversationPanel.tsx` (and `ZoeChat.tsx` if applicable), swap the plain-text render of assistant messages for `<SpokenTranscript messageId={m.id} text={m.content} />`.
-   - Pass `messageId` into every `speakAsZoe(...)` call site in those components so the bus knows which message is active.
+**Pass 2 — chat/text functions**
+Direct-rewrite the remaining text/chat functions to Groq (primary) with Google AI Studio fallback. Model mapping: `google/gemini-2.5-flash` → `gemini-2.5-flash` on AI Studio; `gpt-*`/reasoning calls → `llama-3.3-70b-versatile` on Groq.
 
-6. **Design tokens (in `index.css`)**
-   - Add `--zoe-transcript-active-bg`, `--zoe-transcript-active-fg`, `--zoe-transcript-spoken`, `--zoe-transcript-unspoken` mapped to existing HSL tokens (no hard-coded hex). Highlight uses a subtle glow, not the loud yellow from the reference, to match Zoe's design system.
+**Pass 3 — vision, image, video, audio**
+- Vision → Google AI Studio `gemini-2.5-flash` / `gemini-2.5-pro` direct.
+- Image generation/edit → Pollinations, with Google AI Studio image model as fallback.
+- Transcription → Deepgram (primary), AssemblyAI (fallback).
 
-### Technical details
+**Pass 4 — scheduled/ops jobs**
+These are the quiet credit burners. For each: repoint to your keys, and where the job is purely diagnostic (`run-ai-audit-job`, `pce-agent-nightly`, `visual-regression-check`, `verify-regression`, `evolution-sandbox`), gate it behind an explicit opt-in flag so it never runs unattended.
 
-- **Tokenization:** split by whitespace but retain a `[start, end)` char range per token so `charIndex` from the boundary event lands in the right token via a binary search.
-- **Chunk offset math:** `zoeVoice.ts` already splits long text into multiple utterances. Before enqueuing chunk N, record `chunkStart = sum(lengths of chunks 0..N-1) + separatorLength`. The bus publishes `absoluteCharIndex = chunkStart + event.charIndex`.
-- **Fallback estimator:** if no boundary fires within 400ms of `onstart`, switch to time-based advance using `words.length` and utterance start timestamp; recover to boundary-driven mode if a real event later arrives.
-- **Stop/cancel:** on `stopZoeSpeech`, bus publishes `{ messageId, ended: true }` so highlight clears.
-- **Multi-message safety:** only the message whose id matches the last-published event highlights; all others render flat.
+**Pass 5 — frontend + verification**
+- Clean the three frontend references so health panels report your providers, not Lovable.
+- Repo-wide grep to confirm zero `ai.gateway.lovable.dev` / `LOVABLE_API_KEY` hits.
+- Re-read the AI Gateway log after 24h to confirm request count drops to zero.
 
-### Acceptance criteria
+## Technical notes
 
-- Speaking a long Zoe reply on desktop Chrome/Safari: each word highlights in sync with speech; container auto-scrolls to keep the active word centered.
-- On Android Chrome (where `onboundary` is unreliable): the estimator drives smooth, roughly-in-sync highlighting instead of nothing.
-- Stopping Zoe mid-sentence clears the highlight immediately.
-- Non-speaking messages render as normal text with no layout shift when a message starts/stops speaking.
-- Reduced-motion users get instant scroll and no pulse.
-- No changes to Zoe brain/backend; no new credits or API calls.
+- `LOVABLE_API_KEY` is a managed secret and can't be deleted from the secrets panel; removing all code references is what stops the billing. The guard in Pass 1 makes that enforceable.
+- Lovable Cloud usage (Postgres, storage, function invocations) will still show on the credit ledger after this work. That is the app's backend, not AI.
+- No database schema changes are needed for any of this.
 
-### Risks
+## What I need from you
 
-- Some browsers fire `onboundary` per sentence, not per word — the fallback estimator covers this but sync will be approximate.
-- If the TTS path ever shifts off `SpeechSynthesisUtterance` (e.g., server-side audio), only the estimator applies — sync remains visually acceptable but not exact.
+Confirm the pass order, or tell me to compress it. If you want the absolute minimum spend, Pass 1 + Pass 4 alone removes the large majority of recurring, unattended calls.
