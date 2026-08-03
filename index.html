@@ -560,10 +560,10 @@
             }
           },
           {
-            name: 'Lovable AI Gateway (reachability)',
+            name: 'Sovereign AI providers (reachability)',
             timeoutMs: 8000,
             run: function () {
-              return fetch('https://ai.gateway.lovable.dev/v1/models', { method: 'GET', cache: 'no-store' })
+              return fetch('https://api.groq.com/openai/v1/models', { method: 'GET', cache: 'no-store' })
                 .then(function (r) { if (!(r.status === 200 || r.status === 401 || r.status === 403)) throw new Error('HTTP ' + r.status); return { ok: true, detail: 'reachable (' + r.status + ')' }; });
             }
           },

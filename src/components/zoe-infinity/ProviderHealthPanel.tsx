@@ -232,7 +232,7 @@ export default function ProviderHealthPanel() {
           </button>
         </div>
         <ul className="mt-2 grid grid-cols-1 gap-1 sm:grid-cols-2">
-          {(['GROQ_API_KEY','GOOGLE_AI_STUDIO_KEY','OPENROUTER_API_KEY','LOVABLE_API_KEY'] as const).map(k => {
+          {(['GROQ_API_KEY','GOOGLE_AI_STUDIO_KEY','OPENROUTER_API_KEY','POLLINATIONS_API_KEY'] as const).map(k => {
             const present = !!health?.keys?.[k];
             return (
               <li key={k} className="flex items-center gap-2 rounded-md bg-black/30 px-2 py-1.5">

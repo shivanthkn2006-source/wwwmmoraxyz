@@ -688,7 +688,7 @@ export const useZoeDiagnostics = () => {
     }
 
     try {
-      const response = await fetch('https://ai.gateway.lovable.dev/health', { 
+      const response = await fetch('https://api.groq.com/openai/v1/models', { 
         method: 'HEAD',
         mode: 'no-cors'
       });
