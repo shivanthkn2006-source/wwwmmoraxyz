@@ -1,3 +1,4 @@
+import { sovereignFetch, sovereignKey } from "./sovereign-ai.ts";
 /**
  * ═══════════════════════════════════════════════════════════════════════════════
  * SOVEREIGN CASCADE MODULE — Smart Auto-Routing with structured fallback reasons
@@ -221,10 +222,10 @@ async function callOpenRouter(messages: Message[], opts: CascadeOptions): Promis
 }
 
 async function callLovable(messages: Message[], opts: CascadeOptions, model = 'google/gemini-2.5-flash'): Promise<ProviderOutcome> {
-  const apiKey = Deno.env.get('LOVABLE_API_KEY');
-  if (!apiKey) return { content: null, status: null, reasonCode: 'missing_key', reasonText: 'LOVABLE_API_KEY not set' };
+  const apiKey = sovereignKey();
+  if (!apiKey) return { content: null, status: null, reasonCode: 'missing_key', reasonText: 'SOVEREIGN_AI_KEY not set' };
   try {
-    const resp = await withTimeout(fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const resp = await withTimeout(sovereignFetch('sovereign://chat/completions', {
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -353,7 +354,7 @@ export function hardenZoeIdentity(response: string): string {
     [/\bOpenRouter\b/gi, "Sovereign Network"],
     [/\bGoogle AI Studio\b/gi, "Sovereign Studio"],
     [/\bAPI\s*key\b/gi, "sovereign key"],
-    [/\bLOVABLE_API_KEY\b/gi, "SOVEREIGN_KEY"],
+    [/\bSOVEREIGN_AI_KEY\b/gi, "SOVEREIGN_KEY"],
     [/\bMeta AI\b/g, "Zoe's Sovereign Core"],
     [/\bLLaMA\b/g, "Sovereign Core"],
   ];

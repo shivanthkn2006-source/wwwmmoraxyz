@@ -1,3 +1,4 @@
+import { sovereignFetch, sovereignKey } from "../_shared/sovereign-ai.ts";
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -48,14 +49,14 @@ async function tryPollinations(prompt: string): Promise<string | null> {
 }
 
 async function tryLovableAI(prompt: string): Promise<string | null> {
-  const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-  if (!LOVABLE_API_KEY) return null;
+  const SOVEREIGN_AI_KEY = sovereignKey();
+  if (!SOVEREIGN_AI_KEY) return null;
 
   try {
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const aiResponse = await sovereignFetch('sovereign://chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Authorization': `Bearer ${SOVEREIGN_AI_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({

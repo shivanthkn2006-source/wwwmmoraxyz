@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { sovereignFetch, sovereignKey } from "../_shared/sovereign-ai.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -17,9 +18,9 @@ serve(async (req) => {
       throw new Error('Image data is required');
     }
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY is not configured');
+    const SOVEREIGN_AI_KEY = sovereignKey();
+    if (!SOVEREIGN_AI_KEY) {
+      throw new Error('SOVEREIGN_AI_KEY is not configured');
     }
 
     console.log('Analyzing image with Gemini 2.5 Pro Vision:', analysisType);
@@ -54,10 +55,10 @@ Return ONLY valid JSON with structure: { "objects": ["string"], "scene": "string
 Return ONLY valid JSON with structure: { "product": "string", "brand": "string", "condition": "string", "issues": ["string"], "recommendations": ["string"] }`;
     }
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const response = await sovereignFetch('sovereign://chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Authorization': `Bearer ${SOVEREIGN_AI_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({

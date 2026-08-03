@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sovereignFetch, sovereignKey } from "../_shared/sovereign-ai.ts";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // PHASE 3: QUANTUM PENTARCHY SWARM - "FORCING QUANTUM" PATCH
@@ -218,10 +219,10 @@ async function callStream(
   context: Record<string, unknown>
 ): Promise<StreamResponse> {
   const startTime = performance.now();
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  const SOVEREIGN_AI_KEY = sovereignKey();
   
-  if (!LOVABLE_API_KEY) {
-    throw new Error("LOVABLE_API_KEY not configured");
+  if (!SOVEREIGN_AI_KEY) {
+    throw new Error("SOVEREIGN_AI_KEY not configured");
   }
 
   let userMessage = `QUERY TO ANALYZE:\n"${query}"`;
@@ -234,10 +235,10 @@ async function callStream(
   }
 
   try {
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await sovereignFetch("sovereign://chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${SOVEREIGN_AI_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -319,10 +320,10 @@ async function collapseQuantumStreams(
   query: string,
   streams: StreamResponse[]
 ): Promise<QuantumCollapseResult> {
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  const SOVEREIGN_AI_KEY = sovereignKey();
   
-  if (!LOVABLE_API_KEY) {
-    throw new Error("LOVABLE_API_KEY not configured");
+  if (!SOVEREIGN_AI_KEY) {
+    throw new Error("SOVEREIGN_AI_KEY not configured");
   }
 
   // Build the streams context for the observer
@@ -344,10 +345,10 @@ ${streamsContext}
 Now collapse these 5 quantum streams into a single Super-Positioned truth.`;
 
   try {
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await sovereignFetch("sovereign://chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${SOVEREIGN_AI_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({

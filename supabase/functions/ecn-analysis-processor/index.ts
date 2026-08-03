@@ -6,6 +6,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sovereignFetch, sovereignKey } from "../_shared/sovereign-ai.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -98,7 +99,7 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+    const lovableApiKey = sovereignKey();
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Get user from JWT
@@ -214,7 +215,7 @@ Respond in JSON format only.`;
       
       while (retries > 0 && !aiSuccess) {
         try {
-          const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          const aiResponse = await sovereignFetch('sovereign://chat/completions', {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${lovableApiKey}`,

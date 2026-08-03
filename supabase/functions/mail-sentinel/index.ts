@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sovereignKey } from "../_shared/sovereign-ai.ts";
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════════
@@ -22,8 +23,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const LOVABLE_API_KEY = () => Deno.env.get("LOVABLE_API_KEY");
-const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const SOVEREIGN_AI_KEY = () => sovereignKey();
+const AI_GATEWAY = "sovereign://chat/completions";
 
 // Email classification categories
 type EmailCategory = 'urgent' | 'finance' | 'social' | 'work' | 'newsletter' | 'meeting' | 'spam' | 'personal';
@@ -116,9 +117,9 @@ async function analyzeEmail(payload: {
   receivedAt: string;
   isVerifiedSender?: boolean;
 }): Promise<Response> {
-  const apiKey = LOVABLE_API_KEY();
+  const apiKey = SOVEREIGN_AI_KEY();
   if (!apiKey) {
-    throw new Error("LOVABLE_API_KEY not configured");
+    throw new Error("SOVEREIGN_AI_KEY not configured");
   }
 
   const systemPrompt = `You are the Mail Sentinel - Zoe's autonomous inbox guardian.
@@ -253,9 +254,9 @@ async function generateBriefing(payload: {
   }>;
   timeRange: string;
 }): Promise<Response> {
-  const apiKey = LOVABLE_API_KEY();
+  const apiKey = SOVEREIGN_AI_KEY();
   if (!apiKey) {
-    throw new Error("LOVABLE_API_KEY not configured");
+    throw new Error("SOVEREIGN_AI_KEY not configured");
   }
 
   const { emails, timeRange } = payload;
@@ -365,9 +366,9 @@ async function generateAutoResponse(payload: {
     preferences?: string;
   };
 }): Promise<Response> {
-  const apiKey = LOVABLE_API_KEY();
+  const apiKey = SOVEREIGN_AI_KEY();
   if (!apiKey) {
-    throw new Error("LOVABLE_API_KEY not configured");
+    throw new Error("SOVEREIGN_AI_KEY not configured");
   }
 
   const { originalEmail, responseType, userContext } = payload;
@@ -459,9 +460,9 @@ async function batchProcessEmails(payload: {
     bodyPreview: string;
   }>;
 }): Promise<Response> {
-  const apiKey = LOVABLE_API_KEY();
+  const apiKey = SOVEREIGN_AI_KEY();
   if (!apiKey) {
-    throw new Error("LOVABLE_API_KEY not configured");
+    throw new Error("SOVEREIGN_AI_KEY not configured");
   }
 
   const { emails } = payload;

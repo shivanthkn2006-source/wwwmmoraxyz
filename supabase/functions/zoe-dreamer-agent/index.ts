@@ -13,6 +13,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sovereignFetch, sovereignKey } from "../_shared/sovereign-ai.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -319,7 +320,7 @@ For each scenario, provide:
 
 Return as JSON array with fields: id, name, description, outcome, probability, riskLevel, recommendation`;
 
-      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      const response = await sovereignFetch('sovereign://chat/completions', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiKey}`,
@@ -477,7 +478,7 @@ Generate:
 
 Format as JSON: {"insight": "...", "actionItem": "..."}`;
 
-      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      const response = await sovereignFetch('sovereign://chat/completions', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiKey}`,
@@ -652,7 +653,7 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+    const lovableApiKey = sovereignKey();
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const request: DreamerRequest = await req.json();

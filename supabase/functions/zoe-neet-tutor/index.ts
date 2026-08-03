@@ -1,3 +1,4 @@
+import { sovereignFetch, sovereignKey } from "../_shared/sovereign-ai.ts";
 // ═══════════════════════════════════════════════════════════════════════════════
 // ZOE NEET TUTOR — Trial Mode
 // Lightweight NEET (India medical entrance) tutor for Zoe Infinity chat.
@@ -49,8 +50,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const SOVEREIGN_AI_KEY = sovereignKey();
+    if (!SOVEREIGN_AI_KEY) throw new Error("SOVEREIGN_AI_KEY not configured");
 
     // Trim history to last 12 turns to keep tokens lean
     const trimmedHistory = Array.isArray(history) ? history.slice(-12) : [];
@@ -64,10 +65,10 @@ Deno.serve(async (req) => {
       { role: "user", content: message },
     ];
 
-    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const aiRes = await sovereignFetch("sovereign://chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${SOVEREIGN_AI_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({

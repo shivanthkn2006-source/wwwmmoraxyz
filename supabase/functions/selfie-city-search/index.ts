@@ -1,12 +1,13 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { sovereignFetch, sovereignKey } from "../_shared/sovereign-ai.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+const SOVEREIGN_AI_KEY = sovereignKey();
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
@@ -212,10 +213,10 @@ Respond with a JSON object containing:
   "zoe_insight": "A brief, helpful insight about the search"
 }`;
 
-  const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+  const response = await sovereignFetch('sovereign://chat/completions', {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+      'Authorization': `Bearer ${SOVEREIGN_AI_KEY}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
@@ -419,7 +420,7 @@ serve(async (req) => {
     const dbDeals = await getLocationBasedDeals(query, location);
 
     // Check if Zoe/AI should be used
-    if (!useZoe || !LOVABLE_API_KEY) {
+    if (!useZoe || !SOVEREIGN_AI_KEY) {
       console.log('[selfie-city-search] Using fallback search (Zoe unavailable)');
       const fallbackResults = fallbackSearch(query, location);
       // Merge with DB deals

@@ -4,6 +4,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { sovereignKey } from "../_shared/sovereign-ai.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -33,7 +34,7 @@ serve(async (req) => {
 
   try {
     // Check if Lovable AI API key is available
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+    const lovableApiKey = sovereignKey();
     const hasAIService = !!lovableApiKey;
 
     // Check Supabase connectivity

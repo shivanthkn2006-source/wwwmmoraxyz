@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+import { sovereignFetch, sovereignKey } from "../_shared/sovereign-ai.ts";
 import { 
   callAIGateway, 
   corsHeaders, 
@@ -118,10 +119,10 @@ async function callAgent(
   additionalContext?: string
 ): Promise<AgentResponse> {
   const startTime = Date.now();
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  const SOVEREIGN_AI_KEY = sovereignKey();
   
-  if (!LOVABLE_API_KEY) {
-    throw new Error("LOVABLE_API_KEY not configured");
+  if (!SOVEREIGN_AI_KEY) {
+    throw new Error("SOVEREIGN_AI_KEY not configured");
   }
 
   const systemPrompt = AGENT_PROMPTS[agentType];
@@ -138,10 +139,10 @@ async function callAgent(
   }
 
   try {
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await sovereignFetch("sovereign://chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${SOVEREIGN_AI_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({

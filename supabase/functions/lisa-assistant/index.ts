@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { sovereignFetch, sovereignKey } from "../_shared/sovereign-ai.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -39,7 +40,7 @@ async function generateViaPollinations(prompt: string): Promise<string | null> {
  */
 async function generateViaLovableAI(prompt: string, apiKey: string): Promise<string | null> {
   try {
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const aiResponse = await sovereignFetch('sovereign://chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
@@ -92,8 +93,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
+    const SOVEREIGN_AI_KEY = sovereignKey();
+    if (!SOVEREIGN_AI_KEY) {
       return new Response(JSON.stringify({ error: 'AI gateway not configured' }), {
         status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -102,10 +103,10 @@ Deno.serve(async (req) => {
     const { type, prompt, provider } = await req.json();
 
     if (type === 'generate_text') {
-      const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      const aiResponse = await sovereignFetch('sovereign://chat/completions', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+          'Authorization': `Bearer ${SOVEREIGN_AI_KEY}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -139,14 +140,14 @@ Deno.serve(async (req) => {
 
       // Try Pollinations first (free), then Lovable AI as fallback
       if (provider === 'lovable-ai') {
-        imageUrl = await generateViaLovableAI(prompt, LOVABLE_API_KEY);
+        imageUrl = await generateViaLovableAI(prompt, SOVEREIGN_AI_KEY);
         usedProvider = 'lovable-ai';
       } else {
         imageUrl = await generateViaPollinations(prompt);
         usedProvider = 'pollinations';
         
         if (!imageUrl) {
-          imageUrl = await generateViaLovableAI(prompt, LOVABLE_API_KEY);
+          imageUrl = await generateViaLovableAI(prompt, SOVEREIGN_AI_KEY);
           usedProvider = 'lovable-ai-fallback';
         }
       }

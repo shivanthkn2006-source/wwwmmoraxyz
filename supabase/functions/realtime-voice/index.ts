@@ -5,6 +5,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sovereignFetch, sovereignKey } from "../_shared/sovereign-ai.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -30,10 +31,10 @@ serve(async (req) => {
   console.log('[RealtimeVoice] ═══ REQUEST ═══');
 
   try {
-    const lovableKey = Deno.env.get('LOVABLE_API_KEY');
+    const lovableKey = sovereignKey();
     
     if (!lovableKey) {
-      console.error('[RealtimeVoice] LOVABLE_API_KEY not configured');
+      console.error('[RealtimeVoice] SOVEREIGN_AI_KEY not configured');
       return new Response(
         JSON.stringify({ 
           error: 'AI service not configured',
@@ -74,7 +75,7 @@ serve(async (req) => {
             
             if (userText) {
               // Get AI response
-              const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+              const response = await sovereignFetch('sovereign://chat/completions', {
                 method: 'POST',
                 headers: {
                   'Authorization': `Bearer ${lovableKey}`,
@@ -166,7 +167,7 @@ ${context?.user_context || ''}`
       { role: 'user', content: text }
     ];
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const response = await sovereignFetch('sovereign://chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${lovableKey}`,
