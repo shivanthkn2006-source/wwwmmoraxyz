@@ -25,7 +25,7 @@ const TRACKED_KEYS = [
   'GROQ_API_KEY',
   'GOOGLE_AI_STUDIO_KEY',
   'OPENROUTER_API_KEY',
-  'SOVEREIGN_AI_KEY',
+  'POLLINATIONS_API_KEY',
 ] as const;
 
 function keyPresenceMap() {

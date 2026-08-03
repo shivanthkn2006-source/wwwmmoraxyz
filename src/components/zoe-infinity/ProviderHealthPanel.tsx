@@ -181,7 +181,7 @@ export default function ProviderHealthPanel() {
         {summary.lovableReliancePct > 25 && (
           <p className="mt-2 text-xs text-amber-300">
             <AlertTriangle className="inline h-3.5 w-3.5 mr-1" />
-            T5 reliance is {summary.lovableReliancePct.toFixed(1)}% — T1/T2/T3/T4 are being bypassed more than expected.
+            Paid-tier reliance is {summary.lovableReliancePct.toFixed(1)}% — expected 0% on the sovereign cascade.
           </p>
         )}
       </section>
@@ -321,9 +321,9 @@ export default function ProviderHealthPanel() {
         </div>
         <p className="mt-1 text-[11px] text-white/50">
           Total {summary.total} req · ~{summary.monthlyProjection.estTotal}/mo projected ·
-          Lovable T5 reliance: <span className={summary.lovableReliancePct > 25 ? 'text-amber-300' : 'text-emerald-300'}>
+          Paid-tier reliance: <span className={summary.lovableReliancePct > 25 ? 'text-amber-300' : 'text-emerald-300'}>
             {summary.lovableReliancePct.toFixed(1)}%
-          </span> (~{summary.monthlyProjection.estLovableT5}/mo paid)
+          </span> (~{summary.monthlyProjection.estLovableT5}/mo paid — should be 0)
         </p>
         <ul className="mt-2 space-y-1">
           {summary.byTier.map(b => (
