@@ -1,4 +1,4 @@
-import { sovereignFetch, sovereignKey } from "./sovereign-ai.ts";
+// Sovereign cascade — no Lovable AI Gateway tier.
 /**
  * ═══════════════════════════════════════════════════════════════════════════════
  * SOVEREIGN CASCADE MODULE — Smart Auto-Routing with structured fallback reasons
