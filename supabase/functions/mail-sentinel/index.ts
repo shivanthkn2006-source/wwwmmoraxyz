@@ -176,7 +176,7 @@ SUBJECT: ${payload.subject}
 BODY:
 ${payload.body.substring(0, 2000)}`;
 
-  const response = await fetch(AI_GATEWAY, {
+  const response = await sovereignFetch(AI_GATEWAY, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -295,7 +295,7 @@ Return JSON:
   "highlights": ["key point 1", "key point 2", "key point 3"]
 }`;
 
-  const response = await fetch(AI_GATEWAY, {
+  const response = await sovereignFetch(AI_GATEWAY, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -407,7 +407,7 @@ Body: ${originalEmail.body.substring(0, 1000)}
 
 ${userContext?.schedule ? `USER SCHEDULE:\n${JSON.stringify(userContext.schedule)}` : ''}`;
 
-  const response = await fetch(AI_GATEWAY, {
+  const response = await sovereignFetch(AI_GATEWAY, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -485,7 +485,7 @@ Be fast and accurate. Focus on obvious classifications.`;
     `ID: ${e.id}\nFROM: ${e.sender} <${e.senderEmail}>\nSUBJECT: ${e.subject}\nPREVIEW: ${e.bodyPreview?.substring(0, 200) || 'No preview'}`
   ).join('\n\n---\n\n');
 
-  const response = await fetch(AI_GATEWAY, {
+  const response = await sovereignFetch(AI_GATEWAY, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
