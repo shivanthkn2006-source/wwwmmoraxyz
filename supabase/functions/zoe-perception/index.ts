@@ -40,14 +40,7 @@ serve(async (req) => {
   console.log('[Zoe Perception] ═══ INCOMING REQUEST ═══');
 
   try {
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      console.error('[Zoe Perception] No authorization header');
-      return new Response(JSON.stringify({ error: 'No authorization header' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+    const authHeader = req.headers.get('Authorization') || '';
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -63,16 +56,15 @@ serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get user from JWT
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
-    
-    if (userError || !user) {
-      console.error('[Zoe Perception] Invalid token:', userError?.message);
-      return new Response(JSON.stringify({ error: 'Invalid token' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    // Resolve user from JWT when present. Anonymous/expired tokens (e.g. the
+    // publishable key) are allowed through as guests — vision still works,
+    // only per-user memory writes are skipped.
+    const token = authHeader.replace('Bearer ', '').trim();
+    let userId: string | null = null;
+    if (token) {
+      const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+      if (user) userId = user.id;
+      else console.warn('[Zoe Perception] Guest mode (no valid session):', userError?.message);
     }
 
     const { media_type, media_data, file_name, context, cross_reference }: PerceptionRequest = await req.json();
@@ -86,15 +78,15 @@ serve(async (req) => {
     }
 
     const mediaSize = Math.round(media_data.length / 1024);
-    console.log(`[Zoe Perception] Processing ${media_type} for user ${user.id.substring(0, 8)}... | Size: ${mediaSize}KB`);
+    console.log(`[Zoe Perception] Processing ${media_type} for ${userId ? userId.substring(0, 8) : 'guest'}... | Size: ${mediaSize}KB`);
 
     // Query past visual memories if cross-referencing enabled
     let pastVisuals: any[] = [];
-    if (cross_reference) {
+    if (cross_reference && userId) {
       const { data: memories } = await supabase
         .from('zoe_sovereign_memory')
         .select('content_text, zoe_state_json, created_at')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('event_type', 'multimodal_visual_scan')
         .order('created_at', { ascending: false })
         .limit(10);
@@ -240,11 +232,12 @@ Respond ONLY with valid JSON.`;
       };
     }
 
-    // Store in Zoe Sovereign Memory Table (ZSMT)
+    // Store in Zoe Sovereign Memory Table (ZSMT) — only for signed-in users
+    if (userId) {
     const { error: memoryError } = await supabase
       .from('zoe_sovereign_memory')
       .insert({
-        user_id: user.id,
+        user_id: userId,
         event_type: 'multimodal_visual_scan',
         content_text: analysis.summary,
         zoe_state_json: {
@@ -269,7 +262,7 @@ Respond ONLY with valid JSON.`;
 
     // Also log to behavioral stream for DHF
     await supabase.from('behavioral_events').insert({
-      user_id: user.id,
+      user_id: userId,
       event_type: 'visual_perception',
       event_category: 'multimodal_input',
       context_snippet: analysis.summary.substring(0, 50),
@@ -281,6 +274,7 @@ Respond ONLY with valid JSON.`;
       },
       sentiment_score: getSentimentScore(analysis.emotional_sentiment),
     });
+    }
 
     // Generate empathetic response
     let zoeSays = analysis.summary;
