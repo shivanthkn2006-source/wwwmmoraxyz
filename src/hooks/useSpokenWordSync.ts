@@ -234,7 +234,7 @@ export function useSpokenWordSync(messageId: string | undefined, text: string) {
 
         if (isNewSession) {
           boundarySeenRef.current = false;
-          lastIndexRef.current = -1;
+          lastIndexRef.current = 0;
           audioRef.current = null;
           audioMetadataRef.current = null;
           setSpokenText(activeSession.text);
