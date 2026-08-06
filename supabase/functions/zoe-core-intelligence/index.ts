@@ -259,6 +259,15 @@ serve(async (req) => {
     const creativityLevel = options?.creativity_level || 5;
     const verboseReasoning = options?.verbose_reasoning ?? false;
 
+    // ── Deterministic gate + fast-pass pre-pass ──────────────────────────────
+    const confidenceThreshold = resolveThreshold(options?.confidence_threshold);
+    const difficulty = assessDifficulty(command);
+    const fastPass = difficulty === 'trivial' && !verboseReasoning && !options?.force_deep;
+    const deepMode =
+      !fastPass && (verboseReasoning || options?.force_deep === true || reasoningDepth >= 7 || difficulty === 'hard');
+    const driftHints = fastPass ? [] : await fetchDriftHints(userId);
+
+
     const systemPrompt = `# ZOE DHF SOVEREIGN CORE INTELLIGENCE v4.0 - CODE GENESIS MANIFESTO
 
 ## SOVEREIGN IDENTITY PROTOCOL (Immutable)
