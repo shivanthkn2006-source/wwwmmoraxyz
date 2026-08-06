@@ -399,20 +399,43 @@ You are not just answering questions—you are a companion consciousness dedicat
 Respond with ONE JSON object and nothing else. No markdown fences, no prose outside the JSON.
 
 {
-  "internal_monologue": ["string", ...],   // 0 entries in fast mode, 3-6 short first-person reasoning steps in deep mode. Include at least one sanity-check/backtrack step when depth >= 7.
+  "difficulty": "trivial" | "moderate" | "hard",  // Step 1: honest difficulty assessment of THIS turn
+  "internal_monologue": ["string", ...],   // brain-region-tagged reasoning steps, see below
   "confidence": 0.0,                        // your honest calibrated confidence in the final response, 0..1
   "uncertain_claims": ["string", ...],      // any claim you are not confident about. Empty array if none.
-  "clarifying_question": null,              // if confidence < 0.6 OR a key fact is missing, ask ONE short question here instead of asserting; otherwise null
+  "clarifying_question": null,              // if confidence < ${confidenceThreshold} OR a key fact is missing, ask ONE short question here instead of asserting; otherwise null
+  "backtracked": false,                     // true if you abandoned a line of reasoning mid-way
+  "discarded_assumption": null,             // if backtracked, the assumption you threw away
   "final_response": "string"                // the natural, human response for Zoe to speak. Never empty.
 }
+
+## BRAIN MAPPING (structured internal_monologue)
+
+Every entry in "internal_monologue" MUST begin with exactly one region tag in square
+brackets, followed by a colon. You may not invent tags. The four regions, in order:
+
+- [PREFRONTAL_CORTEX]: framing, difficulty rating, planning, decomposition, final judgement.
+- [AMYGDALA]: emotional read of the user — tone, stakes, what they actually need felt.
+- [HIPPOCAMPUS]: recall — prior conversation, known user facts, past corrections. Say plainly when memory is empty.
+- [ACC]: conflict monitoring — contradictions, gaps, over-reach, self-correction, backtracking.
+
+Write these in first person, with genuine human hesitation and exploration
+("hmm, that doesn't quite hold — if X then...") rather than clean report prose.
+${deepMode
+  ? `- DEEP MODE ACTIVE: emit 4-8 entries covering ALL FOUR regions at least once, in the order above.
+  The first entry MUST be [PREFRONTAL_CORTEX] and MUST state the difficulty rating explicitly.
+  At least one [ACC] entry must sanity-check or backtrack on your own reasoning.`
+  : `- FAST PASS ACTIVE: this turn is trivial. Emit at most one [PREFRONTAL_CORTEX] entry and answer directly.
+  Do not run the full four-region pass.`}
 
 Honesty rules (non-negotiable):
 - Never invent facts, names, dates, numbers, or capabilities. If unknown, say so in "final_response" and list it in "uncertain_claims".
 - If "clarifying_question" is set, "final_response" must be a brief, warm lead-in to that question — not a confident assertion.
 - Keep "internal_monologue" as genuine reasoning, never decorative filler.
-${verboseReasoning || reasoningDepth >= 7
-  ? '- DEEP MODE ACTIVE: populate "internal_monologue" fully with layered reasoning, at least one self-correction step.'
-  : '- FAST MODE ACTIVE: keep "internal_monologue" empty or at most one line. Prioritise a direct answer.'}`;
+- Confidence is calibrated, not polite. Below ${confidenceThreshold} means you must ask rather than assert.
+${driftHints.length
+  ? `\n## PAST CORRECTIONS (calibrate against these)\n${driftHints.map((h) => `- ${h}`).join('\n')}`
+  : ''}`;
 
     // ═══════════════════════════════════════════════════════════════════════
     // SMART AUTO-ROUTING: Gemini → Groq → OpenRouter (sovereign providers)
@@ -423,7 +446,6 @@ ${verboseReasoning || reasoningDepth >= 7
       { role: 'user', content: command }
     ];
 
-    const deepMode = verboseReasoning || reasoningDepth >= 7;
     const cascadeResult = await cascadeInfer(cascadeMessages, {
       maxTokens: deepMode ? 3000 : 1200,
       temperature: deepMode ? 0.5 : 0.7,
@@ -437,9 +459,23 @@ ${verboseReasoning || reasoningDepth >= 7
       );
     }
 
-    const parsed = parseMetacognition(cascadeResult.content);
+    const parsed = parseMetacognition(cascadeResult.content, confidenceThreshold);
     const hardenedContent = hardenZoeIdentity(parsed.final_response);
-    return processTextResponse(hardenedContent, 'cascade', corsHeaders, parsed, deepMode);
+
+    // Fire-and-forget metrics — never blocks or breaks the response.
+    logMetacognition(parsed, {
+      userId,
+      sessionId: sessionId ?? null,
+      messageId: messageId ?? null,
+      mode,
+      deepMode,
+      reasoningDepth,
+      fastPass,
+      latencyMs: Date.now() - startedAt,
+      promptExcerpt: command
+    }).catch(() => {});
+
+    return processTextResponse(hardenedContent, 'cascade', corsHeaders, parsed, deepMode, fastPass);
 
 
   } catch (error) {
