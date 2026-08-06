@@ -200,11 +200,15 @@ const requestSchema = z.object({
       engagement: z.number().optional()
     }).optional()
   }).optional(),
+  sessionId: z.string().optional(),
+  messageId: z.string().optional(),
   options: z.object({
     reasoning_depth: z.number().min(1).max(10).optional(),
     creativity_level: z.number().min(1).max(10).optional(),
     precision_level: z.number().min(1).max(10).optional(),
-    verbose_reasoning: z.boolean().optional()
+    verbose_reasoning: z.boolean().optional(),
+    confidence_threshold: z.number().min(0).max(1).optional(),
+    force_deep: z.boolean().optional()
   }).optional()
 });
 
