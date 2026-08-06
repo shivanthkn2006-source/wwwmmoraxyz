@@ -115,6 +115,43 @@ function fractionToWord(cumulative: number[], total: number, fraction: number): 
 
 const endsSentence = (word: string) => /[.!?…]["')\]]*$/.test(word);
 
+/** Normalize a token for cross-list matching (markdown / punctuation agnostic). */
+const normalizeToken = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+/**
+ * Align the tokens the TTS engine actually speaks (markdown stripped, whitespace
+ * collapsed) with the tokens rendered on screen. Without this, every markdown
+ * marker or removed token shifts the highlight off by one or more words.
+ * Returns spokenIndex -> displayIndex.
+ */
+export function alignSpokenToDisplay(
+  spoken: SpokenToken[],
+  display: SpokenToken[]
+): number[] {
+  const map = new Array<number>(spoken.length).fill(-1);
+  let cursor = 0;
+  for (let s = 0; s < spoken.length; s++) {
+    const target = normalizeToken(spoken[s].text);
+    let found = -1;
+    if (target) {
+      const limit = Math.min(display.length, cursor + 10);
+      for (let d = cursor; d < limit; d++) {
+        if (normalizeToken(display[d].text) === target) {
+          found = d;
+          break;
+        }
+      }
+    }
+    if (found === -1) {
+      map[s] = Math.min(cursor, Math.max(0, display.length - 1));
+    } else {
+      map[s] = found;
+      cursor = found + 1;
+    }
+  }
+  return map;
+}
+
 /** Range of word indices belonging to the sentence containing `wordIndex`. */
 export function computeSentenceRange(
   tokens: SpokenToken[],
