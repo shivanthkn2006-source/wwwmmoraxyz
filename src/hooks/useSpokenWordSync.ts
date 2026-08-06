@@ -304,11 +304,7 @@ export function useSpokenWordSync(messageId: string | undefined, text: string) {
         ) {
           const charIndex = audioMetadata.charStart +
             (audioMetadata.charEnd - audioMetadata.charStart) * audioFraction;
-          const index = charIndexToWord(tokens, charIndex);
-          if (index !== lastIndexRef.current) {
-            lastIndexRef.current = index;
-            setActiveWordIndex(index);
-          }
+          commitIndex.current(charIndexToWord(tokens, charIndex));
           return;
         }
 
@@ -321,11 +317,7 @@ export function useSpokenWordSync(messageId: string | undefined, text: string) {
       }
 
       if (fraction === null) return;
-      const index = fractionToWord(weights.cumulative, weights.total, fraction);
-      if (index !== lastIndexRef.current) {
-        lastIndexRef.current = index;
-        setActiveWordIndex(index);
-      }
+      commitIndex.current(fractionToWord(weights.cumulative, weights.total, fraction));
     };
 
     rafRef.current = requestAnimationFrame(tick);
@@ -335,18 +327,35 @@ export function useSpokenWordSync(messageId: string | undefined, text: string) {
     };
   }, [isActive, isPaused, tokens.length, weights]);
 
+  // Translate the spoken-token index onto the rendered token list.
+  const displayWordIndex = useMemo(() => {
+    if (!isActive || activeWordIndex < 0) return -1;
+    if (spokenTokens === displayTokens) {
+      return Math.min(activeWordIndex, displayTokens.length - 1);
+    }
+    const mapped = spokenToDisplay[activeWordIndex];
+    if (mapped === undefined || mapped < 0) {
+      return Math.min(activeWordIndex, Math.max(0, displayTokens.length - 1));
+    }
+    return mapped;
+  }, [isActive, activeWordIndex, spokenToDisplay, spokenTokens, displayTokens]);
+
   const sentenceRange = useMemo(
-    () => (isActive ? computeSentenceRange(displayTokens, activeWordIndex) : null),
-    [isActive, displayTokens, activeWordIndex]
+    () => (isActive ? computeSentenceRange(displayTokens, displayWordIndex) : null),
+    [isActive, displayTokens, displayWordIndex]
   );
 
   return {
     isActive,
     isPaused,
-    activeWordIndex,
+    /** Index into the *rendered* tokens (what SpokenTranscript paints). */
+    activeWordIndex: displayWordIndex,
+    /** Raw index into the spoken (TTS) token list — for diagnostics. */
+    spokenWordIndex: activeWordIndex,
     activeSentenceIndex: sentenceRange?.index ?? -1,
     sentenceRange,
     tokens,
+    displayTokens,
     segments,
   };
 }
