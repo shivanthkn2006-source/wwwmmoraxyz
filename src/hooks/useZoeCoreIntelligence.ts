@@ -39,7 +39,16 @@ export interface IntelligenceResponse {
     confidence: number;
   };
   reasoning?: string;
+  metacognition?: {
+    internalMonologue: string[];
+    confidence: number;
+    uncertainClaims: string[];
+    clarifyingQuestion: string | null;
+    needsClarification: boolean;
+    deepMode: boolean;
+  };
 }
+
 
 /**
  * Hook for interacting with Zoe's Core Intelligence powered by Gemini 3 Pro
