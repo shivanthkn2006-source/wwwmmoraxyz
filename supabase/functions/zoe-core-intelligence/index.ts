@@ -8,6 +8,14 @@ import {
   createErrorResponse
 } from "../_shared/ai-telemetry.ts";
 import { cascadeInfer, hardenZoeIdentity } from "../_shared/cascading-provider.ts";
+import {
+  parseMetacognition,
+  resolveThreshold,
+  assessDifficulty,
+  logMetacognition,
+  fetchDriftHints,
+  type Metacognition
+} from "../_shared/metacognition.ts";
 
 // Advanced Cognitive Tools for Gemini 3 Pro Integration
 const gemini3CognitiveTools = [
