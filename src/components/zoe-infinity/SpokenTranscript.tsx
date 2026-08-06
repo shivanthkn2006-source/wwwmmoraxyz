@@ -21,11 +21,31 @@ interface SpokenTranscriptProps {
   autoScroll?: boolean;
 }
 
-const SCROLL_THROTTLE_MS = 180;
+const SCROLL_THROTTLE_MS = 260;
+/** Comfortable band (fraction of container height) the active word may sit in. */
+const BAND_TOP = 0.22;
+const BAND_BOTTOM = 0.78;
+/** Where we park the active word when we do scroll. */
+const PARK_AT = 0.42;
 
 const prefersReducedMotion = () =>
   typeof window !== 'undefined' &&
   window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+/**
+ * Nearest ancestor that can actually scroll. We deliberately never scroll the
+ * window/document: doing so made the whole chat jump up and down on every word.
+ */
+function findScrollParent(node: HTMLElement | null): HTMLElement | null {
+  let el = node?.parentElement ?? null;
+  while (el && el !== document.body) {
+    const style = window.getComputedStyle(el);
+    const canScroll = /(auto|scroll|overlay)/.test(style.overflowY);
+    if (canScroll && el.scrollHeight > el.clientHeight + 8) return el;
+    el = el.parentElement;
+  }
+  return null;
+}
 
 export const SpokenTranscript: React.FC<SpokenTranscriptProps> = ({
   messageId,
@@ -44,36 +64,36 @@ export const SpokenTranscript: React.FC<SpokenTranscriptProps> = ({
     const node = activeRef.current;
     if (!node) return;
 
-    const reduced = prefersReducedMotion();
-
-    if (reduced) {
-      // Reduced motion: never animate. Jump only when the active word has
-      // actually left the visible area, so highlighting stays accurate
-      // while the page stays visually still.
-      const rect = node.getBoundingClientRect();
-      const vh = window.innerHeight || document.documentElement.clientHeight;
-      const outOfView = rect.bottom > vh - 24 || rect.top < 24;
-      if (!outOfView) return;
-      try {
-        node.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'nearest' });
-      } catch {
-        /* older browsers – ignore */
-      }
-      return;
-    }
+    const container = findScrollParent(node);
+    if (!container) return; // never move the page itself
 
     const now = Date.now();
     if (now - lastScrollRef.current < SCROLL_THROTTLE_MS) return;
+
+    const cRect = container.getBoundingClientRect();
+    const nRect = node.getBoundingClientRect();
+    const relTop = nRect.top - cRect.top;
+    const relBottom = nRect.bottom - cRect.top;
+
+    // Already comfortably visible → do nothing. This deadzone is what stops the
+    // highlight from dragging the view up and down word by word.
+    if (relTop >= cRect.height * BAND_TOP && relBottom <= cRect.height * BAND_BOTTOM) return;
+
     lastScrollRef.current = now;
+    const delta = relTop - cRect.height * PARK_AT;
+    const target = Math.max(
+      0,
+      Math.min(container.scrollHeight - container.clientHeight, container.scrollTop + delta)
+    );
+    if (Math.abs(target - container.scrollTop) < 4) return;
 
     try {
-      node.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center',
-        inline: 'nearest',
+      container.scrollTo({
+        top: target,
+        behavior: prefersReducedMotion() ? 'auto' : 'smooth',
       });
     } catch {
-      /* older browsers – ignore */
+      container.scrollTop = target;
     }
   }, [isActive, isPaused, activeWordIndex, autoScroll]);
 
