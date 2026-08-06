@@ -433,23 +433,95 @@ ${verboseReasoning || reasoningDepth >= 7
   }
 });
 
-function processTextResponse(content: string, model: string, corsHeaders: Record<string, string>): Response {
+interface Metacognition {
+  internal_monologue: string[];
+  confidence: number;
+  uncertain_claims: string[];
+  clarifying_question: string | null;
+  final_response: string;
+}
+
+function parseMetacognition(raw: string): Metacognition {
+  const fallback: Metacognition = {
+    internal_monologue: [],
+    confidence: 0.6,
+    uncertain_claims: [],
+    clarifying_question: null,
+    final_response: (raw || '').trim()
+  };
+
+  if (!raw) return fallback;
+
+  // Strip code fences and isolate the outermost JSON object.
+  let text = raw.trim().replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
+  if (start === -1 || end <= start) return fallback;
+  text = text.slice(start, end + 1);
+
+  try {
+    const obj = JSON.parse(text);
+    const finalResponse = typeof obj.final_response === 'string' ? obj.final_response.trim() : '';
+    if (!finalResponse) return fallback;
+
+    const confidenceRaw = typeof obj.confidence === 'number' ? obj.confidence : 0.6;
+    const confidence = Math.min(1, Math.max(0, confidenceRaw));
+    const clarifying = typeof obj.clarifying_question === 'string' && obj.clarifying_question.trim()
+      ? obj.clarifying_question.trim()
+      : null;
+
+    return {
+      internal_monologue: Array.isArray(obj.internal_monologue)
+        ? obj.internal_monologue.filter((s: unknown) => typeof s === 'string' && s.trim()).slice(0, 8)
+        : [],
+      confidence,
+      uncertain_claims: Array.isArray(obj.uncertain_claims)
+        ? obj.uncertain_claims.filter((s: unknown) => typeof s === 'string' && s.trim()).slice(0, 8)
+        : [],
+      // Enforce the confidence gate server-side, not just in the prompt.
+      clarifying_question: clarifying ?? null,
+      final_response: finalResponse
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+function processTextResponse(
+  content: string,
+  model: string,
+  corsHeaders: Record<string, string>,
+  meta?: Metacognition,
+  deepMode?: boolean
+): Response {
+  const confidence = meta?.confidence ?? 0.93;
+  const needsClarification = !!meta?.clarifying_question || confidence < 0.6;
+
   return new Response(
     JSON.stringify({
       message: content,
       toolCalls: [],
       model: 'sovereign-core',
       intelligence: {
-        version: '3.0',
+        version: '4.0',
         architecture: 'sovereign',
         capabilities: ['neural_reasoning', 'metacognition', 'pattern_synthesis', 'predictive', 'creative', 'empathetic'],
-        confidence: 0.93
+        confidence
       },
-      reasoning: null
+      metacognition: {
+        internalMonologue: meta?.internal_monologue ?? [],
+        confidence,
+        uncertainClaims: meta?.uncertain_claims ?? [],
+        clarifyingQuestion: meta?.clarifying_question ?? null,
+        needsClarification,
+        deepMode: !!deepMode
+      },
+      reasoning: meta?.internal_monologue?.length ? meta.internal_monologue.join('\n') : null
     }),
     { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
   );
 }
+
 
 function processAIResponse(data: any, model: string, corsHeaders: Record<string, string>): Response {
   const aiMessage = data.choices?.[0]?.message;
