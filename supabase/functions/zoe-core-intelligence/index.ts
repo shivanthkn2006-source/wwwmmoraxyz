@@ -219,7 +219,8 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { command, userId, mode = 'standard', context, options } = requestSchema.parse(body);
+    const { command, userId, mode = 'standard', context, options, sessionId, messageId } = requestSchema.parse(body);
+    const startedAt = Date.now();
 
     // API keys checked per-provider in cascade
 
