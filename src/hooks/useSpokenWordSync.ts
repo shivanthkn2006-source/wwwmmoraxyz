@@ -256,11 +256,7 @@ export function useSpokenWordSync(messageId: string | undefined, text: string) {
     return subscribeSpokenProgress((progress) => {
       if (progress.messageId !== messageId) return;
       boundarySeenRef.current = true;
-      const index = charIndexToWord(tokens, progress.charIndex);
-      if (index !== lastIndexRef.current) {
-        lastIndexRef.current = index;
-        setActiveWordIndex(index);
-      }
+      commitIndex.current(charIndexToWord(tokens, progress.charIndex));
     });
   }, [isActive, messageId, tokens]);
 
