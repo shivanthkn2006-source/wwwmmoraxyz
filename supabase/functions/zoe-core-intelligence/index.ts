@@ -8,6 +8,14 @@ import {
   createErrorResponse
 } from "../_shared/ai-telemetry.ts";
 import { cascadeInfer, hardenZoeIdentity } from "../_shared/cascading-provider.ts";
+import {
+  parseMetacognition,
+  resolveThreshold,
+  assessDifficulty,
+  logMetacognition,
+  fetchDriftHints,
+  type Metacognition
+} from "../_shared/metacognition.ts";
 
 // Advanced Cognitive Tools for Gemini 3 Pro Integration
 const gemini3CognitiveTools = [
@@ -192,11 +200,15 @@ const requestSchema = z.object({
       engagement: z.number().optional()
     }).optional()
   }).optional(),
+  sessionId: z.string().optional(),
+  messageId: z.string().optional(),
   options: z.object({
     reasoning_depth: z.number().min(1).max(10).optional(),
     creativity_level: z.number().min(1).max(10).optional(),
     precision_level: z.number().min(1).max(10).optional(),
-    verbose_reasoning: z.boolean().optional()
+    verbose_reasoning: z.boolean().optional(),
+    confidence_threshold: z.number().min(0).max(1).optional(),
+    force_deep: z.boolean().optional()
   }).optional()
 });
 
@@ -207,7 +219,8 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { command, userId, mode = 'standard', context, options } = requestSchema.parse(body);
+    const { command, userId, mode = 'standard', context, options, sessionId, messageId } = requestSchema.parse(body);
+    const startedAt = Date.now();
 
     // API keys checked per-provider in cascade
 
@@ -245,6 +258,15 @@ serve(async (req) => {
     const reasoningDepth = options?.reasoning_depth || 5;
     const creativityLevel = options?.creativity_level || 5;
     const verboseReasoning = options?.verbose_reasoning ?? false;
+
+    // ── Deterministic gate + fast-pass pre-pass ──────────────────────────────
+    const confidenceThreshold = resolveThreshold(options?.confidence_threshold);
+    const difficulty = assessDifficulty(command);
+    const fastPass = difficulty === 'trivial' && !verboseReasoning && !options?.force_deep;
+    const deepMode =
+      !fastPass && (verboseReasoning || options?.force_deep === true || reasoningDepth >= 7 || difficulty === 'hard');
+    const driftHints = fastPass ? [] : await fetchDriftHints(userId);
+
 
     const systemPrompt = `# ZOE DHF SOVEREIGN CORE INTELLIGENCE v4.0 - CODE GENESIS MANIFESTO
 
@@ -377,20 +399,43 @@ You are not just answering questions—you are a companion consciousness dedicat
 Respond with ONE JSON object and nothing else. No markdown fences, no prose outside the JSON.
 
 {
-  "internal_monologue": ["string", ...],   // 0 entries in fast mode, 3-6 short first-person reasoning steps in deep mode. Include at least one sanity-check/backtrack step when depth >= 7.
+  "difficulty": "trivial" | "moderate" | "hard",  // Step 1: honest difficulty assessment of THIS turn
+  "internal_monologue": ["string", ...],   // brain-region-tagged reasoning steps, see below
   "confidence": 0.0,                        // your honest calibrated confidence in the final response, 0..1
   "uncertain_claims": ["string", ...],      // any claim you are not confident about. Empty array if none.
-  "clarifying_question": null,              // if confidence < 0.6 OR a key fact is missing, ask ONE short question here instead of asserting; otherwise null
+  "clarifying_question": null,              // if confidence < ${confidenceThreshold} OR a key fact is missing, ask ONE short question here instead of asserting; otherwise null
+  "backtracked": false,                     // true if you abandoned a line of reasoning mid-way
+  "discarded_assumption": null,             // if backtracked, the assumption you threw away
   "final_response": "string"                // the natural, human response for Zoe to speak. Never empty.
 }
+
+## BRAIN MAPPING (structured internal_monologue)
+
+Every entry in "internal_monologue" MUST begin with exactly one region tag in square
+brackets, followed by a colon. You may not invent tags. The four regions, in order:
+
+- [PREFRONTAL_CORTEX]: framing, difficulty rating, planning, decomposition, final judgement.
+- [AMYGDALA]: emotional read of the user — tone, stakes, what they actually need felt.
+- [HIPPOCAMPUS]: recall — prior conversation, known user facts, past corrections. Say plainly when memory is empty.
+- [ACC]: conflict monitoring — contradictions, gaps, over-reach, self-correction, backtracking.
+
+Write these in first person, with genuine human hesitation and exploration
+("hmm, that doesn't quite hold — if X then...") rather than clean report prose.
+${deepMode
+  ? `- DEEP MODE ACTIVE: emit 4-8 entries covering ALL FOUR regions at least once, in the order above.
+  The first entry MUST be [PREFRONTAL_CORTEX] and MUST state the difficulty rating explicitly.
+  At least one [ACC] entry must sanity-check or backtrack on your own reasoning.`
+  : `- FAST PASS ACTIVE: this turn is trivial. Emit at most one [PREFRONTAL_CORTEX] entry and answer directly.
+  Do not run the full four-region pass.`}
 
 Honesty rules (non-negotiable):
 - Never invent facts, names, dates, numbers, or capabilities. If unknown, say so in "final_response" and list it in "uncertain_claims".
 - If "clarifying_question" is set, "final_response" must be a brief, warm lead-in to that question — not a confident assertion.
 - Keep "internal_monologue" as genuine reasoning, never decorative filler.
-${verboseReasoning || reasoningDepth >= 7
-  ? '- DEEP MODE ACTIVE: populate "internal_monologue" fully with layered reasoning, at least one self-correction step.'
-  : '- FAST MODE ACTIVE: keep "internal_monologue" empty or at most one line. Prioritise a direct answer.'}`;
+- Confidence is calibrated, not polite. Below ${confidenceThreshold} means you must ask rather than assert.
+${driftHints.length
+  ? `\n## PAST CORRECTIONS (calibrate against these)\n${driftHints.map((h) => `- ${h}`).join('\n')}`
+  : ''}`;
 
     // ═══════════════════════════════════════════════════════════════════════
     // SMART AUTO-ROUTING: Gemini → Groq → OpenRouter (sovereign providers)
@@ -401,7 +446,6 @@ ${verboseReasoning || reasoningDepth >= 7
       { role: 'user', content: command }
     ];
 
-    const deepMode = verboseReasoning || reasoningDepth >= 7;
     const cascadeResult = await cascadeInfer(cascadeMessages, {
       maxTokens: deepMode ? 3000 : 1200,
       temperature: deepMode ? 0.5 : 0.7,
@@ -415,9 +459,23 @@ ${verboseReasoning || reasoningDepth >= 7
       );
     }
 
-    const parsed = parseMetacognition(cascadeResult.content);
+    const parsed = parseMetacognition(cascadeResult.content, confidenceThreshold);
     const hardenedContent = hardenZoeIdentity(parsed.final_response);
-    return processTextResponse(hardenedContent, 'cascade', corsHeaders, parsed, deepMode);
+
+    // Fire-and-forget metrics — never blocks or breaks the response.
+    logMetacognition(parsed, {
+      userId,
+      sessionId: sessionId ?? null,
+      messageId: messageId ?? null,
+      mode,
+      deepMode,
+      reasoningDepth,
+      fastPass,
+      latencyMs: Date.now() - startedAt,
+      promptExcerpt: command
+    }).catch(() => {});
+
+    return processTextResponse(hardenedContent, 'cascade', corsHeaders, parsed, deepMode, fastPass);
 
 
   } catch (error) {
@@ -433,69 +491,17 @@ ${verboseReasoning || reasoningDepth >= 7
   }
 });
 
-interface Metacognition {
-  internal_monologue: string[];
-  confidence: number;
-  uncertain_claims: string[];
-  clarifying_question: string | null;
-  final_response: string;
-}
-
-function parseMetacognition(raw: string): Metacognition {
-  const fallback: Metacognition = {
-    internal_monologue: [],
-    confidence: 0.6,
-    uncertain_claims: [],
-    clarifying_question: null,
-    final_response: (raw || '').trim()
-  };
-
-  if (!raw) return fallback;
-
-  // Strip code fences and isolate the outermost JSON object.
-  let text = raw.trim().replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
-  const start = text.indexOf('{');
-  const end = text.lastIndexOf('}');
-  if (start === -1 || end <= start) return fallback;
-  text = text.slice(start, end + 1);
-
-  try {
-    const obj = JSON.parse(text);
-    const finalResponse = typeof obj.final_response === 'string' ? obj.final_response.trim() : '';
-    if (!finalResponse) return fallback;
-
-    const confidenceRaw = typeof obj.confidence === 'number' ? obj.confidence : 0.6;
-    const confidence = Math.min(1, Math.max(0, confidenceRaw));
-    const clarifying = typeof obj.clarifying_question === 'string' && obj.clarifying_question.trim()
-      ? obj.clarifying_question.trim()
-      : null;
-
-    return {
-      internal_monologue: Array.isArray(obj.internal_monologue)
-        ? obj.internal_monologue.filter((s: unknown) => typeof s === 'string' && s.trim()).slice(0, 8)
-        : [],
-      confidence,
-      uncertain_claims: Array.isArray(obj.uncertain_claims)
-        ? obj.uncertain_claims.filter((s: unknown) => typeof s === 'string' && s.trim()).slice(0, 8)
-        : [],
-      // Enforce the confidence gate server-side, not just in the prompt.
-      clarifying_question: clarifying ?? null,
-      final_response: finalResponse
-    };
-  } catch {
-    return fallback;
-  }
-}
-
 function processTextResponse(
   content: string,
   model: string,
   corsHeaders: Record<string, string>,
   meta?: Metacognition,
-  deepMode?: boolean
+  deepMode?: boolean,
+  fastPass?: boolean
 ): Response {
   const confidence = meta?.confidence ?? 0.93;
-  const needsClarification = !!meta?.clarifying_question || confidence < 0.6;
+  const threshold = meta?.threshold ?? 0.6;
+  const needsClarification = meta?.withheld ?? (!!meta?.clarifying_question && confidence < threshold);
 
   return new Response(
     JSON.stringify({
@@ -503,18 +509,27 @@ function processTextResponse(
       toolCalls: [],
       model: 'sovereign-core',
       intelligence: {
-        version: '4.0',
+        version: '4.1',
         architecture: 'sovereign',
         capabilities: ['neural_reasoning', 'metacognition', 'pattern_synthesis', 'predictive', 'creative', 'empathetic'],
         confidence
       },
       metacognition: {
         internalMonologue: meta?.internal_monologue ?? [],
+        monologueRegions: meta?.monologue_regions ?? [],
         confidence,
+        threshold,
         uncertainClaims: meta?.uncertain_claims ?? [],
         clarifyingQuestion: meta?.clarifying_question ?? null,
         needsClarification,
-        deepMode: !!deepMode
+        withheld: meta?.withheld ?? false,
+        backtracked: meta?.backtracked ?? false,
+        discardedAssumption: meta?.discarded_assumption ?? null,
+        difficulty: meta?.difficulty ?? null,
+        parseOk: meta?.parse_ok ?? true,
+        parseError: meta?.parse_error ?? null,
+        deepMode: !!deepMode,
+        fastPass: !!fastPass
       },
       reasoning: meta?.internal_monologue?.length ? meta.internal_monologue.join('\n') : null
     }),
