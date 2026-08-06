@@ -6936,6 +6936,62 @@ export type Database = {
         }
         Relationships: []
       }
+      zoe_drift_corrections: {
+        Row: {
+          clarification_answer: string | null
+          clarifying_question: string | null
+          corrected_response: string | null
+          correction_type: string
+          created_at: string
+          id: string
+          message_id: string | null
+          metacognition_log_id: string | null
+          notes: string | null
+          original_response: string | null
+          reported_confidence: number | null
+          user_id: string
+          was_correct: boolean | null
+        }
+        Insert: {
+          clarification_answer?: string | null
+          clarifying_question?: string | null
+          corrected_response?: string | null
+          correction_type?: string
+          created_at?: string
+          id?: string
+          message_id?: string | null
+          metacognition_log_id?: string | null
+          notes?: string | null
+          original_response?: string | null
+          reported_confidence?: number | null
+          user_id: string
+          was_correct?: boolean | null
+        }
+        Update: {
+          clarification_answer?: string | null
+          clarifying_question?: string | null
+          corrected_response?: string | null
+          correction_type?: string
+          created_at?: string
+          id?: string
+          message_id?: string | null
+          metacognition_log_id?: string | null
+          notes?: string | null
+          original_response?: string | null
+          reported_confidence?: number | null
+          user_id?: string
+          was_correct?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "zoe_drift_corrections_metacognition_log_id_fkey"
+            columns: ["metacognition_log_id"]
+            isOneToOne: false
+            referencedRelation: "zoe_metacognition_log"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       zoe_emotional_intelligence: {
         Row: {
           adaptive_response_style: Json | null
@@ -7793,6 +7849,75 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      zoe_metacognition_log: {
+        Row: {
+          clarifying_question: string | null
+          confidence_score: number | null
+          created_at: string
+          deep_mode: boolean
+          fast_pass: boolean
+          id: string
+          latency_ms: number | null
+          message_id: string | null
+          mode: string | null
+          monologue_regions: Json
+          parse_error: string | null
+          parse_ok: boolean
+          prompt_excerpt: string | null
+          reasoning_depth: number | null
+          response_excerpt: string | null
+          session_id: string | null
+          threshold: number | null
+          uncertain_claims: Json
+          user_id: string
+          withheld: boolean
+        }
+        Insert: {
+          clarifying_question?: string | null
+          confidence_score?: number | null
+          created_at?: string
+          deep_mode?: boolean
+          fast_pass?: boolean
+          id?: string
+          latency_ms?: number | null
+          message_id?: string | null
+          mode?: string | null
+          monologue_regions?: Json
+          parse_error?: string | null
+          parse_ok?: boolean
+          prompt_excerpt?: string | null
+          reasoning_depth?: number | null
+          response_excerpt?: string | null
+          session_id?: string | null
+          threshold?: number | null
+          uncertain_claims?: Json
+          user_id: string
+          withheld?: boolean
+        }
+        Update: {
+          clarifying_question?: string | null
+          confidence_score?: number | null
+          created_at?: string
+          deep_mode?: boolean
+          fast_pass?: boolean
+          id?: string
+          latency_ms?: number | null
+          message_id?: string | null
+          mode?: string | null
+          monologue_regions?: Json
+          parse_error?: string | null
+          parse_ok?: boolean
+          prompt_excerpt?: string | null
+          reasoning_depth?: number | null
+          response_excerpt?: string | null
+          session_id?: string | null
+          threshold?: number | null
+          uncertain_claims?: Json
+          user_id?: string
+          withheld?: boolean
+        }
+        Relationships: []
       }
       zoe_mind_merge_log: {
         Row: {
