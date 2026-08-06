@@ -41,11 +41,20 @@ export interface IntelligenceResponse {
   reasoning?: string;
   metacognition?: {
     internalMonologue: string[];
+    monologueRegions?: string[];
     confidence: number;
+    threshold?: number;
     uncertainClaims: string[];
     clarifyingQuestion: string | null;
     needsClarification: boolean;
+    withheld?: boolean;
+    backtracked?: boolean;
+    discardedAssumption?: string | null;
+    difficulty?: 'trivial' | 'moderate' | 'hard' | null;
+    parseOk?: boolean;
+    parseError?: string | null;
     deepMode: boolean;
+    fastPass?: boolean;
   };
 }
 
