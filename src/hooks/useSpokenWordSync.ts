@@ -190,6 +190,12 @@ export function useSpokenWordSync(messageId: string | undefined, text: string) {
   const weights = useMemo(() => buildWeights(spokenTokens), [spokenTokens]);
   const tokens = spokenTokens;
 
+  /** spokenIndex -> displayIndex, so the highlight lands on the right word. */
+  const spokenToDisplay = useMemo(
+    () => alignSpokenToDisplay(spokenTokens, displayTokens),
+    [spokenTokens, displayTokens]
+  );
+
   const boundarySeenRef = useRef(false);
   const startedAtRef = useRef(0);
   const audioRef = useRef<HTMLMediaElement | null>(null);
@@ -197,6 +203,21 @@ export function useSpokenWordSync(messageId: string | undefined, text: string) {
   const rafRef = useRef<number | null>(null);
   const lastIndexRef = useRef(-1);
   const activeSessionIdRef = useRef<string | null>(null);
+
+  /**
+   * Commit a new spoken-word index.
+   * Monotonic on purpose: chunked Deepgram audio restarts `currentTime` at 0
+   * for every chunk and the estimator can lag behind boundary events, which
+   * used to yank the highlight (and the scroll position) backwards.
+   */
+  const commitIndex = useRef((index: number) => {});
+  commitIndex.current = (index: number) => {
+    if (index < 0 || index >= tokens.length) return;
+    if (index <= lastIndexRef.current) return;
+    lastIndexRef.current = index;
+    setActiveWordIndex(index);
+  };
+
 
   // ── Session tracking ────────────────────────────────────────────────────
   useEffect(() => {
