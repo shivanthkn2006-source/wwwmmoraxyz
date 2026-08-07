@@ -64,6 +64,7 @@ const ProfileContent = React.lazy(() => import('@/components/ProfileContent'));
 import { AtlasHUD } from '@/components/atlas';
 
 import { useFriendRequests } from "@/hooks/useFriendRequests";
+import PageSeo from "@/components/seo/PageSeo";
 
 
 interface Post {
