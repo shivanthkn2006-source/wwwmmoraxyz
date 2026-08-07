@@ -62,8 +62,36 @@
     
     <meta name="twitter:image" content="https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/ee5e2820-d202-4ed3-899d-40b9ee60ecd5">
     
-    <!-- Canonical URL -->
-    <link rel="canonical" href="https://mmora.xyz" />
+    <!-- Canonical URL is set per-route via react-helmet-async (src/components/seo/PageSeo.tsx) -->
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "MMora",
+        "url": "https://www.mmora.xyz",
+        "description": "Immersive AI social platform powered by Zoe."
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "Universe of Life",
+        "url": "https://www.mmora.xyz",
+        "brand": "MMora"
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "Zoe AI Architect",
+        "applicationCategory": "MultimediaApplication",
+        "operatingSystem": "Web",
+        "url": "https://www.mmora.xyz/zoe-infinity"
+      }
+    </script>
   <meta property="og:title" content="Universe of ai - www.mmora.xyz">
   <meta name="twitter:title" content="Universe of ai - www.mmora.xyz">
   <meta property="og:description" content="Next-generation AI platform powered by Zoe - available at mmora.xyz">

@@ -19,6 +19,7 @@ import useDeepRootScanScheduler from '@/hooks/useDeepRootScanScheduler';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import PageSeo from '@/components/seo/PageSeo';
 import { initializeZoeVoices } from '@/utils/zoeVoice';
 import { generateArt, shouldTriggerArtGift } from '@/utils/ArtGenerator';
 import { generateSpeculativeSpeech } from '@/core/speech/SpeculativeSpeechProtocol';
@@ -3717,6 +3718,12 @@ If you realize you made a factual error, repeated yourself, or gave contradictor
       className="fixed inset-0 flex flex-col overflow-hidden bg-black"
       onClick={() => isVisualsReady && genesisEffects.initEffects()}
     >
+      <PageSeo
+        title="Zoe Infinity Workspace — MMora"
+        description="Talk, create and research with Zoe Infinity: a voice-first AI workspace for conversation, images and deep research."
+      />
+      <h1 className="sr-only">Zoe Infinity Workspace</h1>
+
       {/* Loading Progress Indicator - Shows during staged loading or initialization */}
       {(!phases.isFullyLoaded || isInitializing) && (
         <div className="absolute top-2 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-black/60 px-3 py-1 rounded-full text-xs text-white/50">

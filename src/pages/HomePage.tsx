@@ -64,6 +64,7 @@ const ProfileContent = React.lazy(() => import('@/components/ProfileContent'));
 import { AtlasHUD } from '@/components/atlas';
 
 import { useFriendRequests } from "@/hooks/useFriendRequests";
+import PageSeo from "@/components/seo/PageSeo";
 
 
 interface Post {
@@ -1722,6 +1723,11 @@ const HomePage = () => {
 
   return (
     <>
+      <PageSeo
+        title="MMora — Immersive AI Social Platform"
+        description="Share loops, selfies and timelines with friends on MMora, the immersive AI social platform powered by Zoe."
+      />
+
       {/* Atlas HUD Overlay - Smith AI Interface (SEPARATE from Zoe Infinity) */}
       {/* Atlas Boot and Prime Objective are handled INSIDE AtlasHUD, not in main Zoe flow */}
       {atlasHUDActive && (
@@ -1763,6 +1769,7 @@ const HomePage = () => {
                   onClick={triggerHomeRefresh}
                 >
                   MMora
+                  <span className="sr-only"> — Immersive AI Social Platform</span>
                 </h1>
               </div>
 
@@ -1775,7 +1782,7 @@ const HomePage = () => {
                 title="Profile"
               >
                 <Avatar className={glowClass}>
-                  <AvatarImage src={userProfile?.profile_photo_url || userProfile?.avatar_url || ''} alt="Profile" />
+                  <AvatarImage src={userProfile?.profile_photo_url || userProfile?.avatar_url || ''} alt="User profile photo" />
                   <AvatarFallback>
                     {(userProfile?.display_name || user?.email || 'U').slice(0, 1).toUpperCase()}
                   </AvatarFallback>
@@ -1802,7 +1809,7 @@ const HomePage = () => {
                 <AdminFeedDebugger entries={debugEntries} isAdmin={isAdminUser} />
                 {receivedRequests.length > 0 && (
                   <div className="mb-6">
-                    <h3 className="text-lg font-semibold mb-3">Friend Requests</h3>
+                    <h2 className="text-lg font-semibold mb-3">Friend Requests</h2>
                     <div className="space-y-2">
                       {receivedRequests.map((request) => (
                         <FriendRequestCard
@@ -1877,6 +1884,7 @@ const HomePage = () => {
                         onClick={() => navigate('/selfie-city')}
                         className="group relative flex items-center justify-center w-6 h-6 rounded-md bg-foreground/5 backdrop-blur-md border border-foreground/20 hover:border-foreground/40 hover:bg-foreground/10 transition-all duration-300 cursor-pointer focus:outline-none focus-visible:ring-0 focus-visible:border-foreground/40 shadow-none"
                         title="Selfie City"
+                        aria-label="Selfie City"
                       >
                         <Camera className="w-3 h-3 text-foreground" />
                       </button>
