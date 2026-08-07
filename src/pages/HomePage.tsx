@@ -1722,6 +1722,11 @@ const HomePage = () => {
 
   return (
     <>
+      <PageSeo
+        title="MMora — Immersive AI Social Platform"
+        description="Share loops, selfies and timelines with friends on MMora, the immersive AI social platform powered by Zoe."
+      />
+
       {/* Atlas HUD Overlay - Smith AI Interface (SEPARATE from Zoe Infinity) */}
       {/* Atlas Boot and Prime Objective are handled INSIDE AtlasHUD, not in main Zoe flow */}
       {atlasHUDActive && (
