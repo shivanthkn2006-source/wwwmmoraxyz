@@ -1,6 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { BookOpen, Shield, FileText, Mail, MapPin, Scale } from "lucide-react";
+import PageSeo from "@/components/seo/PageSeo";
 
 const AboutPage = () => {
   const sections = [
