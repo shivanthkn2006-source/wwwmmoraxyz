@@ -1763,6 +1763,7 @@ const HomePage = () => {
                   onClick={triggerHomeRefresh}
                 >
                   MMora
+                  <span className="sr-only"> — Immersive AI Social Platform</span>
                 </h1>
               </div>
 
