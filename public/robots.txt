@@ -12,3 +12,13 @@ Allow: /
 
 User-agent: *
 Allow: /
+Disallow: /admin/
+Disallow: /god-mode
+Disallow: /root-scan
+Disallow: /platform-audit
+Disallow: /vr-audit
+Disallow: /integration-test
+Disallow: /access-denied
+Disallow: /password-recovery
+
+Sitemap: https://www.mmora.xyz/sitemap.xml
