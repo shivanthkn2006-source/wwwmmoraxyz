@@ -1776,7 +1776,7 @@ const HomePage = () => {
                 title="Profile"
               >
                 <Avatar className={glowClass}>
-                  <AvatarImage src={userProfile?.profile_photo_url || userProfile?.avatar_url || ''} alt="Profile" />
+                  <AvatarImage src={userProfile?.profile_photo_url || userProfile?.avatar_url || ''} alt="User profile photo" />
                   <AvatarFallback>
                     {(userProfile?.display_name || user?.email || 'U').slice(0, 1).toUpperCase()}
                   </AvatarFallback>
