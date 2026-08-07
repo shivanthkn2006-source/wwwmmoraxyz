@@ -19,6 +19,7 @@ import useDeepRootScanScheduler from '@/hooks/useDeepRootScanScheduler';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import PageSeo from '@/components/seo/PageSeo';
 import { initializeZoeVoices } from '@/utils/zoeVoice';
 import { generateArt, shouldTriggerArtGift } from '@/utils/ArtGenerator';
 import { generateSpeculativeSpeech } from '@/core/speech/SpeculativeSpeechProtocol';
