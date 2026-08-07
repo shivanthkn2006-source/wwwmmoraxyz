@@ -1878,6 +1878,7 @@ const HomePage = () => {
                         onClick={() => navigate('/selfie-city')}
                         className="group relative flex items-center justify-center w-6 h-6 rounded-md bg-foreground/5 backdrop-blur-md border border-foreground/20 hover:border-foreground/40 hover:bg-foreground/10 transition-all duration-300 cursor-pointer focus:outline-none focus-visible:ring-0 focus-visible:border-foreground/40 shadow-none"
                         title="Selfie City"
+                        aria-label="Selfie City"
                       >
                         <Camera className="w-3 h-3 text-foreground" />
                       </button>
