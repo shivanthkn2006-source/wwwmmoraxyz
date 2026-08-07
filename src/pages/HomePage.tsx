@@ -1803,7 +1803,7 @@ const HomePage = () => {
                 <AdminFeedDebugger entries={debugEntries} isAdmin={isAdminUser} />
                 {receivedRequests.length > 0 && (
                   <div className="mb-6">
-                    <h3 className="text-lg font-semibold mb-3">Friend Requests</h3>
+                    <h2 className="text-lg font-semibold mb-3">Friend Requests</h2>
                     <div className="space-y-2">
                       {receivedRequests.map((request) => (
                         <FriendRequestCard
