@@ -188,6 +188,11 @@ Enterprise: enterprise@universeoflife.app`
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-primary/5 pb-20">
+      <PageSeo
+        title="About Universe of Life — MMora"
+        description="Learn about Universe of Life, the team behind MMora and Zoe, our mission, contact details and platform principles."
+      />
+
       <div className="container mx-auto px-4 pt-8 max-w-5xl">
         {/* Header */}
         <div className="text-center mb-12 space-y-4">
