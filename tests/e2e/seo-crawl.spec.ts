@@ -42,7 +42,7 @@ test.describe('public route crawl', () => {
       expect(description, `description on ${entry.path}`).toBe(ROUTE_SEO[entry.path].description);
 
       const h1Count = await page.locator('h1').count();
-      expect(h1Count, `h1 count on ${entry.path}`).toBeGreaterThan(0);
+      expect(h1Count, `h1 count on ${entry.path}`).toBe(1);
     });
   }
 
