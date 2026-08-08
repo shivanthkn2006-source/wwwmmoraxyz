@@ -15,6 +15,8 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Mail, Lock, Eye, EyeOff, Loader2, ArrowRight, Sparkles } from 'lucide-react';
 import { z } from 'zod';
+import PageSeo from '@/components/seo/PageSeo';
+import { ROUTE_SEO } from '@/config/routeSeo';
 
 // Validation schemas
 const emailSchema = z.string().email('Please enter a valid email address');
@@ -137,6 +139,7 @@ export default function ZoeInfinityAuth() {
 
   return (
     <div className="fixed inset-0 flex flex-col items-center justify-center overflow-hidden bg-black">
+      <PageSeo title={ROUTE_SEO['/zoe-infinity'].title} description={ROUTE_SEO['/zoe-infinity'].description} path="/zoe-infinity" />
       {/* Subtle grid background */}
       <div 
         className="absolute inset-0 opacity-[0.03]"
