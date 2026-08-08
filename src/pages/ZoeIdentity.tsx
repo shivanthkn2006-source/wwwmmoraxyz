@@ -259,6 +259,7 @@ const ZoeIdentity: React.FC = () => {
 return (
     <>
       <PageSeo title={ROUTE_SEO['/genesis-imprint'].title} description={ROUTE_SEO['/genesis-imprint'].description} path="/genesis-imprint" />
+      <h1 className="sr-only">Genesis Imprint — Bio-Quantum Sign In</h1>
     <div className="fixed inset-0 bg-black overflow-hidden">
       {/* THE VOID - Pure Black Background */}
       <div className="absolute inset-0 bg-gradient-to-b from-black via-black to-black">
