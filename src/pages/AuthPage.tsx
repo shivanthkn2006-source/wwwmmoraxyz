@@ -14,6 +14,8 @@ import LoginQueueSystem from '@/components/LoginQueueSystem';
 import PermissionActivationModal from '@/components/PermissionActivationModal';
 import { hasActivatedPermissions } from '@/utils/unifiedPermissionManager';
 import { useWebAuthn } from '@/hooks/useWebAuthn';
+import PageSeo from '@/components/seo/PageSeo';
+import { ROUTE_SEO } from '@/config/routeSeo';
 
 
 // Validation schemas
@@ -218,6 +220,7 @@ const AuthPage = () => {
 
   return (
     <>
+      <PageSeo title={ROUTE_SEO['/auth'].title} description={ROUTE_SEO['/auth'].description} path="/auth" />
       {/* Login Queue System - Staggers entry to prevent cold start issues */}
       {showQueue && (
         <LoginQueueSystem
