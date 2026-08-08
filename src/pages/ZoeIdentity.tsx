@@ -19,6 +19,8 @@ import { cn } from '@/lib/utils';
 
 // Use the safe shard with 2D fallback
 import { SafeQuantumShard as QuantumShard } from '@/components/zoe-infinity/SafeQuantumShard';
+import PageSeo from '@/components/seo/PageSeo';
+import { ROUTE_SEO } from '@/config/routeSeo';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // STATUS MESSAGES
@@ -254,7 +256,10 @@ const ZoeIdentity: React.FC = () => {
   const currentMessage = STATUS_MESSAGES[status.state];
   const shardState = getShardState();
   
-  return (
+return (
+    <>
+      <PageSeo title={ROUTE_SEO['/genesis-imprint'].title} description={ROUTE_SEO['/genesis-imprint'].description} path="/genesis-imprint" />
+      <h1 className="sr-only">Genesis Imprint — Bio-Quantum Sign In</h1>
     <div className="fixed inset-0 bg-black overflow-hidden">
       {/* THE VOID - Pure Black Background */}
       <div className="absolute inset-0 bg-gradient-to-b from-black via-black to-black">
@@ -466,6 +471,7 @@ const ZoeIdentity: React.FC = () => {
         )}
       </AnimatePresence>
     </div>
+    </>
   );
 };
 

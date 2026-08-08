@@ -10,6 +10,8 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { generateEarLinkBlueprintPDF } from '@/utils/earLinkBlueprintPdfGenerator';
 import { toast } from 'sonner';
+import PageSeo from '@/components/seo/PageSeo';
+import { ROUTE_SEO } from '@/config/routeSeo';
 
 const EarLinkBlueprintPage: React.FC = () => {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -53,7 +55,9 @@ const EarLinkBlueprintPage: React.FC = () => {
     { icon: Battery, label: 'Battery', value: '8hr / 400mAh' },
   ];
 
-  return (
+return (
+    <>
+      <PageSeo title={ROUTE_SEO['/ear-link-blueprint'].title} description={ROUTE_SEO['/ear-link-blueprint'].description} path="/ear-link-blueprint" />
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-cyan-950 flex items-center justify-center p-4">
       <motion.div 
         initial={{ opacity: 0, y: 20 }} 
@@ -126,6 +130,7 @@ const EarLinkBlueprintPage: React.FC = () => {
         </p>
       </motion.div>
     </div>
+    </>
   );
 };
 

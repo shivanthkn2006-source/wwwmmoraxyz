@@ -9,6 +9,8 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Download, Smartphone, Monitor, CheckCircle, Share, Plus, MoreVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import PageSeo from '@/components/seo/PageSeo';
+import { ROUTE_SEO } from '@/config/routeSeo';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -98,7 +100,9 @@ export default function InstallApp() {
     );
   }
 
-  return (
+return (
+    <>
+      <PageSeo title={ROUTE_SEO['/install'].title} description={ROUTE_SEO['/install'].description} path="/install" />
     <div className="min-h-screen bg-gradient-to-b from-background to-background/95">
       {/* Hero */}
       <div className="px-6 pt-16 pb-12 text-center">
@@ -262,5 +266,6 @@ export default function InstallApp() {
         </a>
       </div>
     </div>
+    </>
   );
 }
