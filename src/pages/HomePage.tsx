@@ -757,7 +757,7 @@ const HomePage = () => {
       if (feedAutoTimerRef.current) window.clearTimeout(feedAutoTimerRef.current);
       feedAutoTimerRef.current = null;
     };
-  }, [activeTab, loading, loopRailInView, loopRailPassCompleted, feedAutoPassCompleted, globalPosts.length, personalPosts.length, feedAutoIndex, autoScrollEnabled, zoeChatOpen]);
+  }, [activeTab, loading, loopRailInView, loopRailPassCompleted, feedAutoPassCompleted, hasNewPosts, globalPosts.length, personalPosts.length, feedAutoIndex, autoScrollEnabled, zoeChatOpen]);
 
 
   // Voice / programmatic command bus for the Home surface.
