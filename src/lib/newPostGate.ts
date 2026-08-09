@@ -5,6 +5,14 @@
 
 const MAX_IDS = 500;
 
+export type FeedUpdateSource = 'initial' | 'manual' | 'realtime';
+
+export interface NewArrivalResult {
+  knownIds: string[];
+  newIds: string[];
+  shouldAutoScroll: boolean;
+}
+
 const keyFor = (tab: string) => `mmora.home.seenPosts.${tab}`;
 
 export const readSeenPostIds = (tab: string): Set<string> => {
@@ -36,3 +44,28 @@ export const getUnseenPostIds = (tab: string, ids: string[]): string[] => {
 
 /** True when the first load on a device has no history at all (nothing seen yet). */
 export const hasNoSeenHistory = (tab: string): boolean => readSeenPostIds(tab).size === 0;
+
+/**
+ * Compares two feed snapshots. Initial loads and manual refreshes always become
+ * a quiet baseline; only a realtime update is allowed to arm auto-scroll.
+ */
+export const detectNewArrivals = (
+  previousIds: string[],
+  nextIds: string[],
+  source: FeedUpdateSource,
+): NewArrivalResult => {
+  const knownIds = Array.from(new Set(nextIds.filter(Boolean)));
+  const previous = new Set(previousIds.filter(Boolean));
+  const newIds = source === 'realtime' ? knownIds.filter((id) => !previous.has(id)) : [];
+  return { knownIds, newIds, shouldAutoScroll: newIds.length > 0 };
+};
+
+export const createOnePassQueue = (ids: string[]): string[] =>
+  Array.from(new Set(ids.filter(Boolean)));
+
+export const advanceOnePass = (queue: string[], index: number) => {
+  const nextIndex = index + 1;
+  return nextIndex >= queue.length
+    ? { completed: true, nextIndex: 0 }
+    : { completed: false, nextIndex };
+};
