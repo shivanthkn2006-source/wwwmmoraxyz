@@ -1868,6 +1868,15 @@ const HomePage = () => {
 
         <TabsContent value="global" className="mt-0 pb-24 xxs:pb-24 xs:pb-20">
               <div className="space-y-2 p-3" data-feed-tab="global">
+                {hasNewPosts && (
+                  <div className="sticky top-16 z-30 flex items-center justify-between rounded-md border border-primary/30 bg-background/95 px-3 py-2 shadow-sm backdrop-blur" data-testid="new-posts-indicator">
+                    <span className="text-sm font-medium">New posts available</span>
+                    <Button size="sm" variant="outline" onClick={scrollToNewPosts}>
+                      <ArrowDown className="mr-1 h-4 w-4" />
+                      Scroll to new posts
+                    </Button>
+                  </div>
+                )}
                 <FeedDiagnosticsBanner
                   diag={feedDiag}
                   consecutiveFailures={consecutiveFailures}
@@ -2135,7 +2144,10 @@ const HomePage = () => {
                       <div ref={loopRailRef} className="flex gap-2 overflow-x-auto pb-1 scroll-smooth snap-x" data-testid="loops-rail">
                         {filteredLoops.map((post, index) => (
                           <FeedErrorBoundary key={post.id} section="loops" postId={post.id} onRetry={() => retrySingleLoop(post.id)}>
-                            <div data-loop-index={index} className="snap-start shrink-0">
+                            <div data-loop-index={index} className="relative snap-start shrink-0" data-new={newContentIds.has(post.id) ? 'true' : 'false'}>
+                              {newContentIds.has(post.id) && (
+                                <NewContentBadge className="left-1 top-1" onViewed={() => dismissNewContent(post.id)} />
+                              )}
                               <LoopVideoItem
                                 post={post}
                                 index={index}
@@ -2186,7 +2198,10 @@ const HomePage = () => {
                   globalPosts.map(post => {
                     const isToday = post.created_at && new Date(post.created_at).toDateString() === new Date().toDateString();
                     return (
-                      <div key={post.id} data-post-card data-post-id={post.id} data-today={isToday ? 'true' : 'false'}>
+                      <div key={post.id} className="relative" data-post-card data-post-id={post.id} data-today={isToday ? 'true' : 'false'} data-new={newContentIds.has(post.id) ? 'true' : 'false'}>
+                        {newContentIds.has(post.id) && (
+                          <NewContentBadge className="right-3 top-3" onViewed={() => dismissNewContent(post.id)} />
+                        )}
                         <FeedErrorBoundary section="post-card" postId={post.id} onRetry={() => retrySinglePost(post.id)}>
                           <PostCard post={post} onUpdate={handleUpdate} />
                         </FeedErrorBoundary>
@@ -2199,6 +2214,15 @@ const HomePage = () => {
 
             <TabsContent value="personal" className="mt-0 pb-24 xxs:pb-24 xs:pb-20">
               <div className="space-y-2 p-3" data-feed-tab="personal">
+                {hasNewPosts && (
+                  <div className="sticky top-16 z-30 flex items-center justify-between rounded-md border border-primary/30 bg-background/95 px-3 py-2 shadow-sm backdrop-blur" data-testid="new-posts-indicator">
+                    <span className="text-sm font-medium">New posts available</span>
+                    <Button size="sm" variant="outline" onClick={scrollToNewPosts}>
+                      <ArrowDown className="mr-1 h-4 w-4" />
+                      Scroll to new posts
+                    </Button>
+                  </div>
+                )}
                 {loading ? (
                   <p className="text-center text-muted-foreground py-8">Loading posts...</p>
                 ) : personalPosts.length === 0 ? (
@@ -2207,7 +2231,10 @@ const HomePage = () => {
                   personalPosts.map(post => {
                     const isToday = post.created_at && new Date(post.created_at).toDateString() === new Date().toDateString();
                     return (
-                      <div key={post.id} data-post-card data-post-id={post.id} data-today={isToday ? 'true' : 'false'}>
+                      <div key={post.id} className="relative" data-post-card data-post-id={post.id} data-today={isToday ? 'true' : 'false'} data-new={newContentIds.has(post.id) ? 'true' : 'false'}>
+                        {newContentIds.has(post.id) && (
+                          <NewContentBadge className="right-3 top-3" onViewed={() => dismissNewContent(post.id)} />
+                        )}
                         <FeedErrorBoundary section="post-card" postId={post.id} onRetry={() => retrySinglePost(post.id)}>
                           <PostCard post={post} onUpdate={handleUpdate} />
                         </FeedErrorBoundary>
