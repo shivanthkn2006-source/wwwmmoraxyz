@@ -282,6 +282,10 @@ const HomePage = () => {
   const [loopRailPassCompleted, setLoopRailPassCompleted] = useState(false);
   const [feedAutoIndex, setFeedAutoIndex] = useState(0);
   const [feedAutoPassCompleted, setFeedAutoPassCompleted] = useState(false);
+  // Auto-scroll only runs when NEW posts have appeared on the active tab.
+  const [hasNewPosts, setHasNewPosts] = useState(false);
+  const pendingSeenIdsRef = useRef<string[]>([]);
+
   const [showZoeHomeDebug, setShowZoeHomeDebug] = useState<boolean>(() => {
     try { return typeof window !== 'undefined' && window.localStorage.getItem('mmora.home.zoeDebugOverlay') !== 'false'; } catch { return true; }
   });
