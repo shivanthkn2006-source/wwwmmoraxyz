@@ -65,6 +65,8 @@ import { AtlasHUD } from '@/components/atlas';
 
 import { useFriendRequests } from "@/hooks/useFriendRequests";
 import PageSeo from "@/components/seo/PageSeo";
+import { getUnseenPostIds, markPostsSeen } from "@/lib/newPostGate";
+
 
 
 interface Post {
