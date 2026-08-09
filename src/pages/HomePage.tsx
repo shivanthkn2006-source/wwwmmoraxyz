@@ -706,14 +706,18 @@ const HomePage = () => {
     const advance = () => {
       const nextIdx = targetIndex + 1;
       if (nextIdx >= posts.length) {
-        // One full pass done → scroll back to the first post and stop.
+        // One full pass done → mark everything as seen, scroll back, and stop
+        // until genuinely new posts arrive.
         posts[0]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        markPostsSeen(activeTab, pendingSeenIdsRef.current);
         setFeedAutoIndex(0);
         setFeedAutoPassCompleted(true);
-        if (import.meta.env.DEV) console.info('[HomePage] timeline one-pass complete → auto-scroll stopped');
+        setHasNewPosts(false);
+        if (import.meta.env.DEV) console.info('[HomePage] timeline one-pass complete → posts marked seen, auto-scroll stopped');
         try { window.dispatchEvent(new CustomEvent('mmora:analytics', { detail: { name: 'feed_autoscroll_pass_completed' } })); } catch {}
         return;
       }
+
       posts[nextIdx]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       setFeedAutoIndex(nextIdx);
     };
