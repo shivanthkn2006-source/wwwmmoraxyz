@@ -65,7 +65,8 @@ import { AtlasHUD } from '@/components/atlas';
 
 import { useFriendRequests } from "@/hooks/useFriendRequests";
 import PageSeo from "@/components/seo/PageSeo";
-import { getUnseenPostIds, markPostsSeen } from "@/lib/newPostGate";
+import NewContentBadge from '@/components/NewContentBadge';
+import { detectNewArrivals, markPostsSeen, type FeedUpdateSource } from "@/lib/newPostGate";
 
 
 
@@ -287,6 +288,8 @@ const HomePage = () => {
   // Auto-scroll only runs when NEW posts have appeared on the active tab.
   const [hasNewPosts, setHasNewPosts] = useState(false);
   const pendingSeenIdsRef = useRef<string[]>([]);
+  const knownFeedIdsRef = useRef<Record<'global' | 'personal' | 'loops', string[]>>({ global: [], personal: [], loops: [] });
+  const [newContentIds, setNewContentIds] = useState<Set<string>>(() => new Set());
 
   const [showZoeHomeDebug, setShowZoeHomeDebug] = useState<boolean>(() => {
     try { return typeof window !== 'undefined' && window.localStorage.getItem('mmora.home.zoeDebugOverlay') !== 'false'; } catch { return true; }
@@ -665,28 +668,29 @@ const HomePage = () => {
     };
   }, [activeTab, globalPosts, personalPosts, filteredLoops, preloadPostMedia]);
 
-  // New-post gate: auto-scroll is only armed when posts the user has never seen
-  // appear on the active tab (global or friends). Everything already seen stays
-  // static so the scroll always means "here is what's new".
+  const visibleNewIds = (activeTab === 'personal' ? personalPosts : globalPosts)
+    .map((post) => post.id)
+    .filter((id) => newContentIds.has(id));
+
   useEffect(() => {
-    if (loading) return;
-    if (activeTab !== 'global' && activeTab !== 'personal') { setHasNewPosts(false); return; }
-    const source = activeTab === 'global' ? globalPosts : personalPosts;
-    const ids = (source ?? []).map((p: any) => String(p?.id ?? '')).filter(Boolean);
-    if (ids.length === 0) { setHasNewPosts(false); return; }
-    const unseen = getUnseenPostIds(activeTab, ids);
-    pendingSeenIdsRef.current = ids;
-    if (unseen.length > 0) {
-      setHasNewPosts(true);
-      setFeedAutoPassCompleted(false);
-      setFeedAutoIndex(0);
-      if (import.meta.env.DEV) console.info('[HomePage] new posts detected → auto-scroll armed', { tab: activeTab, unseen: unseen.length });
-      try { window.dispatchEvent(new CustomEvent('mmora:analytics', { detail: { name: 'feed_new_posts_detected', tab: activeTab, count: unseen.length } })); } catch {}
-    } else {
-      setHasNewPosts(false);
-      if (import.meta.env.DEV) console.info('[HomePage] no new posts → auto-scroll idle', { tab: activeTab });
-    }
-  }, [activeTab, loading, globalPosts, personalPosts]);
+    pendingSeenIdsRef.current = visibleNewIds;
+    setHasNewPosts(visibleNewIds.length > 0);
+  }, [activeTab, newContentIds, globalPosts, personalPosts]);
+
+  const dismissNewContent = React.useCallback((id: string) => {
+    setNewContentIds((current) => {
+      if (!current.has(id)) return current;
+      const next = new Set(current);
+      next.delete(id);
+      return next;
+    });
+    if (activeTab === 'global' || activeTab === 'personal') markPostsSeen(activeTab, [id]);
+  }, [activeTab]);
+
+  const scrollToNewPosts = React.useCallback(() => {
+    const first = document.querySelector<HTMLElement>(`[data-feed-tab="${activeTab}"] [data-post-card][data-new="true"]`);
+    first?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [activeTab]);
 
   // Auto-advance the active feed after the current clip's real duration finishes.
   // Event-driven per video (handles buffering/stalls); non-video posts fall back to 5s.
@@ -695,8 +699,8 @@ const HomePage = () => {
     if (import.meta.env.DEV) console.info('[HomePage] timeline-autoscroll guards', { blocked, loading, zoeChatOpen, loopRailInView, loopRailPassCompleted, feedAutoPassCompleted, hasNewPosts, autoScrollEnabled, activeTab });
     if (blocked) return;
 
-    const posts = Array.from(document.querySelectorAll<HTMLElement>(`[data-feed-tab="${activeTab}"] [data-post-card]`));
-    if (posts.length <= 1) return;
+    const posts = Array.from(document.querySelectorAll<HTMLElement>(`[data-feed-tab="${activeTab}"] [data-post-card][data-new="true"]`));
+    if (posts.length === 0) return;
 
     const targetIndex = feedAutoIndex % posts.length;
     const target = posts[targetIndex];
@@ -708,8 +712,12 @@ const HomePage = () => {
       if (nextIdx >= posts.length) {
         // One full pass done → mark everything as seen, scroll back, and stop
         // until genuinely new posts arrive.
-        posts[0]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         markPostsSeen(activeTab, pendingSeenIdsRef.current);
+        setNewContentIds((current) => {
+          const next = new Set(current);
+          pendingSeenIdsRef.current.forEach((id) => next.delete(id));
+          return next;
+        });
         setFeedAutoIndex(0);
         setFeedAutoPassCompleted(true);
         setHasNewPosts(false);
@@ -1009,7 +1017,7 @@ const HomePage = () => {
     fetchFriendships();
   }, [user]);
 
-  const fetchGlobalPosts = async () => {
+  const fetchGlobalPosts = async (updateSource: FeedUpdateSource = 'manual') => {
     const t0 = performance.now();
     if (!user) {
       setGlobalPosts([]);
@@ -1106,6 +1114,14 @@ const HomePage = () => {
           user_liked: likedPostIds.has(post.id)
         }));
 
+      const ids = postsWithLikes.map((post: Post) => post.id);
+      const arrivals = detectNewArrivals(knownFeedIdsRef.current.global, ids, updateSource);
+      knownFeedIdsRef.current.global = arrivals.knownIds;
+      if (arrivals.shouldAutoScroll) {
+        setNewContentIds((current) => new Set([...current, ...arrivals.newIds]));
+        setFeedAutoPassCompleted(false);
+        setFeedAutoIndex(0);
+      }
       setGlobalPosts(postsWithLikes as any);
       setFeedDiag({
         status: postsWithLikes.length ? 'ok' : 'empty',
@@ -1122,7 +1138,7 @@ const HomePage = () => {
     }
   };
 
-  const fetchLoopPosts = async () => {
+  const fetchLoopPosts = async (updateSource: FeedUpdateSource = 'manual') => {
     if (!user) {
       setLoopPosts([]);
       return;
@@ -1179,13 +1195,18 @@ const HomePage = () => {
       }
       const likedPostIds = new Set(userLikesResult.data?.map(p => p.post_id) || []);
 
-      setLoopPosts(loopRows.map((post: any) => ({
+      const preparedLoops = loopRows.map((post: any) => ({
         ...post,
         media_type: 'video',
         profile: profileMap.get(post.user_id) || null,
         user_liked: likedPostIds.has(post.id),
         has_deferred_media: false,
-      })) as any);
+      })) as Post[];
+      const loopIds = preparedLoops.map((post) => post.id);
+      const loopArrivals = detectNewArrivals(knownFeedIdsRef.current.loops, loopIds, updateSource);
+      knownFeedIdsRef.current.loops = loopArrivals.knownIds;
+      if (loopArrivals.newIds.length > 0) setNewContentIds((current) => new Set([...current, ...loopArrivals.newIds]));
+      setLoopPosts(preparedLoops);
       setBrokenLoopPreviewIds(prev => {
         const next = new Set(prev);
         loopRows.forEach((post: any) => next.delete(post.id));
@@ -1199,7 +1220,7 @@ const HomePage = () => {
     }
   };
 
-  const fetchPersonalPosts = async () => {
+  const fetchPersonalPosts = async (updateSource: FeedUpdateSource = 'manual') => {
     if (!user) return;
 
     try {
@@ -1275,6 +1296,14 @@ const HomePage = () => {
           user_liked: likedPostIds.has(post.id)
         }));
 
+      const ids = postsWithLikes.map((post: Post) => post.id);
+      const arrivals = detectNewArrivals(knownFeedIdsRef.current.personal, ids, updateSource);
+      knownFeedIdsRef.current.personal = arrivals.knownIds;
+      if (arrivals.shouldAutoScroll) {
+        setNewContentIds((current) => new Set([...current, ...arrivals.newIds]));
+        setFeedAutoPassCompleted(false);
+        setFeedAutoIndex(0);
+      }
       setPersonalPosts(postsWithLikes as any);
     } catch (err) {
       console.error('Error in fetchPersonalPosts:', err);
@@ -1389,7 +1418,7 @@ const HomePage = () => {
       try {
         // Critical path: wait for the actual fetch (with a generous safety cap)
         // so the empty state never flashes before posts arrive on slow networks.
-        await settleWithin(Promise.all([fetchGlobalPosts(), fetchLoopPosts()]), 12000);
+        await settleWithin(Promise.all([fetchGlobalPosts('initial'), fetchLoopPosts('initial')]), 12000);
       } finally {
         setLoading(false);
       }
@@ -1409,7 +1438,7 @@ const HomePage = () => {
       
       // Further defer personal posts and badge counts
       setTimeout(() => {
-        fetchPersonalPosts();
+        fetchPersonalPosts('initial');
         fetchUnreadMessages();
         fetchNewMatches();
       }, 2000);
@@ -1419,7 +1448,9 @@ const HomePage = () => {
 
     // Listen for manual refresh events
     const unsubscribe = onHomeRefresh(() => {
-      loadPosts();
+      setLoading(true);
+      Promise.all([fetchGlobalPosts('manual'), fetchLoopPosts('manual'), fetchPersonalPosts('manual')])
+        .finally(() => setLoading(false));
     });
 
     // Set up real-time subscription for notification updates (deferred)
@@ -1427,7 +1458,7 @@ const HomePage = () => {
     if (user) {
       const setupRealtime = () => {
         channel = supabase
-          .channel(`notification-count-changes:${user.id}:${Math.random().toString(36).slice(2, 8)}`)
+          .channel(`home-realtime:${user.id}:${Math.random().toString(36).slice(2, 8)}`)
           .on(
             'postgres_changes',
             {
@@ -1440,6 +1471,11 @@ const HomePage = () => {
               fetchUnreadCount();
             }
           )
+          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, () => {
+            fetchGlobalPosts('realtime');
+            fetchPersonalPosts('realtime');
+            fetchLoopPosts('realtime');
+          })
           .subscribe();
       };
       
@@ -1466,9 +1502,9 @@ const HomePage = () => {
 
 
   const handleUpdate = () => {
-    fetchGlobalPosts();
-    fetchPersonalPosts();
-    fetchLoopPosts();
+    fetchGlobalPosts('manual');
+    fetchPersonalPosts('manual');
+    fetchLoopPosts('manual');
   };
 
   const openLoopsPlayer = (index: number) => {

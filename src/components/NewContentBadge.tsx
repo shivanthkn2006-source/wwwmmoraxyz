@@ -7,7 +7,7 @@ interface NewContentBadgeProps {
 }
 
 const NewContentBadge: React.FC<NewContentBadgeProps> = ({ onViewed, className = '' }) => {
-  const ref = useRef<HTMLSpanElement | null>(null);
+  const ref = useRef<HTMLDivElement | null>(null);
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
@@ -35,9 +35,9 @@ const NewContentBadge: React.FC<NewContentBadgeProps> = ({ onViewed, className =
 
   if (!visible) return null;
   return (
-    <Badge ref={ref} className={`pointer-events-none absolute z-20 bg-primary text-primary-foreground ${className}`} data-testid="new-content-badge">
-      New
-    </Badge>
+    <div ref={ref} className={`pointer-events-none absolute z-20 ${className}`} data-testid="new-content-badge">
+      <Badge>New</Badge>
+    </div>
   );
 };
 
