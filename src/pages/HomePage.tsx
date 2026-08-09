@@ -1882,7 +1882,7 @@ const HomePage = () => {
                   consecutiveFailures={consecutiveFailures}
                   onRetry={async () => {
                     setLoading(true);
-                    try { await fetchGlobalPosts(); } finally { setLoading(false); }
+                    try { await fetchGlobalPosts('manual'); } finally { setLoading(false); }
                   }}
                 />
                 <AdminFeedDebugger entries={debugEntries} isAdmin={isAdminUser} />
