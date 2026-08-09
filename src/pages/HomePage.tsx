@@ -65,6 +65,8 @@ import { AtlasHUD } from '@/components/atlas';
 
 import { useFriendRequests } from "@/hooks/useFriendRequests";
 import PageSeo from "@/components/seo/PageSeo";
+import { getUnseenPostIds, markPostsSeen } from "@/lib/newPostGate";
+
 
 
 interface Post {
@@ -282,6 +284,10 @@ const HomePage = () => {
   const [loopRailPassCompleted, setLoopRailPassCompleted] = useState(false);
   const [feedAutoIndex, setFeedAutoIndex] = useState(0);
   const [feedAutoPassCompleted, setFeedAutoPassCompleted] = useState(false);
+  // Auto-scroll only runs when NEW posts have appeared on the active tab.
+  const [hasNewPosts, setHasNewPosts] = useState(false);
+  const pendingSeenIdsRef = useRef<string[]>([]);
+
   const [showZoeHomeDebug, setShowZoeHomeDebug] = useState<boolean>(() => {
     try { return typeof window !== 'undefined' && window.localStorage.getItem('mmora.home.zoeDebugOverlay') !== 'false'; } catch { return true; }
   });
@@ -659,12 +665,36 @@ const HomePage = () => {
     };
   }, [activeTab, globalPosts, personalPosts, filteredLoops, preloadPostMedia]);
 
+  // New-post gate: auto-scroll is only armed when posts the user has never seen
+  // appear on the active tab (global or friends). Everything already seen stays
+  // static so the scroll always means "here is what's new".
+  useEffect(() => {
+    if (loading) return;
+    if (activeTab !== 'global' && activeTab !== 'personal') { setHasNewPosts(false); return; }
+    const source = activeTab === 'global' ? globalPosts : personalPosts;
+    const ids = (source ?? []).map((p: any) => String(p?.id ?? '')).filter(Boolean);
+    if (ids.length === 0) { setHasNewPosts(false); return; }
+    const unseen = getUnseenPostIds(activeTab, ids);
+    pendingSeenIdsRef.current = ids;
+    if (unseen.length > 0) {
+      setHasNewPosts(true);
+      setFeedAutoPassCompleted(false);
+      setFeedAutoIndex(0);
+      if (import.meta.env.DEV) console.info('[HomePage] new posts detected → auto-scroll armed', { tab: activeTab, unseen: unseen.length });
+      try { window.dispatchEvent(new CustomEvent('mmora:analytics', { detail: { name: 'feed_new_posts_detected', tab: activeTab, count: unseen.length } })); } catch {}
+    } else {
+      setHasNewPosts(false);
+      if (import.meta.env.DEV) console.info('[HomePage] no new posts → auto-scroll idle', { tab: activeTab });
+    }
+  }, [activeTab, loading, globalPosts, personalPosts]);
+
   // Auto-advance the active feed after the current clip's real duration finishes.
   // Event-driven per video (handles buffering/stalls); non-video posts fall back to 5s.
   useEffect(() => {
-    const blocked = loading || zoeChatOpen || (loopRailInView && !loopRailPassCompleted) || !autoScrollEnabled || feedAutoPassCompleted || (activeTab !== 'global' && activeTab !== 'personal');
-    if (import.meta.env.DEV) console.info('[HomePage] timeline-autoscroll guards', { blocked, loading, zoeChatOpen, loopRailInView, loopRailPassCompleted, feedAutoPassCompleted, autoScrollEnabled, activeTab });
+    const blocked = loading || zoeChatOpen || (loopRailInView && !loopRailPassCompleted) || !autoScrollEnabled || feedAutoPassCompleted || !hasNewPosts || (activeTab !== 'global' && activeTab !== 'personal');
+    if (import.meta.env.DEV) console.info('[HomePage] timeline-autoscroll guards', { blocked, loading, zoeChatOpen, loopRailInView, loopRailPassCompleted, feedAutoPassCompleted, hasNewPosts, autoScrollEnabled, activeTab });
     if (blocked) return;
+
     const posts = Array.from(document.querySelectorAll<HTMLElement>(`[data-feed-tab="${activeTab}"] [data-post-card]`));
     if (posts.length <= 1) return;
 
@@ -676,14 +706,18 @@ const HomePage = () => {
     const advance = () => {
       const nextIdx = targetIndex + 1;
       if (nextIdx >= posts.length) {
-        // One full pass done → scroll back to the first post and stop.
+        // One full pass done → mark everything as seen, scroll back, and stop
+        // until genuinely new posts arrive.
         posts[0]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        markPostsSeen(activeTab, pendingSeenIdsRef.current);
         setFeedAutoIndex(0);
         setFeedAutoPassCompleted(true);
-        if (import.meta.env.DEV) console.info('[HomePage] timeline one-pass complete → auto-scroll stopped');
+        setHasNewPosts(false);
+        if (import.meta.env.DEV) console.info('[HomePage] timeline one-pass complete → posts marked seen, auto-scroll stopped');
         try { window.dispatchEvent(new CustomEvent('mmora:analytics', { detail: { name: 'feed_autoscroll_pass_completed' } })); } catch {}
         return;
       }
+
       posts[nextIdx]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       setFeedAutoIndex(nextIdx);
     };
@@ -723,7 +757,7 @@ const HomePage = () => {
       if (feedAutoTimerRef.current) window.clearTimeout(feedAutoTimerRef.current);
       feedAutoTimerRef.current = null;
     };
-  }, [activeTab, loading, loopRailInView, loopRailPassCompleted, feedAutoPassCompleted, globalPosts.length, personalPosts.length, feedAutoIndex, autoScrollEnabled, zoeChatOpen]);
+  }, [activeTab, loading, loopRailInView, loopRailPassCompleted, feedAutoPassCompleted, hasNewPosts, globalPosts.length, personalPosts.length, feedAutoIndex, autoScrollEnabled, zoeChatOpen]);
 
 
   // Voice / programmatic command bus for the Home surface.
