@@ -1378,7 +1378,9 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
               wisdomChecked: true,
               wisdomPassed: true,
               wisdomConfidence: 90,
-              classifiedIntent: 'vision_analysis',
+              classifiedIntent: (result as any).identity_prompt && (result as any).identity_prompt !== 'none'
+                ? `vision_identity_${(result as any).identity_prompt}`
+                : 'vision_analysis',
               extractedEmotions: ['curious'],
               codexInjected: true,
             },
@@ -1387,6 +1389,22 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
           setMessages(prev => [...prev, zoeMessage]);
           offlineDataSync.addConversation('zoe', result.zoe_response);
           saveMessageToDb('assistant', result.zoe_response, undefined, undefined, zoeMessage.id);
+
+          // Offer to lock this photo as the identity reference (explicit consent only).
+          if ((result as any).identity_prompt === 'offer_lock' && user?.id && mediaType === 'image') {
+            toast('Save this as your identity photo?', {
+              description: 'Stored privately so Zoe can create images that look like you.',
+              duration: 15000,
+              action: {
+                label: 'Save',
+                onClick: async () => {
+                  const savedUrl = await saveIdentityReference(user.id, mediaFile);
+                  if (savedUrl) toast.success('Identity photo locked in your private vault');
+                  else toast.error('Could not save your identity photo');
+                },
+              },
+            });
+          }
 
           if (!isMuted) {
             speakAsZoe(
