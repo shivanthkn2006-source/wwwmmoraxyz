@@ -11,9 +11,9 @@ import DeepThinkingBlock, { type DeepThinkingMeta } from '@/components/zoe-infin
 import TeleprompterDebugOverlay from '@/components/zoe-infinity/TeleprompterDebugOverlay';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, Volume2, VolumeX, Minimize2, Maximize2, Paperclip, Image, FileText, Video, Loader2, Download, Upload, Mic, Circle, Square, Camera, StopCircle, Copy, Check, Users, MessageCircle, Search, ArrowLeft, User, Plus, Sparkles, CheckCheck, Reply, CornerUpLeft, ChevronDown, Brain, Cloud, CloudDownload, CloudUpload, Shield, FileDown, Activity, Phone, PhoneOff, Pause, Play, Gauge } from 'lucide-react';
-import MetacognitionMetricsPanel from '@/components/zoe-infinity/MetacognitionMetricsPanel';
-import CotWiringStatusPanel from '@/components/zoe-infinity/CotWiringStatusPanel';
+import ZoeDiagnosticsDrawer, { type DiagTab } from '@/components/zoe-infinity/ZoeDiagnosticsDrawer';
 import { cotStart, cotFinish } from '@/utils/cotWiringBus';
+import { setSendStage, reportDiagnosticError } from '@/utils/zoeDiagnosticsBus';
 import { useNavigate } from 'react-router-dom';
 import { useZoeOmegaCoreIntegration } from '@/hooks/useZoeOmegaCoreIntegration';
 import { format, isToday, isYesterday } from 'date-fns';
@@ -325,9 +325,9 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
       return next;
     });
   }, []);
-  // Deep Thinking (metacognitive brain) mode — routes to zoe-core-intelligence
+  // Deep Thinking (metacognitive brain) mode — routes to zoe-core-intelligence. ON by default.
   const [deepThinking, setDeepThinking] = useState<boolean>(() => {
-    try { return localStorage.getItem('zoe-orb-deep-thinking') === '1'; } catch { return false; }
+    try { return localStorage.getItem('zoe-orb-deep-thinking') !== '0'; } catch { return true; }
   });
   const toggleDeepThinking = useCallback(() => {
     setDeepThinking((prev) => {
@@ -336,10 +336,23 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
       return next;
     });
   }, []);
-  // Metacognition metrics overlay
-  const [showMetrics, setShowMetrics] = useState(false);
-  // Real-time CoT wiring status overlay
-  const [showWiring, setShowWiring] = useState(false);
+  // Unified diagnostics strip (metrics + CoT wiring + debug). Visible by default, collapsed.
+  const [showDiagnostics, setShowDiagnostics] = useState<boolean>(() => {
+    try { return localStorage.getItem('zoe-orb-diagnostics') !== '0'; } catch { return true; }
+  });
+  const [diagExpanded, setDiagExpanded] = useState(false);
+  const [diagTab, setDiagTab] = useState<DiagTab>('wiring');
+  const hideDiagnostics = useCallback(() => {
+    setShowDiagnostics(false);
+    setDiagExpanded(false);
+    try { localStorage.setItem('zoe-orb-diagnostics', '0'); } catch { /* ignore */ }
+  }, []);
+  const openDiagnostics = useCallback((tab: DiagTab) => {
+    setShowDiagnostics(true);
+    setDiagTab(tab);
+    setDiagExpanded(true);
+    try { localStorage.setItem('zoe-orb-diagnostics', '1'); } catch { /* ignore */ }
+  }, []);
 
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
@@ -1119,6 +1132,7 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
     setInput('');
     setReplyingTo(null); // Clear reply state after sending
     setIsProcessing(true);
+    setSendStage('sending', deepThinking ? 'zoe-core-intelligence' : 'zoe-chat');
 
     // ═══ CODE GENESIS MANIFESTO: Dispatch user message for CDSP analysis ═══
     window.dispatchEvent(new CustomEvent('zoe-user-message', { detail: { text: userMessage.content } }));
@@ -1642,13 +1656,15 @@ Want me to dive deeper into any aspect?`;
       }
       
       // ═══ DEEP THINKING MODE: metacognitive brain (zoe-core-intelligence) ═══
-      if (!responseText && deepThinking && isOnline) {
+      if (!responseText && deepThinking && isOnline && user?.id) {
         const dtToken = cotStart('zoe-core-intelligence');
+        setSendStage('thinking', 'zoe-core-intelligence');
         try {
           console.log('[ZoeOrb] Deep thinking → zoe-core-intelligence');
           const { data: dtData, error: dtError } = await supabase.functions.invoke('zoe-core-intelligence', {
             body: {
               command: userMessage.content,
+              userId: user.id,
               mode: 'deep_thinking',
               context: {
                 currentPage: window.location.pathname,
@@ -1671,6 +1687,7 @@ Want me to dive deeper into any aspect?`;
           cotFinish(dtToken, { ok: true });
         } catch (dtErr) {
           cotFinish(dtToken, { error: dtErr });
+          reportDiagnosticError('zoe-core-intelligence', dtErr);
           console.warn('[ZoeOrb] Deep thinking failed, falling back to zoe-chat:', dtErr);
         }
 
@@ -2159,8 +2176,9 @@ Want me to dive deeper into any aspect?`;
       }
     } finally {
       setIsProcessing(false);
+      setSendStage('done');
     }
-  }, [input, isProcessing, isSending, isOnline, messages, isMuted, processConversation, saveMessageToDb, pendingMedia, processMedia, messagingMode, selectedUser, sendDirectMessage, user?.id, processCommand, replyingTo, tubeSight, sentinelGateway, protocolWisdom]);
+  }, [input, isProcessing, isSending, isOnline, messages, isMuted, processConversation, saveMessageToDb, pendingMedia, processMedia, messagingMode, selectedUser, sendDirectMessage, user?.id, processCommand, replyingTo, tubeSight, sentinelGateway, protocolWisdom, deepThinking]);
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -2928,14 +2946,13 @@ Want me to dive deeper into any aspect?`;
                       size="icon"
                       className={cn(
                         'h-5 w-5 md:h-5 md:w-5 lg:h-4 lg:w-4 rounded-full transition-colors flex items-center justify-center shrink-0',
-                        showMetrics ? 'bg-amber-500/20 hover:bg-amber-500/30' : 'hover:bg-primary/10'
+                        diagTab === 'metrics' && diagExpanded ? 'bg-amber-500/20 hover:bg-amber-500/30' : 'hover:bg-primary/10'
                       )}
-                      onClick={() => setShowMetrics((v) => !v)}
-                      aria-pressed={showMetrics}
-                      aria-label={showMetrics ? 'Hide metacognition metrics' : 'Show metacognition metrics'}
+                      onClick={() => openDiagnostics('metrics')}
+                      aria-label="Show metacognition metrics"
                       title="Metacognition metrics"
                     >
-                      <Gauge className={cn('h-3 w-3 lg:h-2.5 lg:w-2.5', showMetrics ? 'text-amber-300' : 'text-foreground/60')} />
+                      <Gauge className={cn('h-3 w-3 lg:h-2.5 lg:w-2.5', diagTab === 'metrics' && diagExpanded ? 'text-amber-300' : 'text-foreground/60')} />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="bottom" className="text-[10px]">Metacognition metrics</TooltipContent>
@@ -2951,14 +2968,13 @@ Want me to dive deeper into any aspect?`;
                       size="icon"
                       className={cn(
                         'h-5 w-5 md:h-5 md:w-5 lg:h-4 lg:w-4 rounded-full transition-colors flex items-center justify-center shrink-0',
-                        showWiring ? 'bg-emerald-500/20 hover:bg-emerald-500/30' : 'hover:bg-primary/10'
+                        diagTab === 'wiring' && diagExpanded ? 'bg-emerald-500/20 hover:bg-emerald-500/30' : 'hover:bg-primary/10'
                       )}
-                      onClick={() => setShowWiring((v) => !v)}
-                      aria-pressed={showWiring}
-                      aria-label={showWiring ? 'Hide CoT wiring status' : 'Show CoT wiring status'}
+                      onClick={() => openDiagnostics('wiring')}
+                      aria-label="Show CoT wiring status"
                       title="CoT wiring status"
                     >
-                      <Activity className={cn('h-3 w-3 lg:h-2.5 lg:w-2.5', showWiring ? 'text-emerald-300' : 'text-foreground/60')} />
+                      <Activity className={cn('h-3 w-3 lg:h-2.5 lg:w-2.5', diagTab === 'wiring' && diagExpanded ? 'text-emerald-300' : 'text-foreground/60')} />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="bottom" className="text-[10px]">CoT wiring status</TooltipContent>
@@ -3004,16 +3020,15 @@ Want me to dive deeper into any aspect?`;
             </div>
           </div>
 
-          {showMetrics && (
-            <div className="border-b border-primary/10 bg-background/60 max-h-[45vh] overflow-y-auto overscroll-contain p-2">
-              <MetacognitionMetricsPanel />
-            </div>
-          )}
-
-          {showWiring && (
-            <div className="border-b border-primary/10 bg-background/60 max-h-[45vh] overflow-y-auto overscroll-contain p-2">
-              <CotWiringStatusPanel />
-            </div>
+          {showDiagnostics && (
+            <ZoeDiagnosticsDrawer
+              tab={diagTab}
+              onTabChange={setDiagTab}
+              expanded={diagExpanded}
+              onToggleExpanded={() => setDiagExpanded((v) => !v)}
+              onHide={hideDiagnostics}
+              deepThinking={deepThinking}
+            />
           )}
 
 

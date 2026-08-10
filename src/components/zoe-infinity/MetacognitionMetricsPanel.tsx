@@ -3,6 +3,7 @@ import { Brain, RefreshCw, AlertTriangle, Gauge, Timer, ShieldQuestion } from 'l
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { cn } from '@/lib/utils';
+import { setMetricsFetch } from '@/utils/zoeDiagnosticsBus';
 
 interface LogRow {
   id: string;
@@ -62,8 +63,13 @@ export const MetacognitionMetricsPanel = ({ className }: { className?: string })
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    if (!user) return;
+    if (!user) {
+      setMetricsFetch('error', { error: 'Not signed in' });
+      setLoading(false);
+      return;
+    }
     setLoading(true);
+    setMetricsFetch('loading');
     const { data, error } = await supabase
       .from('zoe_metacognition_log')
       .select(
@@ -72,7 +78,12 @@ export const MetacognitionMetricsPanel = ({ className }: { className?: string })
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(100);
-    if (error) console.error('[metacognition-metrics]', error);
+    if (error) {
+      console.error('[metacognition-metrics]', error);
+      setMetricsFetch('error', { error: error.message });
+    } else {
+      setMetricsFetch('ok', { rows: data?.length ?? 0 });
+    }
     setRows((data as LogRow[]) ?? []);
     setLoading(false);
   }, [user]);
