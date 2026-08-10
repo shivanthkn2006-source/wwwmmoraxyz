@@ -103,6 +103,31 @@ export const saveIdentityReference = async (
 };
 
 /**
+ * Remove the locked identity reference (vault object + profile pointer).
+ */
+export const clearIdentityReference = async (userId: string): Promise<boolean> => {
+  const { data: listed } = await supabase.storage.from(BUCKET).list(userId);
+  const paths = (listed || [])
+    .filter((f) => f.name.startsWith('reference.'))
+    .map((f) => `${userId}/${f.name}`);
+  if (paths.length) {
+    const { error } = await supabase.storage.from(BUCKET).remove(paths);
+    if (error) console.error('[ZoeIdentityVault] Reference delete failed:', error);
+  }
+
+  const { error: profileError } = await supabase
+    .from('profiles')
+    .update({ zoe_identity_photo_url: null, zoe_identity_consent_at: null } as any)
+    .eq('user_id', userId);
+
+  if (profileError) {
+    console.error('[ZoeIdentityVault] Profile clear failed:', profileError);
+    return false;
+  }
+  return true;
+};
+
+/**
  * Persist a generated identity image so the chat bubble survives a reload.
  * Data URLs are too large for the message table, so they are uploaded first.
  */
@@ -129,4 +154,4 @@ export const persistGeneratedIdentityImage = async (
   }
 };
 
-export default { getIdentityReference, saveIdentityReference, persistGeneratedIdentityImage };
+export default { getIdentityReference, saveIdentityReference, clearIdentityReference, persistGeneratedIdentityImage };
