@@ -1082,7 +1082,39 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
     setMessages(prev => [...prev, message]);
     saveMessageToDb('assistant', confirmation, savedUrl, 'image', message.id);
     toast.success('Identity photo saved');
-  }, [user?.id]);
+
+    // Human-like continuation: if Zoe requested this photo for an unfinished
+    // creation, complete that original task immediately instead of requiring
+    // the user to repeat the prompt or send another message.
+    if (pendingIdentityImageRequest?.prompt) {
+      setIsProcessing(true);
+      setSendStage('thinking', 'identity-image-generation');
+      try {
+        const result = await generateIdentityImage(
+          buildUserIdentityPrompt(pendingIdentityImageRequest.prompt),
+          { file },
+        );
+        const storedImageUrl = await persistGeneratedIdentityImage(user.id, result.imageUrl);
+        const caption = 'I used the photo you just verified and completed your original image request ✨';
+        const generatedMessage: Message = {
+          id: createMessageId(), role: 'zoe', content: caption, timestamp: new Date(),
+          mediaPreview: storedImageUrl, mediaType: 'image',
+          reasoningTrace: { classifiedIntent: 'identity_image_generation_resumed', codexInjected: false },
+        };
+        setMessages(prev => [...prev, generatedMessage]);
+        saveMessageToDb('assistant', caption, storedImageUrl, 'image', generatedMessage.id);
+        setPendingIdentityConfirmation(null);
+        rememberPendingIdentityRequest(null);
+        setSendStage('done', 'identity-image-generation');
+      } catch (error) {
+        reportDiagnosticError('identity-image-generation', error);
+        toast.error('Your photo was saved, but the image could not be created yet. Your original request is still ready to retry.');
+        setSendStage('error', 'identity-image-generation');
+      } finally {
+        setIsProcessing(false);
+      }
+    }
+  }, [user?.id, pendingIdentityImageRequest, rememberPendingIdentityRequest]);
 
 
 
@@ -1354,6 +1386,7 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
         };
         setMessages(prev => [...prev, zoeMessage]);
         saveMessageToDb('assistant', caption, storedImageUrl, 'image', zoeMessage.id);
+        setPendingIdentityConfirmation(null);
         rememberPendingIdentityRequest(null);
         if (attachedReference) {
           setPendingIdentitySave(attachedReference);
