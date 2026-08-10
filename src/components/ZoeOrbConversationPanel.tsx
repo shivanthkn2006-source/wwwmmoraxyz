@@ -325,9 +325,9 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
       return next;
     });
   }, []);
-  // Deep Thinking (metacognitive brain) mode — routes to zoe-core-intelligence
+  // Deep Thinking (metacognitive brain) mode — routes to zoe-core-intelligence. ON by default.
   const [deepThinking, setDeepThinking] = useState<boolean>(() => {
-    try { return localStorage.getItem('zoe-orb-deep-thinking') === '1'; } catch { return false; }
+    try { return localStorage.getItem('zoe-orb-deep-thinking') !== '0'; } catch { return true; }
   });
   const toggleDeepThinking = useCallback(() => {
     setDeepThinking((prev) => {
@@ -336,10 +336,23 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
       return next;
     });
   }, []);
-  // Metacognition metrics overlay
-  const [showMetrics, setShowMetrics] = useState(false);
-  // Real-time CoT wiring status overlay
-  const [showWiring, setShowWiring] = useState(false);
+  // Unified diagnostics strip (metrics + CoT wiring + debug). Visible by default, collapsed.
+  const [showDiagnostics, setShowDiagnostics] = useState<boolean>(() => {
+    try { return localStorage.getItem('zoe-orb-diagnostics') !== '0'; } catch { return true; }
+  });
+  const [diagExpanded, setDiagExpanded] = useState(false);
+  const [diagTab, setDiagTab] = useState<DiagTab>('wiring');
+  const hideDiagnostics = useCallback(() => {
+    setShowDiagnostics(false);
+    setDiagExpanded(false);
+    try { localStorage.setItem('zoe-orb-diagnostics', '0'); } catch { /* ignore */ }
+  }, []);
+  const openDiagnostics = useCallback((tab: DiagTab) => {
+    setShowDiagnostics(true);
+    setDiagTab(tab);
+    setDiagExpanded(true);
+    try { localStorage.setItem('zoe-orb-diagnostics', '1'); } catch { /* ignore */ }
+  }, []);
 
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
