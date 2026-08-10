@@ -1199,6 +1199,67 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
     try {
       let responseText: string;
 
+      // ═══ IMAGE GENERATION INTENT ═══
+      // "draw / create an image / generate a picture / create your image / cartoon …"
+      // Text models can only answer with ASCII art, so route these to the image
+      // pipeline instead of the chat brain.
+      const imgText = userMessage.content.trim();
+      const imageIntent =
+        /\b(draw|sketch|paint|illustrate|generate|create|make|render|design|show)\b[^.?!]{0,40}\b(image|images|picture|pic|photo|portrait|selfie|artwork|art|drawing|painting|illustration|cartoon|avatar|wallpaper|logo|poster)\b/i.test(imgText) ||
+        /^\s*(image|imagine|draw|generate image|create image)\s*:/i.test(imgText);
+
+      if (imageIntent && isOnline) {
+        try {
+          setSendStage('thinking', 'image-generation');
+          const selfPortrait = /\b(your|yourself|你|zoe'?s)\b/i.test(imgText) && /\b(image|picture|photo|portrait|selfie|avatar)\b/i.test(imgText);
+          const prompt = selfPortrait
+            ? 'Zoe — a warm, photorealistic portrait of a friendly futuristic AI companion woman, soft teal and violet rim lighting, cinematic depth of field, ultra detailed'
+            : imgText.replace(/^\s*(please\s+)?(zoe[, ]+)?/i, '');
+
+          const result = await generateImage(prompt, { width: 1024, height: 1024 });
+          const caption = selfPortrait
+            ? "Here's how I picture myself ✨"
+            : `Here's what I created for you ✨`;
+
+          const zoeMessage: Message = {
+            id: createMessageId(),
+            role: 'zoe',
+            content: caption,
+            timestamp: new Date(),
+            mediaPreview: result.imageUrl,
+            mediaType: 'image',
+            reasoningTrace: {
+              sentinelScanned: true,
+              wisdomChecked: true,
+              wisdomPassed: true,
+              classifiedIntent: 'image_generation',
+              codexInjected: false,
+            },
+          };
+
+          setMessages(prev => [...prev, zoeMessage]);
+          offlineDataSync.addConversation('zoe', caption);
+          saveMessageToDb('assistant', caption, result.imageUrl, 'image', zoeMessage.id);
+
+          if (!isMuted) {
+            speakAsZoe(
+              caption,
+              { messageId: zoeMessage.id },
+              () => setIsSpeaking(true),
+              () => setIsSpeaking(false)
+            );
+          }
+          setIsProcessing(false);
+          setSendStage('done', 'image-generation');
+          return;
+        } catch (imgErr) {
+          console.error('[ZoeOrb] Image generation failed:', imgErr);
+          reportDiagnosticError('image-generation', imgErr);
+          // fall through to the normal chat pipeline
+        }
+      }
+
+
       // ═══ ASTROLOGY FOLLOW-UP CAPTURE ═══
       // If Zoe asked for birth time/place in the previous step, allow user to reply
       // with JUST the time/place (without re-typing "jathakam") and continue.
