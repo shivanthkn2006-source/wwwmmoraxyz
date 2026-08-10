@@ -125,6 +125,8 @@ interface Message {
     versionId: string;
     status: string;
   };
+  // Metacognitive brain output (deep thinking mode)
+  metacognition?: DeepThinkingMeta | null;
 }
 
 interface ZoeOrbConversationPanelProps {
