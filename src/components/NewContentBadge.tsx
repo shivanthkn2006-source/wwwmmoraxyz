@@ -16,10 +16,15 @@ const NewContentBadge: React.FC<NewContentBadgeProps> = ({ onViewed, className =
   useEffect(() => {
     const node = ref.current;
     if (!node || !visible) return;
+    // Non-breaking fallback: without IntersectionObserver we keep the badge visible
+    // rather than dismissing it on a timer the user never actually saw.
+    if (typeof IntersectionObserver === 'undefined') return;
     const viewedElement = node.parentElement ?? node;
     let timer: number | null = null;
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry?.isIntersecting && entry.intersectionRatio >= 0.6) {
+    let observer: IntersectionObserver;
+    try {
+      observer = new IntersectionObserver(([entry]) => {
+        if (entry?.isIntersecting && entry.intersectionRatio >= 0.6) {
         if (timer !== null) return;
         timer = window.setTimeout(() => {
           setVisible(false);
@@ -30,8 +35,11 @@ const NewContentBadge: React.FC<NewContentBadgeProps> = ({ onViewed, className =
         window.clearTimeout(timer);
         timer = null;
       }
-    }, { threshold: [0.6] });
-    observer.observe(viewedElement);
+      }, { threshold: [0.6] });
+      observer.observe(viewedElement);
+    } catch {
+      return; // observer unavailable — badge stays until state changes upstream
+    }
     return () => {
       observer.disconnect();
       if (timer !== null) window.clearTimeout(timer);
