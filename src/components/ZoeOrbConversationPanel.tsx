@@ -1132,6 +1132,7 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
     setInput('');
     setReplyingTo(null); // Clear reply state after sending
     setIsProcessing(true);
+    setSendStage('sending', deepThinking ? 'zoe-core-intelligence' : 'zoe-chat');
 
     // ═══ CODE GENESIS MANIFESTO: Dispatch user message for CDSP analysis ═══
     window.dispatchEvent(new CustomEvent('zoe-user-message', { detail: { text: userMessage.content } }));
