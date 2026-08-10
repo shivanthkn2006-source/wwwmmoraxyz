@@ -16,27 +16,45 @@ const NewContentBadge: React.FC<NewContentBadgeProps> = ({ onViewed, className =
   useEffect(() => {
     const node = ref.current;
     if (!node || !visible) return;
+    // Non-breaking fallback: without a working IntersectionObserver we keep the
+    // badge visible instead of dismissing content the user never actually saw.
+    if (typeof IntersectionObserver === 'undefined') return;
     const viewedElement = node.parentElement ?? node;
     let timer: number | null = null;
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry?.isIntersecting && entry.intersectionRatio >= 0.6) {
-        if (timer !== null) return;
-        timer = window.setTimeout(() => {
-          setVisible(false);
-          onViewedRef.current();
-          observer.disconnect();
-        }, 3000);
-      } else if (timer !== null) {
+    let observer: IntersectionObserver | null = null;
+
+    const clearTimer = () => {
+      if (timer !== null) {
         window.clearTimeout(timer);
         timer = null;
       }
-    }, { threshold: [0.6] });
-    observer.observe(viewedElement);
+    };
+
+    try {
+      observer = new IntersectionObserver(([entry]) => {
+        if (entry?.isIntersecting && entry.intersectionRatio >= 0.6) {
+          if (timer !== null) return;
+          timer = window.setTimeout(() => {
+            setVisible(false);
+            onViewedRef.current();
+            observer?.disconnect();
+          }, 3000);
+        } else {
+          clearTimer();
+        }
+      }, { threshold: [0.6] });
+      observer.observe(viewedElement);
+    } catch {
+      observer = null; // observer unavailable — badge stays until state changes upstream
+      return;
+    }
+
     return () => {
-      observer.disconnect();
-      if (timer !== null) window.clearTimeout(timer);
+      observer?.disconnect();
+      clearTimer();
     };
   }, [visible]);
+
 
   if (!visible) return null;
   return (
