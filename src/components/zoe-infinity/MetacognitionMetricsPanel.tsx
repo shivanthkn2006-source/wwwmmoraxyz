@@ -3,6 +3,7 @@ import { Brain, RefreshCw, AlertTriangle, Gauge, Timer, ShieldQuestion } from 'l
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { cn } from '@/lib/utils';
+import { setMetricsFetch } from '@/utils/zoeDiagnosticsBus';
 
 interface LogRow {
   id: string;
