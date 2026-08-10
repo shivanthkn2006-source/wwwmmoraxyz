@@ -15,6 +15,7 @@ import ZoeDiagnosticsDrawer, { type DiagTab } from '@/components/zoe-infinity/Zo
 import { cotStart, cotFinish } from '@/utils/cotWiringBus';
 import { setSendStage, reportDiagnosticError } from '@/utils/zoeDiagnosticsBus';
 import { generateIdentityImage, generateImage, IdentityImageError } from '@/services/pollinationsService';
+import { getIdentityReference, saveIdentityReference, persistGeneratedIdentityImage } from '@/services/zoeIdentityVault';
 import { buildUserIdentityPrompt, detectZoeImageIntent } from '@/utils/zoeImageIntent';
 import { useNavigate } from 'react-router-dom';
 import { useZoeOmegaCoreIntegration } from '@/hooks/useZoeOmegaCoreIntegration';
