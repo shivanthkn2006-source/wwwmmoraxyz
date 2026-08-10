@@ -1213,12 +1213,9 @@ const HomePage = () => {
         has_deferred_media: false,
       })) as Post[];
       const loopIds = preparedLoops.map((post) => post.id);
-      const loopArrivals = detectNewArrivals(knownFeedIdsRef.current.loops, loopIds, updateSource);
+      const loopArrivals = syncUnseenPostSnapshot('loops', knownFeedIdsRef.current.loops, loopIds, updateSource);
       knownFeedIdsRef.current.loops = loopArrivals.knownIds;
-      const loopUnseen = updateSource === 'realtime'
-        ? registerUnseenPosts('loops', loopArrivals.newIds)
-        : reconcileUnseenPosts('loops', loopIds);
-      setNewContentByFeed((current) => ({ ...current, loops: loopUnseen }));
+      setNewContentByFeed((current) => ({ ...current, loops: loopArrivals.unseenIds }));
       setLoopPosts(preparedLoops);
       setBrokenLoopPreviewIds(prev => {
         const next = new Set(prev);
