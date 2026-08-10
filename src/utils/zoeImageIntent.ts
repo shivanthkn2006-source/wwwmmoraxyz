@@ -21,6 +21,7 @@ const ZOE_IDENTITY = /\b(you|your|yourself|zoe(?:'s|’s)?)\b/i;
 const IDENTITY_STYLE = /\b(cartoon|sketch|portrait|selfie|avatar|painting|drawing|anime|comic|caricature|photo|picture|image)\b/i;
 const CONTEXTUAL_PROMPT_REFERENCE = /\b(?:use|turn|render|create|generate|make)\s+(?:this|that|the)?\s*(?:above|earlier|previous|last)?\s*(?:description|prompt|idea|concept|reply|response|text)\b|\buse\s+(?:this|that|the)\s+above\b/i;
 const ZOE_APPEARANCE_CHANGE = /\b(?:wear|wearing|dress|dressed|outfit|saree|sari|costume|hairstyle|look like|appearance)\b/i;
+const IMAGE_FOLLOW_UP = /\b(?:full[ -]?size|larger|bigger|high[ -]?resolution|hi[ -]?res|landscape|portrait)\b(?:\s+(?:one|version|image|picture))?/i;
 
 export const detectZoeImageIntent = (input: string): ZoeImageIntent => {
   const text = input.trim();
@@ -55,6 +56,19 @@ export const resolveZoeImageTurn = (
   }
 
   const intent = detectZoeImageIntent(input);
+  if (IMAGE_FOLLOW_UP.test(input)) {
+    const previousImageRequest = [...context]
+      .reverse()
+      .find((message) => message.role === 'user' && detectZoeImageIntent(message.content).isImageRequest);
+    if (previousImageRequest) {
+      const previousIntent = detectZoeImageIntent(previousImageRequest.content);
+      return {
+        prompt: `${previousImageRequest.content.trim()} Render as a full-size, high-resolution finished image.`,
+        intent: previousIntent,
+        resumed: true,
+      };
+    }
+  }
   if (intent.isImageRequest && CONTEXTUAL_PROMPT_REFERENCE.test(input)) {
     const referenced = [...context]
       .reverse()

@@ -77,4 +77,16 @@ describe('Zoe identity image intent', () => {
     expect(prompt).toContain('Kerala saree on a houseboat');
     expect(prompt).toContain('finished visual');
   });
+
+  it('keeps a full-size follow-up in the previous image pipeline', () => {
+    const turn = resolveZoeImageTurn('a full size one?', null, [
+      { role: 'user', content: 'create a saree image of you wearing it' },
+      { role: 'zoe', content: "Here's how I picture myself" },
+    ]);
+    expect(turn.resumed).toBe(true);
+    expect(turn.intent.isImageRequest).toBe(true);
+    expect(turn.intent.isZoeIdentityRequest).toBe(true);
+    expect(turn.prompt).toContain('saree image');
+    expect(turn.prompt).toContain('full-size');
+  });
 });

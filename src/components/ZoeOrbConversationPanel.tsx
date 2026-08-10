@@ -3660,7 +3660,9 @@ Want me to dive deeper into any aspect?`;
                 >
                   <div
                     className={cn(
-                      'max-w-[85%] rounded-xl px-2.5 py-1.5 md:px-3 md:py-2 lg:px-3.5 lg:py-2.5 text-xs md:text-sm lg:text-base relative',
+                      msg.mediaPreview && msg.mediaType === 'image' && msg.role === 'zoe'
+                        ? 'max-w-[min(85%,560px)] rounded-xl px-2.5 py-1.5 md:px-3 md:py-2 lg:px-3.5 lg:py-2.5 text-xs md:text-sm lg:text-base relative'
+                        : 'max-w-[85%] rounded-xl px-2.5 py-1.5 md:px-3 md:py-2 lg:px-3.5 lg:py-2.5 text-xs md:text-sm lg:text-base relative',
                       dm.sender_id === user?.id
                         ? 'bg-cyan-500/80 text-white rounded-br-sm backdrop-blur-sm'
                         : 'bg-foreground/5 text-foreground/90 rounded-bl-sm border border-cyan-500/20'
@@ -3762,7 +3764,12 @@ Want me to dive deeper into any aspect?`;
                         <img 
                           src={msg.mediaPreview} 
                           alt={msg.role === 'zoe' ? 'Image created by Zoe' : 'Shared image'}
-                          className="max-w-full max-h-32 md:max-h-44 lg:max-h-56 object-contain rounded cursor-zoom-in"
+                          className={cn(
+                            'object-contain rounded cursor-zoom-in',
+                            msg.role === 'zoe'
+                              ? 'w-[50vw] max-w-full max-h-[50vh] min-h-48'
+                              : 'max-w-full max-h-48'
+                          )}
                           onClick={() => setFullSizeImage({
                             url: msg.mediaPreview as string,
                             alt: msg.role === 'zoe' ? 'Image created by Zoe' : 'Shared image',
@@ -3771,7 +3778,7 @@ Want me to dive deeper into any aspect?`;
                         <Button
                           variant="secondary"
                           size="icon"
-                          className="absolute bottom-1 right-1 h-7 w-7 opacity-100 md:opacity-0 md:group-hover/image:opacity-100 transition-opacity"
+                          className="absolute bottom-1 right-1 h-8 w-8 opacity-100 md:opacity-0 md:group-hover/image:opacity-100 transition-opacity"
                           onClick={() => setFullSizeImage({
                             url: msg.mediaPreview as string,
                             alt: msg.role === 'zoe' ? 'Image created by Zoe' : 'Shared image',
@@ -3780,6 +3787,31 @@ Want me to dive deeper into any aspect?`;
                           title="Open full screen"
                         >
                           <Maximize2 className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="icon"
+                          className="absolute bottom-1 right-10 h-8 w-8 opacity-100 md:opacity-0 md:group-hover/image:opacity-100 transition-opacity"
+                          onClick={async (event) => {
+                            event.stopPropagation();
+                            try {
+                              const response = await fetch(msg.mediaPreview as string);
+                              if (!response.ok) throw new Error('Download failed');
+                              const blob = await response.blob();
+                              const url = URL.createObjectURL(blob);
+                              const anchor = document.createElement('a');
+                              anchor.href = url;
+                              anchor.download = `zoe-image-${Date.now()}.${blob.type.includes('jpeg') ? 'jpg' : blob.type.includes('webp') ? 'webp' : 'png'}`;
+                              anchor.click();
+                              URL.revokeObjectURL(url);
+                            } catch {
+                              window.open(msg.mediaPreview as string, '_blank', 'noopener,noreferrer');
+                            }
+                          }}
+                          aria-label="Download image"
+                          title="Download image"
+                        >
+                          <Download className="h-3.5 w-3.5" />
                         </Button>
                       </div>
                     )}
