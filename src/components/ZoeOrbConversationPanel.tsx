@@ -1733,10 +1733,12 @@ Want me to dive deeper into any aspect?`;
             },
           });
 
+          cotFinish(chatToken, { error });
           if (error) {
             console.error('[ZoeOrb] API error:', error);
             throw error;
           }
+
           
           console.log('[ZoeOrb] API response:', data);
           const rawText = data?.message || data?.response || "I'm here to help!";
