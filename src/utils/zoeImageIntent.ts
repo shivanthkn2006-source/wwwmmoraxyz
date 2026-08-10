@@ -15,7 +15,8 @@ export const detectZoeImageIntent = (input: string): ZoeImageIntent => {
   const explicitImageRequest =
     (CREATE_ACTION.test(text) && IMAGE_NOUN.test(text)) ||
     /^\s*(image|imagine|draw|sketch|generate image|create image)\s*:/i.test(text);
-  const styledIdentityRequest = CREATE_ACTION.test(text) && IDENTITY_STYLE.test(text);
+  const directIdentityScene = /\b(draw|sketch|paint|illustrate|render|show)\s+(?:a\s+)?(?:picture\s+of\s+)?(?:me|myself)\b/i.test(text);
+  const styledIdentityRequest = CREATE_ACTION.test(text) && (IDENTITY_STYLE.test(text) || directIdentityScene);
   const isUserIdentityRequest = USER_IDENTITY.test(text) && (explicitImageRequest || styledIdentityRequest);
   const isZoeIdentityRequest = ZOE_IDENTITY.test(text) && explicitImageRequest && !isUserIdentityRequest;
 
