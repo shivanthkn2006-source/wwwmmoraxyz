@@ -334,6 +334,9 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
       return next;
     });
   }, []);
+  // Metacognition metrics overlay
+  const [showMetrics, setShowMetrics] = useState(false);
+
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [isInputFocused, setIsInputFocused] = useState(false);
