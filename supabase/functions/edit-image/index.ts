@@ -65,7 +65,7 @@ serve(async (req) => {
 
     console.log('[edit-image] Editing via Google AI Studio Gemini image model, prompt:', prompt);
 
-    const model = 'gemini-2.5-flash-image-preview';
+    const model = 'gemini-2.5-flash-image';
     const resp = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GOOGLE_KEY}`,
       {
@@ -98,17 +98,21 @@ serve(async (req) => {
 
     const data = await resp.json();
     const parts = data?.candidates?.[0]?.content?.parts ?? [];
-    const imgPart = parts.find((p: any) => p?.inline_data?.data);
+    const imgPart = parts.find((part: { inlineData?: { data?: string }; inline_data?: { data?: string } }) =>
+      part?.inlineData?.data || part?.inline_data?.data
+    );
     if (!imgPart) {
       console.error('[edit-image] No image in response', JSON.stringify(data).slice(0, 500));
       throw new Error('No edited image returned');
     }
 
-    const outMime = imgPart.inline_data.mime_type || 'image/png';
-    const imageUrl = `data:${outMime};base64,${imgPart.inline_data.data}`;
+    const imageData = imgPart.inlineData ?? imgPart.inline_data;
+    if (!imageData?.data) throw new Error('Edited image data was empty');
+    const outMime = ('mimeType' in imageData ? imageData.mimeType : imageData.mime_type) || 'image/png';
+    const resultImageUrl = `data:${outMime};base64,${imageData.data}`;
 
     return new Response(
-      JSON.stringify({ imageUrl, provider: 'gemini-direct' }),
+      JSON.stringify({ imageUrl: resultImageUrl, provider: 'gemini-direct' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
