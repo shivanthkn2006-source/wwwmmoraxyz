@@ -7,6 +7,9 @@ describe('Zoe identity image intent', () => {
     'can you create my cartoon?',
     'make a sketch of me',
     'draw me driving a car',
+    'create a picture of me driving a car',
+    'make my profile photo into a pencil sketch',
+    'can you create an avatar of myself?',
     'turn my photo into an anime avatar',
   ])('routes account-holder request: %s', (prompt) => {
     const intent = detectZoeImageIntent(prompt);
