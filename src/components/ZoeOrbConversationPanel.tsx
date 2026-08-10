@@ -15,6 +15,7 @@ import ZoeDiagnosticsDrawer, { type DiagTab } from '@/components/zoe-infinity/Zo
 import { cotStart, cotFinish } from '@/utils/cotWiringBus';
 import { setSendStage, reportDiagnosticError } from '@/utils/zoeDiagnosticsBus';
 import { generateIdentityImage, generateImage, IdentityImageError } from '@/services/pollinationsService';
+import { getIdentityReference, saveIdentityReference, persistGeneratedIdentityImage } from '@/services/zoeIdentityVault';
 import { buildUserIdentityPrompt, detectZoeImageIntent } from '@/utils/zoeImageIntent';
 import { useNavigate } from 'react-router-dom';
 import { useZoeOmegaCoreIntegration } from '@/hooks/useZoeOmegaCoreIntegration';
@@ -372,6 +373,7 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
+  const identityInputRef = useRef<HTMLInputElement>(null);
   const attachMenuWrapperRef = useRef<HTMLDivElement>(null);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   
@@ -1012,6 +1014,43 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
     if (fileInputRef.current) fileInputRef.current.value = '';
   }, []);
 
+  // Dedicated identity-photo path: saves straight into the private Zoe identity vault
+  const handleIdentityPhotoSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (identityInputRef.current) identityInputRef.current.value = '';
+    setShowAttachMenu(false);
+    if (!file) return;
+    if (!user?.id) {
+      toast.error('Please sign in to save your identity photo');
+      return;
+    }
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please choose a photo of yourself');
+      return;
+    }
+
+    toast.info('🔐 Saving your identity photo securely...');
+    const savedUrl = await saveIdentityReference(user.id, file);
+    if (!savedUrl) {
+      toast.error('Could not save your identity photo');
+      return;
+    }
+
+    const confirmation = 'Your identity photo is saved in your private Zoe vault. I will use it whenever you ask me to create an image of you.';
+    const message: Message = {
+      id: createMessageId(), role: 'zoe', timestamp: new Date(),
+      content: confirmation,
+      mediaPreview: savedUrl,
+      mediaType: 'image',
+      reasoningTrace: { classifiedIntent: 'identity_reference_saved', codexInjected: false },
+    };
+    setMessages(prev => [...prev, message]);
+    saveMessageToDb('assistant', confirmation, savedUrl, 'image', message.id);
+    toast.success('Identity photo saved');
+  }, [user?.id]);
+
+
+
   // Send message with optional media - handles both Zoe and User modes
   const sendMessage = useCallback(async (messageText?: string) => {
     const textToSend = messageText || input;
@@ -1155,43 +1194,32 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
       const declined = /^(no|nope|don't|do not|cancel|not now)\b/i.test(answer);
       if (approved || declined) {
         if (approved) {
-          try {
-            const fileName = `${user.id}.jpg`;
-            const { error: uploadError } = await supabase.storage
-              .from('avatars')
-              .upload(fileName, pendingIdentitySave, { upsert: true, cacheControl: '0' });
-            if (uploadError) throw uploadError;
-            const { data: signedUrlData, error: urlError } = await supabase.storage
-              .from('avatars')
-              .createSignedUrl(fileName, 31536000);
-            if (urlError || !signedUrlData?.signedUrl) throw urlError || new Error('Unable to create photo URL');
-            const { error: profileError } = await supabase
-              .from('profiles')
-              .update({ profile_photo_url: signedUrlData.signedUrl })
-              .eq('user_id', user.id);
-            if (profileError) throw profileError;
-          } catch (saveError) {
-            console.error('[ZoeOrb] Identity reference save failed:', saveError);
+          const savedUrl = await saveIdentityReference(user.id, pendingIdentitySave);
+          if (!savedUrl) {
+            const failureContent = 'I could not save that photo to your private identity vault. It was not retained as your reference.';
             const failureMessage: Message = {
               id: createMessageId(), role: 'zoe', timestamp: new Date(),
-              content: 'I could not save that photo to your profile. It was not retained as your identity reference.',
+              content: failureContent,
               reasoningTrace: { classifiedIntent: 'identity_reference_save_error', codexInjected: false },
             };
             setMessages(prev => [...prev, failureMessage]);
+            saveMessageToDb('assistant', failureContent, undefined, undefined, failureMessage.id);
             setPendingIdentitySave(null);
             setIsProcessing(false);
             setSendStage('error', 'identity-reference-save');
             return;
           }
         }
+        const saveContent = approved
+          ? 'Saved to your private Zoe identity vault. I will reuse it for future image creations, and it is never used as a login credential.'
+          : 'Okay, I did not save that photo as your identity reference.';
         const saveMessage: Message = {
           id: createMessageId(), role: 'zoe', timestamp: new Date(),
-          content: approved
-            ? 'Saved as your profile identity photo for future image creations. It is not used as a biometric login credential.'
-            : 'Okay, I did not save that photo as your profile identity reference.',
+          content: saveContent,
           reasoningTrace: { classifiedIntent: approved ? 'identity_reference_saved' : 'identity_reference_not_saved', codexInjected: false },
         };
         setMessages(prev => [...prev, saveMessage]);
+        saveMessageToDb('assistant', saveContent, undefined, undefined, saveMessage.id);
         setPendingIdentitySave(null);
         setIsProcessing(false);
         setSendStage('done', 'identity-reference-save');
@@ -1210,12 +1238,14 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
         setPendingIdentityConfirmation(null);
       } else if (declined) {
         setPendingIdentityConfirmation(null);
+        const declineContent = 'Understood. Attach a clear front-facing photo of yourself (the + menu → "My photo"), then resend your image request.';
         const requestMessage: Message = {
           id: createMessageId(), role: 'zoe', timestamp: new Date(),
-          content: 'Understood. Attach a clear front-facing photo, then resend your image request.',
+          content: declineContent,
           reasoningTrace: { classifiedIntent: 'identity_reference_declined', codexInjected: false },
         };
         setMessages(prev => [...prev, requestMessage]);
+        saveMessageToDb('assistant', declineContent, undefined, undefined, requestMessage.id);
         setIsProcessing(false);
         setSendStage('done', 'identity-reference-declined');
         return;
@@ -1226,39 +1256,42 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
     // An attached image is a reference, not something Zoe should merely describe.
     if (imageIntent.isUserIdentityRequest) {
       const attachedReference = pendingMedia?.type === 'image' ? pendingMedia.file : undefined;
-      let profilePhotoUrl: string | null = confirmedProfilePhotoUrl;
-      if (!attachedReference && !profilePhotoUrl && user?.id) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('profile_photo_url')
-          .eq('user_id', user.id)
-          .maybeSingle();
-        profilePhotoUrl = profile?.profile_photo_url ?? null;
+      let referenceUrl: string | null = confirmedProfilePhotoUrl;
+      let referenceSource: 'identity-vault' | 'profile-photo' | null = confirmedProfilePhotoUrl ? 'identity-vault' : null;
+      if (!attachedReference && !referenceUrl && user?.id) {
+        const reference = await getIdentityReference(user.id);
+        referenceUrl = reference?.url ?? null;
+        referenceSource = reference?.source ?? null;
       }
 
-      if (!attachedReference && !profilePhotoUrl) {
+      if (!attachedReference && !referenceUrl) {
+        const requestContent = 'Please attach a clear front-facing photo of yourself using the + menu → "My photo". I keep it in your private identity vault and use it so your images always look like you.';
         const requestMessage: Message = {
           id: createMessageId(), role: 'zoe', timestamp: new Date(),
-          content: 'Please attach a clear front-facing photo of yourself. I need a real reference photo to create your image without replacing you with a random person.',
+          content: requestContent,
           reasoningTrace: { classifiedIntent: 'identity_reference_required', codexInjected: false },
         };
         setMessages(prev => [...prev, requestMessage]);
+        saveMessageToDb('assistant', requestContent, undefined, undefined, requestMessage.id);
         setPendingMedia(null);
         setIsProcessing(false);
         setSendStage('done', 'identity-reference-required');
         return;
       }
 
-      if (!attachedReference && profilePhotoUrl && !confirmedProfilePhotoUrl) {
-        setPendingIdentityConfirmation({ prompt: identityRequestText, imageUrl: profilePhotoUrl });
+      // A vault photo was already approved by the user — no need to re-confirm every time.
+      if (!attachedReference && referenceUrl && !confirmedProfilePhotoUrl && referenceSource !== 'identity-vault') {
+        setPendingIdentityConfirmation({ prompt: identityRequestText, imageUrl: referenceUrl });
+        const confirmContent = 'Is this your photo, and should I use it to create this image? Reply yes to continue, or no and attach a different photo.';
         const confirmationMessage: Message = {
           id: createMessageId(), role: 'zoe', timestamp: new Date(),
-          content: 'Is this your photo, and should I use it to create this image? Reply yes to continue, or no and attach a different photo.',
-          mediaPreview: profilePhotoUrl,
+          content: confirmContent,
+          mediaPreview: referenceUrl,
           mediaType: 'image',
           reasoningTrace: { classifiedIntent: 'identity_reference_confirmation', codexInjected: false },
         };
         setMessages(prev => [...prev, confirmationMessage]);
+        saveMessageToDb('assistant', confirmContent, referenceUrl, 'image', confirmationMessage.id);
         setPendingMedia(null);
         setIsProcessing(false);
         setSendStage('done', 'identity-reference-confirmation');
@@ -1269,26 +1302,29 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
         setSendStage('thinking', 'identity-image-generation');
         const result = await generateIdentityImage(buildUserIdentityPrompt(identityRequestText), {
           file: attachedReference,
-          imageUrl: attachedReference ? undefined : profilePhotoUrl || undefined,
+          imageUrl: attachedReference ? undefined : referenceUrl || undefined,
         });
+        const storedImageUrl = user?.id
+          ? await persistGeneratedIdentityImage(user.id, result.imageUrl)
+          : result.imageUrl;
         const caption = 'I created this from your own reference photo and preserved your identity ✨';
         const zoeMessage: Message = {
           id: createMessageId(), role: 'zoe', content: caption, timestamp: new Date(),
-          mediaPreview: result.imageUrl, mediaType: 'image',
+          mediaPreview: storedImageUrl, mediaType: 'image',
           reasoningTrace: { classifiedIntent: 'identity_image_generation', codexInjected: false },
         };
         setMessages(prev => [...prev, zoeMessage]);
-        saveMessageToDb('assistant', caption, result.imageUrl, 'image', zoeMessage.id);
+        saveMessageToDb('assistant', caption, storedImageUrl, 'image', zoeMessage.id);
         if (attachedReference) {
           setPendingIdentitySave(attachedReference);
+          const saveConsent = 'Should I keep this photo in your private identity vault for future image creations? Reply yes or no.';
           const savePrompt: Message = {
             id: createMessageId(), role: 'zoe', timestamp: new Date(),
-            content: 'Should I save this as your profile identity photo for future image creations? Reply yes or no.',
-            mediaPreview: pendingMedia?.preview,
-            mediaType: 'image',
+            content: saveConsent,
             reasoningTrace: { classifiedIntent: 'identity_reference_save_consent', codexInjected: false },
           };
           setMessages(prev => [...prev, savePrompt]);
+          saveMessageToDb('assistant', saveConsent, undefined, undefined, savePrompt.id);
         }
         setPendingMedia(null);
         setIsProcessing(false);
@@ -1297,19 +1333,21 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
       } catch (error) {
         const needsReference = error instanceof IdentityImageError && error.code === 'REFERENCE_NOT_HUMAN';
         const content = needsReference
-          ? 'Your current profile image is not a clear photo of you. Please attach a clear front-facing photo of yourself, then resend the same request.'
+          ? 'That reference is not a clear photo of a real person. Please attach a clear front-facing photo of yourself (+ menu → "My photo"), then resend the same request.'
           : 'I could not create your identity image just now. Your reference was not replaced with a random person—please try again.';
         const failureMessage: Message = {
           id: createMessageId(), role: 'zoe', content, timestamp: new Date(),
           reasoningTrace: { classifiedIntent: needsReference ? 'identity_reference_required' : 'identity_image_error', codexInjected: false },
         };
         setMessages(prev => [...prev, failureMessage]);
+        saveMessageToDb('assistant', content, undefined, undefined, failureMessage.id);
         setPendingMedia(null);
         setIsProcessing(false);
         setSendStage(needsReference ? 'done' : 'error', 'identity-image-generation');
         return;
       }
     }
+
 
     // Process non-generation media attachments.
     if (hasPendingMedia && pendingMedia) {
@@ -3966,6 +4004,13 @@ Want me to dive deeper into any aspect?`;
               onChange={handleFileSelect}
               className="hidden"
             />
+            <input
+              ref={identityInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleIdentityPhotoSelect}
+              className="hidden"
+            />
             
             <div className="flex items-center gap-1">
               {/* Left side - Single attach button with floating menu (does not change layout / does not block content) */}
@@ -4005,6 +4050,18 @@ Want me to dive deeper into any aspect?`;
                       >
                         <Image className="h-3 w-3 text-blue-400" />
                         Photo
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full justify-start gap-1.5 h-6 text-[10px] px-1.5"
+                        title="Save a photo of yourself so Zoe can create images that look like you"
+                        onClick={() => {
+                          identityInputRef.current?.click();
+                        }}
+                      >
+                        <Image className="h-3 w-3 text-emerald-400" />
+                        My photo (identity)
                       </Button>
                       <Button
                         variant="ghost"
