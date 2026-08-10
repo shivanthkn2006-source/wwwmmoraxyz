@@ -81,35 +81,59 @@ serve(async (req) => {
 
     console.log('[edit-image] Editing via Google AI Studio Gemini image model, prompt:', prompt);
 
-    const model = 'gemini-2.5-flash-image';
-    const resp = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GOOGLE_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{
-            role: 'user',
-            parts: [
-              { text: prompt },
-              { inline_data: { mime_type: mime, data: b64 } },
-            ],
-          }],
-          generationConfig: { responseModalities: ['IMAGE', 'TEXT'] },
-        }),
-      }
-    );
+    // Try the image models in order; free-tier quota (429) on one model should
+    // roll over to the next instead of failing the whole request.
+    const models = ['gemini-2.5-flash-image', 'gemini-2.0-flash-preview-image-generation'];
+    let resp: Response | null = null;
+    let lastStatus = 0;
+    let lastErr = '';
 
-    if (!resp.ok) {
-      const errText = await resp.text();
-      console.error('[edit-image] Google AI error:', resp.status, errText);
-      if (resp.status === 429) {
+    for (const model of models) {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const r = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GOOGLE_KEY}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{
+                role: 'user',
+                parts: [
+                  { text: prompt },
+                  { inline_data: { mime_type: mime, data: b64 } },
+                ],
+              }],
+              generationConfig: { responseModalities: ['IMAGE', 'TEXT'] },
+            }),
+          }
+        );
+
+        if (r.ok) { resp = r; break; }
+
+        lastStatus = r.status;
+        lastErr = (await r.text()).slice(0, 300);
+        console.error('[edit-image] Google AI error:', model, r.status, lastErr);
+
+        if (r.status === 429 && attempt === 0) {
+          await new Promise((res) => setTimeout(res, 3000));
+          continue; // one short retry, then move to next model
+        }
+        break;
+      }
+      if (resp) break;
+    }
+
+    if (!resp) {
+      if (lastStatus === 429) {
         return new Response(
-          JSON.stringify({ error: 'RATE_LIMIT', message: 'Rate limit exceeded. Try again shortly.' }),
+          JSON.stringify({
+            error: 'RATE_LIMIT',
+            message: 'The image model is at its quota right now. Please try again in a minute.',
+          }),
           { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      throw new Error(`Google AI error: ${resp.status}`);
+      throw new Error(`Google AI error: ${lastStatus}`);
     }
 
     const data = await resp.json();
