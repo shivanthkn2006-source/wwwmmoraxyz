@@ -1429,6 +1429,7 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
     if (hasPendingMedia && pendingMedia) {
       const mediaFile = pendingMedia.file;
       const mediaType = pendingMedia.type;
+      const perceptionToken = cotStart('zoe-perception');
       setPendingMedia(null);
       
       try {
@@ -1444,6 +1445,7 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
         }
         
         if (result.success && result.zoe_response) {
+          cotFinish(perceptionToken, { ok: true });
           const zoeMessage: Message = {
             id: createMessageId(),
             role: 'zoe',
@@ -1493,7 +1495,10 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
           setIsProcessing(false);
           return;
         }
+        cotFinish(perceptionToken, { error: new Error('Perception returned no response') });
       } catch (err) {
+        cotFinish(perceptionToken, { error: err });
+        reportDiagnosticError('zoe-perception', err);
         console.error('[ZoeOrb] Media processing error:', err);
       }
     }
