@@ -74,7 +74,7 @@ export async function generateIdentityImage(
     if (!pollinationsError && pollinationsData?.imageUrl && pollinationsData?.usedFace !== false) {
       return { imageUrl: pollinationsData.imageUrl, provider: 'pollinations-edge' };
     }
-    console.warn('[PollinationsService] Identity edit unavailable, trying Gemini fallback:', pollinationsData?.message || pollinationsError?.message);
+    console.warn('[PollinationsService] Identity edit unavailable, trying image-model fallback:', pollinationsData?.message || pollinationsError?.message);
   } catch (pollinationsError) {
     console.warn('[PollinationsService] Identity edit failed, trying Gemini fallback:', pollinationsError);
   }
@@ -88,7 +88,7 @@ export async function generateIdentityImage(
     if (responseCode === 'REFERENCE_NOT_HUMAN') {
       throw new IdentityImageError('REFERENCE_NOT_HUMAN', data?.message || 'A clear human reference photo is required.');
     }
-    throw new IdentityImageError('IDENTITY_GENERATION_FAILED', data?.message || error?.message || 'Identity image generation failed.');
+    throw new IdentityImageError('IDENTITY_GENERATION_FAILED', data?.message || data?.error || error?.message || 'Identity image generation failed.');
   }
 
   return { imageUrl: data.imageUrl, provider: 'gemini-edge' };
