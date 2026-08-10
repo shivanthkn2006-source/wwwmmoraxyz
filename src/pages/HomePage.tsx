@@ -66,7 +66,7 @@ import { AtlasHUD } from '@/components/atlas';
 import { useFriendRequests } from "@/hooks/useFriendRequests";
 import PageSeo from "@/components/seo/PageSeo";
 import NewContentBadge from '@/components/NewContentBadge';
-import { detectNewArrivals, markPostsSeen, type FeedUpdateSource } from "@/lib/newPostGate";
+import { detectNewArrivals, markPostsSeen, readUnseenPostIds, reconcileUnseenPosts, registerUnseenPosts, type FeedUpdateSource } from "@/lib/newPostGate";
 
 
 
@@ -289,7 +289,12 @@ const HomePage = () => {
   const [hasNewPosts, setHasNewPosts] = useState(false);
   const pendingSeenIdsRef = useRef<string[]>([]);
   const knownFeedIdsRef = useRef<Record<'global' | 'personal' | 'loops', string[]>>({ global: [], personal: [], loops: [] });
-  const [newContentIds, setNewContentIds] = useState<Set<string>>(() => new Set());
+  type NewContentByFeed = Record<'global' | 'personal' | 'loops', Set<string>>;
+  const [newContentByFeed, setNewContentByFeed] = useState<NewContentByFeed>(() => ({
+    global: readUnseenPostIds('global'),
+    personal: readUnseenPostIds('personal'),
+    loops: readUnseenPostIds('loops'),
+  }));
 
   const [showZoeHomeDebug, setShowZoeHomeDebug] = useState<boolean>(() => {
     try { return typeof window !== 'undefined' && window.localStorage.getItem('mmora.home.zoeDebugOverlay') !== 'false'; } catch { return true; }
@@ -668,24 +673,26 @@ const HomePage = () => {
     };
   }, [activeTab, globalPosts, personalPosts, filteredLoops, preloadPostMedia]);
 
-  const visibleNewIds = (activeTab === 'personal' ? personalPosts : globalPosts)
+  const activeFeed = activeTab === 'personal' ? 'personal' : 'global';
+  const activeNewIds = newContentByFeed[activeFeed];
+  const visibleNewIds = (activeFeed === 'personal' ? personalPosts : globalPosts)
     .map((post) => post.id)
-    .filter((id) => newContentIds.has(id));
+    .filter((id) => activeNewIds.has(id));
 
   useEffect(() => {
     pendingSeenIdsRef.current = visibleNewIds;
     setHasNewPosts(visibleNewIds.length > 0);
-  }, [activeTab, newContentIds, globalPosts, personalPosts]);
+  }, [activeTab, activeNewIds, globalPosts, personalPosts]);
 
-  const dismissNewContent = React.useCallback((id: string) => {
-    setNewContentIds((current) => {
-      if (!current.has(id)) return current;
-      const next = new Set(current);
-      next.delete(id);
-      return next;
+  const dismissNewContent = React.useCallback((feed: keyof NewContentByFeed, id: string) => {
+    markPostsSeen(feed, [id]);
+    setNewContentByFeed((current) => {
+      if (!current[feed].has(id)) return current;
+      const nextFeed = new Set(current[feed]);
+      nextFeed.delete(id);
+      return { ...current, [feed]: nextFeed };
     });
-    if (activeTab === 'global' || activeTab === 'personal') markPostsSeen(activeTab, [id]);
-  }, [activeTab]);
+  }, []);
 
   const scrollToNewPosts = React.useCallback(() => {
     const first = document.querySelector<HTMLElement>(`[data-feed-tab="${activeTab}"] [data-post-card][data-new="true"]`);
@@ -713,10 +720,10 @@ const HomePage = () => {
         // One full pass done → mark everything as seen, scroll back, and stop
         // until genuinely new posts arrive.
         markPostsSeen(activeTab, pendingSeenIdsRef.current);
-        setNewContentIds((current) => {
-          const next = new Set(current);
-          pendingSeenIdsRef.current.forEach((id) => next.delete(id));
-          return next;
+        setNewContentByFeed((current) => {
+          const nextFeed = new Set(current[activeFeed]);
+          pendingSeenIdsRef.current.forEach((id) => nextFeed.delete(id));
+          return { ...current, [activeFeed]: nextFeed };
         });
         setFeedAutoIndex(0);
         setFeedAutoPassCompleted(true);
@@ -765,7 +772,7 @@ const HomePage = () => {
       if (feedAutoTimerRef.current) window.clearTimeout(feedAutoTimerRef.current);
       feedAutoTimerRef.current = null;
     };
-  }, [activeTab, loading, loopRailInView, loopRailPassCompleted, feedAutoPassCompleted, hasNewPosts, globalPosts.length, personalPosts.length, feedAutoIndex, autoScrollEnabled, zoeChatOpen]);
+  }, [activeTab, activeFeed, loading, loopRailInView, loopRailPassCompleted, feedAutoPassCompleted, hasNewPosts, globalPosts.length, personalPosts.length, feedAutoIndex, autoScrollEnabled, zoeChatOpen]);
 
 
   // Voice / programmatic command bus for the Home surface.
@@ -1117,8 +1124,11 @@ const HomePage = () => {
       const ids = postsWithLikes.map((post: Post) => post.id);
       const arrivals = detectNewArrivals(knownFeedIdsRef.current.global, ids, updateSource);
       knownFeedIdsRef.current.global = arrivals.knownIds;
+      const globalUnseen = updateSource === 'realtime'
+        ? registerUnseenPosts('global', arrivals.newIds)
+        : reconcileUnseenPosts('global', ids);
+      setNewContentByFeed((current) => ({ ...current, global: globalUnseen }));
       if (arrivals.shouldAutoScroll) {
-        setNewContentIds((current) => new Set([...current, ...arrivals.newIds]));
         setFeedAutoPassCompleted(false);
         setFeedAutoIndex(0);
       }
@@ -1205,7 +1215,10 @@ const HomePage = () => {
       const loopIds = preparedLoops.map((post) => post.id);
       const loopArrivals = detectNewArrivals(knownFeedIdsRef.current.loops, loopIds, updateSource);
       knownFeedIdsRef.current.loops = loopArrivals.knownIds;
-      if (loopArrivals.newIds.length > 0) setNewContentIds((current) => new Set([...current, ...loopArrivals.newIds]));
+      const loopUnseen = updateSource === 'realtime'
+        ? registerUnseenPosts('loops', loopArrivals.newIds)
+        : reconcileUnseenPosts('loops', loopIds);
+      setNewContentByFeed((current) => ({ ...current, loops: loopUnseen }));
       setLoopPosts(preparedLoops);
       setBrokenLoopPreviewIds(prev => {
         const next = new Set(prev);
@@ -1299,8 +1312,11 @@ const HomePage = () => {
       const ids = postsWithLikes.map((post: Post) => post.id);
       const arrivals = detectNewArrivals(knownFeedIdsRef.current.personal, ids, updateSource);
       knownFeedIdsRef.current.personal = arrivals.knownIds;
+      const personalUnseen = updateSource === 'realtime'
+        ? registerUnseenPosts('personal', arrivals.newIds)
+        : reconcileUnseenPosts('personal', ids);
+      setNewContentByFeed((current) => ({ ...current, personal: personalUnseen }));
       if (arrivals.shouldAutoScroll) {
-        setNewContentIds((current) => new Set([...current, ...arrivals.newIds]));
         setFeedAutoPassCompleted(false);
         setFeedAutoIndex(0);
       }
@@ -2144,9 +2160,9 @@ const HomePage = () => {
                       <div ref={loopRailRef} className="flex gap-2 overflow-x-auto pb-1 scroll-smooth snap-x" data-testid="loops-rail">
                         {filteredLoops.map((post, index) => (
                           <FeedErrorBoundary key={post.id} section="loops" postId={post.id} onRetry={() => retrySingleLoop(post.id)}>
-                            <div data-loop-index={index} className="relative snap-start shrink-0" data-new={newContentIds.has(post.id) ? 'true' : 'false'}>
-                              {newContentIds.has(post.id) && (
-                                <NewContentBadge className="left-1 top-1" onViewed={() => dismissNewContent(post.id)} />
+                            <div data-loop-index={index} className="relative snap-start shrink-0" data-new={newContentByFeed.loops.has(post.id) ? 'true' : 'false'}>
+                              {newContentByFeed.loops.has(post.id) && (
+                                <NewContentBadge className="left-1 top-1" onViewed={() => dismissNewContent('loops', post.id)} />
                               )}
                               <LoopVideoItem
                                 post={post}
@@ -2198,9 +2214,9 @@ const HomePage = () => {
                   globalPosts.map(post => {
                     const isToday = post.created_at && new Date(post.created_at).toDateString() === new Date().toDateString();
                     return (
-                      <div key={post.id} className="relative" data-post-card data-post-id={post.id} data-today={isToday ? 'true' : 'false'} data-new={newContentIds.has(post.id) ? 'true' : 'false'}>
-                        {newContentIds.has(post.id) && (
-                          <NewContentBadge className="right-3 top-3" onViewed={() => dismissNewContent(post.id)} />
+                      <div key={post.id} className="relative" data-post-card data-post-id={post.id} data-today={isToday ? 'true' : 'false'} data-new={newContentByFeed.global.has(post.id) ? 'true' : 'false'}>
+                        {newContentByFeed.global.has(post.id) && (
+                          <NewContentBadge className="right-3 top-3" onViewed={() => dismissNewContent('global', post.id)} />
                         )}
                         <FeedErrorBoundary section="post-card" postId={post.id} onRetry={() => retrySinglePost(post.id)}>
                           <PostCard post={post} onUpdate={handleUpdate} />
@@ -2231,9 +2247,9 @@ const HomePage = () => {
                   personalPosts.map(post => {
                     const isToday = post.created_at && new Date(post.created_at).toDateString() === new Date().toDateString();
                     return (
-                      <div key={post.id} className="relative" data-post-card data-post-id={post.id} data-today={isToday ? 'true' : 'false'} data-new={newContentIds.has(post.id) ? 'true' : 'false'}>
-                        {newContentIds.has(post.id) && (
-                          <NewContentBadge className="right-3 top-3" onViewed={() => dismissNewContent(post.id)} />
+                      <div key={post.id} className="relative" data-post-card data-post-id={post.id} data-today={isToday ? 'true' : 'false'} data-new={newContentByFeed.personal.has(post.id) ? 'true' : 'false'}>
+                        {newContentByFeed.personal.has(post.id) && (
+                          <NewContentBadge className="right-3 top-3" onViewed={() => dismissNewContent('personal', post.id)} />
                         )}
                         <FeedErrorBoundary section="post-card" postId={post.id} onRetry={() => retrySinglePost(post.id)}>
                           <PostCard post={post} onUpdate={handleUpdate} />

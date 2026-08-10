@@ -6,7 +6,10 @@ import {
   detectNewArrivals,
   getUnseenPostIds,
   markPostsSeen,
+  readUnseenPostIds,
   readSeenPostIds,
+  reconcileUnseenPosts,
+  registerUnseenPosts,
 } from '@/lib/newPostGate';
 
 describe('newPostGate', () => {
@@ -37,5 +40,21 @@ describe('newPostGate', () => {
     expect(queue).toEqual(['n1', 'n2']);
     expect(advanceOnePass(queue, 0)).toEqual({ completed: false, nextIndex: 1 });
     expect(advanceOnePass(queue, 1)).toEqual({ completed: true, nextIndex: 0 });
+  });
+
+  it('uses persisted unseen IDs as the shared badge and auto-scroll source', () => {
+    registerUnseenPosts('global', ['g2']);
+    registerUnseenPosts('personal', ['f2']);
+    expect([...readUnseenPostIds('global')]).toEqual(['g2']);
+    expect([...readUnseenPostIds('personal')]).toEqual(['f2']);
+    expect([...reconcileUnseenPosts('global', ['g2', 'g1'])]).toEqual(['g2']);
+  });
+
+  it('removes a viewed post from unseen state without affecting the other feed', () => {
+    registerUnseenPosts('global', ['shared']);
+    registerUnseenPosts('personal', ['shared']);
+    markPostsSeen('global', ['shared']);
+    expect([...readUnseenPostIds('global')]).toEqual([]);
+    expect([...readUnseenPostIds('personal')]).toEqual(['shared']);
   });
 });

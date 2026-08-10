@@ -36,7 +36,7 @@ const NewContentBadge: React.FC<NewContentBadgeProps> = ({ onViewed, className =
   if (!visible) return null;
   return (
     <div ref={ref} className={`pointer-events-none absolute z-20 ${className}`} data-testid="new-content-badge">
-      <Badge>New</Badge>
+      <Badge className="border border-primary-foreground/30 bg-primary px-2 py-1 font-semibold text-primary-foreground shadow-md">New</Badge>
     </div>
   );
 };
