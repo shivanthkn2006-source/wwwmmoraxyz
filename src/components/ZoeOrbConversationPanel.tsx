@@ -15,7 +15,7 @@ import ZoeDiagnosticsDrawer, { type DiagTab } from '@/components/zoe-infinity/Zo
 import { cotStart, cotFinish } from '@/utils/cotWiringBus';
 import { setSendStage, reportDiagnosticError } from '@/utils/zoeDiagnosticsBus';
 import { generateIdentityImage, generateImage, IdentityImageError } from '@/services/pollinationsService';
-import { getIdentityReference, saveIdentityReference, persistGeneratedIdentityImage } from '@/services/zoeIdentityVault';
+import { getIdentityReference, saveIdentityReference, persistGeneratedIdentityImage, refreshStoredImageUrl } from '@/services/zoeIdentityVault';
 import { buildUserIdentityPrompt, detectZoeImageIntent } from '@/utils/zoeImageIntent';
 import { useNavigate } from 'react-router-dom';
 import { useZoeOmegaCoreIntegration } from '@/hooks/useZoeOmegaCoreIntegration';
@@ -900,6 +900,22 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
           }));
         setMessages(dbMessages);
         console.log('[ZoeOrb] Loaded', dbMessages.length, 'messages from DB');
+
+        // Repair expired zoe-identity signed URLs so identity/generated images
+        // never disappear after a reload.
+        const staleIdentity = dbMessages.filter(m => m.mediaPreview?.includes('/object/sign/zoe-identity/'));
+        if (staleIdentity.length) {
+          Promise.all(
+            staleIdentity.map(async m => ({ id: m.id, url: await refreshStoredImageUrl(m.mediaPreview!) })),
+          ).then(fixed => {
+            setMessages(prev =>
+              prev.map(m => {
+                const patch = fixed.find(f => f.id === m.id);
+                return patch && patch.url !== m.mediaPreview ? { ...m, mediaPreview: patch.url } : m;
+              }),
+            );
+          });
+        }
         return;
       }
       
