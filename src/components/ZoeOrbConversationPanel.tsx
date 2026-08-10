@@ -7,6 +7,7 @@
 
 import React, { useState, useRef, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
 import SpokenTranscript from '@/components/zoe-infinity/SpokenTranscript';
+import DeepThinkingBlock, { type DeepThinkingMeta } from '@/components/zoe-infinity/DeepThinkingBlock';
 import TeleprompterDebugOverlay from '@/components/zoe-infinity/TeleprompterDebugOverlay';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, Volume2, VolumeX, Minimize2, Maximize2, Paperclip, Image, FileText, Video, Loader2, Download, Upload, Mic, Circle, Square, Camera, StopCircle, Copy, Check, Users, MessageCircle, Search, ArrowLeft, User, Plus, Sparkles, CheckCheck, Reply, CornerUpLeft, ChevronDown, Brain, Cloud, CloudDownload, CloudUpload, Shield, FileDown, Activity, Phone, PhoneOff, Pause, Play } from 'lucide-react';
@@ -124,6 +125,8 @@ interface Message {
     versionId: string;
     status: string;
   };
+  // Metacognitive brain output (deep thinking mode)
+  metacognition?: DeepThinkingMeta | null;
 }
 
 interface ZoeOrbConversationPanelProps {
@@ -316,6 +319,17 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
     setPanelSize((prev) => {
       const next = prev === 'compact' ? 'expanded' : prev === 'expanded' ? 'full' : 'compact';
       try { localStorage.setItem('zoe-orb-panel-size', next); } catch { /* ignore */ }
+      return next;
+    });
+  }, []);
+  // Deep Thinking (metacognitive brain) mode — routes to zoe-core-intelligence
+  const [deepThinking, setDeepThinking] = useState<boolean>(() => {
+    try { return localStorage.getItem('zoe-orb-deep-thinking') === '1'; } catch { return false; }
+  });
+  const toggleDeepThinking = useCallback(() => {
+    setDeepThinking((prev) => {
+      const next = !prev;
+      try { localStorage.setItem('zoe-orb-deep-thinking', next ? '1' : '0'); } catch { /* ignore */ }
       return next;
     });
   }, []);
@@ -1619,6 +1633,37 @@ Want me to dive deeper into any aspect?`;
         }
       }
       
+      // ═══ DEEP THINKING MODE: metacognitive brain (zoe-core-intelligence) ═══
+      if (!responseText && deepThinking && isOnline) {
+        try {
+          console.log('[ZoeOrb] Deep thinking → zoe-core-intelligence');
+          const { data: dtData, error: dtError } = await supabase.functions.invoke('zoe-core-intelligence', {
+            body: {
+              command: userMessage.content,
+              mode: 'deep_thinking',
+              context: {
+                currentPage: window.location.pathname,
+                conversationHistory: messages.slice(-6).map(m => ({
+                  role: m.role === 'zoe' ? 'assistant' : 'user',
+                  content: m.content,
+                })),
+              },
+              options: { verbose_reasoning: true },
+            },
+          });
+          if (dtError) throw dtError;
+          const dtText = dtData?.message || dtData?.response || '';
+          if (dtText) {
+            responseText = guardResponse(dtText).safeResponse;
+            if (dtData?.metacognition) {
+              (window as any).__lastMetacognition = dtData.metacognition;
+            }
+          }
+        } catch (dtErr) {
+          console.warn('[ZoeOrb] Deep thinking failed, falling back to zoe-chat:', dtErr);
+        }
+      }
+
       // Use API if no local response was generated
       if (!responseText) {
         if (isOnline) {
@@ -1758,6 +1803,8 @@ Want me to dive deeper into any aspect?`;
       // PHASE 4: Retrieve evolution event if it was captured
       const capturedEvolution = (window as any).__lastEvolutionEvent || undefined;
       if (capturedEvolution) delete (window as any).__lastEvolutionEvent;
+      const capturedMetacognition = (window as any).__lastMetacognition || undefined;
+      if (capturedMetacognition) delete (window as any).__lastMetacognition;
 
       const zoeMessage: Message = {
         id: createMessageId(),
@@ -1785,6 +1832,7 @@ Want me to dive deeper into any aspect?`;
         },
         // PHASE 4: Evolution event metadata
         evolutionEvent: capturedEvolution,
+        metacognition: capturedMetacognition ?? null,
       };
 
       setMessages(prev => [...prev, zoeMessage]);
@@ -2829,6 +2877,31 @@ Want me to dive deeper into any aspect?`;
                 </Tooltip>
               </TooltipProvider>
 
+              {/* Deep Thinking toggle */}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={cn(
+                        'h-5 w-5 md:h-5 md:w-5 lg:h-4 lg:w-4 rounded-full transition-colors flex items-center justify-center shrink-0',
+                        deepThinking ? 'bg-cyan-500/20 hover:bg-cyan-500/30' : 'hover:bg-primary/10'
+                      )}
+                      onClick={toggleDeepThinking}
+                      aria-pressed={deepThinking}
+                      aria-label={deepThinking ? 'Disable deep thinking' : 'Enable deep thinking'}
+                      title={deepThinking ? 'Deep thinking: on' : 'Deep thinking: off'}
+                    >
+                      <Sparkles className={cn('h-3 w-3 lg:h-2.5 lg:w-2.5', deepThinking ? 'text-cyan-300' : 'text-foreground/60')} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="text-[10px]">
+                    {deepThinking ? 'Deep thinking on (metacognitive brain)' : 'Deep thinking off'}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
               {/* Expand/Minimize */}
               <Button
                 variant="ghost"
@@ -3224,11 +3297,21 @@ Want me to dive deeper into any aspect?`;
                     )}
                     {/* Message content */}
                     <div className="pr-5">
-                      <SpokenTranscript
-                        messageId={msg.role === 'zoe' ? msg.id : undefined}
-                        text={msg.content.replace(/\[\[(PATTERN|MEMORY):[^\]]+\]\]/g, '').trim()}
-                      />
+                      {msg.role === 'zoe' && msg.metacognition ? (
+                        <DeepThinkingBlock
+                          message={msg.content.replace(/\[\[(PATTERN|MEMORY):[^\]]+\]\]/g, '').trim()}
+                          meta={msg.metacognition}
+                          messageId={msg.id}
+                          onClarify={(prompt) => { void sendMessage(prompt); }}
+                        />
+                      ) : (
+                        <SpokenTranscript
+                          messageId={msg.role === 'zoe' ? msg.id : undefined}
+                          text={msg.content.replace(/\[\[(PATTERN|MEMORY):[^\]]+\]\]/g, '').trim()}
+                        />
+                      )}
                     </div>
+
 
                     {/* Action buttons */}
                     <div className="absolute top-1 right-1 flex gap-0.5">
