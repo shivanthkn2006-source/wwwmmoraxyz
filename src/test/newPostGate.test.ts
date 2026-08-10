@@ -10,6 +10,7 @@ import {
   readSeenPostIds,
   reconcileUnseenPosts,
   registerUnseenPosts,
+  syncUnseenPostSnapshot,
 } from '@/lib/newPostGate';
 
 describe('newPostGate', () => {
@@ -56,5 +57,37 @@ describe('newPostGate', () => {
     markPostsSeen('global', ['shared']);
     expect([...readUnseenPostIds('global')]).toEqual([]);
     expect([...readUnseenPostIds('personal')]).toEqual(['shared']);
+  });
+
+  it.each([
+    ['global', ['g1'], 'g2'],
+    ['personal', ['f1'], 'f2'],
+  ] as const)('uses one persisted snapshot for %s badges and auto-scroll', (tab, baseline, arrival) => {
+    const initial = syncUnseenPostSnapshot(tab, [], [...baseline], 'initial');
+    expect([...initial.unseenIds]).toEqual([]);
+
+    const realtime = syncUnseenPostSnapshot(tab, [...baseline], [arrival, ...baseline], 'realtime');
+    expect(realtime.newIds).toEqual([arrival]);
+    expect(realtime.shouldAutoScroll).toBe(true);
+    expect([...realtime.unseenIds]).toEqual([arrival]);
+    expect([...readUnseenPostIds(tab)]).toEqual([arrival]);
+  });
+
+  it('preserves pending unseen IDs through later initial/manual completion order', () => {
+    const realtime = syncUnseenPostSnapshot('personal', ['f1'], ['f2', 'f1'], 'realtime');
+    expect([...realtime.unseenIds]).toEqual(['f2']);
+
+    const delayedInitial = syncUnseenPostSnapshot('personal', [], ['f2', 'f1'], 'initial');
+    expect([...delayedInitial.unseenIds]).toEqual(['f2']);
+
+    const manual = syncUnseenPostSnapshot('personal', ['f2', 'f1'], ['f2', 'f1'], 'manual');
+    expect([...manual.unseenIds]).toEqual(['f2']);
+  });
+
+  it('clears stale unseen IDs when either feed resolves to an empty snapshot', () => {
+    registerUnseenPosts('global', ['gone']);
+    registerUnseenPosts('personal', ['also-gone']);
+    expect([...syncUnseenPostSnapshot('global', ['gone'], [], 'manual').unseenIds]).toEqual([]);
+    expect([...syncUnseenPostSnapshot('personal', ['also-gone'], [], 'initial').unseenIds]).toEqual([]);
   });
 });

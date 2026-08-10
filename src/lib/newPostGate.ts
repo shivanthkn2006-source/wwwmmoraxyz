@@ -15,6 +15,10 @@ export interface NewArrivalResult {
   shouldAutoScroll: boolean;
 }
 
+export interface UnseenSnapshotResult extends NewArrivalResult {
+  unseenIds: Set<string>;
+}
+
 const keyFor = (tab: string) => `mmora.home.seenPosts.${tab}`;
 const unseenKeyFor = (tab: string) => `mmora.home.unseenPosts.${tab}`;
 
@@ -88,6 +92,25 @@ export const detectNewArrivals = (
   const previous = new Set(previousIds.filter(Boolean));
   const newIds = source === 'realtime' ? knownIds.filter((id) => !previous.has(id)) : [];
   return { knownIds, newIds, shouldAutoScroll: newIds.length > 0 };
+};
+
+/**
+ * Atomically resolves a feed snapshot against the persisted unseen-ID store.
+ * Badge rendering and auto-scroll must both consume `unseenIds` from this result
+ * rather than independently deriving "new" state from rendered posts.
+ */
+export const syncUnseenPostSnapshot = (
+  tab: string,
+  previousIds: string[],
+  nextIds: string[],
+  source: FeedUpdateSource,
+): UnseenSnapshotResult => {
+  const arrivals = detectNewArrivals(previousIds, nextIds, source);
+  const unseenIds = source === 'realtime'
+    ? registerUnseenPosts(tab, arrivals.newIds)
+    : reconcileUnseenPosts(tab, arrivals.knownIds);
+
+  return { ...arrivals, unseenIds };
 };
 
 export const createOnePassQueue = (ids: string[]): string[] =>
