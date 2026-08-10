@@ -31,10 +31,10 @@ const ImageViewer: React.FC<ImageViewerProps> = ({ imageUrl, onClose, alt = 'Ful
 
   return (
     <div 
-      className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm flex items-center justify-center p-4"
+      className="fixed inset-0 z-[12000] bg-background/95 backdrop-blur-sm flex items-center justify-center p-4"
       onClick={onClose}
     >
-      <div className="absolute top-4 right-4 flex gap-2">
+      <div className="absolute top-4 right-4 z-10 flex gap-2">
         <Button variant="secondary" size="icon" onClick={(event) => { event.stopPropagation(); void downloadImage(); }} aria-label="Download full-size image">
           <Download className="w-5 h-5" />
         </Button>
