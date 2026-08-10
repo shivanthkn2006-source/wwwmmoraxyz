@@ -59,7 +59,7 @@ serve(async (req) => {
     if (classification !== 'HUMAN_PHOTO') {
       return new Response(
         JSON.stringify({ code: 'REFERENCE_NOT_HUMAN', message: 'Please upload a clear photo of yourself so I can preserve your real identity.' }),
-        { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
 
