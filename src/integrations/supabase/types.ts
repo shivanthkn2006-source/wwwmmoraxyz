@@ -3949,6 +3949,8 @@ export type Database = {
           zoe_elite_mode: boolean | null
           zoe_genesis_complete: boolean
           zoe_genesis_completed_at: string | null
+          zoe_identity_consent_at: string | null
+          zoe_identity_photo_url: string | null
           zoe_infinity_genesis_complete: boolean | null
           zoe_infinity_intimacy_level: number | null
           zoe_infinity_nickname: string | null
@@ -4016,6 +4018,8 @@ export type Database = {
           zoe_elite_mode?: boolean | null
           zoe_genesis_complete?: boolean
           zoe_genesis_completed_at?: string | null
+          zoe_identity_consent_at?: string | null
+          zoe_identity_photo_url?: string | null
           zoe_infinity_genesis_complete?: boolean | null
           zoe_infinity_intimacy_level?: number | null
           zoe_infinity_nickname?: string | null
@@ -4083,6 +4087,8 @@ export type Database = {
           zoe_elite_mode?: boolean | null
           zoe_genesis_complete?: boolean
           zoe_genesis_completed_at?: string | null
+          zoe_identity_consent_at?: string | null
+          zoe_identity_photo_url?: string | null
           zoe_infinity_genesis_complete?: boolean | null
           zoe_infinity_intimacy_level?: number | null
           zoe_infinity_nickname?: string | null
