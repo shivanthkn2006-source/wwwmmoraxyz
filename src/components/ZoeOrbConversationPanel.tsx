@@ -11,9 +11,9 @@ import DeepThinkingBlock, { type DeepThinkingMeta } from '@/components/zoe-infin
 import TeleprompterDebugOverlay from '@/components/zoe-infinity/TeleprompterDebugOverlay';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, Volume2, VolumeX, Minimize2, Maximize2, Paperclip, Image, FileText, Video, Loader2, Download, Upload, Mic, Circle, Square, Camera, StopCircle, Copy, Check, Users, MessageCircle, Search, ArrowLeft, User, Plus, Sparkles, CheckCheck, Reply, CornerUpLeft, ChevronDown, Brain, Cloud, CloudDownload, CloudUpload, Shield, FileDown, Activity, Phone, PhoneOff, Pause, Play, Gauge } from 'lucide-react';
-import MetacognitionMetricsPanel from '@/components/zoe-infinity/MetacognitionMetricsPanel';
-import CotWiringStatusPanel from '@/components/zoe-infinity/CotWiringStatusPanel';
+import ZoeDiagnosticsDrawer, { type DiagTab } from '@/components/zoe-infinity/ZoeDiagnosticsDrawer';
 import { cotStart, cotFinish } from '@/utils/cotWiringBus';
+import { setSendStage, reportDiagnosticError } from '@/utils/zoeDiagnosticsBus';
 import { useNavigate } from 'react-router-dom';
 import { useZoeOmegaCoreIntegration } from '@/hooks/useZoeOmegaCoreIntegration';
 import { format, isToday, isYesterday } from 'date-fns';
