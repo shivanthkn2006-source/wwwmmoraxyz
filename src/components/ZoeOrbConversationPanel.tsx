@@ -3272,11 +3272,21 @@ Want me to dive deeper into any aspect?`;
                     )}
                     {/* Message content */}
                     <div className="pr-5">
-                      <SpokenTranscript
-                        messageId={msg.role === 'zoe' ? msg.id : undefined}
-                        text={msg.content.replace(/\[\[(PATTERN|MEMORY):[^\]]+\]\]/g, '').trim()}
-                      />
+                      {msg.role === 'zoe' && msg.metacognition ? (
+                        <DeepThinkingBlock
+                          message={msg.content.replace(/\[\[(PATTERN|MEMORY):[^\]]+\]\]/g, '').trim()}
+                          meta={msg.metacognition}
+                          messageId={msg.id}
+                          onClarify={(prompt) => { void sendMessage(prompt); }}
+                        />
+                      ) : (
+                        <SpokenTranscript
+                          messageId={msg.role === 'zoe' ? msg.id : undefined}
+                          text={msg.content.replace(/\[\[(PATTERN|MEMORY):[^\]]+\]\]/g, '').trim()}
+                        />
+                      )}
                     </div>
+
 
                     {/* Action buttons */}
                     <div className="absolute top-1 right-1 flex gap-0.5">
