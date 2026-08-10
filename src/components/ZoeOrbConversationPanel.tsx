@@ -1633,6 +1633,37 @@ Want me to dive deeper into any aspect?`;
         }
       }
       
+      // ═══ DEEP THINKING MODE: metacognitive brain (zoe-core-intelligence) ═══
+      if (!responseText && deepThinking && isOnline) {
+        try {
+          console.log('[ZoeOrb] Deep thinking → zoe-core-intelligence');
+          const { data: dtData, error: dtError } = await supabase.functions.invoke('zoe-core-intelligence', {
+            body: {
+              command: userMessage.content,
+              mode: 'deep_thinking',
+              context: {
+                currentPage: window.location.pathname,
+                conversationHistory: messages.slice(-6).map(m => ({
+                  role: m.role === 'zoe' ? 'assistant' : 'user',
+                  content: m.content,
+                })),
+              },
+              options: { verbose_reasoning: true },
+            },
+          });
+          if (dtError) throw dtError;
+          const dtText = dtData?.message || dtData?.response || '';
+          if (dtText) {
+            responseText = guardResponse(dtText).safeResponse;
+            if (dtData?.metacognition) {
+              (window as any).__lastMetacognition = dtData.metacognition;
+            }
+          }
+        } catch (dtErr) {
+          console.warn('[ZoeOrb] Deep thinking failed, falling back to zoe-chat:', dtErr);
+        }
+      }
+
       // Use API if no local response was generated
       if (!responseText) {
         if (isOnline) {
