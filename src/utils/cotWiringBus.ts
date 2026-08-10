@@ -79,7 +79,11 @@ const emit = () => {
 export const getCotWiringSnapshot = (): CotServiceState[] =>
   Array.from(states.values())
     .map((s) => ({ ...s }))
-    .sort((a, b) => (b.lastRequestAt ?? 0) - (a.lastRequestAt ?? 0));
+    .sort(
+      (a, b) =>
+        (b.lastRequestAt ?? 0) - (a.lastRequestAt ?? 0) ||
+        (order.get(b.service) ?? 0) - (order.get(a.service) ?? 0),
+    );
 
 export const subscribeCotWiring = (listener: Listener): (() => void) => {
   listeners.add(listener);
