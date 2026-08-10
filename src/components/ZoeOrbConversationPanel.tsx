@@ -2240,6 +2240,7 @@ Want me to dive deeper into any aspect?`;
           },
         });
 
+        cotFinish(voiceToken, { error });
         if (error) throw error;
         const rawVoiceText = data?.message || data?.response || "I'm here to help!";
         responseText = guardResponse(rawVoiceText).safeResponse;
