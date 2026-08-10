@@ -356,17 +356,22 @@ Respond ONLY with valid JSON.`;
       return String(v ?? '').toLowerCase();
     };
 
-    if (pastVisuals.length > 0 && analysis.objects.length > 0) {
+    // Generic nouns (person, man, shirt…) overlap in almost every photo and
+    // produced false "you showed me this before" claims. Ignore them.
+    const GENERIC = new Set(['person', 'people', 'man', 'woman', 'face', 'human', 'shirt', 'hair', 'background', 'wall', 'light', 'photo', 'image', 'portrait', 'eyes', 'head']);
+
+    if (identityPrompt === 'none' && pastVisuals.length > 0 && analysis.objects.length > 0) {
       const pastObjects: string[] = pastVisuals
         .flatMap((m: any) => m.zoe_state_json?.objects_detected || [])
         .map(toStr)
-        .filter((s: string) => s.length > 0);
-      const currentObjects: string[] = analysis.objects.map(toStr).filter((s: string) => s.length > 0);
-      const matchingObjects = currentObjects.filter(obj =>
-        pastObjects.some(past => past.includes(obj) || obj.includes(past))
-      );
-      
-      if (matchingObjects.length > 0) {
+        .filter((s: string) => s.length > 3 && !GENERIC.has(s));
+      const currentObjects: string[] = analysis.objects
+        .map(toStr)
+        .filter((s: string) => s.length > 3 && !GENERIC.has(s));
+      const matchingObjects = currentObjects.filter(obj => pastObjects.includes(obj));
+
+      // Require several specific matches before claiming recognition.
+      if (matchingObjects.length >= 2) {
         const pastDate = new Date(pastVisuals[0].created_at);
         const daysAgo = Math.floor((Date.now() - pastDate.getTime()) / (1000 * 60 * 60 * 24));
         zoeSays += ` I notice something familiar here... Is this related to what you showed me ${daysAgo === 0 ? 'earlier today' : daysAgo === 1 ? 'yesterday' : `${daysAgo} days ago`}?`;
@@ -377,6 +382,8 @@ Respond ONLY with valid JSON.`;
       success: true,
       analysis,
       zoe_response: zoeSays,
+      identity_prompt: identityPrompt,
+      has_locked_reference: Boolean(referenceUrl),
       cross_referenced: pastVisuals.length > 0,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
