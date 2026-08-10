@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, act } from '@testing-library/react';
+import { render, screen, act, cleanup } from '@testing-library/react';
 import {
   registerUnseenPosts,
   readUnseenPostIds,
@@ -73,6 +73,7 @@ describe('NewContentBadge fallback behaviour', () => {
   const OriginalIO = globalThis.IntersectionObserver;
 
   afterEach(() => {
+    cleanup();
     globalThis.IntersectionObserver = OriginalIO;
     vi.useRealTimers();
   });
