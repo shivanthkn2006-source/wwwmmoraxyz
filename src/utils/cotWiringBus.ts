@@ -41,6 +41,8 @@ const LABELS: Record<string, { label: string; pipeline: CotServiceState['pipelin
 const states = new Map<string, CotServiceState>();
 const listeners = new Set<Listener>();
 const pending = new Map<string, { service: string; startedAt: number }>();
+/** Monotonic start ordering — breaks ties when two calls start in the same ms. */
+const order = new Map<string, number>();
 
 let seq = 0;
 
