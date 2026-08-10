@@ -185,14 +185,21 @@ Respond ONLY with valid JSON.`;
           model: 'google/gemini-2.5-flash',
           messages: [
             { role: 'system', content: analysisPrompt },
-            { 
-              role: 'user', 
+            {
+              role: 'user',
               content: [
-                { type: 'text', text: 'Analyze this media:' },
-                { type: 'image_url', image_url: { url: media_data } }
-              ]
+                { type: 'text', text: 'FIRST image — the media the user just shared. Analyze this:' },
+                { type: 'image_url', image_url: { url: media_data } },
+                ...(media_type === 'image' && referenceUrl
+                  ? [
+                      { type: 'text', text: 'SECOND image — the account holder\'s saved reference photo, for identity comparison only. Never describe it as the shared media.' },
+                      { type: 'image_url', image_url: { url: referenceUrl } },
+                    ]
+                  : []),
+              ],
             }
           ],
+          temperature: 0.2,
           max_tokens: 1500,
         }),
       });
