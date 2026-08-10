@@ -2906,6 +2906,30 @@ Want me to dive deeper into any aspect?`;
                 </Tooltip>
               </TooltipProvider>
 
+              {/* Metacognition metrics */}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={cn(
+                        'h-5 w-5 md:h-5 md:w-5 lg:h-4 lg:w-4 rounded-full transition-colors flex items-center justify-center shrink-0',
+                        showMetrics ? 'bg-amber-500/20 hover:bg-amber-500/30' : 'hover:bg-primary/10'
+                      )}
+                      onClick={() => setShowMetrics((v) => !v)}
+                      aria-pressed={showMetrics}
+                      aria-label={showMetrics ? 'Hide metacognition metrics' : 'Show metacognition metrics'}
+                      title="Metacognition metrics"
+                    >
+                      <Gauge className={cn('h-3 w-3 lg:h-2.5 lg:w-2.5', showMetrics ? 'text-amber-300' : 'text-foreground/60')} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="text-[10px]">Metacognition metrics</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
+
               {/* Expand/Minimize */}
               <Button
                 variant="ghost"
