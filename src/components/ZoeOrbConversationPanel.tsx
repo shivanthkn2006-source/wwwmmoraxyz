@@ -1114,7 +1114,7 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
         setIsProcessing(false);
       }
     }
-  }, [user?.id, pendingIdentityImageRequest, rememberPendingIdentityRequest]);
+  }, [user?.id, pendingIdentityImageRequest, rememberPendingIdentityRequest, saveMessageToDb]);
 
 
 
@@ -1251,7 +1251,10 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
     offlineDataSync.addConversation('user', userMessage.content);
     saveMessageToDb('user', userMessage.content, pendingMedia?.preview, pendingMedia?.type, userMessage.id);
 
-    const resolvedImageTurn = resolveZoeImageTurn(userMessage.content, pendingIdentityImageRequest);
+    const resolvedImageTurn = resolveZoeImageTurn(
+      userMessage.content,
+      pendingMedia?.type === 'image' ? pendingIdentityImageRequest : null,
+    );
     let imageIntent = resolvedImageTurn.intent;
     let identityRequestText = resolvedImageTurn.prompt;
     let confirmedProfilePhotoUrl: string | null = null;
