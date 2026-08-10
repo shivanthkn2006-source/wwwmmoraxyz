@@ -399,10 +399,13 @@ export const persistGeneratedIdentityImage = async (
   imageUrl: string,
 ): Promise<string> => {
   try {
-    if (!imageUrl.startsWith('data:')) return imageUrl;
+    // Remote provider URLs are already durable. Browser-local data/blob URLs
+    // are not: upload them before writing the chat row so reload/login works.
+    if (!imageUrl.startsWith('data:') && !imageUrl.startsWith('blob:')) return imageUrl;
 
     const blob = await dataUrlToBlob(imageUrl);
-    const path = `${userId}/generated/${Date.now()}.png`;
+    const extension = blob.type.includes('jpeg') ? 'jpg' : blob.type.includes('webp') ? 'webp' : 'png';
+    const path = `${userId}/generated/${crypto.randomUUID()}.${extension}`;
     const { error } = await supabase.storage.from(BUCKET).upload(path, blob, {
       upsert: true,
       contentType: blob.type || 'image/png',
@@ -410,10 +413,12 @@ export const persistGeneratedIdentityImage = async (
     if (error) throw error;
 
     const url = await signedUrl(path);
-    return url ? withCacheBust(url) : imageUrl;
+    if (!url) throw new Error('Generated image was uploaded but could not be signed');
+    return withCacheBust(url);
   } catch (err) {
     console.error('[ZoeIdentityVault] Generated image persistence failed:', err);
-    return imageUrl;
+    // Never pretend a temporary browser URL was persisted.
+    throw err;
   }
 };
 

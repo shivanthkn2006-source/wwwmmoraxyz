@@ -45,7 +45,7 @@ serve(async (req) => {
     let classification = 'HUMAN_PHOTO';
     try {
       const classificationResponse = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GOOGLE_KEY}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${GOOGLE_KEY}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -83,7 +83,11 @@ serve(async (req) => {
 
     // Try the image models in order; free-tier quota (429) on one model should
     // roll over to the next instead of failing the whole request.
-    const models = ['gemini-2.5-flash-image', 'gemini-2.0-flash-preview-image-generation'];
+    const models = [
+      'gemini-3.1-flash-image-preview',
+      'gemini-3-pro-image-preview',
+      'gemini-2.5-flash-image',
+    ];
     let resp: Response | null = null;
     let lastStatus = 0;
     let lastErr = '';
@@ -128,7 +132,7 @@ serve(async (req) => {
         return new Response(
           JSON.stringify({
             error: 'RATE_LIMIT',
-            message: 'The image model is at its quota right now. Please try again in a minute.',
+            message: 'All identity-image models are temporarily at quota. Your request and photo remain saved so you can retry.',
           }),
           { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );

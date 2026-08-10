@@ -1224,12 +1224,25 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
     }
 
     // ═══ ZOE MODE: Regular Zoe conversation ═══
+    let durablePendingMediaUrl = pendingMedia?.preview;
+    if (pendingMedia?.type === 'image' && user?.id && durablePendingMediaUrl) {
+      try {
+        durablePendingMediaUrl = await persistGeneratedIdentityImage(user.id, durablePendingMediaUrl);
+      } catch (mediaPersistError) {
+        reportDiagnosticError('chat-image-persistence', mediaPersistError);
+        toast.error('This photo could not be saved. Please retry the upload.');
+        setIsProcessing(false);
+        setSendStage('error', 'chat-image-persistence');
+        return;
+      }
+    }
+
     const userMessage: Message = {
       id: createMessageId(),
       role: 'user',
       content: textToSend.trim() || `[Shared a ${pendingMedia?.type}]`,
       timestamp: new Date(),
-      mediaPreview: pendingMedia?.preview,
+      mediaPreview: durablePendingMediaUrl,
       mediaType: pendingMedia?.type,
       replyTo: replyingTo ? {
         id: replyingTo.id,
@@ -1249,7 +1262,7 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
 
     // Store in offline cache AND database with media info
     offlineDataSync.addConversation('user', userMessage.content);
-    saveMessageToDb('user', userMessage.content, pendingMedia?.preview, pendingMedia?.type, userMessage.id);
+    await saveMessageToDb('user', userMessage.content, durablePendingMediaUrl, pendingMedia?.type, userMessage.id);
 
     const resolvedImageTurn = resolveZoeImageTurn(
       userMessage.content,
@@ -1388,7 +1401,7 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
           reasoningTrace: { classifiedIntent: 'identity_image_generation', codexInjected: false },
         };
         setMessages(prev => [...prev, zoeMessage]);
-        saveMessageToDb('assistant', caption, storedImageUrl, 'image', zoeMessage.id);
+        await saveMessageToDb('assistant', caption, storedImageUrl, 'image', zoeMessage.id);
         setPendingIdentityConfirmation(null);
         rememberPendingIdentityRequest(null);
         if (attachedReference) {
@@ -1521,6 +1534,9 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
             : imgText.replace(/^\s*(please\s+)?(zoe[, ]+)?/i, '');
 
           const result = await generateImage(prompt, { width: 1024, height: 1024 });
+          const storedImageUrl = user?.id
+            ? await persistGeneratedIdentityImage(user.id, result.imageUrl)
+            : result.imageUrl;
           const caption = selfPortrait
             ? "Here's how I picture myself ✨"
             : `Here's what I created for you ✨`;
@@ -1530,7 +1546,7 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
             role: 'zoe',
             content: caption,
             timestamp: new Date(),
-            mediaPreview: result.imageUrl,
+            mediaPreview: storedImageUrl,
             mediaType: 'image',
             reasoningTrace: {
               sentinelScanned: true,
@@ -1543,7 +1559,7 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
 
           setMessages(prev => [...prev, zoeMessage]);
           offlineDataSync.addConversation('zoe', caption);
-          saveMessageToDb('assistant', caption, result.imageUrl, 'image', zoeMessage.id);
+          await saveMessageToDb('assistant', caption, storedImageUrl, 'image', zoeMessage.id);
 
           if (!isMuted) {
             speakAsZoe(
