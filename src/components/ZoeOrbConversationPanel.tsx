@@ -4055,6 +4055,18 @@ Want me to dive deeper into any aspect?`;
                         variant="ghost"
                         size="sm"
                         className="w-full justify-start gap-1.5 h-6 text-[10px] px-1.5"
+                        title="Save a photo of yourself so Zoe can create images that look like you"
+                        onClick={() => {
+                          identityInputRef.current?.click();
+                        }}
+                      >
+                        <Image className="h-3 w-3 text-emerald-400" />
+                        My photo (identity)
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full justify-start gap-1.5 h-6 text-[10px] px-1.5"
                         onClick={() => {
                           fileInputRef.current?.click();
                           setShowAttachMenu(false);
