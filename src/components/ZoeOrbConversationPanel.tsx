@@ -3660,9 +3660,7 @@ Want me to dive deeper into any aspect?`;
                 >
                   <div
                     className={cn(
-                      msg.mediaPreview && msg.mediaType === 'image' && msg.role === 'zoe'
-                        ? 'max-w-[min(85%,560px)] rounded-xl px-2.5 py-1.5 md:px-3 md:py-2 lg:px-3.5 lg:py-2.5 text-xs md:text-sm lg:text-base relative'
-                        : 'max-w-[85%] rounded-xl px-2.5 py-1.5 md:px-3 md:py-2 lg:px-3.5 lg:py-2.5 text-xs md:text-sm lg:text-base relative',
+                      'max-w-[85%] rounded-xl px-2.5 py-1.5 md:px-3 md:py-2 lg:px-3.5 lg:py-2.5 text-xs md:text-sm lg:text-base relative',
                       dm.sender_id === user?.id
                         ? 'bg-cyan-500/80 text-white rounded-br-sm backdrop-blur-sm'
                         : 'bg-foreground/5 text-foreground/90 rounded-bl-sm border border-cyan-500/20'
@@ -3728,7 +3726,9 @@ Want me to dive deeper into any aspect?`;
                 >
                   <div
                     className={cn(
-                      'max-w-[85%] rounded-xl px-2.5 py-1.5 md:px-3 md:py-2 lg:px-3.5 lg:py-2.5 text-xs md:text-sm lg:text-base relative',
+                      msg.mediaPreview && msg.mediaType === 'image' && msg.role === 'zoe'
+                        ? 'max-w-[min(85%,560px)] rounded-xl px-2.5 py-1.5 md:px-3 md:py-2 lg:px-3.5 lg:py-2.5 text-xs md:text-sm lg:text-base relative'
+                        : 'max-w-[85%] rounded-xl px-2.5 py-1.5 md:px-3 md:py-2 lg:px-3.5 lg:py-2.5 text-xs md:text-sm lg:text-base relative',
                       msg.role === 'user'
                         ? 'bg-primary/80 text-primary-foreground rounded-br-sm backdrop-blur-sm'
                         : 'bg-foreground/5 text-foreground/90 rounded-bl-sm border border-foreground/5 cursor-pointer hover:bg-foreground/10 transition-colors',
