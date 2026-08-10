@@ -7,6 +7,8 @@ import {
   type Metacognition,
 } from '@/utils/confidenceGate';
 import { useClarificationCycle } from '@/hooks/useClarificationCycle';
+import SpokenTranscript from '@/components/zoe-infinity/SpokenTranscript';
+
 
 interface ConfidenceGatedMessageProps {
   message: string;
@@ -145,21 +147,26 @@ export const ConfidenceGatedMessage = ({
   return (
     <div className={cn('space-y-1', className)} data-testid="confidence-gate-answer">
       <p className="text-sm leading-relaxed text-foreground">
-        {segments.map((seg, i) =>
-          seg.uncertain ? (
-            <mark
-              key={i}
-              data-testid="uncertain-span"
-              title="Zoe is not fully confident about this"
-              className="rounded bg-amber-500/20 px-0.5 text-foreground decoration-amber-500/70 decoration-dotted underline-offset-2 [text-decoration-line:underline]"
-            >
-              {seg.text}
-            </mark>
-          ) : (
-            <span key={i}>{seg.text}</span>
+        {gated.uncertainClaims.length === 0 ? (
+          <SpokenTranscript messageId={messageId ?? undefined} text={gated.spokenText} />
+        ) : (
+          segments.map((seg, i) =>
+            seg.uncertain ? (
+              <mark
+                key={i}
+                data-testid="uncertain-span"
+                title="Zoe is not fully confident about this"
+                className="rounded bg-amber-500/20 px-0.5 text-foreground decoration-amber-500/70 decoration-dotted underline-offset-2 [text-decoration-line:underline]"
+              >
+                {seg.text}
+              </mark>
+            ) : (
+              <span key={i}>{seg.text}</span>
+            )
           )
         )}
       </p>
+
 
       {showFeedback && (
         <div className="flex items-center gap-2 pt-0.5" data-testid="calibration-feedback">
