@@ -1701,6 +1701,7 @@ Want me to dive deeper into any aspect?`;
           // Get new user notifications for chat context
           const newUserNotification = getNewUserNotification();
           
+          const chatToken = cotStart('zoe-chat');
           const { data, error } = await supabase.functions.invoke('zoe-chat', {
             body: {
               messages: [
