@@ -322,6 +322,17 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
       return next;
     });
   }, []);
+  // Deep Thinking (metacognitive brain) mode — routes to zoe-core-intelligence
+  const [deepThinking, setDeepThinking] = useState<boolean>(() => {
+    try { return localStorage.getItem('zoe-orb-deep-thinking') === '1'; } catch { return false; }
+  });
+  const toggleDeepThinking = useCallback(() => {
+    setDeepThinking((prev) => {
+      const next = !prev;
+      try { localStorage.setItem('zoe-orb-deep-thinking', next ? '1' : '0'); } catch { /* ignore */ }
+      return next;
+    });
+  }, []);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [isInputFocused, setIsInputFocused] = useState(false);
