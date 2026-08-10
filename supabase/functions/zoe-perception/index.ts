@@ -327,8 +327,24 @@ Respond ONLY with valid JSON.`;
     });
     }
 
-    // Generate empathetic response
+    // Generate empathetic response, grounded in who is actually in the frame
     let zoeSays = analysis.summary;
+    const identityState = analysis.subject_identity;
+    let identityPrompt: 'none' | 'offer_lock' | 'verified' | 'mismatch' = 'none';
+
+    if (analysis.person_present && userId) {
+      if (identityState === 'account_holder' && (analysis.identity_match_confidence ?? 0) >= 0.6) {
+        identityPrompt = 'verified';
+        zoeSays += ` That's you — it matches the reference photo locked in your identity vault.`;
+      } else if (identityState === 'other_person') {
+        identityPrompt = 'mismatch';
+        zoeSays += ` This isn't the face saved in your identity vault, so I won't treat it as your likeness.`;
+      } else if (!referenceUrl) {
+        identityPrompt = 'offer_lock';
+        zoeSays += ` I don't have a locked reference photo for you yet. If this is you, save it as your identity photo and I'll use it whenever you ask me to create images of you.`;
+      }
+    }
+
     
     // Cross-reference past memories for "Samantha Effect"
     // Coerce anything (string | {name} | object) into a lowercase string
