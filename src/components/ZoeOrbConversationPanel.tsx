@@ -2877,6 +2877,31 @@ Want me to dive deeper into any aspect?`;
                 </Tooltip>
               </TooltipProvider>
 
+              {/* Deep Thinking toggle */}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={cn(
+                        'h-5 w-5 md:h-5 md:w-5 lg:h-4 lg:w-4 rounded-full transition-colors flex items-center justify-center shrink-0',
+                        deepThinking ? 'bg-cyan-500/20 hover:bg-cyan-500/30' : 'hover:bg-primary/10'
+                      )}
+                      onClick={toggleDeepThinking}
+                      aria-pressed={deepThinking}
+                      aria-label={deepThinking ? 'Disable deep thinking' : 'Enable deep thinking'}
+                      title={deepThinking ? 'Deep thinking: on' : 'Deep thinking: off'}
+                    >
+                      <Sparkles className={cn('h-3 w-3 lg:h-2.5 lg:w-2.5', deepThinking ? 'text-cyan-300' : 'text-foreground/60')} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="text-[10px]">
+                    {deepThinking ? 'Deep thinking on (metacognitive brain)' : 'Deep thinking off'}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
               {/* Expand/Minimize */}
               <Button
                 variant="ghost"
