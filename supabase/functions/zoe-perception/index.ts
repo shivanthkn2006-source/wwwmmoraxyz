@@ -30,6 +30,10 @@ interface PerceptionAnalysis {
   entities: string[];
   summary: string;
   visual_tags: string[];
+  person_present?: boolean;
+  subject_identity?: 'account_holder' | 'other_person' | 'no_person' | 'unknown';
+  identity_match_confidence?: number;
+  identity_notes?: string;
 }
 
 serve(async (req) => {
