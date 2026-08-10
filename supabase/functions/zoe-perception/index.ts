@@ -18,6 +18,8 @@ interface PerceptionRequest {
   file_name?: string;
   context?: string; // User message context
   cross_reference?: boolean; // Query past visual memories
+  debug?: boolean; // Return the identification decision trail
+  scan_purpose?: string; // e.g. 'identity_rescan'
 }
 
 interface PerceptionAnalysis {
@@ -71,7 +73,16 @@ serve(async (req) => {
       else console.warn('[Zoe Perception] Guest mode (no valid session):', userError?.message);
     }
 
-    const { media_type, media_data, file_name, context, cross_reference }: PerceptionRequest = await req.json();
+    const { media_type, media_data, file_name, context, cross_reference, debug, scan_purpose }: PerceptionRequest = await req.json();
+
+    // Identification decision trail — always logged server-side, returned only
+    // when the caller explicitly asks for debug output.
+    const decisionTrail: Record<string, unknown> = {
+      scan_purpose: scan_purpose || 'general',
+      authenticated: Boolean(userId),
+      media_type,
+      received_kb: Math.round((media_data?.length || 0) / 1024),
+    };
 
     if (!media_data) {
       console.error('[Zoe Perception] No media data provided');
@@ -105,11 +116,19 @@ serve(async (req) => {
     if (userId) {
       const { data: profile } = await supabase
         .from('profiles')
-        .select('display_name, username, zoe_identity_photo_url, profile_photo_url')
+        .select('display_name, username, zoe_identity_photo_url, zoe_identity_photo_path, zoe_identity_dhf_locked, profile_photo_url')
         .eq('user_id', userId)
         .maybeSingle();
       holderName = (profile as any)?.display_name || (profile as any)?.username || '';
       referenceUrl = (profile as any)?.zoe_identity_photo_url || (profile as any)?.profile_photo_url || null;
+      decisionTrail.reference_source = (profile as any)?.zoe_identity_photo_url
+        ? 'identity-vault'
+        : (profile as any)?.profile_photo_url
+          ? 'profile-photo'
+          : 'none';
+      decisionTrail.reference_path = (profile as any)?.zoe_identity_photo_path || null;
+      decisionTrail.dhf_locked = Boolean((profile as any)?.zoe_identity_dhf_locked);
+      console.log('[Zoe Perception][identity] reference resolved:', decisionTrail.reference_source);
     }
 
     // Build vision analysis prompt based on media type
@@ -378,6 +397,38 @@ Respond ONLY with valid JSON.`;
       }
     }
 
+    decisionTrail.person_present = Boolean(analysis.person_present);
+    decisionTrail.subject_identity = analysis.subject_identity;
+    decisionTrail.identity_match_confidence = analysis.identity_match_confidence ?? null;
+    decisionTrail.identity_notes = analysis.identity_notes ?? null;
+    decisionTrail.identity_prompt = identityPrompt;
+
+    // Server-side audit of every identification attempt (owner-readable only).
+    if (userId && (scan_purpose === 'identity_rescan' || analysis.person_present)) {
+      const outcome = analysis.subject_identity === 'account_holder' && (analysis.identity_match_confidence ?? 0) >= 0.6
+        ? 'identified'
+        : 'not_identified';
+      const reasonCode = !analysis.person_present
+        ? 'NO_FACE_DETECTED'
+        : analysis.subject_identity === 'other_person'
+          ? 'FACE_MISMATCH'
+          : outcome === 'identified'
+            ? 'IDENTIFIED'
+            : 'LOW_CONFIDENCE';
+
+      console.log(`[Zoe Perception][identity] outcome=${outcome} reason=${reasonCode}`, decisionTrail);
+
+      const { error: logError } = await supabase.from('zoe_identity_vault_log').insert({
+        user_id: userId,
+        action: scan_purpose === 'identity_rescan' ? 'rescan' : 'perception_scan',
+        source: String(decisionTrail.reference_source ?? 'none'),
+        outcome,
+        reason_code: reasonCode,
+        details: decisionTrail,
+      });
+      if (logError) console.error('[Zoe Perception][identity] audit log failed:', logError.message);
+    }
+
     return new Response(JSON.stringify({
       success: true,
       analysis,
@@ -385,6 +436,7 @@ Respond ONLY with valid JSON.`;
       identity_prompt: identityPrompt,
       has_locked_reference: Boolean(referenceUrl),
       cross_referenced: pastVisuals.length > 0,
+      ...(debug ? { debug: decisionTrail } : {}),
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

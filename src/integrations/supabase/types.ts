@@ -3950,6 +3950,9 @@ export type Database = {
           zoe_genesis_complete: boolean
           zoe_genesis_completed_at: string | null
           zoe_identity_consent_at: string | null
+          zoe_identity_dhf_locked: boolean
+          zoe_identity_locked_at: string | null
+          zoe_identity_photo_path: string | null
           zoe_identity_photo_url: string | null
           zoe_infinity_genesis_complete: boolean | null
           zoe_infinity_intimacy_level: number | null
@@ -4019,6 +4022,9 @@ export type Database = {
           zoe_genesis_complete?: boolean
           zoe_genesis_completed_at?: string | null
           zoe_identity_consent_at?: string | null
+          zoe_identity_dhf_locked?: boolean
+          zoe_identity_locked_at?: string | null
+          zoe_identity_photo_path?: string | null
           zoe_identity_photo_url?: string | null
           zoe_infinity_genesis_complete?: boolean | null
           zoe_infinity_intimacy_level?: number | null
@@ -4088,6 +4094,9 @@ export type Database = {
           zoe_genesis_complete?: boolean
           zoe_genesis_completed_at?: string | null
           zoe_identity_consent_at?: string | null
+          zoe_identity_dhf_locked?: boolean
+          zoe_identity_locked_at?: string | null
+          zoe_identity_photo_path?: string | null
           zoe_identity_photo_url?: string | null
           zoe_infinity_genesis_complete?: boolean | null
           zoe_infinity_intimacy_level?: number | null
@@ -7354,6 +7363,39 @@ export type Database = {
           tts_parameters_used?: Json | null
           updated_at?: string | null
           user_engagement_score?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      zoe_identity_vault_log: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json
+          id: string
+          outcome: string
+          reason_code: string | null
+          source: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json
+          id?: string
+          outcome: string
+          reason_code?: string | null
+          source?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json
+          id?: string
+          outcome?: string
+          reason_code?: string | null
+          source?: string | null
           user_id?: string
         }
         Relationships: []
