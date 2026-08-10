@@ -247,6 +247,21 @@ Respond ONLY with valid JSON.`;
         analysis.context = normStr(analysis.context);
         analysis.emotional_sentiment = normStr(analysis.emotional_sentiment) || 'neutral';
         analysis.text_extracted = analysis.text_extracted ? normStr(analysis.text_extracted) : null;
+        analysis.person_present = analysis.person_present === true;
+        const allowedIdentity = ['account_holder', 'other_person', 'no_person', 'unknown'];
+        analysis.subject_identity = allowedIdentity.includes(String(analysis.subject_identity))
+          ? analysis.subject_identity
+          : (analysis.person_present ? 'unknown' : 'no_person');
+        // Without a stored reference there is nothing to match against.
+        if (!referenceUrl && analysis.subject_identity === 'account_holder') {
+          analysis.subject_identity = 'unknown';
+        }
+        analysis.identity_match_confidence = Number(analysis.identity_match_confidence) || 0;
+        analysis.identity_notes = normStr(analysis.identity_notes);
+        // Last-resort guard: Zoe must never be named as the subject of a user photo.
+        if (analysis.person_present) {
+          analysis.summary = analysis.summary.replace(/\bZoe\b/g, holderName || 'the person in your photo');
+        }
         console.log('[Zoe Perception] ✓ Parsed analysis:', analysis.scene, '| Objects:', analysis.objects.slice(0, 3).join(', '));
       } else {
         console.error('[Zoe Perception] No valid JSON in response:', content.substring(0, 200));
