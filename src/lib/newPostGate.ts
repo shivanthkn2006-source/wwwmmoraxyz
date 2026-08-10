@@ -22,25 +22,39 @@ export interface UnseenSnapshotResult extends NewArrivalResult {
 const keyFor = (tab: string) => `mmora.home.seenPosts.${tab}`;
 const unseenKeyFor = (tab: string) => `mmora.home.unseenPosts.${tab}`;
 
+// In-memory mirror so unseen IDs survive storage failures (Safari private mode,
+// quota errors, disabled cookies). The badge must never vanish because a write threw.
+const memoryStore = new Map<string, string[]>();
+
+const sanitize = (value: unknown): string[] =>
+  Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string' && !!v) : [];
+
 const readIds = (key: string): Set<string> => {
+  let fromStorage: string[] | null = null;
   try {
     const raw = typeof window !== 'undefined' ? window.localStorage.getItem(key) : null;
-    if (!raw) return new Set();
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? new Set(parsed.filter((value) => typeof value === 'string' && value)) : new Set();
+    if (raw) fromStorage = sanitize(JSON.parse(raw));
   } catch {
-    return new Set();
+    fromStorage = null;
   }
+  const fromMemory = memoryStore.get(key) ?? [];
+  // Union both sources: storage may be stale/unavailable, memory may be empty after reload.
+  return new Set([...(fromStorage ?? []), ...fromMemory]);
 };
 
 const writeIds = (key: string, ids: Iterable<string>): void => {
+  const list = Array.from(new Set(ids)).slice(0, MAX_IDS);
+  memoryStore.set(key, list);
   try {
     if (typeof window === 'undefined') return;
-    window.localStorage.setItem(key, JSON.stringify(Array.from(new Set(ids)).slice(0, MAX_IDS)));
+    window.localStorage.setItem(key, JSON.stringify(list));
   } catch {
-    /* storage unavailable — state remains valid for the current render */
+    /* storage unavailable — memory mirror keeps state valid for this session */
   }
 };
+
+/** Test/util hook: clears the in-memory fallback mirror. */
+export const __resetUnseenMemoryStore = (): void => { memoryStore.clear(); };
 
 export const readSeenPostIds = (tab: string): Set<string> => readIds(keyFor(tab));
 
@@ -57,8 +71,12 @@ export const registerUnseenPosts = (tab: string, ids: string[]): Set<string> => 
 
 /** Restores pending arrivals on reload, while dropping IDs no longer in this feed. */
 export const reconcileUnseenPosts = (tab: string, feedIds: string[]): Set<string> => {
+  const existing = readUnseenPostIds(tab);
+  // Race guard: an empty snapshot (feed still loading / fetch failed) must never
+  // wipe pending unseen IDs, otherwise the "New" badge disappears incorrectly.
+  if (feedIds.length === 0) return existing;
   const available = new Set(feedIds);
-  const reconciled = new Set([...readUnseenPostIds(tab)].filter((id) => available.has(id)));
+  const reconciled = new Set([...existing].filter((id) => available.has(id)));
   writeIds(unseenKeyFor(tab), reconciled);
   return reconciled;
 };
