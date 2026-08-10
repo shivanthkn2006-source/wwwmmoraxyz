@@ -1803,6 +1803,8 @@ Want me to dive deeper into any aspect?`;
       // PHASE 4: Retrieve evolution event if it was captured
       const capturedEvolution = (window as any).__lastEvolutionEvent || undefined;
       if (capturedEvolution) delete (window as any).__lastEvolutionEvent;
+      const capturedMetacognition = (window as any).__lastMetacognition || undefined;
+      if (capturedMetacognition) delete (window as any).__lastMetacognition;
 
       const zoeMessage: Message = {
         id: createMessageId(),
@@ -1830,6 +1832,7 @@ Want me to dive deeper into any aspect?`;
         },
         // PHASE 4: Evolution event metadata
         evolutionEvent: capturedEvolution,
+        metacognition: capturedMetacognition ?? null,
       };
 
       setMessages(prev => [...prev, zoeMessage]);
