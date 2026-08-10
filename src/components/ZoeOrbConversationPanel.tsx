@@ -2942,6 +2942,30 @@ Want me to dive deeper into any aspect?`;
                 </Tooltip>
               </TooltipProvider>
 
+              {/* CoT wiring status */}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={cn(
+                        'h-5 w-5 md:h-5 md:w-5 lg:h-4 lg:w-4 rounded-full transition-colors flex items-center justify-center shrink-0',
+                        showWiring ? 'bg-emerald-500/20 hover:bg-emerald-500/30' : 'hover:bg-primary/10'
+                      )}
+                      onClick={() => setShowWiring((v) => !v)}
+                      aria-pressed={showWiring}
+                      aria-label={showWiring ? 'Hide CoT wiring status' : 'Show CoT wiring status'}
+                      title="CoT wiring status"
+                    >
+                      <Activity className={cn('h-3 w-3 lg:h-2.5 lg:w-2.5', showWiring ? 'text-emerald-300' : 'text-foreground/60')} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="text-[10px]">CoT wiring status</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
+
 
               {/* Expand/Minimize */}
               <Button
