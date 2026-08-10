@@ -2222,6 +2222,7 @@ Want me to dive deeper into any aspect?`;
         const localTime = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
         const feedsSummary = getFeedsSummaryForChat();
 
+        const voiceToken = cotStart('zoe-chat');
         const { data, error } = await supabase.functions.invoke('zoe-chat', {
           body: {
             messages: [...conversationHistory, { role: 'user', content: messageText }],
