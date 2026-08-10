@@ -2823,13 +2823,22 @@ Want me to dive deeper into any aspect?`;
                 variant="ghost"
                 size="icon"
                 className="h-5 w-5 md:h-5 md:w-5 lg:h-4 lg:w-4 rounded-full hover:bg-primary/10 transition-colors flex items-center justify-center shrink-0"
-                onClick={() => setIsExpanded(!isExpanded)}
-                aria-label={isExpanded ? 'Minimize chat' : 'Expand chat'}
+                onClick={cyclePanelSize}
+                aria-label={
+                  panelSize === 'compact' ? 'Expand chat'
+                    : panelSize === 'expanded' ? 'Full page chat'
+                    : 'Shrink chat'
+                }
+                title={
+                  panelSize === 'compact' ? 'Expand'
+                    : panelSize === 'expanded' ? 'Full page'
+                    : 'Compact'
+                }
               >
-                {isExpanded ? (
+                {isFullPage ? (
                   <Minimize2 className="h-3 w-3 md:h-3 md:w-3 lg:h-2.5 lg:w-2.5 text-foreground/70" />
                 ) : (
-                  <Maximize2 className="h-3 w-3 md:h-3 md:w-3 lg:h-2.5 lg:w-2.5 text-foreground/70" />
+                  <Maximize2 className="h-3 w-3 md:h-3 md:w-3 lg:h-2.5 lg:w-2.5 text-primary/80" />
                 )}
               </Button>
 
