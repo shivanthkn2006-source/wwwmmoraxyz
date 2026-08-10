@@ -1242,12 +1242,6 @@ const HomePage = () => {
         f.user1_id === user.id ? f.user2_id : f.user1_id
       );
 
-      // If no friendships loaded yet, return empty (will re-fetch when friendships load)
-      if (friendIds.length === 0 && friendships.length === 0) {
-        setPersonalPosts([]);
-        return;
-      }
-
       // SIMPLIFIED: Fetch posts first without complex joins to avoid JSON parse errors
       const postsResult = await (supabase as any)
         .from('feed_posts_safe')
