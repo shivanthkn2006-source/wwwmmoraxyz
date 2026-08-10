@@ -14,7 +14,8 @@ import { X, Send, Volume2, VolumeX, Minimize2, Maximize2, Paperclip, Image, File
 import ZoeDiagnosticsDrawer, { type DiagTab } from '@/components/zoe-infinity/ZoeDiagnosticsDrawer';
 import { cotStart, cotFinish } from '@/utils/cotWiringBus';
 import { setSendStage, reportDiagnosticError } from '@/utils/zoeDiagnosticsBus';
-import { generateImage } from '@/services/pollinationsService';
+import { generateIdentityImage, generateImage, IdentityImageError } from '@/services/pollinationsService';
+import { buildUserIdentityPrompt, detectZoeImageIntent } from '@/utils/zoeImageIntent';
 import { useNavigate } from 'react-router-dom';
 import { useZoeOmegaCoreIntegration } from '@/hooks/useZoeOmegaCoreIntegration';
 import { format, isToday, isYesterday } from 'date-fns';
@@ -1142,7 +1143,71 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
     offlineDataSync.addConversation('user', userMessage.content);
     saveMessageToDb('user', userMessage.content, pendingMedia?.preview, pendingMedia?.type, userMessage.id);
 
-    // Process media first if attached
+    const imageIntent = detectZoeImageIntent(userMessage.content);
+
+    // Identity-aware image requests must run before generic attachment analysis.
+    // An attached image is a reference, not something Zoe should merely describe.
+    if (imageIntent.isUserIdentityRequest) {
+      const attachedReference = pendingMedia?.type === 'image' ? pendingMedia.file : undefined;
+      let profilePhotoUrl: string | null = null;
+      if (!attachedReference && user?.id) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('profile_photo_url')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        profilePhotoUrl = profile?.profile_photo_url ?? null;
+      }
+
+      if (!attachedReference && !profilePhotoUrl) {
+        const requestMessage: Message = {
+          id: createMessageId(), role: 'zoe', timestamp: new Date(),
+          content: 'Please attach a clear front-facing photo of yourself. I need a real reference photo to create your image without replacing you with a random person.',
+          reasoningTrace: { classifiedIntent: 'identity_reference_required', codexInjected: false },
+        };
+        setMessages(prev => [...prev, requestMessage]);
+        setPendingMedia(null);
+        setIsProcessing(false);
+        setSendStage('done', 'identity-reference-required');
+        return;
+      }
+
+      try {
+        setSendStage('thinking', 'identity-image-generation');
+        const result = await generateIdentityImage(buildUserIdentityPrompt(userMessage.content), {
+          file: attachedReference,
+          imageUrl: attachedReference ? undefined : profilePhotoUrl || undefined,
+        });
+        const caption = 'I created this from your own reference photo and preserved your identity ✨';
+        const zoeMessage: Message = {
+          id: createMessageId(), role: 'zoe', content: caption, timestamp: new Date(),
+          mediaPreview: result.imageUrl, mediaType: 'image',
+          reasoningTrace: { classifiedIntent: 'identity_image_generation', codexInjected: false },
+        };
+        setMessages(prev => [...prev, zoeMessage]);
+        saveMessageToDb('assistant', caption, result.imageUrl, 'image', zoeMessage.id);
+        setPendingMedia(null);
+        setIsProcessing(false);
+        setSendStage('done', 'identity-image-generation');
+        return;
+      } catch (error) {
+        const needsReference = error instanceof IdentityImageError && error.code === 'REFERENCE_NOT_HUMAN';
+        const content = needsReference
+          ? 'Your current profile image is not a clear photo of you. Please attach a clear front-facing photo of yourself, then resend the same request.'
+          : 'I could not create your identity image just now. Your reference was not replaced with a random person—please try again.';
+        const failureMessage: Message = {
+          id: createMessageId(), role: 'zoe', content, timestamp: new Date(),
+          reasoningTrace: { classifiedIntent: needsReference ? 'identity_reference_required' : 'identity_image_error', codexInjected: false },
+        };
+        setMessages(prev => [...prev, failureMessage]);
+        setPendingMedia(null);
+        setIsProcessing(false);
+        setSendStage(needsReference ? 'done' : 'error', 'identity-image-generation');
+        return;
+      }
+    }
+
+    // Process non-generation media attachments.
     if (hasPendingMedia && pendingMedia) {
       const mediaFile = pendingMedia.file;
       const mediaType = pendingMedia.type;
@@ -1205,14 +1270,11 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
       // Text models can only answer with ASCII art, so route these to the image
       // pipeline instead of the chat brain.
       const imgText = userMessage.content.trim();
-      const imageIntent =
-        /\b(draw|sketch|paint|illustrate|generate|create|make|render|design|show)\b[^.?!]{0,40}\b(image|images|picture|pic|photo|portrait|selfie|artwork|art|drawing|painting|illustration|cartoon|avatar|wallpaper|logo|poster)\b/i.test(imgText) ||
-        /^\s*(image|imagine|draw|generate image|create image)\s*:/i.test(imgText);
 
-      if (imageIntent) {
+      if (imageIntent.isImageRequest) {
         try {
           setSendStage('thinking', 'image-generation');
-          const selfPortrait = /\b(your|yourself|你|zoe'?s)\b/i.test(imgText) && /\b(image|picture|photo|portrait|selfie|avatar)\b/i.test(imgText);
+          const selfPortrait = imageIntent.isZoeIdentityRequest;
           const prompt = selfPortrait
             ? 'Zoe — a warm, photorealistic portrait of a friendly futuristic AI companion woman, soft teal and violet rim lighting, cinematic depth of field, ultra detailed'
             : imgText.replace(/^\s*(please\s+)?(zoe[, ]+)?/i, '');

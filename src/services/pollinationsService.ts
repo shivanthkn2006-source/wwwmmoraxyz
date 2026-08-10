@@ -31,6 +31,42 @@ export interface ImageGenResult {
   directUrl?: string; // Pollinations direct URL (hotlinkable)
 }
 
+export type IdentityImageErrorCode = 'REFERENCE_NOT_HUMAN' | 'IDENTITY_GENERATION_FAILED';
+
+export class IdentityImageError extends Error {
+  constructor(public readonly code: IdentityImageErrorCode, message: string) {
+    super(message);
+    this.name = 'IdentityImageError';
+  }
+}
+
+const fileToDataUrl = (file: File): Promise<string> => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = () => typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('Unable to read image'));
+  reader.onerror = () => reject(reader.error ?? new Error('Unable to read image'));
+  reader.readAsDataURL(file);
+});
+
+export async function generateIdentityImage(
+  prompt: string,
+  reference: { file?: File; imageUrl?: string },
+): Promise<ImageGenResult> {
+  const imageBase64 = reference.file ? await fileToDataUrl(reference.file) : undefined;
+  const { data, error } = await supabase.functions.invoke('edit-image', {
+    body: { prompt, imageBase64, imageUrl: reference.imageUrl },
+  });
+
+  if (error || !data?.imageUrl) {
+    const responseCode = data?.code;
+    if (responseCode === 'REFERENCE_NOT_HUMAN') {
+      throw new IdentityImageError('REFERENCE_NOT_HUMAN', data?.message || 'A clear human reference photo is required.');
+    }
+    throw new IdentityImageError('IDENTITY_GENERATION_FAILED', data?.message || error?.message || 'Identity image generation failed.');
+  }
+
+  return { imageUrl: data.imageUrl, provider: 'gemini-edge' };
+}
+
 /**
  * Get a direct Pollinations URL (no fetch needed, use as img src)
  */
@@ -141,4 +177,4 @@ export async function generateRegionalAvatar(
   throw new Error('Regional avatar generation failed');
 }
 
-export default { generateImage, generateRegionalAvatar, getPollinationsUrl };
+export default { generateImage, generateIdentityImage, generateRegionalAvatar, getPollinationsUrl };
