@@ -10,7 +10,8 @@ import SpokenTranscript from '@/components/zoe-infinity/SpokenTranscript';
 import DeepThinkingBlock, { type DeepThinkingMeta } from '@/components/zoe-infinity/DeepThinkingBlock';
 import TeleprompterDebugOverlay from '@/components/zoe-infinity/TeleprompterDebugOverlay';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, Volume2, VolumeX, Minimize2, Maximize2, Paperclip, Image, FileText, Video, Loader2, Download, Upload, Mic, Circle, Square, Camera, StopCircle, Copy, Check, Users, MessageCircle, Search, ArrowLeft, User, Plus, Sparkles, CheckCheck, Reply, CornerUpLeft, ChevronDown, Brain, Cloud, CloudDownload, CloudUpload, Shield, FileDown, Activity, Phone, PhoneOff, Pause, Play } from 'lucide-react';
+import { X, Send, Volume2, VolumeX, Minimize2, Maximize2, Paperclip, Image, FileText, Video, Loader2, Download, Upload, Mic, Circle, Square, Camera, StopCircle, Copy, Check, Users, MessageCircle, Search, ArrowLeft, User, Plus, Sparkles, CheckCheck, Reply, CornerUpLeft, ChevronDown, Brain, Cloud, CloudDownload, CloudUpload, Shield, FileDown, Activity, Phone, PhoneOff, Pause, Play, Gauge } from 'lucide-react';
+import MetacognitionMetricsPanel from '@/components/zoe-infinity/MetacognitionMetricsPanel';
 import { useNavigate } from 'react-router-dom';
 import { useZoeOmegaCoreIntegration } from '@/hooks/useZoeOmegaCoreIntegration';
 import { format, isToday, isYesterday } from 'date-fns';
@@ -333,6 +334,9 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
       return next;
     });
   }, []);
+  // Metacognition metrics overlay
+  const [showMetrics, setShowMetrics] = useState(false);
+
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [isInputFocused, setIsInputFocused] = useState(false);
@@ -2902,6 +2906,30 @@ Want me to dive deeper into any aspect?`;
                 </Tooltip>
               </TooltipProvider>
 
+              {/* Metacognition metrics */}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={cn(
+                        'h-5 w-5 md:h-5 md:w-5 lg:h-4 lg:w-4 rounded-full transition-colors flex items-center justify-center shrink-0',
+                        showMetrics ? 'bg-amber-500/20 hover:bg-amber-500/30' : 'hover:bg-primary/10'
+                      )}
+                      onClick={() => setShowMetrics((v) => !v)}
+                      aria-pressed={showMetrics}
+                      aria-label={showMetrics ? 'Hide metacognition metrics' : 'Show metacognition metrics'}
+                      title="Metacognition metrics"
+                    >
+                      <Gauge className={cn('h-3 w-3 lg:h-2.5 lg:w-2.5', showMetrics ? 'text-amber-300' : 'text-foreground/60')} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="text-[10px]">Metacognition metrics</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
+
               {/* Expand/Minimize */}
               <Button
                 variant="ghost"
@@ -2938,6 +2966,13 @@ Want me to dive deeper into any aspect?`;
               </Button>
             </div>
           </div>
+
+          {showMetrics && (
+            <div className="border-b border-primary/10 bg-background/60 max-h-[45vh] overflow-y-auto overscroll-contain p-2">
+              <MetacognitionMetricsPanel />
+            </div>
+          )}
+
 
           {/* Unified Conversation List - dropdown when header is clicked */}
           <AnimatePresence>
