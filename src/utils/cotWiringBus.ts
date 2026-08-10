@@ -148,6 +148,7 @@ export const cotTrack = async <T>(service: string, fn: () => Promise<T>): Promis
 /** Reset — used by tests only. */
 export const resetCotWiring = (): void => {
   states.clear();
+  order.clear();
   pending.clear();
   emit();
 };
