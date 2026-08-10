@@ -1209,7 +1209,7 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
         /\b(draw|sketch|paint|illustrate|generate|create|make|render|design|show)\b[^.?!]{0,40}\b(image|images|picture|pic|photo|portrait|selfie|artwork|art|drawing|painting|illustration|cartoon|avatar|wallpaper|logo|poster)\b/i.test(imgText) ||
         /^\s*(image|imagine|draw|generate image|create image)\s*:/i.test(imgText);
 
-      if (imageIntent && isOnline) {
+      if (imageIntent) {
         try {
           setSendStage('thinking', 'image-generation');
           const selfPortrait = /\b(your|yourself|你|zoe'?s)\b/i.test(imgText) && /\b(image|picture|photo|portrait|selfie|avatar)\b/i.test(imgText);
@@ -1256,7 +1256,20 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
         } catch (imgErr) {
           console.error('[ZoeOrb] Image generation failed:', imgErr);
           reportDiagnosticError('image-generation', imgErr);
-          // fall through to the normal chat pipeline
+          const failureMessage: Message = {
+            id: createMessageId(),
+            role: 'zoe',
+            content: "I couldn't render the image just now. Please tap send to try again.",
+            timestamp: new Date(),
+            reasoningTrace: {
+              classifiedIntent: 'image_generation_error',
+              codexInjected: false,
+            },
+          };
+          setMessages(prev => [...prev, failureMessage]);
+          setIsProcessing(false);
+          setSendStage('error', 'image-generation');
+          return;
         }
       }
 

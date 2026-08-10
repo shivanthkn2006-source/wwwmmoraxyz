@@ -69,7 +69,13 @@ export async function generateImage(
     if (resp.ok) {
       const buf = await resp.arrayBuffer();
       if (buf.byteLength > 1000) {
-        const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+        const bytes = new Uint8Array(buf);
+        const chunks: string[] = [];
+        const chunkSize = 0x8000;
+        for (let i = 0; i < bytes.length; i += chunkSize) {
+          chunks.push(String.fromCharCode(...bytes.subarray(i, i + chunkSize)));
+        }
+        const b64 = btoa(chunks.join(''));
         const ct = resp.headers.get('content-type') || 'image/jpeg';
         console.log(`[PollinationsService] ✅ Direct success (${(buf.byteLength / 1024).toFixed(1)}KB)`);
         return {
@@ -100,7 +106,14 @@ export async function generateImage(
     console.error('[PollinationsService] Edge function fallback failed:', e);
   }
 
-  throw new Error('All image generation providers failed');
+  // Browser CORS can block reading the response even though the image endpoint
+  // itself is available. Let the <img> element load that URL directly rather
+  // than incorrectly downgrading an image request into a text reply.
+  return {
+    imageUrl: getPollinationsUrl(prompt, rest),
+    provider: 'pollinations-direct',
+    directUrl: getPollinationsUrl(prompt, rest),
+  };
 }
 
 /**
