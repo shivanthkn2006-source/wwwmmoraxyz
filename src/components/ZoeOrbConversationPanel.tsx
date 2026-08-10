@@ -1014,6 +1014,43 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
     if (fileInputRef.current) fileInputRef.current.value = '';
   }, []);
 
+  // Dedicated identity-photo path: saves straight into the private Zoe identity vault
+  const handleIdentityPhotoSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (identityInputRef.current) identityInputRef.current.value = '';
+    setShowAttachMenu(false);
+    if (!file) return;
+    if (!user?.id) {
+      toast.error('Please sign in to save your identity photo');
+      return;
+    }
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please choose a photo of yourself');
+      return;
+    }
+
+    toast.info('🔐 Saving your identity photo securely...');
+    const savedUrl = await saveIdentityReference(user.id, file);
+    if (!savedUrl) {
+      toast.error('Could not save your identity photo');
+      return;
+    }
+
+    const confirmation = 'Your identity photo is saved in your private Zoe vault. I will use it whenever you ask me to create an image of you.';
+    const message: Message = {
+      id: createMessageId(), role: 'zoe', timestamp: new Date(),
+      content: confirmation,
+      mediaPreview: savedUrl,
+      mediaType: 'image',
+      reasoningTrace: { classifiedIntent: 'identity_reference_saved', codexInjected: false },
+    };
+    setMessages(prev => [...prev, message]);
+    saveMessageToDb('assistant', confirmation, savedUrl, 'image', message.id);
+    toast.success('Identity photo saved');
+  }, [user?.id]);
+
+
+
   // Send message with optional media - handles both Zoe and User modes
   const sendMessage = useCallback(async (messageText?: string) => {
     const textToSend = messageText || input;
