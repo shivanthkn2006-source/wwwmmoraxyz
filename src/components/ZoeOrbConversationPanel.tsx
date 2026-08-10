@@ -2291,9 +2291,18 @@ Want me to dive deeper into any aspect?`;
       {isOpen && (
         <>
         <TeleprompterDebugOverlay />
-        <div data-orb-conversation-panel="true" data-exclude-phantom-tap="true" className="fixed left-1/2 bottom-6 z-[9998] -translate-x-1/2 pointer-events-none">
+        <div
+          data-orb-conversation-panel="true"
+          data-exclude-phantom-tap="true"
+          className={cn(
+            'fixed z-[9998] pointer-events-none',
+            isFullPage
+              ? 'inset-0 flex items-stretch justify-center p-2 sm:p-3 md:p-4'
+              : 'left-1/2 bottom-6 -translate-x-1/2'
+          )}
+        >
           <motion.div
-            drag
+            drag={!isFullPage}
             dragMomentum={false}
             dragElastic={0.05}
             onDragStart={() => setIsPanelDragging(true)}
@@ -2303,17 +2312,19 @@ Want me to dive deeper into any aspect?`;
             exit={{ opacity: 0, scale: 0.9, y: 10 }}
             transition={{ type: 'spring', damping: 30, stiffness: 400 }}
             className={cn(
-              'overflow-hidden flex flex-col overscroll-contain cursor-grab active:cursor-grabbing pointer-events-auto',
+              'overflow-hidden flex flex-col overscroll-contain pointer-events-auto',
+              isFullPage ? 'cursor-default' : 'cursor-grab active:cursor-grabbing',
               // Glassmorphism design - futuristic translucent panel with scroll isolation
               'bg-background/40 backdrop-blur-2xl',
               'border border-primary/20',
-              'rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.3)]',
+              isFullPage ? 'rounded-2xl' : 'rounded-xl',
+              'shadow-[0_8px_32px_rgba(0,0,0,0.3)]',
               // Responsive sizing - 4.1" to 95" 4K displays
-              isExpanded 
-                ? 'w-[calc(100vw-24px)] xs:w-[300px] sm:w-[340px] md:w-[380px] lg:w-[420px] xl:w-[460px] 2xl:w-[500px] h-[min(480px,calc(100vh-160px))] md:h-[min(520px,calc(100vh-140px))] lg:h-[min(560px,calc(100vh-120px))] xl:h-[min(600px,calc(100vh-100px))]' 
-                : 'w-[calc(100vw-24px)] xs:w-[260px] sm:w-[280px] md:w-[320px] lg:w-[360px] xl:w-[400px] 2xl:w-[440px] h-[min(360px,calc(100vh-160px))] md:h-[min(400px,calc(100vh-140px))] lg:h-[min(440px,calc(100vh-120px))] xl:h-[min(480px,calc(100vh-100px))]',
-              // Safe area for bottom navigation
-              'max-h-[calc(100vh-120px)]'
+              isFullPage
+                ? 'w-full h-full max-w-[1400px] max-h-[calc(100dvh-16px)] sm:max-h-[calc(100dvh-24px)]'
+                : isExpanded
+                ? 'w-[calc(100vw-24px)] xs:w-[300px] sm:w-[340px] md:w-[380px] lg:w-[420px] xl:w-[460px] 2xl:w-[500px] h-[min(480px,calc(100vh-160px))] md:h-[min(520px,calc(100vh-140px))] lg:h-[min(560px,calc(100vh-120px))] xl:h-[min(600px,calc(100vh-100px))] max-h-[calc(100vh-120px)]'
+                : 'w-[calc(100vw-24px)] xs:w-[260px] sm:w-[280px] md:w-[320px] lg:w-[360px] xl:w-[400px] 2xl:w-[440px] h-[min(360px,calc(100vh-160px))] md:h-[min(400px,calc(100vh-140px))] lg:h-[min(440px,calc(100vh-120px))] xl:h-[min(480px,calc(100vh-100px))] max-h-[calc(100vh-120px)]'
             )}
             style={{
               // Glassmorphism glow effect
