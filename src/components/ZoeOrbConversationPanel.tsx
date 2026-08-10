@@ -338,6 +338,8 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
   }, []);
   // Metacognition metrics overlay
   const [showMetrics, setShowMetrics] = useState(false);
+  // Real-time CoT wiring status overlay
+  const [showWiring, setShowWiring] = useState(false);
 
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
