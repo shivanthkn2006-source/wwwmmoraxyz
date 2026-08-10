@@ -978,10 +978,14 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
 
       // SEPARATION PROTOCOL: Tag as 'zoe_classic' (Old Zoe / MMORA)
       insertRow.variant = 'zoe_classic';
-      await supabase.from('ai_companion_messages').insert(insertRow);
+      const { error } = await supabase.from('ai_companion_messages').insert(insertRow);
+      if (error) throw error;
       console.log('[ZoeOrb] Saved message to DB with media:', !!mediaUrl);
+      return true;
     } catch (err) {
       console.error('[ZoeOrb] Save error:', err);
+      reportDiagnosticError('chat-history-save', err);
+      return false;
     }
   };
 
