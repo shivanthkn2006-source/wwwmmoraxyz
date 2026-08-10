@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { detectZoeImageIntent } from '@/utils/zoeImageIntent';
+import { detectZoeImageIntent, resolveZoeImageTurn } from '@/utils/zoeImageIntent';
 
 describe('Zoe identity image intent', () => {
   it.each([
@@ -26,5 +26,21 @@ describe('Zoe identity image intent', () => {
 
   it('does not turn ordinary conversation into an image request', () => {
     expect(detectZoeImageIntent('I am driving a car today').isImageRequest).toBe(false);
+  });
+
+  it('resumes the original creation after a photo-only follow-up', () => {
+    const turn = resolveZoeImageTurn('[Shared a image]', {
+      prompt: 'create an image of mine sitting in a private jet',
+      requestedAt: Date.now(),
+    });
+    expect(turn.resumed).toBe(true);
+    expect(turn.prompt).toBe('create an image of mine sitting in a private jet');
+    expect(turn.intent.isUserIdentityRequest).toBe(true);
+  });
+
+  it('keeps generic uploads in perception when no creation is pending', () => {
+    const turn = resolveZoeImageTurn('[Shared a image]', null);
+    expect(turn.resumed).toBe(false);
+    expect(turn.intent.isImageRequest).toBe(false);
   });
 });

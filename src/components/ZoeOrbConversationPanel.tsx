@@ -16,7 +16,7 @@ import { cotStart, cotFinish } from '@/utils/cotWiringBus';
 import { setSendStage, reportDiagnosticError } from '@/utils/zoeDiagnosticsBus';
 import { generateIdentityImage, generateImage, IdentityImageError } from '@/services/pollinationsService';
 import { getIdentityReference, saveIdentityReference, persistGeneratedIdentityImage, refreshStoredImageUrl } from '@/services/zoeIdentityVault';
-import { buildUserIdentityPrompt, detectZoeImageIntent } from '@/utils/zoeImageIntent';
+import { buildUserIdentityPrompt, resolveZoeImageTurn, type PendingIdentityImageRequest } from '@/utils/zoeImageIntent';
 import { useNavigate } from 'react-router-dom';
 import { useZoeOmegaCoreIntegration } from '@/hooks/useZoeOmegaCoreIntegration';
 import { format, isToday, isYesterday } from 'date-fns';
@@ -362,6 +362,16 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
   const [isInputFocused, setIsInputFocused] = useState(false);
   const [pendingMedia, setPendingMedia] = useState<{ file: File; preview: string; type: 'image' | 'document' | 'video' | 'audio' } | null>(null);
   const [pendingIdentityConfirmation, setPendingIdentityConfirmation] = useState<{ prompt: string; imageUrl: string } | null>(null);
+  const [pendingIdentityImageRequest, setPendingIdentityImageRequestState] = useState<PendingIdentityImageRequest | null>(() => {
+    try {
+      const raw = sessionStorage.getItem('zoe-pending-identity-image-request');
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as PendingIdentityImageRequest;
+      return parsed?.prompt && Date.now() - parsed.requestedAt < 30 * 60 * 1000 ? parsed : null;
+    } catch {
+      return null;
+    }
+  });
   const [pendingIdentitySave, setPendingIdentitySave] = useState<File | null>(null);
   const [handsFreeMode, setHandsFreeMode] = useState(true); // Hands-free mode enabled by default
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
@@ -376,6 +386,15 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
   const identityInputRef = useRef<HTMLInputElement>(null);
   const attachMenuWrapperRef = useRef<HTMLDivElement>(null);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
+
+  const rememberPendingIdentityRequest = useCallback((prompt: string | null) => {
+    const next = prompt?.trim() ? { prompt: prompt.trim(), requestedAt: Date.now() } : null;
+    setPendingIdentityImageRequestState(next);
+    try {
+      if (next) sessionStorage.setItem('zoe-pending-identity-image-request', JSON.stringify(next));
+      else sessionStorage.removeItem('zoe-pending-identity-image-request');
+    } catch { /* storage unavailable */ }
+  }, []);
   
   // Voice note recorder
   const { 
@@ -1063,7 +1082,39 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
     setMessages(prev => [...prev, message]);
     saveMessageToDb('assistant', confirmation, savedUrl, 'image', message.id);
     toast.success('Identity photo saved');
-  }, [user?.id]);
+
+    // Human-like continuation: if Zoe requested this photo for an unfinished
+    // creation, complete that original task immediately instead of requiring
+    // the user to repeat the prompt or send another message.
+    if (pendingIdentityImageRequest?.prompt) {
+      setIsProcessing(true);
+      setSendStage('thinking', 'identity-image-generation');
+      try {
+        const result = await generateIdentityImage(
+          buildUserIdentityPrompt(pendingIdentityImageRequest.prompt),
+          { file },
+        );
+        const storedImageUrl = await persistGeneratedIdentityImage(user.id, result.imageUrl);
+        const caption = 'I used the photo you just verified and completed your original image request ✨';
+        const generatedMessage: Message = {
+          id: createMessageId(), role: 'zoe', content: caption, timestamp: new Date(),
+          mediaPreview: storedImageUrl, mediaType: 'image',
+          reasoningTrace: { classifiedIntent: 'identity_image_generation_resumed', codexInjected: false },
+        };
+        setMessages(prev => [...prev, generatedMessage]);
+        saveMessageToDb('assistant', caption, storedImageUrl, 'image', generatedMessage.id);
+        setPendingIdentityConfirmation(null);
+        rememberPendingIdentityRequest(null);
+        setSendStage('done', 'identity-image-generation');
+      } catch (error) {
+        reportDiagnosticError('identity-image-generation', error);
+        toast.error('Your photo was saved, but the image could not be created yet. Your original request is still ready to retry.');
+        setSendStage('error', 'identity-image-generation');
+      } finally {
+        setIsProcessing(false);
+      }
+    }
+  }, [user?.id, pendingIdentityImageRequest, rememberPendingIdentityRequest, saveMessageToDb]);
 
 
 
@@ -1200,8 +1251,12 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
     offlineDataSync.addConversation('user', userMessage.content);
     saveMessageToDb('user', userMessage.content, pendingMedia?.preview, pendingMedia?.type, userMessage.id);
 
-    let imageIntent = detectZoeImageIntent(userMessage.content);
-    let identityRequestText = userMessage.content;
+    const resolvedImageTurn = resolveZoeImageTurn(
+      userMessage.content,
+      pendingMedia?.type === 'image' ? pendingIdentityImageRequest : null,
+    );
+    let imageIntent = resolvedImageTurn.intent;
+    let identityRequestText = resolvedImageTurn.prompt;
     let confirmedProfilePhotoUrl: string | null = null;
 
     if (pendingIdentitySave && user?.id) {
@@ -1254,6 +1309,7 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
         setPendingIdentityConfirmation(null);
       } else if (declined) {
         setPendingIdentityConfirmation(null);
+        rememberPendingIdentityRequest(null);
         const declineContent = 'Understood. Attach a clear front-facing photo of yourself (the + menu → "My photo"), then resend your image request.';
         const requestMessage: Message = {
           id: createMessageId(), role: 'zoe', timestamp: new Date(),
@@ -1281,6 +1337,7 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
       }
 
       if (!attachedReference && !referenceUrl) {
+        rememberPendingIdentityRequest(identityRequestText);
         const requestContent = 'Please attach a clear front-facing photo of yourself using the + menu → "My photo". I keep it in your private identity vault and use it so your images always look like you.';
         const requestMessage: Message = {
           id: createMessageId(), role: 'zoe', timestamp: new Date(),
@@ -1297,6 +1354,7 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
 
       // A vault photo was already approved by the user — no need to re-confirm every time.
       if (!attachedReference && referenceUrl && !confirmedProfilePhotoUrl && referenceSource !== 'identity-vault') {
+        rememberPendingIdentityRequest(identityRequestText);
         setPendingIdentityConfirmation({ prompt: identityRequestText, imageUrl: referenceUrl });
         const confirmContent = 'Is this your photo, and should I use it to create this image? Reply yes to continue, or no and attach a different photo.';
         const confirmationMessage: Message = {
@@ -1331,6 +1389,8 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
         };
         setMessages(prev => [...prev, zoeMessage]);
         saveMessageToDb('assistant', caption, storedImageUrl, 'image', zoeMessage.id);
+        setPendingIdentityConfirmation(null);
+        rememberPendingIdentityRequest(null);
         if (attachedReference) {
           setPendingIdentitySave(attachedReference);
           const saveConsent = 'Should I keep this photo in your private identity vault for future image creations? Reply yes or no.';
@@ -1369,6 +1429,7 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
     if (hasPendingMedia && pendingMedia) {
       const mediaFile = pendingMedia.file;
       const mediaType = pendingMedia.type;
+      const perceptionToken = cotStart('zoe-perception');
       setPendingMedia(null);
       
       try {
@@ -1384,6 +1445,7 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
         }
         
         if (result.success && result.zoe_response) {
+          cotFinish(perceptionToken, { ok: true });
           const zoeMessage: Message = {
             id: createMessageId(),
             role: 'zoe',
@@ -1433,7 +1495,10 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
           setIsProcessing(false);
           return;
         }
+        cotFinish(perceptionToken, { error: new Error('Perception returned no response') });
       } catch (err) {
+        cotFinish(perceptionToken, { error: err });
+        reportDiagnosticError('zoe-perception', err);
         console.error('[ZoeOrb] Media processing error:', err);
       }
     }
@@ -2491,7 +2556,7 @@ Want me to dive deeper into any aspect?`;
       setIsProcessing(false);
       setSendStage('done');
     }
-  }, [input, isProcessing, isSending, isOnline, messages, isMuted, processConversation, saveMessageToDb, pendingMedia, pendingIdentityConfirmation, pendingIdentitySave, processMedia, messagingMode, selectedUser, sendDirectMessage, user?.id, processCommand, replyingTo, tubeSight, sentinelGateway, protocolWisdom, deepThinking]);
+  }, [input, isProcessing, isSending, isOnline, messages, isMuted, processConversation, saveMessageToDb, pendingMedia, pendingIdentityConfirmation, pendingIdentityImageRequest, pendingIdentitySave, processMedia, messagingMode, selectedUser, sendDirectMessage, user?.id, processCommand, replyingTo, tubeSight, sentinelGateway, protocolWisdom, deepThinking, rememberPendingIdentityRequest]);
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
