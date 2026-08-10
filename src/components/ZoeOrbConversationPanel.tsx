@@ -4004,6 +4004,13 @@ Want me to dive deeper into any aspect?`;
               onChange={handleFileSelect}
               className="hidden"
             />
+            <input
+              ref={identityInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleIdentityPhotoSelect}
+              className="hidden"
+            />
             
             <div className="flex items-center gap-1">
               {/* Left side - Single attach button with floating menu (does not change layout / does not block content) */}
