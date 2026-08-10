@@ -7,6 +7,7 @@
 
 import React, { useState, useRef, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
 import SpokenTranscript from '@/components/zoe-infinity/SpokenTranscript';
+import ImageViewer from '@/components/ImageViewer';
 import DeepThinkingBlock, { type DeepThinkingMeta } from '@/components/zoe-infinity/DeepThinkingBlock';
 import TeleprompterDebugOverlay from '@/components/zoe-infinity/TeleprompterDebugOverlay';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -16,7 +17,7 @@ import { cotStart, cotFinish } from '@/utils/cotWiringBus';
 import { setSendStage, reportDiagnosticError } from '@/utils/zoeDiagnosticsBus';
 import { generateIdentityImage, generateImage, IdentityImageError } from '@/services/pollinationsService';
 import { getIdentityReference, saveIdentityReference, persistGeneratedIdentityImage, refreshStoredImageUrl } from '@/services/zoeIdentityVault';
-import { buildUserIdentityPrompt, resolveZoeImageTurn, type PendingIdentityImageRequest } from '@/utils/zoeImageIntent';
+import { buildUserIdentityPrompt, buildZoeIdentityPrompt, resolveZoeImageTurn, type PendingIdentityImageRequest } from '@/utils/zoeImageIntent';
 import { useNavigate } from 'react-router-dom';
 import { useZoeOmegaCoreIntegration } from '@/hooks/useZoeOmegaCoreIntegration';
 import { format, isToday, isYesterday } from 'date-fns';
@@ -386,6 +387,7 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
   const identityInputRef = useRef<HTMLInputElement>(null);
   const attachMenuWrapperRef = useRef<HTMLDivElement>(null);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
+  const [fullSizeImage, setFullSizeImage] = useState<{ url: string; alt: string } | null>(null);
 
   const rememberPendingIdentityRequest = useCallback((prompt: string | null) => {
     const next = prompt?.trim() ? { prompt: prompt.trim(), requestedAt: Date.now() } : null;
@@ -1271,6 +1273,7 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
     const resolvedImageTurn = resolveZoeImageTurn(
       userMessage.content,
       pendingMedia?.type === 'image' ? pendingIdentityImageRequest : null,
+      messages.map((message) => ({ role: message.role, content: message.content })),
     );
     let imageIntent = resolvedImageTurn.intent;
     let identityRequestText = resolvedImageTurn.prompt;
@@ -1534,8 +1537,8 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
           setSendStage('thinking', 'image-generation');
           const selfPortrait = imageIntent.isZoeIdentityRequest;
           const prompt = selfPortrait
-            ? 'Zoe — a warm, photorealistic portrait of a friendly futuristic AI companion woman, soft teal and violet rim lighting, cinematic depth of field, ultra detailed'
-            : imgText.replace(/^\s*(please\s+)?(zoe[, ]+)?/i, '');
+            ? buildZoeIdentityPrompt(identityRequestText)
+            : identityRequestText.replace(/^\s*(please\s+)?(zoe[, ]+)?/i, '');
 
           const result = await generateImage(prompt, { width: 1024, height: 1024 });
           const storedImageUrl = user?.id
@@ -3755,12 +3758,29 @@ Want me to dive deeper into any aspect?`;
                     )}
                     {/* Media preview for images */}
                     {msg.mediaPreview && msg.mediaType === 'image' && (
-                      <div className="mb-1.5 md:mb-2 rounded-lg overflow-hidden">
+                      <div className="relative mb-1.5 md:mb-2 rounded-lg overflow-hidden group/image">
                         <img 
                           src={msg.mediaPreview} 
-                          alt="Shared image" 
-                          className="max-w-full max-h-24 md:max-h-32 lg:max-h-40 object-cover rounded"
+                          alt={msg.role === 'zoe' ? 'Image created by Zoe' : 'Shared image'}
+                          className="max-w-full max-h-32 md:max-h-44 lg:max-h-56 object-contain rounded cursor-zoom-in"
+                          onClick={() => setFullSizeImage({
+                            url: msg.mediaPreview as string,
+                            alt: msg.role === 'zoe' ? 'Image created by Zoe' : 'Shared image',
+                          })}
                         />
+                        <Button
+                          variant="secondary"
+                          size="icon"
+                          className="absolute bottom-1 right-1 h-7 w-7 opacity-100 md:opacity-0 md:group-hover/image:opacity-100 transition-opacity"
+                          onClick={() => setFullSizeImage({
+                            url: msg.mediaPreview as string,
+                            alt: msg.role === 'zoe' ? 'Image created by Zoe' : 'Shared image',
+                          })}
+                          aria-label="Open image full screen"
+                          title="Open full screen"
+                        >
+                          <Maximize2 className="h-3.5 w-3.5" />
+                        </Button>
                       </div>
                     )}
                     {/* Media indicator for documents/videos/audio */}
@@ -4428,6 +4448,13 @@ Want me to dive deeper into any aspect?`;
           </div>
           </motion.div>
         </div>
+        {fullSizeImage && (
+          <ImageViewer
+            imageUrl={fullSizeImage.url}
+            alt={fullSizeImage.alt}
+            onClose={() => setFullSizeImage(null)}
+          />
+        )}
         </>
       )}
     </AnimatePresence>
