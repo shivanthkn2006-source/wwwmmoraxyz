@@ -8,30 +8,35 @@ interface NewContentBadgeProps {
 
 const NewContentBadge: React.FC<NewContentBadgeProps> = ({ onViewed, className = '' }) => {
   const ref = useRef<HTMLDivElement | null>(null);
+  const onViewedRef = useRef(onViewed);
   const [visible, setVisible] = useState(true);
+
+  onViewedRef.current = onViewed;
 
   useEffect(() => {
     const node = ref.current;
     if (!node || !visible) return;
+    const viewedElement = node.parentElement ?? node;
     let timer: number | null = null;
     const observer = new IntersectionObserver(([entry]) => {
       if (entry?.isIntersecting && entry.intersectionRatio >= 0.6) {
+        if (timer !== null) return;
         timer = window.setTimeout(() => {
           setVisible(false);
-          onViewed();
+          onViewedRef.current();
           observer.disconnect();
-        }, 900);
+        }, 3000);
       } else if (timer !== null) {
         window.clearTimeout(timer);
         timer = null;
       }
     }, { threshold: [0.6] });
-    observer.observe(node);
+    observer.observe(viewedElement);
     return () => {
       observer.disconnect();
       if (timer !== null) window.clearTimeout(timer);
     };
-  }, [onViewed, visible]);
+  }, [visible]);
 
   if (!visible) return null;
   return (
