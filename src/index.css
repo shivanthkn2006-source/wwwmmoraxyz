@@ -5812,18 +5812,19 @@ body.form-watch .auto-heal-text {
   transition: color 120ms ease-out, background-color 120ms ease-out, opacity 120ms ease-out, box-shadow 120ms ease-out;
 }
 
-.zoe-transcript-word--spoken {
-  color: hsl(var(--zoe-transcript-spoken));
-}
-
+/* Everything that is not the word being spoken stays plain white. */
+.zoe-transcript-word--spoken,
 .zoe-transcript-word--pending {
-  color: hsl(var(--zoe-transcript-pending));
+  color: hsl(0 0% 100%);
+  background-color: transparent;
+  box-shadow: none;
 }
 
+/* No sentence-level band — only the single active word is highlighted. */
 .zoe-transcript-word--sentence {
-  background-color: hsl(var(--zoe-transcript-sentence-bg) / 0.16);
-  color: hsl(var(--zoe-transcript-sentence-fg));
-  box-shadow: 0 0 0 0.12em hsl(var(--zoe-transcript-sentence-bg) / 0.16);
+  background-color: transparent;
+  color: hsl(0 0% 100%);
+  box-shadow: none;
 }
 
 .zoe-transcript-word--active {
