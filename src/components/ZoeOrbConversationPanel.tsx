@@ -2967,6 +2967,13 @@ Want me to dive deeper into any aspect?`;
             </div>
           </div>
 
+          {showMetrics && (
+            <div className="border-b border-primary/10 bg-background/60 max-h-[45vh] overflow-y-auto overscroll-contain p-2">
+              <MetacognitionMetricsPanel />
+            </div>
+          )}
+
+
           {/* Unified Conversation List - dropdown when header is clicked */}
           <AnimatePresence>
             {showConversationList && (
