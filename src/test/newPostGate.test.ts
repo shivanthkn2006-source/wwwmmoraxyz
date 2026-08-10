@@ -11,10 +11,14 @@ import {
   reconcileUnseenPosts,
   registerUnseenPosts,
   syncUnseenPostSnapshot,
+  __resetUnseenMemoryStore,
 } from '@/lib/newPostGate';
 
 describe('newPostGate', () => {
-  beforeEach(() => localStorage.clear());
+  beforeEach(() => {
+    localStorage.clear();
+    __resetUnseenMemoryStore();
+  });
 
   it('tracks seen IDs independently for global and friends tabs', () => {
     markPostsSeen('global', ['g1']);
@@ -84,10 +88,15 @@ describe('newPostGate', () => {
     expect([...manual.unseenIds]).toEqual(['f2']);
   });
 
-  it('clears stale unseen IDs when either feed resolves to an empty snapshot', () => {
+  it('preserves unseen IDs when either feed resolves to an empty snapshot (loading race)', () => {
     registerUnseenPosts('global', ['gone']);
     registerUnseenPosts('personal', ['also-gone']);
-    expect([...syncUnseenPostSnapshot('global', ['gone'], [], 'manual').unseenIds]).toEqual([]);
-    expect([...syncUnseenPostSnapshot('personal', ['also-gone'], [], 'initial').unseenIds]).toEqual([]);
+    expect([...syncUnseenPostSnapshot('global', ['gone'], [], 'manual').unseenIds]).toEqual(['gone']);
+    expect([...syncUnseenPostSnapshot('personal', ['also-gone'], [], 'initial').unseenIds]).toEqual(['also-gone']);
+  });
+
+  it('drops stale unseen IDs once a real non-empty snapshot arrives', () => {
+    registerUnseenPosts('global', ['gone']);
+    expect([...syncUnseenPostSnapshot('global', ['gone'], ['fresh'], 'manual').unseenIds]).toEqual([]);
   });
 });
