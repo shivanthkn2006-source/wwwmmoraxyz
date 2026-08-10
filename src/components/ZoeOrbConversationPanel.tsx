@@ -3971,7 +3971,25 @@ Want me to dive deeper into any aspect?`;
                 disabled={isProcessing || isPerceptionProcessing || isSending || (messagingMode === 'user' && !selectedUser)}
               />
               
-              {/* Right side - Compact rounded send button */}
+              {/* Right side - Stop (while Zoe speaks) or send button */}
+              {isSpeaking ? (
+                <Button
+                  size="icon"
+                  aria-label="Stop Zoe's voice"
+                  title="Stop speaking"
+                  className={cn(
+                    "rounded-full shadow-sm transition-all duration-300 flex-shrink-0 bg-destructive hover:bg-destructive/90 text-destructive-foreground",
+                    isInputFocused ? "h-8 w-8 md:h-9 md:w-9 lg:h-10 lg:w-10" : "h-6 w-6 md:h-7 md:w-7 lg:h-8 lg:w-8"
+                  )}
+                  onClick={() => {
+                    stopZoeSpeech();
+                    setIsSpeechPaused(false);
+                    setIsSpeaking(false);
+                  }}
+                >
+                  <Square className={cn("transition-all", isInputFocused ? "h-3.5 w-3.5 md:h-4 md:w-4" : "h-3 w-3 md:h-3.5 md:w-3.5")} />
+                </Button>
+              ) : (
               <Button
                 size="icon"
                 className={cn(
@@ -3988,6 +4006,7 @@ Want me to dive deeper into any aspect?`;
               >
                 <Send className={cn("transition-all", isInputFocused ? "h-3.5 w-3.5 md:h-4 md:w-4 lg:h-4.5 lg:w-4.5" : "h-3 w-3 md:h-3.5 md:w-3.5 lg:h-4 lg:w-4")} />
               </Button>
+              )}
             </div>
           </div>
           </motion.div>
