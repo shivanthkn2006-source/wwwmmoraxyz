@@ -103,6 +103,7 @@ export const cotStart = (service: string): string => {
   s.lastRequestAt = startedAt;
   s.lastError = null;
   const token = `${service}#${++seq}`;
+  order.set(service, seq);
   pending.set(token, { service, startedAt });
   emit();
   return token;
