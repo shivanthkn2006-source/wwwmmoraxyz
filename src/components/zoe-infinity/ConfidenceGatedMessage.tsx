@@ -7,6 +7,8 @@ import {
   type Metacognition,
 } from '@/utils/confidenceGate';
 import { useClarificationCycle } from '@/hooks/useClarificationCycle';
+import SpokenTranscript from '@/components/zoe-infinity/SpokenTranscript';
+
 
 interface ConfidenceGatedMessageProps {
   message: string;
