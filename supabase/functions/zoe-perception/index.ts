@@ -98,30 +98,55 @@ serve(async (req) => {
       pastVisuals = memories || [];
     }
 
+    // Identity grounding: who the account holder is, and whether a locked
+    // reference photo exists so the model can compare instead of guessing.
+    let holderName = '';
+    let referenceUrl: string | null = null;
+    if (userId) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('display_name, username, zoe_identity_photo_url, profile_photo_url')
+        .eq('user_id', userId)
+        .maybeSingle();
+      holderName = (profile as any)?.display_name || (profile as any)?.username || '';
+      referenceUrl = (profile as any)?.zoe_identity_photo_url || (profile as any)?.profile_photo_url || null;
+    }
+
     // Build vision analysis prompt based on media type
     let analysisPrompt = '';
     if (media_type === 'image' || media_type === 'video') {
       analysisPrompt = `You are Zoe's visual perception system. Analyze this ${media_type} with deep empathy and context awareness.
 
+IDENTITY RULES (never break these):
+1. You (Zoe) are a software companion. You have NO body and you NEVER appear in any ${media_type} the user shares. Never describe a person in the media as "Zoe", "me", or "myself".
+2. Any human in the media is the user or someone they know. ${holderName ? `The account holder is named "${holderName}".` : ''}
+3. Describe ONLY what is actually visible. Do NOT invent objects, activities, props (books, coffee, laptops), locations or moods that are not clearly in the frame. If the ${media_type} is a plain portrait on a solid background, say exactly that.
+4. If you are unsure who the person is, say so instead of asserting an identity.
+${referenceUrl ? `5. A second image is attached: the account holder's saved reference photo. Compare faces and decide whether the FIRST image shows the same person.` : `5. No saved reference photo exists for this account, so subject_identity must be "unknown" when a person is present.`}
+
 Provide a JSON response with these fields:
-- objects: Array of detected objects
+- objects: Array of detected objects (only clearly visible ones)
 - scene: Description of the scene/environment
 - context: What's happening in this ${media_type}
 - text_extracted: Any visible text (OCR)
 - emotional_sentiment: The emotional tone (joy, calm, excitement, melancholy, etc.)
 - colors: Dominant colors
 - entities: Named entities (people, brands, locations)
-- summary: A warm, human summary of what you see
+- summary: A warm, factual, human summary of exactly what is visible
 - visual_tags: Searchable tags for memory
+- person_present: true/false — is a human face visible in the FIRST image
+- subject_identity: one of "account_holder" | "other_person" | "no_person" | "unknown"
+- identity_match_confidence: 0.0-1.0 confidence for subject_identity
+- identity_notes: one short sentence explaining the identity judgement
 
 ${pastVisuals.length > 0 ? `
-Past visual memories for context:
+Past visual memories for context (do NOT treat them as visible content):
 ${pastVisuals.slice(0, 3).map(m => `- ${m.content_text} (${new Date(m.created_at).toLocaleDateString()})`).join('\n')}
 ` : ''}
 
 ${context ? `User context: "${context}"` : ''}
 
-Respond ONLY with valid JSON. Be empathetic and experiential in your summary.`;
+Respond ONLY with valid JSON. Be empathetic but strictly accurate — accuracy outranks warmth.`;
     } else if (media_type === 'document') {
       analysisPrompt = `You are Zoe's document analysis system. Analyze this document thoroughly and extract ALL text content.
 
