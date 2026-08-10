@@ -360,6 +360,8 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [isInputFocused, setIsInputFocused] = useState(false);
   const [pendingMedia, setPendingMedia] = useState<{ file: File; preview: string; type: 'image' | 'document' | 'video' | 'audio' } | null>(null);
+  const [pendingIdentityConfirmation, setPendingIdentityConfirmation] = useState<{ prompt: string; imageUrl: string } | null>(null);
+  const [pendingIdentitySave, setPendingIdentitySave] = useState<File | null>(null);
   const [handsFreeMode, setHandsFreeMode] = useState(true); // Hands-free mode enabled by default
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null); // Reply-to state
@@ -1143,14 +1145,89 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
     offlineDataSync.addConversation('user', userMessage.content);
     saveMessageToDb('user', userMessage.content, pendingMedia?.preview, pendingMedia?.type, userMessage.id);
 
-    const imageIntent = detectZoeImageIntent(userMessage.content);
+    let imageIntent = detectZoeImageIntent(userMessage.content);
+    let identityRequestText = userMessage.content;
+    let confirmedProfilePhotoUrl: string | null = null;
+
+    if (pendingIdentitySave && user?.id) {
+      const answer = userMessage.content.trim().toLowerCase();
+      const approved = /^(yes|yes please|sure|okay|ok|save it|remember it|use it)\b/i.test(answer);
+      const declined = /^(no|nope|don't|do not|cancel|not now)\b/i.test(answer);
+      if (approved || declined) {
+        if (approved) {
+          try {
+            const fileName = `${user.id}.jpg`;
+            const { error: uploadError } = await supabase.storage
+              .from('avatars')
+              .upload(fileName, pendingIdentitySave, { upsert: true, cacheControl: '0' });
+            if (uploadError) throw uploadError;
+            const { data: signedUrlData, error: urlError } = await supabase.storage
+              .from('avatars')
+              .createSignedUrl(fileName, 31536000);
+            if (urlError || !signedUrlData?.signedUrl) throw urlError || new Error('Unable to create photo URL');
+            const { error: profileError } = await supabase
+              .from('profiles')
+              .update({ profile_photo_url: signedUrlData.signedUrl })
+              .eq('user_id', user.id);
+            if (profileError) throw profileError;
+          } catch (saveError) {
+            console.error('[ZoeOrb] Identity reference save failed:', saveError);
+            const failureMessage: Message = {
+              id: createMessageId(), role: 'zoe', timestamp: new Date(),
+              content: 'I could not save that photo to your profile. It was not retained as your identity reference.',
+              reasoningTrace: { classifiedIntent: 'identity_reference_save_error', codexInjected: false },
+            };
+            setMessages(prev => [...prev, failureMessage]);
+            setPendingIdentitySave(null);
+            setIsProcessing(false);
+            setSendStage('error', 'identity-reference-save');
+            return;
+          }
+        }
+        const saveMessage: Message = {
+          id: createMessageId(), role: 'zoe', timestamp: new Date(),
+          content: approved
+            ? 'Saved as your profile identity photo for future image creations. It is not used as a biometric login credential.'
+            : 'Okay, I did not save that photo as your profile identity reference.',
+          reasoningTrace: { classifiedIntent: approved ? 'identity_reference_saved' : 'identity_reference_not_saved', codexInjected: false },
+        };
+        setMessages(prev => [...prev, saveMessage]);
+        setPendingIdentitySave(null);
+        setIsProcessing(false);
+        setSendStage('done', 'identity-reference-save');
+        return;
+      }
+    }
+
+    if (pendingIdentityConfirmation) {
+      const answer = userMessage.content.trim().toLowerCase();
+      const approved = /^(yes|yes please|sure|okay|ok|use it|that is me|it's me|it is me)\b/i.test(answer);
+      const declined = /^(no|nope|not me|don't|do not|cancel)\b/i.test(answer);
+      if (approved) {
+        identityRequestText = pendingIdentityConfirmation.prompt;
+        confirmedProfilePhotoUrl = pendingIdentityConfirmation.imageUrl;
+        imageIntent = { isImageRequest: true, isUserIdentityRequest: true, isZoeIdentityRequest: false };
+        setPendingIdentityConfirmation(null);
+      } else if (declined) {
+        setPendingIdentityConfirmation(null);
+        const requestMessage: Message = {
+          id: createMessageId(), role: 'zoe', timestamp: new Date(),
+          content: 'Understood. Attach a clear front-facing photo, then resend your image request.',
+          reasoningTrace: { classifiedIntent: 'identity_reference_declined', codexInjected: false },
+        };
+        setMessages(prev => [...prev, requestMessage]);
+        setIsProcessing(false);
+        setSendStage('done', 'identity-reference-declined');
+        return;
+      }
+    }
 
     // Identity-aware image requests must run before generic attachment analysis.
     // An attached image is a reference, not something Zoe should merely describe.
     if (imageIntent.isUserIdentityRequest) {
       const attachedReference = pendingMedia?.type === 'image' ? pendingMedia.file : undefined;
-      let profilePhotoUrl: string | null = null;
-      if (!attachedReference && user?.id) {
+      let profilePhotoUrl: string | null = confirmedProfilePhotoUrl;
+      if (!attachedReference && !profilePhotoUrl && user?.id) {
         const { data: profile } = await supabase
           .from('profiles')
           .select('profile_photo_url')
@@ -1172,9 +1249,25 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
         return;
       }
 
+      if (!attachedReference && profilePhotoUrl && !confirmedProfilePhotoUrl) {
+        setPendingIdentityConfirmation({ prompt: identityRequestText, imageUrl: profilePhotoUrl });
+        const confirmationMessage: Message = {
+          id: createMessageId(), role: 'zoe', timestamp: new Date(),
+          content: 'Is this your photo, and should I use it to create this image? Reply yes to continue, or no and attach a different photo.',
+          mediaPreview: profilePhotoUrl,
+          mediaType: 'image',
+          reasoningTrace: { classifiedIntent: 'identity_reference_confirmation', codexInjected: false },
+        };
+        setMessages(prev => [...prev, confirmationMessage]);
+        setPendingMedia(null);
+        setIsProcessing(false);
+        setSendStage('done', 'identity-reference-confirmation');
+        return;
+      }
+
       try {
         setSendStage('thinking', 'identity-image-generation');
-        const result = await generateIdentityImage(buildUserIdentityPrompt(userMessage.content), {
+        const result = await generateIdentityImage(buildUserIdentityPrompt(identityRequestText), {
           file: attachedReference,
           imageUrl: attachedReference ? undefined : profilePhotoUrl || undefined,
         });
@@ -1186,6 +1279,17 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
         };
         setMessages(prev => [...prev, zoeMessage]);
         saveMessageToDb('assistant', caption, result.imageUrl, 'image', zoeMessage.id);
+        if (attachedReference) {
+          setPendingIdentitySave(attachedReference);
+          const savePrompt: Message = {
+            id: createMessageId(), role: 'zoe', timestamp: new Date(),
+            content: 'Should I save this as your profile identity photo for future image creations? Reply yes or no.',
+            mediaPreview: pendingMedia?.preview,
+            mediaType: 'image',
+            reasoningTrace: { classifiedIntent: 'identity_reference_save_consent', codexInjected: false },
+          };
+          setMessages(prev => [...prev, savePrompt]);
+        }
         setPendingMedia(null);
         setIsProcessing(false);
         setSendStage('done', 'identity-image-generation');
@@ -2315,7 +2419,7 @@ Want me to dive deeper into any aspect?`;
       setIsProcessing(false);
       setSendStage('done');
     }
-  }, [input, isProcessing, isSending, isOnline, messages, isMuted, processConversation, saveMessageToDb, pendingMedia, processMedia, messagingMode, selectedUser, sendDirectMessage, user?.id, processCommand, replyingTo, tubeSight, sentinelGateway, protocolWisdom, deepThinking]);
+  }, [input, isProcessing, isSending, isOnline, messages, isMuted, processConversation, saveMessageToDb, pendingMedia, pendingIdentityConfirmation, pendingIdentitySave, processMedia, messagingMode, selectedUser, sendDirectMessage, user?.id, processCommand, replyingTo, tubeSight, sentinelGateway, protocolWisdom, deepThinking]);
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {

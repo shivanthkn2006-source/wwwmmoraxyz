@@ -52,6 +52,33 @@ export async function generateIdentityImage(
   reference: { file?: File; imageUrl?: string },
 ): Promise<ImageGenResult> {
   const imageBase64 = reference.file ? await fileToDataUrl(reference.file) : undefined;
+  const sourceImage = imageBase64 ?? reference.imageUrl;
+  if (!sourceImage) {
+    throw new IdentityImageError('IDENTITY_GENERATION_FAILED', 'A reference photo is required.');
+  }
+
+  // Pollinations is the primary identity-preserving editor. It was already
+  // configured, but this flow previously bypassed it and called Gemini only.
+  try {
+    const { data: pollinationsData, error: pollinationsError } = await supabase.functions.invoke('pollinations-image', {
+      body: {
+        prompt,
+        sourceImage,
+        mode: 'image-edit',
+        model: 'p-image-edit',
+        width: 768,
+        height: 1024,
+      },
+    });
+
+    if (!pollinationsError && pollinationsData?.imageUrl && pollinationsData?.usedFace !== false) {
+      return { imageUrl: pollinationsData.imageUrl, provider: 'pollinations-edge' };
+    }
+    console.warn('[PollinationsService] Identity edit unavailable, trying Gemini fallback:', pollinationsData?.message || pollinationsError?.message);
+  } catch (pollinationsError) {
+    console.warn('[PollinationsService] Identity edit failed, trying Gemini fallback:', pollinationsError);
+  }
+
   const { data, error } = await supabase.functions.invoke('edit-image', {
     body: { prompt, imageBase64, imageUrl: reference.imageUrl },
   });
