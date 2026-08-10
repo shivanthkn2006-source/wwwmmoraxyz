@@ -303,7 +303,22 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isSpeechPaused, setIsSpeechPaused] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [panelSize, setPanelSize] = useState<'compact' | 'expanded' | 'full'>(() => {
+    try {
+      const saved = localStorage.getItem('zoe-orb-panel-size');
+      if (saved === 'compact' || saved === 'expanded' || saved === 'full') return saved;
+    } catch { /* storage unavailable */ }
+    return 'compact';
+  });
+  const isExpanded = panelSize !== 'compact';
+  const isFullPage = panelSize === 'full';
+  const cyclePanelSize = useCallback(() => {
+    setPanelSize((prev) => {
+      const next = prev === 'compact' ? 'expanded' : prev === 'expanded' ? 'full' : 'compact';
+      try { localStorage.setItem('zoe-orb-panel-size', next); } catch { /* ignore */ }
+      return next;
+    });
+  }, []);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [isInputFocused, setIsInputFocused] = useState(false);
