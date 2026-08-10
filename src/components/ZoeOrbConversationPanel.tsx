@@ -16,7 +16,7 @@ import { cotStart, cotFinish } from '@/utils/cotWiringBus';
 import { setSendStage, reportDiagnosticError } from '@/utils/zoeDiagnosticsBus';
 import { generateIdentityImage, generateImage, IdentityImageError } from '@/services/pollinationsService';
 import { getIdentityReference, saveIdentityReference, persistGeneratedIdentityImage, refreshStoredImageUrl } from '@/services/zoeIdentityVault';
-import { buildUserIdentityPrompt, detectZoeImageIntent } from '@/utils/zoeImageIntent';
+import { buildUserIdentityPrompt, resolveZoeImageTurn, type PendingIdentityImageRequest } from '@/utils/zoeImageIntent';
 import { useNavigate } from 'react-router-dom';
 import { useZoeOmegaCoreIntegration } from '@/hooks/useZoeOmegaCoreIntegration';
 import { format, isToday, isYesterday } from 'date-fns';
@@ -362,6 +362,16 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
   const [isInputFocused, setIsInputFocused] = useState(false);
   const [pendingMedia, setPendingMedia] = useState<{ file: File; preview: string; type: 'image' | 'document' | 'video' | 'audio' } | null>(null);
   const [pendingIdentityConfirmation, setPendingIdentityConfirmation] = useState<{ prompt: string; imageUrl: string } | null>(null);
+  const [pendingIdentityImageRequest, setPendingIdentityImageRequestState] = useState<PendingIdentityImageRequest | null>(() => {
+    try {
+      const raw = sessionStorage.getItem('zoe-pending-identity-image-request');
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as PendingIdentityImageRequest;
+      return parsed?.prompt && Date.now() - parsed.requestedAt < 30 * 60 * 1000 ? parsed : null;
+    } catch {
+      return null;
+    }
+  });
   const [pendingIdentitySave, setPendingIdentitySave] = useState<File | null>(null);
   const [handsFreeMode, setHandsFreeMode] = useState(true); // Hands-free mode enabled by default
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
@@ -376,6 +386,15 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
   const identityInputRef = useRef<HTMLInputElement>(null);
   const attachMenuWrapperRef = useRef<HTMLDivElement>(null);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
+
+  const rememberPendingIdentityRequest = useCallback((prompt: string | null) => {
+    const next = prompt?.trim() ? { prompt: prompt.trim(), requestedAt: Date.now() } : null;
+    setPendingIdentityImageRequestState(next);
+    try {
+      if (next) sessionStorage.setItem('zoe-pending-identity-image-request', JSON.stringify(next));
+      else sessionStorage.removeItem('zoe-pending-identity-image-request');
+    } catch { /* storage unavailable */ }
+  }, []);
   
   // Voice note recorder
   const { 
