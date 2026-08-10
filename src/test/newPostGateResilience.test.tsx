@@ -77,8 +77,8 @@ describe('NewContentBadge fallback behaviour', () => {
   });
 
   it('stays visible when IntersectionObserver is unavailable', () => {
-    // @ts-expect-error simulating an unsupported environment
-    delete globalThis.IntersectionObserver;
+    // simulating an unsupported environment
+    (globalThis as Record<string, unknown>).IntersectionObserver = undefined as never;
     const onViewed = vi.fn();
     render(<div><NewContentBadge onViewed={onViewed} /></div>);
     expect(screen.getByTestId('new-content-badge')).toBeTruthy();
