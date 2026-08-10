@@ -1219,8 +1219,9 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
     offlineDataSync.addConversation('user', userMessage.content);
     saveMessageToDb('user', userMessage.content, pendingMedia?.preview, pendingMedia?.type, userMessage.id);
 
-    let imageIntent = detectZoeImageIntent(userMessage.content);
-    let identityRequestText = userMessage.content;
+    const resolvedImageTurn = resolveZoeImageTurn(userMessage.content, pendingIdentityImageRequest);
+    let imageIntent = resolvedImageTurn.intent;
+    let identityRequestText = resolvedImageTurn.prompt;
     let confirmedProfilePhotoUrl: string | null = null;
 
     if (pendingIdentitySave && user?.id) {
@@ -1273,6 +1274,7 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
         setPendingIdentityConfirmation(null);
       } else if (declined) {
         setPendingIdentityConfirmation(null);
+        rememberPendingIdentityRequest(null);
         const declineContent = 'Understood. Attach a clear front-facing photo of yourself (the + menu → "My photo"), then resend your image request.';
         const requestMessage: Message = {
           id: createMessageId(), role: 'zoe', timestamp: new Date(),
@@ -1300,6 +1302,7 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
       }
 
       if (!attachedReference && !referenceUrl) {
+        rememberPendingIdentityRequest(identityRequestText);
         const requestContent = 'Please attach a clear front-facing photo of yourself using the + menu → "My photo". I keep it in your private identity vault and use it so your images always look like you.';
         const requestMessage: Message = {
           id: createMessageId(), role: 'zoe', timestamp: new Date(),
@@ -1316,6 +1319,7 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
 
       // A vault photo was already approved by the user — no need to re-confirm every time.
       if (!attachedReference && referenceUrl && !confirmedProfilePhotoUrl && referenceSource !== 'identity-vault') {
+        rememberPendingIdentityRequest(identityRequestText);
         setPendingIdentityConfirmation({ prompt: identityRequestText, imageUrl: referenceUrl });
         const confirmContent = 'Is this your photo, and should I use it to create this image? Reply yes to continue, or no and attach a different photo.';
         const confirmationMessage: Message = {
@@ -1350,6 +1354,7 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
         };
         setMessages(prev => [...prev, zoeMessage]);
         saveMessageToDb('assistant', caption, storedImageUrl, 'image', zoeMessage.id);
+        rememberPendingIdentityRequest(null);
         if (attachedReference) {
           setPendingIdentitySave(attachedReference);
           const saveConsent = 'Should I keep this photo in your private identity vault for future image creations? Reply yes or no.';
@@ -2510,7 +2515,7 @@ Want me to dive deeper into any aspect?`;
       setIsProcessing(false);
       setSendStage('done');
     }
-  }, [input, isProcessing, isSending, isOnline, messages, isMuted, processConversation, saveMessageToDb, pendingMedia, pendingIdentityConfirmation, pendingIdentitySave, processMedia, messagingMode, selectedUser, sendDirectMessage, user?.id, processCommand, replyingTo, tubeSight, sentinelGateway, protocolWisdom, deepThinking]);
+  }, [input, isProcessing, isSending, isOnline, messages, isMuted, processConversation, saveMessageToDb, pendingMedia, pendingIdentityConfirmation, pendingIdentityImageRequest, pendingIdentitySave, processMedia, messagingMode, selectedUser, sendDirectMessage, user?.id, processCommand, replyingTo, tubeSight, sentinelGateway, protocolWisdom, deepThinking, rememberPendingIdentityRequest]);
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
