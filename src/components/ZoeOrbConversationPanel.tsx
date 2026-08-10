@@ -2941,14 +2941,13 @@ Want me to dive deeper into any aspect?`;
                       size="icon"
                       className={cn(
                         'h-5 w-5 md:h-5 md:w-5 lg:h-4 lg:w-4 rounded-full transition-colors flex items-center justify-center shrink-0',
-                        showMetrics ? 'bg-amber-500/20 hover:bg-amber-500/30' : 'hover:bg-primary/10'
+                        diagTab === 'metrics' && diagExpanded ? 'bg-amber-500/20 hover:bg-amber-500/30' : 'hover:bg-primary/10'
                       )}
-                      onClick={() => setShowMetrics((v) => !v)}
-                      aria-pressed={showMetrics}
-                      aria-label={showMetrics ? 'Hide metacognition metrics' : 'Show metacognition metrics'}
+                      onClick={() => openDiagnostics('metrics')}
+                      aria-label="Show metacognition metrics"
                       title="Metacognition metrics"
                     >
-                      <Gauge className={cn('h-3 w-3 lg:h-2.5 lg:w-2.5', showMetrics ? 'text-amber-300' : 'text-foreground/60')} />
+                      <Gauge className={cn('h-3 w-3 lg:h-2.5 lg:w-2.5', diagTab === 'metrics' && diagExpanded ? 'text-amber-300' : 'text-foreground/60')} />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="bottom" className="text-[10px]">Metacognition metrics</TooltipContent>
