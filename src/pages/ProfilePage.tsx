@@ -7,6 +7,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { toast } from 'sonner';
 import ProfileContent from '@/components/ProfileContent';
+import IdentityVaultSection from '@/components/profile/IdentityVaultSection';
 import VoiceCommandsSettings from '@/components/VoiceCommandsSettings';
 import FeedbackCollectionPanel from '@/components/FeedbackCollectionPanel';
 import { supabase } from '@/integrations/supabase/client';
@@ -210,6 +211,7 @@ const ProfilePage = () => {
           </div>
         </div>
         <ProfileContent />
+        <IdentityVaultSection />
       </div>
     </div>
   );

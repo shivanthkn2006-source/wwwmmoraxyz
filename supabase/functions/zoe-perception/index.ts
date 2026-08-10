@@ -30,6 +30,10 @@ interface PerceptionAnalysis {
   entities: string[];
   summary: string;
   visual_tags: string[];
+  person_present?: boolean;
+  subject_identity?: 'account_holder' | 'other_person' | 'no_person' | 'unknown';
+  identity_match_confidence?: number;
+  identity_notes?: string;
 }
 
 serve(async (req) => {
@@ -94,30 +98,55 @@ serve(async (req) => {
       pastVisuals = memories || [];
     }
 
+    // Identity grounding: who the account holder is, and whether a locked
+    // reference photo exists so the model can compare instead of guessing.
+    let holderName = '';
+    let referenceUrl: string | null = null;
+    if (userId) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('display_name, username, zoe_identity_photo_url, profile_photo_url')
+        .eq('user_id', userId)
+        .maybeSingle();
+      holderName = (profile as any)?.display_name || (profile as any)?.username || '';
+      referenceUrl = (profile as any)?.zoe_identity_photo_url || (profile as any)?.profile_photo_url || null;
+    }
+
     // Build vision analysis prompt based on media type
     let analysisPrompt = '';
     if (media_type === 'image' || media_type === 'video') {
       analysisPrompt = `You are Zoe's visual perception system. Analyze this ${media_type} with deep empathy and context awareness.
 
+IDENTITY RULES (never break these):
+1. You (Zoe) are a software companion. You have NO body and you NEVER appear in any ${media_type} the user shares. Never describe a person in the media as "Zoe", "me", or "myself".
+2. Any human in the media is the user or someone they know. ${holderName ? `The account holder is named "${holderName}".` : ''}
+3. Describe ONLY what is actually visible. Do NOT invent objects, activities, props (books, coffee, laptops), locations or moods that are not clearly in the frame. If the ${media_type} is a plain portrait on a solid background, say exactly that.
+4. If you are unsure who the person is, say so instead of asserting an identity.
+${referenceUrl ? `5. A second image is attached: the account holder's saved reference photo. Compare faces and decide whether the FIRST image shows the same person.` : `5. No saved reference photo exists for this account, so subject_identity must be "unknown" when a person is present.`}
+
 Provide a JSON response with these fields:
-- objects: Array of detected objects
+- objects: Array of detected objects (only clearly visible ones)
 - scene: Description of the scene/environment
 - context: What's happening in this ${media_type}
 - text_extracted: Any visible text (OCR)
 - emotional_sentiment: The emotional tone (joy, calm, excitement, melancholy, etc.)
 - colors: Dominant colors
 - entities: Named entities (people, brands, locations)
-- summary: A warm, human summary of what you see
+- summary: A warm, factual, human summary of exactly what is visible
 - visual_tags: Searchable tags for memory
+- person_present: true/false — is a human face visible in the FIRST image
+- subject_identity: one of "account_holder" | "other_person" | "no_person" | "unknown"
+- identity_match_confidence: 0.0-1.0 confidence for subject_identity
+- identity_notes: one short sentence explaining the identity judgement
 
 ${pastVisuals.length > 0 ? `
-Past visual memories for context:
+Past visual memories for context (do NOT treat them as visible content):
 ${pastVisuals.slice(0, 3).map(m => `- ${m.content_text} (${new Date(m.created_at).toLocaleDateString()})`).join('\n')}
 ` : ''}
 
 ${context ? `User context: "${context}"` : ''}
 
-Respond ONLY with valid JSON. Be empathetic and experiential in your summary.`;
+Respond ONLY with valid JSON. Be empathetic but strictly accurate — accuracy outranks warmth.`;
     } else if (media_type === 'document') {
       analysisPrompt = `You are Zoe's document analysis system. Analyze this document thoroughly and extract ALL text content.
 
@@ -156,14 +185,21 @@ Respond ONLY with valid JSON.`;
           model: 'google/gemini-2.5-flash',
           messages: [
             { role: 'system', content: analysisPrompt },
-            { 
-              role: 'user', 
+            {
+              role: 'user',
               content: [
-                { type: 'text', text: 'Analyze this media:' },
-                { type: 'image_url', image_url: { url: media_data } }
-              ]
+                { type: 'text', text: 'FIRST image — the media the user just shared. Analyze this:' },
+                { type: 'image_url', image_url: { url: media_data } },
+                ...(media_type === 'image' && referenceUrl
+                  ? [
+                      { type: 'text', text: 'SECOND image — the account holder\'s saved reference photo, for identity comparison only. Never describe it as the shared media.' },
+                      { type: 'image_url', image_url: { url: referenceUrl } },
+                    ]
+                  : []),
+              ],
             }
           ],
+          temperature: 0.2,
           max_tokens: 1500,
         }),
       });
@@ -211,6 +247,21 @@ Respond ONLY with valid JSON.`;
         analysis.context = normStr(analysis.context);
         analysis.emotional_sentiment = normStr(analysis.emotional_sentiment) || 'neutral';
         analysis.text_extracted = analysis.text_extracted ? normStr(analysis.text_extracted) : null;
+        analysis.person_present = analysis.person_present === true;
+        const allowedIdentity = ['account_holder', 'other_person', 'no_person', 'unknown'];
+        analysis.subject_identity = allowedIdentity.includes(String(analysis.subject_identity))
+          ? analysis.subject_identity
+          : (analysis.person_present ? 'unknown' : 'no_person');
+        // Without a stored reference there is nothing to match against.
+        if (!referenceUrl && analysis.subject_identity === 'account_holder') {
+          analysis.subject_identity = 'unknown';
+        }
+        analysis.identity_match_confidence = Number(analysis.identity_match_confidence) || 0;
+        analysis.identity_notes = normStr(analysis.identity_notes);
+        // Last-resort guard: Zoe must never be named as the subject of a user photo.
+        if (analysis.person_present) {
+          analysis.summary = analysis.summary.replace(/\bZoe\b/g, holderName || 'the person in your photo');
+        }
         console.log('[Zoe Perception] ✓ Parsed analysis:', analysis.scene, '| Objects:', analysis.objects.slice(0, 3).join(', '));
       } else {
         console.error('[Zoe Perception] No valid JSON in response:', content.substring(0, 200));
@@ -276,8 +327,24 @@ Respond ONLY with valid JSON.`;
     });
     }
 
-    // Generate empathetic response
+    // Generate empathetic response, grounded in who is actually in the frame
     let zoeSays = analysis.summary;
+    const identityState = analysis.subject_identity;
+    let identityPrompt: 'none' | 'offer_lock' | 'verified' | 'mismatch' = 'none';
+
+    if (analysis.person_present && userId) {
+      if (identityState === 'account_holder' && (analysis.identity_match_confidence ?? 0) >= 0.6) {
+        identityPrompt = 'verified';
+        zoeSays += ` That's you — it matches the reference photo locked in your identity vault.`;
+      } else if (identityState === 'other_person') {
+        identityPrompt = 'mismatch';
+        zoeSays += ` This isn't the face saved in your identity vault, so I won't treat it as your likeness.`;
+      } else if (!referenceUrl) {
+        identityPrompt = 'offer_lock';
+        zoeSays += ` I don't have a locked reference photo for you yet. If this is you, save it as your identity photo and I'll use it whenever you ask me to create images of you.`;
+      }
+    }
+
     
     // Cross-reference past memories for "Samantha Effect"
     // Coerce anything (string | {name} | object) into a lowercase string
@@ -289,17 +356,22 @@ Respond ONLY with valid JSON.`;
       return String(v ?? '').toLowerCase();
     };
 
-    if (pastVisuals.length > 0 && analysis.objects.length > 0) {
+    // Generic nouns (person, man, shirt…) overlap in almost every photo and
+    // produced false "you showed me this before" claims. Ignore them.
+    const GENERIC = new Set(['person', 'people', 'man', 'woman', 'face', 'human', 'shirt', 'hair', 'background', 'wall', 'light', 'photo', 'image', 'portrait', 'eyes', 'head']);
+
+    if (identityPrompt === 'none' && pastVisuals.length > 0 && analysis.objects.length > 0) {
       const pastObjects: string[] = pastVisuals
         .flatMap((m: any) => m.zoe_state_json?.objects_detected || [])
         .map(toStr)
-        .filter((s: string) => s.length > 0);
-      const currentObjects: string[] = analysis.objects.map(toStr).filter((s: string) => s.length > 0);
-      const matchingObjects = currentObjects.filter(obj =>
-        pastObjects.some(past => past.includes(obj) || obj.includes(past))
-      );
-      
-      if (matchingObjects.length > 0) {
+        .filter((s: string) => s.length > 3 && !GENERIC.has(s));
+      const currentObjects: string[] = analysis.objects
+        .map(toStr)
+        .filter((s: string) => s.length > 3 && !GENERIC.has(s));
+      const matchingObjects = currentObjects.filter(obj => pastObjects.includes(obj));
+
+      // Require several specific matches before claiming recognition.
+      if (matchingObjects.length >= 2) {
         const pastDate = new Date(pastVisuals[0].created_at);
         const daysAgo = Math.floor((Date.now() - pastDate.getTime()) / (1000 * 60 * 60 * 24));
         zoeSays += ` I notice something familiar here... Is this related to what you showed me ${daysAgo === 0 ? 'earlier today' : daysAgo === 1 ? 'yesterday' : `${daysAgo} days ago`}?`;
@@ -310,6 +382,8 @@ Respond ONLY with valid JSON.`;
       success: true,
       analysis,
       zoe_response: zoeSays,
+      identity_prompt: identityPrompt,
+      has_locked_reference: Boolean(referenceUrl),
       cross_referenced: pastVisuals.length > 0,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

@@ -20,8 +20,14 @@ export interface PerceptionResult {
     entities: string[];
     summary: string;
     visual_tags: string[];
+    person_present?: boolean;
+    subject_identity?: 'account_holder' | 'other_person' | 'no_person' | 'unknown';
+    identity_match_confidence?: number;
+    identity_notes?: string;
   };
   zoe_response?: string;
+  identity_prompt?: 'none' | 'offer_lock' | 'verified' | 'mismatch';
+  has_locked_reference?: boolean;
   cross_referenced?: boolean;
   error?: string;
 }
@@ -113,6 +119,8 @@ export const useZoePerception = () => {
         success: data.success,
         analysis: data.analysis,
         zoe_response: data.zoe_response,
+        identity_prompt: data.identity_prompt,
+        has_locked_reference: data.has_locked_reference,
         cross_referenced: data.cross_referenced,
         error: data.error,
       };
