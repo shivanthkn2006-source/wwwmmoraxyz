@@ -12,6 +12,8 @@ import TeleprompterDebugOverlay from '@/components/zoe-infinity/TeleprompterDebu
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, Volume2, VolumeX, Minimize2, Maximize2, Paperclip, Image, FileText, Video, Loader2, Download, Upload, Mic, Circle, Square, Camera, StopCircle, Copy, Check, Users, MessageCircle, Search, ArrowLeft, User, Plus, Sparkles, CheckCheck, Reply, CornerUpLeft, ChevronDown, Brain, Cloud, CloudDownload, CloudUpload, Shield, FileDown, Activity, Phone, PhoneOff, Pause, Play, Gauge } from 'lucide-react';
 import MetacognitionMetricsPanel from '@/components/zoe-infinity/MetacognitionMetricsPanel';
+import CotWiringStatusPanel from '@/components/zoe-infinity/CotWiringStatusPanel';
+import { cotStart, cotFinish } from '@/utils/cotWiringBus';
 import { useNavigate } from 'react-router-dom';
 import { useZoeOmegaCoreIntegration } from '@/hooks/useZoeOmegaCoreIntegration';
 import { format, isToday, isYesterday } from 'date-fns';
@@ -336,6 +338,8 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
   }, []);
   // Metacognition metrics overlay
   const [showMetrics, setShowMetrics] = useState(false);
+  // Real-time CoT wiring status overlay
+  const [showWiring, setShowWiring] = useState(false);
 
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
@@ -1639,6 +1643,7 @@ Want me to dive deeper into any aspect?`;
       
       // ═══ DEEP THINKING MODE: metacognitive brain (zoe-core-intelligence) ═══
       if (!responseText && deepThinking && isOnline) {
+        const dtToken = cotStart('zoe-core-intelligence');
         try {
           console.log('[ZoeOrb] Deep thinking → zoe-core-intelligence');
           const { data: dtData, error: dtError } = await supabase.functions.invoke('zoe-core-intelligence', {
@@ -1663,9 +1668,12 @@ Want me to dive deeper into any aspect?`;
               (window as any).__lastMetacognition = dtData.metacognition;
             }
           }
+          cotFinish(dtToken, { ok: true });
         } catch (dtErr) {
+          cotFinish(dtToken, { error: dtErr });
           console.warn('[ZoeOrb] Deep thinking failed, falling back to zoe-chat:', dtErr);
         }
+
       }
 
       // Use API if no local response was generated
@@ -1695,6 +1703,7 @@ Want me to dive deeper into any aspect?`;
           // Get new user notifications for chat context
           const newUserNotification = getNewUserNotification();
           
+          const chatToken = cotStart('zoe-chat');
           const { data, error } = await supabase.functions.invoke('zoe-chat', {
             body: {
               messages: [
@@ -1726,10 +1735,12 @@ Want me to dive deeper into any aspect?`;
             },
           });
 
+          cotFinish(chatToken, { error });
           if (error) {
             console.error('[ZoeOrb] API error:', error);
             throw error;
           }
+
           
           console.log('[ZoeOrb] API response:', data);
           const rawText = data?.message || data?.response || "I'm here to help!";
@@ -2213,6 +2224,7 @@ Want me to dive deeper into any aspect?`;
         const localTime = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
         const feedsSummary = getFeedsSummaryForChat();
 
+        const voiceToken = cotStart('zoe-chat');
         const { data, error } = await supabase.functions.invoke('zoe-chat', {
           body: {
             messages: [...conversationHistory, { role: 'user', content: messageText }],
@@ -2230,6 +2242,7 @@ Want me to dive deeper into any aspect?`;
           },
         });
 
+        cotFinish(voiceToken, { error });
         if (error) throw error;
         const rawVoiceText = data?.message || data?.response || "I'm here to help!";
         responseText = guardResponse(rawVoiceText).safeResponse;
@@ -2929,6 +2942,30 @@ Want me to dive deeper into any aspect?`;
                 </Tooltip>
               </TooltipProvider>
 
+              {/* CoT wiring status */}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={cn(
+                        'h-5 w-5 md:h-5 md:w-5 lg:h-4 lg:w-4 rounded-full transition-colors flex items-center justify-center shrink-0',
+                        showWiring ? 'bg-emerald-500/20 hover:bg-emerald-500/30' : 'hover:bg-primary/10'
+                      )}
+                      onClick={() => setShowWiring((v) => !v)}
+                      aria-pressed={showWiring}
+                      aria-label={showWiring ? 'Hide CoT wiring status' : 'Show CoT wiring status'}
+                      title="CoT wiring status"
+                    >
+                      <Activity className={cn('h-3 w-3 lg:h-2.5 lg:w-2.5', showWiring ? 'text-emerald-300' : 'text-foreground/60')} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="text-[10px]">CoT wiring status</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
+
 
               {/* Expand/Minimize */}
               <Button
@@ -2972,6 +3009,13 @@ Want me to dive deeper into any aspect?`;
               <MetacognitionMetricsPanel />
             </div>
           )}
+
+          {showWiring && (
+            <div className="border-b border-primary/10 bg-background/60 max-h-[45vh] overflow-y-auto overscroll-contain p-2">
+              <CotWiringStatusPanel />
+            </div>
+          )}
+
 
 
           {/* Unified Conversation List - dropdown when header is clicked */}
