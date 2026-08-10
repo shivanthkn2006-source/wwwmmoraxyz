@@ -66,7 +66,7 @@ import { AtlasHUD } from '@/components/atlas';
 import { useFriendRequests } from "@/hooks/useFriendRequests";
 import PageSeo from "@/components/seo/PageSeo";
 import NewContentBadge from '@/components/NewContentBadge';
-import { detectNewArrivals, markPostsSeen, readUnseenPostIds, reconcileUnseenPosts, registerUnseenPosts, type FeedUpdateSource } from "@/lib/newPostGate";
+import { markPostsSeen, readUnseenPostIds, syncUnseenPostSnapshot, type FeedUpdateSource } from "@/lib/newPostGate";
 
 
 
@@ -1078,6 +1078,9 @@ const HomePage = () => {
       });
 
       if (feedRows.length === 0) {
+        knownFeedIdsRef.current.global = [];
+        const emptySnapshot = syncUnseenPostSnapshot('global', [], [], updateSource);
+        setNewContentByFeed((current) => ({ ...current, global: emptySnapshot.unseenIds }));
         setGlobalPosts([]);
         setFeedDiag({ status: 'empty', message: 'No global posts available', durationMs: dur, rowCount: 0, authReady: true, timestamp: new Date().toISOString() });
         return;
@@ -1122,12 +1125,9 @@ const HomePage = () => {
         }));
 
       const ids = postsWithLikes.map((post: Post) => post.id);
-      const arrivals = detectNewArrivals(knownFeedIdsRef.current.global, ids, updateSource);
+      const arrivals = syncUnseenPostSnapshot('global', knownFeedIdsRef.current.global, ids, updateSource);
       knownFeedIdsRef.current.global = arrivals.knownIds;
-      const globalUnseen = updateSource === 'realtime'
-        ? registerUnseenPosts('global', arrivals.newIds)
-        : reconcileUnseenPosts('global', ids);
-      setNewContentByFeed((current) => ({ ...current, global: globalUnseen }));
+      setNewContentByFeed((current) => ({ ...current, global: arrivals.unseenIds }));
       if (arrivals.shouldAutoScroll) {
         setFeedAutoPassCompleted(false);
         setFeedAutoIndex(0);
@@ -1213,12 +1213,9 @@ const HomePage = () => {
         has_deferred_media: false,
       })) as Post[];
       const loopIds = preparedLoops.map((post) => post.id);
-      const loopArrivals = detectNewArrivals(knownFeedIdsRef.current.loops, loopIds, updateSource);
+      const loopArrivals = syncUnseenPostSnapshot('loops', knownFeedIdsRef.current.loops, loopIds, updateSource);
       knownFeedIdsRef.current.loops = loopArrivals.knownIds;
-      const loopUnseen = updateSource === 'realtime'
-        ? registerUnseenPosts('loops', loopArrivals.newIds)
-        : reconcileUnseenPosts('loops', loopIds);
-      setNewContentByFeed((current) => ({ ...current, loops: loopUnseen }));
+      setNewContentByFeed((current) => ({ ...current, loops: loopArrivals.unseenIds }));
       setLoopPosts(preparedLoops);
       setBrokenLoopPreviewIds(prev => {
         const next = new Set(prev);
@@ -1261,6 +1258,9 @@ const HomePage = () => {
       const feedRows = ((postsResult.data || []) as any[]);
 
       if (feedRows.length === 0) {
+        knownFeedIdsRef.current.personal = [];
+        const emptySnapshot = syncUnseenPostSnapshot('personal', [], [], updateSource);
+        setNewContentByFeed((current) => ({ ...current, personal: emptySnapshot.unseenIds }));
         setPersonalPosts([]);
         return;
       }
@@ -1304,12 +1304,9 @@ const HomePage = () => {
         }));
 
       const ids = postsWithLikes.map((post: Post) => post.id);
-      const arrivals = detectNewArrivals(knownFeedIdsRef.current.personal, ids, updateSource);
+      const arrivals = syncUnseenPostSnapshot('personal', knownFeedIdsRef.current.personal, ids, updateSource);
       knownFeedIdsRef.current.personal = arrivals.knownIds;
-      const personalUnseen = updateSource === 'realtime'
-        ? registerUnseenPosts('personal', arrivals.newIds)
-        : reconcileUnseenPosts('personal', ids);
-      setNewContentByFeed((current) => ({ ...current, personal: personalUnseen }));
+      setNewContentByFeed((current) => ({ ...current, personal: arrivals.unseenIds }));
       if (arrivals.shouldAutoScroll) {
         setFeedAutoPassCompleted(false);
         setFeedAutoIndex(0);
