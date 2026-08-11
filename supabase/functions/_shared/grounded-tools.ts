@@ -157,7 +157,7 @@ export const GROUNDED_TOOL_DEFS = [
   {
     name: 'math_calculator',
     description:
-      'Evaluate an arithmetic expression EXACTLY. ALWAYS use this instead of computing mentally, for any sum, product, percentage, ratio, average or unit conversion. Supports + - * / % ^ ( ) and sqrt, abs, round, floor, ceil, ln, log, sin, cos, tan.',
+      'Evaluate an arithmetic expression EXACTLY. ALWAYS use this instead of computing mentally, for any sum, product, percentage,character, or substring appears in a word or phrase. ALWAYS use this tool for spelling, counting letters, or analyzing character occurrences.', ratio, average or unit conversion. Supports + - * / % ^ ( ) and sqrt, abs, round, floor, ceil, ln, log, sin, cos, tan.',
     parameters: {
       type: 'object',
       properties: {
