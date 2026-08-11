@@ -155,15 +155,19 @@ export type ToolExecution = { tool: string; args: Record<string, unknown>; resul
 
 export const GROUNDED_TOOL_DEFS = [
   {
-    name: 'math_calculator',
-    description:
-      'Evaluate an arithmetic expression EXACTLY. ALWAYS use this instead of computing mentally, for any sum, product, percentage,character, or substring appears in a word or phrase. ALWAYS use this tool for spelling, counting letters, or analyzing character occurrences.', ratio, average or unit conversion. Supports + - * / % ^ ( ) and sqrt, abs, round, floor, ceil, ln, log, sin, cos, tan.',
-    parameters: {
-      type: 'object',
-      properties: {
-        expression: { type: 'string', description: 'A pure math expression, e.g. "(3 + 2) * 7 / 4"' },
-      },
-      required: ['expression'],
+   {
+  name: 'character_counter',
+  description:
+    'Count the exact number of times a specific letter, character, or substring appears in a word or phrase. ALWAYS use this tool for spelling, counting letters, or analyzing character occurrences.',
+  parameters: {
+    type: 'object',
+    properties: {
+      text: { type: 'string', description: 'The word or phrase to analyze, e.g. "strawberry"' },
+      target_char: { type: 'string', description: 'The letter or character to count, e.g. "r"' },
+    },
+    required: ['text', 'target_char'],
+  },
+},
     },
   },
   {
