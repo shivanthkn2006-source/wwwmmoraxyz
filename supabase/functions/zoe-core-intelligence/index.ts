@@ -18,6 +18,7 @@ import {
 } from "../_shared/metacognition.ts";
 import {
   runGeminiToolLoop,
+  runOpenAIToolLoop,
   precomputeGroundedFacts,
   groundedFactsBlock,
   stripScratchpad,
