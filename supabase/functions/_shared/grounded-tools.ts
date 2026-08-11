@@ -355,3 +355,80 @@ export async function runGeminiToolLoop(
 
   return { ...base, toolExecutions, rounds: MAX_ROUNDS, error: 'max_tool_rounds_exceeded' };
 }
+
+/**
+ * OpenAI-style tool loop (Groq / OpenRouter). Second grounded provider so a
+ * Gemini quota 429 does NOT drop Zoe back to guessing arithmetic.
+ */
+export async function runOpenAIToolLoop(
+  systemPrompt: string,
+  messages: Msg[],
+  opts: { maxTokens?: number; temperature?: number; timeoutMs?: number } = {},
+): Promise<ToolLoopResult> {
+  const groqKey = env('GROQ_API_KEY');
+  const orKey = env('OPENROUTER_API_KEY');
+  const provider = groqKey ? 'groq' : orKey ? 'openrouter' : null;
+  const model = provider === 'groq' ? 'llama-3.3-70b-versatile' : 'meta-llama/llama-3.3-70b-instruct';
+  const url = provider === 'groq'
+    ? 'https://api.groq.com/openai/v1/chat/completions'
+    : 'https://openrouter.ai/api/v1/chat/completions';
+  const base: ToolLoopResult = { ok: false, content: '', provider: provider ?? 'none', model, toolExecutions: [], rounds: 0 };
+  if (!provider) return { ...base, error: 'no tool-capable key (GROQ_API_KEY / OPENROUTER_API_KEY)' };
+
+  const convo: any[] = [
+    { role: 'system', content: systemPrompt },
+    ...messages.filter((m) => m.role !== 'system' && m.content).map((m) => ({ role: m.role, content: m.content })),
+  ];
+  const tools = GROUNDED_TOOL_DEFS.map((t) => ({ type: 'function', function: t }));
+  const toolExecutions: ToolExecution[] = [];
+
+  for (let round = 0; round < MAX_ROUNDS; round++) {
+    let data: any;
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), opts.timeoutMs ?? 30_000);
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${groqKey ?? orKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model,
+          messages: convo,
+          tools,
+          tool_choice: 'auto',
+          max_tokens: opts.maxTokens ?? 2048,
+          temperature: opts.temperature ?? 0.6,
+        }),
+        signal: ctrl.signal,
+      });
+      clearTimeout(timer);
+      if (!resp.ok) {
+        const t = await resp.text();
+        return { ...base, toolExecutions, rounds: round, error: `${resp.status}: ${t.slice(0, 180)}` };
+      }
+      data = await resp.json();
+    } catch (e) {
+      return { ...base, toolExecutions, rounds: round, error: e instanceof Error ? e.message : String(e) };
+    }
+
+    const msg = data?.choices?.[0]?.message;
+    const calls = msg?.tool_calls ?? [];
+    if (!calls.length) {
+      const text = (msg?.content ?? '').trim();
+      if (!text) return { ...base, toolExecutions, rounds: round + 1, error: 'empty_response' };
+      return { ok: true, content: text, provider: provider!, model, toolExecutions, rounds: round + 1 };
+    }
+
+    convo.push(msg);
+    for (const c of calls) {
+      const name = c?.function?.name as string;
+      let args: Record<string, any> = {};
+      try { args = JSON.parse(c?.function?.arguments ?? '{}'); } catch { args = {}; }
+      const result = executeGroundedTool(name, args);
+      toolExecutions.push({ tool: name, args, result });
+      console.log(`[grounded-tools:${provider}] ${name}(${JSON.stringify(args)}) → ${JSON.stringify(result)}`);
+      convo.push({ role: 'tool', tool_call_id: c.id, name, content: JSON.stringify(result) });
+    }
+  }
+
+  return { ...base, toolExecutions, rounds: MAX_ROUNDS, error: 'max_tool_rounds_exceeded' };
+}
