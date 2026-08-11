@@ -469,21 +469,31 @@ ${driftHints.length
     let toolRounds = 0;
     let toolError: string | null = null;
 
-    const toolLoop = await runGeminiToolLoop(
-      groundedSystemPrompt,
-      cascadeMessages.filter((m) => m.role !== 'system'),
-      { maxTokens: deepMode ? 3000 : 1200, temperature: deepMode ? 0.5 : 0.7 }
-    );
+    const toolMessages = cascadeMessages.filter((m) => m.role !== 'system');
+    const toolOpts = { maxTokens: deepMode ? 3000 : 1200, temperature: deepMode ? 0.5 : 0.7 };
+
+    // Primary grounded provider: Gemini function calling.
+    let toolLoop = await runGeminiToolLoop(groundedSystemPrompt, toolMessages, toolOpts);
+    // Secondary grounded provider: Groq/OpenRouter OpenAI-style tools, so a
+    // Gemini 429 never drops Zoe back to guessing arithmetic.
+    if (!toolLoop.ok) {
+      console.warn(`[zoe-core-intelligence] gemini tool loop failed: ${toolLoop.error}`);
+      const fallbackLoop = await runOpenAIToolLoop(groundedSystemPrompt, toolMessages, toolOpts);
+      toolLoop = fallbackLoop.ok
+        ? fallbackLoop
+        : { ...fallbackLoop, error: `gemini:${toolLoop.error} | ${fallbackLoop.provider}:${fallbackLoop.error}` };
+    }
     toolRounds = toolLoop.rounds;
 
     if (toolLoop.ok && toolLoop.content) {
       rawContent = toolLoop.content;
-      servedBy = `gemini-tools:${toolLoop.model}`;
+      servedBy = `${toolLoop.provider}-tools:${toolLoop.model}`;
       toolExecutions.push(...toolLoop.toolExecutions);
     } else {
-      // Tool path unavailable → sovereign cascade still has the grounded facts.
+      // Both tool paths down → sovereign cascade still has the grounded facts.
       toolError = toolLoop.error ?? 'tool_loop_unavailable';
-      console.warn(`[zoe-core-intelligence] tool loop skipped: ${toolError}`);
+      console.warn(`[zoe-core-intelligence] tool loops unavailable: ${toolError}`);
+
       const cascadeResult = await cascadeInfer(cascadeMessages, {
         maxTokens: deepMode ? 3000 : 1200,
         temperature: deepMode ? 0.5 : 0.7,
