@@ -16,6 +16,15 @@ import {
   fetchDriftHints,
   type Metacognition
 } from "../_shared/metacognition.ts";
+import {
+  runGeminiToolLoop,
+  precomputeGroundedFacts,
+  groundedFactsBlock,
+  stripScratchpad,
+  extractScratchpad,
+  SCRATCHPAD_INSTRUCTION,
+  type ToolExecution,
+} from "../_shared/grounded-tools.ts";
 
 // Advanced Cognitive Tools for Gemini 3 Pro Integration
 const gemini3CognitiveTools = [
