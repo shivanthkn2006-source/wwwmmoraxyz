@@ -75,8 +75,8 @@ describe('hidden scratchpad', () => {
   const reply = 'Hi!\n<scratchpad>mug moves to pantry, so 3+2=5</scratchpad>\nThe mug is in the pantry.';
 
   it('hides reasoning from the user on both server and client', () => {
-    expect(stripScratchpad(reply)).toBe('Hi!\nThe mug is in the pantry.');
-    expect(clientStrip(reply)).toBe('Hi!\nThe mug is in the pantry.');
+    expect(stripScratchpad(reply)).toBe('Hi!\n\nThe mug is in the pantry.');
+    expect(clientStrip(reply)).toBe('Hi!\n\nThe mug is in the pantry.');
     expect(hasScratchpad(reply)).toBe(true);
   });
 
