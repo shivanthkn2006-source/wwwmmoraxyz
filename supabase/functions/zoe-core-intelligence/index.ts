@@ -562,7 +562,13 @@ function processTextResponse(
   corsHeaders: Record<string, string>,
   meta?: Metacognition,
   deepMode?: boolean,
-  fastPass?: boolean
+  fastPass?: boolean,
+  grounding?: {
+    toolExecutions: ToolExecution[];
+    toolRounds: number;
+    toolError: string | null;
+    scratchpadUsed: boolean;
+  }
 ): Response {
   const confidence = meta?.confidence ?? 0.93;
   const threshold = meta?.threshold ?? 0.6;
@@ -571,8 +577,16 @@ function processTextResponse(
   return new Response(
     JSON.stringify({
       message: content,
-      toolCalls: [],
+      toolCalls: grounding?.toolExecutions ?? [],
+      grounding: {
+        toolsUsed: (grounding?.toolExecutions ?? []).map((t) => t.tool),
+        toolRounds: grounding?.toolRounds ?? 0,
+        toolError: grounding?.toolError ?? null,
+        scratchpadUsed: !!grounding?.scratchpadUsed,
+        servedBy: model,
+      },
       model: 'sovereign-core',
+
       intelligence: {
         version: '4.1',
         architecture: 'sovereign',
