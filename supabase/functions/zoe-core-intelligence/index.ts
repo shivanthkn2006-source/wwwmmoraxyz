@@ -16,6 +16,16 @@ import {
   fetchDriftHints,
   type Metacognition
 } from "../_shared/metacognition.ts";
+import {
+  runGeminiToolLoop,
+  runOpenAIToolLoop,
+  precomputeGroundedFacts,
+  groundedFactsBlock,
+  stripScratchpad,
+  extractScratchpad,
+  SCRATCHPAD_INSTRUCTION,
+  type ToolExecution,
+} from "../_shared/grounded-tools.ts";
 
 // Advanced Cognitive Tools for Gemini 3 Pro Integration
 const gemini3CognitiveTools = [
@@ -438,28 +448,87 @@ ${driftHints.length
   : ''}`;
 
     // ═══════════════════════════════════════════════════════════════════════
-    // SMART AUTO-ROUTING: Gemini → Groq → OpenRouter (sovereign providers)
+    // GROUNDING LAYER 1 — deterministic pre-compute (provider-agnostic net)
     // ═══════════════════════════════════════════════════════════════════════
+    const preFacts = precomputeGroundedFacts(command);
+    const groundedSystemPrompt =
+      systemPrompt + SCRATCHPAD_INSTRUCTION + groundedFactsBlock(preFacts);
+
     const cascadeMessages = [
-      { role: 'system', content: systemPrompt },
+      { role: 'system', content: groundedSystemPrompt },
       ...(context?.conversationHistory || []),
       { role: 'user', content: command }
     ];
 
-    const cascadeResult = await cascadeInfer(cascadeMessages, {
-      maxTokens: deepMode ? 3000 : 1200,
-      temperature: deepMode ? 0.5 : 0.7,
-      mode: 't1-primary'
-    });
+    // ═══════════════════════════════════════════════════════════════════════
+    // GROUNDING LAYER 2 — Gemini function calling with a real tool loop.
+    // Model pauses → we execute math locally → fact goes back → model resumes.
+    // ═══════════════════════════════════════════════════════════════════════
+    let rawContent = '';
+    let servedBy = 'cascade';
+    const toolExecutions: ToolExecution[] = [...preFacts];
+    let toolRounds = 0;
+    let toolError: string | null = null;
 
-    if (!cascadeResult.success) {
-      return new Response(
-        JSON.stringify({ error: 'All AI providers unavailable', code: 'SERVICE_UNAVAILABLE' }),
-        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    const toolMessages = cascadeMessages.filter((m) => m.role !== 'system');
+    const toolOpts = { maxTokens: deepMode ? 3000 : 1200, temperature: deepMode ? 0.5 : 0.7 };
+
+    // Primary grounded provider: Gemini function calling.
+    let toolLoop = await runGeminiToolLoop(groundedSystemPrompt, toolMessages, toolOpts);
+    // Secondary grounded provider: Groq/OpenRouter OpenAI-style tools, so a
+    // Gemini 429 never drops Zoe back to guessing arithmetic.
+    if (!toolLoop.ok) {
+      console.warn(`[zoe-core-intelligence] gemini tool loop failed: ${toolLoop.error}`);
+      const fallbackLoop = await runOpenAIToolLoop(groundedSystemPrompt, toolMessages, toolOpts);
+      toolLoop = fallbackLoop.ok
+        ? fallbackLoop
+        : { ...fallbackLoop, error: `gemini:${toolLoop.error} | ${fallbackLoop.provider}:${fallbackLoop.error}` };
+    }
+    toolRounds = toolLoop.rounds;
+
+    if (toolLoop.ok && toolLoop.content) {
+      rawContent = toolLoop.content;
+      servedBy = `${toolLoop.provider}-tools:${toolLoop.model}`;
+      toolExecutions.push(...toolLoop.toolExecutions);
+    } else {
+      // Both tool paths down → sovereign cascade still has the grounded facts.
+      toolError = toolLoop.error ?? 'tool_loop_unavailable';
+      console.warn(`[zoe-core-intelligence] tool loops unavailable: ${toolError}`);
+
+      const cascadeResult = await cascadeInfer(cascadeMessages, {
+        maxTokens: deepMode ? 3000 : 1200,
+        temperature: deepMode ? 0.5 : 0.7,
+        mode: 't1-primary'
+      });
+      if (!cascadeResult.success) {
+        return new Response(
+          JSON.stringify({ error: 'All AI providers unavailable', code: 'SERVICE_UNAVAILABLE' }),
+          { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      rawContent = cascadeResult.content;
+      servedBy = `cascade:${cascadeResult.selectedProvider}`;
     }
 
-    const parsed = parseMetacognition(cascadeResult.content, confidenceThreshold);
+    // ═══ HIDDEN SCRATCHPAD — reasoning stays server-side, never shown ═══
+    const hiddenThoughts = extractScratchpad(rawContent);
+    const visibleRaw = stripScratchpad(rawContent);
+
+    const parsed = parseMetacognition(visibleRaw, confidenceThreshold);
+    parsed.final_response = stripScratchpad(parsed.final_response);
+    if (hiddenThoughts.length) {
+      parsed.internal_monologue = [
+        ...(parsed.internal_monologue ?? []),
+        ...hiddenThoughts.map((t) => `[PREFRONTAL_CORTEX] ${t.slice(0, 400)}`),
+      ];
+    }
+    for (const ex of toolExecutions) {
+      const r = ex.result as any;
+      if (r?.ok) parsed.internal_monologue = [
+        ...(parsed.internal_monologue ?? []),
+        `[ACC] tool ${ex.tool}: ${(ex.args as any).expression} = ${r.display ?? r.actual_value}`,
+      ];
+    }
     const hardenedContent = hardenZoeIdentity(parsed.final_response);
 
     // Fire-and-forget metrics — never blocks or breaks the response.
@@ -475,7 +544,14 @@ ${driftHints.length
       promptExcerpt: command
     }).catch(() => {});
 
-    return processTextResponse(hardenedContent, 'cascade', corsHeaders, parsed, deepMode, fastPass);
+    return processTextResponse(hardenedContent, servedBy, corsHeaders, parsed, deepMode, fastPass, {
+      toolExecutions,
+      toolRounds,
+      toolError,
+      scratchpadUsed: hiddenThoughts.length > 0,
+    });
+
+
 
 
   } catch (error) {
@@ -497,7 +573,13 @@ function processTextResponse(
   corsHeaders: Record<string, string>,
   meta?: Metacognition,
   deepMode?: boolean,
-  fastPass?: boolean
+  fastPass?: boolean,
+  grounding?: {
+    toolExecutions: ToolExecution[];
+    toolRounds: number;
+    toolError: string | null;
+    scratchpadUsed: boolean;
+  }
 ): Response {
   const confidence = meta?.confidence ?? 0.93;
   const threshold = meta?.threshold ?? 0.6;
@@ -506,8 +588,16 @@ function processTextResponse(
   return new Response(
     JSON.stringify({
       message: content,
-      toolCalls: [],
+      toolCalls: grounding?.toolExecutions ?? [],
+      grounding: {
+        toolsUsed: (grounding?.toolExecutions ?? []).map((t) => t.tool),
+        toolRounds: grounding?.toolRounds ?? 0,
+        toolError: grounding?.toolError ?? null,
+        scratchpadUsed: !!grounding?.scratchpadUsed,
+        servedBy: model,
+      },
       model: 'sovereign-core',
+
       intelligence: {
         version: '4.1',
         architecture: 'sovereign',

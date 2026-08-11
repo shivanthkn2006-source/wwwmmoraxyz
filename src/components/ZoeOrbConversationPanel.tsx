@@ -87,6 +87,7 @@ import { useAtmanArchive } from '@/hooks/useAtmanArchive';
 import { useMmoraAgent } from '@/hooks/useMmoraAgent';
 import { useNeuroSymbolicGuard } from '@/hooks/useNeuroSymbolicGuard';
 import { loadDestinySeed, saveDestinySeed } from '@/core/soul/AtmanArchive';
+import { stripScratchpad } from '@/utils/hiddenScratchpad';
 
 // Relationship command patterns that should be executed as commands, not chat
 const RELATIONSHIP_COMMAND_PATTERNS = [
@@ -2078,13 +2079,20 @@ Want me to dive deeper into any aspect?`;
             },
           });
           if (dtError) throw dtError;
-          const dtText = dtData?.message || dtData?.response || '';
+          // Hidden scratchpad: server strips it, this is the client-side net so
+          // raw reasoning never reaches the bubble or the TTS teleprompter.
+          const dtText = stripScratchpad(dtData?.message || dtData?.response || '');
           if (dtText) {
             responseText = guardResponse(dtText).safeResponse;
             if (dtData?.metacognition) {
               (window as any).__lastMetacognition = dtData.metacognition;
             }
+            if (dtData?.grounding) {
+              (window as any).__lastGrounding = dtData.grounding;
+              console.log('[ZoeOrb] grounding:', dtData.grounding);
+            }
           }
+
           cotFinish(dtToken, { ok: true });
         } catch (dtErr) {
           cotFinish(dtToken, { error: dtErr });
