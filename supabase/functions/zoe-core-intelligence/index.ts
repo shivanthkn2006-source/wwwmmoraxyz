@@ -438,28 +438,77 @@ ${driftHints.length
   : ''}`;
 
     // ═══════════════════════════════════════════════════════════════════════
-    // SMART AUTO-ROUTING: Gemini → Groq → OpenRouter (sovereign providers)
+    // GROUNDING LAYER 1 — deterministic pre-compute (provider-agnostic net)
     // ═══════════════════════════════════════════════════════════════════════
+    const preFacts = precomputeGroundedFacts(command);
+    const groundedSystemPrompt =
+      systemPrompt + SCRATCHPAD_INSTRUCTION + groundedFactsBlock(preFacts);
+
     const cascadeMessages = [
-      { role: 'system', content: systemPrompt },
+      { role: 'system', content: groundedSystemPrompt },
       ...(context?.conversationHistory || []),
       { role: 'user', content: command }
     ];
 
-    const cascadeResult = await cascadeInfer(cascadeMessages, {
-      maxTokens: deepMode ? 3000 : 1200,
-      temperature: deepMode ? 0.5 : 0.7,
-      mode: 't1-primary'
-    });
+    // ═══════════════════════════════════════════════════════════════════════
+    // GROUNDING LAYER 2 — Gemini function calling with a real tool loop.
+    // Model pauses → we execute math locally → fact goes back → model resumes.
+    // ═══════════════════════════════════════════════════════════════════════
+    let rawContent = '';
+    let servedBy = 'cascade';
+    const toolExecutions: ToolExecution[] = [...preFacts];
+    let toolRounds = 0;
+    let toolError: string | null = null;
 
-    if (!cascadeResult.success) {
-      return new Response(
-        JSON.stringify({ error: 'All AI providers unavailable', code: 'SERVICE_UNAVAILABLE' }),
-        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    const toolLoop = await runGeminiToolLoop(
+      groundedSystemPrompt,
+      cascadeMessages.filter((m) => m.role !== 'system'),
+      { maxTokens: deepMode ? 3000 : 1200, temperature: deepMode ? 0.5 : 0.7 }
+    );
+    toolRounds = toolLoop.rounds;
+
+    if (toolLoop.ok && toolLoop.content) {
+      rawContent = toolLoop.content;
+      servedBy = `gemini-tools:${toolLoop.model}`;
+      toolExecutions.push(...toolLoop.toolExecutions);
+    } else {
+      // Tool path unavailable → sovereign cascade still has the grounded facts.
+      toolError = toolLoop.error ?? 'tool_loop_unavailable';
+      console.warn(`[zoe-core-intelligence] tool loop skipped: ${toolError}`);
+      const cascadeResult = await cascadeInfer(cascadeMessages, {
+        maxTokens: deepMode ? 3000 : 1200,
+        temperature: deepMode ? 0.5 : 0.7,
+        mode: 't1-primary'
+      });
+      if (!cascadeResult.success) {
+        return new Response(
+          JSON.stringify({ error: 'All AI providers unavailable', code: 'SERVICE_UNAVAILABLE' }),
+          { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      rawContent = cascadeResult.content;
+      servedBy = `cascade:${cascadeResult.selectedProvider}`;
     }
 
-    const parsed = parseMetacognition(cascadeResult.content, confidenceThreshold);
+    // ═══ HIDDEN SCRATCHPAD — reasoning stays server-side, never shown ═══
+    const hiddenThoughts = extractScratchpad(rawContent);
+    const visibleRaw = stripScratchpad(rawContent);
+
+    const parsed = parseMetacognition(visibleRaw, confidenceThreshold);
+    parsed.final_response = stripScratchpad(parsed.final_response);
+    if (hiddenThoughts.length) {
+      parsed.internal_monologue = [
+        ...(parsed.internal_monologue ?? []),
+        ...hiddenThoughts.map((t) => `[PREFRONTAL_CORTEX] ${t.slice(0, 400)}`),
+      ];
+    }
+    for (const ex of toolExecutions) {
+      const r = ex.result as any;
+      if (r?.ok) parsed.internal_monologue = [
+        ...(parsed.internal_monologue ?? []),
+        `[ACC] tool ${ex.tool}: ${(ex.args as any).expression} = ${r.display ?? r.actual_value}`,
+      ];
+    }
     const hardenedContent = hardenZoeIdentity(parsed.final_response);
 
     // Fire-and-forget metrics — never blocks or breaks the response.
@@ -475,7 +524,14 @@ ${driftHints.length
       promptExcerpt: command
     }).catch(() => {});
 
-    return processTextResponse(hardenedContent, 'cascade', corsHeaders, parsed, deepMode, fastPass);
+    return processTextResponse(hardenedContent, servedBy, corsHeaders, parsed, deepMode, fastPass, {
+      toolExecutions,
+      toolRounds,
+      toolError,
+      scratchpadUsed: hiddenThoughts.length > 0,
+    });
+
+
 
 
   } catch (error) {
