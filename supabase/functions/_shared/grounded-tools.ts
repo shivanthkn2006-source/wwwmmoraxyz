@@ -306,7 +306,14 @@ export function precomputeGroundedFacts(text: string): ToolExecution[] {
 
 export function groundedFactsBlock(facts: ToolExecution[]): string {
   if (!facts.length) return '';
-  const lines = facts.map((f) => `- ${(f.args as any).expression} = ${(f.result as any).display}`);
+  const lines = facts.map((f) => {
+    const a = f.args as any;
+    const r = f.result as any;
+    if (f.tool === 'character_counter') {
+      return `- the letter '${a.target_char}' appears exactly ${r.count} time(s) in "${a.text}"`;
+    }
+    return `- ${a.expression} = ${r.display}`;
+  });
   return `\n\n## GROUNDED FACTS (computed deterministically — these are TRUE, never contradict them)\n${lines.join('\n')}\n`;
 }
 
@@ -318,6 +325,8 @@ Before your final answer, think step-by-step inside <scratchpad>…</scratchpad>
 track objects, state changes, units and each arithmetic step there. The user NEVER
 sees the scratchpad, so be blunt and correct yourself freely inside it.
 For ANY arithmetic, call the math_calculator tool instead of computing in your head.
+For ANY letter/spelling/character counting question, call character_counter — never count in your head.
+For riddles with objects moving between places or ordered steps, call sequence_simulator and follow its trace.
 After </scratchpad>, write only the final conversational answer.`;
 
 /** Removes scratchpad/thinking blocks so they never reach the user. */
