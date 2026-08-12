@@ -21,7 +21,10 @@ const ZOE_IDENTITY = /\b(you|your|yourself|zoe(?:'s|’s)?)\b/i;
 const IDENTITY_STYLE = /\b(cartoon|sketch|portrait|selfie|avatar|painting|drawing|anime|comic|caricature|photo|picture|image)\b/i;
 const CONTEXTUAL_PROMPT_REFERENCE = /\b(?:use|turn|render|create|generate|make)\s+(?:this|that|the)?\s*(?:above|earlier|previous|last)?\s*(?:description|prompt|idea|concept|reply|response|text)\b|\buse\s+(?:this|that|the)\s+above\b/i;
 const ZOE_APPEARANCE_CHANGE = /\b(?:wear|wearing|dress|dressed|outfit|saree|sari|costume|hairstyle|look like|appearance)\b/i;
-const IMAGE_FOLLOW_UP = /\b(?:full[ -]?size|larger|bigger|high[ -]?resolution|hi[ -]?res|landscape|portrait)\b(?:\s+(?:one|version|image|picture))?/i;
+const IMAGE_FOLLOW_UP = /\b(?:full[ -]?size|full[ -]?screen|larger|bigger|high[ -]?resolution|high[ -]?res|hi[ -]?res|upscale|re-?generate|re-?create|re-?draw|re-?render|try\s+again|another\s+(?:one|version)|landscape|portrait)\b(?:\s+(?:one|version|image|picture))?/i;
+
+/** Grounded routing guard: these keywords must always resolve to the image pipeline, never text. */
+export const isForcedImageRoutingKeyword = (input: string): boolean => IMAGE_FOLLOW_UP.test(input);
 
 export const detectZoeImageIntent = (input: string): ZoeImageIntent => {
   const text = input.trim();
@@ -63,11 +66,22 @@ export const resolveZoeImageTurn = (
     if (previousImageRequest) {
       const previousIntent = detectZoeImageIntent(previousImageRequest.content);
       return {
-        prompt: `${previousImageRequest.content.trim()} Render as a full-size, high-resolution finished image.`,
-        intent: previousIntent,
+        prompt: `${previousImageRequest.content.trim()} ${input.trim()} Render as a full-size, high-resolution finished image.`,
+        // Grounded routing: a follow-up on an image turn is always an image request.
+        intent: { ...previousIntent, isImageRequest: true },
         resumed: true,
       };
     }
+    // No prior explicit image request found: fall back to the last substantive Zoe reply
+    // (usually the generated prompt/description) and still force the image path.
+    const referencedReply = [...context]
+      .reverse()
+      .find((message) => message.role === 'zoe' && message.content.trim().length > 20);
+    return {
+      prompt: `${(referencedReply?.content.trim().slice(0, 4000) ?? input.trim())} ${input.trim()} Render as a full-size, high-resolution finished image.`,
+      intent: { isImageRequest: true, isUserIdentityRequest: intent.isUserIdentityRequest, isZoeIdentityRequest: intent.isZoeIdentityRequest },
+      resumed: true,
+    };
   }
   if (intent.isImageRequest && CONTEXTUAL_PROMPT_REFERENCE.test(input)) {
     const referenced = [...context]
