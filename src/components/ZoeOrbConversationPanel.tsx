@@ -17,7 +17,7 @@ import { cotStart, cotFinish } from '@/utils/cotWiringBus';
 import { setSendStage, reportDiagnosticError } from '@/utils/zoeDiagnosticsBus';
 import { generateIdentityImage, generateImage, IdentityImageError } from '@/services/pollinationsService';
 import { getIdentityReference, saveIdentityReference, persistGeneratedIdentityImage, refreshStoredImageUrl } from '@/services/zoeIdentityVault';
-import { buildUserIdentityPrompt, buildZoeIdentityPrompt, resolveZoeImageTurn, type PendingIdentityImageRequest } from '@/utils/zoeImageIntent';
+import { buildUserIdentityPrompt, buildZoeIdentityPrompt, isForcedImageRoutingKeyword, resolveZoeImageTurn, type PendingIdentityImageRequest } from '@/utils/zoeImageIntent';
 import { useNavigate } from 'react-router-dom';
 import { useZoeOmegaCoreIntegration } from '@/hooks/useZoeOmegaCoreIntegration';
 import { format, isToday, isYesterday } from 'date-fns';
@@ -1277,6 +1277,10 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
       messages.map((message) => ({ role: message.role, content: message.content })),
     );
     let imageIntent = resolvedImageTurn.intent;
+    // Grounded routing check: keywords like "full size" or "regenerate" must never fall back to text.
+    if (isForcedImageRoutingKeyword(userMessage.content)) {
+      imageIntent = { ...imageIntent, isImageRequest: true };
+    }
     let identityRequestText = resolvedImageTurn.prompt;
     let confirmedProfilePhotoUrl: string | null = null;
 
