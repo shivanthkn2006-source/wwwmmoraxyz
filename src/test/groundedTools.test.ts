@@ -89,3 +89,42 @@ describe('hidden scratchpad', () => {
     expect(extractScratchpad(reply)).toEqual(['mug moves to pantry, so 3+2=5']);
   });
 });
+
+import { precomputeCharacterFacts, GROUNDED_TOOL_DEFS } from '../../supabase/functions/_shared/grounded-tools';
+
+describe('character_counter (strawberry test)', () => {
+  it('counts letters exactly', () => {
+    const r = executeGroundedTool('character_counter', { text: 'strawberry', target_char: 'r' }) as any;
+    expect(r.ok).toBe(true);
+    expect(r.count).toBe(3);
+    expect(r.instruction).toContain('EXACTLY 3');
+  });
+
+  it('is case-insensitive and regex-safe', () => {
+    expect((executeGroundedTool('character_counter', { text: 'Mississippi', target_char: 'S' }) as any).count).toBe(4);
+    expect((executeGroundedTool('character_counter', { text: 'a.b.c', target_char: '.' }) as any).count).toBe(2);
+  });
+
+  it('pre-computes from natural language', () => {
+    const facts = precomputeCharacterFacts("How many r's are in strawberry?");
+    expect((facts[0].result as any).count).toBe(3);
+    expect(groundedFactsBlock(facts)).toContain('exactly 3 time(s) in "strawberry"');
+  });
+});
+
+describe('tool registry + riddle simulator', () => {
+  it('exposes all four grounded tools', () => {
+    expect(GROUNDED_TOOL_DEFS.map((t) => t.name)).toEqual([
+      'math_calculator', 'character_counter', 'logic_checker', 'sequence_simulator',
+    ]);
+  });
+
+  it('returns an ordered trace for riddles', () => {
+    const r = executeGroundedTool('sequence_simulator', {
+      steps: ['coin put in mug', 'mug turned upside down on table', 'mug moved to microwave'],
+      question: 'where is the coin?',
+    }) as any;
+    expect(r.ok).toBe(true);
+    expect(r.steps[2]).toContain('3.');
+  });
+});

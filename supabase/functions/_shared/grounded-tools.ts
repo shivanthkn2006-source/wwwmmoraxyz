@@ -155,19 +155,28 @@ export type ToolExecution = { tool: string; args: Record<string, unknown>; resul
 
 export const GROUNDED_TOOL_DEFS = [
   {
-   {
-  name: 'character_counter',
-  description:
-    'Count the exact number of times a specific letter, character, or substring appears in a word or phrase. ALWAYS use this tool for spelling, counting letters, or analyzing character occurrences.',
-  parameters: {
-    type: 'object',
-    properties: {
-      text: { type: 'string', description: 'The word or phrase to analyze, e.g. "strawberry"' },
-      target_char: { type: 'string', description: 'The letter or character to count, e.g. "r"' },
+    name: 'math_calculator',
+    description:
+      'Evaluate an arithmetic expression deterministically. ALWAYS use this for ANY arithmetic instead of computing mentally.',
+    parameters: {
+      type: 'object',
+      properties: {
+        expression: { type: 'string', description: 'e.g. "17 * 249 * (1 - 0.125)"' },
+      },
+      required: ['expression'],
     },
-    required: ['text', 'target_char'],
   },
-},
+  {
+    name: 'character_counter',
+    description:
+      'Count the exact number of times a specific letter, character, or substring appears in a word or phrase. ALWAYS use this tool for spelling, counting letters, or analyzing character occurrences.',
+    parameters: {
+      type: 'object',
+      properties: {
+        text: { type: 'string', description: 'The word or phrase to analyze, e.g. "strawberry"' },
+        target_char: { type: 'string', description: 'The letter or character to count, e.g. "r"' },
+      },
+      required: ['text', 'target_char'],
     },
   },
   {
@@ -183,6 +192,23 @@ export const GROUNDED_TOOL_DEFS = [
       required: ['expression', 'claimed_value'],
     },
   },
+  {
+    name: 'sequence_simulator',
+    description:
+      'Simulate a step-by-step state change puzzle (riddles: object moved between containers, river crossings, swaps). Provide the ordered steps as plain sentences; returns the tracked final state so you never guess.',
+    parameters: {
+      type: 'object',
+      properties: {
+        steps: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Ordered steps, e.g. ["coin placed in mug", "mug turned upside down on table", "mug moved to microwave"]',
+        },
+        question: { type: 'string', description: 'What is being asked, e.g. "where is the coin?"' },
+      },
+      required: ['steps'],
+    },
+  },
 ] as const;
 
 /** Executes a tool locally. Never throws — errors come back as data the model can read. */
@@ -191,6 +217,38 @@ export function executeGroundedTool(name: string, args: Record<string, any>): Re
     if (name === 'math_calculator') {
       const value = evaluateMath(String(args?.expression ?? ''));
       return { ok: true, expression: args?.expression, value, display: formatNumber(value) };
+    }
+    if (name === 'character_counter') {
+      const text = String(args?.text ?? '');
+      const target = String(args?.target_char ?? '');
+      if (!text) throw new Error('No text provided');
+      if (!target) throw new Error('No target character provided');
+      const regex = new RegExp(target.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+      const matches = text.match(regex);
+      const count = matches ? matches.length : 0;
+      const positions = [...text.matchAll(regex)].map((m) => (m.index ?? 0) + 1);
+      return {
+        ok: true,
+        text,
+        target_char: target,
+        count,
+        positions,
+        instruction: `FACT: The character '${target}' appears EXACTLY ${count} time(s) in "${text}" (positions ${positions.join(', ') || 'none'}). State this exact number. Do not guess.`,
+      };
+    }
+    if (name === 'sequence_simulator') {
+      const steps: string[] = Array.isArray(args?.steps) ? args.steps.map((s: unknown) => String(s)) : [];
+      if (!steps.length) throw new Error('No steps provided');
+      const trace = steps.map((s, i) => `${i + 1}. ${s.trim()}`);
+      return {
+        ok: true,
+        steps: trace,
+        question: args?.question ?? null,
+        instruction:
+          'Walk the numbered steps in order, updating the location/state of EVERY object after each step. ' +
+          'Objects only move when a step explicitly moves them — a container moving does not move its contents if the contents already fell out. ' +
+          'State the final answer from this trace, not from memory of similar riddles.',
+      };
     }
     if (name === 'logic_checker') {
       const value = evaluateMath(String(args?.expression ?? ''));
@@ -209,6 +267,19 @@ export function executeGroundedTool(name: string, args: Record<string, any>): Re
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e), instruction: 'Do not guess. Say you could not compute it.' };
   }
+}
+
+/** Detects "how many X in Y" style questions and grounds them before the model speaks. */
+export function precomputeCharacterFacts(text: string): ToolExecution[] {
+  const out: ToolExecution[] = [];
+  const re = /how\s+many\s+(?:letter\s+)?["'`]?([a-z])["'`]?(?:'s|s)?\s+(?:are\s+|is\s+)?(?:there\s+)?in\s+(?:the\s+word\s+)?["'`]?([a-z][a-z\- ]{1,40}?)["'`]?\s*[?.!]?$/gim;
+  for (const m of String(text ?? '').matchAll(re)) {
+    const target = m[1];
+    const word = m[2].trim();
+    const result = executeGroundedTool('character_counter', { text: word, target_char: target });
+    if (result.ok) out.push({ tool: 'character_counter', args: { text: word, target_char: target }, result });
+  }
+  return out;
 }
 
 // ───────────────── Pre-compute net (provider-agnostic) ─────────────────
@@ -235,7 +306,14 @@ export function precomputeGroundedFacts(text: string): ToolExecution[] {
 
 export function groundedFactsBlock(facts: ToolExecution[]): string {
   if (!facts.length) return '';
-  const lines = facts.map((f) => `- ${(f.args as any).expression} = ${(f.result as any).display}`);
+  const lines = facts.map((f) => {
+    const a = f.args as any;
+    const r = f.result as any;
+    if (f.tool === 'character_counter') {
+      return `- the letter '${a.target_char}' appears exactly ${r.count} time(s) in "${a.text}"`;
+    }
+    return `- ${a.expression} = ${r.display}`;
+  });
   return `\n\n## GROUNDED FACTS (computed deterministically — these are TRUE, never contradict them)\n${lines.join('\n')}\n`;
 }
 
@@ -247,6 +325,8 @@ Before your final answer, think step-by-step inside <scratchpad>…</scratchpad>
 track objects, state changes, units and each arithmetic step there. The user NEVER
 sees the scratchpad, so be blunt and correct yourself freely inside it.
 For ANY arithmetic, call the math_calculator tool instead of computing in your head.
+For ANY letter/spelling/character counting question, call character_counter — never count in your head.
+For riddles with objects moving between places or ordered steps, call sequence_simulator and follow its trace.
 After </scratchpad>, write only the final conversational answer.`;
 
 /** Removes scratchpad/thinking blocks so they never reach the user. */

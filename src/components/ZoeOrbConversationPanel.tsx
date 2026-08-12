@@ -2070,7 +2070,7 @@ Want me to dive deeper into any aspect?`;
               mode: 'deep_thinking',
               context: {
                 currentPage: window.location.pathname,
-                conversationHistory: messages.slice(-6).map(m => ({
+                conversationHistory: messages.slice(-20).map(m => ({
                   role: m.role === 'zoe' ? 'assistant' : 'user',
                   content: m.content,
                 })),
@@ -2107,7 +2107,7 @@ Want me to dive deeper into any aspect?`;
         if (isOnline) {
           console.log('[ZoeOrb] Calling zoe-chat (online)...');
           // Use online API
-          const conversationHistory = messages.slice(-5).map(m => ({
+          const conversationHistory = messages.slice(-20).map(m => ({
             role: m.role === 'zoe' ? 'assistant' : m.role,
             content: m.content,
           }));
@@ -2640,7 +2640,7 @@ Want me to dive deeper into any aspect?`;
       let responseText = '';
 
       if (isOnline) {
-        const conversationHistory = messages.slice(-5).map(m => ({
+        const conversationHistory = messages.slice(-20).map(m => ({
           role: m.role === 'zoe' ? 'assistant' : m.role,
           content: m.content,
         }));

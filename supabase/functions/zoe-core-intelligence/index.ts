@@ -20,6 +20,7 @@ import {
   runGeminiToolLoop,
   runOpenAIToolLoop,
   precomputeGroundedFacts,
+  precomputeCharacterFacts,
   groundedFactsBlock,
   stripScratchpad,
   extractScratchpad,
@@ -450,7 +451,10 @@ ${driftHints.length
     // ═══════════════════════════════════════════════════════════════════════
     // GROUNDING LAYER 1 — deterministic pre-compute (provider-agnostic net)
     // ═══════════════════════════════════════════════════════════════════════
-    const preFacts = precomputeGroundedFacts(command);
+    const preFacts = [
+      ...precomputeGroundedFacts(command),
+      ...precomputeCharacterFacts(command),
+    ];
     const groundedSystemPrompt =
       systemPrompt + SCRATCHPAD_INSTRUCTION + groundedFactsBlock(preFacts);
 
