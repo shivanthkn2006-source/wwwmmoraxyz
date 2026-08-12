@@ -20,6 +20,7 @@ import {
   runGeminiToolLoop,
   runOpenAIToolLoop,
   precomputeGroundedFacts,
+  precomputeCharacterFacts,
   groundedFactsBlock,
   stripScratchpad,
   extractScratchpad,
