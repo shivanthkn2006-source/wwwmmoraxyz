@@ -8,6 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   MemoryService,
   normaliseAtoms,
+  extractPersonaText,
   type MemoryAtom,
   type PersonaPayload,
 } from '@/services/memoryService';
@@ -27,7 +28,7 @@ export const MemoryDashboard = ({ userId, refreshToken = 0 }: MemoryDashboardPro
 
   const loadPersona = useCallback(async () => {
     setLoadingPersona(true);
-    const res = await MemoryService.getPersona(userId);
+    const res = await MemoryService.getPersona();
     if (res.success) {
       setPersona(res.data ?? null);
       setError(null);
@@ -35,32 +36,27 @@ export const MemoryDashboard = ({ userId, refreshToken = 0 }: MemoryDashboardPro
       setError(res.error ?? 'Failed to load persona');
     }
     setLoadingPersona(false);
-  }, [userId]);
+  }, []);
 
-  const loadAtoms = useCallback(
-    async (q: string) => {
-      setLoadingAtoms(true);
-      const res = await MemoryService.queryFacts(userId, q || '*', 10);
-      if (res.success) {
-        setAtoms(normaliseAtoms(res.data));
-        setError(null);
-      } else {
-        setError(res.error ?? 'Failed to load memory atoms');
-      }
-      setLoadingAtoms(false);
-    },
-    [userId]
-  );
+  const loadAtoms = useCallback(async (q: string) => {
+    setLoadingAtoms(true);
+    const res = await MemoryService.searchMemories(q || '*', 10);
+    if (res.success) {
+      setAtoms(normaliseAtoms(res.data));
+      setError(null);
+    } else {
+      setError(res.error ?? 'Failed to load memory atoms');
+    }
+    setLoadingAtoms(false);
+  }, []);
 
   useEffect(() => {
     loadPersona();
     loadAtoms('');
-  }, [loadPersona, loadAtoms, refreshToken]);
+  }, [loadPersona, loadAtoms, refreshToken, userId]);
 
-  const personaText =
-    persona?.persona ||
-    persona?.summary ||
-    (persona ? JSON.stringify(persona, null, 2) : '');
+  const personaText = extractPersonaText(persona);
+
 
   return (
     <div className="flex flex-col gap-4">
