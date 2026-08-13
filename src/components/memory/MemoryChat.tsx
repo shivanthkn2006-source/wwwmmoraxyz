@@ -10,49 +10,27 @@ import { supabase } from '@/integrations/supabase/client';
 import {
   MemoryService,
   normaliseAtoms,
-  type MemoryAtom,
-  type PersonaPayload,
+  extractPersonaText,
 } from '@/services/memoryService';
 
 export interface MemoryChatTurn {
   id: string;
   role: 'user' | 'assistant';
   content: string;
-  /** null = pending, true = written to L0, false = gateway unavailable */
+  /** null = pending, true = round written to L0, false = gateway unavailable */
   saved: boolean | null;
 }
+
+export type GatewayResult = 'online' | 'offline' | 'unauthorized';
 
 interface MemoryChatProps {
   userId: string;
   sessionId: string;
-  /** Called with true/false after each gateway write so the page can show status. */
-  onGatewayResult?: (online: boolean) => void;
+  /** Reports gateway reachability after each write so the page can show status. */
+  onGatewayResult?: (result: GatewayResult) => void;
   /** Called after a successful L0 write so the dashboard can refresh. */
   onStored?: () => void;
 }
-
-const buildMemoryContext = (
-  persona: PersonaPayload | null,
-  atoms: MemoryAtom[]
-): string => {
-  const parts: string[] = [];
-  if (persona) {
-    const summary =
-      persona.persona ||
-      persona.summary ||
-      (Array.isArray(persona.traits) ? persona.traits.join(', ') : '');
-    if (summary) parts.push(`Known persona: ${summary}`);
-  }
-  if (atoms.length) {
-    parts.push(
-      `Relevant remembered facts:\n${atoms
-        .slice(0, 5)
-        .map((a) => `- ${a.content}`)
-        .join('\n')}`
-    );
-  }
-  return parts.join('\n\n');
-};
 
 export const MemoryChat = ({
   userId,
@@ -71,18 +49,50 @@ export const MemoryChat = ({
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [turns, sending]);
 
-  const markSaved = (id: string, saved: boolean) =>
-    setTurns((prev) => prev.map((t) => (t.id === id ? { ...t, saved } : t)));
+  // Flush the session on unmount so the gateway runs L1 -> L3 distillation.
+  useEffect(() => {
+    return () => {
+      void MemoryService.endSession(sessionId, userId);
+    };
+  }, [sessionId, userId]);
 
-  const storeTurn = async (
-    id: string,
-    role: 'user' | 'assistant',
-    content: string
-  ) => {
-    const res = await MemoryService.saveConversation(sessionId, role, content, userId);
-    markSaved(id, res.success);
-    onGatewayResult?.(res.success);
-    if (res.success) onStored?.();
+  const markSaved = (ids: string[], saved: boolean) =>
+    setTurns((prev) =>
+      prev.map((t) => (ids.includes(t.id) ? { ...t, saved } : t))
+    );
+
+  /** Pull grounding context: /recall first, /search/memories as fallback. */
+  const loadMemoryContext = async (query: string): Promise<string> => {
+    try {
+      const recalled = await MemoryService.recall(query, sessionId, userId);
+      const context = recalled.success ? recalled.data?.context?.trim() : '';
+      if (context) return context;
+
+      const [factsRes, personaRes] = await Promise.all([
+        MemoryService.searchMemories(query, 5),
+        MemoryService.getPersona(),
+      ]);
+
+      const parts: string[] = [];
+      if (personaRes.success) {
+        const persona = extractPersonaText(personaRes.data ?? null);
+        if (persona) parts.push(`Known persona: ${persona}`);
+      }
+      if (factsRes.success) {
+        const atoms = normaliseAtoms(factsRes.data);
+        if (atoms.length) {
+          parts.push(
+            `Relevant remembered facts:\n${atoms
+              .slice(0, 5)
+              .map((a) => `- ${a.content}`)
+              .join('\n')}`
+          );
+        }
+      }
+      return parts.join('\n\n');
+    } catch {
+      return '';
+    }
   };
 
   const runTurn = async (content: string) => {
@@ -90,31 +100,14 @@ export const MemoryChat = ({
     setReplyError(null);
     setLastPrompt(content);
 
-    const userId_ = `${Date.now()}-u`;
+    const userTurnId = `${Date.now()}-u`;
     setTurns((prev) => [
       ...prev,
-      { id: userId_, role: 'user', content, saved: null },
+      { id: userTurnId, role: 'user', content, saved: null },
     ]);
 
-    // 1. Write the user turn to L0 (never blocks the reply).
-    void storeTurn(userId_, 'user', content);
+    const memoryContext = await loadMemoryContext(content);
 
-    // 2. Pull grounding context from L1/L2 + L3 (degrades silently when offline).
-    let memoryContext = '';
-    try {
-      const [factsRes, personaRes] = await Promise.all([
-        MemoryService.queryFacts(userId, content, 5),
-        MemoryService.getPersona(userId),
-      ]);
-      memoryContext = buildMemoryContext(
-        personaRes.success ? personaRes.data ?? null : null,
-        factsRes.success ? normaliseAtoms(factsRes.data) : []
-      );
-    } catch {
-      memoryContext = '';
-    }
-
-    // 3. Ask Zoe, grounded on the retrieved memory.
     try {
       const history = turns.map((t) => ({ role: t.role, content: t.content }));
       const messages = [
@@ -146,13 +139,28 @@ export const MemoryChat = ({
       const reply: string =
         data?.message || data?.response || "I'm here — say that again?";
 
-      const assistantId = `${Date.now()}-a`;
+      const assistantTurnId = `${Date.now()}-a`;
       setTurns((prev) => [
         ...prev,
-        { id: assistantId, role: 'assistant', content: reply, saved: null },
+        { id: assistantTurnId, role: 'assistant', content: reply, saved: null },
       ]);
-      void storeTurn(assistantId, 'assistant', reply);
+
+      // One /capture per completed round (user + assistant together).
+      void (async () => {
+        const res = await MemoryService.captureRound(
+          sessionId,
+          content,
+          reply,
+          userId
+        );
+        markSaved([userTurnId, assistantTurnId], res.success);
+        onGatewayResult?.(
+          res.success ? 'online' : res.unauthorized ? 'unauthorized' : 'offline'
+        );
+        if (res.success) onStored?.();
+      })();
     } catch (err) {
+      markSaved([userTurnId], false);
       setReplyError(
         err instanceof Error ? err.message : 'Zoe could not answer right now.'
       );
@@ -178,8 +186,8 @@ export const MemoryChat = ({
         <ScrollArea className="h-[460px] pr-3">
           {turns.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              Every turn here is written to the L0 tier and distilled by the gateway into
-              facts, scenarios and a persona you can watch build up on the right.
+              Each completed round is written to the L0 tier and distilled by the gateway
+              into facts, scenarios and a persona you can watch build up on the right.
             </p>
           ) : (
             <ul className="space-y-3">
