@@ -1,12 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Loader2, Send, Settings2, Plug, CheckCircle2, XCircle } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Loader2, Settings2, Plug, CheckCircle2, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/lib/auth';
 import { MemoryDashboard } from '@/components/memory/MemoryDashboard';
+import { MemoryChat } from '@/components/memory/MemoryChat';
 import {
   MemoryService,
   getGatewayUrl,
@@ -14,36 +14,40 @@ import {
   DEFAULT_GATEWAY_URL,
 } from '@/services/memoryService';
 
-interface ChatTurn {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  saved: boolean | null;
-}
-
 type GatewayState = 'unknown' | 'online' | 'offline' | 'checking';
+
+const GUEST_KEY = 'mmora.memoryGateway.guestId';
+
+const resolveGuestId = (): string => {
+  try {
+    const existing = localStorage.getItem(GUEST_KEY);
+    if (existing) return existing;
+    const fresh = `guest-${Math.random().toString(36).slice(2, 10)}`;
+    localStorage.setItem(GUEST_KEY, fresh);
+    return fresh;
+  } catch {
+    return 'guest';
+  }
+};
 
 const AgentMemoryPage = () => {
   const { user } = useAuth();
-  const userId = user?.id ?? 'guest';
+  const userId = useMemo(() => user?.id ?? resolveGuestId(), [user?.id]);
   const sessionId = useMemo(
     () => `session-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
     []
   );
 
-  const [turns, setTurns] = useState<ChatTurn[]>([]);
-  const [draft, setDraft] = useState('');
-  const [sending, setSending] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [baseUrl, setBaseUrl] = useState(getGatewayUrl());
   const [status, setStatus] = useState<GatewayState>('unknown');
   const [refreshToken, setRefreshToken] = useState(0);
-  const endRef = useRef<HTMLDivElement>(null);
 
   const checkGateway = async () => {
     setStatus('checking');
     const res = await MemoryService.ping();
     setStatus(res.success ? 'online' : 'offline');
+    return res.success;
   };
 
   useEffect(() => {
@@ -51,33 +55,13 @@ const AgentMemoryPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Light poll only while the gateway is reachable, so an offline gateway
+  // never generates a stream of failing requests.
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [turns]);
-
-  const handleSend = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const content = draft.trim();
-    if (!content || sending) return;
-
-    const turn: ChatTurn = {
-      id: `${Date.now()}`,
-      role: 'user',
-      content,
-      saved: null,
-    };
-    setTurns((prev) => [...prev, turn]);
-    setDraft('');
-    setSending(true);
-
-    const res = await MemoryService.saveConversation(sessionId, 'user', content, userId);
-    setTurns((prev) =>
-      prev.map((t) => (t.id === turn.id ? { ...t, saved: res.success } : t))
-    );
-    setStatus(res.success ? 'online' : 'offline');
-    setSending(false);
-    if (res.success) setRefreshToken((n) => n + 1);
-  };
+    if (status !== 'online') return;
+    const id = window.setInterval(() => setRefreshToken((n) => n + 1), 15000);
+    return () => window.clearInterval(id);
+  }, [status]);
 
   const saveSettings = () => {
     setGatewayUrl(baseUrl || DEFAULT_GATEWAY_URL);
@@ -86,6 +70,7 @@ const AgentMemoryPage = () => {
     checkGateway();
     setRefreshToken((n) => n + 1);
   };
+
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-6">
