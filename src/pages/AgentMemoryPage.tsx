@@ -136,56 +136,21 @@ const AgentMemoryPage = () => {
         </Card>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card className="flex flex-col">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Conversation (L0 ingest)</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-1 flex-col gap-3">
-            <ScrollArea className="h-[380px] pr-3">
-              {turns.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  Messages sent here are written straight to the L0 tier and distilled by the gateway.
-                </p>
-              ) : (
-                <ul className="space-y-2">
-                  {turns.map((t) => (
-                    <li key={t.id} className="rounded-md border border-border bg-muted/40 p-2 text-sm">
-                      <div className="mb-1 flex items-center gap-2">
-                        <Badge variant="secondary" className="text-[10px] uppercase">
-                          {t.role}
-                        </Badge>
-                        {t.saved === true && (
-                          <span className="text-[10px] text-muted-foreground">stored</span>
-                        )}
-                        {t.saved === false && (
-                          <span className="text-[10px] text-destructive">not stored</span>
-                        )}
-                      </div>
-                      <p className="break-words">{t.content}</p>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <div ref={endRef} />
-            </ScrollArea>
+      <div className="grid gap-6 lg:grid-cols-5">
+        <div className="lg:col-span-3">
+          <MemoryChat
+            userId={userId}
+            sessionId={sessionId}
+            onGatewayResult={(online) => setStatus(online ? 'online' : 'offline')}
+            onStored={() => setRefreshToken((n) => n + 1)}
+          />
+        </div>
 
-            <form className="flex gap-2" onSubmit={handleSend}>
-              <Input
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                placeholder="Say something to remember…"
-                aria-label="Message to store in memory"
-              />
-              <Button type="submit" size="icon" disabled={sending || !draft.trim()}>
-                {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-
-        <MemoryDashboard userId={userId} refreshToken={refreshToken} />
+        <div className="lg:col-span-2">
+          <MemoryDashboard userId={userId} refreshToken={refreshToken} />
+        </div>
       </div>
+
     </main>
   );
 };
