@@ -70,6 +70,7 @@ const ZoeNexusPage = lazy(() => import("./pages/ZoeNexusPage"));
 const PhoenixCorePage = lazy(() => import("./pages/PhoenixCorePage"));
 const VitruvianPage = lazy(() => import("./pages/VitruvianPage"));
 const OrbitalCommandPage = lazy(() => import("./pages/OrbitalCommandPage"));
+const AgentMemoryPage = lazy(() => import("./pages/AgentMemoryPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const ExodusProtocolPage = lazy(() => import("./components/exodus/ExodusProtocolPage"));
 const ExodusMap = lazy(() => import("./components/exodus/ExodusMap"));
@@ -430,6 +431,7 @@ const RouteAwareShell = () => {
               <Route path="/ear-link-blueprint" element={<EarLinkBlueprintPage />} />
               <Route path="/platform-audit" element={<PlatformAuditPage />} />
               <Route path="/root-scan" element={<RootScanPage />} />
+              <Route path="/agent-memory" element={<AgentMemoryPage />} />
               <Route path="/vr-audit" element={<VRWorldAuditPage />} />
               <Route path="/install" element={<InstallAppPage />} />
               <Route path="/" element={<RootRedirect />} />
