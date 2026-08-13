@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Loader2, Settings2, Plug, CheckCircle2, XCircle } from 'lucide-react';
+import { Loader2, Settings2, Plug, CheckCircle2, XCircle, KeyRound } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/lib/auth';
@@ -11,10 +12,14 @@ import {
   MemoryService,
   getGatewayUrl,
   setGatewayUrl,
+  getGatewayApiKey,
+  setGatewayApiKey,
+  getGatewayServiceId,
+  setGatewayServiceId,
   DEFAULT_GATEWAY_URL,
 } from '@/services/memoryService';
 
-type GatewayState = 'unknown' | 'online' | 'offline' | 'checking';
+type GatewayState = 'unknown' | 'online' | 'offline' | 'checking' | 'unauthorized';
 
 const GUEST_KEY = 'mmora.memoryGateway.guestId';
 
@@ -30,6 +35,14 @@ const resolveGuestId = (): string => {
   }
 };
 
+const STATUS_LABEL: Record<GatewayState, string> = {
+  unknown: 'Gateway offline',
+  online: 'Gateway online',
+  offline: 'Gateway offline',
+  checking: 'Checking…',
+  unauthorized: 'Auth required',
+};
+
 const AgentMemoryPage = () => {
   const { user } = useAuth();
   const userId = useMemo(() => user?.id ?? resolveGuestId(), [user?.id]);
@@ -40,13 +53,15 @@ const AgentMemoryPage = () => {
 
   const [showSettings, setShowSettings] = useState(false);
   const [baseUrl, setBaseUrl] = useState(getGatewayUrl());
+  const [apiKey, setApiKey] = useState(getGatewayApiKey());
+  const [serviceId, setServiceId] = useState(getGatewayServiceId());
   const [status, setStatus] = useState<GatewayState>('unknown');
   const [refreshToken, setRefreshToken] = useState(0);
 
   const checkGateway = async () => {
     setStatus('checking');
     const res = await MemoryService.ping();
-    setStatus(res.success ? 'online' : 'offline');
+    setStatus(res.success ? 'online' : res.unauthorized ? 'unauthorized' : 'offline');
     return res.success;
   };
 
@@ -65,12 +80,13 @@ const AgentMemoryPage = () => {
 
   const saveSettings = () => {
     setGatewayUrl(baseUrl || DEFAULT_GATEWAY_URL);
+    setGatewayApiKey(apiKey);
+    setGatewayServiceId(serviceId);
     setBaseUrl(getGatewayUrl());
     setShowSettings(false);
     checkGateway();
     setRefreshToken((n) => n + 1);
   };
-
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-6">
@@ -83,17 +99,25 @@ const AgentMemoryPage = () => {
         </div>
         <div className="flex items-center gap-2">
           <Badge
-            variant={status === 'online' ? 'default' : status === 'offline' ? 'destructive' : 'secondary'}
+            variant={
+              status === 'online'
+                ? 'default'
+                : status === 'checking' || status === 'unauthorized'
+                  ? 'secondary'
+                  : 'destructive'
+            }
             className="gap-1"
           >
             {status === 'checking' ? (
               <Loader2 className="h-3 w-3 animate-spin" />
             ) : status === 'online' ? (
               <CheckCircle2 className="h-3 w-3" />
+            ) : status === 'unauthorized' ? (
+              <KeyRound className="h-3 w-3" />
             ) : (
               <XCircle className="h-3 w-3" />
             )}
-            {status === 'online' ? 'Gateway online' : status === 'checking' ? 'Checking…' : 'Gateway offline'}
+            {STATUS_LABEL[status]}
           </Badge>
           <Button variant="outline" size="sm" onClick={() => setShowSettings((s) => !s)}>
             <Settings2 className="mr-1 h-4 w-4" />
@@ -107,34 +131,75 @@ const AgentMemoryPage = () => {
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-base">
               <Plug className="h-4 w-4" />
-              Gateway endpoint
+              Gateway connection
             </CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-wrap items-center gap-2">
-            <Input
-              value={baseUrl}
-              onChange={(e) => setBaseUrl(e.target.value)}
-              placeholder={DEFAULT_GATEWAY_URL}
-              className="max-w-md"
-              aria-label="Memory gateway base URL"
-            />
-            <Button onClick={saveSettings}>Save</Button>
-            <Button
-              variant="ghost"
-              onClick={() => {
-                setBaseUrl(DEFAULT_GATEWAY_URL);
-                setGatewayUrl(DEFAULT_GATEWAY_URL);
-                checkGateway();
-              }}
-            >
-              Reset to local
-            </Button>
-            <p className="w-full text-xs text-muted-foreground">
-              Run locally: <code>docker run -p 8420:8420 tencentcloud/tencentdb-agent-memory:latest</code>
-            </p>
+          <CardContent className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="space-y-1">
+                <Label htmlFor="gw-url" className="text-xs">Base URL</Label>
+                <Input
+                  id="gw-url"
+                  value={baseUrl}
+                  onChange={(e) => setBaseUrl(e.target.value)}
+                  placeholder={DEFAULT_GATEWAY_URL}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="gw-key" className="text-xs">API key (TDAI_GATEWAY_API_KEY)</Label>
+                <Input
+                  id="gw-key"
+                  type="password"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder="leave empty if auth is disabled"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="gw-sid" className="text-xs">Service id (x-tdai-service-id)</Label>
+                <Input
+                  id="gw-sid"
+                  value={serviceId}
+                  onChange={(e) => setServiceId(e.target.value)}
+                  placeholder="memory instance id"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <Button onClick={saveSettings}>Save &amp; test</Button>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setBaseUrl(DEFAULT_GATEWAY_URL);
+                  setGatewayUrl(DEFAULT_GATEWAY_URL);
+                  checkGateway();
+                }}
+              >
+                Reset to local
+              </Button>
+            </div>
+
+            <div className="rounded-md border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
+              <p className="mb-1 font-medium text-foreground">Run the gateway locally</p>
+              <pre className="whitespace-pre-wrap break-words font-mono text-[11px]">
+{`git clone https://github.com/TencentCloud/TencentDB-Agent-Memory
+cd TencentDB-Agent-Memory/MemoryCore && docker build -t memory-core:local .
+docker run -p 8420:8420 -e TDAI_GATEWAY_HOST=0.0.0.0 \\
+  -e TDAI_LLM_API_KEY=... -e TDAI_LLM_BASE_URL=... -e TDAI_LLM_MODEL=... \\
+  -e TDAI_GATEWAY_API_KEY=... \\
+  -v ./tdai-gateway.yaml:/data/config/tdai-gateway.yaml:ro memory-core:local`}
+              </pre>
+              <p className="mt-2">
+                Set <code>server.corsOrigins</code> in <code>tdai-gateway.yaml</code> to include this
+                origin, otherwise the browser blocks every call. Local development only —
+                <code> localhost:8420</code> is unreachable from the published https site.
+              </p>
+            </div>
           </CardContent>
         </Card>
       )}
+
 
       <div className="grid gap-6 lg:grid-cols-5">
         <div className="lg:col-span-3">
