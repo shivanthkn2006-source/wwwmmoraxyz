@@ -206,9 +206,10 @@ docker run -p 8420:8420 -e TDAI_GATEWAY_HOST=0.0.0.0 \\
           <MemoryChat
             userId={userId}
             sessionId={sessionId}
-            onGatewayResult={(online) => setStatus(online ? 'online' : 'offline')}
+            onGatewayResult={(result) => setStatus(result)}
             onStored={() => setRefreshToken((n) => n + 1)}
           />
+
         </div>
 
         <div className="lg:col-span-2">
