@@ -181,6 +181,32 @@ const AgentMemoryPage = () => {
             </div>
 
             <div className="rounded-md border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
+              <p className="mb-1 font-medium text-foreground">This browser origin must be allow-listed</p>
+              <pre className="whitespace-pre-wrap break-words font-mono text-[11px]">
+{`server:
+  host: 0.0.0.0
+  port: 8420
+  corsOrigins:
+    - "${typeof window !== 'undefined' ? window.location.origin : 'http://localhost:8080'}"`}
+              </pre>
+              <p className="mt-2">
+                You are viewing this page from{' '}
+                <code>{typeof window !== 'undefined' ? window.location.origin : ''}</code>. The
+                gateway only accepts origins listed in <code>server.corsOrigins</code> — add the one
+                above to <code>tdai-gateway.yaml</code> and restart the container.
+                {typeof window !== 'undefined' &&
+                  window.location.protocol === 'https:' &&
+                  baseUrl.startsWith('http://') && (
+                    <>
+                      {' '}Also note this page is served over <strong>https</strong>: Safari and
+                      Firefox block plain <code>http://localhost</code> calls entirely. Open the app
+                      over <code>http://localhost:8080</code> (or use Chrome) to test the gateway.
+                    </>
+                  )}
+              </p>
+            </div>
+
+            <div className="rounded-md border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
               <p className="mb-1 font-medium text-foreground">Run the gateway locally</p>
               <pre className="whitespace-pre-wrap break-words font-mono text-[11px]">
 {`git clone https://github.com/TencentCloud/TencentDB-Agent-Memory
@@ -190,12 +216,8 @@ docker run -p 8420:8420 -e TDAI_GATEWAY_HOST=0.0.0.0 \\
   -e TDAI_GATEWAY_API_KEY=... \\
   -v ./tdai-gateway.yaml:/data/config/tdai-gateway.yaml:ro memory-core:local`}
               </pre>
-              <p className="mt-2">
-                Set <code>server.corsOrigins</code> in <code>tdai-gateway.yaml</code> to include this
-                origin, otherwise the browser blocks every call. Local development only —
-                <code> localhost:8420</code> is unreachable from the published https site.
-              </p>
             </div>
+
           </CardContent>
         </Card>
       )}
