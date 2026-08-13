@@ -397,6 +397,7 @@ const RouteAwareShell = () => {
     pathname.startsWith('/ear-link-blueprint') ||
     pathname.startsWith('/platform-audit') ||
     pathname.startsWith('/root-scan') ||
+    pathname.startsWith('/agent-memory') ||
     pathname.startsWith('/vr-audit') ||
     pathname.startsWith('/install');
 
