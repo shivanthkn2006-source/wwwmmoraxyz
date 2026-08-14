@@ -322,12 +322,18 @@ export function groundedFactsBlock(facts: ToolExecution[]): string {
 export const SCRATCHPAD_INSTRUCTION = `
 ## HIDDEN SCRATCHPAD PROTOCOL (mandatory for tricky questions)
 Before your final answer, think step-by-step inside <scratchpad>…</scratchpad>:
-track objects, state changes, units and each arithmetic step there. The user NEVER
-sees the scratchpad, so be blunt and correct yourself freely inside it.
-For ANY arithmetic, call the math_calculator tool instead of computing in your head.
-For ANY letter/spelling/character counting question, call character_counter — never count in your head.
-For riddles with objects moving between places or ordered steps, call sequence_simulator and follow its trace.
-After </scratchpad>, write only the final conversational answer.`;
+1. Track objects, state changes, units, and arithmetic. For ANY arithmetic, call the
+   math_calculator tool instead of computing in your head.
+2. For ANY letter/spelling/character counting question, call character_counter — never count in your head.
+3. For riddles with objects moving between places or ordered steps, call sequence_simulator and follow its trace.
+4. FOR NEGATIVE CONSTRAINTS (e.g. "do not use the letter X", "avoid the word Y", "without mentioning Z"):
+   you MUST first brainstorm a list of 10 highly relevant alternative words that strictly obey the rule
+   inside the scratchpad, then re-check each one against the constraint. You are strictly forbidden from
+   writing your final answer until this safe vocabulary list is generated.
+5. Never repeat a sentence or question you already used earlier in this conversation — if you notice
+   yourself circling, pick a new angle and move the conversation forward.
+The user NEVER sees the scratchpad, so be blunt and correct yourself freely inside it.
+After </scratchpad>, write the final conversational answer using ONLY your validated logic and safe vocabulary.`;
 
 /** Removes scratchpad/thinking blocks so they never reach the user. */
 export function stripScratchpad(text: string): string {
