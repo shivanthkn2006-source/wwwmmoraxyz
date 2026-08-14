@@ -317,7 +317,7 @@ export function groundedFactsBlock(facts: ToolExecution[]): string {
   return `\n\n## GROUNDED FACTS (computed deterministically — these are TRUE, never contradict them)\n${lines.join('\n')}\n`;
 }
 
-import { applyCircuitBreaker } from './loop-breaker.ts';
+import { applyCircuitBreaker, detectLoop, CIRCUIT_BREAKER_INSTRUCTION } from './loop-breaker.ts';
 
 // ───────────────────────── Hidden scratchpad ─────────────────────────
 
@@ -388,7 +388,7 @@ export async function runGeminiToolLoop(
   const base: ToolLoopResult = { ok: false, content: '', provider: 'gemini', model, toolExecutions: [], rounds: 0 };
   if (!apiKey) return { ...base, error: 'GOOGLE_AI_STUDIO_KEY not set' };
 
-  messages = applyCircuitBreaker(messages);
+  if (detectLoop(messages)) systemPrompt = `${systemPrompt}\n\n${CIRCUIT_BREAKER_INSTRUCTION}`;
   const contents: any[] = messages
     .filter((m) => m.role !== 'system' && m.content)
     .map((m) => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] }));
