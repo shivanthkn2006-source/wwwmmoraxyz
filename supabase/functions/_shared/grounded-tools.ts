@@ -317,17 +317,25 @@ export function groundedFactsBlock(facts: ToolExecution[]): string {
   return `\n\n## GROUNDED FACTS (computed deterministically — these are TRUE, never contradict them)\n${lines.join('\n')}\n`;
 }
 
+import { applyCircuitBreaker, detectLoop, CIRCUIT_BREAKER_INSTRUCTION } from './loop-breaker.ts';
+
 // ───────────────────────── Hidden scratchpad ─────────────────────────
 
 export const SCRATCHPAD_INSTRUCTION = `
 ## HIDDEN SCRATCHPAD PROTOCOL (mandatory for tricky questions)
 Before your final answer, think step-by-step inside <scratchpad>…</scratchpad>:
-track objects, state changes, units and each arithmetic step there. The user NEVER
-sees the scratchpad, so be blunt and correct yourself freely inside it.
-For ANY arithmetic, call the math_calculator tool instead of computing in your head.
-For ANY letter/spelling/character counting question, call character_counter — never count in your head.
-For riddles with objects moving between places or ordered steps, call sequence_simulator and follow its trace.
-After </scratchpad>, write only the final conversational answer.`;
+1. Track objects, state changes, units, and arithmetic. For ANY arithmetic, call the
+   math_calculator tool instead of computing in your head.
+2. For ANY letter/spelling/character counting question, call character_counter — never count in your head.
+3. For riddles with objects moving between places or ordered steps, call sequence_simulator and follow its trace.
+4. FOR NEGATIVE CONSTRAINTS (e.g. "do not use the letter X", "avoid the word Y", "without mentioning Z"):
+   you MUST first brainstorm a list of 10 highly relevant alternative words that strictly obey the rule
+   inside the scratchpad, then re-check each one against the constraint. You are strictly forbidden from
+   writing your final answer until this safe vocabulary list is generated.
+5. Never repeat a sentence or question you already used earlier in this conversation — if you notice
+   yourself circling, pick a new angle and move the conversation forward.
+The user NEVER sees the scratchpad, so be blunt and correct yourself freely inside it.
+After </scratchpad>, write the final conversational answer using ONLY your validated logic and safe vocabulary.`;
 
 /** Removes scratchpad/thinking blocks so they never reach the user. */
 export function stripScratchpad(text: string): string {
@@ -380,6 +388,7 @@ export async function runGeminiToolLoop(
   const base: ToolLoopResult = { ok: false, content: '', provider: 'gemini', model, toolExecutions: [], rounds: 0 };
   if (!apiKey) return { ...base, error: 'GOOGLE_AI_STUDIO_KEY not set' };
 
+  if (detectLoop(messages)) systemPrompt = `${systemPrompt}\n\n${CIRCUIT_BREAKER_INSTRUCTION}`;
   const contents: any[] = messages
     .filter((m) => m.role !== 'system' && m.content)
     .map((m) => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] }));
@@ -459,6 +468,7 @@ export async function runOpenAIToolLoop(
   const base: ToolLoopResult = { ok: false, content: '', provider: provider ?? 'none', model, toolExecutions: [], rounds: 0 };
   if (!provider) return { ...base, error: 'no tool-capable key (GROQ_API_KEY / OPENROUTER_API_KEY)' };
 
+  messages = applyCircuitBreaker(messages);
   const convo: any[] = [
     { role: 'system', content: systemPrompt },
     ...messages.filter((m) => m.role !== 'system' && m.content).map((m) => ({ role: m.role, content: m.content })),
