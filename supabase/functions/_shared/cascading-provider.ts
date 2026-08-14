@@ -127,8 +127,8 @@ async function callGemmaPrimary(messages: Message[], opts: CascadeOptions): Prom
 }
 
 async function callGemini(messages: Message[], opts: CascadeOptions): Promise<ProviderOutcome> {
-  const apiKey = Deno.env.get('GOOGLE_AI_STUDIO_KEY');
-  if (!apiKey) return { content: null, status: null, reasonCode: 'missing_key', reasonText: 'GOOGLE_AI_STUDIO_KEY not set' };
+  const apiKey = Deno.env.get('GOOGLE_AI_STUDIO_KEY') || Deno.env.get('GEMINI_API_KEY');
+  if (!apiKey) return { content: null, status: null, reasonCode: 'missing_key', reasonText: 'GOOGLE_AI_STUDIO_KEY / GEMINI_API_KEY not set' };
   try {
     const geminiMessages = messages
       .filter(m => m.role !== 'system')
@@ -140,7 +140,7 @@ async function callGemini(messages: Message[], opts: CascadeOptions): Promise<Pr
     };
     if (systemMsg) body.systemInstruction = { parts: [{ text: systemMsg }] };
     const resp = await withTimeout(fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
       { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) },
     ), opts.timeoutMs ?? 25_000);
     if (!resp.ok) {
@@ -200,7 +200,7 @@ async function callOpenRouter(messages: Message[], opts: CascadeOptions): Promis
         'X-Title': 'Zoe Infinity',
       },
       body: JSON.stringify({
-        model: 'meta-llama/llama-3.3-70b-instruct:free',
+        model: 'openrouter/auto',
         messages,
         max_tokens: opts.maxTokens ?? 500,
         temperature: opts.temperature ?? 0.7,
@@ -240,9 +240,9 @@ export function getDefaultTiers(_mode: CascadeMode = 'default', _lovableModel?: 
   // Lovable Gateway (T5) REMOVED — sovereign free-provider cascade only.
   return [
     { tier: 1, name: 'T1 · Groq Llama-3.1-8B (primary)', provider: 'groq',     model: 'llama-3.1-8b-instant',               envKey: 'GROQ_API_KEY',           call: callGemmaPrimary },
-    { tier: 2, name: 'T2 · Gemini 2.0 Flash',            provider: 'gemini',   model: 'gemini-2.0-flash',                   envKey: 'GOOGLE_AI_STUDIO_KEY',   call: callGemini },
+    { tier: 2, name: 'T2 · Gemini 2.5 Flash',            provider: 'gemini',   model: 'gemini-2.5-flash',                   envKey: 'GOOGLE_AI_STUDIO_KEY',   call: callGemini },
     { tier: 3, name: 'T3 · Llama-3.3-70B (Groq)',        provider: 'groq',     model: 'llama-3.3-70b-versatile',            envKey: 'GROQ_API_KEY',           call: callGroqLlama },
-    { tier: 4, name: 'T4 · Llama-3.3-70B (OpenRouter)',  provider: 'openrouter', model: 'meta-llama/llama-3.3-70b-instruct:free', envKey: 'OPENROUTER_API_KEY',   call: callOpenRouter },
+    { tier: 4, name: 'T4 · OpenRouter Auto',             provider: 'openrouter', model: 'openrouter/auto',                        envKey: 'OPENROUTER_API_KEY',   call: callOpenRouter },
   ];
 }
 
