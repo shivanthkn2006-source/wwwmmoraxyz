@@ -733,7 +733,9 @@ ${cortexPromptAddition}`;
       ...messages.map(m => ({ ...m, content: truncateMessageIfNeeded(m.content) })),
     ];
     
-    const cascadeResult = await cascadeInfer(cascadeMessages, { maxTokens: 1500, temperature: 0.7, mode: 't1-primary' });
+    // Keep enough TPM headroom for Groq's free tier; the system context is already
+    // large, so a 1500-token completion could rate-limit both Groq tiers at once.
+    const cascadeResult = await cascadeInfer(cascadeMessages, { maxTokens: 800, temperature: 0.7, mode: 't1-primary' });
     
     if (!cascadeResult.success) {
       console.error('All providers failed', JSON.stringify(cascadeResult.attempts));
@@ -838,7 +840,12 @@ ${cortexPromptAddition}`;
           totalMs: Math.round(totalLatencyMs),
           targetMs: targetLatency,
           slaMet: totalLatencyMs <= targetLatency
-        }
+        },
+        provider: {
+          name: cascadeResult.selectedProvider,
+          model: cascadeResult.selectedModel,
+          tier: cascadeResult.selectedTier,
+        },
       }),
       {
         headers: {
