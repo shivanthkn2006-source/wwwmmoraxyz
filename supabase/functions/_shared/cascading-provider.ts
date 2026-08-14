@@ -17,6 +17,8 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  */
 
+import { applyCircuitBreaker } from './loop-breaker.ts';
+
 export type CascadeMode = 'default' | 't1-primary';
 
 export type CascadeReason =
@@ -269,7 +271,9 @@ export async function cascadeInferFast(
   return runCascade(base, messages, opts);
 }
 
-async function runCascade(tiers: TierSpec[], messages: Message[], opts: CascadeOptions): Promise<CascadeResult> {
+async function runCascade(tiers: TierSpec[], rawMessages: Message[], opts: CascadeOptions): Promise<CascadeResult> {
+  // Context-anchoring circuit breaker: hidden override when the model loops.
+  const messages = applyCircuitBreaker(rawMessages as any) as Message[];
   const attempts: AttemptLog[] = [];
   for (const t of tiers) {
     const t0 = Date.now();

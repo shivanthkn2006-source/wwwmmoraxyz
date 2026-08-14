@@ -317,6 +317,8 @@ export function groundedFactsBlock(facts: ToolExecution[]): string {
   return `\n\n## GROUNDED FACTS (computed deterministically — these are TRUE, never contradict them)\n${lines.join('\n')}\n`;
 }
 
+import { applyCircuitBreaker } from './loop-breaker.ts';
+
 // ───────────────────────── Hidden scratchpad ─────────────────────────
 
 export const SCRATCHPAD_INSTRUCTION = `
@@ -386,6 +388,7 @@ export async function runGeminiToolLoop(
   const base: ToolLoopResult = { ok: false, content: '', provider: 'gemini', model, toolExecutions: [], rounds: 0 };
   if (!apiKey) return { ...base, error: 'GOOGLE_AI_STUDIO_KEY not set' };
 
+  messages = applyCircuitBreaker(messages);
   const contents: any[] = messages
     .filter((m) => m.role !== 'system' && m.content)
     .map((m) => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] }));
@@ -465,6 +468,7 @@ export async function runOpenAIToolLoop(
   const base: ToolLoopResult = { ok: false, content: '', provider: provider ?? 'none', model, toolExecutions: [], rounds: 0 };
   if (!provider) return { ...base, error: 'no tool-capable key (GROQ_API_KEY / OPENROUTER_API_KEY)' };
 
+  messages = applyCircuitBreaker(messages);
   const convo: any[] = [
     { role: 'system', content: systemPrompt },
     ...messages.filter((m) => m.role !== 'system' && m.content).map((m) => ({ role: m.role, content: m.content })),
