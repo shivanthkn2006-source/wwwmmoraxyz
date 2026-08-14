@@ -123,16 +123,19 @@ const AgentMemoryPage = () => {
       if (!handle) return;
       const file = await handle.getFile();
       const current = await file.text();
-      const originsMatch = current.match(/corsOrigins:\s*\n((?:\s*-\s*[^\n]+\n?)*)/);
-      const existingOrigins = originsMatch?.[1]
+      const originsMatch = current.match(/^(\s*)corsOrigins:\s*\n((?:\s*-\s*[^\n]+\n?)*)/m);
+      const existingOrigins = originsMatch?.[2]
         ?.split('\n')
         .map((line) => line.replace(/^\s*-\s*/, '').replace(/["']/g, '').trim())
         .filter(Boolean) ?? [];
       const nextOrigins = Array.from(new Set([...existingOrigins, browserOrigin]));
-      const originsYaml = `corsOrigins:\n${nextOrigins.map((origin) => `    - "${origin}"`).join('\n')}`;
+      const indent = originsMatch?.[1] ?? '  ';
+      const originsYaml = `${indent}corsOrigins:\n${nextOrigins.map((origin) => `${indent}  - "${origin}"`).join('\n')}`;
       const updated = originsMatch
-        ? current.replace(/corsOrigins:\s*\n(?:\s*-\s*[^\n]+\n?)*/, `${originsYaml}\n`)
-        : `${current.trimEnd()}\nserver:\n  corsOrigins:\n    - "${browserOrigin}"\n`;
+        ? current.replace(/^(\s*)corsOrigins:\s*\n(?:\s*-\s*[^\n]+\n?)*/m, `${originsYaml}\n`)
+        : /^server:\s*$/m.test(current)
+          ? current.replace(/^server:\s*$/m, `server:\n  corsOrigins:\n    - "${browserOrigin}"`)
+          : `${current.trimEnd()}\nserver:\n  corsOrigins:\n    - "${browserOrigin}"\n`;
       const writable = await handle.createWritable();
       await writable.write(updated);
       await writable.close();
