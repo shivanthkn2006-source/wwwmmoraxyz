@@ -736,14 +736,17 @@ ${cortexPromptAddition}`;
     const cascadeResult = await cascadeInfer(cascadeMessages, { maxTokens: 1500, temperature: 0.7, mode: 't1-primary' });
     
     if (!cascadeResult.success) {
-      console.error('All providers failed');
+      console.error('All providers failed', JSON.stringify(cascadeResult.attempts));
       return new Response(
         JSON.stringify({ 
-          message: "I'm experiencing a brief moment of rest right now — my neural pathways are recharging. I'm still here with you though. What's on your mind?",
-          soulUpdates: { intimacyDelta: 1, harmonyDelta: 1, loveEnergyDelta: 1 },
-          isGracefulFallback: true
+          error: 'All configured AI providers failed.',
+          code: 'AI_PROVIDERS_UNAVAILABLE',
+          retryable: true,
+          providerAttempts: cascadeResult.attempts.map(({ tier, provider, model, status, reasonCode }) => ({
+            tier, provider, model, status, reasonCode,
+          })),
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 

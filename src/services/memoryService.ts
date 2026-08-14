@@ -32,6 +32,23 @@ export interface MemoryResponse<T = unknown> {
   error?: string;
   /** true when the gateway answered 401/403 (reachable, but auth is wrong). */
   unauthorized?: boolean;
+  status?: number;
+  failureKind?: 'cors' | 'unauthorized' | 'unreachable' | 'timeout' | 'gateway';
+  browserError?: string;
+}
+
+export interface GatewayDiagnostic {
+  ok: boolean;
+  healthOk: boolean;
+  authOk: boolean;
+  kind: 'online' | 'cors' | 'unauthorized' | 'unreachable' | 'timeout' | 'gateway';
+  origin: string;
+  requestUrl: string;
+  requiredHeaders: string[];
+  summary: string;
+  detail: string;
+  health: MemoryResponse;
+  auth: MemoryResponse;
 }
 
 export interface MemoryAtom {
@@ -145,6 +162,8 @@ async function request<T>(
       const unauthorized = response.status === 401 || response.status === 403;
       return {
         success: false,
+        status: response.status,
+        failureKind: unauthorized ? 'unauthorized' : 'gateway',
         unauthorized,
         error: unauthorized
           ? 'Gateway rejected the credentials — set the API key and service id in Settings.'
@@ -160,8 +179,11 @@ async function request<T>(
     return { success: true, data: json as T };
   } catch (error) {
     const aborted = error instanceof DOMException && error.name === 'AbortError';
+    const browserError = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
     return {
       success: false,
+      failureKind: aborted ? 'timeout' : 'unreachable',
+      browserError,
       error: aborted
         ? `Gateway timed out at ${base}`
         : `Cannot reach the gateway at ${base} — is the container running, and is CORS allow-listed for this origin?`,
@@ -179,6 +201,60 @@ export const MemoryService = {
   /** Health probe. The only route that never requires auth. */
   async ping(): Promise<MemoryResponse> {
     return request('/health', { method: 'GET', skipAuth: true });
+  },
+
+  /** Combined reachability + authenticated data-plane test. */
+  async diagnose(): Promise<GatewayDiagnostic> {
+    const origin = typeof window === 'undefined' ? '' : window.location.origin;
+    const requestUrl = `${getGatewayUrl()}/v2/core/read`;
+    const health = await request('/health', { method: 'GET', skipAuth: true });
+    const auth = await request('/v2/core/read', {
+      method: 'POST',
+      body: JSON.stringify({}),
+    });
+
+    let kind: GatewayDiagnostic['kind'] = 'online';
+    let summary = 'Health and authentication passed.';
+    let detail = 'The browser reached the gateway and the API key was accepted.';
+
+    if (!health.success && !auth.success) {
+      const timedOut = health.failureKind === 'timeout' || auth.failureKind === 'timeout';
+      kind = timedOut ? 'timeout' : 'unreachable';
+      summary = timedOut ? 'Gateway request timed out.' : 'Gateway is unreachable from this browser.';
+      detail = auth.browserError || health.browserError || auth.error || health.error || 'Fetch failed.';
+    } else if (health.success && !auth.success) {
+      if (auth.unauthorized) {
+        kind = 'unauthorized';
+        summary = 'Gateway is healthy, but authentication failed (401/403).';
+        detail = auth.error || 'Check the gateway API key and service id.';
+      } else if (auth.failureKind === 'unreachable') {
+        kind = 'cors';
+        summary = 'Health passed, but the authenticated browser request was blocked by CORS/preflight.';
+        detail = auth.browserError || 'The browser blocked the preflight response.';
+      } else if (auth.failureKind === 'timeout') {
+        kind = 'timeout';
+        summary = 'Health passed, but the authenticated request timed out.';
+        detail = auth.browserError || auth.error || 'Authenticated probe timed out.';
+      } else {
+        kind = 'gateway';
+        summary = `Gateway health passed, but the auth probe failed${auth.status ? ` (${auth.status})` : ''}.`;
+        detail = auth.error || 'The authenticated data-plane route failed.';
+      }
+    }
+
+    return {
+      ok: health.success && auth.success,
+      healthOk: health.success,
+      authOk: auth.success,
+      kind,
+      origin,
+      requestUrl,
+      requiredHeaders: ['authorization', 'content-type', 'x-tdai-service-id'],
+      summary,
+      detail,
+      health,
+      auth,
+    };
   },
 
   /**
