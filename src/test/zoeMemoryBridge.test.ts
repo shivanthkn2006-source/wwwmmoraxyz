@@ -25,13 +25,14 @@ vi.mock('@/integrations/supabase/client', () => {
       select: (_cols: string, opts?: { head?: boolean }) => {
         if (opts?.head) {
           return {
-            eq: () =>
+            eq: (_col: string, value: string) =>
               Promise.resolve({
-                count: sovereignRows.filter((r) => r.user_id === state.userId).length,
+                count: sovereignRows.filter((r) => r.user_id === value).length,
                 error: null,
               }),
           };
         }
+
         return api;
       },
       eq: (col: string, value: string) => {
