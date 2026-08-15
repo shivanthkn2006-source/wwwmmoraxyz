@@ -2133,13 +2133,27 @@ Want me to dive deeper into any aspect?`;
           // Get new user notifications for chat context
           const newUserNotification = getNewUserNotification();
           
+          // Persistent memory grounding (TencentDB gateway -> sovereign fallback)
+          const memoryRecall = await recallZoeMemory({
+            query: messageContent,
+            sessionKey: zoeMemorySessionKey,
+            userId: user?.id,
+          });
+
           const chatToken = cotStart('zoe-chat');
           const { data, error } = await supabase.functions.invoke('zoe-chat', {
             body: {
               messages: [
+                ...(memoryRecall.context
+                  ? [{
+                      role: 'system',
+                      content: `Long-term memory about this user (${memoryRecall.source}):\n${memoryRecall.context}`,
+                    }]
+                  : []),
                 ...conversationHistory,
                 { role: 'user', content: messageContent }
               ],
+
               timezone: userTimezone,
               localTime: localTime,
               soulMetrics: { 
