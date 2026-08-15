@@ -47,6 +47,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
+import { recallZoeMemory, rememberZoeRound } from '@/services/zoeMemoryBridge';
+
 import { speakAsZoe, stopZoeSpeech, isZoeSpeaking, initializeZoeVoices, replayAsZoe, pauseZoeSpeech, resumeZoeSpeech } from '@/utils/zoeVoice';
 import { isZoeInfinityMessage, stripZoeInfinityMarker } from '@/utils/conversationNamespaces';
 import { setActiveVoiceExperience } from '@/utils/voiceExperienceLock';
@@ -157,6 +159,9 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
     setActiveVoiceExperience('mmora');
   }, []);
   const { user } = useAuth();
+  // Stable session key for persistent memory (TencentDB gateway + sovereign memory)
+  const zoeMemorySessionKey = `zoe-orb-${user?.id ?? 'guest'}`;
+
   const navigate = useNavigate();
   const { isOnline, processConversation } = useZoeOffline();
   const { processMedia, isProcessing: isPerceptionProcessing, supportedTypes } = useZoePerception();
@@ -2133,13 +2138,27 @@ Want me to dive deeper into any aspect?`;
           // Get new user notifications for chat context
           const newUserNotification = getNewUserNotification();
           
+          // Persistent memory grounding (TencentDB gateway -> sovereign fallback)
+          const memoryRecall = await recallZoeMemory({
+            query: messageContent,
+            sessionKey: zoeMemorySessionKey,
+            userId: user?.id,
+          });
+
           const chatToken = cotStart('zoe-chat');
           const { data, error } = await supabase.functions.invoke('zoe-chat', {
             body: {
               messages: [
+                ...(memoryRecall.context
+                  ? [{
+                      role: 'system',
+                      content: `Long-term memory about this user (${memoryRecall.source}):\n${memoryRecall.context}`,
+                    }]
+                  : []),
                 ...conversationHistory,
                 { role: 'user', content: messageContent }
               ],
+
               timezone: userTimezone,
               localTime: localTime,
               soulMetrics: { 
@@ -2285,6 +2304,15 @@ Want me to dive deeper into any aspect?`;
       // Store Zoe's response in cache AND database
       offlineDataSync.addConversation('zoe', responseText);
       saveMessageToDb('assistant', responseText, undefined, undefined, zoeMessage.id);
+
+      // Persist the completed round to sovereign memory + TencentDB gateway (best effort)
+      void rememberZoeRound({
+        userId: user?.id,
+        sessionKey: zoeMemorySessionKey,
+        userText: userMessage.content,
+        assistantText: responseText,
+      });
+
 
       // ═══ PHASE 1 GOLDEN RECORD: Detect baseline capture triggers ═══
       const lowerInput = userMessage.content.toLowerCase();
