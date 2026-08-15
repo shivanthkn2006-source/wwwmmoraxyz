@@ -159,6 +159,9 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
     setActiveVoiceExperience('mmora');
   }, []);
   const { user } = useAuth();
+  // Stable session key for persistent memory (TencentDB gateway + sovereign memory)
+  const zoeMemorySessionKey = `zoe-orb-${user?.id ?? 'guest'}`;
+
   const navigate = useNavigate();
   const { isOnline, processConversation } = useZoeOffline();
   const { processMedia, isProcessing: isPerceptionProcessing, supportedTypes } = useZoePerception();
