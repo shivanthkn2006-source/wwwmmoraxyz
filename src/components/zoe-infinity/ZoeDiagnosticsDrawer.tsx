@@ -108,7 +108,13 @@ const ZoeDiagnosticsDrawer = ({ tab, onTabChange, expanded, onToggleExpanded, on
 
           <div className="max-h-[30vh] overflow-y-auto overscroll-contain p-2">
             {tab === 'metrics' && <MetacognitionMetricsPanel />}
-            {tab === 'wiring' && <CotWiringStatusPanel />}
+            {tab === 'wiring' && (
+              <div className="space-y-2">
+                <ZoeMemoryStatusPanel />
+                <CotWiringStatusPanel />
+              </div>
+            )}
+
             {tab === 'debug' && (
               <div className="space-y-2 text-[10px]">
                 <div className="grid grid-cols-2 gap-1.5">
