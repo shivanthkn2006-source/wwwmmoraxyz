@@ -3,6 +3,8 @@ import { Activity, Brain, Bug, ChevronDown, ChevronUp, EyeOff, Loader2 } from 'l
 import { cn } from '@/lib/utils';
 import MetacognitionMetricsPanel from '@/components/zoe-infinity/MetacognitionMetricsPanel';
 import CotWiringStatusPanel from '@/components/zoe-infinity/CotWiringStatusPanel';
+import ZoeMemoryStatusPanel from '@/components/zoe-infinity/ZoeMemoryStatusPanel';
+
 import {
   clearDiagnosticErrors,
   getDiagnostics,
