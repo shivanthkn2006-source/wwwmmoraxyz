@@ -2305,6 +2305,15 @@ Want me to dive deeper into any aspect?`;
       offlineDataSync.addConversation('zoe', responseText);
       saveMessageToDb('assistant', responseText, undefined, undefined, zoeMessage.id);
 
+      // Persist the completed round to sovereign memory + TencentDB gateway (best effort)
+      void rememberZoeRound({
+        userId: user?.id,
+        sessionKey: zoeMemorySessionKey,
+        userText: userMessage.content,
+        assistantText: responseText,
+      });
+
+
       // ═══ PHASE 1 GOLDEN RECORD: Detect baseline capture triggers ═══
       const lowerInput = userMessage.content.toLowerCase();
       const baselineTriggers = [
