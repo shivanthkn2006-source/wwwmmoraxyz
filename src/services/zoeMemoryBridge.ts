@@ -98,11 +98,19 @@ export async function rememberZoeRound(
     }
   }
 
-  const capture = await MemoryService.captureRound(
-    input.sessionKey,
-    input.userText,
-    input.assistantText,
-    input.userId ?? undefined
+  const { result: capture, attempts } = await retryWithBackoff(
+    () =>
+      MemoryService.captureRound(
+        input.sessionKey,
+        input.userText,
+        input.assistantText,
+        input.userId ?? undefined
+      ),
+    {
+      attempts: 3,
+      shouldRetry: (r) =>
+        !r.success && TRANSIENT_GATEWAY_KINDS.has(r.failureKind ?? 'unreachable'),
+    }
   );
   result.gatewaySaved = capture.success;
   if (!capture.success) {
@@ -110,8 +118,25 @@ export async function rememberZoeRound(
     if (!result.error) result.error = capture.error;
   }
 
+  logMemoryAudit({
+    action: 'save',
+    outcome: result.sovereignSaved || result.gatewaySaved ? 'ok' : 'error',
+    target: result.sovereignSaved && result.gatewaySaved
+      ? 'both'
+      : result.gatewaySaved
+        ? 'gateway'
+        : result.sovereignSaved
+          ? 'sovereign'
+          : 'none',
+    attempts,
+    detail: result.gatewaySaved
+      ? undefined
+      : `gateway write-back failed (${result.gatewayKind}): ${result.error ?? 'unknown'}`,
+  });
+
   return result;
 }
+
 
 /** Pull grounding context: gateway recall/search first, sovereign rows as fallback. */
 export async function recallZoeMemory(opts: {
