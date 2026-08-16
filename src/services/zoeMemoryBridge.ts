@@ -146,15 +146,37 @@ export async function recallZoeMemory(opts: {
   limit?: number;
 }): Promise<{ context: string; source: 'gateway' | 'sovereign' | 'none' }> {
   const limit = opts.limit ?? 5;
+  let fallbackReason = 'gateway returned no context';
+  let recallAttempts = 1;
 
   try {
-    const recalled = await MemoryService.recall(
-      opts.query,
-      opts.sessionKey,
-      opts.userId ?? undefined
+    const { result: recalled, attempts } = await retryWithBackoff(
+      () =>
+        MemoryService.recall(
+          opts.query,
+          opts.sessionKey,
+          opts.userId ?? undefined
+        ),
+      {
+        attempts: 3,
+        shouldRetry: (r) =>
+          !r.success && TRANSIENT_GATEWAY_KINDS.has(r.failureKind ?? 'unreachable'),
+      }
     );
+    recallAttempts = attempts;
+    if (!recalled.success) {
+      fallbackReason = `gateway recall failed (${recalled.failureKind ?? 'unreachable'}): ${recalled.error ?? 'unknown'}`;
+    }
     const direct = recalled.success ? recalled.data?.context?.trim() : '';
-    if (direct) return { context: direct, source: 'gateway' };
+    if (direct) {
+      logMemoryAudit({
+        action: 'recall',
+        outcome: 'ok',
+        target: 'gateway',
+        attempts,
+      });
+      return { context: direct, source: 'gateway' };
+    }
 
     if (recalled.success) {
       const [facts, persona] = await Promise.all([
@@ -174,10 +196,18 @@ export async function recallZoeMemory(opts: {
           );
         }
       }
-      if (parts.length) return { context: parts.join('\n\n'), source: 'gateway' };
+      if (parts.length) {
+        logMemoryAudit({
+          action: 'recall',
+          outcome: 'ok',
+          target: 'gateway',
+          attempts,
+        });
+        return { context: parts.join('\n\n'), source: 'gateway' };
+      }
     }
-  } catch {
-    /* fall through to sovereign */
+  } catch (err) {
+    fallbackReason = err instanceof Error ? err.message : String(err);
   }
 
   if (opts.userId) {
@@ -191,6 +221,13 @@ export async function recallZoeMemory(opts: {
         .limit(limit);
       const rows = (data ?? []).filter((r) => r.content_text);
       if (rows.length) {
+        logMemoryAudit({
+          action: 'fallback',
+          outcome: 'fallback',
+          target: 'sovereign',
+          attempts: recallAttempts,
+          detail: fallbackReason,
+        });
         return {
           context: `Earlier remembered exchanges:\n${rows
             .map((r) => `- ${r.content_text}`)
@@ -203,8 +240,16 @@ export async function recallZoeMemory(opts: {
     }
   }
 
+  logMemoryAudit({
+    action: 'recall',
+    outcome: 'error',
+    target: 'none',
+    attempts: recallAttempts,
+    detail: fallbackReason,
+  });
   return { context: '', source: 'none' };
 }
+
 
 /** Health of both stores, with the precise gateway failure reason. */
 export async function getZoeMemoryStatus(
