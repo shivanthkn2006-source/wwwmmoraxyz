@@ -28,8 +28,14 @@ const ZoeMemoryStatusPanel = () => {
     }
   }, [user?.id]);
 
+  // Initial probe + periodic health check so the badge flips automatically
+  // when the TencentDB container comes online or goes offline.
   useEffect(() => {
     void refresh();
+    const id = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void refresh();
+    }, 30_000);
+    return () => window.clearInterval(id);
   }, [refresh]);
 
   const dot = (ok: boolean) =>
@@ -90,6 +96,19 @@ const ZoeMemoryStatusPanel = () => {
             )}
             {status?.gateway.error && (
               <p className="mt-0.5 break-words text-destructive">{status.gateway.error}</p>
+            )}
+            <button
+              type="button"
+              onClick={() => void refresh()}
+              disabled={loading}
+              className="mt-1.5 rounded border border-primary/20 px-2 py-1 text-[10px] text-foreground hover:bg-primary/10 disabled:opacity-60"
+            >
+              {loading ? 'Testing…' : 'Test gateway connection'}
+            </button>
+            {status && (
+              <p className="mt-1 text-[9px] text-muted-foreground">
+                Auto-checked every 30s · last {new Date(status.checkedAt).toLocaleTimeString()}
+              </p>
             )}
           </div>
         </div>
