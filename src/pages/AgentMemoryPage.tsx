@@ -140,6 +140,10 @@ const AgentMemoryPage = () => {
       await writable.write(updated);
       await writable.close();
       setAllowedOrigins(nextOrigins);
+      // Share the allow-list with the Zoe memory status panel diagnostics.
+      try {
+        localStorage.setItem('mmora_tdai_allowed_origins', JSON.stringify(nextOrigins));
+      } catch { /* ignore */ }
       toast.success('Origin added to tdai-gateway.yaml. Restart the container next.');
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') return;

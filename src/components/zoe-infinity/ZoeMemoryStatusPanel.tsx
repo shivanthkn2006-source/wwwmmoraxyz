@@ -1,8 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Database, HardDrive, Loader2, RefreshCw } from 'lucide-react';
+import { Database, HardDrive, Loader2, RefreshCw, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth';
 import { getZoeMemoryStatus, type ZoeMemoryStatus } from '@/services/zoeMemoryBridge';
+import {
+  clearMemoryAudit,
+  subscribeMemoryAudit,
+  type MemoryAuditEntry,
+} from '@/services/zoeMemoryAudit';
 
 const KIND_LABEL: Record<string, string> = {
   online: 'Connected',
@@ -13,11 +18,40 @@ const KIND_LABEL: Record<string, string> = {
   gateway: 'Gateway error',
 };
 
+const INTERVAL_KEY = 'mmora_zoe_memory_poll_ms';
+const ALLOWED_ORIGINS_KEY = 'mmora_tdai_allowed_origins';
+
+const INTERVALS = [
+  { label: '10s', value: 10_000 },
+  { label: '30s', value: 30_000 },
+  { label: '1m', value: 60_000 },
+  { label: '5m', value: 300_000 },
+  { label: 'Off', value: 0 },
+];
+
+const readInterval = (): number => {
+  if (typeof localStorage === 'undefined') return 30_000;
+  const raw = Number(localStorage.getItem(INTERVAL_KEY));
+  return INTERVALS.some((i) => i.value === raw) ? raw : 30_000;
+};
+
+const readAllowedOrigins = (): string[] => {
+  if (typeof localStorage === 'undefined') return [];
+  try {
+    const parsed = JSON.parse(localStorage.getItem(ALLOWED_ORIGINS_KEY) || '[]');
+    return Array.isArray(parsed) ? parsed.filter((o) => typeof o === 'string') : [];
+  } catch {
+    return [];
+  }
+};
+
 /** Compact memory health strip: sovereign memory + TencentDB gateway. */
 const ZoeMemoryStatusPanel = () => {
   const { user } = useAuth();
   const [status, setStatus] = useState<ZoeMemoryStatus | null>(null);
   const [loading, setLoading] = useState(false);
+  const [pollMs, setPollMs] = useState<number>(readInterval);
+  const [audit, setAudit] = useState<MemoryAuditEntry[]>([]);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -28,36 +62,66 @@ const ZoeMemoryStatusPanel = () => {
     }
   }, [user?.id]);
 
-  // Initial probe + periodic health check so the badge flips automatically
-  // when the TencentDB container comes online or goes offline.
+  useEffect(() => subscribeMemoryAudit(setAudit), []);
+
+  // Initial probe + configurable periodic health check so the badge flips
+  // automatically when the TencentDB container comes online or goes offline.
   useEffect(() => {
     void refresh();
+    if (!pollMs) return;
     const id = window.setInterval(() => {
       if (document.visibilityState === 'visible') void refresh();
-    }, 30_000);
+    }, pollMs);
     return () => window.clearInterval(id);
-  }, [refresh]);
+  }, [refresh, pollMs]);
+
+  const changeInterval = (value: number) => {
+    setPollMs(value);
+    try {
+      localStorage.setItem(INTERVAL_KEY, String(value));
+    } catch {
+      /* ignore */
+    }
+  };
 
   const dot = (ok: boolean) =>
     cn('h-2 w-2 shrink-0 rounded-full', ok ? 'bg-emerald-400' : 'bg-destructive');
 
+  const gw = status?.gateway;
+  const allowedOrigins = readAllowedOrigins();
+  const showCorsBlock = !!gw && !gw.connected;
+
   return (
     <div className="space-y-2 rounded-md border border-primary/10 bg-background/60 p-2.5">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <span className="text-[11px] font-medium text-foreground">Persistent memory</span>
-        <button
-          type="button"
-          onClick={() => void refresh()}
-          className="rounded p-1 text-muted-foreground hover:text-foreground"
-          aria-label="Refresh memory status"
-          disabled={loading}
-        >
-          {loading ? (
-            <Loader2 className="h-3 w-3 animate-spin" />
-          ) : (
-            <RefreshCw className="h-3 w-3" />
-          )}
-        </button>
+        <div className="flex items-center gap-1">
+          <select
+            aria-label="Health polling interval"
+            value={pollMs}
+            onChange={(e) => changeInterval(Number(e.target.value))}
+            className="rounded border border-primary/20 bg-background/80 px-1 py-0.5 text-[10px] text-foreground"
+          >
+            {INTERVALS.map((i) => (
+              <option key={i.value} value={i.value}>
+                {i.label}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={() => void refresh()}
+            className="rounded p-1 text-muted-foreground hover:text-foreground"
+            aria-label="Refresh memory status"
+            disabled={loading}
+          >
+            {loading ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              <RefreshCw className="h-3 w-3" />
+            )}
+          </button>
+        </div>
       </div>
 
       <div className="space-y-1.5 text-[10px]">
@@ -85,18 +149,57 @@ const ZoeMemoryStatusPanel = () => {
           <Database className="mt-0.5 h-3 w-3 shrink-0 text-muted-foreground" />
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
-              <span className={dot(!!status?.gateway.connected)} />
+              <span className={dot(!!gw?.connected)} />
               <span className="text-foreground">TencentDB gateway</span>
               <span className="text-muted-foreground">
-                · {status ? KIND_LABEL[status.gateway.kind] ?? status.gateway.kind : 'checking…'}
+                · {status ? KIND_LABEL[gw!.kind] ?? gw!.kind : 'checking…'}
               </span>
             </div>
-            {status && (
-              <p className="mt-0.5 truncate text-muted-foreground">{status.gateway.url}</p>
+            {gw && <p className="mt-0.5 truncate text-muted-foreground">{gw.url}</p>}
+            {gw?.error && (
+              <p className="mt-0.5 break-words text-destructive">{gw.error}</p>
             )}
-            {status?.gateway.error && (
-              <p className="mt-0.5 break-words text-destructive">{status.gateway.error}</p>
+
+            {showCorsBlock && (
+              <dl className="mt-1 space-y-0.5 rounded border border-destructive/20 bg-destructive/5 p-1.5 text-[9px] text-muted-foreground">
+                <div className="flex gap-1">
+                  <dt className="shrink-0">Reason:</dt>
+                  <dd className="break-words text-foreground">
+                    {gw.detail || gw.summary || 'Unknown failure'}
+                  </dd>
+                </div>
+                <div className="flex gap-1">
+                  <dt className="shrink-0">Request Origin:</dt>
+                  <dd className="break-all font-mono">{gw.origin || 'unknown'}</dd>
+                </div>
+                <div className="flex gap-1">
+                  <dt className="shrink-0">Preflight URL:</dt>
+                  <dd className="break-all font-mono">{gw.requestUrl || gw.url}</dd>
+                </div>
+                <div className="flex gap-1">
+                  <dt className="shrink-0">Allowed origins:</dt>
+                  <dd className="break-all font-mono">
+                    {allowedOrigins.length
+                      ? allowedOrigins.join(', ')
+                      : 'unknown — open /agent-memory and load tdai-gateway.yaml'}
+                  </dd>
+                </div>
+                <div className="flex gap-1">
+                  <dt className="shrink-0">Required headers:</dt>
+                  <dd className="break-all font-mono">
+                    {(gw.requiredHeaders ?? []).join(', ') || '—'}
+                  </dd>
+                </div>
+                <div className="flex gap-1">
+                  <dt className="shrink-0">Probes:</dt>
+                  <dd>
+                    health {gw.healthOk ? 'ok' : 'failed'} · auth{' '}
+                    {gw.authOk ? 'ok' : 'failed'} · {gw.attempts ?? 1} attempt(s)
+                  </dd>
+                </div>
+              </dl>
             )}
+
             <button
               type="button"
               onClick={() => void refresh()}
@@ -107,11 +210,60 @@ const ZoeMemoryStatusPanel = () => {
             </button>
             {status && (
               <p className="mt-1 text-[9px] text-muted-foreground">
-                Auto-checked every 30s · last {new Date(status.checkedAt).toLocaleTimeString()}
+                {pollMs ? `Auto-checked every ${pollMs / 1000}s` : 'Auto-check off'} · last{' '}
+                {new Date(status.checkedAt).toLocaleTimeString()}
               </p>
             )}
           </div>
         </div>
+      </div>
+
+      <div className="border-t border-primary/10 pt-1.5">
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] font-medium text-foreground">Last actions</span>
+          <button
+            type="button"
+            onClick={clearMemoryAudit}
+            className="rounded p-1 text-muted-foreground hover:text-foreground"
+            aria-label="Clear memory audit log"
+          >
+            <Trash2 className="h-3 w-3" />
+          </button>
+        </div>
+        {audit.length === 0 ? (
+          <p className="text-[9px] text-muted-foreground">No memory activity yet.</p>
+        ) : (
+          <ul className="mt-1 max-h-32 space-y-1 overflow-y-auto pr-1">
+            {audit.slice(0, 12).map((row) => (
+              <li key={row.id} className="text-[9px] leading-tight">
+                <span className="text-muted-foreground">
+                  {new Date(row.at).toLocaleTimeString()}
+                </span>{' '}
+                <span
+                  className={cn(
+                    'font-medium',
+                    row.outcome === 'ok'
+                      ? 'text-emerald-400'
+                      : row.outcome === 'fallback'
+                        ? 'text-amber-400'
+                        : 'text-destructive'
+                  )}
+                >
+                  {row.action}
+                </span>{' '}
+                <span className="text-muted-foreground">
+                  → {row.target ?? 'none'}
+                  {row.attempts && row.attempts > 1 ? ` (${row.attempts} tries)` : ''}
+                </span>
+                {row.detail && (
+                  <span className="block break-words text-muted-foreground/80">
+                    {row.detail}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   );

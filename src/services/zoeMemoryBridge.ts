@@ -18,6 +18,8 @@ import {
   extractPersonaText,
   getGatewayUrl,
 } from '@/services/memoryService';
+import { retryWithBackoff, TRANSIENT_GATEWAY_KINDS } from '@/utils/backoff';
+import { logMemoryAudit } from '@/services/zoeMemoryAudit';
 
 export const ZOE_MEMORY_EVENT = 'zoe_orb_round';
 
@@ -38,6 +40,15 @@ export interface GatewayStatus extends StoreStatus {
   kind: 'online' | GatewayFailureKind;
   url: string;
   origin: string;
+  /** Short human summary of the last probe. */
+  summary?: string;
+  /** Precise browser/CORS/preflight failure reason. */
+  detail?: string;
+  requiredHeaders?: string[];
+  requestUrl?: string;
+  healthOk?: boolean;
+  authOk?: boolean;
+  attempts?: number;
 }
 
 export interface ZoeMemoryStatus {
@@ -45,6 +56,7 @@ export interface ZoeMemoryStatus {
   gateway: GatewayStatus;
   checkedAt: string;
 }
+
 
 export interface RememberInput {
   userId?: string | null;
@@ -86,11 +98,19 @@ export async function rememberZoeRound(
     }
   }
 
-  const capture = await MemoryService.captureRound(
-    input.sessionKey,
-    input.userText,
-    input.assistantText,
-    input.userId ?? undefined
+  const { result: capture, attempts } = await retryWithBackoff(
+    () =>
+      MemoryService.captureRound(
+        input.sessionKey,
+        input.userText,
+        input.assistantText,
+        input.userId ?? undefined
+      ),
+    {
+      attempts: 3,
+      shouldRetry: (r) =>
+        !r.success && TRANSIENT_GATEWAY_KINDS.has(r.failureKind ?? 'unreachable'),
+    }
   );
   result.gatewaySaved = capture.success;
   if (!capture.success) {
@@ -98,8 +118,25 @@ export async function rememberZoeRound(
     if (!result.error) result.error = capture.error;
   }
 
+  logMemoryAudit({
+    action: 'save',
+    outcome: result.sovereignSaved || result.gatewaySaved ? 'ok' : 'error',
+    target: result.sovereignSaved && result.gatewaySaved
+      ? 'both'
+      : result.gatewaySaved
+        ? 'gateway'
+        : result.sovereignSaved
+          ? 'sovereign'
+          : 'none',
+    attempts,
+    detail: result.gatewaySaved
+      ? undefined
+      : `gateway write-back failed (${result.gatewayKind}): ${result.error ?? 'unknown'}`,
+  });
+
   return result;
 }
+
 
 /** Pull grounding context: gateway recall/search first, sovereign rows as fallback. */
 export async function recallZoeMemory(opts: {
@@ -109,15 +146,37 @@ export async function recallZoeMemory(opts: {
   limit?: number;
 }): Promise<{ context: string; source: 'gateway' | 'sovereign' | 'none' }> {
   const limit = opts.limit ?? 5;
+  let fallbackReason = 'gateway returned no context';
+  let recallAttempts = 1;
 
   try {
-    const recalled = await MemoryService.recall(
-      opts.query,
-      opts.sessionKey,
-      opts.userId ?? undefined
+    const { result: recalled, attempts } = await retryWithBackoff(
+      () =>
+        MemoryService.recall(
+          opts.query,
+          opts.sessionKey,
+          opts.userId ?? undefined
+        ),
+      {
+        attempts: 3,
+        shouldRetry: (r) =>
+          !r.success && TRANSIENT_GATEWAY_KINDS.has(r.failureKind ?? 'unreachable'),
+      }
     );
+    recallAttempts = attempts;
+    if (!recalled.success) {
+      fallbackReason = `gateway recall failed (${recalled.failureKind ?? 'unreachable'}): ${recalled.error ?? 'unknown'}`;
+    }
     const direct = recalled.success ? recalled.data?.context?.trim() : '';
-    if (direct) return { context: direct, source: 'gateway' };
+    if (direct) {
+      logMemoryAudit({
+        action: 'recall',
+        outcome: 'ok',
+        target: 'gateway',
+        attempts,
+      });
+      return { context: direct, source: 'gateway' };
+    }
 
     if (recalled.success) {
       const [facts, persona] = await Promise.all([
@@ -137,10 +196,18 @@ export async function recallZoeMemory(opts: {
           );
         }
       }
-      if (parts.length) return { context: parts.join('\n\n'), source: 'gateway' };
+      if (parts.length) {
+        logMemoryAudit({
+          action: 'recall',
+          outcome: 'ok',
+          target: 'gateway',
+          attempts,
+        });
+        return { context: parts.join('\n\n'), source: 'gateway' };
+      }
     }
-  } catch {
-    /* fall through to sovereign */
+  } catch (err) {
+    fallbackReason = err instanceof Error ? err.message : String(err);
   }
 
   if (opts.userId) {
@@ -154,6 +221,13 @@ export async function recallZoeMemory(opts: {
         .limit(limit);
       const rows = (data ?? []).filter((r) => r.content_text);
       if (rows.length) {
+        logMemoryAudit({
+          action: 'fallback',
+          outcome: 'fallback',
+          target: 'sovereign',
+          attempts: recallAttempts,
+          detail: fallbackReason,
+        });
         return {
           context: `Earlier remembered exchanges:\n${rows
             .map((r) => `- ${r.content_text}`)
@@ -166,8 +240,16 @@ export async function recallZoeMemory(opts: {
     }
   }
 
+  logMemoryAudit({
+    action: 'recall',
+    outcome: 'error',
+    target: 'none',
+    attempts: recallAttempts,
+    detail: fallbackReason,
+  });
   return { context: '', source: 'none' };
 }
+
 
 /** Health of both stores, with the precise gateway failure reason. */
 export async function getZoeMemoryStatus(
@@ -196,15 +278,39 @@ export async function getZoeMemoryStatus(
   })();
 
   const gatewayPromise = (async (): Promise<GatewayStatus> => {
-    const diag = await MemoryService.diagnose();
-    return {
+    const { result: diag, attempts } = await retryWithBackoff(
+      () => MemoryService.diagnose(),
+      {
+        attempts: 3,
+        baseDelayMs: 500,
+        // CORS / 401 are deterministic — only retry transient failures.
+        shouldRetry: (d) => !d.ok && TRANSIENT_GATEWAY_KINDS.has(d.kind),
+      }
+    );
+    const status: GatewayStatus = {
       connected: diag.ok,
       kind: diag.kind,
       url: getGatewayUrl(),
       origin: diag.origin || origin,
+      summary: diag.summary,
+      detail: diag.detail,
+      requiredHeaders: diag.requiredHeaders,
+      requestUrl: diag.requestUrl,
+      healthOk: diag.healthOk,
+      authOk: diag.authOk,
+      attempts,
       error: diag.ok ? null : `${diag.summary} ${diag.detail}`.trim(),
     };
+    logMemoryAudit({
+      action: 'health',
+      outcome: diag.ok ? 'ok' : 'error',
+      target: 'gateway',
+      attempts,
+      detail: diag.ok ? undefined : `${diag.kind}: ${diag.summary}`,
+    });
+    return status;
   })();
+
 
   const [sovereign, gateway] = await Promise.all([
     sovereignPromise,
