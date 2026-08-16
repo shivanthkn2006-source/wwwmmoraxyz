@@ -18,6 +18,8 @@ import {
   extractPersonaText,
   getGatewayUrl,
 } from '@/services/memoryService';
+import { retryWithBackoff, TRANSIENT_GATEWAY_KINDS } from '@/utils/backoff';
+import { logMemoryAudit } from '@/services/zoeMemoryAudit';
 
 export const ZOE_MEMORY_EVENT = 'zoe_orb_round';
 
