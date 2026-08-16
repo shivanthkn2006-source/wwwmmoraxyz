@@ -278,15 +278,39 @@ export async function getZoeMemoryStatus(
   })();
 
   const gatewayPromise = (async (): Promise<GatewayStatus> => {
-    const diag = await MemoryService.diagnose();
-    return {
+    const { result: diag, attempts } = await retryWithBackoff(
+      () => MemoryService.diagnose(),
+      {
+        attempts: 3,
+        baseDelayMs: 500,
+        // CORS / 401 are deterministic — only retry transient failures.
+        shouldRetry: (d) => !d.ok && TRANSIENT_GATEWAY_KINDS.has(d.kind),
+      }
+    );
+    const status: GatewayStatus = {
       connected: diag.ok,
       kind: diag.kind,
       url: getGatewayUrl(),
       origin: diag.origin || origin,
+      summary: diag.summary,
+      detail: diag.detail,
+      requiredHeaders: diag.requiredHeaders,
+      requestUrl: diag.requestUrl,
+      healthOk: diag.healthOk,
+      authOk: diag.authOk,
+      attempts,
       error: diag.ok ? null : `${diag.summary} ${diag.detail}`.trim(),
     };
+    logMemoryAudit({
+      action: 'health',
+      outcome: diag.ok ? 'ok' : 'error',
+      target: 'gateway',
+      attempts,
+      detail: diag.ok ? undefined : `${diag.kind}: ${diag.summary}`,
+    });
+    return status;
   })();
+
 
   const [sovereign, gateway] = await Promise.all([
     sovereignPromise,
