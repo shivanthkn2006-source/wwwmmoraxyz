@@ -40,6 +40,15 @@ export interface GatewayStatus extends StoreStatus {
   kind: 'online' | GatewayFailureKind;
   url: string;
   origin: string;
+  /** Short human summary of the last probe. */
+  summary?: string;
+  /** Precise browser/CORS/preflight failure reason. */
+  detail?: string;
+  requiredHeaders?: string[];
+  requestUrl?: string;
+  healthOk?: boolean;
+  authOk?: boolean;
+  attempts?: number;
 }
 
 export interface ZoeMemoryStatus {
@@ -47,6 +56,7 @@ export interface ZoeMemoryStatus {
   gateway: GatewayStatus;
   checkedAt: string;
 }
+
 
 export interface RememberInput {
   userId?: string | null;
