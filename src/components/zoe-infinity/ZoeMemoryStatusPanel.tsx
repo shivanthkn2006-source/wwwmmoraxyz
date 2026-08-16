@@ -28,8 +28,14 @@ const ZoeMemoryStatusPanel = () => {
     }
   }, [user?.id]);
 
+  // Initial probe + periodic health check so the badge flips automatically
+  // when the TencentDB container comes online or goes offline.
   useEffect(() => {
     void refresh();
+    const id = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void refresh();
+    }, 30_000);
+    return () => window.clearInterval(id);
   }, [refresh]);
 
   const dot = (ok: boolean) =>
