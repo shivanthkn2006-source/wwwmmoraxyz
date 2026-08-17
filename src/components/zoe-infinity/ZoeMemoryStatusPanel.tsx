@@ -1,13 +1,21 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Database, HardDrive, Loader2, RefreshCw, Trash2 } from 'lucide-react';
+import { Database, HardDrive, Loader2, RefreshCw, Trash2, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth';
-import { getZoeMemoryStatus, type ZoeMemoryStatus } from '@/services/zoeMemoryBridge';
+import {
+  getZoeMemoryStatus,
+  listZoeMemories,
+  deleteMemory,
+  clearAllMemory,
+  type StoredZoeMemory,
+  type ZoeMemoryStatus,
+} from '@/services/zoeMemoryBridge';
 import {
   clearMemoryAudit,
   subscribeMemoryAudit,
   type MemoryAuditEntry,
 } from '@/services/zoeMemoryAudit';
+
 
 const KIND_LABEL: Record<string, string> = {
   online: 'Connected',
@@ -52,17 +60,39 @@ const ZoeMemoryStatusPanel = () => {
   const [loading, setLoading] = useState(false);
   const [pollMs, setPollMs] = useState<number>(readInterval);
   const [audit, setAudit] = useState<MemoryAuditEntry[]>([]);
+  const [memories, setMemories] = useState<StoredZoeMemory[]>([]);
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  const loadMemories = useCallback(async () => {
+    setMemories(await listZoeMemories(user?.id));
+  }, [user?.id]);
 
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
       setStatus(await getZoeMemoryStatus(user?.id));
+      await loadMemories();
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [user?.id, loadMemories]);
+
+  const handleDelete = async (id: string) => {
+    setBusyId(id);
+    const res = await deleteMemory(id);
+    if (res.ok) setMemories((prev) => prev.filter((m) => m.id !== id));
+    setBusyId(null);
+  };
+
+  const handleClearAll = async () => {
+    setBusyId('all');
+    const res = await clearAllMemory(user?.id);
+    if (res.ok) setMemories([]);
+    setBusyId(null);
+  };
 
   useEffect(() => subscribeMemoryAudit(setAudit), []);
+
 
   // Initial probe + configurable periodic health check so the badge flips
   // automatically when the TencentDB container comes online or goes offline.
@@ -217,6 +247,55 @@ const ZoeMemoryStatusPanel = () => {
           </div>
         </div>
       </div>
+
+      <div className="border-t border-primary/10 pt-1.5">
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] font-medium text-foreground">
+            Stored memories{memories.length ? ` (${memories.length})` : ''}
+          </span>
+          <button
+            type="button"
+            onClick={() => void handleClearAll()}
+            disabled={!memories.length || busyId === 'all'}
+            className="rounded border border-destructive/30 px-2 py-0.5 text-[9px] text-destructive hover:bg-destructive/10 disabled:opacity-40"
+          >
+            {busyId === 'all' ? 'Clearing…' : 'Clear All'}
+          </button>
+        </div>
+        {memories.length === 0 ? (
+          <p className="mt-1 text-[9px] text-muted-foreground">No stored memories.</p>
+        ) : (
+          <ul className="mt-1 max-h-32 space-y-1 overflow-y-auto pr-1">
+            {memories.map((m) => (
+              <li key={m.id} className="flex items-start gap-1.5 text-[9px] leading-tight">
+                <div className="min-w-0 flex-1">
+                  <span className="text-muted-foreground">
+                    {new Date(m.createdAt).toLocaleString()}
+                  </span>
+                  <span className="block break-words text-foreground/90 line-clamp-2">
+                    {m.text}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void handleDelete(m.id)}
+                  disabled={busyId === m.id}
+                  aria-label="Delete memory"
+                  className="rounded p-0.5 text-muted-foreground hover:text-destructive disabled:opacity-40"
+                >
+                  {busyId === m.id ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <X className="h-3 w-3" />
+                  )}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+
 
       <div className="border-t border-primary/10 pt-1.5">
         <div className="flex items-center justify-between">

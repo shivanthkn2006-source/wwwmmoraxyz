@@ -250,6 +250,64 @@ export async function recallZoeMemory(opts: {
   return { context: '', source: 'none' };
 }
 
+export interface StoredZoeMemory {
+  id: string;
+  createdAt: string;
+  text: string;
+}
+
+/** List stored sovereign memory rows for the memory controls UI. */
+export async function listZoeMemories(
+  userId?: string | null,
+  limit = 25
+): Promise<StoredZoeMemory[]> {
+  if (!userId) return [];
+  const { data, error } = await supabase
+    .from('zoe_sovereign_memory')
+    .select('id, content_text, created_at')
+    .eq('user_id', userId)
+    .eq('event_type', ZOE_MEMORY_EVENT)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) return [];
+  return (data ?? []).map((r) => ({
+    id: String(r.id),
+    createdAt: r.created_at as string,
+    text: (r.content_text as string) ?? '',
+  }));
+}
+
+/** Delete one stored memory row. */
+export async function deleteMemory(id: string): Promise<{ ok: boolean; error?: string }> {
+  const { error } = await supabase.from('zoe_sovereign_memory').delete().eq('id', id);
+  logMemoryAudit({
+    action: 'save',
+    outcome: error ? 'error' : 'ok',
+    target: 'sovereign',
+    detail: error ? `delete failed: ${error.message}` : `deleted memory ${id}`,
+  });
+  return { ok: !error, error: error?.message };
+}
+
+/** Delete every stored memory for this user. */
+export async function clearAllMemory(
+  userId?: string | null
+): Promise<{ ok: boolean; error?: string }> {
+  if (!userId) return { ok: false, error: 'Not signed in' };
+  const { error } = await supabase
+    .from('zoe_sovereign_memory')
+    .delete()
+    .eq('user_id', userId)
+    .eq('event_type', ZOE_MEMORY_EVENT);
+  logMemoryAudit({
+    action: 'save',
+    outcome: error ? 'error' : 'ok',
+    target: 'sovereign',
+    detail: error ? `clear all failed: ${error.message}` : 'cleared all stored memories',
+  });
+  return { ok: !error, error: error?.message };
+}
+
 
 /** Health of both stores, with the precise gateway failure reason. */
 export async function getZoeMemoryStatus(
