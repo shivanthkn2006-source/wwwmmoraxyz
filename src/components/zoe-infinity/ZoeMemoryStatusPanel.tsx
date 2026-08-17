@@ -1,13 +1,21 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Database, HardDrive, Loader2, RefreshCw, Trash2 } from 'lucide-react';
+import { Database, HardDrive, Loader2, RefreshCw, Trash2, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth';
-import { getZoeMemoryStatus, type ZoeMemoryStatus } from '@/services/zoeMemoryBridge';
+import {
+  getZoeMemoryStatus,
+  listZoeMemories,
+  deleteMemory,
+  clearAllMemory,
+  type StoredZoeMemory,
+  type ZoeMemoryStatus,
+} from '@/services/zoeMemoryBridge';
 import {
   clearMemoryAudit,
   subscribeMemoryAudit,
   type MemoryAuditEntry,
 } from '@/services/zoeMemoryAudit';
+
 
 const KIND_LABEL: Record<string, string> = {
   online: 'Connected',
