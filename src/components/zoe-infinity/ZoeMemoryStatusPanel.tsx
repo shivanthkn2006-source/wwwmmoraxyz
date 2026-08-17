@@ -250,6 +250,55 @@ const ZoeMemoryStatusPanel = () => {
 
       <div className="border-t border-primary/10 pt-1.5">
         <div className="flex items-center justify-between">
+          <span className="text-[10px] font-medium text-foreground">
+            Stored memories{memories.length ? ` (${memories.length})` : ''}
+          </span>
+          <button
+            type="button"
+            onClick={() => void handleClearAll()}
+            disabled={!memories.length || busyId === 'all'}
+            className="rounded border border-destructive/30 px-2 py-0.5 text-[9px] text-destructive hover:bg-destructive/10 disabled:opacity-40"
+          >
+            {busyId === 'all' ? 'Clearing…' : 'Clear All'}
+          </button>
+        </div>
+        {memories.length === 0 ? (
+          <p className="mt-1 text-[9px] text-muted-foreground">No stored memories.</p>
+        ) : (
+          <ul className="mt-1 max-h-32 space-y-1 overflow-y-auto pr-1">
+            {memories.map((m) => (
+              <li key={m.id} className="flex items-start gap-1.5 text-[9px] leading-tight">
+                <div className="min-w-0 flex-1">
+                  <span className="text-muted-foreground">
+                    {new Date(m.createdAt).toLocaleString()}
+                  </span>
+                  <span className="block break-words text-foreground/90 line-clamp-2">
+                    {m.text}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void handleDelete(m.id)}
+                  disabled={busyId === m.id}
+                  aria-label="Delete memory"
+                  className="rounded p-0.5 text-muted-foreground hover:text-destructive disabled:opacity-40"
+                >
+                  {busyId === m.id ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <X className="h-3 w-3" />
+                  )}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+
+
+      <div className="border-t border-primary/10 pt-1.5">
+        <div className="flex items-center justify-between">
           <span className="text-[10px] font-medium text-foreground">Last actions</span>
           <button
             type="button"
