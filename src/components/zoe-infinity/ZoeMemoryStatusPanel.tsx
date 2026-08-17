@@ -60,17 +60,39 @@ const ZoeMemoryStatusPanel = () => {
   const [loading, setLoading] = useState(false);
   const [pollMs, setPollMs] = useState<number>(readInterval);
   const [audit, setAudit] = useState<MemoryAuditEntry[]>([]);
+  const [memories, setMemories] = useState<StoredZoeMemory[]>([]);
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  const loadMemories = useCallback(async () => {
+    setMemories(await listZoeMemories(user?.id));
+  }, [user?.id]);
 
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
       setStatus(await getZoeMemoryStatus(user?.id));
+      await loadMemories();
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [user?.id, loadMemories]);
+
+  const handleDelete = async (id: string) => {
+    setBusyId(id);
+    const res = await deleteMemory(id);
+    if (res.ok) setMemories((prev) => prev.filter((m) => m.id !== id));
+    setBusyId(null);
+  };
+
+  const handleClearAll = async () => {
+    setBusyId('all');
+    const res = await clearAllMemory(user?.id);
+    if (res.ok) setMemories([]);
+    setBusyId(null);
+  };
 
   useEffect(() => subscribeMemoryAudit(setAudit), []);
+
 
   // Initial probe + configurable periodic health check so the badge flips
   // automatically when the TencentDB container comes online or goes offline.
