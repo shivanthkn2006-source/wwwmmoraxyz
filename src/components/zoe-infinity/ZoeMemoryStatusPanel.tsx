@@ -391,6 +391,43 @@ const ZoeMemoryStatusPanel = () => {
           </ul>
         )}
       </div>
+
+      <Dialog open={confirm.open} onOpenChange={(open) => !open && closeConfirm()}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>
+              {confirm.mode === 'all' ? 'Clear all memories?' : 'Delete this memory?'}
+            </DialogTitle>
+            <DialogDescription>
+              {confirm.mode === 'all'
+                ? `This will permanently remove ${confirm.text} from sovereign memory. This action cannot be undone.`
+                : `This will permanently remove "${confirm.text}" from sovereign memory. This action cannot be undone.`}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" size="sm" onClick={closeConfirm}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => void executeConfirmedAction()}
+              disabled={busyId !== null}
+            >
+              {busyId !== null ? (
+                <>
+                  <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                  {confirm.mode === 'all' ? 'Clearing…' : 'Deleting…'}
+                </>
+              ) : confirm.mode === 'all' ? (
+                'Clear All'
+              ) : (
+                'Delete'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
