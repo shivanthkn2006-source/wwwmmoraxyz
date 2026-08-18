@@ -6,8 +6,8 @@ import { processOfflineCommand, OfflineResponse } from './zoeOfflineIntelligence
 
 const getOfflineCharacterCountResponse = (input: string): string | null => {
   const patterns = [
-    /(?:how\s+many|count(?:\s+the)?)\s+(?:letter(?:s)?\s+)?["'`]?([a-z])["'`]?(?:'s|s)?\s+(?:are\s+|is\s+)?(?:there\s+)?(?:appear\s+)?in\s+(?:the\s+word\s+)?["'`]?([a-z][a-z\-]{1,40})["'`]?\s*[?.!]?$/i,
-    /how\s+many\s+(?:letter(?:s)?\s+)?["'`]?([a-z])["'`]?(?:'s|s)?\s+does\s+(?:the\s+word\s+)?["'`]?([a-z][a-z\-]{1,40})["'`]?\s+(?:have|contain)\s*[?.!]?$/i,
+    /(?:how\s+many|count(?:\s+the)?)\s+(?:letter(?:s)?\s+)?["'`]?([a-z])["'`]?(?:['’]s|s)?\s+(?:are\s+|is\s+)?(?:there\s+)?(?:appear\s+)?in\s+(?:the\s+word\s+)?["'`]?([a-z][a-z\-]{1,40})["'`]?\s*[?.!]?$/i,
+    /how\s+many\s+(?:letter(?:s)?\s+)?["'`]?([a-z])["'`]?(?:['’]s|s)?\s+does\s+(?:the\s+word\s+)?["'`]?([a-z][a-z\-]{1,40})["'`]?\s+(?:have|contain)\s*[?.!]?$/i,
   ];
 
   for (const pattern of patterns) {

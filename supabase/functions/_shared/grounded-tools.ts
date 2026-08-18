@@ -274,9 +274,9 @@ export function precomputeCharacterFacts(text: string): ToolExecution[] {
   const out: ToolExecution[] = [];
   const input = String(text ?? '').trim();
   const patterns = [
-    /(?:how\s+many|count(?:\s+the)?)\s+(?:letter(?:s)?\s+)?["'`]?([a-z])["'`]?(?:'s|s)?\s+(?:are\s+|is\s+)?(?:there\s+)?(?:appear\s+)?in\s+(?:the\s+word\s+)?["'`]?([a-z][a-z\-]{1,40})["'`]?\s*[?.!]?$/i,
-    /how\s+many\s+(?:letter(?:s)?\s+)?["'`]?([a-z])["'`]?(?:'s|s)?\s+does\s+(?:the\s+word\s+)?["'`]?([a-z][a-z\-]{1,40})["'`]?\s+(?:have|contain)\s*[?.!]?$/i,
-    /(?:the\s+word\s+)?["'`]?([a-z][a-z\-]{1,40})["'`]?\s+(?:has|contains)\s+how\s+many\s+(?:letter(?:s)?\s+)?["'`]?([a-z])["'`]?(?:'s|s)?\s*[?.!]?$/i,
+    /(?:how\s+many|count(?:\s+the)?)\s+(?:letter(?:s)?\s+)?["'`]?([a-z])["'`]?(?:['’]s|s)?\s+(?:are\s+|is\s+)?(?:there\s+)?(?:appear\s+)?in\s+(?:the\s+word\s+)?["'`]?([a-z][a-z\-]{1,40})["'`]?\s*[?.!]?$/i,
+    /how\s+many\s+(?:letter(?:s)?\s+)?["'`]?([a-z])["'`]?(?:['’]s|s)?\s+does\s+(?:the\s+word\s+)?["'`]?([a-z][a-z\-]{1,40})["'`]?\s+(?:have|contain)\s*[?.!]?$/i,
+    /(?:the\s+word\s+)?["'`]?([a-z][a-z\-]{1,40})["'`]?\s+(?:has|contains)\s+how\s+many\s+(?:letter(?:s)?\s+)?["'`]?([a-z])["'`]?(?:['’]s|s)?\s*[?.!]?$/i,
   ];
 
   for (const [index, pattern] of patterns.entries()) {
