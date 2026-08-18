@@ -2,6 +2,15 @@ import { useCallback, useEffect, useState } from 'react';
 import { Database, HardDrive, Loader2, RefreshCw, Trash2, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   getZoeMemoryStatus,
   listZoeMemories,
