@@ -325,7 +325,7 @@ const ZoeMemoryStatusPanel = () => {
                 </div>
                 <button
                   type="button"
-                  onClick={() => void handleDelete(m.id)}
+                  onClick={() => void requestDelete(m.id)}
                   disabled={busyId === m.id}
                   aria-label="Delete memory"
                   className="rounded p-0.5 text-muted-foreground hover:text-destructive disabled:opacity-40"
