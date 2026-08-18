@@ -272,12 +272,21 @@ export function executeGroundedTool(name: string, args: Record<string, any>): Re
 /** Detects "how many X in Y" style questions and grounds them before the model speaks. */
 export function precomputeCharacterFacts(text: string): ToolExecution[] {
   const out: ToolExecution[] = [];
-  const re = /how\s+many\s+(?:letter\s+)?["'`]?([a-z])["'`]?(?:'s|s)?\s+(?:are\s+|is\s+)?(?:there\s+)?in\s+(?:the\s+word\s+)?["'`]?([a-z][a-z\- ]{1,40}?)["'`]?\s*[?.!]?$/gim;
-  for (const m of String(text ?? '').matchAll(re)) {
-    const target = m[1];
-    const word = m[2].trim();
+  const input = String(text ?? '').trim();
+  const patterns = [
+    /(?:how\s+many|count(?:\s+the)?)\s+(?:letter(?:s)?\s+)?["'`]?([a-z])["'`]?(?:'s|s)?\s+(?:are\s+|is\s+)?(?:there\s+)?(?:appear\s+)?in\s+(?:the\s+word\s+)?["'`]?([a-z][a-z\-]{1,40})["'`]?\s*[?.!]?$/i,
+    /how\s+many\s+(?:letter(?:s)?\s+)?["'`]?([a-z])["'`]?(?:'s|s)?\s+does\s+(?:the\s+word\s+)?["'`]?([a-z][a-z\-]{1,40})["'`]?\s+(?:have|contain)\s*[?.!]?$/i,
+    /(?:the\s+word\s+)?["'`]?([a-z][a-z\-]{1,40})["'`]?\s+(?:has|contains)\s+how\s+many\s+(?:letter(?:s)?\s+)?["'`]?([a-z])["'`]?(?:'s|s)?\s*[?.!]?$/i,
+  ];
+
+  for (const [index, pattern] of patterns.entries()) {
+    const match = input.match(pattern);
+    if (!match) continue;
+    const target = index === 2 ? match[2] : match[1];
+    const word = (index === 2 ? match[1] : match[2]).trim();
     const result = executeGroundedTool('character_counter', { text: word, target_char: target });
     if (result.ok) out.push({ tool: 'character_counter', args: { text: word, target_char: target }, result });
+    break;
   }
   return out;
 }

@@ -8,6 +8,7 @@ import {
   getLatencyTarget
 } from "../_shared/ai-telemetry.ts";
 import { cascadeInfer, hardenZoeIdentity } from "../_shared/cascading-provider.ts";
+import { precomputeCharacterFacts } from "../_shared/grounded-tools.ts";
 
 // Zodiac sign calculation helper
 function getZodiacSign(birthDate: Date): string {
@@ -174,6 +175,31 @@ serve(async (req) => {
     // ASI 7.5x PROCESSING - Pentarchy + Truth Engine + Quantum Loop
     // ═══════════════════════════════════════════════════════════════════════════════
     const lastUserMessage = messages.filter(m => m.role === 'user').pop()?.content || '';
+    const characterFacts = precomputeCharacterFacts(lastUserMessage);
+
+    // Exact character-count questions must never reach a probabilistic model.
+    // This protects every zoe-chat caller, including the M'Mora orb and voice path.
+    if (characterFacts.length > 0) {
+      const fact = characterFacts[0];
+      const args = fact.args as { text?: string; target_char?: string };
+      const result = fact.result as { count?: number; positions?: number[] };
+      const count = result.count ?? 0;
+      const positions = result.positions ?? [];
+      const answer = `The letter “${args.target_char ?? ''}” appears ${count} times in “${args.text ?? ''}”${positions.length > 0 ? ` — at positions ${positions.join(', ')}` : ''}.`;
+
+      return new Response(JSON.stringify({
+        message: answer,
+        grounding: {
+          deterministic: true,
+          tool: 'character_counter',
+          count,
+          positions,
+        },
+        provider: { name: 'local', model: 'character-counter', tier: 0 },
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
     const shouldUseASI = enableASI || shouldTriggerASI(lastUserMessage);
     const computedASIMode = asiMode || (shouldUseASI ? determineASIMode(lastUserMessage) : null);
     
