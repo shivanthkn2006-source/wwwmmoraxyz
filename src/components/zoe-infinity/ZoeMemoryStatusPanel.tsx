@@ -302,7 +302,7 @@ const ZoeMemoryStatusPanel = () => {
           </span>
           <button
             type="button"
-            onClick={() => void handleClearAll()}
+            onClick={() => void requestClearAll()}
             disabled={!memories.length || busyId === 'all'}
             className="rounded border border-destructive/30 px-2 py-0.5 text-[9px] text-destructive hover:bg-destructive/10 disabled:opacity-40"
           >
