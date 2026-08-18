@@ -2,6 +2,15 @@ import { useCallback, useEffect, useState } from 'react';
 import { Database, HardDrive, Loader2, RefreshCw, Trash2, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   getZoeMemoryStatus,
   listZoeMemories,
@@ -53,6 +62,15 @@ const readAllowedOrigins = (): string[] => {
   }
 };
 
+type ConfirmMode = 'single' | 'all';
+
+interface ConfirmState {
+  open: boolean;
+  mode: ConfirmMode;
+  targetId: string | null;
+  text: string;
+}
+
 /** Compact memory health strip: sovereign memory + TencentDB gateway. */
 const ZoeMemoryStatusPanel = () => {
   const { user } = useAuth();
@@ -62,6 +80,12 @@ const ZoeMemoryStatusPanel = () => {
   const [audit, setAudit] = useState<MemoryAuditEntry[]>([]);
   const [memories, setMemories] = useState<StoredZoeMemory[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [confirm, setConfirm] = useState<ConfirmState>({
+    open: false,
+    mode: 'single',
+    targetId: null,
+    text: '',
+  });
 
   const loadMemories = useCallback(async () => {
     setMemories(await listZoeMemories(user?.id));
@@ -77,19 +101,42 @@ const ZoeMemoryStatusPanel = () => {
     }
   }, [user?.id, loadMemories]);
 
-  const handleDelete = async (id: string) => {
-    setBusyId(id);
-    const res = await deleteMemory(id);
-    if (res.ok) setMemories((prev) => prev.filter((m) => m.id !== id));
-    setBusyId(null);
+  const requestDelete = (id: string) => {
+    const memory = memories.find((m) => m.id === id);
+    setConfirm({
+      open: true,
+      mode: 'single',
+      targetId: id,
+      text: memory?.text ? memory.text.slice(0, 120) : 'this memory',
+    });
   };
 
-  const handleClearAll = async () => {
-    setBusyId('all');
-    const res = await clearAllMemory(user?.id);
-    if (res.ok) setMemories([]);
-    setBusyId(null);
+  const requestClearAll = () => {
+    setConfirm({
+      open: true,
+      mode: 'all',
+      targetId: null,
+      text: `${memories.length} stored memory${memories.length === 1 ? '' : 'ies'}`,
+    });
   };
+
+  const executeConfirmedAction = async () => {
+    setConfirm((prev) => ({ ...prev, open: false }));
+    if (confirm.mode === 'single' && confirm.targetId) {
+      const id = confirm.targetId;
+      setBusyId(id);
+      const res = await deleteMemory(id);
+      if (res.ok) setMemories((prev) => prev.filter((m) => m.id !== id));
+      setBusyId(null);
+    } else if (confirm.mode === 'all') {
+      setBusyId('all');
+      const res = await clearAllMemory(user?.id);
+      if (res.ok) setMemories([]);
+      setBusyId(null);
+    }
+  };
+
+  const closeConfirm = () => setConfirm((prev) => ({ ...prev, open: false }));
 
   useEffect(() => subscribeMemoryAudit(setAudit), []);
 
@@ -255,7 +302,7 @@ const ZoeMemoryStatusPanel = () => {
           </span>
           <button
             type="button"
-            onClick={() => void handleClearAll()}
+            onClick={() => void requestClearAll()}
             disabled={!memories.length || busyId === 'all'}
             className="rounded border border-destructive/30 px-2 py-0.5 text-[9px] text-destructive hover:bg-destructive/10 disabled:opacity-40"
           >
@@ -278,7 +325,7 @@ const ZoeMemoryStatusPanel = () => {
                 </div>
                 <button
                   type="button"
-                  onClick={() => void handleDelete(m.id)}
+                  onClick={() => void requestDelete(m.id)}
                   disabled={busyId === m.id}
                   aria-label="Delete memory"
                   className="rounded p-0.5 text-muted-foreground hover:text-destructive disabled:opacity-40"
@@ -344,6 +391,43 @@ const ZoeMemoryStatusPanel = () => {
           </ul>
         )}
       </div>
+
+      <Dialog open={confirm.open} onOpenChange={(open) => !open && closeConfirm()}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>
+              {confirm.mode === 'all' ? 'Clear all memories?' : 'Delete this memory?'}
+            </DialogTitle>
+            <DialogDescription>
+              {confirm.mode === 'all'
+                ? `This will permanently remove ${confirm.text} from sovereign memory. This action cannot be undone.`
+                : `This will permanently remove "${confirm.text}" from sovereign memory. This action cannot be undone.`}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" size="sm" onClick={closeConfirm}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => void executeConfirmedAction()}
+              disabled={busyId !== null}
+            >
+              {busyId !== null ? (
+                <>
+                  <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                  {confirm.mode === 'all' ? 'Clearing…' : 'Deleting…'}
+                </>
+              ) : confirm.mode === 'all' ? (
+                'Clear All'
+              ) : (
+                'Delete'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
