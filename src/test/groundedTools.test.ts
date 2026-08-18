@@ -110,6 +110,15 @@ describe('character_counter (strawberry test)', () => {
     expect((facts[0].result as any).count).toBe(3);
     expect(groundedFactsBlock(facts)).toContain('exactly 3 time(s) in "strawberry"');
   });
+
+  it.each([
+    'How many r does strawberry have?',
+    'Count the r in strawberry',
+    'Strawberry has how many r’s?',
+  ])('grounds common wording: %s', (question) => {
+    const facts = precomputeCharacterFacts(question);
+    expect((facts[0].result as any).count).toBe(3);
+  });
 });
 
 describe('tool registry + riddle simulator', () => {

@@ -4,6 +4,23 @@
 import { offlineDataSync, ZoeConversationContext } from './offlineDataSync';
 import { processOfflineCommand, OfflineResponse } from './zoeOfflineIntelligence';
 
+const getOfflineCharacterCountResponse = (input: string): string | null => {
+  const patterns = [
+    /(?:how\s+many|count(?:\s+the)?)\s+(?:letter(?:s)?\s+)?["'`]?([a-z])["'`]?(?:['’]s|s)?\s+(?:are\s+|is\s+)?(?:there\s+)?(?:appear\s+)?in\s+(?:the\s+word\s+)?["'`]?([a-z][a-z\-]{1,40})["'`]?\s*[?.!]?$/i,
+    /how\s+many\s+(?:letter(?:s)?\s+)?["'`]?([a-z])["'`]?(?:['’]s|s)?\s+does\s+(?:the\s+word\s+)?["'`]?([a-z][a-z\-]{1,40})["'`]?\s+(?:have|contain)\s*[?.!]?$/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = input.trim().match(pattern);
+    if (!match) continue;
+    const target = match[1].toLocaleLowerCase();
+    const word = match[2];
+    const positions = [...word.toLocaleLowerCase()].flatMap((character, index) => character === target ? [index + 1] : []);
+    return `The letter “${target}” appears ${positions.length} times in “${word}”${positions.length > 0 ? ` — at positions ${positions.join(', ')}` : ''}.`;
+  }
+  return null;
+};
+
 interface ConversationResponse {
   text: string;
   emotion?: string;
@@ -247,6 +264,12 @@ export const processOfflineConversation = (input: string): ConversationResponse 
 
   // Store the conversation
   offlineDataSync.addConversation('user', input);
+
+  const characterCountResponse = getOfflineCharacterCountResponse(input);
+  if (characterCountResponse) {
+    offlineDataSync.addConversation('zoe', characterCountResponse);
+    return { text: characterCountResponse, confidence: 1 };
+  }
 
   // Check for basic commands first
   const commandResponse = processOfflineCommand(input);
