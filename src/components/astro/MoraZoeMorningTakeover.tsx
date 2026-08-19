@@ -37,7 +37,8 @@ export const MoraZoeMorningTakeover: React.FC<Props> = ({ prediction, posterUrl,
           className="absolute inset-0 h-full w-full object-cover"
         />
       )}
-      <div className="absolute inset-0 bg-gradient-to-b from-background/90 via-background/80 to-background" />
+      {/* Readable scrim only — the celestial art itself stays fully visible. */}
+      <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-background/35 to-background/85" />
 
       {/* Countdown bar */}
       <div className="absolute inset-x-0 top-0 h-1 bg-muted">
