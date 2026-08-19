@@ -34,7 +34,7 @@ export const MoraZoeMorningTakeover: React.FC<Props> = ({ prediction, posterUrl,
           src={art}
           alt=""
           aria-hidden="true"
-          className="absolute inset-0 h-full w-full object-cover opacity-40"
+          className="absolute inset-0 h-full w-full object-cover"
         />
       )}
       <div className="absolute inset-0 bg-gradient-to-b from-background/90 via-background/80 to-background" />

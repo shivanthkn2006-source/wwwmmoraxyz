@@ -22,10 +22,11 @@ export const MoraZoeLoginGreeting: React.FC<Props> = ({ motivation, posterUrl, o
           src={posterUrl}
           alt=""
           aria-hidden="true"
-          className="absolute inset-0 h-full w-full object-cover opacity-40"
+          className="absolute inset-0 h-full w-full object-cover"
         />
       )}
-      <div className="absolute inset-0 bg-gradient-to-b from-background/85 via-background/75 to-background" />
+      {/* Readable scrim only — the photo itself stays fully visible. */}
+      <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-background/35 to-background/85" />
 
       <button
         type="button"
