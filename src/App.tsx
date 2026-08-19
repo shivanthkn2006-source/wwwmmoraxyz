@@ -8,6 +8,7 @@ import { CorticalStackProvider } from "@/contexts/CorticalStackContext";
 import { GlobalMediaProvider } from "@/contexts/GlobalMediaContext"; // ONE EAR PROTOCOL
 import { NavigationBusProvider } from "@/contexts/NavigationBusContext"; // PHASE 2: Search → Globe Bridge
 import { DeferredComponentLoader } from '@/components/DeferredComponentLoader';
+import { MoraZoeGlobalHost } from '@/components/astro/MoraZoeGlobalHost';
 import { LightActivityTracker } from '@/components/LightActivityTracker';
 import { MemoryLeakPlumberGlobal } from '@/components/MemoryLeakPlumberGlobal';
 import { AutoFixProvider } from '@/components/AutoFixProvider';
