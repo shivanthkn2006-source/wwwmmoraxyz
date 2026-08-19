@@ -765,13 +765,6 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
 
 
 
-        {isOwnPost && (
-          <button type="button" onClick={handleDelete} className={overlayButton} aria-label="Delete post">
-            <span className={overlayIconWrap}>
-              <Trash2 className="h-6 w-6 text-destructive" />
-            </span>
-          </button>
-        )}
 
         <div className="relative mt-1">
           <Avatar
