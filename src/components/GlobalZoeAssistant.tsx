@@ -934,7 +934,8 @@ export const GlobalZoeAssistant = ({ config = DEFAULT_CONFIG }: { config?: Parti
                       isThinking={isProcessing || alwaysOnVoice.isProcessing}
                       size="lg"
                       onClick={() => {
-                        if (!isDragging) setShowConversationPanel(true);
+                        const homeControlActive = Boolean((window as Window & { __mmoraHomeControlDragging?: boolean }).__mmoraHomeControlDragging);
+                        if (!isDragging && !homeControlActive) setShowConversationPanel(true);
                       }}
                       onDoubleClick={() => {
                         if (!isDragging) navigate('/ai-companion');

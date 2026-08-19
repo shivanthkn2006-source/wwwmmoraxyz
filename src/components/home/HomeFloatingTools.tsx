@@ -84,7 +84,7 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
           >
             <GripHorizontal className="h-4 w-4" />
           </button>
-          <div className="flex items-center gap-2 px-2">
+          <div className="flex min-w-0 flex-1 items-center gap-2 px-2">
             <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
             <Input
               autoFocus
