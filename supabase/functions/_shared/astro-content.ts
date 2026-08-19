@@ -3,6 +3,7 @@
  * No Lovable AI Gateway is used anywhere in this module.
  */
 import { sovereignFetch } from './sovereign-ai.ts';
+import { renderImage } from './image-engine.ts';
 import type { Transit } from './astro-engine.ts';
 
 export type Slot = 'morning' | 'noon' | 'evening' | 'night';
@@ -67,15 +68,16 @@ export function violatesGuardrails(text: string): boolean {
   return BANNED_PATTERNS.some((re) => re.test(t));
 }
 
-const SYSTEM_PROMPT = `You are M'Mora Zoe, an astrological guide and motivational psychologist.
-You turn precise astrological transit data and the member's current emotional state into a short, empowering, actionable reflection.
+const SYSTEM_PROMPT = `You are M'Mora Zoe. You read the sky for people who know nothing about astrology.
 
-HARD SAFETY RULES (never break):
-1. NEVER predict illness, death, financial ruin, accidents, legal trouble, or the end of a relationship.
-2. Frame every square/opposition as constructive friction and an opportunity to level up.
-3. No medical, legal, or financial advice. No fear language. No absolute claims about the future.
-4. Sophisticated, warm, grounded tone. No emojis in the JSON values.
-5. Return STRICT JSON only, with exactly these keys: headline (under 7 words), body (under 60 words), quote (under 15 words).`;
+HOW YOU WRITE (never break):
+1. Plain, everyday English. Simple short sentences. A 12-year-old must understand every word.
+2. NEVER use technical astrology words: no "transit", "natal", "square", "trine", "sextile", "conjunction", "retrograde", "house", "aspect", "degrees", "ephemeris". Translate the sky into ordinary feelings, e.g. "today the mood favours patience over speed".
+3. NEVER predict illness, death, money loss, accidents, legal trouble or the end of a relationship.
+4. Turn any tense energy into a friendly heads-up and something useful the person can do.
+5. Warm, calm, encouraging. Talk to the reader as "you". No emojis, no buzzwords, no absolute promises.
+6. Return STRICT JSON only, with exactly these keys: headline (under 7 words), body (under 60 words), quote (under 15 words).`;
+
 
 interface GenerateArgs {
   slot: Slot;
@@ -161,16 +163,25 @@ Write the ${slot} reflection.`;
 }
 
 const SLOT_SCENE: Record<Slot, string> = {
-  morning: 'soft dawn light over calm mountains, pale gold and deep indigo',
-  noon: 'clear high-noon sky over a quiet ocean horizon, warm neutral tones',
-  evening: 'golden hour over rolling hills, amber and dusty rose',
-  night: 'deep starfield night sky above still water, midnight blue and silver',
+  morning: 'soft dawn light over calm mountains, pale gold and deep indigo, drifting mist',
+  noon: 'clear high-noon sky over a quiet ocean horizon, warm neutral tones, glittering water',
+  evening: 'golden hour over rolling hills, amber and dusty rose, long soft shadows',
+  night: 'deep starfield night sky above still water, midnight blue and silver, glowing milky way',
+};
+
+const SLOT_PALETTE: Record<Slot, [string, string, string]> = {
+  morning: ['#1b2340', '#3d5a8a', '#f0c98a'],
+  noon: ['#123246', '#2f7ba0', '#eae2c8'],
+  evening: ['#3a1f2b', '#8a4a52', '#f2c19a'],
+  night: ['#0b1024', '#1e2a55', '#c9d6ff'],
 };
 
 /**
- * Render the poster with Pollinations, download the bytes and persist them in
- * Supabase Storage. Pollinations URLs are not durable, so we never store them.
- * Returns null on any failure — the card still publishes text-only.
+ * Celestial poster for the astrology card. Uses the sovereign image engine, so
+ * an image ALWAYS exists (Pollinations ladder → guaranteed local SVG poster).
+ * Art direction is deliberately celestial/abstract — the daily-motivation
+ * feature renders photographic lifestyle scenes instead, so the two features
+ * never look alike.
  */
 export async function renderPoster(opts: {
   slot: Slot;
@@ -180,54 +191,17 @@ export async function renderPoster(opts: {
   supabaseUrl: string;
   serviceKey: string;
 }): Promise<string | null> {
-  const prompt = encodeURIComponent(
-    `minimal cinematic celestial poster background, ${SLOT_SCENE[opts.slot]}, ` +
-    `abstract astrology constellation lines, no text, no words, no letters, no watermark, ` +
-    `elegant editorial composition, subtle film grain`,
-  );
-  let seed = 0;
-  for (let i = 0; i < opts.storagePath.length; i++) seed = (seed * 31 + opts.storagePath.charCodeAt(i)) >>> 0;
-  const url = `https://image.pollinations.ai/prompt/${prompt}?width=1080&height=1350&nologo=true&model=flux&seed=${seed % 100000}`;
-
-  const pollToken = Deno.env.get('POLLINATIONS_API_KEY');
-  try {
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 45000);
-    const img = await fetch(url, {
-      signal: ctrl.signal,
-      headers: pollToken ? { Authorization: `Bearer ${pollToken}` } : {},
-    });
-    clearTimeout(timer);
-    if (!img.ok) {
-      console.warn('[astro-poster] pollinations failed', img.status, (await img.text()).slice(0, 200));
-      return null;
-    }
-    const bytes = new Uint8Array(await img.arrayBuffer());
-    if (bytes.byteLength < 1024) {
-      console.warn('[astro-poster] pollinations returned tiny payload', bytes.byteLength);
-      return null;
-    }
-
-    const up = await fetch(
-      `${opts.supabaseUrl}/storage/v1/object/astro-posters/${opts.storagePath}`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${opts.serviceKey}`,
-          apikey: opts.serviceKey,
-          'Content-Type': 'image/jpeg',
-          'x-upsert': 'true',
-        },
-        body: bytes,
-      },
-    );
-    if (!up.ok) {
-      console.warn('[astro-poster] storage upload failed', up.status, (await up.text()).slice(0, 200));
-      return null;
-    }
-    return opts.storagePath;
-  } catch (e) {
-    console.warn('[astro-poster] error', String(e));
-    return null;
-  }
+  const res = await renderImage({
+    prompt:
+      `minimal cinematic celestial poster background, ${SLOT_SCENE[opts.slot]}, ` +
+      `abstract constellation lines, elegant editorial composition, subtle film grain`,
+    storagePath: opts.storagePath,
+    bucket: 'astro-posters',
+    supabaseUrl: opts.supabaseUrl,
+    serviceKey: opts.serviceKey,
+    palette: SLOT_PALETTE[opts.slot],
+  });
+  if (!res.path) console.warn('[astro-poster] all providers failed', JSON.stringify(res.attempts));
+  return res.path;
 }
+

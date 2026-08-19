@@ -7118,6 +7118,48 @@ export type Database = {
         }
         Relationships: []
       }
+      zoe_daily_motivations: {
+        Row: {
+          action_step: string
+          body: string
+          created_at: string
+          headline: string
+          id: string
+          poster_path: string | null
+          quote: string
+          source: string
+          target_date: string
+          theme: string
+          user_id: string
+        }
+        Insert: {
+          action_step?: string
+          body: string
+          created_at?: string
+          headline: string
+          id?: string
+          poster_path?: string | null
+          quote?: string
+          source?: string
+          target_date: string
+          theme?: string
+          user_id: string
+        }
+        Update: {
+          action_step?: string
+          body?: string
+          created_at?: string
+          headline?: string
+          id?: string
+          poster_path?: string | null
+          quote?: string
+          source?: string
+          target_date?: string
+          theme?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       zoe_document_learnings: {
         Row: {
           created_at: string | null
