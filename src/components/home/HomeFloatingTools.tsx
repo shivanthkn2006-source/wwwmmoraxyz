@@ -1,5 +1,5 @@
 import React from 'react';
-import { Camera, Search, X } from 'lucide-react';
+import { Camera, GripHorizontal, Search, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import DraggableHomeControl from '@/components/home/DraggableHomeControl';
 
@@ -11,6 +11,19 @@ interface HomeFloatingToolsProps {
 
 export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }: HomeFloatingToolsProps) {
   const [searchOpen, setSearchOpen] = React.useState(false);
+  const [searchPosition, setSearchPosition] = React.useState<{ x: number; y: number }>(() => {
+    const fallback = { x: 12, y: Math.max(72, window.innerHeight - 76) };
+    try {
+      const stored = localStorage.getItem('mmora.home.search-panel-position.v1');
+      return stored ? JSON.parse(stored) : fallback;
+    } catch { return fallback; }
+  });
+  const dragRef = React.useRef<{ id: number; x: number; y: number; originX: number; originY: number } | null>(null);
+
+  const clampSearch = React.useCallback((x: number, y: number) => ({
+    x: Math.max(8, Math.min(x, window.innerWidth - Math.min(512, window.innerWidth - 24) - 8)),
+    y: Math.max(8, Math.min(y, window.innerHeight - 58)),
+  }), []);
 
   return (
     <>
@@ -34,10 +47,43 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
 
       {searchOpen && (
         <div
-          className="fixed inset-x-3 bottom-[max(1rem,env(safe-area-inset-bottom))] z-[9996] mx-auto max-w-lg rounded-full border border-border/60 bg-background/65 p-1.5 shadow-xl backdrop-blur-2xl"
+          className="fixed z-[9996] flex w-[calc(100vw-1.5rem)] max-w-lg items-center rounded-full border border-border/60 bg-background/80 p-1.5 shadow-xl backdrop-blur-2xl"
+          style={{ left: searchPosition.x, top: searchPosition.y }}
           onPointerDown={(event) => event.stopPropagation()}
           onClick={(event) => event.stopPropagation()}
         >
+          <button
+            type="button"
+            aria-label="Drag search bar"
+            className="flex h-9 w-8 touch-none items-center justify-center text-muted-foreground"
+            onPointerDown={(event) => {
+              event.preventDefault(); event.stopPropagation();
+              event.currentTarget.setPointerCapture(event.pointerId);
+              dragRef.current = { id: event.pointerId, x: event.clientX, y: event.clientY, originX: searchPosition.x, originY: searchPosition.y };
+              (window as Window & { __mmoraHomeControlDragging?: boolean }).__mmoraHomeControlDragging = true;
+            }}
+            onPointerMove={(event) => {
+              const drag = dragRef.current;
+              if (!drag || drag.id !== event.pointerId) return;
+              setSearchPosition(clampSearch(drag.originX + event.clientX - drag.x, drag.originY + event.clientY - drag.y));
+            }}
+            onPointerUp={(event) => {
+              event.preventDefault(); event.stopPropagation();
+              const drag = dragRef.current;
+              if (!drag || drag.id !== event.pointerId) return;
+              const next = clampSearch(drag.originX + event.clientX - drag.x, drag.originY + event.clientY - drag.y);
+              dragRef.current = null;
+              setSearchPosition(next);
+              try { localStorage.setItem('mmora.home.search-panel-position.v1', JSON.stringify(next)); } catch { /* unavailable */ }
+              window.setTimeout(() => { (window as Window & { __mmoraHomeControlDragging?: boolean }).__mmoraHomeControlDragging = false; }, 0);
+            }}
+            onPointerCancel={() => {
+              dragRef.current = null;
+              (window as Window & { __mmoraHomeControlDragging?: boolean }).__mmoraHomeControlDragging = false;
+            }}
+          >
+            <GripHorizontal className="h-4 w-4" />
+          </button>
           <div className="flex items-center gap-2 px-2">
             <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
             <Input
