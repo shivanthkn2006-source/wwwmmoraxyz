@@ -137,6 +137,25 @@ export async function rememberZoeRound(
   return result;
 }
 
+/**
+ * Persist the user's question the moment it is asked, so it survives even if
+ * the assistant reply never lands (offline, error, image path, reload).
+ */
+export async function rememberZoeQuestion(input: {
+  userId?: string | null;
+  sessionKey: string;
+  userText: string;
+}): Promise<RememberResult> {
+  return rememberZoeRound({
+    userId: input.userId,
+    sessionKey: input.sessionKey,
+    userText: input.userText,
+    assistantText: '(pending reply)',
+  });
+}
+
+
+
 
 /** Pull grounding context: gateway recall/search first, sovereign rows as fallback. */
 export async function recallZoeMemory(opts: {

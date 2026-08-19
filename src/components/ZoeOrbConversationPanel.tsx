@@ -47,7 +47,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
-import { recallZoeMemory, rememberZoeRound } from '@/services/zoeMemoryBridge';
+import { recallZoeMemory, rememberZoeRound, rememberZoeQuestion } from '@/services/zoeMemoryBridge';
 
 import { speakAsZoe, stopZoeSpeech, isZoeSpeaking, initializeZoeVoices, replayAsZoe, pauseZoeSpeech, resumeZoeSpeech } from '@/utils/zoeVoice';
 import { isZoeInfinityMessage, stripZoeInfinityMarker } from '@/utils/conversationNamespaces';
@@ -1275,6 +1275,14 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
     // Store in offline cache AND database with media info
     offlineDataSync.addConversation('user', userMessage.content);
     await saveMessageToDb('user', userMessage.content, durablePendingMediaUrl, pendingMedia?.type, userMessage.id);
+
+    // Persist the question itself (sovereign + TencentDB gateway) before any reply path runs,
+    // so M'mora orb questions survive reloads, offline replies and image routing.
+    void rememberZoeQuestion({
+      userId: user?.id,
+      sessionKey: zoeMemorySessionKey,
+      userText: userMessage.content,
+    });
 
     const resolvedImageTurn = resolveZoeImageTurn(
       userMessage.content,
