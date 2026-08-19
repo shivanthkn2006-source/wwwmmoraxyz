@@ -1909,7 +1909,7 @@ const HomePage = () => {
             </div>
           </div>
 
-              <TabsContent value="global" className="m-0 h-[100dvh] overflow-y-auto px-0 pt-0 snap-y snap-mandatory" data-feed-tab="global">
+              <TabsContent value="global" className="relative m-0 h-full w-full overflow-hidden p-0" data-feed-tab="global">
                 {hasNewPosts && (
                   <div className="sticky top-16 z-30 mx-3 flex items-center justify-between rounded-md border border-primary/30 bg-background/95 px-3 py-2 shadow-sm backdrop-blur" data-testid="new-posts-indicator">
                     <span className="text-sm font-medium">New posts available</span>
@@ -1944,22 +1944,16 @@ const HomePage = () => {
                   </div>
                 )}
                 
-                {/* Smart Feature Recommendations with Sovereign Quick Access */}
-                <div className="px-3"><SovereignQuickAccess /></div>
-
-                {/* Loops / trending rail removed — in-post previews cover this now */}
-
-
                 {loading ? (
-                  <p className="px-3 text-center text-muted-foreground py-8">Loading posts...</p>
+                  <p className="absolute inset-0 flex items-center justify-center px-3 text-center text-muted-foreground">Loading posts...</p>
                 ) : globalPosts.length === 0 ? (
-                  <p className="px-3 text-center text-muted-foreground py-8">No posts yet</p>
+                  <p className="absolute inset-0 flex items-center justify-center px-3 text-center text-muted-foreground">No posts yet</p>
                 ) : (
-                  <div className="snap-y snap-mandatory overscroll-contain" data-testid="global-posts-snap-feed">
+                  <div className="absolute inset-0 h-full w-full snap-y snap-mandatory overflow-y-auto overscroll-contain" data-testid="global-posts-snap-feed">
                   {visibleGlobalPosts.map(post => {
                     const isToday = post.created_at && new Date(post.created_at).toDateString() === new Date().toDateString();
                     return (
-                      <div key={post.id} className="relative h-[100dvh] snap-start snap-always" data-post-card data-post-id={post.id} data-today={isToday ? 'true' : 'false'} data-new={newContentByFeed.global.has(post.id) ? 'true' : 'false'}>
+                      <div key={post.id} className="relative h-full min-h-full w-full snap-start snap-always" data-post-card data-post-id={post.id} data-today={isToday ? 'true' : 'false'} data-new={newContentByFeed.global.has(post.id) ? 'true' : 'false'}>
                         {newContentByFeed.global.has(post.id) && (
                           <NewContentBadge className="right-3 top-3" onViewed={() => dismissNewContent('global', post.id)} />
                         )}
@@ -1973,8 +1967,8 @@ const HomePage = () => {
                 )}
             </TabsContent>
 
-            <TabsContent value="personal" className="mt-0 h-full w-full ">
-              <div className="h-[100dvh] overflow-y-auto px-0 pt-0 snap-y snap-mandatory" data-feed-tab="personal">
+            <TabsContent value="personal" className="relative m-0 h-full w-full overflow-hidden p-0">
+              <div className="absolute inset-0 h-full w-full overflow-hidden" data-feed-tab="personal">
                 {hasNewPosts && (
                   <div className="sticky top-16 z-30 mx-3 flex items-center justify-between rounded-md border border-primary/30 bg-background/95 px-3 py-2 shadow-sm backdrop-blur" data-testid="new-posts-indicator">
                     <span className="text-sm font-medium">New posts available</span>
@@ -1985,15 +1979,15 @@ const HomePage = () => {
                   </div>
                 )}
                 {loading ? (
-                  <p className="px-3 text-center text-muted-foreground py-8">Loading posts...</p>
+                  <p className="absolute inset-0 flex items-center justify-center px-3 text-center text-muted-foreground">Loading posts...</p>
                 ) : personalPosts.length === 0 ? (
-                  <p className="px-3 text-center text-muted-foreground py-8">No posts from friends yet</p>
+                  <p className="absolute inset-0 flex items-center justify-center px-3 text-center text-muted-foreground">No posts from friends yet</p>
                 ) : (
-                  <div className="snap-y snap-mandatory overscroll-contain" data-testid="personal-posts-snap-feed">
+                  <div className="absolute inset-0 h-full w-full snap-y snap-mandatory overflow-y-auto overscroll-contain" data-testid="personal-posts-snap-feed">
                   {visiblePersonalPosts.map(post => {
                     const isToday = post.created_at && new Date(post.created_at).toDateString() === new Date().toDateString();
                     return (
-                      <div key={post.id} className="relative h-[100dvh] snap-start snap-always" data-post-card data-post-id={post.id} data-today={isToday ? 'true' : 'false'} data-new={newContentByFeed.personal.has(post.id) ? 'true' : 'false'}>
+                      <div key={post.id} className="relative h-full min-h-full w-full snap-start snap-always" data-post-card data-post-id={post.id} data-today={isToday ? 'true' : 'false'} data-new={newContentByFeed.personal.has(post.id) ? 'true' : 'false'}>
                         {newContentByFeed.personal.has(post.id) && (
                           <NewContentBadge className="right-3 top-3" onViewed={() => dismissNewContent('personal', post.id)} />
                         )}
