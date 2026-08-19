@@ -19,6 +19,9 @@ import { usePrivateTimelines } from '@/hooks/usePrivateTimelines';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { appendMediaVersion, inferMediaType, isPrivateStorageUrl, makeFallbackVideoPoster, resolvePrivateStorageUrl } from '@/lib/mediaUtils';
 import { usePersistentMediaSound } from '@/hooks/usePersistentMediaSound';
+import AuthorPreviewRail from '@/components/home/AuthorPreviewRail';
+import { useFollow } from '@/hooks/useFollow';
+import { isInPlaylist, toggleWatchLater, WATCH_LATER_ID } from '@/lib/shortsPlaylists';
 
 interface Post {
   id: string;
