@@ -72,7 +72,7 @@ async function ensureForUser(userId: string, tz: string, now: Date) {
     // Row exists without art (older run / provider outage) — repair the image.
     const theme = row.theme || themeFor(targetDate, userId);
     const img = await renderImage({
-      prompt: sceneFor(theme),
+      prompt: row.image_prompt || sceneFor(theme),
       storagePath: `${userId}/motivation_${targetDate}.jpg`,
       bucket: BUCKET,
       supabaseUrl: SUPABASE_URL,
@@ -98,7 +98,7 @@ async function ensureForUser(userId: string, tz: string, now: Date) {
   const content = gen.content ?? pickMotivationFallback(seed, theme);
 
   const img = await renderImage({
-    prompt: sceneFor(theme),
+    prompt: content.scene || sceneFor(theme),
     storagePath: `${userId}/motivation_${targetDate}.jpg`,
     bucket: BUCKET,
     supabaseUrl: SUPABASE_URL,
@@ -118,6 +118,7 @@ async function ensureForUser(userId: string, tz: string, now: Date) {
       action_step: content.actionStep,
       quote: content.quote,
       poster_path: img.path,
+      image_prompt: content.scene || sceneFor(theme),
       source: content.source,
     }),
   });
