@@ -728,6 +728,39 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
           <span className="text-xs font-semibold">Save</span>
         </button>
 
+        <button
+          type="button"
+          onClick={handleWatchLater}
+          className={overlayButton}
+          aria-label={watchLater ? 'Remove from watch later' : 'Watch later'}
+          aria-pressed={watchLater}
+        >
+          <span className={overlayIconWrap}>
+            <Clock className={`h-6 w-6 ${watchLater ? 'text-primary' : ''}`} />
+          </span>
+          <span className="text-xs font-semibold">Later</span>
+        </button>
+
+        {canFollow && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleFollow();
+            }}
+            className={overlayButton}
+            aria-label={isFollowing ? 'Unfollow creator' : 'Follow creator'}
+            aria-pressed={isFollowing}
+          >
+            <span className={overlayIconWrap}>
+              {isFollowing ? <UserCheck className="h-6 w-6" /> : <UserPlus className="h-6 w-6" />}
+            </span>
+            <span className="text-xs font-semibold">{isFollowing ? 'Following' : 'Follow'}</span>
+          </button>
+        )}
+
+
+
         {isOwnPost && (
           <button type="button" onClick={handleDelete} className={overlayButton} aria-label="Delete post">
             <span className={overlayIconWrap}>
