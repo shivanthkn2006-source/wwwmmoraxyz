@@ -576,7 +576,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
             muted={!shouldPlayWithSound}
             loop
             preload="metadata"
-            className="h-full w-full object-contain"
+            className="block h-full w-full object-cover object-center"
             data-testid="post-video"
             onClick={() => {
               const v = videoRef.current;
@@ -599,7 +599,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
           <img
             src={displayMediaSrc}
             alt="Post media"
-            className="h-full w-full cursor-pointer object-contain"
+            className="block h-full w-full cursor-pointer object-cover object-center"
             data-testid="post-image"
             onClick={() => setShowImageViewer(true)}
             onError={() => console.warn('[PostCard][image] failed to load', post.id)}
