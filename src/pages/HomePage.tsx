@@ -1626,18 +1626,31 @@ const HomePage = () => {
       }
 
       setUploadState('saving');
-      const { error } = await supabase.from('posts').insert({
+      const { data: inserted, error } = await supabase.from('posts').insert({
         user_id: user.id,
         content: '',
         media_url: mediaUrl,
         media_preview_url: mediaPreviewUrl || (mediaType === 'image' ? mediaUrl : null),
         media_type: mediaType,
         visibility: 'global',
-      });
+      }).select('id').maybeSingle();
       if (error) throw error;
 
+      // Persist the short in the M'mora orb memory (offline cache + memory bridge)
+      void rememberShortInOrbMemory(
+        {
+          postId: inserted?.id || `local-${Date.now()}`,
+          mediaUrl,
+          posterUrl: mediaPreviewUrl || (mediaType === 'image' ? mediaUrl : null),
+          mediaType,
+          content: '',
+          createdAt: new Date().toISOString(),
+        },
+        user.id,
+      );
+
       setUploadState('success');
-      toast({ title: 'Posted!', description: 'Your loop is now live' });
+      toast({ title: 'Posted!', description: 'Your short is now live' });
       triggerHomeRefresh();
       // Auto-clear success state after a moment
       setTimeout(() => {
