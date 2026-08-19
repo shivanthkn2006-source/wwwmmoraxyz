@@ -713,17 +713,18 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
         }}
       />
 
-      {/* Small delete control, sitting just below the in-post preview icons */}
+      {/* Bare delete glyph, sitting just below the in-post preview icons */}
       {isOwnPost && (
         <button
           type="button"
           onClick={handleDelete}
           aria-label="Delete post"
-          className="absolute bottom-14 left-2 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-md hover:bg-white/20"
+          className="absolute bottom-14 left-4 z-20 text-destructive drop-shadow-[0_2px_6px_rgba(0,0,0,0.8)] transition-opacity hover:opacity-80"
         >
-          <Trash2 className="h-3.5 w-3.5 text-destructive" />
+          <Trash2 className="h-4 w-4" />
         </button>
       )}
+
 
 
 
