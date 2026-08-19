@@ -3,23 +3,38 @@ import { createPortal } from 'react-dom';
 import { Sparkles, Moon, Clock, X, Compass } from 'lucide-react';
 import type { AstroPredictionRecord } from './moraZoeTypes';
 
+/** Turns technical aspect names into everyday language anyone can follow. */
+const plainMood = (aspect: string, retrograde: boolean): string => {
+  const key = (aspect || '').toLowerCase();
+  const base =
+    key.includes('trine') ? 'Things flow easily today'
+    : key.includes('sextile') ? 'A small door opens if you act'
+    : key.includes('square') ? 'A little friction — go steady'
+    : key.includes('opposition') ? 'Balance two sides of your day'
+    : key.includes('conjunction') ? 'Strong focus on one thing'
+    : 'A gentle, steady day';
+  return retrograde ? `${base} · double-check details` : base;
+};
+
 interface Props {
   prediction: AstroPredictionRecord;
+  posterUrl?: string | null;
   secondsRemaining: number;
   onDismiss: () => void;
 }
 
-export const MoraZoeMorningTakeover: React.FC<Props> = ({ prediction, secondsRemaining, onDismiss }) => {
+export const MoraZoeMorningTakeover: React.FC<Props> = ({ prediction, posterUrl, secondsRemaining, onDismiss }) => {
   const progressPercent = ((60 - secondsRemaining) / 60) * 100;
+  const art = posterUrl ?? null;
 
   const overlay = (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center overflow-hidden bg-background">
-      {prediction.poster_image_url && (
+      {art && (
         <img
-          src={prediction.poster_image_url}
+          src={art}
           alt=""
           aria-hidden="true"
-          className="absolute inset-0 h-full w-full object-cover opacity-30"
+          className="absolute inset-0 h-full w-full object-cover opacity-40"
         />
       )}
       <div className="absolute inset-0 bg-gradient-to-b from-background/90 via-background/80 to-background" />
@@ -71,7 +86,7 @@ export const MoraZoeMorningTakeover: React.FC<Props> = ({ prediction, secondsRem
         {prediction.transits_summary?.length > 0 && (
           <div className="mt-6">
             <div className="mb-2 flex items-center justify-center gap-2 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-              <Compass className="h-3.5 w-3.5" /> Exact transits
+              <Compass className="h-3.5 w-3.5" /> What today feels like
             </div>
             <div className="flex flex-wrap justify-center gap-2">
               {prediction.transits_summary.slice(0, 3).map((t, idx) => (
@@ -79,13 +94,13 @@ export const MoraZoeMorningTakeover: React.FC<Props> = ({ prediction, secondsRem
                   key={`${t.transit_planet}-${t.natal_planet}-${idx}`}
                   className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground"
                 >
-                  {t.transit_planet} {t.aspect} natal {t.natal_planet}
-                  {t.is_retrograde ? ' ℞' : ''}
+                  {plainMood(t.aspect, t.is_retrograde)}
                 </span>
               ))}
             </div>
           </div>
         )}
+
 
         <p className="mt-8 text-[11px] text-muted-foreground">
           Auto-dismissing and saving to your daily alignment archive…

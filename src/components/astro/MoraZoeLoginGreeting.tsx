@@ -1,47 +1,76 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { Sparkles, X, ArrowRight } from 'lucide-react';
-import type { AstroPredictionRecord } from './moraZoeTypes';
+import { Sun, X, Check, ArrowRight } from 'lucide-react';
+import type { ZoeMotivation } from '@/hooks/useZoeMotivation';
 
 interface Props {
-  prediction: AstroPredictionRecord;
+  motivation: ZoeMotivation;
+  posterUrl?: string | null;
   onDismiss: () => void;
 }
 
-export const MoraZoeLoginGreeting: React.FC<Props> = ({ prediction, onDismiss }) => {
+/**
+ * Full-screen everyday motivation card. Deliberately different from the
+ * astrology takeover: plain life-coach language, one action step, and a
+ * photographic lifestyle poster instead of celestial art.
+ */
+export const MoraZoeLoginGreeting: React.FC<Props> = ({ motivation, posterUrl, onDismiss }) => {
   const overlay = (
-    <div className="fixed inset-x-0 bottom-0 z-[9998] flex justify-center px-4 pb-6 pointer-events-none">
-      <div className="pointer-events-auto w-full max-w-md rounded-2xl border border-border bg-card/95 p-4 shadow-lg backdrop-blur animate-fade-in">
-        <div className="flex items-start gap-3">
-          <div className="mt-0.5 rounded-full border border-border p-2">
-            <Sparkles className="h-4 w-4 text-primary" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Daily alignment</p>
-            <p className="truncate text-sm font-medium text-foreground">{prediction.prediction_headline}</p>
-            <p className="mt-2 text-xs italic text-muted-foreground">
-              &ldquo;{prediction.motivational_quote}&rdquo;
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onDismiss}
-            aria-label="Dismiss daily alignment"
-            className="rounded-full p-1 text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <X className="h-4 w-4" />
-          </button>
+    <div className="fixed inset-0 z-[9998] flex items-center justify-center overflow-hidden bg-background">
+      {posterUrl && (
+        <img
+          src={posterUrl}
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 h-full w-full object-cover opacity-40"
+        />
+      )}
+      <div className="absolute inset-0 bg-gradient-to-b from-background/85 via-background/75 to-background" />
+
+      <button
+        type="button"
+        onClick={onDismiss}
+        aria-label="Close today's motivation"
+        className="absolute right-5 top-5 rounded-full p-2 text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <X className="h-5 w-5" />
+      </button>
+
+      <div className="relative mx-auto w-full max-w-lg px-6 text-center">
+        <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-border px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+          <Sun className="h-3.5 w-3.5" />
+          Today&apos;s motivation
         </div>
-        <div className="mt-3 flex items-center justify-between">
-          <span className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Swiss ephemeris</span>
-          <button
-            type="button"
-            onClick={onDismiss}
-            className="inline-flex items-center gap-1 text-xs font-medium text-primary"
-          >
-            Enter app <ArrowRight className="h-3.5 w-3.5" />
-          </button>
-        </div>
+
+        <h1 className="text-3xl font-semibold leading-tight text-foreground sm:text-4xl">
+          {motivation.headline}
+        </h1>
+
+        <p className="mt-4 text-sm leading-relaxed text-muted-foreground sm:text-base">
+          {motivation.body}
+        </p>
+
+        {motivation.action_step && (
+          <div className="mt-6 flex items-start gap-3 rounded-2xl border border-border bg-card/70 p-4 text-left backdrop-blur">
+            <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">One thing to do today</p>
+              <p className="mt-1 text-sm text-foreground">{motivation.action_step}</p>
+            </div>
+          </div>
+        )}
+
+        {motivation.quote && (
+          <p className="mt-6 text-sm italic text-foreground">&ldquo;{motivation.quote}&rdquo;</p>
+        )}
+
+        <button
+          type="button"
+          onClick={onDismiss}
+          className="mt-8 inline-flex items-center gap-1.5 rounded-full border border-border px-5 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+        >
+          Start my day <ArrowRight className="h-4 w-4" />
+        </button>
       </div>
     </div>
   );
