@@ -7125,6 +7125,7 @@ export type Database = {
           created_at: string
           headline: string
           id: string
+          image_prompt: string | null
           poster_path: string | null
           quote: string
           source: string
@@ -7138,6 +7139,7 @@ export type Database = {
           created_at?: string
           headline: string
           id?: string
+          image_prompt?: string | null
           poster_path?: string | null
           quote?: string
           source?: string
@@ -7151,6 +7153,7 @@ export type Database = {
           created_at?: string
           headline?: string
           id?: string
+          image_prompt?: string | null
           poster_path?: string | null
           quote?: string
           source?: string
