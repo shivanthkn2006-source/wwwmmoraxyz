@@ -19,12 +19,10 @@ import FuturisticCounter from '@/components/FuturisticCounter';
 import { useNavigate } from 'react-router-dom';
 import { onHomeRefresh, triggerHomeRefresh } from '@/lib/homeRefresh';
 import { rememberShortInOrbMemory } from '@/lib/orbShortsMemory';
-import PlaylistsSection from '@/components/home/PlaylistsSection';
 import HomeFloatingTools from '@/components/home/HomeFloatingTools';
 import HomePostEditor, { type HomePostDraft } from '@/components/home/HomePostEditor';
 import { useEventGlow, getAvatarGlowClass } from '@/hooks/useEventGlow';
 import { toast } from '@/hooks/use-toast';
-import AutoScrollDebugOverlay from '@/components/dev/AutoScrollDebugOverlay';
 
 import StatusIconBadge from '@/components/StatusIconBadge';
 import { useSmartNotifications } from '@/hooks/useSmartNotifications';
@@ -2230,21 +2228,6 @@ const HomePage = () => {
                   </>)}
                 </section>
 
-                {/* Playlists + Watch later shelf */}
-                <PlaylistsSection
-                  query={homeQuery}
-                  onPlayItem={(postId) => {
-                    const idx = filteredLoops.findIndex((p) => p.id === postId);
-                    if (idx >= 0) {
-                      setLoopsInitialIndex(idx);
-                      setLoopsPlayerOpen(true);
-                      return;
-                    }
-                    const el = document.querySelector(`[data-post-id="${postId}"]`);
-                    el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                  }}
-                />
-                
                 {loading ? (
                   <p className="px-3 text-center text-muted-foreground py-8">Loading posts...</p>
                 ) : globalPosts.length === 0 ? (
@@ -2389,7 +2372,7 @@ const HomePage = () => {
         </button>
       )}
       </div>
-      {showZoeHomeDebug && (
+      {showZoeHomeDebug && import.meta.env.DEV && new URLSearchParams(window.location.search).has('home_debug') && (
         <div className="pointer-events-none fixed left-2 top-16 z-[60] w-[calc(100vw-1rem)] max-w-sm md:left-4 md:top-20" data-testid="zoe-home-debug-overlay">
           <div className="pointer-events-auto rounded-lg border border-border bg-background/95 p-3 text-foreground shadow-lg backdrop-blur">
             <div className="mb-2 flex items-center justify-between gap-2">
@@ -2425,7 +2408,11 @@ const HomePage = () => {
           </div>
         </div>
       )}
-      <AutoScrollDebugOverlay />
+      {import.meta.env.DEV && new URLSearchParams(window.location.search).has('home_debug') && (
+        <React.Suspense fallback={null}>
+          {React.createElement(React.lazy(() => import('@/components/dev/AutoScrollDebugOverlay')))}
+        </React.Suspense>
+      )}
     </>
   );
 };

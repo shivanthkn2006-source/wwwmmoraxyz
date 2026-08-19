@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, Heart, Loader2, MessageCircle, Share2, Trash2, Bookmark, MoreVertical, Star, Volume2, VolumeX, Clock, UserPlus, UserCheck } from 'lucide-react';
+import { AlertTriangle, Heart, Loader2, MessageCircle, Share2, Trash2, Bookmark, MoreVertical, Star, Volume2, VolumeX, UserPlus, UserCheck, ScanText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
@@ -21,7 +21,6 @@ import { appendMediaVersion, inferMediaType, isPrivateStorageUrl, makeFallbackVi
 import { usePersistentMediaSound } from '@/hooks/usePersistentMediaSound';
 import AuthorPreviewRail from '@/components/home/AuthorPreviewRail';
 import { useFollow } from '@/hooks/useFollow';
-import { isInPlaylist, toggleWatchLater, WATCH_LATER_ID } from '@/lib/shortsPlaylists';
 import { setZoeActivePostContext } from '@/lib/zoePlatformContext';
 
 interface Post {
@@ -91,24 +90,12 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
   
   const isOwnPost = user?.id === post.user_id;
   const { isFollowing, toggleFollow, canFollow } = useFollow(post.user_id);
-  const [watchLater, setWatchLater] = useState(false);
-
-  useEffect(() => {
-    setWatchLater(isInPlaylist(WATCH_LATER_ID, post.id));
-  }, [post.id]);
-
-  const handleWatchLater = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const { added } = toggleWatchLater({
-      postId: post.id,
-      mediaUrl: post.media_url,
-      posterUrl: post.media_preview_url ?? null,
-      mediaType: post.media_type,
-      content: post.content,
-      authorName: post.profile?.display_name ?? null,
-    });
-    setWatchLater(added);
-    toast({ title: added ? 'Saved to Watch later' : 'Removed from Watch later' });
+  const sendPostToZoe = (mode: 'context' | 'transcript') => {
+    const author = post.profile?.display_name || post.profile?.username || 'this creator';
+    const prompt = mode === 'transcript'
+      ? `Transcribe the current post video with timestamps. Post by ${author}. Text: ${post.content || '(no caption)'}. Video: ${displayMediaUrl || '(no video URL)'}`
+      : `Use this post as context and answer me in chat. Post by ${author}. Text: ${post.content || '(no caption)'}. Media: ${displayMediaUrl || '(no media URL)'}`;
+    window.dispatchEvent(new CustomEvent('mmora:zoe-open-with-context', { detail: { prompt, postId: post.id } }));
   };
   const displayMediaUrl = post.media_url || loadedHeavyMediaUrl || post.full_media_url || null;
   const isDeferredHeavyMedia = !post.media_url && (post.has_deferred_media || !!post.full_media_url) && !loadedHeavyMediaUrl && !post.full_media_url;
@@ -752,17 +739,9 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
           <span className="text-xs font-semibold">Save</span>
         </button>
 
-        <button
-          type="button"
-          onClick={handleWatchLater}
-          className={overlayButton}
-          aria-label={watchLater ? 'Remove from watch later' : 'Watch later'}
-          aria-pressed={watchLater}
-        >
-          <span className={overlayIconWrap}>
-            <Clock className={`h-6 w-6 ${watchLater ? 'text-primary' : ''}`} />
-          </span>
-          <span className="text-xs font-semibold">Later</span>
+        <button type="button" onClick={() => sendPostToZoe('context')} className={overlayButton} aria-label="Use post as Zoe context">
+          <span className={overlayIconWrap}><ScanText className="h-6 w-6" /></span>
+          <span className="text-xs font-semibold">Zoe</span>
         </button>
 
         {canFollow && (
@@ -795,7 +774,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
 
         <div className="relative mt-1">
           <Avatar
-            className={`h-10 w-10 cursor-pointer rounded-lg border-2 border-white/80 ${glowClass}`}
+            className={`h-10 w-10 cursor-pointer rounded-full border-2 border-white/80 ${glowClass}`}
             onClick={(e) => {
               e.stopPropagation();
               if (post.profile?.profile_photo_url) setShowProfileViewer(true);
@@ -858,7 +837,11 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
         <div className="absolute inset-x-0 bottom-0 z-30 max-h-[65%] overflow-y-auto rounded-t-2xl bg-background/95 backdrop-blur-md">
           <div className="flex items-center justify-between px-4 py-2">
             <span className="text-sm font-semibold">Comments</span>
-            <Button variant="ghost" size="sm" onClick={() => setShowComments(false)}>Close</Button>
+            <div className="flex items-center gap-1">
+              {isVideoMedia && <Button variant="ghost" size="sm" onClick={() => sendPostToZoe('transcript')}>Transcript</Button>}
+              <Button variant="ghost" size="sm" onClick={() => sendPostToZoe('context')}>Ask Zoe</Button>
+              <Button variant="ghost" size="sm" onClick={() => setShowComments(false)}>Close</Button>
+            </div>
           </div>
           <CommentSection postId={post.id} onUpdate={onUpdate} />
         </div>

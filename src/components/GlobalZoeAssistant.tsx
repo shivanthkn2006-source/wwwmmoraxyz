@@ -783,6 +783,16 @@ export const GlobalZoeAssistant = ({ config = DEFAULT_CONFIG }: { config?: Parti
   const hasInitializedRef = useRef(false);
   const sessionKeyRef = useRef<string | null>(null);
   const [orbActivationEmotion, setOrbActivationEmotion] = useState<ECNEmotionState | null>(null);
+
+  useEffect(() => {
+    const openWithContext = (event: Event) => {
+      (window as Window & { __mmoraPendingZoeContext?: { prompt?: string } }).__mmoraPendingZoeContext =
+        (event as CustomEvent<{ prompt?: string }>).detail;
+      setShowConversationPanel(true);
+    };
+    window.addEventListener('mmora:zoe-open-with-context', openWithContext);
+    return () => window.removeEventListener('mmora:zoe-open-with-context', openWithContext);
+  }, []);
   
   // Listen for Entity Activation Protocol orb activation event
   useEffect(() => {
@@ -928,7 +938,8 @@ export const GlobalZoeAssistant = ({ config = DEFAULT_CONFIG }: { config?: Parti
                       isThinking={isProcessing || alwaysOnVoice.isProcessing}
                       size="lg"
                       onClick={() => {
-                        if (!isDragging) setShowConversationPanel(true);
+                        const homeControlActive = Boolean((window as Window & { __mmoraHomeControlDragging?: boolean }).__mmoraHomeControlDragging);
+                        if (!isDragging && !homeControlActive) setShowConversationPanel(true);
                       }}
                       onDoubleClick={() => {
                         if (!isDragging) navigate('/ai-companion');
