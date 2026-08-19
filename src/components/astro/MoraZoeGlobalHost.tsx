@@ -2,9 +2,11 @@ import React from 'react';
 import { useAstroDiagnostics } from '@/hooks/useAstroDiagnostics';
 import { useZoeMotivation } from '@/hooks/useZoeMotivation';
 import { useMoraZoeScheduler } from '@/hooks/useMoraZoeScheduler';
+import { useBirthDetailsGate } from '@/hooks/useBirthDetailsGate';
 import { resolvePosterUrl } from '@/lib/astroPoster';
 import { MoraZoeMorningTakeover } from './MoraZoeMorningTakeover';
 import { MoraZoeLoginGreeting } from './MoraZoeLoginGreeting';
+import { MoraZoeBirthDetailsPrompt } from './MoraZoeBirthDetailsPrompt';
 
 /**
  * Single plug-and-play overlay host. Fully sandboxed: renders nothing when a
