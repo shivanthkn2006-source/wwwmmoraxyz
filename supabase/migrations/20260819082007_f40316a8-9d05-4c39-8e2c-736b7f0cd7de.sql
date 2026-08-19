@@ -1,0 +1,1 @@
+ALTER TABLE public.zoe_daily_motivations ADD COLUMN IF NOT EXISTS image_prompt text;
