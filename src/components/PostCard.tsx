@@ -623,8 +623,9 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
         </div>
       )}
 
-      {/* Top-right controls */}
-      <div className="absolute right-2 top-2 z-20 flex items-center gap-1">
+      {/* Right-side controls, placed below the header profile icon so nothing overlaps */}
+      <div className="absolute right-2 top-20 z-20 flex items-center gap-1">
+
         {isVideoMedia && (
           <button
             type="button"
@@ -709,6 +710,20 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
         }}
       />
 
+      {/* Small delete control, sitting just below the in-post preview icons */}
+      {isOwnPost && (
+        <button
+          type="button"
+          onClick={handleDelete}
+          aria-label="Delete post"
+          className="absolute bottom-14 left-2 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-md hover:bg-white/20"
+        >
+          <Trash2 className="h-3.5 w-3.5 text-destructive" />
+        </button>
+      )}
+
+
+
       {/* Right action rail (transparent, Shorts style) */}
       <div className="absolute bottom-20 right-2 z-20 flex flex-col items-center gap-2.5">
         <button type="button" onClick={handleLike} className={overlayButton} aria-label="Like">
@@ -764,13 +779,6 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
 
 
 
-        {isOwnPost && (
-          <button type="button" onClick={handleDelete} className={overlayButton} aria-label="Delete post">
-            <span className={overlayIconWrap}>
-              <Trash2 className="h-6 w-6 text-destructive" />
-            </span>
-          </button>
-        )}
 
         <div className="relative mt-1">
           <Avatar
