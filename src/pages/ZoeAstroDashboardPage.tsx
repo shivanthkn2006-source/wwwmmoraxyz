@@ -65,7 +65,7 @@ const ZoeAstroDashboardPage: React.FC = () => {
         supabase
           .from('profiles')
           .select('birth_date, birth_time, birth_place')
-          .eq('id', user.id)
+          .eq('user_id', user.id)
           .maybeSingle(),
       ]);
 
@@ -95,7 +95,7 @@ const ZoeAstroDashboardPage: React.FC = () => {
         birth_time: birthTime ? `${birthTime}:00` : null,
         birth_place: birthPlace || null,
       })
-      .eq('id', user.id);
+      .eq('user_id', user.id);
     setSaving(false);
     setMessage(error ? `Could not save: ${error.message}` : 'Birth details saved — alignments refresh from the next slot.');
   };
