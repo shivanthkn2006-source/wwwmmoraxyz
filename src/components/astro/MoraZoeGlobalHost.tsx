@@ -38,6 +38,14 @@ export const MoraZoeGlobalHost: React.FC = () => {
     return () => { cancelled = true; };
   }, [todayPrediction?.poster_image_url]);
 
+  const {
+    needsDetails,
+    existing: existingBirth,
+    loading: birthLoading,
+    save: saveBirth,
+    snooze: snoozeBirth,
+  } = useBirthDetailsGate();
+
   const canShowAstro = !!diagnostics?.passed && !!todayPrediction;
   const canShowMotivation = !motivationLoading && !!motivation;
 
@@ -46,6 +54,11 @@ export const MoraZoeGlobalHost: React.FC = () => {
   const showAstroTakeover = showMorningTakeover && canShowAstro;
   const showMotivationCard =
     canShowMotivation && !showAstroTakeover && (showLoginGreeting || showMorningTakeover);
+
+  // Only members with missing birth date/time/place ever see this, and only
+  // once nothing else is on screen, so overlays never stack.
+  const showBirthPrompt =
+    !birthLoading && needsDetails && !showAstroTakeover && !showMotivationCard;
 
   return (
     <>
@@ -67,8 +80,16 @@ export const MoraZoeGlobalHost: React.FC = () => {
           }}
         />
       )}
+      {showBirthPrompt && (
+        <MoraZoeBirthDetailsPrompt
+          initial={existingBirth}
+          onSave={saveBirth}
+          onSkip={snoozeBirth}
+        />
+      )}
     </>
   );
 };
+
 
 export default MoraZoeGlobalHost;
