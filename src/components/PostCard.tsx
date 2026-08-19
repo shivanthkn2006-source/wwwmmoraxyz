@@ -623,28 +623,10 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
         </div>
       )}
 
-      {/* Right-side controls, placed below the header profile icon so nothing overlaps */}
-      <div className="absolute right-2 top-20 z-20 flex items-center gap-1">
+      {/* Right-side controls: rate + more on one row, speaker tucked underneath */}
+      <div className="absolute right-2 top-20 z-20 flex flex-col items-end gap-1.5">
+        <div className="flex items-center gap-1">
 
-        {isVideoMedia && (
-          <button
-            type="button"
-            aria-label={soundEnabled ? 'Mute video audio' : 'Unmute video audio'}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-md hover:bg-white/20"
-            onClick={(e) => {
-              e.stopPropagation();
-              setSoundUnlocked(true);
-              const next = !soundEnabled;
-              setSoundEnabled(next);
-              if (videoRef.current) {
-                videoRef.current.muted = !next;
-                if (next) videoRef.current.play().catch(() => {});
-              }
-            }}
-          >
-            {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-          </button>
-        )}
         {!isOwnPost && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
