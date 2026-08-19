@@ -29,13 +29,13 @@ const AuthorPreviewRail: React.FC<AuthorPreviewRailProps> = ({ authorId, current
     let cancelled = false;
     (async () => {
       const { data } = await supabase
-        .from('posts')
+        .from('feed_posts_safe')
         .select('id, media_url, media_preview_url, media_type, content, likes_count, created_at')
         .eq('user_id', authorId)
         .neq('id', currentPostId)
         .order('likes_count', { ascending: false })
         .order('created_at', { ascending: false })
-        .limit(4);
+        .limit(3);
       if (!cancelled) setPosts((data as RailPost[]) || []);
     })();
     return () => {

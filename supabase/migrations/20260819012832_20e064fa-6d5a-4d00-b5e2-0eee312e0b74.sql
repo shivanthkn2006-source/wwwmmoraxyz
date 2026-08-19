@@ -1,0 +1,1 @@
+ALTER VIEW public.feed_posts_safe SET (security_invoker = true);
