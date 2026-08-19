@@ -687,7 +687,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
           <button
             type="button"
             aria-label={soundEnabled ? 'Mute video audio' : 'Unmute video audio'}
-            className="flex h-7 w-7 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-md hover:bg-white/20"
+            className="flex h-7 w-7 items-center justify-center text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)]"
             onClick={(e) => {
               e.stopPropagation();
               setSoundUnlocked(true);
@@ -701,6 +701,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
           >
             {soundEnabled ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
           </button>
+
         )}
       </div>
 
