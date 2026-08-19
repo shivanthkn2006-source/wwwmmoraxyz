@@ -1673,6 +1673,12 @@ const HomePage = () => {
     if (lastUploadFile) handleLoopsUpload(lastUploadFile);
   }, [lastUploadFile, handleLoopsUpload]);
 
+  useEffect(() => {
+    const openShortUpload = () => document.getElementById('shorts-fab-upload')?.click();
+    window.addEventListener('mmora:request-shorts-upload', openShortUpload);
+    return () => window.removeEventListener('mmora:request-shorts-upload', openShortUpload);
+  }, []);
+
   const handleLoopDecodeStatus = React.useCallback((postId: string, status: string) => {
     setLoopDecodeStatus(prev => (prev[postId] === status ? prev : { ...prev, [postId]: status }));
     if (status === 'decode-failed' || status === 'timeout' || status === 'missing-source') {
@@ -2231,7 +2237,8 @@ const HomePage = () => {
                 ) : globalPosts.length === 0 ? (
                   <p className="px-3 text-center text-muted-foreground py-8">No posts yet</p>
                 ) : (
-                  globalPosts.map(post => {
+                  <div className="h-[100svh] overflow-y-auto snap-y snap-mandatory overscroll-contain" data-testid="global-posts-snap-feed">
+                  {globalPosts.map(post => {
                     const isToday = post.created_at && new Date(post.created_at).toDateString() === new Date().toDateString();
                     return (
                       <div key={post.id} className="relative" data-post-card data-post-id={post.id} data-today={isToday ? 'true' : 'false'} data-new={newContentByFeed.global.has(post.id) ? 'true' : 'false'}>
@@ -2243,7 +2250,8 @@ const HomePage = () => {
                         </FeedErrorBoundary>
                       </div>
                     );
-                  })
+                  })}
+                  </div>
                 )}
               </div>
             </TabsContent>
@@ -2264,7 +2272,8 @@ const HomePage = () => {
                 ) : personalPosts.length === 0 ? (
                   <p className="px-3 text-center text-muted-foreground py-8">No posts from friends yet</p>
                 ) : (
-                  personalPosts.map(post => {
+                  <div className="h-[100svh] overflow-y-auto snap-y snap-mandatory overscroll-contain" data-testid="personal-posts-snap-feed">
+                  {personalPosts.map(post => {
                     const isToday = post.created_at && new Date(post.created_at).toDateString() === new Date().toDateString();
                     return (
                       <div key={post.id} className="relative" data-post-card data-post-id={post.id} data-today={isToday ? 'true' : 'false'} data-new={newContentByFeed.personal.has(post.id) ? 'true' : 'false'}>
@@ -2276,7 +2285,8 @@ const HomePage = () => {
                         </FeedErrorBoundary>
                       </div>
                     );
-                  })
+                  })}
+                  </div>
                 )}
               </div>
             </TabsContent>
