@@ -1910,7 +1910,7 @@ const HomePage = () => {
 
         </div>
 
-              <div className="h-[100dvh] overflow-y-auto px-0 pt-0 snap-y snap-mandatory" data-feed-tab="global">
+              <TabsContent value="global" className="m-0 h-[100dvh] overflow-y-auto px-0 pt-0 snap-y snap-mandatory" data-feed-tab="global">
                 {hasNewPosts && (
                   <div className="sticky top-16 z-30 mx-3 flex items-center justify-between rounded-md border border-primary/30 bg-background/95 px-3 py-2 shadow-sm backdrop-blur" data-testid="new-posts-indicator">
                     <span className="text-sm font-medium">New posts available</span>
@@ -2270,7 +2270,7 @@ const HomePage = () => {
                   })}
                   </div>
                 )}
-              </div>
+              </TabsContent>
             </TabsContent>
 
             <TabsContent value="personal" className="mt-0 h-full w-full ">
@@ -2331,9 +2331,7 @@ const HomePage = () => {
               </div>
             </TabsContent>
 
-          </div>
         </Tabs>
-      <SearchBar />
       <NotificationMenu open={notificationMenuOpen} onOpenChange={setNotificationMenuOpen} />
       <HamburgerMenu
         isOpen={hamburgerMenuOpen}
