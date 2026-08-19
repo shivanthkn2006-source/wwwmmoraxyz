@@ -1846,14 +1846,14 @@ const HomePage = () => {
           />
         )} */}
         
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <div className="max-w-2xl mx-auto">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full h-screen flex flex-col">
+        <div className="">
           {/* Fixed header - Clean minimal version (profile now in HUD) */}
           <div
             className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ease-out will-change-transform ${headerVisible ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'}`}
             aria-hidden={!headerVisible}
           >
-            <div className="max-w-2xl mx-auto">
+            <div className="">
             <div className="flex items-center justify-between p-4">
               <div className="flex items-center gap-2">
                 {/* Hamburger Menu Button */}
@@ -1890,7 +1890,7 @@ const HomePage = () => {
 
         </div>
 
-              <div className="space-y-0 px-0 pt-0 snap-y snap-mandatory" data-feed-tab="global">
+              <div className="space-y-0 px-0 pt-0 snap-y snap-mandatory" data-feed-tab="global" className="h-full flex flex-col">
                 {hasNewPosts && (
                   <div className="sticky top-16 z-30 mx-3 flex items-center justify-between rounded-md border border-primary/30 bg-background/95 px-3 py-2 shadow-sm backdrop-blur" data-testid="new-posts-indicator">
                     <span className="text-sm font-medium">New posts available</span>
@@ -2237,7 +2237,7 @@ const HomePage = () => {
                   {globalPosts.map(post => {
                     const isToday = post.created_at && new Date(post.created_at).toDateString() === new Date().toDateString();
                     return (
-                      <div key={post.id} className="relative" data-post-card data-post-id={post.id} data-today={isToday ? 'true' : 'false'} data-new={newContentByFeed.global.has(post.id) ? 'true' : 'false'}>
+                      <div key={post.id} className="relative h-screen" data-post-card data-post-id={post.id} data-today={isToday ? 'true' : 'false'} data-new={newContentByFeed.global.has(post.id) ? 'true' : 'false'}>
                         {newContentByFeed.global.has(post.id) && (
                           <NewContentBadge className="right-3 top-3" onViewed={() => dismissNewContent('global', post.id)} />
                         )}
@@ -2253,7 +2253,7 @@ const HomePage = () => {
             </TabsContent>
 
             <TabsContent value="personal" className="mt-0 ">
-              <div className="space-y-0 px-0 pt-0 snap-y snap-mandatory" data-feed-tab="personal">
+              <div className="space-y-0 px-0 pt-0 snap-y snap-mandatory" data-feed-tab="personal" className="h-full flex flex-col">
                 {hasNewPosts && (
                   <div className="sticky top-16 z-30 mx-3 flex items-center justify-between rounded-md border border-primary/30 bg-background/95 px-3 py-2 shadow-sm backdrop-blur" data-testid="new-posts-indicator">
                     <span className="text-sm font-medium">New posts available</span>
@@ -2272,7 +2272,7 @@ const HomePage = () => {
                   {personalPosts.map(post => {
                     const isToday = post.created_at && new Date(post.created_at).toDateString() === new Date().toDateString();
                     return (
-                      <div key={post.id} className="relative" data-post-card data-post-id={post.id} data-today={isToday ? 'true' : 'false'} data-new={newContentByFeed.personal.has(post.id) ? 'true' : 'false'}>
+                      <div key={post.id} className="relative h-screen" data-post-card data-post-id={post.id} data-today={isToday ? 'true' : 'false'} data-new={newContentByFeed.personal.has(post.id) ? 'true' : 'false'}>
                         {newContentByFeed.personal.has(post.id) && (
                           <NewContentBadge className="right-3 top-3" onViewed={() => dismissNewContent('personal', post.id)} />
                         )}
