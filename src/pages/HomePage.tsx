@@ -569,8 +569,13 @@ const HomePage = () => {
   // After one full cycle we stop and hand off to the main timeline auto-scroll.
   useEffect(() => {
     const el = loopRailRef.current;
-    if (!el || filteredLoops.length <= 1) return;
+    // Loops rail is no longer rendered — hand off to timeline auto-scroll immediately.
+    if (!el || filteredLoops.length <= 1) {
+      if (!loopRailPassCompleted) setLoopRailPassCompleted(true);
+      return;
+    }
     if (loopRailPassCompleted || zoeChatOpen) return;
+
     let hoverPause = false;
     const onEnter = () => { hoverPause = true; };
     const onLeave = () => { hoverPause = false; };
