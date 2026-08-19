@@ -46,11 +46,12 @@ export function assertNoLovableGateway(url: string): void {
 
 // ───────────── model mapping ─────────────
 
-const GROQ_TEXT_FAST = 'llama-3.1-8b-instant';
-const GROQ_TEXT_QUALITY = 'llama-3.3-70b-versatile';
-const GOOGLE_TEXT = 'gemini-2.0-flash';
-const GOOGLE_PRO = 'gemini-2.5-pro';
-const OPENROUTER_TEXT = 'meta-llama/llama-3.3-70b-instruct:free';
+// Verified live against each provider's /models catalogue (Aug 2026).
+const GROQ_TEXT_FAST = 'openai/gpt-oss-20b';
+const GROQ_TEXT_QUALITY = 'openai/gpt-oss-120b';
+const GOOGLE_TEXT = 'gemini-3.6-flash';
+const GOOGLE_PRO = 'gemini-3.1-pro-preview';
+const OPENROUTER_TEXT = 'meta-llama/llama-3.3-70b-instruct';
 
 function isProTier(model: string): boolean {
   const m = (model || '').toLowerCase();

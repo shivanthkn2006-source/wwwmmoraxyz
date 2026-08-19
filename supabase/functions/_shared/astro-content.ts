@@ -48,16 +48,23 @@ export function pickFallback(slot: Slot, seed: string): PredictionContent {
   return { ...vault[h % vault.length], source: 'fallback' };
 }
 
-const BANNED = [
-  'death', 'die', 'dying', 'illness', 'disease', 'cancer', 'diagnos',
-  'divorce', 'breakup', 'bankrupt', 'ruin', 'lawsuit', 'accident',
-  'curse', 'doom', 'tragedy', 'fatal', 'suicide',
+/**
+ * Word-boundary patterns only. Substring matching used to misfire on ordinary
+ * words and on the zodiac sign "Cancer", which sent valid output to fallback.
+ * Medical fear language is still caught via illness/disease/diagnosis terms.
+ */
+const BANNED_PATTERNS: RegExp[] = [
+  /\bdeaths?\b/, /\bdying\b/, /\bdies\b/, /\bdied\b/,
+  /\billness(es)?\b/, /\bdiseases?\b/, /\bdiagnos\w*\b/, /\bterminally ill\b/,
+  /\bdivorces?\b/, /\bbreak-?ups?\b/, /\bbankrupt\w*\b/, /\bfinancial ruin\b/,
+  /\blawsuits?\b/, /\baccidents?\b/, /\bcursed?\b/, /\bdoomed?\b/,
+  /\btragedy\b/, /\btragic\b/, /\bfatal\b/, /\bsuicid\w*\b/,
 ];
 
 /** Terminal safety net: reject any output that violates the guardrails. */
 export function violatesGuardrails(text: string): boolean {
   const t = (text || '').toLowerCase();
-  return BANNED.some((w) => t.includes(w));
+  return BANNED_PATTERNS.some((re) => re.test(t));
 }
 
 const SYSTEM_PROMPT = `You are M'Mora Zoe, an astrological guide and motivational psychologist.
@@ -182,14 +189,24 @@ export async function renderPoster(opts: {
   for (let i = 0; i < opts.storagePath.length; i++) seed = (seed * 31 + opts.storagePath.charCodeAt(i)) >>> 0;
   const url = `https://image.pollinations.ai/prompt/${prompt}?width=1080&height=1350&nologo=true&model=flux&seed=${seed % 100000}`;
 
+  const pollToken = Deno.env.get('POLLINATIONS_API_KEY');
   try {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 45000);
-    const img = await fetch(url, { signal: ctrl.signal });
+    const img = await fetch(url, {
+      signal: ctrl.signal,
+      headers: pollToken ? { Authorization: `Bearer ${pollToken}` } : {},
+    });
     clearTimeout(timer);
-    if (!img.ok) return null;
+    if (!img.ok) {
+      console.warn('[astro-poster] pollinations failed', img.status, (await img.text()).slice(0, 200));
+      return null;
+    }
     const bytes = new Uint8Array(await img.arrayBuffer());
-    if (bytes.byteLength < 1024) return null;
+    if (bytes.byteLength < 1024) {
+      console.warn('[astro-poster] pollinations returned tiny payload', bytes.byteLength);
+      return null;
+    }
 
     const up = await fetch(
       `${opts.supabaseUrl}/storage/v1/object/astro-posters/${opts.storagePath}`,
@@ -197,15 +214,20 @@ export async function renderPoster(opts: {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${opts.serviceKey}`,
+          apikey: opts.serviceKey,
           'Content-Type': 'image/jpeg',
           'x-upsert': 'true',
         },
         body: bytes,
       },
     );
-    if (!up.ok) return null;
+    if (!up.ok) {
+      console.warn('[astro-poster] storage upload failed', up.status, (await up.text()).slice(0, 200));
+      return null;
+    }
     return opts.storagePath;
-  } catch {
+  } catch (e) {
+    console.warn('[astro-poster] error', String(e));
     return null;
   }
 }
