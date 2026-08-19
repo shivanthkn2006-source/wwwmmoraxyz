@@ -818,7 +818,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
           </DialogContent>
         </Dialog>
 
-        <div className="flex items-center space-x-4 pt-2 border-t border-border">
+        <div className="order-4 flex items-center space-x-4 px-1">
           <Button
             variant="ghost"
             size="sm"
