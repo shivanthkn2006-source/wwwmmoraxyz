@@ -68,6 +68,35 @@ const AuthorPreviewRail: React.FC<AuthorPreviewRailProps> = ({ authorId, current
       push('recent', 'New', byRecent);
 
       setSlots(picked);
+
+      // Some rows come back with media stripped (oversized inline blobs are nulled in
+      // the safe feed view). Fetch the real media for those few posts so every
+      // preview tile shows a thumbnail instead of a bare "Post" label.
+      const missing = picked.filter((s) => !s.post.media_preview_url && !s.post.media_url).map((s) => s.post.id);
+      if (missing.length > 0) {
+        const { data: full } = await supabase
+          .from('posts')
+          .select('id, media_url, media_preview_url, media_type')
+          .in('id', missing);
+        if (cancelled || !full) return;
+        const byId = new Map(full.map((p: any) => [p.id, p]));
+        setSlots((current) =>
+          current.map((slot) => {
+            const extra = byId.get(slot.post.id);
+            if (!extra) return slot;
+            return {
+              ...slot,
+              post: {
+                ...slot.post,
+                media_url: extra.media_url ?? slot.post.media_url,
+                media_preview_url: extra.media_preview_url ?? slot.post.media_preview_url,
+                media_type: extra.media_type ?? slot.post.media_type,
+              },
+            };
+          }),
+        );
+      }
+
     })();
     return () => {
       cancelled = true;
