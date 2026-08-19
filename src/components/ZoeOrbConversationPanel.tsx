@@ -645,6 +645,17 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
     return () => window.removeEventListener('mmora:zoe-open-with-context', handleContext);
   }, [setMessagingMode]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const host = window as Window & { __mmoraPendingZoeContext?: { prompt?: string } };
+    const pending = host.__mmoraPendingZoeContext;
+    if (!pending?.prompt) return;
+    host.__mmoraPendingZoeContext = undefined;
+    setMessagingMode('zoe');
+    setInput(pending.prompt);
+    window.setTimeout(() => inputRef.current?.focus(), 150);
+  }, [isOpen, setMessagingMode]);
+
   // Listen for background task completions to inject messages into chat
   useEffect(() => {
     const handleTaskCompleted = (e: CustomEvent<any>) => {
