@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Play, CheckCircle2, AlertCircle, RefreshCw, Activity } from 'lucide-react';
+import { Play, CheckCircle2, AlertCircle, RefreshCw, Activity, Send } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { MoraZoeDailyCard } from './MoraZoeDailyCard';
 import type { AstroSlot, DailyPrediction } from './types';
@@ -33,6 +33,39 @@ export const AstroTestingHarness: React.FC = () => {
   );
   const [mood, setMood] = useState('Balanced');
   const [days, setDays] = useState(1);
+
+  const [publishSlot, setPublishSlot] = useState<AstroSlot>('noon');
+  const [publishDate, setPublishDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [publishing, setPublishing] = useState(false);
+
+  /** Runs the real dispatcher for the signed-in member, writing a live feed card. */
+  const publishNow = async () => {
+    setPublishing(true);
+    setError(null);
+    setStatusMsg('Publishing…');
+    try {
+      const { data: auth } = await supabase.auth.getUser();
+      const userId = auth?.user?.id;
+      if (!userId) throw new Error('not signed in');
+      const { data, error: err } = await supabase.functions.invoke('astro-dispatch', {
+        body: { action: 'run', userId, slot: publishSlot, targetDate: publishDate, force: true },
+      });
+      if (err) throw new Error(err.message);
+      if (!data?.ok) throw new Error(data?.error ?? 'publish failed');
+      const r = data.results?.[0];
+      setStatusMsg(
+        r?.status === 'duplicate'
+          ? `Already published for ${publishDate} • ${publishSlot}.`
+          : `Published — status: ${r?.status ?? 'unknown'} for ${publishDate} • ${publishSlot}.`,
+      );
+      loadState();
+    } catch (e) {
+      setError(String((e as Error)?.message ?? e));
+      setStatusMsg('');
+    } finally {
+      setPublishing(false);
+    }
+  };
 
   const loadState = useCallback(async () => {
     const { data, error: err } = await supabase.functions.invoke('astro-dispatch', {
