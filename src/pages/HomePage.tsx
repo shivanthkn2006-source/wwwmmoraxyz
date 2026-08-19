@@ -2372,7 +2372,7 @@ const HomePage = () => {
         </button>
       )}
       </div>
-      {showZoeHomeDebug && (
+      {showZoeHomeDebug && import.meta.env.DEV && new URLSearchParams(window.location.search).has('home_debug') && (
         <div className="pointer-events-none fixed left-2 top-16 z-[60] w-[calc(100vw-1rem)] max-w-sm md:left-4 md:top-20" data-testid="zoe-home-debug-overlay">
           <div className="pointer-events-auto rounded-lg border border-border bg-background/95 p-3 text-foreground shadow-lg backdrop-blur">
             <div className="mb-2 flex items-center justify-between gap-2">
