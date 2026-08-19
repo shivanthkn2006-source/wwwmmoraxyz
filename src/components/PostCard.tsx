@@ -528,9 +528,10 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
   }
 
   return (
-    <Card className="bg-card border-border overflow-hidden">
-      <div className="p-3">
-        <div className="flex items-center space-x-3 mb-2">
+    <Card className="bg-transparent border-0 border-b border-border/40 rounded-none shadow-none overflow-hidden">
+      <div className="flex flex-col gap-2 pb-3">
+        <div className="order-2 flex items-start space-x-3 px-3">
+
           <div className="relative">
             <Avatar 
               className={`w-10 h-10 cursor-pointer hover:opacity-90 transition-opacity ${glowClass}`}
@@ -662,7 +663,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
         </div>
 
         {post.content && (
-          <p className="text-foreground mb-2">{post.content}</p>
+          <p className="order-3 px-3 text-sm leading-snug text-foreground">{post.content}</p>
         )}
 
         {(displayMediaUrl || isDeferredHeavyMedia) && (() => {
@@ -670,10 +671,11 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
           return (
             <div
               ref={mediaFrameRef}
-              className="mb-2 overflow-hidden rounded-lg bg-muted flex items-center justify-center relative"
+              className="order-1 overflow-hidden rounded-none bg-black flex items-center justify-center relative"
               data-testid="post-media-frame"
               style={{ maxHeight: '85svh' }}
             >
+
               {isDeferredHeavyMedia ? (
                 <div className="w-full aspect-[9/16] max-h-[85svh] bg-muted animate-pulse" data-testid="post-deferred-media-preview" />
               ) : isVideo ? (
@@ -816,7 +818,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
           </DialogContent>
         </Dialog>
 
-        <div className="flex items-center space-x-4 pt-2 border-t border-border">
+        <div className="order-4 flex items-center space-x-4 px-1">
           <Button
             variant="ghost"
             size="sm"

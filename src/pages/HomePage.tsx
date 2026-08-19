@@ -1874,9 +1874,9 @@ const HomePage = () => {
         <div className="h-14"></div>
 
         <TabsContent value="global" className="mt-0 pb-24 xxs:pb-24 xs:pb-20">
-              <div className="space-y-2 p-3" data-feed-tab="global">
+              <div className="space-y-3 px-0 pt-1" data-feed-tab="global">
                 {hasNewPosts && (
-                  <div className="sticky top-16 z-30 flex items-center justify-between rounded-md border border-primary/30 bg-background/95 px-3 py-2 shadow-sm backdrop-blur" data-testid="new-posts-indicator">
+                  <div className="sticky top-16 z-30 mx-3 flex items-center justify-between rounded-md border border-primary/30 bg-background/95 px-3 py-2 shadow-sm backdrop-blur" data-testid="new-posts-indicator">
                     <span className="text-sm font-medium">New posts available</span>
                     <Button size="sm" variant="outline" onClick={scrollToNewPosts}>
                       <ArrowDown className="mr-1 h-4 w-4" />
@@ -1894,7 +1894,7 @@ const HomePage = () => {
                 />
                 <AdminFeedDebugger entries={debugEntries} isAdmin={isAdminUser} />
                 {receivedRequests.length > 0 && (
-                  <div className="mb-6">
+                  <div className="mb-6 px-3">
                     <h2 className="text-lg font-semibold mb-3">Friend Requests</h2>
                     <div className="space-y-2">
                       {receivedRequests.map((request) => (
@@ -1910,10 +1910,10 @@ const HomePage = () => {
                 )}
                 
                 {/* Smart Feature Recommendations with Sovereign Quick Access */}
-                <SovereignQuickAccess />
+                <div className="px-3"><SovereignQuickAccess /></div>
 
                 {/* Loops short videos row */}
-                <section className="space-y-2" aria-label="Loops short videos">
+                <section className="space-y-2 px-3" aria-label="Loops short videos">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <h2 
@@ -2148,10 +2148,10 @@ const HomePage = () => {
 
                   {filteredLoops.length > 0 ? (
                     <FeedErrorBoundary section="loops" onRetry={handleUpdate}>
-                      <div ref={loopRailRef} className="flex gap-2 overflow-x-auto pb-1 scroll-smooth snap-x" data-testid="loops-rail">
+                      <div ref={loopRailRef} className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5" data-testid="loops-rail">
                         {filteredLoops.map((post, index) => (
                           <FeedErrorBoundary key={post.id} section="loops" postId={post.id} onRetry={() => retrySingleLoop(post.id)}>
-                            <div data-loop-index={index} className="relative snap-start shrink-0" data-new={newContentByFeed.loops.has(post.id) ? 'true' : 'false'}>
+                            <div data-loop-index={index} className="relative w-full" data-new={newContentByFeed.loops.has(post.id) ? 'true' : 'false'}>
                               {newContentByFeed.loops.has(post.id) && (
                                 <NewContentBadge className="left-1 top-1" onViewed={() => dismissNewContent('loops', post.id)} />
                               )}
@@ -2161,6 +2161,7 @@ const HomePage = () => {
                                 active={index === activeLoopRailIndex % filteredLoops.length}
                                 onDuration={(postId, duration) => setLoopDurations(prev => prev[postId] === duration ? prev : { ...prev, [postId]: duration })}
                                 onVideoClick={openLoopsPlayer}
+                                className="relative w-full aspect-[9/16] rounded-xl overflow-hidden bg-muted focus:outline-none focus:ring-2 focus:ring-primary/60 group"
                                 onDecodeStatus={handleLoopDecodeStatus}
                                 onRegeneratePoster={regenerateLoopPoster}
                                 canRegeneratePoster={isAdminUser || user?.id === post.user_id}
@@ -2198,9 +2199,9 @@ const HomePage = () => {
                 </section>
                 
                 {loading ? (
-                  <p className="text-center text-muted-foreground py-8">Loading posts...</p>
+                  <p className="px-3 text-center text-muted-foreground py-8">Loading posts...</p>
                 ) : globalPosts.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">No posts yet</p>
+                  <p className="px-3 text-center text-muted-foreground py-8">No posts yet</p>
                 ) : (
                   globalPosts.map(post => {
                     const isToday = post.created_at && new Date(post.created_at).toDateString() === new Date().toDateString();
@@ -2220,9 +2221,9 @@ const HomePage = () => {
             </TabsContent>
 
             <TabsContent value="personal" className="mt-0 pb-24 xxs:pb-24 xs:pb-20">
-              <div className="space-y-2 p-3" data-feed-tab="personal">
+              <div className="space-y-3 px-0 pt-1" data-feed-tab="personal">
                 {hasNewPosts && (
-                  <div className="sticky top-16 z-30 flex items-center justify-between rounded-md border border-primary/30 bg-background/95 px-3 py-2 shadow-sm backdrop-blur" data-testid="new-posts-indicator">
+                  <div className="sticky top-16 z-30 mx-3 flex items-center justify-between rounded-md border border-primary/30 bg-background/95 px-3 py-2 shadow-sm backdrop-blur" data-testid="new-posts-indicator">
                     <span className="text-sm font-medium">New posts available</span>
                     <Button size="sm" variant="outline" onClick={scrollToNewPosts}>
                       <ArrowDown className="mr-1 h-4 w-4" />
@@ -2231,9 +2232,9 @@ const HomePage = () => {
                   </div>
                 )}
                 {loading ? (
-                  <p className="text-center text-muted-foreground py-8">Loading posts...</p>
+                  <p className="px-3 text-center text-muted-foreground py-8">Loading posts...</p>
                 ) : personalPosts.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">No posts from friends yet</p>
+                  <p className="px-3 text-center text-muted-foreground py-8">No posts from friends yet</p>
                 ) : (
                   personalPosts.map(post => {
                     const isToday = post.created_at && new Date(post.created_at).toDateString() === new Date().toDateString();
