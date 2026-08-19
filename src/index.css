@@ -5848,14 +5848,26 @@ body.form-watch .auto-heal-text {
   }
 }
 
-/* Fix for full-screen mobile height */
-html, body, #root {
-  height: 100%;
+/* App baseline: normal pages must retain document scrolling.
+   The Shorts-style viewport lock belongs only to HomePage's own wrapper. */
+html,
+body,
+#root {
+  min-height: 100%;
   margin: 0;
   padding: 0;
-  overflow: hidden;
+}
+
+html,
+body {
+  overflow-x: hidden;
+}
+
+body {
+  overflow-y: auto;
 }
 
 #root {
+  height: auto;
   max-width: none !important;
 }
