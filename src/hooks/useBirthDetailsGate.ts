@@ -43,10 +43,11 @@ export function useBirthDetailsGate() {
         if (!uid) { if (!cancelled) setLoading(false); return; }
         if (!cancelled) setUserId(uid);
 
+        // profiles is keyed by `user_id` (its `id` column is a separate row id).
         const { data, error } = await supabase
           .from('profiles')
           .select('birth_date, birth_time, birth_place')
-          .eq('id', uid)
+          .eq('user_id', uid)
           .maybeSingle();
 
         if (error) throw error;
@@ -76,16 +77,33 @@ export function useBirthDetailsGate() {
     if (!details.birth_date || !details.birth_time || !details.birth_place.trim()) {
       return { ok: false, error: 'Please fill date, time and place.' };
     }
-    const { error } = await supabase
+    const patch = {
+      birth_date: details.birth_date,
+      birth_time: `${details.birth_time.slice(0, 5)}:00`,
+      birth_place: details.birth_place.trim(),
+    };
+
+    const { data: updated, error } = await supabase
       .from('profiles')
-      .update({
-        birth_date: details.birth_date,
-        birth_time: `${details.birth_time.slice(0, 5)}:00`,
-        birth_place: details.birth_place.trim(),
-      })
-      .eq('id', userId);
+      .update(patch)
+      .eq('user_id', userId)
+      .select('user_id');
 
     if (error) return { ok: false, error: error.message };
+
+    // Members who never got a profile row still need their details stored.
+    if (!updated || updated.length === 0) {
+      const { data: { session } } = await supabase.auth.getSession();
+      const email = session?.user?.email ?? '';
+      const base = (email.split('@')[0] || 'member').replace(/[^a-zA-Z0-9_]/g, '').slice(0, 20) || 'member';
+      const { error: insertError } = await supabase.from('profiles').insert({
+        user_id: userId,
+        username: `${base}${userId.slice(0, 6)}`,
+        display_name: base,
+        ...patch,
+      });
+      if (insertError) return { ok: false, error: insertError.message };
+    }
 
     // Ask the engine to build today's alignment straight away.
     try {
