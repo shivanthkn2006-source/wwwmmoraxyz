@@ -1872,7 +1872,6 @@ const HomePage = () => {
             className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ease-out will-change-transform ${headerVisible ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'}`}
             aria-hidden={!headerVisible}
           >
-            <div className="">
             <div className="flex items-center justify-between p-4">
               <div className="flex items-center gap-2">
                 {/* Hamburger Menu Button */}
