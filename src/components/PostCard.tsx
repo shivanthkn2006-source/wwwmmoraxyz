@@ -556,7 +556,8 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
   const overlayButton =
     'flex flex-col items-center gap-1 text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)]';
   const overlayIconWrap =
-    'flex h-11 w-11 items-center justify-center rounded-full bg-white/10 backdrop-blur-md transition-colors hover:bg-white/20';
+    'flex h-11 w-11 items-center justify-center text-white';
+
 
   return (
     <div
