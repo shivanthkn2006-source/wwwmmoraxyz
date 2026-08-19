@@ -18,6 +18,8 @@ import { trackEvent } from '@/lib/analytics';
 import FuturisticCounter from '@/components/FuturisticCounter';
 import { useNavigate } from 'react-router-dom';
 import { onHomeRefresh, triggerHomeRefresh } from '@/lib/homeRefresh';
+import { rememberShortInOrbMemory } from '@/lib/orbShortsMemory';
+import PlaylistsSection from '@/components/home/PlaylistsSection';
 import { useEventGlow, getAvatarGlowClass } from '@/hooks/useEventGlow';
 import { toast } from '@/hooks/use-toast';
 import AutoScrollDebugOverlay from '@/components/dev/AutoScrollDebugOverlay';
@@ -1626,18 +1628,31 @@ const HomePage = () => {
       }
 
       setUploadState('saving');
-      const { error } = await supabase.from('posts').insert({
+      const { data: inserted, error } = await supabase.from('posts').insert({
         user_id: user.id,
         content: '',
         media_url: mediaUrl,
         media_preview_url: mediaPreviewUrl || (mediaType === 'image' ? mediaUrl : null),
         media_type: mediaType,
         visibility: 'global',
-      });
+      }).select('id').maybeSingle();
       if (error) throw error;
 
+      // Persist the short in the M'mora orb memory (offline cache + memory bridge)
+      void rememberShortInOrbMemory(
+        {
+          postId: inserted?.id || `local-${Date.now()}`,
+          mediaUrl,
+          posterUrl: mediaPreviewUrl || (mediaType === 'image' ? mediaUrl : null),
+          mediaType,
+          content: '',
+          createdAt: new Date().toISOString(),
+        },
+        user.id,
+      );
+
       setUploadState('success');
-      toast({ title: 'Posted!', description: 'Your loop is now live' });
+      toast({ title: 'Posted!', description: 'Your short is now live' });
       triggerHomeRefresh();
       // Auto-clear success state after a moment
       setTimeout(() => {
@@ -2197,6 +2212,20 @@ const HomePage = () => {
                   )}
                   </>)}
                 </section>
+
+                {/* Playlists + Watch later shelf */}
+                <PlaylistsSection
+                  onPlayItem={(postId) => {
+                    const idx = filteredLoops.findIndex((p) => p.id === postId);
+                    if (idx >= 0) {
+                      setLoopsInitialIndex(idx);
+                      setLoopsPlayerOpen(true);
+                      return;
+                    }
+                    const el = document.querySelector(`[data-post-id="${postId}"]`);
+                    el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }}
+                />
                 
                 {loading ? (
                   <p className="px-3 text-center text-muted-foreground py-8">Loading posts...</p>
@@ -2320,6 +2349,35 @@ const HomePage = () => {
           onUpdate={handleUpdate}
         />
       )}
+
+      {/* Floating shorts upload (bottom-left, keeps bottom-right call controls clear) */}
+      <input
+        type="file"
+        accept={ALLOWED_VIDEO_MIME.join(',')}
+        id="shorts-fab-upload"
+        className="hidden"
+        onChange={async (e) => {
+          const file = e.target.files?.[0];
+          if (file) await handleLoopsUpload(file);
+          e.target.value = '';
+        }}
+      />
+      <label
+        htmlFor="shorts-fab-upload"
+        title="Upload a 9:16 short"
+        aria-label="Upload a 9:16 short"
+        className="fixed bottom-24 left-4 z-50 flex h-12 w-12 cursor-pointer items-center justify-center rounded-full border border-white/25 bg-black/40 text-white backdrop-blur-md transition-colors hover:bg-black/60"
+      >
+        {uploadState === 'uploading' || uploadState === 'saving' || uploadState === 'validating' ? (
+          <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" opacity="0.25" />
+            <path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+          </svg>
+        ) : (
+          <Video className="h-5 w-5" />
+        )}
+      </label>
+
       
       {/* Simple Scroll to Top Arrow - Fixed at bottom right corner */}
       {showScrollTop && (

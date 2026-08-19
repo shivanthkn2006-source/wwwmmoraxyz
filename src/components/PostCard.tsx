@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, Heart, Loader2, MessageCircle, Share2, Trash2, Bookmark, MoreVertical, Star, Volume2, VolumeX } from 'lucide-react';
+import { AlertTriangle, Heart, Loader2, MessageCircle, Share2, Trash2, Bookmark, MoreVertical, Star, Volume2, VolumeX, Clock, UserPlus, UserCheck } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
@@ -19,6 +19,9 @@ import { usePrivateTimelines } from '@/hooks/usePrivateTimelines';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { appendMediaVersion, inferMediaType, isPrivateStorageUrl, makeFallbackVideoPoster, resolvePrivateStorageUrl } from '@/lib/mediaUtils';
 import { usePersistentMediaSound } from '@/hooks/usePersistentMediaSound';
+import AuthorPreviewRail from '@/components/home/AuthorPreviewRail';
+import { useFollow } from '@/hooks/useFollow';
+import { isInPlaylist, toggleWatchLater, WATCH_LATER_ID } from '@/lib/shortsPlaylists';
 
 interface Post {
   id: string;
@@ -86,6 +89,26 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
   const { timelines, loading: timelinesLoading } = usePrivateTimelines();
   
   const isOwnPost = user?.id === post.user_id;
+  const { isFollowing, toggleFollow, canFollow } = useFollow(post.user_id);
+  const [watchLater, setWatchLater] = useState(false);
+
+  useEffect(() => {
+    setWatchLater(isInPlaylist(WATCH_LATER_ID, post.id));
+  }, [post.id]);
+
+  const handleWatchLater = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const { added } = toggleWatchLater({
+      postId: post.id,
+      mediaUrl: post.media_url,
+      posterUrl: post.media_preview_url ?? null,
+      mediaType: post.media_type,
+      content: post.content,
+      authorName: post.profile?.display_name ?? null,
+    });
+    setWatchLater(added);
+    toast({ title: added ? 'Saved to Watch later' : 'Removed from Watch later' });
+  };
   const displayMediaUrl = post.media_url || loadedHeavyMediaUrl || post.full_media_url || null;
   const isDeferredHeavyMedia = !post.media_url && (post.has_deferred_media || !!post.full_media_url) && !loadedHeavyMediaUrl && !post.full_media_url;
   const mediaVersion = post.updated_at || post.created_at || post.id;
@@ -675,6 +698,17 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
         </DropdownMenu>
       </div>
 
+      {/* Left in-post preview rail: this creator's top / recent posts */}
+      <AuthorPreviewRail
+        authorId={post.user_id}
+        currentPostId={post.id}
+        onSelect={(postId) => {
+          const el = document.querySelector(`[data-post-id="${postId}"]`);
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          else navigate(`/post/${postId}`);
+        }}
+      />
+
       {/* Right action rail (transparent, Shorts style) */}
       <div className="absolute bottom-24 right-2 z-20 flex flex-col items-center gap-4">
         <button type="button" onClick={handleLike} className={overlayButton} aria-label="Like">
@@ -704,6 +738,39 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
           </span>
           <span className="text-xs font-semibold">Save</span>
         </button>
+
+        <button
+          type="button"
+          onClick={handleWatchLater}
+          className={overlayButton}
+          aria-label={watchLater ? 'Remove from watch later' : 'Watch later'}
+          aria-pressed={watchLater}
+        >
+          <span className={overlayIconWrap}>
+            <Clock className={`h-6 w-6 ${watchLater ? 'text-primary' : ''}`} />
+          </span>
+          <span className="text-xs font-semibold">Later</span>
+        </button>
+
+        {canFollow && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleFollow();
+            }}
+            className={overlayButton}
+            aria-label={isFollowing ? 'Unfollow creator' : 'Follow creator'}
+            aria-pressed={isFollowing}
+          >
+            <span className={overlayIconWrap}>
+              {isFollowing ? <UserCheck className="h-6 w-6" /> : <UserPlus className="h-6 w-6" />}
+            </span>
+            <span className="text-xs font-semibold">{isFollowing ? 'Following' : 'Follow'}</span>
+          </button>
+        )}
+
+
 
         {isOwnPost && (
           <button type="button" onClick={handleDelete} className={overlayButton} aria-label="Delete post">
