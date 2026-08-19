@@ -18,6 +18,8 @@ import { trackEvent } from '@/lib/analytics';
 import FuturisticCounter from '@/components/FuturisticCounter';
 import { useNavigate } from 'react-router-dom';
 import { onHomeRefresh, triggerHomeRefresh } from '@/lib/homeRefresh';
+import { rememberShortInOrbMemory } from '@/lib/orbShortsMemory';
+import PlaylistsSection from '@/components/home/PlaylistsSection';
 import { useEventGlow, getAvatarGlowClass } from '@/hooks/useEventGlow';
 import { toast } from '@/hooks/use-toast';
 import AutoScrollDebugOverlay from '@/components/dev/AutoScrollDebugOverlay';
