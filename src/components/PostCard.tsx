@@ -623,8 +623,9 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
         </div>
       )}
 
-      {/* Top-right controls */}
-      <div className="absolute right-2 top-2 z-20 flex items-center gap-1">
+      {/* Right-side controls, placed below the header profile icon so nothing overlaps */}
+      <div className="absolute right-2 top-20 z-20 flex items-center gap-1">
+
         {isVideoMedia && (
           <button
             type="button"
