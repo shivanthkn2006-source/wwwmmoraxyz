@@ -679,7 +679,28 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
             <DropdownMenuItem onClick={() => handlePreference('not_interested')}>👎 Not Interested</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        </div>
+        {isVideoMedia && (
+          <button
+            type="button"
+            aria-label={soundEnabled ? 'Mute video audio' : 'Unmute video audio'}
+            className="flex h-7 w-7 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-md hover:bg-white/20"
+            onClick={(e) => {
+              e.stopPropagation();
+              setSoundUnlocked(true);
+              const next = !soundEnabled;
+              setSoundEnabled(next);
+              if (videoRef.current) {
+                videoRef.current.muted = !next;
+                if (next) videoRef.current.play().catch(() => {});
+              }
+            }}
+          >
+            {soundEnabled ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
+          </button>
+        )}
       </div>
+
 
       {/* Left in-post preview rail: this creator's top / recent posts */}
       <AuthorPreviewRail
