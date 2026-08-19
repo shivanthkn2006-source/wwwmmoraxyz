@@ -1157,15 +1157,14 @@ const HomePage = () => {
     }
 
     try {
-      // Loops must use the real posts table, not feed_posts_safe: that view strips
-      // large data URLs, which makes valid uploaded videos disappear from Loops.
+      // Use the indexed `is_video` flag on the safe feed view instead of ILIKE scans
+      // over multi-megabyte media_url values (those caused statement timeouts).
       const postsResult = await (supabase as any)
-        .from('posts')
-        .select('id, user_id, content, media_url, media_type, likes_count, comments_count, created_at, updated_at, visibility, private_timeline_id, media_preview_url')
+        .from('feed_posts_safe')
+        .select('id, user_id, content, media_url, media_type, likes_count, comments_count, created_at, updated_at, visibility, private_timeline_id, media_preview_url, has_deferred_media, media_size')
         .in('visibility', ['global', 'personal'])
         .is('private_timeline_id', null)
-        .not('media_url', 'is', null)
-        .or('media_type.eq.video,media_url.like.data:video/%,media_url.ilike.%.mp4%,media_url.ilike.%.webm%,media_url.ilike.%.mov%,media_url.ilike.%.ogg%,media_url.ilike.%.m4v%')
+        .eq('is_video', true)
         .order('created_at', { ascending: false })
         .limit(30);
 
