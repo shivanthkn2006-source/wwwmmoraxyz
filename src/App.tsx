@@ -1099,7 +1099,13 @@ const App = () => {
                         <OfflineModeOverlay />
                       </Suspense>
 
+                      {/* Sandboxed M'Mora Zoe overlay layer — zero impact on feed/routing */}
+                      <Suspense fallback={null}>
+                        <MoraZoeGlobalHost />
+                      </Suspense>
+
                       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+
                         <ZoePreviewRecoveryGuard>
                           <SecurityBypassOnAuthRoutes>
                             {/* Route-aware shell: keep /auth ultra-light to prevent Safari hangs */}
