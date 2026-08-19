@@ -9624,6 +9624,14 @@ export type Database = {
         Returns: Json
       }
       refresh_leaderboard_stats: { Args: never; Returns: undefined }
+      resolve_astro_place: {
+        Args: { p_place: string }
+        Returns: {
+          lat: number
+          lon: number
+          tz: string
+        }[]
+      }
       search_mmora_memories: {
         Args: {
           match_count?: number
