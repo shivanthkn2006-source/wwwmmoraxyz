@@ -28,7 +28,7 @@ export const MoraZoeMorningTakeover: React.FC<Props> = ({ prediction, posterUrl,
   const art = posterUrl ?? null;
 
   const overlay = (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center overflow-hidden bg-background">
+    <div className="fixed inset-0 z-[10050] flex items-center justify-center overflow-hidden bg-background">
       {art && (
         <img
           src={art}

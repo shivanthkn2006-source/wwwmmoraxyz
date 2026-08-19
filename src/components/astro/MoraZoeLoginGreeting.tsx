@@ -16,7 +16,7 @@ interface Props {
  */
 export const MoraZoeLoginGreeting: React.FC<Props> = ({ motivation, posterUrl, onDismiss }) => {
   const overlay = (
-    <div className="fixed inset-0 z-[9998] flex items-center justify-center overflow-hidden bg-background">
+    <div className="fixed inset-0 z-[10040] flex items-center justify-center overflow-hidden bg-background">
       {posterUrl && (
         <img
           src={posterUrl}

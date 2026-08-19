@@ -104,6 +104,26 @@ async function releaseLease(summary: Record<string, unknown>) {
   });
 }
 
+/** Append this run to the dashboard's run history (best effort — never throws). */
+async function logRun(summary: Record<string, unknown>, results: unknown[], error: string | null) {
+  try {
+    await db('astro_dispatch_runs', {
+      method: 'POST',
+      headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify({
+        engine: 'astro-dispatch',
+        finished_at: new Date().toISOString(),
+        summary,
+        results: (results ?? []).slice(0, 50),
+        failed_count: (results as any[] ?? []).filter((r) => r?.status === 'failed').length,
+        error,
+      }),
+    });
+  } catch { /* history is diagnostic only */ }
+}
+
+
+
 // ───────────────────────── slot resolution ─────────────────────────
 /** Which slot is currently due for this member's local clock, if any. */
 function dueSlot(now: Date, timeZone: string): Slot | null {
@@ -364,9 +384,13 @@ Deno.serve(async (req) => {
       probe_only: probeOnly,
     };
     await releaseLease(summary);
+    await logRun(summary, results, null);
     return json({ ok: true, summary, results });
   } catch (e) {
-    await releaseLease({ at: now.toISOString(), error: String((e as Error)?.message ?? e) });
-    return json({ ok: false, error: String((e as Error)?.message ?? e) }, 200);
+    const message = String((e as Error)?.message ?? e);
+    await releaseLease({ at: now.toISOString(), error: message });
+    await logRun({ at: now.toISOString(), processed: results.length }, results, message);
+    return json({ ok: false, error: message }, 200);
   }
+
 });

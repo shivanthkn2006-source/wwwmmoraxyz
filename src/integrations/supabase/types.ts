@@ -240,6 +240,39 @@ export type Database = {
           },
         ]
       }
+      astro_dispatch_runs: {
+        Row: {
+          engine: string
+          error: string | null
+          failed_count: number
+          finished_at: string | null
+          id: string
+          results: Json
+          started_at: string
+          summary: Json
+        }
+        Insert: {
+          engine?: string
+          error?: string | null
+          failed_count?: number
+          finished_at?: string | null
+          id?: string
+          results?: Json
+          started_at?: string
+          summary?: Json
+        }
+        Update: {
+          engine?: string
+          error?: string | null
+          failed_count?: number
+          finished_at?: string | null
+          id?: string
+          results?: Json
+          started_at?: string
+          summary?: Json
+        }
+        Relationships: []
+      }
       astro_dispatch_state: {
         Row: {
           consecutive_rate_limits: number
@@ -9588,6 +9621,7 @@ export type Database = {
       }
       detect_behavioral_anomaly: { Args: { p_user_id: string }; Returns: Json }
       detect_relationship_style: { Args: { p_user_id: string }; Returns: Json }
+      ensure_profiles_for_all_users: { Args: never; Returns: number }
       get_daily_notification_count: {
         Args: { p_user_id: string }
         Returns: number

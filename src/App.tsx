@@ -109,6 +109,9 @@ const AdminHealthPage = lazy(() => import("./pages/AdminHealthPage")); // ADMIN 
 const AdminFeedDebugPage = lazy(() => import("./pages/AdminFeedDebugPage")); // FEED/LOOPS DEBUGGER
 const AstroPreviewPage = lazy(() => import("./pages/AstroPreviewPage")); // M'MORA ZOE DAILY ALIGNMENT HARNESS
 const ZoeAstroDashboardPage = lazy(() => import("./pages/ZoeAstroDashboardPage")); // M'MORA ZOE ALIGNMENT DASHBOARD
+const ZoeBirthDetailsPage = lazy(() => import("./pages/ZoeBirthDetailsPage"));
+const ZoeDispatchDashboardPage = lazy(() => import("./pages/ZoeDispatchDashboardPage"));
+
 
 // Loading fallback component — never render a silent black screen.
 const PageLoader = () => (
@@ -685,6 +688,23 @@ const RouteAwareShell = () => {
                               </ProtectedRoute>
                             }
                           />
+                          <Route
+                            path="/zoe-astro/birth"
+                            element={
+                              <ProtectedRoute>
+                                <ZoeBirthDetailsPage />
+                              </ProtectedRoute>
+                            }
+                          />
+                          <Route
+                            path="/zoe-astro/dispatch"
+                            element={
+                              <ProtectedRoute>
+                                <ZoeDispatchDashboardPage />
+                              </ProtectedRoute>
+                            }
+                          />
+
                           <Route
                             path="/dhf-dashboard"
                             element={
