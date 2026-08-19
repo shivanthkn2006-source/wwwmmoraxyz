@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card } from '@/components/ui/card';
+
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, Heart, Loader2, MessageCircle, Share2, Trash2, Bookmark, MoreVertical, Star, Volume2, VolumeX } from 'lucide-react';
