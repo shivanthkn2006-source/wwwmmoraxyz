@@ -556,7 +556,8 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
   const overlayButton =
     'flex flex-col items-center gap-1 text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)]';
   const overlayIconWrap =
-    'flex h-11 w-11 items-center justify-center rounded-full bg-white/10 backdrop-blur-md transition-colors hover:bg-white/20';
+    'flex h-11 w-11 items-center justify-center text-white';
+
 
   return (
     <div
@@ -633,10 +634,11 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
               <button
                 type="button"
                 aria-label="Rate post"
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-md hover:bg-white/20"
+                className="flex h-9 w-9 items-center justify-center text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)]"
               >
                 <Star className={`h-4 w-4 ${starRating ? 'fill-yellow-400 text-yellow-400' : ''}`} />
               </button>
+
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-32 bg-background/95 backdrop-blur-sm">
               {[5, 4, 3, 2, 1].map((rating) => (
@@ -669,10 +671,11 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
             <button
               type="button"
               aria-label="More options"
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-md hover:bg-white/20"
+              className="flex h-9 w-9 items-center justify-center text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)]"
             >
               <MoreVertical className="h-4 w-4" />
             </button>
+
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
             <DropdownMenuItem onClick={() => handlePreference('interested')}>👍 Interested</DropdownMenuItem>
@@ -684,7 +687,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
           <button
             type="button"
             aria-label={soundEnabled ? 'Mute video audio' : 'Unmute video audio'}
-            className="flex h-7 w-7 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-md hover:bg-white/20"
+            className="flex h-7 w-7 items-center justify-center text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)]"
             onClick={(e) => {
               e.stopPropagation();
               setSoundUnlocked(true);
@@ -698,6 +701,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
           >
             {soundEnabled ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
           </button>
+
         )}
       </div>
 
