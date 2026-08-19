@@ -1276,6 +1276,14 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
     offlineDataSync.addConversation('user', userMessage.content);
     await saveMessageToDb('user', userMessage.content, durablePendingMediaUrl, pendingMedia?.type, userMessage.id);
 
+    // Persist the question itself (sovereign + TencentDB gateway) before any reply path runs,
+    // so M'mora orb questions survive reloads, offline replies and image routing.
+    void rememberZoeQuestion({
+      userId: user?.id,
+      sessionKey: zoeMemorySessionKey,
+      userText: userMessage.content,
+    });
+
     const resolvedImageTurn = resolveZoeImageTurn(
       userMessage.content,
       pendingMedia?.type === 'image' ? pendingIdentityImageRequest : null,
