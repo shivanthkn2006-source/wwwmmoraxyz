@@ -8,6 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import PostCard from '@/components/PostCard';
+import { MoraZoeDailyCard } from '@/components/astro/MoraZoeDailyCard';
+import useAstroDailyPrediction from '@/hooks/useAstroDailyPrediction';
 import { FeedErrorBoundary } from '@/components/FeedErrorBoundary';
 import NotificationMenu from '@/components/NotificationMenu';
 import AnimatedHamburgerButton from '@/components/AnimatedHamburgerButton';
