@@ -89,6 +89,26 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
   const { timelines, loading: timelinesLoading } = usePrivateTimelines();
   
   const isOwnPost = user?.id === post.user_id;
+  const { isFollowing, toggleFollow, canFollow } = useFollow(post.user_id);
+  const [watchLater, setWatchLater] = useState(false);
+
+  useEffect(() => {
+    setWatchLater(isInPlaylist(WATCH_LATER_ID, post.id));
+  }, [post.id]);
+
+  const handleWatchLater = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const { added } = toggleWatchLater({
+      postId: post.id,
+      mediaUrl: post.media_url,
+      posterUrl: post.media_preview_url ?? null,
+      mediaType: post.media_type,
+      content: post.content,
+      authorName: post.profile?.display_name ?? null,
+    });
+    setWatchLater(added);
+    toast({ title: added ? 'Saved to Watch later' : 'Removed from Watch later' });
+  };
   const displayMediaUrl = post.media_url || loadedHeavyMediaUrl || post.full_media_url || null;
   const isDeferredHeavyMedia = !post.media_url && (post.has_deferred_media || !!post.full_media_url) && !loadedHeavyMediaUrl && !post.full_media_url;
   const mediaVersion = post.updated_at || post.created_at || post.id;
