@@ -2349,6 +2349,35 @@ const HomePage = () => {
           onUpdate={handleUpdate}
         />
       )}
+
+      {/* Floating shorts upload (bottom-left, keeps bottom-right call controls clear) */}
+      <input
+        type="file"
+        accept={ALLOWED_VIDEO_MIME.join(',')}
+        id="shorts-fab-upload"
+        className="hidden"
+        onChange={async (e) => {
+          const file = e.target.files?.[0];
+          if (file) await handleLoopsUpload(file);
+          e.target.value = '';
+        }}
+      />
+      <label
+        htmlFor="shorts-fab-upload"
+        title="Upload a 9:16 short"
+        aria-label="Upload a 9:16 short"
+        className="fixed bottom-24 left-4 z-50 flex h-12 w-12 cursor-pointer items-center justify-center rounded-full border border-white/25 bg-black/40 text-white backdrop-blur-md transition-colors hover:bg-black/60"
+      >
+        {uploadState === 'uploading' || uploadState === 'saving' || uploadState === 'validating' ? (
+          <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" opacity="0.25" />
+            <path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+          </svg>
+        ) : (
+          <Video className="h-5 w-5" />
+        )}
+      </label>
+
       
       {/* Simple Scroll to Top Arrow - Fixed at bottom right corner */}
       {showScrollTop && (
