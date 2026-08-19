@@ -330,3 +330,6 @@ verify_jwt = false
 [functions.zoe-infinity-quota-prune]
 verify_jwt = false
 
+
+[functions.zoe-motivation]
+verify_jwt = false
