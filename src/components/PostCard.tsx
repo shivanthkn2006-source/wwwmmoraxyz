@@ -576,7 +576,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
             muted={!shouldPlayWithSound}
             loop
             preload="metadata"
-            className="h-full w-full object-cover"
+            className="h-full w-full object-contain"
             data-testid="post-video"
             onClick={() => {
               const v = videoRef.current;
