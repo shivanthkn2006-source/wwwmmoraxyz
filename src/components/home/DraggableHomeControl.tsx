@@ -57,9 +57,10 @@ export default function DraggableHomeControl({
       aria-label={ariaLabel}
       title={`${ariaLabel} · drag to move`}
       className={cn(
-        'fixed z-[9997] flex h-12 w-12 touch-none select-none items-center justify-center rounded-full border border-border/60 bg-background/65 text-foreground shadow-lg backdrop-blur-xl transition-colors hover:bg-background/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        'fixed z-[9997] flex h-9 w-9 touch-none select-none items-center justify-center rounded-full bg-white/10 text-white shadow-none backdrop-blur-md transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         className,
       )}
+
       style={{ left: position.x, top: position.y }}
       onClick={(event) => {
         event.preventDefault();
