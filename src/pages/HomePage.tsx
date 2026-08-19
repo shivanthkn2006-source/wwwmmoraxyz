@@ -20,6 +20,8 @@ import { useNavigate } from 'react-router-dom';
 import { onHomeRefresh, triggerHomeRefresh } from '@/lib/homeRefresh';
 import { rememberShortInOrbMemory } from '@/lib/orbShortsMemory';
 import PlaylistsSection from '@/components/home/PlaylistsSection';
+import HomeFloatingTools from '@/components/home/HomeFloatingTools';
+import HomePostEditor, { type HomePostDraft } from '@/components/home/HomePostEditor';
 import { useEventGlow, getAvatarGlowClass } from '@/hooks/useEventGlow';
 import { toast } from '@/hooks/use-toast';
 import AutoScrollDebugOverlay from '@/components/dev/AutoScrollDebugOverlay';
@@ -262,6 +264,8 @@ const HomePage = () => {
   const [notificationMenuOpen, setNotificationMenuOpen] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [activeTab, setActiveTab] = useState<string>('global');
+  const [homeQuery, setHomeQuery] = useState('');
+  const [postEditorOpen, setPostEditorOpen] = useState(false);
   const [zoeVisible, setZoeVisible] = useState(true); // Zoe visibility state
   const [loopsPlayerOpen, setLoopsPlayerOpen] = useState(false);
   const [loopsInitialIndex, setLoopsInitialIndex] = useState(0);
@@ -516,9 +520,19 @@ const HomePage = () => {
     !!post.media_url && inferMediaType(post.media_url, post.media_type) === 'video'
   ), [loopPosts]);
 
+  const normalizedHomeQuery = homeQuery.trim().toLowerCase();
+  const matchesHomeQuery = React.useCallback((post: Post) => {
+    if (!normalizedHomeQuery) return true;
+    return [post.content, post.profile?.display_name, post.profile?.username, post.media_type]
+      .filter(Boolean)
+      .some((value) => value?.toLowerCase().includes(normalizedHomeQuery));
+  }, [normalizedHomeQuery]);
+  const visibleGlobalPosts = React.useMemo(() => globalPosts.filter(matchesHomeQuery), [globalPosts, matchesHomeQuery]);
+  const visiblePersonalPosts = React.useMemo(() => personalPosts.filter(matchesHomeQuery), [personalPosts, matchesHomeQuery]);
+
   const filteredLoops = React.useMemo(() => {
     let filtered = [...videoPosts];
-    const publicLoops = filtered.filter(post => post.visibility === 'global');
+    const publicLoops = filtered.filter(post => post.visibility === 'global' && matchesHomeQuery(post));
     
     switch (loopsFilter) {
       case 'trending':
@@ -540,7 +554,7 @@ const HomePage = () => {
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         );
     }
-  }, [videoPosts, loopsFilter, friendships]);
+  }, [videoPosts, loopsFilter, friendships, matchesHomeQuery]);
 
   useEffect(() => {
     const el = loopRailRef.current;
@@ -1520,7 +1534,7 @@ const HomePage = () => {
     setLoopsPlayerOpen(true);
   };
 
-  const handleLoopsUpload = React.useCallback(async (file: File) => {
+  const handleLoopsUpload = React.useCallback(async (file: File, metadata?: { title?: string; text?: string; tags?: string[] }) => {
     if (!user) return;
 
     // 1. MIME whitelist
@@ -1627,9 +1641,11 @@ const HomePage = () => {
       }
 
       setUploadState('saving');
+      const tagText = metadata?.tags?.map((tag) => `#${tag}`).join(' ') || '';
+      const postContent = [metadata?.title, metadata?.text, tagText].filter(Boolean).join('\n');
       const { data: inserted, error } = await supabase.from('posts').insert({
         user_id: user.id,
-        content: '',
+        content: postContent,
         media_url: mediaUrl,
         media_preview_url: mediaPreviewUrl || (mediaType === 'image' ? mediaUrl : null),
         media_type: mediaType,
@@ -1644,7 +1660,7 @@ const HomePage = () => {
           mediaUrl,
           posterUrl: mediaPreviewUrl || (mediaType === 'image' ? mediaUrl : null),
           mediaType,
-          content: '',
+          content: postContent,
           createdAt: new Date().toISOString(),
         },
         user.id,
@@ -1668,6 +1684,10 @@ const HomePage = () => {
       toast({ title: 'Upload failed', description: msg, variant: 'destructive' });
     }
   }, [user]);
+
+  const publishPostDraft = React.useCallback(async (draft: HomePostDraft) => {
+    await handleLoopsUpload(draft.file, { title: draft.title, text: draft.text, tags: draft.tags });
+  }, [handleLoopsUpload]);
 
   const retryLastUpload = React.useCallback(() => {
     if (lastUploadFile) handleLoopsUpload(lastUploadFile);
@@ -1846,7 +1866,7 @@ const HomePage = () => {
           />
         )} */}
         
-        <Tabs value={activeTab} className="h-full w-full flex flex-col" onValueChange={setActiveTab} className="w-full h-screen flex flex-col">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="h-[100dvh] w-full overflow-hidden">
         <div className="">
           {/* Fixed header - Clean minimal version (profile now in HUD) */}
           <div
@@ -1890,7 +1910,7 @@ const HomePage = () => {
 
         </div>
 
-              <div className="space-y-0 px-0 pt-0 snap-y snap-mandatory" data-feed-tab="global" className="h-full flex flex-col">
+              <div className="h-[100dvh] overflow-y-auto px-0 pt-0 snap-y snap-mandatory" data-feed-tab="global">
                 {hasNewPosts && (
                   <div className="sticky top-16 z-30 mx-3 flex items-center justify-between rounded-md border border-primary/30 bg-background/95 px-3 py-2 shadow-sm backdrop-blur" data-testid="new-posts-indicator">
                     <span className="text-sm font-medium">New posts available</span>
@@ -2216,6 +2236,7 @@ const HomePage = () => {
 
                 {/* Playlists + Watch later shelf */}
                 <PlaylistsSection
+                  query={homeQuery}
                   onPlayItem={(postId) => {
                     const idx = filteredLoops.findIndex((p) => p.id === postId);
                     if (idx >= 0) {
@@ -2233,11 +2254,11 @@ const HomePage = () => {
                 ) : globalPosts.length === 0 ? (
                   <p className="px-3 text-center text-muted-foreground py-8">No posts yet</p>
                 ) : (
-                  <div className="h-full overflow-y-auto snap-y snap-mandatory overscroll-contain" data-testid="global-posts-snap-feed">
-                  {globalPosts.map(post => {
+                  <div className="snap-y snap-mandatory overscroll-contain" data-testid="global-posts-snap-feed">
+                  {visibleGlobalPosts.map(post => {
                     const isToday = post.created_at && new Date(post.created_at).toDateString() === new Date().toDateString();
                     return (
-                      <div key={post.id} className="relative h-screen" data-post-card data-post-id={post.id} data-today={isToday ? 'true' : 'false'} data-new={newContentByFeed.global.has(post.id) ? 'true' : 'false'}>
+                      <div key={post.id} className="relative h-[100dvh] snap-start snap-always" data-post-card data-post-id={post.id} data-today={isToday ? 'true' : 'false'} data-new={newContentByFeed.global.has(post.id) ? 'true' : 'false'}>
                         {newContentByFeed.global.has(post.id) && (
                           <NewContentBadge className="right-3 top-3" onViewed={() => dismissNewContent('global', post.id)} />
                         )}
@@ -2253,7 +2274,7 @@ const HomePage = () => {
             </TabsContent>
 
             <TabsContent value="personal" className="mt-0 h-full w-full ">
-              <div className="space-y-0 px-0 pt-0 snap-y snap-mandatory" data-feed-tab="personal" className="h-full flex flex-col">
+              <div className="h-[100dvh] overflow-y-auto px-0 pt-0 snap-y snap-mandatory" data-feed-tab="personal">
                 {hasNewPosts && (
                   <div className="sticky top-16 z-30 mx-3 flex items-center justify-between rounded-md border border-primary/30 bg-background/95 px-3 py-2 shadow-sm backdrop-blur" data-testid="new-posts-indicator">
                     <span className="text-sm font-medium">New posts available</span>
@@ -2268,11 +2289,11 @@ const HomePage = () => {
                 ) : personalPosts.length === 0 ? (
                   <p className="px-3 text-center text-muted-foreground py-8">No posts from friends yet</p>
                 ) : (
-                  <div className="h-full overflow-y-auto snap-y snap-mandatory overscroll-contain" data-testid="personal-posts-snap-feed">
-                  {personalPosts.map(post => {
+                  <div className="snap-y snap-mandatory overscroll-contain" data-testid="personal-posts-snap-feed">
+                  {visiblePersonalPosts.map(post => {
                     const isToday = post.created_at && new Date(post.created_at).toDateString() === new Date().toDateString();
                     return (
-                      <div key={post.id} className="relative h-screen" data-post-card data-post-id={post.id} data-today={isToday ? 'true' : 'false'} data-new={newContentByFeed.personal.has(post.id) ? 'true' : 'false'}>
+                      <div key={post.id} className="relative h-[100dvh] snap-start snap-always" data-post-card data-post-id={post.id} data-today={isToday ? 'true' : 'false'} data-new={newContentByFeed.personal.has(post.id) ? 'true' : 'false'}>
                         {newContentByFeed.personal.has(post.id) && (
                           <NewContentBadge className="right-3 top-3" onViewed={() => dismissNewContent('personal', post.id)} />
                         )}
@@ -2355,33 +2376,13 @@ const HomePage = () => {
         />
       )}
 
-      {/* Floating shorts upload (bottom-left, keeps bottom-right call controls clear) */}
-      <input
-        type="file"
-        accept={ALLOWED_VIDEO_MIME.join(',')}
-        id="shorts-fab-upload"
-        className="hidden"
-        onChange={async (e) => {
-          const file = e.target.files?.[0];
-          if (file) await handleLoopsUpload(file);
-          e.target.value = '';
-        }}
+      <HomeFloatingTools query={homeQuery} onQueryChange={setHomeQuery} onOpenEditor={() => setPostEditorOpen(true)} />
+      <HomePostEditor
+        open={postEditorOpen}
+        busy={uploadState === 'uploading' || uploadState === 'saving' || uploadState === 'validating'}
+        onOpenChange={setPostEditorOpen}
+        onSubmit={publishPostDraft}
       />
-      <label
-        htmlFor="shorts-fab-upload"
-        title="Upload a 9:16 short"
-        aria-label="Upload a 9:16 short"
-        className="fixed bottom-24 left-4 z-50 flex h-12 w-12 cursor-pointer items-center justify-center rounded-full border border-white/25 bg-black/40 text-white backdrop-blur-md transition-colors hover:bg-black/60"
-      >
-        {uploadState === 'uploading' || uploadState === 'saving' || uploadState === 'validating' ? (
-          <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none">
-            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" opacity="0.25" />
-            <path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-          </svg>
-        ) : (
-          <Video className="h-5 w-5" />
-        )}
-      </label>
 
       
       {/* Simple Scroll to Top Arrow - Fixed at bottom right corner */}

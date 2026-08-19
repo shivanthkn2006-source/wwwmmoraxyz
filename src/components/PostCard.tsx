@@ -573,8 +573,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
 
   return (
     <div
-      className="relative w-full snap-start snap-always overflow-hidden bg-black"
-      style={{ height: '100dvh', minHeight: '440px' }}
+      className="relative h-[100dvh] min-h-[440px] w-full snap-start snap-always overflow-hidden bg-background"
       data-testid="post-card"
     >
       {/* Media layer (full bleed) */}
@@ -590,7 +589,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
             muted={!shouldPlayWithSound}
             loop
             preload="metadata"
-            className="h-full w-full object-contain"
+            className="h-full w-full object-cover"
             data-testid="post-video"
             onClick={() => {
               const v = videoRef.current;
@@ -613,7 +612,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
           <img
             src={displayMediaSrc}
             alt="Post media"
-            className="h-full w-full cursor-pointer object-contain"
+            className="h-full w-full cursor-pointer object-cover"
             data-testid="post-image"
             onClick={() => setShowImageViewer(true)}
             onError={() => console.warn('[PostCard][image] failed to load', post.id)}
@@ -724,7 +723,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
       />
 
       {/* Right action rail (transparent, Shorts style) */}
-      <div className="absolute bottom-24 right-2 z-20 flex flex-col items-center gap-4">
+      <div className="absolute bottom-20 right-2 z-20 flex flex-col items-center gap-2.5">
         <button type="button" onClick={handleLike} className={overlayButton} aria-label="Like">
           <span className={overlayIconWrap}>
             <Heart className={`h-6 w-6 ${liked ? 'fill-white text-white' : 'text-white'}`} />

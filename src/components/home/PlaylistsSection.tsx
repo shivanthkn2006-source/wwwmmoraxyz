@@ -14,10 +14,11 @@ import { Input } from '@/components/ui/input';
 
 interface PlaylistsSectionProps {
   onPlayItem?: (postId: string) => void;
+  query?: string;
 }
 
 /** Playlists + Watch later shelf for shorts, shown on /home. */
-const PlaylistsSection: React.FC<PlaylistsSectionProps> = ({ onPlayItem }) => {
+const PlaylistsSection: React.FC<PlaylistsSectionProps> = ({ onPlayItem, query = '' }) => {
   const [playlists, setPlaylists] = useState<ShortsPlaylist[]>([]);
   const [newName, setNewName] = useState('');
   const [creating, setCreating] = useState(false);
@@ -28,6 +29,17 @@ const PlaylistsSection: React.FC<PlaylistsSectionProps> = ({ onPlayItem }) => {
   }, []);
 
   const total = playlists.reduce((sum, p) => sum + p.items.length, 0);
+  const normalizedQuery = query.trim().toLowerCase();
+  const visiblePlaylists = normalizedQuery
+    ? playlists.map((playlist) => ({
+        ...playlist,
+        items: playlist.items.filter((item) =>
+          [item.content, item.authorName, item.mediaType]
+            .filter(Boolean)
+            .some((value) => value?.toLowerCase().includes(normalizedQuery)),
+        ),
+      })).filter((playlist) => playlist.name.toLowerCase().includes(normalizedQuery) || playlist.items.length > 0)
+    : playlists;
 
   return (
     <section className="space-y-2 px-3" aria-label="Shorts playlists">
@@ -78,7 +90,7 @@ const PlaylistsSection: React.FC<PlaylistsSectionProps> = ({ onPlayItem }) => {
       )}
 
       <div className="space-y-3">
-        {playlists.map((pl) => (
+        {visiblePlaylists.map((pl) => (
           <div key={pl.id} className="rounded-lg border border-border/50 bg-muted/20 p-2">
             <div className="mb-2 flex items-center justify-between">
               <div className="flex items-center gap-1.5 text-xs font-medium">
