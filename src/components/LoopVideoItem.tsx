@@ -23,6 +23,7 @@ interface LoopVideoItemProps {
   active?: boolean;
   onDuration?: (postId: string, duration: number) => void;
   canRegeneratePoster?: boolean;
+  className?: string;
 }
 
 const LoopVideoItem: React.FC<LoopVideoItemProps> = ({
@@ -35,6 +36,7 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({
   active = false,
   onDuration,
   canRegeneratePoster = false,
+  className,
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hoverTimeoutRef = useRef<NodeJS.Timeout>();
@@ -229,7 +231,7 @@ const LoopVideoItem: React.FC<LoopVideoItemProps> = ({
   return (
     <button
       type="button"
-      className="relative w-24 h-40 rounded-lg overflow-hidden bg-muted shrink-0 focus:outline-none focus:ring-2 focus:ring-primary/60 group"
+      className={className ?? "relative w-24 h-40 rounded-lg overflow-hidden bg-muted shrink-0 focus:outline-none focus:ring-2 focus:ring-primary/60 group"}
       onClick={() => onVideoClick(index)}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
