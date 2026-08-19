@@ -14,6 +14,8 @@ export interface MotivationContent {
   body: string;
   actionStep: string;
   quote: string;
+  /** Photo scene that visually matches THIS day's words. */
+  scene: string;
   source: 'model' | 'fallback';
 }
 
@@ -119,7 +121,7 @@ const VAULT: Array<Omit<MotivationContent, 'source' | 'theme'>> = [
 export function pickMotivationFallback(seed: string, theme: string): MotivationContent {
   let h = 0;
   for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
-  return { ...VAULT[h % VAULT.length], theme, source: 'fallback' };
+  return { ...VAULT[h % VAULT.length], theme, scene: sceneFor(theme), source: 'fallback' };
 }
 
 const BANNED = [
@@ -140,7 +142,8 @@ STYLE RULES (never break):
 3. Warm, human, encouraging. Talk to the reader as "you". No corporate buzzwords, no emojis.
 4. Never mention illness, death, money loss, legal trouble or relationship breakdown.
 5. Give exactly one concrete action the person can do today.
-6. Return STRICT JSON only with keys: headline (max 6 words), body (40-70 words), actionStep (max 18 words), quote (max 12 words).`;
+6. Give a matching picture idea: a real-world photo scene that visually echoes today's message (no people's faces, no text in the picture).
+7. Return STRICT JSON only with keys: headline (max 6 words), body (40-70 words), actionStep (max 18 words), quote (max 12 words), scene (max 25 words, a photographic scene description with lighting and mood).`;
 
 export async function generateMotivation(args: {
   theme: string;
@@ -181,6 +184,7 @@ Write today's motivation for a normal working person's daily routine. Make it fe
     const body = String(p.body ?? '').trim();
     const actionStep = String(p.actionStep ?? p.action_step ?? '').trim();
     const quote = String(p.quote ?? '').trim();
+    const scene = String(p.scene ?? p.image_prompt ?? '').trim();
 
     if (!headline || !body) return { content: pickMotivationFallback(seed, theme), error: 'incomplete output' };
     if (motivationUnsafe(`${headline} ${body} ${actionStep} ${quote}`)) {
@@ -194,6 +198,9 @@ Write today's motivation for a normal working person's daily routine. Make it fe
         body: body.slice(0, 600),
         actionStep: (actionStep || 'Take one small step toward what matters today.').slice(0, 200),
         quote: (quote || 'Small steps, repeated, change everything.').slice(0, 160),
+        // The art is generated from the model's own scene so picture and words
+        // always describe the same idea; the theme map is the safety net.
+        scene: (scene ? `${scene}, cinematic lifestyle photograph, natural light` : sceneFor(theme)).slice(0, 300),
         source: 'model',
       },
     };
