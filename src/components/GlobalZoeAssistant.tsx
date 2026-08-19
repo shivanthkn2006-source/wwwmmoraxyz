@@ -783,6 +783,12 @@ export const GlobalZoeAssistant = ({ config = DEFAULT_CONFIG }: { config?: Parti
   const hasInitializedRef = useRef(false);
   const sessionKeyRef = useRef<string | null>(null);
   const [orbActivationEmotion, setOrbActivationEmotion] = useState<ECNEmotionState | null>(null);
+
+  useEffect(() => {
+    const openWithContext = () => setShowConversationPanel(true);
+    window.addEventListener('mmora:zoe-open-with-context', openWithContext);
+    return () => window.removeEventListener('mmora:zoe-open-with-context', openWithContext);
+  }, []);
   
   // Listen for Entity Activation Protocol orb activation event
   useEffect(() => {

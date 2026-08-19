@@ -19,7 +19,6 @@ import FuturisticCounter from '@/components/FuturisticCounter';
 import { useNavigate } from 'react-router-dom';
 import { onHomeRefresh, triggerHomeRefresh } from '@/lib/homeRefresh';
 import { rememberShortInOrbMemory } from '@/lib/orbShortsMemory';
-import PlaylistsSection from '@/components/home/PlaylistsSection';
 import HomeFloatingTools from '@/components/home/HomeFloatingTools';
 import HomePostEditor, { type HomePostDraft } from '@/components/home/HomePostEditor';
 import { useEventGlow, getAvatarGlowClass } from '@/hooks/useEventGlow';
@@ -2230,21 +2229,6 @@ const HomePage = () => {
                   </>)}
                 </section>
 
-                {/* Playlists + Watch later shelf */}
-                <PlaylistsSection
-                  query={homeQuery}
-                  onPlayItem={(postId) => {
-                    const idx = filteredLoops.findIndex((p) => p.id === postId);
-                    if (idx >= 0) {
-                      setLoopsInitialIndex(idx);
-                      setLoopsPlayerOpen(true);
-                      return;
-                    }
-                    const el = document.querySelector(`[data-post-id="${postId}"]`);
-                    el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                  }}
-                />
-                
                 {loading ? (
                   <p className="px-3 text-center text-muted-foreground py-8">Loading posts...</p>
                 ) : globalPosts.length === 0 ? (

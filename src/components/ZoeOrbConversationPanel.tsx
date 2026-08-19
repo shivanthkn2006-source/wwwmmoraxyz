@@ -632,6 +632,19 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
     };
   }, [isOpen]);
 
+  // Receive post/page context from compact controls without navigating away.
+  useEffect(() => {
+    const handleContext = (event: Event) => {
+      const detail = (event as CustomEvent<{ prompt?: string }>).detail;
+      if (!detail?.prompt) return;
+      setMessagingMode('zoe');
+      setInput(detail.prompt);
+      window.setTimeout(() => inputRef.current?.focus(), 120);
+    };
+    window.addEventListener('mmora:zoe-open-with-context', handleContext);
+    return () => window.removeEventListener('mmora:zoe-open-with-context', handleContext);
+  }, [setMessagingMode]);
+
   // Listen for background task completions to inject messages into chat
   useEffect(() => {
     const handleTaskCompleted = (e: CustomEvent<any>) => {
