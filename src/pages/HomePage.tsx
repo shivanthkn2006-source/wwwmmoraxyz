@@ -1867,7 +1867,6 @@ const HomePage = () => {
         )} */}
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="h-[100dvh] w-full overflow-hidden">
-        <div className="">
           {/* Fixed header - Clean minimal version (profile now in HUD) */}
           <div
             className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ease-out will-change-transform ${headerVisible ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'}`}
@@ -1907,8 +1906,6 @@ const HomePage = () => {
               </button>
             </div>
           </div>
-
-        </div>
 
               <TabsContent value="global" className="m-0 h-[100dvh] overflow-y-auto px-0 pt-0 snap-y snap-mandatory" data-feed-tab="global">
                 {hasNewPosts && (
