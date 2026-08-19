@@ -3,11 +3,11 @@
 // Single source of truth for M'mora accent colors. Update here to propagate
 // across all M'mora components (sidebar accent, progress meters, badges, etc.).
 //
-// Reference blue sampled from the approved screenshot: ~rgb(80, 150, 240)
-// HSL(213, 84%, 63%) — matches the existing Tailwind `blue-400` / `blue-500`.
+// Brand accent is a slightly off-white (#ece7dc). The Tailwind `blue-*` scale is
+// remapped in tailwind.config.ts to off-white shades, so these classes stay valid.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/** Tailwind utility class shorthands for the M'mora accent (blue). */
+/** Tailwind utility class shorthands for the M'mora accent (off-white). */
 export const MMORA_ACCENT = {
   // Text
   text: 'text-blue-500',
@@ -29,7 +29,7 @@ export const MMORA_ACCENT = {
 
   // States
   focusRing: 'focus-visible:ring-blue-500',
-  disabled: 'disabled:bg-blue-500/40 disabled:text-blue-100',
+  disabled: 'disabled:bg-blue-500/40 disabled:text-background',
 } as const;
 
 /** Raw hex + HSL tokens for non-Tailwind usage (SVG, canvas, inline styles). */
