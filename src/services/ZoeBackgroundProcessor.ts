@@ -247,10 +247,10 @@ class ZoeBackgroundProcessorService {
   }
   
   private async processYouTubeAnalysisTask(task: BackgroundTask): Promise<any> {
-    const { videoUrl, userId, onAnalysisComplete } = task.payload;
+    const { videoUrl } = task.payload;
     
     const { data, error } = await supabase.functions.invoke('analyze-youtube', {
-      body: { video_url: videoUrl, user_id: userId }
+      body: { url: videoUrl }
     });
     
     if (error) throw error;

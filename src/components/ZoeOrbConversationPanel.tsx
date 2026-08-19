@@ -1301,6 +1301,15 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
     if (imageIntent.isImageRequest && refersToVisiblePost && activePostContext) {
       identityRequestText = `${identityRequestText}\n\nUse this visible M'Mora post as creative context: creator ${activePostContext.authorName}; caption: ${activePostContext.content || '[no caption]'}; media: ${activePostContext.mediaUrl || '[no media URL]'}.`;
     }
+    const imageRequestYouTubeLink = imageIntent.isImageRequest
+      ? tubeSight.detectYouTubeLinks(userMessage.content)[0]
+      : undefined;
+    if (imageRequestYouTubeLink) {
+      const sourceAnalysis = await tubeSight.analyzeVideo(imageRequestYouTubeLink);
+      if (sourceAnalysis?.analysis) {
+        identityRequestText = `${identityRequestText}\n\nCreate the image from this analyzed video context:\n${sourceAnalysis.analysis}`;
+      }
+    }
     let confirmedProfilePhotoUrl: string | null = null;
 
     if (pendingIdentitySave && user?.id) {
@@ -1969,12 +1978,7 @@ Want me to dive deeper into any aspect?`;
         console.log('[ZoeOrb] YouTube link detected, queuing for background analysis:', youtubeLinks[0]);
         toast.info('🎬 Zoe is watching the video in the background...', { duration: 3000 });
         
-        // Queue as background task so it continues even if chat closes
-        if (user?.id) {
-          backgroundTasks.addYouTubeTask(youtubeLinks[0], user.id);
-        }
-        
-        // Also run immediate analysis if chat is open
+        // Run once and place the transcript/analysis directly into this chat.
         tubeSight.analyzeVideo(youtubeLinks[0]).then((analysis) => {
           if (analysis) {
             // Inject Zoe's video analysis as a new message
