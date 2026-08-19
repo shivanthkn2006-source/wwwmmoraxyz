@@ -23,7 +23,6 @@ import HomeFloatingTools from '@/components/home/HomeFloatingTools';
 import HomePostEditor, { type HomePostDraft } from '@/components/home/HomePostEditor';
 import { useEventGlow, getAvatarGlowClass } from '@/hooks/useEventGlow';
 import { toast } from '@/hooks/use-toast';
-import AutoScrollDebugOverlay from '@/components/dev/AutoScrollDebugOverlay';
 
 import StatusIconBadge from '@/components/StatusIconBadge';
 import { useSmartNotifications } from '@/hooks/useSmartNotifications';
@@ -2409,7 +2408,11 @@ const HomePage = () => {
           </div>
         </div>
       )}
-      <AutoScrollDebugOverlay />
+      {import.meta.env.DEV && new URLSearchParams(window.location.search).has('home_debug') && (
+        <React.Suspense fallback={null}>
+          {React.createElement(React.lazy(() => import('@/components/dev/AutoScrollDebugOverlay')))}
+        </React.Suspense>
+      )}
     </>
   );
 };
