@@ -8,6 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import PostCard from '@/components/PostCard';
+import { MoraZoeDailyCard } from '@/components/astro/MoraZoeDailyCard';
+import useAstroDailyPrediction from '@/hooks/useAstroDailyPrediction';
 import { FeedErrorBoundary } from '@/components/FeedErrorBoundary';
 import NotificationMenu from '@/components/NotificationMenu';
 import AnimatedHamburgerButton from '@/components/AnimatedHamburgerButton';
@@ -249,6 +251,7 @@ function xhrUploadToPosts(
 
 const HomePage = () => {
   const { user } = useAuth();
+  const { prediction: astroDaily } = useAstroDailyPrediction();
   const navigate = useNavigate();
   const { receivedRequests, acceptFriendRequest, rejectFriendRequest } = useFriendRequests();
   const [globalPosts, setGlobalPosts] = useState<Post[]>([]);
@@ -1946,10 +1949,15 @@ const HomePage = () => {
                 
                 {loading ? (
                   <p className="absolute inset-0 flex items-center justify-center px-3 text-center text-muted-foreground">Loading posts...</p>
-                ) : globalPosts.length === 0 ? (
+                ) : globalPosts.length === 0 && !astroDaily ? (
                   <p className="absolute inset-0 flex items-center justify-center px-3 text-center text-muted-foreground">No posts yet</p>
                 ) : (
                   <div className="absolute inset-0 h-full w-full snap-y snap-mandatory overflow-y-auto overscroll-contain" data-testid="global-posts-snap-feed">
+                  {astroDaily && (
+                    <div className="relative flex h-full min-h-full w-full shrink-0 snap-start snap-always items-center overflow-y-auto p-4" data-astro-daily>
+                      <MoraZoeDailyCard prediction={astroDaily} className="w-full" />
+                    </div>
+                  )}
                   {visibleGlobalPosts.map(post => {
                     const isToday = post.created_at && new Date(post.created_at).toDateString() === new Date().toDateString();
                     return (
@@ -1980,10 +1988,15 @@ const HomePage = () => {
                 )}
                 {loading ? (
                   <p className="absolute inset-0 flex items-center justify-center px-3 text-center text-muted-foreground">Loading posts...</p>
-                ) : personalPosts.length === 0 ? (
+                ) : personalPosts.length === 0 && !astroDaily ? (
                   <p className="absolute inset-0 flex items-center justify-center px-3 text-center text-muted-foreground">No posts from friends yet</p>
                 ) : (
                   <div className="absolute inset-0 h-full w-full snap-y snap-mandatory overflow-y-auto overscroll-contain" data-testid="personal-posts-snap-feed">
+                  {astroDaily && (
+                    <div className="relative flex h-full min-h-full w-full shrink-0 snap-start snap-always items-center overflow-y-auto p-4" data-astro-daily>
+                      <MoraZoeDailyCard prediction={astroDaily} className="w-full" />
+                    </div>
+                  )}
                   {visiblePersonalPosts.map(post => {
                     const isToday = post.created_at && new Date(post.created_at).toDateString() === new Date().toDateString();
                     return (
