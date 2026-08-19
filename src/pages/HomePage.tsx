@@ -251,6 +251,7 @@ function xhrUploadToPosts(
 
 const HomePage = () => {
   const { user } = useAuth();
+  const { prediction: astroDaily } = useAstroDailyPrediction();
   const navigate = useNavigate();
   const { receivedRequests, acceptFriendRequest, rejectFriendRequest } = useFriendRequests();
   const [globalPosts, setGlobalPosts] = useState<Post[]>([]);
