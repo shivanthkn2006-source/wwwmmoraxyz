@@ -569,48 +569,65 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
         {isDeferredHeavyMedia ? (
           <div className="h-full w-full animate-pulse bg-muted" data-testid="post-deferred-media-preview" />
         ) : isVideoMedia ? (
-          <video
-            ref={videoRef}
-            src={displayMediaSrc}
-            poster={posterSrc}
-            playsInline
-            muted={!shouldPlayWithSound}
-            loop
-            preload="metadata"
-            className="block h-full w-full object-cover object-center"
-            data-testid="post-video"
-            onClick={() => {
-              const v = videoRef.current;
-              if (!v) return;
-              setSoundUnlocked(true);
-              if (v.paused) {
-                v.muted = !soundEnabled;
-                v.play().catch(() => { v.muted = true; v.play().catch(() => {}); });
-                setIsVideoPlaying(true);
-              } else {
-                v.pause();
-                setIsVideoPlaying(false);
-              }
-            }}
-            onPlay={() => setIsVideoPlaying(true)}
-            onPause={() => setIsVideoPlaying(false)}
-            onError={(e) => console.warn('[PostCard][video]', post.id, getVideoErrorReason(e.currentTarget))}
-          />
+          <div className="relative h-full w-full overflow-hidden bg-black">
+            {(posterSrc || displayMediaSrc) && (
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-0 scale-110 bg-cover bg-center blur-2xl brightness-50"
+                style={{ backgroundImage: `url("${posterSrc || displayMediaSrc}")` }}
+              />
+            )}
+            <video
+              ref={videoRef}
+              src={displayMediaSrc}
+              poster={posterSrc}
+              playsInline
+              muted={!shouldPlayWithSound}
+              loop
+              preload="metadata"
+              className="relative block h-full w-full object-contain object-center"
+              data-testid="post-video"
+              onClick={() => {
+                const v = videoRef.current;
+                if (!v) return;
+                setSoundUnlocked(true);
+                if (v.paused) {
+                  v.muted = !soundEnabled;
+                  v.play().catch(() => { v.muted = true; v.play().catch(() => {}); });
+                  setIsVideoPlaying(true);
+                } else {
+                  v.pause();
+                  setIsVideoPlaying(false);
+                }
+              }}
+              onPlay={() => setIsVideoPlaying(true)}
+              onPause={() => setIsVideoPlaying(false)}
+              onError={(e) => console.warn('[PostCard][video]', post.id, getVideoErrorReason(e.currentTarget))}
+            />
+          </div>
         ) : displayMediaUrl ? (
-          <img
-            src={displayMediaSrc}
-            alt="Post media"
-            className="block h-full w-full cursor-pointer object-cover object-center"
-            data-testid="post-image"
-            onClick={() => setShowImageViewer(true)}
-            onError={() => console.warn('[PostCard][image] failed to load', post.id)}
-          />
+          <div className="relative h-full w-full overflow-hidden bg-black">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0 scale-110 bg-cover bg-center blur-2xl brightness-50"
+              style={{ backgroundImage: `url("${displayMediaSrc}")` }}
+            />
+            <img
+              src={displayMediaSrc}
+              alt="Post media"
+              className="relative block h-full w-full cursor-pointer object-contain object-center"
+              data-testid="post-image"
+              onClick={() => setShowImageViewer(true)}
+              onError={() => console.warn('[PostCard][image] failed to load', post.id)}
+            />
+          </div>
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-neutral-900 to-neutral-800 px-8">
             <p className="text-center text-lg font-medium leading-snug text-white">{post.content}</p>
           </div>
         )}
       </div>
+
 
       {/* Readability gradients */}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black/70 via-black/25 to-transparent" />
