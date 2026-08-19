@@ -24,7 +24,9 @@ const corsHeaders = {
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const BUCKET = 'astro-posters';
-const MAX_BATCH = 25;
+const MAX_BATCH = 50;
+const GENERATION_BUDGET = 5;   // new images per run; the hourly cron finishes the rest
+
 
 async function db(path: string, init: RequestInit = {}) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
@@ -153,16 +155,46 @@ Deno.serve(async (req) => {
 
   try {
     if (action === 'run') {
+      // Every account gets a profile row first — nobody is skipped because a
+      // profile was never provisioned for them.
+      await fetch(`${SUPABASE_URL}/rest/v1/rpc/ensure_profiles_for_all_users`, {
+        method: 'POST',
+        headers: {
+          apikey: SERVICE_KEY,
+          Authorization: `Bearer ${SERVICE_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: '{}',
+      }).catch(() => {});
+
+      // Motivation needs no birth data — iterate every member, not just the
+      // ones with an astro profile.
       const profRes = await db(
-        `astro_profiles?select=user_id,display_timezone&order=updated_at.asc&limit=${MAX_BATCH}`,
+        `profiles?select=user_id&order=created_at.asc&limit=${MAX_BATCH}`,
       );
-      const rows: Array<{ user_id: string; display_timezone: string }> = Array.isArray(profRes.data) ? profRes.data : [];
-      const out = [];
+      const rows: Array<{ user_id: string }> = Array.isArray(profRes.data) ? profRes.data : [];
+
+      // Timezone hints where we have them; UTC otherwise.
+      const tzRes = await db('astro_profiles?select=user_id,display_timezone');
+      const tzMap = new Map<string, string>(
+        (Array.isArray(tzRes.data) ? tzRes.data : []).map((r: any) => [r.user_id, r.display_timezone || 'UTC']),
+      );
+
+      const out: any[] = [];
+      let generated = 0;
       for (const p of rows) {
-        out.push({ user_id: p.user_id, ...(await ensureForUser(p.user_id, p.display_timezone || 'UTC', now)) });
+        // Bounded generation budget per run — the hourly cron picks up the rest.
+        if (generated >= GENERATION_BUDGET) {
+          out.push({ user_id: p.user_id, status: 'deferred' });
+          continue;
+        }
+        const r = await ensureForUser(p.user_id, tzMap.get(p.user_id) || body.timezone || 'UTC', now);
+        if (r.status === 'created' || r.status === 'repaired') generated++;
+        out.push({ user_id: p.user_id, ...r });
       }
-      return json({ ok: true, processed: out.length, results: out.map((r) => ({ user_id: r.user_id, status: r.status })) });
+      return json({ ok: true, processed: out.length, generated, results: out.map((r) => ({ user_id: r.user_id, status: r.status })) });
     }
+
 
     // ensure — identify the caller from their JWT
     const authHeader = req.headers.get('Authorization') ?? '';

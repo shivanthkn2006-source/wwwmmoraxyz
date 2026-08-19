@@ -32,7 +32,7 @@ export const MoraZoeBirthDetailsPrompt: React.FC<Props> = ({ initial, onSave, on
   };
 
   const overlay = (
-    <div className="fixed inset-0 z-[9997] flex items-center justify-center overflow-y-auto bg-background/95 px-5 py-10 backdrop-blur">
+    <div className="fixed inset-0 z-[10030] flex items-center justify-center overflow-y-auto bg-background/95 px-5 py-10 backdrop-blur">
       <form
         onSubmit={submit}
         className="relative w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-lg"
