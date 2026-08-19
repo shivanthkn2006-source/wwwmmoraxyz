@@ -85,12 +85,9 @@ ${context ? `User context: ${context}` : ''}`;
             role: 'user', 
             content: [
               { type: 'text', text: userPrompt },
-              { 
-                type: 'image_url', 
-                image_url: { 
-                  url: video_data,
-                  detail: 'high'
-                } 
+              {
+                type: 'video_url',
+                video_url: { url: video_data }
               }
             ]
           }

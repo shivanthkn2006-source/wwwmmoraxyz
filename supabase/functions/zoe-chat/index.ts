@@ -121,6 +121,17 @@ const requestSchema = z.object({
     exclusiveOffers: z.array(z.string()).optional(),
     hasNewUpdates: z.boolean().optional(),
   }).optional(),
+  postContext: z.object({
+    id: z.string(),
+    authorName: z.string(),
+    content: z.string(),
+    mediaType: z.string().nullable(),
+    mediaUrl: z.string().nullable(),
+    createdAt: z.string(),
+    likesCount: z.number(),
+    commentsCount: z.number(),
+  }).optional(),
+  platformPages: z.string().optional(),
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -169,7 +180,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { messages, soulMetrics, timezone, localTime, replyContext, platformContext, behavioralTelemetry, enableASI, asiMode, realtimeContext } = requestSchema.parse(body);
+    const { messages, soulMetrics, timezone, localTime, replyContext, platformContext, behavioralTelemetry, enableASI, asiMode, realtimeContext, postContext, platformPages } = requestSchema.parse(body);
 
     // ═══════════════════════════════════════════════════════════════════════════════
     // ASI 7.5x PROCESSING - Pentarchy + Truth Engine + Quantum Loop
@@ -546,6 +557,19 @@ ${userContextBlock}
 - Current page: ${currentPage}
 ${userProfileContext?.city || platformContext?.userCity ? `- User's city: ${userProfileContext?.city || platformContext?.userCity}` : ''}
 ${userProfileContext?.bio || platformContext?.userBio ? `- About the user: ${userProfileContext?.bio || platformContext?.userBio}` : ''}
+
+${postContext ? `**CURRENTLY VISIBLE M'MORA POST:**
+- Post ID: ${postContext.id}
+- Creator: ${postContext.authorName}
+- Text: ${postContext.content || '[No caption]'}
+- Media: ${postContext.mediaType || 'none'}${postContext.mediaUrl ? ` at ${postContext.mediaUrl}` : ''}
+- Published: ${postContext.createdAt}
+- Engagement: ${postContext.likesCount} likes, ${postContext.commentsCount} comments
+When the user says “this post”, “this video”, or asks about the visible content, use this exact context rather than guessing.` : ''}
+
+${platformPages ? `**M'MORA PLATFORM PAGE DIRECTORY:**
+${platformPages}
+Use this directory to explain where a feature lives or answer questions about it without forcing the user to open that page. Never claim page-specific live data unless it was supplied in context.` : ''}
 
 ${behavioralTelemetry ? `**🧠 EMOTIONAL TELEMETRY - I CAN SENSE YOUR STATE:**
 I detected the following from your typing patterns:

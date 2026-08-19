@@ -90,6 +90,7 @@ import { useMmoraAgent } from '@/hooks/useMmoraAgent';
 import { useNeuroSymbolicGuard } from '@/hooks/useNeuroSymbolicGuard';
 import { loadDestinySeed, saveDestinySeed } from '@/core/soul/AtmanArchive';
 import { stripScratchpad } from '@/utils/hiddenScratchpad';
+import { getZoeActivePostContext, getZoePlatformPageContext } from '@/lib/zoePlatformContext';
 
 // Relationship command patterns that should be executed as commands, not chat
 const RELATIONSHIP_COMMAND_PATTERNS = [
@@ -1295,6 +1296,11 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
       imageIntent = { ...imageIntent, isImageRequest: true };
     }
     let identityRequestText = resolvedImageTurn.prompt;
+    const activePostContext = getZoeActivePostContext();
+    const refersToVisiblePost = /\b(this|current|visible)\s+(post|video|photo|image|content)\b|\bthe\s+post\b/i.test(userMessage.content);
+    if (imageIntent.isImageRequest && refersToVisiblePost && activePostContext) {
+      identityRequestText = `${identityRequestText}\n\nUse this visible M'Mora post as creative context: creator ${activePostContext.authorName}; caption: ${activePostContext.content || '[no caption]'}; media: ${activePostContext.mediaUrl || '[no media URL]'}.`;
+    }
     let confirmedProfilePhotoUrl: string | null = null;
 
     if (pendingIdentitySave && user?.id) {
@@ -1995,6 +2001,24 @@ Want me to dive deeper into any aspect?`;
           }
         });
       }
+
+      // Read the currently visible M'Mora video inside chat, without opening its player.
+      if (!responseText && refersToVisiblePost && activePostContext?.mediaType === 'video' && activePostContext.mediaUrl) {
+        try {
+          setSendStage('thinking', 'visible-post-video');
+          const { data: postVideoData, error: postVideoError } = await supabase.functions.invoke('process-live-video', {
+            body: {
+              video_data: activePostContext.mediaUrl,
+              context: `${userMessage.content}\nPost caption: ${activePostContext.content || '[no caption]'}\nCreator: ${activePostContext.authorName}`,
+              analysis_type: /transcrib|what.*say|words|speech/i.test(userMessage.content) ? 'transcription' : 'comprehensive',
+            },
+          });
+          if (postVideoError) throw postVideoError;
+          responseText = postVideoData?.zoe_response || postVideoData?.analysis?.raw_response || '';
+        } catch (postVideoReadError) {
+          reportDiagnosticError('visible-post-video', postVideoReadError);
+        }
+      }
       
       if (isWeatherQuery || isTrafficQuery || isBriefingQuery) {
         console.log('[ZoeOrb] Handling local query:', { isWeatherQuery, isTrafficQuery, isBriefingQuery });
@@ -2188,7 +2212,18 @@ Want me to dive deeper into any aspect?`;
                 exclusiveOffers: feedsSummary.exclusiveOffers,
                 hasNewUpdates: feedsSummary.hasFreshUpdates,
                 newUserNotification: newUserNotification, // New user sign-ups/sign-ins
-              }
+              },
+              postContext: activePostContext ? {
+                id: activePostContext.id,
+                authorName: activePostContext.authorName,
+                content: activePostContext.content,
+                mediaType: activePostContext.mediaType,
+                mediaUrl: activePostContext.mediaUrl,
+                createdAt: activePostContext.createdAt,
+                likesCount: activePostContext.likesCount,
+                commentsCount: activePostContext.commentsCount,
+              } : undefined,
+              platformPages: getZoePlatformPageContext(),
             },
           });
 

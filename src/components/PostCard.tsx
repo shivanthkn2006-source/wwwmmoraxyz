@@ -22,6 +22,7 @@ import { usePersistentMediaSound } from '@/hooks/usePersistentMediaSound';
 import AuthorPreviewRail from '@/components/home/AuthorPreviewRail';
 import { useFollow } from '@/hooks/useFollow';
 import { isInPlaylist, toggleWatchLater, WATCH_LATER_ID } from '@/lib/shortsPlaylists';
+import { setZoeActivePostContext } from '@/lib/zoePlatformContext';
 
 interface Post {
   id: string;
@@ -155,6 +156,19 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
         entries.forEach((entry) => {
           const inView = entry.isIntersecting && entry.intersectionRatio >= 0.6;
           setVideoInView(inView);
+          if (inView) {
+            setZoeActivePostContext({
+              id: post.id,
+              authorId: post.user_id,
+              authorName: post.profile?.display_name || post.profile?.username || 'Unknown creator',
+              content: post.content || '',
+              mediaUrl: displayMediaUrl,
+              mediaType: post.media_type,
+              createdAt: post.created_at,
+              likesCount: post.likes_count,
+              commentsCount: post.comments_count,
+            });
+          }
           if (inView && isDeferredHeavyMedia) revealDeferredMedia();
           const v = videoRef.current;
           if (!v) return;
@@ -173,7 +187,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
     );
     io.observe(frame);
     return () => io.disconnect();
-  }, [isDeferredHeavyMedia, revealDeferredMedia, displayMediaSrc, shouldPlayWithSound]);
+  }, [isDeferredHeavyMedia, revealDeferredMedia, displayMediaSrc, displayMediaUrl, post, shouldPlayWithSound]);
 
   useEffect(() => {
     let alive = true;
@@ -560,7 +574,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
   return (
     <div
       className="relative w-full snap-start snap-always overflow-hidden bg-black"
-      style={{ height: 'calc(100svh - 7.5rem)', minHeight: '440px' }}
+      style={{ height: '100svh', minHeight: '440px' }}
       data-testid="post-card"
     >
       {/* Media layer (full bleed) */}
