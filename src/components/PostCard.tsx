@@ -527,350 +527,322 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
     return null;
   }
 
-  return (
-    <Card className="bg-transparent border-0 border-b border-border/40 rounded-none shadow-none overflow-hidden">
-      <div className="flex flex-col gap-2 pb-3">
-        <div className="order-2 flex items-start space-x-3 px-3">
+  const isVideoMedia = !!displayMediaUrl && inferMediaType(displayMediaUrl, post.media_type) === 'video';
 
-          <div className="relative">
-            <Avatar 
-              className={`w-10 h-10 cursor-pointer hover:opacity-90 transition-opacity ${glowClass}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (post.profile?.profile_photo_url) {
-                  setShowProfileViewer(true);
-                }
-              }}
-            >
-              <AvatarImage src={post.profile?.profile_photo_url || ''} />
-              <AvatarFallback className="bg-primary/10 text-primary">
-                {post.profile?.display_name?.charAt(0) || 'U'}
-              </AvatarFallback>
-            </Avatar>
-            <StatusIconBadge status={post.profile?.status} size="sm" />
-            
-            <AnimatePresence>
-              {showLikeAnimation && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.5, y: 0 }}
-                  animate={{ opacity: 1, scale: 1.5, y: 30 }}
-                  exit={{ opacity: 0, scale: 0.8, y: 50 }}
-                  transition={{ duration: 1.5, ease: "easeOut" }}
-                  className="absolute left-1/2 -translate-x-1/2 top-full pointer-events-none"
-                  style={{ marginTop: '4px' }}
-                >
-                  <motion.div
-                    initial={{ scale: 0.5 }}
-                    animate={{ scale: [0.5, 1.2, 1] }}
-                    transition={{ duration: 0.5 }}
-                    className="text-3xl"
-                  >
-                    💙
-                  </motion.div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+  const overlayButton =
+    'flex flex-col items-center gap-1 text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)]';
+  const overlayIconWrap =
+    'flex h-11 w-11 items-center justify-center rounded-full bg-white/10 backdrop-blur-md transition-colors hover:bg-white/20';
+
+  return (
+    <div
+      className="relative w-full snap-start snap-always overflow-hidden bg-black"
+      style={{ height: 'calc(100svh - 7.5rem)', minHeight: '440px' }}
+      data-testid="post-card"
+    >
+      {/* Media layer (full bleed) */}
+      <div ref={mediaFrameRef} className="absolute inset-0" data-testid="post-media-frame">
+        {isDeferredHeavyMedia ? (
+          <div className="h-full w-full animate-pulse bg-muted" data-testid="post-deferred-media-preview" />
+        ) : isVideoMedia ? (
+          <video
+            ref={videoRef}
+            src={displayMediaSrc}
+            poster={posterSrc}
+            playsInline
+            muted={!shouldPlayWithSound}
+            loop
+            preload="metadata"
+            className="h-full w-full object-cover"
+            data-testid="post-video"
+            onClick={() => {
+              const v = videoRef.current;
+              if (!v) return;
+              setSoundUnlocked(true);
+              if (v.paused) {
+                v.muted = !soundEnabled;
+                v.play().catch(() => { v.muted = true; v.play().catch(() => {}); });
+                setIsVideoPlaying(true);
+              } else {
+                v.pause();
+                setIsVideoPlaying(false);
+              }
+            }}
+            onPlay={() => setIsVideoPlaying(true)}
+            onPause={() => setIsVideoPlaying(false)}
+            onError={(e) => console.warn('[PostCard][video]', post.id, getVideoErrorReason(e.currentTarget))}
+          />
+        ) : displayMediaUrl ? (
+          <img
+            src={displayMediaSrc}
+            alt="Post media"
+            className="h-full w-full cursor-pointer object-cover"
+            data-testid="post-image"
+            onClick={() => setShowImageViewer(true)}
+            onError={() => console.warn('[PostCard][image] failed to load', post.id)}
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-neutral-900 to-neutral-800 px-8">
+            <p className="text-center text-lg font-medium leading-snug text-white">{post.content}</p>
           </div>
-          <div className="flex-1">
-            <p 
-              className="font-semibold text-foreground cursor-pointer hover:underline"
-              onClick={() => navigate(`/profile/${post.user_id}`)}
-            >
-              {post.profile?.display_name}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              @{post.profile?.username} · {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
-            </p>
-          </div>
-          <div className="flex items-center gap-1">
-            {!isOwnPost && (
-              <>
-                {starRating && (
-                  <span className="text-sm font-medium text-foreground mr-1">{starRating}</span>
-                )}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                      <Star className={`w-4 h-4 ${starRating ? 'fill-yellow-400 text-yellow-400' : ''}`} />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-32 bg-background/95 backdrop-blur-sm">
-                    {[5, 4, 3, 2, 1].map((rating) => (
-                      <DropdownMenuItem 
-                        key={rating}
-                        onClick={async () => {
-                          if (!user) return;
-                          try {
-                            await supabase
-                              .from('post_ratings')
-                              .upsert({
-                                post_id: post.id,
-                                user_id: user.id,
-                                rating: rating
-                              }, {
-                                onConflict: 'post_id,user_id'
-                              });
-                            setStarRating(rating);
-                            toast({
-                              title: 'Rating submitted',
-                              description: `You rated this post ${rating} stars`,
-                            });
-                          } catch (error) {
-                            toast({
-                              title: 'Error',
-                              description: 'Failed to submit rating',
-                              variant: 'destructive',
-                            });
-                          }
-                        }}
-                        className="justify-center"
-                      >
-                        {Array.from({ length: rating }, (_, i) => (
-                          <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400 inline" />
-                        ))}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </>
-            )}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                  <MoreVertical className="w-4 h-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onClick={() => handlePreference('interested')}>
-                  👍 Interested
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handlePreference('not_interested')}>
-                  👎 Not Interested
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            {user?.id === post.user_id && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleDelete}
-                className="text-destructive hover:text-destructive h-8 w-8 p-0"
-              >
-                <Trash2 className="w-4 h-4" />
-              </Button>
-            )}
+        )}
+      </div>
+
+      {/* Readability gradients */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black/70 via-black/25 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/50 to-transparent" />
+
+      {isVideoMedia && !isVideoPlaying && (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <div className="rounded-full bg-black/40 p-4 backdrop-blur-sm">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z" /></svg>
           </div>
         </div>
+      )}
 
-        {post.content && (
-          <p className="order-3 px-3 text-sm leading-snug text-foreground">{post.content}</p>
+      {/* Top-right controls */}
+      <div className="absolute right-2 top-2 z-20 flex items-center gap-1">
+        {isVideoMedia && (
+          <button
+            type="button"
+            aria-label={soundEnabled ? 'Mute video audio' : 'Unmute video audio'}
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-md hover:bg-white/20"
+            onClick={(e) => {
+              e.stopPropagation();
+              setSoundUnlocked(true);
+              const next = !soundEnabled;
+              setSoundEnabled(next);
+              if (videoRef.current) {
+                videoRef.current.muted = !next;
+                if (next) videoRef.current.play().catch(() => {});
+              }
+            }}
+          >
+            {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+          </button>
         )}
-
-        {(displayMediaUrl || isDeferredHeavyMedia) && (() => {
-          const isVideo = !!displayMediaUrl && inferMediaType(displayMediaUrl, post.media_type) === 'video';
-          return (
-            <div
-              ref={mediaFrameRef}
-              className="order-1 overflow-hidden rounded-none bg-black flex items-center justify-center relative"
-              data-testid="post-media-frame"
-              style={{ maxHeight: '85svh' }}
-            >
-
-              {isDeferredHeavyMedia ? (
-                <div className="w-full aspect-[9/16] max-h-[85svh] bg-muted animate-pulse" data-testid="post-deferred-media-preview" />
-              ) : isVideo ? (
-                <div
-                  className="relative w-full flex items-center justify-center bg-muted"
-                  onClick={() => {
-                    const v = videoRef.current;
-                    if (!v) return;
-                    setSoundUnlocked(true);
-                    if (v.paused) { v.muted = !soundEnabled; v.play().catch(() => { v.muted = true; v.play().catch(() => {}); }); setIsVideoPlaying(true); }
-                    else { v.pause(); setIsVideoPlaying(false); }
-                  }}
-                >
-                  <video
-                    ref={videoRef}
-                    src={displayMediaSrc}
-                    poster={posterSrc}
-                    playsInline
-                    muted={!shouldPlayWithSound}
-                    loop
-                    preload="metadata"
-                    className="h-auto w-full max-h-[85svh] object-contain"
-                    data-testid="post-video"
-                    onPlay={() => setIsVideoPlaying(true)}
-                    onPause={() => setIsVideoPlaying(false)}
-                    onError={(e) => {
-                      console.warn('[PostCard][video]', post.id, getVideoErrorReason(e.currentTarget));
-                    }}
-                  />
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="secondary"
-                    aria-label={soundEnabled ? 'Mute video audio' : 'Unmute video audio'}
-                    className="absolute right-2 top-2 h-8 w-8 rounded-full bg-background/75 text-foreground backdrop-blur-sm hover:bg-background/90"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSoundUnlocked(true);
-                      const next = !soundEnabled;
-                      setSoundEnabled(next);
-                      if (videoRef.current) {
-                        videoRef.current.muted = !next;
-                        if (next) videoRef.current.play().catch(() => {});
-                      }
-                    }}
-                  >
-                    {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-                  </Button>
-                  {!isVideoPlaying && (
-                    <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                      <div className="rounded-full bg-black/50 p-4 backdrop-blur-sm">
-                        <svg width="32" height="32" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <img
-                  src={displayMediaSrc}
-                  alt="Post media"
-                  className="h-auto w-full max-h-[85svh] cursor-pointer object-contain"
-                  data-testid="post-image"
-                  onClick={() => setShowImageViewer(true)}
-                  onError={() => console.warn('[PostCard][image] failed to load', post.id)}
-                />
-              )}
-            </div>
-          );
-        })()}
-
-
-        {showImageViewer && displayMediaUrl && (
-          <ImageViewer
-            imageUrl={displayMediaUrl}
-            onClose={() => setShowImageViewer(false)}
-          />
-        )}
-
-        {showProfileViewer && post.profile?.profile_photo_url && (
-          <ImageViewer
-            imageUrl={post.profile.profile_photo_url}
-            onClose={() => setShowProfileViewer(false)}
-          />
-        )}
-
-        <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Share Post</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <Button
-                onClick={handleCopyLink}
-                variant="outline"
-                className="w-full justify-start"
+        {!isOwnPost && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                aria-label="Rate post"
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-md hover:bg-white/20"
               >
-                <Share2 className="w-4 h-4 mr-2" />
-                Copy Link
-              </Button>
-              
-              {timelines.length > 0 && (
-                <>
-                  <div className="text-sm font-medium text-muted-foreground">
-                    Share to Private Timeline
-                  </div>
-                  <ScrollArea className="max-h-[300px]">
-                    <div className="space-y-2">
-                      {timelines.map((timeline) => (
-                        <Button
-                          key={timeline.id}
-                          onClick={() => handleShareToTimeline(timeline.id)}
-                          variant="ghost"
-                          className="w-full justify-start"
-                          disabled={sharingToTimeline}
-                        >
-                          <div className="flex items-center gap-2">
-                            <div className="flex -space-x-2">
-                              {timeline.members.slice(0, 3).map((member) => (
-                                <Avatar key={member.user_id} className="w-6 h-6 border-2 border-background">
-                                  <AvatarImage src={member.profile_photo_url || ''} />
-                                  <AvatarFallback className="text-xs">
-                                    {member.display_name?.charAt(0) || 'U'}
-                                  </AvatarFallback>
-                                </Avatar>
-                              ))}
-                            </div>
-                            <div className="flex-1 text-left">
-                              <div className="text-sm font-medium">
-                                {timeline.members.map(m => m.display_name).join(', ')}
-                              </div>
-                            </div>
-                          </div>
-                        </Button>
-                      ))}
-                    </div>
-                  </ScrollArea>
-                </>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
+                <Star className={`h-4 w-4 ${starRating ? 'fill-yellow-400 text-yellow-400' : ''}`} />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-32 bg-background/95 backdrop-blur-sm">
+              {[5, 4, 3, 2, 1].map((rating) => (
+                <DropdownMenuItem
+                  key={rating}
+                  onClick={async () => {
+                    if (!user) return;
+                    try {
+                      await supabase
+                        .from('post_ratings')
+                        .upsert({ post_id: post.id, user_id: user.id, rating }, { onConflict: 'post_id,user_id' });
+                      setStarRating(rating);
+                      toast({ title: 'Rating submitted', description: `You rated this post ${rating} stars` });
+                    } catch (error) {
+                      toast({ title: 'Error', description: 'Failed to submit rating', variant: 'destructive' });
+                    }
+                  }}
+                  className="justify-center"
+                >
+                  {Array.from({ length: rating }, (_, i) => (
+                    <Star key={i} className="inline h-4 w-4 fill-yellow-400 text-yellow-400" />
+                  ))}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              aria-label="More options"
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-md hover:bg-white/20"
+            >
+              <MoreVertical className="h-4 w-4" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem onClick={() => handlePreference('interested')}>👍 Interested</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handlePreference('not_interested')}>👎 Not Interested</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
 
-        <div className="order-4 flex items-center space-x-4 px-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleLike}
-            className={`flex items-center space-x-1 ${
-              post.private_timeline_id 
-                ? liked ? 'text-blue-500' : 'text-muted-foreground'
-                : liked ? 'text-primary' : 'text-muted-foreground'
-            }`}
-          >
-            <Heart className={`w-5 h-5 ${
-              post.private_timeline_id 
-                ? liked ? 'fill-blue-500' : ''
-                : liked ? 'fill-primary' : ''
-            }`} />
-            <span>{likesCount}</span>
-          </Button>
+      {/* Right action rail (transparent, Shorts style) */}
+      <div className="absolute bottom-24 right-2 z-20 flex flex-col items-center gap-4">
+        <button type="button" onClick={handleLike} className={overlayButton} aria-label="Like">
+          <span className={overlayIconWrap}>
+            <Heart className={`h-6 w-6 ${liked ? 'fill-white text-white' : 'text-white'}`} />
+          </span>
+          <span className="text-xs font-semibold">{likesCount}</span>
+        </button>
 
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowComments(!showComments)}
-            className="flex items-center space-x-1 text-muted-foreground"
-          >
-            <MessageCircle className="w-5 h-5" />
-            <span>{commentsCount}</span>
-          </Button>
+        <button type="button" onClick={() => setShowComments(!showComments)} className={overlayButton} aria-label="Comments">
+          <span className={overlayIconWrap}>
+            <MessageCircle className="h-6 w-6" />
+          </span>
+          <span className="text-xs font-semibold">{commentsCount}</span>
+        </button>
 
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleShare}
-            className="flex items-center space-x-1 text-muted-foreground"
-          >
-            <Share2 className="w-5 h-5" />
-          </Button>
+        <button type="button" onClick={handleShare} className={overlayButton} aria-label="Share">
+          <span className={overlayIconWrap}>
+            <Share2 className="h-6 w-6" />
+          </span>
+          <span className="text-xs font-semibold">Share</span>
+        </button>
 
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleSave}
-            className={`flex items-center space-x-1 ${isSaved ? 'text-primary' : 'text-muted-foreground'}`}
+        <button type="button" onClick={handleSave} className={overlayButton} aria-label="Save">
+          <span className={overlayIconWrap}>
+            <Bookmark className={`h-6 w-6 ${isSaved ? 'fill-white' : ''}`} />
+          </span>
+          <span className="text-xs font-semibold">Save</span>
+        </button>
+
+        {isOwnPost && (
+          <button type="button" onClick={handleDelete} className={overlayButton} aria-label="Delete post">
+            <span className={overlayIconWrap}>
+              <Trash2 className="h-6 w-6 text-destructive" />
+            </span>
+          </button>
+        )}
+
+        <div className="relative mt-1">
+          <Avatar
+            className={`h-10 w-10 cursor-pointer rounded-lg border-2 border-white/80 ${glowClass}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (post.profile?.profile_photo_url) setShowProfileViewer(true);
+            }}
           >
-            <Bookmark className={`w-5 h-5 ${isSaved ? 'fill-primary' : ''}`} />
-          </Button>
+            <AvatarImage src={post.profile?.profile_photo_url || ''} />
+            <AvatarFallback className="bg-primary/10 text-primary">
+              {post.profile?.display_name?.charAt(0) || 'U'}
+            </AvatarFallback>
+          </Avatar>
+          <StatusIconBadge status={post.profile?.status} size="sm" />
+          <AnimatePresence>
+            {showLikeAnimation && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.5, y: 0 }}
+                animate={{ opacity: 1, scale: 1.4, y: -30 }}
+                exit={{ opacity: 0, scale: 0.8, y: -50 }}
+                transition={{ duration: 1.2, ease: 'easeOut' }}
+                className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 text-3xl"
+              >
+                💙
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 
+      {/* Bottom-left author + caption */}
+      <div className="absolute bottom-4 left-3 z-20 max-w-[72%] space-y-1.5">
+        <div className="flex items-center gap-2">
+          <Avatar
+            className={`h-8 w-8 cursor-pointer ${glowClass}`}
+            onClick={() => navigate(`/profile/${post.user_id}`)}
+          >
+            <AvatarImage src={post.profile?.profile_photo_url || ''} />
+            <AvatarFallback className="bg-primary/10 text-primary text-xs">
+              {post.profile?.display_name?.charAt(0) || 'U'}
+            </AvatarFallback>
+          </Avatar>
+          <button
+            type="button"
+            onClick={() => navigate(`/profile/${post.user_id}`)}
+            className="text-sm font-semibold text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]"
+          >
+            @{post.profile?.username || post.profile?.display_name}
+          </button>
+          <span className="text-xs text-white/70">
+            {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
+          </span>
+        </div>
+        {post.content && displayMediaUrl && (
+          <p className="line-clamp-2 text-sm text-white/90 drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]">
+            {post.content}
+          </p>
+        )}
+      </div>
+
+      {/* Comments overlay */}
       {showComments && (
-        <CommentSection postId={post.id} onUpdate={onUpdate} />
+        <div className="absolute inset-x-0 bottom-0 z-30 max-h-[65%] overflow-y-auto rounded-t-2xl bg-background/95 backdrop-blur-md">
+          <div className="flex items-center justify-between px-4 py-2">
+            <span className="text-sm font-semibold">Comments</span>
+            <Button variant="ghost" size="sm" onClick={() => setShowComments(false)}>Close</Button>
+          </div>
+          <CommentSection postId={post.id} onUpdate={onUpdate} />
+        </div>
       )}
-    </Card>
+
+      {showImageViewer && displayMediaUrl && (
+        <ImageViewer imageUrl={displayMediaUrl} onClose={() => setShowImageViewer(false)} />
+      )}
+
+      {showProfileViewer && post.profile?.profile_photo_url && (
+        <ImageViewer imageUrl={post.profile.profile_photo_url} onClose={() => setShowProfileViewer(false)} />
+      )}
+
+      <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Share Post</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Button onClick={handleCopyLink} variant="outline" className="w-full justify-start">
+              <Share2 className="mr-2 h-4 w-4" />
+              Copy Link
+            </Button>
+
+            {timelines.length > 0 && (
+              <>
+                <div className="text-sm font-medium text-muted-foreground">Share to Private Timeline</div>
+                <ScrollArea className="max-h-[300px]">
+                  <div className="space-y-2">
+                    {timelines.map((timeline) => (
+                      <Button
+                        key={timeline.id}
+                        onClick={() => handleShareToTimeline(timeline.id)}
+                        variant="ghost"
+                        className="w-full justify-start"
+                        disabled={sharingToTimeline}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="flex -space-x-2">
+                            {timeline.members.slice(0, 3).map((member) => (
+                              <Avatar key={member.user_id} className="h-6 w-6 border-2 border-background">
+                                <AvatarImage src={member.profile_photo_url || ''} />
+                                <AvatarFallback className="text-xs">
+                                  {member.display_name?.charAt(0) || 'U'}
+                                </AvatarFallback>
+                              </Avatar>
+                            ))}
+                          </div>
+                          <div className="flex-1 text-left">
+                            <div className="text-sm font-medium">
+                              {timeline.members.map((m) => m.display_name).join(', ')}
+                            </div>
+                          </div>
+                        </div>
+                      </Button>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 };
 
