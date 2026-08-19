@@ -28,22 +28,23 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
   return (
     <>
       <DraggableHomeControl
-        storageKey="mmora.home.camera-position.v2"
-        defaultPosition={{ x: 16, y: Math.max(120, window.innerHeight - 176) }}
+        storageKey="mmora.home.search-position.v3"
+        defaultPosition={{ x: 8, y: 80 }}
+        ariaLabel={searchOpen ? 'Close home search' : 'Search home'}
+        onActivate={() => setSearchOpen((current) => !current)}
+      >
+        {searchOpen ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
+      </DraggableHomeControl>
+
+      <DraggableHomeControl
+        storageKey="mmora.home.camera-position.v3"
+        defaultPosition={{ x: 8, y: 124 }}
         ariaLabel="Create a short"
         onActivate={onOpenEditor}
       >
         <Camera className="h-5 w-5" />
       </DraggableHomeControl>
 
-      <DraggableHomeControl
-        storageKey="mmora.home.search-position.v2"
-        defaultPosition={{ x: Math.max(16, window.innerWidth - 64), y: Math.max(72, window.innerHeight - 176) }}
-        ariaLabel={searchOpen ? 'Close home search' : 'Search home'}
-        onActivate={() => setSearchOpen((current) => !current)}
-      >
-        {searchOpen ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
-      </DraggableHomeControl>
 
       {searchOpen && (
         <div

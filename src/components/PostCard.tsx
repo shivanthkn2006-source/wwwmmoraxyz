@@ -576,7 +576,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
             muted={!shouldPlayWithSound}
             loop
             preload="metadata"
-            className="h-full w-full object-cover"
+            className="h-full w-full object-contain"
             data-testid="post-video"
             onClick={() => {
               const v = videoRef.current;
@@ -599,7 +599,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
           <img
             src={displayMediaSrc}
             alt="Post media"
-            className="h-full w-full cursor-pointer object-cover"
+            className="h-full w-full cursor-pointer object-contain"
             data-testid="post-image"
             onClick={() => setShowImageViewer(true)}
             onError={() => console.warn('[PostCard][image] failed to load', post.id)}
@@ -623,28 +623,10 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
         </div>
       )}
 
-      {/* Right-side controls, placed below the header profile icon so nothing overlaps */}
-      <div className="absolute right-2 top-20 z-20 flex items-center gap-1">
+      {/* Right-side controls: rate + more on one row, speaker tucked underneath */}
+      <div className="absolute right-2 top-20 z-20 flex flex-col items-end gap-1.5">
+        <div className="flex items-center gap-1">
 
-        {isVideoMedia && (
-          <button
-            type="button"
-            aria-label={soundEnabled ? 'Mute video audio' : 'Unmute video audio'}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-md hover:bg-white/20"
-            onClick={(e) => {
-              e.stopPropagation();
-              setSoundUnlocked(true);
-              const next = !soundEnabled;
-              setSoundEnabled(next);
-              if (videoRef.current) {
-                videoRef.current.muted = !next;
-                if (next) videoRef.current.play().catch(() => {});
-              }
-            }}
-          >
-            {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-          </button>
-        )}
         {!isOwnPost && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -697,7 +679,28 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
             <DropdownMenuItem onClick={() => handlePreference('not_interested')}>👎 Not Interested</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        </div>
+        {isVideoMedia && (
+          <button
+            type="button"
+            aria-label={soundEnabled ? 'Mute video audio' : 'Unmute video audio'}
+            className="flex h-7 w-7 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-md hover:bg-white/20"
+            onClick={(e) => {
+              e.stopPropagation();
+              setSoundUnlocked(true);
+              const next = !soundEnabled;
+              setSoundEnabled(next);
+              if (videoRef.current) {
+                videoRef.current.muted = !next;
+                if (next) videoRef.current.play().catch(() => {});
+              }
+            }}
+          >
+            {soundEnabled ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
+          </button>
+        )}
       </div>
+
 
       {/* Left in-post preview rail: this creator's top / recent posts */}
       <AuthorPreviewRail
@@ -710,17 +713,18 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
         }}
       />
 
-      {/* Small delete control, sitting just below the in-post preview icons */}
+      {/* Bare delete glyph, sitting just below the in-post preview icons */}
       {isOwnPost && (
         <button
           type="button"
           onClick={handleDelete}
           aria-label="Delete post"
-          className="absolute bottom-14 left-2 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-md hover:bg-white/20"
+          className="absolute bottom-14 left-4 z-20 text-destructive drop-shadow-[0_2px_6px_rgba(0,0,0,0.8)] transition-opacity hover:opacity-80"
         >
-          <Trash2 className="h-3.5 w-3.5 text-destructive" />
+          <Trash2 className="h-4 w-4" />
         </button>
       )}
+
 
 
 
