@@ -1962,7 +1962,7 @@ const HomePage = () => {
                         ) : (
                           <Video className="w-3 h-3 text-foreground" />
                         )}
-                        <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse" />
+                        <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
                       </label>
                       {/* Selfie City Navigation Button — matches Loops upload button exactly */}
                       <button
