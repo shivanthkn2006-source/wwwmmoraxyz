@@ -107,6 +107,7 @@ const SentinelPage = lazy(() => import("./pages/SentinelPage")); // M'MORA SENTI
 const AdminHealthPage = lazy(() => import("./pages/AdminHealthPage")); // ADMIN HEALTH & STATUS
 const AdminFeedDebugPage = lazy(() => import("./pages/AdminFeedDebugPage")); // FEED/LOOPS DEBUGGER
 const AstroPreviewPage = lazy(() => import("./pages/AstroPreviewPage")); // M'MORA ZOE DAILY ALIGNMENT HARNESS
+const ZoeAstroDashboardPage = lazy(() => import("./pages/ZoeAstroDashboardPage")); // M'MORA ZOE ALIGNMENT DASHBOARD
 
 // Loading fallback component — never render a silent black screen.
 const PageLoader = () => (
@@ -672,6 +673,14 @@ const RouteAwareShell = () => {
                             element={
                               <ProtectedRoute>
                                 <AstroPreviewPage />
+                              </ProtectedRoute>
+                            }
+                          />
+                          <Route
+                            path="/zoe-astro"
+                            element={
+                              <ProtectedRoute>
+                                <ZoeAstroDashboardPage />
                               </ProtectedRoute>
                             }
                           />
