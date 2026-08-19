@@ -35,7 +35,7 @@ const AuthorPreviewRail: React.FC<AuthorPreviewRailProps> = ({ authorId, current
         .neq('id', currentPostId)
         .order('likes_count', { ascending: false })
         .order('created_at', { ascending: false })
-        .limit(4);
+        .limit(3);
       if (!cancelled) setPosts((data as RailPost[]) || []);
     })();
     return () => {
