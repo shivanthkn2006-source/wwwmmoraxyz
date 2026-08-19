@@ -2212,6 +2212,20 @@ const HomePage = () => {
                   )}
                   </>)}
                 </section>
+
+                {/* Playlists + Watch later shelf */}
+                <PlaylistsSection
+                  onPlayItem={(postId) => {
+                    const idx = filteredLoops.findIndex((p) => p.id === postId);
+                    if (idx >= 0) {
+                      setLoopsInitialIndex(idx);
+                      setLoopsPlayerOpen(true);
+                      return;
+                    }
+                    const el = document.querySelector(`[data-post-id="${postId}"]`);
+                    el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }}
+                />
                 
                 {loading ? (
                   <p className="px-3 text-center text-muted-foreground py-8">Loading posts...</p>
