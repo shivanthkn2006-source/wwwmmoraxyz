@@ -212,12 +212,13 @@ async function processOne(
       })
     : { content: pickFallback(slot, idempotencyKey), error: astroNote ?? 'no transits' };
 
-  // 5) Poster (best effort — bytes are persisted to storage, never a Pollinations URL).
-  const posterPath = await renderPoster({
+  // 5) Poster (Pollinations, with retries — bytes are persisted to storage).
+  const poster = await renderPoster({
     slot, headline: gen.content.headline, userId: profile.user_id,
     storagePath: `${profile.user_id}/${targetDate}_${slot}.jpg`,
     supabaseUrl: SUPABASE_URL, serviceKey: SERVICE_KEY,
   });
+  const posterPath = poster.path;
 
   const finalStatus = shadowMode ? 'shadow' : gen.content.source === 'fallback' ? 'fallback' : 'published';
 
@@ -231,6 +232,13 @@ async function processOne(
       motivational_quote: gen.content.quote,
       poster_image_url: posterPath,
       status: finalStatus,
+      image_prompt: poster.prompt,
+      image_provider: poster.provider,
+      image_status: poster.status,
+      image_attempts: poster.attempts,
+      image_retries: poster.retries,
+      image_cost_usd: poster.costUsd,
+      image_attempt_log: poster.log,
       engine_notes: {
         source: gen.content.source,
         error: (gen as any).error ?? astroNote ?? null,
@@ -239,6 +247,7 @@ async function processOne(
       },
     }),
   });
+
 
   // 6) Publish the feed card (skipped entirely in shadow mode).
   if (!shadowMode) {

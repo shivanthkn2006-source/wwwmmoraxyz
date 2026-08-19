@@ -1,12 +1,13 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- * SOVEREIGN IMAGE ENGINE — never returns "no image".
+ * SOVEREIGN IMAGE ENGINE — Pollinations only.
  *
- * Provider ladder (first success wins):
- *   1. Pollinations · flux      (best quality)
- *   2. Pollinations · turbo     (fast, different endpoint params)
- *   3. Google AI Studio image   (only when GOOGLE_AI_STUDIO_KEY is present)
- *   4. Deterministic SVG poster (local, zero-network — ALWAYS succeeds)
+ * The old placeholder/Google path is gone. Every card image is rendered by
+ * Pollinations with bounded retries across its models:
+ *   flux → turbo → flux (retry) → flux-realism (retry)
+ * A deterministic local SVG is written ONLY if every Pollinations attempt
+ * failed, so a card never renders empty; it is reported as `local-svg` with
+ * `status: 'fallback'` so the log page shows it truthfully.
  *
  * Bytes are always persisted to Supabase Storage; provider URLs are never
  * stored because they are not durable. No Lovable AI Gateway is used.
@@ -27,11 +28,36 @@ export interface RenderImageOptions {
   height?: number;
 }
 
+export interface RenderImageAttempt {
+  provider: string;
+  model?: string;
+  ok: boolean;
+  ms: number;
+  reason?: string;
+}
+
 export interface RenderImageResult {
   path: string | null;
-  provider: 'pollinations-flux' | 'pollinations-turbo' | 'google' | 'local-svg' | 'none';
-  attempts: Array<{ provider: string; ok: boolean; reason?: string }>;
+  provider: 'pollinations-flux' | 'pollinations-turbo' | 'pollinations-flux-realism' | 'local-svg' | 'none';
+  /** 'generated' = real Pollinations art, 'fallback' = local SVG, 'failed' = nothing stored. */
+  status: 'generated' | 'fallback' | 'failed';
+  /** Total provider calls made (including the successful one). */
+  attempts: number;
+  /** Provider calls that failed before the one that worked. */
+  retries: number;
+  /** Estimated spend. Pollinations is free, so this is 0 unless a paid provider is added. */
+  costUsd: number;
+  prompt: string;
+  log: RenderImageAttempt[];
 }
+
+/** Per-successful-image price by provider (USD). Pollinations is free. */
+const PROVIDER_COST_USD: Record<string, number> = {
+  'pollinations-flux': 0,
+  'pollinations-turbo': 0,
+  'pollinations-flux-realism': 0,
+  'local-svg': 0,
+};
 
 function hashSeed(input: string): number {
   let h = 0;
@@ -112,81 +138,70 @@ export async function renderImage(opts: RenderImageOptions): Promise<RenderImage
   const width = opts.width ?? 1080;
   const height = opts.height ?? 1920;
   const palette = opts.palette ?? ['#131a2b', '#2b3d63', '#c8a96a'];
-  const attempts: RenderImageResult['attempts'] = [];
+  const log: RenderImageAttempt[] = [];
   const seed = hashSeed(opts.storagePath) % 100000;
-  const encoded = encodeURIComponent(
-    `${opts.prompt}, no text, no words, no letters, no watermark, no logo`,
-  );
+  const fullPrompt = `${opts.prompt}, no text, no words, no letters, no watermark, no logo`;
+  const encoded = encodeURIComponent(fullPrompt);
   const pollToken = Deno.env.get('POLLINATIONS_API_KEY');
   const pollHeaders = pollToken ? { Authorization: `Bearer ${pollToken}` } : {};
 
-  const ladder: Array<{ name: RenderImageResult['provider']; run: () => Promise<Uint8Array | string> }> = [
-    {
-      name: 'pollinations-flux',
-      run: () => fetchBytes(
-        `https://image.pollinations.ai/prompt/${encoded}?width=${width}&height=${height}&nologo=true&enhance=true&model=flux&seed=${seed}`,
-        pollHeaders, 45000,
-      ),
-    },
-    {
-      name: 'pollinations-turbo',
-      run: () => fetchBytes(
-        `https://image.pollinations.ai/prompt/${encoded}?width=${width}&height=${height}&nologo=true&model=turbo&seed=${(seed + 7) % 100000}`,
-        pollHeaders, 30000,
-      ),
-    },
+  const pollUrl = (model: string, s: number, enhance: boolean) =>
+    `https://image.pollinations.ai/prompt/${encoded}?width=${width}&height=${height}` +
+    `&nologo=true&model=${model}&seed=${s}${enhance ? '&enhance=true' : ''}`;
+
+  // Pollinations-only ladder with retries. Each entry is one provider call.
+  const ladder: Array<{ name: RenderImageResult['provider']; model: string; run: () => Promise<Uint8Array | string> }> = [
+    { name: 'pollinations-flux', model: 'flux', run: () => fetchBytes(pollUrl('flux', seed, true), pollHeaders, 45000) },
+    { name: 'pollinations-turbo', model: 'turbo', run: () => fetchBytes(pollUrl('turbo', (seed + 7) % 100000, false), pollHeaders, 30000) },
+    { name: 'pollinations-flux', model: 'flux', run: () => fetchBytes(pollUrl('flux', (seed + 31) % 100000, false), pollHeaders, 45000) },
+    { name: 'pollinations-flux-realism', model: 'flux-realism', run: () => fetchBytes(pollUrl('flux-realism', (seed + 61) % 100000, true), pollHeaders, 40000) },
   ];
 
-  const googleKey = Deno.env.get('GOOGLE_AI_STUDIO_KEY');
-  if (googleKey) {
-    ladder.push({
-      name: 'google',
-      run: async () => {
-        try {
-          const res = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${googleKey}`,
-            {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                contents: [{ role: 'user', parts: [{ text: opts.prompt }] }],
-                generationConfig: { responseModalities: ['TEXT', 'IMAGE'] },
-              }),
-            },
-          );
-          if (!res.ok) return `http ${res.status}`;
-          const j = await res.json();
-          const parts = j?.candidates?.[0]?.content?.parts ?? [];
-          const inline = parts.find((p: any) => p?.inlineData?.data)?.inlineData?.data;
-          if (!inline) return 'no inline image';
-          const bin = atob(inline);
-          const out = new Uint8Array(bin.length);
-          for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
-          return out;
-        } catch (e) {
-          return String((e as Error)?.message ?? e);
-        }
-      },
-    });
-  }
-
+  let attempts = 0;
   for (const step of ladder) {
+    attempts++;
+    const started = Date.now();
     const out = await step.run();
+    const ms = Date.now() - started;
     if (out instanceof Uint8Array) {
       const stored = await upload(out, 'image/jpeg', opts);
-      attempts.push({ provider: step.name, ok: stored, reason: stored ? undefined : 'upload failed' });
-      if (stored) return { path: opts.storagePath, provider: step.name, attempts };
+      log.push({ provider: step.name, model: step.model, ok: stored, ms, reason: stored ? undefined : 'upload failed' });
+      if (stored) {
+        return {
+          path: opts.storagePath,
+          provider: step.name,
+          status: 'generated',
+          attempts,
+          retries: attempts - 1,
+          costUsd: PROVIDER_COST_USD[step.name] ?? 0,
+          prompt: fullPrompt,
+          log,
+        };
+      }
     } else {
-      attempts.push({ provider: step.name, ok: false, reason: out });
+      log.push({ provider: step.name, model: step.model, ok: false, ms, reason: out });
     }
+    // Small spacing between retries so a rate-limited provider can recover.
+    if (attempts < ladder.length) await new Promise((r) => setTimeout(r, 600 * attempts));
   }
 
-  // Guaranteed local fallback — an image ALWAYS exists.
+  // Every Pollinations attempt failed — write the deterministic local poster so
+  // the card is never blank, and report it as a fallback.
   const svgPath = opts.storagePath.replace(/\.(jpe?g|png)$/i, '.svg');
   const svg = localSvgPoster(opts.storagePath, palette, width, height);
+  const started = Date.now();
   const stored = await upload(svg, 'image/svg+xml', { ...opts, storagePath: svgPath });
-  attempts.push({ provider: 'local-svg', ok: stored });
-  return stored
-    ? { path: svgPath, provider: 'local-svg', attempts }
-    : { path: null, provider: 'none', attempts };
+  log.push({ provider: 'local-svg', ok: stored, ms: Date.now() - started });
+  console.warn('[image-engine] Pollinations exhausted', JSON.stringify(log));
+
+  return {
+    path: stored ? svgPath : null,
+    provider: stored ? 'local-svg' : 'none',
+    status: stored ? 'fallback' : 'failed',
+    attempts,
+    retries: attempts,
+    costUsd: 0,
+    prompt: fullPrompt,
+    log,
+  };
 }

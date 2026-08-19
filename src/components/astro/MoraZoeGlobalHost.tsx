@@ -3,6 +3,7 @@ import { useAstroDiagnostics } from '@/hooks/useAstroDiagnostics';
 import { useZoeMotivation } from '@/hooks/useZoeMotivation';
 import { useMoraZoeScheduler } from '@/hooks/useMoraZoeScheduler';
 import { useBirthDetailsGate } from '@/hooks/useBirthDetailsGate';
+import { useCardImpression } from '@/hooks/useCardImpression';
 import { resolvePosterUrl } from '@/lib/astroPoster';
 import { MoraZoeMorningTakeover } from './MoraZoeMorningTakeover';
 import { MoraZoeLoginGreeting } from './MoraZoeLoginGreeting';
@@ -60,6 +61,10 @@ export const MoraZoeGlobalHost: React.FC = () => {
   const showBirthPrompt =
     !birthLoading && needsDetails && !showAstroTakeover && !showMotivationCard;
 
+  // Open-rate tracking (fire-and-forget; never blocks the overlays).
+  const astroImpression = useCardImpression('morning_takeover', showAstroTakeover, todayPrediction?.id);
+  const motivationImpression = useCardImpression('login_greeting', showMotivationCard, motivation?.id);
+
   return (
     <>
       {showAstroTakeover && todayPrediction && (
@@ -67,7 +72,7 @@ export const MoraZoeGlobalHost: React.FC = () => {
           prediction={todayPrediction}
           posterUrl={astroPoster}
           secondsRemaining={secondsRemaining}
-          onDismiss={() => dismissTakeover('manual')}
+          onDismiss={() => { void astroImpression.markDismissed(); dismissTakeover('manual'); }}
         />
       )}
       {showMotivationCard && motivation && (
@@ -75,6 +80,7 @@ export const MoraZoeGlobalHost: React.FC = () => {
           motivation={motivation}
           posterUrl={posterUrl}
           onDismiss={() => {
+            void motivationImpression.markDismissed();
             dismissLoginGreeting();
             if (showMorningTakeover) dismissTakeover('manual');
           }}

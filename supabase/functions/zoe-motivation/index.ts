@@ -62,16 +62,16 @@ function weekdayIn(now: Date, tz: string): string {
   }
 }
 
-async function ensureForUser(userId: string, tz: string, now: Date) {
+async function ensureForUser(userId: string, tz: string, now: Date, force = false) {
   const targetDate = localDateIn(now, tz);
   const existing = await db(
     `zoe_daily_motivations?user_id=eq.${userId}&target_date=eq.${targetDate}&select=*`,
   );
-  if (Array.isArray(existing.data) && existing.data.length) {
+  if (Array.isArray(existing.data) && existing.data.length && !force) {
     const row = existing.data[0];
-    if (row.poster_path) return { status: 'exists', row };
+    if (row.poster_path && row.image_status === 'generated') return { status: 'exists', row };
 
-    // Row exists without art (older run / provider outage) — repair the image.
+    // Row exists without real art (older run / provider outage) — re-render.
     const theme = row.theme || themeFor(targetDate, userId);
     const img = await renderImage({
       prompt: row.image_prompt || sceneFor(theme),
@@ -85,7 +85,16 @@ async function ensureForUser(userId: string, tz: string, now: Date) {
       const patched = await db(`zoe_daily_motivations?id=eq.${row.id}`, {
         method: 'PATCH',
         headers: { Prefer: 'return=representation' },
-        body: JSON.stringify({ poster_path: img.path }),
+        body: JSON.stringify({
+          poster_path: img.path,
+          image_prompt: img.prompt,
+          image_provider: img.provider,
+          image_status: img.status,
+          image_attempts: img.attempts,
+          image_retries: (row.image_retries ?? 0) + img.retries,
+          image_cost_usd: img.costUsd,
+          image_attempt_log: img.log,
+        }),
       });
       return { status: 'repaired', row: patched.data?.[0] ?? { ...row, poster_path: img.path }, image: img.provider };
     }
@@ -93,7 +102,7 @@ async function ensureForUser(userId: string, tz: string, now: Date) {
   }
 
   const theme = themeFor(targetDate, userId);
-  const seed = `${userId}_${targetDate}`;
+  const seed = force ? `${userId}_${targetDate}_${Date.now()}` : `${userId}_${targetDate}`;
   const gen = await generateMotivation({
     theme, weekday: weekdayIn(now, tz), localDate: targetDate, seed,
   });
@@ -101,28 +110,53 @@ async function ensureForUser(userId: string, tz: string, now: Date) {
 
   const img = await renderImage({
     prompt: content.scene || sceneFor(theme),
-    storagePath: `${userId}/motivation_${targetDate}.jpg`,
+    storagePath: `${userId}/motivation_${targetDate}${force ? `_${Date.now()}` : ''}.jpg`,
     bucket: BUCKET,
     supabaseUrl: SUPABASE_URL,
     serviceKey: SERVICE_KEY,
     palette: paletteFor(theme),
   });
 
+  const payload = {
+    user_id: userId,
+    target_date: targetDate,
+    theme: content.theme,
+    headline: content.headline,
+    body: content.body,
+    action_step: content.actionStep,
+    quote: content.quote,
+    poster_path: img.path,
+    image_prompt: img.prompt,
+    image_provider: img.provider,
+    image_status: img.status,
+    image_attempts: img.attempts,
+    image_retries: img.retries,
+    image_cost_usd: img.costUsd,
+    image_attempt_log: img.log,
+    source: content.source,
+  };
+
+  // A forced regeneration replaces today's row in place instead of inserting.
+  if (force && Array.isArray(existing.data) && existing.data.length) {
+    const rowId = existing.data[0].id;
+    const patched = await db(`zoe_daily_motivations?id=eq.${rowId}`, {
+      method: 'PATCH',
+      headers: { Prefer: 'return=representation' },
+      body: JSON.stringify(payload),
+    });
+    return {
+      status: 'regenerated',
+      row: patched.data?.[0] ?? null,
+      image: img.provider,
+      text: content.source,
+      diagnostics: gen.error ?? null,
+    };
+  }
+
   const insert = await db('zoe_daily_motivations', {
     method: 'POST',
     headers: { Prefer: 'return=representation,resolution=merge-duplicates' },
-    body: JSON.stringify({
-      user_id: userId,
-      target_date: targetDate,
-      theme: content.theme,
-      headline: content.headline,
-      body: content.body,
-      action_step: content.actionStep,
-      quote: content.quote,
-      poster_path: img.path,
-      image_prompt: content.scene || sceneFor(theme),
-      source: content.source,
-    }),
+    body: JSON.stringify(payload),
   });
 
   if (!insert.ok) {
@@ -138,6 +172,7 @@ async function ensureForUser(userId: string, tz: string, now: Date) {
     text: content.source,
     diagnostics: gen.error ?? null,
   };
+
 }
 
 Deno.serve(async (req) => {
@@ -209,7 +244,7 @@ Deno.serve(async (req) => {
     if (!user?.id) return json({ ok: false, error: 'invalid session' }, 401);
 
     const tz = typeof body.timezone === 'string' && body.timezone ? body.timezone : 'UTC';
-    const result = await ensureForUser(user.id, tz, now);
+    const result = await ensureForUser(user.id, tz, now, body.force === true || action === 'regenerate');
     return json({ ok: true, ...result });
   } catch (e) {
     return json({ ok: false, error: String((e as Error)?.message ?? e) }, 200);
