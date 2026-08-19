@@ -599,7 +599,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
           <img
             src={displayMediaSrc}
             alt="Post media"
-            className="h-full w-full cursor-pointer object-cover"
+            className="h-full w-full cursor-pointer object-contain"
             data-testid="post-image"
             onClick={() => setShowImageViewer(true)}
             onError={() => console.warn('[PostCard][image] failed to load', post.id)}
