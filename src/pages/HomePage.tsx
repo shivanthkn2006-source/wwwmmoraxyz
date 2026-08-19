@@ -1846,7 +1846,7 @@ const HomePage = () => {
           />
         )} */}
         
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full h-screen flex flex-col">
+        <Tabs value={activeTab} className="h-full w-full flex flex-col" onValueChange={setActiveTab} className="w-full h-screen flex flex-col">
         <div className="">
           {/* Fixed header - Clean minimal version (profile now in HUD) */}
           <div
@@ -2252,7 +2252,7 @@ const HomePage = () => {
               </div>
             </TabsContent>
 
-            <TabsContent value="personal" className="mt-0 ">
+            <TabsContent value="personal" className="mt-0 h-full w-full ">
               <div className="space-y-0 px-0 pt-0 snap-y snap-mandatory" data-feed-tab="personal" className="h-full flex flex-col">
                 {hasNewPosts && (
                   <div className="sticky top-16 z-30 mx-3 flex items-center justify-between rounded-md border border-primary/30 bg-background/95 px-3 py-2 shadow-sm backdrop-blur" data-testid="new-posts-indicator">
@@ -2287,7 +2287,7 @@ const HomePage = () => {
               </div>
             </TabsContent>
 
-            <TabsContent value="selfiecity" className="mt-0 ">
+            <TabsContent value="selfiecity" className="mt-0 h-full w-full ">
               <div className="space-y-2 p-3">
                 {/* Selfie City Feed Header */}
                 <div className="flex items-center justify-between">

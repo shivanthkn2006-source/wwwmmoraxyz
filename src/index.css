@@ -2,19 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
-html, body, #root {
-  height: 100% !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  overflow: hidden !important;
+@layer base {
+  html, body, #root {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+  }
 }
 
-#root {
-  width: 100% !important;
-  max-width: none !important;
-}
-
-/* Ensure Tabs and TabsContent fill the screen */
-[data-radix-collection-item], [data-state] {
-  height: 100%;
-}
+/* Keep previous Protocol Zero-G animations if needed, but the priority is the fix */
