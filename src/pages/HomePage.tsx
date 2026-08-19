@@ -1874,7 +1874,7 @@ const HomePage = () => {
         <div className="h-14"></div>
 
         <TabsContent value="global" className="mt-0 pb-24 xxs:pb-24 xs:pb-20">
-              <div className="space-y-3 px-0 pt-1" data-feed-tab="global">
+              <div className="space-y-0 px-0 pt-0 snap-y snap-mandatory" data-feed-tab="global">
                 {hasNewPosts && (
                   <div className="sticky top-16 z-30 mx-3 flex items-center justify-between rounded-md border border-primary/30 bg-background/95 px-3 py-2 shadow-sm backdrop-blur" data-testid="new-posts-indicator">
                     <span className="text-sm font-medium">New posts available</span>
@@ -2221,7 +2221,7 @@ const HomePage = () => {
             </TabsContent>
 
             <TabsContent value="personal" className="mt-0 pb-24 xxs:pb-24 xs:pb-20">
-              <div className="space-y-3 px-0 pt-1" data-feed-tab="personal">
+              <div className="space-y-0 px-0 pt-0 snap-y snap-mandatory" data-feed-tab="personal">
                 {hasNewPosts && (
                   <div className="sticky top-16 z-30 mx-3 flex items-center justify-between rounded-md border border-primary/30 bg-background/95 px-3 py-2 shadow-sm backdrop-blur" data-testid="new-posts-indicator">
                     <span className="text-sm font-medium">New posts available</span>
