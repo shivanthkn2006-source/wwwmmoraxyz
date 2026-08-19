@@ -528,9 +528,10 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
   }
 
   return (
-    <Card className="bg-card border-border overflow-hidden">
-      <div className="p-3">
-        <div className="flex items-center space-x-3 mb-2">
+    <Card className="bg-transparent border-0 border-b border-border/40 rounded-none shadow-none overflow-hidden">
+      <div className="flex flex-col gap-2 pb-3">
+        <div className="order-2 flex items-start space-x-3 px-3">
+
           <div className="relative">
             <Avatar 
               className={`w-10 h-10 cursor-pointer hover:opacity-90 transition-opacity ${glowClass}`}
