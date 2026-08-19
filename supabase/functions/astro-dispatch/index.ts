@@ -81,14 +81,18 @@ async function acquireLease(owner: string): Promise<boolean> {
   const nowIso = new Date().toISOString();
   const expires = new Date(Date.now() + LEASE_MS).toISOString();
   const r = await db(
-    `astro_dispatch_state?id=eq.singleton&or=(lease_expires_at.is.null,lease_expires_at.lt.${nowIso})`,
+    `astro_dispatch_state?id=eq.singleton&or=(lease_expires_at.is.null,lease_expires_at.lt.${encodeURIComponent(nowIso)})`,
     {
       method: 'PATCH',
       headers: { Prefer: 'return=representation' },
       body: JSON.stringify({ lease_owner: owner, lease_expires_at: expires }),
     },
   );
-  return Array.isArray(r.data) && r.data.length > 0;
+  if (!r.ok) return false;
+  if (Array.isArray(r.data) && r.data.length > 0) return r.data[0].lease_owner === owner;
+  // Some PostgREST configs answer with an empty body — confirm by re-reading.
+  const check = await db('astro_dispatch_state?id=eq.singleton&select=lease_owner');
+  return Array.isArray(check.data) && check.data[0]?.lease_owner === owner;
 }
 
 async function releaseLease(summary: Record<string, unknown>) {
