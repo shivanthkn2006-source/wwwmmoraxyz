@@ -240,6 +240,209 @@ export type Database = {
           },
         ]
       }
+      astro_dispatch_state: {
+        Row: {
+          consecutive_rate_limits: number
+          id: string
+          last_run_at: string | null
+          last_run_summary: Json
+          lease_expires_at: string | null
+          lease_owner: string | null
+          pause_reason: string | null
+          paused: boolean
+          shadow_mode: boolean
+          updated_at: string
+        }
+        Insert: {
+          consecutive_rate_limits?: number
+          id?: string
+          last_run_at?: string | null
+          last_run_summary?: Json
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          pause_reason?: string | null
+          paused?: boolean
+          shadow_mode?: boolean
+          updated_at?: string
+        }
+        Update: {
+          consecutive_rate_limits?: number
+          id?: string
+          last_run_at?: string | null
+          last_run_summary?: Json
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          pause_reason?: string | null
+          paused?: boolean
+          shadow_mode?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      astro_feed_posts: {
+        Row: {
+          content_text: string
+          created_at: string
+          id: string
+          is_public: boolean
+          media_url: string | null
+          post_type: string
+          prediction_id: string | null
+          publish_at: string
+          slot: string
+          user_id: string
+        }
+        Insert: {
+          content_text: string
+          created_at?: string
+          id?: string
+          is_public?: boolean
+          media_url?: string | null
+          post_type?: string
+          prediction_id?: string | null
+          publish_at?: string
+          slot?: string
+          user_id: string
+        }
+        Update: {
+          content_text?: string
+          created_at?: string
+          id?: string
+          is_public?: boolean
+          media_url?: string | null
+          post_type?: string
+          prediction_id?: string | null
+          publish_at?: string
+          slot?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "astro_feed_posts_prediction_id_fkey"
+            columns: ["prediction_id"]
+            isOneToOne: false
+            referencedRelation: "astro_predictions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      astro_mood_logs: {
+        Row: {
+          id: string
+          intensity: number
+          logged_at: string
+          mood_mode: string
+          notes: string | null
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          intensity?: number
+          logged_at?: string
+          mood_mode?: string
+          notes?: string | null
+          user_id: string
+        }
+        Update: {
+          id?: string
+          intensity?: number
+          logged_at?: string
+          mood_mode?: string
+          notes?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      astro_predictions: {
+        Row: {
+          created_at: string
+          engine_notes: Json
+          id: string
+          idempotency_key: string
+          motivational_quote: string
+          poster_image_url: string | null
+          prediction_body: string
+          prediction_headline: string
+          slot: string
+          status: string
+          target_date: string
+          transits_summary: Json
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          engine_notes?: Json
+          id?: string
+          idempotency_key: string
+          motivational_quote: string
+          poster_image_url?: string | null
+          prediction_body: string
+          prediction_headline: string
+          slot: string
+          status?: string
+          target_date: string
+          transits_summary?: Json
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          engine_notes?: Json
+          id?: string
+          idempotency_key?: string
+          motivational_quote?: string
+          poster_image_url?: string | null
+          prediction_body?: string
+          prediction_headline?: string
+          slot?: string
+          status?: string
+          target_date?: string
+          transits_summary?: Json
+          user_id?: string
+        }
+        Relationships: []
+      }
+      astro_profiles: {
+        Row: {
+          birth_date: string
+          birth_latitude: number
+          birth_longitude: number
+          birth_time: string
+          birth_timezone: string
+          created_at: string
+          display_timezone: string
+          id: string
+          is_enabled: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          birth_date: string
+          birth_latitude?: number
+          birth_longitude?: number
+          birth_time?: string
+          birth_timezone?: string
+          created_at?: string
+          display_timezone?: string
+          id?: string
+          is_enabled?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          birth_date?: string
+          birth_latitude?: number
+          birth_longitude?: number
+          birth_time?: string
+          birth_timezone?: string
+          created_at?: string
+          display_timezone?: string
+          id?: string
+          is_enabled?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       atlas_sync_authorizations: {
         Row: {
           authorization_keyword: string
