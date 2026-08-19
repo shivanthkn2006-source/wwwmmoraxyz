@@ -634,10 +634,11 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
               <button
                 type="button"
                 aria-label="Rate post"
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-md hover:bg-white/20"
+                className="flex h-9 w-9 items-center justify-center text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)]"
               >
                 <Star className={`h-4 w-4 ${starRating ? 'fill-yellow-400 text-yellow-400' : ''}`} />
               </button>
+
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-32 bg-background/95 backdrop-blur-sm">
               {[5, 4, 3, 2, 1].map((rating) => (
