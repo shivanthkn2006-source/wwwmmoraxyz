@@ -9071,7 +9071,7 @@ export type Database = {
           has_deferred_media?: never
           id?: string | null
           likes_count?: number | null
-          media_preview_url?: string | null
+          media_preview_url?: never
           media_size?: never
           media_type?: string | null
           media_url?: never
@@ -9087,7 +9087,7 @@ export type Database = {
           has_deferred_media?: never
           id?: string | null
           likes_count?: number | null
-          media_preview_url?: string | null
+          media_preview_url?: never
           media_size?: never
           media_type?: string | null
           media_url?: never
