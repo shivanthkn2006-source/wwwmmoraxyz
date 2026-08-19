@@ -8,6 +8,7 @@ import { CorticalStackProvider } from "@/contexts/CorticalStackContext";
 import { GlobalMediaProvider } from "@/contexts/GlobalMediaContext"; // ONE EAR PROTOCOL
 import { NavigationBusProvider } from "@/contexts/NavigationBusContext"; // PHASE 2: Search → Globe Bridge
 import { DeferredComponentLoader } from '@/components/DeferredComponentLoader';
+import { MoraZoeGlobalHost } from '@/components/astro/MoraZoeGlobalHost';
 import { LightActivityTracker } from '@/components/LightActivityTracker';
 import { MemoryLeakPlumberGlobal } from '@/components/MemoryLeakPlumberGlobal';
 import { AutoFixProvider } from '@/components/AutoFixProvider';
@@ -1099,7 +1100,13 @@ const App = () => {
                         <OfflineModeOverlay />
                       </Suspense>
 
+                      {/* Sandboxed M'Mora Zoe overlay layer — zero impact on feed/routing */}
+                      <Suspense fallback={null}>
+                        <MoraZoeGlobalHost />
+                      </Suspense>
+
                       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+
                         <ZoePreviewRecoveryGuard>
                           <SecurityBypassOnAuthRoutes>
                             {/* Route-aware shell: keep /auth ultra-light to prevent Safari hangs */}

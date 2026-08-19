@@ -5787,6 +5787,33 @@ export type Database = {
         }
         Relationships: []
       }
+      user_daily_ephemeral_views: {
+        Row: {
+          dismiss_type: string
+          id: string
+          seen_at: string
+          user_id: string
+          view_date: string
+          view_duration_seconds: number
+        }
+        Insert: {
+          dismiss_type?: string
+          id?: string
+          seen_at?: string
+          user_id: string
+          view_date: string
+          view_duration_seconds?: number
+        }
+        Update: {
+          dismiss_type?: string
+          id?: string
+          seen_at?: string
+          user_id?: string
+          view_date?: string
+          view_duration_seconds?: number
+        }
+        Relationships: []
+      }
       user_follows: {
         Row: {
           created_at: string
@@ -9666,6 +9693,7 @@ export type Database = {
         Returns: string
       }
       validate_invite_code: { Args: { p_code: string }; Returns: Json }
+      verify_astro_permissions: { Args: never; Returns: Json }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
