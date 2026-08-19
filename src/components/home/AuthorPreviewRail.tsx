@@ -9,7 +9,14 @@ interface RailPost {
   media_type: string | null;
   content: string | null;
   likes_count: number | null;
+  comments_count: number | null;
   created_at: string;
+}
+
+interface RailSlot {
+  key: string;
+  label: string;
+  post: RailPost;
 }
 
 interface AuthorPreviewRailProps {
@@ -19,63 +26,104 @@ interface AuthorPreviewRailProps {
 }
 
 /**
- * Transparent 64px-wide rail on the left of a post showing the same author's
- * most-viewed (top rated) posts, with the newest ones after them.
+ * Transparent rail on the left of a post showing three labelled previews from
+ * the same author: most viewed, top rated (liked) and most recent.
  */
 const AuthorPreviewRail: React.FC<AuthorPreviewRailProps> = ({ authorId, currentPostId, onSelect }) => {
-  const [posts, setPosts] = useState<RailPost[]>([]);
+  const [slots, setSlots] = useState<RailSlot[]>([]);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       const { data } = await supabase
         .from('feed_posts_safe')
-        .select('id, media_url, media_preview_url, media_type, content, likes_count, created_at')
+        .select('id, media_url, media_preview_url, media_type, content, likes_count, comments_count, created_at')
         .eq('user_id', authorId)
         .neq('id', currentPostId)
-        .order('likes_count', { ascending: false })
         .order('created_at', { ascending: false })
-        .limit(3);
-      if (!cancelled) setPosts((data as RailPost[]) || []);
+        .limit(30);
+
+      if (cancelled) return;
+      const posts = (data as RailPost[]) || [];
+      if (posts.length === 0) {
+        setSlots([]);
+        return;
+      }
+
+      const engagement = (p: RailPost) => (p.likes_count ?? 0) + (p.comments_count ?? 0);
+      const byViews = [...posts].sort((a, b) => engagement(b) - engagement(a));
+      const byLikes = [...posts].sort((a, b) => (b.likes_count ?? 0) - (a.likes_count ?? 0));
+      const byRecent = [...posts];
+
+      const picked: RailSlot[] = [];
+      const used = new Set<string>();
+      const push = (key: string, label: string, list: RailPost[]) => {
+        const post = list.find((p) => !used.has(p.id));
+        if (!post) return;
+        used.add(post.id);
+        picked.push({ key, label, post });
+      };
+      push('viewed', 'Viewed', byViews);
+      push('top', 'Top', byLikes);
+      push('recent', 'New', byRecent);
+
+      setSlots(picked);
     })();
     return () => {
       cancelled = true;
     };
   }, [authorId, currentPostId]);
 
-  if (posts.length === 0) return null;
+  if (slots.length === 0) return null;
 
   return (
     <div
       className="pointer-events-auto absolute bottom-24 left-2 z-20 flex w-16 flex-col gap-2"
       aria-label="More from this creator"
+      data-testid="author-preview-rail"
     >
-      <span className="text-center text-[10px] font-medium uppercase tracking-wide text-white/80 drop-shadow-[0_2px_6px_rgba(0,0,0,0.8)]">Top</span>
-      {posts.map((p) => {
-        const poster = p.media_preview_url || (p.media_type === 'image' ? p.media_url : null);
+      {slots.map(({ key, label, post }) => {
+        const poster = post.media_preview_url || (post.media_type === 'image' ? post.media_url : null);
+        const isVideo = post.media_type === 'video' || (!!post.media_url && !poster);
         return (
           <button
-            key={p.id}
+            key={key}
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              onSelect?.(p.id);
+              onSelect?.(post.id);
             }}
             className="relative h-24 w-16 overflow-hidden rounded-lg border border-white/25 bg-white/5 backdrop-blur-[2px] transition-transform hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
-            title={p.content || 'View post'}
+            title={`${label}: ${post.content || 'View post'}`}
           >
             {poster ? (
-              <img src={poster} alt={p.content?.slice(0, 40) || 'Post preview'} loading="lazy" className="h-full w-full object-cover opacity-90" />
+              <img
+                src={poster}
+                alt={post.content?.slice(0, 40) || `${label} post preview`}
+                loading="lazy"
+                className="h-full w-full object-cover opacity-90"
+              />
+            ) : isVideo && post.media_url ? (
+              <video
+                src={`${post.media_url}#t=0.1`}
+                muted
+                playsInline
+                preload="metadata"
+                className="h-full w-full object-cover opacity-90"
+              />
             ) : (
               <span className="flex h-full w-full items-center justify-center p-1 text-[9px] leading-tight text-white/90 drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]">
-                {p.content?.slice(0, 40) || 'Post'}
+                {post.content?.slice(0, 40) || 'Post'}
               </span>
             )}
-            {p.media_type === 'video' && (
+            <span className="absolute left-0 top-0 rounded-br-md bg-black/45 px-1 py-0.5 text-[8px] font-semibold uppercase tracking-wide text-white">
+              {label}
+            </span>
+            {post.media_type === 'video' && (
               <Play className="absolute bottom-1 left-1 h-3 w-3 fill-white text-white drop-shadow" />
             )}
             <span className="absolute bottom-0 right-1 text-[9px] font-semibold text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]">
-              {p.likes_count ?? 0}
+              {post.likes_count ?? 0}
             </span>
           </button>
         );
