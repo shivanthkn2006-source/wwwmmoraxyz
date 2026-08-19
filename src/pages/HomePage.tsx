@@ -2270,7 +2270,6 @@ const HomePage = () => {
                   })}
                   </div>
                 )}
-              </TabsContent>
             </TabsContent>
 
             <TabsContent value="personal" className="mt-0 h-full w-full ">
