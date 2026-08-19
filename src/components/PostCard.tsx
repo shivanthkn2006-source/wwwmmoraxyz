@@ -698,6 +698,17 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
         </DropdownMenu>
       </div>
 
+      {/* Left in-post preview rail: this creator's top / recent posts */}
+      <AuthorPreviewRail
+        authorId={post.user_id}
+        currentPostId={post.id}
+        onSelect={(postId) => {
+          const el = document.querySelector(`[data-post-id="${postId}"]`);
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          else navigate(`/post/${postId}`);
+        }}
+      />
+
       {/* Right action rail (transparent, Shorts style) */}
       <div className="absolute bottom-24 right-2 z-20 flex flex-col items-center gap-4">
         <button type="button" onClick={handleLike} className={overlayButton} aria-label="Like">
