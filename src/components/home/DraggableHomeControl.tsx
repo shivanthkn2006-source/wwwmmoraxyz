@@ -15,7 +15,7 @@ interface DraggableHomeControlProps {
   onActivate: () => void;
 }
 
-const CONTROL_SIZE = 48;
+const CONTROL_SIZE = 36;
 const EDGE_GAP = 8;
 
 export default function DraggableHomeControl({
