@@ -2722,7 +2722,7 @@ h1, h2, h3 {
   }
   
   .responsive-card {
-    padding: 2rem;
+    
     border-radius: 1rem;
   }
   
@@ -5847,4 +5847,16 @@ body.form-watch .auto-heal-text {
     transition: none;
     animation: none;
   }
+}
+
+/* Fix for full-screen mobile height */
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+#root {
+  max-width: none !important;
 }

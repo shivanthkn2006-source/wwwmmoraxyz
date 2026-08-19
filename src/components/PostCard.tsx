@@ -574,7 +574,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
   return (
     <div
       className="relative w-full snap-start snap-always overflow-hidden bg-black"
-      style={{ height: '100svh', minHeight: '440px' }}
+      style={{ height: '100dvh', minHeight: '440px' }}
       data-testid="post-card"
     >
       {/* Media layer (full bleed) */}

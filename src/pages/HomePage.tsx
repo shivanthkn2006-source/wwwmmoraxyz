@@ -1890,10 +1890,6 @@ const HomePage = () => {
 
         </div>
 
-        {/* Spacer for fixed header — minimized to maximize usable screen area */}
-        <div className="h-14"></div>
-
-        <TabsContent value="global" className="mt-0 pb-24 xxs:pb-24 xs:pb-20">
               <div className="space-y-0 px-0 pt-0 snap-y snap-mandatory" data-feed-tab="global">
                 {hasNewPosts && (
                   <div className="sticky top-16 z-30 mx-3 flex items-center justify-between rounded-md border border-primary/30 bg-background/95 px-3 py-2 shadow-sm backdrop-blur" data-testid="new-posts-indicator">
@@ -2237,7 +2233,7 @@ const HomePage = () => {
                 ) : globalPosts.length === 0 ? (
                   <p className="px-3 text-center text-muted-foreground py-8">No posts yet</p>
                 ) : (
-                  <div className="h-[100svh] overflow-y-auto snap-y snap-mandatory overscroll-contain" data-testid="global-posts-snap-feed">
+                  <div className="h-full overflow-y-auto snap-y snap-mandatory overscroll-contain" data-testid="global-posts-snap-feed">
                   {globalPosts.map(post => {
                     const isToday = post.created_at && new Date(post.created_at).toDateString() === new Date().toDateString();
                     return (
@@ -2256,7 +2252,7 @@ const HomePage = () => {
               </div>
             </TabsContent>
 
-            <TabsContent value="personal" className="mt-0 pb-24 xxs:pb-24 xs:pb-20">
+            <TabsContent value="personal" className="mt-0 ">
               <div className="space-y-0 px-0 pt-0 snap-y snap-mandatory" data-feed-tab="personal">
                 {hasNewPosts && (
                   <div className="sticky top-16 z-30 mx-3 flex items-center justify-between rounded-md border border-primary/30 bg-background/95 px-3 py-2 shadow-sm backdrop-blur" data-testid="new-posts-indicator">
@@ -2272,7 +2268,7 @@ const HomePage = () => {
                 ) : personalPosts.length === 0 ? (
                   <p className="px-3 text-center text-muted-foreground py-8">No posts from friends yet</p>
                 ) : (
-                  <div className="h-[100svh] overflow-y-auto snap-y snap-mandatory overscroll-contain" data-testid="personal-posts-snap-feed">
+                  <div className="h-full overflow-y-auto snap-y snap-mandatory overscroll-contain" data-testid="personal-posts-snap-feed">
                   {personalPosts.map(post => {
                     const isToday = post.created_at && new Date(post.created_at).toDateString() === new Date().toDateString();
                     return (
@@ -2291,7 +2287,7 @@ const HomePage = () => {
               </div>
             </TabsContent>
 
-            <TabsContent value="selfiecity" className="mt-0 pb-24 xxs:pb-24 xs:pb-20">
+            <TabsContent value="selfiecity" className="mt-0 ">
               <div className="space-y-2 p-3">
                 {/* Selfie City Feed Header */}
                 <div className="flex items-center justify-between">
