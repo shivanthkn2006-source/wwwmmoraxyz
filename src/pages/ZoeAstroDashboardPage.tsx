@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, RefreshCw, Save, Sparkles, Compass, HeartPulse, Filter } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Save, Sparkles, Compass, HeartPulse, Filter, Wand2, ScrollText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { MoraZoeDailyCard } from '@/components/astro/MoraZoeDailyCard';
@@ -34,6 +34,7 @@ const ZoeAstroDashboardPage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [aspect, setAspect] = useState<AspectFilter>('all');
+  const [generating, setGenerating] = useState(false);
 
   // Birth details (source of truth: profiles → trigger syncs the alignment engine)
   const [birthDate, setBirthDate] = useState('');
@@ -83,6 +84,33 @@ const ZoeAstroDashboardPage: React.FC = () => {
   }, [user?.id]);
 
   useEffect(() => { load(); }, [load]);
+
+  /** On-demand run of both engines for today, for this member only. */
+  const generateNow = async () => {
+    if (!user?.id) return;
+    setGenerating(true);
+    setMessage(null);
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    try {
+      const [astro, motivation] = await Promise.all([
+        supabase.functions.invoke('astro-dispatch', {
+          body: { action: 'run', userId: user.id, force: true },
+        }),
+        supabase.functions.invoke('zoe-motivation', {
+          body: { action: 'regenerate', force: true, timezone },
+        }),
+      ]);
+      const notes: string[] = [];
+      notes.push(astro.error ? `Alignment: ${astro.error.message}` : 'Alignment card refreshed.');
+      notes.push(motivation.error ? `Motivation: ${motivation.error.message}` : 'Motivation card refreshed.');
+      setMessage(notes.join(' '));
+      await load();
+    } catch (err) {
+      setMessage(`Generation failed: ${(err as Error).message}`);
+    } finally {
+      setGenerating(false);
+    }
+  };
 
   const saveBirthDetails = async () => {
     if (!user?.id) return;
@@ -142,6 +170,26 @@ const ZoeAstroDashboardPage: React.FC = () => {
         </header>
 
         {message && <p className="rounded-lg border border-border bg-muted/40 p-3 text-sm">{message}</p>}
+
+        {/* Manual generation */}
+        <section className="flex flex-wrap items-center gap-3 rounded-xl border border-border p-4">
+          <div className="mr-auto">
+            <h2 className="text-sm font-medium">Generate my daily card</h2>
+            <p className="text-xs text-muted-foreground">
+              Runs the alignment and motivation engines for today, right now.
+            </p>
+          </div>
+          <Link to="/zoe-astro/log" className="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm">
+            <ScrollText className="h-4 w-4" aria-hidden /> Generation log
+          </Link>
+          <button onClick={generateNow} disabled={generating}
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-60">
+            <Wand2 className={`h-4 w-4 ${generating ? 'animate-pulse' : ''}`} aria-hidden />
+            {generating ? 'Generating…' : 'Generate my daily card'}
+          </button>
+        </section>
+
+
 
         {/* Birth details */}
         <section className="space-y-3 rounded-xl border border-border p-4">

@@ -240,6 +240,45 @@ export type Database = {
           },
         ]
       }
+      astro_card_impressions: {
+        Row: {
+          card_id: string | null
+          created_at: string
+          dismissed_at: string | null
+          dwell_ms: number | null
+          id: string
+          opened_at: string
+          read_completed: boolean
+          surface: string
+          target_date: string
+          user_id: string
+        }
+        Insert: {
+          card_id?: string | null
+          created_at?: string
+          dismissed_at?: string | null
+          dwell_ms?: number | null
+          id?: string
+          opened_at?: string
+          read_completed?: boolean
+          surface: string
+          target_date?: string
+          user_id: string
+        }
+        Update: {
+          card_id?: string | null
+          created_at?: string
+          dismissed_at?: string | null
+          dwell_ms?: number | null
+          id?: string
+          opened_at?: string
+          read_completed?: boolean
+          surface?: string
+          target_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       astro_dispatch_runs: {
         Row: {
           engine: string
@@ -392,6 +431,13 @@ export type Database = {
           engine_notes: Json
           id: string
           idempotency_key: string
+          image_attempt_log: Json
+          image_attempts: number
+          image_cost_usd: number
+          image_prompt: string | null
+          image_provider: string | null
+          image_retries: number
+          image_status: string
           motivational_quote: string
           poster_image_url: string | null
           prediction_body: string
@@ -407,6 +453,13 @@ export type Database = {
           engine_notes?: Json
           id?: string
           idempotency_key: string
+          image_attempt_log?: Json
+          image_attempts?: number
+          image_cost_usd?: number
+          image_prompt?: string | null
+          image_provider?: string | null
+          image_retries?: number
+          image_status?: string
           motivational_quote: string
           poster_image_url?: string | null
           prediction_body: string
@@ -422,6 +475,13 @@ export type Database = {
           engine_notes?: Json
           id?: string
           idempotency_key?: string
+          image_attempt_log?: Json
+          image_attempts?: number
+          image_cost_usd?: number
+          image_prompt?: string | null
+          image_provider?: string | null
+          image_retries?: number
+          image_status?: string
           motivational_quote?: string
           poster_image_url?: string | null
           prediction_body?: string
@@ -7158,7 +7218,13 @@ export type Database = {
           created_at: string
           headline: string
           id: string
+          image_attempt_log: Json
+          image_attempts: number
+          image_cost_usd: number
           image_prompt: string | null
+          image_provider: string | null
+          image_retries: number
+          image_status: string
           poster_path: string | null
           quote: string
           source: string
@@ -7172,7 +7238,13 @@ export type Database = {
           created_at?: string
           headline: string
           id?: string
+          image_attempt_log?: Json
+          image_attempts?: number
+          image_cost_usd?: number
           image_prompt?: string | null
+          image_provider?: string | null
+          image_retries?: number
+          image_status?: string
           poster_path?: string | null
           quote?: string
           source?: string
@@ -7186,7 +7258,13 @@ export type Database = {
           created_at?: string
           headline?: string
           id?: string
+          image_attempt_log?: Json
+          image_attempts?: number
+          image_cost_usd?: number
           image_prompt?: string | null
+          image_provider?: string | null
+          image_retries?: number
+          image_status?: string
           poster_path?: string | null
           quote?: string
           source?: string

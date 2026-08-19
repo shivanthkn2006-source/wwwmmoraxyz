@@ -190,7 +190,7 @@ export async function renderPoster(opts: {
   storagePath: string;
   supabaseUrl: string;
   serviceKey: string;
-}): Promise<string | null> {
+}): Promise<import('./image-engine.ts').RenderImageResult> {
   const res = await renderImage({
     prompt:
       `minimal cinematic celestial poster background, ${SLOT_SCENE[opts.slot]}, ` +
@@ -201,7 +201,8 @@ export async function renderPoster(opts: {
     serviceKey: opts.serviceKey,
     palette: SLOT_PALETTE[opts.slot],
   });
-  if (!res.path) console.warn('[astro-poster] all providers failed', JSON.stringify(res.attempts));
-  return res.path;
+  if (!res.path) console.warn('[astro-poster] all providers failed', JSON.stringify(res.log));
+  return res;
 }
+
 

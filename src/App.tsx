@@ -111,6 +111,7 @@ const AstroPreviewPage = lazy(() => import("./pages/AstroPreviewPage")); // M'MO
 const ZoeAstroDashboardPage = lazy(() => import("./pages/ZoeAstroDashboardPage")); // M'MORA ZOE ALIGNMENT DASHBOARD
 const ZoeBirthDetailsPage = lazy(() => import("./pages/ZoeBirthDetailsPage"));
 const ZoeDispatchDashboardPage = lazy(() => import("./pages/ZoeDispatchDashboardPage"));
+const ZoeAstroLogPage = lazy(() => import("./pages/ZoeAstroLogPage"));
 
 
 // Loading fallback component — never render a silent black screen.
@@ -693,6 +694,14 @@ const RouteAwareShell = () => {
                             element={
                               <ProtectedRoute>
                                 <ZoeBirthDetailsPage />
+                              </ProtectedRoute>
+                            }
+                          />
+                          <Route
+                            path="/zoe-astro/log"
+                            element={
+                              <ProtectedRoute>
+                                <ZoeAstroLogPage />
                               </ProtectedRoute>
                             }
                           />
