@@ -671,10 +671,11 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
             <button
               type="button"
               aria-label="More options"
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-md hover:bg-white/20"
+              className="flex h-9 w-9 items-center justify-center text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)]"
             >
               <MoreVertical className="h-4 w-4" />
             </button>
+
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
             <DropdownMenuItem onClick={() => handlePreference('interested')}>👍 Interested</DropdownMenuItem>
