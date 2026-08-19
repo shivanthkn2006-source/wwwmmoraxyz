@@ -1876,7 +1876,7 @@ const HomePage = () => {
         <TabsContent value="global" className="mt-0 pb-24 xxs:pb-24 xs:pb-20">
               <div className="space-y-3 px-0 pt-1" data-feed-tab="global">
                 {hasNewPosts && (
-                  <div className="sticky top-16 z-30 flex items-center justify-between rounded-md border border-primary/30 bg-background/95 px-3 py-2 shadow-sm backdrop-blur" data-testid="new-posts-indicator">
+                  <div className="sticky top-16 z-30 mx-3 flex items-center justify-between rounded-md border border-primary/30 bg-background/95 px-3 py-2 shadow-sm backdrop-blur" data-testid="new-posts-indicator">
                     <span className="text-sm font-medium">New posts available</span>
                     <Button size="sm" variant="outline" onClick={scrollToNewPosts}>
                       <ArrowDown className="mr-1 h-4 w-4" />
@@ -1894,7 +1894,7 @@ const HomePage = () => {
                 />
                 <AdminFeedDebugger entries={debugEntries} isAdmin={isAdminUser} />
                 {receivedRequests.length > 0 && (
-                  <div className="mb-6">
+                  <div className="mb-6 px-3">
                     <h2 className="text-lg font-semibold mb-3">Friend Requests</h2>
                     <div className="space-y-2">
                       {receivedRequests.map((request) => (
@@ -1910,7 +1910,7 @@ const HomePage = () => {
                 )}
                 
                 {/* Smart Feature Recommendations with Sovereign Quick Access */}
-                <SovereignQuickAccess />
+                <div className="px-3"><SovereignQuickAccess /></div>
 
                 {/* Loops short videos row */}
                 <section className="space-y-2 px-3" aria-label="Loops short videos">
@@ -2199,9 +2199,9 @@ const HomePage = () => {
                 </section>
                 
                 {loading ? (
-                  <p className="text-center text-muted-foreground py-8">Loading posts...</p>
+                  <p className="px-3 text-center text-muted-foreground py-8">Loading posts...</p>
                 ) : globalPosts.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">No posts yet</p>
+                  <p className="px-3 text-center text-muted-foreground py-8">No posts yet</p>
                 ) : (
                   globalPosts.map(post => {
                     const isToday = post.created_at && new Date(post.created_at).toDateString() === new Date().toDateString();
@@ -2223,7 +2223,7 @@ const HomePage = () => {
             <TabsContent value="personal" className="mt-0 pb-24 xxs:pb-24 xs:pb-20">
               <div className="space-y-3 px-0 pt-1" data-feed-tab="personal">
                 {hasNewPosts && (
-                  <div className="sticky top-16 z-30 flex items-center justify-between rounded-md border border-primary/30 bg-background/95 px-3 py-2 shadow-sm backdrop-blur" data-testid="new-posts-indicator">
+                  <div className="sticky top-16 z-30 mx-3 flex items-center justify-between rounded-md border border-primary/30 bg-background/95 px-3 py-2 shadow-sm backdrop-blur" data-testid="new-posts-indicator">
                     <span className="text-sm font-medium">New posts available</span>
                     <Button size="sm" variant="outline" onClick={scrollToNewPosts}>
                       <ArrowDown className="mr-1 h-4 w-4" />
@@ -2232,9 +2232,9 @@ const HomePage = () => {
                   </div>
                 )}
                 {loading ? (
-                  <p className="text-center text-muted-foreground py-8">Loading posts...</p>
+                  <p className="px-3 text-center text-muted-foreground py-8">Loading posts...</p>
                 ) : personalPosts.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">No posts from friends yet</p>
+                  <p className="px-3 text-center text-muted-foreground py-8">No posts from friends yet</p>
                 ) : (
                   personalPosts.map(post => {
                     const isToday = post.created_at && new Date(post.created_at).toDateString() === new Date().toDateString();
