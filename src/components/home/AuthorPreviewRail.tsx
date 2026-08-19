@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Camera, Play } from 'lucide-react';
+import { Play } from 'lucide-react';
 
 interface RailPost {
   id: string;
@@ -50,18 +50,6 @@ const AuthorPreviewRail: React.FC<AuthorPreviewRailProps> = ({ authorId, current
       className="pointer-events-auto absolute bottom-24 left-2 z-20 flex w-16 flex-col gap-2"
       aria-label="More from this creator"
     >
-      <button
-        type="button"
-        onClick={(event) => {
-          event.stopPropagation();
-          window.dispatchEvent(new Event('mmora:request-shorts-upload'));
-        }}
-        className="flex h-10 w-10 items-center justify-center self-center rounded-full border border-white/30 bg-black/30 text-white backdrop-blur-md transition-colors hover:bg-black/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
-        aria-label="Upload a short"
-        title="Upload a short"
-      >
-        <Camera className="h-4 w-4" />
-      </button>
       <span className="text-center text-[10px] font-medium uppercase tracking-wide text-white/80 drop-shadow-[0_2px_6px_rgba(0,0,0,0.8)]">Top</span>
       {posts.map((p) => {
         const poster = p.media_preview_url || (p.media_type === 'image' ? p.media_url : null);
