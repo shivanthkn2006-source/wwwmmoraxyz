@@ -663,7 +663,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
         </div>
 
         {post.content && (
-          <p className="text-foreground mb-2">{post.content}</p>
+          <p className="order-3 px-3 text-sm leading-snug text-foreground">{post.content}</p>
         )}
 
         {(displayMediaUrl || isDeferredHeavyMedia) && (() => {
@@ -671,10 +671,11 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
           return (
             <div
               ref={mediaFrameRef}
-              className="mb-2 overflow-hidden rounded-lg bg-muted flex items-center justify-center relative"
+              className="order-1 overflow-hidden rounded-none bg-black flex items-center justify-center relative"
               data-testid="post-media-frame"
               style={{ maxHeight: '85svh' }}
             >
+
               {isDeferredHeavyMedia ? (
                 <div className="w-full aspect-[9/16] max-h-[85svh] bg-muted animate-pulse" data-testid="post-deferred-media-preview" />
               ) : isVideo ? (
