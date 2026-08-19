@@ -125,6 +125,12 @@ export default {
     },
     extend: {
       colors: {
+        // M'mora brand: blue palette remapped to slightly off-white
+        blue: {
+          50: '#ffffff', 100: '#fdfcfa', 200: '#faf8f4', 300: '#f6f3ec',
+          400: '#f2eee5', 500: '#ece7dc', 600: '#ddd7ca', 700: '#c4bdaf',
+          800: '#9c968a', 900: '#6f6a61', 950: '#3b3833',
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

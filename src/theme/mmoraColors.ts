@@ -34,11 +34,11 @@ export const MMORA_ACCENT = {
 
 /** Raw hex + HSL tokens for non-Tailwind usage (SVG, canvas, inline styles). */
 export const MMORA_ACCENT_RAW = {
-  hex: '#3b82f6',      // blue-500
-  hexLight: '#60a5fa', // blue-400
-  hexDark: '#2563eb',  // blue-600
-  hsl: '217 91% 60%',  // blue-500 in HSL (matches index.css convention)
-  rgb: 'rgb(59, 130, 246)',
+  hex: '#ece7dc',      // off-white 500
+  hexLight: '#f2eee5', // off-white 400
+  hexDark: '#ddd7ca',  // off-white 600
+  hsl: '40 20% 94%',   // off-white in HSL
+  rgb: 'rgb(236, 231, 220)',
 } as const;
 
 export type MmoraAccentKey = keyof typeof MMORA_ACCENT;
