@@ -3723,6 +3723,51 @@ export type Database = {
           },
         ]
       }
+      platform_error_events: {
+        Row: {
+          component_stack: string | null
+          created_at: string
+          error_type: string
+          id: string
+          message: string
+          metadata: Json
+          severity: string
+          source: string
+          stack: string | null
+          url: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          component_stack?: string | null
+          created_at?: string
+          error_type: string
+          id?: string
+          message: string
+          metadata?: Json
+          severity?: string
+          source?: string
+          stack?: string | null
+          url?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          component_stack?: string | null
+          created_at?: string
+          error_type?: string
+          id?: string
+          message?: string
+          metadata?: Json
+          severity?: string
+          source?: string
+          stack?: string | null
+          url?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       platform_health_logs: {
         Row: {
           created_at: string
