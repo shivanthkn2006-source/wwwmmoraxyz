@@ -20,6 +20,7 @@ export const MoraZoeBirthDetailsPrompt: React.FC<Props> = ({ initial, onSave, on
   const [place, setPlace] = useState(initial?.birth_place ?? '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showHelp, setShowHelp] = useState(false);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
