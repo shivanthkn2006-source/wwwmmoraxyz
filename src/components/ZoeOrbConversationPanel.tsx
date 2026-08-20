@@ -20,24 +20,8 @@ import { getIdentityReference, saveIdentityReference, persistGeneratedIdentityIm
 import { buildUserIdentityPrompt, buildZoeIdentityPrompt, isForcedImageRoutingKeyword, resolveZoeImageTurn, type PendingIdentityImageRequest } from '@/utils/zoeImageIntent';
 import { useNavigate } from 'react-router-dom';
 import { useZoeOmegaCoreIntegration } from '@/hooks/useZoeOmegaCoreIntegration';
-import { format, isToday, isYesterday } from 'date-fns';
-
-// Format timestamp for messages
-const formatMessageTime = (date: Date | string | undefined): string => {
-  if (!date) return '';
-  try {
-    const d = typeof date === 'string' ? new Date(date) : date;
-    if (isNaN(d.getTime())) return '';
-    if (isToday(d)) {
-      return format(d, 'h:mm a');
-    } else if (isYesterday(d)) {
-      return `Yesterday ${format(d, 'h:mm a')}`;
-    }
-    return format(d, 'MMM d, h:mm a');
-  } catch {
-    return '';
-  }
-};
+import { format } from 'date-fns';
+import { formatMessageTime, isRelationshipCommand } from '@/components/zoe/orbConversationUtils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -92,16 +76,6 @@ import { loadDestinySeed, saveDestinySeed } from '@/core/soul/AtmanArchive';
 import { stripScratchpad } from '@/utils/hiddenScratchpad';
 import { getZoeActivePostContext, getZoePlatformPageContext } from '@/lib/zoePlatformContext';
 
-// Relationship command patterns that should be executed as commands, not chat
-const RELATIONSHIP_COMMAND_PATTERNS = [
-  /^(?:zoe\s+)?(?:inform|tell|message|notify|remind)\s+(?:my\s+)?(son|daughter|wife|husband|father|mother|dad|mom|brother|sister|grandpa|grandma|grandfather|grandmother|uncle|aunt|cousin|friend|partner)\s+(?:to|that|about)?\s*.+$/i,
-  /^(?:zoe\s+)?(?:send|text)\s+(?:my\s+)?(son|daughter|wife|husband|father|mother|dad|mom|brother|sister|friend|partner)$/i,
-  /^(?:zoe\s+)?(?:ask|tell|remind)\s+(?:my\s+)?(son|daughter|wife|husband|father|mother|dad|mom|brother|sister|friend|partner)\s+to\s+call\s+(?:me|back)$/i,
-];
-
-const isRelationshipCommand = (text: string): boolean => {
-  return RELATIONSHIP_COMMAND_PATTERNS.some(pattern => pattern.test(text.trim()));
-};
 
 interface Message {
   id: string;
