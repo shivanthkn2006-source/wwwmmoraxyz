@@ -53,9 +53,23 @@ export const useAmbientSearch = () => {
       setIsSynthesizing(true);
       setError(null);
 
+      const requestId = `as-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+      const startedAt = performance.now();
+      console.info('[zoe-ambient-search:req]', { requestId, query: term });
+
       try {
         const { data, error: fnError } = await supabase.functions.invoke('zoe-ambient-search', {
-          body: { queryText: term, dhfContext: dhfContext || {} },
+          body: { queryText: term, dhfContext: dhfContext || {}, requestId },
+        });
+        const roundTripMs = Math.round(performance.now() - startedAt);
+        console.info('[zoe-ambient-search:res]', {
+          requestId,
+          roundTripMs,
+          serverTimings: data?.timings ?? null,
+          intent: data?.intent?.intent ?? null,
+          nodesEvaluated: data?.nodesEvaluated ?? 0,
+          degraded: data?.degraded ?? null,
+          error: fnError?.message || data?.error || null,
         });
 
         if (fnError) throw fnError;
@@ -119,15 +133,38 @@ export async function indexEntity(input: {
   socialWeight?: number;
   metadata?: Record<string, any>;
 }): Promise<boolean> {
+  if (!input?.entityType || !input?.entityId) {
+    console.warn('[zoe-index-ingest:req] skipped — entityType/entityId required', input);
+    return false;
+  }
+  const requestId = `ix-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  const startedAt = performance.now();
+  console.info('[zoe-index-ingest:req]', {
+    requestId,
+    entityType: input.entityType,
+    entityId: input.entityId,
+    hasMedia: Boolean(input.mediaUrl),
+    contentChars: (input.rawContent || '').length,
+  });
   try {
-    const { data, error } = await supabase.functions.invoke('zoe-index-ingest', { body: input });
+    const { data, error } = await supabase.functions.invoke('zoe-index-ingest', {
+      body: { ...input, requestId },
+    });
+    const roundTripMs = Math.round(performance.now() - startedAt);
     if (error || data?.error) {
-      console.warn('[indexEntity] failed', error || data.error);
+      console.warn('[zoe-index-ingest:res]', { requestId, roundTripMs, error: error?.message || data?.error });
       return false;
     }
+    console.info('[zoe-index-ingest:res]', {
+      requestId,
+      roundTripMs,
+      indexedCharacters: data?.indexedCharacters ?? 0,
+      dims: data?.dims ?? null,
+      serverTimings: data?.timings ?? null,
+    });
     return true;
   } catch (e) {
-    console.warn('[indexEntity] threw', e);
+    console.warn('[zoe-index-ingest:res] threw', { requestId, error: e });
     return false;
   }
 }
