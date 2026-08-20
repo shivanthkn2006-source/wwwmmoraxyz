@@ -6,6 +6,7 @@ import { useHomeSearch, recordHomeSearch, type HomeSearchResult } from '@/hooks/
 import DraggableHomeControl from '@/components/home/DraggableHomeControl';
 import { useAmbientSearch, type AmbientSearchRecord } from '@/core/ports/useAmbientSearch';
 import { routeForDispatch, routeForEntity, labelForRecord } from '@/lib/ambientDispatch';
+import SearchDebugPanel from '@/components/home/SearchDebugPanel';
 
 interface HomeFloatingToolsProps {
   query: string;
@@ -30,6 +31,7 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
     result: ambient,
     error: ambientError,
     reset: resetAmbient,
+    debug: ambientDebug,
   } = useAmbientSearch();
 
   React.useEffect(() => {
@@ -246,6 +248,8 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
 
         </div>
       )}
+
+      <SearchDebugPanel debug={ambientDebug} />
     </>
   );
 }
