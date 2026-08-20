@@ -137,7 +137,54 @@ class ErrorLogger {
     } catch (e) {
       // Ignore localStorage errors (quota exceeded, etc.)
     }
+
+    // Forward to the server-side sink (fire-and-forget, never throws)
+    this.enqueueRemote(errorLog);
   }
+
+  /** Buffer + flush errors to the platform error sink. */
+  private remoteQueue: ErrorLog[] = [];
+  private remoteFlushTimer: ReturnType<typeof setTimeout> | null = null;
+
+  private enqueueRemote(errorLog: ErrorLog) {
+    try {
+      if (import.meta.env.DEV) return; // don't ship dev noise
+      this.remoteQueue.push(errorLog);
+      if (this.remoteQueue.length > 25) this.remoteQueue = this.remoteQueue.slice(-25);
+      if (this.remoteFlushTimer) return;
+      this.remoteFlushTimer = setTimeout(() => {
+        this.remoteFlushTimer = null;
+        void this.flushRemote();
+      }, 4000);
+    } catch {
+      // never let logging break the app
+    }
+  }
+
+  private async flushRemote() {
+    const batch = this.remoteQueue.splice(0, this.remoteQueue.length);
+    if (batch.length === 0) return;
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      await supabase.functions.invoke('log-platform-error', {
+        body: {
+          events: batch.map((e) => ({
+            errorType: e.errorType,
+            message: e.message,
+            stack: e.stack,
+            componentStack: e.componentStack,
+            url: e.url,
+            userAgent: e.userAgent,
+            severity: e.severity,
+            source: 'frontend',
+          })),
+        },
+      });
+    } catch {
+      // swallow — the sink must never surface errors to users
+    }
+  }
+
 
   getErrors(): ErrorLog[] {
     return [...this.errors];
