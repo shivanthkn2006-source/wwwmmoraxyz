@@ -76,6 +76,13 @@ export const useAmbientSearch = () => {
       console.info('[zoe-ambient-search:req]', { requestId, query: term });
 
       try {
+        // Drain a small durable indexing batch first. Database triggers create
+        // jobs, so an interrupted upload/search is safely retried next time.
+        const { error: indexerError } = await supabase.functions.invoke('zoe-search-indexer', {
+          body: { limit: 5 },
+        });
+        if (indexerError) console.warn('[zoe-search-indexer] background batch failed:', indexerError.message);
+
         const { data, error: fnError } = await supabase.functions.invoke('zoe-ambient-search', {
           body: { queryText: term, dhfContext: dhfContext || {}, requestId },
         });

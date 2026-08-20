@@ -143,7 +143,9 @@ Deno.serve(async (req) => {
     const user = await requireSearchUser(req);
     if (!SUPABASE_URL || !SERVICE_ROLE) throw new Error('BACKEND_NOT_CONFIGURED');
     const body = await req.json().catch(() => ({}));
-    const limit = Math.max(1, Math.min(Number(body?.limit) || 20, 50));
+    // Keep each invocation inside the edge runtime budget; callers repeatedly
+    // drain the durable queue in small resumable batches.
+    const limit = Math.max(1, Math.min(Number(body?.limit) || 5, 10));
     const db = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { persistSession: false } });
     const enqueued = body?.backfill === true ? await enqueueBackfill(db, user.id) : 0;
 
