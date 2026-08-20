@@ -63,9 +63,36 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
       handleSelect(results[activeIndex]);
       return;
     }
-    if (!query.trim()) return;
-    void recordHomeSearch(query.trim());
-  }, [query, activeIndex, results, handleSelect]);
+    const term = query.trim();
+    if (!term) return;
+    void recordHomeSearch(term);
+
+    // Route the submitted query through the ambient retrieval orchestrator.
+    void (async () => {
+      const started = performance.now();
+      const output = await executeAmbientSearch(term);
+      const ms = Math.round(performance.now() - started);
+      console.info('[ambient-search] submit', {
+        query: term,
+        ms,
+        intent: output?.intent?.intent,
+        nodes: output?.nodesEvaluated ?? 0,
+        dispatch: output?.dispatchAction?.action ?? null,
+      });
+      const dispatchRoute = routeForDispatch(output?.dispatchAction);
+      if (dispatchRoute) {
+        setSearchOpen(false);
+        navigate(dispatchRoute);
+      }
+    })();
+  }, [query, activeIndex, results, handleSelect, executeAmbientSearch, navigate]);
+
+  const handleAmbientRecord = React.useCallback((record: AmbientSearchRecord) => {
+    setSearchOpen(false);
+    navigate(routeForEntity(record.entity_type, record.entity_id));
+  }, [navigate]);
+
+
 
   const handleInputKeyDown = React.useCallback((event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Escape') {
