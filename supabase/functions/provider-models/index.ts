@@ -1,4 +1,4 @@
-// Temporary diagnostic: lists model IDs available to the configured provider keys.
+// Temporary diagnostic: pings candidate model IDs with the configured provider keys.
 // deno-lint-ignore no-explicit-any
 declare const Deno: any;
 
@@ -7,36 +7,43 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const GROQ_CANDIDATES = ['openai/gpt-oss-20b', 'openai/gpt-oss-120b', 'qwen/qwen3.6-27b', 'groq/compound-mini'];
+const GEMINI_CANDIDATES = ['gemini-flash-latest', 'gemini-3.5-flash', 'gemini-2.5-flash-lite', 'gemini-3.1-flash-lite'];
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
-  const out: Record<string, unknown> = {};
-
+  const results: Record<string, unknown> = {};
   const groqKey = Deno.env.get('GROQ_API_KEY');
-  if (groqKey) {
-    try {
-      const r = await fetch('https://api.groq.com/openai/v1/models', {
-        headers: { Authorization: `Bearer ${groqKey}` },
-      });
-      const j = await r.json();
-      out.groq = Array.isArray(j?.data) ? j.data.map((m: any) => m.id) : j;
-    } catch (e) { out.groq = String(e); }
-  }
-
   const gKey = Deno.env.get('GOOGLE_AI_STUDIO_KEY') || Deno.env.get('GEMINI_API_KEY');
-  if (gKey) {
+
+  for (const m of GROQ_CANDIDATES) {
+    if (!groqKey) break;
     try {
-      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${gKey}&pageSize=200`);
-      const j = await r.json();
-      out.gemini = Array.isArray(j?.models)
-        ? j.models
-            .filter((m: any) => (m.supportedGenerationMethods || []).includes('generateContent'))
-            .map((m: any) => m.name)
-        : j;
-    } catch (e) { out.gemini = String(e); }
+      const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: m, messages: [{ role: 'user', content: 'say pong' }], max_tokens: 16 }),
+      });
+      const t = await r.text();
+      results[`groq:${m}`] = `${r.status} ${t.slice(0, 120)}`;
+    } catch (e) { results[`groq:${m}`] = String(e); }
   }
 
-  return new Response(JSON.stringify(out), {
+  for (const m of GEMINI_CANDIDATES) {
+    if (!gKey) break;
+    try {
+      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${gKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: 'say pong' }] }] }),
+      });
+      const t = await r.text();
+      results[`gemini:${m}`] = `${r.status} ${t.slice(0, 120)}`;
+    } catch (e) { results[`gemini:${m}`] = String(e); }
+  }
+
+  return new Response(JSON.stringify(results, null, 2), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
 });
