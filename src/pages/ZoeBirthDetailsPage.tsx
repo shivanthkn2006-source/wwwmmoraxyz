@@ -49,9 +49,30 @@ const ZoeBirthDetailsPage: React.FC = () => {
         birth_place: birthPlace.trim(),
       })
       .eq('user_id', user.id);
+
+    if (error) {
+      setSaving(false);
+      setMessage(`Could not save: ${error.message}`);
+      return;
+    }
+
+    // Rebuild today's alignment straight away so the feed card reflects the edit.
+    setMessage('Saved. Rebuilding today’s card…');
+    try {
+      await supabase.functions.invoke('astro-dispatch', {
+        body: {
+          action: 'run',
+          userId: user.id,
+          force: true,
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        },
+      });
+      setMessage('Saved. Your card has been rebuilt with the new details — pull the feed to refresh.');
+    } catch {
+      setMessage('Saved. Your next scheduled card will use these details.');
+    }
     setSaving(false);
-    setMessage(error ? `Could not save: ${error.message}` : 'Saved. Your next daily card will use these details.');
-    if (!error) void load();
+    void load();
   };
 
   const clear = async () => {
