@@ -38,11 +38,29 @@ export interface AmbientSearchResult {
   nodesEvaluated: number;
 }
 
+/** Developer-only trace of the most recent orchestrator round trip. */
+export interface AmbientSearchDebug {
+  requestId: string;
+  query: string;
+  at: number;
+  roundTripMs: number;
+  serverTimings: Record<string, number> | null;
+  intent: string | null;
+  nodesEvaluated: number;
+  nodeTypes: Record<string, number>;
+  dispatchBlock: string | null;
+  dispatchParsed: ZoeDispatchAction | null;
+  degraded: unknown;
+  error: string | null;
+}
+
 export const useAmbientSearch = () => {
   const [isSynthesizing, setIsSynthesizing] = useState(false);
   const [result, setResult] = useState<AmbientSearchResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [debug, setDebug] = useState<AmbientSearchDebug | null>(null);
   const runIdRef = useRef(0);
+
 
   const executeAmbientSearch = useCallback(
     async (query: string, dhfContext?: Record<string, any>): Promise<AmbientSearchResult | null> => {
