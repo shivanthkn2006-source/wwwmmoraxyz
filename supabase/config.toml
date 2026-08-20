@@ -335,7 +335,10 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.zoe-index-ingest]
-verify_jwt = false
+verify_jwt = true
 
 [functions.zoe-ambient-search]
+verify_jwt = true
+
+[functions.zoe-search-indexer]
 verify_jwt = true
