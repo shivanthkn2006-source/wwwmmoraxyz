@@ -20,6 +20,7 @@ import { getIdentityReference, saveIdentityReference, persistGeneratedIdentityIm
 import { buildUserIdentityPrompt, buildZoeIdentityPrompt, isForcedImageRoutingKeyword, resolveZoeImageTurn, type PendingIdentityImageRequest } from '@/utils/zoeImageIntent';
 import { useNavigate } from 'react-router-dom';
 import { useZoeOmegaCoreIntegration } from '@/hooks/useZoeOmegaCoreIntegration';
+import { format } from 'date-fns';
 import { formatMessageTime, isRelationshipCommand } from '@/components/zoe/orbConversationUtils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
