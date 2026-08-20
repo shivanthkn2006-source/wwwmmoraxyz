@@ -153,7 +153,7 @@ export async function generateMotivation(args: {
 }): Promise<{ content: MotivationContent; error?: string }> {
   const { theme, weekday, localDate, seed } = args;
   try {
-    const res = await sovereignFetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const res = await sovereignFetch('sovereign://chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

@@ -35,14 +35,29 @@ export function sovereignKey(): string | undefined {
   );
 }
 
-/** Hard guard: throws if anything still tries to reach the Lovable gateway. */
+/**
+ * Hard guard: throws if anything still tries to reach the Lovable AI Gateway,
+ * or relies on LOVABLE_API_KEY. Billed Lovable AI credits must never be used.
+ */
 export function assertNoLovableGateway(url: string): void {
   if (typeof url === 'string' && url.includes('ai.gateway.lovable.dev')) {
-    // Not fatal by design — sovereignFetch intercepts and reroutes. Log loudly
-    // so any un-migrated direct fetch() is visible in function logs.
-    console.warn('[sovereign-ai] intercepted Lovable gateway URL, rerouting to sovereign providers:', url);
+    throw new Error(
+      `[sovereign-ai] BLOCKED: a caller passed a Lovable AI Gateway URL (${url}). ` +
+        `This project routes 100% of AI through its own provider keys. ` +
+        `Replace the URL with 'sovereign://chat/completions' (or 'sovereign://images' for image generation).`,
+    );
+  }
+  if (Deno.env.get('LOVABLE_API_KEY')) {
+    // Present in the environment is fine; USING it is not. Nothing in this shim reads it.
+    // Surfaced once so a stale secret is visible and can be deleted.
+    if (!warnedAboutLovableKey) {
+      warnedAboutLovableKey = true;
+      console.warn('[sovereign-ai] LOVABLE_API_KEY is still present in secrets but is never used. Safe to delete.');
+    }
   }
 }
+
+let warnedAboutLovableKey = false;
 
 // ───────────── model mapping ─────────────
 
