@@ -58,13 +58,11 @@ async function loadCanonical(db: ReturnType<typeof createClient>, job: QueueRow)
     if (error) throw error;
     if (!data) return null;
     const privacy = data.visibility === 'global' ? 'public' : data.visibility === 'personal' ? 'friends' : 'private';
-    const author = await authorLine(db, data.user_id);
+    const author = await loadAuthor(db, data.user_id);
     const body = String(data.content || '').trim() || `${data.media_type || job.entity_type} post`;
-    const { data: profile } = await db.from('profiles')
-      .select('display_name,username').eq('user_id', data.user_id).maybeSingle();
     return {
       ownerId: data.user_id,
-      content: [author, body].filter(Boolean).join('\n'),
+      content: [author.line, body].filter(Boolean).join('\n'),
       privacy,
       metadata: {
         mediaType: data.media_type,
