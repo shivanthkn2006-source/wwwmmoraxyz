@@ -38,6 +38,14 @@ function sanitizedError(error: unknown): string {
   return message.replace(/[\r\n]+/g, ' ').slice(0, 300);
 }
 
+/** Author attribution so searching a person's name also returns their content. */
+async function authorLine(db: ReturnType<typeof createClient>, userId: string): Promise<string> {
+  const { data } = await db.from('profiles')
+    .select('display_name,username').eq('user_id', userId).maybeSingle();
+  const parts = [data?.display_name, data?.username ? `@${data.username}` : ''].filter(Boolean);
+  return parts.length ? `By ${parts.join(' ')}` : '';
+}
+
 async function loadCanonical(db: ReturnType<typeof createClient>, job: QueueRow): Promise<CanonicalEntity | null> {
   if (['post', 'loop_video', 'image', 'quote'].includes(job.entity_type)) {
     const { data, error } = await db.from('posts')
@@ -46,15 +54,21 @@ async function loadCanonical(db: ReturnType<typeof createClient>, job: QueueRow)
     if (error) throw error;
     if (!data) return null;
     const privacy = data.visibility === 'global' ? 'public' : data.visibility === 'personal' ? 'friends' : 'private';
+    const author = await authorLine(db, data.user_id);
+    const body = String(data.content || '').trim() || `${data.media_type || job.entity_type} post`;
+    const { data: profile } = await db.from('profiles')
+      .select('display_name,username').eq('user_id', data.user_id).maybeSingle();
     return {
       ownerId: data.user_id,
-      content: String(data.content || '').trim() || `${data.media_type || job.entity_type} post`,
+      content: [author, body].filter(Boolean).join('\n'),
       privacy,
       metadata: {
         mediaType: data.media_type,
         mediaUrl: data.media_url,
         previewUrl: data.media_preview_url,
         createdAt: data.created_at,
+        authorName: profile?.display_name || profile?.username || null,
+        authorUsername: profile?.username || null,
       },
     };
   }
