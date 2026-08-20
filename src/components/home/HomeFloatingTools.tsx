@@ -197,7 +197,7 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
         >
           {loading && <p role="status" className="px-3 py-2 text-xs text-muted-foreground">Searching…</p>}
           {!loading && error && <p role="alert" className="px-3 py-2 text-xs text-muted-foreground">{error}</p>}
-          {!loading && !error && results.length === 0 && (
+          {!loading && !error && results.length === 0 && !ambient && !isSynthesizing && (
             <p role="status" className="px-3 py-2 text-xs text-muted-foreground">No results for "{query.trim()}"</p>
           )}
           {results.map((result, index) => (
@@ -220,6 +220,30 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
               </span>
             </button>
           ))}
+
+          {isSynthesizing && (
+            <p role="status" className="px-3 py-2 text-xs text-muted-foreground">Zoe is synthesizing…</p>
+          )}
+          {!isSynthesizing && ambientError && (
+            <p role="alert" className="px-3 py-2 text-xs text-muted-foreground">{ambientError}</p>
+          )}
+          {!isSynthesizing && ambient?.synthesis && (
+            <p className="px-3 py-2 text-xs leading-relaxed text-foreground/90">{ambient.synthesis}</p>
+          )}
+          {!isSynthesizing && (ambient?.records ?? []).map((record) => (
+            <button
+              key={`ambient-${record.id}`}
+              type="button"
+              onClick={() => handleAmbientRecord(record)}
+              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-muted/60"
+            >
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm text-foreground">{labelForRecord(record)}</span>
+                <span className="block truncate text-[11px] text-muted-foreground">{record.entity_type}</span>
+              </span>
+            </button>
+          ))}
+
         </div>
       )}
     </>
