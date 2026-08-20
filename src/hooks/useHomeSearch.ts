@@ -76,7 +76,7 @@ export function useHomeSearch(query: string, enabled = true) {
             id: p.id,
             title: (p.content || 'Post').slice(0, 80),
             subtitle: 'Post',
-            route: `/post/${p.id}`,
+            route: '',
           });
         });
 
