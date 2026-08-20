@@ -75,16 +75,6 @@ import { loadDestinySeed, saveDestinySeed } from '@/core/soul/AtmanArchive';
 import { stripScratchpad } from '@/utils/hiddenScratchpad';
 import { getZoeActivePostContext, getZoePlatformPageContext } from '@/lib/zoePlatformContext';
 
-// Relationship command patterns that should be executed as commands, not chat
-const RELATIONSHIP_COMMAND_PATTERNS = [
-  /^(?:zoe\s+)?(?:inform|tell|message|notify|remind)\s+(?:my\s+)?(son|daughter|wife|husband|father|mother|dad|mom|brother|sister|grandpa|grandma|grandfather|grandmother|uncle|aunt|cousin|friend|partner)\s+(?:to|that|about)?\s*.+$/i,
-  /^(?:zoe\s+)?(?:send|text)\s+(?:my\s+)?(son|daughter|wife|husband|father|mother|dad|mom|brother|sister|friend|partner)$/i,
-  /^(?:zoe\s+)?(?:ask|tell|remind)\s+(?:my\s+)?(son|daughter|wife|husband|father|mother|dad|mom|brother|sister|friend|partner)\s+to\s+call\s+(?:me|back)$/i,
-];
-
-const isRelationshipCommand = (text: string): boolean => {
-  return RELATIONSHIP_COMMAND_PATTERNS.some(pattern => pattern.test(text.trim()));
-};
 
 interface Message {
   id: string;
