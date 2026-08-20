@@ -182,6 +182,9 @@ const ZoeAstroDashboardPage: React.FC = () => {
           <Link to="/zoe-astro/log" className="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm">
             <ScrollText className="h-4 w-4" aria-hidden /> Generation log
           </Link>
+          <Link to="/zoe-astro/dispatch" className="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm">
+            <ScrollText className="h-4 w-4" aria-hidden /> Dispatch queue
+          </Link>
           <button onClick={generateNow} disabled={generating}
             className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-60">
             <Wand2 className={`h-4 w-4 ${generating ? 'animate-pulse' : ''}`} aria-hidden />
