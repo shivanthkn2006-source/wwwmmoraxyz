@@ -141,22 +141,6 @@ import { detectDecoratorIntent, emitOpenDecorator } from '@/features/zoe-decorat
 import { detectHairstyleIntent, emitOpenHairstyle } from '@/features/zoe-hairstyle/intent';
 import { detectZoeCommand, emitZoeRun, emitZoeEnd } from '@/features/zoe-command-bus';
 
-type ZoeMood = 'neutral' | 'cyan' | 'gold';
-
-const zoeUiTimeFormatter = new Intl.DateTimeFormat([], {
-  hour: 'numeric',
-  minute: '2-digit',
-});
-
-const MAX_PERSISTED_MESSAGES = 95;
-
-const ZOE_IDLE_ALERTS = [
-  'Hey… are you okay? I’m here if you need me.',
-  'You went quiet for a bit — is anything bothering you?',
-  'Just checking in… do you need help with something?',
-  'Did you forget something, or want me to help you get somewhere?',
-  'I noticed the silence. Want to talk, or want a hand with anything?',
-];
 
 // Safe defaults extracted to separate module
 import {
