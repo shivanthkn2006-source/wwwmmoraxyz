@@ -38,11 +38,29 @@ export interface AmbientSearchResult {
   nodesEvaluated: number;
 }
 
+/** Developer-only trace of the most recent orchestrator round trip. */
+export interface AmbientSearchDebug {
+  requestId: string;
+  query: string;
+  at: number;
+  roundTripMs: number;
+  serverTimings: Record<string, number> | null;
+  intent: string | null;
+  nodesEvaluated: number;
+  nodeTypes: Record<string, number>;
+  dispatchBlock: string | null;
+  dispatchParsed: ZoeDispatchAction | null;
+  degraded: unknown;
+  error: string | null;
+}
+
 export const useAmbientSearch = () => {
   const [isSynthesizing, setIsSynthesizing] = useState(false);
   const [result, setResult] = useState<AmbientSearchResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [debug, setDebug] = useState<AmbientSearchDebug | null>(null);
   const runIdRef = useRef(0);
+
 
   const executeAmbientSearch = useCallback(
     async (query: string, dhfContext?: Record<string, any>): Promise<AmbientSearchResult | null> => {
@@ -98,13 +116,51 @@ export const useAmbientSearch = () => {
           nodesEvaluated: data?.nodesEvaluated || 0,
         };
 
+        const nodeTypes: Record<string, number> = {};
+        for (const record of searchOutput.records) {
+          nodeTypes[record.entity_type] = (nodeTypes[record.entity_type] || 0) + 1;
+        }
+
         // Ignore stale responses from superseded queries.
-        if (runId === runIdRef.current) setResult(searchOutput);
+        if (runId === runIdRef.current) {
+          setResult(searchOutput);
+          setDebug({
+            requestId,
+            query: term,
+            at: Date.now(),
+            roundTripMs,
+            serverTimings: (data?.timings as Record<string, number>) ?? null,
+            intent: data?.intent?.intent ?? null,
+            nodesEvaluated: searchOutput.nodesEvaluated,
+            nodeTypes,
+            dispatchBlock: dispatchMatch ? dispatchMatch[0] : null,
+            dispatchParsed: dispatchAction,
+            degraded: data?.degraded ?? null,
+            error: null,
+          });
+        }
         return searchOutput;
       } catch (err: any) {
         const errMessage = err?.message || 'Synthesis failed';
-        if (runId === runIdRef.current) setError(errMessage);
+        if (runId === runIdRef.current) {
+          setError(errMessage);
+          setDebug({
+            requestId,
+            query: term,
+            at: Date.now(),
+            roundTripMs: Math.round(performance.now() - startedAt),
+            serverTimings: null,
+            intent: null,
+            nodesEvaluated: 0,
+            nodeTypes: {},
+            dispatchBlock: null,
+            dispatchParsed: null,
+            degraded: null,
+            error: errMessage,
+          });
+        }
         return null;
+
       } finally {
         if (runId === runIdRef.current) setIsSynthesizing(false);
       }
@@ -119,7 +175,9 @@ export const useAmbientSearch = () => {
     setIsSynthesizing(false);
   }, []);
 
-  return { executeAmbientSearch, isSynthesizing, result, error, reset };
+  // `debug` intentionally survives reset() so the last trace stays inspectable.
+  return { executeAmbientSearch, isSynthesizing, result, error, reset, debug };
+
 };
 
 /** Fire-and-forget indexing of any platform entity into the universal vector graph. */
