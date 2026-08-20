@@ -214,6 +214,18 @@ export class BlackBoxLedger {
     const genesisSignature = generateGenesisSignature(eventType, category, timestamp, sourceSystem);
     const integrityHash = generateIntegrityHash(maskedPayload);
 
+    // Ledger rows are owner-scoped: attribute the event to the signed-in user
+    // so the insert (and its returning row) stays readable under RLS.
+    let ownerId = options.userId;
+    if (!ownerId) {
+      try {
+        const { data: authData } = await supabase.auth.getUser();
+        ownerId = authData?.user?.id;
+      } catch {
+        ownerId = undefined;
+      }
+    }
+
     const entry: BlackBoxEntry = {
       event_type: eventType,
       event_category: category,
@@ -227,8 +239,9 @@ export class BlackBoxLedger {
         recorded_at: timestamp,
       },
       integrity_hash: integrityHash,
-      user_id: options.userId,
+      user_id: ownerId,
     };
+
 
     // If offline, buffer locally
     if (!this.isOnline) {
@@ -237,12 +250,19 @@ export class BlackBoxLedger {
       return { success: true, entryId: 'buffered_' + Date.now() };
     }
 
+    // Signed-out boot events can't own a ledger row — buffer them instead of
+    // firing a write the WORM policy will reject.
+    if (!ownerId) {
+      this.localBuffer.push(entry);
+      return { success: true, entryId: 'buffered_' + Date.now() };
+    }
+
     try {
-      const { data, error } = await supabase
+      // Insert without a returning read: the ledger is write-once and the
+      // returning row would need a second permission check.
+      const { error } = await supabase
         .from('zoe_black_box_ledger')
-        .insert(entry)
-        .select('event_id')
-        .single();
+        .insert(entry);
 
       if (error) {
         // Buffer on error
@@ -251,13 +271,13 @@ export class BlackBoxLedger {
         return { success: false, error: error.message };
       }
 
-      console.log('[BLACK BOX LEDGER] ✓ Event recorded:', eventType, data.event_id);
-      return { success: true, entryId: data.event_id };
+      return { success: true, entryId: genesisSignature };
     } catch (err) {
       this.localBuffer.push(entry);
       console.error('[BLACK BOX LEDGER] Exception:', err);
       return { success: false, error: String(err) };
     }
+
   }
 
   /**
@@ -411,10 +431,28 @@ export class BlackBoxLedger {
       const now = new Date();
       const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
+      // Ledger rows are RLS-scoped to their owner; always query within the
+      // caller's own scope so unscoped reads don't get rejected.
+      if (!userId) {
+        const { data: authData } = await supabase.auth.getUser();
+        userId = authData?.user?.id;
+      }
+      if (!userId) {
+        return {
+          totalEntries: 0,
+          entriesLast24h: 0,
+          criticalEvents: 0,
+          empTriggers: 0,
+          oldestEntry: null,
+          newestEntry: null,
+        };
+      }
+
       // Total entries
       let totalQuery = supabase.from('zoe_black_box_ledger').select('event_id', { count: 'exact' });
       if (userId) totalQuery = totalQuery.eq('user_id', userId);
       const { count: totalEntries } = await totalQuery;
+
 
       // Last 24h
       let recentQuery = supabase.from('zoe_black_box_ledger')
@@ -489,15 +527,30 @@ export class BlackBoxLedger {
     const toFlush = [...this.localBuffer];
     this.localBuffer = [];
 
+    let ownerId: string | undefined;
+    try {
+      const { data: authData } = await supabase.auth.getUser();
+      ownerId = authData?.user?.id;
+    } catch {
+      ownerId = undefined;
+    }
+
     for (const entry of toFlush) {
+      if (!entry.user_id && !ownerId) {
+        this.localBuffer.push(entry);
+        continue;
+      }
       try {
-        await supabase.from('zoe_black_box_ledger').insert(entry);
+        await supabase
+          .from('zoe_black_box_ledger')
+          .insert({ ...entry, user_id: entry.user_id || ownerId });
       } catch (err) {
         // Re-buffer on failure
         this.localBuffer.push(entry);
       }
     }
   }
+
 
   /**
    * Get count of buffered entries
