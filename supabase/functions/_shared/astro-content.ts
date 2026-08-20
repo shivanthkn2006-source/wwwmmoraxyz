@@ -107,7 +107,7 @@ Strongest active transits: ${JSON.stringify(transits.slice(0, 4))}
 Write the ${slot} reflection.`;
 
   try {
-    const res = await sovereignFetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const res = await sovereignFetch('sovereign://chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
