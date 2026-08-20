@@ -20,24 +20,7 @@ import { getIdentityReference, saveIdentityReference, persistGeneratedIdentityIm
 import { buildUserIdentityPrompt, buildZoeIdentityPrompt, isForcedImageRoutingKeyword, resolveZoeImageTurn, type PendingIdentityImageRequest } from '@/utils/zoeImageIntent';
 import { useNavigate } from 'react-router-dom';
 import { useZoeOmegaCoreIntegration } from '@/hooks/useZoeOmegaCoreIntegration';
-import { format, isToday, isYesterday } from 'date-fns';
-
-// Format timestamp for messages
-const formatMessageTime = (date: Date | string | undefined): string => {
-  if (!date) return '';
-  try {
-    const d = typeof date === 'string' ? new Date(date) : date;
-    if (isNaN(d.getTime())) return '';
-    if (isToday(d)) {
-      return format(d, 'h:mm a');
-    } else if (isYesterday(d)) {
-      return `Yesterday ${format(d, 'h:mm a')}`;
-    }
-    return format(d, 'MMM d, h:mm a');
-  } catch {
-    return '';
-  }
-};
+import { formatMessageTime, isRelationshipCommand } from '@/components/zoe/orbConversationUtils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
