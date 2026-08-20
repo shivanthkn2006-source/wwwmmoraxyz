@@ -70,7 +70,6 @@ import { AtlasHUD } from '@/components/atlas';
 import { useFriendRequests } from "@/hooks/useFriendRequests";
 import PageSeo from "@/components/seo/PageSeo";
 import NewContentBadge from '@/components/NewContentBadge';
-import { indexEntity } from '@/core/ports/useAmbientSearch';
 import { markPostsSeen, readUnseenPostIds, syncUnseenPostSnapshot, type FeedUpdateSource } from "@/lib/newPostGate";
 
 
@@ -1498,17 +1497,6 @@ const HomePage = () => {
         visibility: 'global',
       }).select('id').maybeSingle();
       if (error) throw error;
-
-      // Index the new short into the universal vector graph (fire-and-forget).
-      void indexEntity({
-        entityType: mediaType === 'video' ? 'loop_video' : 'post',
-        entityId: inserted?.id || '',
-        rawContent: postContent,
-        mediaUrl: mediaPreviewUrl || (mediaType === 'image' ? mediaUrl : undefined),
-        ownerId: user.id,
-        privacyLevel: 'public',
-        metadata: { mediaType, tags: metadata?.tags || [], source: 'home_loops_upload' },
-      });
 
       // Persist the short in the M'mora orb memory (offline cache + memory bridge)
       void rememberShortInOrbMemory(
