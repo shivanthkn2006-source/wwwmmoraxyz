@@ -163,6 +163,31 @@ Deno.serve(async (req) => {
     // drain the durable queue in small resumable batches.
     const limit = Math.max(1, Math.min(Number(body?.limit) || 5, 10));
     const db = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { persistSession: false } });
+
+    // Health/progress snapshot for the startup guard and the admin view.
+    if (body?.stats === true) {
+      const [indexed, pending, processing, failedRows, newest] = await Promise.all([
+        db.from('zoe_universal_index').select('id', { count: 'exact', head: true }),
+        db.from('zoe_search_index_queue').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+        db.from('zoe_search_index_queue').select('id', { count: 'exact', head: true }).eq('status', 'processing'),
+        db.from('zoe_search_index_queue').select('id,entity_type,entity_id,attempts,last_error,updated_at')
+          .eq('status', 'failed').order('updated_at', { ascending: false }).limit(20),
+        db.from('zoe_universal_index').select('updated_at').order('updated_at', { ascending: false }).limit(1).maybeSingle(),
+      ]);
+      return json({
+        requestId,
+        stats: {
+          indexed: indexed.count ?? 0,
+          pending: pending.count ?? 0,
+          processing: processing.count ?? 0,
+          failed: (failedRows.data || []).length,
+          newestIndexedAt: newest.data?.updated_at ?? null,
+        },
+        failures: failedRows.data || [],
+      });
+    }
+
+    // Keep each invocation inside the edge runtime budget; callers repeatedly
     const enqueued = body?.backfill === true ? await enqueueBackfill(db, user.id) : 0;
 
     const { data: jobs, error: queueError } = await db.from('zoe_search_index_queue')
