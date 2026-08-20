@@ -101,6 +101,46 @@ export const MoraZoeBirthDetailsPrompt: React.FC<Props> = ({ initial, onSave, on
           </div>
         </div>
 
+        <div className="mt-4 rounded-xl border border-border bg-muted/40 p-3">
+          <button
+            type="button"
+            onClick={() => setShowHelp((v) => !v)}
+            className="flex w-full items-center gap-2 text-left text-xs font-medium text-foreground"
+          >
+            <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />
+            Not sure of your birth time or place?
+            <ChevronDown
+              className={`ml-auto h-3.5 w-3.5 text-muted-foreground transition-transform ${showHelp ? 'rotate-180' : ''}`}
+            />
+          </button>
+
+          {showHelp && (
+            <div className="mt-3 space-y-3 text-[12px] leading-relaxed text-muted-foreground">
+              <div>
+                <p className="font-medium text-foreground">Where to find your birth time</p>
+                <ul className="mt-1 list-disc space-y-1 pl-4">
+                  <li>Your birth certificate — the time is usually printed next to the date.</li>
+                  <li>Hospital discharge or record card, or the maternity register.</li>
+                  <li>Ask a parent or an older relative who was there that day.</li>
+                  <li>Still unsure? Use your best guess — morning 08:00, midday 12:00, evening 18:00.</li>
+                </ul>
+              </div>
+              <div>
+                <p className="font-medium text-foreground">How to write your birth place</p>
+                <ul className="mt-1 list-disc space-y-1 pl-4">
+                  <li>Use <strong>City, Country</strong> — for example “Chennai, India”.</li>
+                  <li>Born in a small town? Use the nearest large city.</li>
+                  <li>The place sets your time zone, so your card arrives at your real local morning.</li>
+                </ul>
+              </div>
+              <p>
+                Accuracy matters most for the time: even 30 minutes shifts the reading. You can update
+                these details any time from your Zoe birth details page.
+              </p>
+            </div>
+          )}
+        </div>
+
         {error && <p className="mt-3 text-xs text-destructive">{error}</p>}
 
         <div className="mt-6 flex items-center gap-3">
