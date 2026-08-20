@@ -443,7 +443,14 @@ export async function runGeminiToolLoop(
     }
 
     // The pause → execute locally → hand the fact back.
-    contents.push({ role: 'model', parts: calls.map((c) => ({ functionCall: c.functionCall })) });
+    // Gemini 3.x requires the model turn to be echoed back verbatim, including
+    // `thoughtSignature` on each functionCall part — omitting it fails with 400.
+    contents.push({
+      role: 'model',
+      parts: calls.map((c) => (c.thoughtSignature
+        ? { functionCall: c.functionCall, thoughtSignature: c.thoughtSignature }
+        : { functionCall: c.functionCall })),
+    });
     const responseParts = calls.map((c) => {
       const name = c.functionCall.name as string;
       const args = (c.functionCall.args ?? {}) as Record<string, any>;
