@@ -13,6 +13,7 @@ interface DraggableHomeControlProps {
   className?: string;
   children: React.ReactNode;
   onActivate: () => void;
+  onPositionChange?: (position: Position) => void;
 }
 
 const CONTROL_SIZE = 36;
@@ -25,6 +26,7 @@ export default function DraggableHomeControl({
   className,
   children,
   onActivate,
+  onPositionChange,
 }: DraggableHomeControlProps) {
   const [position, setPosition] = useState<Position>(() => {
     try {
@@ -42,10 +44,15 @@ export default function DraggableHomeControl({
   }), []);
 
   useEffect(() => {
+    onPositionChange?.(position);
+  }, [position, onPositionChange]);
+
+  useEffect(() => {
     const onResize = () => setPosition((current) => clamp(current));
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, [clamp]);
+
 
   const blockZoeInteraction = (blocked: boolean) => {
     (window as Window & { __mmoraHomeControlDragging?: boolean }).__mmoraHomeControlDragging = blocked;
