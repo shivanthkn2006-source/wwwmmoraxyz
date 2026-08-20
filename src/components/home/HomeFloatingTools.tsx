@@ -18,8 +18,31 @@ const EDGE_GAP = 8;
 export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }: HomeFloatingToolsProps) {
   const [searchOpen, setSearchOpen] = React.useState(false);
   const [iconPosition, setIconPosition] = React.useState<{ x: number; y: number }>({ x: 8, y: 80 });
+  const [activeIndex, setActiveIndex] = React.useState(-1);
+  const inputRef = React.useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const { results, loading, error } = useHomeSearch(query, searchOpen);
+
+  React.useEffect(() => {
+    setActiveIndex(-1);
+  }, [query, searchOpen]);
+
+  React.useEffect(() => {
+    if (searchOpen) {
+      const id = window.setTimeout(() => inputRef.current?.focus(), 60);
+      return () => window.clearTimeout(id);
+    }
+  }, [searchOpen]);
+
+  // Global keyboard: Escape closes the sideways bar from anywhere.
+  React.useEffect(() => {
+    if (!searchOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setSearchOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [searchOpen]);
 
   const handleSelect = React.useCallback((result: HomeSearchResult) => {
     void recordHomeSearch(query, result);
@@ -34,9 +57,29 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
 
   const handleSubmit = React.useCallback((event: React.FormEvent) => {
     event.preventDefault();
+    if (activeIndex >= 0 && results[activeIndex]) {
+      handleSelect(results[activeIndex]);
+      return;
+    }
     if (!query.trim()) return;
     void recordHomeSearch(query.trim());
-  }, [query]);
+  }, [query, activeIndex, results, handleSelect]);
+
+  const handleInputKeyDown = React.useCallback((event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      setSearchOpen(false);
+      return;
+    }
+    if (!results.length) return;
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setActiveIndex((current) => (current + 1) % results.length);
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setActiveIndex((current) => (current <= 0 ? results.length - 1 : current - 1));
+    }
+  }, [results]);
 
   const handleIconPosition = React.useCallback((position: { x: number; y: number }) => {
     setIconPosition(position);
@@ -88,6 +131,9 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
         <form onSubmit={handleSubmit} className="flex min-w-0 flex-1 items-center gap-2 px-2">
           <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
           <Input
+            ref={inputRef}
+            role="searchbox"
+            onKeyDown={handleInputKeyDown}
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
             placeholder="Search posts, shorts, tags or creators"
@@ -112,17 +158,19 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
           }}
           onPointerDown={(event) => event.stopPropagation()}
         >
-          {loading && <p className="px-3 py-2 text-xs text-muted-foreground">Searching…</p>}
-          {!loading && error && <p className="px-3 py-2 text-xs text-muted-foreground">{error}</p>}
+          {loading && <p role="status" className="px-3 py-2 text-xs text-muted-foreground">Searching…</p>}
+          {!loading && error && <p role="alert" className="px-3 py-2 text-xs text-muted-foreground">{error}</p>}
           {!loading && !error && results.length === 0 && (
-            <p className="px-3 py-2 text-xs text-muted-foreground">No results for "{query.trim()}"</p>
+            <p role="status" className="px-3 py-2 text-xs text-muted-foreground">No results for "{query.trim()}"</p>
           )}
-          {results.map((result) => (
+          {results.map((result, index) => (
             <button
               key={`${result.type}-${result.id}`}
               type="button"
               onClick={() => handleSelect(result)}
-              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-muted/60"
+              onMouseEnter={() => setActiveIndex(index)}
+              aria-selected={index === activeIndex}
+              className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-muted/60 ${index === activeIndex ? 'bg-muted/60' : ''}`
             >
               {result.avatarUrl && (
                 <img src={result.avatarUrl} alt="" className="h-7 w-7 shrink-0 rounded-full object-cover" />
