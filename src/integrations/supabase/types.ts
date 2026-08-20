@@ -9322,6 +9322,51 @@ export type Database = {
         }
         Relationships: []
       }
+      zoe_universal_index: {
+        Row: {
+          content_synthesis: string
+          created_at: string
+          embedding: string | null
+          entity_id: string
+          entity_type: string
+          fts: unknown
+          id: string
+          metadata: Json
+          owner_id: string | null
+          privacy_level: string
+          social_weight: number
+          updated_at: string
+        }
+        Insert: {
+          content_synthesis: string
+          created_at?: string
+          embedding?: string | null
+          entity_id: string
+          entity_type: string
+          fts?: unknown
+          id?: string
+          metadata?: Json
+          owner_id?: string | null
+          privacy_level?: string
+          social_weight?: number
+          updated_at?: string
+        }
+        Update: {
+          content_synthesis?: string
+          created_at?: string
+          embedding?: string | null
+          entity_id?: string
+          entity_type?: string
+          fts?: unknown
+          id?: string
+          metadata?: Json
+          owner_id?: string | null
+          privacy_level?: string
+          social_weight?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       zoe_user_behavior: {
         Row: {
           average_session_duration: number | null
@@ -9905,6 +9950,23 @@ export type Database = {
       }
       validate_invite_code: { Args: { p_code: string }; Returns: Json }
       verify_astro_permissions: { Args: never; Returns: Json }
+      zoe_hybrid_search: {
+        Args: {
+          match_count?: number
+          query_embedding: string
+          query_text: string
+          rrf_k?: number
+        }
+        Returns: {
+          content_synthesis: string
+          entity_id: string
+          entity_type: string
+          id: string
+          metadata: Json
+          score: number
+          social_weight: number
+        }[]
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"

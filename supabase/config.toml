@@ -333,3 +333,9 @@ verify_jwt = false
 
 [functions.zoe-motivation]
 verify_jwt = false
+
+[functions.zoe-index-ingest]
+verify_jwt = false
+
+[functions.zoe-ambient-search]
+verify_jwt = true
