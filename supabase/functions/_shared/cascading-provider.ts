@@ -105,7 +105,7 @@ async function callGemmaPrimary(messages: Message[], opts: CascadeOptions): Prom
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        // NOTE: Groq decommissioned `gemma2-9b-it` (Jun 2026). `openai/gpt-oss-20b`
+        // NOTE: Groq retired the llama-3.x IDs (Aug 2026). `openai/gpt-oss-20b`
         // is Groq's currently-supported instant tier and is the supported P1 replacement.
         model: 'openai/gpt-oss-20b',
         messages,
@@ -241,9 +241,9 @@ export interface TierSpec {
 export function getDefaultTiers(_mode: CascadeMode = 'default', _lovableModel?: string): TierSpec[] {
   // Lovable Gateway (T5) REMOVED — sovereign free-provider cascade only.
   return [
-    { tier: 1, name: 'T1 · Groq Llama-3.1-8B (primary)', provider: 'groq',     model: 'openai/gpt-oss-20b',               envKey: 'GROQ_API_KEY',           call: callGemmaPrimary },
-    { tier: 2, name: 'T2 · Gemini 2.5 Flash',            provider: 'gemini',   model: 'gemini-3.5-flash',                   envKey: 'GOOGLE_AI_STUDIO_KEY',   call: callGemini },
-    { tier: 3, name: 'T3 · Llama-3.3-70B (Groq)',        provider: 'groq',     model: 'openai/gpt-oss-120b',            envKey: 'GROQ_API_KEY',           call: callGroqLlama },
+    { tier: 1, name: 'T1 · Groq GPT-OSS-20B (primary)', provider: 'groq',     model: 'openai/gpt-oss-20b',               envKey: 'GROQ_API_KEY',           call: callGemmaPrimary },
+    { tier: 2, name: 'T2 · Gemini 3.5 Flash',            provider: 'gemini',   model: 'gemini-3.5-flash',                   envKey: 'GOOGLE_AI_STUDIO_KEY',   call: callGemini },
+    { tier: 3, name: 'T3 · Groq GPT-OSS-120B',        provider: 'groq',     model: 'openai/gpt-oss-120b',            envKey: 'GROQ_API_KEY',           call: callGroqLlama },
     { tier: 4, name: 'T4 · OpenRouter Auto',             provider: 'openrouter', model: 'openrouter/auto',                        envKey: 'OPENROUTER_API_KEY',   call: callOpenRouter },
   ];
 }
