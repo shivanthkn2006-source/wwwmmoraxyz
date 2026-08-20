@@ -74,10 +74,17 @@ export default function DraggableHomeControl({
         event.preventDefault();
         event.stopPropagation();
       }}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          event.stopPropagation();
+          onActivate();
+        }
+      }}
       onPointerDown={(event) => {
         event.preventDefault();
         event.stopPropagation();
-        event.currentTarget.setPointerCapture(event.pointerId);
+        event.currentTarget.setPointerCapture?.(event.pointerId);
         pointerRef.current = {
           id: event.pointerId,
           startX: event.clientX,

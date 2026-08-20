@@ -30,6 +30,7 @@ export function useHomeSearch(query: string, enabled = true) {
     }
 
     let cancelled = false;
+    const controller = new AbortController();
     setLoading(true);
     setError(null);
 
@@ -42,14 +43,16 @@ export function useHomeSearch(query: string, enabled = true) {
             .from('public_profiles')
             .select('user_id, display_name, username, profile_photo_url')
             .or(`display_name.ilike.%${safe}%,username.ilike.%${safe}%`)
-            .limit(5),
+            .limit(5)
+            .abortSignal(controller.signal),
           supabase
             .from('posts')
             .select('id, content, user_id, created_at')
             .eq('visibility', 'global')
             .ilike('content', `%${safe}%`)
             .order('created_at', { ascending: false })
-            .limit(5),
+            .limit(5)
+            .abortSignal(controller.signal),
         ]);
 
         if (cancelled) return;
@@ -94,7 +97,7 @@ export function useHomeSearch(query: string, enabled = true) {
 
         setResults(next);
       } catch (err) {
-        if (!cancelled) {
+        if (!cancelled && !controller.signal.aborted) {
           console.error('[useHomeSearch]', err);
           setError('Search failed');
           setResults([]);
@@ -106,6 +109,7 @@ export function useHomeSearch(query: string, enabled = true) {
 
     return () => {
       cancelled = true;
+      controller.abort();
       clearTimeout(timer);
     };
   }, [query, enabled]);
