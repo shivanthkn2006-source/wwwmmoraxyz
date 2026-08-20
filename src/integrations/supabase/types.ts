@@ -4064,9 +4064,12 @@ export type Database = {
           location_lat: number | null
           location_lng: number | null
           location_name: string | null
+          media_is_heavy: boolean | null
           media_preview_url: string | null
+          media_size_bytes: number | null
           media_type: string | null
           media_url: string | null
+          preview_is_heavy: boolean | null
           private_timeline_id: string | null
           updated_at: string
           user_id: string
@@ -4082,9 +4085,12 @@ export type Database = {
           location_lat?: number | null
           location_lng?: number | null
           location_name?: string | null
+          media_is_heavy?: boolean | null
           media_preview_url?: string | null
+          media_size_bytes?: number | null
           media_type?: string | null
           media_url?: string | null
+          preview_is_heavy?: boolean | null
           private_timeline_id?: string | null
           updated_at?: string
           user_id: string
@@ -4100,9 +4106,12 @@ export type Database = {
           location_lat?: number | null
           location_lng?: number | null
           location_name?: string | null
+          media_is_heavy?: boolean | null
           media_preview_url?: string | null
+          media_size_bytes?: number | null
           media_type?: string | null
           media_url?: string | null
+          preview_is_heavy?: boolean | null
           private_timeline_id?: string | null
           updated_at?: string
           user_id?: string
@@ -9503,12 +9512,12 @@ export type Database = {
           comments_count?: number | null
           content?: string | null
           created_at?: string | null
-          has_deferred_media?: never
+          has_deferred_media?: boolean | null
           id?: string | null
           is_video?: boolean | null
           likes_count?: number | null
           media_preview_url?: never
-          media_size?: never
+          media_size?: number | null
           media_type?: string | null
           media_url?: never
           private_timeline_id?: string | null
@@ -9520,12 +9529,12 @@ export type Database = {
           comments_count?: number | null
           content?: string | null
           created_at?: string | null
-          has_deferred_media?: never
+          has_deferred_media?: boolean | null
           id?: string | null
           is_video?: boolean | null
           likes_count?: number | null
           media_preview_url?: never
-          media_size?: never
+          media_size?: number | null
           media_type?: string | null
           media_url?: never
           private_timeline_id?: string | null
