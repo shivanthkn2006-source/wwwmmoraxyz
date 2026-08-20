@@ -69,8 +69,8 @@ async function loadCanonical(db: ReturnType<typeof createClient>, job: QueueRow)
         mediaUrl: data.media_url,
         previewUrl: data.media_preview_url,
         createdAt: data.created_at,
-        authorName: profile?.display_name || profile?.username || null,
-        authorUsername: profile?.username || null,
+        authorName: author.name,
+        authorUsername: author.username,
       },
     };
   }
