@@ -4,6 +4,8 @@ import { Input } from '@/components/ui/input';
 import { useNavigate } from 'react-router-dom';
 import { useHomeSearch, recordHomeSearch, type HomeSearchResult } from '@/hooks/useHomeSearch';
 import DraggableHomeControl from '@/components/home/DraggableHomeControl';
+import { useAmbientSearch, type AmbientSearchRecord } from '@/core/ports/useAmbientSearch';
+import { routeForDispatch, routeForEntity, labelForRecord } from '@/lib/ambientDispatch';
 
 interface HomeFloatingToolsProps {
   query: string;
@@ -22,10 +24,18 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
   const inputRef = React.useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const { results, loading, error } = useHomeSearch(query, searchOpen);
+  const {
+    executeAmbientSearch,
+    isSynthesizing,
+    result: ambient,
+    error: ambientError,
+    reset: resetAmbient,
+  } = useAmbientSearch();
 
   React.useEffect(() => {
     setActiveIndex(-1);
-  }, [query, searchOpen]);
+    resetAmbient();
+  }, [query, searchOpen, resetAmbient]);
 
   React.useEffect(() => {
     if (searchOpen) {
@@ -61,9 +71,36 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
       handleSelect(results[activeIndex]);
       return;
     }
-    if (!query.trim()) return;
-    void recordHomeSearch(query.trim());
-  }, [query, activeIndex, results, handleSelect]);
+    const term = query.trim();
+    if (!term) return;
+    void recordHomeSearch(term);
+
+    // Route the submitted query through the ambient retrieval orchestrator.
+    void (async () => {
+      const started = performance.now();
+      const output = await executeAmbientSearch(term);
+      const ms = Math.round(performance.now() - started);
+      console.info('[ambient-search] submit', {
+        query: term,
+        ms,
+        intent: output?.intent?.intent,
+        nodes: output?.nodesEvaluated ?? 0,
+        dispatch: output?.dispatchAction?.action ?? null,
+      });
+      const dispatchRoute = routeForDispatch(output?.dispatchAction);
+      if (dispatchRoute) {
+        setSearchOpen(false);
+        navigate(dispatchRoute);
+      }
+    })();
+  }, [query, activeIndex, results, handleSelect, executeAmbientSearch, navigate]);
+
+  const handleAmbientRecord = React.useCallback((record: AmbientSearchRecord) => {
+    setSearchOpen(false);
+    navigate(routeForEntity(record.entity_type, record.entity_id));
+  }, [navigate]);
+
+
 
   const handleInputKeyDown = React.useCallback((event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Escape') {
@@ -160,7 +197,7 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
         >
           {loading && <p role="status" className="px-3 py-2 text-xs text-muted-foreground">Searching…</p>}
           {!loading && error && <p role="alert" className="px-3 py-2 text-xs text-muted-foreground">{error}</p>}
-          {!loading && !error && results.length === 0 && (
+          {!loading && !error && results.length === 0 && !ambient && !isSynthesizing && (
             <p role="status" className="px-3 py-2 text-xs text-muted-foreground">No results for "{query.trim()}"</p>
           )}
           {results.map((result, index) => (
@@ -183,6 +220,30 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
               </span>
             </button>
           ))}
+
+          {isSynthesizing && (
+            <p role="status" className="px-3 py-2 text-xs text-muted-foreground">Zoe is synthesizing…</p>
+          )}
+          {!isSynthesizing && ambientError && (
+            <p role="alert" className="px-3 py-2 text-xs text-muted-foreground">{ambientError}</p>
+          )}
+          {!isSynthesizing && ambient?.synthesis && (
+            <p className="px-3 py-2 text-xs leading-relaxed text-foreground/90">{ambient.synthesis}</p>
+          )}
+          {!isSynthesizing && (ambient?.records ?? []).map((record) => (
+            <button
+              key={`ambient-${record.id}`}
+              type="button"
+              onClick={() => handleAmbientRecord(record)}
+              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-muted/60"
+            >
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm text-foreground">{labelForRecord(record)}</span>
+                <span className="block truncate text-[11px] text-muted-foreground">{record.entity_type}</span>
+              </span>
+            </button>
+          ))}
+
         </div>
       )}
     </>
