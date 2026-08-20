@@ -24,6 +24,13 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
   const inputRef = React.useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const { results, loading, error } = useHomeSearch(query, searchOpen);
+  const {
+    executeAmbientSearch,
+    isSynthesizing,
+    result: ambient,
+    error: ambientError,
+    reset: resetAmbient,
+  } = useAmbientSearch();
 
   React.useEffect(() => {
     setActiveIndex(-1);
