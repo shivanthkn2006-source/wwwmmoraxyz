@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { CalendarClock, MapPin, X, Loader2 } from 'lucide-react';
+import { CalendarClock, MapPin, X, Loader2, HelpCircle, ChevronDown } from 'lucide-react';
 import type { BirthDetails } from '@/hooks/useBirthDetailsGate';
 
 interface Props {
