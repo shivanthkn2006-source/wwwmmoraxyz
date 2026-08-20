@@ -97,6 +97,29 @@ async function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
 
 // ───────────── Provider implementations ─────────────
 
+/**
+ * Groq's gpt-oss models are reasoning models: with a small token budget the whole
+ * budget can be spent on hidden reasoning, leaving `content` empty. We keep the
+ * reasoning effort low and, as a last resort, fall back to the reasoning text.
+ */
+function groqContent(data: any): string | null {
+  const msg = data?.choices?.[0]?.message;
+  const direct = typeof msg?.content === 'string' ? msg.content.trim() : '';
+  if (direct) return direct;
+  const reasoning = typeof msg?.reasoning === 'string' ? msg.reasoning.trim() : '';
+  return reasoning || null;
+}
+
+/** Gemini 3.x returns thought parts first — pick the first non-thought text part. */
+function geminiContent(data: any): string | null {
+  const parts = data?.candidates?.[0]?.content?.parts;
+  if (!Array.isArray(parts)) return null;
+  const visible = parts.filter((p: any) => !p?.thought && typeof p?.text === 'string' && p.text.trim());
+  if (visible.length) return visible.map((p: any) => p.text).join('').trim();
+  const anyText = parts.filter((p: any) => typeof p?.text === 'string' && p.text.trim());
+  return anyText.length ? anyText.map((p: any) => p.text).join('').trim() : null;
+}
+
 async function callGemmaPrimary(messages: Message[], opts: CascadeOptions): Promise<ProviderOutcome> {
   const apiKey = Deno.env.get('GROQ_API_KEY');
   if (!apiKey) return { content: null, status: null, reasonCode: 'missing_key', reasonText: 'GROQ_API_KEY not set' };
@@ -109,8 +132,9 @@ async function callGemmaPrimary(messages: Message[], opts: CascadeOptions): Prom
         // is Groq's currently-supported instant tier and is the supported P1 replacement.
         model: 'openai/gpt-oss-20b',
         messages,
-        max_tokens: opts.maxTokens ?? 500,
+        max_tokens: Math.max(opts.maxTokens ?? 500, 256),
         temperature: opts.temperature ?? 0.7,
+        reasoning_effort: 'low',
       }),
     }), opts.timeoutMs ?? 25_000);
     if (!resp.ok) {
@@ -119,7 +143,7 @@ async function callGemmaPrimary(messages: Message[], opts: CascadeOptions): Prom
       return { content: null, status: resp.status, reasonCode: code, reasonText: text };
     }
     const data = await resp.json();
-    const content = data.choices?.[0]?.message?.content ?? null;
+    const content = groqContent(data);
     if (!content) return { content: null, status: resp.status, reasonCode: 'empty_response', reasonText: 'no choices[0].content' };
     return { content, status: resp.status, reasonCode: 'success', reasonText: 'ok' };
   } catch (e: any) {
@@ -127,6 +151,7 @@ async function callGemmaPrimary(messages: Message[], opts: CascadeOptions): Prom
     return { content: null, status: null, reasonCode: isTimeout ? 'timeout' : 'network_error', reasonText: String(e?.message ?? e) };
   }
 }
+
 
 async function callGemini(messages: Message[], opts: CascadeOptions): Promise<ProviderOutcome> {
   const apiKey = Deno.env.get('GOOGLE_AI_STUDIO_KEY') || Deno.env.get('GEMINI_API_KEY');
