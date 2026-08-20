@@ -170,7 +170,7 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
               onClick={() => handleSelect(result)}
               onMouseEnter={() => setActiveIndex(index)}
               aria-selected={index === activeIndex}
-              className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-muted/60 ${index === activeIndex ? 'bg-muted/60' : ''}`
+              className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-muted/60 ${index === activeIndex ? 'bg-muted/60' : ''}`}
             >
               {result.avatarUrl && (
                 <img src={result.avatarUrl} alt="" className="h-7 w-7 shrink-0 rounded-full object-cover" />
