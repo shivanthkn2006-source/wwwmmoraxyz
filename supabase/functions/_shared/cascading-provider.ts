@@ -4,11 +4,11 @@
  * SOVEREIGN CASCADE MODULE — Smart Auto-Routing with structured fallback reasons
  *
  * Default provider order (T1 primary, T5 absolute last-resort):
- *   T1  Groq • llama-3.1-8b-instant      (primary, free, lowest latency)
- *   T2  Google AI Studio • gemini-2.0-flash   (direct, free tier)
- *   T3  Groq • llama-3.3-70b-versatile        (quality speed tier)
+ *   T1  Groq • openai/gpt-oss-20b      (primary, free, lowest latency)
+ *   T2  Google AI Studio • gemini-3.5-flash   (direct, free tier)
+ *   T3  Groq • openai/gpt-oss-120b        (quality speed tier)
  *   T4  OpenRouter • llama-3.3-70b free       (backup speed tier)
- *   T5  Lovable Gateway • google/gemini-2.5-flash (paid credits, last-resort only)
+ *   T5  Lovable Gateway • google/gemini-3.5-flash (paid credits, last-resort only)
  *
  * Use mode: 't1-primary' to boost T1 timeout and keep T5 as the true fallback.
  * Every attempt is recorded with {tier, provider, model, ok, status, reasonCode,
@@ -105,9 +105,9 @@ async function callGemmaPrimary(messages: Message[], opts: CascadeOptions): Prom
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        // NOTE: Groq decommissioned `gemma2-9b-it` (Jun 2026). `llama-3.1-8b-instant`
+        // NOTE: Groq decommissioned `gemma2-9b-it` (Jun 2026). `openai/gpt-oss-20b`
         // is Groq's currently-supported instant tier and is the supported P1 replacement.
-        model: 'llama-3.1-8b-instant',
+        model: 'openai/gpt-oss-20b',
         messages,
         max_tokens: opts.maxTokens ?? 500,
         temperature: opts.temperature ?? 0.7,
@@ -142,7 +142,7 @@ async function callGemini(messages: Message[], opts: CascadeOptions): Promise<Pr
     };
     if (systemMsg) body.systemInstruction = { parts: [{ text: systemMsg }] };
     const resp = await withTimeout(fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`,
       { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) },
     ), opts.timeoutMs ?? 25_000);
     if (!resp.ok) {
@@ -168,7 +168,7 @@ async function callGroqLlama(messages: Message[], opts: CascadeOptions): Promise
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
+        model: 'openai/gpt-oss-120b',
         messages,
         max_tokens: opts.maxTokens ?? 500,
         temperature: opts.temperature ?? 0.7,
@@ -241,9 +241,9 @@ export interface TierSpec {
 export function getDefaultTiers(_mode: CascadeMode = 'default', _lovableModel?: string): TierSpec[] {
   // Lovable Gateway (T5) REMOVED — sovereign free-provider cascade only.
   return [
-    { tier: 1, name: 'T1 · Groq Llama-3.1-8B (primary)', provider: 'groq',     model: 'llama-3.1-8b-instant',               envKey: 'GROQ_API_KEY',           call: callGemmaPrimary },
-    { tier: 2, name: 'T2 · Gemini 2.5 Flash',            provider: 'gemini',   model: 'gemini-2.5-flash',                   envKey: 'GOOGLE_AI_STUDIO_KEY',   call: callGemini },
-    { tier: 3, name: 'T3 · Llama-3.3-70B (Groq)',        provider: 'groq',     model: 'llama-3.3-70b-versatile',            envKey: 'GROQ_API_KEY',           call: callGroqLlama },
+    { tier: 1, name: 'T1 · Groq Llama-3.1-8B (primary)', provider: 'groq',     model: 'openai/gpt-oss-20b',               envKey: 'GROQ_API_KEY',           call: callGemmaPrimary },
+    { tier: 2, name: 'T2 · Gemini 2.5 Flash',            provider: 'gemini',   model: 'gemini-3.5-flash',                   envKey: 'GOOGLE_AI_STUDIO_KEY',   call: callGemini },
+    { tier: 3, name: 'T3 · Llama-3.3-70B (Groq)',        provider: 'groq',     model: 'openai/gpt-oss-120b',            envKey: 'GROQ_API_KEY',           call: callGroqLlama },
     { tier: 4, name: 'T4 · OpenRouter Auto',             provider: 'openrouter', model: 'openrouter/auto',                        envKey: 'OPENROUTER_API_KEY',   call: callOpenRouter },
   ];
 }
