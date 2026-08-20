@@ -1,0 +1,1 @@
+DELETE FROM public.zoe_universal_index WHERE metadata->>'test' = 'true';
