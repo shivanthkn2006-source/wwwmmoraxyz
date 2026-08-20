@@ -37,18 +37,25 @@ There is a homegrown `errorBoundaryLogger` storing errors in localStorage only �
 
 Confirmed sizes: `ZoeOrbConversationPanel.tsx` 4,604 lines, `ZoeAssistant.tsx` 4,446, `ZoeInfinityUnlocked.tsx` 4,170, `VROMEGAWorld.tsx` 3,313, `HomePage.tsx` 2,149. Split one per pass, extracting hooks and subcomponents behind unchanged props so behaviour is byte-identical. Start with `HomePage.tsx`, since that is where edits keep causing regressions.
 
-## Step 4: video transcoding CDN
+## Step 4: prune dormant tables and functions
 
-Today loops are transcoded in-browser to 480p WebM only when the file is ≥5MB, so quality and consistency vary. Move uploads to a hosted transcoder (Mux or Cloudflare Stream) with HLS playback, poster generation, and adaptive bitrate. This one needs a paid third-party account and a key.
+~200 tables and 125 edge functions. Produce a usage report (last-write timestamps, function invocation counts), mark dead ones, then remove in a reviewed batch after you approve the list. Nothing is dropped without your sign-off. Also revoke `EXECUTE` on the security-definer functions the linter flags that no longer need public access.
 
-## Step 5: prune dormant tables and functions
+## Step 5: tests around feed and auth
 
-~200 tables and 125 edge functions. Produce a usage report (last-write timestamps, function invocation counts), mark dead ones, then remove in a reviewed batch after you approve the list. Also revoke `EXECUTE` on the security-definer functions the linter flags that no longer need public access.
+Coverage is near zero. Add Playwright specs for: sign-in and session persistence, feed loads with posts visible and fitted, loop rail single-pass, and Zoe orb replying. Wire `scripts/check-no-lovable-ai.mjs` into the same CI run so the gateway can never come back. Tests are additive — no app code changes.
 
-## Step 6: tests around feed and auth
+(The video transcoding CDN step has been removed at your request.)
 
-Coverage is near zero. Add Playwright specs for: sign-in and session persistence, feed loads with posts visible and fitted, loop rail single-pass, and Zoe orb replying. Wire `scripts/check-no-lovable-ai.mjs` into the same CI run so the gateway can never come back.
+## Non-regression rules for every step
+
+- No behaviour changes to any existing screen, feed, Zoe flow, or upload path. Nothing visual changes.
+- Before each policy tightening, the client code is checked for a browser-side read/write on that table; if one exists, the policy keeps that path working instead of breaking it.
+- Mega-file splits are pure extraction: same props, same hooks order, same JSX output — no logic rewrites.
+- Each step ships on its own and is verified (scanner re-run, preview loaded, console checked) before the next begins.
+- Anything destructive (dropping a table or function) waits for your explicit approval with the list in front of you.
 
 ## Sequencing
 
-Steps 1 and 2 are the ones with real risk attached today. Steps 3–6 are quality and cost work. I would do step 1 as its own pass, then stop for your review before step 2.
+Steps 1 and 2 carry the real risk today. Steps 3–5 are quality work. Step 1 runs as its own pass, then I stop for your review before step 2.
+
