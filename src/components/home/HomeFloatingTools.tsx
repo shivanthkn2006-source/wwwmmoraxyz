@@ -34,7 +34,8 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
 
   React.useEffect(() => {
     setActiveIndex(-1);
-  }, [query, searchOpen]);
+    resetAmbient();
+  }, [query, searchOpen, resetAmbient]);
 
   React.useEffect(() => {
     if (searchOpen) {
