@@ -18,7 +18,6 @@ const EDGE_GAP = 8;
 export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }: HomeFloatingToolsProps) {
   const [searchOpen, setSearchOpen] = React.useState(false);
   const [iconPosition, setIconPosition] = React.useState<{ x: number; y: number }>({ x: 8, y: 80 });
-  const [submittedQuery, setSubmittedQuery] = React.useState('');
   const navigate = useNavigate();
   const { results, loading, error } = useHomeSearch(query, searchOpen);
 
@@ -36,7 +35,6 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
   const handleSubmit = React.useCallback((event: React.FormEvent) => {
     event.preventDefault();
     if (!query.trim()) return;
-    setSubmittedQuery(query.trim());
     void recordHomeSearch(query.trim());
   }, [query]);
 
