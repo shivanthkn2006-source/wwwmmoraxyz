@@ -85,21 +85,37 @@ Deno.serve(async (req) => {
       privacyLevel,
       socialWeight,
       metadata,
+      requestId: clientRequestId,
     } = await req.json();
 
-    if (!entityType || !entityId) return json({ error: 'entityType and entityId are required' }, 400);
+    const requestId = clientRequestId || crypto.randomUUID();
+    const t0 = performance.now();
+
+    if (!entityType || !entityId) return json({ error: 'entityType and entityId are required', requestId }, 400);
+    console.log('[zoe-index-ingest:req]', JSON.stringify({ requestId, entityType, entityId, hasMedia: Boolean(mediaUrl) }));
 
     let synthesizedText = (rawContent || '').toString().trim();
 
+    let visionMs = 0;
     if (mediaUrl) {
+      const tVision = performance.now();
       const visuals = await describeMedia(mediaUrl);
+      visionMs = Math.round(performance.now() - tVision);
       if (visuals) synthesizedText = `${synthesizedText}\n[Visual Data]: ${visuals}`.trim();
+      console.log('[zoe-index-ingest:vision]', JSON.stringify({ requestId, visionMs, extractedChars: visuals.length }));
     }
 
-    if (!synthesizedText) return json({ error: 'Nothing to index (empty synthesis)' }, 400);
+    if (!synthesizedText) return json({ error: 'Nothing to index (empty synthesis)', requestId }, 400);
 
+    const tEmbed = performance.now();
     const embedding = await embedText(synthesizedText);
-    if (!embedding) return json({ error: 'Failed to generate embedding vector' }, 502);
+    const embedMs = Math.round(performance.now() - tEmbed);
+    if (!embedding) {
+      console.error('[zoe-index-ingest:embed]', JSON.stringify({ requestId, embedMs, error: 'embedding failed' }));
+      return json({ error: 'Failed to generate embedding vector', requestId }, 502);
+    }
+    console.log('[zoe-index-ingest:embed]', JSON.stringify({ requestId, embedMs, dims: embedding.length }));
+    const tWrite = performance.now();
 
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { persistSession: false } });
     const { error: dbError } = await supabase
@@ -120,10 +136,21 @@ Deno.serve(async (req) => {
       );
 
     if (dbError) throw dbError;
+    const writeMs = Math.round(performance.now() - tWrite);
+    const totalMs = Math.round(performance.now() - t0);
+    console.log('[zoe-index-ingest:res]', JSON.stringify({
+      requestId, visionMs, embedMs, writeMs, totalMs, indexedCharacters: synthesizedText.length,
+    }));
 
-    return json({ success: true, indexedCharacters: synthesizedText.length, dims: embedding.length });
+    return json({
+      success: true,
+      requestId,
+      indexedCharacters: synthesizedText.length,
+      dims: embedding.length,
+      timings: { visionMs, embedMs, writeMs, totalMs },
+    });
   } catch (err: any) {
-    console.error('[zoe-index-ingest]', err);
+    console.error('[zoe-index-ingest:error]', err?.message || err);
     return json({ error: err?.message || 'Ingest failed' }, 500);
   }
 });

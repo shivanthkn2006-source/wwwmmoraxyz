@@ -37,10 +37,44 @@ function makeBuilder(table: string) {
   return builder;
 }
 
+const invokeCalls: Array<{ name: string; options: any }> = [];
+let ambientResponse: any = {
+  data: {
+    requestId: 'as-test',
+    synthesis: 'Here is what I found on your loops.',
+    intent: { intent: 'informational', requiresAction: false, normalizedQuery: 'zoe' },
+    nodesEvaluated: 1,
+    records: [
+      {
+        id: 'idx-1',
+        entity_type: 'loop_video',
+        entity_id: 'loop-9',
+        content_synthesis: 'Skateboarding loop at sunset',
+        metadata: {},
+        social_weight: 1,
+        score: 0.9,
+      },
+    ],
+    timings: { routeMs: 40, retrievalMs: 12, synthesisMs: 300, totalMs: 360 },
+  },
+  error: null,
+};
+
+const TEST_JWT = 'test-jwt-token';
+
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
     from: vi.fn((table: string) => makeBuilder(table)),
-    auth: { getUser: vi.fn(() => Promise.resolve({ data: { user: null } })) },
+    auth: {
+      getUser: vi.fn(() => Promise.resolve({ data: { user: { id: 'u-me' } } })),
+      getSession: vi.fn(() => Promise.resolve({ data: { session: { access_token: TEST_JWT, user: { id: 'u-me' } } } })),
+    },
+    functions: {
+      invoke: vi.fn(async (name: string, options: any) => {
+        invokeCalls.push({ name, options });
+        return ambientResponse;
+      }),
+    },
   },
 }));
 
@@ -70,6 +104,7 @@ function toggleSearch() {
 describe('HomeFloatingTools sideways search', () => {
   beforeEach(() => {
     selectCalls.length = 0;
+    invokeCalls.length = 0;
     navigateSpy.mockReset();
     vi.useRealTimers();
   });
@@ -132,5 +167,56 @@ describe('HomeFloatingTools sideways search', () => {
     await new Promise((r) => setTimeout(r, 400));
     // one profiles + one posts query only
     expect(selectCalls.length).toBe(2);
+  });
+
+  it('routes submission through zoe-ambient-search with the authenticated client', async () => {
+    const { supabase } = await import('@/integrations/supabase/client');
+    render(<Harness />);
+    toggleSearch();
+    const input = screen.getByRole('searchbox');
+    fireEvent.change(input, { target: { value: 'sunset loops' } });
+    fireEvent.submit(input.closest('form')!);
+
+    await waitFor(() => expect(invokeCalls.length).toBe(1), { timeout: 3000 });
+    expect(invokeCalls[0].name).toBe('zoe-ambient-search');
+    expect(invokeCalls[0].options.body.queryText).toBe('sunset loops');
+    expect(typeof invokeCalls[0].options.body.requestId).toBe('string');
+
+    // The shared client carries the current user's JWT for the edge call.
+    const { data } = await (supabase as any).auth.getSession();
+    expect(data.session.access_token).toBe(TEST_JWT);
+
+    await waitFor(() => expect(screen.getByText(/Here is what I found/)).toBeTruthy());
+  });
+
+  it('navigates to the entity route when an ambient record is chosen', async () => {
+    render(<Harness />);
+    toggleSearch();
+    const input = screen.getByRole('searchbox');
+    fireEvent.change(input, { target: { value: 'sunset loops' } });
+    fireEvent.submit(input.closest('form')!);
+
+    const record = await screen.findByText('Skateboarding loop at sunset', undefined, { timeout: 3000 });
+    fireEvent.click(record.closest('button')!);
+    expect(navigateSpy).toHaveBeenCalledWith('/home?post=loop-9');
+  });
+
+  it('follows a <zoe_dispatch> action returned by the orchestrator', async () => {
+    ambientResponse = {
+      data: {
+        synthesis: 'Opening your profile.\n<zoe_dispatch>{"action":"OPEN_PROFILE","payload":{"userId":"u-42"}}</zoe_dispatch>',
+        intent: { intent: 'actionable', requiresAction: true, normalizedQuery: 'open my profile' },
+        nodesEvaluated: 0,
+        records: [],
+      },
+      error: null,
+    };
+    render(<Harness />);
+    toggleSearch();
+    const input = screen.getByRole('searchbox');
+    fireEvent.change(input, { target: { value: 'open my profile' } });
+    fireEvent.submit(input.closest('form')!);
+
+    await waitFor(() => expect(navigateSpy).toHaveBeenCalledWith('/profile/u-42'), { timeout: 3000 });
   });
 });
