@@ -158,12 +158,18 @@ Deno.serve(async (req) => {
   if (!authHeader) return json({ error: 'Unauthorized' }, 401);
 
   try {
-    const { queryText, dhfContext, matchCount } = await req.json();
+    const { queryText, dhfContext, matchCount, requestId: clientRequestId } = await req.json();
+    const requestId = clientRequestId || crypto.randomUUID();
+    const t0 = performance.now();
     const term = (queryText || '').toString().trim();
-    if (!term) return json({ error: 'queryText is required' }, 400);
+    if (!term) return json({ error: 'queryText is required', requestId }, 400);
+    console.log('[zoe-ambient-search:req]', JSON.stringify({ requestId, chars: term.length, matchCount: matchCount ?? 10 }));
 
     // 1. Fast intent routing + 2. query vector (parallel).
+    const tRoute = performance.now();
     const [parsedIntent, queryVector] = await Promise.all([routeIntent(term), embedText(term)]);
+    const routeMs = Math.round(performance.now() - tRoute);
+    console.log('[zoe-ambient-search:intent]', JSON.stringify({ requestId, routeMs, intent: parsedIntent.intent, requiresAction: parsedIntent.requiresAction, embedded: Boolean(queryVector) }));
 
     // 3. RRF hybrid search under the caller's RLS context.
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -171,12 +177,18 @@ Deno.serve(async (req) => {
       auth: { persistSession: false },
     });
 
+    const tSearch = performance.now();
     const { data: retrievedRecords, error: searchError } = await supabase.rpc('zoe_hybrid_search', {
       query_embedding: queryVector ? JSON.stringify(queryVector) : null,
       query_text: term,
       match_count: typeof matchCount === 'number' ? matchCount : 10,
     });
-    if (searchError) throw searchError;
+    const retrievalMs = Math.round(performance.now() - tSearch);
+    if (searchError) {
+      console.error('[zoe-ambient-search:retrieval]', JSON.stringify({ requestId, retrievalMs, error: searchError.message }));
+      throw searchError;
+    }
+    console.log('[zoe-ambient-search:retrieval]', JSON.stringify({ requestId, retrievalMs, nodes: retrievedRecords?.length || 0 }));
 
     // 4. Ambient synthesis + agentic dispatch.
     const systemPrompt = `[SYSTEM DIRECTIVE: ZOE AMBIENT SYNTHESIS CORE]
@@ -202,17 +214,28 @@ INSTRUCTIONS:
 }
 </zoe_dispatch>`;
 
+    const tSynth = performance.now();
     const answer = await synthesize(systemPrompt, term);
+    const synthesisMs = Math.round(performance.now() - tSynth);
+    const totalMs = Math.round(performance.now() - t0);
+    const hasDispatch = /<zoe_dispatch>/.test(answer || '');
+    console.log('[zoe-ambient-search:res]', JSON.stringify({
+      requestId, routeMs, retrievalMs, synthesisMs, totalMs,
+      answerChars: (answer || '').length, hasDispatch,
+      degraded: { embedding: !queryVector, synthesis: !answer },
+    }));
 
     return json({
+      requestId,
       synthesis: answer || 'No synthesis generated.',
       intent: parsedIntent,
       nodesEvaluated: retrievedRecords?.length || 0,
       records: retrievedRecords || [],
       degraded: { embedding: !queryVector, synthesis: !answer },
+      timings: { routeMs, retrievalMs, synthesisMs, totalMs },
     });
   } catch (err: any) {
-    console.error('[zoe-ambient-search]', err);
+    console.error('[zoe-ambient-search:error]', err?.message || err);
     return json({ error: err?.message || 'Ambient search failed' }, 500);
   }
 });
