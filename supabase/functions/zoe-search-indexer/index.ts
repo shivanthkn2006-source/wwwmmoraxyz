@@ -39,11 +39,15 @@ function sanitizedError(error: unknown): string {
 }
 
 /** Author attribution so searching a person's name also returns their content. */
-async function authorLine(db: ReturnType<typeof createClient>, userId: string): Promise<string> {
+async function loadAuthor(db: ReturnType<typeof createClient>, userId: string) {
   const { data } = await db.from('profiles')
     .select('display_name,username').eq('user_id', userId).maybeSingle();
   const parts = [data?.display_name, data?.username ? `@${data.username}` : ''].filter(Boolean);
-  return parts.length ? `By ${parts.join(' ')}` : '';
+  return {
+    line: parts.length ? `By ${parts.join(' ')}` : '',
+    name: (data?.display_name as string | null) || (data?.username as string | null) || null,
+    username: (data?.username as string | null) || null,
+  };
 }
 
 async function loadCanonical(db: ReturnType<typeof createClient>, job: QueueRow): Promise<CanonicalEntity | null> {
