@@ -76,6 +76,13 @@ export const useAmbientSearch = () => {
       console.info('[zoe-ambient-search:req]', { requestId, query: term });
 
       try {
+        // Drain a small durable indexing batch first. Database triggers create
+        // jobs, so an interrupted upload/search is safely retried next time.
+        const { error: indexerError } = await supabase.functions.invoke('zoe-search-indexer', {
+          body: { limit: 5 },
+        });
+        if (indexerError) console.warn('[zoe-search-indexer] background batch failed:', indexerError.message);
+
         const { data, error: fnError } = await supabase.functions.invoke('zoe-ambient-search', {
           body: { queryText: term, dhfContext: dhfContext || {}, requestId },
         });
@@ -179,52 +186,5 @@ export const useAmbientSearch = () => {
   return { executeAmbientSearch, isSynthesizing, result, error, reset, debug };
 
 };
-
-/** Fire-and-forget indexing of any platform entity into the universal vector graph. */
-export async function indexEntity(input: {
-  entityType: 'loop_video' | 'chat' | 'dhf_node' | 'spot' | '3d_asset' | 'post' | string;
-  entityId: string;
-  rawContent?: string;
-  mediaUrl?: string;
-  ownerId?: string;
-  privacyLevel?: 'public' | 'friends' | 'private';
-  socialWeight?: number;
-  metadata?: Record<string, any>;
-}): Promise<boolean> {
-  if (!input?.entityType || !input?.entityId) {
-    console.warn('[zoe-index-ingest:req] skipped — entityType/entityId required', input);
-    return false;
-  }
-  const requestId = `ix-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-  const startedAt = performance.now();
-  console.info('[zoe-index-ingest:req]', {
-    requestId,
-    entityType: input.entityType,
-    entityId: input.entityId,
-    hasMedia: Boolean(input.mediaUrl),
-    contentChars: (input.rawContent || '').length,
-  });
-  try {
-    const { data, error } = await supabase.functions.invoke('zoe-index-ingest', {
-      body: { ...input, requestId },
-    });
-    const roundTripMs = Math.round(performance.now() - startedAt);
-    if (error || data?.error) {
-      console.warn('[zoe-index-ingest:res]', { requestId, roundTripMs, error: error?.message || data?.error });
-      return false;
-    }
-    console.info('[zoe-index-ingest:res]', {
-      requestId,
-      roundTripMs,
-      indexedCharacters: data?.indexedCharacters ?? 0,
-      dims: data?.dims ?? null,
-      serverTimings: data?.timings ?? null,
-    });
-    return true;
-  } catch (e) {
-    console.warn('[zoe-index-ingest:res] threw', { requestId, error: e });
-    return false;
-  }
-}
 
 export default useAmbientSearch;

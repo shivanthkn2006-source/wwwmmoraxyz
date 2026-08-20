@@ -19,7 +19,6 @@ import {
   isSpeechRecognitionSupported 
 } from '@/utils/micPermissionManager';
 import { useNeuroSymbolicGuard } from '@/hooks/useNeuroSymbolicGuard';
-import { indexEntity } from '@/core/ports/useAmbientSearch';
 
 interface DailyUsage {
   text: number;
@@ -627,17 +626,6 @@ const WebdropPage = () => {
         .select('id')
         .maybeSingle();
       if (error) throw error;
-
-      // Index the new post into the universal vector graph (fire-and-forget).
-      void indexEntity({
-        entityType: generatedContent.type === 'image' ? 'image' : 'post',
-        entityId: insertedPost?.id || '',
-        rawContent: (postData as any).content || imageCaption || '',
-        mediaUrl: (postData as any).media_url || undefined,
-        ownerId: user.id,
-        privacyLevel: actualVisibility === 'global' ? 'public' : 'friends',
-        metadata: { source: 'webdrop', visibility: actualVisibility },
-      });
 
       const successMessage = privateTimelineId 
         ? 'Posted to private timeline!'

@@ -177,10 +177,11 @@ describe('HomeFloatingTools sideways search', () => {
     fireEvent.change(input, { target: { value: 'sunset loops' } });
     fireEvent.submit(input.closest('form')!);
 
-    await waitFor(() => expect(invokeCalls.length).toBe(1), { timeout: 3000 });
-    expect(invokeCalls[0].name).toBe('zoe-ambient-search');
-    expect(invokeCalls[0].options.body.queryText).toBe('sunset loops');
-    expect(typeof invokeCalls[0].options.body.requestId).toBe('string');
+    await waitFor(() => expect(invokeCalls.some((call) => call.name === 'zoe-ambient-search')).toBe(true), { timeout: 3000 });
+    const ambientCall = invokeCalls.find((call) => call.name === 'zoe-ambient-search');
+    expect(invokeCalls.some((call) => call.name === 'zoe-search-indexer')).toBe(true);
+    expect(ambientCall?.options.body.queryText).toBe('sunset loops');
+    expect(typeof ambientCall?.options.body.requestId).toBe('string');
 
     // The shared client carries the current user's JWT for the edge call.
     const { data } = await (supabase as any).auth.getSession();
