@@ -26,7 +26,7 @@ const GOOGLE_KEY = Deno.env.get('GOOGLE_AI_STUDIO_KEY') || Deno.env.get('GEMINI_
 // Live model ids (verified Aug 2026).
 const GROQ_ROUTER_MODEL = 'openai/gpt-oss-20b';
 const OPENROUTER_ROUTER_MODEL = 'meta-llama/llama-3.3-70b-instruct';
-const GEMINI_SYNTH_MODEL = 'gemini-2.5-flash';
+const GEMINI_SYNTH_MODEL = 'gemini-3.6-flash';
 
 type Intent = {
   intent: 'informational' | 'actionable' | 'memory_recall' | 'academic';
