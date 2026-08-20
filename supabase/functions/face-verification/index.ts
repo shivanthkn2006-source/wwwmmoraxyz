@@ -48,7 +48,7 @@ serve(async (req) => {
       );
     }
     const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
-    const GEMINI_MODEL = 'gemini-2.5-flash';
+    const GEMINI_MODEL = 'gemini-3.5-flash';
     const geminiHeaders = {
       'Authorization': `Bearer ${googleApiKey}`,
       'Content-Type': 'application/json',
@@ -256,7 +256,7 @@ serve(async (req) => {
           user_id: verifiedUserId,
           event_type: 'face_verification_enrolled',
           event_status: 'success',
-          metadata: { ai_model: 'gemini-2.5-pro' }
+          metadata: { ai_model: 'gemini-3.1-pro-preview' }
         });
 
         return new Response(
@@ -343,7 +343,7 @@ serve(async (req) => {
           event_status: isMatch ? 'success' : 'failed',
           metadata: { 
             match_score: matchScore,
-            ai_model: 'gemini-2.5-pro'
+            ai_model: 'gemini-3.1-pro-preview'
           }
         });
 
@@ -452,7 +452,7 @@ serve(async (req) => {
           event_status: isMatch ? 'success' : 'failed',
           metadata: { 
             match_score: matchScore,
-            ai_model: 'gemini-2.5-pro'
+            ai_model: 'gemini-3.1-pro-preview'
           }
         });
 

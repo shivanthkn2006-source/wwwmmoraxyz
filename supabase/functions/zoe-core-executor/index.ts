@@ -241,18 +241,18 @@ function verifyConstitutionalLaw(
 // Model selection — sovereign Groq only (Lovable Gateway removed)
 const MODEL_SELECTION: Record<ThinkingLevel, { primary: string; fallbacks: string[]; latencyTarget: number }> = {
   'low': {
-    primary: 'llama-3.1-8b-instant',
-    fallbacks: ['llama-3.3-70b-versatile'],
+    primary: 'openai/gpt-oss-20b',
+    fallbacks: ['openai/gpt-oss-120b'],
     latencyTarget: 500
   },
   'medium': {
-    primary: 'llama-3.3-70b-versatile',
-    fallbacks: ['llama-3.1-8b-instant'],
+    primary: 'openai/gpt-oss-120b',
+    fallbacks: ['openai/gpt-oss-20b'],
     latencyTarget: 1000
   },
   'high': {
-    primary: 'llama-3.3-70b-versatile',
-    fallbacks: ['llama-3.1-8b-instant'],
+    primary: 'openai/gpt-oss-120b',
+    fallbacks: ['openai/gpt-oss-20b'],
     latencyTarget: 5000
   }
 };

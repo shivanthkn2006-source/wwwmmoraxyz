@@ -283,18 +283,18 @@ Remember: You are not just answering questions—you are genuinely helping someo
         'Authorization': `Bearer ${GROQ_API_KEY}`,
         'Content-Type': 'application/json',
       },
-      body: groqBody('llama-3.3-70b-versatile'),
+      body: groqBody('openai/gpt-oss-120b'),
     });
 
     if (!response.ok && (response.status === 400 || response.status === 404 || response.status === 503)) {
-      console.log('Groq 70B unavailable, falling back to llama-3.1-8b-instant...');
+      console.log('Groq 70B unavailable, falling back to openai/gpt-oss-20b...');
       response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${GROQ_API_KEY}`,
           'Content-Type': 'application/json',
         },
-        body: groqBody('llama-3.1-8b-instant'),
+        body: groqBody('openai/gpt-oss-20b'),
       });
     }
 

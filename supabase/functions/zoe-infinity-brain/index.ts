@@ -105,7 +105,7 @@ async function tryGoogleAI(systemPrompt: string, messages: Message[], mode: Inte
   if (!apiKey) return null;
   
   try {
-    const model = mode === 'pro' ? 'gemini-2.0-flash' : 'gemini-2.0-flash';
+    const model = mode === 'pro' ? 'gemini-3.5-flash' : 'gemini-3.5-flash';
     const geminiMessages = messages.map(m => ({
       role: m.role === 'assistant' ? 'model' : 'user',
       parts: [{ text: m.content }],
@@ -147,7 +147,7 @@ async function tryGroq(systemPrompt: string, messages: Message[], mode: Intellig
   if (!apiKey) return null;
   
   try {
-    const model = "llama-3.3-70b-versatile";
+    const model = "openai/gpt-oss-120b";
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -486,7 +486,7 @@ Be factual. Use real, plausible URLs from authoritative sources. Return ONLY the
   
   if (googleKey) {
     try {
-      const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${googleKey}`, {
+      const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${googleKey}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -508,7 +508,7 @@ Be factual. Use real, plausible URLs from authoritative sources. Return ONLY the
         method: "POST",
         headers: { Authorization: `Bearer ${groqKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "llama-3.3-70b-versatile",
+          model: "openai/gpt-oss-120b",
           messages: [{ role: "user", content: searchPrompt }],
           max_tokens: 500, temperature: 0.2,
         }),
@@ -523,7 +523,7 @@ Be factual. Use real, plausible URLs from authoritative sources. Return ONLY the
         method: "POST",
         headers: { Authorization: `Bearer ${lovableKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "google/gemini-2.5-flash-lite",
+          model: "google/gemini-3.5-flash",
           messages: [{ role: "user", content: searchPrompt }],
           max_tokens: 500, temperature: 0.2,
         }),

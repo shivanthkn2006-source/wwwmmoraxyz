@@ -4,11 +4,11 @@
  * SOVEREIGN CASCADE MODULE — Smart Auto-Routing with structured fallback reasons
  *
  * Default provider order (T1 primary, T5 absolute last-resort):
- *   T1  Groq • llama-3.1-8b-instant      (primary, free, lowest latency)
- *   T2  Google AI Studio • gemini-2.0-flash   (direct, free tier)
- *   T3  Groq • llama-3.3-70b-versatile        (quality speed tier)
+ *   T1  Groq • openai/gpt-oss-20b      (primary, free, lowest latency)
+ *   T2  Google AI Studio • gemini-3.5-flash   (direct, free tier)
+ *   T3  Groq • openai/gpt-oss-120b        (quality speed tier)
  *   T4  OpenRouter • llama-3.3-70b free       (backup speed tier)
- *   T5  Lovable Gateway • google/gemini-2.5-flash (paid credits, last-resort only)
+ *   T5  Lovable Gateway • google/gemini-3.5-flash (paid credits, last-resort only)
  *
  * Use mode: 't1-primary' to boost T1 timeout and keep T5 as the true fallback.
  * Every attempt is recorded with {tier, provider, model, ok, status, reasonCode,
@@ -97,6 +97,29 @@ async function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
 
 // ───────────── Provider implementations ─────────────
 
+/**
+ * Groq's gpt-oss models are reasoning models: with a small token budget the whole
+ * budget can be spent on hidden reasoning, leaving `content` empty. We keep the
+ * reasoning effort low and, as a last resort, fall back to the reasoning text.
+ */
+function groqContent(data: any): string | null {
+  const msg = data?.choices?.[0]?.message;
+  const direct = typeof msg?.content === 'string' ? msg.content.trim() : '';
+  if (direct) return direct;
+  const reasoning = typeof msg?.reasoning === 'string' ? msg.reasoning.trim() : '';
+  return reasoning || null;
+}
+
+/** Gemini 3.x returns thought parts first — pick the first non-thought text part. */
+function geminiContent(data: any): string | null {
+  const parts = data?.candidates?.[0]?.content?.parts;
+  if (!Array.isArray(parts)) return null;
+  const visible = parts.filter((p: any) => !p?.thought && typeof p?.text === 'string' && p.text.trim());
+  if (visible.length) return visible.map((p: any) => p.text).join('').trim();
+  const anyText = parts.filter((p: any) => typeof p?.text === 'string' && p.text.trim());
+  return anyText.length ? anyText.map((p: any) => p.text).join('').trim() : null;
+}
+
 async function callGemmaPrimary(messages: Message[], opts: CascadeOptions): Promise<ProviderOutcome> {
   const apiKey = Deno.env.get('GROQ_API_KEY');
   if (!apiKey) return { content: null, status: null, reasonCode: 'missing_key', reasonText: 'GROQ_API_KEY not set' };
@@ -105,12 +128,13 @@ async function callGemmaPrimary(messages: Message[], opts: CascadeOptions): Prom
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        // NOTE: Groq decommissioned `gemma2-9b-it` (Jun 2026). `llama-3.1-8b-instant`
+        // NOTE: Groq retired the llama-3.x IDs (Aug 2026). `openai/gpt-oss-20b`
         // is Groq's currently-supported instant tier and is the supported P1 replacement.
-        model: 'llama-3.1-8b-instant',
+        model: 'openai/gpt-oss-20b',
         messages,
-        max_tokens: opts.maxTokens ?? 500,
+        max_tokens: Math.max(opts.maxTokens ?? 500, 256),
         temperature: opts.temperature ?? 0.7,
+        reasoning_effort: 'low',
       }),
     }), opts.timeoutMs ?? 25_000);
     if (!resp.ok) {
@@ -119,7 +143,7 @@ async function callGemmaPrimary(messages: Message[], opts: CascadeOptions): Prom
       return { content: null, status: resp.status, reasonCode: code, reasonText: text };
     }
     const data = await resp.json();
-    const content = data.choices?.[0]?.message?.content ?? null;
+    const content = groqContent(data);
     if (!content) return { content: null, status: resp.status, reasonCode: 'empty_response', reasonText: 'no choices[0].content' };
     return { content, status: resp.status, reasonCode: 'success', reasonText: 'ok' };
   } catch (e: any) {
@@ -127,6 +151,7 @@ async function callGemmaPrimary(messages: Message[], opts: CascadeOptions): Prom
     return { content: null, status: null, reasonCode: isTimeout ? 'timeout' : 'network_error', reasonText: String(e?.message ?? e) };
   }
 }
+
 
 async function callGemini(messages: Message[], opts: CascadeOptions): Promise<ProviderOutcome> {
   const apiKey = Deno.env.get('GOOGLE_AI_STUDIO_KEY') || Deno.env.get('GEMINI_API_KEY');
@@ -138,11 +163,17 @@ async function callGemini(messages: Message[], opts: CascadeOptions): Promise<Pr
     const systemMsg = opts.systemPrompt || messages.find(m => m.role === 'system')?.content;
     const body: any = {
       contents: geminiMessages,
-      generationConfig: { maxOutputTokens: opts.maxTokens ?? 500, temperature: opts.temperature ?? 0.7 },
+      generationConfig: {
+        maxOutputTokens: Math.max(opts.maxTokens ?? 500, 256),
+        temperature: opts.temperature ?? 0.7,
+        // Gemini 3.x thinks by default; keep it minimal so the token budget
+        // produces visible text instead of thought-only parts.
+        thinkingConfig: { thinkingLevel: 'low' },
+      },
     };
     if (systemMsg) body.systemInstruction = { parts: [{ text: systemMsg }] };
     const resp = await withTimeout(fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`,
       { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) },
     ), opts.timeoutMs ?? 25_000);
     if (!resp.ok) {
@@ -151,8 +182,9 @@ async function callGemini(messages: Message[], opts: CascadeOptions): Promise<Pr
       return { content: null, status: resp.status, reasonCode: code, reasonText: text };
     }
     const data = await resp.json();
-    const content = data.candidates?.[0]?.content?.parts?.[0]?.text ?? null;
+    const content = geminiContent(data);
     if (!content) return { content: null, status: resp.status, reasonCode: 'empty_response', reasonText: 'no candidates[0].text' };
+
     return { content, status: resp.status, reasonCode: 'success', reasonText: 'ok' };
   } catch (e: any) {
     const isTimeout = e?.message === 'timeout';
@@ -168,10 +200,11 @@ async function callGroqLlama(messages: Message[], opts: CascadeOptions): Promise
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
+        model: 'openai/gpt-oss-120b',
         messages,
-        max_tokens: opts.maxTokens ?? 500,
+        max_tokens: Math.max(opts.maxTokens ?? 500, 256),
         temperature: opts.temperature ?? 0.7,
+        reasoning_effort: 'low',
       }),
     }), opts.timeoutMs ?? 25_000);
     if (!resp.ok) {
@@ -180,7 +213,7 @@ async function callGroqLlama(messages: Message[], opts: CascadeOptions): Promise
       return { content: null, status: resp.status, reasonCode: code, reasonText: text };
     }
     const data = await resp.json();
-    const content = data.choices?.[0]?.message?.content ?? null;
+    const content = groqContent(data);
     if (!content) return { content: null, status: resp.status, reasonCode: 'empty_response', reasonText: 'no choices[0].content' };
     return { content, status: resp.status, reasonCode: 'success', reasonText: 'ok' };
   } catch (e: any) {
@@ -188,6 +221,7 @@ async function callGroqLlama(messages: Message[], opts: CascadeOptions): Promise
     return { content: null, status: null, reasonCode: isTimeout ? 'timeout' : 'network_error', reasonText: String(e?.message ?? e) };
   }
 }
+
 
 async function callOpenRouter(messages: Message[], opts: CascadeOptions): Promise<ProviderOutcome> {
   const apiKey = Deno.env.get('OPENROUTER_API_KEY');
@@ -241,9 +275,9 @@ export interface TierSpec {
 export function getDefaultTiers(_mode: CascadeMode = 'default', _lovableModel?: string): TierSpec[] {
   // Lovable Gateway (T5) REMOVED — sovereign free-provider cascade only.
   return [
-    { tier: 1, name: 'T1 · Groq Llama-3.1-8B (primary)', provider: 'groq',     model: 'llama-3.1-8b-instant',               envKey: 'GROQ_API_KEY',           call: callGemmaPrimary },
-    { tier: 2, name: 'T2 · Gemini 2.5 Flash',            provider: 'gemini',   model: 'gemini-2.5-flash',                   envKey: 'GOOGLE_AI_STUDIO_KEY',   call: callGemini },
-    { tier: 3, name: 'T3 · Llama-3.3-70B (Groq)',        provider: 'groq',     model: 'llama-3.3-70b-versatile',            envKey: 'GROQ_API_KEY',           call: callGroqLlama },
+    { tier: 1, name: 'T1 · Groq GPT-OSS-20B (primary)', provider: 'groq',     model: 'openai/gpt-oss-20b',               envKey: 'GROQ_API_KEY',           call: callGemmaPrimary },
+    { tier: 2, name: 'T2 · Gemini 3.5 Flash',            provider: 'gemini',   model: 'gemini-3.5-flash',                   envKey: 'GOOGLE_AI_STUDIO_KEY',   call: callGemini },
+    { tier: 3, name: 'T3 · Groq GPT-OSS-120B',        provider: 'groq',     model: 'openai/gpt-oss-120b',            envKey: 'GROQ_API_KEY',           call: callGroqLlama },
     { tier: 4, name: 'T4 · OpenRouter Auto',             provider: 'openrouter', model: 'openrouter/auto',                        envKey: 'OPENROUTER_API_KEY',   call: callOpenRouter },
   ];
 }

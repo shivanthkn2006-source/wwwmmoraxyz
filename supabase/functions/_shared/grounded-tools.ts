@@ -393,7 +393,7 @@ export async function runGeminiToolLoop(
   opts: { maxTokens?: number; temperature?: number; timeoutMs?: number; model?: string } = {},
 ): Promise<ToolLoopResult> {
   const apiKey = env('GOOGLE_AI_STUDIO_KEY');
-  const model = opts.model ?? 'gemini-2.0-flash';
+  const model = opts.model ?? 'gemini-3.5-flash';
   const base: ToolLoopResult = { ok: false, content: '', provider: 'gemini', model, toolExecutions: [], rounds: 0 };
   if (!apiKey) return { ...base, error: 'GOOGLE_AI_STUDIO_KEY not set' };
 
@@ -443,7 +443,14 @@ export async function runGeminiToolLoop(
     }
 
     // The pause → execute locally → hand the fact back.
-    contents.push({ role: 'model', parts: calls.map((c) => ({ functionCall: c.functionCall })) });
+    // Gemini 3.x requires the model turn to be echoed back verbatim, including
+    // `thoughtSignature` on each functionCall part — omitting it fails with 400.
+    contents.push({
+      role: 'model',
+      parts: calls.map((c) => (c.thoughtSignature
+        ? { functionCall: c.functionCall, thoughtSignature: c.thoughtSignature }
+        : { functionCall: c.functionCall })),
+    });
     const responseParts = calls.map((c) => {
       const name = c.functionCall.name as string;
       const args = (c.functionCall.args ?? {}) as Record<string, any>;
@@ -470,7 +477,7 @@ export async function runOpenAIToolLoop(
   const groqKey = env('GROQ_API_KEY');
   const orKey = env('OPENROUTER_API_KEY');
   const provider = groqKey ? 'groq' : orKey ? 'openrouter' : null;
-  const model = provider === 'groq' ? 'llama-3.3-70b-versatile' : 'meta-llama/llama-3.3-70b-instruct';
+  const model = provider === 'groq' ? 'openai/gpt-oss-120b' : 'meta-llama/llama-3.3-70b-instruct';
   const url = provider === 'groq'
     ? 'https://api.groq.com/openai/v1/chat/completions'
     : 'https://openrouter.ai/api/v1/chat/completions';
