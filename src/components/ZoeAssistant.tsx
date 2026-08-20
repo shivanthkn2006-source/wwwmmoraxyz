@@ -29,6 +29,7 @@ import { APP_FEATURES } from '@/data/appFeatures';
 import { useFeatureAnalytics } from '@/hooks/useFeatureAnalytics';
 import { useGamification } from '@/hooks/useGamification';
 import { ZoeOfflineCache } from '@/utils/zoeOfflineCache';
+import { getTimeAgo } from '@/components/zoe/orbConversationUtils';
 
 
 interface ZoeAssistantProps {
