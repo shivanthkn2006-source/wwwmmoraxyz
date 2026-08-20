@@ -116,13 +116,51 @@ export const useAmbientSearch = () => {
           nodesEvaluated: data?.nodesEvaluated || 0,
         };
 
+        const nodeTypes: Record<string, number> = {};
+        for (const record of searchOutput.records) {
+          nodeTypes[record.entity_type] = (nodeTypes[record.entity_type] || 0) + 1;
+        }
+
         // Ignore stale responses from superseded queries.
-        if (runId === runIdRef.current) setResult(searchOutput);
+        if (runId === runIdRef.current) {
+          setResult(searchOutput);
+          setDebug({
+            requestId,
+            query: term,
+            at: Date.now(),
+            roundTripMs,
+            serverTimings: (data?.timings as Record<string, number>) ?? null,
+            intent: data?.intent?.intent ?? null,
+            nodesEvaluated: searchOutput.nodesEvaluated,
+            nodeTypes,
+            dispatchBlock: dispatchMatch ? dispatchMatch[0] : null,
+            dispatchParsed: dispatchAction,
+            degraded: data?.degraded ?? null,
+            error: null,
+          });
+        }
         return searchOutput;
       } catch (err: any) {
         const errMessage = err?.message || 'Synthesis failed';
-        if (runId === runIdRef.current) setError(errMessage);
+        if (runId === runIdRef.current) {
+          setError(errMessage);
+          setDebug({
+            requestId,
+            query: term,
+            at: Date.now(),
+            roundTripMs: Math.round(performance.now() - startedAt),
+            serverTimings: null,
+            intent: null,
+            nodesEvaluated: 0,
+            nodeTypes: {},
+            dispatchBlock: null,
+            dispatchParsed: null,
+            degraded: null,
+            error: errMessage,
+          });
+        }
         return null;
+
       } finally {
         if (runId === runIdRef.current) setIsSynthesizing(false);
       }
