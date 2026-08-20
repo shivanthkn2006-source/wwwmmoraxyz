@@ -175,7 +175,9 @@ export const useAmbientSearch = () => {
     setIsSynthesizing(false);
   }, []);
 
-  return { executeAmbientSearch, isSynthesizing, result, error, reset };
+  // `debug` intentionally survives reset() so the last trace stays inspectable.
+  return { executeAmbientSearch, isSynthesizing, result, error, reset, debug };
+
 };
 
 /** Fire-and-forget indexing of any platform entity into the universal vector graph. */
