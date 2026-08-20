@@ -8926,6 +8926,87 @@ export type Database = {
         }
         Relationships: []
       }
+      zoe_search_events: {
+        Row: {
+          created_at: string
+          degraded: Json
+          entity_type: string | null
+          error_code: string | null
+          event_type: string
+          id: string
+          node_types: Json
+          request_id: string
+          result_count: number | null
+          timings: Json
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          degraded?: Json
+          entity_type?: string | null
+          error_code?: string | null
+          event_type: string
+          id?: string
+          node_types?: Json
+          request_id: string
+          result_count?: number | null
+          timings?: Json
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          degraded?: Json
+          entity_type?: string | null
+          error_code?: string | null
+          event_type?: string
+          id?: string
+          node_types?: Json
+          request_id?: string
+          result_count?: number | null
+          timings?: Json
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      zoe_search_index_queue: {
+        Row: {
+          attempts: number
+          available_at: string
+          created_at: string
+          entity_id: string
+          entity_type: string
+          id: string
+          last_error: string | null
+          owner_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          available_at?: string
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          id?: string
+          last_error?: string | null
+          owner_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          available_at?: string
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          last_error?: string | null
+          owner_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       zoe_self_corrections: {
         Row: {
           corrected_response: string
@@ -9798,6 +9879,10 @@ export type Database = {
       }
       detect_behavioral_anomaly: { Args: { p_user_id: string }; Returns: Json }
       detect_relationship_style: { Args: { p_user_id: string }; Returns: Json }
+      enqueue_zoe_search_entity: {
+        Args: { p_entity_id: string; p_entity_type: string; p_owner_id: string }
+        Returns: undefined
+      }
       ensure_profiles_for_all_users: { Args: never; Returns: number }
       get_daily_notification_count: {
         Args: { p_user_id: string }
