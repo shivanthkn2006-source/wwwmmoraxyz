@@ -163,7 +163,13 @@ async function callGemini(messages: Message[], opts: CascadeOptions): Promise<Pr
     const systemMsg = opts.systemPrompt || messages.find(m => m.role === 'system')?.content;
     const body: any = {
       contents: geminiMessages,
-      generationConfig: { maxOutputTokens: opts.maxTokens ?? 500, temperature: opts.temperature ?? 0.7 },
+      generationConfig: {
+        maxOutputTokens: Math.max(opts.maxTokens ?? 500, 256),
+        temperature: opts.temperature ?? 0.7,
+        // Gemini 3.x thinks by default; keep it minimal so the token budget
+        // produces visible text instead of thought-only parts.
+        thinkingConfig: { thinkingLevel: 'low' },
+      },
     };
     if (systemMsg) body.systemInstruction = { parts: [{ text: systemMsg }] };
     const resp = await withTimeout(fetch(
@@ -176,8 +182,9 @@ async function callGemini(messages: Message[], opts: CascadeOptions): Promise<Pr
       return { content: null, status: resp.status, reasonCode: code, reasonText: text };
     }
     const data = await resp.json();
-    const content = data.candidates?.[0]?.content?.parts?.[0]?.text ?? null;
+    const content = geminiContent(data);
     if (!content) return { content: null, status: resp.status, reasonCode: 'empty_response', reasonText: 'no candidates[0].text' };
+
     return { content, status: resp.status, reasonCode: 'success', reasonText: 'ok' };
   } catch (e: any) {
     const isTimeout = e?.message === 'timeout';
