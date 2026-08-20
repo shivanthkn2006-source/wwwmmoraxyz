@@ -202,8 +202,9 @@ async function callGroqLlama(messages: Message[], opts: CascadeOptions): Promise
       body: JSON.stringify({
         model: 'openai/gpt-oss-120b',
         messages,
-        max_tokens: opts.maxTokens ?? 500,
+        max_tokens: Math.max(opts.maxTokens ?? 500, 256),
         temperature: opts.temperature ?? 0.7,
+        reasoning_effort: 'low',
       }),
     }), opts.timeoutMs ?? 25_000);
     if (!resp.ok) {
@@ -212,7 +213,7 @@ async function callGroqLlama(messages: Message[], opts: CascadeOptions): Promise
       return { content: null, status: resp.status, reasonCode: code, reasonText: text };
     }
     const data = await resp.json();
-    const content = data.choices?.[0]?.message?.content ?? null;
+    const content = groqContent(data);
     if (!content) return { content: null, status: resp.status, reasonCode: 'empty_response', reasonText: 'no choices[0].content' };
     return { content, status: resp.status, reasonCode: 'success', reasonText: 'ok' };
   } catch (e: any) {
@@ -220,6 +221,7 @@ async function callGroqLlama(messages: Message[], opts: CascadeOptions): Promise
     return { content: null, status: null, reasonCode: isTimeout ? 'timeout' : 'network_error', reasonText: String(e?.message ?? e) };
   }
 }
+
 
 async function callOpenRouter(messages: Message[], opts: CascadeOptions): Promise<ProviderOutcome> {
   const apiKey = Deno.env.get('OPENROUTER_API_KEY');
