@@ -1,0 +1,1 @@
+DELETE FROM public.zoe_universal_index WHERE entity_id = '11111111-1111-1111-1111-111111111111';
