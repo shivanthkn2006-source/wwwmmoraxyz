@@ -27,6 +27,30 @@ function json(body: unknown, status = 200) {
   });
 }
 
+async function canonicalOwner(
+  db: ReturnType<typeof createClient>,
+  entityType: string,
+  entityId: string,
+): Promise<string | null> {
+  if (['post', 'loop_video', 'image', 'quote'].includes(entityType)) {
+    const { data } = await db.from('posts').select('user_id').eq('id', entityId).maybeSingle();
+    return data?.user_id ?? null;
+  }
+  if (entityType === 'profile') {
+    const { data } = await db.from('profiles').select('user_id').eq('user_id', entityId).maybeSingle();
+    return data?.user_id ?? null;
+  }
+  if (entityType === 'chat') {
+    const { data } = await db.from('zoe_infinity_messages').select('user_id').eq('id', entityId).maybeSingle();
+    return data?.user_id ?? null;
+  }
+  if (entityType === 'dhf_node') {
+    const { data } = await db.from('mmora_memories').select('user_id').eq('id', entityId).maybeSingle();
+    return data?.user_id ?? null;
+  }
+  return null;
+}
+
 /** Gemini vision pass: OCR + object/mood extraction for images. */
 async function describeMedia(mediaUrl: string): Promise<string> {
   if (!GOOGLE_KEY) return '';
@@ -79,6 +103,7 @@ Deno.serve(async (req) => {
 
   try {
     const user = await requireSearchUser(req);
+    const supabase = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { persistSession: false } });
     const {
       entityType,
       entityId,
@@ -98,6 +123,8 @@ Deno.serve(async (req) => {
       return json({ error: 'A supported entityType and UUID entityId are required', requestId }, 400);
     }
     if (ownerId && ownerId !== user.id) return json({ error: 'Forbidden owner', requestId }, 403);
+    const verifiedOwner = await canonicalOwner(supabase, entityType, entityId);
+    if (!verifiedOwner || verifiedOwner !== user.id) return json({ error: 'Entity not found or not owned by caller', requestId }, 403);
     if (privacyLevel && !['public', 'friends', 'private'].includes(privacyLevel)) {
       return json({ error: 'Invalid privacyLevel', requestId }, 400);
     }
@@ -129,7 +156,6 @@ Deno.serve(async (req) => {
     console.log('[zoe-index-ingest:embed]', JSON.stringify({ requestId, embedMs, dims: embedding.length }));
     const tWrite = performance.now();
 
-    const supabase = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { persistSession: false } });
     const { error: dbError } = await supabase
       .from('zoe_universal_index')
       .upsert(
