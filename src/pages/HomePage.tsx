@@ -15,7 +15,7 @@ import NotificationMenu from '@/components/NotificationMenu';
 import AnimatedHamburgerButton from '@/components/AnimatedHamburgerButton';
 import HamburgerMenu from '@/components/HamburgerMenu';
 import SearchBar from '@/components/SearchBar';
-import { ArrowDown, Mail, Search, Video, TrendingUp, ArrowUp, Camera, ChevronUp, ChevronDown } from 'lucide-react';
+import { ArrowDown, Mail, Search, Video, TrendingUp, ArrowUp, Camera, ChevronUp, ChevronDown, Sparkles, MessageCircle, Settings, Bell, User as UserIcon, Heart, Bookmark } from 'lucide-react';
 import { trackEvent } from '@/lib/analytics';
 import FuturisticCounter from '@/components/FuturisticCounter';
 import { useNavigate } from 'react-router-dom';
@@ -23,6 +23,8 @@ import { onHomeRefresh, triggerHomeRefresh } from '@/lib/homeRefresh';
 import { rememberShortInOrbMemory } from '@/lib/orbShortsMemory';
 import HomeFloatingTools from '@/components/home/HomeFloatingTools';
 import HomeGlassDock from '@/components/home/HomeGlassDock';
+import HomeCollectionSheet, { type CollectionMode } from '@/components/home/HomeCollectionSheet';
+
 
 import HomePostEditor, { type HomePostDraft } from '@/components/home/HomePostEditor';
 import { useEventGlow, getAvatarGlowClass } from '@/hooks/useEventGlow';
