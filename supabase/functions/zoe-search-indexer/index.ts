@@ -181,7 +181,7 @@ Deno.serve(async (req) => {
           indexed: indexed.count ?? 0,
           pending: pending.count ?? 0,
           processing: processing.count ?? 0,
-          failed: (failedRows.data || []).length,
+          failed: failedCount.count ?? 0,
           newestIndexedAt: newest.data?.updated_at ?? null,
         },
         failures: failedRows.data || [],
