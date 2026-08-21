@@ -24,6 +24,8 @@ import { rememberShortInOrbMemory } from '@/lib/orbShortsMemory';
 import HomeFloatingTools from '@/components/home/HomeFloatingTools';
 import HomeGlassDock from '@/components/home/HomeGlassDock';
 import HomeCollectionSheet, { type CollectionMode } from '@/components/home/HomeCollectionSheet';
+import useHomeDockBadges from '@/hooks/useHomeDockBadges';
+
 
 
 import HomePostEditor, { type HomePostDraft } from '@/components/home/HomePostEditor';
