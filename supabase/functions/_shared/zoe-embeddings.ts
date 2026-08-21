@@ -75,8 +75,13 @@ export async function embedText(text: string): Promise<number[] | null> {
     }
   }
 
+  // Last-resort tier: NVIDIA NIM (llama-3.2-nv-embedqa-1b-v2), width-normalised to 1536.
+  const nvidia = await nvidiaEmbed(clean, ZOE_VECTOR_DIMS, 'passage');
+  if (nvidia) return nvidia;
+
   return null;
 }
+
 
 /** Split long text into embeddable chunks (~1200 chars with overlap). */
 export function chunkText(text: string, size = 1200, overlap = 150): string[] {
