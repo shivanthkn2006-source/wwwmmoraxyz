@@ -13,6 +13,8 @@ import {
   Search,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { readDockUsage, recordDockUsage, orderByFrequency, type DockUsageMap } from '@/lib/homeDockUsage';
+
 
 export interface GlassDockItem {
   id: string;
@@ -42,10 +44,22 @@ const PLACEHOLDER_ICONS = [Compass, Bell, Camera, MessageCircle, Sparkles, Bookm
 export default function HomeGlassDock({ items = [], className }: HomeGlassDockProps) {
   const [open, setOpen] = React.useState(false);
   const rootRef = React.useRef<HTMLDivElement>(null);
+  const railRef = React.useRef<HTMLDivElement>(null);
+  const triggerRef = React.useRef<HTMLButtonElement>(null);
   const swipeStart = React.useRef<{ x: number; y: number } | null>(null);
   const longPressTimer = React.useRef<number | null>(null);
   const longPressPreview = React.useRef(false);
   const suppressClick = React.useRef(false);
+  const [usage, setUsage] = React.useState<DockUsageMap>({});
+
+  // Frequently-used ordering (most used sits nearest the home trigger).
+  React.useEffect(() => {
+    setUsage(readDockUsage());
+    const onUsage = () => setUsage(readDockUsage());
+    window.addEventListener('mmora:home-dock-usage', onUsage);
+    return () => window.removeEventListener('mmora:home-dock-usage', onUsage);
+  }, []);
+
 
 
   // Tap outside / Escape closes the rail.
@@ -111,9 +125,7 @@ export default function HomeGlassDock({ items = [], className }: HomeGlassDockPr
     if (wasPreview) suppressClick.current = true;
   };
 
-
-
-  const slots: GlassDockItem[] =
+  const baseSlots: GlassDockItem[] =
     items.length > 0
       ? items
       : PLACEHOLDER_ICONS.map((Icon, index) => ({
@@ -122,6 +134,32 @@ export default function HomeGlassDock({ items = [], className }: HomeGlassDockPr
           icon: <Icon className="h-[22px] w-[22px]" />,
           onSelect: () => {},
         }));
+
+  // Most-used icons render last → nearest the home trigger / opening area.
+  const slots = React.useMemo(() => orderByFrequency(baseSlots, usage), [baseSlots, usage]);
+
+  // On open, park the rail at its right end so the handiest icons are visible,
+  // and move focus into the rail. On close, hand focus back to the trigger.
+  React.useEffect(() => {
+    if (!open) return;
+    const rail = railRef.current;
+    if (!rail) return;
+    const id = window.requestAnimationFrame(() => {
+      rail.scrollLeft = rail.scrollWidth;
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [open, slots.length]);
+
+  // When the rail retracts while focus is still inside it, return focus to the trigger.
+  const wasOpen = React.useRef(open);
+  React.useEffect(() => {
+    if (wasOpen.current && !open) {
+      const active = document.activeElement;
+      if (active && railRef.current?.contains(active)) triggerRef.current?.focus();
+    }
+    wasOpen.current = open;
+  }, [open]);
+
 
   return (
     <div
@@ -142,6 +180,9 @@ export default function HomeGlassDock({ items = [], className }: HomeGlassDockPr
         )}
       >
         <div
+          ref={railRef}
+          role="menu"
+          aria-hidden={!open}
           className={cn(
             'flex h-12 items-center gap-1 overflow-x-auto rounded-2xl rounded-r-none border border-white/25 border-r-0 px-2',
             'bg-white/10 backdrop-blur-xl shadow-[0_8px_24px_rgba(0,0,0,0.35)]',
@@ -151,20 +192,23 @@ export default function HomeGlassDock({ items = [], className }: HomeGlassDockPr
         >
 
           {slots.map((item) => {
-            const badge = item.badge ?? 0;
+            const badge = Number.isFinite(item.badge) ? Math.max(0, Math.floor(item.badge as number)) : 0;
             const highlighted = Boolean(item.active) || badge > 0;
             return (
               <button
                 key={item.id}
                 type="button"
-                aria-label={badge > 0 ? `${item.label}, ${badge} new` : item.label}
+                role="menuitem"
+                aria-label={badge > 0 ? `${item.label}, ${badge > 99 ? '99+' : badge} new` : item.label}
                 title={item.label}
                 aria-current={item.active ? 'true' : undefined}
                 tabIndex={open ? 0 : -1}
                 onClick={() => {
                   setOpen(false);
+                  recordDockUsage(item.id);
                   item.onSelect();
                 }}
+
                 className={cn(
                   'relative flex h-10 w-10 shrink-0 snap-start items-center justify-center rounded-xl',
                   'transition-all active:scale-95',
@@ -197,9 +241,18 @@ export default function HomeGlassDock({ items = [], className }: HomeGlassDockPr
 
       {/* Bare home trigger — flush at the right edge, no ring, no box */}
       <button
+        ref={triggerRef}
         type="button"
         aria-label={open ? 'Close home menu' : 'Open home menu'}
         aria-expanded={open}
+        aria-haspopup="menu"
+        onBlur={(event) => {
+          // Focus leaving the dock entirely retracts it (never leaves it stuck open).
+          const next = event.relatedTarget as Node | null;
+          if (next && rootRef.current?.contains(next)) return;
+          if (next) setOpen(false);
+        }}
+
         onPointerDown={handlePointerDown}
         onPointerUp={handlePointerUp}
         onPointerCancel={() => {
