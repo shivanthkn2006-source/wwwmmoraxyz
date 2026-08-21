@@ -11,7 +11,7 @@ export const NVIDIA_BASE = 'https://integrate.api.nvidia.com/v1';
 /** Chat model used for intent routing + ambient synthesis. */
 export const NVIDIA_CHAT_MODEL = 'meta/llama-3.3-70b-instruct';
 /** Embedding model; asymmetric query/passage QA embedder. */
-export const NVIDIA_EMBED_MODEL = 'nvidia/llama-3.2-nv-embedqa-1b-v2';
+export const NVIDIA_EMBED_MODEL = 'nvidia/nv-embedqa-e5-v5';
 
 export function nvidiaKey(): string | null {
   return Deno.env.get('NVIDIA_API_KEY') || null;
