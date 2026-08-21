@@ -38,6 +38,10 @@ export default function HomeGlassDock({ items = [], className }: HomeGlassDockPr
   const [open, setOpen] = React.useState(false);
   const rootRef = React.useRef<HTMLDivElement>(null);
   const swipeStart = React.useRef<{ x: number; y: number } | null>(null);
+  const longPressTimer = React.useRef<number | null>(null);
+  const longPressPreview = React.useRef(false);
+  const suppressClick = React.useRef(false);
+
 
   // Tap outside / Escape closes the rail.
   React.useEffect(() => {
@@ -56,20 +60,53 @@ export default function HomeGlassDock({ items = [], className }: HomeGlassDockPr
     };
   }, [open]);
 
+  React.useEffect(() => () => {
+    if (longPressTimer.current) window.clearTimeout(longPressTimer.current);
+  }, []);
+
+  const clearLongPress = () => {
+    if (longPressTimer.current) {
+      window.clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
+
   const handlePointerDown = (event: React.PointerEvent) => {
     swipeStart.current = { x: event.clientX, y: event.clientY };
+    clearLongPress();
+    longPressPreview.current = false;
+    longPressTimer.current = window.setTimeout(() => {
+      longPressPreview.current = true;
+      setOpen(true);
+    }, 350);
+  };
+
+  const endLongPress = () => {
+    clearLongPress();
+    if (longPressPreview.current) {
+      longPressPreview.current = false;
+      setOpen(false);
+      return true;
+    }
+    return false;
   };
 
   const handlePointerUp = (event: React.PointerEvent) => {
     const start = swipeStart.current;
     swipeStart.current = null;
+    const wasPreview = endLongPress();
     if (!start) return;
     const dx = event.clientX - start.x;
     const dy = event.clientY - start.y;
     if (Math.abs(dx) > 24 && Math.abs(dx) > Math.abs(dy)) {
+      suppressClick.current = true;
       setOpen(dx < 0); // swipe left opens, swipe right closes
+      return;
     }
+    if (wasPreview) suppressClick.current = true;
   };
+
+
 
   const slots: GlassDockItem[] =
     items.length > 0
@@ -90,12 +127,12 @@ export default function HomeGlassDock({ items = [], className }: HomeGlassDockPr
         className,
       )}
     >
-      {/* Rectangular horizontal glass tube — slides out right → left, spans near full width */}
+      {/* Rectangular horizontal glass tube — slides out right → left, auto-sized to viewport */}
       <div
         className={cn(
           'flex h-12 items-center overflow-hidden transition-all duration-300 ease-out',
           open
-            ? 'mr-0 max-w-[calc(100vw-16px)] translate-x-0 opacity-100'
+            ? 'mr-0 max-w-[calc(100vw-env(safe-area-inset-left,0px)-env(safe-area-inset-right,0px)-52px)] translate-x-0 opacity-100'
             : 'pointer-events-none mr-0 max-w-0 translate-x-4 opacity-0',
         )}
       >
@@ -104,9 +141,10 @@ export default function HomeGlassDock({ items = [], className }: HomeGlassDockPr
             'flex h-12 items-center gap-1 overflow-x-auto rounded-2xl rounded-r-none border border-white/25 border-r-0 px-2',
             'bg-white/10 backdrop-blur-xl shadow-[0_8px_24px_rgba(0,0,0,0.35)]',
             '[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden',
-            'snap-x touch-pan-x',
+            'snap-x snap-mandatory scroll-px-2 scroll-smooth touch-pan-x [overscroll-behavior-x:contain]',
           )}
         >
+
           {slots.map((item) => (
             <button
               key={item.id}
@@ -138,7 +176,18 @@ export default function HomeGlassDock({ items = [], className }: HomeGlassDockPr
         aria-expanded={open}
         onPointerDown={handlePointerDown}
         onPointerUp={handlePointerUp}
-        onClick={() => setOpen((value) => !value)}
+        onPointerCancel={() => {
+          swipeStart.current = null;
+          endLongPress();
+        }}
+        onContextMenu={(event) => event.preventDefault()}
+        onClick={() => {
+          if (suppressClick.current) {
+            suppressClick.current = false;
+            return;
+          }
+          setOpen((value) => !value);
+        }}
         onKeyDown={(event) => {
           if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
@@ -146,11 +195,14 @@ export default function HomeGlassDock({ items = [], className }: HomeGlassDockPr
           }
         }}
         className={cn(
-          'flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-transparent',
+          'relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-transparent',
           'pr-1 text-white/90 drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)] transition-transform',
-          'active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60',
+          'select-none touch-none active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60',
+          // Enlarged invisible hit + focus area without changing the visual size
+          'after:absolute after:-inset-2.5 after:content-[""] after:rounded-full',
         )}
       >
+
         <Home className="h-[22px] w-[22px]" />
       </button>
     </div>
