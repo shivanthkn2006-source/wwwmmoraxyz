@@ -3,8 +3,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { searchFeatures } from '@/data/appFeatures';
 import { routeForEntity } from '@/lib/ambientDispatch';
 
+export type SearchFilter = 'all' | 'profiles' | 'chats' | 'images' | 'loops' | 'videos' | 'other';
+
+/** Which part of the indexed document contributed to the match. */
+export type MatchSignal = 'text' | 'caption' | 'ocr' | 'visual' | 'author';
+
 export interface HomeSearchResult {
   type: 'user' | 'post' | 'feature' | 'index';
+  filter: SearchFilter;
+  signals: MatchSignal[];
   id: string;
   title: string;
   subtitle?: string;
@@ -23,6 +30,62 @@ const ENTITY_LABEL: Record<string, string> = {
   spot: 'Selfie City spot',
   '3d_asset': 'VR asset',
 };
+
+const ENTITY_FILTER: Record<string, SearchFilter> = {
+  profile: 'profiles',
+  chat: 'chats',
+  image: 'images',
+  loop_video: 'loops',
+  post: 'other',
+  quote: 'other',
+  dhf_node: 'other',
+};
+
+export const SEARCH_FILTERS: { id: SearchFilter; label: string }[] = [
+  { id: 'all', label: 'All' },
+  { id: 'profiles', label: 'Profiles' },
+  { id: 'chats', label: 'Chats' },
+  { id: 'images', label: 'Images' },
+  { id: 'loops', label: 'Loops' },
+  { id: 'videos', label: 'Videos' },
+];
+
+export const SIGNAL_LABEL: Record<MatchSignal, string> = {
+  text: 'text',
+  caption: 'caption',
+  ocr: 'OCR',
+  visual: 'visual',
+  author: 'author',
+};
+
+/**
+ * Explains a match by locating the query term inside the indexed document:
+ * author attribution line, caption/body text, or the vision-generated
+ * `[Visual Data]` block (OCR when the description quotes readable text).
+ */
+export function explainMatch(term: string, synthesis: string, entityType: string): MatchSignal[] {
+  const doc = (synthesis || '').toLowerCase();
+  const needle = term.trim().toLowerCase();
+  const visualAt = doc.indexOf('[visual data]');
+  const head = visualAt >= 0 ? doc.slice(0, visualAt) : doc;
+  const visual = visualAt >= 0 ? doc.slice(visualAt) : '';
+  const lines = head.split('\n');
+  const authorLine = lines[0]?.startsWith('by ') ? lines[0] : '';
+  const bodyText = (authorLine ? lines.slice(1) : lines).join('\n');
+
+  const signals: MatchSignal[] = [];
+  if (needle && authorLine.includes(needle)) signals.push('author');
+  if (needle && bodyText.includes(needle)) {
+    signals.push(entityType === 'chat' || entityType === 'dhf_node' || entityType === 'profile' ? 'text' : 'caption');
+  }
+  if (needle && visual.includes(needle)) {
+    const ocrHit = /text|sign|caption|reads|written|label/.test(visual) && /["“”']/.test(visual);
+    signals.push(ocrHit ? 'ocr' : 'visual');
+  }
+  if (!signals.length && visual) signals.push('visual');
+  if (!signals.length) signals.push('text');
+  return Array.from(new Set(signals));
+}
 
 function cleanSynthesis(text: string): string {
   return (text || '')
