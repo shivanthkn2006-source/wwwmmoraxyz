@@ -46,10 +46,14 @@ export function usePlatformInsight(query: string, enabled = true, maxLines = 5) 
 
         const [members, online, friends, posts, loops] = await Promise.all([
           supabase.from('public_profiles').select('user_id', { count: 'exact', head: true }),
-          supabase.from('online_sessions').select('id', { count: 'exact', head: true }).gte('last_seen_at', since),
+          supabase.from('online_sessions').select('id', { count: 'exact', head: true }).gte('last_heartbeat', since),
           uid
-            ? supabase.from('friendships').select('id', { count: 'exact', head: true }).eq('user_id', uid)
+            ? supabase
+                .from('friendships')
+                .select('id', { count: 'exact', head: true })
+                .or(`user1_id.eq.${uid},user2_id.eq.${uid}`)
             : Promise.resolve({ count: 0 } as any),
+
           supabase.from('posts').select('id', { count: 'exact', head: true }),
           supabase.from('posts').select('id', { count: 'exact', head: true }).eq('media_type', 'video'),
         ]);
