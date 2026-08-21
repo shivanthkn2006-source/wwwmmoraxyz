@@ -40,6 +40,8 @@ export default function HomeGlassDock({ items = [], className }: HomeGlassDockPr
   const swipeStart = React.useRef<{ x: number; y: number } | null>(null);
   const longPressTimer = React.useRef<number | null>(null);
   const longPressPreview = React.useRef(false);
+  const suppressClick = React.useRef(false);
+
 
   // Tap outside / Escape closes the rail.
   React.useEffect(() => {
