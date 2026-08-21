@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { X, Eye, Heart, Send, Smile, Share2, MoreVertical, CameraOff } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
+import { X, Eye, Heart, Send, Smile, Share2, MoreVertical, CameraOff, Play } from 'lucide-react';
 import { useAdaptiveCamera } from '@/hooks/useAdaptiveCamera';
+import { mmoraLogoProps } from '@/components/brand/MmoraBrandHomeBridge';
 
 interface LiveComment {
   id: string;
@@ -27,6 +28,22 @@ const AMBIENT_COMMENTS: Array<Omit<LiveComment, 'id'>> = [
   { user: '@paulus', text: 'crazy' },
 ];
 
+/** Memoized so a new incoming comment never re-renders the whole rail. */
+const CommentRow = memo(({ comment }: { comment: LiveComment }) => (
+  <div className="flex items-start gap-2 will-change-transform animate-fade-in">
+    <div className="mt-[1px] flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/20 text-[10px] font-semibold text-white">
+      {comment.user.replace('@', '').charAt(0).toUpperCase()}
+    </div>
+    <p className="text-[13px] leading-snug text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.7)]">
+      <span className="mr-1.5 font-semibold text-white/80">{comment.user}</span>
+      {comment.text}
+    </p>
+  </div>
+));
+CommentRow.displayName = 'CommentRow';
+
+const MAX_VISIBLE_COMMENTS = 24;
+
 export const LiveStreamView: React.FC<LiveStreamViewProps> = ({
   onClose,
   channelName = "M'Mora Live",
@@ -43,39 +60,93 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({
   const [likeCount, setLikeCount] = useState(1280);
   const [floatingHearts, setFloatingHearts] = useState<FloatingHeart[]>([]);
 
-  const { stream, error, networkType, startStream, stopStream } = useAdaptiveCamera({ autoStart: true });
+  const { stream, error, isStarting, networkType, startStream, stopStream } = useAdaptiveCamera({ autoStart: true });
+  const [needsTapToPlay, setNeedsTapToPlay] = useState(false);
+
+  // iOS/Safari: playback must be muted + inline, and play() can still reject
+  // until a user gesture. Surface a tap-to-start affordance instead of failing.
+  const attachAndPlay = useCallback(async () => {
+    const el = videoRef.current;
+    if (!el || !stream) return;
+    el.muted = true;
+    el.setAttribute('muted', '');
+    el.setAttribute('playsinline', '');
+    el.setAttribute('webkit-playsinline', 'true');
+    if (el.srcObject !== stream) el.srcObject = stream;
+    try {
+      await el.play();
+      setNeedsTapToPlay(false);
+    } catch {
+      setNeedsTapToPlay(true);
+    }
+  }, [stream]);
 
   useEffect(() => {
     const el = videoRef.current;
     if (!el) return;
-    el.srcObject = stream ?? null;
-    if (stream) void el.play().catch(() => {});
+    if (!stream) {
+      el.srcObject = null;
+      return;
+    }
+    void attachAndPlay();
+    // Safari sometimes drops the first frame when returning to the tab.
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void attachAndPlay();
+    };
+    document.addEventListener('visibilitychange', onVisible);
     return () => {
+      document.removeEventListener('visibilitychange', onVisible);
       if (el) el.srcObject = null;
     };
-  }, [stream]);
+  }, [stream, attachAndPlay]);
 
-  // Smooth auto-scroll of the floating chat
+  // Comment queue: incoming comments buffer in a ref and flush on a single
+  // rAF-batched tick, so bursts cause one render instead of one render each.
+  const pendingComments = useRef<LiveComment[]>([]);
+  const flushHandle = useRef<number | null>(null);
+
+  const pushComment = useCallback((comment: LiveComment) => {
+    pendingComments.current.push(comment);
+    if (flushHandle.current !== null) return;
+    flushHandle.current = window.requestAnimationFrame(() => {
+      flushHandle.current = null;
+      const batch = pendingComments.current;
+      pendingComments.current = [];
+      if (!batch.length) return;
+      setComments((prev) => [...prev, ...batch].slice(-MAX_VISIBLE_COMMENTS));
+    });
+  }, []);
+
+  useEffect(() => () => {
+    if (flushHandle.current !== null) window.cancelAnimationFrame(flushHandle.current);
+  }, []);
+
+  // Auto-scroll without smooth-scroll animation cost on low-end devices.
   useEffect(() => {
     const el = chatScrollRef.current;
     if (!el) return;
-    el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+    const id = window.requestAnimationFrame(() => {
+      el.scrollTop = el.scrollHeight;
+    });
+    return () => window.cancelAnimationFrame(id);
   }, [comments]);
 
   // Ambient comment stream + viewer drift (keeps the rail alive like YT Live)
   useEffect(() => {
     const commentTimer = window.setInterval(() => {
+      if (document.visibilityState === 'hidden') return;
       const pick = AMBIENT_COMMENTS[Math.floor(Math.random() * AMBIENT_COMMENTS.length)];
-      setComments((prev) => [...prev, { ...pick, id: `a-${Date.now()}-${Math.random()}` }].slice(-40));
+      pushComment({ ...pick, id: `a-${Date.now()}-${Math.random()}` });
     }, 3200);
     const viewerTimer = window.setInterval(() => {
+      if (document.visibilityState === 'hidden') return;
       setViewerCount((v) => Math.max(1, v + Math.floor(Math.random() * 21) - 8));
     }, 4000);
     return () => {
       window.clearInterval(commentTimer);
       window.clearInterval(viewerTimer);
     };
-  }, []);
+  }, [pushComment]);
 
   // Close on Escape
   useEffect(() => {
@@ -103,7 +174,7 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({
     e?.preventDefault();
     const text = inputComment.trim();
     if (!text) return;
-    setComments((prev) => [...prev, { id: `me-${Date.now()}`, user: '@you', text }].slice(-40));
+    pushComment({ id: `me-${Date.now()}`, user: '@you', text });
     setInputComment('');
   };
 
@@ -131,17 +202,47 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({
       />
 
       {error && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-8 text-center">
+        <div
+          className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 px-8 text-center"
+          role="alert"
+        >
           <CameraOff className="h-8 w-8 text-white/80" />
-          <p className="text-sm text-white/80">{error}</p>
-          <button
-            type="button"
-            onClick={() => void startStream()}
-            className="rounded-full border border-white/30 bg-white/10 px-4 py-2 text-xs font-medium text-white backdrop-blur-md"
-          >
-            Retry camera
-          </button>
+          <p className="text-base font-semibold text-white">{error.title}</p>
+          <p className="max-w-xs text-sm leading-relaxed text-white/70">{error.message}</p>
+          <div className="mt-1 flex items-center gap-2">
+            {error.recoverable && (
+              <button
+                type="button"
+                onClick={() => void startStream()}
+                disabled={isStarting}
+                className="rounded-full border border-white/30 bg-white/10 px-4 py-2 text-xs font-medium text-white backdrop-blur-md disabled:opacity-50"
+              >
+                {isStarting ? 'Starting…' : 'Try again'}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={handleClose}
+              className="rounded-full border border-white/20 px-4 py-2 text-xs font-medium text-white/80"
+            >
+              Close
+            </button>
+          </div>
         </div>
+      )}
+
+      {!error && needsTapToPlay && (
+        <button
+          type="button"
+          onClick={() => void attachAndPlay()}
+          className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 text-white"
+          aria-label="Tap to start the live preview"
+        >
+          <span className="rounded-full border border-white/30 bg-white/10 p-4 backdrop-blur-md">
+            <Play className="h-7 w-7" />
+          </span>
+          <span className="text-sm text-white/80">Tap to start live preview</span>
+        </button>
       )}
 
       {/* Gradients */}
@@ -154,7 +255,11 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({
         style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
       >
         <div className="flex min-w-0 items-center gap-2 rounded-full bg-black/35 px-2 py-1.5 backdrop-blur-md">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/20 text-sm font-semibold text-white">
+          <div
+            {...mmoraLogoProps}
+            onClick={handleClose}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/20 text-sm font-semibold text-white"
+          >
             M
           </div>
           <div className="min-w-0">
@@ -239,15 +344,7 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({
         >
           <div className="flex flex-col gap-2">
             {comments.map((c) => (
-              <div key={c.id} className="flex items-start gap-2 will-change-transform animate-fade-in">
-                <div className="mt-[1px] flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/20 text-[10px] font-semibold text-white">
-                  {c.user.replace('@', '').charAt(0).toUpperCase()}
-                </div>
-                <p className="text-[13px] leading-snug text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.7)]">
-                  <span className="mr-1.5 font-semibold text-white/80">{c.user}</span>
-                  {c.text}
-                </p>
-              </div>
+              <CommentRow key={c.id} comment={c} />
             ))}
           </div>
         </div>
