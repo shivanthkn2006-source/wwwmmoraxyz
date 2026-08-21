@@ -55,7 +55,9 @@ const formatAgo = (timestamp?: number | null): string => {
 };
 
 export default function HomeGlassDock({ items = [], className, badgesUpdatedAt }: HomeGlassDockProps) {
+  const badgesEnabled = useDockBadgesEnabled();
   const [open, setOpen] = React.useState(false);
+
   const rootRef = React.useRef<HTMLDivElement>(null);
   const railRef = React.useRef<HTMLDivElement>(null);
   const triggerRef = React.useRef<HTMLButtonElement>(null);
