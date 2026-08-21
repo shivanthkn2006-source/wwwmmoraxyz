@@ -130,11 +130,20 @@ async function synthesize(systemPrompt: string, queryText: string): Promise<stri
       console.warn('[zoe-ambient-search] gemini threw', e);
     }
   }
-  // Fallback cascade: Groq → OpenRouter.
+  // Fallback cascade: Groq → NVIDIA NIM → OpenRouter.
+  const nvidia = await nvidiaChat(queryText, {
+    systemPrompt,
+    temperature: 0.6,
+    maxTokens: 1400,
+    timeoutMs: 25_000,
+  });
+  const groqFirst = await (async () => null)();
+  void groqFirst;
   for (const [url, key, model] of [
     ['https://api.groq.com/openai/v1/chat/completions', GROQ_KEY, 'openai/gpt-oss-120b'],
     ['https://openrouter.ai/api/v1/chat/completions', OPENROUTER_KEY, OPENROUTER_ROUTER_MODEL],
   ] as const) {
+
     if (!key) continue;
     try {
       const resp = await fetch(url, {
