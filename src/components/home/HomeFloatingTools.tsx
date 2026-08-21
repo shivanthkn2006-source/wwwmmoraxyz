@@ -270,6 +270,16 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
                 {result.subtitle && (
                   <span className="block truncate text-[11px] text-muted-foreground">{result.subtitle}</span>
                 )}
+                <span className="mt-0.5 flex flex-wrap gap-1">
+                  {result.signals.map((signal) => (
+                    <span
+                      key={signal}
+                      className="rounded-full bg-muted px-1.5 py-[1px] text-[9px] uppercase tracking-wide text-muted-foreground"
+                    >
+                      {SIGNAL_LABEL[signal]}
+                    </span>
+                  ))}
+                </span>
               </span>
             </button>
           ))}
