@@ -195,7 +195,7 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
         </form>
       </div>
 
-      {searchOpen && query.trim().length >= 2 && (
+      {searchOpen && query.trim().length >= 1 && (
         <div
           className="fixed z-[9996] max-h-[50vh] overflow-y-auto rounded-2xl border border-border/60 bg-background/90 p-1 shadow-xl backdrop-blur-2xl"
           style={{
@@ -246,7 +246,12 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
               className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-muted/60 ${index === activeIndex ? 'bg-muted/60' : ''}`}
             >
               {result.avatarUrl && (
-                <img src={result.avatarUrl} alt="" className="h-7 w-7 shrink-0 rounded-full object-cover" />
+                <img
+                  src={result.avatarUrl}
+                  alt=""
+                  className={`h-9 w-9 shrink-0 object-cover ${result.type === 'user' ? 'rounded-full' : 'rounded-md'}`}
+                  loading="lazy"
+                />
               )}
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm text-foreground">{result.title}</span>

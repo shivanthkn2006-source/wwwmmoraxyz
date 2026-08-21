@@ -62,7 +62,7 @@ export function useHomeSearch(query: string, enabled = true) {
         const safe = term.replace(/[%,()]/g, ' ').toLowerCase();
 
         const [indexRes, usersRes] = await Promise.all([
-          supabase.rpc('zoe_prefix_search', { query_text: safe, match_count: 12 }),
+          supabase.rpc('zoe_prefix_search', { query_text: safe, match_count: 20 }),
           supabase
             .from('public_profiles')
             .select('user_id, display_name, username, profile_photo_url')
@@ -86,11 +86,17 @@ export function useHomeSearch(query: string, enabled = true) {
           if (seen.has(key)) return;
           seen.add(key);
           const body = cleanSynthesis(row.content_synthesis);
+          const preview = typeof row.metadata?.previewUrl === 'string' && row.metadata.previewUrl.startsWith('http')
+            ? row.metadata.previewUrl
+            : typeof row.metadata?.mediaUrl === 'string' && row.metadata.mediaUrl.startsWith('http')
+              ? row.metadata.mediaUrl
+              : undefined;
           next.push({
             type: 'index',
             id: row.id,
             title: body.slice(0, 90) || ENTITY_LABEL[row.entity_type] || row.entity_type,
             subtitle: ENTITY_LABEL[row.entity_type] || row.entity_type,
+            avatarUrl: preview,
             route: routeForEntity(row.entity_type, row.entity_id),
           });
         });
