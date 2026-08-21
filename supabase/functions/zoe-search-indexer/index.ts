@@ -66,8 +66,10 @@ async function loadCanonical(db: ReturnType<typeof createClient>, job: QueueRow)
       privacy,
       metadata: {
         mediaType: data.media_type,
-        mediaUrl: data.media_url,
-        previewUrl: data.media_preview_url,
+        // Never store base64 data: URLs in the index — they bloat every search
+        // response by megabytes. Keep only remote references.
+        mediaUrl: slimMediaRef(data.media_url),
+        previewUrl: slimMediaRef(data.media_preview_url),
         createdAt: data.created_at,
         authorName: author.name,
         authorUsername: author.username,
