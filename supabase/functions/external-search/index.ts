@@ -126,9 +126,11 @@ Deno.serve(async (req) => {
     const wantsWeather = /\b(weather|forecast|temperature|rain|climate)\b/i.test(term);
     const wantsMusic = /\b(music|song|songs|track|album|artist|play|listen)\b/i.test(term);
 
-    const tasks: Promise<ExternalResult[]>[] = [webSearch(term)];
+    // Intent-matched sources run first so they rank above generic web hits.
+    const tasks: Promise<ExternalResult[]>[] = [];
     if (wantsWeather) tasks.push(weatherSearch(term));
     if (wantsMusic || !wantsWeather) tasks.push(musicSearch(term));
+    tasks.push(webSearch(term));
 
     const settled = await Promise.allSettled(tasks);
     const results = settled.flatMap((entry) => (entry.status === 'fulfilled' ? entry.value : []));
