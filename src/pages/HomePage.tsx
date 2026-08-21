@@ -163,6 +163,15 @@ const HomePage = () => {
     window.addEventListener('mmora:zoe-chat-toggle', onToggle);
     return () => window.removeEventListener('mmora:zoe-chat-toggle', onToggle);
   }, []);
+  // Search bar open state (dispatched by HomeFloatingTools) → highlights the dock search icon.
+  const [homeSearchOpen, setHomeSearchOpen] = useState(false);
+  useEffect(() => {
+    const onSearchToggle = (e: Event) => setHomeSearchOpen(Boolean((e as CustomEvent).detail?.open));
+    window.addEventListener('mmora:home-search-toggle', onSearchToggle);
+    return () => window.removeEventListener('mmora:home-search-toggle', onSearchToggle);
+  }, []);
+  const { badges: dockBadges } = useHomeDockBadges();
+
   const loopRailRef = useRef<HTMLDivElement | null>(null);
   const feedAutoTimerRef = useRef<number | null>(null);
 
