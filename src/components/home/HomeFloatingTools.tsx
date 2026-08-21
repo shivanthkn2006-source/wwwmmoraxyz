@@ -8,6 +8,8 @@ import { useAmbientSearch, type AmbientSearchRecord } from '@/core/ports/useAmbi
 import { routeForDispatch, routeForEntity, labelForRecord } from '@/lib/ambientDispatch';
 import SearchDebugPanel from '@/components/home/SearchDebugPanel';
 import { useSearchIndexHealth } from '@/hooks/useSearchIndexHealth';
+import { usePlatformInsight } from '@/hooks/usePlatformInsight';
+
 
 interface HomeFloatingToolsProps {
   query: string;
@@ -28,6 +30,9 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
   const { results, loading, error } = useHomeSearch(query, searchOpen);
   // Startup guard: warns and self-heals when the universal index is empty/stale.
   const { isEmpty: indexEmpty } = useSearchIndexHealth({ autoBackfill: true });
+  // Live 5-line structural answer (VR world components, features, live counts).
+  const { lines: insightLines } = usePlatformInsight(query, searchOpen, 5);
+
   const {
     executeAmbientSearch,
     isSynthesizing,
@@ -205,11 +210,32 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
               Search index is empty — Zoe is rebuilding it now. Results will appear shortly.
             </p>
           )}
+          {insightLines.length > 0 && (
+            <div className="border-b border-border/50 pb-1" role="list" aria-label="Platform answers">
+              {insightLines.map((line) => (
+                <button
+                  key={line.id}
+                  type="button"
+                  role="listitem"
+                  onClick={() => {
+                    if (line.route) {
+                      setSearchOpen(false);
+                      navigate(line.route);
+                    }
+                  }}
+                  className="block w-full rounded-xl px-3 py-1.5 text-left text-[11px] leading-snug text-foreground/90 hover:bg-muted/60"
+                >
+                  {line.text}
+                </button>
+              ))}
+            </div>
+          )}
           {loading && <p role="status" className="px-3 py-2 text-xs text-muted-foreground">Searching…</p>}
           {!loading && error && <p role="alert" className="px-3 py-2 text-xs text-muted-foreground">{error}</p>}
-          {!loading && !error && results.length === 0 && !ambient && !isSynthesizing && (
+          {!loading && !error && results.length === 0 && insightLines.length === 0 && !ambient && !isSynthesizing && (
             <p role="status" className="px-3 py-2 text-xs text-muted-foreground">No results for "{query.trim()}"</p>
           )}
+
           {results.map((result, index) => (
             <button
               key={`${result.type}-${result.id}`}
