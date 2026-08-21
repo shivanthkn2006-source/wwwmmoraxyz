@@ -24,6 +24,8 @@ import { rememberShortInOrbMemory } from '@/lib/orbShortsMemory';
 import HomeFloatingTools from '@/components/home/HomeFloatingTools';
 import HomeGlassDock from '@/components/home/HomeGlassDock';
 import HomeCollectionSheet, { type CollectionMode } from '@/components/home/HomeCollectionSheet';
+import useHomeDockBadges from '@/hooks/useHomeDockBadges';
+
 
 
 import HomePostEditor, { type HomePostDraft } from '@/components/home/HomePostEditor';
@@ -163,6 +165,15 @@ const HomePage = () => {
     window.addEventListener('mmora:zoe-chat-toggle', onToggle);
     return () => window.removeEventListener('mmora:zoe-chat-toggle', onToggle);
   }, []);
+  // Search bar open state (dispatched by HomeFloatingTools) → highlights the dock search icon.
+  const [homeSearchOpen, setHomeSearchOpen] = useState(false);
+  useEffect(() => {
+    const onSearchToggle = (e: Event) => setHomeSearchOpen(Boolean((e as CustomEvent).detail?.open));
+    window.addEventListener('mmora:home-search-toggle', onSearchToggle);
+    return () => window.removeEventListener('mmora:home-search-toggle', onSearchToggle);
+  }, []);
+  const { badges: dockBadges } = useHomeDockBadges();
+
   const loopRailRef = useRef<HTMLDivElement | null>(null);
   const feedAutoTimerRef = useRef<number | null>(null);
 
@@ -1933,6 +1944,7 @@ const HomePage = () => {
             id: 'zoe-ai',
             label: 'Zoe AI chat',
             icon: <Sparkles className="h-[22px] w-[22px]" />,
+            active: zoeChatOpen,
             onSelect: () => window.dispatchEvent(new CustomEvent('mmora:zoe-open-with-context', { detail: {} })),
           },
           {
@@ -1945,45 +1957,45 @@ const HomePage = () => {
             id: 'chat',
             label: 'Messages',
             icon: <MessageCircle className="h-[22px] w-[22px]" />,
+            badge: unreadMessages,
             onSelect: () => navigate('/chat'),
           },
           {
             id: 'notifications',
             label: 'Notifications',
-            icon: (
-              <span className="relative flex items-center justify-center">
-                <Bell className="h-[22px] w-[22px]" />
-                {unreadNotifications > 0 && (
-                  <span className="absolute -right-1.5 -top-1.5 min-w-[15px] rounded-full bg-primary px-1 text-[9px] font-semibold leading-[15px] text-primary-foreground">
-                    {unreadNotifications > 9 ? '9+' : unreadNotifications}
-                  </span>
-                )}
-              </span>
-            ),
+            icon: <Bell className="h-[22px] w-[22px]" />,
+            badge: unreadNotifications,
+            active: notificationMenuOpen,
             onSelect: () => setNotificationMenuOpen(true),
           },
           {
             id: 'search',
             label: 'Search',
             icon: <Search className="h-[22px] w-[22px]" />,
+            active: homeSearchOpen,
             onSelect: () => window.dispatchEvent(new CustomEvent('mmora:open-home-search')),
           },
           {
             id: 'likes',
             label: 'Liked posts',
             icon: <Heart className="h-[22px] w-[22px]" />,
+            badge: dockBadges.likes,
+            active: collectionMode === 'liked',
             onSelect: () => setCollectionMode('liked'),
           },
           {
             id: 'saved',
             label: 'Saved posts',
             icon: <Bookmark className="h-[22px] w-[22px]" />,
+            badge: dockBadges.saved,
+            active: collectionMode === 'saved',
             onSelect: () => setCollectionMode('saved'),
           },
           {
             id: 'profile',
             label: 'Profile',
             icon: <UserIcon className="h-[22px] w-[22px]" />,
+            active: isProfileSheetOpen,
             onSelect: () => setIsProfileSheetOpen(true),
           },
           {
@@ -1993,6 +2005,7 @@ const HomePage = () => {
             onSelect: () => navigate('/profile?settings=1'),
           },
         ]}
+
       />
       <HomeCollectionSheet mode={collectionMode} onOpenChange={(open) => !open && setCollectionMode(null)} />
 
