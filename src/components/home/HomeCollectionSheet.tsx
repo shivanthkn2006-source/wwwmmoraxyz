@@ -8,7 +8,7 @@ export type CollectionMode = 'saved' | 'liked';
 
 interface CollectionItem {
   id: string;
-  caption: string | null;
+  content: string | null;
   media_url: string | null;
   media_type: string | null;
   created_at: string;
@@ -55,7 +55,7 @@ export default function HomeCollectionSheet({ mode, onOpenChange }: HomeCollecti
 
         const { data: posts, error: postError } = await supabase
           .from('posts')
-          .select('id, caption, media_url, media_type, created_at')
+          .select('id, content, media_url, media_type, created_at')
           .in('id', ids);
         if (postError) throw postError;
 
@@ -110,7 +110,7 @@ export default function HomeCollectionSheet({ mode, onOpenChange }: HomeCollecti
                 </span>
               )}
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm text-foreground">{item.caption || 'Untitled post'}</span>
+                <span className="block truncate text-sm text-foreground">{item.content || 'Untitled post'}</span>
                 <span className="block text-[11px] text-muted-foreground">
                   {new Date(item.created_at).toLocaleDateString()}
                 </span>
