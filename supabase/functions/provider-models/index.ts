@@ -47,6 +47,39 @@ Deno.serve(async (req: Request) => {
   }
 
   const nvKey = Deno.env.get('NVIDIA_API_KEY');
+  if (nvKey && new URL(req.url).searchParams.get('nvidia_probe') === '1') {
+    const body = await req.json().catch(() => ({})) as { chat?: string[]; embed?: string[] };
+    const out: Record<string, string> = {};
+    for (const m of body.chat ?? []) {
+      try {
+        const r = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${nvKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: m, messages: [{ role: 'user', content: 'reply with the single word pong' }], max_tokens: 24 }),
+        });
+        const t = await r.text();
+        out[m] = `${r.status} ${t.slice(0, 110).replace(/\s+/g, ' ')}`;
+      } catch (e) { out[m] = `ERR ${e}`; }
+    }
+    for (const m of body.embed ?? []) {
+      try {
+        const r = await fetch('https://integrate.api.nvidia.com/v1/embeddings', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${nvKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: m, input: ['moksh'], input_type: 'query', encoding_format: 'float', truncate: 'END' }),
+        });
+        const j = await r.json().catch(() => null);
+        out[`embed:${m}`] = `${r.status} dims=${j?.data?.[0]?.embedding?.length ?? 'n/a'} ${JSON.stringify(j?.detail ?? j?.error ?? '').slice(0, 90)}`;
+      } catch (e) { out[`embed:${m}`] = `ERR ${e}`; }
+    }
+    return new Response(JSON.stringify(out, null, 2), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  }
+  if (nvKey && new URL(req.url).searchParams.get('nvidia_catalog') === '1') {
+    const r = await fetch('https://integrate.api.nvidia.com/v1/models', { headers: { Authorization: `Bearer ${nvKey}` } });
+    const j = await r.json().catch(() => null);
+    const ids = (j?.data ?? []).map((m: { id: string }) => m.id).sort();
+    return new Response(JSON.stringify({ count: ids.length, ids }, null, 2), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  }
   for (const m of NVIDIA_CANDIDATES) {
     if (!nvKey) break;
     try {

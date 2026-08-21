@@ -13,9 +13,57 @@ export const NVIDIA_CHAT_MODEL = 'meta/llama-3.3-70b-instruct';
 /** Embedding model; asymmetric query/passage QA embedder. */
 export const NVIDIA_EMBED_MODEL = 'nvidia/nv-embedqa-e5-v5';
 
+/**
+ * Role registry — every id below was live-probed against this account's NIM
+ * catalog (103 models) and answered 200. Each role is an ordered fallback
+ * chain: the first model that returns content wins, so a rate-limited or
+ * retired model never takes a feature down.
+ */
+export const NVIDIA_ROLES = {
+  /** Deep thinking / hard reasoning (Zoe metacognition, riddles, planning). */
+  deep_thinking: [
+    'nvidia/nemotron-3-ultra-550b-a55b',
+    'moonshotai/kimi-k3',
+    'nvidia/nemotron-3-super-120b-a12b',
+    'deepseek-ai/deepseek-v4-flash-0731',
+  ],
+  /** Everyday conversational replies. */
+  chat: [
+    'deepseek-ai/deepseek-v4-flash-0731',
+    'meta/llama-3.3-70b-instruct',
+    'z-ai/glm-5.2',
+    'minimaxai/minimax-m3',
+  ],
+  /** Low-latency routing / classification (search intent, gates). */
+  fast: [
+    'nvidia/nemotron-3.5-lightning-30b-a3b',
+    'meta/llama-3.3-70b-instruct',
+    'minimaxai/minimax-m3',
+  ],
+  /** Image / frame understanding — OCR, objects, mood (search + DHF indexing). */
+  vision: [
+    'nvidia/nemotron-nano-12b-v2-vl',
+    'meta/llama-3.2-11b-vision-instruct',
+    'microsoft/phi-3-vision-128k-instruct',
+  ],
+  /** Creative long-form copy (astrology cards, motivations). */
+  creative: [
+    'z-ai/glm-5.2',
+    'moonshotai/kimi-k3',
+    'meta/llama-3.3-70b-instruct',
+  ],
+  /** Translation. */
+  translate: ['nvidia/riva-translate-4b-instruct-v2', 'meta/llama-3.3-70b-instruct'],
+  /** Safety / moderation of user content. */
+  safety: ['nvidia/llama-3.1-nemoguard-8b-content-safety', 'meta/llama-guard-4-12b'],
+} as const;
+
+export type NvidiaRole = keyof typeof NVIDIA_ROLES;
+
 export function nvidiaKey(): string | null {
   return Deno.env.get('NVIDIA_API_KEY') || null;
 }
+
 
 export interface NvidiaChatOptions {
   systemPrompt?: string;
@@ -102,4 +150,68 @@ export async function nvidiaEmbed(
     console.warn('[nvidia] embed threw', e);
     return null;
   }
+}
+
+/**
+ * Role-aware chat: walks the role's fallback chain until one model answers.
+ * Returns `{ content, model }` so callers can log which NIM actually served.
+ */
+export async function nvidiaChatByRole(
+  role: NvidiaRole,
+  userText: string,
+  opts: NvidiaChatOptions = {},
+): Promise<{ content: string; model: string } | null> {
+  for (const model of NVIDIA_ROLES[role]) {
+    const content = await nvidiaChat(userText, { ...opts, model });
+    if (content) return { content, model };
+  }
+  return null;
+}
+
+/**
+ * Vision pass over a base64 image using the NIM VLM chain.
+ * `dataUrl` must be a full `data:image/...;base64,...` string.
+ */
+export async function nvidiaVision(
+  dataUrl: string,
+  prompt: string,
+  opts: { maxTokens?: number; timeoutMs?: number } = {},
+): Promise<string | null> {
+  const key = nvidiaKey();
+  if (!key) return null;
+  for (const model of NVIDIA_ROLES.vision) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), opts.timeoutMs ?? 45_000);
+    try {
+      const resp = await fetch(`${NVIDIA_BASE}/chat/completions`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+        signal: controller.signal,
+        body: JSON.stringify({
+          model,
+          messages: [{
+            role: 'user',
+            content: [
+              { type: 'text', text: prompt },
+              { type: 'image_url', image_url: { url: dataUrl } },
+            ],
+          }],
+          temperature: 0.2,
+          max_tokens: opts.maxTokens ?? 512,
+        }),
+      });
+      if (!resp.ok) {
+        console.warn('[nvidia] vision failed', model, resp.status);
+        continue;
+      }
+      const data = await resp.json();
+      const content = data?.choices?.[0]?.message?.content;
+      if (typeof content === 'string' && content.trim()) return content;
+    } catch (e) {
+      console.warn('[nvidia] vision threw', model, e);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  return null;
 }

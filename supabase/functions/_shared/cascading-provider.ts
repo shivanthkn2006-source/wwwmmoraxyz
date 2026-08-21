@@ -18,21 +18,22 @@
  */
 
 import { applyCircuitBreaker } from './loop-breaker.ts';
-import { nvidiaChat, NVIDIA_CHAT_MODEL } from './nvidia-provider.ts';
+import { nvidiaChatByRole, NVIDIA_ROLES, type NvidiaRole } from './nvidia-provider.ts';
 
 async function callNvidia(messages: Message[], opts: CascadeOptions): Promise<ProviderOutcome> {
   const apiKey = Deno.env.get('NVIDIA_API_KEY');
   if (!apiKey) return { content: null, status: null, reasonCode: 'missing_key', reasonText: 'NVIDIA_API_KEY not set' };
   const systemPrompt = opts.systemPrompt || messages.find(m => m.role === 'system')?.content;
   const userText = messages.filter(m => m.role !== 'system').map(m => `${m.role}: ${m.content}`).join('\n\n');
-  const content = await nvidiaChat(userText || (messages.at(-1)?.content ?? ''), {
+  const role: NvidiaRole = opts.nvidiaRole ?? 'chat';
+  const result = await nvidiaChatByRole(role, userText || (messages.at(-1)?.content ?? ''), {
     systemPrompt,
     temperature: opts.temperature ?? 0.7,
     maxTokens: Math.max(opts.maxTokens ?? 500, 256),
     timeoutMs: opts.timeoutMs ?? 25_000,
   });
-  if (!content) return { content: null, status: null, reasonCode: 'empty_response', reasonText: 'nvidia returned no content' };
-  return { content, status: 200, reasonCode: 'success', reasonText: 'ok' };
+  if (!result) return { content: null, status: null, reasonCode: 'empty_response', reasonText: `nvidia (${role}) returned no content` };
+  return { content: result.content, status: 200, reasonCode: 'success', reasonText: `ok via ${result.model}` };
 }
 
 
@@ -82,6 +83,8 @@ export interface CascadeOptions {
   timeoutMs?: number;
   /** Cascade strategy: default keeps T1→T5 order; t1-primary boosts T1 and keeps T5 as last-resort fallback. */
   mode?: CascadeMode;
+  /** Task role — selects the NVIDIA NIM model chain on the T5 tier (deep_thinking, chat, fast, creative, ...). */
+  nvidiaRole?: NvidiaRole;
 }
 
 interface Message {
@@ -296,7 +299,7 @@ export function getDefaultTiers(_mode: CascadeMode = 'default', _lovableModel?: 
     { tier: 2, name: 'T2 · Gemini 3.5 Flash',            provider: 'gemini',   model: 'gemini-3.5-flash',                   envKey: 'GOOGLE_AI_STUDIO_KEY',   call: callGemini },
     { tier: 3, name: 'T3 · Groq GPT-OSS-120B',        provider: 'groq',     model: 'openai/gpt-oss-120b',            envKey: 'GROQ_API_KEY',           call: callGroqLlama },
     { tier: 4, name: 'T4 · OpenRouter Auto',             provider: 'openrouter', model: 'openrouter/auto',                        envKey: 'OPENROUTER_API_KEY',   call: callOpenRouter },
-    { tier: 5, name: 'T5 · NVIDIA NIM Llama 3.3 70B',    provider: 'nvidia',   model: NVIDIA_CHAT_MODEL,                    envKey: 'NVIDIA_API_KEY',         call: callNvidia },
+    { tier: 5, name: 'T5 · NVIDIA NIM (role chain)',    provider: 'nvidia',   model: NVIDIA_ROLES.chat[0],                    envKey: 'NVIDIA_API_KEY',         call: callNvidia },
   ];
 
 }

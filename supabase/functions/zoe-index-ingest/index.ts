@@ -17,6 +17,8 @@ const corsHeaders = {
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const GOOGLE_KEY = Deno.env.get('GOOGLE_AI_STUDIO_KEY') || Deno.env.get('GEMINI_API_KEY');
+import { nvidiaVision } from '../_shared/nvidia-provider.ts';
+
 const VISION_MODEL = 'gemini-3.6-flash';
 const SUPPORTED_TYPES = new Set(['post', 'loop_video', 'image', 'quote', 'profile', 'chat', 'dhf_node']);
 
@@ -51,9 +53,11 @@ async function canonicalOwner(
   return null;
 }
 
-/** Gemini vision pass: OCR + object/mood extraction for images. */
+const VISION_PROMPT =
+  'Extract all visual elements, OCR text, objects, people, mood and actions from this media, concisely, for database indexing.';
+
+/** Gemini vision pass with an NVIDIA NIM VLM fallback: OCR + object/mood extraction. */
 async function describeMedia(mediaUrl: string): Promise<string> {
-  if (!GOOGLE_KEY) return '';
   try {
     const media = await fetch(mediaUrl);
     if (!media.ok) return '';
@@ -63,6 +67,11 @@ async function describeMedia(mediaUrl: string): Promise<string> {
     if (buf.byteLength > 6_000_000) return '';
     let binary = '';
     for (let i = 0; i < buf.length; i += 8192) binary += String.fromCharCode(...buf.subarray(i, i + 8192));
+
+    const nvidiaFallback = () =>
+      nvidiaVision(`data:${mimeType};base64,${btoa(binary)}`, VISION_PROMPT).then((t) => t ?? '');
+
+    if (!GOOGLE_KEY) return await nvidiaFallback();
 
     const resp = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${VISION_MODEL}:generateContent?key=${GOOGLE_KEY}`,
@@ -74,9 +83,7 @@ async function describeMedia(mediaUrl: string): Promise<string> {
             {
               role: 'user',
               parts: [
-                {
-                  text: 'Extract all visual elements, OCR text, objects, people, mood and actions from this media, concisely, for database indexing.',
-                },
+                { text: VISION_PROMPT },
                 { inline_data: { mime_type: mimeType, data: btoa(binary) } },
               ],
             },
@@ -86,11 +93,12 @@ async function describeMedia(mediaUrl: string): Promise<string> {
       },
     );
     if (!resp.ok) {
-      console.warn('[zoe-index-ingest] vision failed', resp.status);
-      return '';
+      console.warn('[zoe-index-ingest] gemini vision failed, trying NVIDIA VLM', resp.status);
+      return await nvidiaFallback();
     }
     const data = await resp.json();
-    return data?.candidates?.[0]?.content?.parts?.map((p: any) => p.text).filter(Boolean).join('') ?? '';
+    const text = data?.candidates?.[0]?.content?.parts?.map((p: any) => p.text).filter(Boolean).join('') ?? '';
+    return text || await nvidiaFallback();
   } catch (e) {
     console.warn('[zoe-index-ingest] vision threw', e);
     return '';
