@@ -1,14 +1,16 @@
 /**
  * ZOE AMBIENT SEARCH — Decoupled Headless Retrieval Orchestrator.
- *  1. Groq intent router (<100ms JSON classification)
- *  2. Sovereign 1536-dim query vector
+ *  1. Intent router cascade (Groq → NVIDIA NIM → OpenRouter, <100ms JSON classification)
+ *  2. Sovereign 1536-dim query vector (Google → OpenRouter → NVIDIA)
  *  3. RRF hybrid search (pgvector + FTS + social consensus weights)
- *  4. Gemini ambient synthesis + <zoe_dispatch> agentic action block
+ *  4. Synthesis cascade (Gemini → Groq → NVIDIA NIM → OpenRouter) + <zoe_dispatch>
  * Sovereign providers only — no Lovable AI credits.
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.58.0';
 import { embedText } from '../_shared/zoe-embeddings.ts';
 import { requireSearchUser } from '../_shared/zoe-search-auth.ts';
+import { nvidiaChat, nvidiaKey } from '../_shared/nvidia-provider.ts';
+
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -76,9 +78,19 @@ async function routeIntent(queryText: string): Promise<Intent> {
   const fallback: Intent = { intent: 'informational', requiresAction: false, normalizedQuery: queryText };
   let raw: string | null = null;
   if (GROQ_KEY) raw = await chat('https://api.groq.com/openai/v1/chat/completions', GROQ_KEY, GROQ_ROUTER_MODEL, queryText);
+  if (!raw && nvidiaKey()) {
+    raw = await nvidiaChat(queryText, {
+      systemPrompt: ROUTER_SYSTEM,
+      temperature: 0,
+      maxTokens: 200,
+      jsonMode: true,
+      timeoutMs: 12_000,
+    });
+  }
   if (!raw && OPENROUTER_KEY) {
     raw = await chat('https://openrouter.ai/api/v1/chat/completions', OPENROUTER_KEY, OPENROUTER_ROUTER_MODEL, queryText);
   }
+
   if (!raw) return fallback;
   try {
     const parsed = JSON.parse(raw.replace(/^```json\s*|\s*```$/g, '').trim());
@@ -118,22 +130,26 @@ async function synthesize(systemPrompt: string, queryText: string): Promise<stri
       console.warn('[zoe-ambient-search] gemini threw', e);
     }
   }
-  // Fallback cascade: Groq → OpenRouter.
-  for (const [url, key, model] of [
-    ['https://api.groq.com/openai/v1/chat/completions', GROQ_KEY, 'openai/gpt-oss-120b'],
-    ['https://openrouter.ai/api/v1/chat/completions', OPENROUTER_KEY, OPENROUTER_ROUTER_MODEL],
-  ] as const) {
-    if (!key) continue;
+  // Fallback cascade: Groq → NVIDIA NIM → OpenRouter.
+  const openAiCompatTiers = [
+    { url: 'https://api.groq.com/openai/v1/chat/completions', key: GROQ_KEY, model: 'openai/gpt-oss-120b' },
+    { url: 'https://openrouter.ai/api/v1/chat/completions', key: OPENROUTER_KEY, model: OPENROUTER_ROUTER_MODEL },
+  ];
+
+  async function callOpenAiCompat(tier: { url: string; key?: string; model: string }): Promise<string | null> {
+    if (!tier.key) return null;
     try {
-      const resp = await fetch(url, {
+      const resp = await fetch(tier.url, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${key}`,
+          Authorization: `Bearer ${tier.key}`,
           'Content-Type': 'application/json',
-          ...(url.includes('openrouter') ? { 'HTTP-Referer': 'https://myzoe.xyz', 'X-Title': 'Zoe Ambient Search' } : {}),
+          ...(tier.url.includes('openrouter')
+            ? { 'HTTP-Referer': 'https://myzoe.xyz', 'X-Title': 'Zoe Ambient Search' }
+            : {}),
         },
         body: JSON.stringify({
-          model,
+          model: tier.model,
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: queryText },
@@ -141,16 +157,32 @@ async function synthesize(systemPrompt: string, queryText: string): Promise<stri
           temperature: 0.6,
         }),
       });
-      if (!resp.ok) continue;
+      if (!resp.ok) {
+        console.warn('[zoe-ambient-search] synth tier failed', tier.model, resp.status);
+        return null;
+      }
       const data = await resp.json();
-      const text = data?.choices?.[0]?.message?.content;
-      if (text) return text;
-    } catch {
-      /* try next provider */
+      return data?.choices?.[0]?.message?.content || null;
+    } catch (e) {
+      console.warn('[zoe-ambient-search] synth tier threw', tier.model, e);
+      return null;
     }
   }
-  return null;
+
+  const groqText = await callOpenAiCompat(openAiCompatTiers[0]);
+  if (groqText) return groqText;
+
+  const nvidiaText = await nvidiaChat(queryText, {
+    systemPrompt,
+    temperature: 0.6,
+    maxTokens: 1400,
+    timeoutMs: 25_000,
+  });
+  if (nvidiaText) return nvidiaText;
+
+  return await callOpenAiCompat(openAiCompatTiers[1]);
 }
+
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });

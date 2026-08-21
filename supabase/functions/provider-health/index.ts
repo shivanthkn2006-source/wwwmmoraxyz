@@ -26,6 +26,7 @@ const TRACKED_KEYS = [
   'GOOGLE_AI_STUDIO_KEY',
   'OPENROUTER_API_KEY',
   'POLLINATIONS_API_KEY',
+  'NVIDIA_API_KEY',
 ] as const;
 
 function keyPresenceMap() {

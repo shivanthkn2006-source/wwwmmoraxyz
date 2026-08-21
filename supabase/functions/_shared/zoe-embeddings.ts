@@ -2,15 +2,18 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  * ZOE SOVEREIGN EMBEDDINGS
  * 1536-dim vectors for public.zoe_universal_index — no Lovable AI credits.
- * Provider cascade: Google AI Studio (gemini-embedding-001) → OpenRouter fallback.
+ * Provider cascade: Google AI Studio (gemini-embedding-001) → OpenRouter → NVIDIA NIM.
  * ═══════════════════════════════════════════════════════════════════════════════
  */
+
+import { nvidiaEmbed } from './nvidia-provider.ts';
 
 const GOOGLE_EMBED_MODEL = 'gemini-embedding-001';
 export const ZOE_VECTOR_DIMS = 1536;
 
 /** Embed a single text chunk. Returns null when every provider is unavailable. */
 export async function embedText(text: string): Promise<number[] | null> {
+
   const clean = (text || '').trim().slice(0, 20000);
   if (!clean) return null;
 
@@ -72,8 +75,13 @@ export async function embedText(text: string): Promise<number[] | null> {
     }
   }
 
+  // Last-resort tier: NVIDIA NIM (llama-3.2-nv-embedqa-1b-v2), width-normalised to 1536.
+  const nvidia = await nvidiaEmbed(clean, ZOE_VECTOR_DIMS, 'passage');
+  if (nvidia) return nvidia;
+
   return null;
 }
+
 
 /** Split long text into embeddable chunks (~1200 chars with overlap). */
 export function chunkText(text: string, size = 1200, overlap = 150): string[] {
