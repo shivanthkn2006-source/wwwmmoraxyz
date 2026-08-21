@@ -178,7 +178,9 @@ export const clearHomeIconErrors = () => {
 
 export const subscribeHomeIconStatus = (listener: () => void) => {
   listeners.add(listener);
-  return () => listeners.delete(listener);
+  return () => {
+    listeners.delete(listener);
+  };
 };
 
 export interface ChecklistResult {

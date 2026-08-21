@@ -2021,9 +2021,9 @@ const HomePage = () => {
             label: 'Zoe AI chat',
             icon: <Sparkles className="h-[22px] w-[22px]" />,
             active: zoeChatOpen,
-            onSelect: runHomeIconAction('zoe-ai', () =>
-              window.dispatchEvent(new CustomEvent('mmora:zoe-open-with-context', { detail: {} })),
-            ),
+            onSelect: runHomeIconAction('zoe-ai', () => {
+              window.dispatchEvent(new CustomEvent('mmora:zoe-open-with-context', { detail: {} }));
+            }),
           },
           {
             id: 'camera',
@@ -2051,9 +2051,9 @@ const HomePage = () => {
             label: 'Search',
             icon: <Search className="h-[22px] w-[22px]" />,
             active: homeSearchOpen,
-            onSelect: runHomeIconAction('search', () =>
-              window.dispatchEvent(new CustomEvent('mmora:open-home-search')),
-            ),
+            onSelect: runHomeIconAction('search', () => {
+              window.dispatchEvent(new CustomEvent('mmora:open-home-search'));
+            }),
           },
           {
             id: 'likes',
