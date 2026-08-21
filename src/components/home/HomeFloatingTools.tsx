@@ -25,6 +25,8 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
   const inputRef = React.useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const { results, loading, error } = useHomeSearch(query, searchOpen);
+  // Startup guard: warns and self-heals when the universal index is empty/stale.
+  const { isEmpty: indexEmpty } = useSearchIndexHealth({ autoBackfill: true });
   const {
     executeAmbientSearch,
     isSynthesizing,
