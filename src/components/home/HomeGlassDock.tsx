@@ -25,6 +25,8 @@ export interface GlassDockItem {
   badge?: number;
   /** Marks the icon as the currently-open surface (rendered brighter). */
   active?: boolean;
+  /** Badge value comes from a cached snapshot (realtime/auth failure). */
+  badgeStale?: boolean;
 }
 
 
@@ -32,6 +34,8 @@ interface HomeGlassDockProps {
   /** Future menu entries. When empty, placeholder slots are shown. */
   items?: GlassDockItem[];
   className?: string;
+  /** Timestamp of the last successful badge refresh (for the stale note). */
+  badgesUpdatedAt?: number | null;
 }
 
 const PLACEHOLDER_ICONS = [Compass, Bell, Camera, MessageCircle, Sparkles, Bookmark, Settings, User, Heart, Search];
@@ -41,7 +45,16 @@ const PLACEHOLDER_ICONS = [Compass, Bell, Camera, MessageCircle, Sparkles, Bookm
  * right→left to slide out a single horizontal rectangular glass tube holding
  * the menu icons. Purely additive — no other UI is touched.
  */
-export default function HomeGlassDock({ items = [], className }: HomeGlassDockProps) {
+const formatAgo = (timestamp?: number | null): string => {
+  if (!timestamp) return 'never';
+  const seconds = Math.max(0, Math.round((Date.now() - timestamp) / 1000));
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  return `${Math.round(minutes / 60)}h ago`;
+};
+
+export default function HomeGlassDock({ items = [], className, badgesUpdatedAt }: HomeGlassDockProps) {
   const [open, setOpen] = React.useState(false);
   const rootRef = React.useRef<HTMLDivElement>(null);
   const railRef = React.useRef<HTMLDivElement>(null);
@@ -191,16 +204,30 @@ export default function HomeGlassDock({ items = [], className }: HomeGlassDockPr
           )}
         >
 
+          {items.some((item) => item.badgeStale && (item.badge ?? 0) > 0) && (
+            <span
+              className="mr-1 shrink-0 rounded-full border border-dashed border-white/40 bg-black/40 px-2 py-[3px] text-[9px] font-medium leading-none text-white/70"
+              title="Counts are cached — live updates are currently unavailable"
+            >
+              cached · {formatAgo(badgesUpdatedAt)}
+            </span>
+          )}
+
           {slots.map((item) => {
             const badge = Number.isFinite(item.badge) ? Math.max(0, Math.floor(item.badge as number)) : 0;
             const highlighted = Boolean(item.active) || badge > 0;
+            const badgeStale = Boolean(item.badgeStale) && badge > 0;
             return (
               <button
                 key={item.id}
                 type="button"
                 role="menuitem"
-                aria-label={badge > 0 ? `${item.label}, ${badge > 99 ? '99+' : badge} new` : item.label}
-                title={item.label}
+                aria-label={
+                  badge > 0
+                    ? `${item.label}, ${badge > 99 ? '99+' : badge} new${badgeStale ? ` (cached, updated ${formatAgo(badgesUpdatedAt)})` : ''}`
+                    : item.label
+                }
+                title={badgeStale ? `${item.label} — cached count, updated ${formatAgo(badgesUpdatedAt)}` : item.label}
                 aria-current={item.active ? 'true' : undefined}
                 tabIndex={open ? 0 : -1}
                 onClick={() => {
@@ -226,10 +253,11 @@ export default function HomeGlassDock({ items = [], className }: HomeGlassDockPr
                       'pointer-events-none absolute -top-1.5 left-1/2 -translate-x-1/2',
                       'flex h-[16px] min-w-[16px] items-center justify-center rounded-full px-1',
                       'bg-black/85 text-[10px] font-semibold leading-none text-white',
-                      'border border-white/40 shadow-[0_1px_4px_rgba(0,0,0,0.6)]',
+                      'border shadow-[0_1px_4px_rgba(0,0,0,0.6)]',
+                      badgeStale ? 'border-dashed border-white/50 text-white/70' : 'border-white/40',
                     )}
                   >
-                    {badge > 99 ? '99+' : badge}
+                    {badgeStale ? '~' : ''}{badge > 99 ? '99+' : badge}
                   </span>
                 )}
               </button>
