@@ -30,6 +30,9 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
   const { results, loading, error } = useHomeSearch(query, searchOpen);
   // Startup guard: warns and self-heals when the universal index is empty/stale.
   const { isEmpty: indexEmpty } = useSearchIndexHealth({ autoBackfill: true });
+  // Live 5-line structural answer (VR world components, features, live counts).
+  const { lines: insightLines } = usePlatformInsight(query, searchOpen, 5);
+
   const {
     executeAmbientSearch,
     isSynthesizing,
