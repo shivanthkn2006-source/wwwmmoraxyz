@@ -151,3 +151,67 @@ export async function nvidiaEmbed(
     return null;
   }
 }
+
+/**
+ * Role-aware chat: walks the role's fallback chain until one model answers.
+ * Returns `{ content, model }` so callers can log which NIM actually served.
+ */
+export async function nvidiaChatByRole(
+  role: NvidiaRole,
+  userText: string,
+  opts: NvidiaChatOptions = {},
+): Promise<{ content: string; model: string } | null> {
+  for (const model of NVIDIA_ROLES[role]) {
+    const content = await nvidiaChat(userText, { ...opts, model });
+    if (content) return { content, model };
+  }
+  return null;
+}
+
+/**
+ * Vision pass over a base64 image using the NIM VLM chain.
+ * `dataUrl` must be a full `data:image/...;base64,...` string.
+ */
+export async function nvidiaVision(
+  dataUrl: string,
+  prompt: string,
+  opts: { maxTokens?: number; timeoutMs?: number } = {},
+): Promise<string | null> {
+  const key = nvidiaKey();
+  if (!key) return null;
+  for (const model of NVIDIA_ROLES.vision) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), opts.timeoutMs ?? 45_000);
+    try {
+      const resp = await fetch(`${NVIDIA_BASE}/chat/completions`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+        signal: controller.signal,
+        body: JSON.stringify({
+          model,
+          messages: [{
+            role: 'user',
+            content: [
+              { type: 'text', text: prompt },
+              { type: 'image_url', image_url: { url: dataUrl } },
+            ],
+          }],
+          temperature: 0.2,
+          max_tokens: opts.maxTokens ?? 512,
+        }),
+      });
+      if (!resp.ok) {
+        console.warn('[nvidia] vision failed', model, resp.status);
+        continue;
+      }
+      const data = await resp.json();
+      const content = data?.choices?.[0]?.message?.content;
+      if (typeof content === 'string' && content.trim()) return content;
+    } catch (e) {
+      console.warn('[nvidia] vision threw', model, e);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  return null;
+}
