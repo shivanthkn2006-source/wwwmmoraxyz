@@ -125,9 +125,7 @@ export default function HomeGlassDock({ items = [], className }: HomeGlassDockPr
     if (wasPreview) suppressClick.current = true;
   };
 
-
-
-  const slots: GlassDockItem[] =
+  const baseSlots: GlassDockItem[] =
     items.length > 0
       ? items
       : PLACEHOLDER_ICONS.map((Icon, index) => ({
@@ -136,6 +134,22 @@ export default function HomeGlassDock({ items = [], className }: HomeGlassDockPr
           icon: <Icon className="h-[22px] w-[22px]" />,
           onSelect: () => {},
         }));
+
+  // Most-used icons render last → nearest the home trigger / opening area.
+  const slots = React.useMemo(() => orderByFrequency(baseSlots, usage), [baseSlots, usage]);
+
+  // On open, park the rail at its right end so the handiest icons are visible,
+  // and move focus into the rail. On close, hand focus back to the trigger.
+  React.useEffect(() => {
+    if (!open) return;
+    const rail = railRef.current;
+    if (!rail) return;
+    const id = window.requestAnimationFrame(() => {
+      rail.scrollLeft = rail.scrollWidth;
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [open, slots.length]);
+
 
   return (
     <div
