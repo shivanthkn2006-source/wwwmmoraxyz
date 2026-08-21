@@ -38,6 +38,8 @@ export default function HomeGlassDock({ items = [], className }: HomeGlassDockPr
   const [open, setOpen] = React.useState(false);
   const rootRef = React.useRef<HTMLDivElement>(null);
   const swipeStart = React.useRef<{ x: number; y: number } | null>(null);
+  const longPressTimer = React.useRef<number | null>(null);
+  const longPressPreview = React.useRef(false);
 
   // Tap outside / Escape closes the rail.
   React.useEffect(() => {
@@ -56,20 +58,51 @@ export default function HomeGlassDock({ items = [], className }: HomeGlassDockPr
     };
   }, [open]);
 
+  React.useEffect(() => () => {
+    if (longPressTimer.current) window.clearTimeout(longPressTimer.current);
+  }, []);
+
+  const clearLongPress = () => {
+    if (longPressTimer.current) {
+      window.clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
+
   const handlePointerDown = (event: React.PointerEvent) => {
     swipeStart.current = { x: event.clientX, y: event.clientY };
+    clearLongPress();
+    longPressPreview.current = false;
+    longPressTimer.current = window.setTimeout(() => {
+      longPressPreview.current = true;
+      setOpen(true);
+    }, 350);
+  };
+
+  const endLongPress = () => {
+    clearLongPress();
+    if (longPressPreview.current) {
+      longPressPreview.current = false;
+      setOpen(false);
+      return true;
+    }
+    return false;
   };
 
   const handlePointerUp = (event: React.PointerEvent) => {
     const start = swipeStart.current;
     swipeStart.current = null;
+    const wasPreview = endLongPress();
     if (!start) return;
     const dx = event.clientX - start.x;
     const dy = event.clientY - start.y;
     if (Math.abs(dx) > 24 && Math.abs(dx) > Math.abs(dy)) {
       setOpen(dx < 0); // swipe left opens, swipe right closes
+      return;
     }
+    if (wasPreview) return;
   };
+
 
   const slots: GlassDockItem[] =
     items.length > 0
