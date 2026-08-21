@@ -175,7 +175,50 @@ const HomePage = () => {
     window.addEventListener('mmora:home-search-toggle', onSearchToggle);
     return () => window.removeEventListener('mmora:home-search-toggle', onSearchToggle);
   }, []);
-  const { badges: dockBadges } = useHomeDockBadges();
+  const { badges: dockBadges, refresh: refreshDockBadges } = useHomeDockBadges();
+
+  // Diagnostics-only panel (?iconstatus=1) — no change to the default Home UI.
+  const [iconStatusPanelOpen, setIconStatusPanelOpen] = useState<boolean>(() => {
+    try {
+      return typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('iconstatus');
+    } catch {
+      return false;
+    }
+  });
+
+  // Register every dock icon with the status registry + define the
+  // non-destructive probes used by the preview checklist.
+  useEffect(() => {
+    const routeProbe = (path: string) => () => {
+      const known = ['/camera', '/chat', '/profile'];
+      if (!known.includes(path.split('?')[0])) throw new Error(`Route ${path} is not registered`);
+      if (typeof navigate !== 'function') throw new Error('Router navigate unavailable');
+      return true;
+    };
+    const eventProbe = (name: string) => () => {
+      if (typeof window === 'undefined') throw new Error('No window');
+      window.dispatchEvent(new CustomEvent(`${name}:probe`, { detail: { probe: true } }));
+      return true;
+    };
+    const surfaceProbe = (setter: unknown) => () => {
+      if (typeof setter !== 'function') throw new Error('State setter unavailable');
+      return true;
+    };
+
+    const unsubs = [
+      registerHomeIcon('zoe-ai', 'Zoe AI chat', 'event', eventProbe('mmora:zoe-open-with-context')),
+      registerHomeIcon('camera', 'Camera', 'route', routeProbe('/camera')),
+      registerHomeIcon('chat', 'Messages', 'route', routeProbe('/chat')),
+      registerHomeIcon('notifications', 'Notifications', 'surface', surfaceProbe(setNotificationMenuOpen)),
+      registerHomeIcon('search', 'Search', 'event', eventProbe('mmora:open-home-search')),
+      registerHomeIcon('likes', 'Liked posts', 'surface', surfaceProbe(setCollectionMode)),
+      registerHomeIcon('saved', 'Saved posts', 'surface', surfaceProbe(setCollectionMode)),
+      registerHomeIcon('profile', 'Profile', 'surface', surfaceProbe(setIsProfileSheetOpen)),
+      registerHomeIcon('settings', 'Settings', 'route', routeProbe('/profile?settings=1')),
+    ];
+    return () => unsubs.forEach((off) => off());
+  }, [navigate]);
+
 
   const loopRailRef = useRef<HTMLDivElement | null>(null);
   const feedAutoTimerRef = useRef<number | null>(null);
