@@ -7,6 +7,7 @@ import DraggableHomeControl from '@/components/home/DraggableHomeControl';
 import { useAmbientSearch, type AmbientSearchRecord } from '@/core/ports/useAmbientSearch';
 import { routeForDispatch, routeForEntity, labelForRecord } from '@/lib/ambientDispatch';
 import SearchDebugPanel from '@/components/home/SearchDebugPanel';
+import { useSearchIndexHealth } from '@/hooks/useSearchIndexHealth';
 
 interface HomeFloatingToolsProps {
   query: string;
