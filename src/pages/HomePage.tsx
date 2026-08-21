@@ -25,6 +25,9 @@ import HomeFloatingTools from '@/components/home/HomeFloatingTools';
 import HomeGlassDock from '@/components/home/HomeGlassDock';
 import HomeCollectionSheet, { type CollectionMode } from '@/components/home/HomeCollectionSheet';
 import useHomeDockBadges from '@/hooks/useHomeDockBadges';
+import { registerHomeIcon, runHomeIconAction } from '@/lib/homeIconStatus';
+const HomeIconStatusPanel = React.lazy(() => import('@/components/home/HomeIconStatusPanel'));
+
 
 
 
@@ -172,7 +175,50 @@ const HomePage = () => {
     window.addEventListener('mmora:home-search-toggle', onSearchToggle);
     return () => window.removeEventListener('mmora:home-search-toggle', onSearchToggle);
   }, []);
-  const { badges: dockBadges } = useHomeDockBadges();
+  const { badges: dockBadges, refresh: refreshDockBadges } = useHomeDockBadges();
+
+  // Diagnostics-only panel (?iconstatus=1) — no change to the default Home UI.
+  const [iconStatusPanelOpen, setIconStatusPanelOpen] = useState<boolean>(() => {
+    try {
+      return typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('iconstatus');
+    } catch {
+      return false;
+    }
+  });
+
+  // Register every dock icon with the status registry + define the
+  // non-destructive probes used by the preview checklist.
+  useEffect(() => {
+    const routeProbe = (path: string) => () => {
+      const known = ['/camera', '/chat', '/profile'];
+      if (!known.includes(path.split('?')[0])) throw new Error(`Route ${path} is not registered`);
+      if (typeof navigate !== 'function') throw new Error('Router navigate unavailable');
+      return true;
+    };
+    const eventProbe = (name: string) => () => {
+      if (typeof window === 'undefined') throw new Error('No window');
+      window.dispatchEvent(new CustomEvent(`${name}:probe`, { detail: { probe: true } }));
+      return true;
+    };
+    const surfaceProbe = (setter: unknown) => () => {
+      if (typeof setter !== 'function') throw new Error('State setter unavailable');
+      return true;
+    };
+
+    const unsubs = [
+      registerHomeIcon('zoe-ai', 'Zoe AI chat', 'event', eventProbe('mmora:zoe-open-with-context')),
+      registerHomeIcon('camera', 'Camera', 'route', routeProbe('/camera')),
+      registerHomeIcon('chat', 'Messages', 'route', routeProbe('/chat')),
+      registerHomeIcon('notifications', 'Notifications', 'surface', surfaceProbe(setNotificationMenuOpen)),
+      registerHomeIcon('search', 'Search', 'event', eventProbe('mmora:open-home-search')),
+      registerHomeIcon('likes', 'Liked posts', 'surface', surfaceProbe(setCollectionMode)),
+      registerHomeIcon('saved', 'Saved posts', 'surface', surfaceProbe(setCollectionMode)),
+      registerHomeIcon('profile', 'Profile', 'surface', surfaceProbe(setIsProfileSheetOpen)),
+      registerHomeIcon('settings', 'Settings', 'route', routeProbe('/profile?settings=1')),
+    ];
+    return () => unsubs.forEach((off) => off());
+  }, [navigate]);
+
 
   const loopRailRef = useRef<HTMLDivElement | null>(null);
   const feedAutoTimerRef = useRef<number | null>(null);
@@ -1254,6 +1300,36 @@ const HomePage = () => {
     }
   };
 
+  // Fallback polling: keeps notification / message / collection badges accurate
+  // even when the realtime socket drops or briefly fails to (re)connect.
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const poll = () => {
+      void fetchUnreadCount();
+      void fetchUnreadMessages();
+      void refreshDockBadges();
+    };
+
+    const interval = window.setInterval(poll, 30_000);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') poll();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('online', poll);
+    window.addEventListener('focus', poll);
+
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('online', poll);
+      window.removeEventListener('focus', poll);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, refreshDockBadges]);
+
+
+
   const fetchNewMatches = async () => {
     if (!user) return;
     
@@ -1945,20 +2021,22 @@ const HomePage = () => {
             label: 'Zoe AI chat',
             icon: <Sparkles className="h-[22px] w-[22px]" />,
             active: zoeChatOpen,
-            onSelect: () => window.dispatchEvent(new CustomEvent('mmora:zoe-open-with-context', { detail: {} })),
+            onSelect: runHomeIconAction('zoe-ai', () => {
+              window.dispatchEvent(new CustomEvent('mmora:zoe-open-with-context', { detail: {} }));
+            }),
           },
           {
             id: 'camera',
             label: 'Camera',
             icon: <Camera className="h-[22px] w-[22px]" />,
-            onSelect: () => navigate('/camera'),
+            onSelect: runHomeIconAction('camera', () => navigate('/camera')),
           },
           {
             id: 'chat',
             label: 'Messages',
             icon: <MessageCircle className="h-[22px] w-[22px]" />,
             badge: unreadMessages,
-            onSelect: () => navigate('/chat'),
+            onSelect: runHomeIconAction('chat', () => navigate('/chat')),
           },
           {
             id: 'notifications',
@@ -1966,14 +2044,16 @@ const HomePage = () => {
             icon: <Bell className="h-[22px] w-[22px]" />,
             badge: unreadNotifications,
             active: notificationMenuOpen,
-            onSelect: () => setNotificationMenuOpen(true),
+            onSelect: runHomeIconAction('notifications', () => setNotificationMenuOpen(true)),
           },
           {
             id: 'search',
             label: 'Search',
             icon: <Search className="h-[22px] w-[22px]" />,
             active: homeSearchOpen,
-            onSelect: () => window.dispatchEvent(new CustomEvent('mmora:open-home-search')),
+            onSelect: runHomeIconAction('search', () => {
+              window.dispatchEvent(new CustomEvent('mmora:open-home-search'));
+            }),
           },
           {
             id: 'likes',
@@ -1981,7 +2061,7 @@ const HomePage = () => {
             icon: <Heart className="h-[22px] w-[22px]" />,
             badge: dockBadges.likes,
             active: collectionMode === 'liked',
-            onSelect: () => setCollectionMode('liked'),
+            onSelect: runHomeIconAction('likes', () => setCollectionMode('liked')),
           },
           {
             id: 'saved',
@@ -1989,24 +2069,30 @@ const HomePage = () => {
             icon: <Bookmark className="h-[22px] w-[22px]" />,
             badge: dockBadges.saved,
             active: collectionMode === 'saved',
-            onSelect: () => setCollectionMode('saved'),
+            onSelect: runHomeIconAction('saved', () => setCollectionMode('saved')),
           },
           {
             id: 'profile',
             label: 'Profile',
             icon: <UserIcon className="h-[22px] w-[22px]" />,
             active: isProfileSheetOpen,
-            onSelect: () => setIsProfileSheetOpen(true),
+            onSelect: runHomeIconAction('profile', () => setIsProfileSheetOpen(true)),
           },
           {
             id: 'settings',
             label: 'Settings',
             icon: <Settings className="h-[22px] w-[22px]" />,
-            onSelect: () => navigate('/profile?settings=1'),
+            onSelect: runHomeIconAction('settings', () => navigate('/profile?settings=1')),
           },
         ]}
 
       />
+      {iconStatusPanelOpen && (
+        <React.Suspense fallback={null}>
+          <HomeIconStatusPanel onClose={() => setIconStatusPanelOpen(false)} />
+        </React.Suspense>
+      )}
+
       <HomeCollectionSheet mode={collectionMode} onOpenChange={(open) => !open && setCollectionMode(null)} />
 
 
