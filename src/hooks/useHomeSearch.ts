@@ -222,7 +222,14 @@ export function useHomeSearch(query: string, enabled = true) {
     };
   }, [query, enabled]);
 
-  return { results, loading, error };
+  // Per-type coverage so the filter chips can show how many hits each type has.
+  const counts = results.reduce<Record<SearchFilter, number>>((acc, item) => {
+    acc.all += 1;
+    acc[item.filter] += 1;
+    return acc;
+  }, { all: 0, profiles: 0, chats: 0, images: 0, loops: 0, videos: 0, other: 0 });
+
+  return { results, loading, error, counts };
 }
 
 export async function recordHomeSearch(query: string, result?: HomeSearchResult) {
