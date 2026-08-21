@@ -82,23 +82,23 @@ export default function HomeGlassDock({ items = [], className }: HomeGlassDockPr
     <div
       ref={rootRef}
       className={cn(
-        'fixed right-2 z-[9996] flex items-center justify-end',
+        'fixed right-0 z-[9996] flex items-center justify-end',
         'bottom-[calc(env(safe-area-inset-bottom,0px)+12px)]',
         className,
       )}
     >
-      {/* Rectangular horizontal glass tube — slides out right → left */}
+      {/* Rectangular horizontal glass tube — slides out right → left, spans near full width */}
       <div
         className={cn(
           'flex h-12 items-center overflow-hidden transition-all duration-300 ease-out',
           open
-            ? 'mr-1 max-w-[68vw] translate-x-0 opacity-100'
+            ? 'mr-0 max-w-[calc(100vw-16px)] translate-x-0 opacity-100'
             : 'pointer-events-none mr-0 max-w-0 translate-x-4 opacity-0',
         )}
       >
         <div
           className={cn(
-            'flex h-12 items-center gap-1 overflow-x-auto rounded-2xl border border-white/25 px-2',
+            'flex h-12 items-center gap-1 overflow-x-auto rounded-2xl rounded-r-none border border-white/25 border-r-0 px-2',
             'bg-white/10 backdrop-blur-xl shadow-[0_8px_24px_rgba(0,0,0,0.35)]',
             '[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden',
             'snap-x touch-pan-x',
@@ -128,7 +128,7 @@ export default function HomeGlassDock({ items = [], className }: HomeGlassDockPr
         </div>
       </div>
 
-      {/* Bare home trigger — no ring, no box */}
+      {/* Bare home trigger — flush at the right edge, no ring, no box */}
       <button
         type="button"
         aria-label={open ? 'Close home menu' : 'Open home menu'}
@@ -144,7 +144,7 @@ export default function HomeGlassDock({ items = [], className }: HomeGlassDockPr
         }}
         className={cn(
           'flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-transparent',
-          'text-white/90 drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)] transition-transform',
+          'pr-1 text-white/90 drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)] transition-transform',
           'active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60',
         )}
       >
