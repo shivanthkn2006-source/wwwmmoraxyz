@@ -14,6 +14,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { readDockUsage, recordDockUsage, orderByFrequency, type DockUsageMap } from '@/lib/homeDockUsage';
+import { useDockBadgesEnabled } from '@/components/home/DockBadgeBoundary';
+
 
 
 export interface GlassDockItem {
@@ -55,7 +57,9 @@ const formatAgo = (timestamp?: number | null): string => {
 };
 
 export default function HomeGlassDock({ items = [], className, badgesUpdatedAt }: HomeGlassDockProps) {
+  const badgesEnabled = useDockBadgesEnabled();
   const [open, setOpen] = React.useState(false);
+
   const rootRef = React.useRef<HTMLDivElement>(null);
   const railRef = React.useRef<HTMLDivElement>(null);
   const triggerRef = React.useRef<HTMLButtonElement>(null);
@@ -204,7 +208,7 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt }
           )}
         >
 
-          {items.some((item) => item.badgeStale && (item.badge ?? 0) > 0) && (
+          {badgesEnabled && items.some((item) => item.badgeStale && (item.badge ?? 0) > 0) && (
             <span
               className="mr-1 shrink-0 rounded-full border border-dashed border-white/40 bg-black/40 px-2 py-[3px] text-[9px] font-medium leading-none text-white/70"
               title="Counts are cached — live updates are currently unavailable"
@@ -214,9 +218,10 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt }
           )}
 
           {slots.map((item) => {
-            const badge = Number.isFinite(item.badge) ? Math.max(0, Math.floor(item.badge as number)) : 0;
+            const badge = badgesEnabled && Number.isFinite(item.badge) ? Math.max(0, Math.floor(item.badge as number)) : 0;
             const highlighted = Boolean(item.active) || badge > 0;
-            const badgeStale = Boolean(item.badgeStale) && badge > 0;
+            const badgeStale = badgesEnabled && Boolean(item.badgeStale) && badge > 0;
+
             return (
               <button
                 key={item.id}

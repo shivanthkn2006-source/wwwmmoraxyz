@@ -23,6 +23,7 @@ import { onHomeRefresh, triggerHomeRefresh } from '@/lib/homeRefresh';
 import { rememberShortInOrbMemory } from '@/lib/orbShortsMemory';
 import HomeFloatingTools from '@/components/home/HomeFloatingTools';
 import HomeGlassDock from '@/components/home/HomeGlassDock';
+import DockBadgeBoundary from '@/components/home/DockBadgeBoundary';
 import HomeCollectionSheet, { type CollectionMode } from '@/components/home/HomeCollectionSheet';
 import useHomeDockBadges from '@/hooks/useHomeDockBadges';
 import { registerHomeIcon, runHomeIconAction } from '@/lib/homeIconStatus';
@@ -2016,6 +2017,7 @@ const HomePage = () => {
       )}
 
       <HomeFloatingTools query={homeQuery} onQueryChange={setHomeQuery} onOpenEditor={() => setPostEditorOpen(true)} />
+      <DockBadgeBoundary>
       <HomeGlassDock
         badgesUpdatedAt={dockBadgesUpdatedAt}
         items={[
@@ -2105,6 +2107,7 @@ const HomePage = () => {
         ]}
 
       />
+      </DockBadgeBoundary>
       {iconStatusPanelOpen && (
         <React.Suspense fallback={null}>
           <HomeIconStatusPanel onClose={() => setIconStatusPanelOpen(false)} />
