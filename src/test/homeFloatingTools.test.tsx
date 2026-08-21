@@ -158,7 +158,8 @@ describe('HomeFloatingTools sideways search', () => {
     }, { timeout: 3000 });
 
     expect(selectCalls.some((c) => c.startsWith('public_profiles'))).toBe(true);
-    expect(selectCalls.every((c) => c.endsWith('signal'))).toBe(true);
+    expect(selectCalls.some((c) => c === 'rpc:zoe_prefix_search')).toBe(true);
+    expect(selectCalls.filter((c) => c.startsWith('public_profiles')).every((c) => c.endsWith('signal'))).toBe(true);
     expect(screen.getByText('Zoe AI Assistant')).toBeTruthy();
   });
 
@@ -182,7 +183,7 @@ describe('HomeFloatingTools sideways search', () => {
 
     await waitFor(() => expect(selectCalls.length).toBeGreaterThan(0), { timeout: 3000 });
     await new Promise((r) => setTimeout(r, 400));
-    // one profiles + one posts query only
+    // one universal-index RPC + one profiles query only
     expect(selectCalls.length).toBe(2);
   });
 
