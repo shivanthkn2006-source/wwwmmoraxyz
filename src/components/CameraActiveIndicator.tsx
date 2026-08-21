@@ -31,6 +31,16 @@ let globalMediaState: MediaState = {
 
 const mediaStateListeners = new Set<(state: MediaState) => void>();
 
+/**
+ * Privacy: never surface raw hardware device names (e.g. "FaceTime HD Camera",
+ * "MacBook Pro Microphone", "AirPods", "Galaxy Buds"). We always show a generic,
+ * device-agnostic status label instead — identical on every OS/browser.
+ */
+const genericLabel = (kind: 'camera' | 'microphone') =>
+  kind === 'camera' ? 'Camera ON' : 'Mic ON';
+
+
+
 // Cross-browser track active media devices
 export const trackMediaDevices = () => {
   if (typeof navigator === 'undefined' || !navigator.mediaDevices) return;
