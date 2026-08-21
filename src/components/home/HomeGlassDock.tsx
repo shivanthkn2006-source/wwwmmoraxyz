@@ -123,12 +123,12 @@ export default function HomeGlassDock({ items = [], className }: HomeGlassDockPr
         className,
       )}
     >
-      {/* Rectangular horizontal glass tube — slides out right → left, spans near full width */}
+      {/* Rectangular horizontal glass tube — slides out right → left, auto-sized to viewport */}
       <div
         className={cn(
           'flex h-12 items-center overflow-hidden transition-all duration-300 ease-out',
           open
-            ? 'mr-0 max-w-[calc(100vw-16px)] translate-x-0 opacity-100'
+            ? 'mr-0 max-w-[calc(100vw-env(safe-area-inset-left,0px)-env(safe-area-inset-right,0px)-52px)] translate-x-0 opacity-100'
             : 'pointer-events-none mr-0 max-w-0 translate-x-4 opacity-0',
         )}
       >
@@ -137,9 +137,10 @@ export default function HomeGlassDock({ items = [], className }: HomeGlassDockPr
             'flex h-12 items-center gap-1 overflow-x-auto rounded-2xl rounded-r-none border border-white/25 border-r-0 px-2',
             'bg-white/10 backdrop-blur-xl shadow-[0_8px_24px_rgba(0,0,0,0.35)]',
             '[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden',
-            'snap-x touch-pan-x',
+            'snap-x snap-mandatory scroll-px-2 scroll-smooth touch-pan-x [overscroll-behavior-x:contain]',
           )}
         >
+
           {slots.map((item) => (
             <button
               key={item.id}
