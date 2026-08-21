@@ -13,6 +13,8 @@ import {
   Search,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { readDockUsage, recordDockUsage, orderByFrequency, type DockUsageMap } from '@/lib/homeDockUsage';
+
 
 export interface GlassDockItem {
   id: string;
