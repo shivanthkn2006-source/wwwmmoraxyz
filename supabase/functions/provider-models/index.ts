@@ -47,6 +47,12 @@ Deno.serve(async (req: Request) => {
   }
 
   const nvKey = Deno.env.get('NVIDIA_API_KEY');
+  if (nvKey && new URL(req.url).searchParams.get('nvidia_catalog') === '1') {
+    const r = await fetch('https://integrate.api.nvidia.com/v1/models', { headers: { Authorization: `Bearer ${nvKey}` } });
+    const j = await r.json().catch(() => null);
+    const ids = (j?.data ?? []).map((m: { id: string }) => m.id).sort();
+    return new Response(JSON.stringify({ count: ids.length, ids }, null, 2), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  }
   for (const m of NVIDIA_CANDIDATES) {
     if (!nvKey) break;
     try {
