@@ -18,6 +18,23 @@
  */
 
 import { applyCircuitBreaker } from './loop-breaker.ts';
+import { nvidiaChat, NVIDIA_CHAT_MODEL } from './nvidia-provider.ts';
+
+async function callNvidia(messages: Message[], opts: CascadeOptions): Promise<ProviderOutcome> {
+  const apiKey = Deno.env.get('NVIDIA_API_KEY');
+  if (!apiKey) return { content: null, status: null, reasonCode: 'missing_key', reasonText: 'NVIDIA_API_KEY not set' };
+  const systemPrompt = opts.systemPrompt || messages.find(m => m.role === 'system')?.content;
+  const userText = messages.filter(m => m.role !== 'system').map(m => `${m.role}: ${m.content}`).join('\n\n');
+  const content = await nvidiaChat(userText || (messages.at(-1)?.content ?? ''), {
+    systemPrompt,
+    temperature: opts.temperature ?? 0.7,
+    maxTokens: Math.max(opts.maxTokens ?? 500, 256),
+    timeoutMs: opts.timeoutMs ?? 25_000,
+  });
+  if (!content) return { content: null, status: null, reasonCode: 'empty_response', reasonText: 'nvidia returned no content' };
+  return { content, status: 200, reasonCode: 'success', reasonText: 'ok' };
+}
+
 
 export type CascadeMode = 'default' | 't1-primary';
 
