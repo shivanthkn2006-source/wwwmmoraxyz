@@ -14,6 +14,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { readDockUsage, recordDockUsage, orderByFrequency, type DockUsageMap } from '@/lib/homeDockUsage';
+import { useDockBadgesEnabled } from '@/components/home/DockBadgeBoundary';
+
 
 
 export interface GlassDockItem {
