@@ -2,7 +2,14 @@ import React from 'react';
 import { Camera, Search, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useNavigate } from 'react-router-dom';
-import { useHomeSearch, recordHomeSearch, type HomeSearchResult } from '@/hooks/useHomeSearch';
+import {
+  useHomeSearch,
+  recordHomeSearch,
+  SEARCH_FILTERS,
+  SIGNAL_LABEL,
+  type HomeSearchResult,
+  type SearchFilter,
+} from '@/hooks/useHomeSearch';
 import DraggableHomeControl from '@/components/home/DraggableHomeControl';
 import { useAmbientSearch, type AmbientSearchRecord } from '@/core/ports/useAmbientSearch';
 import { routeForDispatch, routeForEntity, labelForRecord } from '@/lib/ambientDispatch';
