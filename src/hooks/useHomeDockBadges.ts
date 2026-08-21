@@ -110,7 +110,7 @@ export const useHomeDockBadges = () => {
     };
   }, [user?.id, refresh]);
 
-  return { badges, refresh, stale };
+  return { badges, refresh, stale, updatedAt };
 };
 
 export default useHomeDockBadges;
