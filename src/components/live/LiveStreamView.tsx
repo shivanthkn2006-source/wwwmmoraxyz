@@ -251,7 +251,7 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({
 
       {/* Header */}
       <div
-        className="absolute inset-x-0 top-0 flex items-start justify-between gap-3 px-3"
+        className="absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-3 px-3"
         style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
       >
         <div className="flex min-w-0 items-center gap-2 rounded-full bg-black/35 px-2 py-1.5 backdrop-blur-md">
