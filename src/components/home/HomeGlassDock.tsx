@@ -8,6 +8,9 @@ import {
   Bookmark,
   Settings,
   Sparkles,
+  User,
+  Heart,
+  Search,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -24,7 +27,7 @@ interface HomeGlassDockProps {
   className?: string;
 }
 
-const PLACEHOLDER_ICONS = [Compass, Bell, Camera, MessageCircle, Sparkles, Bookmark, Settings];
+const PLACEHOLDER_ICONS = [Compass, Bell, Camera, MessageCircle, Sparkles, Bookmark, Settings, User, Heart, Search];
 
 /**
  * Bottom-right home dock. Tap, press Enter/Space, or swipe the bare home icon
