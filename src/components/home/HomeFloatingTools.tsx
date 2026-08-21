@@ -68,12 +68,17 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
     }
   }, [searchOpen]);
 
-  // Home dock search icon opens this same bar.
+  // Home dock search icon opens this same bar; broadcast state so the dock icon can light up.
   React.useEffect(() => {
     const open = () => setSearchOpen(true);
     window.addEventListener('mmora:open-home-search', open);
     return () => window.removeEventListener('mmora:open-home-search', open);
   }, []);
+
+  React.useEffect(() => {
+    window.dispatchEvent(new CustomEvent('mmora:home-search-toggle', { detail: { open: searchOpen } }));
+  }, [searchOpen]);
+
 
   // Outside-the-platform results (web, music, weather) via the external-search function.
   const [externalResults, setExternalResults] = React.useState<Array<{
