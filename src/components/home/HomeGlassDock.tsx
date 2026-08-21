@@ -99,11 +99,13 @@ export default function HomeGlassDock({ items = [], className }: HomeGlassDockPr
     const dx = event.clientX - start.x;
     const dy = event.clientY - start.y;
     if (Math.abs(dx) > 24 && Math.abs(dx) > Math.abs(dy)) {
+      suppressClick.current = true;
       setOpen(dx < 0); // swipe left opens, swipe right closes
       return;
     }
-    if (wasPreview) return;
+    if (wasPreview) suppressClick.current = true;
   };
+
 
 
   const slots: GlassDockItem[] =
