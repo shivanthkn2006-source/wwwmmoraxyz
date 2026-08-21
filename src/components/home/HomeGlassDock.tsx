@@ -50,61 +50,68 @@ export default function HomeGlassDock({ items = [], className }: HomeGlassDockPr
         className,
       )}
     >
-      {/* Horizontal glass tube: extends right → left, same height as the home icon */}
+      {/* One rectangular glass box: scrollable icon strip + home button at its end */}
       <div
         className={cn(
-          'flex h-11 items-center overflow-hidden transition-all duration-300 ease-out',
-          open ? 'mr-1 max-w-[72vw] opacity-100' : 'pointer-events-none mr-0 max-w-0 opacity-0',
+          'flex h-12 items-stretch overflow-hidden rounded-2xl border border-white/25',
+          'bg-white/10 backdrop-blur-xl shadow-[0_8px_24px_rgba(0,0,0,0.35)]',
+          'transition-all duration-300 ease-out',
         )}
       >
         <div
           className={cn(
-            'flex h-11 items-center gap-2 overflow-x-auto rounded-full border border-white/25 px-2',
-            'bg-white/10 backdrop-blur-xl',
-            '[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden',
-            'snap-x touch-pan-x',
+            'flex items-center overflow-hidden transition-all duration-300 ease-out',
+            open ? 'max-w-[70vw] opacity-100' : 'pointer-events-none max-w-0 opacity-0',
           )}
         >
-          {items.length === 0 ? (
-            <span className="whitespace-nowrap px-3 text-[11px] text-white/60">Menus coming soon</span>
-          ) : (
-            items.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                aria-label={item.label}
-                title={item.label}
-                onClick={() => {
-                  setOpen(false);
-                  item.onSelect();
-                }}
-                className={cn(
-                  'flex h-9 w-9 shrink-0 snap-start items-center justify-center rounded-full',
-                  'text-white/90 transition-transform active:scale-95 hover:bg-white/15',
-                )}
-              >
-                {item.icon}
-              </button>
-            ))
-          )}
+          <div
+            className={cn(
+              'flex h-12 items-center gap-1 overflow-x-auto px-2',
+              '[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden',
+              'snap-x touch-pan-x',
+            )}
+          >
+            {items.length === 0 ? (
+              <span className="whitespace-nowrap px-3 text-[11px] text-white/60">Menus coming soon</span>
+            ) : (
+              items.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  aria-label={item.label}
+                  title={item.label}
+                  onClick={() => {
+                    setOpen(false);
+                    item.onSelect();
+                  }}
+                  className={cn(
+                    'flex h-10 w-10 shrink-0 snap-start items-center justify-center rounded-xl',
+                    'text-white/90 transition-transform active:scale-95 hover:bg-white/15',
+                  )}
+                >
+                  {item.icon}
+                </button>
+              ))
+            )}
+          </div>
+          <div className="my-2 w-px shrink-0 bg-white/20" />
         </div>
-      </div>
 
-      {/* Bare home trigger — no outer ring */}
-      <button
-        type="button"
-        aria-label={open ? 'Close home menu' : 'Open home menu'}
-        aria-expanded={open}
-        onClick={() => setOpen((value) => !value)}
-        className={cn(
-          'flex h-11 w-11 shrink-0 items-center justify-center rounded-full',
-          'text-white/90 drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)] transition-transform',
-          'active:scale-95',
-        )}
-      >
-        <Home className="h-[22px] w-[22px]" />
-      </button>
+        <button
+          type="button"
+          aria-label={open ? 'Close home menu' : 'Open home menu'}
+          aria-expanded={open}
+          onClick={() => setOpen((value) => !value)}
+          className={cn(
+            'flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl',
+            'text-white/90 transition-transform active:scale-95 hover:bg-white/10',
+          )}
+        >
+          <Home className="h-[22px] w-[22px]" />
+        </button>
+      </div>
     </div>
   );
 }
+
 
