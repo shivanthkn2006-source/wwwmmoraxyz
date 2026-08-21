@@ -1927,7 +1927,75 @@ const HomePage = () => {
       )}
 
       <HomeFloatingTools query={homeQuery} onQueryChange={setHomeQuery} onOpenEditor={() => setPostEditorOpen(true)} />
-      <HomeGlassDock />
+      <HomeGlassDock
+        items={[
+          {
+            id: 'zoe-ai',
+            label: 'Zoe AI chat',
+            icon: <Sparkles className="h-[22px] w-[22px]" />,
+            onSelect: () => window.dispatchEvent(new CustomEvent('mmora:zoe-open-with-context', { detail: {} })),
+          },
+          {
+            id: 'camera',
+            label: 'Camera',
+            icon: <Camera className="h-[22px] w-[22px]" />,
+            onSelect: () => navigate('/camera'),
+          },
+          {
+            id: 'chat',
+            label: 'Messages',
+            icon: <MessageCircle className="h-[22px] w-[22px]" />,
+            onSelect: () => navigate('/chat'),
+          },
+          {
+            id: 'notifications',
+            label: 'Notifications',
+            icon: (
+              <span className="relative flex items-center justify-center">
+                <Bell className="h-[22px] w-[22px]" />
+                {unreadNotifications > 0 && (
+                  <span className="absolute -right-1.5 -top-1.5 min-w-[15px] rounded-full bg-primary px-1 text-[9px] font-semibold leading-[15px] text-primary-foreground">
+                    {unreadNotifications > 9 ? '9+' : unreadNotifications}
+                  </span>
+                )}
+              </span>
+            ),
+            onSelect: () => setNotificationMenuOpen(true),
+          },
+          {
+            id: 'search',
+            label: 'Search',
+            icon: <Search className="h-[22px] w-[22px]" />,
+            onSelect: () => window.dispatchEvent(new CustomEvent('mmora:open-home-search')),
+          },
+          {
+            id: 'likes',
+            label: 'Liked posts',
+            icon: <Heart className="h-[22px] w-[22px]" />,
+            onSelect: () => setCollectionMode('liked'),
+          },
+          {
+            id: 'saved',
+            label: 'Saved posts',
+            icon: <Bookmark className="h-[22px] w-[22px]" />,
+            onSelect: () => setCollectionMode('saved'),
+          },
+          {
+            id: 'profile',
+            label: 'Profile',
+            icon: <UserIcon className="h-[22px] w-[22px]" />,
+            onSelect: () => setIsProfileSheetOpen(true),
+          },
+          {
+            id: 'settings',
+            label: 'Settings',
+            icon: <Settings className="h-[22px] w-[22px]" />,
+            onSelect: () => navigate('/profile?settings=1'),
+          },
+        ]}
+      />
+      <HomeCollectionSheet mode={collectionMode} onOpenChange={(open) => !open && setCollectionMode(null)} />
+
 
       <HomePostEditor
         open={postEditorOpen}
