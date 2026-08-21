@@ -150,27 +150,48 @@ export default function HomeGlassDock({ items = [], className }: HomeGlassDockPr
           )}
         >
 
-          {slots.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              aria-label={item.label}
-              title={item.label}
-              tabIndex={open ? 0 : -1}
-              onClick={() => {
-                setOpen(false);
-                item.onSelect();
-              }}
-              className={cn(
-                'flex h-10 w-10 shrink-0 snap-start items-center justify-center rounded-xl',
-                'border border-white/15 bg-white/5 text-white/90',
-                'transition-transform active:scale-95 hover:bg-white/15',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60',
-              )}
-            >
-              {item.icon}
-            </button>
-          ))}
+          {slots.map((item) => {
+            const badge = item.badge ?? 0;
+            const highlighted = Boolean(item.active) || badge > 0;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                aria-label={badge > 0 ? `${item.label}, ${badge} new` : item.label}
+                title={item.label}
+                aria-current={item.active ? 'true' : undefined}
+                tabIndex={open ? 0 : -1}
+                onClick={() => {
+                  setOpen(false);
+                  item.onSelect();
+                }}
+                className={cn(
+                  'relative flex h-10 w-10 shrink-0 snap-start items-center justify-center rounded-xl',
+                  'transition-all active:scale-95',
+                  highlighted
+                    ? 'border border-white/45 bg-white/25 text-white shadow-[0_0_10px_rgba(255,255,255,0.35)] hover:bg-white/30'
+                    : 'border border-white/15 bg-white/5 text-white/60 hover:bg-white/15 hover:text-white/90',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60',
+                )}
+              >
+                {item.icon}
+                {badge > 0 && (
+                  <span
+                    aria-hidden="true"
+                    className={cn(
+                      'pointer-events-none absolute -top-1.5 left-1/2 -translate-x-1/2',
+                      'flex h-[16px] min-w-[16px] items-center justify-center rounded-full px-1',
+                      'bg-black/85 text-[10px] font-semibold leading-none text-white',
+                      'border border-white/40 shadow-[0_1px_4px_rgba(0,0,0,0.6)]',
+                    )}
+                  >
+                    {badge > 99 ? '99+' : badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+
         </div>
       </div>
 
