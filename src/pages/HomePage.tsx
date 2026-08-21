@@ -15,7 +15,7 @@ import NotificationMenu from '@/components/NotificationMenu';
 import AnimatedHamburgerButton from '@/components/AnimatedHamburgerButton';
 import HamburgerMenu from '@/components/HamburgerMenu';
 import SearchBar from '@/components/SearchBar';
-import { ArrowDown, Mail, Search, Video, TrendingUp, ArrowUp, Camera, ChevronUp, ChevronDown, Sparkles, MessageCircle, Settings, Bell, User as UserIcon, Heart, Bookmark, Boxes } from 'lucide-react';
+import { ArrowDown, Mail, Search, Video, TrendingUp, ArrowUp, Camera, ChevronUp, ChevronDown, Sparkles, MessageCircle, Settings, Bell, User as UserIcon, Heart, Bookmark, Boxes, Radio } from 'lucide-react';
 import { trackEvent } from '@/lib/analytics';
 import FuturisticCounter from '@/components/FuturisticCounter';
 import { useNavigate } from 'react-router-dom';
@@ -27,6 +27,7 @@ import HomeCollectionSheet, { type CollectionMode } from '@/components/home/Home
 import useHomeDockBadges from '@/hooks/useHomeDockBadges';
 import { registerHomeIcon, runHomeIconAction } from '@/lib/homeIconStatus';
 const HomeIconStatusPanel = React.lazy(() => import('@/components/home/HomeIconStatusPanel'));
+const LiveStreamView = React.lazy(() => import('@/components/live/LiveStreamView'));
 
 
 
@@ -113,6 +114,7 @@ const HomePage = () => {
   const [notificationMenuOpen, setNotificationMenuOpen] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [collectionMode, setCollectionMode] = useState<CollectionMode | null>(null);
+  const [liveViewOpen, setLiveViewOpen] = useState(false);
 
   const [activeTab, setActiveTab] = useState<string>('global');
   const [homeQuery, setHomeQuery] = useState('');
@@ -2063,6 +2065,13 @@ const HomePage = () => {
             }),
           },
           {
+            id: 'live',
+            label: 'Live',
+            icon: <Radio className="h-[22px] w-[22px]" />,
+            active: liveViewOpen,
+            onSelect: runHomeIconAction('live', () => setLiveViewOpen(true)),
+          },
+          {
             id: 'likes',
             label: 'Liked posts',
             icon: <Heart className="h-[22px] w-[22px]" />,
@@ -2099,6 +2108,12 @@ const HomePage = () => {
       {iconStatusPanelOpen && (
         <React.Suspense fallback={null}>
           <HomeIconStatusPanel onClose={() => setIconStatusPanelOpen(false)} />
+        </React.Suspense>
+      )}
+
+      {liveViewOpen && (
+        <React.Suspense fallback={null}>
+          <LiveStreamView onClose={() => setLiveViewOpen(false)} />
         </React.Suspense>
       )}
 
