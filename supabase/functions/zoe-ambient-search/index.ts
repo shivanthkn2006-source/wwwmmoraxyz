@@ -1,14 +1,16 @@
 /**
  * ZOE AMBIENT SEARCH — Decoupled Headless Retrieval Orchestrator.
- *  1. Groq intent router (<100ms JSON classification)
- *  2. Sovereign 1536-dim query vector
+ *  1. Intent router cascade (Groq → NVIDIA NIM → OpenRouter, <100ms JSON classification)
+ *  2. Sovereign 1536-dim query vector (Google → OpenRouter → NVIDIA)
  *  3. RRF hybrid search (pgvector + FTS + social consensus weights)
- *  4. Gemini ambient synthesis + <zoe_dispatch> agentic action block
+ *  4. Synthesis cascade (Gemini → Groq → NVIDIA NIM → OpenRouter) + <zoe_dispatch>
  * Sovereign providers only — no Lovable AI credits.
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.58.0';
 import { embedText } from '../_shared/zoe-embeddings.ts';
 import { requireSearchUser } from '../_shared/zoe-search-auth.ts';
+import { nvidiaChat, nvidiaKey } from '../_shared/nvidia-provider.ts';
+
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
