@@ -114,6 +114,7 @@ const HomePage = () => {
   const [notificationMenuOpen, setNotificationMenuOpen] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [collectionMode, setCollectionMode] = useState<CollectionMode | null>(null);
+  const [liveViewOpen, setLiveViewOpen] = useState(false);
 
   const [activeTab, setActiveTab] = useState<string>('global');
   const [homeQuery, setHomeQuery] = useState('');
