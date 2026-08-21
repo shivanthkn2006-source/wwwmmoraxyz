@@ -65,6 +65,23 @@ const TEST_JWT = 'test-jwt-token';
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
     from: vi.fn((table: string) => makeBuilder(table)),
+    rpc: vi.fn(async (fn: string) => {
+      selectCalls.push(`rpc:${fn}`);
+      return {
+        data: [
+          {
+            id: 'idx-1',
+            entity_type: 'loop_video',
+            entity_id: 'loop-9',
+            content_synthesis: 'By zoefan\nSkateboarding loop at sunset',
+            metadata: {},
+            social_weight: 1,
+            score: 0.9,
+          },
+        ],
+        error: null,
+      };
+    }),
     auth: {
       getUser: vi.fn(() => Promise.resolve({ data: { user: { id: 'u-me' } } })),
       getSession: vi.fn(() => Promise.resolve({ data: { session: { access_token: TEST_JWT, user: { id: 'u-me' } } } })),
@@ -141,7 +158,8 @@ describe('HomeFloatingTools sideways search', () => {
     }, { timeout: 3000 });
 
     expect(selectCalls.some((c) => c.startsWith('public_profiles'))).toBe(true);
-    expect(selectCalls.every((c) => c.endsWith('signal'))).toBe(true);
+    expect(selectCalls.some((c) => c === 'rpc:zoe_prefix_search')).toBe(true);
+    expect(selectCalls.filter((c) => c.startsWith('public_profiles')).every((c) => c.endsWith('signal'))).toBe(true);
     expect(screen.getByText('Zoe AI Assistant')).toBeTruthy();
   });
 
@@ -165,7 +183,7 @@ describe('HomeFloatingTools sideways search', () => {
 
     await waitFor(() => expect(selectCalls.length).toBeGreaterThan(0), { timeout: 3000 });
     await new Promise((r) => setTimeout(r, 400));
-    // one profiles + one posts query only
+    // one universal-index RPC + one profiles query only
     expect(selectCalls.length).toBe(2);
   });
 

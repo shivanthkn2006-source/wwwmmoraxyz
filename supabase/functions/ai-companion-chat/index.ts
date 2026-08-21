@@ -298,7 +298,7 @@ Remember: ${userName} isn't just a user - they're someone you deeply care about,
     // ═══════════════════════════════════════════════════════════════════════
     // T1-PRIMARY CASCADE: Groq Llama-3.1-8B primary → T2 → T3 → T4 → Lovable Gateway last-resort
     // ═══════════════════════════════════════════════════════════════════════
-    const cascadeResult = await cascadeInfer(allMessages, { maxTokens: 1000, temperature: 0.7, mode: 't1-primary' });
+    const cascadeResult = await cascadeInfer(allMessages, { maxTokens: 1000, temperature: 0.7, mode: 't1-primary', nvidiaRole: 'chat' });
     
     if (!cascadeResult.success) {
       return new Response(

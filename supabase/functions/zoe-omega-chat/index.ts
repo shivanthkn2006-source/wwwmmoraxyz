@@ -71,7 +71,7 @@ Recent memory:\n${memoryContext}\n\nAdditional context: ${JSON.stringify(context
         },
         { role: 'user', content: message },
       ],
-      { maxTokens: 1000, temperature: 0.7, mode: 't1-primary' }
+      { maxTokens: 1000, temperature: 0.7, mode: 't1-primary', nvidiaRole: 'chat' }
     );
     
     const response = cascadeResult.success 
