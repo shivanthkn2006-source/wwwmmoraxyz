@@ -77,7 +77,7 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
       return;
     }
     const term = query.trim();
-    if (!term) return;
+    if (!term || indexEmpty) return;
     void recordHomeSearch(term);
 
     // Route the submitted query through the ambient retrieval orchestrator.
