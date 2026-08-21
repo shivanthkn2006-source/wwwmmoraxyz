@@ -66,7 +66,7 @@ function describeError(err: any): AdaptiveCameraError {
       recoverable: false,
     };
   }
-  if (err?.__unsupported) {
+  if (err?.__unsupported || name === 'NotSupportedError' || /not supported/i.test(String(err?.message ?? ''))) {
     return {
       kind: 'unsupported',
       title: 'Live is not supported here',
