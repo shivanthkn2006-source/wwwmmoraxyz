@@ -16,6 +16,8 @@ import { routeForDispatch, routeForEntity, labelForRecord } from '@/lib/ambientD
 import SearchDebugPanel from '@/components/home/SearchDebugPanel';
 import { useSearchIndexHealth } from '@/hooks/useSearchIndexHealth';
 import { usePlatformInsight } from '@/hooks/usePlatformInsight';
+import { supabase } from '@/integrations/supabase/client';
+
 
 
 interface HomeFloatingToolsProps {
@@ -65,6 +67,53 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
       return () => window.clearTimeout(id);
     }
   }, [searchOpen]);
+
+  // Home dock search icon opens this same bar.
+  React.useEffect(() => {
+    const open = () => setSearchOpen(true);
+    window.addEventListener('mmora:open-home-search', open);
+    return () => window.removeEventListener('mmora:open-home-search', open);
+  }, []);
+
+  // Outside-the-platform results (web, music, weather) via the external-search function.
+  const [externalResults, setExternalResults] = React.useState<Array<{
+    id: string;
+    kind: 'web' | 'music' | 'weather';
+    title: string;
+    subtitle?: string;
+    url?: string;
+    thumbnail?: string;
+  }>>([]);
+  const [externalLoading, setExternalLoading] = React.useState(false);
+
+  React.useEffect(() => {
+    const term = query.trim();
+    if (!searchOpen || term.length < 3) {
+      setExternalResults([]);
+      return;
+    }
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      setExternalLoading(true);
+      try {
+        const { data, error: fnError } = await supabase.functions.invoke('external-search', {
+          body: { query: term },
+        });
+        if (fnError) throw fnError;
+        if (!cancelled) setExternalResults(data?.results ?? []);
+      } catch (err) {
+        console.warn('[external-search] failed', err);
+        if (!cancelled) setExternalResults([]);
+      } finally {
+        if (!cancelled) setExternalLoading(false);
+      }
+    }, 550);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [query, searchOpen]);
+
 
   // Global keyboard: Escape closes the sideways bar from anywhere.
   React.useEffect(() => {
@@ -326,8 +375,41 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
             </button>
           ))}
 
+          {(externalLoading || externalResults.length > 0) && (
+            <div className="mt-1 border-t border-border/50 pt-1">
+              <p className="px-3 py-1 text-[10px] uppercase tracking-wide text-muted-foreground">From the internet</p>
+              {externalLoading && externalResults.length === 0 && (
+                <p role="status" className="px-3 py-1.5 text-xs text-muted-foreground">Searching the web…</p>
+              )}
+              {externalResults.map((item) => (
+                <button
+                  key={`ext-${item.id}`}
+                  type="button"
+                  onClick={() => {
+                    if (item.url) window.open(item.url, '_blank', 'noopener,noreferrer');
+                  }}
+                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-muted/60"
+                >
+                  {item.thumbnail && (
+                    <img src={item.thumbnail} alt="" loading="lazy" className="h-9 w-9 shrink-0 rounded-md object-cover" />
+                  )}
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm text-foreground">{item.title}</span>
+                    {item.subtitle && (
+                      <span className="block truncate text-[11px] text-muted-foreground">{item.subtitle}</span>
+                    )}
+                  </span>
+                  <span className="shrink-0 rounded-full bg-muted px-1.5 py-[1px] text-[9px] uppercase tracking-wide text-muted-foreground">
+                    {item.kind}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+
         </div>
       )}
+
 
       <SearchDebugPanel debug={ambientDebug} />
     </>
