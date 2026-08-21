@@ -2,7 +2,14 @@ import React from 'react';
 import { Camera, Search, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useNavigate } from 'react-router-dom';
-import { useHomeSearch, recordHomeSearch, type HomeSearchResult } from '@/hooks/useHomeSearch';
+import {
+  useHomeSearch,
+  recordHomeSearch,
+  SEARCH_FILTERS,
+  SIGNAL_LABEL,
+  type HomeSearchResult,
+  type SearchFilter,
+} from '@/hooks/useHomeSearch';
 import DraggableHomeControl from '@/components/home/DraggableHomeControl';
 import { useAmbientSearch, type AmbientSearchRecord } from '@/core/ports/useAmbientSearch';
 import { routeForDispatch, routeForEntity, labelForRecord } from '@/lib/ambientDispatch';
@@ -27,7 +34,12 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
   const [activeIndex, setActiveIndex] = React.useState(-1);
   const inputRef = React.useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
-  const { results, loading, error } = useHomeSearch(query, searchOpen);
+  const { results: allResults, loading, error, counts } = useHomeSearch(query, searchOpen);
+  const [filter, setFilter] = React.useState<SearchFilter>('all');
+  const results = React.useMemo(
+    () => (filter === 'all' ? allResults : allResults.filter((item) => item.filter === filter)),
+    [allResults, filter],
+  );
   // Startup guard: warns and self-heals when the universal index is empty/stale.
   const { isEmpty: indexEmpty } = useSearchIndexHealth({ autoBackfill: true });
   // Live 5-line structural answer (VR world components, features, live counts).
@@ -230,6 +242,25 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
               ))}
             </div>
           )}
+          {allResults.length > 0 && (
+            <div className="flex gap-1 overflow-x-auto border-b border-border/50 px-2 py-1.5" role="group" aria-label="Filter search results">
+              {SEARCH_FILTERS.map((chip) => (
+                <button
+                  key={chip.id}
+                  type="button"
+                  aria-pressed={filter === chip.id}
+                  onClick={() => setFilter(chip.id)}
+                  className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] ${
+                    filter === chip.id
+                      ? 'border-foreground/40 bg-foreground/10 text-foreground'
+                      : 'border-border/60 text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {chip.label} {counts[chip.id]}
+                </button>
+              ))}
+            </div>
+          )}
           {loading && <p role="status" className="px-3 py-2 text-xs text-muted-foreground">Searching…</p>}
           {!loading && error && <p role="alert" className="px-3 py-2 text-xs text-muted-foreground">{error}</p>}
           {!loading && !error && results.length === 0 && insightLines.length === 0 && !ambient && !isSynthesizing && (
@@ -258,6 +289,16 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
                 {result.subtitle && (
                   <span className="block truncate text-[11px] text-muted-foreground">{result.subtitle}</span>
                 )}
+                <span className="mt-0.5 flex flex-wrap gap-1">
+                  {result.signals.map((signal) => (
+                    <span
+                      key={signal}
+                      className="rounded-full bg-muted px-1.5 py-[1px] text-[9px] uppercase tracking-wide text-muted-foreground"
+                    >
+                      {SIGNAL_LABEL[signal]}
+                    </span>
+                  ))}
+                </span>
               </span>
             </button>
           ))}

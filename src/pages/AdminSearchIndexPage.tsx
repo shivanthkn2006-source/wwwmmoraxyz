@@ -2,10 +2,10 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { useSearchIndexHealth, runIndexerBatch } from '@/hooks/useSearchIndexHealth';
+import { useSearchIndexHealth, runIndexerBatch, runVisionBackfill } from '@/hooks/useSearchIndexHealth';
 
 export default function AdminSearchIndexPage() {
-  const { stats, failures, loading, refresh } = useSearchIndexHealth();
+  const { stats, coverage, failures, loading, refresh } = useSearchIndexHealth();
   const [running, setRunning] = React.useState(false);
   const [elapsed, setElapsed] = React.useState(0);
   const [log, setLog] = React.useState<string[]>([]);
@@ -32,6 +32,34 @@ export default function AdminSearchIndexPage() {
       }
     } catch (error: any) {
       setLog((prev) => [`error: ${error?.message || 'backfill failed'}`, ...prev]);
+    } finally {
+      window.clearInterval(timer);
+      setRunning(false);
+    }
+  }, [running, refresh]);
+
+  /** Re-describes media with the vision pipeline, then drains the queue. */
+  const startVisionBackfill = React.useCallback(async (force: boolean) => {
+    if (running) return;
+    cancelRef.current = false;
+    setRunning(true);
+    setLog([]);
+    const started = Date.now();
+    const timer = window.setInterval(() => setElapsed(Math.round((Date.now() - started) / 1000)), 1000);
+    try {
+      const first = await runVisionBackfill({ force, limit: 3 });
+      setLog([`queued ${first.enqueued} media item(s) for vision re-description`]);
+      for (let batch = 0; batch < 300 && !cancelRef.current; batch += 1) {
+        const result = batch === 0 ? first : await runIndexerBatch({ limit: 3 });
+        setLog((prev) => [
+          `vision batch ${batch + 1}: processed ${result.processed} · described ${result.completed} · failed ${result.failed}`,
+          ...prev,
+        ].slice(0, 40));
+        await refresh();
+        if (result.processed === 0) break;
+      }
+    } catch (error: any) {
+      setLog((prev) => [`error: ${error?.message || 'vision backfill failed'}`, ...prev]);
     } finally {
       window.clearInterval(timer);
       setRunning(false);
@@ -68,6 +96,12 @@ export default function AdminSearchIndexPage() {
         <Button variant="outline" onClick={() => { cancelRef.current = true; }} disabled={!running}>
           Stop
         </Button>
+        <Button variant="secondary" onClick={() => void startVisionBackfill(false)} disabled={running}>
+          Vision backfill (missing)
+        </Button>
+        <Button variant="outline" onClick={() => void startVisionBackfill(true)} disabled={running}>
+          Vision backfill (all media)
+        </Button>
         <Button variant="ghost" onClick={() => void refresh()} disabled={running}>Refresh</Button>
         <span className="text-xs text-muted-foreground">
           Newest entry: {stats?.newestIndexedAt ? new Date(stats.newestIndexedAt).toLocaleString() : '—'}
@@ -79,6 +113,24 @@ export default function AdminSearchIndexPage() {
           {log.map((line, index) => <div key={index}>{line}</div>)}
         </Card>
       )}
+
+      <Card className="p-3">
+        <h2 className="mb-2 text-sm font-medium">Coverage by type</h2>
+        {Object.keys(coverage).length === 0 ? (
+          <p className="text-xs text-muted-foreground">No coverage data yet.</p>
+        ) : (
+          <ul className="space-y-1 text-xs text-muted-foreground">
+            {Object.entries(coverage).sort(([a], [b]) => a.localeCompare(b)).map(([type, value]) => (
+              <li key={type} className="flex justify-between">
+                <span>{type}</span>
+                <span className="tabular-nums">
+                  {value.indexed} indexed · {value.withVision} with vision
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
 
       <Card className="p-3">
         <h2 className="mb-2 text-sm font-medium">Recent failures</h2>
