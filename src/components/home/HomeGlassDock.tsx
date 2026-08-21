@@ -150,6 +150,16 @@ export default function HomeGlassDock({ items = [], className }: HomeGlassDockPr
     return () => window.cancelAnimationFrame(id);
   }, [open, slots.length]);
 
+  // When the rail retracts while focus is still inside it, return focus to the trigger.
+  const wasOpen = React.useRef(open);
+  React.useEffect(() => {
+    if (wasOpen.current && !open) {
+      const active = document.activeElement;
+      if (active && railRef.current?.contains(active)) triggerRef.current?.focus();
+    }
+    wasOpen.current = open;
+  }, [open]);
+
 
   return (
     <div
