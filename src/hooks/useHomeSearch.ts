@@ -154,8 +154,16 @@ export function useHomeSearch(query: string, enabled = true) {
             : typeof row.metadata?.mediaUrl === 'string' && row.metadata.mediaUrl.startsWith('http')
               ? row.metadata.mediaUrl
               : undefined;
+          const mediaType = typeof row.metadata?.mediaType === 'string' ? row.metadata.mediaType : '';
+          const filter: SearchFilter = row.entity_type === 'loop_video'
+            ? 'loops'
+            : mediaType === 'video'
+              ? 'videos'
+              : ENTITY_FILTER[row.entity_type] || 'other';
           next.push({
             type: 'index',
+            filter,
+            signals: explainMatch(safe, row.content_synthesis || '', row.entity_type),
             id: row.id,
             title: body.slice(0, 90) || ENTITY_LABEL[row.entity_type] || row.entity_type,
             subtitle: ENTITY_LABEL[row.entity_type] || row.entity_type,
@@ -170,6 +178,8 @@ export function useHomeSearch(query: string, enabled = true) {
           seen.add(key);
           next.unshift({
             type: 'user',
+            filter: 'profiles',
+            signals: ['text'],
             id: u.user_id,
             title: u.display_name || u.username || 'Member',
             subtitle: u.username ? `@${u.username}` : 'Member',
@@ -183,12 +193,15 @@ export function useHomeSearch(query: string, enabled = true) {
           .forEach((f: any) => {
             next.push({
               type: 'feature',
+              filter: 'other',
+              signals: ['text'],
               id: f.id,
               title: f.name,
               subtitle: f.description,
               route: f.location || '/',
             });
           });
+
 
         setResults(next);
       } catch (err) {
