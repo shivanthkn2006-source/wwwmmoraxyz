@@ -168,6 +168,66 @@ async function enqueueBackfill(db: ReturnType<typeof createClient>, userId: stri
   return rows.length;
 }
 
+/**
+ * Requeues media entities (images / loops / media posts) so they are re-described
+ * by the vision pipeline. By default only rows without a vision description are
+ * requeued; `force` re-runs vision for every media row.
+ */
+async function enqueueVisionBackfill(db: ReturnType<typeof createClient>, force: boolean) {
+  const { data: posts, error: postsError } = await db.from('posts')
+    .select('id,user_id,media_url,media_preview_url,media_type,content');
+  if (postsError) throw postsError;
+
+  const media = (posts || []).filter((row) => Boolean(row.media_url || row.media_preview_url));
+  if (!media.length) return 0;
+
+  const { data: indexed, error: indexError } = await db.from('zoe_universal_index')
+    .select('entity_id,content_synthesis,metadata')
+    .in('entity_id', media.map((row) => row.id));
+  if (indexError) throw indexError;
+
+  const described = new Set(
+    (indexed || [])
+      .filter((row) =>
+        (row.metadata as Record<string, unknown> | null)?.visualIndexed === true ||
+        String(row.content_synthesis || '').includes('[Visual Data]'))
+      .map((row) => row.entity_id as string),
+  );
+
+  const rows = media
+    .filter((row) => force || !described.has(row.id as string))
+    .map((row) => ({
+      entity_type: row.media_type === 'video' ? 'loop_video' : row.media_type === 'image' ? 'image' : 'post',
+      entity_id: row.id,
+      owner_id: row.user_id,
+    }));
+  if (!rows.length) return 0;
+
+  const { error } = await db.from('zoe_search_index_queue').upsert(
+    rows.map((row) => ({ ...row, status: 'pending', attempts: 0, available_at: new Date().toISOString(), last_error: null })),
+    { onConflict: 'entity_type,entity_id' },
+  );
+  if (error) throw error;
+  return rows.length;
+}
+
+/** Per-entity-type index + vision coverage for the admin view and search filters. */
+async function coverageSnapshot(db: ReturnType<typeof createClient>) {
+  const { data, error } = await db.from('zoe_universal_index')
+    .select('entity_type,content_synthesis,metadata').limit(5000);
+  if (error) throw error;
+  const coverage: Record<string, { indexed: number; withVision: number }> = {};
+  for (const row of data || []) {
+    const type = String(row.entity_type);
+    coverage[type] = coverage[type] || { indexed: 0, withVision: 0 };
+    coverage[type].indexed += 1;
+    const hasVision = (row.metadata as Record<string, unknown> | null)?.visualIndexed === true ||
+      String(row.content_synthesis || '').includes('[Visual Data]');
+    if (hasVision) coverage[type].withVision += 1;
+  }
+  return coverage;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
