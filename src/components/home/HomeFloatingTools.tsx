@@ -16,6 +16,8 @@ import { routeForDispatch, routeForEntity, labelForRecord } from '@/lib/ambientD
 import SearchDebugPanel from '@/components/home/SearchDebugPanel';
 import { useSearchIndexHealth } from '@/hooks/useSearchIndexHealth';
 import { usePlatformInsight } from '@/hooks/usePlatformInsight';
+import { supabase } from '@/integrations/supabase/client';
+
 
 
 interface HomeFloatingToolsProps {
