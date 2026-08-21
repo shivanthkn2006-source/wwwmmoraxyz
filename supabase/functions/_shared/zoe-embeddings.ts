@@ -2,15 +2,18 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  * ZOE SOVEREIGN EMBEDDINGS
  * 1536-dim vectors for public.zoe_universal_index — no Lovable AI credits.
- * Provider cascade: Google AI Studio (gemini-embedding-001) → OpenRouter fallback.
+ * Provider cascade: Google AI Studio (gemini-embedding-001) → OpenRouter → NVIDIA NIM.
  * ═══════════════════════════════════════════════════════════════════════════════
  */
+
+import { nvidiaEmbed } from './nvidia-provider.ts';
 
 const GOOGLE_EMBED_MODEL = 'gemini-embedding-001';
 export const ZOE_VECTOR_DIMS = 1536;
 
 /** Embed a single text chunk. Returns null when every provider is unavailable. */
 export async function embedText(text: string): Promise<number[] | null> {
+
   const clean = (text || '').trim().slice(0, 20000);
   if (!clean) return null;
 
