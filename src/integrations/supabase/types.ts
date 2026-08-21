@@ -10052,6 +10052,18 @@ export type Database = {
           social_weight: number
         }[]
       }
+      zoe_prefix_search: {
+        Args: { match_count?: number; query_text: string }
+        Returns: {
+          content_synthesis: string
+          entity_id: string
+          entity_type: string
+          id: string
+          metadata: Json
+          score: number
+          social_weight: number
+        }[]
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
