@@ -342,3 +342,6 @@ verify_jwt = true
 
 [functions.zoe-search-indexer]
 verify_jwt = true
+
+[functions.external-search]
+verify_jwt = false
