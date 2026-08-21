@@ -38,6 +38,18 @@ function sanitizedError(error: unknown): string {
   return message.replace(/[\r\n]+/g, ' ').slice(0, 300);
 }
 
+/** Author attribution so searching a person's name also returns their content. */
+async function loadAuthor(db: ReturnType<typeof createClient>, userId: string) {
+  const { data } = await db.from('profiles')
+    .select('display_name,username').eq('user_id', userId).maybeSingle();
+  const parts = [data?.display_name, data?.username ? `@${data.username}` : ''].filter(Boolean);
+  return {
+    line: parts.length ? `By ${parts.join(' ')}` : '',
+    name: (data?.display_name as string | null) || (data?.username as string | null) || null,
+    username: (data?.username as string | null) || null,
+  };
+}
+
 async function loadCanonical(db: ReturnType<typeof createClient>, job: QueueRow): Promise<CanonicalEntity | null> {
   if (['post', 'loop_video', 'image', 'quote'].includes(job.entity_type)) {
     const { data, error } = await db.from('posts')
@@ -46,15 +58,19 @@ async function loadCanonical(db: ReturnType<typeof createClient>, job: QueueRow)
     if (error) throw error;
     if (!data) return null;
     const privacy = data.visibility === 'global' ? 'public' : data.visibility === 'personal' ? 'friends' : 'private';
+    const author = await loadAuthor(db, data.user_id);
+    const body = String(data.content || '').trim() || `${data.media_type || job.entity_type} post`;
     return {
       ownerId: data.user_id,
-      content: String(data.content || '').trim() || `${data.media_type || job.entity_type} post`,
+      content: [author.line, body].filter(Boolean).join('\n'),
       privacy,
       metadata: {
         mediaType: data.media_type,
         mediaUrl: data.media_url,
         previewUrl: data.media_preview_url,
         createdAt: data.created_at,
+        authorName: author.name,
+        authorUsername: author.username,
       },
     };
   }
@@ -147,6 +163,32 @@ Deno.serve(async (req) => {
     // drain the durable queue in small resumable batches.
     const limit = Math.max(1, Math.min(Number(body?.limit) || 5, 10));
     const db = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { persistSession: false } });
+
+    // Health/progress snapshot for the startup guard and the admin view.
+    if (body?.stats === true) {
+      const [indexed, pending, processing, failedCount, failedRows, newest] = await Promise.all([
+        db.from('zoe_universal_index').select('id', { count: 'exact', head: true }),
+        db.from('zoe_search_index_queue').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+        db.from('zoe_search_index_queue').select('id', { count: 'exact', head: true }).eq('status', 'processing'),
+        db.from('zoe_search_index_queue').select('id', { count: 'exact', head: true }).eq('status', 'failed'),
+        db.from('zoe_search_index_queue').select('id,entity_type,entity_id,attempts,last_error,updated_at')
+          .eq('status', 'failed').order('updated_at', { ascending: false }).limit(20),
+        db.from('zoe_universal_index').select('updated_at').order('updated_at', { ascending: false }).limit(1).maybeSingle(),
+      ]);
+      return json({
+        requestId,
+        stats: {
+          indexed: indexed.count ?? 0,
+          pending: pending.count ?? 0,
+          processing: processing.count ?? 0,
+          failed: failedCount.count ?? 0,
+          newestIndexedAt: newest.data?.updated_at ?? null,
+        },
+        failures: failedRows.data || [],
+      });
+    }
+
+    // Keep each invocation inside the edge runtime budget; callers repeatedly
     const enqueued = body?.backfill === true ? await enqueueBackfill(db, user.id) : 0;
 
     const { data: jobs, error: queueError } = await db.from('zoe_search_index_queue')

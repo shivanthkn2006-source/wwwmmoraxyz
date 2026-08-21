@@ -7,6 +7,7 @@ import DraggableHomeControl from '@/components/home/DraggableHomeControl';
 import { useAmbientSearch, type AmbientSearchRecord } from '@/core/ports/useAmbientSearch';
 import { routeForDispatch, routeForEntity, labelForRecord } from '@/lib/ambientDispatch';
 import SearchDebugPanel from '@/components/home/SearchDebugPanel';
+import { useSearchIndexHealth } from '@/hooks/useSearchIndexHealth';
 
 interface HomeFloatingToolsProps {
   query: string;
@@ -25,6 +26,8 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
   const inputRef = React.useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const { results, loading, error } = useHomeSearch(query, searchOpen);
+  // Startup guard: warns and self-heals when the universal index is empty/stale.
+  const { isEmpty: indexEmpty } = useSearchIndexHealth({ autoBackfill: true });
   const {
     executeAmbientSearch,
     isSynthesizing,
@@ -74,7 +77,7 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
       return;
     }
     const term = query.trim();
-    if (!term) return;
+    if (!term || indexEmpty) return;
     void recordHomeSearch(term);
 
     // Route the submitted query through the ambient retrieval orchestrator.
@@ -95,7 +98,7 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
         navigate(dispatchRoute);
       }
     })();
-  }, [query, activeIndex, results, handleSelect, executeAmbientSearch, navigate]);
+  }, [query, activeIndex, results, handleSelect, executeAmbientSearch, navigate, indexEmpty]);
 
   const handleAmbientRecord = React.useCallback((record: AmbientSearchRecord) => {
     setSearchOpen(false);
@@ -197,6 +200,11 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
           }}
           onPointerDown={(event) => event.stopPropagation()}
         >
+          {indexEmpty && (
+            <p role="alert" className="px-3 py-2 text-xs text-muted-foreground">
+              Search index is empty — Zoe is rebuilding it now. Results will appear shortly.
+            </p>
+          )}
           {loading && <p role="status" className="px-3 py-2 text-xs text-muted-foreground">Searching…</p>}
           {!loading && error && <p role="alert" className="px-3 py-2 text-xs text-muted-foreground">{error}</p>}
           {!loading && !error && results.length === 0 && !ambient && !isSynthesizing && (

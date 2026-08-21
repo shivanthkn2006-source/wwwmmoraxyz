@@ -106,6 +106,7 @@ const InstallAppPage = lazy(() => import("./pages/InstallApp")); // PWA INSTALL 
 const GodModeEvolution = lazy(() => import("./pages/GodModeEvolution")); // ASI GENESIS KERNEL
 const SentinelPage = lazy(() => import("./pages/SentinelPage")); // M'MORA SENTINEL
 const AdminHealthPage = lazy(() => import("./pages/AdminHealthPage")); // ADMIN HEALTH & STATUS
+const AdminSearchIndexPage = lazy(() => import("./pages/AdminSearchIndexPage")); // SEARCH INDEX BACKFILL
 const AdminFeedDebugPage = lazy(() => import("./pages/AdminFeedDebugPage")); // FEED/LOOPS DEBUGGER
 const AstroPreviewPage = lazy(() => import("./pages/AstroPreviewPage")); // M'MORA ZOE DAILY ALIGNMENT HARNESS
 const ZoeAstroDashboardPage = lazy(() => import("./pages/ZoeAstroDashboardPage")); // M'MORA ZOE ALIGNMENT DASHBOARD
@@ -662,6 +663,14 @@ const RouteAwareShell = () => {
                             element={
                               <ProtectedRoute>
                                 <AdminHealthPage />
+                              </ProtectedRoute>
+                            }
+                          />
+                          <Route
+                            path="/admin/search-index"
+                            element={
+                              <ProtectedRoute>
+                                <AdminSearchIndexPage />
                               </ProtectedRoute>
                             }
                           />
