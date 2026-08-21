@@ -299,7 +299,7 @@ export function getDefaultTiers(_mode: CascadeMode = 'default', _lovableModel?: 
     { tier: 2, name: 'T2 · Gemini 3.5 Flash',            provider: 'gemini',   model: 'gemini-3.5-flash',                   envKey: 'GOOGLE_AI_STUDIO_KEY',   call: callGemini },
     { tier: 3, name: 'T3 · Groq GPT-OSS-120B',        provider: 'groq',     model: 'openai/gpt-oss-120b',            envKey: 'GROQ_API_KEY',           call: callGroqLlama },
     { tier: 4, name: 'T4 · OpenRouter Auto',             provider: 'openrouter', model: 'openrouter/auto',                        envKey: 'OPENROUTER_API_KEY',   call: callOpenRouter },
-    { tier: 5, name: 'T5 · NVIDIA NIM Llama 3.3 70B',    provider: 'nvidia',   model: NVIDIA_ROLES.chat[0],                    envKey: 'NVIDIA_API_KEY',         call: callNvidia },
+    { tier: 5, name: 'T5 · NVIDIA NIM (role chain)',    provider: 'nvidia',   model: NVIDIA_ROLES.chat[0],                    envKey: 'NVIDIA_API_KEY',         call: callNvidia },
   ];
 
 }
