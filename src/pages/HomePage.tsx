@@ -2111,6 +2111,12 @@ const HomePage = () => {
         </React.Suspense>
       )}
 
+      {liveViewOpen && (
+        <React.Suspense fallback={null}>
+          <LiveStreamView onClose={() => setLiveViewOpen(false)} />
+        </React.Suspense>
+      )}
+
       <HomeCollectionSheet mode={collectionMode} onOpenChange={(open) => !open && setCollectionMode(null)} />
 
 
