@@ -15,7 +15,7 @@ import NotificationMenu from '@/components/NotificationMenu';
 import AnimatedHamburgerButton from '@/components/AnimatedHamburgerButton';
 import HamburgerMenu from '@/components/HamburgerMenu';
 import SearchBar from '@/components/SearchBar';
-import { ArrowDown, Mail, Search, Video, TrendingUp, ArrowUp, Camera, ChevronUp, ChevronDown, Sparkles, MessageCircle, Settings, Bell, User as UserIcon, Heart, Bookmark } from 'lucide-react';
+import { ArrowDown, Mail, Search, Video, TrendingUp, ArrowUp, Camera, ChevronUp, ChevronDown, Sparkles, MessageCircle, Settings, Bell, User as UserIcon, Heart, Bookmark, Boxes } from 'lucide-react';
 import { trackEvent } from '@/lib/analytics';
 import FuturisticCounter from '@/components/FuturisticCounter';
 import { useNavigate } from 'react-router-dom';
@@ -175,7 +175,7 @@ const HomePage = () => {
     window.addEventListener('mmora:home-search-toggle', onSearchToggle);
     return () => window.removeEventListener('mmora:home-search-toggle', onSearchToggle);
   }, []);
-  const { badges: dockBadges, refresh: refreshDockBadges } = useHomeDockBadges();
+  const { badges: dockBadges, refresh: refreshDockBadges, stale: dockBadgesStale, updatedAt: dockBadgesUpdatedAt } = useHomeDockBadges();
 
   // Diagnostics-only panel (?iconstatus=1) — no change to the default Home UI.
   const [iconStatusPanelOpen, setIconStatusPanelOpen] = useState<boolean>(() => {
@@ -2015,7 +2015,14 @@ const HomePage = () => {
 
       <HomeFloatingTools query={homeQuery} onQueryChange={setHomeQuery} onOpenEditor={() => setPostEditorOpen(true)} />
       <HomeGlassDock
+        badgesUpdatedAt={dockBadgesUpdatedAt}
         items={[
+          {
+            id: 'vr-world',
+            label: 'VR World',
+            icon: <Boxes className="h-[22px] w-[22px]" />,
+            onSelect: runHomeIconAction('vr-world', () => navigate('/zoe-omega')),
+          },
           {
             id: 'zoe-ai',
             label: 'Zoe AI chat',
@@ -2060,6 +2067,7 @@ const HomePage = () => {
             label: 'Liked posts',
             icon: <Heart className="h-[22px] w-[22px]" />,
             badge: dockBadges.likes,
+            badgeStale: dockBadgesStale,
             active: collectionMode === 'liked',
             onSelect: runHomeIconAction('likes', () => setCollectionMode('liked')),
           },
@@ -2068,6 +2076,7 @@ const HomePage = () => {
             label: 'Saved posts',
             icon: <Bookmark className="h-[22px] w-[22px]" />,
             badge: dockBadges.saved,
+            badgeStale: dockBadgesStale,
             active: collectionMode === 'saved',
             onSelect: runHomeIconAction('saved', () => setCollectionMode('saved')),
           },
