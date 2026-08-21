@@ -231,9 +231,18 @@ export default function HomeGlassDock({ items = [], className }: HomeGlassDockPr
 
       {/* Bare home trigger — flush at the right edge, no ring, no box */}
       <button
+        ref={triggerRef}
         type="button"
         aria-label={open ? 'Close home menu' : 'Open home menu'}
         aria-expanded={open}
+        aria-haspopup="menu"
+        onBlur={(event) => {
+          // Focus leaving the dock entirely retracts it (never leaves it stuck open).
+          const next = event.relatedTarget as Node | null;
+          if (next && rootRef.current?.contains(next)) return;
+          if (next) setOpen(false);
+        }}
+
         onPointerDown={handlePointerDown}
         onPointerUp={handlePointerUp}
         onPointerCancel={() => {
