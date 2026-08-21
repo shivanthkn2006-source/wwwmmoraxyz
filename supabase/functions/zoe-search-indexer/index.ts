@@ -25,6 +25,14 @@ type CanonicalEntity = {
   privacy: 'public' | 'friends' | 'private';
   metadata: Record<string, unknown>;
 };
+/** Drops inline base64 payloads; keeps only http(s)/storage references. */
+function slimMediaRef(url: unknown): string | null {
+  const value = typeof url === 'string' ? url : '';
+  if (!value) return null;
+  if (value.startsWith('data:')) return `inline:${value.slice(5, value.indexOf(';') > 0 ? value.indexOf(';') : 20)}`;
+  return value.slice(0, 500);
+}
+
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
