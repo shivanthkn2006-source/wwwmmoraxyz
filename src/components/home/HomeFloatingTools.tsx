@@ -197,6 +197,11 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
           }}
           onPointerDown={(event) => event.stopPropagation()}
         >
+          {indexEmpty && (
+            <p role="alert" className="px-3 py-2 text-xs text-muted-foreground">
+              Search index is empty — Zoe is rebuilding it now. Results will appear shortly.
+            </p>
+          )}
           {loading && <p role="status" className="px-3 py-2 text-xs text-muted-foreground">Searching…</p>}
           {!loading && error && <p role="alert" className="px-3 py-2 text-xs text-muted-foreground">{error}</p>}
           {!loading && !error && results.length === 0 && !ambient && !isSynthesizing && (
