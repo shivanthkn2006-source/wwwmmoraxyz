@@ -5871,3 +5871,17 @@ body {
   height: auto;
   max-width: none !important;
 }
+
+/* ===== Live stream (M'Mora Live) ===== */
+@keyframes floatHeart {
+  0% { opacity: 1; transform: translate3d(0, 0, 0) scale(0.8) rotate(0deg); }
+  50% { opacity: 0.9; transform: translate3d(0, -90px, 0) scale(1.15) rotate(-10deg); }
+  100% { opacity: 0; transform: translate3d(0, -180px, 0) scale(1.3) rotate(12deg); }
+}
+
+.animate-float-heart {
+  animation: floatHeart 1.8s ease-out forwards;
+}
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
