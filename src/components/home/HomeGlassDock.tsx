@@ -172,7 +172,18 @@ export default function HomeGlassDock({ items = [], className }: HomeGlassDockPr
         aria-expanded={open}
         onPointerDown={handlePointerDown}
         onPointerUp={handlePointerUp}
-        onClick={() => setOpen((value) => !value)}
+        onPointerCancel={() => {
+          swipeStart.current = null;
+          endLongPress();
+        }}
+        onContextMenu={(event) => event.preventDefault()}
+        onClick={() => {
+          if (suppressClick.current) {
+            suppressClick.current = false;
+            return;
+          }
+          setOpen((value) => !value);
+        }}
         onKeyDown={(event) => {
           if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
@@ -180,11 +191,14 @@ export default function HomeGlassDock({ items = [], className }: HomeGlassDockPr
           }
         }}
         className={cn(
-          'flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-transparent',
+          'relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-transparent',
           'pr-1 text-white/90 drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)] transition-transform',
-          'active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60',
+          'select-none touch-none active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60',
+          // Enlarged invisible hit + focus area without changing the visual size
+          'after:absolute after:-inset-2.5 after:content-[""] after:rounded-full',
         )}
       >
+
         <Home className="h-[22px] w-[22px]" />
       </button>
     </div>
