@@ -19,7 +19,12 @@ export interface GlassDockItem {
   label: string;
   icon: React.ReactNode;
   onSelect: () => void;
+  /** Numeric unread/pending count rendered centred on top of the icon. */
+  badge?: number;
+  /** Marks the icon as the currently-open surface (rendered brighter). */
+  active?: boolean;
 }
+
 
 interface HomeGlassDockProps {
   /** Future menu entries. When empty, placeholder slots are shown. */
