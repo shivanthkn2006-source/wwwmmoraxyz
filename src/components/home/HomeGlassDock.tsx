@@ -170,6 +170,9 @@ export default function HomeGlassDock({ items = [], className }: HomeGlassDockPr
         )}
       >
         <div
+          ref={railRef}
+          role="menu"
+          aria-hidden={!open}
           className={cn(
             'flex h-12 items-center gap-1 overflow-x-auto rounded-2xl rounded-r-none border border-white/25 border-r-0 px-2',
             'bg-white/10 backdrop-blur-xl shadow-[0_8px_24px_rgba(0,0,0,0.35)]',
@@ -179,20 +182,23 @@ export default function HomeGlassDock({ items = [], className }: HomeGlassDockPr
         >
 
           {slots.map((item) => {
-            const badge = item.badge ?? 0;
+            const badge = Number.isFinite(item.badge) ? Math.max(0, Math.floor(item.badge as number)) : 0;
             const highlighted = Boolean(item.active) || badge > 0;
             return (
               <button
                 key={item.id}
                 type="button"
-                aria-label={badge > 0 ? `${item.label}, ${badge} new` : item.label}
+                role="menuitem"
+                aria-label={badge > 0 ? `${item.label}, ${badge > 99 ? '99+' : badge} new` : item.label}
                 title={item.label}
                 aria-current={item.active ? 'true' : undefined}
                 tabIndex={open ? 0 : -1}
                 onClick={() => {
                   setOpen(false);
+                  recordDockUsage(item.id);
                   item.onSelect();
                 }}
+
                 className={cn(
                   'relative flex h-10 w-10 shrink-0 snap-start items-center justify-center rounded-xl',
                   'transition-all active:scale-95',
