@@ -83,6 +83,19 @@ const ProfilePage = () => {
     };
   }, []);
 
+  // ?settings=1 (home dock settings icon) opens the settings sheet directly.
+  const [searchParams, setSearchParams] = useSearchParams();
+  React.useEffect(() => {
+    if (searchParams.get('settings')) {
+      setShowSettings(true);
+      const next = new URLSearchParams(searchParams);
+      next.delete('settings');
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
+
+
+
   const handleLogout = async () => {
     try {
       await signOut();
