@@ -8,6 +8,8 @@ import { useAmbientSearch, type AmbientSearchRecord } from '@/core/ports/useAmbi
 import { routeForDispatch, routeForEntity, labelForRecord } from '@/lib/ambientDispatch';
 import SearchDebugPanel from '@/components/home/SearchDebugPanel';
 import { useSearchIndexHealth } from '@/hooks/useSearchIndexHealth';
+import { usePlatformInsight } from '@/hooks/usePlatformInsight';
+
 
 interface HomeFloatingToolsProps {
   query: string;
