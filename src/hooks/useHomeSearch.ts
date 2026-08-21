@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { searchFeatures } from '@/data/appFeatures';
+import { routeForEntity } from '@/lib/ambientDispatch';
 
 export interface HomeSearchResult {
-  type: 'user' | 'post' | 'feature';
+  type: 'user' | 'post' | 'feature' | 'index';
   id: string;
   title: string;
   subtitle?: string;
@@ -11,9 +12,31 @@ export interface HomeSearchResult {
   route: string;
 }
 
+const ENTITY_LABEL: Record<string, string> = {
+  post: 'Post',
+  image: 'Image post',
+  loop_video: 'Loop',
+  quote: 'Quote',
+  chat: 'Zoe chat',
+  dhf_node: 'DHF node',
+  profile: 'Member',
+  spot: 'Selfie City spot',
+  '3d_asset': 'VR asset',
+};
+
+function cleanSynthesis(text: string): string {
+  return (text || '')
+    .replace(/\s+/g, ' ')
+    .replace(/^By\s+/i, '')
+    .trim();
+}
+
 /**
- * Lightweight home search: reuses the same backend sources as the main SearchBar
- * (public_profiles + posts + in-app feature registry) with debounce.
+ * Home typeahead search.
+ * Primary source is `zoe_universal_index` (every indexed post, loop, image,
+ * chat, DHF node and profile across M'mora) via the `zoe_prefix_search` RPC,
+ * which supports single-letter prefix matching. Profiles and the in-app
+ * feature registry are merged in as secondary sources.
  */
 export function useHomeSearch(query: string, enabled = true) {
   const [results, setResults] = useState<HomeSearchResult[]>([]);
@@ -22,7 +45,7 @@ export function useHomeSearch(query: string, enabled = true) {
 
   useEffect(() => {
     const term = query.trim();
-    if (!enabled || term.length < 2) {
+    if (!enabled || term.length < 1) {
       setResults([]);
       setLoading(false);
       setError(null);
@@ -38,48 +61,51 @@ export function useHomeSearch(query: string, enabled = true) {
       try {
         const safe = term.replace(/[%,()]/g, ' ').toLowerCase();
 
-        const [usersRes, postsRes] = await Promise.all([
+        const [indexRes, usersRes] = await Promise.all([
+          supabase.rpc('zoe_prefix_search', { query_text: safe, match_count: 12 }),
           supabase
             .from('public_profiles')
             .select('user_id, display_name, username, profile_photo_url')
             .or(`display_name.ilike.%${safe}%,username.ilike.%${safe}%`)
             .limit(5)
             .abortSignal(controller.signal),
-          supabase
-            .from('posts')
-            .select('id, content, user_id, created_at')
-            .eq('visibility', 'global')
-            .ilike('content', `%${safe}%`)
-            .order('created_at', { ascending: false })
-            .limit(5)
-            .abortSignal(controller.signal),
         ]);
 
         if (cancelled) return;
-        if (usersRes.error && postsRes.error) {
+        if (indexRes.error && usersRes.error) {
           setError('Search is temporarily unavailable');
         }
+        if (indexRes.error) console.warn('[useHomeSearch] index', indexRes.error.message);
 
         const next: HomeSearchResult[] = [];
+        const seen = new Set<string>();
 
-        (usersRes.data ?? []).forEach((u: any) => {
+        (indexRes.data ?? []).forEach((row: any) => {
+          if (row.entity_type === 'profile') return; // covered by the profile source below
+          const key = `${row.entity_type}:${row.entity_id}`;
+          if (seen.has(key)) return;
+          seen.add(key);
+          const body = cleanSynthesis(row.content_synthesis);
           next.push({
-            type: 'user',
-            id: u.user_id,
-            title: u.display_name || u.username || 'Member',
-            subtitle: u.username ? `@${u.username}` : undefined,
-            avatarUrl: u.profile_photo_url || undefined,
-            route: `/profile/${u.user_id}`,
+            type: 'index',
+            id: row.id,
+            title: body.slice(0, 90) || ENTITY_LABEL[row.entity_type] || row.entity_type,
+            subtitle: ENTITY_LABEL[row.entity_type] || row.entity_type,
+            route: routeForEntity(row.entity_type, row.entity_id),
           });
         });
 
-        (postsRes.data ?? []).forEach((p: any) => {
-          next.push({
-            type: 'post',
-            id: p.id,
-            title: (p.content || 'Post').slice(0, 80),
-            subtitle: 'Post',
-            route: '',
+        (usersRes.data ?? []).forEach((u: any) => {
+          const key = `profile:${u.user_id}`;
+          if (seen.has(key)) return;
+          seen.add(key);
+          next.unshift({
+            type: 'user',
+            id: u.user_id,
+            title: u.display_name || u.username || 'Member',
+            subtitle: u.username ? `@${u.username}` : 'Member',
+            avatarUrl: u.profile_photo_url || undefined,
+            route: `/profile/${u.user_id}`,
           });
         });
 
@@ -105,7 +131,7 @@ export function useHomeSearch(query: string, enabled = true) {
       } finally {
         if (!cancelled) setLoading(false);
       }
-    }, 300);
+    }, 220);
 
     return () => {
       cancelled = true;
