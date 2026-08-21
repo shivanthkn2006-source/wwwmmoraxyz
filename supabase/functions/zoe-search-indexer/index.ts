@@ -254,6 +254,7 @@ Deno.serve(async (req) => {
           .eq('status', 'failed').order('updated_at', { ascending: false }).limit(20),
         db.from('zoe_universal_index').select('updated_at').order('updated_at', { ascending: false }).limit(1).maybeSingle(),
       ]);
+      const coverage = await coverageSnapshot(db);
       return json({
         requestId,
         stats: {
@@ -263,12 +264,18 @@ Deno.serve(async (req) => {
           failed: failedCount.count ?? 0,
           newestIndexedAt: newest.data?.updated_at ?? null,
         },
+        coverage,
         failures: failedRows.data || [],
       });
     }
 
     // Keep each invocation inside the edge runtime budget; callers repeatedly
-    const enqueued = body?.backfill === true ? await enqueueBackfill(db, user.id) : 0;
+    const enqueued = body?.backfill === true
+      ? await enqueueBackfill(db, user.id)
+      : body?.visionBackfill === true
+        ? await enqueueVisionBackfill(db, body?.force === true)
+        : 0;
+
 
     const { data: jobs, error: queueError } = await db.from('zoe_search_index_queue')
       .select('id,entity_type,entity_id,owner_id,attempts')
