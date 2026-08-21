@@ -42,6 +42,17 @@ export async function runIndexerBatch(options: { backfill?: boolean; limit?: num
   return data as { enqueued: number; processed: number; completed: number; failed: number };
 }
 
+async function drainIndexerQueue(initialBackfill: boolean) {
+  let shouldBackfill = initialBackfill;
+  for (let batch = 0; batch < 60; batch += 1) {
+    const result = await runIndexerBatch({ backfill: shouldBackfill, limit: 1 });
+    shouldBackfill = false;
+    if (result.processed === 0) break;
+    // Yield between media-analysis calls and avoid monopolizing the browser/network.
+    await new Promise((resolve) => window.setTimeout(resolve, 250));
+  }
+}
+
 export function useSearchIndexHealth(options: { autoBackfill?: boolean } = {}) {
   const { autoBackfill = false } = options;
   const [stats, setStats] = useState<SearchIndexStats | null>(null);
@@ -68,15 +79,16 @@ export function useSearchIndexHealth(options: { autoBackfill?: boolean } = {}) {
       const newest = snapshot.stats.newestIndexedAt ? Date.parse(snapshot.stats.newestIndexedAt) : 0;
       const isEmpty = snapshot.stats.indexed === 0;
       const isStale = !newest || Date.now() - newest > STALE_MS;
-      if (!isEmpty && !isStale) return;
+      const hasOutstandingJobs = snapshot.stats.pending > 0 || snapshot.stats.failed > 0;
+      if (!isEmpty && !isStale && !hasOutstandingJobs) return;
 
       // Guard against repeated startup storms: at most one auto backfill per day.
       const lastRun = Number(localStorage.getItem(AUTO_BACKFILL_KEY) || 0);
-      if (!isEmpty && Date.now() - lastRun < STALE_MS) return;
+      if (!isEmpty && !hasOutstandingJobs && Date.now() - lastRun < STALE_MS) return;
       startedRef.current = true;
       localStorage.setItem(AUTO_BACKFILL_KEY, String(Date.now()));
       try {
-        await runIndexerBatch({ backfill: true, limit: 10 });
+        await drainIndexerQueue(isEmpty || isStale);
         if (!cancelled) await refresh();
       } catch (error) {
         console.warn('[search-index] auto backfill failed:', error);
