@@ -30,6 +30,7 @@ import SplashScreen from "./components/SplashScreen";
 import InstallPrompt from "./components/InstallPrompt";
 import GuardianInterventionOverlay from "./components/vitruvian/GuardianInterventionOverlay";
 import MicPermissionInitializer from "./components/MicPermissionInitializer";
+import MmoraBrandHomeBridge from "./components/brand/MmoraBrandHomeBridge";
 import VoiceSystemActivator from "./components/VoiceSystemActivator";
 import CameraActiveIndicator from "./components/CameraActiveIndicator"; // CAMERA EYE INDICATOR
 import { DHFHeartbeatPulse } from "./components/DHFHeartbeatPulse"; // PHASE 3: 24h Kill Switch
@@ -1145,6 +1146,7 @@ const App = () => {
 
                       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
 
+                        <MmoraBrandHomeBridge />
                         <ZoePreviewRecoveryGuard>
                           <SecurityBypassOnAuthRoutes>
                             {/* Route-aware shell: keep /auth ultra-light to prevent Safari hangs */}
