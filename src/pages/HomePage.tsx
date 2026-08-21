@@ -27,6 +27,7 @@ import HomeCollectionSheet, { type CollectionMode } from '@/components/home/Home
 import useHomeDockBadges from '@/hooks/useHomeDockBadges';
 import { registerHomeIcon, runHomeIconAction } from '@/lib/homeIconStatus';
 const HomeIconStatusPanel = React.lazy(() => import('@/components/home/HomeIconStatusPanel'));
+const LiveStreamView = React.lazy(() => import('@/components/live/LiveStreamView'));
 
 
 
