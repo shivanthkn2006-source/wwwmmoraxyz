@@ -107,6 +107,8 @@ const HomePage = () => {
   const [isProfileSheetOpen, setIsProfileSheetOpen] = useState(false);
   const [notificationMenuOpen, setNotificationMenuOpen] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [collectionMode, setCollectionMode] = useState<CollectionMode | null>(null);
+
   const [activeTab, setActiveTab] = useState<string>('global');
   const [homeQuery, setHomeQuery] = useState('');
   const [postEditorOpen, setPostEditorOpen] = useState(false);
