@@ -7,6 +7,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.58.0';
 import { embedText } from '../_shared/zoe-embeddings.ts';
 import { isUuid, requireSearchUser, safeHttpUrl } from '../_shared/zoe-search-auth.ts';
+import { describeSearchMedia } from '../_shared/zoe-media-understanding.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,10 +17,6 @@ const corsHeaders = {
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const GOOGLE_KEY = Deno.env.get('GOOGLE_AI_STUDIO_KEY') || Deno.env.get('GEMINI_API_KEY');
-import { nvidiaVision } from '../_shared/nvidia-provider.ts';
-
-const VISION_MODEL = 'gemini-3.6-flash';
 const SUPPORTED_TYPES = new Set(['post', 'loop_video', 'image', 'quote', 'profile', 'chat', 'dhf_node']);
 
 function json(body: unknown, status = 200) {
@@ -51,58 +48,6 @@ async function canonicalOwner(
     return data?.user_id ?? null;
   }
   return null;
-}
-
-const VISION_PROMPT =
-  'Extract all visual elements, OCR text, objects, people, mood and actions from this media, concisely, for database indexing.';
-
-/** Gemini vision pass with an NVIDIA NIM VLM fallback: OCR + object/mood extraction. */
-async function describeMedia(mediaUrl: string): Promise<string> {
-  try {
-    const media = await fetch(mediaUrl);
-    if (!media.ok) return '';
-    const mimeType = media.headers.get('content-type') || 'image/jpeg';
-    if (!mimeType.startsWith('image/')) return '';
-    const buf = new Uint8Array(await media.arrayBuffer());
-    if (buf.byteLength > 6_000_000) return '';
-    let binary = '';
-    for (let i = 0; i < buf.length; i += 8192) binary += String.fromCharCode(...buf.subarray(i, i + 8192));
-
-    const nvidiaFallback = () =>
-      nvidiaVision(`data:${mimeType};base64,${btoa(binary)}`, VISION_PROMPT).then((t) => t ?? '');
-
-    if (!GOOGLE_KEY) return await nvidiaFallback();
-
-    const resp = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${VISION_MODEL}:generateContent?key=${GOOGLE_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: 'user',
-              parts: [
-                { text: VISION_PROMPT },
-                { inline_data: { mime_type: mimeType, data: btoa(binary) } },
-              ],
-            },
-          ],
-          generationConfig: { temperature: 0.2, maxOutputTokens: 512 },
-        }),
-      },
-    );
-    if (!resp.ok) {
-      console.warn('[zoe-index-ingest] gemini vision failed, trying NVIDIA VLM', resp.status);
-      return await nvidiaFallback();
-    }
-    const data = await resp.json();
-    const text = data?.candidates?.[0]?.content?.parts?.map((p: any) => p.text).filter(Boolean).join('') ?? '';
-    return text || await nvidiaFallback();
-  } catch (e) {
-    console.warn('[zoe-index-ingest] vision threw', e);
-    return '';
-  }
 }
 
 Deno.serve(async (req) => {
@@ -137,7 +82,9 @@ Deno.serve(async (req) => {
       return json({ error: 'Invalid privacyLevel', requestId }, 400);
     }
     if (String(rawContent || '').length > 20000) return json({ error: 'rawContent is too large', requestId }, 413);
-    const validatedMediaUrl = safeHttpUrl(mediaUrl);
+    const validatedMediaUrl = typeof mediaUrl === 'string' && mediaUrl.startsWith('data:')
+      ? mediaUrl
+      : safeHttpUrl(mediaUrl);
     if (mediaUrl && !validatedMediaUrl) return json({ error: 'Invalid mediaUrl', requestId }, 400);
     console.log('[zoe-index-ingest:req]', JSON.stringify({ requestId, entityType, entityId, hasMedia: Boolean(mediaUrl) }));
 
@@ -146,7 +93,7 @@ Deno.serve(async (req) => {
     let visionMs = 0;
     if (validatedMediaUrl) {
       const tVision = performance.now();
-      const visuals = await describeMedia(validatedMediaUrl);
+      const visuals = await describeSearchMedia(validatedMediaUrl);
       visionMs = Math.round(performance.now() - tVision);
       if (visuals) synthesizedText = `${synthesizedText}\n[Visual Data]: ${visuals}`.trim();
       console.log('[zoe-index-ingest:vision]', JSON.stringify({ requestId, visionMs, extractedChars: visuals.length }));

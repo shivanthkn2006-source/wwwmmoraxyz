@@ -2,6 +2,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.58.0';
 import { embedText } from '../_shared/zoe-embeddings.ts';
 import { requireSearchUser } from '../_shared/zoe-search-auth.ts';
+import { describeSearchMedia } from '../_shared/zoe-media-understanding.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -67,10 +68,17 @@ async function loadCanonical(db: ReturnType<typeof createClient>, job: QueueRow)
     if (!data) return null;
     const privacy = data.visibility === 'global' ? 'public' : data.visibility === 'personal' ? 'friends' : 'private';
     const author = await loadAuthor(db, data.user_id);
-    const body = String(data.content || '').trim() || `${data.media_type || job.entity_type} post`;
+    const caption = String(data.content || '').trim();
+    const primaryMedia = typeof data.media_url === 'string' ? data.media_url : null;
+    const previewMedia = typeof data.media_preview_url === 'string' ? data.media_preview_url : null;
+    let visualDescription = await describeSearchMedia(primaryMedia);
+    if (!visualDescription && previewMedia && previewMedia !== primaryMedia) {
+      visualDescription = await describeSearchMedia(previewMedia);
+    }
+    const body = caption || `${data.media_type || job.entity_type} post`;
     return {
       ownerId: data.user_id,
-      content: [author.line, body].filter(Boolean).join('\n'),
+      content: [author.line, body, visualDescription ? `[Visual Data]: ${visualDescription}` : ''].filter(Boolean).join('\n'),
       privacy,
       metadata: {
         mediaType: data.media_type,
@@ -81,6 +89,7 @@ async function loadCanonical(db: ReturnType<typeof createClient>, job: QueueRow)
         createdAt: data.created_at,
         authorName: author.name,
         authorUsername: author.username,
+        visualIndexed: Boolean(visualDescription),
       },
     };
   }

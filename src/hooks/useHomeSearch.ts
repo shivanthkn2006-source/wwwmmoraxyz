@@ -62,7 +62,7 @@ export function useHomeSearch(query: string, enabled = true) {
         const safe = term.replace(/[%,()]/g, ' ').toLowerCase();
 
         const [indexRes, usersRes] = await Promise.all([
-          supabase.rpc('zoe_prefix_search', { query_text: safe, match_count: 12 }),
+          supabase.rpc('zoe_prefix_search', { query_text: safe, match_count: 20 }),
           supabase
             .from('public_profiles')
             .select('user_id, display_name, username, profile_photo_url')

@@ -195,7 +195,7 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
         </form>
       </div>
 
-      {searchOpen && query.trim().length >= 2 && (
+      {searchOpen && query.trim().length >= 1 && (
         <div
           className="fixed z-[9996] max-h-[50vh] overflow-y-auto rounded-2xl border border-border/60 bg-background/90 p-1 shadow-xl backdrop-blur-2xl"
           style={{
