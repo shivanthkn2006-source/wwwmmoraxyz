@@ -27,10 +27,25 @@ export interface SearchIndexFailure {
 const STALE_MS = 24 * 60 * 60 * 1000;
 const AUTO_BACKFILL_KEY = 'zoe.search.autoBackfillAt';
 
-export async function fetchSearchIndexStats(): Promise<{ stats: SearchIndexStats; failures: SearchIndexFailure[] } | null> {
+export type SearchIndexCoverage = Record<string, { indexed: number; withVision: number }>;
+
+export async function fetchSearchIndexStats(): Promise<{ stats: SearchIndexStats; failures: SearchIndexFailure[]; coverage: SearchIndexCoverage } | null> {
   const { data, error } = await supabase.functions.invoke('zoe-search-indexer', { body: { stats: true } });
   if (error || !data?.stats) return null;
-  return { stats: data.stats as SearchIndexStats, failures: (data.failures || []) as SearchIndexFailure[] };
+  return {
+    stats: data.stats as SearchIndexStats,
+    failures: (data.failures || []) as SearchIndexFailure[],
+    coverage: (data.coverage || {}) as SearchIndexCoverage,
+  };
+}
+
+/** Requeues media entities for vision description (all of them when `force`). */
+export async function runVisionBackfill(options: { force?: boolean; limit?: number } = {}) {
+  const { data, error } = await supabase.functions.invoke('zoe-search-indexer', {
+    body: { visionBackfill: true, force: options.force === true, limit: options.limit ?? 5 },
+  });
+  if (error) throw error;
+  return data as { enqueued: number; processed: number; completed: number; failed: number };
 }
 
 /** Drains one bounded batch; optionally enqueues the full historical backfill first. */
@@ -57,6 +72,7 @@ export function useSearchIndexHealth(options: { autoBackfill?: boolean } = {}) {
   const { autoBackfill = false } = options;
   const [stats, setStats] = useState<SearchIndexStats | null>(null);
   const [failures, setFailures] = useState<SearchIndexFailure[]>([]);
+  const [coverage, setCoverage] = useState<SearchIndexCoverage>({});
   const [loading, setLoading] = useState(true);
   const startedRef = useRef(false);
 
@@ -65,6 +81,7 @@ export function useSearchIndexHealth(options: { autoBackfill?: boolean } = {}) {
     if (snapshot) {
       setStats(snapshot.stats);
       setFailures(snapshot.failures);
+      setCoverage(snapshot.coverage);
     }
     setLoading(false);
     return snapshot;
@@ -99,6 +116,7 @@ export function useSearchIndexHealth(options: { autoBackfill?: boolean } = {}) {
 
   return {
     stats,
+    coverage,
     failures,
     loading,
     refresh,
