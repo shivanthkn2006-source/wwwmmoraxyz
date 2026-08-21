@@ -78,9 +78,19 @@ async function routeIntent(queryText: string): Promise<Intent> {
   const fallback: Intent = { intent: 'informational', requiresAction: false, normalizedQuery: queryText };
   let raw: string | null = null;
   if (GROQ_KEY) raw = await chat('https://api.groq.com/openai/v1/chat/completions', GROQ_KEY, GROQ_ROUTER_MODEL, queryText);
+  if (!raw && nvidiaKey()) {
+    raw = await nvidiaChat(queryText, {
+      systemPrompt: ROUTER_SYSTEM,
+      temperature: 0,
+      maxTokens: 200,
+      jsonMode: true,
+      timeoutMs: 12_000,
+    });
+  }
   if (!raw && OPENROUTER_KEY) {
     raw = await chat('https://openrouter.ai/api/v1/chat/completions', OPENROUTER_KEY, OPENROUTER_ROUTER_MODEL, queryText);
   }
+
   if (!raw) return fallback;
   try {
     const parsed = JSON.parse(raw.replace(/^```json\s*|\s*```$/g, '').trim());
