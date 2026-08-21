@@ -66,6 +66,53 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
     }
   }, [searchOpen]);
 
+  // Home dock search icon opens this same bar.
+  React.useEffect(() => {
+    const open = () => setSearchOpen(true);
+    window.addEventListener('mmora:open-home-search', open);
+    return () => window.removeEventListener('mmora:open-home-search', open);
+  }, []);
+
+  // Outside-the-platform results (web, music, weather) via the external-search function.
+  const [externalResults, setExternalResults] = React.useState<Array<{
+    id: string;
+    kind: 'web' | 'music' | 'weather';
+    title: string;
+    subtitle?: string;
+    url?: string;
+    thumbnail?: string;
+  }>>([]);
+  const [externalLoading, setExternalLoading] = React.useState(false);
+
+  React.useEffect(() => {
+    const term = query.trim();
+    if (!searchOpen || term.length < 3) {
+      setExternalResults([]);
+      return;
+    }
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      setExternalLoading(true);
+      try {
+        const { data, error: fnError } = await supabase.functions.invoke('external-search', {
+          body: { query: term },
+        });
+        if (fnError) throw fnError;
+        if (!cancelled) setExternalResults(data?.results ?? []);
+      } catch (err) {
+        console.warn('[external-search] failed', err);
+        if (!cancelled) setExternalResults([]);
+      } finally {
+        if (!cancelled) setExternalLoading(false);
+      }
+    }, 550);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [query, searchOpen]);
+
+
   // Global keyboard: Escape closes the sideways bar from anywhere.
   React.useEffect(() => {
     if (!searchOpen) return;
