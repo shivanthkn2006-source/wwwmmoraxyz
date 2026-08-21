@@ -22,7 +22,7 @@ export const useHomeDockBadges = () => {
   const { user } = useAuth();
   const [badges, setBadges] = useState<HomeDockBadges>(EMPTY);
   const [stale, setStale] = useState(false);
-  const [updatedAt, setUpdatedAt] = useState<number | null>(null);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(null);
   const lastSuccess = useRef(0);
   const inFlight = useRef(false);
 
@@ -31,7 +31,7 @@ export const useHomeDockBadges = () => {
       // Unauthenticated (or session dropped): never show another user's counts.
       setBadges(EMPTY);
       setStale(false);
-      setUpdatedAt(null);
+      setLastUpdatedAt(null);
       lastSuccess.current = 0;
       return;
     }
@@ -63,7 +63,7 @@ export const useHomeDockBadges = () => {
 
       setBadges({ likes, saved: savedResult.count ?? 0 });
       lastSuccess.current = Date.now();
-      setUpdatedAt(lastSuccess.current);
+      setLastUpdatedAt(lastSuccess.current);
       setStale(false);
     } catch (error) {
       console.warn('[useHomeDockBadges] refresh failed', error);
@@ -113,7 +113,7 @@ export const useHomeDockBadges = () => {
     };
   }, [user?.id, refresh]);
 
-  return { badges, refresh, stale, updatedAt };
+  return { badges, refresh, stale, updatedAt: lastUpdatedAt };
 };
 
 export default useHomeDockBadges;
