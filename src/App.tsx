@@ -666,6 +666,14 @@ const RouteAwareShell = () => {
                             }
                           />
                           <Route
+                            path="/admin/search-index"
+                            element={
+                              <ProtectedRoute>
+                                <AdminSearchIndexPage />
+                              </ProtectedRoute>
+                            }
+                          />
+                          <Route
                             path="/admin/feed-debug"
                             element={
                               <ProtectedRoute>
