@@ -1300,6 +1300,36 @@ const HomePage = () => {
     }
   };
 
+  // Fallback polling: keeps notification / message / collection badges accurate
+  // even when the realtime socket drops or briefly fails to (re)connect.
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const poll = () => {
+      void fetchUnreadCount();
+      void fetchUnreadMessages();
+      void refreshDockBadges();
+    };
+
+    const interval = window.setInterval(poll, 30_000);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') poll();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('online', poll);
+    window.addEventListener('focus', poll);
+
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('online', poll);
+      window.removeEventListener('focus', poll);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, refreshDockBadges]);
+
+
+
   const fetchNewMatches = async () => {
     if (!user) return;
     
