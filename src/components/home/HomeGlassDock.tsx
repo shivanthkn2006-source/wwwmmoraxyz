@@ -11,10 +11,6 @@ import {
   User,
   Heart,
   Search,
-  Music,
-  Mail,
-  Zap,
-  Map,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
