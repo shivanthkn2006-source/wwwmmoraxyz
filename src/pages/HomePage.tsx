@@ -1945,20 +1945,22 @@ const HomePage = () => {
             label: 'Zoe AI chat',
             icon: <Sparkles className="h-[22px] w-[22px]" />,
             active: zoeChatOpen,
-            onSelect: () => window.dispatchEvent(new CustomEvent('mmora:zoe-open-with-context', { detail: {} })),
+            onSelect: runHomeIconAction('zoe-ai', () =>
+              window.dispatchEvent(new CustomEvent('mmora:zoe-open-with-context', { detail: {} })),
+            ),
           },
           {
             id: 'camera',
             label: 'Camera',
             icon: <Camera className="h-[22px] w-[22px]" />,
-            onSelect: () => navigate('/camera'),
+            onSelect: runHomeIconAction('camera', () => navigate('/camera')),
           },
           {
             id: 'chat',
             label: 'Messages',
             icon: <MessageCircle className="h-[22px] w-[22px]" />,
             badge: unreadMessages,
-            onSelect: () => navigate('/chat'),
+            onSelect: runHomeIconAction('chat', () => navigate('/chat')),
           },
           {
             id: 'notifications',
@@ -1966,14 +1968,16 @@ const HomePage = () => {
             icon: <Bell className="h-[22px] w-[22px]" />,
             badge: unreadNotifications,
             active: notificationMenuOpen,
-            onSelect: () => setNotificationMenuOpen(true),
+            onSelect: runHomeIconAction('notifications', () => setNotificationMenuOpen(true)),
           },
           {
             id: 'search',
             label: 'Search',
             icon: <Search className="h-[22px] w-[22px]" />,
             active: homeSearchOpen,
-            onSelect: () => window.dispatchEvent(new CustomEvent('mmora:open-home-search')),
+            onSelect: runHomeIconAction('search', () =>
+              window.dispatchEvent(new CustomEvent('mmora:open-home-search')),
+            ),
           },
           {
             id: 'likes',
@@ -1981,7 +1985,7 @@ const HomePage = () => {
             icon: <Heart className="h-[22px] w-[22px]" />,
             badge: dockBadges.likes,
             active: collectionMode === 'liked',
-            onSelect: () => setCollectionMode('liked'),
+            onSelect: runHomeIconAction('likes', () => setCollectionMode('liked')),
           },
           {
             id: 'saved',
@@ -1989,24 +1993,30 @@ const HomePage = () => {
             icon: <Bookmark className="h-[22px] w-[22px]" />,
             badge: dockBadges.saved,
             active: collectionMode === 'saved',
-            onSelect: () => setCollectionMode('saved'),
+            onSelect: runHomeIconAction('saved', () => setCollectionMode('saved')),
           },
           {
             id: 'profile',
             label: 'Profile',
             icon: <UserIcon className="h-[22px] w-[22px]" />,
             active: isProfileSheetOpen,
-            onSelect: () => setIsProfileSheetOpen(true),
+            onSelect: runHomeIconAction('profile', () => setIsProfileSheetOpen(true)),
           },
           {
             id: 'settings',
             label: 'Settings',
             icon: <Settings className="h-[22px] w-[22px]" />,
-            onSelect: () => navigate('/profile?settings=1'),
+            onSelect: runHomeIconAction('settings', () => navigate('/profile?settings=1')),
           },
         ]}
 
       />
+      {iconStatusPanelOpen && (
+        <React.Suspense fallback={null}>
+          <HomeIconStatusPanel onClose={() => setIconStatusPanelOpen(false)} />
+        </React.Suspense>
+      )}
+
       <HomeCollectionSheet mode={collectionMode} onOpenChange={(open) => !open && setCollectionMode(null)} />
 
 
