@@ -167,10 +167,10 @@ Deno.serve(async (req) => {
     // Health/progress snapshot for the startup guard and the admin view.
     if (body?.stats === true) {
       const [indexed, pending, processing, failedCount, failedRows, newest] = await Promise.all([
-        db.from('zoe_search_index_queue').select('id', { count: 'exact', head: true }).eq('status', 'failed'),
         db.from('zoe_universal_index').select('id', { count: 'exact', head: true }),
         db.from('zoe_search_index_queue').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
         db.from('zoe_search_index_queue').select('id', { count: 'exact', head: true }).eq('status', 'processing'),
+        db.from('zoe_search_index_queue').select('id', { count: 'exact', head: true }).eq('status', 'failed'),
         db.from('zoe_search_index_queue').select('id,entity_type,entity_id,attempts,last_error,updated_at')
           .eq('status', 'failed').order('updated_at', { ascending: false }).limit(20),
         db.from('zoe_universal_index').select('updated_at').order('updated_at', { ascending: false }).limit(1).maybeSingle(),
