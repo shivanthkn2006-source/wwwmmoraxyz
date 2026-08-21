@@ -1921,6 +1921,8 @@ const HomePage = () => {
       )}
 
       <HomeFloatingTools query={homeQuery} onQueryChange={setHomeQuery} onOpenEditor={() => setPostEditorOpen(true)} />
+      <HomeGlassDock />
+
       <HomePostEditor
         open={postEditorOpen}
         busy={uploadState === 'uploading' || uploadState === 'saving' || uploadState === 'validating'}
