@@ -42,10 +42,22 @@ const PLACEHOLDER_ICONS = [Compass, Bell, Camera, MessageCircle, Sparkles, Bookm
 export default function HomeGlassDock({ items = [], className }: HomeGlassDockProps) {
   const [open, setOpen] = React.useState(false);
   const rootRef = React.useRef<HTMLDivElement>(null);
+  const railRef = React.useRef<HTMLDivElement>(null);
+  const triggerRef = React.useRef<HTMLButtonElement>(null);
   const swipeStart = React.useRef<{ x: number; y: number } | null>(null);
   const longPressTimer = React.useRef<number | null>(null);
   const longPressPreview = React.useRef(false);
   const suppressClick = React.useRef(false);
+  const [usage, setUsage] = React.useState<DockUsageMap>({});
+
+  // Frequently-used ordering (most used sits nearest the home trigger).
+  React.useEffect(() => {
+    setUsage(readDockUsage());
+    const onUsage = () => setUsage(readDockUsage());
+    window.addEventListener('mmora:home-dock-usage', onUsage);
+    return () => window.removeEventListener('mmora:home-dock-usage', onUsage);
+  }, []);
+
 
 
   // Tap outside / Escape closes the rail.
