@@ -236,7 +236,7 @@ ${endearment ? `- You may occasionally call them "${endearment}"` : ''}
     const { cascadeInfer } = await import("../_shared/cascading-provider.ts");
     const cascade = await cascadeInfer(
       [{ role: "system", content: systemPrompt }, ...messages],
-      { maxTokens: 400, temperature: 0.85, systemPrompt },
+      { maxTokens: 400, temperature: 0.85, systemPrompt, nvidiaRole: 'creative' },
     );
 
     if (!cascade.success) {

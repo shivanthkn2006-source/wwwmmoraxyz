@@ -502,7 +502,8 @@ ${driftHints.length
       const cascadeResult = await cascadeInfer(cascadeMessages, {
         maxTokens: deepMode ? 3000 : 1200,
         temperature: deepMode ? 0.5 : 0.7,
-        mode: 't1-primary'
+        mode: 't1-primary',
+        nvidiaRole: deepMode ? 'deep_thinking' : 'chat',
       });
       if (!cascadeResult.success) {
         return new Response(

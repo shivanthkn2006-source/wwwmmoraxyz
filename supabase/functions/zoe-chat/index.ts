@@ -447,7 +447,7 @@ serve(async (req) => {
             { role: 'system', content: 'Extract a proposed system prompt rewrite from the user message. Return ONLY the new system prompt text, nothing else. If the user just says "be concise", write a full system prompt that IS concise. Keep core Zoe identity.' },
             { role: 'user', content: lastUserMessage },
           ],
-          { maxTokens: 500, temperature: 0.3 }
+          { maxTokens: 500, temperature: 0.3, nvidiaRole: 'fast' }
         );
         const proposalResponse = { ok: proposalResult.success };
         
@@ -785,7 +785,7 @@ ${cortexPromptAddition}`;
     
     // Keep enough TPM headroom for Groq's free tier; the system context is already
     // large, so a 1500-token completion could rate-limit both Groq tiers at once.
-    const cascadeResult = await cascadeInfer(cascadeMessages, { maxTokens: 800, temperature: 0.7, mode: 't1-primary' });
+    const cascadeResult = await cascadeInfer(cascadeMessages, { maxTokens: 800, temperature: 0.7, mode: 't1-primary', nvidiaRole: 'chat' });
     
     if (!cascadeResult.success) {
       console.error('All providers failed', JSON.stringify(cascadeResult.attempts));
