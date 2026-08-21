@@ -2065,6 +2065,13 @@ const HomePage = () => {
             }),
           },
           {
+            id: 'live',
+            label: 'Live',
+            icon: <Radio className="h-[22px] w-[22px]" />,
+            active: liveViewOpen,
+            onSelect: runHomeIconAction('live', () => setLiveViewOpen(true)),
+          },
+          {
             id: 'likes',
             label: 'Liked posts',
             icon: <Heart className="h-[22px] w-[22px]" />,
