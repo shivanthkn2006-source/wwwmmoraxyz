@@ -63,11 +63,11 @@ export const trackMediaDevices = () => {
           stream.getTracks().forEach(track => {
             if (track.kind === 'video' && track.readyState === 'live') {
               hasActiveCamera = true;
-              cameraLabel = track.label || 'Camera';
+              cameraLabel = genericLabel('camera');
             }
             if (track.kind === 'audio' && track.readyState === 'live') {
               hasActiveMic = true;
-              micLabel = track.label || 'Microphone';
+              micLabel = genericLabel('microphone');
             }
           });
         }
@@ -109,10 +109,10 @@ export const trackMediaDevices = () => {
 export const setMediaActive = (type: 'camera' | 'microphone', active: boolean, label?: string) => {
   const newState = { ...globalMediaState };
   newState[type] = active;
-  if (label) {
-    if (type === 'camera') newState.cameraLabel = label;
-    if (type === 'microphone') newState.micLabel = label;
-  }
+  // `label` is intentionally ignored: hardware device names are never displayed.
+  void label;
+  if (type === 'camera') newState.cameraLabel = genericLabel('camera');
+  if (type === 'microphone') newState.micLabel = genericLabel('microphone');
   globalMediaState = newState;
   mediaStateListeners.forEach(listener => listener(newState));
 };
@@ -212,12 +212,12 @@ export const CameraActiveIndicator: React.FC<CameraActiveIndicatorProps> = ({
               <div className="flex flex-col text-xs">
                 {mediaState.camera && (
                   <span className="text-red-400 font-medium">
-                    {mediaState.cameraLabel || 'Camera ON'}
+                    {genericLabel('camera')}
                   </span>
                 )}
                 {mediaState.microphone && (
                   <span className="text-amber-400 font-medium">
-                    {mediaState.micLabel || 'Mic ON'}
+                    {genericLabel('microphone')}
                   </span>
                 )}
               </div>
