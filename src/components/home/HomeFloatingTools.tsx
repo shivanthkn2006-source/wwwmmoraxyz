@@ -98,7 +98,7 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
         navigate(dispatchRoute);
       }
     })();
-  }, [query, activeIndex, results, handleSelect, executeAmbientSearch, navigate]);
+  }, [query, activeIndex, results, handleSelect, executeAmbientSearch, navigate, indexEmpty]);
 
   const handleAmbientRecord = React.useCallback((record: AmbientSearchRecord) => {
     setSearchOpen(false);
