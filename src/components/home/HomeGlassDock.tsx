@@ -44,25 +44,29 @@ export default function HomeGlassDock({ items = [], className }: HomeGlassDockPr
   return (
     <div
       ref={rootRef}
-      className={cn('fixed bottom-20 right-3 z-[9996] flex items-center justify-end gap-2', className)}
+      className={cn(
+        'fixed right-2 z-[9996] flex items-center justify-end',
+        'bottom-[calc(env(safe-area-inset-bottom,0px)+12px)]',
+        className,
+      )}
     >
-      {/* Extending rail: right → left, one horizontal swipeable line */}
+      {/* Horizontal glass tube: extends right → left, same height as the home icon */}
       <div
         className={cn(
-          'flex items-center overflow-hidden transition-all duration-300 ease-out',
-          open ? 'max-w-[70vw] opacity-100' : 'pointer-events-none max-w-0 opacity-0',
+          'flex h-11 items-center overflow-hidden transition-all duration-300 ease-out',
+          open ? 'mr-1 max-w-[72vw] opacity-100' : 'pointer-events-none mr-0 max-w-0 opacity-0',
         )}
       >
         <div
           className={cn(
-            'flex items-center gap-3 overflow-x-auto rounded-full border border-white/25 px-3 py-2',
-            'bg-white/10 backdrop-blur-xl shadow-[0_8px_28px_rgba(0,0,0,0.35)]',
+            'flex h-11 items-center gap-2 overflow-x-auto rounded-full border border-white/25 px-2',
+            'bg-white/10 backdrop-blur-xl',
             '[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden',
-            'snap-x snap-mandatory touch-pan-x',
+            'snap-x touch-pan-x',
           )}
         >
           {items.length === 0 ? (
-            <span className="whitespace-nowrap px-2 text-[11px] text-white/70">Menus coming soon</span>
+            <span className="whitespace-nowrap px-3 text-[11px] text-white/60">Menus coming soon</span>
           ) : (
             items.map((item) => (
               <button
@@ -76,8 +80,7 @@ export default function HomeGlassDock({ items = [], className }: HomeGlassDockPr
                 }}
                 className={cn(
                   'flex h-9 w-9 shrink-0 snap-start items-center justify-center rounded-full',
-                  'border border-white/20 bg-white/10 text-white/90 transition-transform',
-                  'active:scale-95 hover:bg-white/20',
+                  'text-white/90 transition-transform active:scale-95 hover:bg-white/15',
                 )}
               >
                 {item.icon}
@@ -87,21 +90,21 @@ export default function HomeGlassDock({ items = [], className }: HomeGlassDockPr
         </div>
       </div>
 
-      {/* Home trigger */}
+      {/* Bare home trigger — no outer ring */}
       <button
         type="button"
         aria-label={open ? 'Close home menu' : 'Open home menu'}
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
         className={cn(
-          'flex h-10 w-10 shrink-0 items-center justify-center rounded-full',
-          'border border-white/25 bg-white/10 backdrop-blur-xl',
-          'text-white shadow-[0_6px_20px_rgba(0,0,0,0.35)] transition-transform',
-          'active:scale-95 hover:bg-white/20',
+          'flex h-11 w-11 shrink-0 items-center justify-center rounded-full',
+          'text-white/90 drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)] transition-transform',
+          'active:scale-95',
         )}
       >
-        <Home className="h-[18px] w-[18px]" />
+        <Home className="h-[22px] w-[22px]" />
       </button>
     </div>
   );
 }
+
