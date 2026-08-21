@@ -65,6 +65,23 @@ const TEST_JWT = 'test-jwt-token';
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
     from: vi.fn((table: string) => makeBuilder(table)),
+    rpc: vi.fn(async (fn: string) => {
+      selectCalls.push(`rpc:${fn}`);
+      return {
+        data: [
+          {
+            id: 'idx-1',
+            entity_type: 'loop_video',
+            entity_id: 'loop-9',
+            content_synthesis: 'By zoefan\nSkateboarding loop at sunset',
+            metadata: {},
+            social_weight: 1,
+            score: 0.9,
+          },
+        ],
+        error: null,
+      };
+    }),
     auth: {
       getUser: vi.fn(() => Promise.resolve({ data: { user: { id: 'u-me' } } })),
       getSession: vi.fn(() => Promise.resolve({ data: { session: { access_token: TEST_JWT, user: { id: 'u-me' } } } })),
