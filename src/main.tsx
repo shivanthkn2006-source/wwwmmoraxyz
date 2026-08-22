@@ -21,6 +21,7 @@ import { initSafariFixes } from "./utils/safariBrowserFixes"; // SAFARI CROSS-BR
 import { installServiceWorkerDevGuard } from "@/lib/serviceWorkerDevGuard"; // #11 Zoe Infinity SW dev guard
 import { installRuntimeIssueCollector } from "@/features/zoe-godmode/runtimeIssueCollector"; // God-mode error capture
 import { installFetchPerfLogger, recordPageLoad } from "@/utils/perfLogger"; // Perf logging
+import { installMediaTrackRegistry } from "@/lib/mediaTrackRegistry"; // MediaStream leak observability
 
 // #11 Block service worker registration in dev/preview before anything else
 // touches navigator.serviceWorker.
