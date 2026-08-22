@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
 import { X, Eye, Heart, Send, Smile, Share2, MoreVertical, CameraOff, Play } from 'lucide-react';
 import { useAdaptiveCamera } from '@/hooks/useAdaptiveCamera';
 import { mmoraLogoProps } from '@/components/brand/MmoraBrandHomeBridge';
+import { recordCompatEvent } from '@/lib/runtimeCompatibility';
+import { getMediaTrackSnapshot } from '@/lib/mediaTrackRegistry';
 
 interface LiveComment {
   id: string;
