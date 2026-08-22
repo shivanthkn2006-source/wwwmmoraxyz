@@ -6,7 +6,7 @@
 
 import React, { useState, useEffect, useCallback, useRef, lazy, Suspense, Component, ErrorInfo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Brain, Activity, Zap, Shield, Eye, Waves, Cpu, Network, Sparkles, Terminal, Heart, Send, Glasses, Box, Volume2, VolumeX, AlertTriangle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
