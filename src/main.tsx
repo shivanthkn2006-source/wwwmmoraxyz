@@ -27,6 +27,7 @@ import { installFetchPerfLogger, recordPageLoad } from "@/utils/perfLogger"; // 
 installServiceWorkerDevGuard();
 installRuntimeIssueCollector();
 installFetchPerfLogger();
+installMediaTrackRegistry();
 recordPageLoad();
 
 // Expose APP_VERSION + safe env to the startup shell so its diagnostics
