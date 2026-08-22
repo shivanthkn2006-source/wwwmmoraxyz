@@ -2025,7 +2025,7 @@ const HomePage = () => {
             id: 'vr-world',
             label: 'VR World',
             icon: <Boxes className="h-[22px] w-[22px]" />,
-            onSelect: runHomeIconAction('vr-world', () => navigate('/zoe-omega')),
+            onSelect: runHomeIconAction('vr-world', () => navigate('/zoe-omega?vr=1')),
           },
           {
             id: 'zoe-ai',

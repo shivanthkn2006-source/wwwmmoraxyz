@@ -6,7 +6,7 @@
 
 import React, { useState, useEffect, useCallback, useRef, lazy, Suspense, Component, ErrorInfo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Brain, Activity, Zap, Shield, Eye, Waves, Cpu, Network, Sparkles, Terminal, Heart, Send, Glasses, Box, Volume2, VolumeX, AlertTriangle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -425,8 +425,10 @@ const ZoeOmegaPage: React.FC = () => {
   const [isTransitioning, setIsTransitioning] = useState(true);
   const [metaMonologue, setMetaMonologue] = useState<string>('');
   const [dissonanceGlitch, setDissonanceGlitch] = useState(false);
-  const [isVRMode, setIsVRMode] = useState(false);
-  const [vrStasisActive, setVrStasisActive] = useState(true); // VR Stasis Protocol - starts in stasis
+  const [searchParams] = useSearchParams();
+  const directVR = searchParams.get('vr') === '1';
+  const [isVRMode, setIsVRMode] = useState(directVR);
+  const [vrStasisActive, setVrStasisActive] = useState(!directVR); // VR Stasis Protocol - starts in stasis unless launched directly into VR
   const [isSoundEnabled, setIsSoundEnabled] = useState(true);
   const soundEngineRef = useRef<OmegaSoundEngine | null>(null);
 
