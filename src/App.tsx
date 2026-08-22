@@ -66,6 +66,7 @@ const AnalyticsDashboard = lazy(() => import("./pages/AnalyticsDashboard"));
 const DHFDashboardPage = lazy(() => import("./pages/DHFDashboardPage"));
 const IntegrationTestPage = lazy(() => import("./pages/IntegrationTestPage"));
 const ZoeOmegaPage = lazy(() => import("./pages/ZoeOmegaPage"));
+const CompatibilityReportPage = lazy(() => import("./pages/CompatibilityReportPage"));
 const OmegaEvolutionPage = lazy(() => import("./pages/OmegaEvolutionPage"));
 const QuadrillionAuditDashboard = lazy(() => import("./pages/QuadrillionAuditDashboard"));
 const ZoeNexusPage = lazy(() => import("./pages/ZoeNexusPage"));
@@ -739,6 +740,14 @@ const RouteAwareShell = () => {
                                 <div className="pb-16">
                                   <IntegrationTestPage />
                                 </div>
+                              </ProtectedRoute>
+                            }
+                          />
+                          <Route
+                            path="/compatibility-report"
+                            element={
+                              <ProtectedRoute>
+                                <CompatibilityReportPage />
                               </ProtectedRoute>
                             }
                           />

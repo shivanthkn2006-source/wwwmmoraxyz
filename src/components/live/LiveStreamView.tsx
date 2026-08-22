@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
 import { X, Eye, Heart, Send, Smile, Share2, MoreVertical, CameraOff, Play } from 'lucide-react';
 import { useAdaptiveCamera } from '@/hooks/useAdaptiveCamera';
 import { mmoraLogoProps } from '@/components/brand/MmoraBrandHomeBridge';
+import { recordCompatEvent } from '@/lib/runtimeCompatibility';
+import { getMediaTrackSnapshot } from '@/lib/mediaTrackRegistry';
 
 interface LiveComment {
   id: string;
@@ -147,6 +149,32 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({
       window.clearInterval(viewerTimer);
     };
   }, [pushComment]);
+
+  // Compatibility telemetry: open/close lifecycle + hardware teardown proof.
+  useEffect(() => {
+    recordCompatEvent('live-stream', 'opened');
+    return () => {
+      recordCompatEvent('live-stream', 'closed');
+      // Give the teardown a tick, then verify no tracks are left holding hardware.
+      window.setTimeout(() => {
+        const snapshot = getMediaTrackSnapshot();
+        recordCompatEvent(
+          'media-teardown',
+          snapshot.liveTracks === 0 ? 'tracks-released' : 'tracks-leaked',
+          snapshot.liveTracks === 0 ? 'ok' : 'failed',
+          `${snapshot.liveTracks} live track(s)`,
+        );
+      }, 250);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (stream) recordCompatEvent('live-stream', 'camera-active', 'ok', networkType);
+  }, [stream, networkType]);
+
+  useEffect(() => {
+    if (error) recordCompatEvent('live-stream', error.kind, error.recoverable ? 'degraded' : 'failed', error.title);
+  }, [error]);
 
   // Close on Escape
   useEffect(() => {

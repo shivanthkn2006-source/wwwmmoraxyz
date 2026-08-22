@@ -11,6 +11,7 @@
     "preview": "vite preview",
     "test:e2e": "playwright test",
     "test:e2e:home": "playwright test tests/e2e/home-blank-screen.spec.ts",
+    "test:e2e:dock-live": "playwright test tests/e2e/home-dock-live.spec.ts",
     "predev": "bunx tsx scripts/generate-sitemap.ts",
     "prebuild": "bunx tsx scripts/generate-sitemap.ts && vitest run src/test/routeSeo.test.ts scripts/generate-sitemap.test.ts",
     "test:seo": "vitest run src/test/routeSeo.test.ts scripts/generate-sitemap.test.ts",
