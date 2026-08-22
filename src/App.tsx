@@ -744,6 +744,14 @@ const RouteAwareShell = () => {
                             }
                           />
                           <Route
+                            path="/compatibility-report"
+                            element={
+                              <ProtectedRoute>
+                                <CompatibilityReportPage />
+                              </ProtectedRoute>
+                            }
+                          />
+                          <Route
                             path="/zoe-omega"
                             element={
                               <ProtectedRoute>
