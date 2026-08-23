@@ -46,7 +46,6 @@ export default function ExternalVideoCard({
   autoPlay = false,
   active,
   onDismiss,
-  onExit,
   onToggleSave,
   saved = false,
 }: Props) {
