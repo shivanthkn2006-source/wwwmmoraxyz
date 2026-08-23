@@ -938,12 +938,23 @@ export const GlobalZoeAssistant = ({ config = DEFAULT_CONFIG }: { config?: Parti
                       isThinking={isProcessing || alwaysOnVoice.isProcessing}
                       size="lg"
                       onClick={() => {
+                        // Zoe's orb now opens on a double click / double tap so a
+                        // single stray tap while scrolling never opens the panel.
+                        const homeControlActive = Boolean((window as Window & { __mmoraHomeControlDragging?: boolean }).__mmoraHomeControlDragging);
+                        if (isDragging || homeControlActive) return;
+                        const now = Date.now();
+                        if (now - lastOrbTapRef.current < 350) {
+                          lastOrbTapRef.current = 0;
+                          setShowConversationPanel(true);
+                        } else {
+                          lastOrbTapRef.current = now;
+                        }
+                      }}
+                      onDoubleClick={() => {
                         const homeControlActive = Boolean((window as Window & { __mmoraHomeControlDragging?: boolean }).__mmoraHomeControlDragging);
                         if (!isDragging && !homeControlActive) setShowConversationPanel(true);
                       }}
-                      onDoubleClick={() => {
-                        if (!isDragging) navigate('/ai-companion');
-                      }}
+
                       ecnEmotion={currentEmotion}
                     />
                   </Suspense>
