@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { X, Bookmark, BookmarkCheck, ArrowLeft } from 'lucide-react';
+import { X, Bookmark, BookmarkCheck } from 'lucide-react';
 
 export interface ExternalVideoItem {
   id: string;
