@@ -23,6 +23,7 @@ import { onHomeRefresh, triggerHomeRefresh } from '@/lib/homeRefresh';
 import { rememberShortInOrbMemory } from '@/lib/orbShortsMemory';
 import HomeFloatingTools from '@/components/home/HomeFloatingTools';
 import ExternalVideoCard, { type ExternalVideoItem } from '@/components/home/ExternalVideoCard';
+import { useDhfBrain } from '@/hooks/useDhfBrain';
 
 import HomeGlassDock from '@/components/home/HomeGlassDock';
 import DockBadgeBoundary from '@/components/home/DockBadgeBoundary';
@@ -115,6 +116,7 @@ const HomePage = () => {
   const [loading, setLoading] = useState(true);
   // Search videos (YouTube) injected into the feed and played inline — new-window
   // navigation to youtube.com is blocked by Cross-Origin-Opener-Policy.
+  const { ingest: ingestDhf } = useDhfBrain();
   const [searchVideos, setSearchVideos] = useState<ExternalVideoItem[]>([]);
   const [activeSearchVideoId, setActiveSearchVideoId] = useState<string | null>(null);
 
@@ -145,6 +147,7 @@ const HomePage = () => {
         <div
           key={`search-video-${video.id}`}
           data-search-video-slide={index === 0 ? 'first' : 'true'}
+          data-video-key={video.id}
           className="relative h-full min-h-full w-full shrink-0 snap-start snap-always overflow-hidden"
         >
           <ExternalVideoCard
@@ -196,6 +199,7 @@ const HomePage = () => {
         <div
           key={`neural-video-${video.id}`}
           data-neural-video-slide="true"
+          data-video-key={video.id}
           className="relative h-full min-h-full w-full shrink-0 snap-start snap-always overflow-hidden"
         >
           <ExternalVideoCard
@@ -206,6 +210,47 @@ const HomePage = () => {
       )),
     [neuralVideos],
   );
+
+  // Watch-pattern learning: when a video slide stays on screen, feed its topic
+  // into Zoe's DHF memory so later replies reflect what the user actually watches.
+  const learnedVideoIds = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const items = [...searchVideos, ...neuralVideos];
+    if (!items.length) return;
+    const byKey = new Map(items.map((v) => [v.id, v]));
+    const timers = new Map<string, number>();
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          const key = (entry.target as HTMLElement).dataset.videoKey ?? '';
+          const video = byKey.get(key);
+          if (!video || learnedVideoIds.current.has(key)) continue;
+          if (entry.isIntersecting && entry.intersectionRatio > 0.6) {
+            timers.set(
+              key,
+              window.setTimeout(() => {
+                learnedVideoIds.current.add(key);
+                void ingestDhf(video.title, 'feed_click', { injectFeed: false });
+              }, 5000),
+            );
+          } else {
+            const timer = timers.get(key);
+            if (timer) window.clearTimeout(timer);
+            timers.delete(key);
+          }
+        }
+      },
+      { threshold: [0, 0.61, 1] },
+    );
+    document
+      .querySelectorAll<HTMLElement>('[data-video-key]')
+      .forEach((el) => observer.observe(el));
+    return () => {
+      observer.disconnect();
+      timers.forEach((timer) => window.clearTimeout(timer));
+    };
+  }, [searchVideos, neuralVideos, ingestDhf]);
+
 
 
   const [userProfile, setUserProfile] = useState<any>(null);

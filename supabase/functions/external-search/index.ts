@@ -81,7 +81,7 @@ const videoSearch = async (query: string): Promise<ExternalResult[]> => {
   }
   const term = query.replace(/\b(video|videos|watch|youtube)\b/gi, ' ').trim() || query;
   const data = await safeJson(
-    `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&safeSearch=moderate&maxResults=5` +
+    `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&safeSearch=moderate&maxResults=10` +
       `&q=${encodeURIComponent(term)}&key=${key}`,
   );
   const items: any[] = Array.isArray(data?.items) ? data.items : [];
@@ -169,7 +169,7 @@ Deno.serve(async (req) => {
     const settled = await Promise.allSettled(tasks);
     const results = settled.flatMap((entry) => (entry.status === 'fulfilled' ? entry.value : []));
 
-    return new Response(JSON.stringify({ results: results.slice(0, 14) }), {
+    return new Response(JSON.stringify({ results: results.slice(0, 24) }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {

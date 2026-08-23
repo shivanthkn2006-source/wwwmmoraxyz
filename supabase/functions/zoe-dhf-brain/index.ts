@@ -117,7 +117,7 @@ async function injectYouTube(
 
   try {
     const endpoint =
-      `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=5&safeSearch=moderate` +
+      `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=10&safeSearch=moderate` +
       `&q=${encodeURIComponent(term)}&type=video&key=${key}`;
     const res = await fetch(endpoint);
     if (!res.ok) {
