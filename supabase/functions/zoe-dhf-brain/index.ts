@@ -178,14 +178,20 @@ Deno.serve(async (req) => {
   const user = userData?.user;
   if (userError || !user) return json({ error: 'unauthorized' }, 401);
 
-  let body: { query?: string; contextType?: string; injectFeed?: boolean; timezone?: string };
+  let body: { query?: string; contextType?: string; injectFeed?: boolean; timezone?: string; mode?: string };
   try {
     body = await req.json();
   } catch {
-    return json({ error: 'invalid_json' }, 400);
+    return json({ error: 'invalid_json', code: 'invalid_json' }, 400);
   }
 
-  const query = (body.query || '').trim().slice(0, 2000);
+  // Health/quota probe — no writes, no feed injection.
+  if (body.mode === 'diagnose') {
+    const diagnosis = await diagnoseYouTube();
+    console.log(JSON.stringify({ fn: 'zoe-dhf-brain', stage: 'diagnose', user: user.id, ...diagnosis }));
+    return json({ success: true, youtube: diagnosis });
+  }
+
   const contextType = body.contextType || 'search';
   const admin = createClient(url, service);
   const degraded: string[] = [];
@@ -203,9 +209,15 @@ Deno.serve(async (req) => {
   const dailyTelemetry = getDailyArchetype(new Date(), timeZone);
   const archetype = `${dailyTelemetry.rulingPlanet}_${dailyTelemetry.archetype.split(' ')[0]}`;
 
-  if (!query) {
-    return json({ success: true, dailyTelemetry, natalAlignment: profile?.natal_chart ?? null, memoryStored: false, feed: { injected: 0, reason: 'empty_query' }, degraded: ['empty_query'] });
-  }
+  // Default (no explicit query): curate from day-lord + birth alignment so the
+  // feed is never empty for a signed-in user.
+  const explicitQuery = (body.query || '').trim().slice(0, 2000);
+  const query =
+    explicitQuery ||
+    `${dailyTelemetry.rulingPlanet} energy ${dailyTelemetry.dailyFocus} meditation motivation`;
+  const isDefaultQuery = !explicitQuery;
+  if (isDefaultQuery) degraded.push('default_birth_query');
+
 
   // 3. Embedding (sovereign cascade: Google → OpenRouter → NVIDIA)
   let embedding: number[] | null = null;
