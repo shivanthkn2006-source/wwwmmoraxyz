@@ -169,7 +169,7 @@ Deno.serve(async (req) => {
     const settled = await Promise.allSettled(tasks);
     const results = settled.flatMap((entry) => (entry.status === 'fulfilled' ? entry.value : []));
 
-    return new Response(JSON.stringify({ results: results.slice(0, 14) }), {
+    return new Response(JSON.stringify({ results: results.slice(0, 24) }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
