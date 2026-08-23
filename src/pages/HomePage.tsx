@@ -2344,10 +2344,7 @@ const HomePage = () => {
         query={homeQuery}
         onQueryChange={setHomeQuery}
         onOpenEditor={() => setPostEditorOpen(true)}
-        hasInjectedVideos={
-          searchVideos.length > 0 ||
-          youtubeSlideVisible
-        }
+        hasInjectedVideos
       />
       <DockBadgeBoundary>
       <HomeGlassDock
