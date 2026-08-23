@@ -113,7 +113,7 @@ export default function DraggableHomeControl({
       aria-label={ariaLabel}
       aria-disabled={disabled || undefined}
       aria-busy={busy || undefined}
-      title={`${tooltip ?? ariaLabel} · drag to move`}
+      title={tooltip}
       className={cn(
         'fixed z-[9997] flex h-9 w-9 touch-none select-none items-center justify-center text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         disabled && 'cursor-not-allowed opacity-50',

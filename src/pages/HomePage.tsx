@@ -114,6 +114,7 @@ const HomePage = () => {
   const [loopPosts, setLoopPosts] = useState<Post[]>([]);
   const [brokenLoopPreviewIds, setBrokenLoopPreviewIds] = useState<Set<string>>(() => new Set());
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<string>('global');
   // Search videos (YouTube) injected into the feed and played inline — new-window
   // navigation to youtube.com is blocked by Cross-Origin-Opener-Policy.
   const { ingest: ingestDhf } = useDhfBrain();
@@ -159,12 +160,14 @@ const HomePage = () => {
   /** Leave the injected search results and go back to the user's own feed. */
   const exitSearchVideos = React.useCallback(() => {
     const saved = feedReturnStateRef.current;
+    // Pause the active search iframe before unmounting it.
+    setVisibleVideoKey(null);
     setSearchVideos([]);
     setActiveSearchVideoId(null);
     requestAnimationFrame(() => {
-      const container = document.querySelector('[data-feed-scroll]') as HTMLElement | null;
-      container?.scrollTo({ top: saved?.top ?? 0, behavior: 'smooth' });
-      window.scrollTo({ top: saved?.windowTop ?? 0, behavior: 'smooth' });
+      const container = document.querySelector(`[data-feed-tab="${activeTab}"] [data-feed-scroll]`) as HTMLElement | null;
+      container?.scrollTo({ top: saved?.top ?? 0, behavior: 'auto' });
+      window.scrollTo({ top: saved?.windowTop ?? 0, behavior: 'auto' });
       // Resume playback on the slide that was active before the search detour.
       if (saved?.videoKey) setVisibleVideoKey(saved.videoKey);
       window.dispatchEvent(
@@ -172,7 +175,7 @@ const HomePage = () => {
       );
       feedReturnStateRef.current = null;
     });
-  }, []);
+  }, [activeTab]);
 
   useEffect(() => {
     const onInject = (event: Event) => {
@@ -181,7 +184,7 @@ const HomePage = () => {
       if (!videos.length) return;
       const activeId = detail?.activeId ?? videos[0].id;
       // Snapshot where the user was so the feed icon can bring them back exactly.
-      const container = document.querySelector('[data-feed-scroll]') as HTMLElement | null;
+       const container = document.querySelector(`[data-feed-tab="${activeTab}"] [data-feed-scroll]`) as HTMLElement | null;
       feedReturnStateRef.current = {
         top: container?.scrollTop ?? 0,
         windowTop: window.scrollY,
@@ -195,13 +198,13 @@ const HomePage = () => {
       setSearchVideos(ordered);
       setActiveSearchVideoId(activeId);
       requestAnimationFrame(() => {
-        document.querySelector('[data-search-video-slide]')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+         document.querySelector(`[data-feed-tab="${activeTab}"] [data-search-video-slide]`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         window.dispatchEvent(new CustomEvent('mmora:feed-external-videos-ready'));
       });
     };
     window.addEventListener('mmora:feed-external-videos', onInject);
     return () => window.removeEventListener('mmora:feed-external-videos', onInject);
-  }, []);
+  }, [activeTab]);
 
 
   // Listen for the floating feed icon to exit search videos back to the user's feed.
@@ -346,7 +349,6 @@ const HomePage = () => {
   const [collectionMode, setCollectionMode] = useState<CollectionMode | null>(null);
   const [liveViewOpen, setLiveViewOpen] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<string>('global');
   const [homeQuery, setHomeQuery] = useState('');
   const [postEditorOpen, setPostEditorOpen] = useState(false);
   const [zoeVisible, setZoeVisible] = useState(true); // Zoe visibility state
@@ -2117,7 +2119,7 @@ const HomePage = () => {
 
                   <p className="absolute inset-0 flex items-center justify-center px-3 text-center text-muted-foreground">No posts yet</p>
                 ) : (
-                  <div className="absolute inset-0 h-full w-full snap-y snap-mandatory overflow-y-auto overscroll-contain" data-testid="global-posts-snap-feed">
+                  <div className="absolute inset-0 h-full w-full snap-y snap-mandatory overflow-y-auto overscroll-contain" data-testid="global-posts-snap-feed" data-feed-scroll>
                   {searchVideoSlides}
                   {astroDaily && (
 
@@ -2160,7 +2162,7 @@ const HomePage = () => {
                 ) : personalPosts.length === 0 && !astroDaily && searchVideos.length === 0 && neuralVideos.length === 0 ? (
                   <p className="absolute inset-0 flex items-center justify-center px-3 text-center text-muted-foreground">No posts from friends yet</p>
                 ) : (
-                  <div className="absolute inset-0 h-full w-full snap-y snap-mandatory overflow-y-auto overscroll-contain" data-testid="personal-posts-snap-feed">
+                  <div className="absolute inset-0 h-full w-full snap-y snap-mandatory overflow-y-auto overscroll-contain" data-testid="personal-posts-snap-feed" data-feed-scroll>
                   {searchVideoSlides}
                   {astroDaily && (
 
@@ -2270,7 +2272,12 @@ const HomePage = () => {
         />
       )}
 
-      <HomeFloatingTools query={homeQuery} onQueryChange={setHomeQuery} onOpenEditor={() => setPostEditorOpen(true)} />
+      <HomeFloatingTools
+        query={homeQuery}
+        onQueryChange={setHomeQuery}
+        onOpenEditor={() => setPostEditorOpen(true)}
+        hasInjectedVideos={searchVideos.length > 0}
+      />
       <DockBadgeBoundary>
       <HomeGlassDock
         badgesUpdatedAt={dockBadgesUpdatedAt}
