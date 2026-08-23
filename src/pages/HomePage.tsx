@@ -207,6 +207,47 @@ const HomePage = () => {
     [neuralVideos],
   );
 
+  // Watch-pattern learning: when a video slide stays on screen, feed its topic
+  // into Zoe's DHF memory so later replies reflect what the user actually watches.
+  const learnedVideoIds = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const items = [...searchVideos, ...neuralVideos];
+    if (!items.length) return;
+    const byKey = new Map(items.map((v) => [v.id, v]));
+    const timers = new Map<string, number>();
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          const key = (entry.target as HTMLElement).dataset.videoKey ?? '';
+          const video = byKey.get(key);
+          if (!video || learnedVideoIds.current.has(key)) continue;
+          if (entry.isIntersecting && entry.intersectionRatio > 0.6) {
+            timers.set(
+              key,
+              window.setTimeout(() => {
+                learnedVideoIds.current.add(key);
+                void dhfBrain.ingest(video.title, 'feed_click', { injectFeed: false });
+              }, 5000),
+            );
+          } else {
+            const timer = timers.get(key);
+            if (timer) window.clearTimeout(timer);
+            timers.delete(key);
+          }
+        }
+      },
+      { threshold: [0, 0.61, 1] },
+    );
+    document
+      .querySelectorAll<HTMLElement>('[data-video-key]')
+      .forEach((el) => observer.observe(el));
+    return () => {
+      observer.disconnect();
+      timers.forEach((timer) => window.clearTimeout(timer));
+    };
+  }, [searchVideos, neuralVideos, dhfBrain]);
+
+
 
   const [userProfile, setUserProfile] = useState<any>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
