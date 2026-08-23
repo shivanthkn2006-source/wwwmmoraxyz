@@ -123,6 +123,7 @@ const HomePage = () => {
   const [activeSearchVideoId, setActiveSearchVideoId] = useState<string | null>(null);
   // Key of the slide currently on screen — only that iframe is allowed to play.
   const [visibleVideoKey, setVisibleVideoKey] = useState<string | null>(null);
+  const [youtubeSlideVisible, setYoutubeSlideVisible] = useState(false);
   const visibleVideoKeyRef = useRef<string | null>(null);
   useEffect(() => {
     visibleVideoKeyRef.current = visibleVideoKey;
@@ -161,6 +162,7 @@ const HomePage = () => {
   /** Leave the injected search results and go back to the user's own feed. */
   const exitSearchVideos = React.useCallback(() => {
     const saved = feedReturnStateRef.current;
+    const returningFromInjectedSearch = searchVideos.length > 0;
     // Pause the active search iframe before unmounting it.
     setVisibleVideoKey(null);
     setSearchVideos([]);
@@ -171,8 +173,11 @@ const HomePage = () => {
     try { window.localStorage.setItem('mmora.home.loopsHidden', 'false'); } catch {}
     requestAnimationFrame(() => {
       const container = document.querySelector(`[data-feed-tab="${activeTab}"] [data-feed-scroll]`) as HTMLElement | null;
-      container?.scrollTo({ top: saved?.top ?? 0, behavior: 'auto' });
-      window.scrollTo({ top: saved?.windowTop ?? 0, behavior: 'auto' });
+      // Search results restore the exact native-feed position captured before
+      // injection. A curated YouTube slide has no detour snapshot, so return to
+      // the beginning of the complete Loops/Home feed instead.
+      container?.scrollTo({ top: returningFromInjectedSearch ? (saved?.top ?? 0) : 0, behavior: 'auto' });
+      window.scrollTo({ top: returningFromInjectedSearch ? (saved?.windowTop ?? 0) : 0, behavior: 'auto' });
       // Resume playback on the slide that was active before the search detour.
       if (saved?.videoKey) setVisibleVideoKey(saved.videoKey);
       window.dispatchEvent(
@@ -180,7 +185,7 @@ const HomePage = () => {
       );
       feedReturnStateRef.current = null;
     });
-  }, [activeTab]);
+  }, [activeTab, searchVideos.length]);
 
   useEffect(() => {
     const onInject = (event: Event) => {
@@ -333,14 +338,41 @@ const HomePage = () => {
       },
       { threshold: [0, 0.61, 1] },
     );
+    // Only observe the currently selected feed. The same YouTube items also
+    // exist in the hidden tab; observing both lets a hidden duplicate clear the
+    // visible item's key and incorrectly hides the return-to-feed control.
     document
-      .querySelectorAll<HTMLElement>('[data-video-key]')
+      .querySelectorAll<HTMLElement>(`[data-feed-tab="${activeTab}"] [data-video-key]`)
       .forEach((el) => observer.observe(el));
     return () => {
       observer.disconnect();
       timers.forEach((timer) => window.clearTimeout(timer));
     };
-  }, [searchVideos, neuralVideos, ingestDhf]);
+  }, [searchVideos, neuralVideos, ingestDhf, activeTab]);
+
+  // Keep the return icon tied to the actual YouTube slide in the active feed.
+  // This intentionally does not depend on iframe playback, which can lag or be
+  // cleared while the slide itself remains visible.
+  useEffect(() => {
+    const feed = document.querySelector<HTMLElement>(`[data-feed-tab="${activeTab}"] [data-feed-scroll]`);
+    if (!feed) {
+      setYoutubeSlideVisible(false);
+      return;
+    }
+    const visibleSlides = new Set<Element>();
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && entry.intersectionRatio > 0.6) visibleSlides.add(entry.target);
+          else visibleSlides.delete(entry.target);
+        });
+        setYoutubeSlideVisible(visibleSlides.size > 0);
+      },
+      { root: feed, threshold: [0, 0.61, 1] },
+    );
+    feed.querySelectorAll<HTMLElement>('[data-search-video-slide], [data-neural-video-slide]').forEach((slide) => observer.observe(slide));
+    return () => observer.disconnect();
+  }, [activeTab, searchVideos, neuralVideos]);
 
 
 
@@ -2312,7 +2344,10 @@ const HomePage = () => {
         query={homeQuery}
         onQueryChange={setHomeQuery}
         onOpenEditor={() => setPostEditorOpen(true)}
-        hasInjectedVideos={searchVideos.length > 0}
+        hasInjectedVideos={
+          searchVideos.length > 0 ||
+          youtubeSlideVisible
+        }
       />
       <DockBadgeBoundary>
       <HomeGlassDock
