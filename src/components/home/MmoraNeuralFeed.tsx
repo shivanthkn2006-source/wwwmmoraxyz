@@ -130,11 +130,12 @@ export const MmoraNeuralFeed: React.FC = () => {
           <p>Day lord: {telemetry.rulingPlanet} · {telemetry.archetype}</p>
           <p>Focus: {telemetry.dailyFocus}</p>
           <p>
-            YouTube key:{' '}
+            Video service:{' '}
             {youtube
-              ? `${youtube.keySource} · ${youtube.configured ? 'configured' : 'missing'} · quota ${youtube.quota}${youtube.reason ? ` · ${youtube.reason}` : ''}`
-              : 'probing…'}
+              ? `${youtube.configured ? 'connected' : 'unavailable'} · ${youtube.quota === 'exceeded' ? 'rate limited' : 'healthy'}`
+              : 'checking…'}
           </p>
+
           <p>
             Last ingestion:{' '}
             {lastResult
