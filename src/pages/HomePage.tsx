@@ -114,6 +114,7 @@ const HomePage = () => {
   const [loopPosts, setLoopPosts] = useState<Post[]>([]);
   const [brokenLoopPreviewIds, setBrokenLoopPreviewIds] = useState<Set<string>>(() => new Set());
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<string>('global');
   // Search videos (YouTube) injected into the feed and played inline — new-window
   // navigation to youtube.com is blocked by Cross-Origin-Opener-Policy.
   const { ingest: ingestDhf } = useDhfBrain();
@@ -348,7 +349,6 @@ const HomePage = () => {
   const [collectionMode, setCollectionMode] = useState<CollectionMode | null>(null);
   const [liveViewOpen, setLiveViewOpen] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<string>('global');
   const [homeQuery, setHomeQuery] = useState('');
   const [postEditorOpen, setPostEditorOpen] = useState(false);
   const [zoeVisible, setZoeVisible] = useState(true); // Zoe visibility state

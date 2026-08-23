@@ -24,14 +24,14 @@ interface HomeFloatingToolsProps {
   query: string;
   onQueryChange: (query: string) => void;
   onOpenEditor: () => void;
-  hasInjectedVideos: boolean;
+  hasInjectedVideos?: boolean;
 }
 
 const ICON_SIZE = 36;
 const GAP = 6;
 const EDGE_GAP = 8;
 
-export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, hasInjectedVideos }: HomeFloatingToolsProps) {
+export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, hasInjectedVideos = false }: HomeFloatingToolsProps) {
   const [searchOpen, setSearchOpen] = React.useState(false);
   const [iconPosition, setIconPosition] = React.useState<{ x: number; y: number }>({ x: 8, y: 80 });
   const [activeIndex, setActiveIndex] = React.useState(-1);
