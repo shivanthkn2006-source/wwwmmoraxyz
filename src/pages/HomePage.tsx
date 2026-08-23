@@ -2046,11 +2046,6 @@ const HomePage = () => {
           >
             <div className="flex items-center justify-between p-4">
               <div className="flex items-center gap-2">
-                {/* Hamburger Menu Button */}
-                <AnimatedHamburgerButton 
-                  isOpen={hamburgerMenuOpen} 
-                  onClick={() => setHamburgerMenuOpen(!hamburgerMenuOpen)} 
-                />
                 <h1 
                   className="text-2xl font-bold text-foreground cursor-pointer hover:opacity-80 transition-opacity" 
                   onClick={triggerHomeRefresh}
