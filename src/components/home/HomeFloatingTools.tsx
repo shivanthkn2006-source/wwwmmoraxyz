@@ -39,7 +39,10 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
   const { results: allResults, loading, error, counts } = useHomeSearch(query, searchOpen);
   const [filter, setFilter] = React.useState<SearchFilter>('all');
   const results = React.useMemo(
-    () => (filter === 'all' ? allResults : allResults.filter((item) => item.filter === filter)),
+    () =>
+      filter === 'all'
+        ? allResults
+        : allResults.filter((item) => (item.facets?.length ? item.facets : [item.filter]).includes(filter)),
     [allResults, filter],
   );
   // Startup guard: warns and self-heals when the universal index is empty/stale.
@@ -83,7 +86,7 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
   // Outside-the-platform results (web, music, weather) via the external-search function.
   const [externalResults, setExternalResults] = React.useState<Array<{
     id: string;
-    kind: 'web' | 'music' | 'weather';
+    kind: 'web' | 'music' | 'weather' | 'video';
     title: string;
     subtitle?: string;
     url?: string;
@@ -310,7 +313,7 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
                       : 'border-border/60 text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  {chip.label} {counts[chip.id]}
+                  {chip.label} {chip.id === 'videos' ? counts.videos + externalVideos.length : counts[chip.id]}
                 </button>
               ))}
             </div>
