@@ -2144,13 +2144,15 @@ const HomePage = () => {
                 
                 {loading ? (
                   <p className="absolute inset-0 flex items-center justify-center px-3 text-center text-muted-foreground">Loading posts...</p>
-                ) : globalPosts.length === 0 && !astroDaily && searchVideos.length === 0 && neuralVideos.length === 0 ? (
+                ) : globalPosts.length === 0 && !astroDaily && searchVideos.length === 0 && neuralVideos.length === 0 && loopSlides.length === 0 ? (
 
                   <p className="absolute inset-0 flex items-center justify-center px-3 text-center text-muted-foreground">No posts yet</p>
                 ) : (
-                  <div className="absolute inset-0 h-full w-full snap-y snap-mandatory overflow-y-auto overscroll-contain" data-testid="global-posts-snap-feed" data-feed-scroll>
+                  <div ref={loopRailRef} className="absolute inset-0 h-full w-full snap-y snap-mandatory overflow-y-auto overscroll-contain" data-testid="global-posts-snap-feed" data-feed-scroll>
                   {searchVideoSlides}
+                  {!loopsHidden && loopSlides}
                   {astroDaily && (
+
 
                     <div className="relative flex h-full min-h-full w-full shrink-0 snap-start snap-always items-center overflow-y-auto p-4" data-astro-daily>
                       <MoraZoeDailyCard prediction={astroDaily} className="w-full" />
