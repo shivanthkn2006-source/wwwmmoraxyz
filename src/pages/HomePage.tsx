@@ -1933,7 +1933,8 @@ const HomePage = () => {
                 
                 {loading ? (
                   <p className="absolute inset-0 flex items-center justify-center px-3 text-center text-muted-foreground">Loading posts...</p>
-                ) : globalPosts.length === 0 && !astroDaily ? (
+                ) : globalPosts.length === 0 && !astroDaily && searchVideos.length === 0 ? (
+
                   <p className="absolute inset-0 flex items-center justify-center px-3 text-center text-muted-foreground">No posts yet</p>
                 ) : (
                   <div className="absolute inset-0 h-full w-full snap-y snap-mandatory overflow-y-auto overscroll-contain" data-testid="global-posts-snap-feed">
