@@ -1,5 +1,5 @@
 import React from 'react';
-import { Camera, Search, X } from 'lucide-react';
+import { Camera, ListVideo, Search, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useNavigate } from 'react-router-dom';
 import {
