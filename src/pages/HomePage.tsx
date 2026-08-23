@@ -2050,6 +2050,8 @@ const HomePage = () => {
                       </div>
                     );
                   })}
+                  {neuralVideoSlides}
+
                   </div>
                 )}
               </div>
