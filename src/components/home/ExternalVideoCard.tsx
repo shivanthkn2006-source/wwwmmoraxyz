@@ -1,5 +1,5 @@
-import React from 'react';
-import { X } from 'lucide-react';
+import React, { useEffect, useRef } from 'react';
+import { X, Bookmark, BookmarkCheck, ArrowLeft } from 'lucide-react';
 
 export interface ExternalVideoItem {
   id: string;
@@ -28,7 +28,13 @@ export const youTubeIdFromUrl = (url?: string): string | null => {
 interface Props {
   item: ExternalVideoItem;
   autoPlay?: boolean;
+  /** True only for the slide currently on screen — every other slide is paused. */
+  active?: boolean;
   onDismiss?: () => void;
+  /** Leaves the search results and returns to the user's own feed. */
+  onExit?: () => void;
+  onToggleSave?: () => void;
+  saved?: boolean;
 }
 
 /**
@@ -37,17 +43,48 @@ interface Props {
  * Playing in-page avoids the Cross-Origin-Opener-Policy failure that breaks
  * opening youtube.com in a new window from the preview shell.
  */
-export default function ExternalVideoCard({ item, autoPlay = false, onDismiss }: Props) {
+export default function ExternalVideoCard({
+  item,
+  autoPlay = false,
+  active,
+  onDismiss,
+  onExit,
+  onToggleSave,
+  saved = false,
+}: Props) {
   const videoId = youTubeIdFromUrl(item.url);
+  const frameRef = useRef<HTMLIFrameElement | null>(null);
+
+  // Only the on-screen slide keeps playing; every other iframe is paused via the
+  // YouTube iframe API so two videos can never sound at once.
+  useEffect(() => {
+    if (active === undefined) return;
+    const win = frameRef.current?.contentWindow;
+    if (!win) return;
+    const command = active ? 'playVideo' : 'pauseVideo';
+    try {
+      win.postMessage(JSON.stringify({ event: 'command', func: command, args: [] }), '*');
+    } catch {
+      /* cross-origin timing — ignore */
+    }
+  }, [active]);
+
+  const lang = typeof navigator !== 'undefined' ? (navigator.language || 'en').split('-')[0] : 'en';
 
   return (
     <div className="relative h-full w-full bg-black" data-testid="external-video-card" data-video-id={videoId ?? ''}>
       <div className="flex h-full w-full items-center justify-center">
         {videoId ? (
           <iframe
+            ref={frameRef}
             data-testid="external-video-frame"
             title={item.title}
-            src={`https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1&playsinline=1&autoplay=${autoPlay ? 1 : 0}`}
+            src={
+              `https://www.youtube-nocookie.com/embed/${videoId}` +
+              `?rel=0&modestbranding=1&playsinline=1&enablejsapi=1` +
+              `&cc_load_policy=1&cc_lang_pref=${lang}&hl=${lang}` +
+              `&autoplay=${autoPlay && active !== false ? 1 : 0}`
+            }
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             allowFullScreen
             referrerPolicy="strict-origin-when-cross-origin"
@@ -71,14 +108,39 @@ export default function ExternalVideoCard({ item, autoPlay = false, onDismiss }:
         <p className="mt-1 text-[10px] uppercase tracking-wide text-white/50">From search · YouTube</p>
       </div>
 
-      {onDismiss && (
+      <div className="absolute left-3 top-3 z-10 flex items-center gap-2">
+        {onExit && (
+          <button
+            type="button"
+            onClick={onExit}
+            aria-label="Back to my feed"
+            className="flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1.5 text-[11px] font-medium text-white backdrop-blur hover:bg-black/80"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            My feed
+          </button>
+        )}
+        {onDismiss && (
+          <button
+            type="button"
+            onClick={onDismiss}
+            aria-label="Remove this search video from the feed"
+            className="rounded-full bg-black/60 p-1.5 text-white backdrop-blur hover:bg-black/80"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+
+      {onToggleSave && (
         <button
           type="button"
-          onClick={onDismiss}
-          aria-label="Remove this search video from the feed"
-          className="absolute left-3 top-3 z-10 rounded-full bg-black/60 p-1.5 text-white backdrop-blur hover:bg-black/80"
+          onClick={onToggleSave}
+          aria-label={saved ? 'Remove this video from saved' : 'Save this video'}
+          aria-pressed={saved}
+          className="absolute right-3 top-3 z-10 rounded-full bg-black/60 p-1.5 text-white backdrop-blur hover:bg-black/80"
         >
-          <X className="h-4 w-4" />
+          {saved ? <BookmarkCheck className="h-4 w-4" /> : <Bookmark className="h-4 w-4" />}
         </button>
       )}
     </div>

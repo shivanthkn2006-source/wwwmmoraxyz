@@ -119,6 +119,43 @@ const HomePage = () => {
   const { ingest: ingestDhf } = useDhfBrain();
   const [searchVideos, setSearchVideos] = useState<ExternalVideoItem[]>([]);
   const [activeSearchVideoId, setActiveSearchVideoId] = useState<string | null>(null);
+  // Key of the slide currently on screen — only that iframe is allowed to play.
+  const [visibleVideoKey, setVisibleVideoKey] = useState<string | null>(null);
+  const [savedVideoIds, setSavedVideoIds] = useState<Set<string>>(() => {
+    try {
+      return new Set(JSON.parse(localStorage.getItem('mmora:saved-videos') ?? '[]'));
+    } catch {
+      return new Set<string>();
+    }
+  });
+
+  const toggleSavedVideo = React.useCallback((video: ExternalVideoItem) => {
+    setSavedVideoIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(video.id)) next.delete(video.id);
+      else next.add(video.id);
+      try {
+        localStorage.setItem('mmora:saved-videos', JSON.stringify([...next]));
+        const store = JSON.parse(localStorage.getItem('mmora:saved-videos-meta') ?? '{}');
+        if (next.has(video.id)) store[video.id] = video;
+        else delete store[video.id];
+        localStorage.setItem('mmora:saved-videos-meta', JSON.stringify(store));
+      } catch {
+        /* storage full / private mode — saving is best-effort */
+      }
+      return next;
+    });
+  }, []);
+
+  /** Leave the injected search results and go back to the user's own feed. */
+  const exitSearchVideos = React.useCallback(() => {
+    setSearchVideos([]);
+    setActiveSearchVideoId(null);
+    requestAnimationFrame(() => {
+      document.querySelector('[data-feed-scroll]')?.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  }, []);
 
   useEffect(() => {
     const onInject = (event: Event) => {
@@ -153,11 +190,15 @@ const HomePage = () => {
           <ExternalVideoCard
             item={video}
             autoPlay={video.id === activeSearchVideoId}
+            active={visibleVideoKey === null ? video.id === activeSearchVideoId : visibleVideoKey === video.id}
+            saved={savedVideoIds.has(video.id)}
+            onToggleSave={() => toggleSavedVideo(video)}
+            onExit={exitSearchVideos}
             onDismiss={() => setSearchVideos((prev) => prev.filter((entry) => entry.id !== video.id))}
           />
         </div>
       )),
-    [searchVideos, activeSearchVideoId],
+    [searchVideos, activeSearchVideoId, visibleVideoKey, savedVideoIds, toggleSavedVideo, exitSearchVideos],
   );
 
   // DHF-curated YouTube videos rendered inline in the home feed (same shorts
@@ -204,11 +245,14 @@ const HomePage = () => {
         >
           <ExternalVideoCard
             item={video}
+            active={visibleVideoKey === video.id}
+            saved={savedVideoIds.has(video.id)}
+            onToggleSave={() => toggleSavedVideo(video)}
             onDismiss={() => setNeuralVideos((prev) => prev.filter((entry) => entry.id !== video.id))}
           />
         </div>
       )),
-    [neuralVideos],
+    [neuralVideos, visibleVideoKey, savedVideoIds, toggleSavedVideo],
   );
 
   // Watch-pattern learning: when a video slide stays on screen, feed its topic
@@ -224,7 +268,14 @@ const HomePage = () => {
         for (const entry of entries) {
           const key = (entry.target as HTMLElement).dataset.videoKey ?? '';
           const video = byKey.get(key);
-          if (!video || learnedVideoIds.current.has(key)) continue;
+          if (!video) continue;
+          // Single-playback guard: the most visible slide becomes the active one.
+          if (entry.isIntersecting && entry.intersectionRatio > 0.6) {
+            setVisibleVideoKey(key);
+          } else {
+            setVisibleVideoKey((prev) => (prev === key ? null : prev));
+          }
+          if (learnedVideoIds.current.has(key)) continue;
           if (entry.isIntersecting && entry.intersectionRatio > 0.6) {
             timers.set(
               key,
@@ -250,6 +301,7 @@ const HomePage = () => {
       timers.forEach((timer) => window.clearTimeout(timer));
     };
   }, [searchVideos, neuralVideos, ingestDhf]);
+
 
 
 
