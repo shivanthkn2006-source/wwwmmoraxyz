@@ -72,11 +72,13 @@ export const MmoraNeuralFeed: React.FC = () => {
     setError(null);
     try {
       const result = await ingest('', 'manual', { allowEmpty: true });
-      if (!result) setError(lastError ?? 'Neural ingestion did not complete. Please retry.');
+      let message: string | null = null;
+      if (!result) message = lastError ?? 'Neural ingestion did not complete. Please retry.';
       else if (result.feed?.injected === 0 && result.feed?.reason) {
-        setError(describeFeedReason(result.feed.reason));
+        message = describeFeedReason(result.feed.reason);
       }
       await loadFeed();
+      if (message) setError(message);
     } finally {
       setRefreshing(false);
     }
