@@ -2151,17 +2151,6 @@ const HomePage = () => {
                 ) : (
                   <div ref={loopRailRef} className="absolute inset-0 h-full w-full snap-y snap-mandatory overflow-y-auto overscroll-contain" data-testid="global-posts-snap-feed" data-feed-scroll>
                   {searchVideoSlides}
-                  {!loopsHidden && loopSlides}
-                  {dailyMotivation && (
-                    <HomeMotivationSlide motivation={dailyMotivation} posterUrl={motivationPosterUrl} />
-                  )}
-                  {astroDaily && (
-
-
-                    <div className="relative flex h-full min-h-full w-full shrink-0 snap-start snap-always items-center overflow-y-auto p-4" data-astro-daily>
-                      <MoraZoeDailyCard prediction={astroDaily} className="w-full" />
-                    </div>
-                  )}
                   {visibleGlobalPosts.map(post => {
                     const isToday = post.created_at && new Date(post.created_at).toDateString() === new Date().toDateString();
                     return (
@@ -2175,6 +2164,17 @@ const HomePage = () => {
                       </div>
                     );
                   })}
+                  {!loopsHidden && loopSlides}
+                  {dailyMotivation && (
+                    <HomeMotivationSlide motivation={dailyMotivation} posterUrl={motivationPosterUrl} />
+                  )}
+                  {astroDaily && (
+
+
+                    <div className="relative flex h-full min-h-full w-full shrink-0 snap-start snap-always items-center overflow-y-auto p-4" data-astro-daily>
+                      <MoraZoeDailyCard prediction={astroDaily} className="w-full" />
+                    </div>
+                  )}
                   <div className="relative h-full min-h-full w-full shrink-0 snap-start snap-always overflow-y-auto bg-background px-4 pb-24 pt-24" data-people-recommendations>
                     <InterestRecommendations />
                   </div>
@@ -2202,17 +2202,6 @@ const HomePage = () => {
                 ) : (
                   <div className="absolute inset-0 h-full w-full snap-y snap-mandatory overflow-y-auto overscroll-contain" data-testid="personal-posts-snap-feed" data-feed-scroll>
                   {searchVideoSlides}
-                  {!loopsHidden && loopSlides}
-                  {dailyMotivation && (
-                    <HomeMotivationSlide motivation={dailyMotivation} posterUrl={motivationPosterUrl} />
-                  )}
-
-                  {astroDaily && (
-
-                    <div className="relative flex h-full min-h-full w-full shrink-0 snap-start snap-always items-center overflow-y-auto p-4" data-astro-daily>
-                      <MoraZoeDailyCard prediction={astroDaily} className="w-full" />
-                    </div>
-                  )}
                   {visiblePersonalPosts.map(post => {
                     const isToday = post.created_at && new Date(post.created_at).toDateString() === new Date().toDateString();
                     return (
@@ -2226,6 +2215,17 @@ const HomePage = () => {
                       </div>
                     );
                   })}
+                  {!loopsHidden && loopSlides}
+                  {dailyMotivation && (
+                    <HomeMotivationSlide motivation={dailyMotivation} posterUrl={motivationPosterUrl} />
+                  )}
+
+                  {astroDaily && (
+
+                    <div className="relative flex h-full min-h-full w-full shrink-0 snap-start snap-always items-center overflow-y-auto p-4" data-astro-daily>
+                      <MoraZoeDailyCard prediction={astroDaily} className="w-full" />
+                    </div>
+                  )}
                   {neuralVideoSlides}
 
                   </div>
