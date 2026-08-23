@@ -61,7 +61,6 @@ import InterestRecommendations from "@/components/InterestRecommendations";
 import FullScreenVideoPlayer from "@/components/FullScreenVideoPlayer";
 import { initializeAudio } from '@/utils/notificationSounds';
 import PrivateTimelinesSheet from '@/components/PrivateTimelinesSheet';
-import LoopVideoItem from '@/components/LoopVideoItem';
 import SelfieCityFeed from '@/components/selfiecity/SelfieCityFeed';
 import FeedDiagnosticsBanner, { FeedDiagnostics } from '@/components/FeedDiagnosticsBanner';
 import AdminFeedDebugger from '@/components/AdminFeedDebugger';
@@ -163,6 +162,10 @@ const HomePage = () => {
     setVisibleVideoKey(null);
     setSearchVideos([]);
     setActiveSearchVideoId(null);
+    // Returning from search must always reveal the native Loops + posts feed,
+    // even when an older session left the Loops visibility preference hidden.
+    setLoopsHidden(false);
+    try { window.localStorage.setItem('mmora.home.loopsHidden', 'false'); } catch {}
     requestAnimationFrame(() => {
       const container = document.querySelector(`[data-feed-tab="${activeTab}"] [data-feed-scroll]`) as HTMLElement | null;
       container?.scrollTo({ top: saved?.top ?? 0, behavior: 'auto' });
@@ -2005,8 +2008,8 @@ const HomePage = () => {
 
 
 
-  // Loops rail restored as full-height shorts slides inside the main feed so
-  // exiting search videos always lands back on loops + posts.
+  // Native Loops use the complete post surface so every slide retains the
+  // normal caption, creator, like, comment, share, save and Zoe controls.
   const loopSlides = React.useMemo(
     () =>
       filteredLoops.map((post, index) => (
@@ -2017,26 +2020,11 @@ const HomePage = () => {
           className="relative h-full min-h-full w-full shrink-0 snap-start snap-always overflow-hidden"
         >
           <FeedErrorBoundary section="loops" postId={post.id} onRetry={() => retrySingleLoop(post.id)}>
-            <LoopVideoItem
-              post={post}
-              index={index}
-              active={index === activeLoopRailIndex % Math.max(filteredLoops.length, 1)}
-              onDuration={(postId, duration) =>
-                setLoopDurations(prev => (prev[postId] === duration ? prev : { ...prev, [postId]: duration }))
-              }
-              onVideoClick={openLoopsPlayer}
-              className="relative h-full w-full overflow-hidden bg-muted focus:outline-none group"
-              onDecodeStatus={handleLoopDecodeStatus}
-              onRegeneratePoster={regenerateLoopPoster}
-              canRegeneratePoster={isAdminUser || user?.id === post.user_id}
-              onPreviewError={(postId) => {
-                setBrokenLoopPreviewIds(prev => new Set(prev).add(postId));
-              }}
-            />
+            <PostCard post={post} onUpdate={handleUpdate} />
           </FeedErrorBoundary>
         </div>
       )),
-    [filteredLoops, activeLoopRailIndex, handleLoopDecodeStatus, regenerateLoopPoster, retrySingleLoop, isAdminUser, user?.id],
+    [filteredLoops, retrySingleLoop, handleUpdate],
   );
 
 
