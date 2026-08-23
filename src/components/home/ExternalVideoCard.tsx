@@ -69,8 +69,9 @@ export default function ExternalVideoCard({
   const lang = typeof navigator !== 'undefined' ? (navigator.language || 'en').split('-')[0] : 'en';
 
   return (
-    <div className="relative h-full w-full bg-black" data-testid="external-video-card" data-video-id={videoId ?? ''}>
-      <div className="flex h-full w-full items-center justify-center">
+    <div className="relative h-full w-full overflow-hidden bg-black" data-testid="external-video-card" data-video-id={videoId ?? ''}>
+      <div className="flex h-full w-full items-center justify-center overflow-hidden">
+
         {videoId ? (
           <iframe
             ref={frameRef}
@@ -85,7 +86,7 @@ export default function ExternalVideoCard({
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             allowFullScreen
             referrerPolicy="strict-origin-when-cross-origin"
-            className="aspect-[9/16] h-full max-h-full w-auto max-w-full border-0"
+            className="aspect-[9/16] h-auto max-h-full w-full max-w-full shrink-0 border-0"
           />
         ) : (
           <div className="px-6 text-center text-sm text-muted-foreground">
