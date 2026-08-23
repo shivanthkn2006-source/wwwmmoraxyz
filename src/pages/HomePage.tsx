@@ -24,6 +24,7 @@ import { rememberShortInOrbMemory } from '@/lib/orbShortsMemory';
 import HomeFloatingTools from '@/components/home/HomeFloatingTools';
 import HomeGlassDock from '@/components/home/HomeGlassDock';
 import DockBadgeBoundary from '@/components/home/DockBadgeBoundary';
+import LiveViewBoundary from '@/components/live/LiveViewBoundary';
 import HomeCollectionSheet, { type CollectionMode } from '@/components/home/HomeCollectionSheet';
 import useHomeDockBadges from '@/hooks/useHomeDockBadges';
 import { registerHomeIcon, runHomeIconAction } from '@/lib/homeIconStatus';
