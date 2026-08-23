@@ -66,8 +66,8 @@ const ScreenTapController: React.FC<ScreenTapControllerProps> = ({
     }, 100);
   }, [isVisible, show]);
 
-  // Handle interaction (works for both touch and click)
-  const handleInteraction = useCallback((e: MouseEvent | TouchEvent) => {
+  // Pointer events unify mouse, touch and pen without touch/click double firing.
+  const handleInteraction = useCallback((e: PointerEvent) => {
     // Skip excluded elements
     if (isExcludedElement(e.target)) {
       return;
@@ -105,29 +105,14 @@ const ScreenTapController: React.FC<ScreenTapControllerProps> = ({
     hide();
   }, [location.pathname, hide, isVRRoute]);
 
-  // Attach global listeners
+  // Attach one global listener for mouse, touch and pen.
   useEffect(() => {
     if (isVRRoute) return;
 
-    // Use touchend for touch devices, click for mouse
-    const handleTouchEnd = (e: TouchEvent) => {
-      handleInteraction(e);
-    };
-
-    const handleClick = (e: MouseEvent) => {
-      // Only handle click if not a touch device (to avoid double firing)
-      if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
-        return; // Touch device - use touchend instead
-      }
-      handleInteraction(e);
-    };
-
-    document.addEventListener('touchend', handleTouchEnd, { passive: true });
-    document.addEventListener('click', handleClick, { passive: true });
+    document.addEventListener('pointerup', handleInteraction, { passive: true });
 
     return () => {
-      document.removeEventListener('touchend', handleTouchEnd);
-      document.removeEventListener('click', handleClick);
+      document.removeEventListener('pointerup', handleInteraction);
       if (singleActionTimeoutRef.current) {
         clearTimeout(singleActionTimeoutRef.current);
       }
