@@ -31,8 +31,6 @@ interface Props {
   /** True only for the slide currently on screen — every other slide is paused. */
   active?: boolean;
   onDismiss?: () => void;
-  /** Leaves the search results and returns to the user's own feed. */
-  onExit?: () => void;
   onToggleSave?: () => void;
   saved?: boolean;
 }
