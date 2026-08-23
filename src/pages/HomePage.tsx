@@ -15,7 +15,7 @@ import NotificationMenu from '@/components/NotificationMenu';
 import AnimatedHamburgerButton from '@/components/AnimatedHamburgerButton';
 import HamburgerMenu from '@/components/HamburgerMenu';
 import SearchBar from '@/components/SearchBar';
-import { ArrowDown, Mail, Search, Video, TrendingUp, ArrowUp, Camera, ChevronUp, ChevronDown, Sparkles, MessageCircle, Settings, Bell, User as UserIcon, Heart, Bookmark, Boxes, Radio } from 'lucide-react';
+import { ArrowDown, Mail, Search, Video, TrendingUp, ArrowUp, Camera, ChevronUp, ChevronDown, Sparkles, MessageCircle, Settings, Bell, User as UserIcon, Heart, Bookmark, Boxes, Radio, Radar } from 'lucide-react';
 import { trackEvent } from '@/lib/analytics';
 import FuturisticCounter from '@/components/FuturisticCounter';
 import { useNavigate } from 'react-router-dom';
@@ -30,6 +30,7 @@ import useHomeDockBadges from '@/hooks/useHomeDockBadges';
 import { registerHomeIcon, runHomeIconAction } from '@/lib/homeIconStatus';
 const HomeIconStatusPanel = React.lazy(() => import('@/components/home/HomeIconStatusPanel'));
 const LiveStreamView = React.lazy(() => import('@/components/live/LiveStreamView'));
+const MmoraNeuralFeed = React.lazy(() => import('@/components/home/MmoraNeuralFeed'));
 
 
 
@@ -114,6 +115,7 @@ const HomePage = () => {
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [isProfileSheetOpen, setIsProfileSheetOpen] = useState(false);
   const [notificationMenuOpen, setNotificationMenuOpen] = useState(false);
+  const [neuralFeedOpen, setNeuralFeedOpen] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [collectionMode, setCollectionMode] = useState<CollectionMode | null>(null);
   const [liveViewOpen, setLiveViewOpen] = useState(false);
@@ -1991,6 +1993,22 @@ const HomePage = () => {
       <OnboardingTour />
       <PrivateTimelinesSheet open={privateTimelinesOpen} onOpenChange={setPrivateTimelinesOpen} />
 
+      {/* DHF Neural Feed Sheet */}
+      <Sheet open={neuralFeedOpen} onOpenChange={setNeuralFeedOpen}>
+        <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto bg-background/90 backdrop-blur-xl border-l border-border/50">
+          <SheetHeader>
+            <SheetTitle>DHF Neural Feed</SheetTitle>
+          </SheetHeader>
+          <div className="pt-4">
+            {neuralFeedOpen && (
+              <React.Suspense fallback={<div className="py-8 text-center text-sm text-muted-foreground">Aligning feed…</div>}>
+                <MmoraNeuralFeed />
+              </React.Suspense>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
+
       {/* Profile Sheet */}
       <Sheet open={isProfileSheetOpen} onOpenChange={setIsProfileSheetOpen}>
         <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto bg-background/80 backdrop-blur-xl border-l border-border/50">
@@ -2022,6 +2040,13 @@ const HomePage = () => {
       <HomeGlassDock
         badgesUpdatedAt={dockBadgesUpdatedAt}
         items={[
+          {
+            id: 'neural-feed',
+            label: 'DHF Neural Feed',
+            icon: <Radar className="h-[22px] w-[22px]" />,
+            active: neuralFeedOpen,
+            onSelect: runHomeIconAction('neural-feed', () => setNeuralFeedOpen(true)),
+          },
           {
             id: 'vr-world',
             label: 'VR World',
