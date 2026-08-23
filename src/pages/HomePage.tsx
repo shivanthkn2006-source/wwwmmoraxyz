@@ -2001,6 +2001,9 @@ const HomePage = () => {
     } catch (err: any) {
       logFeedIssue({ step: 'loops:single-retry', postId, errorMessage: err?.message || String(err) });
     }
+  }, [user, logFeedIssue]);
+
+
 
   // Loops rail restored as full-height shorts slides inside the main feed so
   // exiting search videos always lands back on loops + posts.
