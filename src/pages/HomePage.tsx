@@ -24,6 +24,7 @@ import { rememberShortInOrbMemory } from '@/lib/orbShortsMemory';
 import HomeFloatingTools from '@/components/home/HomeFloatingTools';
 import HomeGlassDock from '@/components/home/HomeGlassDock';
 import DockBadgeBoundary from '@/components/home/DockBadgeBoundary';
+import LiveViewBoundary from '@/components/live/LiveViewBoundary';
 import HomeCollectionSheet, { type CollectionMode } from '@/components/home/HomeCollectionSheet';
 import useHomeDockBadges from '@/hooks/useHomeDockBadges';
 import { registerHomeIcon, runHomeIconAction } from '@/lib/homeIconStatus';
@@ -2115,9 +2116,22 @@ const HomePage = () => {
       )}
 
       {liveViewOpen && (
-        <React.Suspense fallback={null}>
-          <LiveStreamView onClose={() => setLiveViewOpen(false)} />
-        </React.Suspense>
+        <LiveViewBoundary onClose={() => setLiveViewOpen(false)}>
+          <React.Suspense
+            fallback={
+              <div
+                className="fixed inset-0 z-[120] flex items-center justify-center bg-black/95 text-sm text-white/80"
+                role="status"
+                aria-live="polite"
+                data-testid="live-loading"
+              >
+                Starting M’Mora Live…
+              </div>
+            }
+          >
+            <LiveStreamView onClose={() => setLiveViewOpen(false)} />
+          </React.Suspense>
+        </LiveViewBoundary>
       )}
 
       <HomeCollectionSheet mode={collectionMode} onOpenChange={(open) => !open && setCollectionMode(null)} />

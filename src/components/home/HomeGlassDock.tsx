@@ -237,8 +237,17 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt }
                 tabIndex={open ? 0 : -1}
                 onClick={() => {
                   setOpen(false);
-                  recordDockUsage(item.id);
-                  item.onSelect();
+                  try {
+                    recordDockUsage(item.id);
+                  } catch {
+                    /* usage tracking must never block navigation */
+                  }
+                  try {
+                    item.onSelect();
+                  } catch (error) {
+                    // A failing action must never take the dock (or HomePage) down.
+                    console.warn('[HomeGlassDock] action failed', item.id, error);
+                  }
                 }}
 
                 className={cn(

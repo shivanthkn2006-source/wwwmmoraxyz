@@ -9,9 +9,11 @@ import { test, expect, Page } from '@playwright/test';
  */
 
 const BREAKPOINTS = [
-  { name: 'laptop-1280', width: 1280, height: 800 },
-  { name: 'desktop-1440', width: 1440, height: 900 },
-  { name: 'wide-1920', width: 1920, height: 1080 },
+  { name: 'mobile-portrait-360', width: 360, height: 800, mobile: true },
+  { name: 'mobile-portrait-390', width: 390, height: 844, mobile: true },
+  { name: 'laptop-1280', width: 1280, height: 800, mobile: false },
+  { name: 'desktop-1440', width: 1440, height: 900, mobile: false },
+  { name: 'wide-1920', width: 1920, height: 1080, mobile: false },
 ];
 
 type Errors = string[];
@@ -146,6 +148,108 @@ for (const bp of BREAKPOINTS) {
       const fatal = errors.filter((e) => /Can't find variable|is not defined|Cannot read propert/i.test(e));
       expect(fatal, `runtime errors: ${fatal.join(' | ')}`).toHaveLength(0);
     });
+
+    test('dock, Live controls and error fallbacks are keyboard/AT accessible', async ({ page }) => {
+      const signedIn = await gotoHome(page);
+      test.skip(!signedIn, 'preview is signed out — dock is not rendered');
+
+      const trigger = page.getByRole('button', { name: /open home menu/i }).first();
+      test.skip((await trigger.count()) === 0, 'home dock trigger not present');
+
+      // Trigger exposes menu semantics and toggles with the keyboard only.
+      await expect(trigger).toHaveAttribute('aria-haspopup', 'menu');
+      await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+      await trigger.focus();
+      await page.keyboard.press('Enter');
+      await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+
+      // Every dock item must have a non-empty accessible name; badge counts are
+      // announced in the name (badge pill itself is aria-hidden).
+      const items = page.getByRole('menuitem');
+      const count = await items.count();
+      expect(count).toBeGreaterThan(3);
+      for (let i = 0; i < count; i += 1) {
+        const name = (await items.nth(i).getAttribute('aria-label')) ?? '';
+        expect(name.trim().length, `menuitem ${i} needs an accessible name`).toBeGreaterThan(0);
+        await expect(items.nth(i)).toHaveAttribute('tabindex', '0');
+      }
+
+      // Live opens from the keyboard and exposes modal dialog semantics.
+      const liveItem = page.getByRole('menuitem', { name: /^Live/ }).first();
+      test.skip((await liveItem.count()) === 0, 'Live dock icon not present');
+      await stubGetUserMedia(page);
+      await liveItem.focus();
+      await page.keyboard.press('Enter');
+
+      const dialog = page.getByRole('dialog', { name: /live stream/i });
+      const alertDialog = page.getByRole('alertdialog', { name: /live stream unavailable/i });
+      const surface = dialog.or(alertDialog);
+      await expect(surface.first()).toBeVisible({ timeout: 15_000 });
+
+      if (await dialog.count()) {
+        await expect(dialog).toHaveAttribute('aria-modal', 'true');
+        for (const name of [/close live stream/i, /send a like/i, /add a live comment/i]) {
+          await expect(page.getByLabel(name).first()).toBeVisible();
+        }
+        // Controls are reachable and operable without a pointer.
+        await page.getByLabel(/close live stream/i).first().focus();
+        await expect(page.getByLabel(/close live stream/i).first()).toBeFocused();
+      }
+
+      await page.keyboard.press('Escape');
+      await expect(surface.first()).toBeHidden({ timeout: 10_000 });
+      await expect(page.locator('#root')).toBeVisible();
+    });
+
+    test('Live open/close network calls stay clean and failures never crash the page', async ({ page }) => {
+      await stubGetUserMedia(page);
+      const errors = collectErrors(page);
+
+      const requests: string[] = [];
+      const failed: string[] = [];
+      page.on('request', (r) => requests.push(r.url()));
+      page.on('requestfailed', (r) => failed.push(`${r.url()} :: ${r.failure()?.errorText ?? ''}`));
+      page.on('websocket', (ws) => requests.push(`ws:${ws.url()}`));
+
+      const signedIn = await gotoHome(page);
+      test.skip(!signedIn, 'preview is signed out — dock is not rendered');
+
+      // Break every backend REST/realtime call while Live is open.
+      await page.route('**/rest/v1/**', (route) => route.abort());
+      await page.route('**/functions/v1/**', (route) => route.abort());
+      await page.route('**/realtime/v1/**', (route) => route.abort());
+
+      const trigger = await openDock(page);
+      test.skip(!trigger, 'home dock trigger not present');
+      const liveItem = page.getByRole('menuitem', { name: /^Live/ }).first();
+      test.skip((await liveItem.count()) === 0, 'Live dock icon not present');
+      await liveItem.click();
+
+      const surface = page
+        .getByRole('dialog', { name: /live stream/i })
+        .or(page.getByRole('alertdialog', { name: /live stream unavailable/i }));
+      await expect(surface.first()).toBeVisible({ timeout: 15_000 });
+
+      // No unexpected third-party calls are made by opening Live.
+      const external = requests.filter(
+        (url) => /^https?:/.test(url) && !/localhost|127\.0\.0\.1|mmora|lovable|supabase|\.css|\.js|\.woff/i.test(url),
+      );
+      expect(external, `unexpected outbound calls: ${external.join(' | ')}`).toHaveLength(0);
+
+      await page.keyboard.press('Escape');
+      await expect(surface.first()).toBeHidden({ timeout: 10_000 });
+
+      // The app is still alive and no boundary took the HomePage down.
+      await expect(page.locator('#root')).toBeVisible();
+      const dockFailures = await page.evaluate(
+        () => (window as unknown as { __mmoraDockBadgeFailures?: unknown[] }).__mmoraDockBadgeFailures?.length ?? 0,
+      );
+      expect(dockFailures).toBe(0);
+      expect(await liveTrackCount(page), 'tracks must be released after a failed-network session').toBe(0);
+
+      const fatal = errors.filter((e) => /Can't find variable|is not defined|Cannot read propert/i.test(e));
+      expect(fatal, `runtime errors: ${fatal.join(' | ')} (failed requests: ${failed.length})`).toHaveLength(0);
+    });
   });
 }
 
@@ -160,5 +264,42 @@ test.describe('compatibility report', () => {
     await expect(page.locator('[data-feature="live-stream"]')).toBeVisible();
     await expect(page.locator('[data-feature="dock-badges"]')).toBeVisible();
     await expect(page.getByTestId('compat-media')).toContainText('live track');
+  });
+});
+
+test.describe('media permission failures', () => {
+  test('denied camera/mic shows an actionable, non-crashing error UI', async ({ page }) => {
+    await page.addInitScript(() => {
+      const deny = async () => {
+        const err = new Error('Permission denied');
+        err.name = 'NotAllowedError';
+        throw err;
+      };
+      if (!navigator.mediaDevices) {
+        Object.defineProperty(navigator, 'mediaDevices', { value: {}, configurable: true });
+      }
+      (navigator.mediaDevices as MediaDevices).getUserMedia = deny as MediaDevices['getUserMedia'];
+    });
+
+    const errors = collectErrors(page);
+    const signedIn = await gotoHome(page);
+    test.skip(!signedIn, 'preview is signed out — dock is not rendered');
+
+    const trigger = await openDock(page);
+    test.skip(!trigger, 'home dock trigger not present');
+    const liveItem = page.getByRole('menuitem', { name: /^Live/ }).first();
+    test.skip((await liveItem.count()) === 0, 'Live dock icon not present');
+    await liveItem.click();
+
+    // An alert region explains the failure and offers a retry, and HomePage lives on.
+    const alertRegion = page.getByRole('alert').or(page.getByRole('alertdialog'));
+    await expect(alertRegion.first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole('button', { name: /try again/i }).first()).toBeVisible();
+    await expect(page.locator('#root')).toBeVisible();
+    expect(await liveTrackCount(page)).toBe(0);
+
+    await page.keyboard.press('Escape');
+    const fatal = errors.filter((e) => /Can't find variable|is not defined|Cannot read propert/i.test(e));
+    expect(fatal, `runtime errors: ${fatal.join(' | ')}`).toHaveLength(0);
   });
 });
