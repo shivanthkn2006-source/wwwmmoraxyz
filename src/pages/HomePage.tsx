@@ -1984,7 +1984,7 @@ const HomePage = () => {
                 
                 {loading ? (
                   <p className="absolute inset-0 flex items-center justify-center px-3 text-center text-muted-foreground">Loading posts...</p>
-                ) : globalPosts.length === 0 && !astroDaily && searchVideos.length === 0 ? (
+                ) : globalPosts.length === 0 && !astroDaily && searchVideos.length === 0 && neuralVideos.length === 0 ? (
 
                   <p className="absolute inset-0 flex items-center justify-center px-3 text-center text-muted-foreground">No posts yet</p>
                 ) : (
