@@ -405,10 +405,28 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
                   key={`ext-${item.id}`}
                   type="button"
                   onClick={() => {
+                    if (item.kind === 'video') {
+                      // Play inline in the home feed (new-window navigation is blocked by COOP).
+                      window.dispatchEvent(new CustomEvent('mmora:feed-external-videos', {
+                        detail: {
+                          videos: externalVideos.map((video) => ({
+                            id: video.id,
+                            title: video.title,
+                            subtitle: video.subtitle,
+                            url: video.url,
+                            thumbnail: video.thumbnail,
+                          })),
+                          activeId: item.id,
+                        },
+                      }));
+                      setSearchOpen(false);
+                      return;
+                    }
                     if (item.url) window.open(item.url, '_blank', 'noopener,noreferrer');
                   }}
                   className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-muted/60"
                 >
+
                   {item.thumbnail && (
                     <img src={item.thumbnail} alt="" loading="lazy" className="h-9 w-9 shrink-0 rounded-md object-cover" />
                   )}
