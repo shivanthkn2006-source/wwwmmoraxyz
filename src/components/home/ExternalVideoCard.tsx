@@ -69,8 +69,9 @@ export default function ExternalVideoCard({
   const lang = typeof navigator !== 'undefined' ? (navigator.language || 'en').split('-')[0] : 'en';
 
   return (
-    <div className="relative h-full w-full bg-black" data-testid="external-video-card" data-video-id={videoId ?? ''}>
-      <div className="flex h-full w-full items-center justify-center">
+    <div className="relative h-full w-full overflow-hidden bg-black" data-testid="external-video-card" data-video-id={videoId ?? ''}>
+      <div className="flex h-full w-full items-center justify-center overflow-hidden">
+
         {videoId ? (
           <iframe
             ref={frameRef}
