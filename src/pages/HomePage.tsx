@@ -22,6 +22,8 @@ import { useNavigate } from 'react-router-dom';
 import { onHomeRefresh, triggerHomeRefresh } from '@/lib/homeRefresh';
 import { rememberShortInOrbMemory } from '@/lib/orbShortsMemory';
 import HomeFloatingTools from '@/components/home/HomeFloatingTools';
+import ExternalVideoCard, { type ExternalVideoItem } from '@/components/home/ExternalVideoCard';
+
 import HomeGlassDock from '@/components/home/HomeGlassDock';
 import DockBadgeBoundary from '@/components/home/DockBadgeBoundary';
 import LiveViewBoundary from '@/components/live/LiveViewBoundary';
