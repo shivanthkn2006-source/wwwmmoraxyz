@@ -111,6 +111,50 @@ const HomePage = () => {
   const [loopPosts, setLoopPosts] = useState<Post[]>([]);
   const [brokenLoopPreviewIds, setBrokenLoopPreviewIds] = useState<Set<string>>(() => new Set());
   const [loading, setLoading] = useState(true);
+  // Search videos (YouTube) injected into the feed and played inline — new-window
+  // navigation to youtube.com is blocked by Cross-Origin-Opener-Policy.
+  const [searchVideos, setSearchVideos] = useState<ExternalVideoItem[]>([]);
+  const [activeSearchVideoId, setActiveSearchVideoId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const onInject = (event: Event) => {
+      const detail = (event as CustomEvent).detail as { videos?: ExternalVideoItem[]; activeId?: string } | undefined;
+      const videos = (detail?.videos ?? []).filter((video) => !!video?.url);
+      if (!videos.length) return;
+      const activeId = detail?.activeId ?? videos[0].id;
+      // Play the picked video first, then the rest of the search results.
+      const ordered = [
+        ...videos.filter((video) => video.id === activeId),
+        ...videos.filter((video) => video.id !== activeId),
+      ];
+      setSearchVideos(ordered);
+      setActiveSearchVideoId(activeId);
+      requestAnimationFrame(() => {
+        document.querySelector('[data-search-video-slide]')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    };
+    window.addEventListener('mmora:feed-external-videos', onInject);
+    return () => window.removeEventListener('mmora:feed-external-videos', onInject);
+  }, []);
+
+  const searchVideoSlides = React.useMemo(
+    () =>
+      searchVideos.map((video, index) => (
+        <div
+          key={`search-video-${video.id}`}
+          data-search-video-slide={index === 0 ? 'first' : 'true'}
+          className="relative h-full min-h-full w-full shrink-0 snap-start snap-always overflow-hidden"
+        >
+          <ExternalVideoCard
+            item={video}
+            autoPlay={video.id === activeSearchVideoId}
+            onDismiss={() => setSearchVideos((prev) => prev.filter((entry) => entry.id !== video.id))}
+          />
+        </div>
+      )),
+    [searchVideos, activeSearchVideoId],
+  );
+
   const [userProfile, setUserProfile] = useState<any>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [isProfileSheetOpen, setIsProfileSheetOpen] = useState(false);
