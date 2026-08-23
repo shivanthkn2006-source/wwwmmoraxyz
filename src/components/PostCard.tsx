@@ -295,8 +295,11 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
   useEffect(() => {
     if (!user) return;
 
+    const instanceId = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const channel = supabase
-      .channel(`post_updates_${post.id}:${user.id}`)
+      .channel(`post_updates_${post.id}:${user.id}:${instanceId}`)
       .on(
         'postgres_changes',
         {

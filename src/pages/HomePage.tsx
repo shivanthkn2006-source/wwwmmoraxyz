@@ -14,7 +14,7 @@ import { FeedErrorBoundary } from '@/components/FeedErrorBoundary';
 import NotificationMenu from '@/components/NotificationMenu';
 import HamburgerMenu from '@/components/HamburgerMenu';
 import SearchBar from '@/components/SearchBar';
-import { ArrowDown, Mail, Search, Video, TrendingUp, ArrowUp, Camera, ChevronUp, ChevronDown, Sparkles, MessageCircle, Settings, Bell, User as UserIcon, Heart, Bookmark, Boxes, Radio, Radar } from 'lucide-react';
+import { ArrowDown, Mail, Search, Video, TrendingUp, ArrowUp, Camera, ChevronUp, ChevronDown, Sparkles, MessageCircle, Settings, Bell, User as UserIcon, Heart, Bookmark, Boxes, Radio, Radar, Globe2, Users } from 'lucide-react';
 import { trackEvent } from '@/lib/analytics';
 import FuturisticCounter from '@/components/FuturisticCounter';
 import { useNavigate } from 'react-router-dom';
@@ -23,6 +23,8 @@ import { rememberShortInOrbMemory } from '@/lib/orbShortsMemory';
 import HomeFloatingTools from '@/components/home/HomeFloatingTools';
 import ExternalVideoCard, { type ExternalVideoItem } from '@/components/home/ExternalVideoCard';
 import { useDhfBrain } from '@/hooks/useDhfBrain';
+import useZoeMotivation from '@/hooks/useZoeMotivation';
+import HomeMotivationSlide from '@/components/home/HomeMotivationSlide';
 
 import HomeGlassDock from '@/components/home/HomeGlassDock';
 import DockBadgeBoundary from '@/components/home/DockBadgeBoundary';
@@ -105,6 +107,7 @@ import {
 const HomePage = () => {
   const { user } = useAuth();
   const { prediction: astroDaily } = useAstroDailyPrediction();
+  const { motivation: dailyMotivation, posterUrl: motivationPosterUrl } = useZoeMotivation();
   const navigate = useNavigate();
   const { receivedRequests, acceptFriendRequest, rejectFriendRequest } = useFriendRequests();
   const [globalPosts, setGlobalPosts] = useState<Post[]>([]);
@@ -2135,13 +2138,16 @@ const HomePage = () => {
                 
                 {loading ? (
                   <p className="absolute inset-0 flex items-center justify-center px-3 text-center text-muted-foreground">Loading posts...</p>
-                ) : globalPosts.length === 0 && !astroDaily && searchVideos.length === 0 && neuralVideos.length === 0 && loopSlides.length === 0 ? (
+                ) : globalPosts.length === 0 && !astroDaily && !dailyMotivation && searchVideos.length === 0 && neuralVideos.length === 0 && loopSlides.length === 0 ? (
 
                   <p className="absolute inset-0 flex items-center justify-center px-3 text-center text-muted-foreground">No posts yet</p>
                 ) : (
                   <div ref={loopRailRef} className="absolute inset-0 h-full w-full snap-y snap-mandatory overflow-y-auto overscroll-contain" data-testid="global-posts-snap-feed" data-feed-scroll>
                   {searchVideoSlides}
                   {!loopsHidden && loopSlides}
+                  {dailyMotivation && (
+                    <HomeMotivationSlide motivation={dailyMotivation} posterUrl={motivationPosterUrl} />
+                  )}
                   {astroDaily && (
 
 
@@ -2162,6 +2168,9 @@ const HomePage = () => {
                       </div>
                     );
                   })}
+                  <div className="relative h-full min-h-full w-full shrink-0 snap-start snap-always overflow-y-auto bg-background px-4 pb-24 pt-24" data-people-recommendations>
+                    <InterestRecommendations />
+                  </div>
                   {neuralVideoSlides}
 
                   </div>
@@ -2181,12 +2190,15 @@ const HomePage = () => {
                 )}
                 {loading ? (
                   <p className="absolute inset-0 flex items-center justify-center px-3 text-center text-muted-foreground">Loading posts...</p>
-                ) : personalPosts.length === 0 && !astroDaily && searchVideos.length === 0 && neuralVideos.length === 0 && loopSlides.length === 0 ? (
+                ) : personalPosts.length === 0 && !astroDaily && !dailyMotivation && searchVideos.length === 0 && neuralVideos.length === 0 && loopSlides.length === 0 ? (
                   <p className="absolute inset-0 flex items-center justify-center px-3 text-center text-muted-foreground">No posts from friends yet</p>
                 ) : (
                   <div className="absolute inset-0 h-full w-full snap-y snap-mandatory overflow-y-auto overscroll-contain" data-testid="personal-posts-snap-feed" data-feed-scroll>
                   {searchVideoSlides}
                   {!loopsHidden && loopSlides}
+                  {dailyMotivation && (
+                    <HomeMotivationSlide motivation={dailyMotivation} posterUrl={motivationPosterUrl} />
+                  )}
 
                   {astroDaily && (
 
@@ -2306,6 +2318,27 @@ const HomePage = () => {
       <HomeGlassDock
         badgesUpdatedAt={dockBadgesUpdatedAt}
         items={[
+          {
+            id: 'global-feed',
+            label: 'Global feed',
+            icon: <Globe2 className="h-[22px] w-[22px]" />,
+            active: activeTab === 'global',
+            onSelect: runHomeIconAction('global-feed', () => setActiveTab('global')),
+          },
+          {
+            id: 'friends-feed',
+            label: 'Friends feed',
+            icon: <Users className="h-[22px] w-[22px]" />,
+            active: activeTab === 'personal',
+            onSelect: runHomeIconAction('friends-feed', () => setActiveTab('personal')),
+          },
+          {
+            id: 'selfie-city',
+            label: 'Selfie City',
+            icon: <Camera className="h-[22px] w-[22px]" />,
+            active: activeTab === 'selfiecity',
+            onSelect: runHomeIconAction('selfie-city', () => setActiveTab('selfiecity')),
+          },
           {
             id: 'neural-feed',
             label: 'DHF Neural Feed',
