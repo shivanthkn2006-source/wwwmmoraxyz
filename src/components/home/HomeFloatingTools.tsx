@@ -94,19 +94,23 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
   }>>([]);
   const [externalLoading, setExternalLoading] = React.useState(false);
 
-  // Show a simple feed icon below the camera only when search videos are injected,
-  // so the user can exit back to their own feed without an overlapping header button.
-  const [hasSearchVideos, setHasSearchVideos] = React.useState(false);
+  // Feed icon lifecycle: hidden when nothing is injected, loading while the
+  // search videos are being pushed into the feed, active once they render.
+  const [feedIconState, setFeedIconState] = React.useState<'hidden' | 'injecting' | 'ready'>('hidden');
   React.useEffect(() => {
-    const onInject = () => setHasSearchVideos(true);
-    const onExit = () => setHasSearchVideos(false);
+    const onInject = () => setFeedIconState((s) => (s === 'ready' ? s : 'injecting'));
+    const onReady = () => setFeedIconState('ready');
+    const onExit = () => setFeedIconState('hidden');
     window.addEventListener('mmora:feed-external-videos', onInject);
+    window.addEventListener('mmora:feed-external-videos-ready', onReady);
     window.addEventListener('mmora:exit-search-videos', onExit);
     return () => {
       window.removeEventListener('mmora:feed-external-videos', onInject);
+      window.removeEventListener('mmora:feed-external-videos-ready', onReady);
       window.removeEventListener('mmora:exit-search-videos', onExit);
     };
   }, []);
+
 
   React.useEffect(() => {
     const term = query.trim();
