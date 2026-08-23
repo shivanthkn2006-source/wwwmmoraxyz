@@ -147,13 +147,25 @@ const HomePage = () => {
     });
   }, []);
 
+  // Remembered feed state (scroll offset + which slide was playing) captured the
+  // moment search videos are injected, restored when the user taps the feed icon.
+  const feedReturnStateRef = useRef<{ top: number; windowTop: number; videoKey: string | null } | null>(null);
+
   /** Leave the injected search results and go back to the user's own feed. */
   const exitSearchVideos = React.useCallback(() => {
+    const saved = feedReturnStateRef.current;
     setSearchVideos([]);
     setActiveSearchVideoId(null);
     requestAnimationFrame(() => {
-      document.querySelector('[data-feed-scroll]')?.scrollTo({ top: 0, behavior: 'smooth' });
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      const container = document.querySelector('[data-feed-scroll]') as HTMLElement | null;
+      container?.scrollTo({ top: saved?.top ?? 0, behavior: 'smooth' });
+      window.scrollTo({ top: saved?.windowTop ?? 0, behavior: 'smooth' });
+      // Resume playback on the slide that was active before the search detour.
+      if (saved?.videoKey) setVisibleVideoKey(saved.videoKey);
+      window.dispatchEvent(
+        new CustomEvent('mmora:restore-feed-playback', { detail: { key: saved?.videoKey ?? null } }),
+      );
+      feedReturnStateRef.current = null;
     });
   }, []);
 
@@ -163,6 +175,13 @@ const HomePage = () => {
       const videos = (detail?.videos ?? []).filter((video) => !!video?.url);
       if (!videos.length) return;
       const activeId = detail?.activeId ?? videos[0].id;
+      // Snapshot where the user was so the feed icon can bring them back exactly.
+      const container = document.querySelector('[data-feed-scroll]') as HTMLElement | null;
+      feedReturnStateRef.current = {
+        top: container?.scrollTop ?? 0,
+        windowTop: window.scrollY,
+        videoKey: visibleVideoKeyRef.current,
+      };
       // Play the picked video first, then the rest of the search results.
       const ordered = [
         ...videos.filter((video) => video.id === activeId),
@@ -172,11 +191,13 @@ const HomePage = () => {
       setActiveSearchVideoId(activeId);
       requestAnimationFrame(() => {
         document.querySelector('[data-search-video-slide]')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        window.dispatchEvent(new CustomEvent('mmora:feed-external-videos-ready'));
       });
     };
     window.addEventListener('mmora:feed-external-videos', onInject);
     return () => window.removeEventListener('mmora:feed-external-videos', onInject);
   }, []);
+
 
   // Listen for the floating feed icon to exit search videos back to the user's feed.
   useEffect(() => {
