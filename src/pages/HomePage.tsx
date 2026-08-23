@@ -12,7 +12,6 @@ import { MoraZoeDailyCard } from '@/components/astro/MoraZoeDailyCard';
 import useAstroDailyPrediction from '@/hooks/useAstroDailyPrediction';
 import { FeedErrorBoundary } from '@/components/FeedErrorBoundary';
 import NotificationMenu from '@/components/NotificationMenu';
-import AnimatedHamburgerButton from '@/components/AnimatedHamburgerButton';
 import HamburgerMenu from '@/components/HamburgerMenu';
 import SearchBar from '@/components/SearchBar';
 import { ArrowDown, Mail, Search, Video, TrendingUp, ArrowUp, Camera, ChevronUp, ChevronDown, Sparkles, MessageCircle, Settings, Bell, User as UserIcon, Heart, Bookmark, Boxes, Radio, Radar } from 'lucide-react';

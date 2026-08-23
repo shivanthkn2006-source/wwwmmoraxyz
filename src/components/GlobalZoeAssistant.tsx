@@ -564,7 +564,6 @@ export const GlobalZoeAssistant = ({ config = DEFAULT_CONFIG }: { config?: Parti
   }));
   const [isDragging, setIsDragging] = useState(false);
   /** Timestamp of the last orb tap — used for double click / double tap activation. */
-  const lastOrbTapRef = useRef<number>(0);
 
   
   // VR Speaking state - pause drift when someone in VR is speaking to Zoe
