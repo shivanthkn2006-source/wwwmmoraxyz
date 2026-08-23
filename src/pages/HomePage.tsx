@@ -23,6 +23,7 @@ import { onHomeRefresh, triggerHomeRefresh } from '@/lib/homeRefresh';
 import { rememberShortInOrbMemory } from '@/lib/orbShortsMemory';
 import HomeFloatingTools from '@/components/home/HomeFloatingTools';
 import ExternalVideoCard, { type ExternalVideoItem } from '@/components/home/ExternalVideoCard';
+import { useDhfBrain } from '@/hooks/useDhfBrain';
 
 import HomeGlassDock from '@/components/home/HomeGlassDock';
 import DockBadgeBoundary from '@/components/home/DockBadgeBoundary';
@@ -115,6 +116,7 @@ const HomePage = () => {
   const [loading, setLoading] = useState(true);
   // Search videos (YouTube) injected into the feed and played inline — new-window
   // navigation to youtube.com is blocked by Cross-Origin-Opener-Policy.
+  const { ingest: ingestDhf } = useDhfBrain();
   const [searchVideos, setSearchVideos] = useState<ExternalVideoItem[]>([]);
   const [activeSearchVideoId, setActiveSearchVideoId] = useState<string | null>(null);
 
@@ -145,6 +147,7 @@ const HomePage = () => {
         <div
           key={`search-video-${video.id}`}
           data-search-video-slide={index === 0 ? 'first' : 'true'}
+          data-video-key={video.id}
           className="relative h-full min-h-full w-full shrink-0 snap-start snap-always overflow-hidden"
         >
           <ExternalVideoCard
@@ -196,6 +199,7 @@ const HomePage = () => {
         <div
           key={`neural-video-${video.id}`}
           data-neural-video-slide="true"
+          data-video-key={video.id}
           className="relative h-full min-h-full w-full shrink-0 snap-start snap-always overflow-hidden"
         >
           <ExternalVideoCard
@@ -226,7 +230,7 @@ const HomePage = () => {
               key,
               window.setTimeout(() => {
                 learnedVideoIds.current.add(key);
-                void dhfBrain.ingest(video.title, 'feed_click', { injectFeed: false });
+                void ingestDhf(video.title, 'feed_click', { injectFeed: false });
               }, 5000),
             );
           } else {
@@ -245,7 +249,7 @@ const HomePage = () => {
       observer.disconnect();
       timers.forEach((timer) => window.clearTimeout(timer));
     };
-  }, [searchVideos, neuralVideos, dhfBrain]);
+  }, [searchVideos, neuralVideos, ingestDhf]);
 
 
 
