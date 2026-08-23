@@ -24,13 +24,14 @@ interface HomeFloatingToolsProps {
   query: string;
   onQueryChange: (query: string) => void;
   onOpenEditor: () => void;
+  hasInjectedVideos: boolean;
 }
 
 const ICON_SIZE = 36;
 const GAP = 6;
 const EDGE_GAP = 8;
 
-export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }: HomeFloatingToolsProps) {
+export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, hasInjectedVideos }: HomeFloatingToolsProps) {
   const [searchOpen, setSearchOpen] = React.useState(false);
   const [iconPosition, setIconPosition] = React.useState<{ x: number; y: number }>({ x: 8, y: 80 });
   const [activeIndex, setActiveIndex] = React.useState(-1);
@@ -99,17 +100,17 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
   const [feedIconState, setFeedIconState] = React.useState<'hidden' | 'injecting' | 'ready'>('hidden');
   React.useEffect(() => {
     const onInject = () => setFeedIconState((s) => (s === 'ready' ? s : 'injecting'));
-    const onReady = () => setFeedIconState('ready');
-    const onExit = () => setFeedIconState('hidden');
     window.addEventListener('mmora:feed-external-videos', onInject);
-    window.addEventListener('mmora:feed-external-videos-ready', onReady);
-    window.addEventListener('mmora:exit-search-videos', onExit);
     return () => {
       window.removeEventListener('mmora:feed-external-videos', onInject);
-      window.removeEventListener('mmora:feed-external-videos-ready', onReady);
-      window.removeEventListener('mmora:exit-search-videos', onExit);
     };
   }, []);
+
+  // The parent feed is the source of truth. This prevents an event race from
+  // leaving a stale exit control visible after the injected slides are gone.
+  React.useEffect(() => {
+    setFeedIconState(hasInjectedVideos ? 'ready' : 'hidden');
+  }, [hasInjectedVideos]);
 
 
   React.useEffect(() => {
@@ -267,7 +268,6 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
               ? 'Loading search videos — exit to my feed will be available shortly'
               : 'Exit search videos and go back to my feed'
           }
-          tooltip={feedIconState === 'injecting' ? 'Loading search videos…' : 'Back to my feed'}
           disabled={feedIconState === 'injecting'}
           busy={feedIconState === 'injecting'}
           onActivate={() => window.dispatchEvent(new CustomEvent('mmora:exit-search-videos'))}
