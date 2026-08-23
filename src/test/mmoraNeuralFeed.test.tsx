@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 
 const invokeMock = vi.fn();
@@ -22,6 +22,7 @@ import MmoraNeuralFeed from '@/components/home/MmoraNeuralFeed';
 
 describe('MmoraNeuralFeed', () => {
   beforeEach(() => {
+    cleanup();
     invokeMock.mockReset();
     feedRows.length = 0;
   });
