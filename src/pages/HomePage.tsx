@@ -123,7 +123,6 @@ const HomePage = () => {
   const [activeSearchVideoId, setActiveSearchVideoId] = useState<string | null>(null);
   // Key of the slide currently on screen — only that iframe is allowed to play.
   const [visibleVideoKey, setVisibleVideoKey] = useState<string | null>(null);
-  const [youtubeSlideVisible, setYoutubeSlideVisible] = useState(false);
   const visibleVideoKeyRef = useRef<string | null>(null);
   useEffect(() => {
     visibleVideoKeyRef.current = visibleVideoKey;
@@ -349,30 +348,6 @@ const HomePage = () => {
       timers.forEach((timer) => window.clearTimeout(timer));
     };
   }, [searchVideos, neuralVideos, ingestDhf, activeTab]);
-
-  // Keep the return icon tied to the actual YouTube slide in the active feed.
-  // This intentionally does not depend on iframe playback, which can lag or be
-  // cleared while the slide itself remains visible.
-  useEffect(() => {
-    const feed = document.querySelector<HTMLElement>(`[data-feed-tab="${activeTab}"] [data-feed-scroll]`);
-    if (!feed) {
-      setYoutubeSlideVisible(false);
-      return;
-    }
-    const visibleSlides = new Set<Element>();
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting && entry.intersectionRatio > 0.6) visibleSlides.add(entry.target);
-          else visibleSlides.delete(entry.target);
-        });
-        setYoutubeSlideVisible(visibleSlides.size > 0);
-      },
-      { root: feed, threshold: [0, 0.61, 1] },
-    );
-    feed.querySelectorAll<HTMLElement>('[data-search-video-slide], [data-neural-video-slide]').forEach((slide) => observer.observe(slide));
-    return () => observer.disconnect();
-  }, [activeTab, searchVideos, neuralVideos]);
 
 
 
