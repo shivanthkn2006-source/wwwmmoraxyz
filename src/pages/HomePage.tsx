@@ -22,6 +22,8 @@ import { useNavigate } from 'react-router-dom';
 import { onHomeRefresh, triggerHomeRefresh } from '@/lib/homeRefresh';
 import { rememberShortInOrbMemory } from '@/lib/orbShortsMemory';
 import HomeFloatingTools from '@/components/home/HomeFloatingTools';
+import ExternalVideoCard, { type ExternalVideoItem } from '@/components/home/ExternalVideoCard';
+
 import HomeGlassDock from '@/components/home/HomeGlassDock';
 import DockBadgeBoundary from '@/components/home/DockBadgeBoundary';
 import LiveViewBoundary from '@/components/live/LiveViewBoundary';
@@ -111,6 +113,50 @@ const HomePage = () => {
   const [loopPosts, setLoopPosts] = useState<Post[]>([]);
   const [brokenLoopPreviewIds, setBrokenLoopPreviewIds] = useState<Set<string>>(() => new Set());
   const [loading, setLoading] = useState(true);
+  // Search videos (YouTube) injected into the feed and played inline — new-window
+  // navigation to youtube.com is blocked by Cross-Origin-Opener-Policy.
+  const [searchVideos, setSearchVideos] = useState<ExternalVideoItem[]>([]);
+  const [activeSearchVideoId, setActiveSearchVideoId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const onInject = (event: Event) => {
+      const detail = (event as CustomEvent).detail as { videos?: ExternalVideoItem[]; activeId?: string } | undefined;
+      const videos = (detail?.videos ?? []).filter((video) => !!video?.url);
+      if (!videos.length) return;
+      const activeId = detail?.activeId ?? videos[0].id;
+      // Play the picked video first, then the rest of the search results.
+      const ordered = [
+        ...videos.filter((video) => video.id === activeId),
+        ...videos.filter((video) => video.id !== activeId),
+      ];
+      setSearchVideos(ordered);
+      setActiveSearchVideoId(activeId);
+      requestAnimationFrame(() => {
+        document.querySelector('[data-search-video-slide]')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    };
+    window.addEventListener('mmora:feed-external-videos', onInject);
+    return () => window.removeEventListener('mmora:feed-external-videos', onInject);
+  }, []);
+
+  const searchVideoSlides = React.useMemo(
+    () =>
+      searchVideos.map((video, index) => (
+        <div
+          key={`search-video-${video.id}`}
+          data-search-video-slide={index === 0 ? 'first' : 'true'}
+          className="relative h-full min-h-full w-full shrink-0 snap-start snap-always overflow-hidden"
+        >
+          <ExternalVideoCard
+            item={video}
+            autoPlay={video.id === activeSearchVideoId}
+            onDismiss={() => setSearchVideos((prev) => prev.filter((entry) => entry.id !== video.id))}
+          />
+        </div>
+      )),
+    [searchVideos, activeSearchVideoId],
+  );
+
   const [userProfile, setUserProfile] = useState<any>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [isProfileSheetOpen, setIsProfileSheetOpen] = useState(false);
@@ -1887,11 +1933,14 @@ const HomePage = () => {
                 
                 {loading ? (
                   <p className="absolute inset-0 flex items-center justify-center px-3 text-center text-muted-foreground">Loading posts...</p>
-                ) : globalPosts.length === 0 && !astroDaily ? (
+                ) : globalPosts.length === 0 && !astroDaily && searchVideos.length === 0 ? (
+
                   <p className="absolute inset-0 flex items-center justify-center px-3 text-center text-muted-foreground">No posts yet</p>
                 ) : (
                   <div className="absolute inset-0 h-full w-full snap-y snap-mandatory overflow-y-auto overscroll-contain" data-testid="global-posts-snap-feed">
+                  {searchVideoSlides}
                   {astroDaily && (
+
                     <div className="relative flex h-full min-h-full w-full shrink-0 snap-start snap-always items-center overflow-y-auto p-4" data-astro-daily>
                       <MoraZoeDailyCard prediction={astroDaily} className="w-full" />
                     </div>
@@ -1926,11 +1975,13 @@ const HomePage = () => {
                 )}
                 {loading ? (
                   <p className="absolute inset-0 flex items-center justify-center px-3 text-center text-muted-foreground">Loading posts...</p>
-                ) : personalPosts.length === 0 && !astroDaily ? (
+                ) : personalPosts.length === 0 && !astroDaily && searchVideos.length === 0 ? (
                   <p className="absolute inset-0 flex items-center justify-center px-3 text-center text-muted-foreground">No posts from friends yet</p>
                 ) : (
                   <div className="absolute inset-0 h-full w-full snap-y snap-mandatory overflow-y-auto overscroll-contain" data-testid="personal-posts-snap-feed">
+                  {searchVideoSlides}
                   {astroDaily && (
+
                     <div className="relative flex h-full min-h-full w-full shrink-0 snap-start snap-always items-center overflow-y-auto p-4" data-astro-daily>
                       <MoraZoeDailyCard prediction={astroDaily} className="w-full" />
                     </div>
