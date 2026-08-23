@@ -1477,6 +1477,42 @@ export type Database = {
         }
         Relationships: []
       }
+      dhf_consciousness_memory: {
+        Row: {
+          archetype_influence: string | null
+          category: string
+          created_at: string
+          embedding: string | null
+          extracted_concepts: string[]
+          id: string
+          metadata: Json
+          raw_query: string
+          user_id: string
+        }
+        Insert: {
+          archetype_influence?: string | null
+          category: string
+          created_at?: string
+          embedding?: string | null
+          extracted_concepts?: string[]
+          id?: string
+          metadata?: Json
+          raw_query: string
+          user_id: string
+        }
+        Update: {
+          archetype_influence?: string | null
+          category?: string
+          created_at?: string
+          embedding?: string | null
+          extracted_concepts?: string[]
+          id?: string
+          metadata?: Json
+          raw_query?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       dhf_ghost_interactions: {
         Row: {
           construct_id: string | null
@@ -1728,6 +1764,45 @@ export type Database = {
           verification_timestamp?: string | null
           vocabulary_signature?: Json | null
           voice_characteristics?: Json | null
+        }
+        Relationships: []
+      }
+      dhf_profiles: {
+        Row: {
+          birth_date: string | null
+          birth_lat: number | null
+          birth_lng: number | null
+          birth_time: string | null
+          birth_timezone: string
+          created_at: string
+          id: string
+          natal_chart: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          birth_date?: string | null
+          birth_lat?: number | null
+          birth_lng?: number | null
+          birth_time?: string | null
+          birth_timezone?: string
+          created_at?: string
+          id?: string
+          natal_chart?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          birth_date?: string | null
+          birth_lat?: number | null
+          birth_lng?: number | null
+          birth_time?: string | null
+          birth_timezone?: string
+          created_at?: string
+          id?: string
+          natal_chart?: Json
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -3167,6 +3242,48 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
         ]
+      }
+      mmora_feed_items: {
+        Row: {
+          astrological_tag: string | null
+          channel_title: string
+          created_at: string
+          id: string
+          is_viewed: boolean
+          relevance_score: number
+          thumbnail_url: string
+          title: string
+          triggered_by_query: string | null
+          user_id: string
+          video_id: string
+        }
+        Insert: {
+          astrological_tag?: string | null
+          channel_title?: string
+          created_at?: string
+          id?: string
+          is_viewed?: boolean
+          relevance_score?: number
+          thumbnail_url?: string
+          title: string
+          triggered_by_query?: string | null
+          user_id: string
+          video_id: string
+        }
+        Update: {
+          astrological_tag?: string | null
+          channel_title?: string
+          created_at?: string
+          id?: string
+          is_viewed?: boolean
+          relevance_score?: number
+          thumbnail_url?: string
+          title?: string
+          triggered_by_query?: string | null
+          user_id?: string
+          video_id?: string
+        }
+        Relationships: []
       }
       mmora_memories: {
         Row: {
