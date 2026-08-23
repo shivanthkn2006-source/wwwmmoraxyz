@@ -253,7 +253,10 @@ Deno.serve(async (req) => {
 
   return json({
     success: true,
+    usedQuery: query,
+    isDefaultQuery,
     dailyTelemetry,
+
     natalAlignment: profile?.natal_chart ?? null,
     hasProfile: Boolean(profile?.birth_date),
     memoryStored: !memError,
