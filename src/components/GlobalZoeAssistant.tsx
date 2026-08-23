@@ -28,7 +28,7 @@ import { useZoeMediaAccess } from '@/hooks/useZoeMediaAccess';
 import { useAuth } from '@/lib/auth';
 import zoeAvatar from '@/assets/zoe-avatar.png';
 import { toast } from 'sonner';
-import { usePhantomVisible } from '@/stores/usePhantomStore'; // PROTOCOL PHANTOM
+import { usePhantomStore, usePhantomVisible } from '@/stores/usePhantomStore'; // PROTOCOL PHANTOM
 import { VR_SPEAKING_EVENT, VR_SPEAKING_END_EVENT, VRSpeakerInfo } from '@/hooks/useVRSpeakingToOrb';
 
 // Lazy load heavy Three.js components to reduce initial bundle
@@ -94,6 +94,7 @@ export const GlobalZoeAssistant = ({ config = DEFAULT_CONFIG }: { config?: Parti
   
   // ═══ PROTOCOL PHANTOM: Ghost Mode Toggle ═══
   const isPhantomVisible = usePhantomVisible();
+  const hidePhantomOrb = usePhantomStore(state => state.hide);
   
   // ═══ ZOE UNIFIED MEDIA ACCESS ═══
   // Pre-warmed audio/mic/camera for instant voice responses
@@ -563,7 +564,6 @@ export const GlobalZoeAssistant = ({ config = DEFAULT_CONFIG }: { config?: Parti
   }));
   const [isDragging, setIsDragging] = useState(false);
   /** Timestamp of the last orb tap — used for double click / double tap activation. */
-  const lastOrbTapRef = useRef<number>(0);
 
   
   // VR Speaking state - pause drift when someone in VR is speaking to Zoe
@@ -941,21 +941,10 @@ export const GlobalZoeAssistant = ({ config = DEFAULT_CONFIG }: { config?: Parti
                       isThinking={isProcessing || alwaysOnVoice.isProcessing}
                       size="lg"
                       onClick={() => {
-                        // Zoe's orb now opens on a double click / double tap so a
-                        // single stray tap while scrolling never opens the panel.
+                        // Once visible, one direct click/tap hides Zoe again.
                         const homeControlActive = Boolean((window as Window & { __mmoraHomeControlDragging?: boolean }).__mmoraHomeControlDragging);
                         if (isDragging || homeControlActive) return;
-                        const now = Date.now();
-                        if (now - lastOrbTapRef.current < 350) {
-                          lastOrbTapRef.current = 0;
-                          setShowConversationPanel(true);
-                        } else {
-                          lastOrbTapRef.current = now;
-                        }
-                      }}
-                      onDoubleClick={() => {
-                        const homeControlActive = Boolean((window as Window & { __mmoraHomeControlDragging?: boolean }).__mmoraHomeControlDragging);
-                        if (!isDragging && !homeControlActive) setShowConversationPanel(true);
+                        hidePhantomOrb();
                       }}
 
                       ecnEmotion={currentEmotion}

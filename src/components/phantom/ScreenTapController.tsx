@@ -1,8 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 // SCREEN TAP CONTROLLER - Protocol Phantom
-// Invisible layer that detects screen-wide taps to show/hide the Orb
-// Touch Devices: Single Tap = Show Orb, Double Tap = Hide Orb
-// Desktop: Single Click = Show Orb, Double Click = Hide Orb
+// Invisible layer that detects the deliberate double interaction that shows Zoe.
+// A single interaction outside the orb never changes visibility.
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import React, { useRef, useCallback, useEffect, memo } from 'react';
@@ -54,34 +53,21 @@ const ScreenTapController: React.FC<ScreenTapControllerProps> = ({
     return false;
   }, [excludeSelectors]);
 
-  // Show orb
+  // Show orb only after a deliberate double click/tap.
   const showOrb = useCallback(() => {
     if (isProcessingRef.current || isVisible) return;
     
     isProcessingRef.current = true;
     show();
-    console.log('[ScreenTap] 👁️ Orb VISIBLE (single tap/click)');
+    console.log('[ScreenTap] Orb visible (double tap/click)');
     
     setTimeout(() => {
       isProcessingRef.current = false;
     }, 100);
   }, [isVisible, show]);
 
-  // Hide orb
-  const hideOrb = useCallback(() => {
-    if (isProcessingRef.current || !isVisible) return;
-    
-    isProcessingRef.current = true;
-    hide();
-    console.log('[ScreenTap] 👻 Orb HIDDEN (double tap/click)');
-    
-    setTimeout(() => {
-      isProcessingRef.current = false;
-    }, 100);
-  }, [isVisible, hide]);
-
-  // Handle interaction (works for both touch and click)
-  const handleInteraction = useCallback((e: MouseEvent | TouchEvent) => {
+  // Pointer events unify mouse, touch and pen without touch/click double firing.
+  const handleInteraction = useCallback((e: PointerEvent) => {
     // Skip excluded elements
     if (isExcludedElement(e.target)) {
       return;
@@ -91,15 +77,15 @@ const ScreenTapController: React.FC<ScreenTapControllerProps> = ({
     const timeSinceLastInteraction = now - lastInteractionRef.current;
 
     if (timeSinceLastInteraction < 350) {
-      // Double tap/click detected - HIDE orb
+      // Double tap/click detected — show Zoe.
       if (singleActionTimeoutRef.current) {
         clearTimeout(singleActionTimeoutRef.current);
         singleActionTimeoutRef.current = null;
       }
-      hideOrb();
+      showOrb();
       lastInteractionRef.current = 0;
     } else {
-      // First tap/click - wait to see if second comes
+      // First tap/click — remember it, but intentionally do nothing.
       lastInteractionRef.current = now;
 
       if (singleActionTimeoutRef.current) {
@@ -107,12 +93,11 @@ const ScreenTapController: React.FC<ScreenTapControllerProps> = ({
       }
 
       singleActionTimeoutRef.current = setTimeout(() => {
-        // Single tap/click - SHOW orb
-        showOrb();
         lastInteractionRef.current = 0;
+        singleActionTimeoutRef.current = null;
       }, 350);
     }
-  }, [isExcludedElement, showOrb, hideOrb]);
+  }, [isExcludedElement, showOrb]);
 
   // Always hide orb on route changes (except VR world where in-world orb guidance is required)
   useEffect(() => {
@@ -120,29 +105,14 @@ const ScreenTapController: React.FC<ScreenTapControllerProps> = ({
     hide();
   }, [location.pathname, hide, isVRRoute]);
 
-  // Attach global listeners
+  // Attach one global listener for mouse, touch and pen.
   useEffect(() => {
     if (isVRRoute) return;
 
-    // Use touchend for touch devices, click for mouse
-    const handleTouchEnd = (e: TouchEvent) => {
-      handleInteraction(e);
-    };
-
-    const handleClick = (e: MouseEvent) => {
-      // Only handle click if not a touch device (to avoid double firing)
-      if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
-        return; // Touch device - use touchend instead
-      }
-      handleInteraction(e);
-    };
-
-    document.addEventListener('touchend', handleTouchEnd, { passive: true });
-    document.addEventListener('click', handleClick, { passive: true });
+    document.addEventListener('pointerup', handleInteraction, { passive: true });
 
     return () => {
-      document.removeEventListener('touchend', handleTouchEnd);
-      document.removeEventListener('click', handleClick);
+      document.removeEventListener('pointerup', handleInteraction);
       if (singleActionTimeoutRef.current) {
         clearTimeout(singleActionTimeoutRef.current);
       }
