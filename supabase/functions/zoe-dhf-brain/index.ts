@@ -239,15 +239,17 @@ Deno.serve(async (req) => {
     metadata: { contextType, timezone: timeZone, timestamp: new Date().toISOString() },
   });
   if (memError) {
-    console.error('[zoe-dhf-brain] memory insert failed', memError);
+    console.error(JSON.stringify({ fn: 'zoe-dhf-brain', stage: 'memory_insert', code: (memError as any).code, message: memError.message, user: user.id }));
     degraded.push('memory_write_failed');
   }
 
   // 5. Feed injection (opt-out via injectFeed: false)
-  const feed = body.injectFeed === false
-    ? { injected: 0, reason: 'skipped' }
+  const feed: FeedResult = body.injectFeed === false
+    ? { injected: 0, reason: 'skipped', retryable: false }
     : await injectYouTube(admin, user.id, query, archetype);
   if (feed.reason && feed.injected === 0) degraded.push(`feed_${feed.reason}`);
+  console.log(JSON.stringify({ fn: 'zoe-dhf-brain', stage: 'complete', user: user.id, contextType, injected: feed.injected, degraded }));
+
 
   return json({
     success: true,
