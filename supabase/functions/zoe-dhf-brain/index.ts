@@ -59,7 +59,10 @@ async function injectYouTube(
   searchIntent: string,
   planetInfluence: string,
 ): Promise<{ injected: number; reason?: string }> {
-  const key = Deno.env.get('YOUTUBE_API_KEY') || Deno.env.get('GOOGLE_AI_STUDIO_KEY');
+  const key =
+    Deno.env.get('YOUTUBE_API_KEY') ||
+    Deno.env.get('GOOGLE_API_KEY') ||
+    Deno.env.get('GOOGLE_AI_STUDIO_KEY');
   if (!key) return { injected: 0, reason: 'missing_youtube_key' };
   const term = (searchIntent || '').trim();
   if (term.length < 2) return { injected: 0, reason: 'query_too_short' };
