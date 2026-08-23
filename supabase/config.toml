@@ -345,3 +345,6 @@ verify_jwt = true
 
 [functions.external-search]
 verify_jwt = false
+
+[functions.zoe-dhf-brain]
+verify_jwt = true
