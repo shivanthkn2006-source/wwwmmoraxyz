@@ -52,20 +52,68 @@ function extractConcepts(query: string): string[] {
   ).slice(0, 12);
 }
 
+/** Resolve the YouTube Data API key. Both keys are accepted; YOUTUBE_API_KEY wins. */
+function youtubeKey(): { key: string | null; source: string } {
+  const yt = Deno.env.get('YOUTUBE_API_KEY');
+  if (yt) return { key: yt, source: 'YOUTUBE_API_KEY' };
+  const g = Deno.env.get('GOOGLE_API_KEY');
+  if (g) return { key: g, source: 'GOOGLE_API_KEY' };
+  const s = Deno.env.get('GOOGLE_AI_STUDIO_KEY');
+  if (s) return { key: s, source: 'GOOGLE_AI_STUDIO_KEY' };
+  return { key: null, source: 'none' };
+}
+
+export interface FeedResult {
+  injected: number;
+  reason?: string;
+  retryable?: boolean;
+  keySource?: string;
+  status?: number;
+}
+
+/** Probe the key with a 1-result call; classifies quota / invalid-key / ok. */
+async function diagnoseYouTube(): Promise<{
+  configured: boolean;
+  keySource: string;
+  valid: boolean;
+  quota: 'ok' | 'exceeded' | 'unknown';
+  status?: number;
+  reason?: string;
+}> {
+  const { key, source } = youtubeKey();
+  if (!key) return { configured: false, keySource: source, valid: false, quota: 'unknown', reason: 'missing_youtube_key' };
+  try {
+    const res = await fetch(
+      `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=1&type=video&q=test&key=${key}`,
+    );
+    const body = await res.json().catch(() => ({}));
+    if (res.ok) return { configured: true, keySource: source, valid: true, quota: 'ok', status: res.status };
+    const reason = String(body?.error?.errors?.[0]?.reason ?? body?.error?.status ?? `http_${res.status}`);
+    const quotaExceeded = res.status === 403 && /quota|rateLimit|dailyLimit/i.test(reason);
+    return {
+      configured: true,
+      keySource: source,
+      valid: !/keyInvalid|API_KEY_INVALID|forbidden/i.test(reason) || quotaExceeded,
+      quota: quotaExceeded ? 'exceeded' : 'unknown',
+      status: res.status,
+      reason,
+    };
+  } catch (e) {
+    return { configured: true, keySource: source, valid: false, quota: 'unknown', reason: `exception_${(e as Error)?.message?.slice(0, 80)}` };
+  }
+}
+
 /** YouTube Data API v3 search → mmora_feed_items. Keyless = silent no-op. */
 async function injectYouTube(
   admin: ReturnType<typeof createClient>,
   userId: string,
   searchIntent: string,
   planetInfluence: string,
-): Promise<{ injected: number; reason?: string }> {
-  const key =
-    Deno.env.get('YOUTUBE_API_KEY') ||
-    Deno.env.get('GOOGLE_API_KEY') ||
-    Deno.env.get('GOOGLE_AI_STUDIO_KEY');
-  if (!key) return { injected: 0, reason: 'missing_youtube_key' };
+): Promise<FeedResult> {
+  const { key, source } = youtubeKey();
+  if (!key) return { injected: 0, reason: 'missing_youtube_key', retryable: false, keySource: source };
   const term = (searchIntent || '').trim();
-  if (term.length < 2) return { injected: 0, reason: 'query_too_short' };
+  if (term.length < 2) return { injected: 0, reason: 'query_too_short', retryable: false, keySource: source };
 
   try {
     const endpoint =
@@ -73,11 +121,15 @@ async function injectYouTube(
       `&q=${encodeURIComponent(term)}&type=video&key=${key}`;
     const res = await fetch(endpoint);
     if (!res.ok) {
-      return { injected: 0, reason: `youtube_${res.status}` };
+      const body = await res.json().catch(() => ({}));
+      const reason = String(body?.error?.errors?.[0]?.reason ?? `youtube_${res.status}`);
+      const rateLimited = res.status === 429 || (res.status === 403 && /quota|rateLimit|dailyLimit/i.test(reason));
+      console.error(JSON.stringify({ fn: 'zoe-dhf-brain', stage: 'youtube', status: res.status, reason, keySource: source }));
+      return { injected: 0, reason: rateLimited ? `quota_${reason}` : `youtube_${res.status}`, retryable: rateLimited || res.status >= 500, keySource: source, status: res.status };
     }
     const data = await res.json();
     const items: any[] = Array.isArray(data?.items) ? data.items : [];
-    if (!items.length) return { injected: 0, reason: 'no_results' };
+    if (!items.length) return { injected: 0, reason: 'no_results', retryable: false, keySource: source };
 
     const rows = items
       .filter((i) => i?.id?.videoId)
@@ -94,17 +146,21 @@ async function injectYouTube(
         relevance_score: Number((1 - index * 0.1).toFixed(2)),
         is_viewed: false,
       }));
-    if (!rows.length) return { injected: 0, reason: 'no_video_ids' };
+    if (!rows.length) return { injected: 0, reason: 'no_video_ids', retryable: false, keySource: source };
 
     const { error } = await admin
       .from('mmora_feed_items')
       .upsert(rows, { onConflict: 'user_id,video_id', ignoreDuplicates: true });
-    if (error) return { injected: 0, reason: `db_${error.code || 'error'}` };
-    return { injected: rows.length };
+    if (error) {
+      console.error(JSON.stringify({ fn: 'zoe-dhf-brain', stage: 'feed_upsert', code: error.code, message: error.message }));
+      return { injected: 0, reason: `db_${error.code || 'error'}`, retryable: true, keySource: source };
+    }
+    return { injected: rows.length, keySource: source };
   } catch (e) {
-    return { injected: 0, reason: `exception_${(e as Error)?.message?.slice(0, 60)}` };
+    return { injected: 0, reason: `exception_${(e as Error)?.message?.slice(0, 60)}`, retryable: true, keySource: source };
   }
 }
+
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
