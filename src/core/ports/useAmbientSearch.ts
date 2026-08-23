@@ -76,12 +76,34 @@ export const useAmbientSearch = () => {
       console.info('[zoe-ambient-search:req]', { requestId, query: term });
 
       try {
+        // DHF consciousness ingestion — vector memory + personalised feed
+        // injection. Fire-and-forget: never blocks or fails the search turn.
+        void supabase.functions
+          .invoke('zoe-dhf-brain', {
+            body: {
+              query: term,
+              contextType: 'search',
+              timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            },
+          })
+          .then(({ data, error: brainError }) => {
+            if (brainError) {
+              console.warn('[zoe-dhf-brain] ingestion failed:', brainError.message);
+              return;
+            }
+            if (data?.feed?.injected) {
+              window.dispatchEvent(new CustomEvent('mmora:dhf-feed-updated', { detail: data.feed }));
+            }
+          })
+          .catch((e) => console.warn('[zoe-dhf-brain] ingestion threw:', e));
+
         // Drain a small durable indexing batch first. Database triggers create
         // jobs, so an interrupted upload/search is safely retried next time.
         const { error: indexerError } = await supabase.functions.invoke('zoe-search-indexer', {
           body: { limit: 5 },
         });
         if (indexerError) console.warn('[zoe-search-indexer] background batch failed:', indexerError.message);
+
 
         const { data, error: fnError } = await supabase.functions.invoke('zoe-ambient-search', {
           body: { queryText: term, dhfContext: dhfContext || {}, requestId },
