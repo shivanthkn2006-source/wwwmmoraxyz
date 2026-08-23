@@ -1,5 +1,5 @@
 import React from 'react';
-import { Camera, Search, X } from 'lucide-react';
+import { Camera, ListVideo, Search, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -93,6 +93,20 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
     thumbnail?: string;
   }>>([]);
   const [externalLoading, setExternalLoading] = React.useState(false);
+
+  // Show a simple feed icon below the camera only when search videos are injected,
+  // so the user can exit back to their own feed without an overlapping header button.
+  const [hasSearchVideos, setHasSearchVideos] = React.useState(false);
+  React.useEffect(() => {
+    const onInject = () => setHasSearchVideos(true);
+    const onExit = () => setHasSearchVideos(false);
+    window.addEventListener('mmora:feed-external-videos', onInject);
+    window.addEventListener('mmora:exit-search-videos', onExit);
+    return () => {
+      window.removeEventListener('mmora:feed-external-videos', onInject);
+      window.removeEventListener('mmora:exit-search-videos', onExit);
+    };
+  }, []);
 
   React.useEffect(() => {
     const term = query.trim();
@@ -238,6 +252,16 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
         onActivate={onOpenEditor}
       >
         <Camera className="h-5 w-5" />
+      </DraggableHomeControl>
+
+      <DraggableHomeControl
+        storageKey="mmora.home.feed-position.v3"
+        defaultPosition={{ x: 8, y: 168 }}
+        ariaLabel="Back to my feed"
+        onActivate={() => window.dispatchEvent(new CustomEvent('mmora:exit-search-videos'))}
+        className={hasSearchVideos ? 'opacity-100' : 'pointer-events-none opacity-0'}
+      >
+        <ListVideo className="h-5 w-5" />
       </DraggableHomeControl>
 
       <div

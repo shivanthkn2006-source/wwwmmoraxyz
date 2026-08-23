@@ -178,6 +178,13 @@ const HomePage = () => {
     return () => window.removeEventListener('mmora:feed-external-videos', onInject);
   }, []);
 
+  // Listen for the floating feed icon to exit search videos back to the user's feed.
+  useEffect(() => {
+    const onExit = () => exitSearchVideos();
+    window.addEventListener('mmora:exit-search-videos', onExit);
+    return () => window.removeEventListener('mmora:exit-search-videos', onExit);
+  }, [exitSearchVideos]);
+
   const searchVideoSlides = React.useMemo(
     () =>
       searchVideos.map((video, index) => (
@@ -193,7 +200,6 @@ const HomePage = () => {
             active={visibleVideoKey === null ? video.id === activeSearchVideoId : visibleVideoKey === video.id}
             saved={savedVideoIds.has(video.id)}
             onToggleSave={() => toggleSavedVideo(video)}
-            onExit={exitSearchVideos}
             onDismiss={() => setSearchVideos((prev) => prev.filter((entry) => entry.id !== video.id))}
           />
         </div>

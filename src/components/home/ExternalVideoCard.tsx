@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { X, Bookmark, BookmarkCheck, ArrowLeft } from 'lucide-react';
+import { X, Bookmark, BookmarkCheck } from 'lucide-react';
 
 export interface ExternalVideoItem {
   id: string;
@@ -31,8 +31,6 @@ interface Props {
   /** True only for the slide currently on screen — every other slide is paused. */
   active?: boolean;
   onDismiss?: () => void;
-  /** Leaves the search results and returns to the user's own feed. */
-  onExit?: () => void;
   onToggleSave?: () => void;
   saved?: boolean;
 }
@@ -48,7 +46,6 @@ export default function ExternalVideoCard({
   autoPlay = false,
   active,
   onDismiss,
-  onExit,
   onToggleSave,
   saved = false,
 }: Props) {
@@ -109,17 +106,6 @@ export default function ExternalVideoCard({
       </div>
 
       <div className="absolute left-3 top-3 z-10 flex items-center gap-2">
-        {onExit && (
-          <button
-            type="button"
-            onClick={onExit}
-            aria-label="Back to my feed"
-            className="flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1.5 text-[11px] font-medium text-white backdrop-blur hover:bg-black/80"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            My feed
-          </button>
-        )}
         {onDismiss && (
           <button
             type="button"
