@@ -1939,7 +1939,7 @@ const HomePage = () => {
         mediaType: post.media_type,
         errorMessage: msg,
       });
-      toast({ title: 'Poster failed', description: msg, variant: 'destructive' });
+      toast({ title: 'Poster failed', description: msg, variant: 'destructive' }););
     }
   }, [loopPosts, logFeedIssue, user]);
 
