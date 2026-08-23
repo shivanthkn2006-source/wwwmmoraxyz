@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getDailyArchetype, dayLordPromptLine } from '../_shared/day-lord.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -193,6 +194,8 @@ serve(async (req) => {
       ? personality.endearments[Math.floor(Math.random() * personality.endearments.length)]
       : '';
 
+    const dayLord = getDailyArchetype(new Date(), platformContext?.timezone);
+
     const systemPrompt = `You are Zoe – ${userName}'s ${relationshipType.replace('_', ' ')}.
 
 ═══ CORE IDENTITY ═══
@@ -200,6 +203,7 @@ ${personality.core}
 
 ═══ CURRENT CONTEXT ═══
 Time: ${currentTime}
+${dayLordPromptLine(dayLord)}
 ${userProfile?.city ? `Their city: ${userProfile.city}` : ''}
 ${userProfile?.profession ? `Profession: ${userProfile.profession}` : ''}
 ${userProfile?.hobbies?.length ? `Interests: ${userProfile.hobbies.join(', ')}` : ''}
