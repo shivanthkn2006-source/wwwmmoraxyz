@@ -9,9 +9,11 @@ import { test, expect, Page } from '@playwright/test';
  */
 
 const BREAKPOINTS = [
-  { name: 'laptop-1280', width: 1280, height: 800 },
-  { name: 'desktop-1440', width: 1440, height: 900 },
-  { name: 'wide-1920', width: 1920, height: 1080 },
+  { name: 'mobile-portrait-360', width: 360, height: 800, mobile: true },
+  { name: 'mobile-portrait-390', width: 390, height: 844, mobile: true },
+  { name: 'laptop-1280', width: 1280, height: 800, mobile: false },
+  { name: 'desktop-1440', width: 1440, height: 900, mobile: false },
+  { name: 'wide-1920', width: 1920, height: 1080, mobile: false },
 ];
 
 type Errors = string[];
