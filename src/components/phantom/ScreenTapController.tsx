@@ -33,6 +33,7 @@ const ScreenTapController: React.FC<ScreenTapControllerProps> = ({
 
   const isVisible = usePhantomVisible();
   const show = usePhantomStore(state => state.show);
+  const hide = usePhantomStore(state => state.hide);
   
   // Refs for tap/click detection
   const lastInteractionRef = useRef<number>(0);
