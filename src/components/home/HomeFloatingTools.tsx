@@ -107,6 +107,8 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
       window.removeEventListener('mmora:exit-search-videos', onExit);
     };
   }, []);
+
+  React.useEffect(() => {
     const term = query.trim();
     if (!searchOpen || term.length < 3) {
       setExternalResults([]);
