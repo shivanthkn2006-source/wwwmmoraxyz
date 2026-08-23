@@ -94,7 +94,19 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
   }>>([]);
   const [externalLoading, setExternalLoading] = React.useState(false);
 
+  // Show a simple feed icon below the camera only when search videos are injected,
+  // so the user can exit back to their own feed without an overlapping header button.
+  const [hasSearchVideos, setHasSearchVideos] = React.useState(false);
   React.useEffect(() => {
+    const onInject = () => setHasSearchVideos(true);
+    const onExit = () => setHasSearchVideos(false);
+    window.addEventListener('mmora:feed-external-videos', onInject);
+    window.addEventListener('mmora:exit-search-videos', onExit);
+    return () => {
+      window.removeEventListener('mmora:feed-external-videos', onInject);
+      window.removeEventListener('mmora:exit-search-videos', onExit);
+    };
+  }, []);
     const term = query.trim();
     if (!searchOpen || term.length < 3) {
       setExternalResults([]);
