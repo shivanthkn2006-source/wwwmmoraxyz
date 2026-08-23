@@ -2009,6 +2009,8 @@ const HomePage = () => {
                       </div>
                     );
                   })}
+                  {neuralVideoSlides}
+
                   </div>
                 )}
             </TabsContent>
