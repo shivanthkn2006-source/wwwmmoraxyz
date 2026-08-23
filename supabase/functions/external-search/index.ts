@@ -7,7 +7,7 @@ const corsHeaders = {
 
 type ExternalResult = {
   id: string;
-  kind: 'web' | 'music' | 'weather';
+  kind: 'web' | 'music' | 'weather' | 'video';
   title: string;
   subtitle?: string;
   url?: string;
@@ -64,6 +64,39 @@ const musicSearch = async (query: string): Promise<ExternalResult[]> => {
     url: track.trackViewUrl,
     thumbnail: track.artworkUrl100,
   }));
+};
+
+/**
+ * YouTube video results. Uses YOUTUBE_API_KEY when present, otherwise the
+ * shared GOOGLE_API_KEY. Keyless = silent no-op so search never breaks.
+ */
+const videoSearch = async (query: string): Promise<ExternalResult[]> => {
+  const key =
+    Deno.env.get('YOUTUBE_API_KEY') ||
+    Deno.env.get('GOOGLE_API_KEY') ||
+    Deno.env.get('GOOGLE_AI_STUDIO_KEY');
+  if (!key) {
+    console.warn('[external-search] video search skipped: no youtube key');
+    return [];
+  }
+  const term = query.replace(/\b(video|videos|watch|youtube)\b/gi, ' ').trim() || query;
+  const data = await safeJson(
+    `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&safeSearch=moderate&maxResults=5` +
+      `&q=${encodeURIComponent(term)}&key=${key}`,
+  );
+  const items: any[] = Array.isArray(data?.items) ? data.items : [];
+  if (!items.length) console.warn('[external-search] video search returned no items');
+  return items
+    .filter((item) => item?.id?.videoId)
+    .map((item) => ({
+      id: `video-${item.id.videoId}`,
+      kind: 'video' as const,
+      title: String(item.snippet?.title ?? 'Video'),
+      subtitle: String(item.snippet?.channelTitle ?? 'YouTube'),
+      url: `https://www.youtube.com/watch?v=${item.id.videoId}`,
+      thumbnail:
+        item.snippet?.thumbnails?.medium?.url || item.snippet?.thumbnails?.default?.url || undefined,
+    }));
 };
 
 const webSearch = async (query: string): Promise<ExternalResult[]> => {
@@ -130,12 +163,13 @@ Deno.serve(async (req) => {
     const tasks: Promise<ExternalResult[]>[] = [];
     if (wantsWeather) tasks.push(weatherSearch(term));
     if (wantsMusic || !wantsWeather) tasks.push(musicSearch(term));
+    if (!wantsWeather) tasks.push(videoSearch(term));
     tasks.push(webSearch(term));
 
     const settled = await Promise.allSettled(tasks);
     const results = settled.flatMap((entry) => (entry.status === 'fulfilled' ? entry.value : []));
 
-    return new Response(JSON.stringify({ results: results.slice(0, 10) }), {
+    return new Response(JSON.stringify({ results: results.slice(0, 14) }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {

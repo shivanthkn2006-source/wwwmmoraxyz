@@ -123,6 +123,17 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
   }, [query, searchOpen]);
 
 
+  const externalVideos = React.useMemo(
+    () => externalResults.filter((item) => item.kind === 'video'),
+    [externalResults],
+  );
+  // The internet block follows the active chip: everything on All, YouTube on Videos.
+  const externalVisible = React.useMemo(() => {
+    if (filter === 'all') return externalResults;
+    if (filter === 'videos') return externalVideos;
+    return [];
+  }, [filter, externalResults, externalVideos]);
+
   // Global keyboard: Escape closes the sideways bar from anywhere.
   React.useEffect(() => {
     if (!searchOpen) return;
@@ -383,13 +394,13 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
             </button>
           ))}
 
-          {(externalLoading || externalResults.length > 0) && (
+          {(externalLoading || externalVisible.length > 0) && (
             <div className="mt-1 border-t border-border/50 pt-1">
               <p className="px-3 py-1 text-[10px] uppercase tracking-wide text-muted-foreground">From the internet</p>
-              {externalLoading && externalResults.length === 0 && (
+              {externalLoading && externalVisible.length === 0 && (
                 <p role="status" className="px-3 py-1.5 text-xs text-muted-foreground">Searching the web…</p>
               )}
-              {externalResults.map((item) => (
+              {externalVisible.map((item) => (
                 <button
                   key={`ext-${item.id}`}
                   type="button"
