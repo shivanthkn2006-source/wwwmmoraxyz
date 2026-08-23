@@ -61,6 +61,19 @@ export default class LiveViewBoundary extends React.Component<Props, State> {
     }
   }
 
+  private onKeyDown = (event: KeyboardEvent) => {
+    // The fallback replaces Live's own Escape handler — keep the exit reachable.
+    if (event.key === 'Escape' && this.state.hasError) this.props.onClose();
+  };
+
+  componentDidMount() {
+    window.addEventListener('keydown', this.onKeyDown);
+  }
+
+  componentWillUnmount() {
+    window.removeEventListener('keydown', this.onKeyDown);
+  }
+
   private retry = () => {
     this.setState((prev) => ({ hasError: false, message: '', attempt: prev.attempt + 1 }));
   };
