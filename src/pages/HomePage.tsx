@@ -157,6 +157,57 @@ const HomePage = () => {
     [searchVideos, activeSearchVideoId],
   );
 
+  // DHF-curated YouTube videos rendered inline in the home feed (same shorts
+  // frame as loops/posts) instead of living only inside the neural-feed sheet.
+  const [neuralVideos, setNeuralVideos] = useState<ExternalVideoItem[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      const { data } = await supabase
+        .from('mmora_feed_items')
+        .select('id, video_id, title, channel_title, thumbnail_url')
+        .order('created_at', { ascending: false })
+        .limit(12);
+      if (cancelled) return;
+      setNeuralVideos(
+        ((data as any[]) ?? [])
+          .filter((row) => row?.video_id)
+          .map((row) => ({
+            id: `dhf-${row.id}`,
+            title: String(row.title ?? 'Video'),
+            subtitle: String(row.channel_title ?? 'YouTube'),
+            url: `https://www.youtube.com/watch?v=${row.video_id}`,
+            thumbnail: row.thumbnail_url ?? undefined,
+          })),
+      );
+    };
+    void load();
+    const onUpdate = () => void load();
+    window.addEventListener('mmora:dhf-feed-updated', onUpdate);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('mmora:dhf-feed-updated', onUpdate);
+    };
+  }, []);
+
+  const neuralVideoSlides = React.useMemo(
+    () =>
+      neuralVideos.map((video) => (
+        <div
+          key={`neural-video-${video.id}`}
+          data-neural-video-slide="true"
+          className="relative h-full min-h-full w-full shrink-0 snap-start snap-always overflow-hidden"
+        >
+          <ExternalVideoCard
+            item={video}
+            onDismiss={() => setNeuralVideos((prev) => prev.filter((entry) => entry.id !== video.id))}
+          />
+        </div>
+      )),
+    [neuralVideos],
+  );
+
+
   const [userProfile, setUserProfile] = useState<any>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [isProfileSheetOpen, setIsProfileSheetOpen] = useState(false);
@@ -1933,7 +1984,7 @@ const HomePage = () => {
                 
                 {loading ? (
                   <p className="absolute inset-0 flex items-center justify-center px-3 text-center text-muted-foreground">Loading posts...</p>
-                ) : globalPosts.length === 0 && !astroDaily && searchVideos.length === 0 ? (
+                ) : globalPosts.length === 0 && !astroDaily && searchVideos.length === 0 && neuralVideos.length === 0 ? (
 
                   <p className="absolute inset-0 flex items-center justify-center px-3 text-center text-muted-foreground">No posts yet</p>
                 ) : (
@@ -1958,6 +2009,8 @@ const HomePage = () => {
                       </div>
                     );
                   })}
+                  {neuralVideoSlides}
+
                   </div>
                 )}
             </TabsContent>
@@ -1975,7 +2028,7 @@ const HomePage = () => {
                 )}
                 {loading ? (
                   <p className="absolute inset-0 flex items-center justify-center px-3 text-center text-muted-foreground">Loading posts...</p>
-                ) : personalPosts.length === 0 && !astroDaily && searchVideos.length === 0 ? (
+                ) : personalPosts.length === 0 && !astroDaily && searchVideos.length === 0 && neuralVideos.length === 0 ? (
                   <p className="absolute inset-0 flex items-center justify-center px-3 text-center text-muted-foreground">No posts from friends yet</p>
                 ) : (
                   <div className="absolute inset-0 h-full w-full snap-y snap-mandatory overflow-y-auto overscroll-contain" data-testid="personal-posts-snap-feed">
@@ -1999,6 +2052,8 @@ const HomePage = () => {
                       </div>
                     );
                   })}
+                  {neuralVideoSlides}
+
                   </div>
                 )}
               </div>

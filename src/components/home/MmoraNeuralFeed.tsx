@@ -20,7 +20,7 @@ interface FeedVideoItem {
 }
 
 const FEED_REASON_COPY: Record<string, string> = {
-  missing_youtube_key: 'YouTube API key is not configured on the server.',
+  missing_youtube_key: 'Video service is not available right now.',
   no_results: 'YouTube returned no matching videos for this alignment.',
   query_too_short: 'Search intent was too short to curate a feed.',
   skipped: 'Feed injection was skipped for this run.',
@@ -30,7 +30,7 @@ function describeFeedReason(reason?: string): string | null {
   if (!reason) return null;
   if (FEED_REASON_COPY[reason]) return FEED_REASON_COPY[reason];
   if (reason.startsWith('quota_')) return 'YouTube quota or rate limit reached — try again later.';
-  if (reason.startsWith('youtube_')) return `YouTube API error (${reason.replace('youtube_', 'HTTP ')}).`;
+  if (reason.startsWith('youtube_')) return 'Video service error — please retry in a moment.';
   if (reason.startsWith('db_')) return 'Feed could not be saved to the database.';
   return `Feed injection issue: ${reason}`;
 }
@@ -130,11 +130,12 @@ export const MmoraNeuralFeed: React.FC = () => {
           <p>Day lord: {telemetry.rulingPlanet} · {telemetry.archetype}</p>
           <p>Focus: {telemetry.dailyFocus}</p>
           <p>
-            YouTube key:{' '}
+            Video service:{' '}
             {youtube
-              ? `${youtube.keySource} · ${youtube.configured ? 'configured' : 'missing'} · quota ${youtube.quota}${youtube.reason ? ` · ${youtube.reason}` : ''}`
-              : 'probing…'}
+              ? `${youtube.configured ? 'connected' : 'unavailable'} · ${youtube.quota === 'exceeded' ? 'rate limited' : 'healthy'}`
+              : 'checking…'}
           </p>
+
           <p>
             Last ingestion:{' '}
             {lastResult
