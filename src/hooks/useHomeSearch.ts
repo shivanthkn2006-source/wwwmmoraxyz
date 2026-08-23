@@ -10,7 +10,13 @@ export type MatchSignal = 'text' | 'caption' | 'ocr' | 'visual' | 'author';
 
 export interface HomeSearchResult {
   type: 'user' | 'post' | 'feature' | 'index';
+  /** Primary bucket. */
   filter: SearchFilter;
+  /**
+   * Every chip this result belongs to. A loop is both a Loop and a Video, so
+   * the Videos chip is never structurally empty when video media matched.
+   */
+  facets?: SearchFilter[];
   signals: MatchSignal[];
   id: string;
   title: string;
@@ -155,14 +161,17 @@ export function useHomeSearch(query: string, enabled = true) {
               ? row.metadata.mediaUrl
               : undefined;
           const mediaType = typeof row.metadata?.mediaType === 'string' ? row.metadata.mediaType : '';
+          const isVideo = mediaType === 'video' || row.entity_type === 'loop_video';
           const filter: SearchFilter = row.entity_type === 'loop_video'
             ? 'loops'
-            : mediaType === 'video'
+            : isVideo
               ? 'videos'
               : ENTITY_FILTER[row.entity_type] || 'other';
+          const facets: SearchFilter[] = Array.from(new Set<SearchFilter>([filter, ...(isVideo ? ['videos' as SearchFilter] : [])]));
           next.push({
             type: 'index',
             filter,
+            facets,
             signals: explainMatch(safe, row.content_synthesis || '', row.entity_type),
             id: row.id,
             title: body.slice(0, 90) || ENTITY_LABEL[row.entity_type] || row.entity_type,
@@ -225,7 +234,7 @@ export function useHomeSearch(query: string, enabled = true) {
   // Per-type coverage so the filter chips can show how many hits each type has.
   const counts = results.reduce<Record<SearchFilter, number>>((acc, item) => {
     acc.all += 1;
-    acc[item.filter] += 1;
+    for (const facet of item.facets?.length ? item.facets : [item.filter]) acc[facet] += 1;
     return acc;
   }, { all: 0, profiles: 0, chats: 0, images: 0, loops: 0, videos: 0, other: 0 });
 

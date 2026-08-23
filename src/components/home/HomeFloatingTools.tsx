@@ -39,7 +39,10 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
   const { results: allResults, loading, error, counts } = useHomeSearch(query, searchOpen);
   const [filter, setFilter] = React.useState<SearchFilter>('all');
   const results = React.useMemo(
-    () => (filter === 'all' ? allResults : allResults.filter((item) => item.filter === filter)),
+    () =>
+      filter === 'all'
+        ? allResults
+        : allResults.filter((item) => (item.facets?.length ? item.facets : [item.filter]).includes(filter)),
     [allResults, filter],
   );
   // Startup guard: warns and self-heals when the universal index is empty/stale.
@@ -83,7 +86,7 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
   // Outside-the-platform results (web, music, weather) via the external-search function.
   const [externalResults, setExternalResults] = React.useState<Array<{
     id: string;
-    kind: 'web' | 'music' | 'weather';
+    kind: 'web' | 'music' | 'weather' | 'video';
     title: string;
     subtitle?: string;
     url?: string;
@@ -119,6 +122,17 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
     };
   }, [query, searchOpen]);
 
+
+  const externalVideos = React.useMemo(
+    () => externalResults.filter((item) => item.kind === 'video'),
+    [externalResults],
+  );
+  // The internet block follows the active chip: everything on All, YouTube on Videos.
+  const externalVisible = React.useMemo(() => {
+    if (filter === 'all') return externalResults;
+    if (filter === 'videos') return externalVideos;
+    return [];
+  }, [filter, externalResults, externalVideos]);
 
   // Global keyboard: Escape closes the sideways bar from anywhere.
   React.useEffect(() => {
@@ -310,7 +324,7 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
                       : 'border-border/60 text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  {chip.label} {counts[chip.id]}
+                  {chip.label} {chip.id === 'videos' ? counts.videos + externalVideos.length : counts[chip.id]}
                 </button>
               ))}
             </div>
@@ -380,13 +394,13 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor }
             </button>
           ))}
 
-          {(externalLoading || externalResults.length > 0) && (
+          {(externalLoading || externalVisible.length > 0) && (
             <div className="mt-1 border-t border-border/50 pt-1">
               <p className="px-3 py-1 text-[10px] uppercase tracking-wide text-muted-foreground">From the internet</p>
-              {externalLoading && externalResults.length === 0 && (
+              {externalLoading && externalVisible.length === 0 && (
                 <p role="status" className="px-3 py-1.5 text-xs text-muted-foreground">Searching the web…</p>
               )}
-              {externalResults.map((item) => (
+              {externalVisible.map((item) => (
                 <button
                   key={`ext-${item.id}`}
                   type="button"
