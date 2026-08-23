@@ -41,7 +41,7 @@ describe('MmoraNeuralFeed', () => {
     });
 
     render(<MmoraNeuralFeed />);
-    await waitFor(() => expect(screen.getByText(/Refresh Neural Feed/i)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('button', { name: /refresh neural feed/i })).toBeInTheDocument());
 
     feedRows.push({
       id: '1',
@@ -54,7 +54,7 @@ describe('MmoraNeuralFeed', () => {
       is_viewed: false,
     });
 
-    fireEvent.click(screen.getByText(/Refresh Neural Feed/i));
+    fireEvent.click(screen.getByRole('button', { name: /refresh neural feed/i }));
     await waitFor(() => expect(screen.getByText('Solar focus')).toBeInTheDocument());
     expect(invokeMock).toHaveBeenCalledWith('zoe-dhf-brain', expect.anything());
   });
@@ -72,8 +72,8 @@ describe('MmoraNeuralFeed', () => {
     });
 
     render(<MmoraNeuralFeed />);
-    await waitFor(() => expect(screen.getByText(/Refresh Neural Feed/i)).toBeInTheDocument());
-    fireEvent.click(screen.getByText(/Refresh Neural Feed/i));
+    await waitFor(() => expect(screen.getByRole('button', { name: /refresh neural feed/i })).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: /refresh neural feed/i }));
 
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent(/quota or rate limit/i);
@@ -85,8 +85,8 @@ describe('MmoraNeuralFeed', () => {
   it('surfaces a recoverable error when the brain function fails', async () => {
     invokeMock.mockResolvedValue({ data: null, error: { message: 'edge_function_failed' } });
     render(<MmoraNeuralFeed />);
-    await waitFor(() => expect(screen.getByText(/Refresh Neural Feed/i)).toBeInTheDocument());
-    fireEvent.click(screen.getByText(/Refresh Neural Feed/i));
+    await waitFor(() => expect(screen.getByRole('button', { name: /refresh neural feed/i })).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: /refresh neural feed/i }));
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /reload cached feed/i })).toBeInTheDocument();
   });
