@@ -121,6 +121,11 @@ const HomePage = () => {
   const [activeSearchVideoId, setActiveSearchVideoId] = useState<string | null>(null);
   // Key of the slide currently on screen — only that iframe is allowed to play.
   const [visibleVideoKey, setVisibleVideoKey] = useState<string | null>(null);
+  const visibleVideoKeyRef = useRef<string | null>(null);
+  useEffect(() => {
+    visibleVideoKeyRef.current = visibleVideoKey;
+  }, [visibleVideoKey]);
+
   const [savedVideoIds, setSavedVideoIds] = useState<Set<string>>(() => {
     try {
       return new Set(JSON.parse(localStorage.getItem('mmora:saved-videos') ?? '[]'));
