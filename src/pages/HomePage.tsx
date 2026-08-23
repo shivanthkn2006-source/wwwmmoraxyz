@@ -2001,7 +2001,42 @@ const HomePage = () => {
     } catch (err: any) {
       logFeedIssue({ step: 'loops:single-retry', postId, errorMessage: err?.message || String(err) });
     }
-  }, [logFeedIssue, user]);
+
+  // Loops rail restored as full-height shorts slides inside the main feed so
+  // exiting search videos always lands back on loops + posts.
+  const loopSlides = React.useMemo(
+    () =>
+      filteredLoops.map((post, index) => (
+        <div
+          key={`loop-${post.id}`}
+          data-loop-index={index}
+          data-loop-slide="true"
+          className="relative h-full min-h-full w-full shrink-0 snap-start snap-always overflow-hidden"
+        >
+          <FeedErrorBoundary section="loops" postId={post.id} onRetry={() => retrySingleLoop(post.id)}>
+            <LoopVideoItem
+              post={post}
+              index={index}
+              active={index === activeLoopRailIndex % Math.max(filteredLoops.length, 1)}
+              onDuration={(postId, duration) =>
+                setLoopDurations(prev => (prev[postId] === duration ? prev : { ...prev, [postId]: duration }))
+              }
+              onVideoClick={openLoopsPlayer}
+              className="relative h-full w-full overflow-hidden bg-muted focus:outline-none group"
+              onDecodeStatus={handleLoopDecodeStatus}
+              onRegeneratePoster={regenerateLoopPoster}
+              canRegeneratePoster={isAdminUser || user?.id === post.user_id}
+              onPreviewError={(postId) => {
+                setBrokenLoopPreviewIds(prev => new Set(prev).add(postId));
+              }}
+            />
+          </FeedErrorBoundary>
+        </div>
+      )),
+    [filteredLoops, activeLoopRailIndex, handleLoopDecodeStatus, regenerateLoopPoster, retrySingleLoop, isAdminUser, user?.id],
+  );
+
+
 
 
 
@@ -2109,13 +2144,15 @@ const HomePage = () => {
                 
                 {loading ? (
                   <p className="absolute inset-0 flex items-center justify-center px-3 text-center text-muted-foreground">Loading posts...</p>
-                ) : globalPosts.length === 0 && !astroDaily && searchVideos.length === 0 && neuralVideos.length === 0 ? (
+                ) : globalPosts.length === 0 && !astroDaily && searchVideos.length === 0 && neuralVideos.length === 0 && loopSlides.length === 0 ? (
 
                   <p className="absolute inset-0 flex items-center justify-center px-3 text-center text-muted-foreground">No posts yet</p>
                 ) : (
-                  <div className="absolute inset-0 h-full w-full snap-y snap-mandatory overflow-y-auto overscroll-contain" data-testid="global-posts-snap-feed" data-feed-scroll>
+                  <div ref={loopRailRef} className="absolute inset-0 h-full w-full snap-y snap-mandatory overflow-y-auto overscroll-contain" data-testid="global-posts-snap-feed" data-feed-scroll>
                   {searchVideoSlides}
+                  {!loopsHidden && loopSlides}
                   {astroDaily && (
+
 
                     <div className="relative flex h-full min-h-full w-full shrink-0 snap-start snap-always items-center overflow-y-auto p-4" data-astro-daily>
                       <MoraZoeDailyCard prediction={astroDaily} className="w-full" />
@@ -2153,11 +2190,13 @@ const HomePage = () => {
                 )}
                 {loading ? (
                   <p className="absolute inset-0 flex items-center justify-center px-3 text-center text-muted-foreground">Loading posts...</p>
-                ) : personalPosts.length === 0 && !astroDaily && searchVideos.length === 0 && neuralVideos.length === 0 ? (
+                ) : personalPosts.length === 0 && !astroDaily && searchVideos.length === 0 && neuralVideos.length === 0 && loopSlides.length === 0 ? (
                   <p className="absolute inset-0 flex items-center justify-center px-3 text-center text-muted-foreground">No posts from friends yet</p>
                 ) : (
                   <div className="absolute inset-0 h-full w-full snap-y snap-mandatory overflow-y-auto overscroll-contain" data-testid="personal-posts-snap-feed" data-feed-scroll>
                   {searchVideoSlides}
+                  {!loopsHidden && loopSlides}
+
                   {astroDaily && (
 
                     <div className="relative flex h-full min-h-full w-full shrink-0 snap-start snap-always items-center overflow-y-auto p-4" data-astro-daily>
