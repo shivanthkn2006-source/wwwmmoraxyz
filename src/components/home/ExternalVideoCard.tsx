@@ -86,7 +86,7 @@ export default function ExternalVideoCard({
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             allowFullScreen
             referrerPolicy="strict-origin-when-cross-origin"
-            className="aspect-[9/16] h-full max-h-full w-auto max-w-full border-0"
+            className="aspect-[9/16] h-auto max-h-full w-full max-w-full shrink-0 border-0"
           />
         ) : (
           <div className="px-6 text-center text-sm text-muted-foreground">
