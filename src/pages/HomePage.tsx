@@ -1554,25 +1554,36 @@ const HomePage = () => {
   useEffect(() => {
     if (!user?.id) return;
 
-    const poll = () => {
+    // `visibilitychange` + `online` + `focus` all fire together when a user
+    // returns to the tab, which used to trigger three identical poll bursts.
+    // Guard with a min-interval so we do exactly one, and never poll while the
+    // tab is hidden (we poll immediately on return instead).
+    let lastPollAt = 0;
+    const MIN_POLL_GAP_MS = 5_000;
+
+    const poll = (force = false) => {
+      if (document.visibilityState === 'hidden') return;
+      const now = Date.now();
+      if (!force && now - lastPollAt < MIN_POLL_GAP_MS) return;
+      lastPollAt = now;
       void fetchUnreadCount();
       void fetchUnreadMessages();
       void refreshDockBadges();
     };
 
-    const interval = window.setInterval(poll, 30_000);
-    const onVisible = () => {
-      if (document.visibilityState === 'visible') poll();
-    };
-    document.addEventListener('visibilitychange', onVisible);
-    window.addEventListener('online', poll);
-    window.addEventListener('focus', poll);
+    poll(true);
+
+    const interval = window.setInterval(() => poll(true), 30_000);
+    const onEvent = () => poll();
+    document.addEventListener('visibilitychange', onEvent);
+    window.addEventListener('online', onEvent);
+    window.addEventListener('focus', onEvent);
 
     return () => {
       window.clearInterval(interval);
-      document.removeEventListener('visibilitychange', onVisible);
-      window.removeEventListener('online', poll);
-      window.removeEventListener('focus', poll);
+      document.removeEventListener('visibilitychange', onEvent);
+      window.removeEventListener('online', onEvent);
+      window.removeEventListener('focus', onEvent);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, refreshDockBadges]);
@@ -1665,6 +1676,36 @@ const HomePage = () => {
     // Set up real-time subscription for notification updates (deferred)
     let channel: ReturnType<typeof supabase.channel> | null = null;
     if (user) {
+      // Coalesce bursts of post INSERTs into a single refetch, and skip work
+      // while the tab is hidden (refetch once on return). Same data, far fewer
+      // duplicate network round-trips.
+      let postsRefetchTimer: number | null = null;
+      let pendingWhileHidden = false;
+
+      const runPostsRefetch = () => {
+        postsRefetchTimer = null;
+        if (document.visibilityState === 'hidden') {
+          pendingWhileHidden = true;
+          return;
+        }
+        pendingWhileHidden = false;
+        fetchGlobalPosts('realtime');
+        fetchPersonalPosts('realtime');
+        fetchLoopPosts('realtime');
+      };
+
+      const schedulePostsRefetch = () => {
+        if (postsRefetchTimer !== null) return;
+        postsRefetchTimer = window.setTimeout(runPostsRefetch, 1500);
+      };
+
+      const onVisibleFlush = () => {
+        if (document.visibilityState === 'visible' && pendingWhileHidden) {
+          schedulePostsRefetch();
+        }
+      };
+      document.addEventListener('visibilitychange', onVisibleFlush);
+
       const setupRealtime = () => {
         channel = supabase
           .channel(`home-realtime:${user.id}:${Math.random().toString(36).slice(2, 8)}`)
@@ -1681,9 +1722,7 @@ const HomePage = () => {
             }
           )
           .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, () => {
-            fetchGlobalPosts('realtime');
-            fetchPersonalPosts('realtime');
-            fetchLoopPosts('realtime');
+            schedulePostsRefetch();
           })
           .subscribe();
       };
@@ -1694,6 +1733,8 @@ const HomePage = () => {
       return () => {
         unsubscribe();
         clearTimeout(timer);
+        if (postsRefetchTimer !== null) window.clearTimeout(postsRefetchTimer);
+        document.removeEventListener('visibilitychange', onVisibleFlush);
         if (channel) supabase.removeChannel(channel);
       };
     }
@@ -2169,17 +2210,21 @@ const HomePage = () => {
                   })}
                   {!loopsHidden && loopSlides}
                   {dailyMotivation && (
-                    <HomeMotivationSlide motivation={dailyMotivation} posterUrl={motivationPosterUrl} />
+                    <FeedErrorBoundary section="posts">
+                      <HomeMotivationSlide motivation={dailyMotivation} posterUrl={motivationPosterUrl} />
+                    </FeedErrorBoundary>
                   )}
                   {astroDaily && (
-
-
                     <div className="relative flex h-full min-h-full w-full shrink-0 snap-start snap-always items-center overflow-y-auto p-4" data-astro-daily>
-                      <MoraZoeDailyCard prediction={astroDaily} className="w-full" />
+                      <FeedErrorBoundary section="posts">
+                        <MoraZoeDailyCard prediction={astroDaily} className="w-full" />
+                      </FeedErrorBoundary>
                     </div>
                   )}
                   <div className="relative h-full min-h-full w-full shrink-0 snap-start snap-always overflow-y-auto bg-background px-4 pb-24 pt-24" data-people-recommendations>
-                    <InterestRecommendations />
+                    <FeedErrorBoundary section="posts">
+                      <InterestRecommendations />
+                    </FeedErrorBoundary>
                   </div>
                   {neuralVideoSlides}
 
@@ -2220,13 +2265,16 @@ const HomePage = () => {
                   })}
                   {!loopsHidden && loopSlides}
                   {dailyMotivation && (
-                    <HomeMotivationSlide motivation={dailyMotivation} posterUrl={motivationPosterUrl} />
+                    <FeedErrorBoundary section="posts">
+                      <HomeMotivationSlide motivation={dailyMotivation} posterUrl={motivationPosterUrl} />
+                    </FeedErrorBoundary>
                   )}
 
                   {astroDaily && (
-
                     <div className="relative flex h-full min-h-full w-full shrink-0 snap-start snap-always items-center overflow-y-auto p-4" data-astro-daily>
-                      <MoraZoeDailyCard prediction={astroDaily} className="w-full" />
+                      <FeedErrorBoundary section="posts">
+                        <MoraZoeDailyCard prediction={astroDaily} className="w-full" />
+                      </FeedErrorBoundary>
                     </div>
                   )}
                   {neuralVideoSlides}
