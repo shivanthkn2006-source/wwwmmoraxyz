@@ -1,0 +1,15 @@
+# Cloudflare Pages deployment for the M'mora / Zoe frontend.
+# Backend = your OWN Supabase project (URL + anon key come from Pages env vars).
+#
+#   bunx wrangler pages deploy dist --project-name mmora
+#
+name = "mmora"
+compatibility_date = "2026-08-24"
+pages_build_output_dir = "dist"
+
+[vars]
+# Set the real values in Cloudflare Pages > Settings > Variables (build-time),
+# NOT here. Listed for documentation only.
+# VITE_SUPABASE_URL = "https://<your-ref>.supabase.co"
+# VITE_SUPABASE_PUBLISHABLE_KEY = "<your anon key>"
+# VITE_SUPABASE_PROJECT_ID = "<your-ref>"
