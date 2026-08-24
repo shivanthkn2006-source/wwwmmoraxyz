@@ -78,6 +78,9 @@ import {
 } from '@/lib/zoeHomeCommands';
 
 const ProfileContent = React.lazy(() => import('@/components/ProfileContent'));
+// Hoisted: declaring React.lazy() inside render creates a new component type
+// every render, causing endless unmount/remount + chunk re-download.
+const AutoScrollDebugOverlay = React.lazy(() => import('@/components/dev/AutoScrollDebugOverlay'));
 
 // Atlas HUD Integration - Smith AI from Atlas movie (2024)
 // NOTE: Atlas is a SEPARATE experience from Zoe Infinity - accessed via menu only
@@ -2525,7 +2528,7 @@ const HomePage = () => {
       )}
       {import.meta.env.DEV && new URLSearchParams(window.location.search).has('home_debug') && (
         <React.Suspense fallback={null}>
-          {React.createElement(React.lazy(() => import('@/components/dev/AutoScrollDebugOverlay')))}
+          <AutoScrollDebugOverlay />
         </React.Suspense>
       )}
     </>

@@ -127,6 +127,26 @@ export const checkAppVersion = () => {
     // Clear any leftover guards from prior recovery attempts.
     sessionStorage.removeItem(RELOAD_GUARD_KEY);
     sessionStorage.removeItem(REFRESH_COOLDOWN_KEY);
+    // Reaching here means the bundle loaded fine, so any recovery attempt
+    // succeeded. Clear the one-shot guard and strip the recovery markers from
+    // the URL (history.replaceState — no navigation, no re-render) so the app
+    // can't get stuck on `?chunk_recovery=...` forever.
+    sessionStorage.removeItem(CHUNK_RECOVERY_KEY);
+    const url = new URL(window.location.href);
+    let changed = false;
+    for (const param of ['chunk_recovery', 'hard_refresh', 'preview_heal']) {
+      if (url.searchParams.has(param)) {
+        url.searchParams.delete(param);
+        changed = true;
+      }
+    }
+    if (changed) {
+      window.history.replaceState(
+        window.history.state,
+        '',
+        url.pathname + (url.search ? url.search : '') + url.hash
+      );
+    }
   } catch {
     // ignore
   }
