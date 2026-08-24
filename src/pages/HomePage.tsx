@@ -2525,7 +2525,7 @@ const HomePage = () => {
       )}
       {import.meta.env.DEV && new URLSearchParams(window.location.search).has('home_debug') && (
         <React.Suspense fallback={null}>
-          {React.createElement(React.lazy(() => import('@/components/dev/AutoScrollDebugOverlay')))}
+          <AutoScrollDebugOverlay />
         </React.Suspense>
       )}
     </>
