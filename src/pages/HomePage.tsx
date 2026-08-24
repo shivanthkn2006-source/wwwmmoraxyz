@@ -2210,17 +2210,21 @@ const HomePage = () => {
                   })}
                   {!loopsHidden && loopSlides}
                   {dailyMotivation && (
-                    <HomeMotivationSlide motivation={dailyMotivation} posterUrl={motivationPosterUrl} />
+                    <FeedErrorBoundary section="posts">
+                      <HomeMotivationSlide motivation={dailyMotivation} posterUrl={motivationPosterUrl} />
+                    </FeedErrorBoundary>
                   )}
                   {astroDaily && (
-
-
                     <div className="relative flex h-full min-h-full w-full shrink-0 snap-start snap-always items-center overflow-y-auto p-4" data-astro-daily>
-                      <MoraZoeDailyCard prediction={astroDaily} className="w-full" />
+                      <FeedErrorBoundary section="posts">
+                        <MoraZoeDailyCard prediction={astroDaily} className="w-full" />
+                      </FeedErrorBoundary>
                     </div>
                   )}
                   <div className="relative h-full min-h-full w-full shrink-0 snap-start snap-always overflow-y-auto bg-background px-4 pb-24 pt-24" data-people-recommendations>
-                    <InterestRecommendations />
+                    <FeedErrorBoundary section="posts">
+                      <InterestRecommendations />
+                    </FeedErrorBoundary>
                   </div>
                   {neuralVideoSlides}
 
