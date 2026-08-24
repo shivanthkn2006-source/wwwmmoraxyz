@@ -1554,25 +1554,36 @@ const HomePage = () => {
   useEffect(() => {
     if (!user?.id) return;
 
-    const poll = () => {
+    // `visibilitychange` + `online` + `focus` all fire together when a user
+    // returns to the tab, which used to trigger three identical poll bursts.
+    // Guard with a min-interval so we do exactly one, and never poll while the
+    // tab is hidden (we poll immediately on return instead).
+    let lastPollAt = 0;
+    const MIN_POLL_GAP_MS = 5_000;
+
+    const poll = (force = false) => {
+      if (document.visibilityState === 'hidden') return;
+      const now = Date.now();
+      if (!force && now - lastPollAt < MIN_POLL_GAP_MS) return;
+      lastPollAt = now;
       void fetchUnreadCount();
       void fetchUnreadMessages();
       void refreshDockBadges();
     };
 
-    const interval = window.setInterval(poll, 30_000);
-    const onVisible = () => {
-      if (document.visibilityState === 'visible') poll();
-    };
-    document.addEventListener('visibilitychange', onVisible);
-    window.addEventListener('online', poll);
-    window.addEventListener('focus', poll);
+    poll(true);
+
+    const interval = window.setInterval(() => poll(true), 30_000);
+    const onEvent = () => poll();
+    document.addEventListener('visibilitychange', onEvent);
+    window.addEventListener('online', onEvent);
+    window.addEventListener('focus', onEvent);
 
     return () => {
       window.clearInterval(interval);
-      document.removeEventListener('visibilitychange', onVisible);
-      window.removeEventListener('online', poll);
-      window.removeEventListener('focus', poll);
+      document.removeEventListener('visibilitychange', onEvent);
+      window.removeEventListener('online', onEvent);
+      window.removeEventListener('focus', onEvent);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, refreshDockBadges]);
