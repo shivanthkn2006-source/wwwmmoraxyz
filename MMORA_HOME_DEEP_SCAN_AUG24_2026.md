@@ -255,3 +255,42 @@ Once the registry + virtualizer exist, new features (playlists, live, shorts upl
 12. Desktop/tablet layout renderers
 
 Steps 1–4 alone should fix the load stalls on low-RAM devices without touching a single feature.
+
+---
+
+## 9. ADDENDUM — second-pass findings (deep subagent audit, verified)
+
+### 9.1 Corrections to §1/§6
+- Realtime is worse than first measured: **up to 8 concurrent Supabase Realtime channels** per Home session, not 6.
+  `home-realtime:${user.id}:${rand}` (HomePage:1663-1685) · `home-dock-badges` (useHomeDockBadges:83) · `friend-status-changes:*:smart` (useSmartNotifications:153) · `friend-badge-notifications` (useRealtimeBadgeNotifications:15) · `friend-status-changes:*:online` (useUserOnlineNotifications:35) · desktop-notifications (useDesktopNotifications:60) · `new-posts-notifier-*` (useNewPostNotifications:18) · `friend_requests_changes` (useFriendRequests:224).
+  Several listen to the **same tables** (`notifications`, `posts`, friend status).
+- **Three independent polling loops**, not one: HomePage:1554-1575 (30s) · useHomeDockBadges:98 · useSmartNotifications:179.
+- HomePage `useState` count is **27** (not 57 — earlier figure counted derived/ref declarations); `useEffect` **32**, `useMemo` **7**, `useCallback` **17**.
+- Suspense boundaries **do exist** (`React.Suspense` at 2284, 2300, 2444, 2451, 2527) — the earlier concern is withdrawn.
+- Edge functions confirmed present: `supabase/functions/zoe-dhf-brain`, `supabase/functions/zoe-motivation`, `supabase/functions/external-search`.
+- `quantum-camera`/three.js is **NOT** reachable from `HomeFloatingTools`/`HomeGlassDock`/`DraggableHomeControl` — confirmed zero imports. Home's bundle is clean of three.js.
+- There is a **third tab**: `TabsContent value="selfiecity"` (2236), in addition to `global` (2111) and `personal` (2187).
+
+### 9.2 NEW findings
+| # | Sev | Finding | Evidence |
+|---|---|---|---|
+| N1 | **HIGH** | `React.lazy()` called **inline inside render** — creates a brand-new component type on every render, forcing an unmount/remount + refetch of the chunk each time. This is a prime suspect for the live `TypeError: Importing a module script failed`. | `HomePage.tsx:2528` `React.createElement(React.lazy(() => import('@/components/dev/AutoScrollDebugOverlay')))` |
+| N2 | **HIGH** | Realtime `postgres_changes` on `posts` INSERT is **unfiltered** — fires for *every* post by *every* user platform-wide, and each event triggers **3 refetches** (`fetchGlobalPosts` + `fetchPersonalPosts` + `fetchLoopPosts`). At scale this is a self-inflicted DDoS on the feed. | `HomePage.tsx:1680` |
+| N3 | **MED** | Main feed queries use `(supabase as any)` casts, disabling type safety on the primary data path. | `HomePage.tsx:1208, 1330, 1412` |
+| N4 | **MED** | Three `window` listeners (`visibilitychange`, `online`, `focus`) all re-fire the **same** `poll()` — a tab regaining focus can trigger it twice. | `HomePage.tsx:1561-1566` |
+| N5 | **MED** | Follow-up joins (`safe_public_profiles`, `post_likes`, `post_preferences`) have **no `.limit()`** and use `.in('user_id', ids)` — they scale with feed size. | `1262-1276, 1360-1369, 1440-1450` |
+| N6 | **MED** | `FeedErrorBoundary` wraps post/loop cards (2032, 2161) but **not** the astro / motivation / recommendation slides or the tab container — those can still blank the feed. | `2168-2181` |
+| N7 | **LOW** | IntersectionObserver + per-slide 5s watch timers are rebuilt on every `searchVideos`/`neuralVideos`/`activeTab` change → observer churn on tab switching. | `305-350` |
+| N8 | **LOW** | `useZoeProactiveNotifications.ts` is a **1-line re-export**; real behaviour lives in a Core file — polling behaviour unverified. | — |
+
+### 9.3 Outer provider stack (above `App.tsx`, from `main.tsx:152-167`)
+```
+SystemFailureBoundary → HelmetProvider → LiquidUniverseProvider (3D/shader ctx)
+  → ShapeShifterProvider → AutoHealProvider → DeviceTierProvider → ZoeProvider → App
+```
+So the true always-mounted count is **7 (main.tsx) + 19 (App.tsx) = 26 providers/side-effect mounts** before HomePage renders. `LiquidUniverseProvider`, `ZoeMonitorProvider`, `GlobalMediaProvider`, `ZoeUnifiedSelfHealerProvider`, `AutoHealProvider`, `MemoryLeakPlumberGlobal`, `DHFHeartbeatPulse` all run their own effects/intervals on every route.
+
+### 9.4 Revised fix order
+0. **Fix `HomePage.tsx:2528`** — hoist that `React.lazy` to module scope (1-line change, likely kills the module-script TypeError).
+0b. **Filter the `posts` INSERT subscription** and debounce it to a single refetch instead of 3.
+Then continue with §8 steps 1→12 unchanged.
