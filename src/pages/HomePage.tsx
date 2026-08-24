@@ -1665,6 +1665,36 @@ const HomePage = () => {
     // Set up real-time subscription for notification updates (deferred)
     let channel: ReturnType<typeof supabase.channel> | null = null;
     if (user) {
+      // Coalesce bursts of post INSERTs into a single refetch, and skip work
+      // while the tab is hidden (refetch once on return). Same data, far fewer
+      // duplicate network round-trips.
+      let postsRefetchTimer: number | null = null;
+      let pendingWhileHidden = false;
+
+      const runPostsRefetch = () => {
+        postsRefetchTimer = null;
+        if (document.visibilityState === 'hidden') {
+          pendingWhileHidden = true;
+          return;
+        }
+        pendingWhileHidden = false;
+        fetchGlobalPosts('realtime');
+        fetchPersonalPosts('realtime');
+        fetchLoopPosts('realtime');
+      };
+
+      const schedulePostsRefetch = () => {
+        if (postsRefetchTimer !== null) return;
+        postsRefetchTimer = window.setTimeout(runPostsRefetch, 1500);
+      };
+
+      const onVisibleFlush = () => {
+        if (document.visibilityState === 'visible' && pendingWhileHidden) {
+          schedulePostsRefetch();
+        }
+      };
+      document.addEventListener('visibilitychange', onVisibleFlush);
+
       const setupRealtime = () => {
         channel = supabase
           .channel(`home-realtime:${user.id}:${Math.random().toString(36).slice(2, 8)}`)
@@ -1681,9 +1711,7 @@ const HomePage = () => {
             }
           )
           .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, () => {
-            fetchGlobalPosts('realtime');
-            fetchPersonalPosts('realtime');
-            fetchLoopPosts('realtime');
+            schedulePostsRefetch();
           })
           .subscribe();
       };
@@ -1694,6 +1722,8 @@ const HomePage = () => {
       return () => {
         unsubscribe();
         clearTimeout(timer);
+        if (postsRefetchTimer !== null) window.clearTimeout(postsRefetchTimer);
+        document.removeEventListener('visibilitychange', onVisibleFlush);
         if (channel) supabase.removeChannel(channel);
       };
     }
