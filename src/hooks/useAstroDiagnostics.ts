@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { AstroPredictionRecord, DiagnosticResult } from '@/components/astro/moraZoeTypes';
-import { localDateKey, currentSlot, pickSlotRow } from '@/lib/astroSlot';
+import { localDateKey, currentSlot, pickSlotRow, deviceTimeZone } from '@/lib/astroSlot';
+import { astroTrace } from '@/lib/astroLog';
+
 
 /**
  * Pre-flight RLS/grant validation + today's alignment fetch for the
@@ -39,7 +41,8 @@ export const useAstroDiagnostics = () => {
 
         // Local calendar date — using the UTC date made members east of UTC
         // (e.g. Asia/Kolkata at 05:00) read yesterday's night card at dawn.
-        const todayStr = localDateKey();
+        const tz = deviceTimeZone();
+        const todayStr = localDateKey(new Date(), tz);
         const { data: predictionData, error: predError } = await supabase
           .from('astro_predictions')
           .select('*')
@@ -53,9 +56,22 @@ export const useAstroDiagnostics = () => {
         // Pick the row for the slot the member is actually living in right now.
         let finalPrediction = pickSlotRow(
           (predictionData ?? []) as unknown as Array<AstroPredictionRecord & { slot?: string }>,
+          new Date(),
+          tz,
         ) as unknown as AstroPredictionRecord | null;
 
+        astroTrace('useAstroDiagnostics', {
+          timezone: tz,
+          target_date: todayStr,
+          computed_slot: currentSlot(new Date(), tz),
+          rows_returned: predictionData?.length ?? 0,
+          selected_slot: finalPrediction?.slot ?? null,
+          selected_row_id: finalPrediction?.id ?? null,
+          note: finalPrediction ? undefined : 'no row for local date — using client fallback',
+        });
+
         if (!finalPrediction) {
+
           finalPrediction = {
             id: 'client-fallback-align',
             user_id: session.user.id,

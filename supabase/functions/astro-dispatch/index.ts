@@ -329,6 +329,64 @@ Deno.serve(async (req) => {
     }
   }
 
+  // ── audit (read-only end-to-end check across every member) ──
+  // For each enabled member: resolve their stored timezone, their local date,
+  // the slots that should already have fired today, and compare against the
+  // rows actually written. Flags missing morning prompts explicitly.
+  if (action === 'audit') {
+    const profRes = await db(
+      'astro_profiles?is_enabled=eq.true&select=user_id,display_timezone,birth_timezone&limit=500',
+    );
+    const profiles: ProfileRow[] = Array.isArray(profRes.data) ? profRes.data : [];
+    const members: unknown[] = [];
+    let missingMorning = 0;
+    let missingAny = 0;
+
+    for (const p of profiles) {
+      const tz = p.display_timezone || p.birth_timezone || 'UTC';
+      const localDate = localDateIn(now, tz);
+      const { hour, minute } = localHourMinute(now, tz);
+      const nowMin = hour * 60 + minute;
+      const expected = SLOTS.filter((s) => nowMin >= SLOT_LOCAL_TIME[s].hour * 60 + SLOT_LOCAL_TIME[s].minute);
+
+      const rowsRes = await db(
+        `astro_predictions?user_id=eq.${p.user_id}&target_date=eq.${localDate}&select=id,slot,status,created_at&order=created_at.desc`,
+      );
+      const rows: Array<{ id: string; slot: string; status: string }> = Array.isArray(rowsRes.data) ? rowsRes.data : [];
+      const present = new Set(rows.map((r) => r.slot));
+      const missing = expected.filter((s) => !present.has(s));
+      const morningMissing = expected.includes('morning') && !present.has('morning');
+      if (morningMissing) missingMorning++;
+      if (missing.length) missingAny++;
+
+      const entry = {
+        user_id: p.user_id,
+        timezone: tz,
+        local_time: `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`,
+        target_date: localDate,
+        current_slot: dueSlot(now, tz) ?? expected[expected.length - 1] ?? null,
+        expected_slots: expected,
+        present_slots: [...present],
+        missing_slots: missing,
+        missing_morning: morningMissing,
+        rows: rows.map((r) => ({ id: r.id, slot: r.slot, status: r.status })),
+      };
+      console.log('[astro-audit]', JSON.stringify(entry));
+      members.push(entry);
+    }
+
+    const summary = {
+      at: now.toISOString(),
+      members: profiles.length,
+      missing_morning: missingMorning,
+      members_with_gaps: missingAny,
+    };
+    console.log('[astro-audit:summary]', JSON.stringify(summary));
+    return json({ ok: true, audit: true, summary, members });
+  }
+
+
+
   // ── run ──
   const state = await getState();
   const owner = crypto.randomUUID();
@@ -359,11 +417,29 @@ Deno.serve(async (req) => {
     for (const p of profiles) {
       const tz = p.display_timezone || p.birth_timezone || 'UTC';
       const slot: Slot | null = SLOTS.includes(body.slot) ? body.slot : dueSlot(now, tz);
-      if (!slot) { results.push({ user_id: p.user_id, slot: null, status: 'skipped', note: 'no slot due' }); continue; }
+      const clock = localHourMinute(now, tz);
+      if (!slot) {
+        console.log('[astro-dispatch] skip', JSON.stringify({
+          user_id: p.user_id, timezone: tz,
+          local_time: `${String(clock.hour).padStart(2, '0')}:${String(clock.minute).padStart(2, '0')}`,
+          target_date: localDateIn(now, tz), reason: 'no slot due',
+        }));
+        results.push({ user_id: p.user_id, slot: null, status: 'skipped', note: 'no slot due' });
+        continue;
+      }
 
       const targetDate = body.targetDate ?? localDateIn(now, tz);
+      console.log('[astro-dispatch] process', JSON.stringify({
+        user_id: p.user_id, timezone: tz,
+        local_time: `${String(clock.hour).padStart(2, '0')}:${String(clock.minute).padStart(2, '0')}`,
+        target_date: targetDate, slot, idempotency_key: `${p.user_id}_${targetDate}_${slot}`,
+      }));
       const out = await processOne(p, slot, targetDate, !!state.shadow_mode, now);
+      console.log('[astro-dispatch] result', JSON.stringify({
+        user_id: p.user_id, target_date: targetDate, slot, status: out.result.status, note: out.result.note ?? null,
+      }));
       results.push(out.result);
+
 
       if (out.circuitBreak) { circuitBreak = out.circuitBreak; break; }
       if (out.rateLimited) {

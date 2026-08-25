@@ -2,7 +2,8 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 import { Sparkles, Moon, Clock, X, Compass } from 'lucide-react';
 import type { AstroPredictionRecord } from './moraZoeTypes';
-import { SLOT_LABEL, currentSlot, type AstroSlot } from '@/lib/astroSlot';
+import { SLOT_LABEL, currentSlot, deviceTimeZone, localClock, localDateKey, type AstroSlot } from '@/lib/astroSlot';
+
 
 /** Turns technical aspect names into everyday language anyone can follow. */
 const plainMood = (aspect: string, retrograde: boolean): string => {
@@ -27,10 +28,23 @@ interface Props {
 export const MoraZoeMorningTakeover: React.FC<Props> = ({ prediction, posterUrl, secondsRemaining, onDismiss }) => {
   const progressPercent = ((60 - secondsRemaining) / 60) * 100;
   const art = posterUrl ?? null;
+
+  // Live device clock so the indicator below can be compared to the phone's
+  // own clock at a glance.
+  const [now, setNow] = React.useState(() => new Date());
+  React.useEffect(() => {
+    const t = window.setInterval(() => setNow(new Date()), 15_000);
+    return () => window.clearInterval(t);
+  }, []);
+  const tz = deviceTimeZone();
+  const deviceSlot = currentSlot(now, tz);
+
   // Labels follow the member's own local slot, so a 5 AM login never reads
   // "Dawn cycle" over a night card (or vice-versa) anywhere in the world.
-  const slot = (((prediction as { slot?: string }).slot as AstroSlot) || currentSlot());
+  const slot = (((prediction as { slot?: string }).slot as AstroSlot) || deviceSlot);
   const labels = SLOT_LABEL[slot] ?? SLOT_LABEL.morning;
+  const slotMatches = slot === deviceSlot;
+
 
   const overlay = (
     <div className="fixed inset-0 z-[10050] flex items-center justify-center overflow-hidden bg-background">
@@ -108,9 +122,21 @@ export const MoraZoeMorningTakeover: React.FC<Props> = ({ prediction, posterUrl,
         )}
 
 
-        <p className="mt-8 text-[11px] text-muted-foreground">
+        {/* Local-time indicator: device clock vs the slot this card belongs to. */}
+        <div className="mt-6 inline-flex flex-wrap items-center justify-center gap-x-2 gap-y-1 rounded-full border border-border bg-card/60 px-3 py-1 text-[10px] tracking-wide text-muted-foreground backdrop-blur">
+          <span>{localClock(now, tz)} local · {tz}</span>
+          <span aria-hidden="true">·</span>
+          <span>{localDateKey(now, tz)}</span>
+          <span aria-hidden="true">·</span>
+          <span className={slotMatches ? 'text-primary' : 'text-destructive'}>
+            {slot} card{slotMatches ? '' : ` (device: ${deviceSlot})`}
+          </span>
+        </div>
+
+        <p className="mt-4 text-[11px] text-muted-foreground">
           Auto-dismissing and saving to your daily alignment archive…
         </p>
+
       </div>
     </div>
   );
