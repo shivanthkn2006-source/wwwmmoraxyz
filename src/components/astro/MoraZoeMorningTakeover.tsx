@@ -57,12 +57,12 @@ export const MoraZoeMorningTakeover: React.FC<Props> = ({ prediction, posterUrl,
       <div className="absolute inset-x-0 top-0 flex items-center justify-between px-5 pt-5">
         <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
           <Clock className="h-3.5 w-3.5" />
-          <span>Dawn cycle • {secondsRemaining}s</span>
+          <span>{labels.cycle} • {secondsRemaining}s</span>
         </div>
         <button
           type="button"
           onClick={onDismiss}
-          aria-label="Dismiss dawn alignment"
+          aria-label="Dismiss alignment"
           className="rounded-full p-2 text-muted-foreground transition-colors hover:text-foreground"
         >
           <X className="h-5 w-5" />
@@ -73,7 +73,7 @@ export const MoraZoeMorningTakeover: React.FC<Props> = ({ prediction, posterUrl,
       <div className="relative mx-auto w-full max-w-lg px-6 text-center">
         <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-border px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
           <Moon className="h-3.5 w-3.5" />
-          M&apos;Mora Zoe • Dawn Alignment
+          {labels.badge}
         </div>
 
         <h1 className="text-3xl font-semibold leading-tight text-foreground sm:text-4xl">
