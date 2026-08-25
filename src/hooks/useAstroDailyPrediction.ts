@@ -19,7 +19,8 @@ export function useAstroDailyPrediction() {
     if (!user?.id) { setPrediction(null); return; }
     setLoading(true);
     try {
-      const today = localDateKey();
+      const tz = deviceTimeZone();
+      const today = localDateKey(new Date(), tz);
       const { data, error } = await supabase
         .from('astro_predictions')
         .select('id, target_date, slot, prediction_headline, prediction_body, motivational_quote, poster_image_url, status, transits_summary')
@@ -30,8 +31,21 @@ export function useAstroDailyPrediction() {
         .limit(12);
 
       if (error) throw error;
-      const row = pickSlotRow((data ?? []) as unknown as Array<DailyPrediction & { created_at?: string }>);
+      const row = pickSlotRow(
+        (data ?? []) as unknown as Array<DailyPrediction & { created_at?: string }>,
+        new Date(),
+        tz,
+      );
+      astroTrace('useAstroDailyPrediction', {
+        timezone: tz,
+        target_date: today,
+        computed_slot: currentSlot(new Date(), tz),
+        rows_returned: data?.length ?? 0,
+        selected_slot: (row as { slot?: string } | null)?.slot ?? null,
+        selected_row_id: (row as { id?: string } | null)?.id ?? null,
+      });
       setPrediction((row as unknown as DailyPrediction) ?? null);
+
     } catch (err) {
       console.error('[AstroDaily] load failed', err);
       setPrediction(null);
