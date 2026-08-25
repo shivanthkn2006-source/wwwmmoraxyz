@@ -19,6 +19,7 @@ import { MoraZoeBirthDetailsPrompt } from './MoraZoeBirthDetailsPrompt';
  *  • Login greeting    → everyday motivation (works for every member)
  */
 export const MoraZoeGlobalHost: React.FC = () => {
+  useAstroTimezoneSync();
   const { diagnostics, todayPrediction } = useAstroDiagnostics();
   const { motivation, posterUrl, userId, loading: motivationLoading } = useZoeMotivation();
   const scheduleUserId = diagnostics?.user_id ?? userId;
