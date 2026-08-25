@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { AstroPredictionRecord, DiagnosticResult } from '@/components/astro/moraZoeTypes';
+import { localDateKey, currentSlot, pickSlotRow } from '@/lib/astroSlot';
 
 /**
  * Pre-flight RLS/grant validation + today's alignment fetch for the
@@ -36,18 +37,23 @@ export const useAstroDiagnostics = () => {
         if (rpcError) throw new Error(`RLS RPC check failed: ${rpcError.message}`);
         const rpc = (rpcData ?? {}) as { has_profile?: boolean; predictions_available?: number };
 
-        const todayStr = new Date().toISOString().split('T')[0];
+        // Local calendar date — using the UTC date made members east of UTC
+        // (e.g. Asia/Kolkata at 05:00) read yesterday's night card at dawn.
+        const todayStr = localDateKey();
         const { data: predictionData, error: predError } = await supabase
           .from('astro_predictions')
           .select('*')
           .eq('user_id', session.user.id)
           .eq('target_date', todayStr)
           .order('created_at', { ascending: false })
-          .limit(1);
+          .limit(12);
 
         if (predError) throw new Error(`RLS read error: ${predError.message}`);
 
-        let finalPrediction = (predictionData?.[0] ?? null) as unknown as AstroPredictionRecord | null;
+        // Pick the row for the slot the member is actually living in right now.
+        let finalPrediction = pickSlotRow(
+          (predictionData ?? []) as unknown as Array<AstroPredictionRecord & { slot?: string }>,
+        ) as unknown as AstroPredictionRecord | null;
 
         if (!finalPrediction) {
           finalPrediction = {
@@ -55,6 +61,7 @@ export const useAstroDiagnostics = () => {
             user_id: session.user.id,
             target_date: todayStr,
             idempotency_key: `client_${session.user.id}_${todayStr}`,
+            slot: currentSlot(),
             transits_summary: [
               { transit_planet: 'Sun', natal_planet: 'Jupiter', aspect: 'Trine', exactness_deg: 0.18, is_retrograde: false },
               { transit_planet: 'Moon', natal_planet: 'Venus', aspect: 'Sextile', exactness_deg: 1.05, is_retrograde: false },
