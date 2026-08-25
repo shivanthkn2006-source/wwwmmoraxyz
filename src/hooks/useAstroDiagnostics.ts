@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { AstroPredictionRecord, DiagnosticResult } from '@/components/astro/moraZoeTypes';
-import { localDateKey, currentSlot, pickSlotRow } from '@/lib/astroSlot';
+import { localDateKey, currentSlot, pickSlotRow, deviceTimeZone } from '@/lib/astroSlot';
+import { astroTrace } from '@/lib/astroLog';
+
 
 /**
  * Pre-flight RLS/grant validation + today's alignment fetch for the
