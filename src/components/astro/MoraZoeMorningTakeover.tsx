@@ -2,6 +2,7 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 import { Sparkles, Moon, Clock, X, Compass } from 'lucide-react';
 import type { AstroPredictionRecord } from './moraZoeTypes';
+import { SLOT_LABEL, currentSlot, type AstroSlot } from '@/lib/astroSlot';
 
 /** Turns technical aspect names into everyday language anyone can follow. */
 const plainMood = (aspect: string, retrograde: boolean): string => {
@@ -26,6 +27,10 @@ interface Props {
 export const MoraZoeMorningTakeover: React.FC<Props> = ({ prediction, posterUrl, secondsRemaining, onDismiss }) => {
   const progressPercent = ((60 - secondsRemaining) / 60) * 100;
   const art = posterUrl ?? null;
+  // Labels follow the member's own local slot, so a 5 AM login never reads
+  // "Dawn cycle" over a night card (or vice-versa) anywhere in the world.
+  const slot = (((prediction as { slot?: string }).slot as AstroSlot) || currentSlot());
+  const labels = SLOT_LABEL[slot] ?? SLOT_LABEL.morning;
 
   const overlay = (
     <div className="fixed inset-0 z-[10050] flex items-center justify-center overflow-hidden bg-background">
@@ -52,12 +57,12 @@ export const MoraZoeMorningTakeover: React.FC<Props> = ({ prediction, posterUrl,
       <div className="absolute inset-x-0 top-0 flex items-center justify-between px-5 pt-5">
         <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
           <Clock className="h-3.5 w-3.5" />
-          <span>Dawn cycle • {secondsRemaining}s</span>
+          <span>{labels.cycle} • {secondsRemaining}s</span>
         </div>
         <button
           type="button"
           onClick={onDismiss}
-          aria-label="Dismiss dawn alignment"
+          aria-label="Dismiss alignment"
           className="rounded-full p-2 text-muted-foreground transition-colors hover:text-foreground"
         >
           <X className="h-5 w-5" />
@@ -68,7 +73,7 @@ export const MoraZoeMorningTakeover: React.FC<Props> = ({ prediction, posterUrl,
       <div className="relative mx-auto w-full max-w-lg px-6 text-center">
         <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-border px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
           <Moon className="h-3.5 w-3.5" />
-          M&apos;Mora Zoe • Dawn Alignment
+          {labels.badge}
         </div>
 
         <h1 className="text-3xl font-semibold leading-tight text-foreground sm:text-4xl">

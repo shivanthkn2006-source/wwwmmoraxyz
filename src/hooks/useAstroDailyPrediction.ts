@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import type { DailyPrediction } from '@/components/astro/types';
+import { localDateKey, pickSlotRow } from '@/lib/astroSlot';
 
 /**
  * Latest published M'Mora Zoe alignment for today, for the signed-in member.
@@ -16,7 +17,7 @@ export function useAstroDailyPrediction() {
     if (!user?.id) { setPrediction(null); return; }
     setLoading(true);
     try {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = localDateKey();
       const { data, error } = await supabase
         .from('astro_predictions')
         .select('id, target_date, slot, prediction_headline, prediction_body, motivational_quote, poster_image_url, status, transits_summary')
@@ -24,11 +25,11 @@ export function useAstroDailyPrediction() {
         .eq('target_date', today)
         .eq('status', 'published')
         .order('created_at', { ascending: false })
-        .limit(1);
+        .limit(12);
 
       if (error) throw error;
-      const row = data?.[0] as unknown as DailyPrediction | undefined;
-      setPrediction(row ?? null);
+      const row = pickSlotRow((data ?? []) as unknown as Array<DailyPrediction & { created_at?: string }>);
+      setPrediction((row as unknown as DailyPrediction) ?? null);
     } catch (err) {
       console.error('[AstroDaily] load failed', err);
       setPrediction(null);

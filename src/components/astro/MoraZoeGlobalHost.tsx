@@ -4,6 +4,7 @@ import { useZoeMotivation } from '@/hooks/useZoeMotivation';
 import { useMoraZoeScheduler } from '@/hooks/useMoraZoeScheduler';
 import { useBirthDetailsGate } from '@/hooks/useBirthDetailsGate';
 import { useCardImpression } from '@/hooks/useCardImpression';
+import { useAstroTimezoneSync } from '@/hooks/useAstroTimezoneSync';
 import { resolvePosterUrl } from '@/lib/astroPoster';
 import { MoraZoeMorningTakeover } from './MoraZoeMorningTakeover';
 import { MoraZoeLoginGreeting } from './MoraZoeLoginGreeting';
@@ -18,6 +19,7 @@ import { MoraZoeBirthDetailsPrompt } from './MoraZoeBirthDetailsPrompt';
  *  • Login greeting    → everyday motivation (works for every member)
  */
 export const MoraZoeGlobalHost: React.FC = () => {
+  useAstroTimezoneSync();
   const { diagnostics, todayPrediction } = useAstroDiagnostics();
   const { motivation, posterUrl, userId, loading: motivationLoading } = useZoeMotivation();
   const scheduleUserId = diagnostics?.user_id ?? userId;

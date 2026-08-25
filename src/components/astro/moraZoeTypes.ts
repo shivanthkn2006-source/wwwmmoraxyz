@@ -15,6 +15,7 @@ export interface AstroPredictionRecord {
   id: string;
   user_id: string;
   target_date: string;
+  slot?: string;
   idempotency_key?: string;
   transits_summary: PlanetaryTransit[];
   prediction_headline: string;
