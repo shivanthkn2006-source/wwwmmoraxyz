@@ -4,6 +4,7 @@ import { useZoeMotivation } from '@/hooks/useZoeMotivation';
 import { useMoraZoeScheduler } from '@/hooks/useMoraZoeScheduler';
 import { useBirthDetailsGate } from '@/hooks/useBirthDetailsGate';
 import { useCardImpression } from '@/hooks/useCardImpression';
+import { useAstroTimezoneSync } from '@/hooks/useAstroTimezoneSync';
 import { resolvePosterUrl } from '@/lib/astroPoster';
 import { MoraZoeMorningTakeover } from './MoraZoeMorningTakeover';
 import { MoraZoeLoginGreeting } from './MoraZoeLoginGreeting';
