@@ -7,6 +7,10 @@
  * pick the slot whose local time has most recently passed — never the UTC date
  * and never simply "the newest row", which is why a 5 AM login used to show
  * the previous evening's night card.
+ *
+ * All resolution goes through `Intl` wall-clock parts for an explicit IANA
+ * zone, so daylight-saving transitions and year-end rollover are handled by
+ * the platform's tz database rather than by manual offset arithmetic.
  */
 
 export type AstroSlot = 'morning' | 'noon' | 'evening' | 'night';
@@ -25,6 +29,8 @@ export const SLOT_LABEL: Record<AstroSlot, { cycle: string; badge: string }> = {
   night: { cycle: 'Night cycle', badge: "M'Mora Zoe • Goodnight Alignment" },
 };
 
+export const SLOT_ORDER: AstroSlot[] = ['morning', 'noon', 'evening', 'night'];
+
 /** The device's own IANA timezone (falls back to UTC on exotic runtimes). */
 export function deviceTimeZone(): string {
   try {
@@ -34,35 +40,97 @@ export function deviceTimeZone(): string {
   }
 }
 
-/** YYYY-MM-DD in the device's local calendar (NOT the UTC calendar). */
-export function localDateKey(d: Date = new Date()): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
+export interface ZonedParts {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
 }
 
-/** Slot whose local time most recently passed on the device clock. */
-export function currentSlot(d: Date = new Date()): AstroSlot {
-  const nowMin = d.getHours() * 60 + d.getMinutes();
+const partsCache = new Map<string, Intl.DateTimeFormat>();
+
+function formatterFor(timeZone: string): Intl.DateTimeFormat | null {
+  const cached = partsCache.get(timeZone);
+  if (cached) return cached;
+  try {
+    const fmt = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      hourCycle: 'h23',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    partsCache.set(timeZone, fmt);
+    return fmt;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Wall-clock parts of `d` in `timeZone`. Because this reads the actual local
+ * clock (not a fixed offset), DST shifts and 31 Dec → 1 Jan rollovers resolve
+ * correctly with no special-casing.
+ */
+export function zonedParts(d: Date = new Date(), timeZone: string = deviceTimeZone()): ZonedParts {
+  const fmt = formatterFor(timeZone);
+  if (!fmt) {
+    return {
+      year: d.getFullYear(), month: d.getMonth() + 1, day: d.getDate(),
+      hour: d.getHours(), minute: d.getMinutes(),
+    };
+  }
+  const out: Record<string, number> = {};
+  for (const p of fmt.formatToParts(d)) {
+    if (p.type !== 'literal') out[p.type] = Number(p.value);
+  }
+  // Intl renders midnight as hour 24 in some ICU builds under hourCycle h23.
+  const hour = out.hour === 24 ? 0 : (out.hour ?? 0);
+  return {
+    year: out.year ?? d.getFullYear(),
+    month: out.month ?? d.getMonth() + 1,
+    day: out.day ?? d.getDate(),
+    hour,
+    minute: out.minute ?? 0,
+  };
+}
+
+/** YYYY-MM-DD in the given zone's local calendar (NOT the UTC calendar). */
+export function localDateKey(d: Date = new Date(), timeZone: string = deviceTimeZone()): string {
+  const p = zonedParts(d, timeZone);
+  return `${p.year}-${String(p.month).padStart(2, '0')}-${String(p.day).padStart(2, '0')}`;
+}
+
+/** Local wall-clock time as HH:MM in the given zone. */
+export function localClock(d: Date = new Date(), timeZone: string = deviceTimeZone()): string {
+  const p = zonedParts(d, timeZone);
+  return `${String(p.hour).padStart(2, '0')}:${String(p.minute).padStart(2, '0')}`;
+}
+
+/** Slot whose local time most recently passed on the member's local clock. */
+export function currentSlot(d: Date = new Date(), timeZone: string = deviceTimeZone()): AstroSlot {
+  const { hour, minute } = zonedParts(d, timeZone);
+  const nowMin = hour * 60 + minute;
   let best: AstroSlot = 'night'; // before 00:02 we are still in last night's slot
   let bestAge = Infinity;
-  (Object.keys(SLOT_LOCAL_TIME) as AstroSlot[]).forEach((slot) => {
+  for (const slot of SLOT_ORDER) {
     const s = SLOT_LOCAL_TIME[slot];
     let age = nowMin - (s.hour * 60 + s.minute);
     if (age < 0) age += 1440;
     if (age < bestAge) { bestAge = age; best = slot; }
-  });
+  }
   return best;
 }
 
 /** Slots ordered from the current one backwards through today's earlier slots. */
-export function slotPreferenceOrder(d: Date = new Date()): AstroSlot[] {
-  const order: AstroSlot[] = ['morning', 'noon', 'evening', 'night'];
-  const idx = order.indexOf(currentSlot(d));
+export function slotPreferenceOrder(d: Date = new Date(), timeZone: string = deviceTimeZone()): AstroSlot[] {
+  const idx = SLOT_ORDER.indexOf(currentSlot(d, timeZone));
   const preferred: AstroSlot[] = [];
-  for (let i = idx; i >= 0; i--) preferred.push(order[i]);
-  for (const s of order) if (!preferred.includes(s)) preferred.push(s);
+  for (let i = idx; i >= 0; i--) preferred.push(SLOT_ORDER[i]);
+  for (const s of SLOT_ORDER) if (!preferred.includes(s)) preferred.push(s);
   return preferred;
 }
 
@@ -74,9 +142,10 @@ export function slotPreferenceOrder(d: Date = new Date()): AstroSlot[] {
 export function pickSlotRow<T extends { slot?: string | null; created_at?: string | null }>(
   rows: T[],
   d: Date = new Date(),
+  timeZone: string = deviceTimeZone(),
 ): T | null {
   if (!rows?.length) return null;
-  for (const slot of slotPreferenceOrder(d)) {
+  for (const slot of slotPreferenceOrder(d, timeZone)) {
     const match = rows
       .filter((r) => (r.slot ?? '') === slot)
       .sort((a, b) => String(b.created_at ?? '').localeCompare(String(a.created_at ?? '')))[0];
