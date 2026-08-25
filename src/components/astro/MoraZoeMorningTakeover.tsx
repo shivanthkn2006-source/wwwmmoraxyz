@@ -27,6 +27,10 @@ interface Props {
 export const MoraZoeMorningTakeover: React.FC<Props> = ({ prediction, posterUrl, secondsRemaining, onDismiss }) => {
   const progressPercent = ((60 - secondsRemaining) / 60) * 100;
   const art = posterUrl ?? null;
+  // Labels follow the member's own local slot, so a 5 AM login never reads
+  // "Dawn cycle" over a night card (or vice-versa) anywhere in the world.
+  const slot = (((prediction as { slot?: string }).slot as AstroSlot) || currentSlot());
+  const labels = SLOT_LABEL[slot] ?? SLOT_LABEL.morning;
 
   const overlay = (
     <div className="fixed inset-0 z-[10050] flex items-center justify-center overflow-hidden bg-background">
