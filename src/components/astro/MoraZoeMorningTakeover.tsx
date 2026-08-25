@@ -122,9 +122,21 @@ export const MoraZoeMorningTakeover: React.FC<Props> = ({ prediction, posterUrl,
         )}
 
 
-        <p className="mt-8 text-[11px] text-muted-foreground">
+        {/* Local-time indicator: device clock vs the slot this card belongs to. */}
+        <div className="mt-6 inline-flex flex-wrap items-center justify-center gap-x-2 gap-y-1 rounded-full border border-border bg-card/60 px-3 py-1 text-[10px] tracking-wide text-muted-foreground backdrop-blur">
+          <span>{localClock(now, tz)} local · {tz}</span>
+          <span aria-hidden="true">·</span>
+          <span>{localDateKey(now, tz)}</span>
+          <span aria-hidden="true">·</span>
+          <span className={slotMatches ? 'text-primary' : 'text-destructive'}>
+            {slot} card{slotMatches ? '' : ` (device: ${deviceSlot})`}
+          </span>
+        </div>
+
+        <p className="mt-4 text-[11px] text-muted-foreground">
           Auto-dismissing and saving to your daily alignment archive…
         </p>
+
       </div>
     </div>
   );
