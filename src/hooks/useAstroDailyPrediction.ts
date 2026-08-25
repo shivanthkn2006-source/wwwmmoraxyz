@@ -2,7 +2,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import type { DailyPrediction } from '@/components/astro/types';
-import { localDateKey, pickSlotRow } from '@/lib/astroSlot';
+import { localDateKey, pickSlotRow, currentSlot, deviceTimeZone } from '@/lib/astroSlot';
+import { astroTrace } from '@/lib/astroLog';
+
 
 /**
  * Latest published M'Mora Zoe alignment for today, for the signed-in member.
