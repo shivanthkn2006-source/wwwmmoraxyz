@@ -21,7 +21,9 @@ describe('astroSlot — slot mapping across IANA zones', () => {
     { iso: '2026-08-25T10:00:00Z', tz: 'America/New_York', slot: 'morning', date: '2026-08-25', clock: '06:00' },
     { iso: '2026-08-25T20:00:00Z', tz: 'America/New_York', slot: 'noon', date: '2026-08-25', clock: '16:00' },
     { iso: '2026-08-25T23:00:00Z', tz: 'America/New_York', slot: 'evening', date: '2026-08-25', clock: '19:00' },
-    { iso: '2026-08-25T08:00:00Z', tz: 'Australia/Sydney', slot: 'night', date: '2026-08-25', clock: '18:00' },
+    { iso: '2026-08-25T08:00:00Z', tz: 'Australia/Sydney', slot: 'evening', date: '2026-08-25', clock: '18:00' },
+    { iso: '2026-08-25T12:00:00Z', tz: 'Australia/Sydney', slot: 'night', date: '2026-08-25', clock: '22:00' },
+
     { iso: '2026-08-25T12:00:00Z', tz: 'Pacific/Kiritimati', slot: 'morning', date: '2026-08-26', clock: '02:00' },
     { iso: '2026-08-25T12:00:00Z', tz: 'UTC', slot: 'morning', date: '2026-08-25', clock: '12:00' },
     { iso: '2026-08-25T05:00:00Z', tz: 'Asia/Kathmandu', slot: 'morning', date: '2026-08-25', clock: '10:45' },
