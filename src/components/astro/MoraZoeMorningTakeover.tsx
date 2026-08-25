@@ -28,10 +28,23 @@ interface Props {
 export const MoraZoeMorningTakeover: React.FC<Props> = ({ prediction, posterUrl, secondsRemaining, onDismiss }) => {
   const progressPercent = ((60 - secondsRemaining) / 60) * 100;
   const art = posterUrl ?? null;
+
+  // Live device clock so the indicator below can be compared to the phone's
+  // own clock at a glance.
+  const [now, setNow] = React.useState(() => new Date());
+  React.useEffect(() => {
+    const t = window.setInterval(() => setNow(new Date()), 15_000);
+    return () => window.clearInterval(t);
+  }, []);
+  const tz = deviceTimeZone();
+  const deviceSlot = currentSlot(now, tz);
+
   // Labels follow the member's own local slot, so a 5 AM login never reads
   // "Dawn cycle" over a night card (or vice-versa) anywhere in the world.
-  const slot = (((prediction as { slot?: string }).slot as AstroSlot) || currentSlot());
+  const slot = (((prediction as { slot?: string }).slot as AstroSlot) || deviceSlot);
   const labels = SLOT_LABEL[slot] ?? SLOT_LABEL.morning;
+  const slotMatches = slot === deviceSlot;
+
 
   const overlay = (
     <div className="fixed inset-0 z-[10050] flex items-center justify-center overflow-hidden bg-background">
