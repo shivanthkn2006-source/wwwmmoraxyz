@@ -417,11 +417,29 @@ Deno.serve(async (req) => {
     for (const p of profiles) {
       const tz = p.display_timezone || p.birth_timezone || 'UTC';
       const slot: Slot | null = SLOTS.includes(body.slot) ? body.slot : dueSlot(now, tz);
-      if (!slot) { results.push({ user_id: p.user_id, slot: null, status: 'skipped', note: 'no slot due' }); continue; }
+      const clock = localHourMinute(now, tz);
+      if (!slot) {
+        console.log('[astro-dispatch] skip', JSON.stringify({
+          user_id: p.user_id, timezone: tz,
+          local_time: `${String(clock.hour).padStart(2, '0')}:${String(clock.minute).padStart(2, '0')}`,
+          target_date: localDateIn(now, tz), reason: 'no slot due',
+        }));
+        results.push({ user_id: p.user_id, slot: null, status: 'skipped', note: 'no slot due' });
+        continue;
+      }
 
       const targetDate = body.targetDate ?? localDateIn(now, tz);
+      console.log('[astro-dispatch] process', JSON.stringify({
+        user_id: p.user_id, timezone: tz,
+        local_time: `${String(clock.hour).padStart(2, '0')}:${String(clock.minute).padStart(2, '0')}`,
+        target_date: targetDate, slot, idempotency_key: `${p.user_id}_${targetDate}_${slot}`,
+      }));
       const out = await processOne(p, slot, targetDate, !!state.shadow_mode, now);
+      console.log('[astro-dispatch] result', JSON.stringify({
+        user_id: p.user_id, target_date: targetDate, slot, status: out.result.status, note: out.result.note ?? null,
+      }));
       results.push(out.result);
+
 
       if (out.circuitBreak) { circuitBreak = out.circuitBreak; break; }
       if (out.rateLimited) {
