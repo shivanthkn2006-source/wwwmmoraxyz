@@ -2,7 +2,8 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 import { Sparkles, Moon, Clock, X, Compass } from 'lucide-react';
 import type { AstroPredictionRecord } from './moraZoeTypes';
-import { SLOT_LABEL, currentSlot, type AstroSlot } from '@/lib/astroSlot';
+import { SLOT_LABEL, currentSlot, deviceTimeZone, localClock, localDateKey, type AstroSlot } from '@/lib/astroSlot';
+
 
 /** Turns technical aspect names into everyday language anyone can follow. */
 const plainMood = (aspect: string, retrograde: boolean): string => {
