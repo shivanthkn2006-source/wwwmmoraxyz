@@ -31,10 +31,11 @@ export const MoraZoeMorningTakeover: React.FC<Props> = ({ prediction, posterUrl,
 
   // Live device clock so the indicator below can be compared to the phone's
   // own clock at a glance.
-  const [now, setNow] = React.useState(() => new Date());
+  const [now, setNow] = React.useState(() => astroNow());
   React.useEffect(() => {
-    const t = window.setInterval(() => setNow(new Date()), 15_000);
-    return () => window.clearInterval(t);
+    const t = window.setInterval(() => setNow(astroNow()), 15_000);
+    const unsub = subscribeSimulation(() => setNow(astroNow()));
+    return () => { window.clearInterval(t); unsub(); };
   }, []);
   const tz = deviceTimeZone();
   const deviceSlot = currentSlot(now, tz);
