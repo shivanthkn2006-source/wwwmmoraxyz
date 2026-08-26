@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { deviceTimeZone } from '@/lib/astroSlot';
+import { deviceTimeZone, localClock, localDateKey, currentSlot } from '@/lib/astroSlot';
+import { astroTrace } from '@/lib/astroLog';
+
 
 /**
  * Keeps the member's alignment timezone hardwired to the device they are
