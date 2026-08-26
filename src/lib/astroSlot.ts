@@ -13,6 +13,8 @@
  * the platform's tz database rather than by manual offset arithmetic.
  */
 
+import { simulatedNow, simulatedTimeZone } from './astroSimulation';
+
 export type AstroSlot = 'morning' | 'noon' | 'evening' | 'night';
 
 export const SLOT_LOCAL_TIME: Record<AstroSlot, { hour: number; minute: number }> = {
