@@ -136,6 +136,8 @@ export const MoraZoeMorningTakeover: React.FC<Props> = ({ prediction, posterUrl,
           </span>
         </div>
 
+        <AstroSimulationPanel />
+
         <p className="mt-4 text-[11px] text-muted-foreground">
           Auto-dismissing and saving to your daily alignment archive…
         </p>
