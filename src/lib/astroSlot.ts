@@ -31,13 +31,24 @@ export const SLOT_LABEL: Record<AstroSlot, { cycle: string; badge: string }> = {
 
 export const SLOT_ORDER: AstroSlot[] = ['morning', 'noon', 'evening', 'night'];
 
-/** The device's own IANA timezone (falls back to UTC on exotic runtimes). */
+/**
+ * The device's own IANA timezone (falls back to UTC on exotic runtimes).
+ * In dev builds a simulation override wins, so slot selection can be verified
+ * for any zone without changing the system clock. No-op in production.
+ */
 export function deviceTimeZone(): string {
+  const simulated = simulatedTimeZone();
+  if (simulated) return simulated;
   try {
     return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
   } catch {
     return 'UTC';
   }
+}
+
+/** "Now" for alignment purposes — the simulated instant in dev, else real. */
+export function astroNow(): Date {
+  return simulatedNow() ?? new Date();
 }
 
 export interface ZonedParts {
