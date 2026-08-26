@@ -7,9 +7,12 @@
  * Also keeps the last 20 traces in memory for the on-screen indicator.
  */
 import { deviceTimeZone, localClock, localDateKey, currentSlot } from './astroSlot';
+import { activeCorrelationId } from './astroCorrelation';
 
 export interface AstroTrace {
   at: string;
+  /** Ties this read to the server dispatch/audit run of the same operation. */
+  correlation_id: string;
   source: string;
   timezone: string;
   local_time: string;
@@ -31,6 +34,7 @@ export function astroTrace(
   const tz = extra.timezone ?? deviceTimeZone();
   const trace: AstroTrace = {
     at: now.toISOString(),
+    correlation_id: extra.correlation_id ?? activeCorrelationId(),
     source,
     timezone: tz,
     local_time: localClock(now, tz),
