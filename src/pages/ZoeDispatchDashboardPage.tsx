@@ -1,8 +1,27 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, RefreshCw, PlayCircle, AlertTriangle, Clock, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, RefreshCw, PlayCircle, AlertTriangle, Clock, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
+import { deviceTimeZone, localClock, localDateKey, currentSlot } from '@/lib/astroSlot';
+
+interface AuditMember {
+  user_id: string;
+  timezone: string;
+  local_time: string;
+  target_date: string;
+  current_slot: string | null;
+  expected_slots: string[];
+  present_slots: string[];
+  missing_slots: string[];
+  missing_morning: boolean;
+}
+
+interface AuditResult {
+  summary: { at: string; members: number; missing_morning: number; members_with_gaps: number };
+  members: AuditMember[];
+}
+
 
 interface RunRow {
   id: string;
@@ -33,7 +52,10 @@ const ZoeDispatchDashboardPage: React.FC = () => {
   const [state, setState] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
+  const [auditing, setAuditing] = useState(false);
+  const [audit, setAudit] = useState<AuditResult | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+
 
   const load = useCallback(async () => {
     if (!user?.id) return;
@@ -67,7 +89,18 @@ const ZoeDispatchDashboardPage: React.FC = () => {
     void load();
   };
 
+  const runAudit = async () => {
+    setAuditing(true);
+    setAudit(null);
+    const { data, error } = await supabase.functions.invoke('astro-dispatch', { body: { action: 'audit' } });
+    setAuditing(false);
+    if (error) { setMessage(`Audit failed: ${error.message}`); return; }
+    setAudit(data as AuditResult);
+  };
+
   const failures = runs.filter((r) => r.error || r.failed_count > 0);
+  const tz = deviceTimeZone();
+
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-6 pb-24">
@@ -87,8 +120,64 @@ const ZoeDispatchDashboardPage: React.FC = () => {
           >
             <PlayCircle className="h-4 w-4" /> {running ? 'Running…' : 'Run now'}
           </button>
+          <button
+            onClick={runAudit}
+            disabled={auditing}
+            className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-sm disabled:opacity-60"
+          >
+            <ShieldCheck className="h-4 w-4" /> {auditing ? 'Auditing…' : 'Audit slots'}
+          </button>
         </div>
       </div>
+
+      {/* This device's resolution — compare against your phone's clock. */}
+      <div className="mb-6 rounded-xl border border-border bg-card p-4 text-sm">
+        <div className="mb-2 font-medium">This device</div>
+        <div className="grid grid-cols-2 gap-2 text-muted-foreground">
+          <span>Timezone</span><span className="text-foreground">{tz}</span>
+          <span>Local time</span><span className="text-foreground">{localClock()}</span>
+          <span>Target date</span><span className="text-foreground">{localDateKey()}</span>
+          <span>Computed slot</span><span className="text-foreground">{currentSlot()}</span>
+        </div>
+      </div>
+
+      {/* Slot audit across all members */}
+      {audit && (
+        <div className="mb-6 rounded-xl border border-border bg-card p-4 text-sm">
+          <div className="mb-3 flex items-center gap-2 font-medium">
+            <ShieldCheck className="h-4 w-4" /> Slot audit
+          </div>
+          <p className="mb-3 text-muted-foreground">
+            {audit.summary.members} member(s) · {audit.summary.missing_morning} missing morning ·{' '}
+            {audit.summary.members_with_gaps} with gaps
+          </p>
+          <ul className="space-y-2">
+            {audit.members.map((m) => (
+              <li
+                key={m.user_id}
+                className={`rounded-lg border p-2 ${m.missing_morning ? 'border-destructive/50' : 'border-border/60'}`}
+              >
+                <div className="flex flex-wrap items-center gap-2 text-muted-foreground">
+                  <span className="font-mono text-xs">{m.user_id.slice(0, 8)}</span>
+                  <span>{m.timezone}</span>
+                  <span>{m.local_time}</span>
+                  <span>{m.target_date}</span>
+                  <span className="text-foreground">slot: {m.current_slot ?? '—'}</span>
+                </div>
+                <div className="mt-1 flex flex-wrap gap-2">
+                  <span>expected: {m.expected_slots.join(', ') || '—'}</span>
+                  <span className="text-emerald-500">present: {m.present_slots.join(', ') || '—'}</span>
+                  {m.missing_slots.length > 0 && (
+                    <span className="text-destructive">missing: {m.missing_slots.join(', ')}</span>
+                  )}
+                  {m.missing_morning && <span className="text-destructive font-medium">no morning prompt</span>}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
 
       {/* Engine state */}
       <div className="mb-6 rounded-xl border border-border bg-card p-4 text-sm">
