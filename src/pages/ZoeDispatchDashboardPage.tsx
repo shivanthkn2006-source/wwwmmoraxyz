@@ -64,14 +64,15 @@ const ZoeDispatchDashboardPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
   const [auditing, setAuditing] = useState(false);
-  const [audit, setAudit] = useState<AuditResult | null>(null);
+  const [auditRuns, setAuditRuns] = useState<AuditRunRow[]>([]);
+  const [selectedAuditId, setSelectedAuditId] = useState<string>('');
+  const [showDiff, setShowDiff] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-
 
   const load = useCallback(async () => {
     if (!user?.id) return;
     setLoading(true);
-    const [runRes, queueRes, stateRes] = await Promise.all([
+    const [runRes, queueRes, stateRes, auditRes] = await Promise.all([
       (supabase.from('astro_dispatch_runs' as never) as never as {
         select: (s: string) => { order: (c: string, o: { ascending: boolean }) => { limit: (n: number) => Promise<{ data: RunRow[] | null }> } };
       }).select('*').order('started_at', { ascending: false }).limit(20),
@@ -82,14 +83,35 @@ const ZoeDispatchDashboardPage: React.FC = () => {
         .order('created_at', { ascending: false })
         .limit(20),
       supabase.from('astro_dispatch_state').select('*').maybeSingle(),
+      (supabase.from('astro_audit_runs' as never) as never as {
+        select: (s: string) => { order: (c: string, o: { ascending: boolean }) => { limit: (n: number) => Promise<{ data: AuditRunRow[] | null }> } };
+      }).select('*').order('created_at', { ascending: false }).limit(30),
     ]);
     setRuns((runRes.data as RunRow[]) ?? []);
     setQueue((queueRes.data as QueueRow[]) ?? []);
     setState((stateRes.data as Record<string, unknown>) ?? null);
+    const history = (auditRes.data as AuditRunRow[]) ?? [];
+    setAuditRuns(history);
+    // The latest stored report is the dashboard default.
+    setSelectedAuditId((prev) => (prev && history.some((h) => h.audit_run_id === prev) ? prev : history[0]?.audit_run_id ?? ''));
     setLoading(false);
   }, [user?.id]);
 
   useEffect(() => { void load(); }, [load]);
+
+  const selectedIndex = auditRuns.findIndex((r) => r.audit_run_id === selectedAuditId);
+  const audit = selectedIndex >= 0 ? auditRuns[selectedIndex] : null;
+  const previousAudit = selectedIndex >= 0 ? auditRuns[selectedIndex + 1] ?? null : null;
+
+  const currentRows: FlatAuditRow[] = useMemo(
+    () => (audit ? flattenAudit(audit.members ?? [], { correlation_id: audit.correlation_id, audit_run_id: audit.audit_run_id }) : []),
+    [audit],
+  );
+  const previousRows: FlatAuditRow[] = useMemo(
+    () => (previousAudit ? flattenAudit(previousAudit.members ?? [], { correlation_id: previousAudit.correlation_id, audit_run_id: previousAudit.audit_run_id }) : []),
+    [previousAudit],
+  );
+  const diff = useMemo(() => diffAuditRuns(currentRows, previousRows), [currentRows, previousRows]);
 
   const runNow = async () => {
     setRunning(true);
@@ -103,35 +125,40 @@ const ZoeDispatchDashboardPage: React.FC = () => {
 
   const runAudit = async () => {
     setAuditing(true);
-    setAudit(null);
     // One id for the whole audit: the server stamps every log line with it and
     // client reads made while it is active are tagged the same way.
     const correlationId = newCorrelationId('audit');
     setActiveCorrelationId(correlationId);
-    const { data, error } = await supabase.functions.invoke('astro-dispatch', { body: { action: 'audit', correlationId } });
+    const { data, error } = await supabase.functions.invoke('astro-dispatch', {
+      body: { action: 'audit', correlationId, source: 'manual' },
+    });
     setActiveCorrelationId(null);
     setAuditing(false);
     if (error) { setMessage(`Audit failed: ${error.message}`); return; }
-    setAudit({ correlation_id: correlationId, ...(data as AuditResult) });
+    const result = data as AuditResult;
+    setMessage(`Audit ${result.audit_run_id ?? ''} finished · ${result.summary?.missing_morning ?? 0} missing morning`);
+    await load();
+    if (result.audit_run_id) setSelectedAuditId(result.audit_run_id);
   };
 
   const exportAudit = (format: 'json' | 'csv') => {
     if (!audit) return;
-    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const rows = auditRows(audit);
+    const stamp = new Date(audit.created_at).toISOString().replace(/[:.]/g, '-');
     if (format === 'json') {
       downloadFile(
         `astro-audit-${stamp}.json`,
         'application/json',
-        JSON.stringify({ correlation_id: audit.correlation_id, summary: audit.summary, rows }, null, 2),
+        JSON.stringify({ audit_run_id: audit.audit_run_id, correlation_id: audit.correlation_id, summary: audit.summary, rows: currentRows }, null, 2),
       );
     } else {
-      downloadFile(`astro-audit-${stamp}.csv`, 'text/csv', toCsv(rows));
+      downloadFile(`astro-audit-${stamp}.csv`, 'text/csv', toCsv(currentRows));
     }
   };
 
   const failures = runs.filter((r) => r.error || r.failed_count > 0);
   const tz = deviceTimeZone();
+
+
 
 
   return (
