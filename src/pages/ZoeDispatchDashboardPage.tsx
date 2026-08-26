@@ -1,8 +1,27 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, RefreshCw, PlayCircle, AlertTriangle, Clock, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, RefreshCw, PlayCircle, AlertTriangle, Clock, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
+import { deviceTimeZone, localClock, localDateKey, currentSlot } from '@/lib/astroSlot';
+
+interface AuditMember {
+  user_id: string;
+  timezone: string;
+  local_time: string;
+  target_date: string;
+  current_slot: string | null;
+  expected_slots: string[];
+  present_slots: string[];
+  missing_slots: string[];
+  missing_morning: boolean;
+}
+
+interface AuditResult {
+  summary: { at: string; members: number; missing_morning: number; members_with_gaps: number };
+  members: AuditMember[];
+}
+
 
 interface RunRow {
   id: string;
