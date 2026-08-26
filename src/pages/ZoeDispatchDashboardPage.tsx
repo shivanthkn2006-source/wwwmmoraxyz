@@ -86,7 +86,18 @@ const ZoeDispatchDashboardPage: React.FC = () => {
     void load();
   };
 
+  const runAudit = async () => {
+    setAuditing(true);
+    setAudit(null);
+    const { data, error } = await supabase.functions.invoke('astro-dispatch', { body: { action: 'audit' } });
+    setAuditing(false);
+    if (error) { setMessage(`Audit failed: ${error.message}`); return; }
+    setAudit(data as AuditResult);
+  };
+
   const failures = runs.filter((r) => r.error || r.failed_count > 0);
+  const tz = deviceTimeZone();
+
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-6 pb-24">
