@@ -431,6 +431,8 @@ Deno.serve(async (req) => {
   // the slots that should already have fired today, and compare against the
   // rows actually written. Flags missing morning prompts explicitly.
   if (action === 'audit') {
+    const auditRunId: string = String(body.auditRunId ?? `aud_${Date.now().toString(36)}_${crypto.randomUUID().slice(0, 8)}`);
+    const source: string = String(body.source ?? 'manual');
     const profRes = await db(
       'astro_profiles?is_enabled=eq.true&select=user_id,display_timezone,birth_timezone&limit=500',
     );
@@ -458,6 +460,7 @@ Deno.serve(async (req) => {
 
       const entry = {
         correlation_id: correlationId,
+        audit_run_id: auditRunId,
         user_id: p.user_id,
         timezone: tz,
         local_time: `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`,
@@ -469,13 +472,15 @@ Deno.serve(async (req) => {
         missing_morning: morningMissing,
         rows: rows.map((r) => ({ id: r.id, slot: r.slot, status: r.status })),
       };
-      console.log('[astro-audit]', JSON.stringify({ correlation_id: correlationId, ...entry }));
+      console.log('[astro-audit]', JSON.stringify({ correlation_id: correlationId, audit_run_id: auditRunId, ...entry }));
       members.push(entry);
     }
 
     const summary = {
       at: now.toISOString(),
       correlation_id: correlationId,
+      audit_run_id: auditRunId,
+      source,
       members: profiles.length,
       missing_morning: missingMorning,
       members_with_gaps: missingAny,
@@ -484,17 +489,24 @@ Deno.serve(async (req) => {
 
     // Automatic alert: a missing morning prompt means a member started their
     // day with no alignment card, so it is raised as a platform error event
-    // (visible to the ops dashboards) with the affected members and dates.
+    // (visible to the ops dashboards) and pushed to Slack + email with the
+    // affected members, their local dates and the correlation id.
+    const notifications: Record<string, unknown> = {};
     if (missingMorning > 0) {
       const affected = (members as Array<Record<string, unknown>>)
         .filter((m) => m.missing_morning)
-        .map((m) => ({ user_id: m.user_id, target_date: m.target_date, timezone: m.timezone, missing_slots: m.missing_slots }));
+        .map((m) => ({
+          user_id: String(m.user_id),
+          target_date: String(m.target_date),
+          timezone: String(m.timezone),
+          missing_slots: (m.missing_slots as string[]) ?? [],
+        }));
       const alert = {
         error_type: 'astro_missing_morning_prompt',
         severity: 'critical',
-        source: 'astro-dispatch:audit',
+        source: `astro-dispatch:audit:${source}`,
         message: `${missingMorning} member(s) have no morning alignment prompt for their local date`,
-        metadata: { correlation_id: correlationId, summary, affected: affected.slice(0, 100) },
+        metadata: { correlation_id: correlationId, audit_run_id: auditRunId, summary, affected: affected.slice(0, 100) },
       };
       console.error('[astro-audit:alert]', JSON.stringify(alert));
       await db('platform_error_events', {
@@ -503,10 +515,39 @@ Deno.serve(async (req) => {
         body: JSON.stringify(alert),
       });
       await logRun({ ...summary, alert: 'missing_morning' }, affected, alert.message);
+
+      const text = alertLines({ correlationId, auditRunId, affected, summary });
+      const [slack, email] = await Promise.all([
+        notifySlack(text),
+        notifyEmail(`[M'Mora] ${missingMorning} member(s) missing a morning prompt`, text),
+      ]);
+      notifications.slack = slack;
+      notifications.email = email;
+      console.log('[astro-audit:notify]', JSON.stringify({ correlation_id: correlationId, audit_run_id: auditRunId, slack, email }));
     }
 
-    return json({ ok: true, audit: true, correlation_id: correlationId, summary, members });
+    // Persist the run so the dashboard can default to the latest report and
+    // diff it against the previous one.
+    await db('astro_audit_runs', {
+      method: 'POST',
+      headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify({
+        audit_run_id: auditRunId,
+        correlation_id: correlationId,
+        source,
+        members_count: profiles.length,
+        missing_morning: missingMorning,
+        members_with_gaps: missingAny,
+        summary,
+        members: (members as unknown[]).slice(0, 500),
+        notifications,
+      }),
+    });
+
+    return json({ ok: true, audit: true, correlation_id: correlationId, audit_run_id: auditRunId, summary, members, notifications });
   }
+
+
 
 
 
