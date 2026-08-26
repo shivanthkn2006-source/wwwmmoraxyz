@@ -23,7 +23,10 @@ export function useAstroTimezoneSync() {
         const uid = session?.user?.id;
         if (!uid || cancelled) return;
 
-        const sessionKey = `astro_tz_synced_${uid}_${tz}`;
+        // The offset is part of the key so a DST transition inside a long
+        // session re-verifies the stored zone instead of trusting a stale flag.
+        const offsetMin = -new Date().getTimezoneOffset();
+        const sessionKey = `astro_tz_synced_${uid}_${tz}_${offsetMin}`;
         try { if (sessionStorage.getItem(sessionKey)) return; } catch { /* private mode */ }
 
         const { data } = await supabase
@@ -33,12 +36,19 @@ export function useAstroTimezoneSync() {
           .maybeSingle();
 
         if (cancelled) return;
-        if (data && data.display_timezone !== tz) {
+        const stored = data?.display_timezone ?? null;
+        if (data && stored !== tz) {
           await supabase
             .from('astro_profiles')
             .update({ display_timezone: tz })
             .eq('user_id', uid);
         }
+        astroTrace('useAstroTimezoneSync', {
+          timezone: tz,
+          target_date: localDateKey(new Date(), tz),
+          computed_slot: currentSlot(new Date(), tz),
+          note: `stored=${stored ?? 'none'} device=${tz} offset=${offsetMin}m local=${localClock(new Date(), tz)}${stored !== tz ? ' → updated' : ''}`,
+        });
         try { sessionStorage.setItem(sessionKey, '1'); } catch { /* noop */ }
       } catch (err) {
         console.warn('[AstroTZ] sync skipped', err);
@@ -46,8 +56,16 @@ export function useAstroTimezoneSync() {
     };
 
     void run();
-    return () => { cancelled = true; };
+    // Re-check when the app returns to the foreground: travel, a DST change or
+    // a local-midnight rollover can all happen while the tab is hidden.
+    const onVisible = () => { if (document.visibilityState === 'visible') void run(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      cancelled = true;
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, []);
+
 }
 
 export default useAstroTimezoneSync;
