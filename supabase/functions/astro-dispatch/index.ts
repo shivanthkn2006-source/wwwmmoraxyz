@@ -122,6 +122,99 @@ async function logRun(summary: Record<string, unknown>, results: unknown[], erro
   } catch { /* history is diagnostic only */ }
 }
 
+// ───────────────────── missing-morning alert fan-out ─────────────────────
+interface AffectedMember {
+  user_id: string;
+  target_date: string;
+  timezone: string;
+  missing_slots: string[];
+}
+
+/** Human-readable alert body shared by Slack and email. */
+function alertLines(a: {
+  correlationId: string;
+  auditRunId: string;
+  affected: AffectedMember[];
+  summary: Record<string, unknown>;
+}) {
+  const rows = a.affected
+    .slice(0, 50)
+    .map((m) => `• ${m.user_id} — ${m.target_date} (${m.timezone}) — missing: ${(m.missing_slots ?? []).join(', ') || 'morning'}`);
+  return [
+    `*Astro audit alert — ${a.affected.length} member(s) with no morning prompt*`,
+    `audit_run_id: \`${a.auditRunId}\``,
+    `correlation_id: \`${a.correlationId}\``,
+    `members: ${a.summary.members} · missing morning: ${a.summary.missing_morning} · with gaps: ${a.summary.members_with_gaps}`,
+    '',
+    ...rows,
+    a.affected.length > 50 ? `…and ${a.affected.length - 50} more` : '',
+  ].filter(Boolean).join('\n');
+}
+
+/** Slack via incoming webhook or the Lovable connector gateway. Never throws. */
+async function notifySlack(text: string): Promise<{ sent: boolean; via?: string; error?: string }> {
+  const webhook = Deno.env.get('ASTRO_ALERT_SLACK_WEBHOOK_URL');
+  try {
+    if (webhook) {
+      const r = await fetch(webhook, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+      if (!r.ok) return { sent: false, via: 'webhook', error: `${r.status}: ${(await r.text()).slice(0, 200)}` };
+      return { sent: true, via: 'webhook' };
+    }
+    const lovableKey = Deno.env.get('LOVABLE_API_KEY');
+    const slackKey = Deno.env.get('SLACK_API_KEY');
+    const channel = Deno.env.get('ASTRO_ALERT_SLACK_CHANNEL');
+    if (!lovableKey || !slackKey || !channel) return { sent: false, error: 'slack not configured' };
+    const r = await fetch('https://connector-gateway.lovable.dev/slack/api/chat.postMessage', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${lovableKey}`,
+        'X-Connection-Api-Key': slackKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ channel, text, mrkdwn: true }),
+    });
+    const body = await r.text();
+    let parsed: any = null;
+    try { parsed = JSON.parse(body); } catch { /* non-JSON */ }
+    if (!r.ok || parsed?.ok === false) {
+      return { sent: false, via: 'gateway', error: `${r.status}: ${(parsed?.error ?? body).toString().slice(0, 200)}` };
+    }
+    return { sent: true, via: 'gateway' };
+  } catch (e) {
+    return { sent: false, error: String((e as Error)?.message ?? e).slice(0, 200) };
+  }
+}
+
+/** Email via Resend. Never throws. */
+async function notifyEmail(subject: string, text: string): Promise<{ sent: boolean; error?: string }> {
+  const key = Deno.env.get('RESEND_API_KEY');
+  const to = (Deno.env.get('ASTRO_ALERT_EMAIL_TO') ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+  const from = Deno.env.get('ASTRO_ALERT_EMAIL_FROM') ?? 'alerts@resend.dev';
+  if (!key || !to.length) return { sent: false, error: 'email not configured' };
+  try {
+    const r = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from,
+        to,
+        subject,
+        text,
+        html: `<pre style="font-family:ui-monospace,monospace;font-size:13px">${
+          text.replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c] as string))
+        }</pre>`,
+      }),
+    });
+    if (!r.ok) return { sent: false, error: `${r.status}: ${(await r.text()).slice(0, 200)}` };
+    return { sent: true };
+  } catch (e) {
+    return { sent: false, error: String((e as Error)?.message ?? e).slice(0, 200) };
+  }
+}
 
 
 // ───────────────────────── slot resolution ─────────────────────────
