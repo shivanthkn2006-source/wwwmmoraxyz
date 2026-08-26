@@ -34,6 +34,7 @@ export function astroTrace(
   const tz = extra.timezone ?? deviceTimeZone();
   const trace: AstroTrace = {
     at: now.toISOString(),
+    correlation_id: extra.correlation_id ?? activeCorrelationId(),
     source,
     timezone: tz,
     local_time: localClock(now, tz),
