@@ -240,6 +240,48 @@ export type Database = {
           },
         ]
       }
+      astro_audit_runs: {
+        Row: {
+          audit_run_id: string
+          correlation_id: string
+          created_at: string
+          id: string
+          members: Json
+          members_count: number
+          members_with_gaps: number
+          missing_morning: number
+          notifications: Json
+          source: string
+          summary: Json
+        }
+        Insert: {
+          audit_run_id: string
+          correlation_id: string
+          created_at?: string
+          id?: string
+          members?: Json
+          members_count?: number
+          members_with_gaps?: number
+          missing_morning?: number
+          notifications?: Json
+          source?: string
+          summary?: Json
+        }
+        Update: {
+          audit_run_id?: string
+          correlation_id?: string
+          created_at?: string
+          id?: string
+          members?: Json
+          members_count?: number
+          members_with_gaps?: number
+          missing_morning?: number
+          notifications?: Json
+          source?: string
+          summary?: Json
+        }
+        Relationships: []
+      }
       astro_card_impressions: {
         Row: {
           card_id: string | null
