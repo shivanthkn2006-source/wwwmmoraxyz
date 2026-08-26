@@ -52,7 +52,10 @@ const ZoeDispatchDashboardPage: React.FC = () => {
   const [state, setState] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
+  const [auditing, setAuditing] = useState(false);
+  const [audit, setAudit] = useState<AuditResult | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+
 
   const load = useCallback(async () => {
     if (!user?.id) return;
