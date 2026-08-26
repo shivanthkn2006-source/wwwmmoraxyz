@@ -1,49 +1,20 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, RefreshCw, PlayCircle, AlertTriangle, Clock, CheckCircle2, ShieldCheck, Download } from 'lucide-react';
+import { ArrowLeft, RefreshCw, PlayCircle, AlertTriangle, Clock, CheckCircle2, ShieldCheck, Download, GitCompare, Radio } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { deviceTimeZone, localClock, localDateKey, currentSlot } from '@/lib/astroSlot';
 import { newCorrelationId, setActiveCorrelationId } from '@/lib/astroCorrelation';
-
-interface AuditMember {
-  user_id: string;
-  timezone: string;
-  local_time: string;
-  target_date: string;
-  current_slot: string | null;
-  expected_slots: string[];
-  present_slots: string[];
-  missing_slots: string[];
-  missing_morning: boolean;
-  rows?: Array<{ id: string; slot: string; status: string }>;
-}
+import {
+  flattenAudit, diffAuditRuns, type AuditMember, type AuditRunRow, type FlatAuditRow,
+} from '@/lib/astroAuditDiff';
 
 interface AuditResult {
   correlation_id?: string;
+  audit_run_id?: string;
   summary: { at: string; members: number; missing_morning: number; members_with_gaps: number; correlation_id?: string };
   members: AuditMember[];
 }
-
-/** One flat row per member per selected card — the shape both exports use. */
-const auditRows = (audit: AuditResult) =>
-  audit.members.map((m) => {
-    const selected = m.rows?.find((r) => r.slot === m.current_slot) ?? m.rows?.[0] ?? null;
-    return {
-      correlation_id: audit.correlation_id ?? audit.summary.correlation_id ?? '',
-      user_id: m.user_id,
-      timezone: m.timezone,
-      local_time: m.local_time,
-      local_date: m.target_date,
-      computed_slot: m.current_slot ?? '',
-      selected_row_id: selected?.id ?? '',
-      selected_row_status: selected?.status ?? '',
-      expected_slots: m.expected_slots.join('|'),
-      present_slots: m.present_slots.join('|'),
-      missing_slots: m.missing_slots.join('|'),
-      missing_morning: m.missing_morning,
-    };
-  });
 
 const downloadFile = (name: string, mime: string, body: string) => {
   const url = URL.createObjectURL(new Blob([body], { type: mime }));
@@ -60,6 +31,7 @@ const toCsv = (rows: Array<Record<string, unknown>>) => {
   const cell = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
   return [headers.join(','), ...rows.map((r) => headers.map((h) => cell(r[h])).join(','))].join('\n');
 };
+
 
 
 interface RunRow {
