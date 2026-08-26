@@ -1,0 +1,48 @@
+name: Astro slot (timezone / DST) tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  astro-slot-matrix:
+    name: astroSlot @ ${{ matrix.tz }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      # The host timezone must never influence slot resolution — every zone in
+      # this matrix has to produce identical results, so any regression that
+      # reintroduces host-local date math fails the build.
+      matrix:
+        tz:
+          - UTC
+          - Asia/Kolkata
+          - Asia/Kathmandu
+          - Europe/London
+          - Europe/Berlin
+          - America/New_York
+          - America/Los_Angeles
+          - America/Sao_Paulo
+          - Australia/Sydney
+          - Pacific/Kiritimati
+          - Pacific/Chatham
+    env:
+      TZ: ${{ matrix.tz }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Show host timezone
+        run: date && echo "TZ=$TZ"
+
+      - name: Run astroSlot DST + boundary tests
+        run: bunx vitest run src/test/astroSlot.test.ts --reporter=verbose

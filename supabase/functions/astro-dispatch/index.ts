@@ -283,6 +283,10 @@ Deno.serve(async (req) => {
   let body: any = {};
   try { body = await req.json(); } catch { /* cron may post an empty body */ }
   const action: string = body.action ?? 'run';
+  // Correlation id: supplied by the client for an operation it started, else
+  // minted here. Every log line of this invocation carries it, so client
+  // traces and server logs for one audit/dispatch run join on a single key.
+  const correlationId: string = String(body.correlationId ?? `srv_${crypto.randomUUID().slice(0, 12)}`);
   const now = body.simulateNow ? new Date(body.simulateNow) : new Date();
 
   if (!SUPABASE_URL || !SERVICE_KEY) return json({ error: 'engine not configured' }, 500);
@@ -360,6 +364,7 @@ Deno.serve(async (req) => {
       if (missing.length) missingAny++;
 
       const entry = {
+        correlation_id: correlationId,
         user_id: p.user_id,
         timezone: tz,
         local_time: `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`,
@@ -371,18 +376,43 @@ Deno.serve(async (req) => {
         missing_morning: morningMissing,
         rows: rows.map((r) => ({ id: r.id, slot: r.slot, status: r.status })),
       };
-      console.log('[astro-audit]', JSON.stringify(entry));
+      console.log('[astro-audit]', JSON.stringify({ correlation_id: correlationId, ...entry }));
       members.push(entry);
     }
 
     const summary = {
       at: now.toISOString(),
+      correlation_id: correlationId,
       members: profiles.length,
       missing_morning: missingMorning,
       members_with_gaps: missingAny,
     };
     console.log('[astro-audit:summary]', JSON.stringify(summary));
-    return json({ ok: true, audit: true, summary, members });
+
+    // Automatic alert: a missing morning prompt means a member started their
+    // day with no alignment card, so it is raised as a platform error event
+    // (visible to the ops dashboards) with the affected members and dates.
+    if (missingMorning > 0) {
+      const affected = (members as Array<Record<string, unknown>>)
+        .filter((m) => m.missing_morning)
+        .map((m) => ({ user_id: m.user_id, target_date: m.target_date, timezone: m.timezone, missing_slots: m.missing_slots }));
+      const alert = {
+        error_type: 'astro_missing_morning_prompt',
+        severity: 'critical',
+        source: 'astro-dispatch:audit',
+        message: `${missingMorning} member(s) have no morning alignment prompt for their local date`,
+        metadata: { correlation_id: correlationId, summary, affected: affected.slice(0, 100) },
+      };
+      console.error('[astro-audit:alert]', JSON.stringify(alert));
+      await db('platform_error_events', {
+        method: 'POST',
+        headers: { Prefer: 'return=minimal' },
+        body: JSON.stringify(alert),
+      });
+      await logRun({ ...summary, alert: 'missing_morning' }, affected, alert.message);
+    }
+
+    return json({ ok: true, audit: true, correlation_id: correlationId, summary, members });
   }
 
 
@@ -420,7 +450,7 @@ Deno.serve(async (req) => {
       const clock = localHourMinute(now, tz);
       if (!slot) {
         console.log('[astro-dispatch] skip', JSON.stringify({
-          user_id: p.user_id, timezone: tz,
+          correlation_id: correlationId, user_id: p.user_id, timezone: tz,
           local_time: `${String(clock.hour).padStart(2, '0')}:${String(clock.minute).padStart(2, '0')}`,
           target_date: localDateIn(now, tz), reason: 'no slot due',
         }));
@@ -430,13 +460,13 @@ Deno.serve(async (req) => {
 
       const targetDate = body.targetDate ?? localDateIn(now, tz);
       console.log('[astro-dispatch] process', JSON.stringify({
-        user_id: p.user_id, timezone: tz,
+        correlation_id: correlationId, user_id: p.user_id, timezone: tz,
         local_time: `${String(clock.hour).padStart(2, '0')}:${String(clock.minute).padStart(2, '0')}`,
         target_date: targetDate, slot, idempotency_key: `${p.user_id}_${targetDate}_${slot}`,
       }));
       const out = await processOne(p, slot, targetDate, !!state.shadow_mode, now);
       console.log('[astro-dispatch] result', JSON.stringify({
-        user_id: p.user_id, target_date: targetDate, slot, status: out.result.status, note: out.result.note ?? null,
+        correlation_id: correlationId, user_id: p.user_id, target_date: targetDate, slot, status: out.result.status, note: out.result.note ?? null,
       }));
       results.push(out.result);
 
@@ -457,6 +487,7 @@ Deno.serve(async (req) => {
 
     const summary = {
       at: now.toISOString(),
+      correlation_id: correlationId,
       processed: results.length,
       published: results.filter((r) => r.status === 'published').length,
       shadow: results.filter((r) => r.status === 'shadow').length,
@@ -470,7 +501,7 @@ Deno.serve(async (req) => {
     };
     await releaseLease(summary);
     await logRun(summary, results, null);
-    return json({ ok: true, summary, results });
+    return json({ ok: true, correlation_id: correlationId, summary, results });
   } catch (e) {
     const message = String((e as Error)?.message ?? e);
     await releaseLease({ at: now.toISOString(), error: message });

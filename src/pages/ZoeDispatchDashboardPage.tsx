@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, RefreshCw, PlayCircle, AlertTriangle, Clock, CheckCircle2, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, RefreshCw, PlayCircle, AlertTriangle, Clock, CheckCircle2, ShieldCheck, Download } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { deviceTimeZone, localClock, localDateKey, currentSlot } from '@/lib/astroSlot';
+import { newCorrelationId, setActiveCorrelationId } from '@/lib/astroCorrelation';
 
 interface AuditMember {
   user_id: string;
@@ -15,12 +16,50 @@ interface AuditMember {
   present_slots: string[];
   missing_slots: string[];
   missing_morning: boolean;
+  rows?: Array<{ id: string; slot: string; status: string }>;
 }
 
 interface AuditResult {
-  summary: { at: string; members: number; missing_morning: number; members_with_gaps: number };
+  correlation_id?: string;
+  summary: { at: string; members: number; missing_morning: number; members_with_gaps: number; correlation_id?: string };
   members: AuditMember[];
 }
+
+/** One flat row per member per selected card — the shape both exports use. */
+const auditRows = (audit: AuditResult) =>
+  audit.members.map((m) => {
+    const selected = m.rows?.find((r) => r.slot === m.current_slot) ?? m.rows?.[0] ?? null;
+    return {
+      correlation_id: audit.correlation_id ?? audit.summary.correlation_id ?? '',
+      user_id: m.user_id,
+      timezone: m.timezone,
+      local_time: m.local_time,
+      local_date: m.target_date,
+      computed_slot: m.current_slot ?? '',
+      selected_row_id: selected?.id ?? '',
+      selected_row_status: selected?.status ?? '',
+      expected_slots: m.expected_slots.join('|'),
+      present_slots: m.present_slots.join('|'),
+      missing_slots: m.missing_slots.join('|'),
+      missing_morning: m.missing_morning,
+    };
+  });
+
+const downloadFile = (name: string, mime: string, body: string) => {
+  const url = URL.createObjectURL(new Blob([body], { type: mime }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+const toCsv = (rows: Array<Record<string, unknown>>) => {
+  if (!rows.length) return '';
+  const headers = Object.keys(rows[0]);
+  const cell = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  return [headers.join(','), ...rows.map((r) => headers.map((h) => cell(r[h])).join(','))].join('\n');
+};
 
 
 interface RunRow {
@@ -83,7 +122,8 @@ const ZoeDispatchDashboardPage: React.FC = () => {
   const runNow = async () => {
     setRunning(true);
     setMessage(null);
-    const { data, error } = await supabase.functions.invoke('astro-dispatch', { body: { action: 'run' } });
+    const correlationId = newCorrelationId('run');
+    const { data, error } = await supabase.functions.invoke('astro-dispatch', { body: { action: 'run', correlationId } });
     setRunning(false);
     setMessage(error ? `Run failed: ${error.message}` : `Run finished: ${JSON.stringify((data as { summary?: unknown })?.summary ?? data)}`);
     void load();
@@ -92,10 +132,30 @@ const ZoeDispatchDashboardPage: React.FC = () => {
   const runAudit = async () => {
     setAuditing(true);
     setAudit(null);
-    const { data, error } = await supabase.functions.invoke('astro-dispatch', { body: { action: 'audit' } });
+    // One id for the whole audit: the server stamps every log line with it and
+    // client reads made while it is active are tagged the same way.
+    const correlationId = newCorrelationId('audit');
+    setActiveCorrelationId(correlationId);
+    const { data, error } = await supabase.functions.invoke('astro-dispatch', { body: { action: 'audit', correlationId } });
+    setActiveCorrelationId(null);
     setAuditing(false);
     if (error) { setMessage(`Audit failed: ${error.message}`); return; }
-    setAudit(data as AuditResult);
+    setAudit({ correlation_id: correlationId, ...(data as AuditResult) });
+  };
+
+  const exportAudit = (format: 'json' | 'csv') => {
+    if (!audit) return;
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const rows = auditRows(audit);
+    if (format === 'json') {
+      downloadFile(
+        `astro-audit-${stamp}.json`,
+        'application/json',
+        JSON.stringify({ correlation_id: audit.correlation_id, summary: audit.summary, rows }, null, 2),
+      );
+    } else {
+      downloadFile(`astro-audit-${stamp}.csv`, 'text/csv', toCsv(rows));
+    }
   };
 
   const failures = runs.filter((r) => r.error || r.failed_count > 0);
@@ -146,7 +206,32 @@ const ZoeDispatchDashboardPage: React.FC = () => {
         <div className="mb-6 rounded-xl border border-border bg-card p-4 text-sm">
           <div className="mb-3 flex items-center gap-2 font-medium">
             <ShieldCheck className="h-4 w-4" /> Slot audit
+            <div className="ml-auto flex gap-2">
+              <button
+                onClick={() => exportAudit('json')}
+                className="inline-flex items-center gap-1 rounded-lg border border-border px-2 py-1 text-xs font-normal"
+              >
+                <Download className="h-3.5 w-3.5" /> JSON
+              </button>
+              <button
+                onClick={() => exportAudit('csv')}
+                className="inline-flex items-center gap-1 rounded-lg border border-border px-2 py-1 text-xs font-normal"
+              >
+                <Download className="h-3.5 w-3.5" /> CSV
+              </button>
+            </div>
           </div>
+          {(audit.correlation_id || audit.summary.correlation_id) && (
+            <p className="mb-2 font-mono text-[11px] text-muted-foreground">
+              correlation: {audit.correlation_id ?? audit.summary.correlation_id}
+            </p>
+          )}
+          {audit.summary.missing_morning > 0 && (
+            <p className="mb-3 rounded-lg border border-destructive/50 bg-destructive/10 p-2 text-destructive">
+              Alert raised: {audit.summary.missing_morning} member(s) with no morning prompt —{' '}
+              {audit.members.filter((m) => m.missing_morning).map((m) => `${m.user_id.slice(0, 8)} (${m.target_date})`).join(', ')}
+            </p>
+          )}
           <p className="mb-3 text-muted-foreground">
             {audit.summary.members} member(s) · {audit.summary.missing_morning} missing morning ·{' '}
             {audit.summary.members_with_gaps} with gaps

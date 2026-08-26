@@ -2,7 +2,9 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 import { Sparkles, Moon, Clock, X, Compass } from 'lucide-react';
 import type { AstroPredictionRecord } from './moraZoeTypes';
-import { SLOT_LABEL, currentSlot, deviceTimeZone, localClock, localDateKey, type AstroSlot } from '@/lib/astroSlot';
+import { SLOT_LABEL, astroNow, currentSlot, deviceTimeZone, localClock, localDateKey, type AstroSlot } from '@/lib/astroSlot';
+import { subscribeSimulation } from '@/lib/astroSimulation';
+import AstroSimulationPanel from './AstroSimulationPanel';
 
 
 /** Turns technical aspect names into everyday language anyone can follow. */
@@ -31,10 +33,11 @@ export const MoraZoeMorningTakeover: React.FC<Props> = ({ prediction, posterUrl,
 
   // Live device clock so the indicator below can be compared to the phone's
   // own clock at a glance.
-  const [now, setNow] = React.useState(() => new Date());
+  const [now, setNow] = React.useState(() => astroNow());
   React.useEffect(() => {
-    const t = window.setInterval(() => setNow(new Date()), 15_000);
-    return () => window.clearInterval(t);
+    const t = window.setInterval(() => setNow(astroNow()), 15_000);
+    const unsub = subscribeSimulation(() => setNow(astroNow()));
+    return () => { window.clearInterval(t); unsub(); };
   }, []);
   const tz = deviceTimeZone();
   const deviceSlot = currentSlot(now, tz);
@@ -132,6 +135,8 @@ export const MoraZoeMorningTakeover: React.FC<Props> = ({ prediction, posterUrl,
             {slot} card{slotMatches ? '' : ` (device: ${deviceSlot})`}
           </span>
         </div>
+
+        <AstroSimulationPanel />
 
         <p className="mt-4 text-[11px] text-muted-foreground">
           Auto-dismissing and saving to your daily alignment archive…
