@@ -200,12 +200,31 @@ const ZoeDispatchDashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Slot audit across all members */}
+      {/* Slot audit across all members — defaults to the latest stored report */}
       {audit && (
         <div className="mb-6 rounded-xl border border-border bg-card p-4 text-sm">
-          <div className="mb-3 flex items-center gap-2 font-medium">
+          <div className="mb-3 flex flex-wrap items-center gap-2 font-medium">
             <ShieldCheck className="h-4 w-4" /> Slot audit
+            <select
+              value={selectedAuditId}
+              onChange={(e) => setSelectedAuditId(e.target.value)}
+              className="rounded-lg border border-border bg-background px-2 py-1 text-xs font-normal"
+              aria-label="Audit run"
+            >
+              {auditRuns.map((r, i) => (
+                <option key={r.audit_run_id} value={r.audit_run_id}>
+                  {i === 0 ? 'Latest · ' : ''}{new Date(r.created_at).toLocaleString()} · {r.source} · {r.missing_morning} missing
+                </option>
+              ))}
+            </select>
             <div className="ml-auto flex gap-2">
+              <button
+                onClick={() => setShowDiff((v) => !v)}
+                disabled={!previousAudit}
+                className="inline-flex items-center gap-1 rounded-lg border border-border px-2 py-1 text-xs font-normal disabled:opacity-50"
+              >
+                <GitCompare className="h-3.5 w-3.5" /> {showDiff ? 'Hide diff' : 'Audit diff'}
+              </button>
               <button
                 onClick={() => exportAudit('json')}
                 className="inline-flex items-center gap-1 rounded-lg border border-border px-2 py-1 text-xs font-normal"
@@ -220,25 +239,65 @@ const ZoeDispatchDashboardPage: React.FC = () => {
               </button>
             </div>
           </div>
-          {(audit.correlation_id || audit.summary.correlation_id) && (
-            <p className="mb-2 font-mono text-[11px] text-muted-foreground">
-              correlation: {audit.correlation_id ?? audit.summary.correlation_id}
-            </p>
-          )}
-          {audit.summary.missing_morning > 0 && (
+          <p className="mb-2 break-all font-mono text-[11px] text-muted-foreground">
+            run: {audit.audit_run_id} · correlation: {audit.correlation_id}
+          </p>
+          {audit.missing_morning > 0 && (
             <p className="mb-3 rounded-lg border border-destructive/50 bg-destructive/10 p-2 text-destructive">
-              Alert raised: {audit.summary.missing_morning} member(s) with no morning prompt —{' '}
-              {audit.members.filter((m) => m.missing_morning).map((m) => `${m.user_id.slice(0, 8)} (${m.target_date})`).join(', ')}
+              Alert raised: {audit.missing_morning} member(s) with no morning prompt —{' '}
+              {(audit.members ?? []).filter((m) => m.missing_morning).map((m) => `${m.user_id.slice(0, 8)} (${m.target_date})`).join(', ')}
+              {audit.notifications && (
+                <span className="mt-1 block text-xs">
+                  slack: {(audit.notifications as { slack?: { sent?: boolean; error?: string } }).slack?.sent ? 'sent' : (audit.notifications as { slack?: { error?: string } }).slack?.error ?? 'not sent'}
+                  {' · '}
+                  email: {(audit.notifications as { email?: { sent?: boolean; error?: string } }).email?.sent ? 'sent' : (audit.notifications as { email?: { error?: string } }).email?.error ?? 'not sent'}
+                </span>
+              )}
             </p>
           )}
           <p className="mb-3 text-muted-foreground">
-            {audit.summary.members} member(s) · {audit.summary.missing_morning} missing morning ·{' '}
-            {audit.summary.members_with_gaps} with gaps
+            {audit.members_count} member(s) · {audit.missing_morning} missing morning ·{' '}
+            {audit.members_with_gaps} with gaps · {new Date(audit.created_at).toLocaleString()} · {audit.source}
           </p>
+
+          {/* Diff against the previous run */}
+          {showDiff && previousAudit && (
+            <div className="mb-4 rounded-lg border border-border/60 bg-muted/30 p-3">
+              <div className="mb-2 flex items-center gap-2 font-medium">
+                <GitCompare className="h-3.5 w-3.5" /> Changes vs {new Date(previousAudit.created_at).toLocaleString()}
+              </div>
+              {diff.length === 0 ? (
+                <p className="text-muted-foreground">No member changed between these two runs.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {diff.map((d) => (
+                    <li key={`${d.kind}_${d.key}`} className="rounded-lg border border-border/60 bg-background p-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className={`rounded px-1.5 py-0.5 text-[11px] ${d.kind === 'added' ? 'bg-emerald-500/15 text-emerald-500' : d.kind === 'removed' ? 'bg-muted text-muted-foreground' : 'bg-amber-500/15 text-amber-500'}`}>
+                          {d.kind}
+                        </span>
+                        <span className="font-mono text-xs">{d.user_id.slice(0, 8)}</span>
+                        <span className="text-muted-foreground">{d.local_date}</span>
+                      </div>
+                      {Object.entries(d.changes).map(([field, [before, after]]) => (
+                        <div key={field} className="mt-1 font-mono text-[11px]">
+                          <span className="text-muted-foreground">{field}: </span>
+                          <span className="text-destructive line-through">{before || '—'}</span>
+                          <span className="text-muted-foreground"> → </span>
+                          <span className="text-emerald-500">{after || '—'}</span>
+                        </div>
+                      ))}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+
           <ul className="space-y-2">
-            {audit.members.map((m) => (
+            {(audit.members ?? []).map((m) => (
               <li
-                key={m.user_id}
+                key={`${m.user_id}_${m.target_date}`}
                 className={`rounded-lg border p-2 ${m.missing_morning ? 'border-destructive/50' : 'border-border/60'}`}
               >
                 <div className="flex flex-wrap items-center gap-2 text-muted-foreground">
@@ -247,6 +306,12 @@ const ZoeDispatchDashboardPage: React.FC = () => {
                   <span>{m.local_time}</span>
                   <span>{m.target_date}</span>
                   <span className="text-foreground">slot: {m.current_slot ?? '—'}</span>
+                  <Link
+                    to={`/zoe-astro/trace/${encodeURIComponent(audit.correlation_id)}?user=${encodeURIComponent(m.user_id)}`}
+                    className="ml-auto inline-flex items-center gap-1 rounded border border-border px-1.5 py-0.5 text-[11px] hover:text-foreground"
+                  >
+                    <Radio className="h-3 w-3" /> Trace
+                  </Link>
                 </div>
                 <div className="mt-1 flex flex-wrap gap-2">
                   <span>expected: {m.expected_slots.join(', ') || '—'}</span>
@@ -261,6 +326,7 @@ const ZoeDispatchDashboardPage: React.FC = () => {
           </ul>
         </div>
       )}
+
 
 
       {/* Engine state */}
