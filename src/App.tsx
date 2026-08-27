@@ -116,6 +116,8 @@ const ZoeAstroDashboardPage = lazy(() => import("./pages/ZoeAstroDashboardPage")
 const ZoeBirthDetailsPage = lazy(() => import("./pages/ZoeBirthDetailsPage"));
 const ZoeDispatchDashboardPage = lazy(() => import("./pages/ZoeDispatchDashboardPage"));
 const ZoeAstroLogPage = lazy(() => import("./pages/ZoeAstroLogPage"));
+const ZoeAuditTracePage = lazy(() => import("./pages/ZoeAuditTracePage"));
+
 
 
 // Loading fallback component — never render a silent black screen.
