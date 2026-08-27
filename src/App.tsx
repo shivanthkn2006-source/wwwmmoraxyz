@@ -223,6 +223,16 @@ class ErrorBoundary extends React.Component<
     console.error('Component stack:', errorInfo.componentStack);
     this.setState({ componentStack: errorInfo.componentStack });
 
+    reportPlatformError({
+      errorType: 'AppShellErrorBoundary',
+      message: error.message,
+      stack: error.stack,
+      componentStack: errorInfo.componentStack ?? undefined,
+      severity: 'critical',
+      source: 'app-shell',
+    });
+
+
     const message = String(error?.message || '').toLowerCase();
     const isChunkImportFailure =
       message.includes('importing a module script failed') ||
