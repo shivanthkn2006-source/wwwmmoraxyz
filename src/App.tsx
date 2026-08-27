@@ -437,6 +437,7 @@ const RouteAwareShell = () => {
         </VoiceRuntimeGate>
 
         <ErrorBoundary>
+          <AppErrorBoundary moduleName={`route:${pathname}`} resetKeys={[pathname]}>
           <Suspense fallback={<PageLoader />}>
             <Routes>
               <Route path="/access-denied" element={<AccessDeniedScreen />} />
