@@ -41,6 +41,8 @@ import BiosBootSequence from "./components/boot/BiosBootSequence";
 import React, { useState, useEffect, useCallback, lazy, Suspense, memo } from "react";
 import { useLocation } from "react-router-dom";
 import { checkAppVersion, recoverFromChunkError } from "@/lib/versionCheck";
+import { AppErrorBoundary } from "@/components/core/ErrorBoundary";
+import { reportPlatformError } from "@/lib/enterpriseTelemetry";
 
 // Lazy load pages for code splitting and faster initial load
 const AuthPage = lazy(() => import("./pages/AuthPage"));
@@ -220,6 +222,16 @@ class ErrorBoundary extends React.Component<
     console.error('App ErrorBoundary:', error);
     console.error('Component stack:', errorInfo.componentStack);
     this.setState({ componentStack: errorInfo.componentStack });
+
+    reportPlatformError({
+      errorType: 'AppShellErrorBoundary',
+      message: error.message,
+      stack: error.stack,
+      componentStack: errorInfo.componentStack ?? undefined,
+      severity: 'critical',
+      source: 'app-shell',
+    });
+
 
     const message = String(error?.message || '').toLowerCase();
     const isChunkImportFailure =
