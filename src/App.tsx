@@ -500,6 +500,7 @@ const RouteAwareShell = () => {
                 <QuantumGatekeeper enabled={true}>
                   <div className="min-h-screen bg-background text-foreground omega-void-bg">
                     <ErrorBoundary>
+                      <AppErrorBoundary moduleName={`route:${pathname}`} resetKeys={[pathname]}>
                       <Suspense fallback={<PageLoader />}>
                         <Routes>
                           <Route path="/access-denied" element={<AccessDeniedScreen />} />
