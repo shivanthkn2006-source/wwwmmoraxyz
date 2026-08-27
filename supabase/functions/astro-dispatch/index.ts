@@ -234,6 +234,106 @@ function dueSlot(now: Date, timeZone: string): Slot | null {
   return best;
 }
 
+// ───────────────── retry + delivery-attempt bookkeeping ─────────────────
+type DeliveryResult = { sent: boolean; via?: string; error?: string };
+
+const RETRY_MAX_ATTEMPTS = 4;
+const RETRY_BASE_MS = 400;
+const RETRY_MAX_DELAY_MS = 8_000;
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** Pull the HTTP status out of an "`503: body`"-shaped error string. */
+function statusFromError(error?: string): number | null {
+  const m = /^(\d{3})\b/.exec(error ?? '');
+  return m ? Number(m[1]) : null;
+}
+
+/**
+ * Configuration errors and 4xx client errors are permanent — retrying them
+ * only burns time. Everything else (network blips, 429, 5xx) is transient.
+ */
+function isRetryable(result: DeliveryResult): boolean {
+  if (result.sent) return false;
+  const err = (result.error ?? '').toLowerCase();
+  if (err.includes('not configured')) return false;
+  const status = statusFromError(result.error);
+  if (status === null) return true;                 // network / unknown → retry
+  if (status === 408 || status === 429) return true;
+  return status >= 500;
+}
+
+/** Exponential backoff with full jitter, capped. */
+function backoffDelay(attempt: number): number {
+  const exp = Math.min(RETRY_BASE_MS * 2 ** (attempt - 1), RETRY_MAX_DELAY_MS);
+  return Math.round(exp / 2 + Math.random() * (exp / 2));
+}
+
+interface AttemptContext {
+  auditRunId: string;
+  correlationId: string;
+  source: string;
+  subject: string;
+}
+
+/** Persist one delivery attempt. Never throws — bookkeeping is diagnostic. */
+async function recordAttempt(row: Record<string, unknown>) {
+  try {
+    await db('notification_attempts', {
+      method: 'POST',
+      headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify(row),
+    });
+  } catch { /* diagnostic only */ }
+}
+
+/**
+ * Runs a delivery with bounded exponential backoff, recording every attempt
+ * (success or failure) against the audit run so transient errors are visible
+ * and never silently swallow an alert.
+ */
+async function deliverWithRetry(
+  channel: 'slack' | 'email',
+  ctx: AttemptContext,
+  send: () => Promise<DeliveryResult>,
+): Promise<DeliveryResult & { attempts: number }> {
+  let last: DeliveryResult = { sent: false, error: 'not attempted' };
+
+  for (let attempt = 1; attempt <= RETRY_MAX_ATTEMPTS; attempt++) {
+    const startedAt = Date.now();
+    try {
+      last = await send();
+    } catch (e) {
+      last = { sent: false, error: String((e as Error)?.message ?? e).slice(0, 200) };
+    }
+    const durationMs = Date.now() - startedAt;
+
+    await recordAttempt({
+      audit_run_id: ctx.auditRunId,
+      correlation_id: ctx.correlationId,
+      channel,
+      attempt,
+      max_attempts: RETRY_MAX_ATTEMPTS,
+      succeeded: last.sent,
+      transport: last.via ?? null,
+      error: last.sent ? null : (last.error ?? null),
+      http_status: statusFromError(last.error),
+      duration_ms: durationMs,
+      subject: ctx.subject,
+      source: ctx.source,
+      metadata: { retryable: isRetryable(last) },
+    });
+
+    if (last.sent || !isRetryable(last) || attempt === RETRY_MAX_ATTEMPTS) {
+      return { ...last, attempts: attempt };
+    }
+    await sleep(backoffDelay(attempt));
+  }
+
+  return { ...last, attempts: RETRY_MAX_ATTEMPTS };
+}
+
+
 interface ProfileRow {
   user_id: string;
   birth_date: string;
