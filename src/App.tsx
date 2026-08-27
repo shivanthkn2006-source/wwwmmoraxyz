@@ -466,6 +466,7 @@ const RouteAwareShell = () => {
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
+          </AppErrorBoundary>
         </ErrorBoundary>
       </div>
     );
