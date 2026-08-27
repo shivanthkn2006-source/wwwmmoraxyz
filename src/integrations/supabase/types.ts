@@ -3360,6 +3360,63 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_attempts: {
+        Row: {
+          attempt: number
+          audit_run_id: string | null
+          channel: string
+          correlation_id: string | null
+          created_at: string
+          duration_ms: number | null
+          error: string | null
+          http_status: number | null
+          id: string
+          max_attempts: number
+          metadata: Json
+          source: string | null
+          subject: string | null
+          succeeded: boolean
+          transport: string | null
+          updated_at: string
+        }
+        Insert: {
+          attempt?: number
+          audit_run_id?: string | null
+          channel: string
+          correlation_id?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          error?: string | null
+          http_status?: number | null
+          id?: string
+          max_attempts?: number
+          metadata?: Json
+          source?: string | null
+          subject?: string | null
+          succeeded?: boolean
+          transport?: string | null
+          updated_at?: string
+        }
+        Update: {
+          attempt?: number
+          audit_run_id?: string | null
+          channel?: string
+          correlation_id?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          error?: string | null
+          http_status?: number | null
+          id?: string
+          max_attempts?: number
+          metadata?: Json
+          source?: string | null
+          subject?: string | null
+          succeeded?: boolean
+          transport?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       notification_settings: {
         Row: {
           adaptive_volume_enabled: boolean | null
