@@ -437,6 +437,7 @@ const RouteAwareShell = () => {
         </VoiceRuntimeGate>
 
         <ErrorBoundary>
+          <AppErrorBoundary moduleName={`route:${pathname}`} resetKeys={[pathname]}>
           <Suspense fallback={<PageLoader />}>
             <Routes>
               <Route path="/access-denied" element={<AccessDeniedScreen />} />
@@ -465,6 +466,7 @@ const RouteAwareShell = () => {
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
+          </AppErrorBoundary>
         </ErrorBoundary>
       </div>
     );
@@ -498,6 +500,7 @@ const RouteAwareShell = () => {
                 <QuantumGatekeeper enabled={true}>
                   <div className="min-h-screen bg-background text-foreground omega-void-bg">
                     <ErrorBoundary>
+                      <AppErrorBoundary moduleName={`route:${pathname}`} resetKeys={[pathname]}>
                       <Suspense fallback={<PageLoader />}>
                         <Routes>
                           <Route path="/access-denied" element={<AccessDeniedScreen />} />
@@ -979,6 +982,7 @@ const RouteAwareShell = () => {
                           <Route path="*" element={<NotFound />} />
                         </Routes>
                       </Suspense>
+                      </AppErrorBoundary>
                     </ErrorBoundary>
                   </div>
                 </QuantumGatekeeper>
