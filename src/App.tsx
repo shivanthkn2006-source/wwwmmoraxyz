@@ -727,6 +727,16 @@ const RouteAwareShell = () => {
                               </ProtectedRoute>
                             }
                           />
+                          <Route
+                            path="/zoe-astro/trace/:correlationId"
+                            element={
+                              <ProtectedRoute>
+                                <ZoeAuditTracePage />
+                              </ProtectedRoute>
+                            }
+                          />
+
+
 
                           <Route
                             path="/dhf-dashboard"
