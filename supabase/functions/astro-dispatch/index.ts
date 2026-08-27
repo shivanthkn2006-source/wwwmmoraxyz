@@ -617,9 +617,11 @@ Deno.serve(async (req) => {
       await logRun({ ...summary, alert: 'missing_morning' }, affected, alert.message);
 
       const text = alertLines({ correlationId, auditRunId, affected, summary });
+      const subject = `[M'Mora] ${missingMorning} member(s) missing a morning prompt`;
+      const attemptCtx = { auditRunId, correlationId, source: `astro-dispatch:audit:${source}`, subject };
       const [slack, email] = await Promise.all([
-        notifySlack(text),
-        notifyEmail(`[M'Mora] ${missingMorning} member(s) missing a morning prompt`, text),
+        deliverWithRetry('slack', attemptCtx, () => notifySlack(text)),
+        deliverWithRetry('email', attemptCtx, () => notifyEmail(subject, text)),
       ]);
       notifications.slack = slack;
       notifications.email = email;
