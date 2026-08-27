@@ -25,11 +25,12 @@ const downloadFile = (name: string, mime: string, body: string) => {
   URL.revokeObjectURL(url);
 };
 
-const toCsv = (rows: Array<Record<string, unknown>>) => {
+const toCsv = <T extends object>(rows: T[]) => {
   if (!rows.length) return '';
   const headers = Object.keys(rows[0]);
   const cell = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  return [headers.join(','), ...rows.map((r) => headers.map((h) => cell(r[h])).join(','))].join('\n');
+  return [headers.join(','), ...rows.map((r) => headers.map((h) => cell((r as Record<string, unknown>)[h])).join(','))].join('\n');
+
 };
 
 
