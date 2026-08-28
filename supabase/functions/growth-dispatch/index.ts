@@ -143,12 +143,12 @@ interface PrefRow {
   notify_push?: boolean | null;
   notify_email?: boolean | null;
   notify_digest?: string | null;
-  last_digest_date?: string | null;
+  last_digest_at?: string | null;
 }
 
 const PREF_SELECT =
   'user_id,focus_areas,reflection_style,reflection_styles,delivery_frequency,paused,timezone,' +
-  'notify_on_new_insight,notify_push,notify_email,notify_digest,last_digest_date,onboarded_at';
+  'notify_on_new_insight,notify_push,notify_email,notify_digest,last_digest_at,onboarded_at';
 
 async function candidates(limit: number): Promise<PrefRow[]> {
   const r = await db(
@@ -210,11 +210,16 @@ async function deliverInsightNotifications(
   const digest = pref.notify_digest ?? 'instant';
   if (digest === 'off') return;
   if (digest === 'daily') {
-    if (pref.last_digest_date === localDate) return;
+    // One alert per local day: compare the last digest against the user's own
+    // wall-clock date, not UTC, so timezones never double- or under-notify.
+    const last = pref.last_digest_at
+      ? localDateIn(new Date(pref.last_digest_at), pref.timezone || 'UTC')
+      : null;
+    if (last === localDate) return;
     await db(`growth_preferences?user_id=eq.${pref.user_id}`, {
       method: 'PATCH',
       headers: { Prefer: 'return=minimal' },
-      body: JSON.stringify({ last_digest_date: localDate }),
+      body: JSON.stringify({ last_digest_at: new Date().toISOString() }),
     }).catch(() => undefined);
   }
 
@@ -434,7 +439,7 @@ function parseBackfill(body: any): { req?: BackfillRequest; error?: string } {
  * Bounded three ways: item cap, wall-clock budget, and a per-item throttle so a
  * backfill can never starve the live 15-minute dispatch of provider capacity.
  */
-async function runBackfill(req: BackfillRequest, jobId: string, triggeredBy: string) {
+async function runBackfill(req: BackfillRequest, jobId: string, triggeredBy: string | null) {
   const startedAt = Date.now();
   const state = await getState();
   const shadow = state?.shadow_mode !== false;
@@ -511,7 +516,7 @@ async function runBackfill(req: BackfillRequest, jobId: string, triggeredBy: str
     headers: { Prefer: 'return=minimal' },
     body: JSON.stringify({
       id: jobId,
-      triggered_by: triggeredBy,
+      created_by: triggeredBy,
       from_date: req.fromDate,
       to_date: req.toDate,
       slots: req.slots,
@@ -519,10 +524,12 @@ async function runBackfill(req: BackfillRequest, jobId: string, triggeredBy: str
       dry_run: req.dryRun,
       throttle_ms: req.throttleMs,
       max_items: req.maxItems,
-      status: errors.length ? 'completed_with_errors' : 'completed',
-      scanned, written, skipped,
+      status: errors.length ? 'failed' : 'done',
+      processed: scanned,
+      written,
+      skipped,
       errors: summary.errors,
-      duration_ms: Date.now() - startedAt,
+      started_at: new Date(startedAt).toISOString(),
       finished_at: new Date().toISOString(),
     }),
   }).catch(() => undefined);
@@ -763,7 +770,7 @@ Deno.serve(async (req) => {
       if (!parsed) return json({ ok: false, error }, 400);
       const user = await authUser(req);
       const jobId = crypto.randomUUID();
-      const summary = await runBackfill(parsed, jobId, user?.id ?? 'admin');
+    const summary = await runBackfill(parsed, jobId, user?.id ?? null);
       await logRun({
         run_id: jobId,
         action: 'backfill',
