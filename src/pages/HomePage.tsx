@@ -2462,6 +2462,12 @@ const HomePage = () => {
             onSelect: runHomeIconAction('neural-feed', () => setNeuralFeedOpen(true)),
           },
           {
+            id: 'growth-insights',
+            label: 'Growth insights',
+            icon: <Lightbulb className="h-[22px] w-[22px]" />,
+            onSelect: runHomeIconAction('growth-insights', () => navigate('/growth-insights')),
+          },
+          {
             id: 'vr-world',
             label: 'VR World',
             icon: <Boxes className="h-[22px] w-[22px]" />,
