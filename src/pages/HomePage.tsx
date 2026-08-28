@@ -214,6 +214,22 @@ const HomePage = () => {
       </div>,
     );
   }
+  // Today's delivery status travels with the feed: missing prompts, worker
+  // errors, retry budget and a manual catch-up, right where members read.
+  if (user && !growthLoading && !growthError && !growthNeedsOnboarding) {
+    growthSlide.push(
+      <div
+        key="growth-status"
+        className="relative flex h-full min-h-full w-full shrink-0 snap-start snap-always items-center overflow-y-auto p-4"
+        data-growth-status-slide
+      >
+        <FeedErrorBoundary section="posts">
+          <GrowthTodayStatusPanel className="w-full" verifyComposition />
+        </FeedErrorBoundary>
+      </div>,
+    );
+  }
+
 
 
 
