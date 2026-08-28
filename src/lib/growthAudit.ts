@@ -11,6 +11,8 @@
 import { supabase } from '@/integrations/supabase/client';
 
 export type GrowthAuditAction =
+  | 'onboarding_prompted'
+  | 'preferences_missing'
   | 'onboarding_dismissed'
   | 'onboarding_skipped'
   | 'onboarding_completed'

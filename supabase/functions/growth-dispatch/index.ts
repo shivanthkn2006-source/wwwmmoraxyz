@@ -39,6 +39,9 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 const MAX_USERS_PER_RUN = 25;
+/** Nightly reconciliation ceilings — bounded so a sweep can never run away. */
+const SWEEP_MAX_USERS = 500;
+const MAX_SLOTS_PER_USER = 5;
 const LEASE_MS = 4 * 60_000;
 const SLOT_WINDOW_MIN = 75;
 const RATE_LIMIT_PARK = 3;
@@ -46,7 +49,7 @@ const REGEN_COOLDOWN_MS = 60_000;
 const REGEN_DAILY_CAP = 5;
 const BACKFILL_MAX_ITEMS = 200;
 /** Bumped on every worker change so admin UIs can prove they hit the latest deploy. */
-const WORKER_VERSION = '2026-08-28.3';
+const WORKER_VERSION = '2026-08-28.4';
 const BACKFILL_MIN_THROTTLE_MS = 100;
 const BACKFILL_MAX_THROTTLE_MS = 5_000;
 const BACKFILL_BUDGET_MS = 50_000;
@@ -160,6 +163,25 @@ async function candidates(limit: number, afterUserId?: string | null): Promise<P
   if (rows.length > 0 || !afterUserId) return rows;
   const wrapped = await db(base);
   return Array.isArray(wrapped.data) ? wrapped.data : [];
+}
+
+/**
+ * Nightly reconciliation candidate set: pages through every eligible member in
+ * stable user_id order so nobody can be starved by the rotating cursor.
+ */
+async function allCandidates(maxUsers: number): Promise<PrefRow[]> {
+  const page = 200;
+  const out: PrefRow[] = [];
+  let after: string | null = null;
+  while (out.length < maxUsers) {
+    const batch = await candidates(Math.min(page, maxUsers - out.length) / 8 || 1, after);
+    if (batch.length === 0) break;
+    out.push(...batch);
+    const next = batch[batch.length - 1]?.user_id ?? null;
+    if (!next || next === after) break;
+    after = next;
+  }
+  return out.slice(0, maxUsers);
 }
 
 async function deliveredSlots(userId: string, localDate: string): Promise<Set<string>> {
@@ -359,6 +381,9 @@ async function runBatch(opts: {
   dryRun: boolean;
   probeOnly: boolean;
   targetUserId?: string;
+  /** Nightly reconciliation: page through EVERY eligible user, ignore the cursor. */
+  sweep?: boolean;
+  sweepCap?: number;
 }): Promise<RunSummary> {
   const state = await getState();
   const shadow = state?.shadow_mode !== false;
@@ -371,8 +396,14 @@ async function runBatch(opts: {
   const targetedPref = opts.targetUserId ? await loadPref(opts.targetUserId) : null;
   const rows = opts.targetUserId
     ? (targetedPref && !targetedPref.paused ? [targetedPref] : [])
-    : await candidates(MAX_USERS_PER_RUN, state?.last_candidate_user_id ?? null);
-  const cap = opts.targetUserId ? 5 : opts.probeOnly ? 1 : MAX_USERS_PER_RUN;
+    : opts.sweep
+      ? await allCandidates(opts.sweepCap ?? SWEEP_MAX_USERS)
+      : await candidates(MAX_USERS_PER_RUN, state?.last_candidate_user_id ?? null);
+  const cap = opts.targetUserId
+    ? 5
+    : opts.sweep
+      ? (opts.sweepCap ?? SWEEP_MAX_USERS) * MAX_SLOTS_PER_USER
+      : opts.probeOnly ? 1 : MAX_USERS_PER_RUN;
   let rateLimitStreak = Number(state?.consecutive_rate_limits ?? 0);
 
   for (const pref of rows) {
@@ -924,6 +955,38 @@ Deno.serve(async (req) => {
     if (action === 'preview') {
       const summary = await runBatch({ dryRun: true, probeOnly: true });
       return json({ ok: true, dryRun: true, summary });
+    }
+
+    // Nightly reconciliation: recheck every timezone window for every eligible
+    // member and fill any gap the 15-minute rotation missed. Idempotent — the
+    // unique (user, local_date, slot) key makes a repeat run a no-op.
+    if (action === 'reconcile') {
+      const owner = crypto.randomUUID();
+      const startedAt = new Date();
+      if (!(await acquireLease(owner))) {
+        return json({ ok: true, skipped: 'another run holds the lease', version: WORKER_VERSION });
+      }
+      try {
+        const summary = await runBatch({ dryRun: false, probeOnly: false, sweep: true });
+        await logRun({
+          run_id: owner,
+          action: 'reconcile',
+          started_at: startedAt.toISOString(),
+          finished_at: new Date().toISOString(),
+          duration_ms: Date.now() - startedAt.getTime(),
+          processed: summary.processed,
+          written: summary.written,
+          skipped: summary.skipped,
+          vault: summary.vault,
+          catchups: summary.catchups,
+          paused: summary.paused,
+          parked: summary.parked,
+          errors: summary.errors.slice(0, 10),
+        });
+        return json({ ok: true, summary, version: WORKER_VERSION });
+      } finally {
+        await releaseLease();
+      }
     }
 
     if (action === 'catchup-me') {

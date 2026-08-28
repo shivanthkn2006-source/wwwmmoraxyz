@@ -116,6 +116,10 @@ export const detectNewArrivals = (
  * Atomically resolves a feed snapshot against the persisted unseen-ID store.
  * Badge rendering and auto-scroll must both consume `unseenIds` from this result
  * rather than independently deriving "new" state from rendered posts.
+ *
+ * YouTube-style semantics: the very first load on a device is a silent baseline
+ * (nothing is badged), and from then on ANY id the member has not seen yet gets
+ * a "New" badge — not just realtime arrivals. Auto-scroll stays realtime-only.
  */
 export const syncUnseenPostSnapshot = (
   tab: string,
@@ -124,12 +128,24 @@ export const syncUnseenPostSnapshot = (
   source: FeedUpdateSource,
 ): UnseenSnapshotResult => {
   const arrivals = detectNewArrivals(previousIds, nextIds, source);
-  const unseenIds = source === 'realtime'
-    ? registerUnseenPosts(tab, arrivals.newIds)
-    : reconcileUnseenPosts(tab, arrivals.knownIds);
 
-  return { ...arrivals, unseenIds };
+  if (source === 'realtime') {
+    return { ...arrivals, unseenIds: registerUnseenPosts(tab, arrivals.newIds) };
+  }
+
+  // First ever load on this device: establish a quiet baseline so a returning
+  // member is not shown a wall of "New" badges for their whole backlog.
+  if (hasNoSeenHistory(tab)) {
+    const pending = readUnseenPostIds(tab);
+    const baseline = arrivals.knownIds.filter((id) => !pending.has(id));
+    if (baseline.length > 0) markPostsSeen(tab, baseline);
+    return { ...arrivals, unseenIds: reconcileUnseenPosts(tab, arrivals.knownIds) };
+  }
+
+  registerUnseenPosts(tab, getUnseenPostIds(tab, arrivals.knownIds));
+  return { ...arrivals, unseenIds: reconcileUnseenPosts(tab, arrivals.knownIds) };
 };
+
 
 export const createOnePassQueue = (ids: string[]): string[] =>
   Array.from(new Set(ids.filter(Boolean)));
