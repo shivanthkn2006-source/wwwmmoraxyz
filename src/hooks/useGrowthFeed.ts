@@ -69,8 +69,8 @@ export function useGrowthFeed() {
     if (!user) { setState({ ...EMPTY, loading: false }); return; }
 
     const tz = deviceTimeZone();
-    const today = localDateIn(new Date(), tz);
-    const yesterday = localDateIn(new Date(Date.now() - 86_400_000), tz);
+    const provisionalToday = localDateIn(new Date(), tz);
+    const provisionalYesterday = localDateIn(new Date(Date.now() - 86_400_000), tz);
 
     try {
       const [prefRes, itemRes, savedRes] = await Promise.all([
@@ -84,8 +84,9 @@ export function useGrowthFeed() {
         supabase
           .from('growth_feed_items')
           .select('id, slot, local_date, title, category, content, actionable_step, created_at')
+          .eq('user_id', user.id)
           .eq('status', 'published')
-          .gte('local_date', yesterday)
+          .gte('local_date', provisionalYesterday)
           .order('created_at', { ascending: false })
           .limit(20),
         supabase
@@ -128,6 +129,7 @@ export function useGrowthFeed() {
 
       const enabled = slotsForFrequency(preferences?.delivery_frequency ?? 5);
       const zone = preferences?.timezone || tz;
+      const today = localDateIn(new Date(), zone);
       const slot = currentSlot(new Date(), zone, enabled);
 
       // Catch-up: everything already delivered today, chronologically.
@@ -160,6 +162,31 @@ export function useGrowthFeed() {
   }, [user]);
 
   useEffect(() => { void load(); }, [load]);
+
+  // A signed-in member should not wait for successive cron ticks to recover
+  // missed windows. Ask the worker once per session/local day to fill every
+  // elapsed gap, then refresh the read-only feed. The worker lease + unique key
+  // make concurrent tabs and repeated calls safe.
+  useEffect(() => {
+    if (!user?.id) return;
+    const key = `growth:catchup:${user.id}:${localDateIn(new Date(), deviceTimeZone())}`;
+    try {
+      if (sessionStorage.getItem(key)) return;
+      sessionStorage.setItem(key, 'pending');
+    } catch { /* session storage unavailable; server idempotency still protects us */ }
+    void supabase.functions.invoke('growth-dispatch', { body: { action: 'catchup-me' } })
+      .then(({ data, error }) => {
+        if (error || !(data as { ok?: boolean } | null)?.ok) {
+          try { sessionStorage.removeItem(key); } catch { /* retry next mount */ }
+          return;
+        }
+        try { sessionStorage.setItem(key, 'done'); } catch { /* no-op */ }
+        void load();
+      })
+      .catch(() => {
+        try { sessionStorage.removeItem(key); } catch { /* retry next mount */ }
+      });
+  }, [user?.id, load]);
 
   const toggleSave = useCallback(
     async (itemId: string) => {

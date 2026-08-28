@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   elapsedSlots, sanitizeStyles, slotOrder, slotsForFrequency,
-  currentSlot, ALL_REFLECTION_STYLES,
+  currentSlot, missingElapsedSlots, ALL_REFLECTION_STYLES,
 } from '@/lib/growthSlot';
 
 const at = (iso: string) => new Date(iso);
@@ -26,6 +26,15 @@ describe('growth slot catch-up', () => {
 
   it('keeps chronological ordering stable', () => {
     expect(slotOrder('morning')).toBeLessThan(slotOrder('night'));
+  });
+
+  it('returns every missing elapsed slot in one catch-up pass', () => {
+    const missing = missingElapsedSlots(
+      at('2026-08-28T14:30:00Z'),
+      'Asia/Kolkata',
+      ['midday'],
+    );
+    expect(missing).toEqual(['morning', 'afternoon', 'evening']);
   });
 
   it('still resolves a current slot after midnight', () => {

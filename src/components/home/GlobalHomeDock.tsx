@@ -24,18 +24,21 @@ const EXCLUDED_PREFIXES = [
   '/voice-auth',
   '/password-recovery',
   '/access-denied',
+  // Zoe Infinity is a standalone product surface and intentionally carries
+  // no M'Mora navigation chrome.
   '/zoe-infinity',
 ];
 
 export const GlobalHomeDock: React.FC = () => {
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, session, loading } = useAuth();
   const unread = useGrowthUnread();
   const [alertsOpen, setAlertsOpen] = useState(false);
 
-  const hidden =
-    !user || EXCLUDED_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+  const confirmedSignedOut = !loading && !user && !session;
+  const hidden = confirmedSignedOut ||
+    EXCLUDED_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
   if (hidden) return null;
 
   return (
