@@ -13,7 +13,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Bookmark, Sparkles, Search, Loader2, CalendarRange, X } from 'lucide-react';
+import { ArrowLeft, Bookmark, Sparkles, Search, Loader2, CalendarRange, X, SlidersHorizontal } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { toast } from 'sonner';
@@ -23,6 +23,7 @@ import { CuratedInsightCard, CuratedInsightSkeleton } from '@/components/growth/
 import GrowthInsightDetailsModal from '@/components/growth/GrowthInsightDetailsModal';
 import GrowthEngineStatusBanner from '@/components/growth/GrowthEngineStatusBanner';
 import GrowthTodayStatusPanel from '@/components/growth/GrowthTodayStatusPanel';
+import GrowthEngineSettings from '@/components/growth/GrowthEngineSettings';
 import { recordGrowthEvent } from '@/lib/growthAnalytics';
 import {
   slotOrder, sanitizeStyles, FOCUS_AREAS, deviceTimeZone,
@@ -70,6 +71,7 @@ export default function GrowthInsightsPage() {
   const [details, setDetails] = useState<ArchiveItem | null>(null);
   const [engineOff, setEngineOff] = useState(false);
   const [activating, setActivating] = useState(false);
+  const [editingPlan, setEditingPlan] = useState(false);
   const [prefs, setPrefs] = useState<{ focus: string[]; styles: ReflectionStyle[]; tz: string }>({
     focus: [], styles: [], tz: '',
   });
@@ -289,6 +291,20 @@ export default function GrowthInsightsPage() {
         </header>
 
         <div className="mb-5 space-y-2">
+          <Button
+            variant={editingPlan ? 'default' : 'outline'}
+            className="w-full"
+            aria-expanded={editingPlan}
+            onClick={() => setEditingPlan((value) => !value)}
+          >
+            <SlidersHorizontal className="mr-2 h-4 w-4" aria-hidden="true" />
+            {editingPlan ? 'Close Growth plan' : 'Change my Growth plan'}
+          </Button>
+          {editingPlan && (
+            <div data-growth-plan-editor>
+              <GrowthEngineSettings onSaved={() => void load()} />
+            </div>
+          )}
           <div className="flex gap-2">
             <div className="relative flex-1">
               <Search
@@ -410,6 +426,7 @@ export default function GrowthInsightsPage() {
                     saved={savedIds.has(insight.id)}
                     onToggleSave={(id) => void toggleSave(id)}
                     onOpenDetails={(i) => setDetails(i as ArchiveItem)}
+                    focusAreas={prefs.focus}
                     onImpression={(i) =>
                       void recordGrowthEvent('impression', {
                         userId: user?.id, itemId: i.id, slot: i.slot,

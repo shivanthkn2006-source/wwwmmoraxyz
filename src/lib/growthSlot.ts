@@ -44,6 +44,10 @@ export const FOCUS_AREAS = [
   'Emotional Resilience',
   'Health & Physical Habits',
   'Creativity & Problem Solving',
+  'Relationships & Communication',
+  'Confidence & Self-Leadership',
+  'Learning & Personal Mastery',
+  'Purpose & Meaning',
 ] as const;
 
 export const REFLECTION_STYLE_OPTIONS: Array<{

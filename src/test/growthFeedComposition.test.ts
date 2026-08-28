@@ -19,4 +19,14 @@ describe('Growth feed composition', () => {
     expect(interleaveGrowthCards(['p1'], ['g1', 'g2', 'g3']))
       .toEqual(['p1', 'g1', 'g2', 'g3']);
   });
+
+  it('interleaves cards through a combined posts, loops, and videos sequence', () => {
+    const content = ['post-1', 'loop-1', 'search-video-1', 'post-2', 'neural-video-1'];
+    const composed = interleaveGrowthCards(content, ['growth-morning', 'growth-midday'], 3);
+    expect(composed).toEqual([
+      'post-1', 'loop-1', 'search-video-1', 'growth-morning',
+      'post-2', 'neural-video-1', 'growth-midday',
+    ]);
+    expect(composed.filter((item) => item.startsWith('growth-'))).toHaveLength(2);
+  });
 });

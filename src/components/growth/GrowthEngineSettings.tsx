@@ -45,7 +45,11 @@ const STATUS_COPY: Record<NextStatus, { label: string; tone: string; Icon: typeo
   complete: { label: 'All of today’s insights are delivered', tone: 'text-primary', Icon: CheckCircle2 },
 };
 
-export const GrowthEngineSettings: React.FC = () => {
+interface GrowthEngineSettingsProps {
+  onSaved?: () => void;
+}
+
+export const GrowthEngineSettings: React.FC<GrowthEngineSettingsProps> = ({ onSaved }) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -123,6 +127,12 @@ export const GrowthEngineSettings: React.FC = () => {
     if (error) { toast.error('Could not save preferences'); return; }
     toast.success(paused ? 'Insights paused' : 'Preferences saved');
     void refreshStatus();
+    if (!paused) {
+      void supabase.functions.invoke('growth-dispatch', { body: { action: 'catchup-me' } })
+        .finally(() => onSaved?.());
+    } else {
+      onSaved?.();
+    }
   };
 
   /**
