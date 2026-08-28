@@ -80,6 +80,18 @@ export function bindGrowthAlertUser(userId: string | null) {
 export function hasSeenGrowthCard(id: string) {
   return seen.has(id);
 }
+/** Marks ids as already announced without touching the badge (first sync). */
+export function markGrowthSeen(ids: string[]) {
+  let changed = false;
+  ids.forEach((id) => { if (id && !seen.has(id)) { seen.add(id); changed = true; } });
+  if (changed) persistSeen();
+}
+
+/** True once this device has a persisted seen-ledger for the current member. */
+export function hasGrowthSeenLedger(): boolean {
+  return seen.size > 0;
+}
+
 
 /**
  * Announces cards the member has not seen yet. Returns the ones actually
