@@ -9,6 +9,8 @@
  *   "resume"     — clears a 402/403 pause (admin only).
  *   "me-status"  — per-user schedule + delivery state (signed-in caller).
  *   "regenerate" — re-runs the caller's current window and UPDATES that row.
+ *   "backfill"   — admin-only throttled backfill of past dates/windows.
+ *   "backfill-jobs" — admin-only recent backfill run history.
  *
  * Hardening (mirrors the proven astro-dispatch contract):
  *   • bounded batch per run — never unbounded fan-out
@@ -42,6 +44,10 @@ const SLOT_WINDOW_MIN = 75;
 const RATE_LIMIT_PARK = 3;
 const REGEN_COOLDOWN_MS = 60_000;
 const REGEN_DAILY_CAP = 5;
+const BACKFILL_MAX_ITEMS = 200;
+const BACKFILL_MIN_THROTTLE_MS = 100;
+const BACKFILL_MAX_THROTTLE_MS = 5_000;
+const BACKFILL_BUDGET_MS = 50_000;
 
 async function db(path: string, init: RequestInit = {}) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
@@ -134,10 +140,15 @@ interface PrefRow {
   paused: boolean;
   timezone: string | null;
   notify_on_new_insight?: boolean | null;
+  notify_push?: boolean | null;
+  notify_email?: boolean | null;
+  notify_digest?: string | null;
+  last_digest_date?: string | null;
 }
 
 const PREF_SELECT =
-  'user_id,focus_areas,reflection_style,reflection_styles,delivery_frequency,paused,timezone,notify_on_new_insight,onboarded_at';
+  'user_id,focus_areas,reflection_style,reflection_styles,delivery_frequency,paused,timezone,' +
+  'notify_on_new_insight,notify_push,notify_email,notify_digest,last_digest_date,onboarded_at';
 
 async function candidates(limit: number): Promise<PrefRow[]> {
   const r = await db(
@@ -152,6 +163,67 @@ async function deliveredSlots(userId: string, localDate: string): Promise<Set<st
     `growth_feed_items?user_id=eq.${userId}&local_date=eq.${localDate}&select=slot`,
   );
   return new Set(Array.isArray(r.data) ? r.data.map((x: { slot: string }) => x.slot) : []);
+}
+
+/** Auth email for a user id. Best-effort; empty string when unavailable. */
+async function authEmail(userId: string): Promise<string> {
+  try {
+    const r = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${userId}`, {
+      headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` },
+    });
+    if (!r.ok) return '';
+    const u = await r.json();
+    return typeof u?.email === 'string' ? u.email : '';
+  } catch { return ''; }
+}
+
+/** Transactional email for a new insight. No-op when Resend is not configured. */
+async function emailInsight(userId: string, slot: GrowthSlot, title: string, body: string) {
+  const key = Deno.env.get('RESEND_API_KEY');
+  if (!key) return;
+  const to = await authEmail(userId);
+  if (!to) return;
+  try {
+    await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: Deno.env.get('GROWTH_EMAIL_FROM') ?? 'insights@resend.dev',
+        to: [to],
+        subject: `Your ${SLOT_LOCAL_TIME[slot].label.toLowerCase()} insight: ${String(title).slice(0, 80)}`,
+        text: `${title}\n\n${String(body).slice(0, 1200)}`,
+      }),
+    });
+  } catch { /* email never blocks generation */ }
+}
+
+/**
+ * Delivery fan-out for a freshly published card, honouring the user's channel
+ * and digest preferences. Every branch is best-effort — a failed notification
+ * must never roll back or block a generated insight.
+ *
+ * digest: instant → every card | daily → first card of the local day | off → none
+ */
+async function deliverInsightNotifications(
+  pref: PrefRow, slot: GrowthSlot, localDate: string, title: string, body: string,
+) {
+  const digest = pref.notify_digest ?? 'instant';
+  if (digest === 'off') return;
+  if (digest === 'daily') {
+    if (pref.last_digest_date === localDate) return;
+    await db(`growth_preferences?user_id=eq.${pref.user_id}`, {
+      method: 'PATCH',
+      headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify({ last_digest_date: localDate }),
+    }).catch(() => undefined);
+  }
+
+  if (pref.notify_on_new_insight !== false || pref.notify_push !== false) {
+    await notifyNewInsight(pref.user_id, slot, title);
+  }
+  if (pref.notify_email === true) {
+    await emailInsight(pref.user_id, slot, title, body);
+  }
 }
 
 /** Self-notification for a freshly published card. Best-effort only. */
@@ -282,8 +354,10 @@ async function runBatch(opts: { dryRun: boolean; probeOnly: boolean }): Promise<
     });
     if (ins.ok) {
       summary.written++;
-      if (!shadow && pref.notify_on_new_insight !== false) {
-        await notifyNewInsight(pref.user_id, slot, result.content.title);
+      if (!shadow) {
+        await deliverInsightNotifications(
+          pref, slot, localDate, result.content.title, result.content.content,
+        );
       }
     } else {
       summary.errors.push(`db ${ins.status}`);
