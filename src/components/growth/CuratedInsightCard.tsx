@@ -74,7 +74,7 @@ const GrowthInsightImage: React.FC<{ insight: CuratedInsight }> = ({ insight }) 
   if (status === 'failed') return null;
 
   return (
-    <div className="relative mb-3 overflow-hidden rounded-xl border border-border bg-muted/40 aspect-[16/9]">
+    <div className="relative mb-3 overflow-hidden rounded-xl bg-muted/40 aspect-[16/9]">
       {status === 'loading' && (
         <div className="absolute inset-0 flex items-center justify-center animate-pulse bg-muted">
           <ImageOff className="h-4 w-4 text-muted-foreground/60" aria-hidden="true" />
