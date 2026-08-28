@@ -199,18 +199,19 @@ const HomePage = () => {
     },
     [user?.id, growthPreferences?.focus_areas],
   );
-  // Catch-up: today's cards ordered by the wall clock (the window the member is
-  // in right now leads), then earlier windows, then saved cards.
+  // Growth uses its scheduled local wall-clock instant, not its database insert
+  // time. This is what allows an older night card to sit above an older post.
   const growthCards = React.useMemo(() => {
     const zone = growthPreferences?.timezone || deviceTimeZone();
-    const enabled = slotsForFrequency(growthPreferences?.delivery_frequency ?? 5);
-    const dayCards = growthToday.length
-      ? orderGrowthByTime(growthToday, currentSlot(new Date(), zone, enabled))
-      : growthInsight
-        ? [growthInsight]
-        : [];
-    return dayCards.map((insight) => ({ insight, savedBadge: false }));
-  }, [growthToday, growthInsight, growthPreferences?.timezone, growthPreferences?.delivery_frequency]);
+    const now = Date.now();
+    const enabled = new Set(slotsForFrequency(growthPreferences?.delivery_frequency ?? 5));
+    const due = growthInsights
+      .filter((insight) => enabled.has(insight.slot))
+      .filter((insight) => growthSlotTimestamp(insight.local_date, insight.slot, zone) <= now)
+      .sort((a, b) => growthSlotTimestamp(b.local_date, b.slot, zone) - growthSlotTimestamp(a.local_date, a.slot, zone));
+    const cards = due.length ? due : growthInsight ? [growthInsight] : [];
+    return cards.map((insight) => ({ insight, savedBadge: false }));
+  }, [growthInsights, growthInsight, growthPreferences?.timezone, growthPreferences?.delivery_frequency]);
 
   const growthSlide = growthCards.map(({ insight, savedBadge }) => (
     <div
@@ -2286,30 +2287,37 @@ const HomePage = () => {
     return slides;
   }, [dailyMotivation, motivationPosterUrl, astroDaily]);
 
-  // Growth cards are deterministic members of both feeds, not an appendix at
-  // the end. This keeps every due/saved card visible between posts and Loops.
-  const globalFeedSlides = interleaveGrowthCards(
-    [
-      ...searchVideoSlides,
-      ...visibleGlobalPosts.map((post) => renderPostSlide(post, 'global')),
-      ...(!loopsHidden ? loopSlides : []),
-      ...supportingSlides,
-      ...neuralVideoSlides,
-    ],
-    growthSlide,
-    3,
-  );
-  const personalFeedSlides = interleaveGrowthCards(
-    [
-      ...searchVideoSlides,
-      ...visiblePersonalPosts.map((post) => renderPostSlide(post, 'personal')),
-      ...(!loopsHidden ? loopSlides : []),
-      ...supportingSlides,
-      ...neuralVideoSlides,
-    ],
-    growthSlide,
-    3,
-  );
+  const chronologicalSlides = (posts: Post[], feed: 'global' | 'personal') => {
+    const postIds = new Set(posts.map((post) => post.id));
+    const nativeItems = posts.map((post) => ({
+      id: `post-${post.id}`,
+      timestamp: post.created_at,
+      value: renderPostSlide(post, feed),
+    }));
+    const uniqueLoops = loopsHidden ? [] : filteredLoops.filter((post) => !postIds.has(post.id));
+    const loopItems = uniqueLoops.map((post) => ({
+      id: `loop-${post.id}`,
+      timestamp: post.created_at,
+      value: loopSlides.find((slide) => slide.key === `loop-${post.id}`)!,
+    })).filter((item) => Boolean(item.value));
+    const zone = growthPreferences?.timezone || deviceTimeZone();
+    const growthItems = growthCards.map(({ insight }, index) => ({
+      id: `growth-${insight.id}`,
+      timestamp: growthSlotTimestamp(insight.local_date, insight.slot, zone),
+      value: growthSlide[index],
+    }));
+    return composeChronologicalFeed([...nativeItems, ...loopItems, ...growthItems]);
+  };
+
+  // Search results are an explicit temporary mode. Normal native posts, Loops,
+  // and Growth are merged by one effective timestamp; non-timeline utility
+  // cards remain outside that chronology.
+  const globalFeedSlides = searchVideoSlides.length
+    ? searchVideoSlides
+    : [...chronologicalSlides(visibleGlobalPosts, 'global'), ...supportingSlides, ...neuralVideoSlides, ...savedGrowthSlides];
+  const personalFeedSlides = searchVideoSlides.length
+    ? searchVideoSlides
+    : [...chronologicalSlides(visiblePersonalPosts, 'personal'), ...supportingSlides, ...neuralVideoSlides, ...savedGrowthSlides];
 
 
 
