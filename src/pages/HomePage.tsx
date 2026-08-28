@@ -99,6 +99,7 @@ import { AtlasHUD } from '@/components/atlas';
 import { useFriendRequests } from "@/hooks/useFriendRequests";
 import PageSeo from "@/components/seo/PageSeo";
 import NewContentBadge from '@/components/NewContentBadge';
+import { logFeedEvent } from '@/lib/feedEventDiagnostics';
 import { markPostsSeen, readUnseenPostIds, syncUnseenPostSnapshot, type FeedUpdateSource } from "@/lib/newPostGate";
 import { interleaveGrowthCards } from '@/lib/growthFeedComposition';
 
@@ -107,6 +108,7 @@ import { interleaveGrowthCards } from '@/lib/growthFeedComposition';
 import {
   ALLOWED_IMAGE_MIME,
   ALLOWED_VIDEO_MIME,
+  classifyUpload,
   DATA_URL_PREVIEW_LIMIT,
   captureVideoPreview,
   prepareFeedPostMedia,
@@ -987,6 +989,15 @@ const HomePage = () => {
     pendingSeenIdsRef.current = visibleNewIds;
     setHasNewPosts(visibleNewIds.length > 0);
   }, [activeTab, activeNewIds, globalPosts, personalPosts]);
+
+  const diagnoseNewBadge = React.useCallback((feed: keyof NewContentByFeed, postId: string) =>
+    (event: 'rendered' | 'viewed' | 'suppressed', reason?: string) => {
+      logFeedEvent(
+        event === 'rendered' ? 'new_badge_rendered' : event === 'viewed' ? 'new_badge_viewed' : 'new_badge_suppressed',
+        { feed, post_id: postId, reason, view_once: true },
+        user?.id,
+      );
+    }, [user?.id]);
 
   const dismissNewContent = React.useCallback((feed: keyof NewContentByFeed, id: string) => {
     markPostsSeen(feed, [id]);
@@ -1900,27 +1911,29 @@ const HomePage = () => {
     setLoopsPlayerOpen(true);
   };
 
-  const handleLoopsUpload = React.useCallback(async (file: File, metadata?: { title?: string; text?: string; tags?: string[] }) => {
+  const handleLoopsUpload = React.useCallback(async (file: File | null, metadata?: { title?: string; text?: string; tags?: string[] }) => {
     if (!user) return;
 
     // 1. MIME whitelist
     setUploadState('validating');
     setUploadError('');
-    setUploadFileName(file.name);
+    setUploadFileName(file?.name || 'Text post');
     setUploadProgress(0);
     setLastUploadFile(file);
 
-    const isVideo = ALLOWED_VIDEO_MIME.includes(file.type);
-    const isImage = ALLOWED_IMAGE_MIME.includes(file.type);
-    if (!isVideo && !isImage) {
-      const msg = `Unsupported file type "${file.type || 'unknown'}". Allowed: MP4, WebM, MOV, OGG, JPG, PNG, WebP, GIF.`;
+    const uploadType = file ? classifyUpload(file) : null;
+    const isVideo = uploadType === 'video';
+    const isImage = uploadType === 'image';
+    const isAttachment = uploadType === 'pdf' || uploadType === 'document';
+    if (file && !uploadType) {
+      const msg = `Unsupported file type "${file.type || 'unknown'}". Use a video, image, PDF, or common document format.`;
       setUploadState('error');
       setUploadError(msg);
       toast({ title: 'Unsupported file', description: msg, variant: 'destructive' });
       return;
     }
     const MAX_FILE_BYTES = 50 * 1024 * 1024;
-    if (file.size > MAX_FILE_BYTES) {
+    if (file && file.size > MAX_FILE_BYTES) {
       const msg = 'File too large. Please pick a file under 50MB.';
       setUploadState('error');
       setUploadError(msg);
@@ -1928,17 +1941,18 @@ const HomePage = () => {
       return;
     }
 
-    const mediaType: 'video' | 'image' = isVideo ? 'video' : 'image';
+    const mediaType = uploadType;
     const INLINE_LIMIT = 2 * 1024 * 1024;
 
     try {
-      await validateBrowserCanPreviewFile(file, mediaType);
+      if (!file && !metadata?.title?.trim() && !metadata?.text?.trim()) throw new Error('Add text or choose a file before publishing.');
+      if (file && (isVideo || isImage)) await validateBrowserCanPreviewFile(file, mediaType);
       // Auto-transcode large videos into small preview variants for smoother Reel/Shorts playback.
-      let uploadFile: File = file;
+      let uploadFile: File | null = file;
       if (mediaType === 'video') {
         try {
           setUploadState('validating');
-          const smaller = await transcodeVideoForPreview(file);
+          const smaller = await transcodeVideoForPreview(file!);
           if (smaller && smaller !== file && smaller.size < file.size) {
             uploadFile = smaller;
             toast({ title: 'Optimized for fast playback', description: `Reduced from ${(file.size/1e6).toFixed(1)}MB to ${(smaller.size/1e6).toFixed(1)}MB` });
@@ -1947,11 +1961,11 @@ const HomePage = () => {
           console.warn('[Loops upload] transcode skipped', transErr);
         }
       }
-      let mediaPreviewUrl = mediaType === 'video' ? await captureVideoPreview(uploadFile) : null;
+      let mediaPreviewUrl = mediaType === 'video' && uploadFile ? await captureVideoPreview(uploadFile) : null;
       setUploadState('uploading');
-      let mediaUrl: string;
+      let mediaUrl: string | null = null;
 
-      if (mediaType === 'image' && file.size < INLINE_LIMIT) {
+      if (mediaType === 'image' && file && file.size < INLINE_LIMIT) {
         mediaUrl = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
           reader.onprogress = (ev) => {
@@ -1961,11 +1975,11 @@ const HomePage = () => {
           reader.onerror = () => reject(new Error('Could not read file'));
           reader.readAsDataURL(file);
         });
-      } else {
+      } else if (uploadFile) {
         // Auth token for XHR upload with real progress
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
-        const ext = (uploadFile.name.split('.').pop() || (mediaType === 'video' ? 'webm' : 'jpg')).toLowerCase();
+        const ext = (uploadFile.name.split('.').pop() || (mediaType === 'video' ? 'webm' : mediaType === 'image' ? 'jpg' : 'bin')).toLowerCase();
         const path = `${user.id}/loops/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
 
         // 2. Retry with exponential backoff (3 attempts)
@@ -2020,12 +2034,12 @@ const HomePage = () => {
       if (error) throw error;
 
       // Persist the short in the M'mora orb memory (offline cache + memory bridge)
-      void rememberShortInOrbMemory(
+      if (mediaUrl && (mediaType === 'video' || mediaType === 'image')) void rememberShortInOrbMemory(
         {
           postId: inserted?.id || `local-${Date.now()}`,
           mediaUrl,
           posterUrl: mediaPreviewUrl || (mediaType === 'image' ? mediaUrl : null),
-          mediaType,
+           mediaType,
           content: postContent,
           createdAt: new Date().toISOString(),
         },
@@ -2033,7 +2047,7 @@ const HomePage = () => {
       );
 
       setUploadState('success');
-      toast({ title: 'Posted!', description: 'Your short is now live' });
+      toast({ title: 'Posted!', description: 'Your post is now live' });
       triggerHomeRefresh();
       // Auto-clear success state after a moment
       setTimeout(() => {
@@ -2214,14 +2228,14 @@ const HomePage = () => {
           className="relative h-full min-h-full w-full shrink-0 snap-start snap-always overflow-hidden"
         >
           {newContentByFeed.loops.has(post.id) && (
-            <NewContentBadge className="right-3 top-3" onViewed={() => dismissNewContent('loops', post.id)} />
+            <NewContentBadge className="right-3 top-3" onViewed={() => dismissNewContent('loops', post.id)} onDiagnostic={diagnoseNewBadge('loops', post.id)} />
           )}
           <FeedErrorBoundary section="loops" postId={post.id} onRetry={() => retrySingleLoop(post.id)}>
             <PostCard post={post} onUpdate={handleUpdate} />
           </FeedErrorBoundary>
         </div>
       )),
-    [filteredLoops, retrySingleLoop, handleUpdate, newContentByFeed.loops, dismissNewContent],
+    [filteredLoops, retrySingleLoop, handleUpdate, newContentByFeed.loops, dismissNewContent, diagnoseNewBadge],
   );
 
   const renderPostSlide = React.useCallback((post: Post, feed: 'global' | 'personal') => {
@@ -2230,14 +2244,14 @@ const HomePage = () => {
     return (
       <div key={`${feed}-${post.id}`} className="relative h-full min-h-full w-full shrink-0 snap-start snap-always overflow-hidden" data-post-card data-post-id={post.id} data-today={isToday ? 'true' : 'false'} data-new={isNew ? 'true' : 'false'}>
         {isNew && (
-          <NewContentBadge className="right-3 top-3" onViewed={() => dismissNewContent(feed, post.id)} />
+          <NewContentBadge className="right-3 top-3" onViewed={() => dismissNewContent(feed, post.id)} onDiagnostic={diagnoseNewBadge(feed, post.id)} />
         )}
         <FeedErrorBoundary section="post-card" postId={post.id} onRetry={() => retrySinglePost(post.id)}>
           <PostCard post={post} onUpdate={handleUpdate} />
         </FeedErrorBoundary>
       </div>
     );
-  }, [newContentByFeed, dismissNewContent, retrySinglePost, handleUpdate]);
+  }, [newContentByFeed, dismissNewContent, retrySinglePost, handleUpdate, diagnoseNewBadge]);
 
   const supportingSlides = React.useMemo(() => {
     const slides: React.ReactElement[] = [];

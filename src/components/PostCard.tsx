@@ -331,10 +331,20 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
           table: 'post_likes',
           filter: `post_id=eq.${post.id}`
         },
-        (payload: { new?: { user_id?: string } }) => {
+        (payload: { new?: { id?: string; user_id?: string; post_id?: string } }) => {
           // The clicking tab already animates after its confirmed write. Every
           // other open feed/timeline card—including the creator's—animates here.
-          if (payload.new?.user_id !== user.id) playLikeAnimation();
+          const row = payload.new;
+          if (!row?.user_id || (row.post_id && row.post_id !== post.id)) {
+            logFeedEvent('like_event_invalid', { post_id: post.id, payload_post_id: row?.post_id || null, reason: 'missing_or_mismatched_fields' }, user.id);
+            return;
+          }
+          const eventId = row.id || `${post.id}:${row.user_id}`;
+          if (seenLikeEventsRef.current.has(eventId)) return;
+          seenLikeEventsRef.current.add(eventId);
+          if (seenLikeEventsRef.current.size > 100) seenLikeEventsRef.current.clear();
+          logFeedEvent('like_event_received', { post_id: post.id, actor_id: row.user_id, event_id: eventId }, user.id);
+          if (row.user_id !== user.id) playLikeAnimation();
         }
       )
       .on(
@@ -380,10 +390,25 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
       )
       .subscribe();
 
+    // Realtime can miss a packet during reconnect. Reconcile the count at a
+    // bounded interval and animate a remote increase in creator/viewer feeds.
+    let lastKnown = likesCount;
+    const reconcile = window.setInterval(async () => {
+      const { data, error } = await supabase.from('posts').select('likes_count').eq('id', post.id).maybeSingle();
+      if (error || typeof data?.likes_count !== 'number') return;
+      if (data.likes_count > lastKnown) {
+        playLikeAnimation();
+        logFeedEvent('like_event_fallback', { post_id: post.id, previous_count: lastKnown, next_count: data.likes_count }, user.id);
+      }
+      lastKnown = data.likes_count;
+      setLikesCount(data.likes_count);
+    }, 30_000);
+
     return () => {
+      window.clearInterval(reconcile);
       supabase.removeChannel(channel);
     };
-  }, [post.id, user, playLikeAnimation]);
+  }, [post.id, user?.id, playLikeAnimation]);
 
   const handleLike = async () => {
     if (!user) return;

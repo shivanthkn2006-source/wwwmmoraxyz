@@ -12,14 +12,17 @@ interface NewContentBadgeProps {
 const NewContentBadge: React.FC<NewContentBadgeProps> = ({ onViewed, className = '', onDiagnostic }) => {
   const ref = useRef<HTMLDivElement | null>(null);
   const onViewedRef = useRef(onViewed);
+  const diagnosticRef = useRef(onDiagnostic);
+  const suppressedLoggedRef = useRef(false);
   const [visible, setVisible] = useState(true);
   // Remote kill switch — the badge can be disabled platform-wide without a deploy.
   const { isEnabled, loading } = useGrowthFlags();
   const badgeEnabled = isEnabled(GROWTH_FLAGS.newBadge);
 
   onViewedRef.current = onViewed;
+  diagnosticRef.current = onDiagnostic;
 
-  useEffect(() => { onDiagnostic?.('rendered'); }, [onDiagnostic]);
+  useEffect(() => { diagnosticRef.current?.('rendered'); }, []);
 
 
   useEffect(() => {
@@ -46,7 +49,7 @@ const NewContentBadge: React.FC<NewContentBadgeProps> = ({ onViewed, className =
           timer = window.setTimeout(() => {
             setVisible(false);
             onViewedRef.current();
-            onDiagnostic?.('viewed');
+            diagnosticRef.current?.('viewed');
             observer?.disconnect();
           }, 3000);
         } else {
@@ -63,15 +66,19 @@ const NewContentBadge: React.FC<NewContentBadgeProps> = ({ onViewed, className =
       observer?.disconnect();
       clearTimer();
     };
-  }, [visible, onDiagnostic]);
+  }, [visible]);
+
+  useEffect(() => {
+    if (visible && !loading && !badgeEnabled && !suppressedLoggedRef.current) {
+      suppressedLoggedRef.current = true;
+      diagnosticRef.current?.('suppressed', 'remote_flag_disabled');
+    }
+  }, [visible, loading, badgeEnabled]);
 
 
   // Never hide a real unseen marker merely because the remote-flag request is
   // still loading. Only an explicitly loaded disabled flag may suppress it.
-  if (!visible || (!loading && !badgeEnabled)) {
-    if (visible && !loading && !badgeEnabled) onDiagnostic?.('suppressed', 'remote_flag_disabled');
-    return null;
-  }
+  if (!visible || (!loading && !badgeEnabled)) return null;
   return (
     <div ref={ref} className={`pointer-events-none absolute z-20 ${className}`} data-testid="new-content-badge">
       <Badge className="border border-primary-foreground/30 bg-primary px-2 py-1 font-semibold text-primary-foreground shadow-md">New</Badge>
