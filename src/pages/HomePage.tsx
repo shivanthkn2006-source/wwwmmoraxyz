@@ -2245,6 +2245,8 @@ const HomePage = () => {
                       </FeedErrorBoundary>
                     </div>
                   )}
+                  {growthSlide}
+
                   <div className="relative h-full min-h-full w-full shrink-0 snap-start snap-always overflow-y-auto bg-background px-4 pb-24 pt-24" data-people-recommendations>
                     <FeedErrorBoundary section="posts">
                       <InterestRecommendations />
@@ -2301,6 +2303,7 @@ const HomePage = () => {
                       </FeedErrorBoundary>
                     </div>
                   )}
+                  {growthSlide}
                   {neuralVideoSlides}
 
                   </div>
@@ -2346,6 +2349,11 @@ const HomePage = () => {
         onOpenAtlas={() => setAtlasHUDActive(true)}
       />
       <OnboardingTour />
+      <PersonalGrowthOnboarding
+        open={growthOnboardingOpen}
+        onOpenChange={setGrowthOnboardingOpen}
+        onComplete={() => void refreshGrowth()}
+      />
       <PrivateTimelinesSheet open={privateTimelinesOpen} onOpenChange={setPrivateTimelinesOpen} />
 
       {/* DHF Neural Feed Sheet */}
