@@ -339,6 +339,9 @@ export default defineConfig(({ mode }) => ({
           }
           // Vendor chunks
           if (id.includes('node_modules')) {
+            // Isolate agentic state layer so the 3D/agent chunks can load
+            // independently of the core UI bundle.
+            if (id.includes('zustand')) return 'agent-vendor';
             if (id.includes('react-router') || id.includes('react-dom') || id.includes('/react/')) return 'react-vendor';
             if (id.includes('@radix-ui')) return 'ui-vendor';
             // Keep date helpers separate from Recharts. The previous shared

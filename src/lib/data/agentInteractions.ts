@@ -11,7 +11,7 @@ import {
   insertRow,
   updateRows,
   deleteRows,
-  currentUserId,
+  type QueryContext,
   type Result,
 } from '@/lib/data/dataAccess';
 
@@ -26,39 +26,39 @@ export interface AgentInteraction {
   updated_at: string;
 }
 
-const ctx = { table: AGENT_INTERACTIONS_TABLE, scope: 'owner' as const, ownerColumn: 'user_id' };
+const ctx: QueryContext = {
+  table: AGENT_INTERACTIONS_TABLE,
+  scope: 'owner',
+  ownerColumn: 'user_id',
+};
 
 /** Latest context rows for a single agent section (RLS filters to the owner). */
 export const fetchAgentContext = (agentId: string, limit = 20) =>
-  selectRows<AgentInteraction>(ctx, (q) =>
-    q.select('*').eq('agent_id', agentId).order('created_at', { ascending: false }).limit(limit),
-  );
+  selectRows<AgentInteraction>(ctx, {
+    eq: { agent_id: agentId },
+    order: { column: 'created_at', ascending: false },
+    limit,
+  });
 
 /** Most recent single context payload for an agent. */
 export const fetchLatestAgentContext = (agentId: string) =>
-  selectOne<AgentInteraction>(ctx, (q) =>
-    q.select('*').eq('agent_id', agentId).order('created_at', { ascending: false }).limit(1),
-  );
+  selectOne<AgentInteraction>(ctx, {
+    eq: { agent_id: agentId },
+    order: { column: 'created_at', ascending: false },
+  });
 
-/** Append a new context snapshot for an agent. */
-export async function recordAgentContext(
-  agentId: string,
-  payload: Record<string, unknown>,
-): Promise<Result<AgentInteraction>> {
-  const userId = await currentUserId();
-  return insertRow<Record<string, unknown>>(ctx, {
-    user_id: userId ?? undefined,
-    agent_id: agentId,
-    context_payload: payload,
-  }) as Promise<Result<AgentInteraction>>;
-}
+/** Append a new context snapshot for an agent (owner id stamped by the layer). */
+export const recordAgentContext = (agentId: string, payload: Record<string, unknown>) =>
+  insertRow(ctx, { agent_id: agentId, context_payload: payload }) as Promise<
+    Result<Record<string, unknown>>
+  >;
 
-/** Patch the payload of an existing row. */
+/** Patch the payload of an existing row, still constrained to the caller. */
 export const updateAgentContext = (rowId: string, payload: Record<string, unknown>) =>
-  updateRows(ctx, { context_payload: payload, updated_at: new Date().toISOString() }, (q) =>
-    q.eq('id', rowId),
-  );
+  updateRows(ctx, { id: rowId }, {
+    context_payload: payload,
+    updated_at: new Date().toISOString(),
+  });
 
 /** Forget one agent's stored context (user-initiated data control). */
-export const clearAgentContext = (agentId: string) =>
-  deleteRows(ctx, (q) => q.eq('agent_id', agentId));
+export const clearAgentContext = (agentId: string) => deleteRows(ctx, { agent_id: agentId });
