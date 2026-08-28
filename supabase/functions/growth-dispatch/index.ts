@@ -376,6 +376,160 @@ async function runBatch(opts: { dryRun: boolean; probeOnly: boolean }): Promise<
   return summary;
 }
 
+interface BackfillRequest {
+  fromDate: string;
+  toDate: string;
+  slots: GrowthSlot[];
+  userIds: string[];
+  maxItems: number;
+  throttleMs: number;
+  dryRun: boolean;
+}
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Inclusive list of ISO dates, capped so a typo cannot fan out for years. */
+function dateRange(from: string, to: string, cap = 31): string[] {
+  const out: string[] = [];
+  const start = new Date(`${from}T00:00:00Z`);
+  const end = new Date(`${to}T00:00:00Z`);
+  for (let d = start; d <= end && out.length < cap; d = new Date(d.getTime() + 86_400_000)) {
+    out.push(d.toISOString().slice(0, 10));
+  }
+  return out;
+}
+
+function parseBackfill(body: any): { req?: BackfillRequest; error?: string } {
+  const fromDate = String(body?.fromDate ?? '');
+  const toDate = String(body?.toDate ?? fromDate);
+  if (!DATE_RE.test(fromDate) || !DATE_RE.test(toDate)) return { error: 'fromDate/toDate must be YYYY-MM-DD' };
+  if (toDate < fromDate) return { error: 'toDate must not be before fromDate' };
+  if (dateRange(fromDate, toDate, 100).length > 31) return { error: 'range is limited to 31 days' };
+
+  const rawSlots = Array.isArray(body?.slots) ? body.slots.map(String) : [];
+  const slots = (rawSlots.length ? rawSlots : [...GROWTH_SLOTS])
+    .filter((s: string): s is GrowthSlot => (GROWTH_SLOTS as readonly string[]).includes(s));
+  if (!slots.length) return { error: 'no valid slots selected' };
+
+  const userIds = (Array.isArray(body?.userIds) ? body.userIds.map(String) : [])
+    .filter((id: string) => /^[0-9a-f-]{36}$/i.test(id))
+    .slice(0, 200);
+
+  return {
+    req: {
+      fromDate, toDate, slots, userIds,
+      maxItems: Math.min(Math.max(Number(body?.maxItems ?? 50) || 50, 1), BACKFILL_MAX_ITEMS),
+      throttleMs: Math.min(
+        Math.max(Number(body?.throttleMs ?? 400) || 400, BACKFILL_MIN_THROTTLE_MS),
+        BACKFILL_MAX_THROTTLE_MS,
+      ),
+      dryRun: body?.dryRun === true,
+    },
+  };
+}
+
+/**
+ * Admin backfill / bulk retry. Fills ONLY missing (user, date, slot) rows — an
+ * existing insight is never overwritten, so a repeated run is a safe no-op.
+ * Bounded three ways: item cap, wall-clock budget, and a per-item throttle so a
+ * backfill can never starve the live 15-minute dispatch of provider capacity.
+ */
+async function runBackfill(req: BackfillRequest, jobId: string, triggeredBy: string) {
+  const startedAt = Date.now();
+  const state = await getState();
+  const shadow = state?.shadow_mode !== false;
+  const dates = dateRange(req.fromDate, req.toDate);
+  const errors: string[] = [];
+  let scanned = 0;
+  let written = 0;
+  let skipped = 0;
+
+  const rows = req.userIds.length
+    ? (await db(
+        `growth_preferences?user_id=in.(${req.userIds.join(',')})&select=${PREF_SELECT}`,
+      )).data
+    : (await db(
+        `growth_preferences?onboarded_at=not.is.null&select=${PREF_SELECT}&limit=${BACKFILL_MAX_ITEMS}`,
+      )).data;
+  const prefs: PrefRow[] = Array.isArray(rows) ? rows : [];
+
+  outer:
+  for (const pref of prefs) {
+    const enabled = slotsForFrequency(pref.delivery_frequency ?? 5);
+    for (const localDate of dates) {
+      const delivered = await deliveredSlots(pref.user_id, localDate);
+      for (const slot of req.slots) {
+        if (written >= req.maxItems) break outer;
+        if (Date.now() - startedAt > BACKFILL_BUDGET_MS) { errors.push('time budget reached'); break outer; }
+        scanned++;
+        if (!enabled.includes(slot) || delivered.has(slot)) { skipped++; continue; }
+        if (req.dryRun) { written++; continue; }
+
+        const result = await generateInsight({
+          slot,
+          focusAreas: sanitizeFocusAreas(pref.focus_areas),
+          style: styleForSlot(
+            slot,
+            sanitizeStyles(pref.reflection_styles?.length ? pref.reflection_styles : [pref.reflection_style]),
+          ),
+          localDate,
+          seed: `${pref.user_id}_${localDate}_${slot}`,
+        });
+        if (result.circuitBreak) { errors.push(`circuit break ${result.circuitBreak.status}`); break outer; }
+        if (result.rateLimited) { errors.push('rate limited'); skipped++; continue; }
+
+        const ins = await db('growth_feed_items', {
+          method: 'POST',
+          headers: { Prefer: 'return=minimal,resolution=ignore-duplicates' },
+          body: JSON.stringify({
+            user_id: pref.user_id,
+            slot,
+            local_date: localDate,
+            title: result.content.title,
+            category: result.content.category,
+            content: result.content.content,
+            actionable_step: result.content.actionableStep,
+            source: result.content.source,
+            status: shadow ? 'shadow' : 'published',
+            correlation_id: jobId,
+          }),
+        });
+        if (ins.ok) written++; else { skipped++; errors.push(`db ${ins.status}`); }
+
+        // Throttle so a backfill stays a background citizen next to live runs.
+        await new Promise((r) => setTimeout(r, req.throttleMs));
+      }
+    }
+  }
+
+  const summary = {
+    scanned, written, skipped, dates: dates.length,
+    users: prefs.length, errors: errors.slice(0, 10),
+  };
+  await db('growth_backfill_jobs', {
+    method: 'POST',
+    headers: { Prefer: 'return=minimal' },
+    body: JSON.stringify({
+      id: jobId,
+      triggered_by: triggeredBy,
+      from_date: req.fromDate,
+      to_date: req.toDate,
+      slots: req.slots,
+      user_ids: req.userIds,
+      dry_run: req.dryRun,
+      throttle_ms: req.throttleMs,
+      max_items: req.maxItems,
+      status: errors.length ? 'completed_with_errors' : 'completed',
+      scanned, written, skipped,
+      errors: summary.errors,
+      duration_ms: Date.now() - startedAt,
+      finished_at: new Date().toISOString(),
+    }),
+  }).catch(() => undefined);
+
+  return summary;
+}
+
 async function authUser(req: Request): Promise<{ id: string } | null> {
   const auth = req.headers.get('Authorization') ?? '';
   if (!auth.startsWith('Bearer ')) return null;
@@ -566,9 +720,10 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
   let action = 'run';
+  let bodyJson: any = null;
   try {
-    const body = await req.json();
-    action = String(body?.action ?? 'run');
+    bodyJson = await req.json();
+    action = String(bodyJson?.action ?? 'run');
   } catch { /* default action */ }
 
   try {
@@ -600,6 +755,31 @@ Deno.serve(async (req) => {
       });
       // Always 200 so the client can read the human-readable reason.
       return json(res);
+    }
+
+    if (action === 'backfill') {
+      if (!(await isAdmin(req))) return json({ ok: false, error: 'admin only' }, 403);
+      const { req: parsed, error } = parseBackfill(bodyJson);
+      if (!parsed) return json({ ok: false, error }, 400);
+      const user = await authUser(req);
+      const jobId = crypto.randomUUID();
+      const summary = await runBackfill(parsed, jobId, user?.id ?? 'admin');
+      await logRun({
+        run_id: jobId,
+        action: 'backfill',
+        finished_at: new Date().toISOString(),
+        processed: summary.scanned,
+        written: summary.written,
+        skipped: summary.skipped,
+        errors: summary.errors,
+      });
+      return json({ ok: true, jobId, summary });
+    }
+
+    if (action === 'backfill-jobs') {
+      if (!(await isAdmin(req))) return json({ ok: false, error: 'admin only' }, 403);
+      const r = await db('growth_backfill_jobs?select=*&order=created_at.desc&limit=25');
+      return json({ ok: true, jobs: Array.isArray(r.data) ? r.data : [] });
     }
 
     if (action === 'resume') {
