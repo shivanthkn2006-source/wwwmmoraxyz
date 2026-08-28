@@ -110,7 +110,7 @@ export default function GrowthInsightsPage() {
         supabase.from('growth_saved_items').select('item_id').eq('user_id', user.id),
         supabase
           .from('growth_preferences')
-          .select('focus_areas, reflection_style, reflection_styles, timezone')
+          .select('focus_areas, reflection_style, reflection_styles, timezone, paused, onboarded_at')
           .eq('user_id', user.id)
           .maybeSingle(),
       ]);
@@ -119,6 +119,7 @@ export default function GrowthInsightsPage() {
       setHasMore(page.length === PAGE_SIZE);
       setSavedIds(new Set(((savedRes.data as { item_id: string }[] | null) ?? []).map((r) => r.item_id)));
       const p = prefRes.data as Record<string, unknown> | null;
+      setEngineOff(!p || !p.onboarded_at || p.paused === true);
       if (p) {
         setPrefs({
           focus: (p.focus_areas as string[]) ?? [],

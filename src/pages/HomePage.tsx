@@ -56,7 +56,7 @@ import { useDailyBriefing } from '@/hooks/useDailyBriefing';
 import { OnboardingTour } from '@/components/OnboardingTour';
 import { useGrowthFeed } from '@/hooks/useGrowthFeed';
 import CuratedInsightCard, { CuratedInsightSkeleton, type CuratedInsight } from '@/components/growth/CuratedInsightCard';
-import PersonalGrowthOnboarding from '@/components/growth/PersonalGrowthOnboarding';
+import PersonalGrowthOnboarding, { isOnboardingSnoozed } from '@/components/growth/PersonalGrowthOnboarding';
 import GrowthInsightDetailsModal from '@/components/growth/GrowthInsightDetailsModal';
 import { recordGrowthEvent } from '@/lib/growthAnalytics';
 import { useGrowthUnread } from '@/hooks/useGrowthUnread';
@@ -138,6 +138,7 @@ const HomePage = () => {
     // genuinely never been recorded, and a device-local flag stops a duplicate
     // prompt if the write is still in flight when the page remounts.
     if (!user || growthLoading || growthError || !growthNeedsOnboarding) return;
+    if (isOnboardingSnoozed()) return; // dismissed earlier this session
     const key = `growth_onboarding_shown_${user.id}`;
     try {
       if (localStorage.getItem(key)) return;
