@@ -21,5 +21,7 @@ describe('CuratedInsightCard image', () => {
     const img = screen.getByAltText(/Illustration for Wind down with intent/i) as HTMLImageElement;
     expect(img.src).toContain('image.pollinations.ai/prompt/');
     expect(img.src).toContain('seed=');
+    expect(decodeURIComponent(img.src)).toContain('Reflect on one win.');
+    expect(decodeURIComponent(img.src)).toContain('exact historical person');
   });
 });
