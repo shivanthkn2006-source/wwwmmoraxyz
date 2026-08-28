@@ -2356,10 +2356,11 @@ const HomePage = () => {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="relative h-full min-h-0 w-full overflow-hidden">
           {/* Fixed header - Clean minimal version (profile now in HUD) */}
           <div
-            className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ease-out will-change-transform ${headerVisible ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'}`}
+            className={`pointer-events-none fixed top-0 left-0 right-0 z-50 transition-all duration-300 ease-out will-change-transform ${headerVisible ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'}`}
             aria-hidden={!headerVisible}
           >
-            <div className="flex items-center justify-between p-4">
+            <div className="flex items-center justify-between p-4 [&>*]:pointer-events-auto">
+
               <div className="flex items-center gap-2">
                 <h1 
                   className="text-2xl font-bold text-foreground cursor-pointer hover:opacity-80 transition-opacity" 
