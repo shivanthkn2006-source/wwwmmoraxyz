@@ -101,8 +101,8 @@ import PageSeo from "@/components/seo/PageSeo";
 import NewContentBadge from '@/components/NewContentBadge';
 import { logFeedEvent } from '@/lib/feedEventDiagnostics';
 import { markPostsSeen, readUnseenPostIds, syncUnseenPostSnapshot, type FeedUpdateSource } from "@/lib/newPostGate";
-import { composeChronologicalFeed, orderGrowthByTime } from '@/lib/growthFeedComposition';
-import { currentSlot, deviceTimeZone, growthSlotTimestamp, slotsForFrequency } from '@/lib/growthSlot';
+import { composeChronologicalFeed } from '@/lib/growthFeedComposition';
+import { deviceTimeZone, growthSlotTimestamp, slotsForFrequency } from '@/lib/growthSlot';
 
 
 
@@ -147,7 +147,6 @@ const HomePage = () => {
   const { motivation: dailyMotivation, posterUrl: motivationPosterUrl } = useZoeMotivation();
   // Personal Growth Engine — read-only. Rendering never triggers generation.
   const {
-    today: growthToday,
     insights: growthInsights,
     current: growthInsight,
     savedExtras: growthSaved,
@@ -2294,12 +2293,11 @@ const HomePage = () => {
       timestamp: post.created_at,
       value: renderPostSlide(post, feed),
     }));
-    const uniqueLoops = loopsHidden ? [] : filteredLoops.filter((post) => !postIds.has(post.id));
-    const loopItems = uniqueLoops.map((post) => ({
+    const loopItems = loopsHidden ? [] : filteredLoops.flatMap((post, index) => postIds.has(post.id) ? [] : [{
       id: `loop-${post.id}`,
       timestamp: post.created_at,
-      value: loopSlides.find((slide) => slide.key === `loop-${post.id}`)!,
-    })).filter((item) => Boolean(item.value));
+      value: loopSlides[index],
+    }]).filter((item) => Boolean(item.value));
     const zone = growthPreferences?.timezone || deviceTimeZone();
     const growthItems = growthCards.map(({ insight }, index) => ({
       id: `growth-${insight.id}`,
@@ -2314,10 +2312,10 @@ const HomePage = () => {
   // cards remain outside that chronology.
   const globalFeedSlides = searchVideoSlides.length
     ? searchVideoSlides
-    : [...chronologicalSlides(visibleGlobalPosts, 'global'), ...supportingSlides, ...neuralVideoSlides, ...savedGrowthSlides];
+    : [...chronologicalSlides(visibleGlobalPosts, 'global'), ...growthSlide.slice(growthCards.length), ...supportingSlides, ...neuralVideoSlides, ...savedGrowthSlides];
   const personalFeedSlides = searchVideoSlides.length
     ? searchVideoSlides
-    : [...chronologicalSlides(visiblePersonalPosts, 'personal'), ...supportingSlides, ...neuralVideoSlides, ...savedGrowthSlides];
+    : [...chronologicalSlides(visiblePersonalPosts, 'personal'), ...growthSlide.slice(growthCards.length), ...supportingSlides, ...neuralVideoSlides, ...savedGrowthSlides];
 
 
 
