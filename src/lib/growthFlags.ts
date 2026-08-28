@@ -59,7 +59,14 @@ export const GROWTH_FLAGS = {
   push: 'growth_push_notifications',
   email: 'growth_email_notifications',
   export: 'growth_export',
+  /** Shows the YouTube-style "New" badge on unseen posts/loops. */
+  newBadge: 'new_content_badge',
+  /** When on, feed videos repeat; when off (default) they play once. */
+  loopsAutoplayLoop: 'loops_autoplay_loop',
+  /** Gates the first-sign-in Growth onboarding modal. */
+  onboardingGating: 'growth_onboarding_gating',
 } as const;
+
 
 export type GrowthFlagKey = (typeof GROWTH_FLAGS)[keyof typeof GROWTH_FLAGS];
 
