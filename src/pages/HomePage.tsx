@@ -215,10 +215,11 @@ const HomePage = () => {
   const growthSlide = growthCards.map(({ insight, savedBadge }) => (
     <div
       key={`growth-${insight.id}${savedBadge ? '-saved' : ''}`}
-      className="relative flex h-full min-h-full w-full shrink-0 snap-start snap-always items-center overflow-y-auto p-4"
+      className="relative flex h-full min-h-full w-full shrink-0 snap-start snap-always items-center overflow-y-auto p-4 pt-20 pb-24"
       data-growth-insight
       data-growth-saved={savedBadge ? 'true' : 'false'}
     >
+
       <FeedErrorBoundary section="posts">
         <CuratedInsightCard
           insight={insight}
@@ -236,7 +237,7 @@ const HomePage = () => {
     </div>
   ));
   const savedGrowthSlides = growthSaved.map((insight) => (
-    <div key={`growth-${insight.id}-saved`} className="relative flex h-full min-h-full w-full shrink-0 snap-start snap-always items-center overflow-y-auto p-4" data-growth-insight data-growth-saved="true">
+    <div key={`growth-${insight.id}-saved`} className="relative flex h-full min-h-full w-full shrink-0 snap-start snap-always items-center overflow-y-auto p-4 pt-20 pb-24" data-growth-insight data-growth-saved="true">
       <FeedErrorBoundary section="posts">
         <CuratedInsightCard insight={insight} className="w-full" saved={isGrowthSaved(insight.id)} onToggleSave={(id) => void toggleGrowthSave(id)} savedBadge onImpression={(i) => trackGrowth('impression', i)} onCardClick={(i) => trackGrowth('click', i)} onOpenDetails={(i) => setGrowthDetails(i)} focusAreas={growthPreferences?.focus_areas ?? []} deliveryFrequency={growthPreferences?.delivery_frequency} />
       </FeedErrorBoundary>
@@ -2356,10 +2357,11 @@ const HomePage = () => {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="relative h-full min-h-0 w-full overflow-hidden">
           {/* Fixed header - Clean minimal version (profile now in HUD) */}
           <div
-            className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ease-out will-change-transform ${headerVisible ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'}`}
+            className={`pointer-events-none fixed top-0 left-0 right-0 z-50 transition-all duration-300 ease-out will-change-transform ${headerVisible ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'}`}
             aria-hidden={!headerVisible}
           >
-            <div className="flex items-center justify-between p-4">
+            <div className="flex items-center justify-between p-4 [&>*]:pointer-events-auto">
+
               <div className="flex items-center gap-2">
                 <h1 
                   className="text-2xl font-bold text-foreground cursor-pointer hover:opacity-80 transition-opacity" 
