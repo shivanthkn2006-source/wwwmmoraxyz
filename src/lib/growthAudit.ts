@@ -46,7 +46,7 @@ export async function logGrowthAudit(
     if (!actorId) return; // anonymous — nothing to attribute, and RLS would reject
     await supabase.from('growth_audit_log').insert({
       action,
-      details,
+      details: details as never,
       actor_id: actorId,
       user_id: userId ?? actorId,
     });
