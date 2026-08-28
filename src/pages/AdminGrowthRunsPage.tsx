@@ -122,6 +122,12 @@ export default function AdminGrowthRunsPage() {
           </Card>
         )}
 
+        <div className="mb-4">
+          <Link to="/admin/growth-delivery" className="text-xs text-primary underline">
+            Open the daily growth delivery report →
+          </Link>
+        </div>
+
         <GrowthFlagAdminPanel />
         <GrowthBackfillPanel />
 

@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
+import { useGrowthFlags } from '@/hooks/useGrowthFlags';
+import { GROWTH_FLAGS } from '@/lib/growthFlags';
 
 interface NewContentBadgeProps {
   onViewed: () => void;
@@ -10,8 +12,12 @@ const NewContentBadge: React.FC<NewContentBadgeProps> = ({ onViewed, className =
   const ref = useRef<HTMLDivElement | null>(null);
   const onViewedRef = useRef(onViewed);
   const [visible, setVisible] = useState(true);
+  // Remote kill switch — the badge can be disabled platform-wide without a deploy.
+  const { isEnabled } = useGrowthFlags();
+  const badgeEnabled = isEnabled(GROWTH_FLAGS.newBadge);
 
   onViewedRef.current = onViewed;
+
 
   useEffect(() => {
     const node = ref.current;
@@ -56,7 +62,7 @@ const NewContentBadge: React.FC<NewContentBadgeProps> = ({ onViewed, className =
   }, [visible]);
 
 
-  if (!visible) return null;
+  if (!visible || !badgeEnabled) return null;
   return (
     <div ref={ref} className={`pointer-events-none absolute z-20 ${className}`} data-testid="new-content-badge">
       <Badge className="border border-primary-foreground/30 bg-primary px-2 py-1 font-semibold text-primary-foreground shadow-md">New</Badge>
