@@ -57,6 +57,9 @@ import { OnboardingTour } from '@/components/OnboardingTour';
 import { useGrowthFeed } from '@/hooks/useGrowthFeed';
 import CuratedInsightCard, { CuratedInsightSkeleton, type CuratedInsight } from '@/components/growth/CuratedInsightCard';
 import PersonalGrowthOnboarding, { isOnboardingSnoozed } from '@/components/growth/PersonalGrowthOnboarding';
+import GrowthTodayStatusPanel from '@/components/growth/GrowthTodayStatusPanel';
+import { useGrowthFlags } from '@/hooks/useGrowthFlags';
+import { GROWTH_FLAGS } from '@/lib/growthFlags';
 import { logGrowthAudit } from '@/lib/growthAudit';
 import GrowthInsightDetailsModal from '@/components/growth/GrowthInsightDetailsModal';
 import { recordGrowthEvent } from '@/lib/growthAnalytics';
@@ -133,12 +136,16 @@ const HomePage = () => {
     refresh: refreshGrowth,
   } = useGrowthFeed();
   const growthUnread = useGrowthUnread();
+  // Remote flag: onboarding gating can be switched off platform-wide without a deploy.
+  const { isEnabled: isGrowthFlagEnabled } = useGrowthFlags();
+  const growthOnboardingGating = isGrowthFlagEnabled(GROWTH_FLAGS.onboardingGating);
   const [growthOnboardingOpen, setGrowthOnboardingOpen] = useState(false);
   const [growthDetails, setGrowthDetails] = useState<CuratedInsight | null>(null);
   useEffect(() => {
     // Exactly once per member: the modal only opens when preferences have
     // genuinely never been recorded, and a device-local flag stops a duplicate
     // prompt if the write is still in flight when the page remounts.
+    if (!growthOnboardingGating) return; // remotely disabled
     if (!user || growthLoading || growthError || !growthNeedsOnboarding) return;
     if (isOnboardingSnoozed()) return; // dismissed earlier this session
     // Guard against a duplicate prompt while the preference write is in flight,
@@ -154,7 +161,7 @@ const HomePage = () => {
     // Surface the missing-preferences state for admin visibility.
     void logGrowthAudit('preferences_missing', { reason: 'no_growth_preferences_row', surface: 'home' });
     setGrowthOnboardingOpen(true);
-  }, [user, growthLoading, growthError, growthNeedsOnboarding]);
+  }, [user, growthLoading, growthError, growthNeedsOnboarding, growthOnboardingGating]);
   const trackGrowth = React.useCallback(
     (type: 'impression' | 'click', insight: CuratedInsight) => {
       void recordGrowthEvent(type, {
