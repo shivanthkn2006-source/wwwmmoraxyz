@@ -1,10 +1,10 @@
 /**
- * READ-ONLY growth feed hook.
+ * Growth feed synchronization hook.
  *
- * The home feed subscribes to this and nothing else — it never triggers
- * generation, so refreshing costs a database read, not a model call. If the
- * engine is paused, in shadow mode, or the table is unreachable, the hook
- * returns an empty list and the feed renders exactly as it does today.
+ * Normal refreshes are read-only. Once per signed-in session/local day, an
+ * active onboarded member also requests an idempotent catch-up for elapsed
+ * windows. If the engine is paused, in shadow mode, or the table is unreachable,
+ * the hook returns an empty list and the feed renders exactly as it does today.
  *
  * Catch-up behaviour: every window that has already passed today is returned
  * in chronological order, so a member who signs in at night still sees the
@@ -168,8 +168,14 @@ export function useGrowthFeed() {
   // elapsed gap, then refresh the read-only feed. The worker lease + unique key
   // make concurrent tabs and repeated calls safe.
   useEffect(() => {
-    if (!user?.id) return;
-    const key = `growth:catchup:${user.id}:${localDateIn(new Date(), deviceTimeZone())}`;
+    if (!user?.id || state.loading || !state.preferences?.onboarded_at || state.preferences.paused) return;
+    const timezone = state.preferences.timezone || deviceTimeZone();
+    const key = [
+      'growth:catchup:v2',
+      user.id,
+      localDateIn(new Date(), timezone),
+      state.preferences.onboarded_at,
+    ].join(':');
     try {
       if (sessionStorage.getItem(key)) return;
       sessionStorage.setItem(key, 'pending');
@@ -186,7 +192,14 @@ export function useGrowthFeed() {
       .catch(() => {
         try { sessionStorage.removeItem(key); } catch { /* retry next mount */ }
       });
-  }, [user?.id, load]);
+  }, [
+    user?.id,
+    state.loading,
+    state.preferences?.onboarded_at,
+    state.preferences?.paused,
+    state.preferences?.timezone,
+    load,
+  ]);
 
   const toggleSave = useCallback(
     async (itemId: string) => {
