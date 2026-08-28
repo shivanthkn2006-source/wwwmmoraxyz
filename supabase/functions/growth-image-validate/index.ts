@@ -34,6 +34,26 @@ Deno.serve(async (req) => {
       ? `The card is about the real person "${person}". The image matches ONLY if the depicted person is plausibly ${person} (correct era, age, clothing, likeness). A generic modern model is a mismatch.`
       : 'The card names no person. The image matches ONLY if it shows no identifiable human face.';
 
+    // Providers cannot crawl the image host, so inline the bytes instead.
+    let inlineImage: string;
+    try {
+      const imgRes = await fetch(imageUrl, { headers: { Accept: 'image/*' } });
+      if (!imgRes.ok) return json({ match: true, reason: 'image unavailable for validation' });
+      const buf = new Uint8Array(await imgRes.arrayBuffer());
+      if (buf.byteLength < 1000) return json({ match: true, reason: 'image too small to validate' });
+      let binary = '';
+      for (let i = 0; i < buf.length; i += 8192) {
+        binary += String.fromCharCode(...buf.subarray(i, i + 8192));
+      }
+      const mime = imgRes.headers.get('content-type') ?? 'image/jpeg';
+      inlineImage = `data:${mime};base64,${btoa(binary)}`;
+    } catch (e) {
+      console.warn('[growth-image-validate] image download failed', e);
+      return json({ match: true, reason: 'image download failed' });
+    }
+
+
+
     const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
