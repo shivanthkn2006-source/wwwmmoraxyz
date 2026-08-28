@@ -215,10 +215,11 @@ const HomePage = () => {
   const growthSlide = growthCards.map(({ insight, savedBadge }) => (
     <div
       key={`growth-${insight.id}${savedBadge ? '-saved' : ''}`}
-      className="relative flex h-full min-h-full w-full shrink-0 snap-start snap-always items-center overflow-y-auto p-4"
+      className="relative flex h-full min-h-full w-full shrink-0 snap-start snap-always items-center overflow-y-auto p-4 pt-20 pb-24"
       data-growth-insight
       data-growth-saved={savedBadge ? 'true' : 'false'}
     >
+
       <FeedErrorBoundary section="posts">
         <CuratedInsightCard
           insight={insight}
