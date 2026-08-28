@@ -4,7 +4,9 @@
 // mode, and while offscreen — and must never block the calling render.
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor, act } from '@testing-library/react';
+import { render, screen, cleanup, waitFor, act } from '@testing-library/react';
+
+afterEach(() => cleanup());
 
 vi.mock('@/lib/enterpriseTelemetry', () => ({
   reportPlatformError: vi.fn(),
