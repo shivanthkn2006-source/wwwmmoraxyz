@@ -8,6 +8,7 @@ import { newCorrelationId, setActiveCorrelationId } from '@/lib/astroCorrelation
 import {
   flattenAudit, diffAuditRuns, type AuditMember, type AuditRunRow, type FlatAuditRow,
 } from '@/lib/astroAuditDiff';
+import NotificationAttemptsPanel from '@/components/zoe/NotificationAttemptsPanel';
 
 interface AuditResult {
   correlation_id?: string;
