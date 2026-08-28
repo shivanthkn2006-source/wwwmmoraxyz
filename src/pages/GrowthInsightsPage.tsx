@@ -5,17 +5,24 @@
  * card ever delivered to the signed-in user, newest day first and in window
  * order within each day. Read-only: opening this page never triggers
  * generation, so browsing history costs a database read and nothing else.
+ *
+ * Scaling contract: rows are paged from the database (never loaded whole),
+ * search and date filters run server-side, and the next page is fetched only
+ * when the sentinel scrolls into view.
  */
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Bookmark, Sparkles } from 'lucide-react';
+import { ArrowLeft, Bookmark, Sparkles, Search, Loader2, CalendarRange, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { CuratedInsightCard } from '@/components/growth/CuratedInsightCard';
-import { slotOrder, type GrowthSlot } from '@/lib/growthSlot';
+import { Input } from '@/components/ui/input';
+import { CuratedInsightCard, CuratedInsightSkeleton } from '@/components/growth/CuratedInsightCard';
+import GrowthInsightDetailsModal from '@/components/growth/GrowthInsightDetailsModal';
+import { recordGrowthEvent } from '@/lib/growthAnalytics';
+import { slotOrder, sanitizeStyles, type GrowthSlot, type ReflectionStyle } from '@/lib/growthSlot';
 
 interface ArchiveItem {
   id: string;
@@ -28,7 +35,7 @@ interface ArchiveItem {
   created_at: string;
 }
 
-const PAGE_SIZE = 120;
+const PAGE_SIZE = 20;
 
 const formatDay = (date: string) => {
   const parsed = new Date(`${date}T12:00:00`);
@@ -38,40 +45,126 @@ const formatDay = (date: string) => {
   });
 };
 
+/** Escapes PostgREST `ilike` wildcards so a search term can never widen the query. */
+const escapeLike = (value: string) => value.replace(/[%,()*\\]/g, '').trim().slice(0, 60);
+
 export default function GrowthInsightsPage() {
   const { user } = useAuth();
   const [items, setItems] = useState<ArchiveItem[]>([]);
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [failed, setFailed] = useState(false);
   const [savedOnly, setSavedOnly] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [search, setSearch] = useState('');
+  const [query, setQuery] = useState('');
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+  const [details, setDetails] = useState<ArchiveItem | null>(null);
+  const [prefs, setPrefs] = useState<{ focus: string[]; styles: ReflectionStyle[]; tz: string }>({
+    focus: [], styles: [], tz: '',
+  });
+
+  const sentinel = useRef<HTMLDivElement | null>(null);
+  const requestId = useRef(0);
+
+  // Debounce typing so a fast typist issues one query, not one per keystroke.
+  useEffect(() => {
+    const t = setTimeout(() => setQuery(search), 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const fetchPage = useCallback(
+    async (offset: number): Promise<ArchiveItem[]> => {
+      if (!user) return [];
+      let request = supabase
+        .from('growth_feed_items')
+        .select('id, slot, local_date, title, category, content, actionable_step, created_at')
+        .eq('user_id', user.id)
+        .eq('status', 'published');
+
+      const term = escapeLike(query);
+      if (term) request = request.or(`title.ilike.%${term}%,content.ilike.%${term}%,category.ilike.%${term}%`);
+      if (from) request = request.gte('local_date', from);
+      if (to) request = request.lte('local_date', to);
+
+      const { data, error } = await request
+        .order('local_date', { ascending: false })
+        .order('created_at', { ascending: false })
+        .range(offset, offset + PAGE_SIZE - 1);
+      if (error) throw error;
+      return (data as ArchiveItem[] | null) ?? [];
+    },
+    [user, query, from, to],
+  );
 
   const load = useCallback(async () => {
     if (!user) { setItems([]); setLoading(false); return; }
+    const id = ++requestId.current;
     setLoading(true);
     try {
-      const [itemRes, savedRes] = await Promise.all([
-        supabase
-          .from('growth_feed_items')
-          .select('id, slot, local_date, title, category, content, actionable_step, created_at')
-          .eq('user_id', user.id)
-          .eq('status', 'published')
-          .order('local_date', { ascending: false })
-          .limit(PAGE_SIZE),
+      const [page, savedRes, prefRes] = await Promise.all([
+        fetchPage(0),
         supabase.from('growth_saved_items').select('item_id').eq('user_id', user.id),
+        supabase
+          .from('growth_preferences')
+          .select('focus_areas, reflection_style, reflection_styles, timezone')
+          .eq('user_id', user.id)
+          .maybeSingle(),
       ]);
-      if (itemRes.error) throw itemRes.error;
-      setItems((itemRes.data as ArchiveItem[] | null) ?? []);
+      if (id !== requestId.current) return; // a newer query already won
+      setItems(page);
+      setHasMore(page.length === PAGE_SIZE);
       setSavedIds(new Set(((savedRes.data as { item_id: string }[] | null) ?? []).map((r) => r.item_id)));
+      const p = prefRes.data as Record<string, unknown> | null;
+      if (p) {
+        setPrefs({
+          focus: (p.focus_areas as string[]) ?? [],
+          styles: sanitizeStyles(
+            (p.reflection_styles as unknown[])?.length ? (p.reflection_styles as unknown[]) : [p.reflection_style],
+          ),
+          tz: (p.timezone as string) ?? '',
+        });
+      }
       setFailed(false);
     } catch {
-      setFailed(true);
+      if (id === requestId.current) setFailed(true);
     } finally {
-      setLoading(false);
+      if (id === requestId.current) setLoading(false);
     }
-  }, [user]);
+  }, [user, fetchPage]);
 
   useEffect(() => { void load(); }, [load]);
+
+  const loadMore = useCallback(async () => {
+    if (loading || loadingMore || !hasMore || savedOnly) return;
+    setLoadingMore(true);
+    try {
+      const page = await fetchPage(items.length);
+      setItems((prev) => {
+        const seen = new Set(prev.map((i) => i.id));
+        return [...prev, ...page.filter((i) => !seen.has(i.id))];
+      });
+      setHasMore(page.length === PAGE_SIZE);
+    } catch {
+      setHasMore(false);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [loading, loadingMore, hasMore, savedOnly, fetchPage, items.length]);
+
+  useEffect(() => {
+    const node = sentinel.current;
+    if (!node || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(
+      (entries) => { if (entries.some((e) => e.isIntersecting)) void loadMore(); },
+      { rootMargin: '400px' },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [loadMore]);
 
   const toggleSave = useCallback(async (itemId: string) => {
     if (!user) return;
@@ -111,18 +204,21 @@ export default function GrowthInsightsPage() {
       }));
   }, [items, savedIds, savedOnly]);
 
+  const filtersActive = Boolean(query || from || to);
+  const clearFilters = () => { setSearch(''); setQuery(''); setFrom(''); setTo(''); };
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Helmet>
         <title>Growth Insights Archive | Zoe</title>
         <meta
           name="description"
-          content="Every daily growth insight Zoe has delivered, ordered by day and delivery window, with your saved cards in one place."
+          content="Every daily growth insight Zoe has delivered, ordered by day and delivery window, with search, date filters and your saved cards in one place."
         />
       </Helmet>
 
       <div className="mx-auto max-w-2xl px-4 py-6">
-        <header className="mb-6 flex items-center gap-3">
+        <header className="mb-4 flex items-center gap-3">
           <Link
             to="/"
             aria-label="Back to home feed"
@@ -146,11 +242,66 @@ export default function GrowthInsightsPage() {
             onClick={() => setSavedOnly((v) => !v)}
           >
             <Bookmark className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
-            Saved
+            {savedOnly ? 'Saved' : 'All'}
           </Button>
         </header>
 
-        {loading && <p className="text-sm text-muted-foreground">Loading your insights…</p>}
+        <div className="mb-5 space-y-2">
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
+                aria-hidden="true"
+              />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search past insights"
+                aria-label="Search past insights"
+                className="pl-9"
+              />
+            </div>
+            <Button
+              variant={showFilters || from || to ? 'default' : 'outline'}
+              size="icon"
+              aria-label="Date range filter"
+              aria-pressed={showFilters}
+              onClick={() => setShowFilters((v) => !v)}
+            >
+              <CalendarRange className="h-4 w-4" aria-hidden="true" />
+            </Button>
+          </div>
+
+          {showFilters && (
+            <div className="flex items-end gap-2 rounded-lg border border-border p-3">
+              <label className="flex-1 text-[11px] text-muted-foreground">
+                From
+                <Input type="date" value={from} max={to || undefined} onChange={(e) => setFrom(e.target.value)} />
+              </label>
+              <label className="flex-1 text-[11px] text-muted-foreground">
+                To
+                <Input type="date" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} />
+              </label>
+            </div>
+          )}
+
+          {filtersActive && (
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-3 w-3" aria-hidden="true" /> Clear filters
+            </button>
+          )}
+        </div>
+
+        {loading && (
+          <div className="space-y-3" data-growth-loading>
+            <CuratedInsightSkeleton />
+            <CuratedInsightSkeleton />
+          </div>
+        )}
 
         {!loading && failed && (
           <div className="rounded-xl border border-border p-6 text-center">
@@ -160,12 +311,27 @@ export default function GrowthInsightsPage() {
         )}
 
         {!loading && !failed && days.length === 0 && (
-          <div className="rounded-xl border border-border p-6 text-center">
-            <p className="text-sm text-muted-foreground">
+          <div className="rounded-xl border border-border p-8 text-center" data-growth-empty>
+            <Sparkles className="mx-auto mb-3 h-6 w-6 text-muted-foreground" aria-hidden="true" />
+            <p className="text-sm font-medium">
               {savedOnly
-                ? 'No saved insights yet — tap the bookmark on any card to keep it here.'
-                : 'No insights yet. Your first cards arrive at your next delivery window.'}
+                ? 'No saved insights yet'
+                : filtersActive
+                  ? 'Nothing matches those filters'
+                  : 'No insights yet'}
             </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {savedOnly
+                ? 'Tap the bookmark on any card to keep it here.'
+                : filtersActive
+                  ? 'Try a different keyword or widen the date range.'
+                  : 'Your first cards arrive at your next delivery window.'}
+            </p>
+            {filtersActive && (
+              <Button className="mt-3" size="sm" variant="outline" onClick={clearFilters}>
+                Clear filters
+              </Button>
+            )}
           </div>
         )}
 
@@ -182,12 +348,47 @@ export default function GrowthInsightsPage() {
                     insight={insight}
                     saved={savedIds.has(insight.id)}
                     onToggleSave={(id) => void toggleSave(id)}
+                    onOpenDetails={(i) => setDetails(i as ArchiveItem)}
+                    onImpression={(i) =>
+                      void recordGrowthEvent('impression', {
+                        userId: user?.id, itemId: i.id, slot: i.slot,
+                        category: i.category, focusAreas: prefs.focus, surface: 'archive',
+                      })
+                    }
+                    onCardClick={(i) =>
+                      void recordGrowthEvent('click', {
+                        userId: user?.id, itemId: i.id, slot: i.slot,
+                        category: i.category, focusAreas: prefs.focus, surface: 'archive',
+                      })
+                    }
                   />
                 ))}
               </div>
             </section>
           ))}
         </div>
+
+        {!loading && !failed && !savedOnly && hasMore && (
+          <div ref={sentinel} className="py-6 text-center">
+            {loadingMore ? (
+              <p className="inline-flex items-center gap-2 text-xs text-muted-foreground">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                Loading more…
+              </p>
+            ) : (
+              <Button size="sm" variant="outline" onClick={() => void loadMore()}>Load more</Button>
+            )}
+          </div>
+        )}
+
+        <GrowthInsightDetailsModal
+          insight={details}
+          open={Boolean(details)}
+          onOpenChange={(v) => { if (!v) setDetails(null); }}
+          focusAreas={prefs.focus}
+          styles={prefs.styles}
+          timezone={prefs.tz}
+        />
       </div>
     </div>
   );

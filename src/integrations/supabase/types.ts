@@ -2905,6 +2905,107 @@ export type Database = {
         }
         Relationships: []
       }
+      growth_card_events: {
+        Row: {
+          category: string | null
+          created_at: string
+          event_type: string
+          focus_areas: string[]
+          id: string
+          item_id: string
+          slot: string
+          surface: string
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          event_type: string
+          focus_areas?: string[]
+          id?: string
+          item_id: string
+          slot: string
+          surface?: string
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          event_type?: string
+          focus_areas?: string[]
+          id?: string
+          item_id?: string
+          slot?: string
+          surface?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "growth_card_events_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "growth_feed_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      growth_dispatch_runs: {
+        Row: {
+          action: string
+          catchups: number
+          created_at: string
+          duration_ms: number | null
+          errors: string[]
+          finished_at: string | null
+          id: string
+          parked: boolean
+          paused: boolean
+          processed: number
+          run_id: string
+          shadow_mode: boolean
+          skipped: number
+          started_at: string
+          vault: number
+          written: number
+        }
+        Insert: {
+          action?: string
+          catchups?: number
+          created_at?: string
+          duration_ms?: number | null
+          errors?: string[]
+          finished_at?: string | null
+          id?: string
+          parked?: boolean
+          paused?: boolean
+          processed?: number
+          run_id: string
+          shadow_mode?: boolean
+          skipped?: number
+          started_at?: string
+          vault?: number
+          written?: number
+        }
+        Update: {
+          action?: string
+          catchups?: number
+          created_at?: string
+          duration_ms?: number | null
+          errors?: string[]
+          finished_at?: string | null
+          id?: string
+          parked?: boolean
+          paused?: boolean
+          processed?: number
+          run_id?: string
+          shadow_mode?: boolean
+          skipped?: number
+          started_at?: string
+          vault?: number
+          written?: number
+        }
+        Relationships: []
+      }
       growth_dispatch_state: {
         Row: {
           consecutive_rate_limits: number
@@ -2959,11 +3060,13 @@ export type Database = {
           created_at: string
           id: string
           local_date: string
+          regen_count: number
           seen_at: string | null
           slot: string
           source: string
           status: string
           title: string
+          updated_at: string
           user_id: string
         }
         Insert: {
@@ -2974,11 +3077,13 @@ export type Database = {
           created_at?: string
           id?: string
           local_date: string
+          regen_count?: number
           seen_at?: string | null
           slot: string
           source?: string
           status?: string
           title: string
+          updated_at?: string
           user_id: string
         }
         Update: {
@@ -2989,11 +3094,13 @@ export type Database = {
           created_at?: string
           id?: string
           local_date?: string
+          regen_count?: number
           seen_at?: string | null
           slot?: string
           source?: string
           status?: string
           title?: string
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
@@ -3003,6 +3110,7 @@ export type Database = {
           created_at: string
           delivery_frequency: number
           focus_areas: string[]
+          notify_on_new_insight: boolean
           onboarded_at: string | null
           paused: boolean
           reflection_style: string
@@ -3015,6 +3123,7 @@ export type Database = {
           created_at?: string
           delivery_frequency?: number
           focus_areas?: string[]
+          notify_on_new_insight?: boolean
           onboarded_at?: string | null
           paused?: boolean
           reflection_style?: string
@@ -3027,6 +3136,7 @@ export type Database = {
           created_at?: string
           delivery_frequency?: number
           focus_areas?: string[]
+          notify_on_new_insight?: boolean
           onboarded_at?: string | null
           paused?: boolean
           reflection_style?: string
