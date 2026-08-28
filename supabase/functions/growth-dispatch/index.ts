@@ -152,12 +152,14 @@ const PREF_SELECT =
   'user_id,focus_areas,reflection_style,reflection_styles,delivery_frequency,paused,timezone,' +
   'notify_on_new_insight,notify_push,notify_email,notify_digest,last_digest_at,onboarded_at';
 
-async function candidates(limit: number): Promise<PrefRow[]> {
-  const r = await db(
-    'growth_preferences?paused=eq.false&onboarded_at=not.is.null' +
-    `&select=${PREF_SELECT}&order=updated_at.asc,user_id.asc&limit=${limit * 8}`,
-  );
-  return Array.isArray(r.data) ? r.data : [];
+async function candidates(limit: number, afterUserId?: string | null): Promise<PrefRow[]> {
+  const base = 'growth_preferences?paused=eq.false&onboarded_at=not.is.null' +
+    `&select=${PREF_SELECT}&order=user_id.asc&limit=${limit * 8}`;
+  const first = await db(afterUserId ? `${base}&user_id=gt.${afterUserId}` : base);
+  const rows: PrefRow[] = Array.isArray(first.data) ? first.data : [];
+  if (rows.length > 0 || !afterUserId) return rows;
+  const wrapped = await db(base);
+  return Array.isArray(wrapped.data) ? wrapped.data : [];
 }
 
 async function deliveredSlots(userId: string, localDate: string): Promise<Set<string>> {
@@ -260,6 +262,9 @@ async function deliverInsightNotifications(
   const previousDigestAt = pref.last_digest_at ?? null;
   let digestClaimAt: string | null = null;
   if (digest === 'daily') {
+    const enabled = slotsForFrequency(pref.delivery_frequency ?? 5);
+    const finalSlot = enabled[enabled.length - 1];
+    if (slot !== finalSlot) return;
     // One alert per local day: compare the last digest against the user's own
     // wall-clock date, not UTC, so timezones never double- or under-notify.
     const last = pref.last_digest_at
@@ -276,6 +281,18 @@ async function deliverInsightNotifications(
       body: JSON.stringify({ last_digest_at: digestClaimAt }),
     });
     if (!Array.isArray(claim.data) || claim.data.length === 0) return;
+
+    const cards = await db(
+      `growth_feed_items?user_id=eq.${pref.user_id}&local_date=eq.${localDate}` +
+      '&status=eq.published&select=slot,title,content&order=created_at.asc',
+    );
+    const rows = Array.isArray(cards.data) ? cards.data : [];
+    if (rows.length > 0) {
+      title = `Your ${localDate} Growth digest`;
+      body = rows.map((row: Record<string, unknown>) =>
+        `${SLOT_LOCAL_TIME[String(row.slot) as GrowthSlot]?.label ?? row.slot}: ${row.title}\n${row.content}`,
+      ).join('\n\n');
+    }
   }
 
   const results: DeliveryResult[] = [];
@@ -338,7 +355,11 @@ interface RunSummary {
   errors: string[];
 }
 
-async function runBatch(opts: { dryRun: boolean; probeOnly: boolean }): Promise<RunSummary> {
+async function runBatch(opts: {
+  dryRun: boolean;
+  probeOnly: boolean;
+  targetUserId?: string;
+}): Promise<RunSummary> {
   const state = await getState();
   const shadow = state?.shadow_mode !== false;
   const summary: RunSummary = {
@@ -347,8 +368,11 @@ async function runBatch(opts: { dryRun: boolean; probeOnly: boolean }): Promise<
   };
 
   const now = new Date();
-  const rows = await candidates(MAX_USERS_PER_RUN);
-  const cap = opts.probeOnly ? 1 : MAX_USERS_PER_RUN;
+  const targetedPref = opts.targetUserId ? await loadPref(opts.targetUserId) : null;
+  const rows = opts.targetUserId
+    ? (targetedPref && !targetedPref.paused ? [targetedPref] : [])
+    : await candidates(MAX_USERS_PER_RUN, state?.last_candidate_user_id ?? null);
+  const cap = opts.targetUserId ? 5 : opts.probeOnly ? 1 : MAX_USERS_PER_RUN;
   let rateLimitStreak = Number(state?.consecutive_rate_limits ?? 0);
 
   for (const pref of rows) {
@@ -449,6 +473,9 @@ async function runBatch(opts: { dryRun: boolean; probeOnly: boolean }): Promise<
       last_run_at: new Date().toISOString(),
       last_run_processed: summary.processed,
       last_error: summary.errors[0] ?? null,
+      ...(opts.targetUserId || rows.length === 0
+        ? {}
+        : { last_candidate_user_id: rows[rows.length - 1].user_id }),
     });
   }
 
@@ -897,6 +924,21 @@ Deno.serve(async (req) => {
     if (action === 'preview') {
       const summary = await runBatch({ dryRun: true, probeOnly: true });
       return json({ ok: true, dryRun: true, summary });
+    }
+
+    if (action === 'catchup-me') {
+      const user = await authUser(req);
+      if (!user) return json({ ok: false, error: 'sign in required' }, 401);
+      const owner = crypto.randomUUID();
+      if (!(await acquireLease(owner))) {
+        return json({ ok: true, skipped: 'another run holds the lease', version: WORKER_VERSION });
+      }
+      try {
+        const summary = await runBatch({ dryRun: false, probeOnly: false, targetUserId: user.id });
+        return json({ ok: true, summary, version: WORKER_VERSION });
+      } finally {
+        await releaseLease();
+      }
     }
 
     // ── "run" ────────────────────────────────────────────────────────────

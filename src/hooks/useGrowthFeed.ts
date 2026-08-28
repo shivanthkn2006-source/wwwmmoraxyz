@@ -163,6 +163,31 @@ export function useGrowthFeed() {
 
   useEffect(() => { void load(); }, [load]);
 
+  // A signed-in member should not wait for successive cron ticks to recover
+  // missed windows. Ask the worker once per session/local day to fill every
+  // elapsed gap, then refresh the read-only feed. The worker lease + unique key
+  // make concurrent tabs and repeated calls safe.
+  useEffect(() => {
+    if (!user?.id) return;
+    const key = `growth:catchup:${user.id}:${localDateIn(new Date(), deviceTimeZone())}`;
+    try {
+      if (sessionStorage.getItem(key)) return;
+      sessionStorage.setItem(key, 'pending');
+    } catch { /* session storage unavailable; server idempotency still protects us */ }
+    void supabase.functions.invoke('growth-dispatch', { body: { action: 'catchup-me' } })
+      .then(({ data, error }) => {
+        if (error || !(data as { ok?: boolean } | null)?.ok) {
+          try { sessionStorage.removeItem(key); } catch { /* retry next mount */ }
+          return;
+        }
+        try { sessionStorage.setItem(key, 'done'); } catch { /* no-op */ }
+        void load();
+      })
+      .catch(() => {
+        try { sessionStorage.removeItem(key); } catch { /* retry next mount */ }
+      });
+  }, [user?.id, load]);
+
   const toggleSave = useCallback(
     async (itemId: string) => {
       if (!user || !itemId) return false;
