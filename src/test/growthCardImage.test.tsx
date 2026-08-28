@@ -1,3 +1,4 @@
+/* @vitest-environment jsdom */
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import CuratedInsightCard from '@/components/growth/CuratedInsightCard';
@@ -8,7 +9,7 @@ describe('CuratedInsightCard image', () => {
       <CuratedInsightCard
         insight={{
           id: 'abc',
-          slot: 'night_review' as never,
+          slot: 'night' as never,
           title: 'Wind down with intent',
           category: 'Mindset',
           content: 'Reflect on one win.',
