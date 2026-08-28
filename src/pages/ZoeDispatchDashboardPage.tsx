@@ -328,6 +328,10 @@ const ZoeDispatchDashboardPage: React.FC = () => {
         </div>
       )}
 
+      {/* Slack / email delivery attempts for the selected audit run */}
+      <div className="mb-6">
+        <NotificationAttemptsPanel auditRunId={selectedAuditId || null} />
+      </div>
 
 
       {/* Engine state */}
