@@ -17,7 +17,7 @@ vi.mock('@/lib/versionCheck', () => ({
   checkAppVersion: vi.fn(),
 }));
 
-const { SafeCanvasWrapper, detectWebGLSupport, detectLowPowerDevice } = await import(
+const { SafeCanvasWrapper, detectWebGLSupport, detectLowPowerDevice, __resetCapabilityCache } = await import(
   '@/components/3d/SafeCanvasWrapper'
 );
 const { usePlatformStore } = await import('@/store/usePlatformStore');
@@ -62,6 +62,7 @@ describe('SafeCanvasWrapper capability gating', () => {
       ObserverIntersecting as unknown as typeof IntersectionObserver;
     setHardware(8, 8);
     mockWebGL(true);
+    __resetCapabilityCache();
     usePlatformStore.setState({ thermalSafeMode: false, heavyModulesMounted: 0 });
   });
 

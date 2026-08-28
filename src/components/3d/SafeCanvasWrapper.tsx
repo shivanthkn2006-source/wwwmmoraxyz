@@ -43,6 +43,11 @@ export const detectWebGLSupport = (): boolean => {
   return webglCache;
 };
 
+/** Test/diagnostic hook: forget the memoized WebGL probe result. */
+export const __resetCapabilityCache = () => {
+  webglCache = null;
+};
+
 export const detectLowPowerDevice = (): boolean => {
   if (typeof navigator === 'undefined') return true;
   const memory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory;
