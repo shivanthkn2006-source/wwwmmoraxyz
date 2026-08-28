@@ -1,5 +1,5 @@
 /* @vitest-environment jsdom */
-import React from 'react';
+import React, { useState } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -33,12 +33,34 @@ vi.mock('@/integrations/supabase/client', () => {
 });
 
 import PostCard from '@/components/PostCard';
+import NewContentBadge from '@/components/NewContentBadge';
 import { __resetFeedPlaybackMemory, hasPlayedFeedMedia } from '@/lib/feedPlayback';
+
+vi.mock('@/hooks/useGrowthFlags', () => ({ useGrowthFlags: () => ({ isEnabled: () => true, loading: false }) }));
+
+const CompletionHarness = () => {
+  const [isNew, setIsNew] = useState(true);
+  return (
+    <div data-testid="completion-card" data-new={isNew ? 'true' : 'false'}>
+      {isNew && <NewContentBadge onViewed={() => setIsNew(false)} />}
+      <PostCard
+        post={{
+          id: 'video-post', user_id: 'creator', content: 'A loop',
+          media_url: 'https://example.com/loop.mp4', media_type: 'video',
+          likes_count: 0, comments_count: 0, created_at: new Date().toISOString(),
+        }}
+        onUpdate={vi.fn()}
+        onMediaCompleted={() => setIsNew(false)}
+      />
+    </div>
+  );
+};
 
 describe('PostCard completion contract', () => {
   beforeEach(() => {
     localStorage.clear();
     __resetFeedPlaybackMemory();
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(() => null);
     vi.stubGlobal('IntersectionObserver', class {
       observe() {}
       disconnect() {}
@@ -51,23 +73,15 @@ describe('PostCard completion contract', () => {
   });
 
   it('persists play-once and tells the feed to remove this post New marker', () => {
-    const onMediaCompleted = vi.fn();
-    render(
-      <PostCard
-        post={{
-          id: 'video-post', user_id: 'creator', content: 'A loop',
-          media_url: 'https://example.com/loop.mp4', media_type: 'video',
-          likes_count: 0, comments_count: 0, created_at: new Date().toISOString(),
-        }}
-        onUpdate={vi.fn()}
-        onMediaCompleted={onMediaCompleted}
-      />,
-    );
+    render(<CompletionHarness />);
+
+    expect(screen.getByTestId('completion-card').getAttribute('data-new')).toBe('true');
+    expect(screen.getByTestId('new-content-badge')).toBeTruthy();
 
     fireEvent.ended(screen.getByTestId('post-video'));
 
     expect(hasPlayedFeedMedia('user-a', 'video-post')).toBe(true);
-    expect(onMediaCompleted).toHaveBeenCalledTimes(1);
-    expect(onMediaCompleted).toHaveBeenCalledWith('video-post');
+    expect(screen.getByTestId('completion-card').getAttribute('data-new')).toBe('false');
+    expect(screen.queryByTestId('new-content-badge')).toBeNull();
   });
 });
