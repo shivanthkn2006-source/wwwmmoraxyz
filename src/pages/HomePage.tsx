@@ -54,6 +54,9 @@ import { TutorialOverlay } from '@/components/TutorialOverlay';
 import { useTutorial } from '@/hooks/useTutorial';
 import { useDailyBriefing } from '@/hooks/useDailyBriefing';
 import { OnboardingTour } from '@/components/OnboardingTour';
+import { useGrowthFeed } from '@/hooks/useGrowthFeed';
+import CuratedInsightCard from '@/components/growth/CuratedInsightCard';
+import PersonalGrowthOnboarding from '@/components/growth/PersonalGrowthOnboarding';
 import { SovereignQuickAccess } from '@/components/SovereignQuickAccess';
 import { appendMediaVersion, captureVideoPreviewFromUrl, dataUrlToFile, getPostsStorageObjectPath, inferMediaType, makeFallbackVideoPoster, resolvePrivateStorageUrl, transcodeVideoForPreview } from '@/lib/mediaUtils';
 import PostsGrid from "@/components/PostsGrid";
@@ -111,6 +114,27 @@ const HomePage = () => {
   const { user } = useAuth();
   const { prediction: astroDaily } = useAstroDailyPrediction();
   const { motivation: dailyMotivation, posterUrl: motivationPosterUrl } = useZoeMotivation();
+  // Personal Growth Engine — read-only. Rendering never triggers generation.
+  const {
+    current: growthInsight,
+    needsOnboarding: growthNeedsOnboarding,
+    refresh: refreshGrowth,
+  } = useGrowthFeed();
+  const [growthOnboardingOpen, setGrowthOnboardingOpen] = useState(false);
+  useEffect(() => {
+    if (growthNeedsOnboarding) setGrowthOnboardingOpen(true);
+  }, [growthNeedsOnboarding]);
+  const growthSlide = growthInsight ? (
+    <div
+      className="relative flex h-full min-h-full w-full shrink-0 snap-start snap-always items-center overflow-y-auto p-4"
+      data-growth-insight
+    >
+      <FeedErrorBoundary section="posts">
+        <CuratedInsightCard insight={growthInsight} className="w-full" />
+      </FeedErrorBoundary>
+    </div>
+  ) : null;
+
   const navigate = useNavigate();
   const { receivedRequests, acceptFriendRequest, rejectFriendRequest } = useFriendRequests();
   const [globalPosts, setGlobalPosts] = useState<Post[]>([]);
