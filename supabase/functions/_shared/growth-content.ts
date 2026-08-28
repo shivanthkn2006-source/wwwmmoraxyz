@@ -100,6 +100,16 @@ export function elapsedSlots(
   );
 }
 
+/** Elapsed delivery windows that have not been persisted yet. */
+export function missingElapsedSlots(
+  nowMinutes: number,
+  enabled: GrowthSlot[],
+  delivered: Iterable<string>,
+): GrowthSlot[] {
+  const deliveredSet = new Set(delivered);
+  return elapsedSlots(nowMinutes, enabled).filter((slot) => !deliveredSet.has(slot));
+}
+
 export interface InsightContent {
   title: string;
   category: string;

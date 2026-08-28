@@ -26,7 +26,7 @@
 import { localDateIn, localHourMinute } from '../_shared/astro-engine.ts';
 import {
   GROWTH_SLOTS, SLOT_LOCAL_TIME, slotsForFrequency, generateInsight,
-  sanitizeFocusAreas, sanitizeStyles, styleForSlot, elapsedSlots,
+  sanitizeFocusAreas, sanitizeStyles, styleForSlot, elapsedSlots, missingElapsedSlots,
   type GrowthSlot,
 } from '../_shared/growth-content.ts';
 
@@ -46,7 +46,7 @@ const REGEN_COOLDOWN_MS = 60_000;
 const REGEN_DAILY_CAP = 5;
 const BACKFILL_MAX_ITEMS = 200;
 /** Bumped on every worker change so admin UIs can prove they hit the latest deploy. */
-const WORKER_VERSION = '2026-08-28.1';
+const WORKER_VERSION = '2026-08-28.2';
 const BACKFILL_MIN_THROTTLE_MS = 100;
 const BACKFILL_MAX_THROTTLE_MS = 5_000;
 const BACKFILL_BUDGET_MS = 50_000;
@@ -155,7 +155,7 @@ const PREF_SELECT =
 async function candidates(limit: number): Promise<PrefRow[]> {
   const r = await db(
     'growth_preferences?paused=eq.false&onboarded_at=not.is.null' +
-    `&select=${PREF_SELECT}&limit=${limit * 4}`,
+    `&select=${PREF_SELECT}&order=updated_at.asc,user_id.asc&limit=${limit * 8}`,
   );
   return Array.isArray(r.data) ? r.data : [];
 }
@@ -179,14 +179,16 @@ async function authEmail(userId: string): Promise<string> {
   } catch { return ''; }
 }
 
-/** Transactional email for a new insight. No-op when Resend is not configured. */
-async function emailInsight(userId: string, slot: GrowthSlot, title: string, body: string) {
+interface DeliveryResult { sent: boolean; error?: string; transport?: string }
+
+/** Transactional email for a new insight. */
+async function emailInsight(userId: string, slot: GrowthSlot, title: string, body: string): Promise<DeliveryResult> {
   const key = Deno.env.get('RESEND_API_KEY');
-  if (!key) return;
+  if (!key) return { sent: false, error: 'email not configured' };
   const to = await authEmail(userId);
-  if (!to) return;
+  if (!to) return { sent: false, error: 'recipient email unavailable' };
   try {
-    await fetch('https://api.resend.com/emails', {
+    const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -196,7 +198,51 @@ async function emailInsight(userId: string, slot: GrowthSlot, title: string, bod
         text: `${title}\n\n${String(body).slice(0, 1200)}`,
       }),
     });
-  } catch { /* email never blocks generation */ }
+    if (!response.ok) return { sent: false, error: `${response.status}: ${await response.text()}` };
+    return { sent: true, transport: 'resend' };
+  } catch (error) {
+    return { sent: false, error: String((error as Error)?.message ?? error) };
+  }
+}
+
+const NOTIFICATION_RETRY_DELAYS = [0, 400, 1_200, 3_600];
+
+async function deliverWithRetry(
+  channel: 'push' | 'email',
+  subject: string,
+  send: () => Promise<DeliveryResult>,
+): Promise<DeliveryResult> {
+  const auditRunId = crypto.randomUUID();
+  let last: DeliveryResult = { sent: false, error: 'not attempted' };
+  for (let index = 0; index < NOTIFICATION_RETRY_DELAYS.length; index++) {
+    if (NOTIFICATION_RETRY_DELAYS[index] > 0) {
+      await new Promise((resolve) => setTimeout(resolve, NOTIFICATION_RETRY_DELAYS[index]));
+    }
+    const started = Date.now();
+    last = await send().catch((error) => ({
+      sent: false,
+      error: String((error as Error)?.message ?? error),
+    }));
+    await db('notification_attempts', {
+      method: 'POST',
+      headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify({
+        audit_run_id: auditRunId,
+        correlation_id: subject,
+        channel,
+        attempt: index + 1,
+        max_attempts: NOTIFICATION_RETRY_DELAYS.length,
+        succeeded: last.sent,
+        transport: last.transport ?? null,
+        error: last.error?.slice(0, 500) ?? null,
+        duration_ms: Date.now() - started,
+        subject,
+        source: 'growth-dispatch',
+      }),
+    }).catch(() => undefined);
+    if (last.sent || /not configured|unavailable/i.test(last.error ?? '')) break;
+  }
+  return last;
 }
 
 /**
@@ -211,6 +257,8 @@ async function deliverInsightNotifications(
 ) {
   const digest = pref.notify_digest ?? 'instant';
   if (digest === 'off') return;
+  const previousDigestAt = pref.last_digest_at ?? null;
+  let digestClaimAt: string | null = null;
   if (digest === 'daily') {
     // One alert per local day: compare the last digest against the user's own
     // wall-clock date, not UTC, so timezones never double- or under-notify.
@@ -218,25 +266,50 @@ async function deliverInsightNotifications(
       ? localDateIn(new Date(pref.last_digest_at), pref.timezone || 'UTC')
       : null;
     if (last === localDate) return;
-    await db(`growth_preferences?user_id=eq.${pref.user_id}`, {
+    digestClaimAt = new Date().toISOString();
+    const priorFilter = previousDigestAt
+      ? `last_digest_at=eq.${encodeURIComponent(previousDigestAt)}`
+      : 'last_digest_at=is.null';
+    const claim = await db(`growth_preferences?user_id=eq.${pref.user_id}&${priorFilter}`, {
       method: 'PATCH',
-      headers: { Prefer: 'return=minimal' },
-      body: JSON.stringify({ last_digest_at: new Date().toISOString() }),
-    }).catch(() => undefined);
+      headers: { Prefer: 'return=representation' },
+      body: JSON.stringify({ last_digest_at: digestClaimAt }),
+    });
+    if (!Array.isArray(claim.data) || claim.data.length === 0) return;
   }
 
-  if (pref.notify_on_new_insight !== false || pref.notify_push !== false) {
-    await notifyNewInsight(pref.user_id, slot, title);
+  const results: DeliveryResult[] = [];
+  if (pref.notify_on_new_insight !== false && pref.notify_push !== false) {
+    results.push(await deliverWithRetry(
+      'push', `growth:${pref.user_id}:${localDate}:${digest === 'daily' ? 'daily' : slot}`,
+      () => notifyNewInsight(pref.user_id, slot, title),
+    ));
   }
   if (pref.notify_email === true) {
-    await emailInsight(pref.user_id, slot, title, body);
+    results.push(await deliverWithRetry(
+      'email', `growth:${pref.user_id}:${localDate}:${digest === 'daily' ? 'daily' : slot}`,
+      () => emailInsight(pref.user_id, slot, title, body),
+    ));
+  }
+
+  // A daily digest is complete only when at least one selected channel really
+  // accepted it. Release a failed claim so the next worker run can retry.
+  if (digest === 'daily' && digestClaimAt && !results.some((result) => result.sent)) {
+    await db(
+      `growth_preferences?user_id=eq.${pref.user_id}&last_digest_at=eq.${encodeURIComponent(digestClaimAt)}`,
+      {
+        method: 'PATCH',
+        headers: { Prefer: 'return=minimal' },
+        body: JSON.stringify({ last_digest_at: previousDigestAt }),
+      },
+    ).catch(() => undefined);
   }
 }
 
 /** Self-notification for a freshly published card. Best-effort only. */
-async function notifyNewInsight(userId: string, slot: GrowthSlot, title: string) {
+async function notifyNewInsight(userId: string, slot: GrowthSlot, title: string): Promise<DeliveryResult> {
   try {
-    await db('notifications', {
+    const response = await db('notifications', {
       method: 'POST',
       headers: { Prefer: 'return=minimal' },
       body: JSON.stringify({
@@ -246,7 +319,12 @@ async function notifyNewInsight(userId: string, slot: GrowthSlot, title: string)
         context_data: { slot, title: String(title).slice(0, 120), window: SLOT_LOCAL_TIME[slot].label },
       }),
     });
-  } catch { /* notifications never block generation */ }
+    return response.ok
+      ? { sent: true, transport: 'in-app-push-queue' }
+      : { sent: false, error: `${response.status}: notification queue rejected` };
+  } catch (error) {
+    return { sent: false, error: String((error as Error)?.message ?? error) };
+  }
 }
 
 interface RunSummary {
@@ -285,65 +363,56 @@ async function runBatch(opts: { dryRun: boolean; probeOnly: boolean }): Promise<
     // the due-window check and the catch-up scan.
     const delivered = await deliveredSlots(pref.user_id, localDate);
 
-    // Primary: the window that is due right now. Fallback: the most recent
-    // window that already passed today but was never delivered (worker gap,
-    // signup mid-day, provider outage). At most ONE catch-up per user per run,
-    // so the batch stays bounded.
-    let slot = dueSlot(now, tz, enabled);
-    let isCatchup = false;
-    if (slot && delivered.has(slot)) slot = null;
-    if (!slot) {
-      const passed = elapsedSlots(hour * 60 + minute, enabled);
-      for (let i = passed.length - 1; i >= 0; i--) {
-        if (!delivered.has(passed[i])) { slot = passed[i]; isCatchup = true; break; }
-      }
-    }
-    if (!slot) { summary.skipped++; continue; }
+    // Fill every elapsed missing window in chronological order in this run.
+    // The global item cap and unique key keep this bounded and idempotent.
+    const missing = missingElapsedSlots(hour * 60 + minute, enabled, delivered);
+    if (missing.length === 0) { summary.skipped++; continue; }
 
-    summary.processed++;
-    if (isCatchup) summary.catchups++;
+    for (const slot of missing) {
+      if (summary.processed >= cap) break;
+      const isCatchup = dueSlot(now, tz, enabled) !== slot;
+      summary.processed++;
+      if (isCatchup) summary.catchups++;
 
-    const result = await generateInsight({
-      slot,
-      focusAreas: sanitizeFocusAreas(pref.focus_areas),
-      style: styleForSlot(
+      const result = await generateInsight({
         slot,
-        sanitizeStyles(
-          pref.reflection_styles?.length ? pref.reflection_styles : [pref.reflection_style],
+        focusAreas: sanitizeFocusAreas(pref.focus_areas),
+        style: styleForSlot(
+          slot,
+          sanitizeStyles(
+            pref.reflection_styles?.length ? pref.reflection_styles : [pref.reflection_style],
+          ),
         ),
-      ),
-      localDate,
-      seed: `${pref.user_id}_${localDate}_${slot}`,
-    });
-
-    if (result.circuitBreak) {
-      await patchState({
-        paused: true,
-        paused_reason: `${result.circuitBreak.status}: ${result.circuitBreak.message}`,
-        paused_at: new Date().toISOString(),
+        localDate,
+        seed: `${pref.user_id}_${localDate}_${slot}`,
       });
-      summary.paused = true;
-      summary.errors.push(`circuit break ${result.circuitBreak.status}`);
-      break;
-    }
-    if (result.rateLimited) {
-      rateLimitStreak++;
-      summary.errors.push('rate limited');
-      if (rateLimitStreak >= RATE_LIMIT_PARK) {
-        summary.parked = true;
+
+      if (result.circuitBreak) {
+        await patchState({
+          paused: true,
+          paused_reason: `${result.circuitBreak.status}: ${result.circuitBreak.message}`,
+          paused_at: new Date().toISOString(),
+        });
+        summary.paused = true;
+        summary.errors.push(`circuit break ${result.circuitBreak.status}`);
         break;
       }
-      continue;
-    }
-    rateLimitStreak = 0;
-    if (result.error) summary.errors.push(result.error);
-    if (result.content.source === 'vault') summary.vault++;
+      if (result.rateLimited) {
+        rateLimitStreak++;
+        summary.errors.push('rate limited');
+        if (rateLimitStreak >= RATE_LIMIT_PARK) summary.parked = true;
+        if (summary.parked) break;
+        continue;
+      }
+      rateLimitStreak = 0;
+      if (result.error) summary.errors.push(result.error);
+      if (result.content.source === 'vault') summary.vault++;
 
-    if (opts.dryRun) continue;
+      if (opts.dryRun) continue;
 
     // Idempotent write — the UNIQUE (user_id, local_date, slot) key makes a
     // duplicate run a no-op instead of a second insight.
-    const ins = await db('growth_feed_items', {
+      const ins = await db('growth_feed_items', {
       method: 'POST',
       headers: { Prefer: 'return=minimal,resolution=ignore-duplicates' },
       body: JSON.stringify({
@@ -359,16 +428,19 @@ async function runBatch(opts: { dryRun: boolean; probeOnly: boolean }): Promise<
         correlation_id: crypto.randomUUID(),
       }),
     });
-    if (ins.ok) {
-      summary.written++;
-      if (!shadow) {
-        await deliverInsightNotifications(
-          pref, slot, localDate, result.content.title, result.content.content,
-        );
+      if (ins.ok) {
+        summary.written++;
+        delivered.add(slot);
+        if (!shadow) {
+          await deliverInsightNotifications(
+            pref, slot, localDate, result.content.title, result.content.content,
+          );
+        }
+      } else {
+        summary.errors.push(`db ${ins.status}`);
       }
-    } else {
-      summary.errors.push(`db ${ins.status}`);
     }
+    if (summary.paused || summary.parked) break;
   }
 
   if (!opts.dryRun) {

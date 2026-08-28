@@ -181,6 +181,7 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt }
   return (
     <div
       ref={rootRef}
+      data-home-dock
       className={cn(
         'fixed right-0 z-[9996] flex items-center justify-end',
         'bottom-[calc(env(safe-area-inset-bottom,0px)+12px)]',

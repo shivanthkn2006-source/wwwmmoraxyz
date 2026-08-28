@@ -127,6 +127,17 @@ export function elapsedSlots(
   });
 }
 
+/** Elapsed delivery windows that have not been persisted yet. */
+export function missingElapsedSlots(
+  now: Date,
+  timeZone: string,
+  delivered: Iterable<string>,
+  enabled: GrowthSlot[] = GROWTH_SLOTS,
+): GrowthSlot[] {
+  const deliveredSet = new Set(delivered);
+  return elapsedSlots(now, timeZone, enabled).filter((slot) => !deliveredSet.has(slot));
+}
+
 export const ALL_REFLECTION_STYLES: ReflectionStyle[] = [
   'actionable', 'philosophical', 'biographical', 'strategic',
 ];
