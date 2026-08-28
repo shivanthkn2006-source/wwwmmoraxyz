@@ -3100,6 +3100,7 @@ export type Database = {
         Row: {
           consecutive_rate_limits: number
           id: string
+          last_candidate_user_id: string | null
           last_error: string | null
           last_run_at: string | null
           last_run_processed: number
@@ -3114,6 +3115,7 @@ export type Database = {
         Insert: {
           consecutive_rate_limits?: number
           id?: string
+          last_candidate_user_id?: string | null
           last_error?: string | null
           last_run_at?: string | null
           last_run_processed?: number
@@ -3128,6 +3130,7 @@ export type Database = {
         Update: {
           consecutive_rate_limits?: number
           id?: string
+          last_candidate_user_id?: string | null
           last_error?: string | null
           last_run_at?: string | null
           last_run_processed?: number
