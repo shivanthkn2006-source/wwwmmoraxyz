@@ -5,7 +5,6 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import React, { memo, useCallback, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -76,7 +75,16 @@ const PlanetaryIntentSelector: React.FC = () => {
 
   // This splash belongs to the entry screen only. On any other route it is a
   // full-screen layer that silently swallows every click on the page below.
-  const { pathname } = useLocation();
+  // It renders above the router, so the path is tracked without router context.
+  const [pathname, setPathname] = React.useState(
+    typeof window === 'undefined' ? '/' : window.location.pathname,
+  );
+  useEffect(() => {
+    const read = () => setPathname(window.location.pathname);
+    const id = window.setInterval(read, 400);
+    window.addEventListener('popstate', read);
+    return () => { window.clearInterval(id); window.removeEventListener('popstate', read); };
+  }, []);
 
   useEffect(() => {
     if (showIntentSelector && pathname !== '/') dismissIntentSelector();
