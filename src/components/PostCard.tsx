@@ -54,9 +54,10 @@ interface Post {
 interface PostCardProps {
   post: Post;
   onUpdate: () => void;
+  onMediaCompleted?: (postId: string) => void;
 }
 
-const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
+const PostCard: React.FC<PostCardProps> = ({ post, onUpdate, onMediaCompleted }) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -93,6 +94,12 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
   const latestLikesCountRef = useRef(post.likes_count);
 
   const { soundEnabled, setSoundEnabled } = usePersistentMediaSound(false);
+
+  // Repair stale state from earlier builds where playback completion was
+  // persisted but the owning feed's unseen marker was not cleared.
+  useEffect(() => {
+    if (playedOnceRef.current) onMediaCompleted?.(post.id);
+  }, [onMediaCompleted, post.id]);
 
   const playLikeAnimation = useCallback(() => {
     setShowLikeAnimation(false);
@@ -672,9 +679,12 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
                 onPause={() => setIsVideoPlaying(false)}
                 onEnded={() => {
                   // One pass only — remember it so re-entering the viewport
-                  // does not restart playback.
+                  // does not restart playback, and clear this exact post's
+                  // New marker through the feed that owns unseen state.
                   playedOnceRef.current = true;
                   markFeedMediaPlayed(user?.id, post.id);
+                  onMediaCompleted?.(post.id);
+                  logFeedEvent('media_playback_completed', { post_id: post.id, view_once: true }, user?.id);
                   setIsVideoPlaying(false);
                 }}
                 onError={(e) => console.warn('[PostCard][video]', post.id, getVideoErrorReason(e.currentTarget))}
