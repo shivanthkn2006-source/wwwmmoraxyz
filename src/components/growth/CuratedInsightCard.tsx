@@ -42,42 +42,29 @@ interface Props {
   deliveryFrequency?: number;
 }
 
-/** Stable numeric seed so a given insight always renders the same picture. */
-const seedFrom = (value: string): number => {
-  let hash = 0;
-  for (let i = 0; i < value.length; i += 1) hash = (hash * 31 + value.charCodeAt(i)) % 1000000;
-  return hash;
-};
-
 /**
- * Standalone illustrative image for a growth card. Uses Pollinations directly
- * as an <img> source — no fetch, no backend, no shared state. If it fails to
- * load the block disappears and the card renders exactly as before.
+ * Standalone illustrative image for a growth card. The picture is generated
+ * from the card's own text and then validated against it (see
+ * `useValidatedGrowthImage`): a mismatched face or a stranger where the card
+ * names nobody is re-rolled and finally replaced by a faceless illustration.
+ * If it fails to load the block disappears and the card renders as before.
  */
 const GrowthInsightImage: React.FC<{ insight: CuratedInsight }> = ({ insight }) => {
   const [status, setStatus] = useState<'loading' | 'ready' | 'failed'>('loading');
 
-  const src = useMemo(() => {
-    const subject = `${insight.title}. ${insight.content}`.replace(/\s+/g, ' ').trim().slice(0, 420);
-    const prompt = [
-      `Create a literal editorial image for this personal growth card: ${subject}`,
-      `Theme: ${insight.category}`,
-      'The image must directly match the title and lesson',
-      'If a real person is named, show that exact historical person with recognizable, historically accurate appearance, age, clothing, and era; never substitute a generic young person',
-      'cinematic documentary photography, natural light, respectful, no text, no words, no letters, no logo',
-    ].filter(Boolean).join(', ');
-    return getPollinationsUrl(prompt, {
-      width: 768,
-      height: 432,
-      model: 'flux',
-      seed: seedFrom(`${insight.id ?? insight.slot}-${insight.title}`),
-    });
-  }, [insight.category, insight.content, insight.title, insight.id, insight.slot]);
+  const { src, person } = useValidatedGrowthImage({
+    key: insight.id ?? insight.slot,
+    title: insight.title,
+    content: insight.content,
+    category: insight.category,
+  });
+
+  useEffect(() => { setStatus('loading'); }, [src]);
 
   if (status === 'failed') return null;
 
   return (
-    <div className="relative mb-3 overflow-hidden rounded-xl bg-muted/40 aspect-[16/9]">
+    <div className="relative mb-3 overflow-hidden rounded-xl bg-muted/40 aspect-[16/9]" data-growth-image-person={person ?? ''}>
       {status === 'loading' && (
         <div className="absolute inset-0 flex items-center justify-center animate-pulse bg-muted">
           <ImageOff className="h-4 w-4 text-muted-foreground/60" aria-hidden="true" />
@@ -85,7 +72,7 @@ const GrowthInsightImage: React.FC<{ insight: CuratedInsight }> = ({ insight }) 
       )}
       <img
         src={src}
-        alt={`Illustration for ${insight.title}`}
+        alt={person ? `Illustration of ${person} for ${insight.title}` : `Illustration for ${insight.title}`}
         loading="lazy"
         decoding="async"
         referrerPolicy="no-referrer"
@@ -96,6 +83,7 @@ const GrowthInsightImage: React.FC<{ insight: CuratedInsight }> = ({ insight }) 
     </div>
   );
 };
+
 
 
 export const CuratedInsightCard: React.FC<Props> = ({
