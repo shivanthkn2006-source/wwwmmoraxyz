@@ -111,3 +111,39 @@ export function currentSlot(
   }
   return best;
 }
+
+/** Every enabled slot whose local time has already passed today, in order. */
+export function elapsedSlots(
+  now: Date,
+  timeZone: string,
+  enabled: GrowthSlot[] = GROWTH_SLOTS,
+): GrowthSlot[] {
+  const { hour, minute } = localHourMinute(now, timeZone);
+  const nowMin = hour * 60 + minute;
+  return GROWTH_SLOTS.filter((slot) => {
+    if (!enabled.includes(slot)) return false;
+    const s = SLOT_LOCAL_TIME[slot];
+    return s.hour * 60 + s.minute <= nowMin;
+  });
+}
+
+export const ALL_REFLECTION_STYLES: ReflectionStyle[] = [
+  'actionable', 'philosophical', 'biographical', 'strategic',
+];
+
+/** Whitelist + dedupe. Always returns at least one style. */
+export function sanitizeStyles(input: unknown): ReflectionStyle[] {
+  const list = Array.isArray(input) ? input : [input];
+  const out: ReflectionStyle[] = [];
+  for (const raw of list) {
+    const v = String(raw ?? '').trim() as ReflectionStyle;
+    if (ALL_REFLECTION_STYLES.includes(v) && !out.includes(v)) out.push(v);
+  }
+  return out.length ? out : ['actionable'];
+}
+
+/** Chronological rank of a slot — used to order a day of cards. */
+export function slotOrder(slot: GrowthSlot): number {
+  const i = GROWTH_SLOTS.indexOf(slot);
+  return i < 0 ? GROWTH_SLOTS.length : i;
+}

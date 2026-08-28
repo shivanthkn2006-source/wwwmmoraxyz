@@ -21,7 +21,8 @@
 import { localDateIn, localHourMinute } from '../_shared/astro-engine.ts';
 import {
   GROWTH_SLOTS, SLOT_LOCAL_TIME, slotsForFrequency, generateInsight,
-  sanitizeFocusAreas, sanitizeStyle, type GrowthSlot,
+  sanitizeFocusAreas, sanitizeStyles, styleForSlot, elapsedSlots,
+  type GrowthSlot,
 } from '../_shared/growth-content.ts';
 
 const corsHeaders = {
@@ -112,6 +113,7 @@ interface PrefRow {
   user_id: string;
   focus_areas: string[] | null;
   reflection_style: string | null;
+  reflection_styles: string[] | null;
   delivery_frequency: number | null;
   paused: boolean;
   timezone: string | null;
@@ -120,7 +122,7 @@ interface PrefRow {
 async function candidates(limit: number): Promise<PrefRow[]> {
   const r = await db(
     'growth_preferences?paused=eq.false&onboarded_at=not.is.null' +
-    `&select=user_id,focus_areas,reflection_style,delivery_frequency,paused,timezone&limit=${limit * 4}`,
+    `&select=user_id,focus_areas,reflection_style,reflection_styles,delivery_frequency,paused,timezone&limit=${limit * 4}`,
   );
   return Array.isArray(r.data) ? r.data : [];
 }
@@ -159,18 +161,37 @@ async function runBatch(opts: { dryRun: boolean; probeOnly: boolean }): Promise<
 
     const tz = pref.timezone || 'UTC';
     const enabled = slotsForFrequency(pref.delivery_frequency ?? 5);
-    const slot = dueSlot(now, tz, enabled);
-    if (!slot) { summary.skipped++; continue; }
-
     const localDate = localDateIn(now, tz);
-    if (await alreadyDelivered(pref.user_id, localDate, slot)) { summary.skipped++; continue; }
+    const { hour, minute } = localHourMinute(now, tz);
+
+    // Primary: the window that is due right now. Fallback: the most recent
+    // window that already passed today but was never delivered (worker gap,
+    // signup mid-day, provider outage). At most ONE catch-up per user per run,
+    // so the batch stays bounded.
+    let slot = dueSlot(now, tz, enabled);
+    if (slot && await alreadyDelivered(pref.user_id, localDate, slot)) slot = null;
+    if (!slot) {
+      const passed = elapsedSlots(hour * 60 + minute, enabled);
+      for (let i = passed.length - 1; i >= 0; i--) {
+        if (!(await alreadyDelivered(pref.user_id, localDate, passed[i]))) {
+          slot = passed[i];
+          break;
+        }
+      }
+    }
+    if (!slot) { summary.skipped++; continue; }
 
     summary.processed++;
 
     const result = await generateInsight({
       slot,
       focusAreas: sanitizeFocusAreas(pref.focus_areas),
-      style: sanitizeStyle(pref.reflection_style),
+      style: styleForSlot(
+        slot,
+        sanitizeStyles(
+          pref.reflection_styles?.length ? pref.reflection_styles : [pref.reflection_style],
+        ),
+      ),
       localDate,
       seed: `${pref.user_id}_${localDate}_${slot}`,
     });

@@ -116,7 +116,11 @@ const HomePage = () => {
   const { motivation: dailyMotivation, posterUrl: motivationPosterUrl } = useZoeMotivation();
   // Personal Growth Engine — read-only. Rendering never triggers generation.
   const {
+    today: growthToday,
     current: growthInsight,
+    savedExtras: growthSaved,
+    isSaved: isGrowthSaved,
+    toggleSave: toggleGrowthSave,
     needsOnboarding: growthNeedsOnboarding,
     refresh: refreshGrowth,
   } = useGrowthFeed();
@@ -124,16 +128,37 @@ const HomePage = () => {
   useEffect(() => {
     if (growthNeedsOnboarding) setGrowthOnboardingOpen(true);
   }, [growthNeedsOnboarding]);
-  const growthSlide = growthInsight ? (
+  // Catch-up: every window already delivered today, in order, then saved cards.
+  const growthCards = React.useMemo(() => {
+    const dayCards = growthToday.length
+      ? growthToday
+      : growthInsight
+        ? [growthInsight]
+        : [];
+    return [
+      ...dayCards.map((insight) => ({ insight, savedBadge: false })),
+      ...growthSaved.map((insight) => ({ insight, savedBadge: true })),
+    ];
+  }, [growthToday, growthInsight, growthSaved]);
+  const growthSlide = growthCards.map(({ insight, savedBadge }) => (
     <div
+      key={`growth-${insight.id}${savedBadge ? '-saved' : ''}`}
       className="relative flex h-full min-h-full w-full shrink-0 snap-start snap-always items-center overflow-y-auto p-4"
       data-growth-insight
+      data-growth-saved={savedBadge ? 'true' : 'false'}
     >
       <FeedErrorBoundary section="posts">
-        <CuratedInsightCard insight={growthInsight} className="w-full" />
+        <CuratedInsightCard
+          insight={insight}
+          className="w-full"
+          saved={isGrowthSaved(insight.id)}
+          onToggleSave={(id) => void toggleGrowthSave(id)}
+          savedBadge={savedBadge}
+        />
       </FeedErrorBoundary>
     </div>
-  ) : null;
+  ));
+
 
   const navigate = useNavigate();
   const { receivedRequests, acceptFriendRequest, rejectFriendRequest } = useFriendRequests();
