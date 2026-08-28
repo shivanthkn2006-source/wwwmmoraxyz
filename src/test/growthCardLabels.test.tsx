@@ -22,7 +22,7 @@ describe('CuratedInsightCard plan labels', () => {
       />,
     );
 
-    expect(screen.getByText('Career & Strategic Thinking')).toBeTruthy();
+    expect(screen.getAllByText('Career & Strategic Thinking')).toHaveLength(2);
     expect(screen.getByText('Morning Focus · 07:00')).toBeTruthy();
     expect(screen.getByText('4 per day')).toBeTruthy();
     expect(screen.getByText('Deep Focus & Productivity')).toBeTruthy();
