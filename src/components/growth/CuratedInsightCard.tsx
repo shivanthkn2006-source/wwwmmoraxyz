@@ -7,10 +7,12 @@
  * once, the first time it is at least half visible. Analytics failures are
  * handled by the caller and can never break rendering.
  */
-import React, { useEffect, useRef } from 'react';
-import { Target, Sparkles, Bookmark, BookmarkCheck, Info } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Target, Sparkles, Bookmark, BookmarkCheck, Info, ImageOff } from 'lucide-react';
 import { SLOT_LABEL, type GrowthSlot } from '@/lib/growthSlot';
 import { SLOT_LOCAL_TIME } from '@/lib/growthSlot';
+import { getPollinationsUrl } from '@/services/pollinationsService';
+
 
 export interface CuratedInsight {
   id?: string;
