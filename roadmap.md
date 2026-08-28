@@ -6,3 +6,4 @@
 - [x] Harden New badge view-once behavior and add client/server diagnostics.
 - [x] Validate realtime like events and creator-feed animation with fallbacks and logging.
 - [x] Add focused automated tests and verify the preview build.
+- [x] Verify video completion clears the exact per-user/per-post New marker in unit/rendered tests; authenticated browser coverage is committed and runs when a test session is available.

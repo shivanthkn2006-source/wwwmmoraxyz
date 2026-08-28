@@ -5,6 +5,7 @@ export type FeedEventName =
   | 'new_badge_rendered'
   | 'new_badge_viewed'
   | 'new_badge_suppressed'
+  | 'media_playback_completed'
   | 'like_event_received'
   | 'like_event_invalid'
   | 'like_event_fallback';

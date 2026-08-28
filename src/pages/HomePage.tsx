@@ -2247,7 +2247,7 @@ const HomePage = () => {
             <NewContentBadge className="right-3 top-3" onViewed={() => dismissNewContent('loops', post.id)} onDiagnostic={diagnoseNewBadge('loops', post.id)} />
           )}
           <FeedErrorBoundary section="loops" postId={post.id} onRetry={() => retrySingleLoop(post.id)}>
-            <PostCard post={post} onUpdate={handleUpdate} />
+            <PostCard post={post} onUpdate={handleUpdate} onMediaCompleted={() => dismissNewContent('loops', post.id)} />
           </FeedErrorBoundary>
         </div>
       )),
@@ -2263,7 +2263,7 @@ const HomePage = () => {
           <NewContentBadge className="right-3 top-3" onViewed={() => dismissNewContent(feed, post.id)} onDiagnostic={diagnoseNewBadge(feed, post.id)} />
         )}
         <FeedErrorBoundary section="post-card" postId={post.id} onRetry={() => retrySinglePost(post.id)}>
-          <PostCard post={post} onUpdate={handleUpdate} />
+          <PostCard post={post} onUpdate={handleUpdate} onMediaCompleted={() => dismissNewContent(feed, post.id)} />
         </FeedErrorBoundary>
       </div>
     );

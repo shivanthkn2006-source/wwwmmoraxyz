@@ -31,6 +31,70 @@ const restoreSession = async (page: Page) => {
 };
 
 test.describe('rendered new-post badge and manual scroll controls', () => {
+  test('removes a video New badge only after that video completes', async ({ page, request }) => {
+    test.setTimeout(120_000);
+    const credentials = getTestSession();
+    test.skip(!credentials, 'An injected authenticated preview session is required');
+    if (!credentials) return;
+
+    await restoreSession(page);
+    await page.goto('/home', { waitUntil: 'domcontentloaded' });
+    await page.evaluate((userId) => {
+      const feedKey = `global:${userId}`;
+      localStorage.setItem(`mmora.home.baselineReady.${feedKey}`, '1');
+      localStorage.setItem(`mmora.home.seenPosts.${feedKey}`, JSON.stringify([]));
+      localStorage.setItem(`mmora.home.unseenPosts.${feedKey}`, JSON.stringify([]));
+    }, credentials.session.user.id);
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await expect(page.locator('[data-feed-tab="global"]')).toBeVisible({ timeout: 30_000 });
+    await page.waitForTimeout(3_500);
+
+    const id = randomUUID();
+    try {
+      const response = await request.post(credentials.apiUrl, {
+        headers: {
+          apikey: credentials.session.access_token,
+          Authorization: `Bearer ${credentials.session.access_token}`,
+          Prefer: 'return=minimal',
+        },
+        data: {
+          id,
+          user_id: credentials.session.user.id,
+          visibility: 'global',
+          content: `Completion badge E2E ${id}`,
+          media_type: 'video',
+          // The completion event is dispatched explicitly, so the fixture only
+          // needs to exercise the shipped video/card/feed wiring.
+          media_url: `https://example.invalid/${id}.mp4`,
+        },
+      });
+      expect(response.ok(), 'Could not create completion test video').toBeTruthy();
+
+      const card = page.locator(`[data-feed-tab="global"] [data-post-id="${id}"]`);
+      await expect(card).toHaveAttribute('data-new', 'true', { timeout: 30_000 });
+      await expect(card.getByTestId('new-content-badge')).toBeVisible();
+
+      await card.getByTestId('post-video').dispatchEvent('ended');
+
+      await expect(card).toHaveAttribute('data-new', 'false');
+      await expect(card.getByTestId('new-content-badge')).toHaveCount(0);
+      await expect.poll(() => page.evaluate(({ userId, postId }) => {
+        const unseen = JSON.parse(localStorage.getItem(`mmora.home.unseenPosts.global:${userId}`) || '[]') as string[];
+        return {
+          unseen: unseen.includes(postId),
+          played: localStorage.getItem(`mmora.feed.playedOnce.${userId}.${postId}`),
+        };
+      }, { userId: credentials.session.user.id, postId: id })).toEqual({ unseen: false, played: '1' });
+    } finally {
+      await request.delete(`${credentials.apiUrl}?id=eq.${id}`, {
+        headers: {
+          apikey: credentials.session.access_token,
+          Authorization: `Bearer ${credentials.session.access_token}`,
+        },
+      });
+    }
+  });
+
   test('shows and scrolls to realtime posts in global and friends feeds', async ({ page, request }) => {
     test.setTimeout(120_000);
     const credentials = getTestSession();
