@@ -151,7 +151,7 @@ function alertLines(a: {
   ].filter(Boolean).join('\n');
 }
 
-/** Slack via incoming webhook or the Lovable connector gateway. Never throws. */
+/** Slack via incoming webhook or a sovereign bot token. Never throws. */
 async function notifySlack(text: string): Promise<{ sent: boolean; via?: string; error?: string }> {
   const webhook = Deno.env.get('ASTRO_ALERT_SLACK_WEBHOOK_URL');
   try {
@@ -164,16 +164,15 @@ async function notifySlack(text: string): Promise<{ sent: boolean; via?: string;
       if (!r.ok) return { sent: false, via: 'webhook', error: `${r.status}: ${(await r.text()).slice(0, 200)}` };
       return { sent: true, via: 'webhook' };
     }
-    const lovableKey = Deno.env.get('LOVABLE_API_KEY');
-    const slackKey = Deno.env.get('SLACK_API_KEY');
+    // Sovereign path: a Slack bot token owned by this project. No third-party gateway.
+    const slackKey = Deno.env.get('SLACK_BOT_TOKEN') ?? Deno.env.get('SLACK_API_KEY');
     const channel = Deno.env.get('ASTRO_ALERT_SLACK_CHANNEL');
-    if (!lovableKey || !slackKey || !channel) return { sent: false, error: 'slack not configured' };
-    const r = await fetch('https://connector-gateway.lovable.dev/slack/api/chat.postMessage', {
+    if (!slackKey || !channel) return { sent: false, error: 'slack not configured' };
+    const r = await fetch('https://slack.com/api/chat.postMessage', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${lovableKey}`,
-        'X-Connection-Api-Key': slackKey,
-        'Content-Type': 'application/json',
+        Authorization: `Bearer ${slackKey}`,
+        'Content-Type': 'application/json; charset=utf-8',
       },
       body: JSON.stringify({ channel, text, mrkdwn: true }),
     });
@@ -181,9 +180,10 @@ async function notifySlack(text: string): Promise<{ sent: boolean; via?: string;
     let parsed: any = null;
     try { parsed = JSON.parse(body); } catch { /* non-JSON */ }
     if (!r.ok || parsed?.ok === false) {
-      return { sent: false, via: 'gateway', error: `${r.status}: ${(parsed?.error ?? body).toString().slice(0, 200)}` };
+      return { sent: false, via: 'slack-api', error: `${r.status}: ${(parsed?.error ?? body).toString().slice(0, 200)}` };
     }
-    return { sent: true, via: 'gateway' };
+    return { sent: true, via: 'slack-api' };
+
   } catch (e) {
     return { sent: false, error: String((e as Error)?.message ?? e).slice(0, 200) };
   }
