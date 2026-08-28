@@ -22,6 +22,8 @@ import { usePersistentMediaSound } from '@/hooks/usePersistentMediaSound';
 import AuthorPreviewRail from '@/components/home/AuthorPreviewRail';
 import { useFollow } from '@/hooks/useFollow';
 import { setZoeActivePostContext } from '@/lib/zoePlatformContext';
+import { useGrowthFlags } from '@/hooks/useGrowthFlags';
+import { GROWTH_FLAGS } from '@/lib/growthFlags';
 
 interface Post {
   id: string;
@@ -166,7 +168,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
           if (inView && isDeferredHeavyMedia) revealDeferredMedia();
           const v = videoRef.current;
           if (!v) return;
-          if (inView) {
+          if (inView && !playedOnceRef.current) {
             v.muted = !shouldPlayWithSound;
             v.play().then(() => setIsVideoPlaying(true)).catch(() => {
               v.muted = true;
@@ -587,7 +589,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
                 poster={posterSrc}
                 playsInline
                 muted={!shouldPlayWithSound}
-                loop
+                loop={repeatPlayback}
                 preload="metadata"
                 className="block h-full w-full object-cover object-center"
                 data-testid="post-video"
@@ -596,6 +598,9 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
                   if (!v) return;
                   setSoundUnlocked(true);
                   if (v.paused) {
+                    // Manual play is an explicit replay request.
+                    playedOnceRef.current = false;
+                    if (v.ended) v.currentTime = 0;
                     v.muted = !soundEnabled;
                     v.play().catch(() => { v.muted = true; v.play().catch(() => {}); });
                     setIsVideoPlaying(true);
@@ -606,6 +611,12 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
                 }}
                 onPlay={() => setIsVideoPlaying(true)}
                 onPause={() => setIsVideoPlaying(false)}
+                onEnded={() => {
+                  // One pass only — remember it so re-entering the viewport
+                  // does not restart playback.
+                  playedOnceRef.current = !repeatPlayback;
+                  setIsVideoPlaying(false);
+                }}
                 onError={(e) => console.warn('[PostCard][video]', post.id, getVideoErrorReason(e.currentTarget))}
               />
             </div>
