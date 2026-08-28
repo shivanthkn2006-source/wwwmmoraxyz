@@ -90,6 +90,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
   const playedOnceRef = React.useRef(hasPlayedFeedMedia(user?.id, post.id));
   const likeAnimationTimerRef = useRef<number | null>(null);
   const seenLikeEventsRef = useRef<Set<string>>(new Set());
+  const latestLikesCountRef = useRef(post.likes_count);
 
   const { soundEnabled, setSoundEnabled } = usePersistentMediaSound(false);
 
@@ -102,6 +103,8 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
       likeAnimationTimerRef.current = null;
     }, 2000);
   }, []);
+
+  useEffect(() => { latestLikesCountRef.current = likesCount; }, [likesCount]);
 
   useEffect(() => () => {
     if (likeAnimationTimerRef.current !== null) window.clearTimeout(likeAnimationTimerRef.current);
@@ -358,6 +361,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
         (payload: any) => {
           if (payload.new.likes_count !== undefined) {
             setLikesCount(payload.new.likes_count);
+            latestLikesCountRef.current = payload.new.likes_count;
           }
           if (payload.new.comments_count !== undefined) {
             setCommentsCount(payload.new.comments_count);
@@ -392,15 +396,14 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
 
     // Realtime can miss a packet during reconnect. Reconcile the count at a
     // bounded interval and animate a remote increase in creator/viewer feeds.
-    let lastKnown = likesCount;
     const reconcile = window.setInterval(async () => {
       const { data, error } = await supabase.from('posts').select('likes_count').eq('id', post.id).maybeSingle();
       if (error || typeof data?.likes_count !== 'number') return;
-      if (data.likes_count > lastKnown) {
+      if (data.likes_count > latestLikesCountRef.current) {
         playLikeAnimation();
-        logFeedEvent('like_event_fallback', { post_id: post.id, previous_count: lastKnown, next_count: data.likes_count }, user.id);
+        logFeedEvent('like_event_fallback', { post_id: post.id, previous_count: latestLikesCountRef.current, next_count: data.likes_count }, user.id);
       }
-      lastKnown = data.likes_count;
+      latestLikesCountRef.current = data.likes_count;
       setLikesCount(data.likes_count);
     }, 30_000);
 

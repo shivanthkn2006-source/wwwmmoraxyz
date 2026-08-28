@@ -106,8 +106,6 @@ import { interleaveGrowthCards } from '@/lib/growthFeedComposition';
 
 
 import {
-  ALLOWED_IMAGE_MIME,
-  ALLOWED_VIDEO_MIME,
   classifyUpload,
   DATA_URL_PREVIEW_LIMIT,
   captureVideoPreview,
@@ -530,10 +528,24 @@ const HomePage = () => {
   const knownFeedIdsRef = useRef<Record<'global' | 'personal' | 'loops', string[]>>({ global: [], personal: [], loops: [] });
   type NewContentByFeed = Record<'global' | 'personal' | 'loops', Set<string>>;
   const [newContentByFeed, setNewContentByFeed] = useState<NewContentByFeed>(() => ({
-    global: readUnseenPostIds('global'),
-    personal: readUnseenPostIds('personal'),
-    loops: readUnseenPostIds('loops'),
+    global: readUnseenPostIds(`global:${user?.id || 'anonymous'}`),
+    personal: readUnseenPostIds(`personal:${user?.id || 'anonymous'}`),
+    loops: readUnseenPostIds(`loops:${user?.id || 'anonymous'}`),
   }));
+
+  const newGateKey = React.useCallback(
+    (feed: keyof NewContentByFeed) => `${feed}:${user?.id || 'anonymous'}`,
+    [user?.id],
+  );
+
+  useEffect(() => {
+    knownFeedIdsRef.current = { global: [], personal: [], loops: [] };
+    setNewContentByFeed({
+      global: readUnseenPostIds(newGateKey('global')),
+      personal: readUnseenPostIds(newGateKey('personal')),
+      loops: readUnseenPostIds(newGateKey('loops')),
+    });
+  }, [newGateKey]);
 
   const [showZoeHomeDebug, setShowZoeHomeDebug] = useState<boolean>(() => {
     try { return typeof window !== 'undefined' && window.localStorage.getItem('mmora.home.zoeDebugOverlay') !== 'false'; } catch { return true; }
@@ -1000,14 +1012,14 @@ const HomePage = () => {
     }, [user?.id]);
 
   const dismissNewContent = React.useCallback((feed: keyof NewContentByFeed, id: string) => {
-    markPostsSeen(feed, [id]);
+    markPostsSeen(newGateKey(feed), [id]);
     setNewContentByFeed((current) => {
       if (!current[feed].has(id)) return current;
       const nextFeed = new Set(current[feed]);
       nextFeed.delete(id);
       return { ...current, [feed]: nextFeed };
     });
-  }, []);
+  }, [newGateKey]);
 
   const scrollToNewPosts = React.useCallback(() => {
     const first = document.querySelector<HTMLElement>(`[data-feed-tab="${activeTab}"] [data-post-card][data-new="true"]`);
@@ -1034,7 +1046,7 @@ const HomePage = () => {
       if (nextIdx >= posts.length) {
         // One full pass done → mark everything as seen, scroll back, and stop
         // until genuinely new posts arrive.
-        markPostsSeen(activeTab, pendingSeenIdsRef.current);
+        markPostsSeen(newGateKey(activeTab), pendingSeenIdsRef.current);
         setNewContentByFeed((current) => {
           const nextFeed = new Set(current[activeFeed]);
           pendingSeenIdsRef.current.forEach((id) => nextFeed.delete(id));
@@ -1394,7 +1406,7 @@ const HomePage = () => {
 
       if (feedRows.length === 0) {
         knownFeedIdsRef.current.global = [];
-        const emptySnapshot = syncUnseenPostSnapshot('global', [], [], updateSource);
+        const emptySnapshot = syncUnseenPostSnapshot(newGateKey('global'), [], [], updateSource);
         setNewContentByFeed((current) => ({ ...current, global: emptySnapshot.unseenIds }));
         setGlobalPosts([]);
         setFeedDiag({ status: 'empty', message: 'No global posts available', durationMs: dur, rowCount: 0, authReady: true, timestamp: new Date().toISOString() });
@@ -1440,7 +1452,8 @@ const HomePage = () => {
         }));
 
       const ids = postsWithLikes.map((post: Post) => post.id);
-      const arrivals = syncUnseenPostSnapshot('global', knownFeedIdsRef.current.global, ids, updateSource);
+      const arrivals = syncUnseenPostSnapshot(newGateKey('global'), knownFeedIdsRef.current.global, ids, updateSource);
+      logFeedEvent('new_snapshot', { feed: 'global', source: updateSource, row_count: ids.length, new_count: arrivals.newIds.length, unseen_count: arrivals.unseenIds.size }, user.id);
       knownFeedIdsRef.current.global = arrivals.knownIds;
       setNewContentByFeed((current) => ({ ...current, global: arrivals.unseenIds }));
       if (arrivals.shouldAutoScroll) {
@@ -1497,7 +1510,7 @@ const HomePage = () => {
 
       if (loopRows.length === 0) {
         const emptySnapshot = syncUnseenPostSnapshot(
-          'loops', knownFeedIdsRef.current.loops, [], updateSource,
+          newGateKey('loops'), knownFeedIdsRef.current.loops, [], updateSource,
         );
         if (updateSource !== 'realtime') knownFeedIdsRef.current.loops = [];
         setNewContentByFeed((current) => ({ ...current, loops: emptySnapshot.unseenIds }));
@@ -1532,7 +1545,8 @@ const HomePage = () => {
         has_deferred_media: false,
       })) as Post[];
       const loopIds = preparedLoops.map((post) => post.id);
-      const loopArrivals = syncUnseenPostSnapshot('loops', knownFeedIdsRef.current.loops, loopIds, updateSource);
+      const loopArrivals = syncUnseenPostSnapshot(newGateKey('loops'), knownFeedIdsRef.current.loops, loopIds, updateSource);
+      logFeedEvent('new_snapshot', { feed: 'loops', source: updateSource, row_count: loopIds.length, new_count: loopArrivals.newIds.length, unseen_count: loopArrivals.unseenIds.size }, user.id);
       knownFeedIdsRef.current.loops = loopArrivals.knownIds;
       setNewContentByFeed((current) => ({ ...current, loops: loopArrivals.unseenIds }));
       setLoopPosts(preparedLoops);
@@ -1578,7 +1592,7 @@ const HomePage = () => {
 
       if (feedRows.length === 0) {
         knownFeedIdsRef.current.personal = [];
-        const emptySnapshot = syncUnseenPostSnapshot('personal', [], [], updateSource);
+        const emptySnapshot = syncUnseenPostSnapshot(newGateKey('personal'), [], [], updateSource);
         setNewContentByFeed((current) => ({ ...current, personal: emptySnapshot.unseenIds }));
         setPersonalPosts([]);
         return;
@@ -1623,7 +1637,8 @@ const HomePage = () => {
         }));
 
       const ids = postsWithLikes.map((post: Post) => post.id);
-      const arrivals = syncUnseenPostSnapshot('personal', knownFeedIdsRef.current.personal, ids, updateSource);
+      const arrivals = syncUnseenPostSnapshot(newGateKey('personal'), knownFeedIdsRef.current.personal, ids, updateSource);
+      logFeedEvent('new_snapshot', { feed: 'personal', source: updateSource, row_count: ids.length, new_count: arrivals.newIds.length, unseen_count: arrivals.unseenIds.size }, user.id);
       knownFeedIdsRef.current.personal = arrivals.knownIds;
       setNewContentByFeed((current) => ({ ...current, personal: arrivals.unseenIds }));
       if (arrivals.shouldAutoScroll) {
@@ -1946,7 +1961,8 @@ const HomePage = () => {
 
     try {
       if (!file && !metadata?.title?.trim() && !metadata?.text?.trim()) throw new Error('Add text or choose a file before publishing.');
-      if (file && (isVideo || isImage)) await validateBrowserCanPreviewFile(file, mediaType);
+      if (file && isVideo) await validateBrowserCanPreviewFile(file, 'video');
+      if (file && isImage) await validateBrowserCanPreviewFile(file, 'image');
       // Auto-transcode large videos into small preview variants for smoother Reel/Shorts playback.
       let uploadFile: File | null = file;
       if (mediaType === 'video') {
