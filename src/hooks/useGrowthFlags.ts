@@ -18,7 +18,11 @@ const FALLBACK: Record<string, boolean> = {
   [GROWTH_FLAGS.push]: false,
   [GROWTH_FLAGS.email]: false,
   [GROWTH_FLAGS.export]: true,
+  [GROWTH_FLAGS.newBadge]: true,
+  [GROWTH_FLAGS.loopsAutoplayLoop]: false,
+  [GROWTH_FLAGS.onboardingGating]: true,
 };
+
 
 let cache: { at: number; flags: Record<string, GrowthFlag> } | null = null;
 let inflight: Promise<Record<string, GrowthFlag>> | null = null;
