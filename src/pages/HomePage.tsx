@@ -55,8 +55,10 @@ import { useTutorial } from '@/hooks/useTutorial';
 import { useDailyBriefing } from '@/hooks/useDailyBriefing';
 import { OnboardingTour } from '@/components/OnboardingTour';
 import { useGrowthFeed } from '@/hooks/useGrowthFeed';
-import CuratedInsightCard from '@/components/growth/CuratedInsightCard';
+import CuratedInsightCard, { CuratedInsightSkeleton, type CuratedInsight } from '@/components/growth/CuratedInsightCard';
 import PersonalGrowthOnboarding from '@/components/growth/PersonalGrowthOnboarding';
+import GrowthInsightDetailsModal from '@/components/growth/GrowthInsightDetailsModal';
+import { recordGrowthEvent } from '@/lib/growthAnalytics';
 import { SovereignQuickAccess } from '@/components/SovereignQuickAccess';
 import { appendMediaVersion, captureVideoPreviewFromUrl, dataUrlToFile, getPostsStorageObjectPath, inferMediaType, makeFallbackVideoPoster, resolvePrivateStorageUrl, transcodeVideoForPreview } from '@/lib/mediaUtils';
 import PostsGrid from "@/components/PostsGrid";
@@ -2421,6 +2423,14 @@ const HomePage = () => {
         open={growthOnboardingOpen}
         onOpenChange={setGrowthOnboardingOpen}
         onComplete={() => void refreshGrowth()}
+      />
+      <GrowthInsightDetailsModal
+        insight={growthDetails}
+        open={Boolean(growthDetails)}
+        onOpenChange={(v) => { if (!v) setGrowthDetails(null); }}
+        focusAreas={growthPreferences?.focus_areas ?? []}
+        styles={growthPreferences?.reflection_styles ?? []}
+        timezone={growthPreferences?.timezone}
       />
       <PrivateTimelinesSheet open={privateTimelinesOpen} onOpenChange={setPrivateTimelinesOpen} />
 
