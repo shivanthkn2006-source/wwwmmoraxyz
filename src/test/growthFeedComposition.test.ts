@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { interleaveGrowthCards } from '@/lib/growthFeedComposition';
+import { interleaveGrowthCards, orderGrowthByTime } from '@/lib/growthFeedComposition';
 
 describe('Growth feed composition', () => {
   it('places Growth cards between ordinary feed items', () => {
@@ -28,5 +28,26 @@ describe('Growth feed composition', () => {
       'post-2', 'neural-video-1', 'growth-midday',
     ]);
     expect(composed.filter((item) => item.startsWith('growth-'))).toHaveLength(2);
+  });
+});
+describe('Growth card time ordering', () => {
+  const card = (slot: string) => ({ slot: slot as never, id: slot });
+
+  it('leads with the window the member is in right now', () => {
+    const out = orderGrowthByTime(
+      [card('morning'), card('midday'), card('afternoon')],
+      'afternoon' as never,
+    );
+    expect(out.map((c) => c.id)).toEqual(['afternoon', 'midday', 'morning']);
+  });
+
+  it('falls back to the most recent passed window', () => {
+    const out = orderGrowthByTime([card('morning'), card('midday')], 'afternoon' as never);
+    expect(out.map((c) => c.id)).toEqual(['midday', 'morning']);
+  });
+
+  it('places windows still ahead after the due ones', () => {
+    const out = orderGrowthByTime([card('morning'), card('night')], 'midday' as never);
+    expect(out.map((c) => c.id)).toEqual(['morning', 'night']);
   });
 });
