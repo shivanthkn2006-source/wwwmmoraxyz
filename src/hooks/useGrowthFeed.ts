@@ -164,6 +164,12 @@ export function useGrowthFeed() {
 
   useEffect(() => { void load(); }, [load]);
 
+  useEffect(() => {
+    const refresh = () => void load();
+    window.addEventListener('mmora:growth-preferences-updated', refresh);
+    return () => window.removeEventListener('mmora:growth-preferences-updated', refresh);
+  }, [load]);
+
   // Keep an open home feed synchronized with worker writes. Poll/focus/online
   // are intentional fallbacks when realtime or the network is interrupted.
   useEffect(() => {
@@ -173,6 +179,11 @@ export function useGrowthFeed() {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'growth_feed_items', filter: `user_id=eq.${user.id}` },
+        () => void load(),
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'growth_preferences', filter: `user_id=eq.${user.id}` },
         () => void load(),
       )
       .subscribe();

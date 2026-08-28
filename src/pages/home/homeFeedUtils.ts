@@ -29,6 +29,20 @@ export const DATA_URL_PREVIEW_LIMIT = 900_000;
 // Loops upload whitelist
 export const ALLOWED_VIDEO_MIME = ['video/mp4', 'video/webm', 'video/quicktime', 'video/ogg'];
 export const ALLOWED_IMAGE_MIME = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+export const ALLOWED_DOCUMENT_MIME = [
+  'application/pdf', 'text/plain', 'text/markdown', 'text/csv', 'application/rtf',
+  'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+];
+
+export const classifyUpload = (file: Pick<File, 'type' | 'name'>): 'video' | 'image' | 'pdf' | 'document' | null => {
+  if (ALLOWED_VIDEO_MIME.includes(file.type)) return 'video';
+  if (ALLOWED_IMAGE_MIME.includes(file.type)) return 'image';
+  if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) return 'pdf';
+  if (ALLOWED_DOCUMENT_MIME.includes(file.type) || /\.(txt|md|csv|docx?|xlsx?|pptx?|rtf|odt|ods|odp)$/i.test(file.name)) return 'document';
+  return null;
+};
 
 export const prepareFeedPostMedia = (post: any): Post => {
   const mediaUrl = typeof post.media_url === 'string' ? post.media_url : null;

@@ -125,6 +125,7 @@ export const GrowthEngineSettings: React.FC<GrowthEngineSettingsProps> = ({ onSa
     );
     setSaving(false);
     if (error) { toast.error('Could not save preferences'); return; }
+    window.dispatchEvent(new CustomEvent('mmora:growth-preferences-updated'));
     toast.success(paused ? 'Insights paused' : 'Preferences saved');
     void refreshStatus();
     if (!paused) {
@@ -152,8 +153,14 @@ export const GrowthEngineSettings: React.FC<GrowthEngineSettingsProps> = ({ onSa
       const { error } = await supabase.from('growth_preferences').delete().eq('user_id', user.id);
       if (error) throw error;
       setTopics([]); setStyles(['actionable']); setFrequency(5); setPaused(true);
+      try {
+        sessionStorage.removeItem('growth:onboarding:snoozed');
+        sessionStorage.removeItem(`growth_onboarding_prompted_${user.id}`);
+      } catch { /* no-op */ }
+      window.dispatchEvent(new CustomEvent('mmora:growth-preferences-updated'));
       toast.success('All growth data deleted');
       void refreshStatus();
+      onSaved?.();
     } catch {
       toast.error('Could not delete every item — please try again');
     } finally {
