@@ -8,6 +8,7 @@ import { newCorrelationId, setActiveCorrelationId } from '@/lib/astroCorrelation
 import {
   flattenAudit, diffAuditRuns, type AuditMember, type AuditRunRow, type FlatAuditRow,
 } from '@/lib/astroAuditDiff';
+import NotificationAttemptsPanel from '@/components/zoe/NotificationAttemptsPanel';
 
 interface AuditResult {
   correlation_id?: string;
@@ -328,6 +329,10 @@ const ZoeDispatchDashboardPage: React.FC = () => {
         </div>
       )}
 
+      {/* Slack / email delivery attempts for the selected audit run */}
+      <div className="mb-6">
+        <NotificationAttemptsPanel auditRunId={selectedAuditId || null} />
+      </div>
 
 
       {/* Engine state */}
