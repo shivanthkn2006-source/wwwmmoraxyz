@@ -13,6 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import GrowthBackfillPanel from '@/components/growth/GrowthBackfillPanel';
+import GrowthFlagAdminPanel from '@/components/growth/GrowthFlagAdminPanel';
 
 interface RunRow {
   id: string;
@@ -121,6 +122,7 @@ export default function AdminGrowthRunsPage() {
           </Card>
         )}
 
+        <GrowthFlagAdminPanel />
         <GrowthBackfillPanel />
 
         {loading && <p className="text-sm text-muted-foreground">Loading run history…</p>}
