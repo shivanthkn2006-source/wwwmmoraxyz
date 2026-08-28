@@ -339,10 +339,21 @@ export default defineConfig(({ mode }) => ({
           }
           // Vendor chunks
           if (id.includes('node_modules')) {
-            // Isolate agentic state layer so the 3D/agent chunks can load
-            // independently of the core UI bundle.
-            if (id.includes('zustand')) return 'agent-vendor';
-            if (id.includes('react-router') || id.includes('react-dom') || id.includes('/react/')) return 'react-vendor';
+            // React core + everything that touches React hooks at module scope
+            // MUST live in ONE chunk. Splitting zustand into its own
+            // "agent-vendor" chunk made it evaluate before React was
+            // initialized in Safari -> "undefined is not an object (E.useState)".
+            if (
+              id.includes('node_modules/react/') ||
+              id.includes('node_modules/react-dom/') ||
+              id.includes('node_modules/scheduler/') ||
+              id.includes('node_modules/use-sync-external-store/') ||
+              id.includes('react-router') ||
+              id.includes('zustand')
+            ) {
+              return 'react-vendor';
+            }
+
             if (id.includes('@radix-ui')) return 'ui-vendor';
             // Keep date helpers separate from Recharts. The previous shared
             // chart-vendor chunk loaded Recharts on every page that used
