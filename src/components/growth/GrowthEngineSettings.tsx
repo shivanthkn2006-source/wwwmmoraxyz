@@ -348,7 +348,7 @@ export const GrowthEngineSettings: React.FC<GrowthEngineSettingsProps> = ({ onSa
         </div>
 
         <div className="space-y-2">
-          <Label>Focus areas</Label>
+          <Label>Focus areas ({topics.length} selected)</Label>
           <div className="grid grid-cols-2 gap-2">
             {FOCUS_AREAS.map((area) => {
               const selected = topics.includes(area);
@@ -374,7 +374,7 @@ export const GrowthEngineSettings: React.FC<GrowthEngineSettingsProps> = ({ onSa
         </div>
 
         <div className="space-y-2">
-          <Label>Content delivery style</Label>
+          <Label>Content delivery style ({styles.length} selected)</Label>
           <button
             type="button"
             onClick={() =>

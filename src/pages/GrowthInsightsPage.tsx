@@ -72,8 +72,8 @@ export default function GrowthInsightsPage() {
   const [engineOff, setEngineOff] = useState(false);
   const [activating, setActivating] = useState(false);
   const [editingPlan, setEditingPlan] = useState(false);
-  const [prefs, setPrefs] = useState<{ focus: string[]; styles: ReflectionStyle[]; tz: string }>({
-    focus: [], styles: [], tz: '',
+  const [prefs, setPrefs] = useState<{ focus: string[]; styles: ReflectionStyle[]; tz: string; frequency: number }>({
+    focus: [], styles: [], tz: '', frequency: 5,
   });
 
   const sentinel = useRef<HTMLDivElement | null>(null);
@@ -119,7 +119,7 @@ export default function GrowthInsightsPage() {
         supabase.from('growth_saved_items').select('item_id').eq('user_id', user.id),
         supabase
           .from('growth_preferences')
-          .select('focus_areas, reflection_style, reflection_styles, timezone, paused, onboarded_at')
+          .select('focus_areas, reflection_style, reflection_styles, delivery_frequency, timezone, paused, onboarded_at')
           .eq('user_id', user.id)
           .maybeSingle(),
       ]);
@@ -136,6 +136,7 @@ export default function GrowthInsightsPage() {
             (p.reflection_styles as unknown[])?.length ? (p.reflection_styles as unknown[]) : [p.reflection_style],
           ),
           tz: (p.timezone as string) ?? '',
+          frequency: Number(p.delivery_frequency ?? 5),
         });
       }
       setFailed(false);
@@ -427,6 +428,7 @@ export default function GrowthInsightsPage() {
                     onToggleSave={(id) => void toggleSave(id)}
                     onOpenDetails={(i) => setDetails(i as ArchiveItem)}
                     focusAreas={prefs.focus}
+                    deliveryFrequency={prefs.frequency}
                     onImpression={(i) =>
                       void recordGrowthEvent('impression', {
                         userId: user?.id, itemId: i.id, slot: i.slot,
