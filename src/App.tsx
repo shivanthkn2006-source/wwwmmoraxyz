@@ -42,6 +42,7 @@ import React, { useState, useEffect, useCallback, lazy, Suspense, memo } from "r
 import { useLocation } from "react-router-dom";
 import { checkAppVersion, recoverFromChunkError } from "@/lib/versionCheck";
 import { AppErrorBoundary } from "@/components/core/ErrorBoundary";
+import { PlatformLayout } from "@/layouts/PlatformLayout";
 import { reportPlatformError } from "@/lib/enterpriseTelemetry";
 
 // Lazy load pages for code splitting and faster initial load
@@ -1187,12 +1188,14 @@ const App = () => {
                       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
 
                         <MmoraBrandHomeBridge />
-                        <ZoePreviewRecoveryGuard>
-                          <SecurityBypassOnAuthRoutes>
-                            {/* Route-aware shell: keep /auth ultra-light to prevent Safari hangs */}
-                            <RouteAwareShell />
-                          </SecurityBypassOnAuthRoutes>
-                        </ZoePreviewRecoveryGuard>
+                        <PlatformLayout>
+                          <ZoePreviewRecoveryGuard>
+                            <SecurityBypassOnAuthRoutes>
+                              {/* Route-aware shell: keep /auth ultra-light to prevent Safari hangs */}
+                              <RouteAwareShell />
+                            </SecurityBypassOnAuthRoutes>
+                          </ZoePreviewRecoveryGuard>
+                        </PlatformLayout>
                       </BrowserRouter>
                     </TooltipProvider>
                   </ZoeUnifiedSelfHealerProvider>
