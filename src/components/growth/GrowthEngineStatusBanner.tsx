@@ -52,16 +52,50 @@ function downloadDiagnostics(
   format: 'csv' | 'json',
   lines: DiagnosticLine[],
   status: MeStatus | null,
+  context?: { userId?: string | null; workerVersion?: string | null; lastRunId?: string | null },
 ) {
   const generatedAt = new Date().toISOString();
   const filename = `growth-diagnostics-${generatedAt.slice(0, 10)}.${format}`;
   const csvCell = (value: unknown) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+
+  // Every delivery window for the member's local day, flagged as delivered,
+  // pending, or a catch-up gap the worker still owes them.
+  const schedule = (status?.schedule ?? []).map((row) => ({
+    slot: row.slot,
+    local_time: row.local_time,
+    status: row.status,
+    is_catchup_gap: row.status === 'missed' || row.status === 'failed',
+  }));
+  const meta = {
+    generated_at: generatedAt,
+    user_id: context?.userId ?? null,
+    timezone: status?.timezone ?? null,
+    local_date: status?.local_date ?? null,
+    delivery_frequency: status?.delivery_frequency ?? null,
+    focus_areas: status?.focus_areas ?? [],
+    worker_version: context?.workerVersion ?? null,
+    last_run_id: context?.lastRunId ?? null,
+    last_run_at: status?.last_run_at ?? null,
+    last_error: status?.last_error ?? null,
+    next_slot: status?.next?.slot ?? null,
+    next_local_time: status?.next?.local_time ?? null,
+    catchup_windows: schedule.filter((s) => s.is_catchup_gap).map((s) => s.slot),
+  };
+
   const content = format === 'json'
-    ? JSON.stringify({ generatedAt, status, checks: lines }, null, 2)
+    ? JSON.stringify({ ...meta, status, schedule, checks: lines }, null, 2)
     : [
-        ['generated_at', 'result', 'check', 'detail'].map(csvCell).join(','),
-        ...lines.map((line) => [generatedAt, line.ok ? 'pass' : 'fail', line.label, line.detail]
-          .map(csvCell).join(',')),
+        ['section', 'generated_at', 'user_id', 'timezone', 'local_date', 'worker_version', 'last_run_id', 'last_run_at', 'key', 'value', 'detail']
+          .map(csvCell).join(','),
+        ...lines.map((line) => [
+          'check', generatedAt, meta.user_id, meta.timezone, meta.local_date, meta.worker_version,
+          meta.last_run_id, meta.last_run_at, line.label, line.ok ? 'pass' : 'fail', line.detail,
+        ].map(csvCell).join(',')),
+        ...schedule.map((row) => [
+          row.is_catchup_gap ? 'catchup_window' : 'schedule', generatedAt, meta.user_id, meta.timezone,
+          meta.local_date, meta.worker_version, meta.last_run_id, meta.last_run_at,
+          row.slot, row.status, `local ${row.local_time}`,
+        ].map(csvCell).join(',')),
       ].join('\n');
   const blob = new Blob([content], { type: format === 'json' ? 'application/json' : 'text/csv' });
   const url = URL.createObjectURL(blob);
@@ -71,6 +105,7 @@ function downloadDiagnostics(
   anchor.click();
   URL.revokeObjectURL(url);
 }
+
 
 const STATUS_COPY: Record<string, string> = {
   paused: 'Paused — nothing is being generated',
@@ -88,6 +123,9 @@ export const GrowthEngineStatusBanner: React.FC<{ onChanged?: () => void }> = ({
   const [lastCardAt, setLastCardAt] = useState<string | null>(null);
   const [diagnostics, setDiagnostics] = useState<DiagnosticLine[] | null>(null);
   const [busy, setBusy] = useState<'diagnose' | 'repair' | null>(null);
+  // Deployment identity + last worker run, so an exported report is traceable.
+  const [workerVersion, setWorkerVersion] = useState<string | null>(null);
+  const [lastRunId, setLastRunId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!user) { setLoading(false); return; }
@@ -104,7 +142,8 @@ export const GrowthEngineStatusBanner: React.FC<{ onChanged?: () => void }> = ({
           .limit(1)
           .maybeSingle(),
       ]);
-      const payload = statusRes.data as { ok?: boolean; status?: MeStatus } | null;
+      const payload = statusRes.data as { ok?: boolean; status?: MeStatus; version?: string } | null;
+      setWorkerVersion(payload?.version ?? null);
       if (payload?.ok && payload.status) {
         setStatus(payload.status);
         setUnreachable(false);
@@ -112,6 +151,13 @@ export const GrowthEngineStatusBanner: React.FC<{ onChanged?: () => void }> = ({
         setUnreachable(true);
       }
       setLastCardAt((cardRes.data as { created_at: string } | null)?.created_at ?? null);
+      const { data: runRow } = await supabase
+        .from('growth_dispatch_runs')
+        .select('run_id')
+        .order('started_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      setLastRunId((runRow as { run_id: string } | null)?.run_id ?? null);
     } catch {
       setUnreachable(true);
     } finally {
@@ -335,10 +381,10 @@ export const GrowthEngineStatusBanner: React.FC<{ onChanged?: () => void }> = ({
                 </p>
               )}
               <div className="flex flex-wrap gap-2 pt-1">
-                <Button size="sm" variant="outline" onClick={() => downloadDiagnostics('csv', diagnostics, status)}>
+                <Button size="sm" variant="outline" onClick={() => downloadDiagnostics('csv', diagnostics, status, { userId: user.id, workerVersion, lastRunId })}>
                   <Download className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" /> CSV
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => downloadDiagnostics('json', diagnostics, status)}>
+                <Button size="sm" variant="outline" onClick={() => downloadDiagnostics('json', diagnostics, status, { userId: user.id, workerVersion, lastRunId })}>
                   <Download className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" /> JSON
                 </Button>
               </div>

@@ -57,6 +57,7 @@ import { OnboardingTour } from '@/components/OnboardingTour';
 import { useGrowthFeed } from '@/hooks/useGrowthFeed';
 import CuratedInsightCard, { CuratedInsightSkeleton, type CuratedInsight } from '@/components/growth/CuratedInsightCard';
 import PersonalGrowthOnboarding, { isOnboardingSnoozed } from '@/components/growth/PersonalGrowthOnboarding';
+import { logGrowthAudit } from '@/lib/growthAudit';
 import GrowthInsightDetailsModal from '@/components/growth/GrowthInsightDetailsModal';
 import { recordGrowthEvent } from '@/lib/growthAnalytics';
 import { useGrowthUnread } from '@/hooks/useGrowthUnread';
@@ -139,11 +140,18 @@ const HomePage = () => {
     // prompt if the write is still in flight when the page remounts.
     if (!user || growthLoading || growthError || !growthNeedsOnboarding) return;
     if (isOnboardingSnoozed()) return; // dismissed earlier this session
-    const key = `growth_onboarding_shown_${user.id}`;
+    // Guard against a duplicate prompt while the preference write is in flight,
+    // but NEVER persist a permanent "already shown" flag: a member who reloads
+    // or crashes before finishing must still be offered onboarding next session.
+    // The database (`growthNeedsOnboarding`) remains the single source of truth,
+    // so the modal stops appearing the moment preferences exist.
+    const key = `growth_onboarding_prompted_${user.id}`;
     try {
-      if (localStorage.getItem(key)) return;
-      localStorage.setItem(key, new Date().toISOString());
+      if (sessionStorage.getItem(key)) return;
+      sessionStorage.setItem(key, new Date().toISOString());
     } catch { /* private mode — fall through and still show once */ }
+    // Surface the missing-preferences state for admin visibility.
+    void logGrowthAudit('preferences_missing', { reason: 'no_growth_preferences_row', surface: 'home' });
     setGrowthOnboardingOpen(true);
   }, [user, growthLoading, growthError, growthNeedsOnboarding]);
   const trackGrowth = React.useCallback(
@@ -2170,14 +2178,19 @@ const HomePage = () => {
           key={`loop-${post.id}`}
           data-loop-index={index}
           data-loop-slide="true"
+          data-post-id={post.id}
+          data-new={newContentByFeed.loops.has(post.id) ? 'true' : 'false'}
           className="relative h-full min-h-full w-full shrink-0 snap-start snap-always overflow-hidden"
         >
+          {newContentByFeed.loops.has(post.id) && (
+            <NewContentBadge className="right-3 top-3" onViewed={() => dismissNewContent('loops', post.id)} />
+          )}
           <FeedErrorBoundary section="loops" postId={post.id} onRetry={() => retrySingleLoop(post.id)}>
             <PostCard post={post} onUpdate={handleUpdate} />
           </FeedErrorBoundary>
         </div>
       )),
-    [filteredLoops, retrySingleLoop, handleUpdate],
+    [filteredLoops, retrySingleLoop, handleUpdate, newContentByFeed.loops, dismissNewContent],
   );
 
 

@@ -100,3 +100,29 @@ describe('newPostGate', () => {
     expect([...syncUnseenPostSnapshot('global', ['gone'], ['fresh'], 'manual').unseenIds]).toEqual([]);
   });
 });
+describe('newPostGate — YouTube-style unseen semantics', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    __resetUnseenMemoryStore();
+  });
+
+  it('stays silent on the first ever load, then badges genuinely new posts', () => {
+    const first = syncUnseenPostSnapshot('loops', [], ['a', 'b'], 'initial');
+    expect([...first.unseenIds]).toEqual([]);
+
+    // A later load (new session, new posts fetched without realtime) badges only
+    // the ids the member has never seen.
+    const later = syncUnseenPostSnapshot('loops', ['a', 'b'], ['c', 'a', 'b'], 'initial');
+    expect([...later.unseenIds]).toEqual(['c']);
+  });
+
+  it('clears a badge permanently once the post has been viewed', () => {
+    syncUnseenPostSnapshot('global', [], ['p1'], 'initial');
+    syncUnseenPostSnapshot('global', ['p1'], ['p2', 'p1'], 'manual');
+    expect([...readUnseenPostIds('global')]).toEqual(['p2']);
+
+    markPostsSeen('global', ['p2']);
+    const after = syncUnseenPostSnapshot('global', ['p2', 'p1'], ['p2', 'p1'], 'manual');
+    expect([...after.unseenIds]).toEqual([]);
+  });
+});

@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 const MEDIA_SOUND_KEY = 'mmora_media_sound_enabled';
 const MEDIA_SOUND_EVENT = 'mmora:media-sound-preference';
 
-const readSoundPreference = (fallback = true) => {
+const readSoundPreference = (fallback = false) => {
   if (typeof window === 'undefined') return fallback;
   try {
     const stored = window.localStorage.getItem(MEDIA_SOUND_KEY);
@@ -25,7 +25,9 @@ const writeSoundPreference = (enabled: boolean) => {
   }
 };
 
-export const usePersistentMediaSound = (fallback = true) => {
+// Media starts MUTED by default everywhere (feed, loops, fullscreen player).
+// Only an explicit unmute persists, and it survives reloads via localStorage.
+export const usePersistentMediaSound = (fallback = false) => {
   const [soundEnabled, setSoundEnabledState] = useState(() => readSoundPreference(fallback));
 
   useEffect(() => {

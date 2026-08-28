@@ -82,7 +82,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
   const [resolvedPreviewSrc, setResolvedPreviewSrc] = useState<string | undefined>();
   const videoRef = React.useRef<HTMLVideoElement | null>(null);
   const mediaFrameRef = React.useRef<HTMLDivElement | null>(null);
-  const { soundEnabled, setSoundEnabled } = usePersistentMediaSound(true);
+  const { soundEnabled, setSoundEnabled } = usePersistentMediaSound(false);
 
   const hasEvent = useEventGlow(post.profile?.event_date, post.profile?.event_recurring);
   const glowClass = getAvatarGlowClass(hasEvent, post.profile?.status);
