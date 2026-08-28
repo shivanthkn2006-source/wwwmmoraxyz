@@ -95,6 +95,14 @@ describe('newPostGate', () => {
     expect([...syncUnseenPostSnapshot('personal', ['also-gone'], [], 'initial').unseenIds]).toEqual(['also-gone']);
   });
 
+  it('keeps a realtime loop marked new across a temporary empty refresh', () => {
+    syncUnseenPostSnapshot('loops', ['older-loop'], ['new-loop', 'older-loop'], 'realtime');
+    const empty = syncUnseenPostSnapshot('loops', ['new-loop', 'older-loop'], [], 'manual');
+    expect([...empty.unseenIds]).toEqual(['new-loop']);
+    const restored = syncUnseenPostSnapshot('loops', [], ['new-loop', 'older-loop'], 'manual');
+    expect([...restored.unseenIds]).toEqual(['new-loop']);
+  });
+
   it('drops stale unseen IDs once a real non-empty snapshot arrives', () => {
     registerUnseenPosts('global', ['gone']);
     expect([...syncUnseenPostSnapshot('global', ['gone'], ['fresh'], 'manual').unseenIds]).toEqual([]);

@@ -10,6 +10,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Target, Sparkles, Bookmark, BookmarkCheck, Info } from 'lucide-react';
 import { SLOT_LABEL, type GrowthSlot } from '@/lib/growthSlot';
+import { SLOT_LOCAL_TIME } from '@/lib/growthSlot';
 
 export interface CuratedInsight {
   id?: string;
@@ -35,10 +36,13 @@ interface Props {
   onCardClick?: (insight: CuratedInsight) => void;
   /** Opens the "how this was made" modal. */
   onOpenDetails?: (insight: CuratedInsight) => void;
+  focusAreas?: string[];
+  deliveryFrequency?: number;
 }
 
 export const CuratedInsightCard: React.FC<Props> = ({
   insight, className, saved, onToggleSave, savedBadge, onImpression, onCardClick, onOpenDetails,
+  focusAreas, deliveryFrequency,
 }) => {
   const ref = useRef<HTMLElement | null>(null);
   const reported = useRef(false);
@@ -105,6 +109,27 @@ export const CuratedInsightCard: React.FC<Props> = ({
           )}
         </div>
       </header>
+
+      <div className="mb-3 flex flex-wrap gap-1.5" aria-label="Insight plan details">
+        <span className="rounded-full border border-border bg-muted/60 px-2 py-1 text-[10px] text-muted-foreground">
+          {SLOT_LABEL[insight.slot]} · {String(SLOT_LOCAL_TIME[insight.slot].hour).padStart(2, '0')}:{String(SLOT_LOCAL_TIME[insight.slot].minute).padStart(2, '0')}
+        </span>
+        {typeof deliveryFrequency === 'number' && (
+          <span className="rounded-full border border-border bg-muted/60 px-2 py-1 text-[10px] text-muted-foreground">
+            {deliveryFrequency} per day
+          </span>
+        )}
+        {(focusAreas ?? []).slice(0, 2).map((area) => (
+          <span key={area} className="rounded-full border border-border bg-muted/60 px-2 py-1 text-[10px] text-muted-foreground">
+            {area}
+          </span>
+        ))}
+        {(focusAreas?.length ?? 0) > 2 && (
+          <span className="rounded-full border border-border bg-muted/60 px-2 py-1 text-[10px] text-muted-foreground">
+            +{(focusAreas?.length ?? 0) - 2} more
+          </span>
+        )}
+      </div>
 
       <h2 className="mb-2 text-lg font-semibold leading-snug">{insight.title}</h2>
       <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">

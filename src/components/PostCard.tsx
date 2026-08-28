@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -88,10 +88,25 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
   // it stays on its last frame until the member taps to replay — scrolling
   // back to the slide must never restart an endless loop.
   const playedOnceRef = React.useRef(false);
+  const likeAnimationTimerRef = useRef<number | null>(null);
   const { isEnabled: isFlagEnabled } = useGrowthFlags();
   const repeatPlayback = isFlagEnabled(GROWTH_FLAGS.loopsAutoplayLoop);
 
   const { soundEnabled, setSoundEnabled } = usePersistentMediaSound(false);
+
+  const playLikeAnimation = useCallback(() => {
+    setShowLikeAnimation(false);
+    window.requestAnimationFrame(() => setShowLikeAnimation(true));
+    if (likeAnimationTimerRef.current !== null) window.clearTimeout(likeAnimationTimerRef.current);
+    likeAnimationTimerRef.current = window.setTimeout(() => {
+      setShowLikeAnimation(false);
+      likeAnimationTimerRef.current = null;
+    }, 2000);
+  }, []);
+
+  useEffect(() => () => {
+    if (likeAnimationTimerRef.current !== null) window.clearTimeout(likeAnimationTimerRef.current);
+  }, []);
 
   const hasEvent = useEventGlow(post.profile?.event_date, post.profile?.event_recurring);
   const glowClass = getAvatarGlowClass(hasEvent, post.profile?.status);
@@ -312,6 +327,20 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
       .on(
         'postgres_changes',
         {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'post_likes',
+          filter: `post_id=eq.${post.id}`
+        },
+        (payload: { new?: { user_id?: string } }) => {
+          // The clicking tab already animates after its confirmed write. Every
+          // other open feed/timeline card—including the creator's—animates here.
+          if (payload.new?.user_id !== user.id) playLikeAnimation();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
           event: 'UPDATE',
           schema: 'public',
           table: 'posts',
@@ -355,7 +384,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [post.id, user]);
+  }, [post.id, user, playLikeAnimation]);
 
   const handleLike = async () => {
     if (!user) return;
@@ -391,8 +420,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
           setLikesCount(previousCount);
         } else {
           // Show like animation
-          setShowLikeAnimation(true);
-          setTimeout(() => setShowLikeAnimation(false), 2000);
+          playLikeAnimation();
         }
       }
     } catch (error) {

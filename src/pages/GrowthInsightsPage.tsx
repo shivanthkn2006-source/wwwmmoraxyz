@@ -13,7 +13,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Bookmark, Sparkles, Search, Loader2, CalendarRange, X } from 'lucide-react';
+import { ArrowLeft, Bookmark, Sparkles, Search, Loader2, CalendarRange, X, SlidersHorizontal } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { toast } from 'sonner';
@@ -23,6 +23,7 @@ import { CuratedInsightCard, CuratedInsightSkeleton } from '@/components/growth/
 import GrowthInsightDetailsModal from '@/components/growth/GrowthInsightDetailsModal';
 import GrowthEngineStatusBanner from '@/components/growth/GrowthEngineStatusBanner';
 import GrowthTodayStatusPanel from '@/components/growth/GrowthTodayStatusPanel';
+import GrowthEngineSettings from '@/components/growth/GrowthEngineSettings';
 import { recordGrowthEvent } from '@/lib/growthAnalytics';
 import {
   slotOrder, sanitizeStyles, FOCUS_AREAS, deviceTimeZone,
@@ -70,8 +71,9 @@ export default function GrowthInsightsPage() {
   const [details, setDetails] = useState<ArchiveItem | null>(null);
   const [engineOff, setEngineOff] = useState(false);
   const [activating, setActivating] = useState(false);
-  const [prefs, setPrefs] = useState<{ focus: string[]; styles: ReflectionStyle[]; tz: string }>({
-    focus: [], styles: [], tz: '',
+  const [editingPlan, setEditingPlan] = useState(false);
+  const [prefs, setPrefs] = useState<{ focus: string[]; styles: ReflectionStyle[]; tz: string; frequency: number }>({
+    focus: [], styles: [], tz: '', frequency: 5,
   });
 
   const sentinel = useRef<HTMLDivElement | null>(null);
@@ -117,7 +119,7 @@ export default function GrowthInsightsPage() {
         supabase.from('growth_saved_items').select('item_id').eq('user_id', user.id),
         supabase
           .from('growth_preferences')
-          .select('focus_areas, reflection_style, reflection_styles, timezone, paused, onboarded_at')
+          .select('focus_areas, reflection_style, reflection_styles, delivery_frequency, timezone, paused, onboarded_at')
           .eq('user_id', user.id)
           .maybeSingle(),
       ]);
@@ -134,6 +136,7 @@ export default function GrowthInsightsPage() {
             (p.reflection_styles as unknown[])?.length ? (p.reflection_styles as unknown[]) : [p.reflection_style],
           ),
           tz: (p.timezone as string) ?? '',
+          frequency: Number(p.delivery_frequency ?? 5),
         });
       }
       setFailed(false);
@@ -289,6 +292,20 @@ export default function GrowthInsightsPage() {
         </header>
 
         <div className="mb-5 space-y-2">
+          <Button
+            variant={editingPlan ? 'default' : 'outline'}
+            className="w-full"
+            aria-expanded={editingPlan}
+            onClick={() => setEditingPlan((value) => !value)}
+          >
+            <SlidersHorizontal className="mr-2 h-4 w-4" aria-hidden="true" />
+            {editingPlan ? 'Close Growth plan' : 'Change my Growth plan'}
+          </Button>
+          {editingPlan && (
+            <div data-growth-plan-editor>
+              <GrowthEngineSettings onSaved={() => void load()} />
+            </div>
+          )}
           <div className="flex gap-2">
             <div className="relative flex-1">
               <Search
@@ -410,6 +427,8 @@ export default function GrowthInsightsPage() {
                     saved={savedIds.has(insight.id)}
                     onToggleSave={(id) => void toggleSave(id)}
                     onOpenDetails={(i) => setDetails(i as ArchiveItem)}
+                    focusAreas={prefs.focus}
+                    deliveryFrequency={prefs.frequency}
                     onImpression={(i) =>
                       void recordGrowthEvent('impression', {
                         userId: user?.id, itemId: i.id, slot: i.slot,

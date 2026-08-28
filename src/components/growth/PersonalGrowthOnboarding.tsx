@@ -112,7 +112,7 @@ export const PersonalGrowthOnboarding: React.FC<Props> = ({ open, onOpenChange, 
         {step === 1 && (
           <>
             <DialogHeader>
-              <DialogTitle>Select your focus areas</DialogTitle>
+              <DialogTitle>Select your focus areas ({topics.length} selected)</DialogTitle>
               <DialogDescription>
                 Choose the themes your daily insights should centre around.
               </DialogDescription>
@@ -149,7 +149,7 @@ export const PersonalGrowthOnboarding: React.FC<Props> = ({ open, onOpenChange, 
         {step === 2 && (
           <>
             <DialogHeader>
-              <DialogTitle>Content delivery style</DialogTitle>
+              <DialogTitle>Content delivery style ({styles.length} selected)</DialogTitle>
               <DialogDescription>
                 Pick one or several — you can select all four and see every kind.
               </DialogDescription>

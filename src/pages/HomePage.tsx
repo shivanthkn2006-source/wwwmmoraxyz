@@ -204,6 +204,8 @@ const HomePage = () => {
           onImpression={(i) => trackGrowth('impression', i)}
           onCardClick={(i) => trackGrowth('click', i)}
           onOpenDetails={(i) => setGrowthDetails(i)}
+          focusAreas={growthPreferences?.focus_areas ?? []}
+          deliveryFrequency={growthPreferences?.delivery_frequency}
         />
       </FeedErrorBoundary>
     </div>
@@ -1483,6 +1485,11 @@ const HomePage = () => {
         });
 
       if (loopRows.length === 0) {
+        const emptySnapshot = syncUnseenPostSnapshot(
+          'loops', knownFeedIdsRef.current.loops, [], updateSource,
+        );
+        if (updateSource !== 'realtime') knownFeedIdsRef.current.loops = [];
+        setNewContentByFeed((current) => ({ ...current, loops: emptySnapshot.unseenIds }));
         setLoopPosts([]);
         pushDebug({ step: 'loops:posts-select', rowCount: 0 });
         return;
@@ -2257,18 +2264,22 @@ const HomePage = () => {
   // the end. This keeps every due/saved card visible between posts and Loops.
   const globalFeedSlides = interleaveGrowthCards(
     [
+      ...searchVideoSlides,
       ...visibleGlobalPosts.map((post) => renderPostSlide(post, 'global')),
       ...(!loopsHidden ? loopSlides : []),
       ...supportingSlides,
+      ...neuralVideoSlides,
     ],
     growthSlide,
     3,
   );
   const personalFeedSlides = interleaveGrowthCards(
     [
+      ...searchVideoSlides,
       ...visiblePersonalPosts.map((post) => renderPostSlide(post, 'personal')),
       ...(!loopsHidden ? loopSlides : []),
       ...supportingSlides,
+      ...neuralVideoSlides,
     ],
     growthSlide,
     3,
@@ -2387,7 +2398,6 @@ const HomePage = () => {
                   <p className="absolute inset-0 flex items-center justify-center px-3 text-center text-muted-foreground">No posts yet</p>
                 ) : (
                   <div ref={loopRailRef} className="absolute inset-0 h-full w-full snap-y snap-mandatory overflow-y-auto overscroll-contain" data-testid="global-posts-snap-feed" data-feed-scroll>
-                  {searchVideoSlides}
                   {globalFeedSlides}
 
                   <div className="relative h-full min-h-full w-full shrink-0 snap-start snap-always overflow-y-auto bg-background px-4 pb-24 pt-24" data-people-recommendations>
@@ -2395,7 +2405,6 @@ const HomePage = () => {
                       <InterestRecommendations />
                     </FeedErrorBoundary>
                   </div>
-                  {neuralVideoSlides}
 
                   </div>
                 )}
@@ -2418,9 +2427,7 @@ const HomePage = () => {
                   <p className="absolute inset-0 flex items-center justify-center px-3 text-center text-muted-foreground">No posts from friends yet</p>
                 ) : (
                   <div className="absolute inset-0 h-full w-full snap-y snap-mandatory overflow-y-auto overscroll-contain" data-testid="personal-posts-snap-feed" data-feed-scroll>
-                  {searchVideoSlides}
                   {personalFeedSlides}
-                  {neuralVideoSlides}
 
                   </div>
                 )}
