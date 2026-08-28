@@ -42,6 +42,59 @@ interface Props {
   deliveryFrequency?: number;
 }
 
+/** Stable numeric seed so a given insight always renders the same picture. */
+const seedFrom = (value: string): number => {
+  let hash = 0;
+  for (let i = 0; i < value.length; i += 1) hash = (hash * 31 + value.charCodeAt(i)) % 1000000;
+  return hash;
+};
+
+/**
+ * Standalone illustrative image for a growth card. Uses Pollinations directly
+ * as an <img> source — no fetch, no backend, no shared state. If it fails to
+ * load the block disappears and the card renders exactly as before.
+ */
+const GrowthInsightImage: React.FC<{ insight: CuratedInsight }> = ({ insight }) => {
+  const [status, setStatus] = useState<'loading' | 'ready' | 'failed'>('loading');
+
+  const src = useMemo(() => {
+    const prompt = [
+      insight.category,
+      insight.title,
+      'calm cinematic editorial illustration, soft natural light, minimal, no text, no words, no letters',
+    ].filter(Boolean).join(', ');
+    return getPollinationsUrl(prompt, {
+      width: 768,
+      height: 432,
+      model: 'flux',
+      seed: seedFrom(`${insight.id ?? insight.slot}-${insight.title}`),
+    });
+  }, [insight.category, insight.title, insight.id, insight.slot]);
+
+  if (status === 'failed') return null;
+
+  return (
+    <div className="relative mb-3 overflow-hidden rounded-xl border border-border bg-muted/40 aspect-[16/9]">
+      {status === 'loading' && (
+        <div className="absolute inset-0 flex items-center justify-center animate-pulse bg-muted">
+          <ImageOff className="h-4 w-4 text-muted-foreground/60" aria-hidden="true" />
+        </div>
+      )}
+      <img
+        src={src}
+        alt={`Illustration for ${insight.title}`}
+        loading="lazy"
+        decoding="async"
+        referrerPolicy="no-referrer"
+        onLoad={() => setStatus('ready')}
+        onError={() => setStatus('failed')}
+        className={`h-full w-full object-cover transition-opacity duration-500 ${status === 'ready' ? 'opacity-100' : 'opacity-0'}`}
+      />
+    </div>
+  );
+};
+
+
 export const CuratedInsightCard: React.FC<Props> = ({
   insight, className, saved, onToggleSave, savedBadge, onImpression, onCardClick, onOpenDetails,
   focusAreas, deliveryFrequency,
