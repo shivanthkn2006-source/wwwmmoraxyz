@@ -46,7 +46,7 @@ const REGEN_COOLDOWN_MS = 60_000;
 const REGEN_DAILY_CAP = 5;
 const BACKFILL_MAX_ITEMS = 200;
 /** Bumped on every worker change so admin UIs can prove they hit the latest deploy. */
-const WORKER_VERSION = '2026-08-28.2';
+const WORKER_VERSION = '2026-08-28.3';
 const BACKFILL_MIN_THROTTLE_MS = 100;
 const BACKFILL_MAX_THROTTLE_MS = 5_000;
 const BACKFILL_BUDGET_MS = 50_000;
