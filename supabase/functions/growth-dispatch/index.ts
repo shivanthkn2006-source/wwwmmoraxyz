@@ -45,6 +45,8 @@ const RATE_LIMIT_PARK = 3;
 const REGEN_COOLDOWN_MS = 60_000;
 const REGEN_DAILY_CAP = 5;
 const BACKFILL_MAX_ITEMS = 200;
+/** Bumped on every worker change so admin UIs can prove they hit the latest deploy. */
+const WORKER_VERSION = '2026-08-28.1';
 const BACKFILL_MIN_THROTTLE_MS = 100;
 const BACKFILL_MAX_THROTTLE_MS = 5_000;
 const BACKFILL_BUDGET_MS = 50_000;
@@ -441,6 +443,14 @@ function parseBackfill(body: any): { req?: BackfillRequest; error?: string } {
  */
 async function runBackfill(req: BackfillRequest, jobId: string, triggeredBy: string | null) {
   const startedAt = Date.now();
+  /** Per-(user, date, slot) decision log — powers the downloadable dry-run report. */
+  const plan: Array<{
+    userId: string; localDate: string; slot: string; decision: string; reason: string;
+  }> = [];
+  const PLAN_CAP = 1000;
+  const note = (userId: string, localDate: string, slot: string, decision: string, reason: string) => {
+    if (plan.length < PLAN_CAP) plan.push({ userId, localDate, slot, decision, reason });
+  };
   const state = await getState();
   const shadow = state?.shadow_mode !== false;
   const dates = dateRange(req.fromDate, req.toDate);
@@ -467,8 +477,16 @@ async function runBackfill(req: BackfillRequest, jobId: string, triggeredBy: str
         if (written >= req.maxItems) break outer;
         if (Date.now() - startedAt > BACKFILL_BUDGET_MS) { errors.push('time budget reached'); break outer; }
         scanned++;
-        if (!enabled.includes(slot) || delivered.has(slot)) { skipped++; continue; }
-        if (req.dryRun) { written++; continue; }
+        if (!enabled.includes(slot)) {
+          skipped++; note(pref.user_id, localDate, slot, 'skip', 'window not in the member frequency'); continue;
+        }
+        if (delivered.has(slot)) {
+          skipped++; note(pref.user_id, localDate, slot, 'skip', 'insight already delivered'); continue;
+        }
+        if (req.dryRun) {
+          written++; note(pref.user_id, localDate, slot, 'would-write', 'missing insight'); continue;
+        }
+        note(pref.user_id, localDate, slot, 'write', 'missing insight');
 
         const result = await generateInsight({
           slot,
@@ -510,6 +528,11 @@ async function runBackfill(req: BackfillRequest, jobId: string, triggeredBy: str
   const summary = {
     scanned, written, skipped, dates: dates.length,
     users: prefs.length, errors: errors.slice(0, 10),
+    version: WORKER_VERSION,
+    // Affected members / windows, so an admin can review before executing.
+    plan,
+    planTruncated: plan.length >= PLAN_CAP,
+    affectedUsers: Array.from(new Set(plan.filter((p) => p.decision !== 'skip').map((p) => p.userId))).length,
   };
   await db('growth_backfill_jobs', {
     method: 'POST',
@@ -736,13 +759,13 @@ Deno.serve(async (req) => {
   try {
     if (action === 'status') {
       const state = await getState();
-      return json({ ok: true, state });
+      return json({ ok: true, state, version: WORKER_VERSION });
     }
 
     if (action === 'me-status') {
       const user = await authUser(req);
       if (!user) return json({ ok: false, error: 'sign in required' }, 401);
-      return json({ ok: true, status: await meStatus(user.id) });
+      return json({ ok: true, status: await meStatus(user.id), version: WORKER_VERSION });
     }
 
     if (action === 'regenerate') {
@@ -780,7 +803,11 @@ Deno.serve(async (req) => {
         skipped: summary.skipped,
         errors: summary.errors,
       });
-      return json({ ok: true, jobId, summary });
+      return json({
+        ok: true, jobId, version: WORKER_VERSION,
+        window: { fromDate: parsed.fromDate, toDate: parsed.toDate, slots: parsed.slots, dryRun: parsed.dryRun },
+        summary,
+      });
     }
 
     if (action === 'backfill-jobs') {
