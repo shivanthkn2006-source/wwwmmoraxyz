@@ -2905,6 +2905,33 @@ export type Database = {
         }
         Relationships: []
       }
+      growth_audit_log: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json
+          id: string
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json
+          id?: string
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json
+          id?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       growth_backfill_jobs: {
         Row: {
           created_at: string

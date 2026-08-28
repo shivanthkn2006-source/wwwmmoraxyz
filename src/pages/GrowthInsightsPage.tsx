@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { CuratedInsightCard, CuratedInsightSkeleton } from '@/components/growth/CuratedInsightCard';
 import GrowthInsightDetailsModal from '@/components/growth/GrowthInsightDetailsModal';
+import GrowthEngineStatusBanner from '@/components/growth/GrowthEngineStatusBanner';
 import { recordGrowthEvent } from '@/lib/growthAnalytics';
 import {
   slotOrder, sanitizeStyles, FOCUS_AREAS, deviceTimeZone,
@@ -349,6 +350,8 @@ export default function GrowthInsightsPage() {
             <Button className="mt-3" size="sm" onClick={() => void load()}>Try again</Button>
           </div>
         )}
+
+        <GrowthEngineStatusBanner onChanged={() => void load()} />
 
         {!loading && !failed && engineOff && (
           <div className="mb-4 rounded-xl border border-primary/40 bg-primary/5 p-5 text-center" data-growth-engine-off>
