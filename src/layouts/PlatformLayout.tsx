@@ -10,6 +10,7 @@ import { useVoiceEngine } from '@/hooks/useVoiceEngine';
 import { usePlatformStore } from '@/store/usePlatformStore';
 import { AppErrorBoundary } from '@/components/core/ErrorBoundary';
 import GrowthCardAlertHost from '@/components/growth/GrowthCardAlertHost';
+import GlobalHomeDock from '@/components/home/GlobalHomeDock';
 
 /** Auto-enables thermal safe mode on low-power devices / heavy module pressure. */
 function useThermalWatchdog() {
@@ -57,6 +58,10 @@ export const PlatformLayout = ({ children }: { children: React.ReactNode }) => (
       <GrowthCardAlertHost />
     </AppErrorBoundary>
     {children}
+    {/* Same bottom-right home dock on every route (HomePage owns its own). */}
+    <AppErrorBoundary moduleName="platform:dock" severity="low" fallback={null}>
+      <GlobalHomeDock />
+    </AppErrorBoundary>
   </>
 );
 

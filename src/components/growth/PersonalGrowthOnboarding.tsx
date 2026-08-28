@@ -12,6 +12,7 @@ import { Slider } from '@/components/ui/slider';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { toast } from 'sonner';
+import { logGrowthAudit } from '@/lib/growthAudit';
 import {
   FOCUS_AREAS, REFLECTION_STYLE_OPTIONS, ALL_REFLECTION_STYLES, deviceTimeZone,
   slotsForFrequency, SLOT_LABEL, sanitizeStyles, type ReflectionStyle,
@@ -84,6 +85,7 @@ export const PersonalGrowthOnboarding: React.FC<Props> = ({ open, onOpenChange, 
    */
   const skip = async () => {
     await persist({ paused: true, onboarded_at: new Date().toISOString() });
+    void logGrowthAudit('onboarding_skipped', { step, paused: true, at: new Date().toISOString() });
     toast('Daily insights stay off — you can turn them on any time', {
       description: 'Growth insights → Turn the engine on',
     });
@@ -97,6 +99,7 @@ export const PersonalGrowthOnboarding: React.FC<Props> = ({ open, onOpenChange, 
    */
   const dismiss = () => {
     try { sessionStorage.setItem(SNOOZE_KEY, '1'); } catch { /* private mode */ }
+    void logGrowthAudit('onboarding_dismissed', { step, paused: false, snoozed: true });
     onOpenChange(false);
   };
 
