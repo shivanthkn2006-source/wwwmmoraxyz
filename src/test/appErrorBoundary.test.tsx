@@ -1,8 +1,11 @@
+// @vitest-environment jsdom
 // Verifies module isolation: a crashing child reports to enterpriseTelemetry
 // and the surrounding app keeps rendering.
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent } from '@testing-library/react';
+
+afterEach(() => cleanup());
 
 const reportPlatformError = vi.fn();
 

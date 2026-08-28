@@ -1,9 +1,12 @@
+// @vitest-environment jsdom
 // Device capability + viewport gating for the WebGL wrapper: heavy 3D must
 // degrade to a 2D fallback on low-power devices, without WebGL, in thermal-safe
 // mode, and while offscreen — and must never block the calling render.
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor, act } from '@testing-library/react';
+import { render, screen, cleanup, waitFor, act } from '@testing-library/react';
+
+afterEach(() => cleanup());
 
 vi.mock('@/lib/enterpriseTelemetry', () => ({
   reportPlatformError: vi.fn(),
@@ -14,7 +17,7 @@ vi.mock('@/lib/versionCheck', () => ({
   checkAppVersion: vi.fn(),
 }));
 
-const { SafeCanvasWrapper, detectWebGLSupport, detectLowPowerDevice } = await import(
+const { SafeCanvasWrapper, detectWebGLSupport, detectLowPowerDevice, __resetCapabilityCache } = await import(
   '@/components/3d/SafeCanvasWrapper'
 );
 const { usePlatformStore } = await import('@/store/usePlatformStore');
@@ -59,6 +62,7 @@ describe('SafeCanvasWrapper capability gating', () => {
       ObserverIntersecting as unknown as typeof IntersectionObserver;
     setHardware(8, 8);
     mockWebGL(true);
+    __resetCapabilityCache();
     usePlatformStore.setState({ thermalSafeMode: false, heavyModulesMounted: 0 });
   });
 
