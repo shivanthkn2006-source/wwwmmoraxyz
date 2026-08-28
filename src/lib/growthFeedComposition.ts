@@ -1,3 +1,5 @@
+import { slotOrder, type GrowthSlot } from '@/lib/growthSlot';
+
 /**
  * Inserts Growth cards throughout a feed instead of appending them after every
  * post/video. Order is stable, every Growth card is included exactly once, and
@@ -29,4 +31,25 @@ export function interleaveGrowthCards<T>(
   }
 
   return result;
+}
+/**
+ * Orders today's Growth cards by the wall clock instead of by calendar order.
+ *
+ * The window a member is living in right now comes first, then the earlier
+ * windows they already passed (most recent first), and finally anything that
+ * belongs to a window still ahead of them. This keeps the feed's first Growth
+ * card relevant to the current time of day.
+ */
+export function orderGrowthByTime<T extends { slot: GrowthSlot }>(
+  cards: readonly T[],
+  current: GrowthSlot | null,
+): T[] {
+  const currentRank = current ? slotOrder(current) : Number.POSITIVE_INFINITY;
+  const due = cards
+    .filter((c) => slotOrder(c.slot) <= currentRank)
+    .sort((a, b) => slotOrder(b.slot) - slotOrder(a.slot));
+  const ahead = cards
+    .filter((c) => slotOrder(c.slot) > currentRank)
+    .sort((a, b) => slotOrder(a.slot) - slotOrder(b.slot));
+  return [...due, ...ahead];
 }

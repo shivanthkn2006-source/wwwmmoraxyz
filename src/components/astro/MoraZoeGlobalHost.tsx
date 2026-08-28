@@ -1,5 +1,7 @@
 import React from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAstroDiagnostics } from '@/hooks/useAstroDiagnostics';
+
 import { useZoeMotivation } from '@/hooks/useZoeMotivation';
 import { useMoraZoeScheduler } from '@/hooks/useMoraZoeScheduler';
 import { useBirthDetailsGate } from '@/hooks/useBirthDetailsGate';
@@ -49,19 +51,26 @@ export const MoraZoeGlobalHost: React.FC = () => {
     snooze: snoozeBirth,
   } = useBirthDetailsGate();
 
+  // These layers are full-screen takeovers. They belong to the home feed only —
+  // on any other route (settings, growth insights, admin…) they would sit on top
+  // of the page and silently swallow every click.
+  const { pathname } = useLocation();
+  const onHome = pathname === '/' || pathname === '/home';
+
   const canShowAstro = !!diagnostics?.passed && !!todayPrediction;
   const canShowMotivation = !motivationLoading && !!motivation;
 
   // The astrology takeover needs birth-derived data. Members without it still
   // get their full-screen motivation instead, so nobody sees a blank morning.
-  const showAstroTakeover = showMorningTakeover && canShowAstro;
+  const showAstroTakeover = onHome && showMorningTakeover && canShowAstro;
   const showMotivationCard =
-    canShowMotivation && !showAstroTakeover && (showLoginGreeting || showMorningTakeover);
+    onHome && canShowMotivation && !showAstroTakeover && (showLoginGreeting || showMorningTakeover);
 
   // Only members with missing birth date/time/place ever see this, and only
   // once nothing else is on screen, so overlays never stack.
   const showBirthPrompt =
-    !birthLoading && needsDetails && !showAstroTakeover && !showMotivationCard;
+    onHome && !birthLoading && needsDetails && !showAstroTakeover && !showMotivationCard;
+
 
   // Open-rate tracking (fire-and-forget; never blocks the overlays).
   const astroImpression = useCardImpression('morning_takeover', showAstroTakeover, todayPrediction?.id);

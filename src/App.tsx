@@ -1207,14 +1207,16 @@ const App = () => {
                         <OfflineModeOverlay />
                       </Suspense>
 
-                      {/* Sandboxed M'Mora Zoe overlay layer — zero impact on feed/routing */}
-                      <Suspense fallback={null}>
-                        <MoraZoeGlobalHost />
-                      </Suspense>
-
                       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
 
+                        {/* Sandboxed M'Mora Zoe overlay layer — inside the router so it
+                            can stay on the home feed and never cover other pages. */}
+                        <Suspense fallback={null}>
+                          <MoraZoeGlobalHost />
+                        </Suspense>
+
                         <MmoraBrandHomeBridge />
+
                         <PlatformLayout>
                           <ZoePreviewRecoveryGuard>
                             <SecurityBypassOnAuthRoutes>

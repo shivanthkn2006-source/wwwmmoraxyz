@@ -73,22 +73,24 @@ const PlanetaryIntentSelector: React.FC = () => {
     dismissIntentSelector();
   }, [dismissIntentSelector]);
 
-  // Prevent critical app surfaces from being blocked by the optimization overlay.
+  // This splash belongs to the entry screen only. On any other route it is a
+  // full-screen layer that silently swallows every click on the page below.
+  // It renders above the router, so the path is tracked without router context.
+  const [pathname, setPathname] = React.useState(
+    typeof window === 'undefined' ? '/' : window.location.pathname,
+  );
   useEffect(() => {
-    if (!showIntentSelector) return;
-    if (typeof window === 'undefined') return;
-    const path = window.location.pathname;
-    if (!path.startsWith('/zoe-omega') && path !== '/home' && path !== '/voice-command-test') return;
+    const read = () => setPathname(window.location.pathname);
+    const id = window.setInterval(read, 400);
+    window.addEventListener('popstate', read);
+    return () => { window.clearInterval(id); window.removeEventListener('popstate', read); };
+  }, []);
 
-    const timer = window.setTimeout(() => {
-      dismissIntentSelector();
-    }, 1200);
+  useEffect(() => {
+    if (showIntentSelector && pathname !== '/') dismissIntentSelector();
+  }, [showIntentSelector, pathname, dismissIntentSelector]);
 
-    return () => window.clearTimeout(timer);
-  }, [showIntentSelector, dismissIntentSelector]);
-
-  const path = typeof window !== 'undefined' ? window.location.pathname : '';
-  if (!showIntentSelector || !mvdScore.isBasicComplete || path === '/home' || path === '/voice-command-test') {
+  if (!showIntentSelector || !mvdScore.isBasicComplete || pathname !== '/') {
     return null;
   }
 

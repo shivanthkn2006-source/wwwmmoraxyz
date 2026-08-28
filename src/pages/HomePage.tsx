@@ -101,7 +101,9 @@ import PageSeo from "@/components/seo/PageSeo";
 import NewContentBadge from '@/components/NewContentBadge';
 import { logFeedEvent } from '@/lib/feedEventDiagnostics';
 import { markPostsSeen, readUnseenPostIds, syncUnseenPostSnapshot, type FeedUpdateSource } from "@/lib/newPostGate";
-import { interleaveGrowthCards } from '@/lib/growthFeedComposition';
+import { interleaveGrowthCards, orderGrowthByTime } from '@/lib/growthFeedComposition';
+import { currentSlot, deviceTimeZone, slotsForFrequency } from '@/lib/growthSlot';
+
 
 
 
@@ -175,10 +177,13 @@ const HomePage = () => {
     },
     [user?.id, growthPreferences?.focus_areas],
   );
-  // Catch-up: every window already delivered today, in order, then saved cards.
+  // Catch-up: today's cards ordered by the wall clock (the window the member is
+  // in right now leads), then earlier windows, then saved cards.
   const growthCards = React.useMemo(() => {
+    const zone = growthPreferences?.timezone || deviceTimeZone();
+    const enabled = slotsForFrequency(growthPreferences?.delivery_frequency ?? 5);
     const dayCards = growthToday.length
-      ? growthToday
+      ? orderGrowthByTime(growthToday, currentSlot(new Date(), zone, enabled))
       : growthInsight
         ? [growthInsight]
         : [];
@@ -186,7 +191,8 @@ const HomePage = () => {
       ...dayCards.map((insight) => ({ insight, savedBadge: false })),
       ...growthSaved.map((insight) => ({ insight, savedBadge: true })),
     ];
-  }, [growthToday, growthInsight, growthSaved]);
+  }, [growthToday, growthInsight, growthSaved, growthPreferences?.timezone, growthPreferences?.delivery_frequency]);
+
   const growthSlide = growthCards.map(({ insight, savedBadge }) => (
     <div
       key={`growth-${insight.id}${savedBadge ? '-saved' : ''}`}
