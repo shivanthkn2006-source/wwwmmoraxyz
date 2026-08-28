@@ -9,6 +9,7 @@ import React, { useEffect } from 'react';
 import { useVoiceEngine } from '@/hooks/useVoiceEngine';
 import { usePlatformStore } from '@/store/usePlatformStore';
 import { AppErrorBoundary } from '@/components/core/ErrorBoundary';
+import GrowthCardAlertHost from '@/components/growth/GrowthCardAlertHost';
 
 /** Auto-enables thermal safe mode on low-power devices / heavy module pressure. */
 function useThermalWatchdog() {
@@ -50,6 +51,10 @@ export const PlatformLayout = ({ children }: { children: React.ReactNode }) => (
     {/* Services are crash-isolated: a recognizer failure can never blank the app. */}
     <AppErrorBoundary moduleName="platform:services" severity="low" fallback={null}>
       <PlatformServices />
+    </AppErrorBoundary>
+    {/* Top-of-screen insight alerts — isolated so a failure cannot blank a route. */}
+    <AppErrorBoundary moduleName="growth:alerts" severity="low" fallback={null}>
+      <GrowthCardAlertHost />
     </AppErrorBoundary>
     {children}
   </>
