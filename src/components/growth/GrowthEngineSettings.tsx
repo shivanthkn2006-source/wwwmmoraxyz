@@ -76,7 +76,7 @@ export const GrowthEngineSettings: React.FC = () => {
       .eq('user_id', user.id)
       .maybeSingle();
     if (data) {
-      const row = data as Record<string, unknown>;
+      const row = data as unknown as Record<string, unknown>;
       setTopics((row.focus_areas as string[]) ?? []);
       setStyles(
         sanitizeStyles(
