@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { interleaveGrowthCards, orderGrowthByTime } from '@/lib/growthFeedComposition';
+import { composeChronologicalFeed, interleaveGrowthCards, orderGrowthByTime } from '@/lib/growthFeedComposition';
 
 describe('Growth feed composition', () => {
   it('places Growth cards between ordinary feed items', () => {
@@ -28,6 +28,22 @@ describe('Growth feed composition', () => {
       'post-2', 'neural-video-1', 'growth-midday',
     ]);
     expect(composed.filter((item) => item.startsWith('growth-'))).toHaveLength(2);
+  });
+});
+describe('Chronological mixed feed composition', () => {
+  it('orders posts, loops, and Growth by their real timestamps', () => {
+    expect(composeChronologicalFeed([
+      { id: 'old-post', timestamp: '2026-08-28T10:00:00Z', value: 'old-post' },
+      { id: 'night-growth', timestamp: '2026-08-28T16:30:00Z', value: 'night-growth' },
+      { id: 'new-loop', timestamp: '2026-08-28T18:00:00Z', value: 'new-loop' },
+    ])).toEqual(['new-loop', 'night-growth', 'old-post']);
+  });
+
+  it('keeps stable source order for equal or invalid timestamps', () => {
+    expect(composeChronologicalFeed([
+      { id: 'a', timestamp: 'invalid', value: 'a' },
+      { id: 'b', timestamp: 'invalid', value: 'b' },
+    ])).toEqual(['a', 'b']);
   });
 });
 describe('Growth card time ordering', () => {
