@@ -715,6 +715,14 @@ const RouteAwareShell = () => {
                             }
                           />
                           <Route
+                            path="/growth-insights"
+                            element={
+                              <ProtectedRoute>
+                                <GrowthInsightsPage />
+                              </ProtectedRoute>
+                            }
+                          />
+                          <Route
                             path="/zoe-astro"
                             element={
                               <ProtectedRoute>
