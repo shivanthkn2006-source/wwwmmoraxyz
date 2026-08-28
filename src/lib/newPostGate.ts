@@ -140,6 +140,12 @@ export const syncUnseenPostSnapshot = (
   const arrivals = detectNewArrivals(previousIds, nextIds, source);
 
   if (source === 'realtime') {
+    // A realtime packet may beat the initial fetch on cold start. Establish the
+    // previous snapshot as the quiet baseline, while preserving only actual arrivals.
+    if (!hasFeedBaseline(tab)) {
+      if (previousIds.length > 0) markPostsSeen(tab, previousIds);
+      markFeedBaseline(tab);
+    }
     return { ...arrivals, unseenIds: registerUnseenPosts(tab, arrivals.newIds) };
   }
 

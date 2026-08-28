@@ -1961,7 +1961,8 @@ const HomePage = () => {
 
     try {
       if (!file && !metadata?.title?.trim() && !metadata?.text?.trim()) throw new Error('Add text or choose a file before publishing.');
-      if (file && (isVideo || isImage)) await validateBrowserCanPreviewFile(file, mediaType);
+      if (file && isVideo) await validateBrowserCanPreviewFile(file, 'video');
+      if (file && isImage) await validateBrowserCanPreviewFile(file, 'image');
       // Auto-transcode large videos into small preview variants for smoother Reel/Shorts playback.
       let uploadFile: File | null = file;
       if (mediaType === 'video') {
