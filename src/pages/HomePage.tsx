@@ -59,6 +59,7 @@ import CuratedInsightCard, { CuratedInsightSkeleton, type CuratedInsight } from 
 import PersonalGrowthOnboarding from '@/components/growth/PersonalGrowthOnboarding';
 import GrowthInsightDetailsModal from '@/components/growth/GrowthInsightDetailsModal';
 import { recordGrowthEvent } from '@/lib/growthAnalytics';
+import { useGrowthUnread } from '@/hooks/useGrowthUnread';
 import { SovereignQuickAccess } from '@/components/SovereignQuickAccess';
 import { appendMediaVersion, captureVideoPreviewFromUrl, dataUrlToFile, getPostsStorageObjectPath, inferMediaType, makeFallbackVideoPoster, resolvePrivateStorageUrl, transcodeVideoForPreview } from '@/lib/mediaUtils';
 import PostsGrid from "@/components/PostsGrid";
@@ -129,6 +130,7 @@ const HomePage = () => {
     needsOnboarding: growthNeedsOnboarding,
     refresh: refreshGrowth,
   } = useGrowthFeed();
+  const growthUnread = useGrowthUnread();
   const [growthOnboardingOpen, setGrowthOnboardingOpen] = useState(false);
   const [growthDetails, setGrowthDetails] = useState<CuratedInsight | null>(null);
   useEffect(() => {
@@ -2518,6 +2520,7 @@ const HomePage = () => {
             id: 'growth-insights',
             label: 'Growth insights',
             icon: <Lightbulb className="h-[22px] w-[22px]" />,
+            badge: growthUnread,
             onSelect: runHomeIconAction('growth-insights', () => navigate('/growth-insights')),
           },
           {

@@ -9,6 +9,8 @@
  *   "resume"     — clears a 402/403 pause (admin only).
  *   "me-status"  — per-user schedule + delivery state (signed-in caller).
  *   "regenerate" — re-runs the caller's current window and UPDATES that row.
+ *   "backfill"   — admin-only throttled backfill of past dates/windows.
+ *   "backfill-jobs" — admin-only recent backfill run history.
  *
  * Hardening (mirrors the proven astro-dispatch contract):
  *   • bounded batch per run — never unbounded fan-out
@@ -42,6 +44,10 @@ const SLOT_WINDOW_MIN = 75;
 const RATE_LIMIT_PARK = 3;
 const REGEN_COOLDOWN_MS = 60_000;
 const REGEN_DAILY_CAP = 5;
+const BACKFILL_MAX_ITEMS = 200;
+const BACKFILL_MIN_THROTTLE_MS = 100;
+const BACKFILL_MAX_THROTTLE_MS = 5_000;
+const BACKFILL_BUDGET_MS = 50_000;
 
 async function db(path: string, init: RequestInit = {}) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
@@ -134,10 +140,15 @@ interface PrefRow {
   paused: boolean;
   timezone: string | null;
   notify_on_new_insight?: boolean | null;
+  notify_push?: boolean | null;
+  notify_email?: boolean | null;
+  notify_digest?: string | null;
+  last_digest_at?: string | null;
 }
 
 const PREF_SELECT =
-  'user_id,focus_areas,reflection_style,reflection_styles,delivery_frequency,paused,timezone,notify_on_new_insight,onboarded_at';
+  'user_id,focus_areas,reflection_style,reflection_styles,delivery_frequency,paused,timezone,' +
+  'notify_on_new_insight,notify_push,notify_email,notify_digest,last_digest_at,onboarded_at';
 
 async function candidates(limit: number): Promise<PrefRow[]> {
   const r = await db(
@@ -152,6 +163,72 @@ async function deliveredSlots(userId: string, localDate: string): Promise<Set<st
     `growth_feed_items?user_id=eq.${userId}&local_date=eq.${localDate}&select=slot`,
   );
   return new Set(Array.isArray(r.data) ? r.data.map((x: { slot: string }) => x.slot) : []);
+}
+
+/** Auth email for a user id. Best-effort; empty string when unavailable. */
+async function authEmail(userId: string): Promise<string> {
+  try {
+    const r = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${userId}`, {
+      headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` },
+    });
+    if (!r.ok) return '';
+    const u = await r.json();
+    return typeof u?.email === 'string' ? u.email : '';
+  } catch { return ''; }
+}
+
+/** Transactional email for a new insight. No-op when Resend is not configured. */
+async function emailInsight(userId: string, slot: GrowthSlot, title: string, body: string) {
+  const key = Deno.env.get('RESEND_API_KEY');
+  if (!key) return;
+  const to = await authEmail(userId);
+  if (!to) return;
+  try {
+    await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: Deno.env.get('GROWTH_EMAIL_FROM') ?? 'insights@resend.dev',
+        to: [to],
+        subject: `Your ${SLOT_LOCAL_TIME[slot].label.toLowerCase()} insight: ${String(title).slice(0, 80)}`,
+        text: `${title}\n\n${String(body).slice(0, 1200)}`,
+      }),
+    });
+  } catch { /* email never blocks generation */ }
+}
+
+/**
+ * Delivery fan-out for a freshly published card, honouring the user's channel
+ * and digest preferences. Every branch is best-effort — a failed notification
+ * must never roll back or block a generated insight.
+ *
+ * digest: instant → every card | daily → first card of the local day | off → none
+ */
+async function deliverInsightNotifications(
+  pref: PrefRow, slot: GrowthSlot, localDate: string, title: string, body: string,
+) {
+  const digest = pref.notify_digest ?? 'instant';
+  if (digest === 'off') return;
+  if (digest === 'daily') {
+    // One alert per local day: compare the last digest against the user's own
+    // wall-clock date, not UTC, so timezones never double- or under-notify.
+    const last = pref.last_digest_at
+      ? localDateIn(new Date(pref.last_digest_at), pref.timezone || 'UTC')
+      : null;
+    if (last === localDate) return;
+    await db(`growth_preferences?user_id=eq.${pref.user_id}`, {
+      method: 'PATCH',
+      headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify({ last_digest_at: new Date().toISOString() }),
+    }).catch(() => undefined);
+  }
+
+  if (pref.notify_on_new_insight !== false || pref.notify_push !== false) {
+    await notifyNewInsight(pref.user_id, slot, title);
+  }
+  if (pref.notify_email === true) {
+    await emailInsight(pref.user_id, slot, title, body);
+  }
 }
 
 /** Self-notification for a freshly published card. Best-effort only. */
@@ -282,8 +359,10 @@ async function runBatch(opts: { dryRun: boolean; probeOnly: boolean }): Promise<
     });
     if (ins.ok) {
       summary.written++;
-      if (!shadow && pref.notify_on_new_insight !== false) {
-        await notifyNewInsight(pref.user_id, slot, result.content.title);
+      if (!shadow) {
+        await deliverInsightNotifications(
+          pref, slot, localDate, result.content.title, result.content.content,
+        );
       }
     } else {
       summary.errors.push(`db ${ins.status}`);
@@ -298,6 +377,162 @@ async function runBatch(opts: { dryRun: boolean; probeOnly: boolean }): Promise<
       last_error: summary.errors[0] ?? null,
     });
   }
+
+  return summary;
+}
+
+interface BackfillRequest {
+  fromDate: string;
+  toDate: string;
+  slots: GrowthSlot[];
+  userIds: string[];
+  maxItems: number;
+  throttleMs: number;
+  dryRun: boolean;
+}
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Inclusive list of ISO dates, capped so a typo cannot fan out for years. */
+function dateRange(from: string, to: string, cap = 31): string[] {
+  const out: string[] = [];
+  const start = new Date(`${from}T00:00:00Z`);
+  const end = new Date(`${to}T00:00:00Z`);
+  for (let d = start; d <= end && out.length < cap; d = new Date(d.getTime() + 86_400_000)) {
+    out.push(d.toISOString().slice(0, 10));
+  }
+  return out;
+}
+
+function parseBackfill(body: any): { req?: BackfillRequest; error?: string } {
+  const fromDate = String(body?.fromDate ?? '');
+  const toDate = String(body?.toDate ?? fromDate);
+  if (!DATE_RE.test(fromDate) || !DATE_RE.test(toDate)) return { error: 'fromDate/toDate must be YYYY-MM-DD' };
+  if (toDate < fromDate) return { error: 'toDate must not be before fromDate' };
+  if (dateRange(fromDate, toDate, 100).length > 31) return { error: 'range is limited to 31 days' };
+
+  const rawSlots = Array.isArray(body?.slots) ? body.slots.map(String) : [];
+  const slots = (rawSlots.length ? rawSlots : [...GROWTH_SLOTS])
+    .filter((s: string): s is GrowthSlot => (GROWTH_SLOTS as readonly string[]).includes(s));
+  if (!slots.length) return { error: 'no valid slots selected' };
+
+  const userIds = (Array.isArray(body?.userIds) ? body.userIds.map(String) : [])
+    .filter((id: string) => /^[0-9a-f-]{36}$/i.test(id))
+    .slice(0, 200);
+
+  return {
+    req: {
+      fromDate, toDate, slots, userIds,
+      maxItems: Math.min(Math.max(Number(body?.maxItems ?? 50) || 50, 1), BACKFILL_MAX_ITEMS),
+      throttleMs: Math.min(
+        Math.max(Number(body?.throttleMs ?? 400) || 400, BACKFILL_MIN_THROTTLE_MS),
+        BACKFILL_MAX_THROTTLE_MS,
+      ),
+      dryRun: body?.dryRun === true,
+    },
+  };
+}
+
+/**
+ * Admin backfill / bulk retry. Fills ONLY missing (user, date, slot) rows — an
+ * existing insight is never overwritten, so a repeated run is a safe no-op.
+ * Bounded three ways: item cap, wall-clock budget, and a per-item throttle so a
+ * backfill can never starve the live 15-minute dispatch of provider capacity.
+ */
+async function runBackfill(req: BackfillRequest, jobId: string, triggeredBy: string | null) {
+  const startedAt = Date.now();
+  const state = await getState();
+  const shadow = state?.shadow_mode !== false;
+  const dates = dateRange(req.fromDate, req.toDate);
+  const errors: string[] = [];
+  let scanned = 0;
+  let written = 0;
+  let skipped = 0;
+
+  const rows = req.userIds.length
+    ? (await db(
+        `growth_preferences?user_id=in.(${req.userIds.join(',')})&select=${PREF_SELECT}`,
+      )).data
+    : (await db(
+        `growth_preferences?onboarded_at=not.is.null&select=${PREF_SELECT}&limit=${BACKFILL_MAX_ITEMS}`,
+      )).data;
+  const prefs: PrefRow[] = Array.isArray(rows) ? rows : [];
+
+  outer:
+  for (const pref of prefs) {
+    const enabled = slotsForFrequency(pref.delivery_frequency ?? 5);
+    for (const localDate of dates) {
+      const delivered = await deliveredSlots(pref.user_id, localDate);
+      for (const slot of req.slots) {
+        if (written >= req.maxItems) break outer;
+        if (Date.now() - startedAt > BACKFILL_BUDGET_MS) { errors.push('time budget reached'); break outer; }
+        scanned++;
+        if (!enabled.includes(slot) || delivered.has(slot)) { skipped++; continue; }
+        if (req.dryRun) { written++; continue; }
+
+        const result = await generateInsight({
+          slot,
+          focusAreas: sanitizeFocusAreas(pref.focus_areas),
+          style: styleForSlot(
+            slot,
+            sanitizeStyles(pref.reflection_styles?.length ? pref.reflection_styles : [pref.reflection_style]),
+          ),
+          localDate,
+          seed: `${pref.user_id}_${localDate}_${slot}`,
+        });
+        if (result.circuitBreak) { errors.push(`circuit break ${result.circuitBreak.status}`); break outer; }
+        if (result.rateLimited) { errors.push('rate limited'); skipped++; continue; }
+
+        const ins = await db('growth_feed_items', {
+          method: 'POST',
+          headers: { Prefer: 'return=minimal,resolution=ignore-duplicates' },
+          body: JSON.stringify({
+            user_id: pref.user_id,
+            slot,
+            local_date: localDate,
+            title: result.content.title,
+            category: result.content.category,
+            content: result.content.content,
+            actionable_step: result.content.actionableStep,
+            source: result.content.source,
+            status: shadow ? 'shadow' : 'published',
+            correlation_id: jobId,
+          }),
+        });
+        if (ins.ok) written++; else { skipped++; errors.push(`db ${ins.status}`); }
+
+        // Throttle so a backfill stays a background citizen next to live runs.
+        await new Promise((r) => setTimeout(r, req.throttleMs));
+      }
+    }
+  }
+
+  const summary = {
+    scanned, written, skipped, dates: dates.length,
+    users: prefs.length, errors: errors.slice(0, 10),
+  };
+  await db('growth_backfill_jobs', {
+    method: 'POST',
+    headers: { Prefer: 'return=minimal' },
+    body: JSON.stringify({
+      id: jobId,
+      created_by: triggeredBy,
+      from_date: req.fromDate,
+      to_date: req.toDate,
+      slots: req.slots,
+      user_ids: req.userIds,
+      dry_run: req.dryRun,
+      throttle_ms: req.throttleMs,
+      max_items: req.maxItems,
+      status: errors.length ? 'failed' : 'done',
+      processed: scanned,
+      written,
+      skipped,
+      errors: summary.errors,
+      started_at: new Date(startedAt).toISOString(),
+      finished_at: new Date().toISOString(),
+    }),
+  }).catch(() => undefined);
 
   return summary;
 }
@@ -492,9 +727,10 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
   let action = 'run';
+  let bodyJson: any = null;
   try {
-    const body = await req.json();
-    action = String(body?.action ?? 'run');
+    bodyJson = await req.json();
+    action = String(bodyJson?.action ?? 'run');
   } catch { /* default action */ }
 
   try {
@@ -526,6 +762,31 @@ Deno.serve(async (req) => {
       });
       // Always 200 so the client can read the human-readable reason.
       return json(res);
+    }
+
+    if (action === 'backfill') {
+      if (!(await isAdmin(req))) return json({ ok: false, error: 'admin only' }, 403);
+      const { req: parsed, error } = parseBackfill(bodyJson);
+      if (!parsed) return json({ ok: false, error }, 400);
+      const user = await authUser(req);
+      const jobId = crypto.randomUUID();
+    const summary = await runBackfill(parsed, jobId, user?.id ?? null);
+      await logRun({
+        run_id: jobId,
+        action: 'backfill',
+        finished_at: new Date().toISOString(),
+        processed: summary.scanned,
+        written: summary.written,
+        skipped: summary.skipped,
+        errors: summary.errors,
+      });
+      return json({ ok: true, jobId, summary });
+    }
+
+    if (action === 'backfill-jobs') {
+      if (!(await isAdmin(req))) return json({ ok: false, error: 'admin only' }, 403);
+      const r = await db('growth_backfill_jobs?select=*&order=created_at.desc&limit=25');
+      return json({ ok: true, jobs: Array.isArray(r.data) ? r.data : [] });
     }
 
     if (action === 'resume') {

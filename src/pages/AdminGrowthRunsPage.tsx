@@ -12,6 +12,7 @@ import { ArrowLeft, Activity, RefreshCw, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import GrowthBackfillPanel from '@/components/growth/GrowthBackfillPanel';
 
 interface RunRow {
   id: string;
@@ -119,6 +120,8 @@ export default function AdminGrowthRunsPage() {
             </CardContent>
           </Card>
         )}
+
+        <GrowthBackfillPanel />
 
         {loading && <p className="text-sm text-muted-foreground">Loading run history…</p>}
 
