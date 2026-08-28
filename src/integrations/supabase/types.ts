@@ -2905,6 +2905,135 @@ export type Database = {
         }
         Relationships: []
       }
+      growth_dispatch_state: {
+        Row: {
+          consecutive_rate_limits: number
+          id: string
+          last_error: string | null
+          last_run_at: string | null
+          last_run_processed: number
+          lease_expires_at: string | null
+          lease_owner: string | null
+          paused: boolean
+          paused_at: string | null
+          paused_reason: string | null
+          shadow_mode: boolean
+          updated_at: string
+        }
+        Insert: {
+          consecutive_rate_limits?: number
+          id?: string
+          last_error?: string | null
+          last_run_at?: string | null
+          last_run_processed?: number
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          paused?: boolean
+          paused_at?: string | null
+          paused_reason?: string | null
+          shadow_mode?: boolean
+          updated_at?: string
+        }
+        Update: {
+          consecutive_rate_limits?: number
+          id?: string
+          last_error?: string | null
+          last_run_at?: string | null
+          last_run_processed?: number
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          paused?: boolean
+          paused_at?: string | null
+          paused_reason?: string | null
+          shadow_mode?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      growth_feed_items: {
+        Row: {
+          actionable_step: string | null
+          category: string
+          content: string
+          correlation_id: string | null
+          created_at: string
+          id: string
+          local_date: string
+          seen_at: string | null
+          slot: string
+          source: string
+          status: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          actionable_step?: string | null
+          category?: string
+          content: string
+          correlation_id?: string | null
+          created_at?: string
+          id?: string
+          local_date: string
+          seen_at?: string | null
+          slot: string
+          source?: string
+          status?: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          actionable_step?: string | null
+          category?: string
+          content?: string
+          correlation_id?: string | null
+          created_at?: string
+          id?: string
+          local_date?: string
+          seen_at?: string | null
+          slot?: string
+          source?: string
+          status?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      growth_preferences: {
+        Row: {
+          created_at: string
+          delivery_frequency: number
+          focus_areas: string[]
+          onboarded_at: string | null
+          paused: boolean
+          reflection_style: string
+          timezone: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          delivery_frequency?: number
+          focus_areas?: string[]
+          onboarded_at?: string | null
+          paused?: boolean
+          reflection_style?: string
+          timezone?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          delivery_frequency?: number
+          focus_areas?: string[]
+          onboarded_at?: string | null
+          paused?: boolean
+          reflection_style?: string
+          timezone?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       high_value_zones: {
         Row: {
           created_at: string | null
