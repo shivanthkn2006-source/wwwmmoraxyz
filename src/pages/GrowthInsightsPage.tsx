@@ -22,7 +22,10 @@ import { Input } from '@/components/ui/input';
 import { CuratedInsightCard, CuratedInsightSkeleton } from '@/components/growth/CuratedInsightCard';
 import GrowthInsightDetailsModal from '@/components/growth/GrowthInsightDetailsModal';
 import { recordGrowthEvent } from '@/lib/growthAnalytics';
-import { slotOrder, sanitizeStyles, type GrowthSlot, type ReflectionStyle } from '@/lib/growthSlot';
+import {
+  slotOrder, sanitizeStyles, FOCUS_AREAS, deviceTimeZone,
+  type GrowthSlot, type ReflectionStyle,
+} from '@/lib/growthSlot';
 
 interface ArchiveItem {
   id: string;
@@ -63,6 +66,8 @@ export default function GrowthInsightsPage() {
   const [to, setTo] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [details, setDetails] = useState<ArchiveItem | null>(null);
+  const [engineOff, setEngineOff] = useState(false);
+  const [activating, setActivating] = useState(false);
   const [prefs, setPrefs] = useState<{ focus: string[]; styles: ReflectionStyle[]; tz: string }>({
     focus: [], styles: [], tz: '',
   });
@@ -110,7 +115,7 @@ export default function GrowthInsightsPage() {
         supabase.from('growth_saved_items').select('item_id').eq('user_id', user.id),
         supabase
           .from('growth_preferences')
-          .select('focus_areas, reflection_style, reflection_styles, timezone')
+          .select('focus_areas, reflection_style, reflection_styles, timezone, paused, onboarded_at')
           .eq('user_id', user.id)
           .maybeSingle(),
       ]);
@@ -119,6 +124,7 @@ export default function GrowthInsightsPage() {
       setHasMore(page.length === PAGE_SIZE);
       setSavedIds(new Set(((savedRes.data as { item_id: string }[] | null) ?? []).map((r) => r.item_id)));
       const p = prefRes.data as Record<string, unknown> | null;
+      setEngineOff(!p || !p.onboarded_at || p.paused === true);
       if (p) {
         setPrefs({
           focus: (p.focus_areas as string[]) ?? [],
@@ -137,6 +143,40 @@ export default function GrowthInsightsPage() {
   }, [user, fetchPage]);
 
   useEffect(() => { void load(); }, [load]);
+
+  /**
+   * Turns the engine on from the archive. An account that dismissed or skipped
+   * onboarding sits paused with no focus areas, which previously looked like an
+   * empty, broken page. This writes a working default and immediately asks the
+   * worker for today's card so the user sees a result right away.
+   */
+  const activateEngine = async () => {
+    if (!user) return;
+    setActivating(true);
+    try {
+      const { error } = await supabase.from('growth_preferences').upsert(
+        {
+          user_id: user.id,
+          paused: false,
+          onboarded_at: new Date().toISOString(),
+          focus_areas: prefs.focus.length ? prefs.focus : [FOCUS_AREAS[0]],
+          reflection_styles: prefs.styles.length ? prefs.styles : ['actionable'],
+          reflection_style: prefs.styles[0] ?? 'actionable',
+          timezone: prefs.tz || deviceTimeZone(),
+        },
+        { onConflict: 'user_id' },
+      );
+      if (error) throw error;
+      // Best-effort first card — the scheduled worker also fills any gap.
+      await supabase.functions.invoke('growth-dispatch', { body: { action: 'regenerate' } });
+      toast.success('Daily insights are on — generating your first card');
+      await load();
+    } catch {
+      toast.error('Could not turn the engine on. Please try again.');
+    } finally {
+      setActivating(false);
+    }
+  };
 
   const loadMore = useCallback(async () => {
     if (loading || loadingMore || !hasMore || savedOnly) return;
@@ -310,6 +350,20 @@ export default function GrowthInsightsPage() {
           </div>
         )}
 
+        {!loading && !failed && engineOff && (
+          <div className="mb-4 rounded-xl border border-primary/40 bg-primary/5 p-5 text-center" data-growth-engine-off>
+            <Sparkles className="mx-auto mb-2 h-5 w-5 text-primary" aria-hidden="true" />
+            <p className="text-sm font-medium">Your daily insights are switched off</p>
+            <p className="mx-auto mt-1 max-w-sm text-xs text-muted-foreground">
+              Nothing is generated while the engine is paused, so this archive stays empty. Turn it
+              on to start receiving cards at your delivery windows.
+            </p>
+            <Button className="mt-3" size="sm" disabled={activating} onClick={() => void activateEngine()}>
+              {activating ? 'Turning on…' : 'Turn the engine on'}
+            </Button>
+          </div>
+        )}
+
         {!loading && !failed && days.length === 0 && (
           <div className="rounded-xl border border-border p-8 text-center" data-growth-empty>
             <Sparkles className="mx-auto mb-3 h-6 w-6 text-muted-foreground" aria-hidden="true" />
@@ -325,7 +379,9 @@ export default function GrowthInsightsPage() {
                 ? 'Tap the bookmark on any card to keep it here.'
                 : filtersActive
                   ? 'Try a different keyword or widen the date range.'
-                  : 'Your first cards arrive at your next delivery window.'}
+                  : engineOff
+                    ? 'Turn the engine on above to start receiving cards.'
+                    : 'Your first cards arrive at your next delivery window.'}
             </p>
             {filtersActive && (
               <Button className="mt-3" size="sm" variant="outline" onClick={clearFilters}>

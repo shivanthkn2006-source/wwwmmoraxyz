@@ -17,6 +17,14 @@ import {
   slotsForFrequency, SLOT_LABEL, sanitizeStyles, type ReflectionStyle,
 } from '@/lib/growthSlot';
 
+export const GROWTH_ONBOARDING_SNOOZE_KEY = 'growth:onboarding:snoozed';
+const SNOOZE_KEY = GROWTH_ONBOARDING_SNOOZE_KEY;
+
+/** True when the user dismissed the modal earlier in this browser session. */
+export function isOnboardingSnoozed(): boolean {
+  try { return sessionStorage.getItem(SNOOZE_KEY) === '1'; } catch { return false; }
+}
+
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -69,14 +77,31 @@ export const PersonalGrowthOnboarding: React.FC<Props> = ({ open, onOpenChange, 
     onOpenChange(false);
   };
 
+  /**
+   * Explicit opt-out. Records the decision so the modal does not reappear, and
+   * leaves the engine paused until the user turns it on from the insights page
+   * or settings.
+   */
   const skip = async () => {
-    // Record the decision so the modal does not reappear every session.
     await persist({ paused: true, onboarded_at: new Date().toISOString() });
+    toast('Daily insights stay off — you can turn them on any time', {
+      description: 'Growth insights → Turn the engine on',
+    });
+    onOpenChange(false);
+  };
+
+  /**
+   * Accidental dismissal (outside click / Escape) must NOT silently opt the
+   * user out for good — that produced accounts that were onboarded, paused and
+   * permanently empty. Snooze for this session instead and ask again later.
+   */
+  const dismiss = () => {
+    try { sessionStorage.setItem(SNOOZE_KEY, '1'); } catch { /* private mode */ }
     onOpenChange(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) void skip(); }}>
+    <Dialog open={open} onOpenChange={(v) => { if (!v) dismiss(); }}>
       <DialogContent className="max-w-md">
         {step === 1 && (
           <>
