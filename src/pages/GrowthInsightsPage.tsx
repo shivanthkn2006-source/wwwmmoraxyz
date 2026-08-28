@@ -22,7 +22,10 @@ import { Input } from '@/components/ui/input';
 import { CuratedInsightCard, CuratedInsightSkeleton } from '@/components/growth/CuratedInsightCard';
 import GrowthInsightDetailsModal from '@/components/growth/GrowthInsightDetailsModal';
 import { recordGrowthEvent } from '@/lib/growthAnalytics';
-import { slotOrder, sanitizeStyles, type GrowthSlot, type ReflectionStyle } from '@/lib/growthSlot';
+import {
+  slotOrder, sanitizeStyles, FOCUS_AREAS, deviceTimeZone,
+  type GrowthSlot, type ReflectionStyle,
+} from '@/lib/growthSlot';
 
 interface ArchiveItem {
   id: string;
