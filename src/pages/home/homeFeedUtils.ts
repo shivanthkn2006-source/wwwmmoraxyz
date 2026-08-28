@@ -22,6 +22,18 @@ export interface Post {
     profile_photo_url?: string;
   };
   user_liked?: boolean;
+  attachments?: PostAttachment[];
+}
+
+export interface PostAttachment {
+  id: string;
+  post_id: string;
+  media_url: string;
+  media_preview_url: string | null;
+  media_type: 'image' | 'video' | 'pdf';
+  file_name: string;
+  file_size: number;
+  sort_order: number;
 }
 
 export const DATA_URL_PREVIEW_LIMIT = 900_000;

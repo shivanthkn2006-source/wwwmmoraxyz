@@ -1,5 +1,5 @@
-import React, { useRef, useState } from 'react';
-import { FileText, Hash, Upload } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { FileText, Hash, Image as ImageIcon, Upload, Video, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -10,7 +10,7 @@ export interface HomePostDraft {
   title: string;
   text: string;
   tags: string[];
-  file: File | null;
+  files: File[];
 }
 
 interface HomePostEditorProps {
@@ -24,14 +24,16 @@ export default function HomePostEditor({ open, busy, onOpenChange, onSubmit }: H
   const [title, setTitle] = useState('');
   const [text, setText] = useState('');
   const [tags, setTags] = useState('');
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
+  const previews = useMemo(() => files.map((file) => ({ file, url: URL.createObjectURL(file) })), [files]);
+  useEffect(() => () => previews.forEach(({ url }) => URL.revokeObjectURL(url)), [previews]);
 
   const reset = () => {
     setTitle('');
     setText('');
     setTags('');
-    setFile(null);
+    setFiles([]);
     if (fileRef.current) fileRef.current.value = '';
   };
 
@@ -40,7 +42,7 @@ export default function HomePostEditor({ open, busy, onOpenChange, onSubmit }: H
       <DialogContent className="max-h-[88svh] w-[calc(100%-1.5rem)] overflow-y-auto rounded-lg border-border/70 bg-background/90 p-5 backdrop-blur-xl sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Create a post</DialogTitle>
-          <DialogDescription>Share text, a video, image, PDF, or document in one post.</DialogDescription>
+          <DialogDescription>Share images, videos, and PDFs together in one post.</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -60,19 +62,48 @@ export default function HomePostEditor({ open, busy, onOpenChange, onSubmit }: H
             </div>
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="home-post-video">Attachment (optional)</Label>
+            <Label htmlFor="home-post-media">Media (optional)</Label>
             <input
               ref={fileRef}
-              id="home-post-video"
+              id="home-post-media"
               type="file"
-              accept="video/mp4,video/webm,video/quicktime,video/ogg,image/jpeg,image/png,image/webp,image/gif,application/pdf,text/plain,text/markdown,text/csv,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.rtf,.odt,.ods,.odp"
+              multiple
+              accept="video/mp4,video/webm,video/quicktime,video/ogg,image/jpeg,image/png,image/webp,image/gif,application/pdf"
               className="sr-only"
-              onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+              onChange={(event) => {
+                const selected = Array.from(event.target.files ?? []);
+                setFiles((current) => [...current, ...selected].slice(0, 10));
+                event.target.value = '';
+              }}
             />
             <Button type="button" variant="outline" className="w-full justify-start overflow-hidden" onClick={() => fileRef.current?.click()}>
-              {file ? <FileText className="h-4 w-4" /> : <Upload className="h-4 w-4" />}
-              <span className="truncate">{file?.name ?? 'Choose a file'}</span>
+              <Upload className="h-4 w-4" />
+              <span className="truncate">{files.length ? `Add more · ${files.length}/10 selected` : 'Choose images, videos, or PDFs'}</span>
             </Button>
+            {previews.length > 0 && (
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3" data-testid="home-upload-previews">
+                {previews.map(({ file, url }, index) => (
+                  <div key={`${file.name}-${file.lastModified}-${index}`} className="relative aspect-square min-w-0 overflow-hidden rounded-md border border-border bg-muted">
+                    {file.type.startsWith('image/') ? (
+                      <img src={url} alt={`Preview ${file.name}`} className="h-full w-full object-cover" />
+                    ) : file.type.startsWith('video/') ? (
+                      <video src={url} aria-label={`Preview ${file.name}`} muted playsInline preload="metadata" className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full flex-col items-center justify-center gap-2 p-3 text-center">
+                        <FileText className="h-8 w-8 text-primary" />
+                        <span className="line-clamp-2 text-xs text-muted-foreground">{file.name}</span>
+                      </div>
+                    )}
+                    <span className="pointer-events-none absolute bottom-1 left-1 rounded bg-background/85 p-1 text-foreground">
+                      {file.type.startsWith('image/') ? <ImageIcon className="h-3.5 w-3.5" /> : file.type.startsWith('video/') ? <Video className="h-3.5 w-3.5" /> : <FileText className="h-3.5 w-3.5" />}
+                    </span>
+                    <Button type="button" variant="secondary" size="icon" className="absolute right-1 top-1 h-7 w-7" aria-label={`Remove ${file.name}`} disabled={busy} onClick={() => setFiles((current) => current.filter((_, itemIndex) => itemIndex !== index))}>
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -80,13 +111,13 @@ export default function HomePostEditor({ open, busy, onOpenChange, onSubmit }: H
           <Button type="button" variant="ghost" disabled={busy} onClick={() => { reset(); onOpenChange(false); }}>Cancel</Button>
           <Button
             type="button"
-            disabled={busy || (!file && !title.trim() && !text.trim())}
+            disabled={busy || (!files.length && !title.trim() && !text.trim())}
             onClick={async () => {
               await onSubmit({
                 title: title.trim(),
                 text: text.trim(),
                 tags: tags.split(/[#,\s]+/).map((tag) => tag.trim().toLowerCase()).filter(Boolean).slice(0, 12),
-                file,
+                files,
               });
               reset();
               onOpenChange(false);

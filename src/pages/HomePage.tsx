@@ -101,8 +101,8 @@ import PageSeo from "@/components/seo/PageSeo";
 import NewContentBadge from '@/components/NewContentBadge';
 import { logFeedEvent } from '@/lib/feedEventDiagnostics';
 import { markPostsSeen, readUnseenPostIds, syncUnseenPostSnapshot, type FeedUpdateSource } from "@/lib/newPostGate";
-import { interleaveGrowthCards, orderGrowthByTime } from '@/lib/growthFeedComposition';
-import { currentSlot, deviceTimeZone, slotsForFrequency } from '@/lib/growthSlot';
+import { composeChronologicalFeed } from '@/lib/growthFeedComposition';
+import { deviceTimeZone, growthSlotTimestamp, slotsForFrequency } from '@/lib/growthSlot';
 
 
 
@@ -117,7 +117,28 @@ import {
   withRetry,
   xhrUploadToPosts,
   type Post,
+  type PostAttachment,
 } from '@/pages/home/homeFeedUtils';
+
+async function attachPostMedia(posts: Post[]): Promise<Post[]> {
+  if (!posts.length) return posts;
+  const { data, error } = await supabase
+    .from('post_attachments')
+    .select('id, post_id, media_url, media_preview_url, media_type, file_name, file_size, sort_order')
+    .in('post_id', posts.map((post) => post.id))
+    .order('sort_order', { ascending: true });
+  if (error) {
+    console.warn('[HomeFeed] attachment lookup failed', error.message);
+    return posts;
+  }
+  const byPost = new Map<string, PostAttachment[]>();
+  for (const row of (data ?? []) as PostAttachment[]) {
+    const current = byPost.get(row.post_id) ?? [];
+    current.push(row);
+    byPost.set(row.post_id, current);
+  }
+  return posts.map((post) => ({ ...post, attachments: byPost.get(post.id) ?? [] }));
+}
 
 
 const HomePage = () => {
@@ -126,7 +147,7 @@ const HomePage = () => {
   const { motivation: dailyMotivation, posterUrl: motivationPosterUrl } = useZoeMotivation();
   // Personal Growth Engine — read-only. Rendering never triggers generation.
   const {
-    today: growthToday,
+    insights: growthInsights,
     current: growthInsight,
     savedExtras: growthSaved,
     preferences: growthPreferences,
@@ -177,21 +198,19 @@ const HomePage = () => {
     },
     [user?.id, growthPreferences?.focus_areas],
   );
-  // Catch-up: today's cards ordered by the wall clock (the window the member is
-  // in right now leads), then earlier windows, then saved cards.
+  // Growth uses its scheduled local wall-clock instant, not its database insert
+  // time. This is what allows an older night card to sit above an older post.
   const growthCards = React.useMemo(() => {
     const zone = growthPreferences?.timezone || deviceTimeZone();
-    const enabled = slotsForFrequency(growthPreferences?.delivery_frequency ?? 5);
-    const dayCards = growthToday.length
-      ? orderGrowthByTime(growthToday, currentSlot(new Date(), zone, enabled))
-      : growthInsight
-        ? [growthInsight]
-        : [];
-    return [
-      ...dayCards.map((insight) => ({ insight, savedBadge: false })),
-      ...growthSaved.map((insight) => ({ insight, savedBadge: true })),
-    ];
-  }, [growthToday, growthInsight, growthSaved, growthPreferences?.timezone, growthPreferences?.delivery_frequency]);
+    const now = Date.now();
+    const enabled = new Set(slotsForFrequency(growthPreferences?.delivery_frequency ?? 5));
+    const due = growthInsights
+      .filter((insight) => enabled.has(insight.slot))
+      .filter((insight) => growthSlotTimestamp(insight.local_date, insight.slot, zone) <= now)
+      .sort((a, b) => growthSlotTimestamp(b.local_date, b.slot, zone) - growthSlotTimestamp(a.local_date, a.slot, zone));
+    const cards = due.length ? due : growthInsight ? [growthInsight] : [];
+    return cards.map((insight) => ({ insight, savedBadge: false }));
+  }, [growthInsights, growthInsight, growthPreferences?.timezone, growthPreferences?.delivery_frequency]);
 
   const growthSlide = growthCards.map(({ insight, savedBadge }) => (
     <div
@@ -213,6 +232,13 @@ const HomePage = () => {
           focusAreas={growthPreferences?.focus_areas ?? []}
           deliveryFrequency={growthPreferences?.delivery_frequency}
         />
+      </FeedErrorBoundary>
+    </div>
+  ));
+  const savedGrowthSlides = growthSaved.map((insight) => (
+    <div key={`growth-${insight.id}-saved`} className="relative flex h-full min-h-full w-full shrink-0 snap-start snap-always items-center overflow-y-auto p-4" data-growth-insight data-growth-saved="true">
+      <FeedErrorBoundary section="posts">
+        <CuratedInsightCard insight={insight} className="w-full" saved={isGrowthSaved(insight.id)} onToggleSave={(id) => void toggleGrowthSave(id)} savedBadge onImpression={(i) => trackGrowth('impression', i)} onCardClick={(i) => trackGrowth('click', i)} onOpenDetails={(i) => setGrowthDetails(i)} focusAreas={growthPreferences?.focus_areas ?? []} deliveryFrequency={growthPreferences?.delivery_frequency} />
       </FeedErrorBoundary>
     </div>
   ));
@@ -1466,7 +1492,7 @@ const HomePage = () => {
         setFeedAutoPassCompleted(false);
         setFeedAutoIndex(0);
       }
-      setGlobalPosts(postsWithLikes as any);
+      setGlobalPosts(await attachPostMedia(postsWithLikes as Post[]));
       setFeedDiag({
         status: postsWithLikes.length ? 'ok' : 'empty',
         durationMs: Math.round(performance.now() - t0),
@@ -1555,7 +1581,7 @@ const HomePage = () => {
       logFeedEvent('new_snapshot', { feed: 'loops', source: updateSource, row_count: loopIds.length, new_count: loopArrivals.newIds.length, unseen_count: loopArrivals.unseenIds.size }, user.id);
       knownFeedIdsRef.current.loops = loopArrivals.knownIds;
       setNewContentByFeed((current) => ({ ...current, loops: loopArrivals.unseenIds }));
-      setLoopPosts(preparedLoops);
+      setLoopPosts(await attachPostMedia(preparedLoops));
       setBrokenLoopPreviewIds(prev => {
         const next = new Set(prev);
         loopRows.forEach((post: any) => next.delete(post.id));
@@ -1651,7 +1677,7 @@ const HomePage = () => {
         setFeedAutoPassCompleted(false);
         setFeedAutoIndex(0);
       }
-      setPersonalPosts(postsWithLikes as any);
+      setPersonalPosts(await attachPostMedia(postsWithLikes as Post[]));
     } catch (err) {
       console.error('Error in fetchPersonalPosts:', err);
       setPersonalPosts([]);
@@ -1932,136 +1958,100 @@ const HomePage = () => {
     setLoopsPlayerOpen(true);
   };
 
-  const handleLoopsUpload = React.useCallback(async (file: File | null, metadata?: { title?: string; text?: string; tags?: string[] }) => {
+  const handleLoopsUpload = React.useCallback(async (files: File[], metadata?: { title?: string; text?: string; tags?: string[] }) => {
     if (!user) return;
-
-    // 1. MIME whitelist
     setUploadState('validating');
     setUploadError('');
-    setUploadFileName(file?.name || 'Text post');
+    setUploadFileName(files.length === 1 ? files[0].name : `${files.length} files`);
     setUploadProgress(0);
-    setLastUploadFile(file);
+    setLastUploadFile(files[0] ?? null);
 
-    const uploadType = file ? classifyUpload(file) : null;
-    const isVideo = uploadType === 'video';
-    const isImage = uploadType === 'image';
-    const isAttachment = uploadType === 'pdf' || uploadType === 'document';
-    if (file && !uploadType) {
-      const msg = `Unsupported file type "${file.type || 'unknown'}". Use a video, image, PDF, or common document format.`;
+    const typedFiles = files.map((file) => ({ file, type: classifyUpload(file) }));
+    const invalid = typedFiles.find(({ type }) => !type || type === 'document');
+    if (invalid) {
+      const msg = `Unsupported file type "${invalid.file.type || 'unknown'}". Use images, videos, or PDFs.`;
       setUploadState('error');
       setUploadError(msg);
       toast({ title: 'Unsupported file', description: msg, variant: 'destructive' });
       return;
     }
     const MAX_FILE_BYTES = 50 * 1024 * 1024;
-    if (file && file.size > MAX_FILE_BYTES) {
-      const msg = 'File too large. Please pick a file under 50MB.';
+    const oversized = typedFiles.find(({ file }) => file.size > MAX_FILE_BYTES);
+    if (oversized) {
+      const msg = `${oversized.file.name} is too large. Each file must be under 50MB.`;
       setUploadState('error');
       setUploadError(msg);
       toast({ title: 'File too large', description: msg, variant: 'destructive' });
       return;
     }
 
-    const mediaType = uploadType;
-    const INLINE_LIMIT = 2 * 1024 * 1024;
-
     try {
-      if (!file && !metadata?.title?.trim() && !metadata?.text?.trim()) throw new Error('Add text or choose a file before publishing.');
-      if (file && isVideo) await validateBrowserCanPreviewFile(file, 'video');
-      if (file && isImage) await validateBrowserCanPreviewFile(file, 'image');
-      // Auto-transcode large videos into small preview variants for smoother Reel/Shorts playback.
-      let uploadFile: File | null = file;
-      if (mediaType === 'video') {
-        try {
-          setUploadState('validating');
-          const smaller = await transcodeVideoForPreview(file!);
-          if (smaller && smaller !== file && smaller.size < file.size) {
-            uploadFile = smaller;
-            toast({ title: 'Optimized for fast playback', description: `Reduced from ${(file.size/1e6).toFixed(1)}MB to ${(smaller.size/1e6).toFixed(1)}MB` });
-          }
-        } catch (transErr) {
-          console.warn('[Loops upload] transcode skipped', transErr);
-        }
+      if (!files.length && !metadata?.title?.trim() && !metadata?.text?.trim()) throw new Error('Add text or choose a file before publishing.');
+      for (const { file, type } of typedFiles) {
+        if (type === 'video' || type === 'image') await validateBrowserCanPreviewFile(file, type);
       }
-      let mediaPreviewUrl = mediaType === 'video' && uploadFile ? await captureVideoPreview(uploadFile) : null;
       setUploadState('uploading');
-      let mediaUrl: string | null = null;
-
-      if (mediaType === 'image' && file && file.size < INLINE_LIMIT) {
-        mediaUrl = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onprogress = (ev) => {
-            if (ev.lengthComputable) setUploadProgress(Math.round((ev.loaded / ev.total) * 100));
-          };
-          reader.onloadend = () => { setUploadProgress(100); resolve(reader.result as string); };
-          reader.onerror = () => reject(new Error('Could not read file'));
-          reader.readAsDataURL(file);
-        });
-      } else if (uploadFile) {
-        // Auth token for XHR upload with real progress
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
-        const ext = (uploadFile.name.split('.').pop() || (mediaType === 'video' ? 'webm' : mediaType === 'image' ? 'jpg' : 'bin')).toLowerCase();
-        const path = `${user.id}/loops/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-
-        // 2. Retry with exponential backoff (3 attempts)
-        await withRetry(async (attempt) => {
-          setUploadProgress(0);
-          if (attempt > 1) {
-            toast({ title: `Retrying upload (attempt ${attempt}/3)…` });
-          }
-          if (token) {
-            await xhrUploadToPosts(uploadFile, path, token, setUploadProgress);
-          } else {
-            const { error } = await supabase.storage.from('posts').upload(path, uploadFile, {
-              contentType: uploadFile.type, upsert: false,
-            });
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      const uploadedPaths: string[] = [];
+      const attachments: Array<{ media_url: string; media_preview_url: string | null; media_type: 'image' | 'video' | 'pdf'; file_name: string; file_size: number; sort_order: number }> = [];
+      for (let index = 0; index < typedFiles.length; index += 1) {
+        const { file, type } = typedFiles[index];
+        if (!type || type === 'document') continue;
+        let uploadFile = file;
+        if (type === 'video') uploadFile = await transcodeVideoForPreview(file).catch(() => file);
+        let preview = type === 'video' ? await captureVideoPreview(uploadFile) : null;
+        const ext = (uploadFile.name.split('.').pop() || (type === 'video' ? 'webm' : type === 'image' ? 'jpg' : 'pdf')).toLowerCase();
+        const path = `${user.id}/loops/${Date.now()}-${index}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+        await withRetry(async () => {
+          if (token) await xhrUploadToPosts(uploadFile, path, token, (pct) => setUploadProgress(Math.round(((index + pct / 100) / Math.max(1, typedFiles.length)) * 100)));
+          else {
+            const { error } = await supabase.storage.from('posts').upload(path, uploadFile, { contentType: uploadFile.type, upsert: false });
             if (error) throw error;
-            setUploadProgress(100);
           }
         }, 3, 900);
-
+        uploadedPaths.push(path);
         const { data: pub } = supabase.storage.from('posts').getPublicUrl(path);
-        mediaUrl = pub.publicUrl;
-
-        if (mediaType === 'video' && mediaPreviewUrl) {
-          try {
-            const posterPath = `${user.id}/loops/posters/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
-            const posterFile = dataUrlToFile(mediaPreviewUrl, 'loop-poster.jpg');
-            const { error: posterError } = await supabase.storage.from('posts').upload(posterPath, posterFile, {
-              contentType: 'image/jpeg',
-              upsert: false,
-            });
-            if (!posterError) {
-              const { data: posterPub } = supabase.storage.from('posts').getPublicUrl(posterPath);
-              mediaPreviewUrl = posterPub.publicUrl;
-            }
-          } catch (posterErr) {
-            console.warn('[Loops upload] poster storage upload failed; using inline poster', posterErr);
+        if (type === 'video' && preview) {
+          const posterPath = `${user.id}/loops/posters/${Date.now()}-${index}-${Math.random().toString(36).slice(2, 8)}.jpg`;
+          const { error: posterError } = await supabase.storage.from('posts').upload(posterPath, dataUrlToFile(preview, 'loop-poster.jpg'), { contentType: 'image/jpeg', upsert: false });
+          if (!posterError) {
+            uploadedPaths.push(posterPath);
+            preview = supabase.storage.from('posts').getPublicUrl(posterPath).data.publicUrl;
           }
         }
+        attachments.push({ media_url: pub.publicUrl, media_preview_url: preview || (type === 'image' ? pub.publicUrl : null), media_type: type, file_name: file.name, file_size: file.size, sort_order: index });
       }
 
       setUploadState('saving');
       const tagText = metadata?.tags?.map((tag) => `#${tag}`).join(' ') || '';
       const postContent = [metadata?.title, metadata?.text, tagText].filter(Boolean).join('\n');
+      const first = attachments[0];
       const { data: inserted, error } = await supabase.from('posts').insert({
         user_id: user.id,
         content: postContent,
-        media_url: mediaUrl,
-        media_preview_url: mediaPreviewUrl || (mediaType === 'image' ? mediaUrl : null),
-        media_type: mediaType,
+        media_url: first?.media_url ?? null,
+        media_preview_url: first?.media_preview_url ?? null,
+        media_type: first?.media_type ?? null,
         visibility: 'global',
       }).select('id').maybeSingle();
       if (error) throw error;
+      if (inserted?.id && attachments.length) {
+        const { error: attachmentError } = await supabase.from('post_attachments').insert(attachments.map((attachment) => ({ ...attachment, post_id: inserted.id, user_id: user.id })));
+        if (attachmentError) {
+          await supabase.from('posts').delete().eq('id', inserted.id).eq('user_id', user.id);
+          await supabase.storage.from('posts').remove(uploadedPaths);
+          throw attachmentError;
+        }
+      }
 
       // Persist the short in the M'mora orb memory (offline cache + memory bridge)
-      if (mediaUrl && (mediaType === 'video' || mediaType === 'image')) void rememberShortInOrbMemory(
+      if (first && (first.media_type === 'video' || first.media_type === 'image')) void rememberShortInOrbMemory(
         {
           postId: inserted?.id || `local-${Date.now()}`,
-          mediaUrl,
-          posterUrl: mediaPreviewUrl || (mediaType === 'image' ? mediaUrl : null),
-           mediaType,
+          mediaUrl: first.media_url,
+          posterUrl: first.media_preview_url,
+          mediaType: first.media_type,
           content: postContent,
           createdAt: new Date().toISOString(),
         },
@@ -2088,11 +2078,11 @@ const HomePage = () => {
   }, [user]);
 
   const publishPostDraft = React.useCallback(async (draft: HomePostDraft) => {
-    await handleLoopsUpload(draft.file, { title: draft.title, text: draft.text, tags: draft.tags });
+    await handleLoopsUpload(draft.files, { title: draft.title, text: draft.text, tags: draft.tags });
   }, [handleLoopsUpload]);
 
   const retryLastUpload = React.useCallback(() => {
-    if (lastUploadFile) handleLoopsUpload(lastUploadFile);
+    if (lastUploadFile) handleLoopsUpload([lastUploadFile]);
   }, [lastUploadFile, handleLoopsUpload]);
 
   useEffect(() => {
@@ -2296,30 +2286,36 @@ const HomePage = () => {
     return slides;
   }, [dailyMotivation, motivationPosterUrl, astroDaily]);
 
-  // Growth cards are deterministic members of both feeds, not an appendix at
-  // the end. This keeps every due/saved card visible between posts and Loops.
-  const globalFeedSlides = interleaveGrowthCards(
-    [
-      ...searchVideoSlides,
-      ...visibleGlobalPosts.map((post) => renderPostSlide(post, 'global')),
-      ...(!loopsHidden ? loopSlides : []),
-      ...supportingSlides,
-      ...neuralVideoSlides,
-    ],
-    growthSlide,
-    3,
-  );
-  const personalFeedSlides = interleaveGrowthCards(
-    [
-      ...searchVideoSlides,
-      ...visiblePersonalPosts.map((post) => renderPostSlide(post, 'personal')),
-      ...(!loopsHidden ? loopSlides : []),
-      ...supportingSlides,
-      ...neuralVideoSlides,
-    ],
-    growthSlide,
-    3,
-  );
+  const chronologicalSlides = (posts: Post[], feed: 'global' | 'personal') => {
+    const postIds = new Set(posts.map((post) => post.id));
+    const nativeItems = posts.map((post) => ({
+      id: `post-${post.id}`,
+      timestamp: post.created_at,
+      value: renderPostSlide(post, feed),
+    }));
+    const loopItems = loopsHidden ? [] : filteredLoops.flatMap((post, index) => postIds.has(post.id) ? [] : [{
+      id: `loop-${post.id}`,
+      timestamp: post.created_at,
+      value: loopSlides[index],
+    }]).filter((item) => Boolean(item.value));
+    const zone = growthPreferences?.timezone || deviceTimeZone();
+    const growthItems = growthCards.map(({ insight }, index) => ({
+      id: `growth-${insight.id}`,
+      timestamp: growthSlotTimestamp(insight.local_date, insight.slot, zone),
+      value: growthSlide[index],
+    }));
+    return composeChronologicalFeed([...nativeItems, ...loopItems, ...growthItems]);
+  };
+
+  // Search results are an explicit temporary mode. Normal native posts, Loops,
+  // and Growth are merged by one effective timestamp; non-timeline utility
+  // cards remain outside that chronology.
+  const globalFeedSlides = searchVideoSlides.length
+    ? searchVideoSlides
+    : [...chronologicalSlides(visibleGlobalPosts, 'global'), ...growthSlide.slice(growthCards.length), ...supportingSlides, ...neuralVideoSlides, ...savedGrowthSlides];
+  const personalFeedSlides = searchVideoSlides.length
+    ? searchVideoSlides
+    : [...chronologicalSlides(visiblePersonalPosts, 'personal'), ...growthSlide.slice(growthCards.length), ...supportingSlides, ...neuralVideoSlides, ...savedGrowthSlides];
 
 
 

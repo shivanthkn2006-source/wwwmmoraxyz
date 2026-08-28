@@ -1,5 +1,23 @@
 import { slotOrder, type GrowthSlot } from '@/lib/growthSlot';
 
+export interface TimestampedFeedItem<T> {
+  id: string;
+  timestamp: string | number | Date;
+  value: T;
+}
+
+/** Merge heterogeneous feed sources into one stable newest-first timeline. */
+export function composeChronologicalFeed<T>(items: readonly TimestampedFeedItem<T>[]): T[] {
+  return items
+    .map((item, index) => ({ ...item, index, time: new Date(item.timestamp).getTime() }))
+    .sort((a, b) => {
+      const aTime = Number.isFinite(a.time) ? a.time : 0;
+      const bTime = Number.isFinite(b.time) ? b.time : 0;
+      return bTime - aTime || a.index - b.index || a.id.localeCompare(b.id);
+    })
+    .map((item) => item.value);
+}
+
 /**
  * Inserts Growth cards throughout a feed instead of appending them after every
  * post/video. Order is stable, every Growth card is included exactly once, and
