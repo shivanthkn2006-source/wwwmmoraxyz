@@ -13,8 +13,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { toast } from 'sonner';
 import {
-  FOCUS_AREAS, REFLECTION_STYLE_OPTIONS, deviceTimeZone,
-  slotsForFrequency, SLOT_LABEL, type ReflectionStyle,
+  FOCUS_AREAS, REFLECTION_STYLE_OPTIONS, ALL_REFLECTION_STYLES, deviceTimeZone,
+  slotsForFrequency, SLOT_LABEL, sanitizeStyles, type ReflectionStyle,
 } from '@/lib/growthSlot';
 
 interface Props {
@@ -27,9 +27,14 @@ export const PersonalGrowthOnboarding: React.FC<Props> = ({ open, onOpenChange, 
   const { user } = useAuth();
   const [step, setStep] = useState(1);
   const [topics, setTopics] = useState<string[]>([]);
-  const [style, setStyle] = useState<ReflectionStyle>('actionable');
+  const [styles, setStyles] = useState<ReflectionStyle[]>(['actionable']);
   const [frequency, setFrequency] = useState(5);
   const [saving, setSaving] = useState(false);
+
+  const toggleStyle = (id: ReflectionStyle) =>
+    setStyles((prev) => (prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]));
+
+  const allStylesSelected = styles.length === ALL_REFLECTION_STYLES.length;
 
   const toggleTopic = (topic: string) =>
     setTopics((prev) => (prev.includes(topic) ? prev.filter((t) => t !== topic) : [...prev, topic]));
@@ -51,7 +56,8 @@ export const PersonalGrowthOnboarding: React.FC<Props> = ({ open, onOpenChange, 
     setSaving(true);
     const ok = await persist({
       focus_areas: topics.length ? topics : [FOCUS_AREAS[0]],
-      reflection_style: style,
+      reflection_style: sanitizeStyles(styles)[0],
+      reflection_styles: sanitizeStyles(styles),
       delivery_frequency: frequency,
       paused: false,
       onboarded_at: new Date().toISOString(),
@@ -113,17 +119,33 @@ export const PersonalGrowthOnboarding: React.FC<Props> = ({ open, onOpenChange, 
           <>
             <DialogHeader>
               <DialogTitle>Content delivery style</DialogTitle>
-              <DialogDescription>How should your daily insights be structured?</DialogDescription>
+              <DialogDescription>
+                Pick one or several — you can select all four and see every kind.
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() =>
+                  setStyles(allStylesSelected ? ['actionable'] : [...ALL_REFLECTION_STYLES])
+                }
+                aria-pressed={allStylesSelected}
+                className={`w-full rounded-lg border p-2.5 text-left text-xs font-medium transition ${
+                  allStylesSelected
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border bg-card hover:border-muted-foreground/40'
+                }`}
+              >
+                {allStylesSelected ? 'All styles selected' : 'Select all four styles'}
+              </button>
               {REFLECTION_STYLE_OPTIONS.map((option) => (
                 <button
                   key={option.id}
                   type="button"
-                  onClick={() => setStyle(option.id)}
-                  aria-pressed={style === option.id}
+                  onClick={() => toggleStyle(option.id)}
+                  aria-pressed={styles.includes(option.id)}
                   className={`w-full rounded-lg border p-3 text-left transition ${
-                    style === option.id
+                    styles.includes(option.id)
                       ? 'border-primary bg-primary/10 text-primary'
                       : 'border-border bg-card hover:border-muted-foreground/40'
                   }`}
@@ -135,7 +157,7 @@ export const PersonalGrowthOnboarding: React.FC<Props> = ({ open, onOpenChange, 
             </div>
             <div className="flex gap-2">
               <Button variant="ghost" className="flex-1" onClick={() => setStep(1)}>Back</Button>
-              <Button className="flex-1" onClick={() => setStep(3)}>Next step</Button>
+              <Button className="flex-1" disabled={!styles.length} onClick={() => setStep(3)}>Next step</Button>
             </div>
           </>
         )}

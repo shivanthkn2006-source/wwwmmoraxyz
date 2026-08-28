@@ -3006,6 +3006,7 @@ export type Database = {
           onboarded_at: string | null
           paused: boolean
           reflection_style: string
+          reflection_styles: string[]
           timezone: string
           updated_at: string
           user_id: string
@@ -3017,6 +3018,7 @@ export type Database = {
           onboarded_at?: string | null
           paused?: boolean
           reflection_style?: string
+          reflection_styles?: string[]
           timezone?: string
           updated_at?: string
           user_id: string
@@ -3028,11 +3030,41 @@ export type Database = {
           onboarded_at?: string | null
           paused?: boolean
           reflection_style?: string
+          reflection_styles?: string[]
           timezone?: string
           updated_at?: string
           user_id?: string
         }
         Relationships: []
+      }
+      growth_saved_items: {
+        Row: {
+          created_at: string
+          id: string
+          item_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "growth_saved_items_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "growth_feed_items"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       high_value_zones: {
         Row: {

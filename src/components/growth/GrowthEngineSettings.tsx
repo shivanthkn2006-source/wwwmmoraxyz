@@ -12,8 +12,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { toast } from 'sonner';
 import {
-  FOCUS_AREAS, REFLECTION_STYLE_OPTIONS, deviceTimeZone,
-  slotsForFrequency, SLOT_LABEL, type ReflectionStyle,
+  FOCUS_AREAS, REFLECTION_STYLE_OPTIONS, ALL_REFLECTION_STYLES, deviceTimeZone,
+  slotsForFrequency, SLOT_LABEL, sanitizeStyles, type ReflectionStyle,
 } from '@/lib/growthSlot';
 
 export const GrowthEngineSettings: React.FC = () => {
@@ -21,7 +21,7 @@ export const GrowthEngineSettings: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [topics, setTopics] = useState<string[]>([]);
-  const [style, setStyle] = useState<ReflectionStyle>('actionable');
+  const [styles, setStyles] = useState<ReflectionStyle[]>(['actionable']);
   const [frequency, setFrequency] = useState(5);
   const [paused, setPaused] = useState(false);
 
@@ -31,13 +31,19 @@ export const GrowthEngineSettings: React.FC = () => {
       if (!user) { setLoading(false); return; }
       const { data } = await supabase
         .from('growth_preferences')
-        .select('focus_areas, reflection_style, delivery_frequency, paused')
+        .select('focus_areas, reflection_style, reflection_styles, delivery_frequency, paused')
         .eq('user_id', user.id)
         .maybeSingle();
       if (!active) return;
       if (data) {
         setTopics(data.focus_areas ?? []);
-        setStyle((data.reflection_style as ReflectionStyle) ?? 'actionable');
+        setStyles(
+          sanitizeStyles(
+            (data as { reflection_styles?: unknown[] }).reflection_styles?.length
+              ? (data as { reflection_styles?: unknown[] }).reflection_styles
+              : [data.reflection_style],
+          ),
+        );
         setFrequency(data.delivery_frequency ?? 5);
         setPaused(Boolean(data.paused));
       }
@@ -53,7 +59,8 @@ export const GrowthEngineSettings: React.FC = () => {
       {
         user_id: user.id,
         focus_areas: topics.length ? topics : [FOCUS_AREAS[0]],
-        reflection_style: style,
+        reflection_style: sanitizeStyles(styles)[0],
+        reflection_styles: sanitizeStyles(styles),
         delivery_frequency: frequency,
         paused,
         timezone: deviceTimeZone(),
@@ -115,16 +122,40 @@ export const GrowthEngineSettings: React.FC = () => {
         </div>
 
         <div className="space-y-2">
-          <Label>Style</Label>
+          <Label>Content delivery style</Label>
+          <button
+            type="button"
+            onClick={() =>
+              setStyles(
+                styles.length === ALL_REFLECTION_STYLES.length
+                  ? ['actionable']
+                  : [...ALL_REFLECTION_STYLES],
+              )
+            }
+            aria-pressed={styles.length === ALL_REFLECTION_STYLES.length}
+            className={`w-full rounded-lg border p-2.5 text-left text-xs font-medium transition ${
+              styles.length === ALL_REFLECTION_STYLES.length
+                ? 'border-primary bg-primary/10 text-primary'
+                : 'border-border bg-card hover:border-muted-foreground/40'
+            }`}
+          >
+            {styles.length === ALL_REFLECTION_STYLES.length
+              ? 'All styles selected'
+              : 'Select all four styles'}
+          </button>
           <div className="grid gap-2">
             {REFLECTION_STYLE_OPTIONS.map((o) => (
               <button
                 key={o.id}
                 type="button"
-                aria-pressed={style === o.id}
-                onClick={() => setStyle(o.id)}
+                aria-pressed={styles.includes(o.id)}
+                onClick={() =>
+                  setStyles((prev) =>
+                    prev.includes(o.id) ? prev.filter((s) => s !== o.id) : [...prev, o.id],
+                  )
+                }
                 className={`rounded-lg border p-2.5 text-left text-xs transition ${
-                  style === o.id
+                  styles.includes(o.id)
                     ? 'border-primary bg-primary/10 text-primary'
                     : 'border-border bg-card hover:border-muted-foreground/40'
                 }`}

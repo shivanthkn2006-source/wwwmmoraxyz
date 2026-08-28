@@ -70,6 +70,36 @@ export function sanitizeStyle(input: unknown): ReflectionStyle {
   return REFLECTION_STYLES.includes(v) ? v : 'actionable';
 }
 
+/** Whitelist + dedupe of the multi-select style list. Never empty. */
+export function sanitizeStyles(input: unknown): ReflectionStyle[] {
+  const list = Array.isArray(input) ? input : [input];
+  const out: ReflectionStyle[] = [];
+  for (const raw of list) {
+    const v = String(raw ?? '').trim() as ReflectionStyle;
+    if (REFLECTION_STYLES.includes(v) && !out.includes(v)) out.push(v);
+  }
+  return out.length ? out : ['actionable'];
+}
+
+/** Deterministic per-slot style pick so a multi-style member sees variety. */
+export function styleForSlot(slot: GrowthSlot, styles: ReflectionStyle[]): ReflectionStyle {
+  const list = sanitizeStyles(styles);
+  const idx = Math.max(0, GROWTH_SLOTS.indexOf(slot));
+  return list[idx % list.length];
+}
+
+/** Every enabled window whose local time has already passed, in order. */
+export function elapsedSlots(
+  nowMinutes: number,
+  enabled: GrowthSlot[],
+): GrowthSlot[] {
+  return GROWTH_SLOTS.filter(
+    (slot) =>
+      enabled.includes(slot) &&
+      SLOT_LOCAL_TIME[slot].hour * 60 + SLOT_LOCAL_TIME[slot].minute <= nowMinutes,
+  );
+}
+
 export interface InsightContent {
   title: string;
   category: string;
