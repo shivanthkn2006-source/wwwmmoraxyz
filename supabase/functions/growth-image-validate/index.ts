@@ -72,7 +72,7 @@ Deno.serve(async (req) => {
                 type: 'text',
                 text: `Card theme: ${category ?? 'personal growth'}\nCard content: ${String(subject ?? '').slice(0, 600)}\n\nRule: ${rule}`,
               },
-              { type: 'image_url', image_url: { url: imageUrl } },
+              { type: 'image_url', image_url: { url: inlineImage } },
             ],
           },
         ],
