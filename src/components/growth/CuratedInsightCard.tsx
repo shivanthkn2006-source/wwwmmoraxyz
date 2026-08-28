@@ -58,10 +58,13 @@ const GrowthInsightImage: React.FC<{ insight: CuratedInsight }> = ({ insight }) 
   const [status, setStatus] = useState<'loading' | 'ready' | 'failed'>('loading');
 
   const src = useMemo(() => {
+    const subject = `${insight.title}. ${insight.content}`.replace(/\s+/g, ' ').trim().slice(0, 420);
     const prompt = [
-      insight.category,
-      insight.title,
-      'calm cinematic editorial illustration, soft natural light, minimal, no text, no words, no letters',
+      `Create a literal editorial image for this personal growth card: ${subject}`,
+      `Theme: ${insight.category}`,
+      'The image must directly match the title and lesson',
+      'If a real person is named, show that exact historical person with recognizable, historically accurate appearance, age, clothing, and era; never substitute a generic young person',
+      'cinematic documentary photography, natural light, respectful, no text, no words, no letters, no logo',
     ].filter(Boolean).join(', ');
     return getPollinationsUrl(prompt, {
       width: 768,
@@ -69,7 +72,7 @@ const GrowthInsightImage: React.FC<{ insight: CuratedInsight }> = ({ insight }) 
       model: 'flux',
       seed: seedFrom(`${insight.id ?? insight.slot}-${insight.title}`),
     });
-  }, [insight.category, insight.title, insight.id, insight.slot]);
+  }, [insight.category, insight.content, insight.title, insight.id, insight.slot]);
 
   if (status === 'failed') return null;
 
@@ -130,24 +133,26 @@ export const CuratedInsightCard: React.FC<Props> = ({
       data-growth-slot={insight.slot}
       onClick={onCardClick ? () => onCardClick(insight) : undefined}
     >
-      <header className="mb-3 flex items-center justify-between gap-2">
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
-          <Sparkles className="h-3 w-3" aria-hidden="true" />
-          {insight.category}
-        </span>
-        <div className="relative z-20 flex items-center gap-2">
-          <span className="text-[11px] text-muted-foreground">
+      <header className="mb-3 grid min-h-10 grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
+        <div className="min-w-0">
+          <span className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-border bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
+            <Sparkles className="h-3 w-3 shrink-0" aria-hidden="true" />
+            <span className="truncate">{insight.category}</span>
+          </span>
+          <span className="mt-1 block text-[11px] text-muted-foreground">
             {savedBadge ? 'Saved' : SLOT_LABEL[insight.slot] ?? 'Daily insight'}
           </span>
+        </div>
+        <div className="relative z-20 flex shrink-0 items-center gap-1">
           {onOpenDetails && (
             <button
               type="button"
               aria-label="How this insight was made"
               onPointerDown={(e) => e.stopPropagation()}
               onClick={(e) => { e.stopPropagation(); e.preventDefault(); onOpenDetails(insight); }}
-              className="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full border border-border bg-muted/60 text-muted-foreground transition hover:text-foreground active:scale-95"
+              className="pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full bg-transparent text-muted-foreground transition hover:bg-muted/50 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-95"
             >
-              <Info className="h-4 w-4" aria-hidden="true" />
+              <Info className="h-5 w-5" aria-hidden="true" />
             </button>
           )}
           {onToggleSave && insight.id && (
@@ -157,15 +162,14 @@ export const CuratedInsightCard: React.FC<Props> = ({
               aria-pressed={Boolean(saved)}
               onPointerDown={(e) => e.stopPropagation()}
               onClick={(e) => { e.stopPropagation(); e.preventDefault(); onToggleSave(insight.id as string); }}
-              className="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full border border-border bg-muted/60 text-muted-foreground transition hover:text-foreground active:scale-95"
+              className="pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full bg-transparent text-muted-foreground transition hover:bg-muted/50 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-95"
             >
               {saved
-                ? <BookmarkCheck className="h-4 w-4 text-primary" aria-hidden="true" />
-                : <Bookmark className="h-4 w-4" aria-hidden="true" />}
+                ? <BookmarkCheck className="h-5 w-5 text-primary" aria-hidden="true" />
+                : <Bookmark className="h-5 w-5" aria-hidden="true" />}
             </button>
           )}
         </div>
-
       </header>
 
       <div className="mb-3 flex flex-wrap gap-1.5" aria-label="Insight plan details">
