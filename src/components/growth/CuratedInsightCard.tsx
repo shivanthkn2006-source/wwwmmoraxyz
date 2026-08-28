@@ -133,7 +133,10 @@ export const CuratedInsightCard: React.FC<Props> = ({
         )}
       </div>
 
+      <GrowthInsightImage insight={insight} />
+
       <h2 className="mb-2 text-lg font-semibold leading-snug">{insight.title}</h2>
+
       <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
         {insight.content}
       </p>
