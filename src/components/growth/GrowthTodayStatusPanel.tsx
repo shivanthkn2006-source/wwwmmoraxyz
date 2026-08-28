@@ -40,7 +40,7 @@ export function useGrowthRenderAudit(expected: number, active: boolean) {
     if (typeof document === 'undefined') return;
     // Give the feed a frame or two to mount its slides before judging it.
     const timer = window.setTimeout(() => {
-      const rendered = document.querySelectorAll('[data-growth-card]').length;
+      const rendered = document.querySelectorAll('[data-growth-insight],[data-growth-card]').length;
       setMissing(rendered === 0);
     }, 1_500);
     return () => window.clearTimeout(timer);
