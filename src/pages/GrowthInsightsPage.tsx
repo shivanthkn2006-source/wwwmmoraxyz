@@ -24,6 +24,7 @@ import GrowthInsightDetailsModal from '@/components/growth/GrowthInsightDetailsM
 import GrowthEngineStatusBanner from '@/components/growth/GrowthEngineStatusBanner';
 import GrowthTodayStatusPanel from '@/components/growth/GrowthTodayStatusPanel';
 import GrowthEngineSettings from '@/components/growth/GrowthEngineSettings';
+import PersonalGrowthOnboarding from '@/components/growth/PersonalGrowthOnboarding';
 import { recordGrowthEvent } from '@/lib/growthAnalytics';
 import {
   slotOrder, sanitizeStyles, FOCUS_AREAS, deviceTimeZone,
@@ -72,6 +73,7 @@ export default function GrowthInsightsPage() {
   const [engineOff, setEngineOff] = useState(false);
   const [activating, setActivating] = useState(false);
   const [editingPlan, setEditingPlan] = useState(false);
+  const [reOnboardingOpen, setReOnboardingOpen] = useState(false);
   const [prefs, setPrefs] = useState<{ focus: string[]; styles: ReflectionStyle[]; tz: string; frequency: number }>({
     focus: [], styles: [], tz: '', frequency: 5,
   });
@@ -289,6 +291,10 @@ export default function GrowthInsightsPage() {
             <Bookmark className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
             {savedOnly ? 'Saved' : 'All'}
           </Button>
+          <Button variant="outline" className="w-full" onClick={() => setReOnboardingOpen(true)}>
+            <Sparkles className="mr-2 h-4 w-4" aria-hidden="true" />
+            Re-select categories with guided setup
+          </Button>
         </header>
 
         <div className="mb-5 space-y-2">
@@ -468,6 +474,15 @@ export default function GrowthInsightsPage() {
           focusAreas={prefs.focus}
           styles={prefs.styles}
           timezone={prefs.tz}
+        />
+        <PersonalGrowthOnboarding
+          open={reOnboardingOpen}
+          onOpenChange={setReOnboardingOpen}
+          mode="edit"
+          initialTopics={prefs.focus}
+          initialStyles={prefs.styles}
+          initialFrequency={prefs.frequency}
+          onComplete={() => void load()}
         />
       </div>
     </div>

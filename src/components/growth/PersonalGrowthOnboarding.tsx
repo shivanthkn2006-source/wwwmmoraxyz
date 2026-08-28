@@ -5,7 +5,7 @@
  * skipping is always allowed and never blocks the app. Uses existing design
  * tokens and shadcn primitives — no new palette.
  */
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
@@ -30,15 +30,30 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onComplete?: () => void;
+  initialTopics?: string[];
+  initialStyles?: ReflectionStyle[];
+  initialFrequency?: number;
+  mode?: 'onboarding' | 'edit';
 }
 
-export const PersonalGrowthOnboarding: React.FC<Props> = ({ open, onOpenChange, onComplete }) => {
+export const PersonalGrowthOnboarding: React.FC<Props> = ({
+  open, onOpenChange, onComplete, initialTopics = [], initialStyles = ['actionable'],
+  initialFrequency = 5, mode = 'onboarding',
+}) => {
   const { user } = useAuth();
   const [step, setStep] = useState(1);
   const [topics, setTopics] = useState<string[]>([]);
   const [styles, setStyles] = useState<ReflectionStyle[]>(['actionable']);
   const [frequency, setFrequency] = useState(5);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    setStep(1);
+    setTopics([...initialTopics]);
+    setStyles(sanitizeStyles(initialStyles));
+    setFrequency(Math.max(1, Math.min(5, initialFrequency)));
+  }, [open, initialTopics, initialStyles, initialFrequency]);
 
   const toggleStyle = (id: ReflectionStyle) =>
     setStyles((prev) => (prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]));
@@ -77,6 +92,11 @@ export const PersonalGrowthOnboarding: React.FC<Props> = ({ open, onOpenChange, 
       focus_areas: topics, styles: sanitizeStyles(styles), delivery_frequency: frequency,
     });
     toast.success('Daily engine activated');
+    try {
+      sessionStorage.removeItem(SNOOZE_KEY);
+      sessionStorage.removeItem(`growth_onboarding_prompted_${user?.id ?? ''}`);
+    } catch { /* no-op */ }
+    window.dispatchEvent(new CustomEvent('mmora:growth-preferences-updated'));
     onComplete?.();
     onOpenChange(false);
   };
@@ -108,7 +128,7 @@ export const PersonalGrowthOnboarding: React.FC<Props> = ({ open, onOpenChange, 
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) dismiss(); }}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-h-[88svh] w-[calc(100%-1.5rem)] max-w-md overflow-y-auto">
         {step === 1 && (
           <>
             <DialogHeader>
@@ -218,7 +238,7 @@ export const PersonalGrowthOnboarding: React.FC<Props> = ({ open, onOpenChange, 
             <div className="flex gap-2">
               <Button variant="ghost" className="flex-1" onClick={() => setStep(2)}>Back</Button>
               <Button className="flex-1" disabled={saving} onClick={() => void finish()}>
-                {saving ? 'Activating…' : 'Activate daily engine'}
+                {saving ? 'Saving…' : mode === 'edit' ? 'Save my Growth plan' : 'Activate daily engine'}
               </Button>
             </div>
           </>

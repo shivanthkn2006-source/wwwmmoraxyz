@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, Heart, Loader2, MessageCircle, Share2, Trash2, Bookmark, MoreVertical, Star, Volume2, VolumeX, UserPlus, UserCheck, ScanText } from 'lucide-react';
+import { AlertTriangle, Download, FileText, Heart, Loader2, MessageCircle, Share2, Trash2, Bookmark, MoreVertical, Star, Volume2, VolumeX, UserPlus, UserCheck, ScanText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
@@ -22,8 +22,8 @@ import { usePersistentMediaSound } from '@/hooks/usePersistentMediaSound';
 import AuthorPreviewRail from '@/components/home/AuthorPreviewRail';
 import { useFollow } from '@/hooks/useFollow';
 import { setZoeActivePostContext } from '@/lib/zoePlatformContext';
-import { useGrowthFlags } from '@/hooks/useGrowthFlags';
-import { GROWTH_FLAGS } from '@/lib/growthFlags';
+import { allowFeedMediaReplay, hasPlayedFeedMedia, markFeedMediaPlayed } from '@/lib/feedPlayback';
+import { logFeedEvent } from '@/lib/feedEventDiagnostics';
 
 interface Post {
   id: string;
@@ -87,10 +87,9 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
   // Autoplay contract: a feed video plays through exactly ONCE. After it ends
   // it stays on its last frame until the member taps to replay — scrolling
   // back to the slide must never restart an endless loop.
-  const playedOnceRef = React.useRef(false);
+  const playedOnceRef = React.useRef(hasPlayedFeedMedia(user?.id, post.id));
   const likeAnimationTimerRef = useRef<number | null>(null);
-  const { isEnabled: isFlagEnabled } = useGrowthFlags();
-  const repeatPlayback = isFlagEnabled(GROWTH_FLAGS.loopsAutoplayLoop);
+  const seenLikeEventsRef = useRef<Set<string>>(new Set());
 
   const { soundEnabled, setSoundEnabled } = usePersistentMediaSound(false);
 
@@ -591,7 +590,10 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
     return null;
   }
 
-  const isVideoMedia = !!displayMediaUrl && inferMediaType(displayMediaUrl, post.media_type) === 'video';
+  const inferredMediaType = inferMediaType(displayMediaUrl, post.media_type);
+  const isVideoMedia = !!displayMediaUrl && inferredMediaType === 'video';
+  const isPdfMedia = !!displayMediaUrl && inferredMediaType === 'pdf';
+  const isDocumentMedia = !!displayMediaUrl && inferredMediaType === 'document';
 
   const overlayButton =
     'flex flex-col items-center gap-1 text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)]';
@@ -617,7 +619,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
                 poster={posterSrc}
                 playsInline
                 muted={!shouldPlayWithSound}
-                loop={repeatPlayback}
+                loop={false}
                 preload="metadata"
                 className="block h-full w-full object-cover object-center"
                 data-testid="post-video"
@@ -628,6 +630,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
                   if (v.paused) {
                     // Manual play is an explicit replay request.
                     playedOnceRef.current = false;
+                    allowFeedMediaReplay(user?.id, post.id);
                     if (v.ended) v.currentTime = 0;
                     v.muted = !soundEnabled;
                     v.play().catch(() => { v.muted = true; v.play().catch(() => {}); });
@@ -642,24 +645,40 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
                 onEnded={() => {
                   // One pass only — remember it so re-entering the viewport
                   // does not restart playback.
-                  playedOnceRef.current = !repeatPlayback;
+                  playedOnceRef.current = true;
+                  markFeedMediaPlayed(user?.id, post.id);
                   setIsVideoPlaying(false);
                 }}
                 onError={(e) => console.warn('[PostCard][video]', post.id, getVideoErrorReason(e.currentTarget))}
               />
             </div>
           </div>
-        ) : displayMediaUrl ? (
+        ) : inferredMediaType === 'image' && displayMediaUrl ? (
           <div className="flex h-full w-full items-center justify-center bg-black">
             <div className="relative aspect-[9/16] h-full max-h-full w-auto max-w-full overflow-hidden">
               <img
                 src={displayMediaSrc}
                 alt="Post media"
-                className="block h-full w-full cursor-pointer object-cover object-center"
+                className="block h-full w-full cursor-pointer object-contain object-center"
                 data-testid="post-image"
                 onClick={() => setShowImageViewer(true)}
                 onError={() => console.warn('[PostCard][image] failed to load', post.id)}
               />
+            </div>
+          </div>
+        ) : (isPdfMedia || isDocumentMedia) && displayMediaUrl ? (
+          <div className="flex h-full w-full items-center justify-center bg-muted p-4 sm:p-8">
+            <div className="flex w-full max-w-xl flex-col items-center gap-4 rounded-lg border border-border bg-card p-6 text-center shadow-lg">
+              <FileText className="h-12 w-12 text-primary" aria-hidden="true" />
+              <div>
+                <p className="text-base font-semibold">{isPdfMedia ? 'PDF document' : 'Document attachment'}</p>
+                <p className="mt-1 text-xs text-muted-foreground">Open the attachment in a responsive viewer or download it.</p>
+              </div>
+              <Button asChild>
+                <a href={displayMediaSrc} target="_blank" rel="noopener noreferrer" download>
+                  <Download className="mr-2 h-4 w-4" /> Open attachment
+                </a>
+              </Button>
             </div>
           </div>
         ) : (

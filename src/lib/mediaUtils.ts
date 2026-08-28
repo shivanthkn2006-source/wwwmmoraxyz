@@ -1,13 +1,20 @@
-export type InferredMediaType = 'video' | 'image' | null;
+export type InferredMediaType = 'video' | 'image' | 'pdf' | 'document' | null;
 
 export const inferMediaType = (url: string | null | undefined, declared?: string | null): InferredMediaType => {
-  if (!url) return declared === 'video' ? 'video' : declared === 'image' ? 'image' : null;
+  if (!url) {
+    if (declared === 'video' || declared === 'image' || declared === 'pdf' || declared === 'document') return declared;
+    return null;
+  }
   if (url.startsWith('data:video/')) return 'video';
   if (url.startsWith('data:image/')) return 'image';
+  if (url.startsWith('data:application/pdf')) return 'pdf';
   const clean = url.split('?')[0].toLowerCase();
   if (/\.(mp4|webm|mov|ogg|m4v)$/.test(clean)) return 'video';
   if (/\.(jpe?g|png|webp|gif|avif|heic)$/.test(clean)) return 'image';
-  return declared === 'video' ? 'video' : declared === 'image' ? 'image' : null;
+  if (/\.pdf$/.test(clean)) return 'pdf';
+  if (/\.(txt|md|csv|docx?|xlsx?|pptx?|rtf|odt|ods|odp)$/.test(clean)) return 'document';
+  if (declared === 'video' || declared === 'image' || declared === 'pdf' || declared === 'document') return declared;
+  return null;
 };
 
 export const appendMediaVersion = (url: string | null | undefined, version?: string | number | null): string | undefined => {

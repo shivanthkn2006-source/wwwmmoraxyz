@@ -6,9 +6,10 @@ import { GROWTH_FLAGS } from '@/lib/growthFlags';
 interface NewContentBadgeProps {
   onViewed: () => void;
   className?: string;
+  onDiagnostic?: (event: 'rendered' | 'viewed' | 'suppressed', reason?: string) => void;
 }
 
-const NewContentBadge: React.FC<NewContentBadgeProps> = ({ onViewed, className = '' }) => {
+const NewContentBadge: React.FC<NewContentBadgeProps> = ({ onViewed, className = '', onDiagnostic }) => {
   const ref = useRef<HTMLDivElement | null>(null);
   const onViewedRef = useRef(onViewed);
   const [visible, setVisible] = useState(true);
@@ -17,6 +18,8 @@ const NewContentBadge: React.FC<NewContentBadgeProps> = ({ onViewed, className =
   const badgeEnabled = isEnabled(GROWTH_FLAGS.newBadge);
 
   onViewedRef.current = onViewed;
+
+  useEffect(() => { onDiagnostic?.('rendered'); }, [onDiagnostic]);
 
 
   useEffect(() => {
@@ -43,6 +46,7 @@ const NewContentBadge: React.FC<NewContentBadgeProps> = ({ onViewed, className =
           timer = window.setTimeout(() => {
             setVisible(false);
             onViewedRef.current();
+            onDiagnostic?.('viewed');
             observer?.disconnect();
           }, 3000);
         } else {
@@ -59,12 +63,15 @@ const NewContentBadge: React.FC<NewContentBadgeProps> = ({ onViewed, className =
       observer?.disconnect();
       clearTimer();
     };
-  }, [visible]);
+  }, [visible, onDiagnostic]);
 
 
   // Never hide a real unseen marker merely because the remote-flag request is
   // still loading. Only an explicitly loaded disabled flag may suppress it.
-  if (!visible || (!loading && !badgeEnabled)) return null;
+  if (!visible || (!loading && !badgeEnabled)) {
+    if (visible && !loading && !badgeEnabled) onDiagnostic?.('suppressed', 'remote_flag_disabled');
+    return null;
+  }
   return (
     <div ref={ref} className={`pointer-events-none absolute z-20 ${className}`} data-testid="new-content-badge">
       <Badge className="border border-primary-foreground/30 bg-primary px-2 py-1 font-semibold text-primary-foreground shadow-md">New</Badge>

@@ -21,6 +21,7 @@ export interface UnseenSnapshotResult extends NewArrivalResult {
 
 const keyFor = (tab: string) => `mmora.home.seenPosts.${tab}`;
 const unseenKeyFor = (tab: string) => `mmora.home.unseenPosts.${tab}`;
+const baselineKeyFor = (tab: string) => `mmora.home.baselineReady.${tab}`;
 
 // In-memory mirror so unseen IDs survive storage failures (Safari private mode,
 // quota errors, disabled cookies). The badge must never vanish because a write threw.
@@ -97,6 +98,15 @@ export const getUnseenPostIds = (tab: string, ids: string[]): string[] => {
 /** True when the first load on a device has no history at all (nothing seen yet). */
 export const hasNoSeenHistory = (tab: string): boolean => readSeenPostIds(tab).size === 0;
 
+export const hasFeedBaseline = (tab: string): boolean => {
+  try { return window.localStorage.getItem(baselineKeyFor(tab)) === '1'; } catch { return memoryStore.has(baselineKeyFor(tab)); }
+};
+
+const markFeedBaseline = (tab: string): void => {
+  memoryStore.set(baselineKeyFor(tab), ['1']);
+  try { window.localStorage.setItem(baselineKeyFor(tab), '1'); } catch { /* memory fallback */ }
+};
+
 /**
  * Compares two feed snapshots. Initial loads and manual refreshes always become
  * a quiet baseline; only a realtime update is allowed to arm auto-scroll.
@@ -135,10 +145,11 @@ export const syncUnseenPostSnapshot = (
 
   // First ever load on this device: establish a quiet baseline so a returning
   // member is not shown a wall of "New" badges for their whole backlog.
-  if (hasNoSeenHistory(tab)) {
+  if (!hasFeedBaseline(tab)) {
     const pending = readUnseenPostIds(tab);
     const baseline = arrivals.knownIds.filter((id) => !pending.has(id));
     if (baseline.length > 0) markPostsSeen(tab, baseline);
+    markFeedBaseline(tab);
     return { ...arrivals, unseenIds: reconcileUnseenPosts(tab, arrivals.knownIds) };
   }
 
