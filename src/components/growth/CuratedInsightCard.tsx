@@ -135,7 +135,7 @@ export const CuratedInsightCard: React.FC<Props> = ({
           <Sparkles className="h-3 w-3" aria-hidden="true" />
           {insight.category}
         </span>
-        <div className="flex items-center gap-2">
+        <div className="relative z-20 flex items-center gap-2">
           <span className="text-[11px] text-muted-foreground">
             {savedBadge ? 'Saved' : SLOT_LABEL[insight.slot] ?? 'Daily insight'}
           </span>
@@ -143,10 +143,11 @@ export const CuratedInsightCard: React.FC<Props> = ({
             <button
               type="button"
               aria-label="How this insight was made"
-              onClick={(e) => { e.stopPropagation(); onOpenDetails(insight); }}
-              className="rounded-full border border-border bg-muted/60 p-1.5 text-muted-foreground transition hover:text-foreground"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => { e.stopPropagation(); e.preventDefault(); onOpenDetails(insight); }}
+              className="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full border border-border bg-muted/60 text-muted-foreground transition hover:text-foreground active:scale-95"
             >
-              <Info className="h-3.5 w-3.5" aria-hidden="true" />
+              <Info className="h-4 w-4" aria-hidden="true" />
             </button>
           )}
           {onToggleSave && insight.id && (
@@ -154,15 +155,17 @@ export const CuratedInsightCard: React.FC<Props> = ({
               type="button"
               aria-label={saved ? 'Remove from saved insights' : 'Save this insight'}
               aria-pressed={Boolean(saved)}
-              onClick={(e) => { e.stopPropagation(); onToggleSave(insight.id as string); }}
-              className="rounded-full border border-border bg-muted/60 p-1.5 text-muted-foreground transition hover:text-foreground"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => { e.stopPropagation(); e.preventDefault(); onToggleSave(insight.id as string); }}
+              className="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full border border-border bg-muted/60 text-muted-foreground transition hover:text-foreground active:scale-95"
             >
               {saved
-                ? <BookmarkCheck className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
-                : <Bookmark className="h-3.5 w-3.5" aria-hidden="true" />}
+                ? <BookmarkCheck className="h-4 w-4 text-primary" aria-hidden="true" />
+                : <Bookmark className="h-4 w-4" aria-hidden="true" />}
             </button>
           )}
         </div>
+
       </header>
 
       <div className="mb-3 flex flex-wrap gap-1.5" aria-label="Insight plan details">
