@@ -12,15 +12,30 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
-import { Loader2, RefreshCw, AlertCircle, CheckCircle2, Clock, PauseCircle } from 'lucide-react';
+import {
+  Loader2, RefreshCw, AlertCircle, CheckCircle2, Clock, PauseCircle, Download, BellRing,
+} from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { toast } from 'sonner';
 import { useGrowthStatus, type NextStatus } from '@/hooks/useGrowthStatus';
+import { useGrowthFlags } from '@/hooks/useGrowthFlags';
+import { GROWTH_FLAGS } from '@/lib/growthFlags';
+import { exportGrowthData } from '@/lib/growthExport';
+import { pushPermission, requestPushPermission } from '@/lib/growthPush';
 import {
   FOCUS_AREAS, REFLECTION_STYLE_OPTIONS, ALL_REFLECTION_STYLES, deviceTimeZone,
   slotsForFrequency, SLOT_LABEL, sanitizeStyles, type ReflectionStyle,
 } from '@/lib/growthSlot';
+
+const DIGEST_MODES = ['instant', 'daily', 'off'] as const;
+type DigestMode = (typeof DIGEST_MODES)[number];
+
+const DIGEST_COPY: Record<DigestMode, string> = {
+  instant: 'Alert me as each insight is generated',
+  daily: 'One daily summary instead of individual alerts',
+  off: 'No alerts — I will check the feed myself',
+};
 
 const STATUS_COPY: Record<NextStatus, { label: string; tone: string; Icon: typeof Clock }> = {
   paused: { label: 'Paused — no new insights', tone: 'text-muted-foreground', Icon: PauseCircle },
@@ -41,6 +56,11 @@ export const GrowthEngineSettings: React.FC = () => {
   const [frequency, setFrequency] = useState(5);
   const [paused, setPaused] = useState(false);
   const [notify, setNotify] = useState(true);
+  const [notifyPush, setNotifyPush] = useState(true);
+  const [notifyEmail, setNotifyEmail] = useState(false);
+  const [digest, setDigest] = useState<DigestMode>('instant');
+  const [exporting, setExporting] = useState(false);
+  const { isEnabled } = useGrowthFlags();
 
   const { status, loading: statusLoading, regenerating, refresh: refreshStatus, regenerate } =
     useGrowthStatus(Boolean(user));
@@ -49,7 +69,10 @@ export const GrowthEngineSettings: React.FC = () => {
     if (!user) { setLoading(false); return; }
     const { data } = await supabase
       .from('growth_preferences')
-      .select('focus_areas, reflection_style, reflection_styles, delivery_frequency, paused, notify_on_new_insight')
+      .select(
+        'focus_areas, reflection_style, reflection_styles, delivery_frequency, paused, ' +
+        'notify_on_new_insight, notify_push, notify_email, notify_digest',
+      )
       .eq('user_id', user.id)
       .maybeSingle();
     if (data) {
@@ -65,6 +88,11 @@ export const GrowthEngineSettings: React.FC = () => {
       setFrequency(Number(row.delivery_frequency ?? 5));
       setPaused(Boolean(row.paused));
       setNotify(row.notify_on_new_insight !== false);
+      setNotifyPush(row.notify_push !== false);
+      setNotifyEmail(Boolean(row.notify_email));
+      setDigest(DIGEST_MODES.includes(row.notify_digest as DigestMode)
+        ? (row.notify_digest as DigestMode)
+        : 'instant');
     }
     setLoading(false);
   }, [user]);
@@ -83,6 +111,9 @@ export const GrowthEngineSettings: React.FC = () => {
         delivery_frequency: frequency,
         paused,
         notify_on_new_insight: notify,
+        notify_push: notifyPush,
+        notify_email: notifyEmail,
+        notify_digest: digest,
         timezone: deviceTimeZone(),
         onboarded_at: new Date().toISOString(),
       },
@@ -124,6 +155,32 @@ export const GrowthEngineSettings: React.FC = () => {
   const onRegenerate = async () => {
     const res = await regenerate();
     toast[res.ok ? 'success' : 'error'](res.ok ? 'Insight regenerated' : res.error ?? 'Could not regenerate');
+  };
+
+  /** Asks for device permission before enabling push, so the toggle never lies. */
+  const togglePush = async (next: boolean) => {
+    if (!next) { setNotifyPush(false); return; }
+    const permission = await requestPushPermission();
+    if (permission === 'granted') { setNotifyPush(true); return; }
+    setNotifyPush(false);
+    toast.error(
+      permission === 'unsupported'
+        ? 'This browser cannot show device notifications'
+        : 'Allow notifications in your browser settings to enable this',
+    );
+  };
+
+  const onExport = async (format: 'csv' | 'json') => {
+    if (!user) return;
+    setExporting(true);
+    try {
+      const summary = await exportGrowthData(user.id, format);
+      toast.success(`Exported ${summary.insights} insights and ${summary.events} events`);
+    } catch {
+      toast.error('Could not build your export — please try again');
+    } finally {
+      setExporting(false);
+    }
   };
 
   if (loading) return null;
@@ -206,9 +263,78 @@ export const GrowthEngineSettings: React.FC = () => {
           <Switch id="growth-paused" checked={paused} onCheckedChange={setPaused} />
         </div>
 
-        <div className="flex items-center justify-between">
-          <Label htmlFor="growth-notify">Notify me when a new insight arrives</Label>
-          <Switch id="growth-notify" checked={notify} onCheckedChange={setNotify} />
+        <div className="space-y-3 rounded-lg border border-border p-3" data-growth-notifications>
+          <p className="flex items-center gap-2 text-xs font-semibold">
+            <BellRing className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+            Notifications
+          </p>
+
+          <div className="flex items-center justify-between">
+            <Label htmlFor="growth-notify" className="text-xs font-normal">
+              In-app alert when a new insight arrives
+            </Label>
+            <Switch id="growth-notify" checked={notify} onCheckedChange={setNotify} />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <Label htmlFor="growth-notify-push" className="text-xs font-normal">
+                Device / mobile push notification
+              </Label>
+              <p className="text-[10px] text-muted-foreground">
+                {pushPermission() === 'denied'
+                  ? 'Blocked in your browser settings'
+                  : pushPermission() === 'unsupported'
+                    ? 'Not supported on this browser'
+                    : 'Works on this device, including installed mobile app'}
+              </p>
+            </div>
+            <Switch
+              id="growth-notify-push"
+              checked={notifyPush}
+              disabled={!isEnabled(GROWTH_FLAGS.push)}
+              onCheckedChange={(v) => void togglePush(v)}
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <Label htmlFor="growth-notify-email" className="text-xs font-normal">
+                Email me new insights
+              </Label>
+              {!isEnabled(GROWTH_FLAGS.email) && (
+                <p className="text-[10px] text-muted-foreground">Rolling out — not enabled for your account yet</p>
+              )}
+            </div>
+            <Switch
+              id="growth-notify-email"
+              checked={notifyEmail}
+              disabled={!isEnabled(GROWTH_FLAGS.email)}
+              onCheckedChange={setNotifyEmail}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-normal">How often</Label>
+            <div className="grid gap-1.5">
+              {DIGEST_MODES.map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  aria-pressed={digest === mode}
+                  onClick={() => setDigest(mode)}
+                  className={`rounded-lg border p-2 text-left text-xs capitalize transition ${
+                    digest === mode
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border bg-card hover:border-muted-foreground/40'
+                  }`}
+                >
+                  <span className="font-medium">{mode}</span>
+                  <span className="block text-[10px] text-muted-foreground">{DIGEST_COPY[mode]}</span>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         <div className="space-y-2">
@@ -289,6 +415,27 @@ export const GrowthEngineSettings: React.FC = () => {
             {slotsForFrequency(frequency).map((s) => SLOT_LABEL[s]).join(', ')}
           </p>
         </div>
+
+        {isEnabled(GROWTH_FLAGS.export) && (
+          <div className="space-y-2 rounded-lg border border-border p-3" data-growth-export>
+            <Label className="text-xs">Export my growth data</Label>
+            <p className="text-[10px] text-muted-foreground">
+              Preferences, delivered insights, bookmarks and card analytics.
+            </p>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" disabled={exporting} onClick={() => void onExport('csv')}>
+                {exporting
+                  ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                  : <Download className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />}
+                CSV
+              </Button>
+              <Button size="sm" variant="outline" disabled={exporting} onClick={() => void onExport('json')}>
+                <Download className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+                JSON
+              </Button>
+            </div>
+          </div>
+        )}
 
         <div className="flex gap-2">
           <Button className="flex-1" disabled={saving} onClick={() => void save()}>
