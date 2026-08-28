@@ -117,6 +117,7 @@ const AdminFeedDebugPage = lazy(() => import("./pages/AdminFeedDebugPage")); // 
 const AstroPreviewPage = lazy(() => import("./pages/AstroPreviewPage")); // M'MORA ZOE DAILY ALIGNMENT HARNESS
 const ZoeAstroDashboardPage = lazy(() => import("./pages/ZoeAstroDashboardPage")); // M'MORA ZOE ALIGNMENT DASHBOARD
 const GrowthInsightsPage = lazy(() => import("./pages/GrowthInsightsPage")); // PERSONAL GROWTH ENGINE ARCHIVE
+const AdminGrowthRunsPage = lazy(() => import("./pages/AdminGrowthRunsPage")); // GROWTH WORKER TRACE (admin, RLS-gated)
 const ZoeBirthDetailsPage = lazy(() => import("./pages/ZoeBirthDetailsPage"));
 const ZoeDispatchDashboardPage = lazy(() => import("./pages/ZoeDispatchDashboardPage"));
 const ZoeAstroLogPage = lazy(() => import("./pages/ZoeAstroLogPage"));
@@ -719,6 +720,14 @@ const RouteAwareShell = () => {
                             element={
                               <ProtectedRoute>
                                 <GrowthInsightsPage />
+                              </ProtectedRoute>
+                            }
+                          />
+                          <Route
+                            path="/admin/growth-runs"
+                            element={
+                              <ProtectedRoute>
+                                <AdminGrowthRunsPage />
                               </ProtectedRoute>
                             }
                           />
