@@ -97,6 +97,7 @@ import { useFriendRequests } from "@/hooks/useFriendRequests";
 import PageSeo from "@/components/seo/PageSeo";
 import NewContentBadge from '@/components/NewContentBadge';
 import { markPostsSeen, readUnseenPostIds, syncUnseenPostSnapshot, type FeedUpdateSource } from "@/lib/newPostGate";
+import { interleaveGrowthCards } from '@/lib/growthFeedComposition';
 
 
 
@@ -2193,6 +2194,63 @@ const HomePage = () => {
     [filteredLoops, retrySingleLoop, handleUpdate, newContentByFeed.loops, dismissNewContent],
   );
 
+  const renderPostSlide = React.useCallback((post: Post, feed: 'global' | 'personal') => {
+    const isToday = Boolean(post.created_at && new Date(post.created_at).toDateString() === new Date().toDateString());
+    const isNew = newContentByFeed[feed].has(post.id);
+    return (
+      <div key={`${feed}-${post.id}`} className="relative h-full min-h-full w-full shrink-0 snap-start snap-always overflow-hidden" data-post-card data-post-id={post.id} data-today={isToday ? 'true' : 'false'} data-new={isNew ? 'true' : 'false'}>
+        {isNew && (
+          <NewContentBadge className="right-3 top-3" onViewed={() => dismissNewContent(feed, post.id)} />
+        )}
+        <FeedErrorBoundary section="post-card" postId={post.id} onRetry={() => retrySinglePost(post.id)}>
+          <PostCard post={post} onUpdate={handleUpdate} />
+        </FeedErrorBoundary>
+      </div>
+    );
+  }, [newContentByFeed, dismissNewContent, retrySinglePost, handleUpdate]);
+
+  const supportingSlides = React.useMemo(() => {
+    const slides: React.ReactElement[] = [];
+    if (dailyMotivation) {
+      slides.push(
+        <FeedErrorBoundary key="daily-motivation" section="posts">
+          <HomeMotivationSlide motivation={dailyMotivation} posterUrl={motivationPosterUrl} />
+        </FeedErrorBoundary>,
+      );
+    }
+    if (astroDaily) {
+      slides.push(
+        <div key="astro-daily" className="relative flex h-full min-h-full w-full shrink-0 snap-start snap-always items-center overflow-y-auto p-4" data-astro-daily>
+          <FeedErrorBoundary section="posts">
+            <MoraZoeDailyCard prediction={astroDaily} className="w-full" />
+          </FeedErrorBoundary>
+        </div>,
+      );
+    }
+    return slides;
+  }, [dailyMotivation, motivationPosterUrl, astroDaily]);
+
+  // Growth cards are deterministic members of both feeds, not an appendix at
+  // the end. This keeps every due/saved card visible between posts and Loops.
+  const globalFeedSlides = interleaveGrowthCards(
+    [
+      ...visibleGlobalPosts.map((post) => renderPostSlide(post, 'global')),
+      ...(!loopsHidden ? loopSlides : []),
+      ...supportingSlides,
+    ],
+    growthSlide,
+    3,
+  );
+  const personalFeedSlides = interleaveGrowthCards(
+    [
+      ...visiblePersonalPosts.map((post) => renderPostSlide(post, 'personal')),
+      ...(!loopsHidden ? loopSlides : []),
+      ...supportingSlides,
+    ],
+    growthSlide,
+    3,
+  );
+
 
 
 
@@ -2301,39 +2359,13 @@ const HomePage = () => {
                 
                 {loading ? (
                   <p className="absolute inset-0 flex items-center justify-center px-3 text-center text-muted-foreground">Loading posts...</p>
-                ) : globalPosts.length === 0 && !astroDaily && !dailyMotivation && searchVideos.length === 0 && neuralVideos.length === 0 && loopSlides.length === 0 ? (
+                ) : globalPosts.length === 0 && !astroDaily && !dailyMotivation && searchVideos.length === 0 && neuralVideos.length === 0 && loopSlides.length === 0 && growthSlide.length === 0 ? (
 
                   <p className="absolute inset-0 flex items-center justify-center px-3 text-center text-muted-foreground">No posts yet</p>
                 ) : (
                   <div ref={loopRailRef} className="absolute inset-0 h-full w-full snap-y snap-mandatory overflow-y-auto overscroll-contain" data-testid="global-posts-snap-feed" data-feed-scroll>
                   {searchVideoSlides}
-                  {visibleGlobalPosts.map(post => {
-                    const isToday = post.created_at && new Date(post.created_at).toDateString() === new Date().toDateString();
-                    return (
-                      <div key={post.id} className="relative h-full min-h-full w-full shrink-0 snap-start snap-always overflow-hidden" data-post-card data-post-id={post.id} data-today={isToday ? 'true' : 'false'} data-new={newContentByFeed.global.has(post.id) ? 'true' : 'false'}>
-                        {newContentByFeed.global.has(post.id) && (
-                          <NewContentBadge className="right-3 top-3" onViewed={() => dismissNewContent('global', post.id)} />
-                        )}
-                        <FeedErrorBoundary section="post-card" postId={post.id} onRetry={() => retrySinglePost(post.id)}>
-                          <PostCard post={post} onUpdate={handleUpdate} />
-                        </FeedErrorBoundary>
-                      </div>
-                    );
-                  })}
-                  {!loopsHidden && loopSlides}
-                  {dailyMotivation && (
-                    <FeedErrorBoundary section="posts">
-                      <HomeMotivationSlide motivation={dailyMotivation} posterUrl={motivationPosterUrl} />
-                    </FeedErrorBoundary>
-                  )}
-                  {astroDaily && (
-                    <div className="relative flex h-full min-h-full w-full shrink-0 snap-start snap-always items-center overflow-y-auto p-4" data-astro-daily>
-                      <FeedErrorBoundary section="posts">
-                        <MoraZoeDailyCard prediction={astroDaily} className="w-full" />
-                      </FeedErrorBoundary>
-                    </div>
-                  )}
-                  {growthSlide}
+                  {globalFeedSlides}
 
                   <div className="relative h-full min-h-full w-full shrink-0 snap-start snap-always overflow-y-auto bg-background px-4 pb-24 pt-24" data-people-recommendations>
                     <FeedErrorBoundary section="posts">
@@ -2359,39 +2391,12 @@ const HomePage = () => {
                 )}
                 {loading ? (
                   <p className="absolute inset-0 flex items-center justify-center px-3 text-center text-muted-foreground">Loading posts...</p>
-                ) : personalPosts.length === 0 && !astroDaily && !dailyMotivation && searchVideos.length === 0 && neuralVideos.length === 0 && loopSlides.length === 0 ? (
+                ) : personalPosts.length === 0 && !astroDaily && !dailyMotivation && searchVideos.length === 0 && neuralVideos.length === 0 && loopSlides.length === 0 && growthSlide.length === 0 ? (
                   <p className="absolute inset-0 flex items-center justify-center px-3 text-center text-muted-foreground">No posts from friends yet</p>
                 ) : (
                   <div className="absolute inset-0 h-full w-full snap-y snap-mandatory overflow-y-auto overscroll-contain" data-testid="personal-posts-snap-feed" data-feed-scroll>
                   {searchVideoSlides}
-                  {visiblePersonalPosts.map(post => {
-                    const isToday = post.created_at && new Date(post.created_at).toDateString() === new Date().toDateString();
-                    return (
-                      <div key={post.id} className="relative h-full min-h-full w-full shrink-0 snap-start snap-always overflow-hidden" data-post-card data-post-id={post.id} data-today={isToday ? 'true' : 'false'} data-new={newContentByFeed.personal.has(post.id) ? 'true' : 'false'}>
-                        {newContentByFeed.personal.has(post.id) && (
-                          <NewContentBadge className="right-3 top-3" onViewed={() => dismissNewContent('personal', post.id)} />
-                        )}
-                        <FeedErrorBoundary section="post-card" postId={post.id} onRetry={() => retrySinglePost(post.id)}>
-                          <PostCard post={post} onUpdate={handleUpdate} />
-                        </FeedErrorBoundary>
-                      </div>
-                    );
-                  })}
-                  {!loopsHidden && loopSlides}
-                  {dailyMotivation && (
-                    <FeedErrorBoundary section="posts">
-                      <HomeMotivationSlide motivation={dailyMotivation} posterUrl={motivationPosterUrl} />
-                    </FeedErrorBoundary>
-                  )}
-
-                  {astroDaily && (
-                    <div className="relative flex h-full min-h-full w-full shrink-0 snap-start snap-always items-center overflow-y-auto p-4" data-astro-daily>
-                      <FeedErrorBoundary section="posts">
-                        <MoraZoeDailyCard prediction={astroDaily} className="w-full" />
-                      </FeedErrorBoundary>
-                    </div>
-                  )}
-                  {growthSlide}
+                  {personalFeedSlides}
                   {neuralVideoSlides}
 
                   </div>

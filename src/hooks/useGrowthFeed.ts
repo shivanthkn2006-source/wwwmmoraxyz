@@ -12,7 +12,7 @@
  *
  * Saved cards are bookmarked rows (any date) the member can revisit any time.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import {
@@ -64,6 +64,7 @@ const EMPTY: State = {
 export function useGrowthFeed() {
   const { user } = useAuth();
   const [state, setState] = useState<State>(EMPTY);
+  const channelId = useRef(`growth-feed-${crypto.randomUUID?.() ?? Math.random().toString(36).slice(2)}`);
 
   const load = useCallback(async () => {
     if (!user) { setState({ ...EMPTY, loading: false }); return; }
@@ -162,6 +163,30 @@ export function useGrowthFeed() {
   }, [user]);
 
   useEffect(() => { void load(); }, [load]);
+
+  // Keep an open home feed synchronized with worker writes. Poll/focus/online
+  // are intentional fallbacks when realtime or the network is interrupted.
+  useEffect(() => {
+    if (!user?.id) return;
+    const channel = supabase
+      .channel(channelId.current)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'growth_feed_items', filter: `user_id=eq.${user.id}` },
+        () => void load(),
+      )
+      .subscribe();
+    const refresh = () => void load();
+    const timer = window.setInterval(refresh, 60_000);
+    window.addEventListener('online', refresh);
+    window.addEventListener('focus', refresh);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener('online', refresh);
+      window.removeEventListener('focus', refresh);
+      void supabase.removeChannel(channel);
+    };
+  }, [user?.id, load]);
 
   // A signed-in member should not wait for successive cron ticks to recover
   // missed windows. Ask the worker once per session/local day to fill every
