@@ -119,15 +119,41 @@ const HomePage = () => {
     today: growthToday,
     current: growthInsight,
     savedExtras: growthSaved,
+    preferences: growthPreferences,
+    loading: growthLoading,
+    error: growthError,
     isSaved: isGrowthSaved,
     toggleSave: toggleGrowthSave,
     needsOnboarding: growthNeedsOnboarding,
     refresh: refreshGrowth,
   } = useGrowthFeed();
   const [growthOnboardingOpen, setGrowthOnboardingOpen] = useState(false);
+  const [growthDetails, setGrowthDetails] = useState<CuratedInsight | null>(null);
   useEffect(() => {
-    if (growthNeedsOnboarding) setGrowthOnboardingOpen(true);
-  }, [growthNeedsOnboarding]);
+    // Exactly once per member: the modal only opens when preferences have
+    // genuinely never been recorded, and a device-local flag stops a duplicate
+    // prompt if the write is still in flight when the page remounts.
+    if (!user || growthLoading || growthError || !growthNeedsOnboarding) return;
+    const key = `growth_onboarding_shown_${user.id}`;
+    try {
+      if (localStorage.getItem(key)) return;
+      localStorage.setItem(key, new Date().toISOString());
+    } catch { /* private mode — fall through and still show once */ }
+    setGrowthOnboardingOpen(true);
+  }, [user, growthLoading, growthError, growthNeedsOnboarding]);
+  const trackGrowth = React.useCallback(
+    (type: 'impression' | 'click', insight: CuratedInsight) => {
+      void recordGrowthEvent(type, {
+        userId: user?.id,
+        itemId: insight.id,
+        slot: insight.slot,
+        category: insight.category,
+        focusAreas: growthPreferences?.focus_areas ?? [],
+        surface: 'home',
+      });
+    },
+    [user?.id, growthPreferences?.focus_areas],
+  );
   // Catch-up: every window already delivered today, in order, then saved cards.
   const growthCards = React.useMemo(() => {
     const dayCards = growthToday.length
@@ -154,10 +180,27 @@ const HomePage = () => {
           saved={isGrowthSaved(insight.id)}
           onToggleSave={(id) => void toggleGrowthSave(id)}
           savedBadge={savedBadge}
+          onImpression={(i) => trackGrowth('impression', i)}
+          onCardClick={(i) => trackGrowth('click', i)}
+          onOpenDetails={(i) => setGrowthDetails(i)}
         />
       </FeedErrorBoundary>
     </div>
   ));
+  // While preferences/cards are loading we render one skeleton slide so the
+  // feed never jumps; on error we render nothing at all (feed unchanged).
+  if (growthLoading && !growthError && growthCards.length === 0) {
+    growthSlide.push(
+      <div
+        key="growth-skeleton"
+        className="relative flex h-full min-h-full w-full shrink-0 snap-start snap-always items-center overflow-y-auto p-4"
+        data-growth-insight="loading"
+      >
+        <CuratedInsightSkeleton className="w-full" />
+      </div>,
+    );
+  }
+
 
 
   const navigate = useNavigate();
