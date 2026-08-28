@@ -2905,6 +2905,69 @@ export type Database = {
         }
         Relationships: []
       }
+      growth_backfill_jobs: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          dry_run: boolean
+          errors: string[]
+          finished_at: string | null
+          from_date: string
+          id: string
+          max_items: number
+          processed: number
+          skipped: number
+          slots: string[]
+          started_at: string | null
+          status: string
+          throttle_ms: number
+          to_date: string
+          updated_at: string
+          user_ids: string[]
+          written: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          dry_run?: boolean
+          errors?: string[]
+          finished_at?: string | null
+          from_date: string
+          id?: string
+          max_items?: number
+          processed?: number
+          skipped?: number
+          slots?: string[]
+          started_at?: string | null
+          status?: string
+          throttle_ms?: number
+          to_date: string
+          updated_at?: string
+          user_ids?: string[]
+          written?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          dry_run?: boolean
+          errors?: string[]
+          finished_at?: string | null
+          from_date?: string
+          id?: string
+          max_items?: number
+          processed?: number
+          skipped?: number
+          slots?: string[]
+          started_at?: string | null
+          status?: string
+          throttle_ms?: number
+          to_date?: string
+          updated_at?: string
+          user_ids?: string[]
+          written?: number
+        }
+        Relationships: []
+      }
       growth_card_events: {
         Row: {
           category: string | null
@@ -3051,6 +3114,42 @@ export type Database = {
         }
         Relationships: []
       }
+      growth_feature_flags: {
+        Row: {
+          allow_user_ids: string[]
+          block_user_ids: string[]
+          created_at: string
+          description: string | null
+          enabled: boolean
+          flag_key: string
+          id: string
+          rollout_percent: number
+          updated_at: string
+        }
+        Insert: {
+          allow_user_ids?: string[]
+          block_user_ids?: string[]
+          created_at?: string
+          description?: string | null
+          enabled?: boolean
+          flag_key: string
+          id?: string
+          rollout_percent?: number
+          updated_at?: string
+        }
+        Update: {
+          allow_user_ids?: string[]
+          block_user_ids?: string[]
+          created_at?: string
+          description?: string | null
+          enabled?: boolean
+          flag_key?: string
+          id?: string
+          rollout_percent?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       growth_feed_items: {
         Row: {
           actionable_step: string | null
@@ -3110,9 +3209,14 @@ export type Database = {
           created_at: string
           delivery_frequency: number
           focus_areas: string[]
+          last_digest_at: string | null
+          notify_digest: string
+          notify_email: boolean
           notify_on_new_insight: boolean
+          notify_push: boolean
           onboarded_at: string | null
           paused: boolean
+          push_subscription: Json | null
           reflection_style: string
           reflection_styles: string[]
           timezone: string
@@ -3123,9 +3227,14 @@ export type Database = {
           created_at?: string
           delivery_frequency?: number
           focus_areas?: string[]
+          last_digest_at?: string | null
+          notify_digest?: string
+          notify_email?: boolean
           notify_on_new_insight?: boolean
+          notify_push?: boolean
           onboarded_at?: string | null
           paused?: boolean
+          push_subscription?: Json | null
           reflection_style?: string
           reflection_styles?: string[]
           timezone?: string
@@ -3136,9 +3245,14 @@ export type Database = {
           created_at?: string
           delivery_frequency?: number
           focus_areas?: string[]
+          last_digest_at?: string | null
+          notify_digest?: string
+          notify_email?: boolean
           notify_on_new_insight?: boolean
+          notify_push?: boolean
           onboarded_at?: string | null
           paused?: boolean
+          push_subscription?: Json | null
           reflection_style?: string
           reflection_styles?: string[]
           timezone?: string
