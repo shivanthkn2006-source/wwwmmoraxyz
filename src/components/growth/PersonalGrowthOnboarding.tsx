@@ -73,6 +73,9 @@ export const PersonalGrowthOnboarding: React.FC<Props> = ({ open, onOpenChange, 
     });
     setSaving(false);
     if (!ok) return;
+    void logGrowthAudit('onboarding_completed', {
+      focus_areas: topics, styles: sanitizeStyles(styles), delivery_frequency: frequency,
+    });
     toast.success('Daily engine activated');
     onComplete?.();
     onOpenChange(false);
