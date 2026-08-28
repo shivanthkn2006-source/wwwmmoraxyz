@@ -1406,7 +1406,7 @@ const HomePage = () => {
 
       if (feedRows.length === 0) {
         knownFeedIdsRef.current.global = [];
-        const emptySnapshot = syncUnseenPostSnapshot('global', [], [], updateSource);
+        const emptySnapshot = syncUnseenPostSnapshot(newGateKey('global'), [], [], updateSource);
         setNewContentByFeed((current) => ({ ...current, global: emptySnapshot.unseenIds }));
         setGlobalPosts([]);
         setFeedDiag({ status: 'empty', message: 'No global posts available', durationMs: dur, rowCount: 0, authReady: true, timestamp: new Date().toISOString() });
@@ -1452,7 +1452,8 @@ const HomePage = () => {
         }));
 
       const ids = postsWithLikes.map((post: Post) => post.id);
-      const arrivals = syncUnseenPostSnapshot('global', knownFeedIdsRef.current.global, ids, updateSource);
+      const arrivals = syncUnseenPostSnapshot(newGateKey('global'), knownFeedIdsRef.current.global, ids, updateSource);
+      logFeedEvent('new_snapshot', { feed: 'global', source: updateSource, row_count: ids.length, new_count: arrivals.newIds.length, unseen_count: arrivals.unseenIds.size }, user.id);
       knownFeedIdsRef.current.global = arrivals.knownIds;
       setNewContentByFeed((current) => ({ ...current, global: arrivals.unseenIds }));
       if (arrivals.shouldAutoScroll) {
@@ -1509,7 +1510,7 @@ const HomePage = () => {
 
       if (loopRows.length === 0) {
         const emptySnapshot = syncUnseenPostSnapshot(
-          'loops', knownFeedIdsRef.current.loops, [], updateSource,
+          newGateKey('loops'), knownFeedIdsRef.current.loops, [], updateSource,
         );
         if (updateSource !== 'realtime') knownFeedIdsRef.current.loops = [];
         setNewContentByFeed((current) => ({ ...current, loops: emptySnapshot.unseenIds }));
@@ -1544,7 +1545,8 @@ const HomePage = () => {
         has_deferred_media: false,
       })) as Post[];
       const loopIds = preparedLoops.map((post) => post.id);
-      const loopArrivals = syncUnseenPostSnapshot('loops', knownFeedIdsRef.current.loops, loopIds, updateSource);
+      const loopArrivals = syncUnseenPostSnapshot(newGateKey('loops'), knownFeedIdsRef.current.loops, loopIds, updateSource);
+      logFeedEvent('new_snapshot', { feed: 'loops', source: updateSource, row_count: loopIds.length, new_count: loopArrivals.newIds.length, unseen_count: loopArrivals.unseenIds.size }, user.id);
       knownFeedIdsRef.current.loops = loopArrivals.knownIds;
       setNewContentByFeed((current) => ({ ...current, loops: loopArrivals.unseenIds }));
       setLoopPosts(preparedLoops);
@@ -1590,7 +1592,7 @@ const HomePage = () => {
 
       if (feedRows.length === 0) {
         knownFeedIdsRef.current.personal = [];
-        const emptySnapshot = syncUnseenPostSnapshot('personal', [], [], updateSource);
+        const emptySnapshot = syncUnseenPostSnapshot(newGateKey('personal'), [], [], updateSource);
         setNewContentByFeed((current) => ({ ...current, personal: emptySnapshot.unseenIds }));
         setPersonalPosts([]);
         return;
@@ -1635,7 +1637,8 @@ const HomePage = () => {
         }));
 
       const ids = postsWithLikes.map((post: Post) => post.id);
-      const arrivals = syncUnseenPostSnapshot('personal', knownFeedIdsRef.current.personal, ids, updateSource);
+      const arrivals = syncUnseenPostSnapshot(newGateKey('personal'), knownFeedIdsRef.current.personal, ids, updateSource);
+      logFeedEvent('new_snapshot', { feed: 'personal', source: updateSource, row_count: ids.length, new_count: arrivals.newIds.length, unseen_count: arrivals.unseenIds.size }, user.id);
       knownFeedIdsRef.current.personal = arrivals.knownIds;
       setNewContentByFeed((current) => ({ ...current, personal: arrivals.unseenIds }));
       if (arrivals.shouldAutoScroll) {
