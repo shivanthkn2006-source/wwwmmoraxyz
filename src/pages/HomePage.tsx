@@ -101,8 +101,8 @@ import PageSeo from "@/components/seo/PageSeo";
 import NewContentBadge from '@/components/NewContentBadge';
 import { logFeedEvent } from '@/lib/feedEventDiagnostics';
 import { markPostsSeen, readUnseenPostIds, syncUnseenPostSnapshot, type FeedUpdateSource } from "@/lib/newPostGate";
-import { interleaveGrowthCards, orderGrowthByTime } from '@/lib/growthFeedComposition';
-import { currentSlot, deviceTimeZone, slotsForFrequency } from '@/lib/growthSlot';
+import { composeChronologicalFeed, orderGrowthByTime } from '@/lib/growthFeedComposition';
+import { currentSlot, deviceTimeZone, growthSlotTimestamp, slotsForFrequency } from '@/lib/growthSlot';
 
 
 
@@ -127,6 +127,7 @@ const HomePage = () => {
   // Personal Growth Engine — read-only. Rendering never triggers generation.
   const {
     today: growthToday,
+    insights: growthInsights,
     current: growthInsight,
     savedExtras: growthSaved,
     preferences: growthPreferences,
@@ -187,11 +188,8 @@ const HomePage = () => {
       : growthInsight
         ? [growthInsight]
         : [];
-    return [
-      ...dayCards.map((insight) => ({ insight, savedBadge: false })),
-      ...growthSaved.map((insight) => ({ insight, savedBadge: true })),
-    ];
-  }, [growthToday, growthInsight, growthSaved, growthPreferences?.timezone, growthPreferences?.delivery_frequency]);
+    return dayCards.map((insight) => ({ insight, savedBadge: false }));
+  }, [growthToday, growthInsight, growthPreferences?.timezone, growthPreferences?.delivery_frequency]);
 
   const growthSlide = growthCards.map(({ insight, savedBadge }) => (
     <div
@@ -213,6 +211,13 @@ const HomePage = () => {
           focusAreas={growthPreferences?.focus_areas ?? []}
           deliveryFrequency={growthPreferences?.delivery_frequency}
         />
+      </FeedErrorBoundary>
+    </div>
+  ));
+  const savedGrowthSlides = growthSaved.map((insight) => (
+    <div key={`growth-${insight.id}-saved`} className="relative flex h-full min-h-full w-full shrink-0 snap-start snap-always items-center overflow-y-auto p-4" data-growth-insight data-growth-saved="true">
+      <FeedErrorBoundary section="posts">
+        <CuratedInsightCard insight={insight} className="w-full" saved={isGrowthSaved(insight.id)} onToggleSave={(id) => void toggleGrowthSave(id)} savedBadge onImpression={(i) => trackGrowth('impression', i)} onCardClick={(i) => trackGrowth('click', i)} onOpenDetails={(i) => setGrowthDetails(i)} focusAreas={growthPreferences?.focus_areas ?? []} deliveryFrequency={growthPreferences?.delivery_frequency} />
       </FeedErrorBoundary>
     </div>
   ));

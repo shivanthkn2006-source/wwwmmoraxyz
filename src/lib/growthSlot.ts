@@ -162,3 +162,26 @@ export function slotOrder(slot: GrowthSlot): number {
   const i = GROWTH_SLOTS.indexOf(slot);
   return i < 0 ? GROWTH_SLOTS.length : i;
 }
+
+/** Convert a Growth delivery wall-clock value in an IANA zone to an instant. */
+export function growthSlotTimestamp(localDate: string, slot: GrowthSlot, timeZone: string): number {
+  const time = SLOT_LOCAL_TIME[slot];
+  const [year, month, day] = localDate.split('-').map(Number);
+  if (!year || !month || !day) return 0;
+  const desiredUtc = Date.UTC(year, month - 1, day, time.hour, time.minute);
+  let candidate = desiredUtc;
+  try {
+    for (let pass = 0; pass < 2; pass += 1) {
+      const parts = new Intl.DateTimeFormat('en-CA', {
+        timeZone, year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', hour12: false,
+      }).formatToParts(new Date(candidate));
+      const read = (type: string) => Number(parts.find((part) => part.type === type)?.value ?? 0);
+      const renderedUtc = Date.UTC(read('year'), read('month') - 1, read('day'), read('hour') % 24, read('minute'));
+      candidate += desiredUtc - renderedUtc;
+    }
+    return candidate;
+  } catch {
+    return desiredUtc;
+  }
+}
