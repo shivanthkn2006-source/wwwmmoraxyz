@@ -20,6 +20,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { appendMediaVersion, inferMediaType, isPrivateStorageUrl, makeFallbackVideoPoster, resolvePrivateStorageUrl } from '@/lib/mediaUtils';
 import { usePersistentMediaSound } from '@/hooks/usePersistentMediaSound';
 import AuthorPreviewRail from '@/components/home/AuthorPreviewRail';
+import PostAttachmentGallery from '@/components/home/PostAttachmentGallery';
 import { useFollow } from '@/hooks/useFollow';
 import { setZoeActivePostContext } from '@/lib/zoePlatformContext';
 import { allowFeedMediaReplay, hasPlayedFeedMedia, markFeedMediaPlayed } from '@/lib/feedPlayback';
@@ -49,6 +50,7 @@ interface Post {
     status?: string;
   };
   user_liked?: boolean;
+  attachments?: import('@/pages/home/homeFeedUtils').PostAttachment[];
 }
 
 interface PostCardProps {
@@ -643,7 +645,9 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate, onMediaCompleted })
     >
       {/* Media layer (full bleed) */}
       <div ref={mediaFrameRef} className="absolute inset-0" data-testid="post-media-frame">
-        {isDeferredHeavyMedia ? (
+        {post.attachments && post.attachments.length > 1 ? (
+          <PostAttachmentGallery attachments={post.attachments} onVideoCompleted={() => onMediaCompleted?.(post.id)} />
+        ) : isDeferredHeavyMedia ? (
           <div className="h-full w-full animate-pulse bg-muted" data-testid="post-deferred-media-preview" />
         ) : isVideoMedia ? (
           <div className="flex h-full w-full items-center justify-center bg-black">

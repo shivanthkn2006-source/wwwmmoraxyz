@@ -117,7 +117,28 @@ import {
   withRetry,
   xhrUploadToPosts,
   type Post,
+  type PostAttachment,
 } from '@/pages/home/homeFeedUtils';
+
+async function attachPostMedia(posts: Post[]): Promise<Post[]> {
+  if (!posts.length) return posts;
+  const { data, error } = await supabase
+    .from('post_attachments')
+    .select('id, post_id, media_url, media_preview_url, media_type, file_name, file_size, sort_order')
+    .in('post_id', posts.map((post) => post.id))
+    .order('sort_order', { ascending: true });
+  if (error) {
+    console.warn('[HomeFeed] attachment lookup failed', error.message);
+    return posts;
+  }
+  const byPost = new Map<string, PostAttachment[]>();
+  for (const row of (data ?? []) as PostAttachment[]) {
+    const current = byPost.get(row.post_id) ?? [];
+    current.push(row);
+    byPost.set(row.post_id, current);
+  }
+  return posts.map((post) => ({ ...post, attachments: byPost.get(post.id) ?? [] }));
+}
 
 
 const HomePage = () => {
