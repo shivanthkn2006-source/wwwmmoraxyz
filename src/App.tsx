@@ -495,7 +495,6 @@ const RouteAwareShell = () => {
             <HarvestIntegration />
 
             <VelvetRopeProvider>
-              <PlanetaryIntentSelector />
               <DevTestButton />
               <ScreenTapController />
               <AdminToolbar />
@@ -1208,6 +1207,9 @@ const App = () => {
                       </Suspense>
 
                       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+
+                        {/* Entry splash — inside the router so it only covers the entry screen. */}
+                        <PlanetaryIntentSelector />
 
                         {/* Sandboxed M'Mora Zoe overlay layer — inside the router so it
                             can stay on the home feed and never cover other pages. */}

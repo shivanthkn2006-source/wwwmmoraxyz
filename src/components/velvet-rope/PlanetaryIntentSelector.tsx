@@ -5,6 +5,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import React, { memo, useCallback, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -73,22 +74,15 @@ const PlanetaryIntentSelector: React.FC = () => {
     dismissIntentSelector();
   }, [dismissIntentSelector]);
 
-  // Prevent critical app surfaces from being blocked by the optimization overlay.
+  // This splash belongs to the entry screen only. On any other route it is a
+  // full-screen layer that silently swallows every click on the page below.
+  const { pathname } = useLocation();
+
   useEffect(() => {
-    if (!showIntentSelector) return;
-    if (typeof window === 'undefined') return;
-    const path = window.location.pathname;
-    if (!path.startsWith('/zoe-omega') && path !== '/home' && path !== '/voice-command-test') return;
+    if (showIntentSelector && pathname !== '/') dismissIntentSelector();
+  }, [showIntentSelector, pathname, dismissIntentSelector]);
 
-    const timer = window.setTimeout(() => {
-      dismissIntentSelector();
-    }, 1200);
-
-    return () => window.clearTimeout(timer);
-  }, [showIntentSelector, dismissIntentSelector]);
-
-  const path = typeof window !== 'undefined' ? window.location.pathname : '';
-  if (!showIntentSelector || !mvdScore.isBasicComplete || path === '/home' || path === '/voice-command-test') {
+  if (!showIntentSelector || !mvdScore.isBasicComplete || pathname !== '/') {
     return null;
   }
 
