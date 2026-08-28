@@ -27,6 +27,7 @@ const ProfilePage = () => {
 
   // Fetch username
   useEffect(() => {
+    setUsername('');
     const fetchUsername = async () => {
       if (!user) return;
       
@@ -46,6 +47,8 @@ const ProfilePage = () => {
 
   // Check if user needs onboarding
   useEffect(() => {
+    setShowOnboarding(false);
+    setCheckingOnboarding(true);
     const checkOnboardingStatus = async () => {
       if (!user) return;
 

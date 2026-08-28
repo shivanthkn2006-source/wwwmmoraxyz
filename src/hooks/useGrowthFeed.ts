@@ -69,8 +69,8 @@ export function useGrowthFeed() {
     if (!user) { setState({ ...EMPTY, loading: false }); return; }
 
     const tz = deviceTimeZone();
-    const today = localDateIn(new Date(), tz);
-    const yesterday = localDateIn(new Date(Date.now() - 86_400_000), tz);
+    const provisionalToday = localDateIn(new Date(), tz);
+    const provisionalYesterday = localDateIn(new Date(Date.now() - 86_400_000), tz);
 
     try {
       const [prefRes, itemRes, savedRes] = await Promise.all([
@@ -84,8 +84,9 @@ export function useGrowthFeed() {
         supabase
           .from('growth_feed_items')
           .select('id, slot, local_date, title, category, content, actionable_step, created_at')
+          .eq('user_id', user.id)
           .eq('status', 'published')
-          .gte('local_date', yesterday)
+          .gte('local_date', provisionalYesterday)
           .order('created_at', { ascending: false })
           .limit(20),
         supabase
@@ -128,6 +129,7 @@ export function useGrowthFeed() {
 
       const enabled = slotsForFrequency(preferences?.delivery_frequency ?? 5);
       const zone = preferences?.timezone || tz;
+      const today = localDateIn(new Date(), zone);
       const slot = currentSlot(new Date(), zone, enabled);
 
       // Catch-up: everything already delivered today, chronologically.

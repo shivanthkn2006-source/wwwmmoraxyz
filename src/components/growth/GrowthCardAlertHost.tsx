@@ -141,7 +141,11 @@ export const GrowthCardAlertHost: React.FC = () => {
     prefs?.notify_on_new_insight !== false &&
     prefs?.notify_digest !== 'off';
 
-  const pushOn = alertsOn && isEnabled(GROWTH_FLAGS.push) && prefs?.notify_push !== false;
+  // Instant device pushes fire per-card. Daily digests are aggregated by the
+  // worker at the member's final local window, so emitting here would bypass
+  // the selected frequency and produce multiple mobile alerts.
+  const pushOn = alertsOn && isEnabled(GROWTH_FLAGS.push) &&
+    prefs?.notify_push !== false && prefs?.notify_digest === 'instant';
 
   const onNewAlert = useCallback(
     (a: GrowthAlert) => {

@@ -1594,14 +1594,16 @@ const HomePage = () => {
 
     const { data } = await supabase
       .from('profiles')
-        .select('display_name, username, profile_photo_url, event_date, event_recurring, status, bio, hobbies')
+        .select('display_name, username, profile_photo_url, event_date, event_recurring, status, bio, hobbies, onboarding_step')
       .eq('user_id', user.id)
       .maybeSingle();
 
     if (data) {
       setUserProfile(data);
-      // Auto-open profile sheet for new users without bio or hobbies
-      if (!data.bio && (!data.hobbies || data.hobbies.length === 0)) {
+      // Optional bio/hobbies must never reopen the profile for an established
+      // member on every sign-in. Only an explicitly incomplete profile setup
+      // may open this sheet automatically.
+      if (data.onboarding_step && data.onboarding_step !== 'complete') {
         setIsProfileSheetOpen(true);
       }
     }

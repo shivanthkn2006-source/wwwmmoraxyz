@@ -17,7 +17,7 @@
  */
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  Activity, AlertTriangle, CheckCircle2, Loader2, PauseCircle, Stethoscope, Wrench,
+  Activity, AlertTriangle, CheckCircle2, Download, Loader2, PauseCircle, Stethoscope, Wrench,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -46,6 +46,30 @@ interface DiagnosticLine {
   ok: boolean;
   label: string;
   detail: string;
+}
+
+function downloadDiagnostics(
+  format: 'csv' | 'json',
+  lines: DiagnosticLine[],
+  status: MeStatus | null,
+) {
+  const generatedAt = new Date().toISOString();
+  const filename = `growth-diagnostics-${generatedAt.slice(0, 10)}.${format}`;
+  const csvCell = (value: unknown) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+  const content = format === 'json'
+    ? JSON.stringify({ generatedAt, status, checks: lines }, null, 2)
+    : [
+        ['generated_at', 'result', 'check', 'detail'].map(csvCell).join(','),
+        ...lines.map((line) => [generatedAt, line.ok ? 'pass' : 'fail', line.label, line.detail]
+          .map(csvCell).join(',')),
+      ].join('\n');
+  const blob = new Blob([content], { type: format === 'json' ? 'application/json' : 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
 }
 
 const STATUS_COPY: Record<string, string> = {
@@ -310,6 +334,14 @@ export const GrowthEngineStatusBanner: React.FC<{ onChanged?: () => void }> = ({
                   Everything checks out — cards will appear at your next delivery window.
                 </p>
               )}
+              <div className="flex flex-wrap gap-2 pt-1">
+                <Button size="sm" variant="outline" onClick={() => downloadDiagnostics('csv', diagnostics, status)}>
+                  <Download className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" /> CSV
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => downloadDiagnostics('json', diagnostics, status)}>
+                  <Download className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" /> JSON
+                </Button>
+              </div>
             </div>
           )}
         </div>
