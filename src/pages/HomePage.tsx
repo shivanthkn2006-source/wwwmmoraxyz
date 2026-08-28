@@ -106,8 +106,6 @@ import { interleaveGrowthCards } from '@/lib/growthFeedComposition';
 
 
 import {
-  ALLOWED_IMAGE_MIME,
-  ALLOWED_VIDEO_MIME,
   classifyUpload,
   DATA_URL_PREVIEW_LIMIT,
   captureVideoPreview,
@@ -530,10 +528,24 @@ const HomePage = () => {
   const knownFeedIdsRef = useRef<Record<'global' | 'personal' | 'loops', string[]>>({ global: [], personal: [], loops: [] });
   type NewContentByFeed = Record<'global' | 'personal' | 'loops', Set<string>>;
   const [newContentByFeed, setNewContentByFeed] = useState<NewContentByFeed>(() => ({
-    global: readUnseenPostIds('global'),
-    personal: readUnseenPostIds('personal'),
-    loops: readUnseenPostIds('loops'),
+    global: readUnseenPostIds(`global:${user?.id || 'anonymous'}`),
+    personal: readUnseenPostIds(`personal:${user?.id || 'anonymous'}`),
+    loops: readUnseenPostIds(`loops:${user?.id || 'anonymous'}`),
   }));
+
+  const newGateKey = React.useCallback(
+    (feed: keyof NewContentByFeed) => `${feed}:${user?.id || 'anonymous'}`,
+    [user?.id],
+  );
+
+  useEffect(() => {
+    knownFeedIdsRef.current = { global: [], personal: [], loops: [] };
+    setNewContentByFeed({
+      global: readUnseenPostIds(newGateKey('global')),
+      personal: readUnseenPostIds(newGateKey('personal')),
+      loops: readUnseenPostIds(newGateKey('loops')),
+    });
+  }, [newGateKey]);
 
   const [showZoeHomeDebug, setShowZoeHomeDebug] = useState<boolean>(() => {
     try { return typeof window !== 'undefined' && window.localStorage.getItem('mmora.home.zoeDebugOverlay') !== 'false'; } catch { return true; }
@@ -1000,14 +1012,14 @@ const HomePage = () => {
     }, [user?.id]);
 
   const dismissNewContent = React.useCallback((feed: keyof NewContentByFeed, id: string) => {
-    markPostsSeen(feed, [id]);
+    markPostsSeen(newGateKey(feed), [id]);
     setNewContentByFeed((current) => {
       if (!current[feed].has(id)) return current;
       const nextFeed = new Set(current[feed]);
       nextFeed.delete(id);
       return { ...current, [feed]: nextFeed };
     });
-  }, []);
+  }, [newGateKey]);
 
   const scrollToNewPosts = React.useCallback(() => {
     const first = document.querySelector<HTMLElement>(`[data-feed-tab="${activeTab}"] [data-post-card][data-new="true"]`);
@@ -1034,7 +1046,7 @@ const HomePage = () => {
       if (nextIdx >= posts.length) {
         // One full pass done → mark everything as seen, scroll back, and stop
         // until genuinely new posts arrive.
-        markPostsSeen(activeTab, pendingSeenIdsRef.current);
+        markPostsSeen(newGateKey(activeTab), pendingSeenIdsRef.current);
         setNewContentByFeed((current) => {
           const nextFeed = new Set(current[activeFeed]);
           pendingSeenIdsRef.current.forEach((id) => nextFeed.delete(id));
