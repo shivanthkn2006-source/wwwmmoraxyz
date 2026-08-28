@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 // Device capability + viewport gating for the WebGL wrapper: heavy 3D must
 // degrade to a 2D fallback on low-power devices, without WebGL, in thermal-safe
 // mode, and while offscreen — and must never block the calling render.

@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 // Verifies module isolation: a crashing child reports to enterpriseTelemetry
 // and the surrounding app keeps rendering.
 import React from 'react';
