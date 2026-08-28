@@ -22,6 +22,6 @@ describe('CuratedInsightCard image', () => {
     expect(img.src).toContain('image.pollinations.ai/prompt/');
     expect(img.src).toContain('seed=');
     expect(decodeURIComponent(img.src)).toContain('Reflect on one win.');
-    expect(decodeURIComponent(img.src)).toContain('exact historical person');
+    expect(decodeURIComponent(img.src)).toContain('no human faces');
   });
 });
