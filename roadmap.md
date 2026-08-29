@@ -11,3 +11,11 @@
 - [ ] Persist and render mixed image, video, and PDF attachments for every authenticated user.
 - [ ] Merge posts, Loops, and Growth cards by one effective timestamp so the visible feed is truly newest-first.
 - [ ] Add regression tests and verify upload selection, responsive previews, chronological feed order, and runtime health in the authenticated preview.
+
+## Enterprise hardening — monitoring findings (one by one)
+- [x] Retired NVIDIA model `z-ai/glm-5.2` removed; 410/404 responses now permanently skip a model in the cascade.
+- [x] RLS write storms: telemetry writes go through `src/lib/safeTelemetry.ts` (live-session uid, drop when signed out) for behavioral_events, zoe_settings, platform_health_logs, feed_diagnostics_log, dhf_soul_codex, zoe_black_box_ledger.
+- [ ] `zoe-motivation` scheduled job times out (504) — batch/parallelize LLM + image work.
+- [ ] Audit diff view and trace link never appear on the Zoe dispatch dashboard.
+- [ ] First injected search video restarts and plays off-screen in the background.
+- [ ] Live view stays black after app/tab switch (camera never restarts).
