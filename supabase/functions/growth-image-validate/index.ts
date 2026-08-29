@@ -22,7 +22,8 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
   try {
-    const { imageUrl, person, subject, category } = await req.json();
+    const { imageUrl, person, subject, category, strictness } = await req.json();
+    const mode = strictness === 'strict' || strictness === 'lenient' ? strictness : 'balanced';
     if (typeof imageUrl !== 'string' || !imageUrl.startsWith('http')) {
       return json({ error: 'imageUrl is required' }, 400);
     }
@@ -30,9 +31,15 @@ Deno.serve(async (req) => {
     const apiKey = Deno.env.get('LOVABLE_API_KEY');
     if (!apiKey) return json({ error: 'AI is not configured' }, 401);
 
+    const tolerance = mode === 'strict'
+      ? 'Judge harshly: any doubt about likeness, era or subject relevance is a mismatch.'
+      : mode === 'lenient'
+        ? 'Judge generously: only an obvious contradiction with the card is a mismatch.'
+        : 'Judge fairly: a clear contradiction with the card is a mismatch.';
+
     const rule = person
-      ? `The card is about the real person "${person}". The image matches ONLY if the depicted person is plausibly ${person} (correct era, age, clothing, likeness). A generic modern model is a mismatch.`
-      : 'The card names no person. The image matches ONLY if it shows no identifiable human face.';
+      ? `The card is about the real person "${person}". The image matches ONLY if the depicted person is plausibly ${person} (correct era, age, clothing, likeness). A generic modern model is a mismatch. ${tolerance}`
+      : `The card names no person. The image matches ONLY if it shows no identifiable human face. ${tolerance}`;
 
     // Providers cannot crawl the image host, so inline the bytes instead.
     let inlineImage: string;
