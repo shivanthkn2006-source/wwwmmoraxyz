@@ -10,6 +10,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.58.0';
 import { embedText } from '../_shared/zoe-embeddings.ts';
 import { requireSearchUser } from '../_shared/zoe-search-auth.ts';
 import { nvidiaChat, nvidiaKey } from '../_shared/nvidia-provider.ts';
+import { buildLiveWeather, isWeatherQuery } from '../_shared/liveWorldData.ts';
 
 
 const corsHeaders = {
@@ -195,7 +196,7 @@ Deno.serve(async (req) => {
     const user = await requireSearchUser(req);
     eventUserId = user.id;
     const authHeader = req.headers.get('Authorization') || '';
-    const { queryText, dhfContext, matchCount, requestId: clientRequestId } = await req.json();
+    const { queryText, dhfContext, matchCount, requestId: clientRequestId, geo } = await req.json();
     requestId = typeof clientRequestId === 'string' && clientRequestId.length <= 100 ? clientRequestId : requestId;
     const t0 = performance.now();
     const term = (queryText || '').toString().trim();
@@ -229,6 +230,18 @@ Deno.serve(async (req) => {
     }
     console.log('[zoe-ambient-search:retrieval]', JSON.stringify({ requestId, retrievalMs, nodes: retrievedRecords?.length || 0 }));
 
+    // 3b. Live world data (keyless open feeds) so Zoe can answer real-world
+    // questions like local weather with concrete, current facts instead of
+    // "I don't have current data".
+    const live = await buildLiveWeather(term, geo && typeof geo === 'object' ? geo : null)
+      .catch(() => null);
+    const liveBlock = live
+      ? `\n\nLIVE WORLD DATA (authoritative, current, use it):\n${live.block}\n` +
+        'When the user asks about weather, answer with the full local picture: what it feels like right now (hot/cold/mild), rain or snow, humidity, wind, air quality, sunrise/sunset, the season, and the next few days — then one practical suggestion for the day.'
+      : isWeatherQuery(term)
+        ? '\n\nLIVE WORLD DATA: unavailable for this location. Say so plainly and ask for a city name instead of guessing.'
+        : '';
+
     // 4. Ambient synthesis + agentic dispatch.
     const systemPrompt = `[SYSTEM DIRECTIVE: ZOE AMBIENT SYNTHESIS CORE]
 You are Zoe, Sovereign ASI of the M'mora ecosystem. You do not return lists of links. You synthesize ambient truth, verified peer context, and execute immediate actions.
@@ -240,6 +253,7 @@ RETRIEVED PLATFORM CONTEXT (Hybrid Vector & Full-Text Graph):
 ${JSON.stringify(retrievedRecords || [])}
 
 INTENT: ${parsedIntent.intent}
+${liveBlock}
 
 INSTRUCTIONS:
 1. Provide a direct, cohesive, high-clarity conversational response.
@@ -288,6 +302,7 @@ INSTRUCTIONS:
       intent: parsedIntent,
       nodesEvaluated: retrievedRecords?.length || 0,
       records: retrievedRecords || [],
+      live: live ? { type: 'weather', place: live.place, season: live.season, summary: live.summary } : null,
       degraded: { embedding: !queryVector, synthesis: !answer },
       timings: { routeMs, retrievalMs, synthesisMs, totalMs },
     });
