@@ -37,10 +37,14 @@ export const extractNamedPerson = (title: string, content: string): string | nul
   const re = new RegExp(`${NAME_TOKEN}(?:\\s+${NAME_TOKEN}){1,2}`, 'g');
   const candidates: string[] = [];
 
-  const collect = (text: string) => {
+  const collect = (text: string, requireInContent = false) => {
     for (const match of text.match(re) ?? []) {
-      const parts = match.split(/\s+/);
+      // Strip possessives so "Monday's Momentum" is judged on "Monday".
+      const parts = match.split(/\s+/).map((p) => p.replace(/'s$/i, ''));
       if (parts.some((p) => STOPWORDS.has(p))) continue;
+      // A capitalised phrase that only exists in the title is a label, not a
+      // person — it must be echoed in the body before we depict a face.
+      if (requireInContent && !new RegExp(`\\b${parts[0]}\\b`).test(content)) continue;
       candidates.push(match);
     }
   };
@@ -55,7 +59,7 @@ export const extractNamedPerson = (title: string, content: string): string | nul
     if (new RegExp(`\\b${name}\\b`).test(content)) return name;
   }
 
-  collect(title);
+  collect(title, true);
   return candidates[0] ?? null;
 };
 
