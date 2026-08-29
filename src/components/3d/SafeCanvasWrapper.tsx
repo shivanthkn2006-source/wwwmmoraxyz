@@ -7,6 +7,14 @@
 import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { AppErrorBoundary } from '@/components/core/ErrorBoundary';
 import { usePlatformStore } from '@/store/usePlatformStore';
+import {
+  canAttemptWebGL,
+  recordWebGLFailure,
+  recordWebGLSuccess,
+  resetWebGLBreaker,
+  getBreakerState,
+  subscribeBreaker,
+} from '@/lib/webglCircuitBreaker';
 
 export interface SafeCanvasWrapperProps {
   /** Dynamic import of the heavy scene, e.g. () => import('./HeavyThreeScene') */
@@ -84,8 +92,19 @@ export const SafeCanvasWrapper: React.FC<SafeCanvasWrapperProps> = ({
   const acquireHeavyModule = usePlatformStore((s) => s.acquireHeavyModule);
   const releaseHeavyModule = usePlatformStore((s) => s.releaseHeavyModule);
 
+  // Circuit breaker: re-read on every trip/reset so a failing scene degrades
+  // to the safe UI without a page reload.
+  const [breakerTick, setBreakerTick] = useState(0);
+  useEffect(() => subscribeBreaker(() => setBreakerTick((t) => t + 1)), []);
+  const breaker = useMemo(
+    () => getBreakerState(moduleName),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [moduleName, breakerTick],
+  );
+  const circuitOpen = breaker.state === 'open';
+
   const capable = useMemo(() => detectWebGLSupport() && !detectLowPowerDevice(), []);
-  const shouldRender = capable && !thermalSafeMode && visible;
+  const shouldRender = capable && !thermalSafeMode && visible && canAttemptWebGL(moduleName);
 
   // Viewport gate — never initialise a GL context for an offscreen scene.
   useEffect(() => {
@@ -116,27 +135,56 @@ export const SafeCanvasWrapper: React.FC<SafeCanvasWrapperProps> = ({
   }, [shouldRender, acquireHeavyModule, releaseHeavyModule]);
 
   const Scene = useMemo(
-    () => React.lazy(() => load().catch(() => ({ default: () => null }))),
-    [load],
+    () =>
+      React.lazy(() =>
+        load()
+          .then((mod) => {
+            recordWebGLSuccess(moduleName);
+            return mod;
+          })
+          .catch((error) => {
+            // Chunk fetch / module init failure counts against the breaker.
+            recordWebGLFailure(moduleName, error);
+            return { default: () => null };
+          }),
+      ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [load, moduleName, breakerTick],
+  );
+
+  const safeUi = (label: string) => (
+    <div className="flex h-full w-full flex-col items-center justify-center gap-2 px-4 text-center">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      {circuitOpen && (
+        <button
+          type="button"
+          onClick={() => resetWebGLBreaker(moduleName)}
+          className="rounded-full border border-border px-3 py-1 text-[11px] text-foreground/80 hover:bg-muted"
+          data-testid="webgl-retry"
+        >
+          Try 3D again
+        </button>
+      )}
+    </div>
   );
 
   return (
     <div ref={containerRef} className={className ?? 'h-full min-h-[300px] w-full bg-background'}>
       {!shouldRender ? (
-        fallback2D ?? (
-          <DefaultStatic
-            label={
-              capable
-                ? 'Preview paused to conserve device resources.'
-                : '3D preview unavailable on this device.'
-            }
-          />
+        fallback2D ??
+        safeUi(
+          circuitOpen
+            ? '3D preview turned off after repeated load errors. The rest of the app is unaffected.'
+            : capable
+              ? 'Preview paused to conserve device resources.'
+              : '3D preview unavailable on this device.',
         )
       ) : (
         <AppErrorBoundary
           moduleName={moduleName}
           severity="medium"
-          fallback={fallback2D ?? <DefaultStatic label="3D module offline — falling back." />}
+          onError={(error) => recordWebGLFailure(moduleName, error)}
+          fallback={fallback2D ?? safeUi('3D module offline — falling back to the lightweight view.')}
         >
           <Suspense fallback={<DefaultLoader label={loadingLabel} />}>
             <Scene {...(sceneProps ?? {})} />
