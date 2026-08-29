@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
+import { logTelemetry } from '@/lib/safeTelemetry';
 import { useAuth } from '@/lib/auth';
 import PostCard from '@/components/PostCard';
 import { MoraZoeDailyCard } from '@/components/astro/MoraZoeDailyCard';
@@ -790,8 +791,7 @@ const HomePage = () => {
   const logFeedIssue = React.useCallback(async (entry: Omit<import('@/components/AdminFeedDebugger').FeedDebugEntry,'timestamp'>) => {
     pushDebug(entry);
     try {
-      await (supabase as any).from('feed_diagnostics_log').insert({
-        user_id: user?.id || null,
+      await logTelemetry('feed_diagnostics_log', {
         status: 'error',
         message: entry.errorMessage || entry.step,
         error_code: entry.errorCode || null,
@@ -811,8 +811,7 @@ const HomePage = () => {
 
   const logFeedDiagnostic = React.useCallback(async (d: FeedDiagnostics, rlsBlocked = false) => {
     try {
-      await (supabase as any).from('feed_diagnostics_log').insert({
-        user_id: user?.id || null,
+      await logTelemetry('feed_diagnostics_log', {
         status: d.status,
         message: d.message?.slice(0, 500) || null,
         error_code: d.code || null,

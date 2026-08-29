@@ -10,6 +10,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { logTelemetry } from '@/lib/safeTelemetry';
 import { useAuth } from '@/lib/auth';
 import { toast } from 'sonner';
 
@@ -215,13 +216,12 @@ export const useGenesisEngine = () => {
 
       // Log to platform
       if (user && isOnline) {
-        await supabase.from('platform_health_logs').insert([{
-          user_id: user.id,
+        await logTelemetry('platform_health_logs', {
           score: Math.round((results.filter(r => r.status === 'healthy').length / results.length) * 100),
           status: results.some(r => r.status === 'critical') ? 'critical' : 
                   results.some(r => r.status === 'warning') ? 'warning' : 'healthy',
-          scan_data: JSON.parse(JSON.stringify({ diagnostics: results, duration }))
-        }]);
+          scan_data: JSON.parse(JSON.stringify({ diagnostics: results, duration })),
+        });
       }
 
       return results;

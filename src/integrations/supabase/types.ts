@@ -10645,6 +10645,10 @@ export type Database = {
         Args: { timeline_id: string; user_id: string }
         Returns: boolean
       }
+      is_timeline_owner: {
+        Args: { _timeline_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_user_shadow_banned: { Args: { p_user_id: string }; Returns: boolean }
       log_raa_diagnosis: {
         Args: {

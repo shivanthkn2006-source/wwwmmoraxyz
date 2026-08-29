@@ -15,6 +15,7 @@
 
 import { useRef, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { logTelemetry, resolveAuthUid } from '@/lib/safeTelemetry';
 import { useAuth } from '@/lib/auth';
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -120,9 +121,16 @@ export const useDebouncedTelemetry = () => {
         ecn_processed: false,
       }));
 
+      const uid = await resolveAuthUid();
+      if (!uid) {
+        // Session gone: keep the events buffered rather than tripping RLS.
+        queueRef.current = [...eventsToWrite, ...queueRef.current].slice(0, MAX_QUEUE_SIZE);
+        isFlushingRef.current = false;
+        return;
+      }
       const { error } = await supabase
         .from('behavioral_events')
-        .insert(formattedEvents);
+        .insert(formattedEvents.map((e) => ({ ...e, user_id: uid })));
 
       if (error) {
         console.error('[TELEMETRY] Batch write failed:', error);
@@ -151,8 +159,7 @@ export const useDebouncedTelemetry = () => {
     if (!user?.id) return false;
 
     try {
-      const { error } = await supabase.from('behavioral_events').insert({
-        user_id: user.id,
+      const { ok, error } = await logTelemetry('behavioral_events', {
         event_type: event.event_type,
         event_category: event.event_category,
         context_snippet: event.context_snippet?.substring(0, 500) || null,
@@ -162,8 +169,8 @@ export const useDebouncedTelemetry = () => {
         ecn_processed: false,
       });
 
-      if (error) {
-        console.error('[TELEMETRY] Immediate write failed:', error);
+      if (!ok) {
+        if (error) console.error('[TELEMETRY] Immediate write failed:', error);
         return false;
       }
 
