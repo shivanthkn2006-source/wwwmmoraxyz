@@ -262,7 +262,7 @@ export class BlackBoxLedger {
       // returning row would need a second permission check.
       const { error } = await supabase
         .from('zoe_black_box_ledger')
-        .insert(entry);
+        .insert({ ...entry, user_id: entry.user_id || ownerId });
 
       if (error) {
         // Buffer on error
