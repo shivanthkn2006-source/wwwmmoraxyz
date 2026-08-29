@@ -15,12 +15,36 @@ interface FaceLoginModalProps {
 
 type Step = 'email' | 'camera' | 'verifying' | 'success' | 'error';
 
+/**
+ * Face ID should not interrogate returning members for their email: the
+ * account is remembered from the last successful sign-in on this device and
+ * the flow jumps straight to the camera. The email field only appears the
+ * first time, or after the member clears the remembered account.
+ */
+const REMEMBERED_EMAIL_KEY = 'mmora.faceid.email';
+
+const readRememberedEmail = (): string => {
+  try {
+    return localStorage.getItem(REMEMBERED_EMAIL_KEY) ?? '';
+  } catch {
+    return '';
+  }
+};
+
+const rememberEmail = (value: string) => {
+  try {
+    localStorage.setItem(REMEMBERED_EMAIL_KEY, value.trim().toLowerCase());
+  } catch {
+    /* private mode: the field simply shows again next time */
+  }
+};
+
 const FaceLoginModal: React.FC<FaceLoginModalProps> = ({ open, onClose, onSuccess }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [step, setStep] = useState<Step>('email');
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(() => readRememberedEmail());
   const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
@@ -35,7 +59,7 @@ const FaceLoginModal: React.FC<FaceLoginModalProps> = ({ open, onClose, onSucces
     if (!open) {
       // Reset state when modal closes
       setStep('email');
-      setEmail('');
+      setEmail(readRememberedEmail());
       setErrorMessage('');
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
@@ -44,10 +68,10 @@ const FaceLoginModal: React.FC<FaceLoginModalProps> = ({ open, onClose, onSucces
     }
   }, [open]);
 
-  const checkFaceEnrolled = async () => {
+  const checkFaceEnrolled = async (address = email) => {
     try {
       const { data, error } = await supabase.functions.invoke('face-verification', {
-        body: { operation: 'check_face_enrolled', email }
+        body: { operation: 'check_face_enrolled', email: address }
       });
 
       if (error) throw error;
@@ -58,14 +82,15 @@ const FaceLoginModal: React.FC<FaceLoginModalProps> = ({ open, onClose, onSucces
     }
   };
 
-  const startCamera = async () => {
-    if (!email.trim()) {
+  const startCamera = async (addressArg?: string) => {
+    const address = (addressArg ?? email).trim();
+    if (!address) {
       toast.error('Please enter your email first');
       return;
     }
 
     // Check if face ID is set up for this email
-    const isEnrolled = await checkFaceEnrolled();
+    const isEnrolled = await checkFaceEnrolled(address);
     if (!isEnrolled) {
       setErrorMessage('Face ID is not set up for this account. Please sign in with password first and set up Face ID in settings.');
       setStep('error');
@@ -81,6 +106,7 @@ const FaceLoginModal: React.FC<FaceLoginModalProps> = ({ open, onClose, onSucces
         }
       });
       
+      rememberEmail(address);
       setStream(mediaStream);
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
@@ -163,6 +189,31 @@ const FaceLoginModal: React.FC<FaceLoginModalProps> = ({ open, onClose, onSucces
     }
   };
 
+  // Remembered account: go straight to the scanner, no email prompt.
+  useEffect(() => {
+    if (!open) return;
+    const remembered = readRememberedEmail();
+    if (!remembered || step !== 'email') return;
+    let cancelled = false;
+    (async () => {
+      const enrolled = await checkFaceEnrolled(remembered);
+      if (cancelled || !enrolled) return;
+      await startCamera(remembered);
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  const useAnotherAccount = () => {
+    try {
+      localStorage.removeItem(REMEMBERED_EMAIL_KEY);
+    } catch {
+      /* nothing stored */
+    }
+    setEmail('');
+    setStep('email');
+  };
+
   const retry = () => {
     setStep('email');
     setErrorMessage('');
@@ -198,7 +249,7 @@ const FaceLoginModal: React.FC<FaceLoginModalProps> = ({ open, onClose, onSucces
                 className="bg-input border-border"
               />
               <div className="flex gap-2">
-                <Button onClick={startCamera} className="flex-1 gap-2">
+                <Button onClick={() => startCamera()} className="flex-1 gap-2">
                   <Camera className="w-4 h-4" />
                   Continue with Camera
                 </Button>
@@ -235,6 +286,15 @@ const FaceLoginModal: React.FC<FaceLoginModalProps> = ({ open, onClose, onSucces
               <p className="text-sm text-muted-foreground text-center">
                 Position your face in the oval and click verify
               </p>
+              {email && (
+                <button
+                  type="button"
+                  onClick={useAnotherAccount}
+                  className="mx-auto block text-xs text-muted-foreground underline"
+                >
+                  Signing in as {email} — use another account
+                </button>
+              )}
               
               <div className="flex gap-2">
                 <Button onClick={captureAndVerify} className="flex-1 gap-2">

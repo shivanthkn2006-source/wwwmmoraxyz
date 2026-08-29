@@ -39,18 +39,25 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    // Vision runs through the Lovable AI gateway by default; the direct Google
+    // AI Studio key stays as a fallback for self-hosted deployments. The old
+    // hardcoded Google model id did not exist upstream, which is why face
+    // enrollment/verification failed with a provider error.
+    const lovableKey = Deno.env.get('LOVABLE_API_KEY');
     const googleApiKey = Deno.env.get('GOOGLE_AI_STUDIO_KEY');
-    if (!googleApiKey) {
-      console.error('[face-verification] GOOGLE_AI_STUDIO_KEY is not set');
+    if (!lovableKey && !googleApiKey) {
+      console.error('[face-verification] no vision provider configured');
       return new Response(
-        JSON.stringify({ error: 'Face verification service is not configured (missing GOOGLE_AI_STUDIO_KEY). Ask an admin to add the key in backend secrets.' }),
+        JSON.stringify({ error: 'Face verification service is not configured. Ask an admin to enable AI in backend settings.' }),
         { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-    const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
-    const GEMINI_MODEL = 'gemini-3.5-flash';
+    const GEMINI_URL = lovableKey
+      ? 'https://ai.gateway.lovable.dev/v1/chat/completions'
+      : 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
+    const GEMINI_MODEL = lovableKey ? 'google/gemini-3.7-flash' : 'gemini-2.5-flash';
     const geminiHeaders = {
-      'Authorization': `Bearer ${googleApiKey}`,
+      'Authorization': `Bearer ${lovableKey ?? googleApiKey}`,
       'Content-Type': 'application/json',
     };
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -193,7 +200,7 @@ serve(async (req) => {
     switch (operation) {
       case 'enroll_face': {
         // Store face enrollment data using Gemini 2.5 Pro Vision for analysis
-        const aiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
+        const aiResponse = await fetch(GEMINI_URL, {
           method: 'POST',
           headers: {
             ...geminiHeaders,
@@ -282,7 +289,7 @@ serve(async (req) => {
         }
 
         // Use Gemini 2.5 Pro Vision to verify face match
-        const aiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
+        const aiResponse = await fetch(GEMINI_URL, {
           method: 'POST',
           headers: {
             ...geminiHeaders,
@@ -375,7 +382,7 @@ serve(async (req) => {
         }
 
         // Use Gemini 2.5 Pro Vision to verify face match
-        const aiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
+        const aiResponse = await fetch(GEMINI_URL, {
           method: 'POST',
           headers: {
             ...geminiHeaders,
