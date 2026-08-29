@@ -18,6 +18,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import GrowthImageValidationPanel from '@/components/growth/GrowthImageValidationPanel';
 
 interface AuditRow {
   id: string;
@@ -149,6 +150,10 @@ export default function AdminGrowthDeliveryPage() {
             {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
           </Button>
         </header>
+
+        <div className="mb-6">
+          <GrowthImageValidationPanel />
+        </div>
 
         <div className="mb-4 flex flex-wrap items-center gap-2">
           {ACTION_FILTERS.map((f) => (

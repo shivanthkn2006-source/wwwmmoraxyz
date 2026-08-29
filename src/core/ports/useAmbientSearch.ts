@@ -54,6 +54,34 @@ export interface AmbientSearchDebug {
   error: string | null;
 }
 
+/**
+ * Best-effort device location for live-data answers (weather and friends).
+ * Cached for 10 minutes, resolves fast, and never blocks or rejects: without
+ * a fix the backend simply falls back to a city named in the query.
+ */
+const GEO_TTL_MS = 10 * 60 * 1000;
+let cachedGeo: { at: number; value: { latitude: number; longitude: number } | null } | null = null;
+
+const resolveGeo = (): Promise<{ latitude: number; longitude: number } | null> => {
+  if (cachedGeo && Date.now() - cachedGeo.at < GEO_TTL_MS) return Promise.resolve(cachedGeo.value);
+  if (typeof navigator === 'undefined' || !navigator.geolocation) return Promise.resolve(null);
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (value: { latitude: number; longitude: number } | null) => {
+      if (settled) return;
+      settled = true;
+      cachedGeo = { at: Date.now(), value };
+      resolve(value);
+    };
+    const timer = setTimeout(() => finish(null), 3000);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => { clearTimeout(timer); finish({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }); },
+      () => { clearTimeout(timer); finish(null); },
+      { enableHighAccuracy: false, maximumAge: GEO_TTL_MS, timeout: 3000 },
+    );
+  });
+};
+
 export const useAmbientSearch = () => {
   const [isSynthesizing, setIsSynthesizing] = useState(false);
   const [result, setResult] = useState<AmbientSearchResult | null>(null);
@@ -105,8 +133,17 @@ export const useAmbientSearch = () => {
         if (indexerError) console.warn('[zoe-search-indexer] background batch failed:', indexerError.message);
 
 
+        const coords = await resolveGeo();
         const { data, error: fnError } = await supabase.functions.invoke('zoe-ambient-search', {
-          body: { queryText: term, dhfContext: dhfContext || {}, requestId },
+          body: {
+            queryText: term,
+            dhfContext: dhfContext || {},
+            requestId,
+            geo: {
+              ...(coords || {}),
+              timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            },
+          },
         });
         const roundTripMs = Math.round(performance.now() - startedAt);
         console.info('[zoe-ambient-search:res]', {

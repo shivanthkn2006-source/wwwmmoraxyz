@@ -2371,21 +2371,43 @@ const HomePage = () => {
                 </h1>
               </div>
 
-              {/* Profile (top-right) */}
-              <button
-                type="button"
-                onClick={() => setIsProfileSheetOpen(true)}
-                className="flex items-center justify-center rounded-full outline-none focus:ring-2 focus:ring-primary/40"
-                aria-label="Open profile"
-                title="Profile"
-              >
-                <Avatar className={glowClass}>
-                  <AvatarImage src={userProfile?.profile_photo_url || userProfile?.avatar_url || ''} alt="User profile photo" />
-                  <AvatarFallback>
-                    {(userProfile?.display_name || user?.email || 'U').slice(0, 1).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-              </button>
+              {/* Notifications + profile (top-right) */}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setNotificationMenuOpen(true)}
+                  className="relative flex h-10 w-10 items-center justify-center rounded-full outline-none focus:ring-2 focus:ring-primary/40"
+                  aria-label={`Notifications${unreadNotifications > 0 ? `, ${unreadNotifications} unread` : ''}`}
+                  title="Notifications"
+                  data-testid="header-notifications"
+                >
+                  <Bell className="h-5 w-5 text-foreground" />
+                  {unreadNotifications > 0 && (
+                    <span
+                      className="absolute -right-0.5 -top-0.5 min-w-[18px] rounded-full bg-primary px-1 text-[10px] font-semibold leading-[18px] text-primary-foreground"
+                      data-testid="header-notifications-badge"
+                    >
+                      {unreadNotifications > 99 ? '99+' : unreadNotifications}
+                    </span>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsProfileSheetOpen(true)}
+                  className="flex items-center justify-center rounded-full outline-none focus:ring-2 focus:ring-primary/40"
+                  aria-label="Open profile"
+                  title="Profile"
+                >
+                  <Avatar className={glowClass}>
+                    <AvatarImage src={userProfile?.profile_photo_url || userProfile?.avatar_url || ''} alt="User profile photo" />
+                    <AvatarFallback>
+                      {(userProfile?.display_name || user?.email || 'U').slice(0, 1).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                </button>
+              </div>
+
             </div>
           </div>
 
