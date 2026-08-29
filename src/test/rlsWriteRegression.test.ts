@@ -112,7 +112,7 @@ describe('RLS regression — signed-out writes are skipped, never sent', () => {
 
   it('owner-scoped update and delete are refused while signed out', async () => {
     const ctx = { table: 'agent_interactions', scope: 'owner' as const, ownerColumn: 'user_id' };
-    const upd = await dataAccess.updateRows(ctx, { context_payload: {} }, { id: 'row-1' });
+    const upd = await dataAccess.updateRows(ctx, { id: 'row-1' }, { agent_id: 'agent_moksh' });
     const del = await dataAccess.deleteRows(ctx, { id: 'row-1' });
     expect(upd.error).toBeTruthy();
     expect(del.error).toBeTruthy();
@@ -148,7 +148,7 @@ describe('RLS regression — authorized writes are owner-stamped', () => {
 
   it('update and delete are constrained to the caller uid', async () => {
     const ctx = { table: 'agent_interactions', scope: 'owner' as const, ownerColumn: 'user_id' };
-    await dataAccess.updateRows(ctx, { context_payload: {} }, { id: 'row-1' });
+    await dataAccess.updateRows(ctx, { id: 'row-1' }, { agent_id: 'agent_moksh' });
     await dataAccess.deleteRows(ctx, { id: 'row-1' });
     for (const call of calls) {
       expect(call.filters.user_id).toBe('user-alpha');
