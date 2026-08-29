@@ -31,7 +31,6 @@ export const NVIDIA_ROLES = {
   chat: [
     'deepseek-ai/deepseek-v4-flash-0731',
     'meta/llama-3.3-70b-instruct',
-    'z-ai/glm-5.2',
     'minimaxai/minimax-m3',
   ],
   /** Low-latency routing / classification (search intent, gates). */
@@ -48,7 +47,6 @@ export const NVIDIA_ROLES = {
   ],
   /** Creative long-form copy (astrology cards, motivations). */
   creative: [
-    'z-ai/glm-5.2',
     'moonshotai/kimi-k3',
     'meta/llama-3.3-70b-instruct',
   ],
@@ -59,6 +57,21 @@ export const NVIDIA_ROLES = {
 } as const;
 
 export type NvidiaRole = keyof typeof NVIDIA_ROLES;
+
+/**
+ * Models the catalog has retired (HTTP 410 "end of life"). Once a model answers
+ * 410 it never recovers, so it is skipped for the lifetime of the isolate
+ * instead of burning a request on every cascade.
+ */
+const retiredModels = new Set<string>();
+
+export function isRetiredNvidiaModel(model: string): boolean {
+  return retiredModels.has(model);
+}
+
+export function markNvidiaModelRetired(model: string): void {
+  retiredModels.add(model);
+}
 
 export function nvidiaKey(): string | null {
   return Deno.env.get('NVIDIA_API_KEY') || null;
@@ -78,6 +91,8 @@ export interface NvidiaChatOptions {
 export async function nvidiaChat(userText: string, opts: NvidiaChatOptions = {}): Promise<string | null> {
   const key = nvidiaKey();
   if (!key) return null;
+  const requestedModel = opts.model ?? NVIDIA_CHAT_MODEL;
+  if (retiredModels.has(requestedModel)) return null;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), opts.timeoutMs ?? 25_000);
   try {
@@ -90,7 +105,7 @@ export async function nvidiaChat(userText: string, opts: NvidiaChatOptions = {})
       headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
       signal: controller.signal,
       body: JSON.stringify({
-        model: opts.model ?? NVIDIA_CHAT_MODEL,
+        model: requestedModel,
         messages,
         temperature: opts.temperature ?? 0.6,
         max_tokens: opts.maxTokens ?? 1024,
@@ -98,7 +113,8 @@ export async function nvidiaChat(userText: string, opts: NvidiaChatOptions = {})
       }),
     });
     if (!resp.ok) {
-      console.warn('[nvidia] chat failed', resp.status, (await resp.text()).slice(0, 200));
+      if (resp.status === 410 || resp.status === 404) markNvidiaModelRetired(requestedModel);
+      console.warn('[nvidia] chat failed', resp.status, requestedModel, (await resp.text()).slice(0, 200));
       return null;
     }
     const data = await resp.json();
@@ -162,6 +178,7 @@ export async function nvidiaChatByRole(
   opts: NvidiaChatOptions = {},
 ): Promise<{ content: string; model: string } | null> {
   for (const model of NVIDIA_ROLES[role]) {
+    if (retiredModels.has(model)) continue;
     const content = await nvidiaChat(userText, { ...opts, model });
     if (content) return { content, model };
   }
