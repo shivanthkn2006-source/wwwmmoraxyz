@@ -10,7 +10,27 @@ import React from 'react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor, cleanup } from '@testing-library/react';
 
+vi.mock('@/lib/enterpriseTelemetry', () => ({
+  reportPlatformError: vi.fn(),
+  flushPlatformErrors: vi.fn(),
+}));
+vi.mock('@/lib/versionCheck', () => ({
+  recoverFromChunkError: vi.fn(),
+  checkAppVersion: vi.fn(),
+}));
+
 const breaker = await import('@/lib/webglCircuitBreaker');
+const { __resetCapabilityCache } = await import('@/components/3d/SafeCanvasWrapper');
+
+/** jsdom has no GL: fake a capable, high-power device + visible viewport. */
+const makeDeviceCapable = () => {
+  HTMLCanvasElement.prototype.getContext = vi.fn(
+    () => ({ getExtension: () => null }) as unknown as RenderingContext,
+  ) as unknown as typeof HTMLCanvasElement.prototype.getContext;
+  Object.defineProperty(navigator, 'hardwareConcurrency', { value: 8, configurable: true });
+  Object.defineProperty(navigator, 'deviceMemory', { value: 8, configurable: true });
+  __resetCapabilityCache();
+};
 const {
   canAttemptWebGL,
   getBreakerState,
@@ -28,6 +48,7 @@ beforeEach(() => {
   cleanup();
   vi.restoreAllMocks();
   vi.spyOn(console, 'warn').mockImplementation(() => {});
+  makeDeviceCapable();
 });
 
 describe('breaker state machine', () => {
@@ -102,14 +123,6 @@ describe('breaker state machine', () => {
 });
 
 describe('SafeCanvasWrapper fallback behaviour', () => {
-  const renderWrapper = async (load: () => Promise<{ default: React.ComponentType }>) => {
-    const mod = await import('@/components/3d/SafeCanvasWrapper');
-    mod.__resetCapabilityCache();
-    // Pretend the device is capable so the breaker is the only gate.
-    vi.spyOn(mod, 'detectWebGLSupport').mockReturnValue(true);
-    return mod;
-  };
-
   it('renders the lightweight safe UI with a retry action once the breaker is open', async () => {
     recordWebGLFailure(MODULE);
     recordWebGLFailure(MODULE);
