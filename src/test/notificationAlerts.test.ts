@@ -15,3 +15,16 @@ describe('global notification alerts', () => {
     expect(shouldAlert({ id: '' } as never, seen)).toBe(false);
   });
 });
+
+import { alertCopy } from '@/hooks/useGlobalNotificationAlerts';
+
+describe('alert copy', () => {
+  it('maps known types to friendly titles', () => {
+    expect(alertCopy({ id: '1', type: 'post_like' }).title).toBe('New like');
+  });
+  it('falls back safely and reads context previews', () => {
+    const c = alertCopy({ id: '2', type: 'unknown', context_data: { preview: 'hi' } });
+    expect(c.title).toBe('New notification');
+    expect(c.description).toBe('hi');
+  });
+});

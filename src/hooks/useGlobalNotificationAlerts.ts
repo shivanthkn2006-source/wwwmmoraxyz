@@ -18,8 +18,29 @@ const SEEN_LIMIT = 200;
 export interface AlertableNotification {
   id: string;
   type?: string | null;
-  title?: string | null;
-  message?: string | null;
+  context_data?: Record<string, unknown> | null;
+}
+
+const TITLES: Record<string, string> = {
+  post_like: 'New like',
+  post_comment: 'New comment',
+  comment_like: 'Someone liked your comment',
+  comment_reply: 'New reply',
+  friend_request: 'New friend request',
+  friend_request_accepted: 'Friend request accepted',
+  post_tag: 'You were tagged',
+  message: 'New message',
+};
+
+/** Exported for tests: human title + description for a notification row. */
+export function alertCopy(row: AlertableNotification) {
+  const ctx = (row.context_data ?? {}) as Record<string, unknown>;
+  const title = (typeof ctx.title === 'string' && ctx.title)
+    || TITLES[row.type ?? '']
+    || 'New notification';
+  const description = [ctx.message, ctx.preview, ctx.body]
+    .find((v) => typeof v === 'string' && v) as string | undefined;
+  return { title, description };
 }
 
 /** Exported for tests: decides whether a row should raise an alert. */
@@ -59,10 +80,8 @@ export function useGlobalNotificationAlerts() {
           try { void playNotificationSound(type); } catch { /* never break the app for a sound */ }
           try { triggerVibration(type as never); } catch { /* haptics optional */ }
 
-          toast(row.title || 'New notification', {
-            description: row.message || undefined,
-            duration: 5000,
-          });
+          const { title, description } = alertCopy(row);
+          toast(title, { description, duration: 5000 });
         }
       )
       .subscribe();
