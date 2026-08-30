@@ -8,7 +8,9 @@ describe('unified home refresh', () => {
       await Promise.resolve();
       events.push('posts');
     });
-    const second = vi.fn(() => events.push('zoe-dhf'));
+    const second = vi.fn(() => {
+      events.push('zoe-dhf');
+    });
     const unsubscribeFirst = onHomeRefresh(first);
     const unsubscribeSecond = onHomeRefresh(second);
 
