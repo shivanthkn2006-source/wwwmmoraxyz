@@ -192,6 +192,44 @@ export const previewNotificationSound = (notificationType: string) => {
   generateSound(config);
 };
 
+/** Milliseconds between the incoming cue and the notification itself. */
+export const INCOMING_CUE_LEAD_MS = 700;
+
+/**
+ * Short rising "something is arriving" cue played BEFORE a notification is
+ * shown, so the user learns the sound means an alert is about to appear.
+ * Honours the same suppression / master-mute / quiet-hours rules as alerts.
+ */
+export const playIncomingCue = (customVolume?: number) => {
+  if (isSoundSuppressed()) return false;
+  initializeAudio();
+
+  try {
+    const prefs = localStorage.getItem('notification_preferences');
+    if (prefs && JSON.parse(prefs).sound_enabled === false) return false;
+
+    const settings = localStorage.getItem('notification_settings');
+    if (settings) {
+      const parsed = JSON.parse(settings);
+      if (parsed.quiet_hours_enabled) {
+        const now = new Date();
+        const current = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:00`;
+        const start = parsed.quiet_hours_start;
+        const end = parsed.quiet_hours_end;
+        const quiet = start < end ? current >= start && current < end : current >= start || current < end;
+        if (quiet) return false;
+      }
+    }
+  } catch { /* malformed preferences must never mute the user */ }
+
+  generateSound(
+    { frequencies: [784, 1175], durations: [0.08, 0.12], type: 'sine', volume: 0.28 },
+    customVolume ?? 0.7
+  );
+  return true;
+};
+
+
 // Global audio context to handle browser autoplay policies
 let globalAudioContext: AudioContext | null = null;
 let audioEnabled = false;

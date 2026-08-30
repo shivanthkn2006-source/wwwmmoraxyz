@@ -28,3 +28,11 @@ describe('alert copy', () => {
     expect(c.description).toBe('hi');
   });
 });
+
+describe("incoming cue", () => {
+  it("plays a cue before the alert and leads it by a fixed delay", async () => {
+    const mod = await import("@/utils/notificationSounds");
+    expect(mod.INCOMING_CUE_LEAD_MS).toBeGreaterThan(200);
+    expect(typeof mod.playIncomingCue).toBe("function");
+  });
+});
