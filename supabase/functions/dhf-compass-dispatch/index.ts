@@ -30,33 +30,34 @@ const LEASE_MS = 10 * 60 * 1000;
 
 async function takeLease(): Promise<boolean> {
   const now = Date.now();
-  const existing = await db(`job_queue?job_type=eq.${LEASE_KEY}&select=id,created_at,status&limit=1`);
+  const existing = await db(`dhf_dispatch_lease?key=eq.${LEASE_KEY}&select=key,leased_at,status&limit=1`);
   const row = Array.isArray(existing.data) && existing.data.length ? existing.data[0] : null;
   if (row) {
-    const age = now - new Date(row.created_at).getTime();
+    const age = now - new Date(row.leased_at).getTime();
     if (row.status === 'running' && age < LEASE_MS) return false;
-    const upd = await db(`job_queue?id=eq.${row.id}`, {
+    const upd = await db(`dhf_dispatch_lease?key=eq.${LEASE_KEY}`, {
       method: 'PATCH',
       headers: { Prefer: 'return=minimal' },
-      body: JSON.stringify({ status: 'running', created_at: new Date(now).toISOString() }),
+      body: JSON.stringify({ status: 'running', leased_at: new Date(now).toISOString() }),
     });
     return upd.ok;
   }
-  const created = await db('job_queue', {
+  const created = await db('dhf_dispatch_lease', {
     method: 'POST',
-    headers: { Prefer: 'return=minimal' },
-    body: JSON.stringify({ job_type: LEASE_KEY, status: 'running', payload: {} }),
+    headers: { Prefer: 'return=minimal,resolution=ignore-duplicates' },
+    body: JSON.stringify({ key: LEASE_KEY, status: 'running', leased_at: new Date(now).toISOString() }),
   });
   return created.ok;
 }
 
 async function releaseLease(summary: Record<string, unknown>) {
-  await db(`job_queue?job_type=eq.${LEASE_KEY}`, {
+  await db(`dhf_dispatch_lease?key=eq.${LEASE_KEY}`, {
     method: 'PATCH',
     headers: { Prefer: 'return=minimal' },
-    body: JSON.stringify({ status: 'idle', payload: summary }),
+    body: JSON.stringify({ status: 'idle', summary }),
   });
 }
+
 
 interface Member { user_id: string; timezone: string }
 
