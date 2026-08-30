@@ -143,6 +143,12 @@ export interface RunOptions {
   action?: 'ensure' | 'backfill' | 'regenerate';
   /** Regenerate deletes the day first — only ever reachable through an admin call. */
   regenerate?: boolean;
+  /**
+   * Wall-clock budget in ms. When it runs out the run inserts the slots it has
+   * already produced and returns `partial: true`; the next run resumes at the
+   * first missing slot, so nothing is ever generated (or charged) twice.
+   */
+  budgetMs?: number;
 }
 
 export interface RunResult {
@@ -157,6 +163,8 @@ export interface RunResult {
   imagesStored: number;
   imageFailures: number;
   paused: boolean;
+  /** True when the time budget stopped the run before the day was complete. */
+  partial?: boolean;
   error: string | null;
 }
 
@@ -222,6 +230,9 @@ export async function ensureDayForUser(options: RunOptions): Promise<RunResult> 
       const astro = astroContextFor(profile.dob, profile.birth_time, new Date(`${date}T12:00:00Z`));
       const cta = referralCta(code);
 
+      const done = options.regenerate ? new Set<string>() : await slotsForDate(userId, date);
+      const budget = options.budgetMs ?? 0;
+      let partial = false;
       const rows: Record<string, unknown>[] = [];
       let breaker: { status: number; message: string } | null = null;
       let vaultUsed = 0;
@@ -231,6 +242,8 @@ export async function ensureDayForUser(options: RunOptions): Promise<RunResult> 
 
       for (let i = 0; i < COMPASS_SLOTS.length; i++) {
         const slot = COMPASS_SLOTS[i];
+        if (done.has(slot.time)) continue;
+        if (budget > 0 && Date.now() - started > budget) { partial = true; break; }
         const seed = seedFrom(`${userId}:${date}:${slot.time}`);
         const result = breaker
           ? { content: vaultContent(i) }
@@ -263,11 +276,13 @@ export async function ensureDayForUser(options: RunOptions): Promise<RunResult> 
         });
       }
 
-      const insert = await db('dhf_daily_posts', {
-        method: 'POST',
-        headers: { Prefer: 'resolution=ignore-duplicates,return=minimal' },
-        body: JSON.stringify(rows),
-      });
+      const insert = rows.length
+        ? await db('dhf_daily_posts', {
+          method: 'POST',
+          headers: { Prefer: 'resolution=ignore-duplicates,return=minimal' },
+          body: JSON.stringify(rows),
+        })
+        : { ok: true, data: null };
 
       const after = await countForDate(userId, date);
       const result: RunResult = {
@@ -276,6 +291,7 @@ export async function ensureDayForUser(options: RunOptions): Promise<RunResult> 
         existing: after,
         generated: insert.ok ? rows.length : 0,
         cached: false,
+        partial,
         vaultUsed,
         rateLimited,
         imagesStored,
