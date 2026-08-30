@@ -104,6 +104,10 @@ import { logFeedEvent } from '@/lib/feedEventDiagnostics';
 import { markPostsSeen, readUnseenPostIds, syncUnseenPostSnapshot, type FeedUpdateSource } from "@/lib/newPostGate";
 import { composeChronologicalFeed } from '@/lib/growthFeedComposition';
 import { deviceTimeZone, growthSlotTimestamp, slotsForFrequency } from '@/lib/growthSlot';
+import DHFCompassCard from '@/components/dhf/DHFCompassCard';
+import { useDhfDailyFeed } from '@/hooks/useDhfDailyFeed';
+import { compassSlotTimestamp } from '@/lib/dhfCompass';
+
 
 
 
@@ -160,6 +164,8 @@ const HomePage = () => {
     refresh: refreshGrowth,
   } = useGrowthFeed();
   const growthUnread = useGrowthUnread();
+  const { posts: dhfPosts } = useDhfDailyFeed();
+
   // Remote flag: onboarding gating can be switched off platform-wide without a deploy.
   const { isEnabled: isGrowthFlagEnabled } = useGrowthFlags();
   const growthOnboardingGating = isGrowthFlagEnabled(GROWTH_FLAGS.onboardingGating);
@@ -272,6 +278,22 @@ const HomePage = () => {
       </div>,
     );
   }
+
+  // DHF Daily Compass — pre-generated slot cards, read straight from the
+  // database and placed in the same chronology as posts, Loops and Growth.
+  const dhfSlides = dhfPosts.map((post) => (
+    <div
+      key={`dhf-${post.id}`}
+      className="relative flex h-full min-h-full w-full shrink-0 snap-start snap-always items-start overflow-y-auto p-4 pt-24 pb-24"
+      data-dhf-slide
+    >
+      <FeedErrorBoundary section="posts">
+        <DHFCompassCard post={post} className="w-full" />
+      </FeedErrorBoundary>
+    </div>
+  ));
+
+
 
 
 
@@ -2304,7 +2326,13 @@ const HomePage = () => {
       timestamp: growthSlotTimestamp(insight.local_date, insight.slot, zone),
       value: growthSlide[index],
     }));
-    return composeChronologicalFeed([...nativeItems, ...loopItems, ...growthItems]);
+    const dhfItems = dhfPosts.map((post, index) => ({
+      id: `dhf-${post.id}`,
+      timestamp: compassSlotTimestamp(post.post_date, post.slot_time, zone),
+      value: dhfSlides[index],
+    }));
+    return composeChronologicalFeed([...nativeItems, ...loopItems, ...growthItems, ...dhfItems]);
+
   };
 
   // Search results are an explicit temporary mode. Normal native posts, Loops,
