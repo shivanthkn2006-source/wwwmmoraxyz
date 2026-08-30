@@ -160,6 +160,8 @@ const HomePage = () => {
     refresh: refreshGrowth,
   } = useGrowthFeed();
   const growthUnread = useGrowthUnread();
+  const { posts: dhfPosts } = useDhfDailyFeed();
+
   // Remote flag: onboarding gating can be switched off platform-wide without a deploy.
   const { isEnabled: isGrowthFlagEnabled } = useGrowthFlags();
   const growthOnboardingGating = isGrowthFlagEnabled(GROWTH_FLAGS.onboardingGating);
