@@ -273,6 +273,22 @@ const HomePage = () => {
     );
   }
 
+  // DHF Daily Compass — pre-generated slot cards, read straight from the
+  // database and placed in the same chronology as posts, Loops and Growth.
+  const dhfSlides = dhfPosts.map((post) => (
+    <div
+      key={`dhf-${post.id}`}
+      className="relative flex h-full min-h-full w-full shrink-0 snap-start snap-always items-start overflow-y-auto p-4 pt-24 pb-24"
+      data-dhf-slide
+    >
+      <FeedErrorBoundary section="posts">
+        <DHFCompassCard post={post} className="w-full" />
+      </FeedErrorBoundary>
+    </div>
+  ));
+
+
+
 
 
 
