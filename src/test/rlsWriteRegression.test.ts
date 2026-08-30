@@ -55,7 +55,7 @@ vi.mock('@/integrations/supabase/client', () => ({
   },
 }));
 
-vi.mock('@/lib/platformErrorReporter', () => ({ reportPlatformError: () => {} }), { virtual: true });
+vi.mock('@/lib/enterpriseTelemetry', () => ({ reportPlatformError: () => {}, flushPlatformErrors: () => {} }));
 
 const dataAccess = await import('@/lib/data/dataAccess');
 const telemetry = await import('@/lib/safeTelemetry');
