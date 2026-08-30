@@ -1555,6 +1555,57 @@ export type Database = {
         }
         Relationships: []
       }
+      dhf_daily_posts: {
+        Row: {
+          astrological_context: string | null
+          category: string
+          created_at: string
+          full_story_content: string
+          headline: string
+          id: string
+          image_url: string
+          post_date: string
+          powered_by_badge: string
+          referral_cta: string
+          short_summary: string
+          slot_time: string
+          source: string
+          user_id: string
+        }
+        Insert: {
+          astrological_context?: string | null
+          category?: string
+          created_at?: string
+          full_story_content: string
+          headline: string
+          id?: string
+          image_url: string
+          post_date: string
+          powered_by_badge?: string
+          referral_cta?: string
+          short_summary: string
+          slot_time: string
+          source?: string
+          user_id: string
+        }
+        Update: {
+          astrological_context?: string | null
+          category?: string
+          created_at?: string
+          full_story_content?: string
+          headline?: string
+          id?: string
+          image_url?: string
+          post_date?: string
+          powered_by_badge?: string
+          referral_cta?: string
+          short_summary?: string
+          slot_time?: string
+          source?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       dhf_ghost_interactions: {
         Row: {
           construct_id: string | null
@@ -6643,6 +6694,48 @@ export type Database = {
           user_id?: string
           view_date?: string
           view_duration_seconds?: number
+        }
+        Relationships: []
+      }
+      user_dhf_profiles: {
+        Row: {
+          birth_place: string | null
+          birth_time: string | null
+          created_at: string
+          dhf_life_phase: number | null
+          dob: string | null
+          id: string
+          latitude: number | null
+          longitude: number | null
+          referral_code: string | null
+          reward_points: number
+          updated_at: string
+        }
+        Insert: {
+          birth_place?: string | null
+          birth_time?: string | null
+          created_at?: string
+          dhf_life_phase?: number | null
+          dob?: string | null
+          id: string
+          latitude?: number | null
+          longitude?: number | null
+          referral_code?: string | null
+          reward_points?: number
+          updated_at?: string
+        }
+        Update: {
+          birth_place?: string | null
+          birth_time?: string | null
+          created_at?: string
+          dhf_life_phase?: number | null
+          dob?: string | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          referral_code?: string | null
+          reward_points?: number
+          updated_at?: string
         }
         Relationships: []
       }
