@@ -192,7 +192,7 @@ export const playNotificationSound = async (
 
 export const previewNotificationSound = (notificationType: string) => {
   const config = soundConfigs[notificationType] || soundConfigs[NotificationSoundType.POST_LIKE];
-  generateSound(config);
+  generateSound(config, effectiveNotificationVolume());
 };
 
 /** Milliseconds between the incoming cue and the notification itself. */
