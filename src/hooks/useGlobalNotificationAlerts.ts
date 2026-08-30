@@ -61,6 +61,8 @@ export function useGlobalNotificationAlerts() {
   const { user } = useAuth();
   const seen = useRef<Set<string>>(new Set());
   const since = useRef<string>(new Date().toISOString());
+  const pending = useRef<Set<number>>(new Set());
+
 
   useEffect(() => {
     armAudioUnlock();
