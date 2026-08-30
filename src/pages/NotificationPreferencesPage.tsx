@@ -8,7 +8,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { Bell, Heart, MessageCircle, UserPlus, MapPin, Star, Volume2, Play, Clock, Moon, Sun, Sunset, Music, Vibrate, History, Settings } from 'lucide-react';
-import { previewNotificationSound, NotificationSoundType, getSoundDescription } from '@/utils/notificationSounds';
+import { previewNotificationSound, NotificationSoundType, getSoundDescription, playIncomingCue } from '@/utils/notificationSounds';
+import {
+  getNotificationVolume,
+  isNotificationMuted,
+  setNotificationMuted,
+  setNotificationVolume,
+} from '@/lib/notificationVolume';
 import { useNotificationSettings } from '@/hooks/useNotificationSettings';
 import { CustomSoundUploader } from '@/components/CustomSoundUploader';
 import { useNavigate } from 'react-router-dom';
@@ -62,6 +68,14 @@ const NotificationPreferencesPage = () => {
     sound_tier_upgrades: true,
   });
   const [loading, setLoading] = useState(false);
+  // Master alert volume — full by default for every user.
+  const [masterVolume, setMasterVolume] = useState(1);
+  const [muted, setMuted] = useState(false);
+
+  useEffect(() => {
+    setMasterVolume(getNotificationVolume());
+    setMuted(isNotificationMuted());
+  }, []);
 
   useEffect(() => {
     loadPreferences();
@@ -144,6 +158,59 @@ const NotificationPreferencesPage = () => {
 
           {/* Sounds Tab */}
           <TabsContent value="sounds" className="space-y-4 mt-6">
+            {/* Master alert volume — applies platform-wide, defaults to full */}
+            <Card className="p-6 space-y-4">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <Volume2 className="w-5 h-5" />
+                Alert Volume
+              </h2>
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="mute-alerts">Mute all notification sounds</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Sounds are on at full volume by default
+                  </p>
+                </div>
+                <Switch
+                  id="mute-alerts"
+                  checked={muted}
+                  onCheckedChange={(checked) => {
+                    setMuted(checked);
+                    setNotificationMuted(checked);
+                  }}
+                />
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>Volume</Label>
+                  <span className="text-sm font-medium">{Math.round(masterVolume * 100)}%</span>
+                </div>
+                <Slider
+                  value={[masterVolume]}
+                  onValueChange={([value]) => {
+                    setMasterVolume(value);
+                    setNotificationVolume(value);
+                  }}
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  disabled={muted}
+                  aria-label="Notification volume"
+                />
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  playIncomingCue();
+                  window.setTimeout(() => previewNotificationSound(NotificationSoundType.POST_LIKE), 700);
+                }}
+              >
+                <Play className="w-4 h-4 mr-2" />
+                Test alert (cue + notification)
+              </Button>
+            </Card>
+
             {/* Sound Theme Selection */}
             <Card className="p-6 space-y-4">
               <h2 className="text-lg font-semibold flex items-center gap-2">

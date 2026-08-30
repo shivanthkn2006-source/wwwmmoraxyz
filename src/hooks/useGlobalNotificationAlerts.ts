@@ -19,6 +19,7 @@ import {
 } from '@/utils/notificationSounds';
 
 import { triggerVibration } from '@/utils/vibrationPatterns';
+import { featureLabelForType, formatAlertStamp } from '@/lib/notificationFeatureMap';
 
 const SEEN_LIMIT = 200;
 
@@ -26,6 +27,8 @@ export interface AlertableNotification {
   id: string;
   type?: string | null;
   context_data?: Record<string, unknown> | null;
+  from_user_id?: string | null;
+  created_at?: string | null;
 }
 
 const TITLES: Record<string, string> = {
@@ -39,15 +42,31 @@ const TITLES: Record<string, string> = {
   message: 'New message',
 };
 
-/** Exported for tests: human title + description for a notification row. */
-export function alertCopy(row: AlertableNotification) {
+/**
+ * Exported for tests: human title + description for a notification row.
+ * Every alert reads: WHAT happened (title) and
+ * "date · time · feature · who · content" (description).
+ */
+export function alertCopy(row: AlertableNotification, actorName?: string | null) {
   const ctx = (row.context_data ?? {}) as Record<string, unknown>;
   const title = (typeof ctx.title === 'string' && ctx.title)
     || TITLES[row.type ?? '']
     || 'New notification';
-  const description = [ctx.message, ctx.preview, ctx.body]
+
+  const content = [ctx.message, ctx.preview, ctx.body, ctx.content]
     .find((v) => typeof v === 'string' && v) as string | undefined;
-  return { title, description };
+  const who = actorName
+    || (typeof ctx.actor_name === 'string' && ctx.actor_name ? ctx.actor_name : undefined)
+    || (typeof ctx.from_name === 'string' && ctx.from_name ? ctx.from_name : undefined);
+
+  const parts = [
+    formatAlertStamp(row.created_at ?? new Date()),
+    featureLabelForType(row.type),
+    who ? `from ${who}` : undefined,
+    content,
+  ].filter(Boolean) as string[];
+
+  return { title, description: parts.join(' · ') };
 }
 
 /** Exported for tests: decides whether a row should raise an alert. */
@@ -73,6 +92,24 @@ export function useGlobalNotificationAlerts() {
     if (!user?.id) return;
     let disposed = false;
 
+    const nameCache = new Map<string, string>();
+    const resolveActor = async (id?: string | null): Promise<string | null> => {
+      if (!id || id === user.id) return null;
+      if (nameCache.has(id)) return nameCache.get(id) ?? null;
+      try {
+        const { data } = await supabase
+          .from('profiles')
+          .select('display_name, username')
+          .eq('user_id', id)
+          .maybeSingle();
+        const name = (data?.display_name || data?.username || '') as string;
+        if (name) nameCache.set(id, name);
+        return name || null;
+      } catch {
+        return null;
+      }
+    };
+
     const raise = (row: AlertableNotification) => {
       if (!shouldAlert(row, seen.current)) return;
       seen.current.add(row.id);
@@ -89,8 +126,10 @@ export function useGlobalNotificationAlerts() {
       const timer = window.setTimeout(() => {
         try { void playNotificationSound(type); } catch { /* sound is best-effort */ }
         try { triggerVibration(type as never); } catch { /* haptics optional */ }
-        const { title, description } = alertCopy(row);
-        toast(title, { description, duration: 5000 });
+        void resolveActor(row.from_user_id).then((actorName) => {
+          const { title, description } = alertCopy(row, actorName);
+          toast(title, { description, duration: 6000 });
+        });
       }, INCOMING_CUE_LEAD_MS);
       pending.current.add(timer);
     };
@@ -113,7 +152,7 @@ export function useGlobalNotificationAlerts() {
       if (disposed || document.visibilityState === 'hidden') return;
       const { data, error } = await supabase
         .from('notifications')
-        .select('id, type, context_data, created_at')
+        .select('id, type, context_data, created_at, from_user_id')
         .eq('user_id', user.id)
         .gt('created_at', since.current)
         .order('created_at', { ascending: true })

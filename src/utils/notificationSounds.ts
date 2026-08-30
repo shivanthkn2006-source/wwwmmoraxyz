@@ -2,6 +2,7 @@
 import { NotificationThemes, ThemeName, NotificationType } from './notificationThemes';
 import { triggerVibration } from './vibrationPatterns';
 import { isSoundSuppressed } from '@/lib/platformPurge';
+import { effectiveNotificationVolume, isNotificationMuted } from '@/lib/notificationVolume';
 
 export const NotificationSoundType = {
   POST_LIKE: 'post_like',
@@ -126,7 +127,9 @@ export const playNotificationSound = async (
   // Get notification settings for theme and volume
   const settings = localStorage.getItem('notification_settings');
   let theme: ThemeName = 'classic';
-  let volume = customVolume ?? 0.7;
+  // Default is FULL volume for every user unless they lowered / muted it.
+  if (isNotificationMuted()) return;
+  let volume = customVolume ?? effectiveNotificationVolume();
 
   if (settings) {
     const parsedSettings = JSON.parse(settings);
@@ -189,7 +192,7 @@ export const playNotificationSound = async (
 
 export const previewNotificationSound = (notificationType: string) => {
   const config = soundConfigs[notificationType] || soundConfigs[NotificationSoundType.POST_LIKE];
-  generateSound(config);
+  generateSound(config, effectiveNotificationVolume());
 };
 
 /** Milliseconds between the incoming cue and the notification itself. */
@@ -202,6 +205,7 @@ export const INCOMING_CUE_LEAD_MS = 700;
  */
 export const playIncomingCue = (customVolume?: number) => {
   if (isSoundSuppressed()) return false;
+  if (isNotificationMuted()) return false;
   initializeAudio();
 
   try {
@@ -224,7 +228,7 @@ export const playIncomingCue = (customVolume?: number) => {
 
   generateSound(
     { frequencies: [784, 1175], durations: [0.08, 0.12], type: 'sine', volume: 0.28 },
-    customVolume ?? 0.7
+    customVolume ?? effectiveNotificationVolume()
   );
   return true;
 };

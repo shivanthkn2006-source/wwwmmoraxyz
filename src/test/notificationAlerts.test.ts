@@ -25,7 +25,7 @@ describe('alert copy', () => {
   it('falls back safely and reads context previews', () => {
     const c = alertCopy({ id: '2', type: 'unknown', context_data: { preview: 'hi' } });
     expect(c.title).toBe('New notification');
-    expect(c.description).toBe('hi');
+    expect(c.description).toContain('hi');
   });
 });
 
