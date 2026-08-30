@@ -198,6 +198,7 @@ let audioEnabled = false;
 
 // Initialize audio context on user interaction
 export const initializeAudio = () => {
+  if (typeof window === 'undefined') return false;
   if (!globalAudioContext) {
     try {
       globalAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -213,21 +214,51 @@ export const initializeAudio = () => {
     globalAudioContext.resume().then(() => {
       audioEnabled = true;
       console.log('[NotificationSounds] Audio context resumed');
-    });
+    }).catch(() => undefined);
   }
   
   return audioEnabled;
 };
 
-const generateSound = (config: SoundConfig, masterVolume: number = 0.7) => {
+/** True once the browser has actually allowed audio output. */
+export const isAudioUnlocked = () => globalAudioContext?.state === 'running';
+
+/**
+ * Keeps the shared AudioContext unlocked for the whole session.
+ * Browsers re-suspend the context after tab switches / autoplay policy resets,
+ * so we re-arm on every gesture instead of listening once.
+ */
+let gestureArmed = false;
+export const armAudioUnlock = () => {
+  if (gestureArmed || typeof document === 'undefined') return;
+  gestureArmed = true;
+  const unlock = () => { initializeAudio(); };
+  ['pointerdown', 'touchstart', 'keydown', 'click'].forEach((evt) =>
+    document.addEventListener(evt, unlock, { passive: true })
+  );
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') initializeAudio();
+  });
+};
+
+const generateSound = (config: SoundConfig, masterVolume: number = 0.7, retry = true) => {
   try {
     // Initialize audio if not already done
     if (!globalAudioContext) {
       initializeAudio();
     }
     
-    if (!globalAudioContext || globalAudioContext.state === 'suspended') {
-      console.warn('[NotificationSounds] Audio context not ready, skipping sound');
+    if (!globalAudioContext) {
+      console.warn('[NotificationSounds] No audio context available');
+      return;
+    }
+
+    // Suspended contexts are recoverable: resume and replay once instead of
+    // silently dropping the alert (this was why alerts were never audible).
+    if (globalAudioContext.state === 'suspended') {
+      globalAudioContext.resume()
+        .then(() => { if (retry) generateSound(config, masterVolume, false); })
+        .catch(() => console.warn('[NotificationSounds] Audio blocked until user interacts'));
       return;
     }
     
