@@ -58,6 +58,10 @@ export const PlatformLayout = ({ children }: { children: React.ReactNode }) => (
     <AppErrorBoundary moduleName="growth:alerts" severity="low" fallback={null}>
       <GrowthCardAlertHost />
     </AppErrorBoundary>
+    {/* Platform-wide notification sound / haptics / toast — every route. */}
+    <AppErrorBoundary moduleName="platform:notification-alerts" severity="low" fallback={null}>
+      <NotificationAlertHost />
+    </AppErrorBoundary>
     {children}
     {/* Same bottom-right home dock on every route (HomePage owns its own). */}
     <AppErrorBoundary moduleName="platform:dock" severity="low" fallback={null}>
