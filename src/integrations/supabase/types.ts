@@ -1563,6 +1563,8 @@ export type Database = {
           full_story_content: string
           headline: string
           id: string
+          image_path: string | null
+          image_source: string
           image_url: string
           post_date: string
           powered_by_badge: string
@@ -1579,6 +1581,8 @@ export type Database = {
           full_story_content: string
           headline: string
           id?: string
+          image_path?: string | null
+          image_source?: string
           image_url: string
           post_date: string
           powered_by_badge?: string
@@ -1595,6 +1599,8 @@ export type Database = {
           full_story_content?: string
           headline?: string
           id?: string
+          image_path?: string | null
+          image_source?: string
           image_url?: string
           post_date?: string
           powered_by_badge?: string
@@ -1603,6 +1609,66 @@ export type Database = {
           slot_time?: string
           source?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      dhf_generation_runs: {
+        Row: {
+          action: string
+          cache_hit: boolean
+          circuit_break_status: number | null
+          created_at: string
+          duration_ms: number
+          error: string | null
+          id: string
+          image_failures: number
+          images_stored: number
+          post_date: string | null
+          rate_limited: number
+          slots_existing: number
+          slots_generated: number
+          trigger: string
+          user_id: string | null
+          vault_used: number
+          worker_version: string | null
+        }
+        Insert: {
+          action?: string
+          cache_hit?: boolean
+          circuit_break_status?: number | null
+          created_at?: string
+          duration_ms?: number
+          error?: string | null
+          id?: string
+          image_failures?: number
+          images_stored?: number
+          post_date?: string | null
+          rate_limited?: number
+          slots_existing?: number
+          slots_generated?: number
+          trigger?: string
+          user_id?: string | null
+          vault_used?: number
+          worker_version?: string | null
+        }
+        Update: {
+          action?: string
+          cache_hit?: boolean
+          circuit_break_status?: number | null
+          created_at?: string
+          duration_ms?: number
+          error?: string | null
+          id?: string
+          image_failures?: number
+          images_stored?: number
+          post_date?: string | null
+          rate_limited?: number
+          slots_existing?: number
+          slots_generated?: number
+          trigger?: string
+          user_id?: string | null
+          vault_used?: number
+          worker_version?: string | null
         }
         Relationships: []
       }
@@ -1896,6 +1962,39 @@ export type Database = {
           natal_chart?: Json
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      dhf_referrals: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          referred_id: string
+          referred_points: number
+          referrer_id: string
+          referrer_points: number
+          source: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          referred_id: string
+          referred_points?: number
+          referrer_id: string
+          referrer_points?: number
+          source?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          referred_id?: string
+          referred_points?: number
+          referrer_id?: string
+          referrer_points?: number
+          source?: string
         }
         Relationships: []
       }
