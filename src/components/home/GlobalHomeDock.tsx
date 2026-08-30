@@ -52,6 +52,13 @@ export const GlobalHomeDock: React.FC = () => {
             onSelect: () => navigate('/home'),
           },
           {
+            id: 'global-compass',
+            label: 'Daily Compass',
+            icon: <Compass className="h-[22px] w-[22px]" />,
+            active: pathname.startsWith('/compass'),
+            onSelect: () => navigate('/compass'),
+          },
+          {
             id: 'global-growth',
             label: 'Growth insights',
             icon: <Lightbulb className="h-[22px] w-[22px]" />,
@@ -59,6 +66,7 @@ export const GlobalHomeDock: React.FC = () => {
             active: pathname.startsWith('/growth-insights'),
             onSelect: () => setAlertsOpen(true),
           },
+
           {
             id: 'global-zoe',
             label: 'Zoe AI',
