@@ -49,7 +49,10 @@ export function useVoiceEngine() {
     if (active && !thermalSafeMode) {
       voiceCommandService.start();
     } else if (voiceCommandService.isRunning) {
-      voiceCommandService.stop();
+      // Thermal suspension keeps the opt-in so the mic resumes once the device
+      // cools; an explicit user opt-out is what actually stops the service.
+      if (active && thermalSafeMode) voiceCommandService.suspend();
+      else voiceCommandService.stop();
     }
     // No teardown on route change — persistence is the whole point. The service
     // is a process-wide singleton and stops only when the flag flips off.
@@ -66,7 +69,7 @@ export function useVoiceEngine() {
     let timer: ReturnType<typeof setTimeout> | null = null;
     const onVisibility = () => {
       if (document.hidden) {
-        timer = setTimeout(() => voiceCommandService.stop(), 30_000);
+        timer = setTimeout(() => voiceCommandService.suspend(), 30_000);
       } else {
         if (timer) clearTimeout(timer);
         timer = null;
