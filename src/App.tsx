@@ -719,6 +719,14 @@ const RouteAwareShell = () => {
                             }
                           />
                           <Route
+                            path="/compass"
+                            element={
+                              <ProtectedRoute>
+                                <DHFCompassPage />
+                              </ProtectedRoute>
+                            }
+                          />
+                          <Route
                             path="/growth-insights"
                             element={
                               <ProtectedRoute>
@@ -726,6 +734,7 @@ const RouteAwareShell = () => {
                               </ProtectedRoute>
                             }
                           />
+
                           <Route
                             path="/admin/growth-runs"
                             element={
