@@ -11,7 +11,7 @@
  */
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Home, Lightbulb, Sparkles, MessageCircle, Bell, User } from 'lucide-react';
+import { Home, Lightbulb, Sparkles, MessageCircle, Bell, User, Compass } from 'lucide-react';
 import HomeGlassDock from '@/components/home/HomeGlassDock';
 import GrowthAlertsPanel from '@/components/growth/GrowthAlertsPanel';
 import { useAuth } from '@/lib/auth';
