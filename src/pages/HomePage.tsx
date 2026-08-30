@@ -104,6 +104,10 @@ import { logFeedEvent } from '@/lib/feedEventDiagnostics';
 import { markPostsSeen, readUnseenPostIds, syncUnseenPostSnapshot, type FeedUpdateSource } from "@/lib/newPostGate";
 import { composeChronologicalFeed } from '@/lib/growthFeedComposition';
 import { deviceTimeZone, growthSlotTimestamp, slotsForFrequency } from '@/lib/growthSlot';
+import DHFCompassCard from '@/components/dhf/DHFCompassCard';
+import { useDhfDailyFeed } from '@/hooks/useDhfDailyFeed';
+import { compassSlotTimestamp } from '@/lib/dhfCompass';
+
 
 
 
