@@ -2326,7 +2326,13 @@ const HomePage = () => {
       timestamp: growthSlotTimestamp(insight.local_date, insight.slot, zone),
       value: growthSlide[index],
     }));
-    return composeChronologicalFeed([...nativeItems, ...loopItems, ...growthItems]);
+    const dhfItems = dhfPosts.map((post, index) => ({
+      id: `dhf-${post.id}`,
+      timestamp: compassSlotTimestamp(post.post_date, post.slot_time, zone),
+      value: dhfSlides[index],
+    }));
+    return composeChronologicalFeed([...nativeItems, ...loopItems, ...growthItems, ...dhfItems]);
+
   };
 
   // Search results are an explicit temporary mode. Normal native posts, Loops,
