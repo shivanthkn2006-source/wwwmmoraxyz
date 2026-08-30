@@ -117,6 +117,8 @@ const AdminFeedDebugPage = lazy(() => import("./pages/AdminFeedDebugPage")); // 
 const AstroPreviewPage = lazy(() => import("./pages/AstroPreviewPage")); // M'MORA ZOE DAILY ALIGNMENT HARNESS
 const ZoeAstroDashboardPage = lazy(() => import("./pages/ZoeAstroDashboardPage")); // M'MORA ZOE ALIGNMENT DASHBOARD
 const GrowthInsightsPage = lazy(() => import("./pages/GrowthInsightsPage")); // PERSONAL GROWTH ENGINE ARCHIVE
+const DHFCompassPage = lazy(() => import("./pages/DHFCompassPage")); // DHF DAILY COMPASS ARCHIVE
+
 const AdminGrowthRunsPage = lazy(() => import("./pages/AdminGrowthRunsPage")); // GROWTH WORKER TRACE (admin, RLS-gated)
 const AdminGrowthDeliveryPage = lazy(() => import("./pages/AdminGrowthDeliveryPage")); // DAILY GROWTH DELIVERY REPORT (admin, RLS-gated)
 const ZoeBirthDetailsPage = lazy(() => import("./pages/ZoeBirthDetailsPage"));
