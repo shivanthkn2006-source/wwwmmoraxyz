@@ -10,7 +10,7 @@ import {
  * Birth Chart Verification: August 16, 1977 — 8:20 PM IST — Trivandrum (8.5241° N, 76.9366° E)
  * IST = UTC+5:30 → 8:20 PM IST = 14:50 UTC
  * 
- * Swiss Ephemeris reference values (tropical, geocentric):
+ * Astronomical reference values (tropical, geocentric):
  * ────────────────────────────────────────────────────────
  * Sun:     ~143.6° (Leo ~23°)
  * Moon:    ~164°   (Virgo ~14°)

@@ -145,7 +145,7 @@ const DASHA_VIBES: Record<string, string> = {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// ASTRONOMICAL CALCULATIONS (Simplified Swiss Ephemeris Alternative)
+// ASTRONOMICAL CALCULATIONS (Zoe's DHF)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**

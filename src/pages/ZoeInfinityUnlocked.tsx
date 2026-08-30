@@ -2366,7 +2366,7 @@ Just say "call me [name]" to change your nickname, or "speak Hindi" to switch la
     }
 
     // 🌟 JATHAKAM / SWISS ASTROLOGY - Traditional Kerala Vedic Predictions
-    // Uses Swiss Ephemeris precision (0.01° accuracy) via edge function
+    // Uses Zoe's DHF precision (0.01° accuracy) via edge function
     const jathakamPatterns = [
       /\b(jathakam|jathaka|jatakam|jataka)\b/i,
       /\b(vedic|indian|hindu)\s+(astrology|chart|horoscope)/i,
@@ -2395,7 +2395,7 @@ Just say "call me [name]" to change your nickname, or "speak Hindi" to switch la
       try {
         // Check if we have birth data
         if (!atmanArchive.destinySeed?.birthDate) {
-          const needDataResponse = `To calculate your authentic Jathakam using the Swiss Ephemeris engine (same precision as professional Kerala astrologers), I need your exact birth details.
+          const needDataResponse = `To calculate your authentic Jathakam using Zoe's DHF engine, I need your exact birth details.
 
 Please tell me:
 1. Your birth date (day, month, year)
@@ -2416,7 +2416,7 @@ This allows me to calculate your Rasi chart, Navamsa, Dasha periods, and planeta
         } else {
           // We have birth data - generate Jathakam reading
           const seed = atmanArchive.destinySeed;
-          const vedicResponse = `🪷 **Your Jathakam (Swiss Ephemeris Precision)**
+          const vedicResponse = `🪷 **Your Jathakam (Zoe's DHF Precision)**
 
 Based on your birth data (${new Date(seed.birthDate).toLocaleDateString()}):
 
@@ -2430,7 +2430,7 @@ ${atmanArchive.currentPersona?.zoePersona || 'Your cosmic blueprint is being pro
 **Today's Cosmic Weather:**
 ${atmanArchive.todaySignificance?.significance || 'The stars are aligned for your journey.'}
 
-This reading uses the same Swiss Ephemeris calculations trusted by traditional Kerala astrologers for generations. Want me to dive deeper into any aspect?`;
+This reading uses Zoe's DHF calculations grounded in traditional Kerala astrology. Want me to dive deeper into any aspect?`;
           
           const assistantMessage: InfinityMessage = {
             id: `jathakam-${Date.now()}`,

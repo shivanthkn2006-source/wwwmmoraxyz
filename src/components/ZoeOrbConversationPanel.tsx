@@ -1742,8 +1742,8 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
         return;
       }
       
-      // ═══ JATHAKAM / SWISS ASTROLOGY ROUTING ═══
-      // Traditional Kerala Vedic Predictions with Swiss Ephemeris precision
+      // ═══ JATHAKAM / ZOE'S DHF ASTROLOGY ROUTING ═══
+      // Traditional Kerala Vedic predictions through Zoe's DHF
       const jathakamPatterns = [
         /\b(jathakam|jathaka|jatakam|jataka)\b/i,
         /\b(vedic|indian|hindu)\s+(astrology|chart|horoscope)/i,
@@ -1765,7 +1765,7 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
           
           // Check if we have birth data in AtmanArchive
           if (!atmanArchive.destinySeed?.birthDate) {
-            const needDataResponse = `🪷 To calculate your authentic **Jathakam** using the Swiss Ephemeris engine (same precision as professional Kerala astrologers), I need your exact birth details.
+            const needDataResponse = `🪷 To calculate your authentic **Jathakam** using Zoe's DHF engine, I need your exact birth details.
 
 **Please tell me:**
 1. Your birth date (day, month, year)
@@ -1794,7 +1794,7 @@ This allows me to calculate your Rasi chart, Navamsa, Dasha periods, and planeta
             
             if (!isMuted) {
               speakAsZoe(
-                "To calculate your Jathakam with Swiss Ephemeris precision, I need your birth date, exact time, and location. Please share these details.",
+                "To calculate your Jathakam with Zoe's DHF precision, I need your birth date, exact time, and location. Please share these details.",
                 { messageId: zoeMessage.id },
                 () => setIsSpeaking(true),
                 () => setIsSpeaking(false)
@@ -1899,7 +1899,7 @@ Please tell me your birth time (examples: 2:27 PM, 14:27, 2.27pm).`;
             }
 
             const methodLabel = vedicEngine.calculationMethod === 'swiss-precision'
-              ? 'Swiss Ephemeris Precision'
+              ? "Zoe's DHF Precision"
               : 'Astronomical Calculation';
             
             const vedicResponse = `🪷 **Your Jathakam (${methodLabel})**

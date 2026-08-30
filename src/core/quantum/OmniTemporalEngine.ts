@@ -119,7 +119,7 @@ export function getNakshatra(longitude: number): { name: string; lord: string; p
 
 /**
  * Simplified planetary position calculator using mean motions
- * For production: integrate with Swiss Ephemeris or NASA JPL
+ * For production: integrate with a high-precision astronomical data source
  */
 export function calculatePlanetaryPosition(planet: string, julianDay: number): PlanetaryPosition {
   // Mean daily motions (degrees per day)

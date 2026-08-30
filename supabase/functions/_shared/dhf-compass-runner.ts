@@ -1,6 +1,6 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- * DHF DAILY COMPASS RUNNER — the single generation path used by every caller.
+ * ZOE'S DHF RUNNER — the single generation path used by every caller.
  *
  * Used by:
  *   • generate-dhf-daily-feed  (member "ensure", admin backfill/regenerate)
@@ -22,7 +22,7 @@ import {
   lifePhaseFor, referralCodeFor, referralCta, seedFrom, vaultContent,
 } from './dhf-compass.ts';
 
-export const COMPASS_WORKER_VERSION = '2026-08-30.2';
+export const COMPASS_WORKER_VERSION = '2026-08-30.3';
 export const COMPASS_BUCKET = 'dhf-compass';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -249,9 +249,13 @@ export async function ensureDayForUser(options: RunOptions): Promise<RunResult> 
       for (let i = 0; i < COMPASS_SLOTS.length; i++) {
         const slot = COMPASS_SLOTS[i];
         if (done.has(slot.time)) continue;
-        if (budget > 0 && Date.now() - started > budget) { partial = true; break; }
+        // Never leave a member with a partial day. Once the external-provider
+        // budget is nearly exhausted, finish remaining slots from the local
+        // deterministic vault. This keeps all ten cards available immediately
+        // and lets later runs remain true cache hits.
+        const useVault = budget > 0 && Date.now() - started > Math.max(5_000, budget - 12_000);
         const seed = seedFrom(`${userId}:${date}:${slot.time}`);
-        const result = breaker
+        const result = breaker || useVault
           ? { content: vaultContent(i) }
           : await generateCompassPost({
             slotIndex: i, postDate: date, astro, lifePhase: phase,
@@ -262,8 +266,6 @@ export async function ensureDayForUser(options: RunOptions): Promise<RunResult> 
         if (result.content.source === 'vault') vaultUsed++;
 
         const remoteUrl = compassImageUrl(result.content.headline, i, seed);
-        const path = await storeImage(userId, date, slot.time, remoteUrl);
-        if (path) imagesStored++; else imageFailures++;
 
         rows.push({
           user_id: userId,
@@ -274,8 +276,8 @@ export async function ensureDayForUser(options: RunOptions): Promise<RunResult> 
           short_summary: result.content.shortSummary,
           full_story_content: result.content.fullStory,
           image_url: remoteUrl,
-          image_path: path,
-          image_source: path ? 'storage' : 'remote',
+          image_path: null,
+          image_source: 'remote',
           referral_cta: cta,
           astrological_context: astro.summary.slice(0, 400),
           source: result.content.source,
@@ -289,6 +291,31 @@ export async function ensureDayForUser(options: RunOptions): Promise<RunResult> 
           body: JSON.stringify(rows),
         })
         : { ok: true, data: null };
+
+      // Durable image delivery is intentionally outside the card-availability
+      // critical path. Store all frames concurrently after rows exist, then
+      // patch stable paths. A slow image provider can no longer starve users.
+      const hydrateImages = async () => {
+        const outcomes = await Promise.all(rows.map(async (row) => {
+          const path = await storeImage(userId, date, String(row.slot_time), String(row.image_url));
+          if (!path) return false;
+          const update = await db(
+            `dhf_daily_posts?user_id=eq.${userId}&post_date=eq.${date}&slot_time=eq.${row.slot_time}`,
+            { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ image_path: path, image_source: 'storage' }) },
+          );
+          return update.ok;
+        }));
+        return outcomes;
+      };
+
+      if (insert.ok && rows.length) {
+        const task = hydrateImages().then((outcomes) => {
+          imagesStored = outcomes.filter(Boolean).length;
+          imageFailures = outcomes.length - imagesStored;
+        }).catch(() => { imageFailures = rows.length; });
+        const runtime = (globalThis as typeof globalThis & { EdgeRuntime?: { waitUntil(promise: Promise<unknown>): void } }).EdgeRuntime;
+        if (runtime?.waitUntil) runtime.waitUntil(task);
+      }
 
       const after = await countForDate(userId, date);
       const result: RunResult = {

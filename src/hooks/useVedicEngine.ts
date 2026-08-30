@@ -1,6 +1,6 @@
 /**
  * VEDIC ENGINE HOOK - Jathakam Calculator Integration
- * Connects Swiss Ephemeris Precision Edge Function to Zoe Infinity
+ * Connects Zoe's DHF precision function to Zoe Infinity
  * 
  * Uses VSOP87/ELP2000 theories for 100% accuracy (0.01° precision)
  */
@@ -169,7 +169,7 @@ export function useVedicEngine(options?: { enabled?: boolean }): UseVedicEngineR
   }, []);
 
   /**
-   * Calculate chart using Swiss Ephemeris Precision (Edge Function)
+   * Calculate chart using Zoe's DHF precision (Edge Function)
    * This is 100% accurate like professional astrology software
    */
   const calculateChartPrecision = useCallback(async (
@@ -181,7 +181,7 @@ export function useVedicEngine(options?: { enabled?: boolean }): UseVedicEngineR
     setState(prev => ({ ...prev, isCalculating: true, error: null }));
     
     try {
-      console.log('[VedicEngine] Calling Swiss Ephemeris Precision Edge Function...');
+      console.log("[VedicEngine] Calling Zoe's DHF precision function...");
       
       const { data, error: fnError } = await supabase.functions.invoke('vedic-ephemeris', {
         body: {
@@ -243,7 +243,7 @@ export function useVedicEngine(options?: { enabled?: boolean }): UseVedicEngineR
         calculationMethod: 'swiss-precision'
       });
       
-      toast.success('Jathakam calculated with Swiss Ephemeris precision (0.01° accuracy)');
+      toast.success("Jathakam calculated with Zoe's DHF precision (0.01° accuracy)");
       
       console.log('[VedicEngine] Swiss Precision Chart calculated:', {
         method: (profile as any).calculationMethod,

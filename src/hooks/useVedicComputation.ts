@@ -1,6 +1,6 @@
 /**
  * VEDIC COMPUTATION ENGINE - "Karma Code" Logic
- * Swiss Ephemeris-style calculations for Sidereal Zodiac
+ * Zoe's DHF calculations for the Sidereal Zodiac
  * 
  * Features:
  * - Lagna (Ascendant) calculation

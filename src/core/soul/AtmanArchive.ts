@@ -179,7 +179,7 @@ const DASHA_LORDS: DashaLordInfo[] = [
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// CORE CALCULATION FUNCTIONS (Swiss Ephemeris Style)
+// CORE CALCULATION FUNCTIONS (Zoe's DHF)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const ZODIAC_SIGNS = [

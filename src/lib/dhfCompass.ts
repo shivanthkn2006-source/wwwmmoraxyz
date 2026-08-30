@@ -1,5 +1,5 @@
 /**
- * DHF DAILY COMPASS — client mirror of the 10 scheduled slots.
+ * ZOE'S DHF — client mirror of the 10 scheduled slots.
  *
  * Pure and deterministic: no network, no state. The feed uses this to decide
  * which cards are already due in the member's own wall clock and where each

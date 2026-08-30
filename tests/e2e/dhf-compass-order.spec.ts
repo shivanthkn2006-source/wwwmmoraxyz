@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 /**
- * DHF DAILY COMPASS — deterministic chronological + reader coverage.
+ * ZOE'S DHF — deterministic chronological + reader coverage.
  *
  * The clock is frozen (CURRENT_DATE / CURRENT_TIME are mocked with Playwright's
  * clock API) so slot visibility is a pure function of the fixture, and every
@@ -25,7 +25,7 @@ const post = (slot: string, category: string, headline: string) => ({
   image_url: '',
   image_path: null,
   image_source: 'remote',
-  powered_by_badge: 'mmora / Zoe • Swiss Ephemeris',
+    powered_by_badge: "Powered by Zoe's DHF",
   referral_cta: 'Share your Zoe forecast with code ZOE-TEST01',
   astrological_context: 'Sun in Virgo',
   created_at: `${TODAY}T00:00:00Z`,
@@ -38,7 +38,7 @@ const FIXTURE = [
   post('15:30:00', 'Genius Potential', 'This slot is still in the future'),
 ];
 
-test.describe('DHF Daily Compass ordering + reader', () => {
+test.describe("Zoe's DHF ordering + reader", () => {
   test.beforeEach(async ({ page, context }) => {
     await page.clock.install({ time: FROZEN });
 
