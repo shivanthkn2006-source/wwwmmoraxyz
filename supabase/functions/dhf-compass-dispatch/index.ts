@@ -24,7 +24,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const BATCH_SIZE = 8;
+const BATCH_SIZE = 2;
+/** Hard wall-clock budget so the run always returns before the 150s edge limit. */
+const TIME_BUDGET_MS = 110_000;
 const LEASE_KEY = 'dhf_compass_dispatch';
 const LEASE_MS = 10 * 60 * 1000;
 
@@ -85,7 +87,8 @@ Deno.serve(async (req) => {
   try {
     if (!(await takeLease())) return json({ ok: true, skipped: 'in-flight' });
 
-    const summary = { scanned: 0, generated: 0, cached: 0, failed: 0, paused: false };
+    const startedAt = Date.now();
+    const summary = { scanned: 0, generated: 0, cached: 0, failed: 0, paused: false, timeboxed: false };
     try {
       const list = await members();
       summary.scanned = list.length;
@@ -93,6 +96,7 @@ Deno.serve(async (req) => {
       let processed = 0;
       for (const member of list) {
         if (processed >= BATCH_SIZE || summary.paused) break;
+        if (Date.now() - startedAt > TIME_BUDGET_MS) { summary.timeboxed = true; break; }
         const tz = safeZone(member.timezone);
         const date = localDateIn(new Date(), tz);
 
