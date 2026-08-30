@@ -131,9 +131,12 @@ export function useGlobalNotificationAlerts() {
     return () => {
       disposed = true;
       window.clearInterval(timer);
+      pending.current.forEach((t) => window.clearTimeout(t));
+      pending.current.clear();
       document.removeEventListener('visibilitychange', onVisible);
       supabase.removeChannel(channel);
     };
+
   }, [user?.id]);
 }
 
