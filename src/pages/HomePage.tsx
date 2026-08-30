@@ -28,6 +28,7 @@ import useZoeMotivation from '@/hooks/useZoeMotivation';
 import HomeMotivationSlide from '@/components/home/HomeMotivationSlide';
 
 import HomeGlassDock from '@/components/home/HomeGlassDock';
+import { useNotificationFeatureBadges } from '@/hooks/useNotificationFeatureBadges';
 import DockBadgeBoundary from '@/components/home/DockBadgeBoundary';
 import LiveViewBoundary from '@/components/live/LiveViewBoundary';
 import HomeCollectionSheet, { type CollectionMode } from '@/components/home/HomeCollectionSheet';
@@ -628,6 +629,7 @@ const HomePage = () => {
     return () => window.removeEventListener('mmora:home-search-toggle', onSearchToggle);
   }, []);
   const { badges: dockBadges, refresh: refreshDockBadges, stale: dockBadgesStale, updatedAt: dockBadgesUpdatedAt } = useHomeDockBadges();
+  const { counts: featureBadges, total: featureBadgeTotal } = useNotificationFeatureBadges();
 
   // Diagnostics-only panel (?iconstatus=1) — no change to the default Home UI.
   const [iconStatusPanelOpen, setIconStatusPanelOpen] = useState<boolean>(() => {
@@ -2647,11 +2649,13 @@ const HomePage = () => {
       <DockBadgeBoundary>
       <HomeGlassDock
         badgesUpdatedAt={dockBadgesUpdatedAt}
+        triggerBadge={Math.max(featureBadgeTotal, unreadNotifications + unreadMessages)}
         items={[
           {
             id: 'global-feed',
             label: 'Global feed',
             icon: <Globe2 className="h-[22px] w-[22px]" />,
+            badge: featureBadges.feed || undefined,
             active: activeTab === 'global',
             onSelect: runHomeIconAction('global-feed', () => setActiveTab('global')),
           },
@@ -2673,6 +2677,7 @@ const HomePage = () => {
             id: 'neural-feed',
             label: 'DHF Neural Feed',
             icon: <Radar className="h-[22px] w-[22px]" />,
+            badge: featureBadges.compass || undefined,
             active: neuralFeedOpen,
             onSelect: runHomeIconAction('neural-feed', () => setNeuralFeedOpen(true)),
           },
@@ -2680,7 +2685,7 @@ const HomePage = () => {
             id: 'growth-insights',
             label: 'Growth insights',
             icon: <Lightbulb className="h-[22px] w-[22px]" />,
-            badge: growthUnread,
+            badge: (growthUnread + featureBadges.growth) || undefined,
             onSelect: runHomeIconAction('growth-insights', () => navigate('/growth-insights')),
           },
           {
@@ -2708,14 +2713,14 @@ const HomePage = () => {
             id: 'chat',
             label: 'Messages',
             icon: <MessageCircle className="h-[22px] w-[22px]" />,
-            badge: unreadMessages,
+            badge: Math.max(unreadMessages, featureBadges.messages) || undefined,
             onSelect: runHomeIconAction('chat', () => navigate('/chat')),
           },
           {
             id: 'notifications',
             label: 'Notifications',
             icon: <Bell className="h-[22px] w-[22px]" />,
-            badge: unreadNotifications,
+            badge: Math.max(unreadNotifications, featureBadgeTotal) || undefined,
             active: notificationMenuOpen,
             onSelect: runHomeIconAction('notifications', () => setNotificationMenuOpen(true)),
           },
