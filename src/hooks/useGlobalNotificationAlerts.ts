@@ -53,6 +53,7 @@ export function shouldAlert(row: AlertableNotification | null | undefined, seen:
 export function useGlobalNotificationAlerts() {
   const { user } = useAuth();
   const seen = useRef<Set<string>>(new Set());
+  const since = useRef<string>(new Date().toISOString());
 
   useEffect(() => {
     armAudioUnlock();
@@ -61,33 +62,63 @@ export function useGlobalNotificationAlerts() {
 
   useEffect(() => {
     if (!user?.id) return;
+    let disposed = false;
 
+    const raise = (row: AlertableNotification) => {
+      if (!shouldAlert(row, seen.current)) return;
+      seen.current.add(row.id);
+      if (seen.current.size > SEEN_LIMIT) {
+        seen.current = new Set(Array.from(seen.current).slice(-SEEN_LIMIT / 2));
+      }
+
+      const type = row.type || 'post_like';
+      try { void playNotificationSound(type); } catch { /* never break the app for a sound */ }
+      try { triggerVibration(type as never); } catch { /* haptics optional */ }
+
+      const { title, description } = alertCopy(row);
+      toast(title, { description, duration: 5000 });
+    };
+
+    // Fast path: realtime.
     const channel = supabase
       .channel(`global-notification-alerts:${user.id}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
-        (payload) => {
-          const row = payload.new as AlertableNotification;
-          if (!shouldAlert(row, seen.current)) return;
-
-          seen.current.add(row.id);
-          if (seen.current.size > SEEN_LIMIT) {
-            seen.current = new Set(Array.from(seen.current).slice(-SEEN_LIMIT / 2));
-          }
-
-          const type = row.type || 'post_like';
-          try { void playNotificationSound(type); } catch { /* never break the app for a sound */ }
-          try { triggerVibration(type as never); } catch { /* haptics optional */ }
-
-          const { title, description } = alertCopy(row);
-          toast(title, { description, duration: 5000 });
-        }
+        (payload) => raise(payload.new as AlertableNotification)
       )
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    // Durable path: realtime channels can time out (socket limits, sleeping
+    // tabs, flaky networks). A cheap indexed poll guarantees the user still
+    // hears every alert — this is why alerts previously appeared "dead".
+    const poll = async () => {
+      if (disposed || document.visibilityState === 'hidden') return;
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('id, type, context_data, created_at')
+        .eq('user_id', user.id)
+        .gt('created_at', since.current)
+        .order('created_at', { ascending: true })
+        .limit(20);
+      if (error || !data?.length) return;
+      since.current = data[data.length - 1].created_at as string;
+      data.forEach((row) => raise(row as unknown as AlertableNotification));
+    };
+
+    const timer = window.setInterval(() => { void poll(); }, 20_000);
+    const onVisible = () => { if (document.visibilityState === 'visible') void poll(); };
+    document.addEventListener('visibilitychange', onVisible);
+    void poll();
+
+    return () => {
+      disposed = true;
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisible);
+      supabase.removeChannel(channel);
+    };
   }, [user?.id]);
 }
+
 
 export default useGlobalNotificationAlerts;
