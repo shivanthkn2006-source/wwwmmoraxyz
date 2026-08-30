@@ -26,19 +26,15 @@ export const COMPASS_SLOTS: CompassSlot[] = [
   { time: '05:00:00', label: '5:00 AM', category: 'Morning Ignition', theme: 'Core spirit, waking intention and the first hour of the day.' },
   { time: '06:30:00', label: '6:30 AM', category: 'Energy & Habits', theme: 'Health, vitality, movement and the habit loop that carries the day.' },
   { time: '08:00:00', label: '8:00 AM', category: 'Daily Focus', theme: 'Focus, strategy and choosing the one thing that matters today.' },
-  { time: '09:30:00', label: 'Career Prediction', theme: 'Career trajectory, visibility and the opportunity in motion today.', category_placeholder: '' } as unknown as CompassSlot,
+  { time: '09:30:00', label: '9:30 AM', category: 'Career Prediction', theme: 'Career trajectory, visibility and the opportunity in motion today.' },
   { time: '11:00:00', label: '11:00 AM', category: 'Wealth & Decisions', theme: 'Money, risk posture and decision-making quality.' },
   { time: '12:30:00', label: '12:30 PM', category: 'Philosophy', theme: 'Midday reflection, meaning and long-arc perspective.' },
   { time: '14:00:00', label: '2:00 PM', category: 'Social Dynamics', theme: 'Relationships, communication and how others receive you today.' },
-  { time: '15:30:00', label: 'Genius Potential', theme: 'Creativity, original thought and affinity with animals and nature.', category_placeholder: '' } as unknown as CompassSlot,
+  { time: '15:30:00', label: '3:30 PM', category: 'Genius Potential', theme: 'Creativity, original thought and affinity with animals and nature.' },
   { time: '17:00:00', label: '5:00 PM', category: 'Lifestyle & Travel', theme: 'Evening decompression, movement, travel and lifestyle design.' },
   { time: '18:30:00', label: '6:30 PM', category: 'Night Story', theme: 'A closing story and the forward DHF projection for the life phase.' },
 ];
 
-// Repair the two entries written with a placeholder above so the module stays
-// declarative while keeping label/category explicit and typed.
-COMPASS_SLOTS[3] = { time: '09:30:00', label: '9:30 AM', category: 'Career Prediction', theme: COMPASS_SLOTS[3].theme };
-COMPASS_SLOTS[7] = { time: '15:30:00', label: '3:30 PM', category: 'Genius Potential', theme: COMPASS_SLOTS[7].theme };
 
 export const SLOT_TIMES = COMPASS_SLOTS.map((s) => s.time);
 
