@@ -38,6 +38,8 @@ interface HomeGlassDockProps {
   className?: string;
   /** Timestamp of the last successful badge refresh (for the stale note). */
   badgesUpdatedAt?: number | null;
+  /** Total unread count rendered on top of the bare home trigger itself. */
+  triggerBadge?: number;
 }
 
 const PLACEHOLDER_ICONS = [Compass, Bell, Camera, MessageCircle, Sparkles, Bookmark, Settings, User, Heart, Search];
@@ -56,7 +58,7 @@ const formatAgo = (timestamp?: number | null): string => {
   return `${Math.round(minutes / 60)}h ago`;
 };
 
-export default function HomeGlassDock({ items = [], className, badgesUpdatedAt }: HomeGlassDockProps) {
+export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, triggerBadge = 0 }: HomeGlassDockProps) {
   const badgesEnabled = useDockBadgesEnabled();
   const [open, setOpen] = React.useState(false);
 
@@ -178,6 +180,10 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt }
   }, [open]);
 
 
+  const totalBadge = badgesEnabled && Number.isFinite(triggerBadge)
+    ? Math.max(0, Math.floor(triggerBadge))
+    : 0;
+
   return (
     <div
       ref={rootRef}
@@ -286,7 +292,14 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt }
       <button
         ref={triggerRef}
         type="button"
-        aria-label={open ? 'Close home menu' : 'Open home menu'}
+        data-home-dock-trigger
+        aria-label={
+          open
+            ? 'Close home menu'
+            : totalBadge > 0
+              ? `Open home menu, ${totalBadge > 99 ? '99+' : totalBadge} new notifications`
+              : 'Open home menu'
+        }
         aria-expanded={open}
         aria-haspopup="menu"
         onBlur={(event) => {
@@ -326,6 +339,20 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt }
       >
 
         <Home className="h-[22px] w-[22px]" />
+        {totalBadge > 0 && (
+          <span
+            data-testid="home-dock-trigger-badge"
+            aria-hidden="true"
+            className={cn(
+              'pointer-events-none absolute -top-1 left-1/2 -translate-x-1/2',
+              'flex h-[16px] min-w-[16px] items-center justify-center rounded-full px-1',
+              'border border-white/50 bg-red-500 text-[10px] font-bold leading-none text-white',
+              'shadow-[0_1px_4px_rgba(0,0,0,0.6)]',
+            )}
+          >
+            {totalBadge > 99 ? '99+' : totalBadge}
+          </span>
+        )}
       </button>
     </div>
   );

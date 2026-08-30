@@ -12,6 +12,7 @@ import { AppErrorBoundary } from '@/components/core/ErrorBoundary';
 import GrowthCardAlertHost from '@/components/growth/GrowthCardAlertHost';
 import GlobalHomeDock from '@/components/home/GlobalHomeDock';
 import NotificationAlertHost from '@/components/notifications/NotificationAlertHost';
+import useDhfUnlockReminders from '@/hooks/useDhfUnlockReminders';
 
 /** Auto-enables thermal safe mode on low-power devices / heavy module pressure. */
 function useThermalWatchdog() {
@@ -45,6 +46,8 @@ function useThermalWatchdog() {
 function PlatformServices() {
   useVoiceEngine();
   useThermalWatchdog();
+  // Pre-notice cue + toast a few minutes before every Zoe's DHF unlock.
+  useDhfUnlockReminders();
   return null;
 }
 

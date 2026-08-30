@@ -16,6 +16,7 @@ import HomeGlassDock from '@/components/home/HomeGlassDock';
 import GrowthAlertsPanel from '@/components/growth/GrowthAlertsPanel';
 import { useAuth } from '@/lib/auth';
 import { useGrowthUnread } from '@/hooks/useGrowthUnread';
+import { useNotificationFeatureBadges } from '@/hooks/useNotificationFeatureBadges';
 
 /** Routes that own their dock, or must stay chrome-free. */
 const EXCLUDED_PREFIXES = [
@@ -34,6 +35,7 @@ export const GlobalHomeDock: React.FC = () => {
   const navigate = useNavigate();
   const { user, session, loading } = useAuth();
   const unread = useGrowthUnread();
+  const { counts, total } = useNotificationFeatureBadges();
   const [alertsOpen, setAlertsOpen] = useState(false);
 
   const confirmedSignedOut = !loading && !user && !session;
@@ -44,17 +46,20 @@ export const GlobalHomeDock: React.FC = () => {
   return (
     <>
       <HomeGlassDock
+        triggerBadge={total}
         items={[
           {
             id: 'global-home',
             label: 'Home feed',
             icon: <Home className="h-[22px] w-[22px]" />,
+            badge: counts.feed || undefined,
             onSelect: () => navigate('/home'),
           },
           {
             id: 'global-compass',
             label: "Zoe's DHF",
             icon: <Compass className="h-[22px] w-[22px]" />,
+            badge: counts.compass || undefined,
             active: pathname.startsWith('/compass'),
             onSelect: () => navigate('/compass'),
           },
@@ -62,7 +67,7 @@ export const GlobalHomeDock: React.FC = () => {
             id: 'global-growth',
             label: 'Growth insights',
             icon: <Lightbulb className="h-[22px] w-[22px]" />,
-            badge: unread || undefined,
+            badge: (unread + counts.growth) || undefined,
             active: pathname.startsWith('/growth-insights'),
             onSelect: () => setAlertsOpen(true),
           },
@@ -71,6 +76,7 @@ export const GlobalHomeDock: React.FC = () => {
             id: 'global-zoe',
             label: 'Zoe AI',
             icon: <Sparkles className="h-[22px] w-[22px]" />,
+            badge: counts.zoe || undefined,
             active: pathname.startsWith('/zoe-ai'),
             onSelect: () => navigate('/zoe-ai'),
           },
@@ -78,6 +84,7 @@ export const GlobalHomeDock: React.FC = () => {
             id: 'global-chat',
             label: 'Messages',
             icon: <MessageCircle className="h-[22px] w-[22px]" />,
+            badge: counts.messages || undefined,
             active: pathname.startsWith('/chat'),
             onSelect: () => navigate('/chat'),
           },
@@ -85,6 +92,7 @@ export const GlobalHomeDock: React.FC = () => {
             id: 'global-notifications',
             label: 'Notifications',
             icon: <Bell className="h-[22px] w-[22px]" />,
+            badge: total || undefined,
             active: pathname.startsWith('/notification-history'),
             onSelect: () => navigate('/notification-history'),
           },
@@ -92,6 +100,7 @@ export const GlobalHomeDock: React.FC = () => {
             id: 'global-profile',
             label: 'Profile',
             icon: <User className="h-[22px] w-[22px]" />,
+            badge: counts.friends || undefined,
             active: pathname === '/profile',
             onSelect: () => navigate('/profile'),
           },
