@@ -89,11 +89,15 @@ export interface DhfDailyPost {
   short_summary: string;
   full_story_content: string;
   image_url: string;
+  /** Path inside our own `dhf-compass` bucket when a durable copy exists. */
+  image_path?: string | null;
+  image_source?: string | null;
   powered_by_badge: string;
   referral_cta: string;
   astrological_context?: string | null;
   created_at: string;
 }
+
 
 /**
  * Cards whose slot has already arrived in the member's own time zone,
