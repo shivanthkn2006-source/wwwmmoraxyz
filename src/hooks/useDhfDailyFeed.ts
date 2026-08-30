@@ -52,8 +52,9 @@ export function useDhfDailyFeed() {
       .order('post_date', { ascending: false })
       .order('slot_time', { ascending: false });
     if (error) throw error;
-    return (data ?? []) as unknown as DhfDailyPost[];
+    return resolveCompassImages((data ?? []) as unknown as DhfDailyPost[]);
   }, []);
+
 
   const load = useCallback(async (options: { force?: boolean } = {}) => {
     if (!user) {
