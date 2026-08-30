@@ -110,31 +110,37 @@ export async function countForDate(userId: string, date: string): Promise<number
  */
 async function storeImage(userId: string, date: string, slotTime: string, remoteUrl: string): Promise<string | null> {
   const path = `${userId}/${date}/${slotTime.replace(/:/g, '-')}.jpg`;
-  try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 25_000);
-    const img = await fetch(remoteUrl, { signal: controller.signal });
-    clearTimeout(timer);
-    if (!img.ok) return null;
-    const bytes = new Uint8Array(await img.arrayBuffer());
-    if (bytes.byteLength < 1024) return null;
+  // Pollinations renders on demand and regularly needs >25s for the first hit,
+  // so we allow a longer window and one retry before falling back to the URL.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 45_000);
+      const img = await fetch(remoteUrl, { signal: controller.signal });
+      clearTimeout(timer);
+      if (!img.ok) continue;
+      const bytes = new Uint8Array(await img.arrayBuffer());
+      if (bytes.byteLength < 1024) continue;
 
-    const up = await fetch(`${SUPABASE_URL}/storage/v1/object/${COMPASS_BUCKET}/${path}`, {
-      method: 'POST',
-      headers: {
-        apikey: SERVICE_KEY,
-        Authorization: `Bearer ${SERVICE_KEY}`,
-        'Content-Type': img.headers.get('content-type') || 'image/jpeg',
-        'x-upsert': 'true',
-        'Cache-Control': '31536000',
-      },
-      body: bytes,
-    });
-    return up.ok ? path : null;
-  } catch {
-    return null;
+      const up = await fetch(`${SUPABASE_URL}/storage/v1/object/${COMPASS_BUCKET}/${path}`, {
+        method: 'POST',
+        headers: {
+          apikey: SERVICE_KEY,
+          Authorization: `Bearer ${SERVICE_KEY}`,
+          'Content-Type': img.headers.get('content-type') || 'image/jpeg',
+          'x-upsert': 'true',
+          'Cache-Control': '31536000',
+        },
+        body: bytes,
+      });
+      if (up.ok) return path;
+    } catch {
+      /* fall through to the retry, then to the remote URL */
+    }
   }
+  return null;
 }
+
 
 export interface RunOptions {
   userId: string;
