@@ -72,7 +72,17 @@ export const DHFCompassCard: React.FC<Props> = ({ post, className, onImpression,
       data-dhf-card
       data-dhf-slot={post.slot_time}
     >
+      {/* Brand line: the user must instantly recognise a Zoe's DHF daily card. */}
+      <div
+        className="mb-2 flex items-center gap-1.5 text-[13px] font-bold uppercase tracking-[0.08em] text-primary"
+        data-dhf-brand
+      >
+        <Compass className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+        <span className="truncate">Zoe&apos;s DHF</span>
+      </div>
+
       <header className="mb-3 grid min-h-10 grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
+
         <div className="min-w-0">
           <span className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-border bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
             <Compass className="h-3 w-3 shrink-0" aria-hidden="true" />
