@@ -24,39 +24,42 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const BATCH_SIZE = 8;
+const BATCH_SIZE = 2;
+/** Hard wall-clock budget so the run always returns before the 150s edge limit. */
+const TIME_BUDGET_MS = 110_000;
 const LEASE_KEY = 'dhf_compass_dispatch';
-const LEASE_MS = 10 * 60 * 1000;
+const LEASE_MS = 4 * 60 * 1000;
 
 async function takeLease(): Promise<boolean> {
   const now = Date.now();
-  const existing = await db(`job_queue?job_type=eq.${LEASE_KEY}&select=id,created_at,status&limit=1`);
+  const existing = await db(`dhf_dispatch_lease?key=eq.${LEASE_KEY}&select=key,leased_at,status&limit=1`);
   const row = Array.isArray(existing.data) && existing.data.length ? existing.data[0] : null;
   if (row) {
-    const age = now - new Date(row.created_at).getTime();
+    const age = now - new Date(row.leased_at).getTime();
     if (row.status === 'running' && age < LEASE_MS) return false;
-    const upd = await db(`job_queue?id=eq.${row.id}`, {
+    const upd = await db(`dhf_dispatch_lease?key=eq.${LEASE_KEY}`, {
       method: 'PATCH',
       headers: { Prefer: 'return=minimal' },
-      body: JSON.stringify({ status: 'running', created_at: new Date(now).toISOString() }),
+      body: JSON.stringify({ status: 'running', leased_at: new Date(now).toISOString() }),
     });
     return upd.ok;
   }
-  const created = await db('job_queue', {
+  const created = await db('dhf_dispatch_lease', {
     method: 'POST',
-    headers: { Prefer: 'return=minimal' },
-    body: JSON.stringify({ job_type: LEASE_KEY, status: 'running', payload: {} }),
+    headers: { Prefer: 'return=minimal,resolution=ignore-duplicates' },
+    body: JSON.stringify({ key: LEASE_KEY, status: 'running', leased_at: new Date(now).toISOString() }),
   });
   return created.ok;
 }
 
 async function releaseLease(summary: Record<string, unknown>) {
-  await db(`job_queue?job_type=eq.${LEASE_KEY}`, {
+  await db(`dhf_dispatch_lease?key=eq.${LEASE_KEY}`, {
     method: 'PATCH',
     headers: { Prefer: 'return=minimal' },
-    body: JSON.stringify({ status: 'idle', payload: summary }),
+    body: JSON.stringify({ status: 'idle', summary }),
   });
 }
+
 
 interface Member { user_id: string; timezone: string }
 
@@ -84,7 +87,8 @@ Deno.serve(async (req) => {
   try {
     if (!(await takeLease())) return json({ ok: true, skipped: 'in-flight' });
 
-    const summary = { scanned: 0, generated: 0, cached: 0, failed: 0, paused: false };
+    const startedAt = Date.now();
+    const summary = { scanned: 0, generated: 0, cached: 0, failed: 0, paused: false, timeboxed: false };
     try {
       const list = await members();
       summary.scanned = list.length;
@@ -92,13 +96,14 @@ Deno.serve(async (req) => {
       let processed = 0;
       for (const member of list) {
         if (processed >= BATCH_SIZE || summary.paused) break;
+        if (Date.now() - startedAt > TIME_BUDGET_MS) { summary.timeboxed = true; break; }
         const tz = safeZone(member.timezone);
         const date = localDateIn(new Date(), tz);
 
         const existing = await countForDate(member.user_id, date);
         if (existing >= COMPASS_SLOTS.length) { summary.cached++; continue; }
 
-        const result = await ensureDayForUser({ userId: member.user_id, date, trigger: 'cron', action: 'ensure' });
+        const result = await ensureDayForUser({ userId: member.user_id, date, trigger: 'cron', action: 'ensure', budgetMs: Math.max(10_000, TIME_BUDGET_MS - (Date.now() - startedAt)) });
         processed++;
         if (result.paused) summary.paused = true;
         if (result.ok) summary.generated += result.generated; else summary.failed++;

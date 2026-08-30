@@ -1612,6 +1612,33 @@ export type Database = {
         }
         Relationships: []
       }
+      dhf_dispatch_lease: {
+        Row: {
+          created_at: string
+          key: string
+          leased_at: string
+          status: string
+          summary: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          key: string
+          leased_at?: string
+          status?: string
+          summary?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          key?: string
+          leased_at?: string
+          status?: string
+          summary?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       dhf_generation_runs: {
         Row: {
           action: string

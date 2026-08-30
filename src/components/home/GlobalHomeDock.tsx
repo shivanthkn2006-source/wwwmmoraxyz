@@ -11,7 +11,7 @@
  */
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Home, Lightbulb, Sparkles, MessageCircle, Bell, User } from 'lucide-react';
+import { Home, Lightbulb, Sparkles, MessageCircle, Bell, User, Compass } from 'lucide-react';
 import HomeGlassDock from '@/components/home/HomeGlassDock';
 import GrowthAlertsPanel from '@/components/growth/GrowthAlertsPanel';
 import { useAuth } from '@/lib/auth';
@@ -52,6 +52,13 @@ export const GlobalHomeDock: React.FC = () => {
             onSelect: () => navigate('/home'),
           },
           {
+            id: 'global-compass',
+            label: 'Daily Compass',
+            icon: <Compass className="h-[22px] w-[22px]" />,
+            active: pathname.startsWith('/compass'),
+            onSelect: () => navigate('/compass'),
+          },
+          {
             id: 'global-growth',
             label: 'Growth insights',
             icon: <Lightbulb className="h-[22px] w-[22px]" />,
@@ -59,6 +66,7 @@ export const GlobalHomeDock: React.FC = () => {
             active: pathname.startsWith('/growth-insights'),
             onSelect: () => setAlertsOpen(true),
           },
+
           {
             id: 'global-zoe',
             label: 'Zoe AI',
