@@ -120,7 +120,19 @@ export class VoiceCommandService {
     return true;
   }
 
-  stop() {
+  /**
+   * Suspend the recognizer WITHOUT clearing the user's opt-in (thermal safe
+   * mode, tab hidden). `stop()` is the explicit user-off switch; suspending
+   * with it used to drop voiceCommandActive, so the mic never came back when
+   * the device cooled down again.
+   */
+  suspend() {
+    if (!this.running) return;
+    this.teardown();
+    usePlatformStore.getState().setVoiceStatus('idle');
+  }
+
+  private teardown() {
     this.running = false;
     this.cancelInFlight('service-stopped');
     if (this.debounceTimer) clearTimeout(this.debounceTimer);
@@ -133,6 +145,10 @@ export class VoiceCommandService {
       /* recognizer already torn down */
     }
     this.recognition = null;
+  }
+
+  stop() {
+    this.teardown();
     usePlatformStore.getState().toggleVoiceCommand(false);
   }
 
