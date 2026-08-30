@@ -103,7 +103,7 @@ Deno.serve(async (req) => {
         const existing = await countForDate(member.user_id, date);
         if (existing >= COMPASS_SLOTS.length) { summary.cached++; continue; }
 
-        const result = await ensureDayForUser({ userId: member.user_id, date, trigger: 'cron', action: 'ensure' });
+        const result = await ensureDayForUser({ userId: member.user_id, date, trigger: 'cron', action: 'ensure', budgetMs: Math.max(10_000, TIME_BUDGET_MS - (Date.now() - startedAt)) });
         processed++;
         if (result.paused) summary.paused = true;
         if (result.ok) summary.generated += result.generated; else summary.failed++;
