@@ -15,9 +15,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { deviceTimeZone, localDateIn } from '@/lib/growthSlot';
 import { COMPASS_SLOT_COUNT, duePosts, type DhfDailyPost } from '@/lib/dhfCompass';
+import { resolveCompassImages } from '@/lib/dhfCompassImages';
+
 
 const SELECT =
-  'id, post_date, slot_time, category, headline, short_summary, full_story_content, image_url, powered_by_badge, referral_cta, astrological_context, created_at';
+  'id, post_date, slot_time, category, headline, short_summary, full_story_content, image_url, image_path, image_source, powered_by_badge, referral_cta, astrological_context, created_at';
+
 
 /** Session-scoped guard so remounts never re-trigger generation. */
 const attempted = new Set<string>();
@@ -51,8 +54,9 @@ export function useDhfDailyFeed() {
       .order('post_date', { ascending: false })
       .order('slot_time', { ascending: false });
     if (error) throw error;
-    return (data ?? []) as unknown as DhfDailyPost[];
+    return resolveCompassImages((data ?? []) as unknown as DhfDailyPost[]);
   }, []);
+
 
   const load = useCallback(async (options: { force?: boolean } = {}) => {
     if (!user) {
