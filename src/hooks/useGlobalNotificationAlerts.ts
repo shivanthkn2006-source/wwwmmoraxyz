@@ -79,12 +79,20 @@ export function useGlobalNotificationAlerts() {
       }
 
       const type = row.type || 'post_like';
-      try { void playNotificationSound(type); } catch { /* never break the app for a sound */ }
-      try { triggerVibration(type as never); } catch { /* haptics optional */ }
 
-      const { title, description } = alertCopy(row);
-      toast(title, { description, duration: 5000 });
+      // Heads-up cue FIRST, then the alert itself — the user hears the rising
+      // cue and knows a notification is about to land.
+      try { playIncomingCue(); } catch { /* never break the app for a sound */ }
+
+      const timer = window.setTimeout(() => {
+        try { void playNotificationSound(type); } catch { /* sound is best-effort */ }
+        try { triggerVibration(type as never); } catch { /* haptics optional */ }
+        const { title, description } = alertCopy(row);
+        toast(title, { description, duration: 5000 });
+      }, INCOMING_CUE_LEAD_MS);
+      pending.current.add(timer);
     };
+
 
     // Fast path: realtime.
     const channel = supabase
