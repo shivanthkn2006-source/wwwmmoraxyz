@@ -97,6 +97,7 @@ Deno.serve(async (req) => {
       }
 
       const result = await ensureDayForUser({
+        budgetMs: 100_000,
         userId: targetUserId,
         date,
         trigger: 'admin',
@@ -111,7 +112,7 @@ Deno.serve(async (req) => {
       return json({ ok: true, date, existing, complete: existing >= COMPASS_SLOTS.length });
     }
 
-    const result = await ensureDayForUser({ userId: user.id, date, trigger: 'client', action: 'ensure' });
+    const result = await ensureDayForUser({ userId: user.id, date, trigger: 'client', action: 'ensure', budgetMs: 100_000 });
     return json(result);
   } catch (e) {
     return json({ error: String((e as Error)?.message ?? e).slice(0, 300) }, 500);
