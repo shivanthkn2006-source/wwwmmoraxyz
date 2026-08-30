@@ -11,6 +11,7 @@ import { usePlatformStore } from '@/store/usePlatformStore';
 import { AppErrorBoundary } from '@/components/core/ErrorBoundary';
 import GrowthCardAlertHost from '@/components/growth/GrowthCardAlertHost';
 import GlobalHomeDock from '@/components/home/GlobalHomeDock';
+import NotificationAlertHost from '@/components/notifications/NotificationAlertHost';
 
 /** Auto-enables thermal safe mode on low-power devices / heavy module pressure. */
 function useThermalWatchdog() {
