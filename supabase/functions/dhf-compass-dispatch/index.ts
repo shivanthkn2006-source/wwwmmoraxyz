@@ -28,7 +28,7 @@ const BATCH_SIZE = 2;
 /** Hard wall-clock budget so the run always returns before the 150s edge limit. */
 const TIME_BUDGET_MS = 110_000;
 const LEASE_KEY = 'dhf_compass_dispatch';
-const LEASE_MS = 10 * 60 * 1000;
+const LEASE_MS = 4 * 60 * 1000;
 
 async function takeLease(): Promise<boolean> {
   const now = Date.now();
