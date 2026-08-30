@@ -57,7 +57,7 @@ export function useGlobalNotificationAlerts() {
 
           const type = row.type || 'post_like';
           try { void playNotificationSound(type); } catch { /* never break the app for a sound */ }
-          try { triggerVibration(type); } catch { /* haptics optional */ }
+          try { triggerVibration(type as never); } catch { /* haptics optional */ }
 
           toast(row.title || 'New notification', {
             description: row.message || undefined,
