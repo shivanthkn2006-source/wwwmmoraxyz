@@ -10,7 +10,14 @@ import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { toast } from 'sonner';
-import { playNotificationSound, armAudioUnlock, initializeAudio } from '@/utils/notificationSounds';
+import {
+  playNotificationSound,
+  armAudioUnlock,
+  initializeAudio,
+  playIncomingCue,
+  INCOMING_CUE_LEAD_MS,
+} from '@/utils/notificationSounds';
+
 import { triggerVibration } from '@/utils/vibrationPatterns';
 
 const SEEN_LIMIT = 200;
