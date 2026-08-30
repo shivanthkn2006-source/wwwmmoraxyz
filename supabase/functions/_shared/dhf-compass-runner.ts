@@ -92,10 +92,16 @@ export async function ensureProfile(userId: string): Promise<ProfileRow> {
   return row as unknown as ProfileRow;
 }
 
-export async function countForDate(userId: string, date: string): Promise<number> {
+export async function slotsForDate(userId: string, date: string): Promise<Set<string>> {
   const r = await db(`dhf_daily_posts?user_id=eq.${userId}&post_date=eq.${date}&select=slot_time`);
-  return Array.isArray(r.data) ? r.data.length : 0;
+  const rows = Array.isArray(r.data) ? (r.data as { slot_time: string }[]) : [];
+  return new Set(rows.map((row) => String(row.slot_time).slice(0, 8)));
 }
+
+export async function countForDate(userId: string, date: string): Promise<number> {
+  return (await slotsForDate(userId, date)).size;
+}
+
 
 /**
  * Copy a generated frame into our own bucket so the card never depends on a
