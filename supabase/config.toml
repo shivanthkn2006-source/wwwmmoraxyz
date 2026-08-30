@@ -348,3 +348,9 @@ verify_jwt = false
 
 [functions.zoe-dhf-brain]
 verify_jwt = true
+
+[functions.generate-dhf-daily-feed]
+verify_jwt = true
+
+[functions.dhf-compass-dispatch]
+verify_jwt = false

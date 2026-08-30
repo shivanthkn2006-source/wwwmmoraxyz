@@ -53,7 +53,7 @@ export const GlobalHomeDock: React.FC = () => {
           },
           {
             id: 'global-compass',
-            label: 'Daily Compass',
+            label: "Zoe's DHF",
             icon: <Compass className="h-[22px] w-[22px]" />,
             active: pathname.startsWith('/compass'),
             onSelect: () => navigate('/compass'),

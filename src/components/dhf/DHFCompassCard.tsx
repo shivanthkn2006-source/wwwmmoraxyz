@@ -1,5 +1,5 @@
 /**
- * DHF DAILY COMPASS CARD — presentation only.
+ * ZOE'S DHF CARD — presentation only.
  *
  * Mirrors the existing growth-insight card geometry so the feed keeps exactly
  * the same look and rhythm. It never fetches or generates anything: the image
@@ -122,7 +122,7 @@ export const DHFCompassCard: React.FC<Props> = ({ post, className, onImpression,
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3">
         <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
-          {post.powered_by_badge || 'Powered by Zoe DHF'}
+          {post.powered_by_badge || "Powered by Zoe's DHF"}
         </span>
         {post.referral_cta && (
           <span className="text-[11px] text-muted-foreground" data-dhf-referral>{post.referral_cta}</span>

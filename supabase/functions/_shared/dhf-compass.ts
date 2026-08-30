@@ -1,6 +1,6 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- * DHF DAILY COMPASS — content synthesis for the 10 scheduled daily slots.
+ * ZOE'S DHF — content synthesis for the 10 scheduled daily slots.
  *
  * Design contract (mirrors the proven growth-content module):
  *   • pure, dependency-light and never throws — every failure path falls back

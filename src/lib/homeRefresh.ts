@@ -1,5 +1,5 @@
 // Event emitter for home page refresh
-type RefreshListener = () => void;
+type RefreshListener = () => void | Promise<unknown>;
 
 const listeners: RefreshListener[] = [];
 
@@ -13,6 +13,6 @@ export const onHomeRefresh = (listener: RefreshListener) => {
   };
 };
 
-export const triggerHomeRefresh = () => {
-  listeners.forEach(listener => listener());
+export const triggerHomeRefresh = async () => {
+  await Promise.allSettled(listeners.map((listener) => Promise.resolve(listener())));
 };

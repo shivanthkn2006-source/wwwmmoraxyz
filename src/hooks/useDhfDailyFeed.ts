@@ -1,5 +1,5 @@
 /**
- * DHF DAILY COMPASS FEED HOOK — read-first, generate-once.
+ * ZOE'S DHF FEED HOOK — read-first, generate-once.
  *
  * Cost contract (this is the whole point of the architecture):
  *   1. Read today's rows for the signed-in member.

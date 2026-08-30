@@ -1,8 +1,8 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// VEDIC EPHEMERIS - Swiss Ephemeris Precision Edge Function
+// VEDIC EPHEMERIS - Zoe's DHF Precision Edge Function
 // ═══════════════════════════════════════════════════════════════════════════════
 //
-// This edge function provides 100% accurate Swiss Ephemeris calculations
+// This edge function provides Zoe's DHF astronomical calculations
 // for Jathakam/Vedic astrology charts.
 //
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -62,7 +62,7 @@ const DASHA_VIBES: Record<string, string> = {
 // ═══════════════════════════════════════════════════════════════════════════════
 // HIGH-PRECISION VSOP87/ELP2000 CALCULATIONS
 // These formulas are derived from the VSOP87 and ELP2000 theories
-// used by Swiss Ephemeris, providing arc-second accuracy
+// used by established astronomical implementations, providing arc-second accuracy
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
@@ -377,7 +377,7 @@ function normalizeAngle(angle: number): number {
 }
 
 /**
- * Calculate complete Jathakam with Swiss Ephemeris precision
+ * Calculate complete Jathakam with Zoe's DHF precision
  */
 function calculateJathakam(dob: Date, time: string | null, lat: number, lng: number) {
   // Parse birth time
@@ -478,7 +478,7 @@ function calculateJathakam(dob: Date, time: string | null, lat: number, lng: num
   return {
     version: '3.0.0-swiss-precision',
     generatedAt: new Date().toISOString(),
-    calculationMethod: 'VSOP87/ELP2000 (Swiss Ephemeris Equivalent)',
+    calculationMethod: "VSOP87/ELP2000 (Zoe's DHF)",
     accuracy: '0.01° (36 arcseconds)',
     birthDate: dob.toISOString().split('T')[0],
     birthTime: time,

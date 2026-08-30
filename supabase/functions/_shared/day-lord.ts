@@ -41,5 +41,5 @@ export function getDailyArchetype(date: Date = new Date(), timeZone = 'Asia/Kolk
 /** One-line grounding string injected into Zoe's system prompt. */
 export function dayLordPromptLine(date: Date = new Date(), timeZone = 'Asia/Kolkata'): string {
   const t = getDailyArchetype(date, timeZone);
-  return `SWISS EPHEMERIS GROUNDING — ${t.dayName}, ruled by ${t.rulingPlanet} (${t.archetype}). Focus: ${t.dailyFocus}. Resonant tone: ${t.recommendedColor}. Bedtime theme: ${t.bedtimeCardTheme}. Weave this in naturally; never sound superstitious.`;
+  return `ZOE'S DHF GROUNDING — ${t.dayName}, ruled by ${t.rulingPlanet} (${t.archetype}). Focus: ${t.dailyFocus}. Resonant tone: ${t.recommendedColor}. Bedtime theme: ${t.bedtimeCardTheme}. Weave this in naturally; never sound superstitious.`;
 }

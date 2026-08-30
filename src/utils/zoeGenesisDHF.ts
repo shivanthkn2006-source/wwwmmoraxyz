@@ -4,7 +4,7 @@
 // Once locked (stage=COMPLETE + completed_at), it CANNOT be overwritten —
 // even if the user later types a different name/DOB/location.
 //
-// Also exposes a Swiss-ephemeris snapshot helper so the brain can answer
+// Also exposes a Zoe's DHF snapshot helper so the brain can answer
 // astrology-style queries from the locked DOB with millisecond-precise
 // planetary positions (no UI changes; backend context injection only).
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -125,7 +125,7 @@ export async function lockGenesisToDHF(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// ASTROLOGY DETECTION + SWISS-EPHEMERIS SNAPSHOT
+// ASTROLOGY DETECTION + ZOE'S DHF SNAPSHOT
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const ASTROLOGY_PATTERNS: RegExp[] = [
@@ -144,7 +144,7 @@ export function isAstrologyQuery(text: string | null | undefined): boolean {
 }
 
 export interface EphemerisSnapshot {
-  precisionLabel: string; // e.g. "Swiss Ephemeris (sub-arcsecond / ms-precise)"
+  precisionLabel: string; // e.g. "Zoe's DHF (sub-arcsecond / ms-precise)"
   computedAt: string;     // ISO instant of computation
   birthDate: string | null;
   metadata: EphemerisMetadata;
@@ -153,7 +153,7 @@ export interface EphemerisSnapshot {
 }
 
 /**
- * Build a Swiss-ephemeris snapshot using the locked DOB (if any). Pure client compute.
+ * Build a Zoe's DHF snapshot using the locked DOB (if any). Pure client compute.
  */
 export function getEphemerisSnapshot(dob: string | null | undefined): EphemerisSnapshot {
   const now = new Date();
@@ -165,7 +165,7 @@ export function getEphemerisSnapshot(dob: string | null | undefined): EphemerisS
   const positionsAtBirth = birthValid ? getAllPositions(birth!) : null;
 
   return {
-    precisionLabel: 'Swiss Ephemeris (sub-arcsecond, millisecond-precise via VSOP87 + Chapront)',
+    precisionLabel: "Zoe's DHF (sub-arcsecond, millisecond-precise)",
     computedAt: now.toISOString(),
     birthDate: birthValid ? birth!.toISOString() : null,
     metadata,
@@ -208,7 +208,7 @@ export function buildGenesisDHFContextBlock(
 
   if (ephemeris) {
     lines.push('');
-    lines.push('═══ SWISS EPHEMERIS SNAPSHOT (use for any astrology / planetary answer) ═══');
+    lines.push("═══ ZOE'S DHF SNAPSHOT (use for any astrology / planetary answer) ═══");
     lines.push(`Precision: ${ephemeris.precisionLabel}`);
     lines.push(`Computed at: ${ephemeris.computedAt}`);
     lines.push(`Ayanamsa (Lahiri): ${ephemeris.metadata.ayanamsa.toFixed(6)}°`);

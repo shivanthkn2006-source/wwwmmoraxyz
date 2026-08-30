@@ -5,7 +5,7 @@
  * Every search / chat / feed-click passes through here:
  *   1. resolve the caller from the JWT (never trust a client-supplied user_id)
  *   2. load the DHF profile (birth data + natal chart)
- *   3. compute deterministic day-lord telemetry (Swiss-Ephemeris grounded)
+ *   3. compute deterministic day-lord telemetry (Zoe's DHF grounded)
  *   4. embed the query with the sovereign embedding cascade (no Lovable AI)
  *   5. write the vector memory row into dhf_consciousness_memory
  *   6. inject personalised video recommendations into mmora_feed_items

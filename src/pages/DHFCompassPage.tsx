@@ -1,5 +1,5 @@
 /**
- * DHF DAILY COMPASS — the member's own archive page.
+ * ZOE'S DHF — the member's own archive page.
  *
  * Read-only by construction: it never triggers generation (the cron pre-warms
  * every member, and the home feed owns the one "ensure" call per session), so
@@ -110,13 +110,13 @@ const DHFCompassPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-background pb-28">
       <PageSeo
-        title="Daily Compass — your scheduled Zoe forecasts"
-        description="Every Daily Compass card generated for you, in order, with your referral rewards and story archive."
+        title="Zoe's DHF — your scheduled forecasts"
+        description="Every Zoe's DHF card generated for you, in order, with your referral rewards and story archive."
       />
       <div className="container mx-auto max-w-2xl px-4 py-6">
         <header className="mb-6">
           <h1 className="flex items-center gap-2 text-xl font-semibold text-foreground">
-            <Compass className="h-5 w-5" aria-hidden="true" /> Daily Compass
+            <Compass className="h-5 w-5" aria-hidden="true" /> Zoe's DHF
           </h1>
           <p className="text-sm text-muted-foreground">
             Ten scheduled cards a day, generated once and kept forever.

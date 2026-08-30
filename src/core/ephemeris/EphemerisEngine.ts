@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// EPHEMERIS ENGINE — Swiss Ephemeris-style Planetary Calculator
+// EPHEMERIS ENGINE — Zoe's DHF Planetary Calculator
 // Full-spectrum astronomical computation: ~4713 BCE → 3000+ CE
 // Uses VSOP87-derived perturbation series + Chapront lunar theory
 // Lahiri Ayanamsa for sidereal (Vedic) longitudes
@@ -1314,7 +1314,7 @@ export function getEphemerisMetadata(date: Date): EphemerisMetadata {
 }
 
 /**
- * Calculate planetary position for ANY date (full Swiss Ephemeris-style)
+ * Calculate planetary position for any supported date
  */
 export function getPlanetaryPosition(planet: Planet, date: Date): PlanetaryPosition {
   const jd = dateToJulianDay(date);

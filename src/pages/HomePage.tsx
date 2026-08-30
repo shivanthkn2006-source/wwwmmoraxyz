@@ -107,6 +107,7 @@ import { deviceTimeZone, growthSlotTimestamp, slotsForFrequency } from '@/lib/gr
 import DHFCompassCard from '@/components/dhf/DHFCompassCard';
 import { useDhfDailyFeed } from '@/hooks/useDhfDailyFeed';
 import { compassSlotTimestamp } from '@/lib/dhfCompass';
+import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 
 
 
@@ -164,7 +165,7 @@ const HomePage = () => {
     refresh: refreshGrowth,
   } = useGrowthFeed();
   const growthUnread = useGrowthUnread();
-  const { posts: dhfPosts } = useDhfDailyFeed();
+  const { posts: dhfPosts, refresh: refreshDhf } = useDhfDailyFeed();
 
   // Remote flag: onboarding gating can be switched off platform-wide without a deploy.
   const { isEnabled: isGrowthFlagEnabled } = useGrowthFlags();
@@ -279,7 +280,7 @@ const HomePage = () => {
     );
   }
 
-  // DHF Daily Compass — pre-generated slot cards, read straight from the
+  // Zoe's DHF — pre-generated slot cards, read straight from the
   // database and placed in the same chronology as posts, Loops and Growth.
   const dhfSlides = dhfPosts.map((post) => (
     <div
@@ -305,6 +306,7 @@ const HomePage = () => {
   const [loopPosts, setLoopPosts] = useState<Post[]>([]);
   const [brokenLoopPreviewIds, setBrokenLoopPreviewIds] = useState<Set<string>>(() => new Set());
   const [loading, setLoading] = useState(true);
+  const homeSurfaceRef = useRef<HTMLDivElement | null>(null);
   const [activeTab, setActiveTab] = useState<string>('global');
   // Search videos (YouTube) injected into the feed and played inline — new-window
   // navigation to youtube.com is blocked by Cross-Origin-Opener-Policy.
@@ -1887,8 +1889,13 @@ const HomePage = () => {
     // Listen for manual refresh events
     const unsubscribe = onHomeRefresh(() => {
       setLoading(true);
-      Promise.all([fetchGlobalPosts('manual'), fetchLoopPosts('manual'), fetchPersonalPosts('manual')])
-        .finally(() => setLoading(false));
+      return Promise.all([
+        fetchGlobalPosts('manual'),
+        fetchLoopPosts('manual'),
+        fetchPersonalPosts('manual'),
+        refreshGrowth(),
+        refreshDhf(),
+      ]).finally(() => setLoading(false));
     });
 
     // Set up real-time subscription for notification updates (deferred)
@@ -1958,7 +1965,12 @@ const HomePage = () => {
     }
 
     return unsubscribe;
-  }, [user, friendships]);
+  }, [user, friendships, refreshGrowth, refreshDhf]);
+
+  const runPullRefresh = React.useCallback(async () => {
+    await triggerHomeRefresh();
+  }, []);
+  const pullRefresh = usePullToRefresh(homeSurfaceRef, runPullRefresh);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -2381,7 +2393,21 @@ const HomePage = () => {
           />
         )} */}
         
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="relative h-full min-h-0 w-full overflow-hidden">
+        <Tabs ref={homeSurfaceRef} value={activeTab} onValueChange={setActiveTab} className="relative h-full min-h-0 w-full overflow-hidden">
+          <div
+            className="pointer-events-none fixed left-1/2 top-3 z-[60] flex -translate-x-1/2 items-center justify-center transition-opacity"
+            style={{ opacity: pullRefresh.refreshing || pullRefresh.distance > 8 ? 1 : 0 }}
+            aria-live="polite"
+            data-testid="pull-to-refresh-indicator"
+          >
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-background/90 shadow-md backdrop-blur">
+              <ArrowDown
+                className={`h-4 w-4 text-foreground transition-transform ${pullRefresh.refreshing ? 'animate-spin' : pullRefresh.distance >= 72 ? 'rotate-180' : ''}`}
+                aria-hidden="true"
+              />
+              <span className="sr-only">{pullRefresh.refreshing ? 'Refreshing feed' : 'Pull to refresh'}</span>
+            </span>
+          </div>
           {/* Fixed header - Clean minimal version (profile now in HUD) */}
           <div
             className={`pointer-events-none fixed top-0 left-0 right-0 z-50 transition-all duration-300 ease-out will-change-transform ${headerVisible ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'}`}

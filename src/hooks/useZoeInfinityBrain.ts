@@ -42,7 +42,7 @@ import {
 } from '@/core/inference';
 // ═══ ANTI-HALLUCINATION LAYER 1: Determinism profiling ═══
 import { classifyDeterminism, getCritiqueRouting } from '@/core/inference/Determinism';
-// ═══ GENESIS DHF + Swiss Ephemeris snapshot (immutable identity for the brain) ═══
+// ═══ GENESIS DHF + Zoe's DHF snapshot (immutable identity for the brain) ═══
 import {
   getLockedGenesisIdentity,
   getEphemerisSnapshot,
@@ -858,7 +858,7 @@ export const useZoeInfinityBrain = (): UseZoeInfinityBrainReturn => {
       const critiqueRouting = getCritiqueRouting(determinism.mode);
       console.log(`[ZoeBrain] 🎯 Determinism: ${determinism.mode} (temp=${determinism.temperature}, critique=${critiqueRouting.enabled})`);
 
-      // ── GENESIS DHF + Swiss Ephemeris (immutable identity context) ──
+      // ── GENESIS DHF + Zoe's DHF (immutable identity context) ──
       let genesisIdentity: Awaited<ReturnType<typeof getLockedGenesisIdentity>> = null;
       let ephemerisSnapshot: ReturnType<typeof getEphemerisSnapshot> | null = null;
       try {

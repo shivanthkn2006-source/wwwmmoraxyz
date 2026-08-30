@@ -2,15 +2,15 @@
  * ═══════════════════════════════════════════════════════════════════════════
  * ASTRO ENGINE — deterministic geocentric ecliptic longitudes + transits
  *
- * Deno/TypeScript port of the PySwissEph pipeline. Swiss Ephemeris cannot run
- * inside an edge function (native C extension), so this uses the standard
+ * Deno/TypeScript implementation for Zoe's DHF. Native astronomy extensions
+ * cannot run inside an edge function, so this uses the standard
  * JPL/Standish Keplerian element approximations (1800–2050) for the planets
  * and Meeus low-precision series for the Sun and Moon.
  *
- * Accuracy vs Swiss Ephemeris:
+ * Expected approximation accuracy:
  *   Sun     ±0.01°   Moon ±0.3°   Mercury..Mars ±0.1°
  *   Jupiter..Pluto   ±0.3°
- * Aspect orbs are 4–6°, so aspect DETECTION is identical in practice; only the
+ * Aspect orbs are 4–6°, so aspect detection remains stable; only the
  * printed `exactness_deg` can differ in the second decimal.
  *
  * Everything is UTC-only. Callers must convert local → UTC before entering.
