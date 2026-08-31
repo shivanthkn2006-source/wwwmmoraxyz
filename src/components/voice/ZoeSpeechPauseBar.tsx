@@ -22,11 +22,17 @@ export const ZoeSpeechPauseBar: React.FC = () => {
     window.addEventListener('zoe-speak-end', onEnd);
     window.addEventListener('zoe-speak-pause', onPause);
     window.addEventListener('zoe-speak-resume', onResume);
-    // Safety net: some paths only flip internal state.
+    // Safety net for missed end-events. Deepgram gaps between chunks read as
+    // "not speaking", so only hide after several consecutive idle reads and
+    // never while the user has explicitly paused.
+    let idle = 0;
     const poll = window.setInterval(() => {
       const state = getZoeSpeechState();
-      setSpeaking((prev) => (prev !== state.isSpeakingActive && !state.isPaused ? state.isSpeakingActive : prev));
+      if (state.isSpeakingActive || state.isPaused) { idle = 0; return; }
+      idle += 1;
+      if (idle >= 4) setSpeaking(false);
     }, 1500);
+
     return () => {
       window.clearInterval(poll);
       window.removeEventListener('zoe-speak-start', onStart);
