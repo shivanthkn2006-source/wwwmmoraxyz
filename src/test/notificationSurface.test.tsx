@@ -14,7 +14,7 @@ import { Toaster, toast } from '@/components/ui/sonner';
 describe('global notification surface', () => {
   it('renders a visible top-center notification host', () => {
     render(<Toaster />);
-    expect(screen.getByTestId('sonner')).toHaveAttribute('data-position', 'top-center');
+    expect(screen.getByTestId('sonner').getAttribute('data-position')).toBe('top-center');
   });
 
   it('exports the real toast dispatcher', () => {
