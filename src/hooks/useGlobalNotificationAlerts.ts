@@ -20,6 +20,8 @@ import {
 
 import { triggerVibration } from '@/utils/vibrationPatterns';
 import { featureLabelForType, formatAlertStamp } from '@/lib/notificationFeatureMap';
+import { buildAnnouncementSpeech, isZoeAnnouncementsEnabled } from '@/lib/zoeAnnouncements';
+import { speakAsZoe } from '@/utils/zoeVoice';
 
 const SEEN_LIMIT = 200;
 
@@ -138,6 +140,15 @@ export function useGlobalNotificationAlerts() {
         void resolveActor(row.from_user_id).then((actorName) => {
           const { title, description } = alertCopy(row, actorName);
           toast(title, { description, duration: 6000 });
+          // Zoe announces the event out loud. Best-effort: any voice failure
+          // must never break the visual alert.
+          if (isZoeAnnouncementsEnabled()) {
+            try {
+              void speakAsZoe(buildAnnouncementSpeech(title, description), {
+                messageId: `notification:${row.id}`,
+              });
+            } catch { /* speech is best-effort */ }
+          }
         });
       }, INCOMING_CUE_LEAD_MS);
       pending.current.add(timer);
