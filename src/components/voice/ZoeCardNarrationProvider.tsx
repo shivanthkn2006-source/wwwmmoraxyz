@@ -19,12 +19,17 @@ const Context = createContext<NarrationApi | null>(null);
 export const ZoeCardNarrationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   const items = useRef(new Map<string, NarrationItem>());
+  const registrationRevision = useRef(0);
   const queueToken = useRef(0);
   const [state, setState] = useState<NarrationState>({ activeId: null, paused: false });
 
   const register = useCallback((item: NarrationItem) => {
     items.current.set(item.id, item);
-    return () => { items.current.delete(item.id); };
+    registrationRevision.current += 1;
+    return () => {
+      items.current.delete(item.id);
+      registrationRevision.current += 1;
+    };
   }, []);
 
   const speak = useCallback(async (item: NarrationItem) => {
@@ -56,7 +61,19 @@ export const ZoeCardNarrationProvider: React.FC<{ children: React.ReactNode }> =
       if (hasStartedDailyNarration(user.id)) return;
       const token = ++queueToken.current;
       const run = async () => {
-        await new Promise((resolve) => window.setTimeout(resolve, 1000));
+        // Let async feed queries and lazy cards register before freezing the
+        // once-daily queue. Continue while registrations are still changing,
+        // with a hard ceiling so narration can never hang indefinitely.
+        const deadline = Date.now() + 8_000;
+        let previousRevision = -1;
+        let stablePasses = 0;
+        while (Date.now() < deadline && stablePasses < 2) {
+          await new Promise((resolve) => window.setTimeout(resolve, 500));
+          if (queueToken.current !== token) return;
+          if (registrationRevision.current === previousRevision) stablePasses += 1;
+          else stablePasses = 0;
+          previousRevision = registrationRevision.current;
+        }
         if (queueToken.current !== token) return;
         markDailyNarrationStarted(user.id);
         const welcome: NarrationItem = { id: `welcome:${user.id}`, kind: 'growth', order: -1, text: 'Welcome back. Zoe is ready with your daily focus and DHF compass.' };
