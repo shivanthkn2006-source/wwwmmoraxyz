@@ -9,6 +9,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Compass, ChevronDown, ChevronUp, ImageOff, Share2 } from 'lucide-react';
 import { slotLabel, type DhfDailyPost } from '@/lib/dhfCompass';
+import { COMPASS_SLOTS, normalizeSlotTime } from '@/lib/dhfCompass';
 import ZoeCardNarrationControls from '@/components/voice/ZoeCardNarrationControls';
 
 interface Props {
@@ -96,7 +97,7 @@ export const DHFCompassCard: React.FC<Props> = ({ post, className, onImpression,
             id={`dhf:${post.id}`}
             text={`${post.headline}. ${post.short_summary}${post.full_story_content ? ` ${post.full_story_content}` : ''}`}
             kind="dhf"
-            order={post.slot_index ?? 0}
+            order={Math.max(0, COMPASS_SLOTS.findIndex((slot) => slot.time === normalizeSlotTime(post.slot_time)))}
           />
           {onShare && (
             <button
