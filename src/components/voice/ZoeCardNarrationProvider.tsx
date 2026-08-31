@@ -54,9 +54,11 @@ export const ZoeCardNarrationProvider: React.FC<{ children: React.ReactNode }> =
     if (!user?.id || hasStartedDailyNarration(user.id)) return;
     const start = () => {
       if (hasStartedDailyNarration(user.id)) return;
-      markDailyNarrationStarted(user.id);
       const token = ++queueToken.current;
       const run = async () => {
+        await new Promise((resolve) => window.setTimeout(resolve, 1000));
+        if (queueToken.current !== token) return;
+        markDailyNarrationStarted(user.id);
         const welcome: NarrationItem = { id: `welcome:${user.id}`, kind: 'growth', order: -1, text: 'Welcome back. Zoe is ready with your daily focus and DHF compass.' };
         const daily = Array.from(items.current.values())
           .filter((item) => item.kind === 'growth' || item.kind === 'dhf')
@@ -70,7 +72,7 @@ export const ZoeCardNarrationProvider: React.FC<{ children: React.ReactNode }> =
         }
         if (queueToken.current === token) setState({ activeId: null, paused: false });
       };
-      window.setTimeout(() => void run(), 250);
+      void run();
     };
     window.addEventListener('pointerdown', start, { once: true, passive: true });
     window.addEventListener('keydown', start, { once: true });

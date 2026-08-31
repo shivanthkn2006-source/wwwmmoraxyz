@@ -10,7 +10,7 @@ export const ZoeCardNarrationControls: React.FC<Props> = ({ className, ...item }
   const stableItem = useMemo(() => item, [item.id, item.text, item.kind, item.order]);
   const narration = useZoeCardNarration(stableItem);
   return (
-    <div className={cn('flex items-center gap-1', className)} data-card-narration={item.id}>
+    <div className={cn('flex items-center gap-1 rounded-full bg-background/25 backdrop-blur-sm', className)} data-card-narration={item.id}>
       <Button
         type="button"
         variant="ghost"

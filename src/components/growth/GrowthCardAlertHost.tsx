@@ -25,6 +25,7 @@ import { dismissGrowthAlert, type GrowthAlert } from '@/lib/growthAlertStore';
 import { showGrowthPush } from '@/lib/growthPush';
 import { GROWTH_FLAGS } from '@/lib/growthFlags';
 import { SLOT_LABEL } from '@/lib/growthSlot';
+import { INCOMING_CUE_LEAD_MS, playIncomingCue, playNotificationSound } from '@/utils/notificationSounds';
 
 interface Prefs {
   paused: boolean;
@@ -149,6 +150,8 @@ export const GrowthCardAlertHost: React.FC = () => {
 
   const onNewAlert = useCallback(
     (a: GrowthAlert) => {
+      try { playIncomingCue(); } catch { /* audio is best-effort */ }
+      window.setTimeout(() => { void playNotificationSound('growth_card'); }, INCOMING_CUE_LEAD_MS);
       if (!pushOn) return;
       void showGrowthPush({
         title: a.title,

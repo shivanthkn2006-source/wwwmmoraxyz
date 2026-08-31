@@ -752,7 +752,6 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate, onMediaCompleted })
             text={`${post.profile?.display_name || post.profile?.username || 'A member'} shared: ${post.content}`}
             kind="social"
             order={0}
-            className="text-white"
           />
         )}
         <div className="flex items-center gap-1">
