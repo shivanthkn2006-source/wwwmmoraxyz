@@ -19,3 +19,11 @@
 - [ ] Audit diff view and trace link never appear on the Zoe dispatch dashboard.
 - [ ] First injected search video restarts and plays off-screen in the background.
 - [ ] Live view stays black after app/tab switch (camera never restarts).
+
+## Notification and Zoe card voice reliability
+- [ ] Restore visible iOS/Android-style top notification cards; they are currently disabled by the shared Sonner wrapper.
+- [ ] Make notification sound unlock/status explicit and verify realtime plus polling delivery, unread counts, and white/black dock badges.
+- [ ] Add discoverable hover tooltips and touch labels to the home dock without obstructing the bottom-right controls.
+- [ ] Add a shared Zoe/Deepgram card narration controller with play, pause/resume, and repeat controls.
+- [ ] Wire narration to Home, Loops, timeline, five Growth cards, and ten Zoe's DHF cards with one-time post-login autoplay sequencing.
+- [ ] Add focused unit/rendered/E2E coverage and verify authenticated desktop/mobile preview behavior.
