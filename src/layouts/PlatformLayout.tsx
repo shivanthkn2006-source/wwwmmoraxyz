@@ -14,6 +14,8 @@ import GlobalHomeDock from '@/components/home/GlobalHomeDock';
 import NotificationAlertHost from '@/components/notifications/NotificationAlertHost';
 import useDhfUnlockReminders from '@/hooks/useDhfUnlockReminders';
 import { ZoeCardNarrationProvider } from '@/components/voice/ZoeCardNarrationProvider';
+import ZoeSpeechPauseBar from '@/components/voice/ZoeSpeechPauseBar';
+
 
 /** Auto-enables thermal safe mode on low-power devices / heavy module pressure. */
 function useThermalWatchdog() {
@@ -66,7 +68,12 @@ export const PlatformLayout = ({ children }: { children: React.ReactNode }) => (
     <AppErrorBoundary moduleName="platform:notification-alerts" severity="low" fallback={null}>
       <NotificationAlertHost />
     </AppErrorBoundary>
+    {/* Pause / resume / stop anything Zoe is speaking (bottom-LEFT, dock stays clear). */}
+    <AppErrorBoundary moduleName="platform:zoe-speech-bar" severity="low" fallback={null}>
+      <ZoeSpeechPauseBar />
+    </AppErrorBoundary>
     <ZoeCardNarrationProvider>{children}</ZoeCardNarrationProvider>
+
     {/* Same bottom-right home dock on every route (HomePage owns its own). */}
     <AppErrorBoundary moduleName="platform:dock" severity="low" fallback={null}>
       <GlobalHomeDock />
