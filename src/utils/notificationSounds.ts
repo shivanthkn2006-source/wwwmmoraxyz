@@ -237,6 +237,7 @@ export const playIncomingCue = (customVolume?: number) => {
 // Global audio context to handle browser autoplay policies
 let globalAudioContext: AudioContext | null = null;
 let audioEnabled = false;
+let pendingSound: { config: SoundConfig; masterVolume: number } | null = null;
 export const NOTIFICATION_AUDIO_STATE_EVENT = 'mmora:notification-audio-state';
 
 const announceAudioState = () => {
@@ -266,6 +267,9 @@ export const initializeAudio = () => {
     globalAudioContext.resume().then(() => {
       audioEnabled = true;
       announceAudioState();
+      const queued = pendingSound;
+      pendingSound = null;
+      if (queued) generateSound(queued.config, queued.masterVolume, false);
       console.log('[NotificationSounds] Audio context resumed');
     }).catch(() => undefined);
   }
@@ -310,8 +314,12 @@ const generateSound = (config: SoundConfig, masterVolume: number = 0.7, retry = 
     // Suspended contexts are recoverable: resume and replay once instead of
     // silently dropping the alert (this was why alerts were never audible).
     if (globalAudioContext.state === 'suspended') {
+      pendingSound = { config, masterVolume };
       globalAudioContext.resume()
-        .then(() => { if (retry) generateSound(config, masterVolume, false); })
+        .then(() => {
+          pendingSound = null;
+          if (retry) generateSound(config, masterVolume, false);
+        })
         .catch(() => console.warn('[NotificationSounds] Audio blocked until user interacts'));
       return;
     }
