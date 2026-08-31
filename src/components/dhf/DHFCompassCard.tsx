@@ -9,6 +9,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Compass, ChevronDown, ChevronUp, ImageOff, Share2 } from 'lucide-react';
 import { slotLabel, type DhfDailyPost } from '@/lib/dhfCompass';
+import { COMPASS_SLOTS, normalizeSlotTime } from '@/lib/dhfCompass';
+import ZoeCardNarrationControls from '@/components/voice/ZoeCardNarrationControls';
 
 interface Props {
   post: DhfDailyPost;
@@ -90,8 +92,14 @@ export const DHFCompassCard: React.FC<Props> = ({ post, className, onImpression,
           </span>
           <span className="mt-1 block text-[11px] text-muted-foreground">{slotLabel(post.slot_time)}</span>
         </div>
-        {onShare && (
-          <div className="relative z-20 flex shrink-0 items-center gap-1">
+        <div className="relative z-20 flex shrink-0 items-center gap-1">
+          <ZoeCardNarrationControls
+            id={`dhf:${post.id}`}
+            text={`${post.headline}. ${post.short_summary}${post.full_story_content ? ` ${post.full_story_content}` : ''}`}
+            kind="dhf"
+            order={Math.max(0, COMPASS_SLOTS.findIndex((slot) => slot.time === normalizeSlotTime(post.slot_time)))}
+          />
+          {onShare && (
             <button
               type="button"
               aria-label="Share this compass card"
@@ -101,8 +109,8 @@ export const DHFCompassCard: React.FC<Props> = ({ post, className, onImpression,
             >
               <Share2 className="h-5 w-5" aria-hidden="true" />
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </header>
 
       <CompassImage post={post} />

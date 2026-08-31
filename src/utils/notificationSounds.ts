@@ -180,10 +180,10 @@ export const playNotificationSound = async (
   
   if (!soundConfig) {
     // Fallback to classic theme
-    const fallbackConfig = NotificationThemes.classic.sounds[notificationType as NotificationType];
-    if (fallbackConfig) {
-      generateSound({ ...fallbackConfig, volume: 0.3 }, volume);
-    }
+    const fallbackConfig = NotificationThemes.classic.sounds[notificationType as NotificationType]
+      || soundConfigs[notificationType]
+      || soundConfigs[NotificationSoundType.POST_LIKE];
+    generateSound({ ...fallbackConfig, volume: fallbackConfig.volume ?? 0.3 }, volume);
     return;
   }
 
@@ -237,6 +237,14 @@ export const playIncomingCue = (customVolume?: number) => {
 // Global audio context to handle browser autoplay policies
 let globalAudioContext: AudioContext | null = null;
 let audioEnabled = false;
+export const NOTIFICATION_AUDIO_STATE_EVENT = 'mmora:notification-audio-state';
+
+const announceAudioState = () => {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent(NOTIFICATION_AUDIO_STATE_EVENT, {
+    detail: { unlocked: globalAudioContext?.state === 'running' },
+  }));
+};
 
 // Initialize audio context on user interaction
 export const initializeAudio = () => {
@@ -244,7 +252,9 @@ export const initializeAudio = () => {
   if (!globalAudioContext) {
     try {
       globalAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      audioEnabled = true;
+      audioEnabled = globalAudioContext.state === 'running';
+      globalAudioContext.addEventListener?.('statechange', announceAudioState);
+      announceAudioState();
       console.log('[NotificationSounds] Audio context initialized');
     } catch (error) {
       console.warn('[NotificationSounds] Failed to initialize audio context:', error);
@@ -255,10 +265,12 @@ export const initializeAudio = () => {
   if (globalAudioContext?.state === 'suspended') {
     globalAudioContext.resume().then(() => {
       audioEnabled = true;
+      announceAudioState();
       console.log('[NotificationSounds] Audio context resumed');
     }).catch(() => undefined);
   }
   
+  audioEnabled = globalAudioContext?.state === 'running';
   return audioEnabled;
 };
 
@@ -274,7 +286,7 @@ let gestureArmed = false;
 export const armAudioUnlock = () => {
   if (gestureArmed || typeof document === 'undefined') return;
   gestureArmed = true;
-  const unlock = () => { initializeAudio(); };
+  const unlock = () => { initializeAudio(); announceAudioState(); };
   ['pointerdown', 'touchstart', 'keydown', 'click'].forEach((evt) =>
     document.addEventListener(evt, unlock, { passive: true })
   );

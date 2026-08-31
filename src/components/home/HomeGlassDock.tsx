@@ -258,7 +258,7 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
                 }}
 
                 className={cn(
-                  'relative flex h-10 w-10 shrink-0 snap-start items-center justify-center rounded-xl',
+                  'group relative flex h-10 w-10 shrink-0 snap-start items-center justify-center rounded-xl [@media(pointer:coarse)]:w-auto [@media(pointer:coarse)]:min-w-10 [@media(pointer:coarse)]:px-2',
                   'transition-all active:scale-95',
                   highlighted
                     ? 'border border-white/45 bg-white/25 text-white shadow-[0_0_10px_rgba(255,255,255,0.35)] hover:bg-white/30'
@@ -267,6 +267,9 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
                 )}
               >
                 {item.icon}
+                <span className="pointer-events-none absolute bottom-full mb-2 hidden whitespace-nowrap rounded-md border border-white/25 bg-black/90 px-2 py-1 text-[10px] font-medium text-white shadow-md group-hover:block group-focus-visible:block [@media(pointer:coarse)]:static [@media(pointer:coarse)]:ml-1 [@media(pointer:coarse)]:block [@media(pointer:coarse)]:max-w-20 [@media(pointer:coarse)]:truncate [@media(pointer:coarse)]:border-0 [@media(pointer:coarse)]:bg-transparent [@media(pointer:coarse)]:p-0 [@media(pointer:coarse)]:text-[9px]">
+                  {item.label}
+                </span>
                 {badge > 0 && (
                   <span
                     aria-hidden="true"
@@ -346,7 +349,7 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
             className={cn(
               'pointer-events-none absolute -top-1 left-1/2 -translate-x-1/2',
               'flex h-[16px] min-w-[16px] items-center justify-center rounded-full px-1',
-              'border border-white/50 bg-red-500 text-[10px] font-bold leading-none text-white',
+              'border border-white/60 bg-black/90 text-[10px] font-bold leading-none text-white',
               'shadow-[0_1px_4px_rgba(0,0,0,0.6)]',
             )}
           >
