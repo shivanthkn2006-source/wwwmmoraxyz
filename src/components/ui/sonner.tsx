@@ -1,38 +1,26 @@
 import { useTheme } from "next-themes";
-import { Toaster as Sonner, toast as sonnerToast } from "sonner";
+import { Toaster as Sonner, toast } from "sonner";
 
 type ToasterProps = React.ComponentProps<typeof Sonner>;
 
-// Silent toast function - suppresses all popups for clean UI
-const toast = Object.assign(
-  () => { /* silently ignored */ },
-  {
-    success: () => { /* silently ignored */ },
-    error: () => { /* silently ignored */ },
-    info: () => { /* silently ignored */ },
-    warning: () => { /* silently ignored */ },
-    loading: () => { /* silently ignored */ },
-    promise: () => Promise.resolve() as any,
-    dismiss: () => { /* silently ignored */ },
-    custom: () => { /* silently ignored */ },
-    message: () => { /* silently ignored */ },
-  }
-);
-
-// Toaster is rendered but toasts are invisible (hidden via CSS)
 const Toaster = ({ ...props }: ToasterProps) => {
   const { theme = "system" } = useTheme();
 
   return (
     <Sonner
       theme={theme as ToasterProps["theme"]}
-      className="toaster group hidden"
+      position="top-center"
+      visibleToasts={4}
+      closeButton
+      className="toaster group"
       toastOptions={{
+        duration: 7000,
         classNames: {
-          toast: "hidden",
-          description: "hidden",
-          actionButton: "hidden",
-          cancelButton: "hidden",
+          toast: "group toast border-border bg-card/95 text-card-foreground shadow-lg backdrop-blur-xl",
+          title: "text-sm font-semibold",
+          description: "text-xs text-muted-foreground",
+          actionButton: "bg-primary text-primary-foreground",
+          cancelButton: "bg-muted text-muted-foreground",
         },
       }}
       {...props}

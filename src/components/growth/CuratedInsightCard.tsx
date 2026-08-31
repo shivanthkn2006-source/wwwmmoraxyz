@@ -12,6 +12,7 @@ import { Target, Sparkles, Bookmark, BookmarkCheck, Info, ImageOff } from 'lucid
 import { SLOT_LABEL, type GrowthSlot } from '@/lib/growthSlot';
 import { SLOT_LOCAL_TIME } from '@/lib/growthSlot';
 import { useValidatedGrowthImage } from '@/hooks/useValidatedGrowthImage';
+import ZoeCardNarrationControls from '@/components/voice/ZoeCardNarrationControls';
 
 
 
@@ -133,6 +134,12 @@ export const CuratedInsightCard: React.FC<Props> = ({
           </span>
         </div>
         <div className="relative z-20 flex shrink-0 items-center gap-1">
+          <ZoeCardNarrationControls
+            id={`growth:${insight.id ?? `${insight.local_date ?? 'today'}:${insight.slot}`}`}
+            text={`${insight.title}. ${insight.content}${insight.actionable_step ? ` Immediate action: ${insight.actionable_step}` : ''}`}
+            kind="growth"
+            order={Object.keys(SLOT_LOCAL_TIME).indexOf(insight.slot)}
+          />
           {onOpenDetails && (
             <button
               type="button"

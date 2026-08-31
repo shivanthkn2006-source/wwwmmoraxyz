@@ -25,6 +25,7 @@ import { useFollow } from '@/hooks/useFollow';
 import { setZoeActivePostContext } from '@/lib/zoePlatformContext';
 import { allowFeedMediaReplay, hasPlayedFeedMedia, markFeedMediaPlayed } from '@/lib/feedPlayback';
 import { logFeedEvent } from '@/lib/feedEventDiagnostics';
+import ZoeCardNarrationControls from '@/components/voice/ZoeCardNarrationControls';
 
 interface Post {
   id: string;
@@ -745,6 +746,15 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate, onMediaCompleted })
 
       {/* Right-side controls: rate + more on one row, speaker tucked underneath */}
       <div className="absolute right-2 top-20 z-20 flex flex-col items-end gap-1.5">
+        {post.content && (
+          <ZoeCardNarrationControls
+            id={`post:${post.id}`}
+            text={`${post.profile?.display_name || post.profile?.username || 'A member'} shared: ${post.content}`}
+            kind="social"
+            order={0}
+            className="text-white"
+          />
+        )}
         <div className="flex items-center gap-1">
 
         {!isOwnPost && (

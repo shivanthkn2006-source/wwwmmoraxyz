@@ -13,6 +13,7 @@ import GrowthCardAlertHost from '@/components/growth/GrowthCardAlertHost';
 import GlobalHomeDock from '@/components/home/GlobalHomeDock';
 import NotificationAlertHost from '@/components/notifications/NotificationAlertHost';
 import useDhfUnlockReminders from '@/hooks/useDhfUnlockReminders';
+import { ZoeCardNarrationProvider } from '@/components/voice/ZoeCardNarrationProvider';
 
 /** Auto-enables thermal safe mode on low-power devices / heavy module pressure. */
 function useThermalWatchdog() {
@@ -65,7 +66,7 @@ export const PlatformLayout = ({ children }: { children: React.ReactNode }) => (
     <AppErrorBoundary moduleName="platform:notification-alerts" severity="low" fallback={null}>
       <NotificationAlertHost />
     </AppErrorBoundary>
-    {children}
+    <ZoeCardNarrationProvider>{children}</ZoeCardNarrationProvider>
     {/* Same bottom-right home dock on every route (HomePage owns its own). */}
     <AppErrorBoundary moduleName="platform:dock" severity="low" fallback={null}>
       <GlobalHomeDock />

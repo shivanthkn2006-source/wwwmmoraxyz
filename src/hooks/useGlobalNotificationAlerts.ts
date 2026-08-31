@@ -40,6 +40,15 @@ const TITLES: Record<string, string> = {
   friend_request_accepted: 'Friend request accepted',
   post_tag: 'You were tagged',
   message: 'New message',
+  growth_card: 'New growth insight',
+  growth_insight: 'New growth insight',
+  dhf_compass: "New Zoe's DHF card",
+  dhf_unlock: "Zoe's DHF unlocked",
+  new_loop: 'New Loop',
+  loop_like: 'New Loop like',
+  loop_comment: 'New Loop comment',
+  friend_badge_earned: 'A friend earned a badge',
+  friend_challenge_completed: 'A friend completed a challenge',
 };
 
 /**
