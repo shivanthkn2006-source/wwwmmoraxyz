@@ -183,7 +183,7 @@ export const playNotificationSound = async (
     const fallbackConfig = NotificationThemes.classic.sounds[notificationType as NotificationType]
       || soundConfigs[notificationType]
       || soundConfigs[NotificationSoundType.POST_LIKE];
-    generateSound({ ...fallbackConfig, volume: fallbackConfig.volume ?? 0.3 }, volume);
+    generateSound({ ...fallbackConfig, volume: 0.3 }, volume);
     return;
   }
 
