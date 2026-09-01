@@ -231,10 +231,17 @@ const AdminSentinelPage: React.FC = () => {
             </p>
           </div>
         </div>
-        <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading}>
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => void runProbe()} disabled={probing}>
+            {probing ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <ShieldAlert className="mr-1.5 h-3.5 w-3.5" />}
+            Run probe
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading} aria-label="Refresh">
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+          </Button>
+        </div>
       </header>
+
 
       <Tabs defaultValue="live">
         <TabsList className="grid w-full grid-cols-4">
