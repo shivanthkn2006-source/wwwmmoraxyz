@@ -39,10 +39,19 @@ serve(async (req) => {
       method: 'POST',
       body: form,
     });
-    if (!response.ok) return json({ ok: false }, 502);
-    const result = await response.json() as { success?: boolean };
-    return json({ ok: result.success === true }, result.success === true ? 200 : 403);
+    const result = await response.json().catch(() => ({ success: false })) as {
+      success?: boolean;
+      'error-codes'?: string[];
+    };
+    if (!response.ok || result.success !== true) {
+      console.warn('[signup-security] Turnstile rejected verification', {
+        upstreamStatus: response.status,
+        errorCodes: result['error-codes'] ?? [],
+      });
+      return json({ ok: false });
+    }
+    return json({ ok: true });
   } catch {
-    return json({ ok: false }, 502);
+    return json({ ok: false });
   }
 });

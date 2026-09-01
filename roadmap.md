@@ -48,4 +48,4 @@
 - [x] Document Cloudflare WAF rate-limit rules.
 - [x] Generate controlled Sentinel threat/block events and verify persistence.
 - [x] Publish a current attack-surface report.
-- [ ] Validate final build/runtime health after CAPTCHA wiring.
+- [x] Validate CAPTCHA config and fail-closed verification endpoint; run frontend regression suite.

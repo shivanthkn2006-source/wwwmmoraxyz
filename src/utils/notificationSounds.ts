@@ -251,8 +251,10 @@ const announceAudioState = () => {
 export const initializeAudio = () => {
   if (typeof window === 'undefined') return false;
   if (!globalAudioContext) {
+    const AudioContextConstructor = window.AudioContext || (window as any).webkitAudioContext;
+    if (typeof AudioContextConstructor !== 'function') return false;
     try {
-      globalAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      globalAudioContext = new AudioContextConstructor();
       audioEnabled = globalAudioContext.state === 'running';
       globalAudioContext.addEventListener?.('statechange', announceAudioState);
       announceAudioState();
