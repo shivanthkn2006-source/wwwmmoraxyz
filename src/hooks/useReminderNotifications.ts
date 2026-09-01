@@ -129,8 +129,10 @@ export const useReminderNotifications = () => {
 
     return () => {
       clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
       supabase.removeChannel(channel);
     };
+
   }, [user, checkDueReminders]);
 
   return { checkDueReminders };
