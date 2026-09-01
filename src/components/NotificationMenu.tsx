@@ -55,30 +55,13 @@ const NotificationMenu: React.FC<NotificationMenuProps> = ({ open, onOpenChange 
     }
   }, [open, user]);
 
-  useEffect(() => {
-    if (!user) return;
+  // Multiplexed per-user notification stream — one shared channel even when
+  // the menu, the panel and the dock badge are all mounted at once.
+  useRealtimeTable(
+    { table: 'notifications', event: '*', filter: user ? `user_id=eq.${user.id}` : undefined, enabled: !!user },
+    () => { fetchNotifications(); },
+  );
 
-    // Set up real-time subscription for notifications
-    const channel = supabase
-      .channel(`notifications-changes:${user.id}:${Math.random().toString(36).slice(2, 8)}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${user.id}`
-        },
-        () => {
-          fetchNotifications();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user]);
 
   const fetchNotifications = async () => {
     if (!user) {
