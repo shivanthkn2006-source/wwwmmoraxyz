@@ -116,6 +116,8 @@ export const useValidatedGrowthImage = ({ key, title, content, category, validat
           logValidation({ ...base, outcome: 'error', reason: data.reason ?? 'inconclusive', cached: false });
           return;
         }
+        const match = data.match !== false;
+        setCachedValidation(cacheKey, match, data.reason ?? '');
 
         logValidation({
           ...base,
