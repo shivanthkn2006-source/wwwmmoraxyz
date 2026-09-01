@@ -6031,6 +6031,48 @@ export type Database = {
         }
         Relationships: []
       }
+      sentinel_blocks: {
+        Row: {
+          active: boolean
+          created_at: string
+          device_fingerprint: string | null
+          id: string
+          ip_address: string | null
+          reason: string
+          released_at: string | null
+          released_by: string | null
+          severity: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          device_fingerprint?: string | null
+          id?: string
+          ip_address?: string | null
+          reason: string
+          released_at?: string | null
+          released_by?: string | null
+          severity?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          device_fingerprint?: string | null
+          id?: string
+          ip_address?: string | null
+          reason?: string
+          released_at?: string | null
+          released_by?: string | null
+          severity?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       sentinel_night_watch: {
         Row: {
           attacks_blocked: number | null
@@ -6073,6 +6115,60 @@ export type Database = {
           shadow_ai_detected?: number | null
           status?: string | null
           system_integrity_score?: number | null
+        }
+        Relationships: []
+      }
+      sentinel_threat_events: {
+        Row: {
+          blocked: boolean
+          city: string | null
+          country: string | null
+          created_at: string
+          details: Json
+          device: Json
+          device_fingerprint: string | null
+          id: string
+          ip_address: string | null
+          page_url: string | null
+          region: string | null
+          session_token: string | null
+          severity: string
+          threat_type: string
+          user_id: string | null
+        }
+        Insert: {
+          blocked?: boolean
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          details?: Json
+          device?: Json
+          device_fingerprint?: string | null
+          id?: string
+          ip_address?: string | null
+          page_url?: string | null
+          region?: string | null
+          session_token?: string | null
+          severity?: string
+          threat_type: string
+          user_id?: string | null
+        }
+        Update: {
+          blocked?: boolean
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          details?: Json
+          device?: Json
+          device_fingerprint?: string | null
+          id?: string
+          ip_address?: string | null
+          page_url?: string | null
+          region?: string | null
+          session_token?: string | null
+          severity?: string
+          threat_type?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -7253,10 +7349,12 @@ export type Database = {
           city: string | null
           country: string | null
           created_at: string | null
+          device_fingerprint: string | null
           device_model: string | null
           device_type: string | null
           device_vendor: string | null
           ended_at: string | null
+          hardware: Json
           id: string
           ip_address: unknown
           is_active: boolean | null
@@ -7278,10 +7376,12 @@ export type Database = {
           city?: string | null
           country?: string | null
           created_at?: string | null
+          device_fingerprint?: string | null
           device_model?: string | null
           device_type?: string | null
           device_vendor?: string | null
           ended_at?: string | null
+          hardware?: Json
           id?: string
           ip_address?: unknown
           is_active?: boolean | null
@@ -7303,10 +7403,12 @@ export type Database = {
           city?: string | null
           country?: string | null
           created_at?: string | null
+          device_fingerprint?: string | null
           device_model?: string | null
           device_type?: string | null
           device_vendor?: string | null
           ended_at?: string | null
+          hardware?: Json
           id?: string
           ip_address?: unknown
           is_active?: boolean | null
@@ -11081,6 +11183,7 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: number
       }
+      sentinel_is_blocked: { Args: { _fingerprint?: string }; Returns: boolean }
       should_show_hint: {
         Args: { p_hint_key: string; p_max_count?: number; p_user_id: string }
         Returns: boolean
