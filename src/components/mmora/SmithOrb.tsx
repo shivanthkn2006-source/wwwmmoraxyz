@@ -172,14 +172,16 @@ export default function SmithOrb({ isSpeaking = false, floatUp = false, moodColo
       className="fixed inset-0 z-0 pointer-events-none transition-transform duration-700"
       style={{ transform: floatUp ? 'translateY(-100px)' : 'translateY(0)' }}
     >
-      <Canvas
-        camera={{ position: [0, 0, 5], fov: 60 }}
-        gl={{ antialias: true, alpha: true }}
-      >
-        <ambientLight intensity={0.5} />
-        <pointLight position={[10, 10, 10]} intensity={1} />
-        <ParticleCloud isSpeaking={isSpeaking} moodColor={moodColor} />
-      </Canvas>
+      <WebGLBoundary moduleName="smith-orb" className="h-full w-full">
+        <Canvas
+          camera={{ position: [0, 0, 5], fov: 60 }}
+          gl={{ antialias: true, alpha: true }}
+        >
+          <ambientLight intensity={0.5} />
+          <pointLight position={[10, 10, 10]} intensity={1} />
+          <ParticleCloud isSpeaking={isSpeaking} moodColor={moodColor} />
+        </Canvas>
+      </WebGLBoundary>
     </div>
   );
 }
