@@ -22,18 +22,20 @@ const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const GOOGLE_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
-export const SOVEREIGN_PROVIDERS = ['groq', 'google-ai-studio', 'openrouter', 'pollinations'] as const;
+export const SOVEREIGN_PROVIDERS = ['groq', 'google-ai-studio', 'cohere', 'openrouter', 'pollinations'] as const;
 
 /** Truthy when at least one sovereign provider key is configured. */
 export function sovereignKey(): string | undefined {
   return (
     Deno.env.get('GROQ_API_KEY') ||
     Deno.env.get('GOOGLE_AI_STUDIO_KEY') ||
+    Deno.env.get('COHERE_API_KEY') ||
     Deno.env.get('OPENROUTER_API_KEY') ||
     Deno.env.get('POLLINATIONS_API_KEY') ||
     undefined
   );
 }
+
 
 /**
  * Hard guard: throws if anything still tries to reach the Lovable AI Gateway,
