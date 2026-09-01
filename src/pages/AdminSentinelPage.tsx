@@ -192,7 +192,28 @@ const AdminSentinelPage: React.FC = () => {
     [user?.id],
   );
 
+  /**
+   * Fires the real tamper pipeline end-to-end — the same edge function, geo
+   * resolution and hardware fingerprint an intruder would trigger. Severities
+   * stay low on purpose so an operator self-test never earns a block.
+   */
+  const runProbe = useCallback(async () => {
+    setProbing(true);
+    try {
+      for (const type of ['view_source_attempt', 'page_save_attempt', 'context_menu_probe'] as const) {
+        await reportThreat(type, 'low', { path: '/admin/sentinel', origin: 'operator_probe' });
+      }
+      toast.success('Probe fired — refreshing the board.');
+      await load();
+    } catch {
+      toast.error('The probe could not reach Sentinel.');
+    } finally {
+      setProbing(false);
+    }
+  }, [load]);
+
   const liveCount = useMemo(() => sessions.filter((s) => s.is_active !== false).length, [sessions]);
+
   const countries = useMemo(
     () => new Set(sessions.map((s) => s.country).filter(Boolean)).size,
     [sessions],
