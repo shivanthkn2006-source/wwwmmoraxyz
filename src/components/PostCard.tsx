@@ -782,6 +782,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate, onMediaCompleted })
           <DropdownMenuContent align="end" className="w-48">
             <DropdownMenuItem onClick={() => handlePreference('interested')}>👍 Interested</DropdownMenuItem>
             <DropdownMenuItem onClick={() => handlePreference('not_interested')}>👎 Not Interested</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setReportOpen(true)}>🚩 Report post</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
         </div>
