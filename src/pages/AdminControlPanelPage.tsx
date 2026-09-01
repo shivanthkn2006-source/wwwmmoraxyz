@@ -88,7 +88,7 @@ export default function AdminControlPanelPage() {
       const [profilesRes, postsRes, runsRes, reportsRes] = await Promise.all([
         supabase
           .from('profiles')
-          .select('user_id, username, created_at, last_seen')
+          .select('user_id, username, created_at, updated_at')
           .order('created_at', { ascending: false })
           .limit(200),
         supabase.from('posts').select('user_id').limit(5000),
@@ -114,7 +114,7 @@ export default function AdminControlPanelPage() {
           userId: String(p.user_id),
           username: (p.username as string) ?? '—',
           createdAt: (p.created_at as string) ?? null,
-          lastSeen: (p.last_seen as string) ?? null,
+          lastSeen: (p.updated_at as string) ?? null,
           posts: postCounts.get(String(p.user_id)) ?? 0,
         })),
       );
@@ -231,7 +231,7 @@ export default function AdminControlPanelPage() {
                   <CardContent className="overflow-x-auto p-0">
                     <table className="w-full text-left text-xs">
                       <thead className="text-muted-foreground">
-                        <tr><th className="p-3">Member</th><th className="p-3">Joined</th><th className="p-3">Last seen</th><th className="p-3">Posts</th></tr>
+                        <tr><th className="p-3">Member</th><th className="p-3">Joined</th><th className="p-3">Last active</th><th className="p-3">Posts</th></tr>
                       </thead>
                       <tbody>
                         {activity.map((row) => (
