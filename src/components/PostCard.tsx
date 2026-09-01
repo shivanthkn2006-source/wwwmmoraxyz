@@ -23,6 +23,7 @@ import AuthorPreviewRail from '@/components/home/AuthorPreviewRail';
 import PostAttachmentGallery from '@/components/home/PostAttachmentGallery';
 import { useFollow } from '@/hooks/useFollow';
 import { setZoeActivePostContext } from '@/lib/zoePlatformContext';
+import { useRealtimeTable } from '@/realtime/GlobalRealtimeProvider';
 import { allowFeedMediaReplay, hasPlayedFeedMedia, markFeedMediaPlayed } from '@/lib/feedPlayback';
 import { logFeedEvent } from '@/lib/feedEventDiagnostics';
 import ZoeCardNarrationControls from '@/components/voice/ZoeCardNarrationControls';

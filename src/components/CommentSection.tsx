@@ -116,27 +116,16 @@ const CommentSection: React.FC<CommentSectionProps> = ({ postId, onUpdate }) => 
 
     fetchComments();
 
-    const channel = supabase
-      .channel(`comments_${postId}:${user.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'post_comments',
-          filter: `post_id=eq.${postId}`
-        },
-        () => {
-          fetchComments();
-          onUpdate();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, [postId, user]);
+
+  // Multiplexed: all open comment threads share one `post_comments` channel.
+  useRealtimeTable({ table: 'post_comments', event: '*', enabled: !!user }, (payload) => {
+    const row = (payload.new ?? payload.old) as { post_id?: string } | undefined;
+    if (!row || row.post_id !== postId) return;
+    fetchComments();
+    onUpdate();
+  });
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
