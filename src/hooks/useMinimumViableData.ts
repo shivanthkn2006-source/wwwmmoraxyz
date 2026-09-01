@@ -72,6 +72,77 @@ const FIELD_LABELS: Record<string, string> = {
   organization: 'Organization',
 };
 
+export const calculateMVDScore = (profile: Record<string, any> | null): MVDScore => {
+  if (!profile) {
+    return {
+      totalScore: 0,
+      isBasicComplete: false,
+      isAdvancedReady: false,
+      isDHFReady: false,
+      categories: {
+        identity: { score: 0, missing: ['Display Name', 'Username', 'Profile Photo'] },
+        personality: { score: 0, missing: ['Bio', 'Profession', 'Hobbies', 'Gender'] },
+        astrology: { score: 0, missing: ['Birth Date', 'Birth Time', 'Birth Place'] },
+        social: { score: 0, missing: ['City', 'Field of Study', 'Organization'] },
+      },
+      missingFields: Object.values(FIELD_LABELS),
+      nextSteps: ['Complete your basic profile to unlock advanced features'],
+      canAccessLifeCodex: false,
+      canAccessDHF: false,
+      canAccessAdvancedFeatures: false,
+    };
+  }
+
+  let totalScore = 0;
+  const missingFields: string[] = [];
+  const categories = {
+    identity: { score: 0, missing: [] as string[] },
+    personality: { score: 0, missing: [] as string[] },
+    astrology: { score: 0, missing: [] as string[] },
+    social: { score: 0, missing: [] as string[] },
+  };
+
+  Object.entries(FIELD_WEIGHTS).forEach(([field, weight]) => {
+    const value = profile[field];
+    const hasValue = value !== null && value !== undefined && value !== '' &&
+      (Array.isArray(value) ? value.length > 0 : true);
+    const category = ['display_name', 'username', 'profile_photo_url'].includes(field)
+      ? categories.identity
+      : ['bio', 'profession', 'hobbies', 'gender'].includes(field)
+        ? categories.personality
+        : ['birth_date', 'birth_time', 'birth_place'].includes(field)
+          ? categories.astrology
+          : categories.social;
+    if (hasValue) category.score += weight;
+    else {
+      missingFields.push(FIELD_LABELS[field] || field);
+      category.missing.push(FIELD_LABELS[field]);
+    }
+    if (hasValue) totalScore += weight;
+  });
+
+  const isBasicComplete = totalScore >= 50;
+  const isAdvancedReady = totalScore >= 77;
+  const isDHFReady = totalScore >= 95;
+  const nextSteps: string[] = [];
+  if (categories.identity.score < 30) nextSteps.push('Complete your identity section (name, username, photo)');
+  if (categories.personality.score < 15 && isBasicComplete) nextSteps.push('Add personality details to unlock better AI matching');
+  if (categories.astrology.score < 15 && isAdvancedReady) nextSteps.push('Add birth details to unlock Kronos timeline features');
+
+  return {
+    totalScore,
+    isBasicComplete,
+    isAdvancedReady,
+    isDHFReady,
+    categories,
+    missingFields,
+    nextSteps,
+    canAccessLifeCodex: isAdvancedReady,
+    canAccessDHF: isDHFReady,
+    canAccessAdvancedFeatures: isBasicComplete,
+  };
+};
+
 export const useMinimumViableData = () => {
   const { user } = useAuth();
   const [profile, setProfile] = useState<Record<string, any> | null>(null);
@@ -107,107 +178,7 @@ export const useMinimumViableData = () => {
   }, [user]);
 
   // Calculate MVD score
-  const mvdScore = useMemo((): MVDScore => {
-    if (!profile) {
-      return {
-        totalScore: 0,
-        isBasicComplete: false,
-        isAdvancedReady: false,
-        isDHFReady: false,
-        categories: {
-          identity: { score: 0, missing: ['Display Name', 'Username', 'Profile Photo'] },
-          personality: { score: 0, missing: ['Bio', 'Profession', 'Hobbies', 'Gender'] },
-          astrology: { score: 0, missing: ['Birth Date', 'Birth Time', 'Birth Place'] },
-          social: { score: 0, missing: ['City', 'Field of Study', 'Organization'] },
-        },
-        missingFields: Object.values(FIELD_LABELS),
-        nextSteps: ['Complete your basic profile to unlock advanced features'],
-        canAccessLifeCodex: false,
-        canAccessDHF: false,
-        canAccessAdvancedFeatures: false,
-      };
-    }
-
-    let totalScore = 0;
-    const missingFields: string[] = [];
-    const categories = {
-      identity: { score: 0, missing: [] as string[] },
-      personality: { score: 0, missing: [] as string[] },
-      astrology: { score: 0, missing: [] as string[] },
-      social: { score: 0, missing: [] as string[] },
-    };
-
-    // Check each field
-    Object.entries(FIELD_WEIGHTS).forEach(([field, weight]) => {
-      const value = profile[field];
-      const hasValue = value !== null && value !== undefined && value !== '' && 
-        (Array.isArray(value) ? value.length > 0 : true);
-
-      if (hasValue) {
-        totalScore += weight;
-        
-        // Add to category scores
-        if (['display_name', 'username', 'profile_photo_url'].includes(field)) {
-          categories.identity.score += weight;
-        } else if (['bio', 'profession', 'hobbies', 'gender'].includes(field)) {
-          categories.personality.score += weight;
-        } else if (['birth_date', 'birth_time', 'birth_place'].includes(field)) {
-          categories.astrology.score += weight;
-        } else {
-          categories.social.score += weight;
-        }
-      } else {
-        missingFields.push(FIELD_LABELS[field] || field);
-        
-        // Add to category missing
-        if (['display_name', 'username', 'profile_photo_url'].includes(field)) {
-          categories.identity.missing.push(FIELD_LABELS[field]);
-        } else if (['bio', 'profession', 'hobbies', 'gender'].includes(field)) {
-          categories.personality.missing.push(FIELD_LABELS[field]);
-        } else if (['birth_date', 'birth_time', 'birth_place'].includes(field)) {
-          categories.astrology.missing.push(FIELD_LABELS[field]);
-        } else {
-          categories.social.missing.push(FIELD_LABELS[field]);
-        }
-      }
-    });
-
-    // Normalize to 100
-    const normalizedScore = totalScore; // Already out of 100
-
-    // Calculate thresholds - VELVET ROPE PROTOCOL
-    // Basic: 50% - Unlocks basic features & Planetary Intent selector
-    // Advanced: 77% - Unlocks Life Codex access
-    // DHF: 95% - Unlocks Digital Human Fingerprint core
-    const isBasicComplete = normalizedScore >= 50;
-    const isAdvancedReady = normalizedScore >= 77;
-    const isDHFReady = normalizedScore >= 95;
-
-    // Generate next steps
-    const nextSteps: string[] = [];
-    if (categories.identity.score < 30) {
-      nextSteps.push('Complete your identity section (name, username, photo)');
-    }
-    if (categories.personality.score < 15 && isBasicComplete) {
-      nextSteps.push('Add personality details to unlock better AI matching');
-    }
-    if (categories.astrology.score < 15 && isAdvancedReady) {
-      nextSteps.push('Add birth details to unlock Kronos timeline features');
-    }
-
-    return {
-      totalScore: normalizedScore,
-      isBasicComplete,
-      isAdvancedReady,
-      isDHFReady,
-      categories,
-      missingFields,
-      nextSteps,
-      canAccessLifeCodex: isAdvancedReady,
-      canAccessDHF: isDHFReady,
-      canAccessAdvancedFeatures: isBasicComplete,
-    };
-  }, [profile]);
+  const mvdScore = useMemo(() => calculateMVDScore(profile), [profile]);
 
   // Refresh profile data
   const refreshProfile = useCallback(async () => {

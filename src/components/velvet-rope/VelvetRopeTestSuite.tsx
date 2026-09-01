@@ -21,6 +21,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useVelvetRopeOptional } from '@/contexts/VelvetRopeContext';
+import { calculateMVDScore } from '@/hooks/useMinimumViableData';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST CASE DEFINITIONS
@@ -135,7 +136,8 @@ const TEST_CASES: TestCase[] = [
 
       // Check 2: Velvet Rope context checks
       if (ctx.velvetRope) {
-        const { mvdScore, showProfileGate } = ctx.velvetRope;
+        const mvdScore = calculateMVDScore(profile);
+        const showProfileGate = !mvdScore.isBasicComplete;
         
         // MVD should be 0 for empty profile
         if (mvdScore.totalScore > 0) {
@@ -180,7 +182,7 @@ const TEST_CASES: TestCase[] = [
       const expectedMaxScore = 55;
 
       if (ctx.velvetRope) {
-        const { mvdScore } = ctx.velvetRope;
+        const mvdScore = calculateMVDScore(profile);
         
         // For simulation purposes, check the mock profile structure
         const filledFields = Object.entries(profile).filter(([_, v]) => v !== null && (Array.isArray(v) ? v.length > 0 : true));
@@ -228,7 +230,7 @@ const TEST_CASES: TestCase[] = [
       }
 
       if (ctx.velvetRope) {
-        const { mvdScore } = ctx.velvetRope;
+        const mvdScore = calculateMVDScore(profile);
         
         // Check DHF readiness
         if (mvdScore.isDHFReady) {
