@@ -14,7 +14,7 @@
  */
 import { supabase } from '@/integrations/supabase/client';
 
-export type OrbCapability = 'document_xray' | 'song_id' | 'provider_status';
+export type OrbCapability = 'document_xray' | 'song_id' | 'provider_status' | 'relevance_rank';
 
 export interface OrbCapabilityResult {
   ok: boolean;
@@ -36,6 +36,12 @@ const SONG_PATTERNS = [
   /\bidentify\b[^.?!]{0,20}\b(song|track|music|tune)\b/i,
   /\bwhat('| i)?s playing\b/i,
   /\bshazam\b/i,
+];
+
+const RELEVANCE_PATTERNS = [
+  /\b(rank|score|sort|prioriti[sz]e|curate)\b[^.?!]{0,25}\b(my |the )?(feed|posts|loops|timeline)\b/i,
+  /\bwhat\b[^.?!]{0,25}\b(should i (read|watch|see)|is worth (reading|watching))\b/i,
+  /\bmost relevant (posts?|loops?|content)\b/i,
 ];
 
 const PROVIDER_PATTERNS = [
@@ -69,6 +75,7 @@ export const detectOrbCapability = (
 
   if (!text) return null;
   if (matches(text, PROVIDER_PATTERNS)) return 'provider_status';
+  if (matches(text, RELEVANCE_PATTERNS)) return 'relevance_rank';
   if (matches(text, SONG_PATTERNS)) return 'song_id';
   if (matches(text, DOC_PATTERNS)) return 'document_xray';
   return null;
@@ -228,6 +235,93 @@ export const runProviderStatus = async (): Promise<OrbCapabilityResult> => {
   }
 };
 
+export interface ScoredPost {
+  id: string;
+  content?: string;
+  relevance_score?: number;
+}
+
+export const formatRelevance = (posts: ScoredPost[]): string => {
+  if (!posts.length) return 'There is nothing in your recent feed to rank yet.';
+  const lines = ['Ranked by how close it sits to your interests:', ''];
+  posts.slice(0, 5).forEach((p, i) => {
+    const snippet = (p.content ?? '').replace(/\s+/g, ' ').trim().slice(0, 110) || '(media post)';
+    const score = typeof p.relevance_score === 'number' ? ` — ${Math.round(p.relevance_score * 100)}% match` : '';
+    lines.push(`${i + 1}. ${snippet}${score}`);
+  });
+  return lines.join('\n');
+};
+
+/** Scores the viewer's recent visible posts against their stated interests. */
+export const runRelevanceRanking = async (userId?: string): Promise<OrbCapabilityResult> => {
+  if (!userId) return failure('relevance_rank', 'Sign in and I can rank your feed for you.');
+  try {
+    const { data: recent, error: postsError } = await supabase
+      .from('posts')
+      .select('id, content, media_type')
+      .order('created_at', { ascending: false })
+      .limit(40);
+    if (postsError) return failure('relevance_rank', `Could not read your feed: ${postsError.message}`);
+
+    const posts = (recent ?? []).map((p) => ({
+      id: String((p as { id: string }).id),
+      content: ((p as { content?: string }).content ?? '').slice(0, 500),
+      media_type: (p as { media_type?: string }).media_type ?? undefined,
+    }));
+    if (!posts.length) return failure('relevance_rank', 'Your feed is empty right now — nothing to rank.');
+
+    const { data, error } = await supabase.functions.invoke('score-post-relevance', {
+      body: { userId, posts: posts.slice(0, 100) },
+    });
+    if (error) return failure('relevance_rank', `Relevance scoring unavailable: ${error.message}`);
+
+    const scored = ((data as { scoredPosts?: ScoredPost[] })?.scoredPosts ?? [])
+      .slice()
+      .sort((a, b) => (b.relevance_score ?? 0) - (a.relevance_score ?? 0));
+    if (!scored.length) return failure('relevance_rank', 'Relevance scoring returned nothing.');
+    if (scored.every((s) => !s.relevance_score)) {
+      return failure(
+        'relevance_rank',
+        'I need a few interests on your profile before I can rank your feed meaningfully.',
+      );
+    }
+    return { ok: true, capability: 'relevance_rank', text: formatRelevance(scored), data: scored };
+  } catch (e) {
+    return failure('relevance_rank', (e as Error)?.message ?? 'Relevance scoring failed.');
+  }
+};
+
+/** Feature flag gate — the whole router can be switched off remotely. */
+export const ORB_CAPABILITY_FLAG = 'orb_capability_router';
+let flagCache: { at: number; enabled: boolean } | null = null;
+const FLAG_TTL_MS = 5 * 60_000;
+
+export const isOrbCapabilityRouterEnabled = async (userId?: string): Promise<boolean> => {
+  if (flagCache && Date.now() - flagCache.at < FLAG_TTL_MS) return flagCache.enabled;
+  try {
+    const { data, error } = await supabase
+      .from('growth_feature_flags')
+      .select('flag_key, enabled, rollout_percent, allow_user_ids, block_user_ids')
+      .eq('flag_key', ORB_CAPABILITY_FLAG)
+      .maybeSingle();
+    if (error || !data) {
+      flagCache = { at: Date.now(), enabled: true }; // default on, fail-open
+      return true;
+    }
+    const row = data as { enabled: boolean; rollout_percent: number; allow_user_ids?: string[] | null; block_user_ids?: string[] | null };
+    let enabled = !!row.enabled;
+    if (enabled && userId && row.block_user_ids?.includes(userId)) enabled = false;
+    if (enabled && !userId) enabled = Number(row.rollout_percent ?? 0) >= 100;
+    flagCache = { at: Date.now(), enabled };
+    return enabled;
+  } catch {
+    return true;
+  }
+};
+
+/** Test helper. */
+export const resetOrbCapabilityFlagCache = () => { flagCache = null; };
+
 /** Single entry point used by the orb. */
 export const runOrbCapability = async (
   capability: OrbCapability,
@@ -244,6 +338,8 @@ export const runOrbCapability = async (
         : failure('song_id', 'Record or attach a short audio clip and I will name the track.');
     case 'provider_status':
       return runProviderStatus();
+    case 'relevance_rank':
+      return runRelevanceRanking(ctx.userId);
     default:
       return failure(capability, 'Unknown capability.');
   }
