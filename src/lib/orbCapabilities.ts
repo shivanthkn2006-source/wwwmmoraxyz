@@ -246,7 +246,10 @@ export const formatRelevance = (posts: ScoredPost[]): string => {
   const lines = ['Ranked by how close it sits to your interests:', ''];
   posts.slice(0, 5).forEach((p, i) => {
     const snippet = (p.content ?? '').replace(/\s+/g, ' ').trim().slice(0, 110) || '(media post)';
-    const score = typeof p.relevance_score === 'number' ? ` — ${Math.round(p.relevance_score * 100)}% match` : '';
+    // Backend returns 0-100 percentages; older callers used a 0-1 ratio.
+    const raw = typeof p.relevance_score === 'number' ? p.relevance_score : null;
+    const pct = raw === null ? null : Math.round(raw <= 1 ? raw * 100 : raw);
+    const score = pct === null ? '' : ` — ${pct}% match`;
     lines.push(`${i + 1}. ${snippet}${score}`);
   });
   return lines.join('\n');

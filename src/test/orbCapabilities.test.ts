@@ -78,6 +78,8 @@ describe('relevance ranking', () => {
     const out = formatRelevance([{ id: '1', content: 'Deep work notes', relevance_score: 0.82 }]);
     expect(out).toContain('Deep work notes');
     expect(out).toContain('82% match');
+    // The backend actually returns 0-100 percentages.
+    expect(formatRelevance([{ id: '2', content: 'Calligraphy', relevance_score: 70 }])).toContain('70% match');
   });
 
   it('handles an empty ranking', async () => {
