@@ -24,10 +24,13 @@ import {
 import {
   getCachedValidation,
   getValidationConfig,
+  isValidationCoolingDown,
   logValidation,
   setCachedValidation,
+  startValidationCooldown,
   validationCacheKey,
 } from '@/lib/growthImageValidation';
+
 
 interface Args {
   key: string;
