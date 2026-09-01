@@ -6,8 +6,9 @@ import React, { useState } from 'react';
 import DHFUploadDashboard from '@/components/DHFUploadDashboard';
 import NeuralCoreUplink from '@/components/NeuralCoreUplink';
 import ZoeMemoryStatusPanel from '@/components/zoe-infinity/ZoeMemoryStatusPanel';
+import DhfVideoFeed from '@/components/dhf/DhfVideoFeed';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Brain, Upload, Database } from 'lucide-react';
+import { Brain, Upload, Database, Video } from 'lucide-react';
 import PageSeo from '@/components/seo/PageSeo';
 
 const DHFDashboardPage: React.FC = () => {
@@ -27,10 +28,14 @@ const DHFDashboardPage: React.FC = () => {
           </p>
         </header>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-6 bg-card/50 border border-primary/20">
+          <TabsList className="grid w-full grid-cols-4 mb-6 bg-card/50 border border-primary/20">
             <TabsTrigger value="neural" className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
               <Brain className="w-4 h-4 mr-2" />
               Neural Uplink
+            </TabsTrigger>
+            <TabsTrigger value="videos" className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
+              <Video className="w-4 h-4 mr-2" />
+              Videos
             </TabsTrigger>
             <TabsTrigger value="classic" className="data-[state=active]:bg-accent/20 data-[state=active]:text-accent">
               <Upload className="w-4 h-4 mr-2" />
@@ -41,6 +46,7 @@ const DHFDashboardPage: React.FC = () => {
               Memory
             </TabsTrigger>
           </TabsList>
+
           
           <TabsContent value="neural" className="mt-0">
             <NeuralCoreUplink 
@@ -48,6 +54,11 @@ const DHFDashboardPage: React.FC = () => {
               className="mb-6"
             />
           </TabsContent>
+
+          <TabsContent value="videos" className="mt-0">
+            <DhfVideoFeed canIngest limit={24} />
+          </TabsContent>
+
           
           <TabsContent value="classic" className="mt-0">
             <DHFUploadDashboard />
