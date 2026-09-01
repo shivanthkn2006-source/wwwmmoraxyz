@@ -56,6 +56,14 @@ export function slotsForFrequency(frequency: number): GrowthSlot[] {
   return GROWTH_SLOTS.filter((s) => chosen.has(s));
 }
 
+/**
+ * MUST stay identical to FOCUS_AREAS in src/lib/growthSlot.ts — the settings UI
+ * offers this list and sanitizeFocusAreas drops anything not on it. The two
+ * fell out of sync: the UI offered ten areas while this whitelist held six, so
+ * a member who selected only the four newer areas silently had every one of
+ * them discarded and fell back to 'Deep Focus & Productivity'. That is why one
+ * member's cards were relentlessly focus-themed. A test asserts the match.
+ */
 export const FOCUS_AREAS = [
   'Deep Focus & Productivity',
   'Career & Strategic Thinking',
@@ -63,6 +71,10 @@ export const FOCUS_AREAS = [
   'Emotional Resilience',
   'Health & Physical Habits',
   'Creativity & Problem Solving',
+  'Relationships & Communication',
+  'Confidence & Self-Leadership',
+  'Learning & Personal Mastery',
+  'Purpose & Meaning',
 ] as const;
 
 export const REFLECTION_STYLES: ReflectionStyle[] = [
