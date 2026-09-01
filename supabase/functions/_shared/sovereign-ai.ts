@@ -258,28 +258,39 @@ async function callGoogle(payload: any): Promise<Response | null> {
   };
   if (systemText) body.systemInstruction = { parts: [{ text: systemText }] };
 
-  const model = googleModelFor(payload.model);
-  const resp = await fetch(`${GOOGLE_BASE}/${model}:generateContent?key=${key}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  if (!resp.ok) {
-    console.warn('[sovereign-ai] google failed', resp.status, (await resp.text()).slice(0, 200));
-    return null;
-  }
-  const data = await resp.json();
-  const text = data.candidates?.[0]?.content?.parts?.map((p: any) => p.text).filter(Boolean).join('') ?? '';
-  if (!text) return null;
-  const usage = data.usageMetadata
-    ? {
-        prompt_tokens: data.usageMetadata.promptTokenCount ?? 0,
-        completion_tokens: data.usageMetadata.candidatesTokenCount ?? 0,
-        total_tokens: data.usageMetadata.totalTokenCount ?? 0,
+  const candidates = googleModelsFor(payload.model);
+  for (const model of candidates) {
+    const resp = await fetch(`${GOOGLE_BASE}/${model}:generateContent?key=${key}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!resp.ok) {
+      const detail = (await resp.text()).slice(0, 200);
+      console.warn('[sovereign-ai] google failed', model, resp.status, detail);
+      // A retired / unknown model must never take the whole path down.
+      if (resp.status === 404 || resp.status === 400) {
+        deadGoogleModels.add(model);
+        continue;
       }
-    : undefined;
-  return json(chatShape(text, model, undefined, usage));
+      return null; // 401/429/5xx: key or quota problem, another model won't help
+    }
+    const data = await resp.json();
+    const text = data.candidates?.[0]?.content?.parts?.map((p: any) => p.text).filter(Boolean).join('') ?? '';
+    if (!text) return null;
+    googleWorkingModel = model;
+    const usage = data.usageMetadata
+      ? {
+          prompt_tokens: data.usageMetadata.promptTokenCount ?? 0,
+          completion_tokens: data.usageMetadata.candidatesTokenCount ?? 0,
+          total_tokens: data.usageMetadata.totalTokenCount ?? 0,
+        }
+      : undefined;
+    return json(chatShape(text, model, undefined, usage));
+  }
+  return null;
 }
+
 
 async function callOpenRouter(payload: any): Promise<Response | null> {
   const key = Deno.env.get('OPENROUTER_API_KEY');
