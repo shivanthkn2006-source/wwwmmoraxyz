@@ -13,6 +13,7 @@ import { slotLabel, type DhfDailyPost } from '@/lib/dhfCompass';
 import { COMPASS_SLOTS, normalizeSlotTime } from '@/lib/dhfCompass';
 import ZoeCardNarrationControls from '@/components/voice/ZoeCardNarrationControls';
 import ReportContentDialog from '@/components/moderation/ReportContentDialog';
+import { Button } from '@/components/ui/button';
 
 interface Props {
   post: DhfDailyPost;
@@ -113,15 +114,17 @@ export const DHFCompassCard: React.FC<Props> = ({ post, className, onImpression,
               <Share2 className="h-5 w-5" aria-hidden="true" />
             </button>
           )}
-          <button
+          <Button
             type="button"
+            size="icon"
+            variant="ghost"
             aria-label="Report this compass card"
             onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => { e.stopPropagation(); e.preventDefault(); setReportOpen(true); }}
-            className="pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full bg-transparent text-muted-foreground transition hover:bg-muted/50 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-95"
+            className="pointer-events-auto h-10 w-10 rounded-full text-muted-foreground"
           >
             <Flag className="h-5 w-5" aria-hidden="true" />
-          </button>
+          </Button>
         </div>
       </header>
 

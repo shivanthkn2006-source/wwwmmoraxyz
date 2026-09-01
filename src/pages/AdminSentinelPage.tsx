@@ -15,7 +15,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, RefreshCw, Loader2, ShieldAlert, Globe, Cpu, Ban } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Loader2, ShieldAlert, Globe, Ban } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
@@ -274,9 +274,17 @@ const AdminSentinelPage: React.FC = () => {
                     <div><span className="block text-muted-foreground">Pixel ratio</span><span>{hardwareValue(hw.pixelRatio)}</span></div>
                     <div><span className="block text-muted-foreground">Touch points</span><span>{hardwareValue(hw.touchPoints)}</span></div>
                     <div><span className="block text-muted-foreground">Connection</span><span>{hardwareValue(hw.connection)}</span></div>
+                    <div><span className="block text-muted-foreground">Platform</span><span>{hardwareValue(hw.platform)}</span></div>
+                    <div><span className="block text-muted-foreground">Time zone</span><span>{hardwareValue(hw.timezone)}</span></div>
+                    <div><span className="block text-muted-foreground">Languages</span><span>{hardwareValue(hw.languages)}</span></div>
+                    <div><span className="block text-muted-foreground">App mode</span><span>{hw.standalone === true ? 'Installed' : 'Browser'}</span></div>
                     <div className="col-span-2 sm:col-span-3">
                       <span className="block text-muted-foreground">Device fingerprint</span>
                       <span className="break-all font-mono">{hardwareValue(s.device_fingerprint)}</span>
+                    </div>
+                    <div className="col-span-2 sm:col-span-3">
+                      <span className="block text-muted-foreground">User agent</span>
+                      <span className="break-words">{hardwareValue(hw.userAgent)}</span>
                     </div>
                   </div>
                 </CardContent>

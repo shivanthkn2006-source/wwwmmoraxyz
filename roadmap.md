@@ -42,8 +42,10 @@
 - [ ] Stage 3 GlobalRealtimeProvider, WebGL_ErrorBoundary, setInterval leak sweep
 
 ## Hacker-gate hardening and moderation verification
-- [ ] Expand Sentinel live cards so all collected hardware and browser details are visible with honest unavailable states.
-- [ ] Add DHF feed reporting and exercise the moderation spam → reviewing → actioned workflow.
-- [ ] Add CAPTCHA to every sign-up surface and document Cloudflare WAF rate-limit rules.
-- [ ] Generate controlled Sentinel threat/block events and verify the operator console.
-- [ ] Publish a current attack-surface report and validate build/runtime health.
+- [x] Expand Sentinel live cards so all collected hardware and browser details are visible with honest unavailable states.
+- [x] Add DHF feed reporting and exercise the moderation spam → reviewing → actioned workflow.
+- [ ] Add CAPTCHA to every sign-up surface (waiting for Cloudflare Turnstile credentials).
+- [x] Document Cloudflare WAF rate-limit rules.
+- [x] Generate controlled Sentinel threat/block events and verify persistence.
+- [x] Publish a current attack-surface report.
+- [ ] Validate final build/runtime health after CAPTCHA is configured.
