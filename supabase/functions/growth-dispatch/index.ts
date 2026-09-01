@@ -29,6 +29,7 @@ import {
   sanitizeFocusAreas, sanitizeStyles, styleForSlot, elapsedSlots, missingElapsedSlots,
   type GrowthSlot,
   FIGURE_HISTORY_WINDOW,
+  TITLE_HISTORY_WINDOW,
 } from '../_shared/growth-content.ts';
 
 
@@ -485,6 +486,12 @@ async function runBatch(opts: {
     // Names this member has already been shown. Without this the model
     // converged on the same few famous people for every user, every day.
     const recentFigures = await recentFigureNames(pref.user_id);
+    // Two more anti-repetition inputs, both per member: the headlines they have
+    // already seen, and their birth date for genuine age/month resonance.
+    const [priorTitles, birthDate] = await Promise.all([
+      recentTitles(pref.user_id),
+      birthDateFor(pref.user_id),
+    ]);
 
     for (const slot of missing) {
       if (summary.processed >= cap) break;
@@ -504,6 +511,8 @@ async function runBatch(opts: {
         localDate,
         seed: `${pref.user_id}_${localDate}_${slot}`,
         avoidFigures: recentFigures,
+        avoidTitles: priorTitles,
+        birthDate,
       });
 
       if (result.circuitBreak) {
@@ -550,6 +559,8 @@ async function runBatch(opts: {
       if (ins.ok) {
         summary.written++;
         delivered.add(slot);
+        // Later windows in this same run must also avoid the title just used.
+        priorTitles.unshift(result.content.title);
         if (result.figure) {
           // Ledger write is best-effort: the card is already published, and the
           // unique key makes a retry a no-op rather than a duplicate.
