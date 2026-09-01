@@ -2,6 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { GlobalRealtimeProvider } from "@/realtime/GlobalRealtimeProvider";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { CorticalStackProvider } from "@/contexts/CorticalStackContext";
@@ -1211,6 +1212,7 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         {/* DeviceTierProvider is in main.tsx - earliest possible detection for M05 optimization */}
+        <GlobalRealtimeProvider>
         <GlobalMediaProvider>
           <NavigationBusProvider>
             <DevModeProvider>
@@ -1253,6 +1255,7 @@ const App = () => {
             </DevModeProvider>
           </NavigationBusProvider>
         </GlobalMediaProvider>
+        </GlobalRealtimeProvider>
       </AuthProvider>
     </QueryClientProvider>
   );
