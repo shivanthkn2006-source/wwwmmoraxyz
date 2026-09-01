@@ -261,6 +261,12 @@ export const GROWTH_ANGLES: Record<GrowthSlot, string[]> = {
   ],
 };
 
+/**
+ * How many recent headlines to send as the avoid-list. Larger than the angle
+ * pool per slot so a member cannot cycle back onto a title within the window.
+ */
+export const TITLE_HISTORY_WINDOW = 25;
+
 /** Deterministic angle for this member/day/slot. */
 export function pickAngle(slot: GrowthSlot, seed: string): string {
   const list = GROWTH_ANGLES[slot] ?? GROWTH_ANGLES.morning;
