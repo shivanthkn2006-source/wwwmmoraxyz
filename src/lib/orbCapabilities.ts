@@ -14,7 +14,15 @@
  */
 import { supabase } from '@/integrations/supabase/client';
 
-export type OrbCapability = 'document_xray' | 'song_id' | 'provider_status' | 'relevance_rank';
+export type OrbCapability =
+  | 'document_xray'
+  | 'song_id'
+  | 'provider_status'
+  | 'relevance_rank'
+  | 'index_ingest'
+  | 'premium_detect'
+  | 'brand_learning';
+
 
 export interface OrbCapabilityResult {
   ok: boolean;
@@ -50,6 +58,26 @@ const PROVIDER_PATTERNS = [
   /\bare (your|the) (models|providers|brains)\b[^.?!]{0,20}\b(up|online|working)\b/i,
 ];
 
+const INDEX_PATTERNS = [
+  /\b(index|ingest|remember|memori[sz]e|learn)\b[^.?!]{0,25}\b(this |that |my )?(post|loop|clip|chat|memory|note|card)\b/i,
+  /\badd\b[^.?!]{0,20}\bto (your|the) (index|memory|search)\b/i,
+  /\bmake (this|that) searchable\b/i,
+];
+
+const PREMIUM_PATTERNS = [
+  /\b(premium|vip|tier)\b[^.?!]{0,25}\b(status|score|level|check|standing)\b/i,
+  /\b(what|which)\b[^.?!]{0,15}\btier\b[^.?!]{0,15}\b(am i|do i have)\b/i,
+  /\bam i (a )?(premium|vip)\b/i,
+  /\bluxury brands?\b[^.?!]{0,20}\b(detected|found|do i)\b/i,
+];
+
+const BRAND_PATTERNS = [
+  /\b(my|our)\b[^.?!]{0,15}\bbrand (preferences|affinity|profile|taste)\b/i,
+  /\b(which|what)\b[^.?!]{0,20}\bbrands?\b[^.?!]{0,20}\b(do i (like|prefer)|am i into)\b/i,
+  /\b(brand|deal|offer)\b[^.?!]{0,20}\brecommendations?\b/i,
+  /\brecommend\b[^.?!]{0,20}\b(brands?|deals?|offers?)\b/i,
+];
+
 const matches = (text: string, patterns: RegExp[]) => patterns.some((p) => p.test(text));
 
 /** Document / audio attachments can decide the capability on their own. */
@@ -57,6 +85,7 @@ export const detectOrbCapability = (
   rawText: string,
   attachment?: { type?: string; mimeType?: string; fileName?: string } | null,
 ): OrbCapability | null => {
+
   const text = (rawText || '').trim();
   const mime = (attachment?.mimeType || '').toLowerCase();
   const name = (attachment?.fileName || '').toLowerCase();
@@ -75,11 +104,15 @@ export const detectOrbCapability = (
 
   if (!text) return null;
   if (matches(text, PROVIDER_PATTERNS)) return 'provider_status';
+  if (matches(text, PREMIUM_PATTERNS)) return 'premium_detect';
+  if (matches(text, BRAND_PATTERNS)) return 'brand_learning';
+  if (matches(text, INDEX_PATTERNS)) return 'index_ingest';
   if (matches(text, RELEVANCE_PATTERNS)) return 'relevance_rank';
   if (matches(text, SONG_PATTERNS)) return 'song_id';
   if (matches(text, DOC_PATTERNS)) return 'document_xray';
   return null;
 };
+
 
 const failure = (capability: OrbCapability, text: string): OrbCapabilityResult => ({
   ok: false,
@@ -294,7 +327,138 @@ export const runRelevanceRanking = async (userId?: string): Promise<OrbCapabilit
   }
 };
 
+/* ── Index ingest ─────────────────────────────────────────────────────────── */
+
+/**
+ * Pushes the member's most recent own post into Zoe's universal search index.
+ * The backend re-verifies ownership, so a member can only ever index their own
+ * content — the orb simply chooses the newest candidate.
+ */
+export const runIndexIngest = async (userId?: string): Promise<OrbCapabilityResult> => {
+  if (!userId) return failure('index_ingest', 'Sign in and I can add your posts to my search index.');
+  try {
+    const { data, error } = await supabase
+      .from('posts')
+      .select('id, content, media_url, visibility, created_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) return failure('index_ingest', `I could not reach your posts: ${error.message}`);
+    if (!data) return failure('index_ingest', 'You have no posts of your own for me to index yet.');
+
+    const post = data as { id: string; content?: string | null; media_url?: string | null; visibility?: string | null };
+    const privacy = post.visibility === 'public' || post.visibility === 'friends' ? post.visibility : 'private';
+
+    const { data: result, error: fnError } = await supabase.functions.invoke('zoe-index-ingest', {
+      body: {
+        entityType: 'post',
+        entityId: post.id,
+        rawContent: (post.content ?? '').slice(0, 20000),
+        mediaUrl: post.media_url ?? undefined,
+        privacyLevel: privacy,
+      },
+    });
+    if (fnError) return failure('index_ingest', `Indexing is unavailable right now: ${fnError.message}`);
+    const payload = result as { success?: boolean; error?: string; indexedCharacters?: number };
+    if (!payload?.success) return failure('index_ingest', payload?.error || 'The index rejected that item.');
+
+    return {
+      ok: true,
+      capability: 'index_ingest',
+      text: `Indexed your latest post — I can find it by meaning now${
+        payload.indexedCharacters ? ` (${payload.indexedCharacters} characters synthesised)` : ''
+      }. Its privacy stays **${privacy}**.`,
+      data: payload,
+    };
+  } catch (e) {
+    return failure('index_ingest', (e as Error)?.message ?? 'Indexing failed.');
+  }
+};
+
+/* ── Premium detection ────────────────────────────────────────────────────── */
+
+export interface PremiumScorePayload {
+  success?: boolean;
+  score?: number;
+  total_score?: number;
+  tier?: string | null;
+  suggested_tier?: string | null;
+  is_premium?: boolean;
+  detected_luxury?: Array<{ brand?: string; tier?: string }>;
+}
+
+export const formatPremiumStatus = (payload: PremiumScorePayload): string => {
+  const score = payload.score ?? payload.total_score ?? 0;
+  const tier = payload.tier ?? payload.suggested_tier ?? null;
+  const lines = [
+    tier
+      ? `You're sitting at **${tier}** tier with a premium score of ${Math.round(score)}.`
+      : `Your premium score is ${Math.round(score)} — not enough yet for a tier.`,
+  ];
+  const brands = (payload.detected_luxury ?? []).map((b) => b.brand).filter(Boolean);
+  if (brands.length) lines.push('', `Signals I picked up: ${[...new Set(brands)].slice(0, 8).join(', ')}.`);
+  else lines.push('', 'Tag a few products in your selfies and I can read the signal properly.');
+  return lines.join('\n');
+};
+
+export const runPremiumDetect = async (userId?: string): Promise<OrbCapabilityResult> => {
+  if (!userId) return failure('premium_detect', 'Sign in and I can check your tier.');
+  try {
+    const { data, error } = await supabase.functions.invoke('selfie-city-premium-detect', {
+      body: { action: 'calculate_premium_score' },
+    });
+    if (error) return failure('premium_detect', `Tier lookup unavailable: ${error.message}`);
+    const payload = (data ?? {}) as PremiumScorePayload;
+    if (payload.success === false) return failure('premium_detect', 'Tier lookup returned nothing usable.');
+    return { ok: true, capability: 'premium_detect', text: formatPremiumStatus(payload), data: payload };
+  } catch (e) {
+    return failure('premium_detect', (e as Error)?.message ?? 'Tier lookup failed.');
+  }
+};
+
+/* ── Brand learning ───────────────────────────────────────────────────────── */
+
+export interface BrandPreference {
+  brand_name?: string;
+  category?: string;
+  affinity_score?: number;
+}
+
+export const formatBrandPreferences = (prefs: BrandPreference[]): string => {
+  if (!prefs.length) {
+    return "I haven't learned your brand taste yet — tag products in a selfie or open a few deals and I'll start reading it.";
+  }
+  const lines = ['Here is the brand affinity I have learned for you:', ''];
+  prefs.slice(0, 8).forEach((p, i) => {
+    const meta = p.category ? ` · ${p.category}` : '';
+    const score = typeof p.affinity_score === 'number' ? ` — ${Math.round(p.affinity_score)} pts` : '';
+    lines.push(`${i + 1}. ${p.brand_name ?? 'unknown brand'}${meta}${score}`);
+  });
+  return lines.join('\n');
+};
+
+export const runBrandLearning = async (userId?: string): Promise<OrbCapabilityResult> => {
+  if (!userId) return failure('brand_learning', 'Sign in and I can show your brand affinity.');
+  try {
+    const { data, error } = await supabase.functions.invoke('selfie-city-brand-learning', {
+      body: { action: 'get_preferences', limit: 10 },
+    });
+    if (error) return failure('brand_learning', `Brand profile unavailable: ${error.message}`);
+    const prefs = ((data as { preferences?: BrandPreference[] })?.preferences ?? []);
+    return {
+      ok: true,
+      capability: 'brand_learning',
+      text: formatBrandPreferences(prefs),
+      data: prefs,
+    };
+  } catch (e) {
+    return failure('brand_learning', (e as Error)?.message ?? 'Brand profile failed.');
+  }
+};
+
 /** Feature flag gate — the whole router can be switched off remotely. */
+
 export const ORB_CAPABILITY_FLAG = 'orb_capability_router';
 let flagCache: { at: number; enabled: boolean } | null = null;
 const FLAG_TTL_MS = 5 * 60_000;
@@ -343,6 +507,13 @@ export const runOrbCapability = async (
       return runProviderStatus();
     case 'relevance_rank':
       return runRelevanceRanking(ctx.userId);
+    case 'index_ingest':
+      return runIndexIngest(ctx.userId);
+    case 'premium_detect':
+      return runPremiumDetect(ctx.userId);
+    case 'brand_learning':
+      return runBrandLearning(ctx.userId);
+
     default:
       return failure(capability, 'Unknown capability.');
   }

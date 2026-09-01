@@ -43,3 +43,38 @@ Cloudflare Turnstile must protect sign-up. Production activation requires a Clou
 - Weekly: inspect moderation aging, function errors, and WAF events.
 - Before each release: run dependency scanning, database linting, tests, and authenticated browser checks.
 - Quarterly: rotate provider credentials, review admin roles, and rehearse incident containment and recovery.
+---
+
+## Edge WAF, rate limits and attack response (September 1, 2026)
+
+### Shared WAF (`supabase/functions/_shared/waf.ts`)
+
+Every guarded function now passes through one gate before any business logic:
+
+| Control | Behaviour |
+| --- | --- |
+| Method guard | Non-`POST` (outside CORS preflight) is refused with `405`. |
+| Body ceiling | Oversized payloads refused with `413` before parsing. |
+| Reputation | Known scanner agents (sqlmap, nikto, nmap, wpscan, acunetix, …) refused with `403`. |
+| Injection heuristics | SQLi / XSS / traversal signatures refused with `400` unless the endpoint opts into rich text. |
+| Rate limit | Fixed window per client IP, counted atomically through `bump_edge_rate_limit()` into `public.edge_rate_limits`; over-limit returns `429`. |
+
+### Deployed limits
+
+| Function | Window | Ceiling | Rationale |
+| --- | --- | --- | --- |
+| `signup-security` | 60 s | 20 requests / IP | CAPTCHA config + verify; 5 *successful* verifications per hour per IP caps bulk account creation. |
+| `sentinel-guard` | 60 s | 600 requests / IP | Telemetry is chatty and offices share one NAT address; only a flood trips it. |
+| `dhf-social-links` | 60 s | 120 requests / IP | Protects the YouTube Data API quota; results are cached platform-wide by topic. |
+
+### Sign-up gate
+
+Turnstile is mandatory: tokens are verified server-side against Cloudflare, bound to the requesting IP, single-use (replays rejected), and length-capped. A missing or failed token stops the sign-up before Auth is touched.
+
+### Attack response plan
+
+1. **Detect** — Sentinel Threats tab, `edge_rate_limits` spikes, and edge function logs. Operators can fire the Sentinel *Run probe* control to confirm the pipeline is live end to end.
+2. **Contain** — automatic: score ≥ 12 in the rolling window inserts a `sentinel_blocks` row and closes the session. Manual: add a block by user id or device fingerprint from the Blocks tab.
+3. **Eradicate** — rotate the affected provider key, tighten the offending function's window/ceiling, and (for credential abuse) force sign-out by revoking the session rows.
+4. **Recover** — lift the block from the Blocks tab once the actor is verified; blocks are reversible and audited with `released_by` / `released_at`.
+5. **Review** — record the incident, the trigger score, and the control that caught it; adjust limits at the next release.

@@ -1490,15 +1490,17 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
       ) : null;
 
       if (capability) {
-        const capToken = cotStart(
-          capability === 'document_xray'
-            ? 'zoe-document-xray'
-            : capability === 'song_id'
-              ? 'identify-song'
-              : capability === 'relevance_rank'
-                ? 'score-post-relevance'
-                : 'provider-health',
-        );
+        const CAPABILITY_FUNCTIONS: Record<string, string> = {
+          document_xray: 'zoe-document-xray',
+          song_id: 'identify-song',
+          relevance_rank: 'score-post-relevance',
+          index_ingest: 'zoe-index-ingest',
+          premium_detect: 'selfie-city-premium-detect',
+          brand_learning: 'selfie-city-brand-learning',
+          provider_status: 'provider-health',
+        };
+        const capToken = cotStart(CAPABILITY_FUNCTIONS[capability] ?? 'provider-health');
+
         const capResult = await runOrbCapability(capability, {
           file: pendingMedia?.file ?? null,
           userId: user?.id,

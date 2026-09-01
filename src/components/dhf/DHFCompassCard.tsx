@@ -13,7 +13,9 @@ import { slotLabel, type DhfDailyPost } from '@/lib/dhfCompass';
 import { COMPASS_SLOTS, normalizeSlotTime } from '@/lib/dhfCompass';
 import ZoeCardNarrationControls from '@/components/voice/ZoeCardNarrationControls';
 import ReportContentDialog from '@/components/moderation/ReportContentDialog';
+import DhfVideoLinks from '@/components/dhf/DhfVideoLinks';
 import { Button } from '@/components/ui/button';
+
 
 interface Props {
   post: DhfDailyPost;
@@ -133,7 +135,11 @@ export const DHFCompassCard: React.FC<Props> = ({ post, className, onImpression,
       <h2 className="mb-2 text-lg font-semibold leading-snug">{post.headline}</h2>
       <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">{post.short_summary}</p>
 
+      {/* Real destinations for this story — never a dead placeholder link. */}
+      <DhfVideoLinks headline={post.headline} category={post.category} />
+
       {post.full_story_content && (
+
         <>
           {expanded && (
             <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-foreground" data-dhf-story>

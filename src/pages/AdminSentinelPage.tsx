@@ -19,6 +19,8 @@ import { ArrowLeft, RefreshCw, Loader2, ShieldAlert, Globe, Ban } from 'lucide-r
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
+import { reportThreat } from '@/lib/sentinelClient';
+
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -107,6 +109,8 @@ const AdminSentinelPage: React.FC = () => {
   const [blocks, setBlocks] = useState<BlockRow[]>([]);
   const [signups, setSignups] = useState<SignupRow[]>([]);
   const [releasing, setReleasing] = useState<string | null>(null);
+  const [probing, setProbing] = useState(false);
+
 
   useEffect(() => {
     let alive = true;
@@ -192,7 +196,28 @@ const AdminSentinelPage: React.FC = () => {
     [user?.id],
   );
 
+  /**
+   * Fires the real tamper pipeline end-to-end — the same edge function, geo
+   * resolution and hardware fingerprint an intruder would trigger. Severities
+   * stay low on purpose so an operator self-test never earns a block.
+   */
+  const runProbe = useCallback(async () => {
+    setProbing(true);
+    try {
+      for (const type of ['view_source_attempt', 'page_save_attempt', 'context_menu_probe'] as const) {
+        await reportThreat(type, 'low', { path: '/admin/sentinel', origin: 'operator_probe' });
+      }
+      toast.success('Probe fired — refreshing the board.');
+      await load();
+    } catch {
+      toast.error('The probe could not reach Sentinel.');
+    } finally {
+      setProbing(false);
+    }
+  }, [load]);
+
   const liveCount = useMemo(() => sessions.filter((s) => s.is_active !== false).length, [sessions]);
+
   const countries = useMemo(
     () => new Set(sessions.map((s) => s.country).filter(Boolean)).size,
     [sessions],
@@ -231,10 +256,17 @@ const AdminSentinelPage: React.FC = () => {
             </p>
           </div>
         </div>
-        <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading}>
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => void runProbe()} disabled={probing}>
+            {probing ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <ShieldAlert className="mr-1.5 h-3.5 w-3.5" />}
+            Run probe
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading} aria-label="Refresh">
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+          </Button>
+        </div>
       </header>
+
 
       <Tabs defaultValue="live">
         <TabsList className="grid w-full grid-cols-4">

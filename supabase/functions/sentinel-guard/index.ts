@@ -18,6 +18,8 @@
  */
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.58.0';
+import { guardRequest } from '../_shared/waf.ts';
+
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -101,16 +103,28 @@ function clientIp(req: Request): string | null {
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
+  // WAF: shape + burst guard. Telemetry is chatty and offices share one NAT
+  // address, so the ceiling is generous — it only catches a flood.
+  const guard = await guardRequest(req, {
+    name: 'sentinel-guard',
+    limit: 600,
+    windowSeconds: 60,
+    maxBodyBytes: 16 * 1024,
+    allowRichText: true,
+  });
+  if (guard.response) return guard.response;
+
   const admin = createClient(
     Deno.env.get('SUPABASE_URL') ?? '',
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
   );
 
   try {
-    const body = await req.json().catch(() => ({}));
+    const body = guard.body as Record<string, unknown>;
     const action = String(body.action ?? '');
     const sessionToken = typeof body.sessionToken === 'string' ? body.sessionToken.slice(0, 128) : '';
     const fingerprint = typeof body.fingerprint === 'string' ? body.fingerprint.slice(0, 128) : null;
+
 
     // Resolve the caller from their JWT — anonymous callers stay anonymous.
     let userId: string | null = null;
