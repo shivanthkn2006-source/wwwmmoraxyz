@@ -212,6 +212,42 @@ async function recentFigureNames(userId: string): Promise<string[]> {
   }
 }
 
+/**
+ * Recent headlines for this member. The figure ledger cannot catch this class
+ * of repetition: "Midday Focus Reset" was delivered four times to one member on
+ * four different days, all non-biographical, so no figure was ever involved.
+ */
+async function recentTitles(userId: string): Promise<string[]> {
+  try {
+    const r = await db(
+      `growth_feed_items?user_id=eq.${userId}&select=title` +
+      `&order=created_at.desc&limit=${TITLE_HISTORY_WINDOW}`,
+    );
+    return Array.isArray(r.data)
+      ? r.data.map((x: { title: string }) => x.title).filter(Boolean)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Birth date drives the "at exactly your age…" / shared-birth-month resonance.
+ * Reads `birth_date`, which a database trigger keeps identical to
+ * `date_of_birth`, so either onboarding path is picked up.
+ */
+async function birthDateFor(userId: string): Promise<string | null> {
+  try {
+    const r = await db(`profiles?user_id=eq.${userId}&select=birth_date&limit=1`);
+    const row = Array.isArray(r.data) ? r.data[0] : null;
+    const value = row?.birth_date ?? null;
+    return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+
 
 
 /** Auth email for a user id. Best-effort; empty string when unavailable. */
