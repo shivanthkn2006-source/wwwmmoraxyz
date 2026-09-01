@@ -16,17 +16,19 @@ import { sovereignFetch } from './sovereign-ai.ts';
 
 import {
   pickFigure,
+  birthResonance,
   FIGURE_HISTORY_WINDOW,
   type GrowthFigure,
 } from './growth-figures.ts';
 
-export { FIGURE_HISTORY_WINDOW };
+export { FIGURE_HISTORY_WINDOW, birthResonance };
 export type { GrowthFigure };
 
 
 /** Name → roster slug, so an avoid-list of names can filter the roster. */
 const slugify = (name: string) =>
   name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
 
 
 export type GrowthSlot = 'morning' | 'midday' | 'afternoon' | 'evening' | 'night';
@@ -171,9 +173,13 @@ RULES (never break):
 2. Plain, concrete English. No platitudes, no hype, no emojis, no hashtags.
 3. Ground advice in practical habit systems, mental models or real historical examples.
 4. Never give medical, legal or financial-investment advice, and never predict the future.
-5. If DATA contains "assigned_figure", the insight MUST be about that exact person and no one else. Use the supplied "known_for" as your factual anchor. Never substitute a different, more familiar figure — in particular never default to Benjamin Franklin, Gandhi, Einstein, Steve Jobs or Thomas Edison unless they are the assigned figure. Do not invent biographical facts.
+5. If DATA contains "assigned_figure", the insight MUST be about that exact person and no one else. Use the supplied "known_for" as your factual anchor. Never substitute a different, more familiar figure. Do not invent biographical facts — if you are unsure of a detail, stay with what "known_for" states.
 6. If DATA contains "avoid_figures", you must not mention any person in that list.
-7. Return STRICT JSON only with exactly these keys: title (under 8 words), category (1-3 words), content (under 120 words), actionable_step (under 25 words).`;
+7. If DATA contains "assigned_angle", the insight must take that specific angle. Do not drift back to a generic version of the delivery window.
+8. If DATA contains "avoid_titles", your title must not repeat, paraphrase or lightly reword any entry in it. Titles this member has already received are exhausted — find a genuinely different framing.
+9. If DATA contains "birth_resonance", open by using that real connection between the member and the figure. It is a verified fact; state it plainly and never embellish it. If it is absent, do not invent any link to the member's birth date or age.
+10. Return STRICT JSON only with exactly these keys: title (under 8 words), category (1-3 words), content (under 120 words), actionable_step (under 25 words).`;
+
 
 const STYLE_BRIEF: Record<ReflectionStyle, string> = {
   actionable: 'Concrete, bite-sized tactics that can be done today.',
@@ -181,6 +187,96 @@ const STYLE_BRIEF: Record<ReflectionStyle, string> = {
   biographical: 'A lesson drawn from a real historical or modern achiever.',
   strategic: 'A mental model or systems-thinking framework.',
 };
+
+/**
+ * Concrete lenses, assigned per (member, date, slot) the same way figures are.
+ *
+ * Why: "Midday Focus Reset" was delivered to one member on four separate days.
+ * The seed was already unique per day, but it only reached the model as an
+ * opaque `variation_token`, which carries no meaning — so the model kept
+ * writing the single most generic card the window suggests. An explicit,
+ * differently-worded angle gives each day a distinct thing to be about, and
+ * `avoid_titles` blocks the near-duplicates the angle alone would not catch.
+ */
+export const GROWTH_ANGLES: Record<GrowthSlot, string[]> = {
+  morning: [
+    'the very first physical action taken after waking, before any screen',
+    'how the environment was arranged the night before to make today easier',
+    'choosing a single outcome and deliberately abandoning the rest of the list',
+    'the smallest possible version of a habit on a low-energy day',
+    'the cost of the first interruption and how it was prevented',
+    'a warm-up ritual that signals the start of serious work',
+    'how the hardest task got scheduled first rather than avoided',
+    'what was deliberately NOT done this morning',
+    'preparing the body before preparing the plan',
+    'how a fixed wake time removes a daily decision',
+  ],
+  midday: [
+    'checking direction rather than speed at the halfway point',
+    'the sunk-cost trap in a task already half finished',
+    'renegotiating the day\'s plan honestly after reality intervened',
+    'protecting the second block of deep work from meeting creep',
+    'a two-minute audit of where the morning actually went',
+    'deciding what to delegate, defer or drop right now',
+    'eating and moving as an input to afternoon output',
+    'the difference between urgent and important, applied to one real task',
+    'how a short written note beats a long meeting',
+    'inverting the problem: what would guarantee this day fails?',
+  ],
+  afternoon: [
+    'working with the energy dip instead of fighting it',
+    'switching from creating to organising when focus fades',
+    'a ten-minute reset that restores more than caffeine does',
+    'batching shallow work into the low-attention hours',
+    'preparing tomorrow\'s first task while today\'s context is fresh',
+    'the second wind and how it is deliberately triggered',
+    'reviewing one decision made this morning with fresh eyes',
+    'clearing one small open loop that has been nagging all day',
+    'changing physical location to change mental mode',
+    'setting a hard stop and working backwards from it',
+  ],
+  evening: [
+    'naming one win and one adjustment without judgement',
+    'closing open loops so they do not follow you into the night',
+    'the difference between reviewing a day and re-living it',
+    'separating what was in your control from what was not',
+    'a relationship or conversation that deserved more attention today',
+    'what today taught you that you did not know this morning',
+    'the honest gap between what was planned and what happened',
+    'deciding tomorrow\'s single most important thing tonight',
+    'gratitude as an accuracy exercise, not a mood exercise',
+    'the transition ritual between work and the rest of life',
+  ],
+  night: [
+    'setting the day down deliberately rather than drifting out of it',
+    'why rest is part of the work and not a reward for it',
+    'a two-minute review that lets the mind stop rehearsing',
+    'preparing the morning so the first decision is already made',
+    'the last input before sleep and what it does to tomorrow',
+    'forgiving an unfinished day without lowering the standard',
+    'what the week looks like from tonight\'s vantage point',
+    'a long-horizon question to sleep on rather than solve now',
+    'the compounding effect of one ordinary day repeated',
+    'letting go of a comparison made today',
+  ],
+};
+
+/**
+ * How many recent headlines to send as the avoid-list. Larger than the angle
+ * pool per slot so a member cannot cycle back onto a title within the window.
+ */
+export const TITLE_HISTORY_WINDOW = 25;
+
+/** Deterministic angle for this member/day/slot. */
+export function pickAngle(slot: GrowthSlot, seed: string): string {
+  const list = GROWTH_ANGLES[slot] ?? GROWTH_ANGLES.morning;
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) {
+    h ^= seed.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return list[(h >>> 0) % list.length];
+}
 
 export interface GenerateArgs {
   slot: GrowthSlot;
@@ -197,6 +293,10 @@ export interface GenerateArgs {
   figure?: GrowthFigure | null;
   /** Names this user has recently been shown; the model must not reuse them. */
   avoidFigures?: string[];
+  /** Titles this member already received; blocks near-duplicate headlines. */
+  avoidTitles?: string[];
+  /** Member's birth date (YYYY-MM-DD) for genuine age/month resonance. */
+  birthDate?: string | null;
 }
 
 export interface GenerateResult {
@@ -209,6 +309,16 @@ export interface GenerateResult {
   error?: string;
 }
 
+/** Age in whole years, or null when the birth date is absent/malformed. */
+export function ageFromBirthDate(birthDate: string | null | undefined, today = new Date()): number | null {
+  if (!birthDate || !/^\d{4}-\d{2}-\d{2}$/.test(birthDate)) return null;
+  const [y, m, d] = birthDate.split('-').map(Number);
+  let age = today.getUTCFullYear() - y;
+  const month = today.getUTCMonth() + 1;
+  if (month < m || (month === m && today.getUTCDate() < d)) age -= 1;
+  return age >= 0 && age < 130 ? age : null;
+}
+
 /** Generate one insight. Never throws. */
 export async function generateInsight(args: GenerateArgs): Promise<GenerateResult> {
   const slot = GROWTH_SLOTS.includes(args.slot) ? args.slot : 'morning';
@@ -216,11 +326,23 @@ export async function generateInsight(args: GenerateArgs): Promise<GenerateResul
   const style = sanitizeStyle(args.style);
   const localDate = /^\d{4}-\d{2}-\d{2}$/.test(args.localDate) ? args.localDate : '';
 
+  const birthDate = args.birthDate ?? null;
+  const age = ageFromBirthDate(birthDate);
+  const birthMonth = birthDate && /^\d{4}-\d{2}-\d{2}$/.test(birthDate)
+    ? Number(birthDate.split('-')[1])
+    : null;
+
   // Only biographical cards name a person. Assign deterministically from the
   // seed so a dispatch retry resolves to the same figure and cannot create a
-  // second, different card for the same slot.
+  // second, different card for the same slot. The slot and the member's birth
+  // details bias WHICH figure — an early riser for the morning card, someone
+  // who hit their milestone at the member's current age where one exists.
   const figure = style === 'biographical'
-    ? (args.figure ?? pickFigure(args.seed, (args.avoidFigures ?? []).map(slugify)))
+    ? (args.figure ?? pickFigure(
+        args.seed,
+        (args.avoidFigures ?? []).map(slugify),
+        { slot, birthMonth, age },
+      ))
     : null;
 
   const payload: Record<string, unknown> = {
@@ -229,17 +351,26 @@ export async function generateInsight(args: GenerateArgs): Promise<GenerateResul
     focus_areas: focusAreas,
     style,
     style_brief: STYLE_BRIEF[style],
-    // Varies the generation per user even for non-biographical styles, which
-    // previously produced near-identical text across the whole member base.
-    variation_token: args.seed.slice(0, 64),
+    // A concrete lens for today. Replaces the opaque variation token, which
+    // gave the model nothing to actually differentiate on.
+    assigned_angle: pickAngle(slot, args.seed),
   };
+
+  if (age != null) payload.member_age = age;
 
   if (figure) {
     payload.assigned_figure = figure.name;
     payload.known_for = figure.known;
+    const resonance = birthResonance(figure, birthDate);
+    if (resonance) payload.birth_resonance = resonance;
   }
   const avoid = (args.avoidFigures ?? []).filter((n) => n && n !== figure?.name).slice(0, 25);
   if (avoid.length) payload.avoid_figures = avoid;
+
+  const avoidTitles = (args.avoidTitles ?? []).filter(Boolean).slice(0, 25);
+  if (avoidTitles.length) payload.avoid_titles = avoidTitles;
+
+
 
 
   try {

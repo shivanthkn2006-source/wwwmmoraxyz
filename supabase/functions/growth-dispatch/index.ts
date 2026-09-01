@@ -29,6 +29,7 @@ import {
   sanitizeFocusAreas, sanitizeStyles, styleForSlot, elapsedSlots, missingElapsedSlots,
   type GrowthSlot,
   FIGURE_HISTORY_WINDOW,
+  TITLE_HISTORY_WINDOW,
 } from '../_shared/growth-content.ts';
 
 
@@ -211,6 +212,42 @@ async function recentFigureNames(userId: string): Promise<string[]> {
     return [];
   }
 }
+
+/**
+ * Recent headlines for this member. The figure ledger cannot catch this class
+ * of repetition: "Midday Focus Reset" was delivered four times to one member on
+ * four different days, all non-biographical, so no figure was ever involved.
+ */
+async function recentTitles(userId: string): Promise<string[]> {
+  try {
+    const r = await db(
+      `growth_feed_items?user_id=eq.${userId}&select=title` +
+      `&order=created_at.desc&limit=${TITLE_HISTORY_WINDOW}`,
+    );
+    return Array.isArray(r.data)
+      ? r.data.map((x: { title: string }) => x.title).filter(Boolean)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Birth date drives the "at exactly your age…" / shared-birth-month resonance.
+ * Reads `birth_date`, which a database trigger keeps identical to
+ * `date_of_birth`, so either onboarding path is picked up.
+ */
+async function birthDateFor(userId: string): Promise<string | null> {
+  try {
+    const r = await db(`profiles?user_id=eq.${userId}&select=birth_date&limit=1`);
+    const row = Array.isArray(r.data) ? r.data[0] : null;
+    const value = row?.birth_date ?? null;
+    return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null;
+  } catch {
+    return null;
+  }
+}
+
 
 
 
@@ -449,6 +486,12 @@ async function runBatch(opts: {
     // Names this member has already been shown. Without this the model
     // converged on the same few famous people for every user, every day.
     const recentFigures = await recentFigureNames(pref.user_id);
+    // Two more anti-repetition inputs, both per member: the headlines they have
+    // already seen, and their birth date for genuine age/month resonance.
+    const [priorTitles, birthDate] = await Promise.all([
+      recentTitles(pref.user_id),
+      birthDateFor(pref.user_id),
+    ]);
 
     for (const slot of missing) {
       if (summary.processed >= cap) break;
@@ -468,6 +511,8 @@ async function runBatch(opts: {
         localDate,
         seed: `${pref.user_id}_${localDate}_${slot}`,
         avoidFigures: recentFigures,
+        avoidTitles: priorTitles,
+        birthDate,
       });
 
       if (result.circuitBreak) {
@@ -514,6 +559,8 @@ async function runBatch(opts: {
       if (ins.ok) {
         summary.written++;
         delivered.add(slot);
+        // Later windows in this same run must also avoid the title just used.
+        priorTitles.unshift(result.content.title);
         if (result.figure) {
           // Ledger write is best-effort: the card is already published, and the
           // unique key makes a retry a no-op rather than a duplicate.

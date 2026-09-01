@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   GROWTH_FIGURES,
   pickFigure,
+  birthResonance,
   FIGURE_HISTORY_WINDOW,
 } from '../../supabase/functions/_shared/growth-figures';
 
@@ -15,23 +16,44 @@ describe('growth figures roster', () => {
     expect(new Set(slugs).size).toBe(slugs.length);
   });
 
-  it('does not contain the figures the model kept defaulting to', () => {
-    // Franklin appeared in ~70% of generated biographical cards. The roster is
-    // the replacement for the model's own choice, so it must not reintroduce
-    // the same attractors. Matched on exact name — Rosalind Franklin is a
-    // different person and is legitimately on the roster.
+  it('includes the famous names rather than banning them', () => {
+    // Earlier the roster excluded the model's favourite answers outright. That
+    // was the wrong fix: a growth product without Newton or Gandhi is worse.
+    // Assignment (not exclusion) is what caps their share — see the fair-share
+    // test below.
     const names = new Set(GROWTH_FIGURES.map((f) => f.name.toLowerCase()));
-    for (const banned of [
+    for (const expected of [
       'benjamin franklin',
       'mahatma gandhi',
       'albert einstein',
+      'isaac newton',
+      'nikola tesla',
+      'napoleon bonaparte',
+      'elon musk',
       'steve jobs',
       'thomas edison',
     ]) {
-      expect(names.has(banned)).toBe(false);
+      expect(names.has(expected)).toBe(true);
     }
   });
 
+  it('spans many disciplines and regions, not just science', () => {
+    expect(new Set(GROWTH_FIGURES.map((f) => f.discipline)).size).toBeGreaterThanOrEqual(10);
+    expect(new Set(GROWTH_FIGURES.map((f) => f.region)).size).toBeGreaterThanOrEqual(20);
+  });
+
+  it('covers every birth month so month-resonance always has candidates', () => {
+    const months = new Set(
+      GROWTH_FIGURES.filter((f) => f.born).map((f) => Number(f.born!.split('-')[1])),
+    );
+    for (let m = 1; m <= 12; m++) expect(months.has(m)).toBe(true);
+  });
+
+  it('only claims a milestone when it also states what happened', () => {
+    for (const f of GROWTH_FIGURES) {
+      expect(f.milestoneAge == null).toBe(f.milestone == null);
+    }
+  });
 
   it('is deterministic: the same seed always resolves to the same figure', () => {
     const seed = 'user-abc_2026-03-04_morning';
@@ -50,14 +72,18 @@ describe('growth figures roster', () => {
     expect(pickFigure('any-seed', all)).toBeTruthy();
   });
 
-  it('spreads different users across many distinct figures on the same day', () => {
-    // The original bug: identical prompt inputs for every user. Distinct user
-    // ids must now produce a wide spread rather than one dominant name.
-    const picks = new Set<string>();
-    for (let i = 0; i < 200; i++) {
-      picks.add(pickFigure(`user-${i}_2026-03-04_morning`).slug);
+  it('gives no single figure more than a fair share across many members', () => {
+    // The original defect: Franklin in ~70% of biographical cards. Assignment
+    // must keep any one name near 1/N, which is what makes including the
+    // famous names safe.
+    const counts = new Map<string, number>();
+    for (let i = 0; i < 400; i++) {
+      const slug = pickFigure(`user-${i}_2026-03-04_morning`, [], { slot: 'morning' }).slug;
+      counts.set(slug, (counts.get(slug) ?? 0) + 1);
     }
-    expect(picks.size).toBeGreaterThan(25);
+    const top = Math.max(...counts.values());
+    expect(top / 400).toBeLessThan(0.12);
+    expect(counts.size).toBeGreaterThan(15);
   });
 
   it('does not repeat for one user across a rolling window of days', () => {
@@ -67,5 +93,73 @@ describe('growth figures roster', () => {
       seen.push(pickFigure(seed, seen).slug);
     }
     expect(new Set(seen).size).toBe(seen.length);
+  });
+});
+
+describe('slot affinity', () => {
+  it('prefers a documented early riser for the morning card', () => {
+    let early = 0;
+    for (let i = 0; i < 60; i++) {
+      const f = pickFigure(`u${i}_2026-03-04_morning`, [], { slot: 'morning' });
+      if (f.chronotype === 'early') early++;
+    }
+    // The roster is mostly 'any', so a majority here can only come from the
+    // slot weighting actually being applied.
+    expect(early).toBeGreaterThan(30);
+  });
+
+  it('prefers reflective disciplines for the evening card', () => {
+    let reflective = 0;
+    for (let i = 0; i < 60; i++) {
+      const f = pickFigure(`u${i}_2026-03-04_evening`, [], { slot: 'evening' });
+      if (['philosophy', 'letters', 'arts'].includes(f.discipline)) reflective++;
+    }
+    expect(reflective).toBeGreaterThan(30);
+  });
+
+  it('still varies within a slot rather than collapsing onto one figure', () => {
+    const picks = new Set<string>();
+    for (let i = 0; i < 100; i++) {
+      picks.add(pickFigure(`u${i}_2026-03-04_evening`, [], { slot: 'evening' }).slug);
+    }
+    expect(picks.size).toBeGreaterThan(8);
+  });
+});
+
+describe('birth resonance', () => {
+  const today = new Date('2026-09-01T00:00:00Z');
+
+  it('prefers a figure born in the member\'s birth month', () => {
+    let sameMonth = 0;
+    for (let i = 0; i < 60; i++) {
+      const f = pickFigure(`u${i}_2026-03-04_afternoon`, [], { birthMonth: 7 });
+      if (f.born && Number(f.born.split('-')[1]) === 7) sameMonth++;
+    }
+    expect(sameMonth).toBeGreaterThan(40);
+  });
+
+  it('surfaces an "at exactly your age" line when the milestone matches', () => {
+    const figure = GROWTH_FIGURES.find((f) => f.slug === 'albert-einstein')!;
+    // Einstein's milestone age is 26; a member born in 2000 is 26 on this date.
+    const line = birthResonance(figure, '2000-01-05', today);
+    expect(line).toContain('26');
+    expect(line).toContain('Albert Einstein');
+  });
+
+  it('reports an exact shared birthday', () => {
+    const figure = GROWTH_FIGURES.find((f) => f.slug === 'marie-curie')!;
+    const line = birthResonance(figure, '1990-11-07', today);
+    expect(line).toContain('birthday');
+  });
+
+  it('returns null rather than inventing a link when none exists', () => {
+    const figure = GROWTH_FIGURES.find((f) => f.slug === 'archimedes')!; // no birth date
+    expect(birthResonance(figure, '1990-11-07', today)).toBeNull();
+  });
+
+  it('returns null when the member has no birth date on file', () => {
+    const figure = GROWTH_FIGURES.find((f) => f.slug === 'marie-curie')!;
+    expect(birthResonance(figure, null, today)).toBeNull();
+    expect(birthResonance(figure, 'not-a-date', today)).toBeNull();
   });
 });
