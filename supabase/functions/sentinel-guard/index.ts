@@ -47,26 +47,50 @@ interface GeoInfo {
 /** Best-effort geo lookup; never blocks the write path. */
 async function resolveGeo(ip: string | null, headerCountry: string | null): Promise<GeoInfo> {
   const base: GeoInfo = headerCountry ? { country: headerCountry } : {};
-  if (!ip || ip === 'unknown' || ip.startsWith('127.') || ip.startsWith('::1')) return base;
-  try {
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 2500);
-    const res = await fetch(`https://ipapi.co/${ip}/json/`, { signal: ctrl.signal });
-    clearTimeout(timer);
-    if (!res.ok) return base;
-    const g = await res.json();
+  if (!ip || ip === 'unknown' || ip.startsWith('127.') || ip.startsWith('::1') || ip.startsWith('192.168.')) return base;
+
+  const get = async (url: string): Promise<Record<string, unknown> | null> => {
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 2500);
+      const res = await fetch(url, { signal: ctrl.signal });
+      clearTimeout(timer);
+      if (!res.ok) return null;
+      return await res.json();
+    } catch {
+      return null;
+    }
+  };
+
+  // Primary: ipwho.is (no key, generous limits). Fallback: ipapi.co.
+  const w = await get(`https://ipwho.is/${ip}`);
+  if (w && w.success === true) {
+    const tz = w.timezone as { id?: string } | string | undefined;
     return {
-      country: g.country_name ?? base.country,
-      region: g.region ?? undefined,
-      city: g.city ?? undefined,
-      timezone: g.timezone ?? undefined,
+      country: (w.country as string) ?? base.country,
+      region: (w.region as string) ?? undefined,
+      city: (w.city as string) ?? undefined,
+      timezone: typeof tz === 'string' ? tz : tz?.id,
+      latitude: typeof w.latitude === 'number' ? w.latitude : undefined,
+      longitude: typeof w.longitude === 'number' ? w.longitude : undefined,
+    };
+  }
+
+  const g = await get(`https://ipapi.co/${ip}/json/`);
+  if (g && !g.error) {
+    return {
+      country: (g.country_name as string) ?? base.country,
+      region: (g.region as string) ?? undefined,
+      city: (g.city as string) ?? undefined,
+      timezone: (g.timezone as string) ?? undefined,
       latitude: typeof g.latitude === 'number' ? g.latitude : undefined,
       longitude: typeof g.longitude === 'number' ? g.longitude : undefined,
     };
-  } catch {
-    return base;
   }
+
+  return base;
 }
+
 
 function clientIp(req: Request): string | null {
   const fwd = req.headers.get('x-forwarded-for');
