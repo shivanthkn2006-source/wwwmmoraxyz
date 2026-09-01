@@ -24,6 +24,7 @@ import { GROWTH_FLAGS } from '@/lib/growthFlags';
 import { exportGrowthData } from '@/lib/growthExport';
 import { pushPermission, requestPushPermission } from '@/lib/growthPush';
 import {
+import { invokeGrowthDispatch } from '@/lib/growthDispatch';
   FOCUS_AREAS, REFLECTION_STYLE_OPTIONS, ALL_REFLECTION_STYLES, deviceTimeZone,
   slotsForFrequency, SLOT_LABEL, sanitizeStyles, type ReflectionStyle,
 } from '@/lib/growthSlot';
@@ -129,7 +130,7 @@ export const GrowthEngineSettings: React.FC<GrowthEngineSettingsProps> = ({ onSa
     toast.success(paused ? 'Insights paused' : 'Preferences saved');
     void refreshStatus();
     if (!paused) {
-      void supabase.functions.invoke('growth-dispatch', { body: { action: 'catchup-me' } })
+      void invokeGrowthDispatch({ action: 'catchup-me' })
         .finally(() => onSaved?.());
     } else {
       onSaved?.();

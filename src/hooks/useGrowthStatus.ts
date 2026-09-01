@@ -10,6 +10,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import type { GrowthSlot, ReflectionStyle } from '@/lib/growthSlot';
+import { invokeGrowthDispatch } from '@/lib/growthDispatch';
 
 export type SlotStatus = 'delivered' | 'shadow' | 'pending' | 'scheduled';
 export type NextStatus = 'paused' | 'failed' | 'pending' | 'scheduled' | 'complete';
@@ -60,9 +61,7 @@ export function useGrowthStatus(enabled = true) {
     if (!user || !enabled) { setLoading(false); return; }
     setLoading(true);
     try {
-      const { data, error: fnError } = await supabase.functions.invoke('growth-dispatch', {
-        body: { action: 'me-status' },
-      });
+      const { data, error: fnError } = await invokeGrowthDispatch({ action: 'me-status' });
       if (fnError) throw fnError;
       if (!data?.ok) throw new Error(String(data?.error ?? 'status unavailable'));
       setStatus(data.status as GrowthStatus);
@@ -81,9 +80,7 @@ export function useGrowthStatus(enabled = true) {
     if (!user) return { ok: false, error: 'sign in required' };
     setRegenerating(true);
     try {
-      const { data, error: fnError } = await supabase.functions.invoke('growth-dispatch', {
-        body: { action: 'regenerate' },
-      });
+      const { data, error: fnError } = await invokeGrowthDispatch({ action: 'regenerate' });
       if (fnError) throw fnError;
       if (!data?.ok) return { ok: false, error: String(data?.error ?? 'could not regenerate') };
       await load();

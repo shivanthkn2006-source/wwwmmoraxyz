@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { invokeGrowthDispatch } from '@/lib/growthDispatch';
 
 export interface BirthDetails {
   birth_date: string;
@@ -137,7 +138,7 @@ export function useBirthDetailsGate() {
     // Growth cards are personalised from the same birth data, so build the
     // first one now rather than making the member wait for the next window.
     try {
-      await supabase.functions.invoke('growth-dispatch', { body: { targetUserId: userId } });
+      await invokeGrowthDispatch({ targetUserId: userId });
     } catch { /* the scheduled run will pick it up anyway */ }
 
     setNeedsDetails(false);

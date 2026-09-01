@@ -25,6 +25,7 @@ import { useAuth } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import { logGrowthAudit } from '@/lib/growthAudit';
 import { FOCUS_AREAS, deviceTimeZone, SLOT_LABEL } from '@/lib/growthSlot';
+import { invokeGrowthDispatch } from '@/lib/growthDispatch';
 
 interface MeStatus {
   timezone: string;
@@ -132,7 +133,7 @@ export const GrowthEngineStatusBanner: React.FC<{ onChanged?: () => void }> = ({
     setLoading(true);
     try {
       const [statusRes, cardRes] = await Promise.all([
-        supabase.functions.invoke('growth-dispatch', { body: { action: 'me-status' } }),
+        invokeGrowthDispatch({ action: 'me-status' }),
         supabase
           .from('growth_feed_items')
           .select('created_at')
@@ -182,7 +183,7 @@ export const GrowthEngineStatusBanner: React.FC<{ onChanged?: () => void }> = ({
           .from('growth_feed_items')
           .select('id', { count: 'exact', head: true })
           .eq('user_id', user.id),
-        supabase.functions.invoke('growth-dispatch', { body: { action: 'me-status' } }),
+        invokeGrowthDispatch({ action: 'me-status' }),
       ]);
 
       const pref = prefRes.data as Record<string, unknown> | null;
@@ -277,9 +278,7 @@ export const GrowthEngineStatusBanner: React.FC<{ onChanged?: () => void }> = ({
       );
       if (error) throw error;
 
-      const { data } = await supabase.functions.invoke('growth-dispatch', {
-        body: { action: 'regenerate' },
-      });
+      const { data } = await invokeGrowthDispatch({ action: 'regenerate' });
       void logGrowthAudit('engine_repaired', {
         focus: focus.length ? focus : [FOCUS_AREAS[0]],
         regenerated: Boolean((data as { ok?: boolean } | null)?.ok),
