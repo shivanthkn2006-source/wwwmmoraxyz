@@ -595,7 +595,9 @@ export const useGenesisConversation = (
           .update({
             real_name: finalProfile.userName,
             gender: finalProfile.userGender,
+            // Written to both columns — the alignment engines read `birth_date`.
             date_of_birth: finalProfile.userDOB,
+            birth_date: finalProfile.userDOB,
             city: finalProfile.userLocation,
             assistant_name: finalProfile.acceptedName,
             assistant_voice_preference: finalProfile.voicePreference,

@@ -3542,6 +3542,36 @@ export type Database = {
           },
         ]
       }
+      growth_used_figures: {
+        Row: {
+          created_at: string
+          figure_name: string
+          figure_slug: string
+          id: string
+          local_date: string
+          slot: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          figure_name: string
+          figure_slug: string
+          id?: string
+          local_date: string
+          slot: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          figure_name?: string
+          figure_slug?: string
+          id?: string
+          local_date?: string
+          slot?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       high_value_zones: {
         Row: {
           created_at: string | null

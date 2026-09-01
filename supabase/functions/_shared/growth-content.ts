@@ -14,6 +14,21 @@
  */
 import { sovereignFetch } from './sovereign-ai.ts';
 
+import {
+  pickFigure,
+  FIGURE_HISTORY_WINDOW,
+  type GrowthFigure,
+} from './growth-figures.ts';
+
+export { FIGURE_HISTORY_WINDOW };
+export type { GrowthFigure };
+
+
+/** Name → roster slug, so an avoid-list of names can filter the roster. */
+const slugify = (name: string) =>
+  name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+
 export type GrowthSlot = 'morning' | 'midday' | 'afternoon' | 'evening' | 'night';
 export type ReflectionStyle = 'actionable' | 'philosophical' | 'biographical' | 'strategic';
 
@@ -156,7 +171,9 @@ RULES (never break):
 2. Plain, concrete English. No platitudes, no hype, no emojis, no hashtags.
 3. Ground advice in practical habit systems, mental models or real historical examples.
 4. Never give medical, legal or financial-investment advice, and never predict the future.
-5. Return STRICT JSON only with exactly these keys: title (under 8 words), category (1-3 words), content (under 120 words), actionable_step (under 25 words).`;
+5. If DATA contains "assigned_figure", the insight MUST be about that exact person and no one else. Use the supplied "known_for" as your factual anchor. Never substitute a different, more familiar figure — in particular never default to Benjamin Franklin, Gandhi, Einstein, Steve Jobs or Thomas Edison unless they are the assigned figure. Do not invent biographical facts.
+6. If DATA contains "avoid_figures", you must not mention any person in that list.
+7. Return STRICT JSON only with exactly these keys: title (under 8 words), category (1-3 words), content (under 120 words), actionable_step (under 25 words).`;
 
 const STYLE_BRIEF: Record<ReflectionStyle, string> = {
   actionable: 'Concrete, bite-sized tactics that can be done today.',
@@ -171,10 +188,21 @@ export interface GenerateArgs {
   style: ReflectionStyle;
   localDate: string;
   seed: string;
+  /**
+   * Figure assigned by the caller for biographical insights. Supplying this is
+   * what stops every user receiving the same handful of famous names: the model
+   * is told WHO to write about instead of being left to pick the statistically
+   * most common answer.
+   */
+  figure?: GrowthFigure | null;
+  /** Names this user has recently been shown; the model must not reuse them. */
+  avoidFigures?: string[];
 }
 
 export interface GenerateResult {
   content: InsightContent;
+  /** The figure actually used, so the caller can record it in the ledger. */
+  figure?: GrowthFigure | null;
   /** Terminal provider condition — pauses the whole engine. */
   circuitBreak?: { status: number; message: string };
   rateLimited?: boolean;
@@ -188,13 +216,31 @@ export async function generateInsight(args: GenerateArgs): Promise<GenerateResul
   const style = sanitizeStyle(args.style);
   const localDate = /^\d{4}-\d{2}-\d{2}$/.test(args.localDate) ? args.localDate : '';
 
-  const payload = {
+  // Only biographical cards name a person. Assign deterministically from the
+  // seed so a dispatch retry resolves to the same figure and cannot create a
+  // second, different card for the same slot.
+  const figure = style === 'biographical'
+    ? (args.figure ?? pickFigure(args.seed, (args.avoidFigures ?? []).map(slugify)))
+    : null;
+
+  const payload: Record<string, unknown> = {
     delivery_window: SLOT_LOCAL_TIME[slot].label,
     local_date: localDate,
     focus_areas: focusAreas,
     style,
     style_brief: STYLE_BRIEF[style],
+    // Varies the generation per user even for non-biographical styles, which
+    // previously produced near-identical text across the whole member base.
+    variation_token: args.seed.slice(0, 64),
   };
+
+  if (figure) {
+    payload.assigned_figure = figure.name;
+    payload.known_for = figure.known;
+  }
+  const avoid = (args.avoidFigures ?? []).filter((n) => n && n !== figure?.name).slice(0, 25);
+  if (avoid.length) payload.avoid_figures = avoid;
+
 
   try {
     const res = await sovereignFetch('sovereign://chat/completions', {
@@ -213,15 +259,15 @@ export async function generateInsight(args: GenerateArgs): Promise<GenerateResul
 
     if (res.status === 402 || res.status === 403) {
       const msg = await res.text();
-      return { content: pickVault(slot, args.seed), circuitBreak: { status: res.status, message: msg.slice(0, 300) } };
+      return { content: pickVault(slot, args.seed), figure, circuitBreak: { status: res.status, message: msg.slice(0, 300) } };
     }
-    if (res.status === 429) return { content: pickVault(slot, args.seed), rateLimited: true };
-    if (!res.ok) return { content: pickVault(slot, args.seed), error: `provider ${res.status}` };
+    if (res.status === 429) return { content: pickVault(slot, args.seed), figure, rateLimited: true };
+    if (!res.ok) return { content: pickVault(slot, args.seed), figure, error: `provider ${res.status}` };
 
     const json = await res.json();
     const raw = json?.choices?.[0]?.message?.content ?? '';
     const match = typeof raw === 'string' ? raw.match(/\{[\s\S]*\}/) : null;
-    if (!match) return { content: pickVault(slot, args.seed), error: 'unparseable model output' };
+    if (!match) return { content: pickVault(slot, args.seed), figure, error: 'unparseable model output' };
 
     const parsed = JSON.parse(match[0]);
     const title = String(parsed.title ?? '').trim();
@@ -229,7 +275,7 @@ export async function generateInsight(args: GenerateArgs): Promise<GenerateResul
     const category = String(parsed.category ?? '').trim() || focusAreas[0];
     const step = String(parsed.actionable_step ?? '').trim();
 
-    if (!title || !content) return { content: pickVault(slot, args.seed), error: 'incomplete model output' };
+    if (!title || !content) return { content: pickVault(slot, args.seed), figure, error: 'incomplete model output' };
 
     return {
       content: {
@@ -239,8 +285,9 @@ export async function generateInsight(args: GenerateArgs): Promise<GenerateResul
         actionableStep: step ? step.slice(0, 200) : null,
         source: 'llm',
       },
+      figure,
     };
   } catch (e) {
-    return { content: pickVault(slot, args.seed), error: String((e as Error)?.message ?? e).slice(0, 200) };
+    return { content: pickVault(slot, args.seed), figure, error: String((e as Error)?.message ?? e).slice(0, 200) };
   }
 }
