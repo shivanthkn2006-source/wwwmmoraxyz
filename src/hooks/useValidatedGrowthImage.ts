@@ -112,11 +112,11 @@ export const useValidatedGrowthImage = ({ key, title, content, category, validat
         // Inconclusive (no vision provider / validator never saw the image) is
         // not a verdict: keep the current image and do not poison the cache.
         if (data.inconclusive) {
+          startValidationCooldown();
           logValidation({ ...base, outcome: 'error', reason: data.reason ?? 'inconclusive', cached: false });
           return;
         }
-        const match = data.match !== false;
-        setCachedValidation(cacheKey, match, data.reason ?? '');
+
         logValidation({
           ...base,
           outcome: match ? 'match' : 'mismatch',
