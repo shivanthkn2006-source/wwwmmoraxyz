@@ -369,7 +369,12 @@ async function callNvidia(payload: any, kind: 'text' | 'vision'): Promise<Respon
   return null;
 }
 
+/**
+ * Cohere text fallback. Keeps the platform answering when Groq is down and the
+ * Google free tier is quota-exhausted (the most common real-world outage).
+ */
 async function callCohere(payload: any): Promise<Response | null> {
+
 
   const key = Deno.env.get('COHERE_API_KEY');
   if (!key) return null;
