@@ -404,24 +404,34 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate, onMediaCompleted })
       )
       .subscribe();
 
-    // Realtime can miss a packet during reconnect. Reconcile the count at a
-    // bounded interval and animate a remote increase in creator/viewer feeds.
-    const reconcile = window.setInterval(async () => {
-      const { data, error } = await supabase.from('posts').select('likes_count').eq('id', post.id).maybeSingle();
-      if (error || typeof data?.likes_count !== 'number') return;
-      if (data.likes_count > latestLikesCountRef.current) {
-        playLikeAnimation();
-        logFeedEvent('like_event_fallback', { post_id: post.id, previous_count: latestLikesCountRef.current, next_count: data.likes_count }, user.id);
+    // Realtime can miss a packet during reconnect. Instead of polling every card
+    // on a timer (which produced ~150k reads/week at tiny user counts), reconcile
+    // ONCE when the tab returns to the foreground — bounded, event-driven work.
+    let reconciling = false;
+    const reconcile = async () => {
+      if (reconciling || document.visibilityState !== 'visible') return;
+      reconciling = true;
+      try {
+        const { data, error } = await supabase.from('posts').select('likes_count').eq('id', post.id).maybeSingle();
+        if (error || typeof data?.likes_count !== 'number') return;
+        if (data.likes_count > latestLikesCountRef.current) {
+          playLikeAnimation();
+          logFeedEvent('like_event_fallback', { post_id: post.id, previous_count: latestLikesCountRef.current, next_count: data.likes_count }, user.id);
+        }
+        latestLikesCountRef.current = data.likes_count;
+        setLikesCount(data.likes_count);
+      } finally {
+        reconciling = false;
       }
-      latestLikesCountRef.current = data.likes_count;
-      setLikesCount(data.likes_count);
-    }, 30_000);
+    };
+    document.addEventListener('visibilitychange', reconcile);
 
     return () => {
-      window.clearInterval(reconcile);
+      document.removeEventListener('visibilitychange', reconcile);
       supabase.removeChannel(channel);
     };
   }, [post.id, user?.id, playLikeAnimation]);
+
 
   const handleLike = async () => {
     if (!user) return;
