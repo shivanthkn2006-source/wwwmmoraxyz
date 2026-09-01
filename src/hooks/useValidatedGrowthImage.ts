@@ -24,10 +24,13 @@ import {
 import {
   getCachedValidation,
   getValidationConfig,
+  isValidationCoolingDown,
   logValidation,
   setCachedValidation,
+  startValidationCooldown,
   validationCacheKey,
 } from '@/lib/growthImageValidation';
+
 
 interface Args {
   key: string;
@@ -61,7 +64,10 @@ export const useValidatedGrowthImage = ({ key, title, content, category, validat
     if (!validate || !config.enabled) return;
     if (attempt >= lastAttempt) return; // last resort image is trusted
     if (checked.current.has(src)) return;
+    // Provider is down/quota-exhausted: skip the round trip entirely.
+    if (isValidationCoolingDown()) return;
     checked.current.add(src);
+
 
     const cacheKey = validationCacheKey(src, config.strictness);
     const base = {
@@ -103,14 +109,23 @@ export const useValidatedGrowthImage = ({ key, title, content, category, validat
           logValidation({ ...base, outcome: 'error', reason: error?.message ?? 'no response', cached: false });
           return;
         }
+        // Inconclusive (no vision provider / validator never saw the image) is
+        // not a verdict: keep the current image and do not poison the cache.
+        if (data.inconclusive) {
+          startValidationCooldown();
+          logValidation({ ...base, outcome: 'error', reason: data.reason ?? 'inconclusive', cached: false });
+          return;
+        }
         const match = data.match !== false;
         setCachedValidation(cacheKey, match, data.reason ?? '');
+
         logValidation({
           ...base,
           outcome: match ? 'match' : 'mismatch',
           reason: data.reason ?? '',
           cached: false,
         });
+
         if (!match) {
           setAttempt((a) => {
             const next = Math.min(a + 1, lastAttempt);

@@ -91,6 +91,11 @@ Deno.serve(async (req) => {
 
     if (res.status === 429) return json({ error: 'Rate limited, try again shortly' }, 429);
     if (res.status === 402) return json({ error: 'AI credits exhausted' }, 402);
+    if (res.status === 503) {
+      // No vision-capable provider. Inconclusive is NOT a mismatch: keep the image.
+      console.warn('[growth-image-validate] no vision provider available');
+      return json({ match: true, inconclusive: true, reason: 'vision provider unavailable' });
+    }
     if (!res.ok) {
       const text = await res.text().catch(() => '');
       console.error('[growth-image-validate] gateway error', res.status, text);
@@ -107,7 +112,17 @@ Deno.serve(async (req) => {
       parsed = { match: /"match"\s*:\s*true/i.test(cleaned), reason: cleaned.slice(0, 200) };
     }
 
-    return json({ match: parsed.match === true, reason: parsed.reason ?? '' });
+    const reason = parsed.reason ?? '';
+    // Guard against a model that never actually saw the picture (text-only
+    // route, stripped attachment). That is inconclusive, never a mismatch.
+    if (/\b(no|not?)\b[^.]{0,40}\bimage\b[^.]{0,40}\b(provided|supplied|attached|available|received)\b/i.test(reason)
+      || /unable to (see|view|access) (the )?image/i.test(reason)) {
+      console.warn('[growth-image-validate] model reported no image — treating as inconclusive', reason);
+      return json({ match: true, inconclusive: true, reason: 'validator did not receive the image' });
+    }
+
+    return json({ match: parsed.match === true, reason });
+
   } catch (error) {
     console.error('[growth-image-validate] failed', error);
     return json({ error: 'Validation failed' }, 500);

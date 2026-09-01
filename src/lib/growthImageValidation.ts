@@ -219,3 +219,45 @@ export const subscribeValidationLog = (fn: (entries: ValidationLogEntry[]) => vo
     listeners.delete(fn);
   };
 };
+
+/* ------------------------------------------------------- provider cooldown */
+
+const COOLDOWN_KEY = 'mmora.growth.imageValidation.cooldownUntil';
+const COOLDOWN_MS = 10 * 60 * 1000;
+
+/**
+ * When the vision provider is unavailable (quota exhausted, no key), further
+ * per-card calls only add latency and load. Pause validation for a window.
+ */
+export const startValidationCooldown = (ms = COOLDOWN_MS): number => {
+  const until = Date.now() + ms;
+  try {
+    safeStorage()?.setItem(COOLDOWN_KEY, String(until));
+  } catch {
+    /* ignore */
+  }
+  cooldownUntilMemory = until;
+  return until;
+};
+
+let cooldownUntilMemory = 0;
+
+export const isValidationCoolingDown = (): boolean => {
+  let until = cooldownUntilMemory;
+  try {
+    const raw = safeStorage()?.getItem(COOLDOWN_KEY);
+    if (raw) until = Math.max(until, Number(raw) || 0);
+  } catch {
+    /* ignore */
+  }
+  return Date.now() < until;
+};
+
+export const clearValidationCooldown = () => {
+  cooldownUntilMemory = 0;
+  try {
+    safeStorage()?.removeItem(COOLDOWN_KEY);
+  } catch {
+    /* ignore */
+  }
+};

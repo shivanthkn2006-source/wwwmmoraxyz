@@ -182,7 +182,11 @@ export function useGlobalNotificationAlerts() {
       data.forEach((row) => raise(row as unknown as AlertableNotification));
     };
 
-    const timer = window.setInterval(() => { void poll(); }, 20_000);
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'hidden') return; // resumed by onVisible
+      void poll();
+    }, 20_000);
+
     const onVisible = () => { if (document.visibilityState === 'visible') void poll(); };
     document.addEventListener('visibilitychange', onVisible);
     void poll();

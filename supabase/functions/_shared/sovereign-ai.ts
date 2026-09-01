@@ -22,18 +22,20 @@ const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const GOOGLE_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
-export const SOVEREIGN_PROVIDERS = ['groq', 'google-ai-studio', 'openrouter', 'pollinations'] as const;
+export const SOVEREIGN_PROVIDERS = ['groq', 'google-ai-studio', 'cohere', 'openrouter', 'pollinations'] as const;
 
 /** Truthy when at least one sovereign provider key is configured. */
 export function sovereignKey(): string | undefined {
   return (
     Deno.env.get('GROQ_API_KEY') ||
     Deno.env.get('GOOGLE_AI_STUDIO_KEY') ||
+    Deno.env.get('COHERE_API_KEY') ||
     Deno.env.get('OPENROUTER_API_KEY') ||
     Deno.env.get('POLLINATIONS_API_KEY') ||
     undefined
   );
 }
+
 
 /**
  * Hard guard: throws if anything still tries to reach the Lovable AI Gateway,
@@ -64,9 +66,31 @@ let warnedAboutLovableKey = false;
 // Verified live against each provider's /models catalogue (Aug 2026).
 const GROQ_TEXT_FAST = 'openai/gpt-oss-20b';
 const GROQ_TEXT_QUALITY = 'openai/gpt-oss-120b';
-const GOOGLE_TEXT = 'gemini-3.6-flash';
-const GOOGLE_PRO = 'gemini-3.1-pro-preview';
 const OPENROUTER_TEXT = 'meta-llama/llama-3.3-70b-instruct';
+
+/**
+ * Google model catalogues drift (a model can be renamed or retired at any
+ * time). Instead of one hard-coded id we walk a candidate list and remember
+ * the first id the API actually accepts, so a retired preview name can never
+ * silently take the whole vision/text path down.
+ */
+const GOOGLE_FAST_CANDIDATES = [
+  'gemini-3.6-flash',
+  'gemini-2.5-flash',
+  'gemini-2.0-flash',
+  'gemini-flash-latest',
+];
+const GOOGLE_PRO_CANDIDATES = [
+  'gemini-3.1-pro-preview',
+  'gemini-2.5-pro',
+  'gemini-pro-latest',
+  ...GOOGLE_FAST_CANDIDATES,
+];
+
+/** Model ids proven dead (404/400) this isolate — skipped on later calls. */
+const deadGoogleModels = new Set<string>();
+/** First model id proven to work this isolate — tried first afterwards. */
+let googleWorkingModel: string | null = null;
 
 function isProTier(model: string): boolean {
   const m = (model || '').toLowerCase();
@@ -79,9 +103,12 @@ function groqModelFor(model: string): string {
   return isProTier(m) ? GROQ_TEXT_QUALITY : GROQ_TEXT_FAST;
 }
 
-function googleModelFor(model: string): string {
-  return isProTier(model) ? GOOGLE_PRO : GOOGLE_TEXT;
+function googleModelsFor(model: string): string[] {
+  const base = isProTier(model) ? GOOGLE_PRO_CANDIDATES : GOOGLE_FAST_CANDIDATES;
+  const ordered = googleWorkingModel ? [googleWorkingModel, ...base] : base;
+  return [...new Set(ordered)].filter((m) => !deadGoogleModels.has(m));
 }
+
 
 // ───────────── helpers ─────────────
 
@@ -197,9 +224,24 @@ async function callGroq(payload: any): Promise<Response | null> {
   return resp;
 }
 
+/**
+ * Circuit breaker: once Google answers 429 (free-tier quota exhausted) every
+ * further call in this isolate is pointless and just adds latency to every
+ * request. Skip the provider for a cooldown window instead.
+ */
+let googleQuotaBlockedUntil = 0;
+const GOOGLE_QUOTA_COOLDOWN_MS = 10 * 60 * 1000;
+
+/** True while Google is rate-limited (used by callers to report inconclusive). */
+export function googleQuotaExhausted(): boolean {
+  return Date.now() < googleQuotaBlockedUntil;
+}
+
 async function callGoogle(payload: any): Promise<Response | null> {
   const key = Deno.env.get('GOOGLE_AI_STUDIO_KEY');
   if (!key) return null;
+  if (googleQuotaExhausted()) return null;
+
 
   const messages: AnyMsg[] = payload.messages || [];
   const systemText = messages.filter((m) => m.role === 'system').map((m) => (typeof m.content === 'string' ? m.content : '')).join('\n');
@@ -233,30 +275,88 @@ async function callGoogle(payload: any): Promise<Response | null> {
   };
   if (systemText) body.systemInstruction = { parts: [{ text: systemText }] };
 
-  const model = googleModelFor(payload.model);
-  const resp = await fetch(`${GOOGLE_BASE}/${model}:generateContent?key=${key}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  if (!resp.ok) {
-    console.warn('[sovereign-ai] google failed', resp.status, (await resp.text()).slice(0, 200));
+  const candidates = googleModelsFor(payload.model);
+  for (const model of candidates) {
+    const resp = await fetch(`${GOOGLE_BASE}/${model}:generateContent?key=${key}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!resp.ok) {
+      const detail = (await resp.text()).slice(0, 200);
+      console.warn('[sovereign-ai] google failed', model, resp.status, detail);
+      // A retired / unknown model must never take the whole path down.
+      if (resp.status === 404 || resp.status === 400) {
+        deadGoogleModels.add(model);
+        continue;
+      }
+      if (resp.status === 429) googleQuotaBlockedUntil = Date.now() + GOOGLE_QUOTA_COOLDOWN_MS;
+      return null; // 401/429/5xx: key or quota problem, another model won't help
+
+    }
+    const data = await resp.json();
+    const text = data.candidates?.[0]?.content?.parts?.map((p: any) => p.text).filter(Boolean).join('') ?? '';
+    if (!text) return null;
+    googleWorkingModel = model;
+    const usage = data.usageMetadata
+      ? {
+          prompt_tokens: data.usageMetadata.promptTokenCount ?? 0,
+          completion_tokens: data.usageMetadata.candidatesTokenCount ?? 0,
+          total_tokens: data.usageMetadata.totalTokenCount ?? 0,
+        }
+      : undefined;
+    return json(chatShape(text, model, undefined, usage));
+  }
+  return null;
+}
+
+
+/**
+ * Cohere text fallback. Keeps the platform answering when Groq is down and the
+ * Google free tier is quota-exhausted (the most common real-world outage).
+ */
+async function callCohere(payload: any): Promise<Response | null> {
+  const key = Deno.env.get('COHERE_API_KEY');
+  if (!key) return null;
+  try {
+    const messages = flattenMessages(payload.messages || []).map((m) => ({
+      role: m.role === 'assistant' ? 'assistant' : m.role === 'system' ? 'system' : 'user',
+      content: String(m.content ?? ''),
+    }));
+    if (!messages.length) return null;
+    const resp = await fetch('https://api.cohere.com/v2/chat', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: isProTier(payload.model) ? 'command-a-03-2025' : 'command-r-08-2024',
+        messages,
+        temperature: payload.temperature ?? 0.7,
+        max_tokens: payload.max_tokens ?? 2048,
+      }),
+    });
+    if (!resp.ok) {
+      console.warn('[sovereign-ai] cohere failed', resp.status, (await resp.text()).slice(0, 200));
+      return null;
+    }
+    const data = await resp.json();
+    const text = Array.isArray(data?.message?.content)
+      ? data.message.content.map((p: any) => p?.text).filter(Boolean).join('')
+      : '';
+    if (!text) return null;
+    return json(chatShape(text, 'cohere', undefined, {
+      prompt_tokens: data?.usage?.tokens?.input_tokens ?? 0,
+      completion_tokens: data?.usage?.tokens?.output_tokens ?? 0,
+      total_tokens:
+        (data?.usage?.tokens?.input_tokens ?? 0) + (data?.usage?.tokens?.output_tokens ?? 0),
+    }));
+  } catch (e) {
+    console.warn('[sovereign-ai] cohere error', e);
     return null;
   }
-  const data = await resp.json();
-  const text = data.candidates?.[0]?.content?.parts?.map((p: any) => p.text).filter(Boolean).join('') ?? '';
-  if (!text) return null;
-  const usage = data.usageMetadata
-    ? {
-        prompt_tokens: data.usageMetadata.promptTokenCount ?? 0,
-        completion_tokens: data.usageMetadata.candidatesTokenCount ?? 0,
-        total_tokens: data.usageMetadata.totalTokenCount ?? 0,
-      }
-    : undefined;
-  return json(chatShape(text, model, undefined, usage));
 }
 
 async function callOpenRouter(payload: any): Promise<Response | null> {
+
   const key = Deno.env.get('OPENROUTER_API_KEY');
   if (!key) return null;
   const body: any = {
@@ -405,16 +505,18 @@ export async function sovereignFetch(url: string, init?: RequestInit): Promise<R
 
   const messages: AnyMsg[] = payload.messages || [];
 
-  // Vision requests: Google first (native multimodal), then text-only fallbacks.
+  // Vision requests: Google only. Text-only providers must NEVER be used as a
+  // fallback here — they silently drop the image and answer "no image was
+  // provided", which callers then read as a real verdict.
   if (hasImageInput(messages)) {
     const g = await callGoogle(payload);
     if (g) return g;
-    const gr = await callGroq(payload);
-    if (gr) return gr;
-    const or = await callOpenRouter(payload);
-    if (or) return or;
-    return json({ error: { message: 'No sovereign vision provider available', code: 'SERVICE_UNAVAILABLE' } }, 503);
+    return json(
+      { error: { message: 'No sovereign vision provider available', code: 'VISION_UNAVAILABLE' } },
+      503,
+    );
   }
+
 
   // Tool calling / streaming: OpenAI-compatible providers only.
   if (payload.tools || payload.stream) {
@@ -430,10 +532,13 @@ export async function sovereignFetch(url: string, init?: RequestInit): Promise<R
   if (gr) return gr;
   const g = await callGoogle(payload);
   if (g) return g;
+  const co = await callCohere(payload);
+  if (co) return co;
   const or = await callOpenRouter(payload);
   if (or) return or;
 
   return json({ error: { message: 'All sovereign providers failed', code: 'SERVICE_UNAVAILABLE' } }, 503);
+
 }
 
 export default sovereignFetch;

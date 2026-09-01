@@ -181,8 +181,12 @@ export function useSovereignHeartbeat(): UseSovereignHeartbeatReturn {
     
     load();
     
-    // Refresh every minute
-    const interval = setInterval(loadStatus, 60000);
+    // Refresh every minute, but never from a hidden tab.
+    const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
+      void loadStatus();
+    }, 60000);
+
     
     return () => clearInterval(interval);
   }, [loadStatus, loadRecentThoughts]);
