@@ -14,7 +14,15 @@
  */
 import { supabase } from '@/integrations/supabase/client';
 
-export type OrbCapability = 'document_xray' | 'song_id' | 'provider_status' | 'relevance_rank';
+export type OrbCapability =
+  | 'document_xray'
+  | 'song_id'
+  | 'provider_status'
+  | 'relevance_rank'
+  | 'index_ingest'
+  | 'premium_detect'
+  | 'brand_learning';
+
 
 export interface OrbCapabilityResult {
   ok: boolean;
