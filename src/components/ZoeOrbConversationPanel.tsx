@@ -1480,13 +1480,14 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
     // Maps text/attachment intents onto dedicated backend functions.
     // Anything that fails here silently falls through to the normal pipeline.
     try {
-      const { detectOrbCapability, runOrbCapability } = await import('@/lib/orbCapabilities');
-      const capability = detectOrbCapability(
+      const { detectOrbCapability, runOrbCapability, isOrbCapabilityRouterEnabled } = await import('@/lib/orbCapabilities');
+      const routerEnabled = await isOrbCapabilityRouterEnabled(user?.id);
+      const capability = routerEnabled ? detectOrbCapability(
         userMessage.content,
         pendingMedia
           ? { type: pendingMedia.type, mimeType: pendingMedia.file.type, fileName: pendingMedia.file.name }
           : null,
-      );
+      ) : null;
 
       if (capability) {
         const capToken = cotStart(
@@ -1494,7 +1495,9 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
             ? 'zoe-document-xray'
             : capability === 'song_id'
               ? 'identify-song'
-              : 'provider-health',
+              : capability === 'relevance_rank'
+                ? 'score-post-relevance'
+                : 'provider-health',
         );
         const capResult = await runOrbCapability(capability, {
           file: pendingMedia?.file ?? null,
