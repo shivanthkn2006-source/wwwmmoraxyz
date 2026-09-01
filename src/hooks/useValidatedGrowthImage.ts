@@ -103,6 +103,12 @@ export const useValidatedGrowthImage = ({ key, title, content, category, validat
           logValidation({ ...base, outcome: 'error', reason: error?.message ?? 'no response', cached: false });
           return;
         }
+        // Inconclusive (no vision provider / validator never saw the image) is
+        // not a verdict: keep the current image and do not poison the cache.
+        if (data.inconclusive) {
+          logValidation({ ...base, outcome: 'error', reason: data.reason ?? 'inconclusive', cached: false });
+          return;
+        }
         const match = data.match !== false;
         setCachedValidation(cacheKey, match, data.reason ?? '');
         logValidation({
@@ -111,6 +117,7 @@ export const useValidatedGrowthImage = ({ key, title, content, category, validat
           reason: data.reason ?? '',
           cached: false,
         });
+
         if (!match) {
           setAttempt((a) => {
             const next = Math.min(a + 1, lastAttempt);
