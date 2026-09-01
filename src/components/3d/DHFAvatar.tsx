@@ -5,6 +5,7 @@
 // through SafeCanvasWrapper (viewport + capability + thermal gated).
 // ═══════════════════════════════════════════════════════════════════════════════
 
+import { WebGLBoundary } from '@/components/3d/WebGLBoundary';
 import React, { Suspense, useMemo } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { useGLTF, Environment, Lightformer } from '@react-three/drei';
@@ -34,28 +35,30 @@ export default function AvatarScene({ src = DEFAULT_MODEL, scale = 1 }: AvatarSc
       (navigator.hardwareConcurrency ?? 8) < 6);
 
   return (
-    <Canvas
-      dpr={resolveDpr(isMobile)}
-      camera={{ position: [0, 0.6, 3.2], fov: 40 }}
-      gl={{ antialias: !isMobile, powerPreference: 'low-power' }}
-      frameloop="demand"
-    >
-      <ambientLight intensity={0.6} />
-      <directionalLight position={[3, 5, 4]} intensity={1.1} />
-      <Environment>
-        <Lightformer intensity={2} position={[0, 4, 2]} scale={[8, 8, 1]} />
-        <Lightformer
-          intensity={1}
-          color="#8bb"
-          position={[-4, 1, -1]}
-          rotation-y={Math.PI / 2}
-          scale={[14, 1, 1]}
-        />
-      </Environment>
-      <Suspense fallback={null}>
-        <DHFAvatar src={src} scale={scale} />
-      </Suspense>
-    </Canvas>
+    <WebGLBoundary moduleName="dhf-avatar" className="h-full w-full">
+      <Canvas
+        dpr={resolveDpr(isMobile)}
+        camera={{ position: [0, 0.6, 3.2], fov: 40 }}
+        gl={{ antialias: !isMobile, powerPreference: 'low-power' }}
+        frameloop="demand"
+      >
+        <ambientLight intensity={0.6} />
+        <directionalLight position={[3, 5, 4]} intensity={1.1} />
+        <Environment>
+          <Lightformer intensity={2} position={[0, 4, 2]} scale={[8, 8, 1]} />
+          <Lightformer
+            intensity={1}
+            color="#8bb"
+            position={[-4, 1, -1]}
+            rotation-y={Math.PI / 2}
+            scale={[14, 1, 1]}
+          />
+        </Environment>
+        <Suspense fallback={null}>
+          <DHFAvatar src={src} scale={scale} />
+        </Suspense>
+      </Canvas>
+    </WebGLBoundary>
   );
 }
 

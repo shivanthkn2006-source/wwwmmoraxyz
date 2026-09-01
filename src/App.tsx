@@ -123,6 +123,7 @@ const DHFCompassPage = lazy(() => import("./pages/DHFCompassPage")); // ZOE'S DH
 const AdminGrowthRunsPage = lazy(() => import("./pages/AdminGrowthRunsPage")); // GROWTH WORKER TRACE (admin, RLS-gated)
 const AdminGrowthDeliveryPage = lazy(() => import("./pages/AdminGrowthDeliveryPage")); // DAILY GROWTH DELIVERY REPORT (admin, RLS-gated)
 const AdminDhfGenerationPage = lazy(() => import("./pages/AdminDhfGenerationPage")); // DHF GENERATION STATUS (admin, RLS-gated)
+const AdminControlPanelPage = lazy(() => import("./pages/AdminControlPanelPage")); // ADMIN CONTROL PANEL (activity, DHF logs, moderation)
 const ZoeBirthDetailsPage = lazy(() => import("./pages/ZoeBirthDetailsPage"));
 const ZoeDispatchDashboardPage = lazy(() => import("./pages/ZoeDispatchDashboardPage"));
 const ZoeAstroLogPage = lazy(() => import("./pages/ZoeAstroLogPage"));
@@ -709,6 +710,14 @@ const RouteAwareShell = () => {
                             element={
                               <ProtectedRoute>
                                 <AdminDhfGenerationPage />
+                              </ProtectedRoute>
+                            }
+                          />
+                          <Route
+                            path="/admin/control-panel"
+                            element={
+                              <ProtectedRoute>
+                                <AdminControlPanelPage />
                               </ProtectedRoute>
                             }
                           />
