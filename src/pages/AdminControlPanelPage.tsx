@@ -180,6 +180,14 @@ export default function AdminControlPanelPage() {
     [activity, runs, reports],
   );
 
+  const isSpam = (r: ReportRow) => /spam|scam|bot/i.test(r.reason);
+
+  const visibleReports = useMemo(() => {
+    if (reportFilter === 'all') return reports;
+    if (reportFilter === 'spam') return reports.filter(isSpam);
+    return reports.filter((r) => r.status === reportFilter);
+  }, [reports, reportFilter]);
+
   return (
     <div className="min-h-screen bg-background px-4 py-6">
       <Helmet>
@@ -313,18 +321,52 @@ export default function AdminControlPanelPage() {
 
               <TabsContent value="reports">
                 <Card>
-                  <CardHeader><CardTitle className="text-sm">Spam & abuse reports</CardTitle></CardHeader>
+                  <CardHeader className="space-y-3">
+                    <CardTitle className="text-sm">Spam &amp; abuse reports</CardTitle>
+                    <div className="flex flex-wrap gap-2">
+                      {(['open', 'spam', 'reviewing', 'actioned', 'dismissed', 'all'] as const).map((key) => {
+                        const count =
+                          key === 'all'
+                            ? reports.length
+                            : key === 'spam'
+                              ? reports.filter(isSpam).length
+                              : reports.filter((r) => r.status === key).length;
+                        return (
+                          <Button
+                            key={key}
+                            size="sm"
+                            variant={reportFilter === key ? 'default' : 'outline'}
+                            onClick={() => setReportFilter(key)}
+                          >
+                            {key} ({count})
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  </CardHeader>
                   <CardContent className="space-y-3">
-                    {reports.map((report) => (
+                    {visibleReports.map((report) => (
                       <div key={report.id} className="rounded-lg border border-border/60 p-3 text-xs">
                         <div className="flex flex-wrap items-center gap-2">
                           <Badge className={statusTone[report.status] ?? ''}>{report.status}</Badge>
                           <span className="font-medium">{report.target_type}</span>
                           <span className="font-mono text-muted-foreground">{report.target_id.slice(0, 8)}</span>
+                          {isSpam(report) && <Badge className="bg-orange-500/15 text-orange-400">spam</Badge>}
+                          {report.target_type === 'post' && (
+                            <Link
+                              to={`/?post=${report.target_id}`}
+                              className="text-primary underline-offset-2 hover:underline"
+                            >
+                              view
+                            </Link>
+                          )}
                           <span className="ml-auto text-muted-foreground">{new Date(report.created_at).toLocaleString()}</span>
                         </div>
                         <p className="mt-2">{report.reason}</p>
                         {report.notes && <p className="mt-1 text-muted-foreground">{report.notes}</p>}
+                        <p className="mt-1 text-[11px] text-muted-foreground">
+                          reported by <span className="font-mono">{report.reporter_id.slice(0, 8)}</span>
+                        </p>
                         <div className="mt-2 flex gap-2">
                           {(['reviewing', 'actioned', 'dismissed'] as const).map((next) => (
                             <Button
@@ -340,8 +382,10 @@ export default function AdminControlPanelPage() {
                         </div>
                       </div>
                     ))}
-                    {!reports.length && !loading && (
-                      <p className="p-2 text-xs text-muted-foreground">No reports filed. Nothing to moderate.</p>
+                    {!visibleReports.length && !loading && (
+                      <p className="p-2 text-xs text-muted-foreground">
+                        {reports.length ? 'No reports match this filter.' : 'No reports filed. Nothing to moderate.'}
+                      </p>
                     )}
                   </CardContent>
                 </Card>
