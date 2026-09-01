@@ -485,10 +485,13 @@ export async function sovereignFetch(url: string, init?: RequestInit): Promise<R
   if (gr) return gr;
   const g = await callGoogle(payload);
   if (g) return g;
+  const co = await callCohere(payload);
+  if (co) return co;
   const or = await callOpenRouter(payload);
   if (or) return or;
 
   return json({ error: { message: 'All sovereign providers failed', code: 'SERVICE_UNAVAILABLE' } }, 503);
+
 }
 
 export default sovereignFetch;
