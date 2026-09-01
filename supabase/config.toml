@@ -352,3 +352,5 @@ verify_jwt = true
 [functions.dhf-compass-rerun]
 verify_jwt = true
 
+[functions.sentinel-guard]
+verify_jwt = false

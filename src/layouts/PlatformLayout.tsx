@@ -10,6 +10,7 @@ import { useVoiceEngine } from '@/hooks/useVoiceEngine';
 import { usePlatformStore } from '@/store/usePlatformStore';
 import { AppErrorBoundary } from '@/components/core/ErrorBoundary';
 import GlobalBugReporter from '@/components/core/GlobalBugReporter';
+import SentinelWatchHost from '@/components/security/SentinelWatchHost';
 import GrowthCardAlertHost from '@/components/growth/GrowthCardAlertHost';
 import GlobalHomeDock from '@/components/home/GlobalHomeDock';
 import NotificationAlertHost from '@/components/notifications/NotificationAlertHost';
@@ -78,6 +79,8 @@ export const PlatformLayout = ({ children }: { children: React.ReactNode }) => (
     {/* Enterprise bug reporter — every route, crash-isolated. */}
     <AppErrorBoundary moduleName="platform:bug-reporter" severity="low" fallback={null}>
       <GlobalBugReporter />
+      {/* Silent presence + tamper watch; renders nothing unless the visitor is blocked. */}
+      <SentinelWatchHost />
     </AppErrorBoundary>
 
     {/* Same bottom-right home dock on every route (HomePage owns its own). */}
