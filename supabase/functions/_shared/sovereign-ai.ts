@@ -7,9 +7,9 @@
  * project's OWN provider keys. No Lovable credits are ever consumed.
  *
  * Routing:
- *   text            → Groq → Google AI Studio → OpenRouter
- *   tools/functions → Groq → OpenRouter        (OpenAI-compatible tool calling)
- *   vision (images in messages) → Google AI Studio (gemini) → OpenRouter
+ *   text            → Groq → Google AI Studio → Cohere → NVIDIA NIM → OpenRouter
+ *   tools/functions → Groq → NVIDIA NIM → OpenRouter  (OpenAI-compatible tools)
+ *   vision (images in messages) → Google AI Studio (gemini) → NVIDIA NIM VLM
  *   image generation/edit       → Pollinations → Google AI Studio image model
  *   streaming       → Groq SSE passthrough (OpenAI-compatible)
  *
@@ -18,11 +18,20 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  */
 
+import {
+  NVIDIA_BASE,
+  NVIDIA_ROLES,
+  isRetiredNvidiaModel,
+  markNvidiaModelRetired,
+  nvidiaKey,
+} from './nvidia-provider.ts';
+
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const GOOGLE_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
-export const SOVEREIGN_PROVIDERS = ['groq', 'google-ai-studio', 'cohere', 'openrouter', 'pollinations'] as const;
+export const SOVEREIGN_PROVIDERS = ['groq', 'google-ai-studio', 'cohere', 'nvidia', 'openrouter', 'pollinations'] as const;
+
 
 /** Truthy when at least one sovereign provider key is configured. */
 export function sovereignKey(): string | undefined {
