@@ -125,16 +125,27 @@ export const DHFCompassCard: React.FC<Props> = ({ post, className, onImpression,
               {post.full_story_content}
             </p>
           )}
-          <button
-            type="button"
-            aria-expanded={expanded}
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={(e) => { e.stopPropagation(); e.preventDefault(); setExpanded((v) => !v); }}
-            className="mt-3 inline-flex items-center gap-1 rounded-full bg-transparent px-1 py-1 text-xs font-medium text-primary transition hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            {expanded ? 'Show less' : 'Read the full story'}
-            {expanded ? <ChevronUp className="h-3.5 w-3.5" aria-hidden="true" /> : <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />}
-          </button>
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              aria-expanded={expanded}
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => { e.stopPropagation(); e.preventDefault(); setExpanded((v) => !v); }}
+              className="inline-flex items-center gap-1 rounded-full bg-transparent px-1 py-1 text-xs font-medium text-primary transition hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {expanded ? 'Show less' : 'Read the full story'}
+              {expanded ? <ChevronUp className="h-3.5 w-3.5" aria-hidden="true" /> : <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />}
+            </button>
+            <Link
+              to={`/dhf/essay/${post.id}`}
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1 rounded-full px-1 py-1 text-xs font-medium text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              Open essay
+              <BookOpen className="h-3.5 w-3.5" aria-hidden="true" />
+            </Link>
+          </div>
         </>
       )}
 
