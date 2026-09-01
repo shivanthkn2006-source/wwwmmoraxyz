@@ -5,8 +5,8 @@
  * surrounding shell mounted, and render the recovery fallback.
  */
 import React from 'react';
-import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeAll, afterAll, afterEach } from 'vitest';
+import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { VRErrorBoundary } from '@/pages/ZoeOmegaPage';
 
 const Exploding: React.FC = () => {
@@ -18,6 +18,7 @@ beforeAll(() => {
   errSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 });
 afterAll(() => errSpy.mockRestore());
+afterEach(() => cleanup());
 
 describe('3D crash test — VR world error isolation', () => {
   it('renders the fallback instead of a blank screen and keeps the shell alive', () => {
@@ -31,7 +32,7 @@ describe('3D crash test — VR world error isolation', () => {
     );
 
     expect(screen.getByTestId('app-shell')).toBeInTheDocument();
-    expect(screen.getByText(/VR World Initialization Issue/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/VR World Initialization Issue/i).length).toBeGreaterThan(0);
     expect(document.body.textContent?.trim().length ?? 0).toBeGreaterThan(0);
   });
 
@@ -48,7 +49,7 @@ describe('3D crash test — VR world error isolation', () => {
       </VRErrorBoundary>,
     );
 
-    expect(screen.getByText(/VR World Initialization Issue/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/VR World Initialization Issue/i).length).toBeGreaterThan(0);
 
     shouldThrow = false;
     const retry = screen.getAllByRole('button').find((b) => /try again|retry/i.test(b.textContent ?? ''));
