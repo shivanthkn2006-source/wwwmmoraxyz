@@ -5,6 +5,7 @@
 // through SafeCanvasWrapper (viewport + capability + thermal gated).
 // ═══════════════════════════════════════════════════════════════════════════════
 
+import { WebGLBoundary } from '@/components/3d/WebGLBoundary';
 import React, { Suspense, useMemo } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { useGLTF, Environment, Lightformer } from '@react-three/drei';
