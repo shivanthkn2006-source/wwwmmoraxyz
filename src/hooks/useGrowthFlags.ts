@@ -4,7 +4,7 @@
  * evaluator. Any failure falls back to the built-in defaults — the engine keeps
  * working even when the flag table is unreachable.
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { evaluateFlag, GROWTH_FLAGS, type GrowthFlag } from '@/lib/growthFlags';
