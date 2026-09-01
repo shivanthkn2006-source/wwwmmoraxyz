@@ -30,6 +30,7 @@ import {
   slotOrder, sanitizeStyles, FOCUS_AREAS, deviceTimeZone,
   type GrowthSlot, type ReflectionStyle,
 } from '@/lib/growthSlot';
+import { invokeGrowthDispatch } from '@/lib/growthDispatch';
 
 interface ArchiveItem {
   id: string;
@@ -175,7 +176,7 @@ export default function GrowthInsightsPage() {
       );
       if (error) throw error;
       // Best-effort first card — the scheduled worker also fills any gap.
-      await supabase.functions.invoke('growth-dispatch', { body: { action: 'regenerate' } });
+      await invokeGrowthDispatch({ action: 'regenerate' });
       toast.success('Daily insights are on — generating your first card');
       await load();
     } catch {

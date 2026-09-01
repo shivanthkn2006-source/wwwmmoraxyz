@@ -27,6 +27,7 @@ import {
   FOCUS_AREAS, REFLECTION_STYLE_OPTIONS, ALL_REFLECTION_STYLES, deviceTimeZone,
   slotsForFrequency, SLOT_LABEL, sanitizeStyles, type ReflectionStyle,
 } from '@/lib/growthSlot';
+import { invokeGrowthDispatch } from '@/lib/growthDispatch';
 
 const DIGEST_MODES = ['instant', 'daily', 'off'] as const;
 type DigestMode = (typeof DIGEST_MODES)[number];
@@ -129,7 +130,7 @@ export const GrowthEngineSettings: React.FC<GrowthEngineSettingsProps> = ({ onSa
     toast.success(paused ? 'Insights paused' : 'Preferences saved');
     void refreshStatus();
     if (!paused) {
-      void supabase.functions.invoke('growth-dispatch', { body: { action: 'catchup-me' } })
+      void invokeGrowthDispatch({ action: 'catchup-me' })
         .finally(() => onSaved?.());
     } else {
       onSaved?.();

@@ -19,6 +19,7 @@ import {
   currentSlot, deviceTimeZone, localDateIn, slotsForFrequency, slotOrder,
   sanitizeStyles, type GrowthSlot, type ReflectionStyle,
 } from '@/lib/growthSlot';
+import { invokeGrowthDispatch } from '@/lib/growthDispatch';
 
 export interface GrowthInsight {
   id: string;
@@ -222,7 +223,7 @@ export function useGrowthFeed() {
       if (sessionStorage.getItem(key)) return;
       sessionStorage.setItem(key, 'pending');
     } catch { /* session storage unavailable; server idempotency still protects us */ }
-    void supabase.functions.invoke('growth-dispatch', { body: { action: 'catchup-me' } })
+    void invokeGrowthDispatch({ action: 'catchup-me' })
       .then(({ data, error }) => {
         if (error || !(data as { ok?: boolean } | null)?.ok) {
           try { sessionStorage.removeItem(key); } catch { /* retry next mount */ }

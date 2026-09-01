@@ -24,6 +24,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { useGrowthStatus, type ScheduleEntry } from '@/hooks/useGrowthStatus';
+import { invokeGrowthDispatch } from '@/lib/growthDispatch';
 
 const MAX_AUTO_RETRIES = 3;
 const BASE_RETRY_MS = 2 * 60_000;
@@ -89,9 +90,7 @@ export function useGrowthDelivery(enabled = true) {
       }
       setRunning(true);
       try {
-        const { data, error: fnError } = await supabase.functions.invoke('growth-dispatch', {
-          body: { action: 'catchup-me', reason },
-        });
+        const { data, error: fnError } = await invokeGrowthDispatch({ action: 'catchup-me', reason });
         if (fnError) throw fnError;
         const written = Number(data?.summary?.written ?? 0);
         const skipped = String(data?.skipped ?? '');

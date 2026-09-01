@@ -23,6 +23,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { logGrowthAudit } from '@/lib/growthAudit';
+import { invokeGrowthDispatch } from '@/lib/growthDispatch';
 
 const SLOTS = ['morning', 'midday', 'afternoon', 'evening', 'night'] as const;
 type Slot = (typeof SLOTS)[number];
@@ -132,9 +133,7 @@ export default function GrowthBackfillPanel() {
     setRunning(true);
     setResult(null);
     try {
-      const { data, error } = await supabase.functions.invoke('growth-dispatch', {
-        body: { action: 'backfill', fromDate, toDate, slots, maxItems, throttleMs, dryRun },
-      });
+      const { data, error } = await invokeGrowthDispatch({ action: 'backfill', fromDate, toDate, slots, maxItems, throttleMs, dryRun });
       if (error) throw error;
       if (!data?.ok) throw new Error(data?.error ?? 'Backfill rejected');
       const s = data.summary ?? {};
