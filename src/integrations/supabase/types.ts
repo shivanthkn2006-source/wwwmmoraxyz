@@ -10974,6 +10974,7 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: Json
       }
+      prune_platform_telemetry: { Args: never; Returns: Json }
       refresh_leaderboard_stats: { Args: never; Returns: undefined }
       resolve_astro_place: {
         Args: { p_place: string }

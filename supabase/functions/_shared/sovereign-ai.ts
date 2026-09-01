@@ -7,9 +7,9 @@
  * project's OWN provider keys. No Lovable credits are ever consumed.
  *
  * Routing:
- *   text            → Groq → Google AI Studio → OpenRouter
- *   tools/functions → Groq → OpenRouter        (OpenAI-compatible tool calling)
- *   vision (images in messages) → Google AI Studio (gemini) → OpenRouter
+ *   text            → Groq → Google AI Studio → Cohere → NVIDIA NIM → OpenRouter
+ *   tools/functions → Groq → NVIDIA NIM → OpenRouter  (OpenAI-compatible tools)
+ *   vision (images in messages) → Google AI Studio (gemini) → NVIDIA NIM VLM
  *   image generation/edit       → Pollinations → Google AI Studio image model
  *   streaming       → Groq SSE passthrough (OpenAI-compatible)
  *
@@ -18,11 +18,20 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  */
 
+import {
+  NVIDIA_BASE,
+  NVIDIA_ROLES,
+  isRetiredNvidiaModel,
+  markNvidiaModelRetired,
+  nvidiaKey,
+} from './nvidia-provider.ts';
+
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const GOOGLE_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
-export const SOVEREIGN_PROVIDERS = ['groq', 'google-ai-studio', 'cohere', 'openrouter', 'pollinations'] as const;
+export const SOVEREIGN_PROVIDERS = ['groq', 'google-ai-studio', 'cohere', 'nvidia', 'openrouter', 'pollinations'] as const;
+
 
 /** Truthy when at least one sovereign provider key is configured. */
 export function sovereignKey(): string | undefined {
@@ -76,10 +85,13 @@ const OPENROUTER_TEXT = 'meta-llama/llama-3.3-70b-instruct';
  */
 const GOOGLE_FAST_CANDIDATES = [
   'gemini-3.6-flash',
+  // Live-probed 200 on this account via provider-health (Sep 2026).
+  'gemini-3.5-flash',
   'gemini-2.5-flash',
   'gemini-2.0-flash',
   'gemini-flash-latest',
 ];
+
 const GOOGLE_PRO_CANDIDATES = [
   'gemini-3.1-pro-preview',
   'gemini-2.5-pro',
@@ -312,10 +324,70 @@ async function callGoogle(payload: any): Promise<Response | null> {
 
 
 /**
+ * NVIDIA NIM (build.nvidia.com) — OpenAI-compatible, and the only other
+ * provider on this account with real multimodal models. It therefore serves
+ * two roles here:
+ *   - text fallback after Groq/Google/Cohere,
+ *   - **vision** fallback after Google, which text-only providers can never be.
+ *
+ * Each role walks a chain of model ids, so a retired or rate-limited NIM never
+ * takes the feature down.
+ */
+async function callNvidia(payload: any, kind: 'text' | 'vision'): Promise<Response | null> {
+  const key = nvidiaKey();
+  if (!key) return null;
+
+  const models = (kind === 'vision'
+    ? NVIDIA_ROLES.vision
+    : isProTier(payload.model)
+      ? NVIDIA_ROLES.deep_thinking
+      : NVIDIA_ROLES.chat
+  ).filter((m) => !isRetiredNvidiaModel(m));
+
+  // Vision models need the multimodal content array intact; text models get the
+  // flattened form so a stray image part cannot become "no image provided".
+  const messages = kind === 'vision' ? (payload.messages || []) : flattenMessages(payload.messages || []);
+  if (!messages.length) return null;
+
+  for (const model of models) {
+    try {
+      const body: any = { model, messages };
+      if (payload.temperature !== undefined) body.temperature = payload.temperature;
+      body.max_tokens = payload.max_tokens ?? 2048;
+      if (payload.response_format) body.response_format = payload.response_format;
+      if (kind === 'text' && payload.tools) body.tools = payload.tools;
+      if (kind === 'text' && payload.tool_choice) body.tool_choice = payload.tool_choice;
+
+      const resp = await fetch(`${NVIDIA_BASE}/chat/completions`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!resp.ok) {
+        if (resp.status === 410 || resp.status === 404) markNvidiaModelRetired(model);
+        console.warn('[sovereign-ai] nvidia failed', resp.status, model, (await resp.text()).slice(0, 200));
+        continue;
+      }
+      // NIM is OpenAI-compatible, so the response already has the shape callers
+      // expect — but only forward it when it actually carries content.
+      const data = await resp.json();
+      const content = data?.choices?.[0]?.message?.content;
+      if (typeof content !== 'string' || !content.trim()) continue;
+      return json(chatShape(content, `nvidia/${model}`, undefined, data?.usage));
+    } catch (e) {
+      console.warn('[sovereign-ai] nvidia threw', model, e);
+    }
+  }
+  return null;
+}
+
+/**
  * Cohere text fallback. Keeps the platform answering when Groq is down and the
  * Google free tier is quota-exhausted (the most common real-world outage).
  */
 async function callCohere(payload: any): Promise<Response | null> {
+
+
   const key = Deno.env.get('COHERE_API_KEY');
   if (!key) return null;
   try {
@@ -505,23 +577,32 @@ export async function sovereignFetch(url: string, init?: RequestInit): Promise<R
 
   const messages: AnyMsg[] = payload.messages || [];
 
-  // Vision requests: Google only. Text-only providers must NEVER be used as a
-  // fallback here — they silently drop the image and answer "no image was
-  // provided", which callers then read as a real verdict.
+  // Vision requests: real multimodal providers only. Text-only providers must
+  // NEVER be used as a fallback here — they silently drop the image and answer
+  // "no image was provided", which callers then read as a real verdict.
+  // NVIDIA NIM VLMs are genuinely multimodal, so they are a safe second tier
+  // and are what keeps vision alive through a Google free-tier 429.
   if (hasImageInput(messages)) {
     const g = await callGoogle(payload);
     if (g) return g;
+    const nv = await callNvidia(payload, 'vision');
+    if (nv) return nv;
     return json(
       { error: { message: 'No sovereign vision provider available', code: 'VISION_UNAVAILABLE' } },
       503,
     );
   }
 
-
   // Tool calling / streaming: OpenAI-compatible providers only.
   if (payload.tools || payload.stream) {
     const gr = await callGroq(payload);
     if (gr) return gr;
+    // Streaming needs a raw SSE passthrough; NIM is only used for the
+    // non-streaming tool path where a normalised body is acceptable.
+    if (!payload.stream) {
+      const nv = await callNvidia(payload, 'text');
+      if (nv) return nv;
+    }
     const or = await callOpenRouter(payload);
     if (or) return or;
     return json({ error: { message: 'No sovereign tool-capable provider available', code: 'SERVICE_UNAVAILABLE' } }, 503);
@@ -534,10 +615,13 @@ export async function sovereignFetch(url: string, init?: RequestInit): Promise<R
   if (g) return g;
   const co = await callCohere(payload);
   if (co) return co;
+  const nv = await callNvidia(payload, 'text');
+  if (nv) return nv;
   const or = await callOpenRouter(payload);
   if (or) return or;
 
   return json({ error: { message: 'All sovereign providers failed', code: 'SERVICE_UNAVAILABLE' } }, 503);
+
 
 }
 
