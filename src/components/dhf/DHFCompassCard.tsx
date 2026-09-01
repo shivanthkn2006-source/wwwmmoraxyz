@@ -13,7 +13,9 @@ import { slotLabel, type DhfDailyPost } from '@/lib/dhfCompass';
 import { COMPASS_SLOTS, normalizeSlotTime } from '@/lib/dhfCompass';
 import ZoeCardNarrationControls from '@/components/voice/ZoeCardNarrationControls';
 import ReportContentDialog from '@/components/moderation/ReportContentDialog';
+import DhfVideoLinks from '@/components/dhf/DhfVideoLinks';
 import { Button } from '@/components/ui/button';
+
 
 interface Props {
   post: DhfDailyPost;
