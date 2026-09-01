@@ -69,7 +69,7 @@ const checkWebGLSupport = (): { supported: boolean; version: number } => {
   }
 };
 
-class VRErrorBoundary extends Component<VRErrorBoundaryProps, VRErrorBoundaryState> {
+export class VRErrorBoundary extends Component<VRErrorBoundaryProps, VRErrorBoundaryState> {
   constructor(props: VRErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false, error: null, retryCount: 0 };
