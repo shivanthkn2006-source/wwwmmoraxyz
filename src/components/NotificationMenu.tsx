@@ -26,7 +26,10 @@ interface Notification {
     location_match?: boolean;
     activity_suggestion?: string;
     conversation_starter?: string;
+    /** In-app destination for notifications that are not tied to a post row (e.g. DHF essays). */
+    route?: string;
   };
+
   from_user?: {
     display_name: string;
     profile_photo_url?: string;
