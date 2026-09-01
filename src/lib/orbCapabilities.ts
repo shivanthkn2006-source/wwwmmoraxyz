@@ -104,11 +104,15 @@ export const detectOrbCapability = (
 
   if (!text) return null;
   if (matches(text, PROVIDER_PATTERNS)) return 'provider_status';
+  if (matches(text, PREMIUM_PATTERNS)) return 'premium_detect';
+  if (matches(text, BRAND_PATTERNS)) return 'brand_learning';
+  if (matches(text, INDEX_PATTERNS)) return 'index_ingest';
   if (matches(text, RELEVANCE_PATTERNS)) return 'relevance_rank';
   if (matches(text, SONG_PATTERNS)) return 'song_id';
   if (matches(text, DOC_PATTERNS)) return 'document_xray';
   return null;
 };
+
 
 const failure = (capability: OrbCapability, text: string): OrbCapabilityResult => ({
   ok: false,
