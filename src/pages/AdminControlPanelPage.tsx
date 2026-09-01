@@ -50,8 +50,11 @@ interface ReportRow {
   reason: string;
   notes: string | null;
   status: string;
+  /** Real moderator-set flag, persisted on the row (not a text guess). */
+  is_spam: boolean;
   created_at: string;
 }
+
 
 const statusTone: Record<string, string> = {
   open: 'bg-red-500/15 text-red-400',
@@ -106,7 +109,7 @@ export default function AdminControlPanelPage() {
           .limit(200),
         supabase
           .from('content_reports')
-          .select('id, reporter_id, target_type, target_id, reason, notes, status, created_at')
+          .select('id, reporter_id, target_type, target_id, reason, notes, status, is_spam, created_at')
           .order('created_at', { ascending: false })
           .limit(200),
       ]);
@@ -156,7 +159,7 @@ export default function AdminControlPanelPage() {
     setBusy(id);
     const { error } = await supabase
       .from('content_reports')
-      .update({ status, reviewed_at: new Date().toISOString() })
+      .update({ status, reviewed_at: new Date().toISOString(), reviewed_by: adminId })
       .eq('id', id);
     setBusy(null);
     if (error) {
@@ -165,6 +168,38 @@ export default function AdminControlPanelPage() {
     }
     setReports((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
     toast.success(`Report marked ${status}.`);
+  };
+
+  /**
+   * The spam flag is a real persisted column, not a guess from the reason text.
+   * Flagging also moves an untouched report into review so the queue reflects
+   * that a human has looked at it.
+   */
+  const toggleSpam = async (report: ReportRow) => {
+    const next = !report.is_spam;
+    setBusy(report.id);
+    const { error } = await supabase
+      .from('content_reports')
+      .update({
+        is_spam: next,
+        reviewed_by: adminId,
+        reviewed_at: new Date().toISOString(),
+        ...(next && report.status === 'open' ? { status: 'reviewing' } : {}),
+      })
+      .eq('id', report.id);
+    setBusy(null);
+    if (error) {
+      toast.error(`Spam flag failed: ${error.message}`);
+      return;
+    }
+    setReports((prev) =>
+      prev.map((r) =>
+        r.id === report.id
+          ? { ...r, is_spam: next, status: next && r.status === 'open' ? 'reviewing' : r.status }
+          : r,
+      ),
+    );
+    toast.success(next ? 'Flagged as spam.' : 'Spam flag removed.');
   };
 
   const stats = useMemo(
@@ -180,13 +215,15 @@ export default function AdminControlPanelPage() {
     [activity, runs, reports],
   );
 
-  const isSpam = (r: ReportRow) => /spam|scam|bot/i.test(r.reason);
+  /** Flagged rows first; unflagged rows whose reason reads like spam are only a hint. */
+  const isSpam = (r: ReportRow) => r.is_spam || /spam|scam|bot/i.test(r.reason);
 
   const visibleReports = useMemo(() => {
     if (reportFilter === 'all') return reports;
     if (reportFilter === 'spam') return reports.filter(isSpam);
     return reports.filter((r) => r.status === reportFilter);
   }, [reports, reportFilter]);
+
 
   return (
     <div className="min-h-screen bg-background px-4 py-6">
@@ -351,7 +388,13 @@ export default function AdminControlPanelPage() {
                           <Badge className={statusTone[report.status] ?? ''}>{report.status}</Badge>
                           <span className="font-medium">{report.target_type}</span>
                           <span className="font-mono text-muted-foreground">{report.target_id.slice(0, 8)}</span>
-                          {isSpam(report) && <Badge className="bg-orange-500/15 text-orange-400">spam</Badge>}
+                          {report.is_spam ? (
+                            <Badge className="bg-orange-500/15 text-orange-400">spam</Badge>
+                          ) : (
+                            /spam|scam|bot/i.test(report.reason) && (
+                              <Badge className="bg-muted text-muted-foreground">looks like spam</Badge>
+                            )
+                          )}
                           {report.target_type === 'post' && (
                             <Link
                               to={`/?post=${report.target_id}`}
@@ -379,6 +422,14 @@ export default function AdminControlPanelPage() {
                               {next}
                             </Button>
                           ))}
+                          <Button
+                            size="sm"
+                            variant={report.is_spam ? 'default' : 'outline'}
+                            disabled={busy === report.id}
+                            onClick={() => void toggleSpam(report)}
+                          >
+                            {report.is_spam ? 'unflag spam' : 'flag spam'}
+                          </Button>
                         </div>
                       </div>
                     ))}
