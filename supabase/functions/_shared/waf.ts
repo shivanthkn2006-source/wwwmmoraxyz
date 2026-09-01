@@ -104,29 +104,17 @@ export async function consumeRateLimit(
   const now = Date.now();
   const windowStart = new Date(Math.floor(now / (windowSeconds * 1000)) * windowSeconds * 1000).toISOString();
   try {
-    const { data, error } = await db
-      .from('edge_rate_limits')
-      .upsert(
-        { bucket, window_start: windowStart, hits: 1, updated_at: new Date(now).toISOString() },
-        { onConflict: 'bucket,window_start', ignoreDuplicates: true },
-      )
-      .select('hits')
-      .maybeSingle();
-
-    let hits = 1;
-    if (error || !data) {
-      // Row already existed — increment it atomically.
-      const { data: bumped } = await db.rpc('bump_edge_rate_limit', {
-        _bucket: bucket,
-        _window_start: windowStart,
-      });
-      hits = typeof bumped === 'number' ? bumped : limit; // unknown → treat as at-limit
-    }
-    return { allowed: hits <= limit, remaining: Math.max(0, limit - hits) };
+    const { data, error } = await db.rpc('bump_edge_rate_limit', {
+      _bucket: bucket,
+      _window_start: windowStart,
+    });
+    if (error || typeof data !== 'number') return { allowed: true, remaining: limit };
+    return { allowed: data <= limit, remaining: Math.max(0, limit - data) };
   } catch {
     return { allowed: true, remaining: limit };
   }
 }
+
 
 /** Run every guard. Returns `{ response }` when the caller must stop. */
 export async function guardRequest(req: Request, options: WafOptions): Promise<WafVerdict> {
