@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import EssaySchedulerPanel from '@/components/admin/EssaySchedulerPanel';
 
 interface ActivityRow {
   userId: string;
@@ -64,6 +65,7 @@ export default function AdminControlPanelPage() {
   const [runs, setRuns] = useState<RunRow[]>([]);
   const [reports, setReports] = useState<ReportRow[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
+  const [adminId, setAdminId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -84,6 +86,7 @@ export default function AdminControlPanelPage() {
         return;
       }
       setDenied(false);
+      setAdminId(auth.user.id);
 
       const [profilesRes, postsRes, runsRes, reportsRes] = await Promise.all([
         supabase
@@ -223,6 +226,7 @@ export default function AdminControlPanelPage() {
                 <TabsTrigger value="activity">User activity</TabsTrigger>
                 <TabsTrigger value="dhf">DHF logs</TabsTrigger>
                 <TabsTrigger value="reports">Moderation</TabsTrigger>
+                <TabsTrigger value="essays">Essays</TabsTrigger>
               </TabsList>
 
               <TabsContent value="activity">
@@ -284,6 +288,13 @@ export default function AdminControlPanelPage() {
                     </table>
                   </CardContent>
                 </Card>
+              </TabsContent>
+
+              <TabsContent value="essays">
+                <EssaySchedulerPanel
+                  adminId={adminId}
+                  members={activity.map((row) => ({ userId: row.userId, username: row.username }))}
+                />
               </TabsContent>
 
               <TabsContent value="reports">
