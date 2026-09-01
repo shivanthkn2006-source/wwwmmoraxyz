@@ -7,7 +7,8 @@
  * scroll or a reload costs nothing.
  */
 import React, { useEffect, useRef, useState } from 'react';
-import { Compass, ChevronDown, ChevronUp, ImageOff, Share2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { BookOpen, Compass, ChevronDown, ChevronUp, ImageOff, Share2 } from 'lucide-react';
 import { slotLabel, type DhfDailyPost } from '@/lib/dhfCompass';
 import { COMPASS_SLOTS, normalizeSlotTime } from '@/lib/dhfCompass';
 import ZoeCardNarrationControls from '@/components/voice/ZoeCardNarrationControls';
