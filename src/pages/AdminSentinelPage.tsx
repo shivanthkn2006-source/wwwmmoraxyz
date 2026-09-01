@@ -107,6 +107,8 @@ const AdminSentinelPage: React.FC = () => {
   const [blocks, setBlocks] = useState<BlockRow[]>([]);
   const [signups, setSignups] = useState<SignupRow[]>([]);
   const [releasing, setReleasing] = useState<string | null>(null);
+  const [probing, setProbing] = useState(false);
+
 
   useEffect(() => {
     let alive = true;
