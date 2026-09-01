@@ -68,6 +68,8 @@ export default function AdminControlPanelPage() {
   const [reports, setReports] = useState<ReportRow[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [adminId, setAdminId] = useState<string | null>(null);
+  const [reportFilter, setReportFilter] = useState<'all' | 'open' | 'spam' | 'reviewing' | 'actioned' | 'dismissed'>('open');
+
 
   const load = useCallback(async () => {
     setLoading(true);
