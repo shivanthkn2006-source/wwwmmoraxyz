@@ -70,6 +70,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate, onMediaCompleted })
   if (!post) return null;
   
   const [showComments, setShowComments] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const [liked, setLiked] = useState(post.user_liked || false);
   const [likesCount, setLikesCount] = useState(post.likes_count);
   const [commentsCount, setCommentsCount] = useState(post.comments_count);
