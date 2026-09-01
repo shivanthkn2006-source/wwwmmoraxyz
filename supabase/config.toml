@@ -67,7 +67,7 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.zoe-god-mode]
-verify_jwt = false
+verify_jwt = true
 
 [functions.track-activity]
 verify_jwt = true
@@ -100,7 +100,7 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.zoe-service-ai]
-verify_jwt = false
+verify_jwt = true
 
 [functions.zoe-core-intelligence]
 verify_jwt = true
@@ -226,7 +226,7 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.selfie-city-search]
-verify_jwt = false
+verify_jwt = true
 
 [functions.get-user-location]
 verify_jwt = false
@@ -262,19 +262,19 @@ verify_jwt = false
 verify_jwt = true
 
 [functions.zoe-infinity-chat]
-verify_jwt = false
+verify_jwt = true
 
 [functions.zoe-silent-scribe]
-verify_jwt = false
+verify_jwt = true
 
 [functions.zoe-infinity-brain]
-verify_jwt = false
+verify_jwt = true
 
 [functions.zoe-infinity-deep-research]
-verify_jwt = false
+verify_jwt = true
 
 [functions.zoe-artifact-generator]
-verify_jwt = false
+verify_jwt = true
 
 [functions.ironclad-relay]
 verify_jwt = false
@@ -286,10 +286,10 @@ verify_jwt = false
 verify_jwt = true
 
 [functions.zoe-document-xray]
-verify_jwt = false
+verify_jwt = true
 
 [functions.zoe-infinity-vision]
-verify_jwt = false
+verify_jwt = true
 
 [functions.zoe-voice]
 verify_jwt = false
@@ -310,19 +310,19 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.lisa-assistant]
-verify_jwt = false
+verify_jwt = true
 
 [functions.zoe-omega-chat]
 verify_jwt = false
 
 [functions.zoe-omega-vision]
-verify_jwt = false
+verify_jwt = true
 
 [functions.generate-regional-avatar]
-verify_jwt = false
+verify_jwt = true
 
 [functions.pollinations-image]
-verify_jwt = false
+verify_jwt = true
 
 [functions.zoe-infinity-quota-monitor]
 verify_jwt = false
