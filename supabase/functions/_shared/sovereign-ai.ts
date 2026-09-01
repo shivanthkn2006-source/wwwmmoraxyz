@@ -288,7 +288,9 @@ async function callGoogle(payload: any): Promise<Response | null> {
         deadGoogleModels.add(model);
         continue;
       }
+      if (resp.status === 429) googleQuotaBlockedUntil = Date.now() + GOOGLE_QUOTA_COOLDOWN_MS;
       return null; // 401/429/5xx: key or quota problem, another model won't help
+
     }
     const data = await resp.json();
     const text = data.candidates?.[0]?.content?.parts?.map((p: any) => p.text).filter(Boolean).join('') ?? '';
