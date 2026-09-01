@@ -15,7 +15,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, RefreshCw, Loader2, ShieldAlert, Globe, Cpu, Ban } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Loader2, ShieldAlert, Globe, Ban } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
@@ -32,8 +32,11 @@ interface SessionRow {
   region: string | null;
   city: string | null;
   browser: string | null;
+  browser_version?: string | null;
   os: string | null;
+  os_version?: string | null;
   device_type: string | null;
+  device_vendor?: string | null;
   device_model: string | null;
   device_fingerprint: string | null;
   hardware: Record<string, unknown> | null;
@@ -92,6 +95,9 @@ const when = (iso: string | null): string => {
 const place = (row: { country?: string | null; region?: string | null; city?: string | null }): string =>
   [row.city, row.region, row.country].filter(Boolean).join(', ') || 'Unknown location';
 
+const hardwareValue = (value: unknown, suffix = ''): string =>
+  value === null || value === undefined || value === '' ? 'Unavailable' : `${String(value)}${suffix}`;
+
 const AdminSentinelPage: React.FC = () => {
   const { user } = useAuth();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
@@ -123,7 +129,7 @@ const AdminSentinelPage: React.FC = () => {
       supabase
         .from('sentinel_sessions')
         .select(
-          'id,user_id,ip_address,country,region,city,browser,os,device_type,device_model,device_fingerprint,hardware,last_activity_at,started_at,is_active',
+          'id,user_id,ip_address,country,region,city,browser,browser_version,os,os_version,device_type,device_vendor,device_model,device_fingerprint,hardware,last_activity_at,started_at,is_active',
         )
         .gte('last_activity_at', cutoff)
         .order('last_activity_at', { ascending: false })
@@ -246,7 +252,7 @@ const AdminSentinelPage: React.FC = () => {
             const hw = (s.hardware ?? {}) as Record<string, unknown>;
             return (
               <Card key={s.id}>
-                <CardContent className="space-y-1 p-3 text-sm">
+                <CardContent className="space-y-3 p-3 text-sm">
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-medium">{s.user_id ? s.user_id.slice(0, 8) : 'Visitor'}</span>
                     <Badge variant="outline" className="text-[10px]">{when(s.last_activity_at)}</Badge>
@@ -254,14 +260,33 @@ const AdminSentinelPage: React.FC = () => {
                   <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
                     <Globe className="h-3 w-3" /> {place(s)} · {s.ip_address ?? 'no IP'}
                   </p>
-                  <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <Cpu className="h-3 w-3" /> {s.browser ?? '—'} · {s.os ?? '—'} · {s.device_type ?? '—'}
-                    {s.device_model ? ` · ${s.device_model}` : ''}
-                  </p>
-                  <p className="text-[11px] text-muted-foreground">
-                    {String(hw.cores ?? '?')} cores · {String(hw.memoryGb ?? '?')} GB · {String(hw.screen ?? '?')} ·
-                    fp {s.device_fingerprint?.slice(0, 10) ?? '—'}
-                  </p>
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-2 border-t border-border/60 pt-3 text-[11px] sm:grid-cols-3">
+                    <div><span className="block text-muted-foreground">Browser</span><span>{hardwareValue(s.browser)} {s.browser_version ?? ''}</span></div>
+                    <div><span className="block text-muted-foreground">Operating system</span><span>{hardwareValue(s.os)} {s.os_version ?? ''}</span></div>
+                    <div><span className="block text-muted-foreground">Device</span><span>{hardwareValue(s.device_type)}</span></div>
+                    <div><span className="block text-muted-foreground">CPU</span><span>{hardwareValue(hw.cores, ' cores')}</span></div>
+                    <div><span className="block text-muted-foreground">Memory</span><span>{hardwareValue(hw.memoryGb, ' GB')}</span></div>
+                    <div><span className="block text-muted-foreground">Screen</span><span>{hardwareValue(hw.screen)}</span></div>
+                    <div className="col-span-2 sm:col-span-3">
+                      <span className="block text-muted-foreground">GPU</span>
+                      <span className="break-words">{hardwareValue(s.device_model ?? hw.gpuModel)}{s.device_vendor ? ` · ${s.device_vendor}` : ''}</span>
+                    </div>
+                    <div><span className="block text-muted-foreground">Pixel ratio</span><span>{hardwareValue(hw.pixelRatio)}</span></div>
+                    <div><span className="block text-muted-foreground">Touch points</span><span>{hardwareValue(hw.touchPoints)}</span></div>
+                    <div><span className="block text-muted-foreground">Connection</span><span>{hardwareValue(hw.connection)}</span></div>
+                    <div><span className="block text-muted-foreground">Platform</span><span>{hardwareValue(hw.platform)}</span></div>
+                    <div><span className="block text-muted-foreground">Time zone</span><span>{hardwareValue(hw.timezone)}</span></div>
+                    <div><span className="block text-muted-foreground">Languages</span><span>{hardwareValue(hw.languages)}</span></div>
+                    <div><span className="block text-muted-foreground">App mode</span><span>{hw.standalone === true ? 'Installed' : 'Browser'}</span></div>
+                    <div className="col-span-2 sm:col-span-3">
+                      <span className="block text-muted-foreground">Device fingerprint</span>
+                      <span className="break-all font-mono">{hardwareValue(s.device_fingerprint)}</span>
+                    </div>
+                    <div className="col-span-2 sm:col-span-3">
+                      <span className="block text-muted-foreground">User agent</span>
+                      <span className="break-words">{hardwareValue(hw.userAgent)}</span>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             );

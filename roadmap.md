@@ -40,3 +40,12 @@
 - [x] Stage 2 /admin/dhf-generation dashboard + admin-only dhf-compass-rerun function + 2-4am timezone prewarm batching
 - [ ] Stage 2 remaining: COHERE_API_KEY secret not yet provided
 - [ ] Stage 3 GlobalRealtimeProvider, WebGL_ErrorBoundary, setInterval leak sweep
+
+## Hacker-gate hardening and moderation verification
+- [x] Expand Sentinel live cards so all collected hardware and browser details are visible with honest unavailable states.
+- [x] Add DHF feed reporting and exercise the moderation spam → reviewing → actioned workflow.
+- [ ] Add CAPTCHA to every sign-up surface (waiting for Cloudflare Turnstile credentials).
+- [x] Document Cloudflare WAF rate-limit rules.
+- [x] Generate controlled Sentinel threat/block events and verify persistence.
+- [x] Publish a current attack-surface report.
+- [ ] Validate final build/runtime health after CAPTCHA is configured.

@@ -8,10 +8,12 @@
  */
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { BookOpen, Compass, ChevronDown, ChevronUp, ImageOff, Share2 } from 'lucide-react';
+import { BookOpen, Compass, ChevronDown, ChevronUp, Flag, ImageOff, Share2 } from 'lucide-react';
 import { slotLabel, type DhfDailyPost } from '@/lib/dhfCompass';
 import { COMPASS_SLOTS, normalizeSlotTime } from '@/lib/dhfCompass';
 import ZoeCardNarrationControls from '@/components/voice/ZoeCardNarrationControls';
+import ReportContentDialog from '@/components/moderation/ReportContentDialog';
+import { Button } from '@/components/ui/button';
 
 interface Props {
   post: DhfDailyPost;
@@ -50,6 +52,7 @@ export const DHFCompassCard: React.FC<Props> = ({ post, className, onImpression,
   const ref = useRef<HTMLElement | null>(null);
   const reported = useRef(false);
   const [expanded, setExpanded] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
 
   useEffect(() => {
     if (!onImpression || reported.current) return;
@@ -111,6 +114,17 @@ export const DHFCompassCard: React.FC<Props> = ({ post, className, onImpression,
               <Share2 className="h-5 w-5" aria-hidden="true" />
             </button>
           )}
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            aria-label="Report this compass card"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); e.preventDefault(); setReportOpen(true); }}
+            className="pointer-events-auto h-10 w-10 rounded-full text-muted-foreground"
+          >
+            <Flag className="h-5 w-5" aria-hidden="true" />
+          </Button>
         </div>
       </header>
 
@@ -158,6 +172,12 @@ export const DHFCompassCard: React.FC<Props> = ({ post, className, onImpression,
           <span className="text-[11px] text-muted-foreground" data-dhf-referral>{post.referral_cta}</span>
         )}
       </div>
+      <ReportContentDialog
+        open={reportOpen}
+        onOpenChange={setReportOpen}
+        targetType="dhf_compass"
+        targetId={post.id}
+      />
     </article>
   );
 };
