@@ -1684,6 +1684,53 @@ export type Database = {
         }
         Relationships: []
       }
+      dhf_essay_schedules: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          delivered_at: string | null
+          id: string
+          note: string | null
+          post_id: string
+          scheduled_for: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          delivered_at?: string | null
+          id?: string
+          note?: string | null
+          post_id: string
+          scheduled_for: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          delivered_at?: string | null
+          id?: string
+          note?: string | null
+          post_id?: string
+          scheduled_for?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dhf_essay_schedules_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "dhf_daily_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dhf_generation_runs: {
         Row: {
           action: string
@@ -10886,6 +10933,7 @@ export type Database = {
         Args: { p_player_id: string; p_points: number; p_reason?: string }
         Returns: undefined
       }
+      deliver_due_dhf_essays: { Args: never; Returns: number }
       detect_behavioral_anomaly: { Args: { p_user_id: string }; Returns: Json }
       detect_relationship_style: { Args: { p_user_id: string }; Returns: Json }
       enqueue_zoe_search_entity: {
