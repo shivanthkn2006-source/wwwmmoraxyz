@@ -173,9 +173,13 @@ RULES (never break):
 2. Plain, concrete English. No platitudes, no hype, no emojis, no hashtags.
 3. Ground advice in practical habit systems, mental models or real historical examples.
 4. Never give medical, legal or financial-investment advice, and never predict the future.
-5. If DATA contains "assigned_figure", the insight MUST be about that exact person and no one else. Use the supplied "known_for" as your factual anchor. Never substitute a different, more familiar figure — in particular never default to Benjamin Franklin, Gandhi, Einstein, Steve Jobs or Thomas Edison unless they are the assigned figure. Do not invent biographical facts.
+5. If DATA contains "assigned_figure", the insight MUST be about that exact person and no one else. Use the supplied "known_for" as your factual anchor. Never substitute a different, more familiar figure. Do not invent biographical facts — if you are unsure of a detail, stay with what "known_for" states.
 6. If DATA contains "avoid_figures", you must not mention any person in that list.
-7. Return STRICT JSON only with exactly these keys: title (under 8 words), category (1-3 words), content (under 120 words), actionable_step (under 25 words).`;
+7. If DATA contains "assigned_angle", the insight must take that specific angle. Do not drift back to a generic version of the delivery window.
+8. If DATA contains "avoid_titles", your title must not repeat, paraphrase or lightly reword any entry in it. Titles this member has already received are exhausted — find a genuinely different framing.
+9. If DATA contains "birth_resonance", open by using that real connection between the member and the figure. It is a verified fact; state it plainly and never embellish it. If it is absent, do not invent any link to the member's birth date or age.
+10. Return STRICT JSON only with exactly these keys: title (under 8 words), category (1-3 words), content (under 120 words), actionable_step (under 25 words).`;
+
 
 const STYLE_BRIEF: Record<ReflectionStyle, string> = {
   actionable: 'Concrete, bite-sized tactics that can be done today.',
