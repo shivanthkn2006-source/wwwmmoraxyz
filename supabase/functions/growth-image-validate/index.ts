@@ -1,3 +1,4 @@
+import { sovereignFetch, sovereignKey } from '../_shared/sovereign-ai.ts';
 /**
  * Growth card content-to-image validation.
  *
@@ -28,8 +29,10 @@ Deno.serve(async (req) => {
       return json({ error: 'imageUrl is required' }, 400);
     }
 
-    const apiKey = Deno.env.get('LOVABLE_API_KEY');
-    if (!apiKey) return json({ error: 'AI is not configured' }, 401);
+    if (!sovereignKey()) {
+      console.error('[growth-image-validate] no sovereign AI provider key configured');
+      return json({ error: 'AI is not configured. Ask an admin to add a provider key.' }, 503);
+    }
 
     const tolerance = mode === 'strict'
       ? 'Judge harshly: any doubt about likeness, era or subject relevance is a mismatch.'
@@ -61,11 +64,11 @@ Deno.serve(async (req) => {
 
 
 
-    const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const res = await sovereignFetch('sovereign://chat/completions', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'google/gemini-3.7-flash',
+        model: 'gemini-2.5-flash',
         messages: [
           {
             role: 'system',

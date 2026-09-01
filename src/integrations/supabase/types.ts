@@ -4576,6 +4576,36 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_error_logs: {
+        Row: {
+          created_at: string
+          device_info: Json
+          id: string
+          route: string | null
+          user_id: string | null
+          user_message: string | null
+          zustand_state_snapshot: Json
+        }
+        Insert: {
+          created_at?: string
+          device_info?: Json
+          id?: string
+          route?: string | null
+          user_id?: string | null
+          user_message?: string | null
+          zustand_state_snapshot?: Json
+        }
+        Update: {
+          created_at?: string
+          device_info?: Json
+          id?: string
+          route?: string | null
+          user_id?: string | null
+          user_message?: string | null
+          zustand_state_snapshot?: Json
+        }
+        Relationships: []
+      }
       platform_health_logs: {
         Row: {
           created_at: string
