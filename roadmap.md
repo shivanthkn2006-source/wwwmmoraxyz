@@ -44,8 +44,8 @@
 ## Hacker-gate hardening and moderation verification
 - [x] Expand Sentinel live cards so all collected hardware and browser details are visible with honest unavailable states.
 - [x] Add DHF feed reporting and exercise the moderation spam → reviewing → actioned workflow.
-- [ ] Add CAPTCHA to every sign-up surface (waiting for Cloudflare Turnstile credentials).
+- [x] Add server-verified Cloudflare Turnstile CAPTCHA to every email/password sign-up surface.
 - [x] Document Cloudflare WAF rate-limit rules.
 - [x] Generate controlled Sentinel threat/block events and verify persistence.
 - [x] Publish a current attack-surface report.
-- [ ] Validate final build/runtime health after CAPTCHA is configured.
+- [x] Validate CAPTCHA config and fail-closed verification endpoint; run frontend regression suite.

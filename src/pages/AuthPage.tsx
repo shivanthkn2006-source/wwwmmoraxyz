@@ -16,6 +16,7 @@ import { hasActivatedPermissions } from '@/utils/unifiedPermissionManager';
 import { useWebAuthn } from '@/hooks/useWebAuthn';
 import PageSeo from '@/components/seo/PageSeo';
 import { ROUTE_SEO } from '@/config/routeSeo';
+import TurnstileSignup, { verifyTurnstileToken } from '@/components/security/TurnstileSignup';
 
 
 // Validation schemas
@@ -52,6 +53,8 @@ const AuthPage = () => {
   const [loading, setLoading] = useState(false);
   const [showFaceLogin, setShowFaceLogin] = useState(false);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaReset, setCaptchaReset] = useState(0);
 
   // Safe session wrapper (some browsers can throw on sessionStorage)
   const safeSession = useCallback(
@@ -140,6 +143,17 @@ const AuthPage = () => {
             description: firstError.message,
             variant: "destructive",
           });
+          setLoading(false);
+          return;
+        }
+
+        if (!captchaToken || !(await verifyTurnstileToken(captchaToken))) {
+          toast({
+            title: 'Security check required',
+            description: 'Please complete the human verification and try again.',
+            variant: 'destructive',
+          });
+          setCaptchaReset((value) => value + 1);
           setLoading(false);
           return;
         }
@@ -371,6 +385,10 @@ const AuthPage = () => {
                   )}
                 </button>
               </div>
+
+              {isSignUp && (
+                <TurnstileSignup onTokenChange={setCaptchaToken} resetSignal={captchaReset} />
+              )}
 
               <Button
                 type="submit"

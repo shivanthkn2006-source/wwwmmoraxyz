@@ -55,6 +55,12 @@ const detectOs = (ua: string): { os: string; osVersion: string } => {
 };
 
 const readGpu = (): { gpuVendor: string | null; gpuModel: string | null } => {
+  // Browsers without WebGL (privacy mode, hardened enterprise policies and
+  // non-visual runtimes) may expose canvas.getContext while rejecting every
+  // graphics context. Avoid invoking that noisy unsupported path.
+  if (typeof window === 'undefined' || typeof window.WebGLRenderingContext === 'undefined') {
+    return { gpuVendor: null, gpuModel: null };
+  }
   try {
     const canvas = document.createElement('canvas');
     const gl = (canvas.getContext('webgl') ?? canvas.getContext('experimental-webgl')) as WebGLRenderingContext | null;
