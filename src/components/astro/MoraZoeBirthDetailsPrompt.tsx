@@ -7,6 +7,8 @@ interface Props {
   initial: BirthDetails | null;
   onSave: (details: BirthDetails) => Promise<{ ok: boolean; error?: string }>;
   onSkip: () => void;
+  /** When false the birth date is still missing and the prompt is mandatory. */
+  canSkip?: boolean;
 }
 
 /**
@@ -14,7 +16,7 @@ interface Props {
  * Saving stores it on their profile, which the existing sync trigger mirrors
  * into the alignment engine instantly. Nothing else on the platform changes.
  */
-export const MoraZoeBirthDetailsPrompt: React.FC<Props> = ({ initial, onSave, onSkip }) => {
+export const MoraZoeBirthDetailsPrompt: React.FC<Props> = ({ initial, onSave, onSkip, canSkip = true }) => {
   const [date, setDate] = useState(initial?.birth_date ?? '');
   const [time, setTime] = useState(initial?.birth_time ?? '');
   const [place, setPlace] = useState(initial?.birth_place ?? '');
@@ -38,14 +40,16 @@ export const MoraZoeBirthDetailsPrompt: React.FC<Props> = ({ initial, onSave, on
         onSubmit={submit}
         className="relative w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-lg"
       >
-        <button
-          type="button"
-          onClick={onSkip}
-          aria-label="Not now"
-          className="absolute right-4 top-4 rounded-full p-1.5 text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <X className="h-4 w-4" />
-        </button>
+        {canSkip && (
+          <button
+            type="button"
+            onClick={onSkip}
+            aria-label="Not now"
+            className="absolute right-4 top-4 rounded-full p-1.5 text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
 
         <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-border px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
           <CalendarClock className="h-3.5 w-3.5" />
@@ -153,13 +157,15 @@ export const MoraZoeBirthDetailsPrompt: React.FC<Props> = ({ initial, onSave, on
             {saving && <Loader2 className="h-4 w-4 animate-spin" />}
             {saving ? 'Saving…' : 'Save and continue'}
           </button>
-          <button
-            type="button"
-            onClick={onSkip}
-            className="rounded-full px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-          >
-            Not now
-          </button>
+          {canSkip && (
+            <button
+              type="button"
+              onClick={onSkip}
+              className="rounded-full px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Not now
+            </button>
+          )}
         </div>
       </form>
     </div>

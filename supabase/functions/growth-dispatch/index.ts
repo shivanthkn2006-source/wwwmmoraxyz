@@ -28,7 +28,9 @@ import {
   GROWTH_SLOTS, SLOT_LOCAL_TIME, slotsForFrequency, generateInsight,
   sanitizeFocusAreas, sanitizeStyles, styleForSlot, elapsedSlots, missingElapsedSlots,
   type GrowthSlot,
+  FIGURE_HISTORY_WINDOW,
 } from '../_shared/growth-content.ts';
+
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -190,6 +192,27 @@ async function deliveredSlots(userId: string, localDate: string): Promise<Set<st
   );
   return new Set(Array.isArray(r.data) ? r.data.map((x: { slot: string }) => x.slot) : []);
 }
+
+/**
+ * The historical figures this member has seen most recently. Bounded by
+ * FIGURE_HISTORY_WINDOW, which is deliberately smaller than the roster so the
+ * candidate pool can never empty out.
+ */
+async function recentFigureNames(userId: string): Promise<string[]> {
+  try {
+    const r = await db(
+      `growth_used_figures?user_id=eq.${userId}&select=figure_name` +
+      `&order=created_at.desc&limit=${FIGURE_HISTORY_WINDOW}`,
+    );
+    return Array.isArray(r.data)
+      ? r.data.map((x: { figure_name: string }) => x.figure_name).filter(Boolean)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+
 
 /** Auth email for a user id. Best-effort; empty string when unavailable. */
 async function authEmail(userId: string): Promise<string> {
@@ -423,6 +446,10 @@ async function runBatch(opts: {
     const missing = missingElapsedSlots(hour * 60 + minute, enabled, delivered);
     if (missing.length === 0) { summary.skipped++; continue; }
 
+    // Names this member has already been shown. Without this the model
+    // converged on the same few famous people for every user, every day.
+    const recentFigures = await recentFigureNames(pref.user_id);
+
     for (const slot of missing) {
       if (summary.processed >= cap) break;
       const isCatchup = dueSlot(now, tz, enabled) !== slot;
@@ -440,6 +467,7 @@ async function runBatch(opts: {
         ),
         localDate,
         seed: `${pref.user_id}_${localDate}_${slot}`,
+        avoidFigures: recentFigures,
       });
 
       if (result.circuitBreak) {
@@ -486,6 +514,22 @@ async function runBatch(opts: {
       if (ins.ok) {
         summary.written++;
         delivered.add(slot);
+        if (result.figure) {
+          // Ledger write is best-effort: the card is already published, and the
+          // unique key makes a retry a no-op rather than a duplicate.
+          recentFigures.push(result.figure.name);
+          await db('growth_used_figures', {
+            method: 'POST',
+            headers: { Prefer: 'return=minimal,resolution=ignore-duplicates' },
+            body: JSON.stringify({
+              user_id: pref.user_id,
+              figure_slug: result.figure.slug,
+              figure_name: result.figure.name,
+              local_date: localDate,
+              slot,
+            }),
+          }).catch(() => {});
+        }
         if (!shadow) {
           await deliverInsightNotifications(
             pref, slot, localDate, result.content.title, result.content.content,

@@ -522,7 +522,11 @@ export const useConversationalOnboarding = (): UseConversationalOnboardingReturn
           await supabase
             .from('profiles')
             .update({ 
-              date_of_birth: dob.toISOString().split('T')[0], 
+              // Both columns: the DHF/astro engines read `birth_date`, while
+              // this flow historically wrote only `date_of_birth`, leaving the
+              // engines blind to the DOB and degrading every personalised card.
+              date_of_birth: dob.toISOString().split('T')[0],
+              birth_date: dob.toISOString().split('T')[0],
               onboarding_step: 'assistant_name' 
             } as any)
             .eq('user_id', user.id);

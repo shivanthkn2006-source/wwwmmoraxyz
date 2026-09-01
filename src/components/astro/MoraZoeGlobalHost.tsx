@@ -49,6 +49,7 @@ export const MoraZoeGlobalHost: React.FC = () => {
     loading: birthLoading,
     save: saveBirth,
     snooze: snoozeBirth,
+    canSnooze: canSnoozeBirth,
   } = useBirthDetailsGate();
 
   // These layers are full-screen takeovers. They belong to the home feed only —
@@ -102,6 +103,7 @@ export const MoraZoeGlobalHost: React.FC = () => {
           initial={existingBirth}
           onSave={saveBirth}
           onSkip={snoozeBirth}
+          canSkip={canSnoozeBirth}
         />
       )}
     </>
