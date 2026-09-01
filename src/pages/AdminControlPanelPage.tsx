@@ -1,0 +1,330 @@
+/**
+ * ADMIN CONTROL PANEL (admin-only)
+ *
+ * Three operational surfaces in one page:
+ *   1. User activity — sign-ups, last activity, post/loop counts.
+ *   2. DHF generation logs — the raw run log with cache hits and errors.
+ *   3. Moderation queue — abuse/spam reports filed by members, with
+ *      review actions.
+ *
+ * Every read here is protected by row-level security: a non-admin gets empty
+ * result sets, and the page says so plainly rather than pretending to work.
+ */
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Helmet } from 'react-helmet-async';
+import { Link } from 'react-router-dom';
+import { ArrowLeft, RefreshCw, Loader2, ShieldAlert, Users, Activity } from 'lucide-react';
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
+interface ActivityRow {
+  userId: string;
+  username: string;
+  createdAt: string | null;
+  lastSeen: string | null;
+  posts: number;
+}
+
+interface RunRow {
+  id: string;
+  userId: string | null;
+  postDate: string | null;
+  slots: number | null;
+  cacheHit: boolean | null;
+  error: string | null;
+  createdAt: string;
+}
+
+interface ReportRow {
+  id: string;
+  reporter_id: string;
+  target_type: string;
+  target_id: string;
+  reason: string;
+  notes: string | null;
+  status: string;
+  created_at: string;
+}
+
+const statusTone: Record<string, string> = {
+  open: 'bg-red-500/15 text-red-400',
+  reviewing: 'bg-amber-500/15 text-amber-400',
+  actioned: 'bg-emerald-500/15 text-emerald-400',
+  dismissed: 'bg-muted text-muted-foreground',
+};
+
+export default function AdminControlPanelPage() {
+  const [loading, setLoading] = useState(true);
+  const [denied, setDenied] = useState(false);
+  const [activity, setActivity] = useState<ActivityRow[]>([]);
+  const [runs, setRuns] = useState<RunRow[]>([]);
+  const [reports, setReports] = useState<ReportRow[]>([]);
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth?.user) {
+        setDenied(true);
+        return;
+      }
+      const { data: adminRow } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', auth.user.id)
+        .eq('role', 'admin')
+        .maybeSingle();
+      if (!adminRow) {
+        setDenied(true);
+        return;
+      }
+      setDenied(false);
+
+      const [profilesRes, postsRes, runsRes, reportsRes] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('user_id, username, created_at, last_seen')
+          .order('created_at', { ascending: false })
+          .limit(200),
+        supabase.from('posts').select('user_id').limit(5000),
+        supabase
+          .from('dhf_generation_runs')
+          .select('id, user_id, post_date, slots_generated, cache_hit, error, created_at')
+          .order('created_at', { ascending: false })
+          .limit(200),
+        supabase
+          .from('content_reports')
+          .select('id, reporter_id, target_type, target_id, reason, notes, status, created_at')
+          .order('created_at', { ascending: false })
+          .limit(200),
+      ]);
+
+      const postCounts = new Map<string, number>();
+      (postsRes.data ?? []).forEach((p: { user_id: string | null }) => {
+        if (p.user_id) postCounts.set(p.user_id, (postCounts.get(p.user_id) ?? 0) + 1);
+      });
+
+      setActivity(
+        (profilesRes.data ?? []).map((p: Record<string, unknown>) => ({
+          userId: String(p.user_id),
+          username: (p.username as string) ?? '—',
+          createdAt: (p.created_at as string) ?? null,
+          lastSeen: (p.last_seen as string) ?? null,
+          posts: postCounts.get(String(p.user_id)) ?? 0,
+        })),
+      );
+
+      setRuns(
+        (runsRes.data ?? []).map((r: Record<string, unknown>) => ({
+          id: String(r.id),
+          userId: (r.user_id as string) ?? null,
+          postDate: (r.post_date as string) ?? null,
+          slots: (r.slots_generated as number) ?? null,
+          cacheHit: (r.cache_hit as boolean) ?? null,
+          error: (r.error as string) ?? null,
+          createdAt: String(r.created_at),
+        })),
+      );
+
+      setReports((reportsRes.data as ReportRow[]) ?? []);
+    } catch (error) {
+      console.error('[AdminControlPanel] load failed', error);
+      toast.error('Could not load admin data.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const setReportStatus = async (id: string, status: 'reviewing' | 'actioned' | 'dismissed') => {
+    setBusy(id);
+    const { error } = await supabase
+      .from('content_reports')
+      .update({ status, reviewed_at: new Date().toISOString() })
+      .eq('id', id);
+    setBusy(null);
+    if (error) {
+      toast.error(`Update failed: ${error.message}`);
+      return;
+    }
+    setReports((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
+    toast.success(`Report marked ${status}.`);
+  };
+
+  const stats = useMemo(
+    () => ({
+      members: activity.length,
+      active7d: activity.filter(
+        (a) => a.lastSeen && Date.now() - new Date(a.lastSeen).getTime() < 7 * 864e5,
+      ).length,
+      failedRuns: runs.filter((r) => r.error).length,
+      openReports: reports.filter((r) => r.status === 'open').length,
+    }),
+    [activity, runs, reports],
+  );
+
+  return (
+    <div className="min-h-screen bg-background px-4 py-6">
+      <Helmet>
+        <title>Admin Control Panel | M'Mora</title>
+        <meta name="description" content="Admin view of member activity, DHF generation logs and abuse reports." />
+      </Helmet>
+
+      <div className="mx-auto w-full max-w-5xl space-y-5">
+        <div className="flex items-center justify-between gap-3">
+          <Link to="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="h-4 w-4" /> Home
+          </Link>
+          <Button size="sm" variant="outline" onClick={() => void load()} disabled={loading}>
+            {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+            Refresh
+          </Button>
+        </div>
+
+        <h1 className="text-xl font-semibold">Admin Control Panel</h1>
+
+        {denied ? (
+          <Card>
+            <CardContent className="p-6 text-sm text-muted-foreground">
+              This page is restricted to platform admins. Your account does not have the admin role.
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {[
+                { label: 'Members', value: stats.members, icon: Users },
+                { label: 'Active 7d', value: stats.active7d, icon: Activity },
+                { label: 'Failed DHF runs', value: stats.failedRuns, icon: ShieldAlert },
+                { label: 'Open reports', value: stats.openReports, icon: ShieldAlert },
+              ].map(({ label, value, icon: Icon }) => (
+                <Card key={label}>
+                  <CardContent className="flex items-center gap-3 p-4">
+                    <Icon className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-lg font-semibold leading-none">{value}</p>
+                      <p className="text-xs text-muted-foreground">{label}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            <Tabs defaultValue="activity">
+              <TabsList>
+                <TabsTrigger value="activity">User activity</TabsTrigger>
+                <TabsTrigger value="dhf">DHF logs</TabsTrigger>
+                <TabsTrigger value="reports">Moderation</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="activity">
+                <Card>
+                  <CardHeader><CardTitle className="text-sm">Members</CardTitle></CardHeader>
+                  <CardContent className="overflow-x-auto p-0">
+                    <table className="w-full text-left text-xs">
+                      <thead className="text-muted-foreground">
+                        <tr><th className="p-3">Member</th><th className="p-3">Joined</th><th className="p-3">Last seen</th><th className="p-3">Posts</th></tr>
+                      </thead>
+                      <tbody>
+                        {activity.map((row) => (
+                          <tr key={row.userId} className="border-t border-border/50">
+                            <td className="p-3 font-medium">{row.username}</td>
+                            <td className="p-3">{row.createdAt ? new Date(row.createdAt).toLocaleDateString() : '—'}</td>
+                            <td className="p-3">{row.lastSeen ? new Date(row.lastSeen).toLocaleString() : '—'}</td>
+                            <td className="p-3">{row.posts}</td>
+                          </tr>
+                        ))}
+                        {!activity.length && !loading && (
+                          <tr><td className="p-4 text-muted-foreground" colSpan={4}>No members visible.</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="dhf">
+                <Card>
+                  <CardHeader><CardTitle className="text-sm">DHF generation runs</CardTitle></CardHeader>
+                  <CardContent className="overflow-x-auto p-0">
+                    <table className="w-full text-left text-xs">
+                      <thead className="text-muted-foreground">
+                        <tr><th className="p-3">When</th><th className="p-3">Member</th><th className="p-3">Date</th><th className="p-3">Slots</th><th className="p-3">Result</th></tr>
+                      </thead>
+                      <tbody>
+                        {runs.map((run) => (
+                          <tr key={run.id} className="border-t border-border/50">
+                            <td className="p-3">{new Date(run.createdAt).toLocaleString()}</td>
+                            <td className="p-3 font-mono">{run.userId?.slice(0, 8) ?? '—'}</td>
+                            <td className="p-3">{run.postDate ?? '—'}</td>
+                            <td className="p-3">{run.slots ?? 0}</td>
+                            <td className="p-3">
+                              {run.error ? (
+                                <Badge className="bg-red-500/15 text-red-400">{run.error.slice(0, 60)}</Badge>
+                              ) : run.cacheHit ? (
+                                <Badge className="bg-sky-500/15 text-sky-400">cached</Badge>
+                              ) : (
+                                <Badge className="bg-emerald-500/15 text-emerald-400">generated</Badge>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                        {!runs.length && !loading && (
+                          <tr><td className="p-4 text-muted-foreground" colSpan={5}>No runs logged yet.</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="reports">
+                <Card>
+                  <CardHeader><CardTitle className="text-sm">Spam & abuse reports</CardTitle></CardHeader>
+                  <CardContent className="space-y-3">
+                    {reports.map((report) => (
+                      <div key={report.id} className="rounded-lg border border-border/60 p-3 text-xs">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge className={statusTone[report.status] ?? ''}>{report.status}</Badge>
+                          <span className="font-medium">{report.target_type}</span>
+                          <span className="font-mono text-muted-foreground">{report.target_id.slice(0, 8)}</span>
+                          <span className="ml-auto text-muted-foreground">{new Date(report.created_at).toLocaleString()}</span>
+                        </div>
+                        <p className="mt-2">{report.reason}</p>
+                        {report.notes && <p className="mt-1 text-muted-foreground">{report.notes}</p>}
+                        <div className="mt-2 flex gap-2">
+                          {(['reviewing', 'actioned', 'dismissed'] as const).map((next) => (
+                            <Button
+                              key={next}
+                              size="sm"
+                              variant="outline"
+                              disabled={busy === report.id || report.status === next}
+                              onClick={() => void setReportStatus(report.id, next)}
+                            >
+                              {next}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                    {!reports.length && !loading && (
+                      <p className="p-2 text-xs text-muted-foreground">No reports filed. Nothing to moderate.</p>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
