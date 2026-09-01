@@ -108,6 +108,7 @@ const ZoeIdentityPage = lazy(() => import("./pages/ZoeIdentity")); // GENESIS IM
 const EarLinkBlueprintPage = lazy(() => import("./pages/EarLinkBlueprintPage")); // EAR-LINK HARDWARE
 const PlatformAuditPage = lazy(() => import("./pages/PlatformAuditPage")); // PLATFORM ROOT SCAN
 const RootScanPage = lazy(() => import("./pages/RootScanPage")); // ZOE INFINITY ROOT SCAN
+const PlatformArchitecturePage = lazy(() => import("./pages/PlatformArchitecturePage")); // ARCHITECTURE MAP
 const VRWorldAuditPage = lazy(() => import("./pages/VRWorldAuditPage")); // VR OMEGA WORLD AUDIT
 const InstallAppPage = lazy(() => import("./pages/InstallApp")); // PWA INSTALL PAGE
 const GodModeEvolution = lazy(() => import("./pages/GodModeEvolution")); // ASI GENESIS KERNEL
@@ -470,6 +471,7 @@ const RouteAwareShell = () => {
               <Route path="/ear-link-blueprint" element={<EarLinkBlueprintPage />} />
               <Route path="/platform-audit" element={<PlatformAuditPage />} />
               <Route path="/root-scan" element={<RootScanPage />} />
+              <Route path="/platform-architecture" element={<PlatformArchitecturePage />} />
               <Route path="/agent-memory" element={<AgentMemoryPage />} />
               <Route path="/vr-audit" element={<VRWorldAuditPage />} />
               <Route path="/install" element={<InstallAppPage />} />
