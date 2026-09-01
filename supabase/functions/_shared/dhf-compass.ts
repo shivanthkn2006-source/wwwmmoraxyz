@@ -98,7 +98,7 @@ export function astroContextFor(
 
     const transits = calculateTransits(julianDay(natal), targetJd)
       .slice(0, 5)
-      .map((t) => `${t.transiting} ${t.aspect} natal ${t.natal}`);
+      .map((t) => `${t.transit_planet} ${t.aspect} natal ${t.natal_planet}`);
 
     return { summary: transits.length ? `${skyline}; ${transits.join(', ')}` : skyline, transits };
   } catch {

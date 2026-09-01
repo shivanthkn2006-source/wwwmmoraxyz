@@ -26,7 +26,10 @@ interface Notification {
     location_match?: boolean;
     activity_suggestion?: string;
     conversation_starter?: string;
+    /** In-app destination for notifications that are not tied to a post row (e.g. DHF essays). */
+    route?: string;
   };
+
   from_user?: {
     display_name: string;
     profile_photo_url?: string;
@@ -218,7 +221,12 @@ const NotificationMenu: React.FC<NotificationMenuProps> = ({ open, onOpenChange 
   };
 
   const handleNotificationClick = (notif: Notification) => {
-    if (notif.suggestion_type === 'interest_match') {
+    const route = notif.context_data?.route;
+    if (route && route.startsWith('/')) {
+      // Notifications that carry their own destination (DHF essays, growth cards).
+      navigate(route);
+      onOpenChange(false);
+    } else if (notif.suggestion_type === 'interest_match') {
       // Navigate to chat with friend for interest match suggestions
       navigate(`/chat?userId=${notif.from_user_id}`);
       onOpenChange(false);
@@ -227,6 +235,7 @@ const NotificationMenu: React.FC<NotificationMenuProps> = ({ open, onOpenChange 
       onOpenChange(false);
     }
   };
+
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
