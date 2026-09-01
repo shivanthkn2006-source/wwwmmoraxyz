@@ -27,3 +27,11 @@
 - [x] Add a shared Zoe/Deepgram card narration controller with play, pause/resume, and repeat controls.
 - [x] Wire narration to Home/Loops timeline posts, Growth cards, and Zoe's DHF cards with settled one-time post-login sequencing.
 - [ ] Complete authenticated desktop/mobile E2E verification; focused tests and build pass, but preview session minting requires an owner/admin or signed-in preview session.
+
+## Enterprise hardening (Sep 2026) — 4-stage program
+- [x] Stage 1.1 RLS: profiles/messages WITH CHECK + immutable-column guard triggers; invite_codes control columns admin-only
+- [x] Stage 1.2 Removed per-card `posts.likes_count` 30s polling (visibility-driven reconcile instead)
+- [x] Stage 1.3 verify_jwt=true on 14 user-facing AI functions; removed duplicate `dhf-compass-dispatch-10min` cron
+- [ ] Stage 2 API secrets graceful failure, /admin/dhf-generation dashboard, 2–4am local prewarm cron
+- [ ] Stage 3 GlobalRealtimeProvider (one socket/user), WebGL_ErrorBoundary for 3D canvases, setInterval leak sweep
+- [ ] Stage 4 platform_error_logs table, GlobalBugReporter in PlatformLayout, top-level AppErrorBoundary reset
