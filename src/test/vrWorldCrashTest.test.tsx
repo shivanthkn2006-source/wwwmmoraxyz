@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * 3D Crash Test — forcing a throw inside the <VROMEGAWorld> subtree must NOT
  * white-screen the app. The VR error boundary has to catch it, keep the
