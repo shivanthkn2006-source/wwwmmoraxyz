@@ -713,6 +713,14 @@ const RouteAwareShell = () => {
                             }
                           />
                           <Route
+                            path="/admin/control-panel"
+                            element={
+                              <ProtectedRoute>
+                                <AdminControlPanelPage />
+                              </ProtectedRoute>
+                            }
+                          />
+                          <Route
                             path="/admin/feed-debug"
                             element={
                               <ProtectedRoute>
