@@ -16,10 +16,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import {
-import { invokeGrowthDispatch } from '@/lib/growthDispatch';
   currentSlot, deviceTimeZone, localDateIn, slotsForFrequency, slotOrder,
   sanitizeStyles, type GrowthSlot, type ReflectionStyle,
 } from '@/lib/growthSlot';
+import { invokeGrowthDispatch } from '@/lib/growthDispatch';
 
 export interface GrowthInsight {
   id: string;

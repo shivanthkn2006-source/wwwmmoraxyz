@@ -24,10 +24,10 @@ import { GROWTH_FLAGS } from '@/lib/growthFlags';
 import { exportGrowthData } from '@/lib/growthExport';
 import { pushPermission, requestPushPermission } from '@/lib/growthPush';
 import {
-import { invokeGrowthDispatch } from '@/lib/growthDispatch';
   FOCUS_AREAS, REFLECTION_STYLE_OPTIONS, ALL_REFLECTION_STYLES, deviceTimeZone,
   slotsForFrequency, SLOT_LABEL, sanitizeStyles, type ReflectionStyle,
 } from '@/lib/growthSlot';
+import { invokeGrowthDispatch } from '@/lib/growthDispatch';
 
 const DIGEST_MODES = ['instant', 'daily', 'off'] as const;
 type DigestMode = (typeof DIGEST_MODES)[number];
