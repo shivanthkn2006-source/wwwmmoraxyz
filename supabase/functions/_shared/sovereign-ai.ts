@@ -441,16 +441,18 @@ export async function sovereignFetch(url: string, init?: RequestInit): Promise<R
 
   const messages: AnyMsg[] = payload.messages || [];
 
-  // Vision requests: Google first (native multimodal), then text-only fallbacks.
+  // Vision requests: Google only. Text-only providers must NEVER be used as a
+  // fallback here — they silently drop the image and answer "no image was
+  // provided", which callers then read as a real verdict.
   if (hasImageInput(messages)) {
     const g = await callGoogle(payload);
     if (g) return g;
-    const gr = await callGroq(payload);
-    if (gr) return gr;
-    const or = await callOpenRouter(payload);
-    if (or) return or;
-    return json({ error: { message: 'No sovereign vision provider available', code: 'SERVICE_UNAVAILABLE' } }, 503);
+    return json(
+      { error: { message: 'No sovereign vision provider available', code: 'VISION_UNAVAILABLE' } },
+      503,
+    );
   }
+
 
   // Tool calling / streaming: OpenAI-compatible providers only.
   if (payload.tools || payload.stream) {
