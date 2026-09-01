@@ -35,3 +35,8 @@
 - [ ] Stage 2 API secrets graceful failure, /admin/dhf-generation dashboard, 2–4am local prewarm cron
 - [ ] Stage 3 GlobalRealtimeProvider (one socket/user), WebGL_ErrorBoundary for 3D canvases, setInterval leak sweep
 - [ ] Stage 4 platform_error_logs table, GlobalBugReporter in PlatformLayout, top-level AppErrorBoundary reset
+- [x] Lovable AI sweep: face-verification + growth-image-validate moved to sovereignFetch (tripwire green)
+- [x] Stage 4 platform_error_logs + GlobalBugReporter mounted in PlatformLayout
+- [x] Stage 2 /admin/dhf-generation dashboard + admin-only dhf-compass-rerun function + 2-4am timezone prewarm batching
+- [ ] Stage 2 remaining: COHERE_API_KEY secret not yet provided
+- [ ] Stage 3 GlobalRealtimeProvider, WebGL_ErrorBoundary, setInterval leak sweep
