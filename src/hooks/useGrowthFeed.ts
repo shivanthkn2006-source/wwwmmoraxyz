@@ -188,7 +188,13 @@ export function useGrowthFeed() {
       )
       .subscribe();
     const refresh = () => void load();
-    const timer = window.setInterval(refresh, 60_000);
+    // Background tabs must not keep polling: at 5k users a hidden-tab poll is
+    // pure backend load nobody can see. The focus listener below catches up.
+    const timer = window.setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
+      refresh();
+    }, 60_000);
+
     window.addEventListener('online', refresh);
     window.addEventListener('focus', refresh);
     return () => {
