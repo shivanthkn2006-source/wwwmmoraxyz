@@ -747,6 +747,14 @@ const RouteAwareShell = () => {
                             }
                           />
                           <Route
+                            path="/dhf/essay/:postId"
+                            element={
+                              <ProtectedRoute>
+                                <DhfEssayPage />
+                              </ProtectedRoute>
+                            }
+                          />
+                          <Route
                             path="/growth-insights"
                             element={
                               <ProtectedRoute>
