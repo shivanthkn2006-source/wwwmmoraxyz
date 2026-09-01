@@ -507,6 +507,13 @@ export const runOrbCapability = async (
       return runProviderStatus();
     case 'relevance_rank':
       return runRelevanceRanking(ctx.userId);
+    case 'index_ingest':
+      return runIndexIngest(ctx.userId);
+    case 'premium_detect':
+      return runPremiumDetect(ctx.userId);
+    case 'brand_learning':
+      return runBrandLearning(ctx.userId);
+
     default:
       return failure(capability, 'Unknown capability.');
   }
