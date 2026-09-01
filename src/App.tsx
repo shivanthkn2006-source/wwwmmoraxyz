@@ -125,7 +125,7 @@ const AdminGrowthRunsPage = lazy(() => import("./pages/AdminGrowthRunsPage")); /
 const AdminGrowthDeliveryPage = lazy(() => import("./pages/AdminGrowthDeliveryPage")); // DAILY GROWTH DELIVERY REPORT (admin, RLS-gated)
 const AdminDhfGenerationPage = lazy(() => import("./pages/AdminDhfGenerationPage")); // DHF GENERATION STATUS (admin, RLS-gated)
 const AdminControlPanelPage = lazy(() => import("./pages/AdminControlPanelPage"));
-const AdminSentinelPage = lazy(() => import("./pages/AdminSentinelPage")); // SENTINEL (operator-only live monitoring) // ADMIN CONTROL PANEL (activity, DHF logs, moderation)
+const AdminSentinelPage = lazy(() => import("./pages/AdminSentinelPage")); // SENTINEL (operator-only live monitoring)
 const ZoeBirthDetailsPage = lazy(() => import("./pages/ZoeBirthDetailsPage"));
 const ZoeDispatchDashboardPage = lazy(() => import("./pages/ZoeDispatchDashboardPage"));
 const ZoeAstroLogPage = lazy(() => import("./pages/ZoeAstroLogPage"));
