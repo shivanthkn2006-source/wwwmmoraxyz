@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import ReportContentDialog from '@/components/moderation/ReportContentDialog';
 import { AlertTriangle, Download, FileText, Heart, Loader2, MessageCircle, Share2, Trash2, Bookmark, MoreVertical, Star, Volume2, VolumeX, UserPlus, UserCheck, ScanText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
@@ -1025,6 +1026,14 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate, onMediaCompleted })
           </div>
         </DialogContent>
       </Dialog>
+
+      <ReportContentDialog
+        open={reportOpen}
+        onOpenChange={setReportOpen}
+        targetType="post"
+        targetId={post.id}
+        targetOwnerId={post.user_id}
+      />
     </div>
   );
 };
