@@ -64,7 +64,10 @@ export const useValidatedGrowthImage = ({ key, title, content, category, validat
     if (!validate || !config.enabled) return;
     if (attempt >= lastAttempt) return; // last resort image is trusted
     if (checked.current.has(src)) return;
+    // Provider is down/quota-exhausted: skip the round trip entirely.
+    if (isValidationCoolingDown()) return;
     checked.current.add(src);
+
 
     const cacheKey = validationCacheKey(src, config.strictness);
     const base = {
