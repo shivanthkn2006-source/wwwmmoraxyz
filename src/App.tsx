@@ -1254,6 +1254,7 @@ const App = () => {
             </DevModeProvider>
           </NavigationBusProvider>
         </GlobalMediaProvider>
+        </GlobalRealtimeProvider>
       </AuthProvider>
     </QueryClientProvider>
   );
