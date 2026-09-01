@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { sovereignFetch, sovereignKey } from '../_shared/sovereign-ai.ts';
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
@@ -39,27 +40,18 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    // Vision runs through the Lovable AI gateway by default; the direct Google
-    // AI Studio key stays as a fallback for self-hosted deployments. The old
-    // hardcoded Google model id did not exist upstream, which is why face
-    // enrollment/verification failed with a provider error.
-    const lovableKey = Deno.env.get('LOVABLE_API_KEY');
-    const googleApiKey = Deno.env.get('GOOGLE_AI_STUDIO_KEY');
-    if (!lovableKey && !googleApiKey) {
+    // Vision runs 100% through the project's own provider keys (sovereign shim).
+    // No Lovable AI credits are ever consumed.
+    if (!sovereignKey()) {
       console.error('[face-verification] no vision provider configured');
       return new Response(
-        JSON.stringify({ error: 'Face verification service is not configured. Ask an admin to enable AI in backend settings.' }),
+        JSON.stringify({ error: 'Face verification service is not configured. Ask an admin to add an AI provider key in backend settings.' }),
         { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-    const GEMINI_URL = lovableKey
-      ? 'https://ai.gateway.lovable.dev/v1/chat/completions'
-      : 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
-    const GEMINI_MODEL = lovableKey ? 'google/gemini-3.7-flash' : 'gemini-2.5-flash';
-    const geminiHeaders = {
-      'Authorization': `Bearer ${lovableKey ?? googleApiKey}`,
-      'Content-Type': 'application/json',
-    };
+    const GEMINI_URL = 'sovereign://chat/completions';
+    const GEMINI_MODEL = 'gemini-2.5-flash';
+    const geminiHeaders = { 'Content-Type': 'application/json' };
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Validate and parse input
@@ -200,7 +192,7 @@ serve(async (req) => {
     switch (operation) {
       case 'enroll_face': {
         // Store face enrollment data using Gemini 2.5 Pro Vision for analysis
-        const aiResponse = await fetch(GEMINI_URL, {
+        const aiResponse = await sovereignFetch(GEMINI_URL, {
           method: 'POST',
           headers: {
             ...geminiHeaders,
@@ -289,7 +281,7 @@ serve(async (req) => {
         }
 
         // Use Gemini 2.5 Pro Vision to verify face match
-        const aiResponse = await fetch(GEMINI_URL, {
+        const aiResponse = await sovereignFetch(GEMINI_URL, {
           method: 'POST',
           headers: {
             ...geminiHeaders,
@@ -382,7 +374,7 @@ serve(async (req) => {
         }
 
         // Use Gemini 2.5 Pro Vision to verify face match
-        const aiResponse = await fetch(GEMINI_URL, {
+        const aiResponse = await sovereignFetch(GEMINI_URL, {
           method: 'POST',
           headers: {
             ...geminiHeaders,
