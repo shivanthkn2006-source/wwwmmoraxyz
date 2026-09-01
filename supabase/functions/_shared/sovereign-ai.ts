@@ -64,9 +64,31 @@ let warnedAboutLovableKey = false;
 // Verified live against each provider's /models catalogue (Aug 2026).
 const GROQ_TEXT_FAST = 'openai/gpt-oss-20b';
 const GROQ_TEXT_QUALITY = 'openai/gpt-oss-120b';
-const GOOGLE_TEXT = 'gemini-3.6-flash';
-const GOOGLE_PRO = 'gemini-3.1-pro-preview';
 const OPENROUTER_TEXT = 'meta-llama/llama-3.3-70b-instruct';
+
+/**
+ * Google model catalogues drift (a model can be renamed or retired at any
+ * time). Instead of one hard-coded id we walk a candidate list and remember
+ * the first id the API actually accepts, so a retired preview name can never
+ * silently take the whole vision/text path down.
+ */
+const GOOGLE_FAST_CANDIDATES = [
+  'gemini-3.6-flash',
+  'gemini-2.5-flash',
+  'gemini-2.0-flash',
+  'gemini-flash-latest',
+];
+const GOOGLE_PRO_CANDIDATES = [
+  'gemini-3.1-pro-preview',
+  'gemini-2.5-pro',
+  'gemini-pro-latest',
+  ...GOOGLE_FAST_CANDIDATES,
+];
+
+/** Model ids proven dead (404/400) this isolate — skipped on later calls. */
+const deadGoogleModels = new Set<string>();
+/** First model id proven to work this isolate — tried first afterwards. */
+let googleWorkingModel: string | null = null;
 
 function isProTier(model: string): boolean {
   const m = (model || '').toLowerCase();
@@ -79,9 +101,12 @@ function groqModelFor(model: string): string {
   return isProTier(m) ? GROQ_TEXT_QUALITY : GROQ_TEXT_FAST;
 }
 
-function googleModelFor(model: string): string {
-  return isProTier(model) ? GOOGLE_PRO : GOOGLE_TEXT;
+function googleModelsFor(model: string): string[] {
+  const base = isProTier(model) ? GOOGLE_PRO_CANDIDATES : GOOGLE_FAST_CANDIDATES;
+  const ordered = googleWorkingModel ? [googleWorkingModel, ...base] : base;
+  return [...new Set(ordered)].filter((m) => !deadGoogleModels.has(m));
 }
+
 
 // ───────────── helpers ─────────────
 
