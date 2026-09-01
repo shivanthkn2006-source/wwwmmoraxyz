@@ -327,86 +327,52 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate, onMediaCompleted })
     return () => window.removeEventListener('post-action', handlePostAction as EventListener);
   }, [post.id]);
 
-  // Set up real-time subscription for post updates and ratings
+  // Realtime post updates — multiplexed. Every card on screen shares ONE
+  // channel per table (instead of one channel per card, which meant 20+
+  // subscriptions on a single feed) and filters by post id locally.
+  useRealtimeTable({ table: 'post_likes', event: 'INSERT', enabled: !!user }, (payload) => {
+    if (!user) return;
+    const row = payload.new as { id?: string; user_id?: string; post_id?: string } | undefined;
+    if (!row || row.post_id !== post.id) return;
+    if (!row.user_id) {
+      logFeedEvent('like_event_invalid', { post_id: post.id, payload_post_id: row?.post_id || null, reason: 'missing_or_mismatched_fields' }, user.id);
+      return;
+    }
+    const eventId = row.id || `${post.id}:${row.user_id}`;
+    if (seenLikeEventsRef.current.has(eventId)) return;
+    seenLikeEventsRef.current.add(eventId);
+    if (seenLikeEventsRef.current.size > 100) seenLikeEventsRef.current.clear();
+    logFeedEvent('like_event_received', { post_id: post.id, actor_id: row.user_id, event_id: eventId }, user.id);
+    if (row.user_id !== user.id) playLikeAnimation();
+  });
+
+  useRealtimeTable({ table: 'posts', event: 'UPDATE', enabled: !!user }, (payload) => {
+    const row = payload.new as { id?: string; likes_count?: number; comments_count?: number } | undefined;
+    if (!row || row.id !== post.id) return;
+    if (typeof row.likes_count === 'number') {
+      setLikesCount(row.likes_count);
+      latestLikesCountRef.current = row.likes_count;
+    }
+    if (typeof row.comments_count === 'number') setCommentsCount(row.comments_count);
+  });
+
+  useRealtimeTable({ table: 'post_ratings', event: '*', enabled: !!user }, (payload) => {
+    const row = (payload.new ?? payload.old) as { post_id?: string } | undefined;
+    if (!row || row.post_id !== post.id) return;
+    void (async () => {
+      const { data } = await supabase.from('post_ratings').select('rating').eq('post_id', post.id);
+      if (data && data.length > 0) {
+        const avg = data.reduce((sum, r) => sum + r.rating, 0) / data.length;
+        setAverageRating(Math.round(avg * 10) / 10);
+      }
+    })();
+  });
+
+  // Realtime can miss a packet during reconnect. Instead of polling every card
+  // on a timer (which produced ~150k reads/week at tiny user counts), reconcile
+  // ONCE when the tab returns to the foreground — bounded, event-driven work.
   useEffect(() => {
     if (!user) return;
-
-    const instanceId = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-      ? crypto.randomUUID()
-      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    const channel = supabase
-      .channel(`post_updates_${post.id}:${user.id}:${instanceId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'post_likes',
-          filter: `post_id=eq.${post.id}`
-        },
-        (payload: { new?: { id?: string; user_id?: string; post_id?: string } }) => {
-          // The clicking tab already animates after its confirmed write. Every
-          // other open feed/timeline card—including the creator's—animates here.
-          const row = payload.new;
-          if (!row?.user_id || (row.post_id && row.post_id !== post.id)) {
-            logFeedEvent('like_event_invalid', { post_id: post.id, payload_post_id: row?.post_id || null, reason: 'missing_or_mismatched_fields' }, user.id);
-            return;
-          }
-          const eventId = row.id || `${post.id}:${row.user_id}`;
-          if (seenLikeEventsRef.current.has(eventId)) return;
-          seenLikeEventsRef.current.add(eventId);
-          if (seenLikeEventsRef.current.size > 100) seenLikeEventsRef.current.clear();
-          logFeedEvent('like_event_received', { post_id: post.id, actor_id: row.user_id, event_id: eventId }, user.id);
-          if (row.user_id !== user.id) playLikeAnimation();
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'posts',
-          filter: `id=eq.${post.id}`
-        },
-        (payload: any) => {
-          if (payload.new.likes_count !== undefined) {
-            setLikesCount(payload.new.likes_count);
-            latestLikesCountRef.current = payload.new.likes_count;
-          }
-          if (payload.new.comments_count !== undefined) {
-            setCommentsCount(payload.new.comments_count);
-          }
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'post_ratings',
-          filter: `post_id=eq.${post.id}`
-        },
-        () => {
-          // Recalculate average when any rating changes
-          const calculateAvg = async () => {
-            const { data } = await supabase
-              .from('post_ratings')
-              .select('rating')
-              .eq('post_id', post.id);
-            
-            if (data && data.length > 0) {
-              const avg = data.reduce((sum, r) => sum + r.rating, 0) / data.length;
-              setAverageRating(Math.round(avg * 10) / 10);
-            }
-          };
-          calculateAvg();
-        }
-      )
-      .subscribe();
-
-    // Realtime can miss a packet during reconnect. Instead of polling every card
-    // on a timer (which produced ~150k reads/week at tiny user counts), reconcile
-    // ONCE when the tab returns to the foreground — bounded, event-driven work.
     let reconciling = false;
     const reconcile = async () => {
       if (reconciling || document.visibilityState !== 'visible') return;
@@ -425,12 +391,9 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate, onMediaCompleted })
       }
     };
     document.addEventListener('visibilitychange', reconcile);
-
-    return () => {
-      document.removeEventListener('visibilitychange', reconcile);
-      supabase.removeChannel(channel);
-    };
+    return () => document.removeEventListener('visibilitychange', reconcile);
   }, [post.id, user?.id, playLikeAnimation]);
+
 
 
   const handleLike = async () => {
