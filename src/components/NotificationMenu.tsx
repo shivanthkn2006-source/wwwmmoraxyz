@@ -221,7 +221,12 @@ const NotificationMenu: React.FC<NotificationMenuProps> = ({ open, onOpenChange 
   };
 
   const handleNotificationClick = (notif: Notification) => {
-    if (notif.suggestion_type === 'interest_match') {
+    const route = notif.context_data?.route;
+    if (route && route.startsWith('/')) {
+      // Notifications that carry their own destination (DHF essays, growth cards).
+      navigate(route);
+      onOpenChange(false);
+    } else if (notif.suggestion_type === 'interest_match') {
       // Navigate to chat with friend for interest match suggestions
       navigate(`/chat?userId=${notif.from_user_id}`);
       onOpenChange(false);
@@ -230,6 +235,7 @@ const NotificationMenu: React.FC<NotificationMenuProps> = ({ open, onOpenChange 
       onOpenChange(false);
     }
   };
+
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
