@@ -138,7 +138,19 @@ export const DhfVideoLinks: React.FC<Props> = ({ headline, category, onOpen }) =
           Instagram
         </a>
       )}
+      <button
+        type="button"
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={shareToX}
+        className={linkClass}
+        aria-label="Share this story on X"
+        data-dhf-link="x"
+      >
+        <XGlyph />
+        Share on X
+      </button>
       {links.youtube_channel && (
+
         <span className="text-[10px] text-muted-foreground/80">via {links.youtube_channel}</span>
       )}
     </div>
