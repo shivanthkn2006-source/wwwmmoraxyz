@@ -64,3 +64,24 @@ describe('formatters', () => {
     expect(out).toContain('T1 — online');
   });
 });
+
+describe('relevance ranking', () => {
+  it('detects feed ranking intents', async () => {
+    const { detectOrbCapability } = await import('@/lib/orbCapabilities');
+    expect(detectOrbCapability('rank my feed')).toBe('relevance_rank');
+    expect(detectOrbCapability('what should I read today?')).toBe('relevance_rank');
+    expect(detectOrbCapability('show me the most relevant posts')).toBe('relevance_rank');
+  });
+
+  it('formats ranked posts', async () => {
+    const { formatRelevance } = await import('@/lib/orbCapabilities');
+    const out = formatRelevance([{ id: '1', content: 'Deep work notes', relevance_score: 0.82 }]);
+    expect(out).toContain('Deep work notes');
+    expect(out).toContain('82% match');
+  });
+
+  it('handles an empty ranking', async () => {
+    const { formatRelevance } = await import('@/lib/orbCapabilities');
+    expect(formatRelevance([])).toContain('nothing');
+  });
+});
