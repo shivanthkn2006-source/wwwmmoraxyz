@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import EssaySchedulerPanel from '@/components/admin/EssaySchedulerPanel';
 
 interface ActivityRow {
   userId: string;
@@ -27,6 +28,8 @@ interface ActivityRow {
   createdAt: string | null;
   lastSeen: string | null;
   posts: number;
+  /** Birth details are the gate for personalised DHF Daily Compass cards. */
+  birthDate: string | null;
 }
 
 interface RunRow {
@@ -64,6 +67,7 @@ export default function AdminControlPanelPage() {
   const [runs, setRuns] = useState<RunRow[]>([]);
   const [reports, setReports] = useState<ReportRow[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
+  const [adminId, setAdminId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -84,11 +88,12 @@ export default function AdminControlPanelPage() {
         return;
       }
       setDenied(false);
+      setAdminId(auth.user.id);
 
       const [profilesRes, postsRes, runsRes, reportsRes] = await Promise.all([
         supabase
           .from('profiles')
-          .select('user_id, username, created_at, updated_at')
+          .select('user_id, username, created_at, updated_at, date_of_birth, birth_date')
           .order('created_at', { ascending: false })
           .limit(200),
         supabase.from('posts').select('user_id').limit(5000),
@@ -116,6 +121,7 @@ export default function AdminControlPanelPage() {
           createdAt: (p.created_at as string) ?? null,
           lastSeen: (p.updated_at as string) ?? null,
           posts: postCounts.get(String(p.user_id)) ?? 0,
+          birthDate: ((p.date_of_birth as string) ?? (p.birth_date as string)) || null,
         })),
       );
 
@@ -165,6 +171,7 @@ export default function AdminControlPanelPage() {
       active7d: activity.filter(
         (a) => a.lastSeen && Date.now() - new Date(a.lastSeen).getTime() < 7 * 864e5,
       ).length,
+      missingBirth: activity.filter((a) => !a.birthDate).length,
       failedRuns: runs.filter((r) => r.error).length,
       openReports: reports.filter((r) => r.status === 'open').length,
     }),
@@ -199,10 +206,11 @@ export default function AdminControlPanelPage() {
           </Card>
         ) : (
           <>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
               {[
                 { label: 'Members', value: stats.members, icon: Users },
                 { label: 'Active 7d', value: stats.active7d, icon: Activity },
+                { label: 'No birth details', value: stats.missingBirth, icon: ShieldAlert },
                 { label: 'Failed DHF runs', value: stats.failedRuns, icon: ShieldAlert },
                 { label: 'Open reports', value: stats.openReports, icon: ShieldAlert },
               ].map(({ label, value, icon: Icon }) => (
@@ -223,6 +231,7 @@ export default function AdminControlPanelPage() {
                 <TabsTrigger value="activity">User activity</TabsTrigger>
                 <TabsTrigger value="dhf">DHF logs</TabsTrigger>
                 <TabsTrigger value="reports">Moderation</TabsTrigger>
+                <TabsTrigger value="essays">Essays</TabsTrigger>
               </TabsList>
 
               <TabsContent value="activity">
@@ -231,7 +240,7 @@ export default function AdminControlPanelPage() {
                   <CardContent className="overflow-x-auto p-0">
                     <table className="w-full text-left text-xs">
                       <thead className="text-muted-foreground">
-                        <tr><th className="p-3">Member</th><th className="p-3">Joined</th><th className="p-3">Last active</th><th className="p-3">Posts</th></tr>
+                        <tr><th className="p-3">Member</th><th className="p-3">Joined</th><th className="p-3">Last active</th><th className="p-3">Posts</th><th className="p-3">Birth details</th></tr>
                       </thead>
                       <tbody>
                         {activity.map((row) => (
@@ -240,10 +249,17 @@ export default function AdminControlPanelPage() {
                             <td className="p-3">{row.createdAt ? new Date(row.createdAt).toLocaleDateString() : '—'}</td>
                             <td className="p-3">{row.lastSeen ? new Date(row.lastSeen).toLocaleString() : '—'}</td>
                             <td className="p-3">{row.posts}</td>
+                            <td className="p-3">
+                              {row.birthDate ? (
+                                <Badge className="bg-emerald-500/15 text-emerald-400">{row.birthDate}</Badge>
+                              ) : (
+                                <Badge className="bg-amber-500/15 text-amber-400">missing</Badge>
+                              )}
+                            </td>
                           </tr>
                         ))}
                         {!activity.length && !loading && (
-                          <tr><td className="p-4 text-muted-foreground" colSpan={4}>No members visible.</td></tr>
+                          <tr><td className="p-4 text-muted-foreground" colSpan={5}>No members visible.</td></tr>
                         )}
                       </tbody>
                     </table>
@@ -284,6 +300,13 @@ export default function AdminControlPanelPage() {
                     </table>
                   </CardContent>
                 </Card>
+              </TabsContent>
+
+              <TabsContent value="essays">
+                <EssaySchedulerPanel
+                  adminId={adminId}
+                  members={activity.map((row) => ({ userId: row.userId, username: row.username }))}
+                />
               </TabsContent>
 
               <TabsContent value="reports">

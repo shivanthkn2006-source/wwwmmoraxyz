@@ -4,7 +4,7 @@
  * evaluator. Any failure falls back to the built-in defaults — the engine keeps
  * working even when the flag table is unreachable.
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { evaluateFlag, GROWTH_FLAGS, type GrowthFlag } from '@/lib/growthFlags';
@@ -58,9 +58,18 @@ export function useGrowthFlags() {
   const { user } = useAuth();
   const [flags, setFlags] = useState<Record<string, GrowthFlag>>(() => cache?.flags ?? {});
   const [loading, setLoading] = useState(!cache);
+  // The flag read is a network round-trip; a component that unmounts first
+  // (route change, or a torn-down test environment) must not be written to.
+  const alive = useRef(true);
+
+  useEffect(() => {
+    alive.current = true;
+    return () => { alive.current = false; };
+  }, []);
 
   const load = useCallback(async (force = false) => {
     const next = await fetchFlags(force);
+    if (!alive.current) return;
     setFlags(next);
     setLoading(false);
   }, []);

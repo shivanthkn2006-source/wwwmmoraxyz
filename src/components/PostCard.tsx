@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import ReportContentDialog from '@/components/moderation/ReportContentDialog';
 import { AlertTriangle, Download, FileText, Heart, Loader2, MessageCircle, Share2, Trash2, Bookmark, MoreVertical, Star, Volume2, VolumeX, UserPlus, UserCheck, ScanText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
@@ -70,6 +71,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate, onMediaCompleted })
   if (!post) return null;
   
   const [showComments, setShowComments] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const [liked, setLiked] = useState(post.user_liked || false);
   const [likesCount, setLikesCount] = useState(post.likes_count);
   const [commentsCount, setCommentsCount] = useState(post.comments_count);
@@ -782,6 +784,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate, onMediaCompleted })
           <DropdownMenuContent align="end" className="w-48">
             <DropdownMenuItem onClick={() => handlePreference('interested')}>👍 Interested</DropdownMenuItem>
             <DropdownMenuItem onClick={() => handlePreference('not_interested')}>👎 Not Interested</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setReportOpen(true)}>🚩 Report post</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
         </div>
@@ -1023,6 +1026,14 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate, onMediaCompleted })
           </div>
         </DialogContent>
       </Dialog>
+
+      <ReportContentDialog
+        open={reportOpen}
+        onOpenChange={setReportOpen}
+        targetType="post"
+        targetId={post.id}
+        targetOwnerId={post.user_id}
+      />
     </div>
   );
 };

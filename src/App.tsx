@@ -119,6 +119,7 @@ const AstroPreviewPage = lazy(() => import("./pages/AstroPreviewPage")); // M'MO
 const ZoeAstroDashboardPage = lazy(() => import("./pages/ZoeAstroDashboardPage")); // M'MORA ZOE ALIGNMENT DASHBOARD
 const GrowthInsightsPage = lazy(() => import("./pages/GrowthInsightsPage")); // PERSONAL GROWTH ENGINE ARCHIVE
 const DHFCompassPage = lazy(() => import("./pages/DHFCompassPage")); // ZOE'S DHF ARCHIVE
+const DhfEssayPage = lazy(() => import("./pages/DhfEssayPage")); // ZOE'S DHF LONG-FORM ESSAY READER
 
 const AdminGrowthRunsPage = lazy(() => import("./pages/AdminGrowthRunsPage")); // GROWTH WORKER TRACE (admin, RLS-gated)
 const AdminGrowthDeliveryPage = lazy(() => import("./pages/AdminGrowthDeliveryPage")); // DAILY GROWTH DELIVERY REPORT (admin, RLS-gated)
@@ -742,6 +743,14 @@ const RouteAwareShell = () => {
                             element={
                               <ProtectedRoute>
                                 <DHFCompassPage />
+                              </ProtectedRoute>
+                            }
+                          />
+                          <Route
+                            path="/dhf/essay/:postId"
+                            element={
+                              <ProtectedRoute>
+                                <DhfEssayPage />
                               </ProtectedRoute>
                             }
                           />
