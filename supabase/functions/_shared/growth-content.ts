@@ -16,17 +16,19 @@ import { sovereignFetch } from './sovereign-ai.ts';
 
 import {
   pickFigure,
+  birthResonance,
   FIGURE_HISTORY_WINDOW,
   type GrowthFigure,
 } from './growth-figures.ts';
 
-export { FIGURE_HISTORY_WINDOW };
+export { FIGURE_HISTORY_WINDOW, birthResonance };
 export type { GrowthFigure };
 
 
 /** Name → roster slug, so an avoid-list of names can filter the roster. */
 const slugify = (name: string) =>
   name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
 
 
 export type GrowthSlot = 'morning' | 'midday' | 'afternoon' | 'evening' | 'night';
