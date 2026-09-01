@@ -348,3 +348,7 @@ verify_jwt = false
 
 [functions.zoe-dhf-brain]
 verify_jwt = true
+
+[functions.dhf-compass-rerun]
+verify_jwt = true
+

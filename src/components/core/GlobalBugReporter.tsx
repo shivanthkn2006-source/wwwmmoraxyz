@@ -101,7 +101,7 @@ export const GlobalBugReporter: React.FC = () => {
         user_id: userId,
         route: typeof window !== 'undefined' ? window.location.pathname : null,
         device_info: deviceInfo(),
-        zustand_state_snapshot: { recentChanges, current: snapshotOf(usePlatformStore.getState()) },
+        zustand_state_snapshot: JSON.parse(JSON.stringify({ recentChanges, current: snapshotOf(usePlatformStore.getState()) })),
         user_message: message.trim() || null,
       });
       if (error) throw error;

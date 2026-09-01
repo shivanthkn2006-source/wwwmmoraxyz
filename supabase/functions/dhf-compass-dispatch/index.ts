@@ -103,6 +103,21 @@ function safeZone(tz: string): string {
   try { new Intl.DateTimeFormat('en-US', { timeZone: tz }); return tz; } catch { return 'UTC'; }
 }
 
+/** Local hour (0-23) for a timezone, used for the 2–4am prewarm window. */
+function localHour(tz: string): number {
+  try {
+    return Number(new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: '2-digit', hour12: false }).format(new Date()));
+  } catch {
+    return new Date().getUTCHours();
+  }
+}
+
+/** True while it is 02:00–03:59 for this member — the nightly prewarm slot. */
+function inPrewarmWindow(tz: string): boolean {
+  const h = localHour(tz);
+  return h >= 2 && h < 4;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
@@ -113,29 +128,40 @@ Deno.serve(async (req) => {
     if (!(await takeLease())) return json({ ok: true, skipped: 'in-flight' });
 
     const startedAt = Date.now();
-    const summary = { scanned: 0, generated: 0, cached: 0, failed: 0, paused: false, timeboxed: false };
+    const summary = { scanned: 0, generated: 0, cached: 0, failed: 0, prewarmed: 0, paused: false, timeboxed: false };
     try {
       const list = await members();
       summary.scanned = list.length;
 
+      // Batch by timezone: members whose local clock is in the 2–4am prewarm
+      // window go first, so a full day of cards is cached before they wake up.
+      // Everyone else is only topped up when a slot is genuinely missing, which
+      // keeps the 10-minute run from re-spending on already-cached days.
+      const ordered = [...list].sort(
+        (a, b) => Number(inPrewarmWindow(safeZone(b.timezone))) - Number(inPrewarmWindow(safeZone(a.timezone))),
+      );
+
       let processed = 0;
-      for (const member of list) {
+      for (const member of ordered) {
         if (processed >= BATCH_SIZE) break;
         if (Date.now() - startedAt > TIME_BUDGET_MS) { summary.timeboxed = true; break; }
         const tz = safeZone(member.timezone);
         const date = localDateIn(new Date(), tz);
+        const prewarm = inPrewarmWindow(tz);
 
         const existing = await countForDate(member.user_id, date);
         if (existing >= COMPASS_SLOTS.length) { summary.cached++; continue; }
 
         const result = await ensureDayForUser({ userId: member.user_id, date, trigger: 'cron', action: 'ensure', budgetMs: Math.max(10_000, TIME_BUDGET_MS - (Date.now() - startedAt)) });
         processed++;
+        if (prewarm) summary.prewarmed++;
         if (result.paused) summary.paused = true;
         if (result.ok) summary.generated += result.generated; else summary.failed++;
       }
     } finally {
       await releaseLease(summary);
     }
+
 
     return json({ ok: true, ...summary });
   } catch (e) {
