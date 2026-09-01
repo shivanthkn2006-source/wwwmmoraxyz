@@ -309,7 +309,52 @@ async function callGoogle(payload: any): Promise<Response | null> {
 }
 
 
+/**
+ * Cohere text fallback. Keeps the platform answering when Groq is down and the
+ * Google free tier is quota-exhausted (the most common real-world outage).
+ */
+async function callCohere(payload: any): Promise<Response | null> {
+  const key = Deno.env.get('COHERE_API_KEY');
+  if (!key) return null;
+  try {
+    const messages = flattenMessages(payload.messages || []).map((m) => ({
+      role: m.role === 'assistant' ? 'assistant' : m.role === 'system' ? 'system' : 'user',
+      content: String(m.content ?? ''),
+    }));
+    if (!messages.length) return null;
+    const resp = await fetch('https://api.cohere.com/v2/chat', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: isProTier(payload.model) ? 'command-a-03-2025' : 'command-r-08-2024',
+        messages,
+        temperature: payload.temperature ?? 0.7,
+        max_tokens: payload.max_tokens ?? 2048,
+      }),
+    });
+    if (!resp.ok) {
+      console.warn('[sovereign-ai] cohere failed', resp.status, (await resp.text()).slice(0, 200));
+      return null;
+    }
+    const data = await resp.json();
+    const text = Array.isArray(data?.message?.content)
+      ? data.message.content.map((p: any) => p?.text).filter(Boolean).join('')
+      : '';
+    if (!text) return null;
+    return json(chatShape(text, 'cohere', undefined, {
+      prompt_tokens: data?.usage?.tokens?.input_tokens ?? 0,
+      completion_tokens: data?.usage?.tokens?.output_tokens ?? 0,
+      total_tokens:
+        (data?.usage?.tokens?.input_tokens ?? 0) + (data?.usage?.tokens?.output_tokens ?? 0),
+    }));
+  } catch (e) {
+    console.warn('[sovereign-ai] cohere error', e);
+    return null;
+  }
+}
+
 async function callOpenRouter(payload: any): Promise<Response | null> {
+
   const key = Deno.env.get('OPENROUTER_API_KEY');
   if (!key) return null;
   const body: any = {
