@@ -574,23 +574,32 @@ export async function sovereignFetch(url: string, init?: RequestInit): Promise<R
 
   const messages: AnyMsg[] = payload.messages || [];
 
-  // Vision requests: Google only. Text-only providers must NEVER be used as a
-  // fallback here — they silently drop the image and answer "no image was
-  // provided", which callers then read as a real verdict.
+  // Vision requests: real multimodal providers only. Text-only providers must
+  // NEVER be used as a fallback here — they silently drop the image and answer
+  // "no image was provided", which callers then read as a real verdict.
+  // NVIDIA NIM VLMs are genuinely multimodal, so they are a safe second tier
+  // and are what keeps vision alive through a Google free-tier 429.
   if (hasImageInput(messages)) {
     const g = await callGoogle(payload);
     if (g) return g;
+    const nv = await callNvidia(payload, 'vision');
+    if (nv) return nv;
     return json(
       { error: { message: 'No sovereign vision provider available', code: 'VISION_UNAVAILABLE' } },
       503,
     );
   }
 
-
   // Tool calling / streaming: OpenAI-compatible providers only.
   if (payload.tools || payload.stream) {
     const gr = await callGroq(payload);
     if (gr) return gr;
+    // Streaming needs a raw SSE passthrough; NIM is only used for the
+    // non-streaming tool path where a normalised body is acceptable.
+    if (!payload.stream) {
+      const nv = await callNvidia(payload, 'text');
+      if (nv) return nv;
+    }
     const or = await callOpenRouter(payload);
     if (or) return or;
     return json({ error: { message: 'No sovereign tool-capable provider available', code: 'SERVICE_UNAVAILABLE' } }, 503);
@@ -603,10 +612,13 @@ export async function sovereignFetch(url: string, init?: RequestInit): Promise<R
   if (g) return g;
   const co = await callCohere(payload);
   if (co) return co;
+  const nv = await callNvidia(payload, 'text');
+  if (nv) return nv;
   const or = await callOpenRouter(payload);
   if (or) return or;
 
   return json({ error: { message: 'All sovereign providers failed', code: 'SERVICE_UNAVAILABLE' } }, 503);
+
 
 }
 
