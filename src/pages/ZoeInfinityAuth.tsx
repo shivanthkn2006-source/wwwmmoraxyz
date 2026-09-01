@@ -17,6 +17,7 @@ import { Mail, Lock, Eye, EyeOff, Loader2, ArrowRight, Sparkles } from 'lucide-r
 import { z } from 'zod';
 import PageSeo from '@/components/seo/PageSeo';
 import { ROUTE_SEO } from '@/config/routeSeo';
+import TurnstileSignup, { verifyTurnstileToken } from '@/components/security/TurnstileSignup';
 
 // Validation schemas
 const emailSchema = z.string().email('Please enter a valid email address');
@@ -34,6 +35,8 @@ export default function ZoeInfinityAuth() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaReset, setCaptchaReset] = useState(0);
   const [errors, setErrors] = useState<{ email?: string; password?: string; confirm?: string }>({});
 
   // Redirect if already authenticated
@@ -79,6 +82,11 @@ export default function ZoeInfinityAuth() {
     
     try {
       if (mode === 'signup') {
+        if (!captchaToken || !(await verifyTurnstileToken(captchaToken))) {
+          toast.error('Security check required', { description: 'Complete the human verification and try again.' });
+          setCaptchaReset((value) => value + 1);
+          return;
+        }
         const { error } = await signUp(email, password, {
           source: 'zoe_infinity',
           platform: 'standalone',
@@ -279,6 +287,10 @@ export default function ZoeInfinityAuth() {
             </motion.div>
           )}
 
+          {mode === 'signup' && (
+            <TurnstileSignup onTokenChange={setCaptchaToken} resetSignal={captchaReset} />
+          )}
+
           {/* Submit Button */}
           <Button
             type="submit"
@@ -306,6 +318,7 @@ export default function ZoeInfinityAuth() {
             onClick={() => {
               setMode(mode === 'signin' ? 'signup' : 'signin');
               setErrors({});
+              setCaptchaToken(null);
             }}
             className="text-white/40 text-sm hover:text-cyan-400 transition-colors"
             disabled={isSubmitting}
