@@ -6118,6 +6118,87 @@ export type Database = {
         }
         Relationships: []
       }
+      sentinel_sessions: {
+        Row: {
+          browser: string | null
+          browser_version: string | null
+          city: string | null
+          country: string | null
+          device_fingerprint: string | null
+          device_model: string | null
+          device_type: string | null
+          device_vendor: string | null
+          ended_at: string | null
+          hardware: Json
+          id: string
+          ip_address: string | null
+          is_active: boolean
+          last_activity_at: string
+          latitude: number | null
+          longitude: number | null
+          os: string | null
+          os_version: string | null
+          region: string | null
+          session_token: string
+          started_at: string
+          timezone: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          browser?: string | null
+          browser_version?: string | null
+          city?: string | null
+          country?: string | null
+          device_fingerprint?: string | null
+          device_model?: string | null
+          device_type?: string | null
+          device_vendor?: string | null
+          ended_at?: string | null
+          hardware?: Json
+          id?: string
+          ip_address?: string | null
+          is_active?: boolean
+          last_activity_at?: string
+          latitude?: number | null
+          longitude?: number | null
+          os?: string | null
+          os_version?: string | null
+          region?: string | null
+          session_token: string
+          started_at?: string
+          timezone?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          browser?: string | null
+          browser_version?: string | null
+          city?: string | null
+          country?: string | null
+          device_fingerprint?: string | null
+          device_model?: string | null
+          device_type?: string | null
+          device_vendor?: string | null
+          ended_at?: string | null
+          hardware?: Json
+          id?: string
+          ip_address?: string | null
+          is_active?: boolean
+          last_activity_at?: string
+          latitude?: number | null
+          longitude?: number | null
+          os?: string | null
+          os_version?: string | null
+          region?: string | null
+          session_token?: string
+          started_at?: string
+          timezone?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       sentinel_threat_events: {
         Row: {
           blocked: boolean
