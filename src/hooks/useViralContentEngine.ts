@@ -7,6 +7,7 @@ import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { toast } from 'sonner';
+import { buildAllShareUrls } from '@/lib/shareTargets';
 
 export type SocialPlatform = 'tiktok' | 'youtube' | 'instagram' | 'twitter' | 'linkedin' | 'whatsapp' | 'other';
 export type ContentType = 'loops' | 'architect_plan' | 'dream' | 'timeline_insight' | 'post';
