@@ -208,17 +208,16 @@ serve(async (req) => {
       });
 
       if (shouldBlock) {
-        await admin.from('sentinel_blocks').upsert(
-          {
-            user_id: userId,
-            device_fingerprint: fingerprint,
-            ip_address: ip,
-            reason: `Automatic block after repeated ${threatType} attempts (score ${score}).`,
-            severity: 'critical',
-            active: true,
-          },
-          { onConflict: userId ? 'user_id' : 'device_fingerprint', ignoreDuplicates: true },
-        );
+        // Partial unique indexes cannot be used as upsert targets, so the
+        // "already blocked?" check above is our idempotency guard here.
+        await admin.from('sentinel_blocks').insert({
+          user_id: userId,
+          device_fingerprint: fingerprint,
+          ip_address: ip,
+          reason: `Automatic block after repeated ${threatType} attempts (score ${score}).`,
+          severity: 'critical',
+          active: true,
+        });
         if (sessionToken) {
           await admin
             .from('sentinel_sessions')
