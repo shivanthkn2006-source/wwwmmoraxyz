@@ -21,7 +21,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 
-export type ReportTargetType = 'post' | 'comment' | 'profile' | 'message' | 'loop';
+export type ReportTargetType = 'post' | 'comment' | 'profile' | 'message' | 'loop' | 'dhf_compass';
 
 export const REPORT_REASONS = [
   'Spam or scam',
@@ -101,19 +101,17 @@ export const ReportContentDialog: React.FC<Props> = ({
         <div className="space-y-3">
           <div className="flex flex-wrap gap-2">
             {REPORT_REASONS.map((option) => (
-              <button
+              <Button
                 key={option}
                 type="button"
+                size="sm"
+                variant={reason === option ? 'default' : 'secondary'}
                 onClick={() => setReason(option)}
                 aria-pressed={reason === option}
-                className={`rounded-full px-3 py-1.5 text-xs transition ${
-                  reason === option
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted text-muted-foreground hover:text-foreground'
-                }`}
+                className="h-auto rounded-full px-3 py-1.5 text-xs"
               >
                 {option}
-              </button>
+              </Button>
             ))}
           </div>
 
