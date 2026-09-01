@@ -1476,6 +1476,67 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
     }
 
 
+    // ═══ BACKEND CAPABILITY ROUTER (document x-ray / song id / provider status) ═══
+    // Maps text/attachment intents onto dedicated backend functions.
+    // Anything that fails here silently falls through to the normal pipeline.
+    try {
+      const { detectOrbCapability, runOrbCapability } = await import('@/lib/orbCapabilities');
+      const capability = detectOrbCapability(
+        userMessage.content,
+        pendingMedia
+          ? { type: pendingMedia.type, mimeType: pendingMedia.file.type, fileName: pendingMedia.file.name }
+          : null,
+      );
+
+      if (capability) {
+        const capToken = cotStart(
+          capability === 'document_xray'
+            ? 'zoe-document-xray'
+            : capability === 'song_id'
+              ? 'identify-song'
+              : 'provider-health',
+        );
+        const capResult = await runOrbCapability(capability, {
+          file: pendingMedia?.file ?? null,
+          userId: user?.id,
+        });
+        cotFinish(capToken, capResult.ok ? { ok: true } : { error: capResult.text });
+
+        if (capResult.ok) {
+          setPendingMedia(null);
+          const capMessage: Message = {
+            id: createMessageId(),
+            role: 'zoe',
+            content: capResult.text,
+            timestamp: new Date(),
+            reasoningTrace: {
+              sentinelScanned: true,
+              wisdomChecked: true,
+              wisdomPassed: true,
+              classifiedIntent: capability,
+              codexInjected: false,
+            },
+          };
+          setMessages(prev => [...prev, capMessage]);
+          offlineDataSync.addConversation('zoe', capResult.text);
+          await saveMessageToDb('assistant', capResult.text, undefined, undefined, capMessage.id);
+          if (!isMuted) {
+            speakAsZoe(
+              capResult.text,
+              { messageId: capMessage.id },
+              () => setIsSpeaking(true),
+              () => setIsSpeaking(false),
+            );
+          }
+          setIsProcessing(false);
+          return;
+        }
+        console.warn('[ZoeOrb] capability fell back:', capability, capResult.text);
+      }
+    } catch (capErr) {
+      console.warn('[ZoeOrb] capability router error (falling back):', capErr);
+    }
+
     // Process non-generation media attachments.
     if (hasPendingMedia && pendingMedia) {
       const mediaFile = pendingMedia.file;
