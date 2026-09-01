@@ -2200,6 +2200,54 @@ export type Database = {
           },
         ]
       }
+      dhf_social_links: {
+        Row: {
+          category: string | null
+          created_at: string
+          headline: string | null
+          id: string
+          instagram_url: string | null
+          refreshed_at: string
+          source: string
+          tiktok_url: string | null
+          topic_key: string
+          youtube_channel: string | null
+          youtube_title: string | null
+          youtube_url: string | null
+          youtube_video_id: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          headline?: string | null
+          id?: string
+          instagram_url?: string | null
+          refreshed_at?: string
+          source?: string
+          tiktok_url?: string | null
+          topic_key: string
+          youtube_channel?: string | null
+          youtube_title?: string | null
+          youtube_url?: string | null
+          youtube_video_id?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          headline?: string | null
+          id?: string
+          instagram_url?: string | null
+          refreshed_at?: string
+          source?: string
+          tiktok_url?: string | null
+          topic_key?: string
+          youtube_channel?: string | null
+          youtube_title?: string | null
+          youtube_url?: string | null
+          youtube_video_id?: string | null
+        }
+        Relationships: []
+      }
       dhf_soul_codex: {
         Row: {
           belief_anchors: Json | null
@@ -2500,6 +2548,30 @@ export type Database = {
           tenant_id?: string | null
           user_id?: string
           valence?: number
+        }
+        Relationships: []
+      }
+      edge_rate_limits: {
+        Row: {
+          bucket: string
+          hits: number
+          id: string
+          updated_at: string
+          window_start: string
+        }
+        Insert: {
+          bucket: string
+          hits?: number
+          id?: string
+          updated_at?: string
+          window_start: string
+        }
+        Update: {
+          bucket?: string
+          hits?: number
+          id?: string
+          updated_at?: string
+          window_start?: string
         }
         Relationships: []
       }
