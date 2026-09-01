@@ -85,10 +85,13 @@ const OPENROUTER_TEXT = 'meta-llama/llama-3.3-70b-instruct';
  */
 const GOOGLE_FAST_CANDIDATES = [
   'gemini-3.6-flash',
+  // Live-probed 200 on this account via provider-health (Sep 2026).
+  'gemini-3.5-flash',
   'gemini-2.5-flash',
   'gemini-2.0-flash',
   'gemini-flash-latest',
 ];
+
 const GOOGLE_PRO_CANDIDATES = [
   'gemini-3.1-pro-preview',
   'gemini-2.5-pro',
