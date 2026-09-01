@@ -1280,9 +1280,11 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          is_spam: boolean
           notes: string | null
           reason: string
           reporter_id: string
+          review_note: string | null
           reviewed_at: string | null
           reviewed_by: string | null
           status: Database["public"]["Enums"]["report_status"]
@@ -1294,9 +1296,11 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          is_spam?: boolean
           notes?: string | null
           reason: string
           reporter_id: string
+          review_note?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: Database["public"]["Enums"]["report_status"]
@@ -1308,9 +1312,11 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          is_spam?: boolean
           notes?: string | null
           reason?: string
           reporter_id?: string
+          review_note?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: Database["public"]["Enums"]["report_status"]
