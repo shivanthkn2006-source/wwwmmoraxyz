@@ -222,9 +222,24 @@ async function callGroq(payload: any): Promise<Response | null> {
   return resp;
 }
 
+/**
+ * Circuit breaker: once Google answers 429 (free-tier quota exhausted) every
+ * further call in this isolate is pointless and just adds latency to every
+ * request. Skip the provider for a cooldown window instead.
+ */
+let googleQuotaBlockedUntil = 0;
+const GOOGLE_QUOTA_COOLDOWN_MS = 10 * 60 * 1000;
+
+/** True while Google is rate-limited (used by callers to report inconclusive). */
+export function googleQuotaExhausted(): boolean {
+  return Date.now() < googleQuotaBlockedUntil;
+}
+
 async function callGoogle(payload: any): Promise<Response | null> {
   const key = Deno.env.get('GOOGLE_AI_STUDIO_KEY');
   if (!key) return null;
+  if (googleQuotaExhausted()) return null;
+
 
   const messages: AnyMsg[] = payload.messages || [];
   const systemText = messages.filter((m) => m.role === 'system').map((m) => (typeof m.content === 'string' ? m.content : '')).join('\n');
