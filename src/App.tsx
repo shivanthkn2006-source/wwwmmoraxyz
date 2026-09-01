@@ -1211,6 +1211,7 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         {/* DeviceTierProvider is in main.tsx - earliest possible detection for M05 optimization */}
+        <GlobalRealtimeProvider>
         <GlobalMediaProvider>
           <NavigationBusProvider>
             <DevModeProvider>
