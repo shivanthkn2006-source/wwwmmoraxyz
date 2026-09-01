@@ -2395,6 +2395,105 @@ export type Database = {
         }
         Relationships: []
       }
+      dhf_video_dispatch_runs: {
+        Row: {
+          detail: Json
+          failures: number
+          finished_at: string | null
+          id: string
+          inserted: number
+          requested: number
+          skipped: number
+          started_at: string
+          status: string
+        }
+        Insert: {
+          detail?: Json
+          failures?: number
+          finished_at?: string | null
+          id?: string
+          inserted?: number
+          requested?: number
+          skipped?: number
+          started_at?: string
+          status?: string
+        }
+        Update: {
+          detail?: Json
+          failures?: number
+          finished_at?: string | null
+          id?: string
+          inserted?: number
+          requested?: number
+          skipped?: number
+          started_at?: string
+          status?: string
+        }
+        Relationships: []
+      }
+      dhf_videos: {
+        Row: {
+          active: boolean
+          category: string
+          created_at: string
+          description: string
+          figure_name: string
+          figure_slug: string
+          id: string
+          instagram_url: string | null
+          published_at: string | null
+          source: string
+          thumbnail_url: string | null
+          tiktok_url: string | null
+          title: string
+          topic: string
+          updated_at: string
+          youtube_channel: string | null
+          youtube_url: string | null
+          youtube_video_id: string | null
+        }
+        Insert: {
+          active?: boolean
+          category?: string
+          created_at?: string
+          description?: string
+          figure_name: string
+          figure_slug: string
+          id?: string
+          instagram_url?: string | null
+          published_at?: string | null
+          source?: string
+          thumbnail_url?: string | null
+          tiktok_url?: string | null
+          title: string
+          topic: string
+          updated_at?: string
+          youtube_channel?: string | null
+          youtube_url?: string | null
+          youtube_video_id?: string | null
+        }
+        Update: {
+          active?: boolean
+          category?: string
+          created_at?: string
+          description?: string
+          figure_name?: string
+          figure_slug?: string
+          id?: string
+          instagram_url?: string | null
+          published_at?: string | null
+          source?: string
+          thumbnail_url?: string | null
+          tiktok_url?: string | null
+          title?: string
+          topic?: string
+          updated_at?: string
+          youtube_channel?: string | null
+          youtube_url?: string | null
+          youtube_video_id?: string | null
+        }
+        Relationships: []
+      }
       divine_notifications: {
         Row: {
           brand_name: string | null
