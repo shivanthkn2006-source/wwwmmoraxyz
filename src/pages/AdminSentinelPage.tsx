@@ -121,7 +121,7 @@ const AdminSentinelPage: React.FC = () => {
     const cutoff = new Date(Date.now() - 15 * 60_000).toISOString();
     const [s, t, b, u] = await Promise.all([
       supabase
-        .from('user_sessions')
+        .from('sentinel_sessions')
         .select(
           'id,user_id,ip_address,country,region,city,browser,os,device_type,device_model,device_fingerprint,hardware,last_activity_at,started_at,is_active',
         )

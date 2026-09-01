@@ -121,7 +121,7 @@ serve(async (req) => {
     if (action === 'end') {
       if (sessionToken) {
         await admin
-          .from('user_sessions')
+          .from('sentinel_sessions')
           .update({ is_active: false, ended_at: new Date().toISOString() })
           .eq('session_token', sessionToken);
       }
@@ -135,7 +135,7 @@ serve(async (req) => {
       if (!sessionToken) return json({ ok: false }, 400);
       const geo = await resolveGeo(ip, req.headers.get('cf-ipcountry'));
       const now = new Date().toISOString();
-      await admin.from('user_sessions').upsert(
+      await admin.from('sentinel_sessions').upsert(
         {
           session_token: sessionToken,
           user_id: userId,
@@ -221,7 +221,7 @@ serve(async (req) => {
         );
         if (sessionToken) {
           await admin
-            .from('user_sessions')
+            .from('sentinel_sessions')
             .update({ is_active: false, ended_at: new Date().toISOString() })
             .eq('session_token', sessionToken);
         }
