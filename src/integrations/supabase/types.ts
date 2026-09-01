@@ -11138,6 +11138,10 @@ export type Database = {
         Args: { p_player_id: string; p_points: number; p_reason?: string }
         Returns: undefined
       }
+      bump_edge_rate_limit: {
+        Args: { _bucket: string; _window_start: string }
+        Returns: number
+      }
       calculate_agent_success_probability: {
         Args: { p_job_id: string; p_user_id: string }
         Returns: number
