@@ -7,6 +7,7 @@ import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { toast } from 'sonner';
+import { buildAllShareUrls } from '@/lib/shareTargets';
 
 export type SocialPlatform = 'tiktok' | 'youtube' | 'instagram' | 'twitter' | 'linkedin' | 'whatsapp' | 'other';
 export type ContentType = 'loops' | 'architect_plan' | 'dream' | 'timeline_insight' | 'post';
@@ -211,18 +212,22 @@ For each platform provide:
     }
   }, [user]);
 
-  // Generate share links
+  // Generate share links — every platform resolves through the single
+  // share-target layer so a share can only break in one place.
   const getShareLinks = useCallback((content: string, url?: string) => {
-    const encodedContent = encodeURIComponent(content);
-    const encodedUrl = url ? encodeURIComponent(url) : '';
-    
+    const links = buildAllShareUrls({ text: content, url });
     return {
-      twitter: `https://twitter.com/intent/tweet?text=${encodedContent}${url ? `&url=${encodedUrl}` : ''}`,
-      linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`,
-      whatsapp: `https://wa.me/?text=${encodedContent}${url ? ` ${encodedUrl}` : ''}`,
-      tiktok: 'tiktok://create', // Deep link (requires app)
-      instagram: 'instagram://story-camera', // Deep link (requires app)
-      youtube: 'https://www.youtube.com/upload' // Redirect to upload
+      twitter: links.x as string,
+      x: links.x as string,
+      facebook: links.facebook,
+      linkedin: links.linkedin,
+      whatsapp: links.whatsapp as string,
+      telegram: links.telegram as string,
+      reddit: links.reddit as string,
+      email: links.email as string,
+      tiktok: links.tiktok as string,
+      instagram: links.instagram as string,
+      youtube: links.youtube as string,
     };
   }, []);
 

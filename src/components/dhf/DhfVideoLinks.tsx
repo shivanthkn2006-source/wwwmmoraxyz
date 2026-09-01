@@ -10,13 +10,21 @@
 import React, { useEffect, useState } from 'react';
 import { Play, Loader2 } from 'lucide-react';
 import { resolveDhfSocialLinks, searchFallback, type DhfSocialLinks } from '@/lib/dhfSocialLinks';
+import { openShare } from '@/lib/shareTargets';
 
 interface Props {
   headline: string;
   category?: string;
   /** Fired with the platform id whenever the member opens one. */
-  onOpen?: (platform: 'youtube' | 'tiktok' | 'instagram', url: string) => void;
+  onOpen?: (platform: 'youtube' | 'tiktok' | 'instagram' | 'x', url: string) => void;
 }
+
+const XGlyph: React.FC = () => (
+  <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="currentColor" aria-hidden="true">
+    <path d="M18.24 2.25h3.31l-7.23 8.26 8.5 11.24h-6.65l-5.21-6.82-5.96 6.82H1.68l7.73-8.84L1.25 2.25h6.82l4.71 6.23 5.46-6.23zm-1.16 17.52h1.83L7.01 4.13H5.05l12.03 15.64z" />
+  </svg>
+);
+
 
 const TikTokGlyph: React.FC = () => (
   <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="currentColor" aria-hidden="true">
@@ -63,13 +71,27 @@ export const DhfVideoLinks: React.FC<Props> = ({ headline, category, onOpen }) =
 
   if (!links) return null;
 
-  const open = (platform: 'youtube' | 'tiktok' | 'instagram', url: string | null) => (
+  const open = (platform: 'youtube' | 'tiktok' | 'instagram' | 'x', url: string | null) => (
     e: React.MouseEvent,
   ) => {
     e.stopPropagation();
     if (!url) return;
     onOpen?.(platform, url);
   };
+
+  // Share the story itself to X — the video link when we resolved one,
+  // otherwise the headline on its own.
+  const shareToX = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const used = openShare('x', {
+      text: headline,
+      url: links.youtube_video_id ? links.youtube_url ?? undefined : undefined,
+      hashtags: category ? [category] : undefined,
+    });
+    if (used) onOpen?.('x', used);
+  };
+
 
   return (
     <div className="mt-3 flex flex-wrap items-center gap-2" data-dhf-links="ready">
@@ -116,7 +138,19 @@ export const DhfVideoLinks: React.FC<Props> = ({ headline, category, onOpen }) =
           Instagram
         </a>
       )}
+      <button
+        type="button"
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={shareToX}
+        className={linkClass}
+        aria-label="Share this story on X"
+        data-dhf-link="x"
+      >
+        <XGlyph />
+        Share on X
+      </button>
       {links.youtube_channel && (
+
         <span className="text-[10px] text-muted-foreground/80">via {links.youtube_channel}</span>
       )}
     </div>
