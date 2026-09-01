@@ -31,7 +31,7 @@ describe('3D crash test — VR world error isolation', () => {
       </div>,
     );
 
-    expect(screen.getByTestId('app-shell')).toBeInTheDocument();
+    expect(screen.getByTestId('app-shell')).toBeTruthy();
     expect(screen.getAllByText(/VR World Initialization Issue/i).length).toBeGreaterThan(0);
     expect(document.body.textContent?.trim().length ?? 0).toBeGreaterThan(0);
   });
@@ -56,6 +56,6 @@ describe('3D crash test — VR world error isolation', () => {
     expect(retry).toBeTruthy();
     fireEvent.click(retry!);
 
-    expect(screen.getByTestId('vr-world')).toBeInTheDocument();
+    expect(screen.getByTestId('vr-world')).toBeTruthy();
   });
 });
