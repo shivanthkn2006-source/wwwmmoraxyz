@@ -97,8 +97,18 @@ export const useReminderNotifications = () => {
     // Check immediately
     checkDueReminders();
 
-    // Check every minute
-    const interval = setInterval(checkDueReminders, 60000);
+    // Check every minute while the tab is visible. Reminder toasts are
+    // invisible in a hidden tab, so polling there is wasted backend load; the
+    // visibility handler below runs an immediate catch-up on return.
+    const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
+      void checkDueReminders();
+    }, 60000);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void checkDueReminders();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+
 
     // Listen for new reminders
     const channel = supabase
