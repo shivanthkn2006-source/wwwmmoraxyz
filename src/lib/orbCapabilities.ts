@@ -185,7 +185,7 @@ export const runSongIdentification = async (file: Blob): Promise<OrbCapabilityRe
 export interface ProviderStatusPayload {
   ok?: boolean;
   keys?: Record<string, boolean>;
-  tiers?: Array<{ tier?: string; name?: string; label?: string; ok?: boolean; healthy?: boolean }>;
+  tiers?: Array<{ tier?: number | string; name?: string; label?: string; ok?: boolean; healthy?: boolean; keyPresent?: boolean }>;
   results?: Array<{ model?: string; ok?: boolean; status?: number }>;
 }
 
@@ -200,7 +200,7 @@ export const formatProviderStatus = (payload: ProviderStatusPayload): string => 
     lines.push('', 'Cascade tiers:');
     payload.tiers.forEach((t) => {
       const label = t.label ?? t.name ?? t.tier ?? 'tier';
-      const healthy = t.ok ?? t.healthy;
+      const healthy = t.ok ?? t.healthy ?? t.keyPresent;
       lines.push(`• ${label}${healthy === undefined ? '' : healthy ? ' — online' : ' — offline'}`);
     });
   }
