@@ -71,13 +71,27 @@ export const DhfVideoLinks: React.FC<Props> = ({ headline, category, onOpen }) =
 
   if (!links) return null;
 
-  const open = (platform: 'youtube' | 'tiktok' | 'instagram', url: string | null) => (
+  const open = (platform: 'youtube' | 'tiktok' | 'instagram' | 'x', url: string | null) => (
     e: React.MouseEvent,
   ) => {
     e.stopPropagation();
     if (!url) return;
     onOpen?.(platform, url);
   };
+
+  // Share the story itself to X — the video link when we resolved one,
+  // otherwise the headline on its own.
+  const shareToX = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const used = openShare('x', {
+      text: headline,
+      url: links.youtube_video_id ? links.youtube_url ?? undefined : undefined,
+      hashtags: category ? [category] : undefined,
+    });
+    if (used) onOpen?.('x', used);
+  };
+
 
   return (
     <div className="mt-3 flex flex-wrap items-center gap-2" data-dhf-links="ready">
