@@ -58,6 +58,26 @@ const PROVIDER_PATTERNS = [
   /\bare (your|the) (models|providers|brains)\b[^.?!]{0,20}\b(up|online|working)\b/i,
 ];
 
+const INDEX_PATTERNS = [
+  /\b(index|ingest|remember|memori[sz]e|learn)\b[^.?!]{0,25}\b(this |that |my )?(post|loop|clip|chat|memory|note|card)\b/i,
+  /\badd\b[^.?!]{0,20}\bto (your|the) (index|memory|search)\b/i,
+  /\bmake (this|that) searchable\b/i,
+];
+
+const PREMIUM_PATTERNS = [
+  /\b(premium|vip|tier)\b[^.?!]{0,25}\b(status|score|level|check|standing)\b/i,
+  /\b(what|which)\b[^.?!]{0,15}\btier\b[^.?!]{0,15}\b(am i|do i have)\b/i,
+  /\bam i (a )?(premium|vip)\b/i,
+  /\bluxury brands?\b[^.?!]{0,20}\b(detected|found|do i)\b/i,
+];
+
+const BRAND_PATTERNS = [
+  /\b(my|our)\b[^.?!]{0,15}\bbrand (preferences|affinity|profile|taste)\b/i,
+  /\b(which|what)\b[^.?!]{0,20}\bbrands?\b[^.?!]{0,20}\b(do i (like|prefer)|am i into)\b/i,
+  /\b(brand|deal|offer)\b[^.?!]{0,20}\brecommendations?\b/i,
+  /\brecommend\b[^.?!]{0,20}\b(brands?|deals?|offers?)\b/i,
+];
+
 const matches = (text: string, patterns: RegExp[]) => patterns.some((p) => p.test(text));
 
 /** Document / audio attachments can decide the capability on their own. */
@@ -65,6 +85,7 @@ export const detectOrbCapability = (
   rawText: string,
   attachment?: { type?: string; mimeType?: string; fileName?: string } | null,
 ): OrbCapability | null => {
+
   const text = (rawText || '').trim();
   const mime = (attachment?.mimeType || '').toLowerCase();
   const name = (attachment?.fileName || '').toLowerCase();
