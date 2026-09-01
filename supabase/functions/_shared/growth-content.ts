@@ -89,7 +89,9 @@ export function sanitizeFocusAreas(input: unknown): string[] {
   for (const raw of list) {
     const v = String(raw ?? '').trim();
     if (allowed.has(v) && !out.includes(v)) out.push(v);
-    if (out.length >= 6) break;
+    // Bound only by the number of areas the UI can actually offer, so a member
+    // who selects every area keeps every one of them.
+    if (out.length >= FOCUS_AREAS.length) break;
   }
   return out.length ? out : ['Deep Focus & Productivity'];
 }
