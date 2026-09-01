@@ -58,9 +58,18 @@ export function useGrowthFlags() {
   const { user } = useAuth();
   const [flags, setFlags] = useState<Record<string, GrowthFlag>>(() => cache?.flags ?? {});
   const [loading, setLoading] = useState(!cache);
+  // The flag read is a network round-trip; a component that unmounts first
+  // (route change, or a torn-down test environment) must not be written to.
+  const alive = useRef(true);
+
+  useEffect(() => {
+    alive.current = true;
+    return () => { alive.current = false; };
+  }, []);
 
   const load = useCallback(async (force = false) => {
     const next = await fetchFlags(force);
+    if (!alive.current) return;
     setFlags(next);
     setLoading(false);
   }, []);
