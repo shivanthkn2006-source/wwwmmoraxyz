@@ -19,6 +19,8 @@ import { ArrowLeft, RefreshCw, Loader2, ShieldAlert, Globe, Ban } from 'lucide-r
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
+import { reportThreat } from '@/lib/sentinelClient';
+
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
