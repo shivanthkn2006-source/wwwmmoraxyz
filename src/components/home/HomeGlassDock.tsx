@@ -211,18 +211,18 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
       ref={rootRef}
       data-home-dock
       className={cn(
-        'fixed right-0 z-[9996] flex items-center justify-end',
+        'fixed right-0 z-[9996] flex flex-col items-end justify-end',
         'bottom-[calc(env(safe-area-inset-bottom,0px)+12px)]',
         className,
       )}
     >
-      {/* Rectangular horizontal glass tube — slides out right → left, auto-sized to viewport */}
+      {/* Rounded glass panel — slides up from the home trigger, bottom → top */}
       <div
         className={cn(
-          'flex h-12 items-center overflow-hidden transition-all duration-300 ease-out',
+          'mb-2 mr-2 flex overflow-hidden transition-all duration-300 ease-out',
           open
-            ? 'mr-0 max-w-[calc(100vw-env(safe-area-inset-left,0px)-env(safe-area-inset-right,0px)-52px)] translate-x-0 opacity-100'
-            : 'pointer-events-none mr-0 max-w-0 translate-x-4 opacity-0',
+            ? 'max-h-[60vh] translate-y-0 opacity-100'
+            : 'pointer-events-none max-h-0 translate-y-3 opacity-0',
         )}
       >
         <div
@@ -230,10 +230,10 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
           role="menu"
           aria-hidden={!open}
           className={cn(
-            'flex h-12 items-center gap-1 overflow-x-auto rounded-2xl rounded-r-none border border-white/25 border-r-0 px-2',
+            'grid max-h-[60vh] grid-cols-3 gap-1.5 overflow-y-auto rounded-3xl border border-white/25 p-2',
             'bg-white/10 backdrop-blur-xl shadow-[0_8px_24px_rgba(0,0,0,0.35)]',
             '[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden',
-            'snap-x snap-mandatory scroll-px-2 scroll-smooth touch-pan-x [overscroll-behavior-x:contain]',
+            'scroll-smooth touch-pan-y [overscroll-behavior-y:contain]',
           )}
         >
 
