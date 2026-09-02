@@ -301,7 +301,7 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
   const dropdownTop = iconPosition.y + 52;
   const dropdownMaxHeight = Math.max(180, viewport.h - dropdownTop - 24);
 
-  /** Cyber-Night glass:真 transparency + blur, never a solid panel. */
+  /** Cyber-Night glass: real transparency + blur, never a solid panel. */
   const glassSurface =
     'border border-white/15 bg-white/[0.06] shadow-[0_8px_40px_-12px_rgba(0,0,0,0.8)] backdrop-blur-2xl backdrop-saturate-150 supports-[backdrop-filter]:bg-white/[0.06]';
 
