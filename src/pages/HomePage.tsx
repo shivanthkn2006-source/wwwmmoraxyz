@@ -383,8 +383,14 @@ const HomePage = () => {
 
   useEffect(() => {
     const onInject = (event: Event) => {
-      const detail = (event as CustomEvent).detail as { videos?: ExternalVideoItem[]; activeId?: string } | undefined;
-      const videos = (detail?.videos ?? []).filter((video) => !!video?.url);
+      const detail = (event as CustomEvent).detail as
+        | { videos?: FeedSearchItem[]; items?: FeedSearchItem[]; activeId?: string }
+        | undefined;
+      // Videos still need a playable URL; every other kind (web, image, news,
+      // weather, shopping, music, platform) renders as an in-feed card.
+      const videos = (detail?.items ?? detail?.videos ?? []).filter(
+        (item) => item && (item.kind === 'video' ? !!item.url : true),
+      );
       if (!videos.length) return;
       const activeId = detail?.activeId ?? videos[0].id;
       // Snapshot where the user was so the feed icon can bring them back exactly.
@@ -427,14 +433,23 @@ const HomePage = () => {
           data-video-key={video.id}
           className="relative h-full min-h-full w-full shrink-0 snap-start snap-always overflow-hidden"
         >
-          <ExternalVideoCard
-            item={video}
-            autoPlay={video.id === activeSearchVideoId}
-            active={visibleVideoKey === null ? video.id === activeSearchVideoId : visibleVideoKey === video.id}
-            saved={savedVideoIds.has(video.id)}
-            onToggleSave={() => toggleSavedVideo(video)}
-            onDismiss={() => setSearchVideos((prev) => prev.filter((entry) => entry.id !== video.id))}
-          />
+          {video.kind === 'video' || !video.kind ? (
+            <ExternalVideoCard
+              item={video as ExternalVideoItem}
+              autoPlay={video.id === activeSearchVideoId}
+              active={visibleVideoKey === null ? video.id === activeSearchVideoId : visibleVideoKey === video.id}
+              saved={savedVideoIds.has(video.id)}
+              onToggleSave={() => toggleSavedVideo(video as ExternalVideoItem)}
+              onDismiss={() => setSearchVideos((prev) => prev.filter((entry) => entry.id !== video.id))}
+            />
+          ) : (
+            <FeedSearchCard
+              item={video}
+              saved={savedVideoIds.has(video.id)}
+              onToggleSave={() => toggleSavedVideo(video as ExternalVideoItem)}
+              onDismiss={() => setSearchVideos((prev) => prev.filter((entry) => entry.id !== video.id))}
+            />
+          )}
         </div>
       )),
     [searchVideos, activeSearchVideoId, visibleVideoKey, savedVideoIds, toggleSavedVideo, exitSearchVideos],
