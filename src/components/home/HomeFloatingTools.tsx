@@ -84,15 +84,9 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
   }, [searchOpen]);
 
 
-  // Outside-the-platform results (web, music, weather) via the external-search function.
-  const [externalResults, setExternalResults] = React.useState<Array<{
-    id: string;
-    kind: 'web' | 'music' | 'weather' | 'video';
-    title: string;
-    subtitle?: string;
-    url?: string;
-    thumbnail?: string;
-  }>>([]);
+  // Outside-the-platform results (web, images, news, videos, weather,
+  // shopping, music) via the external-search function.
+  const [externalResults, setExternalResults] = React.useState<FeedSearchItem[]>([]);
   const [externalLoading, setExternalLoading] = React.useState(false);
 
   // Feed icon lifecycle: hidden when nothing is injected, loading while the
