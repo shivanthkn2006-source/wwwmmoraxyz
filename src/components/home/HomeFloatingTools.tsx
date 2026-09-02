@@ -479,10 +479,10 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
                     type="button"
                     aria-pressed={filter === chip.id}
                     onClick={() => setFilter(chip.id)}
-                    className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] ${
+                    className={`shrink-0 bg-transparent px-2 py-0.5 text-[11px] ${
                       filter === chip.id
-                        ? 'border-foreground/40 bg-foreground/10 text-white'
-                        : 'border-white/15 text-white/55 hover:text-white'
+                        ? 'font-semibold text-white'
+                        : 'text-white/50 hover:text-white/80'
                     }`}
                   >
                     {chip.label} {total}
