@@ -98,6 +98,12 @@ const INJECTION_PATTERNS: RegExp[] = [
   /\.\.\/\.\.\/|\/etc\/passwd|\bfile:\/\//i,
 ];
 
+/** Cloudflare thresholds. Tuned to refuse abusers without touching humans. */
+export const CF_THREAT_SCORE_BLOCK = 30; // Cloudflare's own "bad reputation" line
+export const CF_BOT_SCORE_BLOCK = 15; // 1..30 is automated; below 15 is hostile automation
+/** Countries with no member base and a heavy share of credential-stuffing traffic. */
+export const CF_BLOCKED_COUNTRIES = ['T1']; // T1 = Tor exit network
+
 const refuse = (status: number) =>
   new Response(JSON.stringify({ ok: false, error: 'Request refused' }), {
     status,
@@ -109,6 +115,33 @@ export const wafClientIp = (req: Request): string => {
   if (fwd) return fwd.split(',')[0].trim();
   return req.headers.get('cf-connecting-ip') ?? req.headers.get('x-real-ip') ?? 'unknown';
 };
+
+const num = (value: string | null): number | null => {
+  if (value === null || value.trim() === '') return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+/** Read the Cloudflare edge signals Cloudflare adds in front of the function. */
+export const readCloudflareSignals = (req: Request): CloudflareSignals => ({
+  threatScore: num(req.headers.get('cf-threat-score')),
+  botScore: num(req.headers.get('cf-bot-score') ?? req.headers.get('x-bot-score')),
+  verifiedBot: (req.headers.get('cf-verified-bot') ?? '').toLowerCase() === 'true',
+  country: req.headers.get('cf-ipcountry'),
+  ray: req.headers.get('cf-ray'),
+});
+
+/**
+ * Cloudflare rule evaluation. Verified good bots (Googlebot and friends) are
+ * exempt so crawling never trips the bot score rule.
+ */
+export const evaluateCloudflareRules = (cf: CloudflareSignals): WafRuleId | null => {
+  if (cf.country && CF_BLOCKED_COUNTRIES.includes(cf.country.toUpperCase())) return 'cf_geo_block';
+  if (cf.threatScore !== null && cf.threatScore >= CF_THREAT_SCORE_BLOCK) return 'cf_threat_score';
+  if (!cf.verifiedBot && cf.botScore !== null && cf.botScore <= CF_BOT_SCORE_BLOCK) return 'cf_bot_score';
+  return null;
+};
+
 
 let cachedAdmin: SupabaseClient | null = null;
 const adminClient = (): SupabaseClient | null => {
