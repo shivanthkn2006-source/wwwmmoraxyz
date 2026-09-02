@@ -152,6 +152,7 @@ const AdminOverviewPage: React.FC = () => {
               <h2 className="text-sm font-semibold text-foreground">Admin surfaces</h2>
               <div className="mt-3 flex flex-wrap gap-2">
                 {[
+                  ['/admin/vault', 'Sovereign vault'],
                   ['/admin/health', 'Health'],
                   ['/admin/sentinel', 'Sentinel'],
                   ['/admin/dhf-generation', 'DHF generation'],
@@ -163,8 +164,11 @@ const AdminOverviewPage: React.FC = () => {
                   ['/admin/zoe-preview', 'Zoe preview'],
                   ['/attack-response', 'Attack response'],
                   ['/platform-architecture', 'Architecture'],
-
+                  ['/platform-overview', 'Platform overview'],
+                  ['/compatibility-report', 'Compatibility report'],
+                  ['/zoe-astro/birth', 'Birth details'],
                 ].map(([to, label]) => (
+
                   <Button key={to} asChild size="sm" variant="outline">
                     <Link to={to}>{label}</Link>
                   </Button>
