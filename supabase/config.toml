@@ -354,3 +354,6 @@ verify_jwt = true
 
 [functions.sentinel-guard]
 verify_jwt = false
+
+[functions.beta-invite]
+verify_jwt = false

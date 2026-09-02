@@ -50,6 +50,7 @@ interface InviteRow {
   max_uses: number | null;
   current_uses: number | null;
   used_by: string | null;
+  used_at: string | null;
   metadata: Record<string, unknown> | null;
   created_at: string;
   revoked_at: string | null;
@@ -99,7 +100,7 @@ serve(async (req) => {
       if (!code) throw new Error('code is required');
       const { data } = await db
         .from('invite_codes')
-        .select('id, code, is_active, expires_at, max_uses, current_uses, used_by, metadata, created_at, revoked_at, revoked_reason')
+        .select('id, code, is_active, expires_at, max_uses, current_uses, used_by, used_at, metadata, created_at, revoked_at, revoked_reason')
         .eq('code', code)
         .maybeSingle();
       const verdict = inviteUsable(data as InviteRow | null);
@@ -114,7 +115,7 @@ serve(async (req) => {
       if (!code) throw new Error('code is required');
       const { data } = await db
         .from('invite_codes')
-        .select('id, code, is_active, expires_at, max_uses, current_uses, used_by, metadata, created_at, revoked_at, revoked_reason')
+        .select('id, code, is_active, expires_at, max_uses, current_uses, used_by, used_at, metadata, created_at, revoked_at, revoked_reason')
         .eq('code', code)
         .maybeSingle();
       const row = data as InviteRow | null;
