@@ -163,7 +163,22 @@ const PlatformArchitecturePage: React.FC = () => {
  │ Admin surfaces: /admin/sentinel · /admin/control-panel · …     │
  │ Immutable-column triggers on profiles + messages               │
  │ Edge functions: verify_jwt on AI routes, service_role writes   │
- └───────────────────────────────────────────────────────────────┘`}</Diagram>
+  └───────────────────────────────────────────────────────────────┘`}</Diagram>
+
+            <Card className="p-4 bg-card/60 border-border">
+              <p className="text-sm text-muted-foreground">
+                Every rule enforced by the Cloudflare edge, the shared WAF guard and Sentinel — with its detection,
+                automatic mitigation and escalation path — is published on the attack response plan.
+              </p>
+              <Link
+                to="/attack-response"
+                className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
+              >
+                Open the attack response plan →
+              </Link>
+            </Card>
+
+
 
             <Diagram title="Secret handling">{`
   browser  ─── never sees ───▶  GOOGLE_API_KEY, COHERE_API_KEY, NVIDIA_*,
