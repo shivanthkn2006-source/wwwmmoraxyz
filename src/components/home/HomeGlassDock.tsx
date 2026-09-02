@@ -68,8 +68,8 @@ const PLACEHOLDER_ICONS = [
 ];
 
 /**
- * Bottom-left home dock. Tap, press Enter/Space, or swipe the home icon to
- * open a compact glass panel. Home remains in the first bottom-row slot,
+ * Bottom-right home dock. Tap, press Enter/Space, or swipe the home icon to
+ * open a compact glass panel. Home remains in the last bottom-row slot,
  * separated from the menu actions by one empty icon slot.
  */
 const formatAgo = (timestamp?: number | null): string => {
@@ -264,15 +264,15 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
           if (next) setOpen(false);
         } : undefined}
         className={cn(
-          'group relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl',
+          'group relative flex h-11 w-11 shrink-0 items-center justify-center',
           'transition-all active:scale-95',
           isHome
-            ? 'border-0 bg-transparent text-white shadow-none hover:bg-transparent'
+            ? 'appearance-none rounded-none !border-0 !bg-transparent p-0 text-white !shadow-none hover:!bg-transparent'
             : highlighted
               ? 'border border-white/45 bg-white/25 text-white shadow-[0_0_10px_rgba(255,255,255,0.35)] hover:bg-white/30'
               : 'border border-white/15 bg-white/5 text-white/60 hover:bg-white/15 hover:text-white/90',
           isHome
-            ? 'outline-none ring-0 focus:outline-none focus-visible:outline-none focus-visible:ring-0'
+            ? '!outline-none !ring-0 focus:!outline-none focus:!ring-0 focus-visible:!outline-none focus-visible:!ring-0'
             : 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60',
         )}
       >
@@ -324,12 +324,12 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
       ref={rootRef}
       data-home-dock
       className={cn(
-        'fixed z-[9996] flex flex-col items-start justify-end',
-        'bottom-[calc(env(safe-area-inset-bottom,0px)+8px)] left-2',
+        'fixed z-[9996] flex flex-col items-end justify-end',
+        'bottom-[calc(env(safe-area-inset-bottom,0px)+8px)] right-2',
         className,
       )}
     >
-      {/* Glass dock panel — permanently anchored on the computer's left side. */}
+      {/* Glass dock panel — permanently anchored on the computer's right side. */}
       <div
         className={cn(
           'overflow-hidden transition-all duration-300 ease-out',
@@ -343,13 +343,13 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
           role={open ? 'menu' : undefined}
           aria-hidden={open ? false : undefined}
           className={cn(
-            'flex flex-row flex-wrap-reverse content-start items-center justify-start gap-2 rounded-[28px] border-0 p-2',
+            'flex flex-row-reverse flex-wrap-reverse content-start items-center justify-start gap-2 rounded-[28px] border-0 p-2',
             'bg-white/10 backdrop-blur-xl shadow-none',
           )}
           style={{ maxWidth: 'min(100vw - 16px, 380px)' }}
         >
-          {/* Home never relocates. The reserved slot makes its separation obvious. */}
           {renderIconButton(homeItem, true)}
+          {/* One empty bottom-row slot separates actions from the fixed right-corner Home. */}
           {open && <span aria-hidden="true" className="h-11 w-11 shrink-0" />}
           {open && slots.map((item) => renderIconButton(item))}
         </div>
