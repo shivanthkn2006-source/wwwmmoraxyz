@@ -179,39 +179,89 @@ export async function consumeRateLimit(
 }
 
 
+/** True when Sentinel holds an active block for this address. */
+export async function isSentinelBlockedIp(ip: string): Promise<boolean> {
+  if (!ip || ip === 'unknown') return false;
+  const db = adminClient();
+  if (!db) return false;
+  try {
+    const { data, error } = await db
+      .from('sentinel_blocks')
+      .select('id')
+      .eq('ip_address', ip)
+      .eq('active', true)
+      .limit(1);
+    if (error) return false;
+    return (data ?? []).length > 0;
+  } catch {
+    return false;
+  }
+}
+
+/** Record a WAF refusal as a Sentinel threat event. Never throws. */
+export async function recordWafThreat(
+  rule: WafRuleId,
+  ip: string,
+  cf: CloudflareSignals,
+  fn: string,
+): Promise<void> {
+  const db = adminClient();
+  if (!db) return;
+  const severity = rule === 'rate_limit' ? 'medium' : rule === 'sentinel_block' ? 'critical' : 'high';
+  try {
+    await db.from('sentinel_threat_events').insert({
+      threat_type: `waf_${rule}`,
+      severity,
+      ip_address: ip === 'unknown' ? null : ip,
+      country: cf.country,
+      page_url: `edge:${fn}`,
+      blocked: true,
+      details: { rule, function: fn, cf },
+    });
+  } catch {
+    /* telemetry must never break the guard */
+  }
+}
+
 /** Run every guard. Returns `{ response }` when the caller must stop. */
 export async function guardRequest(req: Request, options: WafOptions): Promise<WafVerdict> {
   const ip = wafClientIp(req);
+  const cf = readCloudflareSignals(req);
   const maxBody = options.maxBodyBytes ?? DEFAULT_MAX_BODY;
-  const empty: WafVerdict = { body: {}, ip, remaining: options.limit };
+  const empty: WafVerdict = { body: {}, ip, remaining: options.limit, cf };
 
-  if (req.method !== 'POST') return { ...empty, response: refuse(405) };
+  const deny = (rule: WafRuleId, status: number, body: Record<string, unknown> = {}): WafVerdict => {
+    void recordWafThreat(rule, ip, cf, options.name);
+    return { ...empty, body, rule, response: refuse(status) };
+  };
+
+  if (req.method !== 'POST') return { ...empty, rule: 'method', response: refuse(405) };
 
   const ua = (req.headers.get('user-agent') ?? '').toLowerCase();
-  if (!ua || BAD_AGENTS.some((bad) => ua.includes(bad))) {
-    return { ...empty, response: refuse(403) };
-  }
+  if (!ua || BAD_AGENTS.some((bad) => ua.includes(bad))) return deny('agent', 403);
+
+  // Cloudflare edge verdicts come before any work: reputation, bots and geo.
+  const cfRule = evaluateCloudflareRules(cf);
+  if (cfRule) return deny(cfRule, 403);
+
+  if (await isSentinelBlockedIp(ip)) return deny('sentinel_block', 403);
 
   const declared = Number(req.headers.get('content-length') ?? '0');
-  if (declared > maxBody) return { ...empty, response: refuse(413) };
+  if (declared > maxBody) return deny('body_size', 413);
 
   const raw = await req.text();
-  if (raw.length > maxBody) return { ...empty, response: refuse(413) };
+  if (raw.length > maxBody) return deny('body_size', 413);
 
-  if (!options.allowRichText && INJECTION_PATTERNS.some((p) => p.test(raw))) {
-    return { ...empty, response: refuse(403) };
-  }
+  if (!options.allowRichText && INJECTION_PATTERNS.some((p) => p.test(raw))) return deny('injection', 403);
 
   let body: Record<string, unknown> = {};
   if (raw.trim()) {
     try {
       const parsed = JSON.parse(raw);
-      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-        return { ...empty, response: refuse(400) };
-      }
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return deny('malformed', 400);
       body = parsed as Record<string, unknown>;
     } catch {
-      return { ...empty, response: refuse(400) };
+      return deny('malformed', 400);
     }
   }
 
@@ -222,9 +272,12 @@ export async function guardRequest(req: Request, options: WafOptions): Promise<W
     options.windowSeconds,
   );
   if (!allowed) {
+    void recordWafThreat('rate_limit', ip, cf, options.name);
     return {
       body,
       ip,
+      cf,
+      rule: 'rate_limit',
       remaining: 0,
       response: new Response(JSON.stringify({ ok: false, error: 'Too many requests' }), {
         status: 429,
@@ -236,6 +289,8 @@ export async function guardRequest(req: Request, options: WafOptions): Promise<W
       }),
     };
   }
+
+
 
   return { body, ip, remaining };
 }
