@@ -69,8 +69,8 @@ const PLACEHOLDER_ICONS = [
 
 /**
  * Bottom-right home dock. Tap, press Enter/Space, or swipe the home icon to
- * open a compact glass panel. Home remains in the last bottom-row slot,
- * separated from the menu actions by one empty icon slot.
+ * open a compact glass panel. Home owns the bottom row; menu actions are
+ * packed into five- or seven-column rows above it.
  */
 const formatAgo = (timestamp?: number | null): string => {
   if (!timestamp) return 'never';
@@ -269,8 +269,8 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
           isHome
             ? 'appearance-none rounded-none !border-0 !bg-transparent p-0 text-white !shadow-none hover:!bg-transparent'
             : highlighted
-              ? 'border border-white/45 bg-white/25 text-white shadow-[0_0_10px_rgba(255,255,255,0.35)] hover:bg-white/30'
-              : 'border border-white/15 bg-white/5 text-white/60 hover:bg-white/15 hover:text-white/90',
+              ? 'rounded-xl border border-white/45 bg-white/25 text-white shadow-[0_0_10px_rgba(255,255,255,0.35)] hover:bg-white/30'
+              : 'rounded-xl border border-white/15 bg-white/5 text-white/60 hover:bg-white/15 hover:text-white/90',
           isHome
             ? '!outline-none !ring-0 focus:!outline-none focus:!ring-0 focus-visible:!outline-none focus-visible:!ring-0'
             : 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60',
@@ -343,17 +343,20 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
           role={open ? 'menu' : undefined}
           aria-hidden={open ? false : undefined}
           className={cn(
-            'flex flex-row-reverse flex-wrap-reverse content-start items-center justify-start gap-2 p-2',
+            'flex flex-col items-end gap-2 p-2',
             open
               ? 'rounded-[28px] border-0 bg-white/10 backdrop-blur-xl shadow-none'
               : 'rounded-none border-0 bg-transparent shadow-none',
           )}
-          style={{ maxWidth: 'min(100vw - 16px, 380px)' }}
+          style={{ maxWidth: 'calc(100vw - 16px)' }}
         >
+          {open && (
+            <div className="grid grid-cols-5 gap-2 min-[390px]:grid-cols-7">
+              {slots.map((item) => renderIconButton(item))}
+            </div>
+          )}
+          {/* Home is the only control in the bottom row and stays at screen-right. */}
           {renderIconButton(homeItem, true)}
-          {/* One empty bottom-row slot separates actions from the fixed right-corner Home. */}
-          {open && <span aria-hidden="true" className="h-11 w-11 shrink-0" />}
-          {open && slots.map((item) => renderIconButton(item))}
         </div>
       </div>
     </div>
