@@ -16,6 +16,7 @@ import SearchDebugPanel from '@/components/home/SearchDebugPanel';
 import { useSearchIndexHealth } from '@/hooks/useSearchIndexHealth';
 import { usePlatformInsight } from '@/hooks/usePlatformInsight';
 import { supabase } from '@/integrations/supabase/client';
+import { sanitizeText } from '@/lib/searchSanitize';
 import { KIND_LABEL, portalForItem, tagsForItem, type FeedSearchItem, type FeedSearchKind } from '@/lib/feedSearchItems';
 
 
@@ -168,7 +169,17 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
           },
         });
         if (fnError) throw fnError;
-        if (!cancelled) setExternalResults(data?.results ?? []);
+        if (!cancelled) {
+          // Titles/snippets arrive from RSS and HTML sources — strip markup and
+          // decode entities before they ever reach the panel.
+          setExternalResults(
+            (data?.results ?? []).map((item: FeedSearchItem) => ({
+              ...item,
+              title: sanitizeText(item.title) || item.title,
+              subtitle: sanitizeText(item.subtitle),
+            })),
+          );
+        }
       } catch (err) {
         console.warn('[external-search] failed', err);
         if (!cancelled) setExternalResults([]);
