@@ -42,7 +42,24 @@ interface HomeGlassDockProps {
   triggerBadge?: number;
 }
 
-const PLACEHOLDER_ICONS = [Compass, Bell, Camera, MessageCircle, Sparkles, Bookmark, Settings, User, Heart, Search];
+const PLACEHOLDER_ICONS = [
+  Compass,
+  Bell,
+  Camera,
+  MessageCircle,
+  Sparkles,
+  Bookmark,
+  Settings,
+  User,
+  Heart,
+  Search,
+  Music,
+  Video,
+  Globe,
+  Calendar,
+  Map,
+  Layers,
+];
 
 /**
  * Bottom-right home dock. Tap, press Enter/Space, or swipe the bare home icon
