@@ -398,12 +398,12 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
         >
 
           {indexEmpty && (
-            <p role="alert" className="px-3 py-2 text-xs text-muted-foreground">
+            <p role="alert" className="px-3 py-2 text-xs text-white/55">
               Search index is empty — Zoe is rebuilding it now. Results will appear shortly.
             </p>
           )}
           {insightLines.length > 0 && (
-            <div className="border-b border-border/50 pb-1" role="list" aria-label="Platform answers">
+            <div className="border-b border-white/10 pb-1" role="list" aria-label="Platform answers">
               {insightLines.map((line) => (
                 <button
                   key={line.id}
@@ -415,7 +415,7 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
                       navigate(line.route);
                     }
                   }}
-                  className="block w-full rounded-xl px-3 py-1.5 text-left text-[11px] leading-snug text-foreground/90 hover:bg-muted/60"
+                  className="block w-full rounded-xl px-3 py-1.5 text-left text-[11px] leading-snug text-white/90 hover:bg-white/10"
                 >
                   {line.text}
                 </button>
@@ -423,7 +423,7 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
             </div>
           )}
           {(allResults.length > 0 || externalResults.length > 0) && (
-            <div className="flex gap-1 overflow-x-auto border-b border-border/50 px-2 py-1.5" role="group" aria-label="Filter search results">
+            <div className="flex gap-1 overflow-x-auto border-b border-white/10 px-2 py-1.5" role="group" aria-label="Filter search results">
               {ALL_FILTERS.map((chip) => {
                 const internal = INTERNAL_FILTERS.has(chip.id) ? counts[chip.id as SearchFilter] ?? 0 : 0;
                 const total = chip.id === 'all'
@@ -437,8 +437,8 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
                     onClick={() => setFilter(chip.id)}
                     className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] ${
                       filter === chip.id
-                        ? 'border-foreground/40 bg-foreground/10 text-foreground'
-                        : 'border-border/60 text-muted-foreground hover:text-foreground'
+                        ? 'border-foreground/40 bg-foreground/10 text-white'
+                        : 'border-white/15 text-white/55 hover:text-white'
                     }`}
                   >
                     {chip.label} {total}
@@ -447,10 +447,10 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
               })}
             </div>
           )}
-          {loading && <p role="status" className="px-3 py-2 text-xs text-muted-foreground">Searching…</p>}
-          {!loading && error && <p role="alert" className="px-3 py-2 text-xs text-muted-foreground">{error}</p>}
+          {loading && <p role="status" className="px-3 py-2 text-xs text-white/55">Searching…</p>}
+          {!loading && error && <p role="alert" className="px-3 py-2 text-xs text-white/55">{error}</p>}
           {!loading && !error && results.length === 0 && insightLines.length === 0 && !ambient && !isSynthesizing && (
-            <p role="status" className="px-3 py-2 text-xs text-muted-foreground">No results for "{query.trim()}"</p>
+            <p role="status" className="px-3 py-2 text-xs text-white/55">No results for "{query.trim()}"</p>
           )}
 
           {results.map((result, index) => (
@@ -460,7 +460,7 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
               onClick={() => handleSelect(result)}
               onMouseEnter={() => setActiveIndex(index)}
               aria-selected={index === activeIndex}
-              className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-muted/60 ${index === activeIndex ? 'bg-muted/60' : ''}`}
+              className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-white/10 ${index === activeIndex ? 'bg-white/10' : ''}`}
             >
               {result.avatarUrl && (
                 <img
@@ -471,15 +471,15 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
                 />
               )}
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm text-foreground">{result.title}</span>
+                <span className="block truncate text-sm text-white">{result.title}</span>
                 {result.subtitle && (
-                  <span className="block truncate text-[11px] text-muted-foreground">{result.subtitle}</span>
+                  <span className="block truncate text-[11px] text-white/55">{result.subtitle}</span>
                 )}
                 <span className="mt-0.5 flex flex-wrap gap-1">
                   {result.signals.map((signal) => (
                     <span
                       key={signal}
-                      className="rounded-full bg-muted px-1.5 py-[1px] text-[9px] uppercase tracking-wide text-muted-foreground"
+                      className="rounded-full bg-white/10 px-1.5 py-[1px] text-[9px] uppercase tracking-wide text-white/55"
                     >
                       {SIGNAL_LABEL[signal]}
                     </span>
@@ -490,44 +490,44 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
           ))}
 
           {isSynthesizing && (
-            <p role="status" className="px-3 py-2 text-xs text-muted-foreground">Zoe is synthesizing…</p>
+            <p role="status" className="px-3 py-2 text-xs text-white/55">Zoe is synthesizing…</p>
           )}
           {!isSynthesizing && ambientError && (
-            <p role="alert" className="px-3 py-2 text-xs text-muted-foreground">{ambientError}</p>
+            <p role="alert" className="px-3 py-2 text-xs text-white/55">{ambientError}</p>
           )}
           {!isSynthesizing && ambient?.synthesis && (
-            <p className="px-3 py-2 text-xs leading-relaxed text-foreground/90">{ambient.synthesis}</p>
+            <p className="px-3 py-2 text-xs leading-relaxed text-white/90">{ambient.synthesis}</p>
           )}
           {!isSynthesizing && (ambient?.records ?? []).map((record) => (
             <button
               key={`ambient-${record.id}`}
               type="button"
               onClick={() => handleAmbientRecord(record)}
-              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-muted/60"
+              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-white/10"
             >
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm text-foreground">{labelForRecord(record)}</span>
-                <span className="block truncate text-[11px] text-muted-foreground">{record.entity_type}</span>
+                <span className="block truncate text-sm text-white">{labelForRecord(record)}</span>
+                <span className="block truncate text-[11px] text-white/55">{record.entity_type}</span>
               </span>
             </button>
           ))}
 
           {(externalLoading || externalVisible.length > 0) && (
-            <div className="mt-1 border-t border-border/50 pt-1">
+            <div className="mt-1 border-t border-white/10 pt-1">
               <div className="flex items-center justify-between gap-2 px-3 py-1">
-                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">From the internet</p>
+                <p className="text-[10px] uppercase tracking-wide text-white/55">From the internet</p>
                 {externalVisible.length > 0 && (
                   <button
                     type="button"
                     onClick={() => openInFeed(externalVisible)}
-                    className="rounded-full bg-foreground/10 px-2 py-0.5 text-[10px] font-medium text-foreground"
+                    className="rounded-full bg-foreground/10 px-2 py-0.5 text-[10px] font-medium text-white"
                   >
                     Open {externalVisible.length} in feed
                   </button>
                 )}
               </div>
               {externalLoading && externalVisible.length === 0 && (
-                <p role="status" className="px-3 py-1.5 text-xs text-muted-foreground">Searching the web…</p>
+                <p role="status" className="px-3 py-1.5 text-xs text-white/55">Searching the web…</p>
               )}
               {externalVisible.map((item) => (
                 <button
@@ -536,28 +536,28 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
                   data-testid="external-result"
                   // Everything opens inside the M'Mora feed — no external tab.
                   onClick={() => openInFeed(externalVisible, item.id)}
-                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-muted/60"
+                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-white/10"
                 >
 
                   {(item.thumbnail || item.image) && (
                     <img src={item.thumbnail || item.image} alt="" loading="lazy" className="h-9 w-9 shrink-0 rounded-md object-cover" />
                   )}
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm text-foreground">{item.title}</span>
+                    <span className="block truncate text-sm text-white">{item.title}</span>
                     {item.subtitle && (
-                      <span className="block truncate text-[11px] text-muted-foreground">{item.subtitle}</span>
+                      <span className="block truncate text-[11px] text-white/55">{item.subtitle}</span>
                     )}
                     {tagsForItem(item).length > 0 && (
                       <span className="mt-0.5 flex flex-wrap gap-1">
                         {tagsForItem(item).slice(0, 4).map((tag) => (
-                          <span key={tag} className="rounded-full bg-muted px-1.5 py-[1px] text-[9px] text-muted-foreground">
+                          <span key={tag} className="rounded-full bg-white/10 px-1.5 py-[1px] text-[9px] text-white/55">
                             {tag}
                           </span>
                         ))}
                       </span>
                     )}
                   </span>
-                  <span className="shrink-0 rounded-full bg-muted px-1.5 py-[1px] text-[9px] uppercase tracking-wide text-muted-foreground">
+                  <span className="shrink-0 rounded-full bg-white/10 px-1.5 py-[1px] text-[9px] uppercase tracking-wide text-white/55">
                     {KIND_LABEL[item.kind] ?? item.kind}
                   </span>
                 </button>
