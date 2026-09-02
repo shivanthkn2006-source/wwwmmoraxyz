@@ -119,6 +119,33 @@ export type Database = {
         }
         Relationships: []
       }
+      agent_interactions: {
+        Row: {
+          agent_id: string
+          context_payload: Json
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          agent_id: string
+          context_payload?: Json
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          agent_id?: string
+          context_payload?: Json
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       agentic_earnings: {
         Row: {
           created_at: string
@@ -11493,7 +11520,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "moderator" | "user"
+      app_role: "admin" | "moderator" | "user" | "tester"
       report_status: "open" | "reviewing" | "actioned" | "dismissed"
     }
     CompositeTypes: {
@@ -11622,7 +11649,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "moderator", "user"],
+      app_role: ["admin", "moderator", "user", "tester"],
       report_status: ["open", "reviewing", "actioned", "dismissed"],
     },
   },
