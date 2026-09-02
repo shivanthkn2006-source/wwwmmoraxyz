@@ -366,7 +366,7 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
         onClick={(event) => event.stopPropagation()}
       >
         <form onSubmit={handleSubmit} className="flex min-w-0 flex-1 items-center gap-2 px-2">
-          <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <Search className="h-4 w-4 shrink-0 text-white/60" />
           <Input
             ref={inputRef}
             role="searchbox"
@@ -375,10 +375,10 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
             onChange={(event) => onQueryChange(event.target.value)}
             placeholder="Search posts, shorts, tags or creators"
             tabIndex={searchOpen ? 0 : -1}
-            className="h-9 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+            className="h-9 border-0 bg-transparent px-0 text-white shadow-none placeholder:text-white/45 focus-visible:ring-0 focus-visible:ring-offset-0"
           />
           {query && (
-            <button type="button" className="rounded-full p-1 text-muted-foreground hover:text-foreground" aria-label="Clear search" onClick={() => onQueryChange('')}>
+            <button type="button" className="rounded-full p-1 text-white/60 transition hover:bg-white/10 hover:text-white" aria-label="Clear search" onClick={() => onQueryChange('')}>
               <X className="h-4 w-4" />
             </button>
           )}
@@ -387,14 +387,16 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
 
       {searchOpen && query.trim().length >= 1 && (
         <div
-          className="fixed z-[9996] max-h-[50vh] overflow-y-auto rounded-2xl border border-border/60 bg-background/90 p-1 shadow-xl backdrop-blur-2xl"
+          className={`fixed z-[9996] overflow-y-auto overscroll-contain rounded-3xl p-1.5 text-white ${glassSurface}`}
           style={{
             left: iconPosition.x + ICON_SIZE + GAP,
-            top: iconPosition.y + 52,
+            top: dropdownTop,
             width: barWidth,
+            maxHeight: dropdownMaxHeight,
           }}
           onPointerDown={(event) => event.stopPropagation()}
         >
+
           {indexEmpty && (
             <p role="alert" className="px-3 py-2 text-xs text-muted-foreground">
               Search index is empty — Zoe is rebuilding it now. Results will appear shortly.
