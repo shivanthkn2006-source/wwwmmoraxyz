@@ -140,12 +140,39 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
     () => externalResults.filter((item) => item.kind === 'video'),
     [externalResults],
   );
-  // The internet block follows the active chip: everything on All, YouTube on Videos.
+  // The internet block follows the active chip. Every chip maps to the external
+  // kinds it owns so no lane (web/images/news/shopping/weather) is ever hidden.
   const externalVisible = React.useMemo(() => {
     if (filter === 'all') return externalResults;
-    if (filter === 'videos') return externalVideos;
-    return [];
-  }, [filter, externalResults, externalVideos]);
+    const kinds = FILTER_TO_EXTERNAL_KINDS[filter] ?? [];
+    if (!kinds.length) return [];
+    return externalResults.filter((item) => kinds.includes(item.kind));
+  }, [filter, externalResults]);
+
+  const externalCounts = React.useMemo(() => {
+    const counter: Partial<Record<HomeFilter, number>> = {};
+    for (const chip of ALL_FILTERS) {
+      const kinds = FILTER_TO_EXTERNAL_KINDS[chip.id] ?? [];
+      counter[chip.id] = kinds.length
+        ? externalResults.filter((item) => kinds.includes(item.kind)).length
+        : 0;
+    }
+    return counter;
+  }, [externalResults]);
+
+  /**
+   * Everything opens INSIDE the M'Mora feed — external tabs are never used for
+   * playback/browsing. The whole visible result set is injected so the user can
+   * swipe through web/news/image/shopping/video cards like any other feed.
+   */
+  const openInFeed = React.useCallback((items: FeedSearchItem[], activeId?: string) => {
+    const payload = items.filter((item) => item && (item.kind === 'video' ? !!item.url : true));
+    if (!payload.length) return;
+    window.dispatchEvent(new CustomEvent('mmora:feed-external-videos', {
+      detail: { items: payload, videos: payload, activeId: activeId ?? payload[0].id },
+    }));
+    setSearchOpen(false);
+  }, []);
 
   // Global keyboard: Escape closes the sideways bar from anywhere.
   React.useEffect(() => {
