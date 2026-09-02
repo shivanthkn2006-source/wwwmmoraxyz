@@ -74,6 +74,9 @@ export const GlobalBugReporter: React.FC = () => {
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [pathname, setPathname] = useState(() =>
+    typeof window !== 'undefined' ? window.location.pathname : '/',
+  );
   const mounted = useRef(true);
 
   useEffect(() => {
@@ -84,9 +87,12 @@ export const GlobalBugReporter: React.FC = () => {
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
       if (mounted.current) setUserId(session?.user?.id ?? null);
     });
+    const onRouteChange = () => setPathname(window.location.pathname);
+    window.addEventListener('popstate', onRouteChange);
     return () => {
       mounted.current = false;
       sub.subscription.unsubscribe();
+      window.removeEventListener('popstate', onRouteChange);
     };
   }, []);
 
