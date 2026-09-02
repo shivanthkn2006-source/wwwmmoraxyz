@@ -67,6 +67,8 @@ const VoiceCommandTestPage = lazy(() => import("./pages/VoiceCommandTestPage"));
 const ZoeAIPage = lazy(() => import("./pages/ZoeAIPage"));
 const UniversalTimelinePage = lazy(() => import("./pages/UniversalTimelinePage"));
 const AboutPage = lazy(() => import("./pages/AboutPage"));
+const PlatformOverviewPage = lazy(() => import("./pages/PlatformOverviewPage"));
+const AdminOverviewPage = lazy(() => import("./pages/AdminOverviewPage"));
 const AnalyticsDashboard = lazy(() => import("./pages/AnalyticsDashboard"));
 const DHFDashboardPage = lazy(() => import("./pages/DHFDashboardPage"));
 const IntegrationTestPage = lazy(() => import("./pages/IntegrationTestPage"));
@@ -685,6 +687,15 @@ const RouteAwareShell = () => {
                           <Route path="/genesis-imprint" element={<ZoeIdentityPage />} />
                           <Route path="/" element={<RootRedirect />} />
                           <Route path="/about" element={<AboutPage />} />
+                          <Route path="/platform-overview" element={<PlatformOverviewPage />} />
+                          <Route
+                            path="/admin/overview"
+                            element={
+                              <ProtectedRoute>
+                                <AdminOverviewPage />
+                              </ProtectedRoute>
+                            }
+                          />
                           <Route
                             path="/analytics-dashboard"
                             element={
