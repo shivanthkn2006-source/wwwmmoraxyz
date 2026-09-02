@@ -46,7 +46,7 @@ serve(async (req) => {
 
     const { data: profiles, error: profilesError } = await admin
       .from('profiles')
-      .select('user_id, username, display_name, timezone')
+      .select('user_id, username, display_name')
       .limit(5000);
     if (profilesError) throw profilesError;
 
@@ -68,7 +68,7 @@ serve(async (req) => {
           user_id: p.user_id,
           username: p.username,
           display_name: p.display_name,
-          timezone: p.timezone ?? 'UTC',
+          timezone: 'UTC',
         })),
       });
     }
@@ -89,7 +89,7 @@ serve(async (req) => {
           reflection_styles: STARTER_STYLES,
           delivery_frequency: 3,
           paused: false,
-          timezone: p.timezone || 'UTC',
+          timezone: 'UTC',
           onboarded_at: null,
         })),
         { onConflict: 'user_id', ignoreDuplicates: true },
