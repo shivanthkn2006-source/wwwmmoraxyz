@@ -133,6 +133,22 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
   }, [hasInjectedVideos]);
 
 
+  // Coarse device location, resolved once, so "weather" means *local* weather.
+  const coordsRef = React.useRef<{ lat: number; lon: number } | null>(null);
+  React.useEffect(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        coordsRef.current = {
+          lat: Number(position.coords.latitude.toFixed(3)),
+          lon: Number(position.coords.longitude.toFixed(3)),
+        };
+      },
+      () => { /* denied — the weather lane falls back to the typed place */ },
+      { timeout: 8000, maximumAge: 600000 },
+    );
+  }, []);
+
   React.useEffect(() => {
     const term = query.trim();
     if (!searchOpen || term.length < 3) {
@@ -144,7 +160,12 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
       setExternalLoading(true);
       try {
         const { data, error: fnError } = await supabase.functions.invoke('external-search', {
-          body: { query: term },
+          body: {
+            query: term,
+            lat: coordsRef.current?.lat,
+            lon: coordsRef.current?.lon,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          },
         });
         if (fnError) throw fnError;
         if (!cancelled) setExternalResults(data?.results ?? []);
