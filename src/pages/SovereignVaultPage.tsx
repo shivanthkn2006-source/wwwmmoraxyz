@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useSovereignAdmin } from '@/hooks/useSovereignAdmin';
+import VaultUserDirectory from '@/components/admin/VaultUserDirectory';
 import {
   closeVaultTunnel,
   deviceSignature,
@@ -259,6 +260,8 @@ export default function SovereignVaultPage() {
           </section>
         ) : (
           <>
+            <VaultUserDirectory />
+
             {CAPABILITIES.map((group) => (
               <section key={group.group} className="space-y-3">
                 <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
