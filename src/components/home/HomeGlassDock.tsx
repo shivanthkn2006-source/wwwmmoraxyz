@@ -178,8 +178,7 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
           onSelect: () => {},
         }));
 
-  // Most-used icons render last in DOM so, with row-reverse, they sit nearest
-  // the home trigger at the bottom-right of the panel.
+  // Keep the most-used actions nearest the home trigger on the bottom row.
   const slots = React.useMemo(
     () => orderByFrequency(baseSlots, usage),
     [baseSlots, usage],
@@ -273,7 +272,9 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
             : highlighted
               ? 'border border-white/45 bg-white/25 text-white shadow-[0_0_10px_rgba(255,255,255,0.35)] hover:bg-white/30'
               : 'border border-white/15 bg-white/5 text-white/60 hover:bg-white/15 hover:text-white/90',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60',
+          isHome
+            ? 'outline-none ring-0 focus:outline-none focus-visible:outline-none focus-visible:ring-0'
+            : 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60',
         )}
       >
         {item.icon}
@@ -329,8 +330,7 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
         className,
       )}
     >
-      {/* Glass dock panel — anchored bottom-right with a thin margin on all sides.
-          Home icon lives inside the panel at the bottom-right corner. */}
+      {/* Glass dock panel — anchored on the computer's right side. */}
       <div
         className={cn(
           'overflow-hidden transition-all duration-300 ease-out',
@@ -344,12 +344,12 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
           role={open ? 'menu' : undefined}
           aria-hidden={open ? false : undefined}
           className={cn(
-            'flex flex-row-reverse flex-wrap-reverse content-start items-center justify-start gap-2 rounded-[28px] border-0 p-2',
+            'flex flex-row flex-wrap-reverse content-start items-center justify-start gap-2 rounded-[28px] border-0 p-2',
             'bg-white/10 backdrop-blur-xl shadow-none',
           )}
           style={{ maxWidth: 'min(100vw - 16px, 380px)' }}
         >
-          {/* Home trigger — first in DOM with row-reverse → bottom-right of panel. */}
+          {/* Home stays at the start; every opened action extends to its right. */}
           {renderIconButton(homeItem, true)}
 
           {open && slots.map((item) => renderIconButton(item))}
