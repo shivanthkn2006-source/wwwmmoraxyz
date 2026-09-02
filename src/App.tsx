@@ -69,6 +69,8 @@ const UniversalTimelinePage = lazy(() => import("./pages/UniversalTimelinePage")
 const AboutPage = lazy(() => import("./pages/AboutPage"));
 const PlatformOverviewPage = lazy(() => import("./pages/PlatformOverviewPage"));
 const AdminOverviewPage = lazy(() => import("./pages/AdminOverviewPage"));
+const SovereignVaultPage = lazy(() => import("./pages/SovereignVaultPage"));
+
 const AnalyticsDashboard = lazy(() => import("./pages/AnalyticsDashboard"));
 const DHFDashboardPage = lazy(() => import("./pages/DHFDashboardPage"));
 const IntegrationTestPage = lazy(() => import("./pages/IntegrationTestPage"));
