@@ -9,6 +9,7 @@ import {
   getLatencyTarget
 } from "../_shared/ai-telemetry.ts";
 import { cascadeInfer, hardenZoeIdentity } from "../_shared/cascading-provider.ts";
+import { clientErrorResponse } from '../_shared/client-error.ts';
 
 const messageSchema = z.object({
   role: z.enum(['user', 'assistant', 'system']),
@@ -319,6 +320,9 @@ Remember: ${userName} isn't just a user - they're someone you deeply care about,
       headers: { ...corsHeaders, 'Content-Type': 'text/event-stream' },
     });
   } catch (error) {
+    const __clientError = clientErrorResponse(error, corsHeaders);
+    if (__clientError) return __clientError;
+
     console.error('AI companion chat error:', error);
     return new Response(JSON.stringify({ 
       error: error instanceof Error ? error.message : 'Unknown error',

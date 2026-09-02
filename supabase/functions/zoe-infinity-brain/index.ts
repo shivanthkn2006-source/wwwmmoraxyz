@@ -12,6 +12,7 @@ import {
   buildRelationshipSystemPrompt,
   parseRelationshipStyle,
 } from "../_shared/zoe-relationship-core.ts";
+import { clientErrorResponse } from '../_shared/client-error.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -846,6 +847,9 @@ ${resolvedIntimacy > 70 ? '- Close with them. Terms of endearment feel natural.'
     );
     
   } catch (error: unknown) {
+    const __clientError = clientErrorResponse(error, corsHeaders);
+    if (__clientError) return __clientError;
+
     const latencyMs = Math.round(performance.now() - startTime);
     console.error(`[zoe-brain:${requestId}] ❌ ERROR after ${latencyMs}ms:`, error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";

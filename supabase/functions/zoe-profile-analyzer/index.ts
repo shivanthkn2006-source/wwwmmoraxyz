@@ -5,6 +5,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { sovereignFetch, sovereignKey } from "../_shared/sovereign-ai.ts";
+import { clientErrorResponse } from '../_shared/client-error.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -125,6 +126,9 @@ Provide analysis in JSON format.`;
     });
 
   } catch (error: unknown) {
+    const __clientError = clientErrorResponse(error, corsHeaders);
+    if (__clientError) return __clientError;
+
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     console.error("Profile analyzer error:", errorMessage);
     return new Response(JSON.stringify({ 

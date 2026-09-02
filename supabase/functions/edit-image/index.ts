@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { clientErrorResponse } from '../_shared/client-error.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -160,6 +161,9 @@ serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
+    const __clientError = clientErrorResponse(error, corsHeaders);
+    if (__clientError) return __clientError;
+
     console.error('[edit-image] Error:', error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),

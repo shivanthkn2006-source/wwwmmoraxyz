@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.0";
+import { clientErrorResponse } from '../_shared/client-error.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -20,16 +21,33 @@ serve(async (req) => {
     const now = new Date();
     const fiveMinutesFromNow = new Date(now.getTime() + 5 * 60000);
 
+    // reminders.user_id points at auth.users, not public.profiles, so the
+    // embedded `profiles!reminders_user_id_fkey(...)` hint fails schema-cache
+    // resolution (PGRST200). Fetch reminders plainly and resolve display names
+    // in a second, batched query.
     const { data: dueReminders, error } = await supabase
       .from('reminders')
-      .select('*, profiles!reminders_user_id_fkey(display_name, user_id)')
+      .select('*')
       .lte('reminder_time', fiveMinutesFromNow.toISOString())
       .eq('is_sent', false)
       .eq('is_completed', false);
 
     if (error) throw error;
 
+    const userIds = [...new Set((dueReminders || []).map((r) => r.user_id).filter(Boolean))];
+    let profilesById: Record<string, { display_name: string | null }> = {};
+    if (userIds.length > 0) {
+      const { data: profileRows } = await supabase
+        .from('profiles')
+        .select('user_id, display_name')
+        .in('user_id', userIds);
+      profilesById = Object.fromEntries(
+        (profileRows || []).map((p) => [p.user_id, { display_name: p.display_name }]),
+      );
+    }
+
     console.log(`Found ${dueReminders?.length || 0} due reminders`);
+
 
     // Process each reminder
     for (const reminder of dueReminders || []) {
@@ -67,7 +85,7 @@ serve(async (req) => {
           });
         }
 
-        console.log(`Processed reminder: ${reminder.title}`);
+        console.log(`Processed reminder: ${reminder.title} (for ${profilesById[reminder.user_id]?.display_name ?? reminder.user_id})`);
       } catch (err) {
         console.error(`Error processing reminder ${reminder.id}:`, err);
       }
@@ -81,6 +99,9 @@ serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
+    const __clientError = clientErrorResponse(error, corsHeaders);
+    if (__clientError) return __clientError;
+
     console.error('Error checking reminders:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     return new Response(

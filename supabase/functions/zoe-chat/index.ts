@@ -9,6 +9,7 @@ import {
 } from "../_shared/ai-telemetry.ts";
 import { cascadeInfer, hardenZoeIdentity } from "../_shared/cascading-provider.ts";
 import { precomputeCharacterFacts } from "../_shared/grounded-tools.ts";
+import { clientErrorResponse } from '../_shared/client-error.ts';
 
 // Zodiac sign calculation helper
 function getZodiacSign(birthDate: Date): string {
@@ -906,6 +907,9 @@ ${cortexPromptAddition}`;
     );
 
   } catch (error) {
+    const __clientError = clientErrorResponse(error, corsHeaders);
+    if (__clientError) return __clientError;
+
     console.error('Error in zoe-chat:', error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),

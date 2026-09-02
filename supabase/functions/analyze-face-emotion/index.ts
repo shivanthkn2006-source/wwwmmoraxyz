@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { sovereignFetch, sovereignKey } from "../_shared/sovereign-ai.ts";
+import { clientErrorResponse } from '../_shared/client-error.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -129,6 +130,9 @@ Return ONLY valid JSON with structure: { "product": "string", "brand": "string",
     );
 
   } catch (error) {
+    const __clientError = clientErrorResponse(error, corsHeaders);
+    if (__clientError) return __clientError;
+
     console.error('Error in analyze-face-emotion:', error);
     return new Response(
       JSON.stringify({ 

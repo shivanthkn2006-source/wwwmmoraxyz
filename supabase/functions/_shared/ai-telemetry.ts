@@ -337,11 +337,11 @@ export const corsHeaders = {
 // ERROR RESPONSE HELPERS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export function createErrorResponse(error: AIGatewayResponse['error'], status: number = 500): Response {
+export function createErrorResponse(error: AIGatewayResponse['error'], status?: number): Response {
   if (!error) {
     return new Response(
       JSON.stringify({ error: 'Unknown error', code: 'INTERNAL_ERROR' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: status ?? 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
   
@@ -357,11 +357,16 @@ export function createErrorResponse(error: AIGatewayResponse['error'], status: n
     'INTERNAL_ERROR': 500,
   };
   
+  // An explicit status from the caller always wins: validation failures were
+  // being reported as 500 because the code-based map overrode the passed 400.
+  const resolvedStatus = status ?? statusMap[error.code ?? ''] ?? 500;
+
   return new Response(
     JSON.stringify({ error: error.message, code: error.code, retryAfter: error.retryAfter }),
-    { status: statusMap[error.code] || status, headers }
+    { status: resolvedStatus, headers }
   );
 }
+
 
 export function createSuccessResponse(data: any, additionalFields?: Record<string, any>): Response {
   return new Response(
