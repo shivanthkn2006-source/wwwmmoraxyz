@@ -483,6 +483,15 @@ const RouteAwareShell = () => {
               <Route path="/agent-memory" element={<AgentMemoryPage />} />
               <Route path="/vr-audit" element={<VRWorldAuditPage />} />
               <Route path="/install" element={<InstallAppPage />} />
+              <Route
+                path="/admin/vault"
+                element={
+                  <ProtectedRoute>
+                    <SovereignVaultPage />
+                  </ProtectedRoute>
+                }
+              />
+
               <Route path="/" element={<RootRedirect />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
