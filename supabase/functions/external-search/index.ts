@@ -125,81 +125,141 @@ const musicSearch = async (query: string): Promise<ExternalResult[]> => {
  * shared GOOGLE_API_KEY. Keyless = silent no-op so search never breaks.
  */
 const videoSearch = async (query: string): Promise<ExternalResult[]> => {
+  const term = query.replace(/\b(video|videos|watch|youtube)\b/gi, ' ').trim() || query;
   const key =
     Deno.env.get('YOUTUBE_API_KEY') ||
     Deno.env.get('GOOGLE_API_KEY') ||
     Deno.env.get('GOOGLE_AI_STUDIO_KEY');
-  if (!key) {
-    console.warn('[external-search] video search skipped: no youtube key');
-    return [];
+  if (key) {
+    const data = await safeJson(
+      `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&safeSearch=moderate&maxResults=10` +
+        `&q=${encodeURIComponent(term)}&key=${key}`,
+    );
+    const items: any[] = Array.isArray(data?.items) ? data.items : [];
+    if (items.length) {
+      return items
+        .filter((item) => item?.id?.videoId)
+        .map((item) => ({
+          id: `video-${item.id.videoId}`,
+          kind: 'video' as const,
+          title: String(item.snippet?.title ?? 'Video'),
+          subtitle: String(item.snippet?.channelTitle ?? 'YouTube'),
+          url: `https://www.youtube.com/watch?v=${item.id.videoId}`,
+          thumbnail:
+            item.snippet?.thumbnails?.medium?.url || item.snippet?.thumbnails?.default?.url || undefined,
+          source: 'YouTube',
+          publishedAt: item.snippet?.publishedAt,
+        }));
+    }
+    console.warn('[external-search] youtube api returned nothing (quota/key) — using keyless fallback');
   }
-  const term = query.replace(/\b(video|videos|watch|youtube)\b/gi, ' ').trim() || query;
-  const data = await safeJson(
-    `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&safeSearch=moderate&maxResults=10` +
-      `&q=${encodeURIComponent(term)}&key=${key}`,
+
+  // Keyless fallback: read the public results page and lift the video ids, so
+  // the Videos lane keeps working when the API key is missing or over quota.
+  const html = await safeText(
+    `https://www.youtube.com/results?search_query=${encodeURIComponent(term)}&sp=EgIQAQ%253D%253D`,
   );
-  const items: any[] = Array.isArray(data?.items) ? data.items : [];
-  if (!items.length) console.warn('[external-search] video search returned no items');
-  return items
-    .filter((item) => item?.id?.videoId)
-    .map((item) => ({
-      id: `video-${item.id.videoId}`,
-      kind: 'video' as const,
-      title: String(item.snippet?.title ?? 'Video'),
-      subtitle: String(item.snippet?.channelTitle ?? 'YouTube'),
-      url: `https://www.youtube.com/watch?v=${item.id.videoId}`,
-      thumbnail:
-        item.snippet?.thumbnails?.medium?.url || item.snippet?.thumbnails?.default?.url || undefined,
+  if (!html) return [];
+  const seen = new Set<string>();
+  const results: ExternalResult[] = [];
+  const re = /"videoId":"([\w-]{6,})"[\s\S]{0,600}?"text":"([^"]{3,120})"/g;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(html)) && results.length < 10) {
+    const [, id, title] = match;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    results.push({
+      id: `video-${id}`,
+      kind: 'video',
+      title: title.replace(/\\u0026/g, '&'),
+      subtitle: 'YouTube',
+      url: `https://www.youtube.com/watch?v=${id}`,
+      thumbnail: `https://i.ytimg.com/vi/${id}/mqdefault.jpg`,
       source: 'YouTube',
-      publishedAt: item.snippet?.publishedAt,
-    }));
+    });
+  }
+  if (!results.length) console.warn('[external-search] video search returned no items');
+  return results;
 };
 
-/** Openly licensed images (Openverse) — keyless and safe to embed in-feed. */
+/** Images: Openverse first, Wikimedia Commons as the always-on fallback. */
 const imageSearch = async (query: string): Promise<ExternalResult[]> => {
   const term = query.replace(/\b(image|images|photo|photos|picture|pictures)\b/gi, ' ').trim() || query;
   const data = await safeJson(
     `https://api.openverse.org/v1/images/?q=${encodeURIComponent(term)}&page_size=8&mature=false`,
+    5000,
   );
   const items: any[] = Array.isArray(data?.results) ? data.results : [];
-  return items
-    .filter((item) => item?.url)
-    .map((item) => ({
-      id: `image-${item.id}`,
-      kind: 'image' as const,
-      title: String(item.title || term),
-      subtitle: [item.creator, item.license?.toUpperCase()].filter(Boolean).join(' · '),
-      url: item.foreign_landing_url || item.url,
-      thumbnail: item.thumbnail || item.url,
-      image: item.url,
-      source: String(item.source || 'Openverse'),
-      tags: [item.license ? `License ${String(item.license).toUpperCase()}` : null, item.provider].filter(Boolean) as string[],
-    }));
+  if (items.length) {
+    return items
+      .filter((item) => item?.url)
+      .map((item) => ({
+        id: `image-${item.id}`,
+        kind: 'image' as const,
+        title: String(item.title || term),
+        subtitle: [item.creator, item.license?.toUpperCase()].filter(Boolean).join(' · '),
+        url: item.foreign_landing_url || item.url,
+        thumbnail: item.thumbnail || item.url,
+        image: item.url,
+        source: String(item.source || 'Openverse'),
+        tags: [item.license ? `License ${String(item.license).toUpperCase()}` : null, item.provider].filter(Boolean) as string[],
+      }));
+  }
+
+  const commons = await safeJson(
+    `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrnamespace=6&gsrsearch=${encodeURIComponent(term)}` +
+      `&gsrlimit=8&prop=imageinfo&iiprop=url|extmetadata&iiurlwidth=900&format=json&origin=*`,
+  );
+  const pages: any[] = Object.values(commons?.query?.pages ?? {});
+  return pages
+    .map((page) => {
+      const info = page?.imageinfo?.[0];
+      if (!info?.thumburl) return null;
+      return {
+        id: `image-commons-${page.pageid}`,
+        kind: 'image' as const,
+        title: String(page.title ?? term).replace(/^File:/, ''),
+        subtitle: 'Wikimedia Commons',
+        url: info.descriptionurl || info.url,
+        thumbnail: info.thumburl,
+        image: info.thumburl,
+        source: 'Wikimedia Commons',
+      };
+    })
+    .filter(Boolean) as ExternalResult[];
 };
 
-/** News via the keyless Google News RSS feed. */
+/** News via keyless RSS: Google News first, Bing News as fallback. */
+const parseRssItems = (xml: string, fallbackSource: string): ExternalResult[] =>
+  xml
+    .split('<item>')
+    .slice(1, 9)
+    .map((block, index) => {
+      const pick = (tag: string) => {
+        const match = block.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`));
+        return match ? stripTags(match[1].replace(/<!\[CDATA\[|\]\]>/g, '')) : '';
+      };
+      const link = block.match(/<link[^>]*>([\s\S]*?)<\/link>/)?.[1]?.trim();
+      return {
+        id: `news-${index}-${(link || '').slice(-16)}`,
+        kind: 'news' as const,
+        title: pick('title') || 'News story',
+        subtitle: pick('description').slice(0, 200),
+        url: link,
+        source: pick('source') || fallbackSource,
+        publishedAt: pick('pubDate'),
+      };
+    })
+    .filter((item) => item.title && item.title !== 'News story');
+
 const newsSearch = async (query: string): Promise<ExternalResult[]> => {
-  const xml = await safeText(
+  const google = await safeText(
     `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`,
   );
-  if (!xml) return [];
-  const items = xml.split('<item>').slice(1, 9);
-  return items.map((block, index) => {
-    const pick = (tag: string) => {
-      const match = block.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`));
-      return match ? stripTags(match[1].replace(/<!\[CDATA\[|\]\]>/g, '')) : '';
-    };
-    const link = block.match(/<link[^>]*>([\s\S]*?)<\/link>/)?.[1]?.trim();
-    return {
-      id: `news-${index}-${(link || '').slice(-16)}`,
-      kind: 'news' as const,
-      title: pick('title') || 'News story',
-      subtitle: pick('description').slice(0, 200),
-      url: link,
-      source: pick('source') || 'Google News',
-      publishedAt: pick('pubDate'),
-    };
-  }).filter((item) => item.title);
+  const fromGoogle = google ? parseRssItems(google, 'Google News') : [];
+  if (fromGoogle.length) return fromGoogle;
+  const bing = await safeText(`https://www.bing.com/news/search?q=${encodeURIComponent(query)}&format=RSS`);
+  return bing ? parseRssItems(bing, 'Bing News') : [];
 };
 
 /**
