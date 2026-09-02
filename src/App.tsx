@@ -688,6 +688,7 @@ const RouteAwareShell = () => {
                           <Route path="/" element={<RootRedirect />} />
                           <Route path="/about" element={<AboutPage />} />
                           <Route path="/platform-overview" element={<PlatformOverviewPage />} />
+                          <Route path="/platform-architecture" element={<PlatformArchitecturePage />} />
                           <Route
                             path="/admin/overview"
                             element={
