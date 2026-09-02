@@ -186,7 +186,7 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
     const rail = railRef.current;
     if (!rail) return;
     const id = window.requestAnimationFrame(() => {
-      rail.scrollTop = rail.scrollHeight;
+      rail.scrollLeft = rail.scrollWidth;
     });
     return () => window.cancelAnimationFrame(id);
   }, [open, slots.length]);
@@ -240,7 +240,7 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
 
           {badgesEnabled && items.some((item) => item.badgeStale && (item.badge ?? 0) > 0) && (
             <span
-              className="col-span-3 shrink-0 rounded-full border border-dashed border-white/40 bg-black/40 px-2 py-[3px] text-[9px] font-medium leading-none text-white/70"
+              className="shrink-0 rounded-full border border-dashed border-white/40 bg-black/40 px-2 py-[3px] text-[9px] font-medium leading-none text-white/70"
               title="Counts are cached — live updates are currently unavailable"
             >
               cached · {formatAgo(badgesUpdatedAt)}
