@@ -343,15 +343,15 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
           role={open ? 'menu' : undefined}
           aria-hidden={open ? false : undefined}
           className={cn(
-            'grid grid-cols-7 items-center justify-items-center gap-2 rounded-[28px] border-0 p-2',
+            'flex flex-row-reverse flex-wrap-reverse content-start items-center justify-start gap-2 rounded-[28px] border-0 p-2',
             'bg-white/10 backdrop-blur-xl shadow-none',
           )}
           style={{ maxWidth: 'min(100vw - 16px, 380px)' }}
         >
-          {open && slots.map((item) => renderIconButton(item))}
-          {/* One empty bottom-row slot separates actions from the fixed right-corner Home. */}
-          {open && <span aria-hidden="true" className="h-11 w-11" />}
           {renderIconButton(homeItem, true)}
+          {/* One empty bottom-row slot separates actions from the fixed right-corner Home. */}
+          {open && <span aria-hidden="true" className="h-11 w-11 shrink-0" />}
+          {open && slots.map((item) => renderIconButton(item))}
         </div>
       </div>
     </div>
