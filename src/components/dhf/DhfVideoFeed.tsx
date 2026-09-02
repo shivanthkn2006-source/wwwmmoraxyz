@@ -7,7 +7,7 @@
  * renders once a row exists, and every button opens a URL stored in the row.
  */
 import React, { useCallback, useEffect, useState } from 'react';
-import { Play, Loader2, RefreshCw, Video } from 'lucide-react';
+import { Play, Loader2, RefreshCw, Share2, Video } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { fetchDhfVideos, dhfVideoThumbnail, requestDhfVideoIngest, type DhfVideo } from '@/lib/dhfVideos';
 import { openShare } from '@/lib/shareTargets';
@@ -33,6 +33,7 @@ export const DhfVideoFeed: React.FC<Props> = ({ canIngest = false, limit = 24 })
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [ingesting, setIngesting] = useState(false);
+  const [shareVideo, setShareVideo] = useState<DhfVideo | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -173,6 +174,16 @@ export const DhfVideoFeed: React.FC<Props> = ({ canIngest = false, limit = 24 })
           );
         })}
       </div>
+      <DhfShareSheet
+        open={Boolean(shareVideo)}
+        onOpenChange={(next) => { if (!next) setShareVideo(null); }}
+        title="Share this DHF video"
+        payload={{
+          text: shareVideo ? `${shareVideo.figure_name}: ${shareVideo.title}` : '',
+          url: shareVideo?.youtube_url ?? undefined,
+          hashtags: shareVideo ? [shareVideo.category, 'MMora', 'DHF'] : [],
+        }}
+      />
     </section>
   );
 };
