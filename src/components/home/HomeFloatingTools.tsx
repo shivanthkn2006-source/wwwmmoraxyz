@@ -573,39 +573,84 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
               {externalLoading && externalVisible.length === 0 && (
                 <p role="status" className="px-3 py-1.5 text-xs text-white/55">Searching the web…</p>
               )}
-              {externalVisible.map((item) => (
-                <button
-                  key={`ext-${item.id}`}
-                  type="button"
-                  data-testid="external-result"
-                  // Everything opens inside the M'Mora feed — no external tab.
-                  onClick={() => openInFeed(externalVisible, item.id)}
-                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-white/10"
-                >
-
-                  {(item.thumbnail || item.image) && (
-                    <img src={item.thumbnail || item.image} alt="" loading="lazy" className="h-9 w-9 shrink-0 rounded-md object-cover" />
-                  )}
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm text-white">{item.title}</span>
-                    {item.subtitle && (
-                      <span className="block truncate text-[11px] text-white/55">{item.subtitle}</span>
-                    )}
-                    {tagsForItem(item).length > 0 && (
-                      <span className="mt-0.5 flex flex-wrap gap-1">
-                        {tagsForItem(item).slice(0, 4).map((tag) => (
-                          <span key={tag} className="rounded-full bg-white/10 px-1.5 py-[1px] text-[9px] text-white/55">
-                            {tag}
+              {externalVisible.map((item) => {
+                const expanded = expandedId === item.id;
+                return (
+                  <div key={`ext-${item.id}`} className="rounded-xl">
+                    <button
+                      type="button"
+                      data-testid="external-result"
+                      aria-expanded={expanded}
+                      // Videos need the feed for playback; everything else
+                      // expands right here, Google-style, and only opens in the
+                      // feed when the user asks for it.
+                      onClick={() =>
+                        item.kind === 'video'
+                          ? openInFeed(externalVisible, item.id)
+                          : setExpandedId(expanded ? null : item.id)
+                      }
+                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-white/10"
+                    >
+                      {(item.thumbnail || item.image) && (
+                        <img src={item.thumbnail || item.image} alt="" loading="lazy" className="h-9 w-9 shrink-0 rounded-md object-cover" />
+                      )}
+                      <span className="min-w-0 flex-1">
+                        <span className={`block text-sm text-white ${expanded ? '' : 'truncate'}`}>{item.title}</span>
+                        {item.subtitle && (
+                          <span className={`block text-[11px] text-white/55 ${expanded ? '' : 'truncate'}`}>{item.subtitle}</span>
+                        )}
+                        {tagsForItem(item).length > 0 && (
+                          <span className="mt-0.5 flex flex-wrap gap-1">
+                            {tagsForItem(item).slice(0, 4).map((tag) => (
+                              <span key={tag} className="rounded-full bg-white/10 px-1.5 py-[1px] text-[9px] text-white/55">
+                                {tag}
+                              </span>
+                            ))}
                           </span>
-                        ))}
+                        )}
                       </span>
+                      <span className="shrink-0 text-[9px] uppercase tracking-wide text-white/45">
+                        {KIND_LABEL[item.kind] ?? item.kind}
+                      </span>
+                    </button>
+
+                    {expanded && (
+                      <div className="mb-1 rounded-xl bg-white/[0.04] px-3 py-2" data-testid="external-result-expanded">
+                        {item.image && (
+                          <img
+                            src={item.image}
+                            alt=""
+                            loading="lazy"
+                            className="mb-2 max-h-48 w-full rounded-lg object-cover"
+                          />
+                        )}
+                        <p className="text-[12px] leading-relaxed text-white/85">
+                          {item.subtitle || item.title}
+                        </p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openInFeed(externalVisible, item.id)}
+                            className="rounded-full bg-white/15 px-3 py-1 text-[11px] font-medium text-white"
+                          >
+                            Open in feed
+                          </button>
+                          {item.url && (
+                            <a
+                              href={item.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="rounded-full bg-white/[0.08] px-3 py-1 text-[11px] text-white/80"
+                            >
+                              Source{portalForItem(item) ? ` · ${portalForItem(item)}` : ''}
+                            </a>
+                          )}
+                        </div>
+                      </div>
                     )}
-                  </span>
-                  <span className="shrink-0 rounded-full bg-white/10 px-1.5 py-[1px] text-[9px] uppercase tracking-wide text-white/55">
-                    {KIND_LABEL[item.kind] ?? item.kind}
-                  </span>
-                </button>
-              ))}
+                  </div>
+                );
+              })}
             </div>
           )}
 
