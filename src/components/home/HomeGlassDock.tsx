@@ -177,19 +177,12 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
           onSelect: () => {},
         }));
 
-  // Most-used icons render last → nearest the home trigger / opening area.
-  const slots = React.useMemo(() => orderByFrequency(baseSlots, usage), [baseSlots, usage]);
-
-  // On open, park the panel at its bottom so the handiest icons are visible.
-  React.useEffect(() => {
-    if (!open) return;
-    const rail = railRef.current;
-    if (!rail) return;
-    const id = window.requestAnimationFrame(() => {
-      rail.scrollLeft = rail.scrollWidth;
-    });
-    return () => window.cancelAnimationFrame(id);
-  }, [open, slots.length]);
+  // Most-used icons render first → bottom row, nearest the home trigger.
+  // Additional icons wrap into rows that extend upward from the trigger.
+  const slots = React.useMemo(
+    () => orderByFrequency(baseSlots, usage).reverse(),
+    [baseSlots, usage],
+  );
 
   // When the rail retracts while focus is still inside it, return focus to the trigger.
   const wasOpen = React.useRef(open);
@@ -211,15 +204,16 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
       ref={rootRef}
       data-home-dock
       className={cn(
-        'fixed inset-x-0 z-[9996] flex flex-col items-end justify-end',
+        'fixed right-0 z-[9996] flex flex-col items-end justify-end',
         'bottom-[calc(env(safe-area-inset-bottom,0px)+12px)]',
         className,
       )}
     >
-      {/* Pill rail — 7 icons per line, wrapping upward as more icons are added */}
+      {/* Glass dock panel — anchored bottom-right, grows left and up.
+          Icons align to the left; most-used sit on the bottom row nearest the trigger. */}
       <div
         className={cn(
-          'mb-2 flex w-full justify-end px-2 transition-all duration-300 ease-out',
+          'mb-2 flex justify-end px-3 transition-all duration-300 ease-out',
           open
             ? 'max-h-[60vh] translate-y-0 opacity-100'
             : 'pointer-events-none max-h-0 translate-y-3 opacity-0',
@@ -229,9 +223,9 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
           ref={railRef}
           role="menu"
           aria-hidden={!open}
-          style={{ maxWidth: 'min(100%, 380px)' }}
+          style={{ maxWidth: 'min(100vw - 24px, 380px)' }}
           className={cn(
-            'flex flex-wrap items-center justify-end gap-2 rounded-[28px] border border-white/25 px-3 py-2',
+            'flex flex-wrap content-end items-center justify-start gap-2 rounded-[28px] border border-white/25 px-3 py-2',
             'bg-white/10 backdrop-blur-xl shadow-[0_8px_24px_rgba(0,0,0,0.35)]',
           )}
         >
@@ -356,8 +350,8 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
           }
         }}
         className={cn(
-          'relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-transparent',
-          'pr-1 text-white/90 drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)] transition-transform',
+          'relative mr-3 flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-transparent',
+          'text-white/90 drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)] transition-transform',
           'select-none touch-none active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60',
           // Enlarged invisible hit + focus area without changing the visual size
           'after:absolute after:-inset-2.5 after:content-[""] after:rounded-full',
