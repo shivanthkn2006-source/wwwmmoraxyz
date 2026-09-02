@@ -361,7 +361,7 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
         storageKey="mmora.home.search-position.v3"
         defaultPosition={{ x: 8, y: 80 }}
         ariaLabel={searchOpen ? 'Close home search' : 'Search home'}
-        className={searchOpen ? 'pointer-events-none opacity-0' : 'rounded-full bg-white/5 backdrop-blur-xl backdrop-saturate-150'}
+        className={searchOpen ? 'pointer-events-none opacity-0' : 'bg-transparent'}
         onActivate={() => setSearchOpen((current) => !current)}
         onPositionChange={handleIconPosition}
       >
