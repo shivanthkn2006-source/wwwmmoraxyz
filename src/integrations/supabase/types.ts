@@ -6643,6 +6643,90 @@ export type Database = {
         }
         Relationships: []
       }
+      sovereign_vault_access_log: {
+        Row: {
+          created_at: string
+          device_fingerprint: string | null
+          id: string
+          ip_address: string | null
+          metadata: Json
+          reason: string | null
+          route: string | null
+          tunnel_active: boolean
+          tunnel_fingerprint: string | null
+          user_agent: string | null
+          user_id: string | null
+          verdict: string
+        }
+        Insert: {
+          created_at?: string
+          device_fingerprint?: string | null
+          id?: string
+          ip_address?: string | null
+          metadata?: Json
+          reason?: string | null
+          route?: string | null
+          tunnel_active?: boolean
+          tunnel_fingerprint?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+          verdict: string
+        }
+        Update: {
+          created_at?: string
+          device_fingerprint?: string | null
+          id?: string
+          ip_address?: string | null
+          metadata?: Json
+          reason?: string | null
+          route?: string | null
+          tunnel_active?: boolean
+          tunnel_fingerprint?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+          verdict?: string
+        }
+        Relationships: []
+      }
+      sovereign_vault_sessions: {
+        Row: {
+          cipher: string
+          created_at: string
+          device_fingerprint: string | null
+          expires_at: string
+          id: string
+          revoked: boolean
+          tunnel_fingerprint: string
+          updated_at: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          cipher?: string
+          created_at?: string
+          device_fingerprint?: string | null
+          expires_at?: string
+          id?: string
+          revoked?: boolean
+          tunnel_fingerprint: string
+          updated_at?: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          cipher?: string
+          created_at?: string
+          device_fingerprint?: string | null
+          expires_at?: string
+          id?: string
+          revoked?: boolean
+          tunnel_fingerprint?: string
+          updated_at?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       sunday_protocol_evaluations: {
         Row: {
           acknowledged_at: string | null
@@ -11404,6 +11488,7 @@ export type Database = {
         Returns: undefined
       }
       is_root_admin: { Args: { check_user_id: string }; Returns: boolean }
+      is_sovereign_admin: { Args: { check_user_id: string }; Returns: boolean }
       is_timeline_member: {
         Args: { timeline_id: string; user_id: string }
         Returns: boolean
@@ -11477,6 +11562,7 @@ export type Database = {
         Args: { p_hint_key: string; p_max_count?: number; p_user_id: string }
         Returns: boolean
       }
+      sovereign_admin_id: { Args: never; Returns: string }
       track_viral_share: {
         Args: {
           p_content_id: string
