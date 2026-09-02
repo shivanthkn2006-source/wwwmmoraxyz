@@ -433,9 +433,9 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
         <div
           className={`fixed z-[9996] overflow-y-auto overscroll-contain rounded-3xl p-1.5 text-white ${glassSurface}`}
           style={{
-            left: iconPosition.x + ICON_SIZE + GAP,
+            left: panelLeft,
             top: dropdownTop,
-            width: barWidth,
+            width: panelWidth,
             maxHeight: dropdownMaxHeight,
           }}
           onPointerDown={(event) => event.stopPropagation()}
