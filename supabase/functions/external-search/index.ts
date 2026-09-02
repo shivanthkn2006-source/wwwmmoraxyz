@@ -1,17 +1,33 @@
-// External (outside-platform) search: web, music and weather.
-// Uses only free, keyless public APIs so it never blocks on secrets.
+// External (outside-platform) search: web, images, news, videos, music,
+// weather and shopping products. Uses free/keyless public APIs by default so
+// results never block on secrets. Every result is normalised into one shape so
+// the M'Mora home feed can render it inline (nothing opens outside the app).
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+type ExternalKind = 'web' | 'music' | 'weather' | 'video' | 'image' | 'news' | 'shopping';
+
 type ExternalResult = {
   id: string;
-  kind: 'web' | 'music' | 'weather' | 'video';
+  kind: ExternalKind;
   title: string;
   subtitle?: string;
   url?: string;
   thumbnail?: string;
+  /** Full-bleed media for in-feed rendering (images/products). */
+  image?: string;
+  source?: string;
+  publishedAt?: string;
+  /** Structured product facts rendered as tags on shopping cards. */
+  price?: string;
+  availability?: string;
+  rating?: number;
+  reviews?: number;
+  location?: string;
+  /** Extra key/value chips (portal details, categories, brands…). */
+  tags?: string[];
 };
 
 const safeJson = async (url: string, ms = 6000): Promise<any | null> => {
@@ -27,6 +43,22 @@ const safeJson = async (url: string, ms = 6000): Promise<any | null> => {
     clearTimeout(timer);
   }
 };
+
+const safeText = async (url: string, ms = 6000): Promise<string | null> => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  try {
+    const res = await fetch(url, { signal: controller.signal, headers: { 'User-Agent': 'mmora-search/1.0' } });
+    if (!res.ok) return null;
+    return await res.text();
+  } catch (_error) {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+
+const stripTags = (value: string) => value.replace(/<[^>]+>/g, '').replace(/&[a-z]+;/gi, ' ').trim();
 
 const weatherSearch = async (query: string): Promise<ExternalResult[]> => {
   const place = query.replace(/\b(weather|forecast|temperature|climate|in|at|for|today)\b/gi, '').trim() || 'London';
@@ -47,6 +79,14 @@ const weatherSearch = async (query: string): Promise<ExternalResult[]> => {
       kind: 'weather',
       title: `${hit.name}${hit.country ? `, ${hit.country}` : ''} — ${Math.round(c.temperature_2m)}°C`,
       subtitle: `Humidity ${c.relative_humidity_2m}% · Wind ${Math.round(c.wind_speed_10m)} km/h · High ${Math.round(d?.temperature_2m_max?.[0] ?? c.temperature_2m)}° / Low ${Math.round(d?.temperature_2m_min?.[0] ?? c.temperature_2m)}°`,
+      location: `${hit.name}${hit.admin1 ? `, ${hit.admin1}` : ''}${hit.country ? `, ${hit.country}` : ''}`,
+      source: 'Open-Meteo',
+      tags: [
+        `Now ${Math.round(c.temperature_2m)}°C`,
+        `High ${Math.round(d?.temperature_2m_max?.[0] ?? c.temperature_2m)}°`,
+        `Low ${Math.round(d?.temperature_2m_min?.[0] ?? c.temperature_2m)}°`,
+        `Wind ${Math.round(c.wind_speed_10m)} km/h`,
+      ],
     },
   ];
 };
@@ -63,6 +103,9 @@ const musicSearch = async (query: string): Promise<ExternalResult[]> => {
     subtitle: [track.artistName, track.collectionName].filter(Boolean).join(' · '),
     url: track.trackViewUrl,
     thumbnail: track.artworkUrl100,
+    image: track.artworkUrl100?.replace('100x100', '600x600'),
+    source: 'Apple Music',
+    price: typeof track.trackPrice === 'number' && track.trackPrice > 0 ? `$${track.trackPrice.toFixed(2)}` : undefined,
   }));
 };
 
@@ -96,7 +139,111 @@ const videoSearch = async (query: string): Promise<ExternalResult[]> => {
       url: `https://www.youtube.com/watch?v=${item.id.videoId}`,
       thumbnail:
         item.snippet?.thumbnails?.medium?.url || item.snippet?.thumbnails?.default?.url || undefined,
+      source: 'YouTube',
+      publishedAt: item.snippet?.publishedAt,
     }));
+};
+
+/** Openly licensed images (Openverse) — keyless and safe to embed in-feed. */
+const imageSearch = async (query: string): Promise<ExternalResult[]> => {
+  const term = query.replace(/\b(image|images|photo|photos|picture|pictures)\b/gi, ' ').trim() || query;
+  const data = await safeJson(
+    `https://api.openverse.org/v1/images/?q=${encodeURIComponent(term)}&page_size=8&mature=false`,
+  );
+  const items: any[] = Array.isArray(data?.results) ? data.results : [];
+  return items
+    .filter((item) => item?.url)
+    .map((item) => ({
+      id: `image-${item.id}`,
+      kind: 'image' as const,
+      title: String(item.title || term),
+      subtitle: [item.creator, item.license?.toUpperCase()].filter(Boolean).join(' · '),
+      url: item.foreign_landing_url || item.url,
+      thumbnail: item.thumbnail || item.url,
+      image: item.url,
+      source: String(item.source || 'Openverse'),
+      tags: [item.license ? `License ${String(item.license).toUpperCase()}` : null, item.provider].filter(Boolean) as string[],
+    }));
+};
+
+/** News via the keyless Google News RSS feed. */
+const newsSearch = async (query: string): Promise<ExternalResult[]> => {
+  const xml = await safeText(
+    `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`,
+  );
+  if (!xml) return [];
+  const items = xml.split('<item>').slice(1, 9);
+  return items.map((block, index) => {
+    const pick = (tag: string) => {
+      const match = block.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`));
+      return match ? stripTags(match[1].replace(/<!\[CDATA\[|\]\]>/g, '')) : '';
+    };
+    const link = block.match(/<link[^>]*>([\s\S]*?)<\/link>/)?.[1]?.trim();
+    return {
+      id: `news-${index}-${(link || '').slice(-16)}`,
+      kind: 'news' as const,
+      title: pick('title') || 'News story',
+      subtitle: pick('description').slice(0, 200),
+      url: link,
+      source: pick('source') || 'Google News',
+      publishedAt: pick('pubDate'),
+    };
+  }).filter((item) => item.title);
+};
+
+/**
+ * Shopping products with price, availability, rating, review count and portal
+ * details. Uses SERPAPI_KEY (Google Shopping) when configured; otherwise falls
+ * back to a keyless catalogue so the shopping lane is never structurally empty.
+ */
+const shoppingSearch = async (query: string): Promise<ExternalResult[]> => {
+  const term = query.replace(/\b(buy|shop|shopping|price|cheap|deal|deals|product|products)\b/gi, ' ').trim() || query;
+  const serpKey = Deno.env.get('SERPAPI_KEY');
+  if (serpKey) {
+    const data = await safeJson(
+      `https://serpapi.com/search.json?engine=google_shopping&q=${encodeURIComponent(term)}&num=8&api_key=${serpKey}`,
+    );
+    const items: any[] = Array.isArray(data?.shopping_results) ? data.shopping_results : [];
+    if (items.length) {
+      return items.slice(0, 8).map((item, index) => ({
+        id: `shop-${item.product_id ?? index}`,
+        kind: 'shopping' as const,
+        title: String(item.title ?? 'Product'),
+        subtitle: [item.source, item.delivery].filter(Boolean).join(' · '),
+        url: item.product_link || item.link,
+        thumbnail: item.thumbnail,
+        image: item.thumbnail,
+        source: String(item.source ?? 'Google Shopping'),
+        price: item.price ? String(item.price) : undefined,
+        availability: item.delivery ? String(item.delivery) : 'See portal',
+        rating: typeof item.rating === 'number' ? item.rating : undefined,
+        reviews: typeof item.reviews === 'number' ? item.reviews : undefined,
+        location: item.store_location ? String(item.store_location) : undefined,
+        tags: [item.source, item.delivery, item.extensions?.[0]].filter(Boolean) as string[],
+      }));
+    }
+  }
+
+  const data = await safeJson(`https://dummyjson.com/products/search?q=${encodeURIComponent(term)}&limit=8`);
+  const items: any[] = Array.isArray(data?.products) ? data.products : [];
+  return items.map((item) => ({
+    id: `shop-${item.id}`,
+    kind: 'shopping' as const,
+    title: String(item.title ?? 'Product'),
+    subtitle: [item.brand, item.category].filter(Boolean).join(' · '),
+    url: `https://www.google.com/search?tbm=shop&q=${encodeURIComponent(item.title ?? term)}`,
+    thumbnail: item.thumbnail,
+    image: item.images?.[0] || item.thumbnail,
+    source: String(item.brand || 'Catalogue'),
+    price: typeof item.price === 'number'
+      ? `$${item.price.toFixed(2)}${item.discountPercentage ? ` (-${Math.round(item.discountPercentage)}%)` : ''}`
+      : undefined,
+    availability: item.availabilityStatus || (item.stock > 0 ? `In stock (${item.stock})` : 'Out of stock'),
+    rating: typeof item.rating === 'number' ? item.rating : undefined,
+    reviews: Array.isArray(item.reviews) ? item.reviews.length : undefined,
+    location: item.meta?.barcode ? undefined : undefined,
+    tags: [item.brand, item.category, item.warrantyInformation, item.shippingInformation].filter(Boolean) as string[],
+  }));
 };
 
 const webSearch = async (query: string): Promise<ExternalResult[]> => {
@@ -113,6 +260,7 @@ const webSearch = async (query: string): Promise<ExternalResult[]> => {
       subtitle: ddg.AbstractText,
       url: ddg.AbstractURL,
       thumbnail: ddg.Image ? `https://duckduckgo.com${ddg.Image}` : undefined,
+      source: ddg.AbstractSource || 'DuckDuckGo',
     });
   }
   for (const topic of (ddg?.RelatedTopics ?? []).slice(0, 4)) {
@@ -123,6 +271,7 @@ const webSearch = async (query: string): Promise<ExternalResult[]> => {
       title: topic.Text.split(' - ')[0],
       subtitle: topic.Text,
       url: topic.FirstURL,
+      source: 'DuckDuckGo',
     });
   }
 
@@ -137,6 +286,7 @@ const webSearch = async (query: string): Promise<ExternalResult[]> => {
         title: page.title,
         subtitle: String(page.snippet ?? '').replace(/<[^>]+>/g, ''),
         url: `https://en.wikipedia.org/?curid=${page.pageid}`,
+        source: 'Wikipedia',
       });
     }
   }
@@ -159,17 +309,39 @@ Deno.serve(async (req) => {
     const wantsWeather = /\b(weather|forecast|temperature|rain|climate)\b/i.test(term);
     const wantsMusic = /\b(music|song|songs|track|album|artist|play|listen)\b/i.test(term);
 
-    // Intent-matched sources run first so they rank above generic web hits.
+    // Every lane runs in parallel so one slow/broken source can never blank the
+    // others; intent-matched lanes are simply ordered first.
     const tasks: Promise<ExternalResult[]>[] = [];
     if (wantsWeather) tasks.push(weatherSearch(term));
-    if (wantsMusic || !wantsWeather) tasks.push(musicSearch(term));
-    if (!wantsWeather) tasks.push(videoSearch(term));
+    if (wantsMusic) tasks.push(musicSearch(term));
+    tasks.push(videoSearch(term));
+    tasks.push(imageSearch(term));
+    tasks.push(newsSearch(term));
+    tasks.push(shoppingSearch(term));
     tasks.push(webSearch(term));
+    if (!wantsMusic) tasks.push(musicSearch(term));
 
     const settled = await Promise.allSettled(tasks);
-    const results = settled.flatMap((entry) => (entry.status === 'fulfilled' ? entry.value : []));
+    const degraded: string[] = [];
+    settled.forEach((entry, index) => {
+      if (entry.status === 'rejected') degraded.push(String(index));
+    });
+    const seen = new Set<string>();
+    const results = settled
+      .flatMap((entry) => (entry.status === 'fulfilled' ? entry.value : []))
+      .filter((item) => {
+        if (!item?.id || seen.has(item.id)) return false;
+        seen.add(item.id);
+        return true;
+      });
 
-    return new Response(JSON.stringify({ results: results.slice(0, 24) }), {
+    const counts = results.reduce<Record<string, number>>((acc, item) => {
+      acc[item.kind] = (acc[item.kind] ?? 0) + 1;
+      return acc;
+    }, {});
+    console.log('[external-search]', JSON.stringify({ term, total: results.length, counts, degraded }));
+
+    return new Response(JSON.stringify({ results: results.slice(0, 48), counts, degraded }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
