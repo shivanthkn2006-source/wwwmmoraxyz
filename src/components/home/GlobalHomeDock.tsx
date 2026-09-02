@@ -17,6 +17,7 @@ import GrowthAlertsPanel from '@/components/growth/GrowthAlertsPanel';
 import { useAuth } from '@/lib/auth';
 import { useGrowthUnread } from '@/hooks/useGrowthUnread';
 import { useNotificationFeatureBadges } from '@/hooks/useNotificationFeatureBadges';
+import { buildExtraDockItems } from '@/components/home/dockExtraActions';
 
 /** Routes that own their dock, or must stay chrome-free. */
 const EXCLUDED_PREFIXES = [
@@ -104,6 +105,15 @@ export const GlobalHomeDock: React.FC = () => {
             active: pathname === '/profile',
             onSelect: () => navigate('/profile'),
           },
+          ...buildExtraDockItems(navigate, [
+            '/home',
+            '/compass',
+            '/growth-insights',
+            '/zoe-ai',
+            '/chat',
+            '/notification-history',
+            '/profile',
+          ]),
         ]}
       />
       <GrowthAlertsPanel open={alertsOpen} onOpenChange={setAlertsOpen} />

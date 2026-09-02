@@ -320,9 +320,9 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
     onSelect: () => {},
   };
 
-  // Exactly three rows of seven rounded-edge icons above the Home row.
+  // Four rows of seven rounded-edge icons above the Home row.
   const GRID_COLUMNS = 7;
-  const GRID_ROWS = 3;
+  const GRID_ROWS = 4;
   const GRID_SIZE = GRID_COLUMNS * GRID_ROWS;
 
   const gridSlots: GlassDockItem[] = React.useMemo(() => {
