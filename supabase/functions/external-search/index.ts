@@ -365,6 +365,60 @@ const webSearch = async (query: string): Promise<ExternalResult[]> => {
   return results.slice(0, 6);
 };
 
+/** Long-tail knowledge: Wikipedia summary + Internet Archive holdings. */
+const archiveSearch = async (query: string): Promise<ExternalResult[]> => {
+  const results: ExternalResult[] = [];
+
+  const summary = await safeJson(
+    `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(query.replace(/\s+/g, '_'))}`,
+    6000,
+  );
+  if (summary?.extract) {
+    results.push({
+      id: `wiki-summary-${summary.pageid ?? query}`,
+      kind: 'web',
+      title: stripTags(String(summary.title ?? query)),
+      subtitle: stripTags(String(summary.extract)).slice(0, 320),
+      url: summary.content_urls?.desktop?.page,
+      thumbnail: summary.thumbnail?.source,
+      image: summary.originalimage?.source,
+      source: 'Wikipedia',
+      tags: ['Encyclopedia'],
+    });
+  }
+
+  const archive = await safeJson(
+    `https://archive.org/advancedsearch.php?q=${encodeURIComponent(query)}` +
+      `&fl%5B%5D=identifier&fl%5B%5D=title&fl%5B%5D=mediatype&fl%5B%5D=year&rows=5&page=1&output=json`,
+    8000,
+  );
+  for (const doc of archive?.response?.docs ?? []) {
+    if (!doc?.identifier) continue;
+    results.push({
+      id: `archive-${doc.identifier}`,
+      kind: 'web',
+      title: stripTags(String(doc.title ?? doc.identifier)),
+      subtitle: `Internet Archive · ${doc.mediatype ?? 'item'}${doc.year ? ` · ${doc.year}` : ''}`,
+      url: `https://archive.org/details/${doc.identifier}`,
+      thumbnail: `https://archive.org/services/img/${doc.identifier}`,
+      source: 'archive.org',
+      tags: [String(doc.mediatype ?? 'item')],
+    });
+  }
+
+  return results;
+};
+
+/** Final hygiene pass — no HTML/entity artifacts ever leave this function. */
+const sanitizeResult = (item: ExternalResult): ExternalResult => ({
+  ...item,
+  title: stripTags(item.title ?? '') || item.title,
+  subtitle: item.subtitle ? stripTags(item.subtitle) : item.subtitle,
+  tags: item.tags?.map((tag) => stripTags(tag)).filter(Boolean),
+});
+
+
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
@@ -390,6 +444,7 @@ Deno.serve(async (req) => {
     tasks.push(newsSearch(term));
     tasks.push(shoppingSearch(term));
     tasks.push(webSearch(term));
+    tasks.push(archiveSearch(term));
     if (!wantsMusic) tasks.push(musicSearch(term));
 
     const settled = await Promise.allSettled(tasks);
@@ -404,7 +459,9 @@ Deno.serve(async (req) => {
         if (!item?.id || seen.has(item.id)) return false;
         seen.add(item.id);
         return true;
-      });
+      })
+      .map(sanitizeResult);
+
 
     const counts = results.reduce<Record<string, number>>((acc, item) => {
       acc[item.kind] = (acc[item.kind] ?? 0) + 1;
