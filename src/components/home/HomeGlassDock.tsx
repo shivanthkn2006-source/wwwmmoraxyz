@@ -387,12 +387,8 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
           )}
           style={{ maxWidth: 'calc(100vw - 16px)' }}
         >
-          {open && (
-            <>
-              <div className="min-[390px]:hidden">{renderPackedRows(5)}</div>
-              <div className="hidden min-[390px]:block">{renderPackedRows(7)}</div>
-            </>
-          )}
+          {open && renderPackedRows()}
+
           {/* Home is the only control in the bottom row and stays at screen-right. */}
           {renderIconButton(homeItem, true)}
         </div>
