@@ -161,10 +161,6 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
   }, [query, searchOpen]);
 
 
-  const externalVideos = React.useMemo(
-    () => externalResults.filter((item) => item.kind === 'video'),
-    [externalResults],
-  );
   // The internet block follows the active chip. Every chip maps to the external
   // kinds it owns so no lane (web/images/news/shopping/weather) is ever hidden.
   const externalVisible = React.useMemo(() => {
