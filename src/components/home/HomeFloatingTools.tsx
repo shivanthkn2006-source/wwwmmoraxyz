@@ -397,23 +397,29 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
               ))}
             </div>
           )}
-          {allResults.length > 0 && (
+          {(allResults.length > 0 || externalResults.length > 0) && (
             <div className="flex gap-1 overflow-x-auto border-b border-border/50 px-2 py-1.5" role="group" aria-label="Filter search results">
-              {SEARCH_FILTERS.map((chip) => (
-                <button
-                  key={chip.id}
-                  type="button"
-                  aria-pressed={filter === chip.id}
-                  onClick={() => setFilter(chip.id)}
-                  className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] ${
-                    filter === chip.id
-                      ? 'border-foreground/40 bg-foreground/10 text-foreground'
-                      : 'border-border/60 text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  {chip.label} {chip.id === 'videos' ? counts.videos + externalVideos.length : counts[chip.id]}
-                </button>
-              ))}
+              {ALL_FILTERS.map((chip) => {
+                const internal = INTERNAL_FILTERS.has(chip.id) ? counts[chip.id as SearchFilter] ?? 0 : 0;
+                const total = chip.id === 'all'
+                  ? internal + externalResults.length
+                  : internal + (externalCounts[chip.id] ?? 0);
+                return (
+                  <button
+                    key={chip.id}
+                    type="button"
+                    aria-pressed={filter === chip.id}
+                    onClick={() => setFilter(chip.id)}
+                    className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] ${
+                      filter === chip.id
+                        ? 'border-foreground/40 bg-foreground/10 text-foreground'
+                        : 'border-border/60 text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    {chip.label} {total}
+                  </button>
+                );
+              })}
             </div>
           )}
           {loading && <p role="status" className="px-3 py-2 text-xs text-muted-foreground">Searching…</p>}
