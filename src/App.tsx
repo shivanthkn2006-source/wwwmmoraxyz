@@ -441,7 +441,9 @@ const RouteAwareShell = () => {
     pathname.startsWith('/root-scan') ||
     pathname.startsWith('/agent-memory') ||
     pathname.startsWith('/vr-audit') ||
-    pathname.startsWith('/install');
+    pathname.startsWith('/install') ||
+    pathname.startsWith('/admin/vault');
+
 
   // Ultra-light shell for isolated routes (prevents Safari hanging/crashing)
   if (isLightRoute) {
