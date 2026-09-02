@@ -34,9 +34,10 @@ const METRICS: Metric[] = [
 ];
 
 const countRows = async (table: TableName): Promise<number | null> => {
-  const { count, error } = await supabase
-    .from(table)
-    .select('*', { count: 'exact', head: true });
+  const client = supabase as unknown as {
+    from: (t: string) => { select: (c: string, o: { count: 'exact'; head: boolean }) => Promise<{ count: number | null; error: unknown }> };
+  };
+  const { count, error } = await client.from(table).select('*', { count: 'exact', head: true });
   return error ? null : count ?? 0;
 };
 
