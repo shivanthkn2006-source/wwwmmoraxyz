@@ -30,28 +30,36 @@ type ExternalResult = {
   tags?: string[];
 };
 
-const safeJson = async (url: string, ms = 6000): Promise<any | null> => {
+const safeJson = async (url: string, ms = 9000): Promise<any | null> => {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ms);
   try {
-    const res = await fetch(url, { signal: controller.signal, headers: { 'User-Agent': 'mmora-search/1.0' } });
-    if (!res.ok) return null;
+    const res = await fetch(url, { signal: controller.signal, headers: { 'User-Agent': 'mmora-search/1.0', Accept: 'application/json' } });
+    if (!res.ok) {
+      console.warn('[external-search] json fetch failed', res.status, new URL(url).host);
+      return null;
+    }
     return await res.json();
-  } catch (_error) {
+  } catch (error) {
+    console.warn('[external-search] json fetch threw', new URL(url).host, String(error));
     return null;
   } finally {
     clearTimeout(timer);
   }
 };
 
-const safeText = async (url: string, ms = 6000): Promise<string | null> => {
+const safeText = async (url: string, ms = 9000): Promise<string | null> => {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ms);
   try {
     const res = await fetch(url, { signal: controller.signal, headers: { 'User-Agent': 'mmora-search/1.0' } });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      console.warn('[external-search] text fetch failed', res.status, new URL(url).host);
+      return null;
+    }
     return await res.text();
-  } catch (_error) {
+  } catch (error) {
+    console.warn('[external-search] text fetch threw', new URL(url).host, String(error));
     return null;
   } finally {
     clearTimeout(timer);
