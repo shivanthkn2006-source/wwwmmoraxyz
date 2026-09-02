@@ -159,9 +159,9 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
     if (!start) return;
     const dx = event.clientX - start.x;
     const dy = event.clientY - start.y;
-    if (Math.abs(dx) > 24 && Math.abs(dx) > Math.abs(dy)) {
+    if (Math.abs(dy) > 24 && Math.abs(dy) > Math.abs(dx)) {
       suppressClick.current = true;
-      setOpen(dx < 0); // swipe left opens, swipe right closes
+      setOpen(dy < 0); // swipe up opens, swipe down closes
       return;
     }
     if (wasPreview) suppressClick.current = true;
