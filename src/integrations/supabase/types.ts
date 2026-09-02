@@ -119,6 +119,33 @@ export type Database = {
         }
         Relationships: []
       }
+      agent_interactions: {
+        Row: {
+          agent_id: string
+          context_payload: Json
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          agent_id: string
+          context_payload?: Json
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          agent_id?: string
+          context_payload?: Json
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       agentic_earnings: {
         Row: {
           created_at: string
