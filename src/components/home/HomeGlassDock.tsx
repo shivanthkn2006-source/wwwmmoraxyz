@@ -234,7 +234,7 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
 
           {badgesEnabled && items.some((item) => item.badgeStale && (item.badge ?? 0) > 0) && (
             <span
-              className="shrink-0 rounded-full border border-dashed border-white/40 bg-black/40 px-2 py-[3px] text-[9px] font-medium leading-none text-white/70"
+              className="col-span-7 justify-self-start rounded-full border border-dashed border-white/40 bg-black/40 px-2 py-[3px] text-[9px] font-medium leading-none text-white/70"
               title="Counts are cached — live updates are currently unavailable"
             >
               cached · {formatAgo(badgesUpdatedAt)}
@@ -275,7 +275,7 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
                 }}
 
                 className={cn(
-                  'group relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl',
+                  'group relative flex aspect-square w-full items-center justify-center rounded-2xl',
                   'transition-all active:scale-95',
                   highlighted
                     ? 'border border-white/45 bg-white/25 text-white shadow-[0_0_10px_rgba(255,255,255,0.35)] hover:bg-white/30'
@@ -350,7 +350,7 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
           }
         }}
         className={cn(
-          'relative mr-3 flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-transparent',
+          'absolute bottom-[calc(env(safe-area-inset-bottom,0px)+10px)] right-4 flex h-11 w-11 items-center justify-center rounded-full bg-transparent',
           'text-white/90 drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)] transition-transform',
           'select-none touch-none active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60',
           // Enlarged invisible hit + focus area without changing the visual size
