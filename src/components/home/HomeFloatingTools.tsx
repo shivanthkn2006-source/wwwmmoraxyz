@@ -259,6 +259,12 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
       setSearchOpen(false);
       return;
     }
+    if (event.key === 'Enter' && !event.shiftKey) {
+      // Enter submits; Shift+Enter keeps the query on a new visual line.
+      event.preventDefault();
+      event.currentTarget.form?.requestSubmit();
+      return;
+    }
     if (!results.length) return;
     if (event.key === 'ArrowDown') {
       event.preventDefault();
