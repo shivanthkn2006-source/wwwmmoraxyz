@@ -61,13 +61,13 @@ describe('admin operations panels', () => {
 
   it('flags failing edge functions from the latest probe batch', async () => {
     render(<EdgeFunctionHealthPanel />);
-    await waitFor(() => expect(screen.getByText('1 need attention')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText(/1 need attention/)).toBeTruthy());
     expect(screen.getByText('opensky-states')).toBeTruthy();
   });
 
   it('shows the latest DHF link-health sweep', async () => {
     render(<DhfLinkHealthPanel />);
-    await waitFor(() => expect(screen.getByText('64')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('64', { selector: 'p' })).toBeTruthy());
     expect(screen.getByText('deactivated')).toBeTruthy();
   });
 
