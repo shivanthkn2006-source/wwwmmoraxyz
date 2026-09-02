@@ -14,6 +14,7 @@ import { useAuth } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import PageSeo from '@/components/seo/PageSeo';
+import RolePermissionsPanel from '@/components/admin/RolePermissionsPanel';
 
 type TableName = 'profiles' | 'dhf_essay_schedules' | 'dhf_feed_posts' | 'dhf_videos' | 'posts' | 'user_roles';
 
@@ -142,6 +143,10 @@ const AdminOverviewPage: React.FC = () => {
                 );
               })}
             </div>
+
+            <section className="mt-8">
+              <RolePermissionsPanel />
+            </section>
 
             <section className="mt-8">
               <h2 className="text-sm font-semibold text-foreground">Admin surfaces</h2>
