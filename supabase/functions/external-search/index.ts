@@ -127,7 +127,9 @@ const weatherSearch = async (
 
   const c = forecast.current;
   const d = forecast.daily;
-  const name = label || 'Your location';
+  // Fall back to the resolved IANA timezone city when reverse geocoding is unavailable.
+  const tzCity = String(forecast.timezone ?? '').split('/').pop()?.replace(/_/g, ' ');
+  const name = label || tzCity || 'Your location';
   const results: ExternalResult[] = [
     {
       id: `weather-today-${latitude}-${longitude}`,
