@@ -105,17 +105,21 @@ export const DHFCompassCard: React.FC<Props> = ({ post, className, onImpression,
             kind="dhf"
             order={Math.max(0, COMPASS_SLOTS.findIndex((slot) => slot.time === normalizeSlotTime(post.slot_time)))}
           />
-          {onShare && (
-            <button
-              type="button"
-              aria-label="Share this compass card"
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={(e) => { e.stopPropagation(); e.preventDefault(); onShare(post); }}
-              className="pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full bg-transparent text-muted-foreground transition hover:bg-muted/50 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-95"
-            >
-              <Share2 className="h-5 w-5" aria-hidden="true" />
-            </button>
-          )}
+          <button
+            type="button"
+            aria-label="Share this compass card"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              onShare?.(post);
+              setShareOpen(true);
+            }}
+            className="pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full bg-transparent text-muted-foreground transition hover:bg-muted/50 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-95"
+          >
+            <Share2 className="h-5 w-5" aria-hidden="true" />
+          </button>
+
           <Button
             type="button"
             size="icon"
