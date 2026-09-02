@@ -180,14 +180,13 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
   // Most-used icons render last → nearest the home trigger / opening area.
   const slots = React.useMemo(() => orderByFrequency(baseSlots, usage), [baseSlots, usage]);
 
-  // On open, park the rail at its right end so the handiest icons are visible,
-  // and move focus into the rail. On close, hand focus back to the trigger.
+  // On open, park the panel at its bottom so the handiest icons are visible.
   React.useEffect(() => {
     if (!open) return;
     const rail = railRef.current;
     if (!rail) return;
     const id = window.requestAnimationFrame(() => {
-      rail.scrollLeft = rail.scrollWidth;
+      rail.scrollTop = rail.scrollHeight;
     });
     return () => window.cancelAnimationFrame(id);
   }, [open, slots.length]);
