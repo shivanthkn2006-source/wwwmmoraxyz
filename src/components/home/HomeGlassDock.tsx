@@ -319,6 +319,24 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
     onSelect: () => {},
   };
 
+  const renderPackedRows = (columns: 5 | 7) => {
+    const firstRowSize = slots.length % columns || columns;
+    const rows: GlassDockItem[][] = [slots.slice(0, firstRowSize)];
+    for (let index = firstRowSize; index < slots.length; index += columns) {
+      rows.push(slots.slice(index, index + columns));
+    }
+
+    return (
+      <div className="flex flex-col items-end gap-2">
+        {rows.map((row, rowIndex) => (
+          <div key={`${columns}-${rowIndex}`} className="flex justify-end gap-2">
+            {row.map((item) => renderIconButton(item))}
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <div
       ref={rootRef}
@@ -351,9 +369,10 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
           style={{ maxWidth: 'calc(100vw - 16px)' }}
         >
           {open && (
-            <div className="grid grid-cols-5 gap-2 min-[390px]:grid-cols-7">
-              {slots.map((item) => renderIconButton(item))}
-            </div>
+            <>
+              <div className="min-[390px]:hidden">{renderPackedRows(5)}</div>
+              <div className="hidden min-[390px]:block">{renderPackedRows(7)}</div>
+            </>
           )}
           {/* Home is the only control in the bottom row and stays at screen-right. */}
           {renderIconButton(homeItem, true)}
