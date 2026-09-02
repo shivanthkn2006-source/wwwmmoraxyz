@@ -3,8 +3,10 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useSearchIndexHealth, runIndexerBatch, runVisionBackfill } from '@/hooks/useSearchIndexHealth';
+import { useIsAdmin } from '@/hooks/useIsAdmin';
 
 export default function AdminSearchIndexPage() {
+  const isAdmin = useIsAdmin();
   const { stats, coverage, failures, loading, refresh } = useSearchIndexHealth();
   const [running, setRunning] = React.useState(false);
   const [elapsed, setElapsed] = React.useState(0);
