@@ -402,7 +402,7 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
 
       <div
         ref={barRef}
-        className={`fixed z-[9996] flex flex-col overflow-hidden rounded-2xl p-1.5 text-white transition-[opacity] duration-200 ease-out ${glassSurface}`}
+        className={`fixed z-[9998] flex overflow-hidden rounded-2xl p-1.5 text-white transition-[opacity] duration-200 ease-out ${glassSurface}`}
         style={{
           left: barLeft,
           top: barTop,
@@ -416,28 +416,35 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
         onPointerDown={(event) => event.stopPropagation()}
         onClick={(event) => event.stopPropagation()}
       >
-        <form onSubmit={handleSubmit} className="flex min-w-0 flex-1 flex-col px-2 py-1">
-          {/* Control row — close, search and clear sit above the text field */}
-          <div className="flex items-center justify-between gap-2 pb-1">
+        <form onSubmit={handleSubmit} className="flex min-w-0 flex-1 items-start gap-1 px-1 py-1">
+          {/* Icon column — close, search, clear stacked top-down on the left */}
+          <div className="flex w-7 shrink-0 flex-col items-center gap-1 pt-1">
             <button
               type="button"
               aria-label="Close home search"
               tabIndex={searchOpen ? 0 : -1}
               onClick={() => setSearchOpen(false)}
-              className="shrink-0 rounded-full bg-transparent p-1 text-white/70 transition hover:text-white focus-visible:outline-none"
+              className="rounded-full bg-transparent p-0.5 text-white/70 transition hover:text-white focus-visible:outline-none"
             >
               <X className="h-5 w-5" />
             </button>
-            <Search className="h-4 w-4 shrink-0 text-white/60" />
+            <button
+              type="submit"
+              aria-label="Run search"
+              tabIndex={searchOpen ? 0 : -1}
+              className="rounded-full bg-transparent p-0.5 text-white/60 transition hover:text-white focus-visible:outline-none"
+            >
+              <Search className="h-[18px] w-[18px]" />
+            </button>
             <button
               type="button"
               tabIndex={searchOpen ? 0 : -1}
-              className={`shrink-0 rounded-full p-1 text-white/60 transition hover:text-white ${query ? '' : 'pointer-events-none opacity-0'}`}
+              className={`rounded-full bg-transparent p-0.5 text-white/60 transition hover:text-white focus-visible:outline-none ${query ? '' : 'pointer-events-none opacity-0'}`}
               aria-label="Clear search"
               aria-hidden={!query}
               onClick={() => onQueryChange('')}
             >
-              <Trash2 className="h-4 w-4" />
+              <Trash2 className="h-[18px] w-[18px]" />
             </button>
           </div>
 
@@ -450,22 +457,23 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
             onChange={(event) => onQueryChange(event.target.value)}
             placeholder="Search posts, shorts, tags or creators"
             tabIndex={searchOpen ? 0 : -1}
-            /* Full-width text area — auto-grows as the user types. */
-            className="max-h-32 min-h-[36px] w-full resize-none bg-transparent px-1 py-2 text-sm leading-5 text-white outline-none placeholder:text-white/45"
+            /* ~95% of the bar is typing space — text starts at the top-left */
+            className="max-h-32 min-h-[84px] w-full flex-1 resize-none bg-transparent px-1 py-1 text-[15px] leading-5 text-white outline-none placeholder:text-white/45"
             style={{ height: 'auto' }}
             onInput={(event) => {
               const node = event.currentTarget;
               node.style.height = 'auto';
-              node.style.height = `${Math.min(node.scrollHeight, 128)}px`;
+              node.style.height = `${Math.min(Math.max(node.scrollHeight, 84), 128)}px`;
             }}
           />
         </form>
+
 
       </div>
 
       {searchOpen && query.trim().length >= 1 && (
         <div
-          className={`fixed z-[9996] overflow-y-auto overscroll-contain rounded-3xl p-1.5 text-white ${glassSurface}`}
+          className={`fixed z-[9998] overflow-y-auto overscroll-contain rounded-3xl p-1.5 text-white ${glassSurface}`}
           style={{
             left: panelLeft,
             top: dropdownTop,
