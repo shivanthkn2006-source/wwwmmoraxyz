@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * Render coverage for the admin operations panels added to /admin/overview:
  * edge function health, DHF link health, load tests and the growth onboarding
