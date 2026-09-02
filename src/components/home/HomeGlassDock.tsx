@@ -326,7 +326,17 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
   const GRID_SIZE = GRID_COLUMNS * GRID_ROWS;
 
   const gridSlots: GlassDockItem[] = React.useMemo(() => {
-    const filled = slots.slice(0, GRID_SIZE);
+    // The "Home feed" navigation action is always guaranteed a slot (nearest the
+    // home trigger) so every page can return to the feed from the dock.
+    const homeFeed = slots.find((item) => item.id === 'dock-home-return');
+    const rest = homeFeed ? slots.filter((item) => item !== homeFeed) : slots;
+    const capacity = homeFeed ? GRID_SIZE - 1 : GRID_SIZE;
+
+    // Items are ordered least-used → most-used, so when there are more actions
+    // than slots we keep the TAIL (the ones the member actually uses).
+    const visible = rest.length > capacity ? rest.slice(rest.length - capacity) : rest.slice();
+    const filled = homeFeed ? [...visible, homeFeed] : visible;
+
     for (let index = filled.length; index < GRID_SIZE; index += 1) {
       const Icon = PLACEHOLDER_ICONS[index % PLACEHOLDER_ICONS.length];
       filled.push({
@@ -338,6 +348,7 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
     }
     return filled;
   }, [slots]);
+
 
   const renderPackedRows = () => {
     const rows: GlassDockItem[][] = [];
