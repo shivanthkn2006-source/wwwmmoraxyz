@@ -216,12 +216,12 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
         className,
       )}
     >
-      {/* Full-width horizontal glass bar — slides up from the bottom edge */}
+      {/* Pill rail — 7 icons per line, wrapping upward as more icons are added */}
       <div
         className={cn(
-          'mb-2 flex w-full px-2 transition-all duration-300 ease-out',
+          'mb-2 flex w-full justify-end px-2 transition-all duration-300 ease-out',
           open
-            ? 'max-h-[40vh] translate-y-0 opacity-100'
+            ? 'max-h-[60vh] translate-y-0 opacity-100'
             : 'pointer-events-none max-h-0 translate-y-3 opacity-0',
         )}
       >
@@ -229,13 +229,13 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
           ref={railRef}
           role="menu"
           aria-hidden={!open}
+          style={{ maxWidth: 'min(100%, 380px)' }}
           className={cn(
-            'flex w-full items-center gap-2 overflow-x-auto rounded-3xl border border-white/25 px-3 py-2',
+            'flex flex-wrap items-center justify-end gap-2 rounded-[28px] border border-white/25 px-3 py-2',
             'bg-white/10 backdrop-blur-xl shadow-[0_8px_24px_rgba(0,0,0,0.35)]',
-            '[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden',
-            'scroll-smooth touch-pan-x [overscroll-behavior-x:contain]',
           )}
         >
+
 
 
           {badgesEnabled && items.some((item) => item.badgeStale && (item.badge ?? 0) > 0) && (
