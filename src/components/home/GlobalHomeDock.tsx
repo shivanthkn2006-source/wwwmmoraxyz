@@ -11,13 +11,13 @@
  */
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Home, Lightbulb, Sparkles, MessageCircle, Bell, User, Compass } from 'lucide-react';
+import { Lightbulb, Sparkles, MessageCircle, Bell, User, Compass } from 'lucide-react';
 import HomeGlassDock from '@/components/home/HomeGlassDock';
 import GrowthAlertsPanel from '@/components/growth/GrowthAlertsPanel';
 import { useAuth } from '@/lib/auth';
 import { useGrowthUnread } from '@/hooks/useGrowthUnread';
 import { useNotificationFeatureBadges } from '@/hooks/useNotificationFeatureBadges';
-import { buildExtraDockItems } from '@/components/home/dockExtraActions';
+import { buildExtraDockItems, DOCK_RESERVED_ROUTES } from '@/components/home/dockExtraActions';
 
 /** Routes that own their dock, or must stay chrome-free. */
 const EXCLUDED_PREFIXES = [
