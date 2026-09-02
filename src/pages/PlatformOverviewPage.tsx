@@ -164,9 +164,13 @@ const PlatformOverviewPage: React.FC = () => (
           Where to go next
         </h2>
         <div className="mt-4 flex flex-wrap gap-2">
+          <Button asChild size="sm">
+            <Link to="/beta">Redeem a beta invite</Link>
+          </Button>
           <Button asChild size="sm" variant="outline">
             <Link to="/compass">Daily Compass</Link>
           </Button>
+
           <Button asChild size="sm" variant="outline">
             <Link to="/growth-insights">Growth insights</Link>
           </Button>
