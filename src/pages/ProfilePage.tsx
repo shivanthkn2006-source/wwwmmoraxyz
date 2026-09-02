@@ -13,10 +13,13 @@ import FeedbackCollectionPanel from '@/components/FeedbackCollectionPanel';
 import { supabase } from '@/integrations/supabase/client';
 import { generatePlatformDiagnostics, downloadReport } from '@/utils/platformDiagnostics';
 import { SettingsSearchCommand } from '@/components/SettingsSearchCommand';
+import { useSovereignAdmin } from '@/hooks/useSovereignAdmin';
 
 const ProfilePage = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const { isSovereign } = useSovereignAdmin();
+
   const [showSettings, setShowSettings] = useState(false);
   const [showDocs, setShowDocs] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
