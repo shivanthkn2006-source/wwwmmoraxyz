@@ -701,6 +701,15 @@ const RouteAwareShell = () => {
                             }
                           />
                           <Route
+                            path="/admin/vault"
+                            element={
+                              <ProtectedRoute>
+                                <SovereignVaultPage />
+                              </ProtectedRoute>
+                            }
+                          />
+
+                          <Route
                             path="/analytics-dashboard"
                             element={
                               <ProtectedRoute>
