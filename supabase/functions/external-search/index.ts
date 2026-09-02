@@ -487,7 +487,7 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
   try {
-    const { query } = await req.json();
+    const { query, lat, lon } = await req.json();
     const term = String(query ?? '').trim();
     if (term.length < 2) {
       return new Response(JSON.stringify({ results: [] }), {
@@ -501,7 +501,7 @@ Deno.serve(async (req) => {
     // Every lane runs in parallel so one slow/broken source can never blank the
     // others; intent-matched lanes are simply ordered first.
     const tasks: Promise<ExternalResult[]>[] = [];
-    if (wantsWeather) tasks.push(weatherSearch(term));
+    if (wantsWeather) tasks.push(weatherSearch(term, { lat, lon }));
     if (wantsMusic) tasks.push(musicSearch(term));
     tasks.push(videoSearch(term));
     tasks.push(imageSearch(term));
