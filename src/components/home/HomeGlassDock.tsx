@@ -239,7 +239,7 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
 
           {badgesEnabled && items.some((item) => item.badgeStale && (item.badge ?? 0) > 0) && (
             <span
-              className="mr-1 shrink-0 rounded-full border border-dashed border-white/40 bg-black/40 px-2 py-[3px] text-[9px] font-medium leading-none text-white/70"
+              className="col-span-3 shrink-0 rounded-full border border-dashed border-white/40 bg-black/40 px-2 py-[3px] text-[9px] font-medium leading-none text-white/70"
               title="Counts are cached — live updates are currently unavailable"
             >
               cached · {formatAgo(badgesUpdatedAt)}
@@ -280,7 +280,7 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
                 }}
 
                 className={cn(
-                  'group relative flex h-10 w-10 shrink-0 snap-start items-center justify-center rounded-xl [@media(pointer:coarse)]:w-auto [@media(pointer:coarse)]:min-w-10 [@media(pointer:coarse)]:px-2',
+                  'group relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl',
                   'transition-all active:scale-95',
                   highlighted
                     ? 'border border-white/45 bg-white/25 text-white shadow-[0_0_10px_rgba(255,255,255,0.35)] hover:bg-white/30'
@@ -289,7 +289,7 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
                 )}
               >
                 {item.icon}
-                <span className="pointer-events-none absolute bottom-full mb-2 hidden whitespace-nowrap rounded-md border border-white/25 bg-black/90 px-2 py-1 text-[10px] font-medium text-white shadow-md group-hover:block group-focus-visible:block [@media(pointer:coarse)]:static [@media(pointer:coarse)]:ml-1 [@media(pointer:coarse)]:block [@media(pointer:coarse)]:max-w-20 [@media(pointer:coarse)]:truncate [@media(pointer:coarse)]:border-0 [@media(pointer:coarse)]:bg-transparent [@media(pointer:coarse)]:p-0 [@media(pointer:coarse)]:text-[9px]">
+                <span className="pointer-events-none absolute bottom-full mb-2 hidden whitespace-nowrap rounded-md border border-white/25 bg-black/90 px-2 py-1 text-[10px] font-medium text-white shadow-md group-hover:block group-focus-visible:block ">
                   {item.label}
                 </span>
                 {badge > 0 && (
