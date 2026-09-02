@@ -58,7 +58,7 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
   const [searchOpen, setSearchOpen] = React.useState(false);
   const [iconPosition, setIconPosition] = React.useState<{ x: number; y: number }>({ x: 8, y: 80 });
   const [activeIndex, setActiveIndex] = React.useState(-1);
-  const inputRef = React.useRef<HTMLInputElement>(null);
+  const inputRef = React.useRef<HTMLTextAreaElement>(null);
   const navigate = useNavigate();
   const { results: allResults, loading, error, counts } = useHomeSearch(query, searchOpen);
   const [filter, setFilter] = React.useState<HomeFilter>('all');
@@ -253,7 +253,7 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
 
 
 
-  const handleInputKeyDown = React.useCallback((event: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleInputKeyDown = React.useCallback((event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === 'Escape') {
       event.preventDefault();
       setSearchOpen(false);
@@ -322,7 +322,7 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
         storageKey="mmora.home.search-position.v3"
         defaultPosition={{ x: 8, y: 80 }}
         ariaLabel={searchOpen ? 'Close home search' : 'Search home'}
-        className="rounded-full border border-white/15 bg-white/5 backdrop-blur-xl backdrop-saturate-150"
+        className={searchOpen ? 'pointer-events-none opacity-0' : 'rounded-full bg-white/5 backdrop-blur-xl backdrop-saturate-150'}
         onActivate={() => setSearchOpen((current) => !current)}
         onPositionChange={handleIconPosition}
       >
