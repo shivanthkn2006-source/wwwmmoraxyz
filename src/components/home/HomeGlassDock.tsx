@@ -204,18 +204,17 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
       ref={rootRef}
       data-home-dock
       className={cn(
-        'fixed right-0 z-[9996] flex flex-col items-end justify-end',
-        'bottom-[calc(env(safe-area-inset-bottom,0px)+12px)]',
+        'fixed inset-x-0 bottom-0 z-[9996] flex flex-col justify-end',
         className,
       )}
     >
-      {/* Glass dock panel — anchored bottom-right, grows left and up.
-          Icons align to the left; most-used sit on the bottom row nearest the trigger. */}
+      {/* Glass dock panel — full width, flush to the bottom and both edges.
+          Icons sit 7 per row; extra rows stack upward. */}
       <div
         className={cn(
-          'mb-2 flex justify-end px-3 transition-all duration-300 ease-out',
+          'w-full transition-all duration-300 ease-out',
           open
-            ? 'max-h-[60vh] translate-y-0 opacity-100'
+            ? 'max-h-[70vh] translate-y-0 opacity-100'
             : 'pointer-events-none max-h-0 translate-y-3 opacity-0',
         )}
       >
@@ -223,18 +222,19 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
           ref={railRef}
           role="menu"
           aria-hidden={!open}
-          style={{ maxWidth: 'min(100vw - 24px, 380px)' }}
           className={cn(
-            'flex flex-wrap content-end items-center justify-start gap-2 rounded-[28px] border border-white/25 px-3 py-2',
-            'bg-white/10 backdrop-blur-xl shadow-[0_8px_24px_rgba(0,0,0,0.35)]',
+            'grid grid-cols-7 items-center gap-2 rounded-t-[28px] border-x-0 border-b-0 border-t border-white/25 px-2 pt-3',
+            'pb-[calc(env(safe-area-inset-bottom,0px)+60px)]',
+            'bg-white/10 backdrop-blur-xl shadow-[0_-8px_24px_rgba(0,0,0,0.35)]',
           )}
         >
 
 
 
+
           {badgesEnabled && items.some((item) => item.badgeStale && (item.badge ?? 0) > 0) && (
             <span
-              className="shrink-0 rounded-full border border-dashed border-white/40 bg-black/40 px-2 py-[3px] text-[9px] font-medium leading-none text-white/70"
+              className="col-span-7 justify-self-start rounded-full border border-dashed border-white/40 bg-black/40 px-2 py-[3px] text-[9px] font-medium leading-none text-white/70"
               title="Counts are cached — live updates are currently unavailable"
             >
               cached · {formatAgo(badgesUpdatedAt)}
@@ -275,7 +275,7 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
                 }}
 
                 className={cn(
-                  'group relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl',
+                  'group relative flex aspect-square w-full items-center justify-center rounded-2xl',
                   'transition-all active:scale-95',
                   highlighted
                     ? 'border border-white/45 bg-white/25 text-white shadow-[0_0_10px_rgba(255,255,255,0.35)] hover:bg-white/30'
@@ -350,7 +350,7 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
           }
         }}
         className={cn(
-          'relative mr-3 flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-transparent',
+          'absolute bottom-[calc(env(safe-area-inset-bottom,0px)+10px)] right-4 flex h-11 w-11 items-center justify-center rounded-full bg-transparent',
           'text-white/90 drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)] transition-transform',
           'select-none touch-none active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60',
           // Enlarged invisible hit + focus area without changing the visual size
