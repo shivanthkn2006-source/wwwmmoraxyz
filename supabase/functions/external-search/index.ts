@@ -157,7 +157,7 @@ const videoSearch = async (query: string): Promise<ExternalResult[]> => {
   // Keyless fallback: read the public results page and lift the video ids, so
   // the Videos lane keeps working when the API key is missing or over quota.
   const html = await safeText(
-    `https://www.youtube.com/results?search_query=${encodeURIComponent(term)}&sp=EgIQAQ%253D%253D`,
+    `https://www.youtube.com/results?search_query=${encodeURIComponent(term)}&sp=EgIQAQ%253D%253D&hl=en&gl=US`,
   );
   if (!html) return [];
   const seen = new Set<string>();
