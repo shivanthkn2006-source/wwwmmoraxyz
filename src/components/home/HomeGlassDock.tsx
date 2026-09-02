@@ -211,17 +211,17 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
       ref={rootRef}
       data-home-dock
       className={cn(
-        'fixed right-0 z-[9996] flex flex-col items-end justify-end',
+        'fixed inset-x-0 z-[9996] flex flex-col items-end justify-end',
         'bottom-[calc(env(safe-area-inset-bottom,0px)+12px)]',
         className,
       )}
     >
-      {/* Rounded glass panel — slides up from the home trigger, bottom → top */}
+      {/* Full-width horizontal glass bar — slides up from the bottom edge */}
       <div
         className={cn(
-          'mb-2 mr-2 flex overflow-hidden transition-all duration-300 ease-out',
+          'mb-2 flex w-full px-2 transition-all duration-300 ease-out',
           open
-            ? 'max-h-[60vh] translate-y-0 opacity-100'
+            ? 'max-h-[40vh] translate-y-0 opacity-100'
             : 'pointer-events-none max-h-0 translate-y-3 opacity-0',
         )}
       >
@@ -230,12 +230,13 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
           role="menu"
           aria-hidden={!open}
           className={cn(
-            'grid max-h-[60vh] grid-cols-3 gap-1.5 overflow-y-auto rounded-3xl border border-white/25 p-2',
+            'flex w-full items-center gap-2 overflow-x-auto rounded-3xl border border-white/25 px-3 py-2',
             'bg-white/10 backdrop-blur-xl shadow-[0_8px_24px_rgba(0,0,0,0.35)]',
             '[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden',
-            'scroll-smooth touch-pan-y [overscroll-behavior-y:contain]',
+            'scroll-smooth touch-pan-x [overscroll-behavior-x:contain]',
           )}
         >
+
 
           {badgesEnabled && items.some((item) => item.badgeStale && (item.badge ?? 0) > 0) && (
             <span
