@@ -68,10 +68,9 @@ const PLACEHOLDER_ICONS = [
 ];
 
 /**
- * Bottom-right home dock. Tap, press Enter/Space, or swipe the home icon to
- * open a compact glass panel. The panel anchors to the bottom-right with a
- * thin margin on all sides, extends left and up, and keeps the home icon on
- * the same baseline as the bottom row of menu icons.
+ * Bottom-left home dock. Tap, press Enter/Space, or swipe the home icon to
+ * open a compact glass panel. Home remains in the first bottom-row slot,
+ * separated from the menu actions by one empty icon slot.
  */
 const formatAgo = (timestamp?: number | null): string => {
   if (!timestamp) return 'never';
@@ -268,7 +267,7 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
           'group relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl',
           'transition-all active:scale-95',
           isHome
-            ? 'border-0 bg-white/20 text-white shadow-none hover:bg-white/30'
+            ? 'border-0 bg-transparent text-white shadow-none hover:bg-transparent'
             : highlighted
               ? 'border border-white/45 bg-white/25 text-white shadow-[0_0_10px_rgba(255,255,255,0.35)] hover:bg-white/30'
               : 'border border-white/15 bg-white/5 text-white/60 hover:bg-white/15 hover:text-white/90',
@@ -325,12 +324,12 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
       ref={rootRef}
       data-home-dock
       className={cn(
-        'fixed z-[9996] flex flex-col items-end justify-end',
-        'bottom-[calc(env(safe-area-inset-bottom,0px)+8px)] right-2',
+        'fixed z-[9996] flex flex-col items-start justify-end',
+        'bottom-[calc(env(safe-area-inset-bottom,0px)+8px)] left-2',
         className,
       )}
     >
-      {/* Glass dock panel — anchored on the computer's right side. */}
+      {/* Glass dock panel — permanently anchored on the computer's left side. */}
       <div
         className={cn(
           'overflow-hidden transition-all duration-300 ease-out',
@@ -349,9 +348,9 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
           )}
           style={{ maxWidth: 'min(100vw - 16px, 380px)' }}
         >
-          {/* Home stays at the start; every opened action extends to its right. */}
+          {/* Home never relocates. The reserved slot makes its separation obvious. */}
           {renderIconButton(homeItem, true)}
-
+          {open && <span aria-hidden="true" className="h-11 w-11 shrink-0" />}
           {open && slots.map((item) => renderIconButton(item))}
         </div>
       </div>
