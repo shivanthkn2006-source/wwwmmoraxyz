@@ -268,9 +268,11 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
         className={cn(
           'group relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl',
           'transition-all active:scale-95',
-          isHome || highlighted
-            ? 'border border-white/45 bg-white/25 text-white shadow-[0_0_10px_rgba(255,255,255,0.35)] hover:bg-white/30'
-            : 'border border-white/15 bg-white/5 text-white/60 hover:bg-white/15 hover:text-white/90',
+          isHome
+            ? 'border-0 bg-white/20 text-white shadow-none hover:bg-white/30'
+            : highlighted
+              ? 'border border-white/45 bg-white/25 text-white shadow-[0_0_10px_rgba(255,255,255,0.35)] hover:bg-white/30'
+              : 'border border-white/15 bg-white/5 text-white/60 hover:bg-white/15 hover:text-white/90',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60',
         )}
       >
@@ -342,8 +344,8 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
           role={open ? 'menu' : undefined}
           aria-hidden={open ? false : undefined}
           className={cn(
-            'flex flex-wrap-reverse flex-row-reverse content-start items-center justify-start gap-2 rounded-[28px] border border-white/25 p-2',
-            'bg-white/10 backdrop-blur-xl shadow-[0_8px_24px_rgba(0,0,0,0.35)]',
+            'flex flex-row-reverse flex-wrap-reverse content-start items-center justify-start gap-2 rounded-[28px] border-0 p-2',
+            'bg-white/10 backdrop-blur-xl shadow-none',
           )}
           style={{ maxWidth: 'min(100vw - 16px, 380px)' }}
         >
