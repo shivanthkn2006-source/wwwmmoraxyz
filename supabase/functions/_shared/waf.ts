@@ -292,5 +292,5 @@ export async function guardRequest(req: Request, options: WafOptions): Promise<W
 
 
 
-  return { body, ip, remaining };
+  return { body, ip, remaining, cf };
 }
