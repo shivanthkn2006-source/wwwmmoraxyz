@@ -269,8 +269,8 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
           isHome
             ? 'appearance-none rounded-none !border-0 !bg-transparent p-0 text-white !shadow-none hover:!bg-transparent'
             : highlighted
-              ? 'rounded-xl border border-white/45 bg-white/25 text-white shadow-[0_0_10px_rgba(255,255,255,0.35)] hover:bg-white/30'
-              : 'rounded-xl border border-white/15 bg-white/5 text-white/60 hover:bg-white/15 hover:text-white/90',
+              ? 'rounded-full border border-white/45 bg-white/25 text-white shadow-[0_0_10px_rgba(255,255,255,0.35)] hover:bg-white/30'
+              : 'rounded-full border border-white/15 bg-white/5 text-white/60 hover:bg-white/15 hover:text-white/90',
           isHome
             ? '!outline-none !ring-0 focus:!outline-none focus:!ring-0 focus-visible:!outline-none focus-visible:!ring-0'
             : 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60',
