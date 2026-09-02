@@ -11,6 +11,7 @@ import { Play, Loader2, RefreshCw, Video } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { fetchDhfVideos, dhfVideoThumbnail, requestDhfVideoIngest, type DhfVideo } from '@/lib/dhfVideos';
 import { openShare } from '@/lib/shareTargets';
+import DhfShareSheet from '@/components/dhf/DhfShareSheet';
 
 const chip =
   'inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40 px-3 py-1.5 text-[11px] font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
@@ -152,6 +153,16 @@ export const DhfVideoFeed: React.FC<Props> = ({ canIngest = false, limit = 24 })
                   >
                     <XGlyph />
                     Share
+                  </button>
+                  <button
+                    type="button"
+                    className={chip}
+                    data-dhf-link="share-all"
+                    aria-label={`Share ${video.title} everywhere`}
+                    onClick={() => setShareVideo(video)}
+                  >
+                    <Share2 className="h-3.5 w-3.5" aria-hidden="true" />
+                    All platforms
                   </button>
                 </div>
                 {video.youtube_channel && (
