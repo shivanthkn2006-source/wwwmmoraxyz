@@ -273,12 +273,37 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
     setIconPosition(position);
   }, []);
 
+  // Viewport-aware sizing: the bar and its dropdown re-fit on every resize /
+  // orientation change so phones, tablets, laptops and ultrawides all get a
+  // correctly proportioned search surface.
+  const [viewport, setViewport] = React.useState(() => ({
+    w: typeof window === 'undefined' ? 1024 : window.innerWidth,
+    h: typeof window === 'undefined' ? 768 : window.innerHeight,
+  }));
+  React.useEffect(() => {
+    const onResize = () => setViewport({ w: window.innerWidth, h: window.innerHeight });
+    window.addEventListener('resize', onResize);
+    window.addEventListener('orientationchange', onResize);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      window.removeEventListener('orientationchange', onResize);
+    };
+  }, []);
+
   // Bar grows sideways (left -> right) from the search icon's current spot.
   const availableWidth = Math.max(
-    120,
-    window.innerWidth - (iconPosition.x + ICON_SIZE + GAP) - EDGE_GAP,
+    160,
+    viewport.w - (iconPosition.x + ICON_SIZE + GAP) - EDGE_GAP,
   );
-  const barWidth = Math.min(availableWidth, 420);
+  // Phones fill the free space; larger displays cap at a comfortable measure.
+  const maxBarWidth = viewport.w < 480 ? availableWidth : viewport.w < 1024 ? 520 : 620;
+  const barWidth = Math.min(availableWidth, maxBarWidth);
+  const dropdownTop = iconPosition.y + 52;
+  const dropdownMaxHeight = Math.max(180, viewport.h - dropdownTop - 24);
+
+  /** Cyber-Night glass:真 transparency + blur, never a solid panel. */
+  const glassSurface =
+    'border border-white/15 bg-white/[0.06] shadow-[0_8px_40px_-12px_rgba(0,0,0,0.8)] backdrop-blur-2xl backdrop-saturate-150 supports-[backdrop-filter]:bg-white/[0.06]';
 
   return (
     <>
@@ -286,11 +311,13 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
         storageKey="mmora.home.search-position.v3"
         defaultPosition={{ x: 8, y: 80 }}
         ariaLabel={searchOpen ? 'Close home search' : 'Search home'}
+        className="rounded-full border border-white/15 bg-white/5 backdrop-blur-xl backdrop-saturate-150"
         onActivate={() => setSearchOpen((current) => !current)}
         onPositionChange={handleIconPosition}
       >
         {searchOpen ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
       </DraggableHomeControl>
+
 
       <DraggableHomeControl
         storageKey="mmora.home.camera-position.v3"
