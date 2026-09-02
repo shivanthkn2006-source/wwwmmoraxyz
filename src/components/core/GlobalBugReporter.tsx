@@ -125,7 +125,6 @@ export const GlobalBugReporter: React.FC = () => {
   // Not signed in → nothing to attach a report to; stay out of the way.
   if (!userId) return null;
   // Home screen keeps the chrome clean; the reporter is available on every other route.
-  if (pathname === '/home' || pathname === '/') return null;
 
   return (
     <>
@@ -134,7 +133,7 @@ export const GlobalBugReporter: React.FC = () => {
         aria-label="Report a problem"
         title="Report a problem"
         onClick={() => setOpen(true)}
-        className="fixed left-3 top-1/2 z-40 -translate-y-1/2 rounded-full border border-border/60 bg-background/70 p-2 text-muted-foreground shadow-sm backdrop-blur transition hover:text-foreground"
+        className="fixed left-3 top-1/2 z-40 -translate-y-1/2 bg-transparent p-2 text-muted-foreground transition hover:text-foreground"
       >
         <Bug className="h-4 w-4" />
       </button>
