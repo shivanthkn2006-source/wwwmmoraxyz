@@ -473,7 +473,7 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
 
       {searchOpen && query.trim().length >= 1 && (
         <div
-          className={`fixed z-[9996] overflow-y-auto overscroll-contain rounded-3xl p-1.5 text-white ${glassSurface}`}
+          className={`fixed z-[9998] overflow-y-auto overscroll-contain rounded-3xl p-1.5 text-white ${glassSurface}`}
           style={{
             left: panelLeft,
             top: dropdownTop,
