@@ -17,6 +17,7 @@ import SearchDebugPanel from '@/components/home/SearchDebugPanel';
 import { useSearchIndexHealth } from '@/hooks/useSearchIndexHealth';
 import { usePlatformInsight } from '@/hooks/usePlatformInsight';
 import { supabase } from '@/integrations/supabase/client';
+import { KIND_LABEL, tagsForItem, type FeedSearchItem, type FeedSearchKind } from '@/lib/feedSearchItems';
 
 
 
@@ -31,6 +32,28 @@ const ICON_SIZE = 36;
 const GAP = 6;
 const EDGE_GAP = 8;
 
+/** Platform chips + internet lanes, so one bar covers every result universe. */
+export type HomeFilter = SearchFilter | 'web' | 'news' | 'shopping' | 'weather';
+
+const ALL_FILTERS: { id: HomeFilter; label: string }[] = [
+  ...SEARCH_FILTERS,
+  { id: 'web', label: 'Web' },
+  { id: 'news', label: 'News' },
+  { id: 'shopping', label: 'Shopping' },
+  { id: 'weather', label: 'Weather' },
+];
+
+const INTERNAL_FILTERS = new Set<string>(SEARCH_FILTERS.map((chip) => chip.id));
+
+const FILTER_TO_EXTERNAL_KINDS: Partial<Record<HomeFilter, FeedSearchKind[]>> = {
+  images: ['image'],
+  videos: ['video'],
+  web: ['web', 'music'],
+  news: ['news'],
+  shopping: ['shopping'],
+  weather: ['weather'],
+};
+
 export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, hasInjectedVideos = false }: HomeFloatingToolsProps) {
   const [searchOpen, setSearchOpen] = React.useState(false);
   const [iconPosition, setIconPosition] = React.useState<{ x: number; y: number }>({ x: 8, y: 80 });
@@ -38,12 +61,14 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
   const inputRef = React.useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const { results: allResults, loading, error, counts } = useHomeSearch(query, searchOpen);
-  const [filter, setFilter] = React.useState<SearchFilter>('all');
+  const [filter, setFilter] = React.useState<HomeFilter>('all');
   const results = React.useMemo(
     () =>
       filter === 'all'
         ? allResults
-        : allResults.filter((item) => (item.facets?.length ? item.facets : [item.filter]).includes(filter)),
+        : INTERNAL_FILTERS.has(filter)
+          ? allResults.filter((item) => (item.facets?.length ? item.facets : [item.filter]).includes(filter as SearchFilter))
+          : [],
     [allResults, filter],
   );
   // Startup guard: warns and self-heals when the universal index is empty/stale.
