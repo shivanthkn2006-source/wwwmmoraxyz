@@ -68,9 +68,10 @@ const PLACEHOLDER_ICONS = [
 ];
 
 /**
- * Bottom-right home dock. Tap, press Enter/Space, or swipe the bare home icon
- * right→left to slide out a single horizontal rectangular glass tube holding
- * the menu icons. Purely additive — no other UI is touched.
+ * Bottom-right home dock. Tap, press Enter/Space, or swipe the home icon to
+ * open a compact glass panel. The panel anchors to the bottom-right with a
+ * thin margin on all sides, extends left and up, and keeps the home icon on
+ * the same baseline as the bottom row of menu icons.
  */
 const formatAgo = (timestamp?: number | null): string => {
   if (!timestamp) return 'never';
@@ -94,7 +95,7 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
   const suppressClick = React.useRef(false);
   const [usage, setUsage] = React.useState<DockUsageMap>({});
 
-  // Frequently-used ordering (most used sits nearest the home trigger).
+  // Frequently-used ordering (most used lands nearest the home trigger).
   React.useEffect(() => {
     setUsage(readDockUsage());
     const onUsage = () => setUsage(readDockUsage());
@@ -177,10 +178,10 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
           onSelect: () => {},
         }));
 
-  // Most-used icons render first → bottom row, nearest the home trigger.
-  // Additional icons wrap into rows that extend upward from the trigger.
+  // Most-used icons render last in DOM so, with row-reverse, they sit nearest
+  // the home trigger at the bottom-right of the panel.
   const slots = React.useMemo(
-    () => orderByFrequency(baseSlots, usage).reverse(),
+    () => orderByFrequency(baseSlots, usage),
     [baseSlots, usage],
   );
 
@@ -199,167 +200,99 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
     ? Math.max(0, Math.floor(triggerBadge))
     : 0;
 
-  return (
-    <div
-      ref={rootRef}
-      data-home-dock
-      className={cn(
-        'fixed inset-x-0 bottom-0 z-[9996] flex flex-col justify-end',
-        className,
-      )}
-    >
-      {/* Glass dock panel — full width, flush to the bottom and both edges.
-          Icons sit 7 per row; extra rows stack upward. */}
-      <div
-        className={cn(
-          'w-full transition-all duration-300 ease-out',
-          open
-            ? 'max-h-[70vh] translate-y-0 opacity-100'
-            : 'pointer-events-none max-h-0 translate-y-3 opacity-0',
-        )}
-      >
-        <div
-          ref={railRef}
-          role="menu"
-          aria-hidden={!open}
-          className={cn(
-            'grid grid-cols-7 items-center gap-2 rounded-t-[28px] border-x-0 border-b-0 border-t border-white/25 px-2 pt-3',
-            'pb-[calc(env(safe-area-inset-bottom,0px)+60px)]',
-            'bg-white/10 backdrop-blur-xl shadow-[0_-8px_24px_rgba(0,0,0,0.35)]',
-          )}
-        >
+  const renderIconButton = (item: GlassDockItem, isHome = false) => {
+    const badge = badgesEnabled && Number.isFinite(item.badge) ? Math.max(0, Math.floor(item.badge as number)) : 0;
+    const highlighted = Boolean(item.active) || badge > 0;
+    const badgeStale = badgesEnabled && Boolean(item.badgeStale) && badge > 0;
 
-
-
-
-          {badgesEnabled && items.some((item) => item.badgeStale && (item.badge ?? 0) > 0) && (
-            <span
-              className="col-span-7 justify-self-start rounded-full border border-dashed border-white/40 bg-black/40 px-2 py-[3px] text-[9px] font-medium leading-none text-white/70"
-              title="Counts are cached — live updates are currently unavailable"
-            >
-              cached · {formatAgo(badgesUpdatedAt)}
-            </span>
-          )}
-
-          {slots.map((item) => {
-            const badge = badgesEnabled && Number.isFinite(item.badge) ? Math.max(0, Math.floor(item.badge as number)) : 0;
-            const highlighted = Boolean(item.active) || badge > 0;
-            const badgeStale = badgesEnabled && Boolean(item.badgeStale) && badge > 0;
-
-            return (
-              <button
-                key={item.id}
-                type="button"
-                role="menuitem"
-                aria-label={
-                  badge > 0
-                    ? `${item.label}, ${badge > 99 ? '99+' : badge} new${badgeStale ? ` (cached, updated ${formatAgo(badgesUpdatedAt)})` : ''}`
-                    : item.label
-                }
-                title={badgeStale ? `${item.label} — cached count, updated ${formatAgo(badgesUpdatedAt)}` : item.label}
-                aria-current={item.active ? 'true' : undefined}
-                tabIndex={open ? 0 : -1}
-                onClick={() => {
-                  setOpen(false);
-                  try {
-                    recordDockUsage(item.id);
-                  } catch {
-                    /* usage tracking must never block navigation */
-                  }
-                  try {
-                    item.onSelect();
-                  } catch (error) {
-                    // A failing action must never take the dock (or HomePage) down.
-                    console.warn('[HomeGlassDock] action failed', item.id, error);
-                  }
-                }}
-
-                className={cn(
-                  'group relative flex aspect-square w-full items-center justify-center rounded-2xl',
-                  'transition-all active:scale-95',
-                  highlighted
-                    ? 'border border-white/45 bg-white/25 text-white shadow-[0_0_10px_rgba(255,255,255,0.35)] hover:bg-white/30'
-                    : 'border border-white/15 bg-white/5 text-white/60 hover:bg-white/15 hover:text-white/90',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60',
-                )}
-              >
-                {item.icon}
-                <span className="pointer-events-none absolute bottom-full mb-2 hidden whitespace-nowrap rounded-md border border-white/25 bg-black/90 px-2 py-1 text-[10px] font-medium text-white shadow-md group-hover:block group-focus-visible:block ">
-                  {item.label}
-                </span>
-                {badge > 0 && (
-                  <span
-                    aria-hidden="true"
-                    className={cn(
-                      'pointer-events-none absolute -top-1.5 left-1/2 -translate-x-1/2',
-                      'flex h-[16px] min-w-[16px] items-center justify-center rounded-full px-1',
-                      'bg-black/85 text-[10px] font-semibold leading-none text-white',
-                      'border shadow-[0_1px_4px_rgba(0,0,0,0.6)]',
-                      badgeStale ? 'border-dashed border-white/50 text-white/70' : 'border-white/40',
-                    )}
-                  >
-                    {badgeStale ? '~' : ''}{badge > 99 ? '99+' : badge}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-
-        </div>
-      </div>
-
-      {/* Bare home trigger — flush at the right edge, no ring, no box */}
+    return (
       <button
-        ref={triggerRef}
+        key={item.id}
         type="button"
-        data-home-dock-trigger
+        ref={isHome ? triggerRef : undefined}
+        data-home-dock-trigger={isHome ? true : undefined}
+        role={open ? 'menuitem' : undefined}
         aria-label={
-          open
-            ? 'Close home menu'
-            : totalBadge > 0
-              ? `Open home menu, ${totalBadge > 99 ? '99+' : totalBadge} new notifications`
-              : 'Open home menu'
+          isHome
+            ? open
+              ? 'Close home menu'
+              : totalBadge > 0
+                ? `Open home menu, ${totalBadge > 99 ? '99+' : totalBadge} new notifications`
+                : 'Open home menu'
+            : badge > 0
+              ? `${item.label}, ${badge > 99 ? '99+' : badge} new${badgeStale ? ` (cached, updated ${formatAgo(badgesUpdatedAt)})` : ''}`
+              : item.label
         }
-        aria-expanded={open}
-        aria-haspopup="menu"
-        onBlur={(event) => {
-          // Focus leaving the dock entirely retracts it (never leaves it stuck open).
-          const next = event.relatedTarget as Node | null;
-          if (next && rootRef.current?.contains(next)) return;
-          if (next) setOpen(false);
-        }}
-
-        onPointerDown={handlePointerDown}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={() => {
-          swipeStart.current = null;
-          endLongPress();
-        }}
-        onContextMenu={(event) => event.preventDefault()}
+        title={badgeStale ? `${item.label} — cached count, updated ${formatAgo(badgesUpdatedAt)}` : item.label}
+        aria-current={item.active ? 'true' : undefined}
+        tabIndex={open || isHome ? 0 : -1}
         onClick={() => {
-          if (suppressClick.current) {
+          if (isHome && suppressClick.current) {
             suppressClick.current = false;
             return;
           }
-          setOpen((value) => !value);
+          if (isHome) {
+            setOpen((value) => !value);
+            return;
+          }
+          setOpen(false);
+          try {
+            recordDockUsage(item.id);
+          } catch {
+            /* usage tracking must never block navigation */
+          }
+          try {
+            item.onSelect();
+          } catch (error) {
+            // A failing action must never take the dock (or HomePage) down.
+            console.warn('[HomeGlassDock] action failed', item.id, error);
+          }
         }}
-        onKeyDown={(event) => {
+
+        onPointerDown={isHome ? handlePointerDown : undefined}
+        onPointerUp={isHome ? handlePointerUp : undefined}
+        onPointerCancel={isHome ? () => { swipeStart.current = null; endLongPress(); } : undefined}
+        onContextMenu={isHome ? (event) => event.preventDefault() : undefined}
+        onKeyDown={isHome ? (event) => {
           if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
             setOpen((value) => !value);
           }
-        }}
+        } : undefined}
+        onBlur={isHome ? (event) => {
+          // Focus leaving the dock entirely retracts it (never leaves it stuck open).
+          const next = event.relatedTarget as Node | null;
+          if (next && rootRef.current?.contains(next)) return;
+          if (next) setOpen(false);
+        } : undefined}
         className={cn(
-          'absolute bottom-[calc(env(safe-area-inset-bottom,0px)+10px)] right-4 flex h-11 w-11 items-center justify-center rounded-full bg-transparent',
-          'text-white/90 drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)] transition-transform',
-          'select-none touch-none active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60',
-          // Enlarged invisible hit + focus area without changing the visual size
-          'after:absolute after:-inset-2.5 after:content-[""] after:rounded-full',
+          'group relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl',
+          'transition-all active:scale-95',
+          isHome || highlighted
+            ? 'border border-white/45 bg-white/25 text-white shadow-[0_0_10px_rgba(255,255,255,0.35)] hover:bg-white/30'
+            : 'border border-white/15 bg-white/5 text-white/60 hover:bg-white/15 hover:text-white/90',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60',
         )}
       >
-
-        <Home className="h-[22px] w-[22px]" />
-        {totalBadge > 0 && (
+        {item.icon}
+        <span className="pointer-events-none absolute bottom-full mb-2 hidden whitespace-nowrap rounded-md border border-white/25 bg-black/90 px-2 py-1 text-[10px] font-medium text-white shadow-md group-hover:block group-focus-visible:block ">
+          {item.label}
+        </span>
+        {badge > 0 && !isHome && (
+          <span
+            aria-hidden="true"
+            className={cn(
+              'pointer-events-none absolute -top-1.5 left-1/2 -translate-x-1/2',
+              'flex h-[16px] min-w-[16px] items-center justify-center rounded-full px-1',
+              'bg-black/85 text-[10px] font-semibold leading-none text-white',
+              'border shadow-[0_1px_4px_rgba(0,0,0,0.6)]',
+              badgeStale ? 'border-dashed border-white/50 text-white/70' : 'border-white/40',
+            )}
+          >
+            {badgeStale ? '~' : ''}{badge > 99 ? '99+' : badge}
+          </span>
+        )}
+        {isHome && totalBadge > 0 && !open && (
           <span
             data-testid="home-dock-trigger-badge"
             aria-hidden="true"
@@ -374,6 +307,52 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
           </span>
         )}
       </button>
+    );
+  };
+
+  const homeItem: GlassDockItem = {
+    id: 'home-trigger',
+    label: open ? 'Close home menu' : 'Open home menu',
+    icon: <Home className="h-[22px] w-[22px]" />,
+    onSelect: () => {},
+  };
+
+  return (
+    <div
+      ref={rootRef}
+      data-home-dock
+      className={cn(
+        'fixed z-[9996] flex flex-col items-end justify-end',
+        'bottom-[calc(env(safe-area-inset-bottom,0px)+8px)] right-2',
+        className,
+      )}
+    >
+      {/* Glass dock panel — anchored bottom-right with a thin margin on all sides.
+          Home icon lives inside the panel at the bottom-right corner. */}
+      <div
+        className={cn(
+          'overflow-hidden transition-all duration-300 ease-out',
+          open
+            ? 'max-h-[70vh] translate-y-0 opacity-100'
+            : 'max-h-[64px] translate-y-0 opacity-100',
+        )}
+      >
+        <div
+          ref={railRef}
+          role={open ? 'menu' : undefined}
+          aria-hidden={open ? false : undefined}
+          className={cn(
+            'flex flex-wrap-reverse flex-row-reverse content-start items-center justify-start gap-2 rounded-[28px] border border-white/25 p-2',
+            'bg-white/10 backdrop-blur-xl shadow-[0_8px_24px_rgba(0,0,0,0.35)]',
+          )}
+          style={{ maxWidth: 'min(100vw - 16px, 380px)' }}
+        >
+          {/* Home trigger — first in DOM with row-reverse → bottom-right of panel. */}
+          {renderIconButton(homeItem, true)}
+
+          {open && slots.map((item) => renderIconButton(item))}
+        </div>
+      </div>
     </div>
   );
 }
