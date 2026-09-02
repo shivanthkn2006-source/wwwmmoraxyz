@@ -144,9 +144,23 @@ const AdminOverviewPage: React.FC = () => {
               })}
             </div>
 
+            <section className="mt-8 grid gap-4 lg:grid-cols-2">
+              <EdgeFunctionHealthPanel />
+              <DhfLinkHealthPanel />
+            </section>
+
+            <section className="mt-4">
+              <LoadTestPanel />
+            </section>
+
+            <section className="mt-4">
+              <GrowthOnboardingWizard />
+            </section>
+
             <section className="mt-8">
               <RolePermissionsPanel />
             </section>
+
 
             <section className="mt-8">
               <h2 className="text-sm font-semibold text-foreground">Admin surfaces</h2>
