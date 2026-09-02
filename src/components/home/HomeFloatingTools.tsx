@@ -1,6 +1,5 @@
 import React from 'react';
 import { Camera, ListVideo, Loader2, Search, X } from 'lucide-react';
-import { Input } from '@/components/ui/input';
 import { useNavigate } from 'react-router-dom';
 import {
   useHomeSearch,
@@ -17,7 +16,7 @@ import SearchDebugPanel from '@/components/home/SearchDebugPanel';
 import { useSearchIndexHealth } from '@/hooks/useSearchIndexHealth';
 import { usePlatformInsight } from '@/hooks/usePlatformInsight';
 import { supabase } from '@/integrations/supabase/client';
-import { KIND_LABEL, tagsForItem, type FeedSearchItem, type FeedSearchKind } from '@/lib/feedSearchItems';
+import { KIND_LABEL, portalForItem, tagsForItem, type FeedSearchItem, type FeedSearchKind } from '@/lib/feedSearchItems';
 
 
 
@@ -62,6 +61,8 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
   const navigate = useNavigate();
   const { results: allResults, loading, error, counts } = useHomeSearch(query, searchOpen);
   const [filter, setFilter] = React.useState<HomeFilter>('all');
+  /** Inline (Google-style) expansion inside the panel — no feed jump needed. */
+  const [expandedId, setExpandedId] = React.useState<string | null>(null);
   const results = React.useMemo(
     () =>
       filter === 'all'
