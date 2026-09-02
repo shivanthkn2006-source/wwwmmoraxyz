@@ -15,6 +15,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import PageSeo from '@/components/seo/PageSeo';
 import RolePermissionsPanel from '@/components/admin/RolePermissionsPanel';
+import EdgeFunctionHealthPanel from '@/components/admin/EdgeFunctionHealthPanel';
+import DhfLinkHealthPanel from '@/components/admin/DhfLinkHealthPanel';
+import LoadTestPanel from '@/components/admin/LoadTestPanel';
+import GrowthOnboardingWizard from '@/components/admin/GrowthOnboardingWizard';
+
 
 type TableName = 'profiles' | 'dhf_essay_schedules' | 'dhf_feed_posts' | 'dhf_videos' | 'posts' | 'user_roles';
 
