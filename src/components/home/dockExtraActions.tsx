@@ -29,7 +29,7 @@ import {
   Network,
   Orbit,
   Brain,
-  ShieldCheck,
+  Home,
   Scale,
   Building2,
   FileSearch,
