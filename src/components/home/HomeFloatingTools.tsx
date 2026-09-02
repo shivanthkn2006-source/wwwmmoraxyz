@@ -290,16 +290,27 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
     };
   }, []);
 
-  // Bar grows sideways (left -> right) from the search icon's current spot.
-  const availableWidth = Math.max(
-    160,
-    viewport.w - (iconPosition.x + ICON_SIZE + GAP) - EDGE_GAP,
-  );
-  // Phones fill the free space; larger displays cap at a comfortable measure.
-  const maxBarWidth = viewport.w < 480 ? availableWidth : viewport.w < 1024 ? 520 : 620;
-  const barWidth = Math.min(availableWidth, maxBarWidth);
-  const dropdownTop = iconPosition.y + 52;
-  const dropdownMaxHeight = Math.max(180, viewport.h - dropdownTop - 24);
+  // The open search surface is pinned to the very top of the viewport (above
+  // the M'Mora logo) so phones get the maximum reading area underneath it.
+  const CLOSE_SLOT = 52;
+  const barTop = 8;
+  const barLeft = CLOSE_SLOT + EDGE_GAP;
+  const barWidth = Math.max(160, viewport.w - barLeft - EDGE_GAP);
+  const barRef = React.useRef<HTMLDivElement>(null);
+  const [barHeight, setBarHeight] = React.useState(52);
+  React.useEffect(() => {
+    const node = barRef.current;
+    if (!node || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(() => setBarHeight(node.offsetHeight || 52));
+    observer.observe(node);
+    setBarHeight(node.offsetHeight || 52);
+    return () => observer.disconnect();
+  }, [searchOpen]);
+  // The dropdown starts at the left edge so it uses every pixel of width.
+  const panelLeft = EDGE_GAP;
+  const panelWidth = Math.max(200, viewport.w - EDGE_GAP * 2);
+  const dropdownTop = barTop + barHeight + 8;
+  const dropdownMaxHeight = Math.max(180, viewport.h - dropdownTop - 16);
 
   /** Cyber-Night glass: real transparency + blur, never a solid panel. */
   const glassSurface =
