@@ -96,8 +96,15 @@ const RolePermissionsPanel: React.FC = () => {
     const ids = [...new Set(rows.map((r) => r.user_id))];
     let names = new Map<string, string | null>();
     if (ids.length) {
-      const { data: profiles } = await db.from('profiles').select('id, username').in('id', ids);
-      names = new Map((profiles ?? []).map((p: { id: string; username: string | null }) => [p.id, p.username]));
+      // Roles key on the auth user id, which lives in `profiles.user_id`
+      // (`profiles.id` is the profile row's own id and never matches).
+      const { data: profiles } = await db
+        .from('profiles')
+        .select('user_id, username')
+        .in('user_id', ids);
+      names = new Map(
+        (profiles ?? []).map((p: { user_id: string; username: string | null }) => [p.user_id, p.username]),
+      );
     }
     setGrants(rows.map((r) => ({ ...r, username: names.get(r.user_id) ?? null })));
     setLoading(false);
@@ -115,10 +122,15 @@ const RolePermissionsPanel: React.FC = () => {
     }
     const { data } = await db
       .from('profiles')
-      .select('id, username')
+      .select('user_id, username')
       .ilike('username', `%${term}%`)
       .limit(8);
-    setResults((data ?? []) as Candidate[]);
+    setResults(
+      ((data ?? []) as Array<{ user_id: string; username: string | null }>).map((row) => ({
+        id: row.user_id,
+        username: row.username,
+      })),
+    );
   }, [query]);
 
   const grant = useCallback(
@@ -127,7 +139,10 @@ const RolePermissionsPanel: React.FC = () => {
       const { error } = await db.from('user_roles').insert({ user_id: userId, role });
       setBusy(null);
       if (error) {
-        toast.error(error.message.includes('duplicate') ? 'Role already granted' : 'Could not grant role');
+        const message = error.message ?? '';
+        if (message.includes('duplicate')) toast.error('Role already granted');
+        else if (message.includes('sovereign')) toast.error('Admin is reserved for the sovereign administrator');
+        else toast.error('Could not grant role');
         return;
       }
       toast.success(`${role} granted`);
