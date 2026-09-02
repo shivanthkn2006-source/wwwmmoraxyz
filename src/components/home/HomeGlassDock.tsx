@@ -350,8 +350,8 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
           }
         }}
         className={cn(
-          'relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-transparent',
-          'pr-1 text-white/90 drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)] transition-transform',
+          'relative mr-3 flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-transparent',
+          'text-white/90 drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)] transition-transform',
           'select-none touch-none active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60',
           // Enlarged invisible hit + focus area without changing the visual size
           'after:absolute after:-inset-2.5 after:content-[""] after:rounded-full',
