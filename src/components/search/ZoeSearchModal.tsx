@@ -269,12 +269,13 @@ export const ZoeSearchModal: React.FC<ZoeSearchModalProps> = ({
                           Zoe is analysing “{debounced}” across your DHF, memory and the web…
                         </p>
                       )}
-                      {!isSynthesizing && ambientError && (
-                        <p role="alert" className="text-sm text-white/60">{ambientError}</p>
+                      {!isSynthesizing && (ambientError || !ambient?.synthesis) && (
+                        <p className="text-sm leading-relaxed text-white/80">{localSynthesis}</p>
                       )}
                       {!isSynthesizing && !ambientError && ambient?.synthesis && (
                         <>
                           <p className="text-sm leading-relaxed text-white/90">{sanitizeText(ambient.synthesis)}</p>
+
                           <div className="mt-3 flex flex-wrap gap-2">
                             <button
                               type="button"
