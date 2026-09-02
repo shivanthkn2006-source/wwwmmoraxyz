@@ -185,6 +185,19 @@ const ProfilePage = () => {
                 <span className="text-xs">Diagnostic Report</span>
               </Button>
             )}
+            {isSovereign && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate('/admin/vault')}
+                className="gap-2"
+                title="Sovereign admin console"
+              >
+                <ShieldCheck className="w-4 h-4" />
+                <span className="text-xs">Sovereign Vault</span>
+              </Button>
+            )}
+
             <Sheet open={showSettings} onOpenChange={setShowSettings}>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="sm">
