@@ -23,6 +23,8 @@ import { onHomeRefresh, triggerHomeRefresh } from '@/lib/homeRefresh';
 import { rememberShortInOrbMemory } from '@/lib/orbShortsMemory';
 import HomeFloatingTools from '@/components/home/HomeFloatingTools';
 import ExternalVideoCard, { type ExternalVideoItem } from '@/components/home/ExternalVideoCard';
+import FeedSearchCard from '@/components/home/FeedSearchCard';
+import { type FeedSearchItem } from '@/lib/feedSearchItems';
 import { useDhfBrain } from '@/hooks/useDhfBrain';
 import useZoeMotivation from '@/hooks/useZoeMotivation';
 import HomeMotivationSlide from '@/components/home/HomeMotivationSlide';
