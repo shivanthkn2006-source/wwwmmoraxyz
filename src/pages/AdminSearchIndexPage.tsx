@@ -3,8 +3,10 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useSearchIndexHealth, runIndexerBatch, runVisionBackfill } from '@/hooks/useSearchIndexHealth';
+import { useIsAdmin } from '@/hooks/useIsAdmin';
 
 export default function AdminSearchIndexPage() {
+  const isAdmin = useIsAdmin();
   const { stats, coverage, failures, loading, refresh } = useSearchIndexHealth();
   const [running, setRunning] = React.useState(false);
   const [elapsed, setElapsed] = React.useState(0);
@@ -66,7 +68,23 @@ export default function AdminSearchIndexPage() {
     }
   }, [running, refresh]);
 
+  if (isAdmin === null) {
+    return <main className="p-6 text-sm text-muted-foreground">Checking access…</main>;
+  }
+
+  if (!isAdmin) {
+    return (
+      <main className="mx-auto w-full max-w-md p-8 text-center">
+        <h1 className="text-lg font-semibold text-foreground">Administrators only</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          The search index console is restricted to administrator accounts.
+        </p>
+      </main>
+    );
+  }
+
   return (
+
     <main className="mx-auto w-full max-w-3xl space-y-4 p-4">
       <header className="space-y-1">
         <h1 className="text-xl font-semibold">Search index</h1>

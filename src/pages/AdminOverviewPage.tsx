@@ -159,6 +159,11 @@ const AdminOverviewPage: React.FC = () => {
                   ['/admin/growth-delivery', 'Growth delivery'],
                   ['/admin/control-panel', 'Moderation'],
                   ['/admin/feed-debug', 'Feed debug'],
+                  ['/admin/search-index', 'Search index'],
+                  ['/admin/zoe-preview', 'Zoe preview'],
+                  ['/attack-response', 'Attack response'],
+                  ['/platform-architecture', 'Architecture'],
+
                 ].map(([to, label]) => (
                   <Button key={to} asChild size="sm" variant="outline">
                     <Link to={to}>{label}</Link>
