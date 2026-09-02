@@ -78,6 +78,24 @@ export const DOCK_EXTRA_DEFS: ExtraDef[] = [
 ];
 
 /**
+ * Routes rendered as primary dock items somewhere in the app. Every dock passes
+ * this same list so the extra rows show identical icons and identical labels on
+ * all 70+ pages.
+ */
+export const DOCK_RESERVED_ROUTES = [
+  '/camera',
+  '/chat',
+  '/growth-insights',
+  '/profile',
+  '/selfie-city',
+  '/compass',
+  '/zoe-ai',
+  '/notification-history',
+];
+
+
+
+/**
  * Builds real dock items for the extra rows, skipping any destination that the
  * caller already renders (matched by route) so no icon is ever duplicated.
  */
