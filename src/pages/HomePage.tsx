@@ -314,7 +314,7 @@ const HomePage = () => {
   // Search videos (YouTube) injected into the feed and played inline — new-window
   // navigation to youtube.com is blocked by Cross-Origin-Opener-Policy.
   const { ingest: ingestDhf } = useDhfBrain();
-  const [searchVideos, setSearchVideos] = useState<ExternalVideoItem[]>([]);
+  const [searchVideos, setSearchVideos] = useState<FeedSearchItem[]>([]);
   const [activeSearchVideoId, setActiveSearchVideoId] = useState<string | null>(null);
   // Key of the slide currently on screen — only that iframe is allowed to play.
   const [visibleVideoKey, setVisibleVideoKey] = useState<string | null>(null);
