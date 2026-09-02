@@ -145,6 +145,24 @@ export const ZoeSearchModal: React.FC<ZoeSearchModalProps> = ({
   );
   const webResults = React.useMemo(() => external.filter((item) => WEB_KINDS.has(item.kind)), [external]);
 
+  // Local, keyless summary used whenever the AI lane is unavailable (signed-out, quota, outage).
+  const localSynthesis = React.useMemo(() => {
+    if (!debounced) return '';
+    const sources = Array.from(
+      new Set(external.map((item) => item.source).filter((value): value is string => Boolean(value))),
+    ).slice(0, 3);
+    if (!external.length && !platformResults.length) {
+      return `No matches yet for “${debounced}”. Try a broader phrase or a name.`;
+    }
+    const parts = [
+      `${external.length + platformResults.length} results for “${debounced}”`,
+      platformResults.length ? `${platformResults.length} from your platform` : '',
+      sources.length ? `top sources: ${sources.join(', ')}` : '',
+    ].filter(Boolean);
+    return `${parts.join(' · ')}.`;
+  }, [debounced, external, platformResults]);
+
+
   const counts: Record<TabId, number> = {
     all: platformResults.length + external.length,
     platform: highlightResults.length,
