@@ -30,11 +30,14 @@ type ExternalResult = {
   tags?: string[];
 };
 
+const UA =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
+
 const safeJson = async (url: string, ms = 9000): Promise<any | null> => {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ms);
   try {
-    const res = await fetch(url, { signal: controller.signal, headers: { 'User-Agent': 'mmora-search/1.0', Accept: 'application/json' } });
+    const res = await fetch(url, { signal: controller.signal, headers: { 'User-Agent': UA, Accept: 'application/json' } });
     if (!res.ok) {
       console.warn('[external-search] json fetch failed', res.status, new URL(url).host);
       return null;
@@ -52,7 +55,7 @@ const safeText = async (url: string, ms = 9000): Promise<string | null> => {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ms);
   try {
-    const res = await fetch(url, { signal: controller.signal, headers: { 'User-Agent': 'mmora-search/1.0' } });
+    const res = await fetch(url, { signal: controller.signal, headers: { 'User-Agent': UA, Accept: 'text/html,application/xhtml+xml,application/xml' } });
     if (!res.ok) {
       console.warn('[external-search] text fetch failed', res.status, new URL(url).host);
       return null;
