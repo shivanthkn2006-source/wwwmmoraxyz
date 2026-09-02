@@ -2789,13 +2789,8 @@ const HomePage = () => {
             icon: <Settings className="h-[22px] w-[22px]" />,
             onSelect: runHomeIconAction('settings', () => navigate('/profile?settings=1')),
           },
-          ...buildExtraDockItems(navigate, [
-            '/camera',
-            '/chat',
-            '/growth-insights',
-            '/profile',
-            '/selfie-city',
-          ]),
+          ...buildExtraDockItems(navigate, DOCK_RESERVED_ROUTES),
+
         ]}
 
       />
