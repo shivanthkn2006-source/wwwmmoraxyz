@@ -114,6 +114,7 @@ const PlatformAuditPage = lazy(() => import("./pages/PlatformAuditPage")); // PL
 const RootScanPage = lazy(() => import("./pages/RootScanPage")); // ZOE INFINITY ROOT SCAN
 const PlatformArchitecturePage = lazy(() => import("./pages/PlatformArchitecturePage")); // ARCHITECTURE MAP
 const AttackResponsePlanPage = lazy(() => import("./pages/AttackResponsePlanPage"));
+const BetaPortalPage = lazy(() => import("./pages/BetaPortalPage"));
 const VRWorldAuditPage = lazy(() => import("./pages/VRWorldAuditPage")); // VR OMEGA WORLD AUDIT
 const InstallAppPage = lazy(() => import("./pages/InstallApp")); // PWA INSTALL PAGE
 const GodModeEvolution = lazy(() => import("./pages/GodModeEvolution")); // ASI GENESIS KERNEL
@@ -442,6 +443,7 @@ const RouteAwareShell = () => {
     pathname.startsWith('/agent-memory') ||
     pathname.startsWith('/vr-audit') ||
     pathname.startsWith('/install') ||
+    pathname.startsWith('/beta') ||
     pathname.startsWith('/admin/vault');
 
 
@@ -480,6 +482,7 @@ const RouteAwareShell = () => {
               <Route path="/root-scan" element={<RootScanPage />} />
               <Route path="/platform-architecture" element={<PlatformArchitecturePage />} />
               <Route path="/attack-response" element={<AttackResponsePlanPage />} />
+              <Route path="/beta" element={<BetaPortalPage />} />
               <Route path="/agent-memory" element={<AgentMemoryPage />} />
               <Route path="/vr-audit" element={<VRWorldAuditPage />} />
               <Route path="/install" element={<InstallAppPage />} />
@@ -705,6 +708,7 @@ const RouteAwareShell = () => {
                           <Route path="/platform-overview" element={<PlatformOverviewPage />} />
                           <Route path="/platform-architecture" element={<PlatformArchitecturePage />} />
                           <Route path="/attack-response" element={<AttackResponsePlanPage />} />
+                          <Route path="/beta" element={<BetaPortalPage />} />
                           <Route
                             path="/admin/overview"
                             element={

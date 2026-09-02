@@ -21,6 +21,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useSovereignAdmin } from '@/hooks/useSovereignAdmin';
 import VaultUserDirectory from '@/components/admin/VaultUserDirectory';
+import BetaInvitePanel from '@/components/admin/BetaInvitePanel';
 import {
   closeVaultTunnel,
   deviceSignature,
@@ -261,6 +262,7 @@ export default function SovereignVaultPage() {
         ) : (
           <>
             <VaultUserDirectory />
+            <BetaInvitePanel />
 
             {CAPABILITIES.map((group) => (
               <section key={group.group} className="space-y-3">
