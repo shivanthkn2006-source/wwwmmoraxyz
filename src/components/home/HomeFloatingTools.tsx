@@ -351,7 +351,7 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
 
 
       <div
-        className="fixed z-[9996] flex items-center overflow-hidden rounded-full border border-border/60 bg-background/80 p-1.5 shadow-xl backdrop-blur-2xl transition-[width,opacity] duration-200 ease-out"
+        className={`fixed z-[9996] flex items-center overflow-hidden rounded-full p-1.5 text-white transition-[width,opacity] duration-200 ease-out ${glassSurface}`}
         style={{
           left: iconPosition.x + ICON_SIZE + GAP,
           top: iconPosition.y,
