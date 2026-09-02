@@ -13,6 +13,7 @@ import { slotLabel, type DhfDailyPost } from '@/lib/dhfCompass';
 import { COMPASS_SLOTS, normalizeSlotTime } from '@/lib/dhfCompass';
 import ZoeCardNarrationControls from '@/components/voice/ZoeCardNarrationControls';
 import ReportContentDialog from '@/components/moderation/ReportContentDialog';
+import DhfShareSheet from '@/components/dhf/DhfShareSheet';
 import DhfVideoLinks from '@/components/dhf/DhfVideoLinks';
 import { Button } from '@/components/ui/button';
 
@@ -55,6 +56,7 @@ export const DHFCompassCard: React.FC<Props> = ({ post, className, onImpression,
   const reported = useRef(false);
   const [expanded, setExpanded] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
 
   useEffect(() => {
     if (!onImpression || reported.current) return;
@@ -182,6 +184,16 @@ export const DHFCompassCard: React.FC<Props> = ({ post, className, onImpression,
           <span className="text-[11px] text-muted-foreground" data-dhf-referral>{post.referral_cta}</span>
         )}
       </div>
+      <DhfShareSheet
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        title="Share this compass card"
+        payload={{
+          text: `${post.headline} — ${post.short_summary}`,
+          url: typeof window !== 'undefined' ? `${window.location.origin}/dhf/essay/${post.id}` : undefined,
+          hashtags: [post.category, 'MMora', 'DailyCompass'],
+        }}
+      />
       <ReportContentDialog
         open={reportOpen}
         onOpenChange={setReportOpen}
