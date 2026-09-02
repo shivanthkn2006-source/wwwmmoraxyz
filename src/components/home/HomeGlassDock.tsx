@@ -11,6 +11,12 @@ import {
   User,
   Heart,
   Search,
+  Music,
+  Video,
+  Globe,
+  Calendar,
+  Map,
+  Layers,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { readDockUsage, recordDockUsage, orderByFrequency, type DockUsageMap } from '@/lib/homeDockUsage';
@@ -42,7 +48,24 @@ interface HomeGlassDockProps {
   triggerBadge?: number;
 }
 
-const PLACEHOLDER_ICONS = [Compass, Bell, Camera, MessageCircle, Sparkles, Bookmark, Settings, User, Heart, Search];
+const PLACEHOLDER_ICONS = [
+  Compass,
+  Bell,
+  Camera,
+  MessageCircle,
+  Sparkles,
+  Bookmark,
+  Settings,
+  User,
+  Heart,
+  Search,
+  Music,
+  Video,
+  Globe,
+  Calendar,
+  Map,
+  Layers,
+];
 
 /**
  * Bottom-right home dock. Tap, press Enter/Space, or swipe the bare home icon
@@ -136,9 +159,9 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
     if (!start) return;
     const dx = event.clientX - start.x;
     const dy = event.clientY - start.y;
-    if (Math.abs(dx) > 24 && Math.abs(dx) > Math.abs(dy)) {
+    if (Math.abs(dy) > 24 && Math.abs(dy) > Math.abs(dx)) {
       suppressClick.current = true;
-      setOpen(dx < 0); // swipe left opens, swipe right closes
+      setOpen(dy < 0); // swipe up opens, swipe down closes
       return;
     }
     if (wasPreview) suppressClick.current = true;
@@ -157,14 +180,13 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
   // Most-used icons render last → nearest the home trigger / opening area.
   const slots = React.useMemo(() => orderByFrequency(baseSlots, usage), [baseSlots, usage]);
 
-  // On open, park the rail at its right end so the handiest icons are visible,
-  // and move focus into the rail. On close, hand focus back to the trigger.
+  // On open, park the panel at its bottom so the handiest icons are visible.
   React.useEffect(() => {
     if (!open) return;
     const rail = railRef.current;
     if (!rail) return;
     const id = window.requestAnimationFrame(() => {
-      rail.scrollLeft = rail.scrollWidth;
+      rail.scrollTop = rail.scrollHeight;
     });
     return () => window.cancelAnimationFrame(id);
   }, [open, slots.length]);
@@ -189,18 +211,18 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
       ref={rootRef}
       data-home-dock
       className={cn(
-        'fixed right-0 z-[9996] flex items-center justify-end',
+        'fixed right-0 z-[9996] flex flex-col items-end justify-end',
         'bottom-[calc(env(safe-area-inset-bottom,0px)+12px)]',
         className,
       )}
     >
-      {/* Rectangular horizontal glass tube — slides out right → left, auto-sized to viewport */}
+      {/* Rounded glass panel — slides up from the home trigger, bottom → top */}
       <div
         className={cn(
-          'flex h-12 items-center overflow-hidden transition-all duration-300 ease-out',
+          'mb-2 mr-2 flex overflow-hidden transition-all duration-300 ease-out',
           open
-            ? 'mr-0 max-w-[calc(100vw-env(safe-area-inset-left,0px)-env(safe-area-inset-right,0px)-52px)] translate-x-0 opacity-100'
-            : 'pointer-events-none mr-0 max-w-0 translate-x-4 opacity-0',
+            ? 'max-h-[60vh] translate-y-0 opacity-100'
+            : 'pointer-events-none max-h-0 translate-y-3 opacity-0',
         )}
       >
         <div
@@ -208,16 +230,16 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
           role="menu"
           aria-hidden={!open}
           className={cn(
-            'flex h-12 items-center gap-1 overflow-x-auto rounded-2xl rounded-r-none border border-white/25 border-r-0 px-2',
+            'grid max-h-[60vh] grid-cols-3 gap-1.5 overflow-y-auto rounded-3xl border border-white/25 p-2',
             'bg-white/10 backdrop-blur-xl shadow-[0_8px_24px_rgba(0,0,0,0.35)]',
             '[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden',
-            'snap-x snap-mandatory scroll-px-2 scroll-smooth touch-pan-x [overscroll-behavior-x:contain]',
+            'scroll-smooth touch-pan-y [overscroll-behavior-y:contain]',
           )}
         >
 
           {badgesEnabled && items.some((item) => item.badgeStale && (item.badge ?? 0) > 0) && (
             <span
-              className="mr-1 shrink-0 rounded-full border border-dashed border-white/40 bg-black/40 px-2 py-[3px] text-[9px] font-medium leading-none text-white/70"
+              className="col-span-3 shrink-0 rounded-full border border-dashed border-white/40 bg-black/40 px-2 py-[3px] text-[9px] font-medium leading-none text-white/70"
               title="Counts are cached — live updates are currently unavailable"
             >
               cached · {formatAgo(badgesUpdatedAt)}
@@ -258,7 +280,7 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
                 }}
 
                 className={cn(
-                  'group relative flex h-10 w-10 shrink-0 snap-start items-center justify-center rounded-xl [@media(pointer:coarse)]:w-auto [@media(pointer:coarse)]:min-w-10 [@media(pointer:coarse)]:px-2',
+                  'group relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl',
                   'transition-all active:scale-95',
                   highlighted
                     ? 'border border-white/45 bg-white/25 text-white shadow-[0_0_10px_rgba(255,255,255,0.35)] hover:bg-white/30'
@@ -267,7 +289,7 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
                 )}
               >
                 {item.icon}
-                <span className="pointer-events-none absolute bottom-full mb-2 hidden whitespace-nowrap rounded-md border border-white/25 bg-black/90 px-2 py-1 text-[10px] font-medium text-white shadow-md group-hover:block group-focus-visible:block [@media(pointer:coarse)]:static [@media(pointer:coarse)]:ml-1 [@media(pointer:coarse)]:block [@media(pointer:coarse)]:max-w-20 [@media(pointer:coarse)]:truncate [@media(pointer:coarse)]:border-0 [@media(pointer:coarse)]:bg-transparent [@media(pointer:coarse)]:p-0 [@media(pointer:coarse)]:text-[9px]">
+                <span className="pointer-events-none absolute bottom-full mb-2 hidden whitespace-nowrap rounded-md border border-white/25 bg-black/90 px-2 py-1 text-[10px] font-medium text-white shadow-md group-hover:block group-focus-visible:block ">
                   {item.label}
                 </span>
                 {badge > 0 && (

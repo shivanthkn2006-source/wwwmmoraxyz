@@ -1,6 +1,5 @@
 import React from 'react';
 import { Camera, ListVideo, Loader2, Search, X } from 'lucide-react';
-import { Input } from '@/components/ui/input';
 import { useNavigate } from 'react-router-dom';
 import {
   useHomeSearch,
@@ -17,7 +16,7 @@ import SearchDebugPanel from '@/components/home/SearchDebugPanel';
 import { useSearchIndexHealth } from '@/hooks/useSearchIndexHealth';
 import { usePlatformInsight } from '@/hooks/usePlatformInsight';
 import { supabase } from '@/integrations/supabase/client';
-import { KIND_LABEL, tagsForItem, type FeedSearchItem, type FeedSearchKind } from '@/lib/feedSearchItems';
+import { KIND_LABEL, portalForItem, tagsForItem, type FeedSearchItem, type FeedSearchKind } from '@/lib/feedSearchItems';
 
 
 
@@ -58,10 +57,12 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
   const [searchOpen, setSearchOpen] = React.useState(false);
   const [iconPosition, setIconPosition] = React.useState<{ x: number; y: number }>({ x: 8, y: 80 });
   const [activeIndex, setActiveIndex] = React.useState(-1);
-  const inputRef = React.useRef<HTMLInputElement>(null);
+  const inputRef = React.useRef<HTMLTextAreaElement>(null);
   const navigate = useNavigate();
   const { results: allResults, loading, error, counts } = useHomeSearch(query, searchOpen);
   const [filter, setFilter] = React.useState<HomeFilter>('all');
+  /** Inline (Google-style) expansion inside the panel — no feed jump needed. */
+  const [expandedId, setExpandedId] = React.useState<string | null>(null);
   const results = React.useMemo(
     () =>
       filter === 'all'
@@ -132,6 +133,22 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
   }, [hasInjectedVideos]);
 
 
+  // Coarse device location, resolved once, so "weather" means *local* weather.
+  const coordsRef = React.useRef<{ lat: number; lon: number } | null>(null);
+  React.useEffect(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        coordsRef.current = {
+          lat: Number(position.coords.latitude.toFixed(3)),
+          lon: Number(position.coords.longitude.toFixed(3)),
+        };
+      },
+      () => { /* denied — the weather lane falls back to the typed place */ },
+      { timeout: 8000, maximumAge: 600000 },
+    );
+  }, []);
+
   React.useEffect(() => {
     const term = query.trim();
     if (!searchOpen || term.length < 3) {
@@ -143,7 +160,12 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
       setExternalLoading(true);
       try {
         const { data, error: fnError } = await supabase.functions.invoke('external-search', {
-          body: { query: term },
+          body: {
+            query: term,
+            lat: coordsRef.current?.lat,
+            lon: coordsRef.current?.lon,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          },
         });
         if (fnError) throw fnError;
         if (!cancelled) setExternalResults(data?.results ?? []);
@@ -253,10 +275,16 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
 
 
 
-  const handleInputKeyDown = React.useCallback((event: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleInputKeyDown = React.useCallback((event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === 'Escape') {
       event.preventDefault();
       setSearchOpen(false);
+      return;
+    }
+    if (event.key === 'Enter' && !event.shiftKey) {
+      // Enter submits; Shift+Enter keeps the query on a new visual line.
+      event.preventDefault();
+      event.currentTarget.form?.requestSubmit();
       return;
     }
     if (!results.length) return;
@@ -290,16 +318,27 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
     };
   }, []);
 
-  // Bar grows sideways (left -> right) from the search icon's current spot.
-  const availableWidth = Math.max(
-    160,
-    viewport.w - (iconPosition.x + ICON_SIZE + GAP) - EDGE_GAP,
-  );
-  // Phones fill the free space; larger displays cap at a comfortable measure.
-  const maxBarWidth = viewport.w < 480 ? availableWidth : viewport.w < 1024 ? 520 : 620;
-  const barWidth = Math.min(availableWidth, maxBarWidth);
-  const dropdownTop = iconPosition.y + 52;
-  const dropdownMaxHeight = Math.max(180, viewport.h - dropdownTop - 24);
+  // The open search surface is pinned to the very top of the viewport (above
+  // the M'Mora logo) so phones get the maximum reading area underneath it.
+  const CLOSE_SLOT = 52;
+  const barTop = 8;
+  const barLeft = CLOSE_SLOT + EDGE_GAP;
+  const barWidth = Math.max(160, viewport.w - barLeft - EDGE_GAP);
+  const barRef = React.useRef<HTMLDivElement>(null);
+  const [barHeight, setBarHeight] = React.useState(52);
+  React.useEffect(() => {
+    const node = barRef.current;
+    if (!node || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(() => setBarHeight(node.offsetHeight || 52));
+    observer.observe(node);
+    setBarHeight(node.offsetHeight || 52);
+    return () => observer.disconnect();
+  }, [searchOpen]);
+  // The dropdown starts at the left edge so it uses every pixel of width.
+  const panelLeft = EDGE_GAP;
+  const panelWidth = Math.max(200, viewport.w - EDGE_GAP * 2);
+  const dropdownTop = barTop + barHeight + 8;
+  const dropdownMaxHeight = Math.max(180, viewport.h - dropdownTop - 16);
 
   /** Cyber-Night glass: real transparency + blur, never a solid panel. */
   const glassSurface =
@@ -311,7 +350,7 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
         storageKey="mmora.home.search-position.v3"
         defaultPosition={{ x: 8, y: 80 }}
         ariaLabel={searchOpen ? 'Close home search' : 'Search home'}
-        className="rounded-full border border-white/15 bg-white/5 backdrop-blur-xl backdrop-saturate-150"
+        className={searchOpen ? 'pointer-events-none opacity-0' : 'rounded-full bg-white/5 backdrop-blur-xl backdrop-saturate-150'}
         onActivate={() => setSearchOpen((current) => !current)}
         onPositionChange={handleIconPosition}
       >
@@ -350,11 +389,25 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
       )}
 
 
+      {/* Bare close control — sits left of the bar, no outline, no box */}
+      {searchOpen && (
+        <button
+          type="button"
+          aria-label="Close home search"
+          onClick={() => setSearchOpen(false)}
+          className="fixed z-[9997] flex h-11 w-11 items-center justify-center rounded-full bg-transparent text-white/90 drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)] focus-visible:outline-none"
+          style={{ left: EDGE_GAP, top: barTop + Math.max(0, (barHeight - 44) / 2) }}
+        >
+          <X className="h-5 w-5" />
+        </button>
+      )}
+
       <div
-        className={`fixed z-[9996] flex items-center overflow-hidden rounded-full p-1.5 text-white transition-[width,opacity] duration-200 ease-out ${glassSurface}`}
+        ref={barRef}
+        className={`fixed z-[9996] flex items-start overflow-hidden rounded-3xl p-1.5 text-white transition-[opacity] duration-200 ease-out ${glassSurface}`}
         style={{
-          left: iconPosition.x + ICON_SIZE + GAP,
-          top: iconPosition.y,
+          left: barLeft,
+          top: barTop,
           width: searchOpen ? barWidth : 0,
           opacity: searchOpen ? 1 : 0,
           borderWidth: searchOpen ? undefined : 0,
@@ -365,20 +418,33 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
         onPointerDown={(event) => event.stopPropagation()}
         onClick={(event) => event.stopPropagation()}
       >
-        <form onSubmit={handleSubmit} className="flex min-w-0 flex-1 items-center gap-2 px-2">
-          <Search className="h-4 w-4 shrink-0 text-white/60" />
-          <Input
+        <form onSubmit={handleSubmit} className="flex min-w-0 flex-1 items-start gap-2 px-2 py-1">
+          <Search className="mt-2 h-4 w-4 shrink-0 text-white/60" />
+          <textarea
             ref={inputRef}
             role="searchbox"
+            rows={1}
             onKeyDown={handleInputKeyDown}
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
             placeholder="Search posts, shorts, tags or creators"
             tabIndex={searchOpen ? 0 : -1}
-            className="h-9 border-0 bg-transparent px-0 text-white shadow-none placeholder:text-white/45 focus-visible:ring-0 focus-visible:ring-offset-0"
+            /* Auto-grows as the user types so long queries stay fully visible. */
+            className="max-h-32 min-h-[36px] w-full resize-none bg-transparent py-2 text-sm leading-5 text-white outline-none placeholder:text-white/45"
+            style={{ height: 'auto' }}
+            onInput={(event) => {
+              const node = event.currentTarget;
+              node.style.height = 'auto';
+              node.style.height = `${Math.min(node.scrollHeight, 128)}px`;
+            }}
           />
           {query && (
-            <button type="button" className="rounded-full p-1 text-white/60 transition hover:bg-white/10 hover:text-white" aria-label="Clear search" onClick={() => onQueryChange('')}>
+            <button
+              type="button"
+              className="mt-1 rounded-full p-1 text-white/60 transition hover:text-white"
+              aria-label="Clear search"
+              onClick={() => onQueryChange('')}
+            >
               <X className="h-4 w-4" />
             </button>
           )}
@@ -389,9 +455,9 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
         <div
           className={`fixed z-[9996] overflow-y-auto overscroll-contain rounded-3xl p-1.5 text-white ${glassSurface}`}
           style={{
-            left: iconPosition.x + ICON_SIZE + GAP,
+            left: panelLeft,
             top: dropdownTop,
-            width: barWidth,
+            width: panelWidth,
             maxHeight: dropdownMaxHeight,
           }}
           onPointerDown={(event) => event.stopPropagation()}
@@ -435,10 +501,10 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
                     type="button"
                     aria-pressed={filter === chip.id}
                     onClick={() => setFilter(chip.id)}
-                    className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] ${
+                    className={`shrink-0 bg-transparent px-2 py-0.5 text-[11px] ${
                       filter === chip.id
-                        ? 'border-foreground/40 bg-foreground/10 text-white'
-                        : 'border-white/15 text-white/55 hover:text-white'
+                        ? 'font-semibold text-white'
+                        : 'text-white/50 hover:text-white/80'
                     }`}
                   >
                     {chip.label} {total}
@@ -529,39 +595,84 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
               {externalLoading && externalVisible.length === 0 && (
                 <p role="status" className="px-3 py-1.5 text-xs text-white/55">Searching the web…</p>
               )}
-              {externalVisible.map((item) => (
-                <button
-                  key={`ext-${item.id}`}
-                  type="button"
-                  data-testid="external-result"
-                  // Everything opens inside the M'Mora feed — no external tab.
-                  onClick={() => openInFeed(externalVisible, item.id)}
-                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-white/10"
-                >
-
-                  {(item.thumbnail || item.image) && (
-                    <img src={item.thumbnail || item.image} alt="" loading="lazy" className="h-9 w-9 shrink-0 rounded-md object-cover" />
-                  )}
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm text-white">{item.title}</span>
-                    {item.subtitle && (
-                      <span className="block truncate text-[11px] text-white/55">{item.subtitle}</span>
-                    )}
-                    {tagsForItem(item).length > 0 && (
-                      <span className="mt-0.5 flex flex-wrap gap-1">
-                        {tagsForItem(item).slice(0, 4).map((tag) => (
-                          <span key={tag} className="rounded-full bg-white/10 px-1.5 py-[1px] text-[9px] text-white/55">
-                            {tag}
+              {externalVisible.map((item) => {
+                const expanded = expandedId === item.id;
+                return (
+                  <div key={`ext-${item.id}`} className="rounded-xl">
+                    <button
+                      type="button"
+                      data-testid="external-result"
+                      aria-expanded={expanded}
+                      // Videos need the feed for playback; everything else
+                      // expands right here, Google-style, and only opens in the
+                      // feed when the user asks for it.
+                      onClick={() =>
+                        item.kind === 'video'
+                          ? openInFeed(externalVisible, item.id)
+                          : setExpandedId(expanded ? null : item.id)
+                      }
+                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-white/10"
+                    >
+                      {(item.thumbnail || item.image) && (
+                        <img src={item.thumbnail || item.image} alt="" loading="lazy" className="h-9 w-9 shrink-0 rounded-md object-cover" />
+                      )}
+                      <span className="min-w-0 flex-1">
+                        <span className={`block text-sm text-white ${expanded ? '' : 'truncate'}`}>{item.title}</span>
+                        {item.subtitle && (
+                          <span className={`block text-[11px] text-white/55 ${expanded ? '' : 'truncate'}`}>{item.subtitle}</span>
+                        )}
+                        {tagsForItem(item).length > 0 && (
+                          <span className="mt-0.5 flex flex-wrap gap-1">
+                            {tagsForItem(item).slice(0, 4).map((tag) => (
+                              <span key={tag} className="rounded-full bg-white/10 px-1.5 py-[1px] text-[9px] text-white/55">
+                                {tag}
+                              </span>
+                            ))}
                           </span>
-                        ))}
+                        )}
                       </span>
+                      <span className="shrink-0 text-[9px] uppercase tracking-wide text-white/45">
+                        {KIND_LABEL[item.kind] ?? item.kind}
+                      </span>
+                    </button>
+
+                    {expanded && (
+                      <div className="mb-1 rounded-xl bg-white/[0.04] px-3 py-2" data-testid="external-result-expanded">
+                        {item.image && (
+                          <img
+                            src={item.image}
+                            alt=""
+                            loading="lazy"
+                            className="mb-2 max-h-48 w-full rounded-lg object-cover"
+                          />
+                        )}
+                        <p className="text-[12px] leading-relaxed text-white/85">
+                          {item.subtitle || item.title}
+                        </p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openInFeed(externalVisible, item.id)}
+                            className="rounded-full bg-white/15 px-3 py-1 text-[11px] font-medium text-white"
+                          >
+                            Open in feed
+                          </button>
+                          {item.url && (
+                            <a
+                              href={item.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="rounded-full bg-white/[0.08] px-3 py-1 text-[11px] text-white/80"
+                            >
+                              Source{portalForItem(item) ? ` · ${portalForItem(item)}` : ''}
+                            </a>
+                          )}
+                        </div>
+                      </div>
                     )}
-                  </span>
-                  <span className="shrink-0 rounded-full bg-white/10 px-1.5 py-[1px] text-[9px] uppercase tracking-wide text-white/55">
-                    {KIND_LABEL[item.kind] ?? item.kind}
-                  </span>
-                </button>
-              ))}
+                  </div>
+                );
+              })}
             </div>
           )}
 

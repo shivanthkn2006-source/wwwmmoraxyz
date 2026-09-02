@@ -93,7 +93,7 @@ export default function FeedSearchCard({ item, onDismiss, onToggleSave, saved = 
           type="button"
           onClick={onDismiss}
           aria-label="Remove this search result from the feed"
-          className="absolute left-3 top-3 z-10 rounded-full bg-black/60 p-1.5 text-white backdrop-blur hover:bg-black/80"
+          className="absolute left-3 top-24 z-10 rounded-full bg-black/60 p-1.5 text-white backdrop-blur hover:bg-black/80"
         >
           <X className="h-4 w-4" />
         </button>
@@ -105,7 +105,7 @@ export default function FeedSearchCard({ item, onDismiss, onToggleSave, saved = 
           onClick={onToggleSave}
           aria-label={saved ? 'Remove this result from saved' : 'Save this result'}
           aria-pressed={saved}
-          className="absolute right-3 top-3 z-10 rounded-full bg-black/60 p-1.5 text-white backdrop-blur hover:bg-black/80"
+          className="absolute right-3 top-24 z-10 rounded-full bg-black/60 p-1.5 text-white backdrop-blur hover:bg-black/80"
         >
           {saved ? <BookmarkCheck className="h-4 w-4" /> : <Bookmark className="h-4 w-4" />}
         </button>

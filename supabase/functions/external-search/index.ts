@@ -71,35 +71,99 @@ const safeText = async (url: string, ms = 9000): Promise<string | null> => {
 
 const stripTags = (value: string) => value.replace(/<[^>]+>/g, '').replace(/&[a-z]+;/gi, ' ').trim();
 
-const weatherSearch = async (query: string): Promise<ExternalResult[]> => {
-  const place = query.replace(/\b(weather|forecast|temperature|climate|in|at|for|today)\b/gi, '').trim() || 'London';
-  const geo = await safeJson(
-    `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(place)}&count=1&language=en&format=json`,
-  );
-  const hit = geo?.results?.[0];
-  if (!hit) return [];
+const WEATHER_CODE: Record<number, string> = {
+  0: 'Clear sky', 1: 'Mostly clear', 2: 'Partly cloudy', 3: 'Overcast',
+  45: 'Fog', 48: 'Rime fog', 51: 'Light drizzle', 53: 'Drizzle', 55: 'Heavy drizzle',
+  61: 'Light rain', 63: 'Rain', 65: 'Heavy rain', 71: 'Light snow', 73: 'Snow',
+  75: 'Heavy snow', 77: 'Snow grains', 80: 'Rain showers', 81: 'Rain showers',
+  82: 'Violent rain showers', 85: 'Snow showers', 86: 'Heavy snow showers',
+  95: 'Thunderstorm', 96: 'Thunderstorm with hail', 99: 'Thunderstorm with hail',
+};
+
+/**
+ * Local weather: today's detailed card plus the next 7 daily cards.
+ * Uses the caller's coordinates when available, otherwise the typed place.
+ */
+const weatherSearch = async (
+  query: string,
+  coords?: { lat?: number; lon?: number },
+): Promise<ExternalResult[]> => {
+  const place = query.replace(/\b(weather|forecast|temperature|climate|in|at|for|today|tomorrow|week|my|local|here)\b/gi, '').trim();
+
+  let latitude: number | undefined;
+  let longitude: number | undefined;
+  let label = '';
+
+  if (place) {
+    const geo = await safeJson(
+      `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(place)}&count=1&language=en&format=json`,
+    );
+    const hit = geo?.results?.[0];
+    if (hit) {
+      latitude = hit.latitude;
+      longitude = hit.longitude;
+      label = `${hit.name}${hit.admin1 ? `, ${hit.admin1}` : ''}${hit.country ? `, ${hit.country}` : ''}`;
+    }
+  }
+
+  if (latitude === undefined && typeof coords?.lat === 'number' && typeof coords?.lon === 'number') {
+    latitude = coords.lat;
+    longitude = coords.lon;
+    const rev = await safeJson(
+      `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${coords.lat}&longitude=${coords.lon}&localityLanguage=en`,
+    );
+    label = [rev?.city || rev?.locality, rev?.principalSubdivision, rev?.countryName].filter(Boolean).join(', ') || 'Your location';
+  }
+
+  if (latitude === undefined || longitude === undefined) return [];
+
   const forecast = await safeJson(
-    `https://api.open-meteo.com/v1/forecast?latitude=${hit.latitude}&longitude=${hit.longitude}&current=temperature_2m,relative_humidity_2m,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min&timezone=auto`,
+    `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}` +
+      `&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code` +
+      `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset,wind_speed_10m_max` +
+      `&forecast_days=8&timezone=auto`,
   );
-  if (!forecast?.current) return [];
+  if (!forecast?.current || !forecast?.daily) return [];
+
   const c = forecast.current;
   const d = forecast.daily;
-  return [
+  const name = label || 'Your location';
+  const results: ExternalResult[] = [
     {
-      id: `weather-${hit.id}`,
+      id: `weather-today-${latitude}-${longitude}`,
       kind: 'weather',
-      title: `${hit.name}${hit.country ? `, ${hit.country}` : ''} — ${Math.round(c.temperature_2m)}°C`,
-      subtitle: `Humidity ${c.relative_humidity_2m}% · Wind ${Math.round(c.wind_speed_10m)} km/h · High ${Math.round(d?.temperature_2m_max?.[0] ?? c.temperature_2m)}° / Low ${Math.round(d?.temperature_2m_min?.[0] ?? c.temperature_2m)}°`,
-      location: `${hit.name}${hit.admin1 ? `, ${hit.admin1}` : ''}${hit.country ? `, ${hit.country}` : ''}`,
+      title: `${name} — ${Math.round(c.temperature_2m)}°C, ${WEATHER_CODE[c.weather_code] ?? 'Now'}`,
+      subtitle:
+        `Feels like ${Math.round(c.apparent_temperature)}° · Humidity ${c.relative_humidity_2m}% · ` +
+        `Wind ${Math.round(c.wind_speed_10m)} km/h · High ${Math.round(d.temperature_2m_max?.[0])}° / Low ${Math.round(d.temperature_2m_min?.[0])}° · ` +
+        `Rain chance ${d.precipitation_probability_max?.[0] ?? 0}% · Sunrise ${String(d.sunrise?.[0] ?? '').slice(11)} · Sunset ${String(d.sunset?.[0] ?? '').slice(11)}`,
+      location: name,
       source: 'Open-Meteo',
       tags: [
+        'Today',
         `Now ${Math.round(c.temperature_2m)}°C`,
-        `High ${Math.round(d?.temperature_2m_max?.[0] ?? c.temperature_2m)}°`,
-        `Low ${Math.round(d?.temperature_2m_min?.[0] ?? c.temperature_2m)}°`,
-        `Wind ${Math.round(c.wind_speed_10m)} km/h`,
+        `High ${Math.round(d.temperature_2m_max?.[0])}°`,
+        `Low ${Math.round(d.temperature_2m_min?.[0])}°`,
+        `Rain ${d.precipitation_probability_max?.[0] ?? 0}%`,
       ],
     },
   ];
+
+  for (let i = 1; i < Math.min(8, d.time?.length ?? 0); i++) {
+    const day = new Date(`${d.time[i]}T12:00:00`);
+    results.push({
+      id: `weather-day-${d.time[i]}-${latitude}`,
+      kind: 'weather',
+      title: `${day.toLocaleDateString('en-US', { weekday: 'long' })} — ${Math.round(d.temperature_2m_max[i])}° / ${Math.round(d.temperature_2m_min[i])}°`,
+      subtitle: `${name} · ${WEATHER_CODE[d.weather_code?.[i]] ?? 'Forecast'} · Rain ${d.precipitation_probability_max?.[i] ?? 0}% · Wind ${Math.round(d.wind_speed_10m_max?.[i] ?? 0)} km/h`,
+      location: name,
+      source: 'Open-Meteo',
+      publishedAt: d.time[i],
+      tags: [day.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })],
+    });
+  }
+
+  return results;
 };
 
 const musicSearch = async (query: string): Promise<ExternalResult[]> => {
