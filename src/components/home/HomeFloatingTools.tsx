@@ -402,7 +402,7 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
 
       <div
         ref={barRef}
-        className={`fixed z-[9996] flex items-start overflow-hidden rounded-2xl p-1.5 text-white transition-[opacity] duration-200 ease-out ${glassSurface}`}
+        className={`fixed z-[9996] flex flex-col overflow-hidden rounded-2xl p-1.5 text-white transition-[opacity] duration-200 ease-out ${glassSurface}`}
         style={{
           left: barLeft,
           top: barTop,
@@ -416,18 +416,30 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
         onPointerDown={(event) => event.stopPropagation()}
         onClick={(event) => event.stopPropagation()}
       >
-        <form onSubmit={handleSubmit} className="flex min-w-0 flex-1 items-start gap-2 px-2 py-1">
-          {/* Bare close control — no outline, inside the full-width bar */}
-          <button
-            type="button"
-            aria-label="Close home search"
-            tabIndex={searchOpen ? 0 : -1}
-            onClick={() => setSearchOpen(false)}
-            className="mt-1 shrink-0 rounded-full bg-transparent p-1 text-white/70 transition hover:text-white focus-visible:outline-none"
-          >
-            <X className="h-5 w-5" />
-          </button>
-          <Search className="mt-2 h-4 w-4 shrink-0 text-white/60" />
+        <form onSubmit={handleSubmit} className="flex min-w-0 flex-1 flex-col px-2 py-1">
+          {/* Control row — close, search and clear sit above the text field */}
+          <div className="flex items-center justify-between gap-2 pb-1">
+            <button
+              type="button"
+              aria-label="Close home search"
+              tabIndex={searchOpen ? 0 : -1}
+              onClick={() => setSearchOpen(false)}
+              className="shrink-0 rounded-full bg-transparent p-1 text-white/70 transition hover:text-white focus-visible:outline-none"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <Search className="h-4 w-4 shrink-0 text-white/60" />
+            <button
+              type="button"
+              tabIndex={searchOpen ? 0 : -1}
+              className={`shrink-0 rounded-full p-1 text-white/60 transition hover:text-white ${query ? '' : 'pointer-events-none opacity-0'}`}
+              aria-label="Clear search"
+              aria-hidden={!query}
+              onClick={() => onQueryChange('')}
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
 
           <textarea
             ref={inputRef}
@@ -438,8 +450,8 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
             onChange={(event) => onQueryChange(event.target.value)}
             placeholder="Search posts, shorts, tags or creators"
             tabIndex={searchOpen ? 0 : -1}
-            /* Auto-grows as the user types so long queries stay fully visible. */
-            className="max-h-32 min-h-[36px] w-full resize-none bg-transparent py-2 text-sm leading-5 text-white outline-none placeholder:text-white/45"
+            /* Full-width text area — auto-grows as the user types. */
+            className="max-h-32 min-h-[36px] w-full resize-none bg-transparent px-1 py-2 text-sm leading-5 text-white outline-none placeholder:text-white/45"
             style={{ height: 'auto' }}
             onInput={(event) => {
               const node = event.currentTarget;
@@ -447,17 +459,8 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
               node.style.height = `${Math.min(node.scrollHeight, 128)}px`;
             }}
           />
-          {query && (
-            <button
-              type="button"
-              className="mt-1 rounded-full p-1 text-white/60 transition hover:text-white"
-              aria-label="Clear search"
-              onClick={() => onQueryChange('')}
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
         </form>
+
       </div>
 
       {searchOpen && query.trim().length >= 1 && (
