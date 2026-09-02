@@ -69,6 +69,8 @@ const UniversalTimelinePage = lazy(() => import("./pages/UniversalTimelinePage")
 const AboutPage = lazy(() => import("./pages/AboutPage"));
 const PlatformOverviewPage = lazy(() => import("./pages/PlatformOverviewPage"));
 const AdminOverviewPage = lazy(() => import("./pages/AdminOverviewPage"));
+const SovereignVaultPage = lazy(() => import("./pages/SovereignVaultPage"));
+
 const AnalyticsDashboard = lazy(() => import("./pages/AnalyticsDashboard"));
 const DHFDashboardPage = lazy(() => import("./pages/DHFDashboardPage"));
 const IntegrationTestPage = lazy(() => import("./pages/IntegrationTestPage"));
@@ -439,7 +441,9 @@ const RouteAwareShell = () => {
     pathname.startsWith('/root-scan') ||
     pathname.startsWith('/agent-memory') ||
     pathname.startsWith('/vr-audit') ||
-    pathname.startsWith('/install');
+    pathname.startsWith('/install') ||
+    pathname.startsWith('/admin/vault');
+
 
   // Ultra-light shell for isolated routes (prevents Safari hanging/crashing)
   if (isLightRoute) {
@@ -479,6 +483,15 @@ const RouteAwareShell = () => {
               <Route path="/agent-memory" element={<AgentMemoryPage />} />
               <Route path="/vr-audit" element={<VRWorldAuditPage />} />
               <Route path="/install" element={<InstallAppPage />} />
+              <Route
+                path="/admin/vault"
+                element={
+                  <ProtectedRoute>
+                    <SovereignVaultPage />
+                  </ProtectedRoute>
+                }
+              />
+
               <Route path="/" element={<RootRedirect />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
@@ -700,6 +713,15 @@ const RouteAwareShell = () => {
                               </ProtectedRoute>
                             }
                           />
+                          <Route
+                            path="/admin/vault"
+                            element={
+                              <ProtectedRoute>
+                                <SovereignVaultPage />
+                              </ProtectedRoute>
+                            }
+                          />
+
                           <Route
                             path="/analytics-dashboard"
                             element={

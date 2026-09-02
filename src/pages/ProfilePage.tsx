@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { LogOut, Settings, Download, Loader2, MessageSquare, Mic } from 'lucide-react';
+import { LogOut, Settings, Download, Loader2, MessageSquare, Mic, ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -13,10 +13,13 @@ import FeedbackCollectionPanel from '@/components/FeedbackCollectionPanel';
 import { supabase } from '@/integrations/supabase/client';
 import { generatePlatformDiagnostics, downloadReport } from '@/utils/platformDiagnostics';
 import { SettingsSearchCommand } from '@/components/SettingsSearchCommand';
+import { useSovereignAdmin } from '@/hooks/useSovereignAdmin';
 
 const ProfilePage = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const { isSovereign } = useSovereignAdmin();
+
   const [showSettings, setShowSettings] = useState(false);
   const [showDocs, setShowDocs] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
@@ -185,6 +188,19 @@ const ProfilePage = () => {
                 <span className="text-xs">Diagnostic Report</span>
               </Button>
             )}
+            {isSovereign && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate('/admin/vault')}
+                className="gap-2"
+                title="Sovereign admin console"
+              >
+                <ShieldCheck className="w-4 h-4" />
+                <span className="text-xs">Sovereign Vault</span>
+              </Button>
+            )}
+
             <Sheet open={showSettings} onOpenChange={setShowSettings}>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="sm">
