@@ -361,11 +361,25 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
       )}
 
 
+      {/* Bare close control — sits left of the bar, no outline, no box */}
+      {searchOpen && (
+        <button
+          type="button"
+          aria-label="Close home search"
+          onClick={() => setSearchOpen(false)}
+          className="fixed z-[9997] flex h-11 w-11 items-center justify-center rounded-full bg-transparent text-white/90 drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)] focus-visible:outline-none"
+          style={{ left: EDGE_GAP, top: barTop + Math.max(0, (barHeight - 44) / 2) }}
+        >
+          <X className="h-5 w-5" />
+        </button>
+      )}
+
       <div
-        className={`fixed z-[9996] flex items-center overflow-hidden rounded-full p-1.5 text-white transition-[width,opacity] duration-200 ease-out ${glassSurface}`}
+        ref={barRef}
+        className={`fixed z-[9996] flex items-start overflow-hidden rounded-3xl p-1.5 text-white transition-[opacity] duration-200 ease-out ${glassSurface}`}
         style={{
-          left: iconPosition.x + ICON_SIZE + GAP,
-          top: iconPosition.y,
+          left: barLeft,
+          top: barTop,
           width: searchOpen ? barWidth : 0,
           opacity: searchOpen ? 1 : 0,
           borderWidth: searchOpen ? undefined : 0,
@@ -376,20 +390,33 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
         onPointerDown={(event) => event.stopPropagation()}
         onClick={(event) => event.stopPropagation()}
       >
-        <form onSubmit={handleSubmit} className="flex min-w-0 flex-1 items-center gap-2 px-2">
-          <Search className="h-4 w-4 shrink-0 text-white/60" />
-          <Input
+        <form onSubmit={handleSubmit} className="flex min-w-0 flex-1 items-start gap-2 px-2 py-1">
+          <Search className="mt-2 h-4 w-4 shrink-0 text-white/60" />
+          <textarea
             ref={inputRef}
             role="searchbox"
+            rows={1}
             onKeyDown={handleInputKeyDown}
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
             placeholder="Search posts, shorts, tags or creators"
             tabIndex={searchOpen ? 0 : -1}
-            className="h-9 border-0 bg-transparent px-0 text-white shadow-none placeholder:text-white/45 focus-visible:ring-0 focus-visible:ring-offset-0"
+            /* Auto-grows as the user types so long queries stay fully visible. */
+            className="max-h-32 min-h-[36px] w-full resize-none bg-transparent py-2 text-sm leading-5 text-white outline-none placeholder:text-white/45"
+            style={{ height: 'auto' }}
+            onInput={(event) => {
+              const node = event.currentTarget;
+              node.style.height = 'auto';
+              node.style.height = `${Math.min(node.scrollHeight, 128)}px`;
+            }}
           />
           {query && (
-            <button type="button" className="rounded-full p-1 text-white/60 transition hover:bg-white/10 hover:text-white" aria-label="Clear search" onClick={() => onQueryChange('')}>
+            <button
+              type="button"
+              className="mt-1 rounded-full p-1 text-white/60 transition hover:text-white"
+              aria-label="Clear search"
+              onClick={() => onQueryChange('')}
+            >
               <X className="h-4 w-4" />
             </button>
           )}
