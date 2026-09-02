@@ -68,6 +68,7 @@ const ZoeAIPage = lazy(() => import("./pages/ZoeAIPage"));
 const UniversalTimelinePage = lazy(() => import("./pages/UniversalTimelinePage"));
 const AboutPage = lazy(() => import("./pages/AboutPage"));
 const PlatformOverviewPage = lazy(() => import("./pages/PlatformOverviewPage"));
+const SearchPreviewPage = lazy(() => import("./pages/SearchPreviewPage"));
 const AdminOverviewPage = lazy(() => import("./pages/AdminOverviewPage"));
 const SovereignVaultPage = lazy(() => import("./pages/SovereignVaultPage"));
 
@@ -443,6 +444,7 @@ const RouteAwareShell = () => {
     pathname.startsWith('/agent-memory') ||
     pathname.startsWith('/vr-audit') ||
     pathname.startsWith('/install') ||
+    pathname.startsWith('/search-preview') ||
     pathname.startsWith('/beta') ||
     pathname.startsWith('/admin/vault');
 
@@ -486,6 +488,8 @@ const RouteAwareShell = () => {
               <Route path="/agent-memory" element={<AgentMemoryPage />} />
               <Route path="/vr-audit" element={<VRWorldAuditPage />} />
               <Route path="/install" element={<InstallAppPage />} />
+              <Route path="/search-preview" element={<SearchPreviewPage />} />
+
               <Route
                 path="/admin/vault"
                 element={
@@ -706,6 +710,8 @@ const RouteAwareShell = () => {
                           <Route path="/" element={<RootRedirect />} />
                           <Route path="/about" element={<AboutPage />} />
                           <Route path="/platform-overview" element={<PlatformOverviewPage />} />
+                          <Route path="/search-preview" element={<SearchPreviewPage />} />
+
                           <Route path="/platform-architecture" element={<PlatformArchitecturePage />} />
                           <Route path="/attack-response" element={<AttackResponsePlanPage />} />
                           <Route path="/beta" element={<BetaPortalPage />} />
