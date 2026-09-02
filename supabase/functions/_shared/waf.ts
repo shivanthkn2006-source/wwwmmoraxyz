@@ -48,7 +48,37 @@ export interface WafVerdict {
   ip: string;
   /** Remaining requests in the current window. */
   remaining: number;
+  /** Id of the rule that refused the request, when one did. */
+  rule?: WafRuleId;
+  /** Cloudflare edge signals seen on this request. */
+  cf: CloudflareSignals;
 }
+
+export type WafRuleId =
+  | 'method'
+  | 'agent'
+  | 'body_size'
+  | 'injection'
+  | 'malformed'
+  | 'cf_threat_score'
+  | 'cf_bot_score'
+  | 'cf_geo_block'
+  | 'sentinel_block'
+  | 'rate_limit';
+
+export interface CloudflareSignals {
+  /** Cloudflare threat score, 0 (clean) … 100 (known abuser). */
+  threatScore: number | null;
+  /** Cloudflare Bot Management score, 1 (definitely bot) … 99 (human). */
+  botScore: number | null;
+  /** true when Cloudflare classified the caller as a verified good bot. */
+  verifiedBot: boolean;
+  /** Two-letter country from Cloudflare's edge. */
+  country: string | null;
+  /** Cloudflare ray id, useful for correlating with the Cloudflare dashboard. */
+  ray: string | null;
+}
+
 
 const DEFAULT_MAX_BODY = 64 * 1024;
 
