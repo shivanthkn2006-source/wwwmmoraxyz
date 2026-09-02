@@ -269,8 +269,9 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
           isHome
             ? 'appearance-none rounded-none !border-0 !bg-transparent p-0 text-white !shadow-none hover:!bg-transparent'
             : highlighted
-              ? 'rounded-full border border-white/45 bg-white/25 text-white shadow-[0_0_10px_rgba(255,255,255,0.35)] hover:bg-white/30'
-              : 'rounded-full border border-white/15 bg-white/5 text-white/60 hover:bg-white/15 hover:text-white/90',
+              ? 'rounded-2xl border border-white/45 bg-white/25 text-white shadow-[0_0_10px_rgba(255,255,255,0.35)] hover:bg-white/30'
+              : 'rounded-2xl border border-white/15 bg-white/5 text-white/60 hover:bg-white/15 hover:text-white/90',
+
           isHome
             ? '!outline-none !ring-0 focus:!outline-none focus:!ring-0 focus-visible:!outline-none focus-visible:!ring-0'
             : 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60',
@@ -319,23 +320,42 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
     onSelect: () => {},
   };
 
-  const renderPackedRows = (columns: 5 | 7) => {
-    const firstRowSize = slots.length % columns || columns;
-    const rows: GlassDockItem[][] = [slots.slice(0, firstRowSize)];
-    for (let index = firstRowSize; index < slots.length; index += columns) {
-      rows.push(slots.slice(index, index + columns));
+  // Exactly three rows of seven rounded-edge icons above the Home row.
+  const GRID_COLUMNS = 7;
+  const GRID_ROWS = 3;
+  const GRID_SIZE = GRID_COLUMNS * GRID_ROWS;
+
+  const gridSlots: GlassDockItem[] = React.useMemo(() => {
+    const filled = slots.slice(0, GRID_SIZE);
+    for (let index = filled.length; index < GRID_SIZE; index += 1) {
+      const Icon = PLACEHOLDER_ICONS[index % PLACEHOLDER_ICONS.length];
+      filled.push({
+        id: `dock-filler-${index}`,
+        label: `Menu slot ${index + 1}`,
+        icon: <Icon className="h-[22px] w-[22px]" />,
+        onSelect: () => {},
+      });
+    }
+    return filled;
+  }, [slots]);
+
+  const renderPackedRows = () => {
+    const rows: GlassDockItem[][] = [];
+    for (let index = 0; index < gridSlots.length; index += GRID_COLUMNS) {
+      rows.push(gridSlots.slice(index, index + GRID_COLUMNS));
     }
 
     return (
       <div className="flex flex-col items-end gap-2">
         {rows.map((row, rowIndex) => (
-          <div key={`${columns}-${rowIndex}`} className="flex justify-end gap-2">
+          <div key={`row-${rowIndex}`} className="flex justify-end gap-2">
             {row.map((item) => renderIconButton(item))}
           </div>
         ))}
       </div>
     );
   };
+
 
   return (
     <div
@@ -368,12 +388,8 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
           )}
           style={{ maxWidth: 'calc(100vw - 16px)' }}
         >
-          {open && (
-            <>
-              <div className="min-[390px]:hidden">{renderPackedRows(5)}</div>
-              <div className="hidden min-[390px]:block">{renderPackedRows(7)}</div>
-            </>
-          )}
+          {open && renderPackedRows()}
+
           {/* Home is the only control in the bottom row and stays at screen-right. */}
           {renderIconButton(homeItem, true)}
         </div>
