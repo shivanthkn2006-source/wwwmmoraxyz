@@ -11,6 +11,7 @@ import { embedText } from '../_shared/zoe-embeddings.ts';
 import { requireSearchUser } from '../_shared/zoe-search-auth.ts';
 import { nvidiaChat, nvidiaKey } from '../_shared/nvidia-provider.ts';
 import { buildLiveWeather, isWeatherQuery } from '../_shared/liveWorldData.ts';
+import { clientErrorResponse } from '../_shared/client-error.ts';
 
 
 const corsHeaders = {
@@ -307,16 +308,27 @@ INSTRUCTIONS:
       timings: { routeMs, retrievalMs, synthesisMs, totalMs },
     });
   } catch (err: any) {
+    const __clientError = clientErrorResponse(err, corsHeaders);
+    if (__clientError) return __clientError;
+
     console.error('[zoe-ambient-search:error]', err?.message || err);
     if (SERVICE_ROLE) {
-      eventDb = eventDb || createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { persistSession: false } });
-      await eventDb.from('zoe_search_events').insert({
-        request_id: requestId,
-        event_type: 'search',
-        user_id: eventUserId,
-        error_code: String(err?.message || 'SEARCH_FAILED').slice(0, 120),
-      }).catch(() => undefined);
+      // PostgrestFilterBuilder is a thenable, not a Promise: calling .catch()
+      // on it threw inside the error handler and turned every failure
+      // (including a clean 401) into a bare "Internal Server Error".
+      try {
+        eventDb = eventDb || createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { persistSession: false } });
+        await eventDb.from('zoe_search_events').insert({
+          request_id: requestId,
+          event_type: 'search',
+          user_id: eventUserId,
+          error_code: String(err?.message || 'SEARCH_FAILED').slice(0, 120),
+        });
+      } catch (logErr) {
+        console.error('[zoe-ambient-search:log-failed]', logErr);
+      }
     }
+
     const unauthorized = err?.message === 'UNAUTHORIZED';
     return json({ requestId, error: unauthorized ? 'Unauthorized' : (err?.message || 'Ambient search failed') }, unauthorized ? 401 : 500);
   }

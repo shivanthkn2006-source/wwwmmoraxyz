@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sovereignKey, sovereignFetch } from "../_shared/sovereign-ai.ts";
+import { clientErrorResponse } from '../_shared/client-error.ts';
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════════
@@ -94,6 +95,9 @@ serve(async (req) => {
     }
 
   } catch (error: unknown) {
+    const __clientError = clientErrorResponse(error, corsHeaders);
+    if (__clientError) return __clientError;
+
     const latencyMs = Math.round(performance.now() - startTime);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     console.error(`[MailSentinel] Error after ${latencyMs}ms:`, errorMessage);

@@ -15,6 +15,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import PageSeo from '@/components/seo/PageSeo';
 import RolePermissionsPanel from '@/components/admin/RolePermissionsPanel';
+import EdgeFunctionHealthPanel from '@/components/admin/EdgeFunctionHealthPanel';
+import DhfLinkHealthPanel from '@/components/admin/DhfLinkHealthPanel';
+import LoadTestPanel from '@/components/admin/LoadTestPanel';
+import GrowthOnboardingWizard from '@/components/admin/GrowthOnboardingWizard';
+
 
 type TableName = 'profiles' | 'dhf_essay_schedules' | 'dhf_feed_posts' | 'dhf_videos' | 'posts' | 'user_roles';
 
@@ -144,9 +149,23 @@ const AdminOverviewPage: React.FC = () => {
               })}
             </div>
 
+            <section className="mt-8 grid gap-4 lg:grid-cols-2">
+              <EdgeFunctionHealthPanel />
+              <DhfLinkHealthPanel />
+            </section>
+
+            <section className="mt-4">
+              <LoadTestPanel />
+            </section>
+
+            <section className="mt-4">
+              <GrowthOnboardingWizard />
+            </section>
+
             <section className="mt-8">
               <RolePermissionsPanel />
             </section>
+
 
             <section className="mt-8">
               <h2 className="text-sm font-semibold text-foreground">Admin surfaces</h2>

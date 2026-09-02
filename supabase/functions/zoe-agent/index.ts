@@ -7,6 +7,7 @@ import {
   getLatencyTarget,
   createErrorResponse
 } from "../_shared/ai-telemetry.ts";
+import { clientErrorResponse } from '../_shared/client-error.ts';
 
 // Enhanced cognitive architecture tools for superior reasoning
 const advancedTools = [
@@ -399,6 +400,9 @@ Remember: You are not just answering questions—you are genuinely helping someo
     );
 
   } catch (error) {
+    const __clientError = clientErrorResponse(error, corsHeaders);
+    if (__clientError) return __clientError;
+
     console.error('Zoe Agent error:', error);
     return new Response(
       JSON.stringify({ 

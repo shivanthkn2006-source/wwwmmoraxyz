@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { sovereignFetch, sovereignKey } from "../_shared/sovereign-ai.ts";
+import { clientErrorResponse } from '../_shared/client-error.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -116,6 +117,9 @@ serve(async (req) => {
     );
 
   } catch (error) {
+    const __clientError = clientErrorResponse(error, corsHeaders);
+    if (__clientError) return __clientError;
+
     console.error("Platform diagnostics error:", error);
     return new Response(
       JSON.stringify({ 

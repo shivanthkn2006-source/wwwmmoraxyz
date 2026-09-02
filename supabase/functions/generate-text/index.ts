@@ -10,6 +10,7 @@ import {
   estimateCost,
   getLatencyTarget
 } from "../_shared/ai-telemetry.ts";
+import { clientErrorResponse } from '../_shared/client-error.ts';
 
 // Pre-fetch API key at module load for faster cold starts
 const SOVEREIGN_AI_KEY = sovereignKey();
@@ -140,6 +141,9 @@ serve(async (req) => {
     });
 
   } catch (error) {
+    const __clientError = clientErrorResponse(error, corsHeaders);
+    if (__clientError) return __clientError;
+
     const latency = Math.round(performance.now() - startTime);
     console.error(`[generate-text:${requestId}] Error after ${latency}ms:`, error);
     

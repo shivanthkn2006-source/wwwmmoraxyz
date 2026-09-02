@@ -5,6 +5,7 @@ import {
   createSuccessResponse,
   createErrorResponse,
 } from "../_shared/ai-telemetry.ts";
+import { clientErrorResponse } from '../_shared/client-error.ts';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ZOE SYSTEM 2 CORTEX - THE REASONING WRAPPER
@@ -673,6 +674,9 @@ serve(async (req) => {
     return createSuccessResponse(response);
 
   } catch (error) {
+    const __clientError = clientErrorResponse(error, corsHeaders);
+    if (__clientError) return __clientError;
+
     console.error('[System 2 Cortex] Error:', error);
     return createErrorResponse({
       code: 'INTERNAL_ERROR',

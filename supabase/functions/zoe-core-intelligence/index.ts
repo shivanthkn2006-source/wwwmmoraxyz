@@ -27,6 +27,7 @@ import {
   SCRATCHPAD_INSTRUCTION,
   type ToolExecution,
 } from "../_shared/grounded-tools.ts";
+import { clientErrorResponse } from '../_shared/client-error.ts';
 
 // Advanced Cognitive Tools for Gemini 3 Pro Integration
 const gemini3CognitiveTools = [
@@ -560,6 +561,9 @@ ${driftHints.length
 
 
   } catch (error) {
+    const __clientError = clientErrorResponse(error, corsHeaders);
+    if (__clientError) return __clientError;
+
     console.error('Zoe Core Intelligence error:', error);
     return new Response(
       JSON.stringify({

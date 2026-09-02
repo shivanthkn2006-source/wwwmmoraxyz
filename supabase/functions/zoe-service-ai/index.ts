@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { sovereignFetch, sovereignKey } from "../_shared/sovereign-ai.ts";
+import { clientErrorResponse } from '../_shared/client-error.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -292,6 +293,9 @@ Remember: You are the official voice of customer service. Be confident, knowledg
     );
 
   } catch (error) {
+    const __clientError = clientErrorResponse(error, corsHeaders);
+    if (__clientError) return __clientError;
+
     console.error('Error in zoe-service-ai:', error);
     return new Response(
       JSON.stringify({ 

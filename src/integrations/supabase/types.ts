@@ -1952,6 +1952,39 @@ export type Database = {
         }
         Relationships: []
       }
+      dhf_link_health_runs: {
+        Row: {
+          checked: number
+          deactivated: number
+          dead: number
+          detail: Json
+          errors: number
+          finished_at: string | null
+          id: string
+          started_at: string
+        }
+        Insert: {
+          checked?: number
+          deactivated?: number
+          dead?: number
+          detail?: Json
+          errors?: number
+          finished_at?: string | null
+          id?: string
+          started_at?: string
+        }
+        Update: {
+          checked?: number
+          deactivated?: number
+          dead?: number
+          detail?: Json
+          errors?: number
+          finished_at?: string | null
+          id?: string
+          started_at?: string
+        }
+        Relationships: []
+      }
       dhf_lockdown_events: {
         Row: {
           affected_services: Json | null
@@ -2674,6 +2707,39 @@ export type Database = {
           tenant_id?: string | null
           user_id?: string
           valence?: number
+        }
+        Relationships: []
+      }
+      edge_function_probes: {
+        Row: {
+          category: string
+          checked_at: string
+          duration_ms: number | null
+          fn: string
+          id: string
+          note: string | null
+          ok: boolean
+          status: number
+        }
+        Insert: {
+          category?: string
+          checked_at?: string
+          duration_ms?: number | null
+          fn: string
+          id?: string
+          note?: string | null
+          ok?: boolean
+          status: number
+        }
+        Update: {
+          category?: string
+          checked_at?: string
+          duration_ms?: number | null
+          fn?: string
+          id?: string
+          note?: string | null
+          ok?: boolean
+          status?: number
         }
         Relationships: []
       }
@@ -4962,6 +5028,54 @@ export type Database = {
           score?: number
           status?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      platform_load_tests: {
+        Row: {
+          concurrency: number
+          failed: number
+          id: string
+          max_ms: number | null
+          notes: string | null
+          p50_ms: number | null
+          p95_ms: number | null
+          p99_ms: number | null
+          ran_at: string
+          status_breakdown: Json
+          succeeded: number
+          target: string
+          total_requests: number
+        }
+        Insert: {
+          concurrency: number
+          failed?: number
+          id?: string
+          max_ms?: number | null
+          notes?: string | null
+          p50_ms?: number | null
+          p95_ms?: number | null
+          p99_ms?: number | null
+          ran_at?: string
+          status_breakdown?: Json
+          succeeded?: number
+          target: string
+          total_requests: number
+        }
+        Update: {
+          concurrency?: number
+          failed?: number
+          id?: string
+          max_ms?: number | null
+          notes?: string | null
+          p50_ms?: number | null
+          p95_ms?: number | null
+          p99_ms?: number | null
+          ran_at?: string
+          status_breakdown?: Json
+          succeeded?: number
+          target?: string
+          total_requests?: number
         }
         Relationships: []
       }

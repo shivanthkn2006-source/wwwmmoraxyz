@@ -1,5 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { clientErrorResponse } from '../_shared/client-error.ts';
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════════
@@ -110,6 +111,9 @@ serve(async (req) => {
     );
     
   } catch (error: unknown) {
+    const __clientError = clientErrorResponse(error, corsHeaders);
+    if (__clientError) return __clientError;
+
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('[Ironclad Relay] Error:', errorMessage);
     

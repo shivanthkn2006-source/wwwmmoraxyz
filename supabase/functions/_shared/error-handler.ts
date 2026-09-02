@@ -1,3 +1,4 @@
+import { resolveClaims } from './auth-claims.ts';
 /**
  * Shared error handling utility for edge functions.
  * Returns generic error messages to clients while logging details server-side.
@@ -68,7 +69,7 @@ export async function validateAuth(
   );
 
   const token = authHeader.replace('Bearer ', '');
-  const { data, error } = await supabase.auth.getClaims(token);
+  const { data, error } = await resolveClaims(supabase, token);
   if (error || !data?.claims) {
     return {
       errorResponse: new Response(

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { clientErrorResponse } from '../_shared/client-error.ts';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // SEMANTIC VETO EMBEDDING CHECK - Enterprise-Grade DHF Protection
@@ -252,6 +253,9 @@ serve(async (req) => {
     );
 
   } catch (error) {
+    const __clientError = clientErrorResponse(error, corsHeaders);
+    if (__clientError) return __clientError;
+
     const processingTime = performance.now() - startTime;
     console.error(`[${requestId}] Semantic VETO error:`, error);
 
