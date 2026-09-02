@@ -17,6 +17,7 @@ import SearchDebugPanel from '@/components/home/SearchDebugPanel';
 import { useSearchIndexHealth } from '@/hooks/useSearchIndexHealth';
 import { usePlatformInsight } from '@/hooks/usePlatformInsight';
 import { supabase } from '@/integrations/supabase/client';
+import { KIND_LABEL, tagsForItem, type FeedSearchItem, type FeedSearchKind } from '@/lib/feedSearchItems';
 
 
 
@@ -31,6 +32,28 @@ const ICON_SIZE = 36;
 const GAP = 6;
 const EDGE_GAP = 8;
 
+/** Platform chips + internet lanes, so one bar covers every result universe. */
+export type HomeFilter = SearchFilter | 'web' | 'news' | 'shopping' | 'weather';
+
+const ALL_FILTERS: { id: HomeFilter; label: string }[] = [
+  ...SEARCH_FILTERS,
+  { id: 'web', label: 'Web' },
+  { id: 'news', label: 'News' },
+  { id: 'shopping', label: 'Shopping' },
+  { id: 'weather', label: 'Weather' },
+];
+
+const INTERNAL_FILTERS = new Set<string>(SEARCH_FILTERS.map((chip) => chip.id));
+
+const FILTER_TO_EXTERNAL_KINDS: Partial<Record<HomeFilter, FeedSearchKind[]>> = {
+  images: ['image'],
+  videos: ['video'],
+  web: ['web', 'music'],
+  news: ['news'],
+  shopping: ['shopping'],
+  weather: ['weather'],
+};
+
 export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, hasInjectedVideos = false }: HomeFloatingToolsProps) {
   const [searchOpen, setSearchOpen] = React.useState(false);
   const [iconPosition, setIconPosition] = React.useState<{ x: number; y: number }>({ x: 8, y: 80 });
@@ -38,12 +61,14 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
   const inputRef = React.useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const { results: allResults, loading, error, counts } = useHomeSearch(query, searchOpen);
-  const [filter, setFilter] = React.useState<SearchFilter>('all');
+  const [filter, setFilter] = React.useState<HomeFilter>('all');
   const results = React.useMemo(
     () =>
       filter === 'all'
         ? allResults
-        : allResults.filter((item) => (item.facets?.length ? item.facets : [item.filter]).includes(filter)),
+        : INTERNAL_FILTERS.has(filter)
+          ? allResults.filter((item) => (item.facets?.length ? item.facets : [item.filter]).includes(filter as SearchFilter))
+          : [],
     [allResults, filter],
   );
   // Startup guard: warns and self-heals when the universal index is empty/stale.
@@ -84,15 +109,9 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
   }, [searchOpen]);
 
 
-  // Outside-the-platform results (web, music, weather) via the external-search function.
-  const [externalResults, setExternalResults] = React.useState<Array<{
-    id: string;
-    kind: 'web' | 'music' | 'weather' | 'video';
-    title: string;
-    subtitle?: string;
-    url?: string;
-    thumbnail?: string;
-  }>>([]);
+  // Outside-the-platform results (web, images, news, videos, weather,
+  // shopping, music) via the external-search function.
+  const [externalResults, setExternalResults] = React.useState<FeedSearchItem[]>([]);
   const [externalLoading, setExternalLoading] = React.useState(false);
 
   // Feed icon lifecycle: hidden when nothing is injected, loading while the
@@ -142,16 +161,39 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
   }, [query, searchOpen]);
 
 
-  const externalVideos = React.useMemo(
-    () => externalResults.filter((item) => item.kind === 'video'),
-    [externalResults],
-  );
-  // The internet block follows the active chip: everything on All, YouTube on Videos.
+  // The internet block follows the active chip. Every chip maps to the external
+  // kinds it owns so no lane (web/images/news/shopping/weather) is ever hidden.
   const externalVisible = React.useMemo(() => {
     if (filter === 'all') return externalResults;
-    if (filter === 'videos') return externalVideos;
-    return [];
-  }, [filter, externalResults, externalVideos]);
+    const kinds = FILTER_TO_EXTERNAL_KINDS[filter] ?? [];
+    if (!kinds.length) return [];
+    return externalResults.filter((item) => kinds.includes(item.kind));
+  }, [filter, externalResults]);
+
+  const externalCounts = React.useMemo(() => {
+    const counter: Partial<Record<HomeFilter, number>> = {};
+    for (const chip of ALL_FILTERS) {
+      const kinds = FILTER_TO_EXTERNAL_KINDS[chip.id] ?? [];
+      counter[chip.id] = kinds.length
+        ? externalResults.filter((item) => kinds.includes(item.kind)).length
+        : 0;
+    }
+    return counter;
+  }, [externalResults]);
+
+  /**
+   * Everything opens INSIDE the M'Mora feed — external tabs are never used for
+   * playback/browsing. The whole visible result set is injected so the user can
+   * swipe through web/news/image/shopping/video cards like any other feed.
+   */
+  const openInFeed = React.useCallback((items: FeedSearchItem[], activeId?: string) => {
+    const payload = items.filter((item) => item && (item.kind === 'video' ? !!item.url : true));
+    if (!payload.length) return;
+    window.dispatchEvent(new CustomEvent('mmora:feed-external-videos', {
+      detail: { items: payload, videos: payload, activeId: activeId ?? payload[0].id },
+    }));
+    setSearchOpen(false);
+  }, []);
 
   // Global keyboard: Escape closes the sideways bar from anywhere.
   React.useEffect(() => {
@@ -351,23 +393,29 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
               ))}
             </div>
           )}
-          {allResults.length > 0 && (
+          {(allResults.length > 0 || externalResults.length > 0) && (
             <div className="flex gap-1 overflow-x-auto border-b border-border/50 px-2 py-1.5" role="group" aria-label="Filter search results">
-              {SEARCH_FILTERS.map((chip) => (
-                <button
-                  key={chip.id}
-                  type="button"
-                  aria-pressed={filter === chip.id}
-                  onClick={() => setFilter(chip.id)}
-                  className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] ${
-                    filter === chip.id
-                      ? 'border-foreground/40 bg-foreground/10 text-foreground'
-                      : 'border-border/60 text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  {chip.label} {chip.id === 'videos' ? counts.videos + externalVideos.length : counts[chip.id]}
-                </button>
-              ))}
+              {ALL_FILTERS.map((chip) => {
+                const internal = INTERNAL_FILTERS.has(chip.id) ? counts[chip.id as SearchFilter] ?? 0 : 0;
+                const total = chip.id === 'all'
+                  ? internal + externalResults.length
+                  : internal + (externalCounts[chip.id] ?? 0);
+                return (
+                  <button
+                    key={chip.id}
+                    type="button"
+                    aria-pressed={filter === chip.id}
+                    onClick={() => setFilter(chip.id)}
+                    className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] ${
+                      filter === chip.id
+                        ? 'border-foreground/40 bg-foreground/10 text-foreground'
+                        : 'border-border/60 text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    {chip.label} {total}
+                  </button>
+                );
+              })}
             </div>
           )}
           {loading && <p role="status" className="px-3 py-2 text-xs text-muted-foreground">Searching…</p>}
@@ -437,7 +485,18 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
 
           {(externalLoading || externalVisible.length > 0) && (
             <div className="mt-1 border-t border-border/50 pt-1">
-              <p className="px-3 py-1 text-[10px] uppercase tracking-wide text-muted-foreground">From the internet</p>
+              <div className="flex items-center justify-between gap-2 px-3 py-1">
+                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">From the internet</p>
+                {externalVisible.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => openInFeed(externalVisible)}
+                    className="rounded-full bg-foreground/10 px-2 py-0.5 text-[10px] font-medium text-foreground"
+                  >
+                    Open {externalVisible.length} in feed
+                  </button>
+                )}
+              </div>
               {externalLoading && externalVisible.length === 0 && (
                 <p role="status" className="px-3 py-1.5 text-xs text-muted-foreground">Searching the web…</p>
               )}
@@ -445,40 +504,32 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
                 <button
                   key={`ext-${item.id}`}
                   type="button"
-                  onClick={() => {
-                    if (item.kind === 'video') {
-                      // Play inline in the home feed (new-window navigation is blocked by COOP).
-                      window.dispatchEvent(new CustomEvent('mmora:feed-external-videos', {
-                        detail: {
-                          videos: externalVideos.map((video) => ({
-                            id: video.id,
-                            title: video.title,
-                            subtitle: video.subtitle,
-                            url: video.url,
-                            thumbnail: video.thumbnail,
-                          })),
-                          activeId: item.id,
-                        },
-                      }));
-                      setSearchOpen(false);
-                      return;
-                    }
-                    if (item.url) window.open(item.url, '_blank', 'noopener,noreferrer');
-                  }}
+                  data-testid="external-result"
+                  // Everything opens inside the M'Mora feed — no external tab.
+                  onClick={() => openInFeed(externalVisible, item.id)}
                   className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-muted/60"
                 >
 
-                  {item.thumbnail && (
-                    <img src={item.thumbnail} alt="" loading="lazy" className="h-9 w-9 shrink-0 rounded-md object-cover" />
+                  {(item.thumbnail || item.image) && (
+                    <img src={item.thumbnail || item.image} alt="" loading="lazy" className="h-9 w-9 shrink-0 rounded-md object-cover" />
                   )}
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm text-foreground">{item.title}</span>
                     {item.subtitle && (
                       <span className="block truncate text-[11px] text-muted-foreground">{item.subtitle}</span>
                     )}
+                    {tagsForItem(item).length > 0 && (
+                      <span className="mt-0.5 flex flex-wrap gap-1">
+                        {tagsForItem(item).slice(0, 4).map((tag) => (
+                          <span key={tag} className="rounded-full bg-muted px-1.5 py-[1px] text-[9px] text-muted-foreground">
+                            {tag}
+                          </span>
+                        ))}
+                      </span>
+                    )}
                   </span>
                   <span className="shrink-0 rounded-full bg-muted px-1.5 py-[1px] text-[9px] uppercase tracking-wide text-muted-foreground">
-                    {item.kind}
+                    {KIND_LABEL[item.kind] ?? item.kind}
                   </span>
                 </button>
               ))}

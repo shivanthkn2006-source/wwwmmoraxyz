@@ -1,32 +1,75 @@
-// External (outside-platform) search: web, music and weather.
-// Uses only free, keyless public APIs so it never blocks on secrets.
+// External (outside-platform) search: web, images, news, videos, music,
+// weather and shopping products. Uses free/keyless public APIs by default so
+// results never block on secrets. Every result is normalised into one shape so
+// the M'Mora home feed can render it inline (nothing opens outside the app).
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+type ExternalKind = 'web' | 'music' | 'weather' | 'video' | 'image' | 'news' | 'shopping';
+
 type ExternalResult = {
   id: string;
-  kind: 'web' | 'music' | 'weather' | 'video';
+  kind: ExternalKind;
   title: string;
   subtitle?: string;
   url?: string;
   thumbnail?: string;
+  /** Full-bleed media for in-feed rendering (images/products). */
+  image?: string;
+  source?: string;
+  publishedAt?: string;
+  /** Structured product facts rendered as tags on shopping cards. */
+  price?: string;
+  availability?: string;
+  rating?: number;
+  reviews?: number;
+  location?: string;
+  /** Extra key/value chips (portal details, categories, brands…). */
+  tags?: string[];
 };
 
-const safeJson = async (url: string, ms = 6000): Promise<any | null> => {
+const UA =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
+
+const safeJson = async (url: string, ms = 9000): Promise<any | null> => {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ms);
   try {
-    const res = await fetch(url, { signal: controller.signal, headers: { 'User-Agent': 'mmora-search/1.0' } });
-    if (!res.ok) return null;
+    const res = await fetch(url, { signal: controller.signal, headers: { 'User-Agent': UA, Accept: 'application/json' } });
+    if (!res.ok) {
+      console.warn('[external-search] json fetch failed', res.status, new URL(url).host);
+      return null;
+    }
     return await res.json();
-  } catch (_error) {
+  } catch (error) {
+    console.warn('[external-search] json fetch threw', new URL(url).host, String(error));
     return null;
   } finally {
     clearTimeout(timer);
   }
 };
+
+const safeText = async (url: string, ms = 9000): Promise<string | null> => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  try {
+    const res = await fetch(url, { signal: controller.signal, headers: { 'User-Agent': UA, Accept: 'text/html,application/xhtml+xml,application/xml' } });
+    if (!res.ok) {
+      console.warn('[external-search] text fetch failed', res.status, new URL(url).host);
+      return null;
+    }
+    return await res.text();
+  } catch (error) {
+    console.warn('[external-search] text fetch threw', new URL(url).host, String(error));
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+
+const stripTags = (value: string) => value.replace(/<[^>]+>/g, '').replace(/&[a-z]+;/gi, ' ').trim();
 
 const weatherSearch = async (query: string): Promise<ExternalResult[]> => {
   const place = query.replace(/\b(weather|forecast|temperature|climate|in|at|for|today)\b/gi, '').trim() || 'London';
@@ -47,6 +90,14 @@ const weatherSearch = async (query: string): Promise<ExternalResult[]> => {
       kind: 'weather',
       title: `${hit.name}${hit.country ? `, ${hit.country}` : ''} — ${Math.round(c.temperature_2m)}°C`,
       subtitle: `Humidity ${c.relative_humidity_2m}% · Wind ${Math.round(c.wind_speed_10m)} km/h · High ${Math.round(d?.temperature_2m_max?.[0] ?? c.temperature_2m)}° / Low ${Math.round(d?.temperature_2m_min?.[0] ?? c.temperature_2m)}°`,
+      location: `${hit.name}${hit.admin1 ? `, ${hit.admin1}` : ''}${hit.country ? `, ${hit.country}` : ''}`,
+      source: 'Open-Meteo',
+      tags: [
+        `Now ${Math.round(c.temperature_2m)}°C`,
+        `High ${Math.round(d?.temperature_2m_max?.[0] ?? c.temperature_2m)}°`,
+        `Low ${Math.round(d?.temperature_2m_min?.[0] ?? c.temperature_2m)}°`,
+        `Wind ${Math.round(c.wind_speed_10m)} km/h`,
+      ],
     },
   ];
 };
@@ -63,6 +114,9 @@ const musicSearch = async (query: string): Promise<ExternalResult[]> => {
     subtitle: [track.artistName, track.collectionName].filter(Boolean).join(' · '),
     url: track.trackViewUrl,
     thumbnail: track.artworkUrl100,
+    image: track.artworkUrl100?.replace('100x100', '600x600'),
+    source: 'Apple Music',
+    price: typeof track.trackPrice === 'number' && track.trackPrice > 0 ? `$${track.trackPrice.toFixed(2)}` : undefined,
   }));
 };
 
@@ -71,32 +125,196 @@ const musicSearch = async (query: string): Promise<ExternalResult[]> => {
  * shared GOOGLE_API_KEY. Keyless = silent no-op so search never breaks.
  */
 const videoSearch = async (query: string): Promise<ExternalResult[]> => {
+  const term = query.replace(/\b(video|videos|watch|youtube)\b/gi, ' ').trim() || query;
   const key =
     Deno.env.get('YOUTUBE_API_KEY') ||
     Deno.env.get('GOOGLE_API_KEY') ||
     Deno.env.get('GOOGLE_AI_STUDIO_KEY');
-  if (!key) {
-    console.warn('[external-search] video search skipped: no youtube key');
-    return [];
+  if (key) {
+    const data = await safeJson(
+      `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&safeSearch=moderate&maxResults=10` +
+        `&q=${encodeURIComponent(term)}&key=${key}`,
+    );
+    const items: any[] = Array.isArray(data?.items) ? data.items : [];
+    if (items.length) {
+      return items
+        .filter((item) => item?.id?.videoId)
+        .map((item) => ({
+          id: `video-${item.id.videoId}`,
+          kind: 'video' as const,
+          title: String(item.snippet?.title ?? 'Video'),
+          subtitle: String(item.snippet?.channelTitle ?? 'YouTube'),
+          url: `https://www.youtube.com/watch?v=${item.id.videoId}`,
+          thumbnail:
+            item.snippet?.thumbnails?.medium?.url || item.snippet?.thumbnails?.default?.url || undefined,
+          source: 'YouTube',
+          publishedAt: item.snippet?.publishedAt,
+        }));
+    }
+    console.warn('[external-search] youtube api returned nothing (quota/key) — using keyless fallback');
   }
-  const term = query.replace(/\b(video|videos|watch|youtube)\b/gi, ' ').trim() || query;
-  const data = await safeJson(
-    `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&safeSearch=moderate&maxResults=10` +
-      `&q=${encodeURIComponent(term)}&key=${key}`,
+
+  // Keyless fallback: read the public results page and lift the video ids, so
+  // the Videos lane keeps working when the API key is missing or over quota.
+  const html = await safeText(
+    `https://www.youtube.com/results?search_query=${encodeURIComponent(term)}&sp=EgIQAQ%253D%253D&hl=en&gl=US`,
   );
-  const items: any[] = Array.isArray(data?.items) ? data.items : [];
-  if (!items.length) console.warn('[external-search] video search returned no items');
-  return items
-    .filter((item) => item?.id?.videoId)
-    .map((item) => ({
-      id: `video-${item.id.videoId}`,
-      kind: 'video' as const,
-      title: String(item.snippet?.title ?? 'Video'),
-      subtitle: String(item.snippet?.channelTitle ?? 'YouTube'),
-      url: `https://www.youtube.com/watch?v=${item.id.videoId}`,
-      thumbnail:
-        item.snippet?.thumbnails?.medium?.url || item.snippet?.thumbnails?.default?.url || undefined,
-    }));
+  if (!html) return [];
+  const seen = new Set<string>();
+  const results: ExternalResult[] = [];
+  const re = /"videoId":"([\w-]{6,})"[\s\S]{0,600}?"text":"([^"]{3,120})"/g;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(html)) && results.length < 10) {
+    const [, id, title] = match;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    results.push({
+      id: `video-${id}`,
+      kind: 'video',
+      title: title.replace(/\\u0026/g, '&'),
+      subtitle: 'YouTube',
+      url: `https://www.youtube.com/watch?v=${id}`,
+      thumbnail: `https://i.ytimg.com/vi/${id}/mqdefault.jpg`,
+      source: 'YouTube',
+    });
+  }
+  if (!results.length) console.warn('[external-search] video search returned no items');
+  return results;
+};
+
+/** Images: Openverse first, Wikimedia Commons as the always-on fallback. */
+const imageSearch = async (query: string): Promise<ExternalResult[]> => {
+  const term = query.replace(/\b(image|images|photo|photos|picture|pictures)\b/gi, ' ').trim() || query;
+  const data = await safeJson(
+    `https://api.openverse.org/v1/images/?q=${encodeURIComponent(term)}&page_size=8&mature=false`,
+    5000,
+  );
+  const items: any[] = Array.isArray(data?.results) ? data.results : [];
+  if (items.length) {
+    return items
+      .filter((item) => item?.url)
+      .map((item) => ({
+        id: `image-${item.id}`,
+        kind: 'image' as const,
+        title: String(item.title || term),
+        subtitle: [item.creator, item.license?.toUpperCase()].filter(Boolean).join(' · '),
+        url: item.foreign_landing_url || item.url,
+        thumbnail: item.thumbnail || item.url,
+        image: item.url,
+        source: String(item.source || 'Openverse'),
+        tags: [item.license ? `License ${String(item.license).toUpperCase()}` : null, item.provider].filter(Boolean) as string[],
+      }));
+  }
+
+  const commons = await safeJson(
+    `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrnamespace=6&gsrsearch=${encodeURIComponent(term)}` +
+      `&gsrlimit=8&prop=imageinfo&iiprop=url|extmetadata&iiurlwidth=900&format=json&origin=*`,
+  );
+  const pages: any[] = Object.values(commons?.query?.pages ?? {});
+  return pages
+    .map((page) => {
+      const info = page?.imageinfo?.[0];
+      if (!info?.thumburl) return null;
+      return {
+        id: `image-commons-${page.pageid}`,
+        kind: 'image' as const,
+        title: String(page.title ?? term).replace(/^File:/, ''),
+        subtitle: 'Wikimedia Commons',
+        url: info.descriptionurl || info.url,
+        thumbnail: info.thumburl,
+        image: info.thumburl,
+        source: 'Wikimedia Commons',
+      };
+    })
+    .filter(Boolean) as ExternalResult[];
+};
+
+/** News via keyless RSS: Google News first, Bing News as fallback. */
+const parseRssItems = (xml: string, fallbackSource: string): ExternalResult[] =>
+  xml
+    .split('<item>')
+    .slice(1, 9)
+    .map((block, index) => {
+      const pick = (tag: string) => {
+        const match = block.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`));
+        return match ? stripTags(match[1].replace(/<!\[CDATA\[|\]\]>/g, '')) : '';
+      };
+      const link = block.match(/<link[^>]*>([\s\S]*?)<\/link>/)?.[1]?.trim();
+      return {
+        id: `news-${index}-${(link || '').slice(-16)}`,
+        kind: 'news' as const,
+        title: pick('title') || 'News story',
+        subtitle: pick('description').slice(0, 200),
+        url: link,
+        source: pick('source') || fallbackSource,
+        publishedAt: pick('pubDate'),
+      };
+    })
+    .filter((item) => item.title && item.title !== 'News story');
+
+const newsSearch = async (query: string): Promise<ExternalResult[]> => {
+  const google = await safeText(
+    `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`,
+  );
+  const fromGoogle = google ? parseRssItems(google, 'Google News') : [];
+  if (fromGoogle.length) return fromGoogle;
+  const bing = await safeText(`https://www.bing.com/news/search?q=${encodeURIComponent(query)}&format=RSS`);
+  return bing ? parseRssItems(bing, 'Bing News') : [];
+};
+
+/**
+ * Shopping products with price, availability, rating, review count and portal
+ * details. Uses SERPAPI_KEY (Google Shopping) when configured; otherwise falls
+ * back to a keyless catalogue so the shopping lane is never structurally empty.
+ */
+const shoppingSearch = async (query: string): Promise<ExternalResult[]> => {
+  const term = query.replace(/\b(buy|shop|shopping|price|cheap|deal|deals|product|products)\b/gi, ' ').trim() || query;
+  const serpKey = Deno.env.get('SERPAPI_KEY');
+  if (serpKey) {
+    const data = await safeJson(
+      `https://serpapi.com/search.json?engine=google_shopping&q=${encodeURIComponent(term)}&num=8&api_key=${serpKey}`,
+    );
+    const items: any[] = Array.isArray(data?.shopping_results) ? data.shopping_results : [];
+    if (items.length) {
+      return items.slice(0, 8).map((item, index) => ({
+        id: `shop-${item.product_id ?? index}`,
+        kind: 'shopping' as const,
+        title: String(item.title ?? 'Product'),
+        subtitle: [item.source, item.delivery].filter(Boolean).join(' · '),
+        url: item.product_link || item.link,
+        thumbnail: item.thumbnail,
+        image: item.thumbnail,
+        source: String(item.source ?? 'Google Shopping'),
+        price: item.price ? String(item.price) : undefined,
+        availability: item.delivery ? String(item.delivery) : 'See portal',
+        rating: typeof item.rating === 'number' ? item.rating : undefined,
+        reviews: typeof item.reviews === 'number' ? item.reviews : undefined,
+        location: item.store_location ? String(item.store_location) : undefined,
+        tags: [item.source, item.delivery, item.extensions?.[0]].filter(Boolean) as string[],
+      }));
+    }
+  }
+
+  const data = await safeJson(`https://dummyjson.com/products/search?q=${encodeURIComponent(term)}&limit=8`);
+  const items: any[] = Array.isArray(data?.products) ? data.products : [];
+  return items.map((item) => ({
+    id: `shop-${item.id}`,
+    kind: 'shopping' as const,
+    title: String(item.title ?? 'Product'),
+    subtitle: [item.brand, item.category].filter(Boolean).join(' · '),
+    url: `https://www.google.com/search?tbm=shop&q=${encodeURIComponent(item.title ?? term)}`,
+    thumbnail: item.thumbnail,
+    image: item.images?.[0] || item.thumbnail,
+    source: String(item.brand || 'Catalogue'),
+    price: typeof item.price === 'number'
+      ? `$${item.price.toFixed(2)}${item.discountPercentage ? ` (-${Math.round(item.discountPercentage)}%)` : ''}`
+      : undefined,
+    availability: item.availabilityStatus || (item.stock > 0 ? `In stock (${item.stock})` : 'Out of stock'),
+    rating: typeof item.rating === 'number' ? item.rating : undefined,
+    reviews: Array.isArray(item.reviews) ? item.reviews.length : undefined,
+    location: item.meta?.barcode ? undefined : undefined,
+    tags: [item.brand, item.category, item.warrantyInformation, item.shippingInformation].filter(Boolean) as string[],
+  }));
 };
 
 const webSearch = async (query: string): Promise<ExternalResult[]> => {
@@ -113,6 +331,7 @@ const webSearch = async (query: string): Promise<ExternalResult[]> => {
       subtitle: ddg.AbstractText,
       url: ddg.AbstractURL,
       thumbnail: ddg.Image ? `https://duckduckgo.com${ddg.Image}` : undefined,
+      source: ddg.AbstractSource || 'DuckDuckGo',
     });
   }
   for (const topic of (ddg?.RelatedTopics ?? []).slice(0, 4)) {
@@ -123,6 +342,7 @@ const webSearch = async (query: string): Promise<ExternalResult[]> => {
       title: topic.Text.split(' - ')[0],
       subtitle: topic.Text,
       url: topic.FirstURL,
+      source: 'DuckDuckGo',
     });
   }
 
@@ -137,6 +357,7 @@ const webSearch = async (query: string): Promise<ExternalResult[]> => {
         title: page.title,
         subtitle: String(page.snippet ?? '').replace(/<[^>]+>/g, ''),
         url: `https://en.wikipedia.org/?curid=${page.pageid}`,
+        source: 'Wikipedia',
       });
     }
   }
@@ -159,17 +380,39 @@ Deno.serve(async (req) => {
     const wantsWeather = /\b(weather|forecast|temperature|rain|climate)\b/i.test(term);
     const wantsMusic = /\b(music|song|songs|track|album|artist|play|listen)\b/i.test(term);
 
-    // Intent-matched sources run first so they rank above generic web hits.
+    // Every lane runs in parallel so one slow/broken source can never blank the
+    // others; intent-matched lanes are simply ordered first.
     const tasks: Promise<ExternalResult[]>[] = [];
     if (wantsWeather) tasks.push(weatherSearch(term));
-    if (wantsMusic || !wantsWeather) tasks.push(musicSearch(term));
-    if (!wantsWeather) tasks.push(videoSearch(term));
+    if (wantsMusic) tasks.push(musicSearch(term));
+    tasks.push(videoSearch(term));
+    tasks.push(imageSearch(term));
+    tasks.push(newsSearch(term));
+    tasks.push(shoppingSearch(term));
     tasks.push(webSearch(term));
+    if (!wantsMusic) tasks.push(musicSearch(term));
 
     const settled = await Promise.allSettled(tasks);
-    const results = settled.flatMap((entry) => (entry.status === 'fulfilled' ? entry.value : []));
+    const degraded: string[] = [];
+    settled.forEach((entry, index) => {
+      if (entry.status === 'rejected') degraded.push(String(index));
+    });
+    const seen = new Set<string>();
+    const results = settled
+      .flatMap((entry) => (entry.status === 'fulfilled' ? entry.value : []))
+      .filter((item) => {
+        if (!item?.id || seen.has(item.id)) return false;
+        seen.add(item.id);
+        return true;
+      });
 
-    return new Response(JSON.stringify({ results: results.slice(0, 24) }), {
+    const counts = results.reduce<Record<string, number>>((acc, item) => {
+      acc[item.kind] = (acc[item.kind] ?? 0) + 1;
+      return acc;
+    }, {});
+    console.log('[external-search]', JSON.stringify({ term, total: results.length, counts, degraded }));
+
+    return new Response(JSON.stringify({ results: results.slice(0, 48), counts, degraded }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
