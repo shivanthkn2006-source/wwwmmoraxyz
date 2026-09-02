@@ -29,7 +29,7 @@ import {
   Network,
   Orbit,
   Brain,
-  ShieldCheck,
+  Home,
   Scale,
   Building2,
   FileSearch,
@@ -62,7 +62,7 @@ export const DOCK_EXTRA_DEFS: ExtraDef[] = [
   { id: 'dock-activity-export', label: 'Activity export', route: '/activity-export', Icon: Download },
   { id: 'dock-zoe-ai-page', label: 'Zoe AI workspace', route: '/zoe-ai', Icon: Bot },
   { id: 'dock-agent-memory', label: 'Agent memory', route: '/agent-memory', Icon: Brain },
-  { id: 'dock-security', label: 'Security centre', route: '/security', Icon: ShieldCheck },
+  { id: 'dock-home-return', label: 'Home feed', route: '/home', Icon: Home },
   { id: 'dock-platform-overview', label: 'Platform overview', route: '/platform-overview', Icon: Layers },
   { id: 'dock-merchant', label: 'Merchant', route: '/merchant', Icon: ShoppingBag },
   { id: 'dock-career', label: 'Career divinity', route: '/career-divinity', Icon: Briefcase },
@@ -76,6 +76,24 @@ export const DOCK_EXTRA_DEFS: ExtraDef[] = [
   { id: 'dock-install', label: 'Install app', route: '/install', Icon: Smartphone },
   { id: 'dock-about', label: 'About M\u2019Mora', route: '/about', Icon: Info },
 ];
+
+/**
+ * Routes rendered as primary dock items somewhere in the app. Every dock passes
+ * this same list so the extra rows show identical icons and identical labels on
+ * all 70+ pages.
+ */
+export const DOCK_RESERVED_ROUTES = [
+  '/camera',
+  '/chat',
+  '/growth-insights',
+  '/profile',
+  '/selfie-city',
+  '/compass',
+  '/zoe-ai',
+  '/notification-history',
+];
+
+
 
 /**
  * Builds real dock items for the extra rows, skipping any destination that the

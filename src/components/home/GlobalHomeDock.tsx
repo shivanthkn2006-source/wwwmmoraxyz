@@ -11,13 +11,13 @@
  */
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Home, Lightbulb, Sparkles, MessageCircle, Bell, User, Compass } from 'lucide-react';
+import { Lightbulb, Sparkles, MessageCircle, Bell, User, Compass } from 'lucide-react';
 import HomeGlassDock from '@/components/home/HomeGlassDock';
 import GrowthAlertsPanel from '@/components/growth/GrowthAlertsPanel';
 import { useAuth } from '@/lib/auth';
 import { useGrowthUnread } from '@/hooks/useGrowthUnread';
 import { useNotificationFeatureBadges } from '@/hooks/useNotificationFeatureBadges';
-import { buildExtraDockItems } from '@/components/home/dockExtraActions';
+import { buildExtraDockItems, DOCK_RESERVED_ROUTES } from '@/components/home/dockExtraActions';
 
 /** Routes that own their dock, or must stay chrome-free. */
 const EXCLUDED_PREFIXES = [
@@ -50,15 +50,8 @@ export const GlobalHomeDock: React.FC = () => {
         triggerBadge={total}
         items={[
           {
-            id: 'global-home',
-            label: 'Home feed',
-            icon: <Home className="h-[22px] w-[22px]" />,
-            badge: counts.feed || undefined,
-            onSelect: () => navigate('/home'),
-          },
-          {
             id: 'global-compass',
-            label: "Zoe's DHF",
+            label: 'DHF Neural Feed',
             icon: <Compass className="h-[22px] w-[22px]" />,
             badge: counts.compass || undefined,
             active: pathname.startsWith('/compass'),
@@ -75,7 +68,7 @@ export const GlobalHomeDock: React.FC = () => {
 
           {
             id: 'global-zoe',
-            label: 'Zoe AI',
+            label: 'Zoe AI chat',
             icon: <Sparkles className="h-[22px] w-[22px]" />,
             badge: counts.zoe || undefined,
             active: pathname.startsWith('/zoe-ai'),
@@ -105,16 +98,9 @@ export const GlobalHomeDock: React.FC = () => {
             active: pathname === '/profile',
             onSelect: () => navigate('/profile'),
           },
-          ...buildExtraDockItems(navigate, [
-            '/home',
-            '/compass',
-            '/growth-insights',
-            '/zoe-ai',
-            '/chat',
-            '/notification-history',
-            '/profile',
-          ]),
+          ...buildExtraDockItems(navigate, DOCK_RESERVED_ROUTES),
         ]}
+
       />
       <GrowthAlertsPanel open={alertsOpen} onOpenChange={setAlertsOpen} />
     </>

@@ -30,7 +30,7 @@ import useZoeMotivation from '@/hooks/useZoeMotivation';
 import HomeMotivationSlide from '@/components/home/HomeMotivationSlide';
 
 import HomeGlassDock from '@/components/home/HomeGlassDock';
-import { buildExtraDockItems } from '@/components/home/dockExtraActions';
+import { buildExtraDockItems, DOCK_RESERVED_ROUTES } from '@/components/home/dockExtraActions';
 import { useNotificationFeatureBadges } from '@/hooks/useNotificationFeatureBadges';
 import DockBadgeBoundary from '@/components/home/DockBadgeBoundary';
 import LiveViewBoundary from '@/components/live/LiveViewBoundary';
@@ -2789,13 +2789,8 @@ const HomePage = () => {
             icon: <Settings className="h-[22px] w-[22px]" />,
             onSelect: runHomeIconAction('settings', () => navigate('/profile?settings=1')),
           },
-          ...buildExtraDockItems(navigate, [
-            '/camera',
-            '/chat',
-            '/growth-insights',
-            '/profile',
-            '/selfie-city',
-          ]),
+          ...buildExtraDockItems(navigate, DOCK_RESERVED_ROUTES),
+
         ]}
 
       />
