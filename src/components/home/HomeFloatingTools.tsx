@@ -489,7 +489,18 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
 
           {(externalLoading || externalVisible.length > 0) && (
             <div className="mt-1 border-t border-border/50 pt-1">
-              <p className="px-3 py-1 text-[10px] uppercase tracking-wide text-muted-foreground">From the internet</p>
+              <div className="flex items-center justify-between gap-2 px-3 py-1">
+                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">From the internet</p>
+                {externalVisible.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => openInFeed(externalVisible)}
+                    className="rounded-full bg-foreground/10 px-2 py-0.5 text-[10px] font-medium text-foreground"
+                  >
+                    Open {externalVisible.length} in feed
+                  </button>
+                )}
+              </div>
               {externalLoading && externalVisible.length === 0 && (
                 <p role="status" className="px-3 py-1.5 text-xs text-muted-foreground">Searching the web…</p>
               )}
@@ -497,40 +508,32 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
                 <button
                   key={`ext-${item.id}`}
                   type="button"
-                  onClick={() => {
-                    if (item.kind === 'video') {
-                      // Play inline in the home feed (new-window navigation is blocked by COOP).
-                      window.dispatchEvent(new CustomEvent('mmora:feed-external-videos', {
-                        detail: {
-                          videos: externalVideos.map((video) => ({
-                            id: video.id,
-                            title: video.title,
-                            subtitle: video.subtitle,
-                            url: video.url,
-                            thumbnail: video.thumbnail,
-                          })),
-                          activeId: item.id,
-                        },
-                      }));
-                      setSearchOpen(false);
-                      return;
-                    }
-                    if (item.url) window.open(item.url, '_blank', 'noopener,noreferrer');
-                  }}
+                  data-testid="external-result"
+                  // Everything opens inside the M'Mora feed — no external tab.
+                  onClick={() => openInFeed(externalVisible, item.id)}
                   className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-muted/60"
                 >
 
-                  {item.thumbnail && (
-                    <img src={item.thumbnail} alt="" loading="lazy" className="h-9 w-9 shrink-0 rounded-md object-cover" />
+                  {(item.thumbnail || item.image) && (
+                    <img src={item.thumbnail || item.image} alt="" loading="lazy" className="h-9 w-9 shrink-0 rounded-md object-cover" />
                   )}
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm text-foreground">{item.title}</span>
                     {item.subtitle && (
                       <span className="block truncate text-[11px] text-muted-foreground">{item.subtitle}</span>
                     )}
+                    {tagsForItem(item).length > 0 && (
+                      <span className="mt-0.5 flex flex-wrap gap-1">
+                        {tagsForItem(item).slice(0, 4).map((tag) => (
+                          <span key={tag} className="rounded-full bg-muted px-1.5 py-[1px] text-[9px] text-muted-foreground">
+                            {tag}
+                          </span>
+                        ))}
+                      </span>
+                    )}
                   </span>
                   <span className="shrink-0 rounded-full bg-muted px-1.5 py-[1px] text-[9px] uppercase tracking-wide text-muted-foreground">
-                    {item.kind}
+                    {KIND_LABEL[item.kind] ?? item.kind}
                   </span>
                 </button>
               ))}
