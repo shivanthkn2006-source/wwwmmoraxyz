@@ -62,7 +62,7 @@ export const DOCK_EXTRA_DEFS: ExtraDef[] = [
   { id: 'dock-activity-export', label: 'Activity export', route: '/activity-export', Icon: Download },
   { id: 'dock-zoe-ai-page', label: 'Zoe AI workspace', route: '/zoe-ai', Icon: Bot },
   { id: 'dock-agent-memory', label: 'Agent memory', route: '/agent-memory', Icon: Brain },
-  { id: 'dock-security', label: 'Security centre', route: '/security', Icon: ShieldCheck },
+  { id: 'dock-home-return', label: 'Home feed', route: '/home', Icon: Home },
   { id: 'dock-platform-overview', label: 'Platform overview', route: '/platform-overview', Icon: Layers },
   { id: 'dock-merchant', label: 'Merchant', route: '/merchant', Icon: ShoppingBag },
   { id: 'dock-career', label: 'Career divinity', route: '/career-divinity', Icon: Briefcase },
