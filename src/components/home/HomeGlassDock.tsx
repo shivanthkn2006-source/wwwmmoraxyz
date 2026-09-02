@@ -204,18 +204,17 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
       ref={rootRef}
       data-home-dock
       className={cn(
-        'fixed right-0 z-[9996] flex flex-col items-end justify-end',
-        'bottom-[calc(env(safe-area-inset-bottom,0px)+12px)]',
+        'fixed inset-x-0 bottom-0 z-[9996] flex flex-col justify-end',
         className,
       )}
     >
-      {/* Glass dock panel — anchored bottom-right, grows left and up.
-          Icons align to the left; most-used sit on the bottom row nearest the trigger. */}
+      {/* Glass dock panel — full width, flush to the bottom and both edges.
+          Icons sit 7 per row; extra rows stack upward. */}
       <div
         className={cn(
-          'mb-2 flex justify-end px-3 transition-all duration-300 ease-out',
+          'w-full transition-all duration-300 ease-out',
           open
-            ? 'max-h-[60vh] translate-y-0 opacity-100'
+            ? 'max-h-[70vh] translate-y-0 opacity-100'
             : 'pointer-events-none max-h-0 translate-y-3 opacity-0',
         )}
       >
@@ -223,12 +222,13 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
           ref={railRef}
           role="menu"
           aria-hidden={!open}
-          style={{ maxWidth: 'min(100vw - 24px, 380px)' }}
           className={cn(
-            'flex flex-wrap content-end items-center justify-start gap-2 rounded-[28px] border border-white/25 px-3 py-2',
-            'bg-white/10 backdrop-blur-xl shadow-[0_8px_24px_rgba(0,0,0,0.35)]',
+            'grid grid-cols-7 items-center gap-2 rounded-t-[28px] border-x-0 border-b-0 border-t border-white/25 px-2 pt-3',
+            'pb-[calc(env(safe-area-inset-bottom,0px)+60px)]',
+            'bg-white/10 backdrop-blur-xl shadow-[0_-8px_24px_rgba(0,0,0,0.35)]',
           )}
         >
+
 
 
 
