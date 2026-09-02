@@ -200,7 +200,7 @@ export const ZoeSearchModal: React.FC<ZoeSearchModalProps> = ({
             className={`relative flex max-h-[86vh] w-full max-w-2xl flex-col overflow-hidden rounded-3xl shadow-2xl ${glass}`}
           >
             {/* Query bar */}
-            <div className="flex items-center gap-3 border-b border-white/10 px-4 py-3">
+            <div className="flex shrink-0 items-center gap-3 border-b border-white/10 px-4 py-3">
               <Search className="h-5 w-5 shrink-0 text-blue-400" aria-hidden />
               <input
                 ref={inputRef}
@@ -232,9 +232,9 @@ export const ZoeSearchModal: React.FC<ZoeSearchModalProps> = ({
             </div>
 
             {debounced.length > 0 && (
-              <>
+              <div className="flex min-h-0 flex-1 flex-col">
                 {/* Category chips */}
-                <div className="flex gap-2 overflow-x-auto border-b border-white/10 px-4 py-2.5" role="group" aria-label="Result categories">
+                <div className="flex shrink-0 gap-2 overflow-x-auto border-b border-white/10 px-4 py-2.5" role="group" aria-label="Result categories">
                   {TABS.map((entry) => (
                     <button
                       key={entry.id}
@@ -465,7 +465,7 @@ export const ZoeSearchModal: React.FC<ZoeSearchModalProps> = ({
                     </section>
                   )}
                 </div>
-              </>
+              </div>
             )}
           </motion.div>
         </motion.div>
