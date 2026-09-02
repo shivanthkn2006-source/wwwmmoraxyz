@@ -330,11 +330,10 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
   }, []);
 
   // The open search surface is pinned to the very top of the viewport (above
-  // the M'Mora logo) so phones get the maximum reading area underneath it.
-  const CLOSE_SLOT = 52;
+  // the M'Mora logo) and spans the full width, edge to edge.
   const barTop = 8;
-  const barLeft = CLOSE_SLOT + EDGE_GAP;
-  const barWidth = Math.max(160, viewport.w - barLeft - EDGE_GAP);
+  const barLeft = 0;
+  const barWidth = viewport.w;
   const barRef = React.useRef<HTMLDivElement>(null);
   const [barHeight, setBarHeight] = React.useState(52);
   React.useEffect(() => {
@@ -346,10 +345,11 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
     return () => observer.disconnect();
   }, [searchOpen]);
   // The dropdown starts at the left edge so it uses every pixel of width.
-  const panelLeft = EDGE_GAP;
-  const panelWidth = Math.max(200, viewport.w - EDGE_GAP * 2);
+  const panelLeft = 0;
+  const panelWidth = viewport.w;
   const dropdownTop = barTop + barHeight + 8;
   const dropdownMaxHeight = Math.max(180, viewport.h - dropdownTop - 16);
+
 
   /** Cyber-Night glass: real transparency + blur, never a solid panel. */
   const glassSurface =
@@ -400,22 +400,9 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
       )}
 
 
-      {/* Bare close control — sits left of the bar, no outline, no box */}
-      {searchOpen && (
-        <button
-          type="button"
-          aria-label="Close home search"
-          onClick={() => setSearchOpen(false)}
-          className="fixed z-[9997] flex h-11 w-11 items-center justify-center rounded-full bg-transparent text-white/90 drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)] focus-visible:outline-none"
-          style={{ left: EDGE_GAP, top: barTop + Math.max(0, (barHeight - 44) / 2) }}
-        >
-          <X className="h-5 w-5" />
-        </button>
-      )}
-
       <div
         ref={barRef}
-        className={`fixed z-[9996] flex items-start overflow-hidden rounded-3xl p-1.5 text-white transition-[opacity] duration-200 ease-out ${glassSurface}`}
+        className={`fixed z-[9996] flex items-start overflow-hidden rounded-2xl p-1.5 text-white transition-[opacity] duration-200 ease-out ${glassSurface}`}
         style={{
           left: barLeft,
           top: barTop,
@@ -430,7 +417,18 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
         onClick={(event) => event.stopPropagation()}
       >
         <form onSubmit={handleSubmit} className="flex min-w-0 flex-1 items-start gap-2 px-2 py-1">
+          {/* Bare close control — no outline, inside the full-width bar */}
+          <button
+            type="button"
+            aria-label="Close home search"
+            tabIndex={searchOpen ? 0 : -1}
+            onClick={() => setSearchOpen(false)}
+            className="mt-1 shrink-0 rounded-full bg-transparent p-1 text-white/70 transition hover:text-white focus-visible:outline-none"
+          >
+            <X className="h-5 w-5" />
+          </button>
           <Search className="mt-2 h-4 w-4 shrink-0 text-white/60" />
+
           <textarea
             ref={inputRef}
             role="searchbox"
