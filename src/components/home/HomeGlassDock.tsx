@@ -343,8 +343,10 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
           role={open ? 'menu' : undefined}
           aria-hidden={open ? false : undefined}
           className={cn(
-            'flex flex-row-reverse flex-wrap-reverse content-start items-center justify-start gap-2 rounded-[28px] border-0 p-2',
-            'bg-white/10 backdrop-blur-xl shadow-none',
+            'flex flex-row-reverse flex-wrap-reverse content-start items-center justify-start gap-2 p-2',
+            open
+              ? 'rounded-[28px] border-0 bg-white/10 backdrop-blur-xl shadow-none'
+              : 'rounded-none border-0 bg-transparent shadow-none',
           )}
           style={{ maxWidth: 'min(100vw - 16px, 380px)' }}
         >
