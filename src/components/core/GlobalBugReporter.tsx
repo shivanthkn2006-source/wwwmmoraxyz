@@ -124,6 +124,8 @@ export const GlobalBugReporter: React.FC = () => {
 
   // Not signed in → nothing to attach a report to; stay out of the way.
   if (!userId) return null;
+  // Home screen keeps the chrome clean; the reporter is available on every other route.
+  if (pathname === '/home' || pathname === '/') return null;
 
   return (
     <>
