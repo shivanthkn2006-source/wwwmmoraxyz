@@ -1,5 +1,5 @@
 import React from 'react';
-import { Camera, ListVideo, Loader2, Search, X } from 'lucide-react';
+import { Camera, ListVideo, Loader2, Search, Trash2, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
   useHomeSearch,
