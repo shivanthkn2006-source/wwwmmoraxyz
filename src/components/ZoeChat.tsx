@@ -283,9 +283,11 @@ export const ZoeChat = () => {
         throw new Error(chatError.message || 'Failed to get response');
       }
 
-      // Handle response - filter through NeuroSymbolic Guard
-      const rawContent = data?.message || data?.response || "I'm here to help. Could you please try again?";
+      // Audit fix (SEP03): an empty/malformed backend payload used to be shown
+      // as an in-character reply, hiding provider failures. It now surfaces.
+      const rawContent = data?.message || data?.response || '';
       const responseContent = guardResponse(rawContent).safeResponse;
+
       
       if (!responseContent || responseContent.trim() === '') {
         throw new Error('Empty response from Zoe');
