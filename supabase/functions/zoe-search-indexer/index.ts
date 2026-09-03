@@ -217,12 +217,59 @@ async function loadCanonical(db: ReturnType<typeof createClient>, job: QueueRow)
     };
   }
 
+  // ── Conversational memory: direct messages and post comments ──
+  if (job.entity_type === 'direct_message') {
+    const { data, error } = await db.from('messages')
+      .select('id,sender_id,receiver_id,content,media_type,created_at')
+      .eq('id', job.entity_id).maybeSingle();
+    if (error) throw error;
+    if (!data) return null;
+    const author = await loadAuthor(db, data.sender_id);
+    return {
+      ownerId: data.sender_id,
+      content: [author.line, String(data.content || '').trim()].filter(Boolean).join('\n'),
+      // Always private: only the sender's own recall may surface a DM.
+      privacy: 'private',
+      metadata: {
+        title: 'Direct message',
+        mediaType: data.media_type,
+        counterpartId: data.receiver_id,
+        createdAt: data.created_at,
+        route: `/chat?peer=${data.receiver_id}`,
+      },
+    };
+  }
+
+  if (job.entity_type === 'post_comment') {
+    const { data, error } = await db.from('post_comments')
+      .select('id,post_id,user_id,content,created_at')
+      .eq('id', job.entity_id).maybeSingle();
+    if (error) throw error;
+    if (!data) return null;
+    const { data: parent } = await db.from('posts')
+      .select('id,visibility,content').eq('id', data.post_id).maybeSingle();
+    const author = await loadAuthor(db, data.user_id);
+    return {
+      ownerId: data.user_id,
+      content: [author.line, String(data.content || '').trim(),
+        parent?.content ? `On post: ${String(parent.content).slice(0, 200)}` : ''].filter(Boolean).join('\n'),
+      privacy: parent?.visibility === 'global' ? 'public' : parent?.visibility === 'personal' ? 'friends' : 'private',
+      metadata: {
+        title: 'Comment',
+        postId: data.post_id,
+        createdAt: data.created_at,
+        route: `/post/${data.post_id}`,
+      },
+    };
+  }
+
   return null;
+
 }
 
 
 async function enqueueBackfill(db: ReturnType<typeof createClient>, userId: string) {
-  const [profiles, posts, chats, memories, dhfPosts, dhfVideos, growthCards, predictions, goals] = await Promise.all([
+  const [profiles, posts, chats, memories, dhfPosts, dhfVideos, growthCards, predictions, goals, dms, comments] = await Promise.all([
     db.from('profiles').select('user_id'),
     db.from('posts').select('id,user_id,media_type,content'),
     db.from('zoe_infinity_messages').select('id,user_id').eq('user_id', userId),
@@ -232,8 +279,10 @@ async function enqueueBackfill(db: ReturnType<typeof createClient>, userId: stri
     db.from('growth_feed_items').select('id,user_id').eq('user_id', userId),
     db.from('astro_predictions').select('id,user_id').eq('user_id', userId),
     db.from('wisdom_macro_goals').select('id,user_id').eq('user_id', userId),
+    db.from('messages').select('id,sender_id').eq('sender_id', userId).limit(2000),
+    db.from('post_comments').select('id,user_id').eq('user_id', userId).limit(2000),
   ]);
-  for (const response of [profiles, posts, chats, memories, dhfPosts, dhfVideos, growthCards, predictions, goals]) {
+  for (const response of [profiles, posts, chats, memories, dhfPosts, dhfVideos, growthCards, predictions, goals, dms, comments]) {
     if (response.error) throw response.error;
   }
 
@@ -251,6 +300,8 @@ async function enqueueBackfill(db: ReturnType<typeof createClient>, userId: stri
     ...(growthCards.data || []).map((row) => ({ entity_type: 'growth_card', entity_id: row.id, owner_id: row.user_id })),
     ...(predictions.data || []).map((row) => ({ entity_type: 'astro_prediction', entity_id: row.id, owner_id: row.user_id })),
     ...(goals.data || []).map((row) => ({ entity_type: 'wisdom_goal', entity_id: row.id, owner_id: row.user_id })),
+    ...(dms.data || []).map((row) => ({ entity_type: 'direct_message', entity_id: row.id, owner_id: row.sender_id })),
+    ...(comments.data || []).map((row) => ({ entity_type: 'post_comment', entity_id: row.id, owner_id: row.user_id })),
   ];
   if (!rows.length) return 0;
   const { error } = await db.from('zoe_search_index_queue').upsert(

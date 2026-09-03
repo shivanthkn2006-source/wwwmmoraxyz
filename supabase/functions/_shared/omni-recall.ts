@@ -37,6 +37,8 @@ const LABELS: Record<string, string> = {
   quote: 'Quote',
   profile: 'Member profile',
   chat: 'Past conversation',
+  direct_message: 'Direct message',
+  post_comment: 'Comment',
   dhf_node: 'DHF memory',
   dhf_post: 'DHF daily essay',
   dhf_video: 'DHF video',
