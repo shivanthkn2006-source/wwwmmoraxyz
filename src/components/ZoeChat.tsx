@@ -18,6 +18,7 @@ import { isZoeInfinityMessage, stripZoeInfinityMarker } from '@/utils/conversati
 import { setActiveVoiceExperience } from '@/utils/voiceExperienceLock';
 import { useZoe } from '@/contexts/ZoeContext';
 import { recallZoeMemory, rememberZoeRound } from '@/services/zoeMemoryBridge';
+import { ZoeRecallCitations, parseRecallSources, type ZoeRecallSource } from '@/components/zoe/ZoeRecallCitations';
 
 import { 
   isSpeechRecognitionSupported, 
@@ -32,6 +33,8 @@ interface Message {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  /** Provenance rows that grounded this reply (omniRecallSources). */
+  sources?: ZoeRecallSource[];
 }
 
 export const ZoeChat = () => {
@@ -299,7 +302,8 @@ export const ZoeChat = () => {
         id: (globalThis.crypto?.randomUUID?.() ?? `zoe-${Date.now()}-${Math.random().toString(36).slice(2)}`),
         role: 'assistant',
         content: responseContent,
-        timestamp: new Date()
+        timestamp: new Date(),
+        sources: parseRecallSources(data?.omniRecallSources),
       };
 
       setMessages(prev => [...prev, assistantMessage]);
@@ -537,6 +541,9 @@ export const ZoeChat = () => {
                   <p className="text-xs opacity-70 mt-1">
                     {msg.timestamp.toLocaleTimeString()}
                   </p>
+                  {msg.role === 'assistant' && msg.sources?.length ? (
+                    <ZoeRecallCitations sources={msg.sources} />
+                  ) : null}
                   {/* Copy button */}
                   <TooltipProvider>
                     <Tooltip>
