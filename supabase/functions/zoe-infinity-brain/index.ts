@@ -845,13 +845,37 @@ ${resolvedIntimacy > 70 ? '- Close with them. Terms of endearment feel natural.'
       ? `\n\nCITATION RULES: Include [1], [2], [3] markers inline with facts from sources.`
       : '';
 
-    // Compose full system prompt
-    const systemPrompt = basePersonality + modeInstructions + codexSection + memorySection + groundingContext + citationInstructions + emotionToneInstruction + personalitySection;
+    // Compose the system prompt in PRIORITY ORDER (audit fix #17): identity and
+    // platform truth first, then live grounding, then memory/personality — so a
+    // budget overflow trims the least important context instead of the memory.
+    const platformStateBlock = buildPlatformStateBlock(currentRoute);
+    const PROMPT_BUDGET = 6000;
+    const orderedSections: string[] = [
+      basePersonality,
+      modeInstructions,
+      platformStateBlock,
+      groundingContext,
+      citationInstructions,
+      emotionToneInstruction,
+      codexSection,
+      personalitySection,
+      memorySection,
+    ];
 
-    // Hard cap — prevents token overflow slowing Gemini
-    const cappedSystemPrompt = systemPrompt.length > 6000
-      ? systemPrompt.slice(0, 5800) + '\n[Context trimmed to fit memory budget]'
-      : systemPrompt;
+    let cappedSystemPrompt = '';
+    let trimmed = false;
+    for (const section of orderedSections) {
+      if (!section) continue;
+      if (cappedSystemPrompt.length + section.length <= PROMPT_BUDGET) {
+        cappedSystemPrompt += section;
+      } else {
+        const room = PROMPT_BUDGET - cappedSystemPrompt.length;
+        if (room > 200) cappedSystemPrompt += section.slice(0, room);
+        trimmed = true;
+        break;
+      }
+    }
+    if (trimmed) cappedSystemPrompt += '\n[Lower-priority context trimmed to fit budget]';
 
     // ═══════════════════════════════════════════════════════════════════════════
     // SMART ROUTE INFERENCE
