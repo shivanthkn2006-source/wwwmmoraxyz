@@ -128,22 +128,34 @@ export const BugReportPage: React.FC = () => {
     }
     setSending(true);
     try {
-      const { error } = await supabase.from('platform_error_logs').insert({
-        user_id: userId,
-        route: where.trim() || (typeof window !== 'undefined' ? window.location.pathname : null),
-        device_info: deviceInfo(),
-        zustand_state_snapshot: JSON.parse(
-          JSON.stringify({ current: usePlatformStore.getState().voiceStatus ?? null }),
-        ),
-        user_message: message.trim(),
-        category,
-        severity,
-      });
+      const { data: inserted, error } = await supabase
+        .from('platform_error_logs')
+        .insert({
+          user_id: userId,
+          route: where.trim() || (typeof window !== 'undefined' ? window.location.pathname : null),
+          device_info: deviceInfo(),
+          zustand_state_snapshot: JSON.parse(
+            JSON.stringify({ current: usePlatformStore.getState().voiceStatus ?? null }),
+          ),
+          user_message: message.trim(),
+          category,
+          severity,
+        })
+        .select('id')
+        .single();
       if (error) throw error;
-      toast.success('Report sent. Thank you — we captured the technical details.');
+      toast.success('Report sent. Auto-triage is analysing it now.');
       setMessage('');
       setWhere('');
+      // Fire-and-forget automated diagnosis; the row is already safely stored.
+      if (inserted?.id) {
+        void supabase.functions
+          .invoke('bug-report-pipeline', { body: { action: 'triage', report_id: inserted.id } })
+          .then(() => load(userId))
+          .catch((e) => console.warn('[BugReportPage] triage failed', e));
+      }
       await load(userId);
+
     } catch (e) {
       console.error('[BugReportPage] submit failed', e);
       toast.error('Could not send the report. Please try again.');
