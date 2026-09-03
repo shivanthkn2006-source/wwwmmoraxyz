@@ -1184,6 +1184,50 @@ export type Database = {
           },
         ]
       }
+      bug_report_audit_log: {
+        Row: {
+          action: string
+          actor_id: string | null
+          actor_label: string | null
+          created_at: string
+          from_status: string | null
+          id: string
+          note: string | null
+          report_id: string
+          to_status: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          actor_label?: string | null
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          note?: string | null
+          report_id: string
+          to_status?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          actor_label?: string | null
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          note?: string | null
+          report_id?: string
+          to_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bug_report_audit_log_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "platform_error_logs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaign_claims: {
         Row: {
           campaign_id: string
@@ -4971,6 +5015,10 @@ export type Database = {
       platform_error_logs: {
         Row: {
           admin_note: string | null
+          autofix_at: string | null
+          autofix_state: string
+          autofix_suggestion: string | null
+          autofix_summary: string | null
           category: string
           created_at: string
           device_info: Json
@@ -4984,6 +5032,10 @@ export type Database = {
         }
         Insert: {
           admin_note?: string | null
+          autofix_at?: string | null
+          autofix_state?: string
+          autofix_suggestion?: string | null
+          autofix_summary?: string | null
           category?: string
           created_at?: string
           device_info?: Json
@@ -4997,6 +5049,10 @@ export type Database = {
         }
         Update: {
           admin_note?: string | null
+          autofix_at?: string | null
+          autofix_state?: string
+          autofix_suggestion?: string | null
+          autofix_summary?: string | null
           category?: string
           created_at?: string
           device_info?: Json
