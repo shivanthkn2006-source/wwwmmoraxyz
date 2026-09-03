@@ -265,6 +265,36 @@ Deno.serve(async (req) => {
     degraded.push('memory_write_failed');
   }
 
+  // 4b. Consciousness memory RECALL.
+  // Audit fix (SEP03): memory was written on every call and never read back, so
+  // the DHF brain was permanently amnesiac. Recent categories + concepts now
+  // return to the caller and shape the archetype context.
+  const { data: recalled } = await admin
+    .from('dhf_consciousness_memory')
+    .select('category, raw_query, extracted_concepts, archetype_influence, created_at')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false })
+    .limit(8);
+
+  const recentMemory = (recalled ?? []).map((m) => ({
+    category: m.category as string,
+    query: m.raw_query as string,
+    concepts: (m.extracted_concepts ?? []) as string[],
+    archetype: m.archetype_influence as string,
+    at: m.created_at as string,
+  }));
+  const recurringConcepts = Array.from(
+    recentMemory.reduce((acc, m) => {
+      for (const c of m.concepts) acc.set(c, (acc.get(c) ?? 0) + 1);
+      return acc;
+    }, new Map<string, number>()),
+  )
+    .filter(([, n]) => n > 1)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+    .map(([c]) => c);
+
+
   // 5. Feed injection (opt-out via injectFeed: false)
   const feed: FeedResult = body.injectFeed === false
     ? { injected: 0, reason: 'skipped', retryable: false }
