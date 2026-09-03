@@ -12,7 +12,9 @@
  * - Filters Parent Zoe complexity into actionable advice
  */
 
-import { parentZoeCore, UniversalState } from './ParentZoeCore';
+// ParentZoeCore is no longer imported here: parent consultation now goes
+// through the real `parent-zoe-executor` edge function (audit fix SEP03).
+
 import { supabase } from '@/integrations/supabase/client';
 
 // Soul Codex - The user's memory and identity
