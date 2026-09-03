@@ -6,6 +6,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { publicGuard } from '../_shared/public-guard.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -32,6 +33,9 @@ function deriveThrottle(dbPercent: number): { active: boolean; level: string } {
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  const guard = await publicGuard(req, { name: 'zoe-infinity-quota-monitor', limit: 30, windowSeconds: 60, maxBodyBytes: 512 * 1024, allowRichText: true });
+  if (guard.response) return guard.response;
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;

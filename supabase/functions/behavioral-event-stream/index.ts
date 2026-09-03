@@ -5,6 +5,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { publicGuard } from '../_shared/public-guard.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -128,6 +129,9 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const guard = await publicGuard(req, { name: 'behavioral-event-stream', limit: 120, windowSeconds: 60, maxBodyBytes: 512 * 1024, allowRichText: true });
+  if (guard.response) return guard.response;
+
   try {
     const authHeader = req.headers.get('Authorization');
     
@@ -170,7 +174,7 @@ serve(async (req) => {
       });
     }
 
-    const { events, process_ecn = true }: BatchEventRequest = await req.json();
+    const { events, process_ecn = true }: BatchEventRequest = (guard.body as any);
 
     if (!events || !Array.isArray(events) || events.length === 0) {
       return new Response(JSON.stringify({ error: 'No events provided' }), {

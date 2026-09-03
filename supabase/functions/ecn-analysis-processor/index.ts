@@ -7,6 +7,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sovereignFetch, sovereignKey } from "../_shared/sovereign-ai.ts";
+import { publicGuard } from '../_shared/public-guard.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -88,6 +89,9 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const guard = await publicGuard(req, { name: 'ecn-analysis-processor', limit: 60, windowSeconds: 60, maxBodyBytes: 512 * 1024, allowRichText: true });
+  if (guard.response) return guard.response;
+
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
@@ -126,7 +130,7 @@ serve(async (req) => {
       });
     }
 
-    const { events, queue_id } = await req.json();
+    const { events, queue_id } = (guard.body as any);
 
     if (!events || !Array.isArray(events) || events.length === 0) {
       return new Response(JSON.stringify({ error: 'No events provided' }), {
