@@ -17,6 +17,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4';
 import { embedText } from '../_shared/zoe-embeddings.ts';
 import { getDailyArchetype } from '../_shared/day-lord.ts';
+import { omniRecall } from '../_shared/omni-recall.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -295,6 +296,15 @@ Deno.serve(async (req) => {
     .map(([c]) => c);
 
 
+  // 4c. Omni-graph recall — same shared retrieval path as the other brains.
+  let omniHits: Awaited<ReturnType<typeof omniRecall>> = [];
+  try {
+    omniHits = await omniRecall(authHeader, query, 8);
+  } catch (recallError) {
+    console.warn('[zoe-dhf-brain] omni recall failed:', recallError instanceof Error ? recallError.message : recallError);
+    degraded.push('omni_recall_failed');
+  }
+
   // 5. Feed injection (opt-out via injectFeed: false)
   const feed: FeedResult = body.injectFeed === false
     ? { injected: 0, reason: 'skipped', retryable: false }
@@ -314,6 +324,14 @@ Deno.serve(async (req) => {
     memoryStored: !memError,
     recentMemory,
     recurringConcepts,
+    omniRecall: omniHits.map((h) => ({
+      entityType: h.entityType,
+      entityId: h.entityId,
+      content: h.content,
+      score: h.score,
+      createdAt: h.createdAt,
+      stale: h.stale,
+    })),
     feed,
     degraded,
 

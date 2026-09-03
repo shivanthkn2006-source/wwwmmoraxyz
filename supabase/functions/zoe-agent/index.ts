@@ -8,6 +8,7 @@ import {
   createErrorResponse
 } from "../_shared/ai-telemetry.ts";
 import { clientErrorResponse } from '../_shared/client-error.ts';
+import { omniRecall, buildOmniRecallBlock } from '../_shared/omni-recall.ts';
 
 // Enhanced cognitive architecture tools for superior reasoning
 const advancedTools = [
@@ -267,11 +268,22 @@ Execute tools proactively when they would improve your response quality.
 
 Remember: You are not just answering questions—you are genuinely helping someone achieve their goals. Make every interaction count.`;
 
+    // OMNI-GRAPH RECALL — platform knowledge under the caller's own JWT/RLS.
+    let omniRecallBlock = '';
+    try {
+      const hits = await omniRecall(req.headers.get('Authorization') || '', command, 8);
+      omniRecallBlock = buildOmniRecallBlock(hits);
+      console.log('Zoe Agent omni recall hits:', hits.length);
+    } catch (recallError) {
+      console.warn('Zoe Agent omni recall skipped:', recallError instanceof Error ? recallError.message : recallError);
+    }
+    const groundedSystemPrompt = `${systemPrompt}${omniRecallBlock}`;
+
     // Sovereign Groq call (supports OpenAI-style tool calling). Falls back to 8B on 70B failure.
     const groqBody = (model: string) => JSON.stringify({
       model,
       messages: [
-        { role: 'system', content: systemPrompt },
+        { role: 'system', content: groundedSystemPrompt },
         { role: 'user', content: command }
       ],
       tools: advancedTools,

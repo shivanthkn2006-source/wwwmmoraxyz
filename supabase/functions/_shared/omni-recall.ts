@@ -5,15 +5,28 @@
  * matter which backend answers. The query runs through the caller's JWT (never
  * the service role) so Postgres RLS decides what the user may see: their own
  * rows, public rows, and friends' rows. No client-side privacy filtering.
+ *
+ * Ranking pipeline (SEP03 upgrade):
+ *   1. RLS-safe hybrid retrieval (vector + full-text RRF) with over-fetch.
+ *   2. Rerank: hybrid score x recency decay x temporal-validity x type prior.
+ *   3. Diversity: cap per entity type so one content family cannot flood recall.
+ *   4. Provenance: every hit carries type + id + date for citation.
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.58.0';
 import { embedText } from './zoe-embeddings.ts';
+import { ageInDays, isStale, rerankRecallHits } from './omni-rank.ts';
+
+export { rerankRecallHits };
 
 export type OmniRecallHit = {
   entityType: string;
   entityId: string;
   content: string;
   score: number;
+  rawScore: number;
+  createdAt: string | null;
+  ageDays: number | null;
+  stale: boolean;
   metadata: Record<string, unknown>;
 };
 
@@ -43,6 +56,8 @@ export async function omniRecall(
   const term = (query || '').trim();
   if (!url || !anon || !authHeader || term.length < 3) return [];
 
+  const limit = Math.max(1, Math.min(matchCount, 25));
+
   try {
     const embedding = await embedText(term.slice(0, 2000));
     if (!embedding) return [];
@@ -53,19 +68,36 @@ export async function omniRecall(
     const { data, error } = await db.rpc('zoe_hybrid_search', {
       query_embedding: JSON.stringify(embedding),
       query_text: term.slice(0, 500),
-      match_count: Math.max(1, Math.min(matchCount, 25)),
+      // Over-fetch so the reranker has room to trade relevance for freshness
+      // and type diversity without starving the final set.
+      match_count: Math.min(50, limit * 3),
     });
     if (error) {
       console.warn('[omni-recall] search failed:', error.message);
       return [];
     }
-    return (data || []).map((row: Record<string, unknown>) => ({
-      entityType: String(row.entity_type || 'unknown'),
-      entityId: String(row.entity_id || ''),
-      content: String(row.content_synthesis || '').slice(0, 600),
-      score: Number(row.score || 0),
-      metadata: (row.metadata as Record<string, unknown>) || {},
-    }));
+
+    const hits: OmniRecallHit[] = (data || []).map((row: Record<string, unknown>) => {
+      const entityType = String(row.entity_type || 'unknown');
+      const metadata = (row.metadata as Record<string, unknown>) || {};
+      const createdAt =
+        (typeof row.created_at === 'string' ? row.created_at : null) ||
+        (typeof metadata.createdAt === 'string' ? metadata.createdAt : null);
+      const age = ageInDays(createdAt);
+      return {
+        entityType,
+        entityId: String(row.entity_id || ''),
+        content: String(row.content_synthesis || '').slice(0, 600),
+        rawScore: Number(row.score || 0),
+        score: Number(row.score || 0),
+        createdAt,
+        ageDays: age,
+        stale: isStale(entityType, age),
+        metadata,
+      };
+    });
+
+    return rerankRecallHits(hits, limit);
   } catch (error) {
     console.warn('[omni-recall] unavailable:', error instanceof Error ? error.message : error);
     return [];
@@ -77,8 +109,10 @@ export function buildOmniRecallBlock(hits: OmniRecallHit[]): string {
   if (!hits.length) return '';
   const lines = hits.map((hit, index) => {
     const label = LABELS[hit.entityType] || hit.entityType;
-    const when = typeof hit.metadata?.createdAt === 'string' ? ` (${String(hit.metadata.createdAt).slice(0, 10)})` : '';
-    return `(${index + 1}) [${label}${when}] ${hit.content.replace(/\s+/g, ' ').trim()}`;
+    const when = hit.createdAt ? ` ${hit.createdAt.slice(0, 10)}` : '';
+    const staleTag = hit.stale ? ' · HISTORICAL, no longer current' : '';
+    const ref = hit.entityId ? ` ref:${hit.entityType}/${hit.entityId.slice(0, 8)}` : '';
+    return `(${index + 1}) [${label}${when}${staleTag}${ref}] ${hit.content.replace(/\s+/g, ' ').trim()}`;
   });
-  return `\n\n═══ OMNI-GRAPH RECALL (this platform's own knowledge) ═══\n${lines.join('\n')}\n═══════════════════════════════════════\nUse these platform facts before any outside knowledge. Never invent platform content that is not listed here.`;
+  return `\n\n═══ OMNI-GRAPH RECALL (this platform's own knowledge) ═══\n${lines.join('\n')}\n═══════════════════════════════════════\nUse these platform facts before any outside knowledge. Never invent platform content that is not listed here. Items marked HISTORICAL describe a past day — never present them as today's content.`;
 }
