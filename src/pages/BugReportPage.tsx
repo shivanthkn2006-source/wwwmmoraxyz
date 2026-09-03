@@ -299,11 +299,17 @@ export const BugReportPage: React.FC = () => {
                     {r.route ? <span className="text-muted-foreground">· {r.route}</span> : null}
                   </div>
                   <p className="whitespace-pre-wrap text-sm">{r.user_message || '(no description)'}</p>
+                  {r.autofix_summary ? (
+                    <p className="rounded-md bg-muted/50 p-2 text-xs text-muted-foreground">
+                      Auto-triage: {r.autofix_summary}
+                    </p>
+                  ) : null}
                   {r.admin_note ? (
                     <p className="rounded-md bg-muted/50 p-2 text-xs text-muted-foreground">
                       Team note: {r.admin_note}
                     </p>
                   ) : null}
+
                 </CardContent>
               </Card>
             </li>
