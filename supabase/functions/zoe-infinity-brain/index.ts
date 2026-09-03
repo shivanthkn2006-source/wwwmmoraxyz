@@ -13,6 +13,7 @@ import {
   parseRelationshipStyle,
 } from "../_shared/zoe-relationship-core.ts";
 import { clientErrorResponse } from '../_shared/client-error.ts';
+import { buildPlatformStateBlock, PLATFORM_STATE_VERSION } from '../_shared/platform-state.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -244,26 +245,29 @@ function getProviderChain(task: TaskType, systemPrompt: string, messages: Messag
   // OpenRouter: Free tier → Emergency fallback
   // Lovable: Last resort
 
+  // Audit fix (#19): the Lovable tier always returned null — removed from every chain.
+  void lovable;
+
   switch (task) {
     // Vision — Gemini best for multimodal, Gemma4 backup
     case 'vision':
-      return [gemini, gemma4, groq, openrouter, lovable];
-    
+      return [gemini, gemma4, groq, openrouter];
+
     // Identity probes — Gemma4 primary (best system prompt obedience)
     case 'identity_probe':
-      return [gemma4, gemini, groq, openrouter, lovable];
-    
+      return [gemma4, gemini, groq, openrouter];
+
     // Deep reasoning — Gemma4 primary, Gemini secondary
     case 'reasoning':
-      return [gemma4, gemini, groq, openrouter, lovable];
-    
+      return [gemma4, gemini, groq, openrouter];
+
     // Grounding/facts — Gemini primary (best for search/facts), Groq speed backup
     case 'grounding':
-      return [gemini, gemma4, groq, openrouter, lovable];
-    
+      return [gemini, gemma4, groq, openrouter];
+
     // Simple casual chat — Groq PRIMARY (fastest, highest free quota)
     case 'simple_chat':
-      return [groq, gemma4, gemini, openrouter, lovable];
+      return [groq, gemma4, gemini, openrouter];
   }
 }
 
@@ -472,11 +476,53 @@ function needsExternalData(query: string): boolean {
   return groundingPatterns.some(p => p.test(query));
 }
 
+/**
+ * Audit fix (#16): grounding used to ask an LLM to invent "plausible" URLs, so
+ * citations could point at pages that do not exist. Real retrieval now runs
+ * first through the platform's own `external-search` lanes; the LLM path is
+ * only a degraded fallback and is explicitly marked as unverified.
+ */
+async function searchWebReal(query: string): Promise<Citation[]> {
+  try {
+    const base = Deno.env.get("SUPABASE_URL");
+    const anon = Deno.env.get("SUPABASE_ANON_KEY");
+    if (!base || !anon) return [];
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 9000);
+    const resp = await fetch(`${base}/functions/v1/external-search`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: anon, Authorization: `Bearer ${anon}` },
+      body: JSON.stringify({ query }),
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+    if (!resp.ok) return [];
+    const data = await resp.json();
+    const results: any[] = Array.isArray(data?.results) ? data.results : [];
+    return results
+      .filter((r) => typeof r?.url === 'string' && /^https?:\/\//.test(r.url))
+      .slice(0, 5)
+      .map((r, idx) => ({
+        id: idx + 1,
+        url: r.url as string,
+        title: String(r.title ?? 'Result'),
+        snippet: String(r.subtitle ?? r.description ?? ''),
+        domain: (() => { try { return new URL(r.url).hostname; } catch { return ''; } })(),
+      }));
+  } catch (e) {
+    console.warn('[search:external] failed:', e);
+    return [];
+  }
+}
+
 async function searchWeb(query: string): Promise<Citation[]> {
+  const real = await searchWebReal(query);
+  if (real.length > 0) return real;
+
   const searchPrompt = `You are a search engine. For the query: "${query}"
 Return EXACTLY 3 relevant search results in this JSON format:
 [{"title": "Result Title", "url": "https://example.com/page", "snippet": "Brief relevant excerpt...", "domain": "example.com"}]
-Be factual. Use real, plausible URLs from authoritative sources. Return ONLY the JSON array.`;
+Only return results you are confident actually exist. Return ONLY the JSON array.`;
 
   // Try Gemini first for search (best quality), then Groq (fastest)
   const googleKey = Deno.env.get("GOOGLE_AI_STUDIO_KEY");
@@ -574,7 +620,7 @@ serve(async (req: Request) => {
   }
 
   try {
-    const { messages, mode, soulCodex, memoryContext, enableGrounding = true, emotionContext, intimacyLevel, clientTime, personalityMatrix } = await req.json() as {
+    const { messages, mode, soulCodex, memoryContext, enableGrounding = true, emotionContext, intimacyLevel, clientTime, personalityMatrix, currentRoute } = await req.json() as {
       messages: Message[];
       mode: IntelligenceMode;
       soulCodex?: string;
@@ -584,6 +630,7 @@ serve(async (req: Request) => {
       intimacyLevel?: number;
       clientTime?: ClientTimeContext;
       personalityMatrix?: PersonalityMatrixInput;
+      currentRoute?: string;
     };
 
     const lastUserMessage = [...messages].reverse().find(m => m.role === 'user')?.content || '';
@@ -800,13 +847,37 @@ ${resolvedIntimacy > 70 ? '- Close with them. Terms of endearment feel natural.'
       ? `\n\nCITATION RULES: Include [1], [2], [3] markers inline with facts from sources.`
       : '';
 
-    // Compose full system prompt
-    const systemPrompt = basePersonality + modeInstructions + codexSection + memorySection + groundingContext + citationInstructions + emotionToneInstruction + personalitySection;
+    // Compose the system prompt in PRIORITY ORDER (audit fix #17): identity and
+    // platform truth first, then live grounding, then memory/personality — so a
+    // budget overflow trims the least important context instead of the memory.
+    const platformStateBlock = buildPlatformStateBlock(currentRoute);
+    const PROMPT_BUDGET = 6000;
+    const orderedSections: string[] = [
+      basePersonality,
+      modeInstructions,
+      platformStateBlock,
+      groundingContext,
+      citationInstructions,
+      emotionToneInstruction,
+      codexSection,
+      personalitySection,
+      memorySection,
+    ];
 
-    // Hard cap — prevents token overflow slowing Gemini
-    const cappedSystemPrompt = systemPrompt.length > 6000
-      ? systemPrompt.slice(0, 5800) + '\n[Context trimmed to fit memory budget]'
-      : systemPrompt;
+    let cappedSystemPrompt = '';
+    let trimmed = false;
+    for (const section of orderedSections) {
+      if (!section) continue;
+      if (cappedSystemPrompt.length + section.length <= PROMPT_BUDGET) {
+        cappedSystemPrompt += section;
+      } else {
+        const room = PROMPT_BUDGET - cappedSystemPrompt.length;
+        if (room > 200) cappedSystemPrompt += section.slice(0, room);
+        trimmed = true;
+        break;
+      }
+    }
+    if (trimmed) cappedSystemPrompt += '\n[Lower-priority context trimmed to fit budget]';
 
     // ═══════════════════════════════════════════════════════════════════════════
     // SMART ROUTE INFERENCE
@@ -829,6 +900,7 @@ ${resolvedIntimacy > 70 ? '- Close with them. Terms of endearment feel natural.'
         mode,
         latencyMs,
         codexInjected: !!soulCodex,
+        platformStateVersion: PLATFORM_STATE_VERSION,
         grounded: citations.length > 0,
         citations,
         emotionAttuned,
