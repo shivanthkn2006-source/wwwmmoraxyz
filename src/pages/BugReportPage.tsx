@@ -12,6 +12,8 @@ import { ArrowLeft, Bug, Loader2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { usePlatformStore } from '@/store/usePlatformStore';
+import { useIsAdmin } from '@/hooks/useIsAdmin';
+import BugReportInbox from '@/components/admin/BugReportInbox';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -84,6 +86,7 @@ export const BugReportPage: React.FC = () => {
   const [sending, setSending] = useState(false);
   const [rows, setRows] = useState<ReportRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const isAdmin = useIsAdmin();
 
   const load = useCallback(async (uid: string) => {
     setLoading(true);
@@ -293,6 +296,8 @@ export const BugReportPage: React.FC = () => {
           ))}
         </ul>
       )}
+
+      {isAdmin ? <BugReportInbox /> : null}
     </div>
   );
 };
