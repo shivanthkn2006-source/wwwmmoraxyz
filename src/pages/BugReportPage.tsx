@@ -86,6 +86,7 @@ export const BugReportPage: React.FC = () => {
   const [sending, setSending] = useState(false);
   const [rows, setRows] = useState<ReportRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const isAdmin = useIsAdmin();
 
   const load = useCallback(async (uid: string) => {
     setLoading(true);
