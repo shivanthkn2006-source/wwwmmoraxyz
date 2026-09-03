@@ -406,6 +406,7 @@ Remember: You are not just answering questions—you are genuinely helping someo
       JSON.stringify({
         message: aiMessage.content || 'Task analysis complete. Ready for next instruction.',
         toolCalls: executedTools,
+        omniRecallSources,
         reasoning: executedTools.length > 0 ? 'Applied cognitive tools for enhanced analysis' : null,
         agentMode: true,
         intelligence_level: 'advanced'
