@@ -309,10 +309,13 @@ Deno.serve(async (req) => {
     isDefaultQuery,
     dailyTelemetry,
 
-    natalAlignment: profile?.natal_chart ?? null,
+    natalAlignment: null,
     hasProfile: Boolean(profile?.birth_date),
     memoryStored: !memError,
+    recentMemory,
+    recurringConcepts,
     feed,
     degraded,
+
   });
 });
