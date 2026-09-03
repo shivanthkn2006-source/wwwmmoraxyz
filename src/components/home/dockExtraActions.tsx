@@ -35,6 +35,7 @@ import {
   FileSearch,
   Clock,
   Bot,
+  Bug,
 } from 'lucide-react';
 import type { GlassDockItem } from '@/components/home/HomeGlassDock';
 
@@ -49,7 +50,8 @@ interface ExtraDef {
 
 /** Ordered by usefulness — the dock trims from the end when space runs out. */
 export const DOCK_EXTRA_DEFS: ExtraDef[] = [
-  { id: 'dock-compass', label: "Zoe's Daily Compass", route: '/compass', Icon: Compass },
+  { id: 'dock-compass', label: 'DHF Neural Feed', route: '/compass', Icon: Compass },
+  { id: 'dock-bug-report', label: 'Report a problem', route: '/bug-report', Icon: Bug },
   { id: 'dock-timeline', label: 'Universal timeline', route: '/universal-timeline', Icon: History },
   { id: 'dock-voice-commands', label: 'Voice commands', route: '/voice-commands', Icon: Mic },
   { id: 'dock-zoe-astro', label: 'Zoe Astro', route: '/zoe-astro', Icon: Star },
