@@ -51,6 +51,8 @@ interface ReportRow {
   severity: string | null;
   status: string | null;
   admin_note: string | null;
+  autofix_state?: string | null;
+  autofix_summary?: string | null;
 }
 
 function deviceInfo() {
@@ -92,7 +94,7 @@ export const BugReportPage: React.FC = () => {
     setLoading(true);
     const { data, error } = await supabase
       .from('platform_error_logs')
-      .select('id, created_at, route, user_message, category, severity, status, admin_note')
+      .select('id, created_at, route, user_message, category, severity, status, admin_note, autofix_state, autofix_summary')
       .eq('user_id', uid)
       .order('created_at', { ascending: false })
       .limit(50);
