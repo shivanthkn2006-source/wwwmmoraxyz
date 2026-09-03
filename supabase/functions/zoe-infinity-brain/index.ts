@@ -492,7 +492,7 @@ async function searchWebReal(query: string): Promise<Citation[]> {
     const resp = await fetch(`${base}/functions/v1/external-search`, {
       method: "POST",
       headers: { "Content-Type": "application/json", apikey: anon, Authorization: `Bearer ${anon}` },
-      body: JSON.stringify({ term: query }),
+      body: JSON.stringify({ query }),
       signal: controller.signal,
     });
     clearTimeout(timer);
