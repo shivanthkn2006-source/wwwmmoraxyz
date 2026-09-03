@@ -238,9 +238,27 @@ export const ZoeChat = () => {
       console.log('[ZoeChat] Sending time context:', { formattedTime, userTimezone, timeOfDay });
 
       // Call Zoe chat function with enhanced context
+      // Audit fix (SEP03): this surface used to send zero long-term memory, so
+      // Zoe was amnesiac here while remembering everything in the orb panel.
+      const memoryRecall = await recallZoeMemory({
+        query: text.trim(),
+        sessionKey: `zoe-chat-${user?.id ?? 'anon'}`,
+        userId: user?.id,
+      });
+
       const { data, error: chatError } = await supabase.functions.invoke('zoe-chat', {
         body: {
-          messages: [...conversationHistory, { role: 'user', content: text.trim() }],
+          messages: [
+            ...(memoryRecall.context
+              ? [{
+                  role: 'system',
+                  content: `Long-term memory about this user (${memoryRecall.source}):\n${memoryRecall.context}`,
+                }]
+              : []),
+            ...conversationHistory,
+            { role: 'user', content: text.trim() },
+          ],
+
           soulMetrics: { 
             intimacy: 75, 
             selfHarmony: 80, 
@@ -265,9 +283,11 @@ export const ZoeChat = () => {
         throw new Error(chatError.message || 'Failed to get response');
       }
 
-      // Handle response - filter through NeuroSymbolic Guard
-      const rawContent = data?.message || data?.response || "I'm here to help. Could you please try again?";
+      // Audit fix (SEP03): an empty/malformed backend payload used to be shown
+      // as an in-character reply, hiding provider failures. It now surfaces.
+      const rawContent = data?.message || data?.response || '';
       const responseContent = guardResponse(rawContent).safeResponse;
+
       
       if (!responseContent || responseContent.trim() === '') {
         throw new Error('Empty response from Zoe');
@@ -284,6 +304,15 @@ export const ZoeChat = () => {
 
       // Save assistant response
       await saveMessageToDb('assistant', responseContent);
+
+      // Persist the round into long-term memory (same store the orb uses).
+      void rememberZoeRound({
+        userId: user?.id,
+        sessionKey: `zoe-chat-${user?.id ?? 'anon'}`,
+        userText: text.trim(),
+        assistantText: responseContent,
+      });
+
 
       // Speak the response if voice mode is enabled
       if (voiceMode && responseContent) {

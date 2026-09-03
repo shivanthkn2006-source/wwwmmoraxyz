@@ -186,15 +186,18 @@ export const ZoeProvider = ({ children }: { children: ReactNode }) => {
             sessionStorage.setItem('zoe_ghost_connected', 'true');
             console.log('[ZoeCore] Ghost Network connected:', data.mode);
           } else {
-            console.log('[ZoeCore] Ghost Network fallback to local phantom');
-            setIsGhostNetworkActive(true);
-            sessionStorage.setItem('zoe_ghost_connected', 'true');
+            // Audit fix (SEP03): a failed connect used to be reported as
+            // "connected" and cached for the session, so nothing ever retried.
+            console.warn('[ZoeCore] Ghost Network connect failed', error?.message ?? 'no connection');
+            setIsGhostNetworkActive(false);
+            sessionStorage.removeItem('zoe_ghost_connected');
           }
         } catch (err) {
-          console.log('[ZoeCore] Ghost Network local mode active');
-          setIsGhostNetworkActive(true);
-          sessionStorage.setItem('zoe_ghost_connected', 'true');
+          console.warn('[ZoeCore] Ghost Network unreachable', err);
+          setIsGhostNetworkActive(false);
+          sessionStorage.removeItem('zoe_ghost_connected');
         }
+
       }, 2000);
 
       // Refresh status every 60 seconds

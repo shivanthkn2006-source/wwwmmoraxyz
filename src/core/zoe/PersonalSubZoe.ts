@@ -12,7 +12,9 @@
  * - Filters Parent Zoe complexity into actionable advice
  */
 
-import { parentZoeCore, UniversalState } from './ParentZoeCore';
+// ParentZoeCore is no longer imported here: parent consultation now goes
+// through the real `parent-zoe-executor` edge function (audit fix SEP03).
+
 import { supabase } from '@/integrations/supabase/client';
 
 // Soul Codex - The user's memory and identity
@@ -127,6 +129,9 @@ class PersonalSubZoe {
   private config: PersonalZoeConfig;
   private responseHistory: PersonalZoeResponse[];
   private isInitialized: boolean = false;
+  /** True when init fell back to defaults because the codex/profile load failed. */
+  public initializationDegraded: boolean = false;
+
 
   constructor(config: PersonalZoeConfig) {
     this.userId = config.userId;
@@ -204,11 +209,15 @@ class PersonalSubZoe {
       
       return true;
     } catch (error) {
+      // Audit fix (SEP03): this used to report success on failure, hiding the
+      // fact that Zoe was running on defaults instead of the user's real codex.
       console.error(`[PERSONAL ZOE ${this.userId}] Initialization error:`, error);
-      this.isInitialized = true; // Continue with defaults
-      return true;
+      this.isInitialized = true; // usable, but degraded
+      this.initializationDegraded = true;
+      return false;
     }
   }
+
 
   /**
    * Process a message through Personal Zoe
@@ -272,19 +281,22 @@ class PersonalSubZoe {
    * Consult Parent Zoe for complex queries
    */
   private async consultParentZoe(message: string): Promise<string> {
+    // Audit fix (SEP03): this used to fabricate a "cosmic alignment" sentence
+    // instead of consulting anything. It now calls the real executor and
+    // returns an empty insight (no fabrication) when the call fails.
     try {
-      // In production, this would call the parent-zoe-executor edge function
-      const universalState = parentZoeCore.getUniversalState();
-      
-      // Simulate Parent Zoe consultation
-      return `Universal insight: Based on the Master Timeline and current cosmic alignments, 
-        there are ${universalState.butterflyEffects.length} active butterfly effects affecting this query. 
-        Proceeding with filtered guidance optimized for ${this.soulCodex.userName}.`;
+      const { data, error } = await supabase.functions.invoke('parent-zoe-executor', {
+        body: { message, userId: this.userId, source: 'personal-sub-zoe' },
+      });
+      if (error) throw error;
+      const insight = (data?.response ?? data?.message ?? data?.insight) as string | undefined;
+      return typeof insight === 'string' && insight.trim() ? insight.trim() : '';
     } catch (error) {
       console.error('[PERSONAL ZOE] Parent consultation error:', error);
-      return 'Proceeding with local analysis.';
+      return '';
     }
   }
+
 
   /**
    * Generate personalized response

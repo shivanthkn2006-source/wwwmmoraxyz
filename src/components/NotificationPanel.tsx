@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bell, Check, X, Filter, UserPlus, Heart, MessageCircle, Star, UserCheck, MapPin } from 'lucide-react';
+import { Bell, Check, X, Filter, UserPlus, Heart, MessageCircle, Star, UserCheck, MapPin, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -112,9 +112,15 @@ const NotificationPanel = () => {
 
   const handleNotificationClick = (notification: Notification) => {
     markAsRead(notification.id);
-    
+
+    // Audit fix (SEP03): DHF essay + growth notifications carry their target in
+    // context_data.route (post_id is null), so clicking them used to do nothing.
+    const route = (notification.context_data as { route?: string } | null)?.route;
+
     if (notification.post_id) {
       navigate(`/profile?post=${notification.post_id}`);
+    } else if (typeof route === 'string' && route.startsWith('/')) {
+      navigate(route);
     } else if (notification.type === 'friend_request') {
       navigate('/huddle');
     }
@@ -131,9 +137,11 @@ const NotificationPanel = () => {
       case 'comment_reply': return <MessageCircle className="w-4 h-4" />;
       case 'tier_upgrade': return <Star className="w-4 h-4" />;
       case 'user_online': return <MapPin className="w-4 h-4" />;
+      case 'dhf_essay': return <BookOpen className="w-4 h-4" />;
       default: return <Bell className="w-4 h-4" />;
     }
   };
+
 
   const getNotificationMessage = (notification: Notification) => {
     const contextData = notification.context_data;
