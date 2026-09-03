@@ -421,7 +421,7 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
           <div className="flex w-7 shrink-0 flex-col items-center gap-1 pt-1">
             <button
               type="button"
-              aria-label="Close home search"
+              aria-label="Dismiss search panel"
               tabIndex={searchOpen ? 0 : -1}
               onClick={() => setSearchOpen(false)}
               className="rounded-full bg-transparent p-0.5 text-white/70 transition hover:text-white focus-visible:outline-none"
