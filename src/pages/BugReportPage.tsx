@@ -51,6 +51,8 @@ interface ReportRow {
   severity: string | null;
   status: string | null;
   admin_note: string | null;
+  autofix_state?: string | null;
+  autofix_summary?: string | null;
 }
 
 function deviceInfo() {
@@ -92,7 +94,7 @@ export const BugReportPage: React.FC = () => {
     setLoading(true);
     const { data, error } = await supabase
       .from('platform_error_logs')
-      .select('id, created_at, route, user_message, category, severity, status, admin_note')
+      .select('id, created_at, route, user_message, category, severity, status, admin_note, autofix_state, autofix_summary')
       .eq('user_id', uid)
       .order('created_at', { ascending: false })
       .limit(50);
@@ -128,22 +130,34 @@ export const BugReportPage: React.FC = () => {
     }
     setSending(true);
     try {
-      const { error } = await supabase.from('platform_error_logs').insert({
-        user_id: userId,
-        route: where.trim() || (typeof window !== 'undefined' ? window.location.pathname : null),
-        device_info: deviceInfo(),
-        zustand_state_snapshot: JSON.parse(
-          JSON.stringify({ current: usePlatformStore.getState().voiceStatus ?? null }),
-        ),
-        user_message: message.trim(),
-        category,
-        severity,
-      });
+      const { data: inserted, error } = await supabase
+        .from('platform_error_logs')
+        .insert({
+          user_id: userId,
+          route: where.trim() || (typeof window !== 'undefined' ? window.location.pathname : null),
+          device_info: deviceInfo(),
+          zustand_state_snapshot: JSON.parse(
+            JSON.stringify({ current: usePlatformStore.getState().voiceStatus ?? null }),
+          ),
+          user_message: message.trim(),
+          category,
+          severity,
+        })
+        .select('id')
+        .single();
       if (error) throw error;
-      toast.success('Report sent. Thank you — we captured the technical details.');
+      toast.success('Report sent. Auto-triage is analysing it now.');
       setMessage('');
       setWhere('');
+      // Fire-and-forget automated diagnosis; the row is already safely stored.
+      if (inserted?.id) {
+        void supabase.functions
+          .invoke('bug-report-pipeline', { body: { action: 'triage', report_id: inserted.id } })
+          .then(() => load(userId))
+          .catch((e) => console.warn('[BugReportPage] triage failed', e));
+      }
       await load(userId);
+
     } catch (e) {
       console.error('[BugReportPage] submit failed', e);
       toast.error('Could not send the report. Please try again.');
@@ -285,11 +299,17 @@ export const BugReportPage: React.FC = () => {
                     {r.route ? <span className="text-muted-foreground">· {r.route}</span> : null}
                   </div>
                   <p className="whitespace-pre-wrap text-sm">{r.user_message || '(no description)'}</p>
+                  {r.autofix_summary ? (
+                    <p className="rounded-md bg-muted/50 p-2 text-xs text-muted-foreground">
+                      Auto-triage: {r.autofix_summary}
+                    </p>
+                  ) : null}
                   {r.admin_note ? (
                     <p className="rounded-md bg-muted/50 p-2 text-xs text-muted-foreground">
                       Team note: {r.admin_note}
                     </p>
                   ) : null}
+
                 </CardContent>
               </Card>
             </li>
