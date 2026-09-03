@@ -172,6 +172,9 @@ export const useBehavioralTelemetry = (): TelemetryHookReturn => {
     isTrackingRef.current = false;
     const finalTelemetry = calculateTelemetry();
     setTelemetry(finalTelemetry);
+    // Persist the round into the user's rolling behavioural fingerprint.
+    // Fire-and-forget: never blocks or breaks the typing path.
+    void persistBehavioralFingerprint(finalTelemetry).catch(() => undefined);
     return finalTelemetry;
   }, [calculateTelemetry]);
 
