@@ -19,7 +19,10 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
       - name: Typecheck
-        run: bunx tsc -p tsconfig.app.json --noEmit
+        # tsconfig.app.json targets ignoreDeprecations "6.0", which classic tsc
+        # 5.x rejects — the native preview compiler is the one the preview uses.
+        run: bunx --package @typescript/native-preview tsgo -p tsconfig.app.json --noEmit
+
       - name: Unit tests
         run: bunx vitest run
       - name: Vite build
