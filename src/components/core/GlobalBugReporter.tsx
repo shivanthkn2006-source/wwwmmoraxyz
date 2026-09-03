@@ -9,6 +9,7 @@
  */
 import React, { useEffect, useRef, useState } from 'react';
 import { Bug, Loader2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { usePlatformStore, type PlatformState } from '@/store/usePlatformStore';
@@ -77,6 +78,7 @@ export const GlobalBugReporter: React.FC = () => {
   const [pathname, setPathname] = useState(() =>
     typeof window !== 'undefined' ? window.location.pathname : '/',
   );
+  const navigate = useNavigate();
   const mounted = useRef(true);
 
   useEffect(() => {
