@@ -13,6 +13,7 @@ import {
   parseRelationshipStyle,
 } from "../_shared/zoe-relationship-core.ts";
 import { clientErrorResponse } from '../_shared/client-error.ts';
+import { buildPlatformStateBlock, PLATFORM_STATE_VERSION } from '../_shared/platform-state.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -619,7 +620,7 @@ serve(async (req: Request) => {
   }
 
   try {
-    const { messages, mode, soulCodex, memoryContext, enableGrounding = true, emotionContext, intimacyLevel, clientTime, personalityMatrix } = await req.json() as {
+    const { messages, mode, soulCodex, memoryContext, enableGrounding = true, emotionContext, intimacyLevel, clientTime, personalityMatrix, currentRoute } = await req.json() as {
       messages: Message[];
       mode: IntelligenceMode;
       soulCodex?: string;
@@ -629,6 +630,7 @@ serve(async (req: Request) => {
       intimacyLevel?: number;
       clientTime?: ClientTimeContext;
       personalityMatrix?: PersonalityMatrixInput;
+      currentRoute?: string;
     };
 
     const lastUserMessage = [...messages].reverse().find(m => m.role === 'user')?.content || '';
@@ -898,6 +900,7 @@ ${resolvedIntimacy > 70 ? '- Close with them. Terms of endearment feel natural.'
         mode,
         latencyMs,
         codexInjected: !!soulCodex,
+        platformStateVersion: PLATFORM_STATE_VERSION,
         grounded: citations.length > 0,
         citations,
         emotionAttuned,
