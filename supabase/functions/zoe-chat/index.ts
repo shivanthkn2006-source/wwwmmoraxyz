@@ -10,6 +10,7 @@ import {
 import { cascadeInfer, hardenZoeIdentity } from "../_shared/cascading-provider.ts";
 import { precomputeCharacterFacts } from "../_shared/grounded-tools.ts";
 import { clientErrorResponse } from '../_shared/client-error.ts';
+import { omniRecall, buildOmniRecallBlock } from '../_shared/omni-recall.ts';
 
 // Zodiac sign calculation helper
 function getZodiacSign(birthDate: Date): string {
@@ -779,8 +780,22 @@ ${cortexPromptAddition}`;
     // ═══════════════════════════════════════════════════════════════════════════
     // SMART AUTO-ROUTING: Gemini → Groq → OpenRouter → Lovable AI
     // ═══════════════════════════════════════════════════════════════════════════
+    // OMNI-GRAPH RECALL — same retrieval path as every other Zoe backend, run
+    // under the caller's JWT so RLS decides visibility.
+    let omniRecallBlock = '';
+    let omniRecallCount = 0;
+    try {
+      const lastUserMessage = [...messages].reverse().find((m) => m.role === 'user')?.content || '';
+      const hits = await omniRecall(authHeader || '', String(lastUserMessage), 8);
+      omniRecallCount = hits.length;
+      omniRecallBlock = buildOmniRecallBlock(hits);
+    } catch (recallError) {
+      console.warn('[Zoe] omni recall skipped:', recallError instanceof Error ? recallError.message : recallError);
+    }
+    console.log('[Zoe] omni recall hits:', omniRecallCount);
+
     const cascadeMessages = [
-      { role: 'system', content: systemPrompt },
+      { role: 'system', content: `${systemPrompt}${omniRecallBlock}` },
       ...messages.map(m => ({ ...m, content: truncateMessageIfNeeded(m.content) })),
     ];
     
