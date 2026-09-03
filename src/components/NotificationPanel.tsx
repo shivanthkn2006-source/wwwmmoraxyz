@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bell, Check, X, Filter, UserPlus, Heart, MessageCircle, Star, UserCheck, MapPin } from 'lucide-react';
+import { Bell, Check, X, Filter, UserPlus, Heart, MessageCircle, Star, UserCheck, MapPin, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';

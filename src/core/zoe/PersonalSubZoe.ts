@@ -204,11 +204,15 @@ class PersonalSubZoe {
       
       return true;
     } catch (error) {
+      // Audit fix (SEP03): this used to report success on failure, hiding the
+      // fact that Zoe was running on defaults instead of the user's real codex.
       console.error(`[PERSONAL ZOE ${this.userId}] Initialization error:`, error);
-      this.isInitialized = true; // Continue with defaults
-      return true;
+      this.isInitialized = true; // usable, but degraded
+      this.initializationDegraded = true;
+      return false;
     }
   }
+
 
   /**
    * Process a message through Personal Zoe
