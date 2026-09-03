@@ -662,10 +662,24 @@ serve(async (req: Request) => {
     // ═══════════════════════════════════════════════════════════════════════════
     let omniRecallBlock = '';
     let omniRecallCount = 0;
+    // Provenance for the in-app citation buttons: every claim Zoe grounds in
+    // platform memory can be opened back to its exact source row.
+    let omniRecallSources: Array<Record<string, unknown>> = [];
     try {
       const hits = await omniRecall(authHeader, lastUserMessage, 8);
       omniRecallCount = hits.length;
       omniRecallBlock = buildOmniRecallBlock(hits);
+      omniRecallSources = hits.map((hit, index) => ({
+        citationId: index + 1,
+        entityType: hit.entityType,
+        entityId: hit.entityId,
+        title: typeof hit.metadata?.title === 'string' ? hit.metadata.title : null,
+        route: typeof hit.metadata?.route === 'string' ? hit.metadata.route : null,
+        createdAt: hit.createdAt,
+        stale: hit.stale,
+        score: Number(hit.score.toFixed(4)),
+        excerpt: hit.content.slice(0, 240),
+      }));
     } catch (error) {
       console.warn(`[zoe-brain:${requestId}] omni recall skipped:`, error);
     }
@@ -921,6 +935,7 @@ ${resolvedIntimacy > 70 ? '- Close with them. Terms of endearment feel natural.'
         platformStateVersion: PLATFORM_STATE_VERSION,
         grounded: citations.length > 0,
         omniRecallHits: omniRecallCount,
+        omniRecallSources,
         citations,
         emotionAttuned,
         detectedEmotion,
