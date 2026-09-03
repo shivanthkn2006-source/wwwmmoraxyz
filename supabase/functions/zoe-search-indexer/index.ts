@@ -217,7 +217,54 @@ async function loadCanonical(db: ReturnType<typeof createClient>, job: QueueRow)
     };
   }
 
+  // ── Conversational memory: direct messages and post comments ──
+  if (job.entity_type === 'direct_message') {
+    const { data, error } = await db.from('messages')
+      .select('id,sender_id,receiver_id,content,media_type,created_at')
+      .eq('id', job.entity_id).maybeSingle();
+    if (error) throw error;
+    if (!data) return null;
+    const author = await loadAuthor(db, data.sender_id);
+    return {
+      ownerId: data.sender_id,
+      content: [author.line, String(data.content || '').trim()].filter(Boolean).join('\n'),
+      // Always private: only the sender's own recall may surface a DM.
+      privacy: 'private',
+      metadata: {
+        title: 'Direct message',
+        mediaType: data.media_type,
+        counterpartId: data.receiver_id,
+        createdAt: data.created_at,
+        route: `/chat?peer=${data.receiver_id}`,
+      },
+    };
+  }
+
+  if (job.entity_type === 'post_comment') {
+    const { data, error } = await db.from('post_comments')
+      .select('id,post_id,user_id,content,created_at')
+      .eq('id', job.entity_id).maybeSingle();
+    if (error) throw error;
+    if (!data) return null;
+    const { data: parent } = await db.from('posts')
+      .select('id,visibility,content').eq('id', data.post_id).maybeSingle();
+    const author = await loadAuthor(db, data.user_id);
+    return {
+      ownerId: data.user_id,
+      content: [author.line, String(data.content || '').trim(),
+        parent?.content ? `On post: ${String(parent.content).slice(0, 200)}` : ''].filter(Boolean).join('\n'),
+      privacy: parent?.visibility === 'global' ? 'public' : parent?.visibility === 'personal' ? 'friends' : 'private',
+      metadata: {
+        title: 'Comment',
+        postId: data.post_id,
+        createdAt: data.created_at,
+        route: `/post/${data.post_id}`,
+      },
+    };
+  }
+
   return null;
+
 }
 
 
