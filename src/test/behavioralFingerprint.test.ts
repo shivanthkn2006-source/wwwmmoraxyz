@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const upsert = vi.fn(async () => ({ error: null }));
+const upsert = vi.fn(async (_row?: Record<string, unknown>) => ({ error: null }));
 let currentUser: { id: string } | null = { id: 'user-1' };
 let existingRow: Record<string, unknown> | null = null;
 
