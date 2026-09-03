@@ -15,7 +15,7 @@ import { FeedErrorBoundary } from '@/components/FeedErrorBoundary';
 import NotificationMenu from '@/components/NotificationMenu';
 import HamburgerMenu from '@/components/HamburgerMenu';
 import SearchBar from '@/components/SearchBar';
-import { ArrowDown, Mail, Search, Video, TrendingUp, ArrowUp, Camera, ChevronUp, ChevronDown, Sparkles, MessageCircle, Settings, Bell, User as UserIcon, Heart, Bookmark, Boxes, Radio, Radar, Globe2, Users, Lightbulb } from 'lucide-react';
+import { ArrowDown, Mail, Search, Video, TrendingUp, ArrowUp, Camera, ScanFace, ChevronUp, ChevronDown, Sparkles, MessageCircle, Settings, Bell, User as UserIcon, Heart, Bookmark, Boxes, Radio, Radar, Globe2, Users, Lightbulb } from 'lucide-react';
 import { trackEvent } from '@/lib/analytics';
 import FuturisticCounter from '@/components/FuturisticCounter';
 import { useNavigate } from 'react-router-dom';
@@ -2687,13 +2687,13 @@ const HomePage = () => {
           {
             id: 'selfie-city',
             label: 'Selfie City',
-            icon: <Camera className="h-[22px] w-[22px]" />,
+            icon: <ScanFace className="h-[22px] w-[22px]" />,
             active: activeTab === 'selfiecity',
             onSelect: runHomeIconAction('selfie-city', () => setActiveTab('selfiecity')),
           },
           {
             id: 'neural-feed',
-            label: 'DHF Neural Feed',
+            label: 'Neural feed panel',
             icon: <Radar className="h-[22px] w-[22px]" />,
             badge: featureBadges.compass || undefined,
             active: neuralFeedOpen,
