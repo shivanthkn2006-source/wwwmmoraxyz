@@ -4970,28 +4970,40 @@ export type Database = {
       }
       platform_error_logs: {
         Row: {
+          admin_note: string | null
+          category: string
           created_at: string
           device_info: Json
           id: string
           route: string | null
+          severity: string
+          status: string
           user_id: string | null
           user_message: string | null
           zustand_state_snapshot: Json
         }
         Insert: {
+          admin_note?: string | null
+          category?: string
           created_at?: string
           device_info?: Json
           id?: string
           route?: string | null
+          severity?: string
+          status?: string
           user_id?: string | null
           user_message?: string | null
           zustand_state_snapshot?: Json
         }
         Update: {
+          admin_note?: string | null
+          category?: string
           created_at?: string
           device_info?: Json
           id?: string
           route?: string | null
+          severity?: string
+          status?: string
           user_id?: string | null
           user_message?: string | null
           zustand_state_snapshot?: Json
