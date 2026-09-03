@@ -931,6 +931,8 @@ export const useZoeInfinityBrain = (): UseZoeInfinityBrainReturn => {
             content: m.content
           })),
           mode: currentMode,
+          // Platform-state injection: tell Zoe where the user actually is.
+          currentRoute: typeof window !== 'undefined' ? window.location.pathname : undefined,
           soulCodex: codexStringRef.current,
           memoryContext: combinedMemoryWithDHF, // PHASE 4: memory + DHF identity + ephemeris
           genesisDHF: genesisIdentity || undefined,
