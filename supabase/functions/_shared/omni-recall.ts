@@ -106,7 +106,41 @@ export async function omniRecall(
   }
 }
 
+/**
+ * Provenance payload for the in-app citation buttons: each hit becomes a
+ * numbered citation the UI can open back to its exact source row.
+ */
+export type RecallSource = {
+  citationId: number;
+  entityType: string;
+  entityId: string;
+  title: string | null;
+  route: string | null;
+  createdAt: string | null;
+  stale: boolean;
+  score: number;
+  excerpt: string;
+};
+
+export function buildRecallSources(hits: OmniRecallHit[]): RecallSource[] {
+  return hits.map((hit, index) => ({
+    citationId: index + 1,
+    entityType: hit.entityType,
+    entityId: hit.entityId,
+    title:
+      typeof hit.metadata?.title === 'string'
+        ? hit.metadata.title
+        : LABELS[hit.entityType] || hit.entityType,
+    route: typeof hit.metadata?.route === 'string' ? hit.metadata.route : null,
+    createdAt: hit.createdAt,
+    stale: hit.stale,
+    score: Number(hit.score.toFixed(4)),
+    excerpt: hit.content.slice(0, 240),
+  }));
+}
+
 /** Formats recall hits as a prompt block; returns '' when nothing was found. */
+
 export function buildOmniRecallBlock(hits: OmniRecallHit[]): string {
   if (!hits.length) return '';
   const lines = hits.map((hit, index) => {
