@@ -17,6 +17,8 @@ import SpokenTranscript from '@/components/zoe-infinity/SpokenTranscript';
 import { isZoeInfinityMessage, stripZoeInfinityMarker } from '@/utils/conversationNamespaces';
 import { setActiveVoiceExperience } from '@/utils/voiceExperienceLock';
 import { useZoe } from '@/contexts/ZoeContext';
+import { recallZoeMemory, rememberZoeRound } from '@/services/zoeMemoryBridge';
+
 import { 
   isSpeechRecognitionSupported, 
   createSpeechRecognition, 
