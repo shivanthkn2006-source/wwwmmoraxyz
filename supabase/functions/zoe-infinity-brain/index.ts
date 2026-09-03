@@ -14,7 +14,7 @@ import {
 } from "../_shared/zoe-relationship-core.ts";
 import { clientErrorResponse } from '../_shared/client-error.ts';
 import { buildPlatformStateBlock, PLATFORM_STATE_VERSION } from '../_shared/platform-state.ts';
-import { omniRecall, buildOmniRecallBlock } from '../_shared/omni-recall.ts';
+import { omniRecall, buildOmniRecallBlock, buildRecallSources, type RecallSource } from '../_shared/omni-recall.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -664,22 +664,12 @@ serve(async (req: Request) => {
     let omniRecallCount = 0;
     // Provenance for the in-app citation buttons: every claim Zoe grounds in
     // platform memory can be opened back to its exact source row.
-    let omniRecallSources: Array<Record<string, unknown>> = [];
+    let omniRecallSources: RecallSource[] = [];
     try {
       const hits = await omniRecall(authHeader, lastUserMessage, 8);
       omniRecallCount = hits.length;
       omniRecallBlock = buildOmniRecallBlock(hits);
-      omniRecallSources = hits.map((hit, index) => ({
-        citationId: index + 1,
-        entityType: hit.entityType,
-        entityId: hit.entityId,
-        title: typeof hit.metadata?.title === 'string' ? hit.metadata.title : null,
-        route: typeof hit.metadata?.route === 'string' ? hit.metadata.route : null,
-        createdAt: hit.createdAt,
-        stale: hit.stale,
-        score: Number(hit.score.toFixed(4)),
-        excerpt: hit.content.slice(0, 240),
-      }));
+      omniRecallSources = buildRecallSources(hits);
     } catch (error) {
       console.warn(`[zoe-brain:${requestId}] omni recall skipped:`, error);
     }

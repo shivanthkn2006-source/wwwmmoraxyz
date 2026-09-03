@@ -8,7 +8,7 @@ import {
   createErrorResponse
 } from "../_shared/ai-telemetry.ts";
 import { clientErrorResponse } from '../_shared/client-error.ts';
-import { omniRecall, buildOmniRecallBlock } from '../_shared/omni-recall.ts';
+import { omniRecall, buildOmniRecallBlock, buildRecallSources, type RecallSource } from '../_shared/omni-recall.ts';
 
 // Enhanced cognitive architecture tools for superior reasoning
 const advancedTools = [
@@ -270,9 +270,11 @@ Remember: You are not just answering questions—you are genuinely helping someo
 
     // OMNI-GRAPH RECALL — platform knowledge under the caller's own JWT/RLS.
     let omniRecallBlock = '';
+    let omniRecallSources: RecallSource[] = [];
     try {
       const hits = await omniRecall(req.headers.get('Authorization') || '', command, 8);
       omniRecallBlock = buildOmniRecallBlock(hits);
+      omniRecallSources = buildRecallSources(hits);
       console.log('Zoe Agent omni recall hits:', hits.length);
     } catch (recallError) {
       console.warn('Zoe Agent omni recall skipped:', recallError instanceof Error ? recallError.message : recallError);
@@ -404,6 +406,7 @@ Remember: You are not just answering questions—you are genuinely helping someo
       JSON.stringify({
         message: aiMessage.content || 'Task analysis complete. Ready for next instruction.',
         toolCalls: executedTools,
+        omniRecallSources,
         reasoning: executedTools.length > 0 ? 'Applied cognitive tools for enhanced analysis' : null,
         agentMode: true,
         intelligence_level: 'advanced'
