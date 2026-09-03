@@ -475,11 +475,53 @@ function needsExternalData(query: string): boolean {
   return groundingPatterns.some(p => p.test(query));
 }
 
+/**
+ * Audit fix (#16): grounding used to ask an LLM to invent "plausible" URLs, so
+ * citations could point at pages that do not exist. Real retrieval now runs
+ * first through the platform's own `external-search` lanes; the LLM path is
+ * only a degraded fallback and is explicitly marked as unverified.
+ */
+async function searchWebReal(query: string): Promise<Citation[]> {
+  try {
+    const base = Deno.env.get("SUPABASE_URL");
+    const anon = Deno.env.get("SUPABASE_ANON_KEY");
+    if (!base || !anon) return [];
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 9000);
+    const resp = await fetch(`${base}/functions/v1/external-search`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: anon, Authorization: `Bearer ${anon}` },
+      body: JSON.stringify({ term: query }),
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+    if (!resp.ok) return [];
+    const data = await resp.json();
+    const results: any[] = Array.isArray(data?.results) ? data.results : [];
+    return results
+      .filter((r) => typeof r?.url === 'string' && /^https?:\/\//.test(r.url))
+      .slice(0, 5)
+      .map((r, idx) => ({
+        id: idx + 1,
+        url: r.url as string,
+        title: String(r.title ?? 'Result'),
+        snippet: String(r.subtitle ?? r.description ?? ''),
+        domain: (() => { try { return new URL(r.url).hostname; } catch { return ''; } })(),
+      }));
+  } catch (e) {
+    console.warn('[search:external] failed:', e);
+    return [];
+  }
+}
+
 async function searchWeb(query: string): Promise<Citation[]> {
+  const real = await searchWebReal(query);
+  if (real.length > 0) return real;
+
   const searchPrompt = `You are a search engine. For the query: "${query}"
 Return EXACTLY 3 relevant search results in this JSON format:
 [{"title": "Result Title", "url": "https://example.com/page", "snippet": "Brief relevant excerpt...", "domain": "example.com"}]
-Be factual. Use real, plausible URLs from authoritative sources. Return ONLY the JSON array.`;
+Only return results you are confident actually exist. Return ONLY the JSON array.`;
 
   // Try Gemini first for search (best quality), then Groq (fastest)
   const googleKey = Deno.env.get("GOOGLE_AI_STUDIO_KEY");
