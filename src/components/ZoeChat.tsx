@@ -238,9 +238,27 @@ export const ZoeChat = () => {
       console.log('[ZoeChat] Sending time context:', { formattedTime, userTimezone, timeOfDay });
 
       // Call Zoe chat function with enhanced context
+      // Audit fix (SEP03): this surface used to send zero long-term memory, so
+      // Zoe was amnesiac here while remembering everything in the orb panel.
+      const memoryRecall = await recallZoeMemory({
+        query: text.trim(),
+        sessionKey: `zoe-chat-${user?.id ?? 'anon'}`,
+        userId: user?.id,
+      });
+
       const { data, error: chatError } = await supabase.functions.invoke('zoe-chat', {
         body: {
-          messages: [...conversationHistory, { role: 'user', content: text.trim() }],
+          messages: [
+            ...(memoryRecall.context
+              ? [{
+                  role: 'system',
+                  content: `Long-term memory about this user (${memoryRecall.source}):\n${memoryRecall.context}`,
+                }]
+              : []),
+            ...conversationHistory,
+            { role: 'user', content: text.trim() },
+          ],
+
           soulMetrics: { 
             intimacy: 75, 
             selfHarmony: 80, 
