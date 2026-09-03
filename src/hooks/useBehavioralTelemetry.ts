@@ -4,6 +4,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { persistBehavioralFingerprint } from '@/services/behavioralFingerprintService';
 
 export interface BehavioralTelemetry {
   // Core metrics
