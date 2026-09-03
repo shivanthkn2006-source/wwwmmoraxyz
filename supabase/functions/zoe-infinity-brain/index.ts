@@ -244,26 +244,29 @@ function getProviderChain(task: TaskType, systemPrompt: string, messages: Messag
   // OpenRouter: Free tier → Emergency fallback
   // Lovable: Last resort
 
+  // Audit fix (#19): the Lovable tier always returned null — removed from every chain.
+  void lovable;
+
   switch (task) {
     // Vision — Gemini best for multimodal, Gemma4 backup
     case 'vision':
-      return [gemini, gemma4, groq, openrouter, lovable];
-    
+      return [gemini, gemma4, groq, openrouter];
+
     // Identity probes — Gemma4 primary (best system prompt obedience)
     case 'identity_probe':
-      return [gemma4, gemini, groq, openrouter, lovable];
-    
+      return [gemma4, gemini, groq, openrouter];
+
     // Deep reasoning — Gemma4 primary, Gemini secondary
     case 'reasoning':
-      return [gemma4, gemini, groq, openrouter, lovable];
-    
+      return [gemma4, gemini, groq, openrouter];
+
     // Grounding/facts — Gemini primary (best for search/facts), Groq speed backup
     case 'grounding':
-      return [gemini, gemma4, groq, openrouter, lovable];
-    
+      return [gemini, gemma4, groq, openrouter];
+
     // Simple casual chat — Groq PRIMARY (fastest, highest free quota)
     case 'simple_chat':
-      return [groq, gemma4, gemini, openrouter, lovable];
+      return [groq, gemma4, gemini, openrouter];
   }
 }
 
