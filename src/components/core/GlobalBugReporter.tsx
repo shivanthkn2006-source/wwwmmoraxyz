@@ -154,14 +154,26 @@ export const GlobalBugReporter: React.FC = () => {
             rows={5}
             maxLength={2000}
           />
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setOpen(false)} disabled={sending}>
-              Cancel
+          <DialogFooter className="sm:justify-between">
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setOpen(false);
+                navigate('/bug-report');
+              }}
+              disabled={sending}
+            >
+              Open full report page
             </Button>
-            <Button onClick={submit} disabled={sending}>
-              {sending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Send report
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="ghost" onClick={() => setOpen(false)} disabled={sending}>
+                Cancel
+              </Button>
+              <Button onClick={submit} disabled={sending}>
+                {sending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Send report
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
