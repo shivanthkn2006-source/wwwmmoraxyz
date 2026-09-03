@@ -14,6 +14,7 @@ import {
 } from "../_shared/zoe-relationship-core.ts";
 import { clientErrorResponse } from '../_shared/client-error.ts';
 import { buildPlatformStateBlock, PLATFORM_STATE_VERSION } from '../_shared/platform-state.ts';
+import { omniRecall, buildOmniRecallBlock } from '../_shared/omni-recall.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -656,6 +657,22 @@ serve(async (req: Request) => {
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
+    // OMNI-GRAPH RECALL — the platform's own knowledge (posts, loops, DHF,
+    // growth, compass, profiles, past chats) retrieved under the caller's RLS.
+    // ═══════════════════════════════════════════════════════════════════════════
+    let omniRecallBlock = '';
+    let omniRecallCount = 0;
+    try {
+      const hits = await omniRecall(authHeader, lastUserMessage, 8);
+      omniRecallCount = hits.length;
+      omniRecallBlock = buildOmniRecallBlock(hits);
+    } catch (error) {
+      console.warn(`[zoe-brain:${requestId}] omni recall skipped:`, error);
+    }
+    console.log(`[zoe-brain:${requestId}] 🌌 Omni recall hits: ${omniRecallCount}`);
+
+
+    // ═══════════════════════════════════════════════════════════════════════════
     // USER CONTEXT
     // ═══════════════════════════════════════════════════════════════════════════
     let userName = "there";
@@ -856,6 +873,7 @@ ${resolvedIntimacy > 70 ? '- Close with them. Terms of endearment feel natural.'
       basePersonality,
       modeInstructions,
       platformStateBlock,
+      omniRecallBlock,
       groundingContext,
       citationInstructions,
       emotionToneInstruction,
@@ -902,6 +920,7 @@ ${resolvedIntimacy > 70 ? '- Close with them. Terms of endearment feel natural.'
         codexInjected: !!soulCodex,
         platformStateVersion: PLATFORM_STATE_VERSION,
         grounded: citations.length > 0,
+        omniRecallHits: omniRecallCount,
         citations,
         emotionAttuned,
         detectedEmotion,

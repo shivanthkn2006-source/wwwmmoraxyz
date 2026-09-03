@@ -21,7 +21,7 @@ type QueueRow = {
 };
 
 type CanonicalEntity = {
-  ownerId: string;
+  ownerId: string | null;
   content: string;
   privacy: 'public' | 'friends' | 'private';
   metadata: Record<string, unknown>;
@@ -137,17 +137,105 @@ async function loadCanonical(db: ReturnType<typeof createClient>, job: QueueRow)
     };
   }
 
+  // ── Omni-Graph coverage: DHF, Growth and Daily Compass entities ──
+  if (job.entity_type === 'dhf_post') {
+    const { data, error } = await db.from('dhf_daily_posts')
+      .select('id,user_id,headline,short_summary,full_story_content,category,post_date,slot_time,image_url')
+      .eq('id', job.entity_id).maybeSingle();
+    if (error) throw error;
+    if (!data) return null;
+    return {
+      ownerId: data.user_id,
+      content: [data.headline, data.short_summary, String(data.full_story_content || '').slice(0, 8000)]
+        .filter(Boolean).join('\n'),
+      privacy: 'private',
+      metadata: {
+        title: data.headline, category: data.category, createdAt: data.post_date,
+        slot: data.slot_time, imageUrl: slimMediaRef(data.image_url), route: `/dhf/essay/${data.id}`,
+      },
+    };
+  }
+
+  if (job.entity_type === 'dhf_video') {
+    const { data, error } = await db.from('dhf_videos')
+      .select('id,title,description,figure_name,topic,category,youtube_url,thumbnail_url,published_at,active')
+      .eq('id', job.entity_id).maybeSingle();
+    if (error) throw error;
+    if (!data || data.active === false) return null;
+    return {
+      ownerId: null, // platform-wide asset — no single owner
+      content: [data.title, data.figure_name, data.topic, data.description].filter(Boolean).join('\n'),
+      privacy: 'public',
+      metadata: {
+        title: data.title, figure: data.figure_name, category: data.category,
+        url: data.youtube_url, thumbnailUrl: slimMediaRef(data.thumbnail_url), createdAt: data.published_at,
+      },
+    };
+  }
+
+  if (job.entity_type === 'growth_card') {
+    const { data, error } = await db.from('growth_feed_items')
+      .select('id,user_id,title,content,actionable_step,category,slot,local_date')
+      .eq('id', job.entity_id).maybeSingle();
+    if (error) throw error;
+    if (!data) return null;
+    return {
+      ownerId: data.user_id,
+      content: [data.title, data.content, data.actionable_step].filter(Boolean).join('\n'),
+      privacy: 'private',
+      metadata: { title: data.title, category: data.category, slot: data.slot, createdAt: data.local_date },
+    };
+  }
+
+  if (job.entity_type === 'astro_prediction') {
+    const { data, error } = await db.from('astro_predictions')
+      .select('id,user_id,prediction_headline,prediction_body,motivational_quote,transits_summary,target_date,slot')
+      .eq('id', job.entity_id).maybeSingle();
+    if (error) throw error;
+    if (!data) return null;
+    return {
+      ownerId: data.user_id,
+      content: [data.prediction_headline, data.prediction_body, data.motivational_quote,
+        typeof data.transits_summary === 'string' ? data.transits_summary : JSON.stringify(data.transits_summary || '')]
+        .filter(Boolean).join('\n').slice(0, 8000),
+      privacy: 'private',
+      metadata: { title: data.prediction_headline, slot: data.slot, createdAt: data.target_date },
+    };
+  }
+
+  if (job.entity_type === 'wisdom_goal') {
+    const { data, error } = await db.from('wisdom_macro_goals')
+      .select('id,user_id,title,purpose,domain,status,target_date,created_at')
+      .eq('id', job.entity_id).maybeSingle();
+    if (error) throw error;
+    if (!data) return null;
+    return {
+      ownerId: data.user_id,
+      content: [data.title, data.purpose, data.domain, `Status: ${data.status}`].filter(Boolean).join('\n'),
+      privacy: 'private',
+      metadata: { title: data.title, domain: data.domain, status: data.status, createdAt: data.created_at },
+    };
+  }
+
   return null;
 }
 
+
 async function enqueueBackfill(db: ReturnType<typeof createClient>, userId: string) {
-  const [profiles, posts, chats, memories] = await Promise.all([
+  const [profiles, posts, chats, memories, dhfPosts, dhfVideos, growthCards, predictions, goals] = await Promise.all([
     db.from('profiles').select('user_id'),
     db.from('posts').select('id,user_id,media_type,content'),
     db.from('zoe_infinity_messages').select('id,user_id').eq('user_id', userId),
     db.from('mmora_memories').select('id,user_id').eq('user_id', userId),
+    db.from('dhf_daily_posts').select('id,user_id').eq('user_id', userId),
+    db.from('dhf_videos').select('id').eq('active', true),
+    db.from('growth_feed_items').select('id,user_id').eq('user_id', userId),
+    db.from('astro_predictions').select('id,user_id').eq('user_id', userId),
+    db.from('wisdom_macro_goals').select('id,user_id').eq('user_id', userId),
   ]);
-  for (const response of [profiles, posts, chats, memories]) if (response.error) throw response.error;
+  for (const response of [profiles, posts, chats, memories, dhfPosts, dhfVideos, growthCards, predictions, goals]) {
+    if (response.error) throw response.error;
+  }
 
   const rows = [
     ...(profiles.data || []).map((row) => ({ entity_type: 'profile', entity_id: row.user_id, owner_id: row.user_id })),
@@ -158,6 +246,11 @@ async function enqueueBackfill(db: ReturnType<typeof createClient>, userId: stri
     })),
     ...(chats.data || []).map((row) => ({ entity_type: 'chat', entity_id: row.id, owner_id: row.user_id })),
     ...(memories.data || []).map((row) => ({ entity_type: 'dhf_node', entity_id: row.id, owner_id: row.user_id })),
+    ...(dhfPosts.data || []).map((row) => ({ entity_type: 'dhf_post', entity_id: row.id, owner_id: row.user_id })),
+    ...(dhfVideos.data || []).map((row) => ({ entity_type: 'dhf_video', entity_id: row.id, owner_id: null })),
+    ...(growthCards.data || []).map((row) => ({ entity_type: 'growth_card', entity_id: row.id, owner_id: row.user_id })),
+    ...(predictions.data || []).map((row) => ({ entity_type: 'astro_prediction', entity_id: row.id, owner_id: row.user_id })),
+    ...(goals.data || []).map((row) => ({ entity_type: 'wisdom_goal', entity_id: row.id, owner_id: row.user_id })),
   ];
   if (!rows.length) return 0;
   const { error } = await db.from('zoe_search_index_queue').upsert(
@@ -235,12 +328,19 @@ Deno.serve(async (req) => {
   const startedAt = performance.now();
 
   try {
-    const user = await requireSearchUser(req);
+    // System drain: the scheduled cron authenticates with the service role key so
+    // the queue keeps draining even when nobody is using the app.
+    const bearer = (req.headers.get('Authorization') || '').replace('Bearer ', '').trim();
+    const drainSecret = Deno.env.get('ZOE_INDEX_DRAIN_SECRET') || '';
+    const presentedSecret = (req.headers.get('x-index-drain-secret') || '').trim();
+    const isSystemDrain = (Boolean(SERVICE_ROLE) && bearer === SERVICE_ROLE)
+      || (Boolean(drainSecret) && presentedSecret === drainSecret);
+    const user = isSystemDrain ? null : await requireSearchUser(req);
     if (!SUPABASE_URL || !SERVICE_ROLE) throw new Error('BACKEND_NOT_CONFIGURED');
     const body = await req.json().catch(() => ({}));
     // Keep each invocation inside the edge runtime budget; callers repeatedly
     // drain the durable queue in small resumable batches.
-    const limit = Math.max(1, Math.min(Number(body?.limit) || 5, 10));
+    const limit = Math.max(1, Math.min(Number(body?.limit) || 5, 25));
     const db = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { persistSession: false } });
 
     // Health/progress snapshot for the startup guard and the admin view.
@@ -270,7 +370,7 @@ Deno.serve(async (req) => {
     }
 
     // Keep each invocation inside the edge runtime budget; callers repeatedly
-    const enqueued = body?.backfill === true
+    const enqueued = body?.backfill === true && user
       ? await enqueueBackfill(db, user.id)
       : body?.visionBackfill === true
         ? await enqueueVisionBackfill(db, body?.force === true)
@@ -332,7 +432,7 @@ Deno.serve(async (req) => {
     await db.from('zoe_search_events').insert({
       request_id: requestId,
       event_type: 'backfill',
-      user_id: user.id,
+      user_id: user?.id ?? null,
       result_count: completed,
       timings: { totalMs },
       degraded: { failed },
