@@ -14,6 +14,9 @@
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.58.0';
 import { embedText } from './zoe-embeddings.ts';
+import { ageInDays, isStale, rerankRecallHits } from './omni-rank.ts';
+
+export { rerankRecallHits };
 
 export type OmniRecallHit = {
   entityType: string;
@@ -41,85 +44,6 @@ const LABELS: Record<string, string> = {
   astro_prediction: 'Daily Compass prediction',
   wisdom_goal: 'Wisdom goal',
 };
-
-/**
- * Half-life in days per entity type. Time-bound content (a day's compass
- * reading) decays fast; identity-ish content (profiles, goals) barely decays.
- */
-const HALF_LIFE_DAYS: Record<string, number> = {
-  astro_prediction: 1,
-  growth_card: 3,
-  post: 21,
-  image: 21,
-  loop_video: 21,
-  quote: 60,
-  chat: 30,
-  dhf_post: 45,
-  dhf_video: 180,
-  dhf_node: 120,
-  wisdom_goal: 365,
-  profile: 3650,
-};
-
-/** Beyond this age (days) an item is flagged stale and labelled as historical. */
-const STALE_AFTER_DAYS: Record<string, number> = {
-  astro_prediction: 2,
-  growth_card: 7,
-};
-
-/** Small prior so first-party memory outranks incidental feed chatter on ties. */
-const TYPE_PRIOR: Record<string, number> = {
-  dhf_node: 1.15,
-  chat: 1.1,
-  profile: 1.1,
-  wisdom_goal: 1.05,
-};
-
-/** Maximum hits allowed from a single entity type in the final result set. */
-const MAX_PER_TYPE = 3;
-
-const DAY_MS = 86_400_000;
-
-function ageInDays(createdAt: string | null): number | null {
-  if (!createdAt) return null;
-  const ts = Date.parse(createdAt);
-  if (Number.isNaN(ts)) return null;
-  return Math.max(0, (Date.now() - ts) / DAY_MS);
-}
-
-function recencyFactor(entityType: string, age: number | null): number {
-  if (age === null) return 0.85; // unknown date: mild penalty, never excluded
-  const halfLife = HALF_LIFE_DAYS[entityType] ?? 30;
-  // Exponential decay floored at 0.2 so old-but-relevant content stays reachable.
-  return Math.max(0.2, Math.pow(0.5, age / halfLife));
-}
-
-/** Reranks + diversifies raw hybrid hits. Exported for unit tests. */
-export function rerankRecallHits(hits: OmniRecallHit[], limit: number): OmniRecallHit[] {
-  const scored = hits
-    .map((hit) => {
-      const prior = TYPE_PRIOR[hit.entityType] ?? 1;
-      const recency = recencyFactor(hit.entityType, hit.ageDays);
-      return { ...hit, score: hit.rawScore * recency * prior };
-    })
-    .sort((a, b) => b.score - a.score);
-
-  const perType = new Map<string, number>();
-  const primary: OmniRecallHit[] = [];
-  const overflow: OmniRecallHit[] = [];
-
-  for (const hit of scored) {
-    const used = perType.get(hit.entityType) ?? 0;
-    if (used < MAX_PER_TYPE) {
-      perType.set(hit.entityType, used + 1);
-      primary.push(hit);
-    } else {
-      overflow.push(hit);
-    }
-  }
-
-  return [...primary, ...overflow].slice(0, limit);
-}
 
 /** Retrieves the most relevant platform entities for a natural-language query. */
 export async function omniRecall(
@@ -160,7 +84,6 @@ export async function omniRecall(
         (typeof row.created_at === 'string' ? row.created_at : null) ||
         (typeof metadata.createdAt === 'string' ? metadata.createdAt : null);
       const age = ageInDays(createdAt);
-      const staleAfter = STALE_AFTER_DAYS[entityType];
       return {
         entityType,
         entityId: String(row.entity_id || ''),
@@ -169,7 +92,7 @@ export async function omniRecall(
         score: Number(row.score || 0),
         createdAt,
         ageDays: age,
-        stale: staleAfter !== undefined && age !== null && age > staleAfter,
+        stale: isStale(entityType, age),
         metadata,
       };
     });
