@@ -11762,11 +11762,12 @@ export type Database = {
         Args: {
           match_count?: number
           query_embedding: string
-          query_text: string
+          query_text?: string
           rrf_k?: number
         }
         Returns: {
           content_synthesis: string
+          created_at: string
           entity_id: string
           entity_type: string
           id: string
