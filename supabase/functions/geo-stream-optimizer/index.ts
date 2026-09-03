@@ -20,6 +20,7 @@
  */
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { publicGuard } from '../_shared/public-guard.ts';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // CORS HEADERS
@@ -302,6 +303,9 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const guard = await publicGuard(req, { name: 'geo-stream-optimizer', limit: 240, windowSeconds: 60, maxBodyBytes: 256 * 1024 });
+  if (guard.response) return guard.response;
+
   const url = new URL(req.url);
   const action = url.searchParams.get('action') || 'update';
   const acceptHeader = req.headers.get('accept') || '';
@@ -313,7 +317,7 @@ serve(async (req) => {
     // ACTION: INGEST
     // ═══════════════════════════════════════════════════════════════════════════
     if (req.method === 'POST' && action === 'ingest') {
-      const body = await req.json();
+      const body = guard.body as Record<string, any>;
       const { user_id, lat, lng, heading, speed, status, display_name, avatar_url, selfie_id, has_premium } = body;
 
       if (!user_id || lat === undefined || lng === undefined) {
@@ -395,7 +399,7 @@ serve(async (req) => {
     // ACTION: BATCH INGEST
     // ═══════════════════════════════════════════════════════════════════════════
     if (req.method === 'POST' && action === 'batch-ingest') {
-      const body = await req.json();
+      const body = guard.body as Record<string, any>;
       const { positions } = body as { positions: UserPosition[] };
 
       if (!Array.isArray(positions)) {

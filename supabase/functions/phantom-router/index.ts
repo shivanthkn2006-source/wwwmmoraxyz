@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import { resolveClaims } from '../_shared/auth-claims.ts';
+import { publicGuard } from '../_shared/public-guard.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -64,6 +65,9 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const guard = await publicGuard(req, { name: 'phantom-router', limit: 60, windowSeconds: 60 });
+  if (guard.response) return guard.response;
+
   try {
     // Validate authentication
     const authHeader = req.headers.get('Authorization');
@@ -83,14 +87,7 @@ serve(async (req) => {
     const requestedPath = url.pathname.split('/').pop();
     
     // Parse body for action-based requests
-    let body: { action?: string } = {};
-    try {
-      if (req.method === 'POST') {
-        body = await req.json();
-      }
-    } catch {
-      // Ignore JSON parse errors
-    }
+    const body: { action?: string } = guard.body as { action?: string };
 
     // Validate phantom key (time-based)
     const validPhantomKey = generatePhantomKey();
