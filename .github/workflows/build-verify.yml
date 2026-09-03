@@ -1,0 +1,26 @@
+name: Build verify
+
+# Guards the preview build: any change that breaks typecheck (e.g. a TS2304
+# "cannot find name" from a dropped import) or the Vite build fails CI before
+# it can reach the preview.
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Typecheck
+        run: bunx tsc -p tsconfig.app.json --noEmit
+      - name: Unit tests
+        run: bunx vitest run
+      - name: Vite build
+        run: bunx vite build
