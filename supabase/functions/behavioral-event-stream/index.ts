@@ -131,15 +131,19 @@ serve(async (req) => {
   try {
     const authHeader = req.headers.get('Authorization');
     
-    // Gracefully handle missing auth - return success but skip processing
+    // Telemetry that cannot be attributed to a user is DROPPED, so the caller
+    // must be told. Returning `success: true` here made the client report a
+    // healthy stream while every packet was silently discarded.
     if (!authHeader) {
-      console.log('[Behavioral Stream] No auth header - skipping (anonymous request)');
-      return new Response(JSON.stringify({ 
-        success: true, 
+      console.warn('[Behavioral Stream] No auth header - refusing (events would be dropped)');
+      return new Response(JSON.stringify({
+        success: false,
         events_processed: 0,
         skipped: true,
-        reason: 'anonymous_request'
+        retryable: true,
+        reason: 'anonymous_request',
       }), {
+        status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -153,13 +157,15 @@ serve(async (req) => {
     const { data: { user }, error: userError } = await supabase.auth.getUser(token);
     
     if (userError || !user) {
-      console.log('[Behavioral Stream] Invalid/expired token - skipping');
-      return new Response(JSON.stringify({ 
-        success: true, 
+      console.warn('[Behavioral Stream] Invalid/expired token - refusing so the client can re-queue');
+      return new Response(JSON.stringify({
+        success: false,
         events_processed: 0,
         skipped: true,
-        reason: 'invalid_session'
+        retryable: true,
+        reason: 'invalid_session',
       }), {
+        status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
