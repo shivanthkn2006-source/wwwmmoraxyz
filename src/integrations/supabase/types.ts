@@ -11757,6 +11757,7 @@ export type Database = {
       }
       validate_invite_code: { Args: { p_code: string }; Returns: Json }
       verify_astro_permissions: { Args: never; Returns: Json }
+      zoe_drain_search_index: { Args: never; Returns: undefined }
       zoe_hybrid_search: {
         Args: {
           match_count?: number
