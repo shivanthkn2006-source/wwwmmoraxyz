@@ -1,0 +1,1 @@
+SELECT cron.schedule('zoe-search-index-hourly', '25 * * * *', 'SELECT public.zoe_drain_search_index();');
