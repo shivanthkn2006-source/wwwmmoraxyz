@@ -26,6 +26,8 @@ export const HALF_LIFE_DAYS: Record<string, number> = {
   loop_video: 21,
   quote: 60,
   chat: 30,
+  direct_message: 30,
+  post_comment: 21,
   dhf_post: 45,
   dhf_video: 180,
   dhf_node: 120,
@@ -43,6 +45,7 @@ export const STALE_AFTER_DAYS: Record<string, number> = {
 export const TYPE_PRIOR: Record<string, number> = {
   dhf_node: 1.15,
   chat: 1.1,
+  direct_message: 1.1,
   profile: 1.1,
   wisdom_goal: 1.05,
 };
