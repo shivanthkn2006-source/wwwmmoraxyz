@@ -14,6 +14,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sovereignFetch, sovereignKey } from "../_shared/sovereign-ai.ts";
+import { publicGuard } from '../_shared/public-guard.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -648,6 +649,9 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const guard = await publicGuard(req, { name: 'zoe-dreamer-agent', limit: 20, windowSeconds: 60, maxBodyBytes: 512 * 1024, allowRichText: true });
+  if (guard.response) return guard.response;
+
   const startTime = performance.now();
 
   try {
@@ -656,7 +660,7 @@ serve(async (req) => {
     const lovableApiKey = sovereignKey();
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const request: DreamerRequest = await req.json();
+    const request: DreamerRequest = (guard.body as any);
     const { userId, processAll, mode, dreamDepth = 'deep' } = request;
 
     console.log(`[Dreamer-Agent] Starting | Mode: ${mode} | Depth: ${dreamDepth}`);

@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { toast } from 'sonner';
 import { speakAsZoe } from '@/utils/zoeVoice';
+import { logHealthSnapshot } from '@/lib/safeTelemetry';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TYPE DEFINITIONS
@@ -943,8 +944,8 @@ export const useFeatureScanner = () => {
 
       // Log to database
       if (user?.id) {
-        await supabase.from('platform_health_logs').insert({
-          user_id: user.id,
+        await logHealthSnapshot({
+          source: 'feature-scanner',
           score: result.summary.healthScore,
           status: result.summary.healthScore > 80 ? 'healthy' : result.summary.healthScore > 50 ? 'warning' : 'critical',
           issues_count: result.errors.length,
@@ -953,8 +954,8 @@ export const useFeatureScanner = () => {
             scanType,
             features: result.features.length,
             fixes: result.fixes.length,
-          } as any,
-        } as any);
+          },
+        });
       }
 
     } catch (error) {

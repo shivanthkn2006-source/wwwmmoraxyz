@@ -132,6 +132,14 @@ export const useContinuousDHFStream = (config: Partial<StreamConfig> = {}) => {
         eventQueue.current.unshift(...eventsToSend);
         statsRef.current.failedAttempts++;
         setStreamHealth('degraded');
+      } else if (data && data.success === false) {
+        // The backend accepted the call but persisted nothing (expired session,
+        // missing auth). Treat it as a failure, keep the events, and surface
+        // the degradation instead of reporting a healthy stream.
+        console.warn('[DHF Stream] Backend skipped batch:', data.reason);
+        if (data.retryable !== false) eventQueue.current.unshift(...eventsToSend);
+        statsRef.current.failedAttempts++;
+        setStreamHealth('degraded');
       } else {
         statsRef.current.totalEventsSent += eventsToSend.length;
         statsRef.current.avgLatencyMs = (statsRef.current.avgLatencyMs + latencyMs) / 2;
@@ -143,6 +151,7 @@ export const useContinuousDHFStream = (config: Partial<StreamConfig> = {}) => {
           statsRef.current.ecnEventsProcessed += eventsToSend.length;
         }
       }
+
     } catch (err) {
       console.error('[DHF Stream] Flush failed:', err);
       eventQueue.current.unshift(...eventsToSend);

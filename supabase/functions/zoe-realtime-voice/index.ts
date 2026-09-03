@@ -7,6 +7,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sovereignFetch, sovereignKey } from "../_shared/sovereign-ai.ts";
+import { publicGuard } from '../_shared/public-guard.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -32,6 +33,15 @@ serve(async (req) => {
 
   console.log('[Zoe RealtimeVoice] ═══ INCOMING REQUEST ═══');
 
+  const guard = await publicGuard(req, {
+    name: 'zoe-realtime-voice',
+    limit: 60,
+    windowSeconds: 60,
+    maxBodyBytes: 6 * 1024 * 1024, // base64 audio frames
+    allowRichText: true,
+  });
+  if (guard.response) return guard.response;
+
   try {
     const authHeader = req.headers.get('Authorization');
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -56,7 +66,7 @@ serve(async (req) => {
       if (user) userId = user.id;
     }
 
-    const request: VoiceRequest = await req.json();
+    const request = guard.body as unknown as VoiceRequest;
     const { audio_data, transcribed_text, context, response_mode = 'both' } = request;
 
     // ═══════════════════════════════════════════════════════════════════════════

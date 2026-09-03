@@ -95,3 +95,29 @@ Scope: full-platform deep scan against the target enterprise architecture (Perce
 6. Items 26–32 (polling → cron/realtime; multiplexer compliance; bundle budgets).
 7. Items 33–37 (retention, partitioning, media offload).
 8. Section 8 components, then shadow mode and the nightly crawler as the acceptance gate.
+
+---
+
+## Remediation log — 2026-09-03
+
+### Stage 1 · Public surface hardening (CLOSED)
+
+| Item | Status | Evidence |
+| --- | --- | --- |
+| Unauthenticated edge functions without a WAF | **Fixed** | All 28 live `verify_jwt = false` functions now call `publicGuard`. `edge-tts` and `zoe-voice` are stale config entries with no directory. |
+| Method-agnostic guard | **Fixed** | `supabase/functions/_shared/public-guard.ts` wraps `guardRequest`, keeps GET/cron paths working and exposes the parsed body as `guard.body` so handlers never double-read the request. |
+| Regression prevention | **Fixed** | `scripts/check-public-guard.mjs` fails `prebuild` if a new unauthenticated function ships without a guard. |
+| Live verification | **Passed** | `external-search` / `get-user-location` / `zoe-infinity-quota-monitor` return 200; `User-Agent: sqlmap` → 403; 31st call in a 60s window → 429. |
+
+### Stage 2 · Telemetry integrity (CLOSED)
+
+| Item | Status | Evidence |
+| --- | --- | --- |
+| Silent behavioural-event loss | **Fixed** | `behavioral-event-stream` returns HTTP 401 with `success:false, retryable:true` for anonymous/expired sessions; `useContinuousDHFStream` and `useAdaptiveLearning` now requeue on `success:false` instead of reporting a healthy stream. Live probe returns 401. |
+| Fabricated biometrics presented as real | **Fixed** | `useBioTelemetry` exposes `dataSource: 'simulated'` / `isSimulated`, the fake "Oura Ring Gen 3" label is gone, and `DeviceStatus` renders a **Simulated** chip. The values are never persisted or fed to the DHF graph. |
+| `platform_health_logs` write storm | **Fixed** | Six hooks wrote ~3,300 rows/user/day (16M/day at 5,000 members, 93 MB for three test accounts). All now funnel through `logHealthSnapshot`, which keeps one row per source per 15 min and always lets genuine state changes and one-off events through. Covered by `src/test/healthSnapshotThrottle.test.ts`. |
+| Retention gaps | **Fixed** | `prune_platform_telemetry` now also prunes `dhf_heartbeats` (14d), `zoe_search_events` (90d) and `dhf_asset_logs` (30d), and tightens health logs to 7d / behavioural events to 30d. First run removed 101,765 rows. Execute is revoked from `anon`/`authenticated`. |
+
+Note: `VACUUM FULL` cannot run through the SQL API, so the freed pages stay
+allocated to the tables and are reused by new inserts rather than returned to
+the filesystem. Total database size stops growing, which is the operative goal.

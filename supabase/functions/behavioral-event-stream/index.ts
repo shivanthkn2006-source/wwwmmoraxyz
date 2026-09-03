@@ -5,6 +5,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { publicGuard } from '../_shared/public-guard.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -128,18 +129,25 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const guard = await publicGuard(req, { name: 'behavioral-event-stream', limit: 120, windowSeconds: 60, maxBodyBytes: 512 * 1024, allowRichText: true });
+  if (guard.response) return guard.response;
+
   try {
     const authHeader = req.headers.get('Authorization');
     
-    // Gracefully handle missing auth - return success but skip processing
+    // Telemetry that cannot be attributed to a user is DROPPED, so the caller
+    // must be told. Returning `success: true` here made the client report a
+    // healthy stream while every packet was silently discarded.
     if (!authHeader) {
-      console.log('[Behavioral Stream] No auth header - skipping (anonymous request)');
-      return new Response(JSON.stringify({ 
-        success: true, 
+      console.warn('[Behavioral Stream] No auth header - refusing (events would be dropped)');
+      return new Response(JSON.stringify({
+        success: false,
         events_processed: 0,
         skipped: true,
-        reason: 'anonymous_request'
+        retryable: true,
+        reason: 'anonymous_request',
       }), {
+        status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -153,18 +161,20 @@ serve(async (req) => {
     const { data: { user }, error: userError } = await supabase.auth.getUser(token);
     
     if (userError || !user) {
-      console.log('[Behavioral Stream] Invalid/expired token - skipping');
-      return new Response(JSON.stringify({ 
-        success: true, 
+      console.warn('[Behavioral Stream] Invalid/expired token - refusing so the client can re-queue');
+      return new Response(JSON.stringify({
+        success: false,
         events_processed: 0,
         skipped: true,
-        reason: 'invalid_session'
+        retryable: true,
+        reason: 'invalid_session',
       }), {
+        status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const { events, process_ecn = true }: BatchEventRequest = await req.json();
+    const { events, process_ecn = true }: BatchEventRequest = (guard.body as any);
 
     if (!events || !Array.isArray(events) || events.length === 0) {
       return new Response(JSON.stringify({ error: 'No events provided' }), {

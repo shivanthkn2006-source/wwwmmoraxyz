@@ -8,6 +8,7 @@ import { processASI, quickASI, ASIMode, ASIResult } from '@/core/asi/ASIProcesso
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { toast } from 'sonner';
+import { logHealthSnapshot } from '@/lib/safeTelemetry';
 
 export interface ASIRepairResult {
   success: boolean;
@@ -268,8 +269,8 @@ async function logRepairToDatabase(result: ASIRepairResult): Promise<void> {
       }
     };
     
-    // Try to insert, ignore errors (table may not exist or have different schema)
-    await supabase.from('platform_health_logs').insert(logData as any).single();
+    // A completed repair is an event worth keeping, so it bypasses the sampler.
+    await logHealthSnapshot({ source: 'asi-self-repair', force: true, ...logData });
   } catch (error) {
     console.warn('[ASI-Repair] Failed to log repair (non-critical):', error);
   }

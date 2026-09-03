@@ -7,6 +7,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { publicGuard } from '../_shared/public-guard.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -24,6 +25,9 @@ interface Body {
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  const guard = await publicGuard(req, { name: 'zoe-infinity-quota-prune', limit: 10, windowSeconds: 300, maxBodyBytes: 512 * 1024, allowRichText: true });
+  if (guard.response) return guard.response;
 
   try {
     const authHeader = req.headers.get("authorization");
@@ -57,7 +61,7 @@ serve(async (req) => {
       });
     }
 
-    const body: Body = await req.json().catch(() => ({}));
+    const body: Body = (guard.body as any);
     const targets: Target[] = body.targets?.length
       ? body.targets
       : ["expired_cache", "old_behavioral_events", "old_ecn_history"];

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { toast } from 'sonner';
+import { logHealthSnapshot } from '@/lib/safeTelemetry';
 
 export interface HealthIssue {
   id: string;
@@ -244,14 +245,14 @@ export const usePlatformHealthMonitor = () => {
 
       // Store in database for admin review
       if (user?.id) {
-        await supabase.from('platform_health_logs').insert({
-          user_id: user.id,
+        await logHealthSnapshot({
+          source: 'platform-health-monitor',
           score,
           status,
           issues_count: issues.length,
           critical_issues: issues.filter(i => i.severity === 'critical').length,
-          scan_data: issues as any,
-        } as any);
+          scan_data: { issues },
+        });
       }
 
       if (issues.length > 0) {

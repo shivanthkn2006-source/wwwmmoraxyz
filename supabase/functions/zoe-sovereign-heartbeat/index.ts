@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { publicGuard } from '../_shared/public-guard.ts';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ZOE SOVEREIGN HEARTBEAT - THE INFINITE LOOP PATCH
@@ -70,6 +71,9 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const guard = await publicGuard(req, { name: 'zoe-sovereign-heartbeat', limit: 120, windowSeconds: 60, maxBodyBytes: 512 * 1024, allowRichText: true });
+  if (guard.response) return guard.response;
+
   const startTime = performance.now();
   const heartbeatId = crypto.randomUUID();
   
@@ -85,7 +89,7 @@ serve(async (req) => {
     // Parse request body (may be empty for cron-triggered calls)
     let body: { mode?: string; specificUserId?: string } = {};
     try {
-      body = await req.json();
+      body = (guard.body as any);
     } catch {
       // Empty body is fine for cron triggers
     }

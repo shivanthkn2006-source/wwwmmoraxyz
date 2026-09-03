@@ -15,6 +15,14 @@ export interface BioMetrics {
 
 export interface BioTelemetryState {
   metrics: BioMetrics;
+  /**
+   * TRUTHFULNESS CONTRACT: these readings are generated locally, not read from
+   * a wearable. Nothing may persist them, feed them to the DHF graph, or show
+   * them to a member without the "simulated" label. Flip to 'device' only when
+   * a real BLE/HealthKit source is wired in.
+   */
+  dataSource: 'simulated' | 'device';
+  isSimulated: boolean;
   isConnected: boolean;
   deviceName: string;
   lastSyncAt: Date | null;
@@ -131,6 +139,8 @@ export const useBioTelemetry = () => {
       steps: 0,
       calories: 0
     },
+    dataSource: 'simulated',
+    isSimulated: true,
     isConnected: false,
     deviceName: 'Scanning...',
     lastSyncAt: null,
@@ -156,7 +166,7 @@ export const useBioTelemetry = () => {
       setState(prev => ({
         ...prev,
         isConnected: true,
-        deviceName: 'Oura Ring Gen 3',
+        deviceName: 'Simulated sensor (demo)',
         signalStrength: 95,
         batteryLevel: 87,
         lastSyncAt: new Date()

@@ -2,6 +2,8 @@
 // weather and shopping products. Uses free/keyless public APIs by default so
 // results never block on secrets. Every result is normalised into one shape so
 // the M'Mora home feed can render it inline (nothing opens outside the app).
+import { publicGuard } from '../_shared/public-guard.ts';
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -488,8 +490,16 @@ const sanitizeResult = (item: ExternalResult): ExternalResult => ({
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
+  const guard = await publicGuard(req, {
+    name: 'external-search',
+    limit: 40,
+    windowSeconds: 60,
+    allowRichText: true, // search terms are user prose, not code
+  });
+  if (guard.response) return guard.response;
+
   try {
-    const { query, lat, lon } = await req.json();
+    const { query, lat, lon } = guard.body as { query?: string; lat?: number; lon?: number };
     const term = String(query ?? '').trim();
     if (term.length < 2) {
       return new Response(JSON.stringify({ results: [] }), {

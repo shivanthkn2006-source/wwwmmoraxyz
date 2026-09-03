@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sovereignKey, sovereignFetch } from "../_shared/sovereign-ai.ts";
 import { clientErrorResponse } from '../_shared/client-error.ts';
+import { publicGuard } from '../_shared/public-guard.ts';
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════════
@@ -74,10 +75,13 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const guard = await publicGuard(req, { name: 'mail-sentinel', limit: 30, windowSeconds: 60, maxBodyBytes: 512 * 1024, allowRichText: true });
+  if (guard.response) return guard.response;
+
   const startTime = performance.now();
 
   try {
-    const { action, payload } = await req.json();
+    const { action, payload } = (guard.body as any);
     
     console.log(`[MailSentinel] Action: ${action}`);
 

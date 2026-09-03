@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { resolveClaims } from '../_shared/auth-claims.ts';
 import { sovereignFetch, sovereignKey } from "../_shared/sovereign-ai.ts";
+import { publicGuard } from '../_shared/public-guard.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -71,6 +72,9 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const guard = await publicGuard(req, { name: 'dream-foundry', limit: 10, windowSeconds: 300, maxBodyBytes: 512 * 1024, allowRichText: true });
+  if (guard.response) return guard.response;
+
   const startTime = Date.now();
   const executionId = `foundry-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
 
@@ -87,7 +91,7 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    const { count = 10, manual = false } = await req.json().catch(() => ({}));
+    const { count = 10, manual = false } = (guard.body as any);
     
     console.log(`[DREAM FOUNDRY ${executionId}] Starting generation of ${count} scenarios`);
 

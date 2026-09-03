@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { resolveClaims } from '../_shared/auth-claims.ts';
 import { sovereignFetch, sovereignKey } from "../_shared/sovereign-ai.ts";
+import { publicGuard } from '../_shared/public-guard.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -139,6 +140,9 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const guard = await publicGuard(req, { name: 'parent-zoe-executor', limit: 30, windowSeconds: 60, maxBodyBytes: 512 * 1024, allowRichText: true });
+  if (guard.response) return guard.response;
+
   try {
     // Validate authentication
     const authHeader = req.headers.get('Authorization');
@@ -157,7 +161,7 @@ serve(async (req) => {
       mode = 'parent',
       context = {},
       stream = false 
-    } = await req.json();
+    } = (guard.body as any);
 
     if (!message) {
       return new Response(

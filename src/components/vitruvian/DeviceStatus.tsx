@@ -10,6 +10,8 @@ interface DeviceStatusProps {
   batteryLevel: number;
   lastSyncAt: Date | null;
   onReconnect: () => void;
+  /** True while the readings come from the local simulator, not a wearable. */
+  isSimulated?: boolean;
 }
 
 const DeviceStatus = ({
@@ -18,7 +20,8 @@ const DeviceStatus = ({
   signalStrength,
   batteryLevel,
   lastSyncAt,
-  onReconnect
+  onReconnect,
+  isSimulated = false
 }: DeviceStatusProps) => {
   return (
     <Card className="oni-neuro-glass border-omega-cyan/20 p-4">
@@ -42,6 +45,11 @@ const DeviceStatus = ({
               </span>
               {isConnected && (
                 <Bluetooth className="w-3 h-3 text-omega-cyan" />
+              )}
+              {isSimulated && (
+                <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-share-tech uppercase tracking-wide text-muted-foreground">
+                  Simulated
+                </span>
               )}
             </div>
             <span className="text-xs text-muted-foreground font-share-tech">

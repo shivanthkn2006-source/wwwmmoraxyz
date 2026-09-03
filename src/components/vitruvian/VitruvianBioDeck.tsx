@@ -15,6 +15,7 @@ const VitruvianBioDeck = () => {
     metrics,
     isConnected,
     deviceName,
+    isSimulated,
     signalStrength,
     batteryLevel,
     lastSyncAt,
@@ -83,6 +84,7 @@ const VitruvianBioDeck = () => {
           <DeviceStatus
             isConnected={isConnected}
             deviceName={deviceName}
+            isSimulated={isSimulated}
             signalStrength={signalStrength}
             batteryLevel={batteryLevel}
             lastSyncAt={lastSyncAt}

@@ -14,6 +14,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { toast } from 'sonner';
+import { logHealthSnapshot } from '@/lib/safeTelemetry';
 
 // Protocol violation types
 export type ProtocolViolation = 
@@ -249,18 +250,20 @@ export const useShadowSentinel = () => {
 
     // Log patch
     if (user) {
-      await supabase.from('platform_health_logs').insert([{
-        user_id: user.id,
+      // A security patch is a real event, not a periodic sample — always stored.
+      await logHealthSnapshot({
+        source: 'shadow-sentinel',
         score: 100,
         status: 'patched',
-        scan_data: JSON.parse(JSON.stringify({
+        force: true,
+        scan_data: {
           type: 'security_patch',
           vulnerability,
           patchId,
           version,
           timestamp: new Date().toISOString()
-        }))
-      }]);
+        }
+      });
     }
 
     toast.success(`🔧 Patch Applied: Version ${version}`, {

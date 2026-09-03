@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { publicGuard } from '../_shared/public-guard.ts';
 
 /**
  * QUADRILLION VALUATION AUDIT - Comprehensive Platform Assessment
@@ -87,6 +88,9 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const guard = await publicGuard(req, { name: 'quadrillion-audit', limit: 10, windowSeconds: 300, maxBodyBytes: 512 * 1024, allowRichText: true });
+  if (guard.response) return guard.response;
 
   const auditId = crypto.randomUUID();
   const startTime = Date.now();

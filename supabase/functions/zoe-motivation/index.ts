@@ -12,6 +12,7 @@
  *   • image always present (Pollinations ladder → local SVG poster)
  */
 import { renderImage } from '../_shared/image-engine.ts';
+import { publicGuard } from '../_shared/public-guard.ts';
 import {
   generateMotivation, pickMotivationFallback, themeFor, sceneFor, paletteFor,
 } from '../_shared/motivation-content.ts';
@@ -183,8 +184,10 @@ Deno.serve(async (req) => {
 
   if (!SUPABASE_URL || !SERVICE_KEY) return json({ ok: false, error: 'engine not configured' }, 500);
 
-  let body: any = {};
-  try { body = await req.json(); } catch { /* cron posts empty bodies */ }
+  const guard = await publicGuard(req, { name: 'zoe-motivation', limit: 30, windowSeconds: 60 });
+  if (guard.response) return guard.response;
+
+  const body: any = guard.body ?? {}; // cron posts empty bodies
   const action = body.action ?? 'ensure';
   const now = body.simulateNow ? new Date(body.simulateNow) : new Date();
 

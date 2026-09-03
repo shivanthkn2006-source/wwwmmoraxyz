@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { publicGuard } from '../_shared/public-guard.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -31,6 +32,9 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const guard = await publicGuard(req, { name: 'get-user-location', limit: 30, windowSeconds: 60 });
+  if (guard.response) return guard.response;
 
   try {
     // Get client IP from headers
@@ -66,13 +70,7 @@ serve(async (req) => {
     }
 
     // Parse request body for hints
-    let cityHint = '';
-    try {
-      const body = await req.json();
-      cityHint = body.cityHint?.toLowerCase() || '';
-    } catch {
-      // No body provided
-    }
+    const cityHint = String((guard.body as { cityHint?: string }).cityHint ?? '').toLowerCase();
 
     // Try to match city hint
     if (cityHint) {

@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { cascadeInfer, hardenZoeIdentity } from "../_shared/cascading-provider.ts";
+import { publicGuard } from '../_shared/public-guard.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -10,6 +11,9 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const guard = await publicGuard(req, { name: 'zoe-omega-chat', limit: 40, windowSeconds: 60, maxBodyBytes: 512 * 1024, allowRichText: true });
+  if (guard.response) return guard.response;
 
   try {
     const authHeader = req.headers.get('Authorization');
@@ -33,7 +37,7 @@ Deno.serve(async (req) => {
     }
 
     const userId = user.id;
-    const { message, context } = await req.json();
+    const { message, context } = (guard.body as any);
 
     // Fetch recent sovereign memory for context
     const serviceClient = createClient(

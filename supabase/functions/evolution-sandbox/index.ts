@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sovereignFetch, sovereignKey } from "../_shared/sovereign-ai.ts";
+import { publicGuard } from '../_shared/public-guard.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -17,6 +18,9 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const guard = await publicGuard(req, { name: 'evolution-sandbox', limit: 20, windowSeconds: 60, maxBodyBytes: 512 * 1024, allowRichText: true });
+  if (guard.response) return guard.response;
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
   const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -36,7 +40,7 @@ serve(async (req) => {
     }
     const userId = user.id;
 
-    const { action, proposed_system_prompt, reason_for_upgrade, version_id } = await req.json();
+    const { action, proposed_system_prompt, reason_for_upgrade, version_id } = (guard.body as any);
 
     // ═══════════════════════════════════════════════════════════════════
     // ACTION: propose — Zoe proposes a cortex upgrade

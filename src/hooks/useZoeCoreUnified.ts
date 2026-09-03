@@ -16,6 +16,7 @@ import { useAuth } from '@/lib/auth';
 import { toast } from 'sonner';
 import { zoeOrchestrator } from '@/core/orchestrator';
 import { contextCompressor, memoryMonitor } from '@/core/latency';
+import { logHealthSnapshot } from '@/lib/safeTelemetry';
 
 export interface UnifiedScanResult {
   timestamp: string;
@@ -235,12 +236,12 @@ export const useZoeCoreUnified = () => {
       };
 
       // Log to platform
-      await supabase.from('platform_health_logs').insert([{
-        user_id: user.id,
+      await logHealthSnapshot({
+        source: 'zoe-core-unified',
         score: overallHealth,
         status,
         scan_data: JSON.parse(JSON.stringify(result))
-      }]);
+      });
 
       // Update state
       setState(prev => ({

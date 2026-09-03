@@ -157,8 +157,10 @@ export const useAdaptiveLearning = () => {
         },
       });
 
-      if (error) {
-        console.error('[Adaptive Learning] Flush error:', error);
+      if (error || data?.success === false) {
+        // `success: false` means the backend answered but stored nothing
+        // (expired session), so the batch must be retried, not dropped.
+        console.error('[Adaptive Learning] Flush error:', error ?? data?.reason);
         // Re-add events to buffer for retry
         eventBuffer.current = [...eventsToSend, ...eventBuffer.current];
       } else if (data?.sync_status) {

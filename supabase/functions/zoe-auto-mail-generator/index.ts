@@ -10,6 +10,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { resolveClaims } from '../_shared/auth-claims.ts';
+import { publicGuard } from '../_shared/public-guard.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -66,6 +67,9 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const guard = await publicGuard(req, { name: 'zoe-auto-mail-generator', limit: 20, windowSeconds: 60, maxBodyBytes: 512 * 1024, allowRichText: true });
+  if (guard.response) return guard.response;
+
   try {
     // Validate authentication
     const authHeader = req.headers.get('Authorization');
@@ -83,7 +87,7 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const body: GenerateMailRequest = await req.json();
+    const body: GenerateMailRequest = (guard.body as any);
     const { senderId, recipientId, category, priority, customSubject, customBody } = body;
 
     console.log(`[AutoMailGen ${requestId}] Sender: ${senderId}, Recipient: ${recipientId}`);
