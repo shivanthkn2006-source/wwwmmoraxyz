@@ -196,14 +196,36 @@ Deno.serve(async (req) => {
   const admin = createClient(url, service);
   const degraded: string[] = [];
 
-  // 1. DHF profile (may not exist yet)
-  const { data: profile } = await admin
-    .from('dhf_profiles')
-    .select('birth_date, birth_time, birth_timezone, natal_chart')
+  // 1. Birth profile.
+  // Audit fix (SEP03): this used to read `dhf_profiles`, a table nothing has
+  // ever written (0 rows). The live, populated source is `astro_profiles`
+  // (synced from `profiles`), with `user_dhf_profiles` as a secondary source.
+  const { data: astroProfile } = await admin
+    .from('astro_profiles')
+    .select('birth_date, birth_time, birth_timezone')
     .eq('user_id', user.id)
     .maybeSingle();
 
+  const { data: legacyProfile } = astroProfile
+    ? { data: null as null | { dob: string | null; birth_time: string | null } }
+    : await admin
+        .from('user_dhf_profiles')
+        .select('dob, birth_time')
+        .eq('id', user.id)
+        .maybeSingle();
+
+  const profile = astroProfile
+    ? {
+        birth_date: astroProfile.birth_date as string | null,
+        birth_time: astroProfile.birth_time as string | null,
+        birth_timezone: astroProfile.birth_timezone as string | null,
+      }
+    : legacyProfile
+      ? { birth_date: legacyProfile.dob, birth_time: legacyProfile.birth_time, birth_timezone: null }
+      : null;
+
   const timeZone = body.timezone || (profile?.birth_timezone as string) || 'Asia/Kolkata';
+
 
   // 2. Deterministic telemetry
   const dailyTelemetry = getDailyArchetype(new Date(), timeZone);
