@@ -9,6 +9,7 @@ import { useAuth } from '@/lib/auth';
 import { toast } from 'sonner';
 import { initializeZoeVoices, stopZoeSpeech } from '@/utils/zoeVoice';
 import { supabase } from '@/integrations/supabase/client';
+import { logHealthSnapshot } from '@/lib/safeTelemetry';
 
 interface HealthCheckResult {
   healthy: boolean;
@@ -147,13 +148,13 @@ export const useZoeSelfHealer = () => {
     if (!user || (issues.length === 0 && fixes.length === 0)) return;
 
     try {
-      await supabase.from('platform_health_logs').insert({
-        user_id: user.id,
+      await logHealthSnapshot({
+        source: 'zoe-self-healer',
         score: issues.length === 0 ? 100 : Math.max(0, 100 - issues.length * 20),
         status: issues.length === 0 ? 'healthy' : issues.length <= 2 ? 'warning' : 'critical',
         issues_count: issues.length,
         critical_issues: issues.filter(i => i.includes('offline') || i.includes('connectivity')).length,
-        scan_data: { issues, fixes, timestamp: new Date().toISOString() }
+        scan_data: { issues, fixes }
       });
     } catch {
       // Silent fail - don't interrupt user experience
