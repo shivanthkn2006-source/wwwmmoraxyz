@@ -12,6 +12,8 @@ import { ArrowLeft, Bug, Loader2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { usePlatformStore } from '@/store/usePlatformStore';
+import { useIsAdmin } from '@/hooks/useIsAdmin';
+import BugReportInbox from '@/components/admin/BugReportInbox';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
