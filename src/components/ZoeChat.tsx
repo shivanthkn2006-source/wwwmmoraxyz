@@ -305,6 +305,15 @@ export const ZoeChat = () => {
       // Save assistant response
       await saveMessageToDb('assistant', responseContent);
 
+      // Persist the round into long-term memory (same store the orb uses).
+      void rememberZoeRound({
+        userId: user?.id,
+        sessionKey: `zoe-chat-${user?.id ?? 'anon'}`,
+        userText: text.trim(),
+        assistantText: responseContent,
+      });
+
+
       // Speak the response if voice mode is enabled
       if (voiceMode && responseContent) {
         await speakResponse(responseContent, assistantMessage.id);
