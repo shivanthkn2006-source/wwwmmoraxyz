@@ -295,6 +295,8 @@ export const BugReportPage: React.FC = () => {
           ))}
         </ul>
       )}
+
+      {isAdmin ? <BugReportInbox /> : null}
     </div>
   );
 };
