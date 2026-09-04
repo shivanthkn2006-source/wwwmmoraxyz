@@ -36,3 +36,14 @@ describe('canonical route registry', () => {
     }
   });
 });
+
+describe('dock ↔ registry consistency', () => {
+  it('every dock action points at a real registered route', async () => {
+    const source = read('src/components/home/dockExtraActions.tsx');
+    const routes = [...source.matchAll(/route: '([^']+)'/g)].map((m) => m[1]);
+    expect(routes.length).toBeGreaterThan(10);
+    for (const route of routes) {
+      expect(findRoute(route), `dock route ${route} is not mounted in App.tsx`).toBeTruthy();
+    }
+  });
+});
