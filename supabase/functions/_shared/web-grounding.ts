@@ -27,6 +27,13 @@ const UA =
 
 const strip = (value: string) =>
   String(value ?? '')
+    // Decode first: RSS descriptions carry escaped markup, and stripping tags
+    // before decoding leaves raw `a href="..."` noise in the snippet.
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&apos;/g, "'")
+    .replace(/&amp;/g, '&')
     .replace(/<[^>]+>/g, ' ')
     .replace(/&[a-z#0-9]+;/gi, ' ')
     .replace(/\s+/g, ' ')
@@ -103,13 +110,32 @@ async function wikipedia(query: string): Promise<WebGroundHit[]> {
       query,
     )}&format=json&srlimit=3&origin=*`,
   );
-  return (data?.query?.search ?? []).map((page: Record<string, unknown>) => ({
+  const pages = (data?.query?.search ?? []) as Array<Record<string, unknown>>;
+  const hits: WebGroundHit[] = pages.map((page) => ({
     title: strip(String(page.title ?? query)),
     snippet: strip(String(page.snippet ?? '')),
     url: `https://en.wikipedia.org/?curid=${page.pageid}`,
     source: 'Wikipedia',
     publishedAt: typeof page.timestamp === 'string' ? page.timestamp : null,
   }));
+
+  // Search snippets come from mid-article and rarely state current office
+  // holders. The lead section does ("The current president is ..."), so pull
+  // the intro extract for the top matches and use it as the snippet.
+  const ids = pages.slice(0, 2).map((p) => p.pageid).filter(Boolean);
+  if (ids.length) {
+    const lead = await safeJson(
+      `https://en.wikipedia.org/w/api.php?action=query&prop=extracts&exintro=1&explaintext=1&format=json&origin=*&pageids=${ids.join('|')}`,
+    );
+    const byId = (lead?.query?.pages ?? {}) as Record<string, { pageid?: number; extract?: string }>;
+    for (const entry of Object.values(byId)) {
+      const extract = strip(String(entry?.extract ?? '')).slice(0, 600);
+      if (!extract) continue;
+      const hit = hits.find((h) => h.url.endsWith(`curid=${entry.pageid}`));
+      if (hit) hit.snippet = extract;
+    }
+  }
+  return hits;
 }
 
 async function safeText(url: string, ms = 6000): Promise<string | null> {
@@ -180,7 +206,7 @@ async function freshNews(query: string): Promise<WebGroundHit[]> {
 export async function webGround(query: string, limit = 6): Promise<WebGroundHit[]> {
   const term = (query || '').trim().slice(0, 300);
   if (term.length < 3) return [];
-  const wantsNews = /\b(news|latest|today|breaking|update|current|now|who is|price|score|202\d)\b/i.test(term);
+  const wantsNews = /\b(news|latest|today|breaking|update|current|now|who is|who'?s|president|prime minister|ceo|leader|price|score|202\d)\b/i.test(term);
 
   const settled = await Promise.allSettled([
     duckduckgo(term),
