@@ -452,6 +452,31 @@ ${driftHints.length
   : ''}`;
 
     // ═══════════════════════════════════════════════════════════════════════
+    // GROUNDING LAYER 0 — LIVE WEB. Deep thinking must not stall on a
+    // clarifying question for a fact the open web answers ("America president?").
+    // ═══════════════════════════════════════════════════════════════════════
+    let webBlock = '';
+    let webHitCount = 0;
+    try {
+      if (needsWebGrounding(command, 0)) {
+        const hits = await webGround(command, 6);
+        webHitCount = hits.length;
+        if (hits.length) {
+          webBlock =
+            `\n\n## LIVE WEB FACTS (authoritative, fetched just now)\n` +
+            buildWebGroundingBlock(hits, 0) +
+            `\n\nRULES FOR THESE FACTS:\n` +
+            `- They are current and outrank your training memory.\n` +
+            `- If they answer the user's question, set "clarifying_question" to null, raise "confidence" accordingly and ANSWER. Do not ask which/when when the facts already say it.\n` +
+            `- Only ask a clarifying question if the user's request is genuinely ambiguous about intent, not about a fact you can look up above.\n`;
+        }
+      }
+    } catch (webError) {
+      console.warn('[zoe-core-intelligence] web grounding skipped:', webError instanceof Error ? webError.message : webError);
+    }
+    console.log('[zoe-core-intelligence] web grounding hits:', webHitCount);
+
+    // ═══════════════════════════════════════════════════════════════════════
     // GROUNDING LAYER 1 — deterministic pre-compute (provider-agnostic net)
     // ═══════════════════════════════════════════════════════════════════════
     const preFacts = [
@@ -459,7 +484,7 @@ ${driftHints.length
       ...precomputeCharacterFacts(command),
     ];
     const groundedSystemPrompt =
-      systemPrompt + CLARIFICATION_PROTOCOL + SCRATCHPAD_INSTRUCTION + groundedFactsBlock(preFacts);
+      systemPrompt + CLARIFICATION_PROTOCOL + SCRATCHPAD_INSTRUCTION + groundedFactsBlock(preFacts) + webBlock;
 
     const cascadeMessages = [
       { role: 'system', content: groundedSystemPrompt },
