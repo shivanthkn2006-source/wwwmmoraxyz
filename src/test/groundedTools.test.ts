@@ -144,9 +144,9 @@ describe('character_counter (strawberry test)', () => {
 });
 
 describe('tool registry + riddle simulator', () => {
-  it('exposes all four grounded tools', () => {
+  it('exposes all grounded tools', () => {
     expect(GROUNDED_TOOL_DEFS.map((t) => t.name)).toEqual([
-      'math_calculator', 'character_counter', 'logic_checker', 'sequence_simulator',
+      'math_calculator', 'character_counter', 'logic_checker', 'sequence_simulator', 'calculate_ephemeris',
     ]);
   });
 
