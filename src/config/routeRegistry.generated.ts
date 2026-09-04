@@ -79,6 +79,7 @@ export const CANONICAL_ROUTES: CanonicalRoute[] = [
   { path: "/security", label: "Security", dynamic: false },
   { path: "/selfie-city", label: "Selfie city", dynamic: false },
   { path: "/sentinel", label: "Sentinel", dynamic: false },
+  { path: "/source", label: "Source", dynamic: false },
   { path: "/universal-timeline", label: "Universal timeline", dynamic: false },
   { path: "/vastu-scan", label: "Vastu scan", dynamic: false },
   { path: "/vitruvian", label: "Vitruvian", dynamic: false },
