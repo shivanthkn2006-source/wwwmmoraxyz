@@ -28,6 +28,7 @@ import {
   SCRATCHPAD_INSTRUCTION,
   type ToolExecution,
 } from "../_shared/grounded-tools.ts";
+import { needsWebGrounding, webGround, buildWebGroundingBlock } from "../_shared/web-grounding.ts";
 import { clientErrorResponse } from '../_shared/client-error.ts';
 
 // Advanced Cognitive Tools for Gemini 3 Pro Integration
