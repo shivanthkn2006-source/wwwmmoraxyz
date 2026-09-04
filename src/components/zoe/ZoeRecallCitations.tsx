@@ -46,6 +46,11 @@ export const ZoeRecallCitations = ({ sources }: { sources: ZoeRecallSource[] }) 
   if (!sources.length) return null;
 
   const openSource = (source: ZoeRecallSource) => {
+    // Web-grounded citations point at real external pages — open them in a new tab.
+    if (source.route && /^https?:\/\//i.test(source.route)) {
+      window.open(source.route, '_blank', 'noopener,noreferrer');
+      return;
+    }
     const target =
       source.route ||
       `/admin/search-index?type=${encodeURIComponent(source.entityType)}&id=${encodeURIComponent(source.entityId)}`;
@@ -70,7 +75,7 @@ export const ZoeRecallCitations = ({ sources }: { sources: ZoeRecallSource[] }) 
           <PopoverContent className="w-72 text-xs" align="start">
             <p className="font-medium">{source.title ?? source.entityType}</p>
             <p className="mt-1 opacity-70">
-              {source.entityType}
+              {source.entityType === 'web' ? 'Live web source' : source.entityType}
               {source.createdAt ? ` · ${source.createdAt.slice(0, 10)}` : ''}
               {source.stale ? ' · historical' : ''}
             </p>
