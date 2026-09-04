@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.queue_visual_memory_for_zoe_search() FROM PUBLIC, anon, authenticated;
