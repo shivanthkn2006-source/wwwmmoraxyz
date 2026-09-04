@@ -8,6 +8,8 @@ import NeuralCoreUplink from '@/components/NeuralCoreUplink';
 import ZoeMemoryStatusPanel from '@/components/zoe-infinity/ZoeMemoryStatusPanel';
 import DhfVideoFeed from '@/components/dhf/DhfVideoFeed';
 import DhfSensorPanel from '@/components/dhf/DhfSensorPanel';
+import ZoeVisionSearchPanel from '@/components/dhf/ZoeVisionSearchPanel';
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Brain, Upload, Database, Video } from 'lucide-react';
 import PageSeo from '@/components/seo/PageSeo';
@@ -66,8 +68,10 @@ const DHFDashboardPage: React.FC = () => {
             <DHFUploadDashboard />
           </TabsContent>
 
-          <TabsContent value="memory" className="mt-0">
+          <TabsContent value="memory" className="mt-0 space-y-6">
+            <ZoeVisionSearchPanel />
             <ZoeMemoryStatusPanel />
+
           </TabsContent>
         </Tabs>
       </div>
