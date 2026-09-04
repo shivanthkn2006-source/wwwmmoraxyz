@@ -27,6 +27,13 @@ const UA =
 
 const strip = (value: string) =>
   String(value ?? '')
+    // Decode first: RSS descriptions carry escaped markup, and stripping tags
+    // before decoding leaves raw `a href="..."` noise in the snippet.
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&apos;/g, "'")
+    .replace(/&amp;/g, '&')
     .replace(/<[^>]+>/g, ' ')
     .replace(/&[a-z#0-9]+;/gi, ' ')
     .replace(/\s+/g, ' ')
