@@ -8,6 +8,7 @@ import {
   createErrorResponse
 } from "../_shared/ai-telemetry.ts";
 import { clientErrorResponse } from '../_shared/client-error.ts';
+import { CLARIFICATION_PROTOCOL } from '../_shared/cognitive-fault.ts';
 import { omniRecall, buildOmniRecallBlock, buildRecallSources, type RecallSource } from '../_shared/omni-recall.ts';
 
 // Enhanced cognitive architecture tools for superior reasoning
@@ -279,7 +280,7 @@ Remember: You are not just answering questions—you are genuinely helping someo
     } catch (recallError) {
       console.warn('Zoe Agent omni recall skipped:', recallError instanceof Error ? recallError.message : recallError);
     }
-    const groundedSystemPrompt = `${systemPrompt}${omniRecallBlock}`;
+    const groundedSystemPrompt = `${systemPrompt}${omniRecallBlock}${CLARIFICATION_PROTOCOL}`;
 
     // Sovereign Groq call (supports OpenAI-style tool calling). Falls back to 8B on 70B failure.
     const groqBody = (model: string) => JSON.stringify({

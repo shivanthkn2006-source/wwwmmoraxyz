@@ -13,6 +13,7 @@ import {
   parseRelationshipStyle,
 } from "../_shared/zoe-relationship-core.ts";
 import { clientErrorResponse } from '../_shared/client-error.ts';
+import { CLARIFICATION_PROTOCOL } from '../_shared/cognitive-fault.ts';
 import { buildPlatformStateBlock, PLATFORM_STATE_VERSION } from '../_shared/platform-state.ts';
 import { omniRecall, buildOmniRecallBlock, buildRecallSources, type RecallSource } from '../_shared/omni-recall.ts';
 
@@ -77,7 +78,7 @@ async function tryGemma4(systemPrompt: string, messages: Message[], mode: Intell
       body: JSON.stringify({
         model,
         messages: [
-          { role: "system", content: systemPrompt + '\n\nIMPORTANT: Reply with ONLY your final answer. No reasoning, no drafts, no bullet points, no self-talk.' },
+          { role: "system", content: systemPrompt + CLARIFICATION_PROTOCOL + '\n\nIMPORTANT: Reply with ONLY your final answer. No reasoning, no drafts, no bullet points, no self-talk.' },
           ...messages,
         ],
         max_tokens: mode === 'pro' ? 1500 : 800,
@@ -159,7 +160,7 @@ async function tryGroq(systemPrompt: string, messages: Message[], mode: Intellig
       },
       body: JSON.stringify({
         model,
-        messages: [{ role: "system", content: systemPrompt }, ...messages],
+        messages: [{ role: "system", content: systemPrompt + CLARIFICATION_PROTOCOL }, ...messages],
         max_tokens: mode === 'pro' ? 1500 : 500,
         temperature: mode === 'pro' ? 0.7 : 0.8,
       }),
@@ -199,7 +200,7 @@ async function tryOpenRouter(systemPrompt: string, messages: Message[], mode: In
       },
       body: JSON.stringify({
         model,
-        messages: [{ role: "system", content: systemPrompt }, ...messages],
+        messages: [{ role: "system", content: systemPrompt + CLARIFICATION_PROTOCOL }, ...messages],
         max_tokens: mode === 'pro' ? 1500 : 500,
         temperature: mode === 'pro' ? 0.7 : 0.8,
       }),

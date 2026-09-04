@@ -20,6 +20,7 @@ import {
   lahiriAyanamsa,
   PRECISE_BODIES,
 } from './ephemeris-precision.ts';
+import { getSwissPositions, swissHouses, swissEngineMode } from './swiss-ephemeris.ts';
 import { zonedTimeToUtc } from './astro-engine.ts';
 import { dayLordPromptLine } from './day-lord.ts';
 
@@ -42,20 +43,44 @@ const deg = (n: number) => `${n.toFixed(2)}°`;
 const day = (iso: string) => iso.slice(0, 10);
 
 /**
+ * Swiss Ephemeris first (real Astrodienst library via WASM); the VSOP87/ELP
+ * engine is only used if the WASM module cannot initialise in this sandbox.
+ */
+async function skyFor(date: Date): Promise<{ positions: ReturnType<typeof getPrecisePositions>; engine: string; ayanamsa: number }> {
+  try {
+    const positions = await getSwissPositions(date);
+    const ayanamsa = Number((positions.Sun.longitude - positions.Sun.siderealLongitude + 360) % 360);
+    return {
+      positions,
+      engine: `Swiss Ephemeris ${swissEngineMode() === 'swieph' ? '(JPL DE431 .se1 files)' : '(Moshier model)'} via WASM`,
+      ayanamsa,
+    };
+  } catch (err) {
+    console.warn('[astro-grounding] Swiss Ephemeris unavailable, falling back', err);
+    return {
+      positions: getPrecisePositions(date),
+      engine: 'VSOP87/ELP fallback (astronomy-engine)',
+      ayanamsa: lahiriAyanamsa(date),
+    };
+  }
+}
+
+/**
  * Build the FACTS block. `birth` is optional — without it Zoe still gets the
  * real current sky and the day lord, but no natal/transit/dasha numbers.
  */
-export function buildAstroGroundingBlock(
+export async function buildAstroGroundingBlock(
   birth: AstroBirthProfile | null,
   timeZone = 'Asia/Kolkata',
   now: Date = new Date(),
-): string {
+): Promise<string> {
+
   const lines: string[] = [];
 
   try {
-    const sky = getPrecisePositions(now);
+    const { positions: sky, engine, ayanamsa } = await skyFor(now);
     lines.push(
-      `ENGINE: precision ephemeris (VSOP87/ELP), Lahiri ayanamsa ${deg(lahiriAyanamsa(now))}. Every figure below is computed, not estimated.`,
+      `ENGINE: ${engine}, Lahiri ayanamsa ${deg(ayanamsa)}. Every figure below is computed, not estimated.`,
     );
     lines.push('');
     lines.push('CURRENT SKY (tropical longitude | sidereal/Vedic | nakshatra):');
@@ -71,7 +96,8 @@ export function buildAstroGroundingBlock(
       const tz = birth.birth_timezone || timeZone;
       const time = (birth.birth_time || '12:00').slice(0, 5);
       const natalUtc = zonedTimeToUtc(String(birth.birth_date).slice(0, 10), time, tz);
-      const natal = getPrecisePositions(natalUtc);
+      const natal = (await skyFor(natalUtc)).positions;
+
 
       lines.push('');
       lines.push(
@@ -115,12 +141,25 @@ export function buildAstroGroundingBlock(
         }
       }
 
-      if (birth.birth_latitude == null || birth.birth_longitude == null) {
+      if (birth.birth_latitude != null && birth.birth_longitude != null) {
+        const houses = await swissHouses(natalUtc, birth.birth_latitude, birth.birth_longitude, 'P');
+        if (houses) {
+          const sidAsc = (houses.ascendant - houses.ayanamsa + 360) % 360;
+          lines.push('');
+          lines.push('HOUSES (Swiss Ephemeris, Placidus):');
+          lines.push(
+            `- Ascendant/Lagna: ${deg(houses.ascendant)} tropical | sidereal ${deg(sidAsc)} ${['Aries','Taurus','Gemini','Cancer','Leo','Virgo','Libra','Scorpio','Sagittarius','Capricorn','Aquarius','Pisces'][Math.floor(sidAsc / 30)]}`,
+          );
+          lines.push(`- Midheaven/MC: ${deg(houses.mc)} tropical`);
+          houses.cusps.slice(0, 12).forEach((c, i) => lines.push(`- House ${i + 1} cusp: ${deg(c)}`));
+        }
+      } else {
         lines.push('');
         lines.push(
           'NOTE: birth coordinates are missing, so house/ascendant positions CANNOT be computed. Say so plainly and invite the user to add their birth place; never guess an ascendant.',
         );
       }
+
     } else {
       lines.push('');
       lines.push(
