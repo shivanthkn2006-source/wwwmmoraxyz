@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
+import { askZoe } from '@/services/zoeEngine';
 import {
   MemoryService,
   normaliseAtoms,
@@ -109,35 +110,27 @@ export const MemoryChat = ({
     const memoryContext = await loadMemoryContext(content);
 
     try {
-      const history = turns.map((t) => ({ role: t.role, content: t.content }));
-      const messages = [
-        ...(memoryContext
-          ? [
-              {
-                role: 'system' as const,
-                content: `Long-term memory about this user:\n${memoryContext}`,
-              },
-            ]
-          : []),
-        ...history,
-        { role: 'user' as const, content },
-      ];
+      const history = turns.map((t) => ({ role: t.role as 'user' | 'assistant', content: t.content }));
 
-      const { data, error } = await supabase.functions.invoke('zoe-chat', {
-        body: {
-          messages,
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-          localTime: new Date().toLocaleTimeString('en-US', {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: true,
-          }),
-        },
+      // One brain: every surface talks to Zoe through the shared engine.
+      const answer = await askZoe({
+        text: content,
+        sessionKey: `memory-chat-${userId ?? 'anon'}`,
+        userId: userId ?? undefined,
+        history: [
+          ...(memoryContext
+            ? [
+                {
+                  role: 'system' as const,
+                  content: `Long-term memory about this user:\n${memoryContext}`,
+                },
+              ]
+            : []),
+          ...history,
+        ],
+        skipPersist: true,
       });
-
-      if (error) throw error;
-      const reply: string =
-        data?.message || data?.response || "I'm here — say that again?";
+      const reply: string = answer.text || "I'm here — say that again?";
 
       const assistantTurnId = `${Date.now()}-a`;
       setTurns((prev) => [

@@ -4,6 +4,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { askZoe } from '@/services/zoeEngine';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SentimentTapback } from '@/components/SentimentTapback';
 import { useAdaptiveLearning } from '@/hooks/useAdaptiveLearning';
@@ -337,30 +338,30 @@ const ZoeAIPage = () => {
           responseContent = guardResponse(personalResponse.content).safeResponse;
         } else {
           // Escalate to edge function (Parent Zoe)
-          const { data, error } = await supabase.functions.invoke('zoe-chat', {
+          const answer = await askZoe({
+            text: userMessage,
+            sessionKey: 'zoe-ai-page',
+            history: messages.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content })),
             body: {
-              messages: [...messages, { role: 'user', content: userMessage }],
               soulMetrics: { intimacy, selfHarmony, loveEnergy },
               behavioralTelemetry: pendingTelemetry || undefined,
-              soulCodex: soulCodex, // Pass Soul Codex for context
-            }
+              soulCodex: soulCodex,
+            },
           });
-          
-          if (error) throw error;
-          responseContent = guardResponse(data.message || 'Neural link disrupted.').safeResponse;
+          responseContent = guardResponse(answer.text || 'Neural link disrupted.').safeResponse;
         }
       } else {
         // Fallback: Use edge function directly
-        const { data, error } = await supabase.functions.invoke('zoe-chat', {
+        const answer = await askZoe({
+          text: userMessage,
+          sessionKey: 'zoe-ai-page',
+          history: messages.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content })),
           body: {
-            messages: [...messages, { role: 'user', content: userMessage }],
             soulMetrics: { intimacy, selfHarmony, loveEnergy },
             behavioralTelemetry: pendingTelemetry || undefined,
-          }
+          },
         });
-        
-        if (error) throw error;
-        responseContent = guardResponse(data.message || 'Neural link disrupted.').safeResponse;
+        responseContent = guardResponse(answer.text || 'Neural link disrupted.').safeResponse;
       }
       
       setPendingTelemetry(null);

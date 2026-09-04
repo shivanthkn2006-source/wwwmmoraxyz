@@ -6,6 +6,7 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { askZoe } from '@/services/zoeEngine';
 import { useAuth } from '@/lib/auth';
 import { speakAsZoe, stopZoeSpeech, isZoeSpeaking, initializeZoeVoices, getZoeSpeechState } from '@/utils/zoeVoice';
 import { 
@@ -111,24 +112,15 @@ export const useHandsFreeConversation = () => {
         content: m.content
       }));
 
-      // Get user's local timezone and time
-      const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      const now = new Date();
-      const localTime = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-
-      const { data, error } = await supabase.functions.invoke('zoe-chat', {
-        body: {
-          messages: [...recentMessages, { role: 'user', content: userText }],
-          timezone: userTimezone,
-          localTime: localTime,
-          enableASI: true,
-          soulMetrics: { intimacy: 70, selfHarmony: 75, loveEnergy: 70 }
-        }
+      const answer = await askZoe({
+        text: userText,
+        sessionKey: `handsfree-${user?.id ?? 'anon'}`,
+        userId: user?.id,
+        history: recentMessages as { role: 'user' | 'assistant'; content: string }[],
+        body: { enableASI: true, soulMetrics: { intimacy: 70, selfHarmony: 75, loveEnergy: 70 } },
       });
 
-      if (error) throw error;
-
-      const responseText = data?.message || data?.response || "I'm here with you.";
+      const responseText = answer.text || "I'm here with you.";
       console.log('[HandsFree] Zoe response:', responseText);
       
       // Add Zoe's message
