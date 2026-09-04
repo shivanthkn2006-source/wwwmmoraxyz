@@ -61,3 +61,9 @@
 - [x] Biometric-driven recommendations (`zoe-biometric-recommend` + `zoe_biometric_recommendations`) generated from real heart-rate/motion/battery/location readings and surfaced in the DHF sensor panel
 - [x] Shadow-mode replay (`zoe-shadow-mode`): replays all registered routes via the crawler, regenerates recommendations from real DHF rows, stores shadow vs live in `zoe_shadow_recommendations`, surfaced in `/admin/dhf-growth`
 - [x] Authenticated recall/citation verification: signed-in `zoe-chat` call returned 8 provenance sources resolving to real `dhf_daily_posts` rows with correct timestamps and `/dhf/essay/:id` routes
+
+## Sep 4 2026 — ephemeris + parked items
+- [x] Real Swiss Ephemeris in the edge runtime (`_shared/swiss-ephemeris.ts`, `sweph-wasm` 2.6.9 with JPL DE431 `.se1` files); `astro-grounding.ts` now Swiss-first with Placidus houses/ascendant, astronomy-engine only as fallback
+- [x] Clarification protocol extended to `zoe-agent` and `zoe-infinity-brain` (was only `zoe-chat` / `zoe-omega-chat`)
+- [ ] PARKED — travel tools (flights/cabs/hotels): Amadeus API discontinued; pick a free provider (Skyscanner/Kiwi/Duffel) and wire server-side keys later. No mock bookings in the meantime.
+- [ ] PARKED — full biometric loop: heart rate needs a paired BLE strap, location needs a granted permission. Zoe reports them unavailable rather than simulating.
