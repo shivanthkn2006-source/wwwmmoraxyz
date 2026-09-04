@@ -2239,62 +2239,58 @@ Want me to dive deeper into any aspect?`;
           // Get new user notifications for chat context
           const newUserNotification = getNewUserNotification();
           
-          // Persistent memory grounding (TencentDB gateway -> sovereign fallback)
-          const memoryRecall = await recallZoeMemory({
-            query: messageContent,
-            sessionKey: zoeMemorySessionKey,
-            userId: user?.id,
-          });
-
           const chatToken = cotStart('zoe-chat');
-          const { data, error } = await supabase.functions.invoke('zoe-chat', {
-            body: {
-              messages: [
-                ...(memoryRecall.context
-                  ? [{
-                      role: 'system',
-                      content: `Long-term memory about this user (${memoryRecall.source}):\n${memoryRecall.context}`,
-                    }]
-                  : []),
-                ...conversationHistory,
-                { role: 'user', content: messageContent }
-              ],
-
-              timezone: userTimezone,
-              localTime: localTime,
-              soulMetrics: { 
-                intimacy: 60, 
-                selfHarmony: 70, 
-                loveEnergy: 65,
-                ...chatVision.getVisionContext(), // Include vision context if camera is active
+          // Canonical brain (SEP04): the typed path shares the exact same engine
+          // as the voice path — recall, spatial/temporal anchor, lineage and
+          // intent classification all happen inside `askZoe`. The round itself is
+          // persisted below by this surface, so the engine skips persistence.
+          let data: any = null;
+          let error: unknown = null;
+          try {
+            const result = await askZoe({
+              text: messageContent,
+              sessionKey: zoeMemorySessionKey,
+              userId: user?.id,
+              history: conversationHistory as any,
+              skipPersist: true,
+              body: {
+                soulMetrics: {
+                  intimacy: 60,
+                  selfHarmony: 70,
+                  loveEnergy: 65,
+                  ...chatVision.getVisionContext(), // Include vision context if camera is active
+                },
+                enableASI: true, // Always enable ASI 7.5x processing
+                replyContext: userMessage.replyTo ? {
+                  role: userMessage.replyTo.role,
+                  content: userMessage.replyTo.content
+                } : undefined,
+                // Real-time feeds context for seamless connectivity
+                realtimeContext: {
+                  onlineFriends: feedsSummary.onlineFriendsCount,
+                  recentFriendActivities: feedsSummary.recentFriendActivities,
+                  topBrandDeals: feedsSummary.topBrandDeals,
+                  exclusiveOffers: feedsSummary.exclusiveOffers,
+                  hasNewUpdates: feedsSummary.hasFreshUpdates,
+                  newUserNotification: newUserNotification, // New user sign-ups/sign-ins
+                },
+                postContext: activePostContext ? {
+                  id: activePostContext.id,
+                  authorName: activePostContext.authorName,
+                  content: activePostContext.content,
+                  mediaType: activePostContext.mediaType,
+                  mediaUrl: activePostContext.mediaUrl,
+                  createdAt: activePostContext.createdAt,
+                  likesCount: activePostContext.likesCount,
+                  commentsCount: activePostContext.commentsCount,
+                } : undefined,
+                platformPages: getZoePlatformPageContext(),
               },
-              enableASI: true, // Always enable ASI 7.5x processing
-              replyContext: userMessage.replyTo ? {
-                role: userMessage.replyTo.role,
-                content: userMessage.replyTo.content
-              } : undefined,
-              // Real-time feeds context for seamless connectivity
-              realtimeContext: {
-                onlineFriends: feedsSummary.onlineFriendsCount,
-                recentFriendActivities: feedsSummary.recentFriendActivities,
-                topBrandDeals: feedsSummary.topBrandDeals,
-                exclusiveOffers: feedsSummary.exclusiveOffers,
-                hasNewUpdates: feedsSummary.hasFreshUpdates,
-                newUserNotification: newUserNotification, // New user sign-ups/sign-ins
-              },
-              postContext: activePostContext ? {
-                id: activePostContext.id,
-                authorName: activePostContext.authorName,
-                content: activePostContext.content,
-                mediaType: activePostContext.mediaType,
-                mediaUrl: activePostContext.mediaUrl,
-                createdAt: activePostContext.createdAt,
-                likesCount: activePostContext.likesCount,
-                commentsCount: activePostContext.commentsCount,
-              } : undefined,
-              platformPages: getZoePlatformPageContext(),
-            },
-          });
+            });
+            data = result.raw;
+          } catch (err) {
+            error = err;
+          }
 
           cotFinish(chatToken, { error });
           if (error) {
