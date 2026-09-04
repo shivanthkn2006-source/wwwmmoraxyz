@@ -268,6 +268,8 @@ serve(async (req) => {
 
     // Extract user ID from auth header
     let userProfileContext: UserProfileContext | null = null;
+    // Real birth coordinates for the ephemeris guardrail (see _shared/astro-grounding.ts).
+    let astroBirthProfile: AstroBirthProfile | null = null;
     const authHeader = req.headers.get('authorization');
     
     if (authHeader) {
