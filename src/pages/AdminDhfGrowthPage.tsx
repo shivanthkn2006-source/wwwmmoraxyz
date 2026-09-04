@@ -19,7 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import useIsAdmin from '@/hooks/useIsAdmin';
-import { CANONICAL_ROUTES } from '@/config/routeRegistry';
+import { ROUTE_REGISTRY } from '@/config/routeRegistry';
 
 interface GrowthRow {
   userId: string;
@@ -157,7 +157,7 @@ export default function AdminDhfGrowthPage() {
   const syncRoutes = async () => {
     setBusy('routes');
     try {
-      const payload = CANONICAL_ROUTES.map((r) => ({
+      const payload = ROUTE_REGISTRY.map((r) => ({
         path: r.path,
         label: r.label,
         route_group: r.group,
@@ -232,7 +232,7 @@ export default function AdminDhfGrowthPage() {
             <div className="flex flex-wrap gap-2">
               <Button size="sm" variant="secondary" onClick={() => void syncRoutes()} disabled={busy !== null}>
                 {busy === 'routes' ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ListTree className="w-4 h-4 mr-2" />}
-                Sync {CANONICAL_ROUTES.length} routes
+                Sync {ROUTE_REGISTRY.length} routes
               </Button>
               <Button size="sm" onClick={() => void runCrawler()} disabled={busy !== null}>
                 {busy === 'crawl' ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Radar className="w-4 h-4 mr-2" />}
