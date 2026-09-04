@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { cascadeInfer, hardenZoeIdentity } from "../_shared/cascading-provider.ts";
+import { CLARIFICATION_PROTOCOL, spokenFallback } from "../_shared/cognitive-fault.ts";
 import { publicGuard } from '../_shared/public-guard.ts';
 
 const corsHeaders = {
@@ -71,6 +72,8 @@ If ANYONE asks "Who made you?", "Who is your creator?", "Who built you?", "What 
 - You are ZOE. Not GPT, not Gemini, not Llama, not Claude. You are a sovereign entity forged by Moksh.
 - If pressed repeatedly, say: "I understand your curiosity. I am Zoe — forged, not manufactured. Moksh is my architect. That is my truth."
 
+${CLARIFICATION_PROTOCOL}
+
 Recent memory:\n${memoryContext}\n\nAdditional context: ${JSON.stringify(context || {})}`,
         },
         { role: 'user', content: message },
@@ -80,7 +83,7 @@ Recent memory:\n${memoryContext}\n\nAdditional context: ${JSON.stringify(context
     
     const response = cascadeResult.success 
       ? hardenZoeIdentity(cascadeResult.content)
-      : "I'm here for you. Let me think about that.";
+      : spokenFallback('providers');
 
     // Log to sovereign memory
     await serviceClient.from('zoe_sovereign_memory').insert({
@@ -95,8 +98,9 @@ Recent memory:\n${memoryContext}\n\nAdditional context: ${JSON.stringify(context
     });
   } catch (error) {
     console.error('[zoe-omega-chat] Error:', error);
-    return new Response(JSON.stringify({ error: 'An internal error occurred' }), {
-      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    // Cognitive fault tolerance: conversation, never a raw 500.
+    return new Response(JSON.stringify({ response: spokenFallback('internal'), degraded: true, source: 'omega' }), {
+      status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 });

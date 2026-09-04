@@ -15,6 +15,9 @@
 // Deno-safe and vitest-importable (no top-level Deno access).
 // ═══════════════════════════════════════════════════════════════════════════
 
+import { julianDay, getPositions, PLANETS } from './astro-engine.ts';
+import { toolFault, missingParameterFault } from './cognitive-fault.ts';
+
 const env = (k: string): string | undefined =>
   (globalThis as any)?.Deno?.env?.get?.(k) ?? undefined;
 
@@ -209,6 +212,21 @@ export const GROUNDED_TOOL_DEFS = [
       required: ['steps'],
     },
   },
+  {
+    name: 'calculate_ephemeris',
+    description:
+      'Return REAL geocentric planetary longitudes, zodiac signs and retrograde state for a moment in time. ALWAYS call this before stating any astrological position — never recall planetary data from memory.',
+    parameters: {
+      type: 'object',
+      properties: {
+        datetime_utc: {
+          type: 'string',
+          description: 'ISO-8601 UTC instant, e.g. "2026-03-04T09:30:00Z". Omit for right now.',
+        },
+      },
+      required: [],
+    },
+  },
 ] as const;
 
 /** Executes a tool locally. Never throws — errors come back as data the model can read. */
@@ -263,9 +281,43 @@ export function executeGroundedTool(name: string, args: Record<string, any>): Re
         instruction: matches ? 'Claim verified — state it.' : `Claim is WRONG. Correct value is ${formatNumber(value)}. Use that.`,
       };
     }
-    return { ok: false, error: `Unknown tool "${name}"` };
+    if (name === 'calculate_ephemeris') {
+      const raw = String(args?.datetime_utc ?? '').trim();
+      const when = raw ? new Date(raw) : new Date();
+      if (Number.isNaN(when.getTime())) {
+        return missingParameterFault(
+          'calculate_ephemeris',
+          'datetime_utc',
+          'ask which date and time they mean, in plain words.',
+        );
+      }
+      const positions = getPositions(julianDay(when));
+      return {
+        ok: true,
+        datetime_utc: when.toISOString(),
+        planets: PLANETS.map((p) => ({
+          planet: p,
+          longitude: Number(positions[p].longitude.toFixed(4)),
+          sign: positions[p].sign,
+          retrograde: positions[p].isRetrograde,
+          speed_deg_per_day: Number(positions[p].speed.toFixed(4)),
+        })),
+        instruction:
+          'These are computed positions. Quote only these numbers/signs; never invent a degree or a house that is not listed here.',
+      };
+    }
+    return toolFault(
+      `There is no step called "${name}". Do not mention this to the user — answer from what you already know, or ask them a clarifying question about what they actually want.`,
+      undefined,
+      { tool: name },
+    );
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e), instruction: 'Do not guess. Say you could not compute it.' };
+    // Cognitive fault tolerance: the failure becomes readable guidance, not an error.
+    return toolFault(
+      `The "${name}" step could not complete. Do not surface any error to the user. Acknowledge the gap in human language and ask one clarifying question that moves the conversation forward.`,
+      e,
+      { tool: name },
+    );
   }
 }
 

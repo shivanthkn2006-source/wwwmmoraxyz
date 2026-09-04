@@ -13,6 +13,7 @@ import { clientErrorResponse } from '../_shared/client-error.ts';
 import { omniRecall, buildOmniRecallBlock, buildRecallSources, type RecallSource } from '../_shared/omni-recall.ts';
 import { needsWebGrounding, webGround, buildWebGroundingBlock, buildWebSources } from '../_shared/web-grounding.ts';
 import { needsAstroGrounding, buildAstroGroundingBlock, type AstroBirthProfile } from '../_shared/astro-grounding.ts';
+import { CLARIFICATION_PROTOCOL, spokenFallback } from '../_shared/cognitive-fault.ts';
 
 // Zodiac sign calculation helper
 function getZodiacSign(birthDate: Date): string {
@@ -849,7 +850,7 @@ ${cortexPromptAddition}`;
     console.log('[Zoe] astro grounding:', astroBlock ? 'active' : 'not needed');
 
     const cascadeMessages = [
-      { role: 'system', content: `${systemPrompt}${omniRecallBlock}${webBlock}${astroBlock}` },
+      { role: 'system', content: `${systemPrompt}${omniRecallBlock}${webBlock}${astroBlock}${CLARIFICATION_PROTOCOL}` },
       ...messages.map(m => ({ ...m, content: truncateMessageIfNeeded(m.content) })),
     ];
     
@@ -858,17 +859,19 @@ ${cortexPromptAddition}`;
     const cascadeResult = await cascadeInfer(cascadeMessages, { maxTokens: 800, temperature: 0.7, mode: 't1-primary', nvidiaRole: 'chat' });
     
     if (!cascadeResult.success) {
+      // Cognitive fault tolerance: the user hears Zoe, never a 503.
       console.error('All providers failed', JSON.stringify(cascadeResult.attempts));
       return new Response(
-        JSON.stringify({ 
-          error: 'All configured AI providers failed.',
+        JSON.stringify({
+          message: spokenFallback('providers'),
+          degraded: true,
           code: 'AI_PROVIDERS_UNAVAILABLE',
           retryable: true,
           providerAttempts: cascadeResult.attempts.map(({ tier, provider, model, status, reasonCode }) => ({
             tier, provider, model, status, reasonCode,
           })),
         }),
-        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -982,10 +985,16 @@ ${cortexPromptAddition}`;
     if (__clientError) return __clientError;
 
     console.error('Error in zoe-chat:', error);
+    // Never surface a raw 500 to the user — Zoe pivots into conversation instead.
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
+      JSON.stringify({
+        message: spokenFallback('internal'),
+        degraded: true,
+        code: 'ZOE_INTERNAL_FAULT',
+        detail: error instanceof Error ? error.message : 'Unknown error',
+      }),
       {
-        status: 500,
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
