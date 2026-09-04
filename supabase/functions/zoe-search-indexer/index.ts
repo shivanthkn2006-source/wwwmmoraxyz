@@ -293,7 +293,7 @@ async function loadCanonical(db: ReturnType<typeof createClient>, job: QueueRow)
 
 
 async function enqueueBackfill(db: ReturnType<typeof createClient>, userId: string) {
-  const [profiles, posts, chats, memories, dhfPosts, dhfVideos, growthCards, predictions, goals, dms, comments] = await Promise.all([
+  const [profiles, posts, chats, memories, dhfPosts, dhfVideos, growthCards, predictions, goals, dms, comments, visuals] = await Promise.all([
     db.from('profiles').select('user_id'),
     db.from('posts').select('id,user_id,media_type,content'),
     db.from('zoe_infinity_messages').select('id,user_id').eq('user_id', userId),
@@ -305,8 +305,9 @@ async function enqueueBackfill(db: ReturnType<typeof createClient>, userId: stri
     db.from('wisdom_macro_goals').select('id,user_id').eq('user_id', userId),
     db.from('messages').select('id,sender_id').eq('sender_id', userId).limit(2000),
     db.from('post_comments').select('id,user_id').eq('user_id', userId).limit(2000),
+    db.from('zoe_infinity_memories').select('id,user_id').eq('user_id', userId).like('key', 'vision_%').limit(2000),
   ]);
-  for (const response of [profiles, posts, chats, memories, dhfPosts, dhfVideos, growthCards, predictions, goals, dms, comments]) {
+  for (const response of [profiles, posts, chats, memories, dhfPosts, dhfVideos, growthCards, predictions, goals, dms, comments, visuals]) {
     if (response.error) throw response.error;
   }
 
@@ -326,6 +327,7 @@ async function enqueueBackfill(db: ReturnType<typeof createClient>, userId: stri
     ...(goals.data || []).map((row) => ({ entity_type: 'wisdom_goal', entity_id: row.id, owner_id: row.user_id })),
     ...(dms.data || []).map((row) => ({ entity_type: 'direct_message', entity_id: row.id, owner_id: row.sender_id })),
     ...(comments.data || []).map((row) => ({ entity_type: 'post_comment', entity_id: row.id, owner_id: row.user_id })),
+    ...(visuals.data || []).map((row) => ({ entity_type: 'visual_memory', entity_id: row.id, owner_id: row.user_id })),
   ];
   if (!rows.length) return 0;
   const { error } = await db.from('zoe_search_index_queue').upsert(

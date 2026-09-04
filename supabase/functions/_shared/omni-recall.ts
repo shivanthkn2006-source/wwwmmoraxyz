@@ -45,6 +45,7 @@ const LABELS: Record<string, string> = {
   growth_card: 'Growth insight',
   astro_prediction: 'Daily Compass prediction',
   wisdom_goal: 'Wisdom goal',
+  visual_memory: 'Something Zoe saw',
 };
 
 /** Retrieves the most relevant platform entities for a natural-language query. */
