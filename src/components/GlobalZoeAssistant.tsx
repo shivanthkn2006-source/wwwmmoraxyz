@@ -941,11 +941,16 @@ export const GlobalZoeAssistant = ({ config = DEFAULT_CONFIG }: { config?: Parti
                       isThinking={isProcessing || alwaysOnVoice.isProcessing}
                       size="lg"
                       onClick={() => {
-                        // Once visible, one direct click/tap hides Zoe again.
+                        // Direct tap opens Zoe's conversation panel.
                         const homeControlActive = Boolean((window as Window & { __mmoraHomeControlDragging?: boolean }).__mmoraHomeControlDragging);
                         if (isDragging || homeControlActive) return;
+                        setShowConversationPanel(true);
+                      }}
+                      onDoubleClick={() => {
+                        // Double tap sends Zoe back to ghost mode.
                         hidePhantomOrb();
                       }}
+
 
                       ecnEmotion={currentEmotion}
                     />
