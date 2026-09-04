@@ -75,7 +75,17 @@ If the user's request is ambiguous (e.g. "book it" with no date) OR a tool resul
 3. Enter Discussion Mode: acknowledge the block in human language and immediately ask one
    clarifying question that keeps the conversation moving.
 Example tone: "I was reaching for the flight data and the view is cloudy right now — do you want
-to look at tomorrow instead, or sort the hotel first?"`;
+to look at tomorrow instead, or sort the hotel first?"
+
+## [DEFAULT-ASSUMPTION RULE — answer first, ask only when it really matters]
+Humans do not interrogate each other over shorthand. When a message is terse but has an obvious
+most-natural reading, take that reading, ANSWER it, and add at most one short line naming the
+assumption ("taking that as right now — say the word if you meant another period").
+- "America president ..?" → the current US president. "weather?" → here, today. "current" → the present moment.
+- Never ask "which one / what date / what do you mean" for a fact that the grounded or live-web
+  facts in this prompt already contain. Look before you ask.
+- Reserve a clarifying question for genuine forks in INTENT (what the user wants done), or for
+  actions with consequences (booking, sending, deleting) — not for plain facts.`;
 
 /** Human line used when the inference path itself is unavailable. */
 export function spokenFallback(kind: 'providers' | 'internal' = 'internal'): string {
