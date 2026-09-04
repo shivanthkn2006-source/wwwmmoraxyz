@@ -51,10 +51,32 @@ describe('tool execution loop contract', () => {
     expect(r.instruction).toContain('144');
   });
 
-  it('never throws — errors come back as data', () => {
+  it('never throws — failures come back as conversational guidance', () => {
     const r = executeGroundedTool('math_calculator', { expression: 'rm -rf /' }) as any;
     expect(r.ok).toBe(false);
-    expect(typeof r.error).toBe('string');
+    expect(r.error).toBe(true);
+    expect(typeof r.instruction_to_zoe).toBe('string');
+    expect(r.instruction_to_zoe).toMatch(/clarifying question/i);
+  });
+
+  it('unknown tools degrade into a clarification instruction', () => {
+    const r = executeGroundedTool('does_not_exist', {}) as any;
+    expect(r.error).toBe(true);
+    expect(r.instruction_to_zoe).toMatch(/clarifying question/i);
+  });
+
+  it('calculate_ephemeris returns real computed planetary positions', () => {
+    const r = executeGroundedTool('calculate_ephemeris', { datetime_utc: '2026-03-04T09:30:00Z' }) as any;
+    expect(r.ok).toBe(true);
+    expect(Array.isArray(r.planets)).toBe(true);
+    expect(r.planets.length).toBeGreaterThan(5);
+    expect(typeof r.planets[0].sign).toBe('string');
+  });
+
+  it('an unreadable date asks the user instead of erroring', () => {
+    const r = executeGroundedTool('calculate_ephemeris', { datetime_utc: 'someday' }) as any;
+    expect(r.error).toBe(true);
+    expect(r.missing_parameter).toBe('datetime_utc');
   });
 });
 
