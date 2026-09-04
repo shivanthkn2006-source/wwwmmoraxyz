@@ -212,6 +212,21 @@ export const GROUNDED_TOOL_DEFS = [
       required: ['steps'],
     },
   },
+  {
+    name: 'calculate_ephemeris',
+    description:
+      'Return REAL geocentric planetary longitudes, zodiac signs and retrograde state for a moment in time. ALWAYS call this before stating any astrological position — never recall planetary data from memory.',
+    parameters: {
+      type: 'object',
+      properties: {
+        datetime_utc: {
+          type: 'string',
+          description: 'ISO-8601 UTC instant, e.g. "2026-03-04T09:30:00Z". Omit for right now.',
+        },
+      },
+      required: [],
+    },
+  },
 ] as const;
 
 /** Executes a tool locally. Never throws — errors come back as data the model can read. */
