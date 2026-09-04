@@ -15,6 +15,7 @@ import {
   type SearchTopic,
 } from '@/lib/zoeSearchCompanion';
 import { speakSearchLine, stopSearchVoice } from '@/lib/zoeSearchVoice';
+import { claimVoice, releaseVoice } from '@/lib/zoeVoiceArbiter';
 
 const STORAGE_KEY = 'mmora.zoe.search-companion.v1';
 
