@@ -103,13 +103,32 @@ async function wikipedia(query: string): Promise<WebGroundHit[]> {
       query,
     )}&format=json&srlimit=3&origin=*`,
   );
-  return (data?.query?.search ?? []).map((page: Record<string, unknown>) => ({
+  const pages = (data?.query?.search ?? []) as Array<Record<string, unknown>>;
+  const hits: WebGroundHit[] = pages.map((page) => ({
     title: strip(String(page.title ?? query)),
     snippet: strip(String(page.snippet ?? '')),
     url: `https://en.wikipedia.org/?curid=${page.pageid}`,
     source: 'Wikipedia',
     publishedAt: typeof page.timestamp === 'string' ? page.timestamp : null,
   }));
+
+  // Search snippets come from mid-article and rarely state current office
+  // holders. The lead section does ("The current president is ..."), so pull
+  // the intro extract for the top matches and use it as the snippet.
+  const ids = pages.slice(0, 2).map((p) => p.pageid).filter(Boolean);
+  if (ids.length) {
+    const lead = await safeJson(
+      `https://en.wikipedia.org/w/api.php?action=query&prop=extracts&exintro=1&explaintext=1&format=json&origin=*&pageids=${ids.join('|')}`,
+    );
+    const byId = (lead?.query?.pages ?? {}) as Record<string, { pageid?: number; extract?: string }>;
+    for (const entry of Object.values(byId)) {
+      const extract = strip(String(entry?.extract ?? '')).slice(0, 600);
+      if (!extract) continue;
+      const hit = hits.find((h) => h.url.endsWith(`curid=${entry.pageid}`));
+      if (hit) hit.snippet = extract;
+    }
+  }
+  return hits;
 }
 
 async function safeText(url: string, ms = 6000): Promise<string | null> {
