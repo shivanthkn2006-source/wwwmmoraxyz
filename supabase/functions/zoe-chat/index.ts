@@ -985,10 +985,16 @@ ${cortexPromptAddition}`;
     if (__clientError) return __clientError;
 
     console.error('Error in zoe-chat:', error);
+    // Never surface a raw 500 to the user — Zoe pivots into conversation instead.
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
+      JSON.stringify({
+        message: spokenFallback('internal'),
+        degraded: true,
+        code: 'ZOE_INTERNAL_FAULT',
+        detail: error instanceof Error ? error.message : 'Unknown error',
+      }),
       {
-        status: 500,
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
