@@ -112,30 +112,80 @@ async function wikipedia(query: string): Promise<WebGroundHit[]> {
   }));
 }
 
+async function safeText(url: string, ms = 6000): Promise<string | null> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  try {
+    const res = await fetch(url, {
+      signal: controller.signal,
+      headers: { 'User-Agent': UA, Accept: 'application/rss+xml, text/xml, */*' },
+    });
+    if (!res.ok) return null;
+    return await res.text();
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** Fresh news: Google News RSS (keyless), GDELT as a secondary source. */
 async function freshNews(query: string): Promise<WebGroundHit[]> {
+  const out: WebGroundHit[] = [];
+
+  const xml = await safeText(
+    `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`,
+  );
+  if (xml) {
+    const items = xml.split('<item>').slice(1, 6);
+    for (const item of items) {
+      const pick = (tag: string) => {
+        const m = item.match(new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`));
+        return m ? strip(m[1].replace(/<!\[CDATA\[|\]\]>/g, '')) : '';
+      };
+      const title = pick('title');
+      const link = pick('link');
+      if (!title || !link) continue;
+      out.push({
+        title,
+        snippet: strip(pick('description')).slice(0, 240) || title,
+        url: link,
+        source: pick('source') || 'Google News',
+        publishedAt: pick('pubDate') ? new Date(pick('pubDate')).toISOString() : null,
+      });
+    }
+  }
+
+  if (out.length) return out;
+
   const data = await safeJson(
     `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(
       query,
     )}&mode=artlist&maxrecords=4&sort=datedesc&format=json`,
   );
-  return (data?.articles ?? []).slice(0, 4).map((a: Record<string, unknown>) => ({
-    title: strip(String(a.title ?? '')),
-    snippet: strip(String(a.domain ?? '')),
-    url: String(a.url ?? ''),
-    source: String(a.domain ?? 'news'),
-    publishedAt: typeof a.seendate === 'string' ? a.seendate : null,
-  }));
+  for (const a of (data?.articles ?? []).slice(0, 4)) {
+    if (!a?.url) continue;
+    out.push({
+      title: strip(String(a.title ?? '')),
+      snippet: strip(String(a.domain ?? '')),
+      url: String(a.url),
+      source: String(a.domain ?? 'news'),
+      publishedAt: typeof a.seendate === 'string' ? a.seendate : null,
+    });
+  }
+  return out;
 }
 
 /** Fetch live web knowledge for a query. Never throws. */
 export async function webGround(query: string, limit = 6): Promise<WebGroundHit[]> {
   const term = (query || '').trim().slice(0, 300);
   if (term.length < 3) return [];
-  const wantsNews = /\b(news|latest|today|breaking|update|current|202\d)\b/i.test(term);
+  const wantsNews = /\b(news|latest|today|breaking|update|current|now|who is|price|score|202\d)\b/i.test(term);
 
   const settled = await Promise.allSettled([
     duckduckgo(term),
     wikipedia(term),
+    // News is cheap and keyless — run it whenever the question sounds time-sensitive.
     ...(wantsNews ? [freshNews(term)] : []),
   ]);
 
@@ -159,7 +209,7 @@ export function buildWebGroundingBlock(hits: WebGroundHit[], startIndex = 0): st
   });
   return `\n\n═══ LIVE WEB GROUNDING (outside this platform) ═══\n${lines.join(
     '\n',
-  )}\n═══════════════════════════════════════\nUse these live web facts for anything that is not platform content. Cite them by their number. If they do not answer the question, say what you do not know instead of inventing an answer.`;
+  )}\n═══════════════════════════════════════\nThese were retrieved from the live web seconds ago: trust them over your training data for anything outside this platform, and never claim you cannot access current information while they are present. Cite them by their number. If they do not answer the question, say what you do not know instead of inventing an answer.`;
 }
 
 /** Citation rows in the same shape the UI already renders for platform sources. */
