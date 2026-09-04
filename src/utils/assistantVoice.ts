@@ -7,6 +7,7 @@
  * Supports dynamic switching between Zoe (female) and Smith (male) voices.
  */
 
+import { isBrowserTtsAllowedForZoe } from '@/lib/zoeVoicePolicy';
 import { speakWithDeepgram, stopDeepgramSpeech, isDeepgramPlaying } from './deepgramTTS';
 
 export type AssistantVoiceType = 'Zoe' | 'Smith';
@@ -305,7 +306,12 @@ export const speakAs = async (
       console.log('[Voice] ✅ Deepgram Aura 2 playing as Zoe');
       return;
     }
-    console.log('[Voice] 📱 Deepgram unavailable, falling back to browser TTS');
+    if (!isBrowserTtsAllowedForZoe()) {
+      console.warn('[Voice] Deepgram unavailable — Zoe stays silent (browser TTS disabled for Zoe)');
+      onError?.(new Error('deepgram_unavailable'));
+      return;
+    }
+    console.log('[Voice] 📱 Deepgram unavailable, falling back to browser TTS (owner opt-in)');
   }
 
   // Browser Native Web Speech API (fallback for Zoe, primary for Smith)

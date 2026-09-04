@@ -10,6 +10,7 @@
  * - Text chunking for reliability
  */
 
+import { isBrowserTtsAllowedForZoe } from '@/lib/zoeVoicePolicy';
 import { speakWithDeepgram, stopDeepgramSpeech, isDeepgramPlaying, pauseDeepgramSpeech, resumeDeepgramSpeech, isDeepgramPaused } from './deepgramTTS';
 import {
   startSpokenSession,
@@ -372,8 +373,14 @@ export const speakAsZoe = async (
     return;
   }
   
-  // Fallback to browser TTS
-  console.log('[ZoeVoice] 📱 Falling back to browser TTS');
+  // Deepgram-only policy: Zoe never speaks with the robotic browser voice
+  // unless the owner explicitly opted in.
+  if (!isBrowserTtsAllowedForZoe()) {
+    console.warn('[ZoeVoice] Deepgram unavailable — staying silent (browser TTS is disabled for Zoe)');
+    handleError(new Error('deepgram_unavailable'));
+    return;
+  }
+  console.log('[ZoeVoice] 📱 Falling back to browser TTS (owner opt-in)');
   await initializeZoeVoices();
   speakWithBrowserTTS(cleaned, ZOE_VOICE_CONFIG, cachedVoice, handleStart, handleEnd, handleError);
 };
