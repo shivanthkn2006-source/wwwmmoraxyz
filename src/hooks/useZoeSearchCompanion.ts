@@ -15,6 +15,7 @@ import {
   type SearchTopic,
 } from '@/lib/zoeSearchCompanion';
 import { speakSearchLine, stopSearchVoice } from '@/lib/zoeSearchVoice';
+import { claimVoice, releaseVoice } from '@/lib/zoeVoiceArbiter';
 
 const STORAGE_KEY = 'mmora.zoe.search-companion.v1';
 
@@ -59,21 +60,26 @@ export function useZoeSearchCompanion(query: string, open: boolean) {
   React.useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const { data: auth } = await supabase.auth.getUser();
-      if (!auth?.user || cancelled) return;
-      const { data, error } = await supabase
-        .from('zoe_search_prefs')
-        .select('voice_enabled, scope_by_topic')
-        .eq('user_id', auth.user.id)
-        .maybeSingle();
-      if (cancelled || error || !data) return;
-      const next: CompanionPrefs = {
-        voiceEnabled: !!data.voice_enabled,
-        scopeByTopic: (data.scope_by_topic as CompanionPrefs['scopeByTopic']) ?? {},
-      };
-      setPrefs(next);
-      writeLocal(next);
+      try {
+        const { data: auth } = await supabase.auth.getUser();
+        if (!auth?.user || cancelled) return;
+        const { data, error } = await supabase
+          .from('zoe_search_prefs')
+          .select('voice_enabled, scope_by_topic')
+          .eq('user_id', auth.user.id)
+          .maybeSingle();
+        if (cancelled || error || !data) return;
+        const next: CompanionPrefs = {
+          voiceEnabled: !!data.voice_enabled,
+          scopeByTopic: (data.scope_by_topic as CompanionPrefs['scopeByTopic']) ?? {},
+        };
+        setPrefs(next);
+        writeLocal(next);
+      } catch {
+        // Preferences are a nicety — the local cache keeps the companion working.
+      }
     })();
+
     return () => {
       cancelled = true;
     };
@@ -132,11 +138,23 @@ export function useZoeSearchCompanion(query: string, open: boolean) {
     speakSearchLine(turn.speech, true);
   }, [turn, prefs.voiceEnabled]);
 
+  // Opening the search bar means the user switched features: ambient card /
+  // growth narration must go quiet immediately, even when Zoe's search voice
+  // is off, so two Zoe voices can never overlap.
   React.useEffect(() => {
-    if (!open) stopSearchVoice();
+    if (open) {
+      claimVoice('search');
+      return () => releaseVoice('search');
+    }
+    stopSearchVoice();
+    releaseVoice('search');
   }, [open]);
 
-  React.useEffect(() => () => stopSearchVoice(), []);
+  React.useEffect(() => () => {
+    stopSearchVoice();
+    releaseVoice('search');
+  }, []);
+
 
   const toggleVoice = React.useCallback(() => {
     const next = { ...prefs, voiceEnabled: !prefs.voiceEnabled };

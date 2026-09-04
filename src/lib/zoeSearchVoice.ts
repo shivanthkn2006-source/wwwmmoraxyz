@@ -1,48 +1,51 @@
 /**
- * Tiny, dependency-free speech channel for the search companion.
+ * Zoe's search-bar voice — Deepgram only.
  *
- * Uses the browser Web Speech API only — no network, no TTS credits, no
- * latency added to typing. Every new line cancels the previous one so Zoe
- * never talks over herself while the user keeps typing.
+ * M'Mora rule: every word Zoe speaks is Deepgram Aura (a human-sounding
+ * persona voice). The browser Web Speech API is never used here — if Deepgram
+ * cannot speak, Zoe stays silent rather than switching to a robotic fallback.
+ *
+ * Speaking always goes through the voice arbiter so only one Zoe voice is
+ * audible at a time (search never clashes with growth/DHF card narration).
  */
+import { speakWithDeepgram, stopDeepgramSpeech } from '@/utils/deepgramTTS';
+import { claimVoice, registerVoiceChannel, releaseVoice } from '@/lib/zoeVoiceArbiter';
 
-let lastSpoken = '';
+let registered = false;
 
-export function isSpeechSupported(): boolean {
-  return typeof window !== 'undefined' && 'speechSynthesis' in window;
+function ensureRegistered() {
+  if (registered || typeof window === 'undefined') return;
+  registered = true;
+  registerVoiceChannel('search', () => {
+    stopDeepgramSpeech();
+  });
 }
 
+/** Deepgram runs through the backend, so it is available in any browser. */
+export function isSpeechSupported(): boolean {
+  return typeof window !== 'undefined' && typeof Audio !== 'undefined';
+}
+
+/** Stop whatever the search companion is currently saying. */
 export function stopSearchVoice(): void {
-  if (!isSpeechSupported()) return;
-  try {
-    window.speechSynthesis.cancel();
-  } catch {
-    /* speech is best-effort and must never break search */
-  }
-  lastSpoken = '';
+  if (typeof window === 'undefined') return;
+  stopDeepgramSpeech();
+  releaseVoice('search');
 }
 
 /**
- * Speak a short companion line. No-ops when disabled, unsupported, or when the
- * exact same line is already the current utterance.
+ * Speak one short companion line with Zoe's Deepgram voice.
+ * Any other Zoe voice (card narration, notifications) is silenced first.
  */
 export function speakSearchLine(text: string, enabled: boolean): void {
-  if (!enabled || !text || !isSpeechSupported()) return;
-  if (text === lastSpoken) return;
-  try {
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text.slice(0, 220));
-    utterance.rate = 1.05;
-    utterance.pitch = 1.1;
-    utterance.volume = 0.9;
-    const voices = window.speechSynthesis.getVoices?.() ?? [];
-    const preferred = voices.find((voice) =>
-      /samantha|zira|google uk english female|karen|victoria/i.test(voice.name),
-    );
-    if (preferred) utterance.voice = preferred;
-    lastSpoken = text;
-    window.speechSynthesis.speak(utterance);
-  } catch {
-    /* never surface speech failures to the search flow */
-  }
+  if (!enabled || !text.trim() || !isSpeechSupported()) return;
+  ensureRegistered();
+  // The user is actively searching — this outranks ambient narration.
+  claimVoice('search');
+  void speakWithDeepgram(
+    text,
+    undefined,
+    () => releaseVoice('search'),
+    () => releaseVoice('search'),
+  );
 }

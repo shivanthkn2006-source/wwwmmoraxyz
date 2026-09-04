@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/lib/auth';
 import { speakAsZoe, stopZoeSpeech, pauseZoeSpeech, resumeZoeSpeech, getZoeSpeechState } from '@/utils/zoeVoice';
+import { claimVoice, registerVoiceChannel, releaseVoice } from '@/lib/zoeVoiceArbiter';
 import { hasNarratedCard, hasStartedDailyNarration, markDailyNarrationStarted, markNarratedCard } from '@/lib/zoeCardNarrationMemory';
 
 export type NarrationKind = 'growth' | 'dhf' | 'social';
@@ -33,11 +34,15 @@ export const ZoeCardNarrationProvider: React.FC<{ children: React.ReactNode }> =
   }, []);
 
   const speak = useCallback(async (item: NarrationItem) => {
+    // Ambient narration never talks over the user's own Zoe interaction
+    // (search companion, chat reply). It simply stays quiet.
+    if (!claimVoice('narration', { ambient: true })) return;
     const token = ++queueToken.current;
     setState({ activeId: item.id, paused: false });
     await new Promise<void>((resolve) => {
       void speakAsZoe(item.text, { messageId: `card:${item.id}` }, undefined, resolve, resolve);
     });
+    releaseVoice('narration');
     if (queueToken.current === token) setState({ activeId: null, paused: false });
   }, []);
 
@@ -50,10 +55,19 @@ export const ZoeCardNarrationProvider: React.FC<{ children: React.ReactNode }> =
   const stop = useCallback(() => {
     queueToken.current += 1;
     stopZoeSpeech();
+    releaseVoice('narration');
     setState({ activeId: null, paused: false });
   }, []);
   const pause = useCallback(() => { pauseZoeSpeech(); setState((s) => ({ ...s, paused: true })); }, []);
   const resume = useCallback(() => { resumeZoeSpeech(); setState((s) => ({ ...s, paused: false })); }, []);
+
+  // Any other Zoe voice taking the floor silences narration immediately.
+  useEffect(() => registerVoiceChannel('narration', () => {
+    queueToken.current += 1;
+    stopZoeSpeech();
+    setState({ activeId: null, paused: false });
+  }), []);
+
 
   useEffect(() => {
     if (!user?.id || hasStartedDailyNarration(user.id)) return;
@@ -83,11 +97,16 @@ export const ZoeCardNarrationProvider: React.FC<{ children: React.ReactNode }> =
         for (const item of [welcome, ...daily]) {
           if (queueToken.current !== token) return;
           if (hasNarratedCard(user.id, item.id)) continue;
+          // Stop the daily queue the moment the user starts talking to Zoe
+          // somewhere else (search, chat) — one voice at a time.
+          if (!claimVoice('narration', { ambient: true })) return;
           markNarratedCard(user.id, item.id);
           setState({ activeId: item.id, paused: false });
           await new Promise<void>((resolve) => { void speakAsZoe(item.text, { messageId: `card:${item.id}` }, undefined, resolve, resolve); });
+          releaseVoice('narration');
         }
         if (queueToken.current === token) setState({ activeId: null, paused: false });
+
       };
       void run();
     };
