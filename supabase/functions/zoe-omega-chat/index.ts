@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { cascadeInfer, hardenZoeIdentity } from "../_shared/cascading-provider.ts";
+import { CLARIFICATION_PROTOCOL, spokenFallback } from "../_shared/cognitive-fault.ts";
 import { publicGuard } from '../_shared/public-guard.ts';
 
 const corsHeaders = {
