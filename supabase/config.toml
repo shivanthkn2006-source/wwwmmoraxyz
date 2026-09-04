@@ -357,3 +357,6 @@ verify_jwt = false
 
 [functions.beta-invite]
 verify_jwt = false
+
+[functions.zoe-synthetic-crawler]
+verify_jwt = false

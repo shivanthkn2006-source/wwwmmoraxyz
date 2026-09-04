@@ -16,6 +16,7 @@ export const CANONICAL_ROUTES: CanonicalRoute[] = [
   { path: "/activity-export", label: "Activity export", dynamic: false },
   { path: "/admin/control-panel", label: "Admin · control panel", dynamic: false },
   { path: "/admin/dhf-generation", label: "Admin · DHF generation", dynamic: false },
+  { path: "/admin/dhf-growth", label: "Admin · DHF growth", dynamic: false },
   { path: "/admin/feed-debug", label: "Admin · feed debug", dynamic: false },
   { path: "/admin/growth-delivery", label: "Admin · growth delivery", dynamic: false },
   { path: "/admin/growth-runs", label: "Admin · growth runs", dynamic: false },
