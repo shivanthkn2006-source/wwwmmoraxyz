@@ -11,6 +11,7 @@
  */
 
 import { isBrowserTtsAllowedForZoe } from '@/lib/zoeVoicePolicy';
+import { claimVoice, releaseVoice, registerVoiceChannel } from '@/lib/zoeVoiceArbiter';
 import { speakWithDeepgram, stopDeepgramSpeech, isDeepgramPlaying, pauseDeepgramSpeech, resumeDeepgramSpeech, isDeepgramPaused } from './deepgramTTS';
 import {
   startSpokenSession,
@@ -346,7 +347,11 @@ export const speakAsZoe = async (
   
   // Stop any current speech
   stopZoeSpeech();
-  
+
+  // One voice at a time: Zoe's chat/orb reply is user-driven, so it takes the
+  // floor and silences ambient growth/card narration instantly.
+  claimVoice('chat');
+
   const messageId: string | undefined = options?.messageId;
   const handleStart = () => {
     if (messageId) startSpokenSession(messageId, cleaned);
@@ -354,10 +359,12 @@ export const speakAsZoe = async (
   };
   const handleEnd = () => {
     if (messageId) endSpokenSession(messageId);
+    releaseVoice('chat');
     onEnd?.();
   };
   const handleError = (err?: any) => {
     if (messageId) endSpokenSession(messageId);
+    releaseVoice('chat');
     onError?.(err);
   };
   
@@ -427,6 +434,7 @@ export const speakAsSmith = speakAsSmithVoice;
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export const stopZoeSpeech = (): void => {
+  releaseVoice('chat');
   // Clear teleprompter highlight
   endSpokenSession();
   
@@ -446,6 +454,22 @@ export const stopZoeSpeech = (): void => {
 
 
 export const stopSpeaking = stopZoeSpeech;
+
+// The arbiter silences chat speech when search or another user channel claims
+// the floor. Registered once, at module load, for every Zoe surface.
+if (typeof window !== 'undefined') {
+  registerVoiceChannel('chat', () => {
+    endSpokenSession();
+    stopDeepgramSpeech();
+    if ('speechSynthesis' in window) {
+      speechCancelled = true;
+      window.speechSynthesis.cancel();
+      cleanupSpeechState();
+    }
+    isSpeakingActive = false;
+  });
+}
+
 
 export const isZoeSpeaking = (): boolean => {
   const browserSpeaking = 'speechSynthesis' in window && window.speechSynthesis.speaking;

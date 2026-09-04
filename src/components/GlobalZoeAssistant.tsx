@@ -922,6 +922,13 @@ export const GlobalZoeAssistant = ({ config = DEFAULT_CONFIG }: { config?: Parti
                 dragMomentum={false}
                 onDragStart={() => setIsDragging(true)}
                 onDragEnd={handleDragEnd}
+                // Wrapper-level tap: the 3D canvas can swallow child clicks while
+                // framer-motion owns the pointer, so the whole orb area opens Zoe.
+                onClick={() => {
+                  const homeControlActive = Boolean((window as Window & { __mmoraHomeControlDragging?: boolean }).__mmoraHomeControlDragging);
+                  if (isDragging || homeControlActive) return;
+                  setShowConversationPanel(true);
+                }}
                 whileHover={{ scale: 1.05 }}
                 whileDrag={{ scale: 1.1, cursor: 'grabbing' }}
               >
