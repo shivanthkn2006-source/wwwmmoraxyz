@@ -46,9 +46,16 @@ export const ZoeRecallCitations = ({ sources }: { sources: ZoeRecallSource[] }) 
   if (!sources.length) return null;
 
   const openSource = (source: ZoeRecallSource) => {
-    // Web-grounded citations point at real external pages — open them in a new tab.
+    // Web-grounded citations stay INSIDE the platform: the internal reader
+    // fetches and renders the page instead of opening a new tab.
     if (source.route && /^https?:\/\//i.test(source.route)) {
-      window.open(source.route, '_blank', 'noopener,noreferrer');
+      const query = new URLSearchParams({
+        url: source.route,
+        title: source.title ?? '',
+        excerpt: source.excerpt ?? '',
+        source: source.entityType === 'web' ? 'Live web source' : source.entityType,
+      });
+      navigate(`/source?${query.toString()}`);
       return;
     }
     const target =
@@ -56,6 +63,7 @@ export const ZoeRecallCitations = ({ sources }: { sources: ZoeRecallSource[] }) 
       `/admin/search-index?type=${encodeURIComponent(source.entityType)}&id=${encodeURIComponent(source.entityId)}`;
     navigate(target);
   };
+
 
   return (
     <div className="mt-2 flex flex-wrap items-center gap-1.5">
