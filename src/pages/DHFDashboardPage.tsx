@@ -66,8 +66,10 @@ const DHFDashboardPage: React.FC = () => {
             <DHFUploadDashboard />
           </TabsContent>
 
-          <TabsContent value="memory" className="mt-0">
+          <TabsContent value="memory" className="mt-0 space-y-6">
+            <ZoeVisionSearchPanel />
             <ZoeMemoryStatusPanel />
+
           </TabsContent>
         </Tabs>
       </div>
