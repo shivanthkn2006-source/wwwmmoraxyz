@@ -5,6 +5,7 @@
  */
 
 import { supabase } from '@/integrations/supabase/client';
+import { askZoe } from '@/services/zoeEngine';
 import { speakAsZoe } from '@/utils/zoeVoice';
 import { toast } from 'sonner';
 
@@ -210,18 +211,20 @@ class ZoeBackgroundProcessorService {
   private async processChatTask(task: BackgroundTask): Promise<any> {
     const { message, userId, context } = task.payload;
     
-    const { data, error } = await supabase.functions.invoke('zoe-omega-chat', {
-      body: { message, userId, context }
+    const answer = await askZoe({
+      text: String(message ?? ''),
+      sessionKey: `background-chat-${userId ?? 'system'}`,
+      userId,
+      backend: 'zoe-omega-chat',
+      body: { userId, context },
     });
-    
-    if (error) throw error;
-    
+
     // Optionally speak the response
-    if (data?.response && task.payload.speakResponse) {
-      speakAsZoe(data.response);
+    if (answer.text && task.payload.speakResponse) {
+      speakAsZoe(answer.text);
     }
-    
-    return data;
+
+    return answer.raw ?? { response: answer.text };
   }
   
   private async processProfileUpdateTask(task: BackgroundTask): Promise<any> {
@@ -291,17 +294,19 @@ class ZoeBackgroundProcessorService {
   private async processVoiceCommandTask(task: BackgroundTask): Promise<any> {
     const { command, userId, context } = task.payload;
     
-    const { data, error } = await supabase.functions.invoke('zoe-agent', {
-      body: { command, userId, context }
+    const answer = await askZoe({
+      text: String(command ?? ''),
+      sessionKey: `background-agent-${userId ?? 'system'}`,
+      userId,
+      backend: 'zoe-agent',
+      body: { userId, context },
     });
-    
-    if (error) throw error;
-    
-    if (data?.message && task.payload.speakResponse) {
-      speakAsZoe(data.message);
+
+    if (answer.text && task.payload.speakResponse) {
+      speakAsZoe(answer.text);
     }
-    
-    return data;
+
+    return answer.raw ?? { message: answer.text };
   }
   
   // Public API

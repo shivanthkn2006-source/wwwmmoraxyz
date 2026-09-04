@@ -9,6 +9,7 @@ import { Video, VideoOff, Heart, Brain, Sparkles, Activity, Zap, Camera, Copy, C
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ZoeCompactChatInput } from '@/components/ZoeCompactChatInput';
 import { supabase } from '@/integrations/supabase/client';
+import { askZoe } from '@/services/zoeEngine';
 import { toast } from 'sonner';
 import { 
   createSpeechRecognition, 
@@ -331,16 +332,15 @@ export default function AICompanionPage() {
         throw new Error('No messages to send');
       }
 
-      const { data, error } = await supabase.functions.invoke('zoe-chat', {
-        body: { 
-          messages: messagesToSend,
-          soulMetrics: { intimacy, selfHarmony, loveEnergy, detectedEmotion }
-        }
+      const answer = await askZoe({
+        text: userMsg.content,
+        sessionKey: 'ai-companion',
+        history: messagesToSend.slice(0, -1) as { role: 'user' | 'assistant'; content: string }[],
+        body: { soulMetrics: { intimacy, selfHarmony, loveEnergy, detectedEmotion } },
       });
+      const data = answer.raw ?? {};
 
-      if (error) throw error;
-
-      const rawAiMessage = data.message;
+      const rawAiMessage = answer.text;
       const guardedMessage = guardResponse(rawAiMessage).safeResponse;
       const { patterns: newPatterns, memories: newMemories, cleanText } = parseDeepPsyche(guardedMessage);
 

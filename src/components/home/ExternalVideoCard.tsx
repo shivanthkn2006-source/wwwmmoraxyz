@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { X, Bookmark, BookmarkCheck } from 'lucide-react';
 
 export interface ExternalVideoItem {
@@ -92,9 +93,20 @@ export default function ExternalVideoCard({
           <div className="px-6 text-center text-sm text-muted-foreground">
             This result can't be played inline.
             {item.url && (
-              <a href={item.url} target="_blank" rel="noopener noreferrer" className="mt-2 block underline">
+              <button
+                type="button"
+                onClick={() =>
+                  navigate(
+                    `/source?${new URLSearchParams({
+                      url: item.url!,
+                      title: item.title ?? '',
+                    }).toString()}`,
+                  )
+                }
+                className="mt-2 block w-full underline"
+              >
                 Open the source link
-              </a>
+              </button>
             )}
           </div>
         )}

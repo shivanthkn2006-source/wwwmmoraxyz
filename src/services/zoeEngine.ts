@@ -19,7 +19,7 @@ import { parseRecallSources, type ZoeRecallSource } from '@/components/zoe/ZoeRe
 import { recordDhfLineage } from '@/services/dhfLineage';
 import { classifyZoeIntent, type ZoeIntent } from '@/lib/zoeIntents';
 
-export type ZoeBackend = 'zoe-chat' | 'zoe-agent' | 'zoe-infinity-brain';
+export type ZoeBackend = 'zoe-chat' | 'zoe-agent' | 'zoe-infinity-brain' | 'zoe-omega-chat';
 
 export interface ZoeEngineMessage {
   role: 'user' | 'assistant' | 'system';
@@ -97,14 +97,25 @@ export async function askZoe(options: AskZoeOptions): Promise<AskZoeResult> {
   ];
 
   const time = zoeTimeContext();
+  // One engine, four transports: each backend keeps its own field name for the
+  // current turn, so the caller never has to know which brain answered.
+  const backendShape: Record<string, unknown> =
+    backend === 'zoe-omega-chat'
+      ? { message: text }
+      : backend === 'zoe-agent'
+        ? { command: text, userId: options.userId }
+        : {};
+
   const { data, error } = await supabase.functions.invoke(backend, {
     body: {
       messages,
       timezone: time.timezone,
       localTime: time.localTime,
+      ...backendShape,
       ...(options.body ?? {}),
     },
   });
+
 
   if (error) throw new Error(error.message || 'Zoe backend failed');
 

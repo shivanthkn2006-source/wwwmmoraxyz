@@ -7,6 +7,7 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { askZoe } from '@/services/zoeEngine';
 import { useAuth } from '@/lib/auth';
 import { speakAsZoe, stopZoeSpeech, initializeZoeVoices, isZoeSpeaking, getZoeSpeechState } from '@/utils/zoeVoice';
 import { 
@@ -118,19 +119,14 @@ export const useAlwaysOnVoice = () => {
         hour12: true 
       });
 
-      const { data, error } = await supabase.functions.invoke('zoe-chat', {
-        body: {
-          messages: [{ role: 'user', content: userText }],
-          timezone: userTimezone,
-          localTime: localTime,
-          enableASI: true,
-          soulMetrics: { intimacy: 70, selfHarmony: 75, loveEnergy: 70 }
-        }
+      const answer = await askZoe({
+        text: userText,
+        sessionKey: `always-on-${user?.id ?? 'anon'}`,
+        userId: user?.id,
+        body: { enableASI: true, soulMetrics: { intimacy: 70, selfHarmony: 75, loveEnergy: 70 } },
       });
 
-      if (error) throw error;
-
-      const responseText = data?.message || data?.response || "I'm here.";
+      const responseText = answer.text || "I'm here.";
       console.log('[AlwaysOn] Zoe says:', responseText);
       
       // Save Zoe's message to DB (SEPARATION PROTOCOL: tag as zoe_classic)

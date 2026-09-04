@@ -678,15 +678,24 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
                             Open in feed
                           </button>
                           {item.url && (
-                            <a
-                              href={item.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                            <button
+                              type="button"
+                              onClick={() =>
+                                navigate(
+                                  `/source?${new URLSearchParams({
+                                    url: item.url!,
+                                    title: item.title ?? '',
+                                    excerpt: item.subtitle ?? '',
+                                    source: portalForItem(item) ?? item.source ?? '',
+                                  }).toString()}`,
+                                )
+                              }
                               className="rounded-full bg-white/[0.08] px-3 py-1 text-[11px] text-white/80"
                             >
                               Source{portalForItem(item) ? ` · ${portalForItem(item)}` : ''}
-                            </a>
+                            </button>
                           )}
+
                         </div>
                       </div>
                     )}
