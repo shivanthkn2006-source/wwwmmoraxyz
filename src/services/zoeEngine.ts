@@ -19,7 +19,7 @@ import { parseRecallSources, type ZoeRecallSource } from '@/components/zoe/ZoeRe
 import { recordDhfLineage } from '@/services/dhfLineage';
 import { classifyZoeIntent, type ZoeIntent } from '@/lib/zoeIntents';
 
-export type ZoeBackend = 'zoe-chat' | 'zoe-agent' | 'zoe-infinity-brain';
+export type ZoeBackend = 'zoe-chat' | 'zoe-agent' | 'zoe-infinity-brain' | 'zoe-omega-chat';
 
 export interface ZoeEngineMessage {
   role: 'user' | 'assistant' | 'system';
