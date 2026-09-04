@@ -16,6 +16,7 @@ import { useAuth } from '@/lib/auth';
 import { deviceTimeZone, localDateIn } from '@/lib/growthSlot';
 import { COMPASS_SLOT_COUNT, duePosts, type DhfDailyPost } from '@/lib/dhfCompass';
 import { resolveCompassImages } from '@/lib/dhfCompassImages';
+import { hasLiveSession } from '@/lib/edgeSession';
 
 
 const SELECT =
