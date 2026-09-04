@@ -8770,6 +8770,36 @@ export type Database = {
         }
         Relationships: []
       }
+      zoe_biometric_recommendations: {
+        Row: {
+          created_at: string
+          id: string
+          model: string
+          recommendation: string
+          sample_count: number
+          signals: Json
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          model?: string
+          recommendation: string
+          sample_count?: number
+          signals?: Json
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          model?: string
+          recommendation?: string
+          sample_count?: number
+          signals?: Json
+          user_id?: string
+        }
+        Relationships: []
+      }
       zoe_black_box_ledger: {
         Row: {
           encrypted_payload: Json
