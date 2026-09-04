@@ -6,6 +6,7 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { askZoe } from '@/services/zoeEngine';
 import { useAuth } from '@/lib/auth';
 import { toast } from 'sonner';
 
@@ -298,21 +299,16 @@ export const useZoeSovereignCommand = () => {
     const movieName = movieMatch?.[1] || 'that movie';
     
     try {
-      const { data, error } = await supabase.functions.invoke('zoe-chat', {
-        body: {
-          messages: [{ 
-            role: 'user', 
-            content: `Tell me about the movie "${movieName}" - include a brief plot summary, main cast, and whether it's worth watching. Keep it conversational and under 100 words.` 
-          }],
-          enableASI: true,
-          soulMetrics: { intimacy: 50, selfHarmony: 50, loveEnergy: 50 }
-        }
+      const answer = await askZoe({
+        text: `Tell me about the movie "${movieName}" - include a brief plot summary, main cast, and whether it's worth watching. Keep it conversational and under 100 words.`,
+        sessionKey: 'sovereign-movie',
+        body: { enableASI: true, soulMetrics: { intimacy: 50, selfHarmony: 50, loveEnergy: 50 } },
       });
 
-      if (!error && data?.message) {
+      if (answer.text) {
         return {
           success: true,
-          response: data.message,
+          response: answer.text,
           shouldSpeak: true,
           voiceStyle: 'warm'
         };
@@ -437,26 +433,19 @@ export const useZoeSovereignCommand = () => {
       };
 
       // Call enhanced zoe-chat with full context
-      const { data, error } = await supabase.functions.invoke('zoe-chat', {
+      const answer = await askZoe({
+        text: command,
+        sessionKey: 'sovereign-command',
+        history: conversationHistory as { role: 'user' | 'assistant'; content: string }[],
         body: {
-          messages: [
-            ...conversationHistory,
-            { role: 'user', content: command }
-          ],
           enableASI: true,
-          soulMetrics: { 
-            intimacy: 65, 
-            selfHarmony: 70, 
-            loveEnergy: 75,
-            visionActive: false
-          },
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-          localTime: now.toLocaleTimeString(),
-          platformContext // Send platform awareness context
-        }
+          soulMetrics: { intimacy: 65, selfHarmony: 70, loveEnergy: 75, visionActive: false },
+          platformContext,
+        },
       });
+      const data = answer.raw ?? {};
 
-      if (!error && data?.message) {
+      if (answer.text) {
         // Check if Zoe wants to take initiative/action
         const responseText = data.message;
         let voiceStyle: 'calm' | 'warm' | 'urgent' | 'playful' = 'warm';
