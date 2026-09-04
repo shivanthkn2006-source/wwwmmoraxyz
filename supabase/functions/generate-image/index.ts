@@ -1,4 +1,5 @@
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
+import { openRouterImage } from '../_shared/sovereign-ai.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -78,14 +79,24 @@ Deno.serve(async (req) => {
     let usedProvider = 'unknown';
     const attempts: Array<{ provider: string; ok: boolean; reason?: string }> = [];
 
-    // Sovereign image gen — Pollinations only (free, no Lovable credits).
+    // Sovereign image gen — Pollinations first (free), then OpenRouter Nano
+    // Banana so a Pollinations outage/moderation never turns an image request
+    // into a broken picture. No Lovable credits on either tier.
     imageUrl = await tryPollinations(prompt, width || 1024, height || 1024);
     if (imageUrl) {
       usedProvider = 'pollinations';
       attempts.push({ provider: 'pollinations', ok: true });
     } else {
       attempts.push({ provider: 'pollinations', ok: false, reason: 'unreachable' });
+      imageUrl = await openRouterImage(prompt, []);
+      if (imageUrl) {
+        usedProvider = 'openrouter-gemini-image';
+        attempts.push({ provider: 'openrouter-gemini-image', ok: true });
+      } else {
+        attempts.push({ provider: 'openrouter-gemini-image', ok: false, reason: 'unavailable' });
+      }
     }
+
 
 
     if (!imageUrl) {

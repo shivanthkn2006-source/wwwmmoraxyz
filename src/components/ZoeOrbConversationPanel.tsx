@@ -1380,12 +1380,23 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
     // An attached image is a reference, not something Zoe should merely describe.
     if (imageIntent.isUserIdentityRequest) {
       const attachedReference = pendingMedia?.type === 'image' ? pendingMedia.file : undefined;
-      let referenceUrl: string | null = confirmedProfilePhotoUrl;
-      let referenceSource: 'identity-vault' | 'profile-photo' | null = confirmedProfilePhotoUrl ? 'identity-vault' : null;
-      if (!attachedReference && !referenceUrl && user?.id) {
+      // Precedence: attached photo → private identity vault → previously
+      // confirmed profile photo. The vault is consulted FIRST so a decorative
+      // avatar (deity art, logo, pet) never stands in for the account holder.
+      let referenceUrl: string | null = null;
+      let referenceSource: 'identity-vault' | 'profile-photo' | null = null;
+      if (!attachedReference && user?.id) {
         const reference = await getIdentityReference(user.id);
-        referenceUrl = reference?.url ?? null;
-        referenceSource = reference?.source ?? null;
+        if (reference?.source === 'identity-vault') {
+          referenceUrl = reference.url;
+          referenceSource = 'identity-vault';
+        } else if (confirmedProfilePhotoUrl) {
+          referenceUrl = confirmedProfilePhotoUrl;
+          referenceSource = 'identity-vault';
+        } else {
+          referenceUrl = reference?.url ?? null;
+          referenceSource = reference?.source ?? null;
+        }
       }
 
       if (!attachedReference && !referenceUrl) {
@@ -1460,18 +1471,21 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
         return;
       } catch (error) {
         const needsReference = error instanceof IdentityImageError && error.code === 'REFERENCE_NOT_HUMAN';
+        const quotaExhausted = error instanceof IdentityImageError && error.code === 'PROVIDER_QUOTA';
         const content = needsReference
           ? 'That reference is not a clear photo of a real person. Please attach a clear front-facing photo of yourself (+ menu → "My photo"), then resend the same request.'
-          : 'I could not create your identity image just now. Your reference was not replaced with a random person—please try again.';
+          : quotaExhausted
+            ? 'I have your photo from the vault and I know it\'s you — but every identity-preserving image studio is out of credit right now, so I paused rather than paint a stranger. Ask me again in a little while, or add image credit and I\'ll finish it immediately.'
+            : 'I could not create your identity image just now. Your reference was not replaced with a random person—please try again.';
         const failureMessage: Message = {
           id: createMessageId(), role: 'zoe', content, timestamp: new Date(),
-          reasoningTrace: { classifiedIntent: needsReference ? 'identity_reference_required' : 'identity_image_error', codexInjected: false },
+          reasoningTrace: { classifiedIntent: needsReference ? 'identity_reference_required' : quotaExhausted ? 'identity_provider_quota' : 'identity_image_error', codexInjected: false },
         };
         setMessages(prev => [...prev, failureMessage]);
         saveMessageToDb('assistant', content, undefined, undefined, failureMessage.id);
         setPendingMedia(null);
         setIsProcessing(false);
-        setSendStage(needsReference ? 'done' : 'error', 'identity-image-generation');
+        setSendStage(needsReference || quotaExhausted ? 'done' : 'error', 'identity-image-generation');
         return;
       }
     }

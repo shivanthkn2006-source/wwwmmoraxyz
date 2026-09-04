@@ -85,12 +85,21 @@ const OPENROUTER_TEXT = 'meta-llama/llama-3.3-70b-instruct';
  */
 const GOOGLE_FAST_CANDIDATES = [
   'gemini-3.6-flash',
-  // Live-probed 200 on this account via provider-health (Sep 2026).
+  // Live-probed 200 on this account (Sep 4 2026) while gemini-3.6-flash was
+  // at 429 — Google quotas are PER MODEL, so a 429 must roll to the next id.
+  'gemini-3-flash-preview',
   'gemini-3.5-flash',
   'gemini-2.5-flash',
   'gemini-2.0-flash',
   'gemini-flash-latest',
 ];
+
+/** Groq multimodal model — live-probed with two images (Sep 4 2026). */
+const GROQ_VISION = 'qwen/qwen3.8-27b';
+/** OpenRouter multimodal fallbacks, cheapest first — both live-probed with two images. */
+const OPENROUTER_VISION = ['google/gemini-2.5-flash-lite', 'google/gemma-3-12b-it'];
+/** OpenRouter image generation / editing model (Nano Banana) — live-probed for text→image and image→image. */
+const OPENROUTER_IMAGE = 'google/gemini-2.5-flash-image';
 
 const GOOGLE_PRO_CANDIDATES = [
   'gemini-3.1-pro-preview',
@@ -288,6 +297,7 @@ async function callGoogle(payload: any): Promise<Response | null> {
   if (systemText) body.systemInstruction = { parts: [{ text: systemText }] };
 
   const candidates = googleModelsFor(payload.model);
+  let sawQuota = false;
   for (const model of candidates) {
     const resp = await fetch(`${GOOGLE_BASE}/${model}:generateContent?key=${key}`, {
       method: 'POST',
@@ -302,10 +312,11 @@ async function callGoogle(payload: any): Promise<Response | null> {
         deadGoogleModels.add(model);
         continue;
       }
-      if (resp.status === 429) googleQuotaBlockedUntil = Date.now() + GOOGLE_QUOTA_COOLDOWN_MS;
-      return null; // 401/429/5xx: key or quota problem, another model won't help
-
+      // Google quotas are per model: one id at 429 says nothing about the next.
+      if (resp.status === 429) { sawQuota = true; continue; }
+      return null; // 401/5xx: key or service problem, another model won't help
     }
+    sawQuota = false;
     const data = await resp.json();
     const text = data.candidates?.[0]?.content?.parts?.map((p: any) => p.text).filter(Boolean).join('') ?? '';
     if (!text) return null;
@@ -319,7 +330,73 @@ async function callGoogle(payload: any): Promise<Response | null> {
       : undefined;
     return json(chatShape(text, model, undefined, usage));
   }
+  // Every live candidate answered 429 → cool the whole provider down.
+  if (sawQuota) googleQuotaBlockedUntil = Date.now() + GOOGLE_QUOTA_COOLDOWN_MS;
   return null;
+}
+
+/**
+ * OpenAI-compatible multimodal call (Groq / OpenRouter). The content arrays are
+ * forwarded intact so the model really sees every image (identity comparisons
+ * send two). Returns null on any failure so the chain keeps walking.
+ */
+async function callOpenAICompatVision(
+  provider: 'groq' | 'openrouter',
+  url: string,
+  key: string,
+  models: string[],
+  payload: any,
+  extraHeaders: Record<string, string> = {},
+): Promise<Response | null> {
+  const messages: AnyMsg[] = payload.messages || [];
+  if (!messages.length) return null;
+  for (const model of models) {
+    try {
+      const body: any = { model, messages, max_tokens: payload.max_tokens ?? 2048 };
+      if (payload.temperature !== undefined) body.temperature = payload.temperature;
+      if (payload.response_format?.type === 'json_object') body.response_format = payload.response_format;
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', ...extraHeaders },
+        body: JSON.stringify(body),
+      });
+      if (!resp.ok) {
+        console.warn(`[sovereign-ai] ${provider} vision failed`, resp.status, model, (await resp.text()).slice(0, 200));
+        continue;
+      }
+      const data = await resp.json();
+      // OpenRouter can return HTTP 200 with an embedded upstream error.
+      if (data?.error) {
+        console.warn(`[sovereign-ai] ${provider} vision upstream error`, model, JSON.stringify(data.error).slice(0, 200));
+        continue;
+      }
+      let content = data?.choices?.[0]?.message?.content;
+      if (Array.isArray(content)) content = content.map((p: any) => p?.text ?? '').join('');
+      if (typeof content !== 'string' || !content.trim()) continue;
+      // Reasoning models may wrap thinking in <think>…</think>; never leak it.
+      content = content.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+      if (!content) continue;
+      return json(chatShape(content, `${provider}/${model}`, undefined, data?.usage));
+    } catch (e) {
+      console.warn(`[sovereign-ai] ${provider} vision threw`, model, e);
+    }
+  }
+  return null;
+}
+
+async function callGroqVision(payload: any): Promise<Response | null> {
+  const key = Deno.env.get('GROQ_API_KEY');
+  if (!key) return null;
+  return callOpenAICompatVision('groq', GROQ_URL, key, [GROQ_VISION], payload);
+}
+
+async function callOpenRouterVision(payload: any): Promise<Response | null> {
+  const key = Deno.env.get('OPENROUTER_API_KEY');
+  if (!key) return null;
+  return callOpenAICompatVision('openrouter', OPENROUTER_URL, key, OPENROUTER_VISION, payload, {
+    'HTTP-Referer': 'https://mmora.xyz',
+    'X-Title': "M'Mora Zoe",
+  });
 }
 
 
@@ -516,6 +593,48 @@ async function googleImage(prompt: string, inputImages: string[]): Promise<strin
   }
 }
 
+/**
+ * OpenRouter image generation / editing (Nano Banana). Used when Google AI
+ * Studio image models are at quota and Pollinations' paid edit balance is empty.
+ * Exported so `edit-image` can reuse the exact same call for identity edits.
+ */
+export async function openRouterImage(prompt: string, inputImages: string[]): Promise<string | null> {
+  const key = Deno.env.get('OPENROUTER_API_KEY');
+  if (!key) return null;
+  try {
+    const content: any[] = [{ type: 'text', text: prompt }];
+    for (const url of inputImages) content.push({ type: 'image_url', image_url: { url } });
+    const resp = await fetch(OPENROUTER_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${key}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://mmora.xyz',
+        'X-Title': "M'Mora Zoe",
+      },
+      body: JSON.stringify({
+        model: OPENROUTER_IMAGE,
+        messages: [{ role: 'user', content }],
+        modalities: ['image', 'text'],
+      }),
+    });
+    if (!resp.ok) {
+      console.warn('[sovereign-ai] openrouter image failed', resp.status, (await resp.text()).slice(0, 200));
+      return null;
+    }
+    const data = await resp.json();
+    if (data?.error) {
+      console.warn('[sovereign-ai] openrouter image upstream error', JSON.stringify(data.error).slice(0, 200));
+      return null;
+    }
+    const img = data?.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+    return typeof img === 'string' && img.startsWith('data:') ? img : null;
+  } catch (e) {
+    console.warn('[sovereign-ai] openrouter image error', e);
+    return null;
+  }
+}
+
 async function handleImageRequest(payload: any, openaiImagesEndpoint: boolean): Promise<Response> {
   const messages: AnyMsg[] = payload.messages || [];
   const { text, images } = messages.length
@@ -526,10 +645,13 @@ async function handleImageRequest(payload: any, openaiImagesEndpoint: boolean): 
   let dataUrl: string | null = null;
   if (images.length) {
     dataUrl = await googleImage(text || 'Edit this image', images);
-    if (!dataUrl) dataUrl = await pollinationsImage(text || 'image');
+    if (!dataUrl) dataUrl = await openRouterImage(text || 'Edit this image', images);
+    // Text-only generation can never preserve the input subject — do not
+    // downgrade an edit into an unrelated render.
   } else {
     dataUrl = await pollinationsImage(text || 'image');
     if (!dataUrl) dataUrl = await googleImage(text || 'image', []);
+    if (!dataUrl) dataUrl = await openRouterImage(text || 'image', []);
   }
 
   if (!dataUrl) {
@@ -580,13 +702,21 @@ export async function sovereignFetch(url: string, init?: RequestInit): Promise<R
   // Vision requests: real multimodal providers only. Text-only providers must
   // NEVER be used as a fallback here — they silently drop the image and answer
   // "no image was provided", which callers then read as a real verdict.
-  // NVIDIA NIM VLMs are genuinely multimodal, so they are a safe second tier
-  // and are what keeps vision alive through a Google free-tier 429.
+  // Chain (all live-probed Sep 4 2026):
+  //   Google Gemini → Groq Qwen3.8-27B (free, multi-image) → OpenRouter
+  //   (gemini-2.5-flash-lite / gemma-3-12b) → NVIDIA NIM (single-image only:
+  //   llama-3.2-vision rejects >1 image, which broke identity comparisons).
   if (hasImageInput(messages)) {
     const g = await callGoogle(payload);
     if (g) return g;
-    const nv = await callNvidia(payload, 'vision');
-    if (nv) return nv;
+    const gq = await callGroqVision(payload);
+    if (gq) return gq;
+    const orv = await callOpenRouterVision(payload);
+    if (orv) return orv;
+    if (extractImageParts(messages).images.length <= 1) {
+      const nv = await callNvidia(payload, 'vision');
+      if (nv) return nv;
+    }
     return json(
       { error: { message: 'No sovereign vision provider available', code: 'VISION_UNAVAILABLE' } },
       503,

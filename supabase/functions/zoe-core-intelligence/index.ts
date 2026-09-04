@@ -8,7 +8,7 @@ import {
   createErrorResponse
 } from "../_shared/ai-telemetry.ts";
 import { cascadeInfer, hardenZoeIdentity } from "../_shared/cascading-provider.ts";
-import { CLARIFICATION_PROTOCOL } from "../_shared/cognitive-fault.ts";
+import { CLARIFICATION_PROTOCOL, spokenFallback } from "../_shared/cognitive-fault.ts";
 import {
   parseMetacognition,
   resolveThreshold,
@@ -477,7 +477,9 @@ ${driftHints.length
     let toolError: string | null = null;
 
     const toolMessages = cascadeMessages.filter((m) => m.role !== 'system');
-    const toolOpts = { maxTokens: deepMode ? 3000 : 1200, temperature: deepMode ? 0.5 : 0.7 };
+    // The JSON envelope (4-region monologue + answer) needs headroom: at 1200
+    // tokens a reflective answer got cut mid-string and the raw envelope leaked.
+    const toolOpts = { maxTokens: deepMode ? 3000 : 2200, temperature: deepMode ? 0.5 : 0.7 };
 
     // Primary grounded provider: Gemini function calling.
     let toolLoop = await runGeminiToolLoop(groundedSystemPrompt, toolMessages, toolOpts);
@@ -502,7 +504,7 @@ ${driftHints.length
       console.warn(`[zoe-core-intelligence] tool loops unavailable: ${toolError}`);
 
       const cascadeResult = await cascadeInfer(cascadeMessages, {
-        maxTokens: deepMode ? 3000 : 1200,
+        maxTokens: deepMode ? 3000 : 2200,
         temperature: deepMode ? 0.5 : 0.7,
         mode: 't1-primary',
         nvidiaRole: deepMode ? 'deep_thinking' : 'chat',
@@ -523,6 +525,11 @@ ${driftHints.length
 
     const parsed = parseMetacognition(visibleRaw, confidenceThreshold);
     parsed.final_response = stripScratchpad(parsed.final_response);
+    if (!parsed.final_response.trim()) {
+      // Envelope was cut before the answer began — speak honestly, never show JSON.
+      parsed.final_response = spokenFallback('internal');
+      parsed.parse_error = `${parsed.parse_error ?? 'malformed'}:no_final_response`;
+    }
     if (hiddenThoughts.length) {
       parsed.internal_monologue = [
         ...(parsed.internal_monologue ?? []),

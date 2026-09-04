@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { clientErrorResponse } from '../_shared/client-error.ts';
+import { openRouterImage } from '../_shared/sovereign-ai.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -129,13 +130,25 @@ serve(async (req) => {
     }
 
     if (!resp) {
+      // Google image quota exhausted (429) or a model error → OpenRouter
+      // Nano Banana edits the SAME reference image, so identity is preserved.
+      console.warn('[edit-image] Google image models unavailable, trying OpenRouter image edit. last:', lastStatus, lastErr.slice(0, 120));
+      const orImage = await openRouterImage(prompt, [`data:${mime};base64,${b64}`]);
+      if (orImage) {
+        return new Response(
+          JSON.stringify({ imageUrl: orImage, provider: 'openrouter-gemini-image' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
       if (lastStatus === 429) {
+        // Truthful, machine-readable: every funded identity editor is at quota.
         return new Response(
           JSON.stringify({
+            code: 'PROVIDER_QUOTA',
             error: 'RATE_LIMIT',
-            message: 'All identity-image models are temporarily at quota. Your request and photo remain saved so you can retry.',
+            message: 'Every identity-preserving image editor is out of quota right now (Google image quota and OpenRouter/Pollinations balance). Your photo stays safe in the vault; nobody was substituted.',
           }),
-          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
       throw new Error(`Google AI error: ${lastStatus}`);
