@@ -67,3 +67,6 @@
 - [x] Clarification protocol extended to `zoe-agent` and `zoe-infinity-brain` (was only `zoe-chat` / `zoe-omega-chat`)
 - [ ] PARKED — travel tools (flights/cabs/hotels): Amadeus API discontinued; pick a free provider (Skyscanner/Kiwi/Duffel) and wire server-side keys later. No mock bookings in the meantime.
 - [ ] PARKED — full biometric loop: heart rate needs a paired BLE strap, location needs a granted permission. Zoe reports them unavailable rather than simulating.
+- [x] Removed the last simulated telemetry: `useBioTelemetry` now reads only real BLE heart rate / DeviceMotion / Battery / Network; unmeasured metrics render as "—" (no fabricated HRV, SpO2, temp, steps)
+- [x] `realtimeBehaviorMeter.ts` replaces randomised behavioural inputs to Guardian Angel with measured keystroke rhythm, visibility switches, blur interruptions and focused minutes
+- [x] Persona boundary confirmed: M'Mora Zoe = `zoe-chat` (orb text+voice, ZoeChat, DHF, memory) with `zoe-agent`/`zoe-core-intelligence` for tools/deep thinking. `zoe-infinity-brain` is used ONLY by Zoe Infinity pages — separate project, separate login.

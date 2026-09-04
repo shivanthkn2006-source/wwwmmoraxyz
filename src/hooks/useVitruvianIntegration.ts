@@ -8,6 +8,7 @@ import { useEffect, useCallback } from 'react';
 import { useBioTelemetry, type BioMetrics } from './useBioTelemetry';
 import { guardianAngel, type GuardianState } from '@/services/ZoeGuardianAngel';
 import { hapticSymbiosis } from '@/services/HapticSymbiosis';
+import { startBehaviorMeter, readBehaviorSnapshot } from '@/services/realtimeBehaviorMeter';
 
 // Convert BioMetrics to Guardian-compatible format
 const convertBioMetrics = (metrics: BioMetrics) => ({
@@ -21,29 +22,26 @@ const convertBioMetrics = (metrics: BioMetrics) => ({
   oxygenLevel: metrics.oxygenLevel,
 });
 
-// Convert activity to behavioral metrics
+// Real behavioural signals measured in this session — nothing randomised.
+// Unmeasured fields fall back to neutral values that Guardian treats as "no signal".
 const deriveBehavioralMetrics = (metrics: BioMetrics) => {
-  const isActive = metrics.activityState === 'active' || metrics.activityState === 'exercising';
-  const hour = new Date().getHours();
-  
-  // Simulate typing speed based on activity and time
-  const baseTypingSpeed = 60;
-  const activityModifier = isActive ? 0.8 : 1.0;
-  const timeModifier = hour >= 14 && hour <= 16 ? 0.85 : 1.0; // Afternoon slump
-  
+  const observed = readBehaviorSnapshot();
   return {
-    typingSpeedWpm: Math.floor(baseTypingSpeed * activityModifier * timeModifier * (0.9 + Math.random() * 0.2)),
-    typingSpeedVariance: Math.random() * 15,
-    voiceToneScore: metrics.stressLevel === 'high' ? 0.3 : 
+    typingSpeedWpm: observed.typingSpeedWpm ?? 0,
+    typingSpeedVariance: observed.typingSpeedVariance ?? 0,
+    voiceToneScore: metrics.stressLevel === 'high' ? 0.3 :
                     metrics.stressLevel === 'elevated' ? 0.5 : 0.8,
-    contextSwitches: isActive ? Math.floor(Math.random() * 10) : Math.floor(Math.random() * 20),
-    sessionInterruptions: Math.floor(Math.random() * 8),
-    deepWorkMinutes: isActive ? 30 : 60 + Math.floor(Math.random() * 60),
+    contextSwitches: observed.contextSwitches,
+    sessionInterruptions: observed.sessionInterruptions,
+    deepWorkMinutes: observed.deepWorkMinutes,
   };
 };
 
 export const useVitruvianIntegration = () => {
   const bioTelemetry = useBioTelemetry();
+
+  // Begin measuring real interaction rhythm as soon as the deck mounts.
+  useEffect(() => { startBehaviorMeter(); }, []);
   
   // Feed bio metrics into Guardian Angel analysis
   useEffect(() => {
@@ -69,20 +67,18 @@ export const useVitruvianIntegration = () => {
   useEffect(() => {
     if (!bioTelemetry.isConnected) return;
     
-    const { metrics } = bioTelemetry;
+    const { metrics, available } = bioTelemetry;
     
-    // Critical stress - trigger comfort haptic
-    if (metrics.stressLevel === 'high' || metrics.heartRate > 110) {
+    // Only react to metrics the device actually measured.
+    if (available.heartRate && (metrics.stressLevel === 'high' || metrics.heartRate > 110)) {
       hapticSymbiosis.triggerForEmotion('stressed');
     }
     
-    // Low oxygen - alert haptic
-    if (metrics.oxygenLevel < 94) {
+    if (available.oxygenLevel && metrics.oxygenLevel < 94) {
       hapticSymbiosis.sendAlert();
     }
     
-    // Low energy - gentle presence
-    if (metrics.energyLevel < 25) {
+    if (available.energyLevel && metrics.energyLevel < 25) {
       hapticSymbiosis.sendPresence();
     }
   }, [bioTelemetry.metrics, bioTelemetry.isConnected]);

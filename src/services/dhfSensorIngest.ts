@@ -39,10 +39,26 @@ export interface SensorReading {
 }
 
 let lastHeartRate: number | null = null;
+const heartRateListeners = new Set<(bpm: number | null) => void>();
 
 /** Register a live heart rate from a paired BLE monitor (see `pairHeartRateMonitor`). */
 export function setLiveHeartRate(bpm: number | null) {
   lastHeartRate = typeof bpm === 'number' && bpm > 20 && bpm < 250 ? bpm : null;
+  for (const listener of heartRateListeners) {
+    try { listener(lastHeartRate); } catch { /* listener errors never break ingestion */ }
+  }
+}
+
+/** Current BLE heart rate, or null when no monitor is paired. Never simulated. */
+export function getLiveHeartRate(): number | null {
+  return lastHeartRate;
+}
+
+/** Subscribe to real BLE heart-rate notifications. Returns an unsubscribe fn. */
+export function subscribeHeartRate(listener: (bpm: number | null) => void): () => void {
+  heartRateListeners.add(listener);
+  listener(lastHeartRate);
+  return () => { heartRateListeners.delete(listener); };
 }
 
 async function readMotion(durationMs = 3000): Promise<{ magnitude: number | null; samples: number; reason?: string }> {
