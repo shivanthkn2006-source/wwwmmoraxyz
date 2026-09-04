@@ -831,8 +831,20 @@ ${cortexPromptAddition}`;
     }
     console.log('[Zoe] web grounding hits:', webHitCount);
 
+    // EPHEMERIS GUARDRAIL — astrology answers are grounded in computed
+    // planetary positions, never in the model's recollection.
+    let astroBlock = '';
+    try {
+      if (needsAstroGrounding(lastUserMessage)) {
+        astroBlock = buildAstroGroundingBlock(astroBirthProfile, timezone || 'Asia/Kolkata');
+      }
+    } catch (astroError) {
+      console.warn('[Zoe] astro grounding skipped:', astroError instanceof Error ? astroError.message : astroError);
+    }
+    console.log('[Zoe] astro grounding:', astroBlock ? 'active' : 'not needed');
+
     const cascadeMessages = [
-      { role: 'system', content: `${systemPrompt}${omniRecallBlock}${webBlock}` },
+      { role: 'system', content: `${systemPrompt}${omniRecallBlock}${webBlock}${astroBlock}` },
       ...messages.map(m => ({ ...m, content: truncateMessageIfNeeded(m.content) })),
     ];
     
