@@ -312,8 +312,19 @@ serve(async (req) => {
             relationship: userProfileContext?.zoeRelationshipStyle
           });
         }
+
+        // Birth coordinates live in `astro_profiles` (kept in sync with
+        // `profiles` by the sync_astro_profile_from_profile trigger). They are
+        // the only source the ephemeris guardrail is allowed to compute from.
+        const { data: astroProfile } = await supabase
+          .from('astro_profiles')
+          .select('birth_date, birth_time, birth_timezone, birth_latitude, birth_longitude')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        astroBirthProfile = (astroProfile as AstroBirthProfile | null) ?? null;
       }
     }
+
 
     console.log('Zoe AI chat request with context:', { soulMetrics, platformContext, hasProfile: !!userProfileContext });
 
