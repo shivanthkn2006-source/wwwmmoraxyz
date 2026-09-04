@@ -79,6 +79,12 @@ export function useDhfDailyFeed() {
         return;
       }
 
+      // Without a live token the function answers 401; serve what we have.
+      if (!(await hasLiveSession())) {
+        if (mounted.current) setState({ posts: duePosts(rows, new Date(), tz), loading: false, error: false, generating: false });
+        return;
+      }
+
       attempted.add(guardKey);
       if (mounted.current) {
         setState((prev) => ({ ...prev, posts: duePosts(rows, new Date(), tz), loading: false, generating: true }));
