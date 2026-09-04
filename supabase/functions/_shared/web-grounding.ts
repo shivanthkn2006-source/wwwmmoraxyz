@@ -199,7 +199,7 @@ async function freshNews(query: string): Promise<WebGroundHit[]> {
 export async function webGround(query: string, limit = 6): Promise<WebGroundHit[]> {
   const term = (query || '').trim().slice(0, 300);
   if (term.length < 3) return [];
-  const wantsNews = /\b(news|latest|today|breaking|update|current|now|who is|price|score|202\d)\b/i.test(term);
+  const wantsNews = /\b(news|latest|today|breaking|update|current|now|who is|who'?s|president|prime minister|ceo|leader|price|score|202\d)\b/i.test(term);
 
   const settled = await Promise.allSettled([
     duckduckgo(term),
