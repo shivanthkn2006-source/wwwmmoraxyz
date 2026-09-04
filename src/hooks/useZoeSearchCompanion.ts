@@ -132,11 +132,23 @@ export function useZoeSearchCompanion(query: string, open: boolean) {
     speakSearchLine(turn.speech, true);
   }, [turn, prefs.voiceEnabled]);
 
+  // Opening the search bar means the user switched features: ambient card /
+  // growth narration must go quiet immediately, even when Zoe's search voice
+  // is off, so two Zoe voices can never overlap.
   React.useEffect(() => {
-    if (!open) stopSearchVoice();
+    if (open) {
+      claimVoice('search');
+      return () => releaseVoice('search');
+    }
+    stopSearchVoice();
+    releaseVoice('search');
   }, [open]);
 
-  React.useEffect(() => () => stopSearchVoice(), []);
+  React.useEffect(() => () => {
+    stopSearchVoice();
+    releaseVoice('search');
+  }, []);
+
 
   const toggleVoice = React.useCallback(() => {
     const next = { ...prefs, voiceEnabled: !prefs.voiceEnabled };
