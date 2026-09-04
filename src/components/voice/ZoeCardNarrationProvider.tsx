@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/lib/auth';
 import { speakAsZoe, stopZoeSpeech, pauseZoeSpeech, resumeZoeSpeech, getZoeSpeechState } from '@/utils/zoeVoice';
+import { claimVoice, registerVoiceChannel, releaseVoice } from '@/lib/zoeVoiceArbiter';
 import { hasNarratedCard, hasStartedDailyNarration, markDailyNarrationStarted, markNarratedCard } from '@/lib/zoeCardNarrationMemory';
 
 export type NarrationKind = 'growth' | 'dhf' | 'social';
