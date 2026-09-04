@@ -360,3 +360,6 @@ verify_jwt = false
 
 [functions.zoe-synthetic-crawler]
 verify_jwt = false
+
+[functions.zoe-shadow-mode]
+verify_jwt = false
