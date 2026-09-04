@@ -137,6 +137,30 @@ async function loadCanonical(db: ReturnType<typeof createClient>, job: QueueRow)
     };
   }
 
+  // Visual memory: what Zoe actually SAW, made recallable like any other
+  // memory so "what was in the photo I showed you" resolves to a real row.
+  if (job.entity_type === 'visual_memory') {
+    const { data, error } = await db.from('zoe_infinity_memories')
+      .select('id,user_id,key,value,context,importance_score,created_at')
+      .eq('id', job.entity_id).maybeSingle();
+    if (error) throw error;
+    if (!data) return null;
+    const body = [String(data.value || '').trim(), String(data.context || '').trim()]
+      .filter(Boolean).join('\n');
+    if (!body) return null;
+    return {
+      ownerId: data.user_id,
+      content: `Zoe saw: ${body}`,
+      privacy: 'private',
+      metadata: {
+        title: 'Visual memory',
+        visionKind: data.key,
+        importance: data.importance_score,
+        createdAt: data.created_at,
+      },
+    };
+  }
+
   // ── Omni-Graph coverage: DHF, Growth and Daily Compass entities ──
   if (job.entity_type === 'dhf_post') {
     const { data, error } = await db.from('dhf_daily_posts')
