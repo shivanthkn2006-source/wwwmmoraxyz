@@ -1996,6 +1996,63 @@ export type Database = {
         }
         Relationships: []
       }
+      dhf_lineage_ledger: {
+        Row: {
+          action: string
+          chain_hash: string
+          content_hash: string
+          created_at: string
+          entity_id: string | null
+          entity_type: string
+          id: string
+          intent: string | null
+          ip_hash: string | null
+          metadata: Json
+          prev_hash: string | null
+          route: string | null
+          session_id: string | null
+          unhandled_intent: boolean
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          chain_hash: string
+          content_hash: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          intent?: string | null
+          ip_hash?: string | null
+          metadata?: Json
+          prev_hash?: string | null
+          route?: string | null
+          session_id?: string | null
+          unhandled_intent?: boolean
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          chain_hash?: string
+          content_hash?: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          intent?: string | null
+          ip_hash?: string | null
+          metadata?: Json
+          prev_hash?: string | null
+          route?: string | null
+          session_id?: string | null
+          unhandled_intent?: boolean
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       dhf_link_health_runs: {
         Row: {
           checked: number
@@ -11711,6 +11768,22 @@ export type Database = {
         Returns: Json
       }
       prune_platform_telemetry: { Args: never; Returns: Json }
+      record_dhf_lineage: {
+        Args: {
+          _action: string
+          _content: string
+          _entity_id: string
+          _entity_type: string
+          _intent?: string
+          _ip_hash?: string
+          _metadata?: Json
+          _route?: string
+          _session_id?: string
+          _unhandled_intent?: boolean
+          _user_agent?: string
+        }
+        Returns: string
+      }
       refresh_leaderboard_stats: { Args: never; Returns: undefined }
       resolve_astro_place: {
         Args: { p_place: string }
