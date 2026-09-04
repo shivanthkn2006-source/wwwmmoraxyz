@@ -12,6 +12,7 @@
  * Results land in `zoe_crawl_runs` / `zoe_crawl_findings`.
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4';
+import { publicGuard } from '../_shared/public-guard.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -79,10 +80,13 @@ async function probeRoute(origin: string, path: string): Promise<Finding | null>
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
+  const guard = await publicGuard(req, { name: 'zoe-synthetic-crawler', limit: 30, windowSeconds: 60 });
+  if (guard.response) return guard.response;
+
   const service = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
   try {
-    const body = await req.json().catch(() => ({} as Record<string, unknown>));
+    const body = guard.body;
     const cronSecret = Deno.env.get('CRAWLER_SECRET') ?? '';
     const headerSecret = req.headers.get('x-crawler-secret') ?? '';
     const isCron = !!cronSecret && headerSecret === cronSecret;
