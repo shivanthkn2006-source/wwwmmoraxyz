@@ -36,4 +36,23 @@ export async function getSharedCoords(): Promise<{ lat: number; lng: number }> {
 export function resetSharedCoords(): void {
   cachedCoords = null;
   coordsPromise = null;
+  realCoords = null;
+}
+
+/**
+ * Coordinates ONLY when the browser actually granted geolocation.
+ * Never prompts and never returns the New York fallback, so Zoe's prompt is
+ * either grounded in a real position or carries no position at all.
+ */
+export async function getGrantedCoords(): Promise<{ lat: number; lng: number } | null> {
+  if (realCoords) return realCoords;
+  if (typeof navigator === 'undefined' || !navigator.permissions?.query) return null;
+  try {
+    const status = await navigator.permissions.query({ name: 'geolocation' as PermissionName });
+    if (status.state !== 'granted') return null;
+  } catch {
+    return null;
+  }
+  await getSharedCoords();
+  return realCoords;
 }
