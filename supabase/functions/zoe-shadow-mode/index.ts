@@ -63,9 +63,9 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({} as Record<string, unknown>));
     const cronSecret = Deno.env.get('CRAWLER_SECRET') ?? '';
     const isCron = !!cronSecret && (req.headers.get('x-crawler-secret') ?? '') === cronSecret;
+    const authHeader = req.headers.get('Authorization') ?? '';
 
     if (!isCron) {
-      const authHeader = req.headers.get('Authorization') ?? '';
       if (!authHeader.startsWith('Bearer ')) return json({ error: 'Unauthorized' }, 401);
       const caller = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, {
         global: { headers: { Authorization: authHeader } },
@@ -86,7 +86,11 @@ Deno.serve(async (req) => {
       try {
         const res = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/zoe-synthetic-crawler`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-crawler-secret': cronSecret },
+          headers: {
+            'Content-Type': 'application/json',
+            // cron path uses the shared secret; admin path forwards the caller's token
+            ...(isCron ? { 'x-crawler-secret': cronSecret } : { Authorization: authHeader }),
+          },
           body: JSON.stringify({ trigger: 'shadow-mode' }),
         });
         routeHealth = await res.json().catch(() => null);
