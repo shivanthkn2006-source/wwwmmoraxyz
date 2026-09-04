@@ -10907,6 +10907,30 @@ export type Database = {
         }
         Relationships: []
       }
+      zoe_search_prefs: {
+        Row: {
+          created_at: string
+          scope_by_topic: Json
+          updated_at: string
+          user_id: string
+          voice_enabled: boolean
+        }
+        Insert: {
+          created_at?: string
+          scope_by_topic?: Json
+          updated_at?: string
+          user_id: string
+          voice_enabled?: boolean
+        }
+        Update: {
+          created_at?: string
+          scope_by_topic?: Json
+          updated_at?: string
+          user_id?: string
+          voice_enabled?: boolean
+        }
+        Relationships: []
+      }
       zoe_self_corrections: {
         Row: {
           corrected_response: string

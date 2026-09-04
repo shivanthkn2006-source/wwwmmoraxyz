@@ -1,5 +1,6 @@
 import React from 'react';
-import { Camera, ListVideo, Loader2, Search, Trash2, X } from 'lucide-react';
+import { Camera, ListVideo, Loader2, Search, Trash2, Volume2, VolumeX, X } from 'lucide-react';
+
 import { useNavigate } from 'react-router-dom';
 import {
   useHomeSearch,
@@ -18,6 +19,9 @@ import { usePlatformInsight } from '@/hooks/usePlatformInsight';
 import { supabase } from '@/integrations/supabase/client';
 import { sanitizeText } from '@/lib/searchSanitize';
 import { KIND_LABEL, portalForItem, tagsForItem, type FeedSearchItem, type FeedSearchKind } from '@/lib/feedSearchItems';
+import { useZoeSearchCompanion } from '@/hooks/useZoeSearchCompanion';
+import { SCOPE_LABEL, scopeAllowsPlatform, scopeAllowsWeb } from '@/lib/zoeSearchCompanion';
+
 
 
 
@@ -60,7 +64,24 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
   const [activeIndex, setActiveIndex] = React.useState(-1);
   const inputRef = React.useRef<HTMLTextAreaElement>(null);
   const navigate = useNavigate();
-  const { results: allResults, loading, error, counts } = useHomeSearch(query, searchOpen);
+  /**
+   * Conversational layer: Zoe offers to search M'Mora, the web, or both while
+   * the user is still typing. Purely local classification — it adds no latency
+   * to retrieval, and it narrows retrieval once a scope is chosen.
+   */
+  const {
+    turn: zoeTurn,
+    activeScope,
+    voiceEnabled,
+    toggleVoice,
+    chooseScope,
+    dismiss: dismissZoe,
+  } = useZoeSearchCompanion(query, searchOpen);
+  const { results: allResults, loading, error, counts } = useHomeSearch(
+    query,
+    searchOpen && scopeAllowsPlatform(activeScope),
+  );
+
   const [filter, setFilter] = React.useState<HomeFilter>('all');
   /** Inline (Google-style) expansion inside the panel — no feed jump needed. */
   const [expandedId, setExpandedId] = React.useState<string | null>(null);
@@ -152,7 +173,7 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
 
   React.useEffect(() => {
     const term = query.trim();
-    if (!searchOpen || term.length < 3) {
+    if (!searchOpen || term.length < 3 || !scopeAllowsWeb(activeScope)) {
       setExternalResults([]);
       return;
     }
@@ -191,7 +212,7 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [query, searchOpen]);
+  }, [query, searchOpen, activeScope]);
 
 
   // The internet block follows the active chip. Every chip maps to the external
@@ -482,6 +503,53 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
           }}
           onPointerDown={(event) => event.stopPropagation()}
         >
+
+          {zoeTurn && (
+            <div className="flex items-start gap-2 border-b border-white/10 px-3 py-2" role="status" aria-live="polite">
+              <span className="mt-[3px] h-2 w-2 shrink-0 rounded-full bg-sky-400/80 shadow-[0_0_8px_rgba(56,189,248,0.9)]" />
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] leading-snug text-white/85">{zoeTurn.text}</p>
+                {zoeTurn.options.length > 0 && (
+                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                    {zoeTurn.options.map((option) => (
+                      <button
+                        key={option}
+                        type="button"
+                        onClick={() => chooseScope(option)}
+                        onDoubleClick={() => chooseScope(option, true)}
+                        title="Click to search here · double-click to always search here"
+                        className={`rounded-full border px-2 py-0.5 text-[10px] transition ${
+                          activeScope === option
+                            ? 'border-sky-400/60 bg-sky-400/20 text-white'
+                            : 'border-white/20 bg-white/5 text-white/70 hover:text-white'
+                        }`}
+                      >
+                        {SCOPE_LABEL[option]}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={dismissZoe}
+                      className="rounded-full px-2 py-0.5 text-[10px] text-white/40 hover:text-white/70"
+                    >
+                      Not now
+                    </button>
+                  </div>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={toggleVoice}
+                aria-pressed={voiceEnabled}
+                aria-label={voiceEnabled ? 'Turn Zoe’s search voice off' : 'Turn Zoe’s search voice on'}
+                className="shrink-0 rounded-full p-1 text-white/55 transition hover:text-white"
+              >
+                {voiceEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+              </button>
+            </div>
+          )}
+
+
 
           {indexEmpty && (
             <p role="alert" className="px-3 py-2 text-xs text-white/55">
