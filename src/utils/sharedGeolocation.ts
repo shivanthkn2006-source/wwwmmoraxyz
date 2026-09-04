@@ -6,6 +6,8 @@
 
 let cachedCoords: { lat: number; lng: number } | null = null;
 let coordsPromise: Promise<{ lat: number; lng: number }> | null = null;
+/** Set only when the browser really returned a fix (never the fallback). */
+let realCoords: { lat: number; lng: number } | null = null;
 
 export async function getSharedCoords(): Promise<{ lat: number; lng: number }> {
   if (cachedCoords) return cachedCoords;
