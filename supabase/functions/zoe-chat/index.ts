@@ -577,6 +577,7 @@ ${userContextBlock}
 - User's name: ${userName}
 - Current page: ${currentPage}
 ${userProfileContext?.city || platformContext?.userCity ? `- User's city: ${userProfileContext?.city || platformContext?.userCity}` : ''}
+${platformContext?.latitude != null && platformContext?.longitude != null ? `- Approximate coordinates (${platformContext.locationSource || 'device'}): ${platformContext.latitude.toFixed(3)}, ${platformContext.longitude.toFixed(3)} — use silently for weather/time/place awareness; never recite them back unless asked.` : ''}
 ${userProfileContext?.bio || platformContext?.userBio ? `- About the user: ${userProfileContext?.bio || platformContext?.userBio}` : ''}
 
 ${postContext ? `**CURRENTLY VISIBLE M'MORA POST:**
