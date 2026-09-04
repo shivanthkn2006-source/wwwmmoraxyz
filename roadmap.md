@@ -49,3 +49,13 @@
 - [x] Generate controlled Sentinel threat/block events and verify persistence.
 - [x] Publish a current attack-surface report.
 - [x] Validate CAPTCHA config and fail-closed verification endpoint; run frontend regression suite.
+
+## Zoe brain consolidation & enterprise DHF (Sep 2026)
+- [x] Canonical Zoe engine (`src/services/zoeEngine.ts`) — recall → backend → persist, used by ZoeChat and orb voice
+- [x] Cryptographic lineage ledger (`dhf_lineage_ledger` + `src/services/dhfLineage.ts`), session/IP-hash/content-hash chain
+- [x] Canonical 91-route registry generated from App.tsx; feeds Zoe platform context; dock routes verified against it in tests
+- [x] Real sensor ingestion into the DHF (`src/services/dhfSensorIngest.ts`) — geo, motion, battery, network, optional BLE heart rate; no simulated values
+- [x] Nightly synthetic crawler (`zoe-synthetic-crawler`, 03:50 UTC) over every registered route + orphaned-DHF-table anomalies
+- [x] Admin DHF growth console at `/admin/dhf-growth` — per-member DHF/recommendation/activity metrics, filters, CSV export, crawler controls
+- [ ] Shadow-mode recommendation replay writer into `zoe_shadow_recommendations` (table + RLS ready; generator pending)
+- [ ] Authenticated end-to-end recall/citation verification (needs a signed-in preview session)
