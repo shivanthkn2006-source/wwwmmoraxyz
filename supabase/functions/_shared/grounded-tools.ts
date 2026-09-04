@@ -15,6 +15,9 @@
 // Deno-safe and vitest-importable (no top-level Deno access).
 // ═══════════════════════════════════════════════════════════════════════════
 
+import { julianDay, getPositions, PLANETS } from './astro-engine.ts';
+import { toolFault, missingParameterFault } from './cognitive-fault.ts';
+
 const env = (k: string): string | undefined =>
   (globalThis as any)?.Deno?.env?.get?.(k) ?? undefined;
 
