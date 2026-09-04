@@ -18,7 +18,7 @@ import { recallZoeMemory, rememberZoeRound } from '@/services/zoeMemoryBridge';
 import { parseRecallSources, type ZoeRecallSource } from '@/components/zoe/ZoeRecallCitations';
 import { recordDhfLineage } from '@/services/dhfLineage';
 import { classifyZoeIntent, type ZoeIntent } from '@/lib/zoeIntents';
-import { getSharedCoords } from '@/utils/sharedGeolocation';
+import { getGrantedCoords } from '@/utils/sharedGeolocation';
 
 export type ZoeBackend = 'zoe-chat' | 'zoe-agent' | 'zoe-infinity-brain' | 'zoe-omega-chat';
 
