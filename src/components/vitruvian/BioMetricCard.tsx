@@ -2,7 +2,7 @@ import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Heart, Activity, Battery, Wind, Thermometer, Footprints } from 'lucide-react';
 import { motion } from 'framer-motion';
-import type { BioMetrics } from '@/hooks/useBioTelemetry';
+import type { BioMetrics, BioMetricKey } from '@/hooks/useBioTelemetry';
 
 interface MetricDisplayProps {
   icon: React.ReactNode;
@@ -70,9 +70,15 @@ const MetricDisplay = ({ icon, label, value, unit, progress, status = 'info', an
 
 interface BioMetricCardProps {
   metrics: BioMetrics;
+  /** Which metrics the device actually measured. Missing ones render as "—". */
+  available?: Partial<Record<BioMetricKey, boolean>>;
 }
 
-const BioMetricCard = ({ metrics }: BioMetricCardProps) => {
+const BioMetricCard = ({ metrics, available = {} }: BioMetricCardProps) => {
+  const has = (key: BioMetricKey) => available[key] === true;
+  const show = (key: BioMetricKey, value: string | number) => (has(key) ? value : '—');
+  const statusOf = (key: BioMetricKey, status: 'optimal' | 'warning' | 'critical'): 'optimal' | 'warning' | 'critical' | 'info' =>
+    has(key) ? status : 'info';
   const getHeartRateStatus = (hr: number): 'optimal' | 'warning' | 'critical' => {
     if (hr >= 60 && hr <= 85) return 'optimal';
     if (hr > 100 || hr < 50) return 'critical';
@@ -105,7 +111,7 @@ const BioMetricCard = ({ metrics }: BioMetricCardProps) => {
         </h3>
         <div className="flex items-center gap-1">
           <div className="w-1.5 h-1.5 rounded-full bg-omega-green animate-pulse" />
-          <span className="text-xs text-muted-foreground font-share-tech">LIVE</span>
+          <span className="text-xs text-muted-foreground font-share-tech">LIVE · DEVICE</span>
         </div>
       </div>
       
@@ -113,49 +119,49 @@ const BioMetricCard = ({ metrics }: BioMetricCardProps) => {
         <MetricDisplay
           icon={<Heart className="w-4 h-4" />}
           label="Heart Rate"
-          value={metrics.heartRate}
-          unit="BPM"
-          status={getHeartRateStatus(metrics.heartRate)}
-          animate={true}
+          value={show('heartRate', metrics.heartRate)}
+          unit={has('heartRate') ? 'BPM' : undefined}
+          status={statusOf('heartRate', getHeartRateStatus(metrics.heartRate))}
+          animate={has('heartRate')}
         />
         
         <MetricDisplay
           icon={<Activity className="w-4 h-4" />}
           label="HRV"
-          value={metrics.hrv}
-          unit="ms"
-          status={getStressStatus(metrics.stressLevel)}
+          value={show('hrv', metrics.hrv)}
+          unit={has('hrv') ? 'ms' : undefined}
+          status={statusOf('hrv', getStressStatus(metrics.stressLevel))}
         />
         
         <MetricDisplay
           icon={<Battery className="w-4 h-4" />}
           label="Energy"
-          value={Math.round(metrics.energyLevel)}
-          unit="%"
-          progress={metrics.energyLevel}
-          status={getEnergyStatus(metrics.energyLevel)}
+          value={show('energyLevel', Math.round(metrics.energyLevel))}
+          unit={has('energyLevel') ? '%' : undefined}
+          progress={has('energyLevel') ? metrics.energyLevel : undefined}
+          status={statusOf('energyLevel', getEnergyStatus(metrics.energyLevel))}
         />
         
         <MetricDisplay
           icon={<Wind className="w-4 h-4" />}
           label="SpO₂"
-          value={metrics.oxygenLevel.toFixed(1)}
-          unit="%"
-          status={getOxygenStatus(metrics.oxygenLevel)}
+          value={show('oxygenLevel', metrics.oxygenLevel.toFixed(1))}
+          unit={has('oxygenLevel') ? '%' : undefined}
+          status={statusOf('oxygenLevel', getOxygenStatus(metrics.oxygenLevel))}
         />
         
         <MetricDisplay
           icon={<Thermometer className="w-4 h-4" />}
           label="Temp"
-          value={metrics.skinTemp.toFixed(1)}
-          unit="°C"
+          value={show('skinTemp', metrics.skinTemp.toFixed(1))}
+          unit={has('skinTemp') ? '°C' : undefined}
           status="info"
         />
         
         <MetricDisplay
           icon={<Footprints className="w-4 h-4" />}
           label="Steps"
-          value={metrics.steps.toLocaleString()}
+          value={show('steps', metrics.steps.toLocaleString())}
           status="info"
         />
       </div>

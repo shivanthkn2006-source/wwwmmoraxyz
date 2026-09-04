@@ -13,6 +13,8 @@ const VitruvianBioDeck = () => {
   const navigate = useNavigate();
   const {
     metrics,
+    available,
+    connectHeartRateMonitor,
     isConnected,
     deviceName,
     isSimulated,
@@ -150,7 +152,7 @@ const VitruvianBioDeck = () => {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.3 }}
             >
-              <BioMetricCard metrics={metrics} />
+              <BioMetricCard metrics={metrics} available={available} />
             </motion.div>
             
             {/* Zoe Analysis */}
