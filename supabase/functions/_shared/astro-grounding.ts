@@ -78,9 +78,9 @@ export async function buildAstroGroundingBlock(
   const lines: string[] = [];
 
   try {
-    const sky = getPrecisePositions(now);
+    const { positions: sky, engine, ayanamsa } = await skyFor(now);
     lines.push(
-      `ENGINE: precision ephemeris (VSOP87/ELP), Lahiri ayanamsa ${deg(lahiriAyanamsa(now))}. Every figure below is computed, not estimated.`,
+      `ENGINE: ${engine}, Lahiri ayanamsa ${deg(ayanamsa)}. Every figure below is computed, not estimated.`,
     );
     lines.push('');
     lines.push('CURRENT SKY (tropical longitude | sidereal/Vedic | nakshatra):');
@@ -96,7 +96,8 @@ export async function buildAstroGroundingBlock(
       const tz = birth.birth_timezone || timeZone;
       const time = (birth.birth_time || '12:00').slice(0, 5);
       const natalUtc = zonedTimeToUtc(String(birth.birth_date).slice(0, 10), time, tz);
-      const natal = getPrecisePositions(natalUtc);
+      const natal = (await skyFor(natalUtc)).positions;
+
 
       lines.push('');
       lines.push(
