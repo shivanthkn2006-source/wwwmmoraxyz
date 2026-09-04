@@ -16,6 +16,7 @@ import { useAuth } from '@/lib/auth';
 import { deviceTimeZone, localDateIn } from '@/lib/growthSlot';
 import { COMPASS_SLOT_COUNT, duePosts, type DhfDailyPost } from '@/lib/dhfCompass';
 import { resolveCompassImages } from '@/lib/dhfCompassImages';
+import { hasLiveSession } from '@/lib/edgeSession';
 
 
 const SELECT =
@@ -75,6 +76,12 @@ export function useDhfDailyFeed() {
       const shouldGenerate = todayCount < COMPASS_SLOT_COUNT && (options.force || !attempted.has(guardKey));
 
       if (!shouldGenerate) {
+        if (mounted.current) setState({ posts: duePosts(rows, new Date(), tz), loading: false, error: false, generating: false });
+        return;
+      }
+
+      // Without a live token the function answers 401; serve what we have.
+      if (!(await hasLiveSession())) {
         if (mounted.current) setState({ posts: duePosts(rows, new Date(), tz), loading: false, error: false, generating: false });
         return;
       }

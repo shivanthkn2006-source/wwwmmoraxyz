@@ -5,6 +5,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { hasLiveSession } from '@/lib/edgeSession';
 import { useAuth } from '@/lib/auth';
 import { toast } from 'sonner';
 
@@ -142,6 +143,8 @@ export const useAdaptiveLearning = () => {
   // Flush buffered events to backend
   const flushEvents = useCallback(async () => {
     if (!user || eventBuffer.current.length === 0) return;
+    // No live token -> the function would 401 and we would drop/spam. Wait.
+    if (!(await hasLiveSession())) return;
 
     const eventsToSend = [...eventBuffer.current];
     eventBuffer.current = [];

@@ -5,6 +5,7 @@
 
 import { useCallback, useRef, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { hasLiveSession } from '@/lib/edgeSession';
 import { useAuth } from '@/lib/auth';
 import { toast } from 'sonner';
 
@@ -92,6 +93,8 @@ export const useContinuousDHFStream = (config: Partial<StreamConfig> = {}) => {
   // Flush events to backend (background upload)
   const flushEvents = useCallback(async () => {
     if (!user || eventQueue.current.length === 0) return;
+    // Skip silently while signed out / token expired instead of taking a 401.
+    if (!(await hasLiveSession())) return;
 
     const eventsToSend = eventQueue.current.splice(0, streamConfig.current.batchSize);
     

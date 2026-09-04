@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
     // Providers cannot crawl the image host, so inline the bytes instead.
     let inlineImage: string;
     try {
-      const imgRes = await fetch(imageUrl, { headers: { Accept: 'image/*' } });
+      const imgRes = await fetch(imageUrl, { headers: { Accept: 'image/*' }, signal: AbortSignal.timeout(10_000) });
       if (!imgRes.ok) return json({ match: true, reason: 'image unavailable for validation' });
       const buf = new Uint8Array(await imgRes.arrayBuffer());
       if (buf.byteLength < 1000) return json({ match: true, reason: 'image too small to validate' });
@@ -64,7 +64,10 @@ Deno.serve(async (req) => {
 
 
 
-    const res = await sovereignFetch('sovereign://chat/completions', {
+    let res: Response;
+    try {
+      res = await sovereignFetch('sovereign://chat/completions', {
+      signal: AbortSignal.timeout(45_000),
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -87,7 +90,13 @@ Deno.serve(async (req) => {
           },
         ],
       }),
-    });
+      });
+    } catch (e) {
+      // A hung provider must never hold the request open until the 150s idle
+      // timeout: inconclusive is not a mismatch, so keep the image.
+      console.warn('[growth-image-validate] provider timeout/abort', e);
+      return json({ match: true, inconclusive: true, reason: 'validator timed out' });
+    }
 
     if (res.status === 429) return json({ error: 'Rate limited, try again shortly' }, 429);
     if (res.status === 402) return json({ error: 'AI credits exhausted' }, 402);
