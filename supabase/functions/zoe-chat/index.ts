@@ -108,6 +108,10 @@ const requestSchema = z.object({
     timeOfDay: z.string().optional(),
     currentTime: z.string().optional(),
     platformFeatures: z.array(z.string()).optional(),
+    // Spatial telemetry supplied by the shared engine (opt-in, browser-granted).
+    latitude: z.number().min(-90).max(90).nullable().optional(),
+    longitude: z.number().min(-180).max(180).nullable().optional(),
+    locationSource: z.string().nullable().optional(),
   }).optional(),
   // Behavioral telemetry - Zoe's emotional sensing from typing patterns
   behavioralTelemetry: z.object({
