@@ -842,7 +842,7 @@ ${cortexPromptAddition}`;
     let astroBlock = '';
     try {
       if (needsAstroGrounding(lastUserMessage)) {
-        astroBlock = buildAstroGroundingBlock(astroBirthProfile, timezone || 'Asia/Kolkata');
+        astroBlock = await buildAstroGroundingBlock(astroBirthProfile, timezone || 'Asia/Kolkata');
       }
     } catch (astroError) {
       console.warn('[Zoe] astro grounding skipped:', astroError instanceof Error ? astroError.message : astroError);
