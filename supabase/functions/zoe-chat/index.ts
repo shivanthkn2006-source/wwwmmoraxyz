@@ -850,7 +850,7 @@ ${cortexPromptAddition}`;
     console.log('[Zoe] astro grounding:', astroBlock ? 'active' : 'not needed');
 
     const cascadeMessages = [
-      { role: 'system', content: `${systemPrompt}${omniRecallBlock}${webBlock}${astroBlock}` },
+      { role: 'system', content: `${systemPrompt}${omniRecallBlock}${webBlock}${astroBlock}${CLARIFICATION_PROTOCOL}` },
       ...messages.map(m => ({ ...m, content: truncateMessageIfNeeded(m.content) })),
     ];
     
