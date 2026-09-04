@@ -8,6 +8,7 @@ import {
   createErrorResponse
 } from "../_shared/ai-telemetry.ts";
 import { cascadeInfer, hardenZoeIdentity } from "../_shared/cascading-provider.ts";
+import { CLARIFICATION_PROTOCOL } from "../_shared/cognitive-fault.ts";
 import {
   parseMetacognition,
   resolveThreshold,
@@ -457,7 +458,7 @@ ${driftHints.length
       ...precomputeCharacterFacts(command),
     ];
     const groundedSystemPrompt =
-      systemPrompt + SCRATCHPAD_INSTRUCTION + groundedFactsBlock(preFacts);
+      systemPrompt + CLARIFICATION_PROTOCOL + SCRATCHPAD_INSTRUCTION + groundedFactsBlock(preFacts);
 
     const cascadeMessages = [
       { role: 'system', content: groundedSystemPrompt },
