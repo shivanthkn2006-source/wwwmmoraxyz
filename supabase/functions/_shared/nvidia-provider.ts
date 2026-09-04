@@ -40,10 +40,13 @@ export const NVIDIA_ROLES = {
     'minimaxai/minimax-m3',
   ],
   /** Image / frame understanding — OCR, objects, mood (search + DHF indexing). */
+  // nemotron-nano-12b-v2-vl reached end-of-life 2026-08-26 (410) and
+  // phi-3-vision returns 404 on this account — both removed after live probes.
+  // NOTE: llama-3.2 vision accepts ONE image per prompt; callers with two
+  // images (identity comparison) must use the Groq/OpenRouter tiers instead.
   vision: [
-    'nvidia/nemotron-nano-12b-v2-vl',
     'meta/llama-3.2-11b-vision-instruct',
-    'microsoft/phi-3-vision-128k-instruct',
+    'meta/llama-3.2-90b-vision-instruct',
   ],
   /** Creative long-form copy (astrology cards, motivations). */
   creative: [

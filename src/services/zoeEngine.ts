@@ -19,6 +19,7 @@ import { parseRecallSources, type ZoeRecallSource } from '@/components/zoe/ZoeRe
 import { recordDhfLineage } from '@/services/dhfLineage';
 import { classifyZoeIntent, type ZoeIntent } from '@/lib/zoeIntents';
 import { getGrantedCoords } from '@/utils/sharedGeolocation';
+import { stripScratchpad } from '@/utils/hiddenScratchpad';
 
 export type ZoeBackend = 'zoe-chat' | 'zoe-agent' | 'zoe-infinity-brain' | 'zoe-omega-chat';
 
@@ -139,7 +140,8 @@ export async function askZoe(options: AskZoeOptions): Promise<AskZoeResult> {
 
   if (error) throw new Error(error.message || 'Zoe backend failed');
 
-  const replyText = String(data?.message || data?.response || '').trim();
+  // Second net: scratchpad tags and raw metacognition envelopes never reach a bubble or Deepgram.
+  const replyText = stripScratchpad(String(data?.message || data?.response || ''));
   const intent = classifyZoeIntent(text);
   const result: AskZoeResult = {
     text: replyText,

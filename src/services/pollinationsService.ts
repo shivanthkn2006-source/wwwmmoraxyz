@@ -31,7 +31,7 @@ export interface ImageGenResult {
   directUrl?: string; // Pollinations direct URL (hotlinkable)
 }
 
-export type IdentityImageErrorCode = 'REFERENCE_NOT_HUMAN' | 'IDENTITY_GENERATION_FAILED';
+export type IdentityImageErrorCode = 'REFERENCE_NOT_HUMAN' | 'IDENTITY_GENERATION_FAILED' | 'PROVIDER_QUOTA';
 
 export class IdentityImageError extends Error {
   constructor(public readonly code: IdentityImageErrorCode, message: string) {
@@ -39,6 +39,10 @@ export class IdentityImageError extends Error {
     this.name = 'IdentityImageError';
   }
 }
+
+/** True when a provider answered "no balance / quota" rather than "bad input". */
+const looksLikeQuota = (status?: number, text?: string): boolean =>
+  status === 402 || status === 429 || /insufficient balance|quota|rate.?limit|payment_required|credits/i.test(text ?? '');
 
 const fileToDataUrl = (file: File): Promise<string> => new Promise((resolve, reject) => {
   const reader = new FileReader();
@@ -59,6 +63,7 @@ export async function generateIdentityImage(
 
   // Pollinations is the primary identity-preserving editor. It was already
   // configured, but this flow previously bypassed it and called Gemini only.
+  let pollinationsQuota = false;
   try {
     const { data: pollinationsData, error: pollinationsError } = await supabase.functions.invoke('pollinations-image', {
       body: {
@@ -74,11 +79,14 @@ export async function generateIdentityImage(
     if (!pollinationsError && pollinationsData?.imageUrl && pollinationsData?.usedFace !== false) {
       return { imageUrl: pollinationsData.imageUrl, provider: 'pollinations-edge' };
     }
+    pollinationsQuota = looksLikeQuota(pollinationsData?.status, `${pollinationsData?.message ?? ''} ${pollinationsError?.message ?? ''}`);
     console.warn('[PollinationsService] Identity edit unavailable, trying image-model fallback:', pollinationsData?.message || pollinationsError?.message);
   } catch (pollinationsError) {
     console.warn('[PollinationsService] Identity edit failed, trying Gemini fallback:', pollinationsError);
   }
 
+  // edit-image walks Google image models → OpenRouter Nano Banana on the SAME
+  // reference, and reports PROVIDER_QUOTA when every editor is exhausted.
   const { data, error } = await supabase.functions.invoke('edit-image', {
     body: { prompt, imageBase64, imageUrl: reference.imageUrl },
   });
@@ -88,7 +96,11 @@ export async function generateIdentityImage(
     if (responseCode === 'REFERENCE_NOT_HUMAN') {
       throw new IdentityImageError('REFERENCE_NOT_HUMAN', data?.message || 'A clear human reference photo is required.');
     }
-    throw new IdentityImageError('IDENTITY_GENERATION_FAILED', data?.message || data?.error || error?.message || 'Identity image generation failed.');
+    const detail = data?.message || data?.error || error?.message || 'Identity image generation failed.';
+    if (responseCode === 'PROVIDER_QUOTA' || looksLikeQuota((error as { context?: { status?: number } } | null)?.context?.status, detail) || pollinationsQuota) {
+      throw new IdentityImageError('PROVIDER_QUOTA', detail);
+    }
+    throw new IdentityImageError('IDENTITY_GENERATION_FAILED', detail);
   }
 
   return { imageUrl: data.imageUrl, provider: 'gemini-edge' };

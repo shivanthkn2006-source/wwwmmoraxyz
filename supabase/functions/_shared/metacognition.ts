@@ -89,27 +89,65 @@ function isolateJson(raw: string): string | null {
 }
 
 /**
+ * Salvage the spoken answer from a TRUNCATED metacognition object (the model
+ * hit max_tokens mid-JSON). Returns the decoded `final_response` string, or
+ * null when the field never started. Without this, the raw JSON — including
+ * the private internal monologue — leaked straight into the chat bubble.
+ */
+export function salvageFinalResponse(raw: string): string | null {
+  const m = /"final_response"\s*:\s*"/.exec(raw);
+  if (!m) return null;
+  let i = m.index + m[0].length;
+  let out = '';
+  let escaped = false;
+  for (; i < raw.length; i++) {
+    const ch = raw[i];
+    if (escaped) {
+      out += ch === 'n' ? '\n' : ch === 't' ? '\t' : ch === 'u' ? '\\u' : ch;
+      escaped = false;
+      continue;
+    }
+    if (ch === '\\') { escaped = true; continue; }
+    if (ch === '"') break; // properly closed string
+    out += ch;
+  }
+  // Decode any \uXXXX we passed through, then trim a dangling half-sentence.
+  out = out.replace(/\\u([0-9a-fA-F]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16))).trim();
+  return out.length >= 2 ? out : null;
+}
+
+/** True when the text is (or starts as) a metacognition JSON envelope. */
+const looksLikeEnvelope = (raw: string): boolean =>
+  /"(internal_monologue|final_response|uncertain_claims|clarifying_question)"\s*:/.test(raw);
+
+/**
  * Never throws. Any malformed / prose / partial output degrades to a safe
- * fallback where the raw text becomes the final response.
+ * fallback where the raw text becomes the final response — unless the raw
+ * text is a broken envelope, in which case only the salvaged answer is shown.
  */
 export function parseMetacognition(raw: string, thresholdInput?: number): Metacognition {
   const threshold = resolveThreshold(thresholdInput);
 
-  const fallback = (error: string | null): Metacognition => ({
-    internal_monologue: [],
-    monologue_regions: [],
-    confidence: threshold,
-    threshold,
-    uncertain_claims: [],
-    clarifying_question: null,
-    final_response: (raw || '').trim(),
-    withheld: false,
-    parse_ok: false,
-    parse_error: error,
-    backtracked: false,
-    discarded_assumption: null,
-    difficulty: null,
-  });
+  const fallback = (error: string | null): Metacognition => {
+    const text = (raw || '').trim();
+    const salvaged = looksLikeEnvelope(text) ? salvageFinalResponse(text) : null;
+    return {
+      internal_monologue: [],
+      monologue_regions: [],
+      confidence: threshold,
+      threshold,
+      uncertain_claims: [],
+      clarifying_question: null,
+      // A broken envelope must never surface its private monologue.
+      final_response: salvaged ?? (looksLikeEnvelope(text) ? '' : text),
+      withheld: false,
+      parse_ok: false,
+      parse_error: salvaged ? `${error ?? 'malformed'}:salvaged_final_response` : error,
+      backtracked: false,
+      discarded_assumption: null,
+      difficulty: null,
+    };
+  };
 
   if (!raw || !raw.trim()) return fallback('empty_output');
 
