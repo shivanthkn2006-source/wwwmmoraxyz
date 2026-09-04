@@ -11,7 +11,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Download, RefreshCw, Loader2, Radar, ListTree } from 'lucide-react';
+import { ArrowLeft, Download, RefreshCw, Loader2, Radar, ListTree, GitCompare } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -44,6 +44,18 @@ interface CrawlRun {
   summary: Record<string, unknown> | null;
 }
 
+interface ShadowRow {
+  id: string;
+  user_id: string;
+  source: string;
+  basis: string | null;
+  recommendation: string;
+  live_recommendation: string | null;
+  confidence: number;
+  created_at: string;
+  metadata: Record<string, unknown> | null;
+}
+
 interface CrawlFinding {
   id: string;
   route: string | null;
@@ -65,6 +77,7 @@ export default function AdminDhfGrowthPage() {
   const [rows, setRows] = useState<GrowthRow[]>([]);
   const [runs, setRuns] = useState<CrawlRun[]>([]);
   const [findings, setFindings] = useState<CrawlFinding[]>([]);
+  const [shadowRows, setShadowRows] = useState<ShadowRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [query, setQuery] = useState('');
@@ -79,7 +92,7 @@ export default function AdminDhfGrowthPage() {
         supabase.from('mmora_memories').select('user_id').limit(5000),
         supabase.from('behavioral_events').select('user_id, created_at').order('created_at', { ascending: false }).limit(5000),
         supabase.from('dhf_lineage_ledger').select('user_id').limit(5000),
-        supabase.from('zoe_shadow_recommendations').select('user_id').limit(5000),
+        supabase.from('zoe_shadow_recommendations').select('*').order('created_at', { ascending: false }).limit(2000),
         supabase.from('zoe_crawl_runs').select('*').order('started_at', { ascending: false }).limit(10),
       ]);
 
@@ -88,6 +101,7 @@ export default function AdminDhfGrowthPage() {
       const eventCount = countBy(events.data as { user_id: string }[] | null);
       const lineageCount = countBy(lineage.data as { user_id: string }[] | null);
       const shadowCount = countBy(shadow.data as { user_id: string }[] | null);
+      setShadowRows(((shadow.data ?? []) as ShadowRow[]).slice(0, 50));
 
       const lastActivity = new Map<string, string>();
       for (const e of (events.data ?? []) as { user_id: string; created_at: string }[]) {
@@ -188,6 +202,22 @@ export default function AdminDhfGrowthPage() {
     }
   };
 
+  const runShadowMode = async () => {
+    setBusy('shadow');
+    try {
+      const { data, error } = await supabase.functions.invoke('zoe-shadow-mode', {
+        body: { replayRoutes: true, limitUsers: 25 },
+      });
+      if (error) throw error;
+      toast.success(`Shadow replay complete — ${data?.generated ?? 0} recommendations from ${data?.users ?? 0} members`);
+      await load();
+    } catch (e) {
+      toast.error(`Shadow replay failed: ${(e as Error).message}`);
+    } finally {
+      setBusy(null);
+    }
+  };
+
   if (isAdmin === false) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-6">
@@ -261,6 +291,47 @@ export default function AdminDhfGrowthPage() {
                     <span className="font-mono">{f.route ?? '—'}</span>
                     <span className="text-muted-foreground flex-1">{f.detail}</span>
                     {f.duration_ms !== null && <span className="text-muted-foreground">{f.duration_ms}ms</span>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2"><GitCompare className="w-4 h-4" /> Shadow mode — generated vs live</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex flex-wrap gap-2 items-center">
+              <Button size="sm" onClick={() => void runShadowMode()} disabled={busy !== null}>
+                {busy === 'shadow' ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <GitCompare className="w-4 h-4 mr-2" />}
+                Replay routes + DHF history
+              </Button>
+              <span className="text-xs text-muted-foreground">
+                Recommendations are generated from real DHF rows only and stored for comparison — never shown to members.
+              </span>
+            </div>
+            {shadowRows.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No shadow recommendations yet — run a replay.</p>
+            ) : (
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {shadowRows.map((row) => (
+                  <div key={row.id} className="border border-border rounded-md p-3 text-xs space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant="secondary">{row.source}</Badge>
+                      <span className="font-mono">{row.user_id.slice(0, 8)}</span>
+                      <span className="text-muted-foreground">{new Date(row.created_at).toLocaleString()}</span>
+                      <span className="text-muted-foreground">confidence {Number(row.confidence).toFixed(2)}</span>
+                    </div>
+                    <p><span className="text-muted-foreground">Shadow:</span> {row.recommendation}</p>
+                    <p><span className="text-muted-foreground">Live:</span> {row.live_recommendation ?? '— none delivered —'}</p>
+                    {row.basis && (
+                      <details>
+                        <summary className="cursor-pointer text-muted-foreground">Evidence used</summary>
+                        <pre className="whitespace-pre-wrap mt-1 opacity-80">{row.basis}</pre>
+                      </details>
+                    )}
                   </div>
                 ))}
               </div>

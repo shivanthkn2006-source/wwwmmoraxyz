@@ -1,0 +1,1 @@
+CREATE POLICY "Admins read all shadow recs" ON public.zoe_shadow_recommendations FOR SELECT TO authenticated USING (public.has_role(auth.uid(), 'admin'));
