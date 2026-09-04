@@ -5204,6 +5204,33 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_routes: {
+        Row: {
+          created_at: string
+          dynamic: boolean
+          label: string
+          path: string
+          route_group: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          dynamic?: boolean
+          label: string
+          path: string
+          route_group?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          dynamic?: boolean
+          label?: string
+          path?: string
+          route_group?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       post_attachments: {
         Row: {
           created_at: string
@@ -9031,6 +9058,83 @@ export type Database = {
         }
         Relationships: []
       }
+      zoe_crawl_findings: {
+        Row: {
+          created_at: string
+          detail: string | null
+          duration_ms: number | null
+          finding_type: string
+          http_status: number | null
+          id: string
+          route: string | null
+          run_id: string
+          severity: string
+        }
+        Insert: {
+          created_at?: string
+          detail?: string | null
+          duration_ms?: number | null
+          finding_type: string
+          http_status?: number | null
+          id?: string
+          route?: string | null
+          run_id: string
+          severity?: string
+        }
+        Update: {
+          created_at?: string
+          detail?: string | null
+          duration_ms?: number | null
+          finding_type?: string
+          http_status?: number | null
+          id?: string
+          route?: string | null
+          run_id?: string
+          severity?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "zoe_crawl_findings_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "zoe_crawl_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      zoe_crawl_runs: {
+        Row: {
+          findings_count: number
+          finished_at: string | null
+          id: string
+          routes_checked: number
+          started_at: string
+          status: string
+          summary: Json
+          trigger: string
+        }
+        Insert: {
+          findings_count?: number
+          finished_at?: string | null
+          id?: string
+          routes_checked?: number
+          started_at?: string
+          status?: string
+          summary?: Json
+          trigger?: string
+        }
+        Update: {
+          findings_count?: number
+          finished_at?: string | null
+          id?: string
+          routes_checked?: number
+          started_at?: string
+          status?: string
+          summary?: Json
+          trigger?: string
+        }
+        Relationships: []
+      }
       zoe_daily_motivations: {
         Row: {
           action_step: string
@@ -10974,6 +11078,45 @@ export type Database = {
           voice_volume?: number | null
           voice_warmth?: number | null
           wake_word?: string
+        }
+        Relationships: []
+      }
+      zoe_shadow_recommendations: {
+        Row: {
+          basis: string | null
+          confidence: number
+          created_at: string
+          id: string
+          live_recommendation: string | null
+          metadata: Json
+          recommendation: string
+          reviewed: boolean
+          source: string
+          user_id: string
+        }
+        Insert: {
+          basis?: string | null
+          confidence?: number
+          created_at?: string
+          id?: string
+          live_recommendation?: string | null
+          metadata?: Json
+          recommendation: string
+          reviewed?: boolean
+          source?: string
+          user_id: string
+        }
+        Update: {
+          basis?: string | null
+          confidence?: number
+          created_at?: string
+          id?: string
+          live_recommendation?: string | null
+          metadata?: Json
+          recommendation?: string
+          reviewed?: boolean
+          source?: string
+          user_id?: string
         }
         Relationships: []
       }
