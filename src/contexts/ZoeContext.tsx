@@ -345,7 +345,7 @@ export const ZoeProvider = ({ children }: { children: ReactNode }) => {
         }
         
         // Call the zoe-agent edge function with tier info
-        const { data, error } = await askZoe({
+        const answer = await askZoe({
           text: command,
           sessionKey: `zoe-agent-${user.id}`,
           userId: user.id,
@@ -366,11 +366,12 @@ export const ZoeProvider = ({ children }: { children: ReactNode }) => {
           }
         });
 
+        const data = (answer.raw ?? {}) as any;
         setTaskProgress(80);
 
-        if (error) {
-          console.error('[ZoeContext] Edge function error:', error);
-          toast.error(`Zoe error: ${error.message}`);
+        if (!data || (!answer.text && data?.error)) {
+          console.error('[ZoeContext] Zoe engine error:', data?.error);
+          toast.error(`Zoe error: ${String(data?.error ?? 'unavailable')}`);
           setIsAgentMode(false);
           setCurrentTask(null);
           setTaskProgress(0);
