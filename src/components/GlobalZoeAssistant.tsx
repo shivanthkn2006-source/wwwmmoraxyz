@@ -930,7 +930,13 @@ export const GlobalZoeAssistant = ({ config = DEFAULT_CONFIG }: { config?: Parti
                 {showOrb && activeConfig.enableOrb && isPhantomVisible && !showConversationPanel && (
                   <Suspense
                     fallback={
-                      <div className="w-20 h-20 rounded-full bg-gradient-to-br from-cyan-500/20 to-purple-500/20 animate-pulse" />
+                      <div
+                        className="w-20 h-20 rounded-full bg-gradient-to-br from-cyan-500/20 to-purple-500/20 animate-pulse cursor-pointer"
+                        // A tap while the 3D orb chunk is still loading must still open Zoe.
+                        onClick={() => {
+                          if (!isDragging) setShowConversationPanel(true);
+                        }}
+                      />
                     }
                   >
                     <HolographicATLASOrb
