@@ -859,17 +859,19 @@ ${cortexPromptAddition}`;
     const cascadeResult = await cascadeInfer(cascadeMessages, { maxTokens: 800, temperature: 0.7, mode: 't1-primary', nvidiaRole: 'chat' });
     
     if (!cascadeResult.success) {
+      // Cognitive fault tolerance: the user hears Zoe, never a 503.
       console.error('All providers failed', JSON.stringify(cascadeResult.attempts));
       return new Response(
-        JSON.stringify({ 
-          error: 'All configured AI providers failed.',
+        JSON.stringify({
+          message: spokenFallback('providers'),
+          degraded: true,
           code: 'AI_PROVIDERS_UNAVAILABLE',
           retryable: true,
           providerAttempts: cascadeResult.attempts.map(({ tier, provider, model, status, reasonCode }) => ({
             tier, provider, model, status, reasonCode,
           })),
         }),
-        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
