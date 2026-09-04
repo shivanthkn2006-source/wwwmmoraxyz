@@ -32,6 +32,7 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { recallZoeMemory, rememberZoeRound, rememberZoeQuestion } from '@/services/zoeMemoryBridge';
+import { askZoe } from '@/services/zoeEngine';
 
 import { speakAsZoe, stopZoeSpeech, isZoeSpeaking, initializeZoeVoices, replayAsZoe, pauseZoeSpeech, resumeZoeSpeech } from '@/utils/zoeVoice';
 import { isZoeInfinityMessage, stripZoeInfinityMarker } from '@/utils/conversationNamespaces';
@@ -2795,25 +2796,36 @@ Want me to dive deeper into any aspect?`;
         const feedsSummary = getFeedsSummaryForChat();
 
         const voiceToken = cotStart('zoe-chat');
-        const { data, error } = await supabase.functions.invoke('zoe-chat', {
-          body: {
-            messages: [...conversationHistory, { role: 'user', content: messageText }],
-            timezone: userTimezone,
-            localTime: localTime,
-            soulMetrics: { intimacy: 60, selfHarmony: 70, loveEnergy: 65 },
-            enableASI: true,
-            realtimeContext: {
-              onlineFriends: feedsSummary.onlineFriendsCount,
-              recentFriendActivities: feedsSummary.recentFriendActivities,
-              topBrandDeals: feedsSummary.topBrandDeals,
-              exclusiveOffers: feedsSummary.exclusiveOffers,
-              hasNewUpdates: feedsSummary.hasFreshUpdates,
+        // Consolidated brain (SEP04): the voice path used to skip long-term
+        // recall entirely, so Zoe was amnesiac when spoken to. It now shares the
+        // exact same engine (recall -> backend -> persist) as the typed path.
+        let voiceError: unknown = null;
+        let data: any = null;
+        try {
+          const result = await askZoe({
+            text: messageText,
+            sessionKey: zoeMemorySessionKey,
+            userId: user?.id,
+            history: conversationHistory as any,
+            body: {
+              soulMetrics: { intimacy: 60, selfHarmony: 70, loveEnergy: 65 },
+              enableASI: true,
+              realtimeContext: {
+                onlineFriends: feedsSummary.onlineFriendsCount,
+                recentFriendActivities: feedsSummary.recentFriendActivities,
+                topBrandDeals: feedsSummary.topBrandDeals,
+                exclusiveOffers: feedsSummary.exclusiveOffers,
+                hasNewUpdates: feedsSummary.hasFreshUpdates,
+              },
             },
-          },
-        });
+          });
+          data = result.raw;
+        } catch (err) {
+          voiceError = err;
+        }
 
-        cotFinish(voiceToken, { error });
-        if (error) throw error;
+        cotFinish(voiceToken, { error: voiceError });
+        if (voiceError) throw voiceError;
         const rawVoiceText = data?.message || data?.response || "I'm here to help!";
         responseText = guardResponse(rawVoiceText).safeResponse;
 
