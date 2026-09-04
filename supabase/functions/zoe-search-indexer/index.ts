@@ -137,6 +137,30 @@ async function loadCanonical(db: ReturnType<typeof createClient>, job: QueueRow)
     };
   }
 
+  // Visual memory: what Zoe actually SAW, made recallable like any other
+  // memory so "what was in the photo I showed you" resolves to a real row.
+  if (job.entity_type === 'visual_memory') {
+    const { data, error } = await db.from('zoe_infinity_memories')
+      .select('id,user_id,key,value,context,importance_score,created_at')
+      .eq('id', job.entity_id).maybeSingle();
+    if (error) throw error;
+    if (!data) return null;
+    const body = [String(data.value || '').trim(), String(data.context || '').trim()]
+      .filter(Boolean).join('\n');
+    if (!body) return null;
+    return {
+      ownerId: data.user_id,
+      content: `Zoe saw: ${body}`,
+      privacy: 'private',
+      metadata: {
+        title: 'Visual memory',
+        visionKind: data.key,
+        importance: data.importance_score,
+        createdAt: data.created_at,
+      },
+    };
+  }
+
   // ── Omni-Graph coverage: DHF, Growth and Daily Compass entities ──
   if (job.entity_type === 'dhf_post') {
     const { data, error } = await db.from('dhf_daily_posts')
@@ -269,7 +293,7 @@ async function loadCanonical(db: ReturnType<typeof createClient>, job: QueueRow)
 
 
 async function enqueueBackfill(db: ReturnType<typeof createClient>, userId: string) {
-  const [profiles, posts, chats, memories, dhfPosts, dhfVideos, growthCards, predictions, goals, dms, comments] = await Promise.all([
+  const [profiles, posts, chats, memories, dhfPosts, dhfVideos, growthCards, predictions, goals, dms, comments, visuals] = await Promise.all([
     db.from('profiles').select('user_id'),
     db.from('posts').select('id,user_id,media_type,content'),
     db.from('zoe_infinity_messages').select('id,user_id').eq('user_id', userId),
@@ -281,8 +305,9 @@ async function enqueueBackfill(db: ReturnType<typeof createClient>, userId: stri
     db.from('wisdom_macro_goals').select('id,user_id').eq('user_id', userId),
     db.from('messages').select('id,sender_id').eq('sender_id', userId).limit(2000),
     db.from('post_comments').select('id,user_id').eq('user_id', userId).limit(2000),
+    db.from('zoe_infinity_memories').select('id,user_id').eq('user_id', userId).like('key', 'vision_%').limit(2000),
   ]);
-  for (const response of [profiles, posts, chats, memories, dhfPosts, dhfVideos, growthCards, predictions, goals, dms, comments]) {
+  for (const response of [profiles, posts, chats, memories, dhfPosts, dhfVideos, growthCards, predictions, goals, dms, comments, visuals]) {
     if (response.error) throw response.error;
   }
 
@@ -302,6 +327,7 @@ async function enqueueBackfill(db: ReturnType<typeof createClient>, userId: stri
     ...(goals.data || []).map((row) => ({ entity_type: 'wisdom_goal', entity_id: row.id, owner_id: row.user_id })),
     ...(dms.data || []).map((row) => ({ entity_type: 'direct_message', entity_id: row.id, owner_id: row.sender_id })),
     ...(comments.data || []).map((row) => ({ entity_type: 'post_comment', entity_id: row.id, owner_id: row.user_id })),
+    ...(visuals.data || []).map((row) => ({ entity_type: 'visual_memory', entity_id: row.id, owner_id: row.user_id })),
   ];
   if (!rows.length) return 0;
   const { error } = await db.from('zoe_search_index_queue').upsert(
