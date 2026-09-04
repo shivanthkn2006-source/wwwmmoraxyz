@@ -12,6 +12,7 @@ import { precomputeCharacterFacts } from "../_shared/grounded-tools.ts";
 import { clientErrorResponse } from '../_shared/client-error.ts';
 import { omniRecall, buildOmniRecallBlock, buildRecallSources, type RecallSource } from '../_shared/omni-recall.ts';
 import { needsWebGrounding, webGround, buildWebGroundingBlock, buildWebSources } from '../_shared/web-grounding.ts';
+import { needsAstroGrounding, buildAstroGroundingBlock, type AstroBirthProfile } from '../_shared/astro-grounding.ts';
 
 // Zodiac sign calculation helper
 function getZodiacSign(birthDate: Date): string {
@@ -107,6 +108,10 @@ const requestSchema = z.object({
     timeOfDay: z.string().optional(),
     currentTime: z.string().optional(),
     platformFeatures: z.array(z.string()).optional(),
+    // Spatial telemetry supplied by the shared engine (opt-in, browser-granted).
+    latitude: z.number().min(-90).max(90).nullable().optional(),
+    longitude: z.number().min(-180).max(180).nullable().optional(),
+    locationSource: z.string().nullable().optional(),
   }).optional(),
   // Behavioral telemetry - Zoe's emotional sensing from typing patterns
   behavioralTelemetry: z.object({
@@ -267,6 +272,8 @@ serve(async (req) => {
 
     // Extract user ID from auth header
     let userProfileContext: UserProfileContext | null = null;
+    // Real birth coordinates for the ephemeris guardrail (see _shared/astro-grounding.ts).
+    let astroBirthProfile: AstroBirthProfile | null = null;
     const authHeader = req.headers.get('authorization');
     
     if (authHeader) {
@@ -309,8 +316,19 @@ serve(async (req) => {
             relationship: userProfileContext?.zoeRelationshipStyle
           });
         }
+
+        // Birth coordinates live in `astro_profiles` (kept in sync with
+        // `profiles` by the sync_astro_profile_from_profile trigger). They are
+        // the only source the ephemeris guardrail is allowed to compute from.
+        const { data: astroProfile } = await supabase
+          .from('astro_profiles')
+          .select('birth_date, birth_time, birth_timezone, birth_latitude, birth_longitude')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        astroBirthProfile = (astroProfile as AstroBirthProfile | null) ?? null;
       }
     }
+
 
     console.log('Zoe AI chat request with context:', { soulMetrics, platformContext, hasProfile: !!userProfileContext });
 
@@ -559,6 +577,7 @@ ${userContextBlock}
 - User's name: ${userName}
 - Current page: ${currentPage}
 ${userProfileContext?.city || platformContext?.userCity ? `- User's city: ${userProfileContext?.city || platformContext?.userCity}` : ''}
+${platformContext?.latitude != null && platformContext?.longitude != null ? `- Approximate coordinates (${platformContext.locationSource || 'device'}): ${platformContext.latitude.toFixed(3)}, ${platformContext.longitude.toFixed(3)} — use silently for weather/time/place awareness; never recite them back unless asked.` : ''}
 ${userProfileContext?.bio || platformContext?.userBio ? `- About the user: ${userProfileContext?.bio || platformContext?.userBio}` : ''}
 
 ${postContext ? `**CURRENTLY VISIBLE M'MORA POST:**
@@ -817,8 +836,20 @@ ${cortexPromptAddition}`;
     }
     console.log('[Zoe] web grounding hits:', webHitCount);
 
+    // EPHEMERIS GUARDRAIL — astrology answers are grounded in computed
+    // planetary positions, never in the model's recollection.
+    let astroBlock = '';
+    try {
+      if (needsAstroGrounding(lastUserMessage)) {
+        astroBlock = buildAstroGroundingBlock(astroBirthProfile, timezone || 'Asia/Kolkata');
+      }
+    } catch (astroError) {
+      console.warn('[Zoe] astro grounding skipped:', astroError instanceof Error ? astroError.message : astroError);
+    }
+    console.log('[Zoe] astro grounding:', astroBlock ? 'active' : 'not needed');
+
     const cascadeMessages = [
-      { role: 'system', content: `${systemPrompt}${omniRecallBlock}${webBlock}` },
+      { role: 'system', content: `${systemPrompt}${omniRecallBlock}${webBlock}${astroBlock}` },
       ...messages.map(m => ({ ...m, content: truncateMessageIfNeeded(m.content) })),
     ];
     
