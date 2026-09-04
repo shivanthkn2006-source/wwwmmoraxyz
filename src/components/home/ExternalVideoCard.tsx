@@ -50,6 +50,7 @@ export default function ExternalVideoCard({
   onToggleSave,
   saved = false,
 }: Props) {
+  const navigate = useNavigate();
   const videoId = youTubeIdFromUrl(item.url);
   const frameRef = useRef<HTMLIFrameElement | null>(null);
 

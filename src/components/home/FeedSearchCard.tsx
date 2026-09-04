@@ -80,7 +80,7 @@ export default function FeedSearchCard({ item, onDismiss, onToggleSave, saved = 
                   `/source?${new URLSearchParams({
                     url: item.url!,
                     title: item.title ?? '',
-                    excerpt: item.summary ?? '',
+                    excerpt: item.subtitle ?? '',
                     source: portal ?? 'Live web source',
                   }).toString()}`,
                 )
