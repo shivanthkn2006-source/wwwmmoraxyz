@@ -57,5 +57,7 @@
 - [x] Real sensor ingestion into the DHF (`src/services/dhfSensorIngest.ts`) — geo, motion, battery, network, optional BLE heart rate; no simulated values
 - [x] Nightly synthetic crawler (`zoe-synthetic-crawler`, 03:50 UTC) over every registered route + orphaned-DHF-table anomalies
 - [x] Admin DHF growth console at `/admin/dhf-growth` — per-member DHF/recommendation/activity metrics, filters, CSV export, crawler controls
+- [x] Live web grounding (`_shared/web-grounding.ts`) wired into `zoe-chat` — DuckDuckGo, Wikipedia and Google News feed real outside-platform answers with external citations
+- [x] Biometric-driven recommendations (`zoe-biometric-recommend` + `zoe_biometric_recommendations`) generated from real heart-rate/motion/battery/location readings and surfaced in the DHF sensor panel
 - [x] Shadow-mode replay (`zoe-shadow-mode`): replays all registered routes via the crawler, regenerates recommendations from real DHF rows, stores shadow vs live in `zoe_shadow_recommendations`, surfaced in `/admin/dhf-growth`
 - [x] Authenticated recall/citation verification: signed-in `zoe-chat` call returned 8 provenance sources resolving to real `dhf_daily_posts` rows with correct timestamps and `/dhf/essay/:id` routes
