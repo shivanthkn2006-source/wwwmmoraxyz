@@ -92,6 +92,16 @@ const VitruvianBioDeck = () => {
             lastSyncAt={lastSyncAt}
             onReconnect={reconnect}
           />
+          {!available.heartRate && (
+            <div className="mt-3 flex items-center justify-between gap-3 rounded-lg border border-omega-cyan/20 bg-card/40 p-3">
+              <p className="text-xs font-share-tech text-muted-foreground">
+                No heart-rate monitor paired — cardiac metrics stay blank rather than estimated.
+              </p>
+              <Button size="sm" variant="outline" onClick={() => void connectHeartRateMonitor()}>
+                Pair HR monitor
+              </Button>
+            </div>
+          )}
         </motion.div>
         
         {/* Main Content Grid */}
