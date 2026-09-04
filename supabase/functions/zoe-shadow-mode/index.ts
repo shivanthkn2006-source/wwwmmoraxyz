@@ -27,7 +27,7 @@ const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
 interface Evidence {
-  posts: { id: string; content: string; created_at: string }[];
+  posts: { id: string; headline: string; short_summary: string | null; created_at: string }[];
   memories: { content: string; created_at: string }[];
   sensors: { created_at: string; metadata: Record<string, unknown> | null }[];
   lineage: number;
@@ -36,7 +36,7 @@ interface Evidence {
 
 function summarise(evidence: Evidence): string {
   const lines: string[] = [];
-  for (const p of evidence.posts) lines.push(`DHF post ${p.created_at.slice(0, 10)}: ${String(p.content).slice(0, 220)}`);
+  for (const p of evidence.posts) lines.push(`DHF post ${p.created_at.slice(0, 10)}: ${p.headline} — ${String(p.short_summary ?? '').slice(0, 180)}`);
   for (const m of evidence.memories) lines.push(`Memory ${m.created_at.slice(0, 10)}: ${String(m.content).slice(0, 180)}`);
   for (const s of evidence.sensors.slice(0, 3)) {
     lines.push(`Sensor ${s.created_at.slice(0, 16)}: ${JSON.stringify(s.metadata ?? {}).slice(0, 200)}`);
@@ -50,7 +50,7 @@ function fallbackRecommendation(evidence: Evidence): string {
   if (evidence.posts.length === 0 && evidence.memories.length === 0) {
     return 'Not enough real DHF evidence yet — capture a sensor snapshot or write a DHF entry first.';
   }
-  const latest = evidence.posts[0]?.content ?? evidence.memories[0]?.content ?? '';
+  const latest = evidence.posts[0]?.headline ?? evidence.memories[0]?.content ?? '';
   return `Continue the thread you last recorded ("${String(latest).slice(0, 80)}…") and log one sensor snapshot today so the pattern becomes measurable.`;
 }
 
@@ -120,7 +120,7 @@ Deno.serve(async (req) => {
 
     for (const userId of userIds) {
       const [posts, memories, sensors, lineage, growth] = await Promise.all([
-        service.from('dhf_daily_posts').select('id, content, created_at').eq('user_id', userId).order('created_at', { ascending: false }).limit(8),
+        service.from('dhf_daily_posts').select('id, headline, short_summary, created_at').eq('user_id', userId).order('created_at', { ascending: false }).limit(8),
         service.from('mmora_memories').select('content, created_at').eq('user_id', userId).order('created_at', { ascending: false }).limit(5),
         service.from('behavioral_events').select('created_at, metadata').eq('user_id', userId).eq('event_category', 'biometric').order('created_at', { ascending: false }).limit(5),
         service.from('dhf_lineage_ledger').select('id', { count: 'exact', head: true }).eq('user_id', userId),
