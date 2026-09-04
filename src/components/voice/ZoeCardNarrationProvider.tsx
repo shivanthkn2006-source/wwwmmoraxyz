@@ -97,11 +97,16 @@ export const ZoeCardNarrationProvider: React.FC<{ children: React.ReactNode }> =
         for (const item of [welcome, ...daily]) {
           if (queueToken.current !== token) return;
           if (hasNarratedCard(user.id, item.id)) continue;
+          // Stop the daily queue the moment the user starts talking to Zoe
+          // somewhere else (search, chat) — one voice at a time.
+          if (!claimVoice('narration', { ambient: true })) return;
           markNarratedCard(user.id, item.id);
           setState({ activeId: item.id, paused: false });
           await new Promise<void>((resolve) => { void speakAsZoe(item.text, { messageId: `card:${item.id}` }, undefined, resolve, resolve); });
+          releaseVoice('narration');
         }
         if (queueToken.current === token) setState({ activeId: null, paused: false });
+
       };
       void run();
     };
