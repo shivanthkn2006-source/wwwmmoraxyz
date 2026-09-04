@@ -141,12 +141,25 @@ export async function buildAstroGroundingBlock(
         }
       }
 
-      if (birth.birth_latitude == null || birth.birth_longitude == null) {
+      if (birth.birth_latitude != null && birth.birth_longitude != null) {
+        const houses = await swissHouses(natalUtc, birth.birth_latitude, birth.birth_longitude, 'P');
+        if (houses) {
+          const sidAsc = (houses.ascendant - houses.ayanamsa + 360) % 360;
+          lines.push('');
+          lines.push('HOUSES (Swiss Ephemeris, Placidus):');
+          lines.push(
+            `- Ascendant/Lagna: ${deg(houses.ascendant)} tropical | sidereal ${deg(sidAsc)} ${['Aries','Taurus','Gemini','Cancer','Leo','Virgo','Libra','Scorpio','Sagittarius','Capricorn','Aquarius','Pisces'][Math.floor(sidAsc / 30)]}`,
+          );
+          lines.push(`- Midheaven/MC: ${deg(houses.mc)} tropical`);
+          houses.cusps.slice(0, 12).forEach((c, i) => lines.push(`- House ${i + 1} cusp: ${deg(c)}`));
+        }
+      } else {
         lines.push('');
         lines.push(
           'NOTE: birth coordinates are missing, so house/ascendant positions CANNOT be computed. Say so plainly and invite the user to add their birth place; never guess an ascendant.',
         );
       }
+
     } else {
       lines.push('');
       lines.push(
