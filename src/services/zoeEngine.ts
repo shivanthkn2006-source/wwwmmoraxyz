@@ -107,6 +107,24 @@ export async function askZoe(options: AskZoeOptions): Promise<AskZoeResult> {
         ? { command: text, userId: options.userId }
         : {};
 
+  // Spatial telemetry: attached once, here, so EVERY Zoe surface (chat, orb,
+  // voice, agent) shares the same temporal + spatial anchor. Only a real,
+  // already-granted browser fix is sent — never the geolocation fallback.
+  let coords: { lat: number; lng: number } | null = null;
+  try {
+    coords = await getGrantedCoords();
+  } catch {
+    coords = null;
+  }
+  const callerContext = (options.body?.platformContext ?? {}) as Record<string, unknown>;
+  const platformContext = {
+    timeOfDay: time.timeOfDay,
+    currentTime: time.localTime,
+    ...(coords ? { latitude: coords.lat, longitude: coords.lng, locationSource: 'device-gps' } : {}),
+    // The caller always wins: page-specific context must not be overwritten.
+    ...callerContext,
+  };
+
   const { data, error } = await supabase.functions.invoke(backend, {
     body: {
       messages,
@@ -114,6 +132,7 @@ export async function askZoe(options: AskZoeOptions): Promise<AskZoeResult> {
       localTime: time.localTime,
       ...backendShape,
       ...(options.body ?? {}),
+      platformContext,
     },
   });
 
