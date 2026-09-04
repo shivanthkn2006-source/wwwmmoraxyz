@@ -16,6 +16,8 @@
 import { supabase } from '@/integrations/supabase/client';
 import { recallZoeMemory, rememberZoeRound } from '@/services/zoeMemoryBridge';
 import { parseRecallSources, type ZoeRecallSource } from '@/components/zoe/ZoeRecallCitations';
+import { recordDhfLineage } from '@/services/dhfLineage';
+import { classifyZoeIntent, type ZoeIntent } from '@/lib/zoeIntents';
 
 export type ZoeBackend = 'zoe-chat' | 'zoe-agent' | 'zoe-infinity-brain';
 
@@ -46,6 +48,7 @@ export interface AskZoeResult {
   sources: ZoeRecallSource[];
   evolutionEvent: unknown | null;
   memorySource: string | null;
+  intent: ZoeIntent;
   raw: any;
 }
 
@@ -106,13 +109,31 @@ export async function askZoe(options: AskZoeOptions): Promise<AskZoeResult> {
   if (error) throw new Error(error.message || 'Zoe backend failed');
 
   const replyText = String(data?.message || data?.response || '').trim();
+  const intent = classifyZoeIntent(text);
   const result: AskZoeResult = {
     text: replyText,
     sources: parseRecallSources(data?.omniRecallSources),
     evolutionEvent: data?.evolutionEvent ?? null,
     memorySource,
+    intent: intent.intent,
     raw: data,
   };
+
+  // Cryptographic lineage: every Zoe turn is traceable to its session, IP hash
+  // and route, and unmatched intents are flagged for the audit dashboard.
+  void recordDhfLineage({
+    entityType: 'zoe_turn',
+    entityId: options.sessionKey,
+    action: `${backend}:reply`,
+    content: `${text}\n---\n${replyText}`,
+    intent: intent.intent,
+    unhandledIntent: intent.unhandled,
+    metadata: {
+      backend,
+      memorySource,
+      citations: result.sources.length,
+    },
+  });
 
   if (replyText && !options.skipPersist) {
     void rememberZoeRound({
