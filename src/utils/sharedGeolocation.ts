@@ -23,6 +23,7 @@ export async function getSharedCoords(): Promise<{ lat: number; lng: number }> {
         })
       );
       cachedCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      realCoords = cachedCoords;
       console.log(`[Geolocation] 📍 ${cachedCoords.lat.toFixed(4)}, ${cachedCoords.lng.toFixed(4)}`);
       return cachedCoords;
     } catch {
