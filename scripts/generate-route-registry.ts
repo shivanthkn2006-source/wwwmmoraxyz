@@ -74,9 +74,15 @@ ${rows}
 `;
 }
 
-if (import.meta.main !== false) {
+export function writeRegistry(): number {
   const source = readFileSync(APP, 'utf8');
   const paths = extractRoutes(source);
   writeFileSync(OUT, buildRegistrySource(paths));
-  console.log(`[route-registry] wrote ${paths.length} routes to ${OUT}`);
+  return paths.length;
+}
+
+// Only write when executed directly (never on import from tests).
+const invokedDirectly = process.argv[1]?.includes('generate-route-registry');
+if (invokedDirectly) {
+  console.log(`[route-registry] wrote ${writeRegistry()} routes to ${OUT}`);
 }
