@@ -73,14 +73,22 @@ export default function FeedSearchCard({ item, onDismiss, onToggleSave, saved = 
             </button>
           )}
           {item.url && (
-            <a
-              href={item.url}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              type="button"
+              onClick={() =>
+                navigate(
+                  `/source?${new URLSearchParams({
+                    url: item.url!,
+                    title: item.title ?? '',
+                    excerpt: item.summary ?? '',
+                    source: portal ?? 'Live web source',
+                  }).toString()}`,
+                )
+              }
               className="inline-flex items-center gap-1 rounded-full bg-white/15 px-3 py-1.5 text-[11px] text-white backdrop-blur"
             >
               {portal ? `Source · ${portal}` : 'Open source'} <ExternalLink className="h-3 w-3" />
-            </a>
+            </button>
           )}
         </div>
         {item.publishedAt && (
