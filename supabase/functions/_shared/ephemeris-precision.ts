@@ -83,14 +83,22 @@ function geoEclipticLongitude(body: string, date: Date): { lon: number; lat: num
 }
 
 function nodeLongitude(date: Date): number {
-  // True lunar node from astronomy-engine's node search, falling back to the
-  // classical mean-node formula if the search window misses.
+  // True ascending node (Rahu): walk astronomy-engine's node crossings until we
+  // land on the ascending crossing that brackets the requested instant.
   try {
-    const node = (Astronomy as any).SearchMoonNode(new Date(date.getTime() - 15 * 86_400_000));
-    let n = node;
-    for (let i = 0; i < 3 && n.time.date < date; i++) n = (Astronomy as any).NextMoonNode(n);
-    const moon = geoEclipticLongitude('Moon', n.time.date);
-    return norm360(moon.lon);
+    let n = (Astronomy as any).SearchMoonNode(new Date(date.getTime() - 20 * 86_400_000));
+    let best: any = null;
+    for (let i = 0; i < 6; i++) {
+      if (n.kind === 1 /* ascending */ && (!best || Math.abs(n.time.date.getTime() - date.getTime()) < Math.abs(best.time.date.getTime() - date.getTime()))) {
+        best = n;
+      }
+      n = (Astronomy as any).NextMoonNode(n);
+    }
+    if (!best) throw new Error('no ascending node found');
+    const lon = geoEclipticLongitude('Moon', best.time.date).lon;
+    // The node regresses ~0.0529°/day between crossings.
+    const driftDays = (date.getTime() - best.time.date.getTime()) / 86_400_000;
+    return norm360(lon - 0.0529 * driftDays);
   } catch {
     const jd = date.getTime() / 86_400_000 + 2440587.5;
     const t = (jd - 2451545.0) / 36525;
