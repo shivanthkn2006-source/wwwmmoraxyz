@@ -7,6 +7,7 @@ import DHFUploadDashboard from '@/components/DHFUploadDashboard';
 import NeuralCoreUplink from '@/components/NeuralCoreUplink';
 import ZoeMemoryStatusPanel from '@/components/zoe-infinity/ZoeMemoryStatusPanel';
 import DhfVideoFeed from '@/components/dhf/DhfVideoFeed';
+import DhfSensorPanel from '@/components/dhf/DhfSensorPanel';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Brain, Upload, Database, Video } from 'lucide-react';
 import PageSeo from '@/components/seo/PageSeo';
@@ -53,6 +54,7 @@ const DHFDashboardPage: React.FC = () => {
               onUploadComplete={() => {}}
               className="mb-6"
             />
+            <DhfSensorPanel />
           </TabsContent>
 
           <TabsContent value="videos" className="mt-0">

@@ -2,12 +2,15 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import * as bridge from '@/services/zoeMemoryBridge';
+import * as engine from '@/services/zoeEngine';
 
 /**
  * ZoeChat and the Zoe orb must persist conversation rounds through the SAME
- * memory bridge. When one drifts to a private copy (or an import is dropped,
- * which previously produced TS2304 build failures) Zoe silently loses memory
- * in that surface only — this test fails loudly instead.
+ * memory path. Since the SEP04 brain consolidation that path is `askZoe` in
+ * `@/services/zoeEngine`, which itself recalls before answering and persists
+ * the round afterwards through the shared bridge. A surface that drifts to a
+ * private copy (or drops the import, which previously produced TS2304 build
+ * failures) silently loses memory — this test fails loudly instead.
  */
 const read = (relative: string) => readFileSync(resolve(process.cwd(), relative), 'utf8');
 
@@ -20,35 +23,42 @@ describe('Zoe memory bridge parity', () => {
   it('exposes the shared named exports', () => {
     expect(typeof bridge.recallZoeMemory).toBe('function');
     expect(typeof bridge.rememberZoeRound).toBe('function');
+    expect(typeof engine.askZoe).toBe('function');
+  });
+
+  it('the engine recalls before answering and persists the round after', () => {
+    const source = read('src/services/zoeEngine.ts');
+    const recallAt = source.indexOf('recallZoeMemory({');
+    const invokeAt = source.indexOf('functions.invoke(');
+    const rememberAt = source.indexOf('rememberZoeRound({');
+    expect(recallAt).toBeGreaterThan(-1);
+    expect(invokeAt).toBeGreaterThan(recallAt);
+    expect(rememberAt).toBeGreaterThan(invokeAt);
+    const block = source.slice(rememberAt, rememberAt + 400);
+    expect(block).toContain('sessionKey');
+    expect(block).toContain('userText');
+    expect(block).toContain('assistantText');
   });
 
   for (const [name, path] of SURFACES) {
-    it(`${name} imports both helpers from the shared bridge`, () => {
+    it(`${name} answers through the shared engine or bridge`, () => {
       const source = read(path);
-      const importLine = source
-        .split('\n')
-        .find((line) => line.includes("from '@/services/zoeMemoryBridge'"));
-      expect(importLine, `${name} must import from @/services/zoeMemoryBridge`).toBeTruthy();
-      expect(importLine).toContain('recallZoeMemory');
-      expect(importLine).toContain('rememberZoeRound');
+      const usesEngine = source.includes("from '@/services/zoeEngine'") && source.includes('askZoe({');
+      const usesBridge =
+        source.includes("from '@/services/zoeMemoryBridge'") &&
+        source.includes('recallZoeMemory({') &&
+        source.includes('rememberZoeRound({');
+      expect(usesEngine || usesBridge, `${name} must use the shared Zoe engine/memory bridge`).toBe(true);
     });
 
-    it(`${name} recalls before answering and persists the round after`, () => {
+    it(`${name} never calls a chat backend without the shared path`, () => {
       const source = read(path);
-      const recallAt = source.indexOf('recallZoeMemory({');
-      const rememberAt = source.indexOf('rememberZoeRound({');
-      expect(recallAt, `${name} must call recallZoeMemory`).toBeGreaterThan(-1);
-      expect(rememberAt, `${name} must call rememberZoeRound`).toBeGreaterThan(-1);
-      expect(rememberAt).toBeGreaterThan(recallAt);
-    });
-
-    it(`${name} passes a session key and both sides of the round`, () => {
-      const source = read(path);
-      const start = source.indexOf('rememberZoeRound({');
-      const block = source.slice(start, start + 400);
-      expect(block).toContain('sessionKey');
-      expect(block).toContain('userText');
-      expect(block).toContain('assistantText');
+      const rawInvokes = (source.match(/functions\.invoke\('zoe-chat'/g) ?? []).length;
+      const engineCalls = (source.match(/askZoe\(\{/g) ?? []).length;
+      if (rawInvokes > 0) {
+        // Any remaining raw call must sit alongside an explicit recall in the same file.
+        expect(source.includes('recallZoeMemory({') || engineCalls > 0).toBe(true);
+      }
     });
   }
 });

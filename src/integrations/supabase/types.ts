@@ -1996,6 +1996,63 @@ export type Database = {
         }
         Relationships: []
       }
+      dhf_lineage_ledger: {
+        Row: {
+          action: string
+          chain_hash: string
+          content_hash: string
+          created_at: string
+          entity_id: string | null
+          entity_type: string
+          id: string
+          intent: string | null
+          ip_hash: string | null
+          metadata: Json
+          prev_hash: string | null
+          route: string | null
+          session_id: string | null
+          unhandled_intent: boolean
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          chain_hash: string
+          content_hash: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          intent?: string | null
+          ip_hash?: string | null
+          metadata?: Json
+          prev_hash?: string | null
+          route?: string | null
+          session_id?: string | null
+          unhandled_intent?: boolean
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          chain_hash?: string
+          content_hash?: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          intent?: string | null
+          ip_hash?: string | null
+          metadata?: Json
+          prev_hash?: string | null
+          route?: string | null
+          session_id?: string | null
+          unhandled_intent?: boolean
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       dhf_link_health_runs: {
         Row: {
           checked: number
@@ -5144,6 +5201,33 @@ export type Database = {
           succeeded?: number
           target?: string
           total_requests?: number
+        }
+        Relationships: []
+      }
+      platform_routes: {
+        Row: {
+          created_at: string
+          dynamic: boolean
+          label: string
+          path: string
+          route_group: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          dynamic?: boolean
+          label: string
+          path: string
+          route_group?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          dynamic?: boolean
+          label?: string
+          path?: string
+          route_group?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -8974,6 +9058,83 @@ export type Database = {
         }
         Relationships: []
       }
+      zoe_crawl_findings: {
+        Row: {
+          created_at: string
+          detail: string | null
+          duration_ms: number | null
+          finding_type: string
+          http_status: number | null
+          id: string
+          route: string | null
+          run_id: string
+          severity: string
+        }
+        Insert: {
+          created_at?: string
+          detail?: string | null
+          duration_ms?: number | null
+          finding_type: string
+          http_status?: number | null
+          id?: string
+          route?: string | null
+          run_id: string
+          severity?: string
+        }
+        Update: {
+          created_at?: string
+          detail?: string | null
+          duration_ms?: number | null
+          finding_type?: string
+          http_status?: number | null
+          id?: string
+          route?: string | null
+          run_id?: string
+          severity?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "zoe_crawl_findings_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "zoe_crawl_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      zoe_crawl_runs: {
+        Row: {
+          findings_count: number
+          finished_at: string | null
+          id: string
+          routes_checked: number
+          started_at: string
+          status: string
+          summary: Json
+          trigger: string
+        }
+        Insert: {
+          findings_count?: number
+          finished_at?: string | null
+          id?: string
+          routes_checked?: number
+          started_at?: string
+          status?: string
+          summary?: Json
+          trigger?: string
+        }
+        Update: {
+          findings_count?: number
+          finished_at?: string | null
+          id?: string
+          routes_checked?: number
+          started_at?: string
+          status?: string
+          summary?: Json
+          trigger?: string
+        }
+        Relationships: []
+      }
       zoe_daily_motivations: {
         Row: {
           action_step: string
@@ -10920,6 +11081,45 @@ export type Database = {
         }
         Relationships: []
       }
+      zoe_shadow_recommendations: {
+        Row: {
+          basis: string | null
+          confidence: number
+          created_at: string
+          id: string
+          live_recommendation: string | null
+          metadata: Json
+          recommendation: string
+          reviewed: boolean
+          source: string
+          user_id: string
+        }
+        Insert: {
+          basis?: string | null
+          confidence?: number
+          created_at?: string
+          id?: string
+          live_recommendation?: string | null
+          metadata?: Json
+          recommendation: string
+          reviewed?: boolean
+          source?: string
+          user_id: string
+        }
+        Update: {
+          basis?: string | null
+          confidence?: number
+          created_at?: string
+          id?: string
+          live_recommendation?: string | null
+          metadata?: Json
+          recommendation?: string
+          reviewed?: boolean
+          source?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       zoe_skill_uploads: {
         Row: {
           capabilities_unlocked: Json | null
@@ -11711,6 +11911,22 @@ export type Database = {
         Returns: Json
       }
       prune_platform_telemetry: { Args: never; Returns: Json }
+      record_dhf_lineage: {
+        Args: {
+          _action: string
+          _content: string
+          _entity_id: string
+          _entity_type: string
+          _intent?: string
+          _ip_hash?: string
+          _metadata?: Json
+          _route?: string
+          _session_id?: string
+          _unhandled_intent?: boolean
+          _user_agent?: string
+        }
+        Returns: string
+      }
       refresh_leaderboard_stats: { Args: never; Returns: undefined }
       resolve_astro_place: {
         Args: { p_place: string }

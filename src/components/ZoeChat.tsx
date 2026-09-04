@@ -17,8 +17,8 @@ import SpokenTranscript from '@/components/zoe-infinity/SpokenTranscript';
 import { isZoeInfinityMessage, stripZoeInfinityMarker } from '@/utils/conversationNamespaces';
 import { setActiveVoiceExperience } from '@/utils/voiceExperienceLock';
 import { useZoe } from '@/contexts/ZoeContext';
-import { recallZoeMemory, rememberZoeRound } from '@/services/zoeMemoryBridge';
-import { ZoeRecallCitations, parseRecallSources, type ZoeRecallSource } from '@/components/zoe/ZoeRecallCitations';
+import { askZoe } from '@/services/zoeEngine';
+import { ZoeRecallCitations, type ZoeRecallSource } from '@/components/zoe/ZoeRecallCitations';
 
 import { 
   isSpeechRecognitionSupported, 
@@ -242,68 +242,45 @@ export const ZoeChat = () => {
 
       console.log('[ZoeChat] Sending time context:', { formattedTime, userTimezone, timeOfDay });
 
-      // Call Zoe chat function with enhanced context
-      // Audit fix (SEP03): this surface used to send zero long-term memory, so
-      // Zoe was amnesiac here while remembering everything in the orb panel.
-      const memoryRecall = await recallZoeMemory({
-        query: text.trim(),
+      // Consolidated brain (SEP04): every surface now answers through the one
+      // engine — recall -> single backend call -> citations -> round persistence.
+      const result = await askZoe({
+        text: text.trim(),
         sessionKey: `zoe-chat-${user?.id ?? 'anon'}`,
         userId: user?.id,
-      });
-
-      const { data, error: chatError } = await supabase.functions.invoke('zoe-chat', {
+        history: conversationHistory as any,
         body: {
-          messages: [
-            ...(memoryRecall.context
-              ? [{
-                  role: 'system',
-                  content: `Long-term memory about this user (${memoryRecall.source}):\n${memoryRecall.context}`,
-                }]
-              : []),
-            ...conversationHistory,
-            { role: 'user', content: text.trim() },
-          ],
-
-          soulMetrics: { 
-            intimacy: 75, 
-            selfHarmony: 80, 
+          soulMetrics: {
+            intimacy: 75,
+            selfHarmony: 80,
             loveEnergy: 70,
             visionActive: false,
-            detectedEmotion: 'engaged'
+            detectedEmotion: 'engaged',
           },
           platformContext: {
             currentPage: window.location.pathname,
             userName: user?.email?.split('@')[0] || 'friend',
             timeOfDay,
             currentTime: formattedTime,
-            platformFeatures: ['Solar System Explorer', 'Zoe Dreams', 'Universal Timeline', 'DHF Upload', 'Architect Mode']
+            platformFeatures: ['Solar System Explorer', 'Zoe Dreams', 'Universal Timeline', 'DHF Upload', 'Architect Mode'],
           },
-          timezone: userTimezone,
-          localTime: formattedTime
-        }
+        },
       });
-
-      if (chatError) {
-        console.error('Zoe chat error:', chatError);
-        throw new Error(chatError.message || 'Failed to get response');
-      }
 
       // Audit fix (SEP03): an empty/malformed backend payload used to be shown
       // as an in-character reply, hiding provider failures. It now surfaces.
-      const rawContent = data?.message || data?.response || '';
-      const responseContent = guardResponse(rawContent).safeResponse;
+      const responseContent = guardResponse(result.text).safeResponse;
 
-      
       if (!responseContent || responseContent.trim() === '') {
         throw new Error('Empty response from Zoe');
       }
-      
+
       const assistantMessage: Message = {
         id: (globalThis.crypto?.randomUUID?.() ?? `zoe-${Date.now()}-${Math.random().toString(36).slice(2)}`),
         role: 'assistant',
         content: responseContent,
         timestamp: new Date(),
-        sources: parseRecallSources(data?.omniRecallSources),
+        sources: result.sources,
       };
 
       setMessages(prev => [...prev, assistantMessage]);
@@ -311,13 +288,6 @@ export const ZoeChat = () => {
       // Save assistant response
       await saveMessageToDb('assistant', responseContent);
 
-      // Persist the round into long-term memory (same store the orb uses).
-      void rememberZoeRound({
-        userId: user?.id,
-        sessionKey: `zoe-chat-${user?.id ?? 'anon'}`,
-        userText: text.trim(),
-        assistantText: responseContent,
-      });
 
 
       // Speak the response if voice mode is enabled
