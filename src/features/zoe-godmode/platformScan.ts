@@ -8,9 +8,11 @@
 import { supabase } from '@/integrations/supabase/client';
 import { subscribeZoeDebugState, type ZoeHandsFreeDebugState } from '@/features/zoe-handsfree/debugBus';
 import { getRuntimeIssues, type RuntimeIssue } from './runtimeIssueCollector';
+import { fetchApiStatus, apiHealthWord, type ApiStatusReport } from '@/features/zoe-brain/apiStatus';
+import { ROUTE_REGISTRY } from '@/config/routeRegistry';
 
 export type CheckStatus = 'pass' | 'warn' | 'fail' | 'skip';
-export type CheckCategory = 'browser' | 'permission' | 'cloud' | 'ai' | 'handsfree' | 'runtime' | 'perf';
+export type CheckCategory = 'browser' | 'permission' | 'cloud' | 'ai' | 'modules' | 'api' | 'handsfree' | 'runtime' | 'perf';
 
 export interface CheckResult {
   id: string;
@@ -33,6 +35,21 @@ export interface PlatformScanReport {
   online: boolean;
   checks: CheckResult[];
   runtimeIssues: RuntimeIssue[];
+  /** Live integration inventory (null when the probe could not be reached). */
+  apis: ApiStatusReport | null;
+  /** Front-end modules actually loaded in this session. */
+  modules: LoadedModules;
+}
+
+export interface LoadedModules {
+  /** JS chunks the browser actually fetched for this session. */
+  chunks: number;
+  /** Total transferred JS bytes. */
+  bytes: number;
+  /** Registered application routes (code-split entry points). */
+  routes: number;
+  /** Names of the heaviest chunks, for the report. */
+  heaviest: { name: string; kb: number }[];
 }
 
 export interface ScanProgress {
@@ -335,6 +352,76 @@ function checkHardware(): CheckResult {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
+// Modules actually loaded + external APIs actually reachable
+// ────────────────────────────────────────────────────────────────────────────
+
+export function collectLoadedModules(): LoadedModules {
+  let chunks = 0;
+  let bytes = 0;
+  const heaviest: { name: string; kb: number }[] = [];
+  try {
+    const entries = performance.getEntriesByType('resource') as PerformanceResourceTiming[];
+    for (const e of entries) {
+      if (!/\.(m?js)(\?|$)/.test(e.name)) continue;
+      chunks += 1;
+      const size = e.transferSize || e.encodedBodySize || 0;
+      bytes += size;
+      heaviest.push({ name: e.name.split('/').pop()?.split('?')[0] ?? e.name, kb: Math.round(size / 1024) });
+    }
+  } catch {
+    /* resource timing unavailable — report what we have */
+  }
+  heaviest.sort((a, b) => b.kb - a.kb);
+  return { chunks, bytes, routes: ROUTE_REGISTRY.length, heaviest: heaviest.slice(0, 5) };
+}
+
+function checkModules(mods: LoadedModules): CheckResult {
+  return {
+    id: 'modules.loaded',
+    category: 'modules',
+    label: 'Front-end modules loaded',
+    status: mods.chunks > 0 ? 'pass' : 'warn',
+    detail: mods.chunks
+      ? `${mods.chunks} JS chunks · ${Math.round(mods.bytes / 1024)} KB · ${mods.routes} registered routes`
+      : `resource timing unavailable · ${mods.routes} registered routes`,
+    meta: { heaviest: mods.heaviest },
+  };
+}
+
+async function collectApiChecks(): Promise<{ report: ApiStatusReport | null; checks: CheckResult[] }> {
+  try {
+    const report = await fetchApiStatus({ probe: true, force: true });
+    const checks: CheckResult[] = report.apis.map((a) => {
+      const health = apiHealthWord(a);
+      const status: CheckStatus = health === 'live' ? 'pass' : health === 'configured' ? 'warn' : health === 'failing' ? 'fail' : 'skip';
+      return {
+        id: `api.${a.id}`,
+        category: 'api' as const,
+        label: `${a.label} (${a.provider})`,
+        status,
+        detail: a.probe.detail,
+        durationMs: a.probe.latencyMs ?? undefined,
+        meta: { capability: a.capability, edgeFunctions: a.edgeFunctions },
+      };
+    });
+    return { report, checks };
+  } catch (err) {
+    return {
+      report: null,
+      checks: [
+        {
+          id: 'api.inventory',
+          category: 'api',
+          label: 'External API inventory',
+          status: 'fail',
+          detail: err instanceof Error ? err.message : String(err),
+        },
+      ],
+    };
+  }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
 // Orchestrator
 // ────────────────────────────────────────────────────────────────────────────
 
@@ -377,8 +464,14 @@ export async function runGodModePlatformScan(onProgress?: (p: ScanProgress) => v
     }),
   );
 
+  // Real inventory: what code is loaded, and which outside services answer.
+  const modules = collectLoadedModules();
+  results.push(checkModules(modules));
+  const api = await collectApiChecks();
+  results.push(...api.checks);
+
   // Stable ordering by category then id
-  const order: CheckCategory[] = ['browser', 'permission', 'cloud', 'ai', 'handsfree', 'runtime', 'perf'];
+  const order: CheckCategory[] = ['browser', 'permission', 'cloud', 'ai', 'modules', 'api', 'handsfree', 'runtime', 'perf'];
   results.sort((a, b) => (order.indexOf(a.category) - order.indexOf(b.category)) || a.id.localeCompare(b.id));
 
   const counts: Record<CheckStatus, number> = { pass: 0, warn: 0, fail: 0, skip: 0 };
@@ -397,6 +490,8 @@ export async function runGodModePlatformScan(onProgress?: (p: ScanProgress) => v
     online: typeof navigator !== 'undefined' ? navigator.onLine : true,
     checks: results,
     runtimeIssues: getRuntimeIssues(),
+    apis: api.report,
+    modules,
   };
 }
 

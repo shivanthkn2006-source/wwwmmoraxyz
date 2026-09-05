@@ -13,6 +13,8 @@
  */
 import type { PlatformScanReport, CheckResult } from './platformScan';
 import { getRuntimeIssues, type RuntimeIssue } from './runtimeIssueCollector';
+import { getBrainStats, formatDuration } from '@/features/zoe-brain/brainTelemetry';
+import { apiHealthWord } from '@/features/zoe-brain/apiStatus';
 
 export type OrbScanIntent = 'platform_scan' | 'self_diagnostics' | null;
 
@@ -66,6 +68,34 @@ export function buildScanReply(opts: {
   const overallWord = client.overall === 'pass' ? 'clean' : client.overall === 'warn' ? 'mostly healthy with a few warnings' : 'showing real failures';
   lines.push(`I ran the scan myself just now — this device and session look ${overallWord}: ${client.counts.pass} passed, ${client.counts.warn} warnings, ${client.counts.fail} failed (${Math.round(client.durationMs)} ms).`);
 
+  // What is actually loaded and which outside services actually answered —
+  // real measurements, replacing the old "install nmap" non-answer.
+  lines.push('');
+  lines.push(
+    `**Modules loaded:** ${client.modules.chunks} JS chunks (${Math.round(client.modules.bytes / 1024)} KB) across ${client.modules.routes} registered routes.`,
+  );
+  if (client.apis) {
+    const live = client.apis.apis.filter((a) => apiHealthWord(a) === 'live');
+    const failing = client.apis.apis.filter((a) => apiHealthWord(a) === 'failing');
+    const missing = client.apis.apis.filter((a) => apiHealthWord(a) === 'missing');
+    lines.push(
+      `**APIs I use:** ${client.apis.apis.length} connected services — ${live.length} answered my live ping, ${failing.length} failing, ${missing.length} not connected.`,
+    );
+    for (const a of [...failing, ...missing].slice(0, 8)) {
+      lines.push(`- ${failing.includes(a) ? '❌' : '⚪'} ${a.label} — ${a.probe.detail}`);
+    }
+  } else {
+    lines.push('**APIs I use:** I could not reach my own integration probe just now, so I am not going to guess at their state.');
+  }
+
+  const brain = getBrainStats();
+  lines.push(
+    `**My own brain:** up ${formatDuration(brain.sessionUptimeMs)}, ${brain.totalTurns} turns, ${brain.successRate}% succeeded, avg ${brain.avgLatencyMs} ms (p95 ${brain.p95LatencyMs} ms).`,
+  );
+  if (brain.failingIntents.length) {
+    lines.push(`Failing intents: ${brain.failingIntents.map((i) => `${i.intent} (${i.errors})`).join(', ')}.`);
+  }
+
   const notable = client.checks.filter((c) => c.status === 'fail' || c.status === 'warn');
   if (notable.length) {
     lines.push('');
@@ -106,7 +136,7 @@ export function buildScanReply(opts: {
   }
 
   lines.push('');
-  lines.push('Want me to dig into any one of these, or export the full audit as a PDF from the God Mode menu?');
+  lines.push('Want me to dig into any one of these? The live view is on my brain dashboard at /zoe/brain.');
   return lines.join('\n');
 }
 

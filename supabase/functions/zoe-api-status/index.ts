@@ -34,7 +34,7 @@ interface ApiDef {
   probe?: Probe;
 }
 
-const PROBE_TIMEOUT_MS = 8000;
+const PROBE_TIMEOUT_MS = 12000;
 
 const get = (k: string) => Deno.env.get(k) as string | undefined;
 
@@ -165,11 +165,9 @@ const API_DEFS: ApiDef[] = [
     provider: 'Resend',
     capability: 'Outbound email — invites, alerts, growth digests.',
     keyName: 'RESEND_API_KEY',
+    // Send-only Resend keys answer 401 on every read endpoint, so a probe here
+    // would report a false failure. Key presence is the honest signal.
     edgeFunctions: ['beta-invite', 'bug-report-pipeline', 'growth-dispatch'],
-    probe: (env) =>
-      fetchJson('https://api.resend.com/domains', {
-        headers: { Authorization: `Bearer ${env('RESEND_API_KEY')}` },
-      }),
   },
   {
     id: 'twilio',
