@@ -2186,6 +2186,42 @@ Want me to dive deeper into any aspect?`;
         }
       }
       
+      // ═══ GOD MODE FROM A SENTENCE: "security scan", "scan mmora", "what errors do you have" ═══
+      // The ability already existed (client platform scan + admin zoe-god-mode);
+      // it just was never reachable from typed text, so the model answered
+      // "I can't run a scan from here". Now Zoe runs it and reports honestly.
+      if (!responseText && scanIntent === 'self_diagnostics') {
+        responseText = buildSelfDiagnosticsReply();
+      }
+      if (!responseText && scanIntent === 'platform_scan') {
+        const scanToken = cotStart('god-mode-scan');
+        setSendStage('thinking', 'god-mode-scan');
+        try {
+          const { runGodModePlatformScan } = await import('@/features/zoe-godmode/platformScan');
+          const clientReport = await runGodModePlatformScan();
+          let serverReport: GodModeScanReport | null = null;
+          let serverError: string | null = null;
+          if (isRootAdmin === true && isOnline) {
+            try {
+              serverReport = await runPlatformScan({ autoFix: true, verbose: false });
+            } catch (scanErr) {
+              serverError = scanErr instanceof Error ? scanErr.message : String(scanErr);
+            }
+          }
+          responseText = buildScanReply({
+            client: clientReport,
+            server: serverReport,
+            isAdmin: isRootAdmin,
+            serverError,
+          });
+          cotFinish(scanToken, { ok: true });
+        } catch (scanErr) {
+          cotFinish(scanToken, { error: scanErr });
+          reportDiagnosticError('god-mode-scan', scanErr);
+          responseText = '';
+        }
+      }
+
       // ═══ DEEP THINKING MODE: metacognitive brain (zoe-core-intelligence) ═══
       if (!responseText && deepThinking && isOnline && user?.id) {
         const dtToken = cotStart('zoe-core-intelligence');
