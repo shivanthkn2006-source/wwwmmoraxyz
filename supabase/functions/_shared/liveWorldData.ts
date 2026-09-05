@@ -17,15 +17,23 @@ export interface LiveGeo {
   place?: string | null;
 }
 
-const WEATHER_HINTS = [
-  'weather', 'temperature', 'temp ', 'forecast', 'rain', 'raining', 'snow', 'humid',
-  'humidity', 'wind', 'storm', 'sunny', 'cloudy', 'hot', 'cold', 'climate', 'monsoon',
-  'uv index', 'sunrise', 'sunset', 'air quality', 'aqi', 'season',
-];
+// Word-bounded on purpose. The previous `q.includes(hint)` matched "rain"
+// inside "brain" and "wind" inside "window", so "your brain scan" was answered
+// with a weather report (05 Sep 2026 orb transcript). Ambiguous words
+// ("hot", "cold", "season", "storm") only count next to a temperature/outside
+// cue.
+const WEATHER_WORDS =
+  /\b(weather|temperature|temp|forecast|rain(?:ing|y|fall)?|snow(?:ing|fall)?|humid(?:ity)?|wind(?:y|s)?|storm(?:y|s)?|thunder(?:storm)?|sunny|cloudy|overcast|drizzle|climate|monsoon|heatwave|uv\s*index|sunrise|sunset|air\s*quality|aqi|umbrella)\b/i;
+const TEMPERATURE_CUE =
+  /\b(?:is it|it'?s|its|so|too|very|feels?|feeling|getting|how)\s+(?:hot|cold|warm|chilly|freezing)\b|\b(?:hot|cold|warm|chilly|freezing)\s+(?:today|outside|out|now|tonight|tomorrow|this (?:morning|evening|week))\b/i;
 
 export const isWeatherQuery = (query: string): boolean => {
   const q = query.toLowerCase();
-  return WEATHER_HINTS.some((hint) => q.includes(hint));
+  // Guard the obvious non-weather uses of otherwise weather-ish words.
+  if (/\b(brain|windows?|rainbow|raincheck|brainstorm|storm(?:ed)? (?:the|into)|season\s+\d|seasons? of)\b/i.test(q) && !/\bweather\b/.test(q)) {
+    return /\b(forecast|temperature|humidity|sunny|cloudy)\b/.test(q);
+  }
+  return WEATHER_WORDS.test(q) || TEMPERATURE_CUE.test(q);
 };
 
 const WMO: Record<number, string> = {
