@@ -7,7 +7,7 @@
  */
 import React, { useCallback, useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { Activity, RefreshCw, Plug, AlertTriangle, Timer, Gauge } from 'lucide-react';
+import { Activity, RefreshCw, Plug, AlertTriangle, Timer, Gauge, ExternalLink, Wrench } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,13 @@ import {
   type BrainStats,
 } from '@/features/zoe-brain/brainTelemetry';
 import { fetchApiStatus, apiHealthWord, type ApiStatusReport } from '@/features/zoe-brain/apiStatus';
+import {
+  getFailureHistory,
+  clearFailureHistory,
+  timeAgo,
+  type FailureRecord,
+} from '@/features/zoe-brain/apiFailureLog';
+import { guideFor } from '@/features/zoe-brain/reconnectGuide';
 
 const HEALTH_STYLES: Record<string, string> = {
   live: 'border-emerald-500/40 text-emerald-400',
@@ -25,6 +32,7 @@ const HEALTH_STYLES: Record<string, string> = {
   failing: 'border-destructive/50 text-destructive',
   missing: 'border-muted-foreground/30 text-muted-foreground',
 };
+
 
 const Metric: React.FC<{ icon: React.ReactNode; label: string; value: string; hint?: string }> = ({
   icon,
