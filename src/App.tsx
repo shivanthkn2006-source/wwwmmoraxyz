@@ -123,6 +123,7 @@ const InstallAppPage = lazy(() => import("./pages/InstallApp")); // PWA INSTALL 
 const GodModeEvolution = lazy(() => import("./pages/GodModeEvolution")); // ASI GENESIS KERNEL
 const SentinelPage = lazy(() => import("./pages/SentinelPage")); // M'MORA SENTINEL
 const AdminHealthPage = lazy(() => import("./pages/AdminHealthPage")); // ADMIN HEALTH & STATUS
+const ZoeBrainDashboardPage = lazy(() => import("./pages/ZoeBrainDashboardPage")); // ZOE BRAIN: uptime, latency, failing intents, API health
 const AdminSearchIndexPage = lazy(() => import("./pages/AdminSearchIndexPage")); // SEARCH INDEX BACKFILL
 const AdminFeedDebugPage = lazy(() => import("./pages/AdminFeedDebugPage")); // FEED/LOOPS DEBUGGER
 const AstroPreviewPage = lazy(() => import("./pages/AstroPreviewPage")); // M'MORA ZOE DAILY ALIGNMENT HARNESS
@@ -744,6 +745,14 @@ const RouteAwareShell = () => {
                             element={
                               <ProtectedRoute>
                                 <AnalyticsDashboard />
+                              </ProtectedRoute>
+                            }
+                          />
+                          <Route
+                            path="/zoe/brain"
+                            element={
+                              <ProtectedRoute>
+                                <ZoeBrainDashboardPage />
                               </ProtectedRoute>
                             }
                           />

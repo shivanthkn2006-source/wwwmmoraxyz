@@ -102,4 +102,5 @@ export const CANONICAL_ROUTES: CanonicalRoute[] = [
   { path: "/zoe-nexus", label: "Zoe nexus", dynamic: false },
   { path: "/zoe-nexus-control", label: "Zoe nexus control", dynamic: false },
   { path: "/zoe-omega", label: "Zoe omega", dynamic: false },
+  { path: "/zoe/brain", label: "Zoe · brain", dynamic: false },
 ];
