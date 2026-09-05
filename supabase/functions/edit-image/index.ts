@@ -91,7 +91,6 @@ serve(async (req) => {
     if (!imageBase64 && !imageUrl) throw new Error('Image data is required');
 
     const GOOGLE_KEY = Deno.env.get('GOOGLE_AI_STUDIO_KEY');
-    if (!GOOGLE_KEY) throw new Error('GOOGLE_AI_STUDIO_KEY not configured');
 
     // Strip data-URI prefix if present; detect mime.
     let mime = 'image/png';
@@ -116,6 +115,7 @@ serve(async (req) => {
     // because blocking the edit on a classifier outage produced a hard 500.
     let classification = 'HUMAN_PHOTO';
     try {
+      if (!GOOGLE_KEY) throw new Error('no classifier key');
       const classificationResponse = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${GOOGLE_KEY}`,
         {
@@ -150,6 +150,26 @@ serve(async (req) => {
       );
     }
 
+
+    // Tier 1 — Pollinations, where the owner's image credits live.
+    const pollinated = await tryPollinationsEdit(prompt, mime, b64);
+    if (pollinated) {
+      return new Response(
+        JSON.stringify({ imageUrl: pollinated, provider: 'pollinations-edit' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
+    if (!GOOGLE_KEY) {
+      const orOnly = await openRouterImage(prompt, [`data:${mime};base64,${b64}`]);
+      if (orOnly) {
+        return new Response(
+          JSON.stringify({ imageUrl: orOnly, provider: 'openrouter-gemini-image' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+      throw new Error('No identity image editor is configured');
+    }
 
     console.log('[edit-image] Editing via Google AI Studio Gemini image model, prompt:', prompt);
 
@@ -216,7 +236,7 @@ serve(async (req) => {
           JSON.stringify({
             code: 'PROVIDER_QUOTA',
             error: 'RATE_LIMIT',
-            message: 'Every identity-preserving image editor is out of quota right now (Google image quota and OpenRouter/Pollinations balance). Your photo stays safe in the vault; nobody was substituted.',
+            message: 'Every identity-preserving image editor is out of quota right now (Pollinations credits, Google image quota and OpenRouter balance). Your photo stays safe in the vault; nobody was substituted.',
           }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
