@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import { supabase } from '@/integrations/supabase/client';
+import { hasLiveSession } from '@/lib/edgeSession';
 
 type ScanStatus = 'healthy' | 'warning' | 'critical' | 'fixed';
 
@@ -46,6 +47,10 @@ const statusLabel = (s: ScanStatus) => {
 
 export async function exportRootScanAsPDF(userId: string) {
   console.log('[RootScanPDF] Starting root scan export...');
+
+  if (!(await hasLiveSession())) {
+    throw new Error('Please sign in again — your session expired.');
+  }
 
   const { data, error } = await supabase.functions.invoke('zoe-god-mode', {
     body: {
