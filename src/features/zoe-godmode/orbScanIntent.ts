@@ -19,7 +19,7 @@ export type OrbScanIntent = 'platform_scan' | 'self_diagnostics' | null;
 const SCAN_TARGET = /\b(platform|system|security|mmora|m'?mora|site|app|infra(?:structure)?|backend|everything|whole|entire|full|deep|health|brain|god\s*-?\s*mode)\b/i;
 const SCAN_VERB = /\b(scan|audit|diagnos(?:e|is|tics)|health\s*check|self\s*-?\s*check|integrity\s*check)\b/i;
 const BARE_SCAN = /^\s*(?:please\s+|can you\s+|could you\s+|zoe\s+|run\s+(?:a\s+)?|do\s+(?:a\s+)?|start\s+(?:a\s+)?|perform\s+(?:a\s+)?)*(?:a\s+)?(?:security|system|platform|deep|full|health|brain|god\s*-?\s*mode)?\s*(?:scan|audit)\s*(?:now|please)?\s*[.!?]*\s*$/i;
-const SELF_DIAG = /\b(what(?:'s| is| are)?\s+(?:the\s+)?(?:errors?|bugs?|issues?|problems?)\s+(?:do\s+)?(?:you|u)\s+(?:have|got|see|facing|are facing)|any\s+errors?\s+(?:right\s+)?(?:now|currently)|your\s+(?:current\s+)?(?:errors?|issues?|bugs?)|are you (?:working|ok|okay|broken|healthy)|what(?:'s| is)\s+(?:wrong|broken)\s+(?:with you|right now|currently)|status\s+report|system\s+status)\b/i;
+const SELF_DIAG = /\b(what(?:'?s| is| are)?\s+(?:the\s+)?(?:errors?|bugs?|issues?|problems?)\s+(?:do\s+)?(?:you|u)\s+(?:have|got|see|facing|are facing)|any\s+errors?\s+(?:right\s+)?(?:now|currently)|your\s+(?:current\s+)?(?:errors?|issues?|bugs?)|are you (?:working|ok|okay|broken|healthy)|what(?:'?s| is)\s+(?:wrong|broken)\s+(?:with you|right now|currently)|status\s+report|system\s+status)\b/i;
 
 /** Classifies a typed orb turn. Pure; safe to unit test. */
 export function classifyOrbScanIntent(text: string): OrbScanIntent {
