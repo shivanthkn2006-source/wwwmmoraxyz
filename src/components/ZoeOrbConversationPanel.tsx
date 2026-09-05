@@ -2044,11 +2044,16 @@ Want me to dive deeper into any aspect?`;
         }
       }
       
-      // Check for weather/traffic queries locally first
+      // Check for weather/traffic queries locally first.
+      // Word-bounded on purpose: the old substring test turned "brain" into
+      // "rain" and "roadmap" into "road", so "your brain scan" got a weather
+      // report (05 Sep 2026 transcript). Bare "hot"/"cold" only count when
+      // they are clearly about the outside temperature.
       const lowerContent = userMessage.content.toLowerCase();
-      const isWeatherQuery = /weather|temperature|hot|cold|rain|sunny|cloudy|forecast/i.test(lowerContent);
-      const isTrafficQuery = /traffic|commute|drive|driving|road|congestion/i.test(lowerContent);
-      const isBriefingQuery = /briefing|update|summary|what's new|good morning|good afternoon|good evening/i.test(lowerContent);
+      const isWeatherQuery = /\b(weather|temperature|forecast|rain(?:ing|y|fall)?|sunny|cloudy|humid(?:ity)?|snow(?:ing)?|umbrella)\b|\b(?:is it|it'?s|its|so|too|very|feels?|feeling|getting)\s+(?:hot|cold)\b|\b(?:hot|cold)\s+(?:today|outside|out|now|tonight|tomorrow)\b/i.test(lowerContent);
+      const isTrafficQuery = /\btraffic\b|\bcommute\b|\b(?:my|the)\s+drive\b|\bdriving\s+(?:to|home|in|now)\b|\broad\s+(?:conditions?|closures?|jam|block)\b|\bcongestion\b/i.test(lowerContent);
+      const isBriefingQuery = /^\s*(?:(?:morning|daily|my|quick)\s+)?briefing\b|\bgood\s+(?:morning|afternoon|evening)\b|\bwhat'?s\s+new\b|^\s*(?:any\s+|give me an?\s+)?update\s*\??\s*$/i.test(lowerContent);
+      const scanIntent = classifyOrbScanIntent(userMessage.content);
       
       // ═══ TUBE SIGHT: Detect YouTube links and analyze videos ═══
       // Uses background processor so analysis continues even if chat window closes
