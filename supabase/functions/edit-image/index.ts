@@ -7,8 +7,78 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Sovereign image editing — Google AI Studio (Gemini) directly, no Lovable Gateway.
-// Requires GOOGLE_AI_STUDIO_KEY (already provisioned in project secrets).
+// Sovereign image editing.
+// Order: Pollinations (the account that holds the owner's credits, and the only
+// tier that reliably keeps the person in the photo) → Google AI Studio Gemini →
+// OpenRouter Nano Banana. Every tier edits the SAME reference image, so the
+// result is the account holder, never a stranger.
+
+const POLLINATIONS_EDIT_MODELS = ['nanobanana', 'gemini-2.5-flash-image', 'seedream'];
+
+/**
+ * Identity-preserving edit through Pollinations' OpenAI-compatible endpoint.
+ * The reference photo is sent inline as a data URI, so the model conditions on
+ * the real face instead of inventing one. Returns null on any failure so the
+ * caller can fall through to the next provider.
+ */
+async function tryPollinationsEdit(prompt: string, mime: string, b64: string): Promise<string | null> {
+  const token =
+    Deno.env.get('POLLINATIONS_API_KEY') ??
+    Deno.env.get('POLLINATIONS_TOKEN') ??
+    Deno.env.get('POLLINATIONS_KEY');
+  if (!token) return null;
+
+  for (const model of POLLINATIONS_EDIT_MODELS) {
+    try {
+      const r = await fetch('https://text.pollinations.ai/openai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          model,
+          messages: [
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'text',
+                  text: `${prompt}\n\nKeep the person in the supplied photograph exactly recognisable: same face shape, skin tone, hair and defining features. Do not substitute a different person.`,
+                },
+                { type: 'image_url', image_url: { url: `data:${mime};base64,${b64}` } },
+              ],
+            },
+          ],
+          modalities: ['image', 'text'],
+        }),
+        signal: AbortSignal.timeout(90_000),
+      });
+
+      if (!r.ok) {
+        console.warn('[edit-image] Pollinations edit failed:', model, r.status, (await r.text()).slice(0, 200));
+        continue;
+      }
+
+      const data = await r.json();
+      const message = data?.choices?.[0]?.message;
+      const inline =
+        message?.images?.[0]?.image_url?.url ??
+        message?.images?.[0]?.url ??
+        (typeof message?.content === 'string' && message.content.startsWith('data:image') ? message.content : null);
+      if (inline) {
+        console.log('[edit-image] ✅ Pollinations identity edit via', model);
+        return inline as string;
+      }
+      // Some models answer with a hosted URL inside the text body.
+      const hosted = typeof message?.content === 'string' ? message.content.match(/https?:\/\/\S+\.(?:png|jpe?g|webp)/i)?.[0] : null;
+      if (hosted) return hosted;
+      console.warn('[edit-image] Pollinations returned no image for', model);
+    } catch (err) {
+      console.warn('[edit-image] Pollinations edit threw:', model, err);
+    }
+  }
+  return null;
+}
+
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
