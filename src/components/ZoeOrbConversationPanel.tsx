@@ -60,6 +60,8 @@ import { downloadAsText, downloadAsPDF, exportToText, type ExportMessage } from 
 import { useZoeGodMode, type GodModeScanReport } from '@/hooks/useZoeGodMode';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { classifyOrbScanIntent, buildScanReply, buildSelfDiagnosticsReply } from '@/features/zoe-godmode/orbScanIntent';
+import { answerApiQuestion, classifyApiIntent } from '@/features/zoe-brain/apiIntent';
+import { recordBrainTurn } from '@/features/zoe-brain/brainTelemetry';
 import { downloadGodModeAuditPDF } from '@/utils/godModeAuditExport';
 import { useZoeTubeSight } from '@/hooks/useZoeTubeSight';
 import { useZoeProfileAutoFill } from '@/hooks/useZoeProfileAutoFill';
@@ -1143,6 +1145,13 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
     if (!textToSend.trim() && !hasPendingMedia) return;
     if (isProcessing || isSending) return;
 
+    // Brain telemetry: every turn is measured (intent, latency, outcome) so the
+    // brain dashboard and Zoe's own status answers are real numbers.
+    const turnStartedAt = Date.now();
+    let turnIntent = hasPendingMedia ? 'media' : 'chat';
+    let turnOutcome: 'ok' | 'error' | 'empty' = 'ok';
+    let turnError: string | null = null;
+
     console.log('[ZoeOrb] Sending message:', textToSend.trim(), 'mode:', messagingMode, 'with media:', hasPendingMedia);
 
     // ═══ ZOE DECORATOR INTENT (self-contained feature) ═══
@@ -2196,9 +2205,31 @@ Want me to dive deeper into any aspect?`;
       // it just was never reachable from typed text, so the model answered
       // "I can't run a scan from here". Now Zoe runs it and reports honestly.
       if (!responseText && scanIntent === 'self_diagnostics') {
+        turnIntent = 'self_diagnostics';
         responseText = buildSelfDiagnosticsReply();
       }
+
+      // ═══ "WHICH APIS DO YOU USE / IS DEEPGRAM WORKING / YOUR UPTIME" ═══
+      // Answered from the live zoe-api-status inventory + brain telemetry
+      // instead of stalling on questions about her own integrations.
+      if (!responseText) {
+        const apiIntent = classifyApiIntent(userMessage.content);
+        if (apiIntent) {
+          turnIntent = apiIntent;
+          const apiToken = cotStart('zoe-api-status');
+          setSendStage('thinking', 'zoe-api-status');
+          try {
+            responseText = (await answerApiQuestion(userMessage.content)) || '';
+            cotFinish(apiToken, { ok: true });
+          } catch (apiErr) {
+            cotFinish(apiToken, { error: apiErr });
+            reportDiagnosticError('zoe-api-status', apiErr);
+            responseText = '';
+          }
+        }
+      }
       if (!responseText && scanIntent === 'platform_scan') {
+        turnIntent = 'platform_scan';
         const scanToken = cotStart('god-mode-scan');
         setSendStage('thinking', 'god-mode-scan');
         try {
@@ -2740,6 +2771,8 @@ Want me to dive deeper into any aspect?`;
       }
     } catch (error) {
       console.error('Error getting Zoe response:', error);
+      turnOutcome = 'error';
+      turnError = error instanceof Error ? error.message : String(error);
       
       // Fallback to offline - check brain memory first, then scripted
       let fallbackText = '';
@@ -2784,6 +2817,12 @@ Want me to dive deeper into any aspect?`;
         );
       }
     } finally {
+      recordBrainTurn({
+        intent: turnIntent,
+        outcome: turnOutcome,
+        latencyMs: Date.now() - turnStartedAt,
+        error: turnError,
+      });
       setIsProcessing(false);
       setSendStage('done');
     }
