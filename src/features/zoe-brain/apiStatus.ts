@@ -76,8 +76,16 @@ export async function fetchApiStatus(opts?: { probe?: boolean; force?: boolean }
   if (error) throw error;
   const report = data as ApiStatusReport;
   cache = { at: Date.now(), report };
+  // Persist failures so the health page can show when each service last broke.
+  try {
+    const { recordApiReport } = await import('./apiFailureLog');
+    recordApiReport(report);
+  } catch {
+    /* history is best effort */
+  }
   return report;
 }
+
 
 export function getCachedApiStatus(): ApiStatusReport | null {
   return cache?.report ?? null;
