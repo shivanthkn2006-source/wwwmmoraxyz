@@ -170,6 +170,63 @@ const ZoeBrainDashboardPage: React.FC = () => {
         )}
       </section>
 
+      <section className="mb-8">
+        <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+          <Wrench className="w-4 h-4 text-destructive" /> Needs attention
+          {broken.length > 0 && <Badge variant="outline" className="border-destructive/50 text-destructive">{broken.length}</Badge>}
+        </h2>
+        {!broken.length ? (
+          <Card className="p-4 text-sm text-muted-foreground">
+            {loadingApis ? 'Checking every service…' : 'Every connected service answered. Nothing to fix right now.'}
+          </Card>
+        ) : (
+          <div className="grid gap-3">
+            {broken.map((a) => {
+              const health = apiHealthWord(a);
+              const rec = history[a.id];
+              const guide = guideFor(a.id, a.keyless);
+              return (
+                <Card key={a.id} className="p-4 border-destructive/30">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="font-medium">{a.label}</span>
+                    <Badge variant="outline" className={HEALTH_STYLES[health]}>
+                      {health === 'missing' ? 'not connected' : 'failing'}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">{a.capability}</p>
+                  <p className="text-xs mt-2">
+                    <span className="text-destructive">Last failure: {timeAgo(rec?.events[0]?.at ?? a.probe ? apis?.checkedAt : null)}</span>
+                    {rec?.events[0]?.detail ? <span className="text-muted-foreground"> — {rec.events[0].detail}</span> : null}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">
+                    Last seen working: {timeAgo(rec?.lastOkAt)} · {rec?.totalFailures ?? 1} failed check(s) recorded
+                    {a.keyName ? ` · secret ${guide.secret ?? a.keyName}` : ''}
+                  </p>
+                  <div className="mt-3 rounded-md bg-muted/40 p-3">
+                    <p className="text-xs font-medium mb-1">How to reconnect it — {guide.where}</p>
+                    <ol className="text-xs text-muted-foreground list-decimal ml-4 space-y-1">
+                      {guide.steps.map((s) => (
+                        <li key={s}>{s}</li>
+                      ))}
+                    </ol>
+                    {guide.link && (
+                      <a
+                        href={guide.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                      >
+                        Open {guide.where.split('→')[0].trim()} <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
       <section>
         <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
           <Plug className="w-4 h-4 text-primary" /> Integrations
@@ -180,6 +237,7 @@ const ZoeBrainDashboardPage: React.FC = () => {
         <div className="grid md:grid-cols-2 gap-2">
           {(apis?.apis ?? []).map((a) => {
             const health = apiHealthWord(a);
+            const rec = history[a.id];
             return (
               <Card key={a.id} className="p-3">
                 <div className="flex items-center justify-between gap-2">
@@ -193,10 +251,13 @@ const ZoeBrainDashboardPage: React.FC = () => {
                   {a.provider}
                   {a.probe.latencyMs != null ? ` · ${a.probe.latencyMs} ms` : ''} · {a.probe.detail}
                 </p>
-                <p className="text-[11px] text-muted-foreground/80 mt-1">via {a.edgeFunctions.join(', ')}</p>
+                <p className="text-[11px] text-muted-foreground/80 mt-1">
+                  via {a.edgeFunctions.join(', ')} · last failure {timeAgo(rec?.events[0]?.at)}
+                </p>
               </Card>
             );
           })}
+
           {!apis && loadingApis && <Card className="p-4 text-sm text-muted-foreground">Probing integrations…</Card>}
         </div>
       </section>
