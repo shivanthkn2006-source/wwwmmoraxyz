@@ -55,6 +55,7 @@ const ZoeBrainDashboardPage: React.FC = () => {
   const [apis, setApis] = useState<ApiStatusReport | null>(null);
   const [loadingApis, setLoadingApis] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [history, setHistory] = useState<Record<string, FailureRecord>>({});
 
   useEffect(() => subscribeBrainStats(setStats), []);
 
@@ -66,13 +67,21 @@ const ZoeBrainDashboardPage: React.FC = () => {
     } catch (err) {
       setApiError(err instanceof Error ? err.message : String(err));
     } finally {
+      setHistory(getFailureHistory());
       setLoadingApis(false);
     }
   }, []);
 
   useEffect(() => {
+    setHistory(getFailureHistory());
     void loadApis(false);
   }, [loadApis]);
+
+  const broken = (apis?.apis ?? []).filter((a) => {
+    const h = apiHealthWord(a);
+    return h === 'failing' || h === 'missing';
+  });
+
 
   return (
     <div className="min-h-screen px-4 py-8 md:px-8">
