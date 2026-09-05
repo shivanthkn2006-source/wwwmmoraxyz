@@ -107,7 +107,15 @@ const ZoeBrainDashboardPage: React.FC = () => {
           <Button variant="outline" size="sm" onClick={() => loadApis(true)} disabled={loadingApis}>
             <RefreshCw className={`w-4 h-4 mr-2 ${loadingApis ? 'animate-spin' : ''}`} /> Re-probe APIs
           </Button>
-          <Button variant="ghost" size="sm" onClick={clearBrainTelemetry}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              clearBrainTelemetry();
+              clearFailureHistory();
+              setHistory({});
+            }}
+          >
             Reset metrics
           </Button>
         </div>
@@ -195,7 +203,7 @@ const ZoeBrainDashboardPage: React.FC = () => {
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">{a.capability}</p>
                   <p className="text-xs mt-2">
-                    <span className="text-destructive">Last failure: {timeAgo(rec?.events[0]?.at ?? a.probe ? apis?.checkedAt : null)}</span>
+                    <span className="text-destructive">Last failure: {timeAgo(rec?.events[0]?.at ?? apis?.checkedAt ?? null)}</span>
                     {rec?.events[0]?.detail ? <span className="text-muted-foreground"> — {rec.events[0].detail}</span> : null}
                   </p>
                   <p className="text-[11px] text-muted-foreground">
