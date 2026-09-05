@@ -194,6 +194,9 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
     runPlatformScan,
     overallHealth,
   } = useZoeGodMode();
+  // Server-verified (has_role RPC) — decides whether a typed "scan" also runs
+  // the admin-only platform-wide sweep or only the client-side checks.
+  const isRootAdmin = useIsAdmin();
   
   // Real-time feeds for friends, offers, brand deals
   const {
