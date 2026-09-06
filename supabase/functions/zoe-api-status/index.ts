@@ -191,11 +191,26 @@ const API_DEFS: ApiDef[] = [
     keyName: 'SLACK_BOT_TOKEN',
     altKeys: ['SLACK_API_KEY'],
     edgeFunctions: ['astro-dispatch', 'sentinel-guard'],
-    probe: (env) =>
-      fetchJson('https://slack.com/api/auth.test', {
+    // SLACK_API_KEY from the Lovable connector is a gateway connection key,
+    // not a Slack token — it must be presented to the gateway, never to
+    // slack.com directly (that path always returns invalid_auth).
+    probe: (env) => {
+      const gatewayKey = env('SLACK_API_KEY');
+      const lovableKey = env('LOVABLE_API_KEY');
+      if (gatewayKey && lovableKey) {
+        return fetchJson('https://connector-gateway.lovable.dev/slack/api/auth.test', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${lovableKey}`,
+            'X-Connection-Api-Key': gatewayKey,
+          },
+        });
+      }
+      return fetchJson('https://slack.com/api/auth.test', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${env('SLACK_BOT_TOKEN') ?? env('SLACK_API_KEY')}` },
-      }),
+        headers: { Authorization: `Bearer ${env('SLACK_BOT_TOKEN')}` },
+      });
+    },
   },
   {
     id: 'serpapi',
