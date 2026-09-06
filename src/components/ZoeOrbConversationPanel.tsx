@@ -62,6 +62,7 @@ import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { classifyOrbScanIntent, buildScanReply, buildSelfDiagnosticsReply } from '@/features/zoe-godmode/orbScanIntent';
 import { answerApiQuestion, classifyApiIntent } from '@/features/zoe-brain/apiIntent';
 import { answerSlackQuestion, classifySlackIntent } from '@/features/zoe-brain/slackIntent';
+import { answerIntimacyQuestion, classifyIntimacyIntent } from '@/features/intimacy/intimacyIntent';
 import { recordBrainTurn } from '@/features/zoe-brain/brainTelemetry';
 import { downloadGodModeAuditPDF } from '@/utils/godModeAuditExport';
 import { useZoeTubeSight } from '@/hooks/useZoeTubeSight';
@@ -2243,6 +2244,24 @@ Want me to dive deeper into any aspect?`;
           } catch (slackErr) {
             cotFinish(slackToken, { error: slackErr });
             reportDiagnosticError('zoe-slack', slackErr);
+            responseText = '';
+          }
+        }
+      }
+      // ═══ "WHO AM I CLOSEST TO / HOW DOES MY FEED RANK / MY LEGACY VAULT" ═══
+      // Answered from the member's own closeness graph and vault, never invented.
+      if (!responseText) {
+        const closenessIntent = classifyIntimacyIntent(userMessage.content);
+        if (closenessIntent) {
+          turnIntent = closenessIntent;
+          const intimacyToken = cotStart('zoe-intimacy');
+          setSendStage('thinking', 'zoe-intimacy');
+          try {
+            responseText = (await answerIntimacyQuestion(userMessage.content)) || '';
+            cotFinish(intimacyToken, { ok: true });
+          } catch (intimacyErr) {
+            cotFinish(intimacyToken, { error: intimacyErr });
+            reportDiagnosticError('zoe-intimacy', intimacyErr);
             responseText = '';
           }
         }
