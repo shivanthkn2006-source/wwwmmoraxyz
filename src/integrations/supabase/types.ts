@@ -3454,6 +3454,42 @@ export type Database = {
         }
         Relationships: []
       }
+      feed_events: {
+        Row: {
+          created_at: string
+          dwell_ms: number
+          event_type: string
+          id: string
+          post_id: string | null
+          surface: string | null
+          target_user_id: string | null
+          user_id: string
+          weight: number
+        }
+        Insert: {
+          created_at?: string
+          dwell_ms?: number
+          event_type: string
+          id?: string
+          post_id?: string | null
+          surface?: string | null
+          target_user_id?: string | null
+          user_id: string
+          weight?: number
+        }
+        Update: {
+          created_at?: string
+          dwell_ms?: number
+          event_type?: string
+          id?: string
+          post_id?: string | null
+          surface?: string | null
+          target_user_id?: string | null
+          user_id?: string
+          weight?: number
+        }
+        Relationships: []
+      }
       friend_requests: {
         Row: {
           created_at: string
@@ -4065,6 +4101,45 @@ export type Database = {
         }
         Relationships: []
       }
+      intimacy_scores: {
+        Row: {
+          computed_at: string
+          created_at: string
+          depth_ratio: number
+          event_count: number
+          id: string
+          last_interaction_at: string | null
+          reciprocity: number
+          score: number
+          target_user_id: string
+          user_id: string
+        }
+        Insert: {
+          computed_at?: string
+          created_at?: string
+          depth_ratio?: number
+          event_count?: number
+          id?: string
+          last_interaction_at?: string | null
+          reciprocity?: number
+          score?: number
+          target_user_id: string
+          user_id: string
+        }
+        Update: {
+          computed_at?: string
+          created_at?: string
+          depth_ratio?: number
+          event_count?: number
+          id?: string
+          last_interaction_at?: string | null
+          reciprocity?: number
+          score?: number
+          target_user_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       invite_codes: {
         Row: {
           code: string
@@ -4233,6 +4308,48 @@ export type Database = {
           rarity?: string
           skill_boost?: Json
           transferred_at?: string | null
+        }
+        Relationships: []
+      }
+      legacy_memories: {
+        Row: {
+          body: string | null
+          created_at: string
+          id: string
+          is_sealed: boolean
+          media_type: string | null
+          media_url: string | null
+          recipients: string[]
+          title: string
+          unlock_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          is_sealed?: boolean
+          media_type?: string | null
+          media_url?: string | null
+          recipients?: string[]
+          title: string
+          unlock_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          is_sealed?: boolean
+          media_type?: string | null
+          media_url?: string | null
+          recipients?: string[]
+          title?: string
+          unlock_at?: string | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -5732,6 +5849,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          age_cohort: string | null
           assistant_name: string | null
           assistant_voice_preference: string | null
           bio: string | null
@@ -5804,6 +5922,7 @@ export type Database = {
           zoe_relationship_styles: Json | null
         }
         Insert: {
+          age_cohort?: string | null
           assistant_name?: string | null
           assistant_voice_preference?: string | null
           bio?: string | null
@@ -5876,6 +5995,7 @@ export type Database = {
           zoe_relationship_styles?: Json | null
         }
         Update: {
+          age_cohort?: string | null
           assistant_name?: string | null
           assistant_voice_preference?: string | null
           bio?: string | null
@@ -11965,6 +12085,7 @@ export type Database = {
         Returns: Json
       }
       prune_platform_telemetry: { Args: never; Returns: Json }
+      recompute_intimacy_scores: { Args: { _user_id: string }; Returns: number }
       record_dhf_lineage: {
         Args: {
           _action: string
