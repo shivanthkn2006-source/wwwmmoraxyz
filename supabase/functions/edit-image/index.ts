@@ -13,13 +13,15 @@ const corsHeaders = {
 // OpenRouter Nano Banana. Every tier edits the SAME reference image, so the
 // result is the account holder, never a stranger.
 
-const POLLINATIONS_EDIT_MODELS = ['nanobanana', 'gemini-2.5-flash-image', 'seedream'];
+const POLLINATIONS_EDIT_MODELS = ['nanobanana-2', 'nanobanana-pro', 'nanobanana', 'kontext', 'seedream5'];
+const POLLINATIONS_BASE = 'https://gen.pollinations.ai';
 
 /**
- * Identity-preserving edit through Pollinations' OpenAI-compatible endpoint.
- * The reference photo is sent inline as a data URI, so the model conditions on
- * the real face instead of inventing one. Returns null on any failure so the
- * caller can fall through to the next provider.
+ * Identity-preserving edit through Pollinations' OpenAI-compatible image-edit
+ * endpoint (gen.pollinations.ai — the legacy image host no longer carries the
+ * edit models). The real reference photo is uploaded as the source image, so
+ * the model conditions on the actual face instead of inventing a stranger.
+ * Returns null on any failure so the caller falls through to the next tier.
  */
 async function tryPollinationsEdit(prompt: string, mime: string, b64: string): Promise<string | null> {
   const token =
@@ -28,56 +30,47 @@ async function tryPollinationsEdit(prompt: string, mime: string, b64: string): P
     Deno.env.get('POLLINATIONS_KEY');
   if (!token) return null;
 
+  const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+  const ext = mime.includes('png') ? 'png' : mime.includes('webp') ? 'webp' : 'jpg';
+  const guarded = `${prompt}\n\nKeep the person in the supplied photograph exactly recognisable: same face shape, skin tone, hair and defining features. Never substitute a different person.`;
+
   for (const model of POLLINATIONS_EDIT_MODELS) {
     try {
-      const r = await fetch('https://text.pollinations.ai/openai', {
+      const form = new FormData();
+      form.append('model', model);
+      form.append('prompt', guarded);
+      form.append('n', '1');
+      form.append('image', new Blob([bytes], { type: mime }), `reference.${ext}`);
+
+      const r = await fetch(`${POLLINATIONS_BASE}/v1/images/edits`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          model,
-          messages: [
-            {
-              role: 'user',
-              content: [
-                {
-                  type: 'text',
-                  text: `${prompt}\n\nKeep the person in the supplied photograph exactly recognisable: same face shape, skin tone, hair and defining features. Do not substitute a different person.`,
-                },
-                { type: 'image_url', image_url: { url: `data:${mime};base64,${b64}` } },
-              ],
-            },
-          ],
-          modalities: ['image', 'text'],
-        }),
-        signal: AbortSignal.timeout(90_000),
+        headers: { Authorization: `Bearer ${token}` },
+        body: form,
+        signal: AbortSignal.timeout(120_000),
       });
 
       if (!r.ok) {
-        console.warn('[edit-image] Pollinations edit failed:', model, r.status, (await r.text()).slice(0, 200));
+        console.warn('[edit-image] Pollinations edit failed:', model, r.status, (await r.text()).slice(0, 220));
         continue;
       }
 
       const data = await r.json();
-      const message = data?.choices?.[0]?.message;
-      const inline =
-        message?.images?.[0]?.image_url?.url ??
-        message?.images?.[0]?.url ??
-        (typeof message?.content === 'string' && message.content.startsWith('data:image') ? message.content : null);
-      if (inline) {
+      const first = data?.data?.[0];
+      if (first?.b64_json) {
         console.log('[edit-image] ✅ Pollinations identity edit via', model);
-        return inline as string;
+        return `data:image/png;base64,${first.b64_json}`;
       }
-      // Some models answer with a hosted URL inside the text body.
-      const hosted = typeof message?.content === 'string' ? message.content.match(/https?:\/\/\S+\.(?:png|jpe?g|webp)/i)?.[0] : null;
-      if (hosted) return hosted;
-      console.warn('[edit-image] Pollinations returned no image for', model);
+      if (first?.url) {
+        console.log('[edit-image] ✅ Pollinations identity edit (url) via', model);
+        return first.url as string;
+      }
+      console.warn('[edit-image] Pollinations returned no image for', model, JSON.stringify(data).slice(0, 200));
     } catch (err) {
       console.warn('[edit-image] Pollinations edit threw:', model, err);
     }
   }
   return null;
 }
-
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
