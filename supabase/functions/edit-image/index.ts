@@ -229,7 +229,7 @@ serve(async (req) => {
           JSON.stringify({
             code: 'PROVIDER_QUOTA',
             error: 'RATE_LIMIT',
-            message: 'No identity-preserving image editor has credit right now: the Pollinations balance is 0 pollen (top up at enter.pollinations.ai), Google's image quota is spent and the OpenRouter balance is empty. Your photo stays safe in the vault; nobody was substituted.',
+            message: "No identity-preserving image editor has credit right now: the Pollinations balance is 0 pollen (top up at enter.pollinations.ai), Google image quota is spent and the OpenRouter balance is empty. Your photo stays safe in the vault; nobody was substituted.",
           }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
