@@ -61,6 +61,7 @@ import { useZoeGodMode, type GodModeScanReport } from '@/hooks/useZoeGodMode';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { classifyOrbScanIntent, buildScanReply, buildSelfDiagnosticsReply } from '@/features/zoe-godmode/orbScanIntent';
 import { answerApiQuestion, classifyApiIntent } from '@/features/zoe-brain/apiIntent';
+import { answerSlackQuestion, classifySlackIntent } from '@/features/zoe-brain/slackIntent';
 import { recordBrainTurn } from '@/features/zoe-brain/brainTelemetry';
 import { downloadGodModeAuditPDF } from '@/utils/godModeAuditExport';
 import { useZoeTubeSight } from '@/hooks/useZoeTubeSight';
@@ -2224,6 +2225,24 @@ Want me to dive deeper into any aspect?`;
           } catch (apiErr) {
             cotFinish(apiToken, { error: apiErr });
             reportDiagnosticError('zoe-api-status', apiErr);
+            responseText = '';
+          }
+        }
+      }
+      // ═══ "WHAT CHANNELS DO WE HAVE / WHAT'S NEW IN #SOCIAL" ═══
+      // Answered from the live connected Slack workspace, never invented.
+      if (!responseText) {
+        const slackIntent = classifySlackIntent(userMessage.content);
+        if (slackIntent) {
+          turnIntent = slackIntent;
+          const slackToken = cotStart('zoe-slack');
+          setSendStage('thinking', 'zoe-slack');
+          try {
+            responseText = (await answerSlackQuestion(userMessage.content)) || '';
+            cotFinish(slackToken, { ok: true });
+          } catch (slackErr) {
+            cotFinish(slackToken, { error: slackErr });
+            reportDiagnosticError('zoe-slack', slackErr);
             responseText = '';
           }
         }
