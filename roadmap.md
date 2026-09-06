@@ -71,3 +71,13 @@
 - [x] `realtimeBehaviorMeter.ts` replaces randomised behavioural inputs to Guardian Angel with measured keystroke rhythm, visibility switches, blur interruptions and focused minutes
 - [x] Persona boundary confirmed: M'Mora Zoe = `zoe-chat` (orb text+voice, ZoeChat, DHF, memory) with `zoe-agent`/`zoe-core-intelligence` for tools/deep thinking. `zoe-infinity-brain` is used ONLY by Zoe Infinity pages — separate project, separate login.
 - Reconnect Slack in the new workspace
+
+## Next-generation social layer (Sep 2026) — no Home/feed/loops changes
+- [x] Closeness signals table `feed_events` (RLS: own rows only) + batched client ingestion
+- [x] Derived `intimacy_scores` edges + server-side `recompute_intimacy_scores` (90-day decay, reciprocity, depth)
+- [x] Pure intimacy ranking (`rankFeed.ts`) with velocity cap and author diversity + opt-in `useIntimacyFeed`
+- [x] Legacy Vault: `legacy_memories` table (owner-only) + isolated `/legacy` page
+- [x] Generational tone adapter (cohort from birth date -> style directive)
+- [x] Zoe/orb answers closeness, feed-ranking and vault questions from live data
+- [ ] Wire dwell/reply/save event capture into existing surfaces (behind a flag, no UI change)
+- [ ] Server-side news carousel worker (quota-safe at 5k users)

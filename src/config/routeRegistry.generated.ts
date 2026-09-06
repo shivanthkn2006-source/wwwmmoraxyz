@@ -58,6 +58,7 @@ export const CANONICAL_ROUTES: CanonicalRoute[] = [
   { path: "/install", label: "Install", dynamic: false },
   { path: "/integration-test", label: "Integration test", dynamic: false },
   { path: "/kronos-anima", label: "Kronos anima", dynamic: false },
+  { path: "/legacy", label: "Legacy", dynamic: false },
   { path: "/legal-nexus", label: "Legal nexus", dynamic: false },
   { path: "/merchant", label: "Merchant", dynamic: false },
   { path: "/mmora", label: "M'Mora", dynamic: false },
