@@ -26,11 +26,11 @@ async function displayNames(ids: string[]): Promise<Map<string, string>> {
   if (ids.length === 0) return new Map();
   const { data } = await supabase
     .from('public_profiles')
-    .select('id, username, display_name')
-    .in('id', ids);
+    .select('user_id, username, display_name')
+    .in('user_id', ids);
   const map = new Map<string, string>();
-  for (const row of (data ?? []) as Array<{ id: string; username?: string | null; display_name?: string | null }>) {
-    map.set(row.id, row.display_name || row.username || 'someone in your circle');
+  for (const row of (data ?? []) as Array<{ user_id: string; username?: string | null; display_name?: string | null }>) {
+    map.set(row.user_id, row.display_name || row.username || 'someone in your circle');
   }
   return map;
 }
