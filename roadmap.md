@@ -70,3 +70,4 @@
 - [x] Removed the last simulated telemetry: `useBioTelemetry` now reads only real BLE heart rate / DeviceMotion / Battery / Network; unmeasured metrics render as "—" (no fabricated HRV, SpO2, temp, steps)
 - [x] `realtimeBehaviorMeter.ts` replaces randomised behavioural inputs to Guardian Angel with measured keystroke rhythm, visibility switches, blur interruptions and focused minutes
 - [x] Persona boundary confirmed: M'Mora Zoe = `zoe-chat` (orb text+voice, ZoeChat, DHF, memory) with `zoe-agent`/`zoe-core-intelligence` for tools/deep thinking. `zoe-infinity-brain` is used ONLY by Zoe Infinity pages — separate project, separate login.
+- Reconnect Slack in the new workspace
