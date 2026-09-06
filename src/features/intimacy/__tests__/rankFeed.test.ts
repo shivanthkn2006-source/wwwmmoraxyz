@@ -23,16 +23,16 @@ describe('intimacy ranking', () => {
     expect(rankByIntimacy(items, { intimacy: new Map(), now }).map((i) => i.id)).toEqual(['a', 'b']);
   });
 
-  it('never lets one author take two of the first five slots', () => {
+  it('never lets one author take two of the first five slots when others exist', () => {
     const intimacy = new Map([['dom', 90]]);
-    const items = Array.from({ length: 6 }, (_, i) => ({
-      id: `d${i}`,
-      authorId: 'dom',
-      createdAt: now - i * 1000,
-    })).concat([{ id: 'other', authorId: 'other', createdAt: now - 100_000 }]);
+    const items = [
+      ...Array.from({ length: 6 }, (_, i) => ({ id: `d${i}`, authorId: 'dom', createdAt: now - i * 1000 })),
+      ...Array.from({ length: 6 }, (_, i) => ({ id: `o${i}`, authorId: `other${i}`, createdAt: now - i * 1000 })),
+    ];
     const ordered = rankByIntimacy(items, { intimacy, now, diversityWindow: 5 });
-    const firstFive = ordered.slice(0, 5).filter((i) => i.authorId === 'dom');
-    expect(firstFive.length).toBe(1);
+    const authors = ordered.slice(0, 5).map((i) => i.authorId);
+    expect(new Set(authors).size).toBe(5);
+    expect(authors.filter((a) => a === 'dom').length).toBe(1);
   });
 
   it('caps popularity so virality cannot dominate', () => {
