@@ -977,7 +977,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate, onMediaCompleted })
               <Button variant="ghost" size="sm" onClick={() => setShowComments(false)}>Close</Button>
             </div>
           </div>
-          <CommentSection postId={post.id} onUpdate={onUpdate} />
+          <CommentSection postId={post.id} postAuthorId={post.user_id} onUpdate={onUpdate} />
         </div>
       )}
 
