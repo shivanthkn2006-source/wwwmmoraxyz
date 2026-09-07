@@ -435,6 +435,12 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate, onMediaCompleted })
         } else {
           // Show like animation
           playLikeAnimation();
+          void recordFeedEvent({
+            type: 'like',
+            postId: post.id,
+            targetUserId: post.user_id,
+            surface: 'post_card',
+          });
         }
       }
     } catch (error) {
