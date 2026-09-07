@@ -12,6 +12,7 @@ import UserMentionInput from '@/components/UserMentionInput';
 import ImageViewer from '@/components/ImageViewer';
 import { toast } from '@/hooks/use-toast';
 import { motion, AnimatePresence } from 'framer-motion';
+import { recordFeedEvent } from '@/features/intimacy/feedEvents';
 
 interface Comment {
   id: string;
@@ -35,10 +36,12 @@ interface Comment {
 
 interface CommentSectionProps {
   postId: string;
+  /** Author of the post — used to record closeness signals, never rendered. */
+  postAuthorId?: string;
   onUpdate: () => void;
 }
 
-const CommentSection: React.FC<CommentSectionProps> = ({ postId, onUpdate }) => {
+const CommentSection: React.FC<CommentSectionProps> = ({ postId, postAuthorId, onUpdate }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [comments, setComments] = useState<Comment[]>([]);
@@ -203,6 +206,13 @@ const CommentSection: React.FC<CommentSectionProps> = ({ postId, onUpdate }) => 
       setCommentImagePreview(null);
       setMentionedUsers([]);
       
+      void recordFeedEvent({
+        type: 'comment',
+        postId,
+        targetUserId: postAuthorId ?? null,
+        surface: 'comment_section',
+      });
+
       // Show comment animation
       setShowCommentAnimation(true);
       setTimeout(() => setShowCommentAnimation(false), 2000);
@@ -259,6 +269,13 @@ const CommentSection: React.FC<CommentSectionProps> = ({ postId, onUpdate }) => 
         throw new Error(error.message || 'Failed to post reply');
       }
       
+      void recordFeedEvent({
+        type: 'reply',
+        postId,
+        targetUserId: comments.find((c) => c.id === parentId)?.user_id ?? postAuthorId ?? null,
+        surface: 'comment_section',
+      });
+
       setReplyContent('');
       setReplyingTo(null);
       toast({

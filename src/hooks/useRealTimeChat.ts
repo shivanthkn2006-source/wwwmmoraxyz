@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
+import { recordFeedEvent } from '@/features/intimacy/feedEvents';
 
 export interface Message {
   id: string;
@@ -195,6 +196,8 @@ export const useRealTimeChat = () => {
       console.error('Error sending message:', error);
       return false;
     }
+
+    void recordFeedEvent({ type: 'dm', targetUserId: receiverId, surface: 'direct_message' });
 
     return true;
   }, [user]);

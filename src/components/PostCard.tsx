@@ -28,6 +28,7 @@ import { useRealtimeTable } from '@/realtime/GlobalRealtimeProvider';
 import { allowFeedMediaReplay, hasPlayedFeedMedia, markFeedMediaPlayed } from '@/lib/feedPlayback';
 import { logFeedEvent } from '@/lib/feedEventDiagnostics';
 import ZoeCardNarrationControls from '@/components/voice/ZoeCardNarrationControls';
+import { recordFeedEvent } from '@/features/intimacy/feedEvents';
 
 interface Post {
   id: string;
@@ -434,6 +435,12 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate, onMediaCompleted })
         } else {
           // Show like animation
           playLikeAnimation();
+          void recordFeedEvent({
+            type: 'like',
+            postId: post.id,
+            targetUserId: post.user_id,
+            surface: 'post_card',
+          });
         }
       }
     } catch (error) {
@@ -462,6 +469,12 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate, onMediaCompleted })
         await supabase
           .from('saved_posts')
           .insert({ user_id: user.id, post_id: post.id });
+        void recordFeedEvent({
+          type: 'save',
+          postId: post.id,
+          targetUserId: post.user_id,
+          surface: 'post_card',
+        });
         setIsSaved(true);
         toast({
           title: 'Post saved',
@@ -964,7 +977,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate, onMediaCompleted })
               <Button variant="ghost" size="sm" onClick={() => setShowComments(false)}>Close</Button>
             </div>
           </div>
-          <CommentSection postId={post.id} onUpdate={onUpdate} />
+          <CommentSection postId={post.id} postAuthorId={post.user_id} onUpdate={onUpdate} />
         </div>
       )}
 
