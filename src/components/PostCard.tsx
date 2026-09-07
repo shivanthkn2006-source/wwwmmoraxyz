@@ -469,6 +469,12 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate, onMediaCompleted })
         await supabase
           .from('saved_posts')
           .insert({ user_id: user.id, post_id: post.id });
+        void recordFeedEvent({
+          type: 'save',
+          postId: post.id,
+          targetUserId: post.user_id,
+          surface: 'post_card',
+        });
         setIsSaved(true);
         toast({
           title: 'Post saved',
