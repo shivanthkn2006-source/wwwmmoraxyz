@@ -30,6 +30,8 @@ import useZoeMotivation from '@/hooks/useZoeMotivation';
 import HomeMotivationSlide from '@/components/home/HomeMotivationSlide';
 
 import HomeGlassDock from '@/components/home/HomeGlassDock';
+import HomeFeedSwitcher from '@/components/home/HomeFeedSwitcher';
+import MosaicFeed from '@/components/feed/MosaicFeed';
 import { buildExtraDockItems, DOCK_RESERVED_ROUTES } from '@/components/home/dockExtraActions';
 import { useNotificationFeatureBadges } from '@/hooks/useNotificationFeatureBadges';
 import DockBadgeBoundary from '@/components/home/DockBadgeBoundary';
@@ -2416,6 +2418,17 @@ const HomePage = () => {
         )} */}
         
         <Tabs ref={homeSurfaceRef} value={activeTab} onValueChange={setActiveTab} className="relative h-full min-h-0 w-full overflow-hidden">
+          <HomeFeedSwitcher
+            visible={headerVisible}
+            value={activeTab}
+            onChange={setActiveTab}
+            options={[
+              { id: 'global', label: 'Global' },
+              { id: 'personal', label: 'Friends' },
+              { id: 'mosaic', label: 'Mosaic' },
+              { id: 'selfiecity', label: 'Selfie City' },
+            ]}
+          />
           <div
             className="pointer-events-none fixed left-1/2 top-3 z-[60] flex -translate-x-1/2 items-center justify-center transition-opacity"
             style={{ opacity: pullRefresh.refreshing || pullRefresh.distance > 8 ? 1 : 0 }}
@@ -2565,6 +2578,12 @@ const HomePage = () => {
               </div>
             </TabsContent>
 
+            <TabsContent value="mosaic" className="absolute inset-0 m-0 h-full min-h-0 w-full overflow-hidden p-0" data-feed-tab="mosaic">
+              <div className="absolute inset-0 h-full w-full overflow-y-auto overscroll-contain pb-28 pt-24" data-feed-scroll>
+                <MosaicFeed limit={60} />
+              </div>
+            </TabsContent>
+
             <TabsContent value="selfiecity" className="mt-0 h-full w-full ">
               <div className="space-y-2 p-3">
                 {/* Selfie City Feed Header */}
@@ -2692,6 +2711,13 @@ const HomePage = () => {
             icon: <ScanFace className="h-[22px] w-[22px]" />,
             active: activeTab === 'selfiecity',
             onSelect: runHomeIconAction('selfie-city', () => setActiveTab('selfiecity')),
+          },
+          {
+            id: 'mosaic-feed',
+            label: 'Mosaic feed',
+            icon: <LayoutGrid className="h-[22px] w-[22px]" />,
+            active: activeTab === 'mosaic',
+            onSelect: runHomeIconAction('mosaic-feed', () => setActiveTab('mosaic')),
           },
           {
             id: 'neural-feed',
