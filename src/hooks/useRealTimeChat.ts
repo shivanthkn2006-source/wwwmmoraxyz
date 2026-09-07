@@ -196,6 +196,8 @@ export const useRealTimeChat = () => {
       return false;
     }
 
+    void recordFeedEvent({ type: 'dm', targetUserId: receiverId, surface: 'direct_message' });
+
     return true;
   }, [user]);
 
