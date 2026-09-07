@@ -95,23 +95,31 @@ export const MosaicFeed: React.FC<MosaicFeedProps> = ({ limit = 40, className, s
 
   if (loading) {
     return (
-      <div className={cn('grid grid-cols-2 gap-3 p-3', className)}>
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="h-48 animate-pulse rounded-xl border border-border bg-muted/40" />
-        ))}
+      <div>
+        <ZoeFeedCards />
+        <div className={cn('grid grid-cols-2 gap-3 p-3', className)}>
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="h-48 animate-pulse rounded-xl border border-border bg-muted/40" />
+          ))}
+        </div>
       </div>
     );
   }
 
   if (visible.length === 0) {
     return (
-      <p className="flex h-full items-center justify-center px-6 text-center text-sm text-muted-foreground">
-        Nothing here yet — posts with photos will appear in this mosaic.
-      </p>
+      <div>
+        <ZoeFeedCards />
+        <p className="px-6 py-10 text-center text-sm text-muted-foreground">
+          Nothing here yet — posts with photos will appear in this mosaic.
+        </p>
+      </div>
     );
   }
 
   return (
+    <div>
+      <ZoeFeedCards />
     <div className={cn('columns-2 gap-3 p-3 [column-fill:_balance]', className)} data-testid="mosaic-feed">
       {visible.map((item) => (
         <button
