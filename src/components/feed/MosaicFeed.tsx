@@ -11,6 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useIntimacyFeed } from '@/hooks/useIntimacyFeed';
 import { recordFeedEvent } from '@/features/intimacy/feedEvents';
+import ZoeFeedCards from '@/components/feed/ZoeFeedCards';
 import { cn } from '@/lib/utils';
 
 export interface MosaicItem {
