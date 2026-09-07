@@ -12,6 +12,7 @@ import UserMentionInput from '@/components/UserMentionInput';
 import ImageViewer from '@/components/ImageViewer';
 import { toast } from '@/hooks/use-toast';
 import { motion, AnimatePresence } from 'framer-motion';
+import { recordFeedEvent } from '@/features/intimacy/feedEvents';
 
 interface Comment {
   id: string;
