@@ -123,6 +123,7 @@ const InstallAppPage = lazy(() => import("./pages/InstallApp")); // PWA INSTALL 
 const GodModeEvolution = lazy(() => import("./pages/GodModeEvolution")); // ASI GENESIS KERNEL
 const SentinelPage = lazy(() => import("./pages/SentinelPage")); // M'MORA SENTINEL
 const AdminHealthPage = lazy(() => import("./pages/AdminHealthPage")); // ADMIN HEALTH & STATUS
+const MosaicFeedPage = lazy(() => import("./pages/MosaicFeedPage")); // MOSAIC: monochrome scrapbook feed
 const LegacyVaultPage = lazy(() => import("./pages/LegacyVaultPage")); // LEGACY VAULT: private sealed memories
 const ZoeBrainDashboardPage = lazy(() => import("./pages/ZoeBrainDashboardPage")); // ZOE BRAIN: uptime, latency, failing intents, API health
 const AdminSearchIndexPage = lazy(() => import("./pages/AdminSearchIndexPage")); // SEARCH INDEX BACKFILL
@@ -746,6 +747,14 @@ const RouteAwareShell = () => {
                             element={
                               <ProtectedRoute>
                                 <AnalyticsDashboard />
+                              </ProtectedRoute>
+                            }
+                          />
+                          <Route
+                            path="/mosaic"
+                            element={
+                              <ProtectedRoute>
+                                <MosaicFeedPage />
                               </ProtectedRoute>
                             }
                           />
