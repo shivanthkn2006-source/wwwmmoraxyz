@@ -81,3 +81,10 @@
 - [x] Zoe/orb answers closeness, feed-ranking and vault questions from live data
 - [ ] Wire dwell/reply/save event capture into existing surfaces (behind a flag, no UI change)
 - [ ] Server-side news carousel worker (quota-safe at 5k users)
+
+## Intimacy / Zoe-written feed (Sep 2026)
+- [x] Closeness signals wired to real interactions: likes, saves, comments, replies and direct messages (previously view/dwell/skip only).
+- [x] `zoe_feed_cards` table with owner-only access + `zoe-feed-cards` backend writer grounded in real rows only (no fabricated posts).
+- [x] Monochrome "From Zoe" card strip above the Mosaic feed with refresh and dismiss.
+- [x] Database lockdown: internal SECURITY DEFINER functions revoked from visitors/signed-in members (65 → 41 linter findings; the rest are functions the app genuinely calls plus the pgvector extension in public).
+- [ ] Signed-in end-to-end proof of card generation — session minting is refused for this account.

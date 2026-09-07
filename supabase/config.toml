@@ -363,3 +363,6 @@ verify_jwt = false
 
 [functions.zoe-shadow-mode]
 verify_jwt = false
+
+[functions.zoe-feed-cards]
+verify_jwt = true
