@@ -9632,6 +9632,51 @@ export type Database = {
         }
         Relationships: []
       }
+      zoe_feed_cards: {
+        Row: {
+          body: string
+          cohort: string | null
+          created_at: string
+          dismissed: boolean
+          expires_at: string | null
+          id: string
+          kind: string
+          related_post_ids: string[]
+          source: Json
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          cohort?: string | null
+          created_at?: string
+          dismissed?: boolean
+          expires_at?: string | null
+          id?: string
+          kind?: string
+          related_post_ids?: string[]
+          source?: Json
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          cohort?: string | null
+          created_at?: string
+          dismissed?: boolean
+          expires_at?: string | null
+          id?: string
+          kind?: string
+          related_post_ids?: string[]
+          source?: Json
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       zoe_feedback_loop: {
         Row: {
           context_when_suggested: Json | null
