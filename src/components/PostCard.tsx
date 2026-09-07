@@ -28,6 +28,7 @@ import { useRealtimeTable } from '@/realtime/GlobalRealtimeProvider';
 import { allowFeedMediaReplay, hasPlayedFeedMedia, markFeedMediaPlayed } from '@/lib/feedPlayback';
 import { logFeedEvent } from '@/lib/feedEventDiagnostics';
 import ZoeCardNarrationControls from '@/components/voice/ZoeCardNarrationControls';
+import { recordFeedEvent } from '@/features/intimacy/feedEvents';
 
 interface Post {
   id: string;
