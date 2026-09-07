@@ -176,6 +176,7 @@ export const MosaicFeed: React.FC<MosaicFeedProps> = ({ limit = 40, className, s
         </DialogContent>
       </Dialog>
     </div>
+    </div>
   );
 };
 
