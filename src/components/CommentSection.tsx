@@ -40,7 +40,7 @@ interface CommentSectionProps {
   onUpdate: () => void;
 }
 
-const CommentSection: React.FC<CommentSectionProps> = ({ postId, onUpdate }) => {
+const CommentSection: React.FC<CommentSectionProps> = ({ postId, postAuthorId, onUpdate }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [comments, setComments] = useState<Comment[]>([]);
