@@ -267,9 +267,7 @@ Deno.serve(async (req: Request) => {
             signals: Object.keys(facts.your_engagement_last_14_days).length,
           },
           headline_topic: topic || 'top stories',
-          },
           headlines: headlines.slice(0, 5),
-          model_meta: {
           model: 'google/gemini-2.5-flash',
           generated_at: new Date().toISOString(),
         },
