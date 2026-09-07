@@ -6,9 +6,9 @@
  * next) and renders them as monochrome cards: image, caption, author.
  */
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useIntimacyFeed } from '@/hooks/useIntimacyFeed';
 import { recordFeedEvent } from '@/features/intimacy/feedEvents';
 import { cn } from '@/lib/utils';
@@ -36,7 +36,7 @@ interface MosaicFeedProps {
 const isImage = (t: string | null) => !t || t.startsWith('image');
 
 export const MosaicFeed: React.FC<MosaicFeedProps> = ({ limit = 40, className, scope = 'all' }) => {
-  const navigate = useNavigate();
+  const [openItem, setOpenItem] = useState<MosaicItem | null>(null);
   const [items, setItems] = useState<MosaicItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -119,7 +119,7 @@ export const MosaicFeed: React.FC<MosaicFeedProps> = ({ limit = 40, className, s
           type="button"
           onClick={() => {
             void recordFeedEvent({ type: 'view', postId: item.id, targetUserId: item.authorId, surface: 'mosaic' });
-            navigate(`/post/${item.id}`);
+            setOpenItem(item);
           }}
           className="mb-3 block w-full break-inside-avoid overflow-hidden rounded-xl border border-border bg-card text-left transition-transform duration-200 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           data-mosaic-card
@@ -152,6 +152,21 @@ export const MosaicFeed: React.FC<MosaicFeedProps> = ({ limit = 40, className, s
           </div>
         </button>
       ))}
+      <Dialog open={!!openItem} onOpenChange={(o) => !o && setOpenItem(null)}>
+        <DialogContent className="max-w-lg overflow-hidden p-0">
+          <DialogHeader className="px-4 pt-4">
+            <DialogTitle className="text-sm font-semibold">{openItem?.displayName}</DialogTitle>
+          </DialogHeader>
+          {openItem?.mediaUrl && (
+            isImage(openItem.mediaType) ? (
+              <img src={openItem.mediaUrl} alt={openItem.content ?? 'Post media'} className="max-h-[60vh] w-full object-contain grayscale" />
+            ) : (
+              <video src={openItem.mediaUrl} controls playsInline className="max-h-[60vh] w-full object-contain grayscale" />
+            )
+          )}
+          {openItem?.content && <p className="px-4 pb-4 text-sm text-foreground">{openItem.content}</p>}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
