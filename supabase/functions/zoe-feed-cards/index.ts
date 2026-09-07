@@ -39,6 +39,52 @@ interface DraftCard {
 const clean = (s: unknown, max: number) =>
   typeof s === 'string' ? s.replace(/\s+/g, ' ').trim().slice(0, max) : '';
 
+
+/** Real trending headlines from Google News (GNews) RSS — keyless, no quota. */
+async function googleNews(query: string, limit = 5): Promise<Array<{ title: string; url: string; source: string; publishedAt: string | null }>> {
+  const q = encodeURIComponent(query.trim() || 'top stories');
+  const url = `https://news.google.com/rss/search?q=${q}&hl=en-US&gl=US&ceid=US:en`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 6000);
+  try {
+    const res = await fetch(url, { signal: controller.signal, headers: { 'User-Agent': 'Mozilla/5.0' } });
+    if (!res.ok) return [];
+    const xml = await res.text();
+    const items = xml.split('<item>').slice(1, limit + 1);
+    return items.map((raw) => {
+      const pick = (tag: string) => {
+        const m = raw.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`));
+        return m ? m[1].replace(/<!\[CDATA\[|\]\]>/g, '').replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim() : '';
+      };
+      return {
+        title: pick('title').slice(0, 180),
+        url: pick('link').slice(0, 500),
+        source: pick('source') || 'Google News',
+        publishedAt: pick('pubDate') || null,
+      };
+    }).filter((h) => h.title && h.url);
+  } catch {
+    return [];
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+const STOP = new Set('the a an and or but for with from this that then they them your you our are was were have has had will just about into over more very really today what when where which who how why been being some what\'s i\'m its it\'s here there'.split(' '));
+
+/** Topic derived from what the member actually wrote — never a hardcoded string. */
+function topicFromPosts(texts: string[]): string {
+  const counts = new Map<string, number>();
+  for (const t of texts) {
+    for (const w of (t || '').toLowerCase().match(/[a-z][a-z'-]{3,}/g) ?? []) {
+      if (STOP.has(w)) continue;
+      counts.set(w, (counts.get(w) ?? 0) + 1);
+    }
+  }
+  const top = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([w]) => w);
+  return top.join(' ');
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
@@ -142,10 +188,25 @@ Deno.serve(async (req: Request) => {
       ),
     };
 
+    const topic = topicFromPosts([
+      ...facts.your_recent_posts.map((p) => p.text),
+      ...facts.recent_posts_from_them.map((p) => p.text),
+    ]);
+    const headlines = await googleNews(topic);
+    // deno-lint-ignore no-explicit-any
+    (facts as any).live_headlines_from_google_news = headlines.map((h) => ({
+      title: h.title,
+      source: h.source,
+      published_at: h.publishedAt,
+    }));
+    // deno-lint-ignore no-explicit-any
+    (facts as any).headline_search_topic = topic || 'top stories';
+
     const hasMaterial =
       facts.your_recent_posts.length > 0 ||
       facts.recent_posts_from_them.length > 0 ||
-      Object.keys(facts.your_engagement_last_14_days).length > 0;
+      Object.keys(facts.your_engagement_last_14_days).length > 0 ||
+      headlines.length > 0;
 
     if (!hasMaterial) {
       return json({ ok: true, created: 0, reason: 'no_real_material_yet' });
@@ -163,7 +224,8 @@ Deno.serve(async (req: Request) => {
             'grounded ONLY in the JSON facts given. Never invent a person, a post, a number, a date or an event. ' +
             'If a fact is not in the JSON, do not mention it. Warm, plain, human, no emoji, no hashtags, no marketing tone. ' +
             'Each card: a title of at most 6 words and a body of at most 45 words. ' +
-            'Reply with JSON only: {"cards":[{"kind":"reflection|nudge|circle","title":"...","body":"...","related_post_ids":["uuid"]}]}. ' +
+            'When live_headlines_from_google_news is present, at most ONE card may be kind "topic": summarise a real headline in the member\'s own interest area, quoting nothing that is not in the facts. ' +
+            'Reply with JSON only: {"cards":[{"kind":"reflection|nudge|circle|topic","title":"...","body":"...","related_post_ids":["uuid"]}]}. ' +
             'related_post_ids may only contain ids that appear in the facts.',
         },
         { role: 'user', content: JSON.stringify(facts) },
@@ -194,7 +256,7 @@ Deno.serve(async (req: Request) => {
     const rows = drafts
       .map((d) => ({
         user_id: userId,
-        kind: ['reflection', 'nudge', 'circle'].includes(String(d.kind)) ? String(d.kind) : 'reflection',
+        kind: ['reflection', 'nudge', 'circle', 'topic'].includes(String(d.kind)) ? String(d.kind) : 'reflection',
         title: clean(d.title, 80),
         body: clean(d.body, 400),
         related_post_ids: (d.related_post_ids ?? []).filter((id) => knownIds.has(id)).slice(0, 4),
@@ -204,6 +266,10 @@ Deno.serve(async (req: Request) => {
             circle_posts: facts.recent_posts_from_them.length,
             signals: Object.keys(facts.your_engagement_last_14_days).length,
           },
+          headline_topic: topic || 'top stories',
+          },
+          headlines: headlines.slice(0, 5),
+          model_meta: {
           model: 'google/gemini-2.5-flash',
           generated_at: new Date().toISOString(),
         },
