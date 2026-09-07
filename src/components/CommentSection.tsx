@@ -268,6 +268,13 @@ const CommentSection: React.FC<CommentSectionProps> = ({ postId, postAuthorId, o
         throw new Error(error.message || 'Failed to post reply');
       }
       
+      void recordFeedEvent({
+        type: 'reply',
+        postId,
+        targetUserId: comments.find((c) => c.id === parentId)?.user_id ?? postAuthorId ?? null,
+        surface: 'comment_section',
+      });
+
       setReplyContent('');
       setReplyingTo(null);
       toast({
