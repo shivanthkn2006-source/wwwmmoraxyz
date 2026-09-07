@@ -205,6 +205,13 @@ const CommentSection: React.FC<CommentSectionProps> = ({ postId, postAuthorId, o
       setCommentImagePreview(null);
       setMentionedUsers([]);
       
+      void recordFeedEvent({
+        type: 'comment',
+        postId,
+        targetUserId: postAuthorId ?? null,
+        surface: 'comment_section',
+      });
+
       // Show comment animation
       setShowCommentAnimation(true);
       setTimeout(() => setShowCommentAnimation(false), 2000);
