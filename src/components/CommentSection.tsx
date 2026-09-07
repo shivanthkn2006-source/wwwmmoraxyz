@@ -35,6 +35,8 @@ interface Comment {
 
 interface CommentSectionProps {
   postId: string;
+  /** Author of the post — used to record closeness signals, never rendered. */
+  postAuthorId?: string;
   onUpdate: () => void;
 }
 
