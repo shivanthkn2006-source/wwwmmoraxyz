@@ -2387,6 +2387,7 @@ const HomePage = () => {
 
   return (
     <>
+      <FeedSignalObserver surface="home" />
       <PageSeo
         title="MMora — Immersive AI Social Platform"
         description="Share loops, selfies and timelines with friends on MMora, the immersive AI social platform powered by Zoe."
