@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { useIntimacyFeed } from '@/hooks/useIntimacyFeed';
 import { recordFeedEvent } from '@/features/intimacy/feedEvents';
 import ZoeFeedCards from '@/components/feed/ZoeFeedCards';
+import { listLegacyMemories, isUnlocked } from '@/features/legacy/legacyVault';
 import { cn } from '@/lib/utils';
 import { useAgeCohort } from '@/hooks/useAgeCohort';
 import { cohortStyle } from '@/features/intimacy/cohortStyle';
@@ -27,6 +28,8 @@ export interface MosaicItem {
   displayName: string;
   username: string;
   avatarUrl: string | null;
+  /** Vault entries are private to their owner; posts are public. */
+  kind?: 'post' | 'vault';
 }
 
 interface MosaicFeedProps {
@@ -104,7 +107,29 @@ export const MosaicFeed: React.FC<MosaicFeedProps> = ({ limit = 40, className, s
             avatarUrl: p?.profile_photo_url ?? null,
           };
         });
-        if (alive) setItems(mapped);
+        // Your own Digital Vault entries, visible only to you (owner-only RLS).
+        let vaultItems: MosaicItem[] = [];
+        if (scope === 'all') {
+          const memories = await listLegacyMemories();
+          vaultItems = memories
+            .filter((m) => isUnlocked(m))
+            .slice(0, 12)
+            .map((m) => ({
+              id: `vault-${m.id}`,
+              authorId: null,
+              createdAt: m.createdAt,
+              content: m.body ? `${m.title} — ${m.body}` : m.title,
+              mediaUrl: m.mediaUrl,
+              mediaType: m.mediaType,
+              velocity: 0,
+              displayName: 'From your vault',
+              username: '',
+              avatarUrl: null,
+              kind: 'vault' as const,
+            }));
+        }
+
+        if (alive) setItems([...mapped, ...vaultItems]);
       } catch {
         if (alive) setItems([]);
       } finally {
@@ -117,7 +142,7 @@ export const MosaicFeed: React.FC<MosaicFeedProps> = ({ limit = 40, className, s
   }, [limit, scope]);
 
   const { ordered } = useIntimacyFeed(items);
-  const visible = useMemo(() => ordered.filter((i) => i.mediaUrl), [ordered]);
+  const visible = useMemo(() => ordered.filter((i) => i.mediaUrl || i.kind === 'vault'), [ordered]);
 
   if (loading) {
     return (
@@ -159,7 +184,7 @@ export const MosaicFeed: React.FC<MosaicFeedProps> = ({ limit = 40, className, s
           data-mosaic-card
           data-author-id={item.authorId ?? ''}
         >
-          {isImage(item.mediaType) ? (
+          {!item.mediaUrl ? null : isImage(item.mediaType) ? (
             <img
               src={item.mediaUrl as string}
               alt={item.content ? item.content.slice(0, 80) : `Post by ${item.displayName}`}
