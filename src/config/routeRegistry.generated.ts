@@ -62,6 +62,7 @@ export const CANONICAL_ROUTES: CanonicalRoute[] = [
   { path: "/legal-nexus", label: "Legal nexus", dynamic: false },
   { path: "/merchant", label: "Merchant", dynamic: false },
   { path: "/mmora", label: "M'Mora", dynamic: false },
+  { path: "/mosaic", label: "Mosaic", dynamic: false },
   { path: "/notification-history", label: "Notification history", dynamic: false },
   { path: "/notification-preferences", label: "Notification preferences", dynamic: false },
   { path: "/omega-evolution", label: "Omega evolution", dynamic: false },
