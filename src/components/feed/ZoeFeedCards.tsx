@@ -14,6 +14,8 @@ import {
   type ZoeFeedCard,
 } from '@/features/intimacy/zoeFeedCards';
 import { cn } from '@/lib/utils';
+import { useAgeCohort } from '@/hooks/useAgeCohort';
+import { cohortStyle } from '@/features/intimacy/cohortStyle';
 
 interface ZoeFeedCardsProps {
   className?: string;
@@ -25,6 +27,8 @@ export const ZoeFeedCards: React.FC<ZoeFeedCardsProps> = ({ className, autoGener
   const [cards, setCards] = useState<ZoeFeedCard[]>([]);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
+  const { cohort } = useAgeCohort();
+  const style = cohortStyle(cohort);
 
   const load = useCallback(async () => {
     const rows = await fetchZoeFeedCards();
@@ -93,10 +97,21 @@ export const ZoeFeedCards: React.FC<ZoeFeedCardsProps> = ({ className, autoGener
         <article
           key={card.id}
           data-zoe-card
-          className="relative rounded-xl border border-border bg-card p-3 pr-9"
+          className={cn('relative border border-border bg-card pr-9', style.cardClass)}
         >
-          <h3 className="text-sm font-semibold leading-snug text-foreground">{card.title}</h3>
-          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{card.body}</p>
+          <h3 className={cn('leading-snug text-foreground', style.titleClass)}>{card.title}</h3>
+          <p className={cn('mt-1 text-muted-foreground', style.bodyClass)}>{card.body}</p>
+          {card.kind === 'topic' && Array.isArray((card.source as { headlines?: Array<{ title: string; source: string }> })?.headlines) && (
+            <ul className="mt-2 space-y-0.5">
+              {((card.source as { headlines: Array<{ title: string; source: string }> }).headlines ?? [])
+                .slice(0, 3)
+                .map((h) => (
+                  <li key={h.title} className="truncate text-[11px] text-muted-foreground">
+                    {h.source}: {h.title}
+                  </li>
+                ))}
+            </ul>
+          )}
           <button
             type="button"
             onClick={() => void onDismiss(card.id)}

@@ -88,3 +88,12 @@
 - [x] Monochrome "From Zoe" card strip above the Mosaic feed with refresh and dismiss.
 - [x] Database lockdown: internal SECURITY DEFINER functions revoked from visitors/signed-in members (65 → 41 linter findings; the rest are functions the app genuinely calls plus the pgvector extension in public).
 - [ ] Signed-in end-to-end proof of card generation — session minting is refused for this account.
+
+## Mosaic / Zoe cards / vault (Sep 7 2026)
+- [x] Zoe's card topic now comes from a real Google News (GNews) RSS search built from the member's own words — no hardcoded topic.
+- [x] Zoe cards render with cohort styling and show the real headlines they were grounded in.
+- [x] Mosaic feed uses cohort columns/spacing and ranks by the intimacy graph (like, save, comment, reply, DM, view, dwell, skip all feed it).
+- [x] Friends scope in the mosaic actually filters to people you follow (previously ignored).
+- [x] Your own unlocked Digital Vault memories appear in your mosaic (owner-only).
+- [x] Security warnings 65 → 32; the remaining 31 are app RPCs signed-in users must be able to call, plus 1 extension-in-public.
+- [ ] Signed-in browser verification of cards/vault in the live preview (blocked: no preview session).
