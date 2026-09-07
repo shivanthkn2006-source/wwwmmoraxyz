@@ -103,6 +103,7 @@ import { AtlasHUD } from '@/components/atlas';
 
 import { useFriendRequests } from "@/hooks/useFriendRequests";
 import PageSeo from "@/components/seo/PageSeo";
+import { FeedSignalObserver } from "@/features/intimacy/FeedSignalObserver";
 import NewContentBadge from '@/components/NewContentBadge';
 import { logFeedEvent } from '@/lib/feedEventDiagnostics';
 import { markPostsSeen, readUnseenPostIds, syncUnseenPostSnapshot, type FeedUpdateSource } from "@/lib/newPostGate";
@@ -2308,7 +2309,7 @@ const HomePage = () => {
     const isToday = Boolean(post.created_at && new Date(post.created_at).toDateString() === new Date().toDateString());
     const isNew = newContentByFeed[feed].has(post.id);
     return (
-      <div key={`${feed}-${post.id}`} className="relative h-full min-h-full w-full shrink-0 snap-start snap-always overflow-hidden" data-post-card data-post-id={post.id} data-today={isToday ? 'true' : 'false'} data-new={isNew ? 'true' : 'false'}>
+      <div key={`${feed}-${post.id}`} className="relative h-full min-h-full w-full shrink-0 snap-start snap-always overflow-hidden" data-post-card data-post-id={post.id} data-author-id={post.user_id ?? undefined} data-today={isToday ? 'true' : 'false'} data-new={isNew ? 'true' : 'false'}>
         {isNew && (
           <NewContentBadge className="right-3 top-3" onViewed={() => dismissNewContent(feed, post.id)} onDiagnostic={diagnoseNewBadge(feed, post.id)} />
         )}
@@ -2387,6 +2388,7 @@ const HomePage = () => {
 
   return (
     <>
+      <FeedSignalObserver surface="home" />
       <PageSeo
         title="MMora — Immersive AI Social Platform"
         description="Share loops, selfies and timelines with friends on MMora, the immersive AI social platform powered by Zoe."
