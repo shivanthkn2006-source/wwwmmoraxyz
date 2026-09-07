@@ -13,6 +13,8 @@ import { useIntimacyFeed } from '@/hooks/useIntimacyFeed';
 import { recordFeedEvent } from '@/features/intimacy/feedEvents';
 import ZoeFeedCards from '@/components/feed/ZoeFeedCards';
 import { cn } from '@/lib/utils';
+import { useAgeCohort } from '@/hooks/useAgeCohort';
+import { cohortStyle } from '@/features/intimacy/cohortStyle';
 
 export interface MosaicItem {
   id: string;
@@ -40,18 +42,41 @@ export const MosaicFeed: React.FC<MosaicFeedProps> = ({ limit = 40, className, s
   const [openItem, setOpenItem] = useState<MosaicItem | null>(null);
   const [items, setItems] = useState<MosaicItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const { cohort } = useAgeCohort();
+  const style = cohortStyle(cohort);
 
   useEffect(() => {
     let alive = true;
     void (async () => {
       setLoading(true);
       try {
-        const { data, error } = await supabase
+        let followedIds: string[] | null = null;
+        if (scope === 'friends') {
+          const { data: auth } = await supabase.auth.getUser();
+          const uid = auth?.user?.id;
+          if (!uid) {
+            if (alive) { setItems([]); setLoading(false); }
+            return;
+          }
+          const { data: follows } = await supabase
+            .from('user_follows')
+            .select('following_id')
+            .eq('follower_id', uid);
+          followedIds = Array.from(new Set([...(follows ?? []).map((f: any) => f.following_id), uid]));
+          if (followedIds.length === 0) {
+            if (alive) { setItems([]); setLoading(false); }
+            return;
+          }
+        }
+
+        let query = supabase
           .from('posts')
           .select('id, user_id, content, media_url, media_type, likes_count, comments_count, created_at')
           .not('media_url', 'is', null)
           .order('created_at', { ascending: false })
           .limit(limit);
+        if (followedIds) query = query.in('user_id', followedIds);
+        const { data, error } = await query;
         if (error) throw error;
 
         const rows = data ?? [];
@@ -121,7 +146,7 @@ export const MosaicFeed: React.FC<MosaicFeedProps> = ({ limit = 40, className, s
   return (
     <div>
       <ZoeFeedCards />
-    <div className={cn('columns-2 gap-3 p-3 [column-fill:_balance]', className)} data-testid="mosaic-feed">
+    <div className={cn(style.columnsClass, style.gapClass, 'p-3 [column-fill:_balance]', className)} data-testid="mosaic-feed">
       {visible.map((item) => (
         <button
           key={item.id}
