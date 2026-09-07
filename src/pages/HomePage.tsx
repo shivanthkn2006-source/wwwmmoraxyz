@@ -103,6 +103,7 @@ import { AtlasHUD } from '@/components/atlas';
 
 import { useFriendRequests } from "@/hooks/useFriendRequests";
 import PageSeo from "@/components/seo/PageSeo";
+import { FeedSignalObserver } from "@/features/intimacy/FeedSignalObserver";
 import NewContentBadge from '@/components/NewContentBadge';
 import { logFeedEvent } from '@/lib/feedEventDiagnostics';
 import { markPostsSeen, readUnseenPostIds, syncUnseenPostSnapshot, type FeedUpdateSource } from "@/lib/newPostGate";
