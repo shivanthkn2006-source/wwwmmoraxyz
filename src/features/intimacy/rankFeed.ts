@@ -19,6 +19,8 @@ export interface RankableItem {
 export interface RankOptions {
   /** targetUserId -> intimacy score */
   intimacy: Map<string, number>;
+  /** authorId -> astrology affinity 0…1. Capped contribution, never dominant. */
+  astro?: Map<string, number>;
   /** Half-life of recency in hours. */
   halfLifeHours?: number;
   /** Max popularity contribution — the anti-virality cap. */
@@ -41,7 +43,8 @@ export function scoreItem(item: RankableItem, opts: RankOptions): number {
   const closeness = item.authorId ? (opts.intimacy.get(item.authorId) ?? 0) : 0;
   const closenessScore = Math.log2(1 + Math.max(0, closeness)); // diminishing
   const velocity = Math.min(opts.velocityCap ?? 3, Math.log2(1 + Math.max(0, item.velocity ?? 0)));
-  return closenessScore * 2 + recency * 3 + velocity;
+  const astro = item.authorId ? Math.min(1, Math.max(0, opts.astro?.get(item.authorId) ?? 0)) : 0;
+  return closenessScore * 2 + recency * 3 + velocity + astro;
 }
 
 export function rankByIntimacy<T extends RankableItem>(items: T[], opts: RankOptions): T[] {

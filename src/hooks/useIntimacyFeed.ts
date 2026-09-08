@@ -14,13 +14,15 @@ export interface UseIntimacyFeedOptions {
   enabled?: boolean;
   /** Recompute the graph from raw events on mount (default: false — read only). */
   recomputeOnMount?: boolean;
+  /** authorId -> astrology affinity 0…1, blended into the score when present. */
+  astro?: Map<string, number>;
 }
 
 export function useIntimacyFeed<T extends RankableItem>(
   items: T[],
   options: UseIntimacyFeedOptions = {},
 ) {
-  const { enabled = true, recomputeOnMount = false } = options;
+  const { enabled = true, recomputeOnMount = false, astro } = options;
   const [edges, setEdges] = useState<IntimacyEdge[]>([]);
   const [loading, setLoading] = useState(enabled);
 
@@ -55,9 +57,10 @@ export function useIntimacyFeed<T extends RankableItem>(
   }, [enabled, recomputeOnMount]);
 
   const ordered = useMemo(() => {
-    if (!enabled || edges.length === 0) return items;
-    return rankByIntimacy(items, { intimacy: intimacyMap(edges) });
-  }, [items, edges, enabled]);
+    const hasAstro = !!astro && astro.size > 0;
+    if (!enabled || (edges.length === 0 && !hasAstro)) return items;
+    return rankByIntimacy(items, { intimacy: intimacyMap(edges), astro });
+  }, [items, edges, enabled, astro]);
 
   return { ordered, edges, loading, refresh: () => load(true) };
 }
