@@ -109,6 +109,15 @@ Deno.serve(async (req: Request) => {
   try {
     const since = new Date(Date.now() - 14 * 24 * 3600_000).toISOString();
 
+    // The member's generation decides Zoe's register — never her facts.
+    const { data: meProfile } = await asUser
+      .from('profiles')
+      .select('age_cohort, birth_date, date_of_birth')
+      .eq('user_id', userId)
+      .maybeSingle();
+    const cohort = cohortOf(meProfile);
+
+
     const [{ data: fresh }, { data: mine }, { data: closeness }, { data: signals }] =
       await Promise.all([
         asUser
