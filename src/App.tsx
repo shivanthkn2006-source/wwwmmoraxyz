@@ -129,6 +129,7 @@ const ZoeBrainDashboardPage = lazy(() => import("./pages/ZoeBrainDashboardPage")
 const AdminSearchIndexPage = lazy(() => import("./pages/AdminSearchIndexPage")); // SEARCH INDEX BACKFILL
 const AdminFeedDebugPage = lazy(() => import("./pages/AdminFeedDebugPage")); // FEED/LOOPS DEBUGGER
 const AstroPreviewPage = lazy(() => import("./pages/AstroPreviewPage")); // M'MORA ZOE DAILY ALIGNMENT HARNESS
+const AstrologyPage = lazy(() => import("./pages/AstrologyPage")); // MEMBER ASTROLOGY PAGE
 const ZoeAstroDashboardPage = lazy(() => import("./pages/ZoeAstroDashboardPage")); // M'MORA ZOE ALIGNMENT DASHBOARD
 const GrowthInsightsPage = lazy(() => import("./pages/GrowthInsightsPage")); // PERSONAL GROWTH ENGINE ARCHIVE
 const DHFCompassPage = lazy(() => import("./pages/DHFCompassPage")); // ZOE'S DHF ARCHIVE
@@ -876,6 +877,14 @@ const RouteAwareShell = () => {
                             element={
                               <ProtectedRoute>
                                 <AdminGrowthDeliveryPage />
+                              </ProtectedRoute>
+                            }
+                          />
+                          <Route
+                            path="/astrology"
+                            element={
+                              <ProtectedRoute>
+                                <AstrologyPage />
                               </ProtectedRoute>
                             }
                           />
