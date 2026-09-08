@@ -16,6 +16,7 @@ import { listLegacyMemories, isUnlocked } from '@/features/legacy/legacyVault';
 import { cn } from '@/lib/utils';
 import { useAgeCohort } from '@/hooks/useAgeCohort';
 import { cohortStyle } from '@/features/intimacy/cohortStyle';
+import { buildAstroBoost } from '@/features/astro/astroAffinity';
 
 export interface MosaicItem {
   id: string;
@@ -47,6 +48,7 @@ export const MosaicFeed: React.FC<MosaicFeedProps> = ({ limit = 40, className, s
   const [loading, setLoading] = useState(true);
   const { cohort } = useAgeCohort();
   const style = cohortStyle(cohort);
+  const [astro, setAstro] = useState<Map<string, number>>(new Map());
 
   useEffect(() => {
     let alive = true;
@@ -141,9 +143,18 @@ export const MosaicFeed: React.FC<MosaicFeedProps> = ({ limit = 40, className, s
     };
   }, [limit, scope]);
 
+  // Astrology affinity from real birth dates — empty map when yours is unset.
+  useEffect(() => {
+    let alive = true;
+    const authorIds = items.map((i) => i.authorId).filter(Boolean) as string[];
+    if (authorIds.length === 0) return;
+    void buildAstroBoost(authorIds).then((m) => { if (alive) setAstro(m); });
+    return () => { alive = false; };
+  }, [items]);
+
   // Recompute closeness from the member's own real interactions on open, so
   // likes, comments, saves, messages and dwell actually move the ordering.
-  const { ordered } = useIntimacyFeed(items, { recomputeOnMount: true });
+  const { ordered } = useIntimacyFeed(items, { recomputeOnMount: true, astro });
 
   const visible = useMemo(() => ordered.filter((i) => i.mediaUrl || i.kind === 'vault'), [ordered]);
 
