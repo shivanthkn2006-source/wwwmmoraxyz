@@ -265,7 +265,9 @@ Deno.serve(async (req: Request) => {
             'Each card: a title of at most 6 words and a body of at most 45 words. ' +
             'When live_headlines_from_google_news is present, at most ONE card may be kind "topic": summarise a real headline in the member\'s own interest area, quoting nothing that is not in the facts. ' +
             'Reply with JSON only: {"cards":[{"kind":"reflection|nudge|circle|topic","title":"...","body":"...","related_post_ids":["uuid"]}]}. ' +
-            'related_post_ids may only contain ids that appear in the facts.',
+            'related_post_ids may only contain ids that appear in the facts. ' +
+            `The member's generation is ${cohort}. ${TONE[cohort]} Change only the wording and rhythm for this generation — never the facts.`,
+
         },
         { role: 'user', content: JSON.stringify(facts) },
       ],
