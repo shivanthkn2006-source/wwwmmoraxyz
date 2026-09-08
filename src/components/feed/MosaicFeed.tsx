@@ -6,6 +6,7 @@
  * next) and renders them as monochrome cards: image, caption, author.
  */
 import React, { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -184,6 +185,11 @@ export const MosaicFeed: React.FC<MosaicFeedProps> = ({ limit = 40, className, s
 
   return (
     <div>
+      <div className="flex items-center justify-end px-3 pt-3">
+        <Link to="/astrology" className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground underline-offset-4 hover:underline">
+          Astrology
+        </Link>
+      </div>
       <ZoeFeedCards />
     <div className={cn(style.columnsClass, style.gapClass, 'p-3 [column-fill:_balance]', className)} data-testid="mosaic-feed">
       {visible.map((item) => (
