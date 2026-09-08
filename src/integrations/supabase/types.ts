@@ -11990,6 +11990,7 @@ export type Database = {
       cleanup_old_activity_logs: { Args: never; Returns: undefined }
       cleanup_old_face_login_attempts: { Args: never; Returns: undefined }
       cleanup_stale_sessions: { Args: never; Returns: number }
+      cohort_from_birth_date: { Args: { bd: string }; Returns: string }
       complete_agent_deployment: {
         Args: { p_deployment_id: string }
         Returns: Json
