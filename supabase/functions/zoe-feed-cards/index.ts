@@ -250,7 +250,7 @@ Deno.serve(async (req: Request) => {
 
     const match = raw.match(/\{[\s\S]*\}/);
     if (!match) {
-      console.error('[zoe-feed-cards] no JSON. raw=', JSON.stringify(a.data).slice(0, 900));
+      console.error('[zoe-feed-cards] no JSON in model output; content length', raw.length);
       return json({ ok: false, created: 0, error: 'unparsable_model_output' }, 502);
     }
 
