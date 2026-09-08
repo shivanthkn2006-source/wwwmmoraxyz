@@ -97,3 +97,11 @@
 - [x] Your own unlocked Digital Vault memories appear in your mosaic (owner-only).
 - [x] Security warnings 65 → 32; the remaining 31 are app RPCs signed-in users must be able to call, plus 1 extension-in-public.
 - [ ] Signed-in browser verification of cards/vault in the live preview (blocked: no preview session).
+
+## Generational + astrology feed (Sep 8 2026)
+- [x] Age group derived from birth date for every member (DB trigger + backfill); 9 members have no birth date and stay neutral.
+- [x] Generation tone passed into Zoe's card writing and stored on each card.
+- [x] Generation density applied on Home (Mosaic + Zoe cards).
+- [x] Member astrology page at /astrology from real birth date, day lord and Swiss-Ephemeris readings.
+- [x] Astrology affinity wired into Mosaic ranking, capped so closeness always wins.
+- [ ] 34 database advisory warnings (extension placement + elevated-privilege helpers) — separate pass.
