@@ -315,7 +315,9 @@ Deno.serve(async (req: Request) => {
         kind: ['reflection', 'nudge', 'circle', 'topic'].includes(String(d.kind)) ? String(d.kind) : 'reflection',
         title: clean(d.title, 80),
         body: clean(d.body, 400),
+        cohort,
         related_post_ids: (d.related_post_ids ?? []).filter((id) => knownIds.has(id)).slice(0, 4),
+
         source: {
           generated_from: {
             your_posts: facts.your_recent_posts.length,
