@@ -39,6 +39,36 @@ interface DraftCard {
 const clean = (s: unknown, max: number) =>
   typeof s === 'string' ? s.replace(/\s+/g, ' ').trim().slice(0, max) : '';
 
+type Cohort = 'genz' | 'millennial' | 'genx' | 'boomer' | 'unspecified';
+
+const TONE: Record<Cohort, string> = {
+  genz: 'Register: short, low-key, unpolished lines. Dry warmth. No corporate polish, no exclamation stacking, no emoji.',
+  millennial: 'Register: conversational with light self-awareness. Clear structure, a little humour, no jargon.',
+  genx: 'Register: plain and direct. Point first, context second. No hype.',
+  boomer: 'Register: warm and complete, full sentences, clear explanations. No slang, no abbreviations.',
+  unspecified: 'Register: natural and plain.',
+};
+
+function cohortFromBirthDate(bd?: string | null): Cohort {
+  if (!bd) return 'unspecified';
+  const y = new Date(bd).getFullYear();
+  if (!Number.isFinite(y)) return 'unspecified';
+  if (y >= 1997) return 'genz';
+  if (y >= 1981) return 'millennial';
+  if (y >= 1965) return 'genx';
+  if (y >= 1946) return 'boomer';
+  return 'unspecified';
+}
+
+function cohortOf(
+  profile?: { age_cohort?: string | null; birth_date?: string | null; date_of_birth?: string | null } | null,
+): Cohort {
+  const stored = profile?.age_cohort as Cohort | undefined | null;
+  if (stored && stored !== 'unspecified' && stored in TONE) return stored;
+  return cohortFromBirthDate(profile?.birth_date ?? profile?.date_of_birth ?? null);
+}
+
+
 
 /** Real trending headlines from Google News (GNews) RSS — keyless, no quota. */
 async function googleNews(query: string, limit = 5): Promise<Array<{ title: string; url: string; source: string; publishedAt: string | null }>> {
