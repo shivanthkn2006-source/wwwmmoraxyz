@@ -32,6 +32,7 @@ export const CANONICAL_ROUTES: CanonicalRoute[] = [
   { path: "/analytics-dashboard", label: "Analytics dashboard", dynamic: false },
   { path: "/anka-shastra", label: "Anka shastra", dynamic: false },
   { path: "/asi-test", label: "ASI test", dynamic: false },
+  { path: "/astrology", label: "Astrology", dynamic: false },
   { path: "/attack-response", label: "Attack response", dynamic: false },
   { path: "/auth", label: "Auth", dynamic: false },
   { path: "/beta", label: "Beta", dynamic: false },
