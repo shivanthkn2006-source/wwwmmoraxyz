@@ -215,7 +215,7 @@ Deno.serve(async (req: Request) => {
     const ai = await callAIGateway('zoe-feed-cards', 'feed_card_generation', userId, {
       model: 'google/gemini-2.5-flash',
       temperature: 0.6,
-      maxTokens: 700,
+      maxTokens: 1500,
       messages: [
         {
           role: 'system',
@@ -237,16 +237,31 @@ Deno.serve(async (req: Request) => {
     }
 
     // deno-lint-ignore no-explicit-any
-    const raw: string = (ai as any).content ?? (ai as any).data?.choices?.[0]?.message?.content ?? '';
+    const a = ai as any;
+    const msg = a.data?.choices?.[0]?.message;
+    const raw: string =
+      (typeof a.content === 'string' ? a.content : '') ||
+      (typeof msg?.content === 'string'
+        ? msg.content
+        : Array.isArray(msg?.content)
+          ? msg.content.map((c: { text?: string }) => c?.text ?? '').join('\n')
+          : '') ||
+      (typeof a.data?.output_text === 'string' ? a.data.output_text : '');
+
     const match = raw.match(/\{[\s\S]*\}/);
-    if (!match) return json({ ok: false, created: 0, error: 'unparsable_model_output' }, 502);
+    if (!match) {
+      console.error('[zoe-feed-cards] no JSON in model output; content length', raw.length);
+      return json({ ok: false, created: 0, error: 'unparsable_model_output' }, 502);
+    }
 
     let drafts: DraftCard[] = [];
     try {
       drafts = JSON.parse(match[0]).cards ?? [];
     } catch {
+      console.error('[zoe-feed-cards] JSON parse failed. head=', match[0].slice(0, 300));
       return json({ ok: false, created: 0, error: 'unparsable_model_output' }, 502);
     }
+
 
     const knownIds = new Set([
       ...facts.your_recent_posts.map((p) => p.id),
