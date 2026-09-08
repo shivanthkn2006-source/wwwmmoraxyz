@@ -141,7 +141,10 @@ export const MosaicFeed: React.FC<MosaicFeedProps> = ({ limit = 40, className, s
     };
   }, [limit, scope]);
 
-  const { ordered } = useIntimacyFeed(items);
+  // Recompute closeness from the member's own real interactions on open, so
+  // likes, comments, saves, messages and dwell actually move the ordering.
+  const { ordered } = useIntimacyFeed(items, { recomputeOnMount: true });
+
   const visible = useMemo(() => ordered.filter((i) => i.mediaUrl || i.kind === 'vault'), [ordered]);
 
   if (loading) {

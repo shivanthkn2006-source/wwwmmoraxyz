@@ -39,6 +39,36 @@ interface DraftCard {
 const clean = (s: unknown, max: number) =>
   typeof s === 'string' ? s.replace(/\s+/g, ' ').trim().slice(0, max) : '';
 
+type Cohort = 'genz' | 'millennial' | 'genx' | 'boomer' | 'unspecified';
+
+const TONE: Record<Cohort, string> = {
+  genz: 'Register: short, low-key, unpolished lines. Dry warmth. No corporate polish, no exclamation stacking, no emoji.',
+  millennial: 'Register: conversational with light self-awareness. Clear structure, a little humour, no jargon.',
+  genx: 'Register: plain and direct. Point first, context second. No hype.',
+  boomer: 'Register: warm and complete, full sentences, clear explanations. No slang, no abbreviations.',
+  unspecified: 'Register: natural and plain.',
+};
+
+function cohortFromBirthDate(bd?: string | null): Cohort {
+  if (!bd) return 'unspecified';
+  const y = new Date(bd).getFullYear();
+  if (!Number.isFinite(y)) return 'unspecified';
+  if (y >= 1997) return 'genz';
+  if (y >= 1981) return 'millennial';
+  if (y >= 1965) return 'genx';
+  if (y >= 1946) return 'boomer';
+  return 'unspecified';
+}
+
+function cohortOf(
+  profile?: { age_cohort?: string | null; birth_date?: string | null; date_of_birth?: string | null } | null,
+): Cohort {
+  const stored = profile?.age_cohort as Cohort | undefined | null;
+  if (stored && stored !== 'unspecified' && stored in TONE) return stored;
+  return cohortFromBirthDate(profile?.birth_date ?? profile?.date_of_birth ?? null);
+}
+
+
 
 /** Real trending headlines from Google News (GNews) RSS — keyless, no quota. */
 async function googleNews(query: string, limit = 5): Promise<Array<{ title: string; url: string; source: string; publishedAt: string | null }>> {
@@ -108,6 +138,15 @@ Deno.serve(async (req: Request) => {
 
   try {
     const since = new Date(Date.now() - 14 * 24 * 3600_000).toISOString();
+
+    // The member's generation decides Zoe's register — never her facts.
+    const { data: meProfile } = await asUser
+      .from('profiles')
+      .select('age_cohort, birth_date, date_of_birth')
+      .eq('user_id', userId)
+      .maybeSingle();
+    const cohort = cohortOf(meProfile);
+
 
     const [{ data: fresh }, { data: mine }, { data: closeness }, { data: signals }] =
       await Promise.all([
@@ -226,7 +265,9 @@ Deno.serve(async (req: Request) => {
             'Each card: a title of at most 6 words and a body of at most 45 words. ' +
             'When live_headlines_from_google_news is present, at most ONE card may be kind "topic": summarise a real headline in the member\'s own interest area, quoting nothing that is not in the facts. ' +
             'Reply with JSON only: {"cards":[{"kind":"reflection|nudge|circle|topic","title":"...","body":"...","related_post_ids":["uuid"]}]}. ' +
-            'related_post_ids may only contain ids that appear in the facts.',
+            'related_post_ids may only contain ids that appear in the facts. ' +
+            `The member's generation is ${cohort}. ${TONE[cohort]} Change only the wording and rhythm for this generation — never the facts.`,
+
         },
         { role: 'user', content: JSON.stringify(facts) },
       ],
@@ -274,7 +315,9 @@ Deno.serve(async (req: Request) => {
         kind: ['reflection', 'nudge', 'circle', 'topic'].includes(String(d.kind)) ? String(d.kind) : 'reflection',
         title: clean(d.title, 80),
         body: clean(d.body, 400),
+        cohort,
         related_post_ids: (d.related_post_ids ?? []).filter((id) => knownIds.has(id)).slice(0, 4),
+
         source: {
           generated_from: {
             your_posts: facts.your_recent_posts.length,

@@ -13,6 +13,8 @@ export interface ZoeFeedCard {
   kind: string;
   title: string;
   body: string;
+  /** The generation this card was written for. */
+  cohort: string | null;
   related_post_ids: string[];
   source: Record<string, unknown>;
   created_at: string;
@@ -24,11 +26,12 @@ export async function fetchZoeFeedCards(limit = 6): Promise<ZoeFeedCard[]> {
 
   const { data, error } = await supabase
     .from('zoe_feed_cards')
-    .select('id, kind, title, body, related_post_ids, source, created_at')
+    .select('id, kind, title, body, cohort, related_post_ids, source, created_at')
     .eq('user_id', auth.user.id)
     .eq('dismissed', false)
     .order('created_at', { ascending: false })
     .limit(limit);
+
 
   if (error) {
     console.warn('[zoeFeedCards] read failed:', error.message);

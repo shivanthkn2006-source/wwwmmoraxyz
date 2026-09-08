@@ -77,7 +77,11 @@ export const ZoeFeedCards: React.FC<ZoeFeedCardsProps> = ({ className, autoGener
         <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
           <Sparkles className="h-3 w-3" aria-hidden />
           From Zoe
+          <span className="ml-1 rounded-sm border border-border px-1.5 py-0.5 text-[10px] font-medium normal-case tracking-normal text-muted-foreground">
+            {style.label}
+          </span>
         </p>
+
         <Button
           type="button"
           size="sm"
