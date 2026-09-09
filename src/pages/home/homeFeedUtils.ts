@@ -181,6 +181,7 @@ export function xhrUploadToPosts(
   path: string,
   accessToken: string,
   onProgress: (pct: number) => void,
+  cacheControl?: string,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const url = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/posts/${path.split('/').map(encodeURIComponent).join('/')}`;
@@ -189,9 +190,11 @@ export function xhrUploadToPosts(
     xhr.setRequestHeader('Authorization', `Bearer ${accessToken}`);
     xhr.setRequestHeader('x-upsert', 'false');
     xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+    if (cacheControl) xhr.setRequestHeader('cache-control', `max-age=${cacheControl}`);
     xhr.upload.onprogress = (ev) => {
       if (ev.lengthComputable) onProgress(Math.round((ev.loaded / ev.total) * 100));
     };
+
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) resolve();
       else reject(new Error(`Upload failed (${xhr.status}): ${xhr.responseText?.slice(0, 200) || 'unknown'}`));
