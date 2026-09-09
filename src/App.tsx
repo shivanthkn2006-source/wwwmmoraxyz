@@ -130,6 +130,7 @@ const AdminSearchIndexPage = lazy(() => import("./pages/AdminSearchIndexPage"));
 const AdminFeedDebugPage = lazy(() => import("./pages/AdminFeedDebugPage")); // FEED/LOOPS DEBUGGER
 const AstroPreviewPage = lazy(() => import("./pages/AstroPreviewPage")); // M'MORA ZOE DAILY ALIGNMENT HARNESS
 const AstrologyPage = lazy(() => import("./pages/AstrologyPage")); // MEMBER ASTROLOGY PAGE
+const PrivacyDataPage = lazy(() => import("./pages/PrivacyDataPage")); // EXPORT / DELETE MY DATA
 const ZoeAstroDashboardPage = lazy(() => import("./pages/ZoeAstroDashboardPage")); // M'MORA ZOE ALIGNMENT DASHBOARD
 const GrowthInsightsPage = lazy(() => import("./pages/GrowthInsightsPage")); // PERSONAL GROWTH ENGINE ARCHIVE
 const DHFCompassPage = lazy(() => import("./pages/DHFCompassPage")); // ZOE'S DHF ARCHIVE
