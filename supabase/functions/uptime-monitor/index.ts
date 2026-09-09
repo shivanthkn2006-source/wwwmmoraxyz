@@ -39,7 +39,7 @@ interface ProbeResult {
 async function probe(url: string, key: string, target: typeof TARGETS[number]): Promise<ProbeResult> {
   const started = Date.now();
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), PROBE_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), target.timeoutMs ?? PROBE_TIMEOUT_MS);
   try {
     const res = await fetch(`${url}/functions/v1/${target.path}`, {
       method: 'POST',
