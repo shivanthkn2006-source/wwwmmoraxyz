@@ -182,35 +182,26 @@ export const ZoeMonitorProvider: React.FC<ZoeMonitorProviderProps> = ({ children
         crashedUsername = profile?.username || 'Unknown User';
       }
 
-      // Create notification for each admin
-      const notifications = admins.map(admin => ({
-        user_id: admin.id,
-        from_user_id: userId || admin.id,
-        type: 'system_alert',
-        priority: severity === 'critical' ? 5 : 4,
-        read: false,
-        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-        context_data: {
-          title: `🚨 Zoe Sentry Alert: ${severity.toUpperCase()}`,
+      // Cross-user alerts go through a rate-limited, server-authorised channel.
+      const { error } = await supabase.rpc('notify_admins_of_failure', {
+        p_type: 'zoe_sentry',
+        p_title: `🚨 Zoe Sentry Alert: ${severity.toUpperCase()}`,
+        p_context: {
           message: `Alert: User @${crashedUsername} just crashed on the ${screenName}. Error: ${errorMessage.substring(0, 100)}${errorMessage.length > 100 ? '...' : ''}`,
-          crash_type: 'zoe_sentry',
           crashed_user_id: userId,
           crashed_username: crashedUsername,
           screen_name: screenName,
           severity,
           timestamp: new Date().toISOString(),
-        }
-      }));
-
-      const { error } = await supabase
-        .from('notifications')
-        .insert(notifications as any);
+        },
+      });
 
       if (error) {
         console.error('[ZoeMonitor] Failed to notify admin:', error);
       } else {
         console.log('[ZoeMonitor] Admin notified via Zoe Whisper:', admins.map(a => a.username).join(', '));
       }
+
     } catch (e) {
       console.error('[ZoeMonitor] Admin notification failed:', e);
     }
