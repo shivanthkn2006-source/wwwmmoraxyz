@@ -20,7 +20,8 @@ const json = (body: Record<string, unknown>, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
 /** Tables whose rows belong to a member, discovered from the schema. */
-async function ownedTables(db: ReturnType<typeof createClient>): Promise<string[]> {
+// deno-lint-ignore no-explicit-any
+async function ownedTables(db: any): Promise<string[]> {
   const { data } = await db.rpc('list_owned_tables');
   return Array.isArray(data) ? (data as { table_name: string }[]).map((r) => r.table_name) : [];
 }
