@@ -135,7 +135,27 @@ serve(async (req) => {
       return json({ ok: true, code: row.code });
     }
 
+    // revoke-own — a member (or the security sentinel acting for them) burns the
+    // invite bound to their own account. Never touches anyone else's code.
+    if (action === 'revoke-own') {
+      if (!userId) return json({ ok: false, error: 'sign in required' }, 401);
+      const reason = String(guard.body.reason ?? 'revoked after a security violation').slice(0, 200);
+      const { error } = await db
+        .from('invite_codes')
+        .update({
+          is_active: false,
+          revoked_at: new Date().toISOString(),
+          revoked_by: userId,
+          revoked_reason: reason,
+        })
+        .eq('used_by', userId)
+        .is('revoked_at', null);
+      if (error) return json({ ok: false, error: 'revoke failed' }, 500);
+      return json({ ok: true });
+    }
+
     if (!isAdmin) return json({ ok: false, error: 'sovereign administrator only' }, 403);
+
 
     if (action === 'issue') {
       const count = Math.min(Math.max(Number(guard.body.count ?? 1) || 1, 1), 25);
