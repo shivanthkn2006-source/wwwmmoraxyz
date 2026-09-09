@@ -2053,18 +2053,23 @@ const HomePage = () => {
       const token = session?.access_token;
       const uploadedPaths: string[] = [];
       const attachments: Array<{ media_url: string; media_preview_url: string | null; media_type: 'image' | 'video' | 'pdf'; file_name: string; file_size: number; sort_order: number }> = [];
+      const videoAssets: Array<{ index: number; storagePath: string; playbackUrl: string; lowBandwidthUrl: string | null; posterUrl: string | null; renditions: VideoRenditions }> = [];
       for (let index = 0; index < typedFiles.length; index += 1) {
         const { file, type } = typedFiles[index];
         if (!type || type === 'document') continue;
         let uploadFile = file;
-        if (type === 'video') uploadFile = await transcodeVideoForPreview(file).catch(() => file);
+        let renditions: VideoRenditions | null = null;
+        if (type === 'video') {
+          renditions = await prepareVideoRenditions(file).catch(() => null);
+          uploadFile = renditions?.delivery ?? file;
+        }
         let preview = type === 'video' ? await captureVideoPreview(uploadFile) : null;
         const ext = (uploadFile.name.split('.').pop() || (type === 'video' ? 'webm' : type === 'image' ? 'jpg' : 'pdf')).toLowerCase();
         const path = `${user.id}/loops/${Date.now()}-${index}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
         await withRetry(async () => {
-          if (token) await xhrUploadToPosts(uploadFile, path, token, (pct) => setUploadProgress(Math.round(((index + pct / 100) / Math.max(1, typedFiles.length)) * 100)));
+          if (token) await xhrUploadToPosts(uploadFile, path, token, (pct) => setUploadProgress(Math.round(((index + pct / 100) / Math.max(1, typedFiles.length)) * 100)), CDN_CACHE_CONTROL);
           else {
-            const { error } = await supabase.storage.from('posts').upload(path, uploadFile, { contentType: uploadFile.type, upsert: false });
+            const { error } = await supabase.storage.from('posts').upload(path, uploadFile, { contentType: uploadFile.type, cacheControl: CDN_CACHE_CONTROL, upsert: false });
             if (error) throw error;
           }
         }, 3, 900);
@@ -2072,14 +2077,25 @@ const HomePage = () => {
         const { data: pub } = supabase.storage.from('posts').getPublicUrl(path);
         if (type === 'video' && preview) {
           const posterPath = `${user.id}/loops/posters/${Date.now()}-${index}-${Math.random().toString(36).slice(2, 8)}.jpg`;
-          const { error: posterError } = await supabase.storage.from('posts').upload(posterPath, dataUrlToFile(preview, 'loop-poster.jpg'), { contentType: 'image/jpeg', upsert: false });
+          const { error: posterError } = await supabase.storage.from('posts').upload(posterPath, dataUrlToFile(preview, 'loop-poster.jpg'), { contentType: 'image/jpeg', cacheControl: CDN_CACHE_CONTROL, upsert: false });
           if (!posterError) {
             uploadedPaths.push(posterPath);
             preview = supabase.storage.from('posts').getPublicUrl(posterPath).data.publicUrl;
           }
         }
+        // Low-bandwidth rendition for metered / slow connections.
+        let lowBandwidthUrl: string | null = null;
+        if (type === 'video' && renditions?.lowBandwidth) {
+          const lowPath = `${user.id}/loops/low/${Date.now()}-${index}-${Math.random().toString(36).slice(2, 8)}.webm`;
+          lowBandwidthUrl = await uploadRendition(renditions.lowBandwidth, lowPath).catch(() => null);
+          if (lowBandwidthUrl) uploadedPaths.push(lowPath);
+        }
+        if (type === 'video' && renditions) {
+          videoAssets.push({ index, storagePath: path, playbackUrl: pub.publicUrl, lowBandwidthUrl, posterUrl: preview, renditions });
+        }
         attachments.push({ media_url: pub.publicUrl, media_preview_url: preview || (type === 'image' ? pub.publicUrl : null), media_type: type, file_name: file.name, file_size: file.size, sort_order: index });
       }
+
 
       setUploadState('saving');
       const tagText = metadata?.tags?.map((tag) => `#${tag}`).join(' ') || '';
