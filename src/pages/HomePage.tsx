@@ -115,6 +115,7 @@ import DHFCompassCard from '@/components/dhf/DHFCompassCard';
 import { useDhfDailyFeed } from '@/hooks/useDhfDailyFeed';
 import { compassSlotTimestamp } from '@/lib/dhfCompass';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
+import { screenUpload, reportBlockedUpload } from '@/lib/uploadModeration';
 
 
 

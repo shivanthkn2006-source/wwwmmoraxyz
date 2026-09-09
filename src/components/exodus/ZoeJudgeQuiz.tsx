@@ -10,11 +10,11 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
+// Answers never reach the browser — scoring happens on the server.
 interface Question {
   id: string;
   question: string;
   options: string[];
-  correct_option: number;
   points: number;
 }
 
