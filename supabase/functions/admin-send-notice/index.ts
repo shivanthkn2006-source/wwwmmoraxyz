@@ -59,7 +59,7 @@ serve(async (req) => {
     const { title, message, priority, expiresAt } = requestSchema.parse(body);
 
     // Get all users
-    const { data: profiles, error: profilesError } = await supabase
+    const { data: profiles, error: profilesError } = await db
       .from('profiles')
       .select('user_id');
 
@@ -87,7 +87,7 @@ serve(async (req) => {
       context_data: { title, message, priority },
     }));
 
-    const { error: insertError } = await supabase
+    const { error: insertError } = await db
       .from('notifications')
       .insert(notifications);
 
