@@ -73,47 +73,22 @@ export const QuantumGatekeeper: React.FC<QuantumGatekeeperProps> = ({
     return isAdmin;
   }, [user, logEvent]);
 
-  // Validate invite token
+  // Validate invite token — invite codes are server-authoritative; the browser
+  // never reads or writes the invite_codes table directly.
   const validateInviteToken = useCallback(async (token: string): Promise<boolean> => {
     try {
-      const { data: invite, error } = await supabase
-        .from('invite_codes')
-        .select('*')
-        .eq('code', token)
-        .eq('is_active', true)
-        .single();
+      const { data, error } = await supabase.functions.invoke('beta-invite', {
+        body: { action: user ? 'redeem' : 'validate', code: token },
+      });
 
-      if (error || !invite) {
+      const ok = !error && Boolean(data?.ok) && (user ? true : Boolean(data?.valid));
+      if (!ok) {
         console.log('[QuantumGatekeeper] Invalid invite token');
         return false;
       }
 
-      // Check expiration
-      if (invite.expires_at && new Date(invite.expires_at) < new Date()) {
-        console.log('[QuantumGatekeeper] Invite token expired');
-        return false;
-      }
-
-      // Check max uses
-      if (invite.max_uses && invite.current_uses >= invite.max_uses) {
-        console.log('[QuantumGatekeeper] Invite token max uses reached');
-        return false;
-      }
-
-      // Store valid invite in session
       sessionStorage.setItem('quantum_invite_token', token);
-      
-      // Update usage count if user is logged in
       if (user) {
-        await supabase
-          .from('invite_codes')
-          .update({ 
-            current_uses: (invite.current_uses || 0) + 1,
-            used_by: user.id,
-            used_at: new Date().toISOString()
-          })
-          .eq('id', invite.id);
-        
         await logEvent(SECURITY_EVENTS.INVITE_TOKEN_USED, `Invite token validated: ${token.substring(0, 8)}...`);
       }
 
@@ -124,6 +99,7 @@ export const QuantumGatekeeper: React.FC<QuantumGatekeeperProps> = ({
       return false;
     }
   }, [user, logEvent]);
+
 
   // Main access check
   useEffect(() => {

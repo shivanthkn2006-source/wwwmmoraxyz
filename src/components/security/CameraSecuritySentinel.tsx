@@ -75,13 +75,12 @@ export const CameraSecuritySentinel: React.FC<CameraSecuritySentinelProps> = ({
         action_taken: severity === 'critical' ? 'session_terminated' : 'flagged',
       });
 
-      // For critical violations, revoke invite code
+      // For critical violations, revoke the member's own invite (server-side)
       if (severity === 'critical' && inviteData?.id) {
-        await supabase.from('invite_codes').update({
-          is_active: false,
-          revoked_reason: `Camera security violation: ${type}`,
-          revoked_at: new Date().toISOString(),
-        }).eq('id', inviteData.id);
+        await supabase.functions.invoke('beta-invite', {
+          body: { action: 'revoke-own', reason: `Camera security violation: ${type}` },
+        });
+
 
         // Notify admins
         await notifyAdmins(user.id, `CAMERA THREAT: ${type}`, 'critical');
