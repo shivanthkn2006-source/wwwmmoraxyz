@@ -12023,6 +12023,16 @@ export type Database = {
         Returns: number
       }
       get_dhf_quantum_state: { Args: { p_user_id: string }; Returns: Json }
+      get_exodus_quiz: {
+        Args: { p_limit?: number }
+        Returns: {
+          difficulty: string
+          id: string
+          options: Json
+          points: number
+          question: string
+        }[]
+      }
       get_latest_ecn_fast: { Args: { p_user_id: string }; Returns: Json }
       get_leaderboard: {
         Args: { limit_count?: number }
@@ -12130,6 +12140,10 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: Json
       }
+      notify_admins_of_failure: {
+        Args: { p_context?: Json; p_title: string; p_type: string }
+        Returns: number
+      }
       prune_platform_telemetry: { Args: never; Returns: Json }
       recompute_intimacy_scores: { Args: { _user_id: string }; Returns: number }
       record_dhf_lineage: {
@@ -12155,6 +12169,14 @@ export type Database = {
           lat: number
           lon: number
           tz: string
+        }[]
+      }
+      score_exodus_quiz: {
+        Args: { p_answers: Json }
+        Returns: {
+          correct_count: number
+          question_count: number
+          total_points: number
         }[]
       }
       search_mmora_memories: {
