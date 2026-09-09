@@ -30,34 +30,38 @@ export const ZoeJudgeQuiz: React.FC<{ playerId: string; onComplete: () => void }
   }, []);
 
   const fetchQuestions = async () => {
-    const { data } = await supabase.from('exodus_quiz_questions').select('*').limit(5);
+    // Questions are served without their answers; scoring happens on the server.
+    const { data } = await supabase.rpc('get_exodus_quiz', { p_limit: 5 });
     if (data) {
-      setQuestions(data.map(q => ({ 
-        ...q, 
-        options: typeof q.options === 'string' ? JSON.parse(q.options) : (q.options as string[])
+      setQuestions((data as any[]).map((q) => ({
+        id: q.id,
+        question: q.question,
+        points: q.points,
+        options: typeof q.options === 'string' ? JSON.parse(q.options) : (q.options as string[]),
       })));
     }
   };
 
-  const selectAnswer = (optionIndex: number) => {
+  const selectAnswer = async (optionIndex: number) => {
     const newAnswers = [...answers, optionIndex];
     setAnswers(newAnswers);
 
     if (currentIndex < questions.length - 1) {
       setCurrentIndex(prev => prev + 1);
     } else {
-      // Calculate score
-      let total = 0;
-      questions.forEach((q, i) => {
-        if (newAnswers[i] === q.correct_option) total += q.points;
-      });
+      const payload: Record<string, number> = {};
+      questions.forEach((q, i) => { payload[q.id] = newAnswers[i]; });
+
+      const { data } = await supabase.rpc('score_exodus_quiz', { p_answers: payload as any });
+      const total = Array.isArray(data) ? Number((data[0] as any)?.total_points ?? 0) : 0;
       setScore(total);
       setCompleted(true);
-      
+
       const passed = total >= 30;
       toast[passed ? 'success' : 'error'](
         passed ? 'Zoe approves. You understand the way.' : 'Zoe is disappointed. Study more.'
       );
+
       onComplete();
     }
   };

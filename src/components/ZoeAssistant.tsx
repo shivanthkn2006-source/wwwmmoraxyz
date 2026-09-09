@@ -1658,10 +1658,12 @@ const ZoeAssistant: React.FC<ZoeAssistantProps> = ({ onNavigate }) => {
           // Notify about flagged content
           await supabase.from('notifications').insert({
             user_id: user?.id || '',
+            from_user_id: user?.id || '',
             type: 'moderation_alert',
-            from_user_id: post.user_id,
-            post_id: post.id
+            post_id: post.id,
+            context_data: { flagged_author_id: post.user_id },
           });
+
         } else {
           approved++;
         }
@@ -1726,11 +1728,10 @@ const ZoeAssistant: React.FC<ZoeAssistantProps> = ({ onNavigate }) => {
         return;
       }
 
-      await supabase.from('notifications').insert({
-        user_id: profile.user_id,
-        type: 'warning',
-        from_user_id: user?.id || ''
+      await supabase.functions.invoke('notify-user', {
+        body: { type: 'warning', userId: profile.user_id },
       });
+
 
       showFeedback(`Warning sent to ${username}`);
     } catch (error) {
@@ -2927,18 +2928,20 @@ const ZoeAssistant: React.FC<ZoeAssistantProps> = ({ onNavigate }) => {
       }
 
       // Send in-app notification
-      await supabase.from('notifications').insert({
-        user_id: contact.user_id,
-        from_user_id: user.id,
-        type: 'message',
-        context_data: { 
-          preview: messageContent,
-          marked_important: true,
-          priority_one: true,
-          category: 'family'
+      await supabase.functions.invoke('notify-user', {
+        body: {
+          type: 'message',
+          userId: contact.user_id,
+          priority: 1,
+          context: {
+            preview: messageContent,
+            marked_important: true,
+            priority_one: true,
+            category: 'family',
+          },
         },
-        priority: 1
       });
+
 
       // Also try SMS if phone stored in localStorage
       const storedContacts = JSON.parse(localStorage.getItem('zoe-contacts') || '{}');

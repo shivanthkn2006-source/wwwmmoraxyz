@@ -37,9 +37,15 @@ serve(async (req) => {
       );
     }
 
-    // Check if user has admin role
-    const { data: hasAdminRole } = await supabase.rpc('has_role', { check_role: 'admin' });
-    
+    // Service-role client: members may only write notifications addressed to
+    // themselves, so the broadcast itself runs with elevated privileges after
+    // the admin role has been verified.
+    const db = createClient(supabaseUrl, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, {
+      auth: { persistSession: false },
+    });
+
+    const { data: hasAdminRole } = await db.rpc('has_role', { _user_id: user.id, _role: 'admin' });
+
     if (!hasAdminRole) {
       return new Response(
         JSON.stringify({ error: 'Forbidden: Admin role required' }),
@@ -47,12 +53,13 @@ serve(async (req) => {
       );
     }
 
+
     // Validate request body
     const body = await req.json();
     const { title, message, priority, expiresAt } = requestSchema.parse(body);
 
     // Get all users
-    const { data: profiles, error: profilesError } = await supabase
+    const { data: profiles, error: profilesError } = await db
       .from('profiles')
       .select('user_id');
 
@@ -80,7 +87,7 @@ serve(async (req) => {
       context_data: { title, message, priority },
     }));
 
-    const { error: insertError } = await supabase
+    const { error: insertError } = await db
       .from('notifications')
       .insert(notifications);
 
