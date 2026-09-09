@@ -12110,6 +12110,12 @@ export type Database = {
         Returns: boolean
       }
       is_user_shadow_banned: { Args: { p_user_id: string }; Returns: boolean }
+      list_owned_tables: {
+        Args: never
+        Returns: {
+          table_name: string
+        }[]
+      }
       log_raa_diagnosis: {
         Args: {
           p_error_patterns?: Json
