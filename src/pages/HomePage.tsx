@@ -153,8 +153,31 @@ async function attachPostMedia(posts: Post[]): Promise<Post[]> {
     current.push(row);
     byPost.set(row.post_id, current);
   }
+
+  // On a metered or slow connection, stream the smaller rendition of each video.
+  if (prefersLowBandwidth()) {
+    const { data: assets } = await supabase
+      .from('video_assets')
+      .select('post_id, playback_url, low_bandwidth_url')
+      .in('post_id', posts.map((post) => post.id))
+      .not('low_bandwidth_url', 'is', null);
+    const lowByUrl = new Map((assets ?? []).map((asset) => [asset.playback_url, asset.low_bandwidth_url as string]));
+    if (lowByUrl.size) {
+      for (const [postId, rows] of byPost) {
+        byPost.set(
+          postId,
+          rows.map((row) =>
+            row.media_type === 'video' && lowByUrl.has(row.media_url)
+              ? { ...row, media_url: lowByUrl.get(row.media_url) as string }
+              : row,
+          ),
+        );
+      }
+    }
+  }
   return posts.map((post) => ({ ...post, attachments: byPost.get(post.id) ?? [] }));
 }
+
 
 
 const HomePage = () => {
