@@ -890,6 +890,15 @@ const RouteAwareShell = () => {
                             }
                           />
                           <Route
+                            path="/privacy"
+                            element={
+                              <ProtectedRoute>
+                                <PrivacyDataPage />
+                              </ProtectedRoute>
+                            }
+                          />
+
+                          <Route
                             path="/zoe-astro"
                             element={
                               <ProtectedRoute>
