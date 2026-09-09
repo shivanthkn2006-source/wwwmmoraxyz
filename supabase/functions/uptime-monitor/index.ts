@@ -22,9 +22,10 @@ const PROBE_TIMEOUT_MS = 12_000;
 
 /** Edge services whose failure means members feel it immediately. */
 const TARGETS = [
-  { name: 'zoe-chat', path: 'zoe-chat', body: { message: 'uptime probe', probe: true } },
-  { name: 'zoe-api-status', path: 'zoe-api-status', body: {} },
-  { name: 'beta-invite', path: 'beta-invite', body: { action: 'validate', code: 'UPTIME-PROBE' } },
+  { name: 'zoe-chat', path: 'zoe-chat', body: { message: 'uptime probe', probe: true }, timeoutMs: 15_000 },
+  // Fans out to every third-party provider, so it is legitimately slow.
+  { name: 'zoe-api-status', path: 'zoe-api-status', body: {}, timeoutMs: 40_000 },
+  { name: 'beta-invite', path: 'beta-invite', body: { action: 'validate', code: 'UPTIME-PROBE' }, timeoutMs: 12_000 },
 ];
 
 interface ProbeResult {
