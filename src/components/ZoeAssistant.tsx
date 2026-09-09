@@ -1658,10 +1658,12 @@ const ZoeAssistant: React.FC<ZoeAssistantProps> = ({ onNavigate }) => {
           // Notify about flagged content
           await supabase.from('notifications').insert({
             user_id: user?.id || '',
+            from_user_id: user?.id || '',
             type: 'moderation_alert',
-            from_user_id: post.user_id,
-            post_id: post.id
+            post_id: post.id,
+            context_data: { flagged_author_id: post.user_id },
           });
+
         } else {
           approved++;
         }
