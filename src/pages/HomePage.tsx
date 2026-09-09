@@ -2134,6 +2134,21 @@ const HomePage = () => {
         }
       }
 
+      // Record each video rendition so playback can pick the right file per connection.
+      for (const asset of videoAssets) {
+        void registerVideoAsset({
+          userId: user.id,
+          postId: inserted?.id ?? null,
+          storagePath: asset.storagePath,
+          playbackUrl: asset.playbackUrl,
+          lowBandwidthUrl: asset.lowBandwidthUrl,
+          posterUrl: asset.posterUrl,
+          renditions: asset.renditions,
+        });
+      }
+
+
+
       // Persist the short in the M'mora orb memory (offline cache + memory bridge)
       if (first && (first.media_type === 'video' || first.media_type === 'image')) void rememberShortInOrbMemory(
         {
