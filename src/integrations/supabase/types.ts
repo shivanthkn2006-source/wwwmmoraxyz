@@ -8283,6 +8283,81 @@ export type Database = {
         }
         Relationships: []
       }
+      video_assets: {
+        Row: {
+          codec: string | null
+          container: string | null
+          created_at: string
+          delivered_bytes: number | null
+          duration_seconds: number | null
+          height: number | null
+          id: string
+          low_bandwidth_url: string | null
+          playback_url: string
+          post_id: string | null
+          poster_url: string | null
+          source_bytes: number | null
+          storage_path: string
+          transcoded: boolean
+          updated_at: string
+          user_id: string
+          width: number | null
+        }
+        Insert: {
+          codec?: string | null
+          container?: string | null
+          created_at?: string
+          delivered_bytes?: number | null
+          duration_seconds?: number | null
+          height?: number | null
+          id?: string
+          low_bandwidth_url?: string | null
+          playback_url: string
+          post_id?: string | null
+          poster_url?: string | null
+          source_bytes?: number | null
+          storage_path: string
+          transcoded?: boolean
+          updated_at?: string
+          user_id: string
+          width?: number | null
+        }
+        Update: {
+          codec?: string | null
+          container?: string | null
+          created_at?: string
+          delivered_bytes?: number | null
+          duration_seconds?: number | null
+          height?: number | null
+          id?: string
+          low_bandwidth_url?: string | null
+          playback_url?: string
+          post_id?: string | null
+          poster_url?: string | null
+          source_bytes?: number | null
+          storage_path?: string
+          transcoded?: boolean
+          updated_at?: string
+          user_id?: string
+          width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_assets_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "feed_posts_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_assets_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       voice_assistant_settings: {
         Row: {
           created_at: string
