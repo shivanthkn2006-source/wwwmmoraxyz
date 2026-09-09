@@ -50,7 +50,9 @@ export async function reportBlockedUpload(userId: string, verdict: ModerationVer
   try {
     await supabase.from('content_reports').insert({
       reporter_id: userId,
-      target_type: 'upload',
+      // The upload never became a post, so the attempt gets its own reference.
+      target_id: crypto.randomUUID(),
+      target_type: 'blocked_upload',
       target_owner_id: userId,
       reason: 'automated_moderation',
       notes: [verdict.reason, verdict.severity ? `severity: ${verdict.severity}` : '', mediaUrl ?? '']
