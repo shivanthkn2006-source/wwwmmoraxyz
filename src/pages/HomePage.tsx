@@ -2084,6 +2084,19 @@ const HomePage = () => {
       const tagText = metadata?.tags?.map((tag) => `#${tag}`).join(' ') || '';
       const postContent = [metadata?.title, metadata?.text, tagText].filter(Boolean).join('\n');
       const first = attachments[0];
+
+      // Abuse screening before anything becomes public. A moderation outage
+      // never blocks a member; only an explicit rejection does.
+      const verdict = await screenUpload({
+        content: postContent,
+        mediaUrl: first?.media_url,
+        mediaType: first?.media_type === 'video' || first?.media_type === 'image' ? first.media_type : null,
+      });
+      if (!verdict.approved) {
+        if (uploadedPaths.length) await supabase.storage.from('posts').remove(uploadedPaths);
+        void reportBlockedUpload(user.id, verdict, first?.media_url);
+        throw new Error(verdict.reason || 'This upload breaks the community rules and was not published.');
+      }
       const { data: inserted, error } = await supabase.from('posts').insert({
         user_id: user.id,
         content: postContent,
