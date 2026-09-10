@@ -15,7 +15,8 @@ export type VoiceIntent =
   | { kind: 'navigate'; path: string; label: string; speak: string }
   | { kind: 'notifications'; speak: string }
   | { kind: 'orb-chat'; speak: string }
-  | { kind: 'message'; recipient: string; body?: string; speak: string };
+  | { kind: 'message'; recipient: string; body?: string; speak: string }
+  | { kind: 'god-scan'; speak: string };
 
 /** Spoken aliases that are not the page label ("chat" → Messages). */
 const ALIASES: Record<string, string> = {
@@ -95,6 +96,12 @@ export function resolveVoiceIntent(rawText: string): VoiceIntent | null {
     return { kind: 'orb-chat', speak: 'Opening our chat.' };
   }
 
+
+  // "run god mode scan" — staff only. The page and the edge function both
+  // check the admin role, so a non-admin simply gets told no.
+  if (/\b(god\s*-?\s*mode)\b/.test(text) && /\b(scan|audit|check)\b/.test(text)) {
+    return { kind: 'god-scan', speak: 'Opening the staff dashboard and starting the God Mode scan.' };
+  }
 
   // "send a message to asha soosan" / "message asha"
   const message = text.match(/^(?:send\s+(?:a\s+)?(?:message|text|dm)\s+to|message|text|dm)\s+(.+)$/);
