@@ -14,6 +14,16 @@ describe('resolveVoiceIntent', () => {
     });
   });
 
+  it('opens the orb chat only on an explicit request', () => {
+    expect(resolveVoiceIntent('Zoe, open orb')).toMatchObject({ kind: 'orb-chat' });
+    expect(resolveVoiceIntent('Zoe, open orb chat')).toMatchObject({ kind: 'orb-chat' });
+    expect(resolveVoiceIntent('open chat')).toMatchObject({ kind: 'orb-chat' });
+    // A bare "hey Zoe" produces no command at all, so no panel opens.
+    expect(resolveVoiceIntent('hey zoe')).toBeNull();
+    // "messages" still navigates to the Messages page.
+    expect(resolveVoiceIntent('Zoe, open messages')).toMatchObject({ kind: 'navigate', path: '/chat' });
+  });
+
   it('opens notifications', () => {
     expect(resolveVoiceIntent('Zoe show my notifications')).toMatchObject({ kind: 'notifications' });
   });
