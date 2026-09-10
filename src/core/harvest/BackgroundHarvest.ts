@@ -181,7 +181,8 @@ const flushToSoulCodex = async (userId: string, isFinal = false): Promise<void> 
       .from('dhf_soul_codex')
       .select('id')
       .eq('user_id', actualUserId)
-      .single();
+      // maybeSingle: a member with no codex yet is normal, not a 406 error.
+      .maybeSingle();
     
     if (existingCodex) {
       // Update existing
