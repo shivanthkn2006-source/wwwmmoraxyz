@@ -487,3 +487,53 @@ class AudioRouterService {
 
 export const audioRouter = AudioRouterService.getInstance();
 export default audioRouter;
+
+/**
+ * Headset presence, resolved from the real device list only.
+ *
+ * The browser only exposes device labels after microphone permission is
+ * granted, so when there is no label we report "not connected" instead of
+ * guessing. Any indicator built on this is therefore truthful: it lights up
+ * only when an actual external/Bluetooth output is the one in use.
+ */
+export interface HeadsetState {
+  connected: boolean;
+  label: string | null;
+  wireless: boolean;
+}
+
+const EXTERNAL_HINTS = [
+  /bluetooth/i, /\bbt\b/i, /hands-?free/i, /a2dp/i, /hfp/i,
+  /airpod/i, /headset/i, /headphone/i, /earphone/i, /earbud/i, /\bbuds?\b/i, /\bear\b/i,
+  /boat|boAt/i, /sony|wh-|wf-/i, /jabra/i, /bose/i, /beats/i, /jbl/i, /sennheiser/i,
+  /soundcore|anker/i, /shokz|aftershokz/i, /nothing/i, /oneplus/i, /realme/i, /redmi|mi\b/i,
+  /noise/i, /skullcandy/i, /galaxy buds/i, /pixel buds/i, /marshall/i, /sennheiser/i, /qcy/i,
+];
+const BUILTIN_HINTS = [/built-?in/i, /internal/i, /display audio/i, /hdmi/i, /monitor/i, /macbook/i, /laptop/i];
+const WIRELESS_HINTS = [/bluetooth/i, /\bbt\b/i, /airpod/i, /buds/i, /hands-?free/i, /wireless/i, /a2dp/i, /hfp/i];
+
+export function resolveHeadsetState(
+  outputs: AudioDeviceOption[],
+  activeOutputDeviceId: string,
+): HeadsetState {
+  const active =
+    outputs.find((d) => d.deviceId === activeOutputDeviceId) ??
+    outputs.find((d) => d.deviceId === 'default') ??
+    null;
+
+  const raw = active?.label?.trim() ?? '';
+  // No label means no permission yet — do not pretend a headset is attached.
+  if (!raw || /^(Speaker|Microphone) \(/.test(raw)) {
+    return { connected: false, label: null, wireless: false };
+  }
+
+  const external = EXTERNAL_HINTS.some((re) => re.test(raw));
+  const builtin = BUILTIN_HINTS.some((re) => re.test(raw));
+  const connected = external && !(builtin && !external);
+
+  return {
+    connected,
+    label: connected ? raw.replace(/^Default\s*-\s*/i, '') : null,
+    wireless: connected && WIRELESS_HINTS.some((re) => re.test(raw)),
+  };
+}
