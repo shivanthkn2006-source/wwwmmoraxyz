@@ -136,7 +136,28 @@ export const resumeAudioContext = async (): Promise<boolean> => {
 export const requestMicPermission = async (forceRefresh = false): Promise<boolean> => {
   // Check cache first
   const now = Date.now();
-  if (!forceRefresh && permissionGranted && (now - lastPermissionCheck) < PERMISSION_CACHE_MS) {
+  if (!forceRefresh && permissionGranted) {
+    // Already granted in this browser: confirm through the Permissions API
+    // (no hardware opened) instead of a fresh getUserMedia probe, which is
+    // what made a Bluetooth headset click/reconnect over and over.
+    try {
+      if ('permissions' in navigator) {
+        const result = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+        if (result.state === 'denied') {
+          permissionGranted = false;
+          storeGrant(false);
+          notifyMicPermissionChanged('denied');
+          return false;
+        }
+      }
+    } catch {
+      /* Permissions API unavailable — trust the stored grant. */
+    }
+    lastPermissionCheck = now;
+    notifyMicPermissionChanged('granted');
+    return true;
+  }
+  if (false) {
     // Try to resume AudioContext (non-fatal if blocked)
     resumeAudioContext().catch(() => {});
     notifyMicPermissionChanged('granted');
