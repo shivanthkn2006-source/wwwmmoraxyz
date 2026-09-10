@@ -41,6 +41,9 @@ export const ZoeGlobalMount: React.FC = () => {
     return () => clearTimeout(t);
   }, [ready]);
 
+  // Unit/e2e test shells mount PlatformLayout directly; pulling the whole
+  // assistant bundle in there is pure cost with no behaviour under test.
+  if (import.meta.env.MODE === 'test') return null;
   if (!ready || !isZoeOrbRoute(pathname)) return null;
 
   return (
