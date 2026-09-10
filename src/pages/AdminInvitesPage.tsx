@@ -179,12 +179,35 @@ export default function AdminInvitesPage() {
             {rows.map((row) => {
               const state = row.revoked_at ? 'Revoked' : row.used_at ? 'Used' : row.is_active ? 'Approved' : 'Waiting';
               return (
-                <div key={row.id} className="flex items-center justify-between gap-3 border border-border rounded-md px-3 py-2">
+                 <div key={row.id} className="flex flex-wrap items-center justify-between gap-3 border border-border rounded-md px-3 py-2">
                   <div className="min-w-0">
                     <p className="font-mono text-sm truncate">{row.code}</p>
                     <p className="text-xs text-muted-foreground">
                       {state} · used {row.current_uses ?? 0}/{row.max_uses ?? 1} · created {new Date(row.created_at).toLocaleDateString()}
+                      {typeof row.metadata?.label === 'string' && row.metadata.label ? ` · for ${row.metadata.label}` : ''}
                     </p>
+                    <div className="mt-1 flex flex-wrap items-center gap-2">
+                      <code className="text-[11px] text-muted-foreground break-all">{referralLink(row.code)}</code>
+                      <button
+                        type="button"
+                        onClick={() => void copyLink(row.code)}
+                        className="inline-flex items-center gap-1 text-[11px] border border-border rounded px-2 py-0.5 hover:bg-foreground hover:text-background transition-colors"
+                      >
+                        <Copy className="h-3 w-3" />
+                        {copied === row.code ? 'Copied' : 'Copy'}
+                      </button>
+                      {shareTargets(referralLink(row.code), "Join me on M'Mora.").map((t) => (
+                        <a
+                          key={t.label}
+                          href={t.href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[11px] border border-border rounded px-2 py-0.5 hover:bg-foreground hover:text-background transition-colors"
+                        >
+                          {t.label}
+                        </a>
+                      ))}
+                    </div>
                   </div>
                   <div className="flex gap-2 shrink-0">
                     {!row.is_active && (
