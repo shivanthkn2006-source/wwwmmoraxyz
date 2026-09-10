@@ -836,8 +836,13 @@ export const GlobalZoeAssistant = ({ config = DEFAULT_CONFIG }: { config?: Parti
     return () => {
       window.removeEventListener('zoe-orb-activate', handleOrbActivate as EventListener);
     };
-  }, [activeConfig.enableDHFStream, trackZoeInteraction]);
-  
+  }, [activeConfig.enableDHFStream, trackZoeInteraction, speakResponse, location.pathname, user]);
+
+  // Warm the coarse location cache once, so the wake-word reply is instant.
+  useEffect(() => {
+    if (user) prefetchPresenceLocation();
+  }, [user]);
+
   // Auto-initialize on page load (wake word only, greeting handled by EAP)
   useEffect(() => {
     // Only run once per browser session
