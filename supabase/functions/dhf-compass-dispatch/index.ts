@@ -141,23 +141,43 @@ Deno.serve(async (req) => {
         (a, b) => Number(inPrewarmWindow(safeZone(b.timezone))) - Number(inPrewarmWindow(safeZone(a.timezone))),
       );
 
+      // A single member-day takes 70-100s, so a sequential loop only ever
+      // reached one or two people per run and the rest of the platform woke up
+      // with an empty compass. Run a small pool instead: still bounded by
+      // BATCH_SIZE and the wall-clock budget, but several members at a time.
+      const CONCURRENCY = 4;
       let processed = 0;
-      for (const member of ordered) {
-        if (processed >= BATCH_SIZE) break;
-        if (Date.now() - startedAt > TIME_BUDGET_MS) { summary.timeboxed = true; break; }
-        const tz = safeZone(member.timezone);
-        const date = localDateIn(new Date(), tz);
-        const prewarm = inPrewarmWindow(tz);
+      let cursor = 0;
 
-        const existing = await countForDate(member.user_id, date);
-        if (existing >= COMPASS_SLOTS.length) { summary.cached++; continue; }
+      const worker = async () => {
+        for (;;) {
+          if (processed >= BATCH_SIZE) return;
+          if (Date.now() - startedAt > TIME_BUDGET_MS) { summary.timeboxed = true; return; }
+          const member = ordered[cursor++];
+          if (!member) return;
 
-        const result = await ensureDayForUser({ userId: member.user_id, date, trigger: 'cron', action: 'ensure', budgetMs: Math.max(10_000, TIME_BUDGET_MS - (Date.now() - startedAt)) });
-        processed++;
-        if (prewarm) summary.prewarmed++;
-        if (result.paused) summary.paused = true;
-        if (result.ok) summary.generated += result.generated; else summary.failed++;
-      }
+          const tz = safeZone(member.timezone);
+          const date = localDateIn(new Date(), tz);
+          const prewarm = inPrewarmWindow(tz);
+
+          const existing = await countForDate(member.user_id, date);
+          if (existing >= COMPASS_SLOTS.length) { summary.cached++; continue; }
+
+          processed++;
+          const result = await ensureDayForUser({
+            userId: member.user_id,
+            date,
+            trigger: 'cron',
+            action: 'ensure',
+            budgetMs: Math.max(10_000, TIME_BUDGET_MS - (Date.now() - startedAt)),
+          });
+          if (prewarm) summary.prewarmed++;
+          if (result.paused) summary.paused = true;
+          if (result.ok) summary.generated += result.generated; else summary.failed++;
+        }
+      };
+
+      await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
     } finally {
       await releaseLease(summary);
     }
