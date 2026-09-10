@@ -94,9 +94,17 @@ export const useAlwaysOnVoice = () => {
 
   // Get Zoe's response
   const getZoeResponse = useCallback(async (userText: string) => {
-    if (!userText.trim() || processingRef.current) return;
-    
+    if (!userText.trim()) return;
+    // A turn that never finished (network stall, killed speech) used to jam
+    // every later question in silence. Anything older than 45s is stale.
+    if (processingRef.current) {
+      if (Date.now() - processingStartedRef.current < 45000) return;
+      console.warn('[AlwaysOn] Clearing a stuck turn and answering the new one');
+    }
+
     processingRef.current = true;
+    processingStartedRef.current = Date.now();
+    isEnabledRef.current = true;
     setState(prev => ({ ...prev, isProcessing: true, transcript: '' }));
     
     console.log('[AlwaysOn] User said:', userText);
