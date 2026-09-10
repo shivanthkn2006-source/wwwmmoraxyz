@@ -18,6 +18,7 @@ import {
 } from '@/utils/micPermissionManager';
 import { zoeDebugLog, zoeDebugSetState } from '@/features/zoe-handsfree/debugBus';
 import { resolveVoiceIntent } from '@/features/zoe-handsfree/voiceIntentRouter';
+import { recordVoiceTurn } from '@/services/zoeVoiceHistory';
 
 interface VoiceState {
   isListening: boolean;
