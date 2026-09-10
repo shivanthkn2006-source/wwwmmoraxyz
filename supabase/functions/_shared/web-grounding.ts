@@ -65,16 +65,30 @@ const EXTERNAL_HINT =
   /\b(who|what|when|where|why|how|latest|news|today'?s|current|price|stock|weather|define|meaning|history|explain|search|google|world|president|ceo|release|version|score|match|election|202\d|19\d\d)\b/i;
 
 /**
+ * Small talk and feelings. These are the only turns worth answering without a
+ * web round-trip — everything else may reach outside the platform.
+ */
+const CHITCHAT =
+  /^(hi|hey|hello|yo|hola|good (morning|afternoon|evening|night)|thanks?|thank you|ok(ay)?|sure|cool|nice|love you|i love you|how are you|how'?re you|what'?s up|sup|goodnight|bye|see you)\b[\s!.,?]*$/i;
+
+/**
  * Decide whether to spend a web round-trip on this turn.
- * Ground when the question reaches outside the platform, or when the platform
- * index returned almost nothing to work with.
+ *
+ * The old rule only grounded when the question carried a question word or when
+ * the platform index came back nearly empty. That silently broke real questions
+ * like "tell me about the new iPhone" — the member's own memories scored a
+ * couple of loose hits, grounding was skipped, and Zoe answered from stale
+ * training data. Outside knowledge is keyless and runs in parallel, so the
+ * default is now the other way round: ground unless the turn is clearly about
+ * the member's own platform content or is plain small talk.
  */
 export function needsWebGrounding(query: string, platformHits: number): boolean {
   const q = (query || '').trim();
   if (q.length < 6) return false;
+  if (CHITCHAT.test(q)) return false;
   if (PLATFORM_ONLY.test(q)) return false;
   if (/\b(mmora|m'mora|this platform|the app)\b/i.test(q) && platformHits > 0) return false;
-  return EXTERNAL_HINT.test(q) || platformHits < 2;
+  return true;
 }
 
 async function duckduckgo(query: string): Promise<WebGroundHit[]> {
