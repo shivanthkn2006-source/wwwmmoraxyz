@@ -26,6 +26,7 @@ import { useCDSPPaymentRails } from '@/hooks/useCDSPPaymentRails';
 import { useSkillUpload } from '@/hooks/useSkillUpload';
 import { useZoeMediaAccess } from '@/hooks/useZoeMediaAccess';
 import { useAuth } from '@/lib/auth';
+import { buildWakeGreeting, prefetchPresenceLocation } from '@/services/zoePresence';
 import zoeAvatar from '@/assets/zoe-avatar.png';
 import { toast } from 'sonner';
 import { usePhantomStore, usePhantomVisible } from '@/stores/usePhantomStore'; // PROTOCOL PHANTOM
@@ -815,6 +816,15 @@ export const GlobalZoeAssistant = ({ config = DEFAULT_CONFIG }: { config?: Parti
       
       // Mark speaking state during EAP voice
       setIsSpeaking(true);
+
+      // Wake word / headset press: answer instantly with where they are.
+      // The location is already cached from the session prefetch, so this line
+      // is built synchronously — no lookup delay between "hey Zoe" and a reply.
+      if (event.detail?.source !== 'silent') {
+        const firstName = (user?.user_metadata?.display_name as string | undefined)?.split(' ')[0] ?? null;
+        void speakResponse(buildWakeGreeting(location.pathname, firstName), 'calm');
+      }
+      
       
       // Track in DHF as a response type
       if (activeConfig.enableDHFStream) {
@@ -826,8 +836,13 @@ export const GlobalZoeAssistant = ({ config = DEFAULT_CONFIG }: { config?: Parti
     return () => {
       window.removeEventListener('zoe-orb-activate', handleOrbActivate as EventListener);
     };
-  }, [activeConfig.enableDHFStream, trackZoeInteraction]);
-  
+  }, [activeConfig.enableDHFStream, trackZoeInteraction, speakResponse, location.pathname, user]);
+
+  // Warm the coarse location cache once, so the wake-word reply is instant.
+  useEffect(() => {
+    if (user) prefetchPresenceLocation();
+  }, [user]);
+
   // Auto-initialize on page load (wake word only, greeting handled by EAP)
   useEffect(() => {
     // Only run once per browser session

@@ -188,3 +188,12 @@ export function pageContextLine(path: string): string {
   const base = `Current page: ${entry.label} (${entry.area}). ${entry.purpose}`;
   return abilities ? `${base} ${abilities}` : base;
 }
+
+/** Friendly page name for spoken replies ("You're on Home"). */
+export function resolvePageTitle(path: string): string | null {
+  const entry = SITE_MAP.find((e) => e.path === path);
+  if (entry) return entry.label;
+  const segment = path.split('/').filter(Boolean)[0];
+  if (!segment) return null;
+  return segment.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
