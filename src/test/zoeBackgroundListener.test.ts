@@ -1,4 +1,7 @@
 /**
+ * @vitest-environment jsdom
+ */
+/**
  * Hands-free wake word — behaviour contract.
  *
  * Guards the promises the Zoe Audio page makes to the user: one-time mic
