@@ -136,6 +136,9 @@ const DataPolicyPage = lazy(() => import("./pages/DataPolicyPage"));
 const SiteMapPage = lazy(() => import("./pages/SiteMapPage"));
 const HelpPage = lazy(() => import("./pages/HelpPage"));
 const LandingPage = lazy(() => import("./pages/LandingPage"));
+const DemoPage = lazy(() => import("./pages/DemoPage")); // PUBLIC DEMO: real shared account
+const XImportPage = lazy(() => import("./pages/XImportPage")); // Save a public X post into Home
+
 
 const ZoeAstroDashboardPage = lazy(() => import("./pages/ZoeAstroDashboardPage")); // M'MORA ZOE ALIGNMENT DASHBOARD
 const GrowthInsightsPage = lazy(() => import("./pages/GrowthInsightsPage")); // PERSONAL GROWTH ENGINE ARCHIVE
@@ -451,7 +454,9 @@ const RouteAwareShell = () => {
     pathname.startsWith('/signup') ||
     pathname.startsWith('/welcome') ||
     pathname.startsWith('/password-recovery') ||
+    pathname.startsWith('/demo') ||
     pathname.startsWith('/zoe-omega') ||
+
     pathname.startsWith('/zoe-infinity') ||
     pathname.startsWith('/genesis-imprint') ||
     pathname.startsWith('/ear-link-blueprint') ||
@@ -483,6 +488,8 @@ const RouteAwareShell = () => {
               <Route path="/auth" element={<AuthPage />} />
               <Route path="/signup" element={<AuthPage />} />
               <Route path="/welcome" element={<LandingPage />} />
+              <Route path="/demo" element={<DemoPage />} />
+
               <Route path="/voice-auth" element={<VoiceAuthPage />} />
               <Route path="/password-recovery" element={<PasswordRecoveryPage />} />
               <Route
@@ -770,6 +777,15 @@ const RouteAwareShell = () => {
                               </ProtectedRoute>
                             }
                           />
+                          <Route
+                            path="/import/x"
+                            element={
+                              <ProtectedRoute>
+                                <XImportPage />
+                              </ProtectedRoute>
+                            }
+                          />
+
                           <Route
                             path="/legacy"
                             element={

@@ -19,6 +19,8 @@ import { ROUTE_SEO } from '@/config/routeSeo';
 import TurnstileSignup, { verifyTurnstileToken } from '@/components/security/TurnstileSignup';
 import { supabase } from '@/integrations/supabase/client';
 import { captureReferralFromUrl, redeemStoredReferral } from '@/lib/referral';
+import { markTourPending } from '@/components/onboarding/GuidedTour';
+
 
 
 // Validation schemas
@@ -184,6 +186,8 @@ const AuthPage = () => {
           // With email confirmation on, signUp returns no session until the
           // member clicks the link in their inbox. Never treat it as signed in.
           const { data: sessionData } = await supabase.auth.getSession();
+          // New members get the short guided walk on their first signed-in page.
+          markTourPending();
           if (sessionData?.session) {
             await redeemStoredReferral();
             toast({ title: "Welcome to M'Mora!", description: 'Account created successfully' });
@@ -191,6 +195,7 @@ const AuthPage = () => {
           } else {
             setPendingEmail(formData.email);
           }
+
         }
       } else {
         const validation = signInSchema.safeParse(formData);

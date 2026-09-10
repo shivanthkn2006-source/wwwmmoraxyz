@@ -78,9 +78,13 @@ export default function LandingPage() {
             <Button asChild>
               <Link to={signupHref}>Create your account</Link>
             </Button>
+            <Link to="/demo" className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-4">
+              Try the live demo
+            </Link>
             <Link to="/help" className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-4">
               See how it works
             </Link>
+
           </div>
           {ref && (
             <p className="text-xs text-muted-foreground">
