@@ -114,3 +114,9 @@
 - [ ] 31 database advisories remain: all are helpers the signed-in app calls and all now refuse cross-account use; clearing them needs each rewritten as plain RLS queries.
 - [ ] pgvector in public schema (moving it rebuilds every embedding column).
 - [ ] Server-side multi-bitrate HLS packaging (current transcode runs on the uploader's device).
+
+## Compact controls and native hands-free Zoe (Sep 10 2026)
+- [ ] Remove the audio control border/background/text and prevent notification overlap.
+- [ ] Collapse the Home feed selector to Global; expand Friends, Mosaic, and Selfie City to the right on tap.
+- [ ] Add a real Capacitor native bridge for background/locked-screen Zoe listening and connect it to AudioRouterService.
+- [ ] Verify focused tests, native sync readiness, signed-in Home/audio preview, and current build health.
