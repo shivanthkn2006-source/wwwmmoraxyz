@@ -61,6 +61,51 @@ function buildChunkMetadata(fullText: string, chunks: string[]): TTSAudioMetadat
 }
 
 /**
+ * HUMAN CADENCE
+ * Deepgram follows punctuation closely, so light punctuation edits are what
+ * turn a flat read into a spoken sentence: a beat before a turn of thought, a
+ * breath after an opener, and a real stop at the end of a statement.
+ * Purely presentational — the words themselves are never changed.
+ */
+export function humanizeForSpeech(text: string): string {
+  let out = (text || '').replace(/\s+/g, ' ').trim();
+  if (!out) return out;
+
+  // Strip markdown that would otherwise be read out as symbols.
+  out = out.replace(/[*_`#]+/g, '');
+
+  // A short breath after a conversational opener.
+  out = out.replace(
+    /^(so|well|okay|ok|right|alright|honestly|actually|look|hey)\b[ ,]*/i,
+    (_m, word: string) => `${word}, `,
+  );
+
+  // A beat before a turn of thought, mid-sentence only.
+  out = out.replace(/\s+(but|so|and then|because|although|though|however|actually)\s+/gi, ' — $1 ');
+
+  // Lists breathe between items.
+  out = out.replace(/\s*;\s*/g, ', ');
+
+  // Numbered steps land as separate spoken beats.
+  out = out.replace(/\s(\d)\)\s/g, '. Step $1. ');
+
+  // End statements properly so the voice falls instead of trailing flat.
+  if (!/[.!?…]$/.test(out)) out += '.';
+
+  return out.replace(/\s{2,}/g, ' ').replace(/\s+([,.!?])/g, '$1');
+}
+
+/** Silence between spoken chunks, so she breathes instead of machine-gunning. */
+function pauseAfter(chunk: string): number {
+  const trimmed = chunk.trim();
+  if (/[?!]$/.test(trimmed)) return 320;
+  if (/\.$/.test(trimmed)) return 260;
+  return 140;
+}
+
+const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+/**
  * Split text into sentence-level chunks for reliable and fast playback.
  */
 function splitIntoSentences(text: string): string[] {
@@ -238,9 +283,10 @@ export const speakWithDeepgram = async (
   currentOnError = onError;
 
   try {
-    const sentences = splitIntoSentences(text);
+    const spoken = humanizeForSpeech(text);
+    const sentences = splitIntoSentences(spoken);
     if (sentences.length === 0) throw new Error('No valid chunks to synthesize');
-    const chunkMetadata = buildChunkMetadata(text, sentences);
+    const chunkMetadata = buildChunkMetadata(spoken, sentences);
 
     const startedAt = performance.now();
     const activeModel = getActiveModel();
@@ -288,6 +334,10 @@ export const speakWithDeepgram = async (
         console.warn('[DeepgramTTS] Chunk fetch failed:', result.error);
         continue;
       }
+
+      // Breathe between sentences instead of running them together.
+      await wait(pauseAfter(result.metadata?.chunkText ?? ''));
+      if (aborted) break;
 
       const ok = await playBlob(result.blob, undefined, result.metadata);
       if (!ok || aborted) break;

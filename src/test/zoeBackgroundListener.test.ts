@@ -18,6 +18,7 @@ vi.mock('@/services/AudioRouterService', () => ({
     ensureMicPermission: (...a: unknown[]) => ensureMicPermission(...(a as [])),
     interruptZoe: () => interruptZoe(),
     applySinkToElement: async () => undefined,
+    releaseMic: async () => undefined,
   },
 }));
 

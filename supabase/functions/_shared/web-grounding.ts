@@ -237,9 +237,66 @@ async function serpapiNews(query: string): Promise<WebGroundHit[]> {
   return out;
 }
 
+/**
+ * Second real news API (GNews, or NewsData as an alternative key). Runs in
+ * parallel with SerpAPI so one provider being out of quota, rate limited or
+ * blind to a topic can never leave Zoe with nothing to say about the iPhone
+ * or an election.
+ */
+async function secondaryNewsApi(query: string): Promise<WebGroundHit[]> {
+  const env = (globalThis as any).Deno?.env;
+  const gnews = env?.get?.('GNEWS_API_KEY');
+  const newsdata = env?.get?.('NEWSDATA_API_KEY');
+  const out: WebGroundHit[] = [];
+
+  if (gnews) {
+    const data = await safeJson(
+      `https://gnews.io/api/v4/search?q=${encodeURIComponent(query)}&lang=en&max=6&sortby=publishedAt&apikey=${encodeURIComponent(gnews)}`,
+      7000,
+    );
+    for (const a of (data?.articles ?? []).slice(0, 6)) {
+      if (!a?.url || !a?.title) continue;
+      out.push({
+        title: strip(String(a.title)),
+        snippet: strip(String(a.description ?? a.content ?? a.title)).slice(0, 300),
+        url: String(a.url),
+        source: strip(String(a.source?.name ?? 'GNews')),
+        publishedAt: typeof a.publishedAt === 'string' ? a.publishedAt : null,
+      });
+    }
+  }
+
+  if (!out.length && newsdata) {
+    const data = await safeJson(
+      `https://newsdata.io/api/1/latest?apikey=${encodeURIComponent(newsdata)}&q=${encodeURIComponent(query)}&language=en`,
+      7000,
+    );
+    for (const a of (data?.results ?? []).slice(0, 6)) {
+      if (!a?.link || !a?.title) continue;
+      out.push({
+        title: strip(String(a.title)),
+        snippet: strip(String(a.description ?? a.title)).slice(0, 300),
+        url: String(a.link),
+        source: strip(String(a.source_id ?? 'NewsData')),
+        publishedAt: typeof a.pubDate === 'string' ? new Date(a.pubDate).toISOString() : null,
+      });
+    }
+  }
+
+  return out;
+}
+
 async function freshNews(query: string): Promise<WebGroundHit[]> {
-  const keyed = await serpapiNews(query).catch(() => [] as WebGroundHit[]);
-  if (keyed.length) return keyed;
+  // Both keyed providers run together: whichever answers, Zoe has headlines.
+  const [primary, secondary] = await Promise.all([
+    serpapiNews(query).catch(() => [] as WebGroundHit[]),
+    secondaryNewsApi(query).catch(() => [] as WebGroundHit[]),
+  ]);
+  const keyed = [...primary, ...secondary];
+  if (keyed.length) {
+    const seen = new Set<string>();
+    return keyed.filter((hit) => (seen.has(hit.url) ? false : (seen.add(hit.url), true)));
+  }
 
   const googleXml = await safeText(
     `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`,
@@ -321,7 +378,7 @@ export function buildWebGroundingBlock(hits: WebGroundHit[], startIndex = 0): st
   });
   return `\n\n═══ LIVE WEB GROUNDING (outside this platform) ═══\n${lines.join(
     '\n',
-  )}\n═══════════════════════════════════════\nThese were retrieved from the live web seconds ago: trust them over your training data for anything outside this platform, and never claim you cannot access current information while they are present. Cite them by their number. If they do not answer the question, say what you do not know instead of inventing an answer.`;
+  )}\n═══════════════════════════════════════\nThese were retrieved from the live web seconds ago: trust them over your training data for anything outside this platform, and never claim you cannot access current information while they are present. Cite them by their number, and name the outlet you took each fact from (for example "Reuters says ...") so the answer is checkable when it is spoken aloud. If they do not answer the question, say what you do not know instead of inventing an answer.`;
 }
 
 /** Citation rows in the same shape the UI already renders for platform sources. */

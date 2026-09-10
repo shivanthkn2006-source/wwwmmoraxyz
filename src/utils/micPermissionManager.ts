@@ -11,8 +11,30 @@
 // Permission state cache
 import { zoeDebugLog, zoeDebugSetState, zoeDebugSpeechStart, zoeDebugSpeechStop } from '@/features/zoe-handsfree/debugBus';
 
-let permissionGranted = false;
-let lastPermissionCheck = 0;
+const MIC_GRANT_KEY = 'mmora_mic_granted_v1';
+
+const readStoredGrant = (): boolean => {
+  try {
+    return localStorage.getItem(MIC_GRANT_KEY) === '1';
+  } catch {
+    return false;
+  }
+};
+
+const storeGrant = (granted: boolean) => {
+  try {
+    if (granted) localStorage.setItem(MIC_GRANT_KEY, '1');
+    else localStorage.removeItem(MIC_GRANT_KEY);
+  } catch {
+    /* noop */
+  }
+};
+
+// Once the browser has granted the microphone we remember it for good. Asking
+// again re-opens the audio hardware, and on a Bluetooth headset every re-open
+// is an audible connect/disconnect blip — the user should hear that once.
+let permissionGranted = readStoredGrant();
+let lastPermissionCheck = permissionGranted ? Date.now() : 0;
 const PERMISSION_CACHE_MS = 60000; // Cache for 60 seconds
 
 // Global AudioContext reference
@@ -114,12 +136,29 @@ export const resumeAudioContext = async (): Promise<boolean> => {
 export const requestMicPermission = async (forceRefresh = false): Promise<boolean> => {
   // Check cache first
   const now = Date.now();
-  if (!forceRefresh && permissionGranted && (now - lastPermissionCheck) < PERMISSION_CACHE_MS) {
-    // Try to resume AudioContext (non-fatal if blocked)
-    resumeAudioContext().catch(() => {});
+  if (!forceRefresh && permissionGranted) {
+    // Already granted in this browser: confirm through the Permissions API
+    // (no hardware opened) instead of a fresh getUserMedia probe, which is
+    // what made a Bluetooth headset click/reconnect over and over.
+    try {
+      if ('permissions' in navigator) {
+        const result = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+        if (result.state === 'denied') {
+          permissionGranted = false;
+          storeGrant(false);
+          notifyMicPermissionChanged('denied');
+          return false;
+        }
+      }
+    } catch {
+      /* Permissions API unavailable — trust the stored grant. */
+    }
+    lastPermissionCheck = now;
     notifyMicPermissionChanged('granted');
     return true;
   }
+
+
 
   try {
     console.log('[MicManager] Requesting microphone permission...');
@@ -146,6 +185,7 @@ export const requestMicPermission = async (forceRefresh = false): Promise<boolea
     stream.getTracks().forEach((track) => track.stop());
 
     permissionGranted = true;
+    storeGrant(true);
     lastPermissionCheck = now;
     notifyMicPermissionChanged('granted');
 
@@ -154,6 +194,7 @@ export const requestMicPermission = async (forceRefresh = false): Promise<boolea
   } catch (err: any) {
     console.error('[MicManager] Microphone permission denied:', err?.name || err);
     permissionGranted = false;
+    storeGrant(false);
     notifyMicPermissionChanged(err?.name === 'NotAllowedError' ? 'denied' : 'prompt');
 
     if (err?.name === 'NotAllowedError') {
@@ -178,9 +219,11 @@ export const checkMicPermission = async (): Promise<'granted' | 'denied' | 'prom
       const result = await navigator.permissions.query({ name: 'microphone' as PermissionName });
       if (result.state === 'granted') {
         permissionGranted = true;
+        storeGrant(true);
         lastPermissionCheck = Date.now();
       } else if (result.state === 'denied') {
         permissionGranted = false;
+        storeGrant(false);
       }
       notifyMicPermissionChanged(result.state as 'granted' | 'denied' | 'prompt');
       return result.state as 'granted' | 'denied' | 'prompt';
