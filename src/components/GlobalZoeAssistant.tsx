@@ -798,6 +798,14 @@ export const GlobalZoeAssistant = ({ config = DEFAULT_CONFIG }: { config?: Parti
     window.addEventListener('mmora:zoe-open-with-context', openWithContext);
     return () => window.removeEventListener('mmora:zoe-open-with-context', openWithContext);
   }, []);
+
+  // Explicit voice command "Zoe, open orb / open chat" — the ONLY spoken path
+  // that opens the chat window.
+  useEffect(() => {
+    const openOrbChat = () => setShowConversationPanel(true);
+    window.addEventListener('zoe-open-orb-chat', openOrbChat);
+    return () => window.removeEventListener('zoe-open-orb-chat', openOrbChat);
+  }, []);
   
   // Listen for Entity Activation Protocol orb activation event
   useEffect(() => {
