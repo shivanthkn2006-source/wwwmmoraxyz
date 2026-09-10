@@ -157,12 +157,8 @@ export const requestMicPermission = async (forceRefresh = false): Promise<boolea
     notifyMicPermissionChanged('granted');
     return true;
   }
-  if (false) {
-    // Try to resume AudioContext (non-fatal if blocked)
-    resumeAudioContext().catch(() => {});
-    notifyMicPermissionChanged('granted');
-    return true;
-  }
+
+
 
   try {
     console.log('[MicManager] Requesting microphone permission...');
@@ -189,6 +185,7 @@ export const requestMicPermission = async (forceRefresh = false): Promise<boolea
     stream.getTracks().forEach((track) => track.stop());
 
     permissionGranted = true;
+    storeGrant(true);
     lastPermissionCheck = now;
     notifyMicPermissionChanged('granted');
 
