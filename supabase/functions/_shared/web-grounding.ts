@@ -202,7 +202,45 @@ function parseRss(xml: string, fallbackSource: string): WebGroundHit[] {
  * refuses some datacenter egress, so Bing News RSS and GDELT stand behind it —
  * before this, a single blocked feed left Zoe with nothing current to cite.
  */
+/**
+ * Real news API (SerpAPI → Google News engine) when the key is configured.
+ * This is the highest-quality, most current source; the keyless feeds below
+ * stay as fallbacks so grounding never depends on a secret or a quota.
+ */
+async function serpapiNews(query: string): Promise<WebGroundHit[]> {
+  const key = (globalThis as any).Deno?.env?.get?.('SERPAPI_KEY');
+  if (!key) return [];
+  const data = await safeJson(
+    `https://serpapi.com/search.json?engine=google_news&q=${encodeURIComponent(query)}&hl=en&gl=us&api_key=${encodeURIComponent(key)}`,
+    7000,
+  );
+  const rows = [
+    ...((data?.news_results ?? []) as any[]),
+    ...((data?.news_results ?? []) as any[]).flatMap((r: any) => r?.stories ?? []),
+  ];
+  const out: WebGroundHit[] = [];
+  for (const r of rows.slice(0, 6)) {
+    if (!r?.link || !r?.title) continue;
+    let publishedAt: string | null = null;
+    if (typeof r.date === 'string') {
+      const d = new Date(r.date);
+      publishedAt = Number.isNaN(d.getTime()) ? null : d.toISOString();
+    }
+    out.push({
+      title: strip(String(r.title)),
+      snippet: strip(String(r.snippet ?? r.source?.name ?? r.title)).slice(0, 300),
+      url: String(r.link),
+      source: strip(String(r.source?.name ?? 'Google News')),
+      publishedAt,
+    });
+  }
+  return out;
+}
+
 async function freshNews(query: string): Promise<WebGroundHit[]> {
+  const keyed = await serpapiNews(query).catch(() => [] as WebGroundHit[]);
+  if (keyed.length) return keyed;
+
   const googleXml = await safeText(
     `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`,
   );
