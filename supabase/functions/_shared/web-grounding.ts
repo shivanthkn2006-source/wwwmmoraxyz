@@ -228,16 +228,24 @@ export async function webGround(query: string, limit = 6): Promise<WebGroundHit[
       term,
     ) || /\b(apple|iphone|ipad|google|pixel|samsung|galaxy|tesla|openai|microsoft|nvidia|meta|amazon|sony)\b/i.test(term);
 
-  const settled = await Promise.allSettled([
-    duckduckgo(term),
-    wikipedia(term),
-    // News is cheap and keyless — run it whenever the question sounds time-sensitive.
-    ...(wantsNews ? [freshNews(term)] : []),
+  const [ddg, wiki, news] = await Promise.all([
+    duckduckgo(term).catch(() => [] as WebGroundHit[]),
+    wikipedia(term).catch(() => [] as WebGroundHit[]),
+    wantsNews ? freshNews(term).catch(() => [] as WebGroundHit[]) : Promise.resolve([] as WebGroundHit[]),
   ]);
 
+  // Order matters: the old code concatenated encyclopedia results first, and
+  // they filled the whole budget so today's headlines were silently dropped —
+  // which is exactly how Zoe ended up answering time-sensitive questions from
+  // memory. Fresh news leads whenever the question is time-sensitive, and each
+  // source keeps a guaranteed slice of the budget.
+  const budget = (list: WebGroundHit[], n: number) => list.slice(0, n);
+  const ordered = wantsNews
+    ? [...budget(news, 4), ...budget(ddg, 2), ...budget(wiki, 2)]
+    : [...budget(ddg, 3), ...budget(wiki, 3), ...budget(news, 2)];
+
   const seen = new Set<string>();
-  return settled
-    .flatMap((entry) => (entry.status === 'fulfilled' ? entry.value : []))
+  return ordered
     .filter((hit) => {
       if (!hit?.url || !hit.title || seen.has(hit.url)) return false;
       seen.add(hit.url);
