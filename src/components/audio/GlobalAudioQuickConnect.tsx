@@ -46,7 +46,9 @@ export const GlobalAudioQuickConnect: React.FC = () => {
 
   // Keep the router alive across routes so the chosen sink survives navigation.
   useEffect(() => {
-    void audioRouter.initialize();
+    // Device list only — never open the audio hardware on page load, or a
+    // connected headset sits in an open stream and hisses continuously.
+    void audioRouter.prepareDevices();
     // Restore hands-free listening if the user switched it on before.
     if (zoeBackgroundListener.wasEnabledBefore() && audioRouter.wasMicGrantedBefore()) {
       void zoeBackgroundListener.enable();
