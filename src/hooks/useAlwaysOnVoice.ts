@@ -151,16 +151,27 @@ export const useAlwaysOnVoice = () => {
         // Explicit "open orb / open chat" — only then does the panel open.
         window.dispatchEvent(new CustomEvent('zoe-open-orb-chat'));
       } else if (intent.kind === 'message') {
-        window.dispatchEvent(new CustomEvent('zoe-navigate', { detail: { path: '/chat' } }));
-        window.dispatchEvent(
-          new CustomEvent('zoe-compose-message', { detail: { recipient: intent.recipient } }),
-        );
+        if (intent.body) {
+          // Real delivery — the message lands in the recipient's inbox.
+          const result = await sendVoiceMessage(intent.recipient, intent.body, user?.id);
+          spoken = result.speak;
+          if (result.sent) {
+            window.dispatchEvent(
+              new CustomEvent('zoe-message-sent', {
+                detail: { recipient: result.recipient?.user_id, text: intent.body },
+              }),
+            );
+          }
+        } else {
+          // No wording yet: ask once, then the next thing said is the message.
+          pendingRecipientRef.current = intent.recipient;
+        }
       }
-      window.dispatchEvent(new CustomEvent('zoe-handsfree-reply', { detail: { text: intent.speak } }));
-      await recordVoiceTurn('assistant', intent.speak, user?.id);
+      window.dispatchEvent(new CustomEvent('zoe-handsfree-reply', { detail: { text: spoken } }));
+      await recordVoiceTurn('assistant', spoken, user?.id);
       setState((prev) => ({ ...prev, isProcessing: false, isSpeaking: true }));
       await new Promise<void>((resolve) => {
-        speakAsZoe(intent.speak, undefined, undefined, () => resolve(), () => resolve());
+        speakAsZoe(spoken, undefined, undefined, () => resolve(), () => resolve());
       });
       setState((prev) => ({ ...prev, isSpeaking: false }));
       processingRef.current = false;
