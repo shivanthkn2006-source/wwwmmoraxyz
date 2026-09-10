@@ -6,7 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+
 import { askZoe } from '@/services/zoeEngine';
 import { useAuth } from '@/lib/auth';
 import { speakAsZoe, stopZoeSpeech, pauseZoeSpeech, resumeZoeSpeech, initializeZoeVoices, isZoeSpeaking } from '@/utils/zoeVoice';
@@ -205,6 +205,7 @@ export const useAlwaysOnVoice = () => {
       // Never leave the user talking to silence — say what went wrong.
       const apology = "I couldn't reach my brain just then. Say that again in a moment.";
       window.dispatchEvent(new CustomEvent('zoe-handsfree-reply', { detail: { text: apology } }));
+      await recordVoiceTurn('assistant', apology, user?.id);
       await new Promise<void>((resolve) => {
         speakAsZoe(apology, undefined, undefined, () => resolve(), () => resolve());
       });
