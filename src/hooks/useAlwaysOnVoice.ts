@@ -114,15 +114,8 @@ export const useAlwaysOnVoice = () => {
     zoeDebugSetState({ hfState: 'processing' });
     window.dispatchEvent(new CustomEvent('zoe-handsfree-transcript', { detail: { text: userText } }));
     
-    // Save user message to DB (SEPARATION PROTOCOL: tag as zoe_classic)
-    if (user) {
-      await supabase.from('ai_companion_messages').insert({
-        user_id: user.id,
-        role: 'user',
-        variant: 'zoe_classic',
-        content: userText
-      } as any);
-    }
+    // Spoken turns land in the same history the orb chat shows.
+    await recordVoiceTurn('user', userText, user?.id);
 
     // Deterministic platform actions ("Zoe, open chat", "Zoe, notifications",
     // "Zoe, send a message to Asha"). Anything else falls through to askZoe so
