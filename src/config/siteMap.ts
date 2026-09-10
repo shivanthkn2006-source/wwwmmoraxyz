@@ -156,9 +156,33 @@ export function siteMapByArea(includeAdmin: boolean): Array<{ area: SiteArea; en
     .filter((g) => g.entries.length > 0);
 }
 
+/**
+ * Per-page briefing Zoe gets on top of the purpose line: what she can actually
+ * do for the member while they are standing on this page.
+ */
+const PAGE_ABILITIES: Record<string, string> = {
+  '/astrology':
+    'On this page you can answer questions about the member\u2019s chart, today\u2019s transits, ' +
+    'their sign and compatibility, using their saved birth details. If birth details are ' +
+    'missing, ask for date, time and place instead of guessing. Do not invent placements.',
+  '/legacy':
+    'This is the Digital Vault. Here you can help the member save, find, retitle or read back ' +
+    'a memory or a legacy message, and explain who will be able to see it. Never read vault ' +
+    'contents aloud unless the member asks on this page.',
+  '/vault':
+    'This is the Digital Vault. Here you can help the member save, find, retitle or read back ' +
+    'a memory or a legacy message, and explain who will be able to see it.',
+  '/chat':
+    'This is Messages. Here you can help draft or shorten a reply, summarise an unread thread, ' +
+    'find an old message, or say who is waiting on an answer. Never send a message without ' +
+    'the member confirming the wording first.',
+};
+
 /** Short "what you can do here" line Zoe injects for the current route. */
 export function pageContextLine(path: string): string {
   const entry = SITE_MAP.find((e) => e.path === path);
-  if (!entry) return '';
-  return `Current page: ${entry.label} (${entry.area}). ${entry.purpose}`;
+  const abilities = PAGE_ABILITIES[path];
+  if (!entry) return abilities ? `Current page: ${path}. ${abilities}` : '';
+  const base = `Current page: ${entry.label} (${entry.area}). ${entry.purpose}`;
+  return abilities ? `${base} ${abilities}` : base;
 }

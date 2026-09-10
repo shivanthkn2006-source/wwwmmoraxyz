@@ -20,9 +20,12 @@ interface LiquidUniverseContextType extends DeviceSoul {
 
 const LiquidUniverseContext = createContext<LiquidUniverseContextType | null>(null);
 
-export const LiquidUniverseProvider: React.FC<{ children: React.ReactNode }> = ({ 
-  children 
-}) => {
+// forwardRef: some wrappers in the boot tree hand this provider a ref. Accepting
+// and ignoring it keeps the console clean without changing behaviour.
+export const LiquidUniverseProvider = React.forwardRef<
+  HTMLDivElement,
+  { children: React.ReactNode }
+>(({ children }, _ref) => {
   const deviceSoul = useLiquidUniverse();
   
   // Apply CSS classes to document root
@@ -87,7 +90,8 @@ export const LiquidUniverseProvider: React.FC<{ children: React.ReactNode }> = (
       {children}
     </LiquidUniverseContext.Provider>
   );
-};
+});
+LiquidUniverseProvider.displayName = 'LiquidUniverseProvider';
 
 export const useLiquidUniverseContext = (): LiquidUniverseContextType => {
   const context = useContext(LiquidUniverseContext);

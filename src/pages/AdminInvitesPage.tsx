@@ -44,6 +44,7 @@ export default function AdminInvitesPage() {
   const [newCode, setNewCode] = useState('');
   const [newLabel, setNewLabel] = useState('');
   const [newUses, setNewUses] = useState('1');
+  const [newBatch, setNewBatch] = useState('1');
   const [copied, setCopied] = useState<string | null>(null);
 
   const copyLink = async (code: string) => {
@@ -62,7 +63,7 @@ export default function AdminInvitesPage() {
       .from('invite_codes')
       .select('id, code, is_active, created_at, expires_at, max_uses, current_uses, used_by, used_at, revoked_at, revoked_reason, metadata')
       .order('created_at', { ascending: false })
-      .limit(200);
+      .limit(600);
     if (error) toast({ title: 'Could not load invites', description: error.message, variant: 'destructive' });
     setRows((data as InviteRow[] | null) ?? []);
     setLoading(false);
@@ -86,30 +87,72 @@ export default function AdminInvitesPage() {
   };
 
   const createCode = async () => {
-    const code = (newCode.trim() || randomCode()).toUpperCase();
     setBusy('new');
     const { data: sessionData } = await supabase.auth.getSession();
     const uses = Math.max(1, Math.min(500, Number.parseInt(newUses, 10) || 1));
-    const { error } = await supabase.from('invite_codes').insert({
-      code,
-      is_active: false, // waits for your approval
-      max_uses: uses,
-      current_uses: 0,
-      created_by: sessionData.session?.user?.id ?? null,
-      metadata: { kind: 'referral', label: newLabel.trim() || null },
-    });
+    const batch = Math.max(1, Math.min(500, Number.parseInt(newBatch, 10) || 1));
+    const typed = newCode.trim().toUpperCase();
+    const codes = batch === 1 ? [typed || randomCode()] : Array.from({ length: batch }, () => randomCode());
+    const { error } = await supabase.from('invite_codes').insert(
+      codes.map((code) => ({
+        code,
+        is_active: false, // waits for your approval
+        max_uses: uses,
+        current_uses: 0,
+        created_by: sessionData.session?.user?.id ?? null,
+        metadata: { kind: 'referral', label: newLabel.trim() || null },
+      })),
+    );
     setBusy(null);
     if (error) toast({ title: 'Could not create the code', description: error.message, variant: 'destructive' });
     else {
       setNewCode('');
       setNewLabel('');
       setNewUses('1');
-      toast({ title: 'Code created', description: `${code} is waiting for your approval.` });
+      setNewBatch('1');
+      toast({
+        title: batch === 1 ? 'Code created' : `${batch} codes created`,
+        description: 'Waiting for your approval.',
+      });
       void load();
     }
   };
 
+  /** Approves every code still waiting, in one go. */
+  const approveAll = async () => {
+    const waiting = rows.filter((r) => !r.is_active && !r.revoked_at).map((r) => r.id);
+    if (waiting.length === 0) return;
+    setBusy('approve-all');
+    const { error } = await supabase
+      .from('invite_codes')
+      .update({ is_active: true, revoked_at: null, revoked_reason: null, revoked_by: null })
+      .in('id', waiting);
+    setBusy(null);
+    if (error) toast({ title: 'Change refused', description: error.message, variant: 'destructive' });
+    else {
+      toast({ title: `${waiting.length} codes approved` });
+      void load();
+    }
+  };
+
+  /** Copies every usable invite link, one per line, ready to hand out. */
+  const copyAllLinks = async () => {
+    const usable = rows.filter(
+      (r) => r.is_active && !r.revoked_at && (r.current_uses ?? 0) < (r.max_uses ?? 1),
+    );
+    try {
+      await navigator.clipboard.writeText(usable.map((r) => referralLink(r.code)).join('\n'));
+      toast({ title: `${usable.length} links copied` });
+    } catch {
+      toast({ title: 'Copy failed', description: 'Your browser blocked the clipboard.', variant: 'destructive' });
+    }
+  };
+
   const pending = useMemo(() => rows.filter((r) => !r.is_active && !r.revoked_at).length, [rows]);
+  const usable = useMemo(
+    () => rows.filter((r) => r.is_active && !r.revoked_at && (r.current_uses ?? 0) < (r.max_uses ?? 1)).length,
+    [rows],
+  );
 
   if (isAdmin === false) {
     return (
@@ -160,6 +203,13 @@ export default function AdminInvitesPage() {
               placeholder="Uses"
               className="w-24"
             />
+            <Input
+              value={newBatch}
+              onChange={(e) => setNewBatch(e.target.value)}
+              inputMode="numeric"
+              placeholder="How many"
+              className="w-28"
+            />
             <Button onClick={() => void createCode()} disabled={busy === 'new'}>
               {busy === 'new' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
               <span className="ml-2">Add</span>
@@ -169,8 +219,18 @@ export default function AdminInvitesPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">
-              Invites · {rows.length} total · {pending} waiting for approval
+            <CardTitle className="text-base flex flex-wrap items-center justify-between gap-2">
+              <span>
+                Invites · {rows.length} total · {usable} ready to hand out · {pending} waiting for approval
+              </span>
+              <span className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={() => void copyAllLinks()} disabled={usable === 0}>
+                  Copy all links
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => void approveAll()} disabled={pending === 0 || busy === 'approve-all'}>
+                  {busy === 'approve-all' ? <Loader2 className="h-4 w-4 animate-spin" /> : `Approve all ${pending}`}
+                </Button>
+              </span>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
