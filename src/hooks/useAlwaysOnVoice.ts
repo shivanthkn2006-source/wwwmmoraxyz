@@ -226,7 +226,12 @@ export const useAlwaysOnVoice = () => {
   // Start listening with auto-restart on browser timeout
   const startListening = useCallback(() => {
     if (!isEnabledRef.current) return;
-    if (isZoeSpeaking()) return; // Don't listen while Zoe is speaking
+    if (isZoeSpeaking()) {
+      // Zoe is mid-sentence (e.g. the wake greeting). Waiting instead of
+      // silently giving up is what makes the follow-up question get heard.
+      setTimeout(() => startListening(), 400);
+      return;
+    }
     
     if (!isSpeechRecognitionSupported()) {
       console.warn('[AlwaysOn] Speech recognition not supported');
