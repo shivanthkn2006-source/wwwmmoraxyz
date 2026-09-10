@@ -174,12 +174,15 @@ const AuthPage = () => {
             duration: isConnectionError ? 10000 : 5000,
           });
         } else {
-          toast({
-            title: "Welcome to MMora!",
-            description: "Account created successfully",
-          });
-          // Navigate to home - the HomePage will open profile setup automatically
-          navigate('/home');
+          // With email confirmation on, signUp returns no session until the
+          // member clicks the link in their inbox. Never treat it as signed in.
+          const { data: sessionData } = await supabase.auth.getSession();
+          if (sessionData?.session) {
+            toast({ title: "Welcome to M'Mora!", description: 'Account created successfully' });
+            navigate('/home');
+          } else {
+            setPendingEmail(formData.email);
+          }
         }
       } else {
         const validation = signInSchema.safeParse(formData);
