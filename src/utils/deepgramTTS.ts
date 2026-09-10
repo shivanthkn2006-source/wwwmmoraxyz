@@ -110,6 +110,7 @@ async function fetchChunk(text: string, model?: string): Promise<Blob> {
   const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
   const url = `https://${projectId}.supabase.co/functions/v1/deepgram-tts`;
 
+  window.dispatchEvent(new CustomEvent('zoe-deepgram-status', { detail: { state: 'requesting', model: model || getActiveModel() } }));
   const response = await fetch(url, {
     method: 'POST',
     headers: {
@@ -124,9 +125,11 @@ async function fetchChunk(text: string, model?: string): Promise<Blob> {
 
   if (!response.ok) {
     const errorData = await response.text();
+    window.dispatchEvent(new CustomEvent('zoe-deepgram-status', { detail: { state: 'error', status: response.status, error: errorData.slice(0, 240) } }));
     throw new Error(`Deepgram TTS failed [${response.status}]: ${errorData}`);
   }
 
+  window.dispatchEvent(new CustomEvent('zoe-deepgram-status', { detail: { state: 'ready', model: model || getActiveModel() } }));
   return response.blob();
 }
 
@@ -265,6 +268,7 @@ export const speakWithDeepgram = async (
       const latency = Math.round(performance.now() - startedAt);
       console.log(`[DeepgramTTS] ✅ First audio started in ${latency}ms`);
       onStart?.();
+      window.dispatchEvent(new CustomEvent('zoe-deepgram-status', { detail: { state: 'playing', latencyMs: latency, model: activeModel } }));
       window.dispatchEvent(new CustomEvent('zoe-speak'));
       window.dispatchEvent(new CustomEvent('zoe-speak-start'));
     }, firstMetadata ?? null);
@@ -290,6 +294,7 @@ export const speakWithDeepgram = async (
     }
 
     if (!aborted) {
+      window.dispatchEvent(new CustomEvent('zoe-deepgram-status', { detail: { state: 'idle', model: activeModel } }));
       window.dispatchEvent(new CustomEvent('zoe-speak-end'));
       currentOnEnd?.();
     }
@@ -299,6 +304,7 @@ export const speakWithDeepgram = async (
     isDeepgramSpeaking = false;
     const normalizedError = error instanceof Error ? error : new Error(String(error));
     console.error('[DeepgramTTS] ❌ Error:', normalizedError);
+    window.dispatchEvent(new CustomEvent('zoe-deepgram-status', { detail: { state: 'error', error: normalizedError.message } }));
     currentOnError?.(normalizedError);
     return false;
   } finally {

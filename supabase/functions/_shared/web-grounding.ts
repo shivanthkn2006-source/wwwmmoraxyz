@@ -58,7 +58,7 @@ async function safeJson(url: string, ms = 6000): Promise<any | null> {
 
 /** Personal/platform questions the omni-graph already answers on its own. */
 const PLATFORM_ONLY =
-  /\b(my|mine|our|i)\b[^?]{0,40}\b(post|posts|feed|dhf|essay|memory|memories|profile|growth|loop|loops|comment|message|badge|streak|compass)\b/i;
+  /(?:\b(my|mine|our|i)\b[^?]{0,40}\b(name|identity|username|post|posts|feed|dhf|essay|memory|memories|profile|growth|loop|loops|comment|message|badge|streak|compass)\b|\bwho\s+am\s+i\b)/i;
 
 /** Signals that the answer lives outside this platform. */
 const EXTERNAL_HINT =
