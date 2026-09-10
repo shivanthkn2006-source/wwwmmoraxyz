@@ -194,6 +194,7 @@ export const requestMicPermission = async (forceRefresh = false): Promise<boolea
   } catch (err: any) {
     console.error('[MicManager] Microphone permission denied:', err?.name || err);
     permissionGranted = false;
+    storeGrant(false);
     notifyMicPermissionChanged(err?.name === 'NotAllowedError' ? 'denied' : 'prompt');
 
     if (err?.name === 'NotAllowedError') {
@@ -218,9 +219,11 @@ export const checkMicPermission = async (): Promise<'granted' | 'denied' | 'prom
       const result = await navigator.permissions.query({ name: 'microphone' as PermissionName });
       if (result.state === 'granted') {
         permissionGranted = true;
+        storeGrant(true);
         lastPermissionCheck = Date.now();
       } else if (result.state === 'denied') {
         permissionGranted = false;
+        storeGrant(false);
       }
       notifyMicPermissionChanged(result.state as 'granted' | 'denied' | 'prompt');
       return result.state as 'granted' | 'denied' | 'prompt';
