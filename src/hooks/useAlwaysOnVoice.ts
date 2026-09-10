@@ -126,6 +126,9 @@ export const useAlwaysOnVoice = () => {
         window.dispatchEvent(new CustomEvent('zoe-navigate', { detail: { path: intent.path } }));
       } else if (intent.kind === 'notifications') {
         window.dispatchEvent(new CustomEvent('zoe-open-notifications'));
+      } else if (intent.kind === 'orb-chat') {
+        // Explicit "open orb / open chat" — only then does the panel open.
+        window.dispatchEvent(new CustomEvent('zoe-open-orb-chat'));
       } else if (intent.kind === 'message') {
         window.dispatchEvent(new CustomEvent('zoe-navigate', { detail: { path: '/chat' } }));
         window.dispatchEvent(
