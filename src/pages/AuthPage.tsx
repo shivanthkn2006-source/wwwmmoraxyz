@@ -17,6 +17,7 @@ import { useWebAuthn } from '@/hooks/useWebAuthn';
 import PageSeo from '@/components/seo/PageSeo';
 import { ROUTE_SEO } from '@/config/routeSeo';
 import TurnstileSignup, { verifyTurnstileToken } from '@/components/security/TurnstileSignup';
+import { supabase } from '@/integrations/supabase/client';
 
 
 // Validation schemas
@@ -55,6 +56,8 @@ const AuthPage = () => {
   const [showPermissionModal, setShowPermissionModal] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [captchaReset, setCaptchaReset] = useState(0);
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
+  const [resending, setResending] = useState(false);
 
   // Safe session wrapper (some browsers can throw on sessionStorage)
   const safeSession = useCallback(
