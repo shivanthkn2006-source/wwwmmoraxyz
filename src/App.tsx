@@ -878,6 +878,14 @@ const RouteAwareShell = () => {
                             }
                           />
                           <Route
+                            path="/admin/invites"
+                            element={
+                              <ProtectedRoute>
+                                <AdminInvitesPage />
+                              </ProtectedRoute>
+                            }
+                          />
+                          <Route
                             path="/admin/growth-delivery"
                             element={
                               <ProtectedRoute>
