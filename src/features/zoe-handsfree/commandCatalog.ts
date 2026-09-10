@@ -39,7 +39,8 @@ export const ZOE_COMMAND_CATALOG: ZoeCommandGroup[] = [
     area: 'Getting around',
     commands: [
       { example: 'Zoe home', does: 'Opens the Home feed', kind: 'action' },
-      { example: 'Zoe open chat', does: 'Opens Messages', kind: 'action' },
+      { example: 'Zoe open orb chat', does: 'Opens the Zoe chat window — only when you ask', kind: 'action' },
+      { example: 'Zoe open messages', does: 'Opens Messages', kind: 'action' },
       { example: 'Zoe open Mosaic', does: 'Opens the Mosaic feed', kind: 'action' },
       { example: 'Zoe open my profile', does: 'Opens your profile', kind: 'action' },
       { example: 'Zoe open settings', does: 'Opens Settings', kind: 'action' },

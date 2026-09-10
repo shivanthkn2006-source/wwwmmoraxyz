@@ -798,6 +798,14 @@ export const GlobalZoeAssistant = ({ config = DEFAULT_CONFIG }: { config?: Parti
     window.addEventListener('mmora:zoe-open-with-context', openWithContext);
     return () => window.removeEventListener('mmora:zoe-open-with-context', openWithContext);
   }, []);
+
+  // Explicit voice command "Zoe, open orb / open chat" — the ONLY spoken path
+  // that opens the chat window.
+  useEffect(() => {
+    const openOrbChat = () => setShowConversationPanel(true);
+    window.addEventListener('zoe-open-orb-chat', openOrbChat);
+    return () => window.removeEventListener('zoe-open-orb-chat', openOrbChat);
+  }, []);
   
   // Listen for Entity Activation Protocol orb activation event
   useEffect(() => {
@@ -823,7 +831,9 @@ export const GlobalZoeAssistant = ({ config = DEFAULT_CONFIG }: { config?: Parti
       // is built synchronously — no lookup delay between "hey Zoe" and a reply.
       const spokenCommand = event.detail?.command?.trim();
       if (spokenCommand) {
-        setShowConversationPanel(true);
+        // Answer out loud without popping the chat window — it opens only on
+        // an explicit "Zoe, open orb / open chat" (handled by the intent
+        // router via the 'zoe-open-orb-chat' event below).
         await alwaysOnVoice.processUtterance(spokenCommand);
       } else if (event.detail?.source !== 'silent') {
         const firstName = (user?.user_metadata?.display_name as string | undefined)?.split(' ')[0] ?? null;
