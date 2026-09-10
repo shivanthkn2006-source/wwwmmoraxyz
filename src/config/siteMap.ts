@@ -58,6 +58,7 @@ const PURPOSE: Record<string, string> = {
   '/zoe-ai': 'Talk to Zoe in a full window.',
   '/zoe/brain': "Zoe's health: how fast she answers and what is failing.",
   '/legacy': 'Your Digital Vault — memories you want kept.',
+  '/admin': 'Staff dashboard: run the God Mode scan and watch platform health.',
   '/privacy': 'Download everything we hold, or delete your account.',
   '/terms': 'The rules of using M\u2019Mora.',
   '/data-policy': 'What we store, why, and for how long.',

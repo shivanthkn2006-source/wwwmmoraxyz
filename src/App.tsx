@@ -73,6 +73,7 @@ const SearchPreviewPage = lazy(() => import("./pages/SearchPreviewPage"));
 const ZoeSourcePage = lazy(() => import("./pages/ZoeSourcePage"));
 const BugReportPage = lazy(() => import("./pages/BugReportPage"));
 const AdminOverviewPage = lazy(() => import("./pages/AdminOverviewPage"));
+const AdminDashboardPage = lazy(() => import("./pages/AdminDashboardPage"));
 const SovereignVaultPage = lazy(() => import("./pages/SovereignVaultPage"));
 
 const AnalyticsDashboard = lazy(() => import("./pages/AnalyticsDashboard"));
@@ -746,6 +747,14 @@ const RouteAwareShell = () => {
                           <Route path="/platform-architecture" element={<PlatformArchitecturePage />} />
                           <Route path="/attack-response" element={<AttackResponsePlanPage />} />
                           <Route path="/beta" element={<BetaPortalPage />} />
+                          <Route
+                            path="/admin"
+                            element={
+                              <ProtectedRoute>
+                                <AdminDashboardPage />
+                              </ProtectedRoute>
+                            }
+                          />
                           <Route
                             path="/admin/overview"
                             element={
