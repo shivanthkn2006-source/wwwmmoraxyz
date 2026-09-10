@@ -141,6 +141,7 @@ const DhfEssayPage = lazy(() => import("./pages/DhfEssayPage")); // ZOE'S DHF LO
 
 const AdminDhfGrowthPage = lazy(() => import("./pages/AdminDhfGrowthPage")); // DHF GROWTH CONSOLE (admin)
 const AdminGrowthRunsPage = lazy(() => import("./pages/AdminGrowthRunsPage")); // GROWTH WORKER TRACE (admin, RLS-gated)
+const AdminInvitesPage = lazy(() => import("./pages/AdminInvitesPage")); // INVITE APPROVALS (admin, RLS-gated)
 const AdminGrowthDeliveryPage = lazy(() => import("./pages/AdminGrowthDeliveryPage")); // DAILY GROWTH DELIVERY REPORT (admin, RLS-gated)
 const AdminDhfGenerationPage = lazy(() => import("./pages/AdminDhfGenerationPage")); // DHF GENERATION STATUS (admin, RLS-gated)
 const AdminControlPanelPage = lazy(() => import("./pages/AdminControlPanelPage"));
