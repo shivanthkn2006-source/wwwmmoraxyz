@@ -17,6 +17,8 @@ import NotificationAlertHost from '@/components/notifications/NotificationAlertH
 import useDhfUnlockReminders from '@/hooks/useDhfUnlockReminders';
 import { ZoeCardNarrationProvider } from '@/components/voice/ZoeCardNarrationProvider';
 import ZoeSpeechPauseBar from '@/components/voice/ZoeSpeechPauseBar';
+import GuidedTour from '@/components/onboarding/GuidedTour';
+
 
 
 /** Auto-enables thermal safe mode on low-power devices / heavy module pressure. */
@@ -75,6 +77,11 @@ export const PlatformLayout = ({ children }: { children: React.ReactNode }) => (
       <ZoeSpeechPauseBar />
     </AppErrorBoundary>
     <ZoeCardNarrationProvider>{children}</ZoeCardNarrationProvider>
+
+    {/* First-run guided walk (bottom-LEFT, never over the dock). */}
+    <AppErrorBoundary moduleName="platform:guided-tour" severity="low" fallback={null}>
+      <GuidedTour />
+    </AppErrorBoundary>
 
     {/* Enterprise bug reporter — every route, crash-isolated. */}
     <AppErrorBoundary moduleName="platform:bug-reporter" severity="low" fallback={null}>

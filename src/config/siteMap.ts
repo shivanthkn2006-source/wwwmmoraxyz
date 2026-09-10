@@ -39,6 +39,9 @@ const HIDDEN = new Set(['*', '/access-denied', '/password-recovery', '/source'])
 const PURPOSE: Record<string, string> = {
   '/auth': 'Create your account or sign back in.',
   '/home': 'Everything from the people you follow, newest first.',
+  '/demo': 'A real shared account anyone can open to look around before joining.',
+  '/import/x': 'Paste a link to a public post on X and keep its words, picture and date here.',
+
   '/mosaic': 'A quieter grid of posts, ordered by who you are closest to.',
   '/selfie-city': 'Photos pinned to the places they were taken.',
   '/universal-timeline': 'Your whole story on one line, year by year.',

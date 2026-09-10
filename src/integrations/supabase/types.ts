@@ -12020,6 +12020,7 @@ export type Database = {
           new_tone: string
         }[]
       }
+      auth_user_id_by_email: { Args: { _email: string }; Returns: string }
       award_resonance_points: {
         Args: { p_player_id: string; p_points: number; p_reason?: string }
         Returns: undefined
