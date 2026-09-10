@@ -117,11 +117,32 @@ export const useAlwaysOnVoice = () => {
     // Spoken turns land in the same history the orb chat shows.
     await recordVoiceTurn('user', userText, user?.id);
 
+    // A pending "what should I say to X?" turn: this utterance IS the message.
+    const pending = pendingRecipientRef.current;
+    if (pending) {
+      pendingRecipientRef.current = null;
+      const cancelled = /^(cancel|never mind|nevermind|stop|forget it)\b/i.test(userText.trim());
+      const line = cancelled
+        ? 'Cancelled — nothing was sent.'
+        : (await sendVoiceMessage(pending, userText, user?.id)).speak;
+      window.dispatchEvent(new CustomEvent('zoe-handsfree-reply', { detail: { text: line } }));
+      await recordVoiceTurn('assistant', line, user?.id);
+      setState((prev) => ({ ...prev, isProcessing: false, isSpeaking: true }));
+      await new Promise<void>((resolve) => {
+        speakAsZoe(line, undefined, undefined, () => resolve(), () => resolve());
+      });
+      setState((prev) => ({ ...prev, isSpeaking: false }));
+      processingRef.current = false;
+      if (isEnabledRef.current) setTimeout(() => startListening(), 600);
+      return;
+    }
+
     // Deterministic platform actions ("Zoe, open chat", "Zoe, notifications",
     // "Zoe, send a message to Asha"). Anything else falls through to askZoe so
     // the answer stays natural and live-grounded instead of scripted.
     const intent = resolveVoiceIntent(userText);
     if (intent) {
+      let spoken = intent.speak;
       if (intent.kind === 'navigate') {
         window.dispatchEvent(new CustomEvent('zoe-navigate', { detail: { path: intent.path } }));
       } else if (intent.kind === 'notifications') {
