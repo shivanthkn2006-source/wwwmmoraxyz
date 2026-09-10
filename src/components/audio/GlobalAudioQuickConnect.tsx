@@ -60,7 +60,7 @@ export const GlobalAudioQuickConnect: React.FC = () => {
   return (
     // Small round icon only: tap it to open the audio centre. Kept tiny so it
     // never sits over Home content or hides anything behind it.
-    <div className="fixed top-3 right-3 z-40 pointer-events-auto">
+    <div className="fixed top-16 right-3 z-40 pointer-events-auto">
       <AudioQuickConnectButton compact />
     </div>
   );

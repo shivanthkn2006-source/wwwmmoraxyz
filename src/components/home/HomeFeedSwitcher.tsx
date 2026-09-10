@@ -28,10 +28,16 @@ export const HomeFeedSwitcher: React.FC<HomeFeedSwitcherProps> = ({
   visible = true,
 }) => {
   const items = options.slice(0, 5);
+  const [expanded, setExpanded] = React.useState(false);
+  const primary = items.find((item) => item.id === 'global') ?? items[0];
+  const secondary = primary ? items.filter((item) => item.id !== primary.id) : [];
+
+  if (!primary) return null;
+
   return (
     <div
       className={cn(
-        'pointer-events-none fixed left-1/2 top-16 z-50 -translate-x-1/2 transition-all duration-300',
+        'pointer-events-none fixed left-4 top-16 z-50 transition-all duration-300',
         visible ? 'opacity-100' : '-translate-y-3 opacity-0',
         className,
       )}
@@ -40,10 +46,34 @@ export const HomeFeedSwitcher: React.FC<HomeFeedSwitcherProps> = ({
       <div
         role="tablist"
         aria-label="Home feeds"
-        className="pointer-events-auto flex items-center gap-1 rounded-full border border-border bg-background/85 p-1 shadow-sm backdrop-blur"
+        className="pointer-events-auto flex items-center gap-4"
         data-testid="home-feed-switcher"
       >
-        {items.map((option) => {
+        <button
+          type="button"
+          role="tab"
+          aria-selected={value === primary.id}
+          aria-expanded={expanded}
+          onClick={() => {
+            onChange(primary.id);
+            setExpanded((open) => !open);
+          }}
+          data-feed-switch={primary.id}
+          className={cn(
+            'px-0 py-1 text-sm font-semibold text-foreground transition-opacity hover:opacity-70',
+            value !== primary.id && 'text-muted-foreground',
+          )}
+        >
+          {primary.label}
+        </button>
+        <div
+          className={cn(
+            'flex items-center gap-4 overflow-hidden transition-all duration-300',
+            expanded ? 'max-w-[270px] translate-x-0 opacity-100' : 'pointer-events-none max-w-0 -translate-x-2 opacity-0',
+          )}
+          aria-hidden={!expanded}
+        >
+        {secondary.map((option) => {
           const active = option.id === value;
           return (
             <button
@@ -54,16 +84,17 @@ export const HomeFeedSwitcher: React.FC<HomeFeedSwitcherProps> = ({
               onClick={() => onChange(option.id)}
               data-feed-switch={option.id}
               className={cn(
-                'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
+                'whitespace-nowrap px-0 py-1 text-sm font-medium transition-opacity hover:opacity-70',
                 active
-                  ? 'bg-foreground text-background'
-                  : 'text-muted-foreground hover:text-foreground',
+                  ? 'text-foreground underline underline-offset-4'
+                  : 'text-muted-foreground',
               )}
             >
               {option.label}
             </button>
           );
         })}
+        </div>
       </div>
     </div>
   );

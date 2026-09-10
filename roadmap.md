@@ -116,7 +116,7 @@
 - [ ] Server-side multi-bitrate HLS packaging (current transcode runs on the uploader's device).
 
 ## Compact controls and native hands-free Zoe (Sep 10 2026)
-- [ ] Remove the audio control border/background/text and prevent notification overlap.
-- [ ] Collapse the Home feed selector to Global; expand Friends, Mosaic, and Selfie City to the right on tap.
-- [ ] Add a real Capacitor native bridge for background/locked-screen Zoe listening and connect it to AudioRouterService.
-- [ ] Verify focused tests, native sync readiness, signed-in Home/audio preview, and current build health.
+- [x] Remove the audio control border/background/text and prevent notification overlap.
+- [x] Collapse the Home feed selector to Global; expand Friends, Mosaic, and Selfie City to the right on tap.
+- [x] Add registered Android/iOS native bridges and connect native wake/output events to the existing Zoe/Deepgram path.
+- [ ] Complete signed-in preview and physical Android/iOS headset validation; source tests and native declarations are complete.

@@ -1,6 +1,5 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAudioRouter } from '@/hooks/useAudioRouter';
 
 interface Props {
   onNavigateToAudioSettings?: () => void;
@@ -14,28 +13,12 @@ interface Props {
 }
 
 export const AudioQuickConnectButton: React.FC<Props> = ({ onNavigateToAudioSettings, className, compact }) => {
-  const { status, audioLevel } = useAudioRouter();
   const navigate = useNavigate();
-
-  const getStatusColor = () => {
-    switch (status) {
-      case 'connected':
-        return 'hsl(var(--primary))';
-      case 'fallback':
-        return 'hsl(var(--muted-foreground))';
-      case 'connecting':
-        return 'hsl(var(--muted-foreground))';
-      case 'error':
-        return 'hsl(var(--destructive))';
-      default:
-        return 'hsl(var(--border))';
-    }
-  };
 
   return (
     <button
       onClick={() => (onNavigateToAudioSettings ? onNavigateToAudioSettings() : navigate('/zoe-audio'))}
-      className={`relative flex items-center rounded-full border border-border bg-background/80 hover:bg-muted transition-all text-sm text-foreground ${
+      className={`relative flex items-center transition-opacity text-sm text-foreground hover:opacity-70 ${
         compact ? 'gap-1 h-9 w-9 justify-center p-0' : 'gap-2 px-3 py-1.5'
       } ${className || ''}`}
       title="Zoe Audio & Bluetooth Device Center"
@@ -47,20 +30,6 @@ export const AudioQuickConnectButton: React.FC<Props> = ({ onNavigateToAudioSett
         <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" />
       </svg>
 
-      {!compact && <span className="font-medium hidden sm:inline">Zoe Audio</span>}
-
-      {/* Real-time VU meter tick if connected */}
-      {!compact && status === 'connected' && (
-        <div className="w-8 h-2 bg-muted rounded-full overflow-hidden flex items-center">
-          <div className="h-full bg-foreground transition-all duration-75" style={{ width: `${audioLevel}%` }} />
-        </div>
-      )}
-
-      {/* Connectivity status indicator dot */}
-      <span
-        className={`w-2 h-2 rounded-full ring-2 ring-background ${compact ? 'absolute -top-0.5 -right-0.5' : ''}`}
-        style={{ backgroundColor: getStatusColor() }}
-      />
     </button>
   );
 };

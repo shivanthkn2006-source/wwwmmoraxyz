@@ -1,11 +1,11 @@
 import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'app.lovable.b9030454e9164ad9be10f87ad69107c0',
-  appName: 'mmora-app',
+  appId: 'app.lovable.p5e9c1fcbad3b434fa9d89d7d3fb4a4b4',
+  appName: 'wwwmmoraxyz',
   webDir: 'dist',
   server: {
-    url: 'https://b9030454-e916-4ad9-be10-f87ad69107c0.lovableproject.com?forceHideBadge=true',
+    url: 'https://5e9c1fcb-ad3b-434f-a9d8-9d7d3fb4a4b4.lovableproject.com?forceHideBadge=true',
     cleartext: true,
   },
   plugins: {

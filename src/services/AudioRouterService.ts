@@ -14,6 +14,7 @@
  */
 
 import { subscribeTTSAudio } from '@/utils/zoeTTSAudioBus';
+import { nativeZoeAudioBridge } from '@/services/NativeZoeAudioBridge';
 
 export interface AudioDeviceOption {
   deviceId: string;
@@ -164,8 +165,10 @@ class AudioRouterService {
       if (audio) {
         void this.applySinkToElement(audio);
         this.duckAudio(true);
+        void nativeZoeAudioBridge.setOutputActive(true);
       } else {
         this.duckAudio(false);
+        void nativeZoeAudioBridge.setOutputActive(false);
       }
     });
   }
