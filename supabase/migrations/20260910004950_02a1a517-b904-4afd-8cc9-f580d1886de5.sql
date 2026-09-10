@@ -1,0 +1,14 @@
+ALTER FUNCTION public.apply_zoe_feedback(uuid, text, text, text, text) SECURITY INVOKER;
+ALTER FUNCTION public.calculate_phoenix_sync_score(uuid) SECURITY INVOKER;
+ALTER FUNCTION public.calculate_agent_success_probability(uuid, uuid) SECURITY INVOKER;
+ALTER FUNCTION public.check_user_activity_freshness(uuid, integer) SECURITY INVOKER;
+ALTER FUNCTION public.cqrs_query_zoe_state(uuid) SECURITY INVOKER;
+ALTER FUNCTION public.cqrs_command_log_event(uuid, text, text, jsonb, jsonb) SECURITY INVOKER;
+ALTER FUNCTION public.detect_relationship_style(uuid) SECURITY INVOKER;
+ALTER FUNCTION public.get_upcoming_important_dates(uuid, integer) SECURITY INVOKER;
+ALTER FUNCTION public.get_zoe_sovereign_state(uuid) SECURITY INVOKER;
+ALTER FUNCTION public.get_zoe_stability_score(uuid) SECURITY INVOKER;
+ALTER FUNCTION public.should_show_hint(uuid, text, integer) SECURITY INVOKER;
+ALTER FUNCTION public.increment_shortcut_execution(uuid) SECURITY INVOKER;
+ALTER FUNCTION public.verify_astro_permissions() SECURITY INVOKER;
+ALTER FUNCTION public.migrate_relationship_to_zsmt(uuid) SECURITY INVOKER;
