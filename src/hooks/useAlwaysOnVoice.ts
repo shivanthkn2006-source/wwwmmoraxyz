@@ -153,6 +153,10 @@ export const useAlwaysOnVoice = () => {
       } else if (intent.kind === 'orb-chat') {
         // Explicit "open orb / open chat" — only then does the panel open.
         window.dispatchEvent(new CustomEvent('zoe-open-orb-chat'));
+      } else if (intent.kind === 'god-scan') {
+        window.dispatchEvent(new CustomEvent('zoe-navigate', { detail: { path: '/admin' } }));
+        // The dashboard mounts, then runs the scan. Non-admins see "Staff only".
+        setTimeout(() => window.dispatchEvent(new CustomEvent('zoe-run-god-scan')), 1200);
       } else if (intent.kind === 'message') {
         if (intent.body) {
           // Real delivery — the message lands in the recipient's inbox.
