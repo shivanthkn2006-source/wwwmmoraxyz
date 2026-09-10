@@ -815,6 +815,15 @@ export const GlobalZoeAssistant = ({ config = DEFAULT_CONFIG }: { config?: Parti
       
       // Mark speaking state during EAP voice
       setIsSpeaking(true);
+
+      // Wake word / headset press: answer instantly with where they are.
+      // The location is already cached from the session prefetch, so this line
+      // is built synchronously — no lookup delay between "hey Zoe" and a reply.
+      if (event.detail?.source !== 'silent') {
+        const firstName = (user?.user_metadata?.display_name as string | undefined)?.split(' ')[0] ?? null;
+        void speakResponse(buildWakeGreeting(location.pathname, firstName), 'calm');
+      }
+      
       
       // Track in DHF as a response type
       if (activeConfig.enableDHFStream) {
