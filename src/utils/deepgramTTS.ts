@@ -283,7 +283,7 @@ export const speakWithDeepgram = async (
   currentOnError = onError;
 
   try {
-    const sentences = splitIntoSentences(text);
+    const sentences = splitIntoSentences(humanizeForSpeech(text));
     if (sentences.length === 0) throw new Error('No valid chunks to synthesize');
     const chunkMetadata = buildChunkMetadata(text, sentences);
 
@@ -333,6 +333,10 @@ export const speakWithDeepgram = async (
         console.warn('[DeepgramTTS] Chunk fetch failed:', result.error);
         continue;
       }
+
+      // Breathe between sentences instead of running them together.
+      await wait(pauseAfter(result.metadata?.chunkText ?? ''));
+      if (aborted) break;
 
       const ok = await playBlob(result.blob, undefined, result.metadata);
       if (!ok || aborted) break;
