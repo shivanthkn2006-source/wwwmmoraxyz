@@ -220,7 +220,13 @@ async function freshNews(query: string): Promise<WebGroundHit[]> {
 export async function webGround(query: string, limit = 6): Promise<WebGroundHit[]> {
   const term = (query || '').trim().slice(0, 300);
   if (term.length < 3) return [];
-  const wantsNews = /\b(news|latest|today|breaking|update|current|now|who is|who'?s|president|prime minister|ceo|leader|price|score|202\d)\b/i.test(term);
+  // Anything that could have moved recently gets the fresh-news pass too:
+  // product launches, releases, rumours, companies and people all change faster
+  // than an encyclopedia entry, and Google News RSS is keyless and quick.
+  const wantsNews =
+    /\b(news|latest|newest|new|today|breaking|update|current|now|who is|who'?s|president|prime minister|ceo|leader|price|cost|score|launch|launched|release|released|announce|announced|unveil|rumou?r|leak|review|202\d)\b/i.test(
+      term,
+    ) || /\b(apple|iphone|ipad|google|pixel|samsung|galaxy|tesla|openai|microsoft|nvidia|meta|amazon|sony)\b/i.test(term);
 
   const settled = await Promise.allSettled([
     duckduckgo(term),
