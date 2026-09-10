@@ -37,7 +37,10 @@ export const HomeFeedSwitcher: React.FC<HomeFeedSwitcherProps> = ({
   return (
     <div
       className={cn(
-        'pointer-events-none fixed left-4 top-16 z-50 transition-all duration-300',
+        // Sits directly under the M'Mora wordmark: same left inset as the
+        // header (p-4 = 1rem), just below the 2rem logo line, so the "G" of
+        // Global starts exactly under the "M".
+        'pointer-events-none fixed left-4 top-12 z-50 transition-all duration-300',
         visible ? 'opacity-100' : '-translate-y-3 opacity-0',
         className,
       )}

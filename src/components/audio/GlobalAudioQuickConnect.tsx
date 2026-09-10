@@ -58,9 +58,9 @@ export const GlobalAudioQuickConnect: React.FC = () => {
   if (EXCLUDED_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`))) return null;
 
   return (
-    // Small round icon only: tap it to open the audio centre. Kept tiny so it
-    // never sits over Home content or hides anything behind it.
-    <div className="fixed top-16 right-3 z-40 pointer-events-auto">
+    // Small round icon only, parked immediately to the LEFT of the header
+    // notification bell (bell 40px + 8px gap + 40px avatar + 16px inset).
+    <div className="fixed top-[18px] right-[104px] z-[55] pointer-events-auto">
       <AudioQuickConnectButton compact />
     </div>
   );
