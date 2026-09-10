@@ -20,6 +20,7 @@ import ZoeSpeechPauseBar from '@/components/voice/ZoeSpeechPauseBar';
 import GuidedTour from '@/components/onboarding/GuidedTour';
 import ZoeGlobalMount from '@/components/zoe/ZoeGlobalMount';
 import GlobalAudioQuickConnect from '@/components/audio/GlobalAudioQuickConnect';
+import ZoeVoiceIntentHost from '@/components/zoe/ZoeVoiceIntentHost';
 
 
 
@@ -100,6 +101,11 @@ export const PlatformLayout = ({ children }: { children: React.ReactNode }) => (
     {/* Bluetooth headset status + hardware button bridge (top-right, dock stays clear). */}
     <AppErrorBoundary moduleName="platform:audio-router" severity="low" fallback={null}>
       <GlobalAudioQuickConnect />
+    </AppErrorBoundary>
+
+    {/* Spoken navigation ("Zoe, open chat") — renders nothing. */}
+    <AppErrorBoundary moduleName="platform:zoe-voice-intents" severity="low" fallback={null}>
+      <ZoeVoiceIntentHost />
     </AppErrorBoundary>
 
     {/* Zoe's orb — one mount for the whole platform, crash-isolated. */}
