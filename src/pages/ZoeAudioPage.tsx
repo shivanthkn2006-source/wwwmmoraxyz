@@ -309,7 +309,9 @@ export const ZoeAudioPage: React.FC = () => {
           </div>
           <div className="p-3 bg-background border border-border rounded-lg">
             <span className="text-xs text-muted-foreground uppercase font-mono">Pocket / locked screen</span>
-            <p className="text-sm font-semibold mt-1">{wakeCap.backgroundCapable ? 'Keeps listening' : 'Needs the app open'}</p>
+            <p className="text-sm font-semibold mt-1">
+              {wakeCap.isNative ? 'Native service ready — device test required' : 'Needs the app open'}
+            </p>
           </div>
           <div className="p-3 bg-background border border-border rounded-lg">
             <span className="text-xs text-muted-foreground uppercase font-mono">Running as</span>
@@ -427,8 +429,8 @@ export const ZoeAudioPage: React.FC = () => {
           </div>
           <div className="p-3 bg-background border border-border rounded-md">
             <strong className="text-foreground block mb-1">Background tab &amp; lock-screen listening</strong>
-            Browsers halt raw audio capture when tabs are minimised or the screen is locked. For continuous operation in
-            your pocket, install M'Mora to the home screen or use the native wrapper.
+            Browsers halt raw audio capture when tabs are minimised or the screen is locked. Home-screen browser installs
+            have the same restriction. Pocket listening requires the native app and must be confirmed on your device.
           </div>
           <div className="p-3 bg-background border border-border rounded-md">
             <strong className="text-foreground block mb-1">Permissions &amp; routing reset</strong>

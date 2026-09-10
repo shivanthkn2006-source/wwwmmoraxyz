@@ -21,6 +21,7 @@
     "@capacitor/android": "^7.4.3",
     "@capacitor/cli": "^7.4.3",
     "@capacitor/core": "^7.4.3",
+    "@capacitor/ios": "7.6.7",
     "@hookform/resolvers": "^3.10.0",
     "@mediapipe/tasks-genai": "^0.10.26",
     "@radix-ui/react-accordion": "^1.2.11",

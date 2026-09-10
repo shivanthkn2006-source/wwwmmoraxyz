@@ -9,14 +9,14 @@
  * Honesty about platforms:
  *  - Browser tabs: the OS suspends capture when the tab is hidden or the phone
  *    is locked. We report that instead of pretending it keeps listening.
- *  - Native shell (Capacitor): a silent looping audio element holds the audio
- *    session open so the recognizer survives backgrounding, and Media Session
- *    keeps the lock-screen controls wired to Zoe.
+ *  - Native shell (Capacitor): the native microphone service/audio session owns
+ *    listening. No silent browser audio or duplicate assistant is used.
  */
 
 import { audioRouter } from '@/services/AudioRouterService';
 import { HANDS_FREE_WAKE_PHRASES, HANDS_FREE_STOP_PHRASES, findHandsFreePhrase } from '@/features/zoe-handsfree/phrases';
 import { zoeDebugLog } from '@/features/zoe-handsfree/debugBus';
+import { nativeZoeAudioBridge } from '@/services/NativeZoeAudioBridge';
 
 export type WakeWordState = 'off' | 'starting' | 'listening' | 'triggered' | 'suspended' | 'error';
 
@@ -31,9 +31,6 @@ export interface WakeWordCapability {
 }
 
 const STORAGE_KEY = 'mmora.audio.wakeWordEnabled';
-const SILENT_WAV =
-  'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAgD4AAAB9AAACABAAZGF0YQAAAAA=';
-
 type Listener = (state: WakeWordState) => void;
 
 interface MinimalRecognition {
@@ -69,8 +66,8 @@ export function isNativeShell(): boolean {
 }
 
 export function wakeWordCapability(): WakeWordCapability {
-  const supported = Boolean(speechRecognitionCtor());
   const isNative = isNativeShell();
+  const supported = isNative || Boolean(speechRecognitionCtor());
   if (!supported) {
     return {
       supported: false,
@@ -84,7 +81,7 @@ export function wakeWordCapability(): WakeWordCapability {
       supported: true,
       isNative: true,
       backgroundCapable: true,
-      reason: 'Native app: Zoe keeps the audio session open, so the wake word still works with the screen locked.',
+      reason: 'Native app support is installed for background audio. Locked-screen wake still requires validation on this device.',
     };
   }
   return {
@@ -101,11 +98,14 @@ class ZoeBackgroundListener {
   private state: WakeWordState = 'off';
   private enabled = false;
   private restartTimer: ReturnType<typeof setTimeout> | null = null;
-  private keepAlive: HTMLAudioElement | null = null;
   private listeners = new Set<Listener>();
 
   constructor() {
     if (typeof window === 'undefined') return;
+    window.addEventListener('zoe-native-listening-state', ((event: CustomEvent<{ state?: WakeWordState }>) => {
+      if (!this.enabled || !event.detail?.state) return;
+      this.setState(event.detail.state);
+    }) as EventListener);
     document.addEventListener('visibilitychange', () => {
       if (!this.enabled) return;
       if (document.hidden && !isNativeShell()) {
@@ -155,18 +155,32 @@ class ZoeBackgroundListener {
       this.setState('error');
       return false;
     }
-    const granted = await audioRouter.ensureMicPermission();
-    if (!granted) {
-      this.setState('error');
-      return false;
-    }
     this.enabled = true;
     try {
       localStorage.setItem(STORAGE_KEY, '1');
     } catch {
       /* private mode */
     }
-    this.startKeepAlive();
+    if (cap.isNative) {
+      try {
+        const started = await nativeZoeAudioBridge.start(
+          [...HANDS_FREE_WAKE_PHRASES],
+          [...HANDS_FREE_STOP_PHRASES],
+        );
+        this.setState(started ? 'listening' : 'error');
+        return started;
+      } catch (error) {
+        zoeDebugLog('error', `native wake service failed: ${error instanceof Error ? error.message : String(error)}`);
+        this.setState('error');
+        return false;
+      }
+    }
+    const granted = await audioRouter.ensureMicPermission();
+    if (!granted) {
+      this.enabled = false;
+      this.setState('error');
+      return false;
+    }
     await this.startRecognition();
     return true;
   }
@@ -178,7 +192,7 @@ class ZoeBackgroundListener {
     } catch {
       /* private mode */
     }
-    this.stopKeepAlive();
+    void nativeZoeAudioBridge.stop();
     this.stopRecognition();
     this.setState('off');
   }
@@ -187,35 +201,6 @@ class ZoeBackgroundListener {
     if (on) return this.enable();
     this.disable();
     return false;
-  }
-
-  /**
-   * Silent looping element pinned to the chosen headset sink. On a native shell
-   * this keeps the audio session (and therefore the mic) alive in the pocket.
-   */
-  private startKeepAlive(): void {
-    if (this.keepAlive || !isNativeShell()) return;
-    try {
-      const el = new Audio(SILENT_WAV);
-      el.loop = true;
-      el.volume = 0.0001;
-      void audioRouter.applySinkToElement(el);
-      void el.play().catch(() => undefined);
-      this.keepAlive = el;
-    } catch {
-      this.keepAlive = null;
-    }
-  }
-
-  private stopKeepAlive(): void {
-    if (!this.keepAlive) return;
-    try {
-      this.keepAlive.pause();
-      this.keepAlive.src = '';
-    } catch {
-      /* noop */
-    }
-    this.keepAlive = null;
   }
 
   private stopRecognition(): void {
