@@ -30,6 +30,9 @@ const AUTO_BACKFILL_KEY = 'zoe.search.autoBackfillAt';
 export type SearchIndexCoverage = Record<string, { indexed: number; withVision: number }>;
 
 export async function fetchSearchIndexStats(): Promise<{ stats: SearchIndexStats; failures: SearchIndexFailure[]; coverage: SearchIndexCoverage } | null> {
+  // The indexer is session-only; skip the call entirely when signed out.
+  const { data: sessionData } = await supabase.auth.getSession();
+  if (!sessionData.session) return null;
   const { data, error } = await supabase.functions.invoke('zoe-search-indexer', { body: { stats: true } });
   if (error || !data?.stats) return null;
   return {
