@@ -135,6 +135,7 @@ const TermsPage = lazy(() => import("./pages/TermsPage"));
 const DataPolicyPage = lazy(() => import("./pages/DataPolicyPage"));
 const SiteMapPage = lazy(() => import("./pages/SiteMapPage"));
 const HelpPage = lazy(() => import("./pages/HelpPage"));
+const LandingPage = lazy(() => import("./pages/LandingPage"));
 
 const ZoeAstroDashboardPage = lazy(() => import("./pages/ZoeAstroDashboardPage")); // M'MORA ZOE ALIGNMENT DASHBOARD
 const GrowthInsightsPage = lazy(() => import("./pages/GrowthInsightsPage")); // PERSONAL GROWTH ENGINE ARCHIVE
@@ -448,6 +449,7 @@ const RouteAwareShell = () => {
     pathname.startsWith('/auth') ||
     pathname.startsWith('/login') ||
     pathname.startsWith('/signup') ||
+    pathname.startsWith('/welcome') ||
     pathname.startsWith('/password-recovery') ||
     pathname.startsWith('/zoe-omega') ||
     pathname.startsWith('/zoe-infinity') ||
