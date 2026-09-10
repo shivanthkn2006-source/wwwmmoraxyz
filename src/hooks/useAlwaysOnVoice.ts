@@ -17,6 +17,7 @@ import {
   stopSpeechRecognition 
 } from '@/utils/micPermissionManager';
 import { zoeDebugLog, zoeDebugSetState } from '@/features/zoe-handsfree/debugBus';
+import { resolveVoiceIntent } from '@/features/zoe-handsfree/voiceIntentRouter';
 
 interface VoiceState {
   isListening: boolean;
@@ -111,6 +112,32 @@ export const useAlwaysOnVoice = () => {
         variant: 'zoe_classic',
         content: userText
       } as any);
+    }
+
+    // Deterministic platform actions ("Zoe, open chat", "Zoe, notifications",
+    // "Zoe, send a message to Asha"). Anything else falls through to askZoe so
+    // the answer stays natural and live-grounded instead of scripted.
+    const intent = resolveVoiceIntent(userText);
+    if (intent) {
+      if (intent.kind === 'navigate') {
+        window.dispatchEvent(new CustomEvent('zoe-navigate', { detail: { path: intent.path } }));
+      } else if (intent.kind === 'notifications') {
+        window.dispatchEvent(new CustomEvent('zoe-open-notifications'));
+      } else if (intent.kind === 'message') {
+        window.dispatchEvent(new CustomEvent('zoe-navigate', { detail: { path: '/chat' } }));
+        window.dispatchEvent(
+          new CustomEvent('zoe-compose-message', { detail: { recipient: intent.recipient } }),
+        );
+      }
+      window.dispatchEvent(new CustomEvent('zoe-handsfree-reply', { detail: { text: intent.speak } }));
+      setState((prev) => ({ ...prev, isProcessing: false, isSpeaking: true }));
+      await new Promise<void>((resolve) => {
+        speakAsZoe(intent.speak, undefined, undefined, () => resolve(), () => resolve());
+      });
+      setState((prev) => ({ ...prev, isSpeaking: false }));
+      processingRef.current = false;
+      if (isEnabledRef.current) setTimeout(() => startListening(), 600);
+      return;
     }
 
     try {
