@@ -11,8 +11,30 @@
 // Permission state cache
 import { zoeDebugLog, zoeDebugSetState, zoeDebugSpeechStart, zoeDebugSpeechStop } from '@/features/zoe-handsfree/debugBus';
 
-let permissionGranted = false;
-let lastPermissionCheck = 0;
+const MIC_GRANT_KEY = 'mmora_mic_granted_v1';
+
+const readStoredGrant = (): boolean => {
+  try {
+    return localStorage.getItem(MIC_GRANT_KEY) === '1';
+  } catch {
+    return false;
+  }
+};
+
+const storeGrant = (granted: boolean) => {
+  try {
+    if (granted) localStorage.setItem(MIC_GRANT_KEY, '1');
+    else localStorage.removeItem(MIC_GRANT_KEY);
+  } catch {
+    /* noop */
+  }
+};
+
+// Once the browser has granted the microphone we remember it for good. Asking
+// again re-opens the audio hardware, and on a Bluetooth headset every re-open
+// is an audible connect/disconnect blip — the user should hear that once.
+let permissionGranted = readStoredGrant();
+let lastPermissionCheck = permissionGranted ? Date.now() : 0;
 const PERMISSION_CACHE_MS = 60000; // Cache for 60 seconds
 
 // Global AudioContext reference

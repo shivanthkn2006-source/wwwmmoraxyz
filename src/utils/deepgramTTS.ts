@@ -283,9 +283,10 @@ export const speakWithDeepgram = async (
   currentOnError = onError;
 
   try {
-    const sentences = splitIntoSentences(humanizeForSpeech(text));
+    const spoken = humanizeForSpeech(text);
+    const sentences = splitIntoSentences(spoken);
     if (sentences.length === 0) throw new Error('No valid chunks to synthesize');
-    const chunkMetadata = buildChunkMetadata(text, sentences);
+    const chunkMetadata = buildChunkMetadata(spoken, sentences);
 
     const startedAt = performance.now();
     const activeModel = getActiveModel();
