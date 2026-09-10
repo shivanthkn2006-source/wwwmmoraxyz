@@ -133,6 +133,7 @@ export const useAlwaysOnVoice = () => {
         );
       }
       window.dispatchEvent(new CustomEvent('zoe-handsfree-reply', { detail: { text: intent.speak } }));
+      await recordVoiceTurn('assistant', intent.speak, user?.id);
       setState((prev) => ({ ...prev, isProcessing: false, isSpeaking: true }));
       await new Promise<void>((resolve) => {
         speakAsZoe(intent.speak, undefined, undefined, () => resolve(), () => resolve());
@@ -165,15 +166,7 @@ export const useAlwaysOnVoice = () => {
       zoeDebugLog('voice', `reply: ${responseText.slice(0, 180)}`);
       window.dispatchEvent(new CustomEvent('zoe-handsfree-reply', { detail: { text: responseText } }));
       
-      // Save Zoe's message to DB (SEPARATION PROTOCOL: tag as zoe_classic)
-      if (user) {
-        await supabase.from('ai_companion_messages').insert({
-          user_id: user.id,
-          role: 'assistant',
-          variant: 'zoe_classic',
-          content: responseText
-        } as any);
-      }
+      await recordVoiceTurn('assistant', responseText, user?.id);
 
       // Speak the response with proper state tracking
       setState(prev => ({ ...prev, isSpeaking: true, isProcessing: false }));
