@@ -8,13 +8,14 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, RefreshCw, Loader2, Check, Ban, Plus } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Loader2, Check, Ban, Plus, Copy } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import useIsAdmin from '@/hooks/useIsAdmin';
+import { referralLink, shareTargets } from '@/lib/referral';
 
 interface InviteRow {
   id: string;
@@ -28,6 +29,7 @@ interface InviteRow {
   used_at: string | null;
   revoked_at: string | null;
   revoked_reason: string | null;
+  metadata: Record<string, unknown> | null;
 }
 
 const randomCode = () =>
@@ -40,12 +42,25 @@ export default function AdminInvitesPage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [newCode, setNewCode] = useState('');
+  const [newLabel, setNewLabel] = useState('');
+  const [newUses, setNewUses] = useState('1');
+  const [copied, setCopied] = useState<string | null>(null);
+
+  const copyLink = async (code: string) => {
+    try {
+      await navigator.clipboard.writeText(referralLink(code));
+      setCopied(code);
+      setTimeout(() => setCopied((c) => (c === code ? null : c)), 2000);
+    } catch {
+      toast({ title: 'Copy failed', description: 'Select the link and copy it manually.', variant: 'destructive' });
+    }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
     const { data, error } = await supabase
       .from('invite_codes')
-      .select('id, code, is_active, created_at, expires_at, max_uses, current_uses, used_by, used_at, revoked_at, revoked_reason')
+      .select('id, code, is_active, created_at, expires_at, max_uses, current_uses, used_by, used_at, revoked_at, revoked_reason, metadata')
       .order('created_at', { ascending: false })
       .limit(200);
     if (error) toast({ title: 'Could not load invites', description: error.message, variant: 'destructive' });
@@ -74,17 +89,21 @@ export default function AdminInvitesPage() {
     const code = (newCode.trim() || randomCode()).toUpperCase();
     setBusy('new');
     const { data: sessionData } = await supabase.auth.getSession();
+    const uses = Math.max(1, Math.min(500, Number.parseInt(newUses, 10) || 1));
     const { error } = await supabase.from('invite_codes').insert({
       code,
       is_active: false, // waits for your approval
-      max_uses: 1,
+      max_uses: uses,
       current_uses: 0,
       created_by: sessionData.session?.user?.id ?? null,
+      metadata: { kind: 'referral', label: newLabel.trim() || null },
     });
     setBusy(null);
     if (error) toast({ title: 'Could not create the code', description: error.message, variant: 'destructive' });
     else {
       setNewCode('');
+      setNewLabel('');
+      setNewUses('1');
       toast({ title: 'Code created', description: `${code} is waiting for your approval.` });
       void load();
     }
