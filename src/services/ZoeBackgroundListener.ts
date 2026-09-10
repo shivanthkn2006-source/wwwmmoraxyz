@@ -195,6 +195,8 @@ class ZoeBackgroundListener {
     }
     void nativeZoeAudioBridge.stop();
     this.stopRecognition();
+    // Hand the microphone back so a Bluetooth headset stops hissing.
+    void audioRouter.releaseMic();
     this.setState('off');
   }
 
