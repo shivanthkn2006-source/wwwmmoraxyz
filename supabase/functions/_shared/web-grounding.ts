@@ -169,34 +169,54 @@ async function safeText(url: string, ms = 6000): Promise<string | null> {
   }
 }
 
-/** Fresh news: Google News RSS (keyless), GDELT as a secondary source. */
-async function freshNews(query: string): Promise<WebGroundHit[]> {
+/** Parse a generic RSS feed into grounding hits. */
+function parseRss(xml: string, fallbackSource: string): WebGroundHit[] {
   const out: WebGroundHit[] = [];
+  for (const item of xml.split('<item>').slice(1, 7)) {
+    const pick = (tag: string) => {
+      const m = item.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`));
+      return m ? strip(m[1].replace(/<!\[CDATA\[|\]\]>/g, '')) : '';
+    };
+    const title = pick('title');
+    const link = pick('link');
+    if (!title || !link) continue;
+    const pub = pick('pubDate');
+    let publishedAt: string | null = null;
+    if (pub) {
+      const d = new Date(pub);
+      publishedAt = Number.isNaN(d.getTime()) ? null : d.toISOString();
+    }
+    out.push({
+      title,
+      snippet: pick('description').slice(0, 240) || title,
+      url: link,
+      source: pick('source') || fallbackSource,
+      publishedAt,
+    });
+  }
+  return out;
+}
 
-  const xml = await safeText(
+/**
+ * Fresh news, keyless, in reliability order. Google News is the richest feed but
+ * refuses some datacenter egress, so Bing News RSS and GDELT stand behind it —
+ * before this, a single blocked feed left Zoe with nothing current to cite.
+ */
+async function freshNews(query: string): Promise<WebGroundHit[]> {
+  const googleXml = await safeText(
     `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`,
   );
-  if (xml) {
-    const items = xml.split('<item>').slice(1, 6);
-    for (const item of items) {
-      const pick = (tag: string) => {
-        const m = item.match(new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`));
-        return m ? strip(m[1].replace(/<!\[CDATA\[|\]\]>/g, '')) : '';
-      };
-      const title = pick('title');
-      const link = pick('link');
-      if (!title || !link) continue;
-      out.push({
-        title,
-        snippet: strip(pick('description')).slice(0, 240) || title,
-        url: link,
-        source: pick('source') || 'Google News',
-        publishedAt: pick('pubDate') ? new Date(pick('pubDate')).toISOString() : null,
-      });
-    }
-  }
-
+  let out = googleXml ? parseRss(googleXml, 'Google News') : [];
   if (out.length) return out;
+
+  const bingXml = await safeText(
+    `https://www.bing.com/news/search?q=${encodeURIComponent(query)}&format=RSS`,
+  );
+  out = bingXml ? parseRss(bingXml, 'Bing News') : [];
+  if (out.length) return out;
+
+  out = [];
+
 
   const data = await safeJson(
     `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(
