@@ -2,38 +2,93 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useAudioRouter } from '@/hooks/useAudioRouter';
 import { audioRouter } from '@/services/AudioRouterService';
+import {
+  zoeBackgroundListener,
+  wakeWordCapability,
+  type WakeWordState,
+} from '@/services/ZoeBackgroundListener';
 
 /** Best-supported headsets for the M'Mora / Zoe two-way voice link. */
 const SUPPORTED_HEADSETS = [
   {
     rank: 1,
     name: 'Apple AirPods Pro 2 / AirPods 4',
-    bt: 'Bluetooth 5.3 · LE Audio ready · H2 chip',
-    why: 'Best mic pickup, stem-press maps straight to play/pause so you can start and stop Zoe without the screen.',
+    version: 'Bluetooth 5.3',
+    lc3: 'LE Audio hardware, LC3 not yet enabled by Apple',
+    lc3Ready: false,
+    why: 'Best mic pickup, and a stem press maps straight to play/pause so you can start and stop Zoe without the screen.',
   },
   {
     rank: 2,
     name: 'Sony WF-1000XM5 / WH-1000XM5',
-    bt: 'Bluetooth 5.3 · LE Audio (LC3) · A2DP + HFP',
-    why: 'Wideband voice while listening, strong noise handling, reliable hardware buttons on every OS.',
+    version: 'Bluetooth 5.3',
+    lc3: 'Yes — LE Audio / LC3, plus classic A2DP + HFP',
+    lc3Ready: true,
+    why: 'Wideband voice while listening, strong noise handling, reliable hardware buttons on every operating system.',
   },
   {
     rank: 3,
-    name: 'Jabra Evolve2 65 / Evolve2 85 (enterprise)',
-    bt: 'Bluetooth 5.2 · certified for Teams/Zoom · USB dongle option',
-    why: 'The dongle gives a stable, always-listed device name in the picker — the safest choice for desks and demos.',
+    name: 'Samsung Galaxy Buds3 Pro',
+    version: 'Bluetooth 5.4',
+    lc3: 'Yes — LE Audio / LC3 + Auracast',
+    lc3Ready: true,
+    why: 'Keeps your voice at 32/48 kHz while the mic is open, so Zoe never goes tinny on Android.',
   },
   {
     rank: 4,
-    name: 'Samsung Galaxy Buds3 Pro',
-    bt: 'Bluetooth 5.4 · LE Audio (LC3) · Auracast',
-    why: 'Keeps voice at 32/48 kHz while the mic is open, so Zoe never goes tinny on Android.',
+    name: 'Jabra Evolve2 65 / Evolve2 85 (enterprise)',
+    version: 'Bluetooth 5.2',
+    lc3: 'No — classic A2DP + HFP, wideband via the USB dongle',
+    lc3Ready: false,
+    why: 'The dongle gives a stable, always-listed device name in the picker — the safest choice for desks and demos.',
   },
   {
     rank: 5,
     name: 'Shokz OpenComm2 / OpenRun Pro 2 (bone conduction)',
-    bt: 'Bluetooth 5.1–5.3 · boom mic (OpenComm2)',
-    why: 'Ears stay open — closest to the Jarvis-in-your-ear feel while walking, cycling or in a workshop.',
+    version: 'Bluetooth 5.1–5.3',
+    lc3: 'No — classic A2DP + HFP with a boom mic on OpenComm2',
+    lc3Ready: false,
+    why: 'Ears stay open — closest to a real earpiece while walking, cycling or working in a workshop.',
+  },
+];
+
+/** Plain-language pairing walk-through shown on the page. */
+const PAIRING_STEPS = [
+  {
+    step: 1,
+    title: 'Turn Bluetooth on',
+    body:
+      'Windows: Settings › Bluetooth & devices. Mac: System Settings › Bluetooth. Android: Settings › Connected devices. iPhone: Settings › Bluetooth. Leave the screen open while you pair.',
+  },
+  {
+    step: 2,
+    title: 'Put the headset into pairing mode',
+    body:
+      'Earbuds: put them in the case, keep the lid open and hold the case button until the light blinks. Headphones: hold the power button until you hear "pairing". Then pick the headset in your Bluetooth list.',
+  },
+  {
+    step: 3,
+    title: 'Come back here and allow the microphone once',
+    body:
+      'Press "Allow microphone (one time)" above. Your browser will ask once; choose Allow. M\'Mora remembers it, so no page ever asks you again.',
+  },
+  {
+    step: 4,
+    title: 'Choose the headset in both dropdowns',
+    body:
+      'Pick your headset under "Earphone / Output Sink" so Zoe speaks into your ear, and under "Microphone / Input Feed" so she hears you. Names only appear after you allow the microphone.',
+  },
+  {
+    step: 5,
+    title: 'Test it',
+    body:
+      'Press "Play Test Tone" — you should hear a beep in the headset. Then talk: the meter under "Mic Gain" should move. If both work, the link is live.',
+  },
+  {
+    step: 6,
+    title: 'Talk to Zoe',
+    body:
+      'Press the headset button (or switch on hands-free below and say "Hey Zoe"). Speak normally, and Zoe answers out loud in your ear. Press the button again, or say "Zoe, stop", to cut her off.',
   },
 ];
 
@@ -52,14 +107,20 @@ export const ZoeAudioPage: React.FC = () => {
   } = useAudioRouter();
 
   const [testPlaying, setTestPlaying] = useState<boolean>(false);
+  const [wakeState, setWakeState] = useState<WakeWordState>(zoeBackgroundListener.getState());
   const audioTestRef = useRef<HTMLAudioElement | null>(null);
   const sinkElementRef = useRef<HTMLAudioElement | null>(null);
+  const wakeCap = wakeWordCapability();
 
   // Bind the master output element + open the audio pipeline for this page.
   useEffect(() => {
     if (!sinkElementRef.current) sinkElementRef.current = new Audio();
     void audioRouter.initialize(sinkElementRef.current);
   }, []);
+
+  useEffect(() => zoeBackgroundListener.onStateChange(setWakeState), []);
+
+  const wakeOn = wakeState !== 'off' && wakeState !== 'error';
 
   const runSoundTest = () => {
     if (!audioTestRef.current) {
@@ -224,22 +285,88 @@ export const ZoeAudioPage: React.FC = () => {
         </div>
       </section>
 
+      {/* Hands-free wake word */}
+      <section className="bg-card border border-border rounded-xl p-6 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold">Hands-free — say &ldquo;Hey Zoe&rdquo;</h2>
+            <p className="text-sm text-muted-foreground">
+              Zoe listens for her name on the headset mic and answers out loud, no tapping.
+            </p>
+          </div>
+          <button
+            onClick={() => void zoeBackgroundListener.toggle(!wakeOn)}
+            disabled={!wakeCap.supported}
+            className="px-4 py-2 border border-border hover:bg-muted disabled:opacity-50 text-xs font-semibold rounded-lg transition"
+          >
+            {wakeOn ? 'Turn hands-free off' : 'Turn hands-free on'}
+          </button>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="p-3 bg-background border border-border rounded-lg">
+            <span className="text-xs text-muted-foreground uppercase font-mono">Wake word</span>
+            <p className="text-sm font-semibold mt-1 capitalize">{wakeState}</p>
+          </div>
+          <div className="p-3 bg-background border border-border rounded-lg">
+            <span className="text-xs text-muted-foreground uppercase font-mono">Pocket / locked screen</span>
+            <p className="text-sm font-semibold mt-1">{wakeCap.backgroundCapable ? 'Keeps listening' : 'Needs the app open'}</p>
+          </div>
+          <div className="p-3 bg-background border border-border rounded-lg">
+            <span className="text-xs text-muted-foreground uppercase font-mono">Running as</span>
+            <p className="text-sm font-semibold mt-1">{wakeCap.isNative ? 'Native app' : 'Browser tab'}</p>
+          </div>
+        </div>
+        <p className="text-sm text-muted-foreground">{wakeCap.reason}</p>
+      </section>
+
+      {/* Pairing guide */}
+      <section className="bg-card border border-border rounded-xl p-6 space-y-4">
+        <div>
+          <h2 className="text-lg font-semibold">How to connect your headset — step by step</h2>
+          <p className="text-sm text-muted-foreground">
+            Six steps, about two minutes. You only ever have to do this once per headset.
+          </p>
+        </div>
+        <ol className="space-y-3">
+          {PAIRING_STEPS.map((s) => (
+            <li key={s.step} className="p-4 bg-background border border-border rounded-lg flex gap-4">
+              <span className="font-mono text-xs text-muted-foreground shrink-0 mt-0.5">Step {s.step}</span>
+              <div>
+                <strong className="text-sm block">{s.title}</strong>
+                <p className="text-sm text-muted-foreground mt-1">{s.body}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </section>
+
       {/* Supported headsets */}
       <section className="bg-card border border-border rounded-xl p-6 space-y-4">
         <div>
           <h2 className="text-lg font-semibold">Best supported headsets (top 5)</h2>
           <p className="text-sm text-muted-foreground">
-            Any Bluetooth headset works. These five give the smoothest one-to-one talk with Zoe.
+            Any Bluetooth headset works. These five give the smoothest one-to-one talk with Zoe. LC3 is the newer
+            Bluetooth sound format that keeps Zoe clear while she is also listening to you.
           </p>
         </div>
         <ol className="space-y-3">
           {SUPPORTED_HEADSETS.map((h) => (
             <li key={h.rank} className="p-4 bg-background border border-border rounded-lg">
-              <div className="flex items-baseline gap-3">
+              <div className="flex items-baseline gap-3 flex-wrap">
                 <span className="font-mono text-xs text-muted-foreground">#{h.rank}</span>
                 <strong className="text-sm">{h.name}</strong>
+                <span className="text-xs font-mono px-2 py-0.5 border border-border rounded-full text-muted-foreground">
+                  {h.version}
+                </span>
+                <span
+                  className={`text-xs font-mono px-2 py-0.5 rounded-full border ${
+                    h.lc3Ready ? 'border-foreground/40 text-foreground' : 'border-border text-muted-foreground'
+                  }`}
+                >
+                  {h.lc3Ready ? 'LC3 supported' : 'No LC3'}
+                </span>
               </div>
-              <p className="text-xs text-muted-foreground mt-1 font-mono">{h.bt}</p>
+              <p className="text-xs text-muted-foreground mt-1 font-mono">{h.lc3}</p>
               <p className="text-sm text-muted-foreground mt-1">{h.why}</p>
             </li>
           ))}
