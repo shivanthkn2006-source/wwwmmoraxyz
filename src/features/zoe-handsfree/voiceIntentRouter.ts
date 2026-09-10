@@ -88,6 +88,14 @@ export function resolveVoiceIntent(rawText: string): VoiceIntent | null {
   const text = stripWake(rawText || '');
   if (!text) return null;
 
+  // Only an explicit request opens the orb chat window. Saying "hey Zoe" alone
+  // never opens it — she just answers out loud.
+  if (/\b(open|show|bring\s+up|launch)\s+(the\s+)?(zoe\s+)?(orb(\s+chat)?|chat(\s+window)?|conversation)\b/.test(text)
+      || /^(orb|orb chat|open orb|open chat)$/.test(text)) {
+    return { kind: 'orb-chat', speak: 'Opening our chat.' };
+  }
+
+
   // "send a message to asha soosan" / "message asha"
   const message = text.match(/^(?:send\s+(?:a\s+)?(?:message|text|dm)\s+to|message|text|dm)\s+(.+)$/);
   if (message) {
