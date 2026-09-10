@@ -45,6 +45,7 @@ export const useAlwaysOnVoice = () => {
   const lastTranscriptRef = useRef('');
   const restartCountRef = useRef(0);
   const lastActivityRef = useRef(Date.now());
+  const processingStartedRef = useRef(0);
 
   // Initialize voices on mount
   useEffect(() => {
