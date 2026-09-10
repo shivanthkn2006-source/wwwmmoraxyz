@@ -19,6 +19,7 @@ import {
 import { zoeDebugLog, zoeDebugSetState } from '@/features/zoe-handsfree/debugBus';
 import { resolveVoiceIntent } from '@/features/zoe-handsfree/voiceIntentRouter';
 import { recordVoiceTurn } from '@/services/zoeVoiceHistory';
+import { sendVoiceMessage } from '@/services/zoeVoiceMessaging';
 
 interface VoiceState {
   isListening: boolean;
@@ -47,6 +48,8 @@ export const useAlwaysOnVoice = () => {
   const restartCountRef = useRef(0);
   const lastActivityRef = useRef(Date.now());
   const processingStartedRef = useRef(0);
+  // Recipient awaiting the wording of a spoken message.
+  const pendingRecipientRef = useRef<string | null>(null);
 
   // Initialize voices on mount
   useEffect(() => {
