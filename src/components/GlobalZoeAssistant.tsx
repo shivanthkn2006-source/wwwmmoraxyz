@@ -27,6 +27,7 @@ import { useSkillUpload } from '@/hooks/useSkillUpload';
 import { useZoeMediaAccess } from '@/hooks/useZoeMediaAccess';
 import { useAuth } from '@/lib/auth';
 import { buildWakeGreeting, prefetchPresenceLocation } from '@/services/zoePresence';
+import { recordVoiceTurn } from '@/services/zoeVoiceHistory';
 import zoeAvatar from '@/assets/zoe-avatar.png';
 import { toast } from 'sonner';
 import { usePhantomStore, usePhantomVisible } from '@/stores/usePhantomStore'; // PROTOCOL PHANTOM
