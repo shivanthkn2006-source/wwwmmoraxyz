@@ -370,6 +370,8 @@ class AudioRouterService {
       this.writeStored(STORAGE_INPUT, deviceId);
 
       if (!this.audioCtx) await this.initialize();
+      // A live mic is a real reason to wake the audio graph.
+      if (this.audioCtx?.state === 'suspended') await this.audioCtx.resume().catch(() => undefined);
       if (this.audioCtx && this.analyserNode) {
         const source = this.audioCtx.createMediaStreamSource(this.micStream);
         source.connect(this.analyserNode);
