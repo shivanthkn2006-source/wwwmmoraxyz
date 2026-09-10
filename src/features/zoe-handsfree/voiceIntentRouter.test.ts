@@ -49,3 +49,15 @@ describe('resolveVoiceIntent', () => {
     expect(resolveVoiceIntent('tell me about the new iPhone')).toBeNull();
   });
 });
+
+describe('god mode scan', () => {
+  it('routes "Zoe run god mode scan" to the staff dashboard', () => {
+    const intent = resolveVoiceIntent('Zoe run god mode scan');
+    expect(intent?.kind).toBe('god-scan');
+  });
+
+  it('does not trigger on an ordinary scan question', () => {
+    expect(resolveVoiceIntent('what is god mode')?.kind).not.toBe('god-scan');
+  });
+});
+
