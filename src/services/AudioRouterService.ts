@@ -126,8 +126,11 @@ class AudioRouterService {
         this.duckingGainNode.connect(this.audioCtx.destination);
       }
 
-      if (this.audioCtx.state === 'suspended') {
-        await this.audioCtx.resume().catch(() => undefined);
+      // Only wake the audio hardware when something actually needs to play or
+      // be measured. Resuming on page load keeps a Bluetooth headset in an
+      // always-open stream, which the user hears as a constant hiss.
+      if (this.audioCtx.state === 'running' && !this.micStream && !this.isListeningActive) {
+        await this.audioCtx.suspend().catch(() => undefined);
       }
 
       this.setupMediaSessionHandlers();
@@ -266,6 +269,50 @@ class AudioRouterService {
   }
 
   /**
+   * Lightweight startup path: learn which speakers/mics exist WITHOUT opening
+   * the audio hardware. Page load must never put a headset into an active
+   * stream — that is what the user hears as a permanent hiss.
+   */
+  public async prepareDevices(): Promise<void> {
+    if (
+      typeof window === 'undefined' ||
+      typeof navigator === 'undefined' ||
+      !navigator.mediaDevices?.enumerateDevices
+    ) {
+      this.setStatus('unsupported');
+      return;
+    }
+    try {
+      await this.refreshDeviceList();
+      this.setupMediaSessionHandlers();
+      this.setStatus('connected');
+    } catch {
+      this.setStatus('error');
+    }
+  }
+
+  /**
+   * Release the microphone and let the audio hardware go quiet again.
+   * Called whenever hands-free listening stops, so a Bluetooth headset drops
+   * out of the always-open call profile instead of hissing forever.
+   */
+  public async releaseMic(): Promise<void> {
+    if (this.animationFrameId) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
+    }
+    if (this.micStream) {
+      this.micStream.getTracks().forEach((track) => track.stop());
+      this.micStream = null;
+    }
+    this.isListeningActive = false;
+    this.levelListeners.forEach((listener) => listener(0));
+    if (this.audioCtx && this.audioCtx.state === 'running') {
+      await this.audioCtx.suspend().catch(() => undefined);
+    }
+  }
+
+  /**
    * Sets Output Sink (routes Zoe's voice to selected headset)
    */
   public async setOutputDevice(deviceId: string): Promise<boolean> {
@@ -323,6 +370,8 @@ class AudioRouterService {
       this.writeStored(STORAGE_INPUT, deviceId);
 
       if (!this.audioCtx) await this.initialize();
+      // A live mic is a real reason to wake the audio graph.
+      if (this.audioCtx?.state === 'suspended') await this.audioCtx.resume().catch(() => undefined);
       if (this.audioCtx && this.analyserNode) {
         const source = this.audioCtx.createMediaStreamSource(this.micStream);
         source.connect(this.analyserNode);

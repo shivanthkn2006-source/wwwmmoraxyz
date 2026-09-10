@@ -45,6 +45,7 @@ export const useAlwaysOnVoice = () => {
   const lastTranscriptRef = useRef('');
   const restartCountRef = useRef(0);
   const lastActivityRef = useRef(Date.now());
+  const processingStartedRef = useRef(0);
 
   // Initialize voices on mount
   useEffect(() => {
@@ -94,9 +95,17 @@ export const useAlwaysOnVoice = () => {
 
   // Get Zoe's response
   const getZoeResponse = useCallback(async (userText: string) => {
-    if (!userText.trim() || processingRef.current) return;
-    
+    if (!userText.trim()) return;
+    // A turn that never finished (network stall, killed speech) used to jam
+    // every later question in silence. Anything older than 45s is stale.
+    if (processingRef.current) {
+      if (Date.now() - processingStartedRef.current < 45000) return;
+      console.warn('[AlwaysOn] Clearing a stuck turn and answering the new one');
+    }
+
     processingRef.current = true;
+    processingStartedRef.current = Date.now();
+    isEnabledRef.current = true;
     setState(prev => ({ ...prev, isProcessing: true, transcript: '' }));
     
     console.log('[AlwaysOn] User said:', userText);
@@ -206,6 +215,12 @@ export const useAlwaysOnVoice = () => {
       setState(prev => ({ ...prev, error: 'Connection issue', isSpeaking: false }));
       stopZoeSpeech();
       zoeDebugSetState({ hfState: 'error', lastError: err instanceof Error ? err.message : String(err) });
+      // Never leave the user talking to silence — say what went wrong.
+      const apology = "I couldn't reach my brain just then. Say that again in a moment.";
+      window.dispatchEvent(new CustomEvent('zoe-handsfree-reply', { detail: { text: apology } }));
+      await new Promise<void>((resolve) => {
+        speakAsZoe(apology, undefined, undefined, () => resolve(), () => resolve());
+      });
     } finally {
       processingRef.current = false;
       setState(prev => ({ ...prev, isProcessing: false, isSpeaking: false }));
@@ -226,7 +241,12 @@ export const useAlwaysOnVoice = () => {
   // Start listening with auto-restart on browser timeout
   const startListening = useCallback(() => {
     if (!isEnabledRef.current) return;
-    if (isZoeSpeaking()) return; // Don't listen while Zoe is speaking
+    if (isZoeSpeaking()) {
+      // Zoe is mid-sentence (e.g. the wake greeting). Waiting instead of
+      // silently giving up is what makes the follow-up question get heard.
+      setTimeout(() => startListening(), 400);
+      return;
+    }
     
     if (!isSpeechRecognitionSupported()) {
       console.warn('[AlwaysOn] Speech recognition not supported');
