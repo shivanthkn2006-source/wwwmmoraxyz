@@ -17,6 +17,7 @@ import { useWebAuthn } from '@/hooks/useWebAuthn';
 import PageSeo from '@/components/seo/PageSeo';
 import { ROUTE_SEO } from '@/config/routeSeo';
 import TurnstileSignup, { verifyTurnstileToken } from '@/components/security/TurnstileSignup';
+import { supabase } from '@/integrations/supabase/client';
 
 
 // Validation schemas
@@ -55,6 +56,8 @@ const AuthPage = () => {
   const [showPermissionModal, setShowPermissionModal] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [captchaReset, setCaptchaReset] = useState(0);
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
+  const [resending, setResending] = useState(false);
 
   // Safe session wrapper (some browsers can throw on sessionStorage)
   const safeSession = useCallback(
@@ -174,12 +177,15 @@ const AuthPage = () => {
             duration: isConnectionError ? 10000 : 5000,
           });
         } else {
-          toast({
-            title: "Welcome to MMora!",
-            description: "Account created successfully",
-          });
-          // Navigate to home - the HomePage will open profile setup automatically
-          navigate('/home');
+          // With email confirmation on, signUp returns no session until the
+          // member clicks the link in their inbox. Never treat it as signed in.
+          const { data: sessionData } = await supabase.auth.getSession();
+          if (sessionData?.session) {
+            toast({ title: "Welcome to M'Mora!", description: 'Account created successfully' });
+            navigate('/home');
+          } else {
+            setPendingEmail(formData.email);
+          }
         }
       } else {
         const validation = signInSchema.safeParse(formData);
@@ -231,6 +237,54 @@ const AuthPage = () => {
       [e.target.name]: e.target.value,
     });
   };
+
+  const resendConfirmation = async () => {
+    if (!pendingEmail) return;
+    setResending(true);
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: pendingEmail,
+      options: { emailRedirectTo: `${window.location.origin}/` },
+    });
+    setResending(false);
+    toast(
+      error
+        ? { title: 'Could not resend', description: error.message, variant: 'destructive' }
+        : { title: 'Confirmation sent', description: `We emailed ${pendingEmail} again.` },
+    );
+  };
+
+  if (pendingEmail) {
+    return (
+      <>
+        <PageSeo title={ROUTE_SEO['/auth'].title} description={ROUTE_SEO['/auth'].description} path="/auth" />
+        <div className="min-h-screen bg-background flex items-center justify-center p-6">
+          <Card className="w-full max-w-md bg-card border-border">
+            <CardContent className="p-6 space-y-4 text-center">
+              <h1 className="text-xl font-semibold text-foreground">Confirm your email</h1>
+              <p className="text-sm text-muted-foreground">
+                We sent a confirmation link to <span className="text-foreground">{pendingEmail}</span>.
+                Open it to finish creating your account.
+              </p>
+              <Button className="w-full" onClick={resendConfirmation} disabled={resending}>
+                {resending ? 'Sending…' : 'Resend the email'}
+              </Button>
+              <button
+                type="button"
+                className="text-xs text-muted-foreground hover:text-foreground"
+                onClick={() => {
+                  setPendingEmail(null);
+                  setIsSignUp(false);
+                }}
+              >
+                Back to sign in
+              </button>
+            </CardContent>
+          </Card>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
