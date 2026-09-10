@@ -138,14 +138,27 @@ export default function AdminInvitesPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Create an invite</CardTitle>
+            <CardTitle className="text-base">Create an invite or referral code</CardTitle>
           </CardHeader>
-          <CardContent className="flex gap-2">
+          <CardContent className="flex flex-wrap gap-2">
             <Input
               value={newCode}
               onChange={(e) => setNewCode(e.target.value)}
               placeholder="Leave blank for a random code"
-              className="flex-1"
+              className="flex-1 min-w-[180px]"
+            />
+            <Input
+              value={newLabel}
+              onChange={(e) => setNewLabel(e.target.value)}
+              placeholder="Who is this for? (optional)"
+              className="flex-1 min-w-[160px]"
+            />
+            <Input
+              value={newUses}
+              onChange={(e) => setNewUses(e.target.value)}
+              inputMode="numeric"
+              placeholder="Uses"
+              className="w-24"
             />
             <Button onClick={() => void createCode()} disabled={busy === 'new'}>
               {busy === 'new' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
