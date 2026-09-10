@@ -105,3 +105,12 @@
 - [x] Member astrology page at /astrology from real birth date, day lord and Swiss-Ephemeris readings.
 - [x] Astrology affinity wired into Mosaic ranking, capped so closeness always wins.
 - [ ] 34 database advisory warnings (extension placement + elevated-privilege helpers) — separate pass.
+
+## Launch hardening (Sep 9 2026)
+- [x] Voice shortcut counter locked to its owner (last unguarded elevated helper).
+- [x] Terms of Service (/terms) and Data Policy (/data-policy) written to match invite-only signup, upload screening and the delete/export flow.
+- [x] Video delivery pipeline: 720p delivery + 360p low-bandwidth rendition, poster, immutable 1-year CDN cache headers, `video_assets` record, automatic low-bandwidth playback on metered connections.
+- [x] Early-user launch plan (4 waves, gates per wave) — /mnt/documents/mmora-early-launch-plan.md
+- [ ] 31 database advisories remain: all are helpers the signed-in app calls and all now refuse cross-account use; clearing them needs each rewritten as plain RLS queries.
+- [ ] pgvector in public schema (moving it rebuilds every embedding column).
+- [ ] Server-side multi-bitrate HLS packaging (current transcode runs on the uploader's device).

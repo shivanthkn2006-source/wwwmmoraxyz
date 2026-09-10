@@ -116,7 +116,7 @@ import { useDhfDailyFeed } from '@/hooks/useDhfDailyFeed';
 import { compassSlotTimestamp } from '@/lib/dhfCompass';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { screenUpload, reportBlockedUpload } from '@/lib/uploadModeration';
-import { CDN_CACHE_CONTROL, prepareVideoRenditions, registerVideoAsset, uploadRendition, type VideoRenditions } from '@/lib/videoPipeline';
+import { CDN_CACHE_CONTROL, prefersLowBandwidth, prepareVideoRenditions, registerVideoAsset, uploadRendition, type VideoRenditions } from '@/lib/videoPipeline';
 
 
 
