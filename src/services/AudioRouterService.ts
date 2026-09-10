@@ -34,7 +34,7 @@ export interface AudioDiagnostics {
   micPermission: 'granted' | 'denied' | 'prompt' | 'unknown';
 }
 
-export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'fallback' | 'error';
+export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'fallback' | 'unsupported' | 'error';
 
 type Listener<T> = (data: T) => void;
 

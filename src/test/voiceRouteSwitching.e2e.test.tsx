@@ -116,7 +116,6 @@ describe('voice activation + agent route switching (e2e)', () => {
       // not app failures, so they must not fail the shell-stability assertions.
       const first = typeof args[0] === 'string' ? args[0] : '';
       if (first.includes('React Router Future Flag Warning')) return;
-      process.stdout.write('CAPTURED:' + String(first || args[0]) + '\n');
       errors.push(args[0]);
     });
     usePlatformStore.setState({
