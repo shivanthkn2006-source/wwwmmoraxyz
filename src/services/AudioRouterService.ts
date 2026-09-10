@@ -126,8 +126,11 @@ class AudioRouterService {
         this.duckingGainNode.connect(this.audioCtx.destination);
       }
 
-      if (this.audioCtx.state === 'suspended') {
-        await this.audioCtx.resume().catch(() => undefined);
+      // Only wake the audio hardware when something actually needs to play or
+      // be measured. Resuming on page load keeps a Bluetooth headset in an
+      // always-open stream, which the user hears as a constant hiss.
+      if (this.audioCtx.state === 'running' && !this.micStream && !this.isListeningActive) {
+        await this.audioCtx.suspend().catch(() => undefined);
       }
 
       this.setupMediaSessionHandlers();
