@@ -15,7 +15,7 @@ export type VoiceIntent =
   | { kind: 'navigate'; path: string; label: string; speak: string }
   | { kind: 'notifications'; speak: string }
   | { kind: 'orb-chat'; speak: string }
-  | { kind: 'message'; recipient: string; speak: string };
+  | { kind: 'message'; recipient: string; body?: string; speak: string };
 
 /** Spoken aliases that are not the page label ("chat" → Messages). */
 const ALIASES: Record<string, string> = {
@@ -99,12 +99,18 @@ export function resolveVoiceIntent(rawText: string): VoiceIntent | null {
   // "send a message to asha soosan" / "message asha"
   const message = text.match(/^(?:send\s+(?:a\s+)?(?:message|text|dm)\s+to|message|text|dm)\s+(.+)$/);
   if (message) {
-    const recipient = message[1].replace(/\bsaying\b.*$/, '').trim();
+    const rest = message[1].trim();
+    const split = rest.match(/^(.+?)\s+(?:saying|that says|say|telling (?:her|him|them))\s+(.+)$/);
+    const recipient = (split ? split[1] : rest).trim();
+    const body = split ? split[2].trim() : undefined;
     if (recipient && recipient.length > 1) {
       return {
         kind: 'message',
         recipient,
-        speak: `Opening messages so you can send that to ${recipient}. I will not send anything until you confirm the wording.`,
+        body,
+        speak: body
+          ? `Sending that to ${recipient}.`
+          : `What should I say to ${recipient}?`,
       };
     }
   }

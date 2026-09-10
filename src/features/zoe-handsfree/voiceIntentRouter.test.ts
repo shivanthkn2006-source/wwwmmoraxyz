@@ -28,10 +28,19 @@ describe('resolveVoiceIntent', () => {
     expect(resolveVoiceIntent('Zoe show my notifications')).toMatchObject({ kind: 'notifications' });
   });
 
-  it('starts a message without sending it', () => {
+  it('asks for the wording when only a recipient is named', () => {
     const intent = resolveVoiceIntent('Zoe send a message to asha soosan');
-    expect(intent).toMatchObject({ kind: 'message', recipient: 'asha soosan' });
-    expect((intent as any).speak).toMatch(/confirm/i);
+    expect(intent).toMatchObject({ kind: 'message', recipient: 'asha soosan', body: undefined });
+    expect((intent as any).speak).toMatch(/what should i say/i);
+  });
+
+  it('captures the wording so the message can actually be delivered', () => {
+    const intent = resolveVoiceIntent('Zoe send a message to asha soosan saying I am on my way');
+    expect(intent).toMatchObject({
+      kind: 'message',
+      recipient: 'asha soosan',
+      body: 'i am on my way',
+    });
   });
 
   it('leaves real questions to Zoe’s brain', () => {

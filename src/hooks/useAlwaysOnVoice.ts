@@ -19,6 +19,7 @@ import {
 import { zoeDebugLog, zoeDebugSetState } from '@/features/zoe-handsfree/debugBus';
 import { resolveVoiceIntent } from '@/features/zoe-handsfree/voiceIntentRouter';
 import { recordVoiceTurn } from '@/services/zoeVoiceHistory';
+import { sendVoiceMessage } from '@/services/zoeVoiceMessaging';
 
 interface VoiceState {
   isListening: boolean;
@@ -47,6 +48,8 @@ export const useAlwaysOnVoice = () => {
   const restartCountRef = useRef(0);
   const lastActivityRef = useRef(Date.now());
   const processingStartedRef = useRef(0);
+  // Recipient awaiting the wording of a spoken message.
+  const pendingRecipientRef = useRef<string | null>(null);
 
   // Initialize voices on mount
   useEffect(() => {
@@ -117,11 +120,32 @@ export const useAlwaysOnVoice = () => {
     // Spoken turns land in the same history the orb chat shows.
     await recordVoiceTurn('user', userText, user?.id);
 
+    // A pending "what should I say to X?" turn: this utterance IS the message.
+    const pending = pendingRecipientRef.current;
+    if (pending) {
+      pendingRecipientRef.current = null;
+      const cancelled = /^(cancel|never mind|nevermind|stop|forget it)\b/i.test(userText.trim());
+      const line = cancelled
+        ? 'Cancelled — nothing was sent.'
+        : (await sendVoiceMessage(pending, userText, user?.id)).speak;
+      window.dispatchEvent(new CustomEvent('zoe-handsfree-reply', { detail: { text: line } }));
+      await recordVoiceTurn('assistant', line, user?.id);
+      setState((prev) => ({ ...prev, isProcessing: false, isSpeaking: true }));
+      await new Promise<void>((resolve) => {
+        speakAsZoe(line, undefined, undefined, () => resolve(), () => resolve());
+      });
+      setState((prev) => ({ ...prev, isSpeaking: false }));
+      processingRef.current = false;
+      if (isEnabledRef.current) setTimeout(() => startListening(), 600);
+      return;
+    }
+
     // Deterministic platform actions ("Zoe, open chat", "Zoe, notifications",
     // "Zoe, send a message to Asha"). Anything else falls through to askZoe so
     // the answer stays natural and live-grounded instead of scripted.
     const intent = resolveVoiceIntent(userText);
     if (intent) {
+      let spoken = intent.speak;
       if (intent.kind === 'navigate') {
         window.dispatchEvent(new CustomEvent('zoe-navigate', { detail: { path: intent.path } }));
       } else if (intent.kind === 'notifications') {
@@ -130,16 +154,27 @@ export const useAlwaysOnVoice = () => {
         // Explicit "open orb / open chat" — only then does the panel open.
         window.dispatchEvent(new CustomEvent('zoe-open-orb-chat'));
       } else if (intent.kind === 'message') {
-        window.dispatchEvent(new CustomEvent('zoe-navigate', { detail: { path: '/chat' } }));
-        window.dispatchEvent(
-          new CustomEvent('zoe-compose-message', { detail: { recipient: intent.recipient } }),
-        );
+        if (intent.body) {
+          // Real delivery — the message lands in the recipient's inbox.
+          const result = await sendVoiceMessage(intent.recipient, intent.body, user?.id);
+          spoken = result.speak;
+          if (result.sent) {
+            window.dispatchEvent(
+              new CustomEvent('zoe-message-sent', {
+                detail: { recipient: result.recipient?.user_id, text: intent.body },
+              }),
+            );
+          }
+        } else {
+          // No wording yet: ask once, then the next thing said is the message.
+          pendingRecipientRef.current = intent.recipient;
+        }
       }
-      window.dispatchEvent(new CustomEvent('zoe-handsfree-reply', { detail: { text: intent.speak } }));
-      await recordVoiceTurn('assistant', intent.speak, user?.id);
+      window.dispatchEvent(new CustomEvent('zoe-handsfree-reply', { detail: { text: spoken } }));
+      await recordVoiceTurn('assistant', spoken, user?.id);
       setState((prev) => ({ ...prev, isProcessing: false, isSpeaking: true }));
       await new Promise<void>((resolve) => {
-        speakAsZoe(intent.speak, undefined, undefined, () => resolve(), () => resolve());
+        speakAsZoe(spoken, undefined, undefined, () => resolve(), () => resolve());
       });
       setState((prev) => ({ ...prev, isSpeaking: false }));
       processingRef.current = false;
