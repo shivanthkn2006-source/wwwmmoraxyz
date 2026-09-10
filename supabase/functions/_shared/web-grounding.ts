@@ -378,7 +378,7 @@ export function buildWebGroundingBlock(hits: WebGroundHit[], startIndex = 0): st
   });
   return `\n\n═══ LIVE WEB GROUNDING (outside this platform) ═══\n${lines.join(
     '\n',
-  )}\n═══════════════════════════════════════\nThese were retrieved from the live web seconds ago: trust them over your training data for anything outside this platform, and never claim you cannot access current information while they are present. Cite them by their number. If they do not answer the question, say what you do not know instead of inventing an answer.`;
+  )}\n═══════════════════════════════════════\nThese were retrieved from the live web seconds ago: trust them over your training data for anything outside this platform, and never claim you cannot access current information while they are present. Cite them by their number, and name the outlet you took each fact from (for example "Reuters says ...") so the answer is checkable when it is spoken aloud. If they do not answer the question, say what you do not know instead of inventing an answer.`;
 }
 
 /** Citation rows in the same shape the UI already renders for platform sources. */
