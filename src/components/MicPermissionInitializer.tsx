@@ -1,26 +1,39 @@
 /**
- * MicPermissionInitializer - defers mic permission initialization.
+ * MicPermissionInitializer — ONE-TIME microphone permission for the platform.
  *
- * IMPORTANT: Do NOT request mic permission automatically on page load.
- * Browsers treat it as intrusive and it can trigger the VoiceSystemActivator dialog.
- * We only initialize mic permission after the user explicitly activates voice.
+ * We never ask on page load (browsers treat that as intrusive). Instead the
+ * first real user gesture that needs voice — orb activation, headset button,
+ * voice search — triggers a single request through AudioRouterService, which
+ * caches the grant so no other Zoe surface ever asks again.
  */
 
 import { useEffect } from 'react';
 import { initializeMicPermission } from '@/utils/micPermissionManager';
+import { audioRouter } from '@/services/AudioRouterService';
+
+const VOICE_EVENTS = [
+  'zoe-voice-system-activated',
+  'zoe-request-mic-permission',
+  'zoe-headset-talk',
+] as const;
 
 export const MicPermissionInitializer: React.FC = () => {
   useEffect(() => {
+    let done = false;
+
     const onVoiceActivated = async () => {
+      if (done) return;
+      done = true;
       try {
-        await initializeMicPermission();
+        const granted = await audioRouter.ensureMicPermission();
+        if (granted) await initializeMicPermission();
       } catch {
-        // ignore
+        done = false; // allow a retry on the next explicit activation
       }
     };
 
-    window.addEventListener('zoe-voice-system-activated', onVoiceActivated);
-    return () => window.removeEventListener('zoe-voice-system-activated', onVoiceActivated);
+    VOICE_EVENTS.forEach((evt) => window.addEventListener(evt, onVoiceActivated));
+    return () => VOICE_EVENTS.forEach((evt) => window.removeEventListener(evt, onVoiceActivated));
   }, []);
 
   return null;

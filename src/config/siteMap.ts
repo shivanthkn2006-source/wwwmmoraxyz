@@ -69,6 +69,7 @@ const PURPOSE: Record<string, string> = {
   '/notification-preferences': 'Choose what you get told about.',
   '/notification-history': 'Everything we have sent you.',
   '/voice-commands': 'Things you can say out loud.',
+  '/zoe-audio': 'Connect Bluetooth headphones and route Zoe\u2019s voice to your ear.',
   '/beta': 'Early-access information.',
 };
 
@@ -115,6 +116,7 @@ function tierFor(path: string, area: SiteArea): AccessTier {
 const EXTRA: Array<{ path: string; label: string }> = [
   { path: '/map', label: 'Site map' },
   { path: '/help', label: 'Help' },
+  { path: '/zoe-audio', label: 'Zoe audio & Bluetooth' },
 ];
 
 // EXTRA wins on label; deduped by path so a route present in both appears once.

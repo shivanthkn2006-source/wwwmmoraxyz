@@ -11,7 +11,7 @@
  */
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Lightbulb, Sparkles, MessageCircle, Bell, User, Compass } from 'lucide-react';
+import { Lightbulb, Sparkles, MessageCircle, Bell, User, Compass, Headphones } from 'lucide-react';
 import HomeGlassDock from '@/components/home/HomeGlassDock';
 import GrowthAlertsPanel from '@/components/growth/GrowthAlertsPanel';
 import { useAuth } from '@/lib/auth';
@@ -97,6 +97,13 @@ export const GlobalHomeDock: React.FC = () => {
             badge: counts.friends || undefined,
             active: pathname === '/profile',
             onSelect: () => navigate('/profile'),
+          },
+          {
+            id: 'global-zoe-audio',
+            label: 'Zoe audio & Bluetooth',
+            icon: <Headphones className="h-[22px] w-[22px]" />,
+            active: pathname.startsWith('/zoe-audio'),
+            onSelect: () => navigate('/zoe-audio'),
           },
           ...buildExtraDockItems(navigate, DOCK_RESERVED_ROUTES),
         ]}

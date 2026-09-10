@@ -19,6 +19,7 @@ import { ZoeCardNarrationProvider } from '@/components/voice/ZoeCardNarrationPro
 import ZoeSpeechPauseBar from '@/components/voice/ZoeSpeechPauseBar';
 import GuidedTour from '@/components/onboarding/GuidedTour';
 import ZoeGlobalMount from '@/components/zoe/ZoeGlobalMount';
+import GlobalAudioQuickConnect from '@/components/audio/GlobalAudioQuickConnect';
 
 
 
@@ -94,6 +95,11 @@ export const PlatformLayout = ({ children }: { children: React.ReactNode }) => (
     {/* Same bottom-right home dock on every route (HomePage owns its own). */}
     <AppErrorBoundary moduleName="platform:dock" severity="low" fallback={null}>
       <GlobalHomeDock />
+    </AppErrorBoundary>
+
+    {/* Bluetooth headset status + hardware button bridge (top-right, dock stays clear). */}
+    <AppErrorBoundary moduleName="platform:audio-router" severity="low" fallback={null}>
+      <GlobalAudioQuickConnect />
     </AppErrorBoundary>
 
     {/* Zoe's orb — one mount for the whole platform, crash-isolated. */}
