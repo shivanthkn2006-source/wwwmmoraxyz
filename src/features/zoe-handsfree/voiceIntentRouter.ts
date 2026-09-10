@@ -14,6 +14,7 @@ import { normalizeVoicePhrase, ZOE_WAKE_PHRASES } from './phrases';
 export type VoiceIntent =
   | { kind: 'navigate'; path: string; label: string; speak: string }
   | { kind: 'notifications'; speak: string }
+  | { kind: 'orb-chat'; speak: string }
   | { kind: 'message'; recipient: string; speak: string };
 
 /** Spoken aliases that are not the page label ("chat" → Messages). */
