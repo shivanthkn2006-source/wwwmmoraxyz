@@ -8,13 +8,14 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, RefreshCw, Loader2, Check, Ban, Plus } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Loader2, Check, Ban, Plus, Copy } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import useIsAdmin from '@/hooks/useIsAdmin';
+import { referralLink, shareTargets } from '@/lib/referral';
 
 interface InviteRow {
   id: string;
@@ -28,6 +29,7 @@ interface InviteRow {
   used_at: string | null;
   revoked_at: string | null;
   revoked_reason: string | null;
+  metadata: Record<string, unknown> | null;
 }
 
 const randomCode = () =>
@@ -40,12 +42,25 @@ export default function AdminInvitesPage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [newCode, setNewCode] = useState('');
+  const [newLabel, setNewLabel] = useState('');
+  const [newUses, setNewUses] = useState('1');
+  const [copied, setCopied] = useState<string | null>(null);
+
+  const copyLink = async (code: string) => {
+    try {
+      await navigator.clipboard.writeText(referralLink(code));
+      setCopied(code);
+      setTimeout(() => setCopied((c) => (c === code ? null : c)), 2000);
+    } catch {
+      toast({ title: 'Copy failed', description: 'Select the link and copy it manually.', variant: 'destructive' });
+    }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
     const { data, error } = await supabase
       .from('invite_codes')
-      .select('id, code, is_active, created_at, expires_at, max_uses, current_uses, used_by, used_at, revoked_at, revoked_reason')
+      .select('id, code, is_active, created_at, expires_at, max_uses, current_uses, used_by, used_at, revoked_at, revoked_reason, metadata')
       .order('created_at', { ascending: false })
       .limit(200);
     if (error) toast({ title: 'Could not load invites', description: error.message, variant: 'destructive' });
@@ -74,17 +89,21 @@ export default function AdminInvitesPage() {
     const code = (newCode.trim() || randomCode()).toUpperCase();
     setBusy('new');
     const { data: sessionData } = await supabase.auth.getSession();
+    const uses = Math.max(1, Math.min(500, Number.parseInt(newUses, 10) || 1));
     const { error } = await supabase.from('invite_codes').insert({
       code,
       is_active: false, // waits for your approval
-      max_uses: 1,
+      max_uses: uses,
       current_uses: 0,
       created_by: sessionData.session?.user?.id ?? null,
+      metadata: { kind: 'referral', label: newLabel.trim() || null },
     });
     setBusy(null);
     if (error) toast({ title: 'Could not create the code', description: error.message, variant: 'destructive' });
     else {
       setNewCode('');
+      setNewLabel('');
+      setNewUses('1');
       toast({ title: 'Code created', description: `${code} is waiting for your approval.` });
       void load();
     }
@@ -119,14 +138,27 @@ export default function AdminInvitesPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Create an invite</CardTitle>
+            <CardTitle className="text-base">Create an invite or referral code</CardTitle>
           </CardHeader>
-          <CardContent className="flex gap-2">
+          <CardContent className="flex flex-wrap gap-2">
             <Input
               value={newCode}
               onChange={(e) => setNewCode(e.target.value)}
               placeholder="Leave blank for a random code"
-              className="flex-1"
+              className="flex-1 min-w-[180px]"
+            />
+            <Input
+              value={newLabel}
+              onChange={(e) => setNewLabel(e.target.value)}
+              placeholder="Who is this for? (optional)"
+              className="flex-1 min-w-[160px]"
+            />
+            <Input
+              value={newUses}
+              onChange={(e) => setNewUses(e.target.value)}
+              inputMode="numeric"
+              placeholder="Uses"
+              className="w-24"
             />
             <Button onClick={() => void createCode()} disabled={busy === 'new'}>
               {busy === 'new' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
@@ -147,12 +179,35 @@ export default function AdminInvitesPage() {
             {rows.map((row) => {
               const state = row.revoked_at ? 'Revoked' : row.used_at ? 'Used' : row.is_active ? 'Approved' : 'Waiting';
               return (
-                <div key={row.id} className="flex items-center justify-between gap-3 border border-border rounded-md px-3 py-2">
+                 <div key={row.id} className="flex flex-wrap items-center justify-between gap-3 border border-border rounded-md px-3 py-2">
                   <div className="min-w-0">
                     <p className="font-mono text-sm truncate">{row.code}</p>
                     <p className="text-xs text-muted-foreground">
                       {state} · used {row.current_uses ?? 0}/{row.max_uses ?? 1} · created {new Date(row.created_at).toLocaleDateString()}
+                      {typeof row.metadata?.label === 'string' && row.metadata.label ? ` · for ${row.metadata.label}` : ''}
                     </p>
+                    <div className="mt-1 flex flex-wrap items-center gap-2">
+                      <code className="text-[11px] text-muted-foreground break-all">{referralLink(row.code)}</code>
+                      <button
+                        type="button"
+                        onClick={() => void copyLink(row.code)}
+                        className="inline-flex items-center gap-1 text-[11px] border border-border rounded px-2 py-0.5 hover:bg-foreground hover:text-background transition-colors"
+                      >
+                        <Copy className="h-3 w-3" />
+                        {copied === row.code ? 'Copied' : 'Copy'}
+                      </button>
+                      {shareTargets(referralLink(row.code), "Join me on M'Mora.").map((t) => (
+                        <a
+                          key={t.label}
+                          href={t.href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[11px] border border-border rounded px-2 py-0.5 hover:bg-foreground hover:text-background transition-colors"
+                        >
+                          {t.label}
+                        </a>
+                      ))}
+                    </div>
                   </div>
                   <div className="flex gap-2 shrink-0">
                     {!row.is_active && (

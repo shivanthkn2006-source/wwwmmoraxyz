@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useCallback, useMemo } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +18,7 @@ import PageSeo from '@/components/seo/PageSeo';
 import { ROUTE_SEO } from '@/config/routeSeo';
 import TurnstileSignup, { verifyTurnstileToken } from '@/components/security/TurnstileSignup';
 import { supabase } from '@/integrations/supabase/client';
+import { captureReferralFromUrl, redeemStoredReferral } from '@/lib/referral';
 
 
 // Validation schemas
@@ -49,7 +50,10 @@ const signInSchema = z.object({
 });
 
 const AuthPage = () => {
-  const [isSignUp, setIsSignUp] = useState(false);
+  const location = useLocation();
+  const startsOnSignUp = location.pathname.startsWith('/signup');
+  const [isSignUp, setIsSignUp] = useState(startsOnSignUp);
+  const referralCode = useMemo(() => captureReferralFromUrl(location.search), [location.search]);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showFaceLogin, setShowFaceLogin] = useState(false);
@@ -181,6 +185,7 @@ const AuthPage = () => {
           // member clicks the link in their inbox. Never treat it as signed in.
           const { data: sessionData } = await supabase.auth.getSession();
           if (sessionData?.session) {
+            await redeemStoredReferral();
             toast({ title: "Welcome to M'Mora!", description: 'Account created successfully' });
             navigate('/home');
           } else {
@@ -213,6 +218,7 @@ const AuthPage = () => {
             duration: isConnectionError ? 10000 : 5000,
           });
         } else {
+          await redeemStoredReferral();
           toast({
             title: "Welcome back!",
             description: "Signed in successfully",
@@ -333,7 +339,13 @@ const AuthPage = () => {
           )}>
             {isSignUp ? 'Create your account to get started' : 'Sign in to continue'}
           </p>
+          {referralCode && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Invite code <span className="font-mono">{referralCode}</span> will be applied to your account.
+            </p>
+          )}
         </div>
+
 
         {/* Auth Card - Responsive */}
         <Card className="bg-card border-border responsive-card">
