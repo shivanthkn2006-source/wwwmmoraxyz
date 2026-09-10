@@ -127,10 +127,15 @@ export const useAmbientSearch = () => {
 
         // Drain a small durable indexing batch first. Database triggers create
         // jobs, so an interrupted upload/search is safely retried next time.
-        const { error: indexerError } = await supabase.functions.invoke('zoe-search-indexer', {
-          body: { limit: 5 },
-        });
-        if (indexerError) console.warn('[zoe-search-indexer] background batch failed:', indexerError.message);
+        // Signed-out visitors skip it: the indexer requires a session (401).
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (sessionData.session) {
+          const { error: indexerError } = await supabase.functions.invoke('zoe-search-indexer', {
+            body: { limit: 5 },
+          });
+          if (indexerError) console.warn('[zoe-search-indexer] background batch failed:', indexerError.message);
+        }
+
 
 
         const coords = await resolveGeo();
