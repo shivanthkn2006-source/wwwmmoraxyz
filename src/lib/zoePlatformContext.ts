@@ -1,4 +1,5 @@
 import { routeRegistryAsPrompt, NAVIGABLE_ROUTES } from '@/config/routeRegistry';
+import { pageContextLine } from '@/config/siteMap';
 
 export interface ZoeActivePostContext {
   id: string;
@@ -28,7 +29,12 @@ export function getZoeActivePostContext(): ZoeActivePostContext | null {
  * instead of being hand-maintained and drifting out of date.
  */
 export function getZoePlatformPageContext(): string {
-  return routeRegistryAsPrompt();
+  const menus = routeRegistryAsPrompt();
+  // Page awareness: tell Zoe where the member is standing right now, so her
+  // answer on /astrology differs from her answer on /chat.
+  const here =
+    typeof window !== 'undefined' ? pageContextLine(window.location.pathname) : '';
+  return here ? `${here}\n\n${menus}` : menus;
 }
 
 export function getZoePlatformRoutes(): string[] {

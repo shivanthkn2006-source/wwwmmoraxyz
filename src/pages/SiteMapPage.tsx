@@ -23,8 +23,8 @@ const AREA_BLURB: Record<string, string> = {
 };
 
 export default function SiteMapPage() {
-  const { isAdmin } = useIsAdmin();
-  const groups = siteMapByArea(!!isAdmin);
+  const isAdmin = useIsAdmin();
+  const groups = siteMapByArea(isAdmin === true);
 
   return (
     <main className="min-h-screen bg-background text-foreground px-5 py-10">

@@ -114,10 +114,14 @@ const EXTRA: Array<{ path: string; label: string }> = [
   { path: '/help', label: 'Help' },
 ];
 
-const ALL = [
-  ...CANONICAL_ROUTES.filter((r) => !r.dynamic && !HIDDEN.has(r.path)).map((r) => ({ path: r.path, label: r.label })),
-  ...EXTRA,
-];
+// EXTRA wins on label; deduped by path so a route present in both appears once.
+const BY_PATH = new Map<string, { path: string; label: string }>();
+for (const r of CANONICAL_ROUTES) {
+  if (r.dynamic || HIDDEN.has(r.path)) continue;
+  BY_PATH.set(r.path, { path: r.path, label: r.label });
+}
+for (const e of EXTRA) BY_PATH.set(e.path, e);
+const ALL = [...BY_PATH.values()];
 
 export const SITE_MAP: SiteMapEntry[] = ALL.map(({ path, label }) => {
   const area = areaFor(path);
