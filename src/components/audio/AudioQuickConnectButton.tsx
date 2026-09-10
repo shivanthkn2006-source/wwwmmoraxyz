@@ -5,9 +5,15 @@ import { useAudioRouter } from '@/hooks/useAudioRouter';
 interface Props {
   onNavigateToAudioSettings?: () => void;
   className?: string;
+  /**
+   * Compact = a single small round icon, nothing else. Used for the global
+   * floating chip so it never spreads across the Home screen or sits over
+   * other content; the full label version is for settings pages.
+   */
+  compact?: boolean;
 }
 
-export const AudioQuickConnectButton: React.FC<Props> = ({ onNavigateToAudioSettings, className }) => {
+export const AudioQuickConnectButton: React.FC<Props> = ({ onNavigateToAudioSettings, className, compact }) => {
   const { status, audioLevel } = useAudioRouter();
   const navigate = useNavigate();
 
