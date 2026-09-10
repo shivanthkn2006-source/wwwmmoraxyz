@@ -215,6 +215,12 @@ export const useAlwaysOnVoice = () => {
       setState(prev => ({ ...prev, error: 'Connection issue', isSpeaking: false }));
       stopZoeSpeech();
       zoeDebugSetState({ hfState: 'error', lastError: err instanceof Error ? err.message : String(err) });
+      // Never leave the user talking to silence — say what went wrong.
+      const apology = "I couldn't reach my brain just then. Say that again in a moment.";
+      window.dispatchEvent(new CustomEvent('zoe-handsfree-reply', { detail: { text: apology } }));
+      await new Promise<void>((resolve) => {
+        speakAsZoe(apology, undefined, undefined, () => resolve(), () => resolve());
+      });
     } finally {
       processingRef.current = false;
       setState(prev => ({ ...prev, isProcessing: false, isSpeaking: false }));
