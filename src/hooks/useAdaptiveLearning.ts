@@ -69,12 +69,19 @@ export const useAdaptiveLearning = () => {
     checkActivityFreshness();
   }, [user]);
 
-  // Real-time sync status updates
+  // Real-time sync status updates.
+  // The channel name is unique per hook instance so two mounted consumers can
+  // never collide on one topic (that threw "cannot add postgres_changes
+  // callbacks ... after subscribe()"), and the effect depends only on the user
+  // so live status values don't tear the socket down on every update.
+  const syncStatusRef = useRef(syncStatus);
+  syncStatusRef.current = syncStatus;
+
   useEffect(() => {
     if (!user) return;
 
     const channel = supabase
-      .channel('adaptive-learning-sync')
+      .channel(`adaptive-learning-sync:${user.id}:${sessionId.current}`)
       .on(
         'postgres_changes',
         {
@@ -85,6 +92,7 @@ export const useAdaptiveLearning = () => {
         },
         (payload) => {
           const newData = payload.new as any;
+          const prevStatus = syncStatusRef.current;
           setSyncStatus(prev => ({
             ...prev,
             event_count: newData.event_count || prev.event_count,
@@ -93,15 +101,15 @@ export const useAdaptiveLearning = () => {
           }));
 
           // Show notification for sync milestones
-          if (newData.sync_percentage > syncStatus.sync_percentage && 
+          if (newData.sync_percentage > prevStatus.sync_percentage &&
               newData.sync_percentage % 5 === 0) {
-            toast.success(`Adaptive Learning: +${newData.sync_percentage - syncStatus.sync_percentage}% Synced`, {
+            toast.success(`Adaptive Learning: +${newData.sync_percentage - prevStatus.sync_percentage}% Synced`, {
               duration: 2000,
             });
           }
 
           // Notify when SFT is ready
-          if (newData.finetuning_ready && !syncStatus.finetuning_ready) {
+          if (newData.finetuning_ready && !prevStatus.finetuning_ready) {
             toast.success('🎉 Fine-Tuning Ready!', {
               description: '10,000+ high-quality events collected. Personalized AI unlocked!',
               duration: 5000,
@@ -114,7 +122,8 @@ export const useAdaptiveLearning = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, syncStatus.sync_percentage, syncStatus.finetuning_ready]);
+  }, [user]);
+
 
   // Check user activity freshness
   const checkActivityFreshness = useCallback(async () => {
