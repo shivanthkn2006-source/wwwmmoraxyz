@@ -1,4 +1,5 @@
 import { routeRegistryAsPrompt, NAVIGABLE_ROUTES } from '@/config/routeRegistry';
+import { pageContextLine } from '@/config/siteMap';
 
 export interface ZoeActivePostContext {
   id: string;
