@@ -65,16 +65,30 @@ const EXTERNAL_HINT =
   /\b(who|what|when|where|why|how|latest|news|today'?s|current|price|stock|weather|define|meaning|history|explain|search|google|world|president|ceo|release|version|score|match|election|202\d|19\d\d)\b/i;
 
 /**
+ * Small talk and feelings. These are the only turns worth answering without a
+ * web round-trip — everything else may reach outside the platform.
+ */
+const CHITCHAT =
+  /^(hi|hey|hello|yo|hola|good (morning|afternoon|evening|night)|thanks?|thank you|ok(ay)?|sure|cool|nice|love you|i love you|how are you|how'?re you|what'?s up|sup|goodnight|bye|see you)\b[\s!.,?]*$/i;
+
+/**
  * Decide whether to spend a web round-trip on this turn.
- * Ground when the question reaches outside the platform, or when the platform
- * index returned almost nothing to work with.
+ *
+ * The old rule only grounded when the question carried a question word or when
+ * the platform index came back nearly empty. That silently broke real questions
+ * like "tell me about the new iPhone" — the member's own memories scored a
+ * couple of loose hits, grounding was skipped, and Zoe answered from stale
+ * training data. Outside knowledge is keyless and runs in parallel, so the
+ * default is now the other way round: ground unless the turn is clearly about
+ * the member's own platform content or is plain small talk.
  */
 export function needsWebGrounding(query: string, platformHits: number): boolean {
   const q = (query || '').trim();
   if (q.length < 6) return false;
+  if (CHITCHAT.test(q)) return false;
   if (PLATFORM_ONLY.test(q)) return false;
   if (/\b(mmora|m'mora|this platform|the app)\b/i.test(q) && platformHits > 0) return false;
-  return EXTERNAL_HINT.test(q) || platformHits < 2;
+  return true;
 }
 
 async function duckduckgo(query: string): Promise<WebGroundHit[]> {
@@ -155,34 +169,54 @@ async function safeText(url: string, ms = 6000): Promise<string | null> {
   }
 }
 
-/** Fresh news: Google News RSS (keyless), GDELT as a secondary source. */
-async function freshNews(query: string): Promise<WebGroundHit[]> {
+/** Parse a generic RSS feed into grounding hits. */
+function parseRss(xml: string, fallbackSource: string): WebGroundHit[] {
   const out: WebGroundHit[] = [];
+  for (const item of xml.split('<item>').slice(1, 7)) {
+    const pick = (tag: string) => {
+      const m = item.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`));
+      return m ? strip(m[1].replace(/<!\[CDATA\[|\]\]>/g, '')) : '';
+    };
+    const title = pick('title');
+    const link = pick('link');
+    if (!title || !link) continue;
+    const pub = pick('pubDate');
+    let publishedAt: string | null = null;
+    if (pub) {
+      const d = new Date(pub);
+      publishedAt = Number.isNaN(d.getTime()) ? null : d.toISOString();
+    }
+    out.push({
+      title,
+      snippet: pick('description').slice(0, 240) || title,
+      url: link,
+      source: pick('source') || fallbackSource,
+      publishedAt,
+    });
+  }
+  return out;
+}
 
-  const xml = await safeText(
+/**
+ * Fresh news, keyless, in reliability order. Google News is the richest feed but
+ * refuses some datacenter egress, so Bing News RSS and GDELT stand behind it —
+ * before this, a single blocked feed left Zoe with nothing current to cite.
+ */
+async function freshNews(query: string): Promise<WebGroundHit[]> {
+  const googleXml = await safeText(
     `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`,
   );
-  if (xml) {
-    const items = xml.split('<item>').slice(1, 6);
-    for (const item of items) {
-      const pick = (tag: string) => {
-        const m = item.match(new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`));
-        return m ? strip(m[1].replace(/<!\[CDATA\[|\]\]>/g, '')) : '';
-      };
-      const title = pick('title');
-      const link = pick('link');
-      if (!title || !link) continue;
-      out.push({
-        title,
-        snippet: strip(pick('description')).slice(0, 240) || title,
-        url: link,
-        source: pick('source') || 'Google News',
-        publishedAt: pick('pubDate') ? new Date(pick('pubDate')).toISOString() : null,
-      });
-    }
-  }
-
+  let out = googleXml ? parseRss(googleXml, 'Google News') : [];
   if (out.length) return out;
+
+  const bingXml = await safeText(
+    `https://www.bing.com/news/search?q=${encodeURIComponent(query)}&format=RSS`,
+  );
+  out = bingXml ? parseRss(bingXml, 'Bing News') : [];
+  if (out.length) return out;
+
+  out = [];
+
 
   const data = await safeJson(
     `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(
@@ -206,18 +240,32 @@ async function freshNews(query: string): Promise<WebGroundHit[]> {
 export async function webGround(query: string, limit = 6): Promise<WebGroundHit[]> {
   const term = (query || '').trim().slice(0, 300);
   if (term.length < 3) return [];
-  const wantsNews = /\b(news|latest|today|breaking|update|current|now|who is|who'?s|president|prime minister|ceo|leader|price|score|202\d)\b/i.test(term);
+  // Anything that could have moved recently gets the fresh-news pass too:
+  // product launches, releases, rumours, companies and people all change faster
+  // than an encyclopedia entry, and Google News RSS is keyless and quick.
+  const wantsNews =
+    /\b(news|latest|newest|new|today|breaking|update|current|now|who is|who'?s|president|prime minister|ceo|leader|price|cost|score|launch|launched|release|released|announce|announced|unveil|rumou?r|leak|review|202\d)\b/i.test(
+      term,
+    ) || /\b(apple|iphone|ipad|google|pixel|samsung|galaxy|tesla|openai|microsoft|nvidia|meta|amazon|sony)\b/i.test(term);
 
-  const settled = await Promise.allSettled([
-    duckduckgo(term),
-    wikipedia(term),
-    // News is cheap and keyless — run it whenever the question sounds time-sensitive.
-    ...(wantsNews ? [freshNews(term)] : []),
+  const [ddg, wiki, news] = await Promise.all([
+    duckduckgo(term).catch(() => [] as WebGroundHit[]),
+    wikipedia(term).catch(() => [] as WebGroundHit[]),
+    wantsNews ? freshNews(term).catch(() => [] as WebGroundHit[]) : Promise.resolve([] as WebGroundHit[]),
   ]);
 
+  // Order matters: the old code concatenated encyclopedia results first, and
+  // they filled the whole budget so today's headlines were silently dropped —
+  // which is exactly how Zoe ended up answering time-sensitive questions from
+  // memory. Fresh news leads whenever the question is time-sensitive, and each
+  // source keeps a guaranteed slice of the budget.
+  const budget = (list: WebGroundHit[], n: number) => list.slice(0, n);
+  const ordered = wantsNews
+    ? [...budget(news, 4), ...budget(ddg, 2), ...budget(wiki, 2)]
+    : [...budget(ddg, 3), ...budget(wiki, 3), ...budget(news, 2)];
+
   const seen = new Set<string>();
-  return settled
-    .flatMap((entry) => (entry.status === 'fulfilled' ? entry.value : []))
+  return ordered
     .filter((hit) => {
       if (!hit?.url || !hit.title || seen.has(hit.url)) return false;
       seen.add(hit.url);
