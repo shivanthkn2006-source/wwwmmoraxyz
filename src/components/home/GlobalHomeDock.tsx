@@ -98,6 +98,13 @@ export const GlobalHomeDock: React.FC = () => {
             active: pathname === '/profile',
             onSelect: () => navigate('/profile'),
           },
+          {
+            id: 'global-zoe-audio',
+            label: 'Zoe audio & Bluetooth',
+            icon: <Headphones className="h-[22px] w-[22px]" />,
+            active: pathname.startsWith('/zoe-audio'),
+            onSelect: () => navigate('/zoe-audio'),
+          },
           ...buildExtraDockItems(navigate, DOCK_RESERVED_ROUTES),
         ]}
 
