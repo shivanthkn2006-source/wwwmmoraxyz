@@ -238,6 +238,54 @@ const AuthPage = () => {
     });
   };
 
+  const resendConfirmation = async () => {
+    if (!pendingEmail) return;
+    setResending(true);
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: pendingEmail,
+      options: { emailRedirectTo: `${window.location.origin}/` },
+    });
+    setResending(false);
+    toast(
+      error
+        ? { title: 'Could not resend', description: error.message, variant: 'destructive' }
+        : { title: 'Confirmation sent', description: `We emailed ${pendingEmail} again.` },
+    );
+  };
+
+  if (pendingEmail) {
+    return (
+      <>
+        <PageSeo title={ROUTE_SEO['/auth'].title} description={ROUTE_SEO['/auth'].description} path="/auth" />
+        <div className="min-h-screen bg-background flex items-center justify-center p-6">
+          <Card className="w-full max-w-md bg-card border-border">
+            <CardContent className="p-6 space-y-4 text-center">
+              <h1 className="text-xl font-semibold text-foreground">Confirm your email</h1>
+              <p className="text-sm text-muted-foreground">
+                We sent a confirmation link to <span className="text-foreground">{pendingEmail}</span>.
+                Open it to finish creating your account.
+              </p>
+              <Button className="w-full" onClick={resendConfirmation} disabled={resending}>
+                {resending ? 'Sending…' : 'Resend the email'}
+              </Button>
+              <button
+                type="button"
+                className="text-xs text-muted-foreground hover:text-foreground"
+                onClick={() => {
+                  setPendingEmail(null);
+                  setIsSignUp(false);
+                }}
+              >
+                Back to sign in
+              </button>
+            </CardContent>
+          </Card>
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       <PageSeo title={ROUTE_SEO['/auth'].title} description={ROUTE_SEO['/auth'].description} path="/auth" />
