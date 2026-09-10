@@ -24,7 +24,9 @@ const AREA_BLURB: Record<string, string> = {
 
 export default function SiteMapPage() {
   const isAdmin = useIsAdmin();
-  const groups = siteMapByArea(isAdmin === true);
+  // Members see the staff area too, greyed out and not clickable, so the map is
+  // an honest picture of the platform rather than a partial one.
+  const groups = siteMapByArea(true).filter((g) => g.area !== 'Internal' || isAdmin === true);
 
   return (
     <main className="min-h-screen bg-background text-foreground px-5 py-10">
@@ -56,12 +58,10 @@ export default function SiteMapPage() {
               <p className="text-xs text-muted-foreground">{AREA_BLURB[area]}</p>
             </div>
             <ul className="grid gap-2 sm:grid-cols-2">
-              {entries.map((entry) => (
-                <li key={entry.path}>
-                  <Link
-                    to={entry.path}
-                    className="block h-full rounded-md border border-border p-3 transition-colors hover:bg-muted"
-                  >
+              {entries.map((entry) => {
+                const locked = entry.tier === 'admin' && isAdmin !== true;
+                const card = (
+                  <>
                     <div className="flex items-baseline justify-between gap-2">
                       <span className="text-sm font-medium">{entry.label}</span>
                       <span className="shrink-0 text-[10px] uppercase tracking-wide text-muted-foreground">
@@ -69,9 +69,29 @@ export default function SiteMapPage() {
                       </span>
                     </div>
                     <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{entry.purpose}</p>
-                  </Link>
-                </li>
-              ))}
+                  </>
+                );
+                return (
+                  <li key={entry.path}>
+                    {locked ? (
+                      <div
+                        aria-disabled="true"
+                        title="Staff only"
+                        className="block h-full cursor-not-allowed rounded-md border border-border p-3 opacity-40"
+                      >
+                        {card}
+                      </div>
+                    ) : (
+                      <Link
+                        to={entry.path}
+                        className="block h-full rounded-md border border-border p-3 transition-colors hover:bg-muted"
+                      >
+                        {card}
+                      </Link>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </section>
         ))}

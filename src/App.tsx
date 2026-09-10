@@ -44,6 +44,7 @@ import { useLocation } from "react-router-dom";
 import { checkAppVersion, recoverFromChunkError } from "@/lib/versionCheck";
 import { AppErrorBoundary } from "@/components/core/ErrorBoundary";
 import { PlatformLayout } from "@/layouts/PlatformLayout";
+import EarnedRoute from "@/components/access/EarnedRoute";
 import { reportPlatformError } from "@/lib/enterpriseTelemetry";
 
 // Lazy load pages for code splitting and faster initial load
@@ -790,7 +791,9 @@ const RouteAwareShell = () => {
                             path="/legacy"
                             element={
                               <ProtectedRoute>
-                                <LegacyVaultPage />
+                                <EarnedRoute feature="Your Digital Vault">
+                                  <LegacyVaultPage />
+                                </EarnedRoute>
                               </ProtectedRoute>
                             }
                           />
@@ -919,7 +922,9 @@ const RouteAwareShell = () => {
                             path="/astrology"
                             element={
                               <ProtectedRoute>
-                                <AstrologyPage />
+                                <EarnedRoute feature="Astrology">
+                                  <AstrologyPage />
+                                </EarnedRoute>
                               </ProtectedRoute>
                             }
                           />

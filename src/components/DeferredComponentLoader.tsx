@@ -27,10 +27,6 @@ const scheduleIdle = (cb: () => void, timeout = 1000): void => {
 };
 
 // Lazy load heavy global components
-const GlobalZoeAssistant = lazy(() => 
-  import('@/components/GlobalZoeAssistant').then(module => ({ default: module.GlobalZoeAssistant }))
-);
-
 const PlatformHealthMonitor = lazy(() => 
   import('@/components/PlatformHealthMonitor').then(module => ({ default: module.PlatformHealthMonitor }))
 );
@@ -191,12 +187,8 @@ export const DeferredComponentLoader: React.FC<DeferredComponentLoaderProps> = (
         </>
       )}
       
-      {/* Phase 1: Core Zoe assistant - always loads (core functionality) */}
-      {phase >= 1 && (
-        <Suspense fallback={null}>
-          <GlobalZoeAssistant />
-        </Suspense>
-      )}
+      {/* Zoe's orb now mounts once in PlatformLayout (every route), not here. */}
+      
       
       {/* Phase 2: Viral Content Engine for growth + Feature Scanner */}
       {phase >= 2 && (

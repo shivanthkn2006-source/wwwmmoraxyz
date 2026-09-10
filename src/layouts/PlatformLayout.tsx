@@ -18,6 +18,7 @@ import useDhfUnlockReminders from '@/hooks/useDhfUnlockReminders';
 import { ZoeCardNarrationProvider } from '@/components/voice/ZoeCardNarrationProvider';
 import ZoeSpeechPauseBar from '@/components/voice/ZoeSpeechPauseBar';
 import GuidedTour from '@/components/onboarding/GuidedTour';
+import ZoeGlobalMount from '@/components/zoe/ZoeGlobalMount';
 
 
 
@@ -93,6 +94,11 @@ export const PlatformLayout = ({ children }: { children: React.ReactNode }) => (
     {/* Same bottom-right home dock on every route (HomePage owns its own). */}
     <AppErrorBoundary moduleName="platform:dock" severity="low" fallback={null}>
       <GlobalHomeDock />
+    </AppErrorBoundary>
+
+    {/* Zoe's orb — one mount for the whole platform, crash-isolated. */}
+    <AppErrorBoundary moduleName="platform:zoe-orb" severity="low" fallback={null}>
+      <ZoeGlobalMount />
     </AppErrorBoundary>
   </>
 );
