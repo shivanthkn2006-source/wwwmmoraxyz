@@ -339,7 +339,13 @@ const AuthPage = () => {
           )}>
             {isSignUp ? 'Create your account to get started' : 'Sign in to continue'}
           </p>
+          {referralCode && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Invite code <span className="font-mono">{referralCode}</span> will be applied to your account.
+            </p>
+          )}
         </div>
+
 
         {/* Auth Card - Responsive */}
         <Card className="bg-card border-border responsive-card">
