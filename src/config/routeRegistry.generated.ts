@@ -14,6 +14,7 @@ export const CANONICAL_ROUTES: CanonicalRoute[] = [
   { path: "/about", label: "About", dynamic: false },
   { path: "/access-denied", label: "Access denied", dynamic: false },
   { path: "/activity-export", label: "Activity export", dynamic: false },
+  { path: "/admin", label: "Admin", dynamic: false },
   { path: "/admin/control-panel", label: "Admin · control panel", dynamic: false },
   { path: "/admin/dhf-generation", label: "Admin · DHF generation", dynamic: false },
   { path: "/admin/dhf-growth", label: "Admin · DHF growth", dynamic: false },
