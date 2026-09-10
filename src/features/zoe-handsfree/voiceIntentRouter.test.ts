@@ -7,7 +7,7 @@ describe('resolveVoiceIntent', () => {
   });
 
   it('navigates with a verb', () => {
-    expect(resolveVoiceIntent('Zoe, open chat')).toMatchObject({ kind: 'navigate', path: '/chat' });
+    expect(resolveVoiceIntent('Zoe, open chat')).toMatchObject({ kind: 'orb-chat' });
     expect(resolveVoiceIntent('take me to the astrology page')).toMatchObject({
       kind: 'navigate',
       path: '/astrology',
