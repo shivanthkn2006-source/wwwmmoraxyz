@@ -34,7 +34,7 @@ export interface AudioDiagnostics {
   micPermission: 'granted' | 'denied' | 'prompt' | 'unknown';
 }
 
-export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'fallback' | 'error';
+export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'fallback' | 'unsupported' | 'error';
 
 type Listener<T> = (data: T) => void;
 
@@ -91,6 +91,18 @@ class AudioRouterService {
    * Initializes the audio pipeline, creates nodes, and hooks the Media Session API
    */
   public async initialize(audioElement?: HTMLAudioElement): Promise<void> {
+    // Server rendering and test environments have no Web Audio / device layer.
+    // That is not a failure — stay silent and report an honest unsupported state.
+    if (
+      typeof window === 'undefined' ||
+      typeof navigator === 'undefined' ||
+      !navigator.mediaDevices ||
+      !(window.AudioContext || (window as unknown as { webkitAudioContext?: unknown }).webkitAudioContext)
+    ) {
+      this.setStatus('unsupported');
+      return;
+    }
+
     try {
       this.setStatus('connecting');
       if (audioElement) this.primaryOutputElement = audioElement;

@@ -9,6 +9,7 @@
 import React, { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { audioRouter } from '@/services/AudioRouterService';
+import { zoeBackgroundListener } from '@/services/ZoeBackgroundListener';
 import AudioQuickConnectButton from '@/components/audio/AudioQuickConnectButton';
 import { useAuth } from '@/lib/auth';
 
@@ -46,6 +47,10 @@ export const GlobalAudioQuickConnect: React.FC = () => {
   // Keep the router alive across routes so the chosen sink survives navigation.
   useEffect(() => {
     void audioRouter.initialize();
+    // Restore hands-free listening if the user switched it on before.
+    if (zoeBackgroundListener.wasEnabledBefore() && audioRouter.wasMicGrantedBefore()) {
+      void zoeBackgroundListener.enable();
+    }
   }, []);
 
   const confirmedSignedOut = !loading && !user && !session;

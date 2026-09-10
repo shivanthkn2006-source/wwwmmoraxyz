@@ -30,13 +30,20 @@ const config: CapacitorConfig = {
       sound: 'beep.wav',
     },
   },
-  // iOS-specific settings
+  // iOS-specific settings.
+  // Background listening also needs, in Xcode:
+  //   Signing & Capabilities -> Background Modes -> Audio, AirPlay and Picture in Picture
+  //   Info.plist -> NSMicrophoneUsageDescription + NSSpeechRecognitionUsageDescription
   ios: {
     contentInset: 'automatic',
     preferredContentMode: 'mobile',
     allowsLinkPreview: false,
+    limitsNavigationsToAppBoundDomains: false,
   },
-  // Android-specific settings
+  // Android-specific settings.
+  // Background listening also needs, in AndroidManifest.xml:
+  //   RECORD_AUDIO, MODIFY_AUDIO_SETTINGS, BLUETOOTH_CONNECT, FOREGROUND_SERVICE,
+  //   FOREGROUND_SERVICE_MICROPHONE
   android: {
     allowMixedContent: true,
     captureInput: true,

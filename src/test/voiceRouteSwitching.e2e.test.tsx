@@ -111,6 +111,11 @@ describe('voice activation + agent route switching (e2e)', () => {
     localStorage.clear();
     errors.length = 0;
     errorSpy = vi.spyOn(console, 'error').mockImplementation((...args) => {
+      // React Router prints its v7 future-flag notices through console.error the
+      // first time a router mounts in the process. They are library advisories,
+      // not app failures, so they must not fail the shell-stability assertions.
+      const first = typeof args[0] === 'string' ? args[0] : '';
+      if (first.includes('React Router Future Flag Warning')) return;
       errors.push(args[0]);
     });
     usePlatformStore.setState({
