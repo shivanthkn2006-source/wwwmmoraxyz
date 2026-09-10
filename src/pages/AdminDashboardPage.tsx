@@ -155,7 +155,7 @@ const AdminDashboardPage: React.FC = () => {
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             {running && progress && (
-              <p className="text-muted-foreground">{progress.label ?? 'Checking…'}</p>
+              <p className="text-muted-foreground">{progress.current ?? 'Checking…'} ({progress.completed}/{progress.total})</p>
             )}
             {!running && !report && (
               <p className="text-muted-foreground">
@@ -165,17 +165,17 @@ const AdminDashboardPage: React.FC = () => {
             {report && (
               <div className="space-y-2">
                 <p className="text-muted-foreground">
-                  {report.results.filter((r) => r.status === 'pass').length} passed ·{' '}
-                  {report.results.filter((r) => r.status === 'warn').length} warnings ·{' '}
-                  {report.results.filter((r) => r.status === 'fail').length} failing
+                  {report.checks.filter((r) => r.status === 'pass').length} passed ·{' '}
+                  {report.checks.filter((r) => r.status === 'warn').length} warnings ·{' '}
+                  {report.checks.filter((r) => r.status === 'fail').length} failing
                 </p>
                 <ul className="space-y-1">
-                  {report.results
+                  {report.checks
                     .filter((r) => r.status !== 'pass')
                     .slice(0, 12)
                     .map((r, i) => (
-                      <li key={`${r.name}-${i}`} className="text-muted-foreground">
-                        {r.status === 'fail' ? '✗' : '⚠'} {r.name} — {r.detail}
+                      <li key={`${r.id}-${i}`} className="text-muted-foreground">
+                        {r.status === 'fail' ? '✗' : '⚠'} {r.label} — {r.detail ?? 'no detail'}
                       </li>
                     ))}
                 </ul>
