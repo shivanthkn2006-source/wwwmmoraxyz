@@ -36,6 +36,8 @@ import {
   Clock,
   Bot,
   Bug,
+  LifeBuoy,
+  Map as MapIcon,
 } from 'lucide-react';
 import type { GlassDockItem } from '@/components/home/HomeGlassDock';
 
