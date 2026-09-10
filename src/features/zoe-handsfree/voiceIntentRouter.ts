@@ -23,8 +23,6 @@ const ALIASES: Record<string, string> = {
   'home page': '/home',
   feed: '/home',
   timeline: '/universal-timeline',
-  chat: '/chat',
-  chats: '/chat',
   messages: '/chat',
   inbox: '/chat',
   dm: '/chat',
