@@ -800,7 +800,7 @@ export const GlobalZoeAssistant = ({ config = DEFAULT_CONFIG }: { config?: Parti
   
   // Listen for Entity Activation Protocol orb activation event
   useEffect(() => {
-    const handleOrbActivate = (event: CustomEvent) => {
+    const handleOrbActivate = async (event: CustomEvent<{ source?: string; transcript?: string; command?: string | null; emotion?: ECNEmotionState }>) => {
       console.log('[GlobalZoe] EAP Orb activation received:', event.detail);
       
       // Set emotion for orb animation
@@ -820,9 +820,16 @@ export const GlobalZoeAssistant = ({ config = DEFAULT_CONFIG }: { config?: Parti
       // Wake word / headset press: answer instantly with where they are.
       // The location is already cached from the session prefetch, so this line
       // is built synchronously — no lookup delay between "hey Zoe" and a reply.
-      if (event.detail?.source !== 'silent') {
+      const spokenCommand = event.detail?.command?.trim();
+      if (spokenCommand) {
+        setShowConversationPanel(true);
+        await alwaysOnVoice.processUtterance(spokenCommand);
+      } else if (event.detail?.source !== 'silent') {
         const firstName = (user?.user_metadata?.display_name as string | undefined)?.split(' ')[0] ?? null;
-        void speakResponse(buildWakeGreeting(location.pathname, firstName), 'calm');
+        await speakResponse(buildWakeGreeting(location.pathname, firstName), 'calm');
+        // Wake-only phrases now become a real conversation instead of merely
+        // animating the orb. The wake sentinel yields before this starts.
+        await alwaysOnVoice.enable();
       }
       
       
@@ -836,7 +843,7 @@ export const GlobalZoeAssistant = ({ config = DEFAULT_CONFIG }: { config?: Parti
     return () => {
       window.removeEventListener('zoe-orb-activate', handleOrbActivate as EventListener);
     };
-  }, [activeConfig.enableDHFStream, trackZoeInteraction, speakResponse, location.pathname, user]);
+  }, [activeConfig.enableDHFStream, trackZoeInteraction, speakResponse, location.pathname, user, alwaysOnVoice]);
 
   // Warm the coarse location cache once, so the wake-word reply is instant.
   useEffect(() => {

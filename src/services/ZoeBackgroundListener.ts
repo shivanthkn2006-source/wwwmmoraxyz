@@ -14,9 +14,10 @@
  */
 
 import { audioRouter } from '@/services/AudioRouterService';
-import { HANDS_FREE_WAKE_PHRASES, HANDS_FREE_STOP_PHRASES, findHandsFreePhrase } from '@/features/zoe-handsfree/phrases';
-import { zoeDebugLog } from '@/features/zoe-handsfree/debugBus';
+import { HANDS_FREE_WAKE_PHRASES, HANDS_FREE_STOP_PHRASES, findHandsFreePhrase, normalizeVoicePhrase } from '@/features/zoe-handsfree/phrases';
+import { zoeDebugLog, zoeDebugSetState, zoeDebugSpeechError, zoeDebugSpeechStart, zoeDebugSpeechStop } from '@/features/zoe-handsfree/debugBus';
 import { nativeZoeAudioBridge } from '@/services/NativeZoeAudioBridge';
+import { claimSpeechRecognition, releaseSpeechRecognition } from '@/utils/micPermissionManager';
 
 export type WakeWordState = 'off' | 'starting' | 'listening' | 'triggered' | 'suspended' | 'error';
 
@@ -208,10 +209,15 @@ class ZoeBackgroundListener {
       clearTimeout(this.restartTimer);
       this.restartTimer = null;
     }
+    const recognition = this.recognition;
     try {
-      this.recognition?.abort?.();
+      recognition?.abort?.();
     } catch {
       /* noop */
+    }
+    if (recognition) {
+      releaseSpeechRecognition('wake-word', recognition);
+      zoeDebugSpeechStop('wake-word', 'wake listener stopped');
     }
     this.recognition = null;
   }
@@ -238,7 +244,11 @@ class ZoeBackgroundListener {
     rec.interimResults = true;
     rec.lang = 'en-US';
 
-    rec.onstart = () => this.setState('listening');
+    rec.onstart = () => {
+      this.setState('listening');
+      zoeDebugSetState({ hfState: 'awaiting-wake' });
+      zoeDebugSpeechStart('wake-word', 'global hands-free sentinel');
+    };
 
     rec.onresult = (event: SpeechRecognitionEvent) => {
       let transcript = '';
@@ -256,13 +266,20 @@ class ZoeBackgroundListener {
 
       const wake = findHandsFreePhrase(transcript, HANDS_FREE_WAKE_PHRASES);
       if (wake) {
+        const normalizedTranscript = normalizeVoicePhrase(transcript);
+        const normalizedWake = normalizeVoicePhrase(wake);
+        const command = normalizedTranscript
+          .replace(new RegExp(`(?:^|\\s)${normalizedWake.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:\\s|$)`), 'i')
+          .trim();
         this.setState('triggered');
+        zoeDebugSetState({ hfState: command ? 'processing' : 'wake-detected' });
         zoeDebugLog('wake', `wake phrase "${wake}" (headset)`);
+        zoeDebugLog('voice', command ? `recognized: ${command}` : 'wake-only activation; awaiting question');
         try {
           window.dispatchEvent(new CustomEvent('zoe-request-mic-permission'));
           window.dispatchEvent(
             new CustomEvent('zoe-orb-activate', {
-              detail: { source: 'wake-word', transcript },
+              detail: { source: 'wake-word', transcript, command: command || null },
             }),
           );
         } catch {
@@ -276,6 +293,7 @@ class ZoeBackgroundListener {
 
     rec.onerror = (event: SpeechRecognitionErrorEvent) => {
       const err = event.error;
+      zoeDebugSpeechError('wake-word', err, 'global hands-free sentinel');
       if (err === 'not-allowed' || err === 'service-not-allowed') {
         this.enabled = false;
         this.setState('error');
@@ -287,6 +305,7 @@ class ZoeBackgroundListener {
     };
 
     rec.onend = () => {
+      releaseSpeechRecognition('wake-word', rec);
       this.recognition = null;
       if (this.enabled) this.scheduleRestart();
       else this.setState('off');
@@ -294,8 +313,11 @@ class ZoeBackgroundListener {
 
     this.recognition = rec;
     try {
+      claimSpeechRecognition('wake-word', rec);
       rec.start();
-    } catch {
+    } catch (error) {
+      releaseSpeechRecognition('wake-word', rec);
+      zoeDebugSpeechError('wake-word', error instanceof Error ? error.message : String(error), 'start failed');
       this.recognition = null;
       this.scheduleRestart(1200);
     }

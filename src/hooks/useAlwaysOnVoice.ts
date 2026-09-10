@@ -9,13 +9,14 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { askZoe } from '@/services/zoeEngine';
 import { useAuth } from '@/lib/auth';
-import { speakAsZoe, stopZoeSpeech, initializeZoeVoices, isZoeSpeaking, getZoeSpeechState } from '@/utils/zoeVoice';
+import { speakAsZoe, stopZoeSpeech, pauseZoeSpeech, resumeZoeSpeech, initializeZoeVoices, isZoeSpeaking } from '@/utils/zoeVoice';
 import { 
   requestMicPermission, 
   isSpeechRecognitionSupported, 
   createSpeechRecognition,
   stopSpeechRecognition 
 } from '@/utils/micPermissionManager';
+import { zoeDebugLog, zoeDebugSetState } from '@/features/zoe-handsfree/debugBus';
 
 interface VoiceState {
   isListening: boolean;
@@ -98,6 +99,9 @@ export const useAlwaysOnVoice = () => {
     setState(prev => ({ ...prev, isProcessing: true, transcript: '' }));
     
     console.log('[AlwaysOn] User said:', userText);
+    zoeDebugLog('voice', `recognized: ${userText}`);
+    zoeDebugSetState({ hfState: 'processing' });
+    window.dispatchEvent(new CustomEvent('zoe-handsfree-transcript', { detail: { text: userText } }));
     
     // Save user message to DB (SEPARATION PROTOCOL: tag as zoe_classic)
     if (user) {
@@ -128,6 +132,8 @@ export const useAlwaysOnVoice = () => {
 
       const responseText = answer.text || "I'm here.";
       console.log('[AlwaysOn] Zoe says:', responseText);
+      zoeDebugLog('voice', `reply: ${responseText.slice(0, 180)}`);
+      window.dispatchEvent(new CustomEvent('zoe-handsfree-reply', { detail: { text: responseText } }));
       
       // Save Zoe's message to DB (SEPARATION PROTOCOL: tag as zoe_classic)
       if (user) {
@@ -141,6 +147,7 @@ export const useAlwaysOnVoice = () => {
 
       // Speak the response with proper state tracking
       setState(prev => ({ ...prev, isSpeaking: true, isProcessing: false }));
+      zoeDebugSetState({ hfState: 'speaking' });
       
       await new Promise<void>((resolve) => {
         // Timeout safety - max 60 seconds for speech
@@ -171,6 +178,7 @@ export const useAlwaysOnVoice = () => {
       console.error('[AlwaysOn] Error:', err);
       setState(prev => ({ ...prev, error: 'Connection issue', isSpeaking: false }));
       stopZoeSpeech();
+      zoeDebugSetState({ hfState: 'error', lastError: err instanceof Error ? err.message : String(err) });
     } finally {
       processingRef.current = false;
       setState(prev => ({ ...prev, isProcessing: false, isSpeaking: false }));
@@ -180,6 +188,7 @@ export const useAlwaysOnVoice = () => {
         // Wait a bit longer to ensure TTS is fully stopped
         setTimeout(() => {
           if (isEnabledRef.current && !isZoeSpeaking()) {
+            zoeDebugSetState({ hfState: 'listening' });
             startListening();
           }
         }, 800);
@@ -235,6 +244,23 @@ export const useAlwaysOnVoice = () => {
 
       const transcript = (finalTranscript || interimTranscript).trim();
       if (transcript) {
+        const control = transcript.toLowerCase().replace(/[^a-z\s]/g, ' ').replace(/\s+/g, ' ').trim();
+        if (/^(?:zoe\s+)?(?:stop|be quiet|quiet|cancel)$/.test(control)) {
+          stopZoeSpeech();
+          zoeDebugSetState({ hfState: 'listening' });
+          return;
+        }
+        if (/^(?:zoe\s+)?pause$/.test(control)) {
+          pauseZoeSpeech();
+          zoeDebugSetState({ hfState: 'paused' });
+          return;
+        }
+        if (/^(?:zoe\s+)?(?:continue|resume)$/.test(control)) {
+          resumeZoeSpeech();
+          zoeDebugSetState({ hfState: 'speaking' });
+          return;
+        }
+        if (isZoeSpeaking()) stopZoeSpeech();
         lastTranscriptRef.current = transcript;
         setState(prev => ({ ...prev, transcript }));
         
@@ -362,6 +388,7 @@ export const useAlwaysOnVoice = () => {
     isEnabled: isEnabledRef.current,
     enable,
     disable,
+    processUtterance: getZoeResponse,
   };
 };
 

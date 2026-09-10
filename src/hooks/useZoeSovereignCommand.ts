@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { askZoe } from '@/services/zoeEngine';
 import { useAuth } from '@/lib/auth';
 import { toast } from 'sonner';
+import { speakAsZoe } from '@/utils/zoeVoice';
 
 // Command cooldown reduced to 1 second for fluid conversation
 const COMMAND_COOLDOWN_MS = 1000;
@@ -182,39 +183,11 @@ export const useZoeSovereignCommand = () => {
     }
   }, [user?.id, zoeState]);
 
-  // Speak response using TTS
+  // One canonical Zoe voice: Deepgram first, browser TTS only under the
+  // platform's explicit opt-in policy inside speakAsZoe().
   const speakResponse = useCallback(async (text: string, voiceStyle: string = 'calm') => {
     if (!text) return;
-
-    // Map voice style to TTS parameters
-    const styleParams: Record<string, { pitch: number; rate: number }> = {
-      calm: { pitch: 1.0, rate: 0.95 },
-      warm: { pitch: 1.05, rate: 1.0 },
-      urgent: { pitch: 1.1, rate: 1.15 },
-      playful: { pitch: 1.15, rate: 1.1 },
-    };
-
-    const params = styleParams[voiceStyle] || styleParams.calm;
-
-    // Use Web Speech API directly
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.pitch = params.pitch;
-      utterance.rate = params.rate;
-      utterance.volume = 1.0;
-      
-      const voices = window.speechSynthesis.getVoices();
-      const femaleVoice = voices.find(v => 
-        v.name.includes('Samantha') || 
-        v.name.includes('Victoria') || 
-        v.name.includes('Google UK English Female') ||
-        v.lang.includes('en') && v.name.toLowerCase().includes('female')
-      );
-      if (femaleVoice) utterance.voice = femaleVoice;
-      
-      window.speechSynthesis.speak(utterance);
-    }
+    await speakAsZoe(text, { style: voiceStyle });
   }, []);
 
   // Weather handler
@@ -447,7 +420,7 @@ export const useZoeSovereignCommand = () => {
 
       if (answer.text) {
         // Check if Zoe wants to take initiative/action
-        const responseText = data.message;
+        const responseText = answer.text;
         let voiceStyle: 'calm' | 'warm' | 'urgent' | 'playful' = 'warm';
         
         // Detect tone from response content
