@@ -53,6 +53,8 @@ interface ExtraDef {
 /** Ordered by usefulness — the dock trims from the end when space runs out. */
 export const DOCK_EXTRA_DEFS: ExtraDef[] = [
   { id: 'dock-compass', label: 'DHF Neural Feed', route: '/compass', Icon: Compass },
+  { id: 'dock-help', label: 'Help guides', route: '/help', Icon: LifeBuoy },
+  { id: 'dock-site-map', label: 'Site map', route: '/map', Icon: MapIcon },
   { id: 'dock-bug-report', label: 'Report a problem', route: '/bug-report', Icon: Bug },
   { id: 'dock-timeline', label: 'Universal timeline', route: '/universal-timeline', Icon: History },
   { id: 'dock-voice-commands', label: 'Voice commands', route: '/voice-commands', Icon: Mic },
