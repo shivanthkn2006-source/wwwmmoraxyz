@@ -35,7 +35,9 @@ export const AudioQuickConnectButton: React.FC<Props> = ({ onNavigateToAudioSett
   return (
     <button
       onClick={() => (onNavigateToAudioSettings ? onNavigateToAudioSettings() : navigate('/zoe-audio'))}
-      className={`relative flex items-center gap-2 px-3 py-1.5 rounded-full border border-border bg-background/80 hover:bg-muted transition-all text-sm text-foreground ${className || ''}`}
+      className={`relative flex items-center rounded-full border border-border bg-background/80 hover:bg-muted transition-all text-sm text-foreground ${
+        compact ? 'gap-1 h-9 w-9 justify-center p-0' : 'gap-2 px-3 py-1.5'
+      } ${className || ''}`}
       title="Zoe Audio & Bluetooth Device Center"
       aria-label="Zoe audio and Bluetooth device centre"
     >
