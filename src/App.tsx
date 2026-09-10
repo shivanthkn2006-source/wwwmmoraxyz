@@ -481,6 +481,8 @@ const RouteAwareShell = () => {
             <Routes>
               <Route path="/access-denied" element={<AccessDeniedScreen />} />
               <Route path="/auth" element={<AuthPage />} />
+              <Route path="/signup" element={<AuthPage />} />
+              <Route path="/welcome" element={<LandingPage />} />
               <Route path="/voice-auth" element={<VoiceAuthPage />} />
               <Route path="/password-recovery" element={<PasswordRecoveryPage />} />
               <Route
