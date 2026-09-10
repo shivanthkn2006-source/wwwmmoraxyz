@@ -133,6 +133,8 @@ const AstrologyPage = lazy(() => import("./pages/AstrologyPage")); // MEMBER AST
 const PrivacyDataPage = lazy(() => import("./pages/PrivacyDataPage")); // EXPORT / DELETE MY DATA
 const TermsPage = lazy(() => import("./pages/TermsPage"));
 const DataPolicyPage = lazy(() => import("./pages/DataPolicyPage"));
+const SiteMapPage = lazy(() => import("./pages/SiteMapPage"));
+const HelpPage = lazy(() => import("./pages/HelpPage"));
 
 const ZoeAstroDashboardPage = lazy(() => import("./pages/ZoeAstroDashboardPage")); // M'MORA ZOE ALIGNMENT DASHBOARD
 const GrowthInsightsPage = lazy(() => import("./pages/GrowthInsightsPage")); // PERSONAL GROWTH ENGINE ARCHIVE
@@ -911,6 +913,9 @@ const RouteAwareShell = () => {
                           />
                           <Route path="/terms" element={<TermsPage />} />
                           <Route path="/data-policy" element={<DataPolicyPage />} />
+                          {/* Member orientation: full site map + plain-language guides. */}
+                          <Route path="/map" element={<SiteMapPage />} />
+                          <Route path="/help" element={<HelpPage />} />
 
 
                           <Route
