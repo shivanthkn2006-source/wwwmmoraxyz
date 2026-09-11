@@ -6,6 +6,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { ensureLiveSession } from '@/lib/sessionGuard';
 
 export interface SearchIndexStats {
   indexed: number;
@@ -30,9 +31,8 @@ const AUTO_BACKFILL_KEY = 'zoe.search.autoBackfillAt';
 export type SearchIndexCoverage = Record<string, { indexed: number; withVision: number }>;
 
 export async function fetchSearchIndexStats(): Promise<{ stats: SearchIndexStats; failures: SearchIndexFailure[]; coverage: SearchIndexCoverage } | null> {
-  // The indexer is session-only; skip the call entirely when signed out.
-  const { data: sessionData } = await supabase.auth.getSession();
-  if (!sessionData.session) return null;
+  // The indexer is session-only; skip the call entirely without a live token.
+  if (!(await ensureLiveSession())) return null;
   const { data, error } = await supabase.functions.invoke('zoe-search-indexer', { body: { stats: true } });
   if (error || !data?.stats) return null;
   return {
@@ -46,10 +46,7 @@ type IndexerResult = { enqueued: number; processed: number; completed: number; f
 const IDLE_RESULT: IndexerResult = { enqueued: 0, processed: 0, completed: 0, failed: 0 };
 
 /** The indexer is session-only; signed-out callers must never invoke it (401). */
-async function hasSession(): Promise<boolean> {
-  const { data } = await supabase.auth.getSession();
-  return Boolean(data.session);
-}
+const hasSession = ensureLiveSession;
 
 /** Requeues media entities for vision description (all of them when `force`). */
 export async function runVisionBackfill(options: { force?: boolean; limit?: number } = {}) {
