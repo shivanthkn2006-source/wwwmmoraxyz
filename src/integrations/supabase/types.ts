@@ -12347,9 +12347,9 @@ export type Database = {
       recompute_intimacy_scores: { Args: { _user_id: string }; Returns: number }
       record_dhf_lineage: {
         Args: {
-          _action: string
-          _content: string
-          _entity_id: string
+          _action?: string
+          _content?: string
+          _entity_id?: string
           _entity_type: string
           _intent?: string
           _ip_hash?: string
