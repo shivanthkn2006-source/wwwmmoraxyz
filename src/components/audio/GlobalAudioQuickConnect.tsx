@@ -44,15 +44,47 @@ export const GlobalAudioQuickConnect: React.FC = () => {
     };
   }, []);
 
-  // Keep the router alive across routes so the chosen sink survives navigation.
+  // Zoe audio is ON by default from the moment the platform starts. Nobody has
+  // to open a settings page to switch it on; the settings page only turns it
+  // OFF. Two guarded paths, so this can never nag or hiss:
+  //   - Devices are only enumerated (no capture opened) on load.
+  //   - Listening starts immediately when the microphone was already granted,
+  //     otherwise it waits for the first real tap/click, which is what every
+  //     browser (and iOS in particular) requires before recognition may start.
   useEffect(() => {
-    // Device list only — never open the audio hardware on page load, or a
-    // connected headset sits in an open stream and hisses continuously.
     void audioRouter.prepareDevices();
-    // Restore hands-free listening if the user switched it on before.
-    if (zoeBackgroundListener.wasEnabledBefore() && audioRouter.wasMicGrantedBefore()) {
+
+    let armed = false;
+    const startLink = () => {
+      if (armed) return;
+      if (!isZoeAudioEnabled()) return;
+      armed = true;
       void zoeBackgroundListener.enable();
+    };
+
+    if (isZoeAudioEnabled() && audioRouter.wasMicGrantedBefore()) {
+      startLink();
+      return;
     }
+
+    const onGesture = () => startLink();
+    window.addEventListener('pointerdown', onGesture, { once: true });
+    window.addEventListener('keydown', onGesture, { once: true });
+    return () => {
+      window.removeEventListener('pointerdown', onGesture);
+      window.removeEventListener('keydown', onGesture);
+    };
+  }, []);
+
+  // React immediately when the owner flips the switch on the Zoe Audio page.
+  useEffect(() => {
+    const onPref = (event: Event) => {
+      const enabled = (event as CustomEvent<{ enabled?: boolean }>).detail?.enabled;
+      if (enabled) void zoeBackgroundListener.enable();
+      else zoeBackgroundListener.disable();
+    };
+    window.addEventListener(ZOE_AUDIO_PREF_EVENT, onPref);
+    return () => window.removeEventListener(ZOE_AUDIO_PREF_EVENT, onPref);
   }, []);
 
   const confirmedSignedOut = !loading && !user && !session;
