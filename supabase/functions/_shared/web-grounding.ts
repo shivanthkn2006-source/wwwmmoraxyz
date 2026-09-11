@@ -13,6 +13,7 @@
  * Everything is returned as citation-shaped rows so the existing provenance UI
  * renders web sources next to platform sources.
  */
+import { cached } from './zoe-cache.ts';
 
 export interface WebGroundHit {
   title: string;
