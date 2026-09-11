@@ -52,15 +52,18 @@ async function resolveGeo(ip: string | null, headerCountry: string | null): Prom
   if (!ip || ip === 'unknown' || ip.startsWith('127.') || ip.startsWith('::1') || ip.startsWith('192.168.')) return base;
 
   const get = async (url: string): Promise<Record<string, unknown> | null> => {
+    const ctrl = new AbortController();
+    // Keep the abort armed until the body is fully read — a slow/stalled body
+    // read is what previously kept the whole request alive to the 150s ceiling.
+    const timer = setTimeout(() => ctrl.abort(), 2500);
     try {
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 2500);
       const res = await fetch(url, { signal: ctrl.signal });
-      clearTimeout(timer);
       if (!res.ok) return null;
       return await res.json();
     } catch {
       return null;
+    } finally {
+      clearTimeout(timer);
     }
   };
 
