@@ -156,9 +156,27 @@ Deno.serve(async (req) => {
   }
 
   const text = typeof body.text === 'string' ? body.text : '';
-  if (!text.trim()) return json({ ok: true, stored: 0, facts: [] });
 
-  const facts = extractFacts(text);
+  // EXPLICIT FACTS — when Zoe asked "anything you're allergic to?", the answer
+  // is often one word with no pattern to match, so the caller states the fact
+  // outright. Everything is still validated and clamped before it is stored.
+  const explicit: Fact[] = Array.isArray(body.facts)
+    ? (body.facts as Array<Record<string, unknown>>)
+        .map((f) => ({
+          category: String(f.category ?? '').slice(0, 40).toLowerCase(),
+          fact_key: String(f.fact_key ?? '').slice(0, 60).toLowerCase(),
+          fact_value: clean(String(f.fact_value ?? '')),
+          confidence: Math.min(Math.max(Number(f.confidence) || 0.8, 0), 1),
+        }))
+        .filter((f) => f.category && f.fact_key && f.fact_value.length >= 2)
+        .slice(0, 10)
+    : [];
+
+  if (!text.trim() && explicit.length === 0) return json({ ok: true, stored: 0, facts: [] });
+
+  const extracted = text.trim() ? extractFacts(text) : [];
+  const seenKeys = new Set(explicit.map((f) => `${f.category}:${f.fact_key}`));
+  const facts = [...explicit, ...extracted.filter((f) => !seenKeys.has(`${f.category}:${f.fact_key}`))];
   if (facts.length === 0) return json({ ok: true, stored: 0, facts: [] });
 
   const now = new Date().toISOString();
