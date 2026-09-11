@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { resolvePosterUrl } from '@/lib/astroPoster';
+import { ensureLiveSession } from '@/lib/sessionGuard';
 
 export interface ZoeMotivation {
   id: string;
