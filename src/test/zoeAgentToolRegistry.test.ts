@@ -35,12 +35,39 @@ describe('Zoe agent tool registry', () => {
     expect(res.ok).toBe(false);
   });
 
-  it('reports VR world status from ambient context', async () => {
+  it('reports VR world status from the live presence function', async () => {
+    const { supabase } = await import('@/integrations/supabase/client');
+    (supabase.functions.invoke as any).mockResolvedValueOnce({
+      data: { ok: true, usersOnline: 12, usersInVr: 3, friendsOnline: ['Asha'] },
+      error: null,
+    });
+    setAmbientContext({ activeVRLocation: 'Neon Bay' });
+    const res = await executeZoeTool('queryVRWorldStatus');
+    expect(res.ok).toBe(true);
+    expect(res.source).toBe('live');
+    expect(res.usersInVr).toBe(3);
+    expect(res.vrLocation).toBe('Neon Bay');
+  });
+
+  it('falls back to what the screen knows when the live check fails', async () => {
+    const { supabase } = await import('@/integrations/supabase/client');
+    (supabase.functions.invoke as any).mockResolvedValueOnce({ data: null, error: { message: 'down' } });
     setAmbientContext({ activeVRLocation: 'Neon Bay', friendsList: [{ name: 'Asha', online: true }] });
     const res = await executeZoeTool('queryVRWorldStatus');
     expect(res.ok).toBe(true);
-    expect(res.vrLocation).toBe('Neon Bay');
+    expect(res.source).toBe('local');
     expect(res.friendsOnline).toEqual(['Asha']);
+  });
+
+  it('emails the conversation history through the mail function', async () => {
+    const { supabase } = await import('@/integrations/supabase/client');
+    (supabase.functions.invoke as any).mockResolvedValueOnce({
+      data: { ok: true, messageCount: 4, to: 'a@b.co' },
+      error: null,
+    });
+    const res = await executeZoeTool('emailConversationHistory', { days: 7 });
+    expect(res.ok).toBe(true);
+    expect(res.messageCount).toBe(4);
   });
 
   it('rejects unsafe navigation targets', async () => {

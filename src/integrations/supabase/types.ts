@@ -5857,6 +5857,7 @@ export type Database = {
           birth_place: string | null
           birth_time: string | null
           city: string | null
+          contact_email: string | null
           created_at: string
           current_tier: string | null
           daily_image_count: number | null
@@ -5864,6 +5865,8 @@ export type Database = {
           date_of_birth: string | null
           dhf_autonomy_tolerance: number | null
           display_name: string
+          email_digest_enabled: boolean
+          email_digest_hour: number
           enrichment_consent: boolean | null
           enrichment_source: string | null
           event_custom_details: string | null
@@ -5930,6 +5933,7 @@ export type Database = {
           birth_place?: string | null
           birth_time?: string | null
           city?: string | null
+          contact_email?: string | null
           created_at?: string
           current_tier?: string | null
           daily_image_count?: number | null
@@ -5937,6 +5941,8 @@ export type Database = {
           date_of_birth?: string | null
           dhf_autonomy_tolerance?: number | null
           display_name: string
+          email_digest_enabled?: boolean
+          email_digest_hour?: number
           enrichment_consent?: boolean | null
           enrichment_source?: string | null
           event_custom_details?: string | null
@@ -6003,6 +6009,7 @@ export type Database = {
           birth_place?: string | null
           birth_time?: string | null
           city?: string | null
+          contact_email?: string | null
           created_at?: string
           current_tier?: string | null
           daily_image_count?: number | null
@@ -6010,6 +6017,8 @@ export type Database = {
           date_of_birth?: string | null
           dhf_autonomy_tolerance?: number | null
           display_name?: string
+          email_digest_enabled?: boolean
+          email_digest_hour?: number
           enrichment_consent?: boolean | null
           enrichment_source?: string | null
           event_custom_details?: string | null
@@ -9037,6 +9046,36 @@ export type Database = {
         }
         Relationships: []
       }
+      zoe_cache: {
+        Row: {
+          cache_key: string
+          created_at: string
+          expires_at: string
+          hits: number
+          payload: Json
+          scope: string
+          updated_at: string
+        }
+        Insert: {
+          cache_key: string
+          created_at?: string
+          expires_at: string
+          hits?: number
+          payload: Json
+          scope?: string
+          updated_at?: string
+        }
+        Update: {
+          cache_key?: string
+          created_at?: string
+          expires_at?: string
+          hits?: number
+          payload?: Json
+          scope?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       zoe_cdsp_analysis: {
         Row: {
           analysis_type: string
@@ -9565,6 +9604,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      zoe_email_log: {
+        Row: {
+          created_at: string
+          error: string | null
+          id: string
+          kind: string
+          message_count: number
+          status: string
+          subject: string | null
+          to_email: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          error?: string | null
+          id?: string
+          kind: string
+          message_count?: number
+          status?: string
+          subject?: string | null
+          to_email: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          error?: string | null
+          id?: string
+          kind?: string
+          message_count?: number
+          status?: string
+          subject?: string | null
+          to_email?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       zoe_emotional_intelligence: {
         Row: {
@@ -10368,6 +10443,48 @@ export type Database = {
           learning_enabled?: boolean | null
           response_patterns?: Json | null
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      zoe_life_context: {
+        Row: {
+          category: string
+          confidence: number
+          created_at: string
+          fact_key: string
+          fact_value: string
+          id: string
+          last_seen_at: string
+          occurred_on: string | null
+          source: string
+          source_id: string | null
+          user_id: string
+        }
+        Insert: {
+          category: string
+          confidence?: number
+          created_at?: string
+          fact_key: string
+          fact_value: string
+          id?: string
+          last_seen_at?: string
+          occurred_on?: string | null
+          source?: string
+          source_id?: string | null
+          user_id: string
+        }
+        Update: {
+          category?: string
+          confidence?: number
+          created_at?: string
+          fact_key?: string
+          fact_value?: string
+          id?: string
+          last_seen_at?: string
+          occurred_on?: string | null
+          source?: string
+          source_id?: string | null
           user_id?: string
         }
         Relationships: []

@@ -45,8 +45,26 @@ export async function recordVoiceTurn(role: Role, text: string, userId?: string)
       content,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
+
+    // What the person says about their own life is quietly distilled into
+    // durable memory so Zoe can think from it later. Fire-and-forget: memory
+    // must never delay or break the conversation.
+    if (role === 'user') void rememberLifeFacts(content);
   } catch (err) {
     console.warn('[ZoeVoiceHistory] could not save spoken turn', err);
+  }
+}
+
+/** Sends a user turn to the life-context distiller. Silent on any failure. */
+export async function rememberLifeFacts(text: string): Promise<void> {
+  const content = (text || '').trim();
+  if (content.length < 8) return;
+  try {
+    await supabase.functions.invoke('zoe-life-context', {
+      body: { mode: 'ingest', text: content },
+    });
+  } catch {
+    /* memory is best-effort */
   }
 }
 

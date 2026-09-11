@@ -75,19 +75,58 @@ export const ZOE_TOOL_DEFINITIONS: ZoeToolDefinition[] = [
     description: 'Check progress of a background asset job (image, video or 3D model generation).',
     parameters: object({ jobId: str('Job id returned when the asset was requested') }, ['jobId']),
   },
+  {
+    name: 'recallLifeContext',
+    description:
+      "Recall what you already know about this person — their work, home, people, food, clothes, dates and preferences. Call this before asking them something they have already told you.",
+    parameters: object({}),
+  },
+  {
+    name: 'emailConversationHistory',
+    description:
+      'Email the person their own conversation history with you. Only ever sends to the address on their profile.',
+    parameters: object({ days: { type: 'number', description: 'How many days back, default 30' } }),
+  },
 ];
 
 const executors: Record<string, Executor> = {
   async queryVRWorldStatus() {
+    // Real presence from the platform, cached server-side so hundreds of
+    // people asking at once cost one query.
+    const { data, error } = await supabase.functions.invoke('zoe-vr-status', { body: {} });
+    const live = data as Record<string, unknown> | null;
+    if (error || !live?.ok) {
+      // Fall back to whatever the current screen already knows, and say so.
+      const ctx = getAmbientContext();
+      const online = ctx.friendsList.filter((f) => f.online).map((f) => f.name);
+      return {
+        ok: true,
+        source: 'local',
+        vrLocation: ctx.activeVRLocation ?? 'none',
+        friendsOnline: online,
+        friendsOnlineCount: online.length,
+      };
+    }
     const ctx = getAmbientContext();
-    const online = ctx.friendsList.filter((f) => f.online).map((f) => f.name);
-    return {
-      ok: true,
-      vrLocation: ctx.activeVRLocation ?? 'none',
-      friendsOnline: online,
-      friendsOnlineCount: online.length,
-    };
+    return { ok: true, source: 'live', vrLocation: ctx.activeVRLocation ?? 'none', ...live };
   },
+
+  async recallLifeContext() {
+    const { data, error } = await supabase.functions.invoke('zoe-life-context', {
+      body: { mode: 'recall', limit: 40 },
+    });
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, ...(data as Record<string, unknown>) };
+  },
+
+  async emailConversationHistory(args) {
+    const { data, error } = await supabase.functions.invoke('zoe-conversation-mail', {
+      body: { mode: 'now', days: Number(args.days) || 30 },
+    });
+    if (error) return { ok: false, error: error.message };
+    return { ...(data as Record<string, unknown>) } as ZoeToolResult;
+  },
+
 
   async generateResume(args) {
     const data: ResumeData = {
@@ -151,6 +190,8 @@ export function toolAcknowledgement(name: string): string {
     case 'calculatePlanetaryPositions': return 'Running the exact ephemeris, one moment.';
     case 'navigatePlatform': return 'Opening that up.';
     case 'getAssetJobStatus': return 'Checking that job.';
+    case 'recallLifeContext': return 'Let me think back a second.';
+    case 'emailConversationHistory': return 'Sending that to your inbox now.';
     default: return 'Checking now.';
   }
 }
