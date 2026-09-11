@@ -63,6 +63,7 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
   const [iconPosition, setIconPosition] = React.useState<{ x: number; y: number }>({ x: 8, y: 80 });
   const [activeIndex, setActiveIndex] = React.useState(-1);
   const inputRef = React.useRef<HTMLTextAreaElement>(null);
+  const spokenSearchRef = React.useRef<string | null>(null);
   const navigate = useNavigate();
   /**
    * Conversational layer: Zoe offers to search M'Mora, the web, or both while
@@ -126,16 +127,28 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
   React.useEffect(() => {
     const open = (event: Event) => {
       setSearchOpen(true);
-      const spoken = (event as CustomEvent).detail as { query?: string } | undefined;
+      const spoken = (event as CustomEvent).detail as { query?: string; speak?: boolean } | undefined;
       const term = spoken?.query?.trim();
       if (!term) return;
+      spokenSearchRef.current = spoken?.speak ? term : null;
       onQueryChange(term);
-      void executeAmbientSearch(term);
+      // Query state first triggers the normal reset effect. Start retrieval on
+      // the next task so that reset cannot invalidate this voice-request run.
+      window.setTimeout(() => { void executeAmbientSearch(term); }, 0);
       void recordHomeSearch(term);
     };
     window.addEventListener('mmora:open-home-search', open);
     return () => window.removeEventListener('mmora:open-home-search', open);
   }, [onQueryChange, executeAmbientSearch]);
+
+  // Voice-initiated searches remain visible and read the same synthesis shown
+  // in the panel. Deepgram is the only automatic Zoe voice path.
+  React.useEffect(() => {
+    const pending = spokenSearchRef.current;
+    if (!pending || !ambient?.synthesis || query.trim() !== pending) return;
+    spokenSearchRef.current = null;
+    void import('@/utils/zoeVoice').then(({ speakAsZoe }) => speakAsZoe(ambient.synthesis));
+  }, [ambient?.synthesis, query]);
 
   React.useEffect(() => {
     window.dispatchEvent(new CustomEvent('mmora:home-search-toggle', { detail: { open: searchOpen } }));

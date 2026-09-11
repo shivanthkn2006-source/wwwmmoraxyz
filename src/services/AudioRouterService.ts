@@ -59,6 +59,8 @@ class AudioRouterService {
   private isListeningActive: boolean = false;
   private micPermission: 'granted' | 'denied' | 'prompt' | 'unknown' = 'unknown';
   private micRequestInFlight: Promise<boolean> | null = null;
+  private inputDevices: AudioDeviceOption[] = [];
+  private outputDevices: AudioDeviceOption[] = [];
 
   private statusListeners: Set<Listener<ConnectionState>> = new Set();
   private deviceListeners: Set<Listener<{ inputs: AudioDeviceOption[]; outputs: AudioDeviceOption[] }>> = new Set();
@@ -138,7 +140,11 @@ class AudioRouterService {
       if (this.primaryOutputElement && this.currentOutputDeviceId !== 'default') {
         await this.setOutputDevice(this.currentOutputDeviceId);
       }
-      this.setStatus('connected');
+      // Web Audio being initialized does not prove that a headset exists.
+      // `connected` is reserved for a real labelled external active output;
+      // otherwise playback honestly uses the operating-system default.
+      const headset = resolveHeadsetState(this.outputDevices, this.currentOutputDeviceId);
+      this.setStatus(headset.connected ? 'connected' : 'fallback');
     } catch (err) {
       console.error('[AudioRouterService] Initialization failed:', err);
       this.setStatus('error');
@@ -154,6 +160,8 @@ class AudioRouterService {
         if (this.currentOutputDeviceId !== 'default') {
           void this.setOutputDevice(this.currentOutputDeviceId);
         }
+        const headset = resolveHeadsetState(this.outputDevices, this.currentOutputDeviceId);
+        this.setStatus(headset.connected ? 'connected' : 'fallback');
       };
     }
   }
@@ -212,6 +220,8 @@ class AudioRouterService {
       if (d.kind === 'audiooutput') outputs.push(entry);
     });
 
+    this.inputDevices = inputs;
+    this.outputDevices = outputs;
     this.deviceListeners.forEach((listener) => listener({ inputs, outputs }));
     return { inputs, outputs };
   }
@@ -285,7 +295,8 @@ class AudioRouterService {
     try {
       await this.refreshDeviceList();
       this.setupMediaSessionHandlers();
-      this.setStatus('connected');
+      const headset = resolveHeadsetState(this.outputDevices, this.currentOutputDeviceId);
+      this.setStatus(headset.connected ? 'connected' : 'fallback');
     } catch {
       this.setStatus('error');
     }
@@ -326,7 +337,8 @@ class AudioRouterService {
       try {
         await (element as HTMLMediaElement & { setSinkId: (id: string) => Promise<void> }).setSinkId(deviceId);
         console.info(`[AudioRouterService] Output sink routed to: ${deviceId}`);
-        this.setStatus('connected');
+        const headset = resolveHeadsetState(this.outputDevices, deviceId);
+        this.setStatus(headset.connected ? 'connected' : 'fallback');
         return true;
       } catch (err) {
         console.error('[AudioRouterService] Failed to set sink ID:', err);

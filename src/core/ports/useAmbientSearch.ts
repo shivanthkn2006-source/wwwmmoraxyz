@@ -129,16 +129,21 @@ export const useAmbientSearch = () => {
         // Drain a small durable indexing batch first. Database triggers create
         // jobs, so an interrupted upload/search is safely retried next time.
         // Signed-out visitors skip it: the indexer requires a session (401).
-        if (await ensureLiveSession()) {
-          const { error: indexerError } = await supabase.functions.invoke('zoe-search-indexer', {
-            body: { limit: 5 },
-          });
-          if (indexerError) console.warn('[zoe-search-indexer] background batch failed:', indexerError.message);
-        }
+        // Index maintenance is unrelated to this foreground answer. It used to
+        // block every visible search behind a session check and an edge call.
+        void ensureLiveSession().then((live) => {
+          if (!live) return;
+          return supabase.functions.invoke('zoe-search-indexer', { body: { limit: 5 } });
+        }).then((result) => {
+          if (result?.error) console.warn('[zoe-search-indexer] background batch failed:', result.error.message);
+        }).catch((e) => console.warn('[zoe-search-indexer] background batch threw:', e));
 
-
-
-        const coords = await resolveGeo();
+        // A cached fix arrives immediately. An uncached browser location gets a
+        // small budget so weather remains useful without holding every search.
+        const coords = await Promise.race([
+          resolveGeo(),
+          new Promise<null>((resolve) => window.setTimeout(() => resolve(null), 250)),
+        ]);
         const { data, error: fnError } = await supabase.functions.invoke('zoe-ambient-search', {
           body: {
             queryText: term,

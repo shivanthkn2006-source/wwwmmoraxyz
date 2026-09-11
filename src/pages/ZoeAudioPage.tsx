@@ -8,6 +8,7 @@ import {
   type WakeWordState,
 } from '@/services/ZoeBackgroundListener';
 import { isZoeAudioEnabled, setZoeAudioEnabled } from '@/lib/zoeAudioPreference';
+import { isZoeMuted } from '@/features/zoe-handsfree/muteGate';
 
 /** Best-supported headsets for the M'Mora / Zoe two-way voice link. */
 const SUPPORTED_HEADSETS = [
@@ -71,7 +72,7 @@ const PAIRING_STEPS = [
     step: 3,
     title: 'Come back here and allow the microphone once',
     body:
-      'Press "Allow microphone (one time)" above. Your browser will ask once; choose Allow. M\'Mora remembers it, so no page ever asks you again.',
+      'Press "Allow microphone (one time)" above. Your browser will ask; choose Allow. M\'Mora remembers the successful grant, although Safari or private browsing may ask again.',
   },
   {
     step: 4,
@@ -89,7 +90,7 @@ const PAIRING_STEPS = [
     step: 6,
     title: 'Talk to Zoe',
     body:
-      'Press the headset button (or switch on hands-free below and say "Hey Zoe"). Speak normally, and Zoe answers out loud in your ear. Press the button again, or say "Zoe, stop", to cut her off.',
+      'Press the headset button (or switch on hands-free below and say "Hey Zoe"). Speak normally, and Zoe answers out loud in your ear. If muted, only “Zoe wake” resumes listening. Press the button again, or say "Zoe, stop", to cut her off.',
   },
 ];
 
@@ -110,6 +111,7 @@ export const ZoeAudioPage: React.FC = () => {
   const [testPlaying, setTestPlaying] = useState<boolean>(false);
   const [wakeState, setWakeState] = useState<WakeWordState>(zoeBackgroundListener.getState());
   const [zoeAudioOn, setZoeAudioOn] = useState<boolean>(() => isZoeAudioEnabled());
+  const [muted, setMuted] = useState<boolean>(() => isZoeMuted());
   const audioTestRef = useRef<HTMLAudioElement | null>(null);
   const sinkElementRef = useRef<HTMLAudioElement | null>(null);
   const wakeCap = wakeWordCapability();
@@ -121,6 +123,11 @@ export const ZoeAudioPage: React.FC = () => {
   }, []);
 
   useEffect(() => zoeBackgroundListener.onStateChange(setWakeState), []);
+  useEffect(() => {
+    const onMute = (event: Event) => setMuted(Boolean((event as CustomEvent<{ muted?: boolean }>).detail?.muted));
+    window.addEventListener('zoe-mute-changed', onMute);
+    return () => window.removeEventListener('zoe-mute-changed', onMute);
+  }, []);
 
   const wakeOn = wakeState !== 'off' && wakeState !== 'error';
 
@@ -293,8 +300,8 @@ export const ZoeAudioPage: React.FC = () => {
           <div>
             <h2 className="text-lg font-semibold">Zoe audio</h2>
             <p className="text-sm text-muted-foreground">
-              On by default whenever you open M&rsquo;Mora — your headphones are connected and Zoe can speak and
-              listen straight away. Switch it off here if you would rather keep her quiet.
+              On by default whenever you open M&rsquo;Mora. Zoe uses the system-selected speaker or headset and
+              listens after microphone permission is granted. Switch it off here if you would rather keep her quiet.
             </p>
           </div>
           <button
@@ -310,6 +317,13 @@ export const ZoeAudioPage: React.FC = () => {
           </button>
         </div>
       </section>
+
+      {muted && (
+        <section role="status" aria-live="polite" className="border border-border bg-card rounded-xl p-4">
+          <p className="text-sm font-semibold">Zoe is muted</p>
+          <p className="mt-1 text-sm text-muted-foreground">She discards everything she hears until you say “Zoe wake”.</p>
+        </section>
+      )}
 
       {/* Hands-free wake word */}
       <section className="bg-card border border-border rounded-xl p-6 space-y-4">

@@ -79,7 +79,7 @@ export interface CascadeOptions {
   maxTokens?: number;
   temperature?: number;
   systemPrompt?: string;
-  /** Per-provider timeout in ms (default 25_000). T1 gets a 1.5x boost in t1-primary mode. */
+  /** Per-provider timeout in ms (default 4_500 for interactive speech). */
   timeoutMs?: number;
   /** Cascade strategy: default keeps T1→T5 order; t1-primary boosts T1 and keeps T5 as last-resort fallback. */
   mode?: CascadeMode;
@@ -312,10 +312,9 @@ export async function cascadeInfer(
   lovableModel?: string,
 ): Promise<CascadeResult> {
   const tiers = getDefaultTiers(opts.mode ?? 'default', lovableModel);
-  const optsWithBoost = opts.mode === 't1-primary'
-    ? { ...opts, timeoutMs: Math.round((opts.timeoutMs ?? 25_000) * 1.5) }
-    : opts;
-  return runCascade(tiers, messages, optsWithBoost);
+  // Spoken interaction cannot wait tens of seconds on one unhealthy provider.
+  // Preserve deterministic fallback order, but bound each attempt tightly.
+  return runCascade(tiers, messages, { ...opts, timeoutMs: opts.timeoutMs ?? 4_500 });
 }
 
 export async function cascadeInferFast(

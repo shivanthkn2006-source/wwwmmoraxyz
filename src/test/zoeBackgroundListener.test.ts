@@ -8,7 +8,7 @@
  * permission, "Hey Zoe" fires the same activation a headset button fires,
  * "Zoe stop" cuts her off, and the browser never claims pocket listening.
  */
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 const ensureMicPermission = vi.fn(async () => true);
 const interruptZoe = vi.fn();
@@ -49,6 +49,11 @@ describe('zoeBackgroundListener', () => {
     interruptZoe.mockClear();
     (window as unknown as Record<string, unknown>).SpeechRecognition = FakeRecognition;
     localStorage.clear();
+  });
+
+  afterEach(async () => {
+    const { resetMuteGate } = await import('@/features/zoe-handsfree/muteGate');
+    resetMuteGate();
   });
 
   it('reports honest capability: browser tabs cannot listen in your pocket', async () => {
@@ -106,5 +111,22 @@ describe('zoeBackgroundListener', () => {
     const ok = await zoeBackgroundListener.enable();
     expect(ok).toBe(false);
     expect(zoeBackgroundListener.getState()).toBe('error');
+  });
+
+  it('discards all wake phrases while muted except “Zoe wake”', async () => {
+    const muteGate = await import('@/features/zoe-handsfree/muteGate');
+    const { zoeBackgroundListener } = await import('@/services/ZoeBackgroundListener');
+    await zoeBackgroundListener.enable();
+    muteGate.setZoeMuted(true);
+    let activated = 0;
+    const onActivate = () => { activated += 1; };
+    window.addEventListener('zoe-orb-activate', onActivate);
+    FakeRecognition.instances.at(-1)?.say('hey zoe what is the news');
+    expect(activated).toBe(0);
+    FakeRecognition.instances.at(-1)?.say('zoe wake');
+    expect(activated).toBe(1);
+    expect(muteGate.isZoeMuted()).toBe(false);
+    window.removeEventListener('zoe-orb-activate', onActivate);
+    zoeBackgroundListener.disable();
   });
 });

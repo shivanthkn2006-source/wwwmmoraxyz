@@ -128,6 +128,13 @@ export function resolveVoiceIntent(rawText: string): VoiceIntent | null {
     }
   }
 
+  // Live questions should always open the visible result surface instead of
+  // disappearing into an audio-only answer. The Home panel fetches current,
+  // source-attributed weather/news while Zoe speaks the resulting synthesis.
+  if (/\b(weather|forecast|temperature|rain|humidity|headlines?|breaking news|latest news|news today|current news)\b/.test(text)) {
+    return { kind: 'search', query: text, speak: 'Checking live sources now.' };
+  }
+
   // "run god mode scan" — staff only. The page and the edge function both
   // check the admin role, so a non-admin simply gets told no.
   if (/\b(god\s*-?\s*mode)\b/.test(text) && /\b(scan|audit|check)\b/.test(text)) {

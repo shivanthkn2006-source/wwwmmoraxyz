@@ -51,7 +51,7 @@ const RULES: { topic: SearchTopic; scope: SearchScope; test: RegExp }[] = [
   { topic: 'shopping', scope: 'web', test: /\b(buy|price|cheap|deal|discount|phone|iphone|laptop|shoes|watch|order|shop|amazon|best\s+\w+\s+under)\b/i },
   { topic: 'food', scope: 'both', test: /\b(food|recipe|restaurant|cafe|eat|dinner|lunch|breakfast|biryani|pizza|coffee|menu)\b/i },
   { topic: 'people', scope: 'mmora', test: /(^@)|\b(profile|member|friend|creator|user|who\s+is)\b/i },
-  { topic: 'media', scope: 'mmora', test: /\b(loop|reel|short|video|photo|image|post|clip|story)\b/i },
+  { topic: 'media', scope: 'both', test: /\b(loop|loops|reel|reels|short|shorts|video|videos|photo|photos|image|images|post|posts|clip|clips|story|stories)\b/i },
   { topic: 'platform', scope: 'mmora', test: /\b(setting|settings|dhf|vault|growth|notification|admin|orb|mmora|m'?mora)\b/i },
   { topic: 'howto', scope: 'web', test: /\b(how|why|what|when|where|explain|meaning|define|tutorial)\b/i },
 ];

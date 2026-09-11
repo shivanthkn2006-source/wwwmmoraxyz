@@ -296,7 +296,10 @@ export const GlobalZoeAssistant = ({ config = DEFAULT_CONFIG }: { config?: Parti
     wakeWords: activeConfig.wakeWordPhrase,
     sensitivity: 0.65, // Slightly more sensitive for natural speech
     continuous: true,
-    enabled: wakeWordEnabled && activeConfig.enableWakeWord && !wakeWordPaused, // Pause when voice input active
+    // The platform-wide ZoeBackgroundListener is the sole wake sentinel.
+    // Keeping this legacy recognizer active created two simultaneous browser
+    // SpeechRecognition sessions and made both randomly abort on Safari/Chrome.
+    enabled: false,
     onWakeWordDetected: async (result) => {
       // Prevent handling if already handled recently (cooldown)
       if (wakeWordHandledRef.current) {
