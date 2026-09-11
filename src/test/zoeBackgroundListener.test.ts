@@ -8,7 +8,7 @@
  * permission, "Hey Zoe" fires the same activation a headset button fires,
  * "Zoe stop" cuts her off, and the browser never claims pocket listening.
  */
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 const ensureMicPermission = vi.fn(async () => true);
 const interruptZoe = vi.fn();
