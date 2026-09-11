@@ -155,7 +155,7 @@ export const callSentinel = async (
 ): Promise<SentinelResponse> => {
   try {
     const device = collectDevice();
-    const { data, error } = await supabase.functions.invoke('sentinel-guard', {
+    const call = supabase.functions.invoke('sentinel-guard', {
       body: {
         action,
         sessionToken: sessionToken(),
@@ -165,6 +165,11 @@ export const callSentinel = async (
         ...payload,
       },
     });
+    // Telemetry is best-effort: never let a slow round trip hold up the page.
+    const { data, error } = (await Promise.race([
+      call,
+      new Promise((resolve) => setTimeout(() => resolve({ data: null, error: new Error('timeout') }), 8000)),
+    ])) as { data: unknown; error: unknown };
     if (error) return { ok: false };
     return (data as SentinelResponse) ?? { ok: false };
   } catch {
