@@ -81,3 +81,19 @@ built and typechecked but **not** exercised end to end:
 - real 3D generation (no Meshy key configured)
 
 Sign in on the preview once and these can be walked through for real.
+
+## Staff memory view and signed-in walkthrough (11 Sep 2026)
+
+- `/admin/memory` is live behind the admin role check and reads through the
+  admin-gated `zoe-memory-admin` function (deployed). Verified signed in as the
+  admin account: for member `moksh` it showed 5 learned preferences (food,
+  work, location, a health note, family), a 54-item timeline and 60 orb
+  messages — all real rows, nothing invented.
+- Mute and wake behaviour is covered by 23 passing tests: while muted every
+  transcript is dropped and only "Zoe wake" / "wake up Zoe" releases it.
+  A spoken walkthrough on a physical microphone is still unverified.
+- Resume: triggered in preview signed in, the PDF downloaded silently as
+  `moksh_Resume.pdf` with the member's real name, summary, city and employer.
+- 3D asset: a job was created and the status card rendered honestly with
+  "Not available — no 3D generation provider is connected yet." Real generation
+  stays off until a Meshy API key is saved.
