@@ -12,6 +12,10 @@
 import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 
+const ZoeAssetStatusCard = lazy(() =>
+  import('@/components/zoe/ZoeAssetStatusCard').then((m) => ({ default: m.ZoeAssetStatusCard })),
+);
+
 const GlobalZoeAssistant = lazy(() =>
   import('@/components/GlobalZoeAssistant').then((m) => ({ default: m.GlobalZoeAssistant })),
 );
@@ -49,6 +53,7 @@ export const ZoeGlobalMount: React.FC = () => {
   return (
     <Suspense fallback={null}>
       <GlobalZoeAssistant />
+      <ZoeAssetStatusCard />
     </Suspense>
   );
 };
