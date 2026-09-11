@@ -12,6 +12,7 @@ import { audioRouter } from '@/services/AudioRouterService';
 import { zoeBackgroundListener } from '@/services/ZoeBackgroundListener';
 import AudioQuickConnectButton from '@/components/audio/AudioQuickConnectButton';
 import { useAuth } from '@/lib/auth';
+import { ZOE_AUDIO_PREF_EVENT, isZoeAudioEnabled } from '@/lib/zoeAudioPreference';
 
 const EXCLUDED_PREFIXES = [
   '/auth',
