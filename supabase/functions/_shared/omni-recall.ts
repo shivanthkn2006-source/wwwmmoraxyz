@@ -46,6 +46,9 @@ const LABELS: Record<string, string> = {
   astro_prediction: 'Daily Compass prediction',
   wisdom_goal: 'Wisdom goal',
   visual_memory: 'Something Zoe saw',
+  important_date: 'Saved date',
+  post_attachment: 'Attached photo or document',
+  life_fact: 'Remembered life detail',
 };
 
 /** Retrieves the most relevant platform entities for a natural-language query. */
