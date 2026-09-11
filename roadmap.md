@@ -1,5 +1,13 @@
 # Roadmap
 
+## Home startup, Zoe latency, and launch verification (Sep 11 2026)
+- [x] Remove the legacy BIOS/splash blockers so route content paints immediately; retain the temporary one-time Zoe greeting film.
+- [x] Prevent the wake listener from reclaiming the microphone during a hands-free follow-up.
+- [x] Reduce spoken end-of-turn delay and preserve Deepgram-only Zoe output unless explicitly opted in.
+- [x] Add a fail-open watchdog to the full-screen access gate and shorten Home's degraded-network loading ceiling.
+- [x] Replace visible third-party image-provider labels with M'Mora/Zoe presentation labels while preserving required internal integration names.
+- [ ] Complete authenticated browser and physical iOS/AirPods locked-screen verification (blocked: no matching preview account or attached phone/headset).
+
 - [x] Fix home/loops media autoplay to play once per user/post.
 - [x] Expand the existing single upload flow for videos, images, PDFs, and supported documents with responsive rendering.
 - [x] Restore Growth Insights re-onboarding with expanded categories and durable live preference updates.

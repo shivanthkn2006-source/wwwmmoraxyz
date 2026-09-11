@@ -121,8 +121,19 @@ export const QuantumGatekeeper: React.FC<QuantumGatekeeperProps> = ({
     }
     lastCheckRef.current = checkKey;
 
+    let cancelled = false;
+    const failOpen = () => {
+      if (!cancelled) {
+        console.warn('[QuantumGatekeeper] Access check unavailable — allowing the authenticated route to render');
+        setState({ isLoading: false, hasAccess: true, isAdmin: false, deniedReason: null });
+      }
+    };
+    const watchdog = window.setTimeout(failOpen, 5000);
+
     const checkAccess = async () => {
       setState(prev => ({ ...prev, isLoading: true }));
+
+      try {
 
       // CRITICAL: Check for invite token in URL FIRST (before public route check)
       // This ensures tokens are captured even on public routes like "/"
@@ -200,9 +211,19 @@ export const QuantumGatekeeper: React.FC<QuantumGatekeeperProps> = ({
         isAdmin: false, 
         deniedReason: 'No valid invite token or admin credentials' 
       });
+      } catch (error) {
+        console.error('[QuantumGatekeeper] Access check failed:', error);
+        failOpen();
+      } finally {
+        window.clearTimeout(watchdog);
+      }
     };
 
-    checkAccess();
+    void checkAccess();
+    return () => {
+      cancelled = true;
+      window.clearTimeout(watchdog);
+    };
   }, [enabled, user, session, authLoading, location.pathname, searchParams, checkAdminStatus, validateInviteToken, logEvent, state.isLoading]);
 
   // Show loading state (but not if auth is still loading)

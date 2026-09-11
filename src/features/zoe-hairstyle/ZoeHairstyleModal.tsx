@@ -100,7 +100,7 @@ export function ZoeHairstyleModal({ open, initialGender = 'any', onClose }: Prop
     if (!selectedCut) return;
     // Face-preserving path needs a healthy backend key.
     if (source && health.status === 'missing') {
-      alert(health.message || 'Face-preserving hairstyle edit is disabled: POLLINATIONS_API_KEY is missing in the backend.');
+      alert(health.message || 'Face-preserving hairstyle edit is currently unavailable. Zoe Identity Service needs attention.');
       return;
     }
     // Preview step: confirm the uploaded selfie before generating.
@@ -144,7 +144,7 @@ export function ZoeHairstyleModal({ open, initialGender = 'any', onClose }: Prop
           : 'bg-slate-800/40 border-white/10 text-white/60'
         }`}>
           {health.status === 'ok' && <><ShieldCheck className="w-3.5 h-3.5" /> Face-preserving hairstyle edit is ready.</>}
-          {health.status === 'missing' && <><ShieldAlert className="w-3.5 h-3.5" /> POLLINATIONS_API_KEY missing — selfie-based hairstyle edit is blocked. Add the secret in the backend.</>}
+          {health.status === 'missing' && <><ShieldAlert className="w-3.5 h-3.5" /> Zoe Identity Service is unavailable — selfie-based hairstyle editing is paused.</>}
           {health.status === 'error' && <><ShieldAlert className="w-3.5 h-3.5" /> Health check error: {health.message}</>}
           {health.status === 'checking' && <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Checking image-edit backend…</>}
         </div>

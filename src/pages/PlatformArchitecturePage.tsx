@@ -120,7 +120,7 @@ const PlatformArchitecturePage: React.FC = () => {
                 │ server-side keys only (never shipped to the browser)
  ┌──────────────▼──────────────── EXTERNAL PROVIDERS ─────────────────────────────┐
  │  Gemini / Google AI · Cohere · NVIDIA NIM · Groq · Deepgram (TTS)              │
- │  Pollinations (imagery) · YouTube Data API · Open-Meteo · ipwho.is (GeoIP)     │
+ │  Zoe Neural Imagery · YouTube Data API · Open-Meteo · ipwho.is (GeoIP)         │
  │  Cloudflare Turnstile · TencentDB memory gateway                               │
  └────────────────────────────────────────────────────────────────────────────────┘`}</Diagram>
 
@@ -231,8 +231,8 @@ const PlatformArchitecturePage: React.FC = () => {
                 ├─ 4. Groq          (low-latency retrieval synthesis)
                 └─ circuit breaker + provider-health endpoint
 
-  Imagery  : Pollinations → growth-image-validate (subject/face match) → cached
-  Voice    : Deepgram TTS, Web Speech API fallback
+  Imagery  : Zoe Cascade → growth-image-validate (subject/face match) → cached
+  Voice    : Deepgram TTS; browser speech only with explicit owner opt-in
   Search   : zoe_universal_index (pgvector) ← loops · chats · DHF nodes
   Orb tools: orbCapabilities.ts → zoe-document-xray · identify-song ·
              score-post-relevance · provider-health (silent fallback to brain)`}</Diagram>

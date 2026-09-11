@@ -221,7 +221,7 @@ export function useArtifactGenerator() {
           type,
           content: imageResult.imageUrl,
           title: subject ? `${subject}` : 'Zoe Vision',
-          description: `Generated via ${imageResult.provider}`,
+          description: 'Generated via Zoe Vision',
           timestamp: new Date(),
           isLoading: false,
         };

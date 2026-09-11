@@ -818,35 +818,36 @@ ${cortexPromptAddition}`;
     // under the caller's JWT so RLS decides visibility.
     let omniRecallBlock = '';
     let omniRecallCount = 0;
-    // Provenance for the in-app citation buttons.
+    // Provenance for the in-app citation buttons. Recall and external grounding
+    // are independent, so run them together instead of making live news wait.
     let omniRecallSources: RecallSource[] = [];
-    try {
-      const lastUserMessage = [...messages].reverse().find((m) => m.role === 'user')?.content || '';
-      const hits = await omniRecall(authHeader || '', String(lastUserMessage), 8);
-      omniRecallCount = hits.length;
-      omniRecallBlock = buildOmniRecallBlock(hits);
-      omniRecallSources = buildRecallSources(hits);
-    } catch (recallError) {
-      console.warn('[Zoe] omni recall skipped:', recallError instanceof Error ? recallError.message : recallError);
-    }
+    const recallPromise = omniRecall(authHeader || '', String(lastUserMessage), 8)
+      .catch((recallError) => {
+        console.warn('[Zoe] omni recall skipped:', recallError instanceof Error ? recallError.message : recallError);
+        return [];
+      });
+    const webPromise = needsWebGrounding(String(lastUserMessage), 0)
+      ? webGround(String(lastUserMessage), 6).catch((webError) => {
+          console.warn('[Zoe] web grounding skipped:', webError instanceof Error ? webError.message : webError);
+          return [];
+        })
+      : Promise.resolve([]);
+    const [hits, webHits] = await Promise.all([recallPromise, webPromise]);
+    omniRecallCount = hits.length;
+    omniRecallBlock = buildOmniRecallBlock(hits);
+    omniRecallSources = buildRecallSources(hits);
     console.log('[Zoe] omni recall hits:', omniRecallCount);
 
     // LIVE WEB GROUNDING — anything beyond this platform's own index.
     let webBlock = '';
     let webHitCount = 0;
-    try {
-      const lastUserMessage = [...messages].reverse().find((m) => m.role === 'user')?.content || '';
-      if (needsWebGrounding(String(lastUserMessage), omniRecallCount)) {
-        const webHits = await webGround(String(lastUserMessage), 6);
-        webHitCount = webHits.length;
-        webBlock = buildWebGroundingBlock(webHits, omniRecallSources.length);
-        omniRecallSources = [
-          ...omniRecallSources,
-          ...(buildWebSources(webHits, omniRecallSources.length) as RecallSource[]),
-        ];
-      }
-    } catch (webError) {
-      console.warn('[Zoe] web grounding skipped:', webError instanceof Error ? webError.message : webError);
+    if (webHits.length) {
+      webHitCount = webHits.length;
+      webBlock = buildWebGroundingBlock(webHits, omniRecallSources.length);
+      omniRecallSources = [
+        ...omniRecallSources,
+        ...(buildWebSources(webHits, omniRecallSources.length) as RecallSource[]),
+      ];
     }
     console.log('[Zoe] web grounding hits:', webHitCount);
 
