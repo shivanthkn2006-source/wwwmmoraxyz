@@ -51,6 +51,11 @@ describe('zoeBackgroundListener', () => {
     localStorage.clear();
   });
 
+  afterEach(async () => {
+    const { resetMuteGate } = await import('@/features/zoe-handsfree/muteGate');
+    resetMuteGate();
+  });
+
   it('reports honest capability: browser tabs cannot listen in your pocket', async () => {
     const { wakeWordCapability } = await import('@/services/ZoeBackgroundListener');
     const cap = wakeWordCapability();

@@ -138,7 +138,11 @@ class AudioRouterService {
       if (this.primaryOutputElement && this.currentOutputDeviceId !== 'default') {
         await this.setOutputDevice(this.currentOutputDeviceId);
       }
-      this.setStatus('connected');
+      // Web Audio being initialized does not prove that a headset exists.
+      // `connected` is reserved for a real labelled external active output;
+      // otherwise playback honestly uses the operating-system default.
+      const headset = resolveHeadsetState(this.outputDevices, this.currentOutputDeviceId);
+      this.setStatus(headset.connected ? 'connected' : 'fallback');
     } catch (err) {
       console.error('[AudioRouterService] Initialization failed:', err);
       this.setStatus('error');
@@ -154,6 +158,8 @@ class AudioRouterService {
         if (this.currentOutputDeviceId !== 'default') {
           void this.setOutputDevice(this.currentOutputDeviceId);
         }
+        const headset = resolveHeadsetState(this.outputDevices, this.currentOutputDeviceId);
+        this.setStatus(headset.connected ? 'connected' : 'fallback');
       };
     }
   }

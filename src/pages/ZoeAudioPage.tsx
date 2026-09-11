@@ -72,7 +72,7 @@ const PAIRING_STEPS = [
     step: 3,
     title: 'Come back here and allow the microphone once',
     body:
-      'Press "Allow microphone (one time)" above. Your browser will ask once; choose Allow. M\'Mora remembers it, so no page ever asks you again.',
+      'Press "Allow microphone (one time)" above. Your browser will ask; choose Allow. M\'Mora remembers the successful grant, although Safari or private browsing may ask again.',
   },
   {
     step: 4,
@@ -90,7 +90,7 @@ const PAIRING_STEPS = [
     step: 6,
     title: 'Talk to Zoe',
     body:
-      'Press the headset button (or switch on hands-free below and say "Hey Zoe"). Speak normally, and Zoe answers out loud in your ear. Press the button again, or say "Zoe, stop", to cut her off.',
+      'Press the headset button (or switch on hands-free below and say "Hey Zoe"). Speak normally, and Zoe answers out loud in your ear. If muted, only “Zoe wake” resumes listening. Press the button again, or say "Zoe, stop", to cut her off.',
   },
 ];
 
