@@ -113,6 +113,12 @@ export const PlatformLayout = ({ children }: { children: React.ReactNode }) => (
     <AppErrorBoundary moduleName="platform:zoe-orb" severity="low" fallback={null}>
       <ZoeGlobalMount />
     </AppErrorBoundary>
+
+    {/* First-launch greeting film (full screen, click to shrink). Own overlay:
+        Home / feed / loops / dock trees are never touched. */}
+    <AppErrorBoundary moduleName="platform:zoe-greeting-film" severity="low" fallback={null}>
+      <ZoeGreetingFilm />
+    </AppErrorBoundary>
   </>
 );
 
