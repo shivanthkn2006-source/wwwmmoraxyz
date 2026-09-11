@@ -42,22 +42,33 @@ export async function fetchSearchIndexStats(): Promise<{ stats: SearchIndexStats
   };
 }
 
+type IndexerResult = { enqueued: number; processed: number; completed: number; failed: number };
+const IDLE_RESULT: IndexerResult = { enqueued: 0, processed: 0, completed: 0, failed: 0 };
+
+/** The indexer is session-only; signed-out callers must never invoke it (401). */
+async function hasSession(): Promise<boolean> {
+  const { data } = await supabase.auth.getSession();
+  return Boolean(data.session);
+}
+
 /** Requeues media entities for vision description (all of them when `force`). */
 export async function runVisionBackfill(options: { force?: boolean; limit?: number } = {}) {
+  if (!(await hasSession())) return IDLE_RESULT;
   const { data, error } = await supabase.functions.invoke('zoe-search-indexer', {
     body: { visionBackfill: true, force: options.force === true, limit: options.limit ?? 5 },
   });
   if (error) throw error;
-  return data as { enqueued: number; processed: number; completed: number; failed: number };
+  return data as IndexerResult;
 }
 
 /** Drains one bounded batch; optionally enqueues the full historical backfill first. */
 export async function runIndexerBatch(options: { backfill?: boolean; limit?: number } = {}) {
+  if (!(await hasSession())) return IDLE_RESULT;
   const { data, error } = await supabase.functions.invoke('zoe-search-indexer', {
     body: { backfill: options.backfill === true, limit: options.limit ?? 10 },
   });
   if (error) throw error;
-  return data as { enqueued: number; processed: number; completed: number; failed: number };
+  return data as IndexerResult;
 }
 
 async function drainIndexerQueue(initialBackfill: boolean) {
