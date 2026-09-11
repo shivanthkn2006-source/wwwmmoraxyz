@@ -291,9 +291,12 @@ class ZoeBackgroundListener {
     }
 
     this.setState('starting');
+    const apple = isAppleWebkitSpeech();
     const rec = new Ctor();
-    rec.continuous = true;
-    rec.interimResults = true;
+    // Apple's engine ignores continuous mode and stops after each phrase; ask
+    // for one phrase at a time and let `onend` re-arm the sentinel instantly.
+    rec.continuous = !apple;
+    rec.interimResults = !apple;
     rec.lang = 'en-US';
 
     rec.onstart = () => {
@@ -359,7 +362,9 @@ class ZoeBackgroundListener {
     rec.onend = () => {
       releaseSpeechRecognition('wake-word', rec);
       this.recognition = null;
-      if (this.enabled) this.scheduleRestart();
+      // Apple ends the session after every phrase — that is normal, not a
+      // failure. Re-arm quickly so "hey Zoe" keeps working on iPhone/iPad.
+      if (this.enabled) this.scheduleRestart(apple ? 250 : 700);
       else this.setState('off');
     };
 
