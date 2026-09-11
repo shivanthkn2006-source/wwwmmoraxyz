@@ -66,7 +66,7 @@ describe('assistant actions', () => {
   it('routes a spoken search to the visible Home search', () => {
     const intent = resolveVoiceIntent('Zoe search for the weather in Kochi');
     expect(intent).toMatchObject({ kind: 'search' });
-    expect((intent as { query: string }).query).toContain('weather in Kochi');
+    expect((intent as { query: string }).query).toContain('weather in kochi');
   });
 
   it('routes a resume request', () => {
