@@ -327,8 +327,8 @@ async function freshNews(query: string): Promise<WebGroundHit[]> {
   return out;
 }
 
-/** Fetch live web knowledge for a query. Never throws. */
-export async function webGround(query: string, limit = 6): Promise<WebGroundHit[]> {
+/** Fetch live web knowledge for a query, bypassing the shared cache. */
+export async function webGroundLive(query: string, limit = 6): Promise<WebGroundHit[]> {
   const term = (query || '').trim().slice(0, 300);
   if (term.length < 3) return [];
   // Anything that could have moved recently gets the fresh-news pass too:
