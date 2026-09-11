@@ -285,6 +285,30 @@ export const ZoeAudioPage: React.FC = () => {
         </div>
       </section>
 
+      {/* Master switch — Zoe audio is on by default; this page only turns it off */}
+      <section className="bg-card border border-border rounded-xl p-6 space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold">Zoe audio</h2>
+            <p className="text-sm text-muted-foreground">
+              On by default whenever you open M&rsquo;Mora — your headphones are connected and Zoe can speak and
+              listen straight away. Switch it off here if you would rather keep her quiet.
+            </p>
+          </div>
+          <button
+            data-testid="zoe-audio-master-toggle"
+            onClick={() => {
+              const next = !zoeAudioOn;
+              setZoeAudioOn(next);
+              setZoeAudioEnabled(next);
+            }}
+            className="px-4 py-2 border border-border hover:bg-muted text-xs font-semibold rounded-lg transition"
+          >
+            {zoeAudioOn ? 'Turn Zoe audio off' : 'Turn Zoe audio on'}
+          </button>
+        </div>
+      </section>
+
       {/* Hands-free wake word */}
       <section className="bg-card border border-border rounded-xl p-6 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
