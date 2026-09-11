@@ -52,15 +52,18 @@ async function resolveGeo(ip: string | null, headerCountry: string | null): Prom
   if (!ip || ip === 'unknown' || ip.startsWith('127.') || ip.startsWith('::1') || ip.startsWith('192.168.')) return base;
 
   const get = async (url: string): Promise<Record<string, unknown> | null> => {
+    const ctrl = new AbortController();
+    // Keep the abort armed until the body is fully read — a slow/stalled body
+    // read is what previously kept the whole request alive to the 150s ceiling.
+    const timer = setTimeout(() => ctrl.abort(), 2500);
     try {
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 2500);
       const res = await fetch(url, { signal: ctrl.signal });
-      clearTimeout(timer);
       if (!res.ok) return null;
       return await res.json();
     } catch {
       return null;
+    } finally {
+      clearTimeout(timer);
     }
   };
 
@@ -100,8 +103,21 @@ function clientIp(req: Request): string | null {
   return req.headers.get('cf-connecting-ip') ?? req.headers.get('x-real-ip');
 }
 
+/** Telemetry must never hold a request open; give up long before the platform does. */
+const HANDLER_BUDGET_MS = 10_000;
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+
+  return await Promise.race([
+    handle(req),
+    new Promise<Response>((resolve) =>
+      setTimeout(() => resolve(json({ ok: false, blocked: false })), HANDLER_BUDGET_MS),
+    ),
+  ]);
+});
+
+async function handle(req: Request): Promise<Response> {
 
   // WAF: shape + burst guard. Telemetry is chatty and offices share one NAT
   // address, so the ceiling is generous — it only catches a flood.
@@ -272,4 +288,4 @@ serve(async (req) => {
     // Never leak internals to the caller.
     return json({ ok: false }, 500);
   }
-});
+}
