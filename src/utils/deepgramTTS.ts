@@ -330,11 +330,17 @@ export const speakWithDeepgram = async (
 
     // Start fetching the first chunk + remaining chunks in parallel.
     const firstChunkPromise = fetchChunk(firstText, activeModel);
+    // LATENCY: the later chunks used to be requested at the same instant as the
+    // first one, so eight simultaneous requests fought over the same connection
+    // and delayed the only chunk that decides time-to-first-word. They are now
+    // staggered behind the opening chunk while still overlapping playback.
     const remainingChunkPromises = remainingText.map((sentence, index) =>
-      fetchChunk(sentence, activeModel).then(
-        (blob) => ({ ok: true as const, blob, metadata: remainingMetadata[index] ?? null }),
-        (error) => ({ ok: false as const, error })
-      )
+      wait(120 + index * 90)
+        .then(() => fetchChunk(sentence, activeModel))
+        .then(
+          (blob) => ({ ok: true as const, blob, metadata: remainingMetadata[index] ?? null }),
+          (error) => ({ ok: false as const, error })
+        )
     );
 
     const firstBlob = await firstChunkPromise;
