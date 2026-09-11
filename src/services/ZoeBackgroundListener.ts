@@ -66,6 +66,24 @@ export function isNativeShell(): boolean {
   }
 }
 
+/**
+ * iPhone / iPad / Safari. Apple's WebKit speech engine behaves differently from
+ * Chrome in three ways that used to surface as a flat "wake word error":
+ *   1. `continuous` is ignored — the session ends after every phrase, so the
+ *      sentinel must restart itself instead of treating the end as a failure.
+ *   2. Recognition refuses to start (`service-not-allowed`) while another part
+ *      of the page is holding an open `getUserMedia` stream, so the shared mic
+ *      must be released first.
+ *   3. `start()` must originate from a real user gesture.
+ */
+export function isAppleWebkitSpeech(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  const iOS = /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && (navigator as Navigator & { maxTouchPoints?: number }).maxTouchPoints > 1);
+  const safari = /^((?!chrome|android|crios|fxios|edgios).)*safari/i.test(ua);
+  return iOS || safari;
+}
+
 export function wakeWordCapability(): WakeWordCapability {
   const isNative = isNativeShell();
   const supported = isNative || Boolean(speechRecognitionCtor());
@@ -74,7 +92,8 @@ export function wakeWordCapability(): WakeWordCapability {
       supported: false,
       isNative,
       backgroundCapable: false,
-      reason: 'This browser has no on-device speech recognition. Use the headset button to talk to Zoe.',
+      reason:
+        'This browser has no on-device speech recognition. Use the headset button, or the orb, to talk to Zoe — everything else still works.',
     };
   }
   if (isNative) {
@@ -83,6 +102,15 @@ export function wakeWordCapability(): WakeWordCapability {
       isNative: true,
       backgroundCapable: true,
       reason: 'Native app support is installed for background audio. Locked-screen wake still requires validation on this device.',
+    };
+  }
+  if (isAppleWebkitSpeech()) {
+    return {
+      supported: true,
+      isNative: false,
+      backgroundCapable: false,
+      reason:
+        'On iPhone, iPad and Safari, Zoe listens one phrase at a time and re-arms herself between phrases. Keep this tab in front; the screen must stay awake. Allow the microphone and speech recognition prompts once.',
     };
   }
   return {
