@@ -34,16 +34,23 @@ export const ZoeGreetingFilm: React.FC = () => {
 
   const excluded = EXCLUDED_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 
-  const dismiss = useCallback(() => {
-    setOpen(false);
-    markZoeGreetingSeen(user?.id);
-    try {
-      videoRef.current?.pause();
-      window.dispatchEvent(new CustomEvent('zoe-greeting-film-ended'));
-    } catch {
-      /* noop */
-    }
-  }, [user?.id]);
+  const close = useCallback(
+    (seen: boolean) => {
+      setOpen(false);
+      // Only remember it as "watched" when the film really ran (or the person
+      // skipped it). A missing/broken file must NOT burn the one-time greeting.
+      if (seen) markZoeGreetingSeen(user?.id);
+      try {
+        videoRef.current?.pause();
+        window.dispatchEvent(new CustomEvent('zoe-greeting-film-ended'));
+      } catch {
+        /* noop */
+      }
+    },
+    [user?.id],
+  );
+
+  const dismiss = useCallback(() => close(true), [close]);
 
   // Decide once per session whether the film should run at all.
   useEffect(() => {
