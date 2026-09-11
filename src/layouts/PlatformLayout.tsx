@@ -22,6 +22,8 @@ import ZoeGlobalMount from '@/components/zoe/ZoeGlobalMount';
 import GlobalAudioQuickConnect from '@/components/audio/GlobalAudioQuickConnect';
 import ZoeVoiceIntentHost from '@/components/zoe/ZoeVoiceIntentHost';
 import ZoeGreetingFilm from '@/components/zoe/ZoeGreetingFilm';
+import ZoeAgentProvider from '@/contexts/ZoeAgentProvider';
+import ZoeAgentHost from '@/components/zoe/ZoeAgentHost';
 
 
 
@@ -64,7 +66,7 @@ function PlatformServices() {
 }
 
 export const PlatformLayout = ({ children }: { children: React.ReactNode }) => (
-  <>
+  <ZoeAgentProvider>
     {/* Services are crash-isolated: a recognizer failure can never blank the app. */}
     <AppErrorBoundary moduleName="platform:services" severity="low" fallback={null}>
       <PlatformServices />
@@ -120,7 +122,12 @@ export const PlatformLayout = ({ children }: { children: React.ReactNode }) => (
     <AppErrorBoundary moduleName="platform:zoe-greeting-film" severity="low" fallback={null}>
       <ZoeGreetingFilm />
     </AppErrorBoundary>
-  </>
+
+    {/* Realtime voice agent bridge — renders nothing, changes no layout. */}
+    <AppErrorBoundary moduleName="platform:zoe-agent" severity="low" fallback={null}>
+      <ZoeAgentHost />
+    </AppErrorBoundary>
+  </ZoeAgentProvider>
 );
 
 export default PlatformLayout;
