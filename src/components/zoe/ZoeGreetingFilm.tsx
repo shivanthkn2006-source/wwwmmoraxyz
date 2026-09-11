@@ -97,7 +97,7 @@ export const ZoeGreetingFilm: React.FC = () => {
     if (!el) return;
     void el.play().catch(() => {
       el.muted = true;
-      void el.play().catch(() => close(false));
+      void el.play().catch(() => { /* leave the first frame up; the watchdog closes it */ });
     });
   }, [close]);
 
