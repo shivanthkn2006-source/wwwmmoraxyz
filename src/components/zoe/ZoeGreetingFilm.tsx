@@ -78,16 +78,28 @@ export const ZoeGreetingFilm: React.FC = () => {
   }, [open, dismiss]);
 
   const handleError = useCallback(() => {
-    // Try the next candidate file; if none are left, close quietly.
+    // Try the next candidate file; if none are left, close quietly WITHOUT
+    // marking it watched, so the real film still gets its one showing.
     setSourceIndex((i) => {
       const next = i + 1;
       if (next >= ZOE_GREETING_SOURCES.length) {
-        dismiss();
+        close(false);
         return i;
       }
       return next;
     });
-  }, [dismiss]);
+  }, [close]);
+
+  // Phones refuse to auto-play with sound. Start with sound, and if the browser
+  // blocks it, fall back to a silent play rather than showing a frozen frame.
+  const handleCanPlay = useCallback(() => {
+    const el = videoRef.current;
+    if (!el) return;
+    void el.play().catch(() => {
+      el.muted = true;
+      void el.play().catch(() => close(false));
+    });
+  }, [close]);
 
   if (!open) return null;
 
