@@ -190,6 +190,8 @@ export function toolAcknowledgement(name: string): string {
     case 'calculatePlanetaryPositions': return 'Running the exact ephemeris, one moment.';
     case 'navigatePlatform': return 'Opening that up.';
     case 'getAssetJobStatus': return 'Checking that job.';
+    case 'recallLifeContext': return 'Let me think back a second.';
+    case 'emailConversationHistory': return 'Sending that to your inbox now.';
     default: return 'Checking now.';
   }
 }
