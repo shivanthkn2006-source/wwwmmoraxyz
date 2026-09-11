@@ -20,6 +20,7 @@ import { zoeDebugLog, zoeDebugSetState } from '@/features/zoe-handsfree/debugBus
 import { resolveVoiceIntent } from '@/features/zoe-handsfree/voiceIntentRouter';
 import { recordVoiceTurn } from '@/services/zoeVoiceHistory';
 import { sendVoiceMessage } from '@/services/zoeVoiceMessaging';
+import { gateTranscript, setZoeMuted } from '@/features/zoe-handsfree/muteGate';
 
 interface VoiceState {
   isListening: boolean;
