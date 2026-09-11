@@ -55,7 +55,7 @@ function useThermalWatchdog() {
 }
 
 function PlatformServices() {
-  console.warn('[greeting] platform layout mounted');
+  
   useVoiceEngine();
   useThermalWatchdog();
   // Pre-notice cue + toast a few minutes before every Zoe's DHF unlock.
