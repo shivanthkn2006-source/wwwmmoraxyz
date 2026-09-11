@@ -11,6 +11,7 @@ import { cascadeInfer, hardenZoeIdentity } from "../_shared/cascading-provider.t
 import { precomputeCharacterFacts } from "../_shared/grounded-tools.ts";
 import { clientErrorResponse } from '../_shared/client-error.ts';
 import { omniRecall, buildOmniRecallBlock, buildRecallSources, type RecallSource } from '../_shared/omni-recall.ts';
+import { buildLifeTimelineBlock } from '../_shared/life-timeline.ts';
 import { needsWebGrounding, webGround, buildWebGroundingBlock, buildWebSources } from '../_shared/web-grounding.ts';
 import { needsAstroGrounding, buildAstroGroundingBlock, type AstroBirthProfile } from '../_shared/astro-grounding.ts';
 import { CLARIFICATION_PROTOCOL, spokenFallback } from '../_shared/cognitive-fault.ts';
@@ -842,7 +843,17 @@ ${cortexPromptAddition}`;
           return [];
         })
       : Promise.resolve([]);
-    const [hits, webHits] = await Promise.all([recallPromise, webPromise]);
+    // TIMELINE RECALL — "what was I doing last week", "where was I on Tuesday",
+    // "whose birthday is coming up". Semantic recall cannot answer a date
+    // range, so the member's own history for the window is pulled alongside it.
+    const timelinePromise = buildLifeTimelineBlock(authHeader || '', String(lastUserMessage))
+      .catch((timelineError) => {
+        console.warn('[Zoe] timeline recall skipped:', timelineError instanceof Error ? timelineError.message : timelineError);
+        return { block: '', window: null, entryCount: 0 };
+      });
+    const [hits, webHits, timeline] = await Promise.all([recallPromise, webPromise, timelinePromise]);
+    const timelineBlock = timeline.block ? `\n\n${timeline.block}` : '';
+    console.log('[Zoe] timeline recall:', timeline.window?.label ?? 'not needed', timeline.entryCount, 'entries');
     omniRecallCount = hits.length;
     omniRecallBlock = buildOmniRecallBlock(hits);
     omniRecallSources = buildRecallSources(hits);
@@ -874,7 +885,7 @@ ${cortexPromptAddition}`;
     console.log('[Zoe] astro grounding:', astroBlock ? 'active' : 'not needed');
 
     const cascadeMessages = [
-      { role: 'system', content: `${systemPrompt}${omniRecallBlock}${webBlock}${astroBlock}${CLARIFICATION_PROTOCOL}` },
+      { role: 'system', content: `${systemPrompt}${omniRecallBlock}${timelineBlock}${webBlock}${astroBlock}${CLARIFICATION_PROTOCOL}` },
       ...messages.map(m => ({ ...m, content: truncateMessageIfNeeded(m.content) })),
     ];
     

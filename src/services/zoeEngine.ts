@@ -180,6 +180,14 @@ export async function askZoe(options: AskZoeOptions): Promise<AskZoeResult> {
       userText: text,
       assistantText: replyText,
     });
+
+    // Life details used to be distilled only from SPOKEN turns, so anything a
+    // person typed to Zoe never reached her long-term memory. Distilling here —
+    // the one path every surface goes through — makes typed and spoken
+    // conversation build the same memory. Fire-and-forget by design.
+    void import('@/services/zoeVoiceHistory')
+      .then((m) => m.rememberLifeFacts(text))
+      .catch(() => {});
   }
 
   return result;

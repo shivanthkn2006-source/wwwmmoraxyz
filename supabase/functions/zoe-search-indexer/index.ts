@@ -287,13 +287,103 @@ async function loadCanonical(db: ReturnType<typeof createClient>, job: QueueRow)
     };
   }
 
+  // ── Life graph: dates, attachments and remembered facts ──
+  // These three were previously invisible to recall, which is why questions
+  // like "when is her birthday", "show me the documents I attached" or
+  // "where do I live" had no backing data even though the rows existed.
+  if (job.entity_type === 'important_date') {
+    const { data, error } = await db.from('important_dates')
+      .select('id,user_id,date_type,date_value,title,description,is_recurring,friend_user_id,created_at')
+      .eq('id', job.entity_id).maybeSingle();
+    if (error) throw error;
+    if (!data) return null;
+    const about = data.friend_user_id ? await loadAuthor(db, data.friend_user_id) : null;
+    return {
+      ownerId: data.user_id,
+      content: [
+        `${data.date_type || 'Date'}: ${data.title || ''}`.trim(),
+        data.date_value ? `On ${data.date_value}${data.is_recurring ? ' (every year)' : ''}` : '',
+        about?.name ? `For ${about.name}` : '',
+        data.description || '',
+      ].filter(Boolean).join('\n'),
+      privacy: 'private',
+      metadata: {
+        title: data.title || data.date_type,
+        dateType: data.date_type,
+        dateValue: data.date_value,
+        recurring: data.is_recurring,
+        aboutUserId: data.friend_user_id,
+        aboutName: about?.name ?? null,
+        createdAt: data.created_at,
+        route: '/dates',
+      },
+    };
+  }
+
+  if (job.entity_type === 'post_attachment') {
+    const { data, error } = await db.from('post_attachments')
+      .select('id,post_id,user_id,media_url,media_preview_url,media_type,file_name,created_at')
+      .eq('id', job.entity_id).maybeSingle();
+    if (error) throw error;
+    if (!data) return null;
+    const { data: parent } = await db.from('posts')
+      .select('id,visibility,content,created_at').eq('id', data.post_id).maybeSingle();
+    // Describe the picture so "the photo of the beach" resolves to a real row.
+    const visualDescription = await describeSearchMedia(
+      typeof data.media_url === 'string' ? data.media_url : null,
+    );
+    return {
+      ownerId: data.user_id,
+      content: [
+        `${data.media_type || 'file'} attachment${data.file_name ? `: ${data.file_name}` : ''}`,
+        parent?.content ? `On post: ${String(parent.content).slice(0, 200)}` : '',
+        visualDescription ? `[Visual Data]: ${visualDescription}` : '',
+      ].filter(Boolean).join('\n'),
+      privacy: parent?.visibility === 'global' ? 'public' : parent?.visibility === 'personal' ? 'friends' : 'private',
+      metadata: {
+        title: data.file_name || `${data.media_type || 'File'} attachment`,
+        mediaType: data.media_type,
+        mediaUrl: slimMediaRef(data.media_url),
+        previewUrl: slimMediaRef(data.media_preview_url),
+        postId: data.post_id,
+        createdAt: parent?.created_at || data.created_at,
+        visualIndexed: Boolean(visualDescription),
+        route: `/post/${data.post_id}`,
+      },
+    };
+  }
+
+  if (job.entity_type === 'life_fact') {
+    const { data, error } = await db.from('zoe_life_context')
+      .select('id,user_id,category,fact_key,fact_value,confidence,occurred_on,last_seen_at,created_at')
+      .eq('id', job.entity_id).maybeSingle();
+    if (error) throw error;
+    if (!data) return null;
+    const body = String(data.fact_value || '').trim();
+    if (!body) return null;
+    return {
+      ownerId: data.user_id,
+      content: `${data.category}: ${body}`,
+      privacy: 'private',
+      metadata: {
+        title: `${data.category} — ${data.fact_key}`,
+        category: data.category,
+        factKey: data.fact_key,
+        confidence: data.confidence,
+        occurredOn: data.occurred_on,
+        createdAt: data.occurred_on || data.last_seen_at || data.created_at,
+      },
+    };
+  }
+
   return null;
 
 }
 
 
+
 async function enqueueBackfill(db: ReturnType<typeof createClient>, userId: string) {
-  const [profiles, posts, chats, memories, dhfPosts, dhfVideos, growthCards, predictions, goals, dms, comments, visuals] = await Promise.all([
+  const [profiles, posts, chats, memories, dhfPosts, dhfVideos, growthCards, predictions, goals, dms, comments, visuals, dates, attachments, lifeFacts] = await Promise.all([
     db.from('profiles').select('user_id'),
     db.from('posts').select('id,user_id,media_type,content'),
     db.from('zoe_infinity_messages').select('id,user_id').eq('user_id', userId),
@@ -306,8 +396,11 @@ async function enqueueBackfill(db: ReturnType<typeof createClient>, userId: stri
     db.from('messages').select('id,sender_id').eq('sender_id', userId).limit(2000),
     db.from('post_comments').select('id,user_id').eq('user_id', userId).limit(2000),
     db.from('zoe_infinity_memories').select('id,user_id').eq('user_id', userId).like('key', 'vision_%').limit(2000),
+    db.from('important_dates').select('id,user_id').eq('user_id', userId).limit(2000),
+    db.from('post_attachments').select('id,user_id').eq('user_id', userId).limit(2000),
+    db.from('zoe_life_context').select('id,user_id').eq('user_id', userId).limit(2000),
   ]);
-  for (const response of [profiles, posts, chats, memories, dhfPosts, dhfVideos, growthCards, predictions, goals, dms, comments, visuals]) {
+  for (const response of [profiles, posts, chats, memories, dhfPosts, dhfVideos, growthCards, predictions, goals, dms, comments, visuals, dates, attachments, lifeFacts]) {
     if (response.error) throw response.error;
   }
 
@@ -328,6 +421,9 @@ async function enqueueBackfill(db: ReturnType<typeof createClient>, userId: stri
     ...(dms.data || []).map((row) => ({ entity_type: 'direct_message', entity_id: row.id, owner_id: row.sender_id })),
     ...(comments.data || []).map((row) => ({ entity_type: 'post_comment', entity_id: row.id, owner_id: row.user_id })),
     ...(visuals.data || []).map((row) => ({ entity_type: 'visual_memory', entity_id: row.id, owner_id: row.user_id })),
+    ...(dates.data || []).map((row) => ({ entity_type: 'important_date', entity_id: row.id, owner_id: row.user_id })),
+    ...(attachments.data || []).map((row) => ({ entity_type: 'post_attachment', entity_id: row.id, owner_id: row.user_id })),
+    ...(lifeFacts.data || []).map((row) => ({ entity_type: 'life_fact', entity_id: row.id, owner_id: row.user_id })),
   ];
   if (!rows.length) return 0;
   const { error } = await db.from('zoe_search_index_queue').upsert(

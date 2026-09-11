@@ -11,14 +11,47 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { TTSAudioMetadata } from './zoeTTSAudioBus';
 
-/** Resolve current user's access token (or null if unauthenticated). */
+/**
+ * Resolve current user's access token (or null if unauthenticated).
+ *
+ * LATENCY: this used to run per audio chunk, adding a session round-trip in
+ * front of every request. The token is cached for the life of an utterance and
+ * refreshed lazily, so the first chunk starts as soon as the network allows.
+ */
+let cachedToken: { value: string | null; expiresAt: number } | null = null;
+
 async function getActiveAccessToken(): Promise<string | null> {
+  if (cachedToken && cachedToken.expiresAt > Date.now()) return cachedToken.value;
   try {
     const { data } = await supabase.auth.getSession();
-    return data.session?.access_token ?? null;
+    const token = data.session?.access_token ?? null;
+    cachedToken = { value: token, expiresAt: Date.now() + 60_000 };
+    return token;
   } catch {
     return null;
   }
+}
+
+/** Clear the cached token (call on sign-out / session change). */
+export function resetDeepgramAuthCache(): void {
+  cachedToken = null;
+}
+
+/**
+ * Warm the TTS edge function so the first spoken reply of a session does not
+ * pay a cold-start penalty. Safe to call repeatedly; failures are ignored.
+ */
+let warmedAt = 0;
+export function warmDeepgramTTS(): void {
+  if (Date.now() - warmedAt < 4 * 60_000) return;
+  warmedAt = Date.now();
+  const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+  if (!projectId) return;
+  void fetch(`https://${projectId}.supabase.co/functions/v1/deepgram-tts`, {
+    method: 'OPTIONS',
+    headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || '' },
+  }).catch(() => {});
+  void getActiveAccessToken();
 }
 
 const DEEPGRAM_MODEL_FEMALE = 'aura-2-janus-en';
@@ -297,11 +330,17 @@ export const speakWithDeepgram = async (
 
     // Start fetching the first chunk + remaining chunks in parallel.
     const firstChunkPromise = fetchChunk(firstText, activeModel);
+    // LATENCY: the later chunks used to be requested at the same instant as the
+    // first one, so eight simultaneous requests fought over the same connection
+    // and delayed the only chunk that decides time-to-first-word. They are now
+    // staggered behind the opening chunk while still overlapping playback.
     const remainingChunkPromises = remainingText.map((sentence, index) =>
-      fetchChunk(sentence, activeModel).then(
-        (blob) => ({ ok: true as const, blob, metadata: remainingMetadata[index] ?? null }),
-        (error) => ({ ok: false as const, error })
-      )
+      wait(120 + index * 90)
+        .then(() => fetchChunk(sentence, activeModel))
+        .then(
+          (blob) => ({ ok: true as const, blob, metadata: remainingMetadata[index] ?? null }),
+          (error) => ({ ok: false as const, error })
+        )
     );
 
     const firstBlob = await firstChunkPromise;
