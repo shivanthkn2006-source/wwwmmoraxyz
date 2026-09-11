@@ -365,6 +365,31 @@ export async function webGroundLive(query: string, limit = 6): Promise<WebGround
     .slice(0, limit);
 }
 
+/**
+ * Cached front door. Hundreds of people asking "what's happening in politics"
+ * within the same few minutes now cost one round of upstream calls instead of
+ * hundreds, and the answer still carries its real source links. Time-sensitive
+ * questions get a short life; evergreen ones are held much longer.
+ */
+export async function webGround(query: string, limit = 6): Promise<WebGroundHit[]> {
+  const term = (query || '').trim().slice(0, 300);
+  if (term.length < 3) return [];
+
+  const timeSensitive =
+    /\b(news|latest|today|breaking|now|current|update|score|price|live)\b/i.test(term);
+  const ttl = timeSensitive ? 300 : 21_600;
+  const key = `news:${limit}:${term.toLowerCase().replace(/\s+/g, ' ')}`;
+
+  try {
+    const entry = await cached<WebGroundHit[]>(key, { ttlSeconds: ttl, scope: 'news' }, () =>
+      webGroundLive(term, limit),
+    );
+    return entry.value ?? [];
+  } catch {
+    return await webGroundLive(term, limit).catch(() => []);
+  }
+}
+
 /** Prompt block appended after the platform recall block. */
 export function buildWebGroundingBlock(hits: WebGroundHit[], startIndex = 0): string {
   if (!hits.length) return '';
