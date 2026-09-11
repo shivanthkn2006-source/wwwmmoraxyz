@@ -421,6 +421,9 @@ async function enqueueBackfill(db: ReturnType<typeof createClient>, userId: stri
     ...(dms.data || []).map((row) => ({ entity_type: 'direct_message', entity_id: row.id, owner_id: row.sender_id })),
     ...(comments.data || []).map((row) => ({ entity_type: 'post_comment', entity_id: row.id, owner_id: row.user_id })),
     ...(visuals.data || []).map((row) => ({ entity_type: 'visual_memory', entity_id: row.id, owner_id: row.user_id })),
+    ...(dates.data || []).map((row) => ({ entity_type: 'important_date', entity_id: row.id, owner_id: row.user_id })),
+    ...(attachments.data || []).map((row) => ({ entity_type: 'post_attachment', entity_id: row.id, owner_id: row.user_id })),
+    ...(lifeFacts.data || []).map((row) => ({ entity_type: 'life_fact', entity_id: row.id, owner_id: row.user_id })),
   ];
   if (!rows.length) return 0;
   const { error } = await db.from('zoe_search_index_queue').upsert(
