@@ -52,15 +52,9 @@ export function useZoeMotivation() {
 
         if (!row || !row.poster_path) {
           try {
-            // The function rejects stale tokens ("invalid session"), so make sure
-            // the access token is still valid — refresh once when it is not.
-            const expiresAt = (session?.expires_at ?? 0) * 1000;
-            let live = !expiresAt || expiresAt - Date.now() > 30_000;
-            if (!live) {
-              const { data: refreshed } = await supabase.auth.refreshSession();
-              live = Boolean(refreshed.session);
-            }
-            if (live) {
+            // The function rejects stale tokens ("invalid session"), so confirm
+            // the access token is still accepted before calling it.
+            if (await ensureLiveSession()) {
               const { error: fnError } = await supabase.functions.invoke('zoe-motivation', {
                 body: {
                   action: 'ensure',
