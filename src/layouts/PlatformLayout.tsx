@@ -122,7 +122,12 @@ export const PlatformLayout = ({ children }: { children: React.ReactNode }) => (
     <AppErrorBoundary moduleName="platform:zoe-greeting-film" severity="low" fallback={null}>
       <ZoeGreetingFilm />
     </AppErrorBoundary>
-  </>
+
+    {/* Realtime voice agent bridge — renders nothing, changes no layout. */}
+    <AppErrorBoundary moduleName="platform:zoe-agent" severity="low" fallback={null}>
+      <ZoeAgentHost />
+    </AppErrorBoundary>
+  </ZoeAgentProvider>
 );
 
 export default PlatformLayout;
