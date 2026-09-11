@@ -128,6 +128,8 @@ class ZoeBackgroundListener {
   private enabled = false;
   private restartTimer: ReturnType<typeof setTimeout> | null = null;
   private listeners = new Set<Listener>();
+  private lastError: string | null = null;
+  private permissionRetries = 0;
 
   constructor() {
     if (typeof window === 'undefined') return;
@@ -204,14 +206,34 @@ class ZoeBackgroundListener {
         return false;
       }
     }
+    this.permissionRetries = 0;
+    this.lastError = null;
+    if (isAppleWebkitSpeech()) {
+      // Safari/iOS: never hold an open capture stream here. WebKit hands the
+      // microphone to its own speech service and refuses to start while the
+      // page owns one. Recognition raises its own permission prompt.
+      try {
+        await audioRouter.releaseMic?.();
+      } catch {
+        /* noop */
+      }
+      await this.startRecognition();
+      return true;
+    }
     const granted = await audioRouter.ensureMicPermission();
     if (!granted) {
       this.enabled = false;
+      this.lastError = 'Microphone permission was declined.';
       this.setState('error');
       return false;
     }
     await this.startRecognition();
     return true;
+  }
+
+  /** Plain-language reason the wake word is not running, if any. */
+  public getLastError(): string | null {
+    return this.lastError;
   }
 
   public disable(): void {
