@@ -107,4 +107,21 @@ describe('zoeBackgroundListener', () => {
     expect(ok).toBe(false);
     expect(zoeBackgroundListener.getState()).toBe('error');
   });
+
+  it('discards all wake phrases while muted except “Zoe wake”', async () => {
+    const muteGate = await import('@/features/zoe-handsfree/muteGate');
+    const { zoeBackgroundListener } = await import('@/services/ZoeBackgroundListener');
+    await zoeBackgroundListener.enable();
+    muteGate.setZoeMuted(true);
+    let activated = 0;
+    const onActivate = () => { activated += 1; };
+    window.addEventListener('zoe-orb-activate', onActivate);
+    FakeRecognition.instances.at(-1)?.say('hey zoe what is the news');
+    expect(activated).toBe(0);
+    FakeRecognition.instances.at(-1)?.say('zoe wake');
+    expect(activated).toBe(1);
+    expect(muteGate.isZoeMuted()).toBe(false);
+    window.removeEventListener('zoe-orb-activate', onActivate);
+    zoeBackgroundListener.disable();
+  });
 });

@@ -69,6 +69,11 @@ describe('assistant actions', () => {
     expect((intent as { query: string }).query).toContain('weather in kochi');
   });
 
+  it('routes ordinary weather and news questions to visible live results', () => {
+    expect(resolveVoiceIntent('Zoe what is the weather today')).toMatchObject({ kind: 'search' });
+    expect(resolveVoiceIntent('Zoe give me the latest news')).toMatchObject({ kind: 'search' });
+  });
+
   it('routes a resume request', () => {
     expect(resolveVoiceIntent('Zoe, generate my resume')).toMatchObject({ kind: 'resume' });
   });

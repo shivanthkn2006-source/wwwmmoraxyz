@@ -24,6 +24,10 @@ describe('zoe search companion', () => {
     expect(classifyQuery('@moksh50').topic).toBe('people');
   });
 
+  it('searches both platform and web for visual media', () => {
+    expect(classifyQuery('show me photos of Kochi')).toEqual({ topic: 'media', scope: 'both' });
+  });
+
   it('asks before searching when nothing is remembered', () => {
     const turn = buildCompanionTurn('iphone 17');
     expect(turn?.auto).toBe(false);

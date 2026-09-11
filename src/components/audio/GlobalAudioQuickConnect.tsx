@@ -13,6 +13,7 @@ import { zoeBackgroundListener } from '@/services/ZoeBackgroundListener';
 import AudioQuickConnectButton from '@/components/audio/AudioQuickConnectButton';
 import { useAuth } from '@/lib/auth';
 import { ZOE_AUDIO_PREF_EVENT, isZoeAudioEnabled } from '@/lib/zoeAudioPreference';
+import { isZoeMuted } from '@/features/zoe-handsfree/muteGate';
 
 const EXCLUDED_PREFIXES = [
   '/auth',
@@ -27,6 +28,15 @@ const EXCLUDED_PREFIXES = [
 export const GlobalAudioQuickConnect: React.FC = () => {
   const { pathname } = useLocation();
   const { user, session, loading } = useAuth();
+  const [muted, setMuted] = React.useState(() => isZoeMuted());
+  const [wakeState, setWakeState] = React.useState(() => zoeBackgroundListener.getState());
+
+  useEffect(() => zoeBackgroundListener.onStateChange(setWakeState), []);
+  useEffect(() => {
+    const onMute = (event: Event) => setMuted(Boolean((event as CustomEvent<{ muted?: boolean }>).detail?.muted));
+    window.addEventListener('zoe-mute-changed', onMute);
+    return () => window.removeEventListener('zoe-mute-changed', onMute);
+  }, []);
 
   // Hardware button → Zoe. Registered once for the whole platform.
   useEffect(() => {
@@ -95,7 +105,17 @@ export const GlobalAudioQuickConnect: React.FC = () => {
   return (
     // Small round icon only, parked immediately to the LEFT of the header
     // notification bell (bell 40px + 8px gap + 40px avatar + 16px inset).
-    <div className="fixed top-[18px] right-[104px] z-[55] pointer-events-auto">
+    <div className="fixed top-[18px] right-[104px] z-[55] flex items-center gap-2 pointer-events-auto">
+      {muted && (
+        <span role="status" aria-live="polite" className="rounded-md border border-border bg-background/90 px-2 py-1 text-[10px] text-muted-foreground shadow-sm backdrop-blur">
+          Muted · say “Zoe wake”
+        </span>
+      )}
+      {!muted && (wakeState === 'error' || wakeState === 'suspended') && (
+        <span role="status" className="hidden rounded-md border border-border bg-background/90 px-2 py-1 text-[10px] text-muted-foreground shadow-sm backdrop-blur sm:inline">
+          {wakeState === 'suspended' ? 'Zoe paused · keep this page open' : 'Zoe needs microphone access'}
+        </span>
+      )}
       <AudioQuickConnectButton compact />
     </div>
   );
