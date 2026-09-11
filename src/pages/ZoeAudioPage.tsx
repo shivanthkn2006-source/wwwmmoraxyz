@@ -108,6 +108,7 @@ export const ZoeAudioPage: React.FC = () => {
 
   const [testPlaying, setTestPlaying] = useState<boolean>(false);
   const [wakeState, setWakeState] = useState<WakeWordState>(zoeBackgroundListener.getState());
+  const [zoeAudioOn, setZoeAudioOn] = useState<boolean>(() => isZoeAudioEnabled());
   const audioTestRef = useRef<HTMLAudioElement | null>(null);
   const sinkElementRef = useRef<HTMLAudioElement | null>(null);
   const wakeCap = wakeWordCapability();
