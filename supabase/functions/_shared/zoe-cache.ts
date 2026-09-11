@@ -13,16 +13,19 @@
  *  - Namespaced keys (`scope`) so a future integration can add its own space
  *    without colliding or needing a schema change.
  */
-import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.58.0';
+// Deliberately no SDK import: this module is also pulled into browser-side
+// typechecking through the shared grounding code, so it talks to PostgREST over
+// plain fetch and stays free of Deno-only module specifiers.
 
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-
-let client: SupabaseClient | null = null;
-function db(): SupabaseClient {
-  if (!client) client = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { persistSession: false } });
-  return client;
-}
+const restUrl = () => `${Deno.env.get('SUPABASE_URL') ?? ''}/rest/v1/zoe_cache`;
+const restHeaders = () => {
+  const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+  return {
+    apikey: key,
+    Authorization: `Bearer ${key}`,
+    'Content-Type': 'application/json',
+  };
+};
 
 export interface CacheEntry<T> {
   value: T;
@@ -42,16 +45,16 @@ export interface CacheOptions {
 /** Reads a cached value. Returns null when nothing is stored at all. */
 export async function cacheRead<T>(key: string): Promise<{ value: T; expired: boolean; cachedAt: string } | null> {
   try {
-    const { data } = await db()
-      .from('zoe_cache')
-      .select('payload, expires_at, updated_at')
-      .eq('cache_key', key)
-      .maybeSingle();
-    if (!data) return null;
+    const url = `${restUrl()}?cache_key=eq.${encodeURIComponent(key)}&select=payload,expires_at,updated_at&limit=1`;
+    const res = await fetch(url, { headers: restHeaders() });
+    if (!res.ok) return null;
+    const rows = (await res.json()) as Array<{ payload: { v: T }; expires_at: string; updated_at: string }>;
+    const row = rows?.[0];
+    if (!row) return null;
     return {
-      value: (data.payload as { v: T }).v,
-      expired: new Date(data.expires_at as string).getTime() <= Date.now(),
-      cachedAt: (data.updated_at as string) ?? new Date().toISOString(),
+      value: row.payload?.v as T,
+      expired: new Date(row.expires_at).getTime() <= Date.now(),
+      cachedAt: row.updated_at ?? new Date().toISOString(),
     };
   } catch {
     return null;
@@ -61,18 +64,17 @@ export async function cacheRead<T>(key: string): Promise<{ value: T; expired: bo
 /** Writes a value. Silent on failure — caching is never load-bearing. */
 export async function cacheWrite<T>(key: string, value: T, ttlSeconds: number, scope = 'global'): Promise<void> {
   try {
-    await db()
-      .from('zoe_cache')
-      .upsert(
-        {
-          cache_key: key,
-          scope,
-          payload: { v: value },
-          expires_at: new Date(Date.now() + ttlSeconds * 1000).toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'cache_key' },
-      );
+    await fetch(`${restUrl()}?on_conflict=cache_key`, {
+      method: 'POST',
+      headers: { ...restHeaders(), Prefer: 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify({
+        cache_key: key,
+        scope,
+        payload: { v: value },
+        expires_at: new Date(Date.now() + ttlSeconds * 1000).toISOString(),
+        updated_at: new Date().toISOString(),
+      }),
+    });
   } catch {
     /* cache is best-effort */
   }
