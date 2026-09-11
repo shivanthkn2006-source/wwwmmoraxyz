@@ -128,8 +128,7 @@ export const useAmbientSearch = () => {
         // Drain a small durable indexing batch first. Database triggers create
         // jobs, so an interrupted upload/search is safely retried next time.
         // Signed-out visitors skip it: the indexer requires a session (401).
-        const { data: sessionData } = await supabase.auth.getSession();
-        if (sessionData.session) {
+        if (await ensureLiveSession()) {
           const { error: indexerError } = await supabase.functions.invoke('zoe-search-indexer', {
             body: { limit: 5 },
           });
