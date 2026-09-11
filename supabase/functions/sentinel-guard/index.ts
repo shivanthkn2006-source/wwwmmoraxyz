@@ -288,4 +288,4 @@ async function handle(req: Request): Promise<Response> {
     // Never leak internals to the caller.
     return json({ ok: false }, 500);
   }
-});
+}
