@@ -16,7 +16,10 @@ export type VoiceIntent =
   | { kind: 'notifications'; speak: string }
   | { kind: 'orb-chat'; speak: string }
   | { kind: 'message'; recipient: string; body?: string; speak: string }
-  | { kind: 'god-scan'; speak: string };
+  | { kind: 'god-scan'; speak: string }
+  | { kind: 'search'; query: string; speak: string }
+  | { kind: 'resume'; speak: string }
+  | { kind: 'asset-3d'; prompt: string; speak: string };
 
 /** Spoken aliases that are not the page label ("chat" → Messages). */
 const ALIASES: Record<string, string> = {
