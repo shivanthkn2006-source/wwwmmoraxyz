@@ -343,6 +343,12 @@ export const ZoeAudioPage: React.FC = () => {
           </div>
         </div>
         <p className="text-sm text-muted-foreground">{wakeCap.reason}</p>
+        {wakeState === 'error' && (
+          <p data-testid="wake-word-error" className="text-sm text-foreground border border-border rounded-lg p-3">
+            {zoeBackgroundListener.getLastError() ??
+              'Zoe could not start listening on this device. Check the microphone permission and try again.'}
+          </p>
+        )}
       </section>
 
       {/* Pairing guide */}
