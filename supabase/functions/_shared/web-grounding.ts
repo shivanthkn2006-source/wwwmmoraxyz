@@ -298,26 +298,22 @@ async function freshNews(query: string): Promise<WebGroundHit[]> {
     return keyed.filter((hit) => (seen.has(hit.url) ? false : (seen.add(hit.url), true)));
   }
 
-  const googleXml = await safeText(
-    `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`,
-  );
-  let out = googleXml ? parseRss(googleXml, 'Google News') : [];
-  if (out.length) return out;
+  const [googleXml, bingXml, data] = await Promise.all([
+    safeText(`https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`),
+    safeText(`https://www.bing.com/news/search?q=${encodeURIComponent(query)}&format=RSS`),
+    safeJson(
+      `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(
+        query,
+      )}&mode=artlist&maxrecords=4&sort=datedesc&format=json`,
+    ),
+  ]);
+  const rss = [
+    ...(googleXml ? parseRss(googleXml, 'Google News') : []),
+    ...(bingXml ? parseRss(bingXml, 'Bing News') : []),
+  ];
+  if (rss.length) return rss;
 
-  const bingXml = await safeText(
-    `https://www.bing.com/news/search?q=${encodeURIComponent(query)}&format=RSS`,
-  );
-  out = bingXml ? parseRss(bingXml, 'Bing News') : [];
-  if (out.length) return out;
-
-  out = [];
-
-
-  const data = await safeJson(
-    `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(
-      query,
-    )}&mode=artlist&maxrecords=4&sort=datedesc&format=json`,
-  );
+  const out: WebGroundHit[] = [];
   for (const a of (data?.articles ?? []).slice(0, 4)) {
     if (!a?.url) continue;
     out.push({

@@ -113,7 +113,12 @@ export async function askZoe(options: AskZoeOptions): Promise<AskZoeResult> {
   // already-granted browser fix is sent — never the geolocation fallback.
   let coords: { lat: number; lng: number } | null = null;
   try {
-    coords = await getGrantedCoords();
+    // GPS must never hold up a spoken turn. A granted fix can still enrich the
+    // request when it is already available within this small latency budget.
+    coords = await Promise.race([
+      getGrantedCoords(),
+      new Promise<null>((resolve) => window.setTimeout(() => resolve(null), 180)),
+    ]);
   } catch {
     coords = null;
   }
