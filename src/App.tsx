@@ -71,6 +71,7 @@ const SearchPreviewPage = lazy(() => import("./pages/SearchPreviewPage"));
 const ZoeSourcePage = lazy(() => import("./pages/ZoeSourcePage"));
 const BugReportPage = lazy(() => import("./pages/BugReportPage"));
 const AdminOverviewPage = lazy(() => import("./pages/AdminOverviewPage"));
+const AdminMemoryPage = lazy(() => import("./pages/AdminMemoryPage"));
 const AdminDashboardPage = lazy(() => import("./pages/AdminDashboardPage"));
 const SovereignVaultPage = lazy(() => import("./pages/SovereignVaultPage"));
 
@@ -750,6 +751,14 @@ const RouteAwareShell = () => {
                             element={
                               <ProtectedRoute>
                                 <AdminDashboardPage />
+                              </ProtectedRoute>
+                            }
+                          />
+                          <Route
+                            path="/admin/memory"
+                            element={
+                              <ProtectedRoute>
+                                <AdminMemoryPage />
                               </ProtectedRoute>
                             }
                           />
