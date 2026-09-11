@@ -7,6 +7,7 @@ import {
   wakeWordCapability,
   type WakeWordState,
 } from '@/services/ZoeBackgroundListener';
+import { isZoeAudioEnabled, setZoeAudioEnabled } from '@/lib/zoeAudioPreference';
 
 /** Best-supported headsets for the M'Mora / Zoe two-way voice link. */
 const SUPPORTED_HEADSETS = [
