@@ -27,7 +27,6 @@ import { ZoeMonitorProvider } from '@/components/ZoeMonitorProvider';
 // DeviceTierProvider moved to main.tsx for earliest possible detection
 import ProtectedRoute from "./components/ProtectedRoute";
 // BottomNavigation removed - now using HUD navigation
-import SplashScreen from "./components/SplashScreen";
 import InstallPrompt from "./components/InstallPrompt";
 import GuardianInterventionOverlay from "./components/vitruvian/GuardianInterventionOverlay";
 import MicPermissionInitializer from "./components/MicPermissionInitializer";
@@ -38,7 +37,6 @@ import CameraActiveIndicator from "./components/CameraActiveIndicator"; // CAMER
 import { DHFHeartbeatPulse } from "./components/DHFHeartbeatPulse"; // PHASE 3: 24h Kill Switch
 import GenesisCinematicIntro from "./components/GenesisCinematicIntro";
 import { useGenesisIntro } from "./hooks/useGenesisIntro";
-import BiosBootSequence from "./components/boot/BiosBootSequence";
 import React, { useState, useEffect, useCallback, lazy, Suspense, memo } from "react";
 import { useLocation } from "react-router-dom";
 import { checkAppVersion, recoverFromChunkError } from "@/lib/versionCheck";
@@ -1272,20 +1270,6 @@ const SecurityBypassOnAuthRoutes = ({ children }: { children: React.ReactNode })
 };
 
 const App = () => {
-  const [showBiosBoot, setShowBiosBoot] = useState(() => {
-    // Check if BIOS boot was shown this session
-    return !sessionStorage.getItem('biosBootShown');
-  });
-
-  const [showSplash, setShowSplash] = useState(() => {
-    // Check if splash was shown today
-    const lastShownDate = localStorage.getItem('splashLastShown');
-    const today = new Date().toDateString();
-
-    // Show splash if it hasn't been shown today
-    return lastShownDate !== today;
-  });
-
   // Check app version and force refresh if outdated
   useEffect(() => {
     checkAppVersion();
@@ -1348,66 +1332,6 @@ const App = () => {
       document.removeEventListener('touchstart', initAudio);
     };
   }, []);
-
-  const handleSplashFinish = useCallback(() => {
-    try {
-      const today = new Date().toDateString();
-      localStorage.setItem('splashLastShown', today);
-    } catch {
-      // ignore
-    }
-    setShowSplash(false);
-  }, []);
-
-  const handleBiosComplete = useCallback(() => {
-    try {
-      sessionStorage.setItem('biosBootShown', 'true');
-    } catch {
-      // ignore
-    }
-    setShowBiosBoot(false);
-  }, []);
-
-  // Failsafe: never let BIOS boot stall the app indefinitely
-  useEffect(() => {
-    if (!showBiosBoot) return;
-    const t = window.setTimeout(() => {
-      console.warn('[Boot] BIOS timeout — skipping');
-      try {
-        sessionStorage.setItem('biosBootShown', 'true');
-      } catch {
-        // ignore
-      }
-      setShowBiosBoot(false);
-    }, 600); // ULTRA-OPTIMIZED: 600ms max for BIOS
-
-    return () => window.clearTimeout(t);
-  }, [showBiosBoot]);
-
-  // Failsafe: Splash timeout
-  useEffect(() => {
-    if (!showSplash) return;
-    const t = window.setTimeout(() => {
-      console.warn('[Boot] Splash timeout — skipping');
-      try {
-        localStorage.setItem('splashLastShown', new Date().toDateString());
-      } catch {
-        // ignore
-      }
-      setShowSplash(false);
-    }, 400); // ULTRA-OPTIMIZED: 400ms max for splash
-
-    return () => window.clearTimeout(t);
-  }, [showSplash]);
-
-  // Show BIOS boot first
-  if (showBiosBoot) {
-    return <BiosBootSequence onComplete={handleBiosComplete} />;
-  }
-
-  if (showSplash) {
-    return <SplashScreen onFinish={handleSplashFinish} />;
-  }
 
   return (
     <QueryClientProvider client={queryClient}>

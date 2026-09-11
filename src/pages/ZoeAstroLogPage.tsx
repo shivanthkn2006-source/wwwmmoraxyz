@@ -132,7 +132,7 @@ const ZoeAstroLogPage: React.FC = () => {
           <div className="rounded-xl border border-border p-4">
             <p className="flex items-center gap-2 text-xs text-muted-foreground"><Coins className="h-3.5 w-3.5" aria-hidden /> Total image cost</p>
             <p className="mt-1 text-lg font-semibold">{money(totalCost)}</p>
-            <p className="text-xs text-muted-foreground">Pollinations — free tier</p>
+            <p className="text-xs text-muted-foreground">Zoe Neural Imaging — Standard</p>
           </div>
           <div className="rounded-xl border border-border p-4">
             <p className="flex items-center gap-2 text-xs text-muted-foreground"><RotateCcw className="h-3.5 w-3.5" aria-hidden /> Total retries</p>

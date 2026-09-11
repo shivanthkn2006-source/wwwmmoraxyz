@@ -341,7 +341,8 @@ export const useAlwaysOnVoice = () => {
         lastTranscriptRef.current = transcript;
         setState(prev => ({ ...prev, transcript }));
         
-        // Reset silence timer - process after 2s of silence
+        // A short end-of-turn window keeps natural pauses while meeting the
+        // 1–3 second spoken-response target after a wake phrase.
         clearSilenceTimer();
         silenceTimerRef.current = setTimeout(() => {
           if (lastTranscriptRef.current.trim() && isEnabledRef.current) {
@@ -349,7 +350,7 @@ export const useAlwaysOnVoice = () => {
             try { recognition.stop(); } catch(e) {}
             getZoeResponse(text);
           }
-        }, 2000);
+        }, finalTranscript ? 250 : 900);
       }
     };
 

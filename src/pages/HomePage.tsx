@@ -1907,7 +1907,7 @@ const HomePage = () => {
       try {
         // Critical path: wait for the actual fetch (with a generous safety cap)
         // so the empty state never flashes before posts arrive on slow networks.
-        await settleWithin(Promise.all([fetchGlobalPosts('initial'), fetchLoopPosts('initial')]), 12000);
+        await settleWithin(Promise.all([fetchGlobalPosts('initial'), fetchLoopPosts('initial')]), 5000);
       } finally {
         setLoading(false);
       }

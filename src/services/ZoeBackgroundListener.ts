@@ -130,6 +130,7 @@ class ZoeBackgroundListener {
   private listeners = new Set<Listener>();
   private lastError: string | null = null;
   private permissionRetries = 0;
+  private conversationActive = false;
 
   constructor() {
     if (typeof window === 'undefined') return;
@@ -145,6 +146,15 @@ class ZoeBackgroundListener {
       } else if (!document.hidden) {
         void this.startRecognition();
       }
+    });
+    window.addEventListener('zoe-handsfree-start', () => {
+      this.conversationActive = true;
+      this.stopRecognition();
+      this.setState('suspended');
+    });
+    window.addEventListener('zoe-handsfree-end', () => {
+      this.conversationActive = false;
+      if (this.enabled && !document.hidden) this.scheduleRestart(250);
     });
   }
 
@@ -275,7 +285,7 @@ class ZoeBackgroundListener {
   }
 
   private scheduleRestart(delay = 700): void {
-    if (!this.enabled || this.restartTimer) return;
+    if (!this.enabled || this.conversationActive || this.restartTimer) return;
     this.restartTimer = setTimeout(() => {
       this.restartTimer = null;
       void this.startRecognition();
@@ -283,7 +293,7 @@ class ZoeBackgroundListener {
   }
 
   private async startRecognition(): Promise<void> {
-    if (!this.enabled || this.recognition) return;
+    if (!this.enabled || this.conversationActive || this.recognition) return;
     const Ctor = speechRecognitionCtor();
     if (!Ctor) {
       this.setState('error');
@@ -340,9 +350,9 @@ class ZoeBackgroundListener {
         } catch {
           /* noop */
         }
-        // Hand the mic to the conversation layer; resume the sentinel after.
+        // Hand the mic to the conversation layer. Its start/end events now own
+        // the handoff, so the wake sentinel cannot steal the follow-up phrase.
         this.stopRecognition();
-        this.scheduleRestart(4000);
       }
     };
 
