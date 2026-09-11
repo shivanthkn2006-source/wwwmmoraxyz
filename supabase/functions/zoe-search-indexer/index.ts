@@ -396,8 +396,11 @@ async function enqueueBackfill(db: ReturnType<typeof createClient>, userId: stri
     db.from('messages').select('id,sender_id').eq('sender_id', userId).limit(2000),
     db.from('post_comments').select('id,user_id').eq('user_id', userId).limit(2000),
     db.from('zoe_infinity_memories').select('id,user_id').eq('user_id', userId).like('key', 'vision_%').limit(2000),
+    db.from('important_dates').select('id,user_id').eq('user_id', userId).limit(2000),
+    db.from('post_attachments').select('id,user_id').eq('user_id', userId).limit(2000),
+    db.from('zoe_life_context').select('id,user_id').eq('user_id', userId).limit(2000),
   ]);
-  for (const response of [profiles, posts, chats, memories, dhfPosts, dhfVideos, growthCards, predictions, goals, dms, comments, visuals]) {
+  for (const response of [profiles, posts, chats, memories, dhfPosts, dhfVideos, growthCards, predictions, goals, dms, comments, visuals, dates, attachments, lifeFacts]) {
     if (response.error) throw response.error;
   }
 
