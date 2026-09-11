@@ -101,15 +101,17 @@ export async function cached<T>(key: string, options: CacheOptions, producer: ()
   }
 }
 
-/** Removes expired rows. Safe to call from any cron-driven function. */
+/** Removes rows that expired over a day ago. Safe to call from any cron job. */
 export async function cacheSweep(): Promise<number> {
   try {
-    const { data } = await db()
-      .from('zoe_cache')
-      .delete()
-      .lt('expires_at', new Date(Date.now() - 86_400_000).toISOString())
-      .select('cache_key');
-    return data?.length ?? 0;
+    const cutoff = new Date(Date.now() - 86_400_000).toISOString();
+    const res = await fetch(`${restUrl()}?expires_at=lt.${encodeURIComponent(cutoff)}&select=cache_key`, {
+      method: 'DELETE',
+      headers: { ...restHeaders(), Prefer: 'return=representation' },
+    });
+    if (!res.ok) return 0;
+    const rows = (await res.json()) as unknown[];
+    return rows?.length ?? 0;
   } catch {
     return 0;
   }
