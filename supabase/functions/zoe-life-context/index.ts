@@ -55,7 +55,17 @@ const PATTERNS: Array<{ category: string; key: string; re: RegExp; confidence: n
 const DATE_RE = /\b(?:on |this |next |last )?(monday|tuesday|wednesday|thursday|friday|saturday|sunday|\d{1,2}(?:st|nd|rd|th)? (?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*|\d{4}-\d{2}-\d{2})\b/i;
 const EVENT_RE = /\b(?:i (?:have|had|got)|my) ([a-z0-9'\- ]{3,50}?)(?: on | at |\.|,|$)/i;
 
-const clean = (value: string) => value.trim().replace(/\s+/g, ' ').replace(/[.,!?;]+$/, '').slice(0, 200);
+// People run several statements into one breath ("I live in Kochi and I work
+// at M'Mora"), so a captured value is cut at the first joining word. Without
+// this, one fact swallows the next sentence.
+const STOP_RE = /\s+(?:and|but|so|because|then|while|although|though|however|also|plus)\s+.*$/i;
+const clean = (value: string) =>
+  value
+    .trim()
+    .replace(/\s+/g, ' ')
+    .replace(STOP_RE, '')
+    .replace(/[.,!?;]+$/, '')
+    .slice(0, 200);
 
 export function extractFacts(text: string): Fact[] {
   const facts: Fact[] = [];
