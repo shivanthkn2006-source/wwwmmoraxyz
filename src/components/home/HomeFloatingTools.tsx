@@ -121,11 +121,21 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
   }, [searchOpen]);
 
   // Home dock search icon opens this same bar; broadcast state so the dock icon can light up.
+  // Zoe uses the SAME event with a spoken query, so a voice search is visible
+  // on screen — the member watches exactly what she looked up.
   React.useEffect(() => {
-    const open = () => setSearchOpen(true);
+    const open = (event: Event) => {
+      setSearchOpen(true);
+      const spoken = (event as CustomEvent).detail as { query?: string } | undefined;
+      const term = spoken?.query?.trim();
+      if (!term) return;
+      onQueryChange(term);
+      void executeAmbientSearch(term);
+      void recordHomeSearch(term);
+    };
     window.addEventListener('mmora:open-home-search', open);
     return () => window.removeEventListener('mmora:open-home-search', open);
-  }, []);
+  }, [onQueryChange, executeAmbientSearch]);
 
   React.useEffect(() => {
     window.dispatchEvent(new CustomEvent('mmora:home-search-toggle', { detail: { open: searchOpen } }));
