@@ -125,7 +125,10 @@ export function useZoeSearchCompanion(query: string, open: boolean) {
     if (!term) return null;
     const probe = buildCompanionTurn(term, null);
     if (!probe) return null;
-    const remembered = prefs.scopeByTopic[probe.topic] ?? null;
+    // Visual/media discovery must not be silently trapped inside M'Mora by an
+    // old preference; members expect web imagery as well as their own posts.
+    const stored = prefs.scopeByTopic[probe.topic] ?? null;
+    const remembered = probe.topic === 'media' && stored === 'mmora' ? 'both' : stored;
     return buildCompanionTurn(term, remembered);
   }, [debounced, open, dismissed, prefs.scopeByTopic]);
 
@@ -167,7 +170,8 @@ export function useZoeSearchCompanion(query: string, open: boolean) {
       setScope(next);
       stopSearchVoice();
       if (remember && turn) {
-        persist({ ...prefs, scopeByTopic: { ...prefs.scopeByTopic, [turn.topic]: next } });
+        const safeScope = turn.topic === 'media' && next === 'mmora' ? 'both' : next;
+        persist({ ...prefs, scopeByTopic: { ...prefs.scopeByTopic, [turn.topic]: safeScope } });
       }
     },
     [turn, prefs, persist],

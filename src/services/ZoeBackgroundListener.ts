@@ -18,6 +18,7 @@ import { HANDS_FREE_WAKE_PHRASES, HANDS_FREE_STOP_PHRASES, findHandsFreePhrase, 
 import { zoeDebugLog, zoeDebugSetState, zoeDebugSpeechError, zoeDebugSpeechStart, zoeDebugSpeechStop } from '@/features/zoe-handsfree/debugBus';
 import { nativeZoeAudioBridge } from '@/services/NativeZoeAudioBridge';
 import { claimSpeechRecognition, releaseSpeechRecognition } from '@/utils/micPermissionManager';
+import { isWakeCommand, isZoeMuted, setZoeMuted } from '@/features/zoe-handsfree/muteGate';
 
 export type WakeWordState = 'off' | 'starting' | 'listening' | 'triggered' | 'suspended' | 'error';
 
@@ -321,6 +322,32 @@ class ZoeBackgroundListener {
         transcript += event.results[i][0]?.transcript ?? '';
       }
       if (!transcript.trim()) return;
+
+      // Privacy boundary: while muted, no transcript can activate Zoe, reach
+      // DHF, or reach a backend. Only the explicit “Zoe wake” phrase is
+      // accepted. Any words after it become the first resumed command.
+      if (isZoeMuted()) {
+        if (!isWakeCommand(transcript)) {
+          zoeDebugLog('voice', 'muted — wake listener discarded speech');
+          return;
+        }
+        setZoeMuted(false);
+        const resumedCommand = normalizeVoicePhrase(transcript)
+          .replace(/^(?:zoe|zoey)\s+wake(?:\s+up)?\s*/i, '')
+          .replace(/^wake\s+(?:up\s+)?(?:zoe|zoey)\s*/i, '')
+          .trim();
+        this.setState('triggered');
+        window.dispatchEvent(new CustomEvent('zoe-orb-activate', {
+          detail: {
+            source: 'wake-word',
+            transcript,
+            command: resumedCommand || null,
+            resumedFromMute: true,
+          },
+        }));
+        this.stopRecognition();
+        return;
+      }
 
       const stop = findHandsFreePhrase(transcript, HANDS_FREE_STOP_PHRASES);
       if (stop) {

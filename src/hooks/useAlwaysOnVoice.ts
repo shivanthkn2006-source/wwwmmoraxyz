@@ -14,7 +14,9 @@ import {
   requestMicPermission, 
   isSpeechRecognitionSupported, 
   createSpeechRecognition,
-  stopSpeechRecognition 
+  stopSpeechRecognition,
+  claimSpeechRecognition,
+  releaseSpeechRecognition,
 } from '@/utils/micPermissionManager';
 import { zoeDebugLog, zoeDebugSetState } from '@/features/zoe-handsfree/debugBus';
 import { resolveVoiceIntent } from '@/features/zoe-handsfree/voiceIntentRouter';
@@ -252,6 +254,10 @@ export const useAlwaysOnVoice = () => {
         text: userText,
         sessionKey: `always-on-${user?.id ?? 'anon'}`,
         userId: user?.id,
+        // The authenticated backend already performs DHF, life-profile and
+        // timeline recall in parallel. Repeating gateway recall here delayed
+        // every spoken answer and could make a healthy Zoe feel unresponsive.
+        skipRecall: true,
         body: { enableASI: true, soulMetrics: { intimacy: 70, selfHarmony: 75, loveEnergy: 70 } },
       });
 
@@ -344,7 +350,9 @@ export const useAlwaysOnVoice = () => {
       continuous: true,
       interimResults: true,
       lang: 'en-US',
-      keepAlive: true
+      // This hook owns restart timing. Letting the shared manager restart the
+      // same object too created overlapping sessions on Chrome and Safari.
+      keepAlive: false
     });
     
     if (!recognition) return;
@@ -416,6 +424,7 @@ export const useAlwaysOnVoice = () => {
     };
 
     recognition.onend = () => {
+      releaseSpeechRecognition('voice-input', recognition);
       setState(prev => ({ ...prev, isListening: false }));
       clearKeepAlive();
       
@@ -445,10 +454,12 @@ export const useAlwaysOnVoice = () => {
     };
 
     try {
+      claimSpeechRecognition('voice-input', recognition);
       recognition.start();
       recognitionRef.current = recognition;
       console.log('[AlwaysOn] Recognition started');
     } catch (err) {
+      releaseSpeechRecognition('voice-input', recognition);
       console.error('[AlwaysOn] Start error:', err);
       // Try again after a brief delay
       setTimeout(() => startListening(), 500);
@@ -481,6 +492,7 @@ export const useAlwaysOnVoice = () => {
     restartCountRef.current = 0;
 
     if (recognitionRef.current) {
+      releaseSpeechRecognition('voice-input', recognitionRef.current);
       try { recognitionRef.current.stop(); } catch(e) {}
       recognitionRef.current = null;
     }
@@ -508,6 +520,7 @@ export const useAlwaysOnVoice = () => {
       clearSilenceTimer();
       clearKeepAlive();
       if (recognitionRef.current) {
+        releaseSpeechRecognition('voice-input', recognitionRef.current);
         try { recognitionRef.current.stop(); } catch(e) {}
       }
     };

@@ -40,7 +40,7 @@ const strip = (value: string) =>
     .replace(/\s+/g, ' ')
     .trim();
 
-async function safeJson(url: string, ms = 6000): Promise<any | null> {
+async function safeJson(url: string, ms = 3000): Promise<any | null> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ms);
   try {
@@ -153,7 +153,7 @@ async function wikipedia(query: string): Promise<WebGroundHit[]> {
   return hits;
 }
 
-async function safeText(url: string, ms = 6000): Promise<string | null> {
+async function safeText(url: string, ms = 3000): Promise<string | null> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ms);
   try {
@@ -213,7 +213,7 @@ async function serpapiNews(query: string): Promise<WebGroundHit[]> {
   if (!key) return [];
   const data = await safeJson(
     `https://serpapi.com/search.json?engine=google_news&q=${encodeURIComponent(query)}&hl=en&gl=us&api_key=${encodeURIComponent(key)}`,
-    7000,
+    3500,
   );
   const rows = [
     ...((data?.news_results ?? []) as any[]),
@@ -253,7 +253,7 @@ async function secondaryNewsApi(query: string): Promise<WebGroundHit[]> {
   if (gnews) {
     const data = await safeJson(
       `https://gnews.io/api/v4/search?q=${encodeURIComponent(query)}&lang=en&max=6&sortby=publishedAt&apikey=${encodeURIComponent(gnews)}`,
-      7000,
+      3500,
     );
     for (const a of (data?.articles ?? []).slice(0, 6)) {
       if (!a?.url || !a?.title) continue;
@@ -270,7 +270,7 @@ async function secondaryNewsApi(query: string): Promise<WebGroundHit[]> {
   if (!out.length && newsdata) {
     const data = await safeJson(
       `https://newsdata.io/api/1/latest?apikey=${encodeURIComponent(newsdata)}&q=${encodeURIComponent(query)}&language=en`,
-      7000,
+      3500,
     );
     for (const a of (data?.results ?? []).slice(0, 6)) {
       if (!a?.link || !a?.title) continue;
