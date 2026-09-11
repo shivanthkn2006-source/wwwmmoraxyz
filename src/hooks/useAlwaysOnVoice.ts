@@ -100,6 +100,34 @@ export const useAlwaysOnVoice = () => {
   // Get Zoe's response
   const getZoeResponse = useCallback(async (userText: string) => {
     if (!userText.trim()) return;
+
+    // MUTE GATE — while muted, nothing reaches recall, the backend or Deepgram.
+    // The only phrase that gets through is "Zoe wake".
+    const decision = gateTranscript(userText);
+    if (decision === 'muted-drop') {
+      zoeDebugLog('voice', `muted — dropped: ${userText.slice(0, 60)}`);
+      return;
+    }
+    if (decision === 'mute') {
+      setZoeMuted(true);
+      stopZoeSpeech();
+      zoeDebugLog('voice', 'muted by voice command');
+      window.dispatchEvent(new CustomEvent('zoe-handsfree-reply', { detail: { text: 'Muted. Say "Zoe wake" when you want me back.' } }));
+      return;
+    }
+    if (decision === 'unmute') {
+      setZoeMuted(false);
+      const line = "I'm back. What do you need?";
+      window.dispatchEvent(new CustomEvent('zoe-handsfree-reply', { detail: { text: line } }));
+      await recordVoiceTurn('assistant', line, user?.id);
+      setState((prev) => ({ ...prev, isSpeaking: true }));
+      await new Promise<void>((resolve) => {
+        speakAsZoe(line, undefined, undefined, () => resolve(), () => resolve());
+      });
+      setState((prev) => ({ ...prev, isSpeaking: false }));
+      if (isEnabledRef.current) setTimeout(() => startListening(), 500);
+      return;
+    }
     // A turn that never finished (network stall, killed speech) used to jam
     // every later question in silence. Anything older than 45s is stale.
     if (processingRef.current) {
@@ -157,6 +185,29 @@ export const useAlwaysOnVoice = () => {
         window.dispatchEvent(new CustomEvent('zoe-navigate', { detail: { path: '/admin' } }));
         // The dashboard mounts, then runs the scan. Non-admins see "Staff only".
         setTimeout(() => window.dispatchEvent(new CustomEvent('zoe-run-god-scan')), 1200);
+      } else if (intent.kind === 'search') {
+        // Home shows the search console with the spoken query already typed in,
+        // so the member watches the same results Zoe is reading.
+        window.dispatchEvent(new CustomEvent('zoe-navigate', { detail: { path: '/home' } }));
+        setTimeout(() => {
+          window.dispatchEvent(
+            new CustomEvent('mmora:open-home-search', { detail: { query: intent.query, speak: true } }),
+          );
+        }, 400);
+      } else if (intent.kind === 'resume') {
+        const { triggerHeadlessResume } = await import('@/utils/headlessResumeBuilder');
+        const { buildResumeDataForUser } = await import('@/services/zoeResumeData');
+        const resumeData = await buildResumeDataForUser(user?.id);
+        const result = await triggerHeadlessResume(resumeData);
+        spoken = result.success
+          ? `Done — ${result.fileName} just downloaded. No pop-ups, no waiting.`
+          : `I couldn't build the resume: ${result.message}`;
+      } else if (intent.kind === 'asset-3d') {
+        const { requestAssetJob, spokenAssetAcknowledgement } = await import('@/services/zoeAssetJobs');
+        const outcome = await requestAssetJob(intent.prompt, '3d');
+        spoken = outcome.ok
+          ? spokenAssetAcknowledgement(outcome.job)
+          : `I couldn't start that 3D job: ${outcome.error}`;
       } else if (intent.kind === 'message') {
         if (intent.body) {
           // Real delivery — the message lands in the recipient's inbox.
