@@ -22,6 +22,8 @@ import ZoeGlobalMount from '@/components/zoe/ZoeGlobalMount';
 import GlobalAudioQuickConnect from '@/components/audio/GlobalAudioQuickConnect';
 import ZoeVoiceIntentHost from '@/components/zoe/ZoeVoiceIntentHost';
 import ZoeGreetingFilm from '@/components/zoe/ZoeGreetingFilm';
+import ZoeAgentProvider from '@/contexts/ZoeAgentProvider';
+import ZoeAgentHost from '@/components/zoe/ZoeAgentHost';
 
 
 
