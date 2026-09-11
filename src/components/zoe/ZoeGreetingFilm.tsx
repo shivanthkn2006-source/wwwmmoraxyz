@@ -116,8 +116,8 @@ export const ZoeGreetingFilm: React.FC = () => {
       data-mode={pip ? 'pip' : 'fullscreen'}
       className={
         pip
-          ? 'fixed bottom-4 left-4 z-[95] h-40 w-28 overflow-hidden rounded-xl border border-border bg-background shadow-lg'
-          : 'fixed inset-0 z-[95] flex items-center justify-center bg-background'
+          ? 'fixed bottom-4 left-4 z-[140] h-40 w-28 overflow-hidden rounded-xl border border-border bg-background shadow-lg'
+          : 'fixed inset-0 z-[140] flex items-center justify-center bg-background'
       }
       role="dialog"
       aria-label="Zoe welcome"
