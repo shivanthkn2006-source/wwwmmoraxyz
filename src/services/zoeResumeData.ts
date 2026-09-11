@@ -17,6 +17,11 @@ interface LifeFact {
 export async function buildResumeDataForUser(userId?: string): Promise<ResumeData> {
   const data: ResumeData = {};
 
+  if (!userId) {
+    const { data: sessionData } = await supabase.auth.getSession();
+    userId = sessionData.session?.user?.id ?? undefined;
+  }
+
   if (userId) {
     const { data: profile } = await supabase
       .from('profiles')
