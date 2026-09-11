@@ -49,7 +49,16 @@ const PATTERNS: Array<{ category: string; key: string; re: RegExp; confidence: n
   { category: 'clothes', key: 'size', re: /\bmy (?:shirt |shoe |dress )?size is ([a-z0-9'\-. ]{1,20})/i, confidence: 0.8 },
   { category: 'people', key: 'relation', re: /\bmy (wife|husband|partner|mother|father|mom|dad|son|daughter|brother|sister|friend|boss) (?:is |is called |is named )?([a-z0-9'\- ]{2,30})/i, confidence: 0.75 },
   { category: 'preference', key: 'general', re: /\bi prefer ([a-z0-9'\- ]{3,50})/i, confidence: 0.7 },
-  { category: 'health', key: 'note', re: /\bi(?:'m| am) allergic to ([a-z0-9'\- ]{2,40})/i, confidence: 0.9 },
+  // HEALTH — highest confidence in the set. An allergy is safety information,
+  // so every ordinary way of saying it is matched, including third person
+  // ("Asha has an egg allergy") when the member is describing themselves.
+  { category: 'health', key: 'allergies', re: /\b(?:i(?:'m| am)?\s*)?allergic to ([a-z0-9'\- ,]{2,60})/i, confidence: 0.95 },
+  { category: 'health', key: 'allergies', re: /\bi have (?:an?\s+)?([a-z0-9'\- ]{2,40}?) allerg(?:y|ies)\b/i, confidence: 0.95 },
+  { category: 'health', key: 'allergies', re: /\bmy allerg(?:y|ies) (?:is|are) ([a-z0-9'\- ,]{2,60})/i, confidence: 0.95 },
+  { category: 'health', key: 'intolerance', re: /\bi (?:can'?t|cannot|must not) (?:eat|have|drink|take) ([a-z0-9'\- ,]{2,50})/i, confidence: 0.85 },
+  { category: 'health', key: 'diet', re: /\bi(?:'m| am) (vegan|vegetarian|pescatarian|gluten free|lactose intolerant|diabetic)\b/i, confidence: 0.9 },
+  { category: 'preference', key: 'favourite', re: /\bmy favou?rite ([a-z0-9'\- ]{2,25}) is ([a-z0-9'\- ]{2,40})/i, confidence: 0.85 },
+  { category: 'preference', key: 'music', re: /\bi listen to ([a-z0-9'\- ]{2,40})/i, confidence: 0.65 },
 ];
 
 const DATE_RE = /\b(?:on |this |next |last )?(monday|tuesday|wednesday|thursday|friday|saturday|sunday|\d{1,2}(?:st|nd|rd|th)? (?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*|\d{4}-\d{2}-\d{2})\b/i;
@@ -77,7 +86,14 @@ export function extractFacts(text: string): Fact[] {
     if (!m) continue;
     const value = clean(m[2] ?? m[1] ?? '');
     if (value.length < 2) continue;
-    const key = p.category === 'people' && m[2] ? clean(m[1]).toLowerCase() : p.key;
+    // Two-capture patterns name their own key: "my brother is Sam" keys on
+    // `brother`, "my favourite drink is chai" keys on `favourite drink`.
+    const key =
+      p.category === 'people' && m[2]
+        ? clean(m[1]).toLowerCase()
+        : p.key === 'favourite' && m[2]
+          ? `favourite ${clean(m[1]).toLowerCase()}`
+          : p.key;
     facts.push({ category: p.category, fact_key: key, fact_value: value, confidence: p.confidence });
   }
 
@@ -140,9 +156,27 @@ Deno.serve(async (req) => {
   }
 
   const text = typeof body.text === 'string' ? body.text : '';
-  if (!text.trim()) return json({ ok: true, stored: 0, facts: [] });
 
-  const facts = extractFacts(text);
+  // EXPLICIT FACTS — when Zoe asked "anything you're allergic to?", the answer
+  // is often one word with no pattern to match, so the caller states the fact
+  // outright. Everything is still validated and clamped before it is stored.
+  const explicit: Fact[] = Array.isArray(body.facts)
+    ? (body.facts as Array<Record<string, unknown>>)
+        .map((f) => ({
+          category: String(f.category ?? '').slice(0, 40).toLowerCase(),
+          fact_key: String(f.fact_key ?? '').slice(0, 60).toLowerCase(),
+          fact_value: clean(String(f.fact_value ?? '')),
+          confidence: Math.min(Math.max(Number(f.confidence) || 0.8, 0), 1),
+        }))
+        .filter((f) => f.category && f.fact_key && f.fact_value.length >= 2)
+        .slice(0, 10)
+    : [];
+
+  if (!text.trim() && explicit.length === 0) return json({ ok: true, stored: 0, facts: [] });
+
+  const extracted = text.trim() ? extractFacts(text) : [];
+  const seenKeys = new Set(explicit.map((f) => `${f.category}:${f.fact_key}`));
+  const facts = [...explicit, ...extracted.filter((f) => !seenKeys.has(`${f.category}:${f.fact_key}`))];
   if (facts.length === 0) return json({ ok: true, stored: 0, facts: [] });
 
   const now = new Date().toISOString();

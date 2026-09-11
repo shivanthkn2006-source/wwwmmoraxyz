@@ -61,3 +61,25 @@ describe('god mode scan', () => {
   });
 });
 
+
+describe('assistant actions', () => {
+  it('routes a spoken search to the visible Home search', () => {
+    const intent = resolveVoiceIntent('Zoe search for the weather in Kochi');
+    expect(intent).toMatchObject({ kind: 'search' });
+    expect((intent as { query: string }).query).toContain('weather in Kochi');
+  });
+
+  it('routes a resume request', () => {
+    expect(resolveVoiceIntent('Zoe, generate my resume')).toMatchObject({ kind: 'resume' });
+  });
+
+  it('routes a 3D asset request with its description', () => {
+    const intent = resolveVoiceIntent('Zoe make a 3D model of a red bicycle');
+    expect(intent).toMatchObject({ kind: 'asset-3d' });
+    expect((intent as { prompt: string }).prompt).toBe('a red bicycle');
+  });
+
+  it('leaves a normal question to Zoe\u2019s brain', () => {
+    expect(resolveVoiceIntent('Zoe how is my week looking')).toBeNull();
+  });
+});

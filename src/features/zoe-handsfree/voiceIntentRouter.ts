@@ -16,7 +16,10 @@ export type VoiceIntent =
   | { kind: 'notifications'; speak: string }
   | { kind: 'orb-chat'; speak: string }
   | { kind: 'message'; recipient: string; body?: string; speak: string }
-  | { kind: 'god-scan'; speak: string };
+  | { kind: 'god-scan'; speak: string }
+  | { kind: 'search'; query: string; speak: string }
+  | { kind: 'resume'; speak: string }
+  | { kind: 'asset-3d'; prompt: string; speak: string };
 
 /** Spoken aliases that are not the page label ("chat" → Messages). */
 const ALIASES: Record<string, string> = {
@@ -96,6 +99,34 @@ export function resolveVoiceIntent(rawText: string): VoiceIntent | null {
     return { kind: 'orb-chat', speak: 'Opening our chat.' };
   }
 
+
+  // "make me a 3D model of a red bicycle" — background asset, tracked on a card.
+  const asset = text.match(
+    /^(?:can\s+you\s+)?(?:make|create|build|generate|render)\s+(?:me\s+)?(?:a|an|the)?\s*3\s*-?\s*d\s*(?:model|asset|object)?\s*(?:of|for)?\s*(.*)$/,
+  );
+  if (asset) {
+    const prompt = asset[1].trim();
+    if (prompt.length > 1) {
+      return { kind: 'asset-3d', prompt, speak: `Starting a 3D ${prompt}.` };
+    }
+  }
+
+  // "make my resume" / "generate a resume" — silent PDF, no modal.
+  if (/\b(resume|cv|curriculum vitae)\b/.test(text) && /\b(make|create|build|generate|write|download|prepare|update)\b/.test(text)) {
+    return { kind: 'resume', speak: 'Building your resume now — it will download on its own.' };
+  }
+
+  // "search for the weather in Kochi" — opens the Home search so the member
+  // SEES what was searched, and Zoe reads the answer out.
+  const search = text.match(
+    /^(?:search|look\s*up|find|google|show\s+me\s+results\s+for)\s+(?:for\s+|about\s+)?(.+)$/,
+  );
+  if (search) {
+    const query = search[1].replace(/^\s*(?:the\s+)?/, '').trim();
+    if (query.length > 1 && !/^(?:my\s+)?(?:messages|notifications|settings)$/.test(query)) {
+      return { kind: 'search', query, speak: `Searching for ${query}.` };
+    }
+  }
 
   // "run god mode scan" — staff only. The page and the edge function both
   // check the admin role, so a non-admin simply gets told no.

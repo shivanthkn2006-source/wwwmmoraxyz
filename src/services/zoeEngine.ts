@@ -20,6 +20,7 @@ import { recordDhfLineage } from '@/services/dhfLineage';
 import { classifyZoeIntent, type ZoeIntent } from '@/lib/zoeIntents';
 import { getGrantedCoords } from '@/utils/sharedGeolocation';
 import { stripScratchpad } from '@/utils/hiddenScratchpad';
+import { maybePreferenceProbe, capturePreferenceAnswer } from '@/services/zoePreferenceProbe';
 
 export type ZoeBackend = 'zoe-chat' | 'zoe-agent' | 'zoe-infinity-brain' | 'zoe-omega-chat';
 
@@ -70,6 +71,10 @@ export async function askZoe(options: AskZoeOptions): Promise<AskZoeResult> {
   if (!text) throw new Error('Empty prompt');
 
   const backend: ZoeBackend = options.backend ?? 'zoe-chat';
+
+  // If Zoe asked a getting-to-know-you question last turn, THIS is the answer.
+  // A bare "eggs" carries no pattern, so it is stored explicitly.
+  void capturePreferenceAnswer(text);
 
   let memoryContext = '';
   let memorySource: string | null = null;
@@ -146,7 +151,21 @@ export async function askZoe(options: AskZoeOptions): Promise<AskZoeResult> {
   if (error) throw new Error(error.message || 'Zoe backend failed');
 
   // Second net: scratchpad tags and raw metacognition envelopes never reach a bubble or Deepgram.
-  const replyText = stripScratchpad(String(data?.message || data?.response || ''));
+  const baseReply = stripScratchpad(String(data?.message || data?.response || ''));
+
+  // GETTING TO KNOW YOU — once a conversation is actually running, Zoe adds one
+  // small question about tastes, allergies or habits, and remembers the answer
+  // for good. Never on the opening turn, never twice in a conversation.
+  let replyText = baseReply;
+  try {
+    const probe = maybePreferenceProbe({
+      turnIndex: options.history?.length ?? 0,
+      replyText: baseReply,
+    });
+    if (probe) replyText = `${baseReply.trim()} ${probe}`.trim();
+  } catch {
+    /* a memory nicety must never break a reply */
+  }
   const intent = classifyZoeIntent(text);
   const result: AskZoeResult = {
     text: replyText,

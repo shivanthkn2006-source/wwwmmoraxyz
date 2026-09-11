@@ -12,6 +12,7 @@ import { precomputeCharacterFacts } from "../_shared/grounded-tools.ts";
 import { clientErrorResponse } from '../_shared/client-error.ts';
 import { omniRecall, buildOmniRecallBlock, buildRecallSources, type RecallSource } from '../_shared/omni-recall.ts';
 import { buildLifeTimelineBlock } from '../_shared/life-timeline.ts';
+import { buildLifeProfileBlock } from '../_shared/life-profile.ts';
 import { needsWebGrounding, webGround, buildWebGroundingBlock, buildWebSources } from '../_shared/web-grounding.ts';
 import { needsAstroGrounding, buildAstroGroundingBlock, type AstroBirthProfile } from '../_shared/astro-grounding.ts';
 import { CLARIFICATION_PROTOCOL, spokenFallback } from '../_shared/cognitive-fault.ts';
@@ -851,8 +852,20 @@ ${cortexPromptAddition}`;
         console.warn('[Zoe] timeline recall skipped:', timelineError instanceof Error ? timelineError.message : timelineError);
         return { block: '', window: null, entryCount: 0 };
       });
-    const [hits, webHits, timeline] = await Promise.all([recallPromise, webPromise, timelinePromise]);
-    const timelineBlock = timeline.block ? `\n\n${timeline.block}` : '';
+    // TASTES, ALLERGIES, PEOPLE — the durable profile Zoe has learned from
+    // conversation. Fetched in parallel so it costs no extra wall-clock time.
+    const profilePromise = buildLifeProfileBlock(authHeader || '').catch((profileError) => {
+      console.warn('[Zoe] life profile skipped:', profileError instanceof Error ? profileError.message : profileError);
+      return { block: '', count: 0, hasHealthFacts: false };
+    });
+    const [hits, webHits, timeline, lifeProfile] = await Promise.all([
+      recallPromise,
+      webPromise,
+      timelinePromise,
+      profilePromise,
+    ]);
+    const timelineBlock = `${lifeProfile.block}${timeline.block ? `\n\n${timeline.block}` : ''}`;
+    console.log('[Zoe] life profile facts:', lifeProfile.count, 'health:', lifeProfile.hasHealthFacts);
     console.log('[Zoe] timeline recall:', timeline.window?.label ?? 'not needed', timeline.entryCount, 'entries');
     omniRecallCount = hits.length;
     omniRecallBlock = buildOmniRecallBlock(hits);

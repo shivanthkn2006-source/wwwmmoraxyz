@@ -174,13 +174,14 @@ export const ZoeSearchModal: React.FC<ZoeSearchModalProps> = ({
   const showMemory = tab === 'all' || tab === 'memory';
   const showWeb = tab === 'all' || tab === 'web';
 
+  // Zoe's voice is Deepgram only. The browser's built-in speech synthesis is
+  // never used here — it is a different voice and breaks the one-voice rule.
   const speak = React.useCallback((text: string) => {
-    try {
-      const utterance = new SpeechSynthesisUtterance(text);
-      window.speechSynthesis?.speak(utterance);
-    } catch {
-      /* voice is a progressive enhancement */
-    }
+    void import('@/utils/zoeVoice')
+      .then((m) => m.speakAsZoe(text))
+      .catch(() => {
+        /* voice is a progressive enhancement */
+      });
   }, []);
 
   const openWeb = React.useCallback(
