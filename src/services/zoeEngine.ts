@@ -72,6 +72,10 @@ export async function askZoe(options: AskZoeOptions): Promise<AskZoeResult> {
 
   const backend: ZoeBackend = options.backend ?? 'zoe-chat';
 
+  // If Zoe asked a getting-to-know-you question last turn, THIS is the answer.
+  // A bare "eggs" carries no pattern, so it is stored explicitly.
+  void capturePreferenceAnswer(text);
+
   let memoryContext = '';
   let memorySource: string | null = null;
   if (!options.skipRecall) {
