@@ -11,7 +11,7 @@ import { useEffect, useRef, useCallback, useState } from 'react';
 import { useAuth } from '@/lib/auth';
 import { useLocation } from 'react-router-dom';
 import { playActivationChime, logSoundError, canPlayActivationSound } from '@/utils/zoeActivationSound';
-import { speakAsZoe, initializeAssistantVoices, setCurrentAssistant } from '@/utils/assistantVoice';
+import { initializeAssistantVoices, setCurrentAssistant } from '@/utils/assistantVoice';
 import { supabase } from '@/integrations/supabase/client';
 import { isSoundSuppressed } from '@/lib/platformPurge';
 
@@ -108,47 +108,28 @@ export const useZoeActivationSequence = () => {
     }
   }, []);
 
-  // Step 2: Speak activation message (Zoe voice - Zoe Infinity standalone voice)
+  // Step 2: The greeting itself.
+  //
+  // The old spoken "I'm Zoe, your Zone Operations Entity…" line is retired: it
+  // was one of several startup voices talking over each other, and the owner
+  // replaced it with Zoe's short greeting film (ZoeGreetingFilm). Activation
+  // stays completely silent so exactly ONE Zoe voice can ever be heard.
   const speakWelcome = useCallback(async (): Promise<boolean> => {
-    console.log('[EAP] Step 2: Speaking activation message (Zoe voice)...');
-    
-    return new Promise((resolve) => {
-      // Zoe welcome greeting - warm, soothing, intelligent
-      const welcomeMessage = "Hello. I'm Zoe, your Zone Operations Entity. All systems synchronized. I'm here to guide you through your journey. How can I help you today?";
-      
-      speakAsZoe(
-        welcomeMessage,
-        undefined, // Use default voice settings
-        () => {
-          console.log('[EAP] Zoe voice started');
-          window.dispatchEvent(new CustomEvent('zoe-speak'));
-        },
-        () => {
-          console.log('[EAP] Zoe voice completed');
-          setState(prev => ({ ...prev, voiceSpoken: true }));
-          window.dispatchEvent(new CustomEvent('zoe-speak-end'));
-          resolve(true);
-        },
-        (error) => {
-          console.error('[EAP] Zoe voice error:', error);
-          logActivationToZSMT('error_masked_voice', {
-            reason: error.message
-          });
-          // Still resolve true to continue sequence
-          setState(prev => ({ ...prev, voiceSpoken: false }));
-          resolve(false);
-        }
-      );
-    });
-  }, [logActivationToZSMT]);
+    setState(prev => ({ ...prev, voiceSpoken: false }));
+    return false;
+  }, []);
 
   // Step 3: Trigger orb animation
   const activateOrb = useCallback(() => {
     console.log('[EAP] Step 3: Activating orb visualization...');
     
     // Dispatch event for orb to animate into ready state
+    // 'silent' is critical: without it the global assistant treats this as a
+    // wake-word activation and speaks a second greeting on top of everything
+    // else. Startup animates the orb only.
     window.dispatchEvent(new CustomEvent('zoe-orb-activate', {
       detail: {
+        source: 'silent',
         animation: 'ready',
         emotion: 'joy',
         timestamp: Date.now()

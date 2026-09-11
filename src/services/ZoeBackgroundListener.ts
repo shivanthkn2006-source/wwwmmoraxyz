@@ -66,6 +66,24 @@ export function isNativeShell(): boolean {
   }
 }
 
+/**
+ * iPhone / iPad / Safari. Apple's WebKit speech engine behaves differently from
+ * Chrome in three ways that used to surface as a flat "wake word error":
+ *   1. `continuous` is ignored — the session ends after every phrase, so the
+ *      sentinel must restart itself instead of treating the end as a failure.
+ *   2. Recognition refuses to start (`service-not-allowed`) while another part
+ *      of the page is holding an open `getUserMedia` stream, so the shared mic
+ *      must be released first.
+ *   3. `start()` must originate from a real user gesture.
+ */
+export function isAppleWebkitSpeech(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  const iOS = /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && (navigator as Navigator & { maxTouchPoints?: number }).maxTouchPoints > 1);
+  const safari = /^((?!chrome|android|crios|fxios|edgios).)*safari/i.test(ua);
+  return iOS || safari;
+}
+
 export function wakeWordCapability(): WakeWordCapability {
   const isNative = isNativeShell();
   const supported = isNative || Boolean(speechRecognitionCtor());
@@ -74,7 +92,8 @@ export function wakeWordCapability(): WakeWordCapability {
       supported: false,
       isNative,
       backgroundCapable: false,
-      reason: 'This browser has no on-device speech recognition. Use the headset button to talk to Zoe.',
+      reason:
+        'This browser has no on-device speech recognition. Use the headset button, or the orb, to talk to Zoe — everything else still works.',
     };
   }
   if (isNative) {
@@ -83,6 +102,15 @@ export function wakeWordCapability(): WakeWordCapability {
       isNative: true,
       backgroundCapable: true,
       reason: 'Native app support is installed for background audio. Locked-screen wake still requires validation on this device.',
+    };
+  }
+  if (isAppleWebkitSpeech()) {
+    return {
+      supported: true,
+      isNative: false,
+      backgroundCapable: false,
+      reason:
+        'On iPhone, iPad and Safari, Zoe listens one phrase at a time and re-arms herself between phrases. Keep this tab in front; the screen must stay awake. Allow the microphone and speech recognition prompts once.',
     };
   }
   return {
@@ -100,6 +128,8 @@ class ZoeBackgroundListener {
   private enabled = false;
   private restartTimer: ReturnType<typeof setTimeout> | null = null;
   private listeners = new Set<Listener>();
+  private lastError: string | null = null;
+  private permissionRetries = 0;
 
   constructor() {
     if (typeof window === 'undefined') return;
@@ -176,14 +206,34 @@ class ZoeBackgroundListener {
         return false;
       }
     }
+    this.permissionRetries = 0;
+    this.lastError = null;
+    if (isAppleWebkitSpeech()) {
+      // Safari/iOS: never hold an open capture stream here. WebKit hands the
+      // microphone to its own speech service and refuses to start while the
+      // page owns one. Recognition raises its own permission prompt.
+      try {
+        await audioRouter.releaseMic?.();
+      } catch {
+        /* noop */
+      }
+      await this.startRecognition();
+      return true;
+    }
     const granted = await audioRouter.ensureMicPermission();
     if (!granted) {
       this.enabled = false;
+      this.lastError = 'Microphone permission was declined.';
       this.setState('error');
       return false;
     }
     await this.startRecognition();
     return true;
+  }
+
+  /** Plain-language reason the wake word is not running, if any. */
+  public getLastError(): string | null {
+    return this.lastError;
   }
 
   public disable(): void {
@@ -241,9 +291,12 @@ class ZoeBackgroundListener {
     }
 
     this.setState('starting');
+    const apple = isAppleWebkitSpeech();
     const rec = new Ctor();
-    rec.continuous = true;
-    rec.interimResults = true;
+    // Apple's engine ignores continuous mode and stops after each phrase; ask
+    // for one phrase at a time and let `onend` re-arm the sentinel instantly.
+    rec.continuous = !apple;
+    rec.interimResults = !apple;
     rec.lang = 'en-US';
 
     rec.onstart = () => {
@@ -296,12 +349,37 @@ class ZoeBackgroundListener {
     rec.onerror = (event: SpeechRecognitionErrorEvent) => {
       const err = event.error;
       zoeDebugSpeechError('wake-word', err, 'global hands-free sentinel');
+
       if (err === 'not-allowed' || err === 'service-not-allowed') {
+        // Safari raises `service-not-allowed` transiently when a previous
+        // session has not fully torn down, or while the page still owns the
+        // microphone. Free the mic and retry a bounded number of times before
+        // reporting a real, plain-language failure.
+        this.recognition = null;
+        if (apple && this.permissionRetries < 3) {
+          this.permissionRetries += 1;
+          void audioRouter.releaseMic?.();
+          this.scheduleRestart(600 * this.permissionRetries);
+          return;
+        }
         this.enabled = false;
+        this.lastError =
+          err === 'not-allowed'
+            ? 'Microphone access is blocked for this site. Allow the microphone in your browser settings, then switch hands-free on again.'
+            : 'This browser would not start speech recognition. On iPhone or iPad, allow Speech Recognition in Settings > Safari, keep this tab in front, and try again.';
         this.setState('error');
         zoeDebugLog('error', `wake word blocked: ${err}`);
         return;
       }
+
+      if (err === 'audio-capture') {
+        this.recognition = null;
+        this.lastError = 'No microphone was found. Connect or select an input device on this page.';
+        this.scheduleRestart(2000);
+        return;
+      }
+
+      // Everything else (no-speech, network, aborted) is routine on phones.
       this.recognition = null;
       this.scheduleRestart(err === 'no-speech' ? 300 : 1200);
     };
@@ -309,7 +387,9 @@ class ZoeBackgroundListener {
     rec.onend = () => {
       releaseSpeechRecognition('wake-word', rec);
       this.recognition = null;
-      if (this.enabled) this.scheduleRestart();
+      // Apple ends the session after every phrase — that is normal, not a
+      // failure. Re-arm quickly so "hey Zoe" keeps working on iPhone/iPad.
+      if (this.enabled) this.scheduleRestart(apple ? 250 : 700);
       else this.setState('off');
     };
 

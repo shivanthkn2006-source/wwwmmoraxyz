@@ -21,6 +21,7 @@ import GuidedTour from '@/components/onboarding/GuidedTour';
 import ZoeGlobalMount from '@/components/zoe/ZoeGlobalMount';
 import GlobalAudioQuickConnect from '@/components/audio/GlobalAudioQuickConnect';
 import ZoeVoiceIntentHost from '@/components/zoe/ZoeVoiceIntentHost';
+import ZoeGreetingFilm from '@/components/zoe/ZoeGreetingFilm';
 
 
 
@@ -54,6 +55,7 @@ function useThermalWatchdog() {
 }
 
 function PlatformServices() {
+  
   useVoiceEngine();
   useThermalWatchdog();
   // Pre-notice cue + toast a few minutes before every Zoe's DHF unlock.
@@ -111,6 +113,12 @@ export const PlatformLayout = ({ children }: { children: React.ReactNode }) => (
     {/* Zoe's orb — one mount for the whole platform, crash-isolated. */}
     <AppErrorBoundary moduleName="platform:zoe-orb" severity="low" fallback={null}>
       <ZoeGlobalMount />
+    </AppErrorBoundary>
+
+    {/* First-launch greeting film (full screen, click to shrink). Own overlay:
+        Home / feed / loops / dock trees are never touched. */}
+    <AppErrorBoundary moduleName="platform:zoe-greeting-film" severity="low" fallback={null}>
+      <ZoeGreetingFilm />
     </AppErrorBoundary>
   </>
 );

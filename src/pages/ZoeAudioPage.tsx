@@ -7,6 +7,7 @@ import {
   wakeWordCapability,
   type WakeWordState,
 } from '@/services/ZoeBackgroundListener';
+import { isZoeAudioEnabled, setZoeAudioEnabled } from '@/lib/zoeAudioPreference';
 
 /** Best-supported headsets for the M'Mora / Zoe two-way voice link. */
 const SUPPORTED_HEADSETS = [
@@ -108,6 +109,7 @@ export const ZoeAudioPage: React.FC = () => {
 
   const [testPlaying, setTestPlaying] = useState<boolean>(false);
   const [wakeState, setWakeState] = useState<WakeWordState>(zoeBackgroundListener.getState());
+  const [zoeAudioOn, setZoeAudioOn] = useState<boolean>(() => isZoeAudioEnabled());
   const audioTestRef = useRef<HTMLAudioElement | null>(null);
   const sinkElementRef = useRef<HTMLAudioElement | null>(null);
   const wakeCap = wakeWordCapability();
@@ -285,6 +287,30 @@ export const ZoeAudioPage: React.FC = () => {
         </div>
       </section>
 
+      {/* Master switch — Zoe audio is on by default; this page only turns it off */}
+      <section className="bg-card border border-border rounded-xl p-6 space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold">Zoe audio</h2>
+            <p className="text-sm text-muted-foreground">
+              On by default whenever you open M&rsquo;Mora — your headphones are connected and Zoe can speak and
+              listen straight away. Switch it off here if you would rather keep her quiet.
+            </p>
+          </div>
+          <button
+            data-testid="zoe-audio-master-toggle"
+            onClick={() => {
+              const next = !zoeAudioOn;
+              setZoeAudioOn(next);
+              setZoeAudioEnabled(next);
+            }}
+            className="px-4 py-2 border border-border hover:bg-muted text-xs font-semibold rounded-lg transition"
+          >
+            {zoeAudioOn ? 'Turn Zoe audio off' : 'Turn Zoe audio on'}
+          </button>
+        </div>
+      </section>
+
       {/* Hands-free wake word */}
       <section className="bg-card border border-border rounded-xl p-6 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -319,6 +345,12 @@ export const ZoeAudioPage: React.FC = () => {
           </div>
         </div>
         <p className="text-sm text-muted-foreground">{wakeCap.reason}</p>
+        {wakeState === 'error' && (
+          <p data-testid="wake-word-error" className="text-sm text-foreground border border-border rounded-lg p-3">
+            {zoeBackgroundListener.getLastError() ??
+              'Zoe could not start listening on this device. Check the microphone permission and try again.'}
+          </p>
+        )}
       </section>
 
       {/* Pairing guide */}
