@@ -11,7 +11,7 @@ import { useEffect, useRef, useCallback, useState } from 'react';
 import { useAuth } from '@/lib/auth';
 import { useLocation } from 'react-router-dom';
 import { playActivationChime, logSoundError, canPlayActivationSound } from '@/utils/zoeActivationSound';
-import { speakAsZoe, initializeAssistantVoices, setCurrentAssistant } from '@/utils/assistantVoice';
+import { initializeAssistantVoices, setCurrentAssistant } from '@/utils/assistantVoice';
 import { supabase } from '@/integrations/supabase/client';
 import { isSoundSuppressed } from '@/lib/platformPurge';
 

@@ -21,6 +21,7 @@ import GuidedTour from '@/components/onboarding/GuidedTour';
 import ZoeGlobalMount from '@/components/zoe/ZoeGlobalMount';
 import GlobalAudioQuickConnect from '@/components/audio/GlobalAudioQuickConnect';
 import ZoeVoiceIntentHost from '@/components/zoe/ZoeVoiceIntentHost';
+import ZoeGreetingFilm from '@/components/zoe/ZoeGreetingFilm';
 
 
 
