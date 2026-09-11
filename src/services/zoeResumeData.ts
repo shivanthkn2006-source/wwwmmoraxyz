@@ -20,14 +20,16 @@ export async function buildResumeDataForUser(userId?: string): Promise<ResumeDat
   if (userId) {
     const { data: profile } = await supabase
       .from('profiles')
-      .select('display_name, username, bio, location, contact_email')
+      .select('display_name, real_name, username, bio, city, contact_email, job_title, profession, organization')
       .eq('user_id', userId)
       .maybeSingle();
     if (profile) {
-      data.name = profile.display_name || profile.username || undefined;
+      data.name = profile.real_name || profile.display_name || profile.username || undefined;
       data.summary = profile.bio || undefined;
-      data.location = profile.location || undefined;
-      data.email = (profile as { contact_email?: string }).contact_email || undefined;
+      data.location = profile.city || undefined;
+      data.email = profile.contact_email || undefined;
+      data.title = profile.job_title || profile.profession || undefined;
+      if (profile.organization) data.experience = `${data.title ?? 'Role'} — ${profile.organization}`;
     }
   }
 
