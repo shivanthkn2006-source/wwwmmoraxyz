@@ -54,7 +54,11 @@ export const ZoeGreetingFilm: React.FC = () => {
 
   // Decide once per session whether the film should run at all.
   useEffect(() => {
-    console.warn('[greeting] gate', { user: user?.id, excluded, seen: user?.id ? hasSeenZoeGreeting(user.id) : null });
+    (window as unknown as Record<string, unknown>).__greetMark = {
+      user: user?.id ?? null,
+      excluded,
+      seen: user?.id ? hasSeenZoeGreeting(user.id) : null,
+    };
     if (!user?.id || excluded) return;
     if (hasSeenZoeGreeting(user.id)) return;
     const t = setTimeout(() => setOpen(true), 400);
