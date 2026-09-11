@@ -349,12 +349,37 @@ class ZoeBackgroundListener {
     rec.onerror = (event: SpeechRecognitionErrorEvent) => {
       const err = event.error;
       zoeDebugSpeechError('wake-word', err, 'global hands-free sentinel');
+
       if (err === 'not-allowed' || err === 'service-not-allowed') {
+        // Safari raises `service-not-allowed` transiently when a previous
+        // session has not fully torn down, or while the page still owns the
+        // microphone. Free the mic and retry a bounded number of times before
+        // reporting a real, plain-language failure.
+        this.recognition = null;
+        if (apple && this.permissionRetries < 3) {
+          this.permissionRetries += 1;
+          void audioRouter.releaseMic?.();
+          this.scheduleRestart(600 * this.permissionRetries);
+          return;
+        }
         this.enabled = false;
+        this.lastError =
+          err === 'not-allowed'
+            ? 'Microphone access is blocked for this site. Allow the microphone in your browser settings, then switch hands-free on again.'
+            : 'This browser would not start speech recognition. On iPhone or iPad, allow Speech Recognition in Settings > Safari, keep this tab in front, and try again.';
         this.setState('error');
         zoeDebugLog('error', `wake word blocked: ${err}`);
         return;
       }
+
+      if (err === 'audio-capture') {
+        this.recognition = null;
+        this.lastError = 'No microphone was found. Connect or select an input device on this page.';
+        this.scheduleRestart(2000);
+        return;
+      }
+
+      // Everything else (no-speech, network, aborted) is routine on phones.
       this.recognition = null;
       this.scheduleRestart(err === 'no-speech' ? 300 : 1200);
     };
