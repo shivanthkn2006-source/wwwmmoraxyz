@@ -66,7 +66,7 @@ function PlatformServices() {
 }
 
 export const PlatformLayout = ({ children }: { children: React.ReactNode }) => (
-  <>
+  <ZoeAgentProvider>
     {/* Services are crash-isolated: a recognizer failure can never blank the app. */}
     <AppErrorBoundary moduleName="platform:services" severity="low" fallback={null}>
       <PlatformServices />
