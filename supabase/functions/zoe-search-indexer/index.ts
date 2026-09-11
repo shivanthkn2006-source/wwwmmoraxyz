@@ -383,7 +383,7 @@ async function loadCanonical(db: ReturnType<typeof createClient>, job: QueueRow)
 
 
 async function enqueueBackfill(db: ReturnType<typeof createClient>, userId: string) {
-  const [profiles, posts, chats, memories, dhfPosts, dhfVideos, growthCards, predictions, goals, dms, comments, visuals] = await Promise.all([
+  const [profiles, posts, chats, memories, dhfPosts, dhfVideos, growthCards, predictions, goals, dms, comments, visuals, dates, attachments, lifeFacts] = await Promise.all([
     db.from('profiles').select('user_id'),
     db.from('posts').select('id,user_id,media_type,content'),
     db.from('zoe_infinity_messages').select('id,user_id').eq('user_id', userId),
