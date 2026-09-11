@@ -86,7 +86,14 @@ export function extractFacts(text: string): Fact[] {
     if (!m) continue;
     const value = clean(m[2] ?? m[1] ?? '');
     if (value.length < 2) continue;
-    const key = p.category === 'people' && m[2] ? clean(m[1]).toLowerCase() : p.key;
+    // Two-capture patterns name their own key: "my brother is Sam" keys on
+    // `brother`, "my favourite drink is chai" keys on `favourite drink`.
+    const key =
+      p.category === 'people' && m[2]
+        ? clean(m[1]).toLowerCase()
+        : p.key === 'favourite' && m[2]
+          ? `favourite ${clean(m[1]).toLowerCase()}`
+          : p.key;
     facts.push({ category: p.category, fact_key: key, fact_value: value, confidence: p.confidence });
   }
 
