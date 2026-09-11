@@ -126,6 +126,7 @@ export const ZoeGreetingFilm: React.FC = () => {
         muted={false}
         controls={false}
         onEnded={dismiss}
+        onCanPlay={handleCanPlay}
         onError={handleError}
         onClick={() => setPip((v) => !v)}
         className={pip ? 'h-full w-full object-cover' : 'h-full w-full object-contain'}
