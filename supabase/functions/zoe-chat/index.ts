@@ -843,7 +843,17 @@ ${cortexPromptAddition}`;
           return [];
         })
       : Promise.resolve([]);
-    const [hits, webHits] = await Promise.all([recallPromise, webPromise]);
+    // TIMELINE RECALL — "what was I doing last week", "where was I on Tuesday",
+    // "whose birthday is coming up". Semantic recall cannot answer a date
+    // range, so the member's own history for the window is pulled alongside it.
+    const timelinePromise = buildLifeTimelineBlock(authHeader || '', String(lastUserMessage))
+      .catch((timelineError) => {
+        console.warn('[Zoe] timeline recall skipped:', timelineError instanceof Error ? timelineError.message : timelineError);
+        return { block: '', window: null, entryCount: 0 };
+      });
+    const [hits, webHits, timeline] = await Promise.all([recallPromise, webPromise, timelinePromise]);
+    const timelineBlock = timeline.block ? `\n\n${timeline.block}` : '';
+    console.log('[Zoe] timeline recall:', timeline.window?.label ?? 'not needed', timeline.entryCount, 'entries');
     omniRecallCount = hits.length;
     omniRecallBlock = buildOmniRecallBlock(hits);
     omniRecallSources = buildRecallSources(hits);
