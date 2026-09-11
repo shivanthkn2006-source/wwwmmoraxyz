@@ -8,6 +8,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTr
 import { toast } from 'sonner';
 import ProfileContent from '@/components/ProfileContent';
 import IdentityVaultSection from '@/components/profile/IdentityVaultSection';
+import ConversationEmailSection from '@/components/profile/ConversationEmailSection';
 import VoiceCommandsSettings from '@/components/VoiceCommandsSettings';
 import FeedbackCollectionPanel from '@/components/FeedbackCollectionPanel';
 import { supabase } from '@/integrations/supabase/client';
@@ -244,6 +245,7 @@ const ProfilePage = () => {
         </div>
         <ProfileContent />
         <IdentityVaultSection />
+        <ConversationEmailSection />
       </div>
     </div>
   );
