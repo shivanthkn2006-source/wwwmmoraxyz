@@ -8887,6 +8887,51 @@ export type Database = {
         }
         Relationships: []
       }
+      zoe_asset_jobs: {
+        Row: {
+          created_at: string
+          detail: string | null
+          id: string
+          kind: string
+          progress: number
+          prompt: string
+          provider: string | null
+          provider_job_id: string | null
+          result_url: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          detail?: string | null
+          id?: string
+          kind: string
+          progress?: number
+          prompt: string
+          provider?: string | null
+          provider_job_id?: string | null
+          result_url?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          detail?: string | null
+          id?: string
+          kind?: string
+          progress?: number
+          prompt?: string
+          provider?: string | null
+          provider_job_id?: string | null
+          result_url?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       zoe_avatar_profiles: {
         Row: {
           avatar_data: Json
