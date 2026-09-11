@@ -7,14 +7,17 @@
  * can be swapped without touching the player.
  */
 
+import zoeGreetingAsset from '@/assets/video/zoe-greeting.mp4.asset.json';
+
 /** Ordered candidates — the first one that loads is used. */
-export const ZOE_GREETING_SOURCES = ['/videos/zoe-greeting.mp4', '/videos/avatar-zoe-happy.mp4'] as const;
+export const ZOE_GREETING_SOURCES = [zoeGreetingAsset.url, '/videos/avatar-zoe-happy.mp4'] as const;
 
 /** Poster shown while the first frame decodes. */
 export const ZOE_GREETING_POSTER = '/placeholder.svg';
 
-/** Hard ceiling: the overlay always closes itself, even if the file stalls. */
-export const ZOE_GREETING_MAX_MS = 20_000;
+/** Hard ceiling: the overlay always closes itself, even if the file stalls.
+ *  The greeting film runs ~36s, so allow it to finish before the watchdog. */
+export const ZOE_GREETING_MAX_MS = 60_000;
 
 /** Per-account seen marker. */
 export function zoeGreetingSeenKey(userId?: string | null): string {
