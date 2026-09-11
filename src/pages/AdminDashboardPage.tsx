@@ -27,6 +27,7 @@ import {
 
 const ADMIN_LINKS: Array<{ path: string; label: string; hint: string }> = [
   { path: '/admin/overview', label: 'Overview', hint: 'Real counts across the platform' },
+  { path: '/admin/memory', label: "Zoe's memory", hint: 'Preferences, timeline and orb history per member' },
   { path: '/admin/health', label: 'Health', hint: 'Edge functions and uptime' },
   { path: '/admin/invites', label: 'Invites', hint: 'Beta codes and referrals' },
   { path: '/admin/sentinel', label: 'Sentinel', hint: 'Threats, blocks and night watch' },
