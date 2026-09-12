@@ -143,6 +143,8 @@ class ZoeBackgroundListener {
   private permissionRetries = 0;
   private conversationActive = false;
   private generation = 0;
+  private conversationWatchdog: ReturnType<typeof setTimeout> | null = null;
+  private detachGestureRetry: (() => void) | null = null;
 
   constructor() {
     if (typeof window === 'undefined') return;
@@ -156,6 +158,7 @@ class ZoeBackgroundListener {
         this.setState('suspended');
         this.stopRecognition();
       } else if (!document.hidden) {
+        this.permissionRetries = 0;
         void this.startRecognition();
       }
     });
@@ -163,12 +166,50 @@ class ZoeBackgroundListener {
       this.conversationActive = true;
       this.stopRecognition();
       this.setState('suspended');
+      // Safety net: if the conversation layer never reports an end (Safari can
+      // drop its recognition silently), re-arm the sentinel instead of leaving
+      // the user stuck on "suspended".
+      if (this.conversationWatchdog) clearTimeout(this.conversationWatchdog);
+      this.conversationWatchdog = setTimeout(() => {
+        this.conversationWatchdog = null;
+        if (!this.conversationActive) return;
+        this.conversationActive = false;
+        if (this.enabled && !document.hidden) this.scheduleRestart(250);
+      }, 25000);
     });
     window.addEventListener('zoe-handsfree-end', () => {
       this.conversationActive = false;
+      if (this.conversationWatchdog) {
+        clearTimeout(this.conversationWatchdog);
+        this.conversationWatchdog = null;
+      }
       if (this.enabled && !document.hidden) this.scheduleRestart(250);
     });
   }
+
+  /**
+   * Safari only reliably starts speech recognition from a real user gesture.
+   * When it refuses, we wait for the very next tap or key press on the page and
+   * silently re-arm — the user never has to find a switch again.
+   */
+  private armGestureRetry(): void {
+    if (typeof window === 'undefined' || this.detachGestureRetry) return;
+    const retry = () => {
+      this.detachGestureRetry?.();
+      if (!this.enabled) return;
+      this.permissionRetries = 0;
+      this.lastError = null;
+      this.setState('starting');
+      void this.startRecognition();
+    };
+    const events: Array<keyof WindowEventMap> = ['pointerdown', 'touchend', 'keydown'];
+    events.forEach((evt) => window.addEventListener(evt, retry, { once: true }));
+    this.detachGestureRetry = () => {
+      events.forEach((evt) => window.removeEventListener(evt, retry));
+      this.detachGestureRetry = null;
+    };
+  }
+
 
   public wasEnabledBefore(): boolean {
     try {
@@ -263,6 +304,11 @@ class ZoeBackgroundListener {
 
   public disable(): void {
     this.enabled = false;
+    this.detachGestureRetry?.();
+    if (this.conversationWatchdog) {
+      clearTimeout(this.conversationWatchdog);
+      this.conversationWatchdog = null;
+    }
     try {
       localStorage.setItem(STORAGE_KEY, '0');
     } catch {
@@ -270,6 +316,7 @@ class ZoeBackgroundListener {
     }
     void nativeZoeAudioBridge.stop();
     this.stopRecognition();
+
     // Hand the microphone back so a Bluetooth headset stops hissing.
     void audioRouter.releaseMic?.();
     this.setState('off');
@@ -416,25 +463,32 @@ class ZoeBackgroundListener {
       if (err === 'not-allowed' || err === 'service-not-allowed') {
         // Safari raises `service-not-allowed` transiently when a previous
         // session has not fully torn down, or while the page still owns the
-        // microphone. Free the mic and retry a bounded number of times before
-        // reporting a real, plain-language failure.
+        // microphone. Free the mic and retry quickly; if Safari still refuses,
+        // stay switched on and re-arm on the user's very next tap.
         this.recognition = null;
-        if (apple && this.permissionRetries < 3) {
+        if (apple && this.permissionRetries < 6) {
           this.permissionRetries += 1;
           void audioRouter.releaseMic?.();
           this.setState('starting');
-          this.scheduleRestart(750 * this.permissionRetries);
+          this.scheduleRestart(300 * this.permissionRetries);
+          return;
+        }
+        if (err === 'service-not-allowed' || apple) {
+          this.lastError =
+            'Safari paused listening. Tap anywhere on this page and Zoe starts listening again — no need to switch anything off.';
+          this.setState('error');
+          this.armGestureRetry();
+          zoeDebugLog('error', `wake word paused by browser: ${err}`);
           return;
         }
         this.enabled = false;
         this.lastError =
-          err === 'not-allowed'
-            ? 'Microphone access is blocked for this site. Allow the microphone in your browser settings, then switch hands-free on again.'
-            : 'This browser would not start speech recognition. On iPhone or iPad, allow Speech Recognition in Settings > Safari, keep this tab in front, and try again.';
+          'Microphone access is blocked for this site. Allow the microphone in your browser settings, then switch hands-free on again.';
         this.setState('error');
         zoeDebugLog('error', `wake word blocked: ${err}`);
         return;
       }
+
 
       if (err === 'audio-capture') {
         this.recognition = null;
