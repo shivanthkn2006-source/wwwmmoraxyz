@@ -14,7 +14,7 @@ const UNMUTE_RE = /(?:^|\b)(?:zoe|zoey)\s+wake(?:\s+up)?(?:\b|$)|(?:^|\b)wake\s+
 const MUTE_RE = /(?:^|\b)(?:zoe\s+)?(?:mute|mute\s+yourself|stop\s+listening|don'?t\s+listen|deaf\s+mode)(?:\b|$)/;
 const MUTED_CHECK_IN_RE = /(?:^|\b)(?:zoe|zoey)(?:\s*,?\s*(?:are\s+)?you\s+there|\s*,?\s*can\s+you\s+hear\s+me)(?:\b|$)/;
 const YES_RE = /^(?:yes|yeah|yep|please|please\s+do|unmute|unmute\s+now|go\s+ahead)$/;
-const NO_RE = /^(?:no|nope|stay\s+muted|keep\s+muted|not\s+yet)$/;
+const NO_RE = /^(?:no|nope|not\s+yet)\b|(?:stay|keep|remain)\s+muted\b/;
 
 let muted = false;
 let awaitingUnmuteConfirmation = false;
