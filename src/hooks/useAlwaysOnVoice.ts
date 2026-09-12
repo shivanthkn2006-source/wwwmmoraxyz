@@ -44,7 +44,6 @@ export const useAlwaysOnVoice = () => {
   
   const recognitionRef = useRef<any>(null);
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const keepAliveIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const isEnabledRef = useRef(true);
   const processingRef = useRef(false);
   const lastTranscriptRef = useRef('');
@@ -66,39 +65,6 @@ export const useAlwaysOnVoice = () => {
       silenceTimerRef.current = null;
     }
   }, []);
-
-  // Clear keep-alive interval
-  const clearKeepAlive = useCallback(() => {
-    if (keepAliveIntervalRef.current) {
-      clearInterval(keepAliveIntervalRef.current);
-      keepAliveIntervalRef.current = null;
-    }
-  }, []);
-
-  // Start aggressive keep-alive interval to prevent browser from killing recognition
-  const startKeepAlive = useCallback((recognition: any) => {
-    clearKeepAlive();
-    
-    // Aggressive ping every 2 seconds - prevent 5-second timeout
-    keepAliveIntervalRef.current = setInterval(() => {
-      if (recognition && isEnabledRef.current && !processingRef.current) {
-        const now = Date.now();
-        const timeSinceActivity = now - lastActivityRef.current;
-        
-        // If no activity for 4 seconds, force restart
-        if (timeSinceActivity > 4000) {
-          console.log('[AlwaysOn] Keep-alive: forcing restart after', timeSinceActivity, 'ms');
-          try {
-            recognition.stop();
-            // onend will trigger auto-restart
-          } catch (e) {
-            // Ignore
-          }
-        }
-        lastActivityRef.current = now;
-      }
-    }, 2000);
-  }, [clearKeepAlive]);
 
   // Get Zoe's response
   const getZoeResponse = useCallback(async (userText: string) => {
@@ -142,9 +108,9 @@ export const useAlwaysOnVoice = () => {
       return;
     }
     // A turn that never finished (network stall, killed speech) used to jam
-    // every later question in silence. Anything older than 45s is stale.
+    // every later question in silence. Anything older than 15s is stale.
     if (processingRef.current) {
-      if (Date.now() - processingStartedRef.current < 45000) return;
+      if (Date.now() - processingStartedRef.current < 15000) return;
       console.warn('[AlwaysOn] Clearing a stuck turn and answering the new one');
     }
 
@@ -354,7 +320,6 @@ export const useAlwaysOnVoice = () => {
     // Stop existing recognition
     stopSpeechRecognition(recognitionRef.current);
     recognitionRef.current = null;
-    clearKeepAlive();
 
     const recognition = createSpeechRecognition({
       continuous: true,
@@ -373,7 +338,6 @@ export const useAlwaysOnVoice = () => {
       lastActivityRef.current = Date.now();
       restartCountRef.current = 0; // Reset restart count on successful start
       setState(prev => ({ ...prev, isListening: true, error: null }));
-      startKeepAlive(recognition);
     };
 
     recognition.onresult = (event: any) => {
@@ -420,11 +384,12 @@ export const useAlwaysOnVoice = () => {
             try { recognition.stop(); } catch(e) {}
             getZoeResponse(text);
           }
-        }, finalTranscript ? 250 : 900);
+        }, finalTranscript ? 180 : 450);
       }
     };
 
     recognition.onerror = (event: any) => {
+      if (recognitionRef.current !== recognition) return;
       // Ignore common non-critical errors
       if (['no-speech', 'aborted'].includes(event.error)) {
         console.log('[AlwaysOn] Expected event:', event.error);
@@ -435,8 +400,9 @@ export const useAlwaysOnVoice = () => {
 
     recognition.onend = () => {
       releaseSpeechRecognition('voice-input', recognition);
+      if (recognitionRef.current !== recognition) return;
+      recognitionRef.current = null;
       setState(prev => ({ ...prev, isListening: false }));
-      clearKeepAlive();
       
       // Auto-restart if enabled and not processing - IMMEDIATE restart
       if (isEnabledRef.current && !processingRef.current && !isZoeSpeaking()) {
@@ -456,8 +422,10 @@ export const useAlwaysOnVoice = () => {
           return;
         }
         
-        // Very fast restart - 50ms to minimize gap
-        const restartDelay = 50;
+        // WebKit needs time to release its speech service before a new start.
+        // A zero/50ms loop is treated as contention and becomes
+        // service-not-allowed on Safari and iOS Chrome.
+        const restartDelay = 350;
         console.log(`[AlwaysOn] Auto-restarting in ${restartDelay}ms (restart #${restartCountRef.current})`);
         setTimeout(() => startListening(), restartDelay);
       }
@@ -465,16 +433,17 @@ export const useAlwaysOnVoice = () => {
 
     try {
       claimSpeechRecognition('voice-input', recognition);
-      recognition.start();
       recognitionRef.current = recognition;
+      recognition.start();
       console.log('[AlwaysOn] Recognition started');
     } catch (err) {
       releaseSpeechRecognition('voice-input', recognition);
+      if (recognitionRef.current === recognition) recognitionRef.current = null;
       console.error('[AlwaysOn] Start error:', err);
       // Try again after a brief delay
       setTimeout(() => startListening(), 500);
     }
-  }, [clearSilenceTimer, clearKeepAlive, startKeepAlive, getZoeResponse]);
+  }, [clearSilenceTimer, getZoeResponse]);
 
   // Enable always-on voice
   const enable = useCallback(async () => {
@@ -498,7 +467,6 @@ export const useAlwaysOnVoice = () => {
   const disable = useCallback(() => {
     isEnabledRef.current = false;
     clearSilenceTimer();
-    clearKeepAlive();
     restartCountRef.current = 0;
 
     if (recognitionRef.current) {
@@ -521,20 +489,19 @@ export const useAlwaysOnVoice = () => {
     window.dispatchEvent(new CustomEvent('zoe-handsfree-end'));
 
     console.log('[AlwaysOn] Disabled');
-  }, [clearSilenceTimer, clearKeepAlive]);
+  }, [clearSilenceTimer]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       isEnabledRef.current = false;
       clearSilenceTimer();
-      clearKeepAlive();
       if (recognitionRef.current) {
         releaseSpeechRecognition('voice-input', recognitionRef.current);
         try { recognitionRef.current.stop(); } catch(e) {}
       }
     };
-  }, [clearSilenceTimer, clearKeepAlive]);
+  }, [clearSilenceTimer]);
 
   return {
     ...state,

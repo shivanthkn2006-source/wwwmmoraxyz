@@ -840,7 +840,9 @@ export const GlobalZoeAssistant = ({ config = DEFAULT_CONFIG }: { config?: Parti
         await alwaysOnVoice.processUtterance(spokenCommand);
       } else if (event.detail?.source !== 'silent') {
         const firstName = (user?.user_metadata?.display_name as string | undefined)?.split(' ')[0] ?? null;
-        const greetingLine = buildWakeGreeting(location.pathname, firstName);
+        // Wake acknowledgement must be immediate. Rich page/location context
+        // belongs in the answer to the next question, not in a long wake line.
+        const greetingLine = firstName ? `I'm here, ${firstName}.` : "I'm here.";
         // Keep the spoken greeting in the same history the orb chat shows.
         void recordVoiceTurn('assistant', greetingLine, user?.id);
         await speakResponse(greetingLine, 'calm');

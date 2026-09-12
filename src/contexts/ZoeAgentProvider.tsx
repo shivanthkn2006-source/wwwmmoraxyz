@@ -19,6 +19,7 @@ import { recordVoiceTurn } from '@/services/zoeVoiceHistory';
 import { resolvePageTitle } from '@/config/siteMap';
 import { buildPresenceContext } from '@/services/zoePresence';
 import { describeAmbientContext } from '@/services/zoe-agent/ambientContext';
+import { reserveSpeechRecognition, releaseSpeechRecognition } from '@/utils/micPermissionManager';
 import {
   ZOE_TOOL_DEFINITIONS,
   executeZoeTool,
@@ -195,6 +196,8 @@ export const ZoeAgentProvider = ({
     audioRouter.duckAudio?.(false);
     try { wsRef.current?.close(); } catch { /* already gone */ }
     wsRef.current = null;
+    void audioRouter.releaseMic();
+    releaseSpeechRecognition('realtime-agent');
     setIsActive(false);
     setStatus('idle');
   }, []);
@@ -227,6 +230,10 @@ export const ZoeAgentProvider = ({
     setStatus('connecting');
 
     try {
+      // This mode is opt-in. Reserve the single microphone before opening its
+      // MediaStream so it cannot overlap the wake sentinel or conversation STT.
+      reserveSpeechRecognition('realtime-agent');
+      window.dispatchEvent(new CustomEvent('zoe-handsfree-start'));
       const { data: tokenData, error: tokenError } = await supabase.functions.invoke('zoe-agent-token', {
         body: {},
       });
@@ -235,14 +242,8 @@ export const ZoeAgentProvider = ({
       }
       emailRef.current = tokenData.email ?? emailRef.current ?? currentUserEmail ?? null;
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          deviceId: audioRouter.getActiveInputDeviceId?.() || undefined,
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        },
-      });
+      const stream = await audioRouter.setInputDevice(audioRouter.getActiveInputDeviceId?.() || 'default');
+      if (!stream) throw new Error('Zoe could not open the selected microphone.');
 
       const ws = new WebSocket(AGENT_WS_URL, ['token', tokenData.token]);
       ws.binaryType = 'arraybuffer';
@@ -351,13 +352,14 @@ export const ZoeAgentProvider = ({
       };
 
       ws.onclose = () => {
-        stream.getTracks().forEach((t) => t.stop());
         teardown();
+        window.dispatchEvent(new CustomEvent('zoe-handsfree-end'));
       };
     } catch (err) {
       setLastError(err instanceof Error ? err.message : 'Zoe could not start listening.');
       setStatus('error');
       teardown();
+      window.dispatchEvent(new CustomEvent('zoe-handsfree-end'));
     }
   }, [currentUserEmail, generateSystemPrompt, handleFunctionCall, log, playPcm, send, teardown]);
 

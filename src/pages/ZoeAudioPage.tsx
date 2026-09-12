@@ -110,6 +110,7 @@ export const ZoeAudioPage: React.FC = () => {
 
   const [testPlaying, setTestPlaying] = useState<boolean>(false);
   const [wakeState, setWakeState] = useState<WakeWordState>(zoeBackgroundListener.getState());
+  const [wakeError, setWakeError] = useState<string | null>(zoeBackgroundListener.getLastError());
   const [zoeAudioOn, setZoeAudioOn] = useState<boolean>(() => isZoeAudioEnabled());
   const [muted, setMuted] = useState<boolean>(() => isZoeMuted());
   const audioTestRef = useRef<HTMLAudioElement | null>(null);
@@ -122,7 +123,10 @@ export const ZoeAudioPage: React.FC = () => {
     void audioRouter.initialize(sinkElementRef.current);
   }, []);
 
-  useEffect(() => zoeBackgroundListener.onStateChange(setWakeState), []);
+  useEffect(() => zoeBackgroundListener.onStateChange((next) => {
+    setWakeState(next);
+    setWakeError(zoeBackgroundListener.getLastError());
+  }), []);
   useEffect(() => {
     const onMute = (event: Event) => setMuted(Boolean((event as CustomEvent<{ muted?: boolean }>).detail?.muted));
     window.addEventListener('zoe-mute-changed', onMute);
@@ -345,7 +349,10 @@ export const ZoeAudioPage: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="p-3 bg-background border border-border rounded-lg">
             <span className="text-xs text-muted-foreground uppercase font-mono">Wake word</span>
-            <p className="text-sm font-semibold mt-1 capitalize">{wakeState}</p>
+            <p className="text-sm font-semibold mt-1 capitalize">
+              {wakeState === 'starting' ? 'Starting — keep this page open' :
+                wakeState === 'suspended' ? 'Paused — return to this page' : wakeState}
+            </p>
           </div>
           <div className="p-3 bg-background border border-border rounded-lg">
             <span className="text-xs text-muted-foreground uppercase font-mono">Pocket / locked screen</span>
@@ -361,7 +368,7 @@ export const ZoeAudioPage: React.FC = () => {
         <p className="text-sm text-muted-foreground">{wakeCap.reason}</p>
         {wakeState === 'error' && (
           <p data-testid="wake-word-error" className="text-sm text-foreground border border-border rounded-lg p-3">
-            {zoeBackgroundListener.getLastError() ??
+            {wakeError ??
               'Zoe could not start listening on this device. Check the microphone permission and try again.'}
           </p>
         )}
