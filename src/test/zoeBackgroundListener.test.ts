@@ -12,7 +12,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 const ensureMicPermission = vi.fn(async () => true);
 const interruptZoe = vi.fn();
-const speakAsZoe = vi.fn(async () => undefined);
+const speakAsZoe = vi.fn(async (_text: string) => undefined);
 
 vi.mock('@/services/AudioRouterService', () => ({
   audioRouter: {
@@ -43,6 +43,9 @@ class FakeRecognition {
   stop() { this.started = false; }
   say(transcript: string) {
     this.onresult?.({ resultIndex: 0, results: [[{ transcript }]] });
+  }
+  fail(error: string) {
+    this.onerror?.({ error });
   }
 }
 
@@ -88,12 +91,22 @@ describe('zoeBackgroundListener', () => {
   it('fires the same activation event a headset button fires on "hey zoe"', async () => {
     const { zoeBackgroundListener } = await import('@/services/ZoeBackgroundListener');
     await zoeBackgroundListener.enable();
-    const seen: string[] = [];
-    const onActivate = () => seen.push('activate');
+    const seen: Array<{ command?: string | null }> = [];
+    const onActivate = (event: Event) => seen.push((event as CustomEvent<{ command?: string | null }>).detail);
     window.addEventListener('zoe-orb-activate', onActivate);
     FakeRecognition.instances.at(-1)?.say('hey zoe');
     window.removeEventListener('zoe-orb-activate', onActivate);
-    expect(seen).toEqual(['activate']);
+    expect(seen).toEqual([{ source: 'wake-word', transcript: 'hey zoe', command: null }]);
+    expect(zoeBackgroundListener.getState()).toBe('triggered');
+    zoeBackgroundListener.disable();
+  });
+
+  it('ignores a stale browser error after a successful wake handoff', async () => {
+    const { zoeBackgroundListener } = await import('@/services/ZoeBackgroundListener');
+    await zoeBackgroundListener.enable();
+    const recognition = FakeRecognition.instances.at(-1);
+    recognition?.say('hey zoe');
+    recognition?.fail('aborted');
     expect(zoeBackgroundListener.getState()).toBe('triggered');
     zoeBackgroundListener.disable();
   });
