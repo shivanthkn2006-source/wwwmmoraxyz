@@ -12,11 +12,25 @@ describe('mute gate', () => {
     expect(gateTranscript('Zoe, mute')).toBe('mute');
   });
 
-  it('drops everything while muted — questions, commands, even "hey Zoe"', () => {
+  it('drops ordinary speech while muted, including "hey Zoe"', () => {
     setZoeMuted(true);
     expect(gateTranscript('hey Zoe')).toBe('muted-drop');
     expect(gateTranscript('open my messages')).toBe('muted-drop');
     expect(gateTranscript('what is the news')).toBe('muted-drop');
+  });
+
+  it('answers a muted check-in locally and unmutes only after confirmation', () => {
+    setZoeMuted(true);
+    expect(gateTranscript('Zoe, you there?')).toBe('ask-unmute');
+    expect(isZoeMuted()).toBe(true);
+    expect(gateTranscript('yes')).toBe('unmute');
+  });
+
+  it('stays muted when the user declines the confirmation', () => {
+    setZoeMuted(true);
+    expect(gateTranscript('Zoe are you there')).toBe('ask-unmute');
+    expect(gateTranscript('no, stay muted')).toBe('keep-muted');
+    expect(isZoeMuted()).toBe(true);
   });
 
   it('only "Zoe wake" lifts the mute', () => {

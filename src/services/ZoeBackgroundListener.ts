@@ -18,7 +18,7 @@ import { HANDS_FREE_WAKE_PHRASES, HANDS_FREE_STOP_PHRASES, findHandsFreePhrase, 
 import { zoeDebugLog, zoeDebugSetState, zoeDebugSpeechError, zoeDebugSpeechStart, zoeDebugSpeechStop } from '@/features/zoe-handsfree/debugBus';
 import { nativeZoeAudioBridge } from '@/services/NativeZoeAudioBridge';
 import { claimSpeechRecognition, releaseSpeechRecognition } from '@/utils/micPermissionManager';
-import { isWakeCommand, isZoeMuted, setZoeMuted } from '@/features/zoe-handsfree/muteGate';
+import { gateTranscript, isZoeMuted, setZoeMuted } from '@/features/zoe-handsfree/muteGate';
 
 export type WakeWordState = 'off' | 'starting' | 'listening' | 'triggered' | 'suspended' | 'error';
 
@@ -327,7 +327,16 @@ class ZoeBackgroundListener {
       // DHF, or reach a backend. Only the explicit “Zoe wake” phrase is
       // accepted. Any words after it become the first resumed command.
       if (isZoeMuted()) {
-        if (!isWakeCommand(transcript)) {
+        const muteDecision = gateTranscript(transcript);
+        if (muteDecision === 'ask-unmute' || muteDecision === 'keep-muted') {
+          const reply = muteDecision === 'ask-unmute'
+            ? 'You told me to mute. Should I unmute?'
+            : 'Okay. I’ll stay muted.';
+          window.dispatchEvent(new CustomEvent('zoe-handsfree-reply', { detail: { text: reply } }));
+          void import('@/utils/zoeVoice').then(({ speakAsZoe }) => speakAsZoe(reply));
+          return;
+        }
+        if (muteDecision !== 'unmute') {
           zoeDebugLog('voice', 'muted — wake listener discarded speech');
           return;
         }

@@ -107,6 +107,16 @@ export const useAlwaysOnVoice = () => {
     // MUTE GATE — while muted, nothing reaches recall, the backend or Deepgram.
     // The only phrase that gets through is "Zoe wake".
     const decision = gateTranscript(userText);
+    if (decision === 'ask-unmute' || decision === 'keep-muted') {
+      const line = decision === 'ask-unmute'
+        ? 'You told me to mute. Should I unmute?'
+        : 'Okay. I’ll stay muted.';
+      window.dispatchEvent(new CustomEvent('zoe-handsfree-reply', { detail: { text: line } }));
+      await new Promise<void>((resolve) => {
+        speakAsZoe(line, undefined, undefined, () => resolve(), () => resolve());
+      });
+      return;
+    }
     if (decision === 'muted-drop') {
       zoeDebugLog('voice', `muted — dropped: ${userText.slice(0, 60)}`);
       return;

@@ -12,6 +12,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 const ensureMicPermission = vi.fn(async () => true);
 const interruptZoe = vi.fn();
+const speakAsZoe = vi.fn(async () => undefined);
 
 vi.mock('@/services/AudioRouterService', () => ({
   audioRouter: {
@@ -20,6 +21,10 @@ vi.mock('@/services/AudioRouterService', () => ({
     applySinkToElement: async () => undefined,
     releaseMic: async () => undefined,
   },
+}));
+
+vi.mock('@/utils/zoeVoice', () => ({
+  speakAsZoe: (...args: unknown[]) => speakAsZoe(...args),
 }));
 
 class FakeRecognition {
@@ -47,6 +52,7 @@ describe('zoeBackgroundListener', () => {
     FakeRecognition.instances = [];
     ensureMicPermission.mockClear();
     interruptZoe.mockClear();
+    speakAsZoe.mockClear();
     (window as unknown as Record<string, unknown>).SpeechRecognition = FakeRecognition;
     localStorage.clear();
   });
@@ -127,6 +133,20 @@ describe('zoeBackgroundListener', () => {
     expect(activated).toBe(1);
     expect(muteGate.isZoeMuted()).toBe(false);
     window.removeEventListener('zoe-orb-activate', onActivate);
+    zoeBackgroundListener.disable();
+  });
+
+  it('answers “Zoe, you there?” without sending the muted question onward', async () => {
+    const muteGate = await import('@/features/zoe-handsfree/muteGate');
+    const { zoeBackgroundListener } = await import('@/services/ZoeBackgroundListener');
+    await zoeBackgroundListener.enable();
+    muteGate.setZoeMuted(true);
+    let activated = 0;
+    window.addEventListener('zoe-orb-activate', () => { activated += 1; }, { once: true });
+    FakeRecognition.instances.at(-1)?.say('Zoe, you there?');
+    await vi.waitFor(() => expect(speakAsZoe).toHaveBeenCalledWith('You told me to mute. Should I unmute?'));
+    expect(activated).toBe(0);
+    expect(muteGate.isZoeMuted()).toBe(true);
     zoeBackgroundListener.disable();
   });
 });
