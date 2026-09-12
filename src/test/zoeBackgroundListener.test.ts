@@ -24,7 +24,7 @@ vi.mock('@/services/AudioRouterService', () => ({
 }));
 
 vi.mock('@/utils/zoeVoice', () => ({
-  speakAsZoe: (...args: unknown[]) => speakAsZoe(...args),
+  speakAsZoe: (text: string) => speakAsZoe(text),
 }));
 
 class FakeRecognition {
