@@ -12206,6 +12206,7 @@ export type Database = {
       calculate_user_points: { Args: { user_uuid: string }; Returns: number }
       calculate_zoe_tone: { Args: { integrity_score: number }; Returns: string }
       can_insert_session: { Args: never; Returns: boolean }
+      can_view_post: { Args: { _post_id: string }; Returns: boolean }
       check_behavioral_shift: { Args: { p_user_id: string }; Returns: Json }
       check_face_login_rate_limit: {
         Args: { p_email: string; p_ip_address?: string }
