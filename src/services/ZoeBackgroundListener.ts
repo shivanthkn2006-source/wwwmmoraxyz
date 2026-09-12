@@ -143,6 +143,8 @@ class ZoeBackgroundListener {
   private permissionRetries = 0;
   private conversationActive = false;
   private generation = 0;
+  private conversationWatchdog: ReturnType<typeof setTimeout> | null = null;
+  private detachGestureRetry: (() => void) | null = null;
 
   constructor() {
     if (typeof window === 'undefined') return;
@@ -156,6 +158,7 @@ class ZoeBackgroundListener {
         this.setState('suspended');
         this.stopRecognition();
       } else if (!document.hidden) {
+        this.permissionRetries = 0;
         void this.startRecognition();
       }
     });
@@ -163,12 +166,50 @@ class ZoeBackgroundListener {
       this.conversationActive = true;
       this.stopRecognition();
       this.setState('suspended');
+      // Safety net: if the conversation layer never reports an end (Safari can
+      // drop its recognition silently), re-arm the sentinel instead of leaving
+      // the user stuck on "suspended".
+      if (this.conversationWatchdog) clearTimeout(this.conversationWatchdog);
+      this.conversationWatchdog = setTimeout(() => {
+        this.conversationWatchdog = null;
+        if (!this.conversationActive) return;
+        this.conversationActive = false;
+        if (this.enabled && !document.hidden) this.scheduleRestart(250);
+      }, 25000);
     });
     window.addEventListener('zoe-handsfree-end', () => {
       this.conversationActive = false;
+      if (this.conversationWatchdog) {
+        clearTimeout(this.conversationWatchdog);
+        this.conversationWatchdog = null;
+      }
       if (this.enabled && !document.hidden) this.scheduleRestart(250);
     });
   }
+
+  /**
+   * Safari only reliably starts speech recognition from a real user gesture.
+   * When it refuses, we wait for the very next tap or key press on the page and
+   * silently re-arm — the user never has to find a switch again.
+   */
+  private armGestureRetry(): void {
+    if (typeof window === 'undefined' || this.detachGestureRetry) return;
+    const retry = () => {
+      this.detachGestureRetry?.();
+      if (!this.enabled) return;
+      this.permissionRetries = 0;
+      this.lastError = null;
+      this.setState('starting');
+      void this.startRecognition();
+    };
+    const events: Array<keyof WindowEventMap> = ['pointerdown', 'touchend', 'keydown'];
+    events.forEach((evt) => window.addEventListener(evt, retry, { once: true }));
+    this.detachGestureRetry = () => {
+      events.forEach((evt) => window.removeEventListener(evt, retry));
+      this.detachGestureRetry = null;
+    };
+  }
+
 
   public wasEnabledBefore(): boolean {
     try {
