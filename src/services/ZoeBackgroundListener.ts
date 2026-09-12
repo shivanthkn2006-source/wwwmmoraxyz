@@ -304,6 +304,11 @@ class ZoeBackgroundListener {
 
   public disable(): void {
     this.enabled = false;
+    this.detachGestureRetry?.();
+    if (this.conversationWatchdog) {
+      clearTimeout(this.conversationWatchdog);
+      this.conversationWatchdog = null;
+    }
     try {
       localStorage.setItem(STORAGE_KEY, '0');
     } catch {
@@ -311,6 +316,7 @@ class ZoeBackgroundListener {
     }
     void nativeZoeAudioBridge.stop();
     this.stopRecognition();
+
     // Hand the microphone back so a Bluetooth headset stops hissing.
     void audioRouter.releaseMic?.();
     this.setState('off');
