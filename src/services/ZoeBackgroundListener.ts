@@ -457,25 +457,32 @@ class ZoeBackgroundListener {
       if (err === 'not-allowed' || err === 'service-not-allowed') {
         // Safari raises `service-not-allowed` transiently when a previous
         // session has not fully torn down, or while the page still owns the
-        // microphone. Free the mic and retry a bounded number of times before
-        // reporting a real, plain-language failure.
+        // microphone. Free the mic and retry quickly; if Safari still refuses,
+        // stay switched on and re-arm on the user's very next tap.
         this.recognition = null;
-        if (apple && this.permissionRetries < 3) {
+        if (apple && this.permissionRetries < 6) {
           this.permissionRetries += 1;
           void audioRouter.releaseMic?.();
           this.setState('starting');
-          this.scheduleRestart(750 * this.permissionRetries);
+          this.scheduleRestart(300 * this.permissionRetries);
+          return;
+        }
+        if (err === 'service-not-allowed' || apple) {
+          this.lastError =
+            'Safari paused listening. Tap anywhere on this page and Zoe starts listening again — no need to switch anything off.';
+          this.setState('error');
+          this.armGestureRetry();
+          zoeDebugLog('error', `wake word paused by browser: ${err}`);
           return;
         }
         this.enabled = false;
         this.lastError =
-          err === 'not-allowed'
-            ? 'Microphone access is blocked for this site. Allow the microphone in your browser settings, then switch hands-free on again.'
-            : 'This browser would not start speech recognition. On iPhone or iPad, allow Speech Recognition in Settings > Safari, keep this tab in front, and try again.';
+          'Microphone access is blocked for this site. Allow the microphone in your browser settings, then switch hands-free on again.';
         this.setState('error');
         zoeDebugLog('error', `wake word blocked: ${err}`);
         return;
       }
+
 
       if (err === 'audio-capture') {
         this.recognition = null;
