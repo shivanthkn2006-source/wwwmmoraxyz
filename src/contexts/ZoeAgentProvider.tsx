@@ -363,7 +363,10 @@ export const ZoeAgentProvider = ({
     }
   }, [currentUserEmail, generateSystemPrompt, handleFunctionCall, log, playPcm, send, teardown]);
 
-  const stopListening = useCallback(() => teardown(), [teardown]);
+  const stopListening = useCallback(() => {
+    teardown();
+    window.dispatchEvent(new CustomEvent('zoe-handsfree-end'));
+  }, [teardown]);
 
   useEffect(() => () => teardown(), [teardown]);
 
