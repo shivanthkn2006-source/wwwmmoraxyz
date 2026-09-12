@@ -91,12 +91,12 @@ describe('zoeBackgroundListener', () => {
   it('fires the same activation event a headset button fires on "hey zoe"', async () => {
     const { zoeBackgroundListener } = await import('@/services/ZoeBackgroundListener');
     await zoeBackgroundListener.enable();
-    const seen: string[] = [];
-    const onActivate = () => seen.push('activate');
+    const seen: Array<{ command?: string | null }> = [];
+    const onActivate = (event: Event) => seen.push((event as CustomEvent<{ command?: string | null }>).detail);
     window.addEventListener('zoe-orb-activate', onActivate);
     FakeRecognition.instances.at(-1)?.say('hey zoe');
     window.removeEventListener('zoe-orb-activate', onActivate);
-    expect(seen).toEqual(['activate']);
+    expect(seen).toEqual([{ source: 'wake-word', transcript: 'hey zoe', command: null }]);
     expect(zoeBackgroundListener.getState()).toBe('triggered');
     zoeBackgroundListener.disable();
   });

@@ -57,6 +57,16 @@ function speechRecognitionCtor(): (new () => MinimalRecognition) | null {
   return w.SpeechRecognition || w.webkitSpeechRecognition || null;
 }
 
+export function commandAfterWakePhrase(transcript: string, wakePhrase: string): string {
+  const normalizedTranscript = normalizeVoicePhrase(transcript);
+  const normalizedWake = normalizeVoicePhrase(wakePhrase);
+  const start = normalizedTranscript.indexOf(normalizedWake);
+  if (start < 0) return '';
+  return `${normalizedTranscript.slice(0, start)} ${normalizedTranscript.slice(start + normalizedWake.length)}`
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 export function isNativeShell(): boolean {
   if (typeof window === 'undefined') return false;
   const cap = (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor;
@@ -377,11 +387,7 @@ class ZoeBackgroundListener {
 
       const wake = findHandsFreePhrase(transcript, HANDS_FREE_WAKE_PHRASES);
       if (wake) {
-        const normalizedTranscript = normalizeVoicePhrase(transcript);
-        const normalizedWake = normalizeVoicePhrase(wake);
-        const command = normalizedTranscript
-          .replace(new RegExp(`(?:^|\\s)${normalizedWake.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:\\s|$)`), 'i')
-          .trim();
+        const command = commandAfterWakePhrase(transcript, wake);
         this.setState('triggered');
         zoeDebugSetState({ hfState: command ? 'processing' : 'wake-detected' });
         zoeDebugLog('wake', `wake phrase "${wake}" (headset)`);
