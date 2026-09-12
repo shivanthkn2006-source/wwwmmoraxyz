@@ -132,6 +132,7 @@ class ZoeBackgroundListener {
   private lastError: string | null = null;
   private permissionRetries = 0;
   private conversationActive = false;
+  private generation = 0;
 
   constructor() {
     if (typeof window === 'undefined') return;
@@ -198,6 +199,9 @@ class ZoeBackgroundListener {
       return false;
     }
     this.enabled = true;
+    // The realtime Deepgram agent is an explicit alternate conversation mode.
+    // It must release its MediaStream before the browser wake sentinel starts.
+    window.dispatchEvent(new CustomEvent('zoe-agent-stop'));
     try {
       localStorage.setItem(STORAGE_KEY, '1');
     } catch {
@@ -268,6 +272,7 @@ class ZoeBackgroundListener {
   }
 
   private stopRecognition(): void {
+    this.generation += 1;
     if (this.restartTimer) {
       clearTimeout(this.restartTimer);
       this.restartTimer = null;
@@ -304,6 +309,7 @@ class ZoeBackgroundListener {
     this.setState('starting');
     const apple = isAppleWebkitSpeech();
     const rec = new Ctor();
+    const generation = ++this.generation;
     // Apple's engine ignores continuous mode and stops after each phrase; ask
     // for one phrase at a time and let `onend` re-arm the sentinel instantly.
     rec.continuous = !apple;
@@ -311,12 +317,16 @@ class ZoeBackgroundListener {
     rec.lang = 'en-US';
 
     rec.onstart = () => {
+      if (generation !== this.generation || this.recognition !== rec) return;
+      this.permissionRetries = 0;
+      this.lastError = null;
       this.setState('listening');
       zoeDebugSetState({ hfState: 'awaiting-wake' });
       zoeDebugSpeechStart('wake-word', 'global hands-free sentinel');
     };
 
     rec.onresult = (event: SpeechRecognitionEvent) => {
+      if (generation !== this.generation || this.recognition !== rec) return;
       let transcript = '';
       for (let i = event.resultIndex; i < event.results.length; i++) {
         transcript += event.results[i][0]?.transcript ?? '';
@@ -393,6 +403,7 @@ class ZoeBackgroundListener {
     };
 
     rec.onerror = (event: SpeechRecognitionErrorEvent) => {
+      if (generation !== this.generation || this.recognition !== rec) return;
       const err = event.error;
       zoeDebugSpeechError('wake-word', err, 'global hands-free sentinel');
 
@@ -405,7 +416,8 @@ class ZoeBackgroundListener {
         if (apple && this.permissionRetries < 3) {
           this.permissionRetries += 1;
           void audioRouter.releaseMic?.();
-          this.scheduleRestart(600 * this.permissionRetries);
+          this.setState('starting');
+          this.scheduleRestart(750 * this.permissionRetries);
           return;
         }
         this.enabled = false;
@@ -432,10 +444,11 @@ class ZoeBackgroundListener {
 
     rec.onend = () => {
       releaseSpeechRecognition('wake-word', rec);
+      if (generation !== this.generation || this.recognition !== rec) return;
       this.recognition = null;
       // Apple ends the session after every phrase — that is normal, not a
       // failure. Re-arm quickly so "hey Zoe" keeps working on iPhone/iPad.
-      if (this.enabled) this.scheduleRestart(apple ? 250 : 700);
+      if (this.enabled) this.scheduleRestart(apple ? 500 : 700);
       else this.setState('off');
     };
 
