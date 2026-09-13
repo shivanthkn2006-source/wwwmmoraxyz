@@ -16,6 +16,10 @@ import { publicGuard } from '../_shared/public-guard.ts';
 import {
   generateMotivation, pickMotivationFallback, themeFor, sceneFor, paletteFor,
 } from '../_shared/motivation-content.ts';
+import { createPacer, enqueueRetries, claimQueued, settleQueued } from '../_shared/batch-pacer.ts';
+
+const JOB_TYPE = 'zoe-motivation';
+
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
