@@ -34,6 +34,10 @@ const ALIASES: Record<string, string> = {
   telegu: 'telugu',
 };
 
+const PHRASE_ALIASES: Record<string, string> = {
+  'ketty perry': 'katy perry',
+};
+
 function comparable(value: string): string {
   return value
     .normalize('NFKD')
@@ -78,10 +82,23 @@ export function normalizeMusicQuery(raw: string): MusicQueryNormalization {
     .replace(/\b(?:song|track|music)\s+(?:called|named)\s+/g, '')
     .replace(/\b(?:by the (?:singer|artist)|by artiste)\b/g, 'by')
     .trim();
-  const correctedQuery = cleaned.split(' ').map(correctToken).join(' ').replace(/\s+/g, ' ').trim();
+  const phraseCorrected = PHRASE_ALIASES[cleaned] ?? cleaned;
+  const correctedQuery = phraseCorrected.split(' ').map(correctToken).join(' ').replace(/\s+/g, ' ').trim();
   const variants = Array.from(new Set([correctedQuery, cleaned, original].filter(Boolean)));
   const corrected = correctedQuery.split(' ').some((token, index) => token !== cleaned.split(' ')[index]);
   return { original, query: correctedQuery, variants, corrected };
+}
+
+/** Detects an explicit music lookup without stealing ordinary people/post searches. */
+export function parsePlatformMusicSearch(raw: string): string | null {
+  const normalized = comparable(raw);
+  if (!normalized) return null;
+  const explicit = normalized.match(
+    /^(?:search|find|show|play|listen to)?\s*(?:music|musics|song|songs|track|tracks|artist|artists|singer|singers|album|albums|playlist|playlists|radio)\s*(?:for|by|from|called|named)?\s+(.+)$/,
+  );
+  if (explicit?.[1]?.trim()) return explicit[1].trim();
+  const trailing = normalized.match(/^(.+?)\s+(?:music|song|songs|tracks?|artist|albums?)$/);
+  return trailing?.[1]?.trim() || null;
 }
 
 export function musicMatchScore(track: { title: string; artist: string; album?: string }, query: string): number {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { musicMatchScore, normalizeMusicQuery } from './musicQuery';
+import { musicMatchScore, normalizeMusicQuery, parsePlatformMusicSearch } from './musicQuery';
 
 describe('music query normalization', () => {
   it('normalizes spoken wording, accents and bounded music vocabulary', () => {
@@ -11,6 +11,13 @@ describe('music query normalization', () => {
 
   it('does not guess open song or artist names', () => {
     expect(normalizeMusicQuery('Mishon Impossibel theme').query).toBe('mishon impossibel theme');
+  });
+
+  it('corrects a known artist spelling and recognizes explicit platform music searches', () => {
+    expect(normalizeMusicQuery('Ketty Perry').query).toBe('katy perry');
+    expect(parsePlatformMusicSearch('search songs by Ketty Perry')).toBe('ketty perry');
+    expect(parsePlatformMusicSearch('Katy Perry songs')).toBe('katy perry');
+    expect(parsePlatformMusicSearch('Katy Perry')).toBeNull();
   });
 
   it('ranks exact provider metadata above broad matches', () => {
