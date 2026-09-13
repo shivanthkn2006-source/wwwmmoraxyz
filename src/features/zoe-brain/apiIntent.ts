@@ -5,7 +5,7 @@
  * "why can't you send email?" now resolve against the live `zoe-api-status`
  * inventory and Zoe answers with the real state of that service.
  */
-import { fetchApiStatus, matchApis, apiHealthWord, type ApiStatusEntry, type ApiStatusReport } from './apiStatus';
+import { KEYWORDS, fetchApiStatus, matchApis, apiHealthWord, type ApiStatusEntry, type ApiStatusReport } from './apiStatus';
 import { getBrainStats, formatDuration } from './brainTelemetry';
 
 export type ApiIntent = 'api_inventory' | 'api_specific' | 'brain_status' | null;
