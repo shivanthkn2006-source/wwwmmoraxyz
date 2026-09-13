@@ -45,6 +45,7 @@ final class NativeZoeMusicPlugin: CAPPlugin, CAPBridgedPlugin {
         title = call.getString("title") ?? "Music"
         artist = call.getString("artist") ?? "M'Mora"
         player = AVPlayer(url: url)
+        MMoraAudioSessionState.shared.musicActive = true
         observePlayer()
         publishMetadata()
         notify("buffering")
@@ -72,6 +73,7 @@ final class NativeZoeMusicPlugin: CAPPlugin, CAPBridgedPlugin {
     @objc func stop(_ call: CAPPluginCall) {
         player?.pause()
         player?.seek(to: .zero)
+        MMoraAudioSessionState.shared.musicActive = false
         notify("idle")
         call.resolve()
     }
@@ -115,6 +117,20 @@ final class NativeZoeMusicPlugin: CAPPlugin, CAPBridgedPlugin {
 
     private func configureRemoteControls() {
         let center = MPRemoteCommandCenter.shared()
+        center.playCommand.addTarget { [weak self] _ in
+            guard let self, let player = self.player else { return .noSuchContent }
+            player.play(); self.notify("playing"); return .success
+        }
+        center.pauseCommand.addTarget { [weak self] _ in
+            guard let self, let player = self.player else { return .noSuchContent }
+            player.pause(); self.notify("paused"); return .success
+        }
+        center.togglePlayPauseCommand.addTarget { [weak self] _ in
+            guard let self, let player = self.player else { return .noSuchContent }
+            if player.rate == 0 { player.play(); self.notify("playing") }
+            else { player.pause(); self.notify("paused") }
+            return .success
+        }
         center.nextTrackCommand.addTarget { [weak self] _ in self?.notifyListeners("next", data: [:]); return .success }
         center.previousTrackCommand.addTarget { [weak self] _ in self?.notifyListeners("previous", data: [:]); return .success }
         center.changePlaybackPositionCommand.addTarget { [weak self] event in
