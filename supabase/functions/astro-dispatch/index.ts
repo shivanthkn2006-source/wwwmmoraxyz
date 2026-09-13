@@ -25,6 +25,10 @@ import {
 import {
   SLOT_LOCAL_TIME, generatePrediction, renderPoster, pickFallback, type Slot,
 } from '../_shared/astro-content.ts';
+import { createPacer, enqueueRetries, claimQueued, settleQueued } from '../_shared/batch-pacer.ts';
+
+const JOB_TYPE = 'astro-dispatch';
+
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -782,7 +786,10 @@ Deno.serve(async (req) => {
       paused: !!circuitBreak,
       rate_limited: rateLimitHits,
       probe_only: probeOnly,
+      queued_for_retry: queuedCount,
+      elapsed_ms: pacer.elapsedMs(),
     };
+
     await releaseLease(summary);
     await logRun(summary, results, null);
     return json({ ok: true, correlation_id: correlationId, summary, results });
