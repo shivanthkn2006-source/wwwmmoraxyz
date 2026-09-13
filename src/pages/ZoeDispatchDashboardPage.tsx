@@ -244,6 +244,12 @@ const ZoeDispatchDashboardPage: React.FC = () => {
           <p className="mb-2 break-all font-mono text-[11px] text-muted-foreground">
             run: {audit.audit_run_id} · correlation: {audit.correlation_id}
           </p>
+          <p className="mb-2 text-[11px]">
+            <Link to={`/zoe-astro/audit/${encodeURIComponent(audit.correlation_id)}`} className="underline">
+              Open this audit run
+            </Link>
+          </p>
+
           {audit.missing_morning > 0 && (
             <p className="mb-3 rounded-lg border border-destructive/50 bg-destructive/10 p-2 text-destructive">
               Alert raised: {audit.missing_morning} member(s) with no morning prompt —{' '}

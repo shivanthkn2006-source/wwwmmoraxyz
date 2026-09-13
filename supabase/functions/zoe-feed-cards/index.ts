@@ -182,7 +182,41 @@ Deno.serve(async (req: Request) => {
       return json({ ok: true, created: 0, reason: 'recent_cards_exist' });
     }
 
-    const closeIds = (closeness ?? []).map((r: { target_user_id: string }) => r.target_user_id);
+    // Closest connections must actually exist. The edges are derived, so when
+    // the member has none yet we recompute them server-side and, failing that,
+    // fall back to their real friendships/follows — never an empty circle.
+    type CloseRow = { target_user_id: string; score: number };
+    let close: CloseRow[] = (closeness ?? []) as CloseRow[];
+
+    if (!close.length) {
+      await asUser.rpc('recompute_intimacy_scores', { _user_id: userId }).catch(() => undefined);
+      const { data: again } = await asUser
+        .from('intimacy_scores')
+        .select('target_user_id, score')
+        .eq('user_id', userId)
+        .order('score', { ascending: false })
+        .limit(5);
+      close = (again ?? []) as CloseRow[];
+    }
+
+    if (!close.length) {
+      const [{ data: friends }, { data: follows }] = await Promise.all([
+        asUser.from('friendships').select('user_id, friend_id').limit(20),
+        asUser.from('user_follows').select('following_id').eq('follower_id', userId).limit(20),
+      ]);
+      const ids = new Set<string>();
+      for (const f of (friends ?? []) as Array<{ user_id: string; friend_id: string }>) {
+        const other = f.user_id === userId ? f.friend_id : f.user_id;
+        if (other && other !== userId) ids.add(other);
+      }
+      for (const f of (follows ?? []) as Array<{ following_id: string }>) {
+        if (f.following_id && f.following_id !== userId) ids.add(f.following_id);
+      }
+      close = Array.from(ids).slice(0, 5).map((id) => ({ target_user_id: id, score: 0 }));
+    }
+
+    const closeIds = close.map((r) => r.target_user_id);
+
     let circlePosts: Array<{ id: string; content: string | null; user_id: string }> = [];
     if (closeIds.length) {
       const { data } = await asUser
@@ -209,9 +243,10 @@ Deno.serve(async (req: Request) => {
 
     const facts = {
       your_recent_posts: (mine ?? []).map((p) => ({ id: p.id, text: clean(p.content, 240) })),
-      closest_people: (closeness ?? []).map((c: { target_user_id: string; score: number }) => ({
+      closest_people: close.map((c) => ({
         name: names.get(c.target_user_id) ?? 'someone in your circle',
         closeness: Math.round(c.score),
+
       })),
       recent_posts_from_them: circlePosts.map((p) => ({
         id: p.id,

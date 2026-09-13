@@ -107,6 +107,7 @@ export const CANONICAL_ROUTES: CanonicalRoute[] = [
   { path: "/zoe-ai", label: "Zoe AI", dynamic: false },
   { path: "/zoe-architecture", label: "Zoe architecture", dynamic: false },
   { path: "/zoe-astro", label: "Zoe astro", dynamic: false },
+  { path: "/zoe-astro/audit/:correlationId", label: "Zoe astro · audit", dynamic: true },
   { path: "/zoe-astro/birth", label: "Zoe astro · birth", dynamic: false },
   { path: "/zoe-astro/dispatch", label: "Zoe astro · dispatch", dynamic: false },
   { path: "/zoe-astro/log", label: "Zoe astro · log", dynamic: false },
