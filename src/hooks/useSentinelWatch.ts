@@ -18,13 +18,15 @@ import { callSentinel, reportThreat } from '@/lib/sentinelClient';
 
 const HEARTBEAT_MS = 60_000;
 
-/** Keyboard shortcuts that only ever mean "open the inspector". */
+/**
+ * Keyboard shortcuts that only ever mean "open the inspector".
+ * Save (Ctrl/⌘+S) and underline (Ctrl/⌘+U) are everyday editing shortcuts, so
+ * they are never treated as tampering.
+ */
 const isInspectorKey = (e: KeyboardEvent): string | null => {
   if (e.key === 'F12') return 'devtools_shortcut';
   const mod = e.ctrlKey || e.metaKey;
   if (mod && e.shiftKey && ['I', 'J', 'C'].includes(e.key.toUpperCase())) return 'devtools_shortcut';
-  if (mod && e.key.toUpperCase() === 'U') return 'view_source_attempt';
-  if (mod && e.key.toUpperCase() === 'S') return 'page_save_attempt';
   return null;
 };
 
