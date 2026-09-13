@@ -96,6 +96,8 @@ export const useAdaptiveCamera = ({ autoStart = true }: AdaptiveStreamOptions = 
   const [networkType, setNetworkType] = useState<AdaptiveNetworkType>('high');
   const streamRef = useRef<MediaStream | null>(null);
   const mountedRef = useRef(true);
+  /** Was the camera live when the page was hidden? Used to restore it. */
+  const wasLiveRef = useRef(false);
 
   const getConstraintLadder = useCallback((): { ladder: MediaStreamConstraints[]; tier: AdaptiveNetworkType } => {
     const nav = navigator as any;
