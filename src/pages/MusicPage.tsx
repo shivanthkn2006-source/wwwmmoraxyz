@@ -9,6 +9,17 @@ import { musicEngine } from '@/services/MusicEngine';
 import { useMusicEngine } from '@/hooks/useMusicEngine';
 import { searchMusicCatalog, type MusicSearchResult } from '@/features/music/musicProviders';
 
+const SEARCH_CACHE_KEY = 'mmora.music.lastSearch';
+
+function readSearchCache(): { query: string; result: MusicSearchResult } | null {
+  try {
+    const parsed = JSON.parse(sessionStorage.getItem(SEARCH_CACHE_KEY) ?? 'null');
+    return parsed?.result?.tracks && typeof parsed.query === 'string' ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
 function clock(seconds: number) {
   if (!Number.isFinite(seconds)) return '0:00';
   const minutes = Math.floor(seconds / 60);
@@ -20,11 +31,12 @@ function IconControl({ label, children, ...props }: React.ComponentProps<typeof 
 }
 
 export default function MusicPage() {
+  const cachedSearch = readSearchCache();
   const state = useMusicEngine();
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(cachedSearch?.query ?? '');
   const [searching, setSearching] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
-  const [results, setResults] = useState<MusicSearchResult | null>(null);
+  const [results, setResults] = useState<MusicSearchResult | null>(cachedSearch?.result ?? null);
   const active = state.status === 'playing' || state.status === 'buffering';
 
   const search = async () => {
@@ -35,6 +47,7 @@ export default function MusicPage() {
     try {
       const kind = /\b(radio|station|fm)\b/i.test(value) ? 'radio' : 'track';
       const result = await searchMusicCatalog(value, kind);
+      try { sessionStorage.setItem(SEARCH_CACHE_KEY, JSON.stringify({ query: value, result })); } catch { /* storage is optional */ }
       setResults(result);
       if (!result.tracks.length) {
         const unavailable = result.providers.filter((provider) => provider.status === 'unavailable').map((provider) => provider.name);

@@ -48,4 +48,19 @@ describe('music providers', () => {
     expect(result.tracks.map((track) => track.title)).toEqual(['Signal', 'Signal Radio']);
     expect(result.providers).toHaveLength(3);
   });
+
+  it('keeps successful sources when another provider is unavailable', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url === 'https://api.audius.co') return new Response(JSON.stringify({ data: ['https://audius.test'] }));
+      if (url.includes('/tracks/search')) return new Response(JSON.stringify({ data: [
+        { id: '2', title: 'Resilient Song', user: { name: 'Artist' }, is_streamable: true },
+      ] }));
+      if (url.includes('advancedsearch')) throw new TypeError('Provider unavailable');
+      return new Response(JSON.stringify([]));
+    });
+    const result = await searchMusicCatalog('Resilient Song');
+    expect(result.tracks[0].title).toBe('Resilient Song');
+    expect(result.providers.find((provider) => provider.name === 'Internet Archive')?.status).toBe('empty');
+  });
 });
