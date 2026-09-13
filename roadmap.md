@@ -18,3 +18,4 @@
 - [x] Complete the best-practice music expansion: adaptive Music page, compact feed-safe controls, typed Zoe commands, compliant provider matching, full web QA, and an updated enterprise audit.
 - [x] Make the compact music controls draggable on every page, default them after the MMora wordmark, remove the outer line, and verify controls and screen bounds.
 - [x] Remove all pressed/focus layers from the mini-player symbols and keep the player mounted after Stop.
+- [x] Repair Music page search, aggregate and rank playable providers, show results, add safe query correction, and complete live responsive QA.
