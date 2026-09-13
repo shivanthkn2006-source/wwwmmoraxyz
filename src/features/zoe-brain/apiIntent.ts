@@ -11,9 +11,12 @@ import { getBrainStats, formatDuration } from './brainTelemetry';
 export type ApiIntent = 'api_inventory' | 'api_specific' | 'brain_status' | null;
 
 const INVENTORY = /\b(what|which|list|show|how many)\b[^?]{0,40}\b(api|apis|integrations?|services?|tools?|connections?|capabilit(?:y|ies))\b/i;
-const ABOUT_API = /\b(api|apis|integration|service|provider|key|connected|wired|working|available|hooked up|online|down|broken|failing)\b/i;
+// Only genuine integration language counts. Everyday words like "working",
+// "broken" or "down" belong to normal conversation ("is my post working?") and
+// must never be answered with an integration inventory.
+const ABOUT_API = /\b(api|apis|integrations?|providers?|api key|connector)\b/i;
 const ASK = /\b(can|could|do|does|are|is|why|able|status|check)\b/i;
-const BRAIN_STATUS = /\b(uptime|response time|latency|how fast|brain (?:status|dashboard|health|stats)|your (?:performance|stats|metrics)|which intents?|failing intents?)\b/i;
+const BRAIN_STATUS = /\b(your (?:uptime|response time|latency|performance|stats|metrics)|brain (?:status|dashboard|health|stats)|how fast (?:are|do) you|which intents?|failing intents?)\b/i;
 
 export function classifyApiIntent(text: string): ApiIntent {
   const t = (text || '').trim();
