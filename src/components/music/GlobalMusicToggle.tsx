@@ -65,7 +65,7 @@ export default function GlobalMusicToggle() {
 
     const onPointerDown = (event: PointerEvent) => {
       if (event.button !== 0) return;
-      player.setPointerCapture?.(event.pointerId);
+      try { player.setPointerCapture?.(event.pointerId); } catch { /* Synthetic or unsupported pointer capture. */ }
       pointerRef.current = {
         id: event.pointerId,
         startX: event.clientX,
