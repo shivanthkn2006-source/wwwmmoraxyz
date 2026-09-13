@@ -12,7 +12,7 @@ export default function GlobalMusicToggle() {
 
   const active = state.status === 'playing' || state.status === 'buffering';
   return (
-    <TooltipProvider><div className="music-global-glass fixed left-[max(.5rem,env(safe-area-inset-left))] top-[max(.5rem,env(safe-area-inset-top))] z-[54] flex max-w-[calc(100vw-1rem)] items-center gap-0.5 rounded-full border border-border/70 p-1" data-testid="global-music-control">
+    <TooltipProvider><div className="music-global-glass fixed left-[max(.5rem,env(safe-area-inset-left))] top-[max(4.25rem,env(safe-area-inset-top))] z-[54] flex max-w-[calc(100vw-1rem)] items-center gap-0.5 rounded-full border border-border/70 p-1" data-testid="global-music-control">
       <Tooltip><TooltipTrigger asChild><Button className="music-mini-button rounded-full" variant="ghost" size="icon" onClick={() => navigate('/music')} aria-label={`Open music: ${state.track.title} by ${state.track.artist}`}>
         <Disc3 className={active ? 'animate-spin motion-reduce:animate-none' : ''} />
       </Button></TooltipTrigger><TooltipContent>Open music</TooltipContent></Tooltip>
