@@ -168,11 +168,24 @@ export const useAlwaysOnVoice = () => {
         // Home shows the search console with the spoken query already typed in,
         // so the member watches the same results Zoe is reading.
         window.dispatchEvent(new CustomEvent('zoe-navigate', { detail: { path: '/home' } }));
-        setTimeout(() => {
-          window.dispatchEvent(
-            new CustomEvent('mmora:open-home-search', { detail: { query: intent.query, speak: true } }),
+        // Home is loaded on demand, so the request is parked where the search
+        // bar can pick it up whenever it finishes mounting, and also announced
+        // a few times in case Home is already on screen.
+        try {
+          window.sessionStorage.setItem(
+            'mmora:pending-home-search',
+            JSON.stringify({ query: intent.query, speak: true, at: Date.now() }),
           );
-        }, 400);
+        } catch {
+          /* storage unavailable — the repeated announcements below still apply */
+        }
+        for (const delay of [400, 900, 1600, 2600]) {
+          setTimeout(() => {
+            window.dispatchEvent(
+              new CustomEvent('mmora:open-home-search', { detail: { query: intent.query, speak: true } }),
+            );
+          }, delay);
+        }
       } else if (intent.kind === 'resume') {
         const { triggerHeadlessResume } = await import('@/utils/headlessResumeBuilder');
         const { buildResumeDataForUser } = await import('@/services/zoeResumeData');
