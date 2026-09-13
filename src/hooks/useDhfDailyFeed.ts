@@ -57,7 +57,7 @@ export function useDhfDailyFeed() {
       .order('post_date', { ascending: false })
       .order('slot_time', { ascending: false });
     if (error) throw error;
-    const resolved = resolveCompassImages((data ?? []) as unknown as DhfDailyPost[]);
+    const resolved = await resolveCompassImages((data ?? []) as unknown as DhfDailyPost[]);
     rowsRef.current = resolved;
     return resolved;
   }, []);

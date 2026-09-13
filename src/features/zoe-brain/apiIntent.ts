@@ -5,7 +5,7 @@
  * "why can't you send email?" now resolve against the live `zoe-api-status`
  * inventory and Zoe answers with the real state of that service.
  */
-import { fetchApiStatus, matchApis, apiHealthWord, type ApiStatusEntry, type ApiStatusReport } from './apiStatus';
+import { KEYWORDS, fetchApiStatus, matchApis, apiHealthWord, type ApiStatusEntry, type ApiStatusReport } from './apiStatus';
 import { getBrainStats, formatDuration } from './brainTelemetry';
 
 export type ApiIntent = 'api_inventory' | 'api_specific' | 'brain_status' | null;
@@ -23,8 +23,14 @@ export function classifyApiIntent(text: string): ApiIntent {
   if (!t || t.length > 240) return null;
   if (BRAIN_STATUS.test(t)) return 'brain_status';
   if (INVENTORY.test(t)) return 'api_inventory';
-  if (ABOUT_API.test(t) && ASK.test(t)) return 'api_specific';
+  if (ASK.test(t) && (ABOUT_API.test(t) || namesAService(t))) return 'api_specific';
   return null;
+}
+
+/** True when the member names an actual service, e.g. "is deepgram working?". */
+function namesAService(text: string): boolean {
+  const t = ` ${text.toLowerCase()} `;
+  return Object.keys(KEYWORDS).some((id) => t.includes(` ${id} `) || t.includes(` ${id}?`) || t.includes(` ${id},`));
 }
 
 const icon = (a: ApiStatusEntry) =>

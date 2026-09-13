@@ -337,10 +337,11 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
     // stay visible on a fresh install instead of being pushed out by extras.
     let visible = rest.slice();
     if (rest.length > capacity) {
-      const authored = new Map(baseSlots.map((item, index) => [item.id, index] as const));
+      const authored: Record<string, number> = {};
+      baseSlots.forEach((item, index) => { authored[item.id] = index; });
       const keep = new Set(
         rest
-          .map((item) => ({ item, score: usage[item.id]?.count ?? 0, order: authored.get(item.id) ?? 0 }))
+          .map((item) => ({ item, score: usage[item.id]?.count ?? 0, order: authored[item.id] ?? 0 }))
           .sort((a, b) => (b.score === a.score ? a.order - b.order : b.score - a.score))
           .slice(0, capacity)
           .map((entry) => entry.item.id),
