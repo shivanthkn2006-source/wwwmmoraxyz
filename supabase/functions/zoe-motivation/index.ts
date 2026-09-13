@@ -220,18 +220,64 @@ Deno.serve(async (req) => {
 
       const out: any[] = [];
       let generated = 0;
+      const pacer = createPacer({ budgetMs: 90_000, minGapMs: 500 });
+      const cfg = { supabaseUrl: SUPABASE_URL, serviceKey: SERVICE_KEY };
+
+      // Finish anything a previous run parked before touching new members.
+      const queued = await claimQueued(cfg, JOB_TYPE, GENERATION_BUDGET);
+      const drained = new Set<string>();
+      for (const job of queued) {
+        if (!job.user_id || pacer.expired() || generated >= GENERATION_BUDGET) break;
+        await pacer.gate();
+        try {
+          const r = await ensureForUser(job.user_id, String(job.payload?.timezone ?? 'UTC'), now);
+          if (r.status === 'created' || r.status === 'repaired') generated++;
+          drained.add(job.user_id);
+          out.push({ user_id: job.user_id, status: `queued:${r.status}` });
+          await settleQueued(cfg, job, { ok: true });
+        } catch (err) {
+          await settleQueued(cfg, job, { ok: false, error: String((err as Error)?.message ?? err) });
+          out.push({ user_id: job.user_id, status: 'queued:failed' });
+        }
+      }
+
+      const pending: Array<{ userId: string; payload: Record<string, unknown> }> = [];
       for (const p of rows) {
-        // Bounded generation budget per run — the hourly cron picks up the rest.
-        if (generated >= GENERATION_BUDGET) {
-          out.push({ user_id: p.user_id, status: 'deferred' });
+        if (drained.has(p.user_id)) continue;
+        const tz = tzMap.get(p.user_id) || body.timezone || 'UTC';
+        // Bounded generation budget and wall clock — the rest is queued, not lost.
+        if (generated >= GENERATION_BUDGET || pacer.expired()) {
+          pending.push({ userId: p.user_id, payload: { timezone: tz } });
+          out.push({ user_id: p.user_id, status: 'queued' });
           continue;
         }
-        const r = await ensureForUser(p.user_id, tzMap.get(p.user_id) || body.timezone || 'UTC', now);
+        await pacer.gate();
+        const r = await ensureForUser(p.user_id, tz, now);
         if (r.status === 'created' || r.status === 'repaired') generated++;
         out.push({ user_id: p.user_id, ...r });
       }
-      return json({ ok: true, processed: out.length, generated, results: out.map((r) => ({ user_id: r.user_id, status: r.status })) });
+
+      const enqueued = await enqueueRetries(
+        cfg,
+        JOB_TYPE,
+        pending.map((p) => ({
+          userId: p.userId,
+          targetDate: localDateIn(now, String(p.payload.timezone ?? 'UTC')),
+          payload: p.payload,
+          delaySeconds: 120,
+        })),
+      );
+
+      return json({
+        ok: true,
+        processed: out.length,
+        generated,
+        queued: enqueued,
+        elapsed_ms: pacer.elapsedMs(),
+        results: out.map((r) => ({ user_id: r.user_id, status: r.status })),
+      });
     }
+
 
 
     // ensure — identify the caller from their JWT
