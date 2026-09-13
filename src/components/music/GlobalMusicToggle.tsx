@@ -105,7 +105,7 @@ export default function GlobalMusicToggle() {
   return (
     <div
       ref={playerRef}
-      className="music-global-glass fixed z-[90] flex max-w-[calc(100vw-1rem)] touch-none select-none items-center gap-0.5"
+      className="music-global-glass fixed z-[10050] flex max-w-[calc(100vw-1rem)] touch-none select-none items-center gap-0.5"
       style={{ left: position.x, top: position.y }}
       data-testid="global-music-control"
       data-draggable="true"
