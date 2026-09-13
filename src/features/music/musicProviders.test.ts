@@ -63,6 +63,28 @@ describe('music providers', () => {
     expect(result.providers).toHaveLength(4);
   });
 
+  it('prefers full-length tracks while retaining previews and live radio', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url === 'https://api.audius.co') return new Response(JSON.stringify({ data: ['https://audius.test'] }));
+      if (url.includes('/tracks/search')) return new Response(JSON.stringify({ data: [
+        { id: 'full', title: 'Roar live mix', duration: 240, user: { name: 'Artist' }, is_streamable: true },
+      ] }));
+      if (url.includes('itunes.apple.com')) return new Response(JSON.stringify({ results: [{
+        trackId: 42, trackName: 'Roar', artistName: 'Katy Perry', collectionName: 'PRISM',
+        previewUrl: 'https://audio.test/preview.m4a', trackTimeMillis: 228000,
+      }] }));
+      if (url.includes('radio-browser')) return new Response(JSON.stringify([
+        { stationuuid: 'radio', name: 'Roar Radio', url_resolved: 'https://radio.test/live' },
+      ]));
+      if (url.includes('advancedsearch')) return new Response(JSON.stringify({ response: { docs: [] } }));
+      return new Response('{}', { status: 404 });
+    });
+    const result = await searchMusicCatalog('Roar');
+    expect(result.tracks.map((track) => track.source)).toEqual(['audius', 'apple', 'radio']);
+    expect(result.tracks.find((track) => track.source === 'apple')?.credit).toContain('preview');
+  });
+
   it('keeps successful sources when another provider is unavailable', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const url = String(input);
