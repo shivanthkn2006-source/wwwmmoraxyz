@@ -140,4 +140,24 @@ const handle = async (req: Request): Promise<Response> => {
     console.error('[growth-image-validate] failed', error);
     return json({ error: 'Validation failed' }, 500);
   }
+};
+
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+
+  // Never let a hung provider hold the request open until the platform's 150s
+  // idle timeout: an unfinished check is inconclusive, so keep the image.
+  let timer: number | undefined;
+  const deadline = new Promise<Response>((resolve) => {
+    timer = setTimeout(() => {
+      console.warn('[growth-image-validate] overall budget exceeded');
+      resolve(json({ match: true, inconclusive: true, reason: 'validator timed out' }));
+    }, OVERALL_BUDGET_MS) as unknown as number;
+  });
+
+  try {
+    return await Promise.race([handle(req), deadline]);
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+  }
 });
