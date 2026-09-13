@@ -1,0 +1,321 @@
+/**
+ * GLOBAL MUSIC ENGINE — a plain TypeScript singleton that lives OUTSIDE the
+ * React tree.
+ *
+ * Why a singleton: React unmounts and remounts components on every route
+ * change, which would tear down an <audio> element owned by a component. This
+ * engine owns one element for the whole app, so playback survives navigation
+ * across every page, and the UI merely subscribes to its state.
+ *
+ * It also:
+ *   · registers Media Session so the OS lock screen, Control Center and
+ *     desktop media keys drive playback;
+ *   · pins output to the member's selected Bluetooth headset (AudioRouter);
+ *   · ducks itself while Zoe speaks, and restores the level afterwards;
+ *   · queues, shuffles, repeats and auto-advances.
+ *
+ * Nothing here renders anything, so no existing UI or layout is affected.
+ */
+
+import type { MusicTrack } from '@/features/music/musicProviders';
+import { subscribeTTSAudio } from '@/utils/zoeTTSAudioBus';
+
+export type MusicStatus = 'idle' | 'buffering' | 'playing' | 'paused' | 'error';
+export type RepeatMode = 'off' | 'all' | 'one';
+
+export interface MusicState {
+  status: MusicStatus;
+  track: MusicTrack | null;
+  queue: MusicTrack[];
+  index: number;
+  position: number;
+  duration: number;
+  volume: number;
+  shuffle: boolean;
+  repeat: RepeatMode;
+  /** Honest, member-readable reason when something could not play. */
+  error: string | null;
+}
+
+const VOLUME_KEY = 'mmora.music.volume';
+
+class MusicEngineImpl {
+  private audio: HTMLAudioElement | null = null;
+  private listeners = new Set<(state: MusicState) => void>();
+  private ttsUnsub: (() => void) | null = null;
+  private duckedFrom: number | null = null;
+  private unlocked = false;
+
+  private state: MusicState = {
+    status: 'idle',
+    track: null,
+    queue: [],
+    index: -1,
+    position: 0,
+    duration: 0,
+    volume: 1,
+    shuffle: false,
+    repeat: 'off',
+    error: null,
+  };
+
+  /* ───────────────────────────── lifecycle ───────────────────────────── */
+
+  private el(): HTMLAudioElement | null {
+    if (typeof window === 'undefined') return null;
+    if (this.audio) return this.audio;
+
+    const audio = new Audio();
+    audio.preload = 'auto';
+    audio.crossOrigin = 'anonymous';
+    try {
+      const stored = Number(window.localStorage.getItem(VOLUME_KEY));
+      if (Number.isFinite(stored) && stored > 0 && stored <= 1) this.state.volume = stored;
+    } catch {
+      /* private mode — default volume */
+    }
+    audio.volume = this.state.volume;
+
+    audio.onplaying = () => this.patch({ status: 'playing', error: null });
+    audio.onpause = () => {
+      if (this.state.status !== 'idle') this.patch({ status: 'paused' });
+    };
+    audio.onwaiting = () => this.patch({ status: 'buffering' });
+    audio.ontimeupdate = () =>
+      this.patch({
+        position: audio.currentTime || 0,
+        duration: Number.isFinite(audio.duration) ? audio.duration : 0,
+      });
+    audio.onended = () => void this.next(true);
+    audio.onerror = () =>
+      this.patch({ status: 'error', error: 'That stream would not play. Trying another source usually fixes it.' });
+
+    this.audio = audio;
+    this.bindMediaSession();
+    this.bindDucking();
+    return audio;
+  }
+
+  /** iOS/Android block audio until a real gesture — call this from any tap. */
+  unlock(): void {
+    if (this.unlocked) return;
+    const audio = this.el();
+    if (!audio) return;
+    this.unlocked = true;
+    try {
+      audio.muted = true;
+      void audio.play().catch(() => undefined);
+      audio.pause();
+      audio.muted = false;
+    } catch {
+      /* nothing to unlock yet */
+    }
+  }
+
+  private bindDucking(): void {
+    if (this.ttsUnsub) return;
+    this.ttsUnsub = subscribeTTSAudio((speaking) => {
+      const audio = this.audio;
+      if (!audio) return;
+      if (speaking) {
+        if (this.duckedFrom === null) this.duckedFrom = audio.volume;
+        audio.volume = Math.min(audio.volume, Math.max(0.08, this.duckedFrom * 0.15));
+      } else if (this.duckedFrom !== null) {
+        audio.volume = this.duckedFrom;
+        this.duckedFrom = null;
+      }
+    });
+  }
+
+  private bindMediaSession(): void {
+    if (typeof navigator === 'undefined' || !('mediaSession' in navigator)) return;
+    const ms = navigator.mediaSession;
+    try {
+      ms.setActionHandler('play', () => void this.play());
+      ms.setActionHandler('pause', () => this.pause());
+      ms.setActionHandler('nexttrack', () => void this.next());
+      ms.setActionHandler('previoustrack', () => void this.previous());
+      ms.setActionHandler('stop', () => this.stop());
+    } catch {
+      /* older browsers ignore unknown actions */
+    }
+  }
+
+  private publishMetadata(): void {
+    if (typeof navigator === 'undefined' || !('mediaSession' in navigator)) return;
+    const track = this.state.track;
+    if (!track) return;
+    try {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: track.title,
+        artist: track.artist,
+        album: track.credit,
+        artwork: track.artwork ? [{ src: track.artwork, sizes: '512x512' }] : [],
+      });
+      navigator.mediaSession.playbackState = this.state.status === 'playing' ? 'playing' : 'paused';
+    } catch {
+      /* metadata is best-effort */
+    }
+  }
+
+  /* ───────────────────────────── subscription ───────────────────────────── */
+
+  subscribe(listener: (state: MusicState) => void): () => void {
+    this.listeners.add(listener);
+    listener(this.state);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+
+  getState(): MusicState {
+    return this.state;
+  }
+
+  private patch(next: Partial<MusicState>): void {
+    this.state = { ...this.state, ...next };
+    this.publishMetadata();
+    for (const listener of this.listeners) listener(this.state);
+  }
+
+  /* ───────────────────────────── playback ───────────────────────────── */
+
+  async playQueue(tracks: MusicTrack[], startIndex = 0): Promise<boolean> {
+    if (!tracks.length) {
+      this.patch({ error: 'I could not find that on any of the free music sources.' });
+      return false;
+    }
+    this.patch({ queue: tracks, index: -1, error: null });
+    return this.playIndex(startIndex);
+  }
+
+  enqueue(tracks: MusicTrack[]): void {
+    if (!tracks.length) return;
+    this.patch({ queue: [...this.state.queue, ...tracks] });
+  }
+
+  async playIndex(index: number): Promise<boolean> {
+    const track = this.state.queue[index];
+    const audio = this.el();
+    if (!track || !audio) return false;
+    this.patch({ index, track, status: 'buffering', position: 0, duration: 0, error: null });
+    audio.src = track.url;
+    try {
+      await audio.play();
+      void this.routeToHeadset(audio);
+      return true;
+    } catch {
+      this.patch({
+        status: 'error',
+        error: 'Playback needs one tap first on this device — tap the play symbol and it continues.',
+      });
+      return false;
+    }
+  }
+
+  private async routeToHeadset(audio: HTMLAudioElement): Promise<void> {
+    try {
+      const { audioRouter } = await import('@/services/AudioRouterService');
+      await audioRouter.applySinkToElement(audio);
+    } catch {
+      /* default output is fine */
+    }
+  }
+
+  async play(): Promise<void> {
+    const audio = this.el();
+    if (!audio) return;
+    if (!this.state.track && this.state.queue.length) {
+      await this.playIndex(0);
+      return;
+    }
+    try {
+      await audio.play();
+    } catch {
+      this.patch({ status: 'paused' });
+    }
+  }
+
+  pause(): void {
+    this.audio?.pause();
+  }
+
+  toggle(): void {
+    if (this.state.status === 'playing' || this.state.status === 'buffering') this.pause();
+    else void this.play();
+  }
+
+  stop(): void {
+    const audio = this.audio;
+    if (audio) {
+      audio.pause();
+      audio.removeAttribute('src');
+    }
+    this.patch({ status: 'idle', track: null, index: -1, position: 0, duration: 0 });
+  }
+
+  async next(auto = false): Promise<void> {
+    const { queue, index, shuffle, repeat } = this.state;
+    if (!queue.length) return;
+    if (auto && repeat === 'one') {
+      await this.playIndex(index);
+      return;
+    }
+    let target = shuffle ? Math.floor(Math.random() * queue.length) : index + 1;
+    if (target >= queue.length) {
+      if (repeat === 'off' && auto) {
+        this.patch({ status: 'idle', position: 0 });
+        return;
+      }
+      target = 0;
+    }
+    await this.playIndex(target);
+  }
+
+  async previous(): Promise<void> {
+    const { queue, index } = this.state;
+    if (!queue.length) return;
+    const audio = this.audio;
+    if (audio && audio.currentTime > 3) {
+      audio.currentTime = 0;
+      return;
+    }
+    await this.playIndex(index <= 0 ? queue.length - 1 : index - 1);
+  }
+
+  seek(seconds: number): void {
+    const audio = this.audio;
+    if (!audio || !Number.isFinite(seconds)) return;
+    try {
+      audio.currentTime = Math.max(0, seconds);
+    } catch {
+      /* live streams are not seekable */
+    }
+  }
+
+  setVolume(volume: number): void {
+    const clamped = Math.min(1, Math.max(0, volume));
+    const audio = this.el();
+    if (audio) audio.volume = clamped;
+    this.duckedFrom = null;
+    try {
+      window.localStorage.setItem(VOLUME_KEY, String(clamped));
+    } catch {
+      /* private mode */
+    }
+    this.patch({ volume: clamped });
+  }
+
+  toggleShuffle(): void {
+    this.patch({ shuffle: !this.state.shuffle });
+  }
+
+  cycleRepeat(): void {
+    const order: RepeatMode[] = ['off', 'all', 'one'];
+    const next = order[(order.indexOf(this.state.repeat) + 1) % order.length];
+    this.patch({ repeat: next });
+  }
+}
+
+export const musicEngine = new MusicEngineImpl();
+export default musicEngine;
