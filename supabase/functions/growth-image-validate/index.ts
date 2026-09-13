@@ -19,9 +19,13 @@ const json = (body: unknown, status = 200) =>
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
 
-Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+/**
+ * Hard ceiling for the whole request. Validation is advisory: whatever happens,
+ * answer well before the 150s platform idle timeout so the caller never hangs.
+ */
+const OVERALL_BUDGET_MS = 25_000;
 
+const handle = async (req: Request): Promise<Response> => {
   try {
     const { imageUrl, person, subject, category, strictness } = await req.json();
     const mode = strictness === 'strict' || strictness === 'lenient' ? strictness : 'balanced';
