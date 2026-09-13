@@ -359,7 +359,8 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
       });
     }
     return filled;
-  }, [slots]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slots, baseSlots, usage]);
 
 
   const renderPackedRows = () => {
