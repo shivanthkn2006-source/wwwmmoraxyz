@@ -16,3 +16,4 @@
 - [ ] Verify AirPods/Bluetooth, lock-screen controls, calls/interruptions, and resume behavior on physical iOS and Android devices.
 - [x] Restyle the complete Music page and global control in monochrome Liquid Glass without changing playback behavior.
 - [x] Complete the best-practice music expansion: adaptive Music page, compact feed-safe controls, typed Zoe commands, compliant provider matching, full web QA, and an updated enterprise audit.
+- [ ] Make the compact music controls draggable on every page, default them after the MMora wordmark, remove the outer line, and verify controls and screen bounds.
