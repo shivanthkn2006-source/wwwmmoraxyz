@@ -113,7 +113,13 @@ export const useSentinelWatch = (): { blocked: boolean } => {
       }
     };
     const onContext = (e: MouseEvent) => {
-      e.preventDefault();
+      // Right-click stays available — people need copy, paste and spell-check.
+      // Only note it when it isn't ordinary text or media interaction.
+      const target = e.target as HTMLElement | null;
+      const editing = Boolean(
+        target?.closest('input, textarea, [contenteditable="true"], img, video, a'),
+      );
+      if (editing) return;
       fire('context_menu_probe', 'low');
     };
 
