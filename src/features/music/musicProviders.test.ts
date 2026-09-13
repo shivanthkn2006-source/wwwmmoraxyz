@@ -81,7 +81,7 @@ describe('music providers', () => {
       return new Response('{}', { status: 404 });
     });
     const result = await searchMusicCatalog('Roar');
-    expect(result.tracks.map((track) => track.source)).toEqual(['audius', 'apple', 'radio']);
+    expect(result.tracks.map((track) => track.source)).toEqual(['audius', 'radio', 'apple']);
     expect(result.tracks.find((track) => track.source === 'apple')?.credit).toContain('preview');
   });
 

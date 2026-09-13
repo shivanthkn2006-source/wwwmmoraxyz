@@ -47,7 +47,7 @@ export default function MusicPage() {
     setSearching(true);
     setNotice(null);
     try {
-      const kind = /\b(radio|station|fm)\b/i.test(value) ? 'radio' : 'track';
+      const kind = /\b(radio|station|fm|satellite)\b/i.test(value) ? 'radio' : 'track';
       const result = await searchMusicCatalog(value, kind);
       try { sessionStorage.setItem(SEARCH_CACHE_KEY, JSON.stringify({ query: value, result })); } catch { /* optional */ }
       setResults(result);
