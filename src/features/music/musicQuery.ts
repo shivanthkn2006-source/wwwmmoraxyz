@@ -108,9 +108,9 @@ export function musicMatchScore(track: { title: string; artist: string; album?: 
   const album = comparable(track.album ?? '');
   if (title === needle) return 100;
   if (`${title} ${artist}` === needle || `${artist} ${title}` === needle) return 98;
+  if (artist === needle) return 96;
   if (title.startsWith(needle)) return 90;
   if (title.includes(needle)) return 82;
-  if (artist === needle) return 78;
   if (album === needle) return 74;
   const terms = needle.split(' ').filter((term) => term.length > 1);
   const haystack = `${title} ${artist} ${album}`;

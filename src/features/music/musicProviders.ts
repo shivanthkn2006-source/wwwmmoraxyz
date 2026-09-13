@@ -149,7 +149,7 @@ export async function searchMusicCatalog(rawQuery: string, kind: 'track' | 'mood
 /* ───────────────────────── Apple Music previews ───────────────────── */
 
 /** Official catalog metadata with the playable preview supplied by Apple. */
-export async function searchAppleMusic(query: string, limit = 50): Promise<MusicTrack[]> {
+export async function searchAppleMusic(query: string, limit = 200): Promise<MusicTrack[]> {
   const data = await getJson<{ results?: any[] }>(
     `https://itunes.apple.com/search?media=music&entity=song&limit=${limit}&term=${encodeURIComponent(query)}`,
   );

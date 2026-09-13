@@ -23,5 +23,7 @@ describe('music query normalization', () => {
   it('ranks exact provider metadata above broad matches', () => {
     expect(musicMatchScore({ title: 'Signal', artist: 'Artist' }, 'Signal'))
       .toBeGreaterThan(musicMatchScore({ title: 'Signal Radio', artist: 'Live' }, 'Signal'));
+    expect(musicMatchScore({ title: 'Roar', artist: 'Katy Perry' }, 'Katy Perry'))
+      .toBeGreaterThan(musicMatchScore({ title: 'Katy Perry remix', artist: 'Cover artist' }, 'Katy Perry'));
   });
 });
