@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { resolveMusicQueue, searchAudius } from './musicProviders';
+import { isSecurePlayableUrl, resolveMusicQueue, searchAudius, searchRadio } from './musicProviders';
 
 describe('music providers', () => {
   afterEach(() => vi.restoreAllMocks());
@@ -16,5 +16,18 @@ describe('music providers', () => {
   it('falls through providers and returns an honest empty result', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{}', { status: 503 }));
     await expect(resolveMusicQueue('not available', 'radio')).resolves.toEqual({ tracks: [], source: null });
+  });
+
+  it('rejects insecure and malformed stream URLs', async () => {
+    expect(isSecurePlayableUrl('https://radio.test/live')).toBe(true);
+    expect(isSecurePlayableUrl('http://radio.test/live')).toBe(false);
+    expect(isSecurePlayableUrl('not-a-url')).toBe(false);
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify([
+        { stationuuid: 'unsafe', name: 'Unsafe', url_resolved: 'http://radio.test/live' },
+        { stationuuid: 'safe', name: 'Safe', url_resolved: 'https://radio.test/live' },
+      ]), { status: 200 }),
+    );
+    await expect(searchRadio('jazz')).resolves.toMatchObject([{ id: 'radio:safe' }]);
   });
 });

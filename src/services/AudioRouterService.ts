@@ -294,7 +294,7 @@ class AudioRouterService {
     }
     try {
       await this.refreshDeviceList();
-      this.setupMediaSessionHandlers();
+      this.refreshMediaSessionHandlers();
       const headset = resolveHeadsetState(this.outputDevices, this.currentOutputDeviceId);
       this.setStatus(headset.connected ? 'connected' : 'fallback');
     } catch {
