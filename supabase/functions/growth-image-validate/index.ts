@@ -19,9 +19,13 @@ const json = (body: unknown, status = 200) =>
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
 
-Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+/**
+ * Hard ceiling for the whole request. Validation is advisory: whatever happens,
+ * answer well before the 150s platform idle timeout so the caller never hangs.
+ */
+const OVERALL_BUDGET_MS = 25_000;
 
+const handle = async (req: Request): Promise<Response> => {
   try {
     const { imageUrl, person, subject, category, strictness } = await req.json();
     const mode = strictness === 'strict' || strictness === 'lenient' ? strictness : 'balanced';
@@ -47,7 +51,7 @@ Deno.serve(async (req) => {
     // Providers cannot crawl the image host, so inline the bytes instead.
     let inlineImage: string;
     try {
-      const imgRes = await fetch(imageUrl, { headers: { Accept: 'image/*' }, signal: AbortSignal.timeout(10_000) });
+      const imgRes = await fetch(imageUrl, { headers: { Accept: 'image/*' }, signal: AbortSignal.timeout(8_000) });
       if (!imgRes.ok) return json({ match: true, reason: 'image unavailable for validation' });
       const buf = new Uint8Array(await imgRes.arrayBuffer());
       if (buf.byteLength < 1000) return json({ match: true, reason: 'image too small to validate' });
@@ -67,7 +71,7 @@ Deno.serve(async (req) => {
     let res: Response;
     try {
       res = await sovereignFetch('sovereign://chat/completions', {
-      signal: AbortSignal.timeout(45_000),
+      signal: AbortSignal.timeout(12_000),
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -135,5 +139,25 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('[growth-image-validate] failed', error);
     return json({ error: 'Validation failed' }, 500);
+  }
+};
+
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+
+  // Never let a hung provider hold the request open until the platform's 150s
+  // idle timeout: an unfinished check is inconclusive, so keep the image.
+  let timer: number | undefined;
+  const deadline = new Promise<Response>((resolve) => {
+    timer = setTimeout(() => {
+      console.warn('[growth-image-validate] overall budget exceeded');
+      resolve(json({ match: true, inconclusive: true, reason: 'validator timed out' }));
+    }, OVERALL_BUDGET_MS) as unknown as number;
+  });
+
+  try {
+    return await Promise.race([handle(req), deadline]);
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
   }
 });
