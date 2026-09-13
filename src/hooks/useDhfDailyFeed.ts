@@ -39,6 +39,8 @@ export function useDhfDailyFeed() {
     posts: [], loading: true, error: false, generating: false,
   });
   const mounted = useRef(true);
+  /** Rows fetched for today/yesterday, kept so the reveal timer can re-filter. */
+  const rowsRef = useRef<DhfDailyPost[]>([]);
 
   useEffect(() => {
     mounted.current = true;
@@ -55,7 +57,9 @@ export function useDhfDailyFeed() {
       .order('post_date', { ascending: false })
       .order('slot_time', { ascending: false });
     if (error) throw error;
-    return resolveCompassImages((data ?? []) as unknown as DhfDailyPost[]);
+    const resolved = resolveCompassImages((data ?? []) as unknown as DhfDailyPost[]);
+    rowsRef.current = resolved;
+    return resolved;
   }, []);
 
 
