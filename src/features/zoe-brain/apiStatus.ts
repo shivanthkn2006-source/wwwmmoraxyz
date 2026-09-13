@@ -40,7 +40,7 @@ export interface ApiStatusReport {
 }
 
 /** Search words that map a plain sentence onto an API in the registry. */
-const KEYWORDS: Record<string, string[]> = {
+export const KEYWORDS: Record<string, string[]> = {
   deepgram: ['deepgram', 'voice', 'speak', 'tts', 'text to speech', 'your voice'],
   assemblyai: ['assembly', 'assemblyai', 'transcribe', 'transcription', 'subtitle'],
   groq: ['groq'],
