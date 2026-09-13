@@ -104,7 +104,12 @@ export default function GlobalMusicToggle() {
         pointerRef.current = null;
         suppressClickRef.current = pointer.moved;
         if (pointer.moved) {
-          try { localStorage.setItem(POSITION_KEY, JSON.stringify(position)); } catch { /* Storage unavailable. */ }
+          const finalPosition = clamp({
+            x: pointer.originX + event.clientX - pointer.startX,
+            y: pointer.originY + event.clientY - pointer.startY,
+          });
+          setPosition(finalPosition);
+          try { localStorage.setItem(POSITION_KEY, JSON.stringify(finalPosition)); } catch { /* Storage unavailable. */ }
         }
       }}
       onPointerCancel={() => {
