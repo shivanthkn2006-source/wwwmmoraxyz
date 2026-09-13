@@ -19,6 +19,7 @@
 
 import type { MusicTrack } from '@/features/music/musicProviders';
 import { subscribeTTSAudio } from '@/utils/zoeTTSAudioBus';
+import { nativeZoeMusicBridge } from '@/services/NativeZoeMusicBridge';
 
 export type MusicStatus = 'idle' | 'buffering' | 'playing' | 'paused' | 'error';
 export type RepeatMode = 'off' | 'all' | 'one';
@@ -45,6 +46,7 @@ class MusicEngineImpl {
   private ttsUnsub: (() => void) | null = null;
   private duckedFrom: number | null = null;
   private unlocked = false;
+  private nativeReady = false;
 
   private state: MusicState = {
     status: 'idle',
@@ -94,6 +96,24 @@ class MusicEngineImpl {
     this.bindMediaSession();
     this.bindDucking();
     return audio;
+  }
+
+  private async ensureNative(): Promise<boolean> {
+    if (!nativeZoeMusicBridge.isAvailable()) return false;
+    if (!this.nativeReady) {
+      await nativeZoeMusicBridge.initialize(
+        (event) => this.patch({
+          status: event.state,
+          ...(typeof event.position === 'number' ? { position: event.position } : {}),
+          ...(typeof event.duration === 'number' ? { duration: event.duration } : {}),
+          error: event.state === 'error' ? event.reason ?? 'Native playback failed.' : null,
+        }),
+        () => void this.next(),
+        () => void this.previous(),
+      );
+      this.nativeReady = true;
+    }
+    return true;
   }
 
   /** iOS/Android block audio until a real gesture — call this from any tap. */
@@ -196,9 +216,20 @@ class MusicEngineImpl {
 
   async playIndex(index: number): Promise<boolean> {
     const track = this.state.queue[index];
-    const audio = this.el();
-    if (!track || !audio) return false;
+    if (!track) return false;
     this.patch({ index, track, status: 'buffering', position: 0, duration: 0, error: null });
+    if (await this.ensureNative()) {
+      try {
+        await nativeZoeMusicBridge.load(track);
+        await nativeZoeMusicBridge.play();
+        return true;
+      } catch (error) {
+        this.patch({ status: 'error', error: error instanceof Error ? error.message : 'Native playback failed.' });
+        return false;
+      }
+    }
+    const audio = this.el();
+    if (!audio) return false;
     audio.src = track.url;
     try {
       await audio.play();
@@ -223,12 +254,16 @@ class MusicEngineImpl {
   }
 
   async play(): Promise<void> {
-    const audio = this.el();
-    if (!audio) return;
     if (!this.state.track && this.state.queue.length) {
       await this.playIndex(0);
       return;
     }
+    if (await this.ensureNative()) {
+      await nativeZoeMusicBridge.play();
+      return;
+    }
+    const audio = this.el();
+    if (!audio) return;
     try {
       await audio.play();
     } catch {
@@ -237,6 +272,10 @@ class MusicEngineImpl {
   }
 
   pause(): void {
+    if (nativeZoeMusicBridge.isAvailable()) {
+      void nativeZoeMusicBridge.pause();
+      return;
+    }
     this.audio?.pause();
   }
 
@@ -246,6 +285,7 @@ class MusicEngineImpl {
   }
 
   stop(): void {
+    if (nativeZoeMusicBridge.isAvailable()) void nativeZoeMusicBridge.stop();
     const audio = this.audio;
     if (audio) {
       audio.pause();
@@ -284,6 +324,10 @@ class MusicEngineImpl {
   }
 
   seek(seconds: number): void {
+    if (nativeZoeMusicBridge.isAvailable()) {
+      void nativeZoeMusicBridge.seek(Math.max(0, seconds));
+      return;
+    }
     const audio = this.audio;
     if (!audio || !Number.isFinite(seconds)) return;
     try {
@@ -297,6 +341,7 @@ class MusicEngineImpl {
     const clamped = Math.min(1, Math.max(0, volume));
     const audio = this.el();
     if (audio) audio.volume = clamped;
+    if (nativeZoeMusicBridge.isAvailable()) void nativeZoeMusicBridge.setVolume(clamped);
     this.duckedFrom = null;
     try {
       window.localStorage.setItem(VOLUME_KEY, String(clamped));

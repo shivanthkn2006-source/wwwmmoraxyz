@@ -10,6 +10,7 @@
 
 import { SITE_MAP } from '@/config/siteMap';
 import { normalizeVoicePhrase, ZOE_WAKE_PHRASES } from './phrases';
+import { resolveMusicIntent, type MusicIntent } from '@/features/music/musicIntent';
 
 export type VoiceIntent =
   | { kind: 'navigate'; path: string; label: string; speak: string }
@@ -19,7 +20,8 @@ export type VoiceIntent =
   | { kind: 'god-scan'; speak: string }
   | { kind: 'search'; query: string; speak: string }
   | { kind: 'resume'; speak: string }
-  | { kind: 'asset-3d'; prompt: string; speak: string };
+  | { kind: 'asset-3d'; prompt: string; speak: string }
+  | { kind: 'music'; action: MusicIntent; speak: string };
 
 /** Spoken aliases that are not the page label ("chat" → Messages). */
 const ALIASES: Record<string, string> = {
@@ -91,6 +93,9 @@ function targets(): Array<{ key: string; path: string; label: string }> {
 export function resolveVoiceIntent(rawText: string): VoiceIntent | null {
   const text = stripWake(rawText || '');
   if (!text) return null;
+
+  const music = resolveMusicIntent(text);
+  if (music) return { kind: 'music', action: music, speak: music.speak };
 
   // Only an explicit request opens the orb chat window. Saying "hey Zoe" alone
   // never opens it — she just answers out loud.

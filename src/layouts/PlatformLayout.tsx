@@ -24,6 +24,7 @@ import ZoeVoiceIntentHost from '@/components/zoe/ZoeVoiceIntentHost';
 import ZoeGreetingFilm from '@/components/zoe/ZoeGreetingFilm';
 import ZoeAgentProvider from '@/contexts/ZoeAgentProvider';
 import ZoeAgentHost from '@/components/zoe/ZoeAgentHost';
+import GlobalMusicToggle from '@/components/music/GlobalMusicToggle';
 
 
 
@@ -105,6 +106,10 @@ export const PlatformLayout = ({ children }: { children: React.ReactNode }) => (
     {/* Bluetooth headset status + hardware button bridge (top-right, dock stays clear). */}
     <AppErrorBoundary moduleName="platform:audio-router" severity="low" fallback={null}>
       <GlobalAudioQuickConnect />
+    </AppErrorBoundary>
+
+    <AppErrorBoundary moduleName="platform:music" severity="low" fallback={null}>
+      <GlobalMusicToggle />
     </AppErrorBoundary>
 
     {/* Spoken navigation ("Zoe, open chat") — renders nothing. */}

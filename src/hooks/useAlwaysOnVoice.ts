@@ -216,6 +216,27 @@ export const useAlwaysOnVoice = () => {
           // No wording yet: ask once, then the next thing said is the message.
           pendingRecipientRef.current = intent.recipient;
         }
+      } else if (intent.kind === 'music') {
+        const { musicEngine } = await import('@/services/MusicEngine');
+        const action = intent.action;
+        if (action.kind === 'open') {
+          window.dispatchEvent(new CustomEvent('zoe-navigate', { detail: { path: '/music' } }));
+        } else if (action.kind === 'pause') musicEngine.pause();
+        else if (action.kind === 'stop') musicEngine.stop();
+        else if (action.kind === 'resume') await musicEngine.play();
+        else if (action.kind === 'next') await musicEngine.next();
+        else if (action.kind === 'previous') await musicEngine.previous();
+        else {
+          const { resolveMusicQueue } = await import('@/features/music/musicProviders');
+          const result = await resolveMusicQueue(action.query || 'music for my mood', action.lookup);
+          if (!result.tracks.length) spoken = 'I could not find a playable match from the connected music sources.';
+          else {
+            const played = await musicEngine.playQueue(result.tracks);
+            spoken = played
+              ? `Playing ${result.tracks[0].title} by ${result.tracks[0].artist}, from ${result.source}.`
+              : musicEngine.getState().error ?? 'I found it, but this device needs you to tap play once.';
+          }
+        }
       }
       window.dispatchEvent(new CustomEvent('zoe-handsfree-reply', { detail: { text: spoken } }));
       await recordVoiceTurn('assistant', spoken, user?.id);
