@@ -71,7 +71,7 @@ const handle = async (req: Request): Promise<Response> => {
     let res: Response;
     try {
       res = await sovereignFetch('sovereign://chat/completions', {
-      signal: AbortSignal.timeout(45_000),
+      signal: AbortSignal.timeout(12_000),
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
