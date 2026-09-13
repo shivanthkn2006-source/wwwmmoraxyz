@@ -183,6 +183,21 @@ class ZoeBackgroundListener {
   }
 
   /**
+   * Safety net for a conversation that dies silently (Safari can drop its
+   * recognition without firing an end event). It is pushed out on every sign of
+   * life, so it can only fire when the conversation really has gone quiet.
+   */
+  private armConversationWatchdog(): void {
+    if (this.conversationWatchdog) clearTimeout(this.conversationWatchdog);
+    this.conversationWatchdog = setTimeout(() => {
+      this.conversationWatchdog = null;
+      if (!this.conversationActive) return;
+      this.conversationActive = false;
+      if (this.enabled && !document.hidden) this.scheduleRestart(250);
+    }, 120_000);
+  }
+
+  /**
    * Safari only reliably starts speech recognition from a real user gesture.
    * When it refuses, we wait for the very next tap or key press on the page and
    * silently re-arm — the user never has to find a switch again.
