@@ -82,6 +82,8 @@ import { useNeuroSymbolicGuard } from '@/hooks/useNeuroSymbolicGuard';
 import { loadDestinySeed, saveDestinySeed } from '@/core/soul/AtmanArchive';
 import { stripScratchpad } from '@/utils/hiddenScratchpad';
 import { getZoeActivePostContext, getZoePlatformPageContext } from '@/lib/zoePlatformContext';
+import { resolveMusicIntent } from '@/features/music/musicIntent';
+import { executeMusicIntent } from '@/features/music/executeMusicIntent';
 
 
 interface Message {
@@ -1284,6 +1286,32 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
     setReplyingTo(null); // Clear reply state after sending
     setIsProcessing(true);
     setSendStage('sending', deepThinking ? 'zoe-core-intelligence' : 'zoe-chat');
+
+    // Typed Zoe music requests use the same singleton queue as voice and the
+    // standalone page, so no second player can compete for audio ownership.
+    if (messagingMode === 'zoe' && !hasPendingMedia) {
+      const musicIntent = resolveMusicIntent(userMessage.content);
+      if (musicIntent) {
+        turnIntent = `music_${musicIntent.kind}`;
+        const result = await executeMusicIntent(musicIntent, () => navigate('/music'));
+        const musicMessage: Message = {
+          id: createMessageId(),
+          role: 'zoe',
+          content: result.message,
+          timestamp: new Date(),
+          reasoningTrace: { classifiedIntent: turnIntent, codexInjected: false },
+        };
+        setMessages(prev => [...prev, musicMessage]);
+        offlineDataSync.addConversation('user', userMessage.content);
+        offlineDataSync.addConversation('zoe', result.message);
+        await saveMessageToDb('user', userMessage.content, undefined, undefined, userMessage.id);
+        await saveMessageToDb('assistant', result.message, undefined, undefined, musicMessage.id);
+        if (!isMuted) speakAsZoe(result.message, { messageId: musicMessage.id }, () => setIsSpeaking(true), () => setIsSpeaking(false));
+        setIsProcessing(false);
+        setSendStage('done', 'music-command');
+        return;
+      }
+    }
 
     // ═══ CODE GENESIS MANIFESTO: Dispatch user message for CDSP analysis ═══
     window.dispatchEvent(new CustomEvent('zoe-user-message', { detail: { text: userMessage.content } }));
@@ -2864,7 +2892,7 @@ Want me to dive deeper into any aspect?`;
       setIsProcessing(false);
       setSendStage('done');
     }
-  }, [input, isProcessing, isSending, isOnline, messages, isMuted, processConversation, saveMessageToDb, pendingMedia, pendingIdentityConfirmation, pendingIdentityImageRequest, pendingIdentitySave, processMedia, messagingMode, selectedUser, sendDirectMessage, user?.id, processCommand, replyingTo, tubeSight, sentinelGateway, protocolWisdom, deepThinking, rememberPendingIdentityRequest]);
+  }, [input, isProcessing, isSending, isOnline, messages, isMuted, processConversation, saveMessageToDb, pendingMedia, pendingIdentityConfirmation, pendingIdentityImageRequest, pendingIdentitySave, processMedia, messagingMode, selectedUser, sendDirectMessage, user?.id, processCommand, replyingTo, tubeSight, sentinelGateway, protocolWisdom, deepThinking, rememberPendingIdentityRequest, navigate]);
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {

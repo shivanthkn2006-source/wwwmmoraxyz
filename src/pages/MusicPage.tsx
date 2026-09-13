@@ -42,7 +42,7 @@ export default function MusicPage() {
 
   return (
     <TooltipProvider>
-    <main className="music-liquid-page min-h-screen px-4 pb-32 pt-20 text-foreground sm:px-6 lg:px-8">
+    <main className="music-liquid-page min-h-[100dvh] px-3 pb-[max(7rem,env(safe-area-inset-bottom))] pt-[max(4.5rem,env(safe-area-inset-top))] text-foreground sm:px-6 lg:px-8">
       <Helmet>
         <title>Music Player | M'Mora</title>
         <meta name="description" content="Play music and live radio with Zoe across M'Mora." />
@@ -58,19 +58,19 @@ export default function MusicPage() {
           </div>
         </header>
 
-        <div className="grid lg:grid-cols-[minmax(0,1fr)_360px]">
-        <section className="flex min-h-[620px] flex-col justify-between border-b border-border/60 p-5 sm:p-7 lg:border-b-0 lg:border-r">
+        <div className="grid xl:grid-cols-[minmax(0,1fr)_minmax(18rem,360px)]">
+        <section className="flex min-h-0 flex-col justify-between border-b border-border/60 p-4 sm:p-6 xl:min-h-[620px] xl:border-b-0 xl:border-r">
           <form className="music-liquid-control flex gap-2 rounded-lg border border-border/70 p-1.5" onSubmit={(event) => { event.preventDefault(); void search(); }}>
             <Input className="h-11 border-0 bg-transparent shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search tracks, artists, moods or radio" aria-label="Search music" />
              <IconControl className="h-11 w-11 rounded-full" type="submit" size="icon" disabled={searching} label={searching ? 'Searching music' : 'Search music'}><Search /></IconControl>
           </form>
 
-          <div className="flex flex-1 flex-col items-center justify-center py-10 text-center sm:py-12">
-            <div className="music-liquid-art relative flex aspect-square w-full max-w-sm items-center justify-center overflow-hidden rounded-lg border border-border">
+           <div className="flex flex-1 flex-col items-center justify-center py-6 text-center sm:py-8 xl:py-10">
+             <div className="music-liquid-art relative flex aspect-square w-full max-w-[min(22rem,52dvh)] items-center justify-center overflow-hidden rounded-lg border border-border">
               {state.track?.artwork ? <img src={state.track.artwork} alt="" className="h-full w-full object-cover grayscale" /> : <Disc3 className="h-24 w-24 text-muted-foreground" aria-hidden="true" />}
               <div className="music-liquid-art-glint pointer-events-none absolute inset-0" aria-hidden="true" />
             </div>
-            <h1 className="mt-7 max-w-xl text-3xl font-semibold">{state.track?.title ?? 'Music'}</h1>
+             <h1 className="mt-5 max-w-xl break-words text-2xl font-semibold sm:text-3xl">{state.track?.title ?? 'Music'}</h1>
             <p className="mt-2 text-muted-foreground">{state.track?.artist ?? 'Ask Zoe to play something, or search above.'}</p>
             {state.track && <p className="mt-1 text-xs text-muted-foreground">{state.track.credit}</p>}
             {(state.error || notice) && <p role="status" className="mt-4 max-w-md text-sm text-muted-foreground">{state.error ?? notice}</p>}
@@ -82,17 +82,17 @@ export default function MusicPage() {
               <div className="mt-2 flex justify-between text-xs text-muted-foreground"><span>{clock(state.position)}</span><span>{state.track?.live ? 'LIVE' : clock(state.duration)}</span></div>
             </div>
             <div className="flex items-center justify-center gap-2 sm:gap-3">
-               <IconControl className="rounded-full" variant={state.shuffle ? 'secondary' : 'ghost'} size="icon" onClick={() => musicEngine.toggleShuffle()} label={state.shuffle ? 'Turn shuffle off' : 'Turn shuffle on'}><Shuffle /></IconControl>
-               <IconControl className="rounded-full" variant="ghost" size="icon" onClick={() => void musicEngine.previous()} label="Previous track"><SkipBack /></IconControl>
+                <IconControl className="h-11 w-11 rounded-full sm:h-12 sm:w-12" variant={state.shuffle ? 'secondary' : 'ghost'} size="icon" onClick={() => musicEngine.toggleShuffle()} label={state.shuffle ? 'Turn shuffle off' : 'Turn shuffle on'}><Shuffle /></IconControl>
+                <IconControl className="h-11 w-11 rounded-full sm:h-12 sm:w-12" variant="ghost" size="icon" onClick={() => void musicEngine.previous()} label="Previous track"><SkipBack /></IconControl>
                <IconControl size="icon" className="music-liquid-play h-14 w-14 rounded-full" onClick={() => { musicEngine.unlock(); musicEngine.toggle(); }} label={active ? 'Pause music' : 'Play music'}>{active ? <Pause /> : <Play />}</IconControl>
-               <IconControl className="rounded-full" variant="ghost" size="icon" onClick={() => void musicEngine.next()} label="Next track"><SkipForward /></IconControl>
-               <IconControl className="rounded-full" variant={state.repeat !== 'off' ? 'secondary' : 'ghost'} size="icon" onClick={() => musicEngine.cycleRepeat()} label={`Repeat: ${state.repeat}`}><Repeat /></IconControl>
+                <IconControl className="h-11 w-11 rounded-full sm:h-12 sm:w-12" variant="ghost" size="icon" onClick={() => void musicEngine.next()} label="Next track"><SkipForward /></IconControl>
+                <IconControl className="h-11 w-11 rounded-full sm:h-12 sm:w-12" variant={state.repeat !== 'off' ? 'secondary' : 'ghost'} size="icon" onClick={() => musicEngine.cycleRepeat()} label={`Repeat: ${state.repeat}`}><Repeat /></IconControl>
             </div>
              <div className="flex items-center gap-3"><Volume2 className="h-4 w-4 text-muted-foreground" aria-hidden="true" /><Slider className="music-liquid-slider" value={[state.volume * 100]} max={100} step={1} onValueChange={([value]) => musicEngine.setVolume(value / 100)} aria-label="Music volume" aria-valuetext={`${Math.round(state.volume * 100)} percent`} /><span className="w-10 text-right text-xs tabular-nums text-muted-foreground">{Math.round(state.volume * 100)}%</span></div>
           </div>
         </section>
 
-        <aside className="music-liquid-queue p-5 sm:p-7" aria-label="Music queue">
+        <aside className="music-liquid-queue max-h-[50dvh] overflow-y-auto p-4 sm:p-6 xl:max-h-none" aria-label="Music queue">
           <h2 className="mb-5 flex items-center gap-2 text-lg font-semibold"><ListMusic className="h-5 w-5" /> Queue</h2>
           {state.queue.length === 0 ? <p className="text-sm text-muted-foreground">Your queue is empty.</p> : (
             <ol className="space-y-2">

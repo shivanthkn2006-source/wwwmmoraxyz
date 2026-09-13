@@ -142,7 +142,7 @@ export function resolveMusicIntent(raw: string): MusicIntent | null {
 
   // Anything else that mentions music, or a named title: exact search.
   const named = body.replace(/\b(song|songs|track|music|theme song)\b/g, '').replace(/\s+/g, ' ').trim();
-  if (MUSIC_WORD.test(body) || named.length > 2) {
+  if (MUSIC_WORD.test(body) || named.length >= 4) {
     const query = named || body;
     return { kind: 'play', query, lookup: 'track', speak: `Looking for ${query}.` };
   }

@@ -1345,6 +1345,31 @@ html.phantom-mode [class*="animate-"] {
   background: hsl(var(--music-glass-edge) / 0.92);
 }
 
+.music-mini-button {
+  height: 2.25rem;
+  width: 2.25rem;
+}
+
+@media (max-width: 380px) {
+  .music-mini-button {
+    height: 2rem;
+    width: 2rem;
+  }
+  .music-mini-button svg {
+    height: 0.875rem;
+    width: 0.875rem;
+  }
+}
+
+@media (max-height: 540px) and (orientation: landscape) {
+  .music-liquid-page {
+    padding-top: max(3.75rem, env(safe-area-inset-top));
+  }
+  .music-liquid-art {
+    max-width: min(12rem, 38dvh);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .music-liquid-page *,
   .music-global-glass * {
