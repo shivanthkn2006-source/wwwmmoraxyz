@@ -214,7 +214,7 @@ export const useAdaptiveCamera = ({ autoStart = true }: AdaptiveStreamOptions = 
     };
     document.addEventListener('visibilitychange', onVisibility);
     return () => document.removeEventListener('visibilitychange', onVisibility);
-  }, [stopStream]);
+  }, [stopStream, startStream, isLive]);
 
   return { stream, isLive, isStarting, error, networkType, startStream, stopStream };
 };
