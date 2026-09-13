@@ -152,6 +152,7 @@ final class NativeZoeAudioPlugin: CAPPlugin, CAPBridgedPlugin, SFSpeechRecognize
     }
 
     private func headsetPressed() -> MPRemoteCommandHandlerStatus {
+        if MMoraAudioSessionState.shared.musicActive { return .noSuchContent }
         notifyListeners("headsetButton", data: [:])
         return .success
     }

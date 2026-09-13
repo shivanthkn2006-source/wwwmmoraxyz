@@ -38,6 +38,7 @@ import {
   Bug,
   LifeBuoy,
   Map as MapIcon,
+  Music2,
 } from 'lucide-react';
 import type { GlassDockItem } from '@/components/home/HomeGlassDock';
 
@@ -52,6 +53,7 @@ interface ExtraDef {
 
 /** Ordered by usefulness — the dock trims from the end when space runs out. */
 export const DOCK_EXTRA_DEFS: ExtraDef[] = [
+  { id: 'dock-music', label: 'Music', route: '/music', Icon: Music2 },
   { id: 'dock-compass', label: 'DHF Neural Feed', route: '/compass', Icon: Compass },
   { id: 'dock-help', label: 'Help guides', route: '/help', Icon: LifeBuoy },
   { id: 'dock-site-map', label: 'Site map', route: '/map', Icon: MapIcon },
