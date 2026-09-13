@@ -51,7 +51,7 @@ const handle = async (req: Request): Promise<Response> => {
     // Providers cannot crawl the image host, so inline the bytes instead.
     let inlineImage: string;
     try {
-      const imgRes = await fetch(imageUrl, { headers: { Accept: 'image/*' }, signal: AbortSignal.timeout(10_000) });
+      const imgRes = await fetch(imageUrl, { headers: { Accept: 'image/*' }, signal: AbortSignal.timeout(8_000) });
       if (!imgRes.ok) return json({ match: true, reason: 'image unavailable for validation' });
       const buf = new Uint8Array(await imgRes.arrayBuffer());
       if (buf.byteLength < 1000) return json({ match: true, reason: 'image too small to validate' });
