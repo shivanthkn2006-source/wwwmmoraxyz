@@ -173,7 +173,6 @@ class ZoeBackgroundListener {
     window.addEventListener('zoe-handsfree-transcript', () => this.armConversationWatchdog());
     window.addEventListener('zoe-handsfree-reply', () => this.armConversationWatchdog());
     window.addEventListener('zoe-handsfree-end', () => {
-      /* eslint-disable-next-line no-empty */
       this.conversationActive = false;
       if (this.conversationWatchdog) {
         clearTimeout(this.conversationWatchdog);
