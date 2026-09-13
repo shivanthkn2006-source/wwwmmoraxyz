@@ -29,6 +29,7 @@ class AudioDouble {
 describe('MusicEngine', () => {
   beforeEach(() => {
     vi.resetModules();
+    vi.stubGlobal('window', { localStorage: { getItem: vi.fn(), setItem: vi.fn() } });
     vi.stubGlobal('Audio', AudioDouble);
     vi.stubGlobal('MediaMetadata', class { constructor(public value: unknown) {} });
   });
