@@ -67,6 +67,8 @@ describe('MusicEngine', () => {
     musicEngine.toggleShuffle();
     expect(musicEngine.getState().shuffle).toBe(true);
     musicEngine.stop();
-    expect(musicEngine.getState()).toMatchObject({ status: 'idle', track: null });
+    expect(musicEngine.getState()).toMatchObject({ status: 'idle', index: 1, position: 0, track: { title: 'Two' } });
+    await musicEngine.play();
+    expect(musicEngine.getState()).toMatchObject({ status: 'playing', index: 1, track: { title: 'Two' } });
   });
 });
