@@ -71,4 +71,16 @@ describe('MusicEngine', () => {
     await musicEngine.play();
     expect(musicEngine.getState()).toMatchObject({ status: 'playing', index: 1, track: { title: 'Two' } });
   });
+
+  it('always advances to a different track when shuffle is enabled', async () => {
+    const { musicEngine } = await import('@/services/MusicEngine');
+    await musicEngine.playQueue([
+      { id: '1', title: 'One', artist: 'A', url: 'https://audio.test/one.mp3', source: 'archive', credit: 'Archive' },
+      { id: '2', title: 'Two', artist: 'B', url: 'https://audio.test/two.mp3', source: 'archive', credit: 'Archive' },
+    ]);
+    musicEngine.toggleShuffle();
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    await musicEngine.next();
+    expect(musicEngine.getState().index).toBe(1);
+  });
 });

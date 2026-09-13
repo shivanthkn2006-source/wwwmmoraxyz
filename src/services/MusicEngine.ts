@@ -1,22 +1,3 @@
-/**
- * GLOBAL MUSIC ENGINE — a plain TypeScript singleton that lives OUTSIDE the
- * React tree.
- *
- * Why a singleton: React unmounts and remounts components on every route
- * change, which would tear down an <audio> element owned by a component. This
- * engine owns one element for the whole app, so playback survives navigation
- * across every page, and the UI merely subscribes to its state.
- *
- * It also:
- *   · registers Media Session so the OS lock screen, Control Center and
- *     desktop media keys drive playback;
- *   · pins output to the member's selected Bluetooth headset (AudioRouter);
- *   · ducks itself while Zoe speaks, and restores the level afterwards;
- *   · queues, shuffles, repeats and auto-advances.
- *
- * Nothing here renders anything, so no existing UI or layout is affected.
- */
-
 import type { MusicTrack } from '@/features/music/musicProviders';
 import { subscribeTTSAudio } from '@/utils/zoeTTSAudioBus';
 import { nativeZoeMusicBridge } from '@/services/NativeZoeMusicBridge';
@@ -34,7 +15,6 @@ export interface MusicState {
   volume: number;
   shuffle: boolean;
   repeat: RepeatMode;
-  /** Honest, member-readable reason when something could not play. */
   error: string | null;
 }
 
@@ -48,6 +28,7 @@ class MusicEngineImpl {
   private unlocked = false;
   private nativeReady = false;
   private failedIndexes = new Set<number>();
+  private shuffledIndices: number[] = [];
 
   private state: MusicState = {
     status: 'idle',
@@ -62,36 +43,26 @@ class MusicEngineImpl {
     error: null,
   };
 
-  /* ───────────────────────────── lifecycle ───────────────────────────── */
-
   private el(): HTMLAudioElement | null {
     if (typeof window === 'undefined') return null;
     if (this.audio) return this.audio;
-
     const audio = new Audio();
     audio.preload = 'auto';
     audio.crossOrigin = 'anonymous';
     try {
       const stored = Number(window.localStorage.getItem(VOLUME_KEY));
       if (Number.isFinite(stored) && stored > 0 && stored <= 1) this.state.volume = stored;
-    } catch {
-      /* private mode — default volume */
-    }
+    } catch { /* ignored */ }
     audio.volume = this.state.volume;
-
     audio.onplaying = () => this.patch({ status: 'playing', error: null });
-    audio.onpause = () => {
-      if (this.state.status !== 'idle') this.patch({ status: 'paused' });
-    };
+    audio.onpause = () => { if (this.state.status !== 'idle') this.patch({ status: 'paused' }); };
     audio.onwaiting = () => this.patch({ status: 'buffering' });
-    audio.ontimeupdate = () =>
-      this.patch({
-        position: audio.currentTime || 0,
-        duration: Number.isFinite(audio.duration) ? audio.duration : 0,
-      });
+    audio.ontimeupdate = () => this.patch({
+      position: audio.currentTime || 0,
+      duration: Number.isFinite(audio.duration) ? audio.duration : 0,
+    });
     audio.onended = () => void this.next(true);
     audio.onerror = () => void this.recoverFromStreamError();
-
     this.audio = audio;
     this.bindDucking();
     return audio;
@@ -115,7 +86,6 @@ class MusicEngineImpl {
     return true;
   }
 
-  /** iOS/Android block audio until a real gesture — call this from any tap. */
   unlock(): void {
     if (this.unlocked) return;
     const audio = this.el();
@@ -126,9 +96,7 @@ class MusicEngineImpl {
       void audio.play().catch(() => undefined);
       audio.pause();
       audio.muted = false;
-    } catch {
-      /* nothing to unlock yet */
-    }
+    } catch { /* ignored */ }
   }
 
   private bindDucking(): void {
@@ -154,28 +122,20 @@ class MusicEngineImpl {
       navigator.mediaSession.metadata = new MediaMetadata({
         title: track.title,
         artist: track.artist,
-        album: track.credit,
+        album: track.album || track.credit,
         artwork: track.artwork ? [{ src: track.artwork, sizes: '512x512' }] : [],
       });
       navigator.mediaSession.playbackState = this.state.status === 'playing' ? 'playing' : 'paused';
-    } catch {
-      /* metadata is best-effort */
-    }
+    } catch { /* ignored */ }
   }
-
-  /* ───────────────────────────── subscription ───────────────────────────── */
 
   subscribe(listener: (state: MusicState) => void): () => void {
     this.listeners.add(listener);
     listener(this.state);
-    return () => {
-      this.listeners.delete(listener);
-    };
+    return () => { this.listeners.delete(listener); };
   }
 
-  getState(): MusicState {
-    return this.state;
-  }
+  getState(): MusicState { return this.state; }
 
   private patch(next: Partial<MusicState>): void {
     this.state = { ...this.state, ...next };
@@ -183,22 +143,16 @@ class MusicEngineImpl {
     for (const listener of this.listeners) listener(this.state);
   }
 
-  /* ───────────────────────────── playback ───────────────────────────── */
-
   async playQueue(tracks: MusicTrack[], startIndex = 0): Promise<boolean> {
     if (!tracks.length) {
       this.patch({ error: 'I could not find that on any of the free music sources.' });
       return false;
     }
     this.failedIndexes.clear();
+    this.shuffledIndices = [];
     this.patch({ queue: tracks, index: -1, error: null });
     void import('@/services/AudioRouterService').then(({ audioRouter }) => audioRouter.refreshMediaSessionHandlers());
     return this.playIndex(startIndex);
-  }
-
-  enqueue(tracks: MusicTrack[]): void {
-    if (!tracks.length) return;
-    this.patch({ queue: [...this.state.queue, ...tracks] });
   }
 
   async playIndex(index: number): Promise<boolean> {
@@ -223,10 +177,7 @@ class MusicEngineImpl {
       void this.routeToHeadset(audio);
       return true;
     } catch {
-      this.patch({
-        status: 'error',
-        error: 'Playback needs one tap first on this device — tap the play symbol and it continues.',
-      });
+      this.patch({ status: 'error', error: 'Playback needs one tap first on this device — tap the play symbol and it continues.' });
       return false;
     }
   }
@@ -234,7 +185,11 @@ class MusicEngineImpl {
   private async recoverFromStreamError(): Promise<void> {
     const failed = this.state.index;
     if (failed >= 0) this.failedIndexes.add(failed);
-    const nextIndex = this.state.queue.findIndex((_, index) => !this.failedIndexes.has(index));
+    const { queue } = this.state;
+    const nextIndex = queue.length
+      ? Array.from({ length: queue.length }, (_, offset) => (failed + offset + 1) % queue.length)
+          .find((index) => !this.failedIndexes.has(index)) ?? -1
+      : -1;
     if (nextIndex >= 0) {
       this.patch({ status: 'buffering', error: 'That stream was unavailable, so I’m trying the next one.' });
       await this.playIndex(nextIndex);
@@ -247,34 +202,19 @@ class MusicEngineImpl {
     try {
       const { audioRouter } = await import('@/services/AudioRouterService');
       await audioRouter.applySinkToElement(audio);
-    } catch {
-      /* default output is fine */
-    }
+    } catch { /* ignored */ }
   }
 
   async play(): Promise<void> {
-    if (!this.state.track && this.state.queue.length) {
-      await this.playIndex(0);
-      return;
-    }
-    if (await this.ensureNative()) {
-      await nativeZoeMusicBridge.play();
-      return;
-    }
+    if (!this.state.track && this.state.queue.length) { await this.playIndex(0); return; }
+    if (await this.ensureNative()) { await nativeZoeMusicBridge.play(); return; }
     const audio = this.el();
     if (!audio) return;
-    try {
-      await audio.play();
-    } catch {
-      this.patch({ status: 'paused' });
-    }
+    try { await audio.play(); } catch { this.patch({ status: 'paused' }); }
   }
 
   pause(): void {
-    if (nativeZoeMusicBridge.isAvailable()) {
-      void nativeZoeMusicBridge.pause();
-      return;
-    }
+    if (nativeZoeMusicBridge.isAvailable()) { void nativeZoeMusicBridge.pause(); return; }
     this.audio?.pause();
   }
 
@@ -286,12 +226,7 @@ class MusicEngineImpl {
   stop(): void {
     if (nativeZoeMusicBridge.isAvailable()) void nativeZoeMusicBridge.stop();
     const audio = this.audio;
-    if (audio) {
-      audio.pause();
-      audio.currentTime = 0;
-    }
-    // Keep the loaded track and queue selected so the global transport remains
-    // visible and Play can restart the same song after Stop.
+    if (audio) { audio.pause(); audio.currentTime = 0; }
     this.patch({ status: 'idle', position: 0 });
     void import('@/services/AudioRouterService').then(({ audioRouter }) => audioRouter.refreshMediaSessionHandlers());
   }
@@ -299,17 +234,21 @@ class MusicEngineImpl {
   async next(auto = false): Promise<void> {
     const { queue, index, shuffle, repeat } = this.state;
     if (!queue.length) return;
-    if (auto && repeat === 'one') {
-      await this.playIndex(index);
-      return;
-    }
-    let target = shuffle ? Math.floor(Math.random() * queue.length) : index + 1;
-    if (target >= queue.length) {
-      if (repeat === 'off' && auto) {
-        this.patch({ status: 'idle', position: 0 });
-        return;
+    if (auto && repeat === 'one' && index >= 0) { await this.playIndex(index); return; }
+
+    let target = index + 1;
+    if (shuffle && queue.length > 1) {
+      if (this.shuffledIndices.length !== queue.length) {
+        this.shuffledIndices = Array.from({ length: queue.length }, (_, i) => i).sort(() => Math.random() - 0.5);
       }
-      target = 0;
+      const currentPos = this.shuffledIndices.indexOf(index);
+      target = this.shuffledIndices[(currentPos + 1) % this.shuffledIndices.length];
+      if (target === index) target = this.shuffledIndices[(currentPos + 2) % this.shuffledIndices.length];
+    }
+
+    if (target >= queue.length || (shuffle && target === this.shuffledIndices[0] && index !== -1)) {
+      if (repeat === 'off' && auto) { this.patch({ status: 'idle', position: 0 }); return; }
+      target = shuffle ? this.shuffledIndices[0] : 0;
     }
     await this.playIndex(target);
   }
@@ -318,25 +257,15 @@ class MusicEngineImpl {
     const { queue, index } = this.state;
     if (!queue.length) return;
     const audio = this.audio;
-    if (audio && audio.currentTime > 3) {
-      audio.currentTime = 0;
-      return;
-    }
+    if (audio && audio.currentTime > 3) { audio.currentTime = 0; return; }
     await this.playIndex(index <= 0 ? queue.length - 1 : index - 1);
   }
 
   seek(seconds: number): void {
-    if (nativeZoeMusicBridge.isAvailable()) {
-      void nativeZoeMusicBridge.seek(Math.max(0, seconds));
-      return;
-    }
+    if (nativeZoeMusicBridge.isAvailable()) { void nativeZoeMusicBridge.seek(Math.max(0, seconds)); return; }
     const audio = this.audio;
     if (!audio || !Number.isFinite(seconds)) return;
-    try {
-      audio.currentTime = Math.max(0, seconds);
-    } catch {
-      /* live streams are not seekable */
-    }
+    try { audio.currentTime = Math.max(0, seconds); } catch { /* ignored */ }
   }
 
   setVolume(volume: number): void {
@@ -345,17 +274,11 @@ class MusicEngineImpl {
     if (audio) audio.volume = clamped;
     if (nativeZoeMusicBridge.isAvailable()) void nativeZoeMusicBridge.setVolume(clamped);
     this.duckedFrom = null;
-    try {
-      window.localStorage.setItem(VOLUME_KEY, String(clamped));
-    } catch {
-      /* private mode */
-    }
+    try { window.localStorage.setItem(VOLUME_KEY, String(clamped)); } catch { /* ignored */ }
     this.patch({ volume: clamped });
   }
 
-  toggleShuffle(): void {
-    this.patch({ shuffle: !this.state.shuffle });
-  }
+  toggleShuffle(): void { this.patch({ shuffle: !this.state.shuffle }); }
 
   cycleRepeat(): void {
     const order: RepeatMode[] = ['off', 'all', 'one'];

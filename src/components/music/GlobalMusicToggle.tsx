@@ -138,6 +138,7 @@ export default function GlobalMusicToggle() {
       </Button>
       <Button className="music-mini-button !border-0 !bg-transparent !shadow-none !outline-none !ring-0 !ring-offset-0" variant="ghost" size="icon" onClick={() => musicEngine.stop()} aria-label="Stop music"><Square /></Button>
       <Button className="music-mini-button !border-0 !bg-transparent !shadow-none !outline-none !ring-0 !ring-offset-0" variant="ghost" size="icon" onClick={() => void musicEngine.next()} aria-label="Next track"><SkipForward /></Button>
+      <span className="music-mini-position" aria-label={`Queue position ${state.index + 1} of ${state.queue.length}`}>{state.index + 1}/{state.queue.length}</span>
     </div>
   );
 }

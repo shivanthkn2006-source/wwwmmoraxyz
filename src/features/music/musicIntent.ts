@@ -15,7 +15,7 @@ export type MusicIntent =
   | { kind: 'previous'; speak: string }
   | { kind: 'open'; speak: string };
 
-const MUSIC_WORD = /\b(music|song|songs|track|tracks|playlist|radio|station|album|tune|tunes)\b/;
+const MUSIC_WORD = /\b(music|song|songs|track|tracks|playlist|radio|station|satellite|album|tune|tunes)\b/;
 
 const MOODS: Record<string, string> = {
   happy: 'happy',
@@ -136,8 +136,8 @@ export function resolveMusicIntent(raw: string): MusicIntent | null {
   }
 
   // "play radio" / "play a Spanish station"
-  if (/\b(radio|station|fm)\b/.test(body)) {
-    const query = body.replace(/\b(radio|station|fm|live)\b/g, '').trim() || 'top';
+  if (/\b(radio|station|fm|satellite)\b/.test(body)) {
+    const query = body.replace(/\b(radio|station|fm|satellite|live)\b/g, '').trim() || 'top';
     return { kind: 'play', query, lookup: 'radio', speak: `Tuning in to ${query} radio.` };
   }
 

@@ -103,7 +103,11 @@ function deduplicateAndRank(tracks: MusicTrack[], query: string): MusicTrack[] {
     const key = `${track.title}|${track.artist}`.toLowerCase().replace(/[^a-z0-9]+/g, '');
     if (!unique.has(key)) unique.set(key, track);
   }
-  return [...unique.values()].sort((left, right) => musicMatchScore(right, query) - musicMatchScore(left, query));
+  const sourceBonus: Record<MusicTrack['source'], number> = { audius: 50, archive: 45, radio: 20, apple: 0 };
+  return [...unique.values()].sort((left, right) =>
+    (musicMatchScore(right, query) + sourceBonus[right.source])
+      - (musicMatchScore(left, query) + sourceBonus[left.source]),
+  );
 }
 
 /** Searches every connected playable source while isolating individual provider failures. */
@@ -111,10 +115,10 @@ export async function searchMusicCatalog(rawQuery: string, kind: 'track' | 'mood
   const normalized = normalizeMusicQuery(rawQuery);
   const query = normalized.query || rawQuery.trim();
   const tasks = [
-    { name: 'Apple Music', run: () => searchAppleMusic(query) },
     { name: 'Audius', run: () => searchAudius(query) },
     { name: 'Internet Archive', run: () => searchArchive(query) },
     { name: 'Radio Browser', run: () => searchRadio(query) },
+    { name: 'Apple Music', run: () => searchAppleMusic(query) },
   ];
   if (kind === 'radio' || kind === 'devotional') tasks.reverse();
 

@@ -9,6 +9,7 @@ describe('resolveMusicIntent', () => {
     expect(resolveMusicIntent('skip this')).toMatchObject({ kind: 'next' });
     expect(resolveMusicIntent('previous track')).toMatchObject({ kind: 'previous' });
     expect(resolveMusicIntent('open music player')).toMatchObject({ kind: 'open' });
+    expect(resolveMusicIntent('play jazz satellite radio')).toMatchObject({ kind: 'play', lookup: 'radio', query: 'jazz' });
   });
 
   it('does not hijack ordinary conversation or other media', () => {
