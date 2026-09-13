@@ -59,6 +59,58 @@ export default function GlobalMusicToggle() {
     };
   }, [clamp]);
 
+  useEffect(() => {
+    const player = playerRef.current;
+    if (!player || !state.track) return;
+
+    const onPointerDown = (event: PointerEvent) => {
+      if (event.button !== 0) return;
+      player.setPointerCapture?.(event.pointerId);
+      pointerRef.current = {
+        id: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+        originX: position.x,
+        originY: position.y,
+        moved: false,
+      };
+    };
+    const onPointerMove = (event: PointerEvent) => {
+      const pointer = pointerRef.current;
+      if (!pointer || pointer.id !== event.pointerId) return;
+      const dx = event.clientX - pointer.startX;
+      const dy = event.clientY - pointer.startY;
+      if (Math.hypot(dx, dy) > 6) pointer.moved = true;
+      if (!pointer.moved) return;
+      event.preventDefault();
+      setPosition(clamp({ x: pointer.originX + dx, y: pointer.originY + dy }));
+    };
+    const finishDrag = (event: PointerEvent) => {
+      const pointer = pointerRef.current;
+      if (!pointer || pointer.id !== event.pointerId) return;
+      pointerRef.current = null;
+      suppressClickRef.current = pointer.moved;
+      if (!pointer.moved) return;
+      const finalPosition = clamp({
+        x: pointer.originX + event.clientX - pointer.startX,
+        y: pointer.originY + event.clientY - pointer.startY,
+      });
+      setPosition(finalPosition);
+      try { localStorage.setItem(POSITION_KEY, JSON.stringify(finalPosition)); } catch { /* Storage unavailable. */ }
+    };
+
+    player.addEventListener('pointerdown', onPointerDown);
+    window.addEventListener('pointermove', onPointerMove, { passive: false });
+    window.addEventListener('pointerup', finishDrag);
+    window.addEventListener('pointercancel', finishDrag);
+    return () => {
+      player.removeEventListener('pointerdown', onPointerDown);
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', finishDrag);
+      window.removeEventListener('pointercancel', finishDrag);
+    };
+  }, [clamp, position.x, position.y, state.track]);
+
   if (!state.track) return null;
 
   const active = state.status === 'playing' || state.status === 'buffering';
@@ -73,47 +125,6 @@ export default function GlobalMusicToggle() {
         if (!suppressClickRef.current) return;
         event.preventDefault();
         event.stopPropagation();
-        suppressClickRef.current = false;
-      }}
-      onPointerDown={(event) => {
-        if (event.button !== 0) return;
-        event.currentTarget.setPointerCapture?.(event.pointerId);
-        pointerRef.current = {
-          id: event.pointerId,
-          startX: event.clientX,
-          startY: event.clientY,
-          originX: position.x,
-          originY: position.y,
-          moved: false,
-        };
-      }}
-      onPointerMove={(event) => {
-        const pointer = pointerRef.current;
-        if (!pointer || pointer.id !== event.pointerId) return;
-        const dx = event.clientX - pointer.startX;
-        const dy = event.clientY - pointer.startY;
-        if (Math.hypot(dx, dy) > 6) pointer.moved = true;
-        if (pointer.moved) {
-          event.preventDefault();
-          setPosition(clamp({ x: pointer.originX + dx, y: pointer.originY + dy }));
-        }
-      }}
-      onPointerUp={(event) => {
-        const pointer = pointerRef.current;
-        if (!pointer || pointer.id !== event.pointerId) return;
-        pointerRef.current = null;
-        suppressClickRef.current = pointer.moved;
-        if (pointer.moved) {
-          const finalPosition = clamp({
-            x: pointer.originX + event.clientX - pointer.startX,
-            y: pointer.originY + event.clientY - pointer.startY,
-          });
-          setPosition(finalPosition);
-          try { localStorage.setItem(POSITION_KEY, JSON.stringify(finalPosition)); } catch { /* Storage unavailable. */ }
-        }
-      }}
-      onPointerCancel={() => {
-        pointerRef.current = null;
         suppressClickRef.current = false;
       }}
       aria-label="Draggable music controls"
