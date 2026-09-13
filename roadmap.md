@@ -10,5 +10,7 @@
 - [x] Complete the enterprise global music engine and provider gateway.
 - [x] Wire Zoe music intents, the standalone Music page, and global controls.
 - [x] Add Capacitor iOS/Android background music and OS media controls.
-- [ ] Run the remaining signed-in preview, full route crawl, full regression suite, and native build QA.
+- [x] Complete signed-in Music-page preview, route persistence checks, and full automated regression after enterprise hardening.
+- [x] Verify shared Media Session ownership, secure provider fallback, and music accessibility controls.
+- [ ] Complete the full 111-route visual crawl and native build QA (Android SDK and macOS/Xcode required).
 - [ ] Verify AirPods/Bluetooth, lock-screen controls, calls/interruptions, and resume behavior on physical iOS and Android devices.

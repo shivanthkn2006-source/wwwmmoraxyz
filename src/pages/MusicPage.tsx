@@ -4,6 +4,7 @@ import { Disc3, ListMusic, Pause, Play, Repeat, Search, Shuffle, SkipBack, SkipF
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { musicEngine } from '@/services/MusicEngine';
 import { useMusicEngine } from '@/hooks/useMusicEngine';
 import { resolveMusicQueue } from '@/features/music/musicProviders';
@@ -12,6 +13,10 @@ function clock(seconds: number) {
   if (!Number.isFinite(seconds)) return '0:00';
   const minutes = Math.floor(seconds / 60);
   return `${minutes}:${Math.floor(seconds % 60).toString().padStart(2, '0')}`;
+}
+
+function IconControl({ label, children, ...props }: React.ComponentProps<typeof Button> & { label: string }) {
+  return <Tooltip><TooltipTrigger asChild><Button aria-label={label} {...props}>{children}</Button></TooltipTrigger><TooltipContent>{label}</TooltipContent></Tooltip>;
 }
 
 export default function MusicPage() {
@@ -36,6 +41,7 @@ export default function MusicPage() {
   };
 
   return (
+    <TooltipProvider>
     <main className="min-h-screen bg-background px-4 pb-28 pt-20 text-foreground">
       <Helmet>
         <title>Music Player | M'Mora</title>
@@ -45,7 +51,7 @@ export default function MusicPage() {
         <section className="flex min-h-[620px] flex-col justify-between border-b border-border pb-10 lg:border-b-0 lg:border-r lg:pb-0 lg:pr-10">
           <form className="flex gap-2" onSubmit={(event) => { event.preventDefault(); void search(); }}>
             <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search tracks, artists, moods or radio" aria-label="Search music" />
-            <Button type="submit" size="icon" disabled={searching} aria-label="Search music"><Search /></Button>
+             <IconControl type="submit" size="icon" disabled={searching} label={searching ? 'Searching music' : 'Search music'}><Search /></IconControl>
           </form>
 
           <div className="flex flex-1 flex-col items-center justify-center py-12 text-center">
@@ -60,17 +66,17 @@ export default function MusicPage() {
 
           <div className="mx-auto w-full max-w-2xl space-y-5">
             <div>
-              <Slider value={[state.position]} max={Math.max(state.duration, state.position, 1)} step={1} disabled={!state.duration || Boolean(state.track?.live)} onValueChange={([value]) => musicEngine.seek(value)} aria-label="Playback position" />
+               <Slider value={[state.position]} max={Math.max(state.duration, state.position, 1)} step={1} disabled={!state.duration || Boolean(state.track?.live)} onValueChange={([value]) => musicEngine.seek(value)} aria-label="Playback position" aria-valuetext={clock(state.position)} />
               <div className="mt-2 flex justify-between text-xs text-muted-foreground"><span>{clock(state.position)}</span><span>{state.track?.live ? 'LIVE' : clock(state.duration)}</span></div>
             </div>
             <div className="flex items-center justify-center gap-3">
-              <Button variant={state.shuffle ? 'secondary' : 'ghost'} size="icon" onClick={() => musicEngine.toggleShuffle()} aria-label="Shuffle"><Shuffle /></Button>
-              <Button variant="ghost" size="icon" onClick={() => void musicEngine.previous()} aria-label="Previous track"><SkipBack /></Button>
-              <Button size="icon" className="h-12 w-12" onClick={() => musicEngine.toggle()} aria-label={active ? 'Pause music' : 'Play music'}>{active ? <Pause /> : <Play />}</Button>
-              <Button variant="ghost" size="icon" onClick={() => void musicEngine.next()} aria-label="Next track"><SkipForward /></Button>
-              <Button variant={state.repeat !== 'off' ? 'secondary' : 'ghost'} size="icon" onClick={() => musicEngine.cycleRepeat()} aria-label={`Repeat ${state.repeat}`}><Repeat /></Button>
+               <IconControl variant={state.shuffle ? 'secondary' : 'ghost'} size="icon" onClick={() => musicEngine.toggleShuffle()} label={state.shuffle ? 'Turn shuffle off' : 'Turn shuffle on'}><Shuffle /></IconControl>
+               <IconControl variant="ghost" size="icon" onClick={() => void musicEngine.previous()} label="Previous track"><SkipBack /></IconControl>
+               <IconControl size="icon" className="h-12 w-12" onClick={() => { musicEngine.unlock(); musicEngine.toggle(); }} label={active ? 'Pause music' : 'Play music'}>{active ? <Pause /> : <Play />}</IconControl>
+               <IconControl variant="ghost" size="icon" onClick={() => void musicEngine.next()} label="Next track"><SkipForward /></IconControl>
+               <IconControl variant={state.repeat !== 'off' ? 'secondary' : 'ghost'} size="icon" onClick={() => musicEngine.cycleRepeat()} label={`Repeat: ${state.repeat}`}><Repeat /></IconControl>
             </div>
-            <div className="flex items-center gap-3"><Volume2 className="h-4 w-4 text-muted-foreground" /><Slider value={[state.volume * 100]} max={100} step={1} onValueChange={([value]) => musicEngine.setVolume(value / 100)} aria-label="Music volume" /></div>
+             <div className="flex items-center gap-3"><Volume2 className="h-4 w-4 text-muted-foreground" aria-hidden="true" /><Slider value={[state.volume * 100]} max={100} step={1} onValueChange={([value]) => musicEngine.setVolume(value / 100)} aria-label="Music volume" aria-valuetext={`${Math.round(state.volume * 100)} percent`} /><span className="w-10 text-right text-xs tabular-nums text-muted-foreground">{Math.round(state.volume * 100)}%</span></div>
           </div>
         </section>
 
@@ -80,7 +86,7 @@ export default function MusicPage() {
             <ol className="divide-y divide-border">
               {state.queue.map((track, index) => (
                 <li key={track.id}>
-                  <Button variant="ghost" className="h-auto w-full justify-start whitespace-normal px-2 py-3 text-left" onClick={() => void musicEngine.playIndex(index)}>
+                   <Button variant={index === state.index ? 'secondary' : 'ghost'} className="h-auto w-full justify-start whitespace-normal px-2 py-3 text-left" aria-label={`Play ${track.title} by ${track.artist}`} aria-current={index === state.index ? 'true' : undefined} onClick={() => { musicEngine.unlock(); void musicEngine.playIndex(index); }}>
                     <span className="min-w-0"><span className="block truncate text-sm font-medium">{track.title}</span><span className="block truncate text-xs text-muted-foreground">{track.artist}</span></span>
                   </Button>
                 </li>
@@ -90,5 +96,6 @@ export default function MusicPage() {
         </aside>
       </div>
     </main>
+    </TooltipProvider>
   );
 }

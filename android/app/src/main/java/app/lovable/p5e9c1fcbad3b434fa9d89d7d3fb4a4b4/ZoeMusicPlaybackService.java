@@ -7,6 +7,9 @@ import android.app.Service;
 import android.content.Intent;
 import android.media.MediaMetadata;
 import android.media.MediaPlayer;
+import android.media.AudioAttributes;
+import android.media.AudioFocusRequest;
+import android.media.AudioManager;
 import android.media.session.MediaSession;
 import android.media.session.PlaybackState;
 import android.os.Build;
@@ -26,10 +29,25 @@ public class ZoeMusicPlaybackService extends Service implements MediaPlayer.OnPr
     private MediaSession session;
     private String title = "Music";
     private String artist = "M'Mora";
+    private AudioManager audioManager;
+    private AudioFocusRequest focusRequest;
+    private boolean resumeAfterFocusGain = false;
 
     @Override public void onCreate() {
         super.onCreate();
         createChannel();
+        audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            AudioAttributes attributes = new AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_MEDIA)
+                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                .build();
+            focusRequest = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+                .setAudioAttributes(attributes)
+                .setOnAudioFocusChangeListener(this::onAudioFocusChanged)
+                .setWillPauseWhenDucked(false)
+                .build();
+        }
         session = new MediaSession(this, "ZoeMusic");
         session.setCallback(new MediaSession.Callback() {
             @Override public void onPlay() { handlePlay(); }
@@ -73,10 +91,37 @@ public class ZoeMusicPlaybackService extends Service implements MediaPlayer.OnPr
         publishState(PlaybackState.STATE_BUFFERING);
     }
 
-    private void handlePlay() { if (player != null) { try { player.start(); publishState(PlaybackState.STATE_PLAYING); emit("stateChanged", "playing", null); } catch (Exception ignored) {} } }
+    private boolean requestAudioFocus() {
+        if (audioManager == null) return true;
+        int result = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+            ? audioManager.requestAudioFocus(focusRequest)
+            : audioManager.requestAudioFocus(this::onAudioFocusChanged, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN);
+        return result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED;
+    }
+    private void onAudioFocusChanged(int change) {
+        if (player == null) return;
+        if (change == AudioManager.AUDIOFOCUS_LOSS) {
+            resumeAfterFocusGain = false;
+            handlePause();
+        } else if (change == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT) {
+            resumeAfterFocusGain = player.isPlaying();
+            handlePause();
+        } else if (change == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK) {
+            player.setVolume(0.15f, 0.15f);
+        } else if (change == AudioManager.AUDIOFOCUS_GAIN) {
+            player.setVolume(1f, 1f);
+            if (resumeAfterFocusGain) { resumeAfterFocusGain = false; handlePlay(); }
+        }
+    }
+    private void abandonAudioFocus() {
+        if (audioManager == null) return;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && focusRequest != null) audioManager.abandonAudioFocusRequest(focusRequest);
+        else audioManager.abandonAudioFocus(this::onAudioFocusChanged);
+    }
+    private void handlePlay() { if (player != null && requestAudioFocus()) { try { player.start(); publishState(PlaybackState.STATE_PLAYING); emit("stateChanged", "playing", null); } catch (Exception ignored) {} } }
     private void handlePause() { if (player != null && player.isPlaying()) player.pause(); publishState(PlaybackState.STATE_PAUSED); emit("stateChanged", "paused", null); }
-    private void handleStop() { if (player != null) { player.stop(); player.release(); player = null; } emit("stateChanged", "idle", null); stopSelf(); }
-    @Override public void onPrepared(MediaPlayer mediaPlayer) { mediaPlayer.start(); publishMetadata(); publishState(PlaybackState.STATE_PLAYING); emit("stateChanged", "playing", null); }
+    private void handleStop() { if (player != null) { player.stop(); player.release(); player = null; } abandonAudioFocus(); emit("stateChanged", "idle", null); stopSelf(); }
+    @Override public void onPrepared(MediaPlayer mediaPlayer) { if (requestAudioFocus()) mediaPlayer.start(); publishMetadata(); publishState(PlaybackState.STATE_PLAYING); emit("stateChanged", "playing", null); }
     @Override public void onCompletion(MediaPlayer mediaPlayer) { emit("next", null, null); }
     @Override public boolean onError(MediaPlayer mediaPlayer, int what, int extra) { emit("stateChanged", "error", "Stream playback failed"); return true; }
 
@@ -112,6 +157,6 @@ public class ZoeMusicPlaybackService extends Service implements MediaPlayer.OnPr
         }
     }
 
-    @Override public void onDestroy() { if (player != null) player.release(); if (session != null) session.release(); super.onDestroy(); }
+    @Override public void onDestroy() { if (player != null) player.release(); abandonAudioFocus(); if (session != null) session.release(); super.onDestroy(); }
     @Override public IBinder onBind(Intent intent) { return null; }
 }

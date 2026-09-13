@@ -50,4 +50,23 @@ describe('MusicEngine', () => {
     await expect(musicEngine.playQueue([])).resolves.toBe(false);
     expect(musicEngine.getState().error).toContain('could not find');
   });
+
+  it('supports transport, seek, volume, shuffle and repeat controls', async () => {
+    const { musicEngine } = await import('@/services/MusicEngine');
+    await musicEngine.playQueue([
+      { id: '1', title: 'One', artist: 'A', url: 'https://audio.test/one.mp3', source: 'archive', credit: 'Archive' },
+      { id: '2', title: 'Two', artist: 'B', url: 'https://audio.test/two.mp3', source: 'archive', credit: 'Archive' },
+    ]);
+    musicEngine.pause();
+    await musicEngine.play();
+    musicEngine.seek(42);
+    musicEngine.setVolume(0.4);
+    musicEngine.cycleRepeat();
+    await musicEngine.next();
+    expect(musicEngine.getState()).toMatchObject({ status: 'playing', index: 1, volume: 0.4, repeat: 'all' });
+    musicEngine.toggleShuffle();
+    expect(musicEngine.getState().shuffle).toBe(true);
+    musicEngine.stop();
+    expect(musicEngine.getState()).toMatchObject({ status: 'idle', track: null });
+  });
 });

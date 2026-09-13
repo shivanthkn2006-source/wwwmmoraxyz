@@ -135,7 +135,7 @@ class AudioRouterService {
         await this.audioCtx.suspend().catch(() => undefined);
       }
 
-      this.setupMediaSessionHandlers();
+      this.refreshMediaSessionHandlers();
       await this.refreshDeviceList();
       if (this.primaryOutputElement && this.currentOutputDeviceId !== 'default') {
         await this.setOutputDevice(this.currentOutputDeviceId);
@@ -294,7 +294,7 @@ class AudioRouterService {
     }
     try {
       await this.refreshDeviceList();
-      this.setupMediaSessionHandlers();
+      this.refreshMediaSessionHandlers();
       const headset = resolveHeadsetState(this.outputDevices, this.currentOutputDeviceId);
       this.setStatus(headset.connected ? 'connected' : 'fallback');
     } catch {
@@ -415,28 +415,49 @@ class AudioRouterService {
   /**
    * Headset Hardware Media Button Interceptors (MediaSession API)
    */
-  private setupMediaSessionHandlers(): void {
+  public refreshMediaSessionHandlers(): void {
     if (typeof navigator === 'undefined' || !('mediaSession' in navigator)) return;
 
     try {
       navigator.mediaSession.setActionHandler('play', () => {
-        console.info('[MediaSession] Hardware play pressed: Activating Zoe');
-        this.toggleVoiceInput(true);
-        try { window.dispatchEvent(new CustomEvent('zoe-headset-talk')); } catch { /* noop */ }
+        void import('@/services/MusicEngine').then(({ musicEngine }) => {
+          if (musicEngine.getState().track) void musicEngine.play();
+          else {
+            console.info('[MediaSession] Hardware play pressed: Activating Zoe');
+            this.toggleVoiceInput(true);
+            try { window.dispatchEvent(new CustomEvent('zoe-headset-talk')); } catch { /* noop */ }
+          }
+        });
       });
 
       navigator.mediaSession.setActionHandler('pause', () => {
-        console.info('[MediaSession] Hardware pause pressed: Pausing/Interrupting Zoe');
-        this.interruptZoe();
+        void import('@/services/MusicEngine').then(({ musicEngine }) => {
+          if (musicEngine.getState().track) musicEngine.pause();
+          else this.interruptZoe();
+        });
       });
 
       navigator.mediaSession.setActionHandler('stop', () => {
-        this.interruptZoe();
+        void import('@/services/MusicEngine').then(({ musicEngine }) => {
+          if (musicEngine.getState().track) musicEngine.stop();
+          else this.interruptZoe();
+        });
       });
 
       navigator.mediaSession.setActionHandler('nexttrack', () => {
-        this.interruptZoe();
-        try { window.dispatchEvent(new CustomEvent('zoe-headset-prompt')); } catch { /* noop */ }
+        void import('@/services/MusicEngine').then(({ musicEngine }) => {
+          if (musicEngine.getState().track) void musicEngine.next();
+          else {
+            this.interruptZoe();
+            try { window.dispatchEvent(new CustomEvent('zoe-headset-prompt')); } catch { /* noop */ }
+          }
+        });
+      });
+
+      navigator.mediaSession.setActionHandler('previoustrack', () => {
+        void import('@/services/MusicEngine').then(({ musicEngine }) => {
+          if (musicEngine.getState().track) void musicEngine.previous();
+        });
       });
 
       navigator.mediaSession.metadata = new MediaMetadata({

@@ -28,6 +28,17 @@ export interface MusicTrack {
 
 const TIMEOUT_MS = 8_000;
 
+/** HTTPS pages cannot play insecure radio streams; only queue safe URLs. */
+export function isSecurePlayableUrl(value: unknown): value is string {
+  if (typeof value !== 'string') return false;
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 async function getJson<T>(url: string): Promise<T | null> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
@@ -90,7 +101,7 @@ export async function searchRadio(term: string, limit = 20): Promise<MusicTrack[
         )}`,
       );
   return (byTag ?? [])
-    .filter((s) => s?.url_resolved)
+    .filter((s) => isSecurePlayableUrl(s?.url_resolved))
     .map((s) => ({
       id: `radio:${s.stationuuid}`,
       title: String(s.name ?? 'Radio station').trim(),
