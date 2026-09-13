@@ -15,6 +15,8 @@ export interface MusicTrack {
   id: string;
   title: string;
   artist: string;
+  /** Album or collection, only when the provider supplies it. */
+  album?: string;
   artwork?: string;
   /** Direct, playable audio/stream URL. */
   url: string;
@@ -25,6 +27,15 @@ export interface MusicTrack {
   credit: string;
   live?: boolean;
 }
+
+export interface MusicSearchResult {
+  tracks: MusicTrack[];
+  source: string | null;
+  query: string;
+  corrected: boolean;
+  providers: Array<{ name: string; status: 'ok' | 'empty' | 'unavailable'; count: number }>;
+}
+import { musicMatchScore, normalizeMusicQuery } from './musicQuery';
 
 const TIMEOUT_MS = 8_000;
 
@@ -77,12 +88,60 @@ export async function searchAudius(query: string, limit = 20): Promise<MusicTrac
       id: `audius:${t.id}`,
       title: String(t.title ?? 'Untitled'),
       artist: String(t.user?.name ?? t.user?.handle ?? 'Audius artist'),
+      album: typeof t.album === 'string' ? t.album : undefined,
       artwork: t.artwork?.['480x480'] ?? t.artwork?.['150x150'] ?? undefined,
       url: `${host}/v1/tracks/${t.id}/stream?app_name=MMora`,
       duration: typeof t.duration === 'number' ? t.duration : undefined,
       source: 'audius' as const,
       credit: 'Audius (open streaming)',
     }));
+}
+
+function deduplicateAndRank(tracks: MusicTrack[], query: string): MusicTrack[] {
+  const unique = new Map<string, MusicTrack>();
+  for (const track of tracks) {
+    const key = `${track.title}|${track.artist}`.toLowerCase().replace(/[^a-z0-9]+/g, '');
+    if (!unique.has(key)) unique.set(key, track);
+  }
+  return [...unique.values()].sort((left, right) => musicMatchScore(right, query) - musicMatchScore(left, query));
+}
+
+/** Searches every connected playable source while isolating individual provider failures. */
+export async function searchMusicCatalog(rawQuery: string, kind: 'track' | 'mood' | 'genre' | 'radio' | 'devotional' = 'track'): Promise<MusicSearchResult> {
+  const normalized = normalizeMusicQuery(rawQuery);
+  const query = normalized.query || rawQuery.trim();
+  const tasks = [
+    { name: 'Audius', run: () => searchAudius(query) },
+    { name: 'Internet Archive', run: () => searchArchive(query) },
+    { name: 'Radio Browser', run: () => searchRadio(query) },
+  ];
+  if (kind === 'radio' || kind === 'devotional') tasks.reverse();
+
+  const settled = await Promise.allSettled(tasks.map((provider) => provider.run()));
+  let tracks = settled.flatMap((result) => result.status === 'fulfilled' ? result.value : []);
+
+  // Retry once with the original spelling when correction produced no match.
+  if (!tracks.length && normalized.corrected && normalized.original !== query) {
+    const retry = await Promise.allSettled(tasks.map((provider) => {
+      if (provider.name === 'Audius') return searchAudius(normalized.original);
+      if (provider.name === 'Internet Archive') return searchArchive(normalized.original);
+      return searchRadio(normalized.original);
+    }));
+    tracks = retry.flatMap((result) => result.status === 'fulfilled' ? result.value : []);
+  }
+
+  const ranked = deduplicateAndRank(tracks, query);
+  return {
+    tracks: ranked,
+    source: ranked[0]?.credit ?? null,
+    query,
+    corrected: normalized.corrected,
+    providers: settled.map((result, index) => ({
+      name: tasks[index].name,
+      status: result.status === 'rejected' ? 'unavailable' : result.value.length ? 'ok' : 'empty',
+      count: result.status === 'fulfilled' ? result.value.length : 0,
+    })),
+  };
 }
 
 /* ─────────────────────────── Radio Browser ─────────────────────────── */
@@ -123,45 +182,34 @@ export async function searchArchive(query: string, limit = 10): Promise<MusicTra
     )}&fl%5B%5D=identifier&fl%5B%5D=title&fl%5B%5D=creator&rows=${limit}&page=1&output=json`,
   );
   const docs = search?.response?.docs ?? [];
-  const out: MusicTrack[] = [];
-  for (const doc of docs.slice(0, 5)) {
+  const resolved = await Promise.all(docs.slice(0, 5).map(async (doc): Promise<MusicTrack | null> => {
     const meta = await getJson<{ files?: Array<{ name: string; format?: string; length?: string }> }>(
       `https://archive.org/metadata/${encodeURIComponent(doc.identifier)}`,
     );
     const file = (meta?.files ?? []).find((f) => /(^|\s)(VBR MP3|MP3|64Kbps MP3)$/i.test(String(f.format ?? '')));
-    if (!file) continue;
-    out.push({
+    if (!file) return null;
+    return {
       id: `archive:${doc.identifier}:${file.name}`,
       title: String(doc.title ?? doc.identifier),
       artist: String(doc.creator ?? 'Internet Archive'),
       url: `https://archive.org/download/${encodeURIComponent(doc.identifier)}/${encodeURIComponent(file.name)}`,
       source: 'archive' as const,
       credit: 'Internet Archive (public domain)',
-    });
-  }
-  return out;
+    };
+  }));
+  return resolved.filter((track): track is MusicTrack => Boolean(track));
 }
 
 /* ─────────────────────────── Routing helper ─────────────────────────── */
 
 /**
- * Resolves a spoken request into a real queue. Sources are tried in the order
- * that best matches the request, and the first source with results wins.
+ * Resolves a spoken request into one ranked queue aggregated from every
+ * connected, playable source.
  */
 export async function resolveMusicQueue(
   query: string,
   kind: 'track' | 'mood' | 'genre' | 'radio' | 'devotional',
 ): Promise<{ tracks: MusicTrack[]; source: string | null }> {
-  const order: Array<() => Promise<MusicTrack[]>> =
-    kind === 'radio' || kind === 'devotional'
-      ? [() => searchRadio(query), () => searchArchive(query), () => searchAudius(query)]
-      : kind === 'track'
-        ? [() => searchAudius(query), () => searchArchive(query), () => searchRadio(query)]
-        : [() => searchAudius(query), () => searchRadio(query), () => searchArchive(query)];
-
-  for (const attempt of order) {
-    const tracks = await attempt();
-    if (tracks.length) return { tracks, source: tracks[0].credit };
-  }
-  return { tracks: [], source: null };
+  const result = await searchMusicCatalog(query, kind);
+  return { tracks: result.tracks, source: result.source };
 }

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { isSecurePlayableUrl, resolveMusicQueue, searchAudius, searchRadio } from './musicProviders';
+import { isSecurePlayableUrl, resolveMusicQueue, searchAudius, searchMusicCatalog, searchRadio } from './musicProviders';
 
 describe('music providers', () => {
   afterEach(() => vi.restoreAllMocks());
@@ -29,5 +29,23 @@ describe('music providers', () => {
       ]), { status: 200 }),
     );
     await expect(searchRadio('jazz')).resolves.toMatchObject([{ id: 'radio:safe' }]);
+  });
+
+  it('aggregates, deduplicates and ranks all connected providers', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url === 'https://api.audius.co') return new Response(JSON.stringify({ data: ['https://audius.test'] }));
+      if (url.includes('/tracks/search')) return new Response(JSON.stringify({ data: [
+        { id: '1', title: 'Signal', duration: 90, user: { name: 'Artist' }, is_streamable: true },
+      ] }));
+      if (url.includes('advancedsearch')) return new Response(JSON.stringify({ response: { docs: [] } }));
+      if (url.includes('radio-browser')) return new Response(JSON.stringify([
+        { stationuuid: 'radio', name: 'Signal Radio', url_resolved: 'https://radio.test/live' },
+      ]));
+      return new Response('{}', { status: 404 });
+    });
+    const result = await searchMusicCatalog('Signal');
+    expect(result.tracks.map((track) => track.title)).toEqual(['Signal', 'Signal Radio']);
+    expect(result.providers).toHaveLength(3);
   });
 });

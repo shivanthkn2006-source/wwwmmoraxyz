@@ -7,7 +7,7 @@ import { Slider } from '@/components/ui/slider';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { musicEngine } from '@/services/MusicEngine';
 import { useMusicEngine } from '@/hooks/useMusicEngine';
-import { resolveMusicQueue } from '@/features/music/musicProviders';
+import { searchMusicCatalog, type MusicSearchResult } from '@/features/music/musicProviders';
 
 function clock(seconds: number) {
   if (!Number.isFinite(seconds)) return '0:00';
@@ -24,6 +24,7 @@ export default function MusicPage() {
   const [query, setQuery] = useState('');
   const [searching, setSearching] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [results, setResults] = useState<MusicSearchResult | null>(null);
   const active = state.status === 'playing' || state.status === 'buffering';
 
   const search = async () => {
@@ -31,13 +32,26 @@ export default function MusicPage() {
     if (!value || searching) return;
     setSearching(true);
     setNotice(null);
-    const result = await resolveMusicQueue(value, 'track');
-    if (!result.tracks.length) setNotice('No playable result was available from the connected free music sources.');
-    else {
-      const played = await musicEngine.playQueue(result.tracks);
-      setNotice(played ? `Playing from ${result.source}.` : musicEngine.getState().error);
+    try {
+      const kind = /\b(radio|station|fm)\b/i.test(value) ? 'radio' : 'track';
+      const result = await searchMusicCatalog(value, kind);
+      setResults(result);
+      if (!result.tracks.length) {
+        const unavailable = result.providers.filter((provider) => provider.status === 'unavailable').map((provider) => provider.name);
+        setNotice(unavailable.length === result.providers.length
+          ? 'The connected music sources are temporarily unavailable. Please try again.'
+          : 'No playable match was found. Try a title, artist, album, language, genre, lyric line, or radio station.');
+      } else {
+        musicEngine.unlock();
+        const played = await musicEngine.playQueue(result.tracks);
+        const correction = result.corrected ? ` Interpreted as “${result.query}”.` : '';
+        setNotice(played ? `Playing the best match. ${result.tracks.length} results from connected sources.${correction}` : musicEngine.getState().error);
+      }
+    } catch {
+      setNotice('Music search could not finish. Please check your connection and try again.');
+    } finally {
+      setSearching(false);
     }
-    setSearching(false);
   };
 
   return (
@@ -61,7 +75,7 @@ export default function MusicPage() {
         <div className="grid xl:grid-cols-[minmax(0,1fr)_minmax(18rem,360px)]">
         <section className="flex min-h-0 flex-col justify-between border-b border-border/60 p-4 sm:p-6 xl:min-h-[620px] xl:border-b-0 xl:border-r">
           <form className="music-liquid-control flex gap-2 rounded-lg border border-border/70 p-1.5" onSubmit={(event) => { event.preventDefault(); void search(); }}>
-            <Input className="h-11 border-0 bg-transparent shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search tracks, artists, moods or radio" aria-label="Search music" />
+             <Input className="h-11 border-0 bg-transparent shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Song, artist, album, lyrics, language, genre or radio" aria-label="Search music" autoComplete="off" spellCheck="true" />
              <IconControl className="h-11 w-11 rounded-full" type="submit" size="icon" disabled={searching} label={searching ? 'Searching music' : 'Search music'}><Search /></IconControl>
           </form>
 
@@ -93,6 +107,35 @@ export default function MusicPage() {
         </section>
 
         <aside className="music-liquid-queue max-h-[50dvh] overflow-y-auto p-4 sm:p-6 xl:max-h-none" aria-label="Music queue">
+          {results && (
+            <section className="mb-7" aria-labelledby="music-search-results-heading">
+              <h2 id="music-search-results-heading" className="mb-1 flex items-center gap-2 text-lg font-semibold"><Search className="h-5 w-5" /> Results</h2>
+              <p className="mb-4 text-xs text-muted-foreground">
+                {results.tracks.length ? `${results.tracks.length} playable matches` : 'No playable matches'}
+                {results.corrected ? ` · searched “${results.query}”` : ''}
+              </p>
+              {results.tracks.length > 0 && (
+                <ol className="space-y-2">
+                  {results.tracks.map((track, index) => (
+                    <li key={`result-${track.id}`}>
+                      <Button variant="ghost" className="music-liquid-track h-auto w-full justify-start whitespace-normal rounded-lg border border-transparent px-3 py-3 text-left" aria-label={`Play ${track.title} by ${track.artist}`} onClick={() => { musicEngine.unlock(); void musicEngine.playQueue(results.tracks, index); }}>
+                        <span className="flex min-w-0 items-center gap-3">
+                          <span className="music-liquid-track-index flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full text-xs tabular-nums">
+                            {track.artwork ? <img src={track.artwork} alt="" className="h-full w-full object-cover grayscale" loading="lazy" /> : String(index + 1).padStart(2, '0')}
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-sm font-medium">{track.title}</span>
+                            <span className="block truncate text-xs text-muted-foreground">{track.artist}{track.album ? ` · ${track.album}` : ''}</span>
+                            <span className="block truncate text-[10px] text-muted-foreground">{track.live ? 'LIVE · ' : ''}{track.credit}</span>
+                          </span>
+                        </span>
+                      </Button>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </section>
+          )}
           <h2 className="mb-5 flex items-center gap-2 text-lg font-semibold"><ListMusic className="h-5 w-5" /> Queue</h2>
           {state.queue.length === 0 ? <p className="text-sm text-muted-foreground">Your queue is empty.</p> : (
             <ol className="space-y-2">

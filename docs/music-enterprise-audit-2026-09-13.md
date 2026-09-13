@@ -42,6 +42,7 @@
 13. Added a five-action monochrome Liquid Glass mini-player at top-left, clear of bottom-right call controls.
 14. Added one shared typed-chat command executor for play/pause/stop/resume/next/previous/open.
 15. Tightened ambiguous “play …” parsing so common conversational phrases do not hijack Zoe chat.
+16. Replaced first-provider-only Music search with provider-isolated aggregation, result ranking, deduplication, visible alternatives, and safe bounded-vocabulary correction.
 
 ## Architecture and measured scope
 
