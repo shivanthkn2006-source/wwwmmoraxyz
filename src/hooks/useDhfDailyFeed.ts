@@ -115,17 +115,40 @@ export function useDhfDailyFeed() {
 
   useEffect(() => { void load(); }, [load]);
 
-  // Reveal slots as their local time arrives — no network, pure re-filter of
-  // the rows already fetched for today.
+  // Reveal slots as their local time arrives. Every minute we re-run duePosts
+  // and, while today is still incomplete, re-read the rows so a card written by
+  // the dispatcher after this page loaded appears at its scheduled time.
   useEffect(() => {
-    const timer = window.setInterval(() => {
-      const rows = rowsRef.current;
-      if (!rows.length) return;
-      const due = duePosts(rows, new Date(), deviceTimeZone());
-      setState((prev) => (due.length === prev.posts.length ? prev : { ...prev, posts: due }));
-    }, 60_000);
+    if (!user) return;
+    const tick = async () => {
+      const tz = deviceTimeZone();
+      const today = localDateIn(new Date(), tz);
+      const yesterday = localDateIn(new Date(Date.now() - 86_400_000), tz);
+      let rows = rowsRef.current;
+      const completeToday = rows.filter((r) => r.post_date === today).length >= COMPASS_SLOT_COUNT;
+
+      if (!completeToday) {
+        try {
+          rows = await read(user.id, yesterday, today);
+        } catch {
+          rows = rowsRef.current;
+        }
+      }
+      if (!rows.length || !mounted.current) return;
+
+      const due = duePosts(rows, new Date(), tz);
+      setState((prev) => {
+        const same =
+          due.length === prev.posts.length &&
+          due.every((p, i) => p.id === prev.posts[i]?.id);
+        return same ? prev : { ...prev, posts: due };
+      });
+    };
+
+    const timer = window.setInterval(() => { void tick(); }, 60_000);
     return () => window.clearInterval(timer);
-  }, []);
+  }, [user, read]);
+
 
   return {
     ...state,
