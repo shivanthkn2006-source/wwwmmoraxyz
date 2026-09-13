@@ -185,7 +185,11 @@ class MusicEngineImpl {
   private async recoverFromStreamError(): Promise<void> {
     const failed = this.state.index;
     if (failed >= 0) this.failedIndexes.add(failed);
-    const nextIndex = this.state.queue.findIndex((_, index) => !this.failedIndexes.has(index));
+    const { queue } = this.state;
+    const nextIndex = queue.length
+      ? Array.from({ length: queue.length }, (_, offset) => (failed + offset + 1) % queue.length)
+          .find((index) => !this.failedIndexes.has(index)) ?? -1
+      : -1;
     if (nextIndex >= 0) {
       this.patch({ status: 'buffering', error: 'That stream was unavailable, so I’m trying the next one.' });
       await this.playIndex(nextIndex);
@@ -233,12 +237,13 @@ class MusicEngineImpl {
     if (auto && repeat === 'one' && index >= 0) { await this.playIndex(index); return; }
 
     let target = index + 1;
-    if (shuffle) {
+    if (shuffle && queue.length > 1) {
       if (this.shuffledIndices.length !== queue.length) {
         this.shuffledIndices = Array.from({ length: queue.length }, (_, i) => i).sort(() => Math.random() - 0.5);
       }
       const currentPos = this.shuffledIndices.indexOf(index);
       target = this.shuffledIndices[(currentPos + 1) % this.shuffledIndices.length];
+      if (target === index) target = this.shuffledIndices[(currentPos + 2) % this.shuffledIndices.length];
     }
 
     if (target >= queue.length || (shuffle && target === this.shuffledIndices[0] && index !== -1)) {

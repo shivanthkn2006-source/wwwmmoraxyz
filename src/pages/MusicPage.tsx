@@ -76,12 +76,12 @@ export default function MusicPage() {
 
   return (
     <TooltipProvider>
-      <main className="music-liquid-page min-h-[100dvh] px-3 pb-8 pt-[max(4.5rem,env(safe-area-inset-top))] text-foreground sm:px-6 lg:px-8">
+      <main className="music-liquid-page flex min-h-[100dvh] px-3 pb-0 pt-[max(4.5rem,env(safe-area-inset-top))] text-foreground sm:px-6 lg:px-8">
         <Helmet>
           <title>Music Player | M'Mora</title>
           <meta name="description" content="Play music and live radio with Zoe." />
         </Helmet>
-        <div className="music-liquid-shell mx-auto mb-[max(6rem,env(safe-area-inset-bottom))] max-w-6xl overflow-hidden border border-border/70">
+        <div className="music-liquid-shell mx-auto flex min-h-[calc(100dvh-max(4.5rem,env(safe-area-inset-top)))] w-full max-w-6xl flex-col overflow-hidden border border-b-0 border-border/70">
           <header className="music-liquid-header flex items-center justify-between border-b border-border/60 px-5 py-4 sm:px-7">
             <div>
               <p className="text-[10px] font-semibold uppercase text-muted-foreground">Now listening</p>
@@ -92,7 +92,7 @@ export default function MusicPage() {
             </div>
           </header>
 
-          <div className="grid xl:grid-cols-[minmax(0,1fr)_minmax(18rem,360px)]">
+          <div className="grid flex-1 xl:grid-cols-[minmax(0,1fr)_minmax(18rem,360px)]">
             <section className="flex min-h-0 flex-col justify-between border-b border-border/60 p-4 sm:p-6 xl:min-h-[620px] xl:border-b-0 xl:border-r">
               <form className="music-liquid-control flex gap-2 rounded-lg border border-border/70 p-1.5" onSubmit={(e) => { e.preventDefault(); void search(); }}>
                 <Input className="h-11 border-0 bg-transparent shadow-none focus-visible:ring-0" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Song, artist, genre or radio" aria-label="Search music" autoComplete="off" />

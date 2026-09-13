@@ -614,6 +614,7 @@ const HomePage = () => {
     try { return !(typeof window !== 'undefined' && window.localStorage.getItem('mmora.home.autoScroll') === 'false'); } catch { return true; }
   });
   const [friendships, setFriendships] = useState<Array<{user1_id: string, user2_id: string}>>([]);
+  const friendshipsRef = useRef<Array<{user1_id: string, user2_id: string}>>([]);
   const [privateTimelinesOpen, setPrivateTimelinesOpen] = useState(false);
   const [hamburgerMenuOpen, setHamburgerMenuOpen] = useState(false);
   const [unreadMessages, setUnreadMessages] = useState(0);
@@ -1449,6 +1450,7 @@ const HomePage = () => {
         .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`);
       
       if (data) {
+        friendshipsRef.current = data;
         setFriendships(data);
       }
     };
@@ -1673,7 +1675,7 @@ const HomePage = () => {
 
     try {
       // Use existing friendships state instead of re-fetching
-      const friendIds = friendships.map(f =>
+      const friendIds = friendshipsRef.current.map(f =>
         f.user1_id === user.id ? f.user2_id : f.user1_id
       );
 
@@ -2014,7 +2016,7 @@ const HomePage = () => {
     }
 
     return unsubscribe;
-  }, [user, friendships, refreshGrowth, refreshDhf]);
+  }, [user?.id, refreshGrowth, refreshDhf]);
 
   const runPullRefresh = React.useCallback(async () => {
     await triggerHomeRefresh();
