@@ -60,7 +60,7 @@ describe('music providers', () => {
     });
     const result = await searchMusicCatalog('Signal');
     expect(result.tracks.map((track) => track.title)).toEqual(['Signal', 'Signal Radio']);
-    expect(result.providers).toHaveLength(3);
+    expect(result.providers).toHaveLength(4);
   });
 
   it('keeps successful sources when another provider is unavailable', async () => {
