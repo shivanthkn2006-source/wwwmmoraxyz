@@ -158,6 +158,8 @@ const ZoeBirthDetailsPage = lazy(() => import("./pages/ZoeBirthDetailsPage"));
 const ZoeDispatchDashboardPage = lazy(() => import("./pages/ZoeDispatchDashboardPage"));
 const ZoeAstroLogPage = lazy(() => import("./pages/ZoeAstroLogPage"));
 const ZoeAuditTracePage = lazy(() => import("./pages/ZoeAuditTracePage"));
+const ZoeAstroAuditPage = lazy(() => import("./pages/ZoeAstroAuditPage"));
+
 
 
 
@@ -1002,6 +1004,14 @@ const RouteAwareShell = () => {
                             }
                           />
                           <Route
+                            path="/zoe-astro/audit/:correlationId"
+                            element={
+                              <ProtectedRoute>
+                                <ZoeAstroAuditPage />
+                              </ProtectedRoute>
+                            }
+                          />
+                          <Route
                             path="/zoe-astro/trace/:correlationId"
                             element={
                               <ProtectedRoute>
@@ -1009,6 +1019,7 @@ const RouteAwareShell = () => {
                               </ProtectedRoute>
                             }
                           />
+
 
 
 
