@@ -39,6 +39,8 @@ export function useDhfDailyFeed() {
     posts: [], loading: true, error: false, generating: false,
   });
   const mounted = useRef(true);
+  /** Rows fetched for today/yesterday, kept so the reveal timer can re-filter. */
+  const rowsRef = useRef<DhfDailyPost[]>([]);
 
   useEffect(() => {
     mounted.current = true;
@@ -55,7 +57,9 @@ export function useDhfDailyFeed() {
       .order('post_date', { ascending: false })
       .order('slot_time', { ascending: false });
     if (error) throw error;
-    return resolveCompassImages((data ?? []) as unknown as DhfDailyPost[]);
+    const resolved = resolveCompassImages((data ?? []) as unknown as DhfDailyPost[]);
+    rowsRef.current = resolved;
+    return resolved;
   }, []);
 
 
@@ -111,10 +115,14 @@ export function useDhfDailyFeed() {
 
   useEffect(() => { void load(); }, [load]);
 
-  // Reveal slots as their local time arrives — no network, pure re-filter.
+  // Reveal slots as their local time arrives — no network, pure re-filter of
+  // the rows already fetched for today.
   useEffect(() => {
     const timer = window.setInterval(() => {
-      setState((prev) => (prev.posts.length ? { ...prev } : prev));
+      const rows = rowsRef.current;
+      if (!rows.length) return;
+      const due = duePosts(rows, new Date(), deviceTimeZone());
+      setState((prev) => (due.length === prev.posts.length ? prev : { ...prev, posts: due }));
     }, 60_000);
     return () => window.clearInterval(timer);
   }, []);

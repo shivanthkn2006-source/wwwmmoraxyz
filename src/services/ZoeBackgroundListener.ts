@@ -166,17 +166,12 @@ class ZoeBackgroundListener {
       this.conversationActive = true;
       this.stopRecognition();
       this.setState('suspended');
-      // Safety net: if the conversation layer never reports an end (Safari can
-      // drop its recognition silently), re-arm the sentinel instead of leaving
-      // the user stuck on "suspended".
-      if (this.conversationWatchdog) clearTimeout(this.conversationWatchdog);
-      this.conversationWatchdog = setTimeout(() => {
-        this.conversationWatchdog = null;
-        if (!this.conversationActive) return;
-        this.conversationActive = false;
-        if (this.enabled && !document.hidden) this.scheduleRestart(250);
-      }, 25000);
+      this.armConversationWatchdog();
     });
+    // Any sign of life in the conversation layer pushes the safety net out, so a
+    // long chat is never interrupted by the wake sentinel taking the microphone.
+    window.addEventListener('zoe-handsfree-transcript', () => this.armConversationWatchdog());
+    window.addEventListener('zoe-handsfree-reply', () => this.armConversationWatchdog());
     window.addEventListener('zoe-handsfree-end', () => {
       this.conversationActive = false;
       if (this.conversationWatchdog) {
@@ -185,6 +180,21 @@ class ZoeBackgroundListener {
       }
       if (this.enabled && !document.hidden) this.scheduleRestart(250);
     });
+  }
+
+  /**
+   * Safety net for a conversation that dies silently (Safari can drop its
+   * recognition without firing an end event). It is pushed out on every sign of
+   * life, so it can only fire when the conversation really has gone quiet.
+   */
+  private armConversationWatchdog(): void {
+    if (this.conversationWatchdog) clearTimeout(this.conversationWatchdog);
+    this.conversationWatchdog = setTimeout(() => {
+      this.conversationWatchdog = null;
+      if (!this.conversationActive) return;
+      this.conversationActive = false;
+      if (this.enabled && !document.hidden) this.scheduleRestart(250);
+    }, 120_000);
   }
 
   /**

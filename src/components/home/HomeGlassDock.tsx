@@ -332,9 +332,21 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
     const rest = homeFeed ? slots.filter((item) => item !== homeFeed) : slots;
     const capacity = homeFeed ? GRID_SIZE - 1 : GRID_SIZE;
 
-    // Items are ordered least-used → most-used, so when there are more actions
-    // than slots we keep the TAIL (the ones the member actually uses).
-    const visible = rest.length > capacity ? rest.slice(rest.length - capacity) : rest.slice();
+    // When there are more actions than slots, keep the ones the member actually
+    // uses first and then fall back to the authored order — so the core menus
+    // stay visible on a fresh install instead of being pushed out by extras.
+    let visible = rest.slice();
+    if (rest.length > capacity) {
+      const authored = new Map(baseSlots.map((item, index) => [item.id, index] as const));
+      const keep = new Set(
+        rest
+          .map((item) => ({ item, score: usage[item.id]?.count ?? 0, order: authored.get(item.id) ?? 0 }))
+          .sort((a, b) => (b.score === a.score ? a.order - b.order : b.score - a.score))
+          .slice(0, capacity)
+          .map((entry) => entry.item.id),
+      );
+      visible = rest.filter((item) => keep.has(item.id));
+    }
     const filled = homeFeed ? [...visible, homeFeed] : visible;
 
     for (let index = filled.length; index < GRID_SIZE; index += 1) {
@@ -347,7 +359,8 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
       });
     }
     return filled;
-  }, [slots]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slots, baseSlots, usage]);
 
 
   const renderPackedRows = () => {

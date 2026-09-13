@@ -34,9 +34,11 @@ export const TOUR_STOPS: TourStop[] = [
     body: 'Small daily cards Zoe picks for you. Tap one to hear it read aloud, or save it for later.',
   },
   {
-    path: '/astrology',
-    title: 'Astrology',
-    body: 'Your sign, your day and what it means — worked out from a real sky chart for your birth date and place.',
+    // Astrology opens after a week of use, so the welcome walk must not end on
+    // a locked page. Profile is available from day one.
+    path: '/profile',
+    title: 'Your profile',
+    body: 'Add a photo and a line about yourself so people know who you are. Astrology and your vault open up after your first week here.',
   },
 ];
 

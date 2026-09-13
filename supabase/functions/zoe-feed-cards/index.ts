@@ -164,7 +164,7 @@ Deno.serve(async (req: Request) => {
           .limit(5),
         asUser
           .from('intimacy_scores')
-          .select('other_user_id, score')
+          .select('target_user_id, score')
           .eq('user_id', userId)
           .order('score', { ascending: false })
           .limit(5),
@@ -182,7 +182,7 @@ Deno.serve(async (req: Request) => {
       return json({ ok: true, created: 0, reason: 'recent_cards_exist' });
     }
 
-    const closeIds = (closeness ?? []).map((r: { other_user_id: string }) => r.other_user_id);
+    const closeIds = (closeness ?? []).map((r: { target_user_id: string }) => r.target_user_id);
     let circlePosts: Array<{ id: string; content: string | null; user_id: string }> = [];
     if (closeIds.length) {
       const { data } = await asUser
@@ -209,8 +209,8 @@ Deno.serve(async (req: Request) => {
 
     const facts = {
       your_recent_posts: (mine ?? []).map((p) => ({ id: p.id, text: clean(p.content, 240) })),
-      closest_people: (closeness ?? []).map((c: { other_user_id: string; score: number }) => ({
-        name: names.get(c.other_user_id) ?? 'someone in your circle',
+      closest_people: (closeness ?? []).map((c: { target_user_id: string; score: number }) => ({
+        name: names.get(c.target_user_id) ?? 'someone in your circle',
         closeness: Math.round(c.score),
       })),
       recent_posts_from_them: circlePosts.map((p) => ({

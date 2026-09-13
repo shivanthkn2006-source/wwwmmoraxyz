@@ -14,7 +14,9 @@ const mentionsSlack = (t: string) => /\bslack\b/i.test(t);
 
 export function classifySlackIntent(input: string): SlackIntent | null {
   const t = (input || '').toLowerCase();
-  if (!mentionsSlack(t) && !/#[a-z0-9_-]{2,}/.test(t)) return null;
+  // A hashtag alone is ordinary social language on this platform — only take the
+  // turn when the member actually says "slack".
+  if (!mentionsSlack(t)) return null;
   if (/\bchannels?\b/.test(t) && !/#[a-z0-9_-]{2,}/.test(t)) return 'slack_channels';
   if (/\b(search|find|look up|any mention)\b/.test(t)) return 'slack_search';
   if (/#[a-z0-9_-]{2,}/.test(t) || /\b(messages?|latest|recent|history|what'?s new)\b/.test(t)) return 'slack_history';
