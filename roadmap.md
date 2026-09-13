@@ -15,4 +15,4 @@
 - [ ] Complete the full 111-route visual crawl and native build QA (Android SDK and macOS/Xcode required).
 - [ ] Verify AirPods/Bluetooth, lock-screen controls, calls/interruptions, and resume behavior on physical iOS and Android devices.
 - [x] Restyle the complete Music page and global control in monochrome Liquid Glass without changing playback behavior.
-- [ ] Complete the best-practice music expansion: adaptive Music page, compact feed-safe controls, typed Zoe commands, compliant provider matching, full web QA, and an updated enterprise audit.
+- [x] Complete the best-practice music expansion: adaptive Music page, compact feed-safe controls, typed Zoe commands, compliant provider matching, full web QA, and an updated enterprise audit.

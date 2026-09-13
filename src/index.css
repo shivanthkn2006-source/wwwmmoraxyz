@@ -1301,6 +1301,11 @@ html.phantom-mode [class*="animate-"] {
   -webkit-backdrop-filter: blur(30px) saturate(115%);
 }
 
+.music-global-glass {
+  background: linear-gradient(135deg, hsl(var(--background) / 0.96), hsl(var(--background) / 0.88));
+  box-shadow: inset 0 1px 0 hsl(var(--foreground) / 0.16), 0 10px 30px hsl(var(--background) / 0.72);
+}
+
 .music-liquid-queue {
   background: linear-gradient(180deg, hsl(var(--music-glass) / 0.045), hsl(var(--music-glass) / 0.015));
 }
@@ -1343,6 +1348,31 @@ html.phantom-mode [class*="animate-"] {
 
 .music-liquid-slider > span:first-child > span {
   background: hsl(var(--music-glass-edge) / 0.92);
+}
+
+.music-mini-button {
+  height: 2.25rem;
+  width: 2.25rem;
+}
+
+@media (max-width: 380px) {
+  .music-mini-button {
+    height: 2rem;
+    width: 2rem;
+  }
+  .music-mini-button svg {
+    height: 0.875rem;
+    width: 0.875rem;
+  }
+}
+
+@media (max-height: 540px) and (orientation: landscape) {
+  .music-liquid-page {
+    padding-top: max(3.75rem, env(safe-area-inset-top));
+  }
+  .music-liquid-art {
+    max-width: min(12rem, 38dvh);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

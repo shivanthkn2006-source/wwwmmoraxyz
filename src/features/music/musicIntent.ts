@@ -108,6 +108,7 @@ export function resolveMusicIntent(raw: string): MusicIntent | null {
     .replace(/\s+/g, ' ')
     .trim();
   if (!body) return null;
+  if (/^(fair|nice|safe|along|dead|dumb|pretend|with (me|us)|a game)$/.test(body)) return null;
 
   // "play a song based on my current mood" / "play something for my mood"
   if (/\b(my (current )?mood|how i (feel|am feeling)|based on my mood)\b/.test(body)) {
@@ -142,7 +143,7 @@ export function resolveMusicIntent(raw: string): MusicIntent | null {
 
   // Anything else that mentions music, or a named title: exact search.
   const named = body.replace(/\b(song|songs|track|music|theme song)\b/g, '').replace(/\s+/g, ' ').trim();
-  if (MUSIC_WORD.test(body) || named.length > 2) {
+  if (MUSIC_WORD.test(body) || named.length >= 4) {
     const query = named || body;
     return { kind: 'play', query, lookup: 'track', speak: `Looking for ${query}.` };
   }
