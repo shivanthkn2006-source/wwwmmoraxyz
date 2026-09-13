@@ -243,9 +243,10 @@ Deno.serve(async (req: Request) => {
 
     const facts = {
       your_recent_posts: (mine ?? []).map((p) => ({ id: p.id, text: clean(p.content, 240) })),
-      closest_people: (closeness ?? []).map((c: { target_user_id: string; score: number }) => ({
+      closest_people: close.map((c) => ({
         name: names.get(c.target_user_id) ?? 'someone in your circle',
         closeness: Math.round(c.score),
+
       })),
       recent_posts_from_them: circlePosts.map((p) => ({
         id: p.id,
