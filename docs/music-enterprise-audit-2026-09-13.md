@@ -81,6 +81,10 @@ The music subsystem contains **1,210 lines** across the standalone page, global 
 | Mini-player persistence and five controls | Passed |
 | Queue next/previous state advancement | Passed |
 | Preview build/typecheck | Passed |
+| Aggregated Music search regression | 13/13 passed |
+| Complete regression after search repair | 790 passed, 6 skipped, 0 failed |
+| Live multi-provider browser search | Passed; 23 playable results rendered |
+| Search at 390×844, 768×1024, 820×1180, 1024×768, 1280×800 | Passed; results visible and zero horizontal overflow |
 | Runtime error log | No current runtime errors |
 | Android compilation | Blocked by unavailable Android SDK |
 | iOS compilation | Blocked by unavailable macOS/Xcode |
@@ -89,6 +93,7 @@ The music subsystem contains **1,210 lines** across the standalone page, global 
 ## Remaining risks
 
 - Provider availability, catalog content, CORS behavior, and individual stream health remain external dependencies.
+- Search covers the connected Audius, Internet Archive, and internet-radio sources; it does not claim satellite-radio or unlicensed commercial-catalog access.
 - Native claims cannot be certified until tested on physical iOS and Android devices.
 - A complete visual crawl of all 111 routes remains pending; music persistence was directly verified on Music and Profile.
 - Existing Zoe ref warnings appeared during live testing. They are unrelated to the music changes and did not break playback, but should be handled in a separate platform-wide cleanup.
