@@ -4,5 +4,6 @@ import Capacitor
 final class MMoraBridgeViewController: CAPBridgeViewController {
     override func capacitorDidLoad() {
         bridge?.registerPluginInstance(NativeZoeAudioPlugin())
+        bridge?.registerPluginInstance(NativeZoeMusicPlugin())
     }
 }
