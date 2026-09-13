@@ -93,7 +93,6 @@ class MusicEngineImpl {
     audio.onerror = () => void this.recoverFromStreamError();
 
     this.audio = audio;
-    this.bindMediaSession();
     this.bindDucking();
     return audio;
   }
@@ -147,20 +146,6 @@ class MusicEngineImpl {
     });
   }
 
-  private bindMediaSession(): void {
-    if (typeof navigator === 'undefined' || !('mediaSession' in navigator)) return;
-    const ms = navigator.mediaSession;
-    try {
-      ms.setActionHandler('play', () => void this.play());
-      ms.setActionHandler('pause', () => this.pause());
-      ms.setActionHandler('nexttrack', () => void this.next());
-      ms.setActionHandler('previoustrack', () => void this.previous());
-      ms.setActionHandler('stop', () => this.stop());
-    } catch {
-      /* older browsers ignore unknown actions */
-    }
-  }
-
   private publishMetadata(): void {
     if (typeof navigator === 'undefined' || !('mediaSession' in navigator)) return;
     const track = this.state.track;
@@ -207,6 +192,7 @@ class MusicEngineImpl {
     }
     this.failedIndexes.clear();
     this.patch({ queue: tracks, index: -1, error: null });
+    void import('@/services/AudioRouterService').then(({ audioRouter }) => audioRouter.refreshMediaSessionHandlers());
     return this.playIndex(startIndex);
   }
 
