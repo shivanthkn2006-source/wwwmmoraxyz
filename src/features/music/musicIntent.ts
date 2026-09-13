@@ -108,6 +108,7 @@ export function resolveMusicIntent(raw: string): MusicIntent | null {
     .replace(/\s+/g, ' ')
     .trim();
   if (!body) return null;
+  if (/^(fair|nice|safe|along|dead|dumb|pretend|with (me|us)|a game)$/.test(body)) return null;
 
   // "play a song based on my current mood" / "play something for my mood"
   if (/\b(my (current )?mood|how i (feel|am feeling)|based on my mood)\b/.test(body)) {
