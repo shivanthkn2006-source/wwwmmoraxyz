@@ -305,6 +305,7 @@ class MusicEngineImpl {
       audio.removeAttribute('src');
     }
     this.patch({ status: 'idle', track: null, index: -1, position: 0, duration: 0 });
+    void import('@/services/AudioRouterService').then(({ audioRouter }) => audioRouter.refreshMediaSessionHandlers());
   }
 
   async next(auto = false): Promise<void> {

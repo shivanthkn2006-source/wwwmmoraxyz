@@ -135,7 +135,7 @@ class AudioRouterService {
         await this.audioCtx.suspend().catch(() => undefined);
       }
 
-      this.setupMediaSessionHandlers();
+      this.refreshMediaSessionHandlers();
       await this.refreshDeviceList();
       if (this.primaryOutputElement && this.currentOutputDeviceId !== 'default') {
         await this.setOutputDevice(this.currentOutputDeviceId);
@@ -415,7 +415,7 @@ class AudioRouterService {
   /**
    * Headset Hardware Media Button Interceptors (MediaSession API)
    */
-  private setupMediaSessionHandlers(): void {
+  public refreshMediaSessionHandlers(): void {
     if (typeof navigator === 'undefined' || !('mediaSession' in navigator)) return;
 
     try {
