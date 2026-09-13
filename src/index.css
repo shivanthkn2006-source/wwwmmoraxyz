@@ -1332,7 +1332,17 @@ html.phantom-mode [class*="animate-"] {
 }
 
 .music-liquid-slider [role='slider'] {
+  border-color: hsl(var(--music-glass-edge) / 0.9);
+  background: hsl(var(--music-stage-deep));
   box-shadow: 0 0 0 1px hsl(var(--music-stage-deep) / 0.5), 0 0 16px hsl(var(--music-glass-edge) / 0.14);
+}
+
+.music-liquid-slider > span:first-child {
+  background: hsl(var(--music-glass-edge) / 0.16);
+}
+
+.music-liquid-slider > span:first-child > span {
+  background: hsl(var(--music-glass-edge) / 0.92);
 }
 
 @media (prefers-reduced-motion: reduce) {
