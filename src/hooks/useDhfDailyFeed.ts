@@ -111,10 +111,14 @@ export function useDhfDailyFeed() {
 
   useEffect(() => { void load(); }, [load]);
 
-  // Reveal slots as their local time arrives — no network, pure re-filter.
+  // Reveal slots as their local time arrives — no network, pure re-filter of
+  // the rows already fetched for today.
   useEffect(() => {
     const timer = window.setInterval(() => {
-      setState((prev) => (prev.posts.length ? { ...prev } : prev));
+      const rows = rowsRef.current;
+      if (!rows.length) return;
+      const due = duePosts(rows, new Date(), deviceTimeZone());
+      setState((prev) => (due.length === prev.posts.length ? prev : { ...prev, posts: due }));
     }, 60_000);
     return () => window.clearInterval(timer);
   }, []);
