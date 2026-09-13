@@ -319,6 +319,7 @@ class MusicEngineImpl {
     if (!queue.length) return;
     const audio = this.audio;
     if (audio && audio.currentTime > 3) {
+    await this.playIndex(target);
       audio.currentTime = 0;
       return;
     }
