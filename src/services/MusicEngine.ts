@@ -288,9 +288,11 @@ class MusicEngineImpl {
     const audio = this.audio;
     if (audio) {
       audio.pause();
-      audio.removeAttribute('src');
+      audio.currentTime = 0;
     }
-    this.patch({ status: 'idle', track: null, index: -1, position: 0, duration: 0 });
+    // Keep the loaded track and queue selected so the global transport remains
+    // visible and Play can restart the same song after Stop.
+    this.patch({ status: 'idle', position: 0 });
     void import('@/services/AudioRouterService').then(({ audioRouter }) => audioRouter.refreshMediaSessionHandlers());
   }
 

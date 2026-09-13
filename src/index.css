@@ -1361,10 +1361,15 @@ html.phantom-mode [class*="animate-"] {
 .music-mini-button {
   height: 2.25rem;
   width: 2.25rem;
+  padding: 0;
   border: 0;
   border-radius: 0;
-  background: transparent;
-  box-shadow: none;
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: 0 !important;
+  appearance: none;
+  -webkit-appearance: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .music-mini-button:hover,
@@ -1373,11 +1378,17 @@ html.phantom-mode [class*="animate-"] {
 .music-mini-button:focus-visible,
 .music-mini-button[data-state='open'] {
   border: 0;
-  background: transparent;
-  box-shadow: none;
-  outline: none;
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: 0 !important;
   --tw-ring-offset-shadow: 0 0 transparent;
   --tw-ring-shadow: 0 0 transparent;
+}
+
+.music-mini-button::before,
+.music-mini-button::after {
+  display: none !important;
+  content: none !important;
 }
 
 @media (max-width: 380px) {

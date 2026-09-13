@@ -129,15 +129,15 @@ export default function GlobalMusicToggle() {
       }}
       aria-label="Draggable music controls"
     >
-      <Button className="music-mini-button" variant="ghost" size="icon" onClick={() => navigate('/music')} aria-label={`Open music: ${state.track.title} by ${state.track.artist}`}>
+      <Button className="music-mini-button !border-0 !bg-transparent !shadow-none !outline-none !ring-0 !ring-offset-0" variant="ghost" size="icon" onClick={() => navigate('/music')} aria-label={`Open music: ${state.track.title} by ${state.track.artist}`}>
         <Disc3 className={active ? 'animate-spin motion-reduce:animate-none' : ''} />
       </Button>
-      <Button className="music-mini-button" variant="ghost" size="icon" onClick={() => void musicEngine.previous()} aria-label="Previous track"><SkipBack /></Button>
-      <Button className="music-mini-button" variant="ghost" size="icon" onClick={() => { musicEngine.unlock(); musicEngine.toggle(); }} aria-label={active ? 'Pause music' : 'Play music'}>
+      <Button className="music-mini-button !border-0 !bg-transparent !shadow-none !outline-none !ring-0 !ring-offset-0" variant="ghost" size="icon" onClick={() => void musicEngine.previous()} aria-label="Previous track"><SkipBack /></Button>
+      <Button className="music-mini-button !border-0 !bg-transparent !shadow-none !outline-none !ring-0 !ring-offset-0" variant="ghost" size="icon" onClick={() => { musicEngine.unlock(); musicEngine.toggle(); }} aria-label={active ? 'Pause music' : 'Play music'}>
         {active ? <Pause /> : <Play />}
       </Button>
-      <Button className="music-mini-button" variant="ghost" size="icon" onClick={() => musicEngine.stop()} aria-label="Stop music"><Square /></Button>
-      <Button className="music-mini-button" variant="ghost" size="icon" onClick={() => void musicEngine.next()} aria-label="Next track"><SkipForward /></Button>
+      <Button className="music-mini-button !border-0 !bg-transparent !shadow-none !outline-none !ring-0 !ring-offset-0" variant="ghost" size="icon" onClick={() => musicEngine.stop()} aria-label="Stop music"><Square /></Button>
+      <Button className="music-mini-button !border-0 !bg-transparent !shadow-none !outline-none !ring-0 !ring-offset-0" variant="ghost" size="icon" onClick={() => void musicEngine.next()} aria-label="Next track"><SkipForward /></Button>
     </div>
   );
 }
