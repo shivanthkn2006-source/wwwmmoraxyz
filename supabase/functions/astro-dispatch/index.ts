@@ -678,7 +678,26 @@ Deno.serve(async (req) => {
       : `astro_profiles?is_enabled=eq.true&select=user_id,birth_date,birth_time,birth_timezone,display_timezone&order=updated_at.asc&limit=${probeOnly ? 1 : MAX_USERS_PER_RUN}`;
 
     const profRes = await db(filter);
-    const profiles: ProfileRow[] = Array.isArray(profRes.data) ? profRes.data : [];
+    let profiles: ProfileRow[] = Array.isArray(profRes.data) ? profRes.data : [];
+
+    // Throttled, deadline-bounded run: whatever we cannot reach is queued for
+    // the next run instead of the whole call dying on the platform timeout.
+    const pacer = createPacer({ budgetMs: 90_000, minGapMs: 400, rateLimitCooldownMs: 2_500 });
+    const queueCfg = { supabaseUrl: SUPABASE_URL, serviceKey: SERVICE_KEY };
+    const queuedJobs = probeOnly || explicitUser ? [] : await claimQueued(queueCfg, JOB_TYPE, MAX_USERS_PER_RUN);
+    const jobByUser = new Map(queuedJobs.filter((j) => j.user_id).map((j) => [j.user_id as string, j]));
+
+    if (jobByUser.size) {
+      const ids = Array.from(jobByUser.keys()).map((id) => `"${id}"`).join(',');
+      const requeued = await db(
+        `astro_profiles?user_id=in.(${ids})&select=user_id,birth_date,birth_time,birth_timezone,display_timezone`,
+      );
+      const first: ProfileRow[] = Array.isArray(requeued.data) ? requeued.data : [];
+      const seen = new Set(first.map((p) => p.user_id));
+      profiles = [...first, ...profiles.filter((p) => !seen.has(p.user_id))];
+    }
+
+    const pending: Array<{ userId: string; targetDate: string }> = [];
 
     for (const p of profiles) {
       const tz = p.display_timezone || p.birth_timezone || 'UTC';
@@ -691,29 +710,58 @@ Deno.serve(async (req) => {
           target_date: localDateIn(now, tz), reason: 'no slot due',
         }));
         results.push({ user_id: p.user_id, slot: null, status: 'skipped', note: 'no slot due' });
+        const doneJob = jobByUser.get(p.user_id);
+        if (doneJob) await settleQueued(queueCfg, doneJob, { ok: true });
         continue;
       }
 
       const targetDate = body.targetDate ?? localDateIn(now, tz);
+
+      if (pacer.expired()) {
+        pending.push({ userId: p.user_id, targetDate });
+        results.push({ user_id: p.user_id, slot, status: 'skipped', note: 'queued for next run' });
+        continue;
+      }
+
       console.log('[astro-dispatch] process', JSON.stringify({
         correlation_id: correlationId, user_id: p.user_id, timezone: tz,
         local_time: `${String(clock.hour).padStart(2, '0')}:${String(clock.minute).padStart(2, '0')}`,
         target_date: targetDate, slot, idempotency_key: `${p.user_id}_${targetDate}_${slot}`,
       }));
+      await pacer.gate();
       const out = await processOne(p, slot, targetDate, !!state.shadow_mode, now);
       console.log('[astro-dispatch] result', JSON.stringify({
         correlation_id: correlationId, user_id: p.user_id, target_date: targetDate, slot, status: out.result.status, note: out.result.note ?? null,
       }));
       results.push(out.result);
 
+      const job = jobByUser.get(p.user_id);
+      if (job) {
+        await settleQueued(queueCfg, job, {
+          ok: out.result.status !== 'failed',
+          error: out.result.note ?? 'failed',
+        });
+      }
 
-      if (out.circuitBreak) { circuitBreak = out.circuitBreak; break; }
+      if (out.circuitBreak) {
+        circuitBreak = out.circuitBreak;
+        pending.push({ userId: p.user_id, targetDate });
+        break;
+      }
       if (out.rateLimited) {
         rateLimitHits++;
+        await pacer.cooldown();
         if (rateLimitHits >= RATE_LIMIT_PARK) break;   // park until the next scheduled run
       }
       if (probeOnly) break;                            // paused: exactly one probe
     }
+
+    const queuedCount = await enqueueRetries(
+      queueCfg,
+      JOB_TYPE,
+      pending.map((p) => ({ userId: p.userId, targetDate: p.targetDate, delaySeconds: 180 })),
+    );
+
 
     if (circuitBreak) {
       await patchState({ paused: true, pause_reason: `${circuitBreak.status}: ${circuitBreak.message}` });
