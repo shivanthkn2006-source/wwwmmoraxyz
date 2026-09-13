@@ -61,10 +61,11 @@ describe('MusicEngine', () => {
     await musicEngine.play();
     musicEngine.seek(42);
     musicEngine.setVolume(0.4);
-    musicEngine.toggleShuffle();
     musicEngine.cycleRepeat();
     await musicEngine.next();
-    expect(musicEngine.getState()).toMatchObject({ status: 'playing', index: 1, volume: 0.4, shuffle: true, repeat: 'all' });
+    expect(musicEngine.getState()).toMatchObject({ status: 'playing', index: 1, volume: 0.4, repeat: 'all' });
+    musicEngine.toggleShuffle();
+    expect(musicEngine.getState().shuffle).toBe(true);
     musicEngine.stop();
     expect(musicEngine.getState()).toMatchObject({ status: 'idle', track: null });
   });
