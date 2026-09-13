@@ -201,7 +201,14 @@ export const useAdaptiveCamera = ({ autoStart = true }: AdaptiveStreamOptions = 
   // Release hardware locks when the tab is hidden (prevents thermal drain)
   useEffect(() => {
     const onVisibility = () => {
-      if (document.visibilityState === 'hidden') stopStream();
+      if (document.visibilityState === 'hidden') {
+        wasLiveRef.current = isLive;
+        stopStream();
+      } else if (wasLiveRef.current) {
+        // Coming back to the page must restore the picture, not leave a black view.
+        wasLiveRef.current = false;
+        void startStream();
+      }
     };
     document.addEventListener('visibilitychange', onVisibility);
     return () => document.removeEventListener('visibilitychange', onVisibility);
