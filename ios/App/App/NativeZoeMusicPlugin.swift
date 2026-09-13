@@ -73,7 +73,10 @@ final class NativeZoeMusicPlugin: CAPPlugin, CAPBridgedPlugin {
     @objc func stop(_ call: CAPPluginCall) {
         player?.pause()
         player?.seek(to: .zero)
+        removeObservers()
+        player = nil
         MMoraAudioSessionState.shared.musicActive = false
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
         notify("idle")
         call.resolve()
     }

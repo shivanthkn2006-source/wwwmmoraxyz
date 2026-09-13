@@ -47,6 +47,7 @@ class MusicEngineImpl {
   private duckedFrom: number | null = null;
   private unlocked = false;
   private nativeReady = false;
+  private failedIndexes = new Set<number>();
 
   private state: MusicState = {
     status: 'idle',
@@ -89,8 +90,7 @@ class MusicEngineImpl {
         duration: Number.isFinite(audio.duration) ? audio.duration : 0,
       });
     audio.onended = () => void this.next(true);
-    audio.onerror = () =>
-      this.patch({ status: 'error', error: 'That stream would not play. Trying another source usually fixes it.' });
+    audio.onerror = () => void this.recoverFromStreamError();
 
     this.audio = audio;
     this.bindMediaSession();
@@ -205,6 +205,7 @@ class MusicEngineImpl {
       this.patch({ error: 'I could not find that on any of the free music sources.' });
       return false;
     }
+    this.failedIndexes.clear();
     this.patch({ queue: tracks, index: -1, error: null });
     return this.playIndex(startIndex);
   }
@@ -242,6 +243,18 @@ class MusicEngineImpl {
       });
       return false;
     }
+  }
+
+  private async recoverFromStreamError(): Promise<void> {
+    const failed = this.state.index;
+    if (failed >= 0) this.failedIndexes.add(failed);
+    const nextIndex = this.state.queue.findIndex((_, index) => !this.failedIndexes.has(index));
+    if (nextIndex >= 0) {
+      this.patch({ status: 'buffering', error: 'That stream was unavailable, so I’m trying the next one.' });
+      await this.playIndex(nextIndex);
+      return;
+    }
+    this.patch({ status: 'error', error: 'None of those streams would play right now. Try another search.' });
   }
 
   private async routeToHeadset(audio: HTMLAudioElement): Promise<void> {
