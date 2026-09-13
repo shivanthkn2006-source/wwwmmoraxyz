@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useMusicEngine } from '@/hooks/useMusicEngine';
 import { musicEngine } from '@/services/MusicEngine';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface PlayerPosition {
   x: number;
@@ -28,6 +27,7 @@ export default function GlobalMusicToggle() {
     originY: number;
     moved: boolean;
   } | null>(null);
+  const positionRef = useRef<PlayerPosition>(DEFAULT_POSITION);
   const suppressClickRef = useRef(false);
   const [position, setPosition] = useState<PlayerPosition>(() => {
     try {
@@ -38,6 +38,10 @@ export default function GlobalMusicToggle() {
     }
     return DEFAULT_POSITION;
   });
+
+  useEffect(() => {
+    positionRef.current = position;
+  }, [position]);
 
   const clamp = useCallback((next: PlayerPosition): PlayerPosition => {
     const width = playerRef.current?.offsetWidth ?? 208;
@@ -60,21 +64,6 @@ export default function GlobalMusicToggle() {
   }, [clamp]);
 
   useEffect(() => {
-    const player = playerRef.current;
-    if (!player || !state.track) return;
-
-    const onPointerDown = (event: PointerEvent) => {
-      if (event.button !== 0) return;
-      try { player.setPointerCapture?.(event.pointerId); } catch { /* Synthetic or unsupported pointer capture. */ }
-      pointerRef.current = {
-        id: event.pointerId,
-        startX: event.clientX,
-        startY: event.clientY,
-        originX: position.x,
-        originY: position.y,
-        moved: false,
-      };
-    };
     const onPointerMove = (event: PointerEvent) => {
       const pointer = pointerRef.current;
       if (!pointer || pointer.id !== event.pointerId) return;
@@ -96,31 +85,42 @@ export default function GlobalMusicToggle() {
         y: pointer.originY + event.clientY - pointer.startY,
       });
       setPosition(finalPosition);
+      positionRef.current = finalPosition;
       try { localStorage.setItem(POSITION_KEY, JSON.stringify(finalPosition)); } catch { /* Storage unavailable. */ }
     };
 
-    player.addEventListener('pointerdown', onPointerDown);
     window.addEventListener('pointermove', onPointerMove, { passive: false });
     window.addEventListener('pointerup', finishDrag);
     window.addEventListener('pointercancel', finishDrag);
     return () => {
-      player.removeEventListener('pointerdown', onPointerDown);
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerup', finishDrag);
       window.removeEventListener('pointercancel', finishDrag);
     };
-  }, [clamp, position.x, position.y, state.track]);
+  }, [clamp]);
 
   if (!state.track) return null;
 
   const active = state.status === 'playing' || state.status === 'buffering';
   return (
-    <TooltipProvider><div
+    <div
       ref={playerRef}
-      className="music-global-glass fixed z-[54] flex max-w-[calc(100vw-1rem)] touch-none select-none items-center gap-0.5 rounded-full p-1"
+      className="music-global-glass fixed z-[90] flex max-w-[calc(100vw-1rem)] touch-none select-none items-center gap-0.5"
       style={{ left: position.x, top: position.y }}
       data-testid="global-music-control"
       data-draggable="true"
+      onPointerDown={(event) => {
+        if (event.button !== 0) return;
+        const current = positionRef.current;
+        pointerRef.current = {
+          id: event.pointerId,
+          startX: event.clientX,
+          startY: event.clientY,
+          originX: current.x,
+          originY: current.y,
+          moved: false,
+        };
+      }}
       onClickCapture={(event) => {
         if (!suppressClickRef.current) return;
         event.preventDefault();
@@ -129,15 +129,15 @@ export default function GlobalMusicToggle() {
       }}
       aria-label="Draggable music controls"
     >
-      <Tooltip><TooltipTrigger asChild><Button className="music-mini-button rounded-full" variant="ghost" size="icon" onClick={() => navigate('/music')} aria-label={`Open music: ${state.track.title} by ${state.track.artist}`}>
+      <Button className="music-mini-button" variant="ghost" size="icon" onClick={() => navigate('/music')} aria-label={`Open music: ${state.track.title} by ${state.track.artist}`}>
         <Disc3 className={active ? 'animate-spin motion-reduce:animate-none' : ''} />
-      </Button></TooltipTrigger><TooltipContent>Open music</TooltipContent></Tooltip>
-      <Tooltip><TooltipTrigger asChild><Button className="music-mini-button rounded-full" variant="ghost" size="icon" onClick={() => void musicEngine.previous()} aria-label="Previous track"><SkipBack /></Button></TooltipTrigger><TooltipContent>Previous</TooltipContent></Tooltip>
-      <Tooltip><TooltipTrigger asChild><Button className="music-mini-button rounded-full" variant="ghost" size="icon" onClick={() => { musicEngine.unlock(); musicEngine.toggle(); }} aria-label={active ? 'Pause music' : 'Play music'}>
+      </Button>
+      <Button className="music-mini-button" variant="ghost" size="icon" onClick={() => void musicEngine.previous()} aria-label="Previous track"><SkipBack /></Button>
+      <Button className="music-mini-button" variant="ghost" size="icon" onClick={() => { musicEngine.unlock(); musicEngine.toggle(); }} aria-label={active ? 'Pause music' : 'Play music'}>
         {active ? <Pause /> : <Play />}
-      </Button></TooltipTrigger><TooltipContent>{active ? 'Pause music' : 'Play music'}</TooltipContent></Tooltip>
-      <Tooltip><TooltipTrigger asChild><Button className="music-mini-button rounded-full" variant="ghost" size="icon" onClick={() => musicEngine.stop()} aria-label="Stop music"><Square /></Button></TooltipTrigger><TooltipContent>Stop</TooltipContent></Tooltip>
-      <Tooltip><TooltipTrigger asChild><Button className="music-mini-button rounded-full" variant="ghost" size="icon" onClick={() => void musicEngine.next()} aria-label="Next track"><SkipForward /></Button></TooltipTrigger><TooltipContent>Next</TooltipContent></Tooltip>
-    </div></TooltipProvider>
+      </Button>
+      <Button className="music-mini-button" variant="ghost" size="icon" onClick={() => musicEngine.stop()} aria-label="Stop music"><Square /></Button>
+      <Button className="music-mini-button" variant="ghost" size="icon" onClick={() => void musicEngine.next()} aria-label="Next track"><SkipForward /></Button>
+    </div>
   );
 }

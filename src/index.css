@@ -1358,6 +1358,23 @@ html.phantom-mode [class*="animate-"] {
 .music-mini-button {
   height: 2.25rem;
   width: 2.25rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.music-mini-button:hover,
+.music-mini-button:active,
+.music-mini-button:focus,
+.music-mini-button:focus-visible,
+.music-mini-button[data-state='open'] {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  outline: none;
+  --tw-ring-offset-shadow: 0 0 transparent;
+  --tw-ring-shadow: 0 0 transparent;
 }
 
 @media (max-width: 380px) {
