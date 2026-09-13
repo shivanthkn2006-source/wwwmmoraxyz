@@ -21,6 +21,7 @@ import { sanitizeText } from '@/lib/searchSanitize';
 import { KIND_LABEL, portalForItem, tagsForItem, type FeedSearchItem, type FeedSearchKind } from '@/lib/feedSearchItems';
 import { useZoeSearchCompanion } from '@/hooks/useZoeSearchCompanion';
 import { SCOPE_LABEL, scopeAllowsPlatform, scopeAllowsWeb } from '@/lib/zoeSearchCompanion';
+import { parsePlatformMusicSearch } from '@/features/music/musicQuery';
 
 
 
@@ -326,6 +327,13 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
     const term = query.trim();
     if (!term || indexEmpty) return;
     void recordHomeSearch(term);
+
+    const musicQuery = parsePlatformMusicSearch(term);
+    if (musicQuery) {
+      setSearchOpen(false);
+      navigate(`/music?${new URLSearchParams({ q: musicQuery }).toString()}`);
+      return;
+    }
 
     // Route the submitted query through the ambient retrieval orchestrator.
     void (async () => {
@@ -741,11 +749,16 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
                       // Videos need the feed for playback; everything else
                       // expands right here, Google-style, and only opens in the
                       // feed when the user asks for it.
-                      onClick={() =>
-                        item.kind === 'video'
-                          ? openInFeed(externalVisible, item.id)
-                          : setExpandedId(expanded ? null : item.id)
-                      }
+                       onClick={() => {
+                         if (item.kind === 'music') {
+                           setSearchOpen(false);
+                           navigate(`/music?${new URLSearchParams({ q: query.trim() }).toString()}`);
+                         } else if (item.kind === 'video') {
+                           openInFeed(externalVisible, item.id);
+                         } else {
+                           setExpandedId(expanded ? null : item.id);
+                         }
+                       }}
                       className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-white/10"
                     >
                       {(item.thumbnail || item.image) && (

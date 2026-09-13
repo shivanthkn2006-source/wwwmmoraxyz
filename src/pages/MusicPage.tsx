@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
+import { useSearchParams } from 'react-router-dom';
 import { Disc3, ListMusic, Pause, Play, Repeat, Search, Shuffle, SkipBack, SkipForward, Volume2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,6 +32,7 @@ function IconControl({ label, children, ...props }: React.ComponentProps<typeof 
 }
 
 export default function MusicPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const cachedSearch = readSearchCache();
   const state = useMusicEngine();
   const [query, setQuery] = useState(cachedSearch?.query ?? '');
@@ -38,10 +40,12 @@ export default function MusicPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [results, setResults] = useState<MusicSearchResult | null>(cachedSearch?.result ?? null);
   const active = state.status === 'playing' || state.status === 'buffering';
+  const routedQueryRef = useRef<string | null>(null);
 
-  const search = async () => {
-    const value = query.trim();
+  const search = useCallback(async (requestedQuery?: string) => {
+    const value = (requestedQuery ?? query).trim();
     if (!value || searching) return;
+    if (requestedQuery) setQuery(value);
     setSearching(true);
     setNotice(null);
     try {
@@ -55,7 +59,7 @@ export default function MusicPage() {
           ? 'The connected music sources are temporarily unavailable. Please try again.'
           : 'No playable match was found. Try a title, artist, album, language, genre, lyric line, or radio station.');
       } else {
-        musicEngine.unlock();
+        if (!requestedQuery) musicEngine.unlock();
         const played = await musicEngine.playQueue(result.tracks);
         const correction = result.corrected ? ` Interpreted as “${result.query}”.` : '';
         setNotice(played ? `Playing the best match. ${result.tracks.length} results from connected sources.${correction}` : musicEngine.getState().error);
@@ -65,7 +69,16 @@ export default function MusicPage() {
     } finally {
       setSearching(false);
     }
-  };
+  }, [query, searching]);
+
+  useEffect(() => {
+    const routedQuery = searchParams.get('q')?.trim();
+    if (!routedQuery || routedQueryRef.current === routedQuery) return;
+    routedQueryRef.current = routedQuery;
+    void search(routedQuery).finally(() => {
+      setSearchParams({}, { replace: true });
+    });
+  }, [search, searchParams, setSearchParams]);
 
   return (
     <TooltipProvider>

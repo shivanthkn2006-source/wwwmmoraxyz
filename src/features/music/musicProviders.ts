@@ -22,7 +22,7 @@ export interface MusicTrack {
   url: string;
   /** Seconds, when the provider reports it. */
   duration?: number;
-  source: 'audius' | 'radio' | 'archive';
+  source: 'audius' | 'radio' | 'archive' | 'apple';
   /** Human-readable attribution shown in the UI and spoken by Zoe. */
   credit: string;
   live?: boolean;
@@ -111,6 +111,7 @@ export async function searchMusicCatalog(rawQuery: string, kind: 'track' | 'mood
   const normalized = normalizeMusicQuery(rawQuery);
   const query = normalized.query || rawQuery.trim();
   const tasks = [
+    { name: 'Apple Music', run: () => searchAppleMusic(query) },
     { name: 'Audius', run: () => searchAudius(query) },
     { name: 'Internet Archive', run: () => searchArchive(query) },
     { name: 'Radio Browser', run: () => searchRadio(query) },
@@ -123,6 +124,7 @@ export async function searchMusicCatalog(rawQuery: string, kind: 'track' | 'mood
   // Retry once with the original spelling when correction produced no match.
   if (!tracks.length && normalized.corrected && normalized.original !== query) {
     const retry = await Promise.allSettled(tasks.map((provider) => {
+      if (provider.name === 'Apple Music') return searchAppleMusic(normalized.original);
       if (provider.name === 'Audius') return searchAudius(normalized.original);
       if (provider.name === 'Internet Archive') return searchArchive(normalized.original);
       return searchRadio(normalized.original);
@@ -142,6 +144,28 @@ export async function searchMusicCatalog(rawQuery: string, kind: 'track' | 'mood
       count: result.status === 'fulfilled' ? result.value.length : 0,
     })),
   };
+}
+
+/* ───────────────────────── Apple Music previews ───────────────────── */
+
+/** Official catalog metadata with the playable preview supplied by Apple. */
+export async function searchAppleMusic(query: string, limit = 200): Promise<MusicTrack[]> {
+  const data = await getJson<{ results?: any[] }>(
+    `https://itunes.apple.com/search?media=music&entity=song&limit=${limit}&term=${encodeURIComponent(query)}`,
+  );
+  return (data?.results ?? [])
+    .filter((track) => track?.trackId && isSecurePlayableUrl(track?.previewUrl))
+    .map((track) => ({
+      id: `apple:${track.trackId}`,
+      title: String(track.trackName ?? 'Untitled'),
+      artist: String(track.artistName ?? 'Apple Music artist'),
+      album: typeof track.collectionName === 'string' ? track.collectionName : undefined,
+      artwork: typeof track.artworkUrl100 === 'string' ? track.artworkUrl100.replace('100x100bb', '600x600bb') : undefined,
+      url: String(track.previewUrl),
+      duration: typeof track.trackTimeMillis === 'number' ? Math.round(track.trackTimeMillis / 1000) : undefined,
+      source: 'apple' as const,
+      credit: 'Apple Music (official preview)',
+    }));
 }
 
 /* ─────────────────────────── Radio Browser ─────────────────────────── */

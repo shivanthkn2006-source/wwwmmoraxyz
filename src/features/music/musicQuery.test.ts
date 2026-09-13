@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { musicMatchScore, normalizeMusicQuery } from './musicQuery';
+import { musicMatchScore, normalizeMusicQuery, parsePlatformMusicSearch } from './musicQuery';
 
 describe('music query normalization', () => {
   it('normalizes spoken wording, accents and bounded music vocabulary', () => {
@@ -13,8 +13,17 @@ describe('music query normalization', () => {
     expect(normalizeMusicQuery('Mishon Impossibel theme').query).toBe('mishon impossibel theme');
   });
 
+  it('corrects a known artist spelling and recognizes explicit platform music searches', () => {
+    expect(normalizeMusicQuery('Ketty Perry').query).toBe('katy perry');
+    expect(parsePlatformMusicSearch('search songs by Ketty Perry')).toBe('ketty perry');
+    expect(parsePlatformMusicSearch('Katy Perry songs')).toBe('katy perry');
+    expect(parsePlatformMusicSearch('Katy Perry')).toBeNull();
+  });
+
   it('ranks exact provider metadata above broad matches', () => {
     expect(musicMatchScore({ title: 'Signal', artist: 'Artist' }, 'Signal'))
       .toBeGreaterThan(musicMatchScore({ title: 'Signal Radio', artist: 'Live' }, 'Signal'));
+    expect(musicMatchScore({ title: 'Roar', artist: 'Katy Perry' }, 'Katy Perry'))
+      .toBeGreaterThan(musicMatchScore({ title: 'Katy Perry remix', artist: 'Cover artist' }, 'Katy Perry'));
   });
 });

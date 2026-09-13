@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { isSecurePlayableUrl, resolveMusicQueue, searchAudius, searchMusicCatalog, searchRadio } from './musicProviders';
+import { isSecurePlayableUrl, resolveMusicQueue, searchAppleMusic, searchAudius, searchMusicCatalog, searchRadio } from './musicProviders';
 
 describe('music providers', () => {
   afterEach(() => vi.restoreAllMocks());
@@ -11,6 +11,20 @@ describe('music providers', () => {
     const result = await searchAudius('signal');
     expect(result[0]).toMatchObject({ id: 'audius:1', title: 'Signal', artist: 'Artist', source: 'audius' });
     expect(result[0].url).toContain('/v1/tracks/1/stream');
+  });
+
+  it('normalizes official Apple catalog previews', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ results: [{
+      trackId: 42,
+      trackName: 'Roar',
+      artistName: 'Katy Perry',
+      collectionName: 'PRISM',
+      previewUrl: 'https://audio-ssl.itunes.apple.com/preview.m4a',
+      artworkUrl100: 'https://is1-ssl.mzstatic.com/image/thumb/100x100bb.jpg',
+    }] })));
+    await expect(searchAppleMusic('Katy Perry')).resolves.toMatchObject([
+      { id: 'apple:42', title: 'Roar', artist: 'Katy Perry', source: 'apple' },
+    ]);
   });
 
   it('falls through providers and returns an honest empty result', async () => {
@@ -46,7 +60,7 @@ describe('music providers', () => {
     });
     const result = await searchMusicCatalog('Signal');
     expect(result.tracks.map((track) => track.title)).toEqual(['Signal', 'Signal Radio']);
-    expect(result.providers).toHaveLength(3);
+    expect(result.providers).toHaveLength(4);
   });
 
   it('keeps successful sources when another provider is unavailable', async () => {

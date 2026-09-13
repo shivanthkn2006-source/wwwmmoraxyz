@@ -19,3 +19,4 @@
 - [x] Make the compact music controls draggable on every page, default them after the MMora wordmark, remove the outer line, and verify controls and screen bounds.
 - [x] Remove all pressed/focus layers from the mini-player symbols and keep the player mounted after Stop.
 - [x] Repair Music page search, aggregate and rank playable providers, show results, add safe query correction, and complete live responsive QA.
+- [x] Add official Katy Perry catalog results and route explicit Home/Feed music searches into the Music page; verify live preview.
