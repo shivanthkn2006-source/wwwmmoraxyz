@@ -125,19 +125,43 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
   // Zoe uses the SAME event with a spoken query, so a voice search is visible
   // on screen — the member watches exactly what she looked up.
   React.useEffect(() => {
-    const open = (event: Event) => {
+    let lastTerm = '';
+    let lastAt = 0;
+    const run = (term: string, speak: boolean) => {
       setSearchOpen(true);
-      const spoken = (event as CustomEvent).detail as { query?: string; speak?: boolean } | undefined;
-      const term = spoken?.query?.trim();
       if (!term) return;
-      spokenSearchRef.current = spoken?.speak ? term : null;
+      // The voice path announces the same request a few times while Home loads.
+      if (term === lastTerm && Date.now() - lastAt < 15_000) return;
+      lastTerm = term;
+      lastAt = Date.now();
+      spokenSearchRef.current = speak ? term : null;
       onQueryChange(term);
       // Query state first triggers the normal reset effect. Start retrieval on
       // the next task so that reset cannot invalidate this voice-request run.
       window.setTimeout(() => { void executeAmbientSearch(term); }, 0);
       void recordHomeSearch(term);
     };
+    const open = (event: Event) => {
+      const spoken = (event as CustomEvent).detail as { query?: string; speak?: boolean } | undefined;
+      run(spoken?.query?.trim() ?? '', Boolean(spoken?.speak));
+    };
     window.addEventListener('mmora:open-home-search', open);
+
+    // A spoken search asked for from another page is parked until this bar
+    // exists, so the request is never lost while Home is still loading.
+    try {
+      const raw = window.sessionStorage.getItem('mmora:pending-home-search');
+      if (raw) {
+        window.sessionStorage.removeItem('mmora:pending-home-search');
+        const parked = JSON.parse(raw) as { query?: string; speak?: boolean; at?: number };
+        if (parked?.query && Date.now() - (parked.at ?? 0) < 60_000) {
+          run(parked.query.trim(), Boolean(parked.speak));
+        }
+      }
+    } catch {
+      /* storage unavailable — the live event path still applies */
+    }
+
     return () => window.removeEventListener('mmora:open-home-search', open);
   }, [onQueryChange, executeAmbientSearch]);
 
