@@ -9,7 +9,7 @@ Keep the Music page’s black foundation and current layout, but replace its fla
 - Add restrained white edge highlights and soft internal sheen rather than solid outlines or opaque panels.
 - Keep text and icons white, using softer white opacity for secondary information.
 - Replace solid-blue selected tabs, play/search buttons, progress fills, reaction states, and current-track highlights with translucent white glass states.
-- Retain blue only as a very subtle enabled-status tint where necessary; it will no longer dominate the page.
+- Remove blue completely; all enabled, selected, progress, focus, and active states will use translucent liquid glass with white highlights only.
 - Keep the existing compact structure, content, controls, search behavior, queue, library, reactions, and page wiring unchanged.
 
 ## Responsive and interaction checks
