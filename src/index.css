@@ -1276,28 +1276,23 @@ html.phantom-mode [class*="animate-"] {
    the rest of the platform theme is untouched. */
 .music-liquid-page {
   --music-glass: 0 0% 100%;
-  --music-glass-strong: 0 0% 14%;
   --music-glass-edge: 0 0% 100%;
-  --music-stage: 0 0% 3%;
-  --music-stage-deep: 0 0% 0%;
   --music-blue: 211 100% 55%;
-  background:
-    radial-gradient(circle at 50% 0%, hsl(var(--music-glass) / 0.09), transparent 34rem),
-    hsl(var(--music-stage-deep));
+  background: transparent;
   color: hsl(0 0% 100%);
 }
 
 .music-liquid-shell {
-  background: linear-gradient(150deg, hsl(var(--music-glass) / 0.09), hsl(var(--music-stage) / 0.72) 46%);
-  box-shadow: inset 0 1px 0 hsl(var(--music-glass-edge) / 0.16), 0 24px 70px hsl(var(--music-stage-deep) / 0.62);
-  backdrop-filter: blur(30px) saturate(120%);
-  -webkit-backdrop-filter: blur(30px) saturate(120%);
+  background: hsl(var(--music-glass) / 0.035);
+  box-shadow: inset 0 0 0 1px hsl(var(--music-glass-edge) / 0.12);
+  backdrop-filter: blur(34px) saturate(135%);
+  -webkit-backdrop-filter: blur(34px) saturate(135%);
 }
 
 .music-liquid-control,
 .music-global-glass {
   background: linear-gradient(135deg, hsl(var(--music-glass) / 0.12), hsl(var(--music-glass) / 0.04));
-  box-shadow: inset 0 1px 0 hsl(var(--music-glass-edge) / 0.18), 0 12px 36px hsl(var(--music-stage-deep) / 0.28);
+  box-shadow: inset 0 0 0 1px hsl(var(--music-glass-edge) / 0.14);
   backdrop-filter: blur(30px) saturate(115%);
   -webkit-backdrop-filter: blur(30px) saturate(115%);
 }
@@ -1317,7 +1312,9 @@ html.phantom-mode [class*="animate-"] {
 
 .music-liquid-queue,
 .music-liquid-side {
-  background: linear-gradient(180deg, hsl(var(--music-glass) / 0.05), hsl(var(--music-glass) / 0.015));
+  background: hsl(var(--music-glass) / 0.025);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
 }
 
 .music-liquid-side-title {
@@ -1341,7 +1338,7 @@ html.phantom-mode [class*="animate-"] {
 }
 
 .music-liquid-chip:hover {
-  background: hsl(var(--music-glass) / 0.16);
+  background: hsl(var(--music-blue) / 0.16);
 }
 
 .music-liquid-chip.is-active {
@@ -1351,8 +1348,8 @@ html.phantom-mode [class*="animate-"] {
 }
 
 .music-liquid-art {
-  background: linear-gradient(145deg, hsl(var(--music-glass-strong)), hsl(var(--music-stage-deep)));
-  box-shadow: inset 0 1px 0 hsl(var(--music-glass-edge) / 0.2), 0 18px 40px hsl(var(--music-stage-deep) / 0.5);
+  background: hsl(var(--music-glass) / 0.07);
+  box-shadow: inset 0 0 0 1px hsl(var(--music-glass-edge) / 0.14);
 }
 
 .music-liquid-nowtag {
@@ -1361,7 +1358,7 @@ html.phantom-mode [class*="animate-"] {
   bottom: 0.25rem;
   border-radius: 9999px;
   padding: 0.15rem 0.4rem;
-  background: hsl(var(--music-stage-deep) / 0.6);
+  background: hsl(var(--music-blue) / 0.82);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   color: hsl(0 0% 100%);
@@ -1449,16 +1446,16 @@ html.phantom-mode [class*="animate-"] {
 
 .music-liquid-track:hover,
 .music-liquid-track.is-current {
-  border-color: hsl(var(--music-glass-edge) / 0.14);
-  background: hsl(var(--music-glass) / 0.09);
-  box-shadow: inset 0 1px 0 hsl(var(--music-glass-edge) / 0.08);
+  border-color: transparent;
+  background: hsl(var(--music-blue) / 0.12);
+  box-shadow: none;
 }
 
 
 .music-liquid-slider [role='slider'] {
   border-color: hsl(var(--music-glass-edge) / 0.9);
-  background: hsl(var(--music-stage-deep));
-  box-shadow: 0 0 0 1px hsl(var(--music-stage-deep) / 0.5), 0 0 16px hsl(var(--music-glass-edge) / 0.14);
+  background: hsl(var(--music-blue));
+  box-shadow: 0 0 14px hsl(var(--music-blue) / 0.3);
 }
 
 .music-liquid-slider > span:first-child {
@@ -1466,7 +1463,23 @@ html.phantom-mode [class*="animate-"] {
 }
 
 .music-liquid-slider > span:first-child > span {
-  background: hsl(var(--music-glass-edge) / 0.92);
+  background: hsl(var(--music-blue));
+}
+
+/* Music result buttons must never inherit the platform's opaque selected fill. */
+.music-liquid-page .music-liquid-track,
+.music-liquid-page .music-liquid-track:focus,
+.music-liquid-page .music-liquid-track:focus-visible,
+.music-liquid-page .music-liquid-track:active {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  outline: 0;
+}
+
+.music-liquid-page .music-liquid-track:hover,
+.music-liquid-page .music-liquid-track.is-current {
+  background: hsl(var(--music-blue) / 0.12);
 }
 
 .music-mini-button {

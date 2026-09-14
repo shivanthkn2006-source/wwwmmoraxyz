@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useSearchParams } from 'react-router-dom';
 import { Disc3, Heart, ListMusic, Pause, Play, Repeat, Search, Shuffle, SkipBack, SkipForward, Volume2 } from 'lucide-react';
@@ -128,7 +128,7 @@ export default function MusicPage() {
       <Button variant="ghost" className="music-liquid-track h-auto min-w-0 flex-1 justify-start whitespace-normal px-2.5 py-2.5 text-left" onClick={onPlay}>
         <span className="flex min-w-0 items-center gap-2.5">
           <span className="music-liquid-track-index flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full text-[11px]">
-            {track.artwork ? <img src={track.artwork} alt="" className="h-full w-full object-cover" /> : String(index + 1).padStart(2, '0')}
+            {track.artwork ? <img src={track.artwork} alt="" className="h-full w-full object-cover" loading="lazy" decoding="async" /> : String(index + 1).padStart(2, '0')}
           </span>
           <span className="min-w-0 flex-1">
             <span className="block truncate text-sm font-medium text-white">{track.title}</span>
@@ -150,6 +150,12 @@ export default function MusicPage() {
   );
 
   const savedTracks = library.saved;
+  const artists = useMemo(() => {
+    const names = [...(results?.tracks ?? []), ...savedTracks]
+      .map((track) => track.artist?.trim())
+      .filter((artist): artist is string => Boolean(artist));
+    return [...new Set(names)].slice(0, 12);
+  }, [results, savedTracks]);
 
   return (
     <TooltipProvider>
@@ -159,14 +165,6 @@ export default function MusicPage() {
           <meta name="description" content="Search songs, artists, albums, playlists and live radio on MMora Music, and save what you love to your own library." />
         </Helmet>
         <div className="music-liquid-shell mx-auto flex min-h-[calc(100dvh-max(3.75rem,env(safe-area-inset-top)))] w-full max-w-6xl flex-col overflow-hidden rounded-t-2xl">
-          {/* Compact identity strip: spinning disc + wordmark only. */}
-          <div className="flex items-center gap-2 px-3 py-2 sm:px-5">
-            <span className="music-liquid-status flex h-8 w-8 items-center justify-center rounded-full" aria-label={active ? 'Playing' : 'Ready'}>
-              <Disc3 className={active ? 'h-4 w-4 animate-spin motion-reduce:animate-none' : 'h-4 w-4'} />
-            </span>
-            <h1 className="text-sm font-semibold tracking-wide text-white">MMora music</h1>
-          </div>
-
           <div className="grid flex-1 gap-0 lg:grid-cols-[13rem_minmax(0,1fr)_minmax(17rem,22rem)]">
             {/* Browse sidebar */}
             <aside className="music-liquid-side order-2 max-h-[34dvh] overflow-y-auto p-3 lg:order-1 lg:max-h-none">
@@ -182,6 +180,16 @@ export default function MusicPage() {
                   <button key={station.id} type="button" className="music-liquid-chip" onClick={() => { musicEngine.unlock(); void search(station.query, 'radio'); }}>{station.label}</button>
                 ))}
               </div>
+              {artists.length > 0 && (
+                <>
+                  <p className="music-liquid-side-title">Artists</p>
+                  <div className="mb-4 flex flex-wrap gap-1.5">
+                    {artists.map((artist) => (
+                      <button key={artist} type="button" className="music-liquid-chip" onClick={() => { musicEngine.unlock(); void search(artist, 'track'); }}>{artist}</button>
+                    ))}
+                  </div>
+                </>
+              )}
               <p className="music-liquid-side-title">Playlists</p>
               <div className="flex flex-wrap gap-1.5">
                 <button type="button" className={`music-liquid-chip ${tab === 'library' ? 'is-active' : ''}`} onClick={() => setTab('library')}>My library ({savedTracks.length})</button>
@@ -193,6 +201,10 @@ export default function MusicPage() {
 
             {/* Search + now listening + transport */}
             <section className="order-1 flex min-h-0 flex-col gap-3 p-3 sm:p-4 lg:order-2">
+              <div className="flex items-center gap-2">
+                <Disc3 className={active ? 'h-4 w-4 animate-spin motion-reduce:animate-none' : 'h-4 w-4'} aria-hidden="true" />
+                <h1 className="text-sm font-semibold text-white">MMora music</h1>
+              </div>
               <form className="music-liquid-control flex gap-2 rounded-full p-1" onSubmit={(e) => { e.preventDefault(); void search(); }}>
                 <Input className="h-10 border-0 bg-transparent text-white placeholder:text-white/40 shadow-none focus-visible:ring-0" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Song, artist, album, genre or radio" aria-label="Search music" autoComplete="off" />
                 <IconControl className="music-liquid-play h-10 w-10 rounded-full" type="submit" size="icon" disabled={searching} label={searching ? 'Searching' : 'Search'}><Search /></IconControl>
@@ -201,7 +213,7 @@ export default function MusicPage() {
               {/* Current artwork sits directly under the search bar. */}
               <div className="flex items-center gap-3">
                 <div className="music-liquid-art relative flex aspect-square w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl sm:w-28">
-                  {state.track?.artwork ? <img src={state.track.artwork} alt="" className="h-full w-full object-cover" /> : <Disc3 className="h-8 w-8 text-white/40" />}
+                  {state.track?.artwork ? <img src={state.track.artwork} alt="" className="h-full w-full object-cover" decoding="async" /> : <Disc3 className="h-8 w-8 text-white/40" />}
                   {state.track && <span className="music-liquid-nowtag">Now listening</span>}
                 </div>
                 <div className="min-w-0">
@@ -232,7 +244,7 @@ export default function MusicPage() {
 
               {(state.error || notice) && <p role="status" className="text-xs text-white/60">{state.error ?? notice}</p>}
 
-              <div className="music-liquid-control mt-auto space-y-3 rounded-2xl p-3">
+              <div className="music-liquid-control space-y-3 rounded-2xl p-3">
                 <div>
                   <Slider className="music-liquid-slider" value={[state.position]} max={Math.max(state.duration, state.position, 1)} step={1} disabled={!state.duration || Boolean(state.track?.live)} onValueChange={([v]) => musicEngine.seek(v)} aria-label="Position" />
                   <div className="mt-1.5 flex justify-between text-[10px] text-white/50"><span>{clock(state.position)}</span><span>{state.track?.live ? 'LIVE' : clock(state.duration)}</span></div>
@@ -277,7 +289,7 @@ export default function MusicPage() {
                         {section.tracks.slice(0, 8).map((item) => (
                           <li key={`${section.id}-${item.track_id}`} className="flex items-center gap-2.5 px-1 py-1">
                             <span className="music-liquid-track-index flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full text-[10px]">
-                              {item.track_artwork ? <img src={item.track_artwork} alt="" className="h-full w-full object-cover" /> : '♪'}
+                              {item.track_artwork ? <img src={item.track_artwork} alt="" className="h-full w-full object-cover" loading="lazy" decoding="async" /> : '♪'}
                             </span>
                             <span className="min-w-0 flex-1">
                               <span className="block truncate text-sm text-white">{item.track_title}</span>

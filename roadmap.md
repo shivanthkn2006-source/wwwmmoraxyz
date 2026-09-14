@@ -23,7 +23,7 @@
 - [x] Harden queue advancement and broken-stream recovery; show mini-player queue position.
 - [x] Prefer full-length music sources, retain clearly labelled previews/live radio, and remove the Music page bottom strip.
 - [x] Stop Home from repeating its initial loading cycle (friendship arrival no longer restarts the load/realtime cycle).
-- [ ] Signed-in responsive preview QA of Music/Home — blocked: no test account available in the sandbox.
+- [ ] Signed-in responsive preview QA of Music/Home — managed preview session is now available; rerun after the glass redesign.
 
 ## Music + social reactions stack (Sep 14)
 - [x] Compact transparent glass Music page: no big header, white text, white/blue rounded controls, current artwork directly under the search bar.
@@ -31,8 +31,10 @@
 - [x] Route Home music searches into the Music page (added Music/Mosaic/Selfie City search entries).
 - [x] Music library: save songs with album art, shown in a Library tab.
 - [x] Music page sidebar for browsing genres, radio and playlists.
-- [ ] Animated reactions on music (happy / cool / loved it) with loved / recommended / shared / most listened / most viewed lists and friend mentions.
-- [ ] Friend-listening notifications into other users' feeds with sound and profile photo.
+- [x] Animated reactions on music (happy / cool / loved it) with loved / recommended / shared / most listened lists.
+- [x] Friend-listening notifications in the normal notification stream with sound and profile photo.
 - [ ] Signed-in phone + desktop QA of Music and Home (queue advancement, full-length sources, no repeated Home loading).
 - [ ] Licensed full-track account (Spotify/YouTube Music) — blocked: needs a paid subscription plus their official player SDK; cannot be fabricated.
-- [ ] Real admin sign-in account for QA — blocked: needs the user to supply/confirm credentials or preview sign-in.
+- [ ] Verify the managed signed-in account is @moksh50/admin; never create or elevate a different account.
+- [ ] Add compliant generated fallback artwork for tracks with no provider artwork; avoid regenerating saved covers.
+- [ ] Add most-viewed video metrics and friend mentions to Music community data.
