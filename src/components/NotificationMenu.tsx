@@ -171,6 +171,11 @@ const NotificationMenu: React.FC<NotificationMenuProps> = ({ open, onOpenChange 
       return `completed a challenge! 🏆`;
     }
 
+    if (notif.type === 'friend_music_listen' && notif.context_data) {
+      const { track_title, track_artist } = notif.context_data as any;
+      return `is listening to ${track_title}${track_artist ? ` by ${track_artist}` : ''} 🎵`;
+    }
+
     switch (notif.type) {
       case 'interest_match':
         return 'has interests matching yours';
