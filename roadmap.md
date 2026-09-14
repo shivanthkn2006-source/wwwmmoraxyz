@@ -20,6 +20,7 @@
 - [x] Remove all pressed/focus layers from the mini-player symbols and keep the player mounted after Stop.
 - [x] Repair Music page search, aggregate and rank playable providers, show results, add safe query correction, and complete live responsive QA.
 - [x] Add official Katy Perry catalog results and route explicit Home/Feed music searches into the Music page; verify live preview.
-- [ ] Harden queue advancement and broken-stream recovery; show mini-player queue position.
-- [ ] Prefer full-length music sources, retain clearly labelled previews/live radio, and verify Music page full-height layout.
-- [ ] Stop Home from repeating its initial loading cycle and complete signed-in responsive preview QA.
+- [x] Harden queue advancement and broken-stream recovery; show mini-player queue position.
+- [x] Prefer full-length music sources, retain clearly labelled previews/live radio, and remove the Music page bottom strip.
+- [x] Stop Home from repeating its initial loading cycle (friendship arrival no longer restarts the load/realtime cycle).
+- [ ] Signed-in responsive preview QA of Music/Home — blocked: no test account available in the sandbox.
