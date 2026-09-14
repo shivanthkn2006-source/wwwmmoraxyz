@@ -26,11 +26,11 @@
 - [ ] Signed-in responsive preview QA of Music/Home — blocked: no test account available in the sandbox.
 
 ## Music + social reactions stack (Sep 14)
-- [ ] Compact transparent glass Music page: no big header, white text, white/blue rounded controls, current artwork directly under the search bar.
-- [ ] Universal borderless music-note icon before the headphones icon on every page dock.
-- [ ] Route Home/Feed music and video search results into the Music page instead of Selfie City.
-- [ ] Music library: save songs to a personal list with album art and a playlist view.
-- [ ] Music page sidebar for browsing genres, artists, and playlists.
+- [x] Compact transparent glass Music page: no big header, white text, white/blue rounded controls, current artwork directly under the search bar.
+- [x] Universal borderless music-note icon before the headphones icon on every page dock.
+- [x] Route Home music searches into the Music page (added Music/Mosaic/Selfie City search entries).
+- [x] Music library: save songs with album art, shown in a Library tab.
+- [x] Music page sidebar for browsing genres, radio and playlists.
 - [ ] Animated reactions on music (happy / cool / loved it) with loved / recommended / shared / most listened / most viewed lists and friend mentions.
 - [ ] Friend-listening notifications into other users' feeds with sound and profile photo.
 - [ ] Signed-in phone + desktop QA of Music and Home (queue advancement, full-length sources, no repeated Home loading).

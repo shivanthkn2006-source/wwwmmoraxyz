@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useSearchParams } from 'react-router-dom';
-import { Disc3, ListMusic, Pause, Play, Repeat, Search, Shuffle, SkipBack, SkipForward, Volume2 } from 'lucide-react';
+import { Disc3, Heart, ListMusic, Pause, Play, Repeat, Search, Shuffle, SkipBack, SkipForward, Volume2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { musicEngine } from '@/services/MusicEngine';
 import { useMusicEngine } from '@/hooks/useMusicEngine';
-import { searchMusicCatalog, type MusicSearchResult } from '@/features/music/musicProviders';
+import { searchMusicCatalog, type MusicSearchResult, type MusicTrack } from '@/features/music/musicProviders';
+import { MUSIC_GENRES, MUSIC_STATIONS } from '@/features/music/musicCategories';
+import { getLibrary, isSaved, subscribeLibrary, toggleSaved, type MusicLibrary } from '@/features/music/musicLibrary';
 
 const SEARCH_CACHE_KEY = 'mmora.music.lastSearch';
 
@@ -37,17 +39,22 @@ export default function MusicPage() {
   const [searching, setSearching] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [results, setResults] = useState<MusicSearchResult | null>(cachedSearch?.result ?? null);
+  const [library, setLibrary] = useState<MusicLibrary>(() => getLibrary());
+  const [tab, setTab] = useState<'results' | 'library'>('results');
   const active = state.status === 'playing' || state.status === 'buffering';
   const routedQueryRef = useRef<string | null>(null);
 
-  const search = useCallback(async (requestedQuery?: string) => {
+  useEffect(() => subscribeLibrary(setLibrary), []);
+
+  const search = useCallback(async (requestedQuery?: string, requestedKind?: 'radio' | 'track') => {
     const value = (requestedQuery ?? query).trim();
     if (!value || searching) return;
     if (requestedQuery) setQuery(value);
     setSearching(true);
     setNotice(null);
+    setTab('results');
     try {
-      const kind = /\b(radio|station|fm|satellite)\b/i.test(value) ? 'radio' : 'track';
+      const kind = requestedKind ?? (/\b(radio|station|fm|satellite)\b/i.test(value) ? 'radio' : 'track');
       const result = await searchMusicCatalog(value, kind);
       try { sessionStorage.setItem(SEARCH_CACHE_KEY, JSON.stringify({ query: value, result })); } catch { /* optional */ }
       setResults(result);
@@ -74,95 +81,153 @@ export default function MusicPage() {
     void search(routedQuery).finally(() => setSearchParams({}, { replace: true }));
   }, [search, searchParams, setSearchParams]);
 
+  const trackRow = (track: MusicTrack, index: number, onPlay: () => void) => (
+    <li key={`${track.id}-${index}`} className="flex items-center gap-1">
+      <Button variant="ghost" className="music-liquid-track h-auto min-w-0 flex-1 justify-start whitespace-normal px-2.5 py-2.5 text-left" onClick={onPlay}>
+        <span className="flex min-w-0 items-center gap-2.5">
+          <span className="music-liquid-track-index flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full text-[11px]">
+            {track.artwork ? <img src={track.artwork} alt="" className="h-full w-full object-cover" /> : String(index + 1).padStart(2, '0')}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-medium text-white">{track.title}</span>
+            <span className="block truncate text-xs text-white/60">{track.artist}{track.album ? ` · ${track.album}` : ''}{track.duration ? ` (${clock(track.duration)})` : ''}</span>
+            <span className="block truncate text-[10px] text-white/40">{track.live ? 'LIVE · ' : ''}{track.credit}</span>
+          </span>
+        </span>
+      </Button>
+      <IconControl
+        className={`music-liquid-save h-9 w-9 shrink-0 rounded-full ${isSaved(track.id) ? 'is-saved' : ''}`}
+        variant="ghost"
+        size="icon"
+        onClick={() => toggleSaved(track)}
+        label={isSaved(track.id) ? `Remove ${track.title} from library` : `Save ${track.title} to library`}
+      >
+        <Heart className={isSaved(track.id) ? 'fill-current' : ''} />
+      </IconControl>
+    </li>
+  );
+
+  const savedTracks = library.saved;
+
   return (
     <TooltipProvider>
-      <main className="music-liquid-page flex min-h-[100dvh] px-3 pb-0 pt-[max(4.5rem,env(safe-area-inset-top))] text-foreground sm:px-6 lg:px-8">
+      <main className="music-liquid-page flex min-h-[100dvh] px-2 pb-0 pt-[max(3.75rem,env(safe-area-inset-top))] sm:px-4 lg:px-6">
         <Helmet>
-          <title>Music Player | M'Mora</title>
-          <meta name="description" content="Play music and live radio with Zoe." />
+          <title>MMora Music — Songs, Artists & Live Radio</title>
+          <meta name="description" content="Search songs, artists, albums, playlists and live radio on MMora Music, and save what you love to your own library." />
         </Helmet>
-        <div className="music-liquid-shell mx-auto flex min-h-[calc(100dvh-max(4.5rem,env(safe-area-inset-top)))] w-full max-w-6xl flex-col overflow-hidden border border-b-0 border-border/70">
-          <header className="music-liquid-header flex items-center justify-between border-b border-border/60 px-5 py-4 sm:px-7">
-            <div>
-              <p className="text-[10px] font-semibold uppercase text-muted-foreground">Now listening</p>
-              <p className="mt-1 text-2xl font-semibold uppercase">Music</p>
-            </div>
-            <div className="music-liquid-status flex h-10 w-10 items-center justify-center rounded-full border border-border" aria-label={active ? 'Playing' : 'Ready'}>
-              <Disc3 className={active ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} />
-            </div>
-          </header>
+        <div className="music-liquid-shell mx-auto flex min-h-[calc(100dvh-max(3.75rem,env(safe-area-inset-top)))] w-full max-w-6xl flex-col overflow-hidden rounded-t-2xl">
+          {/* Compact identity strip: spinning disc + wordmark only. */}
+          <div className="flex items-center gap-2 px-3 py-2 sm:px-5">
+            <span className="music-liquid-status flex h-8 w-8 items-center justify-center rounded-full" aria-label={active ? 'Playing' : 'Ready'}>
+              <Disc3 className={active ? 'h-4 w-4 animate-spin motion-reduce:animate-none' : 'h-4 w-4'} />
+            </span>
+            <h1 className="text-sm font-semibold tracking-wide text-white">MMora music</h1>
+          </div>
 
-          <div className="grid flex-1 xl:grid-cols-[minmax(0,1fr)_minmax(18rem,360px)]">
-            <section className="flex min-h-0 flex-col justify-between border-b border-border/60 p-4 sm:p-6 xl:min-h-[620px] xl:border-b-0 xl:border-r">
-              <form className="music-liquid-control flex gap-2 rounded-lg border border-border/70 p-1.5" onSubmit={(e) => { e.preventDefault(); void search(); }}>
-                <Input className="h-11 border-0 bg-transparent shadow-none focus-visible:ring-0" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Song, artist, genre or radio" aria-label="Search music" autoComplete="off" />
-                <IconControl className="h-11 w-11 rounded-full" type="submit" size="icon" disabled={searching} label={searching ? 'Searching' : 'Search'}><Search /></IconControl>
+          <div className="grid flex-1 gap-0 lg:grid-cols-[13rem_minmax(0,1fr)_minmax(17rem,22rem)]">
+            {/* Browse sidebar */}
+            <aside className="music-liquid-side order-2 max-h-[34dvh] overflow-y-auto p-3 lg:order-1 lg:max-h-none">
+              <p className="music-liquid-side-title">Genres</p>
+              <div className="mb-4 flex flex-wrap gap-1.5">
+                {MUSIC_GENRES.map((genre) => (
+                  <button key={genre.id} type="button" className="music-liquid-chip" onClick={() => { musicEngine.unlock(); void search(genre.query, 'track'); }}>{genre.label}</button>
+                ))}
+              </div>
+              <p className="music-liquid-side-title">Radio</p>
+              <div className="mb-4 flex flex-wrap gap-1.5">
+                {MUSIC_STATIONS.map((station) => (
+                  <button key={station.id} type="button" className="music-liquid-chip" onClick={() => { musicEngine.unlock(); void search(station.query, 'radio'); }}>{station.label}</button>
+                ))}
+              </div>
+              <p className="music-liquid-side-title">Playlists</p>
+              <div className="flex flex-wrap gap-1.5">
+                <button type="button" className={`music-liquid-chip ${tab === 'library' ? 'is-active' : ''}`} onClick={() => setTab('library')}>My library ({savedTracks.length})</button>
+                {Object.keys(library.playlists).map((name) => (
+                  <button key={name} type="button" className="music-liquid-chip" onClick={() => setTab('library')}>{name}</button>
+                ))}
+              </div>
+            </aside>
+
+            {/* Search + now listening + transport */}
+            <section className="order-1 flex min-h-0 flex-col gap-3 p-3 sm:p-4 lg:order-2">
+              <form className="music-liquid-control flex gap-2 rounded-full p-1" onSubmit={(e) => { e.preventDefault(); void search(); }}>
+                <Input className="h-10 border-0 bg-transparent text-white placeholder:text-white/40 shadow-none focus-visible:ring-0" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Song, artist, album, genre or radio" aria-label="Search music" autoComplete="off" />
+                <IconControl className="music-liquid-play h-10 w-10 rounded-full" type="submit" size="icon" disabled={searching} label={searching ? 'Searching' : 'Search'}><Search /></IconControl>
               </form>
 
-              <div className="flex flex-1 flex-col items-center justify-center py-6 text-center sm:py-8 xl:py-10">
-                <div className="music-liquid-art relative flex aspect-square w-full max-w-[min(22rem,52dvh)] items-center justify-center overflow-hidden rounded-lg border border-border">
-                  {state.track?.artwork ? <img src={state.track.artwork} alt="" className="h-full w-full object-cover grayscale" /> : <Disc3 className="h-24 w-24 text-muted-foreground" />}
-                  <div className="music-liquid-art-glint pointer-events-none absolute inset-0" />
+              {/* Current artwork sits directly under the search bar. */}
+              <div className="flex items-center gap-3">
+                <div className="music-liquid-art relative flex aspect-square w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl sm:w-28">
+                  {state.track?.artwork ? <img src={state.track.artwork} alt="" className="h-full w-full object-cover" /> : <Disc3 className="h-8 w-8 text-white/40" />}
+                  {state.track && <span className="music-liquid-nowtag">Now listening</span>}
                 </div>
-                <h1 className="mt-5 max-w-xl break-words text-2xl font-semibold sm:text-3xl">{state.track?.title ?? 'Music'}</h1>
-                <p className="mt-2 text-muted-foreground">{state.track?.artist ?? 'Ask Zoe to play something.'}</p>
-                {state.track?.album && <p className="mt-1 text-sm font-medium text-muted-foreground/80">{state.track.album}</p>}
-                {state.track && <p className="mt-1 text-xs text-muted-foreground">{state.track.credit}</p>}
-                {(state.error || notice) && <p role="status" className="mt-4 max-w-md text-sm text-muted-foreground">{state.error ?? notice}</p>}
+                <div className="min-w-0">
+                  <p className="truncate text-base font-semibold text-white sm:text-lg">{state.track?.title ?? 'Nothing playing'}</p>
+                  <p className="truncate text-sm text-white/60">{state.track?.artist ?? 'Search or ask Zoe to play something.'}</p>
+                  {state.track?.album && <p className="truncate text-xs text-white/50">{state.track.album}</p>}
+                  {state.track && <p className="truncate text-[10px] text-white/40">{state.track.credit}</p>}
+                  {state.queue.length > 0 && <p className="mt-1 text-[10px] tabular-nums text-white/40">Queue {state.index + 1} / {state.queue.length}</p>}
+                </div>
               </div>
 
-              <div className="music-liquid-control mx-auto w-full max-w-2xl space-y-5 rounded-lg border border-border/70 p-4 sm:p-5">
+              {(state.error || notice) && <p role="status" className="text-xs text-white/60">{state.error ?? notice}</p>}
+
+              <div className="music-liquid-control mt-auto space-y-3 rounded-2xl p-3">
                 <div>
                   <Slider className="music-liquid-slider" value={[state.position]} max={Math.max(state.duration, state.position, 1)} step={1} disabled={!state.duration || Boolean(state.track?.live)} onValueChange={([v]) => musicEngine.seek(v)} aria-label="Position" />
-                  <div className="mt-2 flex justify-between text-xs text-muted-foreground"><span>{clock(state.position)}</span><span>{state.track?.live ? 'LIVE' : clock(state.duration)}</span></div>
+                  <div className="mt-1.5 flex justify-between text-[10px] text-white/50"><span>{clock(state.position)}</span><span>{state.track?.live ? 'LIVE' : clock(state.duration)}</span></div>
                 </div>
-                <div className="flex items-center justify-center gap-2 sm:gap-3">
-                  <IconControl className="h-11 w-11 rounded-full sm:h-12 sm:w-12" variant={state.shuffle ? 'secondary' : 'ghost'} size="icon" onClick={() => musicEngine.toggleShuffle()} label="Shuffle"><Shuffle /></IconControl>
-                  <IconControl className="h-11 w-11 rounded-full sm:h-12 sm:w-12" variant="ghost" size="icon" onClick={() => void musicEngine.previous()} label="Previous"><SkipBack /></IconControl>
-                  <IconControl size="icon" className="music-liquid-play h-14 w-14 rounded-full" onClick={() => { musicEngine.unlock(); musicEngine.toggle(); }} label={active ? 'Pause' : 'Play'}>{active ? <Pause /> : <Play />}</IconControl>
-                  <IconControl className="h-11 w-11 rounded-full sm:h-12 sm:w-12" variant="ghost" size="icon" onClick={() => void musicEngine.next()} label="Next"><SkipForward /></IconControl>
-                  <IconControl className="h-11 w-11 rounded-full sm:h-12 sm:w-12" variant={state.repeat !== 'off' ? 'secondary' : 'ghost'} size="icon" onClick={() => musicEngine.cycleRepeat()} label={`Repeat: ${state.repeat}`}><Repeat /></IconControl>
+                <div className="flex items-center justify-center gap-1.5 sm:gap-2">
+                  <IconControl className={`music-liquid-round h-10 w-10 rounded-full ${state.shuffle ? 'is-on' : ''}`} variant="ghost" size="icon" onClick={() => musicEngine.toggleShuffle()} label="Shuffle"><Shuffle /></IconControl>
+                  <IconControl className="music-liquid-round h-10 w-10 rounded-full" variant="ghost" size="icon" onClick={() => void musicEngine.previous()} label="Previous"><SkipBack /></IconControl>
+                  <IconControl size="icon" className="music-liquid-play h-12 w-12 rounded-full" onClick={() => { musicEngine.unlock(); musicEngine.toggle(); }} label={active ? 'Pause' : 'Play'}>{active ? <Pause /> : <Play />}</IconControl>
+                  <IconControl className="music-liquid-round h-10 w-10 rounded-full" variant="ghost" size="icon" onClick={() => void musicEngine.next()} label="Next"><SkipForward /></IconControl>
+                  <IconControl className={`music-liquid-round h-10 w-10 rounded-full ${state.repeat !== 'off' ? 'is-on' : ''}`} variant="ghost" size="icon" onClick={() => musicEngine.cycleRepeat()} label={`Repeat: ${state.repeat}`}><Repeat /></IconControl>
                 </div>
-                <div className="flex items-center gap-3"><Volume2 className="h-4 w-4 text-muted-foreground" /><Slider className="music-liquid-slider" value={[state.volume * 100]} max={100} step={1} onValueChange={([v]) => musicEngine.setVolume(v / 100)} aria-label="Volume" /><span className="w-10 text-right text-xs tabular-nums text-muted-foreground">{Math.round(state.volume * 100)}%</span></div>
+                <div className="flex items-center gap-2"><Volume2 className="h-4 w-4 text-white/50" /><Slider className="music-liquid-slider" value={[state.volume * 100]} max={100} step={1} onValueChange={([v]) => musicEngine.setVolume(v / 100)} aria-label="Volume" /><span className="w-9 text-right text-[10px] tabular-nums text-white/50">{Math.round(state.volume * 100)}%</span></div>
               </div>
             </section>
 
-            <aside className="music-liquid-queue max-h-[50dvh] overflow-y-auto p-4 sm:p-6 xl:max-h-none">
-              {results && (
-                <section className="mb-7">
-                  <h2 className="mb-1 flex items-center gap-2 text-lg font-semibold"><Search className="h-5 w-5" /> Results</h2>
-                  <p className="mb-4 text-xs text-muted-foreground">{results.tracks.length} matches{results.corrected ? ` for “${results.query}”` : ''}</p>
-                  <ol className="space-y-2">
-                    {results.tracks.map((track, i) => (
-                      <li key={`res-${track.id}`}>
-                        <Button variant="ghost" className="music-liquid-track h-auto w-full justify-start whitespace-normal px-3 py-3 text-left" onClick={() => { musicEngine.unlock(); void musicEngine.playQueue(results.tracks, i); }}>
-                          <span className="flex min-w-0 items-center gap-3">
-                            <span className="music-liquid-track-index flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full text-xs">
-                              {track.artwork ? <img src={track.artwork} alt="" className="h-full w-full object-cover grayscale" /> : String(i + 1).padStart(2, '0')}
-                            </span>
-                            <span className="min-w-0 flex-1">
-                              <span className="block truncate text-sm font-medium">{track.title}</span>
-                              <span className="block truncate text-xs text-muted-foreground">{track.artist}{track.album ? ` · ${track.album}` : ''}{track.duration ? ` (${clock(track.duration)})` : ''}</span>
-                              <span className="block truncate text-[10px] text-muted-foreground">{track.live ? 'LIVE · ' : ''}{track.credit}</span>
-                            </span>
-                          </span>
+            {/* Results / library */}
+            <aside className="music-liquid-queue order-3 max-h-[46dvh] overflow-y-auto p-3 lg:max-h-none">
+              <div className="mb-3 flex gap-1.5">
+                <button type="button" className={`music-liquid-chip ${tab === 'results' ? 'is-active' : ''}`} onClick={() => setTab('results')}>Results{results ? ` (${results.tracks.length})` : ''}</button>
+                <button type="button" className={`music-liquid-chip ${tab === 'library' ? 'is-active' : ''}`} onClick={() => setTab('library')}>Library ({savedTracks.length})</button>
+              </div>
+
+              {tab === 'results' ? (
+                results && results.tracks.length ? (
+                  <>
+                    <p className="mb-2 text-[11px] text-white/50">{results.tracks.length} matches{results.corrected ? ` for “${results.query}”` : ''}</p>
+                    <ol className="space-y-1">
+                      {results.tracks.map((track, i) => trackRow(track, i, () => { musicEngine.unlock(); void musicEngine.playQueue(results.tracks, i); }))}
+                    </ol>
+                  </>
+                ) : (
+                  <p className="text-sm text-white/50">Search a song, artist, album, genre or station to see results here.</p>
+                )
+              ) : savedTracks.length ? (
+                <ol className="space-y-1">
+                  {savedTracks.map((track, i) => trackRow(track, i, () => { musicEngine.unlock(); void musicEngine.playQueue(savedTracks, i); }))}
+                </ol>
+              ) : (
+                <p className="text-sm text-white/50">Tap the heart beside any track to build your library.</p>
+              )}
+
+              {state.queue.length > 0 && (
+                <section className="mt-5">
+                  <p className="mb-2 flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-white/50"><ListMusic className="h-3.5 w-3.5" /> Queue</p>
+                  <ol className="space-y-1">
+                    {state.queue.map((track, i) => (
+                      <li key={`q-${track.id}-${i}`}>
+                        <Button variant="ghost" className={`music-liquid-track h-auto w-full justify-start whitespace-normal px-2.5 py-2 text-left ${i === state.index ? 'is-current' : ''}`} onClick={() => { musicEngine.unlock(); void musicEngine.playIndex(i); }}>
+                          <span className="flex min-w-0 items-center gap-2.5"><span className="music-liquid-track-index flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px]">{String(i + 1).padStart(2, '0')}</span><span className="min-w-0"><span className="block truncate text-sm text-white">{track.title}</span><span className="block truncate text-xs text-white/50">{track.artist}</span></span></span>
                         </Button>
                       </li>
                     ))}
                   </ol>
                 </section>
-              )}
-              <h2 className="mb-5 flex items-center gap-2 text-lg font-semibold"><ListMusic className="h-5 w-5" /> Queue</h2>
-              {state.queue.length === 0 ? <p className="text-sm text-muted-foreground">Empty queue.</p> : (
-                <ol className="space-y-2">
-                  {state.queue.map((track, i) => (
-                    <li key={`q-${track.id}`}>
-                      <Button variant={i === state.index ? 'secondary' : 'ghost'} className="music-liquid-track h-auto w-full justify-start whitespace-normal px-3 py-3 text-left" onClick={() => { musicEngine.unlock(); void musicEngine.playIndex(i); }}>
-                        <span className="flex min-w-0 items-center gap-3"><span className="music-liquid-track-index flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs">{String(i + 1).padStart(2, '0')}</span><span className="min-w-0"><span className="block truncate text-sm font-medium">{track.title}</span><span className="block truncate text-xs text-muted-foreground">{track.artist}</span></span></span>
-                      </Button>
-                    </li>
-                  ))}
-                </ol>
               )}
             </aside>
           </div>
