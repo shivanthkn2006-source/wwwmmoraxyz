@@ -1272,29 +1272,34 @@ html.phantom-mode [class*="animate-"] {
   --menu-badge-fg: 240 10% 3.9%;
 }
 
-/* Music — transparent Liquid Glass, white text, blue enabled states. Scoped so
+/* Music — monochrome Liquid Glass with white highlights. Scoped so
    the rest of the platform theme is untouched. */
 .music-liquid-page {
   --music-glass: 0 0% 100%;
   --music-glass-edge: 0 0% 100%;
-  --music-blue: 211 100% 55%;
-  background: transparent;
+  background: hsl(var(--background));
   color: hsl(0 0% 100%);
 }
 
 .music-liquid-shell {
-  background: transparent;
-  box-shadow: inset 0 0 0 1px hsl(var(--music-glass-edge) / 0.12);
-  backdrop-filter: blur(34px) saturate(135%);
-  -webkit-backdrop-filter: blur(34px) saturate(135%);
+  background: linear-gradient(145deg, hsl(var(--music-glass) / 0.075), hsl(var(--music-glass) / 0.025));
+  box-shadow:
+    inset 0 1px 0 hsl(var(--music-glass-edge) / 0.22),
+    inset 0 0 0 1px hsl(var(--music-glass-edge) / 0.09),
+    0 18px 48px hsl(var(--background) / 0.3);
+  backdrop-filter: blur(34px) saturate(115%);
+  -webkit-backdrop-filter: blur(34px) saturate(115%);
 }
 
 .music-liquid-control,
 .music-global-glass {
-  background: transparent;
-  box-shadow: inset 0 0 0 1px hsl(var(--music-glass-edge) / 0.14);
-  backdrop-filter: blur(30px) saturate(115%);
-  -webkit-backdrop-filter: blur(30px) saturate(115%);
+  background: linear-gradient(145deg, hsl(var(--music-glass) / 0.12), hsl(var(--music-glass) / 0.045));
+  box-shadow:
+    inset 0 1px 0 hsl(var(--music-glass-edge) / 0.32),
+    inset 0 0 0 1px hsl(var(--music-glass-edge) / 0.12),
+    0 10px 30px hsl(var(--background) / 0.22);
+  backdrop-filter: blur(30px) saturate(120%);
+  -webkit-backdrop-filter: blur(30px) saturate(120%);
 }
 
 .music-global-glass {
@@ -1312,9 +1317,10 @@ html.phantom-mode [class*="animate-"] {
 
 .music-liquid-queue,
 .music-liquid-side {
-  background: transparent;
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+  background: linear-gradient(180deg, hsl(var(--music-glass) / 0.055), hsl(var(--music-glass) / 0.018));
+  box-shadow: inset 0 1px 0 hsl(var(--music-glass-edge) / 0.12);
+  backdrop-filter: blur(24px) saturate(110%);
+  -webkit-backdrop-filter: blur(24px) saturate(110%);
 }
 
 .music-liquid-side-title {
@@ -1329,8 +1335,10 @@ html.phantom-mode [class*="animate-"] {
 .music-liquid-chip {
   border-radius: 9999px;
   padding: 0.3rem 0.7rem;
-  background: transparent;
-  box-shadow: inset 0 0 0 1px hsl(var(--music-glass-edge) / 0.16);
+  background: hsl(var(--music-glass) / 0.035);
+  box-shadow:
+    inset 0 1px 0 hsl(var(--music-glass-edge) / 0.16),
+    inset 0 0 0 1px hsl(var(--music-glass-edge) / 0.13);
   color: hsl(0 0% 100% / 0.85);
   font-size: 0.6875rem;
   line-height: 1.1;
@@ -1338,18 +1346,23 @@ html.phantom-mode [class*="animate-"] {
 }
 
 .music-liquid-chip:hover {
-  background: hsl(var(--music-blue) / 0.16);
+  background: hsl(var(--music-glass) / 0.12);
 }
 
 .music-liquid-chip.is-active {
-  background: hsl(var(--music-blue));
-  box-shadow: inset 0 0 0 1px hsl(var(--music-blue) / 0.9);
+  background: linear-gradient(145deg, hsl(var(--music-glass) / 0.26), hsl(var(--music-glass) / 0.11));
+  box-shadow:
+    inset 0 1px 0 hsl(var(--music-glass-edge) / 0.55),
+    inset 0 0 0 1px hsl(var(--music-glass-edge) / 0.22),
+    0 5px 16px hsl(var(--background) / 0.2);
   color: hsl(0 0% 100%);
 }
 
 .music-liquid-art {
-  background: transparent;
-  box-shadow: inset 0 0 0 1px hsl(var(--music-glass-edge) / 0.14);
+  background: linear-gradient(145deg, hsl(var(--music-glass) / 0.1), hsl(var(--music-glass) / 0.025));
+  box-shadow:
+    inset 0 1px 0 hsl(var(--music-glass-edge) / 0.3),
+    inset 0 0 0 1px hsl(var(--music-glass-edge) / 0.12);
 }
 
 .music-liquid-nowtag {
@@ -1358,7 +1371,8 @@ html.phantom-mode [class*="animate-"] {
   bottom: 0.25rem;
   border-radius: 9999px;
   padding: 0.15rem 0.4rem;
-  background: hsl(var(--music-blue) / 0.82);
+  background: hsl(var(--music-glass) / 0.2);
+  box-shadow: inset 0 1px 0 hsl(var(--music-glass-edge) / 0.35);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   color: hsl(0 0% 100%);
@@ -1371,19 +1385,24 @@ html.phantom-mode [class*="animate-"] {
 
 .music-liquid-status,
 .music-liquid-track-index {
-  background: transparent;
-  box-shadow: inset 0 1px 0 hsl(var(--music-glass-edge) / 0.14);
+  background: hsl(var(--music-glass) / 0.06);
+  box-shadow:
+    inset 0 1px 0 hsl(var(--music-glass-edge) / 0.2),
+    inset 0 0 0 1px hsl(var(--music-glass-edge) / 0.08);
   color: hsl(0 0% 100%);
 }
 
 .music-liquid-play {
-  background: hsl(var(--music-blue)) !important;
-  box-shadow: 0 8px 24px hsl(var(--music-blue) / 0.35);
+  background: linear-gradient(145deg, hsl(var(--music-glass) / 0.32), hsl(var(--music-glass) / 0.13)) !important;
+  box-shadow:
+    inset 0 1px 0 hsl(var(--music-glass-edge) / 0.65),
+    inset 0 0 0 1px hsl(var(--music-glass-edge) / 0.22),
+    0 8px 24px hsl(var(--background) / 0.28);
   color: hsl(0 0% 100%) !important;
 }
 
 .music-liquid-play:hover {
-  background: hsl(var(--music-blue) / 0.88) !important;
+  background: linear-gradient(145deg, hsl(var(--music-glass) / 0.4), hsl(var(--music-glass) / 0.18)) !important;
 }
 
 .music-liquid-round {
@@ -1391,8 +1410,9 @@ html.phantom-mode [class*="animate-"] {
 }
 
 .music-liquid-round.is-on {
-  background: hsl(var(--music-blue) / 0.22);
-  color: hsl(var(--music-blue));
+  background: hsl(var(--music-glass) / 0.16);
+  box-shadow: inset 0 1px 0 hsl(var(--music-glass-edge) / 0.34);
+  color: hsl(0 0% 100%);
 }
 
 .music-liquid-save {
@@ -1400,7 +1420,8 @@ html.phantom-mode [class*="animate-"] {
 }
 
 .music-liquid-save.is-saved {
-  color: hsl(var(--music-blue));
+  color: hsl(0 0% 100%);
+  filter: drop-shadow(0 0 5px hsl(var(--music-glass) / 0.4));
 }
 
 .music-liquid-react {
@@ -1409,8 +1430,10 @@ html.phantom-mode [class*="animate-"] {
   gap: 0.3rem;
   border-radius: 9999px;
   padding: 0.28rem 0.65rem;
-  background: transparent;
-  box-shadow: inset 0 0 0 1px hsl(var(--music-glass-edge) / 0.16);
+  background: hsl(var(--music-glass) / 0.035);
+  box-shadow:
+    inset 0 1px 0 hsl(var(--music-glass-edge) / 0.16),
+    inset 0 0 0 1px hsl(var(--music-glass-edge) / 0.13);
   color: hsl(0 0% 100% / 0.85);
   font-size: 0.6875rem;
   line-height: 1.1;
@@ -1418,11 +1441,14 @@ html.phantom-mode [class*="animate-"] {
 }
 
 .music-liquid-react:hover {
-  background: hsl(var(--music-blue) / 0.16);
+  background: hsl(var(--music-glass) / 0.12);
 }
 
 .music-liquid-react.is-on {
-  background: hsl(var(--music-blue) / 0.9);
+  background: linear-gradient(145deg, hsl(var(--music-glass) / 0.28), hsl(var(--music-glass) / 0.12));
+  box-shadow:
+    inset 0 1px 0 hsl(var(--music-glass-edge) / 0.5),
+    inset 0 0 0 1px hsl(var(--music-glass-edge) / 0.2);
   color: hsl(0 0% 100%);
 }
 
@@ -1447,15 +1473,15 @@ html.phantom-mode [class*="animate-"] {
 .music-liquid-track:hover,
 .music-liquid-track.is-current {
   border-color: transparent;
-  background: hsl(var(--music-blue) / 0.12);
-  box-shadow: none;
+  background: linear-gradient(90deg, hsl(var(--music-glass) / 0.12), hsl(var(--music-glass) / 0.035));
+  box-shadow: inset 0 1px 0 hsl(var(--music-glass-edge) / 0.12);
 }
 
 
 .music-liquid-slider [role='slider'] {
   border-color: hsl(var(--music-glass-edge) / 0.9);
-  background: hsl(var(--music-blue));
-  box-shadow: 0 0 14px hsl(var(--music-blue) / 0.3);
+  background: hsl(var(--music-glass));
+  box-shadow: 0 0 14px hsl(var(--music-glass) / 0.28);
 }
 
 .music-liquid-slider > span:first-child {
@@ -1463,7 +1489,7 @@ html.phantom-mode [class*="animate-"] {
 }
 
 .music-liquid-slider > span:first-child > span {
-  background: hsl(var(--music-blue));
+  background: hsl(var(--music-glass) / 0.9);
 }
 
 /* Music result buttons must never inherit the platform's opaque selected fill. */
@@ -1479,7 +1505,7 @@ html.phantom-mode [class*="animate-"] {
 
 .music-liquid-page .music-liquid-track:hover,
 .music-liquid-page .music-liquid-track.is-current {
-  background: hsl(var(--music-blue) / 0.12);
+  background: linear-gradient(90deg, hsl(var(--music-glass) / 0.12), hsl(var(--music-glass) / 0.035));
 }
 
 .music-mini-button {
