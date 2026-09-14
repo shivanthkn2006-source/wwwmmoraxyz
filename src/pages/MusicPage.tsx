@@ -11,6 +11,7 @@ import { useMusicEngine } from '@/hooks/useMusicEngine';
 import { searchMusicCatalog, type MusicSearchResult, type MusicTrack } from '@/features/music/musicProviders';
 import { MUSIC_GENRES, MUSIC_STATIONS } from '@/features/music/musicCategories';
 import { getLibrary, isSaved, subscribeLibrary, toggleSaved, type MusicLibrary } from '@/features/music/musicLibrary';
+import { fetchMostListened, fetchMyReactions, fetchReactionChart, logListen, MUSIC_REACTIONS, toggleReaction, type MusicReactionId, type MusicSocialTrack } from '@/features/music/musicSocial';
 
 const SEARCH_CACHE_KEY = 'mmora.music.lastSearch';
 
@@ -40,11 +41,52 @@ export default function MusicPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [results, setResults] = useState<MusicSearchResult | null>(cachedSearch?.result ?? null);
   const [library, setLibrary] = useState<MusicLibrary>(() => getLibrary());
-  const [tab, setTab] = useState<'results' | 'library'>('results');
+  const [tab, setTab] = useState<'results' | 'library' | 'community'>('results');
+  const [myReactions, setMyReactions] = useState<MusicReactionId[]>([]);
+  const [burst, setBurst] = useState<string | null>(null);
+  const [chart, setChart] = useState<{ id: string; label: string; tracks: MusicSocialTrack[] }[]>([]);
   const active = state.status === 'playing' || state.status === 'buffering';
   const routedQueryRef = useRef<string | null>(null);
 
   useEffect(() => subscribeLibrary(setLibrary), []);
+
+  // Log every started track (friends who love it get a feed notification) and
+  // load the current member's reactions for it.
+  const trackId = state.track?.id;
+  useEffect(() => {
+    if (!state.track) { setMyReactions([]); return; }
+    const track = state.track;
+    void logListen(track);
+    let cancelled = false;
+    void fetchMyReactions([track.id]).then((map) => { if (!cancelled) setMyReactions(map[track.id] ?? []); });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trackId]);
+
+  const loadCommunity = useCallback(async () => {
+    const [loved, recommended, shared, listened] = await Promise.all([
+      fetchReactionChart('loved'),
+      fetchReactionChart('recommend'),
+      fetchReactionChart('share'),
+      fetchMostListened(),
+    ]);
+    setChart([
+      { id: 'loved', label: 'Loved by members', tracks: loved },
+      { id: 'recommend', label: 'Recommended', tracks: recommended },
+      { id: 'share', label: 'Shared', tracks: shared },
+      { id: 'listened', label: 'Most listened', tracks: listened },
+    ]);
+  }, []);
+
+  useEffect(() => { if (tab === 'community') void loadCommunity(); }, [tab, loadCommunity]);
+
+  const react = useCallback(async (reaction: MusicReactionId) => {
+    if (!state.track) return;
+    setBurst(reaction);
+    window.setTimeout(() => setBurst(null), 700);
+    const added = await toggleReaction(state.track, reaction);
+    setMyReactions((current) => added ? [...current, reaction] : current.filter((item) => item !== reaction));
+  }, [state.track]);
 
   const search = useCallback(async (requestedQuery?: string, requestedKind?: 'radio' | 'track') => {
     const value = (requestedQuery ?? query).trim();
@@ -171,6 +213,23 @@ export default function MusicPage() {
                 </div>
               </div>
 
+              {state.track && (
+                <div className="flex flex-wrap gap-1.5" role="group" aria-label="React to this track">
+                  {MUSIC_REACTIONS.map((reaction) => (
+                    <button
+                      key={reaction.id}
+                      type="button"
+                      className={`music-liquid-react ${myReactions.includes(reaction.id) ? 'is-on' : ''} ${burst === reaction.id ? 'is-burst' : ''}`}
+                      onClick={() => void react(reaction.id)}
+                      aria-pressed={myReactions.includes(reaction.id)}
+                      aria-label={reaction.label}
+                    >
+                      <span aria-hidden="true">{reaction.emoji}</span> {reaction.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
               {(state.error || notice) && <p role="status" className="text-xs text-white/60">{state.error ?? notice}</p>}
 
               <div className="music-liquid-control mt-auto space-y-3 rounded-2xl p-3">
@@ -194,6 +253,7 @@ export default function MusicPage() {
               <div className="mb-3 flex gap-1.5">
                 <button type="button" className={`music-liquid-chip ${tab === 'results' ? 'is-active' : ''}`} onClick={() => setTab('results')}>Results{results ? ` (${results.tracks.length})` : ''}</button>
                 <button type="button" className={`music-liquid-chip ${tab === 'library' ? 'is-active' : ''}`} onClick={() => setTab('library')}>Library ({savedTracks.length})</button>
+                <button type="button" className={`music-liquid-chip ${tab === 'community' ? 'is-active' : ''}`} onClick={() => setTab('community')}>Community</button>
               </div>
 
               {tab === 'results' ? (
@@ -207,6 +267,29 @@ export default function MusicPage() {
                 ) : (
                   <p className="text-sm text-white/50">Search a song, artist, album, genre or station to see results here.</p>
                 )
+              ) : tab === 'community' ? (
+                <div className="space-y-4">
+                  {chart.every((section) => !section.tracks.length) && <p className="text-sm text-white/50">No reactions yet. Use the smilies to start these lists.</p>}
+                  {chart.filter((section) => section.tracks.length).map((section) => (
+                    <section key={section.id}>
+                      <p className="music-liquid-side-title">{section.label}</p>
+                      <ol className="space-y-1">
+                        {section.tracks.slice(0, 8).map((item) => (
+                          <li key={`${section.id}-${item.track_id}`} className="flex items-center gap-2.5 px-1 py-1">
+                            <span className="music-liquid-track-index flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full text-[10px]">
+                              {item.track_artwork ? <img src={item.track_artwork} alt="" className="h-full w-full object-cover" /> : '♪'}
+                            </span>
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-sm text-white">{item.track_title}</span>
+                              <span className="block truncate text-xs text-white/50">{item.track_artist ?? 'Unknown artist'}</span>
+                            </span>
+                            <span className="shrink-0 text-[11px] tabular-nums text-white/50">{item.count}</span>
+                          </li>
+                        ))}
+                      </ol>
+                    </section>
+                  ))}
+                </div>
               ) : savedTracks.length ? (
                 <ol className="space-y-1">
                   {savedTracks.map((track, i) => trackRow(track, i, () => { musicEngine.unlock(); void musicEngine.playQueue(savedTracks, i); }))}
