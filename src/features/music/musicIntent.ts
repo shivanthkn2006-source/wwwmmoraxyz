@@ -123,7 +123,7 @@ export function resolveMusicIntent(raw: string): MusicIntent | null {
   }
 
   // "play a Hindi devotional song" / "play a Tamil pop station"
-  const genre = GENRES.find((g) => body.includes(g));
+  const genre = /\b(radio|station|fm|satellite)\b/.test(body) ? undefined : GENRES.find((g) => body.includes(g));
   if (genre) {
     const devotional = /devotional|bhajan|kirtan|mantra|gospel|qawwali/.test(genre);
     const query = body.replace(/\b(song|songs|music|track|tracks|playlist|station|radio)\b/g, '').trim() || genre;
