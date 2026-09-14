@@ -38,3 +38,4 @@
 - [ ] Verify the managed signed-in account is @moksh50/admin; never create or elevate a different account.
 - [ ] Add compliant generated fallback artwork for tracks with no provider artwork; avoid regenerating saved covers.
 - [ ] Add most-viewed video metrics and friend mentions to Music community data.
+- [ ] Replace all Music-page blue states with monochrome translucent Liquid Glass and white highlights; verify signed-in phone/desktop behavior.
