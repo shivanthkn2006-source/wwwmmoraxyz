@@ -4604,6 +4604,75 @@ export type Database = {
         }
         Relationships: []
       }
+      music_listens: {
+        Row: {
+          created_at: string
+          id: string
+          track_artist: string | null
+          track_artwork: string | null
+          track_id: string
+          track_source: string | null
+          track_title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          track_artist?: string | null
+          track_artwork?: string | null
+          track_id: string
+          track_source?: string | null
+          track_title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          track_artist?: string | null
+          track_artwork?: string | null
+          track_id?: string
+          track_source?: string | null
+          track_title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      music_reactions: {
+        Row: {
+          created_at: string
+          id: string
+          reaction: string
+          track_artist: string | null
+          track_artwork: string | null
+          track_id: string
+          track_source: string | null
+          track_title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          reaction: string
+          track_artist?: string | null
+          track_artwork?: string | null
+          track_id: string
+          track_source?: string | null
+          track_title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          reaction?: string
+          track_artist?: string | null
+          track_artwork?: string | null
+          track_id?: string
+          track_source?: string | null
+          track_title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       notification_attempts: {
         Row: {
           attempt: number
