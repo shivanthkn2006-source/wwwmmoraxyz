@@ -865,8 +865,13 @@ export const SearchBar = () => {
         result.feature_location
       );
       
-      // Navigate to feature location
-      navigate(result.feature_location || '/');
+      // Navigate to feature location. Music carries the typed query so the
+      // Music page searches and plays it immediately.
+      if (result.feature_location === '/music') {
+        navigate(`/music?${new URLSearchParams({ q: query.trim() }).toString()}`);
+      } else {
+        navigate(result.feature_location || '/');
+      }
       setIsOpen(false);
       setQuery('');
       setResults([]);
