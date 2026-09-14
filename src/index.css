@@ -1272,31 +1272,32 @@ html.phantom-mode [class*="animate-"] {
   --menu-badge-fg: 240 10% 3.9%;
 }
 
-/* Music — monochrome Liquid Glass. Scoped to keep the platform theme untouched. */
+/* Music — transparent Liquid Glass, white text, blue enabled states. Scoped so
+   the rest of the platform theme is untouched. */
 .music-liquid-page {
   --music-glass: 0 0% 100%;
   --music-glass-strong: 0 0% 14%;
   --music-glass-edge: 0 0% 100%;
   --music-stage: 0 0% 3%;
   --music-stage-deep: 0 0% 0%;
+  --music-blue: 211 100% 55%;
   background:
     radial-gradient(circle at 50% 0%, hsl(var(--music-glass) / 0.09), transparent 34rem),
     hsl(var(--music-stage-deep));
-  color: hsl(0 0% 98%);
+  color: hsl(0 0% 100%);
 }
 
 .music-liquid-shell {
-  background: linear-gradient(145deg, hsl(var(--music-glass) / 0.075), hsl(var(--music-stage) / 0.92) 42%);
-  box-shadow: inset 0 1px 0 hsl(var(--music-glass-edge) / 0.14), 0 24px 70px hsl(var(--music-stage-deep) / 0.62);
-  backdrop-filter: blur(28px) saturate(110%);
-  -webkit-backdrop-filter: blur(28px) saturate(110%);
+  background: linear-gradient(150deg, hsl(var(--music-glass) / 0.09), hsl(var(--music-stage) / 0.72) 46%);
+  box-shadow: inset 0 1px 0 hsl(var(--music-glass-edge) / 0.16), 0 24px 70px hsl(var(--music-stage-deep) / 0.62);
+  backdrop-filter: blur(30px) saturate(120%);
+  -webkit-backdrop-filter: blur(30px) saturate(120%);
 }
 
-.music-liquid-header,
 .music-liquid-control,
 .music-global-glass {
-  background: linear-gradient(135deg, hsl(var(--music-glass) / 0.105), hsl(var(--music-glass) / 0.035));
-  box-shadow: inset 0 1px 0 hsl(var(--music-glass-edge) / 0.16), 0 12px 36px hsl(var(--music-stage-deep) / 0.28);
+  background: linear-gradient(135deg, hsl(var(--music-glass) / 0.12), hsl(var(--music-glass) / 0.04));
+  box-shadow: inset 0 1px 0 hsl(var(--music-glass-edge) / 0.18), 0 12px 36px hsl(var(--music-stage-deep) / 0.28);
   backdrop-filter: blur(30px) saturate(115%);
   -webkit-backdrop-filter: blur(30px) saturate(115%);
 }
@@ -1314,35 +1315,104 @@ html.phantom-mode [class*="animate-"] {
   cursor: grabbing;
 }
 
-.music-liquid-queue {
-  background: linear-gradient(180deg, hsl(var(--music-glass) / 0.045), hsl(var(--music-glass) / 0.015));
+.music-liquid-queue,
+.music-liquid-side {
+  background: linear-gradient(180deg, hsl(var(--music-glass) / 0.05), hsl(var(--music-glass) / 0.015));
+}
+
+.music-liquid-side-title {
+  margin-bottom: 0.5rem;
+  color: hsl(var(--music-glass) / 0.5);
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.music-liquid-chip {
+  border-radius: 9999px;
+  padding: 0.3rem 0.7rem;
+  background: hsl(var(--music-glass) / 0.08);
+  box-shadow: inset 0 0 0 1px hsl(var(--music-glass-edge) / 0.16);
+  color: hsl(0 0% 100% / 0.85);
+  font-size: 0.6875rem;
+  line-height: 1.1;
+  transition: background 150ms ease, color 150ms ease;
+}
+
+.music-liquid-chip:hover {
+  background: hsl(var(--music-glass) / 0.16);
+}
+
+.music-liquid-chip.is-active {
+  background: hsl(var(--music-blue));
+  box-shadow: inset 0 0 0 1px hsl(var(--music-blue) / 0.9);
+  color: hsl(0 0% 100%);
 }
 
 .music-liquid-art {
   background: linear-gradient(145deg, hsl(var(--music-glass-strong)), hsl(var(--music-stage-deep)));
-  box-shadow: inset 0 1px 0 hsl(var(--music-glass-edge) / 0.2), 0 22px 55px hsl(var(--music-stage-deep) / 0.56);
+  box-shadow: inset 0 1px 0 hsl(var(--music-glass-edge) / 0.2), 0 18px 40px hsl(var(--music-stage-deep) / 0.5);
 }
 
-.music-liquid-art-glint {
-  background: linear-gradient(135deg, hsl(var(--music-glass) / 0.17), transparent 31%, transparent 70%, hsl(var(--music-glass) / 0.05));
+.music-liquid-nowtag {
+  position: absolute;
+  inset-inline: 0.25rem;
+  bottom: 0.25rem;
+  border-radius: 9999px;
+  padding: 0.15rem 0.4rem;
+  background: hsl(var(--music-stage-deep) / 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: hsl(0 0% 100%);
+  font-size: 0.5rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-align: center;
+  text-transform: uppercase;
 }
 
 .music-liquid-status,
 .music-liquid-track-index {
-  background: hsl(var(--music-glass) / 0.07);
-  box-shadow: inset 0 1px 0 hsl(var(--music-glass-edge) / 0.12);
+  background: hsl(var(--music-glass) / 0.08);
+  box-shadow: inset 0 1px 0 hsl(var(--music-glass-edge) / 0.14);
+  color: hsl(0 0% 100%);
 }
 
 .music-liquid-play {
-  box-shadow: 0 0 0 1px hsl(var(--music-glass-edge) / 0.18), 0 10px 28px hsl(var(--music-glass-edge) / 0.1);
+  background: hsl(var(--music-blue)) !important;
+  box-shadow: 0 8px 24px hsl(var(--music-blue) / 0.35);
+  color: hsl(0 0% 100%) !important;
+}
+
+.music-liquid-play:hover {
+  background: hsl(var(--music-blue) / 0.88) !important;
+}
+
+.music-liquid-round {
+  color: hsl(0 0% 100% / 0.85);
+}
+
+.music-liquid-round.is-on {
+  background: hsl(var(--music-blue) / 0.22);
+  color: hsl(var(--music-blue));
+}
+
+.music-liquid-save {
+  color: hsl(0 0% 100% / 0.45);
+}
+
+.music-liquid-save.is-saved {
+  color: hsl(var(--music-blue));
 }
 
 .music-liquid-track:hover,
-.music-liquid-track[aria-current='true'] {
+.music-liquid-track.is-current {
   border-color: hsl(var(--music-glass-edge) / 0.14);
-  background: hsl(var(--music-glass) / 0.08);
+  background: hsl(var(--music-glass) / 0.09);
   box-shadow: inset 0 1px 0 hsl(var(--music-glass-edge) / 0.08);
 }
+
 
 .music-liquid-slider [role='slider'] {
   border-color: hsl(var(--music-glass-edge) / 0.9);
