@@ -45,6 +45,7 @@ const TYPE_FEATURE: Record<string, NotificationFeature> = {
   user_online: 'friends',
   friend_badge_earned: 'friends',
   friend_challenge_completed: 'friends',
+  friend_music_listen: 'friends',
   loop_like: 'feed',
   loop_comment: 'feed',
   new_loop: 'feed',

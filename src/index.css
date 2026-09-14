@@ -1406,6 +1406,47 @@ html.phantom-mode [class*="animate-"] {
   color: hsl(var(--music-blue));
 }
 
+.music-liquid-react {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border-radius: 9999px;
+  padding: 0.28rem 0.65rem;
+  background: hsl(var(--music-glass) / 0.08);
+  box-shadow: inset 0 0 0 1px hsl(var(--music-glass-edge) / 0.16);
+  color: hsl(0 0% 100% / 0.85);
+  font-size: 0.6875rem;
+  line-height: 1.1;
+  transition: background 150ms ease, transform 150ms ease;
+}
+
+.music-liquid-react:hover {
+  background: hsl(var(--music-glass) / 0.16);
+}
+
+.music-liquid-react.is-on {
+  background: hsl(var(--music-blue) / 0.9);
+  color: hsl(0 0% 100%);
+}
+
+.music-liquid-react.is-burst span[aria-hidden='true'] {
+  animation: music-react-pop 700ms ease-out;
+  display: inline-block;
+}
+
+@keyframes music-react-pop {
+  0% { transform: scale(1) translateY(0); }
+  35% { transform: scale(1.7) translateY(-6px) rotate(-8deg); }
+  70% { transform: scale(1.25) translateY(-2px) rotate(6deg); }
+  100% { transform: scale(1) translateY(0) rotate(0deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .music-liquid-react.is-burst span[aria-hidden='true'] {
+    animation: none;
+  }
+}
+
 .music-liquid-track:hover,
 .music-liquid-track.is-current {
   border-color: hsl(var(--music-glass-edge) / 0.14);

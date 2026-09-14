@@ -51,6 +51,7 @@ const TITLES: Record<string, string> = {
   loop_comment: 'New Loop comment',
   friend_badge_earned: 'A friend earned a badge',
   friend_challenge_completed: 'A friend completed a challenge',
+  friend_music_listen: 'A friend is playing a song you love',
 };
 
 /**
