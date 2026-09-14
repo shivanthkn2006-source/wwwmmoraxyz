@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
-import { Heart, MessageCircle, Award } from 'lucide-react';
+import { Heart, MessageCircle, Award, Music2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useRealtimeTable } from '@/realtime/GlobalRealtimeProvider';
 import { useAuth } from '@/lib/auth';
@@ -220,6 +220,8 @@ const NotificationMenu: React.FC<NotificationMenuProps> = ({ open, onOpenChange 
       case 'friend_badge_earned':
       case 'friend_challenge_completed':
         return <Award className={`w-4 h-4 ${accentFill}`} />;
+      case 'friend_music_listen':
+        return <Music2 className={`w-4 h-4 ${accent}`} />;
       default:
         return null;
     }
