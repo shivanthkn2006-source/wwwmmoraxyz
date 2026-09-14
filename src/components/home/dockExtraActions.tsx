@@ -91,6 +91,7 @@ export const DOCK_EXTRA_DEFS: ExtraDef[] = [
  * all 70+ pages.
  */
 export const DOCK_RESERVED_ROUTES = [
+  '/music',
   '/camera',
   '/chat',
   '/growth-insights',

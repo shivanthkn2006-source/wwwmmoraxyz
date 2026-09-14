@@ -3,7 +3,7 @@ export interface AppFeature {
   name: string;
   description: string;
   keywords: string[];
-  category: 'profile' | 'posts' | 'ai' | 'chat' | 'settings' | 'social' | 'media';
+  category: 'profile' | 'posts' | 'ai' | 'chat' | 'settings' | 'social' | 'media' | 'music';
   location: string;
   icon: string;
   action?: () => void;
@@ -11,6 +11,34 @@ export interface AppFeature {
 }
 
 export const APP_FEATURES: AppFeature[] = [
+  // Music — searching any of these hands the query to the Music page.
+  {
+    id: 'music',
+    name: 'Music',
+    description: 'Play songs, artists, albums, playlists and live radio',
+    keywords: ['music', 'song', 'songs', 'track', 'artist', 'singer', 'album', 'playlist', 'listen', 'radio', 'station', 'satellite', 'genre', 'music video'],
+    category: 'music',
+    location: '/music',
+    icon: 'Music',
+  },
+  {
+    id: 'mosaic-feed',
+    name: 'Mosaic Feed',
+    description: 'Scrapbook-style card feed',
+    keywords: ['mosaic', 'scrapbook', 'collage', 'cards'],
+    category: 'media',
+    location: '/mosaic',
+    icon: 'LayoutGrid',
+  },
+  {
+    id: 'selfie-city',
+    name: 'Selfie City',
+    description: 'Selfie map and city pins',
+    keywords: ['selfie', 'selfie city', 'pins', 'selfie map'],
+    category: 'media',
+    location: '/selfie-city',
+    icon: 'ScanFace',
+  },
   // Profile Features
   {
     id: 'activity-status',
