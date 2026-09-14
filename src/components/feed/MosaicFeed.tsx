@@ -209,10 +209,10 @@ export const MosaicFeed: React.FC<MosaicFeedProps> = ({ limit = 40, className, s
               src={item.mediaUrl as string}
               alt={item.content ? item.content.slice(0, 80) : `Post by ${item.displayName}`}
               loading="lazy"
-              className="w-full object-cover grayscale contrast-110"
+              className="w-full object-cover"
             />
           ) : (
-            <video src={item.mediaUrl as string} muted playsInline className="w-full object-cover grayscale" />
+            <video src={item.mediaUrl as string} muted playsInline className="w-full object-cover" />
           )}
           <div className="space-y-2 p-3">
             {item.content && (
@@ -223,7 +223,7 @@ export const MosaicFeed: React.FC<MosaicFeedProps> = ({ limit = 40, className, s
                 <p className="truncate text-xs font-medium text-foreground">{item.displayName}</p>
                 {item.username && <p className="truncate text-[11px] text-muted-foreground">{item.username}</p>}
               </div>
-              <Avatar className="h-7 w-7 shrink-0 grayscale">
+              <Avatar className="h-7 w-7 shrink-0">
                 <AvatarImage src={item.avatarUrl ?? ''} alt={`${item.displayName} avatar`} />
                 <AvatarFallback className="text-[10px]">{item.displayName.slice(0, 1).toUpperCase()}</AvatarFallback>
               </Avatar>
@@ -238,9 +238,9 @@ export const MosaicFeed: React.FC<MosaicFeedProps> = ({ limit = 40, className, s
           </DialogHeader>
           {openItem?.mediaUrl && (
             isImage(openItem.mediaType) ? (
-              <img src={openItem.mediaUrl} alt={openItem.content ?? 'Post media'} className="max-h-[60vh] w-full object-contain grayscale" />
+              <img src={openItem.mediaUrl} alt={openItem.content ?? 'Post media'} className="max-h-[60vh] w-full object-contain" />
             ) : (
-              <video src={openItem.mediaUrl} controls playsInline className="max-h-[60vh] w-full object-contain grayscale" />
+              <video src={openItem.mediaUrl} controls playsInline className="max-h-[60vh] w-full object-contain" />
             )
           )}
           {openItem?.content && <p className="px-4 pb-4 text-sm text-foreground">{openItem.content}</p>}
