@@ -24,3 +24,15 @@
 - [x] Prefer full-length music sources, retain clearly labelled previews/live radio, and remove the Music page bottom strip.
 - [x] Stop Home from repeating its initial loading cycle (friendship arrival no longer restarts the load/realtime cycle).
 - [ ] Signed-in responsive preview QA of Music/Home — blocked: no test account available in the sandbox.
+
+## Music + social reactions stack (Sep 14)
+- [ ] Compact transparent glass Music page: no big header, white text, white/blue rounded controls, current artwork directly under the search bar.
+- [ ] Universal borderless music-note icon before the headphones icon on every page dock.
+- [ ] Route Home/Feed music and video search results into the Music page instead of Selfie City.
+- [ ] Music library: save songs to a personal list with album art and a playlist view.
+- [ ] Music page sidebar for browsing genres, artists, and playlists.
+- [ ] Animated reactions on music (happy / cool / loved it) with loved / recommended / shared / most listened / most viewed lists and friend mentions.
+- [ ] Friend-listening notifications into other users' feeds with sound and profile photo.
+- [ ] Signed-in phone + desktop QA of Music and Home (queue advancement, full-length sources, no repeated Home loading).
+- [ ] Licensed full-track account (Spotify/YouTube Music) — blocked: needs a paid subscription plus their official player SDK; cannot be fabricated.
+- [ ] Real admin sign-in account for QA — blocked: needs the user to supply/confirm credentials or preview sign-in.
