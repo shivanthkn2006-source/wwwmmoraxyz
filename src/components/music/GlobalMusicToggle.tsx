@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Disc3, Pause, Play, SkipBack, SkipForward, Square } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useMusicEngine } from '@/hooks/useMusicEngine';
 import { musicEngine } from '@/services/MusicEngine';
@@ -18,6 +18,7 @@ const DEFAULT_POSITION: PlayerPosition = { x: 104, y: 8 };
 export default function GlobalMusicToggle() {
   const state = useMusicEngine();
   const navigate = useNavigate();
+  const location = useLocation();
   const playerRef = useRef<HTMLDivElement>(null);
   const pointerRef = useRef<{
     id: number;
@@ -62,6 +63,23 @@ export default function GlobalMusicToggle() {
       window.removeEventListener('orientationchange', keepOnScreen);
     };
   }, [clamp]);
+
+  useEffect(() => {
+    if (location.pathname !== '/music') return;
+    const animationFrame = window.requestAnimationFrame(() => {
+      const wordmark = document.querySelector<HTMLElement>('[data-music-wordmark]');
+      if (!wordmark) return;
+      const bounds = wordmark.getBoundingClientRect();
+      const height = playerRef.current?.offsetHeight ?? 36;
+      const anchored = clamp({
+        x: bounds.right + 6,
+        y: bounds.top + (bounds.height - height) / 2,
+      });
+      positionRef.current = anchored;
+      setPosition(anchored);
+    });
+    return () => window.cancelAnimationFrame(animationFrame);
+  }, [clamp, location.pathname, state.track?.id]);
 
   useEffect(() => {
     const onPointerMove = (event: PointerEvent) => {
