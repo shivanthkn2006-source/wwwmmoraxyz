@@ -167,7 +167,7 @@ export default function MusicPage() {
         <div className="music-liquid-shell flex min-h-[100dvh] w-full flex-col overflow-hidden">
           <div className="grid flex-1 gap-0 lg:grid-cols-[13rem_minmax(0,1fr)_minmax(17rem,22rem)]">
             {/* Browse sidebar */}
-            <aside className="music-liquid-side order-2 max-h-[34dvh] overflow-y-auto p-3 lg:order-1 lg:max-h-none">
+            <aside className="music-liquid-side music-align-search order-2 max-h-[34dvh] overflow-y-auto p-3 lg:order-1 lg:max-h-none">
               <p className="music-liquid-side-title">Genres</p>
               <div className="mb-4 flex flex-wrap gap-1.5">
                 {MUSIC_GENRES.map((genre) => (
@@ -201,7 +201,7 @@ export default function MusicPage() {
 
             {/* Search + now listening + transport */}
             <section className="order-1 flex min-h-0 flex-col gap-3 p-3 sm:p-4 lg:order-2">
-              <div className="flex items-center gap-2">
+              <div className="music-page-wordmark flex w-fit items-center gap-2" data-music-wordmark>
                 <Disc3 className={active ? 'h-4 w-4 animate-spin motion-reduce:animate-none' : 'h-4 w-4'} aria-hidden="true" />
                 <h1 className="text-sm font-semibold text-white">MMora music</h1>
               </div>
@@ -261,7 +261,7 @@ export default function MusicPage() {
             </section>
 
             {/* Results / library */}
-            <aside className="music-liquid-queue order-3 max-h-[46dvh] overflow-y-auto p-3 lg:max-h-none">
+            <aside className="music-liquid-queue music-align-search order-3 max-h-[46dvh] overflow-y-auto p-3 lg:max-h-none">
               <div className="mb-3 flex gap-1.5">
                 <button type="button" className={`music-liquid-chip ${tab === 'results' ? 'is-active' : ''}`} onClick={() => setTab('results')}>Results{results ? ` (${results.tracks.length})` : ''}</button>
                 <button type="button" className={`music-liquid-chip ${tab === 'library' ? 'is-active' : ''}`} onClick={() => setTab('library')}>Library ({savedTracks.length})</button>
