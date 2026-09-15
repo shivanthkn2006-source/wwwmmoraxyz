@@ -165,7 +165,7 @@ export default function MusicPage() {
           <meta name="description" content="Search songs, artists, albums, playlists and live radio on MMora Music, and save what you love to your own library." />
         </Helmet>
         <div className="music-liquid-shell flex min-h-[100dvh] w-full flex-col overflow-hidden">
-          <div className="grid flex-1 gap-0 lg:grid-cols-[13rem_minmax(0,1fr)_minmax(17rem,22rem)]">
+          <div className="music-liquid-layout grid flex-1 gap-0 lg:grid-cols-[13rem_minmax(0,1fr)_minmax(17rem,22rem)]">
             {/* Browse sidebar */}
             <aside className="music-liquid-side music-align-search order-2 max-h-[34dvh] overflow-y-auto p-3 lg:order-1 lg:max-h-none">
               <p className="music-liquid-side-title">Genres</p>
@@ -200,7 +200,7 @@ export default function MusicPage() {
             </aside>
 
             {/* Search + now listening + transport */}
-            <section className="order-1 flex min-h-0 flex-col gap-3 p-3 sm:p-4 lg:order-2">
+            <section className="music-liquid-player order-1 flex min-h-0 flex-col gap-3 p-3 sm:p-4 lg:order-2">
               <div className="music-page-wordmark flex w-fit items-center gap-2" data-music-wordmark>
                 <Disc3 className={active ? 'h-4 w-4 animate-spin motion-reduce:animate-none' : 'h-4 w-4'} aria-hidden="true" />
                 <h1 className="text-sm font-semibold text-white">MMora music</h1>
