@@ -1288,7 +1288,10 @@ html.phantom-mode [class*="animate-"] {
 }
 
 .music-liquid-shell {
-  background: hsl(var(--music-glass) / 0.08);
+  max-width: none;
+  margin: 0;
+  border-radius: 0;
+  background: transparent;
   box-shadow: none;
   backdrop-filter: blur(38px) saturate(130%);
   -webkit-backdrop-filter: blur(38px) saturate(130%);
