@@ -1277,18 +1277,22 @@ html.phantom-mode [class*="animate-"] {
 .music-liquid-page {
   --music-glass: 0 0% 100%;
   --music-glass-edge: 0 0% 100%;
-  background: hsl(var(--background));
+  position: relative;
+  isolation: isolate;
+  background: hsl(var(--music-glass) / 0.14);
+  box-shadow: inset 0 1px 0 hsl(var(--music-glass-edge) / 0.28);
+  backdrop-filter: blur(42px) saturate(125%);
+  -webkit-backdrop-filter: blur(42px) saturate(125%);
   color: hsl(0 0% 100%);
 }
 
 .music-liquid-shell {
-  background: linear-gradient(145deg, hsl(var(--music-glass) / 0.075), hsl(var(--music-glass) / 0.025));
+  background: linear-gradient(145deg, hsl(var(--music-glass) / 0.14), hsl(var(--music-glass) / 0.055));
   box-shadow:
-    inset 0 1px 0 hsl(var(--music-glass-edge) / 0.22),
-    inset 0 0 0 1px hsl(var(--music-glass-edge) / 0.09),
-    0 18px 48px hsl(var(--background) / 0.3);
-  backdrop-filter: blur(34px) saturate(115%);
-  -webkit-backdrop-filter: blur(34px) saturate(115%);
+    inset 0 1px 0 hsl(var(--music-glass-edge) / 0.34),
+    inset 0 0 0 1px hsl(var(--music-glass-edge) / 0.12);
+  backdrop-filter: blur(38px) saturate(130%);
+  -webkit-backdrop-filter: blur(38px) saturate(130%);
 }
 
 .music-liquid-control,
@@ -1296,8 +1300,7 @@ html.phantom-mode [class*="animate-"] {
   background: linear-gradient(145deg, hsl(var(--music-glass) / 0.12), hsl(var(--music-glass) / 0.045));
   box-shadow:
     inset 0 1px 0 hsl(var(--music-glass-edge) / 0.32),
-    inset 0 0 0 1px hsl(var(--music-glass-edge) / 0.12),
-    0 10px 30px hsl(var(--background) / 0.22);
+    inset 0 0 0 1px hsl(var(--music-glass-edge) / 0.12);
   backdrop-filter: blur(30px) saturate(120%);
   -webkit-backdrop-filter: blur(30px) saturate(120%);
 }
@@ -1317,8 +1320,10 @@ html.phantom-mode [class*="animate-"] {
 
 .music-liquid-queue,
 .music-liquid-side {
-  background: linear-gradient(180deg, hsl(var(--music-glass) / 0.055), hsl(var(--music-glass) / 0.018));
-  box-shadow: inset 0 1px 0 hsl(var(--music-glass-edge) / 0.12);
+  background: linear-gradient(180deg, hsl(var(--music-glass) / 0.11), hsl(var(--music-glass) / 0.04));
+  box-shadow:
+    inset 0 1px 0 hsl(var(--music-glass-edge) / 0.2),
+    inset 0 0 0 1px hsl(var(--music-glass-edge) / 0.07);
   backdrop-filter: blur(24px) saturate(110%);
   -webkit-backdrop-filter: blur(24px) saturate(110%);
 }
@@ -1353,8 +1358,7 @@ html.phantom-mode [class*="animate-"] {
   background: linear-gradient(145deg, hsl(var(--music-glass) / 0.26), hsl(var(--music-glass) / 0.11));
   box-shadow:
     inset 0 1px 0 hsl(var(--music-glass-edge) / 0.55),
-    inset 0 0 0 1px hsl(var(--music-glass-edge) / 0.22),
-    0 5px 16px hsl(var(--background) / 0.2);
+    inset 0 0 0 1px hsl(var(--music-glass-edge) / 0.22);
   color: hsl(0 0% 100%);
 }
 
@@ -1397,7 +1401,7 @@ html.phantom-mode [class*="animate-"] {
   box-shadow:
     inset 0 1px 0 hsl(var(--music-glass-edge) / 0.65),
     inset 0 0 0 1px hsl(var(--music-glass-edge) / 0.22),
-    0 8px 24px hsl(var(--background) / 0.28);
+    0 8px 24px hsl(var(--music-glass) / 0.1);
   color: hsl(0 0% 100%) !important;
 }
 
