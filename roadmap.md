@@ -39,3 +39,4 @@
 - [ ] Add compliant generated fallback artwork for tracks with no provider artwork; avoid regenerating saved covers.
 - [ ] Add most-viewed video metrics and friend mentions to Music community data.
 - [x] Replace all Music-page blue states with monochrome translucent Liquid Glass and white highlights; verify signed-in phone/desktop behavior.
+- [x] Remove Music page dark gutters and top band, fill every viewport with glass, and strip search-field/search-icon outlines.
