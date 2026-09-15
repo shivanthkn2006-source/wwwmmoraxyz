@@ -1356,7 +1356,33 @@ html.phantom-mode [class*="animate-"] {
   -webkit-backdrop-filter: none;
 }
 
+/* Phone / tablet / installed-app: the results column is the touch scroller.
+   Without an explicit pan-y + momentum hint, global gesture handlers swallow
+   the drag in standalone (PWA) mode and the list appears frozen. */
+@media (max-width: 1023.98px) {
+  .music-liquid-queue,
+  .music-liquid-side {
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+    overscroll-behavior-y: contain;
+  }
+
+  .music-liquid-queue {
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+  }
+
+
+  .music-liquid-queue > *,
+  .music-liquid-side > * {
+    touch-action: pan-y;
+  }
+}
+
 @media (min-width: 1024px) {
+
   .music-liquid-page,
   .music-liquid-shell {
     height: 100dvh;
