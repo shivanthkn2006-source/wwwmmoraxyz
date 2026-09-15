@@ -159,12 +159,12 @@ export default function MusicPage() {
 
   return (
     <TooltipProvider>
-      <main className="music-liquid-page flex min-h-[100dvh] px-2 pb-0 pt-[max(3.75rem,env(safe-area-inset-top))] sm:px-4 lg:px-6">
+      <main className="music-liquid-page flex min-h-[100dvh] p-0">
         <Helmet>
           <title>MMora Music — Songs, Artists & Live Radio</title>
           <meta name="description" content="Search songs, artists, albums, playlists and live radio on MMora Music, and save what you love to your own library." />
         </Helmet>
-        <div className="music-liquid-shell mx-auto flex min-h-[calc(100dvh-max(3.75rem,env(safe-area-inset-top)))] w-full max-w-6xl flex-col overflow-hidden rounded-t-2xl">
+        <div className="music-liquid-shell flex min-h-[100dvh] w-full flex-col overflow-hidden">
           <div className="grid flex-1 gap-0 lg:grid-cols-[13rem_minmax(0,1fr)_minmax(17rem,22rem)]">
             {/* Browse sidebar */}
             <aside className="music-liquid-side order-2 max-h-[34dvh] overflow-y-auto p-3 lg:order-1 lg:max-h-none">
@@ -205,9 +205,9 @@ export default function MusicPage() {
                 <Disc3 className={active ? 'h-4 w-4 animate-spin motion-reduce:animate-none' : 'h-4 w-4'} aria-hidden="true" />
                 <h1 className="text-sm font-semibold text-white">MMora music</h1>
               </div>
-              <form className="music-liquid-control flex gap-2 rounded-full p-1" onSubmit={(e) => { e.preventDefault(); void search(); }}>
-                <Input className="h-10 border-0 bg-transparent text-white placeholder:text-white/40 shadow-none focus-visible:ring-0" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Song, artist, album, genre or radio" aria-label="Search music" autoComplete="off" />
-                <IconControl className="music-liquid-play h-10 w-10 rounded-full" type="submit" size="icon" disabled={searching} label={searching ? 'Searching' : 'Search'}><Search /></IconControl>
+              <form className="music-liquid-control music-search-control flex gap-2 rounded-full p-1" onSubmit={(e) => { e.preventDefault(); void search(); }}>
+                <Input className="music-search-input h-10 border-0 bg-transparent text-white placeholder:text-white/40 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Song, artist, album, genre or radio" aria-label="Search music" autoComplete="off" />
+                <IconControl className="music-search-submit h-10 w-10" type="submit" variant="ghost" size="icon" disabled={searching} label={searching ? 'Searching' : 'Search'}><Search /></IconControl>
               </form>
 
               {/* Current artwork sits directly under the search bar. */}
