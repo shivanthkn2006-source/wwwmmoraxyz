@@ -1357,6 +1357,34 @@ html.phantom-mode [class*="animate-"] {
 }
 
 @media (min-width: 1024px) {
+  .music-liquid-page,
+  .music-liquid-shell {
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .music-liquid-layout {
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .music-liquid-player,
+  .music-liquid-side {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .music-liquid-queue {
+    min-height: 0;
+    max-height: none;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+
   .music-align-search {
     padding-top: 4rem;
   }
