@@ -1370,6 +1370,11 @@ html.phantom-mode [class*="animate-"] {
     overscroll-behavior-y: contain;
   }
 
+  .music-liquid-queue {
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+  }
+
+
   .music-liquid-queue > *,
   .music-liquid-side > * {
     touch-action: pan-y;
