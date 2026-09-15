@@ -1354,6 +1354,12 @@ html.phantom-mode [class*="animate-"] {
   box-shadow: none;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior-y: contain;
 }
 
 /* Phone / tablet / installed-app: the results column is the touch scroller.
@@ -1362,15 +1368,6 @@ html.phantom-mode [class*="animate-"] {
 @media (max-width: 1023.98px) {
   .music-liquid-queue,
   .music-liquid-side {
-    min-height: 0;
-    overflow-x: hidden;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    touch-action: pan-y;
-    overscroll-behavior-y: contain;
-  }
-
-  .music-liquid-queue {
     padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
   }
 
@@ -1396,12 +1393,12 @@ html.phantom-mode [class*="animate-"] {
     overflow: hidden;
   }
 
-  .music-liquid-player,
-  .music-liquid-side {
+  .music-liquid-player {
     min-height: 0;
     overflow: hidden;
   }
 
+  .music-liquid-side,
   .music-liquid-queue {
     min-height: 0;
     max-height: none;
