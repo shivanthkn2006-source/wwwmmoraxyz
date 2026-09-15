@@ -206,8 +206,8 @@ export default function MusicPage() {
                 <h1 className="text-sm font-semibold text-white">MMora music</h1>
               </div>
               <form className="music-liquid-control music-search-control flex gap-2 rounded-full p-1" onSubmit={(e) => { e.preventDefault(); void search(); }}>
-                <Input className="music-search-input h-10 border-0 bg-transparent text-white placeholder:text-white/40 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Song, artist, album, genre or radio" aria-label="Search music" autoComplete="off" />
-                <IconControl className="music-search-submit h-10 w-10" type="submit" variant="ghost" size="icon" disabled={searching} label={searching ? 'Searching' : 'Search'}><Search /></IconControl>
+                <Input className="music-search-input h-10 border-0 bg-transparent text-white shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Search music" autoComplete="off" />
+                <Button className="music-search-submit h-10 w-10" type="submit" variant="ghost" size="icon" disabled={searching} aria-label={searching ? 'Searching' : 'Search'}><Search aria-hidden="true" /></Button>
               </form>
 
               {/* Current artwork sits directly under the search bar. */}
