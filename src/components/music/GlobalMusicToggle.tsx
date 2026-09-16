@@ -147,16 +147,21 @@ export default function GlobalMusicToggle() {
       }}
       aria-label="Draggable music controls"
     >
-      <Button className="music-mini-button !border-0 !bg-transparent !shadow-none !outline-none !ring-0 !ring-offset-0" variant="ghost" size="icon" onClick={() => navigate('/music')} aria-label={`Open music: ${state.track.title} by ${state.track.artist}`}>
+      <Button className="music-mini-button !border-0 !bg-transparent !shadow-none !outline-none !ring-0 !ring-offset-0" variant="ghost" size="icon" onClick={() => setExpanded((value) => !value)} aria-label={expanded ? 'Hide music controls' : `Show music controls: ${state.track.title} by ${state.track.artist}`} aria-expanded={expanded}>
         <Disc3 className={active ? 'animate-spin motion-reduce:animate-none' : ''} />
       </Button>
-      <Button className="music-mini-button !border-0 !bg-transparent !shadow-none !outline-none !ring-0 !ring-offset-0" variant="ghost" size="icon" onClick={() => void musicEngine.previous()} aria-label="Previous track"><SkipBack /></Button>
-      <Button className="music-mini-button !border-0 !bg-transparent !shadow-none !outline-none !ring-0 !ring-offset-0" variant="ghost" size="icon" onClick={() => { musicEngine.unlock(); musicEngine.toggle(); }} aria-label={active ? 'Pause music' : 'Play music'}>
-        {active ? <Pause /> : <Play />}
-      </Button>
-      <Button className="music-mini-button !border-0 !bg-transparent !shadow-none !outline-none !ring-0 !ring-offset-0" variant="ghost" size="icon" onClick={() => musicEngine.stop()} aria-label="Stop music"><Square /></Button>
-      <Button className="music-mini-button !border-0 !bg-transparent !shadow-none !outline-none !ring-0 !ring-offset-0" variant="ghost" size="icon" onClick={() => void musicEngine.next()} aria-label="Next track"><SkipForward /></Button>
-      <span className="music-mini-position" aria-label={`Queue position ${state.index + 1} of ${state.queue.length}`}>{state.index + 1}/{state.queue.length}</span>
+      {expanded && (
+        <>
+          <Button className="music-mini-button !border-0 !bg-transparent !shadow-none !outline-none !ring-0 !ring-offset-0" variant="ghost" size="icon" onClick={() => void musicEngine.previous()} aria-label="Previous track"><SkipBack /></Button>
+          <Button className="music-mini-button !border-0 !bg-transparent !shadow-none !outline-none !ring-0 !ring-offset-0" variant="ghost" size="icon" onClick={() => { musicEngine.unlock(); musicEngine.toggle(); }} aria-label={active ? 'Pause music' : 'Play music'}>
+            {active ? <Pause /> : <Play />}
+          </Button>
+          <Button className="music-mini-button !border-0 !bg-transparent !shadow-none !outline-none !ring-0 !ring-offset-0" variant="ghost" size="icon" onClick={() => musicEngine.stop()} aria-label="Stop music"><Square /></Button>
+          <Button className="music-mini-button !border-0 !bg-transparent !shadow-none !outline-none !ring-0 !ring-offset-0" variant="ghost" size="icon" onClick={() => void musicEngine.next()} aria-label="Next track"><SkipForward /></Button>
+          <button type="button" className="music-mini-position" onClick={() => navigate('/music')} aria-label={`Open music page, queue position ${state.index + 1} of ${state.queue.length}`}>{state.index + 1}/{state.queue.length}</button>
+        </>
+      )}
+
     </div>
   );
 }
