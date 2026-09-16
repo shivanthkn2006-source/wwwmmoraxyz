@@ -13,6 +13,8 @@
 
 export interface MusicTrack {
   id: string;
+  /** Stable row id for a member's own upload, used to mint a fresh private link. */
+  uploadId?: string;
   title: string;
   artist: string;
   /** Album or collection, only when the provider supplies it. */

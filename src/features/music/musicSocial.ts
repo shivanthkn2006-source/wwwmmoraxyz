@@ -33,7 +33,9 @@ function trackColumns(track: MusicTrack) {
     track_artist: track.artist ?? null,
     track_artwork: track.artwork ?? null,
     track_source: track.source ?? null,
-    track_url: track.url ?? null,
+    // A private upload's link expires, so the stable upload id is stored instead
+    // and re-signed when the track is played again.
+    track_url: (track.source === 'upload' ? track.id : track.url) ?? null,
   };
 }
 
