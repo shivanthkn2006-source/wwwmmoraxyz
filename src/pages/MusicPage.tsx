@@ -382,7 +382,7 @@ export default function MusicPage() {
                         {section.tracks.slice(0, 8).map((item) => (
                           <li key={`${section.id}-${item.track_id}`} className="flex items-center gap-2.5 px-1 py-1">
                             <span className="music-liquid-track-index flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full text-[10px]">
-                              {item.track_artwork ? <img src={item.track_artwork} alt="" className="h-full w-full object-cover" loading="lazy" decoding="async" /> : '♪'}
+                              <TrackArtwork src={item.track_artwork} trackId={item.track_id} className="h-full w-full object-cover" fallback="♪" />
                             </span>
                             <span className="min-w-0 flex-1">
                               <span className="block truncate text-sm text-white">{item.track_title}</span>
