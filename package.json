@@ -18,6 +18,7 @@
     "test:crawl": "playwright test tests/e2e/seo-crawl.spec.ts"
   },
   "dependencies": {
+    "@breezystack/lamejs": "^1.2.7",
     "@capacitor/android": "^7.4.3",
     "@capacitor/cli": "^7.4.3",
     "@capacitor/core": "^7.4.3",
