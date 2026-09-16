@@ -140,6 +140,7 @@ export default function GlobalMusicToggle() {
       });
       setPosition(finalPosition);
       positionRef.current = finalPosition;
+      hasSavedPositionRef.current = true;
       try { localStorage.setItem(POSITION_KEY, JSON.stringify(finalPosition)); } catch { /* Storage unavailable. */ }
     };
 
