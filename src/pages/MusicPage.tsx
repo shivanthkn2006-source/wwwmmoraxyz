@@ -294,6 +294,11 @@ export default function MusicPage() {
                 <Button className="music-search-submit h-10 w-9" type="submit" variant="ghost" size="icon" disabled={searching} aria-label={searching ? 'Searching' : 'Search'}><Search aria-hidden="true" /></Button>
               </form>
 
+              {/* Upload shortcut sits directly below the search icon, top right. */}
+              <div className="-mt-2 flex justify-end">
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-white" aria-label="Upload my music" onClick={() => navigate('/music/uploads')}><Upload aria-hidden="true" /></Button>
+              </div>
+
               {/* Current artwork sits directly under the search bar. */}
               <div className="music-current-track flex min-w-0 items-center gap-3 overflow-hidden">
                 <div className="music-liquid-art relative flex aspect-square w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl sm:w-28">
