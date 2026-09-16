@@ -32,7 +32,11 @@ async function myFriendIds(userId: string): Promise<string[]> {
   return [...ids];
 }
 
-/** Songs friends played that the member has not played themselves. */
+/**
+ * Songs friends played that the member has not played themselves.
+ * Ranked by how many friend plays a song has (popularity among friends),
+ * then by how recently it was played. Each song appears once.
+ */
 async function friendPlays(friendIds: string[], skip: Set<string>): Promise<MusicTrack[]> {
   if (!friendIds.length) return [];
   const { data } = await supabase
@@ -41,27 +45,34 @@ async function friendPlays(friendIds: string[], skip: Set<string>): Promise<Musi
     .in('user_id', friendIds)
     .order('created_at', { ascending: false })
     .limit(300);
-  const seen = new Set<string>();
-  const tracks: MusicTrack[] = [];
-  for (const row of data ?? []) {
+  const ranked = new Map<string, { track: MusicTrack; plays: number; order: number }>();
+  (data ?? []).forEach((row, order) => {
     const id = row.track_id;
     const url = row.track_url;
     // Another member's private upload cannot be opened, so it is never suggested.
-    if (!id || !url || row.track_source === 'upload' || seen.has(id) || skip.has(id)) continue;
-    seen.add(id);
-    tracks.push({
-      id,
-      title: row.track_title || 'Untitled',
-      artist: row.track_artist || 'Unknown artist',
-      artwork: row.track_artwork || undefined,
-      url,
-      source: (row.track_source as MusicTrack['source']) || 'archive',
-      credit: 'Played by a friend',
+    if (!id || !url || row.track_source === 'upload' || skip.has(id)) return;
+    const existing = ranked.get(id);
+    if (existing) { existing.plays += 1; return; }
+    ranked.set(id, {
+      plays: 1,
+      order,
+      track: {
+        id,
+        title: row.track_title || 'Untitled',
+        artist: row.track_artist || 'Unknown artist',
+        artwork: row.track_artwork || undefined,
+        url,
+        source: (row.track_source as MusicTrack['source']) || 'archive',
+        credit: 'Played by a friend',
+      },
     });
-    if (tracks.length >= 20) break;
-  }
-  return tracks;
+  });
+  return [...ranked.values()]
+    .sort((a, b) => (b.plays - a.plays) || (a.order - b.order))
+    .slice(0, 20)
+    .map((entry) => entry.track);
 }
+
 
 function seeds(profile: MusicTasteProfile, history: MusicTrack[]): string[] {
   const fromHistory = [...new Set(history.map((track) => track.artist).filter((artist) => artist && artist !== 'Unknown artist'))].slice(0, 2);
@@ -76,9 +87,21 @@ export async function fetchMusicRecommendations(): Promise<MusicRecommendationSe
   const [history, profile] = await Promise.all([fetchMyListening(), fetchMyMusicProfile()]);
   const played = new Set(history.map((track) => track.id));
   const sections: MusicRecommendationSection[] = [];
+  // A song is only suggested once across the whole page.
+  const suggested = new Set<string>(played);
+  const take = (tracks: MusicTrack[], max: number) => {
+    const out: MusicTrack[] = [];
+    for (const track of tracks) {
+      if (suggested.has(track.id)) continue;
+      suggested.add(track.id);
+      out.push(track);
+      if (out.length >= max) break;
+    }
+    return out;
+  };
 
   const friends = await myFriendIds(auth.user.id);
-  const fromFriends = await friendPlays(friends, played);
+  const fromFriends = take(await friendPlays(friends, played), 20);
   if (fromFriends.length) {
     sections.push({ id: 'friends', label: 'Your friends are playing', reason: 'Real plays from people you are connected with', tracks: fromFriends });
   }
@@ -86,11 +109,14 @@ export async function fetchMusicRecommendations(): Promise<MusicRecommendationSe
   const searches = await Promise.all(seeds(profile, history).map(async (seed) => {
     try {
       const result = await searchMusicCatalog(seed, 'track');
-      const tracks = result.tracks.filter((track) => !played.has(track.id)).slice(0, 12);
-      return tracks.length ? { id: `seed-${seed}`, label: `Because you like ${seed}`, reason: 'From your music profile and listening history', tracks } : null;
-    } catch { return null; }
+      return { seed, tracks: result.tracks };
+    } catch { return { seed, tracks: [] as MusicTrack[] }; }
   }));
-  searches.forEach((section) => { if (section) sections.push(section); });
+  searches.forEach(({ seed, tracks }) => {
+    const picked = take(tracks, 12);
+    if (picked.length) sections.push({ id: `seed-${seed}`, label: `Because you like ${seed}`, reason: 'From your music profile and listening history', tracks: picked });
+  });
+
 
   if (history.length) {
     sections.push({ id: 'again', label: 'Play it again', reason: 'Your most played songs', tracks: history.slice(0, 12) });
