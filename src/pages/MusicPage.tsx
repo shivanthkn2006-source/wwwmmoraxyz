@@ -302,7 +302,7 @@ export default function MusicPage() {
               {/* Current artwork sits directly under the search bar. */}
               <div className="music-current-track flex min-w-0 items-center gap-3 overflow-hidden">
                 <div className="music-liquid-art relative flex aspect-square w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl sm:w-28">
-                  {state.track?.artwork ? <img src={state.track.artwork} alt="" className="h-full w-full object-cover" decoding="async" /> : <Disc3 className="h-8 w-8 text-white/40" />}
+                  <TrackArtwork src={state.track?.artwork} trackId={state.track?.id} uploadId={(state.track as (MusicTrack & { uploadId?: string }) | null)?.uploadId} lazy={false} className="h-full w-full object-cover" fallback={<Disc3 className="h-8 w-8 text-white/40" />} />
                   {state.track && <span className="music-liquid-nowtag">Now listening</span>}
                 </div>
                 <div className="music-current-copy min-w-0 flex-1 overflow-hidden">
