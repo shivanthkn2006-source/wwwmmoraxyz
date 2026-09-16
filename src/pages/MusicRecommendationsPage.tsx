@@ -23,12 +23,14 @@ export default function MusicRecommendationsPage() {
   }, []);
 
   return (
-    <main className="music-liquid-page min-h-[100dvh] p-3 text-white">
+    <main className="music-liquid-page flex min-h-[100dvh] flex-col p-0 text-white">
       <Helmet>
         <title>Recommended Songs For You — MMora Music</title>
         <meta name="description" content="Song recommendations built from your real listening history, your friends' plays and the music taste saved on your profile." />
       </Helmet>
-      <section className="mx-auto max-w-2xl space-y-5">
+      <div className="music-liquid-shell music-align-search flex min-h-[100dvh] w-full flex-col gap-3 overflow-hidden p-3 sm:p-4">
+      <section className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col gap-4 overflow-y-auto lg:max-w-5xl">
+
         <header className="flex items-center justify-between">
           <Button variant="ghost" size="icon" aria-label="Back to Home" onClick={() => navigate('/')}><ArrowLeft /></Button>
           <h1 className="text-sm font-semibold">Recommended for you</h1>
