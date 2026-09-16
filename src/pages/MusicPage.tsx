@@ -46,8 +46,13 @@ export default function MusicPage() {
   const [myReactions, setMyReactions] = useState<MusicReactionId[]>([]);
   const [burst, setBurst] = useState<string | null>(null);
   const [chart, setChart] = useState<{ id: string; label: string; tracks: MusicSocialTrack[] }[]>([]);
+  const [stations, setStations] = useState<MusicTrack[]>([]);
+  const [stationTag, setStationTag] = useState<string | null>(null);
+  const [selectedPlaylist, setSelectedPlaylist] = useState<string | null>(null);
+  const [fullOnly, setFullOnly] = useState(false);
   const active = state.status === 'playing' || state.status === 'buffering';
   const routedQueryRef = useRef<string | null>(null);
+
 
   useEffect(() => subscribeLibrary(setLibrary), []);
 
