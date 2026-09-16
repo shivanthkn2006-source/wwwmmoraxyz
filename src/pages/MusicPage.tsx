@@ -275,7 +275,6 @@ export default function MusicPage() {
                   <Disc3 className={active ? 'h-4 w-4 animate-spin motion-reduce:animate-none' : 'h-4 w-4'} aria-hidden="true" />
                   <h1 className="text-sm font-semibold text-white">MMora music</h1>
                 </div>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-white" aria-label="Upload my music" onClick={() => navigate('/music/uploads')}><Upload aria-hidden="true" /></Button>
               </div>
               <form className="music-liquid-control music-search-control flex gap-2 rounded-full p-1" onSubmit={(e) => { e.preventDefault(); void search(); }}>
                 <Textarea
