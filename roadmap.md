@@ -74,3 +74,7 @@
 - [x] Home listening shelf uses my own play counts and refreshed upload album art.
 - [ ] Signed-in walkthrough of upload → search → play needs a preview sign-in (test session cannot be minted for this account).
 - [ ] Full-length YouTube playback stays limited to the official player; no hidden extraction.
+- [x] Friend listening alert verified live: saving a play created the friend's alert (test rows removed afterwards).
+- [x] A new upload now records one play in my own history, so it shows on the Home shelf immediately.
+- [x] "play"/"start" only start a music search when the request sounds like a track ("start my day", "start over", "start the upload" no longer play music).
+- [ ] Phone walkthrough of a real uploaded song (art + play buttons) still needs you signed in on the device.
