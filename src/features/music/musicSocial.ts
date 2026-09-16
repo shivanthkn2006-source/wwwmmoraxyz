@@ -33,8 +33,10 @@ function trackColumns(track: MusicTrack) {
     track_artist: track.artist ?? null,
     track_artwork: track.artwork ?? null,
     track_source: track.source ?? null,
+    track_url: track.url ?? null,
   };
 }
+
 
 /** Reaction ids the current user has already left on the given track. */
 export async function fetchMyReactions(trackIds: string[]): Promise<Record<string, MusicReactionId[]>> {
