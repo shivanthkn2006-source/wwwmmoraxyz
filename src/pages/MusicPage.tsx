@@ -209,11 +209,18 @@ export default function MusicPage() {
                 ))}
               </div>
               <p className="music-liquid-side-title">Radio</p>
-              <div className="mb-4 flex flex-wrap gap-1.5">
-                {MUSIC_STATIONS.map((station) => (
-                  <button key={station.id} type="button" className="music-liquid-chip" onClick={() => { musicEngine.unlock(); void search(station.query, 'radio'); }}>{station.label}</button>
+              <div className="mb-2 flex flex-wrap gap-1.5">
+                {MUSIC_RADIO_TAGS.map((tag) => (
+                  <button key={tag} type="button" className={`music-liquid-chip ${stationTag === tag ? 'is-active' : ''}`} onClick={() => { musicEngine.unlock(); void loadStations(tag); }}>{tag}</button>
                 ))}
               </div>
+              {stations.length > 0 && (
+                <div className="mb-4 flex flex-col gap-1.5">
+                  {stations.map((station) => (
+                    <button key={station.id} type="button" className="music-liquid-chip text-left" onClick={() => { musicEngine.unlock(); void musicEngine.playQueue(stations, stations.indexOf(station)); }}>{station.title}</button>
+                  ))}
+                </div>
+              )}
               {artists.length > 0 && (
                 <>
                   <p className="music-liquid-side-title">Artists</p>
@@ -226,12 +233,22 @@ export default function MusicPage() {
               )}
               <p className="music-liquid-side-title">Playlists</p>
               <div className="flex flex-wrap gap-1.5">
-                <button type="button" className={`music-liquid-chip ${tab === 'library' ? 'is-active' : ''}`} onClick={() => setTab('library')}>My library ({savedTracks.length})</button>
+                <button type="button" className={`music-liquid-chip ${tab === 'library' && !selectedPlaylist ? 'is-active' : ''}`} onClick={() => { setSelectedPlaylist(null); setTab('library'); }}>My library ({savedTracks.length})</button>
                 {Object.keys(library.playlists).map((name) => (
-                  <button key={name} type="button" className="music-liquid-chip" onClick={() => setTab('library')}>{name}</button>
+                  <button
+                    key={name}
+                    type="button"
+                    className={`music-liquid-chip ${selectedPlaylist === name ? 'is-active' : ''}`}
+                    onClick={() => { setSelectedPlaylist(name); setTab('library'); }}
+                    onDoubleClick={() => { removePlaylist(name); setSelectedPlaylist(null); }}
+                    title="Double-tap to delete this playlist"
+                  >
+                    {name} ({library.playlists[name].length})
+                  </button>
                 ))}
               </div>
             </aside>
+
 
             {/* Search + now listening + transport */}
             <section className="music-liquid-player order-1 flex min-h-0 flex-col gap-3 p-3 sm:p-4 lg:order-2">
