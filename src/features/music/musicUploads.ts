@@ -79,6 +79,7 @@ async function signedUrl(path: string | null): Promise<string | undefined> {
 async function rowsToTracks(rows: UploadRow[]): Promise<MusicTrack[]> {
   return Promise.all(rows.map(async (row) => ({
     id: `upload:${row.id}`,
+    uploadId: row.id,
     title: row.title,
     artist: row.artist,
     album: row.album ?? undefined,
@@ -88,6 +89,25 @@ async function rowsToTracks(rows: UploadRow[]): Promise<MusicTrack[]> {
     source: 'upload' as const,
     credit: 'My upload',
   }))).then((tracks) => tracks.filter((track) => Boolean(track.url)));
+}
+
+/**
+ * Uploads are stored privately, so their playable link is only valid for a
+ * limited time. Playback always mints a fresh link (and fresh album art) from
+ * the stable upload id, which is what keeps saved songs and listening history
+ * playable days later.
+ */
+export async function refreshUploadTrack(track: MusicTrack): Promise<MusicTrack | null> {
+  const id = (track as MusicTrack & { uploadId?: string }).uploadId ?? track.id.replace(/^upload:/, '');
+  if (!id) return null;
+  const { data, error } = await supabase
+    .from('music_uploads')
+    .select('id,title,artist,album,storage_path,artwork_path,duration_seconds')
+    .eq('id', id)
+    .maybeSingle();
+  if (error || !data) return null;
+  const [fresh] = await rowsToTracks([data as UploadRow]);
+  return fresh ?? null;
 }
 
 export async function listMyUploads(): Promise<MusicTrack[]> {
