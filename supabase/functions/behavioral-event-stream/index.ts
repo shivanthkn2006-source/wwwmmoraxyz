@@ -147,10 +147,13 @@ serve(async (req) => {
         retryable: true,
         reason: 'anonymous_request',
       }), {
-        status: 401,
+        // 202: nothing stored, but this is an expected signed-out state, not an
+        // error the client should surface as a failed request.
+        status: 202,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -169,7 +172,9 @@ serve(async (req) => {
         retryable: true,
         reason: 'invalid_session',
       }), {
-        status: 401,
+        // Expected when a token expires; client re-queues on success:false.
+        status: 202,
+
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
