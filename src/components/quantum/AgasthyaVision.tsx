@@ -516,9 +516,7 @@ const AgasthyaVision: React.FC = () => {
   
   return (
     <div className="agasthya-liquid music-liquid-page min-h-screen p-4 md:p-8">
-      
-      
-      <div className="relative z-10 max-w-6xl mx-auto">
+      <div className="music-liquid-shell relative z-10 w-full">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
