@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { logMusicEvent } from './musicDiagnostics';
 import type { MusicTrack } from './musicProviders';
 
 const BUCKET = 'music-uploads';
