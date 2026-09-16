@@ -100,8 +100,12 @@ export function resolveMusicIntent(raw: string): MusicIntent | null {
   }
 
   // ── playback requests ──
-  const play = text.match(/^(?:play|put on|start playing)\s+(.+)$/);
+  // "play …" / "put on …" / "start playing …" are treated as playback verbs.
+  // A bare "start …" only counts when the rest clearly sounds like a track
+  // (mentions music, names an artist with "by", or is a quoted title).
+  const play = text.match(/^(?:play|put on|start playing|start)\s+(.+)$/);
   if (!play) return null;
+  const bareStart = /^start\s/.test(text) && !/^start playing\s/.test(text);
   let body = play[1]
     .replace(/^(?:me|us)\s+/, '')
     .replace(/^(?:a|an|the|some)\s+/, '')
@@ -110,7 +114,17 @@ export function resolveMusicIntent(raw: string): MusicIntent | null {
     .trim();
   if (!body) return null;
   if (/^(fair|nice|safe|along|dead|dumb|pretend|with (me|us)|a game)$/.test(body)) return null;
+  if (NON_MUSIC_REQUEST.test(body)) return null;
   if (OTHER_MEDIA_OR_ACTION.test(body) && !MUSIC_WORD.test(body)) return null;
+  if (bareStart) {
+    const soundsLikeATrack = MUSIC_WORD.test(body)
+      || /\bby\s+\w+/.test(body)
+      || /['’"]/.test(raw)
+      || GENRES.some((g) => body.includes(g))
+      || Object.keys(MOODS).some((m) => new RegExp(`\\b${m}\\b`).test(body));
+    if (!soundsLikeATrack) return null;
+  }
+
 
   // "play a song based on my current mood" / "play something for my mood"
   if (/\b(my (current )?mood|how i (feel|am feeling)|based on my mood)\b/.test(body)) {
