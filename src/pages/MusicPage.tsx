@@ -357,13 +357,17 @@ export default function MusicPage() {
                     </section>
                   ))}
                 </div>
-              ) : savedTracks.length ? (
-                <ol className="space-y-1">
-                  {savedTracks.map((track, i) => trackRow(track, i, () => { musicEngine.unlock(); void musicEngine.playQueue(savedTracks, i); }))}
-                </ol>
+              ) : libraryTracks.length ? (
+                <>
+                  <p className="mb-2 text-[11px] text-white/50">{selectedPlaylist ? `${selectedPlaylist} · ${libraryTracks.length} tracks` : `Saved songs · ${libraryTracks.length}`}</p>
+                  <ol className="space-y-1">
+                    {libraryTracks.map((track, i) => trackRow(track, i, () => { musicEngine.unlock(); void musicEngine.playQueue(libraryTracks, i); }))}
+                  </ol>
+                </>
               ) : (
-                <p className="text-sm text-white/50">Tap the heart beside any track to build your library.</p>
+                <p className="text-sm text-white/50">{selectedPlaylist ? 'This playlist is empty. Use the plus beside any track to add songs.' : 'Tap the heart beside any track to build your library.'}</p>
               )}
+
 
               {state.queue.length > 0 && (
                 <section className="mt-5">
