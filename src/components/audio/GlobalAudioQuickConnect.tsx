@@ -105,7 +105,10 @@ export const GlobalAudioQuickConnect: React.FC = () => {
   return (
     // Small round icon only, parked immediately to the LEFT of the header
     // notification bell (bell 40px + 8px gap + 40px avatar + 16px inset).
-    <div className="fixed top-[18px] right-[104px] z-[55] flex items-center gap-2 pointer-events-auto">
+    <div
+      className={`fixed right-[104px] z-[55] flex items-center gap-2 pointer-events-auto ${pathname === '/music' ? 'top-2' : 'top-[18px]'}`}
+      data-global-audio-quick-connect
+    >
       {muted && (
         <span role="status" aria-live="polite" className="rounded-md border border-border bg-background/90 px-2 py-1 text-[10px] text-muted-foreground shadow-sm backdrop-blur">
           Muted · say “Zoe wake”

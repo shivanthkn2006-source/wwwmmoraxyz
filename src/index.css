@@ -1290,6 +1290,40 @@ html.phantom-mode [class*="animate-"] {
   color: hsl(0 0% 100%);
 }
 
+/* Seven Home actions always stay on one row. Width and height both
+   participate so narrow foldables and short landscape screens retain all
+   four rows without changing the icons or their destinations. */
+.home-dock-root {
+  --home-dock-cell: clamp(
+    1.875rem,
+    min(calc((100vw - 4rem) / 7), calc((100dvh - 4.75rem) / 5)),
+    2.75rem
+  );
+  --home-dock-gap: clamp(0.2rem, 1.2vmin, 0.5rem);
+  --home-dock-pad: clamp(0.35rem, 1.6vmin, 0.5rem);
+  --home-dock-panel-width: calc(
+    (7 * var(--home-dock-cell)) + (6 * var(--home-dock-gap)) + (2 * var(--home-dock-pad))
+  );
+}
+
+.home-dock-root [data-home-dock-grid] {
+  width: calc((7 * var(--home-dock-cell)) + (6 * var(--home-dock-gap)));
+}
+
+.home-dock-root [data-home-dock-grid] svg {
+  width: min(1.375rem, calc(var(--home-dock-cell) * 0.58));
+  height: min(1.375rem, calc(var(--home-dock-cell) * 0.58));
+}
+
+/* Labels remain inside their own icon cell and never escape above or below
+   the glass panel. Screen-reader names remain available through aria-label. */
+.home-dock-root .home-dock-label {
+  max-height: calc(var(--home-dock-cell) - 0.25rem);
+  max-width: calc(var(--home-dock-cell) - 0.2rem);
+  overflow: hidden;
+  font-size: clamp(0.42rem, calc(var(--home-dock-cell) * 0.18), 0.625rem);
+}
+
 /* Ambient light room behind the glass: warm and clearly colored, but kept
    at a mid tone so the white Music text and icons stay legible. */
 .music-liquid-page::before {
