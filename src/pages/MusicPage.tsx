@@ -313,23 +313,27 @@ export default function MusicPage() {
 
             {/* Results / library */}
             <aside className="music-liquid-queue music-align-search order-3 max-h-[46dvh] overflow-y-auto p-3 lg:max-h-none">
-              <div className="mb-3 flex gap-1.5">
+              <div className="mb-3 flex flex-wrap gap-1.5">
                 <button type="button" className={`music-liquid-chip ${tab === 'results' ? 'is-active' : ''}`} onClick={() => setTab('results')}>Results{results ? ` (${results.tracks.length})` : ''}</button>
-                <button type="button" className={`music-liquid-chip ${tab === 'library' ? 'is-active' : ''}`} onClick={() => setTab('library')}>Library ({savedTracks.length})</button>
+                <button type="button" className={`music-liquid-chip ${tab === 'library' ? 'is-active' : ''}`} onClick={() => { setSelectedPlaylist(null); setTab('library'); }}>Library ({savedTracks.length})</button>
                 <button type="button" className={`music-liquid-chip ${tab === 'community' ? 'is-active' : ''}`} onClick={() => setTab('community')}>Community</button>
+                {tab === 'results' && (
+                  <button type="button" className={`music-liquid-chip ${fullOnly ? 'is-active' : ''}`} onClick={() => setFullOnly((value) => !value)} aria-pressed={fullOnly}>Full tracks</button>
+                )}
               </div>
 
               {tab === 'results' ? (
-                results && results.tracks.length ? (
+                visibleResults.length ? (
                   <>
-                    <p className="mb-2 text-[11px] text-white/50">{results.tracks.length} matches{results.corrected ? ` for “${results.query}”` : ''}</p>
+                    <p className="mb-2 text-[11px] text-white/50">{visibleResults.length} {fullOnly ? 'full-length tracks' : 'matches'}{results?.corrected ? ` for “${results.query}”` : ''}</p>
                     <ol className="space-y-1">
-                      {results.tracks.map((track, i) => trackRow(track, i, () => { musicEngine.unlock(); void musicEngine.playQueue(results.tracks, i); }))}
+                      {visibleResults.map((track, i) => trackRow(track, i, () => { musicEngine.unlock(); void musicEngine.playQueue(visibleResults, i); }))}
                     </ol>
                   </>
                 ) : (
-                  <p className="text-sm text-white/50">Search a song, artist, album, genre or station to see results here.</p>
+                  <p className="text-sm text-white/50">{results?.tracks.length ? 'No full-length recording in these results. Turn off “Full tracks” to see catalogue previews and live radio.' : 'Search a song, artist, album, genre or station to see results here.'}</p>
                 )
+
               ) : tab === 'community' ? (
                 <div className="space-y-4">
                   {chart.every((section) => !section.tracks.length) && <p className="text-sm text-white/50">No reactions yet. Use the smilies to start these lists.</p>}
