@@ -277,7 +277,7 @@ export default function MusicPage() {
                 <Textarea
                   ref={searchInputRef}
                   rows={1}
-                  className="music-search-input min-h-10 resize-none overflow-y-auto border-0 bg-transparent text-white shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                  className="music-search-input min-h-10 resize-none overflow-y-auto border-0 bg-transparent px-3 py-2 pr-0.5 text-white shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   onKeyDown={(e) => {
@@ -288,7 +288,7 @@ export default function MusicPage() {
                   aria-label="Search music"
                   autoComplete="off"
                 />
-                <Button className="music-search-submit h-10 w-10" type="submit" variant="ghost" size="icon" disabled={searching} aria-label={searching ? 'Searching' : 'Search'}><Search aria-hidden="true" /></Button>
+                <Button className="music-search-submit h-10 w-9" type="submit" variant="ghost" size="icon" disabled={searching} aria-label={searching ? 'Searching' : 'Search'}><Search aria-hidden="true" /></Button>
               </form>
 
               {/* Current artwork sits directly under the search bar. */}

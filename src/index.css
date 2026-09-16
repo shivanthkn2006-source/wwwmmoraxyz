@@ -1363,13 +1363,16 @@ html.phantom-mode [class*="animate-"] {
   width: 100%;
   min-width: 0;
   align-items: flex-start;
+  gap: 0;
   overflow: hidden;
 }
 
+/* Text runs all the way to the icon: no dead padding before the glyph. */
 .music-search-input {
   min-width: 0;
   max-height: 6rem;
   line-height: 1.25rem;
+  padding-right: 0.125rem;
   scrollbar-width: none;
 }
 
@@ -1377,8 +1380,14 @@ html.phantom-mode [class*="animate-"] {
   display: none;
 }
 
+/* The submit control is a bare glyph: no shell, ring, or tap highlight on
+   any platform, and only the icon's own width between text and symbol. */
 .music-search-submit {
-  flex: 0 0 2.5rem;
+  flex: 0 0 2.25rem;
+  width: 2.25rem;
+  -webkit-appearance: none;
+  appearance: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .music-current-track,
