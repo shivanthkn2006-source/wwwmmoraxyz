@@ -161,7 +161,7 @@ export default function MusicPage() {
       <Button variant="ghost" className="music-liquid-track h-auto min-w-0 flex-1 justify-start whitespace-normal px-2.5 py-2.5 text-left" onClick={onPlay}>
         <span className="flex min-w-0 items-center gap-2.5">
           <span className="music-liquid-track-index flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full text-[11px]">
-            {track.artwork ? <img src={track.artwork} alt="" className="h-full w-full object-cover" loading="lazy" decoding="async" /> : String(index + 1).padStart(2, '0')}
+            <TrackArtwork src={track.artwork} trackId={track.id} uploadId={(track as MusicTrack & { uploadId?: string }).uploadId} className="h-full w-full object-cover" fallback={String(index + 1).padStart(2, '0')} />
           </span>
           <span className="min-w-0 flex-1">
             <span className="block truncate text-sm font-medium text-white">{track.title}</span>
