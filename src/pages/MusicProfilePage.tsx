@@ -132,6 +132,13 @@ export default function MusicProfilePage() {
         </div>
 
         {notice && <p role="status" aria-live="polite" className="text-xs text-white/70">{notice}</p>}
+
+        <div className="pb-6">
+          <Button variant="ghost" aria-label="Save my music taste" disabled={saving} onClick={() => void save()} className="w-full gap-2">
+            <Check /> Save my taste
+          </Button>
+        </div>
+
       </section>
     </main>
   );
