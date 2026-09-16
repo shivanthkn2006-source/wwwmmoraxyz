@@ -75,6 +75,31 @@ export default function GlobalMusicToggle() {
     };
   }, [clamp]);
 
+  // Default home: park the collapsed disc immediately to the right of the
+  // floating search icon. Only until the member drags it somewhere themselves.
+  useEffect(() => {
+    if (hasSavedPositionRef.current) return;
+    let frame = 0;
+    let attempts = 0;
+    const anchor = () => {
+      const control = document.querySelector<HTMLElement>(SEARCH_CONTROL_SELECTOR);
+      if (!control) {
+        if (attempts++ < 30) frame = window.requestAnimationFrame(anchor);
+        return;
+      }
+      const bounds = control.getBoundingClientRect();
+      const height = playerRef.current?.offsetHeight ?? 36;
+      const anchored = clamp({
+        x: bounds.right + SEARCH_GAP,
+        y: bounds.top + (bounds.height - height) / 2,
+      });
+      positionRef.current = anchored;
+      setPosition(anchored);
+    };
+    frame = window.requestAnimationFrame(anchor);
+    return () => window.cancelAnimationFrame(frame);
+  }, [clamp, location.pathname, state.track?.id]);
+
   useEffect(() => {
     if (location.pathname !== '/music') return;
     const animationFrame = window.requestAnimationFrame(() => {
