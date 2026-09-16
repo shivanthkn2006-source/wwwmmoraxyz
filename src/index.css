@@ -6512,6 +6512,9 @@ body {
 /* The gradient-clipped headline becomes plain white, like the Music title. */
 .agasthya-liquid h1 {
   background: none !important;
+  background-color: transparent !important;
+  background-clip: border-box !important;
+  -webkit-background-clip: border-box !important;
   -webkit-text-fill-color: hsl(0 0% 100%) !important;
   letter-spacing: 0.01em;
 }
