@@ -23,6 +23,9 @@ import WorldStateController from '@/components/vr/WorldStateController';
 import ReturnToRealityButton from '@/components/vr/ReturnToRealityButton';
 import VRTestSuite from '@/components/vr/VRTestSuite';
 import WarpGateButton from '@/components/evolution/WarpGateButton';
+import VRDraggablePanel from '@/components/vr/VRDraggablePanel';
+import VRControlsGuide, { type VRPanelToggle } from '@/components/vr/VRControlsGuide';
+import useVRLandscapeOrientation from '@/hooks/useVRLandscapeOrientation';
 import { VRStasisPlaceholder } from '@/components/performance';
 import { markVRAudioLocked, markVRAudioUnlocked } from '@/lib/vrAudioGate';
 
@@ -431,6 +434,30 @@ const ZoeOmegaPage: React.FC = () => {
   const [vrStasisActive, setVrStasisActive] = useState(!directVR); // VR Stasis Protocol - starts in stasis unless launched directly into VR
   const [isSoundEnabled, setIsSoundEnabled] = useState(true);
   const soundEngineRef = useRef<OmegaSoundEngine | null>(null);
+
+  // Landscape-first VR entry (auto lock + rotate prompt on touch devices)
+  const { needsRotate, requestLandscape } = useVRLandscapeOrientation(isVRMode);
+
+  // VR panel visibility - every panel stays discoverable through the Panels hub
+  const [vrPanels, setVrPanels] = useState({
+    identity: true,
+    hud: true,
+    dreamscape: true,
+    timeline: true,
+    omniBox: true,
+    diagnostics: true,
+  });
+  const toggleVrPanel = useCallback((key: keyof typeof vrPanels) => {
+    setVrPanels(prev => ({ ...prev, [key]: !prev[key] }));
+  }, []);
+  const vrPanelToggles: VRPanelToggle[] = [
+    { id: 'identity', label: 'Zoe Omega badge', visible: vrPanels.identity, onToggle: () => toggleVrPanel('identity') },
+    { id: 'hud', label: 'Mind HUD', visible: vrPanels.hud, onToggle: () => toggleVrPanel('hud') },
+    { id: 'dreamscape', label: 'Dreamscape moods', visible: vrPanels.dreamscape, onToggle: () => toggleVrPanel('dreamscape') },
+    { id: 'timeline', label: 'Chrono timeline', visible: vrPanels.timeline, onToggle: () => toggleVrPanel('timeline') },
+    { id: 'omniBox', label: 'Genesis omni-box', visible: vrPanels.omniBox, onToggle: () => toggleVrPanel('omniBox') },
+    { id: 'diagnostics', label: 'Diagnostics', visible: vrPanels.diagnostics, onToggle: () => toggleVrPanel('diagnostics') },
+  ];
 
   // Strict VR audio gate: only unlocked when immersive VR is explicitly entered
   useEffect(() => {
@@ -963,22 +990,39 @@ const ZoeOmegaPage: React.FC = () => {
                 </VRLoadingWrapper>
               </VRErrorBoundary>
 
-              {/* VR Mode Floating Controls - replaces hidden header controls */}
-              <div className="fixed top-4 left-4 z-[9995] flex items-center gap-3">
-                {/* ZOE OMEGA branding */}
-                <div className="flex items-center gap-2 bg-black/60 backdrop-blur-md rounded-lg px-3 py-2 border border-purple-500/30">
-                  <div className="animate-gpu-spin-slow">
-                    <Brain className="w-5 h-5 text-purple-400" />
+              {/* VR Mode Floating Controls - draggable + tap to drop down */}
+              {vrPanels.identity && (
+                <VRDraggablePanel
+                  id="omega-identity"
+                  title="Zoe Omega"
+                  icon={<Brain className="w-3.5 h-3.5 text-purple-300" />}
+                  positionClassName="fixed top-4 left-4 z-[9995]"
+                  defaultOpen={false}
+                >
+                  <div className="flex items-center gap-3">
+                    {/* ZOE OMEGA branding */}
+                    <div className="flex items-center gap-2 bg-black/60 backdrop-blur-md rounded-lg px-3 py-2 border border-purple-500/30">
+                      <div className="animate-gpu-spin-slow">
+                        <Brain className="w-5 h-5 text-purple-400" />
+                      </div>
+                      <div>
+                        <h1 className="text-sm font-bold text-white/90">ZOE OMEGA</h1>
+                        <p className="text-[10px] text-purple-300/60">Bi-Cameral Consciousness</p>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <h1 className="text-sm font-bold text-white/90">ZOE OMEGA</h1>
-                    <p className="text-[10px] text-purple-300/60">Bi-Cameral Consciousness</p>
-                  </div>
-                </div>
-              </div>
+                </VRDraggablePanel>
+              )}
 
-              {/* VR Mode Top Right Controls */}
-              <div className="fixed top-4 right-4 z-[9995] flex items-center gap-2">
+              {/* VR Mode Top Right Controls - draggable + tap to drop down */}
+              <VRDraggablePanel
+                id="omega-session"
+                title="Session"
+                icon={<Box className="w-3.5 h-3.5 text-cyan-300" />}
+                positionClassName="fixed top-4 right-4 z-[9995]"
+                className="items-end"
+                contentClassName="flex items-center gap-2"
+              >
                 {/* Sound Toggle */}
                 <motion.button
                   onClick={() => setIsSoundEnabled(!isSoundEnabled)}
@@ -1015,37 +1059,42 @@ const ZoeOmegaPage: React.FC = () => {
                     {integrityLevel.toFixed(0)}%
                   </div>
                 </div>
-              </div>
+              </VRDraggablePanel>
 
-              {/* Dreamscape World Controller - positioned to not overlap */}
-              <WorldStateController
-                moodState={worldMoodState}
-                onMoodChange={(mood) => {
-                  setWorldMoodState(mood);
-                  logOmegaEvent('dreamscape_mood_change', { mood });
-                }}
-                onAutoOverrideChange={(enabled) => {
-                  setZoeAutoOverride(enabled);
-                  logOmegaEvent('zoe_override_toggle', { enabled });
-                }}
-                autoOverride={zoeAutoOverride}
-              />
+              {/* Dreamscape World Controller - already draggable & collapsible */}
+              {vrPanels.dreamscape && (
+                <WorldStateController
+                  moodState={worldMoodState}
+                  onMoodChange={(mood) => {
+                    setWorldMoodState(mood);
+                    logOmegaEvent('dreamscape_mood_change', { mood });
+                  }}
+                  onAutoOverrideChange={(enabled) => {
+                    setZoeAutoOverride(enabled);
+                    logOmegaEvent('zoe_override_toggle', { enabled });
+                  }}
+                  autoOverride={zoeAutoOverride}
+                />
+              )}
 
-              {/* Chrono-Echo Timeline */}
-              <TimeManipulationBar
-                events={timelineEvents}
-                currentTime={currentTimePosition}
-                maxTime={60}
-                onTimeChange={(time) => {
-                  setCurrentTimePosition(time);
-                  logOmegaEvent('chrono_echo_scrub', { position: time });
-                }}
-                onPlayPause={(playing) => {
-                  setIsTimelinePlaying(playing);
-                  logOmegaEvent('chrono_echo_playback', { playing });
-                }}
-                isPlaying={isTimelinePlaying}
-              />
+              {/* Chrono-Echo Timeline - already draggable & collapsible */}
+              {vrPanels.timeline && (
+                <TimeManipulationBar
+                  events={timelineEvents}
+                  currentTime={currentTimePosition}
+                  maxTime={60}
+                  onTimeChange={(time) => {
+                    setCurrentTimePosition(time);
+                    logOmegaEvent('chrono_echo_scrub', { position: time });
+                  }}
+                  onPlayPause={(playing) => {
+                    setIsTimelinePlaying(playing);
+                    logOmegaEvent('chrono_echo_playback', { playing });
+                  }}
+                  isPlaying={isTimelinePlaying}
+                />
+              )}
+
             </motion.div>
             )
           ) : (
@@ -1276,48 +1325,63 @@ const ZoeOmegaPage: React.FC = () => {
         {/* Economy Wallet - Top Right */}
         <EconomyWallet />
 
-        {/* VR Test Suite - Debug Panel (Top Right below wallet) */}
-        {isVRMode && (
-          <div className="fixed top-20 right-4 z-30">
+        {/* VR Test Suite - Debug Panel (draggable + tap to drop down) */}
+        {isVRMode && vrPanels.diagnostics && (
+          <VRDraggablePanel
+            id="omega-diagnostics"
+            title="Diagnostics"
+            icon={<Cpu className="w-3.5 h-3.5 text-cyan-300" />}
+            positionClassName="fixed top-20 right-4 z-[9994]"
+            defaultOpen={false}
+          >
             <VRTestSuite />
-          </div>
+          </VRDraggablePanel>
         )}
 
         {/* Genesis Omni-Box - Bottom Center (only in VR mode) */}
-        {isVRMode && <GenesisOmniBox />}
+        {isVRMode && vrPanels.omniBox && <GenesisOmniBox />}
 
-        {/* Bi-Cameral HUD Overlay (VR mode) - positioned to avoid overlaps */}
+        {/* Bi-Cameral HUD Overlay (VR mode) - draggable + tap to drop down */}
         <AnimatePresence mode="sync">
-          {isVRMode && (
-            <motion.div
+          {isVRMode && vrPanels.hud && (
+            <VRDraggablePanel
               key="bicameral-hud-overlay"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed left-2 sm:left-4 top-20 bottom-36 sm:bottom-32 z-30 pointer-events-none w-64 sm:w-72 md:w-80 lg:w-96 max-w-[40vw]"
+              id="omega-hud"
+              title="Mind HUD"
+              icon={<Brain className="w-3.5 h-3.5 text-purple-300" />}
+              positionClassName="fixed left-2 sm:left-4 top-20 z-30"
+              contentClassName="w-64 sm:w-72 md:w-80 lg:w-96 max-w-[40vw] h-[45vh] sm:h-[50vh] overflow-hidden rounded-2xl"
             >
-              <div className="pointer-events-auto h-full overflow-hidden rounded-2xl">
-                <BiCameralHUD
-                  logicStream={oodaLogs.slice(-5).map(log => `[${log.phase}] ${log.content}`)}
-                  dreamStream={[
-                    emotionalResponse.content,
-                    '~ neural pathways harmonizing ~',
-                    '~ consciousness expanding ~'
-                  ]}
-                  emotionalState={
-                    emotionalResponse.emotion === 'joy' ? 'joy' :
-                    emotionalResponse.emotion === 'engaged' ? 'focused' :
-                    emotionalResponse.emotion === 'reconciled' ? 'creative' :
-                    'neutral'
-                  }
-                />
-              </div>
-            </motion.div>
+              <BiCameralHUD
+                logicStream={oodaLogs.slice(-5).map(log => `[${log.phase}] ${log.content}`)}
+                dreamStream={[
+                  emotionalResponse.content,
+                  '~ neural pathways harmonizing ~',
+                  '~ consciousness expanding ~'
+                ]}
+                emotionalState={
+                  emotionalResponse.emotion === 'joy' ? 'joy' :
+                  emotionalResponse.emotion === 'engaged' ? 'focused' :
+                  emotionalResponse.emotion === 'reconciled' ? 'creative' :
+                  'neutral'
+                }
+              />
+            </VRDraggablePanel>
           )}
         </AnimatePresence>
 
+        {/* Panels hub + touch/drag guide + landscape prompt (VR mode only) */}
+        {isVRMode && (
+          <VRControlsGuide
+            panels={vrPanelToggles}
+            needsRotate={needsRotate}
+            onRequestLandscape={() => { void requestLandscape(); }}
+          />
+        )}
+
         {/* Return to Reality button - Draggable & Compact */}
         <ReturnToRealityButton onReturn={handleReturnToReality} />
+
       </motion.div>
     </>
   );
