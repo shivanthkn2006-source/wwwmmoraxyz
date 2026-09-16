@@ -46,7 +46,7 @@ export const useVRLandscapeOrientation = (active: boolean): VRLandscapeState => 
 
   const requestLandscape = useCallback(async () => {
     if (typeof window === 'undefined' || typeof document === 'undefined') return;
-    const orientation = window.screen?.orientation as ScreenOrientationLockable | undefined;
+    const orientation = window.screen?.orientation as unknown as ScreenOrientationLockable | undefined;
 
     try {
       // Android/Chrome require fullscreen before an orientation lock is allowed.
@@ -68,7 +68,7 @@ export const useVRLandscapeOrientation = (active: boolean): VRLandscapeState => 
 
   const releaseLandscape = useCallback(() => {
     if (typeof window === 'undefined') return;
-    const orientation = window.screen?.orientation as ScreenOrientationLockable | undefined;
+    const orientation = window.screen?.orientation as unknown as ScreenOrientationLockable | undefined;
     try {
       orientation?.unlock?.();
     } catch {
