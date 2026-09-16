@@ -177,3 +177,38 @@ export async function fetchMemberListening(limitMembers = 8): Promise<MemberList
   }).filter((member) => member.tracks.length > 0);
 }
 
+
+export interface MyListeningTrack extends MusicTrack {
+  playCount: number;
+  lastPlayedAt: string;
+}
+
+/** The signed-in member's real listening totals, with playable metadata. */
+export async function fetchMyListening(): Promise<MyListeningTrack[]> {
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) return [];
+  const { data } = await supabase
+    .from('music_listens')
+    .select('track_id,track_title,track_artist,track_artwork,track_source,track_url,created_at')
+    .eq('user_id', auth.user.id)
+    .order('created_at', { ascending: false })
+    .limit(1000);
+  const grouped = new Map<string, MyListeningTrack>();
+  for (const row of data ?? []) {
+    if (!row.track_id || !row.track_url) continue;
+    const existing = grouped.get(row.track_id);
+    if (existing) { existing.playCount += 1; continue; }
+    grouped.set(row.track_id, {
+      id: row.track_id,
+      title: row.track_title || 'Untitled',
+      artist: row.track_artist || 'Unknown artist',
+      artwork: row.track_artwork || undefined,
+      url: row.track_url,
+      source: (row.track_source as MusicTrack['source']) || 'archive',
+      credit: 'My listening history',
+      playCount: 1,
+      lastPlayedAt: row.created_at,
+    });
+  }
+  return [...grouped.values()].sort((a, b) => b.playCount - a.playCount || b.lastPlayedAt.localeCompare(a.lastPlayedAt)).slice(0, 25);
+}
