@@ -28,6 +28,7 @@ class MusicEngineImpl {
   private unlocked = false;
   private nativeReady = false;
   private failedIndexes = new Set<number>();
+  private uploadRetries = new Set<number>();
   private shuffledIndices: number[] = [];
 
   private state: MusicState = {
