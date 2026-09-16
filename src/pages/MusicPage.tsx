@@ -170,8 +170,18 @@ export default function MusicPage() {
       >
         <Heart className={isSaved(track.id) ? 'fill-current' : ''} />
       </IconControl>
+      <IconControl
+        className="music-liquid-save h-9 w-9 shrink-0 rounded-full"
+        variant="ghost"
+        size="icon"
+        onClick={() => saveToPlaylist(track)}
+        label={`Add ${track.title} to a playlist`}
+      >
+        <Plus />
+      </IconControl>
     </li>
   );
+
 
   const savedTracks = library.saved;
   const artists = useMemo(() => {
