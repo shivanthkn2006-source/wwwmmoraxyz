@@ -246,15 +246,18 @@ serve(async (req) => {
               asiMode: computedASIMode,
             },
           }),
+          signal: AbortSignal.timeout(6_500),
         });
         
         if (pentarchyResponse.ok) {
           const pentarchyData = await pentarchyResponse.json();
           asiResult = {
-            synthesizedResponse: pentarchyData.synthesizedAnswer || pentarchyData.message,
-            confidence: pentarchyData.confidence || 85,
+            synthesizedResponse: pentarchyData.success ? pentarchyData.response : undefined,
+            confidence: typeof pentarchyData.details?.confidence === 'number'
+              ? pentarchyData.details.confidence * 100
+              : undefined,
             asiLevel: 7.5,
-            pentarchyUsed: true,
+            pentarchyUsed: Boolean(pentarchyData.success && pentarchyData.response),
           };
           console.log(`[Zoe-ASI] Pentarchy synthesis complete | Confidence: ${asiResult.confidence}%`);
         } else {

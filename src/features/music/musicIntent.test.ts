@@ -17,5 +17,7 @@ describe('resolveMusicIntent', () => {
     expect(resolveMusicIntent('pause the video')).toBeNull();
     expect(resolveMusicIntent('what is the latest news')).toBeNull();
     expect(resolveMusicIntent('play fair')).toBeNull();
+    expect(resolveMusicIntent('start the god mode scan')).toBeNull();
+    expect(resolveMusicIntent('play the video I posted')).toBeNull();
   });
 });

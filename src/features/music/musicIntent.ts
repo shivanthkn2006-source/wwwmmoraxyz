@@ -16,6 +16,7 @@ export type MusicIntent =
   | { kind: 'open'; speak: string };
 
 const MUSIC_WORD = /\b(music|song|songs|track|tracks|playlist|radio|station|satellite|album|tune|tunes)\b/;
+const OTHER_MEDIA_OR_ACTION = /\b(video|movie|film|reel|post|game|scan|audit|check|resume|presentation|slideshow|animation|recording)\b/;
 
 const MOODS: Record<string, string> = {
   happy: 'happy',
@@ -99,7 +100,7 @@ export function resolveMusicIntent(raw: string): MusicIntent | null {
   }
 
   // ── playback requests ──
-  const play = text.match(/^(?:play|put on|start playing|start)\s+(.+)$/);
+  const play = text.match(/^(?:play|put on|start playing)\s+(.+)$/);
   if (!play) return null;
   let body = play[1]
     .replace(/^(?:me|us)\s+/, '')
@@ -109,6 +110,7 @@ export function resolveMusicIntent(raw: string): MusicIntent | null {
     .trim();
   if (!body) return null;
   if (/^(fair|nice|safe|along|dead|dumb|pretend|with (me|us)|a game)$/.test(body)) return null;
+  if (OTHER_MEDIA_OR_ACTION.test(body) && !MUSIC_WORD.test(body)) return null;
 
   // "play a song based on my current mood" / "play something for my mood"
   if (/\b(my (current )?mood|how i (feel|am feeling)|based on my mood)\b/.test(body)) {

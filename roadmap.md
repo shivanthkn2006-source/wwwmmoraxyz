@@ -59,3 +59,9 @@
 - [x] Remove Music-page text/chip surfaces and the search rectangle so only text, cursor, and search glyph remain.
 - [x] Add a plain white upload symbol below Music search, with compressed personal music uploads appearing in search.
 - [x] Replace the Home listening shelf with the signed-in user's real play counts, keeping Music styling and a shelf symbol.
+
+## Monitoring fixes (Sep 16)
+- [x] Repair friend-listening writes and permit the existing friend music notification type.
+- [x] Bound Pentarchy processing time and consume its actual response contract in Zoe chat.
+- [x] Restore Music safe-area spacing without changing its visual design.
+- [x] Prevent non-music “play” and “start” commands from being routed into Music.
