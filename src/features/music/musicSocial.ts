@@ -33,7 +33,9 @@ function trackColumns(track: MusicTrack) {
     track_artist: track.artist ?? null,
     track_artwork: track.artwork ?? null,
     track_source: track.source ?? null,
-    track_url: track.url ?? null,
+    // A private upload's link expires, so the stable upload id is stored instead
+    // and re-signed when the track is played again.
+    track_url: (track.source === 'upload' ? track.id : track.url) ?? null,
   };
 }
 
@@ -210,5 +212,22 @@ export async function fetchMyListening(): Promise<MyListeningTrack[]> {
       lastPlayedAt: row.created_at,
     });
   }
-  return [...grouped.values()].sort((a, b) => b.playCount - a.playCount || b.lastPlayedAt.localeCompare(a.lastPlayedAt)).slice(0, 25);
+  const shelf = [...grouped.values()].sort((a, b) => b.playCount - a.playCount || b.lastPlayedAt.localeCompare(a.lastPlayedAt)).slice(0, 25);
+
+  // Own uploads keep their album art behind a private link, so refresh those.
+  if (shelf.some((track) => track.source === 'upload')) {
+    try {
+      const { listMyUploads } = await import('@/features/music/musicUploads');
+      const uploads = new Map((await listMyUploads()).map((upload) => [upload.id, upload]));
+      shelf.forEach((track) => {
+        const upload = uploads.get(track.id);
+        if (!upload) return;
+        track.artwork = upload.artwork;
+        track.title = upload.title;
+        track.artist = upload.artist;
+        track.uploadId = upload.uploadId;
+      });
+    } catch { /* the shelf still plays without refreshed art */ }
+  }
+  return shelf;
 }

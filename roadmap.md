@@ -65,3 +65,12 @@
 - [x] Bound Pentarchy processing time and consume its actual response contract in Zoe chat.
 - [x] Restore Music safe-area spacing without changing its visual design.
 - [x] Prevent non-music “play” and “start” commands from being routed into Music.
+
+## Music uploads (2026-09-16)
+- [x] Upload symbol moved directly below the search icon on Music.
+- [x] Uploaded tracks re-sign their private link at play time (fixes "uploaded but won't play"); stable upload id stored in listening history.
+- [x] Compact MP3 conversion fixed (encoder module interop) so uploads stay small and playable.
+- [x] Upload/conversion/playback failures show a clear retry message, including offline.
+- [x] Home listening shelf uses my own play counts and refreshed upload album art.
+- [ ] Signed-in walkthrough of upload → search → play needs a preview sign-in (test session cannot be minted for this account).
+- [ ] Full-length YouTube playback stays limited to the official player; no hidden extraction.

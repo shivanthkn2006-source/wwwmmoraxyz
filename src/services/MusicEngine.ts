@@ -28,6 +28,7 @@ class MusicEngineImpl {
   private unlocked = false;
   private nativeReady = false;
   private failedIndexes = new Set<number>();
+  private uploadRetries = new Set<number>();
   private shuffledIndices: number[] = [];
 
   private state: MusicState = {
@@ -149,6 +150,7 @@ class MusicEngineImpl {
       return false;
     }
     this.failedIndexes.clear();
+    this.uploadRetries.clear();
     this.shuffledIndices = [];
     this.patch({ queue: tracks, index: -1, error: null });
     void import('@/services/AudioRouterService').then(({ audioRouter }) => audioRouter.refreshMediaSessionHandlers());
@@ -156,9 +158,25 @@ class MusicEngineImpl {
   }
 
   async playIndex(index: number): Promise<boolean> {
-    const track = this.state.queue[index];
+    let track = this.state.queue[index];
     if (!track) return false;
     this.patch({ index, track, status: 'buffering', position: 0, duration: 0, error: null });
+    if (track.source === 'upload') {
+      const fresh = await this.refreshUpload(track);
+      if (!fresh) {
+        this.patch({
+          status: 'error',
+          error: typeof navigator !== 'undefined' && navigator.onLine === false
+            ? 'You are offline, so your upload cannot be opened. Reconnect and press play again.'
+            : 'That upload could not be opened. Press play to try again.',
+        });
+        return false;
+      }
+      track = fresh;
+      const queue = [...this.state.queue];
+      queue[index] = fresh;
+      this.patch({ queue, track: fresh });
+    }
     if (await this.ensureNative()) {
       try {
         await nativeZoeMusicBridge.load(track);
@@ -182,8 +200,29 @@ class MusicEngineImpl {
     }
   }
 
+  /** Mints a fresh private link for one of the member's own uploads. */
+  private async refreshUpload(track: MusicTrack): Promise<MusicTrack | null> {
+    try {
+      const { refreshUploadTrack } = await import('@/features/music/musicUploads');
+      const fresh = await refreshUploadTrack(track);
+      if (fresh?.url) return fresh;
+    } catch { /* fall through to the stored link below */ }
+    return track.url && /^https:/.test(track.url) ? track : null;
+  }
+
   private async recoverFromStreamError(): Promise<void> {
     const failed = this.state.index;
+    // A member's own upload usually fails only because its private link aged
+    // out, so retry the same song once with a freshly signed link.
+    if (failed >= 0 && this.state.track?.source === 'upload' && !this.uploadRetries.has(failed)) {
+      this.uploadRetries.add(failed);
+      this.patch({ status: 'buffering', error: null });
+      if (await this.playIndex(failed)) return;
+    }
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      this.patch({ status: 'error', error: 'You are offline. Playback continues as soon as the connection is back.' });
+      return;
+    }
     if (failed >= 0) this.failedIndexes.add(failed);
     const { queue } = this.state;
     const nextIndex = queue.length
