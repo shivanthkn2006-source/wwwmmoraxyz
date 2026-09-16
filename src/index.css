@@ -6579,8 +6579,19 @@ body {
 
 /* Progress and gauge fills: white light instead of coloured bars. */
 .agasthya-liquid [role='progressbar'] > *,
-.agasthya-liquid .bg-gradient-to-r {
+.agasthya-liquid [role='progressbar'] [class*='bg-gradient'],
+.agasthya-liquid .h-8 > [class*='bg-gradient'],
+.agasthya-liquid .h-4 > [class*='bg-gradient'],
+.agasthya-liquid .h-3 > [class*='bg-gradient'],
+.agasthya-liquid .h-2 > [class*='bg-gradient'] {
   background: hsl(0 0% 100% / 0.75) !important;
+}
+
+/* Coloured inner panels flatten to the same clear glass as the outer card. */
+.agasthya-liquid div[class*='bg-'],
+.agasthya-liquid span[class*='bg-'],
+.agasthya-liquid p[class*='bg-'] {
+  background-color: transparent !important;
 }
 
 .agasthya-liquid svg {
