@@ -1315,25 +1315,33 @@ html.phantom-mode [class*="animate-"] {
   height: min(1.375rem, calc(var(--home-dock-cell) * 0.58));
 }
 
-/* Labels remain inside their own icon cell and never escape above or below
-   the glass panel. Screen-reader names remain available through aria-label. */
+/* Labels sit BELOW their icon so the glyph stays visible and tappable, and
+   stay inside the glass panel. Screen-reader names remain in aria-label. */
 .home-dock-root .home-dock-label {
-  max-height: calc(var(--home-dock-cell) - 0.25rem);
   max-width: min(9rem, calc(var(--home-dock-panel-width) - 1rem));
   overflow: hidden;
-  font-size: clamp(0.5rem, calc(var(--home-dock-cell) * 0.22), 0.625rem);
+  text-overflow: ellipsis;
+  font-size: clamp(0.5rem, calc(var(--home-dock-cell) * 0.2), 0.625rem);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
+}
+
+/* Bottom row has no space beneath it: flip those labels above the icon. */
+.home-dock-root [data-home-dock-grid] > :nth-child(n + 22) .home-dock-label {
+  top: auto;
+  bottom: 100%;
 }
 
 .home-dock-root [data-home-dock-grid] > :nth-child(7n + 1) .home-dock-label {
   left: 0;
-  transform: translateY(-50%);
+  transform: none;
 }
 
 .home-dock-root [data-home-dock-grid] > :nth-child(7n) .home-dock-label {
   right: 0;
   left: auto;
-  transform: translateY(-50%);
+  transform: none;
 }
+
 
 /* Ambient light room behind the glass: warm and clearly colored, but kept
    at a mid tone so the white Music text and icons stay legible. */
