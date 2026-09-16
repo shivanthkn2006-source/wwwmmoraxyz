@@ -278,9 +278,10 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
         )}
       >
         {item.icon}
-        {!isHome && <span className="home-dock-label pointer-events-none absolute left-1/2 top-1/2 z-10 hidden -translate-x-1/2 -translate-y-1/2 whitespace-normal rounded-md border border-white/25 bg-black/90 px-2 py-1 text-center text-[10px] font-medium leading-tight text-white shadow-md group-hover:block group-focus-visible:block">
+        {!isHome && <span className="home-dock-label pointer-events-none absolute left-1/2 top-full z-10 hidden -translate-x-1/2 whitespace-nowrap px-0.5 text-center text-[10px] font-medium leading-tight text-white group-hover:block group-focus-visible:block">
           {item.label}
         </span>}
+
         {badge > 0 && !isHome && (
           <span
             aria-hidden="true"
