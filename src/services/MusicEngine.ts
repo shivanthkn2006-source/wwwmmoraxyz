@@ -210,6 +210,17 @@ class MusicEngineImpl {
 
   private async recoverFromStreamError(): Promise<void> {
     const failed = this.state.index;
+    // A member's own upload usually fails only because its private link aged
+    // out, so retry the same song once with a freshly signed link.
+    if (failed >= 0 && this.state.track?.source === 'upload' && !this.uploadRetries.has(failed)) {
+      this.uploadRetries.add(failed);
+      this.patch({ status: 'buffering', error: null });
+      if (await this.playIndex(failed)) return;
+    }
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      this.patch({ status: 'error', error: 'You are offline. Playback continues as soon as the connection is back.' });
+      return;
+    }
     if (failed >= 0) this.failedIndexes.add(failed);
     const { queue } = this.state;
     const nextIndex = queue.length
