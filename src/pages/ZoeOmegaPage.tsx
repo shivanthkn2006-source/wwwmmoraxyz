@@ -1077,10 +1077,12 @@ const ZoeOmegaPage: React.FC = () => {
                   }}
                   autoOverride={zoeAutoOverride}
                 />
+                </Suspense>
               )}
 
               {/* Chrono-Echo Timeline - already draggable & collapsible */}
               {vrPanels.timeline && (
+                <Suspense fallback={null}>
                 <TimeManipulationBar
                   events={timelineEvents}
                   currentTime={currentTimePosition}
