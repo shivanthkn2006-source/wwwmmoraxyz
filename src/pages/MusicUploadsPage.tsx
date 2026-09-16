@@ -19,6 +19,7 @@ export default function MusicUploadsPage() {
   const [tracks, setTracks] = useState<MusicTrack[]>([]);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
+  const [canRetry, setCanRetry] = useState(false);
 
   const refresh = () => void listMyUploads().then(setTracks).catch(() => setNotice('Could not load your uploads.'));
   useEffect(refresh, []);
