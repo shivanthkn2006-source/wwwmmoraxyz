@@ -49,9 +49,10 @@ export default function MusicRecommendationsPage() {
               <p className="music-liquid-side-title">{section.label}</p>
               <p className="text-[11px] text-white/50">{section.reason}</p>
             </div>
-            <ol className="space-y-2">
+            <ol className="grid gap-1 sm:grid-cols-2 xl:grid-cols-3">
               {section.tracks.map((track, index) => (
-                <li key={`${section.id}-${track.id}`} className="flex items-center gap-3">
+                <li key={`${section.id}-${track.id}`} className="music-liquid-track flex min-w-0 items-center gap-3 rounded-2xl px-2 py-2">
+
                   <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full">
                     <TrackArtwork src={track.artwork} trackId={track.id} uploadId={(track as typeof track & { uploadId?: string }).uploadId} className="h-full w-full object-cover" fallback="♪" />
                   </span>
