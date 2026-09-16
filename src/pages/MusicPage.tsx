@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Slider } from '@/components/ui/slider';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { musicEngine } from '@/services/MusicEngine';
+import TrackArtwork from '@/components/music/TrackArtwork';
 import { useMusicEngine } from '@/hooks/useMusicEngine';
 import { fetchLiveStations, isFullLengthTrack, searchMusicCatalog, type MusicSearchResult, type MusicTrack } from '@/features/music/musicProviders';
 import { MUSIC_GENRES, MUSIC_RADIO_TAGS } from '@/features/music/musicCategories';
@@ -161,7 +162,7 @@ export default function MusicPage() {
       <Button variant="ghost" className="music-liquid-track h-auto min-w-0 flex-1 justify-start whitespace-normal px-2.5 py-2.5 text-left" onClick={onPlay}>
         <span className="flex min-w-0 items-center gap-2.5">
           <span className="music-liquid-track-index flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full text-[11px]">
-            {track.artwork ? <img src={track.artwork} alt="" className="h-full w-full object-cover" loading="lazy" decoding="async" /> : String(index + 1).padStart(2, '0')}
+            <TrackArtwork src={track.artwork} trackId={track.id} uploadId={(track as MusicTrack & { uploadId?: string }).uploadId} className="h-full w-full object-cover" fallback={String(index + 1).padStart(2, '0')} />
           </span>
           <span className="min-w-0 flex-1">
             <span className="block truncate text-sm font-medium text-white">{track.title}</span>
@@ -302,7 +303,7 @@ export default function MusicPage() {
               {/* Current artwork sits directly under the search bar. */}
               <div className="music-current-track flex min-w-0 items-center gap-3 overflow-hidden">
                 <div className="music-liquid-art relative flex aspect-square w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl sm:w-28">
-                  {state.track?.artwork ? <img src={state.track.artwork} alt="" className="h-full w-full object-cover" decoding="async" /> : <Disc3 className="h-8 w-8 text-white/40" />}
+                  <TrackArtwork src={state.track?.artwork} trackId={state.track?.id} uploadId={(state.track as (MusicTrack & { uploadId?: string }) | null)?.uploadId} lazy={false} className="h-full w-full object-cover" fallback={<Disc3 className="h-8 w-8 text-white/40" />} />
                   {state.track && <span className="music-liquid-nowtag">Now listening</span>}
                 </div>
                 <div className="music-current-copy min-w-0 flex-1 overflow-hidden">
@@ -382,7 +383,7 @@ export default function MusicPage() {
                         {section.tracks.slice(0, 8).map((item) => (
                           <li key={`${section.id}-${item.track_id}`} className="flex items-center gap-2.5 px-1 py-1">
                             <span className="music-liquid-track-index flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full text-[10px]">
-                              {item.track_artwork ? <img src={item.track_artwork} alt="" className="h-full w-full object-cover" loading="lazy" decoding="async" /> : '♪'}
+                              <TrackArtwork src={item.track_artwork} trackId={item.track_id} className="h-full w-full object-cover" fallback="♪" />
                             </span>
                             <span className="min-w-0 flex-1">
                               <span className="block truncate text-sm text-white">{item.track_title}</span>

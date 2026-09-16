@@ -1,6 +1,7 @@
 import type { MusicTrack } from '@/features/music/musicProviders';
 import { subscribeTTSAudio } from '@/utils/zoeTTSAudioBus';
 import { nativeZoeMusicBridge } from '@/services/NativeZoeMusicBridge';
+import { logMusicEvent } from '@/features/music/musicDiagnostics';
 
 export type MusicStatus = 'idle' | 'buffering' | 'playing' | 'paused' | 'error';
 export type RepeatMode = 'off' | 'all' | 'one';
@@ -164,6 +165,7 @@ class MusicEngineImpl {
     if (track.source === 'upload') {
       const fresh = await this.refreshUpload(track);
       if (!fresh) {
+        logMusicEvent('playback:error', 'A fresh link for this upload could not be created.', { trackId: track.id, index });
         this.patch({
           status: 'error',
           error: typeof navigator !== 'undefined' && navigator.onLine === false
@@ -194,7 +196,8 @@ class MusicEngineImpl {
       await audio.play();
       void this.routeToHeadset(audio);
       return true;
-    } catch {
+    } catch (error) {
+      logMusicEvent('playback:error', error, { trackId: track.id, source: track.source, stage: 'play' });
       this.patch({ status: 'error', error: 'Playback needs one tap first on this device — tap the play symbol and it continues.' });
       return false;
     }
@@ -212,10 +215,17 @@ class MusicEngineImpl {
 
   private async recoverFromStreamError(): Promise<void> {
     const failed = this.state.index;
+    logMusicEvent('playback:error', this.audio?.error?.message || 'The audio stream stopped unexpectedly.', {
+      trackId: this.state.track?.id,
+      source: this.state.track?.source,
+      code: this.audio?.error?.code,
+      index: failed,
+    });
     // A member's own upload usually fails only because its private link aged
     // out, so retry the same song once with a freshly signed link.
     if (failed >= 0 && this.state.track?.source === 'upload' && !this.uploadRetries.has(failed)) {
       this.uploadRetries.add(failed);
+      logMusicEvent('playback:retry', 'The upload link aged out, so I am retrying with a fresh one.', { trackId: this.state.track?.id, index: failed });
       this.patch({ status: 'buffering', error: null });
       if (await this.playIndex(failed)) return;
     }

@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { logMusicEvent } from './musicDiagnostics';
 import type { MusicTrack } from './musicProviders';
 
 const BUCKET = 'music-uploads';
@@ -65,15 +66,28 @@ export async function compactAudio(file: File): Promise<{ blob: Blob; duration: 
     if (tail.length) chunks.push(Uint8Array.from(tail).buffer);
     const blob = new Blob(chunks, { type: 'audio/mpeg' });
     if (blob.size > 0 && blob.size < file.size && blob.size <= MAX_STORED_BYTES) return { blob, duration, compressed: true };
-  } catch { /* retain an already-small original when conversion is unavailable */ }
+  } catch (error) {
+    // Retain an already-small original when conversion is unavailable, but record why.
+    logMusicEvent('upload:convert', error, { fileName: file.name, bytes: file.size, type: file.type });
+  }
   if (file.size > MAX_STORED_BYTES) throw new Error('This file cannot be reduced below 12 MB.');
   return { blob: file, duration, compressed: false };
 }
 
-async function signedUrl(path: string | null): Promise<string | undefined> {
+/** Signs a private upload path, retrying once so a flaky connection is survivable. */
+async function signedUrl(path: string | null, attempts = 2): Promise<string | undefined> {
   if (!path) return undefined;
-  const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(path, SIGNED_SECONDS);
-  return error ? undefined : data.signedUrl;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(path, SIGNED_SECONDS);
+      if (!error && data?.signedUrl) return data.signedUrl;
+      logMusicEvent('artwork:resign', error ?? 'No signed link was returned.', { path, attempt });
+    } catch (error) {
+      logMusicEvent('artwork:resign', error, { path, attempt });
+    }
+    if (attempt < attempts) await new Promise((resolve) => setTimeout(resolve, 400 * attempt));
+  }
+  return undefined;
 }
 
 async function rowsToTracks(rows: UploadRow[]): Promise<MusicTrack[]> {
@@ -105,7 +119,10 @@ export async function refreshUploadTrack(track: MusicTrack): Promise<MusicTrack 
     .select('id,title,artist,album,storage_path,artwork_path,duration_seconds')
     .eq('id', id)
     .maybeSingle();
-  if (error || !data) return null;
+  if (error || !data) {
+    logMusicEvent('playback:retry', error ?? 'This upload is no longer in your library.', { uploadId: id });
+    return null;
+  }
   const [fresh] = await rowsToTracks([data as UploadRow]);
   return fresh ?? null;
 }
@@ -132,25 +149,26 @@ export async function uploadMyMusic(draft: MusicUploadDraft): Promise<{ track: M
   const audioPath = `${user.id}/${token}/${safeName(draft.title)}.${compacted.compressed ? 'mp3' : safeName(draft.file.name.split('.').pop() ?? 'audio')}`;
   const artworkPath = draft.artwork ? `${user.id}/${token}/cover.${safeName(draft.artwork.name.split('.').pop() ?? 'jpg')}` : null;
   const audioResult = await supabase.storage.from(BUCKET).upload(audioPath, compacted.blob, { contentType: compacted.blob.type, upsert: false });
-  if (audioResult.error) throw audioResult.error;
+  if (audioResult.error) { logMusicEvent('upload:store', audioResult.error, { path: audioPath, bytes: compacted.blob.size }); throw audioResult.error; }
   if (draft.artwork && artworkPath) {
     const artResult = await supabase.storage.from(BUCKET).upload(artworkPath, draft.artwork, { contentType: draft.artwork.type, upsert: false });
-    if (artResult.error) { await supabase.storage.from(BUCKET).remove([audioPath]); throw artResult.error; }
+    if (artResult.error) { logMusicEvent('upload:store', artResult.error, { path: artworkPath, kind: 'artwork' }); await supabase.storage.from(BUCKET).remove([audioPath]); throw artResult.error; }
   }
   const { data, error } = await supabase.from('music_uploads').insert({
     user_id: user.id, title: draft.title.trim(), artist: draft.artist.trim() || 'My music', album: draft.album?.trim() || null,
     storage_path: audioPath, artwork_path: artworkPath, mime_type: compacted.blob.type || draft.file.type,
     duration_seconds: compacted.duration, file_size_bytes: compacted.blob.size,
   }).select('id,title,artist,album,storage_path,artwork_path,duration_seconds').single();
-  if (error) { await supabase.storage.from(BUCKET).remove([audioPath, ...(artworkPath ? [artworkPath] : [])]); throw error; }
+  if (error) { logMusicEvent('upload:store', error, { stage: 'record' }); await supabase.storage.from(BUCKET).remove([audioPath, ...(artworkPath ? [artworkPath] : [])]); throw error; }
   const tracks = await rowsToTracks([data as UploadRow]);
   if (!tracks[0]) throw new Error('The upload was saved but could not be opened.');
   // A new upload counts as one play, so it appears on the Home listening shelf right away.
   try {
     const { logListen } = await import('./musicSocial');
     await logListen(tracks[0]);
-  } catch {
+  } catch (historyError) {
     // History is best-effort: never fail the upload because the shelf entry could not be written.
+    logMusicEvent('upload:history', historyError, { trackId: tracks[0].id });
   }
   return { track: tracks[0], compressed: compacted.compressed };
 
