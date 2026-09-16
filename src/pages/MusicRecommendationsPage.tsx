@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Play, SlidersHorizontal } from 'lucide-react';
@@ -7,11 +7,16 @@ import { musicEngine } from '@/services/MusicEngine';
 import TrackArtwork from '@/components/music/TrackArtwork';
 import { fetchMusicRecommendations, type MusicRecommendationSection } from '@/features/music/musicRecommendations';
 
+/** Songs rendered at first paint, and added on each scroll step, to stay light on phones. */
+const PAGE_SIZE = 18;
+
 export default function MusicRecommendationsPage() {
   const navigate = useNavigate();
   const [sections, setSections] = useState<MusicRecommendationSection[]>([]);
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState('');
+  const [visible, setVisible] = useState(PAGE_SIZE);
+  const sentinel = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -21,6 +26,32 @@ export default function MusicRecommendationsPage() {
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, []);
+
+  const total = useMemo(() => sections.reduce((sum, section) => sum + section.tracks.length, 0), [sections]);
+
+  /** Sections trimmed to the songs shown so far; indexes still match the full section list. */
+  const paged = useMemo(() => {
+    let left = visible;
+    const out: MusicRecommendationSection[] = [];
+    for (const section of sections) {
+      if (left <= 0) break;
+      out.push({ ...section, tracks: section.tracks.slice(0, left) });
+      left -= Math.min(left, section.tracks.length);
+    }
+    return out;
+  }, [sections, visible]);
+
+  useEffect(() => {
+    const node = sentinel.current;
+    if (!node || visible >= total) return;
+    if (typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) setVisible((count) => Math.min(count + PAGE_SIZE, total));
+    }, { rootMargin: '240px' });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [visible, total]);
+
 
   return (
     <main className="music-liquid-page flex min-h-[100dvh] flex-col p-0 text-white">
@@ -44,7 +75,7 @@ export default function MusicRecommendationsPage() {
           <p className="text-sm text-white/60">Play a few songs, or set your favourite genres and artists, and recommendations will appear here.</p>
         )}
 
-        {sections.map((section) => (
+        {paged.map((section) => (
           <section key={section.id} className="space-y-2">
             <div>
               <p className="music-liquid-side-title">{section.label}</p>
@@ -68,7 +99,8 @@ export default function MusicRecommendationsPage() {
                     aria-label={`Play ${track.title}`}
                     onClick={async () => {
                       musicEngine.unlock();
-                      const started = await musicEngine.playQueue(section.tracks, index);
+                      const queue = sections.find((row) => row.id === section.id)?.tracks ?? section.tracks;
+                      const started = await musicEngine.playQueue(queue, index);
                       if (!started) setNotice(musicEngine.getState().error ?? 'That song could not be played. Please try another one.');
                     }}
                   >
@@ -79,6 +111,15 @@ export default function MusicRecommendationsPage() {
             </ol>
           </section>
         ))}
+
+        {visible < total && (
+          <div ref={sentinel} className="flex justify-center py-3">
+            <Button variant="ghost" className="text-xs text-white/70" onClick={() => setVisible((count) => Math.min(count + PAGE_SIZE, total))}>
+              Show more songs
+            </Button>
+          </div>
+        )}
+
       </section>
       </div>
     </main>
