@@ -156,9 +156,25 @@ class MusicEngineImpl {
   }
 
   async playIndex(index: number): Promise<boolean> {
-    const track = this.state.queue[index];
+    let track = this.state.queue[index];
     if (!track) return false;
     this.patch({ index, track, status: 'buffering', position: 0, duration: 0, error: null });
+    if (track.source === 'upload') {
+      const fresh = await this.refreshUpload(track);
+      if (!fresh) {
+        this.patch({
+          status: 'error',
+          error: typeof navigator !== 'undefined' && navigator.onLine === false
+            ? 'You are offline, so your upload cannot be opened. Reconnect and press play again.'
+            : 'That upload could not be opened. Press play to try again.',
+        });
+        return false;
+      }
+      track = fresh;
+      const queue = [...this.state.queue];
+      queue[index] = fresh;
+      this.patch({ queue, track: fresh });
+    }
     if (await this.ensureNative()) {
       try {
         await nativeZoeMusicBridge.load(track);
