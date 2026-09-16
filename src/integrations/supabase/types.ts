@@ -4679,6 +4679,51 @@ export type Database = {
         }
         Relationships: []
       }
+      music_uploads: {
+        Row: {
+          album: string | null
+          artist: string
+          artwork_path: string | null
+          created_at: string
+          duration_seconds: number | null
+          file_size_bytes: number
+          id: string
+          mime_type: string
+          storage_path: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          album?: string | null
+          artist?: string
+          artwork_path?: string | null
+          created_at?: string
+          duration_seconds?: number | null
+          file_size_bytes: number
+          id?: string
+          mime_type: string
+          storage_path: string
+          title: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          album?: string | null
+          artist?: string
+          artwork_path?: string | null
+          created_at?: string
+          duration_seconds?: number | null
+          file_size_bytes?: number
+          id?: string
+          mime_type?: string
+          storage_path?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       notification_attempts: {
         Row: {
           attempt: number
