@@ -31,3 +31,7 @@ Today the Home shelf lists other members' recent plays. It will change to my own
 - `musicSocial.ts`: add `fetchMyListening()` returning my own tracks with play counts; `HomeMusicShelf.tsx` renders that instead of member rows.
 - New `src/pages/MusicUploadsPage.tsx`, route added in `src/App.tsx` behind the existing protected route wrapper.
 - Tests for upload search matching, play-count grouping, and source ranking; then a signed-in preview check on phone and desktop.
+
+## Approved visual constraint
+
+Only add two plain white symbols: an Upload symbol at the top-right below Search, and a Shelf symbol for personal listening history. Do not change existing Music/Home design components, layout, features, colors, or behavior. Compress uploaded audio before storage where the browser supports it; otherwise reject oversized files rather than storing a large original.
