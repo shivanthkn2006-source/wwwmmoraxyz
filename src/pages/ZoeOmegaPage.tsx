@@ -1097,6 +1097,7 @@ const ZoeOmegaPage: React.FC = () => {
                   }}
                   isPlaying={isTimelinePlaying}
                 />
+                </Suspense>
               )}
 
             </motion.div>
