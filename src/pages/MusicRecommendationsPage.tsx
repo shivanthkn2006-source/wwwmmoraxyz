@@ -79,6 +79,8 @@ export default function MusicRecommendationsPage() {
           </section>
         ))}
       </section>
+      </div>
     </main>
+
   );
 }
