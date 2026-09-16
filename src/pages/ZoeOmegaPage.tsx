@@ -23,6 +23,9 @@ import WorldStateController from '@/components/vr/WorldStateController';
 import ReturnToRealityButton from '@/components/vr/ReturnToRealityButton';
 import VRTestSuite from '@/components/vr/VRTestSuite';
 import WarpGateButton from '@/components/evolution/WarpGateButton';
+import VRDraggablePanel from '@/components/vr/VRDraggablePanel';
+import VRControlsGuide, { type VRPanelToggle } from '@/components/vr/VRControlsGuide';
+import useVRLandscapeOrientation from '@/hooks/useVRLandscapeOrientation';
 import { VRStasisPlaceholder } from '@/components/performance';
 import { markVRAudioLocked, markVRAudioUnlocked } from '@/lib/vrAudioGate';
 
