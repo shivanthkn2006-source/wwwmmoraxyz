@@ -1339,12 +1339,14 @@ const ZoeOmegaPage: React.FC = () => {
             positionClassName="fixed top-20 right-4 z-[9994]"
             defaultOpen={false}
           >
-            <VRTestSuite />
+            <Suspense fallback={null}><VRTestSuite /></Suspense>
           </VRDraggablePanel>
         )}
 
         {/* Genesis Omni-Box - Bottom Center (only in VR mode) */}
-        {isVRMode && vrPanels.omniBox && <GenesisOmniBox />}
+        {isVRMode && vrPanels.omniBox && (
+          <Suspense fallback={null}><GenesisOmniBox /></Suspense>
+        )}
 
         {/* Bi-Cameral HUD Overlay (VR mode) - draggable + tap to drop down */}
         <AnimatePresence mode="sync">
