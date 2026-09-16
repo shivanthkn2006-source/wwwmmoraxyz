@@ -48,5 +48,7 @@
 - [x] Home feed music shelf: each member's most listened songs with album art and a play button.
 - [x] Real live radio channels in the sidebar (Radio Browser tags -> online HTTPS stations) instead of canned station shortcuts.
 - [x] "Full tracks" filter plus deeper Audius/Archive lookups so full-length recordings outrank 30-second catalogue previews.
+- [x] Keep the Music page as one edge-to-edge clear white Liquid Glass layer with no exposed black/grey canvas; keep all Music icons and layout unchanged.
+- [x] Keep the global “Enable alert sound” control white with dark text, never purple.
 - [ ] Signed-in walkthrough of Music (queue, Library, Community reactions, friend-listen alert) — blocked: no managed session can be minted for Moksh@50; needs a preview sign-in.
 - [ ] YouTube full-track playback — blocked: requires an official YouTube API key/licensed player; direct audio extraction is not permitted.
