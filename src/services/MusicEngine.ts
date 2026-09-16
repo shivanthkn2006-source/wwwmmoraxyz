@@ -150,6 +150,7 @@ class MusicEngineImpl {
       return false;
     }
     this.failedIndexes.clear();
+    this.uploadRetries.clear();
     this.shuffledIndices = [];
     this.patch({ queue: tracks, index: -1, error: null });
     void import('@/services/AudioRouterService').then(({ audioRouter }) => audioRouter.refreshMediaSessionHandlers());
