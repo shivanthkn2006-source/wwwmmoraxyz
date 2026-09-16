@@ -207,6 +207,7 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
       <button
         key={item.id}
         type="button"
+        data-home-dock-item={isHome ? undefined : item.id}
         ref={isHome ? triggerRef : undefined}
         data-home-dock-trigger={isHome ? true : undefined}
         role={open ? 'menuitem' : undefined}
@@ -221,7 +222,6 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
               ? `${item.label}, ${badge > 99 ? '99+' : badge} new${badgeStale ? ` (cached, updated ${formatAgo(badgesUpdatedAt)})` : ''}`
               : item.label
         }
-        title={badgeStale ? `${item.label} — cached count, updated ${formatAgo(badgesUpdatedAt)}` : item.label}
         aria-current={item.active ? 'true' : undefined}
         tabIndex={open || isHome ? 0 : -1}
         onClick={() => {
@@ -264,7 +264,7 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
           if (next) setOpen(false);
         } : undefined}
         className={cn(
-          'group relative flex h-11 w-11 shrink-0 items-center justify-center',
+          'group relative flex h-[var(--home-dock-cell)] w-[var(--home-dock-cell)] shrink-0 items-center justify-center',
           'transition-all active:scale-95',
           isHome
             ? 'appearance-none rounded-none !border-0 !bg-transparent p-0 text-white !shadow-none hover:!bg-transparent'
@@ -278,9 +278,9 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
         )}
       >
         {item.icon}
-        <span className="pointer-events-none absolute bottom-full mb-2 hidden whitespace-nowrap rounded-md border border-white/25 bg-black/90 px-2 py-1 text-[10px] font-medium text-white shadow-md group-hover:block group-focus-visible:block ">
+        {!isHome && <span className="home-dock-label pointer-events-none absolute left-1/2 top-1/2 z-10 hidden -translate-x-1/2 -translate-y-1/2 whitespace-normal rounded-md border border-white/25 bg-black/90 px-2 py-1 text-center text-[10px] font-medium leading-tight text-white shadow-md group-hover:block group-focus-visible:block">
           {item.label}
-        </span>
+        </span>}
         {badge > 0 && !isHome && (
           <span
             aria-hidden="true"
@@ -364,22 +364,11 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
   }, [slots, baseSlots, usage]);
 
 
-  const renderPackedRows = () => {
-    const rows: GlassDockItem[][] = [];
-    for (let index = 0; index < gridSlots.length; index += GRID_COLUMNS) {
-      rows.push(gridSlots.slice(index, index + GRID_COLUMNS));
-    }
-
-    return (
-      <div className="flex flex-col items-end gap-2">
-        {rows.map((row, rowIndex) => (
-          <div key={`row-${rowIndex}`} className="flex justify-end gap-2">
-            {row.map((item) => renderIconButton(item))}
-          </div>
-        ))}
-      </div>
-    );
-  };
+  const renderPackedRows = () => (
+      <div data-home-dock-grid className="grid grid-cols-7 gap-[var(--home-dock-gap)] overflow-hidden rounded-2xl">
+      {gridSlots.map((item) => renderIconButton(item))}
+    </div>
+  );
 
 
   return (
@@ -387,17 +376,17 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
       ref={rootRef}
       data-home-dock
       className={cn(
-        'fixed z-[9996] flex flex-col items-end justify-end',
-        'bottom-[calc(env(safe-area-inset-bottom,0px)+8px)] right-2',
+        'home-dock-root fixed z-[9996] flex flex-col items-end justify-end',
+        'bottom-[calc(env(safe-area-inset-bottom,0px)+8px)] right-[max(8px,env(safe-area-inset-right,0px))]',
         className,
       )}
     >
       {/* Glass dock panel — permanently anchored on the computer's right side. */}
       <div
         className={cn(
-          'overflow-hidden transition-all duration-300 ease-out',
+          'max-w-[calc(100vw-max(16px,env(safe-area-inset-left,0px)+env(safe-area-inset-right,0px)))] overflow-hidden transition-all duration-300 ease-out',
           open
-            ? 'max-h-[70vh] translate-y-0 opacity-100'
+            ? 'max-h-[calc(100dvh-max(16px,env(safe-area-inset-top,0px)+env(safe-area-inset-bottom,0px)))] translate-y-0 opacity-100'
             : 'max-h-[64px] translate-y-0 opacity-100',
         )}
       >
@@ -406,12 +395,11 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
           role={open ? 'menu' : undefined}
           aria-hidden={open ? false : undefined}
           className={cn(
-            'flex flex-col items-end gap-2 p-2',
+            'flex flex-col items-end gap-[var(--home-dock-gap)] p-[var(--home-dock-pad)]',
             open
               ? 'rounded-[28px] border-0 bg-white/10 backdrop-blur-xl shadow-none'
               : 'rounded-none border-0 bg-transparent shadow-none',
           )}
-          style={{ maxWidth: 'calc(100vw - 16px)' }}
         >
           {open && renderPackedRows()}
 

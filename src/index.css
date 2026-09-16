@@ -1290,6 +1290,51 @@ html.phantom-mode [class*="animate-"] {
   color: hsl(0 0% 100%);
 }
 
+/* Seven Home actions always stay on one row. Width and height both
+   participate so narrow foldables and short landscape screens retain all
+   four rows without changing the icons or their destinations. */
+.home-dock-root {
+  --home-dock-cell: clamp(
+    1.875rem,
+    min(calc((100vw - 4rem) / 7), calc((100dvh - 4.75rem) / 5)),
+    2.75rem
+  );
+  --home-dock-gap: clamp(0.2rem, 1.2vmin, 0.5rem);
+  --home-dock-pad: clamp(0.35rem, 1.6vmin, 0.5rem);
+  --home-dock-panel-width: calc(
+    (7 * var(--home-dock-cell)) + (6 * var(--home-dock-gap)) + (2 * var(--home-dock-pad))
+  );
+}
+
+.home-dock-root [data-home-dock-grid] {
+  width: calc((7 * var(--home-dock-cell)) + (6 * var(--home-dock-gap)));
+}
+
+.home-dock-root [data-home-dock-grid] svg {
+  width: min(1.375rem, calc(var(--home-dock-cell) * 0.58));
+  height: min(1.375rem, calc(var(--home-dock-cell) * 0.58));
+}
+
+/* Labels remain inside their own icon cell and never escape above or below
+   the glass panel. Screen-reader names remain available through aria-label. */
+.home-dock-root .home-dock-label {
+  max-height: calc(var(--home-dock-cell) - 0.25rem);
+  max-width: min(9rem, calc(var(--home-dock-panel-width) - 1rem));
+  overflow: hidden;
+  font-size: clamp(0.5rem, calc(var(--home-dock-cell) * 0.22), 0.625rem);
+}
+
+.home-dock-root [data-home-dock-grid] > :nth-child(7n + 1) .home-dock-label {
+  left: 0;
+  transform: translateY(-50%);
+}
+
+.home-dock-root [data-home-dock-grid] > :nth-child(7n) .home-dock-label {
+  right: 0;
+  left: auto;
+  transform: translateY(-50%);
+}
+
 /* Ambient light room behind the glass: warm and clearly colored, but kept
    at a mid tone so the white Music text and icons stay legible. */
 .music-liquid-page::before {
@@ -1365,6 +1410,13 @@ html.phantom-mode [class*="animate-"] {
   align-items: flex-start;
   gap: 0;
   overflow: hidden;
+}
+
+/* Music alone lifts the global headset shortcut clear of the search glass.
+   Its icon, destination, and behavior are unchanged. */
+.music-audio-quick-connect > [data-testid='audio-quick-connect'] {
+  min-width: 2.25rem;
+  min-height: 2.25rem;
 }
 
 /* Text runs all the way to the icon: no dead padding before the glyph. */

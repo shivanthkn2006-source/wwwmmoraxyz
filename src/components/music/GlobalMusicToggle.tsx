@@ -117,7 +117,7 @@ export default function GlobalMusicToggle() {
     };
   }, [clamp]);
 
-  if (!state.track) return null;
+  if (!state.track || location.pathname === '/music') return null;
 
   const active = state.status === 'playing' || state.status === 'buffering';
   return (
