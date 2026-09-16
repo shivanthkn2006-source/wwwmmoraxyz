@@ -184,12 +184,21 @@ export default function MusicPage() {
 
 
   const savedTracks = library.saved;
+  const libraryTracks = useMemo(
+    () => (selectedPlaylist ? playlistTracks(selectedPlaylist) : savedTracks),
+    [selectedPlaylist, savedTracks, library.playlists],
+  );
+  const visibleResults = useMemo(() => {
+    const tracks = results?.tracks ?? [];
+    return fullOnly ? tracks.filter(isFullLengthTrack) : tracks;
+  }, [results, fullOnly]);
   const artists = useMemo(() => {
     const names = [...(results?.tracks ?? []), ...savedTracks]
       .map((track) => track.artist?.trim())
       .filter((artist): artist is string => Boolean(artist));
     return [...new Set(names)].slice(0, 12);
   }, [results, savedTracks]);
+
 
   return (
     <TooltipProvider>
