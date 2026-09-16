@@ -1374,6 +1374,7 @@ const ZoeOmegaPage: React.FC = () => {
                   'neutral'
                 }
               />
+              </Suspense>
             </VRDraggablePanel>
           )}
         </AnimatePresence>
@@ -1384,6 +1385,8 @@ const ZoeOmegaPage: React.FC = () => {
             panels={vrPanelToggles}
             needsRotate={needsRotate}
             onRequestLandscape={() => { void requestLandscape(); }}
+            isFullscreen={isFullscreen}
+            onToggleFullscreen={() => { void toggleFullscreen(); }}
           />
         )}
 
