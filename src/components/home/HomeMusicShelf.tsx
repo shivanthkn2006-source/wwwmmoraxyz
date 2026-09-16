@@ -18,7 +18,7 @@ const HomeMusicShelf: React.FC = () => {
     <div className="flex items-center justify-between"><div className="flex items-center gap-2"><LibraryBig className="h-4 w-4 text-foreground/80" aria-hidden="true" /><h2 className="text-sm font-semibold">My listening</h2></div><Link to="/music" className="text-[11px] text-muted-foreground hover:text-foreground">Open Music</Link></div>
     <div className="flex gap-2 overflow-x-auto pb-1">{tracks.map((track, index) => <div key={track.id} className="w-24 shrink-0">
       <Button variant="ghost" size="icon" onClick={() => { musicEngine.unlock(); void musicEngine.playQueue(tracks, index); }} aria-label={`Play ${track.title}`} className="relative h-24 w-24 overflow-hidden rounded-lg p-0">
-        {track.artwork ? <img src={track.artwork} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" /> : <Music className="h-6 w-6 text-muted-foreground" aria-hidden="true" />}<Play className="absolute bottom-1 left-1 h-4 w-4 fill-current" aria-hidden="true" />
+        <TrackArtwork src={track.artwork} trackId={track.id} className="h-full w-full object-cover" fallback={<Music className="h-6 w-6 text-muted-foreground" aria-hidden="true" />} /><Play className="absolute bottom-1 left-1 h-4 w-4 fill-current" aria-hidden="true" />
       </Button><span className="mt-1 block truncate text-[11px] font-medium">{track.title}</span><span className="block truncate text-[10px] text-muted-foreground">{track.playCount} {track.playCount === 1 ? 'play' : 'plays'}</span>
     </div>)}</div>
   </section>;
