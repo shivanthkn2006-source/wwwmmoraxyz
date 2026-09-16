@@ -57,5 +57,5 @@
 - [x] Calibrate Music glass against the supplied references and add phone/PWA, iPad, and desktop visual regression coverage.
 - [x] Keep Home-menu labels inside the panel, preserve seven icons per row across narrow/short displays, hide the mini-player only on Music, and lift the Music headphones shortcut clear of search.
 - [x] Remove Music-page text/chip surfaces and the search rectangle so only text, cursor, and search glyph remain.
-- [ ] Add a plain white upload symbol below Music search, with compressed personal music uploads appearing in search.
-- [ ] Replace the Home listening shelf with the signed-in user's real play counts, keeping Music styling and a shelf symbol.
+- [x] Add a plain white upload symbol below Music search, with compressed personal music uploads appearing in search.
+- [x] Replace the Home listening shelf with the signed-in user's real play counts, keeping Music styling and a shelf symbol.

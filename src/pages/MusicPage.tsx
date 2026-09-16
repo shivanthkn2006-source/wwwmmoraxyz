@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { useSearchParams } from 'react-router-dom';
-import { Disc3, Heart, ListMusic, Pause, Play, Plus, Repeat, Search, Shuffle, SkipBack, SkipForward, Volume2 } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Disc3, Heart, ListMusic, Pause, Play, Plus, Repeat, Search, Shuffle, SkipBack, SkipForward, Upload, Volume2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Slider } from '@/components/ui/slider';
@@ -34,6 +34,7 @@ function IconControl({ label, children, ...props }: React.ComponentProps<typeof 
 }
 
 export default function MusicPage() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const cachedSearch = readSearchCache();
   const state = useMusicEngine();
@@ -269,9 +270,12 @@ export default function MusicPage() {
 
             {/* Search + now listening + transport */}
             <section className="music-liquid-player order-1 flex min-h-0 flex-col gap-3 p-3 sm:p-4 lg:order-2">
-              <div className="music-page-wordmark flex w-fit items-center gap-2" data-music-wordmark>
-                <Disc3 className={active ? 'h-4 w-4 animate-spin motion-reduce:animate-none' : 'h-4 w-4'} aria-hidden="true" />
-                <h1 className="text-sm font-semibold text-white">MMora music</h1>
+              <div className="flex items-start justify-between">
+                <div className="music-page-wordmark flex w-fit items-center gap-2" data-music-wordmark>
+                  <Disc3 className={active ? 'h-4 w-4 animate-spin motion-reduce:animate-none' : 'h-4 w-4'} aria-hidden="true" />
+                  <h1 className="text-sm font-semibold text-white">MMora music</h1>
+                </div>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-white" aria-label="Upload my music" onClick={() => navigate('/music/uploads')}><Upload aria-hidden="true" /></Button>
               </div>
               <form className="music-liquid-control music-search-control flex gap-2 rounded-full p-1" onSubmit={(e) => { e.preventDefault(); void search(); }}>
                 <Textarea

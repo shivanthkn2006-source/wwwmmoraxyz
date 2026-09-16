@@ -43,7 +43,7 @@ export async function compactAudio(file: File): Promise<{ blob: Blob; duration: 
     const channels = Math.min(decoded.numberOfChannels, 2);
     const encoder = new Mp3Encoder(channels, decoded.sampleRate, 96);
     const block = 1152;
-    const chunks: Int8Array[] = [];
+    const chunks: ArrayBuffer[] = [];
     const pcm = Array.from({ length: channels }, (_, channel) => {
       const source = decoded.getChannelData(channel);
       const output = new Int16Array(source.length);
@@ -54,10 +54,10 @@ export async function compactAudio(file: File): Promise<{ blob: Blob; duration: 
       const encoded = channels === 1
         ? encoder.encodeBuffer(pcm[0].subarray(i, i + block))
         : encoder.encodeBuffer(pcm[0].subarray(i, i + block), pcm[1].subarray(i, i + block));
-      if (encoded.length) chunks.push(encoded);
+      if (encoded.length) chunks.push(Uint8Array.from(encoded).buffer);
     }
     const tail = encoder.flush();
-    if (tail.length) chunks.push(tail);
+    if (tail.length) chunks.push(Uint8Array.from(tail).buffer);
     const blob = new Blob(chunks, { type: 'audio/mpeg' });
     if (blob.size > 0 && blob.size < file.size && blob.size <= MAX_STORED_BYTES) return { blob, duration, compressed: true };
   } catch { /* retain an already-small original when conversion is unavailable */ }

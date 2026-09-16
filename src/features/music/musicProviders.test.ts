@@ -60,7 +60,7 @@ describe('music providers', () => {
     });
     const result = await searchMusicCatalog('Signal');
     expect(result.tracks.map((track) => track.title)).toEqual(['Signal', 'Signal Radio']);
-    expect(result.providers).toHaveLength(4);
+    expect(result.providers).toHaveLength(5);
   });
 
   it('prefers full-length tracks while retaining previews and live radio', async () => {
