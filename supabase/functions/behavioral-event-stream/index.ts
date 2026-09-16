@@ -147,9 +147,11 @@ serve(async (req) => {
         retryable: true,
         reason: 'anonymous_request',
       }), {
-        status: 401,
+        // 202: nothing stored, but this is an expected signed-out state, not an
+        // error the client should surface as a failed request.
+        status: 202,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
