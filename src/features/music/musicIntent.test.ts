@@ -20,4 +20,17 @@ describe('resolveMusicIntent', () => {
     expect(resolveMusicIntent('start the god mode scan')).toBeNull();
     expect(resolveMusicIntent('play the video I posted')).toBeNull();
   });
+
+  it('only treats a bare "start" as music when it sounds like a track', () => {
+    expect(resolveMusicIntent('start my day')).toBeNull();
+    expect(resolveMusicIntent('start over')).toBeNull();
+    expect(resolveMusicIntent('start a call with Marc')).toBeNull();
+    expect(resolveMusicIntent('start the upload')).toBeNull();
+    expect(resolveMusicIntent('start the deployment')).toBeNull();
+    expect(resolveMusicIntent('start the song Bohemian Rhapsody')).toMatchObject({ kind: 'play', lookup: 'track' });
+    expect(resolveMusicIntent('start Shape of You by Ed Sheeran')).toMatchObject({ kind: 'play', lookup: 'track' });
+    expect(resolveMusicIntent('start some lofi')).toMatchObject({ kind: 'play' });
+    expect(resolveMusicIntent('play the upload')).toBeNull();
+    expect(resolveMusicIntent('play Mission Impossible theme')).toMatchObject({ kind: 'play', lookup: 'track' });
+  });
 });
