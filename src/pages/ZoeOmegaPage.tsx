@@ -15,13 +15,14 @@ import { useZoeOmegaIntegrity } from '@/hooks/useZoeOmegaIntegrity';
 import { supabase } from '@/integrations/supabase/client';
 import { playActivationChime } from '@/utils/zoeActivationSound';
 import { isSoundSuppressed } from '@/lib/platformPurge';
-import { GenesisOmniBox } from '@/components/GenesisOmniBox';
 import { EconomyWallet } from '@/components/EconomyWallet';
-import BiCameralHUD from '@/components/vr/BiCameralHUD';
-import TimeManipulationBar from '@/components/vr/TimeManipulationBar';
-import WorldStateController from '@/components/vr/WorldStateController';
 import ReturnToRealityButton from '@/components/vr/ReturnToRealityButton';
-import VRTestSuite from '@/components/vr/VRTestSuite';
+// Hidden VR panels load on demand so entering the VR world stays fast on phones/iPads.
+const GenesisOmniBox = lazy(() => import('@/components/GenesisOmniBox').then(m => ({ default: m.GenesisOmniBox })));
+const BiCameralHUD = lazy(() => import('@/components/vr/BiCameralHUD'));
+const TimeManipulationBar = lazy(() => import('@/components/vr/TimeManipulationBar'));
+const WorldStateController = lazy(() => import('@/components/vr/WorldStateController'));
+const VRTestSuite = lazy(() => import('@/components/vr/VRTestSuite'));
 import WarpGateButton from '@/components/evolution/WarpGateButton';
 import VRDraggablePanel from '@/components/vr/VRDraggablePanel';
 import VRControlsGuide, { type VRPanelToggle } from '@/components/vr/VRControlsGuide';
@@ -436,19 +437,40 @@ const ZoeOmegaPage: React.FC = () => {
   const soundEngineRef = useRef<OmegaSoundEngine | null>(null);
 
   // Landscape-first VR entry (auto lock + rotate prompt on touch devices)
-  const { needsRotate, requestLandscape } = useVRLandscapeOrientation(isVRMode);
+  const { needsRotate, requestLandscape, isFullscreen, toggleFullscreen } = useVRLandscapeOrientation(isVRMode);
 
-  // VR panel visibility - every panel stays discoverable through the Panels hub
-  const [vrPanels, setVrPanels] = useState({
+  // VR panel visibility - every panel stays discoverable through the Panels hub,
+  // and the layout is remembered across refreshes / re-entry.
+  const VR_PANEL_VISIBILITY_KEY = 'vr-panel-visibility';
+  const defaultVrPanels = {
     identity: true,
     hud: true,
     dreamscape: true,
     timeline: true,
     omniBox: true,
     diagnostics: true,
+  };
+  const [vrPanels, setVrPanels] = useState(() => {
+    if (typeof window === 'undefined') return defaultVrPanels;
+    try {
+      const raw = window.localStorage.getItem(VR_PANEL_VISIBILITY_KEY);
+      if (!raw) return defaultVrPanels;
+      const parsed = JSON.parse(raw) as Partial<typeof defaultVrPanels>;
+      return { ...defaultVrPanels, ...parsed };
+    } catch {
+      return defaultVrPanels;
+    }
   });
-  const toggleVrPanel = useCallback((key: keyof typeof vrPanels) => {
-    setVrPanels(prev => ({ ...prev, [key]: !prev[key] }));
+  const toggleVrPanel = useCallback((key: keyof typeof defaultVrPanels) => {
+    setVrPanels(prev => {
+      const next = { ...prev, [key]: !prev[key] };
+      try {
+        window.localStorage.setItem(VR_PANEL_VISIBILITY_KEY, JSON.stringify(next));
+      } catch {
+        /* storage unavailable */
+      }
+      return next;
+    });
   }, []);
   const vrPanelToggles: VRPanelToggle[] = [
     { id: 'identity', label: 'Zoe Omega badge', visible: vrPanels.identity, onToggle: () => toggleVrPanel('identity') },
@@ -1063,6 +1085,7 @@ const ZoeOmegaPage: React.FC = () => {
 
               {/* Dreamscape World Controller - already draggable & collapsible */}
               {vrPanels.dreamscape && (
+                <Suspense fallback={null}>
                 <WorldStateController
                   moodState={worldMoodState}
                   onMoodChange={(mood) => {
@@ -1075,10 +1098,12 @@ const ZoeOmegaPage: React.FC = () => {
                   }}
                   autoOverride={zoeAutoOverride}
                 />
+                </Suspense>
               )}
 
               {/* Chrono-Echo Timeline - already draggable & collapsible */}
               {vrPanels.timeline && (
+                <Suspense fallback={null}>
                 <TimeManipulationBar
                   events={timelineEvents}
                   currentTime={currentTimePosition}
@@ -1093,6 +1118,7 @@ const ZoeOmegaPage: React.FC = () => {
                   }}
                   isPlaying={isTimelinePlaying}
                 />
+                </Suspense>
               )}
 
             </motion.div>
@@ -1334,12 +1360,14 @@ const ZoeOmegaPage: React.FC = () => {
             positionClassName="fixed top-20 right-4 z-[9994]"
             defaultOpen={false}
           >
-            <VRTestSuite />
+            <Suspense fallback={null}><VRTestSuite /></Suspense>
           </VRDraggablePanel>
         )}
 
         {/* Genesis Omni-Box - Bottom Center (only in VR mode) */}
-        {isVRMode && vrPanels.omniBox && <GenesisOmniBox />}
+        {isVRMode && vrPanels.omniBox && (
+          <Suspense fallback={null}><GenesisOmniBox /></Suspense>
+        )}
 
         {/* Bi-Cameral HUD Overlay (VR mode) - draggable + tap to drop down */}
         <AnimatePresence mode="sync">
@@ -1352,6 +1380,7 @@ const ZoeOmegaPage: React.FC = () => {
               positionClassName="fixed left-2 sm:left-4 top-20 z-30"
               contentClassName="w-64 sm:w-72 md:w-80 lg:w-96 max-w-[40vw] h-[45vh] sm:h-[50vh] overflow-hidden rounded-2xl"
             >
+              <Suspense fallback={null}>
               <BiCameralHUD
                 logicStream={oodaLogs.slice(-5).map(log => `[${log.phase}] ${log.content}`)}
                 dreamStream={[
@@ -1366,6 +1395,7 @@ const ZoeOmegaPage: React.FC = () => {
                   'neutral'
                 }
               />
+              </Suspense>
             </VRDraggablePanel>
           )}
         </AnimatePresence>
@@ -1376,6 +1406,8 @@ const ZoeOmegaPage: React.FC = () => {
             panels={vrPanelToggles}
             needsRotate={needsRotate}
             onRequestLandscape={() => { void requestLandscape(); }}
+            isFullscreen={isFullscreen}
+            onToggleFullscreen={() => { void toggleFullscreen(); }}
           />
         )}
 

@@ -18,8 +18,12 @@ export interface VRLandscapeState {
   needsRotate: boolean;
   /** True when a native orientation lock is active. */
   locked: boolean;
+  /** True when the document currently owns the full screen. */
+  isFullscreen: boolean;
   /** Manually (re)request landscape - must be called from a user gesture on iOS. */
   requestLandscape: () => Promise<void>;
+  /** One-tap enter/exit full screen (also re-requests landscape on entry). */
+  toggleFullscreen: () => Promise<void>;
   /** Release the lock (used when leaving the VR world). */
   releaseLandscape: () => void;
 }
@@ -34,6 +38,9 @@ const isTouchLike = () => {
 export const useVRLandscapeOrientation = (active: boolean): VRLandscapeState => {
   const [needsRotate, setNeedsRotate] = useState(false);
   const [locked, setLocked] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(
+    typeof document !== 'undefined' && Boolean(document.fullscreenElement)
+  );
 
   const evaluate = useCallback(() => {
     if (typeof window === 'undefined') {
@@ -107,7 +114,33 @@ export const useVRLandscapeOrientation = (active: boolean): VRLandscapeState => 
     };
   }, [evaluate]);
 
-  return { needsRotate, locked, requestLandscape, releaseLandscape };
+  // Track full-screen changes made anywhere (our button, Esc key, system gestures).
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const onChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, []);
+
+  const toggleFullscreen = useCallback(async () => {
+    if (typeof document === 'undefined') return;
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen?.();
+        releaseLandscape();
+        setIsFullscreen(false);
+        return;
+      }
+      await document.documentElement.requestFullscreen?.();
+      setIsFullscreen(Boolean(document.fullscreenElement));
+      await requestLandscape();
+    } catch (error) {
+      console.info('[VR Orientation] Fullscreen unavailable:', (error as Error)?.message);
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    }
+  }, [requestLandscape, releaseLandscape]);
+
+  return { needsRotate, locked, isFullscreen, requestLandscape, toggleFullscreen, releaseLandscape };
 };
 
 export default useVRLandscapeOrientation;
