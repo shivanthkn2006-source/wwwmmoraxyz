@@ -1418,6 +1418,12 @@ html.phantom-mode [class*="animate-"] {
   align-items: flex-start;
   gap: 0;
   overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 /* Music alone lifts the global headset shortcut clear of the search glass.
@@ -1433,6 +1439,7 @@ html.phantom-mode [class*="animate-"] {
   max-height: 6rem;
   line-height: 1.25rem;
   padding-right: 0.125rem;
+  caret-color: currentColor;
   scrollbar-width: none;
 }
 
@@ -1616,28 +1623,27 @@ html.phantom-mode [class*="animate-"] {
 }
 
 .music-liquid-chip {
-  border-radius: 9999px;
+  border: 0;
+  border-radius: 0;
   padding: 0.3rem 0.7rem;
-  background: hsl(var(--music-glass) / 0.035);
-  box-shadow:
-    inset 0 1px 0 hsl(var(--music-glass-edge) / 0.16),
-    inset 0 0 0 1px hsl(var(--music-glass-edge) / 0.13);
+  background: transparent;
+  box-shadow: none;
   color: hsl(0 0% 100% / 0.85);
   font-size: 0.6875rem;
   line-height: 1.1;
-  transition: background 150ms ease, color 150ms ease;
+  transition: color 150ms ease;
 }
 
 .music-liquid-chip:hover {
-  background: hsl(var(--music-glass) / 0.12);
+  background: transparent;
+  color: hsl(0 0% 100%);
 }
 
 .music-liquid-chip.is-active {
-  background: linear-gradient(145deg, hsl(var(--music-glass) / 0.26), hsl(var(--music-glass) / 0.11));
-  box-shadow:
-    inset 0 1px 0 hsl(var(--music-glass-edge) / 0.55),
-    inset 0 0 0 1px hsl(var(--music-glass-edge) / 0.22);
+  background: transparent;
+  box-shadow: none;
   color: hsl(0 0% 100%);
+  font-weight: 700;
 }
 
 .music-liquid-art {
@@ -1651,12 +1657,12 @@ html.phantom-mode [class*="animate-"] {
   position: absolute;
   inset-inline: 0.25rem;
   bottom: 0.25rem;
-  border-radius: 9999px;
+  border-radius: 0;
   padding: 0.15rem 0.4rem;
-  background: hsl(var(--music-glass) / 0.2);
-  box-shadow: inset 0 1px 0 hsl(var(--music-glass-edge) / 0.35);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   color: hsl(0 0% 100%);
   font-size: 0.5rem;
   font-weight: 600;
@@ -1667,10 +1673,8 @@ html.phantom-mode [class*="animate-"] {
 
 .music-liquid-status,
 .music-liquid-track-index {
-  background: hsl(var(--music-glass) / 0.06);
-  box-shadow:
-    inset 0 1px 0 hsl(var(--music-glass-edge) / 0.2),
-    inset 0 0 0 1px hsl(var(--music-glass-edge) / 0.08);
+  background: transparent;
+  box-shadow: none;
   color: hsl(0 0% 100%);
 }
 
@@ -1710,28 +1714,27 @@ html.phantom-mode [class*="animate-"] {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  border-radius: 9999px;
+  border: 0;
+  border-radius: 0;
   padding: 0.28rem 0.65rem;
-  background: hsl(var(--music-glass) / 0.035);
-  box-shadow:
-    inset 0 1px 0 hsl(var(--music-glass-edge) / 0.16),
-    inset 0 0 0 1px hsl(var(--music-glass-edge) / 0.13);
+  background: transparent;
+  box-shadow: none;
   color: hsl(0 0% 100% / 0.85);
   font-size: 0.6875rem;
   line-height: 1.1;
-  transition: background 150ms ease, transform 150ms ease;
+  transition: color 150ms ease, transform 150ms ease;
 }
 
 .music-liquid-react:hover {
-  background: hsl(var(--music-glass) / 0.12);
+  background: transparent;
+  color: hsl(0 0% 100%);
 }
 
 .music-liquid-react.is-on {
-  background: linear-gradient(145deg, hsl(var(--music-glass) / 0.28), hsl(var(--music-glass) / 0.12));
-  box-shadow:
-    inset 0 1px 0 hsl(var(--music-glass-edge) / 0.5),
-    inset 0 0 0 1px hsl(var(--music-glass-edge) / 0.2);
+  background: transparent;
+  box-shadow: none;
   color: hsl(0 0% 100%);
+  font-weight: 700;
 }
 
 .music-liquid-react.is-burst span[aria-hidden='true'] {
@@ -1755,8 +1758,8 @@ html.phantom-mode [class*="animate-"] {
 .music-liquid-track:hover,
 .music-liquid-track.is-current {
   border-color: transparent;
-  background: linear-gradient(90deg, hsl(var(--music-glass) / 0.12), hsl(var(--music-glass) / 0.035));
-  box-shadow: inset 0 1px 0 hsl(var(--music-glass-edge) / 0.12);
+  background: transparent;
+  box-shadow: none;
 }
 
 
@@ -1787,7 +1790,7 @@ html.phantom-mode [class*="animate-"] {
 
 .music-liquid-page .music-liquid-track:hover,
 .music-liquid-page .music-liquid-track.is-current {
-  background: linear-gradient(90deg, hsl(var(--music-glass) / 0.12), hsl(var(--music-glass) / 0.035));
+  background: transparent;
 }
 
 .music-mini-button {

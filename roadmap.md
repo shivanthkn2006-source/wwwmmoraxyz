@@ -56,3 +56,4 @@
 - [x] Remove only the Music player rectangle, halve its footprint, contain long metadata, and keep the search field responsive with content-driven downward expansion.
 - [x] Calibrate Music glass against the supplied references and add phone/PWA, iPad, and desktop visual regression coverage.
 - [x] Keep Home-menu labels inside the panel, preserve seven icons per row across narrow/short displays, hide the mini-player only on Music, and lift the Music headphones shortcut clear of search.
+- [x] Remove Music-page text/chip surfaces and the search rectangle so only text, cursor, and search glyph remain.
