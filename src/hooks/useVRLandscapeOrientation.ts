@@ -8,7 +8,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 type OrientationLockType = 'landscape' | 'landscape-primary' | 'portrait';
 
-interface ScreenOrientationLockable extends ScreenOrientation {
+interface ScreenOrientationLockable {
   lock?: (orientation: OrientationLockType) => Promise<void>;
   unlock?: () => void;
 }
