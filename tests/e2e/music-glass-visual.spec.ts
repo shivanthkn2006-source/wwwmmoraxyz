@@ -37,6 +37,7 @@ for (const viewport of VIEWPORTS) {
         const searchBox = search.getBoundingClientRect();
         const transportBox = transport.getBoundingClientRect();
         const transportStyle = getComputedStyle(transport);
+        const glassStyle = getComputedStyle(pageSurface, '::after');
         return {
           pageLeft: pageBox.left,
           pageRight: innerWidth - pageBox.right,
@@ -45,6 +46,8 @@ for (const viewport of VIEWPORTS) {
           transportRight: transportBox.right,
           transportBackground: transportStyle.backgroundColor,
           transportShadow: transportStyle.boxShadow,
+          glassBackground: glassStyle.backgroundImage,
+          glassBlur: glassStyle.backdropFilter || glassStyle.webkitBackdropFilter,
           scrollWidth: document.documentElement.scrollWidth,
         };
       });
@@ -57,6 +60,11 @@ for (const viewport of VIEWPORTS) {
       expect(geometry?.transportRight).toBeLessThanOrEqual(viewport.width);
       expect(geometry?.transportBackground).toBe('rgba(0, 0, 0, 0)');
       expect(geometry?.transportShadow).toBe('none');
+      expect(geometry?.glassBackground).toContain('rgba(255, 255, 255, 0.2)');
+      expect(geometry?.glassBackground).toContain('rgba(255, 255, 255, 0.08)');
+      expect(geometry?.glassBackground).toContain('rgba(255, 255, 255, 0.15)');
+      expect(geometry?.glassBlur).toContain('blur(52px)');
+      expect(geometry?.glassBlur).toContain('saturate(1.25)');
       expect(geometry?.scrollWidth).toBeLessThanOrEqual(viewport.width);
 
       const search = page.getByLabel('Search music');
