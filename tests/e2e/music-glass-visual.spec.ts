@@ -68,7 +68,12 @@ for (const viewport of VIEWPORTS) {
       expect(geometry?.scrollWidth).toBeLessThanOrEqual(viewport.width);
 
       const search = page.getByLabel('Search music');
+      // Wait for webfonts before measuring: late font swaps change the
+      // long-title wrap and shift the whole glass surface between runs.
+      await page.evaluate(() => document.fonts.ready);
+      await page.waitForTimeout(500);
       await search.fill('an intentionally very long song album artist and soundtrack title that must grow downward without leaving the viewport');
+      await page.waitForTimeout(300);
       const searchBounds = await search.boundingBox();
       expect(searchBounds).not.toBeNull();
       expect(searchBounds?.height).toBeGreaterThan(40);
