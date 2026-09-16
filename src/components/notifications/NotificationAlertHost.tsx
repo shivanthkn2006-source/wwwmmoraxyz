@@ -36,7 +36,7 @@ export const NotificationAlertHost = forwardRef<HTMLDivElement>((_props, _ref) =
         type="button"
         variant="secondary"
         size="sm"
-        className="pointer-events-auto gap-2 border border-border bg-card/95 shadow-lg backdrop-blur-xl"
+        className="pointer-events-auto gap-2 border border-primary/40 bg-primary text-primary-foreground shadow-lg backdrop-blur-xl hover:bg-primary/90"
         onClick={() => {
           initializeAudio();
           playIncomingCue();
