@@ -114,7 +114,33 @@ export const useVRLandscapeOrientation = (active: boolean): VRLandscapeState => 
     };
   }, [evaluate]);
 
-  return { needsRotate, locked, requestLandscape, releaseLandscape };
+  // Track full-screen changes made anywhere (our button, Esc key, system gestures).
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const onChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, []);
+
+  const toggleFullscreen = useCallback(async () => {
+    if (typeof document === 'undefined') return;
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen?.();
+        releaseLandscape();
+        setIsFullscreen(false);
+        return;
+      }
+      await document.documentElement.requestFullscreen?.();
+      setIsFullscreen(Boolean(document.fullscreenElement));
+      await requestLandscape();
+    } catch (error) {
+      console.info('[VR Orientation] Fullscreen unavailable:', (error as Error)?.message);
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    }
+  }, [requestLandscape, releaseLandscape]);
+
+  return { needsRotate, locked, isFullscreen, requestLandscape, toggleFullscreen, releaseLandscape };
 };
 
 export default useVRLandscapeOrientation;
