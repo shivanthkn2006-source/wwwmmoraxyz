@@ -18,8 +18,12 @@ export interface VRLandscapeState {
   needsRotate: boolean;
   /** True when a native orientation lock is active. */
   locked: boolean;
+  /** True when the document currently owns the full screen. */
+  isFullscreen: boolean;
   /** Manually (re)request landscape - must be called from a user gesture on iOS. */
   requestLandscape: () => Promise<void>;
+  /** One-tap enter/exit full screen (also re-requests landscape on entry). */
+  toggleFullscreen: () => Promise<void>;
   /** Release the lock (used when leaving the VR world). */
   releaseLandscape: () => void;
 }
