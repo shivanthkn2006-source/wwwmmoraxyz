@@ -1287,6 +1287,8 @@ html.phantom-mode [class*="animate-"] {
   position: relative;
   isolation: isolate;
   width: 100%;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
   color: hsl(0 0% 100%);
 }
 

@@ -31,6 +31,23 @@ interface PentarchyResult {
   totalProcessingTime: number;
 }
 
+const ANALYST_TIMEOUT_MS = 3_200;
+const SYNTHESIZER_TIMEOUT_MS = 2_800;
+
+async function withDeadline<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs}ms`)), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+  }
+}
+
 const AGENT_PROMPTS = {
   historian: `You are THE HISTORIAN - an expert in Nadi Shastra, Vedic texts, and ancient scriptures.
 Analyze the query through the lens of:
@@ -139,7 +156,7 @@ async function callAgent(
   }
 
   try {
-    const response = await sovereignFetch("sovereign://chat/completions", {
+    const response = await withDeadline(sovereignFetch("sovereign://chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${SOVEREIGN_AI_KEY}`,
@@ -152,8 +169,9 @@ async function callAgent(
           { role: "user", content: userMessage }
         ],
         temperature: 0.3,
+        max_tokens: agentType === "synthesizer" ? 500 : 400,
       }),
-    });
+    }), agentType === "synthesizer" ? SYNTHESIZER_TIMEOUT_MS : ANALYST_TIMEOUT_MS, agentType);
 
     // Handle rate limiting (429) and credits exhausted (402)
     if (response.status === 429) {

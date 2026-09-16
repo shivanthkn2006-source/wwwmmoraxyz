@@ -56,6 +56,14 @@ describe('god mode scan', () => {
     expect(intent?.kind).toBe('god-scan');
   });
 
+  it('does not let music detection hijack a requested God Mode scan', () => {
+    expect(resolveVoiceIntent('Zoe start the god mode scan')).toMatchObject({ kind: 'god-scan' });
+  });
+
+  it('does not treat a posted video as music', () => {
+    expect(resolveVoiceIntent('Zoe play the video I posted')?.kind).not.toBe('music');
+  });
+
   it('does not trigger on an ordinary scan question', () => {
     expect(resolveVoiceIntent('what is god mode')?.kind).not.toBe('god-scan');
   });
