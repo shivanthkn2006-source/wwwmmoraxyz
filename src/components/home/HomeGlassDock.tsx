@@ -207,6 +207,7 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
       <button
         key={item.id}
         type="button"
+        data-home-dock-item={isHome ? undefined : item.id}
         ref={isHome ? triggerRef : undefined}
         data-home-dock-trigger={isHome ? true : undefined}
         role={open ? 'menuitem' : undefined}
@@ -277,7 +278,7 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
         )}
       >
         {item.icon}
-        {!isHome && <span className="home-dock-label pointer-events-none absolute left-1/2 top-1/2 z-10 hidden max-w-[calc(var(--home-dock-panel-width)-1rem)] -translate-x-1/2 -translate-y-1/2 whitespace-normal rounded-md border border-white/25 bg-black/90 px-2 py-1 text-center text-[10px] font-medium leading-tight text-white shadow-md group-hover:block group-focus-visible:block">
+        {!isHome && <span className="home-dock-label pointer-events-none absolute left-1/2 top-1/2 z-10 hidden -translate-x-1/2 -translate-y-1/2 whitespace-normal rounded-md border border-white/25 bg-black/90 px-2 py-1 text-center text-[10px] font-medium leading-tight text-white shadow-md group-hover:block group-focus-visible:block">
           {item.label}
         </span>}
         {badge > 0 && !isHome && (
@@ -364,7 +365,7 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
 
 
   const renderPackedRows = () => (
-    <div data-home-dock-grid className="grid grid-cols-7 gap-[var(--home-dock-gap)]">
+      <div data-home-dock-grid className="grid grid-cols-7 gap-[var(--home-dock-gap)] overflow-hidden rounded-2xl">
       {gridSlots.map((item) => renderIconButton(item))}
     </div>
   );

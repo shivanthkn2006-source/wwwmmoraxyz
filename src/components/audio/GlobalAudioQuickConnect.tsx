@@ -106,7 +106,7 @@ export const GlobalAudioQuickConnect: React.FC = () => {
     // Small round icon only, parked immediately to the LEFT of the header
     // notification bell (bell 40px + 8px gap + 40px avatar + 16px inset).
     <div
-      className={`fixed right-[104px] z-[55] flex items-center gap-2 pointer-events-auto ${pathname === '/music' ? 'top-2' : 'top-[18px]'}`}
+      className={`fixed right-[104px] z-[55] flex items-center gap-2 pointer-events-auto ${pathname === '/music' ? 'music-audio-quick-connect top-0' : 'top-[18px]'}`}
       data-global-audio-quick-connect
     >
       {muted && (

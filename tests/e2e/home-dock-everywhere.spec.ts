@@ -66,6 +66,7 @@ test.describe('Responsive Home menu grid', () => {
       const dock = page.locator('[data-home-dock]').first();
       const grid = dock.locator('[data-home-dock-grid]');
       await expect(grid).toBeVisible();
+      await page.waitForTimeout(400);
 
       const buttons = grid.getByRole('menuitem');
       await expect(buttons).toHaveCount(28);

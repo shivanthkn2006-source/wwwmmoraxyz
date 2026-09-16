@@ -1319,9 +1319,20 @@ html.phantom-mode [class*="animate-"] {
    the glass panel. Screen-reader names remain available through aria-label. */
 .home-dock-root .home-dock-label {
   max-height: calc(var(--home-dock-cell) - 0.25rem);
-  max-width: calc(var(--home-dock-cell) - 0.2rem);
+  max-width: min(9rem, calc(var(--home-dock-panel-width) - 1rem));
   overflow: hidden;
-  font-size: clamp(0.42rem, calc(var(--home-dock-cell) * 0.18), 0.625rem);
+  font-size: clamp(0.5rem, calc(var(--home-dock-cell) * 0.22), 0.625rem);
+}
+
+.home-dock-root [data-home-dock-grid] > :nth-child(7n + 1) .home-dock-label {
+  left: 0;
+  transform: translateY(-50%);
+}
+
+.home-dock-root [data-home-dock-grid] > :nth-child(7n) .home-dock-label {
+  right: 0;
+  left: auto;
+  transform: translateY(-50%);
 }
 
 /* Ambient light room behind the glass: warm and clearly colored, but kept
@@ -1399,6 +1410,13 @@ html.phantom-mode [class*="animate-"] {
   align-items: flex-start;
   gap: 0;
   overflow: hidden;
+}
+
+/* Music alone lifts the global headset shortcut clear of the search glass.
+   Its icon, destination, and behavior are unchanged. */
+.music-audio-quick-connect > [data-testid='audio-quick-connect'] {
+  min-width: 2.25rem;
+  min-height: 2.25rem;
 }
 
 /* Text runs all the way to the icon: no dead padding before the glyph. */
