@@ -1,0 +1,113 @@
+// ═══════════════════════════════════════════════════════════════════════════════
+// VR LANDSCAPE ORIENTATION
+// Auto-requests landscape (+ fullscreen where required) when the VR world opens.
+// Purely additive: no VR visuals, components or logic are modified.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+import { useCallback, useEffect, useState } from 'react';
+
+type OrientationLockType = 'landscape' | 'landscape-primary' | 'portrait';
+
+interface ScreenOrientationLockable extends ScreenOrientation {
+  lock?: (orientation: OrientationLockType) => Promise<void>;
+  unlock?: () => void;
+}
+
+export interface VRLandscapeState {
+  /** True when the viewport is currently portrait on a touch/small device. */
+  needsRotate: boolean;
+  /** True when a native orientation lock is active. */
+  locked: boolean;
+  /** Manually (re)request landscape - must be called from a user gesture on iOS. */
+  requestLandscape: () => Promise<void>;
+  /** Release the lock (used when leaving the VR world). */
+  releaseLandscape: () => void;
+}
+
+const isTouchLike = () => {
+  if (typeof window === 'undefined') return false;
+  const smallest = Math.min(window.innerWidth, window.innerHeight);
+  const coarse = window.matchMedia?.('(pointer: coarse)')?.matches ?? false;
+  return coarse || smallest <= 900;
+};
+
+export const useVRLandscapeOrientation = (active: boolean): VRLandscapeState => {
+  const [needsRotate, setNeedsRotate] = useState(false);
+  const [locked, setLocked] = useState(false);
+
+  const evaluate = useCallback(() => {
+    if (typeof window === 'undefined') {
+      setNeedsRotate(false);
+      return;
+    }
+    const portrait = window.innerHeight > window.innerWidth;
+    setNeedsRotate(Boolean(active) && portrait && isTouchLike());
+  }, [active]);
+
+  const requestLandscape = useCallback(async () => {
+    if (typeof window === 'undefined' || typeof document === 'undefined') return;
+    const orientation = window.screen?.orientation as ScreenOrientationLockable | undefined;
+
+    try {
+      // Android/Chrome require fullscreen before an orientation lock is allowed.
+      if (!document.fullscreenElement && document.documentElement.requestFullscreen && isTouchLike()) {
+        await document.documentElement.requestFullscreen().catch(() => undefined);
+      }
+      if (orientation?.lock) {
+        await orientation.lock('landscape');
+        setLocked(true);
+      }
+    } catch (error) {
+      // iOS Safari and desktop browsers reject locks - fall back to the rotate hint.
+      console.info('[VR Orientation] Landscape lock unavailable:', (error as Error)?.message);
+      setLocked(false);
+    } finally {
+      evaluate();
+    }
+  }, [evaluate]);
+
+  const releaseLandscape = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    const orientation = window.screen?.orientation as ScreenOrientationLockable | undefined;
+    try {
+      orientation?.unlock?.();
+    } catch {
+      /* no-op */
+    }
+    setLocked(false);
+  }, []);
+
+  // Auto-attempt on entry, and clean up on exit.
+  useEffect(() => {
+    if (!active) {
+      releaseLandscape();
+      setNeedsRotate(false);
+      return;
+    }
+    evaluate();
+    void requestLandscape();
+    return () => releaseLandscape();
+  }, [active, evaluate, requestLandscape, releaseLandscape]);
+
+  // Retry the lock on the first user gesture (needed when autoplay-style gating blocks it).
+  useEffect(() => {
+    if (!active || locked) return;
+    const onGesture = () => { void requestLandscape(); };
+    window.addEventListener('pointerdown', onGesture, { once: true, passive: true });
+    return () => window.removeEventListener('pointerdown', onGesture);
+  }, [active, locked, requestLandscape]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.addEventListener('resize', evaluate);
+    window.addEventListener('orientationchange', evaluate);
+    return () => {
+      window.removeEventListener('resize', evaluate);
+      window.removeEventListener('orientationchange', evaluate);
+    };
+  }, [evaluate]);
+
+  return { needsRotate, locked, requestLandscape, releaseLandscape };
+};
+
+export default useVRLandscapeOrientation;
