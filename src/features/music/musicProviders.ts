@@ -76,7 +76,7 @@ async function resolveAudiusHost(): Promise<string | null> {
   return audiusHost;
 }
 
-export async function searchAudius(query: string, limit = 20): Promise<MusicTrack[]> {
+export async function searchAudius(query: string, limit = 40): Promise<MusicTrack[]> {
   const host = await resolveAudiusHost();
   if (!host) return [];
   const data = await getJson<{ data?: any[] }>(
@@ -203,14 +203,15 @@ export async function searchRadio(term: string, limit = 20): Promise<MusicTrack[
 
 /* ────────────────────────── Internet Archive ────────────────────────── */
 
-export async function searchArchive(query: string, limit = 10): Promise<MusicTrack[]> {
+export async function searchArchive(query: string, limit = 20): Promise<MusicTrack[]> {
   const search = await getJson<{ response?: { docs?: Array<{ identifier: string; title?: string; creator?: string }> } }>(
     `https://archive.org/advancedsearch.php?q=${encodeURIComponent(
       `${query} AND mediatype:(audio)`,
     )}&fl%5B%5D=identifier&fl%5B%5D=title&fl%5B%5D=creator&rows=${limit}&page=1&output=json`,
   );
   const docs = search?.response?.docs ?? [];
-  const resolved = await Promise.all(docs.slice(0, 5).map(async (doc): Promise<MusicTrack | null> => {
+  const resolved = await Promise.all(docs.slice(0, 10).map(async (doc): Promise<MusicTrack | null> => {
+
     const meta = await getJson<{ files?: Array<{ name: string; format?: string; length?: string }> }>(
       `https://archive.org/metadata/${encodeURIComponent(doc.identifier)}`,
     );
