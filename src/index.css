@@ -1385,6 +1385,8 @@ html.phantom-mode [class*="animate-"] {
 .music-search-submit {
   flex: 0 0 2.25rem;
   width: 2.25rem;
+  min-width: 0;
+  min-height: 2.5rem;
   -webkit-appearance: none;
   appearance: none;
   -webkit-tap-highlight-color: transparent;
