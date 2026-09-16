@@ -4613,6 +4613,7 @@ export type Database = {
           track_id: string
           track_source: string | null
           track_title: string
+          track_url: string | null
           user_id: string
         }
         Insert: {
@@ -4623,6 +4624,7 @@ export type Database = {
           track_id: string
           track_source?: string | null
           track_title: string
+          track_url?: string | null
           user_id: string
         }
         Update: {
@@ -4633,6 +4635,7 @@ export type Database = {
           track_id?: string
           track_source?: string | null
           track_title?: string
+          track_url?: string | null
           user_id?: string
         }
         Relationships: []
@@ -4647,6 +4650,7 @@ export type Database = {
           track_id: string
           track_source: string | null
           track_title: string
+          track_url: string | null
           user_id: string
         }
         Insert: {
@@ -4658,6 +4662,7 @@ export type Database = {
           track_id: string
           track_source?: string | null
           track_title: string
+          track_url?: string | null
           user_id: string
         }
         Update: {
@@ -4669,6 +4674,7 @@ export type Database = {
           track_id?: string
           track_source?: string | null
           track_title?: string
+          track_url?: string | null
           user_id?: string
         }
         Relationships: []
