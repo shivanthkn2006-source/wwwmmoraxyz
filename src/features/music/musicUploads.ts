@@ -39,7 +39,12 @@ export async function compactAudio(file: File): Promise<{ blob: Blob; duration: 
   const decoded = await decode(file);
   const duration = Math.round(decoded.duration);
   try {
-    const { Mp3Encoder } = await import('lamejs');
+    // lamejs ships CommonJS, so the encoder can arrive on the module or on its default interop object.
+    const lame = (await import('lamejs')) as unknown as Record<string, unknown> & { default?: Record<string, unknown> };
+    const Mp3Encoder = (lame.Mp3Encoder ?? lame.default?.Mp3Encoder) as
+      | (new (channels: number, sampleRate: number, kbps: number) => { encodeBuffer: (l: Int16Array, r?: Int16Array) => Uint8Array | number[]; flush: () => Uint8Array | number[] })
+      | undefined;
+    if (!Mp3Encoder) throw new Error('encoder unavailable');
     const channels = Math.min(decoded.numberOfChannels, 2);
     const encoder = new Mp3Encoder(channels, decoded.sampleRate, 96);
     const block = 1152;
