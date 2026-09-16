@@ -17,6 +17,9 @@ export type MusicIntent =
 
 const MUSIC_WORD = /\b(music|song|songs|track|tracks|playlist|radio|station|satellite|album|tune|tunes)\b/;
 const OTHER_MEDIA_OR_ACTION = /\b(video|movie|film|reel|post|game|scan|audit|check|resume|presentation|slideshow|animation|recording)\b/;
+// Ordinary "play/start …" sentences that are never about music playback.
+const NON_MUSIC_REQUEST = /\b(over|again from|my day|a call|the call|meeting|timer|stopwatch|workout|session|conversation|chat|onboarding|tutorial|upload|download|backup|sync|test|tests|diagnostics|report|deployment|build|scan|search for|recording|stream|livestream|broadcast|countdown|quiz|challenge|journey)\b/;
+
 
 const MOODS: Record<string, string> = {
   happy: 'happy',
