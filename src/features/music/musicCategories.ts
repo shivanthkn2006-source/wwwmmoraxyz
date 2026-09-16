@@ -31,3 +31,12 @@ export const MUSIC_STATIONS: MusicCategory[] = [
   { id: 'station-classical', label: 'Classical radio', query: 'classical radio', kind: 'radio' },
   { id: 'station-chill', label: 'Chill radio', query: 'chillout radio', kind: 'radio' },
 ];
+
+/**
+ * Radio Browser tags used to load real, online stations into the sidebar.
+ * Station names shown to members always come from the live directory.
+ */
+export const MUSIC_RADIO_TAGS: string[] = [
+  'pop', 'rock', 'classical', 'jazz', 'devotional', 'lofi', 'news', 'chillout', 'bollywood', 'oldies',
+];
+
