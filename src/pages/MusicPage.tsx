@@ -129,6 +129,24 @@ export default function MusicPage() {
     void search(routedQuery).finally(() => setSearchParams({}, { replace: true }));
   }, [search, searchParams, setSearchParams]);
 
+  /** Loads the real, currently online stations for one radio tag. */
+  const loadStations = useCallback(async (tag: string) => {
+    setStationTag(tag);
+    setNotice(null);
+    const live = await fetchLiveStations(tag);
+    setStations(live);
+    if (!live.length) setNotice(`No live ${tag} station is online right now.`);
+  }, []);
+
+  const saveToPlaylist = useCallback((track: MusicTrack) => {
+    const name = window.prompt('Add to playlist (name):')?.trim();
+    if (!name) return;
+    addToPlaylist(name, track);
+    setSelectedPlaylist(name);
+  }, []);
+
+
+
   const trackRow = (track: MusicTrack, index: number, onPlay: () => void) => (
     <li key={`${track.id}-${index}`} className="flex items-center gap-1">
       <Button variant="ghost" className="music-liquid-track h-auto min-w-0 flex-1 justify-start whitespace-normal px-2.5 py-2.5 text-left" onClick={onPlay}>
