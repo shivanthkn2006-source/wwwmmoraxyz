@@ -110,6 +110,7 @@ export default function DraggableHomeControl({
   return (
     <button
       type="button"
+      data-home-control={storageKey}
       aria-label={ariaLabel}
       aria-disabled={disabled || undefined}
       aria-busy={busy || undefined}

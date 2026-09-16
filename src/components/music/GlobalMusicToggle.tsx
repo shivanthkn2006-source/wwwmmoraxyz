@@ -12,8 +12,11 @@ interface PlayerPosition {
 
 const POSITION_KEY = 'mmora.music.miniPlayerPosition';
 const EDGE_GAP = 8;
-// Home wordmark begins at 1rem and ends near 6rem; start immediately after its final “a”.
-const DEFAULT_POSITION: PlayerPosition = { x: 104, y: 8 };
+/** The floating home search icon the collapsed disc parks next to by default. */
+const SEARCH_CONTROL_SELECTOR = '[data-home-control="mmora.home.search-position.v3"]';
+const SEARCH_GAP = 6;
+// Fallback if the search control is not mounted (non-home routes): just below it.
+const DEFAULT_POSITION: PlayerPosition = { x: 52, y: 80 };
 
 export default function GlobalMusicToggle() {
   const state = useMusicEngine();
@@ -33,11 +36,15 @@ export default function GlobalMusicToggle() {
   // Collapsed by default: only the disc symbol shows, so it never crowds the
   // headphones shortcut. Tapping the disc reveals the transport controls.
   const [expanded, setExpanded] = useState(false);
+  const hasSavedPositionRef = useRef(false);
   const [position, setPosition] = useState<PlayerPosition>(() => {
 
     try {
       const saved = localStorage.getItem(POSITION_KEY);
-      if (saved) return JSON.parse(saved) as PlayerPosition;
+      if (saved) {
+        hasSavedPositionRef.current = true;
+        return JSON.parse(saved) as PlayerPosition;
+      }
     } catch {
       // Storage may be unavailable in private browsing.
     }
@@ -67,6 +74,31 @@ export default function GlobalMusicToggle() {
       window.removeEventListener('orientationchange', keepOnScreen);
     };
   }, [clamp]);
+
+  // Default home: park the collapsed disc immediately to the right of the
+  // floating search icon. Only until the member drags it somewhere themselves.
+  useEffect(() => {
+    if (hasSavedPositionRef.current) return;
+    let frame = 0;
+    let attempts = 0;
+    const anchor = () => {
+      const control = document.querySelector<HTMLElement>(SEARCH_CONTROL_SELECTOR);
+      if (!control) {
+        if (attempts++ < 30) frame = window.requestAnimationFrame(anchor);
+        return;
+      }
+      const bounds = control.getBoundingClientRect();
+      const height = playerRef.current?.offsetHeight ?? 36;
+      const anchored = clamp({
+        x: bounds.right + SEARCH_GAP,
+        y: bounds.top + (bounds.height - height) / 2,
+      });
+      positionRef.current = anchored;
+      setPosition(anchored);
+    };
+    frame = window.requestAnimationFrame(anchor);
+    return () => window.cancelAnimationFrame(frame);
+  }, [clamp, location.pathname, state.track?.id]);
 
   useEffect(() => {
     if (location.pathname !== '/music') return;
@@ -108,6 +140,7 @@ export default function GlobalMusicToggle() {
       });
       setPosition(finalPosition);
       positionRef.current = finalPosition;
+      hasSavedPositionRef.current = true;
       try { localStorage.setItem(POSITION_KEY, JSON.stringify(finalPosition)); } catch { /* Storage unavailable. */ }
     };
 
