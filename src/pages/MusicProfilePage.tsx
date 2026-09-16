@@ -57,7 +57,7 @@ export default function MusicProfilePage() {
         <header className="flex items-center justify-between">
           <Button variant="ghost" size="icon" aria-label="Back to Music" onClick={() => navigate('/music')}><ArrowLeft /></Button>
           <h1 className="text-sm font-semibold">My music taste</h1>
-          <Button variant="ghost" size="icon" aria-label="Save my music taste" disabled={saving} onClick={() => void save()}><Check /></Button>
+          <span className="w-9" aria-hidden="true" />
         </header>
 
         <div>
