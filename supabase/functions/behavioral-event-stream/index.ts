@@ -151,8 +151,9 @@ serve(async (req) => {
         // error the client should surface as a failed request.
         status: 202,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-
+      });
     }
+
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
