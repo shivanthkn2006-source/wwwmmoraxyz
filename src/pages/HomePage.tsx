@@ -28,6 +28,8 @@ import { type FeedSearchItem } from '@/lib/feedSearchItems';
 import { useDhfBrain } from '@/hooks/useDhfBrain';
 import useZoeMotivation from '@/hooks/useZoeMotivation';
 import HomeMotivationSlide from '@/components/home/HomeMotivationSlide';
+import HomeMusicShelf from '@/components/home/HomeMusicShelf';
+
 
 import HomeGlassDock from '@/components/home/HomeGlassDock';
 import HomeFeedSwitcher from '@/components/home/HomeFeedSwitcher';
