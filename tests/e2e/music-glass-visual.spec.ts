@@ -7,6 +7,12 @@ const VIEWPORTS = [
 ];
 
 async function openMusic(page: Page) {
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
+  const storageKey = process.env.LOVABLE_BROWSER_SUPABASE_STORAGE_KEY;
+  const session = process.env.LOVABLE_BROWSER_SUPABASE_SESSION_JSON;
+  if (storageKey && session) {
+    await page.evaluate(({ key, value }) => localStorage.setItem(key, value), { key: storageKey, value: session });
+  }
   await page.goto('/music', { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(1_000);
   test.skip(new URL(page.url()).pathname.startsWith('/auth'), 'Music requires a signed-in preview session');
