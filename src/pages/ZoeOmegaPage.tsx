@@ -435,6 +435,30 @@ const ZoeOmegaPage: React.FC = () => {
   const [isSoundEnabled, setIsSoundEnabled] = useState(true);
   const soundEngineRef = useRef<OmegaSoundEngine | null>(null);
 
+  // Landscape-first VR entry (auto lock + rotate prompt on touch devices)
+  const { needsRotate, requestLandscape } = useVRLandscapeOrientation(isVRMode);
+
+  // VR panel visibility - every panel stays discoverable through the Panels hub
+  const [vrPanels, setVrPanels] = useState({
+    identity: true,
+    hud: true,
+    dreamscape: true,
+    timeline: true,
+    omniBox: true,
+    diagnostics: true,
+  });
+  const toggleVrPanel = useCallback((key: keyof typeof vrPanels) => {
+    setVrPanels(prev => ({ ...prev, [key]: !prev[key] }));
+  }, []);
+  const vrPanelToggles: VRPanelToggle[] = [
+    { id: 'identity', label: 'Zoe Omega badge', visible: vrPanels.identity, onToggle: () => toggleVrPanel('identity') },
+    { id: 'hud', label: 'Mind HUD', visible: vrPanels.hud, onToggle: () => toggleVrPanel('hud') },
+    { id: 'dreamscape', label: 'Dreamscape moods', visible: vrPanels.dreamscape, onToggle: () => toggleVrPanel('dreamscape') },
+    { id: 'timeline', label: 'Chrono timeline', visible: vrPanels.timeline, onToggle: () => toggleVrPanel('timeline') },
+    { id: 'omniBox', label: 'Genesis omni-box', visible: vrPanels.omniBox, onToggle: () => toggleVrPanel('omniBox') },
+    { id: 'diagnostics', label: 'Diagnostics', visible: vrPanels.diagnostics, onToggle: () => toggleVrPanel('diagnostics') },
+  ];
+
   // Strict VR audio gate: only unlocked when immersive VR is explicitly entered
   useEffect(() => {
     if (isVRMode && !vrStasisActive) {
