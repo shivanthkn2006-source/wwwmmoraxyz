@@ -74,10 +74,20 @@ export async function compactAudio(file: File): Promise<{ blob: Blob; duration: 
   return { blob: file, duration, compressed: false };
 }
 
-async function signedUrl(path: string | null): Promise<string | undefined> {
+/** Signs a private upload path, retrying once so a flaky connection is survivable. */
+async function signedUrl(path: string | null, attempts = 2): Promise<string | undefined> {
   if (!path) return undefined;
-  const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(path, SIGNED_SECONDS);
-  return error ? undefined : data.signedUrl;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(path, SIGNED_SECONDS);
+      if (!error && data?.signedUrl) return data.signedUrl;
+      logMusicEvent('artwork:resign', error ?? 'No signed link was returned.', { path, attempt });
+    } catch (error) {
+      logMusicEvent('artwork:resign', error, { path, attempt });
+    }
+    if (attempt < attempts) await new Promise((resolve) => setTimeout(resolve, 400 * attempt));
+  }
+  return undefined;
 }
 
 async function rowsToTracks(rows: UploadRow[]): Promise<MusicTrack[]> {
