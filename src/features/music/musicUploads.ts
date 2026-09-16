@@ -145,7 +145,15 @@ export async function uploadMyMusic(draft: MusicUploadDraft): Promise<{ track: M
   if (error) { await supabase.storage.from(BUCKET).remove([audioPath, ...(artworkPath ? [artworkPath] : [])]); throw error; }
   const tracks = await rowsToTracks([data as UploadRow]);
   if (!tracks[0]) throw new Error('The upload was saved but could not be opened.');
+  // A new upload counts as one play, so it appears on the Home listening shelf right away.
+  try {
+    const { logListen } = await import('./musicSocial');
+    await logListen(tracks[0]);
+  } catch {
+    // History is best-effort: never fail the upload because the shelf entry could not be written.
+  }
   return { track: tracks[0], compressed: compacted.compressed };
+
 }
 
 export async function deleteMyUpload(trackId: string): Promise<void> {
