@@ -3,7 +3,7 @@ import { Helmet } from 'react-helmet-async';
 import { useSearchParams } from 'react-router-dom';
 import { Disc3, Heart, ListMusic, Pause, Play, Plus, Repeat, Search, Shuffle, SkipBack, SkipForward, Volume2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Slider } from '@/components/ui/slider';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { musicEngine } from '@/services/MusicEngine';
@@ -52,9 +52,17 @@ export default function MusicPage() {
   const [fullOnly, setFullOnly] = useState(false);
   const active = state.status === 'playing' || state.status === 'buffering';
   const routedQueryRef = useRef<string | null>(null);
+  const searchInputRef = useRef<HTMLTextAreaElement>(null);
 
 
   useEffect(() => subscribeLibrary(setLibrary), []);
+
+  useEffect(() => {
+    const input = searchInputRef.current;
+    if (!input) return;
+    input.style.height = '2.5rem';
+    input.style.height = `${Math.min(Math.max(input.scrollHeight, 40), 96)}px`;
+  }, [query]);
 
   // Log every started track (friends who love it get a feed notification) and
   // load the current member's reactions for it.
@@ -266,18 +274,31 @@ export default function MusicPage() {
                 <h1 className="text-sm font-semibold text-white">MMora music</h1>
               </div>
               <form className="music-liquid-control music-search-control flex gap-2 rounded-full p-1" onSubmit={(e) => { e.preventDefault(); void search(); }}>
-                <Input className="music-search-input h-10 border-0 bg-transparent text-white shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Search music" autoComplete="off" />
+                <Textarea
+                  ref={searchInputRef}
+                  rows={1}
+                  className="music-search-input min-h-10 resize-none overflow-y-auto border-0 bg-transparent text-white shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key !== 'Enter' || e.shiftKey) return;
+                    e.preventDefault();
+                    e.currentTarget.form?.requestSubmit();
+                  }}
+                  aria-label="Search music"
+                  autoComplete="off"
+                />
                 <Button className="music-search-submit h-10 w-10" type="submit" variant="ghost" size="icon" disabled={searching} aria-label={searching ? 'Searching' : 'Search'}><Search aria-hidden="true" /></Button>
               </form>
 
               {/* Current artwork sits directly under the search bar. */}
-              <div className="flex items-center gap-3">
+              <div className="music-current-track flex min-w-0 items-center gap-3 overflow-hidden">
                 <div className="music-liquid-art relative flex aspect-square w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl sm:w-28">
                   {state.track?.artwork ? <img src={state.track.artwork} alt="" className="h-full w-full object-cover" decoding="async" /> : <Disc3 className="h-8 w-8 text-white/40" />}
                   {state.track && <span className="music-liquid-nowtag">Now listening</span>}
                 </div>
-                <div className="min-w-0">
-                  <p className="truncate text-base font-semibold text-white sm:text-lg">{state.track?.title ?? 'Nothing playing'}</p>
+                <div className="music-current-copy min-w-0 flex-1 overflow-hidden">
+                  <p className="line-clamp-2 break-words text-base font-semibold text-white sm:text-lg">{state.track?.title ?? 'Nothing playing'}</p>
                   <p className="truncate text-sm text-white/60">{state.track?.artist ?? 'Search or ask Zoe to play something.'}</p>
                   {state.track?.album && <p className="truncate text-xs text-white/50">{state.track.album}</p>}
                   {state.track && <p className="truncate text-[10px] text-white/40">{state.track.credit}</p>}
@@ -304,17 +325,17 @@ export default function MusicPage() {
 
               {(state.error || notice) && <p role="status" className="text-xs text-white/60">{state.error ?? notice}</p>}
 
-              <div className="music-liquid-control space-y-3 rounded-2xl p-3">
+              <div className="music-liquid-control music-transport-control space-y-1.5 p-0">
                 <div>
                   <Slider className="music-liquid-slider" value={[state.position]} max={Math.max(state.duration, state.position, 1)} step={1} disabled={!state.duration || Boolean(state.track?.live)} onValueChange={([v]) => musicEngine.seek(v)} aria-label="Position" />
-                  <div className="mt-1.5 flex justify-between text-[10px] text-white/50"><span>{clock(state.position)}</span><span>{state.track?.live ? 'LIVE' : clock(state.duration)}</span></div>
+                  <div className="mt-0.5 flex justify-between text-[10px] text-white/50"><span>{clock(state.position)}</span><span>{state.track?.live ? 'LIVE' : clock(state.duration)}</span></div>
                 </div>
-                <div className="flex items-center justify-center gap-1.5 sm:gap-2">
-                  <IconControl className={`music-liquid-round h-10 w-10 rounded-full ${state.shuffle ? 'is-on' : ''}`} variant="ghost" size="icon" onClick={() => musicEngine.toggleShuffle()} label="Shuffle"><Shuffle /></IconControl>
-                  <IconControl className="music-liquid-round h-10 w-10 rounded-full" variant="ghost" size="icon" onClick={() => void musicEngine.previous()} label="Previous"><SkipBack /></IconControl>
-                  <IconControl size="icon" className="music-liquid-play h-12 w-12 rounded-full" onClick={() => { musicEngine.unlock(); musicEngine.toggle(); }} label={active ? 'Pause' : 'Play'}>{active ? <Pause /> : <Play />}</IconControl>
-                  <IconControl className="music-liquid-round h-10 w-10 rounded-full" variant="ghost" size="icon" onClick={() => void musicEngine.next()} label="Next"><SkipForward /></IconControl>
-                  <IconControl className={`music-liquid-round h-10 w-10 rounded-full ${state.repeat !== 'off' ? 'is-on' : ''}`} variant="ghost" size="icon" onClick={() => musicEngine.cycleRepeat()} label={`Repeat: ${state.repeat}`}><Repeat /></IconControl>
+                <div className="music-transport-buttons flex items-center justify-center gap-1">
+                  <IconControl className={`music-liquid-round h-8 w-8 rounded-full ${state.shuffle ? 'is-on' : ''}`} variant="ghost" size="icon" onClick={() => musicEngine.toggleShuffle()} label="Shuffle"><Shuffle /></IconControl>
+                  <IconControl className="music-liquid-round h-8 w-8 rounded-full" variant="ghost" size="icon" onClick={() => void musicEngine.previous()} label="Previous"><SkipBack /></IconControl>
+                  <IconControl size="icon" className="music-liquid-play h-9 w-9 rounded-full" onClick={() => { musicEngine.unlock(); musicEngine.toggle(); }} label={active ? 'Pause' : 'Play'}>{active ? <Pause /> : <Play />}</IconControl>
+                  <IconControl className="music-liquid-round h-8 w-8 rounded-full" variant="ghost" size="icon" onClick={() => void musicEngine.next()} label="Next"><SkipForward /></IconControl>
+                  <IconControl className={`music-liquid-round h-8 w-8 rounded-full ${state.repeat !== 'off' ? 'is-on' : ''}`} variant="ghost" size="icon" onClick={() => musicEngine.cycleRepeat()} label={`Repeat: ${state.repeat}`}><Repeat /></IconControl>
                 </div>
                 <div className="flex items-center gap-2"><Volume2 className="h-4 w-4 text-white/50" /><Slider className="music-liquid-slider" value={[state.volume * 100]} max={100} step={1} onValueChange={([v]) => musicEngine.setVolume(v / 100)} aria-label="Volume" /><span className="w-9 text-right text-[10px] tabular-nums text-white/50">{Math.round(state.volume * 100)}%</span></div>
               </div>

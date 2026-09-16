@@ -1280,6 +1280,10 @@ html.phantom-mode [class*="animate-"] {
 .music-liquid-page {
   --music-glass: 0 0% 100%;
   --music-glass-edge: 0 0% 100%;
+  --music-ambient-a: 36 26% 46%;
+  --music-ambient-b: 26 30% 40%;
+  --music-ambient-c: 92 16% 38%;
+  --music-ambient-d: 28 20% 34%;
   position: relative;
   isolation: isolate;
   width: 100%;
@@ -1295,10 +1299,10 @@ html.phantom-mode [class*="animate-"] {
   z-index: -2;
   pointer-events: none;
   background:
-    radial-gradient(120% 90% at 12% 6%, hsl(36 26% 46% / 0.9), transparent 62%),
-    radial-gradient(110% 85% at 90% 10%, hsl(26 30% 40% / 0.85), transparent 60%),
-    radial-gradient(120% 95% at 80% 94%, hsl(92 16% 38% / 0.8), transparent 64%),
-    radial-gradient(130% 100% at 18% 96%, hsl(28 20% 34% / 0.85), transparent 66%),
+    radial-gradient(120% 90% at 12% 6%, hsl(var(--music-ambient-a) / 0.9), transparent 62%),
+    radial-gradient(110% 85% at 90% 10%, hsl(var(--music-ambient-b) / 0.85), transparent 60%),
+    radial-gradient(120% 95% at 80% 94%, hsl(var(--music-ambient-c) / 0.8), transparent 64%),
+    radial-gradient(130% 100% at 18% 96%, hsl(var(--music-ambient-d) / 0.85), transparent 66%),
     linear-gradient(165deg, hsl(34 22% 42%), hsl(26 18% 30%));
   filter: blur(28px) saturate(120%);
 }
@@ -1341,6 +1345,50 @@ html.phantom-mode [class*="animate-"] {
     inset 0 0 0 1px hsl(var(--music-glass-edge) / 0.12);
   backdrop-filter: blur(30px) saturate(120%);
   -webkit-backdrop-filter: blur(30px) saturate(120%);
+}
+
+/* The main transport is intentionally symbols-only: no panel rectangle. */
+.music-liquid-page .music-transport-control {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.music-search-control {
+  width: 100%;
+  min-width: 0;
+  align-items: flex-start;
+  overflow: hidden;
+}
+
+.music-search-input {
+  min-width: 0;
+  max-height: 6rem;
+  line-height: 1.25rem;
+  scrollbar-width: none;
+}
+
+.music-search-input::-webkit-scrollbar {
+  display: none;
+}
+
+.music-search-submit {
+  flex: 0 0 2.5rem;
+}
+
+.music-current-track,
+.music-current-copy {
+  max-width: 100%;
+}
+
+.music-transport-control svg {
+  width: 1rem;
+  height: 1rem;
 }
 
 /* The search field stays glass-only: no inherited dark focus outline or
@@ -1402,6 +1450,20 @@ html.phantom-mode [class*="animate-"] {
    Without an explicit pan-y + momentum hint, global gesture handlers swallow
    the drag in standalone (PWA) mode and the list appears frozen. */
 @media (max-width: 1023.98px) {
+  .music-liquid-player {
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+
+  .music-current-track {
+    align-items: flex-start;
+  }
+
+  .music-liquid-art {
+    width: clamp(4.5rem, 22vw, 6rem);
+  }
+
   .music-liquid-queue,
   .music-liquid-side {
     padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
@@ -1411,6 +1473,30 @@ html.phantom-mode [class*="animate-"] {
   .music-liquid-queue > *,
   .music-liquid-side > * {
     touch-action: pan-y;
+  }
+}
+
+@media (max-width: 420px) {
+  .music-liquid-player {
+    gap: 0.625rem;
+    padding-inline: max(0.625rem, env(safe-area-inset-left, 0px));
+  }
+
+  .music-search-control {
+    gap: 0.25rem;
+  }
+
+  .music-current-track {
+    gap: 0.625rem;
+  }
+
+  .music-current-copy > p:first-child {
+    font-size: 0.9375rem;
+    line-height: 1.2rem;
+  }
+
+  .music-transport-buttons {
+    justify-content: space-between;
   }
 }
 
