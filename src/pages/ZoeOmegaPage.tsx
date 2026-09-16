@@ -1276,48 +1276,63 @@ const ZoeOmegaPage: React.FC = () => {
         {/* Economy Wallet - Top Right */}
         <EconomyWallet />
 
-        {/* VR Test Suite - Debug Panel (Top Right below wallet) */}
-        {isVRMode && (
-          <div className="fixed top-20 right-4 z-30">
+        {/* VR Test Suite - Debug Panel (draggable + tap to drop down) */}
+        {isVRMode && vrPanels.diagnostics && (
+          <VRDraggablePanel
+            id="omega-diagnostics"
+            title="Diagnostics"
+            icon={<Cpu className="w-3.5 h-3.5 text-cyan-300" />}
+            positionClassName="fixed top-20 right-4 z-[9994]"
+            defaultOpen={false}
+          >
             <VRTestSuite />
-          </div>
+          </VRDraggablePanel>
         )}
 
         {/* Genesis Omni-Box - Bottom Center (only in VR mode) */}
-        {isVRMode && <GenesisOmniBox />}
+        {isVRMode && vrPanels.omniBox && <GenesisOmniBox />}
 
-        {/* Bi-Cameral HUD Overlay (VR mode) - positioned to avoid overlaps */}
+        {/* Bi-Cameral HUD Overlay (VR mode) - draggable + tap to drop down */}
         <AnimatePresence mode="sync">
-          {isVRMode && (
-            <motion.div
+          {isVRMode && vrPanels.hud && (
+            <VRDraggablePanel
               key="bicameral-hud-overlay"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed left-2 sm:left-4 top-20 bottom-36 sm:bottom-32 z-30 pointer-events-none w-64 sm:w-72 md:w-80 lg:w-96 max-w-[40vw]"
+              id="omega-hud"
+              title="Mind HUD"
+              icon={<Brain className="w-3.5 h-3.5 text-purple-300" />}
+              positionClassName="fixed left-2 sm:left-4 top-20 z-30"
+              contentClassName="w-64 sm:w-72 md:w-80 lg:w-96 max-w-[40vw] h-[45vh] sm:h-[50vh] overflow-hidden rounded-2xl"
             >
-              <div className="pointer-events-auto h-full overflow-hidden rounded-2xl">
-                <BiCameralHUD
-                  logicStream={oodaLogs.slice(-5).map(log => `[${log.phase}] ${log.content}`)}
-                  dreamStream={[
-                    emotionalResponse.content,
-                    '~ neural pathways harmonizing ~',
-                    '~ consciousness expanding ~'
-                  ]}
-                  emotionalState={
-                    emotionalResponse.emotion === 'joy' ? 'joy' :
-                    emotionalResponse.emotion === 'engaged' ? 'focused' :
-                    emotionalResponse.emotion === 'reconciled' ? 'creative' :
-                    'neutral'
-                  }
-                />
-              </div>
-            </motion.div>
+              <BiCameralHUD
+                logicStream={oodaLogs.slice(-5).map(log => `[${log.phase}] ${log.content}`)}
+                dreamStream={[
+                  emotionalResponse.content,
+                  '~ neural pathways harmonizing ~',
+                  '~ consciousness expanding ~'
+                ]}
+                emotionalState={
+                  emotionalResponse.emotion === 'joy' ? 'joy' :
+                  emotionalResponse.emotion === 'engaged' ? 'focused' :
+                  emotionalResponse.emotion === 'reconciled' ? 'creative' :
+                  'neutral'
+                }
+              />
+            </VRDraggablePanel>
           )}
         </AnimatePresence>
 
+        {/* Panels hub + touch/drag guide + landscape prompt (VR mode only) */}
+        {isVRMode && (
+          <VRControlsGuide
+            panels={vrPanelToggles}
+            needsRotate={needsRotate}
+            onRequestLandscape={() => { void requestLandscape(); }}
+          />
+        )}
+
         {/* Return to Reality button - Draggable & Compact */}
         <ReturnToRealityButton onReturn={handleReturnToReality} />
+
       </motion.div>
     </>
   );
