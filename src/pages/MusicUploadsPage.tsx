@@ -29,16 +29,29 @@ export default function MusicUploadsPage() {
   };
   const submit = async () => {
     if (!file || !title.trim()) return;
-    setBusy(true); setNotice('Compressing and uploading…');
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      setNotice('You are offline. Reconnect, then press upload again.');
+      setCanRetry(true);
+      return;
+    }
+    setBusy(true); setCanRetry(false); setNotice('Compressing and uploading…');
     try {
       const result = await uploadMyMusic({ file, artwork, title, artist, album });
       setTracks((current) => [result.track, ...current]);
       setFile(null); setArtwork(null); setTitle(''); setArtist(''); setAlbum('');
       if (fileRef.current) fileRef.current.value = '';
       if (artRef.current) artRef.current.value = '';
-      setNotice(result.compressed ? 'Uploaded as a space-saving MP3.' : 'Uploaded.');
-    } catch (error) { setNotice(error instanceof Error ? error.message : 'Upload failed.'); }
+      setNotice(result.compressed ? 'Uploaded as a space-saving MP3. It now shows in Music search.' : 'Uploaded. It now shows in Music search.');
+    } catch (error) {
+      setNotice(`${error instanceof Error ? error.message : 'Upload failed.'} You can press upload again to retry.`);
+      setCanRetry(true);
+    }
     finally { setBusy(false); }
+  };
+  const play = async (index: number) => {
+    musicEngine.unlock();
+    const started = await musicEngine.playQueue(tracks, index);
+    if (!started) setNotice(musicEngine.getState().error ?? 'This song could not be played. Please try again.');
   };
 
   return (
