@@ -172,7 +172,9 @@ serve(async (req) => {
         retryable: true,
         reason: 'invalid_session',
       }), {
-        status: 401,
+        // Expected when a token expires; client re-queues on success:false.
+        status: 202,
+
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
