@@ -1,17 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useSearchParams } from 'react-router-dom';
-import { Disc3, Heart, ListMusic, Pause, Play, Repeat, Search, Shuffle, SkipBack, SkipForward, Volume2 } from 'lucide-react';
+import { Disc3, Heart, ListMusic, Pause, Play, Plus, Repeat, Search, Shuffle, SkipBack, SkipForward, Volume2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { musicEngine } from '@/services/MusicEngine';
 import { useMusicEngine } from '@/hooks/useMusicEngine';
-import { searchMusicCatalog, type MusicSearchResult, type MusicTrack } from '@/features/music/musicProviders';
-import { MUSIC_GENRES, MUSIC_STATIONS } from '@/features/music/musicCategories';
-import { getLibrary, isSaved, subscribeLibrary, toggleSaved, type MusicLibrary } from '@/features/music/musicLibrary';
+import { fetchLiveStations, isFullLengthTrack, searchMusicCatalog, type MusicSearchResult, type MusicTrack } from '@/features/music/musicProviders';
+import { MUSIC_GENRES, MUSIC_RADIO_TAGS } from '@/features/music/musicCategories';
+import { addToPlaylist, getLibrary, isSaved, playlistTracks, removePlaylist, subscribeLibrary, toggleSaved, type MusicLibrary } from '@/features/music/musicLibrary';
 import { fetchMostListened, fetchMyReactions, fetchReactionChart, logListen, MUSIC_REACTIONS, toggleReaction, type MusicReactionId, type MusicSocialTrack } from '@/features/music/musicSocial';
+
 
 const SEARCH_CACHE_KEY = 'mmora.music.lastSearch';
 
@@ -45,8 +46,13 @@ export default function MusicPage() {
   const [myReactions, setMyReactions] = useState<MusicReactionId[]>([]);
   const [burst, setBurst] = useState<string | null>(null);
   const [chart, setChart] = useState<{ id: string; label: string; tracks: MusicSocialTrack[] }[]>([]);
+  const [stations, setStations] = useState<MusicTrack[]>([]);
+  const [stationTag, setStationTag] = useState<string | null>(null);
+  const [selectedPlaylist, setSelectedPlaylist] = useState<string | null>(null);
+  const [fullOnly, setFullOnly] = useState(false);
   const active = state.status === 'playing' || state.status === 'buffering';
   const routedQueryRef = useRef<string | null>(null);
+
 
   useEffect(() => subscribeLibrary(setLibrary), []);
 
@@ -123,6 +129,24 @@ export default function MusicPage() {
     void search(routedQuery).finally(() => setSearchParams({}, { replace: true }));
   }, [search, searchParams, setSearchParams]);
 
+  /** Loads the real, currently online stations for one radio tag. */
+  const loadStations = useCallback(async (tag: string) => {
+    setStationTag(tag);
+    setNotice(null);
+    const live = await fetchLiveStations(tag);
+    setStations(live);
+    if (!live.length) setNotice(`No live ${tag} station is online right now.`);
+  }, []);
+
+  const saveToPlaylist = useCallback((track: MusicTrack) => {
+    const name = window.prompt('Add to playlist (name):')?.trim();
+    if (!name) return;
+    addToPlaylist(name, track);
+    setSelectedPlaylist(name);
+  }, []);
+
+
+
   const trackRow = (track: MusicTrack, index: number, onPlay: () => void) => (
     <li key={`${track.id}-${index}`} className="flex items-center gap-1">
       <Button variant="ghost" className="music-liquid-track h-auto min-w-0 flex-1 justify-start whitespace-normal px-2.5 py-2.5 text-left" onClick={onPlay}>
@@ -146,16 +170,35 @@ export default function MusicPage() {
       >
         <Heart className={isSaved(track.id) ? 'fill-current' : ''} />
       </IconControl>
+      <IconControl
+        className="music-liquid-save h-9 w-9 shrink-0 rounded-full"
+        variant="ghost"
+        size="icon"
+        onClick={() => saveToPlaylist(track)}
+        label={`Add ${track.title} to a playlist`}
+      >
+        <Plus />
+      </IconControl>
     </li>
   );
 
+
   const savedTracks = library.saved;
+  const libraryTracks = useMemo(
+    () => (selectedPlaylist ? playlistTracks(selectedPlaylist) : savedTracks),
+    [selectedPlaylist, savedTracks, library.playlists],
+  );
+  const visibleResults = useMemo(() => {
+    const tracks = results?.tracks ?? [];
+    return fullOnly ? tracks.filter(isFullLengthTrack) : tracks;
+  }, [results, fullOnly]);
   const artists = useMemo(() => {
     const names = [...(results?.tracks ?? []), ...savedTracks]
       .map((track) => track.artist?.trim())
       .filter((artist): artist is string => Boolean(artist));
     return [...new Set(names)].slice(0, 12);
   }, [results, savedTracks]);
+
 
   return (
     <TooltipProvider>
@@ -175,11 +218,18 @@ export default function MusicPage() {
                 ))}
               </div>
               <p className="music-liquid-side-title">Radio</p>
-              <div className="mb-4 flex flex-wrap gap-1.5">
-                {MUSIC_STATIONS.map((station) => (
-                  <button key={station.id} type="button" className="music-liquid-chip" onClick={() => { musicEngine.unlock(); void search(station.query, 'radio'); }}>{station.label}</button>
+              <div className="mb-2 flex flex-wrap gap-1.5">
+                {MUSIC_RADIO_TAGS.map((tag) => (
+                  <button key={tag} type="button" className={`music-liquid-chip ${stationTag === tag ? 'is-active' : ''}`} onClick={() => { musicEngine.unlock(); void loadStations(tag); }}>{tag}</button>
                 ))}
               </div>
+              {stations.length > 0 && (
+                <div className="mb-4 flex flex-col gap-1.5">
+                  {stations.map((station) => (
+                    <button key={station.id} type="button" className="music-liquid-chip text-left" onClick={() => { musicEngine.unlock(); void musicEngine.playQueue(stations, stations.indexOf(station)); }}>{station.title}</button>
+                  ))}
+                </div>
+              )}
               {artists.length > 0 && (
                 <>
                   <p className="music-liquid-side-title">Artists</p>
@@ -192,12 +242,22 @@ export default function MusicPage() {
               )}
               <p className="music-liquid-side-title">Playlists</p>
               <div className="flex flex-wrap gap-1.5">
-                <button type="button" className={`music-liquid-chip ${tab === 'library' ? 'is-active' : ''}`} onClick={() => setTab('library')}>My library ({savedTracks.length})</button>
+                <button type="button" className={`music-liquid-chip ${tab === 'library' && !selectedPlaylist ? 'is-active' : ''}`} onClick={() => { setSelectedPlaylist(null); setTab('library'); }}>My library ({savedTracks.length})</button>
                 {Object.keys(library.playlists).map((name) => (
-                  <button key={name} type="button" className="music-liquid-chip" onClick={() => setTab('library')}>{name}</button>
+                  <button
+                    key={name}
+                    type="button"
+                    className={`music-liquid-chip ${selectedPlaylist === name ? 'is-active' : ''}`}
+                    onClick={() => { setSelectedPlaylist(name); setTab('library'); }}
+                    onDoubleClick={() => { removePlaylist(name); setSelectedPlaylist(null); }}
+                    title="Double-tap to delete this playlist"
+                  >
+                    {name} ({library.playlists[name].length})
+                  </button>
                 ))}
               </div>
             </aside>
+
 
             {/* Search + now listening + transport */}
             <section className="music-liquid-player order-1 flex min-h-0 flex-col gap-3 p-3 sm:p-4 lg:order-2">
@@ -262,23 +322,27 @@ export default function MusicPage() {
 
             {/* Results / library */}
             <aside className="music-liquid-queue music-align-search order-3 max-h-[46dvh] overflow-y-auto p-3 lg:max-h-none">
-              <div className="mb-3 flex gap-1.5">
+              <div className="mb-3 flex flex-wrap gap-1.5">
                 <button type="button" className={`music-liquid-chip ${tab === 'results' ? 'is-active' : ''}`} onClick={() => setTab('results')}>Results{results ? ` (${results.tracks.length})` : ''}</button>
-                <button type="button" className={`music-liquid-chip ${tab === 'library' ? 'is-active' : ''}`} onClick={() => setTab('library')}>Library ({savedTracks.length})</button>
+                <button type="button" className={`music-liquid-chip ${tab === 'library' ? 'is-active' : ''}`} onClick={() => { setSelectedPlaylist(null); setTab('library'); }}>Library ({savedTracks.length})</button>
                 <button type="button" className={`music-liquid-chip ${tab === 'community' ? 'is-active' : ''}`} onClick={() => setTab('community')}>Community</button>
+                {tab === 'results' && (
+                  <button type="button" className={`music-liquid-chip ${fullOnly ? 'is-active' : ''}`} onClick={() => setFullOnly((value) => !value)} aria-pressed={fullOnly}>Full tracks</button>
+                )}
               </div>
 
               {tab === 'results' ? (
-                results && results.tracks.length ? (
+                visibleResults.length ? (
                   <>
-                    <p className="mb-2 text-[11px] text-white/50">{results.tracks.length} matches{results.corrected ? ` for “${results.query}”` : ''}</p>
+                    <p className="mb-2 text-[11px] text-white/50">{visibleResults.length} {fullOnly ? 'full-length tracks' : 'matches'}{results?.corrected ? ` for “${results.query}”` : ''}</p>
                     <ol className="space-y-1">
-                      {results.tracks.map((track, i) => trackRow(track, i, () => { musicEngine.unlock(); void musicEngine.playQueue(results.tracks, i); }))}
+                      {visibleResults.map((track, i) => trackRow(track, i, () => { musicEngine.unlock(); void musicEngine.playQueue(visibleResults, i); }))}
                     </ol>
                   </>
                 ) : (
-                  <p className="text-sm text-white/50">Search a song, artist, album, genre or station to see results here.</p>
+                  <p className="text-sm text-white/50">{results?.tracks.length ? 'No full-length recording in these results. Turn off “Full tracks” to see catalogue previews and live radio.' : 'Search a song, artist, album, genre or station to see results here.'}</p>
                 )
+
               ) : tab === 'community' ? (
                 <div className="space-y-4">
                   {chart.every((section) => !section.tracks.length) && <p className="text-sm text-white/50">No reactions yet. Use the smilies to start these lists.</p>}
@@ -302,13 +366,17 @@ export default function MusicPage() {
                     </section>
                   ))}
                 </div>
-              ) : savedTracks.length ? (
-                <ol className="space-y-1">
-                  {savedTracks.map((track, i) => trackRow(track, i, () => { musicEngine.unlock(); void musicEngine.playQueue(savedTracks, i); }))}
-                </ol>
+              ) : libraryTracks.length ? (
+                <>
+                  <p className="mb-2 text-[11px] text-white/50">{selectedPlaylist ? `${selectedPlaylist} · ${libraryTracks.length} tracks` : `Saved songs · ${libraryTracks.length}`}</p>
+                  <ol className="space-y-1">
+                    {libraryTracks.map((track, i) => trackRow(track, i, () => { musicEngine.unlock(); void musicEngine.playQueue(libraryTracks, i); }))}
+                  </ol>
+                </>
               ) : (
-                <p className="text-sm text-white/50">Tap the heart beside any track to build your library.</p>
+                <p className="text-sm text-white/50">{selectedPlaylist ? 'This playlist is empty. Use the plus beside any track to add songs.' : 'Tap the heart beside any track to build your library.'}</p>
               )}
+
 
               {state.queue.length > 0 && (
                 <section className="mt-5">

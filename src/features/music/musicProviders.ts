@@ -76,7 +76,7 @@ async function resolveAudiusHost(): Promise<string | null> {
   return audiusHost;
 }
 
-export async function searchAudius(query: string, limit = 20): Promise<MusicTrack[]> {
+export async function searchAudius(query: string, limit = 40): Promise<MusicTrack[]> {
   const host = await resolveAudiusHost();
   if (!host) return [];
   const data = await getJson<{ data?: any[] }>(
@@ -201,16 +201,49 @@ export async function searchRadio(term: string, limit = 20): Promise<MusicTrack[
     }));
 }
 
+/**
+ * Real, currently-online radio stations for one tag (e.g. "classical"), ordered
+ * by listener votes. Used to fill the sidebar with live channels instead of
+ * canned search shortcuts. Returns [] when the directory is unreachable.
+ */
+export async function fetchLiveStations(tag: string, limit = 10): Promise<MusicTrack[]> {
+  const data = await getJson<any[]>(
+    `https://de1.api.radio-browser.info/json/stations/search?limit=${limit * 3}&hidebroken=true&is_https=true&order=votes&reverse=true&tagList=${encodeURIComponent(tag)}`,
+  );
+  const stations = (data ?? [])
+    .filter((s) => isSecurePlayableUrl(s?.url_resolved))
+    .map((s) => ({
+      id: `radio:${s.stationuuid}`,
+      title: String(s.name ?? 'Radio station').trim(),
+      artist: [s.country, s.language].filter(Boolean).join(' · ') || 'Live radio',
+      artwork: s.favicon || undefined,
+      url: String(s.url_resolved),
+      source: 'radio' as const,
+      credit: 'Radio Browser (live station)',
+      live: true,
+    }));
+  const unique = new Map<string, MusicTrack>();
+  stations.forEach((station) => { if (!unique.has(station.title)) unique.set(station.title, station); });
+  return [...unique.values()].slice(0, limit);
+}
+
+/** A full-length recording (not a 30-second catalogue preview). */
+export function isFullLengthTrack(track: MusicTrack): boolean {
+  return track.source !== 'apple';
+}
+
+
 /* ────────────────────────── Internet Archive ────────────────────────── */
 
-export async function searchArchive(query: string, limit = 10): Promise<MusicTrack[]> {
+export async function searchArchive(query: string, limit = 20): Promise<MusicTrack[]> {
   const search = await getJson<{ response?: { docs?: Array<{ identifier: string; title?: string; creator?: string }> } }>(
     `https://archive.org/advancedsearch.php?q=${encodeURIComponent(
       `${query} AND mediatype:(audio)`,
     )}&fl%5B%5D=identifier&fl%5B%5D=title&fl%5B%5D=creator&rows=${limit}&page=1&output=json`,
   );
   const docs = search?.response?.docs ?? [];
-  const resolved = await Promise.all(docs.slice(0, 5).map(async (doc): Promise<MusicTrack | null> => {
+  const resolved = await Promise.all(docs.slice(0, 10).map(async (doc): Promise<MusicTrack | null> => {
+
     const meta = await getJson<{ files?: Array<{ name: string; format?: string; length?: string }> }>(
       `https://archive.org/metadata/${encodeURIComponent(doc.identifier)}`,
     );

@@ -28,6 +28,8 @@ import { type FeedSearchItem } from '@/lib/feedSearchItems';
 import { useDhfBrain } from '@/hooks/useDhfBrain';
 import useZoeMotivation from '@/hooks/useZoeMotivation';
 import HomeMotivationSlide from '@/components/home/HomeMotivationSlide';
+import HomeMusicShelf from '@/components/home/HomeMusicShelf';
+
 
 import HomeGlassDock from '@/components/home/HomeGlassDock';
 import HomeFeedSwitcher from '@/components/home/HomeFeedSwitcher';
@@ -2412,7 +2414,15 @@ const HomePage = () => {
         </div>,
       );
     }
+    slides.push(
+      <div key="home-music-shelf" className="relative flex h-full min-h-full w-full shrink-0 snap-start snap-always items-center overflow-y-auto py-4" data-home-music-shelf>
+        <FeedErrorBoundary section="posts">
+          <HomeMusicShelf />
+        </FeedErrorBoundary>
+      </div>,
+    );
     return slides;
+
   }, [dailyMotivation, motivationPosterUrl, astroDaily]);
 
   const chronologicalSlides = (posts: Post[], feed: 'global' | 'personal') => {

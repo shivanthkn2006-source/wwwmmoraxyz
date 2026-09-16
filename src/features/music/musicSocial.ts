@@ -33,8 +33,10 @@ function trackColumns(track: MusicTrack) {
     track_artist: track.artist ?? null,
     track_artwork: track.artwork ?? null,
     track_source: track.source ?? null,
+    track_url: track.url ?? null,
   };
 }
+
 
 /** Reaction ids the current user has already left on the given track. */
 export async function fetchMyReactions(trackIds: string[]): Promise<Record<string, MusicReactionId[]>> {
@@ -112,3 +114,66 @@ export async function fetchMostListened(): Promise<MusicSocialTrack[]> {
     .limit(400);
   return tally(data ?? []);
 }
+
+export interface MemberListening {
+  userId: string;
+  name: string;
+  photo: string | null;
+  tracks: MusicTrack[];
+}
+
+/**
+ * Each member's most listened songs, newest first, for the Home feed shelf.
+ * Only rows that already carry a playable provider id are returned.
+ */
+export async function fetchMemberListening(limitMembers = 8): Promise<MemberListening[]> {
+  const { data } = await supabase
+    .from('music_listens')
+    .select('user_id, track_id, track_title, track_artist, track_artwork, track_source, track_url')
+    .order('created_at', { ascending: false })
+    .limit(300);
+  const rows = (data ?? []) as Array<Record<string, string | null>>;
+  if (!rows.length) return [];
+
+  const byUser = new Map<string, MusicTrack[]>();
+  const seen = new Set<string>();
+  rows.forEach((row) => {
+    const userId = row.user_id;
+    const url = row.track_url;
+    if (!userId || !row.track_id || !url) return;
+    const key = `${userId}:${row.track_id}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    const list = byUser.get(userId) ?? [];
+    if (list.length >= 8) return;
+    list.push({
+      id: row.track_id,
+      title: row.track_title ?? 'Untitled',
+      artist: row.track_artist ?? 'Unknown artist',
+      artwork: row.track_artwork ?? undefined,
+      url,
+      source: (row.track_source as MusicTrack['source']) ?? 'archive',
+      credit: 'Played on MMora Music',
+    });
+    byUser.set(userId, list);
+  });
+
+  const userIds = [...byUser.keys()].slice(0, limitMembers);
+  if (!userIds.length) return [];
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('user_id, display_name, username, profile_photo_url')
+    .in('user_id', userIds);
+  const profileMap = new Map((profiles ?? []).map((profile) => [profile.user_id, profile]));
+
+  return userIds.map((userId) => {
+    const profile = profileMap.get(userId);
+    return {
+      userId,
+      name: profile?.display_name || profile?.username || 'MMora member',
+      photo: profile?.profile_photo_url ?? null,
+      tracks: byUser.get(userId) ?? [],
+    };
+  }).filter((member) => member.tracks.length > 0);
+}
+
