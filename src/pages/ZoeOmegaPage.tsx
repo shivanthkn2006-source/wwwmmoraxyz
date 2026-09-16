@@ -437,19 +437,40 @@ const ZoeOmegaPage: React.FC = () => {
   const soundEngineRef = useRef<OmegaSoundEngine | null>(null);
 
   // Landscape-first VR entry (auto lock + rotate prompt on touch devices)
-  const { needsRotate, requestLandscape } = useVRLandscapeOrientation(isVRMode);
+  const { needsRotate, requestLandscape, isFullscreen, toggleFullscreen } = useVRLandscapeOrientation(isVRMode);
 
-  // VR panel visibility - every panel stays discoverable through the Panels hub
-  const [vrPanels, setVrPanels] = useState({
+  // VR panel visibility - every panel stays discoverable through the Panels hub,
+  // and the layout is remembered across refreshes / re-entry.
+  const VR_PANEL_VISIBILITY_KEY = 'vr-panel-visibility';
+  const defaultVrPanels = {
     identity: true,
     hud: true,
     dreamscape: true,
     timeline: true,
     omniBox: true,
     diagnostics: true,
+  };
+  const [vrPanels, setVrPanels] = useState(() => {
+    if (typeof window === 'undefined') return defaultVrPanels;
+    try {
+      const raw = window.localStorage.getItem(VR_PANEL_VISIBILITY_KEY);
+      if (!raw) return defaultVrPanels;
+      const parsed = JSON.parse(raw) as Partial<typeof defaultVrPanels>;
+      return { ...defaultVrPanels, ...parsed };
+    } catch {
+      return defaultVrPanels;
+    }
   });
-  const toggleVrPanel = useCallback((key: keyof typeof vrPanels) => {
-    setVrPanels(prev => ({ ...prev, [key]: !prev[key] }));
+  const toggleVrPanel = useCallback((key: keyof typeof defaultVrPanels) => {
+    setVrPanels(prev => {
+      const next = { ...prev, [key]: !prev[key] };
+      try {
+        window.localStorage.setItem(VR_PANEL_VISIBILITY_KEY, JSON.stringify(next));
+      } catch {
+        /* storage unavailable */
+      }
+      return next;
+    });
   }, []);
   const vrPanelToggles: VRPanelToggle[] = [
     { id: 'identity', label: 'Zoe Omega badge', visible: vrPanels.identity, onToggle: () => toggleVrPanel('identity') },
