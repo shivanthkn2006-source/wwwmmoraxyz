@@ -29,6 +29,8 @@ import { useDhfBrain } from '@/hooks/useDhfBrain';
 import useZoeMotivation from '@/hooks/useZoeMotivation';
 import HomeMotivationSlide from '@/components/home/HomeMotivationSlide';
 import HomeMusicShelf from '@/components/home/HomeMusicShelf';
+import HomeMusicRecommendations from '@/components/home/HomeMusicRecommendations';
+
 
 
 import HomeGlassDock from '@/components/home/HomeGlassDock';
@@ -2417,9 +2419,13 @@ const HomePage = () => {
     slides.push(
       <div key="home-music-shelf" className="relative flex h-full min-h-full w-full shrink-0 snap-start snap-always items-center overflow-y-auto py-4" data-home-music-shelf>
         <FeedErrorBoundary section="posts">
-          <HomeMusicShelf />
+          <div className="w-full space-y-4">
+            <HomeMusicShelf />
+            <HomeMusicRecommendations />
+          </div>
         </FeedErrorBoundary>
       </div>,
+
     );
     return slides;
 

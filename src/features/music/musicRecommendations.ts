@@ -1,0 +1,99 @@
+/**
+ * Song recommendations built from real signals only:
+ *  - the member's own listening history (`music_listens`),
+ *  - what their friends actually played (friendships + `music_listens`),
+ *  - the taste they saved on their music profile (`music_profiles`).
+ *
+ * Nothing is invented: when there is no signal, the section is simply absent.
+ */
+import { supabase } from '@/integrations/supabase/client';
+import { searchMusicCatalog, type MusicTrack } from '@/features/music/musicProviders';
+import { fetchMyListening } from '@/features/music/musicSocial';
+import { fetchMyMusicProfile, type MusicTasteProfile } from '@/features/music/musicProfile';
+
+export interface MusicRecommendationSection {
+  id: string;
+  label: string;
+  reason: string;
+  tracks: MusicTrack[];
+}
+
+async function myFriendIds(userId: string): Promise<string[]> {
+  const { data } = await supabase
+    .from('friendships')
+    .select('user1_id,user2_id')
+    .or(`user1_id.eq.${userId},user2_id.eq.${userId}`);
+  const ids = new Set<string>();
+  (data ?? []).forEach((row) => {
+    const pair = row as { user1_id: string; user2_id: string };
+    const other = pair.user1_id === userId ? pair.user2_id : pair.user1_id;
+    if (other) ids.add(other);
+  });
+  return [...ids];
+}
+
+/** Songs friends played that the member has not played themselves. */
+async function friendPlays(friendIds: string[], skip: Set<string>): Promise<MusicTrack[]> {
+  if (!friendIds.length) return [];
+  const { data } = await supabase
+    .from('music_listens')
+    .select('track_id,track_title,track_artist,track_artwork,track_source,track_url,created_at')
+    .in('user_id', friendIds)
+    .order('created_at', { ascending: false })
+    .limit(300);
+  const seen = new Set<string>();
+  const tracks: MusicTrack[] = [];
+  for (const row of data ?? []) {
+    const id = row.track_id;
+    const url = row.track_url;
+    // Another member's private upload cannot be opened, so it is never suggested.
+    if (!id || !url || row.track_source === 'upload' || seen.has(id) || skip.has(id)) continue;
+    seen.add(id);
+    tracks.push({
+      id,
+      title: row.track_title || 'Untitled',
+      artist: row.track_artist || 'Unknown artist',
+      artwork: row.track_artwork || undefined,
+      url,
+      source: (row.track_source as MusicTrack['source']) || 'archive',
+      credit: 'Played by a friend',
+    });
+    if (tracks.length >= 20) break;
+  }
+  return tracks;
+}
+
+function seeds(profile: MusicTasteProfile, history: MusicTrack[]): string[] {
+  const fromHistory = [...new Set(history.map((track) => track.artist).filter((artist) => artist && artist !== 'Unknown artist'))].slice(0, 2);
+  return [...new Set([...profile.artists.slice(0, 2), ...profile.genres.slice(0, 2), ...profile.moods.slice(0, 1), ...fromHistory])]
+    .filter(Boolean)
+    .slice(0, 4);
+}
+
+export async function fetchMusicRecommendations(): Promise<MusicRecommendationSection[]> {
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) return [];
+  const [history, profile] = await Promise.all([fetchMyListening(), fetchMyMusicProfile()]);
+  const played = new Set(history.map((track) => track.id));
+  const sections: MusicRecommendationSection[] = [];
+
+  const friends = await myFriendIds(auth.user.id);
+  const fromFriends = await friendPlays(friends, played);
+  if (fromFriends.length) {
+    sections.push({ id: 'friends', label: 'Your friends are playing', reason: 'Real plays from people you are connected with', tracks: fromFriends });
+  }
+
+  const searches = await Promise.all(seeds(profile, history).map(async (seed) => {
+    try {
+      const result = await searchMusicCatalog(seed, 'track');
+      const tracks = result.tracks.filter((track) => !played.has(track.id)).slice(0, 12);
+      return tracks.length ? { id: `seed-${seed}`, label: `Because you like ${seed}`, reason: 'From your music profile and listening history', tracks } : null;
+    } catch { return null; }
+  }));
+  searches.forEach((section) => { if (section) sections.push(section); });
+
+  if (history.length) {
+    sections.push({ id: 'again', label: 'Play it again', reason: 'Your most played songs', tracks: history.slice(0, 12) });
+  }
+  return sections;
+}

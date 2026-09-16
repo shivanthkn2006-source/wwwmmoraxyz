@@ -4,7 +4,9 @@ import type { MusicTrack } from './musicProviders';
 
 const BUCKET = 'music-uploads';
 const SIGNED_SECONDS = 60 * 60;
-const MAX_STORED_BYTES = 12 * 1024 * 1024;
+const MAX_STORED_BYTES = 50 * 1024 * 1024;
+const COMPRESSED_AUDIO = /(mpeg|mp3|mp4|m4a|aac|ogg|opus|webm)/i;
+
 
 export interface MusicUploadDraft {
   file: File;
@@ -28,51 +30,91 @@ function safeName(value: string): string {
   return value.normalize('NFKD').replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/-+/g, '-').slice(0, 100) || 'track';
 }
 
+function looksLikeAudio(file: File): boolean {
+  if (file.type.startsWith('audio/') || file.type.startsWith('video/mp4')) return true;
+  // Phones sometimes hand over a file with no type at all, so fall back to the name.
+  return /\.(mp3|m4a|aac|wav|flac|ogg|oga|opus|aif|aiff|wma)$/i.test(file.name);
+}
+
+/** Reads the playing length without decoding the whole song, so phones stay responsive. */
+async function probeDuration(file: File): Promise<number> {
+  if (typeof Audio === 'undefined' || typeof URL?.createObjectURL !== 'function') return 0;
+  const url = URL.createObjectURL(file);
+  try {
+    return await new Promise<number>((resolve) => {
+      const probe = new Audio();
+      const finish = (value: number) => resolve(Number.isFinite(value) && value > 0 ? Math.round(value) : 0);
+      const timer = setTimeout(() => finish(0), 8000);
+      probe.preload = 'metadata';
+      probe.onloadedmetadata = () => { clearTimeout(timer); finish(probe.duration); };
+      probe.onerror = () => { clearTimeout(timer); finish(0); };
+      probe.src = url;
+    });
+  } finally { URL.revokeObjectURL(url); }
+}
+
 async function decode(file: File): Promise<AudioBuffer> {
-  const context = new AudioContext();
+  const Context = (globalThis as unknown as { AudioContext?: typeof AudioContext; webkitAudioContext?: typeof AudioContext }).AudioContext
+    ?? (globalThis as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  if (!Context) throw new Error('This browser cannot read that audio file.');
+  const context = new Context();
   try { return await context.decodeAudioData(await file.arrayBuffer()); }
   finally { await context.close(); }
 }
 
-/** Encodes uploads to compact 96kbps MP3 when that makes the file smaller. */
-export async function compactAudio(file: File): Promise<{ blob: Blob; duration: number; compressed: boolean }> {
-  if (!file.type.startsWith('audio/')) throw new Error('Choose an audio file.');
+/** Encodes to 96 kbps MP3. Only used when the original is uncompressed or too large. */
+async function encodeMp3(file: File): Promise<{ blob: Blob; duration: number }> {
   const decoded = await decode(file);
-  const duration = Math.round(decoded.duration);
-  try {
-    // lamejs ships CommonJS, so the encoder can arrive on the module or on its default interop object.
-    const lame = (await import('lamejs')) as unknown as Record<string, unknown> & { default?: Record<string, unknown> };
-    const Mp3Encoder = (lame.Mp3Encoder ?? lame.default?.Mp3Encoder) as
-      | (new (channels: number, sampleRate: number, kbps: number) => { encodeBuffer: (l: Int16Array, r?: Int16Array) => Uint8Array | number[]; flush: () => Uint8Array | number[] })
-      | undefined;
-    if (!Mp3Encoder) throw new Error('encoder unavailable');
-    const channels = Math.min(decoded.numberOfChannels, 2);
-    const encoder = new Mp3Encoder(channels, decoded.sampleRate, 96);
-    const block = 1152;
-    const chunks: ArrayBuffer[] = [];
-    const pcm = Array.from({ length: channels }, (_, channel) => {
-      const source = decoded.getChannelData(channel);
-      const output = new Int16Array(source.length);
-      for (let i = 0; i < source.length; i += 1) output[i] = Math.max(-32768, Math.min(32767, Math.round(source[i] * 32767)));
-      return output;
-    });
-    for (let i = 0; i < pcm[0].length; i += block) {
-      const encoded = channels === 1
-        ? encoder.encodeBuffer(pcm[0].subarray(i, i + block))
-        : encoder.encodeBuffer(pcm[0].subarray(i, i + block), pcm[1].subarray(i, i + block));
-      if (encoded.length) chunks.push(Uint8Array.from(encoded).buffer);
-    }
-    const tail = encoder.flush();
-    if (tail.length) chunks.push(Uint8Array.from(tail).buffer);
-    const blob = new Blob(chunks, { type: 'audio/mpeg' });
-    if (blob.size > 0 && blob.size < file.size && blob.size <= MAX_STORED_BYTES) return { blob, duration, compressed: true };
-  } catch (error) {
-    // Retain an already-small original when conversion is unavailable, but record why.
-    logMusicEvent('upload:convert', error, { fileName: file.name, bytes: file.size, type: file.type });
+  const { Mp3Encoder } = await import('@breezystack/lamejs');
+  const channels = Math.min(decoded.numberOfChannels, 2);
+  const encoder = new Mp3Encoder(channels, decoded.sampleRate, 96);
+  const block = 1152;
+  const chunks: Uint8Array[] = [];
+  const pcm = Array.from({ length: channels }, (_, channel) => {
+    const source = decoded.getChannelData(channel);
+    const output = new Int16Array(source.length);
+    for (let i = 0; i < source.length; i += 1) output[i] = Math.max(-32768, Math.min(32767, Math.round(source[i] * 32767)));
+    return output;
+  });
+  for (let i = 0; i < pcm[0].length; i += block) {
+    const encoded = channels === 1
+      ? encoder.encodeBuffer(pcm[0].subarray(i, i + block))
+      : encoder.encodeBuffer(pcm[0].subarray(i, i + block), pcm[1].subarray(i, i + block));
+    if (encoded.length) chunks.push(Uint8Array.from(encoded));
   }
-  if (file.size > MAX_STORED_BYTES) throw new Error('This file cannot be reduced below 12 MB.');
-  return { blob: file, duration, compressed: false };
+  const tail = encoder.flush();
+  if (tail.length) chunks.push(Uint8Array.from(tail));
+  return { blob: new Blob(chunks as BlobPart[], { type: 'audio/mpeg' }), duration: Math.round(decoded.duration) };
 }
+
+/**
+ * Prepares a picked song for storage. Already-compressed songs (MP3, M4A, AAC,
+ * OGG) are kept exactly as they are, which is both faster and safer on a phone;
+ * only uncompressed or oversized files are converted to a compact MP3.
+ */
+export async function compactAudio(file: File): Promise<{ blob: Blob; duration: number; compressed: boolean }> {
+  if (!looksLikeAudio(file)) throw new Error('Choose an audio file, for example an MP3 or M4A.');
+  if (!file.size) throw new Error('That file is empty. Pick the song again.');
+  const alreadyCompressed = COMPRESSED_AUDIO.test(file.type) || /\.(mp3|m4a|aac|ogg|oga|opus)$/i.test(file.name);
+  if (alreadyCompressed && file.size <= MAX_STORED_BYTES) {
+    return { blob: file, duration: await probeDuration(file), compressed: false };
+  }
+  try {
+    const encoded = await encodeMp3(file);
+    if (encoded.blob.size > 0 && encoded.blob.size <= MAX_STORED_BYTES) {
+      return { blob: encoded.blob, duration: encoded.duration, compressed: encoded.blob.size < file.size };
+    }
+    if (file.size <= MAX_STORED_BYTES) return { blob: file, duration: encoded.duration, compressed: false };
+    throw new Error(`This song is ${Math.round(encoded.blob.size / (1024 * 1024))} MB even after compressing. Please pick a shorter recording.`);
+  } catch (error) {
+    logMusicEvent('upload:convert', error, { fileName: file.name, bytes: file.size, type: file.type });
+    if (file.size > MAX_STORED_BYTES) {
+      throw new Error(`This song is ${Math.round(file.size / (1024 * 1024))} MB. Songs up to 50 MB can be uploaded.`);
+    }
+    return { blob: file, duration: await probeDuration(file), compressed: false };
+  }
+}
+
 
 /** Signs a private upload path, retrying once so a flaky connection is survivable. */
 async function signedUrl(path: string | null, attempts = 2): Promise<string | undefined> {
@@ -157,7 +199,7 @@ export async function uploadMyMusic(draft: MusicUploadDraft): Promise<{ track: M
   const { data, error } = await supabase.from('music_uploads').insert({
     user_id: user.id, title: draft.title.trim(), artist: draft.artist.trim() || 'My music', album: draft.album?.trim() || null,
     storage_path: audioPath, artwork_path: artworkPath, mime_type: compacted.blob.type || draft.file.type,
-    duration_seconds: compacted.duration, file_size_bytes: compacted.blob.size,
+    duration_seconds: compacted.duration > 0 ? compacted.duration : null, file_size_bytes: compacted.blob.size,
   }).select('id,title,artist,album,storage_path,artwork_path,duration_seconds').single();
   if (error) { logMusicEvent('upload:store', error, { stage: 'record' }); await supabase.storage.from(BUCKET).remove([audioPath, ...(artworkPath ? [artworkPath] : [])]); throw error; }
   const tracks = await rowsToTracks([data as UploadRow]);

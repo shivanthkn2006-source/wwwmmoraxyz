@@ -4640,6 +4640,36 @@ export type Database = {
         }
         Relationships: []
       }
+      music_profiles: {
+        Row: {
+          artists: string[]
+          created_at: string
+          favorite_tracks: Json
+          genres: string[]
+          moods: string[]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          artists?: string[]
+          created_at?: string
+          favorite_tracks?: Json
+          genres?: string[]
+          moods?: string[]
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          artists?: string[]
+          created_at?: string
+          favorite_tracks?: Json
+          genres?: string[]
+          moods?: string[]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       music_reactions: {
         Row: {
           created_at: string
