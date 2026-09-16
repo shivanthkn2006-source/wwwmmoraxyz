@@ -96,7 +96,7 @@ export const VRControlsGuide: React.FC<VRControlsGuideProps> = ({
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 16 }}
-            className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[9997] w-[min(92vw,26rem)]
+            className="fixed bottom-24 sm:bottom-4 left-2 sm:left-4 z-[9996] w-[min(88vw,24rem)]
                        bg-black/80 backdrop-blur-xl border border-white/20 rounded-2xl p-3 shadow-2xl"
           >
             <div className="flex items-start gap-3">
@@ -128,7 +128,7 @@ export const VRControlsGuide: React.FC<VRControlsGuideProps> = ({
         dragMomentum={false}
         dragElastic={0.05}
         whileDrag={{ scale: 1.02, cursor: 'grabbing' }}
-        className="fixed bottom-4 right-4 z-[9996] cursor-grab active:cursor-grabbing touch-none"
+        className="fixed bottom-4 right-4 z-[9997] cursor-grab active:cursor-grabbing touch-none"
         style={{ touchAction: 'none' }}
       >
         <div className="flex flex-col items-end gap-1.5">
