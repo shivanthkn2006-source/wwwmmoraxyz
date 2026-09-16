@@ -38,6 +38,9 @@ const isTouchLike = () => {
 export const useVRLandscapeOrientation = (active: boolean): VRLandscapeState => {
   const [needsRotate, setNeedsRotate] = useState(false);
   const [locked, setLocked] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(
+    typeof document !== 'undefined' && Boolean(document.fullscreenElement)
+  );
 
   const evaluate = useCallback(() => {
     if (typeof window === 'undefined') {
