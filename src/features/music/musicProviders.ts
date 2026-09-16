@@ -22,7 +22,7 @@ export interface MusicTrack {
   url: string;
   /** Seconds, when the provider reports it. */
   duration?: number;
-  source: 'audius' | 'radio' | 'archive' | 'apple';
+  source: 'audius' | 'radio' | 'archive' | 'apple' | 'upload';
   /** Human-readable attribution shown in the UI and spoken by Zoe. */
   credit: string;
   live?: boolean;
@@ -36,6 +36,7 @@ export interface MusicSearchResult {
   providers: Array<{ name: string; status: 'ok' | 'empty' | 'unavailable'; count: number }>;
 }
 import { musicMatchScore, normalizeMusicQuery } from './musicQuery';
+import { searchMyUploads } from './musicUploads';
 
 const TIMEOUT_MS = 8_000;
 
@@ -103,7 +104,7 @@ function deduplicateAndRank(tracks: MusicTrack[], query: string): MusicTrack[] {
     const key = `${track.title}|${track.artist}`.toLowerCase().replace(/[^a-z0-9]+/g, '');
     if (!unique.has(key)) unique.set(key, track);
   }
-  const sourceBonus: Record<MusicTrack['source'], number> = { audius: 50, archive: 45, radio: 20, apple: 0 };
+  const sourceBonus: Record<MusicTrack['source'], number> = { upload: 100, audius: 50, archive: 45, radio: 20, apple: 0 };
   return [...unique.values()].sort((left, right) =>
     (musicMatchScore(right, query) + sourceBonus[right.source])
       - (musicMatchScore(left, query) + sourceBonus[left.source]),
@@ -115,6 +116,7 @@ export async function searchMusicCatalog(rawQuery: string, kind: 'track' | 'mood
   const normalized = normalizeMusicQuery(rawQuery);
   const query = normalized.query || rawQuery.trim();
   const tasks = [
+    { name: 'My uploads', run: () => searchMyUploads(query) },
     { name: 'Audius', run: () => searchAudius(query) },
     { name: 'Internet Archive', run: () => searchArchive(query) },
     { name: 'Radio Browser', run: () => searchRadio(query) },
@@ -128,6 +130,7 @@ export async function searchMusicCatalog(rawQuery: string, kind: 'track' | 'mood
   // Retry once with the original spelling when correction produced no match.
   if (!tracks.length && normalized.corrected && normalized.original !== query) {
     const retry = await Promise.allSettled(tasks.map((provider) => {
+      if (provider.name === 'My uploads') return searchMyUploads(normalized.original);
       if (provider.name === 'Apple Music') return searchAppleMusic(normalized.original);
       if (provider.name === 'Audius') return searchAudius(normalized.original);
       if (provider.name === 'Internet Archive') return searchArchive(normalized.original);

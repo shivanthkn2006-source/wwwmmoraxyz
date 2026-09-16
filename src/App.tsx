@@ -141,6 +141,7 @@ const DemoPage = lazy(() => import("./pages/DemoPage")); // PUBLIC DEMO: real sh
 const XImportPage = lazy(() => import("./pages/XImportPage")); // Save a public X post into Home
 const ZoeAudioPage = lazy(() => import("./pages/ZoeAudioPage")); // BLUETOOTH / HEADSET AUDIO ROUTING CENTRE
 const MusicPage = lazy(() => import("./pages/MusicPage"));
+const MusicUploadsPage = lazy(() => import("./pages/MusicUploadsPage"));
 
 
 const ZoeAstroDashboardPage = lazy(() => import("./pages/ZoeAstroDashboardPage")); // M'MORA ZOE ALIGNMENT DASHBOARD
@@ -975,6 +976,14 @@ const RouteAwareShell = () => {
                             element={
                               <ProtectedRoute>
                                 <MusicPage />
+                              </ProtectedRoute>
+                            }
+                          />
+                          <Route
+                            path="/music/uploads"
+                            element={
+                              <ProtectedRoute>
+                                <MusicUploadsPage />
                               </ProtectedRoute>
                             }
                           />
