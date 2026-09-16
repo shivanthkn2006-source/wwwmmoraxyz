@@ -31,11 +31,12 @@ export default function MusicRecommendationsPage() {
       <div className="music-liquid-shell music-align-search flex min-h-[100dvh] w-full flex-col gap-3 overflow-hidden p-3 sm:p-4">
       <section className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col gap-4 overflow-y-auto lg:max-w-5xl">
 
-        <header className="flex items-center justify-between">
+        <header className="flex items-center gap-2">
           <Button variant="ghost" size="icon" aria-label="Back to Home" onClick={() => navigate('/')}><ArrowLeft /></Button>
-          <h1 className="text-sm font-semibold">Recommended for you</h1>
-          <Button variant="ghost" size="icon" aria-label="Edit my music taste" onClick={() => navigate('/music/profile')}><SlidersHorizontal /></Button>
+          <h1 className="text-sm font-semibold text-white">Recommended for you</h1>
+          <Button className="ml-auto" variant="ghost" size="icon" aria-label="Edit my music taste" onClick={() => navigate('/music/profile')}><SlidersHorizontal /></Button>
         </header>
+
 
         {loading && <p role="status" className="text-xs text-white/70">Looking at what you and your friends played…</p>}
         {notice && <p role="status" aria-live="polite" className="text-xs text-white/70">{notice}</p>}
