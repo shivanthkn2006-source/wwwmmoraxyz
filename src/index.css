@@ -6475,3 +6475,136 @@ body {
 
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Agasthya Vision wears the same Vision Pro Liquid Glass surface as Music:
+   one continuous translucent sheet edge to edge, white type throughout, and
+   no coloured panels, gradients or borders. Scoped to this route only. */
+.agasthya-liquid,
+.agasthya-liquid * {
+  font-family: inherit !important;
+  color: hsl(0 0% 100%) !important;
+  border-color: hsl(0 0% 100% / 0.14) !important;
+  text-shadow: none;
+}
+
+.agasthya-liquid [class*="bg-"],
+.agasthya-liquid [class*="from-"],
+.agasthya-liquid [class*="via-"],
+.agasthya-liquid [class*="to-"] {
+  background-image: none !important;
+}
+
+/* Cards, chips, panels and result sections: clear glass, never a dark box. */
+.agasthya-liquid .rounded-lg,
+.agasthya-liquid .rounded-xl,
+.agasthya-liquid .rounded-2xl,
+.agasthya-liquid .rounded-full,
+.agasthya-liquid [data-slot='card'],
+.agasthya-liquid [role='tablist'] {
+  background-color: transparent !important;
+  box-shadow:
+    inset 0 1px 0 hsl(0 0% 100% / 0.28),
+    inset 0 0 0 1px hsl(0 0% 100% / 0.1) !important;
+  backdrop-filter: blur(30px) saturate(120%);
+  -webkit-backdrop-filter: blur(30px) saturate(120%);
+}
+
+/* The gradient-clipped headline becomes plain white, like the Music title. */
+.agasthya-liquid h1 {
+  background: none !important;
+  background-color: transparent !important;
+  background-clip: border-box !important;
+  -webkit-background-clip: border-box !important;
+  -webkit-text-fill-color: hsl(0 0% 100%) !important;
+  letter-spacing: 0.01em;
+}
+
+.agasthya-liquid h2,
+.agasthya-liquid h3,
+.agasthya-liquid h4,
+.agasthya-liquid label {
+  color: hsl(0 0% 100%) !important;
+}
+
+/* Type bars: glass line only, no outline ring or coloured fill. */
+.agasthya-liquid input,
+.agasthya-liquid input:hover,
+.agasthya-liquid input:focus,
+.agasthya-liquid input:focus-visible,
+.agasthya-liquid textarea {
+  border: 0 !important;
+  border-bottom: 1px solid hsl(0 0% 100% / 0.28) !important;
+  border-radius: 0 !important;
+  outline: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: hsl(0 0% 100%) !important;
+  --tw-ring-offset-shadow: 0 0 transparent;
+  --tw-ring-shadow: 0 0 transparent;
+}
+
+.agasthya-liquid input::placeholder,
+.agasthya-liquid textarea::placeholder {
+  color: hsl(0 0% 100% / 0.5) !important;
+}
+
+.agasthya-liquid input[type='date']::-webkit-calendar-picker-indicator {
+  filter: invert(1) opacity(0.7);
+}
+
+/* Buttons and tabs read as white glass; the active tab is simply brighter. */
+.agasthya-liquid button {
+  background: linear-gradient(145deg, hsl(0 0% 100% / 0.16), hsl(0 0% 100% / 0.06)) !important;
+  border: 0 !important;
+  box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.34) !important;
+  color: hsl(0 0% 100%) !important;
+}
+
+.agasthya-liquid button:hover {
+  background: linear-gradient(145deg, hsl(0 0% 100% / 0.24), hsl(0 0% 100% / 0.1)) !important;
+}
+
+.agasthya-liquid [role='tab'] {
+  background: transparent !important;
+  box-shadow: none !important;
+  color: hsl(0 0% 100% / 0.7) !important;
+}
+
+.agasthya-liquid [role='tab'][data-state='active'] {
+  background: linear-gradient(145deg, hsl(0 0% 100% / 0.2), hsl(0 0% 100% / 0.07)) !important;
+  box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.4) !important;
+  color: hsl(0 0% 100%) !important;
+  font-weight: 700;
+}
+
+/* Progress and gauge fills: white light instead of coloured bars. */
+.agasthya-liquid [role='progressbar'] > *,
+.agasthya-liquid [role='progressbar'] [class*='bg-gradient'],
+.agasthya-liquid .h-8 > [class*='bg-gradient'],
+.agasthya-liquid .h-4 > [class*='bg-gradient'],
+.agasthya-liquid .h-3 > [class*='bg-gradient'],
+.agasthya-liquid .h-2 > [class*='bg-gradient'] {
+  background: hsl(0 0% 100% / 0.75) !important;
+}
+
+/* Coloured inner panels flatten to the same clear glass as the outer card. */
+.agasthya-liquid div[class*='bg-'],
+.agasthya-liquid span[class*='bg-'],
+.agasthya-liquid p[class*='bg-'] {
+  background-color: transparent !important;
+}
+
+.agasthya-liquid svg {
+  color: hsl(0 0% 100%) !important;
+}
+
+/* Clear the floating top controls, exactly like the Music header spacing. */
+.agasthya-liquid {
+  padding-top: calc(env(safe-area-inset-top, 0px) + 3.5rem) !important;
+}
+
+@media (min-width: 768px) {
+  .agasthya-liquid {
+    padding-top: calc(env(safe-area-inset-top, 0px) + 4rem) !important;
+  }
+}
