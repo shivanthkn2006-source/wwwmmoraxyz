@@ -53,3 +53,5 @@
 - [ ] Signed-in walkthrough of Music (queue, Library, Community reactions, friend-listen alert) — blocked: no managed session can be minted for Moksh@50; needs a preview sign-in.
 - [ ] YouTube full-track playback — blocked: requires an official YouTube API key/licensed player; direct audio extraction is not permitted.
 - [x] Music page glass now matches the Vision Pro reference: warm ambient light behind a clear frosted sheet, no grey or black canvas; icons and layout unchanged.
+- [ ] Remove only the Music player rectangle, halve its footprint, contain long metadata, and keep the search field responsive with content-driven downward expansion.
+- [ ] Calibrate Music glass against the supplied references and add phone/PWA, iPad, and desktop visual regression coverage.
