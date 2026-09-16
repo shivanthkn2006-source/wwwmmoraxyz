@@ -6597,3 +6597,14 @@ body {
 .agasthya-liquid svg {
   color: hsl(0 0% 100%) !important;
 }
+
+/* Clear the floating top controls, exactly like the Music header spacing. */
+.agasthya-liquid {
+  padding-top: calc(env(safe-area-inset-top, 0px) + 3.5rem) !important;
+}
+
+@media (min-width: 768px) {
+  .agasthya-liquid {
+    padding-top: calc(env(safe-area-inset-top, 0px) + 4rem) !important;
+  }
+}
