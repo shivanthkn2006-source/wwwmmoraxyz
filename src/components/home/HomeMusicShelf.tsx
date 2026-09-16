@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { LibraryBig, Music, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { musicEngine } from '@/services/MusicEngine';
+import TrackArtwork from '@/components/music/TrackArtwork';
 import { fetchMyListening, type MyListeningTrack } from '@/features/music/musicSocial';
 
 const HomeMusicShelf: React.FC = () => {
