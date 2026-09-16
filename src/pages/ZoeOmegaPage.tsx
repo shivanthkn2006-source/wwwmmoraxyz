@@ -1359,6 +1359,7 @@ const ZoeOmegaPage: React.FC = () => {
               positionClassName="fixed left-2 sm:left-4 top-20 z-30"
               contentClassName="w-64 sm:w-72 md:w-80 lg:w-96 max-w-[40vw] h-[45vh] sm:h-[50vh] overflow-hidden rounded-2xl"
             >
+              <Suspense fallback={null}>
               <BiCameralHUD
                 logicStream={oodaLogs.slice(-5).map(log => `[${log.phase}] ${log.content}`)}
                 dreamStream={[
