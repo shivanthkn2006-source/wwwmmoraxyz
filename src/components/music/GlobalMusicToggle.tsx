@@ -30,7 +30,11 @@ export default function GlobalMusicToggle() {
   } | null>(null);
   const positionRef = useRef<PlayerPosition>(DEFAULT_POSITION);
   const suppressClickRef = useRef(false);
+  // Collapsed by default: only the disc symbol shows, so it never crowds the
+  // headphones shortcut. Tapping the disc reveals the transport controls.
+  const [expanded, setExpanded] = useState(false);
   const [position, setPosition] = useState<PlayerPosition>(() => {
+
     try {
       const saved = localStorage.getItem(POSITION_KEY);
       if (saved) return JSON.parse(saved) as PlayerPosition;
