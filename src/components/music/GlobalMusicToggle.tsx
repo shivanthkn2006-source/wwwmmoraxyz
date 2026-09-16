@@ -12,8 +12,11 @@ interface PlayerPosition {
 
 const POSITION_KEY = 'mmora.music.miniPlayerPosition';
 const EDGE_GAP = 8;
-// Home wordmark begins at 1rem and ends near 6rem; start immediately after its final “a”.
-const DEFAULT_POSITION: PlayerPosition = { x: 104, y: 8 };
+/** The floating home search icon the collapsed disc parks next to by default. */
+const SEARCH_CONTROL_SELECTOR = '[data-home-control="mmora.home.search-position.v3"]';
+const SEARCH_GAP = 6;
+// Fallback if the search control is not mounted (non-home routes): just below it.
+const DEFAULT_POSITION: PlayerPosition = { x: 52, y: 80 };
 
 export default function GlobalMusicToggle() {
   const state = useMusicEngine();
