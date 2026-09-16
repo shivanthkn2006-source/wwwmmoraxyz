@@ -65,7 +65,10 @@ export async function compactAudio(file: File): Promise<{ blob: Blob; duration: 
     if (tail.length) chunks.push(Uint8Array.from(tail).buffer);
     const blob = new Blob(chunks, { type: 'audio/mpeg' });
     if (blob.size > 0 && blob.size < file.size && blob.size <= MAX_STORED_BYTES) return { blob, duration, compressed: true };
-  } catch { /* retain an already-small original when conversion is unavailable */ }
+  } catch (error) {
+    // Retain an already-small original when conversion is unavailable, but record why.
+    logMusicEvent('upload:convert', error, { fileName: file.name, bytes: file.size, type: file.type });
+  }
   if (file.size > MAX_STORED_BYTES) throw new Error('This file cannot be reduced below 12 MB.');
   return { blob: file, duration, compressed: false };
 }
