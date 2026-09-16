@@ -1064,6 +1064,7 @@ const ZoeOmegaPage: React.FC = () => {
 
               {/* Dreamscape World Controller - already draggable & collapsible */}
               {vrPanels.dreamscape && (
+                <Suspense fallback={null}>
                 <WorldStateController
                   moodState={worldMoodState}
                   onMoodChange={(mood) => {
