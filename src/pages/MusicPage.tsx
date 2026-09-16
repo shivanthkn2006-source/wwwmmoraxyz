@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Slider } from '@/components/ui/slider';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { musicEngine } from '@/services/MusicEngine';
+import TrackArtwork from '@/components/music/TrackArtwork';
 import { useMusicEngine } from '@/hooks/useMusicEngine';
 import { fetchLiveStations, isFullLengthTrack, searchMusicCatalog, type MusicSearchResult, type MusicTrack } from '@/features/music/musicProviders';
 import { MUSIC_GENRES, MUSIC_RADIO_TAGS } from '@/features/music/musicCategories';
