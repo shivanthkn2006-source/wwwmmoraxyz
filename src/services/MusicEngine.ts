@@ -198,6 +198,16 @@ class MusicEngineImpl {
     }
   }
 
+  /** Mints a fresh private link for one of the member's own uploads. */
+  private async refreshUpload(track: MusicTrack): Promise<MusicTrack | null> {
+    try {
+      const { refreshUploadTrack } = await import('@/features/music/musicUploads');
+      const fresh = await refreshUploadTrack(track);
+      if (fresh?.url) return fresh;
+    } catch { /* fall through to the stored link below */ }
+    return track.url && /^https:/.test(track.url) ? track : null;
+  }
+
   private async recoverFromStreamError(): Promise<void> {
     const failed = this.state.index;
     if (failed >= 0) this.failedIndexes.add(failed);
