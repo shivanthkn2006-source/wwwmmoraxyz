@@ -55,6 +55,7 @@ export default function MusicPage() {
   const [fullOnly, setFullOnly] = useState(false);
   const [musicSuggestions, setMusicSuggestions] = useState<string[]>([]);
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
+  const [activeSuggestion, setActiveSuggestion] = useState(-1);
   const active = state.status === 'playing' || state.status === 'buffering';
   const routedQueryRef = useRef<string | null>(null);
   const searchInputRef = useRef<HTMLTextAreaElement>(null);
@@ -166,6 +167,18 @@ export default function MusicPage() {
     void recordMusicSignal('playlist_add', { track, context: { playlist: name } });
     setSelectedPlaylist(name);
   }, []);
+
+  // Exactly five keyword suggestions, derived locally from Zoe's saved taste and
+  // planetary context — no model call while typing.
+  const suggestionList = useMemo(() => filterMusicSuggestions(musicSuggestions, query), [musicSuggestions, query]);
+
+  const pickSuggestion = useCallback((suggestion: string) => {
+    setQuery(suggestion);
+    setSuggestionsOpen(false);
+    setActiveSuggestion(-1);
+    void recordMusicSignal('suggestion_select', { query: suggestion });
+    void search(suggestion);
+  }, [search]);
 
 
 
@@ -292,41 +305,61 @@ export default function MusicPage() {
                   <h1 className="text-sm font-semibold text-white">MMora music</h1>
                 </div>
               </div>
-              <form className="music-liquid-control music-search-control relative flex gap-2 rounded-full p-1" onSubmit={(e) => { e.preventDefault(); setSuggestionsOpen(false); void search(); }}>
-                <Textarea
-                  ref={searchInputRef}
-                  rows={1}
-                  className="music-search-input min-h-10 resize-none overflow-y-auto border-0 bg-transparent px-3 py-2 pr-0.5 text-white shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                   onFocus={() => setSuggestionsOpen(true)}
-                   onBlur={() => window.setTimeout(() => setSuggestionsOpen(false), 120)}
-                  onKeyDown={(e) => {
-                    if (e.key !== 'Enter' || e.shiftKey) return;
-                    e.preventDefault();
-                    e.currentTarget.form?.requestSubmit();
-                  }}
-                  aria-label="Search music"
-                  autoComplete="off"
-                />
-                <Button className="music-search-submit h-10 w-9" type="submit" variant="ghost" size="icon" disabled={searching} aria-label={searching ? 'Searching' : 'Search'}><Search aria-hidden="true" /></Button>
-                 {suggestionsOpen && (
-                   <div className="absolute left-1 right-1 top-[calc(100%+0.35rem)] z-30 flex flex-wrap gap-1.5" role="listbox" aria-label="Music suggestions">
-                     {filterMusicSuggestions(musicSuggestions, query).map((suggestion) => (
-                       <button
-                         key={suggestion}
-                         type="button"
-                         role="option"
-                         className="music-liquid-chip"
-                         onMouseDown={(event) => event.preventDefault()}
-                         onClick={() => { setQuery(suggestion); setSuggestionsOpen(false); void recordMusicSignal('suggestion_select', { query: suggestion }); void search(suggestion); }}
-                       >
-                         {suggestion}
-                       </button>
-                     ))}
-                   </div>
-                 )}
-              </form>
+              {/* The search pill clips its own overflow, so the suggestion row lives
+                  outside it in this positioned wrapper and stays visible while typing. */}
+              <div className="relative">
+                <form className="music-liquid-control music-search-control flex gap-2 rounded-full p-1" onSubmit={(e) => { e.preventDefault(); setSuggestionsOpen(false); void search(); }}>
+                  <Textarea
+                    ref={searchInputRef}
+                    rows={1}
+                    className="music-search-input min-h-10 resize-none overflow-y-auto border-0 bg-transparent px-3 py-2 pr-0.5 text-white shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                    value={query}
+                    onChange={(e) => { setQuery(e.target.value); setSuggestionsOpen(true); setActiveSuggestion(-1); }}
+                    onFocus={() => setSuggestionsOpen(true)}
+                    onBlur={() => window.setTimeout(() => setSuggestionsOpen(false), 150)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Escape') { setSuggestionsOpen(false); setActiveSuggestion(-1); return; }
+                      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                        if (!suggestionList.length) return;
+                        e.preventDefault();
+                        setSuggestionsOpen(true);
+                        setActiveSuggestion((index) => {
+                          const next = e.key === 'ArrowDown' ? index + 1 : index - 1;
+                          return (next + suggestionList.length) % suggestionList.length;
+                        });
+                        return;
+                      }
+                      if (e.key !== 'Enter' || e.shiftKey) return;
+                      e.preventDefault();
+                      if (suggestionsOpen && activeSuggestion >= 0 && suggestionList[activeSuggestion]) {
+                        pickSuggestion(suggestionList[activeSuggestion]);
+                        return;
+                      }
+                      e.currentTarget.form?.requestSubmit();
+                    }}
+                    aria-label="Search music"
+                    autoComplete="off"
+                  />
+                  <Button className="music-search-submit h-10 w-9" type="submit" variant="ghost" size="icon" disabled={searching} aria-label={searching ? 'Searching' : 'Search'}><Search aria-hidden="true" /></Button>
+                </form>
+                {suggestionsOpen && suggestionList.length > 0 && (
+                  <div className="absolute left-1 right-1 top-[calc(100%+0.35rem)] z-40 flex flex-wrap gap-1.5" role="listbox" aria-label="Music suggestions">
+                    {suggestionList.map((suggestion, index) => (
+                      <button
+                        key={suggestion}
+                        type="button"
+                        role="option"
+                        aria-selected={index === activeSuggestion}
+                        className={`music-liquid-chip ${index === activeSuggestion ? 'is-active' : ''}`}
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => pickSuggestion(suggestion)}
+                      >
+                        {suggestion}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               {/* Upload shortcut sits directly below the search icon, top right. */}
               <div className="-mt-2 flex justify-end">

@@ -445,19 +445,21 @@ const ZoeOmegaPage: React.FC = () => {
   const { needsRotate, requestLandscape, isFullscreen, toggleFullscreen } = useVRLandscapeOrientation(isVRMode);
 
   // VR panel visibility - every panel stays discoverable through the Panels hub,
-  // and the layout is remembered across refreshes / re-entry.
-  const VR_PANEL_VISIBILITY_KEY = 'vr-panel-visibility';
+  // and the layout is remembered across refreshes / re-entry. Only the essentials
+  // open on first entry so the world stays readable; everything else is one tap
+  // away in the hub. The :v2 key resets the older "everything open" default.
+  const VR_PANEL_VISIBILITY_KEY = 'vr-panel-visibility:v2';
   const defaultVrPanels = {
     identity: true,
-    hud: true,
-    dreamscape: true,
-    timeline: true,
-    omniBox: true,
-    diagnostics: true,
-    music: true,
-    zoeAsk: true,
-    social: true,
-    musicUpload: true,
+    hud: false,
+    dreamscape: false,
+    timeline: false,
+    omniBox: false,
+    diagnostics: false,
+    music: false,
+    zoeAsk: false,
+    social: false,
+    musicUpload: false,
   };
   const [vrPanels, setVrPanels] = useState(() => {
     if (typeof window === 'undefined') return defaultVrPanels;
@@ -470,17 +472,35 @@ const ZoeOmegaPage: React.FC = () => {
       return defaultVrPanels;
     }
   });
-  const toggleVrPanel = useCallback((key: keyof typeof defaultVrPanels) => {
-    setVrPanels(prev => {
-      const next = { ...prev, [key]: !prev[key] };
-      try {
-        window.localStorage.setItem(VR_PANEL_VISIBILITY_KEY, JSON.stringify(next));
-      } catch {
-        /* storage unavailable */
-      }
-      return next;
-    });
+  // Bumping this remounts every panel so a reset really puts them back in place.
+  const [vrLayoutToken, setVrLayoutToken] = useState(0);
+  const persistVrPanels = useCallback((next: typeof defaultVrPanels) => {
+    try {
+      window.localStorage.setItem(VR_PANEL_VISIBILITY_KEY, JSON.stringify(next));
+    } catch {
+      /* storage unavailable */
+    }
+    return next;
   }, []);
+  const toggleVrPanel = useCallback((key: keyof typeof defaultVrPanels) => {
+    setVrPanels(prev => persistVrPanels({ ...prev, [key]: !prev[key] }));
+  }, [persistVrPanels]);
+  const setAllVrPanels = useCallback((visible: boolean) => {
+    setVrPanels(prev => persistVrPanels(
+      Object.fromEntries(Object.keys(prev).map(key => [key, visible])) as typeof defaultVrPanels,
+    ));
+  }, [persistVrPanels]);
+  const resetVrLayout = useCallback(() => {
+    try {
+      Object.keys(window.localStorage)
+        .filter(key => key.startsWith('vr-panel-pos:') || key.startsWith('vr-panel-open:'))
+        .forEach(key => window.localStorage.removeItem(key));
+    } catch {
+      /* storage unavailable */
+    }
+    setVrPanels(persistVrPanels({ ...defaultVrPanels }));
+    setVrLayoutToken(token => token + 1);
+  }, [persistVrPanels]);
   const vrPanelToggles: VRPanelToggle[] = [
     { id: 'identity', label: 'Zoe Omega badge', visible: vrPanels.identity, onToggle: () => toggleVrPanel('identity') },
     { id: 'hud', label: 'Mind HUD', visible: vrPanels.hud, onToggle: () => toggleVrPanel('hud') },
@@ -1028,6 +1048,7 @@ const ZoeOmegaPage: React.FC = () => {
               {/* VR Mode Floating Controls - draggable + tap to drop down */}
               {vrPanels.identity && (
                 <VRDraggablePanel
+                  key={`omega-identity-${vrLayoutToken}`}
                   id="omega-identity"
                   title="Zoe Omega"
                   icon={<Brain className="w-3.5 h-3.5 text-purple-300" />}
@@ -1051,6 +1072,7 @@ const ZoeOmegaPage: React.FC = () => {
 
               {/* VR Mode Top Right Controls - draggable + tap to drop down */}
               <VRDraggablePanel
+                key={`omega-session-${vrLayoutToken}`}
                 id="omega-session"
                 title="Session"
                 icon={<Box className="w-3.5 h-3.5 text-cyan-300" />}
@@ -1367,6 +1389,7 @@ const ZoeOmegaPage: React.FC = () => {
         {/* VR Test Suite - Debug Panel (draggable + tap to drop down) */}
         {isVRMode && vrPanels.diagnostics && (
           <VRDraggablePanel
+            key={`omega-diagnostics-${vrLayoutToken}`}
             id="omega-diagnostics"
             title="Diagnostics"
             icon={<Cpu className="w-3.5 h-3.5 text-cyan-300" />}
@@ -1386,11 +1409,11 @@ const ZoeOmegaPage: React.FC = () => {
         <AnimatePresence mode="sync">
           {isVRMode && vrPanels.hud && (
             <VRDraggablePanel
-              key="bicameral-hud-overlay"
+              key={`bicameral-hud-overlay-${vrLayoutToken}`}
               id="omega-hud"
               title="Mind HUD"
               icon={<Brain className="w-3.5 h-3.5 text-purple-300" />}
-              positionClassName="fixed left-2 sm:left-4 top-20 z-30"
+              positionClassName="fixed left-2 sm:left-4 top-20 z-[9992]"
               contentClassName="w-64 sm:w-72 md:w-80 lg:w-96 max-w-[40vw] h-[45vh] sm:h-[50vh] overflow-hidden rounded-2xl"
             >
               <Suspense fallback={null}>
@@ -1421,12 +1444,18 @@ const ZoeOmegaPage: React.FC = () => {
             onRequestLandscape={() => { void requestLandscape(); }}
             isFullscreen={isFullscreen}
             onToggleFullscreen={() => { void toggleFullscreen(); }}
+            onShowAll={() => setAllVrPanels(true)}
+            onHideAll={() => setAllVrPanels(false)}
+            onResetLayout={resetVrLayout}
           />
         )}
 
-        {/* Additive in-world panels: music, Zoe answers, friends' music, uploads */}
+        {/* Additive in-world panels: music, Zoe answers, friends' music, uploads.
+            Each one rests in its own slot so nothing overlaps on first entry, and
+            the bottom-right call / return controls stay completely clear. */}
         {isVRMode && vrPanels.music && (
           <VRDraggablePanel
+            key={`omega-music-${vrLayoutToken}`}
             id="omega-music"
             title="Music"
             icon={<Music2 className="w-3.5 h-3.5 text-cyan-300" />}
@@ -1439,10 +1468,11 @@ const ZoeOmegaPage: React.FC = () => {
         )}
         {isVRMode && vrPanels.zoeAsk && (
           <VRDraggablePanel
+            key={`omega-zoe-ask-${vrLayoutToken}`}
             id="omega-zoe-ask"
             title="Ask Zoe"
             icon={<Sparkles className="w-3.5 h-3.5 text-purple-300" />}
-            positionClassName="fixed top-32 left-2 sm:left-4 z-[9993]"
+            positionClassName="fixed top-[9.5rem] left-2 sm:left-4 z-[9993]"
             defaultOpen={false}
           >
             <Suspense fallback={null}><VRZoeAskPanel /></Suspense>
@@ -1450,10 +1480,11 @@ const ZoeOmegaPage: React.FC = () => {
         )}
         {isVRMode && vrPanels.social && (
           <VRDraggablePanel
+            key={`omega-social-${vrLayoutToken}`}
             id="omega-social"
             title="Friends' music"
             icon={<Users className="w-3.5 h-3.5 text-emerald-300" />}
-            positionClassName="fixed top-32 right-2 sm:right-4 z-[9993]"
+            positionClassName="fixed top-[16.5rem] right-2 sm:right-4 z-[9993]"
             defaultOpen={false}
           >
             <Suspense fallback={null}><VRSocialFeedPanel /></Suspense>
@@ -1461,11 +1492,11 @@ const ZoeOmegaPage: React.FC = () => {
         )}
         {isVRMode && vrPanels.musicUpload && (
           <VRDraggablePanel
+            key={`omega-music-upload-${vrLayoutToken}`}
             id="omega-music-upload"
             title="Upload a song"
             icon={<UploadCloud className="w-3.5 h-3.5 text-pink-300" />}
-            positionClassName="fixed bottom-24 right-2 sm:right-4 z-[9993]"
-            openDirection="up"
+            positionClassName="fixed top-[9.5rem] right-2 sm:right-4 z-[9993]"
             defaultOpen={false}
           >
             <Suspense fallback={null}><VRMusicUploadPanel /></Suspense>
