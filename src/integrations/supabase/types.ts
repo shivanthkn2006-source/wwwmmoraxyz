@@ -4676,6 +4676,39 @@ export type Database = {
         }
         Relationships: []
       }
+      music_playlist_shares: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          owner_id: string
+          playlist_id: string | null
+          recipient_id: string
+          tracks: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          owner_id: string
+          playlist_id?: string | null
+          recipient_id: string
+          tracks?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          owner_id?: string
+          playlist_id?: string | null
+          recipient_id?: string
+          tracks?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       music_playlists: {
         Row: {
           created_at: string
