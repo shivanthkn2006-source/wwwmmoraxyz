@@ -158,7 +158,7 @@ export const VRControlsGuide: React.FC<VRControlsGuideProps> = ({
           >
             <div className="flex items-start gap-3">
               <Hand className="w-5 h-5 text-cyan-300 mt-0.5 flex-shrink-0" />
-              <div className="text-left">
+              <div className="min-w-0 flex-1 text-left">
                 <p id="vr-controls-coach-title" className="text-white/90 text-xs font-semibold mb-1">How to use this world</p>
                 <ul className="text-white/60 text-[11px] space-y-0.5">
                   <li>• Tap any pill to open or close that panel</li>
@@ -179,7 +179,7 @@ export const VRControlsGuide: React.FC<VRControlsGuideProps> = ({
                 type="button"
                 onClick={dismissCoach}
                 aria-label="Dismiss guide"
-                className="ml-auto p-2 rounded-full hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+                className="relative z-10 ml-auto flex-shrink-0 p-2 rounded-full hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
               >
                 <X className="w-4 h-4 text-white/60" />
               </button>

@@ -7,7 +7,7 @@
 import React, { useState, useEffect, useCallback, useRef, lazy, Suspense, Component, ErrorInfo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Brain, Activity, Zap, Shield, Eye, Waves, Cpu, Network, Sparkles, Terminal, Heart, Send, Glasses, Box, Volume2, VolumeX, AlertTriangle, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Brain, Activity, Zap, Shield, Eye, Waves, Cpu, Network, Sparkles, Terminal, Heart, Send, Glasses, Box, Volume2, VolumeX, AlertTriangle, RefreshCw, Music2, Users, UploadCloud } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth';
@@ -32,6 +32,11 @@ import { markVRAudioLocked, markVRAudioUnlocked } from '@/lib/vrAudioGate';
 
 // Lazy load VR OMEGA World for performance - ONLY when explicitly requested
 const VROMEGAWorld = lazy(() => import('@/components/VROMEGAWorld'));
+// Additive in-world music, Zoe and social panels (lazy so VR entry stays fast).
+const VRMusicPanel = lazy(() => import('@/components/vr/VRMusicPanel'));
+const VRZoeAskPanel = lazy(() => import('@/components/vr/VRZoeAskPanel'));
+const VRSocialFeedPanel = lazy(() => import('@/components/vr/VRSocialFeedPanel'));
+const VRMusicUploadPanel = lazy(() => import('@/components/vr/VRMusicUploadPanel'));
 
 // VR Stasis state: true = show placeholder, false = load 3D world
 // This prevents GPU initialization until user explicitly enters VR
@@ -449,6 +454,10 @@ const ZoeOmegaPage: React.FC = () => {
     timeline: true,
     omniBox: true,
     diagnostics: true,
+    music: true,
+    zoeAsk: true,
+    social: true,
+    musicUpload: true,
   };
   const [vrPanels, setVrPanels] = useState(() => {
     if (typeof window === 'undefined') return defaultVrPanels;
@@ -479,6 +488,10 @@ const ZoeOmegaPage: React.FC = () => {
     { id: 'timeline', label: 'Chrono timeline', visible: vrPanels.timeline, onToggle: () => toggleVrPanel('timeline') },
     { id: 'omniBox', label: 'Genesis omni-box', visible: vrPanels.omniBox, onToggle: () => toggleVrPanel('omniBox') },
     { id: 'diagnostics', label: 'Diagnostics', visible: vrPanels.diagnostics, onToggle: () => toggleVrPanel('diagnostics') },
+    { id: 'music', label: 'Music player', visible: vrPanels.music, onToggle: () => toggleVrPanel('music') },
+    { id: 'zoeAsk', label: 'Ask Zoe', visible: vrPanels.zoeAsk, onToggle: () => toggleVrPanel('zoeAsk') },
+    { id: 'social', label: 'Friends’ music', visible: vrPanels.social, onToggle: () => toggleVrPanel('social') },
+    { id: 'musicUpload', label: 'Upload a song', visible: vrPanels.musicUpload, onToggle: () => toggleVrPanel('musicUpload') },
   ];
 
   // Strict VR audio gate: only unlocked when immersive VR is explicitly entered
@@ -1409,6 +1422,54 @@ const ZoeOmegaPage: React.FC = () => {
             isFullscreen={isFullscreen}
             onToggleFullscreen={() => { void toggleFullscreen(); }}
           />
+        )}
+
+        {/* Additive in-world panels: music, Zoe answers, friends' music, uploads */}
+        {isVRMode && vrPanels.music && (
+          <VRDraggablePanel
+            id="omega-music"
+            title="Music"
+            icon={<Music2 className="w-3.5 h-3.5 text-cyan-300" />}
+            positionClassName="fixed bottom-24 left-2 sm:left-4 z-[9993]"
+            openDirection="up"
+            defaultOpen={false}
+          >
+            <Suspense fallback={null}><VRMusicPanel /></Suspense>
+          </VRDraggablePanel>
+        )}
+        {isVRMode && vrPanels.zoeAsk && (
+          <VRDraggablePanel
+            id="omega-zoe-ask"
+            title="Ask Zoe"
+            icon={<Sparkles className="w-3.5 h-3.5 text-purple-300" />}
+            positionClassName="fixed top-32 left-2 sm:left-4 z-[9993]"
+            defaultOpen={false}
+          >
+            <Suspense fallback={null}><VRZoeAskPanel /></Suspense>
+          </VRDraggablePanel>
+        )}
+        {isVRMode && vrPanels.social && (
+          <VRDraggablePanel
+            id="omega-social"
+            title="Friends' music"
+            icon={<Users className="w-3.5 h-3.5 text-emerald-300" />}
+            positionClassName="fixed top-32 right-2 sm:right-4 z-[9993]"
+            defaultOpen={false}
+          >
+            <Suspense fallback={null}><VRSocialFeedPanel /></Suspense>
+          </VRDraggablePanel>
+        )}
+        {isVRMode && vrPanels.musicUpload && (
+          <VRDraggablePanel
+            id="omega-music-upload"
+            title="Upload a song"
+            icon={<UploadCloud className="w-3.5 h-3.5 text-pink-300" />}
+            positionClassName="fixed bottom-24 right-2 sm:right-4 z-[9993]"
+            openDirection="up"
+            defaultOpen={false}
+          >
+            <Suspense fallback={null}><VRMusicUploadPanel /></Suspense>
+          </VRDraggablePanel>
         )}
 
         {/* Return to Reality button - Draggable & Compact */}

@@ -1,7 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { getLibrary, playlistTracks } from '@/features/music/musicLibrary';
 import { fetchMyListening } from '@/features/music/musicSocial';
-import type { MusicTrack } from '@/features/music/musicProviders';
+import { searchMusicCatalog, type MusicTrack } from '@/features/music/musicProviders';
 import type { Json } from '@/integrations/supabase/types';
 
 export type MusicSignalType = 'play' | 'skip' | 'complete' | 'replay' | 'save' | 'unsave' | 'reaction' | 'search' | 'suggestion_select' | 'playlist_add' | 'explicit_preference';
@@ -71,8 +71,18 @@ export async function recordMusicSignal(eventType: MusicSignalType, options: { t
   if (error) console.warn('[music-connect] signal not saved:', error.message);
 }
 
-export async function resolvePersonalMusicQueue(scope: 'favorite' | 'playlist' | 'history' | 'mood'): Promise<MusicTrack[]> {
+export async function resolvePersonalMusicQueue(scope: 'favorite' | 'playlist' | 'history' | 'mood' | 'chart'): Promise<MusicTrack[]> {
   const library = getLibrary();
+  if (scope === 'chart') {
+    // Keywords already derive from real Swiss-Ephemeris positions and the current
+    // dasha period, so no model call is needed to pick what to play.
+    const context = await fetchMusicConnectContext();
+    for (const keyword of context.suggestions) {
+      const { tracks } = await searchMusicCatalog(keyword, 'track').catch(() => ({ tracks: [] as MusicTrack[] }));
+      if (tracks.length) return tracks;
+    }
+    return library.saved;
+  }
   if (scope === 'favorite') return library.saved;
   if (scope === 'playlist') return Object.keys(library.playlists).flatMap(playlistTracks).filter((track, index, all) => all.findIndex((item) => item.id === track.id) === index);
   const history = await fetchMyListening();

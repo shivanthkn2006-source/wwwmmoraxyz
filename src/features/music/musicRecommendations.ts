@@ -10,6 +10,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { searchMusicCatalog, type MusicTrack } from '@/features/music/musicProviders';
 import { fetchMyListening } from '@/features/music/musicSocial';
 import { fetchMyMusicProfile, type MusicTasteProfile } from '@/features/music/musicProfile';
+import { fetchMusicConnectContext } from '@/features/music/musicConnect';
+import { listMyUploads } from '@/features/music/musicUploads';
 
 export interface MusicRecommendationSection {
   id: string;
@@ -100,22 +102,53 @@ export async function fetchMusicRecommendations(): Promise<MusicRecommendationSe
     return out;
   };
 
-  const friends = await myFriendIds(auth.user.id);
-  const fromFriends = take(await friendPlays(friends, played), 20);
+  // Every source is fetched at once, so the page never waits for one slow provider.
+  const connectKeywords = fetchMusicConnectContext()
+    .then((context) => context.suggestions.slice(0, 2))
+    .catch(() => [] as string[]);
+  const lookup = async (keyword: string) => {
+    try { return { keyword, tracks: (await searchMusicCatalog(keyword, 'track')).tracks }; }
+    catch { return { keyword, tracks: [] as MusicTrack[] }; }
+  };
+
+  const [fromFriendsRaw, myUploads, connectFound, seedFound] = await Promise.all([
+    myFriendIds(auth.user.id).then((friends) => friendPlays(friends, played)).catch(() => [] as MusicTrack[]),
+    listMyUploads().catch(() => [] as MusicTrack[]),
+    connectKeywords.then((keywords) => Promise.all(keywords.map(lookup))),
+    Promise.all(seeds(profile, history).map(lookup)),
+  ]);
+
+  const fromFriends = take(fromFriendsRaw, 20);
   if (fromFriends.length) {
     sections.push({ id: 'friends', label: 'Your friends are playing', reason: 'Real plays from people you are connected with', tracks: fromFriends });
   }
 
-  const searches = await Promise.all(seeds(profile, history).map(async (seed) => {
-    try {
-      const result = await searchMusicCatalog(seed, 'track');
-      return { seed, tracks: result.tracks };
-    } catch { return { seed, tracks: [] as MusicTrack[] }; }
-  }));
-  searches.forEach(({ seed, tracks }) => {
+  // Songs the member uploaded themselves are real, playable and personal, so they
+  // rank right after friends' plays instead of being a one-time play.
+  const mine = take(myUploads, 12);
+  if (mine.length) {
+    sections.push({ id: 'uploads', label: 'From your own uploads', reason: 'Songs you added to Music yourself', tracks: mine });
+  }
+
+  // Zoe's Music Connect keywords come from real Swiss-Ephemeris positions, the
+  // current dasha period and saved taste — never from a token-generated guess.
+  connectFound.forEach(({ keyword, tracks }) => {
     const picked = take(tracks, 12);
-    if (picked.length) sections.push({ id: `seed-${seed}`, label: `Because you like ${seed}`, reason: 'From your music profile and listening history', tracks: picked });
+    if (picked.length) {
+      sections.push({
+        id: `connect-${keyword}`,
+        label: `Zoe suggests: ${keyword}`,
+        reason: 'From your birth chart, current planetary period and saved taste',
+        tracks: picked,
+      });
+    }
   });
+
+  seedFound.forEach(({ keyword, tracks }) => {
+    const picked = take(tracks, 12);
+    if (picked.length) sections.push({ id: `seed-${keyword}`, label: `Because you like ${keyword}`, reason: 'From your music profile and listening history', tracks: picked });
+  });
+
 
 
   if (history.length) {

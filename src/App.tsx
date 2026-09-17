@@ -143,7 +143,9 @@ const ZoeAudioPage = lazy(() => import("./pages/ZoeAudioPage")); // BLUETOOTH / 
 const MusicPage = lazy(() => import("./pages/MusicPage"));
 const MusicUploadsPage = lazy(() => import("./pages/MusicUploadsPage"));
 const MusicProfilePage = lazy(() => import("./pages/MusicProfilePage"));
+const MusicDashboardPage = lazy(() => import("./pages/MusicDashboardPage"));
 const MusicRecommendationsPage = lazy(() => import("./pages/MusicRecommendationsPage"));
+const MusicPlaylistsPage = lazy(() => import("./pages/MusicPlaylistsPage"));
 
 
 
@@ -991,6 +993,14 @@ const RouteAwareShell = () => {
                             }
                           />
                           <Route
+                            path="/music/dashboard"
+                            element={
+                              <ProtectedRoute>
+                                <MusicDashboardPage />
+                              </ProtectedRoute>
+                            }
+                          />
+                          <Route
                             path="/music/profile"
                             element={
                               <ProtectedRoute>
@@ -1003,6 +1013,14 @@ const RouteAwareShell = () => {
                             element={
                               <ProtectedRoute>
                                 <MusicRecommendationsPage />
+                              </ProtectedRoute>
+                            }
+                          />
+                          <Route
+                            path="/music/playlists"
+                            element={
+                              <ProtectedRoute>
+                                <MusicPlaylistsPage />
                               </ProtectedRoute>
                             }
                           />
