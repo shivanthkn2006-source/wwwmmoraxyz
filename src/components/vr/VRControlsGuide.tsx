@@ -72,6 +72,9 @@ export const VRControlsGuide: React.FC<VRControlsGuideProps> = ({
   onRequestLandscape,
   isFullscreen = false,
   onToggleFullscreen,
+  onShowAll,
+  onHideAll,
+  onResetLayout,
 }) => {
   const [isOpen, setIsOpen] = useState(() => {
     if (typeof window === 'undefined') return false;
