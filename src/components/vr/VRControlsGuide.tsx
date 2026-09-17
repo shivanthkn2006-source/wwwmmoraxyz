@@ -113,6 +113,10 @@ export const VRControlsGuide: React.FC<VRControlsGuideProps> = ({
       <AnimatePresence>
         {needsRotate && (
           <motion.div
+            role="dialog"
+            aria-modal="false"
+            aria-labelledby="vr-controls-coach-title"
+            data-testid="vr-first-time-tutorial"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -155,7 +159,7 @@ export const VRControlsGuide: React.FC<VRControlsGuideProps> = ({
             <div className="flex items-start gap-3">
               <Hand className="w-5 h-5 text-cyan-300 mt-0.5 flex-shrink-0" />
               <div className="text-left">
-                <p className="text-white/90 text-xs font-semibold mb-1">How to use this world</p>
+                <p id="vr-controls-coach-title" className="text-white/90 text-xs font-semibold mb-1">How to use this world</p>
                 <ul className="text-white/60 text-[11px] space-y-0.5">
                   <li>• Tap any pill to open or close that panel</li>
                   <li>• Drag a pill by its handle to move the panel anywhere</li>

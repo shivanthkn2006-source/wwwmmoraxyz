@@ -6,7 +6,7 @@
  * by the Unified Search Dock and by Zoe's platform-state injection, so no menu
  * can exist in the app without Zoe knowing about it.
  *
- * Run: bun scripts/generate-route-registry.ts
+ * Run: bunx tsx scripts/generate-route-registry.ts
  * Drift is enforced by src/test/routeRegistry.test.ts.
  */
 import { readFileSync, writeFileSync } from 'node:fs';

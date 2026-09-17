@@ -12,8 +12,8 @@
     "test:e2e": "playwright test",
     "test:e2e:home": "playwright test tests/e2e/home-blank-screen.spec.ts",
     "test:e2e:dock-live": "playwright test tests/e2e/home-dock-live.spec.ts",
-    "predev": "bunx tsx scripts/generate-sitemap.ts",
-    "prebuild": "bunx tsx scripts/generate-sitemap.ts && node scripts/check-backend-target.mjs && node scripts/check-public-guard.mjs && vitest run src/test/routeSeo.test.ts scripts/generate-sitemap.test.ts",
+    "predev": "bunx tsx scripts/generate-route-registry.ts && bunx tsx scripts/generate-sitemap.ts",
+    "prebuild": "bunx tsx scripts/generate-route-registry.ts && bunx tsx scripts/generate-sitemap.ts && node scripts/check-backend-target.mjs && node scripts/check-public-guard.mjs && vitest run src/test/routeSeo.test.ts scripts/generate-sitemap.test.ts",
     "test:seo": "vitest run src/test/routeSeo.test.ts scripts/generate-sitemap.test.ts",
     "test:crawl": "playwright test tests/e2e/seo-crawl.spec.ts"
   },

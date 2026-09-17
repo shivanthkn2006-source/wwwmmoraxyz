@@ -1,5 +1,8 @@
 # Music roadmap
 
+- [x] Automatically wire every registered static page into the Home icon menu
+- [x] Keep the first-time VR tap/drag tutorial with persistent dismissal and unchanged panel visuals
+
 - [ ] Song size limit 50 MB (bucket + client guard)
 - [ ] Fix upload compression (reliable MP3 encoder, no main-thread stall for already-compressed files)
 - [ ] Verify upload -> appears in Music search with art -> real play
