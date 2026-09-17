@@ -55,6 +55,7 @@ export default function MusicPage() {
   const [fullOnly, setFullOnly] = useState(false);
   const [musicSuggestions, setMusicSuggestions] = useState<string[]>([]);
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
+  const [activeSuggestion, setActiveSuggestion] = useState(-1);
   const active = state.status === 'playing' || state.status === 'buffering';
   const routedQueryRef = useRef<string | null>(null);
   const searchInputRef = useRef<HTMLTextAreaElement>(null);
