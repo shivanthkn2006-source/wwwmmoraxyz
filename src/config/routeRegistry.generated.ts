@@ -73,6 +73,7 @@ export const CANONICAL_ROUTES: CanonicalRoute[] = [
   { path: "/mmora", label: "M'Mora", dynamic: false },
   { path: "/mosaic", label: "Mosaic", dynamic: false },
   { path: "/music", label: "Music", dynamic: false },
+  { path: "/music/birth-chart", label: "Music · birth chart", dynamic: false },
   { path: "/music/dashboard", label: "Music · dashboard", dynamic: false },
   { path: "/music/playlists", label: "Music · playlists", dynamic: false },
   { path: "/music/profile", label: "Music · profile", dynamic: false },
