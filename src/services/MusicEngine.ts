@@ -61,7 +61,7 @@ class MusicEngineImpl {
     audio.onplaying = () => {
       if (this.state.track && this.startedAt === 0) {
         this.startedAt = Date.now();
-        void import('@/features/music/musicConnect').then(({ recordMusicSignal }) => recordMusicSignal('play', { track: this.state.track }));
+        void import('@/features/music/musicConnect').then(({ recordMusicSignal }) => recordMusicSignal('play', { track: this.state.track })).catch(() => undefined);
       }
       this.patch({ status: 'playing', error: null });
     };
@@ -74,7 +74,7 @@ class MusicEngineImpl {
     audio.onended = () => {
       if (this.state.track && this.completedTrackId !== this.state.track.id) {
         this.completedTrackId = this.state.track.id;
-        void import('@/features/music/musicConnect').then(({ recordMusicSignal }) => recordMusicSignal('complete', { track: this.state.track, progressRatio: 1 }));
+        void import('@/features/music/musicConnect').then(({ recordMusicSignal }) => recordMusicSignal('complete', { track: this.state.track, progressRatio: 1 })).catch(() => undefined);
       }
       void this.next(true);
     };
@@ -176,7 +176,7 @@ class MusicEngineImpl {
     const previous = this.state.track;
     const elapsed = this.startedAt ? (Date.now() - this.startedAt) / 1000 : 0;
     if (previous && elapsed > 0 && elapsed < 30) {
-      void import('@/features/music/musicConnect').then(({ recordMusicSignal }) => recordMusicSignal('skip', { track: previous, progressRatio: this.state.duration ? this.state.position / this.state.duration : undefined }));
+      void import('@/features/music/musicConnect').then(({ recordMusicSignal }) => recordMusicSignal('skip', { track: previous, progressRatio: this.state.duration ? this.state.position / this.state.duration : undefined })).catch(() => undefined);
     }
     this.startedAt = 0;
     this.completedTrackId = null;

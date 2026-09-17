@@ -78,7 +78,7 @@ function clean(text: string): string {
 }
 
 export function resolveMusicIntent(raw: string): MusicIntent | null {
-  const text = clean(raw);
+  const text = clean(raw).replace(/^(?:hey\s+)?zoe[,\s]+/, '');
   if (!text) return null;
 
   // ── transport controls: only when music is clearly the subject ──
