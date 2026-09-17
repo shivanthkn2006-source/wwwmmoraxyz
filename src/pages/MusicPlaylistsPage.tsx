@@ -308,12 +308,50 @@ export default function MusicPlaylistsPage() {
                   </>
                 )}
               </div>
+              {sharing === playlist.id && (
+                <div className="flex flex-col gap-1 px-1" aria-label={`Send ${playlist.name} to a friend`}>
+                  {friends.length ? friends.map((friend) => (
+                    <button
+                      key={friend.id}
+                      type="button"
+                      onClick={() => void share(playlist, friend)}
+                      className="min-h-11 rounded-xl px-2 py-1.5 text-left text-[11px] text-white/80 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                    >
+                      Send to {friend.name}
+                    </button>
+                  )) : <p className="text-[11px] text-white/40">Add a friend first, then you can send them a playlist.</p>}
+                </div>
+              )}
               <ul className="flex flex-col gap-1.5">
                 {playlist.tracks.map((track, index) => trackRow(track, playlist.id, index, playlist.tracks))}
               </ul>
               {!playlist.tracks.length && <p className="px-1 text-[11px] text-white/40">Drag songs here, or use “Move…” beside any song.</p>}
             </section>
           ))}
+
+          {sharedWithMe.length > 0 && (
+            <section aria-label="Playlists shared with me" className="flex min-h-[8rem] flex-col gap-2 rounded-3xl p-2">
+              <p className="px-1 text-xs font-semibold">Shared with me <span className="text-white/40">({sharedWithMe.length})</span></p>
+              <ul className="flex flex-col gap-1.5">
+                {sharedWithMe.map((shared) => (
+                  <li key={shared.id} className="flex items-center gap-2 px-1">
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[11px]">{shared.name}</span>
+                      <span className="block truncate text-[10px] text-white/40">{shared.fromName} · {shared.tracks.length} songs</span>
+                    </span>
+                    <Button
+                      variant="ghost" size="icon" className="h-8 w-8 text-white/60 hover:text-white"
+                      aria-label={`Play ${shared.name} shared by ${shared.fromName}`} disabled={!shared.tracks.length}
+                      onClick={() => { musicEngine.unlock(); void musicEngine.playQueue(shared.tracks, 0); }}
+                    >
+                      <Play className="h-4 w-4" />
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
 
           <section aria-label="Songs sent from Music and Home" className="flex min-h-[8rem] flex-col gap-2 rounded-3xl p-2">
             <p className="px-1 text-xs font-semibold">From Music &amp; Home <span className="text-white/40">({tray.length})</span></p>
