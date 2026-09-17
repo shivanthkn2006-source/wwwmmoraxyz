@@ -1,6 +1,7 @@
 import type { MusicIntent } from '@/features/music/musicIntent';
 import { resolveMusicQueue } from '@/features/music/musicProviders';
 import { musicEngine } from '@/services/MusicEngine';
+import { resolvePersonalMusicQueue } from '@/features/music/musicConnect';
 
 export interface MusicCommandResult {
   handled: boolean;
@@ -37,6 +38,14 @@ export async function executeMusicIntent(
     await musicEngine.previous();
     const track = musicEngine.getState().track;
     return { handled: true, message: track ? `Now playing “${track.title}” by ${track.artist}.` : 'There is no previous track in the queue.' };
+  }
+
+  if (intent.kind === 'personal') {
+    const tracks = await resolvePersonalMusicQueue(intent.scope);
+    if (!tracks.length) return { handled: true, message: 'I need a little listening history or saved music before I can choose that personally.' };
+    const played = await musicEngine.playQueue(tracks);
+    const track = musicEngine.getState().track;
+    return { handled: true, message: played && track ? `Now playing “${track.title}” by ${track.artist}, chosen from what you already love.` : musicEngine.getState().error ?? 'I found your music, but this device needs one tap on Play.' };
   }
 
   const query = intent.query || 'calm focus music';

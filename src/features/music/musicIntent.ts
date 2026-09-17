@@ -8,6 +8,7 @@
 
 export type MusicIntent =
   | { kind: 'play'; query: string; lookup: 'track' | 'mood' | 'genre' | 'radio' | 'devotional'; speak: string }
+  | { kind: 'personal'; scope: 'favorite' | 'playlist' | 'history' | 'mood'; speak: string }
   | { kind: 'resume'; speak: string }
   | { kind: 'pause'; speak: string }
   | { kind: 'stop'; speak: string }
@@ -128,10 +129,20 @@ export function resolveMusicIntent(raw: string): MusicIntent | null {
     if (!soundsLikeATrack) return null;
   }
 
+  if (/\b(my favou?rites?|my songs?|songs? i (?:love|like)|what i usually play)\b/.test(body)) {
+    return { kind: 'personal', scope: 'favorite', speak: 'Starting music you love.' };
+  }
+  if (/\b(my playlists?|from my playlists?)\b/.test(body)) {
+    return { kind: 'personal', scope: 'playlist', speak: 'Starting your playlist music.' };
+  }
+  if (/\b(my recent music|what i played|my listening history)\b/.test(body)) {
+    return { kind: 'personal', scope: 'history', speak: 'Starting something from your listening history.' };
+  }
+
 
   // "play a song based on my current mood" / "play something for my mood"
   if (/\b(my (current )?mood|how i (feel|am feeling)|based on my mood)\b/.test(body)) {
-    return { kind: 'play', query: '', lookup: 'mood', speak: 'Reading your mood and starting something that fits.' };
+    return { kind: 'personal', scope: 'mood', speak: 'Reading your preferences and starting something that fits.' };
   }
 
   // "play relaxing music" / "play something upbeat"

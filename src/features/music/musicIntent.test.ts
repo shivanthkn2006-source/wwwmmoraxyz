@@ -33,4 +33,11 @@ describe('resolveMusicIntent', () => {
     expect(resolveMusicIntent('play the upload')).toBeNull();
     expect(resolveMusicIntent('play Mission Impossible theme')).toMatchObject({ kind: 'play', lookup: 'track' });
   });
+
+  it('routes personal taste requests without an AI query', () => {
+    expect(resolveMusicIntent('Zoe play my favorites')).toMatchObject({ kind: 'personal', scope: 'favorite' });
+    expect(resolveMusicIntent('play my playlist')).toMatchObject({ kind: 'personal', scope: 'playlist' });
+    expect(resolveMusicIntent('play my recent music')).toMatchObject({ kind: 'personal', scope: 'history' });
+    expect(resolveMusicIntent('play a song based on my current mood')).toMatchObject({ kind: 'personal', scope: 'mood' });
+  });
 });
