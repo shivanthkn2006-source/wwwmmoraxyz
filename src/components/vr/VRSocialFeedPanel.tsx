@@ -32,15 +32,23 @@ const VRSocialFeedPanel: React.FC = () => {
     try {
       const { data: auth } = await supabase.auth.getUser();
       if (!auth.user) { setAlerts([]); setNotice('Sign in to see your friends’ music.'); return; }
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('id,type,context_data,created_at')
-        .eq('user_id', auth.user.id)
-        .in('type', TYPES)
-        .order('created_at', { ascending: false })
-        .limit(20);
-      if (error) throw error;
-      setAlerts((data ?? []).map((row) => {
+      const [notificationResult, uploadResult] = await Promise.all([
+        supabase
+          .from('notifications')
+          .select('id,type,context_data,created_at')
+          .eq('user_id', auth.user.id)
+          .in('type', TYPES)
+          .order('created_at', { ascending: false })
+          .limit(20),
+        supabase
+          .from('music_uploads')
+          .select('id,title,artist,created_at')
+          .eq('user_id', auth.user.id)
+          .order('created_at', { ascending: false })
+          .limit(10),
+      ]);
+      if (notificationResult.error) throw notificationResult.error;
+      const notificationAlerts = (notificationResult.data ?? []).map((row) => {
         const context = (row.context_data ?? {}) as {
           track_title?: string; track_artist?: string; message?: string;
           share_id?: string; playlist_name?: string; track_count?: number;
@@ -57,7 +65,17 @@ const VRSocialFeedPanel: React.FC = () => {
           shareId: isShare ? context.share_id : undefined,
           at: new Date(row.created_at as string).toLocaleString(),
         };
+      });
+      const uploadAlerts: Alert[] = (uploadResult.data ?? []).map((row) => ({
+        id: `upload:${row.id as string}`,
+        title: row.title as string,
+        body: `${(row.artist as string) || 'My upload'} · uploaded by me`,
+        query: [row.title, row.artist].filter(Boolean).join(' '),
+        at: new Date(row.created_at as string).toLocaleString(),
       }));
+      setAlerts([...notificationAlerts, ...uploadAlerts]
+        .sort((left, right) => Date.parse(right.at) - Date.parse(left.at))
+        .slice(0, 30));
       setNotice('');
     } catch {
       setNotice('Alerts could not be loaded. Check your connection.');
