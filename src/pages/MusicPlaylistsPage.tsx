@@ -13,6 +13,10 @@ import {
   renamePlaylist, reorderPlaylists, savePlaylistOrder, savePlaylistTracks, withTrack, withoutTrack, type MusicPlaylist,
 } from '@/features/music/musicPlaylists';
 import { removeFromTray, subscribeTray } from '@/features/music/musicTray';
+import {
+  fetchMusicFriends, fetchSharedWithMe, sharePlaylistWithFriend,
+  type MusicFriend, type SharedPlaylist,
+} from '@/features/music/musicShares';
 
 interface Dragged { playlistId: string; trackId: string }
 
@@ -28,9 +32,34 @@ export default function MusicPlaylistsPage() {
   const [loading, setLoading] = useState(true);
 
   const [tray, setTray] = useState<MusicTrack[]>([]);
+  const [friends, setFriends] = useState<MusicFriend[]>([]);
+  const [sharing, setSharing] = useState<string | null>(null);
+  const [sharedWithMe, setSharedWithMe] = useState<SharedPlaylist[]>([]);
 
   useEffect(() => subscribeLibrary((library) => setSaved(library.saved)), []);
   useEffect(() => subscribeTray(setTray), []);
+  useEffect(() => {
+    void (async () => {
+      try {
+        const [friendRows, sharedRows] = await Promise.all([fetchMusicFriends(), fetchSharedWithMe()]);
+        setFriends(friendRows);
+        setSharedWithMe(sharedRows);
+      } catch {
+        /* sharing stays unavailable; playlists keep working */
+      }
+    })();
+  }, []);
+
+  const share = async (playlist: MusicPlaylist, friend: MusicFriend) => {
+    try {
+      await sharePlaylistWithFriend(playlist, friend.id);
+      setSharing(null);
+      setNotice(`“${playlist.name}” was sent to ${friend.name}. It opens in their VR world too.`);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'That playlist could not be shared.');
+    }
+  };
+
 
   const load = useCallback(async () => {
     try {
