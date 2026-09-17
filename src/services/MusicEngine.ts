@@ -31,6 +31,8 @@ class MusicEngineImpl {
   private failedIndexes = new Set<number>();
   private uploadRetries = new Set<number>();
   private shuffledIndices: number[] = [];
+  private startedAt = 0;
+  private completedTrackId: string | null = null;
 
   private state: MusicState = {
     status: 'idle',
@@ -56,14 +58,26 @@ class MusicEngineImpl {
       if (Number.isFinite(stored) && stored > 0 && stored <= 1) this.state.volume = stored;
     } catch { /* ignored */ }
     audio.volume = this.state.volume;
-    audio.onplaying = () => this.patch({ status: 'playing', error: null });
+    audio.onplaying = () => {
+      if (this.state.track && this.startedAt === 0) {
+        this.startedAt = Date.now();
+        void import('@/features/music/musicConnect').then(({ recordMusicSignal }) => recordMusicSignal('play', { track: this.state.track })).catch(() => undefined);
+      }
+      this.patch({ status: 'playing', error: null });
+    };
     audio.onpause = () => { if (this.state.status !== 'idle') this.patch({ status: 'paused' }); };
     audio.onwaiting = () => this.patch({ status: 'buffering' });
     audio.ontimeupdate = () => this.patch({
       position: audio.currentTime || 0,
       duration: Number.isFinite(audio.duration) ? audio.duration : 0,
     });
-    audio.onended = () => void this.next(true);
+    audio.onended = () => {
+      if (this.state.track && this.completedTrackId !== this.state.track.id) {
+        this.completedTrackId = this.state.track.id;
+        void import('@/features/music/musicConnect').then(({ recordMusicSignal }) => recordMusicSignal('complete', { track: this.state.track, progressRatio: 1 })).catch(() => undefined);
+      }
+      void this.next(true);
+    };
     audio.onerror = () => void this.recoverFromStreamError();
     this.audio = audio;
     this.bindDucking();
@@ -159,6 +173,13 @@ class MusicEngineImpl {
   }
 
   async playIndex(index: number): Promise<boolean> {
+    const previous = this.state.track;
+    const elapsed = this.startedAt ? (Date.now() - this.startedAt) / 1000 : 0;
+    if (previous && this.completedTrackId !== previous.id && elapsed > 0 && elapsed < 30) {
+      void import('@/features/music/musicConnect').then(({ recordMusicSignal }) => recordMusicSignal('skip', { track: previous, progressRatio: this.state.duration ? this.state.position / this.state.duration : undefined })).catch(() => undefined);
+    }
+    this.startedAt = 0;
+    this.completedTrackId = null;
     let track = this.state.queue[index];
     if (!track) return false;
     this.patch({ index, track, status: 'buffering', position: 0, duration: 0, error: null });

@@ -4604,6 +4604,42 @@ export type Database = {
         }
         Relationships: []
       }
+      music_connect_context: {
+        Row: {
+          calculated_at: string
+          created_at: string
+          expires_at: string
+          planetary_context: Json
+          source_fingerprint: string | null
+          suggestion_keywords: string[]
+          taste_vector: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          calculated_at?: string
+          created_at?: string
+          expires_at?: string
+          planetary_context?: Json
+          source_fingerprint?: string | null
+          suggestion_keywords?: string[]
+          taste_vector?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          calculated_at?: string
+          created_at?: string
+          expires_at?: string
+          planetary_context?: Json
+          source_fingerprint?: string | null
+          suggestion_keywords?: string[]
+          taste_vector?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       music_listens: {
         Row: {
           created_at: string
@@ -4636,6 +4672,60 @@ export type Database = {
           track_source?: string | null
           track_title?: string
           track_url?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      music_preference_signals: {
+        Row: {
+          context: Json
+          created_at: string
+          event_type: string
+          genre: string | null
+          id: string
+          mood: string | null
+          occurred_at: string
+          progress_ratio: number | null
+          query_text: string | null
+          signal_weight: number
+          track_artist: string | null
+          track_id: string | null
+          track_source: string | null
+          track_title: string | null
+          user_id: string
+        }
+        Insert: {
+          context?: Json
+          created_at?: string
+          event_type: string
+          genre?: string | null
+          id?: string
+          mood?: string | null
+          occurred_at?: string
+          progress_ratio?: number | null
+          query_text?: string | null
+          signal_weight?: number
+          track_artist?: string | null
+          track_id?: string | null
+          track_source?: string | null
+          track_title?: string | null
+          user_id: string
+        }
+        Update: {
+          context?: Json
+          created_at?: string
+          event_type?: string
+          genre?: string | null
+          id?: string
+          mood?: string | null
+          occurred_at?: string
+          progress_ratio?: number | null
+          query_text?: string | null
+          signal_weight?: number
+          track_artist?: string | null
+          track_id?: string | null
+          track_source?: string | null
+          track_title?: string | null
           user_id?: string
         }
         Relationships: []

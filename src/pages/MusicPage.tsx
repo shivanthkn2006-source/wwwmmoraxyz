@@ -13,6 +13,7 @@ import { fetchLiveStations, isFullLengthTrack, searchMusicCatalog, type MusicSea
 import { MUSIC_GENRES, MUSIC_RADIO_TAGS } from '@/features/music/musicCategories';
 import { addToPlaylist, getLibrary, isSaved, playlistTracks, removePlaylist, subscribeLibrary, toggleSaved, type MusicLibrary } from '@/features/music/musicLibrary';
 import { fetchMostListened, fetchMyReactions, fetchReactionChart, logListen, MUSIC_REACTIONS, toggleReaction, type MusicReactionId, type MusicSocialTrack } from '@/features/music/musicSocial';
+import { fetchMusicConnectContext, filterMusicSuggestions, recordMusicSignal } from '@/features/music/musicConnect';
 
 
 const SEARCH_CACHE_KEY = 'mmora.music.lastSearch';
@@ -52,12 +53,20 @@ export default function MusicPage() {
   const [stationTag, setStationTag] = useState<string | null>(null);
   const [selectedPlaylist, setSelectedPlaylist] = useState<string | null>(null);
   const [fullOnly, setFullOnly] = useState(false);
+  const [musicSuggestions, setMusicSuggestions] = useState<string[]>([]);
+  const [suggestionsOpen, setSuggestionsOpen] = useState(false);
   const active = state.status === 'playing' || state.status === 'buffering';
   const routedQueryRef = useRef<string | null>(null);
   const searchInputRef = useRef<HTMLTextAreaElement>(null);
 
 
   useEffect(() => subscribeLibrary(setLibrary), []);
+
+  useEffect(() => {
+    let active = true;
+    void fetchMusicConnectContext().then((context) => { if (active) setMusicSuggestions(context.suggestions); });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     const input = searchInputRef.current;
@@ -101,6 +110,7 @@ export default function MusicPage() {
     setBurst(reaction);
     window.setTimeout(() => setBurst(null), 700);
     const added = await toggleReaction(state.track, reaction);
+    if (added) void recordMusicSignal('reaction', { track: state.track, context: { reaction } });
     setMyReactions((current) => added ? [...current, reaction] : current.filter((item) => item !== reaction));
   }, [state.track]);
 
@@ -114,6 +124,7 @@ export default function MusicPage() {
     try {
       const kind = requestedKind ?? (/\b(radio|station|fm|satellite)\b/i.test(value) ? 'radio' : 'track');
       const result = await searchMusicCatalog(value, kind);
+      void recordMusicSignal('search', { query: value, context: { kind, resultCount: result.tracks.length } });
       try { sessionStorage.setItem(SEARCH_CACHE_KEY, JSON.stringify({ query: value, result })); } catch { /* optional */ }
       setResults(result);
       if (!result.tracks.length) {
@@ -152,6 +163,7 @@ export default function MusicPage() {
     const name = window.prompt('Add to playlist (name):')?.trim();
     if (!name) return;
     addToPlaylist(name, track);
+    void recordMusicSignal('playlist_add', { track, context: { playlist: name } });
     setSelectedPlaylist(name);
   }, []);
 
@@ -175,7 +187,10 @@ export default function MusicPage() {
         className={`music-liquid-save h-9 w-9 shrink-0 rounded-full ${isSaved(track.id) ? 'is-saved' : ''}`}
         variant="ghost"
         size="icon"
-        onClick={() => toggleSaved(track)}
+        onClick={() => {
+          const saved = toggleSaved(track);
+          void recordMusicSignal(saved ? 'save' : 'unsave', { track });
+        }}
         label={isSaved(track.id) ? `Remove ${track.title} from library` : `Save ${track.title} to library`}
       >
         <Heart className={isSaved(track.id) ? 'fill-current' : ''} />
@@ -277,13 +292,15 @@ export default function MusicPage() {
                   <h1 className="text-sm font-semibold text-white">MMora music</h1>
                 </div>
               </div>
-              <form className="music-liquid-control music-search-control flex gap-2 rounded-full p-1" onSubmit={(e) => { e.preventDefault(); void search(); }}>
+              <form className="music-liquid-control music-search-control relative flex gap-2 rounded-full p-1" onSubmit={(e) => { e.preventDefault(); setSuggestionsOpen(false); void search(); }}>
                 <Textarea
                   ref={searchInputRef}
                   rows={1}
                   className="music-search-input min-h-10 resize-none overflow-y-auto border-0 bg-transparent px-3 py-2 pr-0.5 text-white shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
+                   onFocus={() => setSuggestionsOpen(true)}
+                   onBlur={() => window.setTimeout(() => setSuggestionsOpen(false), 120)}
                   onKeyDown={(e) => {
                     if (e.key !== 'Enter' || e.shiftKey) return;
                     e.preventDefault();
@@ -293,6 +310,22 @@ export default function MusicPage() {
                   autoComplete="off"
                 />
                 <Button className="music-search-submit h-10 w-9" type="submit" variant="ghost" size="icon" disabled={searching} aria-label={searching ? 'Searching' : 'Search'}><Search aria-hidden="true" /></Button>
+                 {suggestionsOpen && (
+                   <div className="absolute left-1 right-1 top-[calc(100%+0.35rem)] z-30 flex flex-wrap gap-1.5" role="listbox" aria-label="Music suggestions">
+                     {filterMusicSuggestions(musicSuggestions, query).map((suggestion) => (
+                       <button
+                         key={suggestion}
+                         type="button"
+                         role="option"
+                         className="music-liquid-chip"
+                         onMouseDown={(event) => event.preventDefault()}
+                         onClick={() => { setQuery(suggestion); setSuggestionsOpen(false); void recordMusicSignal('suggestion_select', { query: suggestion }); void search(suggestion); }}
+                       >
+                         {suggestion}
+                       </button>
+                     ))}
+                   </div>
+                 )}
               </form>
 
               {/* Upload shortcut sits directly below the search icon, top right. */}

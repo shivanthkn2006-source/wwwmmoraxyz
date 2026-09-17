@@ -226,6 +226,16 @@ export const useAlwaysOnVoice = () => {
         else if (action.kind === 'resume') await musicEngine.play();
         else if (action.kind === 'next') await musicEngine.next();
         else if (action.kind === 'previous') await musicEngine.previous();
+        else if (action.kind === 'personal') {
+          const { resolvePersonalMusicQueue } = await import('@/features/music/musicConnect');
+          const tracks = await resolvePersonalMusicQueue(action.scope);
+          if (!tracks.length) spoken = 'I need a little listening history or saved music before I can choose that personally.';
+          else {
+            const played = await musicEngine.playQueue(tracks);
+            const track = musicEngine.getState().track;
+            spoken = played && track ? `Playing ${track.title} by ${track.artist}, chosen from what you already love.` : musicEngine.getState().error ?? 'I found your music, but this device needs one tap on Play.';
+          }
+        }
         else {
           const { resolveMusicQueue } = await import('@/features/music/musicProviders');
           const result = await resolveMusicQueue(action.query || 'music for my mood', action.lookup);
