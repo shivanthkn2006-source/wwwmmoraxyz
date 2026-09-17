@@ -9,6 +9,7 @@ import { Loader2, Music4, RefreshCw, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { musicEngine } from '@/services/MusicEngine';
 import { resolveMusicQueue } from '@/features/music/musicProviders';
+import { fetchSharedPlaylist } from '@/features/music/musicShares';
 
 interface Alert {
   id: string;
