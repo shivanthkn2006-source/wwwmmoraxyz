@@ -12,3 +12,13 @@ describe('Music Connect suggestions', () => {
     expect(result[0]).toBe('night calm');
   });
 });
+describe('chart and recommendation intents', () => {
+  it('routes birth-chart requests to the local resolver', async () => {
+    const { resolveMusicIntent } = await import('./musicIntent');
+    expect(resolveMusicIntent('recommend tracks for my birth chart')).toMatchObject({ kind: 'personal', scope: 'chart' });
+    expect(resolveMusicIntent('play music for my birth chart')).toMatchObject({ kind: 'personal', scope: 'chart' });
+    expect(resolveMusicIntent('suggest songs for my mood')).toMatchObject({ kind: 'personal', scope: 'mood' });
+    expect(resolveMusicIntent('recommend a restaurant')).toBeNull();
+    expect(resolveMusicIntent('suggest a good time to call')).toBeNull();
+  });
+});

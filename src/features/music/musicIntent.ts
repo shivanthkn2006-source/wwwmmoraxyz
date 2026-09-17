@@ -8,7 +8,7 @@
 
 export type MusicIntent =
   | { kind: 'play'; query: string; lookup: 'track' | 'mood' | 'genre' | 'radio' | 'devotional'; speak: string }
-  | { kind: 'personal'; scope: 'favorite' | 'playlist' | 'history' | 'mood'; speak: string }
+  | { kind: 'personal'; scope: 'favorite' | 'playlist' | 'history' | 'mood' | 'chart'; speak: string }
   | { kind: 'resume'; speak: string }
   | { kind: 'pause'; speak: string }
   | { kind: 'stop'; speak: string }
@@ -103,6 +103,17 @@ export function resolveMusicIntent(raw: string): MusicIntent | null {
     return { kind: 'open', speak: 'Opening music.' };
   }
 
+  // ── "recommend tracks for my birth chart" / "suggest songs for my chart" ──
+  if (/^(recommend|suggest)\b/.test(text) && MUSIC_WORD.test(text)) {
+    if (/\b(birth chart|my chart|horoscope|planets?|stars?|nakshatra|dasha)\b/.test(text)) {
+      return { kind: 'personal', scope: 'chart', speak: 'Reading your chart and finding music that fits it.' };
+    }
+    if (/\b(my (current )?mood|how i (feel|am feeling))\b/.test(text)) {
+      return { kind: 'personal', scope: 'mood', speak: 'Finding something that fits your mood.' };
+    }
+    return { kind: 'personal', scope: 'favorite', speak: 'Here is music from what you already love.' };
+  }
+
   // ── playback requests ──
   // "play …" / "put on …" / "start playing …" are treated as playback verbs.
   // A bare "start …" only counts when the rest clearly sounds like a track
@@ -139,6 +150,10 @@ export function resolveMusicIntent(raw: string): MusicIntent | null {
     return { kind: 'personal', scope: 'history', speak: 'Starting something from your listening history.' };
   }
 
+
+  if (/\b(birth chart|my chart|nakshatra|dasha|planets?)\b/.test(body)) {
+    return { kind: 'personal', scope: 'chart', speak: 'Reading your chart and starting music that fits it.' };
+  }
 
   // "play a song based on my current mood" / "play something for my mood"
   if (/\b(my (current )?mood|how i (feel|am feeling)|based on my mood)\b/.test(body)) {
