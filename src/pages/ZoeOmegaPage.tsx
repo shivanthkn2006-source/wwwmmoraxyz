@@ -1409,11 +1409,11 @@ const ZoeOmegaPage: React.FC = () => {
         <AnimatePresence mode="sync">
           {isVRMode && vrPanels.hud && (
             <VRDraggablePanel
-              key="bicameral-hud-overlay"
+              key={`bicameral-hud-overlay-${vrLayoutToken}`}
               id="omega-hud"
               title="Mind HUD"
               icon={<Brain className="w-3.5 h-3.5 text-purple-300" />}
-              positionClassName="fixed left-2 sm:left-4 top-20 z-30"
+              positionClassName="fixed left-2 sm:left-4 top-20 z-[9992]"
               contentClassName="w-64 sm:w-72 md:w-80 lg:w-96 max-w-[40vw] h-[45vh] sm:h-[50vh] overflow-hidden rounded-2xl"
             >
               <Suspense fallback={null}>
