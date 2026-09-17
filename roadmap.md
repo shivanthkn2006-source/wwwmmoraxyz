@@ -27,3 +27,9 @@
 - [x] Music dashboard at /music/dashboard: history, favourites, Zoe's picks (in Home menu)
 - [x] Playlists page, own uploads + chart sections in recommendations, parallel loading
 - [ ] Physical phone voice QA ("play my mood song" spoken) — needs a real device microphone
+
+## 2026-09-17 — Music suggestions + VR world usability
+- [x] Music search: 5 keyword suggestions now render outside the clipped search pill, stay open while typing, keyboard selectable.
+- [x] VR "Upload a song": stages, pre-checks (50 MB / type / offline), 3-minute limit, Cancel + Retry, optional album, typing no longer stolen by drag.
+- [x] VR panels: own resting slots, consistent depth order, only essentials open on first entry (:v2 default), Show all / Hide all / Reset layout, position re-clamped on rotate/resize, content scrolls, drag from header only.
+- [ ] Multi-device/foldable/PWA sweep of today's + yesterday's pages — blocked: no signed-in preview session available to the agent (all Music/VR routes require sign-in).
