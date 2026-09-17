@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Check, ChevronDown, ChevronUp, Download, GripVertical, Pencil, Play, Plus, Trash2, X } from 'lucide-react';
+import { ArrowLeft, Check, ChevronDown, ChevronUp, Download, GripVertical, Pencil, Play, Plus, Share2, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { musicEngine } from '@/services/MusicEngine';
