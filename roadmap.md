@@ -18,3 +18,12 @@
 - [x] Link recommendations from the Home feed
 - [ ] Tests + phone-size preview verification; never change existing design/components
 - [x] Agasthya Vision page: transparent liquid-glass like Music, white text/fonts, edge-to-edge, search/type bars and results sections restyled; verify in preview
+
+## VR + Music integrations (this session)
+- [x] VR music panel: search, play, queue — plays record in listening history and Home shelf (verified: Adele_Hello logged)
+- [x] VR Ask Zoe panel: typed questions answered in-world; music requests resolved locally, no token guess
+- [x] VR friends' music panel: real alerts from notifications, tap to play
+- [x] VR upload panel: song + album art through the existing private upload pipeline
+- [x] Music dashboard at /music/dashboard: history, favourites, Zoe's picks (in Home menu)
+- [x] Playlists page, own uploads + chart sections in recommendations, parallel loading
+- [ ] Physical phone voice QA ("play my mood song" spoken) — needs a real device microphone
