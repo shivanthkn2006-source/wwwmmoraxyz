@@ -97,12 +97,15 @@ export default function MusicPlaylistsPage() {
   const drop = async (toId: string) => {
     setDropTarget(null);
     if (!dragged || dragged.playlistId === toId) { setDragged(null); return; }
-    if (dragged.playlistId === 'saved') {
-      const track = saved.find((item) => item.id === dragged.trackId);
+    if (dragged.playlistId === 'saved' || dragged.playlistId === 'tray') {
+      const source = dragged.playlistId === 'saved' ? saved : tray;
+      const track = source.find((item) => item.id === dragged.trackId);
+      const fromTray = dragged.playlistId === 'tray';
       setDragged(null);
       if (!track) return;
       const next = playlists.map((playlist) => (playlist.id === toId ? { ...playlist, tracks: withTrack(playlist.tracks, track) } : playlist));
       await persist(next, [toId]);
+      if (fromTray) removeFromTray(track.id);
       return;
     }
     const from = dragged.playlistId;
@@ -118,14 +121,29 @@ export default function MusicPlaylistsPage() {
 
   /** Touch-friendly alternative to dragging. */
   const moveTo = async (fromId: string, trackId: string, toId: string) => {
-    if (fromId === 'saved') {
-      const track = saved.find((item) => item.id === trackId);
+    if (fromId === 'saved' || fromId === 'tray') {
+      const track = (fromId === 'saved' ? saved : tray).find((item) => item.id === trackId);
       if (!track) return;
       const next = playlists.map((playlist) => (playlist.id === toId ? { ...playlist, tracks: withTrack(playlist.tracks, track) } : playlist));
       await persist(next, [toId]);
+      if (fromId === 'tray') removeFromTray(trackId);
       return;
     }
     await persist(moveTrackBetween(playlists, fromId, toId, trackId), [fromId, toId]);
+  };
+
+  /** Moves one playlist up or down and remembers the new order. */
+  const reorder = async (id: string, delta: number) => {
+    const previous = playlists;
+    const next = reorderPlaylists(playlists, id, delta);
+    if (next === playlists) return;
+    setPlaylists(next);
+    try {
+      await savePlaylistOrder(next.map((playlist) => playlist.id));
+    } catch {
+      setPlaylists(previous);
+      setNotice('That new order could not be saved. Check your connection and try again.');
+    }
   };
 
   const importDevice = async () => {
