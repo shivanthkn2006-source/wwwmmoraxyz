@@ -234,7 +234,7 @@ export default function MusicPlaylistsPage() {
         {notice && <p className="px-4 pt-2 text-[11px] text-white/60" role="status">{notice}</p>}
 
         <div className="grid min-h-0 flex-1 gap-3 overflow-y-auto p-3 sm:grid-cols-2 xl:grid-cols-3">
-          {playlists.map((playlist) => (
+          {playlists.map((playlist, playlistIndex) => (
             <section
               key={playlist.id}
               onDragOver={(event) => { event.preventDefault(); setDropTarget(playlist.id); }}
@@ -265,6 +265,8 @@ export default function MusicPlaylistsPage() {
                     >
                       <Play className="h-4 w-4" />
                     </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-white/60 hover:text-white" aria-label={`Move ${playlist.name} up`} disabled={playlistIndex === 0} onClick={() => void reorder(playlist.id, -1)}><ChevronUp className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-white/60 hover:text-white" aria-label={`Move ${playlist.name} down`} disabled={playlistIndex === playlists.length - 1} onClick={() => void reorder(playlist.id, 1)}><ChevronDown className="h-4 w-4" /></Button>
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-white/60 hover:text-white" aria-label={`Rename ${playlist.name}`} onClick={() => setRenaming({ id: playlist.id, value: playlist.name })}><Pencil className="h-4 w-4" /></Button>
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-white/50 hover:text-white" aria-label={`Delete ${playlist.name}`} onClick={() => void remove(playlist)}><Trash2 className="h-4 w-4" /></Button>
                   </>
@@ -276,6 +278,14 @@ export default function MusicPlaylistsPage() {
               {!playlist.tracks.length && <p className="px-1 text-[11px] text-white/40">Drag songs here, or use “Move…” beside any song.</p>}
             </section>
           ))}
+
+          <section aria-label="Songs sent from Music and Home" className="flex min-h-[8rem] flex-col gap-2 rounded-3xl p-2">
+            <p className="px-1 text-xs font-semibold">From Music &amp; Home <span className="text-white/40">({tray.length})</span></p>
+            <ul className="flex flex-col gap-1.5">
+              {tray.map((track, index) => trackRow(track, 'tray', index, tray))}
+            </ul>
+            {!tray.length && <p className="px-1 text-[11px] text-white/40">Tap the playlist icon beside any song in Music search or on your Home shelf, then drag it into a playlist here.</p>}
+          </section>
 
           <section aria-label="Saved songs" className="flex min-h-[8rem] flex-col gap-2 rounded-3xl p-2">
             <p className="px-1 text-xs font-semibold">Saved songs <span className="text-white/40">({saved.length})</span></p>
