@@ -2,6 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { getLibrary, playlistTracks } from '@/features/music/musicLibrary';
 import { fetchMyListening } from '@/features/music/musicSocial';
 import type { MusicTrack } from '@/features/music/musicProviders';
+import type { Json } from '@/integrations/supabase/types';
 
 export type MusicSignalType = 'play' | 'skip' | 'complete' | 'replay' | 'save' | 'unsave' | 'reaction' | 'search' | 'suggestion_select' | 'playlist_add' | 'explicit_preference';
 
@@ -65,7 +66,7 @@ export async function recordMusicSignal(eventType: MusicSignalType, options: { t
     track_source: track?.source ?? null, query_text: options.query?.slice(0, 240) ?? null,
     mood: options.mood ?? null, genre: options.genre ?? null,
     progress_ratio: options.progressRatio == null ? null : Math.max(0, Math.min(1, options.progressRatio)),
-    context: options.context ?? {},
+    context: (options.context ?? {}) as Json,
   });
   if (error) console.warn('[music-connect] signal not saved:', error.message);
 }
