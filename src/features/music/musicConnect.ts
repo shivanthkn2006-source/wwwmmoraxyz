@@ -13,13 +13,18 @@ export interface MusicConnectContext {
   expiresAt: string | null;
 }
 
-const FALLBACKS = ['calm music', 'focus music', 'uplifting music', 'melodic music', 'evening chill'];
+export const SUGGESTION_COUNT = 10;
+
+const FALLBACKS = [
+  'calm music', 'focus music', 'uplifting music', 'melodic music', 'evening chill',
+  'morning uplifting', 'sleep ambient', 'devotional music', 'workout energy', 'instrumental meditation',
+];
 
 function cleanFive(values: unknown): string[] {
   const input = Array.isArray(values) ? values : [];
-  const result = [...new Set(input.filter((value): value is string => typeof value === 'string' && value.trim().length > 0).map((value) => value.trim()))].slice(0, 5);
-  for (const fallback of FALLBACKS) if (result.length < 5 && !result.includes(fallback)) result.push(fallback);
-  return result.slice(0, 5);
+  const result = [...new Set(input.filter((value): value is string => typeof value === 'string' && value.trim().length > 0).map((value) => value.trim()))].slice(0, SUGGESTION_COUNT);
+  for (const fallback of FALLBACKS) if (result.length < SUGGESTION_COUNT && !result.includes(fallback)) result.push(fallback);
+  return result.slice(0, SUGGESTION_COUNT);
 }
 
 function mapContext(row: Record<string, unknown> | null): MusicConnectContext {

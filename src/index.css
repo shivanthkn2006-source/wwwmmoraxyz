@@ -1648,51 +1648,43 @@ html.phantom-mode [class*="animate-"] {
   font-weight: 700;
 }
 
-/* Google-style vertical suggestion dropdown for the Music search bar:
-   one stacked, full-width row per suggestion, music-only keywords. */
+/* Vertical suggestion list for the Music search bar: plain white text only,
+   no panel, no grey background — ten compact rows in the old five-row space. */
 .music-suggest-dropdown {
-  border-radius: 1rem;
-  background: linear-gradient(160deg, hsl(0 0% 10% / 0.92), hsl(0 0% 6% / 0.86));
-  backdrop-filter: blur(28px) saturate(1.2);
-  -webkit-backdrop-filter: blur(28px) saturate(1.2);
-  box-shadow:
-    inset 0 1px 0 hsl(0 0% 100% / 0.14),
-    inset 0 0 0 1px hsl(0 0% 100% / 0.1),
-    0 18px 40px hsl(0 0% 0% / 0.55);
-  overflow: hidden;
-  padding: 0.25rem 0;
+  border-radius: 0;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+  overflow-y: auto;
+  max-height: 60dvh;
+  padding: 0.1rem 0;
 }
 
 .music-suggest-row {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.5rem;
   width: 100%;
-  min-height: 44px;
-  padding: 0.55rem 0.9rem;
+  min-height: 26px;
+  padding: 0.1rem 0.75rem;
   border: 0;
   background: transparent;
   box-shadow: none;
-  color: hsl(0 0% 100% / 0.85);
+  color: hsl(0 0% 100% / 0.9);
   font-size: 0.8125rem;
-  line-height: 1.2;
+  line-height: 1.15;
   text-align: left;
-  transition: background 150ms ease, color 150ms ease;
+  transition: color 150ms ease;
 }
 
 .music-suggest-row:hover,
-.music-suggest-row.is-active {
-  background: hsl(0 0% 100% / 0.08);
-  color: hsl(0 0% 100%);
-}
-
-.music-suggest-row.is-active {
-  font-weight: 600;
-}
-
+.music-suggest-row.is-active,
 .music-suggest-row:focus-visible {
+  background: transparent;
   outline: none;
-  background: hsl(0 0% 100% / 0.08);
+  color: hsl(0 0% 100%);
+  font-weight: 600;
 }
 
 .music-liquid-art {

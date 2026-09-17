@@ -24,8 +24,10 @@ const PLANET_MOODS: Record<string, string[]> = {
   Saturn: ['deep focus', 'ambient'], Rahu: ['electronic', 'experimental'], Ketu: ['meditation', 'instrumental'],
 };
 
+const SUGGESTION_COUNT = 10;
+
 function uniqueFive(values: Array<string | null | undefined>): string[] {
-  return [...new Set(values.map((value) => value?.trim().toLowerCase()).filter((value): value is string => Boolean(value)))].slice(0, 5);
+  return [...new Set(values.map((value) => value?.trim().toLowerCase()).filter((value): value is string => Boolean(value)))].slice(0, SUGGESTION_COUNT);
 }
 
 Deno.serve(async (req) => {
@@ -93,14 +95,14 @@ Deno.serve(async (req) => {
 
     const hour = Number(new Intl.DateTimeFormat('en-GB', { hour: '2-digit', hour12: false, timeZone: birthRow?.birth_timezone || 'Asia/Kolkata' }).format(now));
     const timeKeyword = hour < 6 ? 'sleep ambient' : hour < 11 ? 'morning uplifting' : hour < 17 ? 'focus music' : hour < 22 ? 'evening chill' : 'calm night';
-    const suggestions = uniqueFive([moods[0], genres[0], artists[0], astroKeywords[0], timeKeyword, recentArtists[0], recentTracks[0]]);
-    const defaults = ['calm music', 'focus music', 'uplifting music', 'melodic music', 'evening chill'];
-    for (const fallback of defaults) if (suggestions.length < 5 && !suggestions.includes(fallback)) suggestions.push(fallback);
+    const suggestions = uniqueFive([moods[0], moods[1], genres[0], genres[1], artists[0], artists[1], astroKeywords[0], astroKeywords[1], timeKeyword, recentArtists[0], recentArtists[1], recentTracks[0], recentTracks[1]]);
+    const defaults = ['calm music', 'focus music', 'uplifting music', 'melodic music', 'evening chill', 'morning uplifting', 'sleep ambient', 'devotional music', 'workout energy', 'instrumental meditation'];
+    for (const fallback of defaults) if (suggestions.length < SUGGESTION_COUNT && !suggestions.includes(fallback)) suggestions.push(fallback);
 
     const context = {
       user_id: auth.user.id,
       taste_vector: { genres: genres.slice(0, 10), moods: moods.slice(0, 10), artists: [...artists, ...recentArtists].slice(0, 10), recentTracks: recentTracks.slice(0, 10) },
-      suggestion_keywords: suggestions.slice(0, 5),
+      suggestion_keywords: suggestions.slice(0, SUGGESTION_COUNT),
       planetary_context: planetary,
       source_fingerprint: [profile?.genres?.length ?? 0, profile?.moods?.length ?? 0, profile?.artists?.length ?? 0, listens?.length ?? 0, now.toISOString().slice(0, 13)].join(':'),
       calculated_at: now.toISOString(),

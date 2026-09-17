@@ -169,7 +169,7 @@ export default function MusicPage() {
     setSelectedPlaylist(name);
   }, []);
 
-  // Exactly five keyword suggestions, derived locally from Zoe's saved taste and
+  // Ten keyword suggestions, derived locally from Zoe's saved taste and
   // planetary context — no model call while typing.
   const suggestionList = useMemo(() => filterMusicSuggestions(musicSuggestions, query), [musicSuggestions, query]);
 
