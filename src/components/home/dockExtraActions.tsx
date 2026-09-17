@@ -114,6 +114,10 @@ export const DOCK_RESERVED_ROUTES = [
   '/compass',
   '/zoe-ai',
   '/notification-history',
+  // Already rendered as primary dock icons: the VR World entry and the Home
+  // feed itself, so the extra rows must not repeat them.
+  '/zoe-omega',
+  '/home',
 ];
 
 
