@@ -1389,6 +1389,7 @@ const ZoeOmegaPage: React.FC = () => {
         {/* VR Test Suite - Debug Panel (draggable + tap to drop down) */}
         {isVRMode && vrPanels.diagnostics && (
           <VRDraggablePanel
+            key={`omega-diagnostics-${vrLayoutToken}`}
             id="omega-diagnostics"
             title="Diagnostics"
             icon={<Cpu className="w-3.5 h-3.5 text-cyan-300" />}
