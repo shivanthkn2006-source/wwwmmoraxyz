@@ -71,6 +71,7 @@ export const VRDraggablePanel: React.FC<VRDraggablePanelProps> = ({
   // Lazy content: never mount the children until the panel has been opened once.
   const [hasOpened, setHasOpened] = useState<boolean>(isOpen);
   const constraintsRef = useRef<HTMLDivElement | null>(null);
+  const dragControls = useDragControls();
 
   const initialPosition = useRef(readPosition(positionKey));
   const x = useMotionValue(initialPosition.current.x);
@@ -84,6 +85,22 @@ export const VRDraggablePanel: React.FC<VRDraggablePanelProps> = ({
       /* storage unavailable */
     }
   }, [isOpen, storageKey]);
+
+  // A saved position from a larger screen (or from portrait) must never park the
+  // panel off-screen after a rotation or on a smaller device.
+  useEffect(() => {
+    const reclamp = () => {
+      const clamped = readPosition(positionKey);
+      x.set(clamped.x);
+      y.set(clamped.y);
+    };
+    window.addEventListener('resize', reclamp);
+    window.addEventListener('orientationchange', reclamp);
+    return () => {
+      window.removeEventListener('resize', reclamp);
+      window.removeEventListener('orientationchange', reclamp);
+    };
+  }, [positionKey, x, y]);
 
   const persistPosition = () => {
     try {
@@ -101,22 +118,29 @@ export const VRDraggablePanel: React.FC<VRDraggablePanelProps> = ({
     <motion.div
       ref={constraintsRef}
       drag
+      // Dragging starts from the header pill only, so the panel's own controls,
+      // inputs and scrolling keep working untouched.
+      dragListener={false}
+      dragControls={dragControls}
       dragMomentum={false}
       dragElastic={0.05}
-      style={{ touchAction: 'none', x, y }}
+      style={{ x, y }}
       onDragEnd={persistPosition}
-      whileDrag={{ scale: 1.02, cursor: 'grabbing' }}
-      className={cn(positionClassName, 'cursor-grab active:cursor-grabbing touch-none', className)}
+      whileDrag={{ scale: 1.02 }}
+      className={cn(positionClassName, className)}
     >
       <div className="flex flex-col gap-1.5">
         {/* Drag handle + dropdown toggle */}
         <button
           type="button"
           onClick={() => setIsOpen(v => !v)}
+          onPointerDown={(event) => dragControls.start(event)}
           aria-expanded={isOpen}
           aria-label={`${title} — tap to ${isOpen ? 'hide' : 'show'}, drag to move`}
+          style={{ touchAction: 'none' }}
           className="flex items-center gap-1.5 self-start min-h-[44px] px-3.5 py-2.5 rounded-full bg-black/70 backdrop-blur-xl
                      border border-white/20 text-white/80 hover:bg-black/85 hover:border-white/35 transition-all shadow-lg
+                     cursor-grab active:cursor-grabbing
                      focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2
                      focus-visible:ring-offset-black/50 active:bg-black/90"
         >
@@ -130,7 +154,11 @@ export const VRDraggablePanel: React.FC<VRDraggablePanelProps> = ({
           <motion.div
             initial={{ opacity: 0, y: openDirection === 'down' ? -6 : 6 }}
             animate={{ opacity: isOpen ? 1 : 0, y: 0 }}
-            className={cn('pointer-events-auto', isOpen ? '' : 'hidden', contentClassName)}
+            className={cn(
+              'pointer-events-auto max-h-[70vh] overflow-y-auto overscroll-contain',
+              isOpen ? '' : 'hidden',
+              contentClassName,
+            )}
             aria-hidden={!isOpen}
           >
             {children}
