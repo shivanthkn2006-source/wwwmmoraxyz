@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Disc3, Heart, ListMusic, Pause, Play, Plus, Repeat, Search, Shuffle, SkipBack, SkipForward, Upload, Volume2 } from 'lucide-react';
+import { Disc3, Heart, ListMusic, ListPlus, Pause, Play, Plus, Repeat, Search, Shuffle, SkipBack, SkipForward, Upload, Volume2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Slider } from '@/components/ui/slider';
@@ -14,6 +14,7 @@ import { MUSIC_GENRES, MUSIC_RADIO_TAGS } from '@/features/music/musicCategories
 import { addToPlaylist, getLibrary, isSaved, playlistTracks, removePlaylist, subscribeLibrary, toggleSaved, type MusicLibrary } from '@/features/music/musicLibrary';
 import { fetchMostListened, fetchMyReactions, fetchReactionChart, logListen, MUSIC_REACTIONS, toggleReaction, type MusicReactionId, type MusicSocialTrack } from '@/features/music/musicSocial';
 import { fetchMusicConnectContext, filterMusicSuggestions, recordMusicSignal } from '@/features/music/musicConnect';
+import { addToTray } from '@/features/music/musicTray';
 
 
 const SEARCH_CACHE_KEY = 'mmora.music.lastSearch';
@@ -216,6 +217,15 @@ export default function MusicPage() {
         label={`Add ${track.title} to a playlist`}
       >
         <Plus />
+      </IconControl>
+      <IconControl
+        className="music-liquid-save h-9 w-9 shrink-0 rounded-full"
+        variant="ghost"
+        size="icon"
+        onClick={() => { addToTray(track); void recordMusicSignal('playlist_add', { track }); setNotice(`“${track.title}” is waiting on your playlists page.`); }}
+        label={`Send ${track.title} to my playlists page`}
+      >
+        <ListPlus />
       </IconControl>
     </li>
   );
