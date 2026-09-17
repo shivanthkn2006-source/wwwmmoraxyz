@@ -41,8 +41,22 @@ import {
   Music2,
 } from 'lucide-react';
 import type { GlassDockItem } from '@/components/home/HomeGlassDock';
+import { NAVIGABLE_ROUTES } from '@/config/routeRegistry';
 
 const ICON_CLASS = 'h-[22px] w-[22px]';
+
+const NON_MENU_ROUTES = new Set([
+  '/',
+  '/auth',
+  '/signup',
+  '/voice-auth',
+  '/welcome',
+  '/demo',
+  '/access-denied',
+  '/password-recovery',
+]);
+
+const NON_MENU_PREFIXES = ['/zoe-infinity'];
 
 interface ExtraDef {
   id: string;
@@ -111,10 +125,29 @@ export const DOCK_RESERVED_ROUTES = [
 export function buildExtraDockItems(
   navigate: (path: string) => void,
   usedRoutes: string[] = [],
-  limit = 32,
+  limit = Number.POSITIVE_INFINITY,
 ): GlassDockItem[] {
   const taken = new Set(usedRoutes);
-  return DOCK_EXTRA_DEFS.filter((def) => !taken.has(def.route))
+  const authored = DOCK_EXTRA_DEFS.filter((def) => !taken.has(def.route));
+  authored.forEach((def) => taken.add(def.route));
+
+  // The generated registry is rebuilt from App.tsx before development/build.
+  // Therefore every newly mounted static page gets a Home-menu action without
+  // requiring a second, easy-to-forget manual menu edit.
+  const automatic: ExtraDef[] = NAVIGABLE_ROUTES
+    .filter(({ path }) => (
+      !taken.has(path) &&
+      !NON_MENU_ROUTES.has(path) &&
+      !NON_MENU_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`))
+    ))
+    .map(({ path, label }) => ({
+      id: `dock-route-${path.replace(/^\/+/, '').replace(/[^a-z0-9]+/gi, '-')}`,
+      label,
+      route: path,
+      Icon: iconForRoute(path),
+    }));
+
+  return [...authored, ...automatic]
     .slice(0, limit)
     .map(({ id, label, route, Icon }) => ({
       id,
@@ -122,4 +155,26 @@ export function buildExtraDockItems(
       icon: <Icon className={ICON_CLASS} />,
       onSelect: () => navigate(route),
     }));
+}
+
+/** Stable route-aware fallback icon for automatically discovered pages. */
+function iconForRoute(route: string): ExtraDef['Icon'] {
+  if (route.includes('music')) return Music2;
+  if (route.includes('camera') || route.includes('vision')) return Aperture;
+  if (route.includes('chat') || route.includes('huddle')) return PhoneCall;
+  if (route.includes('voice') || route.includes('audio')) return Mic;
+  if (route.includes('notification')) return Info;
+  if (route.includes('profile')) return Home;
+  if (route.includes('astro') || route.includes('astrology')) return Star;
+  if (route.includes('growth') || route.includes('career')) return BarChart3;
+  if (route.includes('security') || route.includes('sentinel') || route.includes('attack')) return Bug;
+  if (route.includes('admin') || route.includes('dashboard') || route.includes('audit')) return LayoutDashboard;
+  if (route.includes('map') || route.includes('city')) return MapIcon;
+  if (route.includes('timeline') || route.includes('history') || route.includes('kronos')) return Clock;
+  if (route.includes('zoe') || route.includes('ai') || route.includes('brain')) return Brain;
+  if (route.includes('settings') || route.includes('preferences')) return SlidersHorizontal;
+  if (route.includes('download') || route.includes('export')) return Download;
+  if (route.includes('legal') || route.includes('terms') || route.includes('policy')) return Scale;
+  if (route.includes('platform') || route.includes('architecture')) return Layers;
+  return Compass;
 }

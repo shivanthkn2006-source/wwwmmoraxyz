@@ -5,6 +5,7 @@ import { extractRoutes, buildRegistrySource } from '../../scripts/generate-route
 import { CANONICAL_ROUTES } from '@/config/routeRegistry.generated';
 import { NAVIGABLE_ROUTES, routeRegistryAsPrompt, findRoute } from '@/config/routeRegistry';
 import { getZoePlatformPageContext } from '@/lib/zoePlatformContext';
+import { buildExtraDockItems, DOCK_EXTRA_DEFS, DOCK_RESERVED_ROUTES } from '@/components/home/dockExtraActions';
 
 const read = (p: string) => readFileSync(resolve(process.cwd(), p), 'utf8');
 
@@ -44,6 +45,21 @@ describe('dock ↔ registry consistency', () => {
     expect(routes.length).toBeGreaterThan(10);
     for (const route of routes) {
       expect(findRoute(route), `dock route ${route} is not mounted in App.tsx`).toBeTruthy();
+    }
+  });
+
+  it('automatically gives every static page a Home-menu action', () => {
+    const items = buildExtraDockItems(() => {}, DOCK_RESERVED_ROUTES);
+    const itemLabels = new Set(items.map((item) => item.label));
+    const authoredPaths = new Set(DOCK_EXTRA_DEFS.map((item) => item.route));
+    const excludedPrefixes = ['/zoe-infinity'];
+    const excluded = new Set(['/', '/auth', '/signup', '/voice-auth', '/welcome', '/demo']);
+
+    for (const route of NAVIGABLE_ROUTES) {
+      if (DOCK_RESERVED_ROUTES.includes(route.path) || excluded.has(route.path)) continue;
+      if (excludedPrefixes.some((prefix) => route.path === prefix || route.path.startsWith(`${prefix}/`))) continue;
+      if (authoredPaths.has(route.path)) continue;
+      expect(itemLabels.has(route.label), `${route.path} missing from Home menu`).toBe(true);
     }
   });
 });

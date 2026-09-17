@@ -321,37 +321,20 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
     onSelect: () => {},
   };
 
-  // Four rows of seven rounded-edge icons above the Home row.
+  // Seven-column menu with four visible rows. Additional registry-discovered
+  // pages remain reachable by scrolling inside the same unchanged panel.
   const GRID_COLUMNS = 7;
   const GRID_ROWS = 4;
-  const GRID_SIZE = GRID_COLUMNS * GRID_ROWS;
+  const MIN_GRID_SIZE = GRID_COLUMNS * GRID_ROWS;
 
   const gridSlots: GlassDockItem[] = React.useMemo(() => {
-    // The "Home feed" navigation action is always guaranteed a slot (nearest the
-    // home trigger) so every page can return to the feed from the dock.
+    // The "Home feed" navigation action stays nearest the trigger. Nothing is
+    // trimmed: every registered page must remain available in the Home menu.
     const homeFeed = slots.find((item) => item.id === 'dock-home-return');
     const rest = homeFeed ? slots.filter((item) => item !== homeFeed) : slots;
-    const capacity = homeFeed ? GRID_SIZE - 1 : GRID_SIZE;
+    const filled = homeFeed ? [...rest, homeFeed] : [...rest];
 
-    // When there are more actions than slots, keep the ones the member actually
-    // uses first and then fall back to the authored order — so the core menus
-    // stay visible on a fresh install instead of being pushed out by extras.
-    let visible = rest.slice();
-    if (rest.length > capacity) {
-      const authored: Record<string, number> = {};
-      baseSlots.forEach((item, index) => { authored[item.id] = index; });
-      const keep = new Set(
-        rest
-          .map((item) => ({ item, score: usage[item.id]?.count ?? 0, order: authored[item.id] ?? 0 }))
-          .sort((a, b) => (b.score === a.score ? a.order - b.order : b.score - a.score))
-          .slice(0, capacity)
-          .map((entry) => entry.item.id),
-      );
-      visible = rest.filter((item) => keep.has(item.id));
-    }
-    const filled = homeFeed ? [...visible, homeFeed] : visible;
-
-    for (let index = filled.length; index < GRID_SIZE; index += 1) {
+    for (let index = filled.length; index < MIN_GRID_SIZE; index += 1) {
       const Icon = PLACEHOLDER_ICONS[index % PLACEHOLDER_ICONS.length];
       filled.push({
         id: `dock-filler-${index}`,
@@ -366,7 +349,7 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
 
 
   const renderPackedRows = () => (
-      <div data-home-dock-grid className="grid grid-cols-7 gap-[var(--home-dock-gap)] overflow-hidden rounded-2xl">
+      <div data-home-dock-grid className="grid max-h-[calc(4*var(--home-dock-cell)+3*var(--home-dock-gap))] grid-cols-7 gap-[var(--home-dock-gap)] overflow-x-hidden overflow-y-auto overscroll-contain rounded-2xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       {gridSlots.map((item) => renderIconButton(item))}
     </div>
   );
