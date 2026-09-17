@@ -2420,12 +2420,20 @@ const HomePage = () => {
         </div>,
       );
     }
+    const hasMusicSlide = musicShelfHasSongs || musicPicksHaveSongs;
     slides.push(
-      <div key="home-music-shelf" className="relative flex h-full min-h-full w-full shrink-0 snap-start snap-always items-center overflow-y-auto py-4" data-home-music-shelf>
+      <div
+        key="home-music-shelf"
+        className={hasMusicSlide
+          ? 'relative flex h-full min-h-full w-full shrink-0 snap-start snap-always items-center overflow-y-auto py-4'
+          : 'sr-only'}
+        aria-hidden={hasMusicSlide ? undefined : true}
+        data-home-music-shelf
+      >
         <FeedErrorBoundary section="posts">
           <div className="w-full space-y-4">
-            <HomeMusicShelf />
-            <HomeMusicRecommendations />
+            <HomeMusicShelf onContent={setMusicShelfHasSongs} />
+            <HomeMusicRecommendations onContent={setMusicPicksHaveSongs} />
           </div>
         </FeedErrorBoundary>
       </div>,
@@ -2433,7 +2441,7 @@ const HomePage = () => {
     );
     return slides;
 
-  }, [dailyMotivation, motivationPosterUrl, astroDaily]);
+  }, [dailyMotivation, motivationPosterUrl, astroDaily, musicShelfHasSongs, musicPicksHaveSongs]);
 
   const chronologicalSlides = (posts: Post[], feed: 'global' | 'personal') => {
     const postIds = new Set(posts.map((post) => post.id));
