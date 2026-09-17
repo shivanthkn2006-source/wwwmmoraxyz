@@ -15,10 +15,11 @@ interface Alert {
   title: string;
   body: string;
   query: string;
+  shareId?: string;
   at: string;
 }
 
-const TYPES = ['friend_music_listen', 'music_upload', 'friend_upload'];
+const TYPES = ['friend_music_listen', 'music_upload', 'friend_upload', 'playlist_share'];
 
 const VRSocialFeedPanel: React.FC = () => {
   const [alerts, setAlerts] = useState<Alert[]>([]);
@@ -39,13 +40,20 @@ const VRSocialFeedPanel: React.FC = () => {
         .limit(20);
       if (error) throw error;
       setAlerts((data ?? []).map((row) => {
-        const context = (row.context_data ?? {}) as { track_title?: string; track_artist?: string; message?: string };
+        const context = (row.context_data ?? {}) as {
+          track_title?: string; track_artist?: string; message?: string;
+          share_id?: string; playlist_name?: string; track_count?: number;
+        };
         const query = [context.track_title, context.track_artist].filter(Boolean).join(' ');
+        const isShare = row.type === 'playlist_share';
         return {
           id: row.id as string,
-          title: context.track_title || 'Music alert',
-          body: context.track_artist || context.message || '',
+          title: isShare ? (context.playlist_name || 'Shared playlist') : (context.track_title || 'Music alert'),
+          body: isShare
+            ? `Playlist from a friend · ${context.track_count ?? 0} songs`
+            : (context.track_artist || context.message || ''),
           query,
+          shareId: isShare ? context.share_id : undefined,
           at: new Date(row.created_at as string).toLocaleString(),
         };
       }));
@@ -60,8 +68,19 @@ const VRSocialFeedPanel: React.FC = () => {
   useEffect(() => { void load(); }, [load]);
 
   const play = async (alert: Alert) => {
-    if (!alert.query) { setNotice('That alert has no song attached.'); return; }
     musicEngine.unlock();
+    if (alert.shareId) {
+      try {
+        const shared = await fetchSharedPlaylist(alert.shareId);
+        if (!shared?.tracks.length) { setNotice('That shared playlist has no songs yet.'); return; }
+        await musicEngine.playQueue(shared.tracks, 0);
+        setNotice(`Playing “${shared.name}” (${shared.tracks.length} songs).`);
+      } catch {
+        setNotice('That shared playlist could not be opened right now.');
+      }
+      return;
+    }
+    if (!alert.query) { setNotice('That alert has no song attached.'); return; }
     try {
       const result = await resolveMusicQueue(alert.query, 'track');
       if (!result.tracks.length) { setNotice('That song is not playable from the connected sources.'); return; }
@@ -71,6 +90,7 @@ const VRSocialFeedPanel: React.FC = () => {
       setNotice('That song could not be started right now.');
     }
   };
+
 
   return (
     <div className="w-64 sm:w-72 rounded-2xl bg-black/50 p-3 text-white backdrop-blur-xl">
