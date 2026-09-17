@@ -130,32 +130,46 @@ export const VRDraggablePanel: React.FC<VRDraggablePanelProps> = ({
       className={cn(positionClassName, className)}
     >
       <div className="flex flex-col gap-1.5">
-        {/* Drag handle + dropdown toggle */}
-        <button
-          type="button"
-          onClick={() => setIsOpen(v => !v)}
-          onPointerDown={(event) => dragControls.start(event)}
-          aria-expanded={isOpen}
-          aria-label={`${title} — tap to ${isOpen ? 'hide' : 'show'}, drag to move`}
-          style={{ touchAction: 'none' }}
-          className="flex items-center gap-1.5 self-start min-h-[44px] px-3.5 py-2.5 rounded-full bg-black/70 backdrop-blur-xl
-                     border border-white/20 text-white/80 hover:bg-black/85 hover:border-white/35 transition-all shadow-lg
-                     cursor-grab active:cursor-grabbing
-                     focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2
-                     focus-visible:ring-offset-black/50 active:bg-black/90"
-        >
-          <GripVertical className="w-4 h-4 text-white/50" aria-hidden />
-          {icon}
-          <span className="text-[11px] sm:text-xs font-mono tracking-wide">{title}</span>
-          <Chevron className="w-4 h-4 text-white/70" aria-hidden />
-        </button>
+        {/* One pill: the grip moves the panel, the label taps it open or shut.
+            Drag lives on its own handle because a pointer-capture drag start on
+            the toggle itself swallows the tap. */}
+        <div className="flex items-center self-start rounded-full bg-black/70 backdrop-blur-xl border border-white/20
+                        shadow-lg overflow-hidden">
+          <span
+            role="button"
+            tabIndex={-1}
+            aria-label={`Drag to move ${title}`}
+            onPointerDown={(event) => dragControls.start(event)}
+            style={{ touchAction: 'none' }}
+            className="flex items-center min-h-[44px] min-w-[36px] justify-center pl-2.5 pr-1 text-white/50
+                       cursor-grab active:cursor-grabbing hover:text-white/80"
+          >
+            <GripVertical className="w-4 h-4" aria-hidden />
+          </span>
+          <button
+            type="button"
+            onClick={() => setIsOpen(v => !v)}
+            aria-expanded={isOpen}
+            aria-label={`${title} — tap to ${isOpen ? 'hide' : 'show'}`}
+            className="flex items-center gap-1.5 min-h-[44px] pl-1 pr-3.5 py-2.5 text-white/80
+                       hover:bg-white/10 transition-colors
+                       focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-inset
+                       active:bg-white/15"
+          >
+            {icon}
+            <span className="text-[11px] sm:text-xs font-mono tracking-wide">{title}</span>
+            <Chevron className="w-4 h-4 text-white/70" aria-hidden />
+          </button>
+        </div>
 
         {hasOpened && (
           <motion.div
             initial={{ opacity: 0, y: openDirection === 'down' ? -6 : 6 }}
             animate={{ opacity: isOpen ? 1 : 0, y: 0 }}
             className={cn(
-              'pointer-events-auto max-h-[70vh] overflow-y-auto overscroll-contain',
+              // Height follows the real viewport (landscape phones are only ~390px
+              // tall), so every field inside a panel stays reachable by scrolling.
+              'pointer-events-auto max-h-[calc(100dvh-8rem)] overflow-y-auto overscroll-contain',
               isOpen ? '' : 'hidden',
               contentClassName,
             )}

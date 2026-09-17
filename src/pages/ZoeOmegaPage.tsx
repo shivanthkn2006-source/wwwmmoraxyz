@@ -1459,8 +1459,7 @@ const ZoeOmegaPage: React.FC = () => {
             id="omega-music"
             title="Music"
             icon={<Music2 className="w-3.5 h-3.5 text-cyan-300" />}
-            positionClassName="fixed bottom-24 left-2 sm:left-4 z-[9993]"
-            openDirection="up"
+            positionClassName="fixed top-24 sm:top-[16.5rem] left-2 sm:left-4 z-[9993]"
             defaultOpen={false}
           >
             <Suspense fallback={null}><VRMusicPanel /></Suspense>
@@ -1472,7 +1471,7 @@ const ZoeOmegaPage: React.FC = () => {
             id="omega-zoe-ask"
             title="Ask Zoe"
             icon={<Sparkles className="w-3.5 h-3.5 text-purple-300" />}
-            positionClassName="fixed top-[9.5rem] left-2 sm:left-4 z-[9993]"
+            positionClassName="fixed top-16 sm:top-[9.5rem] left-2 sm:left-4 z-[9993]"
             defaultOpen={false}
           >
             <Suspense fallback={null}><VRZoeAskPanel /></Suspense>
@@ -1484,7 +1483,7 @@ const ZoeOmegaPage: React.FC = () => {
             id="omega-social"
             title="Friends' music"
             icon={<Users className="w-3.5 h-3.5 text-emerald-300" />}
-            positionClassName="fixed top-[16.5rem] right-2 sm:right-4 z-[9993]"
+            positionClassName="fixed top-24 sm:top-[16.5rem] right-2 sm:right-4 z-[9993]"
             defaultOpen={false}
           >
             <Suspense fallback={null}><VRSocialFeedPanel /></Suspense>
@@ -1496,7 +1495,7 @@ const ZoeOmegaPage: React.FC = () => {
             id="omega-music-upload"
             title="Upload a song"
             icon={<UploadCloud className="w-3.5 h-3.5 text-pink-300" />}
-            positionClassName="fixed top-[9.5rem] right-2 sm:right-4 z-[9993]"
+            positionClassName="fixed top-16 sm:top-[9.5rem] right-2 sm:right-4 z-[9993]"
             defaultOpen={false}
           >
             <Suspense fallback={null}><VRMusicUploadPanel /></Suspense>
