@@ -168,6 +168,18 @@ export default function MusicPage() {
     setSelectedPlaylist(name);
   }, []);
 
+  // Exactly five keyword suggestions, derived locally from Zoe's saved taste and
+  // planetary context — no model call while typing.
+  const suggestionList = useMemo(() => filterMusicSuggestions(musicSuggestions, query), [musicSuggestions, query]);
+
+  const pickSuggestion = useCallback((suggestion: string) => {
+    setQuery(suggestion);
+    setSuggestionsOpen(false);
+    setActiveSuggestion(-1);
+    void recordMusicSignal('suggestion_select', { query: suggestion });
+    void search(suggestion);
+  }, [search]);
+
 
 
   const trackRow = (track: MusicTrack, index: number, onPlay: () => void) => (
