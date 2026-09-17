@@ -79,7 +79,11 @@ export default function MusicDashboardPage() {
         <header className="music-align-search flex items-center justify-between gap-2 p-3">
           <Button variant="ghost" size="icon" aria-label="Back to Music" onClick={() => navigate('/music')}><ArrowLeft /></Button>
           <h1 className="text-sm font-semibold">My music dashboard</h1>
-          <Button variant="ghost" size="icon" aria-label="Edit my music taste" onClick={() => navigate('/music/profile')}><User className="h-4 w-4" /></Button>
+          <span className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" aria-label="My birth chart music picks" onClick={() => navigate('/music/birth-chart')}><Sparkles className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="icon" aria-label="My playlists" onClick={() => navigate('/music/playlists')}><ListMusic className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="icon" aria-label="Edit my music taste" onClick={() => navigate('/music/profile')}><User className="h-4 w-4" /></Button>
+          </span>
         </header>
 
         {notice && <p role="status" className="px-4 text-[11px] text-white/60">{notice}</p>}
