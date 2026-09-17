@@ -294,6 +294,13 @@ export default function MusicPlaylistsPage() {
                     >
                       <Play className="h-4 w-4" />
                     </Button>
+                    <Button
+                      variant="ghost" size="icon" className="h-8 w-8 text-white/60 hover:text-white"
+                      aria-label={`Share ${playlist.name} with a friend`} disabled={!playlist.tracks.length}
+                      onClick={() => setSharing((current) => (current === playlist.id ? null : playlist.id))}
+                    >
+                      <Share2 className="h-4 w-4" />
+                    </Button>
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-white/60 hover:text-white" aria-label={`Move ${playlist.name} up`} disabled={playlistIndex === 0} onClick={() => void reorder(playlist.id, -1)}><ChevronUp className="h-4 w-4" /></Button>
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-white/60 hover:text-white" aria-label={`Move ${playlist.name} down`} disabled={playlistIndex === playlists.length - 1} onClick={() => void reorder(playlist.id, 1)}><ChevronDown className="h-4 w-4" /></Button>
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-white/60 hover:text-white" aria-label={`Rename ${playlist.name}`} onClick={() => setRenaming({ id: playlist.id, value: playlist.name })}><Pencil className="h-4 w-4" /></Button>
