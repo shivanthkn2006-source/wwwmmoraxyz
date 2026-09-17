@@ -211,9 +211,11 @@ export const VRControlsGuide: React.FC<VRControlsGuideProps> = ({
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               className="w-56 bg-black/80 backdrop-blur-xl border border-white/20 rounded-2xl p-2 shadow-2xl"
+              onPointerDown={(event) => event.stopPropagation()}
+              style={{ touchAction: 'auto' }}
             >
               <p className="text-[10px] font-mono text-white/50 px-1.5 pb-1.5">SHOW / HIDE PANELS</p>
-              <div className="space-y-1">
+              <div className="max-h-[50vh] space-y-1 overflow-y-auto overscroll-contain">
                 {panels.map(panel => (
                   <button
                     key={panel.id}
@@ -230,9 +232,33 @@ export const VRControlsGuide: React.FC<VRControlsGuideProps> = ({
                   >
                     {panel.visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                     <span className="truncate">{panel.label}</span>
+                    <span className="ml-auto text-[9px] font-mono text-white/40">{panel.visible ? 'ON' : 'OFF'}</span>
                   </button>
                 ))}
               </div>
+
+              {(onShowAll || onHideAll || onResetLayout) && (
+                <div className="mt-2 flex flex-wrap gap-1 border-t border-white/10 pt-2">
+                  {onShowAll && (
+                    <button type="button" onClick={onShowAll}
+                      className="min-h-[40px] flex-1 rounded-xl bg-white/10 px-2 py-2 text-[10px] font-mono text-white/85 hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70">
+                      Show all
+                    </button>
+                  )}
+                  {onHideAll && (
+                    <button type="button" onClick={onHideAll}
+                      className="min-h-[40px] flex-1 rounded-xl bg-white/10 px-2 py-2 text-[10px] font-mono text-white/85 hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70">
+                      Hide all
+                    </button>
+                  )}
+                  {onResetLayout && (
+                    <button type="button" onClick={onResetLayout}
+                      className="min-h-[40px] w-full rounded-xl bg-white/5 px-2 py-2 text-[10px] font-mono text-white/70 hover:bg-white/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70">
+                      Reset layout
+                    </button>
+                  )}
+                </div>
+              )}
             </motion.div>
           )}
 
