@@ -8,7 +8,7 @@ import { fetchMusicRecommendations } from '@/features/music/musicRecommendations
 import type { MusicTrack } from '@/features/music/musicProviders';
 
 /** A compact Home row of recommended songs, from real plays and saved taste. */
-const HomeMusicRecommendations: React.FC = () => {
+const HomeMusicRecommendations: React.FC<{ onContent?: (hasSongs: boolean) => void }> = ({ onContent }) => {
   const [tracks, setTracks] = useState<MusicTrack[]>([]);
   const [reason, setReason] = useState('');
   const [loading, setLoading] = useState(true);
@@ -20,8 +20,10 @@ const HomeMusicRecommendations: React.FC = () => {
       const first = sections.find((section) => section.tracks.length);
       setTracks(first?.tracks.slice(0, 12) ?? []);
       setReason(first?.label ?? '');
+      onContent?.(Boolean(first?.tracks.length));
     }).catch(() => undefined).finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (loading || !tracks.length) return null;

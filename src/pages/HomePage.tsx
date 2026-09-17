@@ -207,6 +207,10 @@ const HomePage = () => {
   // Remote flag: onboarding gating can be switched off platform-wide without a deploy.
   const { isEnabled: isGrowthFlagEnabled } = useGrowthFlags();
   const growthOnboardingGating = isGrowthFlagEnabled(GROWTH_FLAGS.onboardingGating);
+  // The music slide only becomes a swipeable screen once it really has songs,
+  // so a brand-new member never swipes into an empty screen.
+  const [musicShelfHasSongs, setMusicShelfHasSongs] = useState(false);
+  const [musicPicksHaveSongs, setMusicPicksHaveSongs] = useState(false);
   const [growthOnboardingOpen, setGrowthOnboardingOpen] = useState(false);
   const [growthDetails, setGrowthDetails] = useState<CuratedInsight | null>(null);
   useEffect(() => {
@@ -2416,12 +2420,20 @@ const HomePage = () => {
         </div>,
       );
     }
+    const hasMusicSlide = musicShelfHasSongs || musicPicksHaveSongs;
     slides.push(
-      <div key="home-music-shelf" className="relative flex h-full min-h-full w-full shrink-0 snap-start snap-always items-center overflow-y-auto py-4" data-home-music-shelf>
+      <div
+        key="home-music-shelf"
+        className={hasMusicSlide
+          ? 'relative flex h-full min-h-full w-full shrink-0 snap-start snap-always items-center overflow-y-auto py-4'
+          : 'sr-only'}
+        aria-hidden={hasMusicSlide ? undefined : true}
+        data-home-music-shelf
+      >
         <FeedErrorBoundary section="posts">
           <div className="w-full space-y-4">
-            <HomeMusicShelf />
-            <HomeMusicRecommendations />
+            <HomeMusicShelf onContent={setMusicShelfHasSongs} />
+            <HomeMusicRecommendations onContent={setMusicPicksHaveSongs} />
           </div>
         </FeedErrorBoundary>
       </div>,
@@ -2429,7 +2441,7 @@ const HomePage = () => {
     );
     return slides;
 
-  }, [dailyMotivation, motivationPosterUrl, astroDaily]);
+  }, [dailyMotivation, motivationPosterUrl, astroDaily, musicShelfHasSongs, musicPicksHaveSongs]);
 
   const chronologicalSlides = (posts: Post[], feed: 'global' | 'personal') => {
     const postIds = new Set(posts.map((post) => post.id));
