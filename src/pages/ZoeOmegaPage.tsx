@@ -1072,6 +1072,7 @@ const ZoeOmegaPage: React.FC = () => {
 
               {/* VR Mode Top Right Controls - draggable + tap to drop down */}
               <VRDraggablePanel
+                key={`omega-session-${vrLayoutToken}`}
                 id="omega-session"
                 title="Session"
                 icon={<Box className="w-3.5 h-3.5 text-cyan-300" />}
