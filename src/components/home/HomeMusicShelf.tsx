@@ -7,13 +7,14 @@ import TrackArtwork from '@/components/music/TrackArtwork';
 import { fetchMyListening, type MyListeningTrack } from '@/features/music/musicSocial';
 import { addToTray } from '@/features/music/musicTray';
 
-const HomeMusicShelf: React.FC = () => {
+const HomeMusicShelf: React.FC<{ onContent?: (hasSongs: boolean) => void }> = ({ onContent }) => {
   const [tracks, setTracks] = useState<MyListeningTrack[]>([]);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     let cancelled = false;
-    void fetchMyListening().then((rows) => { if (!cancelled) setTracks(rows); }).catch(() => undefined).finally(() => { if (!cancelled) setLoading(false); });
+    void fetchMyListening().then((rows) => { if (!cancelled) { setTracks(rows); onContent?.(rows.length > 0); } }).catch(() => undefined).finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   if (loading || !tracks.length) return null;
   return <section className="space-y-3 px-3" aria-label="My listening shelf">

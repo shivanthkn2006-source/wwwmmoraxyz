@@ -207,6 +207,10 @@ const HomePage = () => {
   // Remote flag: onboarding gating can be switched off platform-wide without a deploy.
   const { isEnabled: isGrowthFlagEnabled } = useGrowthFlags();
   const growthOnboardingGating = isGrowthFlagEnabled(GROWTH_FLAGS.onboardingGating);
+  // The music slide only becomes a swipeable screen once it really has songs,
+  // so a brand-new member never swipes into an empty screen.
+  const [musicShelfHasSongs, setMusicShelfHasSongs] = useState(false);
+  const [musicPicksHaveSongs, setMusicPicksHaveSongs] = useState(false);
   const [growthOnboardingOpen, setGrowthOnboardingOpen] = useState(false);
   const [growthDetails, setGrowthDetails] = useState<CuratedInsight | null>(null);
   useEffect(() => {
