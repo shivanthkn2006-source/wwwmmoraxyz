@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Check, Download, GripVertical, Pencil, Play, Plus, Trash2, X } from 'lucide-react';
+import { ArrowLeft, Check, ChevronDown, ChevronUp, Download, GripVertical, Pencil, Play, Plus, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { musicEngine } from '@/services/MusicEngine';
@@ -10,8 +10,9 @@ import { getLibrary, subscribeLibrary } from '@/features/music/musicLibrary';
 import type { MusicTrack } from '@/features/music/musicProviders';
 import {
   createPlaylist, deletePlaylist, fetchMyPlaylists, importDevicePlaylists, moveTrackBetween,
-  renamePlaylist, savePlaylistTracks, withTrack, withoutTrack, type MusicPlaylist,
+  renamePlaylist, reorderPlaylists, savePlaylistOrder, savePlaylistTracks, withTrack, withoutTrack, type MusicPlaylist,
 } from '@/features/music/musicPlaylists';
+import { removeFromTray, subscribeTray } from '@/features/music/musicTray';
 
 interface Dragged { playlistId: string; trackId: string }
 
@@ -26,7 +27,10 @@ export default function MusicPlaylistsPage() {
   const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(true);
 
+  const [tray, setTray] = useState<MusicTrack[]>([]);
+
   useEffect(() => subscribeLibrary((library) => setSaved(library.saved)), []);
+  useEffect(() => subscribeTray(setTray), []);
 
   const load = useCallback(async () => {
     try {
