@@ -445,19 +445,21 @@ const ZoeOmegaPage: React.FC = () => {
   const { needsRotate, requestLandscape, isFullscreen, toggleFullscreen } = useVRLandscapeOrientation(isVRMode);
 
   // VR panel visibility - every panel stays discoverable through the Panels hub,
-  // and the layout is remembered across refreshes / re-entry.
-  const VR_PANEL_VISIBILITY_KEY = 'vr-panel-visibility';
+  // and the layout is remembered across refreshes / re-entry. Only the essentials
+  // open on first entry so the world stays readable; everything else is one tap
+  // away in the hub. The :v2 key resets the older "everything open" default.
+  const VR_PANEL_VISIBILITY_KEY = 'vr-panel-visibility:v2';
   const defaultVrPanels = {
     identity: true,
-    hud: true,
-    dreamscape: true,
-    timeline: true,
-    omniBox: true,
-    diagnostics: true,
-    music: true,
-    zoeAsk: true,
-    social: true,
-    musicUpload: true,
+    hud: false,
+    dreamscape: false,
+    timeline: false,
+    omniBox: false,
+    diagnostics: false,
+    music: false,
+    zoeAsk: false,
+    social: false,
+    musicUpload: false,
   };
   const [vrPanels, setVrPanels] = useState(() => {
     if (typeof window === 'undefined') return defaultVrPanels;
@@ -470,17 +472,35 @@ const ZoeOmegaPage: React.FC = () => {
       return defaultVrPanels;
     }
   });
-  const toggleVrPanel = useCallback((key: keyof typeof defaultVrPanels) => {
-    setVrPanels(prev => {
-      const next = { ...prev, [key]: !prev[key] };
-      try {
-        window.localStorage.setItem(VR_PANEL_VISIBILITY_KEY, JSON.stringify(next));
-      } catch {
-        /* storage unavailable */
-      }
-      return next;
-    });
+  // Bumping this remounts every panel so a reset really puts them back in place.
+  const [vrLayoutToken, setVrLayoutToken] = useState(0);
+  const persistVrPanels = useCallback((next: typeof defaultVrPanels) => {
+    try {
+      window.localStorage.setItem(VR_PANEL_VISIBILITY_KEY, JSON.stringify(next));
+    } catch {
+      /* storage unavailable */
+    }
+    return next;
   }, []);
+  const toggleVrPanel = useCallback((key: keyof typeof defaultVrPanels) => {
+    setVrPanels(prev => persistVrPanels({ ...prev, [key]: !prev[key] }));
+  }, [persistVrPanels]);
+  const setAllVrPanels = useCallback((visible: boolean) => {
+    setVrPanels(prev => persistVrPanels(
+      Object.fromEntries(Object.keys(prev).map(key => [key, visible])) as typeof defaultVrPanels,
+    ));
+  }, [persistVrPanels]);
+  const resetVrLayout = useCallback(() => {
+    try {
+      Object.keys(window.localStorage)
+        .filter(key => key.startsWith('vr-panel-pos:') || key.startsWith('vr-panel-open:'))
+        .forEach(key => window.localStorage.removeItem(key));
+    } catch {
+      /* storage unavailable */
+    }
+    setVrPanels(persistVrPanels({ ...defaultVrPanels }));
+    setVrLayoutToken(token => token + 1);
+  }, [persistVrPanels]);
   const vrPanelToggles: VRPanelToggle[] = [
     { id: 'identity', label: 'Zoe Omega badge', visible: vrPanels.identity, onToggle: () => toggleVrPanel('identity') },
     { id: 'hud', label: 'Mind HUD', visible: vrPanels.hud, onToggle: () => toggleVrPanel('hud') },
