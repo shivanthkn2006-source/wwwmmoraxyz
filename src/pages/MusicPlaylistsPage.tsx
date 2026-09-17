@@ -179,7 +179,7 @@ export default function MusicPlaylistsPage() {
       >
         <Play className="h-4 w-4" />
       </Button>
-      {targets.length > (playlistId === 'saved' ? 0 : 1) && (
+      {targets.length > (playlistId === 'saved' || playlistId === 'tray' ? 0 : 1) && (
         <select
           aria-label={`Move ${track.title} to another playlist`}
           className="max-w-[6.5rem] rounded-full bg-transparent px-1 text-[11px] text-white/70"
@@ -195,8 +195,8 @@ export default function MusicPlaylistsPage() {
       {playlistId !== 'saved' && (
         <Button
           variant="ghost" size="icon" className="h-8 w-8 text-white/50 hover:text-white"
-          aria-label={`Remove ${track.title} from ${playlists.find((p) => p.id === playlistId)?.name ?? 'playlist'}`}
-          onClick={() => void removeTrack(playlistId, track.id)}
+          aria-label={playlistId === 'tray' ? `Remove ${track.title} from this list` : `Remove ${track.title} from ${playlists.find((p) => p.id === playlistId)?.name ?? 'playlist'}`}
+          onClick={() => { if (playlistId === 'tray') { removeFromTray(track.id); return; } void removeTrack(playlistId, track.id); }}
         >
           <X className="h-4 w-4" />
         </Button>
