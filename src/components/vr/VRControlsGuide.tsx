@@ -38,6 +38,10 @@ interface VRControlsGuideProps {
   isFullscreen?: boolean;
   /** One-tap full-screen (and landscape where supported) toggle. */
   onToggleFullscreen?: () => void;
+  onShowAll?: () => void;
+  onHideAll?: () => void;
+  /** Puts every panel back in its default slot and clears saved positions. */
+  onResetLayout?: () => void;
 }
 
 const COACH_KEY = 'vr-controls-coach-seen';
