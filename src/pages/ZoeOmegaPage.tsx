@@ -1441,12 +1441,18 @@ const ZoeOmegaPage: React.FC = () => {
             onRequestLandscape={() => { void requestLandscape(); }}
             isFullscreen={isFullscreen}
             onToggleFullscreen={() => { void toggleFullscreen(); }}
+            onShowAll={() => setAllVrPanels(true)}
+            onHideAll={() => setAllVrPanels(false)}
+            onResetLayout={resetVrLayout}
           />
         )}
 
-        {/* Additive in-world panels: music, Zoe answers, friends' music, uploads */}
+        {/* Additive in-world panels: music, Zoe answers, friends' music, uploads.
+            Each one rests in its own slot so nothing overlaps on first entry, and
+            the bottom-right call / return controls stay completely clear. */}
         {isVRMode && vrPanels.music && (
           <VRDraggablePanel
+            key={`omega-music-${vrLayoutToken}`}
             id="omega-music"
             title="Music"
             icon={<Music2 className="w-3.5 h-3.5 text-cyan-300" />}
@@ -1459,10 +1465,11 @@ const ZoeOmegaPage: React.FC = () => {
         )}
         {isVRMode && vrPanels.zoeAsk && (
           <VRDraggablePanel
+            key={`omega-zoe-ask-${vrLayoutToken}`}
             id="omega-zoe-ask"
             title="Ask Zoe"
             icon={<Sparkles className="w-3.5 h-3.5 text-purple-300" />}
-            positionClassName="fixed top-32 left-2 sm:left-4 z-[9993]"
+            positionClassName="fixed top-[9.5rem] left-2 sm:left-4 z-[9993]"
             defaultOpen={false}
           >
             <Suspense fallback={null}><VRZoeAskPanel /></Suspense>
@@ -1470,10 +1477,11 @@ const ZoeOmegaPage: React.FC = () => {
         )}
         {isVRMode && vrPanels.social && (
           <VRDraggablePanel
+            key={`omega-social-${vrLayoutToken}`}
             id="omega-social"
             title="Friends' music"
             icon={<Users className="w-3.5 h-3.5 text-emerald-300" />}
-            positionClassName="fixed top-32 right-2 sm:right-4 z-[9993]"
+            positionClassName="fixed top-[16.5rem] right-2 sm:right-4 z-[9993]"
             defaultOpen={false}
           >
             <Suspense fallback={null}><VRSocialFeedPanel /></Suspense>
@@ -1481,11 +1489,11 @@ const ZoeOmegaPage: React.FC = () => {
         )}
         {isVRMode && vrPanels.musicUpload && (
           <VRDraggablePanel
+            key={`omega-music-upload-${vrLayoutToken}`}
             id="omega-music-upload"
             title="Upload a song"
             icon={<UploadCloud className="w-3.5 h-3.5 text-pink-300" />}
-            positionClassName="fixed bottom-24 right-2 sm:right-4 z-[9993]"
-            openDirection="up"
+            positionClassName="fixed top-[9.5rem] right-2 sm:right-4 z-[9993]"
             defaultOpen={false}
           >
             <Suspense fallback={null}><VRMusicUploadPanel /></Suspense>
