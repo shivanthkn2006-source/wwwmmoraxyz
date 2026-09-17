@@ -146,6 +146,7 @@ const MusicProfilePage = lazy(() => import("./pages/MusicProfilePage"));
 const MusicDashboardPage = lazy(() => import("./pages/MusicDashboardPage"));
 const MusicRecommendationsPage = lazy(() => import("./pages/MusicRecommendationsPage"));
 const MusicPlaylistsPage = lazy(() => import("./pages/MusicPlaylistsPage"));
+const MusicBirthChartPage = lazy(() => import("./pages/MusicBirthChartPage"));
 
 
 
@@ -1021,6 +1022,14 @@ const RouteAwareShell = () => {
                             element={
                               <ProtectedRoute>
                                 <MusicPlaylistsPage />
+                              </ProtectedRoute>
+                            }
+                          />
+                          <Route
+                            path="/music/birth-chart"
+                            element={
+                              <ProtectedRoute>
+                                <MusicBirthChartPage />
                               </ProtectedRoute>
                             }
                           />

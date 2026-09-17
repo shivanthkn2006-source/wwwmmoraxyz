@@ -81,6 +81,22 @@ export async function savePlaylistTracks(id: string, tracks: MusicTrack[]): Prom
   if (error) throw error;
 }
 
+/** Saves the order playlists are shown in, so it survives a refresh or a new device. */
+export async function savePlaylistOrder(ids: string[]): Promise<void> {
+  await Promise.all(ids.map((id, position) => supabase.from('music_playlists').update({ position }).eq('id', id)));
+}
+
+/** Result of moving one playlist up (-1) or down (+1) in the list. */
+export function reorderPlaylists(playlists: MusicPlaylist[], id: string, delta: number): MusicPlaylist[] {
+  const from = playlists.findIndex((playlist) => playlist.id === id);
+  const to = from + delta;
+  if (from < 0 || to < 0 || to >= playlists.length) return playlists;
+  const next = [...playlists];
+  const [moved] = next.splice(from, 1);
+  next.splice(to, 0, moved);
+  return next.map((playlist, position) => ({ ...playlist, position }));
+}
+
 /** Adds a track once; keeps the order songs were added in. */
 export function withTrack(tracks: MusicTrack[], track: MusicTrack): MusicTrack[] {
   return tracks.some((item) => item.id === track.id) ? tracks : [...tracks, track];

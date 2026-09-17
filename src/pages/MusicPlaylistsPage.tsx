@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Check, Download, GripVertical, Pencil, Play, Plus, Trash2, X } from 'lucide-react';
+import { ArrowLeft, Check, ChevronDown, ChevronUp, Download, GripVertical, Pencil, Play, Plus, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { musicEngine } from '@/services/MusicEngine';
@@ -10,8 +10,9 @@ import { getLibrary, subscribeLibrary } from '@/features/music/musicLibrary';
 import type { MusicTrack } from '@/features/music/musicProviders';
 import {
   createPlaylist, deletePlaylist, fetchMyPlaylists, importDevicePlaylists, moveTrackBetween,
-  renamePlaylist, savePlaylistTracks, withTrack, withoutTrack, type MusicPlaylist,
+  renamePlaylist, reorderPlaylists, savePlaylistOrder, savePlaylistTracks, withTrack, withoutTrack, type MusicPlaylist,
 } from '@/features/music/musicPlaylists';
+import { removeFromTray, subscribeTray } from '@/features/music/musicTray';
 
 interface Dragged { playlistId: string; trackId: string }
 
@@ -26,7 +27,10 @@ export default function MusicPlaylistsPage() {
   const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(true);
 
+  const [tray, setTray] = useState<MusicTrack[]>([]);
+
   useEffect(() => subscribeLibrary((library) => setSaved(library.saved)), []);
+  useEffect(() => subscribeTray(setTray), []);
 
   const load = useCallback(async () => {
     try {
@@ -93,12 +97,15 @@ export default function MusicPlaylistsPage() {
   const drop = async (toId: string) => {
     setDropTarget(null);
     if (!dragged || dragged.playlistId === toId) { setDragged(null); return; }
-    if (dragged.playlistId === 'saved') {
-      const track = saved.find((item) => item.id === dragged.trackId);
+    if (dragged.playlistId === 'saved' || dragged.playlistId === 'tray') {
+      const source = dragged.playlistId === 'saved' ? saved : tray;
+      const track = source.find((item) => item.id === dragged.trackId);
+      const fromTray = dragged.playlistId === 'tray';
       setDragged(null);
       if (!track) return;
       const next = playlists.map((playlist) => (playlist.id === toId ? { ...playlist, tracks: withTrack(playlist.tracks, track) } : playlist));
       await persist(next, [toId]);
+      if (fromTray) removeFromTray(track.id);
       return;
     }
     const from = dragged.playlistId;
@@ -114,14 +121,29 @@ export default function MusicPlaylistsPage() {
 
   /** Touch-friendly alternative to dragging. */
   const moveTo = async (fromId: string, trackId: string, toId: string) => {
-    if (fromId === 'saved') {
-      const track = saved.find((item) => item.id === trackId);
+    if (fromId === 'saved' || fromId === 'tray') {
+      const track = (fromId === 'saved' ? saved : tray).find((item) => item.id === trackId);
       if (!track) return;
       const next = playlists.map((playlist) => (playlist.id === toId ? { ...playlist, tracks: withTrack(playlist.tracks, track) } : playlist));
       await persist(next, [toId]);
+      if (fromId === 'tray') removeFromTray(trackId);
       return;
     }
     await persist(moveTrackBetween(playlists, fromId, toId, trackId), [fromId, toId]);
+  };
+
+  /** Moves one playlist up or down and remembers the new order. */
+  const reorder = async (id: string, delta: number) => {
+    const previous = playlists;
+    const next = reorderPlaylists(playlists, id, delta);
+    if (next === playlists) return;
+    setPlaylists(next);
+    try {
+      await savePlaylistOrder(next.map((playlist) => playlist.id));
+    } catch {
+      setPlaylists(previous);
+      setNotice('That new order could not be saved. Check your connection and try again.');
+    }
   };
 
   const importDevice = async () => {
@@ -157,7 +179,7 @@ export default function MusicPlaylistsPage() {
       >
         <Play className="h-4 w-4" />
       </Button>
-      {targets.length > (playlistId === 'saved' ? 0 : 1) && (
+      {targets.length > (playlistId === 'saved' || playlistId === 'tray' ? 0 : 1) && (
         <select
           aria-label={`Move ${track.title} to another playlist`}
           className="max-w-[6.5rem] rounded-full bg-transparent px-1 text-[11px] text-white/70"
@@ -173,8 +195,8 @@ export default function MusicPlaylistsPage() {
       {playlistId !== 'saved' && (
         <Button
           variant="ghost" size="icon" className="h-8 w-8 text-white/50 hover:text-white"
-          aria-label={`Remove ${track.title} from ${playlists.find((p) => p.id === playlistId)?.name ?? 'playlist'}`}
-          onClick={() => void removeTrack(playlistId, track.id)}
+          aria-label={playlistId === 'tray' ? `Remove ${track.title} from this list` : `Remove ${track.title} from ${playlists.find((p) => p.id === playlistId)?.name ?? 'playlist'}`}
+          onClick={() => { if (playlistId === 'tray') { removeFromTray(track.id); return; } void removeTrack(playlistId, track.id); }}
         >
           <X className="h-4 w-4" />
         </Button>
@@ -212,7 +234,7 @@ export default function MusicPlaylistsPage() {
         {notice && <p className="px-4 pt-2 text-[11px] text-white/60" role="status">{notice}</p>}
 
         <div className="grid min-h-0 flex-1 gap-3 overflow-y-auto p-3 sm:grid-cols-2 xl:grid-cols-3">
-          {playlists.map((playlist) => (
+          {playlists.map((playlist, playlistIndex) => (
             <section
               key={playlist.id}
               onDragOver={(event) => { event.preventDefault(); setDropTarget(playlist.id); }}
@@ -243,6 +265,8 @@ export default function MusicPlaylistsPage() {
                     >
                       <Play className="h-4 w-4" />
                     </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-white/60 hover:text-white" aria-label={`Move ${playlist.name} up`} disabled={playlistIndex === 0} onClick={() => void reorder(playlist.id, -1)}><ChevronUp className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-white/60 hover:text-white" aria-label={`Move ${playlist.name} down`} disabled={playlistIndex === playlists.length - 1} onClick={() => void reorder(playlist.id, 1)}><ChevronDown className="h-4 w-4" /></Button>
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-white/60 hover:text-white" aria-label={`Rename ${playlist.name}`} onClick={() => setRenaming({ id: playlist.id, value: playlist.name })}><Pencil className="h-4 w-4" /></Button>
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-white/50 hover:text-white" aria-label={`Delete ${playlist.name}`} onClick={() => void remove(playlist)}><Trash2 className="h-4 w-4" /></Button>
                   </>
@@ -254,6 +278,14 @@ export default function MusicPlaylistsPage() {
               {!playlist.tracks.length && <p className="px-1 text-[11px] text-white/40">Drag songs here, or use “Move…” beside any song.</p>}
             </section>
           ))}
+
+          <section aria-label="Songs sent from Music and Home" className="flex min-h-[8rem] flex-col gap-2 rounded-3xl p-2">
+            <p className="px-1 text-xs font-semibold">From Music &amp; Home <span className="text-white/40">({tray.length})</span></p>
+            <ul className="flex flex-col gap-1.5">
+              {tray.map((track, index) => trackRow(track, 'tray', index, tray))}
+            </ul>
+            {!tray.length && <p className="px-1 text-[11px] text-white/40">Tap the playlist icon beside any song in Music search or on your Home shelf, then drag it into a playlist here.</p>}
+          </section>
 
           <section aria-label="Saved songs" className="flex min-h-[8rem] flex-col gap-2 rounded-3xl p-2">
             <p className="px-1 text-xs font-semibold">Saved songs <span className="text-white/40">({saved.length})</span></p>
