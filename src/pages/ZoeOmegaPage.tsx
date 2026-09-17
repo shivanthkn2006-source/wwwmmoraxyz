@@ -1048,6 +1048,7 @@ const ZoeOmegaPage: React.FC = () => {
               {/* VR Mode Floating Controls - draggable + tap to drop down */}
               {vrPanels.identity && (
                 <VRDraggablePanel
+                  key={`omega-identity-${vrLayoutToken}`}
                   id="omega-identity"
                   title="Zoe Omega"
                   icon={<Brain className="w-3.5 h-3.5 text-purple-300" />}
