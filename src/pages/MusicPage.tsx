@@ -110,6 +110,7 @@ export default function MusicPage() {
     setBurst(reaction);
     window.setTimeout(() => setBurst(null), 700);
     const added = await toggleReaction(state.track, reaction);
+    if (added) void recordMusicSignal('reaction', { track: state.track, context: { reaction } });
     setMyReactions((current) => added ? [...current, reaction] : current.filter((item) => item !== reaction));
   }, [state.track]);
 
@@ -162,6 +163,7 @@ export default function MusicPage() {
     const name = window.prompt('Add to playlist (name):')?.trim();
     if (!name) return;
     addToPlaylist(name, track);
+    void recordMusicSignal('playlist_add', { track, context: { playlist: name } });
     setSelectedPlaylist(name);
   }, []);
 
@@ -185,7 +187,10 @@ export default function MusicPage() {
         className={`music-liquid-save h-9 w-9 shrink-0 rounded-full ${isSaved(track.id) ? 'is-saved' : ''}`}
         variant="ghost"
         size="icon"
-        onClick={() => toggleSaved(track)}
+        onClick={() => {
+          const saved = toggleSaved(track);
+          void recordMusicSignal(saved ? 'save' : 'unsave', { track });
+        }}
         label={isSaved(track.id) ? `Remove ${track.title} from library` : `Save ${track.title} to library`}
       >
         <Heart className={isSaved(track.id) ? 'fill-current' : ''} />

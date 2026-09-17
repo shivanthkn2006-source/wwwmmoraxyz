@@ -175,7 +175,7 @@ class MusicEngineImpl {
   async playIndex(index: number): Promise<boolean> {
     const previous = this.state.track;
     const elapsed = this.startedAt ? (Date.now() - this.startedAt) / 1000 : 0;
-    if (previous && elapsed > 0 && elapsed < 30) {
+    if (previous && this.completedTrackId !== previous.id && elapsed > 0 && elapsed < 30) {
       void import('@/features/music/musicConnect').then(({ recordMusicSignal }) => recordMusicSignal('skip', { track: previous, progressRatio: this.state.duration ? this.state.position / this.state.duration : undefined })).catch(() => undefined);
     }
     this.startedAt = 0;
