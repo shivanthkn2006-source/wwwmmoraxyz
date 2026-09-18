@@ -10,9 +10,13 @@ describe('Music Connect suggestions', () => {
   });
 
   it('adapts cached suggestions locally while typing', () => {
-    const result = filterMusicSuggestions(['calm', 'focus', 'jazz', 'romantic', 'ambient'], 'night');
+    const result = filterMusicSuggestions(['calm', 'focus', 'jazz', 'romantic', 'ambient', 'calm night'], 'night');
     expect(result).toHaveLength(10);
-    expect(result[0]).toBe('night calm');
+    expect(result[0]).toBe('night');
+    expect(result).toContain('calm night');
+    expect(result).toContain('night songs');
+    // The typed text is never glued in front of an unrelated mood keyword.
+    expect(result).not.toContain('night jazz');
   });
 });
 describe('chart and recommendation intents', () => {
