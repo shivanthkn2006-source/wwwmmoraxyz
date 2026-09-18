@@ -18,6 +18,51 @@
  */
 import { COMPASS_SLOTS, countForDate, db, ensureDayForUser } from '../_shared/dhf-compass-runner.ts';
 import { localDateIn } from '../_shared/astro-engine.ts';
+import { DHF_IMAGE_PROMPT_VERSION, buildDhfImageBrief } from '../_shared/dhf-compass-image.ts';
+import { seedFrom } from '../_shared/dhf-compass.ts';
+
+/**
+ * Server-side artwork sweep. Every card written under an older image contract is
+ * rebuilt here, for every member, without any model call and without touching a
+ * single word of card text. This makes the artwork correct even for members who
+ * never open the app while a client is signed in.
+ */
+const REIMAGE_LIMIT = 150;
+
+async function sweepStaleArtwork(): Promise<{ stale: number; repaired: number }> {
+  const stale = await db(
+    'dhf_daily_posts?' +
+    `or=(image_prompt_version.is.null,image_prompt_version.neq.${DHF_IMAGE_PROMPT_VERSION})` +
+    '&select=id,user_id,category,headline,short_summary,full_story_content,astrological_context,slot_time,post_date' +
+    `&order=post_date.desc,slot_time.desc&limit=${REIMAGE_LIMIT}`,
+  );
+  const rows = Array.isArray(stale.data) ? stale.data : [];
+  let repaired = 0;
+  for (const row of rows) {
+    const image = buildDhfImageBrief({
+      category: String(row.category ?? ''),
+      headline: String(row.headline ?? ''),
+      shortSummary: String(row.short_summary ?? ''),
+      fullStory: String(row.full_story_content ?? ''),
+      astrologicalContext: String(row.astrological_context ?? ''),
+      seed: seedFrom(`${row.user_id}:${row.post_date}:${row.slot_time}`),
+    });
+    const patch = await db(`dhf_daily_posts?id=eq.${row.id}`, {
+      method: 'PATCH',
+      headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify({
+        image_url: image.url,
+        image_path: null,
+        image_source: 'remote',
+        image_prompt: image.prompt,
+        image_prompt_version: image.promptVersion,
+        image_prompt_hash: image.promptHash,
+      }),
+    });
+    if (patch.ok) repaired += 1;
+  }
+  return { stale: rows.length, repaired };
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -128,7 +173,7 @@ Deno.serve(async (req) => {
     if (!(await takeLease())) return json({ ok: true, skipped: 'in-flight' });
 
     const startedAt = Date.now();
-    const summary = { scanned: 0, generated: 0, cached: 0, failed: 0, prewarmed: 0, paused: false, timeboxed: false };
+    const summary = { scanned: 0, generated: 0, cached: 0, failed: 0, prewarmed: 0, paused: false, timeboxed: false, imagesRepaired: 0 };
     try {
       const list = await members();
       summary.scanned = list.length;

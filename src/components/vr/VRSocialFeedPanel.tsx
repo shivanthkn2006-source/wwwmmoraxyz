@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { musicEngine } from '@/services/MusicEngine';
 import { resolveMusicQueue } from '@/features/music/musicProviders';
 import { fetchSharedPlaylist } from '@/features/music/musicShares';
+import { useDailyPlanetaryMood } from '@/hooks/useDailyPlanetaryMood';
 
 interface Alert {
   id: string;
@@ -26,6 +27,15 @@ const VRSocialFeedPanel: React.FC = () => {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [busy, setBusy] = useState(true);
   const [notice, setNotice] = useState('');
+  // Read-only: the same hourly Swiss Ephemeris mood the profile panel shows, so
+  // in-world alerts carry today's ruling planet, hour and faith words.
+  const { mood } = useDailyPlanetaryMood();
+  const moodLine = [
+    mood?.dayLord ? `${mood.dayLord.planet} day` : '',
+    mood?.horaLord ? `${mood.horaLord} hour` : '',
+    ...(mood?.keywords ?? []).slice(0, 3),
+    ...(mood?.faithKeywords ?? []).slice(0, 2),
+  ].filter(Boolean).join(' · ');
 
   const load = useCallback(async () => {
     setBusy(true);
@@ -120,6 +130,11 @@ const VRSocialFeedPanel: React.FC = () => {
           {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
         </button>
       </div>
+      {moodLine && (
+        <p className="mb-2 text-[11px] text-white/60">
+          <span className="text-white/40">My mood now: </span>{moodLine}
+        </p>
+      )}
       {notice && <p role="status" className="mb-2 text-[11px] text-white/60">{notice}</p>}
       <ul className="max-h-52 space-y-1 overflow-y-auto">
         {alerts.map((alert) => (
