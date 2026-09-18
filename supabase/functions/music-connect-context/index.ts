@@ -121,7 +121,10 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
   const authHeader = req.headers.get('authorization') ?? '';
-  if (!authHeader.startsWith('Bearer ')) return json({ error: 'Unauthorized' }, 401);
+  // A signed-out or expired visitor is an expected state, not a failure: answer
+  // 200 with an empty context so the Music page keeps its fallback suggestions
+  // instead of surfacing a runtime error.
+  if (!authHeader.startsWith('Bearer ')) return json({ signed_out: true, suggestion_keywords: [], taste_vector: {}, planetary_context: {}, expires_at: null });
 
   try {
     const url = Deno.env.get('SUPABASE_URL');
@@ -131,7 +134,7 @@ Deno.serve(async (req) => {
 
     const caller = createClient(url, anonKey, { global: { headers: { Authorization: authHeader } } });
     const { data: auth, error: authError } = await caller.auth.getUser();
-    if (authError || !auth.user) return json({ error: 'Invalid session' }, 401);
+    if (authError || !auth.user) return json({ signed_out: true, suggestion_keywords: [], taste_vector: {}, planetary_context: {}, expires_at: null });
     const body = await req.json().catch(() => ({}));
     const force = body && typeof body === 'object' && (body as { force?: unknown }).force === true;
     const service = createClient(url, serviceKey);
