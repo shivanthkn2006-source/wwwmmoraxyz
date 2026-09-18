@@ -2,13 +2,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { getLibrary, playlistTracks } from '@/features/music/musicLibrary';
 import { fetchMyListening } from '@/features/music/musicSocial';
 import { searchMusicCatalog, type MusicTrack } from '@/features/music/musicProviders';
+import { faithKeywordsFor } from '@/features/music/musicFaith';
 import type { Json } from '@/integrations/supabase/types';
 
 export type MusicSignalType = 'play' | 'skip' | 'complete' | 'replay' | 'save' | 'unsave' | 'reaction' | 'search' | 'suggestion_select' | 'playlist_add' | 'explicit_preference';
 
 export interface MusicConnectContext {
   suggestions: string[];
-  taste: { genres: string[]; moods: string[]; artists: string[]; recentTracks: string[] };
+  taste: { genres: string[]; moods: string[]; artists: string[]; recentTracks: string[]; religion: string };
   planetary: Record<string, unknown>;
   expiresAt: string | null;
 }
@@ -30,9 +31,17 @@ function cleanFive(values: unknown): string[] {
 function mapContext(row: Record<string, unknown> | null): MusicConnectContext {
   const taste = row?.taste_vector && typeof row.taste_vector === 'object' ? row.taste_vector as Record<string, unknown> : {};
   const strings = (value: unknown) => Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
+  const religion = typeof taste.religion === 'string' ? taste.religion : '';
+  // A member's faith always contributes devotional search words, even when the
+  // planetary words alone would have filled the list.
+  const faith = faithKeywordsFor(religion);
+  const keywords = Array.isArray(row?.suggestion_keywords) ? strings(row?.suggestion_keywords) : [];
+  const withFaith = faith.length
+    ? [...keywords.slice(0, 6), ...faith.slice(0, 2), ...keywords.slice(6)]
+    : keywords;
   return {
-    suggestions: cleanFive(row?.suggestion_keywords),
-    taste: { genres: strings(taste.genres), moods: strings(taste.moods), artists: strings(taste.artists), recentTracks: strings(taste.recentTracks) },
+    suggestions: cleanFive(withFaith),
+    taste: { genres: strings(taste.genres), moods: strings(taste.moods), artists: strings(taste.artists), recentTracks: strings(taste.recentTracks), religion },
     planetary: row?.planetary_context && typeof row.planetary_context === 'object' ? row.planetary_context as Record<string, unknown> : {},
     expiresAt: typeof row?.expires_at === 'string' ? row.expires_at : null,
   };

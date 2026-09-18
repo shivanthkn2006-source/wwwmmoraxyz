@@ -3,6 +3,7 @@ import { Helmet } from 'react-helmet-async';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Check, Heart, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import DailyPlanetaryMoodPanel from '@/components/music/DailyPlanetaryMood';
 import { Input } from '@/components/ui/input';
 import { MUSIC_GENRES } from '@/features/music/musicCategories';
 import { EMPTY_TASTE, MUSIC_MOODS, MUSIC_RELIGIONS, fetchMyMusicProfile, saveMyMusicProfile, type MusicTasteProfile } from '@/features/music/musicProfile';
@@ -59,6 +60,8 @@ export default function MusicProfilePage() {
           <h1 className="text-sm font-semibold">My music taste</h1>
           <span className="w-9" aria-hidden="true" />
         </header>
+
+        <DailyPlanetaryMoodPanel />
 
         <div>
           <p className="music-liquid-side-title">Genres</p>

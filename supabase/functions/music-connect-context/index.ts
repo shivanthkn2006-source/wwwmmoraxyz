@@ -204,6 +204,9 @@ Deno.serve(async (req) => {
     planetary.timeOfDay = timeKeyword;
     const faithKeywords = RELIGION_KEYWORDS[religion] ?? (religion ? [`${religion} devotional`] : []);
     planetary.religion = religion || null;
+    // Faith words are published so the app can search and recommend devotional
+    // music for the member's own faith, not only planetary moods.
+    planetary.faithKeywords = faithKeywords;
 
     // Planet-derived words first, then the member's own saved moods/genres and
     // faith, then the hour of day. No artist names, no played track titles.
