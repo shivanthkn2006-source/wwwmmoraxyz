@@ -12,6 +12,7 @@ import { fetchMyListening } from '@/features/music/musicSocial';
 import { fetchMyMusicProfile, type MusicTasteProfile } from '@/features/music/musicProfile';
 import { fetchMusicConnectContext } from '@/features/music/musicConnect';
 import { listMyUploads } from '@/features/music/musicUploads';
+import { faithKeywordsFor } from '@/features/music/musicFaith';
 
 export interface MusicRecommendationSection {
   id: string;
@@ -111,11 +112,13 @@ export async function fetchMusicRecommendations(): Promise<MusicRecommendationSe
     catch { return { keyword, tracks: [] as MusicTrack[] }; }
   };
 
-  const [fromFriendsRaw, myUploads, connectFound, seedFound] = await Promise.all([
+  const faithWords = faithKeywordsFor(profile.religion).slice(0, 2);
+  const [fromFriendsRaw, myUploads, connectFound, seedFound, faithFound] = await Promise.all([
     myFriendIds(auth.user.id).then((friends) => friendPlays(friends, played)).catch(() => [] as MusicTrack[]),
     listMyUploads().catch(() => [] as MusicTrack[]),
     connectKeywords.then((keywords) => Promise.all(keywords.map(lookup))),
     Promise.all(seeds(profile, history).map(lookup)),
+    Promise.all(faithWords.map(lookup)),
   ]);
 
   const fromFriends = take(fromFriendsRaw, 20);
@@ -150,6 +153,19 @@ export async function fetchMusicRecommendations(): Promise<MusicRecommendationSe
   });
 
 
+
+  // Devotional music for the faith the member declared on their profile.
+  faithFound.forEach(({ keyword, tracks }) => {
+    const picked = take(tracks, 12);
+    if (picked.length) {
+      sections.push({
+        id: `faith-${keyword}`,
+        label: `Devotional: ${keyword}`,
+        reason: `From the faith you saved on your music profile${profile.religion ? ` (${profile.religion})` : ''}`,
+        tracks: picked,
+      });
+    }
+  });
 
   if (history.length) {
     sections.push({ id: 'again', label: 'Play it again', reason: 'Your most played songs', tracks: history.slice(0, 12) });
