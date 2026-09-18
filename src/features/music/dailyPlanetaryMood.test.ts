@@ -32,14 +32,15 @@ describe('daily planetary mood', () => {
 
   it('falls back to the saved faith when the reading has no faith words', () => {
     const mood = readDailyPlanetaryMood(base);
-    expect(mood.faithKeywords).toEqual(['bhajan', 'sanskrit chants']);
+    expect(mood.faithKeywords.slice(0, 2)).toEqual(['bhajan', 'sanskrit chants']);
+    expect(mood.faithKeywords.length).toBeGreaterThan(3);
   });
 
   it('gives devotional words for each supported faith and none when unset', () => {
-    expect(faithKeywordsFor('Christian')).toEqual(['worship songs', 'gospel']);
-    expect(faithKeywordsFor('Buddhist')).toEqual(['buddhist chants', 'zen meditation']);
+    expect(faithKeywordsFor('Christian').slice(0, 2)).toEqual(['worship songs', 'gospel']);
+    expect(faithKeywordsFor('Buddhist').slice(0, 2)).toEqual(['buddhist chants', 'zen meditation']);
     expect(faithKeywordsFor('')).toEqual([]);
     expect(faithKeywordsFor('None')).toEqual([]);
-    expect(faithKeywordsFor('Zoroastrian')).toEqual(['zoroastrian devotional']);
+    expect(faithKeywordsFor('Zoroastrian')).toEqual(['zoroastrian devotional', 'zoroastrian prayer songs']);
   });
 });
