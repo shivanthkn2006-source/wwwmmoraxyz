@@ -173,7 +173,7 @@ Deno.serve(async (req) => {
     if (!(await takeLease())) return json({ ok: true, skipped: 'in-flight' });
 
     const startedAt = Date.now();
-    const summary = { scanned: 0, generated: 0, cached: 0, failed: 0, prewarmed: 0, paused: false, timeboxed: false };
+    const summary = { scanned: 0, generated: 0, cached: 0, failed: 0, prewarmed: 0, paused: false, timeboxed: false, imagesRepaired: 0 };
     try {
       const list = await members();
       summary.scanned = list.length;
