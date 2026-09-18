@@ -27,6 +27,15 @@ const VRSocialFeedPanel: React.FC = () => {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [busy, setBusy] = useState(true);
   const [notice, setNotice] = useState('');
+  // Read-only: the same hourly Swiss Ephemeris mood the profile panel shows, so
+  // in-world alerts carry today's ruling planet, hour and faith words.
+  const { mood } = useDailyPlanetaryMood();
+  const moodLine = [
+    mood?.dayLord ? `${mood.dayLord.planet} day` : '',
+    mood?.horaLord ? `${mood.horaLord} hour` : '',
+    ...(mood?.keywords ?? []).slice(0, 3),
+    ...(mood?.faithKeywords ?? []).slice(0, 2),
+  ].filter(Boolean).join(' · ');
 
   const load = useCallback(async () => {
     setBusy(true);
