@@ -1728,6 +1728,9 @@ export type Database = {
           headline: string
           id: string
           image_path: string | null
+          image_prompt: string | null
+          image_prompt_hash: string | null
+          image_prompt_version: string | null
           image_source: string
           image_url: string
           post_date: string
@@ -1746,6 +1749,9 @@ export type Database = {
           headline: string
           id?: string
           image_path?: string | null
+          image_prompt?: string | null
+          image_prompt_hash?: string | null
+          image_prompt_version?: string | null
           image_source?: string
           image_url: string
           post_date: string
@@ -1764,6 +1770,9 @@ export type Database = {
           headline?: string
           id?: string
           image_path?: string | null
+          image_prompt?: string | null
+          image_prompt_hash?: string | null
+          image_prompt_version?: string | null
           image_source?: string
           image_url?: string
           post_date?: string
