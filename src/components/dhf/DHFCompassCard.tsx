@@ -49,9 +49,12 @@ const CompassImage: React.FC<{ post: DhfDailyPost }> = ({ post }) => {
         referrerPolicy="no-referrer"
         onLoad={() => setStatus('ready')}
         onError={() => setStatus('failed')}
-        className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-500 ${status === 'ready' ? 'opacity-100' : 'opacity-0'}`}
+        className={`absolute inset-0 h-full w-full scale-[1.06] object-cover transition-opacity duration-500 ${status === 'ready' ? 'opacity-100' : 'opacity-0'}`}
       />
-      <span className="absolute bottom-0 right-0 z-10 bg-background/90 px-2 py-1 text-[9px] font-semibold text-foreground backdrop-blur-sm" data-dhf-image-brand>
+      <span
+        className="absolute bottom-0 right-0 z-10 flex h-[9%] min-h-6 w-[30%] min-w-24 items-center justify-end bg-gradient-to-l from-background/95 via-background/85 to-transparent pr-2 text-[9px] font-semibold text-foreground backdrop-blur-sm"
+        data-dhf-image-brand
+      >
         M&apos;Mora / Zoe
       </span>
     </div>

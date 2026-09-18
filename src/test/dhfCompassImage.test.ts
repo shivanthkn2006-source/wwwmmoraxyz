@@ -6,25 +6,34 @@ describe('Zoe DHF image contract', () => {
     category: 'Wealth & Decisions',
     headline: 'Navigating Financial Decisions with Confidence',
     shortSummary: 'Review a real budget before making one calculated long-term investment.',
-    fullStory: 'Open the figures, compare the risks, and choose the one decision that protects future stability.',
+    fullStory: 'Open the figures at your desk, compare the risks calmly, and choose the one decision that protects future stability. Keep the second sentence practical too.',
     astrologicalContext: 'Moon in Taurus; Jupiter trine natal Mercury',
     seed: 8401,
   };
 
-  it('grounds the visual in every visible part of the card', () => {
+  it('grounds the visual in the headline, message and concrete story action', () => {
     const brief = buildDhfImageBrief(input);
     expect(brief.prompt).toContain(input.category);
     expect(brief.prompt).toContain(input.headline);
     expect(brief.prompt).toContain(input.shortSummary);
-    expect(brief.prompt).toContain(input.fullStory);
-    expect(brief.prompt).toContain(input.astrologicalContext);
+    expect(brief.prompt).toContain('Open the figures at your desk');
   });
 
-  it('requires colour oil painting and bans generic mismatched output', () => {
+  it('stays short enough for the image model to keep the subject', () => {
+    expect(buildDhfImageBrief(input).prompt.length).toBeLessThan(1200);
+  });
+
+  it('never leaks raw chart data, only a lighting mood', () => {
     const { prompt } = buildDhfImageBrief(input);
-    expect(prompt).toMatch(/full-colour fine-art oil painting/i);
-    expect(prompt).toMatch(/concrete activity, decision, relationship, place or object/i);
-    expect(prompt).toMatch(/no words.*logos.*watermarks.*monochrome.*grayscale/i);
+    expect(prompt).not.toContain('natal Mercury');
+    expect(prompt).toMatch(/Lighting mood: .+ light/);
+  });
+
+  it('requires colour oil painting and a full-bleed scene, with no negative clauses', () => {
+    const { prompt } = buildDhfImageBrief(input);
+    expect(prompt).toMatch(/Fine-art oil painting in rich natural colour/i);
+    expect(prompt).toMatch(/full-bleed wide cinematic composition/i);
+    expect(prompt).not.toMatch(/\bno (frame|words|canvas)\b/i);
   });
 
   it('is deterministic and carries an auditable version and fingerprint', () => {
@@ -34,5 +43,6 @@ describe('Zoe DHF image contract', () => {
     expect(first.promptVersion).toBe(DHF_IMAGE_PROMPT_VERSION);
     expect(first.promptHash).toMatch(/^[a-f0-9]{8}$/);
     expect(first.url).toContain('nologo=true');
+    expect(first.url).toContain('private=true');
   });
 });

@@ -22,7 +22,7 @@ import {
   lifePhaseFor, referralCodeFor, referralCta, seedFrom, vaultContent,
 } from './dhf-compass.ts';
 
-export const COMPASS_WORKER_VERSION = '2026-09-18.1';
+export const COMPASS_WORKER_VERSION = '2026-09-18.3';
 export const COMPASS_BUCKET = 'dhf-compass';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
