@@ -38,7 +38,7 @@ const VRMusicUploadPanel: React.FC = () => {
     if (!file) { setSong(null); setNotice(''); return; }
     if (file.size > MAX_BYTES) {
       setSong(null);
-      setNotice(`That song is ${Math.round(file.size / (1024 * 1024))} MB. Songs up to 50 MB can be uploaded.`);
+      setNotice(`That song is ${Math.round(file.size / (1024 * 1024))} MB. Songs up to 150 MB can be uploaded.`);
       return;
     }
     if (!file.type.startsWith('audio/') && !file.type.startsWith('video/mp4') && !AUDIO_NAME.test(file.name)) {

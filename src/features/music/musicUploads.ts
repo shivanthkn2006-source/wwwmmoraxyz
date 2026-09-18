@@ -4,7 +4,7 @@ import type { MusicTrack } from './musicProviders';
 
 const BUCKET = 'music-uploads';
 const SIGNED_SECONDS = 60 * 60;
-const MAX_STORED_BYTES = 50 * 1024 * 1024;
+const MAX_STORED_BYTES = 150 * 1024 * 1024;
 const COMPRESSED_AUDIO = /(mpeg|mp3|mp4|m4a|aac|ogg|opus|webm)/i;
 
 
@@ -109,7 +109,7 @@ export async function compactAudio(file: File): Promise<{ blob: Blob; duration: 
   } catch (error) {
     logMusicEvent('upload:convert', error, { fileName: file.name, bytes: file.size, type: file.type });
     if (file.size > MAX_STORED_BYTES) {
-      throw new Error(`This song is ${Math.round(file.size / (1024 * 1024))} MB. Songs up to 50 MB can be uploaded.`);
+      throw new Error(`This song is ${Math.round(file.size / (1024 * 1024))} MB. Songs up to 150 MB can be uploaded.`);
     }
     return { blob: file, duration: await probeDuration(file), compressed: false };
   }
