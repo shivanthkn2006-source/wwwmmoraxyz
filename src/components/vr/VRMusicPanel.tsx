@@ -9,7 +9,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 import React, { useEffect, useState } from 'react';
 import { Loader2, Music2, Pause, Play, SkipForward } from 'lucide-react';
-import { musicEngine, type MusicEngineState } from '@/services/MusicEngine';
+import { musicEngine, type MusicState } from '@/services/MusicEngine';
 import { searchMusicCatalog, type MusicTrack } from '@/features/music/musicProviders';
 import { logListen } from '@/features/music/musicSocial';
 import { recordMusicSignal } from '@/features/music/musicConnect';
@@ -25,7 +25,7 @@ const VRMusicPanel: React.FC = () => {
   const [tracks, setTracks] = useState<MusicTrack[]>([]);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
-  const [state, setState] = useState<MusicEngineState>(() => musicEngine.getState());
+  const [state, setState] = useState<MusicState>(() => musicEngine.getState());
 
   useEffect(() => musicEngine.subscribe(setState), []);
 
