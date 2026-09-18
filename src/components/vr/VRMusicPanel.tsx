@@ -8,12 +8,14 @@
 // No existing VR or Music component is modified.
 // ═══════════════════════════════════════════════════════════════════════════════
 import React, { useEffect, useState } from 'react';
-import { Loader2, Music2, Pause, Play, SkipForward } from 'lucide-react';
+import { Loader2, Mic, Music2, Pause, Play, SkipForward } from 'lucide-react';
 import { musicEngine, type MusicState } from '@/services/MusicEngine';
 import { searchMusicCatalog, type MusicTrack } from '@/features/music/musicProviders';
 import { logListen } from '@/features/music/musicSocial';
 import { recordMusicSignal } from '@/features/music/musicConnect';
 import TrackArtwork from '@/components/music/TrackArtwork';
+import { resolveMusicIntent } from '@/features/music/musicIntent';
+import { executeMusicIntent } from '@/features/music/executeMusicIntent';
 
 type UploadTrack = MusicTrack & { uploadId?: string };
 
@@ -60,6 +62,49 @@ const VRMusicPanel: React.FC = () => {
     }
   };
 
+  // Spoken commands in-world: the phrase is resolved by the same intent resolver
+  // the Music page and Zoe chat use, so "play my mood song" plays a real track
+  // here without spending any model tokens.
+  const [listening, setListening] = useState(false);
+  const listen = () => {
+    const Recognition = (window as unknown as {
+      SpeechRecognition?: new () => any;
+      webkitSpeechRecognition?: new () => any;
+    }).SpeechRecognition ?? (window as unknown as { webkitSpeechRecognition?: new () => any }).webkitSpeechRecognition;
+    if (!Recognition) {
+      setNotice('This device cannot listen. Type the song instead.');
+      return;
+    }
+    musicEngine.unlock();
+    const recognition = new Recognition();
+    recognition.lang = 'en-IN';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    setListening(true);
+    setNotice('Listening…');
+    recognition.onerror = () => { setListening(false); setNotice('I could not hear that. Please try again.'); };
+    recognition.onend = () => setListening(false);
+    recognition.onresult = async (event: any) => {
+      const heard = String(event?.results?.[0]?.[0]?.transcript ?? '').trim();
+      if (!heard) { setNotice('I could not hear that. Please try again.'); return; }
+      setQuery(heard);
+      const intent = resolveMusicIntent(heard);
+      if (!intent) { setNotice(`I heard “${heard}”, but that was not a music request.`); return; }
+      try {
+        const result = await executeMusicIntent(intent, () => undefined);
+        setNotice(result.message);
+        const track = musicEngine.getState().track;
+        if (track) {
+          void logListen(track).catch(() => undefined);
+          void recordMusicSignal('play', { track, context: { surface: 'vr-voice' } });
+        }
+      } catch {
+        setNotice('That song could not be played right now.');
+      }
+    };
+    try { recognition.start(); } catch { setListening(false); }
+  };
+
   const current = state.track as UploadTrack | null;
 
   return (
@@ -76,6 +121,15 @@ const VRMusicPanel: React.FC = () => {
           aria-label="Search a song to play in the VR world"
           className="min-w-0 flex-1 rounded-full bg-white/10 px-3 py-2 text-xs text-white placeholder:text-white/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
         />
+        <button
+          type="button"
+          onClick={listen}
+          aria-label="Speak a music command"
+          aria-pressed={listening}
+          className="rounded-full bg-white/10 p-2 focus-visible:ring-2 focus-visible:ring-white/60"
+        >
+          <Mic className={`h-4 w-4 ${listening ? 'animate-pulse text-emerald-300' : ''}`} />
+        </button>
         <button type="submit" aria-label="Search music" className="rounded-full bg-white/10 p-2 focus-visible:ring-2 focus-visible:ring-white/60">
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
         </button>
