@@ -29,9 +29,13 @@ interface Props {
 const CompassImage: React.FC<{ post: DhfDailyPost }> = ({ post }) => {
   const [status, setStatus] = useState<'loading' | 'ready' | 'failed'>('loading');
   useEffect(() => { setStatus('loading'); }, [post.image_url]);
-  if (!post.image_url || status === 'failed') return null;
+  if (!post.image_url || status === 'failed') return (
+    <div className="flex min-h-36 items-center justify-center bg-muted/40 text-muted-foreground" data-dhf-image-fallback>
+      <ImageOff className="h-5 w-5" aria-hidden="true" />
+    </div>
+  );
   return (
-    <div className="relative mb-3 overflow-hidden rounded-xl bg-muted/40 aspect-[16/9]">
+    <div className="relative h-full min-h-40 overflow-hidden bg-muted/40" data-dhf-image>
       {status === 'loading' && (
         <div className="absolute inset-0 flex items-center justify-center animate-pulse bg-muted">
           <ImageOff className="h-4 w-4 text-muted-foreground/60" aria-hidden="true" />
@@ -45,8 +49,11 @@ const CompassImage: React.FC<{ post: DhfDailyPost }> = ({ post }) => {
         referrerPolicy="no-referrer"
         onLoad={() => setStatus('ready')}
         onError={() => setStatus('failed')}
-        className={`h-full w-full object-cover transition-opacity duration-500 ${status === 'ready' ? 'opacity-100' : 'opacity-0'}`}
+        className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-500 ${status === 'ready' ? 'opacity-100' : 'opacity-0'}`}
       />
+      <span className="absolute bottom-0 right-0 z-10 bg-background/90 px-2 py-1 text-[9px] font-semibold text-foreground backdrop-blur-sm" data-dhf-image-brand>
+        M&apos;Mora / Zoe
+      </span>
     </div>
   );
 };
@@ -78,29 +85,26 @@ export const DHFCompassCard: React.FC<Props> = ({ post, className, onImpression,
   return (
     <article
       ref={ref}
-      className={`overflow-hidden rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-sm ${className ?? ''}`}
+      className={`overflow-hidden rounded-2xl border border-border bg-card text-card-foreground shadow-sm ${className ?? ''}`}
       data-dhf-card
       data-dhf-slot={post.slot_time}
     >
-      {/* Brand line: the user must instantly recognise a Zoe's DHF daily card. */}
-      <div
-        className="mb-2 flex items-center gap-1.5 text-[13px] font-bold uppercase tracking-[0.08em] text-primary"
-        data-dhf-brand
-      >
-        <Compass className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-        <span className="truncate">Zoe&apos;s DHF</span>
-      </div>
-
-      <header className="mb-3 grid min-h-10 grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
-
-        <div className="min-w-0">
-          <span className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-border bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
-            <Compass className="h-3 w-3 shrink-0" aria-hidden="true" />
-            <span className="truncate">{post.category}</span>
-          </span>
-          <span className="mt-1 block text-[11px] text-muted-foreground">{slotLabel(post.slot_time)}</span>
-        </div>
-        <div className="relative z-20 flex shrink-0 items-center gap-1">
+      <div className="grid grid-cols-1 overflow-hidden sm:grid-cols-[minmax(0,42%)_minmax(0,58%)]" data-dhf-lead>
+        <CompassImage post={post} />
+        <div className="flex min-w-0 flex-col p-4 sm:p-5">
+          <div className="mb-2 flex items-center gap-1.5 text-[13px] font-bold uppercase tracking-[0.08em] text-primary" data-dhf-brand>
+            <Compass className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <span className="truncate">Zoe&apos;s DHF</span>
+          </div>
+          <header className="mb-3 grid min-h-10 grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
+            <div className="min-w-0">
+              <span className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-border bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
+                <Compass className="h-3 w-3 shrink-0" aria-hidden="true" />
+                <span className="truncate">{post.category}</span>
+              </span>
+              <span className="mt-1 block text-[11px] text-muted-foreground">{slotLabel(post.slot_time)}</span>
+            </div>
+            <div className="relative z-20 flex shrink-0 items-center gap-1">
           <ZoeCardNarrationControls
             id={`dhf:${post.id}`}
             text={`${post.headline}. ${post.short_summary}${post.full_story_content ? ` ${post.full_story_content}` : ''}`}
@@ -133,13 +137,14 @@ export const DHFCompassCard: React.FC<Props> = ({ post, className, onImpression,
           >
             <Flag className="h-5 w-5" aria-hidden="true" />
           </Button>
+            </div>
+          </header>
+          <h2 className="mb-2 text-lg font-semibold leading-snug">{post.headline}</h2>
+          <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">{post.short_summary}</p>
         </div>
-      </header>
+      </div>
 
-      <CompassImage post={post} />
-
-      <h2 className="mb-2 text-lg font-semibold leading-snug">{post.headline}</h2>
-      <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">{post.short_summary}</p>
+      <div className="p-4 pt-3 sm:p-5 sm:pt-4">
 
       {/* Real destinations for this story — never a dead placeholder link. */}
       <DhfVideoLinks headline={post.headline} category={post.category} />
@@ -200,6 +205,7 @@ export const DHFCompassCard: React.FC<Props> = ({ post, className, onImpression,
         targetType="dhf_compass"
         targetId={post.id}
       />
+      </div>
     </article>
   );
 };

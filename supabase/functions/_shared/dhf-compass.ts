@@ -12,6 +12,7 @@
  */
 import { sovereignFetch } from './sovereign-ai.ts';
 import { julianDay, getPositions, calculateTransits, SIGNS, PLANETS } from './astro-engine.ts';
+export { buildDhfImageBrief, DHF_IMAGE_PROMPT_VERSION } from './dhf-compass-image.ts';
 
 export interface CompassSlot {
   /** 24h HH:MM:SS — matches dhf_daily_posts.slot_time. */
@@ -234,29 +235,6 @@ export async function generateCompassPost(args: GenerateArgs): Promise<GenerateR
   } catch (e) {
     return { content: vaultContent(idx), error: String((e as Error)?.message ?? e).slice(0, 200) };
   }
-}
-
-/**
- * Stable image URL for a card. The URL is persisted once with the row, so a
- * feed reload never re-requests generation (zero token bleed by construction).
- */
-export function compassImageUrl(headline: string, slotIndex: number, seed: number): string {
-  const slot = COMPASS_SLOTS[Math.min(Math.max(slotIndex, 0), COMPASS_SLOTS.length - 1)];
-  const prompt = [
-    'cinematic minimalist editorial illustration,',
-    `${slot.category} theme,`,
-    headline.replace(/[^a-zA-Z0-9 ,.'-]/g, ' ').slice(0, 140) + ',',
-    'monochrome black and white with a single subtle accent light,',
-    'no text, no letters, no watermark, no logo',
-  ].join(' ');
-  const params = new URLSearchParams({
-    width: '1024',
-    height: '576',
-    nologo: 'true',
-    seed: String(seed % 1_000_000),
-    model: 'flux',
-  });
-  return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?${params.toString()}`;
 }
 
 export function referralCta(code: string): string {

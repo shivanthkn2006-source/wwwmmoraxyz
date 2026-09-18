@@ -36,9 +36,13 @@ const statusTone: Record<string, string> = {
 const EssayImage: React.FC<{ post: DhfDailyPost }> = ({ post }) => {
   const [status, setStatus] = useState<'loading' | 'ready' | 'failed'>('loading');
   useEffect(() => setStatus('loading'), [post.image_url]);
-  if (!post.image_url || status === 'failed') return null;
+  if (!post.image_url || status === 'failed') return (
+    <div className="flex min-h-48 items-center justify-center bg-muted/40 text-muted-foreground">
+      <ImageOff className="h-5 w-5" aria-hidden="true" />
+    </div>
+  );
   return (
-    <div className="relative mb-5 overflow-hidden rounded-2xl bg-muted/40 aspect-[16/9]">
+    <div className="relative h-full min-h-48 overflow-hidden bg-muted/40">
       {status === 'loading' && (
         <div className="absolute inset-0 flex animate-pulse items-center justify-center bg-muted">
           <ImageOff className="h-5 w-5 text-muted-foreground/60" aria-hidden="true" />
@@ -52,8 +56,11 @@ const EssayImage: React.FC<{ post: DhfDailyPost }> = ({ post }) => {
         referrerPolicy="no-referrer"
         onLoad={() => setStatus('ready')}
         onError={() => setStatus('failed')}
-        className={`h-full w-full object-cover transition-opacity duration-500 ${status === 'ready' ? 'opacity-100' : 'opacity-0'}`}
+        className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-500 ${status === 'ready' ? 'opacity-100' : 'opacity-0'}`}
       />
+      <span className="absolute bottom-0 right-0 z-10 bg-background/90 px-2 py-1 text-[9px] font-semibold text-foreground backdrop-blur-sm">
+        M&apos;Mora / Zoe
+      </span>
     </div>
   );
 };
@@ -80,7 +87,7 @@ export default function DhfEssayPage() {
       const { data, error } = await supabase
         .from('dhf_daily_posts')
         .select(
-          'id, post_date, slot_time, category, headline, short_summary, full_story_content, image_url, image_path, image_source, powered_by_badge, referral_cta, astrological_context, created_at',
+          'id, post_date, slot_time, category, headline, short_summary, full_story_content, image_url, image_path, image_source, image_prompt, image_prompt_version, image_prompt_hash, powered_by_badge, referral_cta, astrological_context, created_at',
         )
         .eq('id', postId)
         .maybeSingle();
@@ -221,10 +228,13 @@ export default function DhfEssayPage() {
                 </button>
               </div>
 
-              <EssayImage post={post} />
-
-              <h1 className="mb-3 text-2xl font-semibold leading-tight">{post.headline}</h1>
-              <p className="mb-5 text-base leading-relaxed text-muted-foreground">{post.short_summary}</p>
+              <div className="mb-6 grid grid-cols-1 overflow-hidden rounded-xl border border-border sm:grid-cols-[minmax(0,44%)_minmax(0,56%)]">
+                <EssayImage post={post} />
+                <div className="flex min-w-0 flex-col justify-center p-4 sm:p-6">
+                  <h1 className="mb-3 text-2xl font-semibold leading-tight">{post.headline}</h1>
+                  <p className="text-base leading-relaxed text-muted-foreground">{post.short_summary}</p>
+                </div>
+              </div>
 
               <div className="space-y-4" data-dhf-essay-body>
                 {paragraphs.length ? (

@@ -33,3 +33,10 @@
 - [x] VR "Upload a song": stages, pre-checks (50 MB / type / offline), 3-minute limit, Cancel + Retry, optional album, typing no longer stolen by drag.
 - [x] VR panels: own resting slots, consistent depth order, only essentials open on first entry (:v2 default), Show all / Hide all / Reset layout, position re-clamped on rotate/resize, content scrolls, drag from header only.
 - [ ] Multi-device/foldable/PWA sweep of today's + yesterday's pages — blocked: no signed-in preview session available to the agent (all Music/VR routes require sign-in).
+
+## 2026-09-18 — Zoe DHF image fidelity
+- [x] Ground every new DHF image in the exact category, headline, summary, story action, and astrological context.
+- [x] Require full-colour oil-painting art and reject generic portraits, monochrome output, text, logos, and provider marks.
+- [x] Persist the image brief version and fingerprint for audits without changing DHF scheduling or feed logic.
+- [x] Present the image beside the headline and summary, with the story below and a trusted M'Mora / Zoe corner mark.
+- [ ] Deploy both DHF generation entry points and verify phone, foldable, tablet, and desktop previews.
