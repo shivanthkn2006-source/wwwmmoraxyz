@@ -4800,6 +4800,7 @@ export type Database = {
           favorite_tracks: Json
           genres: string[]
           moods: string[]
+          religion: string | null
           updated_at: string
           user_id: string
         }
@@ -4809,6 +4810,7 @@ export type Database = {
           favorite_tracks?: Json
           genres?: string[]
           moods?: string[]
+          religion?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -4818,6 +4820,7 @@ export type Database = {
           favorite_tracks?: Json
           genres?: string[]
           moods?: string[]
+          religion?: string | null
           updated_at?: string
           user_id?: string
         }

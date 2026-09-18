@@ -1,0 +1,1 @@
+ALTER TABLE public.music_profiles ADD COLUMN IF NOT EXISTS religion text;
