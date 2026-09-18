@@ -46,16 +46,11 @@ export function useDailyPlanetaryMood(): {
     void load(false);
     const timer = window.setInterval(() => {
       const now = stamp();
+      // A new planetary hour or a new day means a fresh calculation.
       if (now !== seen.current) {
         seen.current = now;
         void load(true);
-        return;
       }
-      // The cached reading has run out — recalculate quietly.
-      setMood((current) => {
-        if (current && !current.calculatedAt) return current;
-        return current;
-      });
     }, CHECK_MS);
     return () => { alive.current = false; window.clearInterval(timer); };
   }, [load]);
