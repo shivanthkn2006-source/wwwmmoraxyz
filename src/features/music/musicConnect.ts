@@ -63,6 +63,9 @@ export function filterMusicSuggestions(suggestions: string[], query: string): st
 }
 
 export async function fetchMusicConnectContext(force = false): Promise<MusicConnectContext> {
+  // Never call the function without a live token: it would answer as a signed-out
+  // visitor and the failed request would surface as a runtime error.
+  if (!(await ensureLiveSession())) return mapContext(null);
   if (!force) {
     const { data: auth } = await supabase.auth.getUser();
     if (auth.user) {
