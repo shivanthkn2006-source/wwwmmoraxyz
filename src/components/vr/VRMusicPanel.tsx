@@ -2,21 +2,32 @@
 // VR MUSIC PANEL
 // Additive in-world music search and playback. A song played here uses the same
 // singleton music engine as the Music page, and the play is recorded so it shows
-// up in Music search history and on the Home listening shelf.
+// up in Music search history, on the Home listening shelf and in the VR social
+// feed. Real metadata (album art, artist, album/genre credit) is shown in-world,
+// including for the member's own uploads, whose artwork is re-signed on demand.
 // No existing VR or Music component is modified.
 // ═══════════════════════════════════════════════════════════════════════════════
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Loader2, Music2, Pause, Play, SkipForward } from 'lucide-react';
-import { musicEngine } from '@/services/MusicEngine';
+import { musicEngine, type MusicState } from '@/services/MusicEngine';
 import { searchMusicCatalog, type MusicTrack } from '@/features/music/musicProviders';
 import { logListen } from '@/features/music/musicSocial';
 import { recordMusicSignal } from '@/features/music/musicConnect';
+import TrackArtwork from '@/components/music/TrackArtwork';
+
+type UploadTrack = MusicTrack & { uploadId?: string };
+
+/** Genre-ish line shown under a track: album first, otherwise the source credit. */
+const metaLine = (track: MusicTrack) => track.album?.trim() || track.credit || track.source;
 
 const VRMusicPanel: React.FC = () => {
   const [query, setQuery] = useState('');
   const [tracks, setTracks] = useState<MusicTrack[]>([]);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
+  const [state, setState] = useState<MusicState>(() => musicEngine.getState());
+
+  useEffect(() => musicEngine.subscribe(setState), []);
 
   const search = async () => {
     const text = query.trim();
@@ -39,13 +50,17 @@ const VRMusicPanel: React.FC = () => {
     const started = await musicEngine.playQueue(tracks, index);
     const track = tracks[index];
     if (started && track) {
-      // Recorded exactly like a Music page play, so it lands in history and Home.
+      // Recorded exactly like a Music page play, so it lands in history, on Home
+      // and in friends' in-world social feed.
       void logListen(track).catch(() => undefined);
+      void recordMusicSignal('play', { track, context: { surface: 'vr' } });
       setNotice(`Playing “${track.title}”.`);
     } else {
       setNotice(musicEngine.getState().error ?? 'Tap play once more to allow sound.');
     }
   };
+
+  const current = state.track as UploadTrack | null;
 
   return (
     <div className="w-64 sm:w-72 rounded-2xl bg-black/50 p-3 text-white backdrop-blur-xl">
@@ -68,6 +83,24 @@ const VRMusicPanel: React.FC = () => {
 
       {notice && <p role="status" className="mt-2 text-[11px] text-white/60">{notice}</p>}
 
+      {current && (
+        <div className="mt-2 flex items-center gap-2" aria-label="Now playing in the VR world">
+          <TrackArtwork
+            src={current.artwork}
+            trackId={current.id}
+            uploadId={current.uploadId}
+            lazy={false}
+            className="h-10 w-10 shrink-0 rounded-lg object-cover"
+            fallback={<Music2 className="h-4 w-4 text-white/40" />}
+          />
+          <span className="min-w-0">
+            <span className="block truncate text-xs font-semibold">{current.title}</span>
+            <span className="block truncate text-[10px] text-white/60">{current.artist}</span>
+            <span className="block truncate text-[10px] text-white/40">{metaLine(current)}</span>
+          </span>
+        </div>
+      )}
+
       <ul className="mt-2 max-h-52 space-y-1 overflow-y-auto">
         {tracks.map((track, index) => (
           <li key={track.id}>
@@ -76,10 +109,17 @@ const VRMusicPanel: React.FC = () => {
               onClick={() => void play(index)}
               className="flex w-full min-h-11 items-center gap-2 rounded-xl px-2 py-1.5 text-left hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white/60"
             >
-              <Play className="h-3.5 w-3.5 shrink-0 text-white/70" aria-hidden="true" />
+              <TrackArtwork
+                src={track.artwork}
+                trackId={track.id}
+                uploadId={(track as UploadTrack).uploadId}
+                className="h-8 w-8 shrink-0 rounded-md object-cover"
+                fallback={<Play className="h-3.5 w-3.5 text-white/70" />}
+              />
               <span className="min-w-0">
                 <span className="block truncate text-xs">{track.title}</span>
                 <span className="block truncate text-[10px] text-white/50">{track.artist}</span>
+                <span className="block truncate text-[10px] text-white/35">{metaLine(track)}</span>
               </span>
             </button>
           </li>

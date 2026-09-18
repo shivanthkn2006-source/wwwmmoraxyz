@@ -5,7 +5,7 @@ import { ArrowLeft, Check, Heart, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MUSIC_GENRES } from '@/features/music/musicCategories';
-import { EMPTY_TASTE, MUSIC_MOODS, fetchMyMusicProfile, saveMyMusicProfile, type MusicTasteProfile } from '@/features/music/musicProfile';
+import { EMPTY_TASTE, MUSIC_MOODS, MUSIC_RELIGIONS, fetchMyMusicProfile, saveMyMusicProfile, type MusicTasteProfile } from '@/features/music/musicProfile';
 import { getLibrary } from '@/features/music/musicLibrary';
 import { fetchMyListening } from '@/features/music/musicSocial';
 import type { MusicTrack } from '@/features/music/musicProviders';
@@ -76,6 +76,24 @@ export default function MusicProfilePage() {
               <button key={mood} type="button" aria-pressed={taste.moods.includes(mood)} className={`music-liquid-chip ${taste.moods.includes(mood) ? 'is-active' : ''}`} onClick={() => setTaste((current) => ({ ...current, moods: toggle(current.moods, mood) }))}>{mood}</button>
             ))}
           </div>
+        </div>
+
+        <div>
+          <p className="music-liquid-side-title">Faith (optional)</p>
+          <div className="flex flex-wrap gap-1.5">
+            {MUSIC_RELIGIONS.filter((item) => item).map((religion) => (
+              <button
+                key={religion}
+                type="button"
+                aria-pressed={taste.religion === religion}
+                className={`music-liquid-chip ${taste.religion === religion ? 'is-active' : ''}`}
+                onClick={() => setTaste((current) => ({ ...current, religion: current.religion === religion ? '' : religion }))}
+              >
+                {religion}
+              </button>
+            ))}
+          </div>
+          <p className="mt-1 text-xs text-white/50">Used only to suggest devotional music you would actually listen to.</p>
         </div>
 
         <div className="space-y-2">

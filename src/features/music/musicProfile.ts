@@ -10,14 +10,18 @@ export interface MusicTasteProfile {
   genres: string[];
   moods: string[];
   artists: string[];
+  /** Optional faith, so devotional suggestions can match the member. */
+  religion: string;
   favoriteTracks: MusicTrack[];
 }
 
+export const MUSIC_RELIGIONS = ['', 'Hindu', 'Christian', 'Muslim', 'Buddhist', 'Sikh', 'Jain', 'Jewish', 'Spiritual', 'None'] as const;
+
 export const MUSIC_MOODS = ['Happy', 'Calm', 'Focus', 'Energetic', 'Romantic', 'Sad', 'Devotional', 'Party', 'Sleep', 'Workout'] as const;
 
-export const EMPTY_TASTE: MusicTasteProfile = { genres: [], moods: [], artists: [], favoriteTracks: [] };
+export const EMPTY_TASTE: MusicTasteProfile = { genres: [], moods: [], artists: [], religion: '', favoriteTracks: [] };
 
-type Row = { genres: string[] | null; moods: string[] | null; artists: string[] | null; favorite_tracks: unknown };
+type Row = { genres: string[] | null; moods: string[] | null; artists: string[] | null; religion?: string | null; favorite_tracks: unknown };
 
 function toProfile(row: Row | null): MusicTasteProfile {
   if (!row) return EMPTY_TASTE;
@@ -26,6 +30,7 @@ function toProfile(row: Row | null): MusicTasteProfile {
     genres: row.genres ?? [],
     moods: row.moods ?? [],
     artists: row.artists ?? [],
+    religion: row.religion ?? '',
     favoriteTracks: favorites.filter((track) => track && typeof track.title === 'string'),
   };
 }
@@ -35,7 +40,7 @@ export async function fetchMyMusicProfile(): Promise<MusicTasteProfile> {
   if (!auth.user) return EMPTY_TASTE;
   const { data } = await supabase
     .from('music_profiles')
-    .select('genres,moods,artists,favorite_tracks')
+    .select('genres,moods,artists,religion,favorite_tracks')
     .eq('user_id', auth.user.id)
     .maybeSingle();
   return toProfile((data ?? null) as Row | null);
@@ -49,6 +54,7 @@ export async function saveMyMusicProfile(profile: MusicTasteProfile): Promise<vo
     genres: profile.genres,
     moods: profile.moods,
     artists: profile.artists,
+    religion: profile.religion || null,
     favorite_tracks: profile.favoriteTracks.map((track) => ({
       id: track.id, title: track.title, artist: track.artist, album: track.album ?? null,
       artwork: track.artwork ?? null, url: track.source === 'upload' ? track.id : track.url,
@@ -65,7 +71,7 @@ export async function fetchMusicProfilesFor(userIds: string[]): Promise<Map<stri
   if (!userIds.length) return new Map();
   const { data } = await supabase
     .from('music_profiles')
-    .select('user_id,genres,moods,artists,favorite_tracks')
+    .select('user_id,genres,moods,artists,religion,favorite_tracks')
     .in('user_id', userIds);
   return new Map((data ?? []).map((row) => [(row as { user_id: string }).user_id, toProfile(row as Row)]));
 }

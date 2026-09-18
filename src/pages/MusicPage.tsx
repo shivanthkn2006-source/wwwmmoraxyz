@@ -353,7 +353,7 @@ export default function MusicPage() {
                   <Button className="music-search-submit h-10 w-9" type="submit" variant="ghost" size="icon" disabled={searching} aria-label={searching ? 'Searching' : 'Search'}><Search aria-hidden="true" /></Button>
                 </form>
                 {suggestionsOpen && suggestionList.length > 0 && (
-                  <div className="music-suggest-dropdown absolute left-0 right-0 top-[calc(100%+0.35rem)] z-40 flex flex-col" role="listbox" aria-label="Music suggestions">
+                  <div className="music-suggest-dropdown absolute left-0 right-0 top-[calc(100%+0.1rem)] z-40 flex flex-col" role="listbox" aria-label="Music suggestions">
                     {suggestionList.map((suggestion, index) => (
                       <button
                         key={suggestion}
@@ -364,7 +364,6 @@ export default function MusicPage() {
                         onMouseDown={(event) => event.preventDefault()}
                         onClick={() => pickSuggestion(suggestion)}
                       >
-                        <Search className="h-3.5 w-3.5 shrink-0 text-white/50" aria-hidden="true" />
                         <span className="min-w-0 flex-1 truncate text-left">{suggestion}</span>
                       </button>
                     ))}

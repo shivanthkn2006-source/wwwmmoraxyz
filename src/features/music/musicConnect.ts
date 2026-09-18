@@ -38,12 +38,19 @@ function mapContext(row: Record<string, unknown> | null): MusicConnectContext {
   };
 }
 
+/** Natural search completions, the way a search engine offers them. */
+const TYPED_COMPLETIONS = ['songs', 'music', 'live', 'instrumental', 'remix', 'playlist', 'album', 'devotional', 'lyrics', 'best songs'];
+
 export function filterMusicSuggestions(suggestions: string[], query: string): string[] {
-  const needle = query.trim().toLowerCase();
+  const term = query.trim();
+  const needle = term.toLowerCase();
   if (!needle) return cleanFive(suggestions);
+  // While typing, only real completions of what was typed are shown — never the
+  // typed text glued in front of unrelated mood keywords.
   const matching = suggestions.filter((item) => item.toLowerCase().includes(needle));
-  const expanded = suggestions.map((item) => `${query.trim()} ${item}`.trim());
-  return cleanFive([...matching, ...expanded]);
+  const completions = TYPED_COMPLETIONS.map((word) => `${term} ${word}`);
+  const result = [...new Set([term, ...matching, ...completions])].slice(0, SUGGESTION_COUNT);
+  return result;
 }
 
 export async function fetchMusicConnectContext(force = false): Promise<MusicConnectContext> {
