@@ -134,7 +134,7 @@ Deno.serve(async (req) => {
 
     const caller = createClient(url, anonKey, { global: { headers: { Authorization: authHeader } } });
     const { data: auth, error: authError } = await caller.auth.getUser();
-    if (authError || !auth.user) return json({ error: 'Invalid session' }, 401);
+    if (authError || !auth.user) return json({ signed_out: true, suggestion_keywords: [], taste_vector: {}, planetary_context: {}, expires_at: null });
     const body = await req.json().catch(() => ({}));
     const force = body && typeof body === 'object' && (body as { force?: unknown }).force === true;
     const service = createClient(url, serviceKey);
