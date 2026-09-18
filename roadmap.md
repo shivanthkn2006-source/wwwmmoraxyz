@@ -39,4 +39,5 @@
 - [x] Require full-colour oil-painting art and reject generic portraits, monochrome output, text, logos, and provider marks.
 - [x] Persist the image brief version and fingerprint for audits without changing DHF scheduling or feed logic.
 - [x] Present the image beside the headline and summary, with the story below and a trusted M'Mora / Zoe corner mark.
-- [ ] Deploy both DHF generation entry points and verify phone, foldable, tablet, and desktop previews.
+- [x] Deploy both DHF generation entry points and verify phone, tablet, and desktop previews.
+- [x] Repair older cards' artwork once per session without spending any model tokens.

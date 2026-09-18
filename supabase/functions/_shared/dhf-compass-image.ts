@@ -1,6 +1,6 @@
 /** Pure, deterministic image contract for Zoe's DHF cards. */
 
-export const DHF_IMAGE_PROMPT_VERSION = 'dhf-oil-v1';
+export const DHF_IMAGE_PROMPT_VERSION = 'dhf-oil-v2';
 
 export interface DhfImageBriefInput {
   category: string;
@@ -21,6 +21,23 @@ export interface DhfImageBrief {
 const clean = (value: string, limit: number) =>
   value.replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').replace(/[<>]/g, '').trim().slice(0, limit);
 
+/** First meaningful sentence of the story: the concrete action the art must show. */
+const leadAction = (story: string, limit: number) => {
+  const sentences = clean(story, 900).split(/(?<=[.!?])\s+/).filter((s) => s.length > 24);
+  return clean(sentences.slice(0, 2).join(' '), limit);
+};
+
+/** One mood word from the transit line, never the raw chart data. */
+const mood = (astrology: string) => {
+  const text = astrology.toLowerCase();
+  if (/saturn|pluto/.test(text)) return 'steady, grounded evening light';
+  if (/jupiter|venus/.test(text)) return 'warm, generous golden light';
+  if (/mars/.test(text)) return 'bright, decisive light';
+  if (/mercury/.test(text)) return 'clear, alert daylight';
+  if (/moon/.test(text)) return 'soft, reflective light';
+  return 'natural, balanced daylight';
+};
+
 const fingerprint = (value: string): string => {
   let hash = 2166136261;
   for (let index = 0; index < value.length; index += 1) {
@@ -31,36 +48,35 @@ const fingerprint = (value: string): string => {
 };
 
 /**
- * Builds one auditable visual brief from the exact copy shown on the card.
- * The image remains artwork-only; M'Mora / Zoe is rendered by the trusted UI
- * overlay so a provider can never misspell the brand or substitute its mark.
+ * Builds one short, auditable visual brief from the exact copy shown on the card.
+ * Short and concrete beats long and diluted: image models lose the subject when
+ * the whole essay is pasted in, which is what caused generic mismatched art.
+ * The image stays artwork-only; M'Mora / Zoe is drawn by the trusted UI overlay
+ * so a provider can never misspell the brand or leave its own mark visible.
  */
 export function buildDhfImageBrief(input: DhfImageBriefInput): DhfImageBrief {
-  const category = clean(input.category, 80);
-  const headline = clean(input.headline, 160);
-  const summary = clean(input.shortSummary, 320);
-  const story = clean(input.fullStory, 700);
-  const astrology = clean(input.astrologicalContext, 320);
+  const category = clean(input.category, 60);
+  const headline = clean(input.headline, 120);
+  const summary = clean(input.shortSummary, 220);
+  const action = leadAction(input.fullStory, 240);
+  // Positive-only wording: diffusion models render whatever a negative clause
+  // names, so "no frame" produced framed canvases and "no text" invited text.
   const prompt = [
-    'Create one precise, full-colour fine-art oil painting for a personal daily guidance card.',
-    `Card category: ${category}.`,
-    `Exact headline meaning to depict: ${headline}.`,
-    `Exact card message: ${summary}.`,
-    `Practical action and situation from the story: ${story}.`,
-    `Subtle celestial atmosphere only where relevant: ${astrology}.`,
-    'Show a single coherent real-world scene whose subject, objects, action, setting and emotion directly express that exact message.',
-    'Use rich natural colour, luminous layered oil paint, visible brushwork, dimensional light, human warmth and editorial clarity.',
-    'Landscape composition with the focal subject safely inside the central eighty percent; no cropped face, no floating head, no surreal body distortion.',
-    'Do not default to a generic portrait. Include the concrete activity, decision, relationship, place or object described by the card.',
-    'Artwork only: no words, letters, captions, signatures, logos, watermarks, monochrome treatment, grayscale, provider marks or Pollinations branding.',
-  ].join(' ');
+    'Fine-art oil painting in rich natural colour, luminous layered brushwork, dimensional light, human warmth.',
+    `Depict this exact moment: ${headline}.`,
+    `Meaning to show: ${summary}`,
+    action ? `Concrete scene: ${action}` : '',
+    `Theme: ${category}. Lighting mood: ${mood(input.astrologicalContext)}.`,
+    'One single coherent real-world scene, full-bleed wide cinematic composition filling the whole picture, subject complete and centred, clean untouched painted surface.',
+  ].filter(Boolean).join(' ');
   const promptHash = fingerprint(`${DHF_IMAGE_PROMPT_VERSION}:${prompt}`);
   const params = new URLSearchParams({
     width: '1200',
     height: '800',
     nologo: 'true',
-    enhance: 'true',
+    private: 'true',
     safe: 'true',
+    referrer: 'https://mmora.xyz',
     seed: String(Math.abs(input.seed) % 1_000_000),
     model: 'flux',
   });

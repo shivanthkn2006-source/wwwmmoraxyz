@@ -15,6 +15,8 @@
  * ═══════════════════════════════════════════════════════════════════════════
  */
 import { COMPASS_SLOTS, COMPASS_WORKER_VERSION, countForDate, db, ensureDayForUser } from '../_shared/dhf-compass-runner.ts';
+import { buildDhfImageBrief, DHF_IMAGE_PROMPT_VERSION } from '../_shared/dhf-compass-image.ts';
+import { seedFrom } from '../_shared/dhf-compass.ts';
 import { localDateIn } from '../_shared/astro-engine.ts';
 
 const corsHeaders = {
@@ -82,7 +84,44 @@ Deno.serve(async (req) => {
     const tz = sanitizeZone(body.timezone);
     const date = sanitizeDate(body.date, tz);
     const requested = String(body.action ?? 'ensure');
-    const action = ['status', 'backfill', 'regenerate'].includes(requested) ? requested : 'ensure';
+    const action = ['status', 'backfill', 'regenerate', 'reimage'].includes(requested) ? requested : 'ensure';
+
+    // ── Token-free artwork repair ───────────────────────────────────────────
+    // Rebuilds only the image contract for the caller's own existing cards when
+    // they carry an older prompt version. No model call, no text is rewritten.
+    if (action === 'reimage') {
+      const stale = await db(
+        `dhf_daily_posts?user_id=eq.${user.id}` +
+        `&or=(image_prompt_version.is.null,image_prompt_version.neq.${DHF_IMAGE_PROMPT_VERSION})` +
+        '&select=id,category,headline,short_summary,full_story_content,astrological_context,slot_time,post_date' +
+        '&order=post_date.desc,slot_time.desc&limit=60',
+      );
+      const rows = Array.isArray(stale.data) ? stale.data : [];
+      let repaired = 0;
+      for (const row of rows) {
+        const image = buildDhfImageBrief({
+          category: String(row.category ?? ''),
+          headline: String(row.headline ?? ''),
+          shortSummary: String(row.short_summary ?? ''),
+          fullStory: String(row.full_story_content ?? ''),
+          astrologicalContext: String(row.astrological_context ?? ''),
+          seed: seedFrom(`${user.id}:${row.post_date}:${row.slot_time}`),
+        });
+        const patch = await db(`dhf_daily_posts?id=eq.${row.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            image_url: image.url,
+            image_path: null,
+            image_source: 'remote',
+            image_prompt: image.prompt,
+            image_prompt_version: image.promptVersion,
+            image_prompt_hash: image.promptHash,
+          }),
+        });
+        if (patch.ok) repaired += 1;
+      }
+      return json({ ok: true, action, stale: rows.length, repaired, version: DHF_IMAGE_PROMPT_VERSION });
+    }
 
     // ── Admin surface ───────────────────────────────────────────────────────
     if (action === 'backfill' || action === 'regenerate') {

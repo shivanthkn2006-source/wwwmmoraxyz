@@ -14,7 +14,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { deviceTimeZone, localDateIn } from '@/lib/growthSlot';
-import { COMPASS_SLOT_COUNT, duePosts, type DhfDailyPost } from '@/lib/dhfCompass';
+import { COMPASS_IMAGE_VERSION, COMPASS_SLOT_COUNT, duePosts, type DhfDailyPost } from '@/lib/dhfCompass';
 import { resolveCompassImages } from '@/lib/dhfCompassImages';
 import { hasLiveSession } from '@/lib/edgeSession';
 
@@ -25,6 +25,8 @@ const SELECT =
 
 /** Session-scoped guard so remounts never re-trigger generation. */
 const attempted = new Set<string>();
+/** Session-scoped guard for the token-free artwork repair. */
+const reimaged = new Set<string>();
 
 export interface DhfDailyFeedState {
   posts: DhfDailyPost[];
@@ -76,6 +78,19 @@ export function useDhfDailyFeed() {
 
     try {
       let rows = await read(user.id, yesterday, today);
+
+      // Cards written under an older artwork contract are repaired once per
+      // session. This never calls a model and never rewrites any card text.
+      const stale = rows.some((row) => row.image_prompt_version !== COMPASS_IMAGE_VERSION);
+      if (stale && !reimaged.has(user.id) && (await hasLiveSession())) {
+        reimaged.add(user.id);
+        const { error: repairError } = await supabase.functions.invoke('generate-dhf-daily-feed', {
+          body: { action: 'reimage' },
+        });
+        if (repairError) reimaged.delete(user.id);
+        else rows = await read(user.id, yesterday, today);
+      }
+
       const todayCount = rows.filter((row) => row.post_date === today).length;
       const shouldGenerate = todayCount < COMPASS_SLOT_COUNT && (options.force || !attempted.has(guardKey));
 
