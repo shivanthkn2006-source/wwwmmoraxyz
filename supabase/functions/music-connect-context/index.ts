@@ -68,15 +68,15 @@ const NAKSHATRA_MOODS: Record<string, string> = {
 
 /** Faith-aware devotional keywords, used only when the member declared one. */
 const RELIGION_KEYWORDS: Record<string, string[]> = {
-  hindu: ['bhajan', 'sanskrit chants'],
-  christian: ['worship songs', 'gospel'],
-  muslim: ['naat', 'sufi qawwali'],
-  islam: ['naat', 'sufi qawwali'],
-  buddhist: ['buddhist chants', 'zen meditation'],
-  sikh: ['shabad kirtan', 'gurbani'],
-  jain: ['jain stavan', 'peaceful chants'],
-  jewish: ['niggun', 'jewish prayer songs'],
-  spiritual: ['sacred chants', 'meditation music'],
+  hindu: ['bhajan', 'sanskrit chants', 'carnatic devotional', 'aarti', 'kirtan', 'vedic mantra'],
+  christian: ['worship songs', 'gospel', 'hymns', 'contemporary christian', 'choir praise', 'gregorian chant'],
+  muslim: ['naat', 'sufi qawwali', 'nasheed', 'islamic dhikr', 'quran recitation'],
+  islam: ['naat', 'sufi qawwali', 'nasheed', 'islamic dhikr', 'quran recitation'],
+  buddhist: ['buddhist chants', 'zen meditation', 'tibetan singing bowls', 'pali suttas'],
+  sikh: ['shabad kirtan', 'gurbani', 'japji sahib', 'sikh simran'],
+  jain: ['jain stavan', 'peaceful chants', 'navkar mantra', 'jain bhakti'],
+  jewish: ['niggun', 'jewish prayer songs', 'cantorial chazzanut', 'shabbat songs'],
+  spiritual: ['sacred chants', 'meditation music', 'healing frequencies', 'devotional instrumental'],
   none: [],
 };
 
@@ -205,7 +205,7 @@ Deno.serve(async (req) => {
     const hour = Number(new Intl.DateTimeFormat('en-GB', { hour: '2-digit', hour12: false, timeZone }).format(now));
     const timeKeyword = hour < 6 ? 'sleep ambient' : hour < 11 ? 'morning uplifting' : hour < 17 ? 'focus music' : hour < 22 ? 'evening chill' : 'calm night';
     planetary.timeOfDay = timeKeyword;
-    const faithKeywords = RELIGION_KEYWORDS[religion] ?? (religion ? [`${religion} devotional`] : []);
+    const faithKeywords = RELIGION_KEYWORDS[religion] ?? (religion ? [`${religion} devotional`, `${religion} prayer songs`] : []);
     planetary.religion = religion || null;
     // Faith words are published so the app can search and recommend devotional
     // music for the member's own faith, not only planetary moods.
