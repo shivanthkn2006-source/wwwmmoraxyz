@@ -223,6 +223,13 @@ Deno.serve(async (req) => {
       };
 
       await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
+
+      // Artwork repair runs on every dispatch, whatever happened above: it is a
+      // pure metadata rebuild, so it never costs a generation and never blocks.
+      try {
+        const swept = await sweepStaleArtwork();
+        summary.imagesRepaired = swept.repaired;
+      } catch { /* artwork repair is best-effort */ }
     } finally {
       await releaseLease(summary);
     }
