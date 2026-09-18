@@ -29,6 +29,9 @@ export const COMPASS_SLOTS: CompassSlotMeta[] = [
 
 export const COMPASS_SLOT_COUNT = COMPASS_SLOTS.length;
 
+/** Current artwork contract. Cards written under an older one are repaired once. */
+export const COMPASS_IMAGE_VERSION = 'dhf-oil-v2';
+
 /** Normalizes `05:00`, `05:00:00` and `05:00:00+00` to `05:00:00`. */
 export function normalizeSlotTime(value: string): string {
   const match = /^(\d{1,2}):(\d{2})/.exec(value ?? '');

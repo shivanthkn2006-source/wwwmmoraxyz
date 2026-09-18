@@ -14,7 +14,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { deviceTimeZone, localDateIn } from '@/lib/growthSlot';
-import { COMPASS_SLOT_COUNT, duePosts, type DhfDailyPost } from '@/lib/dhfCompass';
+import { COMPASS_IMAGE_VERSION, COMPASS_SLOT_COUNT, duePosts, type DhfDailyPost } from '@/lib/dhfCompass';
 import { resolveCompassImages } from '@/lib/dhfCompassImages';
 import { hasLiveSession } from '@/lib/edgeSession';
 
@@ -25,6 +25,8 @@ const SELECT =
 
 /** Session-scoped guard so remounts never re-trigger generation. */
 const attempted = new Set<string>();
+/** Session-scoped guard for the token-free artwork repair. */
+const reimaged = new Set<string>();
 
 export interface DhfDailyFeedState {
   posts: DhfDailyPost[];
