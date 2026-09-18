@@ -60,6 +60,8 @@ export default function MusicProfilePage() {
           <span className="w-9" aria-hidden="true" />
         </header>
 
+        <DailyPlanetaryMoodPanel />
+
         <div>
           <p className="music-liquid-side-title">Genres</p>
           <div className="flex flex-wrap gap-1.5">
