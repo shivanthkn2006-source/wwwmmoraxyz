@@ -37,6 +37,8 @@ const VRMusicPanel = lazy(() => import('@/components/vr/VRMusicPanel'));
 const VRZoeAskPanel = lazy(() => import('@/components/vr/VRZoeAskPanel'));
 const VRSocialFeedPanel = lazy(() => import('@/components/vr/VRSocialFeedPanel'));
 const VRMusicUploadPanel = lazy(() => import('@/components/vr/VRMusicUploadPanel'));
+const VRPlanetaryMoodPanel = lazy(() => import('@/components/vr/VRPlanetaryMoodPanel'));
+const VRDhfCardPanel = lazy(() => import('@/components/vr/VRDhfCardPanel'));
 
 // VR Stasis state: true = show placeholder, false = load 3D world
 // This prevents GPU initialization until user explicitly enters VR
@@ -448,7 +450,7 @@ const ZoeOmegaPage: React.FC = () => {
   // and the layout is remembered across refreshes / re-entry. Only the essentials
   // open on first entry so the world stays readable; everything else is one tap
   // away in the hub. The :v2 key resets the older "everything open" default.
-  const VR_PANEL_VISIBILITY_KEY = 'vr-panel-visibility:v2';
+  const VR_PANEL_VISIBILITY_KEY = 'vr-panel-visibility:v3';
   const defaultVrPanels = {
     identity: true,
     hud: false,
@@ -460,6 +462,8 @@ const ZoeOmegaPage: React.FC = () => {
     zoeAsk: false,
     social: false,
     musicUpload: false,
+    planetary: false,
+    dhfCards: false,
   };
   const [vrPanels, setVrPanels] = useState(() => {
     if (typeof window === 'undefined') return defaultVrPanels;
@@ -512,6 +516,8 @@ const ZoeOmegaPage: React.FC = () => {
     { id: 'zoeAsk', label: 'Ask Zoe', visible: vrPanels.zoeAsk, onToggle: () => toggleVrPanel('zoeAsk') },
     { id: 'social', label: 'Friends’ music', visible: vrPanels.social, onToggle: () => toggleVrPanel('social') },
     { id: 'musicUpload', label: 'Upload a song', visible: vrPanels.musicUpload, onToggle: () => toggleVrPanel('musicUpload') },
+    { id: 'planetary', label: 'Planetary mood', visible: vrPanels.planetary, onToggle: () => toggleVrPanel('planetary') },
+    { id: 'dhfCards', label: 'Zoe’s cards', visible: vrPanels.dhfCards, onToggle: () => toggleVrPanel('dhfCards') },
   ];
 
   // Strict VR audio gate: only unlocked when immersive VR is explicitly entered
@@ -1499,6 +1505,31 @@ const ZoeOmegaPage: React.FC = () => {
             defaultOpen={false}
           >
             <Suspense fallback={null}><VRMusicUploadPanel /></Suspense>
+          </VRDraggablePanel>
+        )}
+
+        {isVRMode && vrPanels.planetary && (
+          <VRDraggablePanel
+            key={`omega-planetary-${vrLayoutToken}`}
+            id="omega-planetary"
+            title="Planetary mood"
+            icon={<Sparkles className="w-3.5 h-3.5 text-amber-300" />}
+            positionClassName="fixed top-32 sm:top-[23.5rem] left-2 sm:left-4 z-[9993]"
+            defaultOpen={false}
+          >
+            <Suspense fallback={null}><VRPlanetaryMoodPanel /></Suspense>
+          </VRDraggablePanel>
+        )}
+        {isVRMode && vrPanels.dhfCards && (
+          <VRDraggablePanel
+            key={`omega-dhf-cards-${vrLayoutToken}`}
+            id="omega-dhf-cards"
+            title="Zoe's cards"
+            icon={<Sparkles className="w-3.5 h-3.5 text-amber-200" />}
+            positionClassName="fixed top-32 sm:top-[23.5rem] right-2 sm:right-4 z-[9993]"
+            defaultOpen={false}
+          >
+            <Suspense fallback={null}><VRDhfCardPanel /></Suspense>
           </VRDraggablePanel>
         )}
 

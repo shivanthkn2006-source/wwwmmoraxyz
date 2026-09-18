@@ -112,7 +112,7 @@ export async function fetchMusicRecommendations(): Promise<MusicRecommendationSe
     catch { return { keyword, tracks: [] as MusicTrack[] }; }
   };
 
-  const faithWords = faithKeywordsFor(profile.religion).slice(0, 2);
+  const faithWords = faithKeywordsFor(profile.religion).slice(0, 4);
   const [fromFriendsRaw, myUploads, connectFound, seedFound, faithFound] = await Promise.all([
     myFriendIds(auth.user.id).then((friends) => friendPlays(friends, played)).catch(() => [] as MusicTrack[]),
     listMyUploads().catch(() => [] as MusicTrack[]),

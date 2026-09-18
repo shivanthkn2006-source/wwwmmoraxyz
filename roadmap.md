@@ -41,3 +41,15 @@
 - [x] Present the image beside the headline and summary, with the story below and a trusted M'Mora / Zoe corner mark.
 - [x] Deploy both DHF generation entry points and verify phone, tablet, and desktop previews.
 - [x] Repair older cards' artwork once per session without spending any model tokens.
+
+## 2026-09-18 — Faith, planetary and in-world wiring
+- [x] Faith / religion section on the member's own profile page (saves to the same taste row Music, Zoe and recommendations read).
+- [x] Today's planetary mood shown on the profile page, recalculated hourly from the real Swiss Ephemeris reading.
+- [x] Devotional word lists widened (4-6 real genres per faith, client and server) and the devotional recommendation row now uses four keywords.
+- [x] In-world "Planetary mood" panel: ruling planet, planetary hour, Moon, life period, faith words.
+- [x] In-world "Zoe's cards" panel: each card opens full-screen with its oil painting and full text.
+- [x] Spoken music commands inside the VR world resolve through the same intent resolver and play a real track, recorded to history.
+- [x] Verified under real row-level security that a shared playlist is visible to the friend and creates their alert.
+- [ ] Blocked: signed-in preview walkthrough (no preview session can be minted for this project right now — sign in once in the preview).
+- [ ] Blocked: real microphone walkthrough on a physical phone (must be done on the device).
+- [ ] Publish needed for the new artwork and playlist sharing to be live outside the preview.
