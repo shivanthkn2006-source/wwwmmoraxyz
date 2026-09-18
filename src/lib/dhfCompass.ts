@@ -92,6 +92,10 @@ export interface DhfDailyPost {
   /** Path inside our own `dhf-compass` bucket when a durable copy exists. */
   image_path?: string | null;
   image_source?: string | null;
+  /** Auditable generation contract for new cards; absent on historical rows. */
+  image_prompt?: string | null;
+  image_prompt_version?: string | null;
+  image_prompt_hash?: string | null;
   powered_by_badge: string;
   referral_cta: string;
   astrological_context?: string | null;

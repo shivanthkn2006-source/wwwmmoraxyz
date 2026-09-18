@@ -18,11 +18,11 @@
  * ═══════════════════════════════════════════════════════════════════════════
  */
 import {
-  COMPASS_SLOTS, astroContextFor, compassImageUrl, generateCompassPost,
+  COMPASS_SLOTS, astroContextFor, buildDhfImageBrief, generateCompassPost,
   lifePhaseFor, referralCodeFor, referralCta, seedFrom, vaultContent,
 } from './dhf-compass.ts';
 
-export const COMPASS_WORKER_VERSION = '2026-08-30.3';
+export const COMPASS_WORKER_VERSION = '2026-09-18.1';
 export const COMPASS_BUCKET = 'dhf-compass';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -265,7 +265,14 @@ export async function ensureDayForUser(options: RunOptions): Promise<RunResult> 
         if ('rateLimited' in result && result.rateLimited) rateLimited++;
         if (result.content.source === 'vault') vaultUsed++;
 
-        const remoteUrl = compassImageUrl(result.content.headline, i, seed);
+        const image = buildDhfImageBrief({
+          category: result.content.category,
+          headline: result.content.headline,
+          shortSummary: result.content.shortSummary,
+          fullStory: result.content.fullStory,
+          astrologicalContext: astro.summary,
+          seed,
+        });
 
         rows.push({
           user_id: userId,
@@ -275,9 +282,12 @@ export async function ensureDayForUser(options: RunOptions): Promise<RunResult> 
           headline: result.content.headline,
           short_summary: result.content.shortSummary,
           full_story_content: result.content.fullStory,
-          image_url: remoteUrl,
+          image_url: image.url,
           image_path: null,
           image_source: 'remote',
+          image_prompt: image.prompt,
+          image_prompt_version: image.promptVersion,
+          image_prompt_hash: image.promptHash,
           referral_cta: cta,
           astrological_context: astro.summary.slice(0, 400),
           source: result.content.source,
