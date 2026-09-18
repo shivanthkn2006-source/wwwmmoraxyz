@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { ensureLiveSession } from '@/lib/sessionGuard';
 import { getLibrary, playlistTracks } from '@/features/music/musicLibrary';
 import { fetchMyListening } from '@/features/music/musicSocial';
 import { searchMusicCatalog, type MusicTrack } from '@/features/music/musicProviders';
