@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { musicEngine } from '@/services/MusicEngine';
 import { resolveMusicQueue } from '@/features/music/musicProviders';
 import { fetchSharedPlaylist } from '@/features/music/musicShares';
+import { useDailyPlanetaryMood } from '@/hooks/useDailyPlanetaryMood';
 
 interface Alert {
   id: string;
@@ -120,6 +121,11 @@ const VRSocialFeedPanel: React.FC = () => {
           {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
         </button>
       </div>
+      {moodLine && (
+        <p className="mb-2 text-[11px] text-white/60">
+          <span className="text-white/40">My mood now: </span>{moodLine}
+        </p>
+      )}
       {notice && <p role="status" className="mb-2 text-[11px] text-white/60">{notice}</p>}
       <ul className="max-h-52 space-y-1 overflow-y-auto">
         {alerts.map((alert) => (
