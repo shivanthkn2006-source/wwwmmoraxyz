@@ -3,6 +3,7 @@ import { Helmet } from 'react-helmet-async';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Check, Heart, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import DailyPlanetaryMoodPanel from '@/components/music/DailyPlanetaryMood';
 import { Input } from '@/components/ui/input';
 import { MUSIC_GENRES } from '@/features/music/musicCategories';
 import { EMPTY_TASTE, MUSIC_MOODS, MUSIC_RELIGIONS, fetchMyMusicProfile, saveMyMusicProfile, type MusicTasteProfile } from '@/features/music/musicProfile';
