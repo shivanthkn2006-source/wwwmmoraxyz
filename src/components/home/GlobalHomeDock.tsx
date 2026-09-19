@@ -18,6 +18,7 @@ import { useAuth } from '@/lib/auth';
 import { useGrowthUnread } from '@/hooks/useGrowthUnread';
 import { useNotificationFeatureBadges } from '@/hooks/useNotificationFeatureBadges';
 import { buildExtraDockItems, DOCK_RESERVED_ROUTES } from '@/components/home/dockExtraActions';
+import ZoeCallsIcon from '@/components/icons/ZoeCallsIcon';
 
 /** Routes that own their dock, or must stay chrome-free. */
 const EXCLUDED_PREFIXES = [
@@ -81,6 +82,13 @@ export const GlobalHomeDock: React.FC = () => {
             badge: counts.messages || undefined,
             active: pathname.startsWith('/chat'),
             onSelect: () => navigate('/chat'),
+          },
+          {
+            id: 'global-calls',
+            label: 'Audio & video calls',
+            icon: <ZoeCallsIcon className="h-[24px] w-[24px]" />,
+            active: pathname.startsWith('/calls'),
+            onSelect: () => navigate('/calls'),
           },
           {
             id: 'global-notifications',

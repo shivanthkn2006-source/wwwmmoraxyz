@@ -14,7 +14,6 @@ import {
   Mic,
   Star,
   LayoutDashboard,
-  PhoneCall,
   Share2,
   Aperture,
   BarChart3,
@@ -43,6 +42,7 @@ import {
 } from 'lucide-react';
 import type { GlassDockItem } from '@/components/home/HomeGlassDock';
 import { NAVIGABLE_ROUTES } from '@/config/routeRegistry';
+import ZoeCallsIcon from '@/components/icons/ZoeCallsIcon';
 
 const ICON_CLASS = 'h-[22px] w-[22px]';
 
@@ -77,7 +77,7 @@ interface ExtraDef {
 /** Ordered by usefulness — the dock trims from the end when space runs out. */
 export const DOCK_EXTRA_DEFS: ExtraDef[] = [
   { id: 'dock-music', label: 'Music', route: '/music', Icon: Music2 },
-  { id: 'dock-calls', label: 'Calls', route: '/calls', Icon: PhoneCall },
+  { id: 'dock-calls', label: 'Audio & video calls', route: '/calls', Icon: ZoeCallsIcon },
   { id: 'dock-compass', label: 'DHF Neural Feed', route: '/compass', Icon: Compass },
   { id: 'dock-help', label: 'Help guides', route: '/help', Icon: LifeBuoy },
   { id: 'dock-site-map', label: 'Site map', route: '/map', Icon: MapIcon },
@@ -116,6 +116,7 @@ export const DOCK_EXTRA_DEFS: ExtraDef[] = [
  */
 export const DOCK_RESERVED_ROUTES = [
   '/music',
+  '/calls',
   '/camera',
   '/chat',
   '/growth-insights',
@@ -175,7 +176,7 @@ export function buildExtraDockItems(
 function iconForRoute(route: string): ExtraDef['Icon'] {
   if (route.includes('music')) return Music2;
   if (route.includes('camera') || route.includes('vision')) return Aperture;
-  if (route.includes('chat') || route.includes('huddle')) return PhoneCall;
+  if (route.includes('call') || route.includes('chat') || route.includes('huddle')) return ZoeCallsIcon;
   if (route.includes('voice') || route.includes('audio')) return Mic;
   if (route.includes('notification')) return Info;
   if (route.includes('profile')) return Home;

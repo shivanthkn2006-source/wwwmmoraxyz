@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
-import { Phone } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
+import ZoeCallsIcon from '@/components/icons/ZoeCallsIcon';
 import { CallControlPanel } from '@/components/zoe-infinity/CallControlPanel';
 import { QuantumCallModal } from '@/components/quantum/QuantumCallModal';
 import { useZoeQuantumCall, type CallParticipant } from '@/hooks/useZoeQuantumCall';
@@ -29,7 +29,7 @@ const CallsPage = () => {
     <main className="relative min-h-[100dvh] overflow-hidden bg-transparent text-white">
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
         <div className="flex flex-col items-center gap-3 text-white/70">
-          <Phone className="h-8 w-8" />
+          <ZoeCallsIcon className="h-9 w-9" />
           <h1 className="text-xl font-medium text-white">Calls</h1>
         </div>
       </div>
