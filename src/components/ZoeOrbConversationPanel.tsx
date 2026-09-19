@@ -3142,7 +3142,7 @@ Want me to dive deeper into any aspect?`;
           {user?.id && (
             <QuantumCallModal
               currentUserId={user.id}
-              isOpen={showVideoCallModal || quantumCall.hasIncomingCall}
+              isOpen={showVideoCallModal}
               onClose={() => {
                 setShowVideoCallModal(false);
                 setVideoCallTarget(null);
