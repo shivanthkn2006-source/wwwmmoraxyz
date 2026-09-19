@@ -1144,10 +1144,13 @@ const startGodEye = useCallback(() => {
     console.log('[QuantumCall] Creating peer connection...');
     
     const pc = new RTCPeerConnection({
-      iceServers: ICE_SERVERS,
+      iceServers: iceServersRef.current,
       bundlePolicy: 'max-bundle',
       rtcpMuxPolicy: 'require',
     });
+
+    if (isOffererRef.current) attachDataChannel(pc.createDataChannel('zoe-private', { ordered: true }));
+    pc.ondatachannel = (event) => attachDataChannel(event.channel);
 
     pc.onicecandidate = async (event) => {
       if (event.candidate) {
@@ -1163,7 +1166,7 @@ const startGodEye = useCallback(() => {
       
       switch (pc.connectionState) {
         case 'connecting':
-          handshakeStartTimeRef.current = Date.now();
+          if (!hasConnectedOnceRef.current) handshakeStartTimeRef.current = Date.now();
           break;
         case 'connected':
           if (handshakeStartTimeRef.current) {
@@ -1176,7 +1179,16 @@ const startGodEye = useCallback(() => {
             }
           }
           
-          setState(prev => ({ ...prev, callState: 'connected', connectionQuality: 'good' }));
+          hasConnectedOnceRef.current = true;
+          reconnectAttemptsRef.current = 0;
+          if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+          reconnectTimerRef.current = null;
+          setState(prev => ({
+            ...prev,
+            callState: 'connected',
+            connectionQuality: 'good',
+            networkDiagnostics: { ...prev.networkDiagnostics, lastRecovery: prev.callState === 'reconnecting' ? 'recovered' : 'idle' },
+          }));
           callStartTimeRef.current = new Date();
           monitorAudioLevels();
           
@@ -1206,10 +1218,12 @@ const startGodEye = useCallback(() => {
         case 'disconnected':
           triggerSecurityAlert('connection_interrupted', 'Network disconnection detected');
           setState(prev => ({ ...prev, callState: 'reconnecting' }));
+          attemptIceRestart(pc, remoteUserId);
           break;
         case 'failed':
           triggerSecurityAlert('connection_failed', 'WebRTC connection failed');
           setState(prev => ({ ...prev, callState: 'reconnecting' }));
+          attemptIceRestart(pc, remoteUserId);
           // Log connection failure to DHF
           logZoeTTSContext('Call connection failed due to network issues', 'call_end');
           break;
@@ -1276,6 +1290,10 @@ const startGodEye = useCallback(() => {
     pc.oniceconnectionstatechange = () => {
       const iceState = pc.iceConnectionState;
       console.log('[QuantumCall] ICE state:', iceState);
+      setState(prev => ({
+        ...prev,
+        networkDiagnostics: { ...prev.networkDiagnostics, iceState },
+      }));
       
       if (iceState === 'failed') {
         triggerSecurityAlert('ice_failure', 'ICE negotiation failed - potential network interference');
@@ -1285,7 +1303,7 @@ const startGodEye = useCallback(() => {
 
     peerConnectionRef.current = pc;
     return pc;
-  }, [sendSignal, monitorAudioLevels, state.video?.isEnabled, state.video?.localQuality, state.currentCall?.receiver.isAI, startGodEye, logZoeTTSContext, triggerSecurityAlert, monitorEncryptionHandshake, severConnection]);
+  }, [sendSignal, monitorAudioLevels, state.video?.isEnabled, state.video?.localQuality, state.currentCall?.receiver.isAI, startGodEye, logZoeTTSContext, triggerSecurityAlert, monitorEncryptionHandshake, severConnection, attemptIceRestart, attachDataChannel]);
 
   // ═══════════════════════════════════════════════════════════════════════════════
   // CALL INITIATION
@@ -1314,6 +1332,8 @@ const startGodEye = useCallback(() => {
     }
 
     console.log(`[QuantumCall] Initiating ${withVideo ? 'video' : 'voice'} call to`, receiver.userId.slice(0, 8));
+    isOffererRef.current = true;
+    await refreshIceServers();
     
     // Play outgoing ringtone
     playCallRingtone(false);
@@ -1373,7 +1393,7 @@ const startGodEye = useCallback(() => {
       }
     }, CALL_TIMEOUT_MS);
 
-  }, [currentUserId, setupLocalMedia, createPeerConnection, sendSignal, state.callState, playCallRingtone, stopCallRingtone]);
+  }, [currentUserId, setupLocalMedia, createPeerConnection, sendSignal, state.callState, playCallRingtone, stopCallRingtone, refreshIceServers]);
 
   // ═══════════════════════════════════════════════════════════════════════════════
   // CALL ANSWERING
@@ -1383,6 +1403,7 @@ const startGodEye = useCallback(() => {
     if (!state.incomingCall || !currentUserId) return;
 
     console.log('[QuantumCall] Accepting call from', state.incomingCall.userId.slice(0, 8));
+    isOffererRef.current = false;
     
     // Stop incoming ringtone and play connect sound
     stopCallRingtone();
