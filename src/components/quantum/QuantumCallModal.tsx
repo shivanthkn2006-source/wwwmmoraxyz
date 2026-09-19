@@ -20,6 +20,7 @@ import {
 } from '@/hooks/useZoeQuantumCall';
 import { useToast } from '@/hooks/use-toast';
 import type { CallNetworkDiagnostics } from '@/features/calls/callTransport';
+import type { CallWordsEntry } from '@/features/calls/wordsOnlyMode';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -43,6 +44,8 @@ export interface QuantumCallHookState {
   error: string | null;
   networkDiagnostics: CallNetworkDiagnostics;
   dataChannelState: RTCDataChannelState | 'unavailable';
+  wordsOnlyMode: boolean;
+  wordsTranscript: CallWordsEntry[];
   // Actions
   initiateCall: (receiver: CallParticipant, withVideo?: boolean) => Promise<void>;
   acceptCall: (withVideo?: boolean) => Promise<void>;
@@ -50,6 +53,8 @@ export interface QuantumCallHookState {
   toggleMute: () => void;
   toggleVideo: () => Promise<void>;
   setLowDataMode: (enabled: boolean) => Promise<void>;
+  setWordsOnlyMode: (enabled: boolean) => Promise<void>;
+  sendCallWords: (text: string) => boolean;
   setLocalVideoRef: (el: HTMLVideoElement | null) => void;
   setRemoteVideoRef: (el: HTMLVideoElement | null) => void;
   startGodEye: () => void;
@@ -233,6 +238,10 @@ export const QuantumCallModal: React.FC<QuantumCallModalProps> = ({
     error,
     networkDiagnostics,
     dataChannelState,
+    wordsOnlyMode,
+    wordsTranscript,
+    setWordsOnlyMode,
+    sendCallWords,
   } = quantumCallState;
 
   // Auto-start call if configured
@@ -355,8 +364,12 @@ export const QuantumCallModal: React.FC<QuantumCallModalProps> = ({
                 codec={video.codec}
                 networkDiagnostics={networkDiagnostics}
                 dataChannelState={dataChannelState}
+                wordsOnlyMode={wordsOnlyMode}
+                wordsTranscript={wordsTranscript}
                 onToggleVideo={toggleVideo}
                 onSetLowDataMode={setLowDataMode}
+                onSetWordsOnlyMode={setWordsOnlyMode}
+                onSendCallWords={sendCallWords}
                 onSetLocalVideoRef={setLocalVideoRef}
                 onSetRemoteVideoRef={setRemoteVideoRef}
                 godEyeEnabled={godEyeEnabled}

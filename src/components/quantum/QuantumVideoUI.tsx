@@ -34,6 +34,8 @@ import {
   X,
   GripHorizontal,
   MoreHorizontal,
+  MessageSquareText,
+  Send,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -46,6 +48,7 @@ import {
 import { CallState, VideoQuality, GodEyeAnalysis } from '@/hooks/useZoeQuantumCall';
 import { LowPowerCallWarning } from './LowPowerCallWarning';
 import type { CallNetworkDiagnostics } from '@/features/calls/callTransport';
+import type { CallWordsEntry } from '@/features/calls/wordsOnlyMode';
 
 // Responsive sizing hook for call controls
 const useResponsiveCallSize = () => {
@@ -97,8 +100,12 @@ interface QuantumVideoUIProps {
   codec: string;
   networkDiagnostics: CallNetworkDiagnostics;
   dataChannelState: RTCDataChannelState | 'unavailable';
+  wordsOnlyMode: boolean;
+  wordsTranscript: CallWordsEntry[];
   onToggleVideo: () => Promise<void>;
   onSetLowDataMode: (enabled: boolean) => void;
+  onSetWordsOnlyMode: (enabled: boolean) => void;
+  onSendCallWords: (text: string) => boolean;
   
   // Video refs
   onSetLocalVideoRef: (el: HTMLVideoElement | null) => void;
@@ -343,6 +350,8 @@ interface DraggableControlBarProps {
   isConnected: boolean;
   onEndCall: (reason?: string) => Promise<void>;
   onPiP: () => void;
+  wordsOnlyMode: boolean;
+  onSetWordsOnlyMode: (enabled: boolean) => void;
 }
 
 const DraggableControlBar: React.FC<DraggableControlBarProps> = ({
@@ -359,6 +368,8 @@ const DraggableControlBar: React.FC<DraggableControlBarProps> = ({
   isConnected,
   onEndCall,
   onPiP,
+  wordsOnlyMode,
+  onSetWordsOnlyMode,
 }) => {
   const responsiveSize = useResponsiveCallSize();
   const dragControls = useDragControls();
@@ -581,6 +592,21 @@ const DraggableControlBar: React.FC<DraggableControlBarProps> = ({
           </TooltipContent>
         </Tooltip>
 
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn("rounded-full text-white hover:bg-white/15 hover:text-white", btnSize, wordsOnlyMode && "bg-white/15")}
+              aria-label={wordsOnlyMode ? 'Leave words only mode' : 'Use words only mode'}
+              onClick={() => onSetWordsOnlyMode(!wordsOnlyMode)}
+            >
+              <MessageSquareText className={iconSize} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{wordsOnlyMode ? 'Resume media' : 'Words only'}</TooltipContent>
+        </Tooltip>
+
         {/* End call button */}
         <Tooltip>
           <TooltipTrigger asChild>
@@ -634,8 +660,12 @@ export const QuantumVideoUI: React.FC<QuantumVideoUIProps> = ({
   codec,
   networkDiagnostics,
   dataChannelState,
+  wordsOnlyMode,
+  wordsTranscript,
   onToggleVideo,
   onSetLowDataMode,
+  onSetWordsOnlyMode,
+  onSendCallWords,
   onSetLocalVideoRef,
   onSetRemoteVideoRef,
   godEyeEnabled,
@@ -649,6 +679,7 @@ export const QuantumVideoUI: React.FC<QuantumVideoUIProps> = ({
 }) => {
   const [showSettings, setShowSettings] = useState(false);
   const [durationTimer, setDurationTimer] = useState(0);
+  const [wordsDraft, setWordsDraft] = useState('');
   const remoteVideoContainerRef = useRef<HTMLDivElement>(null);
   
   // Update duration timer
@@ -697,6 +728,11 @@ export const QuantumVideoUI: React.FC<QuantumVideoUIProps> = ({
   const isConnected = callState === 'connected';
   const isConnecting = callState === 'connecting';
 
+  const submitWords = useCallback((event: React.FormEvent) => {
+    event.preventDefault();
+    if (onSendCallWords(wordsDraft)) setWordsDraft('');
+  }, [onSendCallWords, wordsDraft]);
+
   return (
     <TooltipProvider>
       <motion.div
@@ -714,7 +750,7 @@ export const QuantumVideoUI: React.FC<QuantumVideoUIProps> = ({
           ref={remoteVideoContainerRef}
           className="relative w-full h-full flex items-center justify-center"
         >
-          {videoEnabled && isConnected ? (
+          {videoEnabled && isConnected && !wordsOnlyMode ? (
             <video
               ref={onSetRemoteVideoRef}
               autoPlay
@@ -763,9 +799,40 @@ export const QuantumVideoUI: React.FC<QuantumVideoUIProps> = ({
           <SpeakingIndicator isActive={remoteIsSpeaking} label="Speaking" />
         </div>
 
+        {wordsOnlyMode && (
+          <section className="absolute inset-x-4 bottom-24 z-20 mx-auto flex max-h-[52dvh] max-w-xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/[0.08] text-white shadow-2xl backdrop-blur-2xl" aria-label="Words only conversation">
+            <div className="flex items-center gap-2 border-b border-white/10 px-4 py-3 text-sm text-white/80">
+              <MessageSquareText className="h-4 w-4" />
+              <span>Words only</span>
+            </div>
+            <div className="flex min-h-24 flex-1 flex-col gap-2 overflow-y-auto px-4 py-3" aria-live="polite">
+              {wordsTranscript.length === 0 ? (
+                <p className="my-auto text-center text-sm text-white/50">Media paused. Messages use very little data.</p>
+              ) : wordsTranscript.map(entry => (
+                <p key={entry.id} className={cn("max-w-[85%] rounded-xl bg-white/[0.08] px-3 py-2 text-sm text-white", entry.from === 'local' ? 'ml-auto' : 'mr-auto')}>
+                  {entry.text}
+                </p>
+              ))}
+            </div>
+            <form className="flex gap-2 border-t border-white/10 p-3" onSubmit={submitWords}>
+              <input
+                value={wordsDraft}
+                onChange={event => setWordsDraft(event.target.value)}
+                maxLength={400}
+                aria-label="Message"
+                placeholder="Send words…"
+                className="min-w-0 flex-1 bg-transparent px-2 text-sm text-white outline-none placeholder:text-white/40"
+              />
+              <Button type="submit" variant="ghost" size="icon" aria-label="Send message" disabled={dataChannelState !== 'open' || !wordsDraft.trim()} className="h-10 w-10 rounded-full text-white hover:bg-white/15 hover:text-white">
+                <Send className="h-4 w-4" />
+              </Button>
+            </form>
+          </section>
+        )}
+
         {/* Local video PiP — visible as soon as the call is live so the caller
             always sees their own camera while requesting/ringing/connecting. */}
-        {callState !== 'idle' && callState !== 'ended' && (
+        {callState !== 'idle' && callState !== 'ended' && !wordsOnlyMode && (
           <LocalVideoPreview
             videoRef={onSetLocalVideoRef}
             isEnabled={videoEnabled}
@@ -864,6 +931,8 @@ export const QuantumVideoUI: React.FC<QuantumVideoUIProps> = ({
           isConnected={isConnected}
           onEndCall={onEndCall}
           onPiP={handlePiP}
+          wordsOnlyMode={wordsOnlyMode}
+          onSetWordsOnlyMode={onSetWordsOnlyMode}
         />
 
         {/* Speaking self-indicator */}
