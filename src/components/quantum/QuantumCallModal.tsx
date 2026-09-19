@@ -8,10 +8,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Phone, PhoneOff, Video, User, Sparkles, X } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { QuantumVideoUI } from './QuantumVideoUI';
-import { HolographicVideoSphere } from './HolographicVideoSphere';
 import { 
   CallParticipant, 
   CallEndReason, 
@@ -199,8 +197,6 @@ export const QuantumCallModal: React.FC<QuantumCallModalProps> = ({
 }) => {
   const { toast } = useToast();
   const [isFullscreen, setIsFullscreen] = useState(true);
-  const [useSphereView] = useState(false); // Preserve legacy implementation without exposing it in the pristine call surface
-  const [isPiPMode, setIsPiPMode] = useState(false);
 
   // Destructure from parent-provided hook state (no duplicate hook instance!)
   const {
@@ -276,8 +272,22 @@ export const QuantumCallModal: React.FC<QuantumCallModalProps> = ({
   }, [endCall]);
 
   // Toggle fullscreen
-  const handleToggleFullscreen = useCallback(() => {
-    setIsFullscreen(prev => !prev);
+  const handleToggleFullscreen = useCallback(async () => {
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      } else {
+        await document.documentElement.requestFullscreen();
+      }
+    } catch {
+      // iOS Safari may not expose the Fullscreen API; the call remains viewport-filling.
+    }
+  }, []);
+
+  useEffect(() => {
+    const syncFullscreen = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener('fullscreenchange', syncFullscreen);
+    return () => document.removeEventListener('fullscreenchange', syncFullscreen);
   }, []);
 
   // Get participant info
@@ -313,84 +323,8 @@ export const QuantumCallModal: React.FC<QuantumCallModalProps> = ({
             <X className="w-4 h-4" />
           </Button>
           
-          {/* HOLOGRAPHIC SPHERE VIEW - Fullscreen balanced layout with CONTAINMENT */}
-          {useSphereView && !isPiPMode && (
-            <motion.div
-              className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-cyan-950/50 overflow-hidden"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            >
-              {/* Ambient background effects - z-0 to stay behind everything */}
-              <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-                <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-cyan-500/10 blur-3xl animate-gpu-blob-1" />
-                <div className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full bg-purple-500/10 blur-3xl animate-gpu-blob-2" />
-              </div>
-              
-              {/* Main content container with strict dimensions */}
-              <div className="relative z-10 w-full max-w-lg max-h-[80vh] flex flex-col items-center justify-center px-4">
-                <HolographicVideoSphere
-                  localVideoRef={setLocalVideoRef}
-                  remoteVideoRef={setRemoteVideoRef}
-                  participantName={participant?.displayName}
-                  participantAvatar={participant?.avatarUrl}
-                  isAICall={participant?.isAI}
-                  isMuted={isMuted}
-                  isSpeaking={isSpeaking}
-                  remoteIsSpeaking={remoteIsSpeaking}
-                  onToggleMute={toggleMute}
-                  videoEnabled={video.isEnabled}
-                  remoteVideoEnabled={video.remoteQuality !== 'off'}
-                  videoQuality={video.localQuality}
-                  onToggleVideo={toggleVideo}
-                  godEyeEnabled={godEyeEnabled}
-                  lastGodEyeAnalysis={lastGodEyeAnalysis}
-                  onToggleGodEye={godEyeEnabled ? stopGodEye : startGodEye}
-                  onEndCall={() => handleEndCall('user_hangup')}
-                  callDuration={callDuration}
-                  isPiPMode={false}
-                  onTogglePiP={() => setIsPiPMode(true)}
-                />
-              </div>
-            </motion.div>
-          )}
-          
-          {/* HOLOGRAPHIC SPHERE - PiP MODE (floats above content) */}
-          {useSphereView && isPiPMode && (
-            <HolographicVideoSphere
-              localVideoRef={setLocalVideoRef}
-              remoteVideoRef={setRemoteVideoRef}
-              participantName={participant?.displayName}
-              participantAvatar={participant?.avatarUrl}
-              isAICall={participant?.isAI}
-              isMuted={isMuted}
-              isSpeaking={isSpeaking}
-              remoteIsSpeaking={remoteIsSpeaking}
-              onToggleMute={toggleMute}
-              videoEnabled={video.isEnabled}
-              remoteVideoEnabled={video.remoteQuality !== 'off'}
-              videoQuality={video.localQuality}
-              onToggleVideo={toggleVideo}
-              godEyeEnabled={godEyeEnabled}
-              lastGodEyeAnalysis={lastGodEyeAnalysis}
-              onToggleGodEye={godEyeEnabled ? stopGodEye : startGodEye}
-              onEndCall={() => {
-                handleEndCall('user_hangup');
-                onClose();
-              }}
-              callDuration={callDuration}
-              isPiPMode={true}
-              onTogglePiP={() => setIsPiPMode(false)}
-            />
-          )}
-          
-          {/* CLASSIC RECTANGLE VIEW */}
-          {!useSphereView && (
-            <motion.div
-              className={cn(
-                "fixed z-50 bg-transparent",
-                isFullscreen ? "inset-0" : "inset-0"
-              )}
+          <motion.div
+              className="fixed inset-0 z-50 bg-transparent"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
@@ -423,8 +357,7 @@ export const QuantumCallModal: React.FC<QuantumCallModalProps> = ({
                 isFullscreen={isFullscreen}
                 onToggleFullscreen={handleToggleFullscreen}
               />
-            </motion.div>
-          )}
+          </motion.div>
         </>
       )}
 
