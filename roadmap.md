@@ -73,3 +73,12 @@
 - [ ] Blocked: signed-in preview walkthrough (no preview session can be minted for this project right now — sign in once in the preview).
 - [ ] Blocked: real microphone walkthrough on a physical phone (must be done on the device).
 - [ ] Publish needed for the new artwork and playlist sharing to be live outside the preview.
+
+## 2026-09-19 — Calling: words-only, Zoe in-call thinking, group, ringing
+- [x] Words-only mode: bad line automatically drops to short text over the private channel, with a manual switch.
+- [x] Zoe's in-call thinking runs inside the call worker (off the main thread) and shows a quiet suggestion line during the call.
+- [x] Call history screen (/calls/history) plus a missed-call alert for the person who was not reached.
+- [x] Group call screen (/calls/group): pick up to 5 people, one direct connection per member, even tile grid, leave call.
+- [x] Sleeping-phone ringing: device registration, background ring handler, and a protected ring service for the person being called.
+- [ ] Blocked: real Moksh-to-Asha two-device call (needs both people signed in on their own devices).
+- [ ] Blocked: relay (TURN/Twilio) — deferred by request, so calls across strict networks may still fail.

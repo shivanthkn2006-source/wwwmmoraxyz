@@ -1023,6 +1023,7 @@ export const useZoeInfinityIntegration = () => {
       sendZoeData: quantumCall.sendZoeData,
       wordsOnlyMode: quantumCall.wordsOnlyMode,
       wordsTranscript: quantumCall.wordsTranscript,
+      zoeWhisper: quantumCall.zoeWhisper,
       setWordsOnlyMode: quantumCall.setWordsOnlyMode,
       sendCallWords: quantumCall.sendCallWords,
       cleanupAllMedia: quantumCall.cleanupAllMedia,

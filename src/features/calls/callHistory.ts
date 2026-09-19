@@ -81,12 +81,12 @@ export const fetchCallHistory = async (currentUserId: string, limit = 50): Promi
   if (counterpartIds.length) {
     const { data: profileRows } = await supabase
       .from('profiles')
-      .select('user_id, display_name, username, avatar_url')
+      .select('user_id, display_name, username, profile_photo_url')
       .in('user_id', counterpartIds);
     (profileRows ?? []).forEach(profile => {
       profiles[profile.user_id] = {
         displayName: profile.display_name || profile.username || 'M’Mora member',
-        avatarUrl: profile.avatar_url ?? null,
+        avatarUrl: profile.profile_photo_url ?? null,
       };
     });
   }

@@ -33,9 +33,14 @@ const CallsPage = () => {
         <div className="flex flex-col items-center gap-3 text-white/70">
           <ZoeCallsIcon className="h-9 w-9" />
           <h1 className="text-xl font-medium text-white">Calls</h1>
-          <Link to="/calls/history" className="pointer-events-auto rounded-full border border-white/15 px-4 py-1.5 text-sm text-white/80 hover:bg-white/10 hover:text-white">
-            Call history
-          </Link>
+          <div className="pointer-events-auto flex items-center gap-2">
+            <Link to="/calls/history" className="rounded-full border border-white/15 px-4 py-1.5 text-sm text-white/80 hover:bg-white/10 hover:text-white">
+              Call history
+            </Link>
+            <Link to="/calls/group" className="rounded-full border border-white/15 px-4 py-1.5 text-sm text-white/80 hover:bg-white/10 hover:text-white">
+              Group call
+            </Link>
+          </div>
         </div>
       </div>
 

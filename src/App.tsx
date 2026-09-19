@@ -56,6 +56,7 @@ const ProfilePage = lazy(() => import("./pages/ProfilePage"));
 const HuddlePage = lazy(() => import("./pages/HuddlePage"));
 const CallsPage = lazy(() => import("./pages/CallsPage"));
 const CallHistoryPage = lazy(() => import("./pages/CallHistoryPage"));
+const GroupCallPage = lazy(() => import("./pages/GroupCallPage"));
 const UserProfileView = lazy(() => import("./pages/UserProfileView"));
 const WebdropPage = lazy(() => import("./pages/WebdropPage"));
 const AICompanionPage = lazy(() => import("./pages/AICompanionPage"));
@@ -659,6 +660,16 @@ const RouteAwareShell = () => {
                               </ProtectedRoute>
                             }
                           />
+                          <Route
+                            path="/calls/group"
+                            element={
+                              <ProtectedRoute>
+                                {/* Group calling: one peer connection per member, no server in the middle. */}
+                                <GroupCallPage />
+                              </ProtectedRoute>
+                            }
+                          />
+
                           <Route
                             path="/profile"
                             element={
