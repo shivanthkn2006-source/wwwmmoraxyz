@@ -474,6 +474,7 @@ const DraggableControlBar: React.FC<DraggableControlBarProps> = ({
               variant="ghost"
               size="icon"
               className={cn("rounded-full text-white hover:bg-white/15 hover:text-white", btnSize)}
+              aria-label={isMuted ? 'Unmute' : 'Mute'}
               onClick={onToggleMute}
             >
               {isMuted ? (
@@ -493,6 +494,7 @@ const DraggableControlBar: React.FC<DraggableControlBarProps> = ({
               variant="ghost"
               size="icon"
               className={cn("rounded-full text-white hover:bg-white/15 hover:text-white", btnSize)}
+              aria-label={videoEnabled ? 'Turn off camera' : 'Turn on camera'}
               onClick={onToggleVideo}
             >
               {videoEnabled ? (
@@ -518,6 +520,7 @@ const DraggableControlBar: React.FC<DraggableControlBarProps> = ({
                   "text-white hover:bg-white/15 hover:text-white",
                   godEyeEnabled && "bg-white/15"
                 )}
+                aria-label={godEyeEnabled ? 'Disable Zoe Vision' : 'Enable Zoe Vision'}
                 onClick={godEyeEnabled ? onStopGodEye : onStartGodEye}
               >
                 {godEyeEnabled ? (
@@ -541,6 +544,7 @@ const DraggableControlBar: React.FC<DraggableControlBarProps> = ({
                 variant="ghost"
                 size="icon"
                 className={cn("rounded-full text-white hover:bg-white/15 hover:text-white", btnSize)}
+                aria-label="Picture in Picture"
                 onClick={onPiP}
               >
                 <PictureInPicture2 className={iconSize} />
@@ -562,6 +566,7 @@ const DraggableControlBar: React.FC<DraggableControlBarProps> = ({
                 "text-white hover:bg-white/15 hover:text-white",
                 isLowDataMode && "bg-white/15"
               )}
+              aria-label={isLowDataMode ? 'Use normal data mode' : 'Use low data mode'}
               onClick={() => onSetLowDataMode(!isLowDataMode)}
             >
               {isLowDataMode ? (
@@ -583,6 +588,7 @@ const DraggableControlBar: React.FC<DraggableControlBarProps> = ({
               variant="ghost"
               size="icon"
               className={cn("rounded-full text-white hover:bg-white/20 hover:text-white", endBtnSize)}
+              aria-label="End call"
               onClick={() => onEndCall('user_hangup')}
             >
               <PhoneOff className={endIconSize} />
@@ -816,6 +822,7 @@ export const QuantumVideoUI: React.FC<QuantumVideoUIProps> = ({
                   <Button
                     variant="ghost"
                     size="icon"
+                    aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
                     className="w-10 h-10 rounded-full bg-white/[0.08] text-white backdrop-blur-2xl hover:bg-white/15 hover:text-white"
                     onClick={onToggleFullscreen}
                   >

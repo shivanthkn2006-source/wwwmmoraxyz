@@ -144,6 +144,7 @@ const IncomingCallUI: React.FC<{
               variant="ghost"
               size="lg"
               className="w-16 h-16 rounded-full bg-white/[0.08] text-white backdrop-blur-2xl hover:bg-white/15 hover:text-white"
+              aria-label="Reject call"
               onClick={onReject}
             >
               <PhoneOff className="w-7 h-7" />
@@ -156,6 +157,7 @@ const IncomingCallUI: React.FC<{
               variant="ghost"
               size="lg"
               className="w-20 h-20 rounded-full bg-white/[0.12] text-white backdrop-blur-2xl hover:bg-white/20 hover:text-white"
+              aria-label="Accept video call"
               onClick={() => onAccept(true)}
             >
               <Video className="w-8 h-8" />
@@ -168,6 +170,7 @@ const IncomingCallUI: React.FC<{
               variant="ghost"
               size="lg"
               className="w-16 h-16 rounded-full bg-white/[0.08] text-white backdrop-blur-2xl hover:bg-white/15 hover:text-white"
+              aria-label="Accept audio call"
               onClick={() => onAccept(false)}
             >
               <Phone className="w-7 h-7" />
