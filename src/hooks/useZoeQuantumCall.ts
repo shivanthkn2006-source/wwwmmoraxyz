@@ -1806,10 +1806,17 @@ const startGodEye = useCallback(() => {
         }
 
         case 'call-reject': {
-          console.log('[QuantumCall] Call rejected');
+          const reason = (data as any)?.reason as string | undefined;
+          console.log('[QuantumCall] Call rejected', reason ?? 'rejected');
           await endCallRef.current?.('rejected');
+          if (reason === 'receiver-media-unavailable') {
+            setState(prev => ({ ...prev, error: 'They could not join: their microphone or camera was unavailable.' }));
+          } else if (reason === 'receiver-connection-unavailable') {
+            setState(prev => ({ ...prev, error: 'They could not join because their connection failed to start.' }));
+          }
           break;
         }
+
 
         case 'call-end': {
           console.log('[QuantumCall] Remote ended call');
