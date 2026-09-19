@@ -90,7 +90,7 @@ const IncomingCallUI: React.FC<{
 
   return (
     <motion.div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-transparent text-white backdrop-blur-2xl"
+      className="fixed inset-0 z-[10100] flex items-center justify-center bg-black/70 text-white backdrop-blur-2xl"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -334,7 +334,7 @@ export const QuantumCallModal: React.FC<QuantumCallModalProps> = ({
             variant="ghost"
             size="icon"
             aria-label="End call"
-            className="fixed top-[max(.75rem,env(safe-area-inset-top))] right-3 z-[70] w-11 h-11 rounded-full bg-white/[0.08] text-white backdrop-blur-2xl shadow-xl hover:bg-white/15 hover:text-white"
+            className="fixed top-[max(.75rem,env(safe-area-inset-top))] right-3 z-[10110] w-11 h-11 rounded-full bg-white/[0.08] text-white backdrop-blur-2xl shadow-xl hover:bg-white/15 hover:text-white"
             onClick={() => {
               handleEndCall('user_hangup');
               onClose();
@@ -344,7 +344,7 @@ export const QuantumCallModal: React.FC<QuantumCallModalProps> = ({
           </Button>
           
           <motion.div
-              className="fixed inset-0 z-50 bg-transparent"
+              className="fixed inset-0 z-[10100] bg-transparent"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
@@ -391,7 +391,7 @@ export const QuantumCallModal: React.FC<QuantumCallModalProps> = ({
       {/* Call ended screen */}
       {callState === 'ended' && !hasIncomingCall && (
         <motion.div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-transparent text-white backdrop-blur-2xl"
+          className="fixed inset-0 z-[10100] flex items-center justify-center bg-black/70 text-white backdrop-blur-2xl"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}

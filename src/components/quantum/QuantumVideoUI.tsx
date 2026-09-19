@@ -35,6 +35,7 @@ import {
   GripHorizontal,
   MoreHorizontal,
   MessageSquareText,
+  MessagesSquare,
   Send,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -107,6 +108,8 @@ interface QuantumVideoUIProps {
   onToggleVideo: () => Promise<void>;
   onSetLowDataMode: (enabled: boolean) => void;
   onSetWordsOnlyMode: (enabled: boolean) => void;
+  onToggleChat?: () => void;
+  chatOpen?: boolean;
   onSendCallWords: (text: string) => boolean;
   
   // Video refs
@@ -354,6 +357,8 @@ interface DraggableControlBarProps {
   onPiP: () => void;
   wordsOnlyMode: boolean;
   onSetWordsOnlyMode: (enabled: boolean) => void;
+  onToggleChat?: () => void;
+  chatOpen?: boolean;
 }
 
 const DraggableControlBar: React.FC<DraggableControlBarProps> = ({
@@ -372,6 +377,8 @@ const DraggableControlBar: React.FC<DraggableControlBarProps> = ({
   onPiP,
   wordsOnlyMode,
   onSetWordsOnlyMode,
+  onToggleChat,
+  chatOpen,
 }) => {
   const responsiveSize = useResponsiveCallSize();
   const dragControls = useDragControls();
@@ -455,15 +462,15 @@ const DraggableControlBar: React.FC<DraggableControlBarProps> = ({
         }));
       }}
       animate={{
-        x: position.x - (typeof window !== 'undefined' ? window.innerWidth / 2 : 0) + position.x,
+        x: position.x,
         y: position.y,
       }}
-      style={{ x: '-50%' }}
+      style={{ translateX: '-50%', maxWidth: 'calc(100vw - 1.5rem)' }}
     >
       <AnimatePresence>
       {isOpen && <motion.div
         className={cn(
-          "flex items-center rounded-full bg-white/[0.08] text-white backdrop-blur-2xl shadow-2xl shadow-black/20",
+          "flex max-w-[calc(100vw-1.5rem)] flex-wrap items-center justify-center rounded-3xl bg-white/[0.08] text-white backdrop-blur-2xl shadow-2xl shadow-black/20",
           "touch-none select-none",
           getGap(),
           getPadding(),
@@ -609,6 +616,23 @@ const DraggableControlBar: React.FC<DraggableControlBarProps> = ({
           <TooltipContent>{wordsOnlyMode ? 'Resume media' : 'Words only'}</TooltipContent>
         </Tooltip>
 
+        {onToggleChat && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn("rounded-full text-white hover:bg-white/15 hover:text-white", btnSize, chatOpen && "bg-white/15")}
+                aria-label={chatOpen ? 'Hide chat with Zoe and your friend' : 'Chat with Zoe and your friend'}
+                onClick={onToggleChat}
+              >
+                <MessagesSquare className={iconSize} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{chatOpen ? 'Hide chat' : 'Chat'}</TooltipContent>
+          </Tooltip>
+        )}
+
         {/* End call button */}
         <Tooltip>
           <TooltipTrigger asChild>
@@ -683,6 +707,7 @@ export const QuantumVideoUI: React.FC<QuantumVideoUIProps> = ({
   const [showSettings, setShowSettings] = useState(false);
   const [durationTimer, setDurationTimer] = useState(0);
   const [wordsDraft, setWordsDraft] = useState('');
+  const [chatOpen, setChatOpen] = useState(false);
   const remoteVideoContainerRef = useRef<HTMLDivElement>(null);
   
   // Update duration timer
@@ -811,15 +836,20 @@ export const QuantumVideoUI: React.FC<QuantumVideoUIProps> = ({
           </div>
         )}
 
-        {wordsOnlyMode && (
-          <section className="absolute inset-x-4 bottom-24 z-20 mx-auto flex max-h-[52dvh] max-w-xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/[0.08] text-white shadow-2xl backdrop-blur-2xl" aria-label="Words only conversation">
+        {(wordsOnlyMode || chatOpen) && (
+          <section className="absolute inset-x-4 bottom-24 z-20 mx-auto flex max-h-[52dvh] max-w-xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/[0.08] text-white shadow-2xl backdrop-blur-2xl" aria-label={wordsOnlyMode ? 'Words only conversation' : 'Call chat'}>
             <div className="flex items-center gap-2 border-b border-white/10 px-4 py-3 text-sm text-white/80">
               <MessageSquareText className="h-4 w-4" />
-              <span>Words only</span>
+              <span>{wordsOnlyMode ? 'Words only' : 'Chat'}</span>
+              {!wordsOnlyMode && (
+                <button type="button" aria-label="Close chat" onClick={() => setChatOpen(false)} className="ml-auto rounded-full px-2 text-white/60 hover:text-white">
+                  <X className="h-4 w-4" />
+                </button>
+              )}
             </div>
             <div className="flex min-h-24 flex-1 flex-col gap-2 overflow-y-auto px-4 py-3" aria-live="polite">
               {wordsTranscript.length === 0 ? (
-                <p className="my-auto text-center text-sm text-white/50">Media paused. Messages use very little data.</p>
+                <p className="my-auto text-center text-sm text-white/50">{wordsOnlyMode ? 'Media paused. Messages use very little data.' : 'Type here to talk while the video keeps playing.'}</p>
               ) : wordsTranscript.map(entry => (
                 <p key={entry.id} className={cn("max-w-[85%] rounded-xl bg-white/[0.08] px-3 py-2 text-sm text-white", entry.from === 'local' ? 'ml-auto' : 'mr-auto')}>
                   {entry.text}
@@ -945,6 +975,8 @@ export const QuantumVideoUI: React.FC<QuantumVideoUIProps> = ({
           onPiP={handlePiP}
           wordsOnlyMode={wordsOnlyMode}
           onSetWordsOnlyMode={onSetWordsOnlyMode}
+          onToggleChat={() => setChatOpen(open => !open)}
+          chatOpen={chatOpen}
         />
 
         {/* Speaking self-indicator */}
