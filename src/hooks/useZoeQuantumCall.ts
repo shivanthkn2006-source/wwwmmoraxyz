@@ -24,6 +24,7 @@ import {
 } from '@/features/calls/callTransport';
 import { createZoeCallDataEnvelope } from '@/features/calls/zoeCallData';
 import { recordMissedCallNotification } from '@/features/calls/callHistory';
+import { ringReceiverDevice } from '@/features/calls/callPush';
 import {
   ZOE_THINK_REQUEST,
   type ZoeCallWhisper,
