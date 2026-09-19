@@ -763,8 +763,9 @@ export const QuantumVideoUI: React.FC<QuantumVideoUIProps> = ({
           <SpeakingIndicator isActive={remoteIsSpeaking} label="Speaking" />
         </div>
 
-        {/* Local video PiP */}
-        {isConnected && (
+        {/* Local video PiP — visible as soon as the call is live so the caller
+            always sees their own camera while requesting/ringing/connecting. */}
+        {callState !== 'idle' && callState !== 'ended' && (
           <LocalVideoPreview
             videoRef={onSetLocalVideoRef}
             isEnabled={videoEnabled}
@@ -772,6 +773,7 @@ export const QuantumVideoUI: React.FC<QuantumVideoUIProps> = ({
             isMuted={isMuted}
           />
         )}
+
 
         {/* God Eye analysis overlay */}
         <GodEyeOverlay
