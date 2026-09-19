@@ -1,5 +1,12 @@
 # Music roadmap
 
+## M’Mora Zoe calling — staged integration
+- [ ] Stage 1: authenticated short-lived relay credentials, TURN fallback, bounded ICE restart, and reconnect telemetry
+- [ ] Stage 2: isolated full-screen remote video, draggable local PiP, and white-only transparent Music-style drop-up controls
+- [ ] Stage 3: authenticated Calls destination in the Home menu with real participant selection and audio/video start paths
+- [ ] Stage 4: encrypted Zoe data channel and call-scoped worker without changing the existing peer-to-peer media path
+- [ ] Stage 5: focused unit, integration, RLS, network-recovery, accessibility, and phone/tablet/desktop visual QA
+
 - [x] Automatically wire every registered static page into the Home icon menu
 - [x] Keep the first-time VR tap/drag tutorial with persistent dismissal and unchanged panel visuals
 
