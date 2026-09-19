@@ -166,7 +166,6 @@ const VIDEO_CODEC_MODIFIER = (sdp: string, preferVP9: boolean = true): string =>
 };
 
 const CALL_TIMEOUT_MS = 30000;
-const ENCRYPTION_HANDSHAKE_TIMEOUT_MS = 2000; // 2s (200ms was too strict and caused false disconnects)
 const SECURITY_ALERT_COOLDOWN_MS = 5000;
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -609,7 +608,7 @@ const startGodEye = useCallback(() => {
         video_quality: metadata.video_quality ?? null,
         god_eye_analyses: metadata.god_eye_analyses ?? 0,
       },
-      security_level: 'quantum_shield',
+      security_level: 'webrtc_dtls_srtp',
       timestamp: new Date().toISOString(),
     };
 
@@ -626,7 +625,7 @@ const startGodEye = useCallback(() => {
           call_duration_ms: metadata.duration_ms,
           connection_quality_pct: 100 - metadata.connection_quality,
           participants_count: 2,
-          encryption_verified: true,
+          transport_security: 'webrtc_dtls_srtp',
           video_enabled: metadata.video_enabled,
         },
         genesis_signature: genesisSignature,
@@ -742,29 +741,12 @@ const startGodEye = useCallback(() => {
     }));
   }, [currentUserId, state.currentCall, state.video?.codec, state.video?.currentBitrate, state.video?.isEnabled, state.video?.localQuality, triggerSecurityAlert, logToBlackBox, stopGodEye]);
 
-  const monitorEncryptionHandshake = useCallback(() => {
-    if (!handshakeStartTimeRef.current) return;
-
-    const handshakeTime = Date.now() - handshakeStartTimeRef.current;
-
-    if (handshakeTime > ENCRYPTION_HANDSHAKE_TIMEOUT_MS) {
-      severConnection(`Encryption handshake exceeded ${ENCRYPTION_HANDSHAKE_TIMEOUT_MS}ms (${handshakeTime}ms) - Potential MITM attack`);
-    }
-  }, [severConnection]);
-
   // ═══════════════════════════════════════════════════════════════════════════════
   // SIGNALING HELPERS
   // ═══════════════════════════════════════════════════════════════════════════════
 
-  const encryptSignalData = useCallback(async (data: object): Promise<string> => {
-    const jsonStr = JSON.stringify(data);
-    const key = Date.now().toString(36);
-    const encrypted = btoa(jsonStr.split('').map((c, i) => 
-      String.fromCharCode(c.charCodeAt(0) ^ key.charCodeAt(i % key.length))
-    ).join(''));
-    return `QS_${key}_${encrypted}`;
-  }, []);
-
+  // Backward-compatible decoder for signals queued by older clients. The QS_
+  // format was obfuscation, not encryption, and new signals no longer emit it.
   const decryptSignalData = useCallback((encrypted: string): object | null => {
     try {
       if (!encrypted.startsWith('QS_')) return JSON.parse(encrypted);
@@ -788,8 +770,6 @@ const startGodEye = useCallback(() => {
   ) => {
     if (!currentUserId) return;
 
-    const encryptedPayload = await encryptSignalData(signalData);
-
     console.log(`[QuantumCall] Sending ${signalType} to ${receiverId.slice(0, 8)}...`);
 
     const { error } = await supabase.from('quantum_call_signals').insert([
@@ -798,7 +778,7 @@ const startGodEye = useCallback(() => {
         receiver_id: receiverId,
         signal_type: signalType,
         signal_data: signalData as any,
-        encrypted_payload: encryptedPayload,
+        encrypted_payload: null,
       },
     ]);
 
@@ -806,7 +786,7 @@ const startGodEye = useCallback(() => {
       console.error('[QuantumCall] Failed to send signal:', signalType, error);
       setState(prev => ({ ...prev, error: `Signaling error: ${error.message}` }));
     }
-  }, [currentUserId, encryptSignalData]);
+  }, [currentUserId]);
 
   const attachDataChannel = useCallback((channel: RTCDataChannel) => {
     dataChannelRef.current = channel;
@@ -1173,10 +1153,8 @@ const startGodEye = useCallback(() => {
             const handshakeTime = Date.now() - handshakeStartTimeRef.current;
             console.log(`[QuantumCall] Handshake completed in ${handshakeTime}ms`);
             
-            if (handshakeTime > ENCRYPTION_HANDSHAKE_TIMEOUT_MS) {
-              severConnection(`Suspicious handshake timing: ${handshakeTime}ms`);
-              return;
-            }
+            // Slow handshakes are normal on mobile and relayed networks. WebRTC
+            // validates DTLS certificates itself; timing is not a MITM signal.
           }
           
           hasConnectedOnceRef.current = true;
@@ -1296,14 +1274,13 @@ const startGodEye = useCallback(() => {
       }));
       
       if (iceState === 'failed') {
-        triggerSecurityAlert('ice_failure', 'ICE negotiation failed - potential network interference');
-        monitorEncryptionHandshake();
+        triggerSecurityAlert('ice_failure', 'ICE negotiation failed; recovery started');
       }
     };
 
     peerConnectionRef.current = pc;
     return pc;
-  }, [sendSignal, monitorAudioLevels, state.video?.isEnabled, state.video?.localQuality, state.currentCall?.receiver.isAI, startGodEye, logZoeTTSContext, triggerSecurityAlert, monitorEncryptionHandshake, severConnection, attemptIceRestart, attachDataChannel]);
+  }, [sendSignal, monitorAudioLevels, state.video?.isEnabled, state.video?.localQuality, state.currentCall?.receiver.isAI, startGodEye, logZoeTTSContext, triggerSecurityAlert, attemptIceRestart, attachDataChannel]);
 
   // ═══════════════════════════════════════════════════════════════════════════════
   // CALL INITIATION
@@ -1586,7 +1563,7 @@ const startGodEye = useCallback(() => {
           call_quality: state.connectionQuality,
           codec_used: state.video?.isEnabled ? (state.video?.codec ?? 'opus').toLowerCase() : 'opus',
           bitrate_kbps: state.video?.isEnabled ? Math.round((state.video?.currentBitrate ?? 0) / 1000) : 32,
-          encryption_level: 'quantum_shield',
+          encryption_level: 'webrtc_dtls_srtp',
           ended_by: currentUserId,
           end_reason: reason,
         });
