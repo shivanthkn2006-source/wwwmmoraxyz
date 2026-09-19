@@ -23,6 +23,15 @@ import {
   type CallNetworkDiagnostics,
 } from '@/features/calls/callTransport';
 import { createZoeCallDataEnvelope } from '@/features/calls/zoeCallData';
+import {
+  appendWordsEntry,
+  createWordsEntry,
+  sanitizeCallWords,
+  shouldEnterWordsOnlyMode,
+  WORDS_ONLY_ENVELOPE_TYPE,
+  WORDS_ONLY_MODE_ENVELOPE_TYPE,
+  type CallWordsEntry,
+} from '@/features/calls/wordsOnlyMode';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -98,6 +107,8 @@ export interface QuantumCallState {
   lastGodEyeAnalysis: GodEyeAnalysis | null;
   networkDiagnostics: CallNetworkDiagnostics;
   dataChannelState: RTCDataChannelState | 'unavailable';
+  wordsOnlyMode: boolean;
+  wordsTranscript: CallWordsEntry[];
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -244,6 +255,8 @@ export const useZoeQuantumCall = (currentUserId?: string) => {
     lastGodEyeAnalysis: null,
     networkDiagnostics: DEFAULT_CALL_NETWORK_DIAGNOSTICS,
     dataChannelState: 'unavailable',
+    wordsOnlyMode: false,
+    wordsTranscript: [],
   });
 
   // Refs for WebRTC
@@ -268,6 +281,7 @@ export const useZoeQuantumCall = (currentUserId?: string) => {
   const hasConnectedOnceRef = useRef(false);
   const dataChannelRef = useRef<RTCDataChannel | null>(null);
   const zoeCallWorkerRef = useRef<Worker | null>(null);
+  const setWordsOnlyModeRef = useRef<(enabled: boolean, notifyPeer?: boolean) => Promise<void>>();
 
   // Buffer ICE candidates that arrive before remoteDescription is set.
   const pendingIceCandidatesRef = useRef<Record<string, RTCIceCandidateInit[]>>({});
@@ -303,7 +317,26 @@ export const useZoeQuantumCall = (currentUserId?: string) => {
   useEffect(() => {
     if (typeof Worker === 'undefined') return;
     const worker = new Worker(new URL('../features/calls/zoeCallWorker.ts', import.meta.url), { type: 'module' });
-    worker.onmessage = (event: MessageEvent<{ ok: boolean; envelope?: object }>) => {
+    worker.onmessage = (event: MessageEvent<{
+      ok: boolean;
+      envelope?: object;
+      words?: { text: string; at: number };
+      wordsMode?: boolean;
+    }>) => {
+      if (event.data.ok && event.data.words) {
+        const entry = createWordsEntry('remote', event.data.words.text);
+        entry.at = event.data.words.at;
+        setState(prev => ({
+          ...prev,
+          wordsOnlyMode: true,
+          wordsTranscript: appendWordsEntry(prev.wordsTranscript, entry),
+        }));
+        return;
+      }
+      if (event.data.ok && typeof event.data.wordsMode === 'boolean') {
+        void setWordsOnlyModeRef.current?.(event.data.wordsMode, false);
+        return;
+      }
       if (event.data.ok && event.data.envelope) {
         window.dispatchEvent(new CustomEvent('zoe-call-data', { detail: event.data.envelope }));
       }
@@ -560,6 +593,10 @@ const startGodEye = useCallback(() => {
               ...prev,
               networkDiagnostics: { ...prev.networkDiagnostics, packetLossPercent: packetLoss },
             }));
+
+            if (shouldEnterWordsOnlyMode({ packetLossPercent: packetLoss })) {
+              void setWordsOnlyModeRef.current?.(true);
+            }
             
             // Auto-downgrade if packet loss exceeds threshold
             if (packetLoss > PACKET_LOSS_THRESHOLD && state.video?.localQuality === '720p') {
@@ -578,15 +615,19 @@ const startGodEye = useCallback(() => {
           else quality = 'poor';
           
           const localCandidate = report.localCandidateId ? stats.get(report.localCandidateId) : null;
+          const roundTripTimeMs = typeof rtt === 'number' ? Math.round(rtt * 1000) : null;
           setState(prev => ({
             ...prev,
             connectionQuality: quality,
             networkDiagnostics: {
               ...prev.networkDiagnostics,
-              roundTripTimeMs: typeof rtt === 'number' ? Math.round(rtt * 1000) : null,
+              roundTripTimeMs,
               route: candidateRoute(localCandidate?.candidateType),
             },
           }));
+          if (shouldEnterWordsOnlyMode({ roundTripTimeMs })) {
+            void setWordsOnlyModeRef.current?.(true);
+          }
         }
       });
     });
@@ -828,6 +869,52 @@ const startGodEye = useCallback(() => {
       return false;
     }
   }, []);
+
+  const sendCallEnvelope = useCallback((type: string, payload: Record<string, unknown>): boolean => {
+    const channel = dataChannelRef.current;
+    if (!channel || channel.readyState !== 'open') return false;
+    try {
+      channel.send(JSON.stringify(createZoeCallDataEnvelope(type, payload)));
+      return true;
+    } catch (error) {
+      console.warn('[QuantumCall] Call data message failed', error);
+      return false;
+    }
+  }, []);
+
+  const setWordsOnlyMode = useCallback(async (enabled: boolean, notifyPeer = true) => {
+    const sender = videoSenderRef.current;
+    if (sender) {
+      try {
+        const parameters = sender.getParameters();
+        parameters.encodings = parameters.encodings?.length ? parameters.encodings : [{}];
+        parameters.encodings = parameters.encodings.map(encoding => ({ ...encoding, active: !enabled }));
+        await sender.setParameters(parameters);
+      } catch (error) {
+        console.warn('[QuantumCall] Could not change words-only video state', error);
+      }
+    }
+    localStreamRef.current?.getVideoTracks().forEach(track => {
+      track.enabled = !enabled;
+    });
+    setState(prev => ({ ...prev, wordsOnlyMode: enabled }));
+    if (notifyPeer) sendCallEnvelope(WORDS_ONLY_MODE_ENVELOPE_TYPE, { active: enabled });
+  }, [sendCallEnvelope]);
+
+  useEffect(() => {
+    setWordsOnlyModeRef.current = setWordsOnlyMode;
+  }, [setWordsOnlyMode]);
+
+  const sendCallWords = useCallback((value: string): boolean => {
+    const text = sanitizeCallWords(value);
+    if (!text || !sendCallEnvelope(WORDS_ONLY_ENVELOPE_TYPE, { text })) return false;
+    setState(prev => ({
+      ...prev,
+      wordsOnlyMode: true,
+      wordsTranscript: appendWordsEntry(prev.wordsTranscript, createWordsEntry('local', text)),
+    }));
+    return true;
+  }, [sendCallEnvelope]);
 
   const attemptIceRestart = useCallback((pc: RTCPeerConnection, remoteUserId: string) => {
     if (!isOffererRef.current || reconnectTimerRef.current || pc.signalingState === 'closed') return;
@@ -1672,6 +1759,8 @@ const startGodEye = useCallback(() => {
       lastGodEyeAnalysis: null,
       networkDiagnostics: DEFAULT_CALL_NETWORK_DIAGNOSTICS,
       dataChannelState: 'unavailable',
+      wordsOnlyMode: false,
+      wordsTranscript: [],
     }));
 
     callStartTimeRef.current = null;
@@ -2030,6 +2119,8 @@ const startGodEye = useCallback(() => {
     startGodEye,
     stopGodEye,
     sendZoeData,
+    setWordsOnlyMode,
+    sendCallWords,
     
     // Master cleanup (for external use)
     cleanupAllMedia,
