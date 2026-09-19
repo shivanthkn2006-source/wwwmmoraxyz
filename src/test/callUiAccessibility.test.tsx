@@ -23,8 +23,12 @@ const renderCall = (overrides: Partial<React.ComponentProps<typeof QuantumVideoU
     codec="VP9"
     networkDiagnostics={{ ...DEFAULT_CALL_NETWORK_DIAGNOSTICS, route: 'relay', roundTripTimeMs: 82 }}
     dataChannelState="open"
+    wordsOnlyMode={false}
+    wordsTranscript={[]}
     onToggleVideo={vi.fn(async () => undefined)}
     onSetLowDataMode={vi.fn()}
+    onSetWordsOnlyMode={vi.fn()}
+    onSendCallWords={vi.fn(() => true)}
     onSetLocalVideoRef={vi.fn()}
     onSetRemoteVideoRef={vi.fn()}
     godEyeEnabled={false}
@@ -45,7 +49,15 @@ describe('call controls accessibility', () => {
     expect(screen.getByRole('button', { name: 'Mute' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Turn off camera' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Use low data mode' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Use words only mode' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'End call' })).toBeTruthy();
+  });
+
+  it('shows the bounded words-only composer when media is suspended', () => {
+    renderCall({ wordsOnlyMode: true });
+    expect(screen.getByRole('region', { name: 'Words only conversation' })).toBeTruthy();
+    expect(screen.getByRole('textbox', { name: 'Message' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Send message' })).toBeTruthy();
   });
 
   it('announces relay diagnostics and the Zoe channel state', () => {

@@ -832,7 +832,7 @@ export const QuantumVideoUI: React.FC<QuantumVideoUIProps> = ({
 
         {/* Local video PiP — visible as soon as the call is live so the caller
             always sees their own camera while requesting/ringing/connecting. */}
-        {callState !== 'idle' && callState !== 'ended' && (
+        {callState !== 'idle' && callState !== 'ended' && !wordsOnlyMode && (
           <LocalVideoPreview
             videoRef={onSetLocalVideoRef}
             isEnabled={videoEnabled}

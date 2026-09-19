@@ -883,21 +883,22 @@ const startGodEye = useCallback(() => {
   }, []);
 
   const setWordsOnlyMode = useCallback(async (enabled: boolean, notifyPeer = true) => {
-    const sender = videoSenderRef.current;
-    if (sender) {
+    const senders = peerConnectionRef.current?.getSenders() ?? [];
+    await Promise.all(senders.map(async sender => {
+      if (!sender.track) return;
       try {
         const parameters = sender.getParameters();
         parameters.encodings = parameters.encodings?.length ? parameters.encodings : [{}];
         parameters.encodings = parameters.encodings.map(encoding => ({ ...encoding, active: !enabled }));
         await sender.setParameters(parameters);
       } catch (error) {
-        console.warn('[QuantumCall] Could not change words-only video state', error);
+        console.warn(`[QuantumCall] Could not change words-only ${sender.track.kind} state`, error);
       }
-    }
-    localStreamRef.current?.getVideoTracks().forEach(track => {
+    }));
+    localStreamRef.current?.getTracks().forEach(track => {
       track.enabled = !enabled;
     });
-    setState(prev => ({ ...prev, wordsOnlyMode: enabled }));
+    setState(prev => ({ ...prev, wordsOnlyMode: enabled, isMuted: enabled ? true : prev.isMuted }));
     if (notifyPeer) sendCallEnvelope(WORDS_ONLY_MODE_ENVELOPE_TYPE, { active: enabled });
   }, [sendCallEnvelope]);
 

@@ -10,6 +10,15 @@
 - [x] Restore the Home destination inside the icon panel and keep recent shortcuts clickable beside the Home trigger
 - [x] Replace competing M'Mora call listeners with one shared call engine and a global incoming-call surface
 - [x] Show the caller's real connecting state immediately after the receiver accepts
+- [x] Ultra-low-data “send words, not pixels” mode: suspend media, exchange bounded text through the call worker, and auto-engage on severe loss/latency
+- [ ] Finish and preview the Music-style incoming call glass panel and ring animation
+- [ ] Add call history and in-app call notifications without changing unrelated screens
+- [ ] Complete Zoe inbox delivery through the signed-in private channel
+- [ ] Complete call-scoped Zoe/DHF worker prompts, whisper subtitles, and in-call chat
+- [ ] Complete Zoe mood-song and birth-chart call/VR commands with real playback
+- [ ] Complete sleeping-phone push call notifications (requires a push service connection and physical-device permission test)
+- [ ] Genuine Moksh↔Asha phone/desktop call, PiP, speech, hang-up, network switch, ICE recovery, and synchronized-state QA (blocked until two signed-in sessions are available)
+- [ ] TURN relay validation across networks (deferred by user; relay provider URL and shared secret are not configured)
 
 - [x] Automatically wire every registered static page into the Home icon menu
 - [x] Keep the first-time VR tap/drag tutorial with persistent dismissal and unchanged panel visuals
