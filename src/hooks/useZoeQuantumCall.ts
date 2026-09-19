@@ -1252,11 +1252,22 @@ const startGodEye = useCallback(() => {
   const createPeerConnection = useCallback((remoteUserId: string): RTCPeerConnection => {
     console.log('[QuantumCall] Creating peer connection...');
     
-    const pc = new RTCPeerConnection({
+    const config: RTCConfiguration = {
       iceServers: iceServersRef.current,
       bundlePolicy: 'max-bundle',
       rtcpMuxPolicy: 'require',
-    });
+    };
+
+    let pc: RTCPeerConnection;
+    try {
+      pc = new RTCPeerConnection(config);
+    } catch (configError) {
+      // A bad relay entry must never stop a call from ringing: retry on the
+      // built-in public servers instead of failing the whole call.
+      console.warn('[QuantumCall] Falling back to default servers:', configError);
+      iceServersRef.current = FALLBACK_ICE_SERVERS;
+      pc = new RTCPeerConnection({ ...config, iceServers: FALLBACK_ICE_SERVERS });
+    }
 
     if (isOffererRef.current) attachDataChannel(pc.createDataChannel('zoe-private', { ordered: true }));
     pc.ondatachannel = (event) => attachDataChannel(event.channel);
@@ -1849,6 +1860,8 @@ const startGodEye = useCallback(() => {
       pendingIceCandidatesRef.current[remoteUserId] = [];
     };
 
+    const handledSignalIds = new Set<string>();
+
     const processSignal = async (signal: {
       id: string;
       caller_id: string;
@@ -1856,6 +1869,10 @@ const startGodEye = useCallback(() => {
       signal_data: any;
       encrypted_payload?: string;
     }) => {
+      if (signal.id) {
+        if (handledSignalIds.has(signal.id)) return;
+        handledSignalIds.add(signal.id);
+      }
       console.log('[QuantumCall] Received signal:', signal.signal_type);
 
       // Use refs to get latest callbacks without causing effect re-runs
@@ -2072,7 +2089,26 @@ const startGodEye = useCallback(() => {
 
     realtimeChannelRef.current = channel;
 
+    // Safety net: if the live channel drops a message, a light poll still
+    // delivers the invite within a few seconds. Duplicates are ignored.
+    const pollTimer = setInterval(async () => {
+      const since = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+      const { data: rows, error } = await supabase
+        .from('quantum_call_signals')
+        .select('id, caller_id, signal_type, signal_data, encrypted_payload, created_at')
+        .eq('receiver_id', currentUserId)
+        .gte('created_at', since)
+        .order('created_at', { ascending: true })
+        .limit(20);
+      if (error || !rows) return;
+      for (const row of rows) {
+        if (handledSignalIds.has(row.id)) continue;
+        await processSignal(row as any);
+      }
+    }, 5000);
+
     return () => {
+      clearInterval(pollTimer);
       if (realtimeChannelRef.current) {
         supabase.removeChannel(realtimeChannelRef.current);
         realtimeChannelRef.current = null;
