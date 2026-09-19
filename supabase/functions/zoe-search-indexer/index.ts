@@ -508,7 +508,28 @@ Deno.serve(async (req) => {
     const presentedSecret = (req.headers.get('x-index-drain-secret') || '').trim();
     const isSystemDrain = (Boolean(SERVICE_ROLE) && bearer === SERVICE_ROLE)
       || (Boolean(drainSecret) && presentedSecret === drainSecret);
-    const user = isSystemDrain ? null : await requireSearchUser(req);
+    // Signed-out or expired callers are an expected state (startup health probe),
+    // not an error: answer 200 with an idle snapshot so the app never shows a
+    // 401 runtime error / blank screen.
+    let user: { id: string } | null = null;
+    if (!isSystemDrain) {
+      try {
+        user = await requireSearchUser(req);
+      } catch (_authError) {
+        return json({
+          requestId,
+          skipped: true,
+          reason: 'invalid_session',
+          stats: { indexed: 0, pending: 0, processing: 0, failed: 0, newestIndexedAt: null },
+          coverage: {},
+          failures: [],
+          enqueued: 0,
+          processed: 0,
+          completed: 0,
+          failed: 0,
+        });
+      }
+    }
     if (!SUPABASE_URL || !SERVICE_ROLE) throw new Error('BACKEND_NOT_CONFIGURED');
     const body = await req.json().catch(() => ({}));
     // Keep each invocation inside the edge runtime budget; callers repeatedly
