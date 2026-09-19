@@ -5,7 +5,10 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import HomeGlassDock from '@/components/home/HomeGlassDock';
 import ZoeCallsIcon from '@/components/icons/ZoeCallsIcon';
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  window.localStorage.clear();
+});
 
 describe('Calls Home menu action', () => {
   it('is visible, named, and wired when the Home menu opens', () => {

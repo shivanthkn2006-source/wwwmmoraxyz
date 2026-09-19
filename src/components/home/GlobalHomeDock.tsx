@@ -11,7 +11,7 @@
  */
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Lightbulb, Sparkles, MessageCircle, Bell, User, Compass, Headphones, Music } from 'lucide-react';
+import { Lightbulb, Sparkles, MessageCircle, Bell, User, Compass, Headphones, Music, Camera, ScanFace, Boxes } from 'lucide-react';
 import HomeGlassDock from '@/components/home/HomeGlassDock';
 import GrowthAlertsPanel from '@/components/growth/GrowthAlertsPanel';
 import { useAuth } from '@/lib/auth';
@@ -83,6 +83,27 @@ export const GlobalHomeDock: React.FC = () => {
             badge: counts.messages || undefined,
             active: pathname.startsWith('/chat'),
             onSelect: () => navigate('/chat'),
+          },
+          {
+            id: 'global-camera',
+            label: 'Camera',
+            icon: <Camera className="h-[22px] w-[22px]" />,
+            active: pathname.startsWith('/camera'),
+            onSelect: () => navigate('/camera'),
+          },
+          {
+            id: 'global-selfie-city',
+            label: 'Selfie City',
+            icon: <ScanFace className="h-[22px] w-[22px]" />,
+            active: pathname.startsWith('/selfie-city'),
+            onSelect: () => navigate('/selfie-city'),
+          },
+          {
+            id: 'global-vr-world',
+            label: 'VR World',
+            icon: <Boxes className="h-[22px] w-[22px]" />,
+            active: pathname.startsWith('/zoe-omega'),
+            onSelect: () => navigate('/zoe-omega?vr=1'),
           },
           {
             id: 'global-calls',
