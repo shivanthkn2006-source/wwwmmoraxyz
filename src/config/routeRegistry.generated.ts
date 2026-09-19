@@ -42,6 +42,7 @@ export const CANONICAL_ROUTES: CanonicalRoute[] = [
   { path: "/blueprint-download", label: "Blueprint download", dynamic: false },
   { path: "/bug-report", label: "Bug report", dynamic: false },
   { path: "/calls", label: "Calls", dynamic: false },
+  { path: "/calls/history", label: "Calls · history", dynamic: false },
   { path: "/camera", label: "Camera", dynamic: false },
   { path: "/career-divinity", label: "Career divinity", dynamic: false },
   { path: "/chat", label: "Chat", dynamic: false },

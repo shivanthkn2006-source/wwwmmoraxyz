@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
 import ZoeCallsIcon from '@/components/icons/ZoeCallsIcon';
 import { CallControlPanel } from '@/components/zoe-infinity/CallControlPanel';
@@ -32,8 +33,12 @@ const CallsPage = () => {
         <div className="flex flex-col items-center gap-3 text-white/70">
           <ZoeCallsIcon className="h-9 w-9" />
           <h1 className="text-xl font-medium text-white">Calls</h1>
+          <Link to="/calls/history" className="pointer-events-auto rounded-full border border-white/15 px-4 py-1.5 text-sm text-white/80 hover:bg-white/10 hover:text-white">
+            Call history
+          </Link>
         </div>
       </div>
+
 
       <CallControlPanel
         currentUserId={user.id}

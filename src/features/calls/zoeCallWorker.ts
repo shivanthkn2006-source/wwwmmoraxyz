@@ -6,10 +6,17 @@ import {
   WORDS_ONLY_MODE_ENVELOPE_TYPE,
   sanitizeCallWords,
 } from './wordsOnlyMode';
+import { buildZoeCallWhisper, isZoeThinkRequest } from './zoeCallThinking';
 
 const scope: DedicatedWorkerGlobalScope = self as unknown as DedicatedWorkerGlobalScope;
 
 scope.onmessage = (event: MessageEvent<unknown>) => {
+  // Zoe's in-call thinking: runs here so the call screen never stutters.
+  if (isZoeThinkRequest(event.data)) {
+    scope.postMessage({ ok: true, whisper: buildZoeCallWhisper(event.data.transcript) });
+    return;
+  }
+
   const envelope = parseZoeCallData(event.data);
   if (!envelope) {
     scope.postMessage({ ok: false, error: 'invalid_call_data' });

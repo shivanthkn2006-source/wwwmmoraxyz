@@ -55,6 +55,7 @@ const ChatPage = lazy(() => import("./pages/ChatPage"));
 const ProfilePage = lazy(() => import("./pages/ProfilePage"));
 const HuddlePage = lazy(() => import("./pages/HuddlePage"));
 const CallsPage = lazy(() => import("./pages/CallsPage"));
+const CallHistoryPage = lazy(() => import("./pages/CallHistoryPage"));
 const UserProfileView = lazy(() => import("./pages/UserProfileView"));
 const WebdropPage = lazy(() => import("./pages/WebdropPage"));
 const AICompanionPage = lazy(() => import("./pages/AICompanionPage"));
@@ -646,6 +647,15 @@ const RouteAwareShell = () => {
                               <ProtectedRoute>
                                 {/* Dedicated authenticated audio/video calling destination. */}
                                 <CallsPage />
+                              </ProtectedRoute>
+                            }
+                          />
+                          <Route
+                            path="/calls/history"
+                            element={
+                              <ProtectedRoute>
+                                {/* Who this member called and who called them. */}
+                                <CallHistoryPage />
                               </ProtectedRoute>
                             }
                           />
