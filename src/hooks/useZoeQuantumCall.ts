@@ -1472,9 +1472,11 @@ const startGodEye = useCallback(() => {
 
     callTimeoutRef.current = setTimeout(() => {
       if (state.callState === 'requesting') {
+        void recordMissedCallNotification(currentUserId, receiver.userId);
         endCall('timeout');
       }
     }, CALL_TIMEOUT_MS);
+
 
   }, [currentUserId, setupLocalMedia, createPeerConnection, sendSignal, state.callState, playCallRingtone, stopCallRingtone, refreshIceServers]);
 
