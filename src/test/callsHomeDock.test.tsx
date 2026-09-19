@@ -5,7 +5,10 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import HomeGlassDock from '@/components/home/HomeGlassDock';
 import ZoeCallsIcon from '@/components/icons/ZoeCallsIcon';
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  window.localStorage.clear();
+});
 
 describe('Calls Home menu action', () => {
   it('is visible, named, and wired when the Home menu opens', () => {
@@ -25,6 +28,22 @@ describe('Calls Home menu action', () => {
     const calls = screen.getByRole('menuitem', { name: 'Audio & video calls' });
     expect(screen.getByTestId('zoe-calls-icon')).toBeTruthy();
     fireEvent.click(calls);
+    expect(onSelect).toHaveBeenCalledOnce();
+  });
+
+  it('keeps a working Home destination inside the open panel', () => {
+    const onHomeSelect = vi.fn();
+    render(<HomeGlassDock items={[]} onHomeSelect={onHomeSelect} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Open home menu' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Home feed' }));
+    expect(onHomeSelect).toHaveBeenCalledOnce();
+  });
+
+  it('keeps a recently used action working beside the closed Home trigger', () => {
+    const onSelect = vi.fn();
+    window.localStorage.setItem('mmora:home-dock-usage:v1', JSON.stringify({ calls: { count: 2, last: Date.now() } }));
+    render(<HomeGlassDock items={[{ id: 'calls', label: 'Audio & video calls', icon: <ZoeCallsIcon />, onSelect }]} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Audio & video calls' }));
     expect(onSelect).toHaveBeenCalledOnce();
   });
 });

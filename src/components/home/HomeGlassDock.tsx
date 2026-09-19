@@ -46,6 +46,8 @@ interface HomeGlassDockProps {
   badgesUpdatedAt?: number | null;
   /** Total unread count rendered on top of the bare home trigger itself. */
   triggerBadge?: number;
+  /** Permanent Home destination shown beside the trigger while the panel is open. */
+  onHomeSelect?: () => void;
 }
 
 const PLACEHOLDER_ICONS = [
@@ -81,7 +83,7 @@ const formatAgo = (timestamp?: number | null): string => {
   return `${Math.round(minutes / 60)}h ago`;
 };
 
-export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, triggerBadge = 0 }: HomeGlassDockProps) {
+export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, triggerBadge = 0, onHomeSelect }: HomeGlassDockProps) {
   const badgesEnabled = useDockBadgesEnabled();
   const [open, setOpen] = React.useState(false);
 
@@ -321,6 +323,18 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
     onSelect: () => {},
   };
 
+  const homeDestination: GlassDockItem = {
+    id: 'home-destination',
+    label: 'Home feed',
+    icon: <Home className="h-[22px] w-[22px]" />,
+    onSelect: onHomeSelect ?? (() => {}),
+  };
+
+  const recentItems = React.useMemo(
+    () => slots.filter((item) => Boolean(usage[item.id])).slice(-3),
+    [slots, usage],
+  );
+
   // Seven-column menu with four visible rows. Additional registry-discovered
   // pages remain reachable by scrolling inside the same unchanged panel.
   const GRID_COLUMNS = 7;
@@ -387,8 +401,12 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
         >
           {open && renderPackedRows()}
 
-          {/* Home is the only control in the bottom row and stays at screen-right. */}
-          {renderIconButton(homeItem, true)}
+          {/* Recent actions remain directly reachable; Home is always present inside the open panel. */}
+          <div className="flex items-center justify-end gap-[var(--home-dock-gap)]">
+            {!open && recentItems.map((item) => renderIconButton(item))}
+            {open && renderIconButton(homeDestination)}
+            {renderIconButton(homeItem, true)}
+          </div>
         </div>
       </div>
     </div>

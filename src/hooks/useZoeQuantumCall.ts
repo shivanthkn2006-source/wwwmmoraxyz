@@ -1164,6 +1164,7 @@ const startGodEye = useCallback(() => {
       switch (pc.connectionState) {
         case 'connecting':
           if (!hasConnectedOnceRef.current) handshakeStartTimeRef.current = Date.now();
+          setState(prev => ({ ...prev, callState: 'connecting' }));
           break;
         case 'connected':
           if (handshakeStartTimeRef.current) {
@@ -1765,6 +1766,7 @@ const startGodEye = useCallback(() => {
           // Stop outgoing ringtone and play connect sound
           stopCallRingtoneRef.current?.();
           playCallConnectRef.current?.();
+          setState(prev => ({ ...prev, callState: 'connecting', error: null }));
           
           if (peerConnectionRef.current && (data as any).answer) {
             await peerConnectionRef.current.setRemoteDescription(

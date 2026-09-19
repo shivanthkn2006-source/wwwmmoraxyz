@@ -52,7 +52,7 @@ import { useZoeVoiceCommands } from '@/hooks/useZoeVoiceCommands';
 import { useZoeOrbRealtimeFeeds } from '@/hooks/useZoeOrbRealtimeFeeds';
 import { useNewUserNotifications } from '@/hooks/useNewUserNotifications';
 import { useZoeHandsFreeMessageReader } from '@/hooks/useZoeHandsFreeMessageReader';
-import { useZoeQuantumCall } from '@/hooks/useZoeQuantumCall';
+import { useCallEngine } from '@/contexts/CallEngineContext';
 import { QuantumCallButton } from '@/components/QuantumCallUI';
 import { QuantumCallModal } from '@/components/quantum/QuantumCallModal';
 import { toast } from 'sonner';
@@ -227,7 +227,7 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
   const handsFreeReader = useZoeHandsFreeMessageReader();
   
   // Quantum Call - P2P encrypted voice calls
-  const quantumCall = useZoeQuantumCall(user?.id);
+  const quantumCall = useCallEngine();
   
   // TubeSight - YouTube video analysis via transcript
   const tubeSight = useZoeTubeSight();
@@ -3142,7 +3142,7 @@ Want me to dive deeper into any aspect?`;
           {user?.id && (
             <QuantumCallModal
               currentUserId={user.id}
-              isOpen={showVideoCallModal || quantumCall.hasIncomingCall}
+              isOpen={showVideoCallModal}
               onClose={() => {
                 setShowVideoCallModal(false);
                 setVideoCallTarget(null);
