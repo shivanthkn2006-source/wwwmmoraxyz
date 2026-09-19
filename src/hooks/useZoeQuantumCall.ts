@@ -23,6 +23,7 @@ import {
   type CallNetworkDiagnostics,
 } from '@/features/calls/callTransport';
 import { createZoeCallDataEnvelope } from '@/features/calls/zoeCallData';
+import { recordMissedCallNotification } from '@/features/calls/callHistory';
 import {
   appendWordsEntry,
   createWordsEntry,
