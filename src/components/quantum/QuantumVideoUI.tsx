@@ -49,6 +49,7 @@ import { CallState, VideoQuality, GodEyeAnalysis } from '@/hooks/useZoeQuantumCa
 import { LowPowerCallWarning } from './LowPowerCallWarning';
 import type { CallNetworkDiagnostics } from '@/features/calls/callTransport';
 import type { CallWordsEntry } from '@/features/calls/wordsOnlyMode';
+import type { ZoeCallWhisper } from '@/features/calls/zoeCallThinking';
 
 // Responsive sizing hook for call controls
 const useResponsiveCallSize = () => {
@@ -102,6 +103,7 @@ interface QuantumVideoUIProps {
   dataChannelState: RTCDataChannelState | 'unavailable';
   wordsOnlyMode: boolean;
   wordsTranscript: CallWordsEntry[];
+  zoeWhisper: ZoeCallWhisper | null;
   onToggleVideo: () => Promise<void>;
   onSetLowDataMode: (enabled: boolean) => void;
   onSetWordsOnlyMode: (enabled: boolean) => void;
@@ -662,6 +664,7 @@ export const QuantumVideoUI: React.FC<QuantumVideoUIProps> = ({
   dataChannelState,
   wordsOnlyMode,
   wordsTranscript,
+  zoeWhisper,
   onToggleVideo,
   onSetLowDataMode,
   onSetWordsOnlyMode,
@@ -798,6 +801,15 @@ export const QuantumVideoUI: React.FC<QuantumVideoUIProps> = ({
           {/* Speaking indicator on remote */}
           <SpeakingIndicator isActive={remoteIsSpeaking} label="Speaking" />
         </div>
+
+        {zoeWhisper && isConnected && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-40 z-20 flex flex-col items-center gap-1 px-6 text-center" aria-live="polite">
+            <p className="max-w-md rounded-full bg-white/[0.08] px-4 py-1.5 text-sm text-white backdrop-blur-2xl">{zoeWhisper.headline}</p>
+            {zoeWhisper.prompts.length > 0 && (
+              <p className="max-w-md text-xs text-white/60">{zoeWhisper.prompts.join(' · ')}</p>
+            )}
+          </div>
+        )}
 
         {wordsOnlyMode && (
           <section className="absolute inset-x-4 bottom-24 z-20 mx-auto flex max-h-[52dvh] max-w-xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/[0.08] text-white shadow-2xl backdrop-blur-2xl" aria-label="Words only conversation">

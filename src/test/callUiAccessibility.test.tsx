@@ -25,6 +25,7 @@ const renderCall = (overrides: Partial<React.ComponentProps<typeof QuantumVideoU
     dataChannelState="open"
     wordsOnlyMode={false}
     wordsTranscript={[]}
+    zoeWhisper={null}
     onToggleVideo={vi.fn(async () => undefined)}
     onSetLowDataMode={vi.fn()}
     onSetWordsOnlyMode={vi.fn()}

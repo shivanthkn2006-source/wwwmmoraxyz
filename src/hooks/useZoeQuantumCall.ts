@@ -25,6 +25,11 @@ import {
 import { createZoeCallDataEnvelope } from '@/features/calls/zoeCallData';
 import { recordMissedCallNotification } from '@/features/calls/callHistory';
 import {
+  ZOE_THINK_REQUEST,
+  type ZoeCallWhisper,
+  type ZoeThinkRequest,
+} from '@/features/calls/zoeCallThinking';
+import {
   appendWordsEntry,
   createWordsEntry,
   sanitizeCallWords,
@@ -110,6 +115,7 @@ export interface QuantumCallState {
   dataChannelState: RTCDataChannelState | 'unavailable';
   wordsOnlyMode: boolean;
   wordsTranscript: CallWordsEntry[];
+  zoeWhisper: ZoeCallWhisper | null;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -258,6 +264,7 @@ export const useZoeQuantumCall = (currentUserId?: string) => {
     dataChannelState: 'unavailable',
     wordsOnlyMode: false,
     wordsTranscript: [],
+    zoeWhisper: null,
   });
 
   // Refs for WebRTC
@@ -323,7 +330,12 @@ export const useZoeQuantumCall = (currentUserId?: string) => {
       envelope?: object;
       words?: { text: string; at: number };
       wordsMode?: boolean;
+      whisper?: ZoeCallWhisper;
     }>) => {
+      if (event.data.ok && event.data.whisper) {
+        setState(prev => ({ ...prev, zoeWhisper: event.data.whisper ?? prev.zoeWhisper }));
+        return;
+      }
       if (event.data.ok && event.data.words) {
         const entry = createWordsEntry('remote', event.data.words.text);
         entry.at = event.data.words.at;
@@ -348,6 +360,15 @@ export const useZoeQuantumCall = (currentUserId?: string) => {
       zoeCallWorkerRef.current = null;
     };
   }, []);
+
+  // Zoe's in-call thinking always happens in the worker, never on the main thread.
+  useEffect(() => {
+    const worker = zoeCallWorkerRef.current;
+    if (!worker || !state.isInCall || state.wordsTranscript.length === 0) return;
+    const request: ZoeThinkRequest = { kind: ZOE_THINK_REQUEST, transcript: state.wordsTranscript };
+    worker.postMessage(request);
+  }, [state.isInCall, state.wordsTranscript]);
+
 
   const refreshIceServers = useCallback(async (): Promise<void> => {
     if (!currentUserId) return;
@@ -1765,6 +1786,7 @@ const startGodEye = useCallback(() => {
       dataChannelState: 'unavailable',
       wordsOnlyMode: false,
       wordsTranscript: [],
+      zoeWhisper: null,
     }));
 
     callStartTimeRef.current = null;

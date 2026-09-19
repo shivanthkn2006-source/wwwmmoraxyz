@@ -21,6 +21,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import type { CallNetworkDiagnostics } from '@/features/calls/callTransport';
 import type { CallWordsEntry } from '@/features/calls/wordsOnlyMode';
+import type { ZoeCallWhisper } from '@/features/calls/zoeCallThinking';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -46,6 +47,7 @@ export interface QuantumCallHookState {
   dataChannelState: RTCDataChannelState | 'unavailable';
   wordsOnlyMode: boolean;
   wordsTranscript: CallWordsEntry[];
+  zoeWhisper: ZoeCallWhisper | null;
   // Actions
   initiateCall: (receiver: CallParticipant, withVideo?: boolean) => Promise<void>;
   acceptCall: (withVideo?: boolean) => Promise<void>;
@@ -240,6 +242,7 @@ export const QuantumCallModal: React.FC<QuantumCallModalProps> = ({
     dataChannelState,
     wordsOnlyMode,
     wordsTranscript,
+    zoeWhisper,
     setWordsOnlyMode,
     sendCallWords,
   } = quantumCallState;
@@ -366,6 +369,7 @@ export const QuantumCallModal: React.FC<QuantumCallModalProps> = ({
                 dataChannelState={dataChannelState}
                 wordsOnlyMode={wordsOnlyMode}
                 wordsTranscript={wordsTranscript}
+                zoeWhisper={zoeWhisper}
                 onToggleVideo={toggleVideo}
                 onSetLowDataMode={setLowDataMode}
                 onSetWordsOnlyMode={setWordsOnlyMode}

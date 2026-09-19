@@ -116,6 +116,9 @@ export default defineConfig(({ mode }) => ({
         clientsClaim: true,
         skipWaiting: true,
 
+        // Background ring handler for incoming calls (additive: only adds push events)
+        importScripts: ['/push-handler.js'],
+
         // Precache offline fallback page
         additionalManifestEntries: [
           { url: '/offline.html', revision: '1.0.0' }
