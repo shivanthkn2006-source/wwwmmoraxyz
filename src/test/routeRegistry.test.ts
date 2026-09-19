@@ -91,6 +91,7 @@ describe('dock ↔ registry consistency', () => {
 
   it('exposes the authenticated Calls destination in the Home menu', () => {
     expect(findRoute('/calls')).toBeTruthy();
-    expect(DOCK_EXTRA_DEFS.some((item) => item.route === '/calls' && item.label === 'Calls')).toBe(true);
+    expect(DOCK_EXTRA_DEFS.some((item) => item.route === '/calls' && item.label === 'Audio & video calls')).toBe(true);
+    expect(DOCK_RESERVED_ROUTES).toContain('/calls');
   });
 });

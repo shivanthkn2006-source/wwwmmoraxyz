@@ -1,6 +1,7 @@
 # Music roadmap
 
 ## M’Mora Zoe calling — staged integration
+- [x] Repair the Preview `/calls` 404 and promote a distinct audio/video Calls icon into the first Home menu group
 - [x] Stage 1: authenticated short-lived relay credentials, TURN fallback, bounded ICE restart, and reconnect telemetry
 - [x] Stage 2: isolated full-screen remote video, draggable local PiP, and white-only transparent Music-style drop-up controls
 - [x] Stage 3: authenticated Calls destination in the Home menu with real participant selection and audio/video start paths

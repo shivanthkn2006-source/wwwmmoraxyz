@@ -37,6 +37,7 @@ import HomeGlassDock from '@/components/home/HomeGlassDock';
 import HomeFeedSwitcher from '@/components/home/HomeFeedSwitcher';
 import MosaicFeed from '@/components/feed/MosaicFeed';
 import { buildExtraDockItems, DOCK_RESERVED_ROUTES } from '@/components/home/dockExtraActions';
+import ZoeCallsIcon from '@/components/icons/ZoeCallsIcon';
 import { useNotificationFeatureBadges } from '@/hooks/useNotificationFeatureBadges';
 import DockBadgeBoundary from '@/components/home/DockBadgeBoundary';
 import LiveViewBoundary from '@/components/live/LiveViewBoundary';
@@ -2891,6 +2892,12 @@ const HomePage = () => {
             label: 'Music',
             icon: <Music className="h-[22px] w-[22px]" />,
             onSelect: runHomeIconAction('music', () => navigate('/music')),
+          },
+          {
+            id: 'calls',
+            label: 'Audio & video calls',
+            icon: <ZoeCallsIcon className="h-[24px] w-[24px]" />,
+            onSelect: runHomeIconAction('calls', () => navigate('/calls')),
           },
           {
             id: 'likes',
