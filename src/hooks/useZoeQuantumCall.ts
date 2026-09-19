@@ -1518,6 +1518,12 @@ const startGodEye = useCallback(() => {
     
     // Clear video sender
     videoSenderRef.current = null;
+    dataChannelRef.current?.close();
+    dataChannelRef.current = null;
+    if (reconnectTimerRef.current) {
+      clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
     
     // Close peer connection
     if (peerConnectionRef.current) {
@@ -1618,6 +1624,9 @@ const startGodEye = useCallback(() => {
     // Reset security tracking
     securityAlertsRef.current = [];
     packetLossRef.current = 0;
+    reconnectAttemptsRef.current = 0;
+    hasConnectedOnceRef.current = false;
+    isOffererRef.current = false;
     handshakeStartTimeRef.current = null;
     godEyeAnalysisCountRef.current = 0;
 
@@ -1643,6 +1652,8 @@ const startGodEye = useCallback(() => {
       },
       godEyeEnabled: false,
       lastGodEyeAnalysis: null,
+      networkDiagnostics: DEFAULT_CALL_NETWORK_DIAGNOSTICS,
+      dataChannelState: 'unavailable',
     }));
 
     callStartTimeRef.current = null;
@@ -1732,6 +1743,7 @@ const startGodEye = useCallback(() => {
             console.warn('[QuantumCall] Failed to load caller profile:', profileError);
           }
 
+          isOffererRef.current = false;
           const pc = createPeerConnectionRef.current?.(signal.caller_id);
           if (pc && (data as any).offer) {
             await pc.setRemoteDescription(new RTCSessionDescription((data as any).offer));
@@ -1805,6 +1817,30 @@ const startGodEye = useCallback(() => {
             } catch (err) {
               console.warn('[QuantumCall] Failed to add ICE candidate:', err);
             }
+          }
+          break;
+        }
+
+        case 'ice-restart-offer': {
+          const pc = peerConnectionRef.current;
+          const offer = (data as any).offer;
+          if (pc && offer) {
+            await pc.setRemoteDescription(new RTCSessionDescription(offer));
+            await flushBufferedIceCandidates(pc, signal.caller_id);
+            const answer = await pc.createAnswer();
+            answer.sdp = OPUS_32KBPS_SDP_MODIFIER(answer.sdp || '');
+            await pc.setLocalDescription(answer);
+            await sendSignal(signal.caller_id, 'ice-restart-answer', { answer: pc.localDescription?.toJSON() });
+          }
+          break;
+        }
+
+        case 'ice-restart-answer': {
+          const pc = peerConnectionRef.current;
+          const answer = (data as any).answer;
+          if (pc && answer) {
+            await pc.setRemoteDescription(new RTCSessionDescription(answer));
+            await flushBufferedIceCandidates(pc, signal.caller_id);
           }
           break;
         }
@@ -1967,6 +2003,7 @@ const startGodEye = useCallback(() => {
     // God Eye
     startGodEye,
     stopGodEye,
+    sendZoeData,
     
     // Master cleanup (for external use)
     cleanupAllMedia,
