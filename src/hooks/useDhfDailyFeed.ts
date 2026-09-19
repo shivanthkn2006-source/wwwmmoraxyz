@@ -23,10 +23,62 @@ const SELECT =
   'id, post_date, slot_time, category, headline, short_summary, full_story_content, image_url, image_path, image_source, image_prompt, image_prompt_version, image_prompt_hash, powered_by_badge, referral_cta, astrological_context, created_at';
 
 
-/** Session-scoped guard so remounts never re-trigger generation. */
-const attempted = new Set<string>();
-/** Session-scoped guard for the token-free artwork repair. */
-const reimaged = new Set<string>();
+/**
+ * Guards are persisted per browser so a reload, a new sign-in or a second tab
+ * never re-asks the generator for a day that was already attempted. Memory
+ * alone would reset on every page load and cost tokens again.
+ */
+const GUARD_KEY = 'zoe.dhf.guards.v1';
+
+type GuardKind = 'ensure' | 'reimage';
+
+const readGuards = (): Record<string, number> => {
+  try {
+    const raw = localStorage.getItem(GUARD_KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
+    return parsed && typeof parsed === 'object' ? (parsed as Record<string, number>) : {};
+  } catch {
+    return {};
+  }
+};
+
+const writeGuards = (guards: Record<string, number>) => {
+  try {
+    // Keep the store small: drop anything older than three days.
+    const cutoff = Date.now() - 3 * 86_400_000;
+    const pruned = Object.fromEntries(Object.entries(guards).filter(([, at]) => at >= cutoff));
+    localStorage.setItem(GUARD_KEY, JSON.stringify(pruned));
+  } catch {
+    /* private mode / quota — memory guards still apply for this session */
+  }
+};
+
+/** Session-scoped mirror so remounts never re-trigger anything either. */
+const memoryGuards = new Set<string>();
+
+const guardKey = (kind: GuardKind, id: string) => `${kind}:${id}`;
+
+const guardTaken = (kind: GuardKind, id: string): boolean => {
+  const key = guardKey(kind, id);
+  if (memoryGuards.has(key)) return true;
+  return Boolean(readGuards()[key]);
+};
+
+const takeGuard = (kind: GuardKind, id: string) => {
+  const key = guardKey(kind, id);
+  memoryGuards.add(key);
+  const guards = readGuards();
+  guards[key] = Date.now();
+  writeGuards(guards);
+};
+
+const releaseGuard = (kind: GuardKind, id: string) => {
+  const key = guardKey(kind, id);
+  memoryGuards.delete(key);
+  const guards = readGuards();
+  delete guards[key];
+  writeGuards(guards);
+};
 
 export interface DhfDailyFeedState {
   posts: DhfDailyPost[];
