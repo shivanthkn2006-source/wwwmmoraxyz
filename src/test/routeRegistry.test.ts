@@ -52,14 +52,40 @@ describe('dock ↔ registry consistency', () => {
     const items = buildExtraDockItems(() => {}, DOCK_RESERVED_ROUTES);
     const itemLabels = new Set(items.map((item) => item.label));
     const authoredPaths = new Set(DOCK_EXTRA_DEFS.map((item) => item.route));
-    const excludedPrefixes = ['/zoe-infinity'];
-    const excluded = new Set(['/', '/auth', '/signup', '/voice-auth', '/welcome', '/demo']);
+    const excludedPrefixes = ['/zoe-infinity', '/admin'];
+    const excluded = new Set([
+      '/',
+      '/auth',
+      '/signup',
+      '/voice-auth',
+      '/welcome',
+      '/demo',
+      // Internal QA / engineering diagnostics stay out of the member menu.
+      '/asi-test',
+      '/integration-test',
+      '/vr-audit',
+      '/platform-audit',
+      '/root-scan',
+      '/search-preview',
+      '/voice-command-test',
+    ]);
 
     for (const route of NAVIGABLE_ROUTES) {
       if (DOCK_RESERVED_ROUTES.includes(route.path) || excluded.has(route.path)) continue;
       if (excludedPrefixes.some((prefix) => route.path === prefix || route.path.startsWith(`${prefix}/`))) continue;
       if (authoredPaths.has(route.path)) continue;
       expect(itemLabels.has(route.label), `${route.path} missing from Home menu`).toBe(true);
+    }
+  });
+
+  it('keeps admin and internal QA pages out of the member Home menu', () => {
+    const items = buildExtraDockItems(() => {}, DOCK_RESERVED_ROUTES);
+    const routes = new Set(items.map((item) => item.label));
+    for (const route of NAVIGABLE_ROUTES) {
+      if (route.path === '/admin' || route.path.startsWith('/admin/') ||
+          ['/asi-test', '/integration-test', '/vr-audit', '/platform-audit', '/root-scan', '/search-preview', '/voice-command-test'].includes(route.path)) {
+        expect(routes.has(route.label), `${route.path} should not appear in the Home menu`).toBe(false);
+      }
     }
   });
 });

@@ -9,9 +9,8 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 import React, { useEffect, useRef, useState } from 'react';
 import { Image as ImageIcon, Loader2, Music, UploadCloud, X } from 'lucide-react';
-import { uploadMyMusic } from '@/features/music/musicUploads';
+import { MAX_STORED_BYTES, uploadMyMusic } from '@/features/music/musicUploads';
 
-const MAX_BYTES = 50 * 1024 * 1024;
 const UPLOAD_TIMEOUT_MS = 180_000;
 const AUDIO_NAME = /\.(mp3|m4a|aac|wav|flac|ogg|oga|opus|aif|aiff|wma)$/i;
 
@@ -36,7 +35,7 @@ const VRMusicUploadPanel: React.FC = () => {
   const pickSong = (file: File | null) => {
     setStage('idle');
     if (!file) { setSong(null); setNotice(''); return; }
-    if (file.size > MAX_BYTES) {
+    if (file.size > MAX_STORED_BYTES) {
       setSong(null);
       setNotice(`That song is ${Math.round(file.size / (1024 * 1024))} MB. Songs up to 150 MB can be uploaded.`);
       return;
