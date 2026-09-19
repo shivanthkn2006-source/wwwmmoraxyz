@@ -1021,6 +1021,10 @@ export const useZoeInfinityIntegration = () => {
       endCall: quantumCall.endCall,
       flipCamera: quantumCall.flipCamera,
       sendZoeData: quantumCall.sendZoeData,
+      wordsOnlyMode: quantumCall.wordsOnlyMode,
+      wordsTranscript: quantumCall.wordsTranscript,
+      setWordsOnlyMode: quantumCall.setWordsOnlyMode,
+      sendCallWords: quantumCall.sendCallWords,
       cleanupAllMedia: quantumCall.cleanupAllMedia,
     },
     profileAutoFill: {
