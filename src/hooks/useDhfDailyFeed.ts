@@ -23,10 +23,62 @@ const SELECT =
   'id, post_date, slot_time, category, headline, short_summary, full_story_content, image_url, image_path, image_source, image_prompt, image_prompt_version, image_prompt_hash, powered_by_badge, referral_cta, astrological_context, created_at';
 
 
-/** Session-scoped guard so remounts never re-trigger generation. */
-const attempted = new Set<string>();
-/** Session-scoped guard for the token-free artwork repair. */
-const reimaged = new Set<string>();
+/**
+ * Guards are persisted per browser so a reload, a new sign-in or a second tab
+ * never re-asks the generator for a day that was already attempted. Memory
+ * alone would reset on every page load and cost tokens again.
+ */
+const GUARD_KEY = 'zoe.dhf.guards.v1';
+
+type GuardKind = 'ensure' | 'reimage';
+
+const readGuards = (): Record<string, number> => {
+  try {
+    const raw = localStorage.getItem(GUARD_KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
+    return parsed && typeof parsed === 'object' ? (parsed as Record<string, number>) : {};
+  } catch {
+    return {};
+  }
+};
+
+const writeGuards = (guards: Record<string, number>) => {
+  try {
+    // Keep the store small: drop anything older than three days.
+    const cutoff = Date.now() - 3 * 86_400_000;
+    const pruned = Object.fromEntries(Object.entries(guards).filter(([, at]) => at >= cutoff));
+    localStorage.setItem(GUARD_KEY, JSON.stringify(pruned));
+  } catch {
+    /* private mode / quota — memory guards still apply for this session */
+  }
+};
+
+/** Session-scoped mirror so remounts never re-trigger anything either. */
+const memoryGuards = new Set<string>();
+
+const guardKey = (kind: GuardKind, id: string) => `${kind}:${id}`;
+
+const guardTaken = (kind: GuardKind, id: string): boolean => {
+  const key = guardKey(kind, id);
+  if (memoryGuards.has(key)) return true;
+  return Boolean(readGuards()[key]);
+};
+
+const takeGuard = (kind: GuardKind, id: string) => {
+  const key = guardKey(kind, id);
+  memoryGuards.add(key);
+  const guards = readGuards();
+  guards[key] = Date.now();
+  writeGuards(guards);
+};
+
+const releaseGuard = (kind: GuardKind, id: string) => {
+  const key = guardKey(kind, id);
+  memoryGuards.delete(key);
+  const guards = readGuards();
+  delete guards[key];
+  writeGuards(guards);
+};
 
 export interface DhfDailyFeedState {
   posts: DhfDailyPost[];
@@ -74,25 +126,27 @@ export function useDhfDailyFeed() {
     const tz = deviceTimeZone();
     const today = localDateIn(new Date(), tz);
     const yesterday = localDateIn(new Date(Date.now() - 86_400_000), tz);
-    const guardKey = `${user.id}:${today}`;
+    const ensureId = `${user.id}:${today}`;
+    const reimageId = `${user.id}:${COMPASS_IMAGE_VERSION}`;
 
     try {
       let rows = await read(user.id, yesterday, today);
 
       // Cards written under an older artwork contract are repaired once per
-      // session. This never calls a model and never rewrites any card text.
+      // browser. This never calls a model and never rewrites any card text.
       const stale = rows.some((row) => row.image_prompt_version !== COMPASS_IMAGE_VERSION);
-      if (stale && !reimaged.has(user.id) && (await hasLiveSession())) {
-        reimaged.add(user.id);
+      if (stale && !guardTaken('reimage', reimageId) && (await hasLiveSession())) {
+        takeGuard('reimage', reimageId);
         const { error: repairError } = await supabase.functions.invoke('generate-dhf-daily-feed', {
           body: { action: 'reimage' },
         });
-        if (repairError) reimaged.delete(user.id);
+        if (repairError) releaseGuard('reimage', reimageId);
         else rows = await read(user.id, yesterday, today);
       }
 
       const todayCount = rows.filter((row) => row.post_date === today).length;
-      const shouldGenerate = todayCount < COMPASS_SLOT_COUNT && (options.force || !attempted.has(guardKey));
+      const shouldGenerate =
+        todayCount < COMPASS_SLOT_COUNT && (options.force || !guardTaken('ensure', ensureId));
 
       if (!shouldGenerate) {
         if (mounted.current) setState({ posts: duePosts(rows, new Date(), tz), loading: false, error: false, generating: false });
@@ -105,7 +159,7 @@ export function useDhfDailyFeed() {
         return;
       }
 
-      attempted.add(guardKey);
+      takeGuard('ensure', ensureId);
       if (mounted.current) {
         setState((prev) => ({ ...prev, posts: duePosts(rows, new Date(), tz), loading: false, generating: true }));
       }
@@ -114,11 +168,12 @@ export function useDhfDailyFeed() {
         body: { action: 'ensure', date: today, timezone: tz },
       });
       if (fnError) {
-        // Allow one more attempt later in the session; still show what exists.
-        attempted.delete(guardKey);
+        // Allow one more attempt later; still show what already exists.
+        releaseGuard('ensure', ensureId);
       } else {
         rows = await read(user.id, yesterday, today);
       }
+
 
       if (mounted.current) {
         setState({ posts: duePosts(rows, new Date(), tz), loading: false, error: Boolean(fnError), generating: false });
