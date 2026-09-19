@@ -1492,6 +1492,10 @@ const startGodEye = useCallback(() => {
       withVideo,
     });
 
+    // Ring the other phone too, so a closed app or a sleeping phone still alerts.
+    void ringReceiverDevice(receiver.userId, receiver.displayName, withVideo);
+
+
     callTimeoutRef.current = setTimeout(() => {
       if (state.callState === 'requesting') {
         void recordMissedCallNotification(currentUserId, receiver.userId);
