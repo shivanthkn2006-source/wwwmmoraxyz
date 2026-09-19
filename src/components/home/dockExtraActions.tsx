@@ -76,6 +76,7 @@ interface ExtraDef {
 /** Ordered by usefulness — the dock trims from the end when space runs out. */
 export const DOCK_EXTRA_DEFS: ExtraDef[] = [
   { id: 'dock-music', label: 'Music', route: '/music', Icon: Music2 },
+  { id: 'dock-calls', label: 'Calls', route: '/calls', Icon: PhoneCall },
   { id: 'dock-compass', label: 'DHF Neural Feed', route: '/compass', Icon: Compass },
   { id: 'dock-help', label: 'Help guides', route: '/help', Icon: LifeBuoy },
   { id: 'dock-site-map', label: 'Site map', route: '/map', Icon: MapIcon },
@@ -84,7 +85,7 @@ export const DOCK_EXTRA_DEFS: ExtraDef[] = [
   { id: 'dock-voice-commands', label: 'Voice commands', route: '/voice-commands', Icon: Mic },
   { id: 'dock-zoe-astro', label: 'Zoe Astro', route: '/zoe-astro', Icon: Star },
   { id: 'dock-dhf-dashboard', label: 'DHF dashboard', route: '/dhf-dashboard', Icon: LayoutDashboard },
-  { id: 'dock-huddle', label: 'Huddle call', route: '/huddle', Icon: PhoneCall },
+  { id: 'dock-huddle', label: 'Huddle', route: '/huddle', Icon: Users },
   { id: 'dock-webdrop', label: 'WebDrop share', route: '/webdrop', Icon: Share2 },
   { id: 'dock-quantum-camera', label: 'Quantum camera', route: '/quantum-camera', Icon: Aperture },
   { id: 'dock-analytics', label: 'Analytics', route: '/analytics-dashboard', Icon: BarChart3 },

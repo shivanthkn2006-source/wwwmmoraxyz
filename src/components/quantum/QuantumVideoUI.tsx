@@ -157,7 +157,7 @@ const QualityIndicator: React.FC<{
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
     >
-      <QualityIcon className={cn('w-4 h-4', getQualityColor(quality))} />
+      <QualityIcon className={cn('w-4 h-4', getQualityColor())} />
       <span className="text-xs font-medium text-white/90">
         {Math.round(bitrate / 1000)}kbps
       </span>

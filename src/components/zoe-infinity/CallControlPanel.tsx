@@ -173,19 +173,26 @@ export const CallControlPanel: React.FC<CallControlPanelProps> = ({
         transition={{ delay: 0.5 }}
       >
         {isInCall ? (
-          <button
-            className="p-1.5 flex items-center justify-center"
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="End call"
+            className="h-11 w-11 rounded-full bg-white/[0.08] text-white backdrop-blur-2xl hover:bg-white/15 hover:text-white"
             onClick={onEndCall}
           >
-            <PhoneOff className="w-5 h-5 text-red-400 drop-shadow-lg" />
-          </button>
+            <PhoneOff className="w-5 h-5" />
+          </Button>
         ) : (
-          <button
-            className="p-1.5 flex items-center justify-center"
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label={isOpen ? 'Close calls' : 'Open calls'}
+            aria-expanded={isOpen}
+            className="h-11 w-11 rounded-full bg-white/[0.08] text-white backdrop-blur-2xl hover:bg-white/15 hover:text-white"
             onClick={() => setIsOpen(!isOpen)}
           >
-            {isOpen ? <X className="w-5 h-5 text-white/60" /> : <Phone className="w-5 h-5 text-white/50 drop-shadow-lg" />}
-          </button>
+            {isOpen ? <X className="w-5 h-5" /> : <Phone className="w-5 h-5" />}
+          </Button>
         )}
       </motion.div>
 
@@ -193,18 +200,18 @@ export const CallControlPanel: React.FC<CallControlPanelProps> = ({
       <AnimatePresence>
         {isOpen && !isInCall && (
           <motion.div
-            className="fixed bottom-40 right-4 w-80 max-h-[60vh] z-40 rounded-2xl bg-background/95 backdrop-blur-xl border border-foreground/10 shadow-2xl overflow-hidden"
+            className="fixed bottom-36 right-3 w-[min(20rem,calc(100vw-1.5rem))] max-h-[min(60vh,32rem)] z-40 rounded-lg bg-white/[0.08] text-white backdrop-blur-2xl shadow-2xl shadow-black/20 overflow-hidden"
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
           >
             {/* Header */}
-            <div className="p-4 border-b border-foreground/10 bg-gradient-to-r from-cyan-500/10 to-blue-500/10">
+            <div className="p-4 border-b border-white/10">
               <h3 className="text-lg font-semibold flex items-center gap-2">
-                <Users className="w-5 h-5 text-cyan-400" />
-                Quantum Call
+                <Users className="w-5 h-5 text-white" />
+                Calls
               </h3>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-xs text-white/60 mt-1">
                 Select a user to start a call
               </p>
             </div>
@@ -212,35 +219,35 @@ export const CallControlPanel: React.FC<CallControlPanelProps> = ({
             {/* Search */}
             <div className="p-3 border-b border-foreground/5">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/60" />
                 <Input
                   placeholder="Search users..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 bg-background/50 border-foreground/10"
+                  className="pl-9 bg-white/[0.06] border-white/10 text-white placeholder:text-white/50"
                 />
               </div>
             </div>
 
             {/* Selected User */}
             {selectedUser && (
-              <div className="p-3 border-b border-foreground/5 bg-primary/5">
+              <div className="p-3 border-b border-white/10 bg-white/[0.04]">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="relative">
                       <Avatar className="w-10 h-10">
                         <AvatarImage src={selectedUser.profile_photo_url || ''} />
-                        <AvatarFallback className="bg-cyan-500/20 text-cyan-400">
+                        <AvatarFallback className="bg-white/10 text-white">
                           {selectedUser.display_name?.charAt(0)?.toUpperCase() || 'U'}
                         </AvatarFallback>
                       </Avatar>
                       {isUserOnline(selectedUser.user_id) && (
-                        <Circle className="absolute bottom-0 right-0 w-3 h-3 fill-emerald-500 text-emerald-500" />
+                         <Circle className="absolute bottom-0 right-0 w-3 h-3 fill-white text-white" />
                       )}
                     </div>
                     <div>
                       <p className="font-medium text-sm">{selectedUser.display_name}</p>
-                      <p className="text-xs text-muted-foreground">
+                       <p className="text-xs text-white/60">
                         {isUserOnline(selectedUser.user_id) ? 'Online' : 'Offline'}
                       </p>
                     </div>
@@ -258,14 +265,16 @@ export const CallControlPanel: React.FC<CallControlPanelProps> = ({
                 {/* Call Buttons */}
                 <div className="flex gap-2 mt-3">
                   <Button
-                    className="flex-1 bg-emerald-500 hover:bg-emerald-600"
+                    variant="ghost"
+                    className="flex-1 bg-white/[0.08] text-white hover:bg-white/15 hover:text-white"
                     onClick={handleStartAudioCall}
                   >
                     <Phone className="w-4 h-4 mr-2" />
                     Audio Call
                   </Button>
                   <Button
-                    className="flex-1 bg-cyan-500 hover:bg-cyan-600"
+                    variant="ghost"
+                    className="flex-1 bg-white/[0.08] text-white hover:bg-white/15 hover:text-white"
                     onClick={handleStartVideoCall}
                   >
                     <Video className="w-4 h-4 mr-2" />
@@ -279,8 +288,8 @@ export const CallControlPanel: React.FC<CallControlPanelProps> = ({
             <ScrollArea className="max-h-64">
               <div className="p-2">
                 {isSearching ? (
-                  <div className="flex items-center justify-center py-8 text-muted-foreground">
-                    <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                   <div className="flex items-center justify-center py-8 text-white/60">
+                     <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
                   </div>
                 ) : displayList.length > 0 ? (
                   <div className="space-y-1">
@@ -290,20 +299,20 @@ export const CallControlPanel: React.FC<CallControlPanelProps> = ({
                         className={cn(
                           "w-full flex items-center gap-3 p-2 rounded-lg transition-all",
                           selectedUser?.user_id === user.user_id
-                            ? "bg-primary/20"
-                            : "hover:bg-foreground/5"
+                            ? "bg-white/15"
+                            : "hover:bg-white/[0.08]"
                         )}
                         onClick={() => handleUserSelect(user)}
                       >
                         <div className="relative">
                           <Avatar className="w-9 h-9">
                             <AvatarImage src={user.profile_photo_url || ''} />
-                            <AvatarFallback className="bg-cyan-500/20 text-cyan-400 text-sm">
+                             <AvatarFallback className="bg-white/10 text-white text-sm">
                               {user.display_name?.charAt(0)?.toUpperCase() || 'U'}
                             </AvatarFallback>
                           </Avatar>
                           {isUserOnline(user.user_id) && (
-                            <Circle className="absolute bottom-0 right-0 w-2.5 h-2.5 fill-emerald-500 text-emerald-500" />
+                             <Circle className="absolute bottom-0 right-0 w-2.5 h-2.5 fill-white text-white" />
                           )}
                         </div>
                         <div className="flex-1 text-left">
@@ -311,13 +320,13 @@ export const CallControlPanel: React.FC<CallControlPanelProps> = ({
                             {user.display_name || user.username || 'Unknown'}
                           </p>
                           {user.username && (
-                            <p className="text-xs text-muted-foreground truncate">
+                             <p className="text-xs text-white/60 truncate">
                               @{user.username}
                             </p>
                           )}
                         </div>
                         {isUserOnline(user.user_id) && (
-                          <span className="text-[10px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full">
+                           <span className="text-[10px] text-white/70 bg-white/10 px-1.5 py-0.5 rounded-full">
                             Online
                           </span>
                         )}
@@ -325,7 +334,7 @@ export const CallControlPanel: React.FC<CallControlPanelProps> = ({
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-8 text-muted-foreground text-sm">
+                   <div className="text-center py-8 text-white/60 text-sm">
                     {searchQuery ? 'No users found' : 'No recent contacts'}
                   </div>
                 )}

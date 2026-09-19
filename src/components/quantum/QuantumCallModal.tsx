@@ -7,7 +7,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Phone, PhoneOff, Video, User, Sparkles, X, Circle, Square } from 'lucide-react';
+import { Phone, PhoneOff, Video, User, Sparkles, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { QuantumVideoUI } from './QuantumVideoUI';
@@ -78,20 +78,11 @@ const IncomingCallUI: React.FC<{
   onAccept: (withVideo: boolean) => void;
   onReject: () => void;
 }> = ({ caller, onAccept, onReject }) => {
-  const [ringPulse, setRingPulse] = useState(0);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setRingPulse(p => (p + 1) % 3);
-    }, 500);
-    return () => clearInterval(interval);
-  }, []);
-
   if (!caller) return null;
 
   return (
     <motion.div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-xl"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-transparent text-white backdrop-blur-2xl"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -101,7 +92,7 @@ const IncomingCallUI: React.FC<{
         {[0, 1, 2].map(i => (
           <div
             key={i}
-            className="absolute rounded-full border-2 border-primary/30 animate-gpu-ring-expand-fade"
+            className="absolute rounded-full border border-white/20 animate-gpu-ring-expand-fade"
             style={{ 
               width: 150, 
               height: 150,
@@ -114,7 +105,7 @@ const IncomingCallUI: React.FC<{
       <div className="relative z-10 flex flex-col items-center gap-8">
         {/* Caller avatar - CSS animation */}
         <div className="relative animate-gpu-pulse-scale-sm">
-          <div className="w-32 h-32 rounded-full bg-gradient-to-br from-primary/30 to-cyan-500/30 border-4 border-primary/50 flex items-center justify-center overflow-hidden shadow-2xl shadow-primary/30">
+          <div className="w-32 h-32 rounded-full bg-white/[0.08] flex items-center justify-center overflow-hidden shadow-2xl shadow-black/20 backdrop-blur-2xl">
             {caller.avatarUrl ? (
               <img
                 src={caller.avatarUrl}
@@ -122,24 +113,24 @@ const IncomingCallUI: React.FC<{
                 className="w-full h-full object-cover"
               />
             ) : caller.isAI ? (
-              <div className="w-full h-full bg-gradient-to-br from-primary via-cyan-500 to-purple-500">
+              <div className="w-full h-full bg-white/10">
                 <Sparkles className="w-12 h-12 text-white absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
               </div>
             ) : (
-              <User className="w-16 h-16 text-foreground/60" />
+              <User className="w-16 h-16 text-white/60" />
             )}
           </div>
 
           {/* Pulsing ring - CSS animation */}
-          <div className="absolute inset-0 rounded-full border-4 border-primary animate-gpu-ring-pulse" />
+          <div className="absolute inset-0 rounded-full border border-white/40 animate-gpu-ring-pulse" />
         </div>
 
         {/* Caller info */}
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-foreground mb-1">
+          <h2 className="text-2xl font-bold text-white mb-1">
             {caller.displayName || (caller.isAI ? 'Zoe AI' : 'Unknown Caller')}
           </h2>
-          <p className="text-muted-foreground animate-gpu-pulse-opacity">
+          <p className="text-white/60 animate-gpu-pulse-opacity">
             Incoming quantum call...
           </p>
         </div>
@@ -149,9 +140,9 @@ const IncomingCallUI: React.FC<{
           {/* Reject */}
           <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
             <Button
-              variant="destructive"
+              variant="ghost"
               size="lg"
-              className="w-16 h-16 rounded-full"
+              className="w-16 h-16 rounded-full bg-white/[0.08] text-white backdrop-blur-2xl hover:bg-white/15 hover:text-white"
               onClick={onReject}
             >
               <PhoneOff className="w-7 h-7" />
@@ -161,9 +152,9 @@ const IncomingCallUI: React.FC<{
           {/* Accept with video */}
           <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
             <Button
-              variant="default"
+              variant="ghost"
               size="lg"
-              className="w-20 h-20 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"
+              className="w-20 h-20 rounded-full bg-white/[0.12] text-white backdrop-blur-2xl hover:bg-white/20 hover:text-white"
               onClick={() => onAccept(true)}
             >
               <Video className="w-8 h-8" />
@@ -173,9 +164,9 @@ const IncomingCallUI: React.FC<{
           {/* Accept audio only */}
           <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
             <Button
-              variant="default"
+              variant="ghost"
               size="lg"
-              className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-cyan-600 hover:from-primary/90 hover:to-cyan-700"
+              className="w-16 h-16 rounded-full bg-white/[0.08] text-white backdrop-blur-2xl hover:bg-white/15 hover:text-white"
               onClick={() => onAccept(false)}
             >
               <Phone className="w-7 h-7" />
@@ -184,7 +175,7 @@ const IncomingCallUI: React.FC<{
         </div>
 
         {/* Instructions */}
-        <p className="text-sm text-muted-foreground text-center max-w-xs">
+        <p className="text-sm text-white/60 text-center max-w-xs">
           Accept with <Video className="w-4 h-4 inline mx-1" /> for video or{' '}
           <Phone className="w-4 h-4 inline mx-1" /> for audio only
         </p>
