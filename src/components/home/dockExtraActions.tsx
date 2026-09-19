@@ -39,6 +39,7 @@ import {
   LifeBuoy,
   Map as MapIcon,
   Music2,
+  Users,
 } from 'lucide-react';
 import type { GlassDockItem } from '@/components/home/HomeGlassDock';
 import { NAVIGABLE_ROUTES } from '@/config/routeRegistry';
