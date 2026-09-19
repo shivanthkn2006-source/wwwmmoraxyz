@@ -299,6 +299,25 @@ export const useZoeQuantumCall = (currentUserId?: string) => {
     }
   }, []);
 
+  const refreshIceServers = useCallback(async (): Promise<void> => {
+    if (!currentUserId) return;
+    try {
+      const { data, error } = await supabase.functions.invoke('zoe-call-turn-credentials', { body: {} });
+      if (error) throw error;
+      const relayServers = normalizeIceServers(data?.iceServers);
+      iceServersRef.current = relayServers === FALLBACK_ICE_SERVERS
+        ? FALLBACK_ICE_SERVERS
+        : [...FALLBACK_ICE_SERVERS, ...relayServers];
+    } catch (error) {
+      iceServersRef.current = FALLBACK_ICE_SERVERS;
+      console.warn('[QuantumCall] Relay credentials unavailable; direct calling remains enabled', error);
+    }
+  }, [currentUserId]);
+
+  useEffect(() => {
+    void refreshIceServers();
+  }, [refreshIceServers]);
+
   // ═══════════════════════════════════════════════════════════════════════════════
   // GOD EYE - REAL-TIME VIDEO ANALYSIS
   // ═══════════════════════════════════════════════════════════════════════════════
@@ -521,6 +540,10 @@ const startGodEye = useCallback(() => {
           if (totalPackets > 0) {
             const packetLoss = ((report.packetsLost || 0) / totalPackets) * 100;
             packetLossRef.current = packetLoss;
+            setState(prev => ({
+              ...prev,
+              networkDiagnostics: { ...prev.networkDiagnostics, packetLossPercent: packetLoss },
+            }));
             
             // Auto-downgrade if packet loss exceeds threshold
             if (packetLoss > PACKET_LOSS_THRESHOLD && state.video?.localQuality === '720p') {
@@ -538,7 +561,16 @@ const startGodEye = useCallback(() => {
           else if (rtt < 0.4) quality = 'fair';
           else quality = 'poor';
           
-          setState(prev => ({ ...prev, connectionQuality: quality }));
+          const localCandidate = report.localCandidateId ? stats.get(report.localCandidateId) : null;
+          setState(prev => ({
+            ...prev,
+            connectionQuality: quality,
+            networkDiagnostics: {
+              ...prev.networkDiagnostics,
+              roundTripTimeMs: typeof rtt === 'number' ? Math.round(rtt * 1000) : null,
+              route: candidateRoute(localCandidate?.candidateType),
+            },
+          }));
         }
       });
     });
