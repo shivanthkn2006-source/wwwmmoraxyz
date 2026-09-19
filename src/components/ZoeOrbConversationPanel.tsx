@@ -850,7 +850,7 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
 
     // Voice command: "Zoe call [username]" / "Zoe video call [username]"
     // Phase 4: Block calls to Zoe AI - only P2P calls allowed
-    const handleInitiateCall = async (e: CustomEvent<{ userId: string; displayName?: string; avatarUrl?: string; withVideo?: boolean }>) => {
+    const handleInitiateCall = (e: CustomEvent<{ userId: string; displayName?: string; avatarUrl?: string; withVideo?: boolean }>) => {
       const { userId, displayName, avatarUrl, withVideo = false } = e.detail;
       
       // Phase 4: SEVER ZOE-AI VIDEO LINK - Block calls to AI
@@ -870,11 +870,8 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
       setCallStartWithVideo(withVideo);
       setShowVideoCallModal(true);
       
-      // Actually initiate the call
-      await quantumCall.initiateCall(
-        { userId, displayName, avatarUrl },
-        withVideo
-      );
+      // QuantumCallModal starts once from this target; do not also create a
+      // competing offer here.
     };
 
     // Voice command: "End call" / "Hang up"

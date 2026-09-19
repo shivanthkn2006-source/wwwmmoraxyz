@@ -166,7 +166,6 @@ const VIDEO_CODEC_MODIFIER = (sdp: string, preferVP9: boolean = true): string =>
 };
 
 const CALL_TIMEOUT_MS = 30000;
-const ENCRYPTION_HANDSHAKE_TIMEOUT_MS = 2000; // 2s (200ms was too strict and caused false disconnects)
 const SECURITY_ALERT_COOLDOWN_MS = 5000;
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -742,16 +741,6 @@ const startGodEye = useCallback(() => {
     }));
   }, [currentUserId, state.currentCall, state.video?.codec, state.video?.currentBitrate, state.video?.isEnabled, state.video?.localQuality, triggerSecurityAlert, logToBlackBox, stopGodEye]);
 
-  const monitorEncryptionHandshake = useCallback(() => {
-    if (!handshakeStartTimeRef.current) return;
-
-    const handshakeTime = Date.now() - handshakeStartTimeRef.current;
-
-    if (handshakeTime > ENCRYPTION_HANDSHAKE_TIMEOUT_MS) {
-      severConnection(`Encryption handshake exceeded ${ENCRYPTION_HANDSHAKE_TIMEOUT_MS}ms (${handshakeTime}ms) - Potential MITM attack`);
-    }
-  }, [severConnection]);
-
   // ═══════════════════════════════════════════════════════════════════════════════
   // SIGNALING HELPERS
   // ═══════════════════════════════════════════════════════════════════════════════
@@ -1173,10 +1162,8 @@ const startGodEye = useCallback(() => {
             const handshakeTime = Date.now() - handshakeStartTimeRef.current;
             console.log(`[QuantumCall] Handshake completed in ${handshakeTime}ms`);
             
-            if (handshakeTime > ENCRYPTION_HANDSHAKE_TIMEOUT_MS) {
-              severConnection(`Suspicious handshake timing: ${handshakeTime}ms`);
-              return;
-            }
+            // Slow handshakes are normal on mobile and relayed networks. WebRTC
+            // validates DTLS certificates itself; timing is not a MITM signal.
           }
           
           hasConnectedOnceRef.current = true;
@@ -1296,14 +1283,13 @@ const startGodEye = useCallback(() => {
       }));
       
       if (iceState === 'failed') {
-        triggerSecurityAlert('ice_failure', 'ICE negotiation failed - potential network interference');
-        monitorEncryptionHandshake();
+        triggerSecurityAlert('ice_failure', 'ICE negotiation failed; recovery started');
       }
     };
 
     peerConnectionRef.current = pc;
     return pc;
-  }, [sendSignal, monitorAudioLevels, state.video?.isEnabled, state.video?.localQuality, state.currentCall?.receiver.isAI, startGodEye, logZoeTTSContext, triggerSecurityAlert, monitorEncryptionHandshake, severConnection, attemptIceRestart, attachDataChannel]);
+  }, [sendSignal, monitorAudioLevels, state.video?.isEnabled, state.video?.localQuality, state.currentCall?.receiver.isAI, startGodEye, logZoeTTSContext, triggerSecurityAlert, attemptIceRestart, attachDataChannel]);
 
   // ═══════════════════════════════════════════════════════════════════════════════
   // CALL INITIATION

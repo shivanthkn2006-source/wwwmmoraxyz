@@ -21,7 +21,7 @@ const GlobalZoeAssistant = lazy(() =>
 );
 
 /** Routes that must stay as light as possible, or own their assistant. */
-const EXCLUDED_PREFIXES = ['/auth', '/signup', '/welcome', '/voice-auth', '/password-recovery', '/zoe-infinity'];
+const EXCLUDED_PREFIXES = ['/auth', '/signup', '/welcome', '/voice-auth', '/password-recovery', '/zoe-infinity', '/calls'];
 
 export function isZoeOrbRoute(pathname: string): boolean {
   return !EXCLUDED_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
