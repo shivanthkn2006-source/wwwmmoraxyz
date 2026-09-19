@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 // ZOE QUANTUM CALL - PROJECT CLAIRVOYANCE
-// Ultra-low latency P2P voice + video calls with Quantum Shield encryption
+// Ultra-low latency P2P voice + video calls secured by WebRTC DTLS-SRTP
 // WebRTC with Opus 32kbps audio + Adaptive Bitrate Video (720p→360p)
 // "God Eye" feature: Zoe can analyze video frames during AI calls
 // SUPPORTS: Front/Back camera flip for all devices
@@ -22,6 +22,7 @@ import {
   normalizeIceServers,
   type CallNetworkDiagnostics,
 } from '@/features/calls/callTransport';
+import { createZoeCallDataEnvelope } from '@/features/calls/zoeCallData';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -266,6 +267,7 @@ export const useZoeQuantumCall = (currentUserId?: string) => {
   const isOffererRef = useRef(false);
   const hasConnectedOnceRef = useRef(false);
   const dataChannelRef = useRef<RTCDataChannel | null>(null);
+  const zoeCallWorkerRef = useRef<Worker | null>(null);
 
   // Buffer ICE candidates that arrive before remoteDescription is set.
   const pendingIceCandidatesRef = useRef<Record<string, RTCIceCandidateInit[]>>({});
@@ -296,6 +298,21 @@ export const useZoeQuantumCall = (currentUserId?: string) => {
     if (!canvasRef.current) {
       canvasRef.current = document.createElement('canvas');
     }
+  }, []);
+
+  useEffect(() => {
+    if (typeof Worker === 'undefined') return;
+    const worker = new Worker(new URL('../features/calls/zoeCallWorker.ts', import.meta.url), { type: 'module' });
+    worker.onmessage = (event: MessageEvent<{ ok: boolean; envelope?: object }>) => {
+      if (event.data.ok && event.data.envelope) {
+        window.dispatchEvent(new CustomEvent('zoe-call-data', { detail: event.data.envelope }));
+      }
+    };
+    zoeCallWorkerRef.current = worker;
+    return () => {
+      worker.terminate();
+      zoeCallWorkerRef.current = null;
+    };
   }, []);
 
   const refreshIceServers = useCallback(async (): Promise<void> => {
@@ -796,7 +813,7 @@ const startGodEye = useCallback(() => {
     channel.onclose = () => setState(prev => ({ ...prev, dataChannelState: 'closed' }));
     channel.onerror = () => setState(prev => ({ ...prev, dataChannelState: 'closed' }));
     channel.onmessage = (event) => {
-      window.dispatchEvent(new CustomEvent('zoe-call-data', { detail: { payload: event.data } }));
+      zoeCallWorkerRef.current?.postMessage(event.data);
     };
   }, []);
 
@@ -804,7 +821,7 @@ const startGodEye = useCallback(() => {
     const channel = dataChannelRef.current;
     if (!channel || channel.readyState !== 'open') return false;
     try {
-      channel.send(JSON.stringify(payload));
+      channel.send(JSON.stringify(createZoeCallDataEnvelope('zoe-context', payload as Record<string, unknown>)));
       return true;
     } catch (error) {
       console.warn('[QuantumCall] Private data message failed', error);
