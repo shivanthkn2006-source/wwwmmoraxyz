@@ -126,25 +126,27 @@ export function useDhfDailyFeed() {
     const tz = deviceTimeZone();
     const today = localDateIn(new Date(), tz);
     const yesterday = localDateIn(new Date(Date.now() - 86_400_000), tz);
-    const guardKey = `${user.id}:${today}`;
+    const ensureId = `${user.id}:${today}`;
+    const reimageId = `${user.id}:${COMPASS_IMAGE_VERSION}`;
 
     try {
       let rows = await read(user.id, yesterday, today);
 
       // Cards written under an older artwork contract are repaired once per
-      // session. This never calls a model and never rewrites any card text.
+      // browser. This never calls a model and never rewrites any card text.
       const stale = rows.some((row) => row.image_prompt_version !== COMPASS_IMAGE_VERSION);
-      if (stale && !reimaged.has(user.id) && (await hasLiveSession())) {
-        reimaged.add(user.id);
+      if (stale && !guardTaken('reimage', reimageId) && (await hasLiveSession())) {
+        takeGuard('reimage', reimageId);
         const { error: repairError } = await supabase.functions.invoke('generate-dhf-daily-feed', {
           body: { action: 'reimage' },
         });
-        if (repairError) reimaged.delete(user.id);
+        if (repairError) releaseGuard('reimage', reimageId);
         else rows = await read(user.id, yesterday, today);
       }
 
       const todayCount = rows.filter((row) => row.post_date === today).length;
-      const shouldGenerate = todayCount < COMPASS_SLOT_COUNT && (options.force || !attempted.has(guardKey));
+      const shouldGenerate =
+        todayCount < COMPASS_SLOT_COUNT && (options.force || !guardTaken('ensure', ensureId));
 
       if (!shouldGenerate) {
         if (mounted.current) setState({ posts: duePosts(rows, new Date(), tz), loading: false, error: false, generating: false });
@@ -157,7 +159,7 @@ export function useDhfDailyFeed() {
         return;
       }
 
-      attempted.add(guardKey);
+      takeGuard('ensure', ensureId);
       if (mounted.current) {
         setState((prev) => ({ ...prev, posts: duePosts(rows, new Date(), tz), loading: false, generating: true }));
       }
@@ -166,11 +168,12 @@ export function useDhfDailyFeed() {
         body: { action: 'ensure', date: today, timezone: tz },
       });
       if (fnError) {
-        // Allow one more attempt later in the session; still show what exists.
-        attempted.delete(guardKey);
+        // Allow one more attempt later; still show what already exists.
+        releaseGuard('ensure', ensureId);
       } else {
         rows = await read(user.id, yesterday, today);
       }
+
 
       if (mounted.current) {
         setState({ posts: duePosts(rows, new Date(), tz), loading: false, error: Boolean(fnError), generating: false });
