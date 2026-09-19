@@ -4,7 +4,7 @@ import type { MusicTrack } from './musicProviders';
 
 const BUCKET = 'music-uploads';
 const SIGNED_SECONDS = 60 * 60;
-const MAX_STORED_BYTES = 150 * 1024 * 1024;
+export const MAX_STORED_BYTES = 150 * 1024 * 1024;
 const COMPRESSED_AUDIO = /(mpeg|mp3|mp4|m4a|aac|ogg|opus|webm)/i;
 
 
