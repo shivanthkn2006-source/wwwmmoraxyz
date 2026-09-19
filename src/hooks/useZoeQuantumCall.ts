@@ -1407,13 +1407,36 @@ const startGodEye = useCallback(() => {
     setState(prev => ({ ...prev, callState: 'connecting' }));
 
     const stream = await setupLocalMedia(withVideo);
-    if (!stream) return;
+    if (!stream) {
+      // Microphone/camera unavailable on the receiver: never leave the caller
+      // stuck on "Connecting" — reject explicitly and surface the reason here.
+      await sendSignal(state.incomingCall.userId, 'call-reject', {
+        reason: 'receiver-media-unavailable',
+      });
+      setState(prev => ({
+        ...prev,
+        callState: 'idle',
+        incomingCall: null,
+        error: 'Microphone or camera unavailable. Check device permissions and try again.',
+      }));
+      return;
+    }
 
     const pc = peerConnectionRef.current;
     if (!pc) {
       console.error('[QuantumCall] No peer connection available');
+      await sendSignal(state.incomingCall.userId, 'call-reject', {
+        reason: 'receiver-connection-unavailable',
+      });
+      setState(prev => ({
+        ...prev,
+        callState: 'idle',
+        incomingCall: null,
+        error: 'Could not start the call connection. Please try again.',
+      }));
       return;
     }
+
 
     stream.getTracks().forEach(track => {
       const sender = pc.addTrack(track, stream);
@@ -1783,10 +1806,17 @@ const startGodEye = useCallback(() => {
         }
 
         case 'call-reject': {
-          console.log('[QuantumCall] Call rejected');
+          const reason = (data as any)?.reason as string | undefined;
+          console.log('[QuantumCall] Call rejected', reason ?? 'rejected');
           await endCallRef.current?.('rejected');
+          if (reason === 'receiver-media-unavailable') {
+            setState(prev => ({ ...prev, error: 'They could not join: their microphone or camera was unavailable.' }));
+          } else if (reason === 'receiver-connection-unavailable') {
+            setState(prev => ({ ...prev, error: 'They could not join because their connection failed to start.' }));
+          }
           break;
         }
+
 
         case 'call-end': {
           console.log('[QuantumCall] Remote ended call');

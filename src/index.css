@@ -1292,13 +1292,37 @@ html.phantom-mode [class*="animate-"] {
   color: hsl(0 0% 100%);
 }
 
-/* Calls borrows Music's clear, edge-lit glass language without importing its
-   warm ambient artwork. The remote video remains the full-screen background. */
+/* Calls uses exactly the Music page's Liquid Glass language: the same glass
+   tokens, the same ambient light room, the same frosted edge-lit sheet, and
+   white-only typography. No other page theme is touched. */
 .calls-liquid-page {
+  --music-glass: 0 0% 100%;
+  --music-glass-edge: 0 0% 100%;
+  --music-ambient-a: 36 26% 46%;
+  --music-ambient-b: 26 30% 40%;
+  --music-ambient-c: 92 16% 38%;
+  --music-ambient-d: 28 20% 34%;
   position: relative;
   isolation: isolate;
   width: 100%;
-  color: hsl(var(--foreground));
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  color: hsl(0 0% 100%);
+}
+
+.calls-liquid-page::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 90% at 12% 6%, hsl(var(--music-ambient-a) / 0.9), transparent 62%),
+    radial-gradient(110% 85% at 90% 10%, hsl(var(--music-ambient-b) / 0.85), transparent 60%),
+    radial-gradient(120% 95% at 80% 94%, hsl(var(--music-ambient-c) / 0.8), transparent 64%),
+    radial-gradient(130% 100% at 18% 96%, hsl(var(--music-ambient-d) / 0.85), transparent 66%),
+    linear-gradient(165deg, hsl(34 22% 42%), hsl(26 18% 30%));
+  filter: blur(28px) saturate(120%);
 }
 
 .calls-liquid-page::after {
@@ -1307,11 +1331,34 @@ html.phantom-mode [class*="animate-"] {
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background: hsl(var(--background) / 0.08);
-  box-shadow: inset 0 1px 0 hsl(var(--foreground) / 0.16);
-  backdrop-filter: blur(30px) saturate(115%);
-  -webkit-backdrop-filter: blur(30px) saturate(115%);
+  background: linear-gradient(
+    160deg,
+    hsl(var(--music-glass) / 0.2),
+    hsl(var(--music-glass) / 0.08) 45%,
+    hsl(var(--music-glass) / 0.15)
+  );
+  box-shadow:
+    inset 0 1px 0 hsl(var(--music-glass-edge) / 0.55),
+    inset 0 -1px 0 hsl(var(--music-glass-edge) / 0.2);
+  backdrop-filter: blur(52px) saturate(125%);
+  -webkit-backdrop-filter: blur(52px) saturate(125%);
 }
+
+/* Every text and icon on the Calls surface is white only. */
+.calls-liquid-page,
+.calls-liquid-page h1,
+.calls-liquid-page h2,
+.calls-liquid-page h3,
+.calls-liquid-page p,
+.calls-liquid-page span,
+.calls-liquid-page button {
+  color: hsl(0 0% 100%);
+}
+
+.calls-liquid-page svg {
+  color: hsl(0 0% 100%);
+}
+
 
 /* Seven Home actions always stay on one row. Width and height both
    participate so narrow foldables and short landscape screens retain all
