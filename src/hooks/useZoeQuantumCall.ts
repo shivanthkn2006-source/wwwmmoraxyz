@@ -13,6 +13,15 @@ import { QuantumShieldLayer } from '@/core/security/QuantumShieldLayer';
 import { RealtimeChannel } from '@supabase/supabase-js';
 import { useZoeAudio } from '@/hooks/useZoeAudio';
 import { useCameraDevices } from '@/hooks/useCameraDevices';
+import {
+  candidateRoute,
+  DEFAULT_CALL_NETWORK_DIAGNOSTICS,
+  FALLBACK_ICE_SERVERS,
+  ICE_RESTART_DELAYS_MS,
+  MAX_ICE_RESTART_ATTEMPTS,
+  normalizeIceServers,
+  type CallNetworkDiagnostics,
+} from '@/features/calls/callTransport';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -86,6 +95,8 @@ export interface QuantumCallState {
   // God Eye state
   godEyeEnabled: boolean;
   lastGodEyeAnalysis: GodEyeAnalysis | null;
+  networkDiagnostics: CallNetworkDiagnostics;
+  dataChannelState: RTCDataChannelState | 'unavailable';
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -153,13 +164,6 @@ const VIDEO_CODEC_MODIFIER = (sdp: string, preferVP9: boolean = true): string =>
   
   return modifiedLines.join('\r\n');
 };
-
-const ICE_SERVERS: RTCIceServer[] = [
-  { urls: 'stun:stun.l.google.com:19302' },
-  { urls: 'stun:stun1.l.google.com:19302' },
-  { urls: 'stun:stun2.l.google.com:19302' },
-  { urls: 'stun:stun3.l.google.com:19302' },
-];
 
 const CALL_TIMEOUT_MS = 30000;
 const ENCRYPTION_HANDSHAKE_TIMEOUT_MS = 2000; // 2s (200ms was too strict and caused false disconnects)
@@ -238,6 +242,8 @@ export const useZoeQuantumCall = (currentUserId?: string) => {
     // God Eye state
     godEyeEnabled: false,
     lastGodEyeAnalysis: null,
+    networkDiagnostics: DEFAULT_CALL_NETWORK_DIAGNOSTICS,
+    dataChannelState: 'unavailable',
   });
 
   // Refs for WebRTC
@@ -255,6 +261,12 @@ export const useZoeQuantumCall = (currentUserId?: string) => {
   const securityAlertsRef = useRef<string[]>([]);
   const lastSecurityAlertRef = useRef<number>(0);
   const packetLossRef = useRef<number>(0);
+  const iceServersRef = useRef<RTCIceServer[]>(FALLBACK_ICE_SERVERS);
+  const reconnectAttemptsRef = useRef(0);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isOffererRef = useRef(false);
+  const hasConnectedOnceRef = useRef(false);
+  const dataChannelRef = useRef<RTCDataChannel | null>(null);
 
   // Buffer ICE candidates that arrive before remoteDescription is set.
   const pendingIceCandidatesRef = useRef<Record<string, RTCIceCandidateInit[]>>({});
