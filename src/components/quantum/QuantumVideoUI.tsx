@@ -33,6 +33,7 @@ import {
   Settings,
   X,
   GripHorizontal,
+  MoreHorizontal,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -135,15 +136,7 @@ const getQualityIcon = (quality: string) => {
   }
 };
 
-const getQualityColor = (quality: string) => {
-  switch (quality) {
-    case 'excellent': return 'text-green-400';
-    case 'good': return 'text-emerald-400';
-    case 'fair': return 'text-amber-400';
-    case 'poor': return 'text-red-400';
-    default: return 'text-muted-foreground';
-  }
-};
+const getQualityColor = () => 'text-white';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // SUBCOMPONENTS
@@ -160,17 +153,17 @@ const QualityIndicator: React.FC<{
   
   return (
     <motion.div
-      className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-background/60 backdrop-blur-md border border-border/30"
+      className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.08] text-white backdrop-blur-2xl"
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
     >
       <QualityIcon className={cn('w-4 h-4', getQualityColor(quality))} />
-      <span className="text-xs font-medium text-foreground/80">
+      <span className="text-xs font-medium text-white/90">
         {Math.round(bitrate / 1000)}kbps
       </span>
       {isLowDataMode && (
         <motion.span
-          className="text-xs text-amber-400 flex items-center gap-1"
+          className="text-xs text-white/80 flex items-center gap-1"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
         >
@@ -178,7 +171,7 @@ const QualityIndicator: React.FC<{
           Low Data
         </motion.span>
       )}
-      <span className="text-xs text-muted-foreground">{codec}</span>
+      <span className="text-xs text-white/60">{codec}</span>
     </motion.div>
   );
 };
@@ -198,21 +191,21 @@ const GodEyeOverlay: React.FC<{
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 20 }}
       >
-        <div className="bg-background/80 backdrop-blur-lg rounded-xl border border-primary/30 p-4 shadow-lg shadow-primary/10">
+        <div className="bg-white/[0.08] text-white backdrop-blur-2xl rounded-2xl p-4 shadow-2xl shadow-black/20">
           <div className="flex items-center gap-2 mb-2">
-            <Eye className="w-4 h-4 text-primary" />
-            <span className="text-xs font-semibold text-primary">Zoe's Vision</span>
-            <Sparkles className="w-3 h-3 text-primary animate-pulse" />
+            <Eye className="w-4 h-4 text-white" />
+            <span className="text-xs font-semibold text-white">Zoe's Vision</span>
+            <Sparkles className="w-3 h-3 text-white animate-pulse" />
           </div>
           
-          <p className="text-sm text-foreground/90 mb-2">{analysis.scene}</p>
+          <p className="text-sm text-white/90 mb-2">{analysis.scene}</p>
           
           {analysis.objects.length > 0 && (
             <div className="flex flex-wrap gap-1 mb-2">
               {analysis.objects.slice(0, 5).map((obj, i) => (
                 <span
                   key={i}
-                  className="px-2 py-0.5 text-xs bg-primary/20 text-primary rounded-full"
+                  className="px-2 py-0.5 text-xs bg-white/10 text-white rounded-full"
                 >
                   {obj}
                 </span>
@@ -222,7 +215,7 @@ const GodEyeOverlay: React.FC<{
           
           {analysis.zoe_response && (
             <motion.p
-              className="text-sm text-muted-foreground italic border-t border-border/30 pt-2 mt-2"
+              className="text-sm text-white/70 italic border-t border-white/10 pt-2 mt-2"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3 }}
@@ -245,7 +238,7 @@ const SpeakingIndicator: React.FC<{ isActive: boolean; label?: string }> = ({
   
   return (
     <motion.div
-      className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-2 px-3 py-1 rounded-full bg-primary/20 backdrop-blur-sm border border-primary/40"
+      className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-white backdrop-blur-xl"
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
     >
@@ -253,11 +246,11 @@ const SpeakingIndicator: React.FC<{ isActive: boolean; label?: string }> = ({
         {[1, 2, 3, 4].map((i) => (
           <div
             key={i}
-            className={`w-0.5 h-3 bg-primary rounded-full ${isActive ? `animate-gpu-audio-bar-${i}` : ''}`}
+            className={`w-0.5 h-3 bg-white rounded-full ${isActive ? `animate-gpu-audio-bar-${i}` : ''}`}
           />
         ))}
       </div>
-      {label && <span className="text-xs text-primary font-medium">{label}</span>}
+      {label && <span className="text-xs text-white font-medium">{label}</span>}
     </motion.div>
   );
 };
@@ -276,8 +269,8 @@ const LocalVideoPreview: React.FC<{
     <motion.div
       className={cn(
         "absolute w-32 h-24 md:w-40 md:h-30 rounded-xl overflow-hidden",
-        "border-2 border-primary/40 shadow-lg shadow-primary/20",
-        "bg-background/80 backdrop-blur-sm",
+        "shadow-2xl shadow-black/30",
+        "bg-white/[0.08] backdrop-blur-xl",
         isDragging ? "cursor-grabbing z-50" : "cursor-grab z-40"
       )}
       style={{ top: position.y, right: position.x }}
@@ -304,19 +297,19 @@ const LocalVideoPreview: React.FC<{
           className="w-full h-full object-cover transform scale-x-[-1]"
         />
       ) : (
-        <div className="w-full h-full flex items-center justify-center bg-muted">
-          <VideoOff className="w-6 h-6 text-muted-foreground" />
+        <div className="w-full h-full flex items-center justify-center bg-black/20">
+          <VideoOff className="w-6 h-6 text-white/70" />
         </div>
       )}
       
       {/* Quality badge */}
-      <div className="absolute top-1 left-1 px-1.5 py-0.5 text-[10px] bg-background/60 backdrop-blur-sm rounded">
+      <div className="absolute top-1 left-1 px-1.5 py-0.5 text-[10px] text-white bg-black/20 backdrop-blur-sm rounded">
         {quality}
       </div>
       
       {/* Muted indicator */}
       {isMuted && (
-        <div className="absolute top-1 right-1 p-1 bg-red-500/80 rounded-full">
+        <div className="absolute top-1 right-1 p-1 bg-white/15 rounded-full">
           <MicOff className="w-3 h-3 text-white" />
         </div>
       )}
@@ -363,6 +356,7 @@ const DraggableControlBar: React.FC<DraggableControlBarProps> = ({
   const dragControls = useDragControls();
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 
   // Get button sizes based on screen size - MORE COMPACT
   const getButtonSize = () => {
@@ -426,7 +420,7 @@ const DraggableControlBar: React.FC<DraggableControlBarProps> = ({
 
   return (
     <motion.div 
-      className="absolute bottom-4 sm:bottom-6 left-1/2 z-30"
+      className="absolute bottom-[max(1rem,env(safe-area-inset-bottom))] left-1/2 z-30 flex flex-col items-center gap-2"
       drag
       dragMomentum={false}
       dragElastic={0.1}
@@ -445,13 +439,14 @@ const DraggableControlBar: React.FC<DraggableControlBarProps> = ({
       }}
       style={{ x: '-50%' }}
     >
-      <motion.div
+      <AnimatePresence>
+      {isOpen && <motion.div
         className={cn(
-          "flex items-center rounded-full bg-background/80 backdrop-blur-lg border border-border/50 shadow-xl",
+          "flex items-center rounded-full bg-white/[0.08] text-white backdrop-blur-2xl shadow-2xl shadow-black/20",
           "touch-none select-none",
           getGap(),
           getPadding(),
-          isDragging && "ring-2 ring-primary/50"
+          isDragging && "bg-white/[0.14]"
         )}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -461,16 +456,16 @@ const DraggableControlBar: React.FC<DraggableControlBarProps> = ({
           className="cursor-grab active:cursor-grabbing p-1 -ml-1 hover:bg-foreground/10 rounded-full transition-colors"
           onPointerDown={(e) => dragControls.start(e)}
         >
-          <GripHorizontal className="w-3 h-3 text-foreground/40" />
+          <GripHorizontal className="w-3 h-3 text-white/50" />
         </div>
 
         {/* Mute toggle */}
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
-              variant={isMuted ? "destructive" : "secondary"}
+              variant="ghost"
               size="icon"
-              className={cn("rounded-full", btnSize)}
+              className={cn("rounded-full text-white hover:bg-white/15 hover:text-white", btnSize)}
               onClick={onToggleMute}
             >
               {isMuted ? (
@@ -487,9 +482,9 @@ const DraggableControlBar: React.FC<DraggableControlBarProps> = ({
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
-              variant={videoEnabled ? "secondary" : "outline"}
+              variant="ghost"
               size="icon"
-              className={cn("rounded-full", btnSize)}
+              className={cn("rounded-full text-white hover:bg-white/15 hover:text-white", btnSize)}
               onClick={onToggleVideo}
             >
               {videoEnabled ? (
@@ -507,12 +502,13 @@ const DraggableControlBar: React.FC<DraggableControlBarProps> = ({
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
-                variant={godEyeEnabled ? "default" : "outline"}
+                variant="ghost"
                 size="icon"
                 className={cn(
                   "rounded-full",
                   btnSize,
-                  godEyeEnabled && "bg-primary text-primary-foreground"
+                  "text-white hover:bg-white/15 hover:text-white",
+                  godEyeEnabled && "bg-white/15"
                 )}
                 onClick={godEyeEnabled ? onStopGodEye : onStartGodEye}
               >
@@ -534,9 +530,9 @@ const DraggableControlBar: React.FC<DraggableControlBarProps> = ({
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
-                variant="outline"
+                variant="ghost"
                 size="icon"
-                className={cn("rounded-full", btnSize)}
+                className={cn("rounded-full text-white hover:bg-white/15 hover:text-white", btnSize)}
                 onClick={onPiP}
               >
                 <PictureInPicture2 className={iconSize} />
@@ -550,12 +546,13 @@ const DraggableControlBar: React.FC<DraggableControlBarProps> = ({
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
-              variant={isLowDataMode ? "default" : "outline"}
+              variant="ghost"
               size="icon"
               className={cn(
                 "rounded-full",
                 btnSize,
-                isLowDataMode && "bg-amber-500 text-white hover:bg-amber-600"
+                "text-white hover:bg-white/15 hover:text-white",
+                isLowDataMode && "bg-white/15"
               )}
               onClick={() => onSetLowDataMode(!isLowDataMode)}
             >
@@ -575,9 +572,9 @@ const DraggableControlBar: React.FC<DraggableControlBarProps> = ({
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
-              variant="destructive"
+              variant="ghost"
               size="icon"
-              className={cn("rounded-full", endBtnSize)}
+              className={cn("rounded-full text-white hover:bg-white/20 hover:text-white", endBtnSize)}
               onClick={() => onEndCall('user_hangup')}
             >
               <PhoneOff className={endIconSize} />
@@ -585,7 +582,18 @@ const DraggableControlBar: React.FC<DraggableControlBarProps> = ({
           </TooltipTrigger>
           <TooltipContent>End Call</TooltipContent>
         </Tooltip>
-      </motion.div>
+      </motion.div>}
+      </AnimatePresence>
+      <Button
+        variant="ghost"
+        size="icon"
+        aria-label={isOpen ? 'Close call controls' : 'Open call controls'}
+        aria-expanded={isOpen}
+        className="h-11 w-11 rounded-full bg-white/[0.08] text-white backdrop-blur-2xl shadow-xl hover:bg-white/15 hover:text-white"
+        onClick={() => setIsOpen(value => !value)}
+      >
+        {isOpen ? <X className="h-4 w-4" /> : <MoreHorizontal className="h-5 w-5" />}
+      </Button>
     </motion.div>
   );
 };
@@ -677,9 +685,7 @@ export const QuantumVideoUI: React.FC<QuantumVideoUIProps> = ({
     <TooltipProvider>
       <motion.div
         className={cn(
-          "relative w-full h-full min-h-[400px] rounded-2xl overflow-hidden",
-          "bg-gradient-to-br from-background via-background/95 to-background",
-          "border border-border/50 shadow-2xl",
+          "relative w-full h-full min-h-[400px] overflow-hidden bg-transparent text-white",
           isFullscreen && "fixed inset-0 z-50 rounded-none",
           className
         )}
@@ -687,19 +693,6 @@ export const QuantumVideoUI: React.FC<QuantumVideoUIProps> = ({
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
       >
-        {/* Holographic background effect */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-cyan-500/5" />
-          {isConnected && (
-            <div
-              className={`absolute inset-0 ${remoteIsSpeaking ? 'animate-gpu-pulse-opacity-slow' : 'opacity-20'}`}
-              style={{
-                background: 'radial-gradient(circle at 50% 50%, hsl(var(--primary) / 0.1) 0%, transparent 70%)',
-              }}
-            />
-          )}
-        </div>
-
         {/* Remote Video / Avatar Area */}
         <div
           ref={remoteVideoContainerRef}
@@ -718,8 +711,7 @@ export const QuantumVideoUI: React.FC<QuantumVideoUIProps> = ({
               <div
                 className={cn(
                   "relative w-32 h-32 md:w-40 md:h-40 rounded-full",
-                  "bg-gradient-to-br from-primary/30 to-cyan-500/30",
-                  "border-2 border-primary/40 shadow-lg shadow-primary/20",
+                  "bg-white/[0.08] backdrop-blur-2xl shadow-2xl shadow-black/20",
                   "flex items-center justify-center overflow-hidden",
                   remoteIsSpeaking && "animate-gpu-speaking-glow"
                 )}
@@ -731,20 +723,20 @@ export const QuantumVideoUI: React.FC<QuantumVideoUIProps> = ({
                     className="w-full h-full object-cover"
                   />
                 ) : isAICall ? (
-                  <div className="w-full h-full bg-gradient-to-br from-primary via-cyan-500 to-purple-500 animate-pulse" />
+                  <div className="w-full h-full bg-white/10 animate-pulse" />
                 ) : (
-                  <span className="text-4xl font-bold text-foreground/80">
+                  <span className="text-4xl font-bold text-white/90">
                     {participantName?.charAt(0)?.toUpperCase() || '?'}
                   </span>
                 )}
               </div>
               
-              <p className="text-lg font-medium text-foreground/90">
+              <p className="text-lg font-medium text-white/90">
                 {participantName || (isAICall ? 'Zoe AI' : 'Unknown')}
               </p>
               
               {isConnecting && (
-                <p className="text-sm text-muted-foreground animate-gpu-status-primary">
+                <p className="text-sm text-white/60 animate-pulse">
                   Establishing quantum link...
                 </p>
               )}
@@ -783,11 +775,11 @@ export const QuantumVideoUI: React.FC<QuantumVideoUIProps> = ({
           <div className="flex items-center gap-2">
             {isConnected && (
               <motion.div
-                className="px-3 py-1.5 rounded-full bg-background/60 backdrop-blur-md border border-border/30"
+                className="px-3 py-1.5 rounded-full bg-white/[0.08] text-white backdrop-blur-2xl"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
               >
-                <span className="text-sm font-mono text-foreground/80">
+                <span className="text-sm font-mono text-white/90">
                   {formatDuration(durationTimer)}
                 </span>
               </motion.div>
@@ -799,7 +791,7 @@ export const QuantumVideoUI: React.FC<QuantumVideoUIProps> = ({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="w-8 h-8 rounded-full bg-background/60 backdrop-blur-md"
+                    className="w-10 h-10 rounded-full bg-white/[0.08] text-white backdrop-blur-2xl hover:bg-white/15 hover:text-white"
                     onClick={onToggleFullscreen}
                   >
                     {isFullscreen ? (
@@ -843,11 +835,11 @@ export const QuantumVideoUI: React.FC<QuantumVideoUIProps> = ({
         {/* Speaking self-indicator */}
         {isSpeaking && !isMuted && (
           <motion.div
-            className="absolute bottom-24 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-green-500/20 backdrop-blur-sm border border-green-500/40"
+            className="absolute bottom-24 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-white/10 text-white backdrop-blur-xl"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
           >
-            <span className="text-xs text-green-400">You are speaking</span>
+            <span className="text-xs text-white">You are speaking</span>
           </motion.div>
         )}
       </motion.div>

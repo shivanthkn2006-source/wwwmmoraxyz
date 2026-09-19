@@ -13,6 +13,15 @@ import { QuantumShieldLayer } from '@/core/security/QuantumShieldLayer';
 import { RealtimeChannel } from '@supabase/supabase-js';
 import { useZoeAudio } from '@/hooks/useZoeAudio';
 import { useCameraDevices } from '@/hooks/useCameraDevices';
+import {
+  candidateRoute,
+  DEFAULT_CALL_NETWORK_DIAGNOSTICS,
+  FALLBACK_ICE_SERVERS,
+  ICE_RESTART_DELAYS_MS,
+  MAX_ICE_RESTART_ATTEMPTS,
+  normalizeIceServers,
+  type CallNetworkDiagnostics,
+} from '@/features/calls/callTransport';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -86,6 +95,8 @@ export interface QuantumCallState {
   // God Eye state
   godEyeEnabled: boolean;
   lastGodEyeAnalysis: GodEyeAnalysis | null;
+  networkDiagnostics: CallNetworkDiagnostics;
+  dataChannelState: RTCDataChannelState | 'unavailable';
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -153,13 +164,6 @@ const VIDEO_CODEC_MODIFIER = (sdp: string, preferVP9: boolean = true): string =>
   
   return modifiedLines.join('\r\n');
 };
-
-const ICE_SERVERS: RTCIceServer[] = [
-  { urls: 'stun:stun.l.google.com:19302' },
-  { urls: 'stun:stun1.l.google.com:19302' },
-  { urls: 'stun:stun2.l.google.com:19302' },
-  { urls: 'stun:stun3.l.google.com:19302' },
-];
 
 const CALL_TIMEOUT_MS = 30000;
 const ENCRYPTION_HANDSHAKE_TIMEOUT_MS = 2000; // 2s (200ms was too strict and caused false disconnects)
@@ -238,6 +242,8 @@ export const useZoeQuantumCall = (currentUserId?: string) => {
     // God Eye state
     godEyeEnabled: false,
     lastGodEyeAnalysis: null,
+    networkDiagnostics: DEFAULT_CALL_NETWORK_DIAGNOSTICS,
+    dataChannelState: 'unavailable',
   });
 
   // Refs for WebRTC
@@ -255,6 +261,12 @@ export const useZoeQuantumCall = (currentUserId?: string) => {
   const securityAlertsRef = useRef<string[]>([]);
   const lastSecurityAlertRef = useRef<number>(0);
   const packetLossRef = useRef<number>(0);
+  const iceServersRef = useRef<RTCIceServer[]>(FALLBACK_ICE_SERVERS);
+  const reconnectAttemptsRef = useRef(0);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isOffererRef = useRef(false);
+  const hasConnectedOnceRef = useRef(false);
+  const dataChannelRef = useRef<RTCDataChannel | null>(null);
 
   // Buffer ICE candidates that arrive before remoteDescription is set.
   const pendingIceCandidatesRef = useRef<Record<string, RTCIceCandidateInit[]>>({});
@@ -286,6 +298,25 @@ export const useZoeQuantumCall = (currentUserId?: string) => {
       canvasRef.current = document.createElement('canvas');
     }
   }, []);
+
+  const refreshIceServers = useCallback(async (): Promise<void> => {
+    if (!currentUserId) return;
+    try {
+      const { data, error } = await supabase.functions.invoke('zoe-call-turn-credentials', { body: {} });
+      if (error) throw error;
+      const relayServers = normalizeIceServers(data?.iceServers);
+      iceServersRef.current = relayServers === FALLBACK_ICE_SERVERS
+        ? FALLBACK_ICE_SERVERS
+        : [...FALLBACK_ICE_SERVERS, ...relayServers];
+    } catch (error) {
+      iceServersRef.current = FALLBACK_ICE_SERVERS;
+      console.warn('[QuantumCall] Relay credentials unavailable; direct calling remains enabled', error);
+    }
+  }, [currentUserId]);
+
+  useEffect(() => {
+    void refreshIceServers();
+  }, [refreshIceServers]);
 
   // ═══════════════════════════════════════════════════════════════════════════════
   // GOD EYE - REAL-TIME VIDEO ANALYSIS
@@ -509,6 +540,10 @@ const startGodEye = useCallback(() => {
           if (totalPackets > 0) {
             const packetLoss = ((report.packetsLost || 0) / totalPackets) * 100;
             packetLossRef.current = packetLoss;
+            setState(prev => ({
+              ...prev,
+              networkDiagnostics: { ...prev.networkDiagnostics, packetLossPercent: packetLoss },
+            }));
             
             // Auto-downgrade if packet loss exceeds threshold
             if (packetLoss > PACKET_LOSS_THRESHOLD && state.video?.localQuality === '720p') {
@@ -526,7 +561,16 @@ const startGodEye = useCallback(() => {
           else if (rtt < 0.4) quality = 'fair';
           else quality = 'poor';
           
-          setState(prev => ({ ...prev, connectionQuality: quality }));
+          const localCandidate = report.localCandidateId ? stats.get(report.localCandidateId) : null;
+          setState(prev => ({
+            ...prev,
+            connectionQuality: quality,
+            networkDiagnostics: {
+              ...prev.networkDiagnostics,
+              roundTripTimeMs: typeof rtt === 'number' ? Math.round(rtt * 1000) : null,
+              route: candidateRoute(localCandidate?.candidateType),
+            },
+          }));
         }
       });
     });
@@ -763,6 +807,68 @@ const startGodEye = useCallback(() => {
       setState(prev => ({ ...prev, error: `Signaling error: ${error.message}` }));
     }
   }, [currentUserId, encryptSignalData]);
+
+  const attachDataChannel = useCallback((channel: RTCDataChannel) => {
+    dataChannelRef.current = channel;
+    setState(prev => ({ ...prev, dataChannelState: channel.readyState }));
+    channel.onopen = () => setState(prev => ({ ...prev, dataChannelState: 'open' }));
+    channel.onclosing = () => setState(prev => ({ ...prev, dataChannelState: 'closing' }));
+    channel.onclose = () => setState(prev => ({ ...prev, dataChannelState: 'closed' }));
+    channel.onerror = () => setState(prev => ({ ...prev, dataChannelState: 'closed' }));
+    channel.onmessage = (event) => {
+      window.dispatchEvent(new CustomEvent('zoe-call-data', { detail: { payload: event.data } }));
+    };
+  }, []);
+
+  const sendZoeData = useCallback((payload: object): boolean => {
+    const channel = dataChannelRef.current;
+    if (!channel || channel.readyState !== 'open') return false;
+    try {
+      channel.send(JSON.stringify(payload));
+      return true;
+    } catch (error) {
+      console.warn('[QuantumCall] Private data message failed', error);
+      return false;
+    }
+  }, []);
+
+  const attemptIceRestart = useCallback((pc: RTCPeerConnection, remoteUserId: string) => {
+    if (!isOffererRef.current || reconnectTimerRef.current || pc.signalingState === 'closed') return;
+    const attempt = reconnectAttemptsRef.current;
+    if (attempt >= MAX_ICE_RESTART_ATTEMPTS) {
+      setState(prev => ({
+        ...prev,
+        networkDiagnostics: { ...prev.networkDiagnostics, lastRecovery: 'failed' },
+      }));
+      void endCallRef.current?.('network_error');
+      return;
+    }
+
+    const delay = ICE_RESTART_DELAYS_MS[attempt] ?? ICE_RESTART_DELAYS_MS[ICE_RESTART_DELAYS_MS.length - 1];
+    reconnectTimerRef.current = setTimeout(async () => {
+      reconnectTimerRef.current = null;
+      if (pc.signalingState === 'closed') return;
+      reconnectAttemptsRef.current += 1;
+      setState(prev => ({
+        ...prev,
+        callState: 'reconnecting',
+        networkDiagnostics: {
+          ...prev.networkDiagnostics,
+          restartCount: reconnectAttemptsRef.current,
+          lastRecovery: 'attempting',
+        },
+      }));
+      try {
+        const offer = await pc.createOffer({ iceRestart: true });
+        offer.sdp = OPUS_32KBPS_SDP_MODIFIER(offer.sdp || '');
+        await pc.setLocalDescription(offer);
+        await sendSignal(remoteUserId, 'ice-restart-offer', { offer: pc.localDescription?.toJSON() });
+      } catch (error) {
+        console.warn('[QuantumCall] ICE restart attempt failed', error);
+        attemptIceRestart(pc, remoteUserId);
+      }
+    }, delay);
+  }, [sendSignal]);
 
   // ═══════════════════════════════════════════════════════════════════════════════
   // MEDIA SETUP - AUDIO + VIDEO
@@ -1038,10 +1144,13 @@ const startGodEye = useCallback(() => {
     console.log('[QuantumCall] Creating peer connection...');
     
     const pc = new RTCPeerConnection({
-      iceServers: ICE_SERVERS,
+      iceServers: iceServersRef.current,
       bundlePolicy: 'max-bundle',
       rtcpMuxPolicy: 'require',
     });
+
+    if (isOffererRef.current) attachDataChannel(pc.createDataChannel('zoe-private', { ordered: true }));
+    pc.ondatachannel = (event) => attachDataChannel(event.channel);
 
     pc.onicecandidate = async (event) => {
       if (event.candidate) {
@@ -1057,7 +1166,7 @@ const startGodEye = useCallback(() => {
       
       switch (pc.connectionState) {
         case 'connecting':
-          handshakeStartTimeRef.current = Date.now();
+          if (!hasConnectedOnceRef.current) handshakeStartTimeRef.current = Date.now();
           break;
         case 'connected':
           if (handshakeStartTimeRef.current) {
@@ -1070,7 +1179,16 @@ const startGodEye = useCallback(() => {
             }
           }
           
-          setState(prev => ({ ...prev, callState: 'connected', connectionQuality: 'good' }));
+          hasConnectedOnceRef.current = true;
+          reconnectAttemptsRef.current = 0;
+          if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+          reconnectTimerRef.current = null;
+          setState(prev => ({
+            ...prev,
+            callState: 'connected',
+            connectionQuality: 'good',
+            networkDiagnostics: { ...prev.networkDiagnostics, lastRecovery: prev.callState === 'reconnecting' ? 'recovered' : 'idle' },
+          }));
           callStartTimeRef.current = new Date();
           monitorAudioLevels();
           
@@ -1100,10 +1218,12 @@ const startGodEye = useCallback(() => {
         case 'disconnected':
           triggerSecurityAlert('connection_interrupted', 'Network disconnection detected');
           setState(prev => ({ ...prev, callState: 'reconnecting' }));
+          attemptIceRestart(pc, remoteUserId);
           break;
         case 'failed':
           triggerSecurityAlert('connection_failed', 'WebRTC connection failed');
           setState(prev => ({ ...prev, callState: 'reconnecting' }));
+          attemptIceRestart(pc, remoteUserId);
           // Log connection failure to DHF
           logZoeTTSContext('Call connection failed due to network issues', 'call_end');
           break;
@@ -1170,6 +1290,10 @@ const startGodEye = useCallback(() => {
     pc.oniceconnectionstatechange = () => {
       const iceState = pc.iceConnectionState;
       console.log('[QuantumCall] ICE state:', iceState);
+      setState(prev => ({
+        ...prev,
+        networkDiagnostics: { ...prev.networkDiagnostics, iceState },
+      }));
       
       if (iceState === 'failed') {
         triggerSecurityAlert('ice_failure', 'ICE negotiation failed - potential network interference');
@@ -1179,7 +1303,7 @@ const startGodEye = useCallback(() => {
 
     peerConnectionRef.current = pc;
     return pc;
-  }, [sendSignal, monitorAudioLevels, state.video?.isEnabled, state.video?.localQuality, state.currentCall?.receiver.isAI, startGodEye, logZoeTTSContext, triggerSecurityAlert, monitorEncryptionHandshake, severConnection]);
+  }, [sendSignal, monitorAudioLevels, state.video?.isEnabled, state.video?.localQuality, state.currentCall?.receiver.isAI, startGodEye, logZoeTTSContext, triggerSecurityAlert, monitorEncryptionHandshake, severConnection, attemptIceRestart, attachDataChannel]);
 
   // ═══════════════════════════════════════════════════════════════════════════════
   // CALL INITIATION
@@ -1208,6 +1332,8 @@ const startGodEye = useCallback(() => {
     }
 
     console.log(`[QuantumCall] Initiating ${withVideo ? 'video' : 'voice'} call to`, receiver.userId.slice(0, 8));
+    isOffererRef.current = true;
+    await refreshIceServers();
     
     // Play outgoing ringtone
     playCallRingtone(false);
@@ -1267,7 +1393,7 @@ const startGodEye = useCallback(() => {
       }
     }, CALL_TIMEOUT_MS);
 
-  }, [currentUserId, setupLocalMedia, createPeerConnection, sendSignal, state.callState, playCallRingtone, stopCallRingtone]);
+  }, [currentUserId, setupLocalMedia, createPeerConnection, sendSignal, state.callState, playCallRingtone, stopCallRingtone, refreshIceServers]);
 
   // ═══════════════════════════════════════════════════════════════════════════════
   // CALL ANSWERING
@@ -1277,6 +1403,7 @@ const startGodEye = useCallback(() => {
     if (!state.incomingCall || !currentUserId) return;
 
     console.log('[QuantumCall] Accepting call from', state.incomingCall.userId.slice(0, 8));
+    isOffererRef.current = false;
     
     // Stop incoming ringtone and play connect sound
     stopCallRingtone();
@@ -1391,6 +1518,12 @@ const startGodEye = useCallback(() => {
     
     // Clear video sender
     videoSenderRef.current = null;
+    dataChannelRef.current?.close();
+    dataChannelRef.current = null;
+    if (reconnectTimerRef.current) {
+      clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
     
     // Close peer connection
     if (peerConnectionRef.current) {
@@ -1491,6 +1624,9 @@ const startGodEye = useCallback(() => {
     // Reset security tracking
     securityAlertsRef.current = [];
     packetLossRef.current = 0;
+    reconnectAttemptsRef.current = 0;
+    hasConnectedOnceRef.current = false;
+    isOffererRef.current = false;
     handshakeStartTimeRef.current = null;
     godEyeAnalysisCountRef.current = 0;
 
@@ -1516,6 +1652,8 @@ const startGodEye = useCallback(() => {
       },
       godEyeEnabled: false,
       lastGodEyeAnalysis: null,
+      networkDiagnostics: DEFAULT_CALL_NETWORK_DIAGNOSTICS,
+      dataChannelState: 'unavailable',
     }));
 
     callStartTimeRef.current = null;
@@ -1605,6 +1743,7 @@ const startGodEye = useCallback(() => {
             console.warn('[QuantumCall] Failed to load caller profile:', profileError);
           }
 
+          isOffererRef.current = false;
           const pc = createPeerConnectionRef.current?.(signal.caller_id);
           if (pc && (data as any).offer) {
             await pc.setRemoteDescription(new RTCSessionDescription((data as any).offer));
@@ -1678,6 +1817,30 @@ const startGodEye = useCallback(() => {
             } catch (err) {
               console.warn('[QuantumCall] Failed to add ICE candidate:', err);
             }
+          }
+          break;
+        }
+
+        case 'ice-restart-offer': {
+          const pc = peerConnectionRef.current;
+          const offer = (data as any).offer;
+          if (pc && offer) {
+            await pc.setRemoteDescription(new RTCSessionDescription(offer));
+            await flushBufferedIceCandidates(pc, signal.caller_id);
+            const answer = await pc.createAnswer();
+            answer.sdp = OPUS_32KBPS_SDP_MODIFIER(answer.sdp || '');
+            await pc.setLocalDescription(answer);
+            await sendSignal(signal.caller_id, 'ice-restart-answer', { answer: pc.localDescription?.toJSON() });
+          }
+          break;
+        }
+
+        case 'ice-restart-answer': {
+          const pc = peerConnectionRef.current;
+          const answer = (data as any).answer;
+          if (pc && answer) {
+            await pc.setRemoteDescription(new RTCSessionDescription(answer));
+            await flushBufferedIceCandidates(pc, signal.caller_id);
           }
           break;
         }
@@ -1840,6 +2003,7 @@ const startGodEye = useCallback(() => {
     // God Eye
     startGodEye,
     stopGodEye,
+    sendZoeData,
     
     // Master cleanup (for external use)
     cleanupAllMedia,
