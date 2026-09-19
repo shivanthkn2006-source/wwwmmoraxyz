@@ -330,10 +330,6 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
     onSelect: onHomeSelect ?? (() => {}),
   };
 
-  const recentItems = React.useMemo(
-    () => slots.filter((item) => Boolean(usage[item.id])).slice(-3),
-    [slots, usage],
-  );
 
   // Seven-column menu with four visible rows. Additional registry-discovered
   // pages remain reachable by scrolling inside the same unchanged panel.
@@ -342,11 +338,11 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
   const MIN_GRID_SIZE = GRID_COLUMNS * GRID_ROWS;
 
   const gridSlots: GlassDockItem[] = React.useMemo(() => {
-    // The "Home feed" navigation action stays nearest the trigger. Nothing is
-    // trimmed: every registered page must remain available in the Home menu.
-    const homeFeed = slots.find((item) => item.id === 'dock-home-return');
-    const rest = homeFeed ? slots.filter((item) => item !== homeFeed) : slots;
-    const filled = homeFeed ? [...rest, homeFeed] : [...rest];
+    // The Home destination sits at the top of the panel, directly above the
+    // trigger, exactly as before. Nothing else is trimmed or reordered.
+    const existingHome = slots.find((item) => item.id === 'dock-home-return');
+    const rest = existingHome ? slots.filter((item) => item !== existingHome) : slots;
+    const filled: GlassDockItem[] = [existingHome ?? homeDestination, ...rest];
 
     for (let index = filled.length; index < MIN_GRID_SIZE; index += 1) {
       const Icon = PLACEHOLDER_ICONS[index % PLACEHOLDER_ICONS.length];
@@ -359,7 +355,8 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
     }
     return filled;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slots, baseSlots, usage]);
+  }, [slots, baseSlots, usage, onHomeSelect]);
+
 
 
   const renderPackedRows = () => (
@@ -401,12 +398,11 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
         >
           {open && renderPackedRows()}
 
-          {/* Recent actions remain directly reachable; Home is always present inside the open panel. */}
+          {/* Only the bare Home trigger ever sits outside the panel. */}
           <div className="flex items-center justify-end gap-[var(--home-dock-gap)]">
-            {!open && recentItems.map((item) => renderIconButton(item))}
-            {open && renderIconButton(homeDestination)}
             {renderIconButton(homeItem, true)}
           </div>
+
         </div>
       </div>
     </div>
