@@ -207,8 +207,8 @@ export const QuantumCallModal: React.FC<QuantumCallModalProps> = ({
   startWithVideo = false,
 }) => {
   const { toast } = useToast();
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [useSphereView, setUseSphereView] = useState(true); // Default to holographic sphere
+  const [isFullscreen, setIsFullscreen] = useState(true);
+  const [useSphereView] = useState(false); // Preserve legacy implementation without exposing it in the pristine call surface
   const [isPiPMode, setIsPiPMode] = useState(false);
 
   // Destructure from parent-provided hook state (no duplicate hook instance!)
@@ -308,43 +308,12 @@ export const QuantumCallModal: React.FC<QuantumCallModalProps> = ({
       {/* Active call / Outgoing call screen */}
       {(isInCall || callState === 'requesting') && (
         <>
-          {/* View toggle button - Compact pill toggle (fixed position) */}
-          <motion.div
-            className="fixed top-3 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-0.5 bg-background/70 backdrop-blur-xl rounded-full p-0.5 border border-foreground/10 shadow-lg"
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <Button
-              variant={useSphereView ? "default" : "ghost"}
-              size="sm"
-              className={cn(
-                "rounded-full gap-1 px-2 py-1 h-7 text-xs transition-all",
-                useSphereView && "bg-primary shadow-md shadow-primary/30"
-              )}
-              onClick={() => setUseSphereView(true)}
-            >
-              <Circle className="w-3 h-3" />
-              <span className="hidden xs:inline">Sphere</span>
-            </Button>
-            <Button
-              variant={!useSphereView ? "default" : "ghost"}
-              size="sm"
-              className={cn(
-                "rounded-full gap-1 px-2 py-1 h-7 text-xs transition-all",
-                !useSphereView && "bg-primary shadow-md shadow-primary/30"
-              )}
-              onClick={() => setUseSphereView(false)}
-            >
-              <Square className="w-3 h-3" />
-              <span className="hidden xs:inline">Classic</span>
-            </Button>
-          </motion.div>
-          
           {/* Close button - Fixed top right (visible in all views) */}
           <Button
             variant="ghost"
             size="icon"
-            className="fixed top-3 right-3 z-[70] w-8 h-8 rounded-full bg-background/70 backdrop-blur-xl border border-foreground/10 shadow-lg hover:bg-red-500/20 hover:border-red-500/50 transition-all"
+            aria-label="End call"
+            className="fixed top-[max(.75rem,env(safe-area-inset-top))] right-3 z-[70] w-11 h-11 rounded-full bg-white/[0.08] text-white backdrop-blur-2xl shadow-xl hover:bg-white/15 hover:text-white"
             onClick={() => {
               handleEndCall('user_hangup');
               onClose();
@@ -428,28 +397,13 @@ export const QuantumCallModal: React.FC<QuantumCallModalProps> = ({
           {!useSphereView && (
             <motion.div
               className={cn(
-                "fixed z-50 bg-background",
-                isFullscreen ? "inset-0" : "inset-4 md:inset-8 lg:inset-16 rounded-2xl shadow-2xl"
+                "fixed z-50 bg-transparent",
+                isFullscreen ? "inset-0" : "inset-0"
               )}
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
             >
-              {/* Close button (when not fullscreen) */}
-              {!isFullscreen && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="absolute top-2 right-2 z-50 rounded-full bg-background/80"
-                  onClick={() => {
-                    handleEndCall('user_hangup');
-                    onClose();
-                  }}
-                >
-                  <X className="w-5 h-5" />
-                </Button>
-              )}
-
               <QuantumVideoUI
                 callState={callState}
                 connectionQuality={connectionQuality}
@@ -486,21 +440,21 @@ export const QuantumCallModal: React.FC<QuantumCallModalProps> = ({
       {/* Call ended screen */}
       {callState === 'ended' && !hasIncomingCall && (
         <motion.div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-xl"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-transparent text-white backdrop-blur-2xl"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
         >
           <div className="text-center">
             <motion.div
-              className="w-20 h-20 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center"
+              className="w-20 h-20 mx-auto mb-4 rounded-full bg-white/[0.08] flex items-center justify-center"
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
             >
-              <PhoneOff className="w-10 h-10 text-muted-foreground" />
+              <PhoneOff className="w-10 h-10 text-white" />
             </motion.div>
-            <h2 className="text-xl font-semibold text-foreground mb-2">Call Ended</h2>
-            <p className="text-muted-foreground">
+            <h2 className="text-xl font-semibold text-white mb-2">Call Ended</h2>
+            <p className="text-white/60">
               Duration: {Math.floor(callDuration / 60)}:{(callDuration % 60).toString().padStart(2, '0')}
             </p>
           </div>
