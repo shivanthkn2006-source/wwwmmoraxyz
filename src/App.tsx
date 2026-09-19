@@ -644,6 +644,7 @@ const RouteAwareShell = () => {
                             path="/calls"
                             element={
                               <ProtectedRoute>
+                                {/* Dedicated authenticated audio/video calling destination. */}
                                 <CallsPage />
                               </ProtectedRoute>
                             }

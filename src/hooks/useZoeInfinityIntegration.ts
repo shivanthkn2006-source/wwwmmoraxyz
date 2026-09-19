@@ -999,6 +999,8 @@ export const useZoeInfinityIntegration = () => {
       isSpeaking: quantumCall.isSpeaking,
       remoteIsSpeaking: quantumCall.remoteIsSpeaking,
       connectionQuality: quantumCall.connectionQuality,
+      networkDiagnostics: quantumCall.networkDiagnostics,
+      dataChannelState: quantumCall.dataChannelState,
       video: quantumCall.video,
       godEyeEnabled: quantumCall.godEyeEnabled,
       lastGodEyeAnalysis: quantumCall.lastGodEyeAnalysis,
@@ -1018,6 +1020,8 @@ export const useZoeInfinityIntegration = () => {
       stopGodEye: quantumCall.stopGodEye,
       endCall: quantumCall.endCall,
       flipCamera: quantumCall.flipCamera,
+      sendZoeData: quantumCall.sendZoeData,
+      cleanupAllMedia: quantumCall.cleanupAllMedia,
     },
     profileAutoFill: {
       isProfileUpdateRequest: profileAutoFill.isProfileUpdateRequest,
