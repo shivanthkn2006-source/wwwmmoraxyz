@@ -2790,6 +2790,7 @@ const HomePage = () => {
       <HomeGlassDock
         badgesUpdatedAt={dockBadgesUpdatedAt}
         triggerBadge={Math.max(featureBadgeTotal, unreadNotifications + unreadMessages)}
+        onHomeSelect={() => setActiveTab('global')}
         items={[
           {
             id: 'global-feed',

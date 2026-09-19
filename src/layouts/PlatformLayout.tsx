@@ -25,6 +25,8 @@ import ZoeGreetingFilm from '@/components/zoe/ZoeGreetingFilm';
 import ZoeAgentProvider from '@/contexts/ZoeAgentProvider';
 import ZoeAgentHost from '@/components/zoe/ZoeAgentHost';
 import GlobalMusicToggle from '@/components/music/GlobalMusicToggle';
+import { CallEngineProvider } from '@/contexts/CallEngineContext';
+import GlobalIncomingCallHost from '@/components/quantum/GlobalIncomingCallHost';
 
 
 
@@ -68,6 +70,7 @@ function PlatformServices() {
 
 export const PlatformLayout = ({ children }: { children: React.ReactNode }) => (
   <ZoeAgentProvider>
+    <CallEngineProvider>
     {/* Services are crash-isolated: a recognizer failure can never blank the app. */}
     <AppErrorBoundary moduleName="platform:services" severity="low" fallback={null}>
       <PlatformServices />
@@ -132,6 +135,10 @@ export const PlatformLayout = ({ children }: { children: React.ReactNode }) => (
     <AppErrorBoundary moduleName="platform:zoe-agent" severity="low" fallback={null}>
       <ZoeAgentHost />
     </AppErrorBoundary>
+    <AppErrorBoundary moduleName="platform:incoming-call" severity="high" fallback={null}>
+      <GlobalIncomingCallHost />
+    </AppErrorBoundary>
+    </CallEngineProvider>
   </ZoeAgentProvider>
 );
 

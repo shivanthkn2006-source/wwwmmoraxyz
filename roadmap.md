@@ -7,6 +7,8 @@
 - [x] Stage 3: authenticated Calls destination in the Home menu with real participant selection and audio/video start paths
 - [x] Stage 4: WebRTC-encrypted Zoe data channel and call-scoped worker without changing the existing peer-to-peer media path
 - [ ] Stage 5: focused unit, integration, RLS, network-recovery, accessibility, and phone/tablet/desktop visual QA (automated checks complete; signed-in two-device media QA awaits a Preview session and TURN credentials)
+- [x] Restore the Home destination inside the icon panel and keep recent shortcuts clickable beside the Home trigger
+- [x] Replace competing M'Mora call listeners with one shared call engine and a global incoming-call surface
 
 - [x] Automatically wire every registered static page into the Home icon menu
 - [x] Keep the first-time VR tap/drag tutorial with persistent dismissal and unchanged panel visuals

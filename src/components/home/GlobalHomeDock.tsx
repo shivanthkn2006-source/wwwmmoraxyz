@@ -49,6 +49,7 @@ export const GlobalHomeDock: React.FC = () => {
     <>
       <HomeGlassDock
         triggerBadge={total}
+        onHomeSelect={() => navigate('/home')}
         items={[
           {
             id: 'global-compass',

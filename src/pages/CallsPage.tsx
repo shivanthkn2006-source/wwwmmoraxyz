@@ -3,11 +3,12 @@ import { useAuth } from '@/lib/auth';
 import ZoeCallsIcon from '@/components/icons/ZoeCallsIcon';
 import { CallControlPanel } from '@/components/zoe-infinity/CallControlPanel';
 import { QuantumCallModal } from '@/components/quantum/QuantumCallModal';
-import { useZoeQuantumCall, type CallParticipant } from '@/hooks/useZoeQuantumCall';
+import type { CallParticipant } from '@/hooks/useZoeQuantumCall';
+import { useCallEngine } from '@/contexts/CallEngineContext';
 
 const CallsPage = () => {
   const { user } = useAuth();
-  const calls = useZoeQuantumCall(user?.id);
+  const calls = useCallEngine();
   const [target, setTarget] = useState<CallParticipant | null>(null);
   const [isOpen, setIsOpen] = useState(false);
 
@@ -26,7 +27,7 @@ const CallsPage = () => {
   if (!user) return null;
 
   return (
-    <main className="relative min-h-[100dvh] overflow-hidden bg-transparent text-white">
+    <main className="calls-liquid-page relative min-h-[100dvh] overflow-hidden bg-transparent text-white">
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
         <div className="flex flex-col items-center gap-3 text-white/70">
           <ZoeCallsIcon className="h-9 w-9" />

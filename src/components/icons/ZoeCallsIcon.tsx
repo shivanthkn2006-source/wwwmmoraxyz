@@ -1,9 +1,9 @@
-import type { SVGProps } from 'react';
+import { forwardRef, type SVGProps } from 'react';
 
 /** Distinct audio/video call mark: handset, live lens, and signal link. */
-export default function ZoeCallsIcon({ className, ...props }: SVGProps<SVGSVGElement>) {
-  return (
+const ZoeCallsIcon = forwardRef<SVGSVGElement, SVGProps<SVGSVGElement>>(({ className, ...props }, ref) => (
     <svg
+      ref={ref}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -19,5 +19,8 @@ export default function ZoeCallsIcon({ className, ...props }: SVGProps<SVGSVGEle
       <path d="m19.6 6 2-1.15v3.8l-2-1.15" />
       <path d="M12.9 3.35c.62-.23 1.29-.35 1.99-.35" opacity=".65" />
     </svg>
-  );
-}
+));
+
+ZoeCallsIcon.displayName = 'ZoeCallsIcon';
+
+export default ZoeCallsIcon;
