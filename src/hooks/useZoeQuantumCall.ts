@@ -808,6 +808,68 @@ const startGodEye = useCallback(() => {
     }
   }, [currentUserId, encryptSignalData]);
 
+  const attachDataChannel = useCallback((channel: RTCDataChannel) => {
+    dataChannelRef.current = channel;
+    setState(prev => ({ ...prev, dataChannelState: channel.readyState }));
+    channel.onopen = () => setState(prev => ({ ...prev, dataChannelState: 'open' }));
+    channel.onclosing = () => setState(prev => ({ ...prev, dataChannelState: 'closing' }));
+    channel.onclose = () => setState(prev => ({ ...prev, dataChannelState: 'closed' }));
+    channel.onerror = () => setState(prev => ({ ...prev, dataChannelState: 'closed' }));
+    channel.onmessage = (event) => {
+      window.dispatchEvent(new CustomEvent('zoe-call-data', { detail: { payload: event.data } }));
+    };
+  }, []);
+
+  const sendZoeData = useCallback((payload: object): boolean => {
+    const channel = dataChannelRef.current;
+    if (!channel || channel.readyState !== 'open') return false;
+    try {
+      channel.send(JSON.stringify(payload));
+      return true;
+    } catch (error) {
+      console.warn('[QuantumCall] Private data message failed', error);
+      return false;
+    }
+  }, []);
+
+  const attemptIceRestart = useCallback((pc: RTCPeerConnection, remoteUserId: string) => {
+    if (!isOffererRef.current || reconnectTimerRef.current || pc.signalingState === 'closed') return;
+    const attempt = reconnectAttemptsRef.current;
+    if (attempt >= MAX_ICE_RESTART_ATTEMPTS) {
+      setState(prev => ({
+        ...prev,
+        networkDiagnostics: { ...prev.networkDiagnostics, lastRecovery: 'failed' },
+      }));
+      void endCallRef.current?.('network_error');
+      return;
+    }
+
+    const delay = ICE_RESTART_DELAYS_MS[attempt] ?? ICE_RESTART_DELAYS_MS[ICE_RESTART_DELAYS_MS.length - 1];
+    reconnectTimerRef.current = setTimeout(async () => {
+      reconnectTimerRef.current = null;
+      if (pc.signalingState === 'closed') return;
+      reconnectAttemptsRef.current += 1;
+      setState(prev => ({
+        ...prev,
+        callState: 'reconnecting',
+        networkDiagnostics: {
+          ...prev.networkDiagnostics,
+          restartCount: reconnectAttemptsRef.current,
+          lastRecovery: 'attempting',
+        },
+      }));
+      try {
+        const offer = await pc.createOffer({ iceRestart: true });
+        offer.sdp = OPUS_32KBPS_SDP_MODIFIER(offer.sdp || '');
+        await pc.setLocalDescription(offer);
+        await sendSignal(remoteUserId, 'ice-restart-offer', { offer: pc.localDescription?.toJSON() });
+      } catch (error) {
+        console.warn('[QuantumCall] ICE restart attempt failed', error);
+        attemptIceRestart(pc, remoteUserId);
+      }
+    }, delay);
+  }, [sendSignal]);
+
   // ═══════════════════════════════════════════════════════════════════════════════
   // MEDIA SETUP - AUDIO + VIDEO
   // ═══════════════════════════════════════════════════════════════════════════════
