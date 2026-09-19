@@ -2864,6 +2864,12 @@ const HomePage = () => {
             onSelect: runHomeIconAction('chat', () => navigate('/chat')),
           },
           {
+            id: 'calls',
+            label: 'Audio & video calls',
+            icon: <ZoeCallsIcon className="h-[24px] w-[24px]" />,
+            onSelect: runHomeIconAction('calls', () => navigate('/calls')),
+          },
+          {
             id: 'notifications',
             label: 'Notifications',
             icon: <Bell className="h-[22px] w-[22px]" />,
@@ -2892,12 +2898,6 @@ const HomePage = () => {
             label: 'Music',
             icon: <Music className="h-[22px] w-[22px]" />,
             onSelect: runHomeIconAction('music', () => navigate('/music')),
-          },
-          {
-            id: 'calls',
-            label: 'Audio & video calls',
-            icon: <ZoeCallsIcon className="h-[24px] w-[24px]" />,
-            onSelect: runHomeIconAction('calls', () => navigate('/calls')),
           },
           {
             id: 'likes',

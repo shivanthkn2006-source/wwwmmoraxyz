@@ -84,6 +84,13 @@ export const GlobalHomeDock: React.FC = () => {
             onSelect: () => navigate('/chat'),
           },
           {
+            id: 'global-calls',
+            label: 'Audio & video calls',
+            icon: <ZoeCallsIcon className="h-[24px] w-[24px]" />,
+            active: pathname.startsWith('/calls'),
+            onSelect: () => navigate('/calls'),
+          },
+          {
             id: 'global-notifications',
             label: 'Notifications',
             icon: <Bell className="h-[22px] w-[22px]" />,
@@ -105,13 +112,6 @@ export const GlobalHomeDock: React.FC = () => {
             icon: <Music className="h-[22px] w-[22px]" />,
             active: pathname.startsWith('/music'),
             onSelect: () => navigate('/music'),
-          },
-          {
-            id: 'global-calls',
-            label: 'Audio & video calls',
-            icon: <ZoeCallsIcon className="h-[24px] w-[24px]" />,
-            active: pathname.startsWith('/calls'),
-            onSelect: () => navigate('/calls'),
           },
           {
             id: 'global-zoe-audio',
