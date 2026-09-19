@@ -54,9 +54,17 @@ const NON_MENU_ROUTES = new Set([
   '/demo',
   '/access-denied',
   '/password-recovery',
+  // Internal QA / engineering diagnostics — not member destinations.
+  '/asi-test',
+  '/integration-test',
+  '/vr-audit',
+  '/platform-audit',
+  '/root-scan',
+  '/search-preview',
+  '/voice-command-test',
 ]);
 
-const NON_MENU_PREFIXES = ['/zoe-infinity'];
+const NON_MENU_PREFIXES = ['/zoe-infinity', '/admin'];
 
 interface ExtraDef {
   id: string;
