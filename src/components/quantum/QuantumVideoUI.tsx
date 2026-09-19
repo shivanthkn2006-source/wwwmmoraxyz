@@ -45,6 +45,7 @@ import {
 } from '@/components/ui/tooltip';
 import { CallState, VideoQuality, GodEyeAnalysis } from '@/hooks/useZoeQuantumCall';
 import { LowPowerCallWarning } from './LowPowerCallWarning';
+import type { CallNetworkDiagnostics } from '@/features/calls/callTransport';
 
 // Responsive sizing hook for call controls
 const useResponsiveCallSize = () => {
@@ -94,6 +95,8 @@ interface QuantumVideoUIProps {
   isLowDataMode: boolean;
   currentBitrate: number;
   codec: string;
+  networkDiagnostics: CallNetworkDiagnostics;
+  dataChannelState: RTCDataChannelState | 'unavailable';
   onToggleVideo: () => Promise<void>;
   onSetLowDataMode: (enabled: boolean) => void;
   
@@ -264,6 +267,7 @@ const LocalVideoPreview: React.FC<{
 }> = ({ videoRef, isEnabled, quality, isMuted }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [position, setPosition] = useState({ x: 16, y: 16 });
+  const previewRef = useRef<HTMLDivElement>(null);
   
   return (
     <motion.div
@@ -273,15 +277,19 @@ const LocalVideoPreview: React.FC<{
         "bg-white/[0.08] backdrop-blur-xl",
         isDragging ? "cursor-grabbing z-50" : "cursor-grab z-40"
       )}
+      ref={previewRef}
       style={{ top: position.y, right: position.x }}
       drag
+      dragConstraints={{ top: 0, right: 0, bottom: 0, left: 0 }}
       dragMomentum={false}
       onDragStart={() => setIsDragging(true)}
       onDragEnd={(_, info) => {
         setIsDragging(false);
+        const width = previewRef.current?.offsetWidth ?? 128;
+        const height = previewRef.current?.offsetHeight ?? 96;
         setPosition(prev => ({
-          x: Math.max(16, prev.x - info.offset.x),
-          y: Math.max(16, prev.y + info.offset.y),
+          x: Math.min(Math.max(16, prev.x - info.offset.x), Math.max(16, window.innerWidth - width - 16)),
+          y: Math.min(Math.max(16, prev.y + info.offset.y), Math.max(16, window.innerHeight - height - 16)),
         }));
       }}
       whileDrag={{ scale: 1.05 }}
@@ -618,6 +626,8 @@ export const QuantumVideoUI: React.FC<QuantumVideoUIProps> = ({
   isLowDataMode,
   currentBitrate,
   codec,
+  networkDiagnostics,
+  dataChannelState,
   onToggleVideo,
   onSetLowDataMode,
   onSetLocalVideoRef,
@@ -771,6 +781,10 @@ export const QuantumVideoUI: React.FC<QuantumVideoUIProps> = ({
             codec={codec}
             isLowDataMode={isLowDataMode}
           />
+          <div className="sr-only" role="status" aria-live="polite">
+            Network {networkDiagnostics.route}; {networkDiagnostics.roundTripTimeMs ?? 'unknown'} milliseconds latency;
+            {networkDiagnostics.packetLossPercent.toFixed(1)} percent packet loss; Zoe channel {dataChannelState}.
+          </div>
           
           <div className="flex items-center gap-2">
             {isConnected && (
@@ -783,6 +797,17 @@ export const QuantumVideoUI: React.FC<QuantumVideoUIProps> = ({
                   {formatDuration(durationTimer)}
                 </span>
               </motion.div>
+            )}
+
+            {isConnected && (
+              <div
+                className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.08] text-xs text-white/70 backdrop-blur-2xl"
+                aria-label={`Network route ${networkDiagnostics.route}, ${networkDiagnostics.roundTripTimeMs ?? 'unknown'} milliseconds latency, ${networkDiagnostics.packetLossPercent.toFixed(1)} percent packet loss, Zoe channel ${dataChannelState}`}
+              >
+                <span>{networkDiagnostics.route}</span>
+                <span>{networkDiagnostics.roundTripTimeMs ?? '—'}ms</span>
+                <span>{networkDiagnostics.packetLossPercent.toFixed(1)}%</span>
+              </div>
             )}
             
             {onToggleFullscreen && (

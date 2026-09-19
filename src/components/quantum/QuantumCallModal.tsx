@@ -19,6 +19,7 @@ import {
   CallSession,
 } from '@/hooks/useZoeQuantumCall';
 import { useToast } from '@/hooks/use-toast';
+import type { CallNetworkDiagnostics } from '@/features/calls/callTransport';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -40,6 +41,8 @@ export interface QuantumCallHookState {
   hasIncomingCall: boolean;
   callDuration: number;
   error: string | null;
+  networkDiagnostics: CallNetworkDiagnostics;
+  dataChannelState: RTCDataChannelState | 'unavailable';
   // Actions
   initiateCall: (receiver: CallParticipant, withVideo?: boolean) => Promise<void>;
   acceptCall: (withVideo?: boolean) => Promise<void>;
@@ -225,6 +228,8 @@ export const QuantumCallModal: React.FC<QuantumCallModalProps> = ({
     stopGodEye,
     endCall,
     error,
+    networkDiagnostics,
+    dataChannelState,
   } = quantumCallState;
 
   // Auto-start call if configured
@@ -345,6 +350,8 @@ export const QuantumCallModal: React.FC<QuantumCallModalProps> = ({
                 isLowDataMode={video.isLowDataMode}
                 currentBitrate={video.currentBitrate}
                 codec={video.codec}
+                networkDiagnostics={networkDiagnostics}
+                dataChannelState={dataChannelState}
                 onToggleVideo={toggleVideo}
                 onSetLowDataMode={setLowDataMode}
                 onSetLocalVideoRef={setLocalVideoRef}
