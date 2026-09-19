@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { QuantumVideoUI } from '@/components/quantum/QuantumVideoUI';
 import { DEFAULT_CALL_NETWORK_DIAGNOSTICS } from '@/features/calls/callTransport';
 
@@ -36,19 +36,22 @@ const renderCall = (overrides: Partial<React.ComponentProps<typeof QuantumVideoU
   />,
 );
 
+afterEach(cleanup);
+
 describe('call controls accessibility', () => {
   it('exposes the compact control tray and essential controls by name', () => {
     renderCall();
     fireEvent.click(screen.getByRole('button', { name: 'Open call controls' }));
-    expect(screen.getByRole('button', { name: 'Mute' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Turn off camera' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Use low data mode' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'End call' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Mute' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Turn off camera' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Use low data mode' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'End call' })).toBeTruthy();
   });
 
   it('announces relay diagnostics and the Zoe channel state', () => {
     renderCall();
-    expect(screen.getByRole('status')).toHaveTextContent('Network relay');
-    expect(screen.getByRole('status')).toHaveTextContent('Zoe channel open');
+    const status = screen.getByRole('status');
+    expect(status.textContent).toContain('Network relay');
+    expect(status.textContent).toContain('Zoe channel open');
   });
 });
