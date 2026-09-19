@@ -651,6 +651,15 @@ const RouteAwareShell = () => {
                             }
                           />
                           <Route
+                            path="/calls/history"
+                            element={
+                              <ProtectedRoute>
+                                {/* Who this member called and who called them. */}
+                                <CallHistoryPage />
+                              </ProtectedRoute>
+                            }
+                          />
+                          <Route
                             path="/profile"
                             element={
                               <ProtectedRoute>
