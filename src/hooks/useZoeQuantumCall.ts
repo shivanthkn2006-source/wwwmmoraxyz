@@ -365,10 +365,11 @@ export const useZoeQuantumCall = (currentUserId?: string) => {
   // Zoe's in-call thinking always happens in the worker, never on the main thread.
   useEffect(() => {
     const worker = zoeCallWorkerRef.current;
-    if (!worker || !state.isInCall || state.wordsTranscript.length === 0) return;
+    const inCall = state.callState === 'connected' || state.callState === 'connecting';
+    if (!worker || !inCall || state.wordsTranscript.length === 0) return;
     const request: ZoeThinkRequest = { kind: ZOE_THINK_REQUEST, transcript: state.wordsTranscript };
     worker.postMessage(request);
-  }, [state.isInCall, state.wordsTranscript]);
+  }, [state.callState, state.wordsTranscript]);
 
 
   const refreshIceServers = useCallback(async (): Promise<void> => {

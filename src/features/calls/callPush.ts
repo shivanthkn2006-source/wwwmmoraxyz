@@ -49,7 +49,7 @@ export const registerCallPushDevice = async (userId: string): Promise<boolean> =
       (await registration.pushManager.getSubscription()) ??
       (await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY).slice().buffer as ArrayBuffer,
       }));
 
     const p256dh = keyToBase64(subscription.getKey('p256dh'));
