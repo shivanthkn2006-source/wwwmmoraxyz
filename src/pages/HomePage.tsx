@@ -1370,6 +1370,7 @@ const HomePage = () => {
   
   // Enable user online notifications
   useUserOnlineNotifications();
+  useFriendActivityNotifications();
   
   // Enable desktop push notifications for high-priority alerts
   useDesktopNotifications(user?.id);
