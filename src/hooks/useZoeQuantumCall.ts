@@ -934,7 +934,6 @@ const startGodEye = useCallback(() => {
     if (!text || !sendCallEnvelope(WORDS_ONLY_ENVELOPE_TYPE, { text })) return false;
     setState(prev => ({
       ...prev,
-      wordsOnlyMode: true,
       wordsTranscript: appendWordsEntry(prev.wordsTranscript, createWordsEntry('local', text)),
     }));
     return true;
