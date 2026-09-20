@@ -41,7 +41,7 @@ describe('Home menu search and contained labels', () => {
     fireEvent.change(screen.getByRole('searchbox', { name: 'Search home menu icons' }), { target: { value: 'missing' } });
     fireEvent.keyDown(window, { key: 'Escape' });
     fireEvent.click(screen.getByRole('button', { name: 'Open home menu' }));
-    expect(screen.getByRole('searchbox', { name: 'Search home menu icons' })).toHaveValue('');
+    expect((screen.getByRole('searchbox', { name: 'Search home menu icons' }) as HTMLInputElement).value).toBe('');
     expect(screen.getByRole('menuitem', { name: 'Settings' })).toBeTruthy();
   });
 });

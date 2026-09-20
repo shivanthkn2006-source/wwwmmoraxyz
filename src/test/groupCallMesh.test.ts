@@ -6,6 +6,7 @@ import {
   MAX_GROUP_PARTICIPANTS,
   normalizeGroupRoster,
   shouldCreateOffer,
+  zoeSpeakerId,
   type GroupParticipant,
 } from '@/features/calls/groupCallMesh';
 
@@ -23,6 +24,11 @@ describe('group call mesh', () => {
   it('lets exactly one side of each pair make the offer', () => {
     expect(shouldCreateOffer('aaa', 'bbb')).toBe(true);
     expect(shouldCreateOffer('bbb', 'aaa')).toBe(false);
+  });
+
+  it('elects one deterministic Zoe speaker for the room', () => {
+    expect(zoeSpeakerId('member-c', ['member-b', 'member-a'])).toBe('member-a');
+    expect(zoeSpeakerId('member-a', ['member-c', 'member-b'])).toBe('member-a');
   });
 
   it('cleans the roster and keeps it bounded', () => {

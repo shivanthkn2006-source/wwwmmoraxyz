@@ -14,6 +14,8 @@ export type GroupCallSignalType =
   | 'group-offer'
   | 'group-answer'
   | 'group-ice'
+  | 'group-zoe-request'
+  | 'group-zoe-caption'
   | 'group-leave';
 
 export interface GroupParticipant {
@@ -30,6 +32,10 @@ export interface GroupParticipant {
  * same time and the connection would never settle.
  */
 export const shouldCreateOffer = (selfId: string, peerId: string): boolean => selfId < peerId;
+
+/** One deterministic device speaks for Zoe, preventing duplicate audio and TTS charges. */
+export const zoeSpeakerId = (selfId: string, peerIds: string[]): string =>
+  [selfId, ...peerIds].sort((left, right) => left.localeCompare(right))[0] ?? selfId;
 
 /** Keeps the roster unique, bounded and free of the member themselves. */
 export const normalizeGroupRoster = (selfId: string, ids: string[]): string[] => {

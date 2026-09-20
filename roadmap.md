@@ -95,8 +95,9 @@
 - [ ] Blocked: sleeping-phone wake confirmation requires a physical subscribed phone on the published app; preview service workers are intentionally disabled.
 
 ## 2026-09-21 — Home menu search, contained labels, call voice and wake ringing
-- [ ] Add an unframed Home-menu search field in the panel’s bottom row, filtering every wired menu destination.
-- [ ] Keep each menu label inside its existing icon tile without changing tile dimensions.
-- [ ] Route Zoe’s Deepgram call speech so every group-call participant hears it.
-- [ ] Complete background incoming-call ringing for supported published/PWA/native devices.
-- [ ] Verify focused tests and phone/tablet/desktop panel layouts; physical sleeping-phone wake remains device-only.
+- [x] Add an unframed Home-menu search field in the panel’s bottom row, filtering every wired menu destination.
+- [x] Keep each menu label inside its existing icon tile without changing tile dimensions.
+- [x] Route one elected Zoe Deepgram voice stream through the group WebRTC mesh with shared captions.
+- [x] Harden published-PWA call subscription readiness and preserve the push worker during recovery refreshes.
+- [ ] Connect APNs/FCM and verify sleeping-phone wake on physical native devices; external credentials and devices required.
+- [ ] Finish phone/tablet/desktop visual verification; focused tests and type validation pass.
