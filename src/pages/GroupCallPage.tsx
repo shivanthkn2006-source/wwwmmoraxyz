@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/integrations/supabase/client';
 import { useGroupCall } from '@/hooks/useGroupCall';
+import { useActivityStatuses } from '@/features/calls/useActivityStatuses';
+import ActivityStatusPicker from '@/components/quantum/ActivityStatusPicker';
+import { getCallActivityStatus, type CallActivityStatus } from '@/features/calls/callActivityStatuses';
 import {
   activeGroupParticipants,
   groupGridColumns,
@@ -20,9 +23,11 @@ interface ContactRow {
 const ParticipantTile = ({
   participant,
   stream,
+  activity,
 }: {
   participant: GroupParticipant;
   stream: MediaStream | null;
+  activity: CallActivityStatus;
 }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
@@ -38,9 +43,15 @@ const ParticipantTile = ({
           {participant.displayName}
         </div>
       )}
-      <div className="absolute inset-x-0 bottom-0 flex items-center justify-between px-3 py-2 text-[11px] text-white/70">
+      <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 px-3 py-2 text-[11px] text-white/70">
         <span className="truncate text-white">{participant.displayName}</span>
-        <span>{participant.connectionState === 'connected' ? 'Live' : participant.connectionState}</span>
+        <span
+          className="flex shrink-0 items-center gap-1"
+          aria-label={`${participant.displayName} activity: ${activity.label}`}
+        >
+          <activity.Icon className="h-3 w-3" aria-hidden />
+          <span className="truncate">{activity.label}</span>
+        </span>
       </div>
     </div>
   );
@@ -53,6 +64,11 @@ const GroupCallPage = () => {
   const [selected, setSelected] = useState<string[]>([]);
   const [invite, setInvite] = useState<{ roomId: string; from: string; roster: string[] } | null>(null);
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
+  const memberIds = useMemo(
+    () => group.participants.map(entry => entry.userId),
+    [group.participants],
+  );
+  const { ownStatus, setOwnStatus, statusFor } = useActivityStatuses(user?.id ?? null, memberIds);
 
   useEffect(() => {
     if (!user) return;
@@ -101,7 +117,10 @@ const GroupCallPage = () => {
   return (
     <main className="calls-liquid-page relative min-h-[100dvh] overflow-hidden bg-transparent px-4 pb-32 pt-8 text-white">
       <header className="mx-auto flex max-w-3xl items-center justify-between">
-        <h1 className="text-xl font-medium text-white">Group call</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-xl font-medium text-white">Group call</h1>
+          <ActivityStatusPicker status={ownStatus} onChange={(value) => void setOwnStatus(value)} showLabel />
+        </div>
         <Link to="/calls" className="rounded-full border border-white/15 px-4 py-1.5 text-sm text-white/80 hover:bg-white/10 hover:text-white">
           One to one
         </Link>
@@ -186,13 +205,23 @@ const GroupCallPage = () => {
           <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}>
             <div className="relative aspect-[3/4] overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] backdrop-blur-2xl">
               <video ref={localVideoRef} autoPlay playsInline muted className="h-full w-full object-cover" />
-              <span className="absolute bottom-2 left-3 text-[11px] text-white/70">You</span>
+              <span className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 px-3 py-2 text-[11px] text-white/70">
+                <span className="text-white">You</span>
+                <span className="flex shrink-0 items-center gap-1" aria-label={`Your activity: ${getCallActivityStatus(ownStatus).label}`}>
+                  {(() => {
+                    const OwnIcon = getCallActivityStatus(ownStatus).Icon;
+                    return <OwnIcon className="h-3 w-3" aria-hidden />;
+                  })()}
+                  <span className="truncate">{getCallActivityStatus(ownStatus).label}</span>
+                </span>
+              </span>
             </div>
             {liveParticipants.map(participant => (
               <ParticipantTile
                 key={participant.userId}
                 participant={participant}
                 stream={group.getRemoteStreamFor(participant.userId)}
+                activity={statusFor(participant.userId)}
               />
             ))}
           </div>
