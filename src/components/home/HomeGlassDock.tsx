@@ -86,6 +86,7 @@ const formatAgo = (timestamp?: number | null): string => {
 export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, triggerBadge = 0, onHomeSelect }: HomeGlassDockProps) {
   const badgesEnabled = useDockBadgesEnabled();
   const [open, setOpen] = React.useState(false);
+  const [searchQuery, setSearchQuery] = React.useState('');
 
   const rootRef = React.useRef<HTMLDivElement>(null);
   const railRef = React.useRef<HTMLDivElement>(null);
@@ -126,6 +127,10 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
   React.useEffect(() => () => {
     if (longPressTimer.current) window.clearTimeout(longPressTimer.current);
   }, []);
+
+  React.useEffect(() => {
+    if (!open) setSearchQuery('');
+  }, [open]);
 
   const clearLongPress = () => {
     if (longPressTimer.current) {
@@ -266,7 +271,7 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
           if (next) setOpen(false);
         } : undefined}
         className={cn(
-          'group relative flex h-[var(--home-dock-cell)] w-[var(--home-dock-cell)] shrink-0 items-center justify-center',
+          'group relative flex h-[var(--home-dock-cell)] w-[var(--home-dock-cell)] shrink-0 items-center justify-center overflow-hidden',
           'transition-all active:scale-95',
           isHome
             ? 'appearance-none rounded-none !border-0 !bg-transparent p-0 text-white !shadow-none hover:!bg-transparent'
@@ -280,9 +285,11 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
         )}
       >
         {item.icon}
-        {!isHome && <span className="home-dock-label pointer-events-none absolute left-1/2 top-full z-10 hidden -translate-x-1/2 whitespace-nowrap px-0.5 text-center text-[10px] font-medium leading-tight text-white group-hover:block group-focus-visible:block">
-          {item.label}
-        </span>}
+        {!isHome && !item.id.startsWith('dock-filler-') && !item.id.startsWith('placeholder-') && (
+          <span className="home-dock-label pointer-events-none absolute inset-x-1 bottom-1 z-10 line-clamp-2 text-center text-[7px] font-medium leading-[8px] text-white/90">
+            {item.label}
+          </span>
+        )}
 
         {badge > 0 && !isHome && (
           <span
@@ -357,11 +364,21 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slots, baseSlots, usage, onHomeSelect]);
 
+  const visibleGridSlots = React.useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
+    if (!normalizedQuery) return gridSlots;
+    return gridSlots.filter((item) => (
+      !item.id.startsWith('dock-filler-')
+      && !item.id.startsWith('placeholder-')
+      && item.label.toLocaleLowerCase().includes(normalizedQuery)
+    ));
+  }, [gridSlots, searchQuery]);
+
 
 
   const renderPackedRows = () => (
       <div data-home-dock-grid className="grid max-h-[calc(4*var(--home-dock-cell)+3*var(--home-dock-gap))] grid-cols-7 gap-[var(--home-dock-gap)] overflow-x-hidden overflow-y-auto overscroll-contain rounded-2xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-      {gridSlots.map((item) => renderIconButton(item))}
+      {visibleGridSlots.map((item) => renderIconButton(item))}
     </div>
   );
 
@@ -399,7 +416,21 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
           {open && renderPackedRows()}
 
           {/* Only the bare Home trigger ever sits outside the panel. */}
-          <div className="flex items-center justify-end gap-[var(--home-dock-gap)]">
+          <div className="flex w-full items-center justify-end gap-[var(--home-dock-gap)]">
+            {open && (
+              <label className="flex min-w-0 flex-1 items-center gap-2 px-1" aria-label="Search home menu">
+                <input
+                  autoFocus
+                  type="search"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder=""
+                  aria-label="Search home menu icons"
+                  className="h-8 min-w-0 flex-1 appearance-none border-0 bg-transparent p-0 text-xs text-white caret-white outline-none ring-0 placeholder:text-transparent focus:border-0 focus:outline-none focus:ring-0 [&::-webkit-search-cancel-button]:hidden"
+                />
+                <Search aria-hidden="true" className="h-4 w-4 shrink-0 text-white/70" />
+              </label>
+            )}
             {renderIconButton(homeItem, true)}
           </div>
 
