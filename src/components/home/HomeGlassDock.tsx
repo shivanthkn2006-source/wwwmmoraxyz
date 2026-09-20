@@ -281,7 +281,7 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
 
           isHome
             ? '!outline-none !ring-0 focus:!outline-none focus:!ring-0 focus-visible:!outline-none focus-visible:!ring-0'
-            : 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60',
+            : 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 [&>svg]:-translate-y-1.5',
         )}
       >
         {item.icon}

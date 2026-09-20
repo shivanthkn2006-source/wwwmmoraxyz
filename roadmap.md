@@ -100,4 +100,4 @@
 - [x] Route one elected Zoe Deepgram voice stream through the group WebRTC mesh with shared captions.
 - [x] Harden published-PWA call subscription readiness and preserve the push worker during recovery refreshes.
 - [ ] Connect APNs/FCM and verify sleeping-phone wake on physical native devices; external credentials and devices required.
-- [ ] Finish phone/tablet/desktop visual verification; focused tests and type validation pass.
+- [x] Finish phone/tablet/desktop visual verification; focused tests and type validation pass.
