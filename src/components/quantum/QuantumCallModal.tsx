@@ -251,7 +251,9 @@ export const QuantumCallModal: React.FC<QuantumCallModalProps> = ({
 
   useEffect(() => {
     window.dispatchEvent(new CustomEvent('quantum-call-visibility', { detail: { visible: isOpen } }));
-    return () => window.dispatchEvent(new CustomEvent('quantum-call-visibility', { detail: { visible: false } }));
+    return () => {
+      window.dispatchEvent(new CustomEvent('quantum-call-visibility', { detail: { visible: false } }));
+    };
   }, [isOpen]);
 
   // Auto-start call if configured

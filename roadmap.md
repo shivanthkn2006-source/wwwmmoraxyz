@@ -83,3 +83,13 @@
 - [x] Calls activity status: all Profile activities shown with plain icons below KBPS, editable by the user and refreshed for the other participant.
 - [ ] Blocked: real Moksh-to-Asha two-device call (needs both people signed in on their own devices).
 - [ ] Blocked: relay (TURN/Twilio) — deferred by request, so calls across strict networks may still fail.
+
+## 2026-09-20 — Calls activity, self-view and device controls
+- [x] Custom personal activity messages: owner-editable, 80-character validation, live refresh, group tiles, and Zoe context.
+- [x] Calls activity menus use transparent monochrome glass without the grey panel.
+- [x] Idle title is “Zoe Calls” at the top-left, with phone spacing that avoids existing alert overlays.
+- [x] Local camera preview defaults below the participant name at top-left and remains draggable.
+- [x] Front/back camera switching is exposed in the call controls and uses the existing live track replacement.
+- [x] The app Camera/Mic banner is suppressed only while the Calls overlay is visible; browser privacy indicators remain unchanged.
+- [x] Focused tests, type validation, and phone/tablet/desktop preview checks pass.
+- [ ] Blocked: sleeping-phone wake confirmation requires a physical subscribed phone on the published app; preview service workers are intentionally disabled.

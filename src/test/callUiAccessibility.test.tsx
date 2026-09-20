@@ -29,6 +29,8 @@ const renderCall = (overrides: Partial<React.ComponentProps<typeof QuantumVideoU
     wordsTranscript={[]}
     zoeWhisper={null}
     onToggleVideo={vi.fn(async () => undefined)}
+    onFlipCamera={vi.fn(async () => undefined)}
+    cameraFacing="front"
     onSetLowDataMode={vi.fn()}
     onSetWordsOnlyMode={vi.fn()}
     onSendCallWords={vi.fn(() => true)}
@@ -51,6 +53,7 @@ describe('call controls accessibility', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Open call controls' }));
     expect(screen.getByRole('button', { name: 'Mute' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Turn off camera' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Switch to back camera' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Use low data mode' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Use words only mode' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'End call' })).toBeTruthy();
