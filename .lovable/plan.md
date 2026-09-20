@@ -1,25 +1,25 @@
-# Make the Music profile edge-to-edge transparent
+# Make the main M’Mora Profile transparent and white-only
 
 ## Goal
-Keep every Music profile section, word, control, and action unchanged while making the whole page edge-to-edge transparent with white-only text, icons, fields, and states.
+Restyle the existing main Profile page shown in the supplied screenshots—not the Music taste page—so it matches the edge-to-edge transparency and white typography of Music and Calls.
 
 ## Visual changes
-- Apply the existing Music page’s transparent surface from edge to edge on `/music/profile`.
-- Remove any inherited colored, grey, or opaque fills from the artist field, chips, buttons, notices, favourites, and planetary section.
-- Keep all typography and icons white, using white opacity only for secondary text.
-- Preserve current spacing, section order, control sizes, page content, and interactions.
+- Keep the profile photo and every existing section, word, control, icon, order, size, and action unchanged.
+- Make the Profile page edge-to-edge transparent, removing grey, black, purple, colored, and opaque section fills.
+- Use white-only text, icons, borders, active states, fields, tabs, cards, dialogs, and buttons, with white opacity for hierarchy.
+- Scope the treatment to the main Profile page so no shared component changes visually elsewhere.
 
 ## Wiring audit
-- Trace and document how profile birth date, birth time, birth place, faith, city/location, listening taste, and favourites are stored and consumed.
-- Record concrete strengths in the current Zoe relationship path: saved profile identity, persistent memory, location-aware context, planetary context, faith-aware suggestions, and learned listening signals.
-- Identify genuine gaps without inventing integrations or changing unrelated profile behavior.
+- Trace and document how birth date, birth time, birth place, faith, city/location, identity, interests, and activity data are stored and read.
+- Record the concrete personalization strengths connecting Profile data to Zoe, planetary context, Music recommendations, location-aware context, long-term memory, and relationship learning.
+- Record real gaps or drift risks without changing profile content or functionality in this visual task.
 
 ## Verification
-- Add focused checks that the Music profile remains edge-to-edge, transparent, white-only, and fully interactive.
-- Verify load, faith/genre/mood selection, artist entry, favourites, save state, planetary refresh, and back navigation.
-- Inspect signed-in phone, tablet, and desktop previews for overflow, clipping, colored remnants, and opaque panels.
+- Add focused checks for edge-to-edge transparency and white-only presentation while preserving Profile content and controls.
+- Verify Profile loading, edit access, tabs, planner, reminders, calendar, faith controls, settings, and navigation remain present and usable.
+- Inspect signed-in phone, tablet, and desktop previews for overflow, clipping, colored remnants, opaque panels, or unreadable text.
 - Deliver a concise integration and QA audit report with verified strengths, gaps, and test results.
 
 ## Technical scope
-- Change only Music-profile-specific presentation code and focused tests.
-- Do not redesign or alter the main Profile page, shared components, database behavior, recommendation logic, Zoe behavior, or other Music pages.
+- Change only the main Profile page’s scoped wrapper styling and focused tests.
+- Do not alter Music Profile, Profile data, child component behavior, database logic, Zoe behavior, or unrelated pages.

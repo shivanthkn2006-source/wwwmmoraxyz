@@ -108,9 +108,9 @@
 - [x] Keep every menu name below its symbol inside the same tile.
 - [x] Verify opening, search height, label placement, and destination wiring in phone/PWA preview.
 
-## 2026-09-21 — Music profile transparency and profile-wiring audit
-- [ ] Restyle only `/music/profile` as an edge-to-edge transparent, white-only Music surface without changing content or behavior.
-- [ ] Preserve genres, moods, faith, artists, favourites, planetary mood, save behavior, and navigation exactly as wired.
-- [ ] Document concrete strengths and verified gaps across birth details, faith, location, Music personalization, and Zoe relationship context.
+## 2026-09-21 — Main M’Mora Profile transparency and profile-wiring audit
+- [ ] Restyle only the main Profile page shown in the supplied screenshots as an edge-to-edge transparent, white-only Music/Calls-style surface.
+- [ ] Preserve every existing Profile section, image, field, control, action, order, and behavior unchanged.
+- [ ] Document concrete strengths and verified gaps across birth details, faith, location, profile data, and Zoe relationship context.
 - [ ] Add focused visual safeguards and verify signed-in phone, tablet, and desktop previews.
 - [ ] Produce a concise QA and integration audit report.
