@@ -1392,6 +1392,7 @@ html.phantom-mode [class*="animate-"] {
 
 .profile-liquid-page [data-profile-liquid-content],
 .profile-liquid-page [data-profile-liquid-content] section,
+.profile-liquid-page [data-profile-liquid-content] [class*='bg-']:not([data-profile-photo]),
 .profile-liquid-page [data-profile-liquid-content] [class*='bg-card'],
 .profile-liquid-page [data-profile-liquid-content] [class*='bg-background'],
 .profile-liquid-page [data-profile-liquid-content] [class*='bg-muted']:not([data-profile-photo]),
@@ -1454,6 +1455,10 @@ html.phantom-mode [class*="animate-"] {
 }
 
 .profile-liquid-page [data-profile-liquid-content] :is([class*='border-primary'], [class*='border-secondary'], [class*='border-accent'], [class*='border-destructive'], [class*='border-emerald'], [class*='border-green'], [class*='border-amber'], [class*='border-blue'], [class*='border-cyan'], [class*='border-purple'], [class*='border-pink'], [class*='border-violet'], [class*='border-fuchsia'], [class*='border-border']) {
+  border-color: hsl(var(--profile-white) / 0.22);
+}
+
+.profile-liquid-page [data-profile-liquid-content] :is([class~='border'], [class*='border-']) {
   border-color: hsl(var(--profile-white) / 0.22);
 }
 
