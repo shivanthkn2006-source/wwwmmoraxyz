@@ -1359,6 +1359,112 @@ html.phantom-mode [class*="animate-"] {
   color: hsl(0 0% 100%);
 }
 
+/* Main M'Mora Profile — edge-to-edge transparent, white-only presentation.
+   This wrapper is intentionally route-scoped so the many shared Profile
+   sections keep their behavior without changing their appearance elsewhere. */
+.profile-liquid-page {
+  --profile-white: 0 0% 100%;
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  box-sizing: border-box;
+  overflow-x: clip;
+  color: hsl(var(--profile-white));
+  background: transparent;
+}
+
+.profile-liquid-page::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: transparent;
+}
+
+.profile-liquid-header {
+  border-color: hsl(var(--profile-white) / 0.18);
+  background: hsl(var(--profile-white) / 0.035);
+  box-shadow: inset 0 -1px 0 hsl(var(--profile-white) / 0.08);
+  backdrop-filter: blur(28px) saturate(115%);
+  -webkit-backdrop-filter: blur(28px) saturate(115%);
+}
+
+.profile-liquid-page [data-profile-liquid-content],
+.profile-liquid-page [data-profile-liquid-content] > div:not(:first-of-type),
+.profile-liquid-page [data-profile-liquid-content] section,
+.profile-liquid-page [data-profile-liquid-content] [class*='bg-card'],
+.profile-liquid-page [data-profile-liquid-content] [class*='bg-background'],
+.profile-liquid-page [data-profile-liquid-content] [class*='bg-muted'],
+.profile-liquid-page [data-profile-liquid-content] [class*='bg-primary'],
+.profile-liquid-page [data-profile-liquid-content] [class*='bg-secondary'],
+.profile-liquid-page [data-profile-liquid-content] [class*='bg-accent'],
+.profile-liquid-page [data-profile-liquid-content] [class*='bg-gradient'],
+.profile-liquid-page [data-profile-liquid-content] [class*='from-'],
+.profile-liquid-page [data-profile-liquid-content] [class*='via-'],
+.profile-liquid-page [data-profile-liquid-content] [class*='to-'] {
+  background-color: transparent;
+  background-image: none;
+}
+
+/* Keep the member's real profile photograph untouched. Every surface beneath
+   and over it becomes a clear white-edged layer rather than a coloured card. */
+.profile-liquid-page [data-profile-liquid-content] > :not(.profile-liquid-header) [class*='backdrop-blur'],
+.profile-liquid-page [data-profile-liquid-content] .rounded-2xl,
+.profile-liquid-page [data-profile-liquid-content] .rounded-lg,
+.profile-liquid-page [data-profile-liquid-content] .rounded-xl,
+.profile-liquid-page [data-profile-liquid-content] [role='tabpanel'] {
+  background-color: transparent;
+  background-image: none;
+  box-shadow: none;
+}
+
+.profile-liquid-page [data-profile-liquid-content] :is(h1, h2, h3, h4, h5, h6, p, span, label, dt, dd, time),
+.profile-liquid-page [data-profile-liquid-content] :is(button, a, input, textarea, select),
+.profile-liquid-page [data-profile-liquid-content] svg {
+  color: hsl(var(--profile-white));
+}
+
+.profile-liquid-page [data-profile-liquid-content] :is(.text-muted-foreground, [class*='text-primary'], [class*='text-secondary'], [class*='text-accent'], [class*='text-destructive'], [class*='text-emerald'], [class*='text-green'], [class*='text-amber'], [class*='text-blue'], [class*='text-cyan'], [class*='text-purple'], [class*='text-pink'], [class*='text-orange'], [class*='text-violet'], [class*='text-fuchsia']) {
+  color: hsl(var(--profile-white) / 0.68);
+}
+
+.profile-liquid-page [data-profile-liquid-content] :is(button, [role='button'], input, textarea, select, [role='tab'], [role='switch']) {
+  border-color: hsl(var(--profile-white) / 0.24);
+  background-color: transparent;
+  background-image: none;
+  box-shadow: none;
+}
+
+.profile-liquid-page [data-profile-liquid-content] :is(button, [role='button'], [role='tab']):is(:hover, :focus-visible, [data-state='active'], [data-state='checked']) {
+  border-color: hsl(var(--profile-white) / 0.48);
+  background-color: hsl(var(--profile-white) / 0.1);
+  color: hsl(var(--profile-white));
+}
+
+.profile-liquid-page [data-profile-liquid-content] :is(input, textarea, select)::placeholder {
+  color: hsl(var(--profile-white) / 0.5);
+}
+
+.profile-liquid-page [data-profile-liquid-content] :is([class*='border-primary'], [class*='border-secondary'], [class*='border-accent'], [class*='border-destructive'], [class*='border-emerald'], [class*='border-green'], [class*='border-amber'], [class*='border-blue'], [class*='border-cyan'], [class*='border-purple'], [class*='border-pink'], [class*='border-violet'], [class*='border-fuchsia'], [class*='border-border']) {
+  border-color: hsl(var(--profile-white) / 0.22);
+}
+
+.profile-liquid-page [data-profile-liquid-content] [role='progressbar'] {
+  background-color: hsl(var(--profile-white) / 0.12);
+}
+
+.profile-liquid-page [data-profile-liquid-content] [role='progressbar'] > * {
+  background-color: hsl(var(--profile-white) / 0.82);
+  background-image: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-liquid-page * {
+    scroll-behavior: auto;
+  }
+}
+
 
 /* Seven Home actions always stay on one row. Width and height both
    participate so narrow foldables and short landscape screens retain all

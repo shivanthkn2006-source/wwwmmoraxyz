@@ -132,10 +132,10 @@ const ProfilePage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-20">
-      <div className="max-w-2xl mx-auto">
+    <div className="profile-liquid-page min-h-screen pb-20" data-profile-liquid-page>
+      <div className="mx-auto w-full" data-profile-liquid-content>
         {/* Top Header with Settings Search & Actions */}
-        <div className="sticky top-0 bg-background/95 backdrop-blur-xl border-b border-border/50 z-50">
+        <div className="profile-liquid-header sticky top-0 z-50 border-b backdrop-blur-xl">
           <SettingsSearchCommand 
             onOpenProfileEdit={() => {
               // Trigger profile edit modal in ProfileContent
