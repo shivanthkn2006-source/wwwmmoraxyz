@@ -1883,6 +1883,15 @@ const startGodEye = useCallback(() => {
       }
     };
 
+    // A catch-up row for a call that has already come and gone must never ring.
+    const INVITE_FRESHNESS_MS = 45 * 1000;
+    const isExpiredInvite = (row: { signal_type?: string; created_at?: string }) => {
+      if (row?.signal_type !== 'call-request') return false;
+      if (!row.created_at) return false;
+      const at = Date.parse(row.created_at);
+      return Number.isFinite(at) && Date.now() - at > INVITE_FRESHNESS_MS;
+    };
+
     const processSignal = async (signal: {
       id: string;
       caller_id: string;
