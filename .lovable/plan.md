@@ -1,24 +1,23 @@
-# Home panel search and real call audio
+# Home menu search, contained labels, Zoe call voice, and background ringing
 
-## Goal
-Use the Home panel’s empty bottom space for a minimal icon search, keep every menu name inside its existing tile, make Zoe audible to everyone in a group call, and complete supported background incoming-call ringing without changing unrelated design.
+## Home menu
+- Keep the existing seven-column panel and current icon dimensions.
+- Add a borderless search field in the unused bottom row, with the cursor at left and a small search symbol immediately before Home.
+- Filter every wired Home destination by its visible name without changing navigation, order, badges, or actions.
+- Place each name inside its existing icon tile beneath the symbol; do not enlarge tiles or alter unrelated components.
 
-## Changes
-- Add a borderless search input inside the open Home panel’s bottom row: cursor at the left, small search symbol near the right, and the existing Home trigger at the far right.
-- Filter all real Home destinations by their visible names while preserving existing navigation, ordering, badges, and icon/tile sizes. Show each real destination name beneath its symbol inside the same tile; do not label filler slots.
-- Connect group-call Zoe responses to the existing Deepgram-only voice pipeline and distribute the resulting call-safe voice output to participants through the group call’s existing peer connections.
-- Harden incoming-call background notifications using the existing protected push service and published-app worker path; add native wake/ring support only where the current mobile project can securely receive it.
+## Zoe group-call voice
+- Reuse the authenticated Deepgram voice pipeline only; do not use browser speech or simulated audio.
+- Add a call-scoped audio bridge that sends one designated Zoe voice stream through the existing WebRTC group mesh to every participant.
+- Keep Zoe’s worker-generated subtitles synchronized and retain text as the fallback for weak networks.
+- Add bounded speaking, one-speaker arbitration, and renegotiation safeguards to avoid duplicate voices or dropped human audio.
+
+## Background incoming-call ring
+- Harden production PWA registration so the push-capable service worker is ready before subscription and survives recovery refreshes.
+- Preserve the existing authenticated Web Push edge function and incoming-call notification deep link.
+- Add focused browser push tests. Native killed-app wake requires APNs/FCM credentials and native CallKit/Android call-service setup; no physical wake result will be claimed without a real device test.
 
 ## Verification
-- Add focused tests for search filtering, label containment, navigation, and unchanged tile sizing.
-- Verify the open panel at phone/PWA, tablet, and desktop sizes against the supplied screenshots.
-- Test group-call Zoe audio signalling/playback and background-ring registration paths without substituting browser speech.
-- Run type checks and focused tests, then inspect the preview and current error logs.
-
-## Device limitation
-A real sleeping-phone wake can only be confirmed on the published app after that physical phone grants notification permission. Implementation and automated checks can be completed here; the final wake confirmation requires the user’s device.
-
-## Technical details
-- Keep the seven-column icon grid and current CSS size variables.
-- Keep Deepgram as Zoe’s only voice source and respect the one-voice-at-a-time audio lock.
-- Do not introduce simulated device results, a second call engine, or unrelated page changes.
+- Run focused Home, group-call, call-push, type, and existing call tests.
+- Check the Home panel at phone, tablet, and desktop widths.
+- Report separately what is code-verified, production-PWA capable, and still awaiting physical-device confirmation.
