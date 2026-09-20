@@ -59,6 +59,7 @@ import StatusIconBadge from '@/components/StatusIconBadge';
 import { useSmartNotifications } from '@/hooks/useSmartNotifications';
 import { useRealtimeBadgeNotifications } from '@/hooks/useRealtimeBadgeNotifications';
 import { useUserOnlineNotifications } from '@/hooks/useUserOnlineNotifications';
+import { useFriendActivityNotifications } from '@/hooks/useFriendActivityNotifications';
 import { useDesktopNotifications } from '@/hooks/useDesktopNotifications';
 import { useNewPostNotifications } from '@/hooks/useNewPostNotifications';
 import { useZoeProactiveNotifications } from '@/hooks/useZoeProactiveNotifications';
