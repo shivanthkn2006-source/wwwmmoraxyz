@@ -342,7 +342,6 @@ export const useZoeQuantumCall = (currentUserId?: string) => {
         entry.at = event.data.words.at;
         setState(prev => ({
           ...prev,
-          wordsOnlyMode: true,
           wordsTranscript: appendWordsEntry(prev.wordsTranscript, entry),
         }));
         return;
