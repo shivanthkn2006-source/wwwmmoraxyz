@@ -1391,11 +1391,10 @@ html.phantom-mode [class*="animate-"] {
 }
 
 .profile-liquid-page [data-profile-liquid-content],
-.profile-liquid-page [data-profile-liquid-content] > div:not(:first-of-type),
 .profile-liquid-page [data-profile-liquid-content] section,
 .profile-liquid-page [data-profile-liquid-content] [class*='bg-card'],
 .profile-liquid-page [data-profile-liquid-content] [class*='bg-background'],
-.profile-liquid-page [data-profile-liquid-content] [class*='bg-muted'],
+.profile-liquid-page [data-profile-liquid-content] [class*='bg-muted']:not([data-profile-photo]),
 .profile-liquid-page [data-profile-liquid-content] [class*='bg-primary'],
 .profile-liquid-page [data-profile-liquid-content] [class*='bg-secondary'],
 .profile-liquid-page [data-profile-liquid-content] [class*='bg-accent'],
@@ -1405,6 +1404,10 @@ html.phantom-mode [class*="animate-"] {
 .profile-liquid-page [data-profile-liquid-content] [class*='to-'] {
   background-color: transparent;
   background-image: none;
+}
+
+.profile-liquid-page [data-profile-photo] {
+  background-color: transparent;
 }
 
 /* Keep the member's real profile photograph untouched. Every surface beneath

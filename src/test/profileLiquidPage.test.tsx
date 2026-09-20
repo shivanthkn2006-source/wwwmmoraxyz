@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 
 describe('main Profile transparent presentation', () => {
   const page = readFileSync('src/pages/ProfilePage.tsx', 'utf8');
+  const content = readFileSync('src/components/ProfileContent.tsx', 'utf8');
   const css = readFileSync('src/index.css', 'utf8');
 
   it('scopes the transparent treatment to the main Profile page', () => {
@@ -12,6 +13,8 @@ describe('main Profile transparent presentation', () => {
     expect(page).toContain('<FaithSection />');
     expect(page).toContain('<IdentityVaultSection />');
     expect(page).toContain('<ConversationEmailSection />');
+    expect(content).toContain('data-profile-photo');
+    expect(css).toContain(":not([data-profile-photo])");
   });
 
   it('keeps the Profile white-only and transparent without affecting Music Profile', () => {
