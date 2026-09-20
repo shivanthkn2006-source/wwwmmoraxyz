@@ -29,7 +29,7 @@ const CallsPage = () => {
 
   return (
     <main className="calls-liquid-page relative min-h-[100dvh] overflow-hidden bg-transparent text-white">
-      <div className="pointer-events-none absolute left-4 top-[max(1rem,env(safe-area-inset-top))]">
+      <div className="pointer-events-none absolute left-14 top-[max(5rem,env(safe-area-inset-top))] sm:left-4 sm:top-[max(1rem,env(safe-area-inset-top))]">
         <div className="flex items-center gap-2 text-white/90">
           <ZoeCallsIcon className="h-9 w-9" />
           <h1 className="text-xl font-medium text-white">Zoe Calls</h1>
