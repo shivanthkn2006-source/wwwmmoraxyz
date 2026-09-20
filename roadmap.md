@@ -109,8 +109,8 @@
 - [x] Verify opening, search height, label placement, and destination wiring in phone/PWA preview.
 
 ## 2026-09-21 — Main M’Mora Profile transparency and profile-wiring audit
-- [ ] Restyle only the main Profile page shown in the supplied screenshots as an edge-to-edge transparent, white-only Music/Calls-style surface.
-- [ ] Preserve every existing Profile section, image, field, control, action, order, and behavior unchanged.
-- [ ] Document concrete strengths and verified gaps across birth details, faith, location, profile data, and Zoe relationship context.
-- [ ] Add focused visual safeguards and verify signed-in phone, tablet, and desktop previews.
-- [ ] Produce a concise QA and integration audit report.
+- [x] Restyle only the main Profile page shown in the supplied screenshots as an edge-to-edge transparent, white-only Music/Calls-style surface.
+- [x] Preserve every existing Profile section, image, field, control, action, order, and behavior unchanged.
+- [x] Document concrete strengths and verified gaps across birth details, faith, location, profile data, and Zoe relationship context.
+- [x] Add focused visual safeguards and run phone, tablet, and desktop preview checks; signed-in screenshots await an available preview session.
+- [x] Produce a concise QA and integration audit report.

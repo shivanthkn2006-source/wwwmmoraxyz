@@ -382,6 +382,7 @@ const ProfileContent = () => {
       {/* Header with Background Wallpaper */}
       <div 
         className="relative h-screen bg-cover bg-center bg-muted"
+        data-profile-photo
         style={{
           backgroundImage: profile.profile_photo_url 
             ? `linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.5)), url(${profile.profile_photo_url})` 
