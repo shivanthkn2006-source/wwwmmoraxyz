@@ -311,7 +311,9 @@ export const QuantumCallModal: React.FC<QuantumCallModalProps> = ({
   }, []);
 
   // Get participant info
-  const participant = currentCall?.receiver || incomingCall || targetParticipant;
+  const participant = currentCall
+    ? (currentCall.caller.userId === currentUserId ? currentCall.receiver : currentCall.caller)
+    : incomingCall || targetParticipant;
 
   if (!isOpen) return null;
 
@@ -355,6 +357,8 @@ export const QuantumCallModal: React.FC<QuantumCallModalProps> = ({
                 callDuration={callDuration}
                 participantName={participant?.displayName}
                 participantAvatar={participant?.avatarUrl}
+                currentUserId={currentUserId}
+                participantId={participant?.userId}
                 isAICall={participant?.isAI}
                 isMuted={isMuted}
                 isSpeaking={isSpeaking}
