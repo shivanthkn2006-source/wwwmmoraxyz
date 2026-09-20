@@ -30,6 +30,13 @@ const ProfilePage = () => {
   const [generatingReport, setGeneratingReport] = useState(false);
   const [username, setUsername] = useState<string>('');
 
+  // Radix renders Profile dialogs and menus at document.body. Keep the
+  // Profile-only liquid treatment active for those portalled surfaces too.
+  useEffect(() => {
+    document.body.classList.add('profile-liquid-active');
+    return () => document.body.classList.remove('profile-liquid-active');
+  }, []);
+
   // Fetch username
   useEffect(() => {
     setUsername('');

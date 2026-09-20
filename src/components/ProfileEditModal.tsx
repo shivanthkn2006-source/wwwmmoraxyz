@@ -146,7 +146,7 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onClose, pr
           });
         }
 
-        setFormData(prev => ({ ...prev, city: canonicalCity!, locationEnabled: true }));
+        setFormData(prev => ({ ...prev, city: canonicalCity, location_enabled: true }));
       } catch (error) {
         console.error('Location error:', error);
         toast({
@@ -232,6 +232,7 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onClose, pr
         location_enabled: formData.location_enabled,
         city: formData.location_enabled ? formData.city : profile.city,
         birth_date: formData.birth_date || null,
+        date_of_birth: formData.birth_date || null,
         birth_place: formData.birth_place || null,
         birth_time: formData.birth_time || null,
       };
