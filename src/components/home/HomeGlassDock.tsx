@@ -264,12 +264,6 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
             setOpen((value) => !value);
           }
         } : undefined}
-        onBlur={isHome ? (event) => {
-          // Focus leaving the dock entirely retracts it (never leaves it stuck open).
-          const next = event.relatedTarget as Node | null;
-          if (next && rootRef.current?.contains(next)) return;
-          if (next) setOpen(false);
-        } : undefined}
         className={cn(
           'group relative flex h-[var(--home-dock-cell)] w-[var(--home-dock-cell)] shrink-0 items-center justify-center overflow-hidden',
           'transition-all active:scale-95',
