@@ -342,7 +342,6 @@ export const useZoeQuantumCall = (currentUserId?: string) => {
         entry.at = event.data.words.at;
         setState(prev => ({
           ...prev,
-          wordsOnlyMode: true,
           wordsTranscript: appendWordsEntry(prev.wordsTranscript, entry),
         }));
         return;
@@ -935,7 +934,6 @@ const startGodEye = useCallback(() => {
     if (!text || !sendCallEnvelope(WORDS_ONLY_ENVELOPE_TYPE, { text })) return false;
     setState(prev => ({
       ...prev,
-      wordsOnlyMode: true,
       wordsTranscript: appendWordsEntry(prev.wordsTranscript, createWordsEntry('local', text)),
     }));
     return true;
@@ -1881,6 +1879,15 @@ const startGodEye = useCallback(() => {
       } catch {
         /* storage unavailable — in-memory dedupe still applies */
       }
+    };
+
+    // A catch-up row for a call that has already come and gone must never ring.
+    const INVITE_FRESHNESS_MS = 45 * 1000;
+    const isExpiredInvite = (row: { signal_type?: string; created_at?: string }) => {
+      if (row?.signal_type !== 'call-request') return false;
+      if (!row.created_at) return false;
+      const at = Date.parse(row.created_at);
+      return Number.isFinite(at) && Date.now() - at > INVITE_FRESHNESS_MS;
     };
 
     const processSignal = async (signal: {
