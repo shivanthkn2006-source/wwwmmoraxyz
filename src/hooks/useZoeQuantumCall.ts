@@ -1893,6 +1893,7 @@ const startGodEye = useCallback(() => {
       if (signal.id) {
         if (handledSignalIds.has(signal.id)) return;
         handledSignalIds.add(signal.id);
+        persistHandled();
       }
       console.log('[QuantumCall] Received signal:', signal.signal_type);
 
