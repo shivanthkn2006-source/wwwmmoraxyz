@@ -1416,6 +1416,7 @@ html.phantom-mode [class*="animate-"] {
   .home-dock-root > div,
   .home-dock-root > div > div {
     width: 100%;
+    max-width: none;
   }
 }
 

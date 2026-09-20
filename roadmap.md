@@ -106,4 +106,4 @@
 - [x] Fill the mobile panel to the left safe-area edge with equal compact tile gaps and unchanged icon artwork size.
 - [x] Keep the four-row panel height while search results are filtered.
 - [x] Keep every menu name below its symbol inside the same tile.
-- [ ] Verify opening, search height, label placement, and destination wiring in phone/PWA preview.
+- [x] Verify opening, search height, label placement, and destination wiring in phone/PWA preview.
