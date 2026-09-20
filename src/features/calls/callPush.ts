@@ -33,6 +33,20 @@ const keyToBase64 = (key: ArrayBuffer | null): string | null => {
   return btoa(binary);
 };
 
+export const getCallPushRegistration = async (): Promise<ServiceWorkerRegistration | null> => {
+  const existing = await navigator.serviceWorker.getRegistration();
+  if (existing?.pushManager) return existing;
+  try {
+    const ready = await Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise<null>(resolve => window.setTimeout(() => resolve(null), 8_000)),
+    ]);
+    return ready && ready.pushManager ? ready : null;
+  } catch {
+    return null;
+  }
+};
+
 export const registerCallPushDevice = async (userId: string): Promise<boolean> => {
   if (!callPushSupported() || !userId) return false;
   try {
@@ -42,7 +56,7 @@ export const registerCallPushDevice = async (userId: string): Promise<boolean> =
       if (permission !== 'granted') return false;
     }
 
-    const registration = await navigator.serviceWorker.getRegistration();
+    const registration = await getCallPushRegistration();
     if (!registration?.pushManager) return false;
 
     const subscription =

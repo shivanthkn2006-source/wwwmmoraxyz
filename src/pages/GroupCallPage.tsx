@@ -63,6 +63,7 @@ const GroupCallPage = () => {
   const [contacts, setContacts] = useState<ContactRow[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
   const [invite, setInvite] = useState<{ roomId: string; from: string; roster: string[] } | null>(null);
+  const [zoePrompt, setZoePrompt] = useState('');
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const memberIds = useMemo(
     () => group.participants.map(entry => entry.userId),
@@ -225,6 +226,34 @@ const GroupCallPage = () => {
               />
             ))}
           </div>
+
+          <form
+            className="mt-4 flex items-center gap-2 rounded-full border border-white/15 bg-transparent px-4 py-2 backdrop-blur-2xl"
+            onSubmit={event => {
+              event.preventDefault();
+              const prompt = zoePrompt.trim();
+              if (!prompt) return;
+              setZoePrompt('');
+              void group.askZoe(prompt);
+            }}
+          >
+            <input
+              value={zoePrompt}
+              onChange={event => setZoePrompt(event.target.value)}
+              maxLength={400}
+              aria-label="Ask Zoe in this group call"
+              placeholder="Ask Zoe"
+              className="min-w-0 flex-1 border-0 bg-transparent text-sm text-white outline-none placeholder:text-white/50"
+            />
+            <button type="submit" disabled={!zoePrompt.trim() || group.zoeSpeaking} className="text-sm text-white/80 disabled:opacity-40">
+              {group.zoeSpeaking ? 'Speaking…' : 'Send'}
+            </button>
+          </form>
+          {group.zoeCaption && (
+            <p aria-live="polite" className="mx-auto mt-3 max-w-2xl text-center text-sm text-white/80">
+              <span className="font-medium text-white">Zoe:</span> {group.zoeCaption}
+            </p>
+          )}
 
           <button
             type="button"

@@ -11,9 +11,12 @@ import {
   MAX_GROUP_PARTICIPANTS,
   normalizeGroupRoster,
   shouldCreateOffer,
+  zoeSpeakerId,
   type GroupCallSignalType,
   type GroupParticipant,
 } from '@/features/calls/groupCallMesh';
+import { ZoeGroupCallVoiceBridge } from '@/features/calls/zoeGroupCallVoiceBridge';
+import { speakWithDeepgram, stopDeepgramSpeech, warmDeepgramTTS } from '@/utils/deepgramTTS';
 
 type GroupCallState = 'idle' | 'starting' | 'active' | 'ended';
 
@@ -23,6 +26,7 @@ interface GroupSignalPayload {
   sdp?: RTCSessionDescriptionInit;
   candidate?: RTCIceCandidateInit;
   displayName?: string;
+  text?: string;
 }
 
 const MEDIA_CONSTRAINTS: MediaStreamConstraints = {
@@ -35,6 +39,8 @@ export const useGroupCall = (currentUserId: string | null) => {
   const [roomId, setRoomId] = useState<string | null>(null);
   const [participants, setParticipants] = useState<GroupParticipant[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [zoeCaption, setZoeCaption] = useState<string | null>(null);
+  const [zoeSpeaking, setZoeSpeaking] = useState(false);
 
   const localStreamRef = useRef<MediaStream | null>(null);
   const peersRef = useRef<Map<string, RTCPeerConnection>>(new Map());
@@ -42,6 +48,9 @@ export const useGroupCall = (currentUserId: string | null) => {
   const pendingCandidatesRef = useRef<Map<string, RTCIceCandidateInit[]>>(new Map());
   const iceServersRef = useRef<RTCIceServer[]>(FALLBACK_ICE_SERVERS);
   const roomIdRef = useRef<string | null>(null);
+  const rosterRef = useRef<string[]>([]);
+  const zoeVoiceRef = useRef(new ZoeGroupCallVoiceBridge());
+  const zoeTrackRef = useRef<MediaStreamTrack | null>(null);
 
   const updateParticipant = useCallback((userId: string, patch: Partial<GroupParticipant>) => {
     setParticipants(prev => {
@@ -95,6 +104,8 @@ export const useGroupCall = (currentUserId: string | null) => {
       localStreamRef.current?.getTracks().forEach(track => {
         if (localStreamRef.current) peer.addTrack(track, localStreamRef.current);
       });
+      const zoeTrack = zoeTrackRef.current;
+      if (zoeTrack) peer.addTrack(zoeTrack, new MediaStream([zoeTrack]));
 
       peer.ontrack = event => {
         const stream = getRemoteStream(peerId);
@@ -166,6 +177,10 @@ export const useGroupCall = (currentUserId: string | null) => {
     pendingCandidatesRef.current.clear();
     localStreamRef.current?.getTracks().forEach(track => track.stop());
     localStreamRef.current = null;
+    stopDeepgramSpeech();
+    zoeVoiceRef.current.stop();
+    zoeTrackRef.current = null;
+    rosterRef.current = [];
     roomIdRef.current = null;
     setRoomId(null);
     setParticipants([]);
@@ -191,8 +206,11 @@ export const useGroupCall = (currentUserId: string | null) => {
         setCallState('idle');
         return;
       }
+      zoeTrackRef.current = await zoeVoiceRef.current.start();
+      warmDeepgramTTS();
       await refreshIceServers();
       const room = crypto.randomUUID();
+      rosterRef.current = roster;
       roomIdRef.current = room;
       setRoomId(room);
       setCallState('active');
@@ -214,15 +232,58 @@ export const useGroupCall = (currentUserId: string | null) => {
         setCallState('idle');
         return;
       }
+      zoeTrackRef.current = await zoeVoiceRef.current.start();
+      warmDeepgramTTS();
       await refreshIceServers();
       roomIdRef.current = room;
       setRoomId(room);
       setCallState('active');
       const peers = normalizeGroupRoster(currentUserId, roster);
+      rosterRef.current = peers;
       await Promise.all(peers.map(peerId => sendSignal(peerId, 'group-join', { roomId: room, roster: [currentUserId, ...peers] })));
     },
     [currentUserId, refreshIceServers, sendSignal, startLocalMedia],
   );
+
+  const speakZoeReply = useCallback(async (prompt: string) => {
+    if (!currentUserId || !roomIdRef.current) return;
+    setZoeSpeaking(true);
+    try {
+      const { data, error: responseError } = await supabase.functions.invoke('zoe-core-intelligence', {
+        body: {
+          command: prompt,
+          userId: currentUserId,
+          mode: 'deep_thinking',
+          context: { currentPage: '/calls/group', groupCall: true },
+          options: { verbose_reasoning: false },
+        },
+      });
+      if (responseError) throw responseError;
+      const reply = String((data as { message?: string; response?: string } | null)?.message
+        ?? (data as { response?: string } | null)?.response
+        ?? '').replace(/<think>[\s\S]*?<\/think>/gi, '').trim().slice(0, 900);
+      if (!reply) throw new Error('Zoe returned no spoken response.');
+      setZoeCaption(reply);
+      await Promise.all(rosterRef.current.map(peerId => sendSignal(peerId, 'group-zoe-caption', { roomId: roomIdRef.current ?? '', text: reply })));
+      await speakWithDeepgram(reply);
+    } catch (zoeError) {
+      console.warn('[GroupCall] Zoe reply failed', zoeError);
+      setError('Zoe could not speak just now.');
+    } finally {
+      setZoeSpeaking(false);
+    }
+  }, [currentUserId, sendSignal]);
+
+  const askZoe = useCallback(async (value: string) => {
+    const prompt = value.replace(/\s+/g, ' ').trim().slice(0, 400);
+    if (!prompt || !currentUserId || !roomIdRef.current) return;
+    const speaker = zoeSpeakerId(currentUserId, rosterRef.current);
+    if (speaker === currentUserId) {
+      await speakZoeReply(prompt);
+      return;
+    }
+    await sendSignal(speaker, 'group-zoe-request', { roomId: roomIdRef.current, text: prompt });
+  }, [currentUserId, sendSignal, speakZoeReply]);
 
   const handleSignal = useCallback(
     async (signalType: GroupCallSignalType, senderId: string, payload: GroupSignalPayload) => {
@@ -238,6 +299,16 @@ export const useGroupCall = (currentUserId: string | null) => {
 
       if (!roomIdRef.current || payload.roomId !== roomIdRef.current) return;
       if (peersRef.current.size >= MAX_GROUP_PARTICIPANTS - 1 && !peersRef.current.has(senderId)) return;
+
+      if (signalType === 'group-zoe-request' && payload.text) {
+        if (zoeSpeakerId(currentUserId, rosterRef.current) === currentUserId) await speakZoeReply(payload.text.slice(0, 400));
+        return;
+      }
+
+      if (signalType === 'group-zoe-caption' && payload.text) {
+        setZoeCaption(payload.text.slice(0, 900));
+        return;
+      }
 
       if (signalType === 'group-join') {
         updateParticipant(senderId, { connectionState: 'new' });
@@ -290,7 +361,7 @@ export const useGroupCall = (currentUserId: string | null) => {
         setParticipants(prev => prev.filter(entry => entry.userId !== senderId));
       }
     },
-    [currentUserId, ensurePeer, flushCandidates, sendSignal, updateParticipant],
+    [currentUserId, ensurePeer, flushCandidates, sendSignal, speakZoeReply, updateParticipant],
   );
 
   useEffect(() => {
@@ -325,6 +396,8 @@ export const useGroupCall = (currentUserId: string | null) => {
     peersRef.current.forEach(peer => peer.close());
     peersRef.current.clear();
     localStreamRef.current?.getTracks().forEach(track => track.stop());
+    stopDeepgramSpeech();
+    zoeVoiceRef.current.stop();
   }, []);
 
   const getRemoteStreamFor = useCallback((peerId: string): MediaStream | null => remoteStreamsRef.current.get(peerId) ?? null, []);
@@ -334,10 +407,13 @@ export const useGroupCall = (currentUserId: string | null) => {
     roomId,
     participants,
     error,
+    zoeCaption,
+    zoeSpeaking,
     localStream: localStreamRef.current,
     startGroupCall,
     joinGroupCall,
     leaveGroupCall,
+    askZoe,
     getRemoteStreamFor,
   };
 };
