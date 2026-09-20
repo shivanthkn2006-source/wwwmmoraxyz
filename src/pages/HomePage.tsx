@@ -2758,11 +2758,15 @@ const HomePage = () => {
 
       {/* Profile Sheet */}
       <Sheet open={isProfileSheetOpen} onOpenChange={setIsProfileSheetOpen}>
-        <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto bg-background/80 backdrop-blur-xl border-l border-border/50">
+        <SheetContent
+          side="right"
+          className="profile-liquid-page w-full sm:max-w-md overflow-y-auto border-l border-white/20 bg-transparent backdrop-blur-xl"
+          data-profile-liquid-page
+        >
           <SheetHeader>
             <SheetTitle>Profile</SheetTitle>
           </SheetHeader>
-          <div className="pt-4">
+          <div className="pt-4" data-profile-liquid-content>
             {isProfileSheetOpen && (
               <React.Suspense fallback={<div className="py-8 text-center text-sm text-muted-foreground">Loading profile…</div>}>
                 <ProfileContent />
@@ -2771,6 +2775,7 @@ const HomePage = () => {
           </div>
         </SheetContent>
       </Sheet>
+
       
       {/* Full Screen Loops Video Player */}
       {loopsPlayerOpen && filteredLoops.length > 0 && (
