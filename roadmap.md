@@ -114,3 +114,8 @@
 - [x] Document concrete strengths and verified gaps across birth details, faith, location, profile data, and Zoe relationship context.
 - [x] Add focused visual safeguards and run phone, tablet, and desktop preview checks; signed-in screenshots await an available preview session.
 - [x] Produce a concise QA and integration audit report.
+
+## M'Mora profile presentation
+- [x] Transparent white-only treatment on the profile opened from the Home top-right photo, including Event Planner Diary, Smart Reminders, Calendar View and Edit Profile
+- [x] Same treatment for every existing and new member (no per-user gating)
+- [ ] Signed-in phone/tablet/desktop visual verification
