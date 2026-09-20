@@ -1860,7 +1860,28 @@ const startGodEye = useCallback(() => {
       pendingIceCandidatesRef.current[remoteUserId] = [];
     };
 
-    const handledSignalIds = new Set<string>();
+    // Remembered across reloads so a finished call never rings again.
+    const handledStorageKey = `mmora.callSignals.handled.${currentUserId}`;
+    const loadHandled = (): Set<string> => {
+      try {
+        const raw = localStorage.getItem(handledStorageKey);
+        const parsed = raw ? (JSON.parse(raw) as string[]) : [];
+        return new Set(Array.isArray(parsed) ? parsed.slice(-300) : []);
+      } catch {
+        return new Set<string>();
+      }
+    };
+    const handledSignalIds = loadHandled();
+    const persistHandled = () => {
+      try {
+        localStorage.setItem(
+          handledStorageKey,
+          JSON.stringify(Array.from(handledSignalIds).slice(-300)),
+        );
+      } catch {
+        /* storage unavailable — in-memory dedupe still applies */
+      }
+    };
 
     const processSignal = async (signal: {
       id: string;
