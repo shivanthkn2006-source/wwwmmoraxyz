@@ -102,6 +102,19 @@ const ProfileContent = () => {
   const hasEvent = useEventGlow(profile?.event_date, profile?.event_recurring);
   const glowClass = getAvatarGlowClass(hasEvent, profile?.status);
 
+  // Every M'Mora profile surface — for every existing and new member, on the
+  // standalone page and inside the Home profile panel — uses the transparent
+  // white-only presentation, including its portalled dialogs and menus.
+  useEffect(() => {
+    document.body.classList.add('profile-liquid-active');
+    return () => {
+      if (!document.querySelector('[data-profile-liquid-content]')) {
+        document.body.classList.remove('profile-liquid-active');
+      }
+    };
+  }, []);
+
+
   // ═══════════════════════════════════════════════════════════════════════════════
   // VELVET ROPE: Centralized Profile Completeness from Context
   // Uses useVelvetRopeOptional for graceful degradation outside provider
