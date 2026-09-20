@@ -68,7 +68,7 @@ const GroupCallPage = () => {
     () => group.participants.map(entry => entry.userId),
     [group.participants],
   );
-  const { ownStatus, setOwnStatus, statusFor } = useActivityStatuses(user?.id ?? null, memberIds);
+  const { ownStatus, ownMessage, setOwnStatus, setOwnMessage, statusFor, messageFor } = useActivityStatuses(user?.id ?? null, memberIds);
 
   useEffect(() => {
     if (!user) return;
@@ -119,7 +119,7 @@ const GroupCallPage = () => {
       <header className="mx-auto flex max-w-3xl items-center justify-between">
         <div className="flex items-center gap-3">
           <h1 className="text-xl font-medium text-white">Group call</h1>
-          <ActivityStatusPicker status={ownStatus} onChange={(value) => void setOwnStatus(value)} showLabel />
+          <ActivityStatusPicker status={ownStatus} customMessage={ownMessage} onChange={(value) => void setOwnStatus(value)} onCustomMessageChange={setOwnMessage} showLabel />
         </div>
         <Link to="/calls" className="rounded-full border border-white/15 px-4 py-1.5 text-sm text-white/80 hover:bg-white/10 hover:text-white">
           One to one
@@ -221,7 +221,7 @@ const GroupCallPage = () => {
                 key={participant.userId}
                 participant={participant}
                 stream={group.getRemoteStreamFor(participant.userId)}
-                activity={statusFor(participant.userId)}
+                activity={{ ...statusFor(participant.userId), label: messageFor(participant.userId) || statusFor(participant.userId).label }}
               />
             ))}
           </div>

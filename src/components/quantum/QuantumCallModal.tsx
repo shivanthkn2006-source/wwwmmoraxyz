@@ -54,6 +54,7 @@ export interface QuantumCallHookState {
   rejectCall: () => Promise<void>;
   toggleMute: () => void;
   toggleVideo: () => Promise<void>;
+  flipCamera: () => Promise<void>;
   setLowDataMode: (enabled: boolean) => Promise<void>;
   setWordsOnlyMode: (enabled: boolean) => Promise<void>;
   sendCallWords: (text: string) => boolean;
@@ -231,6 +232,7 @@ export const QuantumCallModal: React.FC<QuantumCallModalProps> = ({
     rejectCall,
     toggleMute,
     toggleVideo,
+    flipCamera,
     setLowDataMode,
     setLocalVideoRef,
     setRemoteVideoRef,
@@ -246,6 +248,11 @@ export const QuantumCallModal: React.FC<QuantumCallModalProps> = ({
     setWordsOnlyMode,
     sendCallWords,
   } = quantumCallState;
+
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('quantum-call-visibility', { detail: { visible: isOpen } }));
+    return () => window.dispatchEvent(new CustomEvent('quantum-call-visibility', { detail: { visible: false } }));
+  }, [isOpen]);
 
   // Auto-start call if configured
   useEffect(() => {
@@ -375,6 +382,8 @@ export const QuantumCallModal: React.FC<QuantumCallModalProps> = ({
                 wordsTranscript={wordsTranscript}
                 zoeWhisper={zoeWhisper}
                 onToggleVideo={toggleVideo}
+                onFlipCamera={flipCamera}
+                cameraFacing={video.cameraFacing}
                 onSetLowDataMode={setLowDataMode}
                 onSetWordsOnlyMode={setWordsOnlyMode}
                 onSendCallWords={sendCallWords}

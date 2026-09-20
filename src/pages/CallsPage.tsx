@@ -29,11 +29,11 @@ const CallsPage = () => {
 
   return (
     <main className="calls-liquid-page relative min-h-[100dvh] overflow-hidden bg-transparent text-white">
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div className="flex flex-col items-center gap-3 text-white/70">
+      <div className="pointer-events-none absolute left-4 top-[max(1rem,env(safe-area-inset-top))]">
+        <div className="flex items-center gap-2 text-white/90">
           <ZoeCallsIcon className="h-9 w-9" />
-          <h1 className="text-xl font-medium text-white">Calls</h1>
-          <div className="pointer-events-auto flex items-center gap-2">
+          <h1 className="text-xl font-medium text-white">Zoe Calls</h1>
+          <div className="pointer-events-auto ml-2 flex items-center gap-2">
             <Link to="/calls/history" className="rounded-full border border-white/15 px-4 py-1.5 text-sm text-white/80 hover:bg-white/10 hover:text-white">
               Call history
             </Link>

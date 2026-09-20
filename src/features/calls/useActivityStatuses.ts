@@ -5,7 +5,13 @@ import { getCallActivityStatus } from '@/features/calls/callActivityStatuses';
 
 interface ProfileStatusRow {
   user_id: string;
-  status: string | null;
+  activity_status: string | null;
+  activity_message: string | null;
+}
+
+export interface CallActivityPresence {
+  status: string;
+  message: string | null;
 }
 
 /**
@@ -14,7 +20,7 @@ interface ProfileStatusRow {
  * never disagree. Kept outside the media/signalling path.
  */
 export const useActivityStatuses = (currentUserId: string | null, peerIds: string[]) => {
-  const [statuses, setStatuses] = useState<Record<string, string>>({});
+  const [statuses, setStatuses] = useState<Record<string, CallActivityPresence>>({});
 
   const watchedIds = useMemo(() => {
     const ids = new Set<string>();
@@ -29,12 +35,15 @@ export const useActivityStatuses = (currentUserId: string | null, peerIds: strin
     if (watchedIds.length === 0) return;
     const { data } = await supabase
       .from('profiles')
-      .select('user_id, status')
+      .select('user_id, activity_status, activity_message')
       .in('user_id', watchedIds);
 
-    const next: Record<string, string> = {};
+    const next: Record<string, CallActivityPresence> = {};
     (data as ProfileStatusRow[] | null)?.forEach(row => {
-      next[row.user_id] = row.status || 'online';
+      next[row.user_id] = {
+        status: row.activity_status || 'online',
+        message: row.activity_message?.trim() || null,
+      };
     });
     setStatuses(prev => ({ ...prev, ...next }));
   }, [watchKey]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -51,7 +60,13 @@ export const useActivityStatuses = (currentUserId: string | null, peerIds: strin
         payload => {
           const row = payload.new as ProfileStatusRow;
           if (!row?.user_id || !watchedIds.includes(row.user_id)) return;
-          setStatuses(prev => ({ ...prev, [row.user_id]: row.status || 'online' }));
+          setStatuses(prev => ({
+            ...prev,
+            [row.user_id]: {
+              status: row.activity_status || 'online',
+              message: row.activity_message?.trim() || null,
+            },
+          }));
         },
       )
       .subscribe();
@@ -63,26 +78,48 @@ export const useActivityStatuses = (currentUserId: string | null, peerIds: strin
     };
   }, [watchKey, load]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const ownStatus = currentUserId ? statuses[currentUserId] || 'online' : 'online';
+  const ownPresence = currentUserId ? statuses[currentUserId] : undefined;
+  const ownStatus = ownPresence?.status || 'online';
+  const ownMessage = ownPresence?.message || null;
 
   const setOwnStatus = useCallback(async (status: string) => {
     if (!currentUserId) return;
     const previous = ownStatus;
-    setStatuses(prev => ({ ...prev, [currentUserId]: status }));
-    const { error } = await supabase.from('profiles').update({ status }).eq('user_id', currentUserId);
-    if (error) setStatuses(prev => ({ ...prev, [currentUserId]: previous }));
+    setStatuses(prev => ({ ...prev, [currentUserId]: { status, message: prev[currentUserId]?.message || null } }));
+    const { error } = await supabase.from('profiles').update({ activity_status: status }).eq('user_id', currentUserId);
+    if (error) setStatuses(prev => ({ ...prev, [currentUserId]: { status: previous, message: prev[currentUserId]?.message || null } }));
   }, [currentUserId, ownStatus]);
+
+  const setOwnMessage = useCallback(async (message: string) => {
+    if (!currentUserId) return false;
+    const normalized = message.trim().slice(0, 80) || null;
+    const previous = ownMessage;
+    setStatuses(prev => ({
+      ...prev,
+      [currentUserId]: { status: prev[currentUserId]?.status || ownStatus, message: normalized },
+    }));
+    const { error } = await supabase.from('profiles').update({ activity_message: normalized }).eq('user_id', currentUserId);
+    if (error) {
+      setStatuses(prev => ({
+        ...prev,
+        [currentUserId]: { status: prev[currentUserId]?.status || ownStatus, message: previous },
+      }));
+      return false;
+    }
+    return true;
+  }, [currentUserId, ownMessage, ownStatus]);
 
   // Let Zoe speak about activity without any UI change: she reads ambient context.
   useEffect(() => {
-    setAmbientExtra('My activity status', getCallActivityStatus(ownStatus).label);
+    setAmbientExtra('My activity status', ownMessage || getCallActivityStatus(ownStatus).label);
     const peers = peerIds
       .filter(Boolean)
-      .map(id => `${id.slice(0, 8)}: ${getCallActivityStatus(statuses[id]).label}`);
+      .map(id => `${id.slice(0, 8)}: ${statuses[id]?.message || getCallActivityStatus(statuses[id]?.status).label}`);
     setAmbientExtra('Call member activities', peers.length ? peers.join(', ') : null);
   }, [ownStatus, statuses, peerIds]);
 
-  const statusFor = useCallback((userId?: string | null) => getCallActivityStatus(userId ? statuses[userId] : undefined), [statuses]);
+  const statusFor = useCallback((userId?: string | null) => getCallActivityStatus(userId ? statuses[userId]?.status : undefined), [statuses]);
+  const messageFor = useCallback((userId?: string | null) => userId ? statuses[userId]?.message || null : null, [statuses]);
 
-  return { statuses, ownStatus, setOwnStatus, statusFor, reload: load };
+  return { statuses, ownStatus, ownMessage, setOwnStatus, setOwnMessage, statusFor, messageFor, reload: load };
 };
