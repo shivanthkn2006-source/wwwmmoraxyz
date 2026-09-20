@@ -144,7 +144,16 @@ export const CameraActiveIndicator: React.FC<CameraActiveIndicatorProps> = ({
   forceShow = false,
 }) => {
   const mediaState = useMediaActiveState();
+  const [callVisible, setCallVisible] = useState(false);
   const isActive = mediaState.camera || mediaState.microphone || forceShow;
+
+  useEffect(() => {
+    const onVisibility = (event: Event) => {
+      setCallVisible(Boolean((event as CustomEvent<{ visible?: boolean }>).detail?.visible));
+    };
+    window.addEventListener('quantum-call-visibility', onVisibility);
+    return () => window.removeEventListener('quantum-call-visibility', onVisibility);
+  }, []);
 
   const positionClasses = {
     'top-left': 'top-4 left-4',
@@ -153,7 +162,7 @@ export const CameraActiveIndicator: React.FC<CameraActiveIndicatorProps> = ({
     'bottom-right': 'bottom-4 right-4',
   };
 
-  if (!isActive) return null;
+  if (!isActive || callVisible) return null;
 
   return (
     <AnimatePresence>

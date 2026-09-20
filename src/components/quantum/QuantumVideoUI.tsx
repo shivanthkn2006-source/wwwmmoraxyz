@@ -109,6 +109,8 @@ interface QuantumVideoUIProps {
   wordsTranscript: CallWordsEntry[];
   zoeWhisper: ZoeCallWhisper | null;
   onToggleVideo: () => Promise<void>;
+  onFlipCamera: () => Promise<void>;
+  cameraFacing: 'front' | 'back' | 'unknown';
   onSetLowDataMode: (enabled: boolean) => void;
   onSetWordsOnlyMode: (enabled: boolean) => void;
   onToggleChat?: () => void;
@@ -287,13 +289,13 @@ const LocalVideoPreview: React.FC<{
   return (
     <motion.div
       className={cn(
-        "absolute w-32 h-24 md:w-40 md:h-30 rounded-xl overflow-hidden",
+         "absolute w-28 h-20 sm:w-32 sm:h-24 md:w-40 md:h-30 rounded-xl overflow-hidden",
         "shadow-2xl shadow-black/30",
         "bg-white/[0.08] backdrop-blur-xl",
         isDragging ? "cursor-grabbing z-50" : "cursor-grab z-40"
       )}
       ref={previewRef}
-      style={{ top: position.y, right: position.x }}
+       style={{ top: position.y + 42, left: position.x }}
       drag
       dragConstraints={{ top: 0, right: 0, bottom: 0, left: 0 }}
       dragMomentum={false}
@@ -303,7 +305,7 @@ const LocalVideoPreview: React.FC<{
         const width = previewRef.current?.offsetWidth ?? 128;
         const height = previewRef.current?.offsetHeight ?? 96;
         setPosition(prev => ({
-          x: Math.min(Math.max(16, prev.x - info.offset.x), Math.max(16, window.innerWidth - width - 16)),
+          x: Math.min(Math.max(16, prev.x + info.offset.x), Math.max(16, window.innerWidth - width - 16)),
           y: Math.min(Math.max(16, prev.y + info.offset.y), Math.max(16, window.innerHeight - height - 16)),
         }));
       }}
@@ -349,6 +351,8 @@ interface DraggableControlBarProps {
   onToggleMute: () => void;
   videoEnabled: boolean;
   onToggleVideo: () => Promise<void>;
+  onFlipCamera: () => Promise<void>;
+  cameraFacing: 'front' | 'back' | 'unknown';
   isLowDataMode: boolean;
   onSetLowDataMode: (enabled: boolean) => void;
   godEyeEnabled: boolean;
@@ -369,6 +373,8 @@ const DraggableControlBar: React.FC<DraggableControlBarProps> = ({
   onToggleMute,
   videoEnabled,
   onToggleVideo,
+  onFlipCamera,
+  cameraFacing,
   isLowDataMode,
   onSetLowDataMode,
   godEyeEnabled,
@@ -529,6 +535,24 @@ const DraggableControlBar: React.FC<DraggableControlBarProps> = ({
           </TooltipTrigger>
           <TooltipContent>{videoEnabled ? 'Turn off camera' : 'Turn on camera'}</TooltipContent>
         </Tooltip>
+
+        {/* God Eye toggle (only for AI calls) */}
+        {videoEnabled && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn("rounded-full text-white hover:bg-white/15 hover:text-white", btnSize)}
+                aria-label={`Switch to ${cameraFacing === 'back' ? 'front' : 'back'} camera`}
+                onClick={() => void onFlipCamera()}
+              >
+                <SwitchCamera className={iconSize} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Flip camera</TooltipContent>
+          </Tooltip>
+        )}
 
         {/* God Eye toggle (only for AI calls) */}
         {isAICall && videoEnabled && (
@@ -695,6 +719,8 @@ export const QuantumVideoUI: React.FC<QuantumVideoUIProps> = ({
   wordsTranscript,
   zoeWhisper,
   onToggleVideo,
+  onFlipCamera,
+  cameraFacing,
   onSetLowDataMode,
   onSetWordsOnlyMode,
   onSendCallWords,
@@ -832,6 +858,10 @@ export const QuantumVideoUI: React.FC<QuantumVideoUIProps> = ({
           <SpeakingIndicator isActive={remoteIsSpeaking} label="Speaking" />
         </div>
 
+        <div className="pointer-events-none absolute left-4 top-4 z-30 max-w-[calc(100vw-8rem)] truncate text-sm font-medium text-white">
+          {participantName || (isAICall ? 'Zoe AI' : 'Unknown')}
+        </div>
+
         {zoeWhisper && isConnected && (
           <div className="pointer-events-none absolute inset-x-0 bottom-40 z-20 flex flex-col items-center gap-1 px-6 text-center" aria-live="polite">
             <p className="max-w-md rounded-full bg-white/[0.08] px-4 py-1.5 text-sm text-white backdrop-blur-2xl">{zoeWhisper.headline}</p>
@@ -896,7 +926,7 @@ export const QuantumVideoUI: React.FC<QuantumVideoUIProps> = ({
         />
 
         {/* Top bar - Quality, activity & Duration */}
-        <div className="absolute top-4 left-4 right-4 flex items-start justify-between z-30">
+        <div className="absolute left-4 right-4 top-32 sm:top-36 md:top-40 flex items-start justify-between z-30">
           <div className="flex min-w-0 flex-col items-start gap-2">
             <QualityIndicator
               quality={connectionQuality}
@@ -976,6 +1006,8 @@ export const QuantumVideoUI: React.FC<QuantumVideoUIProps> = ({
           onToggleMute={onToggleMute}
           videoEnabled={videoEnabled}
           onToggleVideo={onToggleVideo}
+          onFlipCamera={onFlipCamera}
+          cameraFacing={cameraFacing}
           isLowDataMode={isLowDataMode}
           onSetLowDataMode={onSetLowDataMode}
           godEyeEnabled={godEyeEnabled}

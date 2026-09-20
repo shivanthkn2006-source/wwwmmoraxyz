@@ -6206,6 +6206,8 @@ export type Database = {
       }
       profiles: {
         Row: {
+          activity_message: string | null
+          activity_status: string
           age_cohort: string | null
           assistant_name: string | null
           assistant_voice_preference: string | null
@@ -6282,6 +6284,8 @@ export type Database = {
           zoe_relationship_styles: Json | null
         }
         Insert: {
+          activity_message?: string | null
+          activity_status?: string
           age_cohort?: string | null
           assistant_name?: string | null
           assistant_voice_preference?: string | null
@@ -6358,6 +6362,8 @@ export type Database = {
           zoe_relationship_styles?: Json | null
         }
         Update: {
+          activity_message?: string | null
+          activity_status?: string
           age_cohort?: string | null
           assistant_name?: string | null
           assistant_voice_preference?: string | null

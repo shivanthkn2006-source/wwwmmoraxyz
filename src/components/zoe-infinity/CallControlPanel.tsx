@@ -58,7 +58,7 @@ export const CallControlPanel: React.FC<CallControlPanelProps> = ({
     ],
     [selectedUser, searchResults, recentContacts],
   );
-  const { ownStatus, setOwnStatus, statusFor } = useActivityStatuses(currentUserId, peerIds);
+  const { ownStatus, ownMessage, setOwnStatus, setOwnMessage, statusFor, messageFor } = useActivityStatuses(currentUserId, peerIds);
 
   // Load recent contacts
   const loadRecentContacts = useCallback(async () => {
@@ -225,7 +225,13 @@ export const CallControlPanel: React.FC<CallControlPanelProps> = ({
                   <Users className="w-5 h-5 text-white" />
                   Calls
                 </h3>
-                <ActivityStatusPicker status={ownStatus} onChange={(value) => void setOwnStatus(value)} showLabel />
+                <ActivityStatusPicker
+                  status={ownStatus}
+                  customMessage={ownMessage}
+                  onChange={(value) => void setOwnStatus(value)}
+                  onCustomMessageChange={setOwnMessage}
+                  showLabel
+                />
               </div>
               <p className="text-xs text-white/60 mt-1">
                 Select a user to start a call
@@ -268,7 +274,7 @@ export const CallControlPanel: React.FC<CallControlPanelProps> = ({
                           const SelectedIcon = statusFor(selectedUser.user_id).Icon;
                           return <SelectedIcon className="h-3 w-3 shrink-0" aria-hidden />;
                         })()}
-                        <span>{statusFor(selectedUser.user_id).label}</span>
+                         <span>{messageFor(selectedUser.user_id) || statusFor(selectedUser.user_id).label}</span>
                         <span className="text-white/40">·</span>
                         <span>{isUserOnline(selectedUser.user_id) ? 'Online' : 'Offline'}</span>
                       </p>
@@ -349,13 +355,13 @@ export const CallControlPanel: React.FC<CallControlPanelProps> = ({
                         </div>
                         <span
                           className="flex shrink-0 items-center gap-1 text-[10px] text-white/70"
-                          aria-label={`Activity: ${statusFor(user.user_id).label}`}
+                           aria-label={`Activity: ${messageFor(user.user_id) || statusFor(user.user_id).label}`}
                         >
                           {(() => {
                             const RowIcon = statusFor(user.user_id).Icon;
                             return <RowIcon className="h-3 w-3" aria-hidden />;
                           })()}
-                          {statusFor(user.user_id).label}
+                           {messageFor(user.user_id) || statusFor(user.user_id).label}
                         </span>
                       </button>
                     ))}
