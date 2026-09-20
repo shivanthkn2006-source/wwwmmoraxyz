@@ -29,7 +29,8 @@ describe('Home menu search and contained labels', () => {
     const settings = screen.getByRole('menuitem', { name: 'Settings' });
     expect(screen.queryByRole('menuitem', { name: 'Messages' })).toBeNull();
     expect(settings.querySelector('.home-dock-label')?.textContent).toBe('Settings');
-    expect(settings.querySelector('.home-dock-label')?.className).toContain('bottom-1');
+    expect(settings.querySelector('.home-dock-label')?.className).toContain('bottom-0.5');
+    expect(document.querySelector('[data-home-dock-grid]')?.className).toContain('h-[calc(4*var(--home-dock-cell)+3*var(--home-dock-gap))]');
 
     fireEvent.click(settings);
     expect(openSettings).toHaveBeenCalledOnce();

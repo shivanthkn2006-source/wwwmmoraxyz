@@ -281,12 +281,12 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
 
           isHome
             ? '!outline-none !ring-0 focus:!outline-none focus:!ring-0 focus-visible:!outline-none focus-visible:!ring-0'
-            : 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 [&>svg]:-translate-y-1.5',
+            : 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60',
         )}
       >
         {item.icon}
         {!isHome && !item.id.startsWith('dock-filler-') && !item.id.startsWith('placeholder-') && (
-          <span className="home-dock-label pointer-events-none absolute inset-x-1 bottom-1 z-10 line-clamp-2 text-center text-[7px] font-medium leading-[8px] text-white/90">
+          <span className="home-dock-label pointer-events-none absolute inset-x-0.5 bottom-0.5 z-10 line-clamp-2 text-center font-medium text-white/90">
             {item.label}
           </span>
         )}
@@ -377,7 +377,7 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
 
 
   const renderPackedRows = () => (
-      <div data-home-dock-grid className="grid max-h-[calc(4*var(--home-dock-cell)+3*var(--home-dock-gap))] grid-cols-7 gap-[var(--home-dock-gap)] overflow-x-hidden overflow-y-auto overscroll-contain rounded-2xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div data-home-dock-grid className="grid h-[calc(4*var(--home-dock-cell)+3*var(--home-dock-gap))] grid-cols-7 content-start gap-[var(--home-dock-gap)] overflow-x-hidden overflow-y-auto overscroll-contain rounded-2xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       {visibleGridSlots.map((item) => renderIconButton(item))}
     </div>
   );
