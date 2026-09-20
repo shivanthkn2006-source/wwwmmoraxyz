@@ -2126,6 +2126,7 @@ const startGodEye = useCallback(() => {
       if (error || !rows) return;
       for (const row of rows) {
         if (handledSignalIds.has(row.id)) continue;
+        if (isExpiredInvite(row as any)) continue;
         await processSignal(row as any);
       }
     }, 5000);
