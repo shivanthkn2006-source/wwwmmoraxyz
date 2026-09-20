@@ -189,7 +189,11 @@ Deno.serve(async (req: Request) => {
     let close: CloseRow[] = (closeness ?? []) as CloseRow[];
 
     if (!close.length) {
-      await asUser.rpc('recompute_intimacy_scores', { _user_id: userId }).catch(() => undefined);
+      try {
+        await asUser.rpc('recompute_intimacy_scores', { _user_id: userId });
+      } catch (_recomputeError) {
+        // Non-fatal: fall through to the friendships/follows fallback below.
+      }
       const { data: again } = await asUser
         .from('intimacy_scores')
         .select('target_user_id, score')
