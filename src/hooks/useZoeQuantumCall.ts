@@ -1860,7 +1860,28 @@ const startGodEye = useCallback(() => {
       pendingIceCandidatesRef.current[remoteUserId] = [];
     };
 
-    const handledSignalIds = new Set<string>();
+    // Remembered across reloads so a finished call never rings again.
+    const handledStorageKey = `mmora.callSignals.handled.${currentUserId}`;
+    const loadHandled = (): Set<string> => {
+      try {
+        const raw = localStorage.getItem(handledStorageKey);
+        const parsed = raw ? (JSON.parse(raw) as string[]) : [];
+        return new Set(Array.isArray(parsed) ? parsed.slice(-300) : []);
+      } catch {
+        return new Set<string>();
+      }
+    };
+    const handledSignalIds = loadHandled();
+    const persistHandled = () => {
+      try {
+        localStorage.setItem(
+          handledStorageKey,
+          JSON.stringify(Array.from(handledSignalIds).slice(-300)),
+        );
+      } catch {
+        /* storage unavailable — in-memory dedupe still applies */
+      }
+    };
 
     const processSignal = async (signal: {
       id: string;
@@ -1872,6 +1893,7 @@ const startGodEye = useCallback(() => {
       if (signal.id) {
         if (handledSignalIds.has(signal.id)) return;
         handledSignalIds.add(signal.id);
+        persistHandled();
       }
       console.log('[QuantumCall] Received signal:', signal.signal_type);
 
@@ -2082,6 +2104,7 @@ const startGodEye = useCallback(() => {
         if (pendingSignals && pendingSignals.length > 0) {
           console.log(`[QuantumCall] Processing ${pendingSignals.length} pending signal(s)`);
           for (const s of pendingSignals) {
+            if (isExpiredInvite(s as any)) continue;
             await processSignal(s as any);
           }
         }
@@ -2103,6 +2126,7 @@ const startGodEye = useCallback(() => {
       if (error || !rows) return;
       for (const row of rows) {
         if (handledSignalIds.has(row.id)) continue;
+        if (isExpiredInvite(row as any)) continue;
         await processSignal(row as any);
       }
     }, 5000);
