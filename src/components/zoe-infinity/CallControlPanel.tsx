@@ -3,7 +3,7 @@
 // Audio/Video call buttons with user selection and online status
 // ═══════════════════════════════════════════════════════════════════════════════
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Phone, Video, PhoneOff, VideoOff, Users, User, Search, X, Circle } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -13,6 +13,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { useOnlinePresence } from '@/hooks/useOnlinePresence';
+import { useActivityStatuses } from '@/features/calls/useActivityStatuses';
+import ActivityStatusPicker from '@/components/quantum/ActivityStatusPicker';
 
 interface UserProfile {
   user_id: string;
@@ -46,6 +48,17 @@ export const CallControlPanel: React.FC<CallControlPanelProps> = ({
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   
   const { isUserOnline, getOnlineUsersList } = useOnlinePresence();
+
+  // Activity statuses for me and everyone shown in this panel, live from profiles.
+  const peerIds = useMemo(
+    () => [
+      ...(selectedUser ? [selectedUser.user_id] : []),
+      ...searchResults.map(entry => entry.user_id),
+      ...recentContacts.map(entry => entry.user_id),
+    ],
+    [selectedUser, searchResults, recentContacts],
+  );
+  const { ownStatus, setOwnStatus, statusFor } = useActivityStatuses(currentUserId, peerIds);
 
   // Load recent contacts
   const loadRecentContacts = useCallback(async () => {
@@ -207,10 +220,13 @@ export const CallControlPanel: React.FC<CallControlPanelProps> = ({
           >
             {/* Header */}
             <div className="p-4 border-b border-white/10">
-              <h3 className="text-lg font-semibold flex items-center gap-2">
-                <Users className="w-5 h-5 text-white" />
-                Calls
-              </h3>
+              <div className="flex items-start justify-between gap-2">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <Users className="w-5 h-5 text-white" />
+                  Calls
+                </h3>
+                <ActivityStatusPicker status={ownStatus} onChange={(value) => void setOwnStatus(value)} showLabel />
+              </div>
               <p className="text-xs text-white/60 mt-1">
                 Select a user to start a call
               </p>
@@ -247,8 +263,14 @@ export const CallControlPanel: React.FC<CallControlPanelProps> = ({
                     </div>
                     <div>
                       <p className="font-medium text-sm">{selectedUser.display_name}</p>
-                       <p className="text-xs text-white/60">
-                        {isUserOnline(selectedUser.user_id) ? 'Online' : 'Offline'}
+                       <p className="flex items-center gap-1.5 text-xs text-white/60">
+                        {(() => {
+                          const SelectedIcon = statusFor(selectedUser.user_id).Icon;
+                          return <SelectedIcon className="h-3 w-3 shrink-0" aria-hidden />;
+                        })()}
+                        <span>{statusFor(selectedUser.user_id).label}</span>
+                        <span className="text-white/40">·</span>
+                        <span>{isUserOnline(selectedUser.user_id) ? 'Online' : 'Offline'}</span>
                       </p>
                     </div>
                   </div>
@@ -325,11 +347,16 @@ export const CallControlPanel: React.FC<CallControlPanelProps> = ({
                             </p>
                           )}
                         </div>
-                        {isUserOnline(user.user_id) && (
-                           <span className="text-[10px] text-white/70 bg-white/10 px-1.5 py-0.5 rounded-full">
-                            Online
-                          </span>
-                        )}
+                        <span
+                          className="flex shrink-0 items-center gap-1 text-[10px] text-white/70"
+                          aria-label={`Activity: ${statusFor(user.user_id).label}`}
+                        >
+                          {(() => {
+                            const RowIcon = statusFor(user.user_id).Icon;
+                            return <RowIcon className="h-3 w-3" aria-hidden />;
+                          })()}
+                          {statusFor(user.user_id).label}
+                        </span>
                       </button>
                     ))}
                   </div>
