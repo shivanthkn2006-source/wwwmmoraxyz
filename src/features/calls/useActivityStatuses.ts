@@ -16,8 +16,8 @@ export interface CallActivityPresence {
 
 /**
  * Live activity statuses for any set of members, read from the same
- * `profiles.status` value the Profile page writes, so Calls and Profile can
- * never disagree. Kept outside the media/signalling path.
+ * dedicated profile activity fields, including the optional personal message.
+ * Kept outside the media/signalling path.
  */
 export const useActivityStatuses = (currentUserId: string | null, peerIds: string[]) => {
   const [statuses, setStatuses] = useState<Record<string, CallActivityPresence>>({});
@@ -116,7 +116,7 @@ export const useActivityStatuses = (currentUserId: string | null, peerIds: strin
       .filter(Boolean)
       .map(id => `${id.slice(0, 8)}: ${statuses[id]?.message || getCallActivityStatus(statuses[id]?.status).label}`);
     setAmbientExtra('Call member activities', peers.length ? peers.join(', ') : null);
-  }, [ownStatus, statuses, peerIds]);
+  }, [ownStatus, ownMessage, statuses, peerIds]);
 
   const statusFor = useCallback((userId?: string | null) => getCallActivityStatus(userId ? statuses[userId]?.status : undefined), [statuses]);
   const messageFor = useCallback((userId?: string | null) => userId ? statuses[userId]?.message || null : null, [statuses]);
