@@ -93,3 +93,10 @@
 - [x] The app Camera/Mic banner is suppressed only while the Calls overlay is visible; browser privacy indicators remain unchanged.
 - [x] Focused tests, type validation, and phone/tablet/desktop preview checks pass.
 - [ ] Blocked: sleeping-phone wake confirmation requires a physical subscribed phone on the published app; preview service workers are intentionally disabled.
+
+## 2026-09-21 — Home menu search, contained labels, call voice and wake ringing
+- [ ] Add an unframed Home-menu search field in the panel’s bottom row, filtering every wired menu destination.
+- [ ] Keep each menu label inside its existing icon tile without changing tile dimensions.
+- [ ] Route Zoe’s Deepgram call speech so every group-call participant hears it.
+- [ ] Complete background incoming-call ringing for supported published/PWA/native devices.
+- [ ] Verify focused tests and phone/tablet/desktop panel layouts; physical sleeping-phone wake remains device-only.
