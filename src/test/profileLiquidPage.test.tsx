@@ -17,7 +17,7 @@ describe('M’Mora profile transparent presentation', () => {
   });
 
   it('applies the same treatment to the profile opened from the Home photo', () => {
-    expect(home).toContain('profile-liquid-page w-full sm:max-w-md');
+    expect(home).toContain('<div className="profile-liquid-page pt-4">');
     expect(home).toContain('data-profile-liquid-page');
     expect(home).toContain('data-profile-liquid-content');
     expect(home).not.toContain('bg-background/80 backdrop-blur-xl border-l border-border/50');
