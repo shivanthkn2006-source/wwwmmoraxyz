@@ -35,11 +35,11 @@ const clearBrowserCaches = async () => {
   await Promise.allSettled(cacheNames.map((name) => caches.delete(name)));
 };
 
-const unregisterServiceWorkers = async () => {
+const refreshServiceWorkers = async () => {
   if (typeof navigator === 'undefined' || !("serviceWorker" in navigator)) return;
 
   const registrations = await navigator.serviceWorker.getRegistrations();
-  await Promise.allSettled(registrations.map((registration) => registration.unregister()));
+  await Promise.allSettled(registrations.map((registration) => registration.update()));
 };
 
 /**
@@ -54,7 +54,7 @@ export const recoverAuthTransportOncePerSession = async (_reason: 'signin' | 'si
   clearAuthStorage();
 
   try {
-    await Promise.allSettled([clearBrowserCaches(), unregisterServiceWorkers()]);
+    await Promise.allSettled([clearBrowserCaches(), refreshServiceWorkers()]);
   } catch {
     // ignore
   }

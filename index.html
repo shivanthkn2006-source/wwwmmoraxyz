@@ -206,7 +206,7 @@
           autoRetried = true;
           try {
             if ('caches' in window) caches.keys().then(function (k) { k.forEach(function (n) { caches.delete(n); }); });
-            if ('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations().then(function (rs) { rs.forEach(function (r) { r.unregister(); }); });
+            if ('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations().then(function (rs) { rs.forEach(function (r) { try { r.update(); } catch (_) {} }); });
           } catch (_) {}
           var sub = document.getElementById('__startup_shell_sub__');
           if (sub) sub.textContent = 'Recovering — retrying once…';
@@ -859,7 +859,7 @@
           if (t.id === '__startup_retry__') {
             try {
               if ('caches' in window) caches.keys().then(function (k) { k.forEach(function (n) { caches.delete(n); }); });
-              if ('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations().then(function (rs) { rs.forEach(function (r) { r.unregister(); }); });
+              if ('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations().then(function (rs) { rs.forEach(function (r) { try { r.update(); } catch (_) {} }); });
             } catch (_) {}
             try { sessionStorage.removeItem(AUTO_RETRY_KEY); } catch (_) {}
             var u = new URL(location.href); u.searchParams.set('hard_refresh', String(Date.now())); location.replace(u.toString());

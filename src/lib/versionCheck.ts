@@ -24,11 +24,11 @@ const clearCachesAndServiceWorkers = async () => {
     // ignore
   }
 
-  // Unregister service workers (they'll re-register on next load)
+  // Refresh the service worker without removing its Web Push subscription.
   try {
     if ("serviceWorker" in navigator) {
       const regs = await navigator.serviceWorker.getRegistrations();
-      await Promise.allSettled(regs.map((r) => r.unregister()));
+      await Promise.allSettled(regs.map((r) => r.update()));
     }
   } catch {
     // ignore
