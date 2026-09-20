@@ -1471,6 +1471,42 @@ html.phantom-mode [class*="animate-"] {
   background-image: none;
 }
 
+/* Profile dialogs, selects and menus are portalled outside the page wrapper. */
+body.profile-liquid-active :is([role='dialog'], [role='menu'], [role='listbox']) {
+  --profile-white: 0 0% 100%;
+  color: hsl(var(--profile-white));
+  border-color: hsl(var(--profile-white) / 0.24) !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  backdrop-filter: blur(28px) saturate(115%);
+  -webkit-backdrop-filter: blur(28px) saturate(115%);
+}
+
+body.profile-liquid-active :is([role='dialog'], [role='menu'], [role='listbox']) *:not(img) {
+  border-color: hsl(var(--profile-white) / 0.22) !important;
+}
+
+body.profile-liquid-active :is([role='dialog'], [role='menu'], [role='listbox']) :is(h1, h2, h3, h4, p, span, label, button, a, input, textarea, [role='menuitem'], [role='option']) {
+  color: hsl(var(--profile-white)) !important;
+}
+
+body.profile-liquid-active :is([role='dialog'], [role='menu'], [role='listbox']) :is(button, input, textarea, [role='tab'], [role='menuitem'], [role='option'], [class*='bg-']):not(img) {
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+body.profile-liquid-active :is([role='dialog'], [role='menu'], [role='listbox']) svg {
+  color: hsl(var(--profile-white)) !important;
+  fill: none !important;
+  stroke: currentColor !important;
+}
+
+body.profile-liquid-active :is([role='dialog'], [role='menu'], [role='listbox']) svg circle[fill] {
+  fill: hsl(var(--profile-white)) !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .profile-liquid-page * {
     scroll-behavior: auto;

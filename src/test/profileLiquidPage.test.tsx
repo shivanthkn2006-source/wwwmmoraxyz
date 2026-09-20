@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 describe('main Profile transparent presentation', () => {
   const page = readFileSync('src/pages/ProfilePage.tsx', 'utf8');
   const content = readFileSync('src/components/ProfileContent.tsx', 'utf8');
+  const editModal = readFileSync('src/components/ProfileEditModal.tsx', 'utf8');
   const css = readFileSync('src/index.css', 'utf8');
 
   it('scopes the transparent treatment to the main Profile page', () => {
@@ -21,6 +22,11 @@ describe('main Profile transparent presentation', () => {
     expect(css).toContain('.profile-liquid-page');
     expect(css).toContain('--profile-white: 0 0% 100%');
     expect(css).toContain('background: transparent');
+    expect(page).toContain("document.body.classList.add('profile-liquid-active')");
+    expect(css).toContain('body.profile-liquid-active');
+    expect(css).toContain("[role='dialog']");
+    expect(editModal).toContain('location_enabled: true');
+    expect(editModal).toContain('date_of_birth: formData.birth_date || null');
     expect(page).not.toContain('music-liquid-page');
   });
 });
