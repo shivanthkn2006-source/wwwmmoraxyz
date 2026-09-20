@@ -2104,6 +2104,7 @@ const startGodEye = useCallback(() => {
         if (pendingSignals && pendingSignals.length > 0) {
           console.log(`[QuantumCall] Processing ${pendingSignals.length} pending signal(s)`);
           for (const s of pendingSignals) {
+            if (isExpiredInvite(s as any)) continue;
             await processSignal(s as any);
           }
         }
