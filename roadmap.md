@@ -101,3 +101,9 @@
 - [x] Harden published-PWA call subscription readiness and preserve the push worker during recovery refreshes.
 - [ ] Connect APNs/FCM and verify sleeping-phone wake on physical native devices; external credentials and devices required.
 - [x] Finish phone/tablet/desktop visual verification; focused tests and type validation pass.
+
+## 2026-09-21 — Home panel mobile fit correction
+- [x] Fill the mobile panel to the left safe-area edge with equal compact tile gaps and unchanged icon artwork size.
+- [x] Keep the four-row panel height while search results are filtered.
+- [x] Keep every menu name below its symbol inside the same tile.
+- [ ] Verify opening, search height, label placement, and destination wiring in phone/PWA preview.
