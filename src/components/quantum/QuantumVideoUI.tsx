@@ -51,6 +51,7 @@ import { LowPowerCallWarning } from './LowPowerCallWarning';
 import type { CallNetworkDiagnostics } from '@/features/calls/callTransport';
 import type { CallWordsEntry } from '@/features/calls/wordsOnlyMode';
 import type { ZoeCallWhisper } from '@/features/calls/zoeCallThinking';
+import CallActivityStatusPanel from './CallActivityStatusPanel';
 
 // Responsive sizing hook for call controls
 const useResponsiveCallSize = () => {
@@ -86,6 +87,8 @@ interface QuantumVideoUIProps {
   // Participant info
   participantName?: string;
   participantAvatar?: string;
+  currentUserId: string;
+  participantId?: string;
   isAICall?: boolean;
   
   // Audio controls
@@ -674,6 +677,8 @@ export const QuantumVideoUI: React.FC<QuantumVideoUIProps> = ({
   callDuration,
   participantName,
   participantAvatar,
+  currentUserId,
+  participantId,
   isAICall,
   isMuted,
   isSpeaking,
@@ -890,14 +895,21 @@ export const QuantumVideoUI: React.FC<QuantumVideoUIProps> = ({
           isEnabled={godEyeEnabled}
         />
 
-        {/* Top bar - Quality & Duration */}
-        <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-30">
-          <QualityIndicator
-            quality={connectionQuality}
-            bitrate={currentBitrate}
-            codec={codec}
-            isLowDataMode={isLowDataMode}
-          />
+        {/* Top bar - Quality, activity & Duration */}
+        <div className="absolute top-4 left-4 right-4 flex items-start justify-between z-30">
+          <div className="flex min-w-0 flex-col items-start gap-2">
+            <QualityIndicator
+              quality={connectionQuality}
+              bitrate={currentBitrate}
+              codec={codec}
+              isLowDataMode={isLowDataMode}
+            />
+            <CallActivityStatusPanel
+              currentUserId={currentUserId}
+              participantId={participantId}
+              participantName={participantName}
+            />
+          </div>
           <div className="sr-only" role="status" aria-live="polite">
             Network {networkDiagnostics.route}; {networkDiagnostics.roundTripTimeMs ?? 'unknown'} milliseconds latency;
             {networkDiagnostics.packetLossPercent.toFixed(1)} percent packet loss; Zoe channel {dataChannelState}.

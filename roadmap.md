@@ -80,5 +80,6 @@
 - [x] Call history screen (/calls/history) plus a missed-call alert for the person who was not reached.
 - [x] Group call screen (/calls/group): pick up to 5 people, one direct connection per member, even tile grid, leave call.
 - [x] Sleeping-phone ringing: device registration, background ring handler, and a protected ring service for the person being called.
+- [x] Calls activity status: all Profile activities shown with plain icons below KBPS, editable by the user and refreshed for the other participant.
 - [ ] Blocked: real Moksh-to-Asha two-device call (needs both people signed in on their own devices).
 - [ ] Blocked: relay (TURN/Twilio) — deferred by request, so calls across strict networks may still fail.
