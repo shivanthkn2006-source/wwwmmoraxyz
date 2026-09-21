@@ -58,6 +58,7 @@ interface Profile {
   username: string;
   bio?: string;
   profile_photo_url?: string;
+  avatar_url?: string;
   profession?: string;
   field_of_study?: string;
   gender?: string;
@@ -397,8 +398,8 @@ const ProfileContent = () => {
         className="relative h-[28rem] bg-cover bg-center bg-muted sm:h-[32rem]"
         data-profile-photo
         style={{
-          backgroundImage: profile.profile_photo_url 
-            ? `linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.5)), url(${profile.profile_photo_url})` 
+          backgroundImage: profile.profile_photo_url || profile.avatar_url
+            ? `linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.5)), url(${profile.profile_photo_url || profile.avatar_url})`
             : 'linear-gradient(135deg, hsl(var(--primary)/0.2), hsl(var(--accent)/0.3))',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
