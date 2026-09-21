@@ -394,7 +394,7 @@ const ProfileContent = () => {
     <>
       {/* Header with Background Wallpaper */}
       <div 
-        className="relative h-screen bg-cover bg-center bg-muted"
+        className="relative h-[28rem] bg-cover bg-center bg-muted sm:h-[32rem]"
         data-profile-photo
         style={{
           backgroundImage: profile.profile_photo_url 
@@ -505,6 +505,8 @@ const ProfileContent = () => {
                 size="icon"
                 className="bg-white/20 text-white hover:bg-white/30 rounded-full w-10 h-10"
                 onClick={() => setShowEditModal(true)}
+                data-profile-edit
+                aria-label="Edit profile"
               >
                 <Edit className="w-5 h-5" />
               </Button>

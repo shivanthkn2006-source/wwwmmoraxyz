@@ -17,7 +17,8 @@ describe('M’Mora profile transparent presentation', () => {
   });
 
   it('applies the same treatment to the profile opened from the Home photo', () => {
-    expect(home).toContain('<div className="profile-liquid-page pt-4">');
+    expect(home).toContain('<div className="profile-liquid-page">');
+    expect(home).toContain('profile-liquid-surface');
     expect(home).toContain('data-profile-liquid-page');
     expect(home).toContain('data-profile-liquid-content');
     expect(home).not.toContain('bg-background/80 backdrop-blur-xl border-l border-border/50');
@@ -32,6 +33,10 @@ describe('M’Mora profile transparent presentation', () => {
 
   it('keeps the Profile white-only and transparent without affecting Music Profile', () => {
     expect(css).toContain('.profile-liquid-page');
+    expect(css).toContain('.profile-liquid-surface::after');
+    expect(css).toContain('--profile-ambient-a: 36 26% 46%');
+    expect(content).toContain('h-[28rem]');
+    expect(content).toContain('data-profile-edit');
     expect(css).toContain('--profile-white: 0 0% 100%');
     expect(css).toContain('background: transparent');
     expect(editModal).toContain('location_enabled: true');
