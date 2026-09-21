@@ -2760,13 +2760,13 @@ const HomePage = () => {
       <Sheet open={isProfileSheetOpen} onOpenChange={setIsProfileSheetOpen}>
         <SheetContent
           side="right"
-          className="w-full sm:max-w-md overflow-y-auto border-l border-white/20 bg-transparent backdrop-blur-xl"
+          className="profile-liquid-surface w-full sm:max-w-md overflow-y-auto border-l border-white/20 bg-transparent p-0"
           data-profile-liquid-page
         >
-          <SheetHeader>
+          <SheetHeader className="profile-liquid-header sticky top-0 z-40 px-6 py-4">
             <SheetTitle>Profile</SheetTitle>
           </SheetHeader>
-          <div className="profile-liquid-page pt-4">
+          <div className="profile-liquid-page">
             <div data-profile-liquid-content>
               {isProfileSheetOpen && (
                 <React.Suspense fallback={<div className="py-8 text-center text-sm text-muted-foreground">Loading profile…</div>}>

@@ -119,3 +119,4 @@
 - [x] Transparent white-only treatment on the profile opened from the Home top-right photo, including Event Planner Diary, Smart Reminders, Calendar View and Edit Profile
 - [x] Same treatment for every existing and new member (no per-user gating)
 - [ ] Signed-in phone/tablet/desktop visual verification
+- [ ] Confirm the Calls-matched liquid surface and visible profile controls in the signed-in Home profile panel
