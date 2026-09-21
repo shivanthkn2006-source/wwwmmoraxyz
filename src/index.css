@@ -1378,6 +1378,13 @@ html.phantom-mode [class*="animate-"] {
   background: transparent;
 }
 
+/* The Home profile is a right-side sheet. Keep its fixed viewport anchoring;
+   only the nested profile content uses relative positioning. */
+.profile-liquid-surface {
+  position: fixed;
+  height: 100dvh;
+}
+
 .profile-liquid-page::before,
 .profile-liquid-surface::before {
   content: '';
