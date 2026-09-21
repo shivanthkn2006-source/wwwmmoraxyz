@@ -120,3 +120,4 @@
 - [x] Same treatment for every existing and new member (no per-user gating)
 - [x] Signed-in phone/tablet/desktop visual verification
 - [x] Confirm the Calls-matched liquid surface and visible profile controls in the signed-in Home profile panel
+- [x] Place the signed-in member photo from beneath the Profile header through the frosted identity and stats summary

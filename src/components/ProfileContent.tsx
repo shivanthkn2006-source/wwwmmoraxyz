@@ -102,6 +102,11 @@ const ProfileContent = () => {
 
   const hasEvent = useEventGlow(profile?.event_date, profile?.event_recurring);
   const glowClass = getAvatarGlowClass(hasEvent, profile?.status);
+  const profilePhotoUrl = profile?.profile_photo_url
+    || profile?.avatar_url
+    || (user?.user_metadata as { avatar_url?: string; picture?: string } | undefined)?.avatar_url
+    || (user?.user_metadata as { avatar_url?: string; picture?: string } | undefined)?.picture
+    || '';
 
   // Every M'Mora profile surface — for every existing and new member, on the
   // standalone page and inside the Home profile panel — uses the transparent
@@ -394,18 +399,20 @@ const ProfileContent = () => {
   return (
     <>
       {/* Header with Background Wallpaper */}
-      <div 
-        className="relative h-[28rem] bg-cover bg-center bg-muted sm:h-[32rem]"
+      <div
+        className="relative h-[28rem] overflow-hidden sm:h-[32rem]"
         data-profile-photo
-        style={{
-          backgroundImage: profile.profile_photo_url || profile.avatar_url
-            ? `linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.5)), url(${profile.profile_photo_url || profile.avatar_url})`
-            : 'linear-gradient(135deg, hsl(var(--primary)/0.2), hsl(var(--accent)/0.3))',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-        }}
       >
-        <div className="flex flex-col gap-2 justify-end items-end p-4">
+        {profilePhotoUrl && (
+          <img
+            src={profilePhotoUrl}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover object-center"
+            data-profile-photo-image
+          />
+        )}
+        <div className="profile-photo-shade absolute inset-0" aria-hidden="true" />
+        <div className="relative z-10 flex flex-col items-end justify-end gap-2 p-4">
           <Button 
             variant="ghost" 
             size="icon"
@@ -441,7 +448,7 @@ const ProfileContent = () => {
         </div>
 
         {/* Glassmorphic Stats Box - Compact Rectangular */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 w-[92%] max-w-[450px] bg-white/15 backdrop-blur-xl rounded-2xl border border-white/30 p-4 shadow-2xl">
+        <div className="profile-summary-glass absolute bottom-0 left-1/2 z-10 w-[92%] max-w-[450px] -translate-x-1/2 rounded-2xl border p-4" data-profile-summary>
           <div className="text-center space-y-2">
             <h2 className="text-xl font-bold text-white">{profile.display_name}</h2>
             <p className="text-white/80 text-xs">@{profile.username}</p>
@@ -835,9 +842,9 @@ const ProfileContent = () => {
         currentEventRecurring={profile.event_recurring}
       />
 
-      {showProfileViewer && profile.profile_photo_url && (
+      {showProfileViewer && profilePhotoUrl && (
         <ImageViewer
-          imageUrl={profile.profile_photo_url}
+          imageUrl={profilePhotoUrl}
           onClose={() => setShowProfileViewer(false)}
         />
       )}

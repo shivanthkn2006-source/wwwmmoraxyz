@@ -44,4 +44,15 @@ describe('M’Mora profile transparent presentation', () => {
     expect(editModal).toContain('date_of_birth: formData.birth_date || null');
     expect(page).not.toContain('music-liquid-page');
   });
+
+  it('shows the saved member photo behind the frosted identity summary', () => {
+    expect(content).toContain('profile?.profile_photo_url');
+    expect(content).toContain('profile?.avatar_url');
+    expect(content).toContain('user?.user_metadata');
+    expect(content).toContain('data-profile-photo-image');
+    expect(content).toContain('data-profile-summary');
+    expect(content).toContain('absolute bottom-0');
+    expect(css).toContain('.profile-liquid-page [data-profile-summary]');
+    expect(css).toContain('backdrop-filter: blur(28px) saturate(120%)');
+  });
 });
