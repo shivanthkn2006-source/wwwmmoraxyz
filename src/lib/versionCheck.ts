@@ -200,8 +200,8 @@ export const recoverFromChunkError = () => {
     // One-shot per session: if we already tried, fall through to normal path
     const already = sessionStorage.getItem(CHUNK_RECOVERY_KEY);
     if (already) {
-      console.warn('[ChunkRecovery] Already attempted this session, falling back to normal refresh');
-      return forceAppRefresh();
+      console.warn('[ChunkRecovery] Already attempted this session; blocking another automatic reload');
+      return;
     }
     sessionStorage.setItem(CHUNK_RECOVERY_KEY, String(Date.now()));
   } catch {

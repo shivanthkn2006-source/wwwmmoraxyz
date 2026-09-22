@@ -41,7 +41,7 @@ export interface ZoeCoreState {
   subsystemStatus: Record<string, 'online' | 'offline' | 'degraded'>;
 }
 
-export const useZoeCoreUnified = () => {
+export const useZoeCoreUnified = (autoScan = true) => {
   const { user } = useAuth();
   const [state, setState] = useState<ZoeCoreState>({
     isScanning: false,
@@ -59,6 +59,8 @@ export const useZoeCoreUnified = () => {
   
   const scanIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const ecnProcessorRef = useRef<NodeJS.Timeout | null>(null);
+  const scanInFlightRef = useRef(false);
+  const lastScanStartedAtRef = useRef(0);
 
   // ═══════════════════════════════════════════════════════════════════
   // UNIFIED DEEP SCAN - Scans all subsystems
@@ -67,7 +69,13 @@ export const useZoeCoreUnified = () => {
     autoFix?: boolean;
     processECN?: boolean;
   }): Promise<UnifiedScanResult | null> => {
-    if (!user) return null;
+    if (!user || scanInFlightRef.current) return null;
+
+    // Collapse noisy health/error events into one scan window. Manual scans remain
+    // available after the brief cooldown instead of launching overlapping requests.
+    if (Date.now() - lastScanStartedAtRef.current < 15_000) return null;
+    scanInFlightRef.current = true;
+    lastScanStartedAtRef.current = Date.now();
     
     setState(prev => ({ ...prev, isScanning: true }));
     const startTime = Date.now();
@@ -277,6 +285,8 @@ export const useZoeCoreUnified = () => {
       setState(prev => ({ ...prev, isScanning: false }));
       toast.error('Core scan failed');
       return null;
+    } finally {
+      scanInFlightRef.current = false;
     }
   }, [user]);
 
@@ -456,21 +466,30 @@ export const useZoeCoreUnified = () => {
   // AUTO-INITIALIZATION
   // ═══════════════════════════════════════════════════════════════════
   useEffect(() => {
-    if (!user) return;
+    if (!user || !autoScan) return;
 
-    // Initial scan after mount
-    const initTimeout = setTimeout(async () => {
+    // Diagnostics are background maintenance, never startup work. Schedule them
+    // after the member can already use Home and avoid competing for first-load I/O.
+    const runInitialMaintenance = async () => {
       // Seed ECN if empty
       await seedECNHistory();
       
       // Run initial unified scan
       await runUnifiedDeepScan({ autoFix: true, processECN: true });
-    }, 3000);
+    };
+    let idleId: number | null = null;
+    let initTimeout: ReturnType<typeof setTimeout> | null = null;
+    if ('requestIdleCallback' in window) {
+      idleId = (window as Window & { requestIdleCallback: (callback: () => void, options?: { timeout: number }) => number })
+        .requestIdleCallback(() => { void runInitialMaintenance(); }, { timeout: 12_000 });
+    } else {
+      initTimeout = setTimeout(() => { void runInitialMaintenance(); }, 10_000);
+    }
 
-    // Periodic scans every 5 minutes
+    // Periodic scans every 10 minutes; queue processing has its own worker cadence.
     scanIntervalRef.current = setInterval(() => {
-      runUnifiedDeepScan({ autoFix: true, processECN: true });
-    }, 5 * 60 * 1000);
+      runUnifiedDeepScan({ autoFix: true, processECN: false });
+    }, 10 * 60 * 1000);
 
     // Process ECN queue every 2 minutes
     ecnProcessorRef.current = setInterval(() => {
@@ -478,11 +497,14 @@ export const useZoeCoreUnified = () => {
     }, 2 * 60 * 1000);
 
     return () => {
-      clearTimeout(initTimeout);
+      if (idleId !== null && 'cancelIdleCallback' in window) {
+        (window as Window & { cancelIdleCallback: (id: number) => void }).cancelIdleCallback(idleId);
+      }
+      if (initTimeout) clearTimeout(initTimeout);
       if (scanIntervalRef.current) clearInterval(scanIntervalRef.current);
       if (ecnProcessorRef.current) clearInterval(ecnProcessorRef.current);
     };
-  }, [user, seedECNHistory, runUnifiedDeepScan, processECNQueue]);
+  }, [user, autoScan, seedECNHistory, runUnifiedDeepScan, processECNQueue]);
 
   // ═══════════════════════════════════════════════════════════════════
   // DISPATCH EVENTS FOR OTHER SYSTEMS

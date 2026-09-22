@@ -10,9 +10,9 @@ import { initializeAssistantVoices } from "./utils/assistantVoice";
 import { initCrossBrowserCompat } from "./utils/crossBrowserCompat";
 import SystemFailureBoundary from "@/components/SystemFailureBoundary";
 import { HelmetProvider } from "react-helmet-async";
-import { ensurePreviewSessionFreshness, recoverFromChunkError } from "@/lib/versionCheck";
+import { recoverFromChunkError } from "@/lib/versionCheck";
 import { startIdleRoutePreloader } from "@/lib/idleRoutePreloader";
-import { executePlatformPurge, reconnectZoeCore, truncateConsoleLogs } from "@/lib/platformPurge";
+import { executePlatformPurge, truncateConsoleLogs } from "@/lib/platformPurge";
 import { poolerMonitor, verifyPoolerConnection } from "./utils/supabasePooler";
 import { initializeKernel, isLive } from "@/core/security/ConstitutionalKernel";
 import { zoeBackgroundProcessor } from "./services/ZoeBackgroundProcessor"; // ZOE BACKGROUND PROCESSOR
@@ -50,9 +50,6 @@ initCrossBrowserCompat();
 // Initialize Safari/iOS specific fixes for voice/video
 initSafariFixes();
 
-// One-time self-heal for preview domains to recover from stale SW/cache auth failures
-ensurePreviewSessionFreshness();
-
 // ═══════════════════════════════════════════════════════════════════════════════
 // CACHE / SERVICE WORKER RECOVERY
 // NOTE: Do NOT aggressively delete caches on every boot.
@@ -68,11 +65,6 @@ ensurePreviewSessionFreshness();
 // It caused reload loops on Safari when a chunk import fails.
 
 // Phase 6: Platform Purge - Clear ghost bugs on deploy
-const purgeResult = executePlatformPurge();
-if (purgeResult.purged) {
-  console.log('[Boot] Platform purged, reconnecting Zoe core...');
-  reconnectZoeCore();
-}
 truncateConsoleLogs();
 
 // Initialize Supabase Pooler Monitor - 500 Spartans Protocol CHECK 1
@@ -184,6 +176,7 @@ try {
 
 // Defer non-critical voice + idle preload init so they don't block first paint.
 const deferredInit = () => {
+  executePlatformPurge();
   initializeAssistantVoices()
     .then(() => console.log("[Main] Assistant voice system initialized (default: Zoe)"))
     .catch((err) => console.warn("[Main] Voice system init skipped (non-critical):", err?.message || err));

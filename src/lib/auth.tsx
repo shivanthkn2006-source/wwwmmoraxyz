@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { recoverAuthTransportOncePerSession } from '@/lib/authTransportRecovery';
@@ -36,15 +36,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const refreshStartedRef = useRef(false);
+
+  const applySession = useCallback((nextSession: Session | null) => {
+    setSession((current) => current?.access_token === nextSession?.access_token ? current : nextSession);
+    setUser((current) => current?.id === nextSession?.user?.id ? current : nextSession?.user ?? null);
+    setLoading(false);
+  }, []);
 
   useEffect(() => {
     let finished = false;
-    let refreshInterval: ReturnType<typeof setInterval> | null = null;
     let retryInterval: ReturnType<typeof setInterval> | null = null;
 
     // IMPORTANT: For Zoe Infinity continuity we must not prematurely treat users as logged-out.
-    // Some environments take 8–12s for /user to resolve (cold starts, mobile networks).
-    // We still allow UI to render, but we keep retrying session fetch in the background.
+    // Never hold the application shell beyond the three-second startup budget.
+    // A locally persisted session normally resolves synchronously; degraded transports
+    // continue retrying without forcing a reload or leaving the UI on a spinner.
     const timeout = window.setTimeout(() => {
       if (finished) return;
       console.warn('[Auth] Session load slow — continuing UI, retrying session fetch');
@@ -58,8 +65,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const { data: { session } } = await supabase.auth.getSession();
           if (session) {
             console.log('[Auth] Session recovered after slow start');
-            setSession(session);
-            setUser(session.user);
+            applySession(session);
             if (retryInterval) clearInterval(retryInterval);
             retryInterval = null;
           }
@@ -72,13 +78,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           retryInterval = null;
         }
       }, 2000);
-    }, 12000);
+    }, 2500);
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       finished = true;
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
+      applySession(session);
       window.clearTimeout(timeout);
 
       // Handle token refresh events
@@ -108,9 +112,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     supabase.auth.getSession()
       .then(({ data: { session } }) => {
         finished = true;
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
+        applySession(session);
         window.clearTimeout(timeout);
 
         // If we recovered quickly, stop any slow-start retries
@@ -119,35 +121,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           retryInterval = null;
         }
 
-        // Set up proactive token refresh if session exists
-        if (session) {
-          // Refresh token every 10 minutes to prevent JWT expiry issues
-          refreshInterval = setInterval(async () => {
-            try {
-              // First check if we still have a valid session
-              const { data: currentSession } = await supabase.auth.getSession();
-              if (!currentSession?.session) {
-                // No session, skip refresh attempt
-                console.debug('[Auth] No active session, skipping proactive refresh');
-                return;
-              }
-              
-              const { data, error } = await supabase.auth.refreshSession();
-              if (error) {
-                // Only warn if it's not an expected session missing error
-                if (!error.message?.includes('session missing')) {
-                  console.warn('[Auth] Proactive token refresh failed:', error.message);
-                }
-              } else if (data.session) {
-                console.debug('[Auth] Proactive token refresh successful');
-              }
-            } catch (err: any) {
-              // Silently handle session-related errors
-              if (!err?.message?.includes('session')) {
-                console.warn('[Auth] Proactive refresh error:', err);
-              }
-            }
-          }, 10 * 60 * 1000); // Every 10 minutes
+        // The auth client already owns refresh scheduling. Starting a second timer
+        // caused overlapping refreshes and duplicate SIGNED_IN/TOKEN_REFRESHED events.
+        if (session && !refreshStartedRef.current) {
+          refreshStartedRef.current = true;
+          supabase.auth.startAutoRefresh();
         }
       })
       .catch((err) => {
@@ -165,11 +143,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       finished = true;
       window.clearTimeout(timeout);
-      if (refreshInterval) clearInterval(refreshInterval);
       if (retryInterval) clearInterval(retryInterval);
       subscription.unsubscribe();
+      if (refreshStartedRef.current) {
+        supabase.auth.stopAutoRefresh();
+        refreshStartedRef.current = false;
+      }
     };
-  }, []);
+  }, [applySession]);
 
   const connectionError = {
     message: 'Connection failed. The backend may be paused or unavailable. Please try again in a few moments.',

@@ -223,7 +223,7 @@ export const ZoeCoreUnifiedProvider: React.FC<ZoeCoreUnifiedProviderProps> = ({
   autoScan = true,
   autoStartQuantumASI = false
 }) => {
-  const core = useZoeCoreUnified();
+  const core = useZoeCoreUnified(autoScan);
   const [quantumInitialized, setQuantumInitialized] = useState(false);
   
   // ═══════════════════════════════════════════════════════════════════════════════
