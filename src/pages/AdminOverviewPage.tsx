@@ -8,7 +8,7 @@
  */
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Users, FileText, Compass, Video, Image as ImageIcon, RefreshCw, Loader2, ShieldAlert } from 'lucide-react';
+import { ArrowLeft, Users, CalendarDays, Bell, Activity, Radio, RefreshCw, Loader2, ShieldAlert } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
@@ -21,29 +21,31 @@ import LoadTestPanel from '@/components/admin/LoadTestPanel';
 import GrowthOnboardingWizard from '@/components/admin/GrowthOnboardingWizard';
 
 
-type TableName = 'profiles' | 'dhf_essay_schedules' | 'dhf_feed_posts' | 'dhf_videos' | 'posts' | 'user_roles';
+type TableName = 'profiles' | 'online_sessions' | 'user_sessions' | 'user_activity_log' | 'important_dates' | 'reminders';
 
 interface Metric {
   key: TableName;
   label: string;
   hint: string;
   icon: React.ComponentType<{ className?: string }>;
+  filter?: (query: any) => any;
 }
 
 const METRICS: Metric[] = [
   { key: 'profiles', label: 'Users', hint: 'Registered profiles', icon: Users },
-  { key: 'dhf_essay_schedules', label: 'Essays', hint: 'Scheduled DHF essays', icon: FileText },
-  { key: 'dhf_feed_posts', label: 'DHF cards', hint: 'Compass cards delivered', icon: Compass },
-  { key: 'dhf_videos', label: 'DHF videos', hint: 'Ingested video library', icon: Video },
-  { key: 'posts', label: 'Posts', hint: 'User posts and loops', icon: ImageIcon },
-  { key: 'user_roles', label: 'Role grants', hint: 'Admin / moderator assignments', icon: ShieldAlert },
+  { key: 'online_sessions', label: 'Active now', hint: 'Heartbeat received in the last 2 minutes', icon: Radio, filter: (q) => q.eq('status', 'active').gte('last_heartbeat', new Date(Date.now() - 120_000).toISOString()) },
+  { key: 'user_sessions', label: 'Sessions', hint: 'Sessions started in the last 24 hours', icon: Activity, filter: (q) => q.gte('started_at', new Date(Date.now() - 86_400_000).toISOString()) },
+  { key: 'user_activity_log', label: 'Events', hint: 'Activity events in the last 24 hours', icon: Activity, filter: (q) => q.gte('created_at', new Date(Date.now() - 86_400_000).toISOString()) },
+  { key: 'important_dates', label: 'Planner events', hint: 'Upcoming shared calendar events', icon: CalendarDays, filter: (q) => q.gte('date_value', new Date().toISOString().slice(0, 10)) },
+  { key: 'reminders', label: 'Smart Reminders', hint: 'Active reminders across members', icon: Bell, filter: (q) => q.eq('is_completed', false) },
 ];
 
-const countRows = async (table: TableName): Promise<number | null> => {
+const countRows = async (metric: Metric): Promise<number | null> => {
   const client = supabase as unknown as {
     from: (t: string) => { select: (c: string, o: { count: 'exact'; head: boolean }) => Promise<{ count: number | null; error: unknown }> };
   };
-  const { count, error } = await client.from(table).select('*', { count: 'exact', head: true });
+  const baseQuery = client.from(metric.key).select('*', { count: 'exact', head: true });
+  const { count, error } = await (metric.filter ? metric.filter(baseQuery) : baseQuery);
   return error ? null : count ?? 0;
 };
 
@@ -66,7 +68,7 @@ const AdminOverviewPage: React.FC = () => {
   const load = useCallback(async () => {
     setLoading(true);
     const entries = await Promise.all(
-      METRICS.map(async (m) => [m.key, await countRows(m.key)] as const),
+      METRICS.map(async (m) => [m.key, await countRows(m)] as const),
     );
     setCounts(Object.fromEntries(entries) as Partial<Record<TableName, number | null>>);
     setLoading(false);
