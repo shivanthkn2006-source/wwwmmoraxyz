@@ -12652,7 +12652,6 @@ export type Database = {
         Returns: undefined
       }
       ensure_profiles_for_all_users: { Args: never; Returns: number }
-      get_admin_operational_metrics: { Args: never; Returns: Json }
       get_daily_notification_count: {
         Args: { p_user_id: string }
         Returns: number
