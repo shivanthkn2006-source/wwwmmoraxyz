@@ -2,6 +2,8 @@ import React, { createContext, useCallback, useContext, useEffect, useState } fr
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { recoverAuthTransportOncePerSession } from '@/lib/authTransportRecovery';
+import { markStartupPhase } from '@/lib/startupTiming';
+
 
 interface AuthContextType {
   user: User | null;
@@ -40,7 +42,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setSession((current) => current?.access_token === nextSession?.access_token ? current : nextSession);
     setUser((current) => current?.id === nextSession?.user?.id ? current : nextSession?.user ?? null);
     setLoading(false);
+    markStartupPhase('auth-session-resolved');
   }, []);
+
 
   useEffect(() => {
     let finished = false;
