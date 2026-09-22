@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { recoverAuthTransportOncePerSession } from '@/lib/authTransportRecovery';
@@ -36,8 +36,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const refreshStartedRef = useRef(false);
-
   const applySession = useCallback((nextSession: Session | null) => {
     setSession((current) => current?.access_token === nextSession?.access_token ? current : nextSession);
     setUser((current) => current?.id === nextSession?.user?.id ? current : nextSession?.user ?? null);
@@ -121,12 +119,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           retryInterval = null;
         }
 
-        // The auth client already owns refresh scheduling. Starting a second timer
-        // caused overlapping refreshes and duplicate SIGNED_IN/TOKEN_REFRESHED events.
-        if (session && !refreshStartedRef.current) {
-          refreshStartedRef.current = true;
-          supabase.auth.startAutoRefresh();
-        }
+        // The shared auth client owns token refresh scheduling. Do not start a
+        // second timer here; duplicate refresh owners create event and request storms.
       })
       .catch((err) => {
         console.warn('[Auth] getSession failed:', err);
@@ -145,10 +139,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       window.clearTimeout(timeout);
       if (retryInterval) clearInterval(retryInterval);
       subscription.unsubscribe();
-      if (refreshStartedRef.current) {
-        supabase.auth.stopAutoRefresh();
-        refreshStartedRef.current = false;
-      }
     };
   }, [applySession]);
 
