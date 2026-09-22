@@ -44,38 +44,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     let finished = false;
-    let retryInterval: ReturnType<typeof setInterval> | null = null;
 
     // IMPORTANT: For Zoe Infinity continuity we must not prematurely treat users as logged-out.
     // Never hold the application shell beyond the three-second startup budget.
-    // A locally persisted session normally resolves synchronously; degraded transports
-    // continue retrying without forcing a reload or leaving the UI on a spinner.
+    // A locally persisted session normally resolves synchronously. The auth-state
+    // subscription is the single recovery path if transport hydration finishes late.
     const timeout = window.setTimeout(() => {
       if (finished) return;
-      console.warn('[Auth] Session load slow — continuing UI, retrying session fetch');
+      console.warn('[Auth] Session load slow — continuing without blocking the interface');
       setLoading(false);
-
-      // Background retries (max ~30s) to avoid permanent "guest" state.
-      let attempts = 0;
-      retryInterval = setInterval(async () => {
-        attempts += 1;
-        try {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (session) {
-            console.log('[Auth] Session recovered after slow start');
-            applySession(session);
-            if (retryInterval) clearInterval(retryInterval);
-            retryInterval = null;
-          }
-        } catch {
-          // ignore
-        }
-
-        if (attempts >= 15) {
-          if (retryInterval) clearInterval(retryInterval);
-          retryInterval = null;
-        }
-      }, 2000);
     }, 2500);
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -113,12 +90,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         applySession(session);
         window.clearTimeout(timeout);
 
-        // If we recovered quickly, stop any slow-start retries
-        if (retryInterval) {
-          clearInterval(retryInterval);
-          retryInterval = null;
-        }
-
         // The shared auth client owns token refresh scheduling. Do not start a
         // second timer here; duplicate refresh owners create event and request storms.
       })
@@ -128,16 +99,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setLoading(false);
         window.clearTimeout(timeout);
 
-        if (retryInterval) {
-          clearInterval(retryInterval);
-          retryInterval = null;
-        }
       });
 
     return () => {
       finished = true;
       window.clearTimeout(timeout);
-      if (retryInterval) clearInterval(retryInterval);
       subscription.unsubscribe();
     };
   }, [applySession]);

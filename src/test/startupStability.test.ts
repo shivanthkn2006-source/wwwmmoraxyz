@@ -17,6 +17,7 @@ describe('startup and reconnect stability', () => {
     expect(auth).toContain('}, 2500);');
     expect(auth).not.toContain('supabase.auth.startAutoRefresh()');
     expect(auth).not.toContain('10 * 60 * 1000); // Every 10 minutes');
+    expect(auth).not.toContain('retryInterval');
   });
 
   it('shows accurate startup copy and blocks repeated automatic recovery', () => {
