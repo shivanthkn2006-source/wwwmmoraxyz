@@ -1406,29 +1406,9 @@ const App = () => {
     }
   }, []);
 
-  // Initialize Zoe AI voices on app load
+  // Audio modules are user-initiated so session restoration owns the phone
+  // startup path and Zoe keeps using the configured Deepgram voice only.
   useEffect(() => {
-    // Initialize Zoe voices with error resilience for M05/low-end devices
-    const initVoices = async () => {
-      try {
-        const { initializeZoeVoices } = await import('@/utils/zoeVoice');
-        await initializeZoeVoices();
-      } catch (error) {
-        // On M05/low-end devices, module import may fail - use direct fallback
-        console.warn('Failed to initialize Zoe voices:', error);
-        try {
-          // Direct fallback: ensure speechSynthesis is ready
-          if ('speechSynthesis' in window) {
-            window.speechSynthesis.getVoices();
-            console.log('[ZoeVoice] Fallback: Direct speechSynthesis initialized');
-          }
-        } catch {
-          // Voice unavailable - not critical
-        }
-      }
-    };
-    initVoices();
-
     // Initialize notification sounds audio context on user interaction
     const initAudio = () => {
       import('@/utils/notificationSounds')

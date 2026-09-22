@@ -1,10 +1,9 @@
 /**
  * ADMIN OVERVIEW — one screen with the real platform counts.
  *
- * Users, essays, DHF cards, DHF videos and posts, counted straight from the
- * database with head-only queries (no rows transferred). Access is gated on the
- * `has_role(uid,'admin')` function — the same check the rest of the admin
- * surfaces use — and row-level security remains the real boundary underneath.
+ * Users, sessions, activity, Planner events and Smart Reminders, counted with
+ * head-only queries (no rows transferred). Root-admin row rules remain the
+ * boundary underneath.
  */
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';

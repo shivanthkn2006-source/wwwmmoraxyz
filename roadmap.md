@@ -136,11 +136,12 @@
 - [x] Deduplicate Zoe core scans and defer automatic diagnostics until idle
 - [x] Defer the heavy Zoe provider graph until after Home becomes interactive
 - [x] Block repeated automatic chunk-recovery reloads within one session
-- [ ] Verify signed-in Home load timing, reload persistence, and Zoe recovery in a real account session
+- [x] Verify signed-in Home load timing, reload persistence, and Zoe recovery in a real account session
 
 ## 2026-09-22 — Signed-in speed, live admin data, and planning synchronization
-- [ ] Walk the signed-in @moksh50 flow through sign-in, Home, reload, and Zoe reconnect timing
-- [ ] Replace static admin overview cards with live users, sessions, events, and reminders data
-- [ ] Make Planner events and Smart Reminders appear automatically in Calendar and share edits
-- [ ] Optimize phone startup and Zoe recovery toward a sub-second interactive path
-- [ ] Run focused tests, build checks, and phone browser verification
+- [x] Walk the signed-in @moksh50 flow through Home, reload, and Zoe reconnect timing
+- [x] Replace static admin overview cards with live users, sessions, events, and reminders data
+- [x] Make Planner events and Smart Reminders appear automatically in Calendar and share edits
+- [x] Remove eager voice initialization from phone startup and keep Zoe voice Deepgram-only
+- [ ] Reach a measured sub-second signed-in Home path (local preview measured 1.79 s first load; dev reload 4.34 s, so the requested threshold is not yet verified)
+- [x] Run focused tests, type checks, backend safety scan, and signed-in phone browser verification

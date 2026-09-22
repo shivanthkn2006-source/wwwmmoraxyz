@@ -34,4 +34,10 @@ describe('startup and reconnect stability', () => {
     expect(read('src/components/core/ZoeCoreUnifiedProvider.tsx')).toContain('useZoeCoreUnified(autoScan)');
     expect(read('src/components/AdaptiveProviderShell.tsx')).toContain('if (!initialized || !providersReady)');
   });
+
+  it('does not initialize Zoe voice or browser speech during app startup', () => {
+    const app = read('src/App.tsx');
+    expect(app).not.toContain("import('@/utils/zoeVoice')");
+    expect(app).not.toContain('speechSynthesis.getVoices()');
+  });
 });
