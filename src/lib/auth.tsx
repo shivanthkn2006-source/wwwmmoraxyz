@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { recoverAuthTransportOncePerSession } from '@/lib/authTransportRecovery';
@@ -36,8 +36,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const refreshStartedRef = useRef(false);
-
   const applySession = useCallback((nextSession: Session | null) => {
     setSession((current) => current?.access_token === nextSession?.access_token ? current : nextSession);
     setUser((current) => current?.id === nextSession?.user?.id ? current : nextSession?.user ?? null);
@@ -46,38 +44,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     let finished = false;
-    let retryInterval: ReturnType<typeof setInterval> | null = null;
 
     // IMPORTANT: For Zoe Infinity continuity we must not prematurely treat users as logged-out.
     // Never hold the application shell beyond the three-second startup budget.
-    // A locally persisted session normally resolves synchronously; degraded transports
-    // continue retrying without forcing a reload or leaving the UI on a spinner.
+    // A locally persisted session normally resolves synchronously. The auth-state
+    // subscription is the single recovery path if transport hydration finishes late.
     const timeout = window.setTimeout(() => {
       if (finished) return;
-      console.warn('[Auth] Session load slow — continuing UI, retrying session fetch');
+      console.warn('[Auth] Session load slow — continuing without blocking the interface');
       setLoading(false);
-
-      // Background retries (max ~30s) to avoid permanent "guest" state.
-      let attempts = 0;
-      retryInterval = setInterval(async () => {
-        attempts += 1;
-        try {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (session) {
-            console.log('[Auth] Session recovered after slow start');
-            applySession(session);
-            if (retryInterval) clearInterval(retryInterval);
-            retryInterval = null;
-          }
-        } catch {
-          // ignore
-        }
-
-        if (attempts >= 15) {
-          if (retryInterval) clearInterval(retryInterval);
-          retryInterval = null;
-        }
-      }, 2000);
     }, 2500);
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -115,18 +90,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         applySession(session);
         window.clearTimeout(timeout);
 
-        // If we recovered quickly, stop any slow-start retries
-        if (retryInterval) {
-          clearInterval(retryInterval);
-          retryInterval = null;
-        }
-
-        // The auth client already owns refresh scheduling. Starting a second timer
-        // caused overlapping refreshes and duplicate SIGNED_IN/TOKEN_REFRESHED events.
-        if (session && !refreshStartedRef.current) {
-          refreshStartedRef.current = true;
-          supabase.auth.startAutoRefresh();
-        }
+        // The shared auth client owns token refresh scheduling. Do not start a
+        // second timer here; duplicate refresh owners create event and request storms.
       })
       .catch((err) => {
         console.warn('[Auth] getSession failed:', err);
@@ -134,21 +99,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setLoading(false);
         window.clearTimeout(timeout);
 
-        if (retryInterval) {
-          clearInterval(retryInterval);
-          retryInterval = null;
-        }
       });
 
     return () => {
       finished = true;
       window.clearTimeout(timeout);
-      if (retryInterval) clearInterval(retryInterval);
       subscription.unsubscribe();
-      if (refreshStartedRef.current) {
-        supabase.auth.stopAutoRefresh();
-        refreshStartedRef.current = false;
-      }
     };
   }, [applySession]);
 

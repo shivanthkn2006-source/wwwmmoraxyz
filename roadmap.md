@@ -130,8 +130,10 @@
 ## 2026-09-22 — Sign-in startup and Zoe stability
 - [x] Remove eager preview self-heal navigation from the pre-render path
 - [x] Bound initial auth loading to 2.5 seconds and remove duplicate token-refresh scheduling
+- [x] Remove the 15-request slow-session retry loop; rely on the single auth-state subscription
 - [x] Replace the false Zoe reconnect startup label with an accurate M'Mora loading state
 - [x] Move platform purge out of the critical render path and stop synthetic reconnect dispatches
 - [x] Deduplicate Zoe core scans and defer automatic diagnostics until idle
+- [x] Defer the heavy Zoe provider graph until after Home becomes interactive
 - [x] Block repeated automatic chunk-recovery reloads within one session
 - [ ] Verify signed-in Home load timing, reload persistence, and Zoe recovery in a real account session

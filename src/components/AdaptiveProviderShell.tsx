@@ -76,6 +76,7 @@ interface AdaptiveProviderShellProps {
 export const AdaptiveProviderShell = memo(({ children, forceMode }: AdaptiveProviderShellProps) => {
   const [mode, setMode] = useState<'lite' | 'standard' | 'god'>('standard');
   const [initialized, setInitialized] = useState(false);
+  const [providersReady, setProvidersReady] = useState(false);
   
   let tierContext: ReturnType<typeof useDeviceTierContext> | null = null;
   try {
@@ -134,6 +135,34 @@ export const AdaptiveProviderShell = memo(({ children, forceMode }: AdaptiveProv
     setInitialized(true);
   }, [tier, capabilities?.isLowPowerDevice, isDetecting, forceMode, isAuthRoute]);
 
+  // Keep the first paint and session hydration independent of the diagnostic
+  // provider graph. Mount it only after the page is interactive and the browser
+  // has an idle window, avoiding the post-sign-in /user request burst.
+  useEffect(() => {
+    if (!initialized || isAuthRoute || mode === 'lite') {
+      setProvidersReady(false);
+      return;
+    }
+
+    let idleId: number | null = null;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    const enable = () => setProvidersReady(true);
+
+    if ('requestIdleCallback' in window) {
+      idleId = (window as Window & { requestIdleCallback: (callback: () => void, options?: { timeout: number }) => number })
+        .requestIdleCallback(enable, { timeout: 8_000 });
+    } else {
+      timeoutId = setTimeout(enable, 5_000);
+    }
+
+    return () => {
+      if (idleId !== null && 'cancelIdleCallback' in window) {
+        (window as Window & { cancelIdleCallback: (id: number) => void }).cancelIdleCallback(idleId);
+      }
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [initialized, isAuthRoute, mode]);
+
   // Memory pressure monitoring - downgrade if needed
   useEffect(() => {
     if (mode === 'lite') return; // Already at minimum
@@ -157,8 +186,8 @@ export const AdaptiveProviderShell = memo(({ children, forceMode }: AdaptiveProv
   }, [mode]);
 
   // Render appropriate provider based on mode
-  if (!initialized) {
-    // During detection, render children without heavy providers
+  if (!initialized || !providersReady) {
+    // During detection/startup, render the usable page without heavy providers.
     return <>{children}</>;
   }
 

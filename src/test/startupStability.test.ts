@@ -15,8 +15,9 @@ describe('startup and reconnect stability', () => {
   it('uses a bounded auth shell and one refresh owner', () => {
     const auth = read('src/lib/auth.tsx');
     expect(auth).toContain('}, 2500);');
-    expect(auth).toContain('supabase.auth.startAutoRefresh()');
+    expect(auth).not.toContain('supabase.auth.startAutoRefresh()');
     expect(auth).not.toContain('10 * 60 * 1000); // Every 10 minutes');
+    expect(auth).not.toContain('retryInterval');
   });
 
   it('shows accurate startup copy and blocks repeated automatic recovery', () => {
@@ -31,5 +32,6 @@ describe('startup and reconnect stability', () => {
     expect(hook).toContain('requestIdleCallback');
     expect(hook).toContain('if (!user || !autoScan) return;');
     expect(read('src/components/core/ZoeCoreUnifiedProvider.tsx')).toContain('useZoeCoreUnified(autoScan)');
+    expect(read('src/components/AdaptiveProviderShell.tsx')).toContain('if (!initialized || !providersReady)');
   });
 });
