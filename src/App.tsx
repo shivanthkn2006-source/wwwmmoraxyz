@@ -179,7 +179,7 @@ const PageLoader = () => (
   <div className="flex min-h-screen items-center justify-center bg-background text-foreground">
     <div className="flex flex-col items-center gap-4 rounded-lg border border-border bg-card/60 px-6 py-5 shadow-lg backdrop-blur">
       <div className="h-10 w-10 animate-spin rounded-full border-2 border-muted border-b-primary" />
-      <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Zoe is reconnecting</p>
+      <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Loading M'Mora</p>
     </div>
   </div>
 );

@@ -126,3 +126,12 @@
 - [x] Extend the warm frosted white treatment to Home, Event Planner Diary, Smart Reminders, and Calendar without changing their behavior
 - [x] Extend the same treatment to Omni-Sense, all `/admin` screens, Sovereign Vault, and the Home sovereign control panel
 - [ ] Verify signed-in phone, tablet, and desktop layouts across Home, planning tools, and representative admin screens
+
+## 2026-09-22 — Sign-in startup and Zoe stability
+- [x] Remove eager preview self-heal navigation from the pre-render path
+- [x] Bound initial auth loading to 2.5 seconds and remove duplicate token-refresh scheduling
+- [x] Replace the false Zoe reconnect startup label with an accurate M'Mora loading state
+- [x] Move platform purge out of the critical render path and stop synthetic reconnect dispatches
+- [x] Deduplicate Zoe core scans and defer automatic diagnostics until idle
+- [x] Block repeated automatic chunk-recovery reloads within one session
+- [ ] Verify signed-in Home load timing, reload persistence, and Zoe recovery in a real account session
