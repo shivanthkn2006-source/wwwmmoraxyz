@@ -136,7 +136,7 @@
 - [x] Deduplicate Zoe core scans and defer automatic diagnostics until idle
 - [x] Defer the heavy Zoe provider graph until after Home becomes interactive
 - [x] Block repeated automatic chunk-recovery reloads within one session
-- [ ] Verify signed-in Home load timing, reload persistence, and Zoe recovery in a real account session
+- [x] Verify signed-in Home load timing, reload persistence, and Zoe recovery in a real account session
 
 ## 2026-09-22 — Signed-in speed, live admin data, and planning synchronization
 - [x] Walk the signed-in @moksh50 flow through Home, reload, and Zoe reconnect timing
