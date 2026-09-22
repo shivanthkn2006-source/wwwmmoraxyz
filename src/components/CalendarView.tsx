@@ -7,6 +7,7 @@ import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-reac
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek } from 'date-fns';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getImportantDayForDate } from '@/data/worldImportantDays';
+import { PLANNING_SYNC_EVENT } from '@/lib/planningSync';
 
 interface Reminder {
   id: string;
@@ -28,10 +29,12 @@ const CATEGORY_COLORS = {
 };
 
 interface Event {
-  display_name: string;
-  event_type: string | null;
-  event_date: string | null;
-  event_recurring: boolean | null;
+  id: string;
+  title: string;
+  description: string | null;
+  date_type: string;
+  date_value: string;
+  is_recurring: boolean | null;
 }
 
 export const CalendarView = () => {
@@ -46,7 +49,25 @@ export const CalendarView = () => {
       loadReminders();
       loadEvents();
     }
-  }, [user, currentDate]);
+  }, [user, currentDate, view]);
+
+  useEffect(() => {
+    if (!user) return;
+    const refresh = () => {
+      void loadReminders();
+      void loadEvents();
+    };
+    window.addEventListener(PLANNING_SYNC_EVENT, refresh);
+    const channel = supabase
+      .channel(`planning-calendar-${user.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'reminders', filter: `user_id=eq.${user.id}` }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'important_dates', filter: `user_id=eq.${user.id}` }, refresh)
+      .subscribe();
+    return () => {
+      window.removeEventListener(PLANNING_SYNC_EVENT, refresh);
+      void supabase.removeChannel(channel);
+    };
+  }, [user, currentDate, view]);
 
   const loadReminders = async () => {
     if (!user) return;
@@ -74,10 +95,26 @@ export const CalendarView = () => {
     const { data, error } = await supabase
       .from('profiles')
       .select('display_name, event_type, event_date, event_recurring')
-      .not('event_date', 'is', null);
+      .eq('user_id', user.id)
+      .not('event_date', 'is', null)
+      .maybeSingle();
 
-    if (!error && data) {
-      setEvents(data);
+    const { data: plannedDates, error: plannedError } = await supabase
+      .from('important_dates')
+      .select('id, title, description, date_type, date_value, is_recurring')
+      .eq('user_id', user.id)
+      .order('date_value', { ascending: true });
+
+    if (!error && !plannedError) {
+      const legacy = data?.event_date ? [{
+        id: `profile-${user.id}`,
+        title: data.display_name,
+        description: null,
+        date_type: data.event_type || 'event',
+        date_value: data.event_date,
+        is_recurring: data.event_recurring,
+      }] : [];
+      setEvents([...(plannedDates || []), ...legacy]);
     }
   };
 
@@ -99,10 +136,10 @@ export const CalendarView = () => {
     );
 
     const dayEvents = events.filter(e => {
-      if (!e.event_date) return false;
-      const eventDate = new Date(e.event_date);
+      if (!e.date_value) return false;
+      const eventDate = new Date(`${e.date_value}T00:00:00`);
       
-      if (e.event_recurring) {
+      if (e.is_recurring) {
         return eventDate.getMonth() === day.getMonth() && 
                eventDate.getDate() === day.getDate();
       } else {
@@ -206,11 +243,11 @@ export const CalendarView = () => {
                       
                       {dayEvents.map((event, idx) => (
                         <div
-                          key={idx}
+                           key={event.id || idx}
                           className="text-xs p-1 rounded bg-accent/20 text-accent-foreground truncate"
-                          title={event.display_name}
+                           title={event.description || event.title}
                         >
-                          {event.event_type === 'birthday' ? '🎂' : '🎉'} {event.display_name}
+                           {event.date_type.toLowerCase() === 'birthday' ? '🎂' : '🎉'} {event.title}
                         </div>
                       ))}
                     </div>
