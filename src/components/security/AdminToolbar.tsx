@@ -60,23 +60,23 @@ export const AdminToolbar: React.FC = () => {
             initial={{ opacity: 0, y: 20, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.9 }}
-            className="fixed bottom-20 right-4 z-[99998] w-72 bg-black/95 border border-purple-500/30 rounded-lg shadow-xl shadow-purple-500/20 overflow-hidden"
+            className="admin-liquid-panel fixed bottom-20 right-4 z-[99998] w-72 overflow-hidden rounded-lg border"
           >
             {/* Header */}
-            <div className="p-3 border-b border-purple-500/30 flex items-center justify-between bg-purple-500/10">
+            <div className="flex items-center justify-between border-b p-3">
               <div className="flex items-center gap-2">
-                <Zap className="w-4 h-4 text-purple-400" />
-                <span className="text-purple-300 font-mono text-sm">SOVEREIGN CONTROL</span>
+                <Zap className="h-4 w-4" />
+                <span className="font-mono text-sm">SOVEREIGN CONTROL</span>
               </div>
-              <button onClick={() => setIsOpen(false)} className="text-gray-400 hover:text-white">
+              <button onClick={() => setIsOpen(false)} className="text-muted-foreground hover:text-foreground" aria-label="Close sovereign control">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             {/* Admin Info */}
-            <div className="p-3 border-b border-purple-500/20">
-              <div className="text-xs text-gray-500 font-mono">LOGGED IN AS</div>
-              <div className="text-cyan-400 font-mono">@{adminUsername}</div>
+            <div className="border-b p-3">
+              <div className="font-mono text-xs text-muted-foreground">LOGGED IN AS</div>
+              <div className="font-mono">@{adminUsername}</div>
             </div>
 
             {/* Controls */}
@@ -85,14 +85,14 @@ export const AdminToolbar: React.FC = () => {
               <button
                 onClick={toggleDevMode}
                 className={`w-full flex items-center justify-between p-2 rounded ${
-                  isDevMode ? 'bg-green-500/20 border border-green-500/30' : 'bg-gray-800/50 border border-gray-700'
+                  isDevMode ? 'border border-foreground/45 bg-foreground/10' : 'border border-foreground/20 bg-transparent'
                 }`}
               >
                 <div className="flex items-center gap-2">
                   <Settings className="w-4 h-4" />
                   <span className="text-sm">Dev Mode</span>
                 </div>
-                <span className={`text-xs font-mono ${isDevMode ? 'text-green-400' : 'text-gray-500'}`}>
+                <span className={`text-xs font-mono ${isDevMode ? 'text-foreground' : 'text-muted-foreground'}`}>
                   {isDevMode ? 'ON' : 'OFF'}
                 </span>
               </button>
@@ -101,14 +101,14 @@ export const AdminToolbar: React.FC = () => {
               <button
                 onClick={toggleSecurity}
                 className={`w-full flex items-center justify-between p-2 rounded ${
-                  securityEnabled ? 'bg-cyan-500/20 border border-cyan-500/30' : 'bg-red-500/20 border border-red-500/30'
+                  securityEnabled ? 'border border-foreground/45 bg-foreground/10' : 'border border-foreground/20 bg-transparent'
                 }`}
               >
                 <div className="flex items-center gap-2">
                   {securityEnabled ? <Shield className="w-4 h-4" /> : <ShieldOff className="w-4 h-4" />}
                   <span className="text-sm">Security Systems</span>
                 </div>
-                <span className={`text-xs font-mono ${securityEnabled ? 'text-cyan-400' : 'text-red-400'}`}>
+                <span className={`text-xs font-mono ${securityEnabled ? 'text-foreground' : 'text-muted-foreground'}`}>
                   {securityEnabled ? 'ON' : 'OFF'}
                 </span>
               </button>
@@ -117,14 +117,14 @@ export const AdminToolbar: React.FC = () => {
               <button
                 onClick={toggleSimulateUser}
                 className={`w-full flex items-center justify-between p-2 rounded ${
-                  simulateUserView ? 'bg-orange-500/20 border border-orange-500/30' : 'bg-gray-800/50 border border-gray-700'
+                  simulateUserView ? 'border border-foreground/45 bg-foreground/10' : 'border border-foreground/20 bg-transparent'
                 }`}
               >
                 <div className="flex items-center gap-2">
                   {simulateUserView ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   <span className="text-sm">Simulate User View</span>
                 </div>
-                <span className={`text-xs font-mono ${simulateUserView ? 'text-orange-400' : 'text-gray-500'}`}>
+                <span className={`text-xs font-mono ${simulateUserView ? 'text-foreground' : 'text-muted-foreground'}`}>
                   {simulateUserView ? 'ON' : 'OFF'}
                 </span>
               </button>
@@ -132,7 +132,7 @@ export const AdminToolbar: React.FC = () => {
               {/* Clear Cache */}
               <button
                 onClick={clearCache}
-                className="w-full flex items-center justify-between p-2 rounded bg-gray-800/50 border border-gray-700 hover:bg-red-500/20 hover:border-red-500/30 transition-colors"
+                className="flex w-full items-center justify-between rounded border border-foreground/20 bg-transparent p-2 transition-colors hover:border-foreground/45 hover:bg-foreground/10"
               >
                 <div className="flex items-center gap-2">
                   <Trash2 className="w-4 h-4" />
@@ -142,7 +142,7 @@ export const AdminToolbar: React.FC = () => {
             </div>
 
             {/* Status Footer */}
-            <div className="p-2 bg-black/50 border-t border-purple-500/20 text-xs font-mono text-gray-500 text-center">
+            <div className="border-t p-2 text-center font-mono text-xs text-muted-foreground">
               {isDevMode ? '🔓 DEV MODE ACTIVE' : '🔒 PRODUCTION MODE'}
             </div>
           </motion.div>

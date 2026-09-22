@@ -119,7 +119,7 @@ export const CalendarView = () => {
   const days = getDaysInView();
 
   return (
-    <Card className="bg-card border-border">
+    <Card className="planning-liquid-section bg-card border-border" data-planning-surface="calendar">
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
