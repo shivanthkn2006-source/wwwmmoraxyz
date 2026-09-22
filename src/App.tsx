@@ -44,6 +44,8 @@ import { AppErrorBoundary } from "@/components/core/ErrorBoundary";
 import { PlatformLayout } from "@/layouts/PlatformLayout";
 import EarnedRoute from "@/components/access/EarnedRoute";
 import { reportPlatformError } from "@/lib/enterpriseTelemetry";
+import { markStartupPhase } from "@/lib/startupTiming";
+
 
 // Lazy load pages for code splitting and faster initial load
 const AuthPage = lazy(() => import("./pages/AuthPage"));
@@ -1387,10 +1389,17 @@ const SecurityBypassOnAuthRoutes = ({ children }: { children: React.ReactNode })
 };
 
 const App = () => {
+  // Record the exact startup phases so the remaining delay is measured, not guessed.
+  useEffect(() => {
+    markStartupPhase('app-mounted');
+    requestAnimationFrame(() => markStartupPhase('first-route-painted'));
+  }, []);
+
   // Check app version and force refresh if outdated
   useEffect(() => {
     checkAppVersion();
   }, []);
+
 
   // Capture invite token as early as possible (even before boot/splash/intro)
   // This prevents losing the token if any early UI flow triggers a redirect.

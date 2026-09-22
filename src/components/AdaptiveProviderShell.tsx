@@ -6,6 +6,8 @@
 
 import React, { memo, lazy, Suspense, useEffect, useState } from 'react';
 import { useDeviceTierContext } from '@/contexts/DeviceTierContext';
+import { markStartupPhase } from '@/lib/startupTiming';
+
 
 // Heavy providers - only loaded on capable devices
 const AdaptiveHoloProvider = lazy(() => 
@@ -146,7 +148,11 @@ export const AdaptiveProviderShell = memo(({ children, forceMode }: AdaptiveProv
 
     let idleId: number | null = null;
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
-    const enable = () => setProvidersReady(true);
+    const enable = () => {
+      setProvidersReady(true);
+      markStartupPhase('providers-ready');
+    };
+
 
     if ('requestIdleCallback' in window) {
       idleId = (window as Window & { requestIdleCallback: (callback: () => void, options?: { timeout: number }) => number })

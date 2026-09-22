@@ -66,10 +66,20 @@ const DayPlannerDiary = () => {
 
   useEffect(() => { if (user) { void loadEvents(); void loadNotes(); } }, [user, loadEvents, loadNotes]);
   useEffect(() => {
+    if (!user) return;
     const refresh = () => void loadEvents();
     window.addEventListener(PLANNING_SYNC_EVENT, refresh);
-    return () => window.removeEventListener(PLANNING_SYNC_EVENT, refresh);
-  }, [loadEvents]);
+    const channel = supabase
+      .channel(`planning-diary-${user.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'important_dates', filter: `user_id=eq.${user.id}` }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'reminders', filter: `user_id=eq.${user.id}` }, refresh)
+      .subscribe();
+    return () => {
+      window.removeEventListener(PLANNING_SYNC_EVENT, refresh);
+      void supabase.removeChannel(channel);
+    };
+  }, [user, loadEvents]);
+
 
   const saveEvent = async () => {
     if (!user || !eventDraft.title.trim() || !eventDraft.date) return toast.error('Add a title and date');

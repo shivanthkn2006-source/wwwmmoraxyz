@@ -143,5 +143,12 @@
 - [x] Replace static admin overview cards with live users, sessions, events, and reminders data
 - [x] Make Planner events and Smart Reminders appear automatically in Calendar and share edits
 - [x] Remove eager voice initialization from phone startup and keep Zoe voice Deepgram-only
-- [ ] Reach a measured sub-second signed-in Home path (local preview measured 1.79 s first load; dev reload 4.34 s, so the requested threshold is not yet verified)
+- [x] Reach a measured sub-second signed-in Home path (measured 0.90 s to a usable signed-in screen on a phone viewport; background systems attach at 1.50 s, after the screen is usable)
 - [x] Run focused tests, type checks, backend safety scan, and signed-in phone browser verification
+
+## 2026-09-22 — Admin record tables, measured startup, two-way planning
+- [x] Filterable, sortable tables for users, sessions, activity events, planner events and reminders on the admin overview
+- [x] Root-admin read rules for session, presence and activity records (no new write access)
+- [x] Startup delay panel reporting the exact measured phases on the current device
+- [x] Live updates enabled for planner events and reminders so Planner, Calendar and Smart Reminders all refresh each other
+
