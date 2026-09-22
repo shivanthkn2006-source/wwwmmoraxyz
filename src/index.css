@@ -1419,6 +1419,7 @@ html.phantom-mode [class*="animate-"] {
 
 .planning-liquid-section,
 .admin-liquid-panel,
+.home-liquid-page :is(.bg-card, [class*='bg-card/'], [class*='bg-muted'], [class*='bg-background']):not(img):not(video):not(canvas),
 .admin-liquid-page :is(.bg-card, [class*='bg-card/'], [class*='bg-muted'], [class*='bg-background']):not(img):not(video):not(canvas) {
   border-color: hsl(var(--liquid-white) / 0.24) !important;
   background-color: hsl(var(--liquid-white) / 0.07) !important;
@@ -1430,6 +1431,7 @@ html.phantom-mode [class*="animate-"] {
   -webkit-backdrop-filter: blur(28px) saturate(120%);
 }
 
+.home-liquid-page :is([class*='bg-primary'], [class*='bg-secondary'], [class*='bg-accent'], [class*='bg-gradient'], [class*='from-'], [class*='via-'], [class*='to-']):not(img):not(video):not(canvas),
 .planning-liquid-section :is(.bg-card, [class*='bg-card/'], [class*='bg-muted'], [class*='bg-primary'], [class*='bg-accent'], [class*='bg-gradient'], [class*='from-'], [class*='to-']):not(img):not(video):not(canvas),
 .admin-liquid-page :is([class*='bg-primary'], [class*='bg-secondary'], [class*='bg-accent'], [class*='bg-destructive'], [class*='bg-gradient'], [class*='from-'], [class*='via-'], [class*='to-']):not(img):not(video):not(canvas),
 .admin-liquid-panel :is([class*='bg-'], [class*='from-'], [class*='via-'], [class*='to-']):not(img):not(video):not(canvas) {

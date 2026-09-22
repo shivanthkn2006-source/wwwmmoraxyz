@@ -26,6 +26,7 @@ describe('shared warm liquid surfaces', () => {
 
   it('preserves media while making chrome white and transparent', () => {
     expect(css).toContain(':not(img):not(video):not(canvas)');
+    expect(css).toContain(".home-liquid-page :is(.bg-card, [class*='bg-card/'], [class*='bg-muted'], [class*='bg-background'])");
     expect(css).toContain('backdrop-filter: blur(28px) saturate(120%)');
     expect(css).toContain('color: hsl(var(--liquid-white))');
   });
