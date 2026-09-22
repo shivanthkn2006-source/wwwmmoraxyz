@@ -18,6 +18,9 @@ import EdgeFunctionHealthPanel from '@/components/admin/EdgeFunctionHealthPanel'
 import DhfLinkHealthPanel from '@/components/admin/DhfLinkHealthPanel';
 import LoadTestPanel from '@/components/admin/LoadTestPanel';
 import GrowthOnboardingWizard from '@/components/admin/GrowthOnboardingWizard';
+import AdminDataTables from '@/components/admin/AdminDataTables';
+import StartupTimingPanel from '@/components/admin/StartupTimingPanel';
+
 
 
 type TableName = 'profiles' | 'online_sessions' | 'user_sessions' | 'user_activity_log' | 'important_dates' | 'reminders';
@@ -150,10 +153,19 @@ const AdminOverviewPage: React.FC = () => {
               })}
             </div>
 
+            <section className="mt-6">
+              <StartupTimingPanel />
+            </section>
+
+            <section className="mt-6">
+              <AdminDataTables />
+            </section>
+
             <section className="mt-8 grid gap-4 lg:grid-cols-2">
               <EdgeFunctionHealthPanel />
               <DhfLinkHealthPanel />
             </section>
+
 
             <section className="mt-4">
               <LoadTestPanel />

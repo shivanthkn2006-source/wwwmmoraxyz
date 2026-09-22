@@ -11,7 +11,7 @@ import { useAuth } from '@/lib/auth';
 import { useToast } from '@/components/ui/use-toast';
 import { Bell, Plus, Trash2, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
-import { notifyPlanningChanged } from '@/lib/planningSync';
+import { notifyPlanningChanged, PLANNING_SYNC_EVENT } from '@/lib/planningSync';
 
 interface Reminder {
   id: string;
@@ -54,6 +54,24 @@ export const RemindersManager = () => {
       loadReminders();
     }
   }, [user]);
+
+  // Two-way sync: reminders refresh when Planner or Calendar changes anything,
+  // and when the shared rows change in the database.
+  useEffect(() => {
+    if (!user) return;
+    const refresh = () => void loadReminders();
+    window.addEventListener(PLANNING_SYNC_EVENT, refresh);
+    const channel = supabase
+      .channel(`planning-reminders-${user.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'reminders', filter: `user_id=eq.${user.id}` }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'important_dates', filter: `user_id=eq.${user.id}` }, refresh)
+      .subscribe();
+    return () => {
+      window.removeEventListener(PLANNING_SYNC_EVENT, refresh);
+      void supabase.removeChannel(channel);
+    };
+  }, [user]);
+
 
   const loadReminders = async () => {
     if (!user) return;
