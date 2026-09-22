@@ -1359,6 +1359,149 @@ html.phantom-mode [class*="animate-"] {
   color: hsl(0 0% 100%);
 }
 
+/* Shared warm Liquid Glass room for Home, Profile planning tools, and every
+   administrator route. Media remains untouched; only interface chrome is
+   recoloured so feeds, member photos, charts, and camera output stay legible. */
+.home-liquid-page,
+.admin-liquid-page,
+.admin-liquid-panel,
+.planning-liquid-section {
+  --liquid-white: 0 0% 100%;
+  --liquid-ambient-a: 36 26% 46%;
+  --liquid-ambient-b: 26 30% 40%;
+  --liquid-ambient-c: 92 16% 38%;
+  --liquid-ambient-d: 28 20% 34%;
+  color: hsl(var(--liquid-white));
+}
+
+.home-liquid-page,
+.admin-liquid-page {
+  position: relative;
+  isolation: isolate;
+  background-color: transparent !important;
+}
+
+.home-liquid-page::before,
+.admin-liquid-page::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 90% at 12% 6%, hsl(var(--liquid-ambient-a) / 0.9), transparent 62%),
+    radial-gradient(110% 85% at 90% 10%, hsl(var(--liquid-ambient-b) / 0.85), transparent 60%),
+    radial-gradient(120% 95% at 80% 94%, hsl(var(--liquid-ambient-c) / 0.8), transparent 64%),
+    radial-gradient(130% 100% at 18% 96%, hsl(var(--liquid-ambient-d) / 0.85), transparent 66%),
+    linear-gradient(165deg, hsl(34 22% 42%), hsl(26 18% 30%));
+  filter: blur(28px) saturate(120%);
+}
+
+.home-liquid-page::after,
+.admin-liquid-page::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(
+    160deg,
+    hsl(var(--liquid-white) / 0.2),
+    hsl(var(--liquid-white) / 0.08) 45%,
+    hsl(var(--liquid-white) / 0.15)
+  );
+  box-shadow:
+    inset 0 1px 0 hsl(var(--liquid-white) / 0.55),
+    inset 0 -1px 0 hsl(var(--liquid-white) / 0.2);
+  backdrop-filter: blur(52px) saturate(125%);
+  -webkit-backdrop-filter: blur(52px) saturate(125%);
+}
+
+.planning-liquid-section,
+.admin-liquid-panel,
+.admin-liquid-page :is(.bg-card, [class*='bg-card/'], [class*='bg-muted'], [class*='bg-background']):not(img):not(video):not(canvas) {
+  border-color: hsl(var(--liquid-white) / 0.24) !important;
+  background-color: hsl(var(--liquid-white) / 0.07) !important;
+  background-image: none !important;
+  box-shadow:
+    inset 0 1px 0 hsl(var(--liquid-white) / 0.26),
+    inset 0 -1px 0 hsl(var(--liquid-white) / 0.08);
+  backdrop-filter: blur(28px) saturate(120%);
+  -webkit-backdrop-filter: blur(28px) saturate(120%);
+}
+
+.planning-liquid-section :is(.bg-card, [class*='bg-card/'], [class*='bg-muted'], [class*='bg-primary'], [class*='bg-accent'], [class*='bg-gradient'], [class*='from-'], [class*='to-']):not(img):not(video):not(canvas),
+.admin-liquid-page :is([class*='bg-primary'], [class*='bg-secondary'], [class*='bg-accent'], [class*='bg-destructive'], [class*='bg-gradient'], [class*='from-'], [class*='via-'], [class*='to-']):not(img):not(video):not(canvas),
+.admin-liquid-panel :is([class*='bg-'], [class*='from-'], [class*='via-'], [class*='to-']):not(img):not(video):not(canvas) {
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+.home-liquid-page :is(h1, h2, h3, h4, h5, h6, p, span, label, button, a),
+.home-liquid-page svg,
+.planning-liquid-section :is(h1, h2, h3, h4, p, span, label, button, input, textarea),
+.planning-liquid-section svg,
+.admin-liquid-page :is(h1, h2, h3, h4, h5, h6, p, span, label, button, a, input, textarea, select),
+.admin-liquid-page svg,
+.admin-liquid-panel :is(div, span, button),
+.admin-liquid-panel svg {
+  color: hsl(var(--liquid-white)) !important;
+}
+
+.home-liquid-page :is(.text-muted-foreground, [class*='text-primary'], [class*='text-secondary'], [class*='text-accent']),
+.planning-liquid-section :is(.text-muted-foreground, [class*='text-primary'], [class*='text-secondary'], [class*='text-accent'], [class*='text-destructive'], [class*='text-blue'], [class*='text-green'], [class*='text-red'], [class*='text-purple'], [class*='text-yellow'], [class*='text-gray']),
+.admin-liquid-page :is(.text-muted-foreground, [class*='text-primary'], [class*='text-secondary'], [class*='text-accent'], [class*='text-destructive'], [class*='text-blue'], [class*='text-green'], [class*='text-red'], [class*='text-purple'], [class*='text-yellow'], [class*='text-cyan'], [class*='text-orange'], [class*='text-gray']) {
+  color: hsl(var(--liquid-white) / 0.7) !important;
+}
+
+.planning-liquid-section :is(button, input, textarea, select, [role='button'], [role='tab'], [role='switch']),
+.admin-liquid-page :is(button, input, textarea, select, [role='button'], [role='tab'], [role='switch']),
+.admin-liquid-panel button {
+  border-color: hsl(var(--liquid-white) / 0.24) !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  color: hsl(var(--liquid-white)) !important;
+}
+
+.planning-liquid-section :is(button, [role='button'], [role='tab']):is(:hover, :focus-visible, [data-state='active'], [data-state='checked']),
+.admin-liquid-page :is(button, a, [role='button'], [role='tab']):is(:hover, :focus-visible, [data-state='active'], [data-state='checked']),
+.admin-liquid-panel button:is(:hover, :focus-visible) {
+  border-color: hsl(var(--liquid-white) / 0.48) !important;
+  background-color: hsl(var(--liquid-white) / 0.1) !important;
+}
+
+.planning-liquid-section :is([class~='border'], [class*='border-']),
+.admin-liquid-page :is([class~='border'], [class*='border-']),
+.admin-liquid-panel :is([class~='border'], [class*='border-']) {
+  border-color: hsl(var(--liquid-white) / 0.22) !important;
+}
+
+.planning-liquid-section :is(input, textarea)::placeholder,
+.admin-liquid-page :is(input, textarea)::placeholder {
+  color: hsl(var(--liquid-white) / 0.5) !important;
+}
+
+.admin-liquid-panel {
+  border-color: hsl(var(--liquid-white) / 0.28);
+  background: linear-gradient(160deg, hsl(var(--liquid-white) / 0.15), hsl(var(--liquid-white) / 0.06));
+  box-shadow:
+    inset 0 1px 0 hsl(var(--liquid-white) / 0.38),
+    0 18px 50px hsl(var(--background) / 0.28);
+  backdrop-filter: blur(28px) saturate(120%);
+  -webkit-backdrop-filter: blur(28px) saturate(120%);
+}
+
+/* Home's media is the content, so preserve its natural colour while frosting
+   only controls and navigation that already carry a surface. */
+.home-liquid-page :is(header, nav, [role='tablist'], [data-home-floating-tools]) {
+  border-color: hsl(var(--liquid-white) / 0.22);
+  color: hsl(var(--liquid-white));
+}
+
+.home-liquid-page :is(button, input, [role='button'], [role='tab']) {
+  color: hsl(var(--liquid-white));
+}
+
 /* Main M'Mora Profile — edge-to-edge transparent, white-only presentation.
    This wrapper is intentionally route-scoped so the many shared Profile
    sections keep their behavior without changing their appearance elsewhere. */
