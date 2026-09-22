@@ -178,7 +178,7 @@ const DayPlannerDiary = () => {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="planning-liquid-section space-y-4" data-planning-surface="diary">
       <Card className="bg-card/50 backdrop-blur-sm border-border/50">
         <CardHeader>
           <div className="flex items-center justify-between">

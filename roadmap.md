@@ -121,3 +121,8 @@
 - [x] Signed-in phone/tablet/desktop visual verification
 - [x] Confirm the Calls-matched liquid surface and visible profile controls in the signed-in Home profile panel
 - [x] Place the signed-in member photo from beneath the Profile header through the frosted identity and stats summary
+
+## 2026-09-22 — Shared warm Liquid Glass surfaces
+- [x] Extend the warm frosted white treatment to Home, Event Planner Diary, Smart Reminders, and Calendar without changing their behavior
+- [x] Extend the same treatment to Omni-Sense, all `/admin` screens, Sovereign Vault, and the Home sovereign control panel
+- [ ] Verify signed-in phone, tablet, and desktop layouts across Home, planning tools, and representative admin screens

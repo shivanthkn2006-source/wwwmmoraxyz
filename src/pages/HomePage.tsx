@@ -2511,7 +2511,7 @@ const HomePage = () => {
       
        {/* Atlas HUD Toggle Button moved into HamburgerMenu */}
       
-      <div className="h-[100dvh] min-h-0 overflow-hidden bg-background">
+      <div className="home-liquid-page h-[100dvh] min-h-0 overflow-hidden bg-transparent" data-home-liquid-page>
         {/* Tutorial Overlay - Temporarily hidden */}
         {/* {showTutorial && (
           <TutorialOverlay

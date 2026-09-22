@@ -458,6 +458,7 @@ const VoiceRuntimeGate = ({ children }: { children: React.ReactNode }) => {
 const RouteAwareShell = () => {
   const { pathname } = useLocation();
   const { user, loading } = useAuth();
+  const isAdminLiquidRoute = pathname.startsWith('/admin') || pathname === '/analytics-dashboard';
   
   // FIX 3: THE COMPONENT PURGE - Zoe Infinity is ISOLATED from AdaptiveProviderShell
   // These routes bypass the heavy provider tree for pure isolation
@@ -488,7 +489,7 @@ const RouteAwareShell = () => {
   // Ultra-light shell for isolated routes (prevents Safari hanging/crashing)
   if (isLightRoute) {
     return (
-      <div className="min-h-screen bg-background text-foreground omega-void-bg">
+      <div className={`${isAdminLiquidRoute ? 'admin-liquid-page' : ''} min-h-screen bg-background text-foreground omega-void-bg`} data-admin-liquid-page={isAdminLiquidRoute || undefined}>
         <VoiceRuntimeGate>
           <MicPermissionInitializer />
           <PlatformPermissionsInitializer />
@@ -577,7 +578,7 @@ const RouteAwareShell = () => {
 
               <GenesisIntroWrapper>
                 <QuantumGatekeeper enabled={true}>
-                  <div className="min-h-screen bg-background text-foreground omega-void-bg">
+                  <div className={`${isAdminLiquidRoute ? 'admin-liquid-page' : ''} min-h-screen bg-background text-foreground omega-void-bg`} data-admin-liquid-page={isAdminLiquidRoute || undefined}>
                     <ErrorBoundary>
                       <AppErrorBoundary moduleName={`route:${pathname}`} resetKeys={[pathname]}>
                       <Suspense fallback={<PageLoader />}>
