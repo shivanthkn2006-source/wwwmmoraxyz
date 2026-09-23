@@ -84,6 +84,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
           sessionStorage.setItem('zoe_infinity_session_valid', 'true');
         } catch {}
+        // Every member needs their own profile row or they stay invisible to
+        // friends and the member directory. Written once, after the session is
+        // live, and skipped when it already exists.
+        void ensureOwnProfile(session.user);
       }
     });
 
