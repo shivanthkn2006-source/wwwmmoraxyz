@@ -2,22 +2,33 @@
  * ADMIN DATA TABLES — real users, sessions, events and reminders.
  *
  * Every row comes from the database under the root-admin read rules. Each table
- * can be filtered by text and sorted by any column, like the Calendar filters.
+ * can be filtered by text and sorted by any column, like the Calendar filters,
+ * and the admin can add, change or remove records from here.
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ArrowDown, ArrowUp, Loader2, RefreshCw } from 'lucide-react';
+import { ArrowDown, ArrowUp, Loader2, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { PLANNING_SYNC_EVENT } from '@/lib/planningSync';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { PLANNING_SYNC_EVENT, notifyPlanningChanged } from '@/lib/planningSync';
 
 type Row = Record<string, string | number | null>;
 
 interface Column {
   key: string;
   label: string;
+}
+
+interface Field {
+  key: string;
+  label: string;
+  type?: 'text' | 'date' | 'datetime-local' | 'password' | 'email';
+  createOnly?: boolean;
 }
 
 interface TableSpec {
@@ -28,6 +39,7 @@ interface TableSpec {
   order: string;
   ascending?: boolean;
   columns: Column[];
+  fields: Field[];
   map: (raw: Record<string, unknown>) => Row;
 }
 
@@ -39,6 +51,7 @@ const stamp = (value: unknown): string | null => {
 };
 
 const SPECS: TableSpec[] = [
+
   {
     id: 'users',
     label: 'Users',
