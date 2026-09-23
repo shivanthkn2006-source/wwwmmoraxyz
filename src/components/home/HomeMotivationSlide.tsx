@@ -1,5 +1,7 @@
 import React from 'react';
-import { Check, Quote, Sun } from 'lucide-react';
+import { Check, Quote, Sun, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { useMotivationVote } from '@/hooks/useMotivationVote';
+import { cn } from '@/lib/utils';
 import type { ZoeMotivation } from '@/hooks/useZoeMotivation';
 import { useDailyQuote } from '@/hooks/useDailyQuote';
 
@@ -11,6 +13,7 @@ interface HomeMotivationSlideProps {
 /** Persistent in-feed version of today's motivation. */
 export default function HomeMotivationSlide({ motivation, posterUrl }: HomeMotivationSlideProps) {
   const daily = useDailyQuote();
+  const { vote, cast } = useMotivationVote(motivation.id, (motivation as { user_id?: string }).user_id);
   return (
     <article className="relative flex h-full min-h-full w-full shrink-0 snap-start snap-always items-end overflow-hidden bg-background text-foreground" data-daily-motivation>
       {posterUrl && (
@@ -44,6 +47,16 @@ export default function HomeMotivationSlide({ motivation, posterUrl }: HomeMotiv
         <div className="mt-6 flex max-w-xl items-start gap-2 text-sm italic text-foreground/90">
           <Quote className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
           <p>&ldquo;{daily.quote}&rdquo;<span className="not-italic"> — {daily.author}</span></p>
+        </div>
+        <div className="mt-5 flex items-center gap-5" aria-label="Rate today's motivation">
+          <button type="button" onClick={() => void cast(1)} aria-label="Helpful" aria-pressed={vote === 1}
+            className={cn('p-1 transition-transform active:scale-90 focus:outline-none', vote === 1 ? 'text-primary' : 'text-foreground/80')}>
+            <ThumbsUp className="h-6 w-6" fill={vote === 1 ? 'currentColor' : 'none'} strokeWidth={1.75} />
+          </button>
+          <button type="button" onClick={() => void cast(-1)} aria-label="Not helpful" aria-pressed={vote === -1}
+            className={cn('p-1 transition-transform active:scale-90 focus:outline-none', vote === -1 ? 'text-primary' : 'text-foreground/80')}>
+            <ThumbsDown className="h-6 w-6" fill={vote === -1 ? 'currentColor' : 'none'} strokeWidth={1.75} />
+          </button>
         </div>
       </div>
     </article>
