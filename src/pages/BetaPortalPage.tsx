@@ -20,6 +20,7 @@ import {
   INVITE_REASON_COPY,
   normaliseInviteCode,
   redeemInviteCode,
+  signUpWithInvite,
   validateInviteCode,
 } from '@/lib/betaInvites';
 
@@ -73,7 +74,7 @@ export default function BetaPortalPage() {
       setMessage(INVITE_REASON_COPY[result.error as keyof typeof INVITE_REASON_COPY] ?? 'Invite could not be applied.');
       return;
     }
-    navigate('/platform-overview', { replace: true });
+    navigate('/', { replace: true });
   }, [code, navigate]);
 
   const submitAccount = async (event: React.FormEvent) => {
@@ -87,16 +88,17 @@ export default function BetaPortalPage() {
         await finish();
         return;
       }
-      const { data, error } = await supabase.auth.signUp({
-        email: email.trim(),
-        password,
-        options: { emailRedirectTo: `${window.location.origin}/beta?code=${encodeURIComponent(code)}` },
-      });
-      if (error) throw error;
-      if (!data.session) {
-        setMessage('Account created. Confirm your email, then return here to finish with the same code.');
+      const created = await signUpWithInvite(code, email.trim(), password);
+      if (!created.ok) {
+        setMessage(
+          INVITE_REASON_COPY[created.error as keyof typeof INVITE_REASON_COPY] ??
+            created.error ??
+            'Could not create the account.',
+        );
         return;
       }
+      const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+      if (error) throw error;
       await finish();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Could not complete sign in.');

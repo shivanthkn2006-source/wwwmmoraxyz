@@ -3,6 +3,7 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { recoverAuthTransportOncePerSession } from '@/lib/authTransportRecovery';
 import { markStartupPhase } from '@/lib/startupTiming';
+import { ensureOwnProfile } from '@/lib/ensureOwnProfile';
 
 
 interface AuthContextType {
@@ -84,6 +85,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
           sessionStorage.setItem('zoe_infinity_session_valid', 'true');
         } catch {}
+        // Every member needs their own profile row or they stay invisible to
+        // friends and the member directory. Written once, after the session is
+        // live, and skipped when it already exists.
+        void ensureOwnProfile(session.user);
       }
     });
 

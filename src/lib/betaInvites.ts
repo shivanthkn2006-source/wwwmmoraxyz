@@ -73,6 +73,28 @@ export async function redeemInviteCode(code: string): Promise<{ ok: boolean; err
   }
 }
 
+/**
+ * Creates the account for an invited friend on the server: the invite proves who
+ * they are, so the account arrives ready to sign in, with a profile row and the
+ * friendship to the person who invited them already in place.
+ */
+export async function signUpWithInvite(
+  code: string,
+  email: string,
+  password: string,
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const result = await callInvite<{ ok: boolean; error?: string }>(
+      { action: 'invite-signup', code: normaliseInviteCode(code), email, password },
+      false,
+    );
+    return { ok: Boolean(result?.ok), error: result?.error };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : 'sign up failed' };
+  }
+}
+
+
 export async function listInviteCodes(): Promise<InviteCodeRecord[]> {
   const result = await callInvite<{ codes?: InviteCodeRecord[] }>({ action: 'list' }, true);
   return result?.codes ?? [];

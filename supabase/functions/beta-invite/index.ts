@@ -107,6 +107,91 @@ serve(async (req) => {
       return json({ ok: true, valid: verdict.usable, reason: verdict.reason });
     }
 
+    // invite-signup — an invited friend creates their account here. The code is
+    // checked first, the account is created already confirmed (the invite is the
+    // proof of identity), a profile row is written so the member shows up in the
+    // directory, and the code is burnt with the friendship linked in one step.
+    if (action === 'invite-signup') {
+      const code = normalise(guard.body.code);
+      const email = String(guard.body.email ?? '').trim().toLowerCase();
+      const password = String(guard.body.password ?? '');
+      if (!code || !email || password.length < 8) {
+        return json({ ok: false, error: 'A code, an email address and a password of 8 characters are required.' }, 400);
+      }
+
+      const { data: inviteData } = await db
+        .from('invite_codes')
+        .select('id, code, is_active, expires_at, max_uses, current_uses, used_by, used_at, metadata, created_at, revoked_at, revoked_reason')
+        .eq('code', code)
+        .maybeSingle();
+      const invite = inviteData as InviteRow | null;
+      const check = inviteUsable(invite);
+      if (!invite || !check.usable) return json({ ok: false, error: check.reason }, 400);
+
+      let newUserId: string | null = null;
+      const { data: created, error: createError } = await db.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+      });
+      if (created?.user) {
+        newUserId = created.user.id;
+      } else {
+        // An address can already exist from an abandoned attempt that never got
+        // past email confirmation. A valid invite is proof enough, so that
+        // half-finished account is confirmed and given the chosen password
+        // instead of leaving the person stuck. A fully confirmed account is left
+        // untouched — they sign in instead.
+        const { data: existingId } = await db.rpc('auth_user_id_by_email', { _email: email });
+        if (!existingId) {
+          return json({ ok: false, error: createError?.message ?? 'Could not create the account.' }, 400);
+        }
+        const { data: existing } = await db.auth.admin.getUserById(String(existingId));
+        if (existing?.user?.email_confirmed_at) {
+          return json(
+            { ok: false, error: 'That email already has an account. Use "Already have an account? Sign in".' },
+            400,
+          );
+        }
+        const { error: fixError } = await db.auth.admin.updateUserById(String(existingId), {
+          password,
+          email_confirm: true,
+        });
+        if (fixError) return json({ ok: false, error: 'Could not finish setting up the account.' }, 400);
+        newUserId = String(existingId);
+      }
+      const handle = `user_${newUserId.slice(0, 8)}`;
+      const { error: profileError } = await db.from('profiles').upsert(
+        {
+          user_id: newUserId,
+          username: handle,
+          display_name: email.split('@')[0].slice(0, 40),
+          profile_visibility: 'public',
+        },
+        { onConflict: 'user_id' },
+      );
+      if (profileError) {
+        await db.auth.admin.deleteUser(newUserId);
+        return json({ ok: false, error: 'Could not finish setting up the account.' }, 500);
+      }
+
+      await db
+        .from('invite_codes')
+        .update({
+          current_uses: (invite.current_uses ?? 0) + 1,
+          used_by: invite.used_by ?? newUserId,
+          used_at: invite.used_at ?? new Date().toISOString(),
+        })
+        .eq('id', invite.id);
+
+      const inviterId = typeof invite.metadata?.invited_by === 'string' ? invite.metadata.invited_by : null;
+      if (inviterId && inviterId !== newUserId) {
+        const [user1_id, user2_id] = [inviterId, newUserId].sort();
+        await db.from('friendships').insert({ user1_id, user2_id });
+      }
+      return json({ ok: true, userId: newUserId, invitedBy: inviterId });
+    }
+
     const { userId, isAdmin } = await callerContext(req);
 
     if (action === 'redeem') {
