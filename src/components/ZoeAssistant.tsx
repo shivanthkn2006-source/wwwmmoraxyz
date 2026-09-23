@@ -1853,7 +1853,11 @@ const ZoeAssistant: React.FC<ZoeAssistantProps> = ({ onNavigate }) => {
       let message = `You have ${count} new notification${count > 1 ? 's' : ''}. `;
       
       // Announce the first few notifications
-      const topNotifications = notifications.slice(0, 3);
+      const topNotifications = await attachDirectoryProfiles(
+        notifications.slice(0, 3) as any[],
+        'from_user_id',
+        'profile',
+      );
       topNotifications.forEach((notif: any, index: number) => {
         const fromUser = (notif as any).profile?.display_name || 'Someone';
         
