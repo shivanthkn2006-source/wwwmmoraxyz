@@ -82,3 +82,22 @@ export const loadDirectoryByIds = async (userIds: string[]): Promise<Map<string,
   const { data } = await supabase.from('public_profiles').select(DIRECTORY_FIELDS).in('user_id', unique);
   return new Map(((data as DirectoryProfile[] | null) || []).map((row) => [row.user_id, row]));
 };
+
+/**
+ * Attaches directory profiles to rows that reference a member id.
+ * Used in place of joins on the private profiles table, so a post, comment or
+ * message written by somebody who is not a friend still shows a name and photo.
+ */
+export const attachDirectoryProfiles = async <T extends Record<string, unknown>>(
+  rows: T[] | null | undefined,
+  idKey = 'user_id',
+  targetKey = 'profile',
+): Promise<T[]> => {
+  const list = rows || [];
+  if (list.length === 0) return [];
+  const directory = await loadDirectoryByIds(list.map((row) => String(row[idKey] ?? '')));
+  return list.map((row) => ({
+    ...row,
+    [targetKey]: directory.get(String(row[idKey] ?? '')) ?? null,
+  })) as T[];
+};
