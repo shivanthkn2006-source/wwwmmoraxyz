@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
-import { supabase } from '@/integrations/supabase/client';
+import { loadFriendDirectory } from '@/lib/friendDirectory';
 import { useGroupCall } from '@/hooks/useGroupCall';
 import { useActivityStatuses } from '@/features/calls/useActivityStatuses';
 import ActivityStatusPicker from '@/components/quantum/ActivityStatusPicker';
