@@ -17,7 +17,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Label } from '@/components/ui/label';
 import { PLANNING_SYNC_EVENT, notifyPlanningChanged } from '@/lib/planningSync';
 
-type Row = Record<string, string | number | null>;
+type Row = Record<string, string | number | boolean | null>;
 
 interface Column {
   key: string;
@@ -56,7 +56,7 @@ const SPECS: TableSpec[] = [
     id: 'users',
     label: 'Users',
     table: 'profiles',
-    select: 'user_id, username, display_name, created_at',
+    select: 'user_id, username, display_name, city, status, created_at',
     order: 'created_at',
     columns: [
       { key: 'username', label: 'Username' },
@@ -75,6 +75,8 @@ const SPECS: TableSpec[] = [
       id: text(r.user_id),
       username: text(r.username),
       display_name: text(r.display_name),
+      city: text(r.city),
+      status: text(r.status),
       created_at: stamp(r.created_at),
     }),
   },
@@ -99,6 +101,7 @@ const SPECS: TableSpec[] = [
     ],
     map: (r) => ({
       id: text(r.id),
+      user_id: text(r.user_id),
       device_type: text(r.device_type),
       browser: text(r.browser),
       country: text(r.country),
@@ -109,7 +112,7 @@ const SPECS: TableSpec[] = [
     id: 'events',
     label: 'Events',
     table: 'user_activity_log',
-    select: 'id, activity_type, created_at',
+    select: 'id, user_id, activity_type, created_at',
     order: 'created_at',
     columns: [
       { key: 'activity_type', label: 'Event' },
@@ -119,7 +122,12 @@ const SPECS: TableSpec[] = [
       { key: 'user_id', label: 'Member id' },
       { key: 'activity_type', label: 'Event' },
     ],
-    map: (r) => ({ id: text(r.id), activity_type: text(r.activity_type), created_at: stamp(r.created_at) }),
+    map: (r) => ({
+      id: text(r.id),
+      user_id: text(r.user_id),
+      activity_type: text(r.activity_type),
+      created_at: stamp(r.created_at),
+    }),
   },
   {
     id: 'planner',
