@@ -63,6 +63,14 @@ const SPECS: TableSpec[] = [
       { key: 'display_name', label: 'Name' },
       { key: 'created_at', label: 'Joined' },
     ],
+    fields: [
+      { key: 'email', label: 'Email (new account only)', type: 'email', createOnly: true },
+      { key: 'password', label: 'Password (new account only)', type: 'password', createOnly: true },
+      { key: 'username', label: 'Username' },
+      { key: 'display_name', label: 'Name' },
+      { key: 'city', label: 'City' },
+      { key: 'status', label: 'Status' },
+    ],
     map: (r) => ({
       id: text(r.user_id),
       username: text(r.username),
@@ -82,6 +90,13 @@ const SPECS: TableSpec[] = [
       { key: 'country', label: 'Country' },
       { key: 'started_at', label: 'Started' },
     ],
+    fields: [
+      { key: 'user_id', label: 'Member id' },
+      { key: 'device_type', label: 'Device' },
+      { key: 'browser', label: 'Browser' },
+      { key: 'country', label: 'Country' },
+      { key: 'started_at', label: 'Started', type: 'datetime-local' },
+    ],
     map: (r) => ({
       id: text(r.id),
       device_type: text(r.device_type),
@@ -100,6 +115,10 @@ const SPECS: TableSpec[] = [
       { key: 'activity_type', label: 'Event' },
       { key: 'created_at', label: 'When' },
     ],
+    fields: [
+      { key: 'user_id', label: 'Member id' },
+      { key: 'activity_type', label: 'Event' },
+    ],
     map: (r) => ({ id: text(r.id), activity_type: text(r.activity_type), created_at: stamp(r.created_at) }),
   },
   {
@@ -114,6 +133,13 @@ const SPECS: TableSpec[] = [
       { key: 'date_type', label: 'Type' },
       { key: 'date_value', label: 'Date' },
       { key: 'is_recurring', label: 'Repeats' },
+    ],
+    fields: [
+      { key: 'user_id', label: 'Member id' },
+      { key: 'title', label: 'Title' },
+      { key: 'description', label: 'Details' },
+      { key: 'date_type', label: 'Type' },
+      { key: 'date_value', label: 'Date', type: 'date' },
     ],
     map: (r) => ({
       id: text(r.id),
@@ -135,6 +161,13 @@ const SPECS: TableSpec[] = [
       { key: 'category', label: 'Category' },
       { key: 'reminder_time', label: 'Due' },
       { key: 'is_completed', label: 'Status' },
+    ],
+    fields: [
+      { key: 'user_id', label: 'Member id' },
+      { key: 'title', label: 'Title' },
+      { key: 'description', label: 'Details' },
+      { key: 'category', label: 'Category' },
+      { key: 'reminder_time', label: 'Due', type: 'datetime-local' },
     ],
     map: (r) => ({
       id: text(r.id),
