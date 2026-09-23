@@ -20,6 +20,7 @@ import {
   INVITE_REASON_COPY,
   normaliseInviteCode,
   redeemInviteCode,
+  signUpWithInvite,
   validateInviteCode,
 } from '@/lib/betaInvites';
 
