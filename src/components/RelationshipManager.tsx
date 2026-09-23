@@ -9,6 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, UserPlus, Check, X, Send, Heart, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { loadDirectoryByIds } from '@/lib/friendDirectory';
 import { useAuth } from '@/lib/auth';
 import { toast } from 'sonner';
 
@@ -83,18 +84,23 @@ export const RelationshipManager: React.FC = () => {
       // Fetch all relationships where user is involved
       const { data, error } = await supabase
         .from('user_relationships')
-        .select(`
-          *,
-          requester_profile:public_profiles!user_relationships_requester_id_fkey(username, display_name, profile_photo_url),
-          recipient_profile:public_profiles!user_relationships_recipient_id_fkey(username, display_name, profile_photo_url)
-        `)
+        .select('*')
         .or(`requester_id.eq.${user.id},recipient_id.eq.${user.id}`)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      const confirmed = (data || []).filter(r => r.status === 'confirmed');
-      const pending = (data || []).filter(r => r.status === 'pending');
+      const directory = await loadDirectoryByIds(
+        (data || []).flatMap((row) => [row.requester_id, row.recipient_id]),
+      );
+      const hydrated = (data || []).map((row) => ({
+        ...row,
+        requester_profile: directory.get(row.requester_id) ?? null,
+        recipient_profile: directory.get(row.recipient_id) ?? null,
+      })) as unknown as Relationship[];
+
+      const confirmed = hydrated.filter(r => r.status === 'confirmed');
+      const pending = hydrated.filter(r => r.status === 'pending');
 
       setRelationships(confirmed);
       setPendingRequests(pending);

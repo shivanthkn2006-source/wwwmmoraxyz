@@ -673,7 +673,8 @@ export const SearchBar = () => {
           .limit(5);
 
         if (posts) {
-          posts.forEach(post => {
+          const hydratedPosts = await attachDirectoryProfiles(posts, 'user_id', 'profile');
+          hydratedPosts.forEach(post => {
             // Apply location filter to post author
             if (filters.location && post.profile?.city !== filters.location) {
               return;
