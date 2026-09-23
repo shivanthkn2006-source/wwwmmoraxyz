@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
-import { supabase } from '@/integrations/supabase/client';
+import { loadFriendDirectory } from '@/lib/friendDirectory';
 import { useGroupCall } from '@/hooks/useGroupCall';
 import { useActivityStatuses } from '@/features/calls/useActivityStatuses';
 import ActivityStatusPicker from '@/components/quantum/ActivityStatusPicker';
@@ -71,15 +71,17 @@ const GroupCallPage = () => {
   );
   const { ownStatus, ownMessage, setOwnStatus, setOwnMessage, statusFor, messageFor } = useActivityStatuses(user?.id ?? null, memberIds);
 
+  // Only accepted friends can be invited to or seen in a group call.
   useEffect(() => {
     if (!user) return;
     void (async () => {
-      const { data } = await supabase
-        .from('profiles')
-        .select('user_id, display_name, username, profile_photo_url')
-        .neq('user_id', user.id)
-        .limit(20);
-      setContacts((data as ContactRow[] | null) ?? []);
+      const friends = await loadFriendDirectory(user.id);
+      setContacts(friends.map(friend => ({
+        user_id: friend.user_id,
+        display_name: friend.display_name,
+        username: friend.username,
+        profile_photo_url: friend.profile_photo_url,
+      })) as ContactRow[]);
     })();
   }, [user]);
 

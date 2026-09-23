@@ -79,7 +79,7 @@ const InterestRecommendations = () => {
 
     // Fetch all users with public profiles (excluding current user and friends)
     const { data: allUsers } = await supabase
-      .from('profiles')
+      .from('public_profiles')
       .select('user_id, display_name, username, profile_photo_url, hobbies, status, event_date, event_recurring')
       .neq('user_id', user.id);
 

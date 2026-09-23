@@ -80,7 +80,7 @@ const HuddleSearchBar = ({ onUserSelect }: HuddleSearchBarProps) => {
 
       try {
         const { data: users } = await supabase
-          .from('profiles')
+          .from('public_profiles')
           .select('user_id, display_name, username, profile_photo_url, status, event_date, event_recurring, city')
           .or(`display_name.ilike.%${query}%,username.ilike.%${query}%`)
           .limit(8);

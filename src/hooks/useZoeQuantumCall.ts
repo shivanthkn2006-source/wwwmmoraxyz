@@ -1919,7 +1919,7 @@ const startGodEye = useCallback(() => {
           console.log('[QuantumCall] Incoming call from', signal.caller_id.slice(0, 8));
 
           const { data: callerProfile, error: profileError } = await supabase
-            .from('profiles')
+            .from('public_profiles')
             .select('display_name, username, profile_photo_url')
             .eq('user_id', signal.caller_id)
             .single();
