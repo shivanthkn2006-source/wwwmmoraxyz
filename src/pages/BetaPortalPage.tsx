@@ -73,7 +73,7 @@ export default function BetaPortalPage() {
       setMessage(INVITE_REASON_COPY[result.error as keyof typeof INVITE_REASON_COPY] ?? 'Invite could not be applied.');
       return;
     }
-    navigate('/platform-overview', { replace: true });
+    navigate('/', { replace: true });
   }, [code, navigate]);
 
   const submitAccount = async (event: React.FormEvent) => {
