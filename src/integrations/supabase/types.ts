@@ -11118,6 +11118,30 @@ export type Database = {
         }
         Relationships: []
       }
+      zoe_motivation_votes: {
+        Row: {
+          created_at: string
+          id: string
+          motivation_id: string
+          user_id: string
+          vote: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          motivation_id: string
+          user_id: string
+          vote: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          motivation_id?: string
+          user_id?: string
+          vote?: number
+        }
+        Relationships: []
+      }
       zoe_multiagent_tasks: {
         Row: {
           agent_executions: Json | null
