@@ -3582,13 +3582,6 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
           {
-            foreignKeyName: "friend_requests_receiver_id_fkey"
-            columns: ["receiver_id"]
-            isOneToOne: false
-            referencedRelation: "safe_public_profiles"
-            referencedColumns: ["user_id"]
-          },
-          {
             foreignKeyName: "friend_requests_sender_id_fkey"
             columns: ["sender_id"]
             isOneToOne: false
@@ -3600,13 +3593,6 @@ export type Database = {
             columns: ["sender_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "friend_requests_sender_id_fkey"
-            columns: ["sender_id"]
-            isOneToOne: false
-            referencedRelation: "safe_public_profiles"
             referencedColumns: ["user_id"]
           },
         ]
@@ -4502,13 +4488,6 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
           {
-            foreignKeyName: "messages_receiver_id_fkey"
-            columns: ["receiver_id"]
-            isOneToOne: false
-            referencedRelation: "safe_public_profiles"
-            referencedColumns: ["user_id"]
-          },
-          {
             foreignKeyName: "messages_reply_to_message_id_fkey"
             columns: ["reply_to_message_id"]
             isOneToOne: false
@@ -4527,13 +4506,6 @@ export type Database = {
             columns: ["sender_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "messages_sender_id_fkey"
-            columns: ["sender_id"]
-            isOneToOne: false
-            referencedRelation: "safe_public_profiles"
             referencedColumns: ["user_id"]
           },
         ]
@@ -5846,13 +5818,6 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["user_id"]
           },
-          {
-            foreignKeyName: "post_comments_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "safe_public_profiles"
-            referencedColumns: ["user_id"]
-          },
         ]
       }
       post_likes: {
@@ -6097,13 +6062,6 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["user_id"]
           },
-          {
-            foreignKeyName: "posts_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "safe_public_profiles"
-            referencedColumns: ["user_id"]
-          },
         ]
       }
       private_timeline_members: {
@@ -6144,13 +6102,6 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
           {
-            foreignKeyName: "private_timeline_members_added_by_user_id_fkey"
-            columns: ["added_by_user_id"]
-            isOneToOne: false
-            referencedRelation: "safe_public_profiles"
-            referencedColumns: ["user_id"]
-          },
-          {
             foreignKeyName: "private_timeline_members_timeline_id_fkey"
             columns: ["timeline_id"]
             isOneToOne: false
@@ -6169,13 +6120,6 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "private_timeline_members_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "safe_public_profiles"
             referencedColumns: ["user_id"]
           },
         ]
@@ -6445,6 +6389,8 @@ export type Database = {
         Row: {
           bio: string | null
           city: string | null
+          created_at: string | null
+          current_tier: string | null
           display_name: string
           event_date: string | null
           event_recurring: boolean | null
@@ -6455,12 +6401,15 @@ export type Database = {
           profile_photo_url: string | null
           profile_visibility: string
           status: string | null
+          total_points: number | null
           user_id: string
           username: string
         }
         Insert: {
           bio?: string | null
           city?: string | null
+          created_at?: string | null
+          current_tier?: string | null
           display_name: string
           event_date?: string | null
           event_recurring?: boolean | null
@@ -6471,12 +6420,15 @@ export type Database = {
           profile_photo_url?: string | null
           profile_visibility?: string
           status?: string | null
+          total_points?: number | null
           user_id: string
           username: string
         }
         Update: {
           bio?: string | null
           city?: string | null
+          created_at?: string | null
+          current_tier?: string | null
           display_name?: string
           event_date?: string | null
           event_recurring?: boolean | null
@@ -6487,6 +6439,7 @@ export type Database = {
           profile_photo_url?: string | null
           profile_visibility?: string
           status?: string | null
+          total_points?: number | null
           user_id?: string
           username?: string
         }
@@ -6503,13 +6456,6 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: true
             referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "public_profiles_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: true
-            referencedRelation: "safe_public_profiles"
             referencedColumns: ["user_id"]
           },
         ]
@@ -8401,13 +8347,6 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
           {
-            foreignKeyName: "user_relationships_recipient_id_fkey"
-            columns: ["recipient_id"]
-            isOneToOne: false
-            referencedRelation: "safe_public_profiles"
-            referencedColumns: ["user_id"]
-          },
-          {
             foreignKeyName: "user_relationships_requester_id_fkey"
             columns: ["requester_id"]
             isOneToOne: false
@@ -8419,13 +8358,6 @@ export type Database = {
             columns: ["requester_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "user_relationships_requester_id_fkey"
-            columns: ["requester_id"]
-            isOneToOne: false
-            referencedRelation: "safe_public_profiles"
             referencedColumns: ["user_id"]
           },
         ]
@@ -12475,13 +12407,6 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["user_id"]
           },
-          {
-            foreignKeyName: "posts_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "safe_public_profiles"
-            referencedColumns: ["user_id"]
-          },
         ]
       }
       leaderboard_stats: {
@@ -12502,10 +12427,16 @@ export type Database = {
       safe_public_profiles: {
         Row: {
           bio: string | null
+          city: string | null
           created_at: string | null
           current_tier: string | null
           display_name: string | null
+          event_date: string | null
+          event_recurring: boolean | null
+          field_of_study: string | null
           hobbies: string[] | null
+          location_enabled: boolean | null
+          profession: string | null
           profile_photo_url: string | null
           profile_visibility: string | null
           status: string | null
@@ -12515,10 +12446,16 @@ export type Database = {
         }
         Insert: {
           bio?: string | null
+          city?: string | null
           created_at?: string | null
           current_tier?: string | null
           display_name?: string | null
+          event_date?: string | null
+          event_recurring?: boolean | null
+          field_of_study?: string | null
           hobbies?: string[] | null
+          location_enabled?: boolean | null
+          profession?: string | null
           profile_photo_url?: string | null
           profile_visibility?: string | null
           status?: string | null
@@ -12528,10 +12465,16 @@ export type Database = {
         }
         Update: {
           bio?: string | null
+          city?: string | null
           created_at?: string | null
           current_tier?: string | null
           display_name?: string | null
+          event_date?: string | null
+          event_recurring?: boolean | null
+          field_of_study?: string | null
           hobbies?: string[] | null
+          location_enabled?: boolean | null
+          profession?: string | null
           profile_photo_url?: string | null
           profile_visibility?: string | null
           status?: string | null
@@ -12539,7 +12482,22 @@ export type Database = {
           user_id?: string | null
           username?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "public_profiles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "leaderboard_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "public_profiles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       session_analytics: {
         Row: {
