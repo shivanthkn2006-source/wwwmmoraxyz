@@ -2420,16 +2420,6 @@ const HomePage = () => {
 
   const supportingSlides = React.useMemo(() => {
     const slides: React.ReactElement[] = [];
-    if (dailyMotivation && !isMotivationRevealed()) {
-      // Revealed from 07:00 local time; placed at the top of the feed below.
-    }
-    if (false) {
-      slides.push(
-        <FeedErrorBoundary key="daily-motivation" section="posts">
-          <HomeMotivationSlide motivation={dailyMotivation} posterUrl={motivationPosterUrl} />
-        </FeedErrorBoundary>,
-      );
-    }
     if (astroDaily) {
       slides.push(
         <div key="astro-daily" className="relative flex h-full min-h-full w-full shrink-0 snap-start snap-always items-center overflow-y-auto p-4" data-astro-daily>
@@ -2460,7 +2450,7 @@ const HomePage = () => {
     );
     return slides;
 
-  }, [dailyMotivation, motivationPosterUrl, astroDaily, musicShelfHasSongs, musicPicksHaveSongs]);
+  }, [astroDaily, musicShelfHasSongs, musicPicksHaveSongs]);
 
   const chronologicalSlides = (posts: Post[], feed: 'global' | 'personal') => {
     const postIds = new Set(posts.map((post) => post.id));
