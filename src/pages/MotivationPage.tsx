@@ -4,6 +4,7 @@ import { ThumbsUp, ThumbsDown, RefreshCw, Quote } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useZoeMotivation } from '@/hooks/useZoeMotivation';
 import { insightForDate } from '@/lib/curatedInsights';
+import { useDailyQuote } from '@/hooks/useDailyQuote';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { toast } from 'sonner';
@@ -14,6 +15,7 @@ const MotivationPage = () => {
   const [vote, setVote] = useState<number | null>(null);
   const [rerunning, setRerunning] = useState(false);
   const curated = insightForDate();
+  const daily = useDailyQuote();
 
   useEffect(() => {
     setVote(null);
@@ -51,8 +53,8 @@ const MotivationPage = () => {
 
   const headline = motivation?.headline?.trim() || "Today's insight";
   const body = motivation?.body?.trim();
-  const quote = motivation?.quote?.trim() || curated.quote;
-  const author = motivation?.quote?.trim() ? null : curated.author;
+  const quote = daily.quote || curated.quote;
+  const author = daily.author || curated.author;
 
   return (
     <div className="profile-liquid-page min-h-screen px-4 py-8 sm:px-8">
@@ -81,6 +83,10 @@ const MotivationPage = () => {
                   <Quote className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                   <p>&ldquo;{quote}&rdquo;{author && <span className="not-italic text-muted-foreground"> — {author}</span>}</p>
                 </div>
+                <p className="text-xs text-muted-foreground" data-quote-source>
+                  Quote of the day from{' '}
+                  {daily.sourceUrl ? <a href={daily.sourceUrl} target="_blank" rel="noreferrer" className="underline">{daily.source}</a> : daily.source}
+                </p>
               </>
             )}
             <div className="flex gap-2 pt-2">
