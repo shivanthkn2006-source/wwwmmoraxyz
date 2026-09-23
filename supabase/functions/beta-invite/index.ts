@@ -128,15 +128,38 @@ serve(async (req) => {
       const check = inviteUsable(invite);
       if (!invite || !check.usable) return json({ ok: false, error: check.reason }, 400);
 
+      let newUserId: string | null = null;
       const { data: created, error: createError } = await db.auth.admin.createUser({
         email,
         password,
         email_confirm: true,
       });
-      if (createError || !created?.user) {
-        return json({ ok: false, error: createError?.message ?? 'Could not create the account.' }, 400);
+      if (created?.user) {
+        newUserId = created.user.id;
+      } else {
+        // An address can already exist from an abandoned attempt that never got
+        // past email confirmation. A valid invite is proof enough, so that
+        // half-finished account is confirmed and given the chosen password
+        // instead of leaving the person stuck. A fully confirmed account is left
+        // untouched — they sign in instead.
+        const { data: existingId } = await db.rpc('auth_user_id_by_email', { _email: email });
+        if (!existingId) {
+          return json({ ok: false, error: createError?.message ?? 'Could not create the account.' }, 400);
+        }
+        const { data: existing } = await db.auth.admin.getUserById(String(existingId));
+        if (existing?.user?.email_confirmed_at) {
+          return json(
+            { ok: false, error: 'That email already has an account. Use "Already have an account? Sign in".' },
+            400,
+          );
+        }
+        const { error: fixError } = await db.auth.admin.updateUserById(String(existingId), {
+          password,
+          email_confirm: true,
+        });
+        if (fixError) return json({ ok: false, error: 'Could not finish setting up the account.' }, 400);
+        newUserId = String(existingId);
       }
-      const newUserId = created.user.id;
       const handle = `user_${newUserId.slice(0, 8)}`;
       const { error: profileError } = await db.from('profiles').upsert(
         {
