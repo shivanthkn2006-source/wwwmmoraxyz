@@ -132,7 +132,15 @@ serve(async (req) => {
         })
         .eq('id', row.id);
       if (error) return json({ ok: false, error: 'redeem failed' }, 500);
-      return json({ ok: true, code: row.code });
+
+      // A member-issued invite links the two accounts as friends straight away,
+      // so birthdays and planner events flow without a second request step.
+      const inviter = typeof row.metadata?.invited_by === 'string' ? row.metadata.invited_by : null;
+      if (inviter && inviter !== userId) {
+        const [user1_id, user2_id] = [inviter, userId].sort();
+        await db.from('friendships').insert({ user1_id, user2_id });
+      }
+      return json({ ok: true, code: row.code, invitedBy: inviter });
     }
 
     // revoke-own — a member (or the security sentinel acting for them) burns the
@@ -152,6 +160,51 @@ serve(async (req) => {
         .is('revoked_at', null);
       if (error) return json({ ok: false, error: 'revoke failed' }, 500);
       return json({ ok: true });
+    }
+
+    // invite-friend — any signed-in member mints a personal invite link. Capped so
+    // a single account cannot flood the code space; each code is single-use.
+    if (action === 'invite-friend') {
+      if (!userId) return json({ ok: false, error: 'sign in required' }, 401);
+      const label = String(guard.body.label ?? '').slice(0, 120);
+      const { data: mine } = await db
+        .from('invite_codes')
+        .select('id')
+        .eq('created_by', userId)
+        .is('used_by', null)
+        .is('revoked_at', null)
+        .eq('is_active', true);
+      if ((mine?.length ?? 0) >= 10) {
+        return json({ ok: false, error: 'You already have 10 unused invites. Share those first.' }, 429);
+      }
+      const { data, error } = await db
+        .from('invite_codes')
+        .insert({
+          code: mintCode(),
+          created_by: userId,
+          is_active: true,
+          max_uses: 1,
+          current_uses: 0,
+          expires_at: new Date(Date.now() + 30 * 86_400_000).toISOString(),
+          metadata: { label, cohort: 'member-invite', invited_by: userId },
+        })
+        .select('id, code, expires_at, used_by, used_at, metadata, created_at')
+        .single();
+      if (error) return json({ ok: false, error: 'Could not create the invite.' }, 500);
+      return json({ ok: true, invite: data });
+    }
+
+    // my-invites — the caller's own invites only.
+    if (action === 'my-invites') {
+      if (!userId) return json({ ok: false, error: 'sign in required' }, 401);
+      const { data, error } = await db
+        .from('invite_codes')
+        .select('id, code, is_active, expires_at, used_by, used_at, metadata, created_at, revoked_at')
+        .eq('created_by', userId)
+        .order('created_at', { ascending: false })
+        .limit(50);
+      if (error) return json({ ok: false, error: 'Could not load your invites.' }, 500);
+      return json({ ok: true, invites: data ?? [] });
     }
 
     if (!isAdmin) return json({ ok: false, error: 'sovereign administrator only' }, 403);
