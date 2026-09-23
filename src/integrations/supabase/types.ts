@@ -6444,25 +6444,49 @@ export type Database = {
       public_profiles: {
         Row: {
           bio: string | null
+          city: string | null
           display_name: string
+          event_date: string | null
+          event_recurring: boolean | null
+          field_of_study: string | null
+          hobbies: string[] | null
+          location_enabled: boolean | null
+          profession: string | null
           profile_photo_url: string | null
           profile_visibility: string
+          status: string | null
           user_id: string
           username: string
         }
         Insert: {
           bio?: string | null
+          city?: string | null
           display_name: string
+          event_date?: string | null
+          event_recurring?: boolean | null
+          field_of_study?: string | null
+          hobbies?: string[] | null
+          location_enabled?: boolean | null
+          profession?: string | null
           profile_photo_url?: string | null
           profile_visibility?: string
+          status?: string | null
           user_id: string
           username: string
         }
         Update: {
           bio?: string | null
+          city?: string | null
           display_name?: string
+          event_date?: string | null
+          event_recurring?: boolean | null
+          field_of_study?: string | null
+          hobbies?: string[] | null
+          location_enabled?: boolean | null
+          profession?: string | null
           profile_photo_url?: string | null
           profile_visibility?: string
+          status?: string | null
           user_id?: string
           username?: string
         }
