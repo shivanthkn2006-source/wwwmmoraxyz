@@ -40,7 +40,7 @@ export const useNewMatches = () => {
 
       let profilesQuery = supabase
         .from('public_profiles')
-        .select('user_id, hobbies:profiles!inner(hobbies)')
+        .select('user_id, hobbies')
         .neq('user_id', user.id);
 
       if (friendIds.length > 0) {

@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Send, Heart, MessageCircle, Sparkles, Image as ImageIcon, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { attachDirectoryProfiles } from '@/lib/friendDirectory';
 import { useRealtimeTable } from '@/realtime/GlobalRealtimeProvider';
 import { useAuth } from '@/lib/auth';
 import { formatDistanceToNow } from 'date-fns';
@@ -63,7 +64,6 @@ const CommentSection: React.FC<CommentSectionProps> = ({ postId, postAuthorId, o
       .from('post_comments')
       .select(`
         *,
-        profile:profiles!inner(display_name, username, profile_photo_url, event_date, event_recurring, status),
         user_liked:comment_likes!left(user_id)
       `)
       .eq('post_id', postId)
@@ -72,14 +72,15 @@ const CommentSection: React.FC<CommentSectionProps> = ({ postId, postAuthorId, o
 
     if (error || !topComments) return;
 
+    const topCommentsWithAuthors = await attachDirectoryProfiles(topComments as any[], 'user_id', 'profile');
+
     // Fetch replies for each comment
     const commentsWithReplies = await Promise.all(
-      topComments.map(async (comment: any) => {
+      topCommentsWithAuthors.map(async (comment: any) => {
         const { data: replies } = await supabase
           .from('post_comments')
           .select(`
             *,
-            profile:profiles!inner(display_name, username, profile_photo_url, event_date, event_recurring, status),
             user_liked:comment_likes!left(user_id)
           `)
           .eq('parent_comment_id', comment.id)
@@ -90,7 +91,9 @@ const CommentSection: React.FC<CommentSectionProps> = ({ postId, postAuthorId, o
           ? comment.user_liked.some((like: any) => like.user_id === user.id)
           : false;
 
-        const formattedReplies = replies?.map((reply: any) => {
+        const repliesWithAuthors = await attachDirectoryProfiles(replies as any[], 'user_id', 'profile');
+
+        const formattedReplies = repliesWithAuthors?.map((reply: any) => {
           const replyProfile = Array.isArray(reply.profile) ? reply.profile[0] : reply.profile;
           const replyUserLiked = Array.isArray(reply.user_liked)
             ? reply.user_liked.some((like: any) => like.user_id === user.id)

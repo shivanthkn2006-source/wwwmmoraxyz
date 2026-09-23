@@ -2,6 +2,7 @@
 // Caches posts, messages, user data, DHF, and enables full offline Zoe interactions
 
 import { supabase } from '@/integrations/supabase/client';
+import { attachDirectoryProfiles } from '@/lib/friendDirectory';
 
 // Storage keys
 const STORAGE_KEYS = {
@@ -134,8 +135,7 @@ export class OfflineDataSync {
         .from('posts')
         .select(`
           id, user_id, content, media_url, media_type, 
-          likes_count, comments_count, created_at, visibility,
-          profiles!posts_user_id_fkey(display_name, username, profile_photo_url)
+          likes_count, comments_count, created_at, visibility
         `)
         .eq('visibility', 'public')
         .order('created_at', { ascending: false })
@@ -151,8 +151,10 @@ export class OfflineDataSync {
 
       const likedPostIds = new Set(likes?.map(l => l.post_id) || []);
 
+      const postsWithAuthors = await attachDirectoryProfiles(posts as any[], 'user_id', 'profiles');
+
       // Transform and cache
-      const offlinePosts: OfflinePost[] = (posts || []).map(post => ({
+      const offlinePosts: OfflinePost[] = (postsWithAuthors || []).map((post: any) => ({
         id: post.id,
         user_id: post.user_id,
         content: post.content,

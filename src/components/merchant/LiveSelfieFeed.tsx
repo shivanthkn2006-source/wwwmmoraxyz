@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Camera, Heart, MapPin, Clock, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { attachDirectoryProfiles } from '@/lib/friendDirectory';
 import { formatDistanceToNow } from 'date-fns';
 
 interface Campaign {
@@ -89,15 +90,14 @@ const LiveSelfieFeed: React.FC<LiveSelfieFeedProps> = ({ campaigns }) => {
         if (activeCampaigns.length > 0) {
           const { data: pins } = await supabase
             .from('selfie_city_pins')
-            .select(`
-              *,
-              user:profiles!selfie_city_pins_user_id_fkey(username, avatar_url)
-            `)
+            .select('*')
             .order('created_at', { ascending: false })
             .limit(50);
 
+          const pinsWithUsers = await attachDirectoryProfiles(pins as any[], 'user_id', 'user');
+
           // Filter pins that are within campaign geofences
-          const nearbyPinsFiltered = (pins || []).filter((pin: any) => {
+          const nearbyPinsFiltered = (pinsWithUsers || []).filter((pin: any) => {
             if (!pin.location_lat || !pin.location_lng) return false;
             
             return activeCampaigns.some(campaign => {

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { supabase } from '@/integrations/supabase/client';
+import { attachDirectoryProfiles } from '@/lib/friendDirectory';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
 import StatusIconBadge from '@/components/StatusIconBadge';
@@ -644,10 +645,7 @@ export const SearchBar = () => {
         // Search posts with filters
         let postQuery = supabase
           .from('posts')
-          .select(`
-            *,
-            profile:profiles!posts_user_id_fkey(display_name, username, profile_photo_url, city)
-          `)
+          .select('*')
           .eq('visibility', 'global')
           .ilike('content', `%${searchQuery}%`);
         
@@ -816,14 +814,13 @@ export const SearchBar = () => {
     
     const { data: post } = await supabase
       .from('posts')
-      .select(`
-        *,
-        profile:profiles!posts_user_id_fkey(display_name, username, profile_photo_url, status, event_date, event_recurring)
-      `)
+      .select('*')
       .eq('id', postId)
       .single();
     
     if (!post) return null;
+
+    const [hydratedPost] = await attachDirectoryProfiles([post as any], 'user_id', 'profile');
 
     // Check if user liked the post
     if (user) {
@@ -835,13 +832,13 @@ export const SearchBar = () => {
         .maybeSingle();
       
       return {
-        ...post,
+        ...hydratedPost,
         user_liked: !!likeData
       };
     }
     
     return {
-      ...post,
+      ...hydratedPost,
       user_liked: false
     };
   };

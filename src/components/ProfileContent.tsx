@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Edit, UserPlus, Calendar, Settings, LogOut, Award, BookOpen, Mic, Shield, Sparkles, Lock, FileText, Brain, Fingerprint, Dna, CheckCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { attachDirectoryProfiles } from '@/lib/friendDirectory';
 import { useAuth } from '@/lib/auth';
 import FriendCard from '@/components/FriendCard';
 import PostsGrid from '@/components/PostsGrid';
@@ -214,15 +215,14 @@ const ProfileContent = () => {
     // Fetch user's own posts
     const { data: ownPosts } = await supabase
       .from('posts')
-      .select(`
-        *,
-        profile:profiles!inner(display_name, username, profile_photo_url, event_date, event_recurring, status)
-      `)
+      .select('*')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false });
 
+    const ownPostsHydrated = await attachDirectoryProfiles(ownPosts as any[], 'user_id', 'profile');
+
     const ownPostsWithLikes = await Promise.all(
-      (ownPosts || []).map(async (post: any) => {
+      (ownPostsHydrated || []).map(async (post: any) => {
         const { data: liked } = await supabase
           .from('post_likes')
           .select('id')
@@ -248,16 +248,14 @@ const ProfileContent = () => {
       const postIds = taggedPostIds.map(t => t.post_id);
       const { data } = await supabase
         .from('posts')
-        .select(`
-          *,
-          profile:profiles!inner(display_name, username, profile_photo_url, event_date, event_recurring, status)
-        `)
+        .select('*')
         .in('id', postIds)
         .order('created_at', { ascending: false });
       
       if (data) {
+        const taggedHydrated = await attachDirectoryProfiles(data as any[], 'user_id', 'profile');
         taggedPostsData = await Promise.all(
-          data.map(async (post: any) => {
+          taggedHydrated.map(async (post: any) => {
             const { data: liked } = await supabase
               .from('post_likes')
               .select('id')

@@ -1833,7 +1833,7 @@ const ZoeAssistant: React.FC<ZoeAssistantProps> = ({ onNavigate }) => {
     try {
       const { data: notifications, error } = await supabase
         .from('notifications')
-        .select('*, profiles!notifications_from_user_id_fkey(display_name)')
+        .select('*')
         .eq('user_id', user.id)
         .eq('read', false)
         .order('created_at', { ascending: false })
