@@ -24,7 +24,7 @@ const MembersDirectoryPage = () => {
   const [searching, setSearching] = useState(false);
   const [me, setMe] = useState<string | null>(null);
   const [sent, setSent] = useState<Set<string>>(new Set());
-  const fr = useFriendRequests() as ReturnType<typeof useFriendRequests> & Record<string, any>;
+  const fr = useFriendRequests();
 
   useEffect(() => { void supabase.auth.getUser().then(({ data }) => setMe(data.user?.id ?? null)); }, []);
 
@@ -44,7 +44,7 @@ const MembersDirectoryPage = () => {
     setSent((s) => new Set(s).add(id));
   };
 
-  const incoming: any[] = fr.pendingRequests ?? fr.requests ?? [];
+  const incoming = fr.receivedRequests as any[];
 
   return (
     <div className="profile-liquid-page min-h-screen px-4 py-8 sm:px-8">
@@ -63,12 +63,12 @@ const MembersDirectoryPage = () => {
             {incoming.map((r) => (
               <Card key={r.id} className="flex items-center justify-between gap-3 p-3">
                 <div className="flex min-w-0 items-center gap-3">
-                  <Avatar p={{ profile_photo_url: r.sender?.profile_photo_url ?? null, display_name: r.sender?.display_name ?? null }} />
-                  <p className="truncate text-sm text-foreground">{r.sender?.display_name || r.sender?.username || 'Member'}</p>
+                  <Avatar p={{ profile_photo_url: r.sender_profile?.profile_photo_url ?? null, display_name: r.sender_profile?.display_name ?? null }} />
+                  <p className="truncate text-sm text-foreground">{r.sender_profile?.display_name || r.sender_profile?.username || 'Member'}</p>
                 </div>
                 <div className="flex gap-2">
-                  <Button size="sm" onClick={() => fr.acceptFriendRequest?.(r.id)} aria-label="Accept"><Check className="h-4 w-4" /></Button>
-                  <Button size="sm" variant="outline" onClick={() => fr.rejectFriendRequest?.(r.id)} aria-label="Decline"><X className="h-4 w-4" /></Button>
+                  <Button size="sm" onClick={() => fr.acceptFriendRequest(r.id)} aria-label="Accept"><Check className="h-4 w-4" /></Button>
+                  <Button size="sm" variant="outline" onClick={() => fr.rejectFriendRequest(r.id)} aria-label="Decline"><X className="h-4 w-4" /></Button>
                 </div>
               </Card>
             ))}
