@@ -115,7 +115,7 @@ const Huddle = () => {
       const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
       const { data: profiles } = await supabase
-        .from('profiles')
+        .from('public_profiles')
         .select('user_id');
 
       if (!profiles) return;
@@ -202,7 +202,7 @@ const Huddle = () => {
     setUserFriends(friendIds);
 
     const { data: allUsersData } = await supabase
-      .from('profiles')
+      .from('public_profiles')
       .select('user_id, display_name, username, profile_photo_url, city, hobbies, status, event_date, event_recurring')
       .neq('user_id', user.id);
 

@@ -197,7 +197,7 @@ const IndiaMap = forwardRef<IndiaMapRef, IndiaMapProps>(({
     if (!user) return;
 
     const { data } = await supabase
-      .from('profiles')
+      .from('public_profiles')
       .select('user_id, display_name, username, profile_photo_url, city, hobbies, status')
       .eq('location_enabled', true)
       .not('city', 'is', null)
@@ -316,7 +316,7 @@ const IndiaMap = forwardRef<IndiaMapRef, IndiaMapProps>(({
       .single();
 
     const { data: theirProfile } = await supabase
-      .from('profiles')
+      .from('public_profiles')
       .select('hobbies')
       .eq('user_id', userId)
       .single();

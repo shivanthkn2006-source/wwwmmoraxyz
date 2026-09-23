@@ -126,7 +126,7 @@ export const useZoeVoiceCommands = (userId: string | undefined) => {
     
     // Search for user by display name or username
     const { data: targetUsers, error } = await supabase
-      .from('profiles')
+      .from('public_profiles')
       .select('user_id, display_name, username, profile_photo_url')
       .or(`display_name.ilike.%${targetName}%,username.ilike.%${targetName}%`)
       .limit(1);

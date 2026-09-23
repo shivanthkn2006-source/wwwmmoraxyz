@@ -390,7 +390,7 @@ export const SearchBar = () => {
   // Load available user locations for filter
   const loadAvailableLocations = async () => {
     const { data } = await supabase
-      .from('profiles')
+      .from('public_profiles')
       .select('city')
       .not('city', 'is', null);
     

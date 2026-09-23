@@ -144,7 +144,7 @@ export const RelationshipManager: React.FC = () => {
     setIsSearching(true);
     try {
       const { data, error } = await supabase
-        .from('profiles')
+        .from('public_profiles')
         .select('user_id, username, display_name, profile_photo_url')
         .or(`username.ilike.%${query}%,display_name.ilike.%${query}%`)
         .neq('user_id', user?.id)
