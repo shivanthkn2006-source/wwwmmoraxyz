@@ -28,6 +28,7 @@ import { type FeedSearchItem } from '@/lib/feedSearchItems';
 import { useDhfBrain } from '@/hooks/useDhfBrain';
 import useZoeMotivation from '@/hooks/useZoeMotivation';
 import HomeMotivationSlide from '@/components/home/HomeMotivationSlide';
+import { isMotivationRevealed } from '@/hooks/useMotivationVote';
 import HomeMusicShelf from '@/components/home/HomeMusicShelf';
 import HomeMusicRecommendations from '@/components/home/HomeMusicRecommendations';
 
@@ -2405,9 +2406,24 @@ const HomePage = () => {
     );
   }, [newContentByFeed, dismissNewContent, retrySinglePost, handleUpdate, diagnoseNewBadge]);
 
+  const [motivationTick, setMotivationTick] = React.useState(0);
+  React.useEffect(() => {
+    const t = setInterval(() => setMotivationTick((n) => n + 1), 60_000);
+    return () => clearInterval(t);
+  }, []);
+  const motivationTopSlide = React.useMemo(() => (
+    dailyMotivation && isMotivationRevealed()
+      ? [<FeedErrorBoundary key="daily-motivation" section="posts"><HomeMotivationSlide motivation={dailyMotivation} posterUrl={motivationPosterUrl} /></FeedErrorBoundary>]
+      : []
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  ), [dailyMotivation, motivationPosterUrl, motivationTick]);
+
   const supportingSlides = React.useMemo(() => {
     const slides: React.ReactElement[] = [];
-    if (dailyMotivation) {
+    if (dailyMotivation && !isMotivationRevealed()) {
+      // Revealed from 07:00 local time; placed at the top of the feed below.
+    }
+    if (false) {
       slides.push(
         <FeedErrorBoundary key="daily-motivation" section="posts">
           <HomeMotivationSlide motivation={dailyMotivation} posterUrl={motivationPosterUrl} />
@@ -2478,7 +2494,7 @@ const HomePage = () => {
   // cards remain outside that chronology.
   const globalFeedSlides = searchVideoSlides.length
     ? searchVideoSlides
-    : [...chronologicalSlides(visibleGlobalPosts, 'global'), ...growthSlide.slice(growthCards.length), ...supportingSlides, ...neuralVideoSlides, ...savedGrowthSlides];
+    : [...motivationTopSlide, ...chronologicalSlides(visibleGlobalPosts, 'global'), ...growthSlide.slice(growthCards.length), ...supportingSlides, ...neuralVideoSlides, ...savedGrowthSlides];
   const personalFeedSlides = searchVideoSlides.length
     ? searchVideoSlides
     : [...chronologicalSlides(visiblePersonalPosts, 'personal'), ...growthSlide.slice(growthCards.length), ...supportingSlides, ...neuralVideoSlides, ...savedGrowthSlides];

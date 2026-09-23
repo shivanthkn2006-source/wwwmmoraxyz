@@ -1,7 +1,8 @@
 /** TODAY'S MOTIVATION — Zoe's daily insight, member votes, and a rerun button. */
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { ThumbsUp, ThumbsDown, RefreshCw, Quote } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useMotivationVote } from '@/hooks/useMotivationVote';
 import { useZoeMotivation } from '@/hooks/useZoeMotivation';
 import { insightForDate } from '@/lib/curatedInsights';
 import { useDailyQuote } from '@/hooks/useDailyQuote';
@@ -78,6 +79,9 @@ const MotivationPage = () => {
                 <ThumbsDown className="h-4 w-4" />
               </Button>
             </div>
+            <p className="text-xs text-muted-foreground" data-motivation-stats>
+              Your votes so far: {stats.up} helpful · {stats.down} not helpful · {stats.days} days rated
+            </p>
           </div>
         </Card>
       </div>
