@@ -43,4 +43,8 @@ describe('startup and reconnect stability', () => {
     expect(app).not.toContain("import('@/utils/zoeVoice')");
     expect(app).not.toContain('speechSynthesis.getVoices()');
   });
+
+  it('keeps retired Google vision models out of the sovereign fallback chain', () => {
+    expect(read('supabase/functions/_shared/sovereign-ai.ts')).not.toContain("'gemini-2.0-flash'");
+  });
 });

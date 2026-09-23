@@ -90,7 +90,6 @@ const GOOGLE_FAST_CANDIDATES = [
   'gemini-3-flash-preview',
   'gemini-3.5-flash',
   'gemini-2.5-flash',
-  'gemini-2.0-flash',
   'gemini-flash-latest',
 ];
 
