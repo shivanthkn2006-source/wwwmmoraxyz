@@ -171,6 +171,9 @@ serve(async (req) => {
         .from('invite_codes')
         .select('id')
         .eq('created_by', userId)
+        // Only personal friend invites count toward the cap — bulk beta batches
+        // issued from the admin console must never block a member invite.
+        .eq('metadata->>cohort', 'member-invite')
         .is('used_by', null)
         .is('revoked_at', null)
         .eq('is_active', true);
@@ -201,6 +204,7 @@ serve(async (req) => {
         .from('invite_codes')
         .select('id, code, is_active, expires_at, used_by, used_at, metadata, created_at, revoked_at')
         .eq('created_by', userId)
+        .eq('metadata->>cohort', 'member-invite')
         .order('created_at', { ascending: false })
         .limit(50);
       if (error) return json({ ok: false, error: 'Could not load your invites.' }, 500);

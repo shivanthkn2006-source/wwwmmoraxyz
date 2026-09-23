@@ -8,55 +8,68 @@
 declare const Deno: any;
 
 export const NVIDIA_BASE = 'https://integrate.api.nvidia.com/v1';
-/** Chat model used for intent routing + ambient synthesis. */
-export const NVIDIA_CHAT_MODEL = 'meta/llama-3.3-70b-instruct';
-/** Embedding model; asymmetric query/passage QA embedder. */
-export const NVIDIA_EMBED_MODEL = 'nvidia/nv-embedqa-e5-v5';
+/**
+ * Chat + embedding defaults. Every id below answered HTTP 200 on this account in
+ * the 2026-09-23 full-catalog sweep (82 models probed). Models the catalog has
+ * dropped (meta/llama-3.3-70b-instruct, minimaxai/minimax-m3,
+ * deepseek-ai/deepseek-v4-flash-0731) and the retired embedder
+ * nvidia/nv-embedqa-e5-v5 (410 Gone) were removed — they can never answer again.
+ */
+export const NVIDIA_CHAT_MODEL = 'nvidia/nemotron-3-super-120b-a12b';
+/** Embedding model; 2048-dim, padded/truncated by nvidiaEmbed to the caller width. */
+export const NVIDIA_EMBED_MODEL = 'nvidia/nemotron-3-embed-1b';
 
 /**
- * Role registry — every id below was live-probed against this account's NIM
- * catalog (103 models) and answered 200. Each role is an ordered fallback
- * chain: the first model that returns content wins, so a rate-limited or
- * retired model never takes a feature down.
+ * Role registry — ordered fallback chains built from the live sweep. Fast,
+ * consistently-answering models lead each chain; models that queue for capacity
+ * (nemotron-3-ultra-550b, kimi-k3, deepseek-v4.1-flash, glm-5.3) sit last so a
+ * slow tier can never stall a feature, and 404-only ids are gone entirely.
+ *
+ * Verified round-trips: nemotron-3-super-120b-a12b 0.5-1.1s,
+ * diffusiongemma-26b-a4b-it 0.6s, muse-glimmer-30b 1.8s,
+ * ising-calibration-1.5-31b 0.9s, nemotron-3-nano-omni-reasoning 1.6s,
+ * nemotron-3.5-content-safety 0.24s, riva-translate-4b-instruct-v2 0.35s,
+ * llama-3.2-11b-vision-instruct 0.25s, nemotron-parse-2.0 0.15s,
+ * nemotron-3-embed-1b 0.11s (2048 dims).
  */
 export const NVIDIA_ROLES = {
   /** Deep thinking / hard reasoning (Zoe metacognition, riddles, planning). */
   deep_thinking: [
-    'nvidia/nemotron-3-ultra-550b-a55b',
-    'moonshotai/kimi-k3',
     'nvidia/nemotron-3-super-120b-a12b',
-    'deepseek-ai/deepseek-v4-flash-0731',
+    'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning',
+    'nvidia/ising-calibration-1.5-31b',
+    'nvidia/nemotron-3-ultra-550b-a55b',
   ],
-  /** Everyday conversational replies. */
+  /** Everyday conversational replies (Zoe chat, companion, DHF dialogue). */
   chat: [
-    'deepseek-ai/deepseek-v4-flash-0731',
-    'meta/llama-3.3-70b-instruct',
-    'minimaxai/minimax-m3',
+    'nvidia/nemotron-3-super-120b-a12b',
+    'meta/muse-glimmer-30b',
+    'google/diffusiongemma-26b-a4b-it',
   ],
-  /** Low-latency routing / classification (search intent, gates). */
+  /** Low-latency routing / classification (search intent, feed gates). */
   fast: [
-    'nvidia/nemotron-3.5-lightning-30b-a3b',
-    'meta/llama-3.3-70b-instruct',
-    'minimaxai/minimax-m3',
+    'google/diffusiongemma-26b-a4b-it',
+    'nvidia/nemotron-3-super-120b-a12b',
+    'meta/muse-glimmer-30b',
   ],
   /** Image / frame understanding — OCR, objects, mood (search + DHF indexing). */
-  // nemotron-nano-12b-v2-vl reached end-of-life 2026-08-26 (410) and
-  // phi-3-vision returns 404 on this account — both removed after live probes.
   // NOTE: llama-3.2 vision accepts ONE image per prompt; callers with two
   // images (identity comparison) must use the Groq/OpenRouter tiers instead.
   vision: [
     'meta/llama-3.2-11b-vision-instruct',
+    'nvidia/nemotron-parse-2.0',
     'meta/llama-3.2-90b-vision-instruct',
   ],
-  /** Creative long-form copy (astrology cards, motivations). */
+  /** Creative long-form copy (astrology cards, motivations, growth insights). */
   creative: [
-    'moonshotai/kimi-k3',
-    'meta/llama-3.3-70b-instruct',
+    'meta/muse-glimmer-30b',
+    'nvidia/nemotron-3-super-120b-a12b',
+    'google/diffusiongemma-26b-a4b-it',
   ],
   /** Translation. */
-  translate: ['nvidia/riva-translate-4b-instruct-v2', 'meta/llama-3.3-70b-instruct'],
+  translate: ['nvidia/riva-translate-4b-instruct-v2', 'nvidia/nemotron-3-super-120b-a12b'],
   /** Safety / moderation of user content. */
-  safety: ['nvidia/llama-3.1-nemoguard-8b-content-safety', 'meta/llama-guard-4-12b'],
+  safety: ['nvidia/nemotron-3.5-content-safety', 'nvidia/nemotron-3-super-120b-a12b'],
 } as const;
 
 export type NvidiaRole = keyof typeof NVIDIA_ROLES;
@@ -88,6 +101,8 @@ export interface NvidiaChatOptions {
   jsonMode?: boolean;
   timeoutMs?: number;
   model?: string;
+  /** Internal: set once a 429/503 retry has already been spent. */
+  __retried?: boolean;
 }
 
 /** Single NVIDIA chat completion. Returns null on any failure (caller cascades on). */
@@ -117,7 +132,14 @@ export async function nvidiaChat(userText: string, opts: NvidiaChatOptions = {})
     });
     if (!resp.ok) {
       if (resp.status === 410 || resp.status === 404) markNvidiaModelRetired(requestedModel);
-      console.warn('[nvidia] chat failed', resp.status, requestedModel, (await resp.text()).slice(0, 200));
+      const detail = (await resp.text()).slice(0, 200);
+      console.warn('[nvidia] chat failed', resp.status, requestedModel, detail);
+      // Shared NIM capacity answers 429/503 in bursts and clears within a second.
+      // One short retry keeps a healthy model in play instead of dropping a tier.
+      if ((resp.status === 429 || resp.status === 503) && !opts.__retried) {
+        await new Promise((resolve) => setTimeout(resolve, 900));
+        return nvidiaChat(userText, { ...opts, model: requestedModel, __retried: true });
+      }
       return null;
     }
     const data = await resp.json();

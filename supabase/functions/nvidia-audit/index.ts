@@ -62,9 +62,51 @@ Deno.serve(async (req: Request) => {
   if (!key) return json({ ok: false, error: 'NVIDIA_API_KEY is not configured' }, 503);
 
   let probe = false;
+  let probeModels: string[] = [];
+  let probeKind: 'chat' | 'embed' = 'chat';
   try {
-    if (req.method === 'POST') probe = Boolean((await req.json())?.probe);
+    if (req.method === 'POST') {
+      const body = await req.json();
+      probe = Boolean(body?.probe);
+      if (Array.isArray(body?.models)) probeModels = body.models.filter((m: unknown) => typeof m === 'string').slice(0, 12);
+      if (body?.kind === 'embed') probeKind = 'embed';
+    }
   } catch { /* no body */ }
+
+  // Direct model probe — verifies an explicit list of model ids against this
+  // account, so role chains can be rebuilt from models that actually answer.
+  if (probeModels.length) {
+    const results = await Promise.all(probeModels.map(async (model) => {
+      const t0 = Date.now();
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 25_000);
+      try {
+        const resp = probeKind === 'embed'
+          ? await fetch(`${NVIDIA_BASE}/embeddings`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+            signal: controller.signal,
+            body: JSON.stringify({ model, input: ['ping'], input_type: 'passage', encoding_format: 'float', truncate: 'END' }),
+          })
+          : await fetch(`${NVIDIA_BASE}/chat/completions`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+            signal: controller.signal,
+            body: JSON.stringify({ model, messages: [{ role: 'user', content: 'Reply with the single word: pong' }], max_tokens: 8, temperature: 0 }),
+          });
+        if (!resp.ok) return { model, ok: false, status: resp.status, error: (await resp.text()).slice(0, 120), latencyMs: Date.now() - t0 };
+        const data = await resp.json();
+        const dims = data?.data?.[0]?.embedding?.length ?? null;
+        const content = data?.choices?.[0]?.message?.content ?? null;
+        return { model, ok: true, status: 200, dims, content: typeof content === 'string' ? content.slice(0, 40) : null, latencyMs: Date.now() - t0 };
+      } catch (e) {
+        return { model, ok: false, status: 0, error: String(e).slice(0, 120), latencyMs: Date.now() - t0 };
+      } finally {
+        clearTimeout(timer);
+      }
+    }));
+    return json({ ok: true, kind: probeKind, results });
+  }
 
   // 1. Live catalog.
   let catalog: string[] = [];
