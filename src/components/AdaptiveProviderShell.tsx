@@ -191,22 +191,22 @@ export const AdaptiveProviderShell = memo(({ children, forceMode }: AdaptiveProv
     return () => clearInterval(interval);
   }, [mode]);
 
-  // Render appropriate provider based on mode
-  if (!initialized || !providersReady) {
-    // During detection/startup, render the usable page without heavy providers.
-    return <>{children}</>;
-  }
+  // Keep the route subtree at the same React position for the lifetime of the
+  // session. Late-mount providers render as a sibling so enabling diagnostics
+  // can never wipe forms, scroll position, or page-local state.
+  const DeferredProviders = mode === 'god' ? GodModeProvider : StandardModeProvider;
+  const mountDeferredProviders = initialized && providersReady && mode !== 'lite';
 
-  switch (mode) {
-    case 'lite':
-      return <LiteModeProvider>{children}</LiteModeProvider>;
-    case 'standard':
-      return <StandardModeProvider>{children}</StandardModeProvider>;
-    case 'god':
-      return <GodModeProvider>{children}</GodModeProvider>;
-    default:
-      return <StandardModeProvider>{children}</StandardModeProvider>;
-  }
+  return (
+    <>
+      {children}
+      {mountDeferredProviders && (
+        <DeferredProviders>
+          <span hidden aria-hidden="true" />
+        </DeferredProviders>
+      )}
+    </>
+  );
 });
 
 AdaptiveProviderShell.displayName = 'AdaptiveProviderShell';

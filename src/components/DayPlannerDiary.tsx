@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { notifyPlanningChanged, PLANNING_SYNC_EVENT } from '@/lib/planningSync';
+import { loadFriendBirthdayEvents } from '@/lib/friendBirthdays';
 
 interface Event {
   id: string;
@@ -40,9 +41,10 @@ const DayPlannerDiary = () => {
 
   const loadEvents = useCallback(async () => {
     if (!user) return;
-    const [{ data: planned }, { data: profile }] = await Promise.all([
+    const [{ data: planned }, { data: profile }, friendBirthdays] = await Promise.all([
       supabase.from('important_dates').select('id, title, description, date_type, date_value, is_recurring').eq('user_id', user.id).order('date_value'),
       supabase.from('profiles').select('display_name, event_type, event_date, event_custom_details, event_recurring').eq('user_id', user.id).maybeSingle(),
+      loadFriendBirthdayEvents(user.id),
     ]);
     const shared: Event[] = (planned || []).map((item) => ({
       id: item.id, date: item.date_value, type: item.date_type, title: item.title,
@@ -53,6 +55,15 @@ const DayPlannerDiary = () => {
         title: profile.event_custom_details || profile.display_name, customDetails: profile.event_custom_details || '',
         isRecurring: Boolean(profile.event_recurring), isLegacy: true });
     }
+    shared.push(...friendBirthdays.map((birthday) => ({
+      id: birthday.id,
+      date: birthday.date_value,
+      type: birthday.date_type,
+      title: birthday.title,
+      customDetails: birthday.description || '',
+      isRecurring: birthday.is_recurring,
+      isLegacy: true,
+    })));
     setEvents(shared.sort((a, b) => a.date.localeCompare(b.date)));
   }, [user]);
 

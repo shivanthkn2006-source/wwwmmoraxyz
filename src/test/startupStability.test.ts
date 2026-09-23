@@ -28,11 +28,14 @@ describe('startup and reconnect stability', () => {
 
   it('defers and deduplicates automatic Zoe diagnostics', () => {
     const hook = read('src/hooks/useZoeCoreUnified.ts');
+    const shell = read('src/components/AdaptiveProviderShell.tsx');
     expect(hook).toContain('scanInFlightRef.current');
     expect(hook).toContain('requestIdleCallback');
     expect(hook).toContain('if (!user || !autoScan) return;');
     expect(read('src/components/core/ZoeCoreUnifiedProvider.tsx')).toContain('useZoeCoreUnified(autoScan)');
-    expect(read('src/components/AdaptiveProviderShell.tsx')).toContain('if (!initialized || !providersReady)');
+    expect(shell).toContain('{children}');
+    expect(shell).toContain('mountDeferredProviders &&');
+    expect(shell).not.toContain('if (!initialized || !providersReady)');
   });
 
   it('does not initialize Zoe voice or browser speech during app startup', () => {

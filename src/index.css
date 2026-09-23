@@ -1589,7 +1589,7 @@ html.phantom-mode [class*="animate-"] {
 
 /* The identity and stats panel floats over the member's photograph using the
    same white-edged frosted surface as Music and Calls. */
-.profile-liquid-page [data-profile-summary] {
+.profile-liquid-page [data-profile-liquid-content] [data-profile-summary] {
   border-color: hsl(var(--profile-white) / 0.3);
   background: linear-gradient(
     160deg,
