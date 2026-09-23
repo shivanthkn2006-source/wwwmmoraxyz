@@ -6,6 +6,7 @@ import { ContextualHintWrapper } from '@/components/ContextualHintWrapper';
 import { useVoiceNotifications } from '@/hooks/useVoiceNotifications';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
+import { attachDirectoryProfiles } from '@/lib/friendDirectory';
 import { useAuth } from '@/lib/auth';
 import zoeAvatar from '@/assets/zoe-avatar.png';
 import { useZoe } from '@/contexts/ZoeContext';
@@ -1854,7 +1855,7 @@ const ZoeAssistant: React.FC<ZoeAssistantProps> = ({ onNavigate }) => {
       // Announce the first few notifications
       const topNotifications = notifications.slice(0, 3);
       topNotifications.forEach((notif: any, index: number) => {
-        const fromUser = notif.profiles?.display_name || 'Someone';
+        const fromUser = (notif as any).profile?.display_name || 'Someone';
         
         if (notif.type === 'like') {
           message += `${fromUser} liked your post. `;
@@ -3467,7 +3468,7 @@ const ZoeAssistant: React.FC<ZoeAssistantProps> = ({ onNavigate }) => {
       // Get the most recent post
       const { data: posts, error: postsError } = await supabase
         .from('posts')
-        .select('id, content, profiles!inner(display_name)')
+        .select('id, content, user_id')
         .order('created_at', { ascending: false })
         .limit(1);
 
@@ -3481,7 +3482,8 @@ const ZoeAssistant: React.FC<ZoeAssistantProps> = ({ onNavigate }) => {
       }
 
       const postId = posts[0].id;
-      const authorName = posts[0].profiles?.display_name || 'Someone';
+      const [hydratedPost] = await attachDirectoryProfiles(posts as any[], 'user_id', 'profile');
+      const authorName = (hydratedPost as any)?.profile?.display_name || 'Someone';
 
       // Check if already saved
       const { data: existing } = await supabase
