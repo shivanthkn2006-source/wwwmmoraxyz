@@ -1,7 +1,7 @@
 import React from 'react';
 import { Check, Quote, Sun } from 'lucide-react';
 import type { ZoeMotivation } from '@/hooks/useZoeMotivation';
-import { insightForDate } from '@/lib/curatedInsights';
+import { useDailyQuote } from '@/hooks/useDailyQuote';
 
 interface HomeMotivationSlideProps {
   motivation: ZoeMotivation;
@@ -10,6 +10,7 @@ interface HomeMotivationSlideProps {
 
 /** Persistent in-feed version of today's motivation. */
 export default function HomeMotivationSlide({ motivation, posterUrl }: HomeMotivationSlideProps) {
+  const daily = useDailyQuote();
   return (
     <article className="relative flex h-full min-h-full w-full shrink-0 snap-start snap-always items-end overflow-hidden bg-background text-foreground" data-daily-motivation>
       {posterUrl && (
@@ -42,7 +43,7 @@ export default function HomeMotivationSlide({ motivation, posterUrl }: HomeMotiv
 
         <div className="mt-6 flex max-w-xl items-start gap-2 text-sm italic text-foreground/90">
           <Quote className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
-          <p>&ldquo;{motivation.quote?.trim() || insightForDate().quote}&rdquo;{!motivation.quote?.trim() && <span className="not-italic"> — {insightForDate().author}</span>}</p>
+          <p>&ldquo;{daily.quote}&rdquo;<span className="not-italic"> — {daily.author}</span></p>
         </div>
       </div>
     </article>
