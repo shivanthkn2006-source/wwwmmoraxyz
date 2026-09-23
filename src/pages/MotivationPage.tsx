@@ -12,32 +12,13 @@ import { toast } from 'sonner';
 const MotivationPage = () => {
   const [reloadKey, setReloadKey] = useState(0);
   const { motivation, posterUrl, userId, loading } = useZoeMotivation(reloadKey);
-  const [vote, setVote] = useState<number | null>(null);
+  const { vote, cast, stats } = useMotivationVote(motivation?.id, userId);
   const [rerunning, setRerunning] = useState(false);
   const curated = insightForDate();
   const daily = useDailyQuote();
 
-  useEffect(() => {
-    setVote(null);
-    if (!motivation?.id || !userId) return;
-    void supabase
-      .from('zoe_motivation_votes' as never)
-      .select('vote')
-      .eq('user_id', userId)
-      .eq('motivation_id', motivation.id)
-      .maybeSingle()
-      .then(({ data }) => setVote((data as { vote?: number } | null)?.vote ?? null));
-  }, [motivation?.id, userId]);
-
   const castVote = async (value: 1 | -1) => {
-    if (!motivation?.id || !userId) return;
-    const next = vote === value ? null : value;
-    setVote(next);
-    const table = supabase.from('zoe_motivation_votes' as never);
-    const { error } = next === null
-      ? await table.delete().eq('user_id', userId).eq('motivation_id', motivation.id)
-      : await table.upsert({ user_id: userId, motivation_id: motivation.id, vote: next } as never, { onConflict: 'user_id,motivation_id' });
-    if (error) { toast.error('Could not save your vote.'); setVote(vote); }
+    if (!(await cast(value))) toast.error('Could not save your vote.');
   };
 
   const rerun = async () => {
