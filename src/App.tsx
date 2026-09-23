@@ -59,6 +59,8 @@ const HuddlePage = lazy(() => import("./pages/HuddlePage"));
 const CallsPage = lazy(() => import("./pages/CallsPage"));
 const CallHistoryPage = lazy(() => import("./pages/CallHistoryPage"));
 const InviteFriendsPage = lazy(() => import("./pages/InviteFriendsPage"));
+const MotivationPage = lazy(() => import("./pages/MotivationPage"));
+const MembersDirectoryPage = lazy(() => import("./pages/MembersDirectoryPage"));
 const GroupCallPage = lazy(() => import("./pages/GroupCallPage"));
 const UserProfileView = lazy(() => import("./pages/UserProfileView"));
 const WebdropPage = lazy(() => import("./pages/WebdropPage"));
@@ -682,6 +684,9 @@ const RouteAwareShell = () => {
                               </ProtectedRoute>
                             }
                           />
+                          <Route path="/motivation" element={<ProtectedRoute><MotivationPage /></ProtectedRoute>} />
+                          <Route path="/members" element={<ProtectedRoute><MembersDirectoryPage /></ProtectedRoute>} />
+
 
 
                           <Route

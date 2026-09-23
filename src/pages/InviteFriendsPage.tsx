@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import { redeemInviteCode } from '@/lib/betaInvites';
 
 interface MemberInvite {
   id: string;
@@ -31,6 +32,17 @@ const InviteFriendsPage = () => {
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState<string | null>(null);
+  const [acceptCode, setAcceptCode] = useState('');
+  const [accepting, setAccepting] = useState(false);
+
+  const acceptInvite = async () => {
+    setAccepting(true);
+    const result = await redeemInviteCode(acceptCode);
+    setAccepting(false);
+    if (!result.ok) { toast.error(result.error || 'That invite could not be accepted.'); return; }
+    setAcceptCode('');
+    toast.success('Invite accepted — you are now friends.');
+  };
 
   const load = useCallback(async () => {
     const { data, error } = await supabase.functions.invoke('beta-invite', { body: { action: 'my-invites' } });
@@ -110,6 +122,19 @@ const InviteFriendsPage = () => {
             {busy ? 'Creating…' : 'Create invite link'}
           </Button>
         </Card>
+
+        <Card className="space-y-3 p-4">
+          <label className="text-sm font-medium text-foreground" htmlFor="accept-code">
+            Got an invite from someone? Enter the code
+          </label>
+          <div className="flex gap-2">
+            <Input id="accept-code" value={acceptCode} onChange={(e) => setAcceptCode(e.target.value)} placeholder="MMORA-XXXX" maxLength={64} />
+            <Button onClick={acceptInvite} disabled={accepting || !acceptCode.trim()}>
+              {accepting ? 'Accepting…' : 'Accept'}
+            </Button>
+          </div>
+        </Card>
+
 
         <section className="space-y-3">
           <h2 className="text-lg font-medium text-foreground">Ready to share ({pending.length})</h2>

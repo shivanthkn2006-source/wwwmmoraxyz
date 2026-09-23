@@ -22,7 +22,7 @@ const localDate = (d = new Date()) =>
  * Works for EVERY member — no birth data required. If today's record does not
  * exist yet, the isolated engine is asked to create it on the spot.
  */
-export function useZoeMotivation() {
+export function useZoeMotivation(reloadKey = 0) {
   const [motivation, setMotivation] = useState<ZoeMotivation | null>(null);
   const [posterUrl, setPosterUrl] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | undefined>(undefined);
@@ -30,6 +30,7 @@ export function useZoeMotivation() {
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
 
     const run = async () => {
       try {
@@ -82,7 +83,7 @@ export function useZoeMotivation() {
 
     void run();
     return () => { cancelled = true; };
-  }, []);
+  }, [reloadKey]);
 
   return { motivation, posterUrl, userId, loading };
 }

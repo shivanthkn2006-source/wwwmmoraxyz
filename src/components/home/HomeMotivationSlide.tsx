@@ -1,6 +1,7 @@
 import React from 'react';
 import { Check, Quote, Sun } from 'lucide-react';
 import type { ZoeMotivation } from '@/hooks/useZoeMotivation';
+import { insightForDate } from '@/lib/curatedInsights';
 
 interface HomeMotivationSlideProps {
   motivation: ZoeMotivation;
@@ -39,12 +40,10 @@ export default function HomeMotivationSlide({ motivation, posterUrl }: HomeMotiv
           </div>
         )}
 
-        {motivation.quote && (
-          <div className="mt-6 flex max-w-xl items-start gap-2 text-sm italic text-foreground/90">
-            <Quote className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
-            <p>&ldquo;{motivation.quote}&rdquo;</p>
-          </div>
-        )}
+        <div className="mt-6 flex max-w-xl items-start gap-2 text-sm italic text-foreground/90">
+          <Quote className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+          <p>&ldquo;{motivation.quote?.trim() || insightForDate().quote}&rdquo;{!motivation.quote?.trim() && <span className="not-italic"> — {insightForDate().author}</span>}</p>
+        </div>
       </div>
     </article>
   );
