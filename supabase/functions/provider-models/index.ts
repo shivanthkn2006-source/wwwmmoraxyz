@@ -10,8 +10,8 @@ const corsHeaders = {
 const GROQ_CANDIDATES = ['openai/gpt-oss-20b', 'openai/gpt-oss-120b', 'qwen/qwen3.6-27b', 'groq/compound-mini'];
 const GEMINI_CANDIDATES = ['gemini-flash-latest', 'gemini-3.5-flash', 'gemini-2.5-flash-lite', 'gemini-3.1-flash-lite'];
 
-const NVIDIA_CANDIDATES = ['meta/llama-3.3-70b-instruct', 'deepseek-ai/deepseek-r1', 'nvidia/llama-3.1-nemotron-70b-instruct'];
-const NVIDIA_EMBED_CANDIDATES = ['nvidia/llama-3.2-nv-embedqa-1b-v2', 'nvidia/nv-embedqa-e5-v5'];
+const NVIDIA_CANDIDATES = ['nvidia/nemotron-3-super-120b-a12b', 'meta/muse-glimmer-30b', 'google/diffusiongemma-26b-a4b-it'];
+const NVIDIA_EMBED_CANDIDATES = ['nvidia/nemotron-3-embed-1b'];
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });

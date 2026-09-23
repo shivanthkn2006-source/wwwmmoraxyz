@@ -90,12 +90,12 @@ export const attachDirectoryProfiles = async <T extends Record<string, unknown>>
   rows: T[] | null | undefined,
   idKey = 'user_id',
   targetKey = 'profile',
-): Promise<T[]> => {
+): Promise<(T & { profile: DirectoryProfile | null })[]> => {
   const list = rows || [];
   if (list.length === 0) return [];
   const directory = await loadDirectoryByIds(list.map((row) => String(row[idKey] ?? '')));
   return list.map((row) => ({
     ...row,
     [targetKey]: directory.get(String(row[idKey] ?? '')) ?? null,
-  })) as T[];
+  })) as (T & { profile: DirectoryProfile | null })[];
 };

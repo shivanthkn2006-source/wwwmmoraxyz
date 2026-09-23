@@ -133,7 +133,7 @@ const SPECS: TableSpec[] = [
     id: 'planner',
     label: 'Planner events',
     table: 'important_dates',
-    select: 'id, title, date_type, date_value, is_recurring',
+    select: 'id, user_id, title, description, date_type, date_value, is_recurring',
     order: 'date_value',
     ascending: true,
     columns: [
@@ -155,13 +155,15 @@ const SPECS: TableSpec[] = [
       date_type: text(r.date_type),
       date_value: text(r.date_value),
       is_recurring: r.is_recurring ? 'yearly' : 'no',
+      user_id: text(r.user_id),
+      description: text(r.description),
     }),
   },
   {
     id: 'reminders',
     label: 'Smart Reminders',
     table: 'reminders',
-    select: 'id, title, category, reminder_time, is_completed',
+    select: 'id, user_id, title, description, category, reminder_time, is_completed',
     order: 'reminder_time',
     ascending: true,
     columns: [
@@ -183,6 +185,8 @@ const SPECS: TableSpec[] = [
       category: text(r.category),
       reminder_time: stamp(r.reminder_time),
       is_completed: r.is_completed ? 'done' : 'active',
+      user_id: text(r.user_id),
+      description: text(r.description),
     }),
   },
 ];

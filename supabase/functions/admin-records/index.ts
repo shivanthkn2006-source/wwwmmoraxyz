@@ -14,11 +14,11 @@ const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 type Entity = 'users' | 'sessions' | 'events' | 'planner' | 'reminders';
 
 const ENTITIES: Record<Entity, { table: string; pk: string; fields: string[] }> = {
-  users: { table: 'profiles', pk: 'user_id', fields: ['username', 'display_name', 'bio', 'status', 'city'] },
+  users: { table: 'profiles', pk: 'user_id', fields: ['username', 'display_name', 'bio', 'status', 'city', 'birth_date'] },
   sessions: {
     table: 'user_sessions',
     pk: 'id',
-    fields: ['user_id', 'device_type', 'browser', 'country', 'started_at', 'ended_at', 'is_active'],
+    fields: ['user_id', 'device_type', 'browser', 'country', 'started_at', 'ended_at', 'is_active', 'session_token'],
   },
   events: {
     table: 'user_activity_log',
@@ -33,7 +33,7 @@ const ENTITIES: Record<Entity, { table: string; pk: string; fields: string[] }> 
   reminders: {
     table: 'reminders',
     pk: 'id',
-    fields: ['user_id', 'title', 'description', 'category', 'reminder_time', 'is_completed', 'priority'],
+    fields: ['user_id', 'title', 'description', 'category', 'reminder_type', 'reminder_time', 'is_completed', 'priority'],
   },
 };
 
@@ -89,9 +89,17 @@ Deno.serve(async (req) => {
           email_confirm: true,
         });
         if (createError || !created?.user) return json({ error: createError?.message || 'Could not create the account.' }, 400);
+        // Upsert, not update: a brand-new account may not have a profile row yet,
+        // so an update would silently write nothing and leave the member invisible.
         const values = pick(entity, body?.values || {});
-        if (Object.keys(values).length > 0) {
-          await admin.from('profiles').update(values).eq('user_id', created.user.id);
+        const { error: profileError } = await admin
+          .from('profiles')
+          .upsert({ ...values, user_id: created.user.id }, { onConflict: 'user_id' });
+        if (profileError) {
+          // Roll the account back so a failed profile write cannot leave an
+          // orphaned login that blocks the email from being used again.
+          await admin.auth.admin.deleteUser(created.user.id);
+          return json({ error: profileError.message }, 400);
         }
         return json({ ok: true, id: created.user.id });
       }
@@ -112,6 +120,14 @@ Deno.serve(async (req) => {
       const values = pick(entity, body?.values || {});
       if (Object.keys(values).length === 0) return json({ error: 'Nothing to add.' }, 400);
       if (!values.user_id) values.user_id = userData.user.id;
+      // reminder_type is required by the database; default it so a new reminder
+      // never fails just because the admin left the type blank.
+      if (entity === 'reminders' && !values.reminder_type) values.reminder_type = 'custom';
+      // A session row needs a unique token; mint one for admin-created records.
+      if (entity === 'sessions') {
+        if (!values.session_token) values.session_token = crypto.randomUUID();
+        if (!values.started_at) values.started_at = new Date().toISOString();
+      }
       const { data: inserted, error: insertError } = await admin.from(spec.table).insert(values).select('id').single();
       if (insertError) return json({ error: insertError.message }, 400);
       return json({ ok: true, id: inserted?.id });
