@@ -14,7 +14,11 @@ const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 type Entity = 'users' | 'sessions' | 'events' | 'planner' | 'reminders';
 
 const ENTITIES: Record<Entity, { table: string; pk: string; fields: string[] }> = {
-  users: { table: 'profiles', pk: 'user_id', fields: ['username', 'display_name', 'bio', 'status', 'city', 'birth_date'] },
+  users: {
+    table: 'profiles',
+    pk: 'user_id',
+    fields: ['username', 'display_name', 'bio', 'status', 'city', 'birth_date', 'profile_photo_url'],
+  },
   sessions: {
     table: 'user_sessions',
     pk: 'id',

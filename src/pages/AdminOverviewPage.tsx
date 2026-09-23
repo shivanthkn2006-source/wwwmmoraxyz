@@ -20,6 +20,7 @@ import LoadTestPanel from '@/components/admin/LoadTestPanel';
 import GrowthOnboardingWizard from '@/components/admin/GrowthOnboardingWizard';
 import AdminDataTables from '@/components/admin/AdminDataTables';
 import StartupTimingPanel from '@/components/admin/StartupTimingPanel';
+import AdminFriendRequests from '@/components/admin/AdminFriendRequests';
 
 
 
@@ -159,6 +160,10 @@ const AdminOverviewPage: React.FC = () => {
 
             <section className="mt-6">
               <AdminDataTables />
+            </section>
+
+            <section className="mt-6">
+              <AdminFriendRequests />
             </section>
 
             <section className="mt-8 grid gap-4 lg:grid-cols-2">
