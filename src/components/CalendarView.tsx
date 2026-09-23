@@ -8,6 +8,7 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSam
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getImportantDayForDate } from '@/data/worldImportantDays';
 import { PLANNING_SYNC_EVENT } from '@/lib/planningSync';
+import { loadFriendBirthdayEvents } from '@/lib/friendBirthdays';
 
 interface Reminder {
   id: string;
@@ -99,11 +100,14 @@ export const CalendarView = () => {
       .not('event_date', 'is', null)
       .maybeSingle();
 
-    const { data: plannedDates, error: plannedError } = await supabase
-      .from('important_dates')
-      .select('id, title, description, date_type, date_value, is_recurring')
-      .eq('user_id', user.id)
-      .order('date_value', { ascending: true });
+    const [{ data: plannedDates, error: plannedError }, friendBirthdays] = await Promise.all([
+      supabase
+        .from('important_dates')
+        .select('id, title, description, date_type, date_value, is_recurring')
+        .eq('user_id', user.id)
+        .order('date_value', { ascending: true }),
+      loadFriendBirthdayEvents(user.id),
+    ]);
 
     if (!error && !plannedError) {
       const legacy = data?.event_date ? [{
@@ -114,7 +118,7 @@ export const CalendarView = () => {
         date_value: data.event_date,
         is_recurring: data.event_recurring,
       }] : [];
-      setEvents([...(plannedDates || []), ...legacy]);
+      setEvents([...(plannedDates || []), ...friendBirthdays, ...legacy]);
     }
   };
 

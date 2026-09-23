@@ -152,3 +152,9 @@
 - [x] Startup delay panel reporting the exact measured phases on the current device
 - [x] Live updates enabled for planner events and reminders so Planner, Calendar and Smart Reminders all refresh each other
 
+## 2026-09-23 — Monitoring regressions
+- [x] Prevent deferred provider startup from remounting the active page
+- [x] Restore friends' birthdays in Planner Diary and Calendar
+- [x] Restore the frosted identity panel over profile photos
+- [x] Verify current vision fallback health and remove the retired Google candidate
+

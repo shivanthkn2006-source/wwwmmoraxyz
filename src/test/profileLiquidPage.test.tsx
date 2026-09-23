@@ -50,7 +50,7 @@ describe('M’Mora profile transparent presentation', () => {
     expect(content).toContain('data-profile-photo-image');
     expect(content).toContain('data-profile-summary');
     expect(content).toContain('absolute bottom-0');
-    expect(css).toContain('.profile-liquid-page [data-profile-summary]');
+    expect(css).toContain('.profile-liquid-page [data-profile-liquid-content] [data-profile-summary]');
     expect(css).toContain('backdrop-filter: blur(28px) saturate(120%)');
   });
 });

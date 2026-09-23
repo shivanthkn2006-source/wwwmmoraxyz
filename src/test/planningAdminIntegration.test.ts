@@ -17,6 +17,14 @@ describe('live admin and shared planning data', () => {
     expect(read('src/components/CalendarView.tsx')).toContain("from('important_dates')");
   });
 
+  it('keeps friends birthdays visible in Planner and Calendar', () => {
+    const birthdays = read('src/lib/friendBirthdays.ts');
+    expect(birthdays).toContain("from('friendships')");
+    expect(birthdays).toContain("from('profiles')");
+    expect(read('src/components/DayPlannerDiary.tsx')).toContain('loadFriendBirthdayEvents(user.id)');
+    expect(read('src/components/CalendarView.tsx')).toContain('loadFriendBirthdayEvents(user.id)');
+  });
+
   it('broadcasts reminder and planner edits to Calendar immediately', () => {
     expect(read('src/components/RemindersManager.tsx')).toContain("notifyPlanningChanged('reminders')");
     expect(read('src/components/DayPlannerDiary.tsx')).toContain("notifyPlanningChanged('planner')");
