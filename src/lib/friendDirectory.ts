@@ -52,26 +52,24 @@ export const loadFriendDirectory = async (userId: string): Promise<DirectoryProf
   return data as DirectoryProfile[];
 };
 
-/** Name/handle search across the whole platform — discovery only, no personal details. */
+/**
+ * Name/handle search for finding people to add.
+ * Runs on the server so it can return only a name, handle and photo — personal
+ * profile details of strangers are never sent to the app.
+ */
 export const searchDirectory = async (
   query: string,
   excludeUserId?: string | null,
   limit = 10,
 ): Promise<DirectoryProfile[]> => {
   const needle = query.trim();
-  if (!needle) return [];
+  if (needle.length < 2) return [];
 
-  let request = supabase
-    .from('public_profiles')
-    .select(DIRECTORY_FIELDS)
-    .or(`display_name.ilike.%${needle}%,username.ilike.%${needle}%`)
-    .limit(limit);
-
-  if (excludeUserId) request = request.neq('user_id', excludeUserId);
-
-  const { data, error } = await request;
+  const { data, error } = await supabase.functions.invoke('member-directory', {
+    body: { query: needle, excludeUserId: excludeUserId ?? null, limit },
+  });
   if (error || !data) return [];
-  return data as DirectoryProfile[];
+  return ((data as { profiles?: DirectoryProfile[] }).profiles || []) as DirectoryProfile[];
 };
 
 /** Directory rows for a known set of members (post authors, message senders, map pins). */
