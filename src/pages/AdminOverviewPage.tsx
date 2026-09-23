@@ -20,6 +20,7 @@ import LoadTestPanel from '@/components/admin/LoadTestPanel';
 import GrowthOnboardingWizard from '@/components/admin/GrowthOnboardingWizard';
 import AdminDataTables from '@/components/admin/AdminDataTables';
 import StartupTimingPanel from '@/components/admin/StartupTimingPanel';
+import AdminFriendRequests from '@/components/admin/AdminFriendRequests';
 
 
 
