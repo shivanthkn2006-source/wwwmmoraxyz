@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { attachDirectoryProfiles } from '@/lib/friendDirectory';
 import { useAuth } from '@/lib/auth';
 
 export interface DetectedProduct {
@@ -75,12 +76,7 @@ export function useSelfieCityStore() {
           location_lng,
           location_name,
           metadata,
-          created_at,
-          profiles!posts_user_id_fkey (
-            display_name,
-            username,
-            profile_photo_url
-          )
+          created_at
         `)
         .not('location_lat', 'is', null)
         .not('location_lng', 'is', null)
@@ -89,7 +85,9 @@ export function useSelfieCityStore() {
 
       if (error) throw error;
 
-      const mappedSelfies: SelfieCityPin[] = (posts || []).map((post: any) => ({
+      const postsWithAuthors = await attachDirectoryProfiles(posts as any[], 'user_id', 'profiles');
+
+      const mappedSelfies: SelfieCityPin[] = (postsWithAuthors || []).map((post: any) => ({
         id: post.id,
         userId: post.user_id,
         imageUrl: post.media_url || '/placeholder.svg',

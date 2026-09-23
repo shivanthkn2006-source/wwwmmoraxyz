@@ -85,8 +85,8 @@ export const RelationshipManager: React.FC = () => {
         .from('user_relationships')
         .select(`
           *,
-          requester_profile:profiles!user_relationships_requester_id_fkey(username, display_name, profile_photo_url),
-          recipient_profile:profiles!user_relationships_recipient_id_fkey(username, display_name, profile_photo_url)
+          requester_profile:public_profiles!user_relationships_requester_id_fkey(username, display_name, profile_photo_url),
+          recipient_profile:public_profiles!user_relationships_recipient_id_fkey(username, display_name, profile_photo_url)
         `)
         .or(`requester_id.eq.${user.id},recipient_id.eq.${user.id}`)
         .order('created_at', { ascending: false });
