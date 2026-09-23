@@ -12801,6 +12801,15 @@ export type Database = {
           total_points: number
         }[]
       }
+      search_member_directory: {
+        Args: { p_limit?: number; p_query: string }
+        Returns: {
+          display_name: string
+          profile_photo_url: string
+          user_id: string
+          username: string
+        }[]
+      }
       search_mmora_memories: {
         Args: {
           match_count?: number
