@@ -15,6 +15,7 @@ import { buildLifeTimelineBlock } from '../_shared/life-timeline.ts';
 import { buildLifeProfileBlock } from '../_shared/life-profile.ts';
 import { needsWebGrounding, webGround, buildWebGroundingBlock, buildWebSources } from '../_shared/web-grounding.ts';
 import { needsAstroGrounding, buildAstroGroundingBlock, type AstroBirthProfile } from '../_shared/astro-grounding.ts';
+import { isForecastTurn, parseForecastFocus, buildForecastFocusBlock, deterministicForecast, ensureForecastFraming, FORECAST_FOLLOW_UPS, type DhfCardSignal } from '../_shared/life-forecast.ts';
 import { CLARIFICATION_PROTOCOL, spokenFallback } from '../_shared/cognitive-fault.ts';
 
 // Zodiac sign calculation helper
@@ -891,14 +892,30 @@ ${cortexPromptAddition}`;
     // EPHEMERIS GUARDRAIL — astrology answers are grounded in computed
     // planetary positions, never in the model's recollection.
     let astroBlock = '';
+    const forecastTurn = isForecastTurn(messages as Array<{ role: string; content: string }>);
+    const forecastFocus = forecastTurn ? parseForecastFocus(String(lastUserMessage)) : null;
     try {
-      if (needsAstroGrounding(lastUserMessage)) {
+      if (needsAstroGrounding(lastUserMessage) || forecastTurn) {
         astroBlock = await buildAstroGroundingBlock(astroBirthProfile, timezone || 'Asia/Kolkata');
+      }
+      if (forecastFocus) {
+        let cards: DhfCardSignal[] = [];
+        if (userId) {
+          const { data } = await supabase
+            .from('dhf_daily_posts')
+            .select('category, headline, short_summary, slot_time, post_date')
+            .eq('user_id', userId)
+            .order('post_date', { ascending: false })
+            .order('slot_time', { ascending: false })
+            .limit(6);
+          cards = (data as DhfCardSignal[] | null) ?? [];
+        }
+        astroBlock += buildForecastFocusBlock(forecastFocus, cards, !!astroBirthProfile?.birth_date);
       }
     } catch (astroError) {
       console.warn('[Zoe] astro grounding skipped:', astroError instanceof Error ? astroError.message : astroError);
     }
-    console.log('[Zoe] astro grounding:', astroBlock ? 'active' : 'not needed');
+    console.log('[Zoe] astro grounding:', astroBlock ? 'active' : 'not needed', forecastFocus ? `forecast ${forecastFocus.window.label}` : '');
 
     const cascadeMessages = [
       { role: 'system', content: `${systemPrompt}${omniRecallBlock}${timelineBlock}${webBlock}${astroBlock}${CLARIFICATION_PROTOCOL}` },
@@ -912,12 +929,17 @@ ${cortexPromptAddition}`;
     if (!cascadeResult.success) {
       // Cognitive fault tolerance: the user hears Zoe, never a 503.
       console.error('All providers failed', JSON.stringify(cascadeResult.attempts));
+      // Forecast turns still get a real, zero-token reading from the dasha timeline.
+      const offlineForecast = forecastFocus
+        ? (() => { try { return deterministicForecast(astroBirthProfile, forecastFocus, timezone || 'Asia/Kolkata'); } catch { return null; } })()
+        : null;
       return new Response(
         JSON.stringify({
-          message: spokenFallback('providers'),
+          message: offlineForecast ?? spokenFallback('providers'),
           degraded: true,
-          code: 'AI_PROVIDERS_UNAVAILABLE',
-          retryable: true,
+          code: offlineForecast ? 'FORECAST_OFFLINE_READING' : 'AI_PROVIDERS_UNAVAILABLE',
+          retryable: !offlineForecast,
+          forecast: forecastFocus ? { areas: forecastFocus.areas, window: forecastFocus.window.label, followUps: FORECAST_FOLLOW_UPS, source: 'dasha-timeline' } : undefined,
           providerAttempts: cascadeResult.attempts.map(({ tier, provider, model, status, reasonCode }) => ({
             tier, provider, model, status, reasonCode,
           })),
@@ -927,6 +949,13 @@ ${cortexPromptAddition}`;
     }
 
     let aiMessage = hardenZoeIdentity(cascadeResult.content);
+    if (aiMessage && forecastFocus) {
+      // A cut-off model reply (too short to be a reading) is replaced by the zero-token dasha reading.
+      if (astroBirthProfile?.birth_date && aiMessage.replace(/\s+/g, ' ').trim().length < 220) {
+        try { aiMessage = deterministicForecast(astroBirthProfile, forecastFocus, timezone || 'Asia/Kolkata'); } catch { /* keep model text */ }
+      }
+      aiMessage = ensureForecastFraming(aiMessage);
+    }
 
     if (!aiMessage) {
       throw new Error('No message in AI response');
@@ -1017,6 +1046,7 @@ ${cortexPromptAddition}`;
           targetMs: targetLatency,
           slaMet: totalLatencyMs <= targetLatency
         },
+        forecast: forecastFocus ? { areas: forecastFocus.areas, window: forecastFocus.window.label, followUps: FORECAST_FOLLOW_UPS, source: 'swiss-ephemeris+dasha+dhf' } : undefined,
         provider: {
           name: cascadeResult.selectedProvider,
           model: cascadeResult.selectedModel,
