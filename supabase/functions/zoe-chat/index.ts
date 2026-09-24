@@ -198,6 +198,8 @@ serve(async (req) => {
     // ASI 7.5x PROCESSING - Pentarchy + Truth Engine + Quantum Loop
     // ═══════════════════════════════════════════════════════════════════════════════
     const lastUserMessage = messages.filter(m => m.role === 'user').pop()?.content || '';
+    const earlyForecastTurn = isForecastTurn(messages as Array<{ role: string; content: string }>);
+    const earlyForecastFocus = earlyForecastTurn ? parseForecastFocus(String(lastUserMessage)) : null;
     const characterFacts = precomputeCharacterFacts(lastUserMessage);
 
     // Exact character-count questions must never reach a probabilistic model.
@@ -223,7 +225,7 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    const shouldUseASI = enableASI || shouldTriggerASI(lastUserMessage);
+    const shouldUseASI = !earlyForecastTurn && (enableASI || shouldTriggerASI(lastUserMessage));
     const computedASIMode = asiMode || (shouldUseASI ? determineASIMode(lastUserMessage) : null);
     
     let asiResult: { synthesizedResponse?: string; confidence?: number; asiLevel?: number; pentarchyUsed?: boolean } = {};
@@ -333,6 +335,37 @@ serve(async (req) => {
           .eq('user_id', user.id)
           .maybeSingle();
         astroBirthProfile = (astroProfile as AstroBirthProfile | null) ?? null;
+      }
+    }
+
+    // FAST DHF PATH — answer same-day repeated forecasts immediately after
+    // authentication, before recall, web grounding, timeline and prompt setup.
+    // The key is deterministic and user-scoped; uncached turns continue through
+    // the complete conversational pipeline below.
+    if (userId && earlyForecastFocus) {
+      const earlyKey = forecastCacheKey(earlyForecastFocus);
+      const { data: hit } = await supabase
+        .from('dhf_consciousness_memory')
+        .select('metadata, created_at')
+        .eq('user_id', userId)
+        .eq('category', 'forecast_answer')
+        .eq('raw_query', earlyKey)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const metadata = (hit?.metadata ?? null) as { answer?: string } | null;
+      const today = new Date().toISOString().slice(0, 10);
+      if (metadata?.answer && String(hit?.created_at ?? '').slice(0, 10) === today) {
+        return new Response(JSON.stringify({
+          message: ensureForecastFraming(metadata.answer),
+          cacheHit: true,
+          forecast: {
+            areas: earlyForecastFocus.areas,
+            window: earlyForecastFocus.window.label,
+            followUps: FORECAST_FOLLOW_UPS,
+            source: 'dhf-cache',
+          },
+        }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
     }
 
@@ -893,8 +926,8 @@ ${cortexPromptAddition}`;
     // planetary positions, never in the model's recollection.
     let astroBlock = '';
     let forecastCards: DhfCardSignal[] = [];
-    const forecastTurn = isForecastTurn(messages as Array<{ role: string; content: string }>);
-    const forecastFocus = forecastTurn ? parseForecastFocus(String(lastUserMessage)) : null;
+    const forecastTurn = earlyForecastTurn;
+    const forecastFocus = earlyForecastFocus;
     try {
       if (needsAstroGrounding(lastUserMessage) || forecastTurn) {
         astroBlock = await buildAstroGroundingBlock(astroBirthProfile, timezone || 'Asia/Kolkata');
@@ -930,22 +963,7 @@ ${cortexPromptAddition}`;
     // same day) answer instantly from Zoe's DHF memory with zero tokens.
     const forecastKey = forecastFocus && userId ? forecastCacheKey(forecastFocus) : null;
     const todayIso = new Date().toISOString().slice(0, 10);
-    let cachedForecast: { answer: string; day: string } | null = null;
-    if (forecastKey) {
-      try {
-        const { data: hit } = await supabase
-          .from('dhf_consciousness_memory')
-          .select('metadata, created_at')
-          .eq('user_id', userId)
-          .eq('category', 'forecast_answer')
-          .eq('raw_query', forecastKey)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        const md = (hit?.metadata ?? null) as { answer?: string } | null;
-        if (md?.answer) cachedForecast = { answer: md.answer, day: String(hit!.created_at).slice(0, 10) };
-      } catch { /* cache is best-effort */ }
-    }
+    const cachedForecast: { answer: string; day: string } | null = null;
     const forecastMeta = (source: string) => forecastFocus ? { areas: forecastFocus.areas, window: forecastFocus.window.label, followUps: FORECAST_FOLLOW_UPS, source } : undefined;
     if (cachedForecast && cachedForecast.day === todayIso) {
       return new Response(JSON.stringify({
