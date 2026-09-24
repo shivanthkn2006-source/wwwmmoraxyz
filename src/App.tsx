@@ -582,6 +582,7 @@ const RouteAwareShell = () => {
               <DevTestButton />
               <ScreenTapController />
               <AdminToolbar />
+              <Suspense fallback={null}><ZoeSkyShiftMount /></Suspense>
 
               <GenesisIntroWrapper>
                 <QuantumGatekeeper enabled={true}>
@@ -687,7 +688,7 @@ const RouteAwareShell = () => {
                             }
                           />
                           <Route path="/motivation" element={<ProtectedRoute><MotivationPage /></ProtectedRoute>} />
-                          <Route path="/life-projection" element={<ProtectedRoute><LifeProjectionPage /><ZoeSkyShiftMount /></ProtectedRoute>} />
+                          <Route path="/life-projection" element={<ProtectedRoute><LifeProjectionPage /></ProtectedRoute>} />
                           <Route path="/members" element={<ProtectedRoute><MembersDirectoryPage /></ProtectedRoute>} />
 
 
