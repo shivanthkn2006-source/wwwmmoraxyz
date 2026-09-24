@@ -141,7 +141,7 @@ export const FORECAST_OPENING = "A gentle note first: this is guidance drawn fro
 export const FORECAST_CLOSING = "Remember, no reading is 100% accurate. Your choices and effort shape what actually happens — use this to plan, not to worry.";
 
 /** Zero-token reading from the dasha timeline. Used when every provider is down. */
-export function deterministicForecast(birth: AstroBirthProfile | null, focus: ForecastFocus, fallbackTz = 'Asia/Kolkata'): string {
+export function deterministicForecast(birth: AstroBirthProfile | null, focus: ForecastFocus, fallbackTz = 'Asia/Kolkata', todayCard?: DhfCardSignal | null): string {
   if (!birth?.birth_date) {
     return 'I can read your year only from your real birth chart, and I don\'t have your birth details yet. Share your date, time (roughly is fine) and city of birth, and I\'ll walk you through it part by part.';
   }
@@ -163,6 +163,7 @@ export function deterministicForecast(birth: AstroBirthProfile | null, focus: Fo
       .filter(Boolean);
     lines.push(`From ${p.start} to ${p.end} you're in ${p.maha}–${p.antar}. ${themes.length ? themes.join('; ') + '.' : 'A quieter stretch for these areas.'} (${themes.length > 1 ? 'stronger' : 'mixed'} signal)`);
   }
+  if (todayCard?.headline) lines.push(`Today's DHF card says: "${todayCard.headline}"${todayCard.short_summary ? ` — ${String(todayCard.short_summary).slice(0, 160)}` : ''}.`);
   if (areas.includes('health') || areas.includes('money')) lines.push('For health or money decisions, let a doctor or financial adviser guide the real steps.');
   lines.push(FORECAST_CLOSING);
   lines.push('Want me to go deeper on one area, or a specific year, month, week or date?');
@@ -180,3 +181,35 @@ export function ensureForecastFraming(text: string): string {
 export const FORECAST_FOLLOW_UPS = [
   'Career this year', 'Money next 6 months', 'Love this month', 'Family next week', 'Health this month', 'Pick a specific date',
 ];
+
+/** Stable cache key for a forecast question: same areas + same window = same answer. */
+export function forecastCacheKey(focus: ForecastFocus): string {
+  const areas = [...focus.areas].sort().join(',') || 'all';
+  return `forecast:${areas}:${iso(focus.window.start)}:${iso(focus.window.end)}`;
+}
+
+export interface ProjectedPeriod {
+  maha: string; antar: string; start: string; end: string;
+  areas: Partial<Record<LifeArea, string>>;
+  signal: 'stronger' | 'mixed' | 'quiet';
+}
+
+/** Zero-token life timeline: every dasha sub-period overlapping the next N months, themed per life area. */
+export function projectLifeTimeline(birth: AstroBirthProfile, months = 24, fallbackTz = 'Asia/Kolkata', now = new Date()): ProjectedPeriod[] {
+  if (!birth?.birth_date) return [];
+  const tz = birth.birth_timezone || fallbackTz;
+  const natalUtc = zonedTimeToUtc(String(birth.birth_date).slice(0, 10), (birth.birth_time || '12:00').slice(0, 5), tz);
+  const end = new Date(now); end.setMonth(end.getMonth() + months);
+  const out: ProjectedPeriod[] = [];
+  const core: LifeArea[] = ['career', 'money', 'love', 'family'];
+  for (const maha of vimshottariDasha(natalUtc, 9).timeline) {
+    for (const a of maha.antardashas ?? []) {
+      if (Date.parse(a.end) <= now.getTime() || Date.parse(a.start) >= end.getTime()) continue;
+      const areas: Partial<Record<LifeArea, string>> = {};
+      for (const area of core) { const t = LORD_THEMES[a.lord]?.[area] ?? LORD_THEMES[maha.lord]?.[area]; if (t) areas[area] = t; }
+      const n = Object.keys(areas).length;
+      out.push({ maha: maha.lord, antar: a.lord, start: a.start.slice(0, 10), end: a.end.slice(0, 10), areas, signal: n > 1 ? 'stronger' : n === 1 ? 'mixed' : 'quiet' });
+    }
+  }
+  return out;
+}
