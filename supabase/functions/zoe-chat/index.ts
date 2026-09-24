@@ -291,6 +291,41 @@ serve(async (req) => {
       
       if (user && !authError) {
         userId = user.id; // Capture for telemetry
+
+        // FAST DHF PATH — a same-day repeat of the same forecast question is
+        // answered straight from Zoe's own memory, before any profile, recall,
+        // web or timeline work. Single indexed read, user-scoped key.
+        if (earlyForecastFocus) {
+          try {
+            const earlyKey = forecastCacheKey(earlyForecastFocus);
+            const { data: hit } = await supabase
+              .from('dhf_consciousness_memory')
+              .select('metadata, created_at')
+              .eq('user_id', userId)
+              .eq('category', 'forecast_answer')
+              .eq('raw_query', earlyKey)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            const metadata = (hit?.metadata ?? null) as { answer?: string } | null;
+            const today = new Date().toISOString().slice(0, 10);
+            if (metadata?.answer && String(hit?.created_at ?? '').slice(0, 10) === today) {
+              return new Response(JSON.stringify({
+                message: ensureForecastFraming(metadata.answer),
+                cacheHit: true,
+                forecast: {
+                  areas: earlyForecastFocus.areas,
+                  window: earlyForecastFocus.window.label,
+                  followUps: FORECAST_FOLLOW_UPS,
+                  source: 'dhf-cache',
+                },
+              }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+            }
+          } catch (cacheError) {
+            console.warn('[Zoe] early forecast cache skipped:', cacheError instanceof Error ? cacheError.message : cacheError);
+          }
+        }
+
         // Fetch complete user profile from database with relationship style
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
@@ -338,40 +373,6 @@ serve(async (req) => {
       }
     }
 
-    // FAST DHF PATH — answer same-day repeated forecasts immediately after
-    // authentication, before recall, web grounding, timeline and prompt setup.
-    // The key is deterministic and user-scoped; uncached turns continue through
-    // the complete conversational pipeline below.
-    if (userId && earlyForecastFocus) {
-      try {
-        const earlyKey = forecastCacheKey(earlyForecastFocus);
-        const { data: hit } = await supabase
-          .from('dhf_consciousness_memory')
-          .select('metadata, created_at')
-          .eq('user_id', userId)
-          .eq('category', 'forecast_answer')
-          .eq('raw_query', earlyKey)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        const metadata = (hit?.metadata ?? null) as { answer?: string } | null;
-        const today = new Date().toISOString().slice(0, 10);
-        if (metadata?.answer && String(hit?.created_at ?? '').slice(0, 10) === today) {
-          return new Response(JSON.stringify({
-            message: ensureForecastFraming(metadata.answer),
-            cacheHit: true,
-            forecast: {
-              areas: earlyForecastFocus.areas,
-              window: earlyForecastFocus.window.label,
-              followUps: FORECAST_FOLLOW_UPS,
-              source: 'dhf-cache',
-            },
-          }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-        }
-      } catch (cacheError) {
-        console.warn('[Zoe] early forecast cache skipped:', cacheError instanceof Error ? cacheError.message : cacheError);
-      }
-    }
 
 
     console.log('Zoe AI chat request with context:', { soulMetrics, platformContext, hasProfile: !!userProfileContext });
