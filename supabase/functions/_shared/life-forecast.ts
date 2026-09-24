@@ -172,7 +172,7 @@ export function deterministicForecast(birth: AstroBirthProfile | null, focus: Fo
 /** Guarantee the before/after honesty framing on every forecast answer. */
 export function ensureForecastFraming(text: string): string {
   let out = String(text || '').trim();
-  if (!/not (a )?certain|not 100|no reading is|guidance/i.test(out.slice(0, 260))) out = `${FORECAST_OPENING} ${out}`;
+  if (!/not (a |an )?(absolute )?(certain|promise)|not 100|no reading is|guidance|gentle/i.test(out.slice(0, 300))) out = `${FORECAST_OPENING} ${out}`;
   if (!/100%|your choices/i.test(out.slice(-320))) out = `${out} ${FORECAST_CLOSING}`;
   return out;
 }

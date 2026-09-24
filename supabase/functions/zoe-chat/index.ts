@@ -949,7 +949,13 @@ ${cortexPromptAddition}`;
     }
 
     let aiMessage = hardenZoeIdentity(cascadeResult.content);
-    if (aiMessage && forecastFocus) aiMessage = ensureForecastFraming(aiMessage);
+    if (aiMessage && forecastFocus) {
+      // A cut-off model reply (too short to be a reading) is replaced by the zero-token dasha reading.
+      if (astroBirthProfile?.birth_date && aiMessage.replace(/\s+/g, ' ').trim().length < 220) {
+        try { aiMessage = deterministicForecast(astroBirthProfile, forecastFocus, timezone || 'Asia/Kolkata'); } catch { /* keep model text */ }
+      }
+      aiMessage = ensureForecastFraming(aiMessage);
+    }
 
     if (!aiMessage) {
       throw new Error('No message in AI response');
