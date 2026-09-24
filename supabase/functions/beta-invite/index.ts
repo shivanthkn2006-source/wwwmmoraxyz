@@ -204,9 +204,12 @@ serve(async (req) => {
         .eq('code', code)
         .maybeSingle();
       const row = data as InviteRow | null;
+      // Self-redeem check first: invite-signup already burns the code, so the
+      // invite is exhausted by the time finish() calls redeem — the caller must
+      // still get an ok response instead of a false "fully used" error.
+      if (row?.used_by === userId) return json({ ok: true, alreadyRedeemed: true, code: row.code });
       const verdict = inviteUsable(row);
       if (!row || !verdict.usable) return json({ ok: false, error: verdict.reason }, 400);
-      if (row.used_by === userId) return json({ ok: true, alreadyRedeemed: true, code: row.code });
 
       const { error } = await db
         .from('invite_codes')
