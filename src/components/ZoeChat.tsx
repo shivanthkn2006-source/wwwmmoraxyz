@@ -19,6 +19,7 @@ import { setActiveVoiceExperience } from '@/utils/voiceExperienceLock';
 import { useZoe } from '@/contexts/ZoeContext';
 import { askZoe } from '@/services/zoeEngine';
 import { ZoeRecallCitations, type ZoeRecallSource } from '@/components/zoe/ZoeRecallCitations';
+import { Suggestion, Suggestions } from '@/components/ai-elements/suggestion';
 
 import { 
   isSpeechRecognitionSupported, 
@@ -35,6 +36,7 @@ interface Message {
   timestamp: Date;
   /** Provenance rows that grounded this reply (omniRecallSources). */
   sources?: ZoeRecallSource[];
+  followUps?: string[];
 }
 
 export const ZoeChat = () => {
@@ -281,6 +283,7 @@ export const ZoeChat = () => {
         content: responseContent,
         timestamp: new Date(),
         sources: result.sources,
+        followUps: Array.isArray(result.raw?.forecast?.followUps) ? result.raw.forecast.followUps : undefined,
       };
 
       setMessages(prev => [...prev, assistantMessage]);
@@ -513,6 +516,18 @@ export const ZoeChat = () => {
                   </p>
                   {msg.role === 'assistant' && msg.sources?.length ? (
                     <ZoeRecallCitations sources={msg.sources} />
+                  ) : null}
+                  {msg.role === 'assistant' && msg.followUps?.length ? (
+                    <Suggestions className="mt-3 flex-wrap" data-forecast-follow-ups>
+                      {msg.followUps.map((followUp) => (
+                        <Suggestion
+                          key={followUp}
+                          suggestion={followUp}
+                          onClick={sendMessage}
+                          disabled={isLoading}
+                        />
+                      ))}
+                    </Suggestions>
                   ) : null}
                   {/* Copy button */}
                   <TooltipProvider>

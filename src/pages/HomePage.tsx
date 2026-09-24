@@ -28,6 +28,7 @@ import { type FeedSearchItem } from '@/lib/feedSearchItems';
 import { useDhfBrain } from '@/hooks/useDhfBrain';
 import useZoeMotivation from '@/hooks/useZoeMotivation';
 import HomeMotivationSlide from '@/components/home/HomeMotivationSlide';
+import zoeAvatar from '@/assets/zoe-avatar.png';
 import { isMotivationRevealed } from '@/hooks/useMotivationVote';
 import HomeMusicShelf from '@/components/home/HomeMusicShelf';
 import HomeMusicRecommendations from '@/components/home/HomeMusicRecommendations';
@@ -124,6 +125,9 @@ import { compassSlotTimestamp } from '@/lib/dhfCompass';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { screenUpload, reportBlockedUpload } from '@/lib/uploadModeration';
 import { CDN_CACHE_CONTROL, prefersLowBandwidth, prepareVideoRenditions, registerVideoAsset, uploadRendition, type VideoRenditions } from '@/lib/videoPipeline';
+import { rankLifeProjectionFeed } from '@/features/feed/lifeProjectionRank';
+import { loadFriendBirthdayEvents } from '@/lib/friendBirthdays';
+import { useQuietZoeGuidance } from '@/hooks/useQuietZoeGuidance';
 
 
 
@@ -345,13 +349,23 @@ const HomePage = () => {
 
   const navigate = useNavigate();
   const { receivedRequests, acceptFriendRequest, rejectFriendRequest } = useFriendRequests();
-  const [globalPosts, setGlobalPosts] = useState<Post[]>([]);
+  const cachedHomePosts = React.useMemo<Post[]>(() => {
+    try { return JSON.parse(sessionStorage.getItem('mmora.home.globalPosts') ?? '[]') as Post[]; }
+    catch { return []; }
+  }, []);
+  const [globalPosts, setGlobalPosts] = useState<Post[]>(cachedHomePosts);
   const [personalPosts, setPersonalPosts] = useState<Post[]>([]);
   const [loopPosts, setLoopPosts] = useState<Post[]>([]);
   const [brokenLoopPreviewIds, setBrokenLoopPreviewIds] = useState<Set<string>>(() => new Set());
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(cachedHomePosts.length === 0);
   const homeSurfaceRef = useRef<HTMLDivElement | null>(null);
   const [activeTab, setActiveTab] = useState<string>('global');
+  const quietGuidance = useQuietZoeGuidance(activeTab);
+  const [lifeSignals, setLifeSignals] = useState({
+    interests: [] as string[],
+    closeness: new Map<string, number>(),
+    birthdays: new Set<string>(),
+  });
   // Search videos (YouTube) injected into the feed and played inline — new-window
   // navigation to youtube.com is blocked by Cross-Origin-Opener-Policy.
   const { ingest: ingestDhf } = useDhfBrain();
@@ -941,7 +955,35 @@ const HomePage = () => {
       .filter(Boolean)
       .some((value) => value?.toLowerCase().includes(normalizedHomeQuery));
   }, [normalizedHomeQuery]);
-  const visibleGlobalPosts = React.useMemo(() => globalPosts.filter(matchesHomeQuery), [globalPosts, matchesHomeQuery]);
+  const visibleGlobalPosts = React.useMemo(() => rankLifeProjectionFeed(
+    globalPosts.filter(matchesHomeQuery),
+    {
+      interests: lifeSignals.interests,
+      closeFriends: lifeSignals.closeness,
+      upcomingBirthdayIds: lifeSignals.birthdays,
+      planetaryKeywords: astroDaily ? [JSON.stringify(astroDaily)] : [],
+    },
+  ), [globalPosts, matchesHomeQuery, lifeSignals, astroDaily]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    let alive = true;
+    void Promise.all([
+      supabase.from('profiles').select('hobbies, profession, field_of_study').eq('user_id', user.id).maybeSingle(),
+      supabase.from('intimacy_scores').select('target_user_id, score'),
+      loadFriendBirthdayEvents(user.id),
+    ]).then(([profileResult, intimacyResult, birthdays]) => {
+      if (!alive) return;
+      const profile = profileResult.data as { hobbies?: string[] | string | null; profession?: string | null; field_of_study?: string | null } | null;
+      const hobbies = Array.isArray(profile?.hobbies) ? profile.hobbies : String(profile?.hobbies ?? '').split(',');
+      setLifeSignals({
+        interests: [...hobbies, profile?.profession ?? '', profile?.field_of_study ?? ''].filter(Boolean),
+        closeness: new Map((intimacyResult.data ?? []).map((row: any) => [row.target_user_id, Number(row.score) || 0])),
+        birthdays: new Set(birthdays.map((event) => event.id.replace('friend-birthday-', ''))),
+      });
+    });
+    return () => { alive = false; };
+  }, [user?.id]);
   const visiblePersonalPosts = React.useMemo(() => personalPosts.filter(matchesHomeQuery), [personalPosts, matchesHomeQuery]);
 
   const filteredLoops = React.useMemo(() => {
@@ -1579,7 +1621,9 @@ const HomePage = () => {
         setFeedAutoPassCompleted(false);
         setFeedAutoIndex(0);
       }
-      setGlobalPosts(await attachPostMedia(postsWithLikes as Post[]));
+      const hydratedPosts = await attachPostMedia(postsWithLikes as Post[]);
+      setGlobalPosts(hydratedPosts);
+      try { sessionStorage.setItem('mmora.home.globalPosts', JSON.stringify(hydratedPosts)); } catch { /* cache is best-effort */ }
       setFeedDiag({
         status: postsWithLikes.length ? 'ok' : 'empty',
         durationMs: Math.round(performance.now() - t0),
@@ -1919,9 +1963,10 @@ const HomePage = () => {
     const loadPosts = async () => {
       setLoading(true);
       try {
-        // Critical path: wait for the actual fetch (with a generous safety cap)
-        // so the empty state never flashes before posts arrive on slow networks.
-        await settleWithin(Promise.all([fetchGlobalPosts('initial'), fetchLoopPosts('initial')]), 5000);
+        // Native posts own the first paint. Loops refresh independently and can
+        // never hold Home in a loading state when their media endpoint is slow.
+        void settleWithin(fetchLoopPosts('initial'), 5000);
+        await settleWithin(fetchGlobalPosts('initial'), 1800);
       } finally {
         setLoading(false);
       }
@@ -2484,7 +2529,18 @@ const HomePage = () => {
   // cards remain outside that chronology.
   const globalFeedSlides = searchVideoSlides.length
     ? searchVideoSlides
-    : [...motivationTopSlide, ...chronologicalSlides(visibleGlobalPosts, 'global'), ...growthSlide.slice(growthCards.length), ...supportingSlides, ...neuralVideoSlides, ...savedGrowthSlides];
+    : [...motivationTopSlide, ...(quietGuidance ? [
+      <div key="quiet-zoe" className="relative flex h-full min-h-full w-full shrink-0 snap-start snap-always items-center px-6" data-quiet-zoe>
+        <div className="mx-auto max-w-lg text-center">
+          <img src={zoeAvatar} alt="Zoe" className="mx-auto mb-4 h-14 w-14 rounded-full object-cover" />
+          <h2 className="text-xl font-medium text-foreground">{quietGuidance.title}</h2>
+          <p className="mt-2 text-sm text-muted-foreground">{quietGuidance.message}</p>
+        </div>
+      </div>,
+    ] : []), ...chronologicalSlides(visibleGlobalPosts, 'global'), ...growthSlide.slice(growthCards.length), ...supportingSlides, ...neuralVideoSlides, ...savedGrowthSlides,
+      <div key="caught-up" className="relative flex h-full min-h-full w-full shrink-0 snap-start snap-always items-center justify-center px-6" data-caught-up>
+        <div className="text-center"><Check className="mx-auto h-7 w-7 text-primary" /><p className="mt-3 font-medium text-foreground">You’re caught up</p><p className="mt-1 text-sm text-muted-foreground">Come back when life brings something relevant.</p></div>
+      </div>];
   const personalFeedSlides = searchVideoSlides.length
     ? searchVideoSlides
     : [...chronologicalSlides(visiblePersonalPosts, 'personal'), ...growthSlide.slice(growthCards.length), ...supportingSlides, ...neuralVideoSlides, ...savedGrowthSlides];
