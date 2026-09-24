@@ -5,7 +5,7 @@ export interface LifeRankablePost {
   created_at: string;
   likes_count?: number | null;
   comments_count?: number | null;
-  profile?: { hobbies?: string[] | string | null } | null;
+  profile?: { hobbies?: string[] | string | null } | Record<string, unknown> | null;
 }
 
 export interface LifeRankingSignals {
