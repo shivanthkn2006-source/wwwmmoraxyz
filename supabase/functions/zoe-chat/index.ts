@@ -1040,6 +1040,7 @@ ${cortexPromptAddition}`;
           targetMs: targetLatency,
           slaMet: totalLatencyMs <= targetLatency
         },
+        forecast: forecastFocus ? { areas: forecastFocus.areas, window: forecastFocus.window.label, followUps: FORECAST_FOLLOW_UPS, source: 'swiss-ephemeris+dasha+dhf' } : undefined,
         provider: {
           name: cascadeResult.selectedProvider,
           model: cascadeResult.selectedModel,
