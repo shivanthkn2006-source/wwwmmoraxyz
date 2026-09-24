@@ -101,7 +101,7 @@ export default function LifeProjectionPage() {
               {!periods.length && <li className="text-sm text-muted-foreground">No strong signals for this area in the next 24 months.</li>}
             </ol>
             <p className="text-xs text-muted-foreground">{res.closing}</p>
-            <Button asChild variant="outline"><Link to="/zoe"><MessageCircle className="h-4 w-4 mr-2" />Ask Zoe about a month or date</Link></Button>
+            <Button asChild variant="outline"><Link to="/chat"><MessageCircle className="h-4 w-4 mr-2" />Ask Zoe about a month or date</Link></Button>
           </>
         )}
         {error && <p className="text-sm text-destructive">{error}</p>}
