@@ -60,6 +60,8 @@ const CallsPage = lazy(() => import("./pages/CallsPage"));
 const CallHistoryPage = lazy(() => import("./pages/CallHistoryPage"));
 const InviteFriendsPage = lazy(() => import("./pages/InviteFriendsPage"));
 const MotivationPage = lazy(() => import("./pages/MotivationPage"));
+const LifeProjectionPage = lazy(() => import("./pages/LifeProjectionPage"));
+const ZoeSkyShiftMount = lazy(() => import("./hooks/useZoeSkyShift").then((m) => ({ default: m.ZoeSkyShiftMount })));
 const MembersDirectoryPage = lazy(() => import("./pages/MembersDirectoryPage"));
 const GroupCallPage = lazy(() => import("./pages/GroupCallPage"));
 const UserProfileView = lazy(() => import("./pages/UserProfileView"));
@@ -580,6 +582,7 @@ const RouteAwareShell = () => {
               <DevTestButton />
               <ScreenTapController />
               <AdminToolbar />
+              <Suspense fallback={null}><ZoeSkyShiftMount /></Suspense>
 
               <GenesisIntroWrapper>
                 <QuantumGatekeeper enabled={true}>
@@ -685,6 +688,7 @@ const RouteAwareShell = () => {
                             }
                           />
                           <Route path="/motivation" element={<ProtectedRoute><MotivationPage /></ProtectedRoute>} />
+                          <Route path="/life-projection" element={<ProtectedRoute><LifeProjectionPage /></ProtectedRoute>} />
                           <Route path="/members" element={<ProtectedRoute><MembersDirectoryPage /></ProtectedRoute>} />
 
 
