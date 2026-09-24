@@ -15,7 +15,7 @@ import { buildLifeTimelineBlock } from '../_shared/life-timeline.ts';
 import { buildLifeProfileBlock } from '../_shared/life-profile.ts';
 import { needsWebGrounding, webGround, buildWebGroundingBlock, buildWebSources } from '../_shared/web-grounding.ts';
 import { needsAstroGrounding, buildAstroGroundingBlock, type AstroBirthProfile } from '../_shared/astro-grounding.ts';
-import { isForecastTurn, parseForecastFocus, buildForecastFocusBlock, deterministicForecast, ensureForecastFraming, FORECAST_FOLLOW_UPS, type DhfCardSignal } from '../_shared/life-forecast.ts';
+import { isForecastTurn, parseForecastFocus, buildForecastFocusBlock, deterministicForecast, ensureForecastFraming, forecastCacheKey, FORECAST_FOLLOW_UPS, type DhfCardSignal } from '../_shared/life-forecast.ts';
 import { CLARIFICATION_PROTOCOL, spokenFallback } from '../_shared/cognitive-fault.ts';
 
 // Zodiac sign calculation helper
@@ -892,6 +892,7 @@ ${cortexPromptAddition}`;
     // EPHEMERIS GUARDRAIL — astrology answers are grounded in computed
     // planetary positions, never in the model's recollection.
     let astroBlock = '';
+    let forecastCards: DhfCardSignal[] = [];
     const forecastTurn = isForecastTurn(messages as Array<{ role: string; content: string }>);
     const forecastFocus = forecastTurn ? parseForecastFocus(String(lastUserMessage)) : null;
     try {
@@ -910,6 +911,7 @@ ${cortexPromptAddition}`;
             .limit(6);
           cards = (data as DhfCardSignal[] | null) ?? [];
         }
+        forecastCards = cards;
         astroBlock += buildForecastFocusBlock(forecastFocus, cards, !!astroBirthProfile?.birth_date);
       }
     } catch (astroError) {
@@ -924,6 +926,35 @@ ${cortexPromptAddition}`;
     
     // Keep enough TPM headroom for Groq's free tier; the system context is already
     // large, so a 1500-token completion could rate-limit both Groq tiers at once.
+    // DHF FORECAST CACHE — repeated forecast questions (same areas + window,
+    // same day) answer instantly from Zoe's DHF memory with zero tokens.
+    const forecastKey = forecastFocus && userId ? forecastCacheKey(forecastFocus) : null;
+    const todayIso = new Date().toISOString().slice(0, 10);
+    let cachedForecast: { answer: string; day: string } | null = null;
+    if (forecastKey) {
+      try {
+        const { data: hit } = await supabase
+          .from('dhf_consciousness_memory')
+          .select('metadata, created_at')
+          .eq('user_id', userId)
+          .eq('category', 'forecast_answer')
+          .eq('raw_query', forecastKey)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        const md = (hit?.metadata ?? null) as { answer?: string } | null;
+        if (md?.answer) cachedForecast = { answer: md.answer, day: String(hit!.created_at).slice(0, 10) };
+      } catch { /* cache is best-effort */ }
+    }
+    const forecastMeta = (source: string) => forecastFocus ? { areas: forecastFocus.areas, window: forecastFocus.window.label, followUps: FORECAST_FOLLOW_UPS, source } : undefined;
+    if (cachedForecast && cachedForecast.day === todayIso) {
+      return new Response(JSON.stringify({
+        message: ensureForecastFraming(cachedForecast.answer),
+        cacheHit: true,
+        forecast: forecastMeta('dhf-cache'),
+      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
     const cascadeResult = await cascadeInfer(cascadeMessages, { maxTokens: 800, temperature: 0.7, mode: 't1-primary', nvidiaRole: 'chat' });
     
     if (!cascadeResult.success) {
@@ -931,7 +962,9 @@ ${cortexPromptAddition}`;
       console.error('All providers failed', JSON.stringify(cascadeResult.attempts));
       // Forecast turns still get a real, zero-token reading from the dasha timeline.
       const offlineForecast = forecastFocus
-        ? (() => { try { return deterministicForecast(astroBirthProfile, forecastFocus, timezone || 'Asia/Kolkata'); } catch { return null; } })()
+        ? (cachedForecast?.answer
+            ? ensureForecastFraming(cachedForecast.answer)
+            : (() => { try { return ensureForecastFraming(deterministicForecast(astroBirthProfile, forecastFocus, timezone || 'Asia/Kolkata', forecastCards[0] ?? null)); } catch { return null; } })())
         : null;
       return new Response(
         JSON.stringify({
@@ -955,6 +988,13 @@ ${cortexPromptAddition}`;
         try { aiMessage = deterministicForecast(astroBirthProfile, forecastFocus, timezone || 'Asia/Kolkata'); } catch { /* keep model text */ }
       }
       aiMessage = ensureForecastFraming(aiMessage);
+      if (forecastKey && astroBirthProfile?.birth_date) {
+        supabase.from('dhf_consciousness_memory').insert({
+          user_id: userId, category: 'forecast_answer', raw_query: forecastKey,
+          extracted_concepts: forecastFocus!.areas.length ? forecastFocus!.areas : ['all'],
+          metadata: { answer: aiMessage, window: forecastFocus!.window.label, day: todayIso },
+        }).then(({ error }) => { if (error) console.warn('[Zoe] forecast cache write:', error.message); });
+      }
     }
 
     if (!aiMessage) {
