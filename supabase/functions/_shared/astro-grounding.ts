@@ -27,8 +27,18 @@ import { dayLordPromptLine } from './day-lord.ts';
 /** Topics that require real ephemeris numbers rather than model intuition. */
 const ASTRO_QUERY = /\b(astro|astrolog|horoscope|zodiac|rashi|nakshatra|dasha|dosha|jathakam|kundli|kundali|natal|birth\s*chart|transit|retrograde|planet|planetary|mercury|venus|mars|jupiter|saturn|rahu|ketu|moon\s*sign|sun\s*sign|ascendant|lagna|vedic|panchang|muhurat|graha)\b/i;
 
+/**
+ * Life-forecast questions ("how's my life next year", "will I get the job",
+ * "when will I marry") need the dasha timeline even without astro words.
+ */
+const LIFE_FORECAST_QUERY = /\b(my\s+(life|future|career|job|money|finances?|love|marriage|relationship|family|health|wish(es)?|luck|destiny)|next\s+(\d+\s+)?(year|years|month|months|week|weeks)|this\s+(year|month|week)|coming\s+(year|months?|weeks?)|will\s+i\s+(get|pass|marry|find|become|win|succeed|meet|move|have)|when\s+will\s+i|am\s+i\s+going\s+to|should\s+i\s+(take|accept|apply|join|move|start|quit)|(get|getting)\s+(the|a|my)\s+(job|admission|visa|promotion|offer)|come\s+true|good\s+time\s+(to|for)|life\s+event)\b/i;
+
+export function needsLifeForecast(text: string): boolean {
+  return LIFE_FORECAST_QUERY.test(text || '');
+}
+
 export function needsAstroGrounding(text: string): boolean {
-  return ASTRO_QUERY.test(text || '');
+  return ASTRO_QUERY.test(text || '') || needsLifeForecast(text);
 }
 
 export interface AstroBirthProfile {
