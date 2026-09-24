@@ -343,29 +343,33 @@ serve(async (req) => {
     // The key is deterministic and user-scoped; uncached turns continue through
     // the complete conversational pipeline below.
     if (userId && earlyForecastFocus) {
-      const earlyKey = forecastCacheKey(earlyForecastFocus);
-      const { data: hit } = await supabase
-        .from('dhf_consciousness_memory')
-        .select('metadata, created_at')
-        .eq('user_id', userId)
-        .eq('category', 'forecast_answer')
-        .eq('raw_query', earlyKey)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      const metadata = (hit?.metadata ?? null) as { answer?: string } | null;
-      const today = new Date().toISOString().slice(0, 10);
-      if (metadata?.answer && String(hit?.created_at ?? '').slice(0, 10) === today) {
-        return new Response(JSON.stringify({
-          message: ensureForecastFraming(metadata.answer),
-          cacheHit: true,
-          forecast: {
-            areas: earlyForecastFocus.areas,
-            window: earlyForecastFocus.window.label,
-            followUps: FORECAST_FOLLOW_UPS,
-            source: 'dhf-cache',
-          },
-        }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      try {
+        const earlyKey = forecastCacheKey(earlyForecastFocus);
+        const { data: hit } = await supabase
+          .from('dhf_consciousness_memory')
+          .select('metadata, created_at')
+          .eq('user_id', userId)
+          .eq('category', 'forecast_answer')
+          .eq('raw_query', earlyKey)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        const metadata = (hit?.metadata ?? null) as { answer?: string } | null;
+        const today = new Date().toISOString().slice(0, 10);
+        if (metadata?.answer && String(hit?.created_at ?? '').slice(0, 10) === today) {
+          return new Response(JSON.stringify({
+            message: ensureForecastFraming(metadata.answer),
+            cacheHit: true,
+            forecast: {
+              areas: earlyForecastFocus.areas,
+              window: earlyForecastFocus.window.label,
+              followUps: FORECAST_FOLLOW_UPS,
+              source: 'dhf-cache',
+            },
+          }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+      } catch (cacheError) {
+        console.warn('[Zoe] early forecast cache skipped:', cacheError instanceof Error ? cacheError.message : cacheError);
       }
     }
 
@@ -963,15 +967,7 @@ ${cortexPromptAddition}`;
     // same day) answer instantly from Zoe's DHF memory with zero tokens.
     const forecastKey = forecastFocus && userId ? forecastCacheKey(forecastFocus) : null;
     const todayIso = new Date().toISOString().slice(0, 10);
-    const cachedForecast: { answer: string; day: string } | null = null;
     const forecastMeta = (source: string) => forecastFocus ? { areas: forecastFocus.areas, window: forecastFocus.window.label, followUps: FORECAST_FOLLOW_UPS, source } : undefined;
-    if (cachedForecast && cachedForecast.day === todayIso) {
-      return new Response(JSON.stringify({
-        message: ensureForecastFraming(cachedForecast.answer),
-        cacheHit: true,
-        forecast: forecastMeta('dhf-cache'),
-      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-    }
 
     const cascadeResult = await cascadeInfer(cascadeMessages, { maxTokens: 800, temperature: 0.7, mode: 't1-primary', nvidiaRole: 'chat' });
     
@@ -980,9 +976,7 @@ ${cortexPromptAddition}`;
       console.error('All providers failed', JSON.stringify(cascadeResult.attempts));
       // Forecast turns still get a real, zero-token reading from the dasha timeline.
       const offlineForecast = forecastFocus
-        ? (cachedForecast?.answer
-            ? ensureForecastFraming(cachedForecast.answer)
-            : (() => { try { return ensureForecastFraming(deterministicForecast(astroBirthProfile, forecastFocus, timezone || 'Asia/Kolkata', forecastCards[0] ?? null)); } catch { return null; } })())
+        ? (() => { try { return ensureForecastFraming(deterministicForecast(astroBirthProfile, forecastFocus, timezone || 'Asia/Kolkata', forecastCards[0] ?? null)); } catch { return null; } })()
         : null;
       return new Response(
         JSON.stringify({
