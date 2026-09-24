@@ -28,6 +28,7 @@ import { type FeedSearchItem } from '@/lib/feedSearchItems';
 import { useDhfBrain } from '@/hooks/useDhfBrain';
 import useZoeMotivation from '@/hooks/useZoeMotivation';
 import HomeMotivationSlide from '@/components/home/HomeMotivationSlide';
+import zoeAvatar from '@/assets/zoe-avatar.png';
 import { isMotivationRevealed } from '@/hooks/useMotivationVote';
 import HomeMusicShelf from '@/components/home/HomeMusicShelf';
 import HomeMusicRecommendations from '@/components/home/HomeMusicRecommendations';
@@ -969,7 +970,7 @@ const HomePage = () => {
     let alive = true;
     void Promise.all([
       supabase.from('profiles').select('hobbies, profession, field_of_study').eq('user_id', user.id).maybeSingle(),
-      supabase.from('intimacy_scores').select('target_user_id, score').eq('user_id', user.id),
+      supabase.from('intimacy_scores').select('target_user_id, score'),
       loadFriendBirthdayEvents(user.id),
     ]).then(([profileResult, intimacyResult, birthdays]) => {
       if (!alive) return;
