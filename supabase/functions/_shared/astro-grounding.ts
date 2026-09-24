@@ -138,6 +138,34 @@ export async function buildAstroGroundingBlock(
         lines.push(`- ${period.lord}: ${day(period.start)} → ${day(period.end)}`);
       }
 
+      // Life-forecast window: every antardasha touching the next 24 months,
+      // so "next year / which month" answers use real period boundaries.
+      const horizonEnd = now.getTime() + 24 * 30.44 * 86_400_000;
+      const upcoming: string[] = [];
+      for (const maha of vimshottariDasha(natalUtc, 9).timeline) {
+        for (const a of maha.antardashas ?? []) {
+          if (Date.parse(a.end) > now.getTime() && Date.parse(a.start) < horizonEnd) {
+            upcoming.push(`- ${maha.lord}/${a.lord}: ${day(a.start)} → ${day(a.end)}`);
+          }
+        }
+      }
+      if (upcoming.length) {
+        lines.push('');
+        lines.push('LIFE TIMELINE — SUB-PERIODS IN THE NEXT 24 MONTHS (mahadasha/antardasha):');
+        lines.push(...upcoming);
+      }
+
+      // Slow-planet sky month by month for the next 12 months (sign changes = turning points).
+      lines.push('');
+      lines.push('NEXT 12 MONTHS — SLOW PLANETS (sidereal sign on the 1st of each month):');
+      for (let m = 1; m <= 12; m++) {
+        const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + m, 1));
+        const s = (await skyFor(d)).positions;
+        const cell = (b: 'Jupiter' | 'Saturn' | 'Rahu' | 'Mars') =>
+          s[b] ? `${b} ${s[b].siderealSign}${s[b].isRetrograde ? ' (R)' : ''}` : '';
+        lines.push(`- ${d.toISOString().slice(0, 7)}: ${[cell('Jupiter'), cell('Saturn'), cell('Rahu'), cell('Mars')].filter(Boolean).join(', ')}`);
+      }
+
       const transits = precisTransits(natal, sky).slice(0, 8);
       lines.push('');
       lines.push('ACTIVE TRANSITS (tightest first):');
