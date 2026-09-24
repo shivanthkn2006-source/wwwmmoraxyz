@@ -219,6 +219,11 @@ export async function buildAstroGroundingBlock(
     '- Use the sidereal/Vedic values for Vedic questions (rashi, nakshatra, dasha) and tropical for Western ones.\n' +
     '- Interpretation and tone are yours; the numbers are not.\n' +
     '- Speak as insight, not superstition, and never as medical, legal or financial advice.\n' +
+    '\nLIFE-FORECAST QUESTIONS ("how is my next year", "will I get the job/admission", "when will my wish come true"):\n' +
+    '- Answer part by part (career, money, love, family, health, personal) using the LIFE TIMELINE sub-periods and the NEXT 12 MONTHS table, naming the exact months/dates from them.\n' +
+    '- If the user did not say which area or time span, give a short overview and ask which month, year or area they want in detail.\n' +
+    '- For yes/no wishes, describe which windows look supportive or challenging and why (period lord, slow-planet sign). Never promise an outcome; frame it as tendencies they can act on.\n' +
+    '- Weave in what you know from their DHF cards and memory so the reading feels about their real life, and keep it short enough to be spoken aloud.\n' +
     '═══════════════════════════════════════════════════\n'
   );
 }
