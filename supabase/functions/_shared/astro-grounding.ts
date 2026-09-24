@@ -27,8 +27,18 @@ import { dayLordPromptLine } from './day-lord.ts';
 /** Topics that require real ephemeris numbers rather than model intuition. */
 const ASTRO_QUERY = /\b(astro|astrolog|horoscope|zodiac|rashi|nakshatra|dasha|dosha|jathakam|kundli|kundali|natal|birth\s*chart|transit|retrograde|planet|planetary|mercury|venus|mars|jupiter|saturn|rahu|ketu|moon\s*sign|sun\s*sign|ascendant|lagna|vedic|panchang|muhurat|graha)\b/i;
 
+/**
+ * Life-forecast questions ("how's my life next year", "will I get the job",
+ * "when will I marry") need the dasha timeline even without astro words.
+ */
+const LIFE_FORECAST_QUERY = /\b(my\s+(life|future|career|job|money|finances?|love|marriage|relationship|family|health|wish(es)?|luck|destiny)|next\s+(\d+\s+)?(year|years|month|months|week|weeks)|this\s+(year|month|week)|coming\s+(year|months?|weeks?)|will\s+i\s+(get|pass|marry|find|become|win|succeed|meet|move|have)|when\s+will\s+i|am\s+i\s+going\s+to|should\s+i\s+(take|accept|apply|join|move|start|quit)|(get|getting)\s+(the|a|my)\s+(job|admission|visa|promotion|offer)|come\s+true|good\s+time\s+(to|for)|life\s+event)\b/i;
+
+export function needsLifeForecast(text: string): boolean {
+  return LIFE_FORECAST_QUERY.test(text || '');
+}
+
 export function needsAstroGrounding(text: string): boolean {
-  return ASTRO_QUERY.test(text || '');
+  return ASTRO_QUERY.test(text || '') || needsLifeForecast(text);
 }
 
 export interface AstroBirthProfile {
@@ -128,6 +138,34 @@ export async function buildAstroGroundingBlock(
         lines.push(`- ${period.lord}: ${day(period.start)} → ${day(period.end)}`);
       }
 
+      // Life-forecast window: every antardasha touching the next 24 months,
+      // so "next year / which month" answers use real period boundaries.
+      const horizonEnd = now.getTime() + 24 * 30.44 * 86_400_000;
+      const upcoming: string[] = [];
+      for (const maha of vimshottariDasha(natalUtc, 9).timeline) {
+        for (const a of maha.antardashas ?? []) {
+          if (Date.parse(a.end) > now.getTime() && Date.parse(a.start) < horizonEnd) {
+            upcoming.push(`- ${maha.lord}/${a.lord}: ${day(a.start)} → ${day(a.end)}`);
+          }
+        }
+      }
+      if (upcoming.length) {
+        lines.push('');
+        lines.push('LIFE TIMELINE — SUB-PERIODS IN THE NEXT 24 MONTHS (mahadasha/antardasha):');
+        lines.push(...upcoming);
+      }
+
+      // Slow-planet sky month by month for the next 12 months (sign changes = turning points).
+      lines.push('');
+      lines.push('NEXT 12 MONTHS — SLOW PLANETS (sidereal sign on the 1st of each month):');
+      for (let m = 1; m <= 12; m++) {
+        const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + m, 1));
+        const s = (await skyFor(d)).positions;
+        const cell = (b: 'Jupiter' | 'Saturn' | 'Rahu' | 'Mars') =>
+          s[b] ? `${b} ${s[b].siderealSign}${s[b].isRetrograde ? ' (R)' : ''}` : '';
+        lines.push(`- ${d.toISOString().slice(0, 7)}: ${[cell('Jupiter'), cell('Saturn'), cell('Rahu'), cell('Mars')].filter(Boolean).join(', ')}`);
+      }
+
       const transits = precisTransits(natal, sky).slice(0, 8);
       lines.push('');
       lines.push('ACTIVE TRANSITS (tightest first):');
@@ -181,6 +219,11 @@ export async function buildAstroGroundingBlock(
     '- Use the sidereal/Vedic values for Vedic questions (rashi, nakshatra, dasha) and tropical for Western ones.\n' +
     '- Interpretation and tone are yours; the numbers are not.\n' +
     '- Speak as insight, not superstition, and never as medical, legal or financial advice.\n' +
+    '\nLIFE-FORECAST QUESTIONS ("how is my next year", "will I get the job/admission", "when will my wish come true"):\n' +
+    '- Answer part by part (career, money, love, family, health, personal) using the LIFE TIMELINE sub-periods and the NEXT 12 MONTHS table, naming the exact months/dates from them.\n' +
+    '- If the user did not say which area or time span, give a short overview and ask which month, year or area they want in detail.\n' +
+    '- For yes/no wishes, describe which windows look supportive or challenging and why (period lord, slow-planet sign). Never promise an outcome; frame it as tendencies they can act on.\n' +
+    '- Weave in what you know from their DHF cards and memory so the reading feels about their real life, and keep it short enough to be spoken aloud.\n' +
     '═══════════════════════════════════════════════════\n'
   );
 }
