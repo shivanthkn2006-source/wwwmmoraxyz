@@ -15,7 +15,7 @@ import { FeedErrorBoundary } from '@/components/FeedErrorBoundary';
 import NotificationMenu from '@/components/NotificationMenu';
 import HamburgerMenu from '@/components/HamburgerMenu';
 import SearchBar from '@/components/SearchBar';
-import { ArrowDown, Mail, Search, Video, TrendingUp, ArrowUp, Camera, ScanFace, ChevronUp, ChevronDown, Sparkles, MessageCircle, Settings, Bell, User as UserIcon, Heart, Bookmark, Boxes, Radio, Radar, Globe2, Users, Lightbulb, LayoutGrid, Music } from 'lucide-react';
+import { ArrowDown, Mail, Search, Video, TrendingUp, ArrowUp, Camera, ScanFace, ChevronUp, ChevronDown, Sparkles, MessageCircle, Settings, Bell, User as UserIcon, Heart, Bookmark, Glasses, Radio, Radar, Globe2, Users, Lightbulb, LayoutGrid, Music } from 'lucide-react';
 import { trackEvent } from '@/lib/analytics';
 import FuturisticCounter from '@/components/FuturisticCounter';
 import { useNavigate } from 'react-router-dom';
@@ -2855,7 +2855,7 @@ const HomePage = () => {
           {
             id: 'vr-world',
             label: 'VR World',
-            icon: <Boxes className="h-[22px] w-[22px]" />,
+            icon: <Glasses className="h-[22px] w-[22px]" />,
             onSelect: runHomeIconAction('vr-world', () => navigate('/zoe-omega?vr=1')),
           },
           {

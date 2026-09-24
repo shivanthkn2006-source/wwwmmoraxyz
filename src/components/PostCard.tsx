@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import ReportContentDialog from '@/components/moderation/ReportContentDialog';
-import { AlertTriangle, Download, FileText, Heart, Loader2, MessageCircle, Share2, Trash2, Bookmark, MoreVertical, Star, Volume2, VolumeX, UserPlus, UserCheck, ScanText } from 'lucide-react';
+import { AlertTriangle, Download, FileText, Heart, Loader2, MessageCircle, Share2, Trash2, Bookmark, MoreVertical, Star, Volume2, VolumeX, UserPlus, UserCheck, ScanText, ThumbsDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
@@ -857,6 +857,13 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate, onMediaCompleted })
             <Heart className={`h-6 w-6 ${liked ? 'fill-white text-white' : 'text-white'}`} />
           </span>
           <span className="text-xs font-semibold">{likesCount}</span>
+        </button>
+
+        <button type="button" onClick={() => void handlePreference('not_interested')} className={overlayButton} aria-label="Dislike">
+          <span className={overlayIconWrap}>
+            <ThumbsDown className="h-6 w-6" />
+          </span>
+          <span className="text-xs font-semibold">Dislike</span>
         </button>
 
         <button type="button" onClick={() => setShowComments(!showComments)} className={overlayButton} aria-label="Comments">
