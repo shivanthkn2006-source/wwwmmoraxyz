@@ -7,6 +7,7 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  */
 import { useCallback, useRef, useState } from 'react';
+import { isFeedWorthyQuery } from '@/lib/feedIntentGuard';
 import { supabase } from '@/integrations/supabase/client';
 import { ensureLiveSession } from '@/lib/sessionGuard';
 
@@ -113,6 +114,7 @@ export const useAmbientSearch = () => {
               query: term,
               contextType: 'search',
               timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+              injectFeed: isFeedWorthyQuery(term),
             },
           })
           .then(({ data, error: brainError }) => {

@@ -54,6 +54,17 @@ export const PlatformPermissionsInitializer: React.FC = () => {
   useEffect(() => {
     if (ranRef.current) return;
     if (typeof window === 'undefined' || !window.isSecureContext) return;
+    if (!user?.id) return;
+    // Ask ONCE per device. Safari / iPad / PWA do not remember grants for
+    // getUserMedia, so re-priming on every visit re-showed the prompt each time.
+    try {
+      if (localStorage.getItem(STORAGE_KEY)) {
+        ranRef.current = true;
+        return;
+      }
+    } catch {
+      /* storage blocked — fall through, still single-shot per session */
+    }
 
     let disposed = false;
 
@@ -61,18 +72,18 @@ export const PlatformPermissionsInitializer: React.FC = () => {
       if (ranRef.current || disposed) return;
       ranRef.current = true;
       detach();
-
-      const [mic, cam] = await Promise.all([queryState('microphone'), queryState('camera')]);
-      if (mic !== 'denied') await requestMedia({ audio: true });
-      if (cam !== 'denied') await requestMedia({ video: true });
-      const geo = await queryState('geolocation');
-      if (geo !== 'denied') await requestLocation();
-
       try {
         localStorage.setItem(STORAGE_KEY, new Date().toISOString());
       } catch {
         /* private mode — best effort */
       }
+
+      const [mic, cam] = await Promise.all([queryState('microphone'), queryState('camera')]);
+      if (mic === 'prompt' || mic === 'unsupported') await requestMedia({ audio: true });
+      if (cam === 'prompt' || cam === 'unsupported') await requestMedia({ video: true });
+      const geo = await queryState('geolocation');
+      if (geo === 'prompt' || geo === 'unsupported') await requestLocation();
+
       window.dispatchEvent(new CustomEvent('mmora:permissions-primed'));
     };
 
@@ -90,17 +101,10 @@ export const PlatformPermissionsInitializer: React.FC = () => {
 
     attach();
 
-    // Already granted previously: warm the streams silently, no gesture needed.
-    void (async () => {
-      const [mic, cam] = await Promise.all([queryState('microphone'), queryState('camera')]);
-      if (mic === 'granted' || cam === 'granted') void prime();
-    })();
-
     return () => {
       disposed = true;
       detach();
     };
-    // Re-arm after sign-in so a fresh session prompts once.
   }, [user?.id]);
 
   return null;
