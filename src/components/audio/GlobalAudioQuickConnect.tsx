@@ -12,7 +12,7 @@ import { audioRouter } from '@/services/AudioRouterService';
 import { zoeBackgroundListener } from '@/services/ZoeBackgroundListener';
 import AudioQuickConnectButton from '@/components/audio/AudioQuickConnectButton';
 import { useAuth } from '@/lib/auth';
-import { ZOE_AUDIO_PREF_EVENT, isZoeAudioEnabled } from '@/lib/zoeAudioPreference';
+import { ZOE_AUDIO_PREF_EVENT } from '@/lib/zoeAudioPreference';
 import { isZoeMuted } from '@/features/zoe-handsfree/muteGate';
 
 const EXCLUDED_PREFIXES = [
