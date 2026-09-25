@@ -383,6 +383,7 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
       data-home-dock
       className={cn(
         'home-dock-root fixed z-[9996] flex flex-col items-end justify-end',
+        open ? 'pointer-events-auto' : 'pointer-events-none',
         'bottom-[calc(env(safe-area-inset-bottom,0px)+8px)] right-[max(8px,env(safe-area-inset-right,0px))]',
         className,
       )}
@@ -391,6 +392,7 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
       <div
         className={cn(
           'max-w-[calc(100vw-max(16px,env(safe-area-inset-left,0px)+env(safe-area-inset-right,0px)))] overflow-hidden transition-all duration-300 ease-out',
+          open ? 'pointer-events-auto' : 'pointer-events-none',
           open
             ? 'max-h-[calc(100dvh-max(16px,env(safe-area-inset-top,0px)+env(safe-area-inset-bottom,0px)))] translate-y-0 opacity-100'
             : 'max-h-[64px] translate-y-0 opacity-100',
@@ -402,6 +404,7 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
           aria-hidden={open ? false : undefined}
           className={cn(
             'flex flex-col items-end gap-[var(--home-dock-gap)] p-[var(--home-dock-pad)]',
+            open ? 'pointer-events-auto' : 'pointer-events-none',
             open
               ? 'rounded-[28px] border-0 bg-white/10 backdrop-blur-xl shadow-none'
               : 'rounded-none border-0 bg-transparent shadow-none',
@@ -410,7 +413,7 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
           {open && renderPackedRows()}
 
           {/* Only the bare Home trigger ever sits outside the panel. */}
-          <div className="flex w-full items-center justify-end gap-[var(--home-dock-gap)]">
+          <div className={cn('flex w-full items-center justify-end gap-[var(--home-dock-gap)]', !open && 'pointer-events-none')}>
             {open && (
               <label className="flex min-w-0 flex-1 items-center gap-2 px-1" aria-label="Search home menu">
                 <input
@@ -425,7 +428,7 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
                 <Search aria-hidden="true" className="h-4 w-4 shrink-0 text-white/70" />
               </label>
             )}
-            {renderIconButton(homeItem, true)}
+            <div className="pointer-events-auto">{renderIconButton(homeItem, true)}</div>
           </div>
 
         </div>
