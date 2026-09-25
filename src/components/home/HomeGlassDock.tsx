@@ -391,7 +391,7 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
       {/* Glass dock panel — permanently anchored on the computer's right side. */}
       <div
         className={cn(
-          'max-w-[calc(100vw-max(16px,env(safe-area-inset-left,0px)+env(safe-area-inset-right,0px)))] overflow-hidden transition-all duration-300 ease-out',
+          'w-fit max-w-[calc(100vw-max(16px,env(safe-area-inset-left,0px)+env(safe-area-inset-right,0px)))] overflow-hidden transition-all duration-300 ease-out',
           open ? 'pointer-events-auto' : 'pointer-events-none',
           open
             ? 'max-h-[calc(100dvh-max(16px,env(safe-area-inset-top,0px)+env(safe-area-inset-bottom,0px)))] translate-y-0 opacity-100'
@@ -403,7 +403,7 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
           role={open ? 'menu' : undefined}
           aria-hidden={open ? false : undefined}
           className={cn(
-            'flex flex-col items-end gap-[var(--home-dock-gap)] p-[var(--home-dock-pad)]',
+            'flex w-fit flex-col items-end gap-[var(--home-dock-gap)] p-[var(--home-dock-pad)]',
             open ? 'pointer-events-auto' : 'pointer-events-none',
             open
               ? 'rounded-[28px] border-0 bg-white/10 backdrop-blur-xl shadow-none'
