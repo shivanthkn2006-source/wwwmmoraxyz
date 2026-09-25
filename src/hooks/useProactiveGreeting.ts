@@ -101,6 +101,15 @@ export const useProactiveGreeting = () => {
       let weatherHumor = '';
       let trafficInfo = null;
       try {
+        // Morning greetings must never open a browser location prompt. Use
+        // precise location only when the member has already granted it through
+        // an explicit location-aware feature; otherwise omit weather/traffic.
+        const locationPermission = await navigator.permissions
+          ?.query({ name: 'geolocation' as PermissionName })
+          .catch(() => null);
+        if (locationPermission?.state !== 'granted') {
+          throw new Error('Location has not been explicitly granted');
+        }
         const position = await getUserLocation();
         const weather = await getWeatherInfo(position.coords.latitude, position.coords.longitude);
         if (weather) {

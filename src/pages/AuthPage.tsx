@@ -10,8 +10,6 @@ import { Eye, EyeOff, ScanFace, Mic, Fingerprint, Loader2 } from 'lucide-react';
 import { z } from 'zod';
 import { cn } from '@/lib/utils';
 import FaceLoginModal from '@/components/FaceLoginModal';
-import PermissionActivationModal from '@/components/PermissionActivationModal';
-import { hasActivatedPermissions } from '@/utils/unifiedPermissionManager';
 import { useWebAuthn } from '@/hooks/useWebAuthn';
 import PageSeo from '@/components/seo/PageSeo';
 import { ROUTE_SEO } from '@/config/routeSeo';
@@ -58,7 +56,6 @@ const AuthPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showFaceLogin, setShowFaceLogin] = useState(false);
-  const [showPermissionModal, setShowPermissionModal] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [captchaReset, setCaptchaReset] = useState(0);
   const [pendingEmail, setPendingEmail] = useState<string | null>(null);
@@ -581,26 +578,7 @@ const AuthPage = () => {
         onClose={() => setShowFaceLogin(false)}
         onSuccess={() => {
           setShowFaceLogin(false);
-          if (!hasActivatedPermissions()) {
-            setShowPermissionModal(true);
-          } else {
-            navigate('/home');
-          }
-        }}
-      />
-      
-      {/* Permission Activation Modal - Shows after auth */}
-      <PermissionActivationModal
-        open={showPermissionModal}
-        onOpenChange={(open) => {
-          setShowPermissionModal(open);
-          if (!open) {
-            navigate('/home');
-          }
-        }}
-        onComplete={() => {
-          // Navigate to home after permissions
-          setTimeout(() => navigate('/home'), 500);
+          navigate('/home');
         }}
       />
       </div>

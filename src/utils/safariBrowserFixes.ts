@@ -562,17 +562,6 @@ export const initSafariFixes = () => {
     safariVersion: caps.safariVersion,
   });
   
-  // Set up audio context resume on first user interaction
-  if (caps.isSafari || caps.isIOS) {
-    const resumeOnGesture = () => {
-      resumeAudioContext();
-      document.removeEventListener('touchstart', resumeOnGesture);
-      document.removeEventListener('click', resumeOnGesture);
-    };
-    document.addEventListener('touchstart', resumeOnGesture, { once: true, passive: true });
-    document.addEventListener('click', resumeOnGesture, { once: true });
-  }
-  
   // Pre-load voices for Safari
   if (caps.supportsSpeechSynthesis) {
     window.speechSynthesis.getVoices();

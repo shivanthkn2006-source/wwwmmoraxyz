@@ -63,8 +63,6 @@ export const VoiceSystemActivator: React.FC<VoiceSystemActivatorProps> = ({ onAc
     if (alreadyActivated) {
       setActivationComplete(true);
       setShowPrompt(false);
-      // Notify orchestrator that voice was previously activated (for deferred probe)
-      window.dispatchEvent(new CustomEvent('zoe-voice-system-activated'));
       return;
     }
 

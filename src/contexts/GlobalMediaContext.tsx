@@ -380,31 +380,9 @@ export const GlobalMediaProvider: React.FC<{ children: ReactNode }> = ({ childre
       const permissions = await checkPermissionStatus();
       setState(prev => ({ ...prev, permissions }));
       
-      // If already granted, silently re-acquire streams
-      if (permissions.audio === 'granted') {
-        console.log('[GlobalMedia] Audio already granted, re-acquiring silently');
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({
-            audio: {
-              echoCancellation: true,
-              noiseSuppression: true,
-              autoGainControl: true,
-              sampleRate: 16000,
-            },
-          });
-          
-          setState(prev => ({
-            ...prev,
-            audioStream: stream,
-            permissions: { ...prev.permissions, audio: 'granted' },
-          }));
-          
-          console.log('[GlobalMedia] Audio stream re-acquired');
-          window.dispatchEvent(new CustomEvent('zoe-voice-system-activated'));
-        } catch (err) {
-          console.warn('[GlobalMedia] Failed to re-acquire audio stream:', err);
-        }
-      }
+      // Never open hardware during app startup, even when a previous grant
+      // exists. Voice and camera surfaces request their stream from the user's
+      // explicit control, which prevents Safari/PWA permission loops.
     };
 
     init();
