@@ -226,6 +226,10 @@ export const QuantumGatekeeper: React.FC<QuantumGatekeeperProps> = ({
     };
   }, [enabled, user, session, authLoading, location.pathname, searchParams, checkAdminStatus, validateInviteToken, logEvent, state.isLoading]);
 
+  // A valid authenticated session has already passed the platform's real route
+  // guard. Never stack a second security loading screen in front of Home.
+  if (session) return <>{children}</>;
+
   // Show loading state (but not if auth is still loading)
   if (state.isLoading || authLoading) {
     return (

@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchMusicConnectContext } from '@/features/music/musicConnect';
 import { readDailyPlanetaryMood, type DailyPlanetaryMood } from '@/features/music/dailyPlanetaryMood';
+import { promiseTimeout } from '@/lib/promiseTimeout';
 
 const CHECK_MS = 60_000;
 
@@ -30,7 +31,11 @@ export function useDailyPlanetaryMood(): {
   const load = useCallback(async (force: boolean) => {
     setLoading(true);
     try {
-      const context = await fetchMusicConnectContext(force);
+      const context = await promiseTimeout(
+        fetchMusicConnectContext(force),
+        8_000,
+        'Planetary mood',
+      );
       if (!alive.current) return;
       setMood(readDailyPlanetaryMood(context));
       setError('');

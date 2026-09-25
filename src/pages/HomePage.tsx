@@ -2005,7 +2005,7 @@ const HomePage = () => {
     // Listen for manual refresh events
     const unsubscribe = onHomeRefresh(() => {
       setLoading(true);
-      return Promise.all([
+      return Promise.allSettled([
         fetchGlobalPosts('manual'),
         fetchLoopPosts('manual'),
         fetchPersonalPosts('manual'),
