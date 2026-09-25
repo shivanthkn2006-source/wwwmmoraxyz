@@ -1,3 +1,4 @@
+import { requireCaller } from '../_shared/caller-guard.ts';
 /**
  * WEB READER — server-side reader so every external source Zoe cites opens
  * INSIDE the platform. The browser never leaves mmora: this function fetches
@@ -77,6 +78,7 @@ function readable(html: string): string[] {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+  { const __c = await requireCaller(req, 'member'); if (__c instanceof Response) return __c; }
 
   const guard = await publicGuard(req, {
     name: 'web-reader',

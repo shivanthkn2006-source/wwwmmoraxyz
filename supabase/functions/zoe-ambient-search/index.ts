@@ -1,3 +1,4 @@
+import { requireCaller } from '../_shared/caller-guard.ts';
 /**
  * ZOE AMBIENT SEARCH — Decoupled Headless Retrieval Orchestrator.
  *  1. Intent router cascade (Groq → NVIDIA NIM → OpenRouter, <100ms JSON classification)
@@ -188,6 +189,7 @@ async function synthesize(systemPrompt: string, queryText: string): Promise<stri
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+  { const __c = await requireCaller(req, 'member'); if (__c instanceof Response) return __c; }
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
   let requestId = crypto.randomUUID();

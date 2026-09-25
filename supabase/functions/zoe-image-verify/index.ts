@@ -1,3 +1,4 @@
+import { requireCaller } from '../_shared/caller-guard.ts';
 import { sovereignFetch, sovereignKey } from "../_shared/sovereign-ai.ts";
 // ═══════════════════════════════════════════════════════════════════════════════
 // ZOE IMAGE VERIFY — Anti-Hallucination Layer 3
@@ -21,6 +22,7 @@ Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+  { const __c = await requireCaller(req, 'member'); if (__c instanceof Response) return __c; }
 
   try {
     const { imageUrl, originalPrompt, strict = false }: VerifyBody = await req.json();

@@ -1,3 +1,4 @@
+import { requireCaller } from '../_shared/caller-guard.ts';
 /**
  * NVIDIA NIM AUDIT — single source of truth for how many NVIDIA models the
  * M'mora / Zoe / DHF platform can reach, which platform function each role
@@ -57,6 +58,7 @@ function json(body: unknown, status = 200) {
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+  { const __c = await requireCaller(req, 'admin'); if (__c instanceof Response) return __c; }
 
   const key = nvidiaKey();
   if (!key) return json({ ok: false, error: 'NVIDIA_API_KEY is not configured' }, 503);

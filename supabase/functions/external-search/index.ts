@@ -1,3 +1,4 @@
+import { requireCaller } from '../_shared/caller-guard.ts';
 // External (outside-platform) search: web, images, news, videos, music,
 // weather and shopping products. Uses free/keyless public APIs by default so
 // results never block on secrets. Every result is normalised into one shape so
@@ -489,6 +490,7 @@ const sanitizeResult = (item: ExternalResult): ExternalResult => ({
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+  { const __c = await requireCaller(req, 'member'); if (__c instanceof Response) return __c; }
 
   const guard = await publicGuard(req, {
     name: 'external-search',

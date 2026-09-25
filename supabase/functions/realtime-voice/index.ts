@@ -1,3 +1,4 @@
+import { requireCaller } from '../_shared/caller-guard.ts';
 // ═══════════════════════════════════════════════════════════════════════════════
 // REALTIME VOICE - Migrated to Lovable AI (No OpenAI Key Required)
 // Provides voice-to-text and text-to-voice via Lovable AI gateway
@@ -27,6 +28,7 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+  { const __c = await requireCaller(req, 'member'); if (__c instanceof Response) return __c; }
 
   console.log('[RealtimeVoice] ═══ REQUEST ═══');
 

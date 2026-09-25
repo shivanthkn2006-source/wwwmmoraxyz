@@ -1,3 +1,4 @@
+import { requireCaller } from '../_shared/caller-guard.ts';
 /**
  * ═══════════════════════════════════════════════════════════════════════════
  * DHF REFERRAL WEBHOOK — credits reward_points to BOTH sides of a referral.
@@ -60,6 +61,7 @@ async function addPoints(userId: string, amount: number) {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+  { const __c = await requireCaller(req, 'member'); if (__c instanceof Response) return __c; }
 
   const json = (body: unknown, status = 200) =>
     new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
