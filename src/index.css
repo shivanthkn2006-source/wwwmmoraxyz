@@ -1747,12 +1747,6 @@ body.profile-liquid-active :is([role='dialog'], [role='menu'], [role='listbox'])
     left: env(safe-area-inset-left, 0px);
     right: env(safe-area-inset-right, 0px);
   }
-
-  .home-dock-root > div,
-  .home-dock-root > div > div {
-    width: 100%;
-    max-width: none;
-  }
 }
 
 
