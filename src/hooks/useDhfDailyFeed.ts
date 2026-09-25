@@ -111,9 +111,9 @@ export function useDhfDailyFeed() {
       .order('post_date', { ascending: false })
       .order('slot_time', { ascending: false });
     if (error) throw error;
-    const resolved = await resolveCompassImages((data ?? []) as unknown as DhfDailyPost[]);
-    rowsRef.current = resolved;
-    return resolved;
+    const rows = (data ?? []) as unknown as DhfDailyPost[];
+    rowsRef.current = rows;
+    return rows;
   }, []);
 
 
@@ -125,12 +125,21 @@ export function useDhfDailyFeed() {
 
     const tz = deviceTimeZone();
     const today = localDateIn(new Date(), tz);
-    const yesterday = localDateIn(new Date(Date.now() - 86_400_000), tz);
+    const historyStart = localDateIn(new Date(Date.now() - 7 * 86_400_000), tz);
     const ensureId = `${user.id}:${today}`;
     const reimageId = `${user.id}:${COMPASS_IMAGE_VERSION}`;
 
     try {
-      let rows = await read(user.id, yesterday, today);
+      let rows = await read(user.id, historyStart, today);
+      if (mounted.current) {
+        setState({ posts: duePosts(rows, new Date(), tz), loading: false, error: false, generating: false });
+      }
+      void resolveCompassImages(rows).then((resolved) => {
+        rowsRef.current = resolved;
+        if (mounted.current) {
+          setState((prev) => ({ ...prev, posts: duePosts(resolved, new Date(), tz) }));
+        }
+      });
 
       // Cards written under an older artwork contract are repaired once per
       // browser. This never calls a model and never rewrites any card text.
@@ -141,7 +150,7 @@ export function useDhfDailyFeed() {
           body: { action: 'reimage' },
         });
         if (repairError) releaseGuard('reimage', reimageId);
-        else rows = await read(user.id, yesterday, today);
+        else rows = await read(user.id, historyStart, today);
       }
 
       const todayCount = rows.filter((row) => row.post_date === today).length;
@@ -171,7 +180,7 @@ export function useDhfDailyFeed() {
         // Allow one more attempt later; still show what already exists.
         releaseGuard('ensure', ensureId);
       } else {
-        rows = await read(user.id, yesterday, today);
+        rows = await read(user.id, historyStart, today);
       }
 
 
@@ -193,13 +202,13 @@ export function useDhfDailyFeed() {
     const tick = async () => {
       const tz = deviceTimeZone();
       const today = localDateIn(new Date(), tz);
-      const yesterday = localDateIn(new Date(Date.now() - 86_400_000), tz);
+      const historyStart = localDateIn(new Date(Date.now() - 7 * 86_400_000), tz);
       let rows = rowsRef.current;
       const completeToday = rows.filter((r) => r.post_date === today).length >= COMPASS_SLOT_COUNT;
 
       if (!completeToday) {
         try {
-          rows = await read(user.id, yesterday, today);
+          rows = await read(user.id, historyStart, today);
         } catch {
           rows = rowsRef.current;
         }
