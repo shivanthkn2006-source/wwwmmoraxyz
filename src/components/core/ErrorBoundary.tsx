@@ -6,7 +6,6 @@
 
 import React, { Component, type ErrorInfo, type ReactNode } from 'react';
 import { reportPlatformError, type ErrorSeverity } from '@/lib/enterpriseTelemetry';
-import { recoverFromChunkError } from '@/lib/versionCheck';
 
 interface Props {
   children?: ReactNode;
@@ -26,18 +25,6 @@ interface State {
   errorMsg: string | null;
   retries: number;
 }
-
-const MAX_AUTO_RETRIES = 2;
-
-const isChunkFailure = (message: string): boolean => {
-  const m = message.toLowerCase();
-  return (
-    m.includes('importing a module script failed') ||
-    m.includes('failed to fetch dynamically imported module') ||
-    m.includes('chunkloaderror') ||
-    m.includes('loading chunk')
-  );
-};
 
 export class AppErrorBoundary extends Component<Props, State> {
   public state: State = { hasError: false, error: null, errorMsg: null, retries: 0 };
@@ -71,12 +58,8 @@ export class AppErrorBoundary extends Component<Props, State> {
 
     this.props.onError?.(error, errorInfo);
 
-    // Stale-deploy chunk failures self-heal once; VR routes opt out to avoid loops.
-    const onVrRoute =
-      typeof window !== 'undefined' && window.location.pathname.startsWith('/zoe-omega');
-    if (isChunkFailure(error.message) && !onVrRoute && this.state.retries < MAX_AUTO_RETRIES) {
-      recoverFromChunkError();
-    }
+    // Deliberately never reload here. Keep the surrounding platform alive and
+    // leave recovery behind the explicit Retry control.
   }
 
   private reset = () => {
@@ -100,7 +83,7 @@ export class AppErrorBoundary extends Component<Props, State> {
     return (
       <div className="flex min-h-[50vh] w-full flex-col items-center justify-center gap-4 bg-background p-6 text-center">
         <h2 className="text-lg font-semibold text-foreground">
-          Module offline. Rebooting agent logic…
+          Module offline
         </h2>
         <p className="max-w-md text-sm text-muted-foreground">
           {this.state.errorMsg || 'An unexpected error occurred in this module.'}

@@ -36,8 +36,9 @@ try {
 // NOTE: Removed "stuck-state auto reload".
 // It caused reload loops on Safari when a chunk import fails.
 
-// Recover from stale-bundle / chunk mismatch issues after deployments.
-// Seen in logs as: "Importing a module script failed."
+// Detect stale-bundle / chunk mismatch issues after deployments.
+// Never navigate automatically: Safari may report the same failure repeatedly,
+// and automatic recovery turns one module fault into an app-wide reload loop.
 const shouldRecoverForImportError = (e: unknown) => {
   const msg =
     (e instanceof Error ? e.message : String(e || "")) +
@@ -52,39 +53,15 @@ const shouldRecoverForImportError = (e: unknown) => {
   );
 };
 
-const shouldAutoHardRefreshRoute = () => {
-  const path = window.location.pathname;
-  const host = window.location.hostname;
-
-  // Prevent refresh loops on heavy VR route; keep scene mounted for manual recovery.
-  if (path.startsWith('/zoe-omega')) return false;
-
-  // Only skip true local dev HMR. Lovable preview must recover because users
-  // can hold a stale iframe shell that permanently points to old module URLs.
-  if (host === 'localhost' || host === '127.0.0.1') return false;
-
-  return true;
-};
-
 window.addEventListener('error', (ev) => {
   if (shouldRecoverForImportError((ev as any).error || ev.message)) {
-    if (shouldAutoHardRefreshRoute()) {
-      console.warn('[Boot] Detected stale bundle. Initiating chunk recovery (bypass cooldown + SW purge)...');
-      void import('@/lib/versionCheck').then(({ recoverFromChunkError }) => recoverFromChunkError());
-    } else {
-      console.warn('[Boot] Import/chunk error detected on local dev or VR route; skipping auto hard refresh to avoid loops.');
-    }
+    console.error('[Boot] Module import failed; automatic reload is disabled.');
   }
 });
 
 window.addEventListener('unhandledrejection', (ev) => {
   if (shouldRecoverForImportError(ev.reason)) {
-    if (shouldAutoHardRefreshRoute()) {
-      console.warn('[Boot] Detected stale bundle (promise). Initiating chunk recovery (bypass cooldown + SW purge)...');
-      void import('@/lib/versionCheck').then(({ recoverFromChunkError }) => recoverFromChunkError());
-    } else {
-      console.warn('[Boot] Import/chunk promise rejection on local dev or VR route; skipping auto hard refresh to avoid loops.');
-    }
+    console.error('[Boot] Module import promise failed; automatic reload is disabled.');
   }
 });
 

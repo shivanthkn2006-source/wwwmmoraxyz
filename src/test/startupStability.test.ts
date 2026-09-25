@@ -20,10 +20,15 @@ describe('startup and reconnect stability', () => {
     expect(auth).not.toContain('retryInterval');
   });
 
-  it('shows accurate startup copy and blocks repeated automatic recovery', () => {
+  it('shows accurate startup copy and disables automatic failure reloads', () => {
     expect(read('src/App.tsx')).toContain("Loading M'Mora");
     expect(read('src/App.tsx')).not.toContain('Zoe is reconnecting');
-    expect(read('src/lib/versionCheck.ts')).toContain('blocking another automatic reload');
+    expect(read('src/main.tsx')).not.toContain('then(({ recoverFromChunkError })');
+    expect(read('src/components/core/ErrorBoundary.tsx')).not.toContain('recoverFromChunkError');
+    expect(read('src/components/SystemFailureBoundary.tsx')).not.toContain('recoverFromChunkError');
+    expect(read('src/components/SystemFailureBoundary.tsx')).not.toContain('attemptVRAutoHeal');
+    expect(read('src/components/SystemFailureBoundary.tsx')).not.toContain('setTimeout(() =>');
+    expect(read('src/App.tsx')).not.toContain('recoverFromChunkError');
   });
 
   it('defers and deduplicates automatic Zoe diagnostics', () => {

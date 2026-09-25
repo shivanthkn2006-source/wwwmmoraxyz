@@ -1,7 +1,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { errorLogger } from "@/utils/errorBoundaryLogger";
-import { forceAppRefresh, recoverFromChunkError } from "@/lib/versionCheck";
+import { forceAppRefresh } from "@/lib/versionCheck";
 import { supabase } from "@/integrations/supabase/client";
 
 type State = {
@@ -9,7 +9,6 @@ type State = {
   error: Error | null;
   componentStack?: string;
   isChunkFailure: boolean;
-  autoRetryIn: number; // seconds remaining for auto-retry
 };
 
 // ─── Zoe Monitor Integration ──────────────────────────────────────────────────
@@ -121,32 +120,13 @@ const notifyAdminOfCrash = async (error: Error) => {
 };
 
 // Auto-heal VR crashes
-const attemptVRAutoHeal = (): boolean => {
-  if (isVRScreen()) {
-    console.log('[ZoeMonitor] VR crash detected - auto-healing to Lite 2D Map');
-    try {
-      sessionStorage.removeItem('vr_state');
-      sessionStorage.removeItem('globe_state');
-      localStorage.removeItem('vr_cache');
-    } catch (e) { /* ignore */ }
-    
-    setTimeout(() => {
-      window.location.href = VR_FALLBACK_PATH;
-    }, 2000);
-    return true;
-  }
-  return false;
-};
-
 // ─── Error Boundary Component ─────────────────────────────────────────────────
 
 export default class SystemFailureBoundary extends React.Component<
   { children: React.ReactNode },
   State
 > {
-  state: State = { hasError: false, error: null, isChunkFailure: false, autoRetryIn: 0 };
-
-  private retryTimer: ReturnType<typeof setInterval> | null = null;
+  state: State = { hasError: false, error: null, isChunkFailure: false };
 
   static getDerivedStateFromError(error: Error): Partial<State> {
     const msg = String(error?.message || '').toLowerCase();
@@ -154,22 +134,10 @@ export default class SystemFailureBoundary extends React.Component<
       msg.includes('importing a module script failed') ||
       msg.includes('failed to fetch dynamically imported module') ||
       msg.includes('chunkloaderror');
-    return { hasError: true, error, isChunkFailure, autoRetryIn: 0 };
+    return { hasError: true, error, isChunkFailure };
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    const message = String(error?.message || '').toLowerCase();
-    const isChunkImportFailure =
-      message.includes('importing a module script failed') ||
-      message.includes('failed to fetch dynamically imported module') ||
-      message.includes('chunkloaderror');
-    const isVRRoute = typeof window !== 'undefined' && window.location.pathname.startsWith('/zoe-omega');
-
-    if (isChunkImportFailure && !isVRRoute) {
-      console.warn('[SystemFailureBoundary] Module import failed, running one-shot chunk recovery');
-      recoverFromChunkError();
-    }
-
     // Log to error logger
     errorLogger.log({
       errorType: "ReactErrorBoundary",
@@ -188,15 +156,8 @@ export default class SystemFailureBoundary extends React.Component<
     // 2. Notify admin (Saraswathi) via Zoe Whisper
     notifyAdminOfCrash(error);
     
-    // 3. Auto-heal VR crashes by redirecting to Lite 2D Map
-    const autoHealed = attemptVRAutoHeal();
-    if (autoHealed) {
-      console.log('[ZoeMonitor] VR auto-heal initiated - redirecting to Lite 2D Map');
-    }
-  }
-
-  componentWillUnmount() {
-    if (this.retryTimer) clearInterval(this.retryTimer);
+    // Never redirect or reload after a crash. The failure screen remains stable
+    // until the user explicitly chooses a destination or recovery action.
   }
 
   private handleReload = () => {
@@ -227,16 +188,15 @@ export default class SystemFailureBoundary extends React.Component<
     const recent = errorLogger.getStoredErrors().slice(-5).reverse();
     const isVR = isVRScreen();
 
-    // Friendly recovery UI for chunk-import failures (deploy / stale tab).
-    // Recovery is already in progress via recoverFromChunkError() — this is
-    // only what the user sees while it happens (~1-2s).
+    // Friendly stable UI for chunk-import failures. Never reload automatically:
+    // the user chooses if and when to retry or refresh.
     if (this.state.isChunkFailure) {
       return (
         <div role="status" aria-live="polite" className="fixed inset-0 z-[2147483647] flex flex-col items-center justify-center gap-4 bg-background text-foreground p-6 text-center">
           <div className="h-9 w-9 rounded-full border-[3px] border-muted border-t-primary animate-spin" />
-          <h1 className="text-base font-semibold">Updating M'mora to the latest version…</h1>
+          <h1 className="text-base font-semibold">A module could not load</h1>
           <p className="text-xs text-muted-foreground max-w-sm">
-            We're refreshing your app cache. This usually takes about a second.
+            M'mora will stay on this screen without reloading automatically.
           </p>
           <Button variant="outline" size="sm" onClick={this.handleHardRefresh} className="mt-2">
             Reload now
