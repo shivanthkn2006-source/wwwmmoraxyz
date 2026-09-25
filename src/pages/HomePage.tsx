@@ -12,12 +12,8 @@ import PostCard from '@/components/PostCard';
 import { MoraZoeDailyCard } from '@/components/astro/MoraZoeDailyCard';
 import useAstroDailyPrediction from '@/hooks/useAstroDailyPrediction';
 import { FeedErrorBoundary } from '@/components/FeedErrorBoundary';
-import NotificationMenu from '@/components/NotificationMenu';
-import HamburgerMenu from '@/components/HamburgerMenu';
-import SearchBar from '@/components/SearchBar';
 import { ArrowDown, Mail, Search, Video, TrendingUp, ArrowUp, Camera, ScanFace, ChevronUp, ChevronDown, Sparkles, MessageCircle, Settings, Bell, User as UserIcon, Heart, Bookmark, Glasses, Radio, Radar, Globe2, Users, Lightbulb, LayoutGrid, Music, Check } from 'lucide-react';
 import { trackEvent } from '@/lib/analytics';
-import FuturisticCounter from '@/components/FuturisticCounter';
 import { useNavigate } from 'react-router-dom';
 import { onHomeRefresh, triggerHomeRefresh } from '@/lib/homeRefresh';
 import { rememberShortInOrbMemory } from '@/lib/orbShortsMemory';
@@ -37,7 +33,6 @@ import HomeMusicRecommendations from '@/components/home/HomeMusicRecommendations
 
 import HomeGlassDock from '@/components/home/HomeGlassDock';
 import HomeFeedSwitcher from '@/components/home/HomeFeedSwitcher';
-import MosaicFeed from '@/components/feed/MosaicFeed';
 import { buildExtraDockItems, DOCK_RESERVED_ROUTES } from '@/components/home/dockExtraActions';
 import ZoeCallsIcon from '@/components/icons/ZoeCallsIcon';
 import { useNotificationFeatureBadges } from '@/hooks/useNotificationFeatureBadges';
@@ -53,11 +48,10 @@ const MmoraNeuralFeed = React.lazy(() => import('@/components/home/MmoraNeuralFe
 
 
 
-import HomePostEditor, { type HomePostDraft } from '@/components/home/HomePostEditor';
+import { type HomePostDraft } from '@/components/home/HomePostEditor';
 import { useEventGlow, getAvatarGlowClass } from '@/hooks/useEventGlow';
 import { toast } from '@/hooks/use-toast';
 
-import StatusIconBadge from '@/components/StatusIconBadge';
 import { useSmartNotifications } from '@/hooks/useSmartNotifications';
 import { useRealtimeBadgeNotifications } from '@/hooks/useRealtimeBadgeNotifications';
 import { useUserOnlineNotifications } from '@/hooks/useUserOnlineNotifications';
@@ -65,13 +59,11 @@ import { useFriendActivityNotifications } from '@/hooks/useFriendActivityNotific
 import { useDesktopNotifications } from '@/hooks/useDesktopNotifications';
 import { useNewPostNotifications } from '@/hooks/useNewPostNotifications';
 import { useZoeProactiveNotifications } from '@/hooks/useZoeProactiveNotifications';
-import { TutorialOverlay } from '@/components/TutorialOverlay';
 import { useTutorial } from '@/hooks/useTutorial';
 import { useDailyBriefing } from '@/hooks/useDailyBriefing';
-import { OnboardingTour } from '@/components/OnboardingTour';
 import { useGrowthFeed } from '@/hooks/useGrowthFeed';
 import CuratedInsightCard, { CuratedInsightSkeleton, type CuratedInsight } from '@/components/growth/CuratedInsightCard';
-import PersonalGrowthOnboarding, { isOnboardingSnoozed } from '@/components/growth/PersonalGrowthOnboarding';
+import { isOnboardingSnoozed } from '@/components/growth/PersonalGrowthOnboarding';
 import GrowthTodayStatusPanel from '@/components/growth/GrowthTodayStatusPanel';
 import { useGrowthFlags } from '@/hooks/useGrowthFlags';
 import { GROWTH_FLAGS } from '@/lib/growthFlags';
@@ -79,16 +71,10 @@ import { logGrowthAudit } from '@/lib/growthAudit';
 import GrowthInsightDetailsModal from '@/components/growth/GrowthInsightDetailsModal';
 import { recordGrowthEvent } from '@/lib/growthAnalytics';
 import { useGrowthUnread } from '@/hooks/useGrowthUnread';
-import { SovereignQuickAccess } from '@/components/SovereignQuickAccess';
 import { appendMediaVersion, captureVideoPreviewFromUrl, dataUrlToFile, getPostsStorageObjectPath, inferMediaType, makeFallbackVideoPoster, resolvePrivateStorageUrl, transcodeVideoForPreview } from '@/lib/mediaUtils';
-import PostsGrid from "@/components/PostsGrid";
-import PostModal from "@/components/PostModal";
 import FriendRequestCard from "@/components/FriendRequestCard";
 import InterestRecommendations from "@/components/InterestRecommendations";
-import FullScreenVideoPlayer from "@/components/FullScreenVideoPlayer";
 import { initializeAudio } from '@/utils/notificationSounds';
-import PrivateTimelinesSheet from '@/components/PrivateTimelinesSheet';
-import SelfieCityFeed from '@/components/selfiecity/SelfieCityFeed';
 import FeedDiagnosticsBanner, { FeedDiagnostics } from '@/components/FeedDiagnosticsBanner';
 import AdminFeedDebugger from '@/components/AdminFeedDebugger';
 import {
@@ -103,13 +89,22 @@ import {
 } from '@/lib/zoeHomeCommands';
 
 const ProfileContent = React.lazy(() => import('@/components/ProfileContent'));
+const AtlasHUD = React.lazy(() => import('@/components/atlas/AtlasHUD').then((m) => ({ default: m.AtlasHUD })));
+const FullScreenVideoPlayer = React.lazy(() => import('@/components/FullScreenVideoPlayer'));
+const HamburgerMenu = React.lazy(() => import('@/components/HamburgerMenu'));
+const HomePostEditor = React.lazy(() => import('@/components/home/HomePostEditor'));
+const MosaicFeed = React.lazy(() => import('@/components/feed/MosaicFeed'));
+const NotificationMenu = React.lazy(() => import('@/components/NotificationMenu'));
+const OnboardingTour = React.lazy(() => import('@/components/OnboardingTour').then((m) => ({ default: m.OnboardingTour })));
+const PersonalGrowthOnboarding = React.lazy(() => import('@/components/growth/PersonalGrowthOnboarding'));
+const PrivateTimelinesSheet = React.lazy(() => import('@/components/PrivateTimelinesSheet'));
+const SelfieCityFeed = React.lazy(() => import('@/components/selfiecity/SelfieCityFeed'));
 // Hoisted: declaring React.lazy() inside render creates a new component type
 // every render, causing endless unmount/remount + chunk re-download.
 const AutoScrollDebugOverlay = React.lazy(() => import('@/components/dev/AutoScrollDebugOverlay'));
 
 // Atlas HUD Integration - Smith AI from Atlas movie (2024)
 // NOTE: Atlas is a SEPARATE experience from Zoe Infinity - accessed via menu only
-import { AtlasHUD } from '@/components/atlas';
 
 import { useFriendRequests } from "@/hooks/useFriendRequests";
 import PageSeo from "@/components/seo/PageSeo";
@@ -2564,11 +2559,13 @@ const HomePage = () => {
       {/* Atlas HUD Overlay - Smith AI Interface (SEPARATE from Zoe Infinity) */}
       {/* Atlas Boot and Prime Objective are handled INSIDE AtlasHUD, not in main Zoe flow */}
       {atlasHUDActive && (
-        <AtlasHUD 
-          isActive={atlasHUDActive} 
-          onClose={() => setAtlasHUDActive(false)}
-          showIntro={true}
-        />
+        <React.Suspense fallback={null}>
+          <AtlasHUD 
+            isActive={atlasHUDActive} 
+            onClose={() => setAtlasHUDActive(false)}
+            showIntro={true}
+          />
+        </React.Suspense>
       )}
       
        {/* Atlas HUD Toggle Button moved into HamburgerMenu */}
@@ -2745,7 +2742,7 @@ const HomePage = () => {
 
             <TabsContent value="mosaic" className="absolute inset-0 m-0 h-full min-h-0 w-full overflow-hidden p-0" data-feed-tab="mosaic">
               <div className="absolute inset-0 h-full w-full overflow-y-auto overscroll-contain pb-28 pt-24" data-feed-scroll>
-                <MosaicFeed limit={60} />
+                <React.Suspense fallback={null}><MosaicFeed limit={60} /></React.Suspense>
               </div>
             </TabsContent>
 
@@ -2768,30 +2765,32 @@ const HomePage = () => {
                 </div>
                 
                 {/* Selfie City Posts Grid */}
-                <SelfieCityFeed />
+                <React.Suspense fallback={null}><SelfieCityFeed /></React.Suspense>
               </div>
             </TabsContent>
 
         </Tabs>
-      <NotificationMenu open={notificationMenuOpen} onOpenChange={setNotificationMenuOpen} />
-      <HamburgerMenu
-        isOpen={hamburgerMenuOpen}
-        onClose={() => setHamburgerMenuOpen(false)}
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        unreadMessages={unreadMessages}
-        unreadNotifications={unreadNotifications}
-        newMatches={newMatches}
-        onNotificationClick={() => setNotificationMenuOpen(true)}
-        onPrivateTimelineClick={() => setPrivateTimelinesOpen(true)}
-        onOpenAtlas={() => setAtlasHUDActive(true)}
-      />
-      <OnboardingTour />
-      <PersonalGrowthOnboarding
-        open={growthOnboardingOpen}
-        onOpenChange={setGrowthOnboardingOpen}
-        onComplete={() => void refreshGrowth()}
-      />
+      <React.Suspense fallback={null}>
+        <NotificationMenu open={notificationMenuOpen} onOpenChange={setNotificationMenuOpen} />
+        <HamburgerMenu
+          isOpen={hamburgerMenuOpen}
+          onClose={() => setHamburgerMenuOpen(false)}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          unreadMessages={unreadMessages}
+          unreadNotifications={unreadNotifications}
+          newMatches={newMatches}
+          onNotificationClick={() => setNotificationMenuOpen(true)}
+          onPrivateTimelineClick={() => setPrivateTimelinesOpen(true)}
+          onOpenAtlas={() => setAtlasHUDActive(true)}
+        />
+        <OnboardingTour />
+        <PersonalGrowthOnboarding
+          open={growthOnboardingOpen}
+          onOpenChange={setGrowthOnboardingOpen}
+          onComplete={() => void refreshGrowth()}
+        />
+      </React.Suspense>
       <GrowthInsightDetailsModal
         insight={growthDetails}
         open={Boolean(growthDetails)}
@@ -2800,7 +2799,9 @@ const HomePage = () => {
         styles={growthPreferences?.reflection_styles ?? []}
         timezone={growthPreferences?.timezone}
       />
-      <PrivateTimelinesSheet open={privateTimelinesOpen} onOpenChange={setPrivateTimelinesOpen} />
+      <React.Suspense fallback={null}>
+        <PrivateTimelinesSheet open={privateTimelinesOpen} onOpenChange={setPrivateTimelinesOpen} />
+      </React.Suspense>
 
       {/* DHF Neural Feed Sheet */}
       <Sheet open={neuralFeedOpen} onOpenChange={setNeuralFeedOpen}>
@@ -2844,12 +2845,14 @@ const HomePage = () => {
       
       {/* Full Screen Loops Video Player */}
       {loopsPlayerOpen && filteredLoops.length > 0 && (
-        <FullScreenVideoPlayer
-          videos={filteredLoops}
-          initialIndex={loopsInitialIndex}
-          onClose={() => setLoopsPlayerOpen(false)}
-          onUpdate={handleUpdate}
-        />
+        <React.Suspense fallback={null}>
+          <FullScreenVideoPlayer
+            videos={filteredLoops}
+            initialIndex={loopsInitialIndex}
+            onClose={() => setLoopsPlayerOpen(false)}
+            onUpdate={handleUpdate}
+          />
+        </React.Suspense>
       )}
 
       <HomeFloatingTools
@@ -3037,12 +3040,14 @@ const HomePage = () => {
       <HomeCollectionSheet mode={collectionMode} onOpenChange={(open) => !open && setCollectionMode(null)} />
 
 
-      <HomePostEditor
-        open={postEditorOpen}
-        busy={uploadState === 'uploading' || uploadState === 'saving' || uploadState === 'validating'}
-        onOpenChange={setPostEditorOpen}
-        onSubmit={publishPostDraft}
-      />
+      <React.Suspense fallback={null}>
+        <HomePostEditor
+          open={postEditorOpen}
+          busy={uploadState === 'uploading' || uploadState === 'saving' || uploadState === 'validating'}
+          onOpenChange={setPostEditorOpen}
+          onSubmit={publishPostDraft}
+        />
+      </React.Suspense>
 
       
       {/* Simple Scroll to Top Arrow - Fixed at bottom right corner */}
