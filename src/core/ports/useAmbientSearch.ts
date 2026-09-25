@@ -7,6 +7,7 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  */
 import { useCallback, useRef, useState } from 'react';
+import { isFeedWorthyQuery } from '@/lib/feedIntentGuard';
 import { supabase } from '@/integrations/supabase/client';
 import { ensureLiveSession } from '@/lib/sessionGuard';
 
