@@ -2862,6 +2862,24 @@ export type Database = {
         }
         Relationships: []
       }
+      edge_cron_tokens: {
+        Row: {
+          created_at: string
+          name: string
+          token: string
+        }
+        Insert: {
+          created_at?: string
+          name: string
+          token?: string
+        }
+        Update: {
+          created_at?: string
+          name?: string
+          token?: string
+        }
+        Relationships: []
+      }
       edge_function_probes: {
         Row: {
           category: string
