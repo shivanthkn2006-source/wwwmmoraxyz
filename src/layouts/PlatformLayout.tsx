@@ -27,6 +27,8 @@ import ZoeAgentHost from '@/components/zoe/ZoeAgentHost';
 import GlobalMusicToggle from '@/components/music/GlobalMusicToggle';
 import { CallEngineProvider } from '@/contexts/CallEngineContext';
 import GlobalIncomingCallHost from '@/components/quantum/GlobalIncomingCallHost';
+import { useLocation } from 'react-router-dom';
+import { useAuth } from '@/lib/auth';
 
 
 
@@ -68,7 +70,23 @@ function PlatformServices() {
   return null;
 }
 
-export const PlatformLayout = ({ children }: { children: React.ReactNode }) => (
+export const PlatformLayout = ({ children }: { children: React.ReactNode }) => {
+  const { pathname } = useLocation();
+  const { user, loading } = useAuth();
+  const isAuthenticationRoute =
+    pathname === '/' ||
+    pathname.startsWith('/auth') ||
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/signup') ||
+    pathname.startsWith('/password-recovery') ||
+    pathname.startsWith('/voice-auth') ||
+    pathname.startsWith('/beta');
+
+  // Authentication owns the critical path. Calls, voice, notifications, Zoe,
+  // media and monitoring start only after a real session reaches an app route.
+  if (loading || !user || isAuthenticationRoute) return <>{children}</>;
+
+  return (
   <ZoeAgentProvider>
     <CallEngineProvider>
     {/* Services are crash-isolated: a recognizer failure can never blank the app. */}
@@ -140,6 +158,7 @@ export const PlatformLayout = ({ children }: { children: React.ReactNode }) => (
     </AppErrorBoundary>
     </CallEngineProvider>
   </ZoeAgentProvider>
-);
+  );
+};
 
 export default PlatformLayout;
