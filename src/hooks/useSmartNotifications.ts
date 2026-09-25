@@ -137,8 +137,7 @@ export const useSmartNotifications = () => {
         // NOTE: friend_online announcements disabled per user preference
       }
 
-      // Cleanup expired notifications
-      await supabase.rpc('cleanup_expired_notifications');
+      // Expired-notification cleanup is server-only (members get 403); skipped client-side.
 
     } catch (error) {
       console.error('Error analyzing notifications:', error);
