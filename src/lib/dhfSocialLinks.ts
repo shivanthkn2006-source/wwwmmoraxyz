@@ -7,6 +7,7 @@
  * feed never issues a second call.
  */
 import { supabase } from '@/integrations/supabase/client';
+import { liveAccessToken } from '@/lib/edgeSession';
 
 export interface DhfSocialLinks {
   topicKey: string;
@@ -76,12 +77,21 @@ const drain = async () => {
         continue;
       }
       try {
+        // Member-only endpoint: never call it with the anon key or an expired
+        // token (that returned 401 "Invalid session"). Cards fall back to
+        // platform search links instead.
+        const token = await liveAccessToken();
+        if (!token) {
+          batch.forEach((p) => p.resolve(null));
+          continue;
+        }
         const { data, error } = await supabase.functions.invoke('dhf-social-links', {
           body: { topics: batch.map((p) => ({ headline: p.headline, category: p.category })) },
+          headers: { Authorization: `Bearer ${token}` },
         });
         if (error) {
           const status = (error as { context?: { status?: number } })?.context?.status;
-          if (status === 429) cooldownUntil = Date.now() + COOLDOWN_MS;
+          if (status === 429 || status === 401) cooldownUntil = Date.now() + COOLDOWN_MS;
           batch.forEach((p) => p.resolve(null));
           continue;
         }
