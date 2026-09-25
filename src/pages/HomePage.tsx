@@ -2537,7 +2537,7 @@ const HomePage = () => {
   // cards remain outside that chronology.
   const globalFeedSlides = searchVideoSlides.length
     ? searchVideoSlides
-    : [...motivationTopSlide, ...(quietGuidance ? [
+    : [...motivationTopSlide, ...chronologicalSlides(visibleGlobalPosts, 'global'), ...growthSlide.slice(growthCards.length), ...supportingSlides, ...neuralVideoSlides, ...savedGrowthSlides, ...(quietGuidance ? [
       <div key="quiet-zoe" className="relative flex h-full min-h-full w-full shrink-0 snap-start snap-always items-center px-6" data-quiet-zoe>
         <div className="mx-auto max-w-lg text-center">
           <img src={zoeAvatar} alt="Zoe" className="mx-auto mb-4 h-14 w-14 rounded-full object-cover" />
@@ -2545,7 +2545,7 @@ const HomePage = () => {
           <p className="mt-2 text-sm text-muted-foreground">{quietGuidance.message}</p>
         </div>
       </div>,
-    ] : []), ...chronologicalSlides(visibleGlobalPosts, 'global'), ...growthSlide.slice(growthCards.length), ...supportingSlides, ...neuralVideoSlides, ...savedGrowthSlides,
+    ] : []),
       <div key="caught-up" className="relative flex h-full min-h-full w-full shrink-0 snap-start snap-always items-center justify-center px-6" data-caught-up>
         <div className="text-center"><Check className="mx-auto h-7 w-7 text-primary" /><p className="mt-3 font-medium text-foreground">You’re caught up</p><p className="mt-1 text-sm text-muted-foreground">Come back when life brings something relevant.</p></div>
       </div>];

@@ -75,6 +75,16 @@ describe('device permissions', () => {
     }
   });
 
+  it('keeps idle Zoe guidance behind DHF and social content', () => {
+    const home = read('src/pages/HomePage.tsx');
+    const feedStart = home.indexOf('const globalFeedSlides');
+    const feedEnd = home.indexOf('const personalFeedSlides', feedStart);
+    const feed = home.slice(feedStart, feedEnd);
+    expect(feed.indexOf("chronologicalSlides(visibleGlobalPosts, 'global')")).toBeLessThan(
+      feed.indexOf('quietGuidance ?'),
+    );
+  });
+
   it('does not unlock Safari audio from the first unrelated tap', () => {
     const safari = read('src/utils/safariBrowserFixes.ts');
     const compat = read('src/utils/crossBrowserCompat.ts');
