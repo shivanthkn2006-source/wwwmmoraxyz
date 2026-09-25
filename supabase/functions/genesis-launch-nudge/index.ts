@@ -21,7 +21,7 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const caller = await requireCaller(req, 'admin');
+  const caller = await requireCaller(req, 'member');
   if (caller instanceof Response) return caller;
 
   const guard = await publicGuard(req, { name: 'genesis-launch-nudge', limit: 10, windowSeconds: 300, maxBodyBytes: 512 * 1024, allowRichText: true });
@@ -36,10 +36,21 @@ Deno.serve(async (req) => {
     console.log('[GENESIS LAUNCH] Initiating Welcome Home briefing for Spartans...');
 
     // Get all users (our 500 Spartans)
-    const { data: profiles, error: profilesError } = await supabase
-      .from('profiles')
-      .select('user_id, display_name, username')
-      .not('user_id', 'is', null);
+    // Admins/server broadcast to everyone. Members may only notify their own
+    // accepted friends; each notification row belongs to its recipient alone.
+    const isBroadcaster = caller.kind === 'service' || caller.isAdmin;
+    let query = supabase.from('profiles').select('user_id, display_name, username').not('user_id', 'is', null);
+    if (!isBroadcaster) {
+      const me = (caller as { userId: string }).userId;
+      const { data: fr } = await supabase.from('friendships').select('user1_id, user2_id')
+        .or(`user1_id.eq.${me},user2_id.eq.${me}`).limit(200);
+      const ids = [...new Set((fr || []).map((f) => f.user1_id === me ? f.user2_id : f.user1_id))].filter((id) => id && id !== me).slice(0, 50);
+      if (ids.length === 0) {
+        return new Response(JSON.stringify({ success: true, stats: { spartans_count: 0, notifications_sent: 0 } }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+      query = query.in('user_id', ids);
+    }
+    const { data: profiles, error: profilesError } = await query;
 
     if (profilesError) {
       console.error('[GENESIS LAUNCH] Failed to fetch profiles:', profilesError);
@@ -85,7 +96,7 @@ Deno.serve(async (req) => {
 
     // Log the genesis event
     await supabase.from('behavioral_events').insert({
-      user_id: '00000000-0000-0000-0000-000000000000', // System user
+      user_id: caller.kind === 'member' ? caller.userId : '00000000-0000-0000-0000-000000000000',
       event_type: 'genesis_launch_executed',
       event_category: 'platform_milestone',
       context_snippet: `Genesis Launch executed. ${inserted} Spartans notified.`,
