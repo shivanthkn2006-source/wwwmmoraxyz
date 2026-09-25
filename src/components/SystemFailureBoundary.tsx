@@ -1,7 +1,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { errorLogger } from "@/utils/errorBoundaryLogger";
-import { forceAppRefresh, recoverFromChunkError } from "@/lib/versionCheck";
+import { forceAppRefresh } from "@/lib/versionCheck";
 import { supabase } from "@/integrations/supabase/client";
 
 type State = {
@@ -158,18 +158,6 @@ export default class SystemFailureBoundary extends React.Component<
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    const message = String(error?.message || '').toLowerCase();
-    const isChunkImportFailure =
-      message.includes('importing a module script failed') ||
-      message.includes('failed to fetch dynamically imported module') ||
-      message.includes('chunkloaderror');
-    const isVRRoute = typeof window !== 'undefined' && window.location.pathname.startsWith('/zoe-omega');
-
-    if (isChunkImportFailure && !isVRRoute) {
-      console.warn('[SystemFailureBoundary] Module import failed, running one-shot chunk recovery');
-      recoverFromChunkError();
-    }
-
     // Log to error logger
     errorLogger.log({
       errorType: "ReactErrorBoundary",
@@ -227,16 +215,15 @@ export default class SystemFailureBoundary extends React.Component<
     const recent = errorLogger.getStoredErrors().slice(-5).reverse();
     const isVR = isVRScreen();
 
-    // Friendly recovery UI for chunk-import failures (deploy / stale tab).
-    // Recovery is already in progress via recoverFromChunkError() — this is
-    // only what the user sees while it happens (~1-2s).
+    // Friendly stable UI for chunk-import failures. Never reload automatically:
+    // the user chooses if and when to retry or refresh.
     if (this.state.isChunkFailure) {
       return (
         <div role="status" aria-live="polite" className="fixed inset-0 z-[2147483647] flex flex-col items-center justify-center gap-4 bg-background text-foreground p-6 text-center">
           <div className="h-9 w-9 rounded-full border-[3px] border-muted border-t-primary animate-spin" />
-          <h1 className="text-base font-semibold">Updating M'mora to the latest version…</h1>
+          <h1 className="text-base font-semibold">A module could not load</h1>
           <p className="text-xs text-muted-foreground max-w-sm">
-            We're refreshing your app cache. This usually takes about a second.
+            M'mora will stay on this screen without reloading automatically.
           </p>
           <Button variant="outline" size="sm" onClick={this.handleHardRefresh} className="mt-2">
             Reload now

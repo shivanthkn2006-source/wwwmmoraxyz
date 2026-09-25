@@ -1,5 +1,7 @@
 # Current fixes
 
+- [x] Disable every automatic reload from global and module failure boundaries; recovery is user-controlled only.
+- [ ] Prove the global failure screen remains mounted without navigation or reload.
 - [x] Remove the simulated login queue and never await invite redemption before entering Home.
 - [x] Keep voice, calls, notifications, monitoring, and Zoe services off the authentication path.
 - [x] Bound sign-in and stop Home's social-post request from holding the first screen.

@@ -39,7 +39,7 @@ import GenesisCinematicIntro from "./components/GenesisCinematicIntro";
 import { useGenesisIntro } from "./hooks/useGenesisIntro";
 import React, { useState, useEffect, useCallback, lazy, Suspense, memo } from "react";
 import { useLocation } from "react-router-dom";
-import { checkAppVersion, recoverFromChunkError } from "@/lib/versionCheck";
+import { checkAppVersion } from "@/lib/versionCheck";
 import { AppErrorBoundary } from "@/components/core/ErrorBoundary";
 import { PlatformLayout } from "@/layouts/PlatformLayout";
 import EarnedRoute from "@/components/access/EarnedRoute";
@@ -198,8 +198,6 @@ const isLovablePreviewHost = (): boolean => {
   return host.includes('lovableproject.com') || host.startsWith('id-preview--');
 };
 
-const ZOE_BLANK_RECOVERY_KEY = 'mmora_preview_blank_recovery_at';
-
 const ZoePreviewRecoveryGuard = ({ children }: { children: React.ReactNode }) => {
   const { pathname } = useLocation();
   const [stalled, setStalled] = useState(false);
@@ -220,23 +218,8 @@ const ZoePreviewRecoveryGuard = ({ children }: { children: React.ReactNode }) =>
       if (isRootVisiblyBlank()) setStalled(true);
     }, 5_000);
 
-    const recoverTimer = window.setTimeout(() => {
-      if (!isLovablePreviewHost() || !isRootVisiblyBlank()) return;
-
-      try {
-        const last = Number(sessionStorage.getItem(ZOE_BLANK_RECOVERY_KEY) || '0');
-        if (Date.now() - last < 10 * 60 * 1000) return;
-        sessionStorage.setItem(ZOE_BLANK_RECOVERY_KEY, String(Date.now()));
-      } catch {
-        // continue with one recovery attempt if storage is unavailable
-      }
-
-      recoverFromChunkError();
-    }, 9_000);
-
     return () => {
       window.clearTimeout(visibleTimer);
-      window.clearTimeout(recoverTimer);
     };
   }, [pathname]);
 
@@ -250,9 +233,6 @@ const ZoePreviewRecoveryGuard = ({ children }: { children: React.ReactNode }) =>
             <h1 className="font-mono text-sm uppercase tracking-widest text-primary">Zoe preview recovery</h1>
             <p className="mt-2 text-sm text-muted-foreground">The preview stalled, so the recovery guard is restoring the session.</p>
             <div className="mt-4 flex justify-center gap-2">
-              <button className="rounded-md bg-primary px-3 py-2 text-xs font-medium text-primary-foreground" onClick={() => recoverFromChunkError()}>
-                Recover now
-              </button>
               <button className="rounded-md border border-border bg-secondary px-3 py-2 text-xs font-medium text-secondary-foreground" onClick={() => window.location.reload()}>
                 Reload
               </button>
@@ -299,12 +279,8 @@ class ErrorBoundary extends React.Component<
       message.includes('failed to fetch dynamically imported module') ||
       message.includes('chunkloaderror');
 
-    const isVRRoute = typeof window !== 'undefined' && window.location.pathname.startsWith('/zoe-omega');
-    if (isChunkImportFailure && !isVRRoute) {
-      console.warn('[App ErrorBoundary] Lazy chunk import failed, running chunk recovery');
-      recoverFromChunkError();
-    } else if (isChunkImportFailure) {
-      console.warn('[App ErrorBoundary] Lazy chunk import failed on VR route; keeping current session to avoid refresh loop.');
+    if (isChunkImportFailure) {
+      console.error('[App ErrorBoundary] Lazy chunk import failed; automatic reload is disabled.');
     }
   }
 
