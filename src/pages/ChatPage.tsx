@@ -833,7 +833,7 @@ const ChatPage = () => {
         </Button>
       )}
 
-      <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4 pb-6 z-20">
+      <div className="fixed bottom-0 left-0 right-0 z-20 bg-transparent p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         {editingMessage && (
           <div className="mb-2 bg-blue-500/10 border border-blue-500/20 rounded-lg px-3 py-2">
             <div className="flex items-center justify-between mb-2">
@@ -903,7 +903,7 @@ const ChatPage = () => {
           </div>
         )}
         {!editingMessage && (
-          <div className="flex items-center space-x-2 pr-[calc(var(--home-dock-cell,48px)+1rem)]">
+          <div className="flex items-center gap-2 pr-[calc(var(--home-dock-cell,48px)+1rem)]">
             <input
               type="file"
               accept="image/*"
@@ -912,7 +912,7 @@ const ChatPage = () => {
               id="chat-image"
             />
             <label htmlFor="chat-image">
-              <Button variant="outline" size="sm" className="cursor-pointer" asChild>
+              <Button variant="ghost" size="icon" className="cursor-pointer border-0 bg-transparent shadow-none" asChild>
                 <span>
                   <ImageIcon className="w-4 h-4" />
                 </span>
@@ -929,7 +929,7 @@ const ChatPage = () => {
                   }
                 }}
                 placeholder="Type a message..."
-                className="bg-background border-border pr-12"
+                className="border-0 bg-transparent pr-12 shadow-none outline-none ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
               />
               <button
                 type="button"

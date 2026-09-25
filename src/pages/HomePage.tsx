@@ -116,7 +116,6 @@ import { composeChronologicalFeed } from '@/lib/growthFeedComposition';
 import { deviceTimeZone, growthSlotTimestamp, slotsForFrequency } from '@/lib/growthSlot';
 import DHFCompassCard from '@/components/dhf/DHFCompassCard';
 import { useDhfDailyFeed } from '@/hooks/useDhfDailyFeed';
-import { compassSlotTimestamp } from '@/lib/dhfCompass';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { screenUpload, reportBlockedUpload } from '@/lib/uploadModeration';
 import { CDN_CACHE_CONTROL, prefersLowBandwidth, prepareVideoRenditions, registerVideoAsset, uploadRendition, type VideoRenditions } from '@/lib/videoPipeline';
@@ -2516,12 +2515,10 @@ const HomePage = () => {
       timestamp: growthSlotTimestamp(insight.local_date, insight.slot, zone),
       value: growthSlide[index],
     }));
-    const dhfItems = dhfPosts.map((post, index) => ({
-      id: `dhf-${post.id}`,
-      timestamp: compassSlotTimestamp(post.post_date, post.slot_time, zone),
-      value: dhfSlides[index],
-    }));
-    return composeChronologicalFeed([...nativeItems, ...loopItems, ...growthItems, ...dhfItems]);
+    const timelineItems = composeChronologicalFeed([...nativeItems, ...loopItems, ...growthItems]);
+    // Due DHF guidance leads the social timeline so a newer upload cannot bury
+    // Zoe's current-day context. duePosts already keeps these newest-first.
+    return [...dhfSlides, ...timelineItems];
 
   };
 
@@ -2703,7 +2700,7 @@ const HomePage = () => {
                   </div>
                 )}
                 
-                {loading ? (
+                {loading && globalFeedSlides.length === 0 ? (
                   <p className="absolute inset-0 flex items-center justify-center px-3 text-center text-muted-foreground">Loading posts...</p>
                 ) : globalPosts.length === 0 && !astroDaily && !dailyMotivation && searchVideos.length === 0 && neuralVideos.length === 0 && loopSlides.length === 0 && growthSlide.length === 0 ? (
 
