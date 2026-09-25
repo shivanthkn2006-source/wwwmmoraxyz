@@ -38,17 +38,25 @@ Deno.serve(async (req) => {
     // Get all users (our 500 Spartans)
     // Admins/server broadcast to everyone. Members may only notify their own
     // accepted friends; each notification row belongs to its recipient alone.
+    const body = await req.clone().json().catch(() => ({})) as { recipient_ids?: unknown };
+    const targets = Array.isArray(body.recipient_ids)
+      ? body.recipient_ids.filter((v): v is string => typeof v === 'string' && /^[0-9a-f-]{36}$/i.test(v)).slice(0, 50)
+      : [];
     const isBroadcaster = caller.kind === 'service' || caller.isAdmin;
     let query = supabase.from('profiles').select('user_id, display_name, username').not('user_id', 'is', null);
     if (!isBroadcaster) {
       const me = (caller as { userId: string }).userId;
       const { data: fr } = await supabase.from('friendships').select('user1_id, user2_id')
         .or(`user1_id.eq.${me},user2_id.eq.${me}`).limit(200);
-      const ids = [...new Set((fr || []).map((f) => f.user1_id === me ? f.user2_id : f.user1_id))].filter((id) => id && id !== me).slice(0, 50);
+      let ids = [...new Set((fr || []).map((f) => f.user1_id === me ? f.user2_id : f.user1_id))].filter((id) => id && id !== me);
+      if (targets.length) ids = ids.filter((id) => targets.includes(id));
+      ids = ids.slice(0, 50);
       if (ids.length === 0) {
         return new Response(JSON.stringify({ success: true, stats: { spartans_count: 0, notifications_sent: 0 } }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
       query = query.in('user_id', ids);
+    } else if (targets.length) {
+      query = query.in('user_id', targets);
     }
     const { data: profiles, error: profilesError } = await query;
 
