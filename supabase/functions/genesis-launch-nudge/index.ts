@@ -61,14 +61,16 @@ Deno.serve(async (req) => {
     console.log(`[GENESIS LAUNCH] Found ${spartanCount} Spartans to notify`);
 
     // Create notifications for all users
+    const senderId = caller.kind === 'member' ? caller.userId : null;
     const notifications = (profiles || []).map(profile => ({
       user_id: profile.user_id,
-      title: '🚀 Welcome Home, Spartan!',
-      message: `The gates are open, ${profile.display_name || profile.username || 'Spartan'}. You were among the first 500 to believe in this vision. Zoe is now fully activated. Your journey begins.`,
-      type: 'genesis_launch',
-      notification_type: 'system',
+      from_user_id: senderId ?? profile.user_id,
+      type: 'admin_notice',
       priority: 10,
       context_data: {
+        title: '🚀 Welcome Home, Spartan!',
+        message: `The gates are open, ${profile.display_name || profile.username || 'Spartan'}. You were among the first 500 to believe in this vision. Zoe is now fully activated. Your journey begins.`,
+        notification_type: 'system',
         launch_type: 'genesis',
         spartan_number: spartanCount,
         launched_at: new Date().toISOString(),
