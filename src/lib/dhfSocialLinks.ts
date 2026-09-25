@@ -21,6 +21,17 @@ export interface DhfSocialLinks {
 export const dhfTopicKey = (headline: string): string =>
   headline.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 160);
 
+/** A never-dead fallback: platform search pages always resolve. */
+export const searchFallback = (headline: string): DhfSocialLinks => ({
+  topicKey: dhfTopicKey(headline),
+  youtube_video_id: null,
+  youtube_url: `https://www.youtube.com/results?search_query=${encodeURIComponent(headline)}`,
+  youtube_title: null,
+  youtube_channel: null,
+  tiktok_url: `https://www.tiktok.com/search?q=${encodeURIComponent(headline)}`,
+  instagram_url: 'https://www.instagram.com/explore/',
+});
+
 const memory = new Map<string, DhfSocialLinks>();
 const inflight = new Map<string, Promise<DhfSocialLinks | null>>();
 
