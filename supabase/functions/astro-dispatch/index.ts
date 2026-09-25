@@ -479,7 +479,7 @@ async function resolveCaller(req: Request): Promise<Caller> {
   if (cronToken) {
     if (!cachedCronToken) {
       const r = await db('edge_cron_tokens?name=eq.astro-dispatch&select=token');
-      const rows = r.ok ? await r.json() : [];
+      const rows = r.ok && Array.isArray(r.data) ? r.data : [];
       cachedCronToken = rows?.[0]?.token ?? null;
     }
     if (cachedCronToken && cronToken.length === cachedCronToken.length && cronToken === cachedCronToken) {
@@ -495,7 +495,7 @@ async function resolveCaller(req: Request): Promise<Caller> {
   const userId: string | undefined = user?.id;
   if (!userId) return { kind: 'none' };
   const roles = await db(`user_roles?user_id=eq.${userId}&role=eq.admin&select=role`);
-  const isAdmin = roles.ok && ((await roles.json()) as unknown[]).length > 0;
+  const isAdmin = roles.ok && Array.isArray(roles.data) && roles.data.length > 0;
   return isAdmin ? { kind: 'admin', userId } : { kind: 'member', userId };
 }
 
