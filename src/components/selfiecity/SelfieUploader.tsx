@@ -67,9 +67,13 @@ const SelfieUploader: React.FC<SelfieUploaderProps> = ({ onUpload, onClose }) =>
   const [userProfile, setUserProfile] = useState<{ total_points: number; current_tier: string } | null>(null);
   const [analysisPhase, setAnalysisPhase] = useState<'scanning' | 'detecting' | 'matching' | 'calculating' | 'complete'>('scanning');
 
-  // Get current location
+  // Reuse location only when the member has already granted it. Opening this
+  // component must not bypass the universal permission action.
   useEffect(() => {
-    if (navigator.geolocation) {
+    const loadGrantedLocation = async () => {
+      if (!navigator.geolocation || !navigator.permissions?.query) return;
+      const permission = await navigator.permissions.query({ name: 'geolocation' });
+      if (permission.state !== 'granted') return;
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           setCurrentLocation({
@@ -79,7 +83,8 @@ const SelfieUploader: React.FC<SelfieUploaderProps> = ({ onUpload, onClose }) =>
         },
         (err) => console.warn('[SelfieUploader] Location error:', err)
       );
-    }
+    };
+    void loadGrantedLocation();
   }, []);
 
   // Load user profile and available brands

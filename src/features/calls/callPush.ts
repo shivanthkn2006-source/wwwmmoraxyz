@@ -50,11 +50,9 @@ export const getCallPushRegistration = async (): Promise<ServiceWorkerRegistrati
 export const registerCallPushDevice = async (userId: string): Promise<boolean> => {
   if (!callPushSupported() || !userId) return false;
   try {
-    if (Notification.permission === 'denied') return false;
-    if (Notification.permission === 'default') {
-      const permission = await Notification.requestPermission();
-      if (permission !== 'granted') return false;
-    }
+    // Background call registration must never open a browser permission prompt.
+    // The universal, user-initiated permission modal owns that interaction.
+    if (Notification.permission !== 'granted') return false;
 
     const registration = await getCallPushRegistration();
     if (!registration?.pushManager) return false;
