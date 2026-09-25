@@ -53,6 +53,9 @@ serve(async (req) => {
     // Parse the request body
     const body: TrackingData = await req.json();
     const { activityType, sessionData, pageData, activityDetails } = body;
+    // Never trust a client-supplied IP: take it from the edge proxy headers.
+    const serverIp = (req.headers.get('cf-connecting-ip') || req.headers.get('x-forwarded-for')?.split(',')[0] || '').trim() || null;
+    if (sessionData) sessionData.ipAddress = serverIp ?? undefined;
 
     // Try to get user from JWT if available (for authenticated requests)
     let userId: string | null = null;
@@ -192,7 +195,7 @@ serve(async (req) => {
         break;
 
       case 'page_exit':
-        if (pageData?.sessionId && pageData?.pagePath && pageData?.durationSeconds !== undefined) {
+        if (userId && pageData?.sessionId && pageData?.pagePath && pageData?.durationSeconds !== undefined) {
           // Update the most recent page view for this session/path
           const { error } = await supabase
             .from('page_views')
@@ -201,6 +204,7 @@ serve(async (req) => {
               duration_seconds: pageData.durationSeconds,
             })
             .eq('session_id', pageData.sessionId)
+            .eq('user_id', userId)
             .eq('page_path', pageData.pagePath)
             .is('exited_at', null)
             .order('entered_at', { ascending: false })
@@ -240,11 +244,7 @@ serve(async (req) => {
         .update({ last_activity_at: new Date().toISOString() })
         .eq('session_token', sessionData.sessionToken);
       
-      if (userId) {
-        await updateQuery.eq('user_id', userId);
-      } else {
-        await updateQuery;
-      }
+      if (userId) await updateQuery.eq('user_id', userId);
     }
 
     return new Response(JSON.stringify({ success: true, data: result }), {
