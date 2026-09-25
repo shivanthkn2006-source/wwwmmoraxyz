@@ -29,8 +29,6 @@ import ProtectedRoute from "./components/ProtectedRoute";
 // BottomNavigation removed - now using HUD navigation
 import InstallPrompt from "./components/InstallPrompt";
 import GuardianInterventionOverlay from "./components/vitruvian/GuardianInterventionOverlay";
-import MicPermissionInitializer from "./components/MicPermissionInitializer";
-import PlatformPermissionsInitializer from "./components/PlatformPermissionsInitializer";
 import MmoraBrandHomeBridge from "./components/brand/MmoraBrandHomeBridge";
 import VoiceSystemActivator from "./components/VoiceSystemActivator";
 import CameraActiveIndicator from "./components/CameraActiveIndicator"; // CAMERA EYE INDICATOR
@@ -469,8 +467,6 @@ const RouteAwareShell = () => {
     return (
       <div className={`${isAdminLiquidRoute ? 'admin-liquid-page' : ''} min-h-screen bg-background text-foreground omega-void-bg`} data-admin-liquid-page={isAdminLiquidRoute || undefined}>
         <VoiceRuntimeGate>
-          <MicPermissionInitializer />
-          <PlatformPermissionsInitializer />
           <VoiceSystemActivator />
         </VoiceRuntimeGate>
 
@@ -536,8 +532,6 @@ const RouteAwareShell = () => {
         <ShadowSentinelProvider>
           <ZoeMonitorProvider>
             <VoiceRuntimeGate>
-              <MicPermissionInitializer />
-              <PlatformPermissionsInitializer />
               <VoiceSystemActivator />
             </VoiceRuntimeGate>
 

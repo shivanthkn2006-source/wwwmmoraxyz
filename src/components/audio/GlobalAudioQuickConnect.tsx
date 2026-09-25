@@ -55,36 +55,11 @@ export const GlobalAudioQuickConnect: React.FC = () => {
     };
   }, []);
 
-  // Zoe audio is ON by default from the moment the platform starts. Nobody has
-  // to open a settings page to switch it on; the settings page only turns it
-  // OFF. Two guarded paths, so this can never nag or hiss:
-  //   - Devices are only enumerated (no capture opened) on load.
-  //   - Listening starts immediately when the microphone was already granted,
-  //     otherwise it waits for the first real tap/click, which is what every
-  //     browser (and iOS in particular) requires before recognition may start.
+  // Device discovery is safe at startup, but microphone capture is never
+  // attached to an unrelated page tap. The quick-connect control and Zoe voice
+  // controls remain the explicit activation points.
   useEffect(() => {
     void audioRouter.prepareDevices();
-
-    let armed = false;
-    const startLink = () => {
-      if (armed) return;
-      if (!isZoeAudioEnabled()) return;
-      armed = true;
-      void zoeBackgroundListener.enable();
-    };
-
-    if (isZoeAudioEnabled() && audioRouter.wasMicGrantedBefore()) {
-      startLink();
-      return;
-    }
-
-    const onGesture = () => startLink();
-    window.addEventListener('pointerdown', onGesture, { once: true });
-    window.addEventListener('keydown', onGesture, { once: true });
-    return () => {
-      window.removeEventListener('pointerdown', onGesture);
-      window.removeEventListener('keydown', onGesture);
-    };
   }, []);
 
   // React immediately when the owner flips the switch on the Zoe Audio page.
