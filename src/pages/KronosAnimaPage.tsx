@@ -13,7 +13,7 @@ import TemporalRadar from '@/components/temporal/TemporalRadar';
 import SoulSynergyPanel from '@/components/temporal/SoulSynergyPanel';
 import KronosUserGuide from '@/components/kronos/KronosUserGuide';
 import AnimaUserGuide from '@/components/anima/AnimaUserGuide';
-import { HelmetProvider, Helmet } from 'react-helmet-async';
+import { Helmet } from 'react-helmet-async';
 import {
   Tooltip,
   TooltipContent,
@@ -27,7 +27,7 @@ const KronosAnimaPage: React.FC = () => {
   const [guideMode, setGuideMode] = useState<'kronos' | 'anima'>('kronos');
 
   return (
-    <HelmetProvider>
+    <>
       <Helmet>
         <title>Kronos & Anima | Zoe DHF</title>
         <meta name="description" content="Temporal Radar & Soul Synergy - 33-Year Dark Cycle Pattern Recognition & Destiny-Based Soulmate Matching" />
@@ -234,7 +234,7 @@ const KronosAnimaPage: React.FC = () => {
           )}
         </main>
       </div>
-    </HelmetProvider>
+    </>
   );
 };
 

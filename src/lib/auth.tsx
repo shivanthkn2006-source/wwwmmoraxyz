@@ -58,7 +58,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (finished) return;
       console.warn('[Auth] Session load slow — continuing without blocking the interface');
       setLoading(false);
-    }, 2500);
+    }, 1500);
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       finished = true;

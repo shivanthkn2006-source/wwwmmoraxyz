@@ -154,7 +154,7 @@ export default class SystemFailureBoundary extends React.Component<
       msg.includes('importing a module script failed') ||
       msg.includes('failed to fetch dynamically imported module') ||
       msg.includes('chunkloaderror');
-    return { hasError: true, error, isChunkFailure, autoRetryIn: isChunkFailure ? 0 : 5 };
+    return { hasError: true, error, isChunkFailure, autoRetryIn: 0 };
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
@@ -195,38 +195,9 @@ export default class SystemFailureBoundary extends React.Component<
     }
   }
 
-  componentDidMount() {
-    this.startAutoRetry();
-  }
-
-  componentDidUpdate(_prevProps: { children: React.ReactNode }, prevState: State) {
-    if (this.state.hasError && !prevState.hasError) {
-      this.startAutoRetry();
-    }
-  }
-
   componentWillUnmount() {
     if (this.retryTimer) clearInterval(this.retryTimer);
   }
-
-  private startAutoRetry = () => {
-    // Auto-retry only for non-chunk transient errors. Chunk failures already
-    // trigger recoverFromChunkError() which shows its own overlay + reload.
-    if (!this.state.hasError || this.state.isChunkFailure || this.state.autoRetryIn <= 0) return;
-    if (this.retryTimer) clearInterval(this.retryTimer);
-    this.retryTimer = setInterval(() => {
-      this.setState((s) => {
-        const next = s.autoRetryIn - 1;
-        if (next <= 0) {
-          if (this.retryTimer) { clearInterval(this.retryTimer); this.retryTimer = null; }
-          // Soft reset — try to recover without full reload
-          window.location.reload();
-          return { autoRetryIn: 0 };
-        }
-        return { autoRetryIn: next };
-      });
-    }, 1000);
-  };
 
   private handleReload = () => {
     window.location.reload();
@@ -284,8 +255,7 @@ export default class SystemFailureBoundary extends React.Component<
                   SYSTEM FAILURE
                 </h1>
                 <p className="font-mono text-xs text-muted-foreground">
-                  ZOE CONNECTION LOST. {isVR && "Redirecting to Lite 2D Map..."}
-                  {this.state.autoRetryIn > 0 && ` Auto-recovering in ${this.state.autoRetryIn}s…`}
+                  MODULE ISOLATED. {isVR && "You can continue in the Lite 2D Map."}
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">

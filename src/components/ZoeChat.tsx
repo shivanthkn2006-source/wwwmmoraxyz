@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -7,7 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
-import { Loader2, Volume2, VolumeX, AlertCircle, Copy, Check, Search, Sparkles } from 'lucide-react';
+import { Loader2, Volume2, VolumeX, AlertCircle, Copy, Check, Search, Sparkles, History } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import { ZoeCompactChatInput } from '@/components/ZoeCompactChatInput';
@@ -40,6 +41,7 @@ interface Message {
 }
 
 export const ZoeChat = () => {
+  const navigate = useNavigate();
   useEffect(() => {
     setActiveVoiceExperience('mmora');
   }, []);
@@ -456,6 +458,9 @@ export const ZoeChat = () => {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/zoe/history')} aria-label="Open Zoe chat history" title="Chat history">
+            <History className="h-4 w-4" />
+          </Button>
           <Label htmlFor="voice-mode" className="text-sm cursor-pointer">
             {voiceMode ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
           </Label>
