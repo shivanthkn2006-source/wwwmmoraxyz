@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -64,6 +64,13 @@ const AuthPage = () => {
   const [captchaReset, setCaptchaReset] = useState(0);
   const [pendingEmail, setPendingEmail] = useState<string | null>(null);
   const [resending, setResending] = useState(false);
+
+  // Home is the destination for every successful sign-in. Fetch its route
+  // while the member is entering credentials so navigation does not replace
+  // the authenticated screen with the full-page lazy-route loader.
+  useEffect(() => {
+    void import('./HomePage');
+  }, []);
 
   // Safe session wrapper (some browsers can throw on sessionStorage)
   const safeSession = useCallback(
