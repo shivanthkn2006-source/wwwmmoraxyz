@@ -45,6 +45,34 @@ serve(async (req) => {
   const caller = await requireCaller(req, 'member');
   if (caller instanceof Response) return caller;
 
+  // Paid provider: cap each member at 30 transcriptions per 5 minutes and 15 MB of audio.
+  if (caller.kind === 'member') {
+    try {
+      const { createClient } = await import('npm:@supabase/supabase-js@2');
+      const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+      const windowStart = new Date(Math.floor(Date.now() / 300000) * 300000).toISOString();
+      const { data: count } = await admin.rpc('bump_edge_rate_limit', {
+        _bucket: `transcribe:${caller.userId}`,
+        _window_start: windowStart,
+      });
+      if (typeof count === 'number' && count > 30) {
+        return new Response(JSON.stringify({ error: 'Too many transcriptions, try again shortly' }), {
+          status: 429,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Retry-After': '300' },
+        });
+      }
+    } catch (e) {
+      console.warn('[transcribe-audio] rate limit check failed', e);
+    }
+  }
+  const lengthHeader = Number(req.headers.get('content-length') ?? 0);
+  if (lengthHeader > 20 * 1024 * 1024) {
+    return new Response(JSON.stringify({ error: 'Audio too large' }), {
+      status: 413,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
   try {
     const { audio, useLovableAI, enableSentiment = true } = await req.json();
     

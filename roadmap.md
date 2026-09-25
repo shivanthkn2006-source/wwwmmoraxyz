@@ -12,3 +12,12 @@
 - [ ] Verify the one-time universal permission action across signed-in desktop and mobile views.
 - [ ] Confirm phased Home loading renders real feed content before background DHF and planetary work.
 - [ ] Complete subagent code audit and visual QA without altering existing features or design.
+
+# Sep 25 requests
+- [x] Launch notice: admin-only (members cannot broadcast to everyone — spam/abuse risk)
+- [x] Paid search / auto-mail writer: already sign-in + rate limited
+- [x] Transcription: add per-member rate limit + size cap
+- [x] Chat history page exists at /zoe/history
+- [ ] Physical-phone walkthrough (needs the user's own device)
+- [ ] Remaining scanner findings: continue next turns
+- Declined: IP / hardware-ID tracking (surveillance)
