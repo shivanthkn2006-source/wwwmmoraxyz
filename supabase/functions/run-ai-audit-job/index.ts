@@ -1,3 +1,4 @@
+import { requireCaller } from '../_shared/caller-guard.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { sovereignKey } from "../_shared/sovereign-ai.ts";
 
@@ -10,6 +11,9 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const caller = await requireCaller(req, 'admin');
+  if (caller instanceof Response) return caller;
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
