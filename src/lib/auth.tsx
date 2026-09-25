@@ -191,8 +191,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const { error: retryError, data: retryData } = await supabase.auth.signInWithPassword(credentials);
 
           if (!retryError && retryData?.session) {
-            setSession(retryData.session);
-            setUser(retryData.session.user);
+            applySession(retryData.session);
             try {
               sessionStorage.setItem('zoe_infinity_session_valid', 'true');
             } catch {}
@@ -206,8 +205,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (!error && data?.session) {
         // Hydrate auth state immediately to avoid route-guard race conditions.
-        setSession(data.session);
-        setUser(data.session.user);
+        applySession(data.session);
         try {
           sessionStorage.setItem('zoe_infinity_session_valid', 'true');
         } catch {}
@@ -224,8 +222,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const { error: retryError, data: retryData } = await supabase.auth.signInWithPassword(credentials);
 
           if (!retryError && retryData?.session) {
-            setSession(retryData.session);
-            setUser(retryData.session.user);
+            applySession(retryData.session);
             try {
               sessionStorage.setItem('zoe_infinity_session_valid', 'true');
             } catch {}

@@ -10,7 +10,6 @@ import { Eye, EyeOff, ScanFace, Mic, Fingerprint, Loader2 } from 'lucide-react';
 import { z } from 'zod';
 import { cn } from '@/lib/utils';
 import FaceLoginModal from '@/components/FaceLoginModal';
-import LoginQueueSystem from '@/components/LoginQueueSystem';
 import PermissionActivationModal from '@/components/PermissionActivationModal';
 import { hasActivatedPermissions } from '@/utils/unifiedPermissionManager';
 import { useWebAuthn } from '@/hooks/useWebAuthn';
@@ -92,17 +91,6 @@ const AuthPage = () => {
     }),
     []
   );
-
-  const [showQueue, setShowQueue] = useState(() => {
-    // Show queue on first visit this session to warm up functions
-    return !safeSession().get('spartans_queue_completed');
-  });
-
-  // Queue completion handler - proceed with auth after queue
-  const handleQueueComplete = useCallback(() => {
-    safeSession().set('spartans_queue_completed', 'true');
-    setShowQueue(false);
-  }, [safeSession]);
 
   const [formData, setFormData] = useState({
     email: '',
@@ -196,7 +184,7 @@ const AuthPage = () => {
           // New members get the short guided walk on their first signed-in page.
           markTourPending();
           if (sessionData?.session) {
-            await redeemStoredReferral();
+            void redeemStoredReferral();
             toast({ title: "Welcome to M'Mora!", description: 'Account created successfully' });
             navigate('/home');
           } else {
@@ -230,7 +218,9 @@ const AuthPage = () => {
             duration: isConnectionError ? 10000 : 5000,
           });
         } else {
-          await redeemStoredReferral();
+          // Invite redemption is idempotent background work. It must never hold
+          // successful authentication or delay the first Home paint.
+          void redeemStoredReferral();
           toast({
             title: "Welcome back!",
             description: "Signed in successfully",
@@ -307,15 +297,6 @@ const AuthPage = () => {
   return (
     <>
       <PageSeo title={ROUTE_SEO['/auth'].title} description={ROUTE_SEO['/auth'].description} path="/auth" />
-      {/* Login Queue System - Staggers entry to prevent cold start issues */}
-      {showQueue && (
-        <LoginQueueSystem
-          onQueueComplete={handleQueueComplete}
-          enabled={true}
-          maxQueueTime={3000}
-        />
-      )}
-      
       <div className="min-h-screen bg-background flex items-center justify-center p-responsive safe-area-pb safe-area-pt">
       <motion.div
         initial={{ opacity: 0, y: 20 }}

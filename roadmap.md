@@ -1,8 +1,7 @@
 # Current fixes
 
-- [x] Permanently stop the `helmetInstances.add` crash and all automatic page remount/reload loops.
-- [x] Make signed-in Home paint immediately from a safe cached snapshot, then refresh in the background.
-- [x] Restore every due Zoe DHF card from its integration date through today and keep DHF before social posts.
-- [x] Preserve chronological ordering and loading/error isolation for global posts, videos, loops, and other feed content.
-- [x] Add durable Zoe conversation and life-forecast history with a browsable in-app page.
-- [ ] Verify sign-in, reload stability, Home latency, DHF ordering, phone chat send, and history persistence in preview.
+- [x] Remove the simulated login queue and never await invite redemption before entering Home.
+- [x] Keep voice, calls, notifications, monitoring, and Zoe services off the authentication path.
+- [ ] Bound every sign-in and Home request so a failed service cannot leave a loading screen.
+- [ ] Restore all due DHF cards from integration day through today before social posts.
+- [ ] Verify sign-in persistence, Home latency, DHF/growth/planetary cards, and reload stability in preview.
