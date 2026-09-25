@@ -1,3 +1,4 @@
+import { requireCaller } from '../_shared/caller-guard.ts';
 /**
  * X POST IMPORT — reads a public post on X (twitter.com / x.com) and returns
  * its text, image and original date so the member can save it to their Home.
@@ -99,6 +100,7 @@ async function viaOEmbed(id: string): Promise<Imported | null> {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+  { const __c = await requireCaller(req, 'member'); if (__c instanceof Response) return __c; }
 
   try {
     const { url } = await req.json().catch(() => ({ url: '' }));

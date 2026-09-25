@@ -1,3 +1,4 @@
+import { requireCaller } from '../_shared/caller-guard.ts';
 /**
  * DHF SOCIAL LINKS — turns a daily compass card into real, openable video
  * destinations instead of dead placeholders.
@@ -88,6 +89,7 @@ async function searchYoutube(query: string): Promise<YoutubeHit | null> {
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+  { const __c = await requireCaller(req, 'member'); if (__c instanceof Response) return __c; }
 
   const guard = await guardRequest(req, {
     name: 'dhf-social-links',

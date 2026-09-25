@@ -1,3 +1,4 @@
+import { requireCaller } from '../_shared/caller-guard.ts';
 // ═══════════════════════════════════════════════════════════════════════════════
 // ZOE MATTER BRIDGE - THE EXECUTIVE ACTION ENGINE
 // Module 2 of 3: "The Hands" - Real World Action Executor with Sovereignty Leash
@@ -1146,6 +1147,7 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+  { const __c = await requireCaller(req, 'member'); if (__c instanceof Response) return __c; }
 
   const startTime = performance.now();
 

@@ -1,3 +1,4 @@
+import { requireCaller } from '../_shared/caller-guard.ts';
 /**
  * ZOE INDEX INGEST — multimodal async indexing pipeline.
  * Writes any platform entity (loop_video, chat, dhf_node, spot, 3d_asset, post…)
@@ -52,6 +53,7 @@ async function canonicalOwner(
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+  { const __c = await requireCaller(req, 'admin'); if (__c instanceof Response) return __c; }
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
   try {

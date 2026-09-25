@@ -1,3 +1,4 @@
+import { requireCaller } from '../_shared/caller-guard.ts';
 // ═══════════════════════════════════════════════════════════════════════════════
 // PHASE 7: ZOE INFINITY VISION - Multi-Modal Image Analysis
 // Uses Gemini Vision to analyze images, documents, screenshots, etc.
@@ -22,6 +23,7 @@ serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+  { const __c = await requireCaller(req, 'member'); if (__c instanceof Response) return __c; }
 
   // ─── AUTH GATE ───
   const authHeader = req.headers.get('authorization');

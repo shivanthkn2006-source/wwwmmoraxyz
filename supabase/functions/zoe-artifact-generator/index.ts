@@ -1,3 +1,4 @@
+import { requireCaller } from '../_shared/caller-guard.ts';
 // ═══════════════════════════════════════════════════════════════════════════════
 // ZOE ARTIFACT GENERATOR - Vision, Chronicle, Education
 // Part 5: The Visionary (Protocol Artifact)
@@ -25,6 +26,7 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+  { const __c = await requireCaller(req, 'member'); if (__c instanceof Response) return __c; }
 
   const requestId = crypto.randomUUID().slice(0, 8);
   console.log(`[Artifact ${requestId}] Request received`);

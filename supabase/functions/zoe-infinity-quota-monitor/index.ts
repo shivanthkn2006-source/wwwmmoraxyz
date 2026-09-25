@@ -1,3 +1,4 @@
+import { requireCaller } from '../_shared/caller-guard.ts';
 // ═══════════════════════════════════════════════════════════════════════════════
 // ZOE INFINITY — QUOTA MONITOR (cron, every 15 min)
 // Reads live Supabase usage and writes to zoe_infinity_quota_state.
@@ -33,6 +34,7 @@ function deriveThrottle(dbPercent: number): { active: boolean; level: string } {
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  { const __c = await requireCaller(req, 'admin'); if (__c instanceof Response) return __c; }
 
   const guard = await publicGuard(req, { name: 'zoe-infinity-quota-monitor', limit: 30, windowSeconds: 60, maxBodyBytes: 512 * 1024, allowRichText: true });
   if (guard.response) return guard.response;

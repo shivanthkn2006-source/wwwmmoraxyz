@@ -1,3 +1,4 @@
+import { requireCaller } from '../_shared/caller-guard.ts';
 /**
  * ZOE ASSET JOB
  * =============
@@ -60,6 +61,7 @@ async function pollMeshy(providerJobId: string) {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+  { const __c = await requireCaller(req, 'member'); if (__c instanceof Response) return __c; }
   if (req.method !== 'POST') return json({ ok: false, error: 'Method not allowed' }, 405);
 
   const token = req.headers.get('Authorization')?.replace('Bearer ', '') ?? '';

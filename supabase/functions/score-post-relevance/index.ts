@@ -1,3 +1,4 @@
+import { requireCaller } from '../_shared/caller-guard.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.58.0';
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
@@ -36,6 +37,7 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+  { const __c = await requireCaller(req, 'member'); if (__c instanceof Response) return __c; }
 
   try {
     const body = await req.json();

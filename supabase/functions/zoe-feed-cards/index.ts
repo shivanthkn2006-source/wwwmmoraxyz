@@ -1,3 +1,4 @@
+import { requireCaller } from '../_shared/caller-guard.ts';
 /**
  * zoe-feed-cards — Zoe writes short, grounded feed cards for the caller.
  *
@@ -117,6 +118,7 @@ function topicFromPosts(texts: string[]): string {
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+  { const __c = await requireCaller(req, 'member'); if (__c instanceof Response) return __c; }
 
   const url = Deno.env.get('SUPABASE_URL')!;
   const anon = Deno.env.get('SUPABASE_ANON_KEY')!;

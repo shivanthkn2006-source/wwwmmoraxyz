@@ -1,3 +1,4 @@
+import { requireCaller } from '../_shared/caller-guard.ts';
 // ═══════════════════════════════════════════════════════════════════════════════
 // ZOE DREAMER AGENT - "THE SUBCONSCIOUS" (Module 3)
 // Deep Sleep Protocol - Runs at 3 AM to process the user's day
@@ -648,6 +649,7 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+  { const __c = await requireCaller(req, 'member'); if (__c instanceof Response) return __c; }
 
   const guard = await publicGuard(req, { name: 'zoe-dreamer-agent', limit: 20, windowSeconds: 60, maxBodyBytes: 512 * 1024, allowRichText: true });
   if (guard.response) return guard.response;
