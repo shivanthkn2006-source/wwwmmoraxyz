@@ -343,10 +343,15 @@ const HomePage = () => {
 
   const navigate = useNavigate();
   const { receivedRequests, acceptFriendRequest, rejectFriendRequest } = useFriendRequests();
+  const homeCacheKey = `mmora.home.globalPosts.${user?.id ?? 'guest'}`;
   const cachedHomePosts = React.useMemo<Post[]>(() => {
-    try { return JSON.parse(sessionStorage.getItem('mmora.home.globalPosts') ?? '[]') as Post[]; }
+    try {
+      const current = localStorage.getItem(homeCacheKey);
+      const legacy = sessionStorage.getItem('mmora.home.globalPosts');
+      return JSON.parse(current ?? legacy ?? '[]') as Post[];
+    }
     catch { return []; }
-  }, []);
+  }, [homeCacheKey]);
   const [globalPosts, setGlobalPosts] = useState<Post[]>(cachedHomePosts);
   const [personalPosts, setPersonalPosts] = useState<Post[]>([]);
   const [loopPosts, setLoopPosts] = useState<Post[]>([]);
@@ -1624,7 +1629,7 @@ const HomePage = () => {
       }
       const hydratedPosts = await attachPostMedia(postsWithLikes as Post[]);
       setGlobalPosts(hydratedPosts);
-      try { sessionStorage.setItem('mmora.home.globalPosts', JSON.stringify(hydratedPosts)); } catch { /* cache is best-effort */ }
+      try { localStorage.setItem(homeCacheKey, JSON.stringify(hydratedPosts)); } catch { /* cache is best-effort */ }
       setFeedDiag({
         status: postsWithLikes.length ? 'ok' : 'empty',
         durationMs: Math.round(performance.now() - t0),
@@ -1961,12 +1966,12 @@ const HomePage = () => {
       ]);
 
     const loadPosts = async () => {
-      setLoading(true);
+      setLoading(cachedHomePosts.length === 0);
       try {
         // Native posts own the first paint. Loops refresh independently and can
         // never hold Home in a loading state when their media endpoint is slow.
         void settleWithin(fetchLoopPosts('initial'), 5000);
-        await settleWithin(fetchGlobalPosts('initial'), 1800);
+        await settleWithin(fetchGlobalPosts('initial'), cachedHomePosts.length ? 250 : 900);
       } finally {
         setLoading(false);
       }

@@ -54,6 +54,7 @@ const SecuritySettingsPage = lazy(() => import("./components/SecuritySettingsPag
 const CameraPage = lazy(() => import("./pages/CameraPage"));
 const HomePage = lazy(() => import("./pages/HomePage"));
 const ChatPage = lazy(() => import("./pages/ChatPage"));
+const ZoeChatHistoryPage = lazy(() => import("./pages/ZoeChatHistoryPage"));
 const ProfilePage = lazy(() => import("./pages/ProfilePage"));
 const HuddlePage = lazy(() => import("./pages/HuddlePage"));
 const CallsPage = lazy(() => import("./pages/CallsPage"));
@@ -660,6 +661,7 @@ const RouteAwareShell = () => {
                               </ProtectedRoute>
                             }
                           />
+                          <Route path="/zoe/history" element={<ProtectedRoute><ZoeChatHistoryPage /></ProtectedRoute>} />
                           <Route
                             path="/calls/history"
                             element={
