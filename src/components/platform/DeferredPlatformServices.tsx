@@ -4,7 +4,6 @@ import GlobalBugReporter from '@/components/core/GlobalBugReporter';
 import SentinelWatchHost from '@/components/security/SentinelWatchHost';
 import GrowthCardAlertHost from '@/components/growth/GrowthCardAlertHost';
 import NotificationAlertHost from '@/components/notifications/NotificationAlertHost';
-import { ZoeCardNarrationProvider } from '@/components/voice/ZoeCardNarrationProvider';
 import ZoeSpeechPauseBar from '@/components/voice/ZoeSpeechPauseBar';
 import GuidedTour from '@/components/onboarding/GuidedTour';
 import ZoeGlobalMount from '@/components/zoe/ZoeGlobalMount';
@@ -25,7 +24,6 @@ export default function DeferredPlatformServices({ children }: { children: React
         <AppErrorBoundary moduleName="growth:alerts" severity="low" fallback={null}><GrowthCardAlertHost /></AppErrorBoundary>
         <AppErrorBoundary moduleName="platform:notification-alerts" severity="low" fallback={null}><NotificationAlertHost /></AppErrorBoundary>
         <AppErrorBoundary moduleName="platform:zoe-speech-bar" severity="low" fallback={null}><ZoeSpeechPauseBar /></AppErrorBoundary>
-        <ZoeCardNarrationProvider><span hidden aria-hidden="true" /></ZoeCardNarrationProvider>
         <AppErrorBoundary moduleName="platform:guided-tour" severity="low" fallback={null}><GuidedTour /></AppErrorBoundary>
         <AppErrorBoundary moduleName="platform:bug-reporter" severity="low" fallback={null}><GlobalBugReporter /><SentinelWatchHost /></AppErrorBoundary>
         <AppErrorBoundary moduleName="platform:audio-router" severity="low" fallback={null}><GlobalAudioQuickConnect /></AppErrorBoundary>

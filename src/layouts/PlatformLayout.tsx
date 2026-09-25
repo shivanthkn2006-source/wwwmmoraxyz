@@ -11,6 +11,7 @@ import { usePlatformStore } from '@/store/usePlatformStore';
 import { AppErrorBoundary } from '@/components/core/ErrorBoundary';
 import GlobalHomeDock from '@/components/home/GlobalHomeDock';
 import useDhfUnlockReminders from '@/hooks/useDhfUnlockReminders';
+import { ZoeCardNarrationProvider } from '@/components/voice/ZoeCardNarrationProvider';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
 
@@ -84,7 +85,7 @@ export const PlatformLayout = ({ children }: { children: React.ReactNode }) => {
 
   return (
   <>
-    {children}
+    <ZoeCardNarrationProvider>{children}</ZoeCardNarrationProvider>
     <AppErrorBoundary moduleName="platform:dock" severity="low" fallback={null}>
       <GlobalHomeDock />
     </AppErrorBoundary>
