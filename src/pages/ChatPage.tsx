@@ -903,7 +903,7 @@ const ChatPage = () => {
           </div>
         )}
         {!editingMessage && (
-          <div className="flex space-x-2">
+          <div className="flex items-center space-x-2 pr-[calc(var(--home-dock-cell,48px)+1rem)]">
             <input
               type="file"
               accept="image/*"
@@ -918,16 +918,29 @@ const ChatPage = () => {
                 </span>
               </Button>
             </label>
-            <Input
-              value={messageText}
-              onChange={handleInputChange}
-              onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-              placeholder="Type a message..."
-              className="bg-background border-border"
-            />
-            <Button onClick={handleSend} disabled={!messageText.trim() && !selectedImage}>
-              <Send className="w-4 h-4" />
-            </Button>
+            <div className="relative flex-1 min-w-0">
+              <Input
+                value={messageText}
+                onChange={handleInputChange}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
+                placeholder="Type a message..."
+                className="bg-background border-border pr-12"
+              />
+              <button
+                type="button"
+                aria-label="Send message"
+                onClick={handleSend}
+                disabled={!messageText.trim() && !selectedImage}
+                className="absolute right-1 top-1/2 -translate-y-1/2 flex h-[22px] w-[22px] box-content p-1.5 items-center justify-center border-0 bg-transparent text-foreground outline-none disabled:opacity-40"
+              >
+                <Send className="h-[22px] w-[22px]" />
+              </button>
+            </div>
           </div>
         )}
       </div>
