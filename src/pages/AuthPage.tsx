@@ -99,10 +99,17 @@ const AuthPage = () => {
     username: '',
   });
 
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, user, loading: authLoading } = useAuth();
   const { authenticateWithEmail, isLoading: passkeyLoading, isSupported: passkeySupported, deviceType } = useWebAuthn();
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  // The auth-state event is authoritative. Navigate as soon as the session is
+  // hydrated instead of waiting for referral/profile background work or for a
+  // slow sign-in request wrapper to settle on mobile networks.
+  useEffect(() => {
+    if (!authLoading && user) navigate('/home', { replace: true });
+  }, [authLoading, navigate, user]);
 
   const handlePasskeyLogin = async () => {
     if (!formData.email.trim()) {
