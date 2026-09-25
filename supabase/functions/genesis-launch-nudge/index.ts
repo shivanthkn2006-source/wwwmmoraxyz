@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
     const notifications = (profiles || []).map(profile => ({
       user_id: profile.user_id,
       from_user_id: senderId ?? profile.user_id,
-      type: 'genesis_launch',
+      type: 'admin_notice',
       priority: 10,
       context_data: {
         title: '🚀 Welcome Home, Spartan!',
