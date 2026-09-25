@@ -203,21 +203,9 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
   }, [hasInjectedVideos]);
 
 
-  // Coarse device location, resolved once, so "weather" means *local* weather.
+  // Location is never requested merely because Home/search rendered. Location-
+  // aware features must be activated by their own explicit user control.
   const coordsRef = React.useRef<{ lat: number; lon: number } | null>(null);
-  React.useEffect(() => {
-    if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        coordsRef.current = {
-          lat: Number(position.coords.latitude.toFixed(3)),
-          lon: Number(position.coords.longitude.toFixed(3)),
-        };
-      },
-      () => { /* denied — the weather lane falls back to the typed place */ },
-      { timeout: 8000, maximumAge: 600000 },
-    );
-  }, []);
 
   React.useEffect(() => {
     const term = query.trim();

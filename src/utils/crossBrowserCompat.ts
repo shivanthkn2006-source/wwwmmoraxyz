@@ -306,15 +306,8 @@ export const applySafariFixes = (): void => {
     setVH();
     window.addEventListener('resize', setVH);
     
-    // Fix for audio context on Safari
-    const resumeAudioContext = () => {
-      const ctx = getAudioContext();
-      if (ctx && ctx.state === 'suspended') {
-        ctx.resume();
-      }
-    };
-    document.addEventListener('touchstart', resumeAudioContext, { once: true });
-    document.addEventListener('click', resumeAudioContext, { once: true });
+    // Do not create or resume audio from an unrelated first page gesture.
+    // Playback and voice controls unlock their own audio context when used.
   }
 };
 

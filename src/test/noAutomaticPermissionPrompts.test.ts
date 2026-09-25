@@ -36,4 +36,22 @@ describe('device permissions', () => {
     );
     expect(restoredPreference).not.toContain("dispatchEvent(new CustomEvent('zoe-voice-system-activated'))");
   });
+
+  it('does not request location when Home search mounts', () => {
+    const homeTools = read('src/components/home/HomeFloatingTools.tsx');
+    expect(homeTools).not.toContain('navigator.geolocation.getCurrentPosition');
+  });
+
+  it('does not show the all-device permission request after sign-in', () => {
+    const auth = read('src/pages/AuthPage.tsx');
+    expect(auth).not.toContain('<PermissionActivationModal');
+    expect(auth).not.toContain('setShowPermissionModal');
+  });
+
+  it('does not unlock Safari audio from the first unrelated tap', () => {
+    const safari = read('src/utils/safariBrowserFixes.ts');
+    const compat = read('src/utils/crossBrowserCompat.ts');
+    expect(safari).not.toContain("document.addEventListener('touchstart', resumeOnGesture");
+    expect(compat).not.toContain("document.addEventListener('touchstart', resumeAudioContext");
+  });
 });
