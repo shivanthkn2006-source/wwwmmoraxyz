@@ -4,6 +4,7 @@ import { useAuth } from '@/lib/auth';
 import type { DailyPrediction } from '@/components/astro/types';
 import { localDateKey, pickSlotRow, currentSlot, deviceTimeZone } from '@/lib/astroSlot';
 import { astroTrace } from '@/lib/astroLog';
+import { promiseTimeout } from '@/lib/promiseTimeout';
 
 
 /**
@@ -21,14 +22,14 @@ export function useAstroDailyPrediction() {
     try {
       const tz = deviceTimeZone();
       const today = localDateKey(new Date(), tz);
-      const { data, error } = await supabase
+      const { data, error } = await promiseTimeout(supabase
         .from('astro_predictions')
         .select('id, target_date, slot, prediction_headline, prediction_body, motivational_quote, poster_image_url, status, transits_summary')
         .eq('user_id', user.id)
         .eq('target_date', today)
         .eq('status', 'published')
         .order('created_at', { ascending: false })
-        .limit(12);
+        .limit(12), 8_000, 'Planetary guidance');
 
       if (error) throw error;
       const row = pickSlotRow(

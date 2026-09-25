@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { resolvePosterUrl } from '@/lib/astroPoster';
 import { ensureLiveSession } from '@/lib/sessionGuard';
+import { promiseTimeout } from '@/lib/promiseTimeout';
 
 export interface ZoeMotivation {
   id: string;
@@ -34,19 +35,23 @@ export function useZoeMotivation(reloadKey = 0) {
 
     const run = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session } } = await promiseTimeout(
+          supabase.auth.getSession(),
+          5_000,
+          'Motivation session',
+        );
         const uid = session?.user?.id;
         if (!uid) { if (!cancelled) { setLoading(false); } return; }
         if (!cancelled) setUserId(uid);
 
         const today = localDate();
         const read = async () => {
-          const { data } = await supabase
+          const { data } = await promiseTimeout(supabase
             .from('zoe_daily_motivations' as never)
             .select('*')
             .eq('user_id', uid)
             .eq('target_date', today)
-            .limit(1);
+            .limit(1), 8_000, 'Today motivation');
           return ((data as unknown as ZoeMotivation[]) ?? [])[0] ?? null;
         };
 

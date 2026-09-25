@@ -17,6 +17,7 @@ import { deviceTimeZone, localDateIn } from '@/lib/growthSlot';
 import { COMPASS_IMAGE_VERSION, COMPASS_SLOT_COUNT, duePosts, type DhfDailyPost } from '@/lib/dhfCompass';
 import { resolveCompassImages } from '@/lib/dhfCompassImages';
 import { hasLiveSession } from '@/lib/edgeSession';
+import { promiseTimeout } from '@/lib/promiseTimeout';
 
 
 const SELECT =
@@ -102,14 +103,14 @@ export function useDhfDailyFeed() {
   }, []);
 
   const read = useCallback(async (userId: string, to: string) => {
-    const { data, error } = await supabase
+    const { data, error } = await promiseTimeout(supabase
       .from('dhf_daily_posts')
       .select(SELECT)
       .eq('user_id', userId)
       .lte('post_date', to)
       .order('post_date', { ascending: false })
       .order('slot_time', { ascending: false })
-      .limit(500);
+      .limit(500), 8_000, 'DHF history');
     if (error) throw error;
     const rows = (data ?? []) as unknown as DhfDailyPost[];
     rowsRef.current = rows;

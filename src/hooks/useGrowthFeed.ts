@@ -20,6 +20,7 @@ import {
   sanitizeStyles, type GrowthSlot, type ReflectionStyle,
 } from '@/lib/growthSlot';
 import { invokeGrowthDispatch } from '@/lib/growthDispatch';
+import { promiseTimeout } from '@/lib/promiseTimeout';
 
 export interface GrowthInsight {
   id: string;
@@ -75,31 +76,31 @@ export function useGrowthFeed() {
     const provisionalYesterday = localDateIn(new Date(Date.now() - 86_400_000), tz);
 
     try {
-      const [prefRes, itemRes, savedRes] = await Promise.all([
-        supabase
+      const [prefRes, itemRes, savedRes] = await promiseTimeout(Promise.all([
+        Promise.resolve(supabase
           .from('growth_preferences')
           .select(
             'focus_areas, reflection_style, reflection_styles, delivery_frequency, paused, timezone, onboarded_at',
           )
           .eq('user_id', user.id)
-          .maybeSingle(),
-        supabase
+          .maybeSingle()),
+        Promise.resolve(supabase
           .from('growth_feed_items')
           .select('id, slot, local_date, title, category, content, actionable_step, created_at')
           .eq('user_id', user.id)
           .eq('status', 'published')
           .gte('local_date', provisionalYesterday)
           .order('created_at', { ascending: false })
-          .limit(20),
-        supabase
+          .limit(20)),
+        Promise.resolve(supabase
           .from('growth_saved_items')
           .select(
             'item_id, created_at, growth_feed_items!inner(id, slot, local_date, title, category, content, actionable_step, created_at)',
           )
           .eq('user_id', user.id)
           .order('created_at', { ascending: false })
-          .limit(50),
-      ]);
+          .limit(50)),
+      ]), 8_000, 'Growth feed');
 
       const raw = (prefRes.data as Record<string, unknown> | null) ?? null;
       const preferences: GrowthPreferences | null = raw
