@@ -101,15 +101,15 @@ export function useDhfDailyFeed() {
     return () => { mounted.current = false; };
   }, []);
 
-  const read = useCallback(async (userId: string, from: string, to: string) => {
+  const read = useCallback(async (userId: string, to: string) => {
     const { data, error } = await supabase
       .from('dhf_daily_posts')
       .select(SELECT)
       .eq('user_id', userId)
-      .gte('post_date', from)
       .lte('post_date', to)
       .order('post_date', { ascending: false })
-      .order('slot_time', { ascending: false });
+      .order('slot_time', { ascending: false })
+      .limit(500);
     if (error) throw error;
     const rows = (data ?? []) as unknown as DhfDailyPost[];
     rowsRef.current = rows;
@@ -125,12 +125,11 @@ export function useDhfDailyFeed() {
 
     const tz = deviceTimeZone();
     const today = localDateIn(new Date(), tz);
-    const historyStart = localDateIn(new Date(Date.now() - 7 * 86_400_000), tz);
     const ensureId = `${user.id}:${today}`;
     const reimageId = `${user.id}:${COMPASS_IMAGE_VERSION}`;
 
     try {
-      let rows = await read(user.id, historyStart, today);
+      let rows = await read(user.id, today);
       if (mounted.current) {
         setState({ posts: duePosts(rows, new Date(), tz), loading: false, error: false, generating: false });
       }
@@ -150,7 +149,7 @@ export function useDhfDailyFeed() {
           body: { action: 'reimage' },
         });
         if (repairError) releaseGuard('reimage', reimageId);
-        else rows = await read(user.id, historyStart, today);
+        else rows = await read(user.id, today);
       }
 
       const todayCount = rows.filter((row) => row.post_date === today).length;
@@ -180,7 +179,7 @@ export function useDhfDailyFeed() {
         // Allow one more attempt later; still show what already exists.
         releaseGuard('ensure', ensureId);
       } else {
-        rows = await read(user.id, historyStart, today);
+        rows = await read(user.id, today);
       }
 
 
@@ -202,13 +201,12 @@ export function useDhfDailyFeed() {
     const tick = async () => {
       const tz = deviceTimeZone();
       const today = localDateIn(new Date(), tz);
-      const historyStart = localDateIn(new Date(Date.now() - 7 * 86_400_000), tz);
       let rows = rowsRef.current;
       const completeToday = rows.filter((r) => r.post_date === today).length >= COMPASS_SLOT_COUNT;
 
       if (!completeToday) {
         try {
-          rows = await read(user.id, historyStart, today);
+          rows = await read(user.id, today);
         } catch {
           rows = rowsRef.current;
         }

@@ -5,6 +5,24 @@ import { recoverAuthTransportOncePerSession } from '@/lib/authTransportRecovery'
 import { markStartupPhase } from '@/lib/startupTiming';
 import { ensureOwnProfile } from '@/lib/ensureOwnProfile';
 
+const AUTH_REQUEST_TIMEOUT_MS = 12_000;
+
+const withinAuthBudget = async <T,>(request: PromiseLike<T>, label: string): Promise<T> => {
+  let timer: number | undefined;
+  try {
+    return await Promise.race([
+      Promise.resolve(request),
+      new Promise<T>((_, reject) => {
+        timer = window.setTimeout(
+          () => reject(Object.assign(new Error(`${label} timed out`), { name: 'AuthTimeoutError' })),
+          AUTH_REQUEST_TIMEOUT_MS,
+        );
+      }),
+    ]);
+  } finally {
+    if (timer !== undefined) window.clearTimeout(timer);
+  }
+};
 
 interface AuthContextType {
   user: User | null;
@@ -93,7 +111,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     // Initial session fetch
-    supabase.auth.getSession()
+    withinAuthBudget(supabase.auth.getSession(), 'Session restoration')
       .then(({ data: { session } }) => {
         finished = true;
         applySession(session);
@@ -133,6 +151,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       message.includes('connection failed') ||
       message.includes('networkerror') ||
       name.includes('fetch')
+      || name.includes('authtimeout')
+      || message.includes('timed out')
     );
   };
 
@@ -182,13 +202,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const credentials = { email, password };
 
     try {
-      const { error, data } = await supabase.auth.signInWithPassword(credentials);
+      const { error, data } = await withinAuthBudget(
+        supabase.auth.signInWithPassword(credentials),
+        'Sign in',
+      );
 
       if (error && isTransientAuthError(error)) {
         const recovered = await recoverAuthTransportOncePerSession('signin');
 
         if (recovered) {
-          const { error: retryError, data: retryData } = await supabase.auth.signInWithPassword(credentials);
+          const { error: retryError, data: retryData } = await withinAuthBudget(
+            supabase.auth.signInWithPassword(credentials),
+            'Sign in retry',
+          );
 
           if (!retryError && retryData?.session) {
             applySession(retryData.session);
@@ -219,7 +245,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const recovered = await recoverAuthTransportOncePerSession('signin');
 
         if (recovered) {
-          const { error: retryError, data: retryData } = await supabase.auth.signInWithPassword(credentials);
+          const { error: retryError, data: retryData } = await withinAuthBudget(
+            supabase.auth.signInWithPassword(credentials),
+            'Sign in retry',
+          );
 
           if (!retryError && retryData?.session) {
             applySession(retryData.session);

@@ -1971,7 +1971,10 @@ const HomePage = () => {
         // Native posts own the first paint. Loops refresh independently and can
         // never hold Home in a loading state when their media endpoint is slow.
         void settleWithin(fetchLoopPosts('initial'), 5000);
-        await settleWithin(fetchGlobalPosts('initial'), cachedHomePosts.length ? 250 : 900);
+        // Never hold the usable Home surface behind the network. Cached cards,
+        // DHF, growth and planetary sections paint independently while social
+        // posts reconcile in the background.
+        void settleWithin(fetchGlobalPosts('initial'), 4_000);
       } finally {
         setLoading(false);
       }
