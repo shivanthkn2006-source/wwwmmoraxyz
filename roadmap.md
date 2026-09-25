@@ -1,7 +1,8 @@
 # Current fixes
 
-- [x] Make the chat field, image action, send action, and Home icon independently touchable without moving Home.
-- [x] Remove chat composer outlines and surrounding bottom panel styling as requested.
-- [x] Stop the full-screen startup shell from lingering after the signed-in app is visible.
-- [x] Restore today's due Zoe DHF cards and place them before user posts in Global Home.
-- [x] Verify chat send/Home touch targets and Home/DHF behavior in signed-in mobile preview.
+- [ ] Permanently stop the `helmetInstances.add` crash and all automatic page remount/reload loops.
+- [ ] Make signed-in Home paint immediately from a safe cached snapshot, then refresh in the background.
+- [ ] Restore every due Zoe DHF card from its integration date through today and keep DHF before social posts.
+- [ ] Preserve chronological ordering and loading/error isolation for global posts, videos, loops, and other feed content.
+- [ ] Add durable Zoe conversation and life-forecast history with a browsable in-app page.
+- [ ] Verify sign-in, reload stability, Home latency, DHF ordering, phone chat send, and history persistence in preview.
