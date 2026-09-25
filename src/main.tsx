@@ -53,33 +53,15 @@ const shouldRecoverForImportError = (e: unknown) => {
   );
 };
 
-const shouldAutoHardRefreshRoute = () => {
-  const path = window.location.pathname;
-  const host = window.location.hostname;
-
-  // Prevent refresh loops on heavy VR route; keep scene mounted for manual recovery.
-  if (path.startsWith('/zoe-omega')) return false;
-
-  // Only skip true local dev HMR. Lovable preview must recover because users
-  // can hold a stale iframe shell that permanently points to old module URLs.
-  if (host === 'localhost' || host === '127.0.0.1') return false;
-
-  return true;
-};
-
 window.addEventListener('error', (ev) => {
   if (shouldRecoverForImportError((ev as any).error || ev.message)) {
-    console.error('[Boot] Module import failed; automatic reload is disabled.', {
-      recoverableRoute: shouldAutoHardRefreshRoute(),
-    });
+    console.error('[Boot] Module import failed; automatic reload is disabled.');
   }
 });
 
 window.addEventListener('unhandledrejection', (ev) => {
   if (shouldRecoverForImportError(ev.reason)) {
-    console.error('[Boot] Module import promise failed; automatic reload is disabled.', {
-      recoverableRoute: shouldAutoHardRefreshRoute(),
-    });
+    console.error('[Boot] Module import promise failed; automatic reload is disabled.');
   }
 });
 

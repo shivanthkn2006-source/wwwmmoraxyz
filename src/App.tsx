@@ -192,12 +192,6 @@ const PageLoader = () => (
   </div>
 );
 
-const isLovablePreviewHost = (): boolean => {
-  if (typeof window === 'undefined') return false;
-  const host = window.location.hostname;
-  return host.includes('lovableproject.com') || host.startsWith('id-preview--');
-};
-
 const ZoePreviewRecoveryGuard = ({ children }: { children: React.ReactNode }) => {
   const { pathname } = useLocation();
   const [stalled, setStalled] = useState(false);

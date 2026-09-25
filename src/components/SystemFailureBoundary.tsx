@@ -9,7 +9,6 @@ type State = {
   error: Error | null;
   componentStack?: string;
   isChunkFailure: boolean;
-  autoRetryIn: number; // seconds remaining for auto-retry
 };
 
 // ─── Zoe Monitor Integration ──────────────────────────────────────────────────
@@ -121,32 +120,13 @@ const notifyAdminOfCrash = async (error: Error) => {
 };
 
 // Auto-heal VR crashes
-const attemptVRAutoHeal = (): boolean => {
-  if (isVRScreen()) {
-    console.log('[ZoeMonitor] VR crash detected - auto-healing to Lite 2D Map');
-    try {
-      sessionStorage.removeItem('vr_state');
-      sessionStorage.removeItem('globe_state');
-      localStorage.removeItem('vr_cache');
-    } catch (e) { /* ignore */ }
-    
-    setTimeout(() => {
-      window.location.href = VR_FALLBACK_PATH;
-    }, 2000);
-    return true;
-  }
-  return false;
-};
-
 // ─── Error Boundary Component ─────────────────────────────────────────────────
 
 export default class SystemFailureBoundary extends React.Component<
   { children: React.ReactNode },
   State
 > {
-  state: State = { hasError: false, error: null, isChunkFailure: false, autoRetryIn: 0 };
-
-  private retryTimer: ReturnType<typeof setInterval> | null = null;
+  state: State = { hasError: false, error: null, isChunkFailure: false };
 
   static getDerivedStateFromError(error: Error): Partial<State> {
     const msg = String(error?.message || '').toLowerCase();
@@ -154,7 +134,7 @@ export default class SystemFailureBoundary extends React.Component<
       msg.includes('importing a module script failed') ||
       msg.includes('failed to fetch dynamically imported module') ||
       msg.includes('chunkloaderror');
-    return { hasError: true, error, isChunkFailure, autoRetryIn: 0 };
+    return { hasError: true, error, isChunkFailure };
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
@@ -176,15 +156,8 @@ export default class SystemFailureBoundary extends React.Component<
     // 2. Notify admin (Saraswathi) via Zoe Whisper
     notifyAdminOfCrash(error);
     
-    // 3. Auto-heal VR crashes by redirecting to Lite 2D Map
-    const autoHealed = attemptVRAutoHeal();
-    if (autoHealed) {
-      console.log('[ZoeMonitor] VR auto-heal initiated - redirecting to Lite 2D Map');
-    }
-  }
-
-  componentWillUnmount() {
-    if (this.retryTimer) clearInterval(this.retryTimer);
+    // Never redirect or reload after a crash. The failure screen remains stable
+    // until the user explicitly chooses a destination or recovery action.
   }
 
   private handleReload = () => {

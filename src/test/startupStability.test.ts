@@ -26,6 +26,8 @@ describe('startup and reconnect stability', () => {
     expect(read('src/main.tsx')).not.toContain('then(({ recoverFromChunkError })');
     expect(read('src/components/core/ErrorBoundary.tsx')).not.toContain('recoverFromChunkError');
     expect(read('src/components/SystemFailureBoundary.tsx')).not.toContain('recoverFromChunkError');
+    expect(read('src/components/SystemFailureBoundary.tsx')).not.toContain('attemptVRAutoHeal');
+    expect(read('src/components/SystemFailureBoundary.tsx')).not.toContain('setTimeout(() =>');
     expect(read('src/App.tsx')).not.toContain('recoverFromChunkError');
   });
 
