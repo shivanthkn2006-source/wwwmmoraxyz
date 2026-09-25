@@ -1532,7 +1532,9 @@ const HomePage = () => {
         const code = postsResult.error.code;
         const isRls = code === '42501' || /row-level security/i.test(postsResult.error.message || '');
         console.error('Error fetching global posts:', postsResult.error);
-        setGlobalPosts([]);
+        // Keep the last usable snapshot visible during transient network/RLS
+        // failures. Clearing it here caused Home to flash back to an empty
+        // loading surface on cellular reconnects and drawer navigation.
         setFeedDiag({
           status: isRls ? 'rls' : 'error',
           message: postsResult.error.message,
@@ -1607,6 +1609,11 @@ const HomePage = () => {
           user_liked: likedPostIds.has(post.id)
         }));
 
+      // The database rows are already usable cards. Paint them immediately;
+      // signed-media hydration is optional enrichment and must not hold the
+      // Home feed behind slow storage/network work.
+      setGlobalPosts(postsWithLikes as Post[]);
+
       const ids = postsWithLikes.map((post: Post) => post.id);
       const arrivals = syncUnseenPostSnapshot(newGateKey('global'), knownFeedIdsRef.current.global, ids, updateSource);
       logFeedEvent('new_snapshot', { feed: 'global', source: updateSource, row_count: ids.length, new_count: arrivals.newIds.length, unseen_count: arrivals.unseenIds.size }, user.id);
@@ -1628,7 +1635,6 @@ const HomePage = () => {
       });
     } catch (err: any) {
       console.error('Error in fetchGlobalPosts:', err);
-      setGlobalPosts([]);
       setFeedDiag({ status: 'error', message: err?.message || String(err), authReady: true, timestamp: new Date().toISOString() });
       pushDebug({ step: 'fetchGlobalPosts:exception', errorMessage: err?.message || String(err) });
     }
