@@ -42,6 +42,14 @@ describe('device permissions', () => {
     expect(homeTools).not.toContain('navigator.geolocation.getCurrentPosition');
   });
 
+  it('uses location in the morning greeting only after an existing grant', () => {
+    const greeting = read('src/hooks/useProactiveGreeting.ts');
+    expect(greeting).toContain("locationPermission?.state !== 'granted'");
+    expect(greeting.indexOf("locationPermission?.state !== 'granted'")).toBeLessThan(
+      greeting.indexOf('const position = await getUserLocation()'),
+    );
+  });
+
   it('does not show the all-device permission request after sign-in', () => {
     const auth = read('src/pages/AuthPage.tsx');
     expect(auth).not.toContain('<PermissionActivationModal');
