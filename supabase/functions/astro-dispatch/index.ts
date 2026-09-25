@@ -470,6 +470,35 @@ async function processOne(
   };
 }
 
+// ───────────────────────── caller resolution ─────────────────────────
+type Caller = { kind: 'scheduler' } | { kind: 'admin'; userId: string } | { kind: 'member'; userId: string } | { kind: 'none' };
+let cachedCronToken: string | null = null;
+
+async function resolveCaller(req: Request): Promise<Caller> {
+  const cronToken = req.headers.get('x-cron-token');
+  if (cronToken) {
+    if (!cachedCronToken) {
+      const r = await db('edge_cron_tokens?name=eq.astro-dispatch&select=token');
+      const rows = r.ok ? await r.json() : [];
+      cachedCronToken = rows?.[0]?.token ?? null;
+    }
+    if (cachedCronToken && cronToken.length === cachedCronToken.length && cronToken === cachedCronToken) {
+      return { kind: 'scheduler' };
+    }
+    return { kind: 'none' };
+  }
+  const bearer = (req.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '');
+  if (!bearer || bearer === SERVICE_KEY) return bearer === SERVICE_KEY ? { kind: 'scheduler' } : { kind: 'none' };
+  const u = await fetch(`${SUPABASE_URL}/auth/v1/user`, { headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${bearer}` } });
+  if (!u.ok) return { kind: 'none' };
+  const user = await u.json().catch(() => null);
+  const userId: string | undefined = user?.id;
+  if (!userId) return { kind: 'none' };
+  const roles = await db(`user_roles?user_id=eq.${userId}&role=eq.admin&select=role`);
+  const isAdmin = roles.ok && ((await roles.json()) as unknown[]).length > 0;
+  return isAdmin ? { kind: 'admin', userId } : { kind: 'member', userId };
+}
+
 // ───────────────────────── handler ─────────────────────────
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
@@ -487,6 +516,22 @@ Deno.serve(async (req) => {
   const now = body.simulateNow ? new Date(body.simulateNow) : new Date();
 
   if (!SUPABASE_URL || !SERVICE_KEY) return json({ error: 'engine not configured' }, 500);
+
+  // ── caller gate ──
+  // scheduler (private token) and admin → every action.
+  // signed-in member → 'run' for their own account, or 'preview' (no data).
+  // anyone else → 401.
+  const caller = await resolveCaller(req);
+  if (caller.kind === 'none') return json({ ok: false, error: 'Unauthorized' }, 401);
+  if (caller.kind === 'member') {
+    if (action === 'run') {
+      if (body.userId && body.userId !== caller.userId) return json({ ok: false, error: 'Forbidden' }, 403);
+      body.userId = caller.userId;
+      delete body.simulateNow;
+    } else if (action !== 'preview') {
+      return json({ ok: false, error: 'Forbidden' }, 403);
+    }
+  }
 
   // ── status ──
   if (action === 'status') {
