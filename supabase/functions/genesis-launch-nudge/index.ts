@@ -1,3 +1,4 @@
+import { requireCaller } from '../_shared/caller-guard.ts';
 // ═══════════════════════════════════════════════════════════════════════════════
 // GENESIS LAUNCH NUDGE - WELCOME HOME BRIEFING FOR SPARTANS
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -19,6 +20,9 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const caller = await requireCaller(req, 'admin');
+  if (caller instanceof Response) return caller;
 
   const guard = await publicGuard(req, { name: 'genesis-launch-nudge', limit: 10, windowSeconds: 300, maxBodyBytes: 512 * 1024, allowRichText: true });
   if (guard.response) return guard.response;
