@@ -93,7 +93,7 @@ export function useDhfDailyFeed() {
     posts: [], loading: true, error: false, generating: false,
   });
   const mounted = useRef(true);
-  /** Rows fetched for today/yesterday, kept so the reveal timer can re-filter. */
+  /** Recent rows kept so the reveal timer can re-filter without blocking Home. */
   const rowsRef = useRef<DhfDailyPost[]>([]);
 
   useEffect(() => {

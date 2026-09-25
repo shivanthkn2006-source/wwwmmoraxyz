@@ -14,7 +14,7 @@ describe('startup and reconnect stability', () => {
 
   it('uses a bounded auth shell and one refresh owner', () => {
     const auth = read('src/lib/auth.tsx');
-    expect(auth).toContain('}, 2500);');
+    expect(auth).toContain('}, 1500);');
     expect(auth).not.toContain('supabase.auth.startAutoRefresh()');
     expect(auth).not.toContain('10 * 60 * 1000); // Every 10 minutes');
     expect(auth).not.toContain('retryInterval');
