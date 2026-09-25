@@ -116,7 +116,6 @@ import { composeChronologicalFeed } from '@/lib/growthFeedComposition';
 import { deviceTimeZone, growthSlotTimestamp, slotsForFrequency } from '@/lib/growthSlot';
 import DHFCompassCard from '@/components/dhf/DHFCompassCard';
 import { useDhfDailyFeed } from '@/hooks/useDhfDailyFeed';
-import { compassSlotTimestamp } from '@/lib/dhfCompass';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { screenUpload, reportBlockedUpload } from '@/lib/uploadModeration';
 import { CDN_CACHE_CONTROL, prefersLowBandwidth, prepareVideoRenditions, registerVideoAsset, uploadRendition, type VideoRenditions } from '@/lib/videoPipeline';
