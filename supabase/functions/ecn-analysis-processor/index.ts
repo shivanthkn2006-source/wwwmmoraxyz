@@ -161,7 +161,8 @@ serve(async (req) => {
               events_analyzed: 0,
             },
           })
-          .eq('id', queue_id);
+          .eq('id', queue_id)
+          .eq('user_id', user.id);
       }
 
       return new Response(JSON.stringify({
@@ -325,7 +326,8 @@ Respond in JSON format only.`;
           processed_at: new Date().toISOString(),
           analysis_result: analysisResult,
         })
-        .eq('id', queue_id);
+        .eq('id', queue_id)
+          .eq('user_id', user.id);
     }
 
     // Mark events as ECN processed
@@ -334,7 +336,8 @@ Respond in JSON format only.`;
       await supabase
         .from('behavioral_events')
         .update({ ecn_processed: true })
-        .in('id', eventIds);
+        .in('id', eventIds)
+        .eq('user_id', user.id);
     }
 
     // Update DHF learning history with patterns
