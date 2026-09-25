@@ -45,7 +45,13 @@ const InviteFriendsPage = () => {
   };
 
   const load = useCallback(async () => {
-    const { data, error } = await supabase.functions.invoke('beta-invite', { body: { action: 'my-invites' } });
+    const { liveAccessToken } = await import('@/lib/edgeSession');
+    const token = await liveAccessToken();
+    if (!token) { setLoading(false); return; }
+    const { data, error } = await supabase.functions.invoke('beta-invite', {
+      body: { action: 'my-invites' },
+      headers: { Authorization: `Bearer ${token}` },
+    });
     setLoading(false);
     if (error || !data?.ok) {
       toast.error('Could not load your invites right now.');

@@ -47,8 +47,13 @@ export async function redeemStoredReferral(): Promise<{ redeemed: boolean; reaso
   const code = getStoredReferral();
   if (!code) return { redeemed: false, reason: 'none' };
   try {
+    // Only call once a live session exists; the code stays stored for the next attempt.
+    const { liveAccessToken } = await import('@/lib/edgeSession');
+    const token = await liveAccessToken();
+    if (!token) return { redeemed: false, reason: 'no-session' };
     const { data, error } = await supabase.functions.invoke('beta-invite', {
       body: { action: 'redeem', code },
+      headers: { Authorization: `Bearer ${token}` },
     });
     if (error) return { redeemed: false, reason: 'error' };
     const ok = Boolean((data as { ok?: boolean } | null)?.ok);
