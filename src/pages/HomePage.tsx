@@ -2559,11 +2559,13 @@ const HomePage = () => {
       {/* Atlas HUD Overlay - Smith AI Interface (SEPARATE from Zoe Infinity) */}
       {/* Atlas Boot and Prime Objective are handled INSIDE AtlasHUD, not in main Zoe flow */}
       {atlasHUDActive && (
-        <AtlasHUD 
-          isActive={atlasHUDActive} 
-          onClose={() => setAtlasHUDActive(false)}
-          showIntro={true}
-        />
+        <React.Suspense fallback={null}>
+          <AtlasHUD 
+            isActive={atlasHUDActive} 
+            onClose={() => setAtlasHUDActive(false)}
+            showIntro={true}
+          />
+        </React.Suspense>
       )}
       
        {/* Atlas HUD Toggle Button moved into HamburgerMenu */}
@@ -2740,7 +2742,7 @@ const HomePage = () => {
 
             <TabsContent value="mosaic" className="absolute inset-0 m-0 h-full min-h-0 w-full overflow-hidden p-0" data-feed-tab="mosaic">
               <div className="absolute inset-0 h-full w-full overflow-y-auto overscroll-contain pb-28 pt-24" data-feed-scroll>
-                <MosaicFeed limit={60} />
+                <React.Suspense fallback={null}><MosaicFeed limit={60} /></React.Suspense>
               </div>
             </TabsContent>
 
@@ -2763,30 +2765,32 @@ const HomePage = () => {
                 </div>
                 
                 {/* Selfie City Posts Grid */}
-                <SelfieCityFeed />
+                <React.Suspense fallback={null}><SelfieCityFeed /></React.Suspense>
               </div>
             </TabsContent>
 
         </Tabs>
-      <NotificationMenu open={notificationMenuOpen} onOpenChange={setNotificationMenuOpen} />
-      <HamburgerMenu
-        isOpen={hamburgerMenuOpen}
-        onClose={() => setHamburgerMenuOpen(false)}
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        unreadMessages={unreadMessages}
-        unreadNotifications={unreadNotifications}
-        newMatches={newMatches}
-        onNotificationClick={() => setNotificationMenuOpen(true)}
-        onPrivateTimelineClick={() => setPrivateTimelinesOpen(true)}
-        onOpenAtlas={() => setAtlasHUDActive(true)}
-      />
-      <OnboardingTour />
-      <PersonalGrowthOnboarding
-        open={growthOnboardingOpen}
-        onOpenChange={setGrowthOnboardingOpen}
-        onComplete={() => void refreshGrowth()}
-      />
+      <React.Suspense fallback={null}>
+        <NotificationMenu open={notificationMenuOpen} onOpenChange={setNotificationMenuOpen} />
+        <HamburgerMenu
+          isOpen={hamburgerMenuOpen}
+          onClose={() => setHamburgerMenuOpen(false)}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          unreadMessages={unreadMessages}
+          unreadNotifications={unreadNotifications}
+          newMatches={newMatches}
+          onNotificationClick={() => setNotificationMenuOpen(true)}
+          onPrivateTimelineClick={() => setPrivateTimelinesOpen(true)}
+          onOpenAtlas={() => setAtlasHUDActive(true)}
+        />
+        <OnboardingTour />
+        <PersonalGrowthOnboarding
+          open={growthOnboardingOpen}
+          onOpenChange={setGrowthOnboardingOpen}
+          onComplete={() => void refreshGrowth()}
+        />
+      </React.Suspense>
       <GrowthInsightDetailsModal
         insight={growthDetails}
         open={Boolean(growthDetails)}
@@ -2795,7 +2799,9 @@ const HomePage = () => {
         styles={growthPreferences?.reflection_styles ?? []}
         timezone={growthPreferences?.timezone}
       />
-      <PrivateTimelinesSheet open={privateTimelinesOpen} onOpenChange={setPrivateTimelinesOpen} />
+      <React.Suspense fallback={null}>
+        <PrivateTimelinesSheet open={privateTimelinesOpen} onOpenChange={setPrivateTimelinesOpen} />
+      </React.Suspense>
 
       {/* DHF Neural Feed Sheet */}
       <Sheet open={neuralFeedOpen} onOpenChange={setNeuralFeedOpen}>
@@ -2839,12 +2845,14 @@ const HomePage = () => {
       
       {/* Full Screen Loops Video Player */}
       {loopsPlayerOpen && filteredLoops.length > 0 && (
-        <FullScreenVideoPlayer
-          videos={filteredLoops}
-          initialIndex={loopsInitialIndex}
-          onClose={() => setLoopsPlayerOpen(false)}
-          onUpdate={handleUpdate}
-        />
+        <React.Suspense fallback={null}>
+          <FullScreenVideoPlayer
+            videos={filteredLoops}
+            initialIndex={loopsInitialIndex}
+            onClose={() => setLoopsPlayerOpen(false)}
+            onUpdate={handleUpdate}
+          />
+        </React.Suspense>
       )}
 
       <HomeFloatingTools
@@ -3032,12 +3040,14 @@ const HomePage = () => {
       <HomeCollectionSheet mode={collectionMode} onOpenChange={(open) => !open && setCollectionMode(null)} />
 
 
-      <HomePostEditor
-        open={postEditorOpen}
-        busy={uploadState === 'uploading' || uploadState === 'saving' || uploadState === 'validating'}
-        onOpenChange={setPostEditorOpen}
-        onSubmit={publishPostDraft}
-      />
+      <React.Suspense fallback={null}>
+        <HomePostEditor
+          open={postEditorOpen}
+          busy={uploadState === 'uploading' || uploadState === 'saving' || uploadState === 'validating'}
+          onOpenChange={setPostEditorOpen}
+          onSubmit={publishPostDraft}
+        />
+      </React.Suspense>
 
       
       {/* Simple Scroll to Top Arrow - Fixed at bottom right corner */}
