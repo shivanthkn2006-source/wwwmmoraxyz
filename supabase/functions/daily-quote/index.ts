@@ -1,4 +1,5 @@
 // Daily rotating quote from ZenQuotes (https://zenquotes.io) — "quote of the day".
+import { publicGuard } from '../_shared/public-guard.ts';
 // Server-side fetch avoids browser CORS; in-memory cache per UTC day.
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -9,6 +10,8 @@ let cache: { day: string; body: string } | null = null;
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
+  const guard = await publicGuard(req, { name: 'daily-quote', limit: 30, windowSeconds: 60 });
+  if (guard.response) return guard.response;
   const day = new Date().toISOString().slice(0, 10);
   if (cache?.day === day) return new Response(cache.body, { headers: { ...cors, 'Content-Type': 'application/json' } });
   try {
