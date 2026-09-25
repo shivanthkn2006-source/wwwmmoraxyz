@@ -1,3 +1,4 @@
+import { isFeedWorthyQuery } from '@/lib/feedIntentGuard';
 // HomePage - Main feed component
 import React, { useState, useEffect, useRef } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -517,13 +518,14 @@ const HomePage = () => {
     const load = async () => {
       const { data } = await supabase
         .from('mmora_feed_items')
-        .select('id, video_id, title, channel_title, thumbnail_url')
+        .select('id, video_id, title, channel_title, thumbnail_url, triggered_by_query')
         .order('created_at', { ascending: false })
-        .limit(12);
+        .limit(30);
       if (cancelled) return;
       setNeuralVideos(
         ((data as any[]) ?? [])
-          .filter((row) => row?.video_id)
+          .filter((row) => row?.video_id && isFeedWorthyQuery(row.triggered_by_query))
+          .slice(0, 12)
           .map((row) => ({
             id: `dhf-${row.id}`,
             title: String(row.title ?? 'Video'),

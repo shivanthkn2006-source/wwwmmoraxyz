@@ -113,6 +113,7 @@ export const useAmbientSearch = () => {
               query: term,
               contextType: 'search',
               timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+              injectFeed: isFeedWorthyQuery(term),
             },
           })
           .then(({ data, error: brainError }) => {

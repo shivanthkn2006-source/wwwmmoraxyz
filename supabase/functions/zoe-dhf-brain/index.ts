@@ -115,6 +115,11 @@ async function injectYouTube(
   if (!key) return { injected: 0, reason: 'missing_youtube_key', retryable: false, keySource: source };
   const term = (searchIntent || '').trim();
   if (term.length < 2) return { injected: 0, reason: 'query_too_short', retryable: false, keySource: source };
+  // People lookups (@handles) and section names are not content interests.
+  const low = term.toLowerCase();
+  if (low.includes('@') || /^(friends?|music|songs?|albums?|home|feed|calls?|chat|profile|members?|selfie( city)?|loops?|vr|search|zoe|dhf)$/.test(low) || (!/\s/.test(low) && /\d/.test(low))) {
+    return { injected: 0, reason: 'not_interest_query', retryable: false, keySource: source };
+  }
 
   try {
     const endpoint =
