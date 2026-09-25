@@ -56,6 +56,35 @@ describe('device permissions', () => {
     expect(auth).not.toContain('setShowPermissionModal');
   });
 
+  it('does not request notification permission from mounted background services', () => {
+    const callPush = read('src/features/calls/callPush.ts');
+    const desktop = read('src/hooks/useDesktopNotifications.ts');
+    const announcements = read('src/hooks/useImportantNotificationAnnouncements.ts');
+    expect(callPush).not.toContain('Notification.requestPermission()');
+    expect(desktop).not.toContain('Notification.requestPermission()');
+    expect(announcements).not.toContain('Notification.requestPermission()');
+  });
+
+  it('does not request Selfie City location unless it is already granted', () => {
+    for (const file of ['src/components/selfiecity/SelfieUploader.tsx', 'src/hooks/useSelfieCityStore.ts']) {
+      const source = read(file);
+      expect(source).toContain("permission.state !== 'granted'");
+      expect(source.indexOf("permission.state !== 'granted'")).toBeLessThan(
+        source.indexOf('navigator.geolocation.getCurrentPosition'),
+      );
+    }
+  });
+
+  it('keeps idle Zoe guidance behind DHF and social content', () => {
+    const home = read('src/pages/HomePage.tsx');
+    const feedStart = home.indexOf('const globalFeedSlides');
+    const feedEnd = home.indexOf('const personalFeedSlides', feedStart);
+    const feed = home.slice(feedStart, feedEnd);
+    expect(feed.indexOf("chronologicalSlides(visibleGlobalPosts, 'global')")).toBeLessThan(
+      feed.indexOf('quietGuidance ?'),
+    );
+  });
+
   it('does not unlock Safari audio from the first unrelated tap', () => {
     const safari = read('src/utils/safariBrowserFixes.ts');
     const compat = read('src/utils/crossBrowserCompat.ts');

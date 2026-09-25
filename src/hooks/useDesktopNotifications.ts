@@ -17,14 +17,9 @@ export const useDesktopNotifications = (userId: string | undefined) => {
     const prefs = JSON.parse(preferences);
     if (!prefs.desktop_push) return false;
 
-    if (Notification.permission === 'granted') {
-      return true;
-    } else if (Notification.permission !== 'denied') {
-      const permission = await Notification.requestPermission();
-      return permission === 'granted';
-    }
-
-    return false;
+    // Never prompt from a realtime/background callback. Permission is requested
+    // only by the explicit universal activation action.
+    return Notification.permission === 'granted';
   }, []);
 
   const showNotification = useCallback(async (title: string, options?: NotificationOptions) => {

@@ -84,11 +84,6 @@ export const useImportantNotificationAnnouncements = () => {
   useEffect(() => {
     if (!user?.id) return;
 
-    // Request notification permission
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
-    }
-
     const channel = supabase
       .channel(`important-notifications:${user.id}:${Math.random().toString(36).slice(2, 8)}`)
       .on(

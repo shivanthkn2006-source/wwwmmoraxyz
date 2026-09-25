@@ -9,3 +9,6 @@
 - [x] Render the requested page before loading optional voice, calls, monitoring, music, and Zoe services.
 - [x] Restore all due DHF cards from integration day through today before social posts.
 - [ ] Verify sign-in persistence, Home latency, DHF/growth/planetary cards, and reload stability with an authorized preview session.
+- [ ] Verify the one-time universal permission action across signed-in desktop and mobile views.
+- [ ] Confirm phased Home loading renders real feed content before background DHF and planetary work.
+- [ ] Complete subagent code audit and visual QA without altering existing features or design.

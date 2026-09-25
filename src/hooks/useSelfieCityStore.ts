@@ -47,9 +47,12 @@ export function useSelfieCityStore() {
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Get user location
+  // Reuse location only after the explicit universal permission action.
   useEffect(() => {
-    if (navigator.geolocation) {
+    const loadGrantedLocation = async () => {
+      if (!navigator.geolocation || !navigator.permissions?.query) return;
+      const permission = await navigator.permissions.query({ name: 'geolocation' });
+      if (permission.state !== 'granted') return;
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
@@ -58,7 +61,8 @@ export function useSelfieCityStore() {
         (err) => console.warn('[SelfieCityStore] Location error:', err),
         { enableHighAccuracy: true }
       );
-    }
+    };
+    void loadGrantedLocation();
   }, []);
 
   // Load selfies from database
