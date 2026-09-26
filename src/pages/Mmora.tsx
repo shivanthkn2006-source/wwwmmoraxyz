@@ -372,7 +372,7 @@ export default function Mmora() {
     <>
       <Helmet>
         <title>M'mora 2120 | Zero-UI Interface</title>
-        <meta name="description" content="M'mora 2120 - A Zero-UI interface powered by the Smith AI Orb" />
+        <meta name="description" content="M'mora 2120 - A Zero-UI interface by Zoe" />
         <link 
           href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&display=swap" 
           rel="stylesheet" 

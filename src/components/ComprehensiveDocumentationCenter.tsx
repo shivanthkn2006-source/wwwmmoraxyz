@@ -62,7 +62,6 @@ const documentationSections: DocSection[] = [
     lastUpdated: '2025-12-02',
     content: [
       'MMora is a next-generation social platform powered by Zoe AI Architect',
-      'Built with React 18, TypeScript, and Tailwind CSS',
       'Features real-time messaging, posts, and social connections',
       'Integrated with advanced AI for personalized experiences',
       'Progressive Web App (PWA) with offline support',
