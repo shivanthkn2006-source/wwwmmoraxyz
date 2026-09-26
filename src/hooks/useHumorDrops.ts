@@ -5,9 +5,8 @@
  */
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { loadAstroSelf } from '@/features/astro/astroAffinity';
-import { elementOf } from '@/features/astro/zodiac';
 import { useAuth } from '@/lib/auth';
+import { isHumorCategory, type HumorCategory } from '@/lib/humor';
 
 export interface HumorDrop {
   id: string;
@@ -16,34 +15,59 @@ export interface HumorDrop {
   lines: { speaker: 'A' | 'B'; text: string }[];
   created_at: string;
   image_url?: string | null;
+  category: HumorCategory;
+  origin: 'zoe' | 'member';
+  author_id: string | null;
+  scheduled_for: string;
 }
 
-const METAL_BY_ELEMENT = { Fire: 'iron', Water: 'silver', Earth: 'lead', Air: 'quicksilver' } as const;
+const CACHE_KEY = 'mmora:humor-drops:v2';
 
-export function useHumorDrops(limit = 3): HumorDrop[] {
-  const [drops, setDrops] = useState<HumorDrop[]>([]);
+function readCache(): HumorDrop[] {
+  try {
+    const rows = JSON.parse(localStorage.getItem(CACHE_KEY) || '[]') as HumorDrop[];
+    return rows.filter((row) => row?.id && Array.isArray(row.lines));
+  } catch { return []; }
+}
+
+export function useHumorDrops(limit = 6): HumorDrop[] {
+  const [drops, setDrops] = useState<HumorDrop[]>(() => readCache().slice(0, limit));
   const { user } = useAuth();
   const uid = user?.id ?? null;
   useEffect(() => {
     let alive = true;
-    if (!uid) return;
-    void (async () => {
+    if (!uid) return () => { alive = false; };
+    const load = async () => {
       try {
-        const self = await loadAstroSelf().catch(() => null);
-        const el = elementOf(self?.sign ?? null);
-        const metal = el ? METAL_BY_ELEMENT[el] : 'quicksilver';
-        const since = new Date(Date.now() - 36 * 3600_000).toISOString();
-        const { data } = await supabase
-          .from('humor_drops' as never)
-          .select('id, metal, headline, lines, created_at, image_url')
-          .eq('metal', metal)
-          .gte('created_at', since)
-          .order('created_at', { ascending: false })
+        const since = new Date(Date.now() - 7 * 24 * 3600_000).toISOString();
+        const { data, error } = await supabase
+          .from('humor_drops')
+          .select('id, metal, headline, lines, created_at, image_url, category, origin, author_id, scheduled_for')
+          .eq('is_published', true)
+          .lte('scheduled_for', new Date().toISOString())
+          .gte('scheduled_for', since)
+          .order('scheduled_for', { ascending: false })
           .limit(limit);
-        if (alive) setDrops(((data ?? []) as unknown as HumorDrop[]).filter((d) => Array.isArray(d.lines) && d.lines.length > 0));
+        if (error) throw error;
+        const valid = ((data ?? []) as unknown as HumorDrop[]).filter((d) => Array.isArray(d.lines) && d.lines.length > 0 && isHumorCategory(d.category));
+        if (alive) setDrops(valid);
+        try { localStorage.setItem(CACHE_KEY, JSON.stringify(valid.slice(0, 24))); } catch { /* private mode */ }
       } catch { /* optional content */ }
-    })();
-    return () => { alive = false; };
+    };
+    void load();
+    const onRefresh = () => void load();
+    const onVisible = () => { if (document.visibilityState === 'visible') void load(); };
+    const channel = supabase.channel(`humor-drops-${uid}`).on('postgres_changes', { event: '*', schema: 'public', table: 'humor_drops' }, onRefresh).subscribe();
+    window.addEventListener('focus', onRefresh);
+    window.addEventListener('mmora:humor-refresh', onRefresh);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      alive = false;
+      window.removeEventListener('focus', onRefresh);
+      window.removeEventListener('mmora:humor-refresh', onRefresh);
+      document.removeEventListener('visibilitychange', onVisible);
+      void supabase.removeChannel(channel);
+    };
   }, [limit, uid]);
   return drops;
 }
