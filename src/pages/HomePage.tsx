@@ -2551,7 +2551,7 @@ const HomePage = () => {
       </div>];
   const personalFeedSlides = searchVideoSlides.length
     ? searchVideoSlides
-    : [...chronologicalSlides(visiblePersonalPosts, 'personal'), ...growthSlide.slice(growthCards.length), ...supportingSlides, ...neuralVideoSlides, ...savedGrowthSlides];
+    : [...motivationTopSlide, ...chronologicalSlides(visiblePersonalPosts, 'personal'), ...growthSlide.slice(growthCards.length), ...supportingSlides, ...neuralVideoSlides, ...savedGrowthSlides];
 
 
 

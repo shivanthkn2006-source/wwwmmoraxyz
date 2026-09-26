@@ -46,7 +46,7 @@ describe('Calls Home menu action', () => {
     expect(screen.getAllByRole('button')).toHaveLength(1);
     expect(screen.getByRole('button', { name: 'Open home menu' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Open home menu' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Audio & video calls' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Audio & video calls' }));
     expect(onSelect).toHaveBeenCalledOnce();
   });
 
@@ -59,9 +59,9 @@ describe('Calls Home menu action', () => {
     }))} />);
     expect(screen.getAllByRole('button')).toHaveLength(1);
     fireEvent.click(screen.getByRole('button', { name: 'Open home menu' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Menu 0' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Menu 0' }));
     fireEvent.click(screen.getByRole('button', { name: 'Open home menu' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Menu 9' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Menu 9' }));
     expect(selections[0]).toHaveBeenCalledOnce();
     expect(selections[9]).toHaveBeenCalledOnce();
   });
