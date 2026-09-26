@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 const TAKEOVER_SECONDS = 60;
+const REMOTE_SEEN_TIMEOUT_MS = 1200;
 
 const localDateKey = (d = new Date()) => {
   const y = d.getFullYear();
@@ -75,12 +76,18 @@ export const useMoraZoeScheduler = (userId?: string) => {
       const todayStr = localDateKey();
       let seenRemote = false;
       try {
-        const { data } = await (supabase as unknown as { from: (t: string) => any })
+        const remoteSeenRequest = (supabase as unknown as { from: (t: string) => any })
           .from('user_daily_ephemeral_views')
           .select('id')
           .eq('user_id', userId)
           .eq('view_date', todayStr)
           .maybeSingle();
+        const { data } = await Promise.race([
+          remoteSeenRequest,
+          new Promise<{ data: null }>((resolve) => {
+            window.setTimeout(() => resolve({ data: null }), REMOTE_SEEN_TIMEOUT_MS);
+          }),
+        ]);
         seenRemote = !!data;
       } catch { /* offline-safe */ }
 

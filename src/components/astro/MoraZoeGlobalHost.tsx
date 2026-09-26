@@ -1,5 +1,6 @@
 import React from 'react';
 import { useLocation } from 'react-router-dom';
+import { useAuth } from '@/lib/auth';
 import { useAstroDiagnostics } from '@/hooks/useAstroDiagnostics';
 
 import { useZoeMotivation } from '@/hooks/useZoeMotivation';
@@ -21,10 +22,14 @@ import { MoraZoeBirthDetailsPrompt } from './MoraZoeBirthDetailsPrompt';
  *  • Login greeting    → everyday motivation (works for every member)
  */
 export const MoraZoeGlobalHost: React.FC = () => {
+  const { user } = useAuth();
   useAstroTimezoneSync();
   const { diagnostics, todayPrediction } = useAstroDiagnostics();
   const { motivation, posterUrl, userId, loading: motivationLoading } = useZoeMotivation();
-  const scheduleUserId = diagnostics?.user_id ?? userId;
+  // Scheduling belongs to the authenticated member, not to slower optional
+  // motivation/astrology requests. This keeps welcome cards responsive even
+  // when either background source is delayed or temporarily unavailable.
+  const scheduleUserId = user?.id ?? diagnostics?.user_id ?? userId;
 
   const {
     showMorningTakeover,

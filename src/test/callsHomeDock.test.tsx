@@ -39,27 +39,28 @@ describe('Calls Home menu action', () => {
     expect(onHomeSelect).toHaveBeenCalledOnce();
   });
 
-  it('renders a frequently used action beside the closed Home trigger', () => {
+  it('keeps a frequently used action inside the Home panel', () => {
     const onSelect = vi.fn();
     window.localStorage.setItem('mmora:home-dock-usage:v1', JSON.stringify({ calls: { count: 2, last: Date.now() } }));
     render(<HomeGlassDock items={[{ id: 'calls', label: 'Audio & video calls', icon: <ZoeCallsIcon />, onSelect }]} onHomeSelect={() => {}} />);
-    const buttons = screen.getAllByRole('button');
-    expect(buttons).toHaveLength(2);
-    expect(screen.getByRole('button', { name: 'Audio & video calls' })).toBeTruthy();
+    expect(screen.getAllByRole('button')).toHaveLength(1);
     expect(screen.getByRole('button', { name: 'Open home menu' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Open home menu' }));
     fireEvent.click(screen.getByRole('button', { name: 'Audio & video calls' }));
     expect(onSelect).toHaveBeenCalledOnce();
   });
 
-  it('keeps every used menu reachable without limiting the rail to four', () => {
+  it('keeps every used menu reachable inside the open panel', () => {
     const selections = Array.from({ length: 10 }, () => vi.fn());
     const usage = Object.fromEntries(selections.map((_, index) => [`menu-${index}`, { count: index + 1, last: Date.now() }]));
     window.localStorage.setItem('mmora:home-dock-usage:v1', JSON.stringify(usage));
     render(<HomeGlassDock items={selections.map((onSelect, index) => ({
       id: `menu-${index}`, label: `Menu ${index}`, icon: <span>{index}</span>, onSelect,
     }))} />);
-    expect(screen.getAllByRole('button')).toHaveLength(11);
+    expect(screen.getAllByRole('button')).toHaveLength(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Open home menu' }));
     fireEvent.click(screen.getByRole('button', { name: 'Menu 0' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Open home menu' }));
     fireEvent.click(screen.getByRole('button', { name: 'Menu 9' }));
     expect(selections[0]).toHaveBeenCalledOnce();
     expect(selections[9]).toHaveBeenCalledOnce();
