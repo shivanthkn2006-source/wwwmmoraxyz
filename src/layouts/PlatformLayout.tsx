@@ -14,6 +14,7 @@ import useDhfUnlockReminders from '@/hooks/useDhfUnlockReminders';
 import { ZoeCardNarrationProvider } from '@/components/voice/ZoeCardNarrationProvider';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
+import { CallEngineProvider } from '@/contexts/CallEngineContext';
 
 const DeferredPlatformServices = lazy(() => import('@/components/platform/DeferredPlatformServices'));
 
