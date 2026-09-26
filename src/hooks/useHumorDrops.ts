@@ -15,6 +15,7 @@ export interface HumorDrop {
   headline: string;
   lines: { speaker: 'A' | 'B'; text: string }[];
   created_at: string;
+  image_url?: string | null;
 }
 
 const METAL_BY_ELEMENT = { Fire: 'iron', Water: 'silver', Earth: 'lead', Air: 'quicksilver' } as const;
@@ -34,7 +35,7 @@ export function useHumorDrops(limit = 3): HumorDrop[] {
         const since = new Date(Date.now() - 36 * 3600_000).toISOString();
         const { data } = await supabase
           .from('humor_drops' as never)
-          .select('id, metal, headline, lines, created_at')
+          .select('id, metal, headline, lines, created_at, image_url')
           .eq('metal', metal)
           .gte('created_at', since)
           .order('created_at', { ascending: false })

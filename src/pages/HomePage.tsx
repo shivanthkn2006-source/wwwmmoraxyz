@@ -2528,12 +2528,12 @@ const HomePage = () => {
       timestamp: growthSlotTimestamp(insight.local_date, insight.slot, zone),
       value: growthSlide[index],
     }));
-    const humorItems = feed === 'global' ? humorDrops.map((drop) => ({
+    const humorItems = feed === 'global' ? humorDrops.map((drop, i) => ({
       id: `humor-${drop.id}`,
       timestamp: drop.created_at,
       value: (
         <div key={`humor-${drop.id}`} className="relative flex h-full min-h-full w-full shrink-0 snap-start snap-always items-center overflow-y-auto p-4 pt-24 pb-24" data-humor-slide>
-          <FeedErrorBoundary section="posts"><HumorDropCard drop={drop} /></FeedErrorBoundary>
+          <FeedErrorBoundary section="posts"><HumorDropCard drop={drop} autoAnnounce={i === 0} /></FeedErrorBoundary>
         </div>
       ),
     })) : [];
