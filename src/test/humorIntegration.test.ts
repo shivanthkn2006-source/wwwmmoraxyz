@@ -51,4 +51,21 @@ describe("Zoe's LOL integration", () => {
     expect(read('src/pages/SubmitJokePage.tsx')).toContain("origin: 'member'");
     expect(read('src/App.tsx')).toContain('path="/zoe-lol/submit"');
   });
+
+  it('keeps every card control inside one transparent card with views and follow', () => {
+    const card = read('src/components/humor/HumorDropCard.tsx');
+    expect(card).toContain('overflow-hidden');
+    expect(card).toContain("from('humor_views'");
+    expect(card).toContain("from('humor_follows'");
+    expect(card).toContain('<time');
+    const page = read('src/pages/ZoeLolPage.tsx');
+    expect(page).toContain("mode === 'top'");
+    expect(page).toContain("mode === 'viewed'");
+  });
+
+  it('uses one shared generation for Home and the Zoe LOL page', () => {
+    expect(read('src/pages/ZoeLolPage.tsx')).toContain('useHumorDrops');
+    expect(read('src/pages/HomePage.tsx')).toContain('useHumorDrops');
+    expect(read('src/hooks/useHumorDrops.ts')).not.toContain('functions.invoke');
+  });
 });
