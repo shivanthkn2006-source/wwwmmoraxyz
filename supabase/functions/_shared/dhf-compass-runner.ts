@@ -21,6 +21,7 @@ import {
   COMPASS_SLOTS, astroContextFor, buildDhfImageBrief, generateCompassPost,
   lifePhaseFor, referralCodeFor, referralCta, seedFrom, vaultContent,
 } from './dhf-compass.ts';
+import { cascadeFetch } from './image-cascade.ts';
 
 export const COMPASS_WORKER_VERSION = '2026-09-18.3';
 export const COMPASS_BUCKET = 'dhf-compass';
@@ -108,15 +109,18 @@ export async function countForDate(userId: string, date: string): Promise<number
  * third-party URL staying alive. Returns the storage path, or null on failure
  * (the caller then keeps the remote URL — the card still renders).
  */
-async function storeImage(userId: string, date: string, slotTime: string, remoteUrl: string): Promise<string | null> {
+export async function storeImage(userId: string, date: string, slotTime: string, remoteUrl: string): Promise<string | null> {
   const path = `${userId}/${date}/${slotTime.replace(/:/g, '-')}.jpg`;
-  // Pollinations renders on demand and regularly needs >25s for the first hit,
-  // so we allow a longer window and one retry before falling back to the URL.
+  // Attempt 1: the card's own Pollinations frame. Attempt 2: the shared
+  // cascade (Pollinations → placeholdr → AI Horde → …) so one provider outage
+  // never leaves a card without a durable stored picture.
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 45_000);
-      const img = await fetch(remoteUrl, { signal: controller.signal });
+      const img = attempt === 0
+        ? await fetch(remoteUrl, { signal: controller.signal })
+        : await cascadeFetch(remoteUrl);
       clearTimeout(timer);
       if (!img.ok) continue;
       const bytes = new Uint8Array(await img.arrayBuffer());
@@ -135,7 +139,7 @@ async function storeImage(userId: string, date: string, slotTime: string, remote
       });
       if (up.ok) return path;
     } catch {
-      /* fall through to the retry, then to the remote URL */
+      /* fall through to the cascade, then to the remote URL */
     }
   }
   return null;

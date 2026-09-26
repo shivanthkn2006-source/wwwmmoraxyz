@@ -147,6 +147,16 @@ export function useDhfDailyFeed() {
         }
       });
 
+      // Save remote-only card pictures into storage once (background, bounded,
+      // once per day per browser) so cards survive image-provider outages.
+      const storeKey = `mmora.dhfImageStore.${user.id}.${today}`;
+      if (rows.some((row) => !row.image_path) && !localStorage.getItem(storeKey)) {
+        localStorage.setItem(storeKey, '1');
+        window.setTimeout(() => {
+          void supabase.functions.invoke('dhf-image-store', { body: {} }).catch(() => undefined);
+        }, 8000);
+      }
+
       // Cards written under an older artwork contract are repaired once per
       // browser. This never calls a model and never rewrites any card text.
       const stale = rows.some((row) => row.image_prompt_version !== COMPASS_IMAGE_VERSION);
