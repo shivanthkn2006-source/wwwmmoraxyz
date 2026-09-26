@@ -44,8 +44,10 @@ export default defineConfig(({ mode }) => ({
       'react',
       'react-dom',
       'react-dom/client',
+      'scheduler',
       'react-router-dom',
       'react/jsx-runtime',
+      'react/jsx-dev-runtime',
       '@supabase/supabase-js',
       '@tanstack/react-query',
       'react-helmet-async',
@@ -293,7 +295,14 @@ export default defineConfig(({ mode }) => ({
     },
     // One React copy only: prevents "dispatcher.useState is null" when the
     // dep optimizer splits react into two chunks after a re-bundle.
-    dedupe: ["react", "react-dom", "react/jsx-runtime"],
+    dedupe: [
+      "react",
+      "react-dom",
+      "react-dom/client",
+      "scheduler",
+      "react/jsx-runtime",
+      "react/jsx-dev-runtime",
+    ],
   },
   build: {
     rollupOptions: {
