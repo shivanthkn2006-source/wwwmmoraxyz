@@ -13,6 +13,7 @@
  * screen it is mounted on.
  */
 import { useEffect, useRef } from 'react';
+import { subscribeRealtime } from '@/realtime/globalRealtime';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { readingTimeMs } from '@/lib/growthFlags';
@@ -101,21 +102,13 @@ export function useGrowthAlertEngine(enabled: boolean, onAlert?: (a: GrowthAlert
     window.addEventListener('focus', onWake);
     window.addEventListener('online', onWake);
 
-    let channel: ReturnType<typeof supabase.channel> | null = null;
+    // Shared multiplexer: auth remounts must not join/leave a duplicate channel.
+    let unsubscribe: (() => void) | null = null;
     try {
-      channel = supabase
-        .channel(`growth-alerts-${user.id}`)
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'growth_feed_items',
-            filter: `user_id=eq.${user.id}`,
-          },
-          () => { void sync(); },
-        )
-        .subscribe();
+      unsubscribe = subscribeRealtime(
+        { table: 'growth_feed_items', event: '*', filter: `user_id=eq.${user.id}` },
+        () => { void sync(); },
+      );
     } catch {
       // Realtime unavailable — the poll above still covers detection.
     }
@@ -126,7 +119,7 @@ export function useGrowthAlertEngine(enabled: boolean, onAlert?: (a: GrowthAlert
       document.removeEventListener('visibilitychange', onWake);
       window.removeEventListener('focus', onWake);
       window.removeEventListener('online', onWake);
-      try { if (channel) void supabase.removeChannel(channel); } catch { /* ignore */ }
+      try { unsubscribe?.(); } catch { /* ignore */ }
     };
   }, [enabled, user?.id]);
 }
