@@ -186,6 +186,8 @@ export function extFor(contentType: string): string {
  */
 export async function cascadeFetch(url: string, _init?: RequestInit): Promise<Response> {
   const u = new URL(url);
+  // Non-Pollinations URLs (chat APIs, existing images) pass straight through.
+  if (u.hostname !== 'image.pollinations.ai' || !u.pathname.startsWith('/prompt/')) return fetch(url, _init);
   const prompt = decodeURIComponent(u.pathname.replace(/^\/prompt\//, ''));
   const width = Number(u.searchParams.get('width')) || 1024;
   const height = Number(u.searchParams.get('height')) || 1024;
