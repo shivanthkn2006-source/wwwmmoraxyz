@@ -116,7 +116,7 @@ export default function ExternalVideoCard({
       <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-4 pb-6 pt-10">
         <p className="line-clamp-2 text-sm font-semibold text-white">{item.title}</p>
         {item.subtitle && <p className="mt-0.5 line-clamp-1 text-xs text-white/70">{item.subtitle}</p>}
-        <p className="mt-1 text-[10px] uppercase tracking-wide text-white/50">From search · YouTube</p>
+        <p className="mt-1 text-[10px] uppercase tracking-wide text-white/50">From search</p>
       </div>
 
       <div className="absolute left-3 top-3 z-10 flex items-center gap-2">

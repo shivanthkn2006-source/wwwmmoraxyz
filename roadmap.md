@@ -31,4 +31,4 @@
 - [ ] Physical-phone check (needs the user's device)
 - [x] Restore frequently used menu icons beside the closed Home icon without expanding its touch layer
 - [x] Keep every used menu available in a horizontally scrollable closed rail, not only four (including more than 40 recorded menus)
-- [ ] Audit visible outside-provider branding across platform surfaces; preserve legally required attribution and creator content
+- [x] Audit incidental provider labels across platform surfaces; preserve required map/video credits, creator content, legal disclosures, and admin diagnostics

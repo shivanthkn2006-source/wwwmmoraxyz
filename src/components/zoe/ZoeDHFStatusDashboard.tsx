@@ -181,7 +181,7 @@ export function ZoeDHFStatusDashboard({ compact = false }: ZoeDHFStatusDashboard
               </Badge>
             </div>
             <div className="text-[10px] text-muted-foreground pl-4">
-              Gemini 2.5 Pro • Reward Model • Synthetic Data Engine
+              Reasoning • Reward Model • Synthetic Data Engine
             </div>
           </div>
 
@@ -213,11 +213,11 @@ export function ZoeDHFStatusDashboard({ compact = false }: ZoeDHFStatusDashboard
             </div>
           </div>
 
-          {/* Gemini Connection */}
+          {/* Model connection */}
           <div className="flex items-center justify-between pt-2 border-t border-border/50">
             <div className="flex items-center gap-2">
               <Zap className="w-3 h-3 text-amber-400" />
-              <span className="text-xs">Gemini Connection</span>
+              <span className="text-xs">Model connection</span>
             </div>
             <Badge 
               variant="outline" 
