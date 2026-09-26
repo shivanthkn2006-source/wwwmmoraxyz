@@ -28,6 +28,7 @@ export interface LoadFailure {
 
 const SNAPSHOT_AFTER_MS = 12_000;
 let activeVisit = false;
+let startupReported = false;
 
 const deviceKind = () => {
   const w = window.innerWidth;
@@ -50,6 +51,8 @@ export function startHomeLoadReport(userId: string | undefined): () => void {
   if (!userId || activeVisit || typeof window === 'undefined') return () => undefined;
   activeVisit = true;
   const startedAt = Date.now();
+  const firstVisitOfPageLoad = !startupReported;
+  startupReported = true;
   const failures: LoadFailure[] = [];
 
   const onError = (e: ErrorEvent) =>
@@ -100,9 +103,11 @@ export function startHomeLoadReport(userId: string | undefined): () => void {
         browser: browserName(),
         viewport: `${window.innerWidth}x${window.innerHeight}`,
         connection: conn?.effectiveType ?? null,
-        interactive_ms: getInteractiveDelayMs(),
+        // Startup timings belong only to the visit that opened the app; a later
+        // in-app return to Home would otherwise repeat the same old numbers.
+        interactive_ms: firstVisitOfPageLoad ? getInteractiveDelayMs() : null,
         marks: [
-          ...getStartupMarks(),
+          ...(firstVisitOfPageLoad ? getStartupMarks() : [{ phase: 'return-visit', at: 0 }]),
           ...Object.entries(seenAt).map(([name, at]) => ({ phase: `part:${name}`, at })),
         ],
         sections,
