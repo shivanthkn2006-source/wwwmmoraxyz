@@ -190,7 +190,7 @@ const AuthPage = () => {
           if (sessionData?.session) {
             void redeemStoredReferral();
             toast({ title: "Welcome to M'Mora!", description: 'Account created successfully' });
-            navigate('/home');
+            navigate('/setup/location');
           } else {
             setPendingEmail(formData.email);
           }

@@ -80,18 +80,33 @@ const drain = async () => {
         // Member-only endpoint: never call it with the anon key or an expired
         // token (that returned 401 "Invalid session"). Cards fall back to
         // platform search links instead.
-        const token = await liveAccessToken();
+        let token = await liveAccessToken();
         if (!token) {
           batch.forEach((p) => p.resolve(null));
           continue;
         }
-        const { data, error } = await supabase.functions.invoke('dhf-social-links', {
-          body: { topics: batch.map((p) => ({ headline: p.headline, category: p.category })) },
+        const body = { topics: batch.map((p) => ({ headline: p.headline, category: p.category })) };
+        let { data, error } = await supabase.functions.invoke('dhf-social-links', {
+          body,
           headers: { Authorization: `Bearer ${token}` },
         });
-        if (error) {
-          const status = (error as { context?: { status?: number } })?.context?.status;
-          if (status === 429 || status === 401) cooldownUntil = Date.now() + COOLDOWN_MS;
+        let status = (error as { context?: { status?: number } } | null)?.context?.status;
+        // A locally-valid token can still be revoked server-side (sign-out on
+        // another device, rotated session). Refresh once and retry before
+        // giving up, instead of surfacing "Invalid session".
+        if (error && status === 401) {
+          const { data: refreshed } = await supabase.auth.refreshSession();
+          token = refreshed?.session?.access_token ?? null;
+          if (token) {
+            ({ data, error } = await supabase.functions.invoke('dhf-social-links', {
+              body,
+              headers: { Authorization: `Bearer ${token}` },
+            }));
+            status = (error as { context?: { status?: number } } | null)?.context?.status;
+          }
+        }
+        if (error || !token) {
+          if (!token || status === 429 || status === 401) cooldownUntil = Date.now() + COOLDOWN_MS;
           batch.forEach((p) => p.resolve(null));
           continue;
         }
