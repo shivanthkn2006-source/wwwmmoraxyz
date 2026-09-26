@@ -4138,6 +4138,51 @@ export type Database = {
         }
         Relationships: []
       }
+      home_load_reports: {
+        Row: {
+          browser: string | null
+          connection: string | null
+          created_at: string
+          device: string | null
+          failure_count: number
+          failures: Json
+          id: string
+          interactive_ms: number | null
+          marks: Json
+          sections: Json
+          user_id: string
+          viewport: string | null
+        }
+        Insert: {
+          browser?: string | null
+          connection?: string | null
+          created_at?: string
+          device?: string | null
+          failure_count?: number
+          failures?: Json
+          id?: string
+          interactive_ms?: number | null
+          marks?: Json
+          sections?: Json
+          user_id: string
+          viewport?: string | null
+        }
+        Update: {
+          browser?: string | null
+          connection?: string | null
+          created_at?: string
+          device?: string | null
+          failure_count?: number
+          failures?: Json
+          id?: string
+          interactive_ms?: number | null
+          marks?: Json
+          sections?: Json
+          user_id?: string
+          viewport?: string | null
+        }
+        Relationships: []
+      }
       humor_comments: {
         Row: {
           body: string
