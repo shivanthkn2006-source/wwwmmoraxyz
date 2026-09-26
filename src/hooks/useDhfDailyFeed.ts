@@ -147,10 +147,11 @@ export function useDhfDailyFeed() {
         }
       });
 
-      // Save remote-only card pictures into storage once (background, bounded,
-      // once per day per browser) so cards survive image-provider outages.
+      // Picture saving into storage is paused until more storage is available.
+      // Flip DHF_IMAGE_STORE_ENABLED to resume the once-per-day background copy.
+      const DHF_IMAGE_STORE_ENABLED = false;
       const storeKey = `mmora.dhfImageStore.${user.id}.${today}`;
-      if (rows.some((row) => !row.image_path) && !localStorage.getItem(storeKey)) {
+      if (DHF_IMAGE_STORE_ENABLED && rows.some((row) => !row.image_path) && !localStorage.getItem(storeKey)) {
         localStorage.setItem(storeKey, '1');
         window.setTimeout(() => {
           void supabase.functions.invoke('dhf-image-store', { body: {} }).catch(() => undefined);
