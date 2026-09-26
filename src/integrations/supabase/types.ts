@@ -4224,6 +4224,24 @@ export type Database = {
         }
         Relationships: []
       }
+      humor_follows: {
+        Row: {
+          category: string
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       humor_reactions: {
         Row: {
           created_at: string
@@ -4249,6 +4267,32 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "humor_reactions_drop_id_fkey"
+            columns: ["drop_id"]
+            isOneToOne: false
+            referencedRelation: "humor_drops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      humor_views: {
+        Row: {
+          created_at: string
+          drop_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          drop_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          drop_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "humor_views_drop_id_fkey"
             columns: ["drop_id"]
             isOneToOne: false
             referencedRelation: "humor_drops"
