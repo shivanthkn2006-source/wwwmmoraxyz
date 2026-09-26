@@ -47,7 +47,7 @@ export function deriveKeywords(prompt: string, max = 4): string[] {
 function hash(s: string): number { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0; return h; }
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-async function getImage(url: string, headers: Record<string, string> = {}): Promise<{ bytes: Uint8Array; type: string } | string> {
+async function getImage(url: string, headers: Record<string, string> = {}, minBytes = 1024): Promise<{ bytes: Uint8Array; type: string } | string> {
   try {
     const res = await fetch(url, { headers: { Accept: 'image/*', ...headers } });
     const type = res.headers.get('content-type') || '';
@@ -55,7 +55,7 @@ async function getImage(url: string, headers: Record<string, string> = {}): Prom
     if (!type.startsWith('image/')) { await res.body?.cancel(); return `not an image (${type})`; }
     if (res.status === 202) { await res.body?.cancel(); return 'pending'; }
     const bytes = new Uint8Array(await res.arrayBuffer());
-    if (bytes.byteLength < 1024) return `tiny payload ${bytes.byteLength}b`;
+    if (bytes.byteLength < minBytes) return `tiny payload ${bytes.byteLength}b`;
     if (bytes.byteLength > 6 * 1024 * 1024) return 'too large';
     return { bytes, type };
   } catch (e) { return String((e as Error)?.message ?? e); }
@@ -85,16 +85,19 @@ async function runProvider(p: CascadeProvider, o: Required<Pick<CascadeOptions, 
     }
     case 'kaleido': {
       if (!o.keywords.length) return 'no keywords';
-      const res = await fetch(`https://kaleidoimages.ai/search?q=${encodeURIComponent(o.keywords.join(', '))}&limit=5&language=en`).catch(() => null);
-      if (!res?.ok) { await res?.body?.cancel(); return `search http ${res?.status ?? 'error'}`; }
-      const data = await res.json().catch(() => null) as { results?: { url: string; relevance?: number }[] } | null;
-      const best = (data?.results ?? []).filter((r) => (r.relevance ?? 0) >= 3);
-      if (!best.length) return 'no keyword match';
-      return getImage(`https://kaleidoimages.ai${best[n % best.length].url}`);
+      // Try the full keyword set, then each keyword alone; 404 = no match.
+      for (const q of [o.keywords.join(', '), ...o.keywords]) {
+        const res = await fetch(`https://kaleidoimages.ai/search?q=${encodeURIComponent(q)}&limit=5`).catch(() => null);
+        if (!res?.ok) { await res?.body?.cancel(); continue; }
+        const data = await res.json().catch(() => null) as { results?: { url: string; relevance?: number }[] } | null;
+        const best = (data?.results ?? []).filter((r) => (r.relevance ?? 0) >= 3);
+        if (best.length) return getImage(`https://kaleidoimages.ai${best[n % best.length].url}`);
+      }
+      return 'no keyword match';
     }
     case 'justapi':
-      return getImage(`https://photos.justapi.dev/abstract/${w}/${h}?seed=${encodeURIComponent(kw)}&format=png`)
-        .then((r) => typeof r === 'string' ? getImage(`https://photos.justapi.dev/${w}/${h}?seed=${encodeURIComponent(kw)}`) : r);
+      // Abstract art is a compact SVG, so accept a smaller payload.
+      return getImage(`https://photos.justapi.dev/abstract/${w}/${h}?seed=${encodeURIComponent(kw)}`, {}, 300);
     case 'imagenow':
       return getImage(`https://my.imagenow.dev/${w}x${h}/1b2440/c8a96a.png`);
   }
