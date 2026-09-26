@@ -133,6 +133,7 @@ export const CANONICAL_ROUTES: CanonicalRoute[] = [
   { path: "/zoe-infinity/auth", label: "Zoe infinity · auth", dynamic: false },
   { path: "/zoe-infinity/mail", label: "Zoe infinity · mail", dynamic: false },
   { path: "/zoe-lol", label: "Zoe lol", dynamic: false },
+  { path: "/zoe-lol/submit", label: "Zoe lol · submit", dynamic: false },
   { path: "/zoe-nexus", label: "Zoe nexus", dynamic: false },
   { path: "/zoe-nexus-control", label: "Zoe nexus control", dynamic: false },
   { path: "/zoe-omega", label: "Zoe omega", dynamic: false },
