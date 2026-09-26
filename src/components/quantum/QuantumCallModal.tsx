@@ -345,7 +345,7 @@ export const QuantumCallModal: React.FC<QuantumCallModalProps> = ({
             variant="ghost"
             size="icon"
             aria-label="End call"
-            className="fixed top-[max(.75rem,env(safe-area-inset-top))] right-3 z-[10110] w-11 h-11 rounded-full bg-white/[0.08] text-white backdrop-blur-2xl shadow-xl hover:bg-white/15 hover:text-white"
+            className="fixed top-[calc(max(.75rem,env(safe-area-inset-top))+3.5rem)] right-3 z-[10110] w-11 h-11 rounded-full border-0 bg-transparent text-white shadow-none ring-0 hover:bg-transparent hover:text-white/80 focus-visible:ring-0 focus-visible:ring-offset-0"
             onClick={() => {
               handleEndCall('user_hangup');
               onClose();
