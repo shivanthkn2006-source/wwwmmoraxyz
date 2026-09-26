@@ -6,6 +6,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { nvidiaChat } from '../_shared/nvidia-provider.ts';
+import { fetchImageCascade, extFor } from '../_shared/image-cascade.ts';
 
 const URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -69,24 +70,12 @@ Return JSON only: {"headline":"<max 6 words, punchline-style>","lines":[{"speake
 async function paintSkit(db: ReturnType<typeof createClient>, row: { id: string; metal: string; headline: string; lines: { text: string }[] }): Promise<boolean> {
   const scene = row.lines.map((l) => l.text).join(' ').slice(0, 600);
   const prompt = `Bright funny editorial cartoon that literally depicts this exact comedy scene. Headline context: ${row.headline}. Dialogue and action: ${scene}. Show the people, objects, action, setting, and facial expressions described by the dialogue. Warm cinematic color, expressive, family friendly, square composition, no written words, no letters, no captions, no logos, no brands, no watermark.`;
-  const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), 40_000);
   try {
-    let res: Response | null = null;
-    for (let attempt = 0; attempt < 3; attempt += 1) {
-      const seed = `${row.id}-${attempt}`;
-      const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&nologo=true&enhance=true&seed=${encodeURIComponent(seed)}`;
-      res = await fetch(imageUrl, { signal: ctrl.signal, headers: { Accept: 'image/*' } });
-      if (res.ok && (res.headers.get('content-type') || '').startsWith('image/')) break;
-      res = null;
-      await new Promise((resolve) => setTimeout(resolve, 800 * (attempt + 1)));
-    }
-    if (!res) return false;
-    const contentType = res.headers.get('content-type') || 'image/jpeg';
-    const bytes = new Uint8Array(await res.arrayBuffer());
-    if (bytes.length < 1024 || bytes.length > 5 * 1024 * 1024) return false;
-    const ext = contentType.includes('png') ? 'png' : contentType.includes('webp') ? 'webp' : 'jpg';
-    const path = `${row.id}.${ext}`;
+    const art = await fetchImageCascade({ prompt, seed: row.id, width: 1024, height: 1024, keywords: [row.metal, ...row.headline.toLowerCase().split(/\W+/).filter((w) => w.length > 3)].slice(0, 4) });
+    if (!art.bytes) return false;
+    const contentType = art.contentType;
+    const bytes = art.bytes;
+    const path = `${row.id}.${extFor(contentType)}`;
     const up = await db.storage.from('humor-images').upload(path, bytes, { contentType, upsert: true });
     if (up.error) return false;
     const signed = await db.storage.from('humor-images').createSignedUrl(path, 60 * 60 * 24 * 365);
@@ -99,7 +88,7 @@ async function paintSkit(db: ReturnType<typeof createClient>, row: { id: string;
       .select('id')
       .maybeSingle();
     return !saved.error && saved.data?.id === row.id;
-  } catch { return false; } finally { clearTimeout(t); }
+  } catch { return false; }
 }
 
 Deno.serve(async (req) => {
