@@ -163,7 +163,8 @@ const MusicBirthChartPage = lazy(() => import("./pages/MusicBirthChartPage"));
 const ZoeAstroDashboardPage = lazy(() => import("./pages/ZoeAstroDashboardPage")); // M'MORA ZOE ALIGNMENT DASHBOARD
 const GrowthInsightsPage = lazy(() => import("./pages/GrowthInsightsPage")); // PERSONAL GROWTH ENGINE ARCHIVE
 const DHFCompassPage = lazy(() => import("./pages/DHFCompassPage")); // ZOE'S DHF ARCHIVE
-const DhfCalendarPage = lazy(() => import("./pages/DhfCalendarPage")); // ZOE'S DHF CALENDAR
+const DhfCalendarPage = lazy(() => import("./pages/DhfCalendarPage"));
+const ZoeLolPage = lazy(() => import("./pages/ZoeLolPage")); // ZOE'S DHF CALENDAR
 const DhfEssayPage = lazy(() => import("./pages/DhfEssayPage")); // ZOE'S DHF LONG-FORM ESSAY READER
 
 const AdminDhfGrowthPage = lazy(() => import("./pages/AdminDhfGrowthPage")); // DHF GROWTH CONSOLE (admin)
@@ -908,6 +909,14 @@ const RouteAwareShell = () => {
                             element={
                               <ProtectedRoute>
                                 <AstroPreviewPage />
+                              </ProtectedRoute>
+                            }
+                          />
+                          <Route
+                            path="/zoe-lol"
+                            element={
+                              <ProtectedRoute>
+                                <ZoeLolPage />
                               </ProtectedRoute>
                             }
                           />

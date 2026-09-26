@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { loadAstroSelf } from '@/features/astro/astroAffinity';
 import { elementOf } from '@/features/astro/zodiac';
+import { useAuth } from '@/lib/auth';
 
 export interface HumorDrop {
   id: string;
@@ -20,8 +21,11 @@ const METAL_BY_ELEMENT = { Fire: 'iron', Water: 'silver', Earth: 'lead', Air: 'q
 
 export function useHumorDrops(limit = 3): HumorDrop[] {
   const [drops, setDrops] = useState<HumorDrop[]>([]);
+  const { user } = useAuth();
+  const uid = user?.id ?? null;
   useEffect(() => {
     let alive = true;
+    if (!uid) return;
     void (async () => {
       try {
         const self = await loadAstroSelf().catch(() => null);
@@ -39,7 +43,7 @@ export function useHumorDrops(limit = 3): HumorDrop[] {
       } catch { /* optional content */ }
     })();
     return () => { alive = false; };
-  }, [limit]);
+  }, [limit, uid]);
   return drops;
 }
 

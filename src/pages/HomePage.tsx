@@ -13,7 +13,7 @@ import PostCard from '@/components/PostCard';
 import { MoraZoeDailyCard } from '@/components/astro/MoraZoeDailyCard';
 import useAstroDailyPrediction from '@/hooks/useAstroDailyPrediction';
 import { FeedErrorBoundary } from '@/components/FeedErrorBoundary';
-import { ArrowDown, Mail, Search, Video, TrendingUp, ArrowUp, Camera, ScanFace, ChevronUp, ChevronDown, Sparkles, MessageCircle, Settings, Bell, User as UserIcon, Heart, Bookmark, Glasses, Radio, Radar, Globe2, Users, Lightbulb, LayoutGrid, Music, Check, CalendarDays } from 'lucide-react';
+import { ArrowDown, Mail, Search, Video, TrendingUp, ArrowUp, Camera, ScanFace, ChevronUp, ChevronDown, Sparkles, MessageCircle, Settings, Bell, User as UserIcon, Heart, Bookmark, Glasses, Radio, Radar, Globe2, Users, Lightbulb, LayoutGrid, Music, Check, CalendarDays, Laugh } from 'lucide-react';
 import { trackEvent } from '@/lib/analytics';
 import { useNavigate } from 'react-router-dom';
 import { onHomeRefresh, triggerHomeRefresh } from '@/lib/homeRefresh';
@@ -2934,6 +2934,12 @@ const HomePage = () => {
             label: "Zoe's DHF calendar",
             icon: <CalendarDays className="h-[22px] w-[22px]" />,
             onSelect: runHomeIconAction('dhf-calendar', () => navigate('/dhf-calendar')),
+          },
+          {
+            id: 'zoe-lol',
+            label: "Zoe's LOL",
+            icon: <Laugh className="h-[22px] w-[22px]" />,
+            onSelect: runHomeIconAction('zoe-lol', () => navigate('/zoe-lol')),
           },
           {
             id: 'growth-insights',
