@@ -103,14 +103,20 @@ export function useDhfDailyFeed() {
   }, []);
 
   const read = useCallback(async (userId: string, to: string) => {
+    // Bounded window: yesterday → today only, so Home never stacks weeks of old cards.
+    const toDate = new Date(`${to}T00:00:00Z`);
+    const from = Number.isNaN(toDate.getTime())
+      ? to
+      : new Date(toDate.getTime() - 86_400_000).toISOString().slice(0, 10);
     const { data, error } = await promiseTimeout(supabase
       .from('dhf_daily_posts')
       .select(SELECT)
       .eq('user_id', userId)
+      .gte('post_date', from)
       .lte('post_date', to)
       .order('post_date', { ascending: false })
       .order('slot_time', { ascending: false })
-      .limit(500), 8_000, 'DHF history');
+      .limit(2 * COMPASS_SLOT_COUNT), 8_000, 'DHF history');
     if (error) throw error;
     const rows = (data ?? []) as unknown as DhfDailyPost[];
     rowsRef.current = rows;
