@@ -3,7 +3,7 @@
 // Purpose: Global device awareness state for the entire app
 // ═══════════════════════════════════════════════════════════════════════════════
 
-import React, { createContext, useContext, useEffect } from 'react';
+import { createContext, useContext, useEffect, type ReactNode } from 'react';
 import useLiquidUniverse, { 
   type DeviceSoul, 
   getLiquidCSSVars 
@@ -20,12 +20,14 @@ interface LiquidUniverseContextType extends DeviceSoul {
 
 const LiquidUniverseContext = createContext<LiquidUniverseContextType | null>(null);
 
-// forwardRef: some wrappers in the boot tree hand this provider a ref. Accepting
-// and ignoring it keeps the console clean without changing behaviour.
-export const LiquidUniverseProvider = React.forwardRef<
-  HTMLDivElement,
-  { children: React.ReactNode }
->(({ children }, _ref) => {
+interface LiquidUniverseProviderProps {
+  children: ReactNode;
+}
+
+// Keep the root provider a plain component. A forwarded ref is meaningless for
+// a context provider and can retain a stale component wrapper across Vite HMR,
+// leaving its hooks attached to the previous React dispatcher after reload.
+export const LiquidUniverseProvider = ({ children }: LiquidUniverseProviderProps) => {
   const deviceSoul = useLiquidUniverse();
   
   // Apply CSS classes to document root
@@ -90,8 +92,7 @@ export const LiquidUniverseProvider = React.forwardRef<
       {children}
     </LiquidUniverseContext.Provider>
   );
-});
-LiquidUniverseProvider.displayName = 'LiquidUniverseProvider';
+};
 
 export const useLiquidUniverseContext = (): LiquidUniverseContextType => {
   const context = useContext(LiquidUniverseContext);
