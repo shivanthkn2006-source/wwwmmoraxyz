@@ -21,3 +21,11 @@
 - [ ] Physical-phone walkthrough (needs the user's own device)
 - [ ] Remaining scanner findings: continue next turns
 - Declined: IP / hardware-ID tracking (surveillance)
+
+# Sep 26 requests
+- [x] Location setup page after sign-up (/setup/location) saving timezone + offset + city
+- [x] DHF video lookup: refresh-and-retry on 401 instead of erroring
+- [x] Real YouTube videos play inside M'Mora (in-app player)
+- [x] Daily card builder: today's 60 cards already built at 00:02 UTC (no duplicate run)
+- [ ] Test sign-up + signed-in walk of Home/Zoe voice/DHF (blocked: preview not signed in; sign-up needs captcha + email confirmation)
+- [ ] Physical-phone check (needs the user's device)
