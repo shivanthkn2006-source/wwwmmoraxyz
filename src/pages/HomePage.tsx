@@ -117,7 +117,9 @@ import { composeChronologicalFeed } from '@/lib/growthFeedComposition';
 import { deviceTimeZone, growthSlotTimestamp, slotsForFrequency } from '@/lib/growthSlot';
 import DHFCompassCard from '@/components/dhf/DHFCompassCard';
 import HumorDropCard from '@/components/humor/HumorDropCard';
+import HumorTrendingSection from '@/components/humor/HumorTrendingSection';
 import { useHumorDrops } from '@/hooks/useHumorDrops';
+import { compassSlotTimestamp } from '@/lib/dhfCompass';
 import { useDhfDailyFeed } from '@/hooks/useDhfDailyFeed';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { screenUpload, reportBlockedUpload } from '@/lib/uploadModeration';
@@ -2550,10 +2552,12 @@ const HomePage = () => {
         </div>
       ),
     }));
-    const timelineItems = composeChronologicalFeed([...nativeItems, ...loopItems, ...growthItems, ...humorItems]);
-    // Due DHF guidance leads the social timeline so a newer upload cannot bury
-    // Zoe's current-day context. duePosts already keeps these newest-first.
-    return [...dhfSlides, ...timelineItems];
+    const dhfItems = dhfPosts.map((post, index) => ({
+      id: `dhf-${post.id}`,
+      timestamp: compassSlotTimestamp(post.post_date, post.slot_time, zone),
+      value: dhfSlides[index],
+    }));
+    return composeChronologicalFeed([...nativeItems, ...loopItems, ...growthItems, ...humorItems, ...dhfItems]);
 
   };
 
@@ -2562,7 +2566,9 @@ const HomePage = () => {
   // cards remain outside that chronology.
   const globalFeedSlides = searchVideoSlides.length
     ? searchVideoSlides
-    : [...motivationTopSlide, ...chronologicalSlides(visibleGlobalPosts, 'global'), ...growthSlide.slice(growthCards.length), ...supportingSlides, ...neuralVideoSlides, ...savedGrowthSlides, ...(quietGuidance ? [
+    : [...motivationTopSlide, ...chronologicalSlides(visibleGlobalPosts, 'global'), ...growthSlide.slice(growthCards.length), ...supportingSlides, ...neuralVideoSlides, ...savedGrowthSlides,
+      ...(humorDrops.length ? [<div key="humor-trending" className="relative flex h-full min-h-full w-full shrink-0 snap-start snap-always items-center overflow-y-auto py-24" data-humor-trending-slide><HumorTrendingSection drops={humorDrops} /></div>] : []),
+      ...(quietGuidance ? [
       <div key="quiet-zoe" className="relative flex h-full min-h-full w-full shrink-0 snap-start snap-always items-center px-6" data-quiet-zoe>
         <div className="mx-auto max-w-lg text-center">
           <img src={zoeAvatar} alt="Zoe" className="mx-auto mb-4 h-14 w-14 rounded-full object-cover" />

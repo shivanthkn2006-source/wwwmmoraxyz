@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Flame, Plus } from 'lucide-react';
 import HumorDropCard from '@/components/humor/HumorDropCard';
 import { useHumorDrops } from '@/hooks/useHumorDrops';
@@ -10,10 +10,14 @@ import { useAuth } from '@/lib/auth';
 
 export default function ZoeLolPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const drops = useHumorDrops(500, 3650);
   const [category, setCategory] = useState<'all' | HumorCategory>('all');
-  const [mode, setMode] = useState<'latest' | 'trending' | 'top' | 'viewed' | 'commented' | 'following' | 'mine'>('latest');
+  const initialMode = searchParams.get('mode');
+  const [mode, setMode] = useState<'latest' | 'trending' | 'top' | 'viewed' | 'commented' | 'following' | 'mine'>(
+    initialMode === 'top' || initialMode === 'viewed' || initialMode === 'commented' ? initialMode : 'latest',
+  );
   const [date, setDate] = useState('all');
   const [engagement, setEngagement] = useState<Record<string, { likes: number; dislikes: number; comments: number; views: number }>>({});
   const [followed, setFollowed] = useState<Set<string>>(new Set());

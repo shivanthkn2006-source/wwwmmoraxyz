@@ -21,6 +21,7 @@ describe("Zoe's LOL integration", () => {
     expect(home).toContain('...growthItems, ...humorItems');
     expect(home).toContain('timestamp: drop.scheduled_for');
     expect(home).toContain('humorDrops.length === 0');
+    expect(home).toContain('compassSlotTimestamp(post.post_date, post.slot_time, zone)');
   });
 
   it('refreshes after auth, realtime changes, focus, and member publishing', () => {
@@ -65,6 +66,7 @@ describe("Zoe's LOL integration", () => {
     expect(page).toContain("mode === 'commented'");
     expect(page).toContain("mode === 'mine'");
     expect(page).toContain('type="date"');
+    expect(read('src/components/humor/HumorTrendingSection.tsx')).toContain('Trending jokes');
   });
 
   it('uses one shared generation for Home and the Zoe LOL page', () => {
