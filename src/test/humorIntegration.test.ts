@@ -6,12 +6,23 @@ import { humorTrendingScore } from '@/lib/humor';
 const read = (path: string) => readFileSync(resolve(process.cwd(), path), 'utf8');
 
 describe("Zoe's LOL integration", () => {
-  it('uses Pollinations as the only image generator', () => {
+  it('routes every joke picture through the shared ordered cascade', () => {
     const scheduled = read('supabase/functions/generate-humor-drops/index.ts');
     const member = read('supabase/functions/generate-humor-image/index.ts');
-    expect(`${scheduled}\n${member}`).toContain('image.pollinations.ai');
-    expect(`${scheduled}\n${member}`).not.toContain('ai.gateway.lovable.dev');
-    expect(`${scheduled}\n${member}`).not.toContain('gemini-2.5-flash-image');
+    const cascade = read('supabase/functions/_shared/image-cascade.ts');
+    for (const src of [scheduled, member]) {
+      expect(src).toContain('fetchImageCascade');
+      expect(src).not.toContain('image.pollinations.ai');
+      expect(src).not.toContain('ai.gateway.lovable.dev');
+    }
+    expect(cascade).toContain("['pollinations', 'placeholdr', 'kaleido', 'justapi', 'imagenow']");
+    expect(cascade).toContain('relevance ?? 0) >= 3');
+  });
+
+  it('never regenerates a stored joke picture', () => {
+    const scheduled = read('supabase/functions/generate-humor-drops/index.ts');
+    expect(scheduled).toContain(".is('image_url', null)");
+    expect(scheduled).toContain("onConflict");
   });
 
   it('places Zoe LOL in Global and accepted-friend member jokes in Friends', () => {

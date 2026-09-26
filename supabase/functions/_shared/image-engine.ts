@@ -1,6 +1,6 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- * SOVEREIGN IMAGE ENGINE — Pollinations only.
+ * SOVEREIGN IMAGE ENGINE — shared cascade (Pollinations first, then ordered backups).
  *
  * The old placeholder/Google path is gone. Every card image is rendered by
  * Pollinations with bounded retries across its models:
@@ -13,6 +13,8 @@
  * stored because they are not durable. No Lovable AI Gateway is used.
  * ═══════════════════════════════════════════════════════════════════════════
  */
+
+import { fetchImageCascade } from './image-cascade.ts';
 
 export interface RenderImageOptions {
   /** Scene/style description. No text should be requested inside the art. */
@@ -38,7 +40,7 @@ export interface RenderImageAttempt {
 
 export interface RenderImageResult {
   path: string | null;
-  provider: 'pollinations-flux' | 'pollinations-turbo' | 'pollinations-flux-realism' | 'local-svg' | 'none';
+  provider: 'pollinations-flux' | 'pollinations-turbo' | 'pollinations-flux-realism' | 'placeholdr' | 'kaleido' | 'justapi' | 'imagenow' | 'local-svg' | 'none';
   /** 'generated' = real Pollinations art, 'fallback' = local SVG, 'failed' = nothing stored. */
   status: 'generated' | 'fallback' | 'failed';
   /** Total provider calls made (including the successful one). */
@@ -158,7 +160,7 @@ export async function renderImage(opts: RenderImageOptions): Promise<RenderImage
   ];
 
   let attempts = 0;
-  for (const step of ladder) {
+  for (const step of ladder.slice(0, 2)) {
     attempts++;
     const started = Date.now();
     const out = await step.run();
@@ -166,23 +168,22 @@ export async function renderImage(opts: RenderImageOptions): Promise<RenderImage
     if (out instanceof Uint8Array) {
       const stored = await upload(out, 'image/jpeg', opts);
       log.push({ provider: step.name, model: step.model, ok: stored, ms, reason: stored ? undefined : 'upload failed' });
-      if (stored) {
-        return {
-          path: opts.storagePath,
-          provider: step.name,
-          status: 'generated',
-          attempts,
-          retries: attempts - 1,
-          costUsd: PROVIDER_COST_USD[step.name] ?? 0,
-          prompt: fullPrompt,
-          log,
-        };
-      }
+      if (stored) return { path: opts.storagePath, provider: step.name, status: 'generated', attempts, retries: attempts - 1, costUsd: 0, prompt: fullPrompt, log };
     } else {
       log.push({ provider: step.name, model: step.model, ok: false, ms, reason: out });
     }
-    // Small spacing between retries so a rate-limited provider can recover.
-    if (attempts < ladder.length) await new Promise((r) => setTimeout(r, 600 * attempts));
+    await new Promise((r) => setTimeout(r, 600 * attempts));
+  }
+
+  // Pollinations exhausted — ordered backups from the shared cascade.
+  const backup = await fetchImageCascade({ prompt: opts.prompt, width, height, seed: opts.storagePath, only: ['placeholdr', 'kaleido', 'justapi', 'imagenow'] });
+  for (const a of backup.log) { attempts++; log.push({ provider: a.provider, ok: a.ok, ms: a.ms, reason: a.reason }); }
+  if (backup.bytes && backup.provider) {
+    const ext = backup.contentType.includes('svg') ? 'svg' : backup.contentType.includes('png') ? 'png' : backup.contentType.includes('webp') ? 'webp' : 'jpg';
+    const path = opts.storagePath.replace(/\.(jpe?g|png|webp|svg)$/i, `.${ext}`);
+    if (await upload(backup.bytes, backup.contentType.split(';')[0], { ...opts, storagePath: path })) {
+      return { path, provider: backup.provider, status: backup.kind === 'generated' ? 'generated' : 'fallback', attempts, retries: attempts - 1, costUsd: 0, prompt: fullPrompt, log };
+    }
   }
 
   // Every Pollinations attempt failed — write the deterministic local poster so

@@ -1,6 +1,7 @@
 import { requireCaller } from '../_shared/caller-guard.ts';
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { openRouterImage } from '../_shared/sovereign-ai.ts';
+import { fetchImageCascade } from '../_shared/image-cascade.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -18,42 +19,15 @@ const promptSchema = z.object({
 });
 
 /**
- * Try Pollinations API first (free, no API key needed)
+ * Shared picture cascade: Pollinations first, then ordered free backups.
  */
 async function tryPollinations(prompt: string, width = 1024, height = 1024): Promise<string | null> {
-  try {
-    const encoded = encodeURIComponent(prompt);
-    const url = `https://image.pollinations.ai/prompt/${encoded}?width=${width}&height=${height}&model=flux&nologo=true&enhance=true`;
-
-    console.log('[generate-image] Trying Pollinations...');
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 20000);
-
-    const resp = await fetch(url, {
-      signal: controller.signal,
-      headers: { 'Accept': 'image/*' },
-    });
-    clearTimeout(timeout);
-
-    if (!resp.ok) {
-      console.warn(`[generate-image] Pollinations returned ${resp.status}`);
-      return null;
-    }
-
-    const buf = await resp.arrayBuffer();
-    if (buf.byteLength < 1000) {
-      console.warn('[generate-image] Pollinations returned suspiciously small image');
-      return null;
-    }
-
-    const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
-    const ct = resp.headers.get('content-type') || 'image/jpeg';
-    console.log(`[generate-image] ✅ Pollinations success (${(buf.byteLength / 1024).toFixed(1)}KB)`);
-    return `data:${ct};base64,${b64}`;
-  } catch (e) {
-    console.warn('[generate-image] Pollinations failed:', e);
-    return null;
-  }
+  const art = await fetchImageCascade({ prompt, width, height });
+  if (!art.bytes) return null;
+  let bin = '';
+  for (let i = 0; i < art.bytes.length; i += 0x8000) bin += String.fromCharCode(...art.bytes.subarray(i, i + 0x8000));
+  console.log(`[generate-image] ✅ ${art.provider} success (${(art.bytes.byteLength / 1024).toFixed(1)}KB)`);
+  return `data:${art.contentType.split(';')[0]};base64,${btoa(bin)}`;
 }
 
 // Lovable Gateway removed — Pollinations is the sole provider (free, unlimited).

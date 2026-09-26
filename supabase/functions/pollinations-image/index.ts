@@ -177,6 +177,8 @@ const REGIONAL_PROMPTS: Record<string, string> = {
   'latin-traditional': 'A beautiful young Latin American woman wearing a colorful traditional folkloric dress with embroidery, warm smile, full body portrait, digital art style, clean background',
 };
 
+import { fetchImageCascade } from '../_shared/image-cascade.ts';
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -247,24 +249,17 @@ Deno.serve(async (req: Request) => {
 
     console.log(`[pollinations-image] Requesting: model=${m}, ${w}x${h}, seed=${s}`);
 
-    // Fetch the image from Pollinations (it returns the image directly)
-    const imgResponse = await fetch(pollinationsUrl, {
-      headers: { 'Accept': 'image/*' },
-    });
-
-    if (!imgResponse.ok) {
-      const errText = await imgResponse.text();
-      console.error(`[pollinations-image] Pollinations error [${imgResponse.status}]: ${errText}`);
+    // Shared cascade: Pollinations first, then ordered backups.
+    const art = await fetchImageCascade({ prompt: prompt.trim(), width: w, height: h, seed: String(s) });
+    if (!art.bytes) {
       return new Response(
-        JSON.stringify({ error: 'Pollinations API failed', status: imgResponse.status }),
+        JSON.stringify({ error: 'All image providers failed', attempts: art.log }),
         { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-
-    // Convert image to base64 data URL
-    const imgBuffer = await imgResponse.arrayBuffer();
+    const imgBuffer = art.bytes.buffer.slice(art.bytes.byteOffset, art.bytes.byteOffset + art.bytes.byteLength) as ArrayBuffer;
     const base64 = arrayBufferToBase64(imgBuffer);
-    const contentType = imgResponse.headers.get('content-type') || 'image/jpeg';
+    const contentType = art.contentType;
     const dataUrl = `data:${contentType};base64,${base64}`;
 
     console.log(`[pollinations-image] ✅ Image generated successfully (${(imgBuffer.byteLength / 1024).toFixed(1)}KB)`);
@@ -272,7 +267,7 @@ Deno.serve(async (req: Request) => {
     return new Response(
       JSON.stringify({
         imageUrl: dataUrl,
-        pollinationsUrl, // Direct URL for embedding if preferred
+        provider: art.provider,
         model: m,
         width: w,
         height: h,
