@@ -313,11 +313,10 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
     } catch { /* storage unavailable */ }
     return 'compact';
   });
-  const isExpanded = panelSize !== 'compact';
   const isFullPage = panelSize === 'full';
   const cyclePanelSize = useCallback(() => {
     setPanelSize((prev) => {
-      const next = prev === 'compact' ? 'expanded' : prev === 'expanded' ? 'full' : 'compact';
+      const next = prev === 'full' ? 'compact' : 'full';
       try { localStorage.setItem('zoe-orb-panel-size', next); } catch { /* ignore */ }
       return next;
     });
@@ -375,7 +374,7 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
   // showUserSearch replaced by showConversationList for unified interface
   const scrollRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
   const identityInputRef = useRef<HTMLInputElement>(null);
@@ -3129,9 +3128,7 @@ Want me to dive deeper into any aspect?`;
               // Responsive sizing - 4.1" to 95" 4K displays
               isFullPage
                 ? 'w-full h-full max-w-[1400px] max-h-[calc(100dvh-16px)] sm:max-h-[calc(100dvh-24px)]'
-                : isExpanded
-                ? 'w-[calc(100vw-24px)] xs:w-[300px] sm:w-[340px] md:w-[380px] lg:w-[420px] xl:w-[460px] 2xl:w-[500px] h-[min(480px,calc(100vh-160px))] md:h-[min(520px,calc(100vh-140px))] lg:h-[min(560px,calc(100vh-120px))] xl:h-[min(600px,calc(100vh-100px))] max-h-[calc(100vh-120px)]'
-                : 'w-[calc(100vw-24px)] xs:w-[260px] sm:w-[280px] md:w-[320px] lg:w-[360px] xl:w-[400px] 2xl:w-[440px] h-[min(360px,calc(100vh-160px))] md:h-[min(400px,calc(100vh-140px))] lg:h-[min(440px,calc(100vh-120px))] xl:h-[min(480px,calc(100vh-100px))] max-h-[calc(100vh-120px)]'
+                : 'w-[calc(100vw-16px)] sm:w-[min(520px,calc(100vw-32px))] lg:w-[min(560px,calc(100vw-48px))] h-[max(320px,min(56dvh,calc(100dvh-96px)))] max-h-[calc(100dvh-48px)]'
             )}
             style={{
               // Glassmorphism glow effect
@@ -3178,7 +3175,7 @@ Want me to dive deeper into any aspect?`;
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-3.5 px-1 gap-1 rounded-full bg-background/30 hover:bg-background/50 transition-all"
+                className="h-5 px-1 gap-1 rounded-full bg-transparent hover:bg-transparent transition-all"
                 onClick={() => {
                   setShowConversationList(!showConversationList);
                   loadRecentContacts();
@@ -3223,7 +3220,7 @@ Want me to dive deeper into any aspect?`;
             
             <div className={cn(
               showFeatureMenu
-                ? 'absolute left-2 top-10 z-[60] flex w-[min(15rem,calc(100%-1rem))] max-h-[calc(100%-7rem)] flex-col gap-0.5 overflow-y-auto overscroll-contain rounded-2xl bg-background/35 p-1.5 backdrop-blur-2xl'
+                ? 'absolute left-2 top-10 bottom-2 z-[60] flex w-[5.75rem] flex-col items-stretch gap-1 overflow-y-auto overscroll-contain rounded-[28px] bg-background/80 py-3 px-1 backdrop-blur-3xl [scrollbar-width:none]'
                 : 'hidden',
               '[&_button]:!bg-transparent [&_button]:!border-0 [&_button]:!shadow-none [&_svg]:!text-foreground/85',
               '[&_.right-0.top-5]:!left-0 [&_.right-0.top-5]:!right-auto [&_.right-0.top-5]:!border-0 [&_.right-0.top-5]:!bg-background/60'
@@ -3753,20 +3750,16 @@ Want me to dive deeper into any aspect?`;
                 className="h-5 w-5 md:h-5 md:w-5 lg:h-4 lg:w-4 rounded-full hover:bg-primary/10 transition-colors flex items-center justify-center shrink-0"
                 onClick={cyclePanelSize}
                 aria-label={
-                  panelSize === 'compact' ? 'Expand chat'
-                    : panelSize === 'expanded' ? 'Full page chat'
-                    : 'Shrink chat'
+                  isFullPage ? 'Half screen chat' : 'Full screen chat'
                 }
                 title={
-                  panelSize === 'compact' ? 'Expand'
-                    : panelSize === 'expanded' ? 'Full page'
-                    : 'Compact'
+                  isFullPage ? 'Half screen' : 'Full screen'
                 }
               >
                 {isFullPage ? (
                   <Minimize2 className="h-3 w-3 md:h-3 md:w-3 lg:h-2.5 lg:w-2.5 text-foreground/70" />
                 ) : (
-                  <Maximize2 className="h-3 w-3 md:h-3 md:w-3 lg:h-2.5 lg:w-2.5 text-primary/80" />
+                  <Maximize2 className="h-3 w-3 md:h-3 md:w-3 lg:h-2.5 lg:w-2.5 text-foreground/70" />
                 )}
               </Button>
 
@@ -3783,7 +3776,7 @@ Want me to dive deeper into any aspect?`;
             </div>
           </div>
 
-          {showDiagnostics && (
+          {showDiagnostics && diagExpanded && (
             <ZoeDiagnosticsDrawer
               tab={diagTab}
               onTabChange={setDiagTab}
@@ -4545,10 +4538,10 @@ Want me to dive deeper into any aspect?`;
               className="hidden"
             />
             
-            <div className="flex items-center gap-1">
+            <div className="flex items-end gap-1">
               {/* Left side - Single attach button with floating menu (does not change layout / does not block content) */}
               {!isRecording && (
-                <div ref={attachMenuWrapperRef} className="relative shrink-0">
+                <div ref={attachMenuWrapperRef} className="shrink-0">
                   <Button
                     variant="ghost"
                     size="icon"
@@ -4564,7 +4557,12 @@ Want me to dive deeper into any aspect?`;
                   {showAttachMenu && (
                     <div
                       role="menu"
-                      className="absolute left-0 bottom-full mb-2 w-[160px] md:w-[180px] lg:w-[200px] rounded-2xl border-0 bg-background/35 backdrop-blur-2xl p-1 md:p-1.5 shadow-none [&_svg]:!text-foreground/85 [&_p]:!bg-transparent [&_p.sticky]:!static max-h-[220px] md:max-h-[260px] lg:max-h-[300px] overflow-y-auto overscroll-contain z-[10050]"
+                      className={cn(
+                        "absolute right-2 bottom-full mb-1 w-[5.75rem] rounded-[28px] border-0 bg-background/80 backdrop-blur-3xl py-3 px-1 shadow-none overflow-y-auto overscroll-contain z-[10050] [scrollbar-width:none] flex flex-col gap-1",
+                        "[&_svg]:!text-foreground/90 [&_svg]:!h-5 [&_svg]:!w-5 [&_svg]:!mr-0 [&_p]:!bg-transparent [&_p.sticky]:!static [&_p]:!text-center [&_p]:!px-0",
+                        "[&_button]:!flex-col [&_button]:!h-auto [&_button]:!w-full [&_button]:!justify-center [&_button]:!gap-1 [&_button]:!py-2 [&_button]:!px-0.5 [&_button]:!whitespace-normal [&_button]:!text-center [&_button]:!leading-tight [&_button]:!bg-transparent [&_button]:!border-0 [&_button]:!shadow-none",
+                        isFullPage ? "h-[calc(100dvh-9rem)]" : "h-[calc(max(320px,min(56dvh,calc(100dvh-96px)))-5.5rem)]"
+                      )}
                       onWheelCapture={(e) => e.stopPropagation()}
                       onTouchMoveCapture={(e) => e.stopPropagation()}
                     >
@@ -4778,11 +4776,17 @@ Want me to dive deeper into any aspect?`;
               )}
 
               {/* Center - Expandable Input field */}
-              <Input
+              <textarea
                 ref={inputRef}
+                rows={1}
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyPress={handleKeyPress}
+                onChange={(e) => {
+                  setInput(e.target.value);
+                  const el = e.currentTarget;
+                  el.style.height = 'auto';
+                  el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+                }}
+                onKeyDown={handleKeyPress}
                 onFocus={() => setIsInputFocused(true)}
                 onBlur={() => setTimeout(() => setIsInputFocused(false), 200)}
                 placeholder={
@@ -4795,9 +4799,7 @@ Want me to dive deeper into any aspect?`;
                         : "Zoe..."
                 }
                 className={cn(
-                  "flex-1 min-w-0 text-[11px] md:text-xs lg:text-sm rounded-full bg-transparent border-0 shadow-none ring-0 ring-offset-0 outline-none placeholder:text-foreground/50 focus-visible:ring-0 focus-visible:ring-offset-0 caret-foreground px-3 md:px-4 transition-all duration-300 ease-out",
-                  isInputFocused ? "h-9 md:h-10 lg:h-11 py-2" : "h-6 md:h-7 lg:h-8",
-                  messagingMode === 'user' ? "" : ""
+                  "flex-1 min-w-0 resize-none overflow-y-auto text-sm leading-5 bg-transparent border-0 shadow-none ring-0 outline-none placeholder:text-foreground/50 focus:outline-none focus-visible:ring-0 caret-foreground px-2 py-2 max-h-40 [scrollbar-width:none]"
                 )}
                 disabled={isProcessing || isPerceptionProcessing || isSending || (messagingMode === 'user' && !selectedUser)}
               />
@@ -4823,19 +4825,16 @@ Want me to dive deeper into any aspect?`;
               ) : (
               <Button
                 size="icon"
+                variant="ghost"
+                aria-label="Send"
                 className={cn(
-                  "rounded-full shadow-sm transition-all duration-300 flex-shrink-0",
-                  isInputFocused ? "h-8 w-8 md:h-9 md:w-9 lg:h-10 lg:w-10" : "h-6 w-6 md:h-7 md:w-7 lg:h-8 lg:w-8",
-                  (input.trim() || pendingMedia) && !isProcessing && !isPerceptionProcessing && !isSending && (messagingMode !== 'user' || selectedUser)
-                    ? messagingMode === 'user' 
-                      ? 'bg-cyan-500 hover:bg-cyan-600 text-white'
-                      : 'bg-primary hover:bg-primary/90 text-primary-foreground'
-                    : 'bg-muted text-muted-foreground'
+                  "h-9 w-9 rounded-full !bg-transparent hover:!bg-transparent border-0 shadow-none flex-shrink-0 disabled:opacity-40",
+                  (input.trim() || pendingMedia) ? 'text-foreground' : 'text-foreground/60'
                 )}
                 onClick={() => sendMessage()}
                 disabled={(!input.trim() && !pendingMedia) || isProcessing || isPerceptionProcessing || isSending || (messagingMode === 'user' && !selectedUser)}
               >
-                <Send className={cn("transition-all", isInputFocused ? "h-3.5 w-3.5 md:h-4 md:w-4 lg:h-4.5 lg:w-4.5" : "h-3 w-3 md:h-3.5 md:w-3.5 lg:h-4 lg:w-4")} />
+                <Send className="h-5 w-5" />
               </Button>
               )}
             </div>
@@ -4859,7 +4858,7 @@ Want me to dive deeper into any aspect?`;
 function ZoeFeatureRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div
-      className="relative flex items-center gap-2 rounded-xl px-1.5 py-1 cursor-pointer hover:bg-foreground/5 [&_button]:!h-7 [&_button]:!min-w-7 [&_svg]:!h-4 [&_svg]:!w-4"
+      className="relative flex flex-col items-center gap-1 rounded-2xl px-1 py-2 cursor-pointer text-center [&_button]:!h-7 [&_button]:!min-w-7 [&_svg]:!h-5 [&_svg]:!w-5"
       onClick={(e) => {
         const target = e.target as HTMLElement;
         if (target.closest('button')) return;
@@ -4867,7 +4866,7 @@ function ZoeFeatureRow({ label, children }: { label: string; children: React.Rea
       }}
     >
       {children}
-      <span className="text-xs text-foreground/85 select-none">{label}</span>
+      <span className="text-[10px] leading-tight text-foreground/90 select-none">{label}</span>
     </div>
   );
 }
