@@ -66,25 +66,34 @@ Return JSON only: {"headline":"<max 6 words, punchline-style>","lines":[{"speake
   return { headline: f.headline, lines: f.lines.map(([speaker, text]) => ({ speaker: speaker as 'A' | 'B', text })), source: 'fallback' };
 }
 
-async function paintSkit(db: ReturnType<typeof createClient>, row: { id: string; metal: string; headline: string; lines: { text: string }[] }): Promise<void> {
+async function paintSkit(db: ReturnType<typeof createClient>, row: { id: string; metal: string; headline: string; lines: { text: string }[] }): Promise<boolean> {
   const scene = row.lines.map((l) => l.text).join(' ').slice(0, 600);
   const prompt = `Bright funny editorial cartoon that literally depicts this exact comedy scene. Headline context: ${row.headline}. Dialogue and action: ${scene}. Show the people, objects, action, setting, and facial expressions described by the dialogue. Warm cinematic color, expressive, family friendly, square composition, no written words, no letters, no captions, no logos, no brands, no watermark.`;
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), 40_000);
   try {
-    const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&nologo=true&enhance=true&seed=${encodeURIComponent(row.id)}`;
-    const res = await fetch(imageUrl, { signal: ctrl.signal, headers: { Accept: 'image/*' } });
+    let res: Response | null = null;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const seed = `${row.id}-${attempt}`;
+      const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&nologo=true&enhance=true&seed=${encodeURIComponent(seed)}`;
+      res = await fetch(imageUrl, { signal: ctrl.signal, headers: { Accept: 'image/*' } });
+      if (res.ok && (res.headers.get('content-type') || '').startsWith('image/')) break;
+      res = null;
+      await new Promise((resolve) => setTimeout(resolve, 800 * (attempt + 1)));
+    }
+    if (!res) return false;
     const contentType = res.headers.get('content-type') || 'image/jpeg';
-    if (!res.ok || !contentType.startsWith('image/')) return;
     const bytes = new Uint8Array(await res.arrayBuffer());
-    if (bytes.length < 1024 || bytes.length > 5 * 1024 * 1024) return;
+    if (bytes.length < 1024 || bytes.length > 5 * 1024 * 1024) return false;
     const ext = contentType.includes('png') ? 'png' : contentType.includes('webp') ? 'webp' : 'jpg';
     const path = `${row.id}.${ext}`;
     const up = await db.storage.from('humor-images').upload(path, bytes, { contentType, upsert: true });
-    if (up.error) return;
+    if (up.error) return false;
     const signed = await db.storage.from('humor-images').createSignedUrl(path, 60 * 60 * 24 * 365);
-    if (signed.data?.signedUrl) await db.from('humor_drops').update({ image_url: signed.data.signedUrl }).eq('id', row.id);
-  } catch { /* picture is optional */ } finally { clearTimeout(t); }
+    if (!signed.data?.signedUrl) return false;
+    const saved = await db.from('humor_drops').update({ image_url: signed.data.signedUrl }).eq('id', row.id);
+    return !saved.error;
+  } catch { return false; } finally { clearTimeout(t); }
 }
 
 Deno.serve(async (req) => {
@@ -100,8 +109,11 @@ Deno.serve(async (req) => {
     const missing = (Object.keys(METALS) as Metal[]).filter((m) => !have.has(m));
     const paintMissing = async () => {
       const { data: bare } = await db.from('humor_drops').select('id, metal, headline, lines').eq('drop_date', date).is('image_url', null).limit(4);
-      await Promise.all((bare ?? []).map((r) => paintSkit(db, r as never)));
-      return (bare ?? []).length;
+      let painted = 0;
+      for (const row of bare ?? []) {
+        if (await paintSkit(db, row as never)) painted += 1;
+      }
+      return painted;
     };
     if (missing.length === 0) return json({ ok: true, date, slot, generated: 0, painted: await paintMissing() });
 

@@ -38,8 +38,10 @@ export default function SubmitJokePage() {
         if (error) throw error;
         imageUrl = supabase.storage.from('posts').getPublicUrl(path).data.publicUrl;
       } else {
-        const { data } = await supabase.functions.invoke('generate-humor-image', { body: { title: headline, text: body } });
+        const { data, error } = await supabase.functions.invoke('generate-humor-image', { body: { title: headline, text: body } });
+        if (error) throw new Error('The matching image could not be created. Please try again.');
         imageUrl = typeof data?.image_url === 'string' ? data.image_url : null;
+        if (!imageUrl) throw new Error('The matching image could not be created. Please try again.');
       }
       const now = new Date();
       const lines = body.split(/\n+/).map((line) => line.trim()).filter(Boolean).slice(0, 8).map((line, index) => ({ speaker: index % 2 ? 'B' : 'A', text: line.slice(0, 500) }));
