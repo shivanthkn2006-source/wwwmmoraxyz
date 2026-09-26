@@ -30,7 +30,7 @@ function readCache(): HumorDrop[] {
   } catch { return []; }
 }
 
-export function useHumorDrops(limit = 6): HumorDrop[] {
+export function useHumorDrops(limit = 24, historyDays = 7): HumorDrop[] {
   const [drops, setDrops] = useState<HumorDrop[]>(() => readCache().slice(0, limit));
   const { user } = useAuth();
   const uid = user?.id ?? null;
@@ -39,7 +39,7 @@ export function useHumorDrops(limit = 6): HumorDrop[] {
     if (!uid) return () => { alive = false; };
     const load = async () => {
       try {
-        const since = new Date(Date.now() - 7 * 24 * 3600_000).toISOString();
+        const since = new Date(Date.now() - historyDays * 24 * 3600_000).toISOString();
         const { data, error } = await supabase
           .from('humor_drops')
           .select('id, metal, headline, lines, created_at, image_url, category, origin, author_id, scheduled_for')
@@ -68,7 +68,7 @@ export function useHumorDrops(limit = 6): HumorDrop[] {
       document.removeEventListener('visibilitychange', onVisible);
       void supabase.removeChannel(channel);
     };
-  }, [limit, uid]);
+  }, [historyDays, limit, uid]);
   return drops;
 }
 

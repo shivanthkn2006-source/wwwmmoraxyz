@@ -1,17 +1,24 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Flame, Plus } from 'lucide-react';
 import HumorDropCard from '@/components/humor/HumorDropCard';
 import { useHumorDrops } from '@/hooks/useHumorDrops';
 import { Button } from '@/components/ui/button';
 import { HUMOR_CATEGORIES, HUMOR_CATEGORY_LABELS, humorTrendingScore, type HumorCategory } from '@/lib/humor';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/lib/auth';
 
 export default function ZoeLolPage() {
   const navigate = useNavigate();
-  const drops = useHumorDrops(48);
+  const [searchParams] = useSearchParams();
+  const { user } = useAuth();
+  const drops = useHumorDrops(500, 3650);
   const [category, setCategory] = useState<'all' | HumorCategory>('all');
-  const [mode, setMode] = useState<'latest' | 'trending' | 'top' | 'viewed' | 'following'>('latest');
+  const initialMode = searchParams.get('mode');
+  const [mode, setMode] = useState<'latest' | 'trending' | 'top' | 'viewed' | 'commented' | 'following' | 'mine'>(
+    initialMode === 'top' || initialMode === 'viewed' || initialMode === 'commented' ? initialMode : 'latest',
+  );
+  const [date, setDate] = useState('all');
   const [engagement, setEngagement] = useState<Record<string, { likes: number; dislikes: number; comments: number; views: number }>>({});
   const [followed, setFollowed] = useState<Set<string>>(new Set());
   useEffect(() => {
@@ -38,17 +45,20 @@ export default function ZoeLolPage() {
   }, [drops]);
   const visible = useMemo(() => {
     let filtered = category === 'all' ? drops : drops.filter((drop) => drop.category === category);
+    if (date !== 'all') filtered = filtered.filter((drop) => drop.scheduled_for.slice(0, 10) === date);
     if (mode === 'following') filtered = filtered.filter((drop) => followed.has(drop.category));
-    if (mode === 'latest' || mode === 'following') return filtered;
+    if (mode === 'mine') filtered = filtered.filter((drop) => drop.author_id === user?.id);
+    if (mode === 'latest' || mode === 'following' || mode === 'mine') return filtered;
     const zero = { likes: 0, dislikes: 0, comments: 0, views: 0 };
     return [...filtered].sort((a, b) => {
       const sa = engagement[a.id] ?? zero;
       const sb = engagement[b.id] ?? zero;
       if (mode === 'top') return (sb.likes - sb.dislikes) - (sa.likes - sa.dislikes);
       if (mode === 'viewed') return sb.views - sa.views;
+      if (mode === 'commented') return sb.comments - sa.comments;
       return humorTrendingScore(sb.likes, sb.dislikes, sb.comments, b.scheduled_for) - humorTrendingScore(sa.likes, sa.dislikes, sa.comments, a.scheduled_for);
     });
-  }, [category, drops, engagement, followed, mode]);
+  }, [category, date, drops, engagement, followed, mode, user?.id]);
   return (
     <main className="min-h-[100dvh] w-full bg-transparent px-4 pb-28 pt-[max(1rem,env(safe-area-inset-top))] text-white">
       <header className="mb-4 flex items-center gap-3">
@@ -61,9 +71,16 @@ export default function ZoeLolPage() {
         <Button size="sm" variant={mode === 'trending' ? 'default' : 'ghost'} onClick={() => setMode('trending')}><Flame className="h-4 w-4" />Trending</Button>
         <Button size="sm" variant={mode === 'top' ? 'default' : 'ghost'} onClick={() => setMode('top')}>Top rated</Button>
         <Button size="sm" variant={mode === 'viewed' ? 'default' : 'ghost'} onClick={() => setMode('viewed')}>Most viewed</Button>
+        <Button size="sm" variant={mode === 'commented' ? 'default' : 'ghost'} onClick={() => setMode('commented')}>Most commented</Button>
         <Button size="sm" variant={mode === 'following' ? 'default' : 'ghost'} onClick={() => setMode('following')}>Following</Button>
+        <Button size="sm" variant={mode === 'mine' ? 'default' : 'ghost'} onClick={() => setMode('mine')}>My jokes</Button>
         <Button size="sm" variant={category === 'all' ? 'secondary' : 'ghost'} onClick={() => setCategory('all')}>All</Button>
         {HUMOR_CATEGORIES.map((item) => <Button key={item} size="sm" variant={category === item ? 'secondary' : 'ghost'} onClick={() => setCategory(item)}>{HUMOR_CATEGORY_LABELS[item]}</Button>)}
+      </div>
+      <div className="mx-auto mb-4 flex max-w-xl items-center gap-2">
+        <label htmlFor="humor-date" className="text-sm text-muted-foreground">Date</label>
+        <input id="humor-date" type="date" value={date === 'all' ? '' : date} onChange={(event) => setDate(event.target.value || 'all')} className="h-9 rounded-md border border-border bg-background/40 px-3 text-sm text-foreground" />
+        {date !== 'all' && <Button size="sm" variant="ghost" onClick={() => setDate('all')}>All dates</Button>}
       </div>
       {visible.length === 0 ? (
         <p className="text-white/80" data-humor-empty>Fresh skits are on the way — check back soon.</p>
