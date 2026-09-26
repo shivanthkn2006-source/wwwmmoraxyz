@@ -91,8 +91,14 @@ async function paintSkit(db: ReturnType<typeof createClient>, row: { id: string;
     if (up.error) return false;
     const signed = await db.storage.from('humor-images').createSignedUrl(path, 60 * 60 * 24 * 365);
     if (!signed.data?.signedUrl) return false;
-    const saved = await db.from('humor_drops').update({ image_url: signed.data.signedUrl }).eq('id', row.id);
-    return !saved.error;
+    const saved = await db
+      .from('humor_drops')
+      .update({ image_url: signed.data.signedUrl })
+      .eq('id', row.id)
+      .is('image_url', null)
+      .select('id')
+      .maybeSingle();
+    return !saved.error && saved.data?.id === row.id;
   } catch { return false; } finally { clearTimeout(t); }
 }
 
@@ -108,7 +114,13 @@ Deno.serve(async (req) => {
     const have = new Set((existing ?? []).map((r: { metal: string }) => r.metal));
     const missing = (Object.keys(METALS) as Metal[]).filter((m) => !have.has(m));
     const paintMissing = async () => {
-      const { data: bare } = await db.from('humor_drops').select('id, metal, headline, lines').eq('drop_date', date).is('image_url', null).limit(4);
+      const { data: bare } = await db
+        .from('humor_drops')
+        .select('id, metal, headline, lines')
+        .eq('drop_date', date)
+        .is('image_url', null)
+        .order('scheduled_for', { ascending: true })
+        .limit(4);
       let painted = 0;
       for (const row of bare ?? []) {
         if (await paintSkit(db, row as never)) painted += 1;
