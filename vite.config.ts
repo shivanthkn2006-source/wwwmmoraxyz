@@ -291,6 +291,9 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+    // One React copy only: prevents "dispatcher.useState is null" when the
+    // dep optimizer splits react into two chunks after a re-bundle.
+    dedupe: ["react", "react-dom", "react/jsx-runtime"],
   },
   build: {
     rollupOptions: {
