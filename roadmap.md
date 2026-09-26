@@ -46,3 +46,9 @@
 - [x] Put every due LOL card into Home's real timestamp order and include jokes in Home's non-empty rendering decision.
 - [x] Expand Zoe's LOL into a saved-history browser with humor type, rating, date, most-viewed, most-commented, followed, and own-submission filters.
 - [x] Prevent reload/sign-in crashes by giving every Zoe's LOL surface one shared realtime subscription instead of duplicate channels.
+
+## Shared picture cascade (2026-09-26)
+- [x] Cascade built and each provider live-tested (Pollinations, placeholdr, Kaleido, JustAPI, ImageNow; Free.ai has no API)
+- [x] Joke, member-joke, general picture, and daily-card engines wired; 3 missing joke pictures filled
+- [ ] Remaining direct Pollinations callers: video, edit-image, avatar, hairstyle, DHF compass URL, artifact/architect/Lisa/thought functions
+- [ ] Signed-in 4-screen visual check — blocked: preview signed out, admin session minting denied
