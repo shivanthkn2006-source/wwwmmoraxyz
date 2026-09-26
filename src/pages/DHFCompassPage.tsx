@@ -21,6 +21,7 @@ import { duePosts, type DhfDailyPost } from '@/lib/dhfCompass';
 import { resolveCompassImages } from '@/lib/dhfCompassImages';
 import { deviceTimeZone } from '@/lib/growthSlot';
 
+const PAGE_SIZE = 100;
 const SELECT =
   'id, post_date, slot_time, category, headline, short_summary, full_story_content, image_url, image_path, image_source, powered_by_badge, referral_cta, astrological_context, created_at';
 
