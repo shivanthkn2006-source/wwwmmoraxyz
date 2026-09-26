@@ -60,3 +60,13 @@
 - [x] Home forecast card (career/money/love/family, "What about <next month>?") with today's sky-shift notice inside it
 - [ ] Signed-in phone/mobile-data walkthrough — blocked: preview signed out, session minting denied
 - [ ] Cloudflare / Pixazo keys — waiting on user
+
+# Sep 26 (evening)
+- [x] Dev (velvet rope) icon moved under the left bug icon
+- [x] Home menu icon for the Home loading report
+- [x] Jokes "Most popular" ranking on Zoe's LOL page
+- [x] Per-part load times + phone/tablet/desktop filter in the Home loading report
+- [ ] Picture backfill to storage (blocked: user waiting on more storage)
+- [ ] Cloudflare picture service (blocked: user's Account ID + Workers AI key)
+- [ ] 8 older backend setup warnings
+- [ ] Real-phone check over mobile data (needs the user's phone)
