@@ -6,4 +6,4 @@
 - Protected routes wait for definitive auth initialization after the UX loading budget, because slow Safari/cellular session hydration must not redirect valid members.
 - Home orders due DHF, growth, social, Loop, and humor cards by their real scheduled timestamps, because fixed source blocks hide timely content.
 - All Zoe's LOL consumers share the global realtime multiplexer, because independent channels race during auth reloads and can take Home offline.
-- The root Liquid Universe context is a plain provider component, because forwarding a meaningless ref can retain a stale hook wrapper across preview reloads.
+- Liquid Universe detection stays outside the root boot tree and consumers use its optional fallback, because device enhancement must never be able to blank authentication or Home.

@@ -3,7 +3,6 @@ import App from "./App.tsx";
 import "./index.css";
 import { ZoeProvider } from "./contexts/ZoeContext";
 import { DeviceTierProvider } from "./contexts/DeviceTierContext";
-import { LiquidUniverseProvider } from "./contexts/LiquidUniverseContext"; // PROTOCOL LIQUID UNIVERSE
 import { ShapeShifterProvider } from "./contexts/ShapeShifterContext"; // PROTOCOL SHAPE SHIFTER
 import { AutoHealProvider } from "./contexts/AutoHealContext"; // PROTOCOL AUTO-HEAL
 import SystemFailureBoundary from "@/components/SystemFailureBoundary";
@@ -69,17 +68,15 @@ window.addEventListener('unhandledrejection', (ev) => {
 createRoot(document.getElementById("root")!).render(
   <SystemFailureBoundary>
     <HelmetProvider>
-      <LiquidUniverseProvider>
-        <ShapeShifterProvider>
-          <AutoHealProvider>
-            <DeviceTierProvider>
-              <ZoeProvider>
-                <App />
-              </ZoeProvider>
-            </DeviceTierProvider>
-          </AutoHealProvider>
-        </ShapeShifterProvider>
-      </LiquidUniverseProvider>
+      <ShapeShifterProvider>
+        <AutoHealProvider>
+          <DeviceTierProvider>
+            <ZoeProvider>
+              <App />
+            </ZoeProvider>
+          </DeviceTierProvider>
+        </AutoHealProvider>
+      </ShapeShifterProvider>
     </HelmetProvider>
   </SystemFailureBoundary>
 );
