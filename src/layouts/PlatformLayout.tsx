@@ -14,6 +14,7 @@ import useDhfUnlockReminders from '@/hooks/useDhfUnlockReminders';
 import { ZoeCardNarrationProvider } from '@/components/voice/ZoeCardNarrationProvider';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
+import { CallEngineProvider } from '@/contexts/CallEngineContext';
 
 const DeferredPlatformServices = lazy(() => import('@/components/platform/DeferredPlatformServices'));
 
@@ -83,8 +84,12 @@ export const PlatformLayout = ({ children }: { children: React.ReactNode }) => {
   // control remains immediate; optional voice/call/monitoring systems follow.
   if (loading || !user || isAuthenticationRoute) return <>{children}</>;
 
+  // The call engine wraps the page itself: the Calls page, call buttons and
+  // the deferred incoming-call host all read it, so it cannot wait for the
+  // deferred services (that gap caused "useCallEngine must be used within
+  // CallEngineProvider" on /calls).
   return (
-  <>
+  <CallEngineProvider>
     <ZoeCardNarrationProvider>{children}</ZoeCardNarrationProvider>
     <AppErrorBoundary moduleName="platform:dock" severity="low" fallback={null}>
       <GlobalHomeDock />
@@ -96,7 +101,7 @@ export const PlatformLayout = ({ children }: { children: React.ReactNode }) => {
         </AppErrorBoundary>
       </Suspense>
     )}
-  </>
+  </CallEngineProvider>
   );
 };
 
