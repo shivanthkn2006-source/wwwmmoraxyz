@@ -1,4 +1,5 @@
 import { isFeedWorthyQuery } from '@/lib/feedIntentGuard';
+import { startHomeLoadReport } from '@/lib/homeLoadReport';
 // HomePage - Main feed component
 import React, { useState, useEffect, useRef } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
