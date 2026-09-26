@@ -13,6 +13,10 @@ const SERVICE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 // UTC minutes of day ≈ 07:00, 09:00, 10:40, 12:00, 14:50, 17:00, 19:00 IST.
 const SLOTS_UTC = [90, 210, 310, 390, 560, 690, 810];
 
+const CATEGORY: Record<Metal, 'absurd' | 'relatable' | 'workplace' | 'wordplay'> = {
+  iron: 'absurd', silver: 'relatable', lead: 'workplace', quicksilver: 'wordplay',
+};
+
 const METALS = {
   iron: 'Mars/Fire — stressed, impatient, high-energy. Fast banter, absurd situational comedy.',
   silver: 'Moon/Water — emotional, nostalgic, overwhelmed. Relatable, gentle self-deprecating humor.',
@@ -63,26 +67,20 @@ Return JSON only: {"headline":"<max 6 words, punchline-style>","lines":[{"speake
 }
 
 async function paintSkit(db: ReturnType<typeof createClient>, row: { id: string; metal: string; headline: string; lines: { text: string }[] }): Promise<void> {
-  const key = Deno.env.get('LOVABLE_API_KEY');
-  if (!key) return;
   const scene = row.lines.map((l) => l.text).join(' ').slice(0, 600);
-  const prompt = `Bright, funny cartoon illustration that literally depicts this comedy skit. Title: "${row.headline}". Scene: ${scene}. Show the exact situation and characters described, expressive faces, warm cinematic colours, no text, no letters, no logos, no watermarks. Square.`;
+  const prompt = `Bright funny editorial cartoon that literally depicts this exact comedy scene. Headline context: ${row.headline}. Dialogue and action: ${scene}. Show the people, objects, action, setting, and facial expressions described by the dialogue. Warm cinematic color, expressive, family friendly, square composition, no written words, no letters, no captions, no logos, no brands, no watermark.`;
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), 40_000);
   try {
-    const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST', signal: ctrl.signal,
-      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: 'google/gemini-2.5-flash-image', messages: [{ role: 'user', content: prompt }], modalities: ['image', 'text'] }),
-    });
-    if (!res.ok) return;
-    const out = await res.json();
-    const dataUrl: string | undefined = out?.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-    const m = dataUrl?.match(/^data:(image\/\w+);base64,(.+)$/);
-    if (!m) return;
-    const bytes = Uint8Array.from(atob(m[2]), (c) => c.charCodeAt(0));
-    const path = `${row.id}.${m[1].split('/')[1]}`;
-    const up = await db.storage.from('humor-images').upload(path, bytes, { contentType: m[1], upsert: true });
+    const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&nologo=true&enhance=true&seed=${encodeURIComponent(row.id)}`;
+    const res = await fetch(imageUrl, { signal: ctrl.signal, headers: { Accept: 'image/*' } });
+    const contentType = res.headers.get('content-type') || 'image/jpeg';
+    if (!res.ok || !contentType.startsWith('image/')) return;
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    if (bytes.length < 1024 || bytes.length > 5 * 1024 * 1024) return;
+    const ext = contentType.includes('png') ? 'png' : contentType.includes('webp') ? 'webp' : 'jpg';
+    const path = `${row.id}.${ext}`;
+    const up = await db.storage.from('humor-images').upload(path, bytes, { contentType, upsert: true });
     if (up.error) return;
     const signed = await db.storage.from('humor-images').createSignedUrl(path, 60 * 60 * 24 * 365);
     if (signed.data?.signedUrl) await db.from('humor_drops').update({ image_url: signed.data.signedUrl }).eq('id', row.id);
@@ -95,6 +93,8 @@ Deno.serve(async (req) => {
   try {
     const db = createClient(URL, SERVICE, { auth: { persistSession: false } });
     const { date, slot } = currentSlot();
+    const scheduledFor = new Date(`${date}T00:00:00.000Z`);
+    scheduledFor.setUTCMinutes(SLOTS_UTC[slot]);
     const { data: existing } = await db.from('humor_drops').select('metal').eq('drop_date', date).eq('slot', slot);
     const have = new Set((existing ?? []).map((r: { metal: string }) => r.metal));
     const missing = (Object.keys(METALS) as Metal[]).filter((m) => !have.has(m));
@@ -107,7 +107,7 @@ Deno.serve(async (req) => {
 
     const skits = await Promise.all(missing.map(async (metal) => ({ metal, ...(await writeSkit(metal)) })));
     const { error } = await db.from('humor_drops').upsert(
-      skits.map((s) => ({ drop_date: date, slot, metal: s.metal, headline: s.headline, lines: s.lines, source: s.source })),
+      skits.map((s) => ({ drop_date: date, slot, metal: s.metal, headline: s.headline, lines: s.lines, source: s.source, category: CATEGORY[s.metal], origin: 'zoe', scheduled_for: scheduledFor.toISOString(), is_published: true })),
       { onConflict: 'drop_date,slot,metal', ignoreDuplicates: true },
     );
     if (error) return json({ ok: false, error: error.message }, 500);
