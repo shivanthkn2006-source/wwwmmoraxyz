@@ -48,7 +48,7 @@ const ZoeDiagnosticsDrawer = ({ tab, onTabChange, expanded, onToggleExpanded, on
     diag.stage === 'error' ? 'text-destructive' : busy ? 'text-cyan-300' : 'text-emerald-400';
 
   return (
-    <div className="border-b border-primary/10 bg-background/70">
+    <div className="border-0 bg-transparent">
       <div className="flex items-center gap-2 px-2.5 py-1.5">
         {busy ? (
           <Loader2 className="h-3 w-3 shrink-0 animate-spin text-cyan-300" />
