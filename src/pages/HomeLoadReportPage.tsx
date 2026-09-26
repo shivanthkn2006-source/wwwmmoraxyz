@@ -162,7 +162,7 @@ const HomeLoadReportPage = () => {
                 <tr><th className="p-2">When</th><th className="p-2">Member</th><th className="p-2">Device</th><th className="p-2">Network</th><th className="p-2">Usable</th><th className="p-2">Missing</th><th className="p-2">Failures</th></tr>
               </thead>
               <tbody>
-                {rows.map((r) => {
+                {filtered.map((r) => {
                   const missing = Object.entries(r.sections ?? {}).filter(([, ok]) => !ok).map(([n]) => n);
                   return (
                     <>
