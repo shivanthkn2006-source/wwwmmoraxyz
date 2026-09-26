@@ -11,7 +11,7 @@
 - [ ] Verify sign-in persistence, Home latency, DHF/growth/planetary cards, and reload stability with an authorized preview session.
 - [ ] Verify the one-time universal permission action across signed-in desktop and mobile views.
 - [ ] Confirm phased Home loading renders real feed content before background DHF and planetary work.
-- [ ] Complete subagent code audit and visual QA without altering existing features or design.
+- [x] Complete subagent code audit and signed-out desktop/mobile visual QA without altering existing features or design.
 
 # Sep 25 requests
 - [x] Launch notice: admin-only (members cannot broadcast to everyone — spam/abuse risk)
@@ -42,3 +42,4 @@
 - [x] Stabilize authenticated sign-in, landing, and Home loading before feature QA.
 - [ ] Verify one persisted Zoe LOL card across Global, Friends, LOL, calendar, voice, reactions, and comments.
 - [ ] Verify admin/@moksh50 authenticated preview without exposing credentials.
+- [ ] Backfill three remaining LOL images (blocked by Pollinations HTTP 429; do not switch providers or duplicate cards).
