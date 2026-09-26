@@ -33,3 +33,9 @@
 - [x] Restore welcome-card scheduling so remote DHF/astrology checks cannot prevent signed-in cards from appearing
 - [x] Keep today's welcome motivation available in both Global and Friends feeds
 - [x] Audit incidental provider labels across platform surfaces; preserve required map/video credits, creator content, legal disclosures, and admin diagnostics
+- [ ] Fix Zoe's LOL delivery in the default Global feed with auth-ready, focus, and scheduled refreshes
+- [ ] Replace Zoe's LOL image generation with Pollinations only and match each skit's actual scene
+- [ ] Move scheduled LOL announcements into shared Deepgram voice delivery and show schedules on the calendar
+- [ ] Add humor categories, filtering, recent-engagement trending, and duplicate-safe Global feed placement
+- [ ] Add secure member joke submission with title, text, category, optional image, and feed engagement
+- [ ] Verify Zoe's LOL end to end in signed-in desktop and phone previews
