@@ -14,15 +14,20 @@ interface Row {
   connection: string | null;
   interactive_ms: number | null;
   sections: Record<string, boolean>;
+  marks: { phase: string; at: number }[] | null;
   failures: { kind: string; label: string; status?: string | number; at: number }[];
   failure_count: number;
 }
+
+const partTime = (r: Row, name: string): number | null =>
+  (r.marks ?? []).find((m) => m.phase === `part:${name}`)?.at ?? null;
 
 const HomeLoadReportPage = () => {
   const isAdmin = useIsAdmin();
   const [rows, setRows] = useState<Row[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [deviceFilter, setDeviceFilter] = useState<'all' | 'phone' | 'tablet' | 'desktop'>('all');
 
   useEffect(() => {
     void (async () => {
@@ -36,24 +41,42 @@ const HomeLoadReportPage = () => {
     })();
   }, []);
 
+  const filtered = useMemo(
+    () => (rows ?? []).filter((r) => deviceFilter === 'all' || (r.device ?? '').startsWith(deviceFilter)),
+    [rows, deviceFilter],
+  );
+
   const summary = useMemo(() => {
-    if (!rows?.length) return null;
+    const list = filtered;
+    if (!list.length) return null;
     const missing: Record<string, number> = {};
     const failing: Record<string, number> = {};
-    for (const r of rows) {
+    for (const r of list) {
       for (const name of Object.keys(HOME_SECTIONS)) if (r.sections?.[name] === false) missing[name] = (missing[name] ?? 0) + 1;
       for (const f of r.failures ?? []) failing[f.label] = (failing[f.label] ?? 0) + 1;
     }
-    const times = rows.map((r) => r.interactive_ms).filter((n): n is number => typeof n === 'number').sort((a, b) => a - b);
+    const times = list.map((r) => r.interactive_ms).filter((n): n is number => typeof n === 'number').sort((a, b) => a - b);
+    const measuredRows = list.filter((r) => (r.marks ?? []).some((m) => String(m.phase).startsWith('part:')));
+    const parts = Object.keys(HOME_SECTIONS).map((name) => {
+      const ts = measuredRows.map((r) => partTime(r, name)).filter((n): n is number => n != null).sort((a, b) => a - b);
+      return {
+        name,
+        median: ts.length ? ts[Math.floor(ts.length / 2)] : null,
+        max: ts.length ? ts[ts.length - 1] : null,
+        never: measuredRows.length - ts.length,
+        measured: measuredRows.length,
+      };
+    });
     return {
-      visits: rows.length,
-      members: new Set(rows.map((r) => r.user_id)).size,
-      withFailures: rows.filter((r) => r.failure_count > 0).length,
+      visits: list.length,
+      members: new Set(list.map((r) => r.user_id)).size,
+      withFailures: list.filter((r) => r.failure_count > 0).length,
       median: times.length ? times[Math.floor(times.length / 2)] : null,
       missing: Object.entries(missing).sort((a, b) => b[1] - a[1]),
       failing: Object.entries(failing).sort((a, b) => b[1] - a[1]).slice(0, 15),
+      parts,
     };
-  }, [rows]);
+  }, [filtered]);
 
   return (
     <main className="min-h-screen bg-background p-4 text-foreground md:p-8">
@@ -85,6 +108,33 @@ const HomeLoadReportPage = () => {
                 <div className="text-lg font-semibold">{value}</div>
               </div>
             ))}
+          </section>
+        )}
+
+        {summary && (
+          <section className="rounded-xl border border-border p-3">
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-sm font-semibold">Load time per Home part</h2>
+              <div className="flex gap-1 text-xs">
+                {(['all', 'phone', 'tablet', 'desktop'] as const).map((d) => (
+                  <button key={d} onClick={() => setDeviceFilter(d)} className={`rounded-md border px-2 py-1 ${deviceFilter === d ? 'border-foreground' : 'border-border text-muted-foreground'}`}>{d}</button>
+                ))}
+              </div>
+            </div>
+            <table className="w-full text-left text-xs">
+              <thead className="text-muted-foreground"><tr><th className="p-1">Part</th><th className="p-1">Median</th><th className="p-1">Slowest</th><th className="p-1">Never appeared</th></tr></thead>
+              <tbody>
+                {summary.parts.map((p) => (
+                  <tr key={p.name} className="border-t border-border/50">
+                    <td className="p-1">{p.name}</td>
+                    <td className={`p-1 font-mono ${p.median != null && p.median > 5000 ? 'text-amber-400' : ''}`}>{p.median != null ? `${(p.median / 1000).toFixed(1)}s` : '—'}</td>
+                    <td className="p-1 font-mono">{p.max != null ? `${(p.max / 1000).toFixed(1)}s` : '—'}</td>
+                    <td className={`p-1 font-mono ${p.never ? 'text-destructive' : ''}`}>{p.never} of {p.measured}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="mt-2 text-[11px] text-muted-foreground">Seconds from opening Home until the part first shows. Older visits recorded before this was added count as not measured.</p>
           </section>
         )}
 
@@ -128,6 +178,12 @@ const HomeLoadReportPage = () => {
                       {openId === r.id && (
                         <tr key={`${r.id}-d`} className="bg-muted/30">
                           <td colSpan={7} className="p-2">
+                            <div className="mb-2 flex flex-wrap gap-x-4 gap-y-1">
+                              {Object.keys(HOME_SECTIONS).map((n) => {
+                                const t = partTime(r, n);
+                                return <span key={n} className={t == null ? 'text-destructive' : t > 5000 ? 'text-amber-400' : ''}>{n}: {t == null ? 'never appeared' : `${(t / 1000).toFixed(1)}s`}</span>;
+                              })}
+                            </div>
                             {r.failures.length === 0 ? 'No failures.' : (
                               <ul className="space-y-1">{r.failures.map((f, i) => <li key={i} className="font-mono">{(f.at / 1000).toFixed(1)}s · {f.kind} · {f.label} {f.status != null ? `(${f.status})` : ''}</li>)}</ul>
                             )}
