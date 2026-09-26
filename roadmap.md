@@ -54,3 +54,9 @@
 - [ ] Cloudflare / DeepAI / Pixazo keys — waiting on user
 - [ ] Not switchable to the cascade: photo editing + hairstyle (need an editor that keeps the face), video clips, DHF card links (saved as live links)
 - [ ] Signed-in 4-screen visual check — blocked: preview signed out, admin session minting denied
+
+## Sep 26 (evening)
+- [x] Daily card pictures: save once to storage with cascade fallback; background backfill of member's own cards (6/day per browser)
+- [x] Home forecast card (career/money/love/family, "What about <next month>?") with today's sky-shift notice inside it
+- [ ] Signed-in phone/mobile-data walkthrough — blocked: preview signed out, session minting denied
+- [ ] Cloudflare / Pixazo keys — waiting on user
