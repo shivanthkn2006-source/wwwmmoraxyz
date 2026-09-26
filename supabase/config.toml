@@ -375,3 +375,6 @@ verify_jwt = true
 
 [functions.daily-quote]
 verify_jwt = false
+
+[functions.generate-humor-drops]
+verify_jwt = false
