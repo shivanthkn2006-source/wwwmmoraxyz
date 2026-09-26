@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { isHumorCategory, type HumorCategory } from '@/lib/humor';
+import { subscribeRealtime } from '@/realtime/globalRealtime';
 
 export interface HumorDrop {
   id: string;
@@ -57,7 +58,14 @@ export function useHumorDrops(limit = 24, historyDays = 7): HumorDrop[] {
     void load();
     const onRefresh = () => void load();
     const onVisible = () => { if (document.visibilityState === 'visible') void load(); };
-    const channel = supabase.channel(`humor-drops-${uid}`).on('postgres_changes', { event: '*', schema: 'public', table: 'humor_drops' }, onRefresh).subscribe();
+    // Home, the LOL archive, and the global announcement host mount this hook
+    // together. They must share one table subscription: creating identically
+    // named channels per mount races auth/reload cleanup and can attempt to add
+    // postgres callbacks to a channel that has already subscribed.
+    const unsubscribeRealtime = subscribeRealtime(
+      { event: '*', schema: 'public', table: 'humor_drops' },
+      onRefresh,
+    );
     window.addEventListener('focus', onRefresh);
     window.addEventListener('mmora:humor-refresh', onRefresh);
     document.addEventListener('visibilitychange', onVisible);
@@ -66,7 +74,7 @@ export function useHumorDrops(limit = 24, historyDays = 7): HumorDrop[] {
       window.removeEventListener('focus', onRefresh);
       window.removeEventListener('mmora:humor-refresh', onRefresh);
       document.removeEventListener('visibilitychange', onVisible);
-      void supabase.removeChannel(channel);
+      unsubscribeRealtime();
     };
   }, [historyDays, limit, uid]);
   return drops;

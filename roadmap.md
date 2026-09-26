@@ -45,3 +45,4 @@
 - [ ] Backfill three remaining LOL images (blocked by Pollinations HTTP 429; do not switch providers or duplicate cards).
 - [x] Put every due LOL card into Home's real timestamp order and include jokes in Home's non-empty rendering decision.
 - [x] Expand Zoe's LOL into a saved-history browser with humor type, rating, date, most-viewed, most-commented, followed, and own-submission filters.
+- [x] Prevent reload/sign-in crashes by giving every Zoe's LOL surface one shared realtime subscription instead of duplicate channels.
