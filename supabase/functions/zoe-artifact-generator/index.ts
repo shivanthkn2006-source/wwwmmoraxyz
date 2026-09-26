@@ -1,3 +1,4 @@
+import { cascadeFetch } from '../_shared/image-cascade.ts';
 import { requireCaller } from '../_shared/caller-guard.ts';
 // ═══════════════════════════════════════════════════════════════════════════════
 // ZOE ARTIFACT GENERATOR - Vision, Chronicle, Education
@@ -8,7 +9,6 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { resolveClaims } from '../_shared/auth-claims.ts';
 import { sovereignFetch, sovereignKey } from "../_shared/sovereign-ai.ts";
-import { cascadeFetch } from '../_shared/image-cascade.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',

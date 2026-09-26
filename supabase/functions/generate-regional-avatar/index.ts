@@ -1,6 +1,6 @@
+import { cascadeFetch } from '../_shared/image-cascade.ts';
 import { requireCaller } from '../_shared/caller-guard.ts';
 import { sovereignFetch, sovereignKey } from "../_shared/sovereign-ai.ts";
-import { cascadeFetch } from '../_shared/image-cascade.ts';
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',

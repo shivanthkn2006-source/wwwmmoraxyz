@@ -1,3 +1,4 @@
+import { cascadeFetch } from './image-cascade.ts';
 /**
  * ═══════════════════════════════════════════════════════════════════════════════
  * SOVEREIGN AI SHIM — drop-in replacement for the Lovable AI Gateway
@@ -19,7 +20,6 @@
  */
 
 import {
-import { cascadeFetch } from './image-cascade.ts';
   NVIDIA_BASE,
   NVIDIA_ROLES,
   isRetiredNvidiaModel,

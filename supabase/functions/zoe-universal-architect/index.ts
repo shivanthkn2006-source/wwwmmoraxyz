@@ -1,3 +1,4 @@
+import { cascadeFetch } from '../_shared/image-cascade.ts';
 // ═══════════════════════════════════════════════════════════════════════════════
 // ZOE UNIVERSAL ARCHITECT (ZUA) - VIRAL ASCENSION ENGINE
 // Phase II: 7-Step UPP + 3-Platform Viral Content Generation
@@ -10,7 +11,6 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { sovereignFetch, sovereignKey } from "../_shared/sovereign-ai.ts";
 import { clientErrorResponse } from '../_shared/client-error.ts';
-import { cascadeFetch } from '../_shared/image-cascade.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',

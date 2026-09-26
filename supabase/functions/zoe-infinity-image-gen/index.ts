@@ -1,6 +1,6 @@
+import { cascadeFetch } from '../_shared/image-cascade.ts';
 import { requireCaller } from '../_shared/caller-guard.ts';
 import { sovereignFetch } from "../_shared/sovereign-ai.ts";
-import { cascadeFetch } from '../_shared/image-cascade.ts';
 // ═══════════════════════════════════════════════════════════════════════════════
 // ZOE INFINITY IMAGE GENERATION - Pollinations Primary, Gemini Fallback
 // ═══════════════════════════════════════════════════════════════════════════════

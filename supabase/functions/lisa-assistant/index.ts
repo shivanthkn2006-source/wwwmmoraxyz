@@ -1,6 +1,6 @@
+import { cascadeFetch } from '../_shared/image-cascade.ts';
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { sovereignFetch, sovereignKey } from "../_shared/sovereign-ai.ts";
-import { cascadeFetch } from '../_shared/image-cascade.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',

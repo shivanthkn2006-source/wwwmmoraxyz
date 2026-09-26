@@ -1,3 +1,4 @@
+import { cascadeFetch } from '../_shared/image-cascade.ts';
 import { requireCaller } from '../_shared/caller-guard.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
@@ -12,7 +13,6 @@ import {
   getLatencyTarget
 } from "../_shared/ai-telemetry.ts";
 import { clientErrorResponse } from '../_shared/client-error.ts';
-import { cascadeFetch } from '../_shared/image-cascade.ts';
 
 // Pre-fetch API key at module load for faster cold starts
 const SOVEREIGN_AI_KEY = sovereignKey();
