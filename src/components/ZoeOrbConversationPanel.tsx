@@ -11,7 +11,7 @@ import ImageViewer from '@/components/ImageViewer';
 import DeepThinkingBlock, { type DeepThinkingMeta } from '@/components/zoe-infinity/DeepThinkingBlock';
 import TeleprompterDebugOverlay from '@/components/zoe-infinity/TeleprompterDebugOverlay';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, Volume2, VolumeX, Minimize2, Maximize2, Paperclip, Image, FileText, Video, Loader2, Download, Upload, Mic, Circle, Square, Camera, StopCircle, Copy, Check, Users, MessageCircle, Search, ArrowLeft, User, Plus, Sparkles, CheckCheck, Reply, CornerUpLeft, ChevronDown, Brain, Cloud, CloudDownload, CloudUpload, Shield, FileDown, Activity, Phone, PhoneOff, Pause, Play, Gauge } from 'lucide-react';
+import { X, Send, Volume2, VolumeX, Minimize2, Maximize2, Paperclip, Image, FileText, Video, Loader2, Download, Upload, Mic, Circle, Square, Camera, StopCircle, Copy, Check, Users, MessageCircle, Search, ArrowLeft, User, Plus, Sparkles, CheckCheck, Reply, CornerUpLeft, ChevronDown, Brain, Cloud, CloudDownload, CloudUpload, Shield, FileDown, Activity, Phone, PhoneOff, Pause, Play, Gauge, LayoutGrid } from 'lucide-react';
 import ZoeDiagnosticsDrawer, { type DiagTab } from '@/components/zoe-infinity/ZoeDiagnosticsDrawer';
 import { cotStart, cotFinish } from '@/utils/cotWiringBus';
 import { setSendStage, reportDiagnosticError } from '@/utils/zoeDiagnosticsBus';
@@ -352,6 +352,7 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
   }, []);
 
   const [showAttachMenu, setShowAttachMenu] = useState(false);
+  const [showFeatureMenu, setShowFeatureMenu] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [isInputFocused, setIsInputFocused] = useState(false);
   const [pendingMedia, setPendingMedia] = useState<{ file: File; preview: string; type: 'image' | 'document' | 'video' | 'audio' } | null>(null);
@@ -733,6 +734,7 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
   useEffect(() => {
     if (isOpen && inputRef.current) {
       setTimeout(() => inputRef.current?.focus(), 300);
+      setTimeout(() => { if (document.activeElement !== inputRef.current) inputRef.current?.focus(); }, 900);
     }
   }, [isOpen]);
 
@@ -3117,11 +3119,11 @@ Want me to dive deeper into any aspect?`;
             exit={{ opacity: 0, scale: 0.9, y: 10 }}
             transition={{ type: 'spring', damping: 30, stiffness: 400 }}
             className={cn(
-              'overflow-hidden flex flex-col overscroll-contain pointer-events-auto',
+              'relative overflow-hidden flex flex-col overscroll-contain pointer-events-auto',
               isFullPage ? 'cursor-default' : 'cursor-grab active:cursor-grabbing',
               // Glassmorphism design - futuristic translucent panel with scroll isolation
-              'bg-background/40 backdrop-blur-2xl',
-              'border border-primary/20',
+              'bg-background/20 backdrop-blur-xl',
+              'border-0',
               isFullPage ? 'rounded-2xl' : 'rounded-xl',
               'shadow-[0_8px_32px_rgba(0,0,0,0.3)]',
               // Responsive sizing - 4.1" to 95" 4K displays
@@ -3133,7 +3135,7 @@ Want me to dive deeper into any aspect?`;
             )}
             style={{
               // Glassmorphism glow effect
-              boxShadow: '0 8px 32px rgba(0,0,0,0.25), inset 0 0 0 1px rgba(255,255,255,0.05)',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
             }}
           >
           {/* QuantumCallUI removed - QuantumCallModal now handles both incoming and active calls */}
@@ -3161,8 +3163,17 @@ Want me to dive deeper into any aspect?`;
           
           {/* Unified Header - responsive design */}
           {/* Unified Header - responsive design with larger touch targets on mobile */}
-          <div className="flex min-h-8 md:min-h-7 lg:min-h-7 items-center justify-between px-2 md:px-2 lg:px-2.5 py-1 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-primary/10">
+          <div className="flex min-h-9 items-center justify-between px-1.5 md:px-2 py-1 bg-transparent border-0">
             <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setShowFeatureMenu((v) => !v)}
+                aria-label={showFeatureMenu ? 'Close Zoe features' : 'Open Zoe features'}
+                aria-expanded={showFeatureMenu}
+                className="h-7 w-7 flex items-center justify-center shrink-0 text-foreground/85 hover:text-foreground bg-transparent border-0"
+              >
+                {showFeatureMenu ? <X className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}
+              </button>
               {/* Current conversation indicator - tap to switch */}
               <Button
                 variant="ghost"
@@ -3210,9 +3221,18 @@ Want me to dive deeper into any aspect?`;
               )}
             </div>
             
-            <div className="flex flex-wrap items-center justify-end gap-x-0.5 gap-y-0.5 min-w-0">
+            <div className={cn(
+              showFeatureMenu
+                ? 'absolute left-2 top-10 z-[60] flex w-[min(15rem,calc(100%-1rem))] max-h-[calc(100%-7rem)] flex-col gap-0.5 overflow-y-auto overscroll-contain rounded-2xl bg-background/35 p-1.5 backdrop-blur-2xl'
+                : 'hidden',
+              '[&_button]:!bg-transparent [&_button]:!border-0 [&_button]:!shadow-none [&_svg]:!text-foreground/85',
+              '[&_.right-0.top-5]:!left-0 [&_.right-0.top-5]:!right-auto [&_.right-0.top-5]:!border-0 [&_.right-0.top-5]:!bg-background/60'
+            )}
+            onWheelCapture={(e) => e.stopPropagation()}
+            onTouchMoveCapture={(e) => e.stopPropagation()}>
               {/* Audio Call Button - HIDDEN for Zoe AI (Phase 4: Sever AI Video Link) */}
               {messagingMode !== 'zoe' && (
+              <ZoeFeatureRow label="Voice call">
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -3260,10 +3280,12 @@ Want me to dive deeper into any aspect?`;
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
+              </ZoeFeatureRow>
               )}
 
               {/* Video Call Button - HIDDEN for Zoe AI (Phase 4: Sever AI Video Link) */}
               {messagingMode !== 'zoe' && (
+              <ZoeFeatureRow label="Video call">
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -3315,9 +3337,11 @@ Want me to dive deeper into any aspect?`;
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
+              </ZoeFeatureRow>
               )}
 
               {/* OMEGA Core Sync Button with dropdown */}
+              <ZoeFeatureRow label="Cloud sync">
               <div className="relative shrink-0">
                 <TooltipProvider>
                   <Tooltip>
@@ -3405,8 +3429,10 @@ Want me to dive deeper into any aspect?`;
                   )}
                 </AnimatePresence>
               </div>
+              </ZoeFeatureRow>
 
               {/* God Mode Scan Button */}
+              <ZoeFeatureRow label="System scan">
               <div className="relative shrink-0">
                 <TooltipProvider>
                   <Tooltip>
@@ -3526,8 +3552,10 @@ Want me to dive deeper into any aspect?`;
                   )}
                 </AnimatePresence>
               </div>
+              </ZoeFeatureRow>
 
               {/* Hands-Free Message Reader Toggle */}
+              <ZoeFeatureRow label="Read messages aloud">
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -3565,9 +3593,11 @@ Want me to dive deeper into any aspect?`;
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
+              </ZoeFeatureRow>
 
               {/* God Eye Vision Toggle */}
               {messagingMode === 'zoe' && (
+              <ZoeFeatureRow label="Zoe vision">
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -3609,9 +3639,11 @@ Want me to dive deeper into any aspect?`;
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
+              </ZoeFeatureRow>
               )}
 
               {/* OMEGA Portal Button - always visible */}
+              <ZoeFeatureRow label="OMEGA World">
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -3633,8 +3665,10 @@ Want me to dive deeper into any aspect?`;
                   <TooltipContent side="bottom" className="text-[10px]">Enter OMEGA World</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
+              </ZoeFeatureRow>
 
               {/* Deep Thinking toggle */}
+              <ZoeFeatureRow label="Deep thinking">
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -3658,8 +3692,10 @@ Want me to dive deeper into any aspect?`;
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
+              </ZoeFeatureRow>
 
               {/* Metacognition metrics */}
+              <ZoeFeatureRow label="Metrics">
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -3680,8 +3716,10 @@ Want me to dive deeper into any aspect?`;
                   <TooltipContent side="bottom" className="text-[10px]">Metacognition metrics</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
+              </ZoeFeatureRow>
 
               {/* CoT wiring status */}
+              <ZoeFeatureRow label="Wiring status">
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -3702,7 +3740,10 @@ Want me to dive deeper into any aspect?`;
                   <TooltipContent side="bottom" className="text-[10px]">CoT wiring status</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
+              </ZoeFeatureRow>
 
+            </div>
+            <div className="flex items-center gap-0.5 shrink-0">
 
 
               {/* Expand/Minimize */}
@@ -4480,7 +4521,7 @@ Want me to dive deeper into any aspect?`;
           )}
 
           {/* Input Area - compact design with attach menu containing all tools */}
-          <div className="px-1 md:px-1.5 lg:px-2 py-0.5 md:py-1 border-t border-primary/10 bg-background/80 backdrop-blur-sm shrink-0 relative z-10">
+          <div className="px-1 md:px-1.5 lg:px-2 py-0.5 md:py-1 border-0 bg-transparent shrink-0 relative z-10">
             {/* Hidden file inputs */}
             <input
               ref={fileInputRef}
@@ -4511,19 +4552,19 @@ Want me to dive deeper into any aspect?`;
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-6 w-6 md:h-7 md:w-7 lg:h-8 lg:w-8 rounded-full hover:bg-primary/10"
+                    className="h-6 w-6 md:h-7 md:w-7 lg:h-8 lg:w-8 rounded-full hover:bg-transparent"
                     title="Menu"
                     aria-expanded={showAttachMenu}
                     aria-haspopup="menu"
                     onClick={() => setShowAttachMenu((v) => !v)}
                   >
-                    <Plus className="h-3 w-3 md:h-3.5 md:w-3.5 lg:h-4 lg:w-4 text-foreground/60" />
+                    <Plus className="h-3 w-3 md:h-3.5 md:w-3.5 lg:h-4 lg:w-4 text-foreground/85" />
                   </Button>
 
                   {showAttachMenu && (
                     <div
                       role="menu"
-                      className="absolute left-0 bottom-full mb-2 w-[160px] md:w-[180px] lg:w-[200px] rounded-lg border border-primary/20 bg-background/95 backdrop-blur-xl p-1 md:p-1.5 shadow-lg max-h-[220px] md:max-h-[260px] lg:max-h-[300px] overflow-y-auto overscroll-contain z-[10050]"
+                      className="absolute left-0 bottom-full mb-2 w-[160px] md:w-[180px] lg:w-[200px] rounded-2xl border-0 bg-background/35 backdrop-blur-2xl p-1 md:p-1.5 shadow-none [&_svg]:!text-foreground/85 [&_p]:!bg-transparent [&_p.sticky]:!static max-h-[220px] md:max-h-[260px] lg:max-h-[300px] overflow-y-auto overscroll-contain z-[10050]"
                       onWheelCapture={(e) => e.stopPropagation()}
                       onTouchMoveCapture={(e) => e.stopPropagation()}
                     >
@@ -4754,9 +4795,9 @@ Want me to dive deeper into any aspect?`;
                         : "Zoe..."
                 }
                 className={cn(
-                  "flex-1 min-w-0 text-[11px] md:text-xs lg:text-sm rounded-full bg-foreground/5 border-0 placeholder:text-foreground/40 focus-visible:ring-1 px-3 md:px-4 transition-all duration-300 ease-out",
+                  "flex-1 min-w-0 text-[11px] md:text-xs lg:text-sm rounded-full bg-transparent border-0 shadow-none ring-0 ring-offset-0 outline-none placeholder:text-foreground/50 focus-visible:ring-0 focus-visible:ring-offset-0 caret-foreground px-3 md:px-4 transition-all duration-300 ease-out",
                   isInputFocused ? "h-9 md:h-10 lg:h-11 py-2" : "h-6 md:h-7 lg:h-8",
-                  messagingMode === 'user' ? "focus-visible:ring-cyan-500/30" : "focus-visible:ring-primary/30"
+                  messagingMode === 'user' ? "" : ""
                 )}
                 disabled={isProcessing || isPerceptionProcessing || isSending || (messagingMode === 'user' && !selectedUser)}
               />
@@ -4813,3 +4854,20 @@ Want me to dive deeper into any aspect?`;
     </AnimatePresence>
   );
 };
+
+/** Plain transparent feature row: icon + name, tap anywhere on the row. Design-only wrapper. */
+function ZoeFeatureRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div
+      className="relative flex items-center gap-2 rounded-xl px-1.5 py-1 cursor-pointer hover:bg-foreground/5 [&_button]:!h-7 [&_button]:!min-w-7 [&_svg]:!h-4 [&_svg]:!w-4"
+      onClick={(e) => {
+        const target = e.target as HTMLElement;
+        if (target.closest('button')) return;
+        (e.currentTarget.querySelector('button') as HTMLButtonElement | null)?.click();
+      }}
+    >
+      {children}
+      <span className="text-xs text-foreground/85 select-none">{label}</span>
+    </div>
+  );
+}
