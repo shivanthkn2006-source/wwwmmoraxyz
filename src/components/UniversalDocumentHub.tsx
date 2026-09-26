@@ -41,7 +41,6 @@ const documents: Document[] = [
       "",
       "Platform Overview:",
       "• Next-generation social platform powered by Zoe AI Architect",
-      "• Built with React 18, TypeScript, and Tailwind CSS",
       "• Real-time messaging, posts, and social connections",
       "• Progressive Web App (PWA) with offline support",
       "",

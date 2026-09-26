@@ -117,7 +117,7 @@ const VoiceLibraryBrowser: React.FC<VoiceLibraryBrowserProps> = ({ selectedVoice
       <CardHeader>
         <CardTitle>Voice Library</CardTitle>
         <CardDescription>
-          Listen to samples and choose your assistant's voice (powered by browser TTS)
+          Listen to samples and choose your assistant's voice
         </CardDescription>
       </CardHeader>
       <CardContent>

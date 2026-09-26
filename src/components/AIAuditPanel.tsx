@@ -146,7 +146,7 @@ export const AIAuditPanel = () => {
             AI Platform Audit (Async Queue)
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
-            Jobs run asynchronously, powered by Gemini 3 Pro
+            Jobs run asynchronously
           </p>
         </div>
         
