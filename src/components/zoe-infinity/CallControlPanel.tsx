@@ -5,7 +5,8 @@
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Phone, Video, PhoneOff, VideoOff, Users, User, Search, X, Circle } from 'lucide-react';
+import { Phone, Video, PhoneOff, VideoOff, Users, User, Search, X, Circle, MessageCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -143,6 +144,8 @@ export const CallControlPanel: React.FC<CallControlPanelProps> = ({
       loadRecentContacts();
     }
   }, [isOpen, loadRecentContacts]);
+
+  const navigate = useNavigate();
 
   const handleUserSelect = (user: UserProfile) => {
     setSelectedUser(user);
@@ -307,6 +310,14 @@ export const CallControlPanel: React.FC<CallControlPanelProps> = ({
                   >
                     <Video className="w-4 h-4 mr-2" />
                     Video Call
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="flex-1 bg-white/[0.08] text-white hover:bg-white/15 hover:text-white"
+                    onClick={() => navigate(`/chat/${selectedUser.user_id}`)}
+                  >
+                    <MessageCircle className="w-4 h-4 mr-2" />
+                    Message
                   </Button>
                 </div>
               </div>
