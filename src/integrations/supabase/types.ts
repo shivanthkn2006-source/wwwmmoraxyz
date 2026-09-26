@@ -4138,12 +4138,45 @@ export type Database = {
         }
         Relationships: []
       }
+      humor_comments: {
+        Row: {
+          body: string
+          created_at: string
+          drop_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          drop_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          drop_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "humor_comments_drop_id_fkey"
+            columns: ["drop_id"]
+            isOneToOne: false
+            referencedRelation: "humor_drops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       humor_drops: {
         Row: {
           created_at: string
           drop_date: string
           headline: string
           id: string
+          image_url: string | null
           lines: Json
           metal: string
           slot: number
@@ -4154,6 +4187,7 @@ export type Database = {
           drop_date: string
           headline: string
           id?: string
+          image_url?: string | null
           lines?: Json
           metal: string
           slot: number
@@ -4164,12 +4198,45 @@ export type Database = {
           drop_date?: string
           headline?: string
           id?: string
+          image_url?: string | null
           lines?: Json
           metal?: string
           slot?: number
           source?: string
         }
         Relationships: []
+      }
+      humor_reactions: {
+        Row: {
+          created_at: string
+          drop_id: string
+          id: string
+          reaction: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          drop_id: string
+          id?: string
+          reaction: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          drop_id?: string
+          id?: string
+          reaction?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "humor_reactions_drop_id_fkey"
+            columns: ["drop_id"]
+            isOneToOne: false
+            referencedRelation: "humor_drops"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       important_dates: {
         Row: {
