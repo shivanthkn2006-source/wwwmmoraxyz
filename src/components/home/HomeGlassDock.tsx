@@ -205,7 +205,7 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
     ? Math.max(0, Math.floor(triggerBadge))
     : 0;
 
-  const renderIconButton = (item: GlassDockItem, isHome = false) => {
+  const renderIconButton = (item: GlassDockItem, isHome = false, isQuickAction = false) => {
     const badge = badgesEnabled && Number.isFinite(item.badge) ? Math.max(0, Math.floor(item.badge as number)) : 0;
     const highlighted = Boolean(item.active) || badge > 0;
     const badgeStale = badgesEnabled && Boolean(item.badgeStale) && badge > 0;
@@ -230,7 +230,7 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
               : item.label
         }
         aria-current={item.active ? 'true' : undefined}
-        tabIndex={open || isHome ? 0 : -1}
+        tabIndex={open || isHome || isQuickAction ? 0 : -1}
         onClick={() => {
           if (isHome && suppressClick.current) {
             suppressClick.current = false;
@@ -279,7 +279,7 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
         )}
       >
         {item.icon}
-        {!isHome && !item.id.startsWith('dock-filler-') && !item.id.startsWith('placeholder-') && (
+        {!isHome && !isQuickAction && !item.id.startsWith('dock-filler-') && !item.id.startsWith('placeholder-') && (
           <span className="home-dock-label pointer-events-none absolute inset-x-0.5 bottom-0.5 z-10 line-clamp-2 text-center font-medium text-white/90">
             {item.label}
           </span>
@@ -368,6 +368,15 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
     ));
   }, [gridSlots, searchQuery]);
 
+  // Keep a small, stable set of genuinely used destinations beside Home
+  // while the full panel is closed. The most-used action sits nearest Home.
+  const frequentSlots = React.useMemo(
+    () => slots
+      .filter((item) => (usage[item.id]?.count ?? 0) > 0)
+      .slice(-4),
+    [slots, usage],
+  );
+
 
 
   const renderPackedRows = () => (
@@ -412,8 +421,12 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
         >
           {open && renderPackedRows()}
 
-          {/* Only the bare Home trigger ever sits outside the panel. */}
-          <div className={cn('flex w-full items-center justify-end gap-[var(--home-dock-gap)]', !open && 'pointer-events-none')}>
+          <div className="flex w-full items-center justify-end gap-[var(--home-dock-gap)]">
+            {!open && frequentSlots.map((item) => (
+              <div key={item.id} className="pointer-events-auto">
+                {renderIconButton(item, false, true)}
+              </div>
+            ))}
             {open && (
               <label className="flex min-w-0 flex-1 items-center gap-2 px-1" aria-label="Search home menu">
                 <input

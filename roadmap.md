@@ -29,3 +29,4 @@
 - [x] Daily card builder: today's 60 cards already built at 00:02 UTC (no duplicate run)
 - [ ] Test sign-up + signed-in walk of Home/Zoe voice/DHF (blocked: preview not signed in; sign-up needs captcha + email confirmation)
 - [ ] Physical-phone check (needs the user's device)
+- [x] Restore frequently used menu icons beside the closed Home icon without expanding its touch layer
