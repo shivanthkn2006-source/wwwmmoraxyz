@@ -21,6 +21,7 @@ import { duePosts, type DhfDailyPost } from '@/lib/dhfCompass';
 import { resolveCompassImages } from '@/lib/dhfCompassImages';
 import { deviceTimeZone } from '@/lib/growthSlot';
 
+const PAGE_SIZE = 100;
 const SELECT =
   'id, post_date, slot_time, category, headline, short_summary, full_story_content, image_url, image_path, image_source, powered_by_badge, referral_cta, astrological_context, created_at';
 
@@ -36,17 +37,29 @@ const DHFCompassPage: React.FC = () => {
   const [adminDate, setAdminDate] = useState('');
   const [adminBusy, setAdminBusy] = useState(false);
 
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+
+  /** Full history, newest first, one page at a time (keeps phones light). */
+  const fetchPage = useCallback(async (offset: number) => {
+    if (!user) return [] as DhfDailyPost[];
+    const { data } = await supabase.from('dhf_daily_posts').select(SELECT).eq('user_id', user.id)
+      .order('post_date', { ascending: false }).order('slot_time', { ascending: false })
+      .range(offset, offset + PAGE_SIZE - 1);
+    return (data ?? []) as unknown as DhfDailyPost[];
+  }, [user]);
+
   const load = useCallback(async () => {
     if (!user) { setLoading(false); return; }
     setLoading(true);
     try {
-      const [{ data: rows }, { data: profile }, { data: roles }] = await Promise.all([
-        supabase.from('dhf_daily_posts').select(SELECT).eq('user_id', user.id)
-          .order('post_date', { ascending: false }).order('slot_time', { ascending: false }).limit(120),
+      const [rows, { data: profile }, { data: roles }] = await Promise.all([
+        fetchPage(0),
         supabase.from('user_dhf_profiles').select('referral_code, reward_points').eq('id', user.id).maybeSingle(),
         supabase.from('user_roles').select('role').eq('user_id', user.id).eq('role', 'admin').limit(1),
       ]);
-      setPosts(await resolveCompassImages((rows ?? []) as unknown as DhfDailyPost[]));
+      setPosts(await resolveCompassImages(rows));
+      setHasMore(rows.length === PAGE_SIZE);
       if (profile) setReferral({ code: profile.referral_code ?? '', points: profile.reward_points ?? 0 });
       setIsAdmin(Boolean(roles && roles.length));
     } catch {
@@ -54,7 +67,24 @@ const DHFCompassPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, fetchPage]);
+
+  const loadOlder = useCallback(async () => {
+    setLoadingOlder(true);
+    try {
+      const rows = await fetchPage(posts.length);
+      const resolved = await resolveCompassImages(rows);
+      setPosts((prev) => {
+        const seen = new Set(prev.map((p) => p.id));
+        return [...prev, ...resolved.filter((p) => !seen.has(p.id))];
+      });
+      setHasMore(rows.length === PAGE_SIZE);
+    } catch {
+      toast.error('Could not load older cards.');
+    } finally {
+      setLoadingOlder(false);
+    }
+  }, [fetchPage, posts.length]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -176,6 +206,14 @@ const DHFCompassPage: React.FC = () => {
             </div>
           </section>
         ))}
+
+        {!loading && hasMore && (
+          <div className="flex justify-center pb-10">
+            <Button variant="ghost" onClick={() => void loadOlder()} disabled={loadingOlder}>
+              {loadingOlder ? 'Loading older cards…' : 'Show older cards'}
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );
