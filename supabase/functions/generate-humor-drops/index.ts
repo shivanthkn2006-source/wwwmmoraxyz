@@ -46,10 +46,10 @@ async function writeSkit(metal: Metal): Promise<{ headline: string; lines: { spe
     `Write ONE original, clean, family-friendly two-person comedy skit for someone whose mood today is: ${METALS[metal]}
 Return JSON only: {"headline":"<max 6 words, punchline-style>","lines":[{"speaker":"A","text":"..."},{"speaker":"B","text":"..."}]}
 4 to 6 alternating lines, each under 120 characters. Voice A is energetic, voice B is deadpan. No emoji, no names of real people, no insults about groups.`,
-    { systemPrompt: 'You are a sharp, kind stand-up writer. Output strict JSON.', temperature: 0.95, maxTokens: 500, jsonMode: true, timeoutMs: 20_000 },
+    { systemPrompt: 'You are a sharp, kind stand-up writer. Output strict JSON.', temperature: 0.95, maxTokens: 1200, timeoutMs: 45_000 },
   );
   try {
-    const m = raw?.match(/\{[\s\S]*\}/);
+    const m = raw?.replace(/<think>[\s\S]*?<\/think>/g, '').match(/\{[\s\S]*\}/);
     const parsed = m ? JSON.parse(m[0]) : null;
     const lines = (Array.isArray(parsed?.lines) ? parsed.lines : [])
       .map((l: any, i: number) => ({ speaker: (l?.speaker === 'B' || (l?.speaker !== 'A' && i % 2)) ? 'B' as const : 'A' as const, text: clean(l?.text, 160) }))
