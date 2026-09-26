@@ -11,7 +11,7 @@
 - [ ] Verify sign-in persistence, Home latency, DHF/growth/planetary cards, and reload stability with an authorized preview session.
 - [ ] Verify the one-time universal permission action across signed-in desktop and mobile views.
 - [ ] Confirm phased Home loading renders real feed content before background DHF and planetary work.
-- [ ] Complete subagent code audit and visual QA without altering existing features or design.
+- [x] Complete subagent code audit and signed-out desktop/mobile visual QA without altering existing features or design.
 
 # Sep 25 requests
 - [x] Launch notice: admin-only (members cannot broadcast to everyone — spam/abuse risk)
@@ -33,9 +33,13 @@
 - [x] Restore welcome-card scheduling so remote DHF/astrology checks cannot prevent signed-in cards from appearing
 - [x] Keep today's welcome motivation available in both Global and Friends feeds
 - [x] Audit incidental provider labels across platform surfaces; preserve required map/video credits, creator content, legal disclosures, and admin diagnostics
-- [ ] Fix Zoe's LOL delivery in the default Global feed with auth-ready, focus, and scheduled refreshes
-- [ ] Replace Zoe's LOL image generation with Pollinations only and match each skit's actual scene
-- [ ] Move scheduled LOL announcements into shared Deepgram voice delivery and show schedules on the calendar
-- [ ] Add humor categories, filtering, recent-engagement trending, and duplicate-safe Global feed placement
-- [ ] Add secure member joke submission with title, text, category, optional image, and feed engagement
+- [x] Fix Zoe's LOL delivery in the default Global feed with auth-ready, focus, and scheduled refreshes
+- [x] Replace Zoe's LOL image generation with Pollinations only and match each skit's actual scene
+- [x] Move scheduled LOL announcements into shared Deepgram voice delivery and show schedules on the calendar
+- [x] Add humor categories, filtering, recent-engagement trending, and duplicate-safe Global feed placement
+- [x] Add secure member joke submission with title, text, category, optional image, and feed engagement
 - [ ] Verify Zoe's LOL end to end in signed-in desktop and phone previews
+- [x] Stabilize authenticated sign-in, landing, and Home loading before feature QA.
+- [ ] Verify one persisted Zoe LOL card across Global, Friends, LOL, calendar, voice, reactions, and comments.
+- [ ] Verify admin/@moksh50 authenticated preview without exposing credentials.
+- [ ] Backfill three remaining LOL images (blocked by Pollinations HTTP 429; do not switch providers or duplicate cards).
