@@ -18,8 +18,9 @@ describe("Zoe's LOL integration", () => {
     const home = read('src/pages/HomePage.tsx');
     expect(home).toContain("drop.origin === 'member'");
     expect(home).toContain('friendIds.has(drop.author_id)');
-    expect(home).toContain('humorItems.slice(0, 3)');
-    expect(home).toContain('interleaved.splice');
+    expect(home).toContain('...growthItems, ...humorItems');
+    expect(home).toContain('timestamp: drop.scheduled_for');
+    expect(home).toContain('humorDrops.length === 0');
   });
 
   it('refreshes after auth, realtime changes, focus, and member publishing', () => {
@@ -61,6 +62,9 @@ describe("Zoe's LOL integration", () => {
     const page = read('src/pages/ZoeLolPage.tsx');
     expect(page).toContain("mode === 'top'");
     expect(page).toContain("mode === 'viewed'");
+    expect(page).toContain("mode === 'commented'");
+    expect(page).toContain("mode === 'mine'");
+    expect(page).toContain('type="date"');
   });
 
   it('uses one shared generation for Home and the Zoe LOL page', () => {

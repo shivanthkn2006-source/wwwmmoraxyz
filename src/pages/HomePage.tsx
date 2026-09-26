@@ -207,7 +207,7 @@ const HomePage = () => {
   } = useGrowthFeed();
   const growthUnread = useGrowthUnread();
   const { posts: dhfPosts, refresh: refreshDhf } = useDhfDailyFeed();
-  const humorDrops = useHumorDrops();
+  const humorDrops = useHumorDrops(48);
 
   // Remote flag: onboarding gating can be switched off platform-wide without a deploy.
   const { isEnabled: isGrowthFlagEnabled } = useGrowthFlags();
@@ -2543,20 +2543,17 @@ const HomePage = () => {
       ));
     const humorItems = feedHumorDrops.map((drop) => ({
       id: `humor-${drop.id}`,
-      timestamp: drop.created_at,
+      timestamp: drop.scheduled_for,
       value: (
         <div key={`humor-${drop.id}`} className="relative flex h-full min-h-full w-full shrink-0 snap-start snap-always items-center overflow-y-auto p-4 pt-24 pb-24" data-humor-slide>
           <FeedErrorBoundary section="posts"><HumorDropCard drop={drop} /></FeedErrorBoundary>
         </div>
       ),
     }));
-    const timelineItems = composeChronologicalFeed([...nativeItems, ...loopItems, ...growthItems]);
+    const timelineItems = composeChronologicalFeed([...nativeItems, ...loopItems, ...growthItems, ...humorItems]);
     // Due DHF guidance leads the social timeline so a newer upload cannot bury
     // Zoe's current-day context. duePosts already keeps these newest-first.
-    if (humorItems.length === 0) return [...dhfSlides, ...timelineItems];
-    const interleaved = [...timelineItems];
-    humorItems.slice(0, 3).forEach((item, index) => interleaved.splice(Math.min(index * 6, interleaved.length), 0, item.value));
-    return [...dhfSlides, ...interleaved];
+    return [...dhfSlides, ...timelineItems];
 
   };
 
@@ -2740,7 +2737,7 @@ const HomePage = () => {
                 
                 {loading && globalFeedSlides.length === 0 ? (
                   <p className="absolute inset-0 flex items-center justify-center px-3 text-center text-muted-foreground">Loading posts...</p>
-                ) : globalPosts.length === 0 && !astroDaily && !dailyMotivation && searchVideos.length === 0 && neuralVideos.length === 0 && loopSlides.length === 0 && growthSlide.length === 0 ? (
+                ) : globalPosts.length === 0 && humorDrops.length === 0 && dhfSlides.length === 0 && !astroDaily && !dailyMotivation && searchVideos.length === 0 && neuralVideos.length === 0 && loopSlides.length === 0 && growthSlide.length === 0 ? (
 
                   <p className="absolute inset-0 flex items-center justify-center px-3 text-center text-muted-foreground">No posts yet</p>
                 ) : (
