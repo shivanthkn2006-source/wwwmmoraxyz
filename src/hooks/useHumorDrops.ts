@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { loadAstroSelf } from '@/features/astro/astroAffinity';
 import { elementOf } from '@/features/astro/zodiac';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/lib/auth';
 
 export interface HumorDrop {
   id: string;
