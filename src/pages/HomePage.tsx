@@ -116,6 +116,8 @@ import { markPostsSeen, readUnseenPostIds, syncUnseenPostSnapshot, type FeedUpda
 import { composeChronologicalFeed } from '@/lib/growthFeedComposition';
 import { deviceTimeZone, growthSlotTimestamp, slotsForFrequency } from '@/lib/growthSlot';
 import DHFCompassCard from '@/components/dhf/DHFCompassCard';
+import HumorDropCard from '@/components/humor/HumorDropCard';
+import { useHumorDrops } from '@/hooks/useHumorDrops';
 import { useDhfDailyFeed } from '@/hooks/useDhfDailyFeed';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { screenUpload, reportBlockedUpload } from '@/lib/uploadModeration';
@@ -205,6 +207,7 @@ const HomePage = () => {
   } = useGrowthFeed();
   const growthUnread = useGrowthUnread();
   const { posts: dhfPosts, refresh: refreshDhf } = useDhfDailyFeed();
+  const humorDrops = useHumorDrops();
 
   // Remote flag: onboarding gating can be switched off platform-wide without a deploy.
   const { isEnabled: isGrowthFlagEnabled } = useGrowthFlags();
@@ -2525,7 +2528,16 @@ const HomePage = () => {
       timestamp: growthSlotTimestamp(insight.local_date, insight.slot, zone),
       value: growthSlide[index],
     }));
-    const timelineItems = composeChronologicalFeed([...nativeItems, ...loopItems, ...growthItems]);
+    const humorItems = feed === 'global' ? humorDrops.map((drop) => ({
+      id: `humor-${drop.id}`,
+      timestamp: drop.created_at,
+      value: (
+        <div key={`humor-${drop.id}`} className="relative flex h-full min-h-full w-full shrink-0 snap-start snap-always items-center overflow-y-auto p-4 pt-24 pb-24" data-humor-slide>
+          <FeedErrorBoundary section="posts"><HumorDropCard drop={drop} /></FeedErrorBoundary>
+        </div>
+      ),
+    })) : [];
+    const timelineItems = composeChronologicalFeed([...nativeItems, ...loopItems, ...growthItems, ...humorItems]);
     // Due DHF guidance leads the social timeline so a newer upload cannot bury
     // Zoe's current-day context. duePosts already keeps these newest-first.
     return [...dhfSlides, ...timelineItems];

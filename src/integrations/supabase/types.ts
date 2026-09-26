@@ -4138,6 +4138,39 @@ export type Database = {
         }
         Relationships: []
       }
+      humor_drops: {
+        Row: {
+          created_at: string
+          drop_date: string
+          headline: string
+          id: string
+          lines: Json
+          metal: string
+          slot: number
+          source: string
+        }
+        Insert: {
+          created_at?: string
+          drop_date: string
+          headline: string
+          id?: string
+          lines?: Json
+          metal: string
+          slot: number
+          source?: string
+        }
+        Update: {
+          created_at?: string
+          drop_date?: string
+          headline?: string
+          id?: string
+          lines?: Json
+          metal?: string
+          slot?: number
+          source?: string
+        }
+        Relationships: []
+      }
       important_dates: {
         Row: {
           created_at: string | null
