@@ -5,7 +5,7 @@
  * short gap between speakers so lines never overlap.
  */
 import React, { useEffect, useRef, useState } from 'react';
-import { Laugh, Pause, Play, ThumbsUp, ThumbsDown, MessageCircle, Share2, Send } from 'lucide-react';
+import { Laugh, Pause, Play, ThumbsUp, ThumbsDown, MessageCircle, Share2, Send, Eye, Bell, BellRing } from 'lucide-react';
 import { claimVoice, releaseVoice, registerVoiceChannel } from '@/lib/zoeVoiceArbiter';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/integrations/supabase/client';
@@ -49,11 +49,19 @@ export const HumorDropCard: React.FC<{ drop: HumorDrop }> = ({ drop }) => {
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
 
+  const [views, setViews] = useState(0);
+  const [following, setFollowing] = useState(false);
+  const cardRef = useRef<HTMLElement | null>(null);
+
   const loadSocial = React.useCallback(async () => {
-    const [{ data: r }, { data: c }] = await Promise.all([
+    const [{ data: r }, { data: c }, { count }, { data: f }] = await Promise.all([
       supabase.from('humor_reactions' as never).select('user_id, reaction').eq('drop_id', drop.id),
       supabase.from('humor_comments' as never).select('id, user_id, body, created_at').eq('drop_id', drop.id).order('created_at').limit(100),
+      supabase.from('humor_views' as never).select('drop_id', { count: 'exact', head: true }).eq('drop_id', drop.id),
+      supabase.from('humor_follows' as never).select('category').eq('user_id', user?.id ?? '').eq('category', drop.category).maybeSingle(),
     ]);
+    setViews(count ?? 0);
+    setFollowing(Boolean(f));
     const rows = (r ?? []) as unknown as { user_id: string; reaction: 'like' | 'dislike' }[];
     setLikes(rows.filter((x) => x.reaction === 'like').length);
     setDislikes(rows.filter((x) => x.reaction === 'dislike').length);
@@ -61,6 +69,29 @@ export const HumorDropCard: React.FC<{ drop: HumorDrop }> = ({ drop }) => {
     setComments((c ?? []) as unknown as Comment[]);
   }, [drop.id, user?.id]);
   useEffect(() => { if (user?.id) void loadSocial().catch(() => {}); }, [loadSocial, user?.id]);
+
+  // Record one view per member once the card is actually on screen.
+  useEffect(() => {
+    const el = cardRef.current;
+    if (!el || !user?.id) return;
+    const obs = new IntersectionObserver((entries) => {
+      if (!entries.some((e) => e.isIntersecting)) return;
+      obs.disconnect();
+      void supabase.from('humor_views' as never).upsert({ drop_id: drop.id, user_id: user.id } as never, { onConflict: 'drop_id,user_id', ignoreDuplicates: true })
+        .then(() => loadSocial().catch(() => {}));
+    }, { threshold: 0.5 });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [drop.id, user?.id, loadSocial]);
+
+  const toggleFollow = async () => {
+    if (!user?.id) return;
+    const table = supabase.from('humor_follows' as never);
+    if (following) await table.delete().eq('user_id', user.id).eq('category', drop.category);
+    else await table.insert({ user_id: user.id, category: drop.category } as never);
+    setFollowing(!following);
+    window.dispatchEvent(new CustomEvent('mmora:humor-follows'));
+  };
 
   const react = async (kind: 'like' | 'dislike') => {
     if (!user?.id) return;
@@ -139,76 +170,82 @@ export const HumorDropCard: React.FC<{ drop: HumorDrop }> = ({ drop }) => {
     }
   };
 
+  const when = new Date(drop.scheduled_for || drop.created_at);
+  const stamp = Number.isNaN(when.getTime()) ? '' : when.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  const icon = 'flex items-center gap-1 border-0 bg-transparent p-0 text-white outline-none';
+
   return (
     <article
+      ref={cardRef}
       data-humor-drop={drop.id}
-      className={`w-full rounded-3xl border border-white/15 bg-gradient-to-br ${TINT[drop.metal]} to-transparent bg-white/5 p-5 text-white backdrop-blur-xl`}
+      className="relative w-full overflow-hidden rounded-3xl bg-white/5 text-white backdrop-blur-xl"
     >
-      <header className="mb-3 flex items-center gap-2 text-xs text-white/70">
-        <Laugh className="h-4 w-4" aria-hidden />
-        <span>{drop.origin === 'member' ? 'Member joke' : "Zoe's LOL"} · {drop.category} · {LABEL[drop.metal]}</span>
-      </header>
       {drop.image_url && (
-        <img src={drop.image_url} alt={drop.headline} loading="lazy" className="mb-4 aspect-square w-full rounded-2xl object-cover" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+        <img src={drop.image_url} alt="" aria-hidden loading="lazy" className="pointer-events-none absolute inset-0 h-full w-full object-cover" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
       )}
-      <h3
-        className="mb-4 text-2xl font-extrabold leading-tight tracking-tight text-white"
-        style={{ WebkitTextStroke: '0.6px rgba(0,0,0,0.55)', textShadow: '0 1px 6px rgba(0,0,0,0.45)' }}
-      >
-        {drop.headline}
-      </h3>
-      <ul className="space-y-2">
-        {drop.lines.map((line, i) => (
-          <li
-            key={i}
-            className={`text-[15px] leading-snug transition-opacity ${active === -1 || active === i ? 'opacity-100' : 'opacity-50'} ${line.speaker === 'B' ? 'pl-6 font-semibold' : 'font-medium'}`}
-            style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}
-          >
-            {line.text}
-          </li>
-        ))}
-      </ul>
-      <div className="mt-4 flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => void play(false)}
-          aria-label={playing ? 'Stop the skit' : 'Play the skit'}
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white"
-        >
-          {playing ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
-        </button>
-        {failed && <span className="text-xs text-white/70">Voice unavailable right now — the words are all here.</span>}
-        <div className="ml-auto flex items-center gap-4 text-sm">
-          <button type="button" aria-label="Like" aria-pressed={mine === 'like'} onClick={() => void react('like')} className={`flex items-center gap-1 ${mine === 'like' ? 'text-white' : 'text-white/70'}`}>
-            <ThumbsUp className="h-5 w-5" fill={mine === 'like' ? 'currentColor' : 'none'} />{likes}
+      <div className={`pointer-events-none absolute inset-0 bg-gradient-to-b ${TINT[drop.metal]} via-black/30 to-black/75`} aria-hidden />
+      <div className="relative flex min-h-[26rem] flex-col p-5">
+        <header className="flex items-center gap-2 text-xs text-white">
+          <Laugh className="h-4 w-4" aria-hidden />
+          <span className="font-semibold tracking-wide">Zoe's LOL</span>
+          <span className="text-white/80">· {drop.origin === 'member' ? 'Member joke' : LABEL[drop.metal]} · {drop.category}</span>
+          <button type="button" onClick={() => void toggleFollow()} aria-pressed={following} aria-label={following ? `Unfollow ${drop.category} jokes` : `Follow ${drop.category} jokes`} className={`${icon} ml-auto`}>
+            {following ? <BellRing className="h-4 w-4" /> : <Bell className="h-4 w-4" />}<span>{following ? 'Following' : 'Follow'}</span>
           </button>
-          <button type="button" aria-label="Dislike" aria-pressed={mine === 'dislike'} onClick={() => void react('dislike')} className={`flex items-center gap-1 ${mine === 'dislike' ? 'text-white' : 'text-white/70'}`}>
-            <ThumbsDown className="h-5 w-5" fill={mine === 'dislike' ? 'currentColor' : 'none'} />{dislikes}
-          </button>
-          <button type="button" aria-label="Comments" onClick={() => setShowComments((v) => !v)} className="flex items-center gap-1 text-white/70">
-            <MessageCircle className="h-5 w-5" />{comments.length}
-          </button>
-          <button type="button" aria-label="Share" onClick={() => void share()} className="text-white/70">
-            <Share2 className="h-5 w-5" />
-          </button>
+        </header>
+        {stamp && <time dateTime={when.toISOString()} className="mt-1 text-[11px] text-white/70">{stamp}</time>}
+        <div className="mt-auto pt-24">
+          <h3 className="mb-3 break-words text-2xl font-extrabold leading-tight tracking-tight text-white" style={{ textShadow: '0 2px 8px rgba(0,0,0,0.6)' }}>
+            {drop.headline}
+          </h3>
+          <ul className="space-y-2">
+            {drop.lines.map((line, i) => (
+              <li
+                key={i}
+                className={`break-words text-[15px] leading-snug transition-opacity ${active === -1 || active === i ? 'opacity-100' : 'opacity-50'} ${line.speaker === 'B' ? 'pl-6 font-semibold' : 'font-medium'}`}
+                style={{ textShadow: '0 1px 5px rgba(0,0,0,0.7)' }}
+              >
+                {line.text}
+              </li>
+            ))}
+          </ul>
+          <div className="mt-4 flex flex-wrap items-center gap-4 text-sm">
+            <button type="button" onClick={() => void play(false)} aria-label={playing ? 'Stop the skit' : 'Play the skit'} className={icon}>
+              {playing ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+            </button>
+            <button type="button" aria-label="Like" aria-pressed={mine === 'like'} onClick={() => void react('like')} className={icon}>
+              <ThumbsUp className="h-5 w-5" fill={mine === 'like' ? 'currentColor' : 'none'} />{likes}
+            </button>
+            <button type="button" aria-label="Dislike" aria-pressed={mine === 'dislike'} onClick={() => void react('dislike')} className={icon}>
+              <ThumbsDown className="h-5 w-5" fill={mine === 'dislike' ? 'currentColor' : 'none'} />{dislikes}
+            </button>
+            <button type="button" aria-label="Comments" onClick={() => setShowComments((v) => !v)} className={icon}>
+              <MessageCircle className="h-5 w-5" />{comments.length}
+            </button>
+            <span className={icon} aria-label={`${views} views`}><Eye className="h-5 w-5" />{views}</span>
+            <button type="button" aria-label="Share" onClick={() => void share()} className={`${icon} ml-auto`}>
+              <Share2 className="h-5 w-5" />
+            </button>
+          </div>
+          {failed && <p className="mt-2 text-xs text-white/80">Voice unavailable right now — the words are all here.</p>}
+          <div className="mt-2 flex justify-end gap-3 text-xs text-white/80">
+            <button type="button" className="border-0 bg-transparent p-0" onClick={() => void share('whatsapp')}>WhatsApp</button>
+            <button type="button" className="border-0 bg-transparent p-0" onClick={() => void share('x')}>X</button>
+            <button type="button" className="border-0 bg-transparent p-0" onClick={() => void share('facebook')}>Facebook</button>
+          </div>
+          {showComments && (
+            <section className="mt-3 max-h-48 space-y-2 overflow-y-auto" data-humor-comments>
+              {comments.map((c) => (
+                <p key={c.id} className="break-words text-sm text-white"><span className="font-semibold">{c.user_id === user?.id ? 'You' : 'Member'}:</span> {c.body}</p>
+              ))}
+              <div className="flex items-center gap-2">
+                <input value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') void postComment(); }} maxLength={500} placeholder="Share your view…" className="min-w-0 flex-1 border-0 bg-transparent py-2 text-sm text-white placeholder:text-white/60 outline-none" />
+                <button type="button" aria-label="Post comment" onClick={() => void postComment()} disabled={sending || !draft.trim()} className={`${icon} disabled:opacity-40`}><Send className="h-5 w-5" /></button>
+              </div>
+            </section>
+          )}
         </div>
       </div>
-      <div className="mt-2 flex justify-end gap-3 text-xs text-white/60">
-        <button type="button" onClick={() => void share('whatsapp')}>WhatsApp</button>
-        <button type="button" onClick={() => void share('x')}>X</button>
-        <button type="button" onClick={() => void share('facebook')}>Facebook</button>
-      </div>
-      {showComments && (
-        <section className="mt-3 space-y-2" data-humor-comments>
-          {comments.map((c) => (
-            <p key={c.id} className="text-sm text-white/90"><span className="font-semibold">{c.user_id === user?.id ? 'You' : 'Member'}:</span> {c.body}</p>
-          ))}
-          <div className="flex items-center gap-2">
-            <input value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') void postComment(); }} maxLength={500} placeholder="Share your view…" className="flex-1 bg-transparent py-2 text-sm text-white placeholder:text-white/50 outline-none" />
-            <button type="button" aria-label="Post comment" onClick={() => void postComment()} disabled={sending || !draft.trim()} className="text-white disabled:opacity-40"><Send className="h-5 w-5" /></button>
-          </div>
-        </section>
-      )}
     </article>
   );
 };
