@@ -1510,6 +1510,9 @@ const HomePage = () => {
       if (data) {
         friendshipsRef.current = data;
         setFriendships(data);
+        // The first Friends request can run before the friendship graph arrives.
+        // Reconcile immediately so accepted-friend posts do not stay empty until reload.
+        void fetchPersonalPosts('initial');
       }
     };
     
@@ -2528,7 +2531,17 @@ const HomePage = () => {
       timestamp: growthSlotTimestamp(insight.local_date, insight.slot, zone),
       value: growthSlide[index],
     }));
-    const humorItems = feed === 'global' ? humorDrops.map((drop) => ({
+    const friendIds = new Set(friendships.map((friendship) => (
+      friendship.user1_id === user?.id ? friendship.user2_id : friendship.user1_id
+    )));
+    const feedHumorDrops = feed === 'global'
+      ? humorDrops
+      : humorDrops.filter((drop) => (
+        drop.origin === 'member'
+        && Boolean(drop.author_id)
+        && (drop.author_id === user?.id || friendIds.has(drop.author_id))
+      ));
+    const humorItems = feedHumorDrops.map((drop) => ({
       id: `humor-${drop.id}`,
       timestamp: drop.created_at,
       value: (
@@ -2536,11 +2549,11 @@ const HomePage = () => {
           <FeedErrorBoundary section="posts"><HumorDropCard drop={drop} /></FeedErrorBoundary>
         </div>
       ),
-    })) : [];
+    }));
     const timelineItems = composeChronologicalFeed([...nativeItems, ...loopItems, ...growthItems]);
     // Due DHF guidance leads the social timeline so a newer upload cannot bury
     // Zoe's current-day context. duePosts already keeps these newest-first.
-    if (feed !== 'global' || humorItems.length === 0) return [...dhfSlides, ...timelineItems];
+    if (humorItems.length === 0) return [...dhfSlides, ...timelineItems];
     const interleaved = [...timelineItems];
     humorItems.slice(0, 3).forEach((item, index) => interleaved.splice(Math.min(index * 6, interleaved.length), 0, item.value));
     return [...dhfSlides, ...interleaved];

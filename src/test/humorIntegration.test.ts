@@ -14,9 +14,10 @@ describe("Zoe's LOL integration", () => {
     expect(`${scheduled}\n${member}`).not.toContain('gemini-2.5-flash-image');
   });
 
-  it('places LOL cards only in the Global feed and interleaves them visibly', () => {
+  it('places Zoe LOL in Global and accepted-friend member jokes in Friends', () => {
     const home = read('src/pages/HomePage.tsx');
-    expect(home).toContain("const humorItems = feed === 'global'");
+    expect(home).toContain("drop.origin === 'member'");
+    expect(home).toContain('friendIds.has(drop.author_id)');
     expect(home).toContain('humorItems.slice(0, 3)');
     expect(home).toContain('interleaved.splice');
   });
