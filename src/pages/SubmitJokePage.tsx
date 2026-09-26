@@ -77,7 +77,7 @@ export default function SubmitJokePage() {
       <div className="mx-auto max-w-xl">
         <header className="mb-6 flex items-center gap-3">
           <Button variant="ghost" size="icon" aria-label="Back" onClick={() => navigate(-1)}><ArrowLeft className="h-5 w-5" /></Button>
-          <div><h1 className="text-xl font-bold">Share a joke</h1><p className="text-sm text-muted-foreground">It will appear in Zoe’s LOL and the Global feed.</p></div>
+          <div><h1 className="text-xl font-bold">Zoe's LOL · Share a joke</h1><p className="text-sm text-muted-foreground">It will appear in Zoe’s LOL and the Global feed.</p></div>
         </header>
         <div className="space-y-5 rounded-lg border border-border/40 bg-card/20 p-5 backdrop-blur-xl">
           <div className="space-y-2"><Label htmlFor="joke-title">Title</Label><Input id="joke-title" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={80} placeholder="Give it a short title" /></div>
@@ -92,7 +92,8 @@ export default function SubmitJokePage() {
             <Label>Image</Label>
             <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(event) => setFile(event.target.files?.[0] ?? null)} />
             <Button type="button" variant="outline" className="w-full justify-start" onClick={() => fileRef.current?.click()}><ImagePlus className="h-4 w-4" />{file?.name ?? 'Choose an image'}</Button>
-            {!file && <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><Sparkles className="h-3.5 w-3.5" />A matching Pollinations image will be created if you leave this empty.</p>}
+            {file && <img src={URL.createObjectURL(file)} alt="Selected joke image" className="aspect-square w-full rounded-lg object-cover" />}
+            {!file && <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><Sparkles className="h-3.5 w-3.5" />A matching image will be created from your joke if you leave this empty.</p>}
           </div>
           <Button className="w-full" disabled={busy || !title.trim() || !text.trim()} onClick={() => void publish()}>{busy ? 'Publishing…' : 'Publish joke'}</Button>
         </div>
