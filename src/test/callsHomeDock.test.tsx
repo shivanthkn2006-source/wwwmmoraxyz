@@ -39,12 +39,15 @@ describe('Calls Home menu action', () => {
     expect(onHomeSelect).toHaveBeenCalledOnce();
   });
 
-  it('never renders any action outside the closed Home trigger', () => {
+  it('renders a frequently used action beside the closed Home trigger', () => {
     const onSelect = vi.fn();
     window.localStorage.setItem('mmora:home-dock-usage:v1', JSON.stringify({ calls: { count: 2, last: Date.now() } }));
     render(<HomeGlassDock items={[{ id: 'calls', label: 'Audio & video calls', icon: <ZoeCallsIcon />, onSelect }]} onHomeSelect={() => {}} />);
     const buttons = screen.getAllByRole('button');
-    expect(buttons).toHaveLength(1);
-    expect(buttons[0].getAttribute('aria-label')).toBe('Open home menu');
+    expect(buttons).toHaveLength(2);
+    expect(screen.getByRole('button', { name: 'Audio & video calls' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Open home menu' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Audio & video calls' }));
+    expect(onSelect).toHaveBeenCalledOnce();
   });
 });
