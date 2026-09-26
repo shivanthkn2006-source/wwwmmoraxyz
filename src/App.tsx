@@ -83,6 +83,7 @@ const ZoeSourcePage = lazy(() => import("./pages/ZoeSourcePage"));
 const BugReportPage = lazy(() => import("./pages/BugReportPage"));
 const AdminOverviewPage = lazy(() => import("./pages/AdminOverviewPage"));
 const AdminMemoryPage = lazy(() => import("./pages/AdminMemoryPage"));
+const HomeLoadReportPage = lazy(() => import("./pages/HomeLoadReportPage"));
 const AdminDashboardPage = lazy(() => import("./pages/AdminDashboardPage"));
 const SovereignVaultPage = lazy(() => import("./pages/SovereignVaultPage"));
 
@@ -790,6 +791,7 @@ const RouteAwareShell = () => {
                               </ProtectedRoute>
                             }
                           />
+                          <Route path="/home-load-report" element={<ProtectedRoute><HomeLoadReportPage /></ProtectedRoute>} />
                           <Route
                             path="/admin/memory"
                             element={

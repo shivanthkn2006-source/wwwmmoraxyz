@@ -211,6 +211,8 @@ const HomePage = () => {
   const growthUnread = useGrowthUnread();
   const { posts: dhfPosts, refresh: refreshDhf } = useDhfDailyFeed();
   const humorDrops = useHumorDrops(48);
+  // Home loading report: one background snapshot per visit, never blocks Home.
+  useEffect(() => startHomeLoadReport(user?.id), [user?.id]);
 
   // Remote flag: onboarding gating can be switched off platform-wide without a deploy.
   const { isEnabled: isGrowthFlagEnabled } = useGrowthFlags();
