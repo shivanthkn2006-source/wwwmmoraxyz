@@ -27,7 +27,7 @@ const withinAuthBudget = async <T,>(request: PromiseLike<T>, label: string): Pro
 interface AuthContextType {
   user: User | null;
   session: Session | null;
-  loading: boolean;
+  loading: boolean; initialized: boolean;
   signUp: (email: string, password: string, metadata?: any) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
@@ -57,10 +57,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [initialized, setInitialized] = useState(false);
   const applySession = useCallback((nextSession: Session | null) => {
     setSession((current) => current?.access_token === nextSession?.access_token ? current : nextSession);
     setUser((current) => current?.id === nextSession?.user?.id ? current : nextSession?.user ?? null);
-    setLoading(false);
+    setLoading(false); setInitialized(true);
     markStartupPhase('auth-session-resolved');
   }, []);
 
@@ -75,7 +76,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const timeout = window.setTimeout(() => {
       if (finished) return;
       console.warn('[Auth] Session load slow — continuing without blocking the interface');
-      setLoading(false);
+      setLoading(false); setInitialized(true);
     }, 1500);
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -123,7 +124,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .catch((err) => {
         console.warn('[Auth] getSession failed:', err);
         finished = true;
-        setLoading(false);
+        setLoading(false); setInitialized(true);
         window.clearTimeout(timeout);
 
       });
