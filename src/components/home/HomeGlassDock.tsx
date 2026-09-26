@@ -205,7 +205,7 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
     ? Math.max(0, Math.floor(triggerBadge))
     : 0;
 
-  const renderIconButton = (item: GlassDockItem, isHome = false, isQuickAction = false) => {
+  const renderIconButton = (item: GlassDockItem, isHome = false) => {
     const badge = badgesEnabled && Number.isFinite(item.badge) ? Math.max(0, Math.floor(item.badge as number)) : 0;
     const highlighted = Boolean(item.active) || badge > 0;
     const badgeStale = badgesEnabled && Boolean(item.badgeStale) && badge > 0;
@@ -230,7 +230,7 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
               : item.label
         }
         aria-current={item.active ? 'true' : undefined}
-        tabIndex={open || isHome || isQuickAction ? 0 : -1}
+        tabIndex={open || isHome ? 0 : -1}
         onClick={() => {
           if (isHome && suppressClick.current) {
             suppressClick.current = false;
@@ -279,7 +279,7 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
         )}
       >
         {item.icon}
-        {!isHome && !isQuickAction && !item.id.startsWith('dock-filler-') && !item.id.startsWith('placeholder-') && (
+        {!isHome && !item.id.startsWith('dock-filler-') && !item.id.startsWith('placeholder-') && (
           <span className="home-dock-label pointer-events-none absolute inset-x-0.5 bottom-0.5 z-10 line-clamp-2 text-center font-medium text-white/90">
             {item.label}
           </span>
@@ -368,16 +368,6 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
     ));
   }, [gridSlots, searchQuery]);
 
-  // Every genuinely used destination stays available in the closed rail.
-  // Overflow scrolls toward Home instead of making the dock wider than the screen.
-  const frequentSlots = React.useMemo(
-    () => slots
-      .filter((item) => (usage[item.id]?.count ?? 0) > 0),
-    [slots, usage],
-  );
-
-
-
   const renderPackedRows = () => (
       <div data-home-dock-grid className="grid h-[calc(4*var(--home-dock-cell)+3*var(--home-dock-gap))] grid-cols-7 content-start gap-[var(--home-dock-gap)] overflow-x-hidden overflow-y-auto overscroll-contain rounded-2xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       {visibleGridSlots.map((item) => renderIconButton(item))}
@@ -421,16 +411,6 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
           {open && renderPackedRows()}
 
           <div className="flex w-full min-w-0 items-center justify-end gap-[var(--home-dock-gap)]">
-            {!open && frequentSlots.length > 0 && (
-              <div
-                aria-label="Frequently used menus"
-                className="pointer-events-auto flex min-w-0 max-w-[calc(100vw-env(safe-area-inset-left,0px)-env(safe-area-inset-right,0px)-var(--home-dock-cell)-2rem)] items-center gap-[var(--home-dock-gap)] overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-              >
-                {frequentSlots.map((item) => (
-                  <div key={item.id} className="shrink-0">{renderIconButton(item, false, true)}</div>
-                ))}
-              </div>
-            )}
             {open && (
               <label className="flex min-w-0 flex-1 items-center gap-2 px-1" aria-label="Search home menu">
                 <input

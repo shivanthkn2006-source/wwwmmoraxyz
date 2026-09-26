@@ -29,6 +29,6 @@
 - [x] Daily card builder: today's 60 cards already built at 00:02 UTC (no duplicate run)
 - [ ] Test sign-up + signed-in walk of Home/Zoe voice/DHF (blocked: preview not signed in; sign-up needs captcha + email confirmation)
 - [ ] Physical-phone check (needs the user's device)
-- [x] Restore frequently used menu icons beside the closed Home icon without expanding its touch layer
-- [x] Keep every used menu available in a horizontally scrollable closed rail, not only four (including more than 40 recorded menus)
+- [x] Keep frequent menus ordered by usage inside the Home panel; never render Calls or other menu icons outside it
+- [x] Restore welcome-card scheduling so remote DHF/astrology checks cannot prevent signed-in cards from appearing
 - [x] Audit incidental provider labels across platform surfaces; preserve required map/video credits, creator content, legal disclosures, and admin diagnostics
