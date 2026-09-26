@@ -27,6 +27,8 @@ describe("Zoe's LOL integration", () => {
   it('refreshes after auth, realtime changes, focus, and member publishing', () => {
     const hook = read('src/hooks/useHumorDrops.ts');
     expect(hook).toContain("table: 'humor_drops'");
+    expect(hook).toContain('subscribeRealtime(');
+    expect(hook).not.toContain('supabase.channel(');
     expect(hook).toContain("window.addEventListener('focus'");
     expect(hook).toContain("window.addEventListener('mmora:humor-refresh'");
     expect(hook).toContain(".lte('scheduled_for'");
