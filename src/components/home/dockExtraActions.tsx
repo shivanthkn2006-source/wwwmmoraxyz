@@ -39,6 +39,7 @@ import {
   Map as MapIcon,
   Music2,
   Users,
+  Activity,
 } from 'lucide-react';
 import type { GlassDockItem } from '@/components/home/HomeGlassDock';
 import { NAVIGABLE_ROUTES } from '@/config/routeRegistry';
@@ -78,6 +79,7 @@ interface ExtraDef {
 export const DOCK_EXTRA_DEFS: ExtraDef[] = [
   { id: 'dock-music', label: 'Music', route: '/music', Icon: Music2 },
   { id: 'dock-calls', label: 'Audio & video calls', route: '/calls', Icon: ZoeCallsIcon },
+  { id: 'dock-home-load-report', label: 'Home loading report', route: '/home-load-report', Icon: Activity },
   { id: 'dock-compass', label: 'DHF Neural Feed', route: '/compass', Icon: Compass },
   { id: 'dock-help', label: 'Help guides', route: '/help', Icon: LifeBuoy },
   { id: 'dock-site-map', label: 'Site map', route: '/map', Icon: MapIcon },
