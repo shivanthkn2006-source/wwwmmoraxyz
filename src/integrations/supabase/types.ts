@@ -6216,10 +6216,13 @@ export type Database = {
           real_name: string | null
           status: string | null
           tenant_id: string | null
+          timezone: string | null
+          timezone_confirmed_at: string | null
           total_points: number | null
           updated_at: string
           user_id: string
           username: string
+          utc_offset_minutes: number | null
           voice_notifications_enabled: boolean | null
           zoe_adaptive_tone: Json | null
           zoe_conversation_style: string | null
@@ -6294,10 +6297,13 @@ export type Database = {
           real_name?: string | null
           status?: string | null
           tenant_id?: string | null
+          timezone?: string | null
+          timezone_confirmed_at?: string | null
           total_points?: number | null
           updated_at?: string
           user_id: string
           username: string
+          utc_offset_minutes?: number | null
           voice_notifications_enabled?: boolean | null
           zoe_adaptive_tone?: Json | null
           zoe_conversation_style?: string | null
@@ -6372,10 +6378,13 @@ export type Database = {
           real_name?: string | null
           status?: string | null
           tenant_id?: string | null
+          timezone?: string | null
+          timezone_confirmed_at?: string | null
           total_points?: number | null
           updated_at?: string
           user_id?: string
           username?: string
+          utc_offset_minutes?: number | null
           voice_notifications_enabled?: boolean | null
           zoe_adaptive_tone?: Json | null
           zoe_conversation_style?: string | null
