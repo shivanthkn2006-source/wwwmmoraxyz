@@ -11,6 +11,7 @@ import React, { useEffect, useState } from 'react';
 import { Play, Loader2 } from 'lucide-react';
 import { resolveDhfSocialLinks, searchFallback, type DhfSocialLinks } from '@/lib/dhfSocialLinks';
 import { openShare } from '@/lib/shareTargets';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 
 interface Props {
   headline: string;
@@ -46,6 +47,7 @@ const linkClass =
 export const DhfVideoLinks: React.FC<Props> = ({ headline, category, onOpen }) => {
   const [links, setLinks] = useState<DhfSocialLinks | null>(null);
   const [pending, setPending] = useState(true);
+  const [playing, setPlaying] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -93,15 +95,43 @@ export const DhfVideoLinks: React.FC<Props> = ({ headline, category, onOpen }) =
   };
 
 
+  // Real videos play inside M'Mora; search fallbacks still open YouTube.
+  const playInApp = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!links.youtube_video_id) return;
+    e.preventDefault();
+    setPlaying(true);
+    if (links.youtube_url) onOpen?.('youtube', links.youtube_url);
+  };
+
   return (
     <div className="mt-3 flex flex-wrap items-center gap-2" data-dhf-links="ready">
+      {links.youtube_video_id && (
+        <Dialog open={playing} onOpenChange={setPlaying}>
+          <DialogContent className="max-w-3xl p-0 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <DialogTitle className="sr-only">{links.youtube_title ?? headline}</DialogTitle>
+            {playing && (
+              <div className="aspect-video w-full">
+                <iframe
+                  data-dhf-player="youtube"
+                  className="h-full w-full"
+                  src={`https://www.youtube-nocookie.com/embed/${encodeURIComponent(links.youtube_video_id)}?autoplay=1&playsinline=1&rel=0`}
+                  title={links.youtube_title ?? headline}
+                  allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+                  allowFullScreen
+                />
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+      )}
       {links.youtube_url && (
         <a
           href={links.youtube_url}
           target="_blank"
           rel="noopener noreferrer"
           onPointerDown={(e) => e.stopPropagation()}
-          onClick={open('youtube', links.youtube_url)}
+          onClick={links.youtube_video_id ? playInApp : open('youtube', links.youtube_url)}
           className={linkClass}
           title={links.youtube_title ?? 'Watch on YouTube'}
           data-dhf-link="youtube"
