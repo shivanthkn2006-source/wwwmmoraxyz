@@ -31,4 +31,5 @@
 - [ ] Physical-phone check (needs the user's device)
 - [x] Keep frequent menus ordered by usage inside the Home panel; never render Calls or other menu icons outside it
 - [x] Restore welcome-card scheduling so remote DHF/astrology checks cannot prevent signed-in cards from appearing
+- [x] Keep today's welcome motivation available in both Global and Friends feeds
 - [x] Audit incidental provider labels across platform surfaces; preserve required map/video credits, creator content, legal disclosures, and admin diagnostics
