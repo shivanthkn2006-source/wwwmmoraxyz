@@ -3,14 +3,18 @@
  * Order (first success wins):
  *   1. pollinations   – AI generation (flux)
  *   2. placeholdr     – AI generation (Flux on Cloudflare), keyword prompt
- *   3. kaleido        – stock AI library, used only when keywords match (relevance gate)
- *   4. justapi        – abstract filler
- *   5. imagenow       – plain colored filler (last resort)
+ *   3. horde        – AI Horde community Stable Diffusion (anonymous key)
+ *   4. cloudflare   – Workers AI flux-1-schnell (CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_AI_TOKEN)
+ *   5. deepai       – DeepAI text2img (DEEPAI_API_KEY)
+ *   6. pixazo       – Pixazo free Flux Schnell (PIXAZO_API_KEY)
+ *   7. kaleido        – stock AI library, used only when keywords match (relevance gate)
+ *   8. justapi        – abstract filler
+ *   9. imagenow       – plain colored filler (last resort)
  * Free.ai has no public API and is intentionally absent.
  * Callers persist the returned bytes once; provider URLs are never stored.
  */
 
-export type CascadeProvider = 'pollinations' | 'placeholdr' | 'kaleido' | 'justapi' | 'imagenow';
+export type CascadeProvider = 'pollinations' | 'placeholdr' | 'horde' | 'cloudflare' | 'deepai' | 'pixazo' | 'kaleido' | 'justapi' | 'imagenow';
 export interface CascadeAttempt { provider: CascadeProvider; ok: boolean; ms: number; reason?: string }
 export interface CascadeResult {
   bytes: Uint8Array | null;
@@ -29,9 +33,9 @@ export interface CascadeOptions {
   only?: CascadeProvider[];
 }
 
-export const CASCADE_ORDER: CascadeProvider[] = ['pollinations', 'placeholdr', 'kaleido', 'justapi', 'imagenow'];
+export const CASCADE_ORDER: CascadeProvider[] = ['pollinations', 'placeholdr', 'horde', 'cloudflare', 'deepai', 'pixazo', 'kaleido', 'justapi', 'imagenow'];
 const KIND: Record<CascadeProvider, CascadeResult['kind']> = {
-  pollinations: 'generated', placeholdr: 'generated', kaleido: 'stock', justapi: 'filler', imagenow: 'filler',
+  pollinations: 'generated', placeholdr: 'generated', horde: 'generated', cloudflare: 'generated', deepai: 'generated', pixazo: 'generated', kaleido: 'stock', justapi: 'filler', imagenow: 'filler',
 };
 const STOP = new Set('a an the and or of to in on at for with this that is are was be by from as it its no not show described exact scene funny bright warm color family friendly square composition written words letters captions logos brands watermark cartoon editorial depicts literally people objects action setting facial expressions title context joke dialogue headline'.split(' '));
 
@@ -83,6 +87,51 @@ async function runProvider(p: CascadeProvider, o: Required<Pick<CascadeOptions, 
       }
       return 'still rendering';
     }
+    case 'horde': {
+      const key = Deno.env.get('AI_HORDE_API_KEY') || '0000000000';
+      const hdr = { apikey: key, 'Content-Type': 'application/json', 'Client-Agent': 'mmora:1:admin@mmora.xyz' };
+      const sub = await fetch('https://aihorde.net/api/v2/generate/async', { method: 'POST', headers: hdr, body: JSON.stringify({ prompt: o.prompt.slice(0, 900), params: { width: 512, height: 512, steps: 20 }, nsfw: false, censor_nsfw: true, r2: true }) }).catch(() => null);
+      if (!sub?.ok) { await sub?.body?.cancel(); return `submit http ${sub?.status ?? 'error'}`; }
+      const { id } = await sub.json() as { id?: string };
+      if (!id) return 'no job id';
+      for (let i = 0; i < 30; i++) {
+        await sleep(4000);
+        const st = await fetch(`https://aihorde.net/api/v2/generate/check/${id}`).then((r) => r.json()).catch(() => null) as { done?: boolean; faulted?: boolean; is_possible?: boolean } | null;
+        if (st?.faulted || st?.is_possible === false) return 'job faulted';
+        if (st?.done) {
+          const res = await fetch(`https://aihorde.net/api/v2/generate/status/${id}`).then((r) => r.json()).catch(() => null) as { generations?: { img: string }[] } | null;
+          const img = res?.generations?.[0]?.img;
+          return img ? getImage(img) : 'no image in result';
+        }
+      }
+      await fetch(`https://aihorde.net/api/v2/generate/status/${id}`, { method: 'DELETE' }).then((r) => r.body?.cancel()).catch(() => {});
+      return 'queue too slow';
+    }
+    case 'cloudflare': {
+      const acct = Deno.env.get('CLOUDFLARE_ACCOUNT_ID'); const token = Deno.env.get('CLOUDFLARE_AI_TOKEN');
+      if (!acct || !token) return 'not configured';
+      const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${acct}/ai/run/@cf/black-forest-labs/flux-1-schnell`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: o.prompt.slice(0, 2000), steps: 4 }) }).catch(() => null);
+      if (!res?.ok) { await res?.body?.cancel(); return `http ${res?.status ?? 'error'}`; }
+      const b64 = (await res.json().catch(() => null) as { result?: { image?: string } } | null)?.result?.image;
+      if (!b64) return 'no image';
+      return { bytes: Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)), type: 'image/jpeg' };
+    }
+    case 'deepai': {
+      const key = Deno.env.get('DEEPAI_API_KEY'); if (!key) return 'not configured';
+      const form = new FormData(); form.append('text', o.prompt.slice(0, 1000));
+      const res = await fetch('https://api.deepai.org/api/text2img', { method: 'POST', headers: { 'api-key': key }, body: form }).catch(() => null);
+      if (!res?.ok) { await res?.body?.cancel(); return `http ${res?.status ?? 'error'}`; }
+      const url = (await res.json().catch(() => null) as { output_url?: string } | null)?.output_url;
+      return url ? getImage(url) : 'no image';
+    }
+    case 'pixazo': {
+      const key = Deno.env.get('PIXAZO_API_KEY'); if (!key) return 'not configured';
+      const res = await fetch('https://gateway.pixazo.ai/flux-1-schnell/v1/getData', { method: 'POST', headers: { 'Ocp-Apim-Subscription-Key': key, 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' }, body: JSON.stringify({ prompt: o.prompt.slice(0, 1000), num_steps: 4, seed: n % 100000, height: 1024, width: 1024 }) }).catch(() => null);
+      if (!res?.ok) { await res?.body?.cancel(); return `http ${res?.status ?? 'error'}`; }
+      const d = await res.json().catch(() => null) as { output?: string; imageUrl?: string; url?: string } | null;
+      const url = d?.output || d?.imageUrl || d?.url;
+      return url ? getImage(url) : 'no image';
+    }
     case 'kaleido': {
       if (!o.keywords.length) return 'no keywords';
       // Try the full keyword set, then each keyword alone; 404 = no match.
@@ -128,4 +177,21 @@ export async function fetchImageCascade(opts: CascadeOptions): Promise<CascadeRe
 
 export function extFor(contentType: string): string {
   return contentType.includes('png') ? 'png' : contentType.includes('webp') ? 'webp' : contentType.includes('svg') ? 'svg' : 'jpg';
+}
+
+/**
+ * Drop-in replacement for `fetch(<pollinations prompt URL>)`. Parses the prompt
+ * and size from the URL, runs the full cascade, and returns an image Response
+ * (or a 502) so existing callers keep their byte-handling code unchanged.
+ */
+export async function cascadeFetch(url: string, _init?: RequestInit): Promise<Response> {
+  const u = new URL(url);
+  // Non-Pollinations URLs (chat APIs, existing images) pass straight through.
+  if (u.hostname !== 'image.pollinations.ai' || !u.pathname.startsWith('/prompt/')) return fetch(url, _init);
+  const prompt = decodeURIComponent(u.pathname.replace(/^\/prompt\//, ''));
+  const width = Number(u.searchParams.get('width')) || 1024;
+  const height = Number(u.searchParams.get('height')) || 1024;
+  const art = await fetchImageCascade({ prompt, width, height, seed: u.searchParams.get('seed') ?? undefined });
+  if (!art.bytes) return new Response(JSON.stringify({ error: 'all image providers failed', log: art.log }), { status: 502 });
+  return new Response(art.bytes as unknown as BodyInit, { status: 200, headers: { 'content-type': art.contentType.split(';')[0], 'x-image-provider': art.provider ?? '' } });
 }

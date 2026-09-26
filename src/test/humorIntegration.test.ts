@@ -15,7 +15,7 @@ describe("Zoe's LOL integration", () => {
       expect(src).not.toContain('image.pollinations.ai');
       expect(src).not.toContain('ai.gateway.lovable.dev');
     }
-    expect(cascade).toContain("['pollinations', 'placeholdr', 'kaleido', 'justapi', 'imagenow']");
+    expect(cascade).toContain("['pollinations', 'placeholdr', 'horde', 'cloudflare', 'deepai', 'pixazo', 'kaleido', 'justapi', 'imagenow']");
     expect(cascade).toContain('relevance ?? 0) >= 3');
   });
 

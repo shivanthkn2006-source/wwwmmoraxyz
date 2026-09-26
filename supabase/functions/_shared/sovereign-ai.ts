@@ -1,3 +1,4 @@
+import { cascadeFetch } from './image-cascade.ts';
 /**
  * ═══════════════════════════════════════════════════════════════════════════════
  * SOVEREIGN AI SHIM — drop-in replacement for the Lovable AI Gateway
@@ -203,7 +204,7 @@ async function urlToInline(url: string): Promise<{ mimeType: string; data: strin
   const inline = dataUrlToInline(url);
   if (inline) return inline;
   try {
-    const resp = await fetch(url);
+    const resp = await cascadeFetch(url);
     if (!resp.ok) return null;
     const buf = new Uint8Array(await resp.arrayBuffer());
     let binary = '';
@@ -354,7 +355,7 @@ async function callOpenAICompatVision(
       const body: any = { model, messages, max_tokens: payload.max_tokens ?? 2048 };
       if (payload.temperature !== undefined) body.temperature = payload.temperature;
       if (payload.response_format?.type === 'json_object') body.response_format = payload.response_format;
-      const resp = await fetch(url, {
+      const resp = await cascadeFetch(url, {
         method: 'POST',
         headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', ...extraHeaders },
         body: JSON.stringify(body),
@@ -542,7 +543,7 @@ async function pollinationsImage(prompt: string): Promise<string | null> {
     const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&model=flux&nologo=true&enhance=true`;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 45_000);
-    const resp = await fetch(url, {
+    const resp = await cascadeFetch(url, {
       signal: controller.signal,
       headers: token ? { Accept: 'image/*', Authorization: `Bearer ${token}` } : { Accept: 'image/*' },
     });

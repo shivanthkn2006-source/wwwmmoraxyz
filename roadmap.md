@@ -50,5 +50,7 @@
 ## Shared picture cascade (2026-09-26)
 - [x] Cascade built and each provider live-tested (Pollinations, placeholdr, Kaleido, JustAPI, ImageNow; Free.ai has no API)
 - [x] Joke, member-joke, general picture, and daily-card engines wired; 3 missing joke pictures filled
-- [ ] Remaining direct Pollinations callers: video, edit-image, avatar, hairstyle, DHF compass URL, artifact/architect/Lisa/thought functions
+- [x] 10 more features switched via cascadeFetch (Zoe tools, avatars, video preview stills, assistants, text-image)
+- [ ] Cloudflare / DeepAI / Pixazo keys — waiting on user
+- [ ] Not switchable to the cascade: photo editing + hairstyle (need an editor that keeps the face), video clips, DHF card links (saved as live links)
 - [ ] Signed-in 4-screen visual check — blocked: preview signed out, admin session minting denied

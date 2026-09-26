@@ -1,3 +1,4 @@
+import { cascadeFetch } from '../_shared/image-cascade.ts';
 import { requireCaller } from '../_shared/caller-guard.ts';
 import { sovereignFetch, sovereignKey } from "../_shared/sovereign-ai.ts";
 const corsHeaders = {
@@ -31,7 +32,7 @@ async function tryPollinations(prompt: string): Promise<string | null> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 15000); // 15s timeout
     
-    const resp = await fetch(url, { 
+    const resp = await cascadeFetch(url, { 
       signal: controller.signal,
       headers: { 'Accept': 'image/*' },
     });

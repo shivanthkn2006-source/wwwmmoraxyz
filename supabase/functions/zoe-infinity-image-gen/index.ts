@@ -1,3 +1,4 @@
+import { cascadeFetch } from '../_shared/image-cascade.ts';
 import { requireCaller } from '../_shared/caller-guard.ts';
 import { sovereignFetch } from "../_shared/sovereign-ai.ts";
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -33,7 +34,7 @@ async function responseToDataUrl(resp: Response): Promise<string | null> {
 
 async function fetchImageAsDataUrl(url: string): Promise<string | null> {
   try {
-    const resp = await fetch(url, { headers: { 'Accept': 'image/*' } });
+    const resp = await cascadeFetch(url, { headers: { 'Accept': 'image/*' } });
     if (!resp.ok) {
       console.warn(`[zoe-image-gen] Remote image fetch returned ${resp.status}`);
       return null;
@@ -58,7 +59,7 @@ async function tryPollinations(prompt: string, width = 1024, height = 1024): Pro
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 20000);
 
-    const resp = await fetch(url, {
+    const resp = await cascadeFetch(url, {
       signal: controller.signal,
       headers: { 'Accept': 'image/*' },
     });

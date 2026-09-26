@@ -1,3 +1,4 @@
+import { cascadeFetch } from '../_shared/image-cascade.ts';
 import { requireCaller } from '../_shared/caller-guard.ts';
 // ═══════════════════════════════════════════════════════════════════════════════
 // ZOE ARTIFACT GENERATOR - Vision, Chronicle, Education
@@ -73,7 +74,7 @@ serve(async (req) => {
         const polUrl = `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=1024&model=flux&nologo=true&enhance=true`;
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 20000);
-        const polResp = await fetch(polUrl, { signal: controller.signal, headers: { 'Accept': 'image/*' } });
+        const polResp = await cascadeFetch(polUrl, { signal: controller.signal, headers: { 'Accept': 'image/*' } });
         clearTimeout(timeout);
         if (polResp.ok) {
           const buf = await polResp.arrayBuffer();
@@ -173,7 +174,7 @@ serve(async (req) => {
         const polUrl = `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=1024&model=flux&nologo=true&enhance=true`;
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 20000);
-        const polResp = await fetch(polUrl, { signal: controller.signal, headers: { 'Accept': 'image/*' } });
+        const polResp = await cascadeFetch(polUrl, { signal: controller.signal, headers: { 'Accept': 'image/*' } });
         clearTimeout(timeout);
         if (polResp.ok) {
           const buf = await polResp.arrayBuffer();

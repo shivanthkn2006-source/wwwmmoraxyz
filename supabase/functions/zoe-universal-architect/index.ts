@@ -1,3 +1,4 @@
+import { cascadeFetch } from '../_shared/image-cascade.ts';
 // ═══════════════════════════════════════════════════════════════════════════════
 // ZOE UNIVERSAL ARCHITECT (ZUA) - VIRAL ASCENSION ENGINE
 // Phase II: 7-Step UPP + 3-Platform Viral Content Generation
@@ -273,7 +274,7 @@ OUTPUT FORMAT (RESPOND ONLY WITH VALID JSON):
       const pollinationsUrl = `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=576&model=flux&nologo=true&enhance=true`;
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 20000);
-      const polResp = await fetch(pollinationsUrl, { signal: controller.signal, headers: { 'Accept': 'image/*' } });
+      const polResp = await cascadeFetch(pollinationsUrl, { signal: controller.signal, headers: { 'Accept': 'image/*' } });
       clearTimeout(timeout);
       if (polResp.ok) {
         const buf = await polResp.arrayBuffer();
