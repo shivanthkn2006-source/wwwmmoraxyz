@@ -2892,6 +2892,10 @@ Want me to dive deeper into any aspect?`;
     }
   }, [input, isProcessing, isSending, isOnline, messages, isMuted, processConversation, saveMessageToDb, pendingMedia, pendingIdentityConfirmation, pendingIdentityImageRequest, pendingIdentitySave, processMedia, messagingMode, selectedUser, sendDirectMessage, user?.id, processCommand, replyingTo, tubeSight, sentinelGateway, protocolWisdom, deepThinking, rememberPendingIdentityRequest, navigate]);
 
+  useEffect(() => {
+    if (!input && inputRef.current) inputRef.current.style.height = '';
+  }, [input]);
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -4545,13 +4549,13 @@ Want me to dive deeper into any aspect?`;
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-6 w-6 md:h-7 md:w-7 lg:h-8 lg:w-8 rounded-full hover:bg-transparent"
+                    className="h-9 w-9 rounded-full hover:bg-transparent"
                     title="Menu"
                     aria-expanded={showAttachMenu}
                     aria-haspopup="menu"
                     onClick={() => setShowAttachMenu((v) => !v)}
                   >
-                    <Plus className="h-3 w-3 md:h-3.5 md:w-3.5 lg:h-4 lg:w-4 text-foreground/85" />
+                    <Plus className="h-5 w-5 text-foreground/85" />
                   </Button>
 
                   {showAttachMenu && (
