@@ -62,6 +62,33 @@ Return JSON only: {"headline":"<max 6 words, punchline-style>","lines":[{"speake
   return { headline: f.headline, lines: f.lines.map(([speaker, text]) => ({ speaker: speaker as 'A' | 'B', text })), source: 'fallback' };
 }
 
+async function paintSkit(db: ReturnType<typeof createClient>, row: { id: string; metal: string; headline: string; lines: { text: string }[] }): Promise<void> {
+  const key = Deno.env.get('LOVABLE_API_KEY');
+  if (!key) return;
+  const scene = row.lines.map((l) => l.text).join(' ').slice(0, 600);
+  const prompt = `Bright, funny cartoon illustration that literally depicts this comedy skit. Title: "${row.headline}". Scene: ${scene}. Show the exact situation and characters described, expressive faces, warm cinematic colours, no text, no letters, no logos, no watermarks. Square.`;
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 40_000);
+  try {
+    const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST', signal: ctrl.signal,
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'google/gemini-2.5-flash-image', messages: [{ role: 'user', content: prompt }], modalities: ['image', 'text'] }),
+    });
+    if (!res.ok) return;
+    const out = await res.json();
+    const dataUrl: string | undefined = out?.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+    const m = dataUrl?.match(/^data:(image\/\w+);base64,(.+)$/);
+    if (!m) return;
+    const bytes = Uint8Array.from(atob(m[2]), (c) => c.charCodeAt(0));
+    const path = `${row.id}.${m[1].split('/')[1]}`;
+    const up = await db.storage.from('humor-images').upload(path, bytes, { contentType: m[1], upsert: true });
+    if (up.error) return;
+    const signed = await db.storage.from('humor-images').createSignedUrl(path, 60 * 60 * 24 * 365);
+    if (signed.data?.signedUrl) await db.from('humor_drops').update({ image_url: signed.data.signedUrl }).eq('id', row.id);
+  } catch { /* picture is optional */ } finally { clearTimeout(t); }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
@@ -71,7 +98,12 @@ Deno.serve(async (req) => {
     const { data: existing } = await db.from('humor_drops').select('metal').eq('drop_date', date).eq('slot', slot);
     const have = new Set((existing ?? []).map((r: { metal: string }) => r.metal));
     const missing = (Object.keys(METALS) as Metal[]).filter((m) => !have.has(m));
-    if (missing.length === 0) return json({ ok: true, date, slot, generated: 0 });
+    const paintMissing = async () => {
+      const { data: bare } = await db.from('humor_drops').select('id, metal, headline, lines').eq('drop_date', date).is('image_url', null).limit(4);
+      await Promise.all((bare ?? []).map((r) => paintSkit(db, r as never)));
+      return (bare ?? []).length;
+    };
+    if (missing.length === 0) return json({ ok: true, date, slot, generated: 0, painted: await paintMissing() });
 
     const skits = await Promise.all(missing.map(async (metal) => ({ metal, ...(await writeSkit(metal)) })));
     const { error } = await db.from('humor_drops').upsert(
@@ -79,7 +111,8 @@ Deno.serve(async (req) => {
       { onConflict: 'drop_date,slot,metal', ignoreDuplicates: true },
     );
     if (error) return json({ ok: false, error: error.message }, 500);
-    return json({ ok: true, date, slot, generated: skits.length, sources: skits.map((s) => s.source) });
+    const painted = await paintMissing();
+    return json({ ok: true, date, slot, generated: skits.length, painted, sources: skits.map((s) => s.source) });
   } catch (e) {
     return json({ ok: false, error: e instanceof Error ? e.message : 'failed' }, 500);
   }
