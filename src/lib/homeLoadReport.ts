@@ -28,6 +28,7 @@ export interface LoadFailure {
 
 const SNAPSHOT_AFTER_MS = 12_000;
 let activeVisit = false;
+let startupReported = false;
 
 const deviceKind = () => {
   const w = window.innerWidth;
@@ -50,6 +51,8 @@ export function startHomeLoadReport(userId: string | undefined): () => void {
   if (!userId || activeVisit || typeof window === 'undefined') return () => undefined;
   activeVisit = true;
   const startedAt = Date.now();
+  const firstVisitOfPageLoad = !startupReported;
+  startupReported = true;
   const failures: LoadFailure[] = [];
 
   const onError = (e: ErrorEvent) =>
