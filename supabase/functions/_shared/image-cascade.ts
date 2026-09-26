@@ -178,3 +178,18 @@ export async function fetchImageCascade(opts: CascadeOptions): Promise<CascadeRe
 export function extFor(contentType: string): string {
   return contentType.includes('png') ? 'png' : contentType.includes('webp') ? 'webp' : contentType.includes('svg') ? 'svg' : 'jpg';
 }
+
+/**
+ * Drop-in replacement for `fetch(<pollinations prompt URL>)`. Parses the prompt
+ * and size from the URL, runs the full cascade, and returns an image Response
+ * (or a 502) so existing callers keep their byte-handling code unchanged.
+ */
+export async function cascadeFetch(url: string, _init?: RequestInit): Promise<Response> {
+  const u = new URL(url);
+  const prompt = decodeURIComponent(u.pathname.replace(/^\/prompt\//, ''));
+  const width = Number(u.searchParams.get('width')) || 1024;
+  const height = Number(u.searchParams.get('height')) || 1024;
+  const art = await fetchImageCascade({ prompt, width, height, seed: u.searchParams.get('seed') ?? undefined });
+  if (!art.bytes) return new Response(JSON.stringify({ error: 'all image providers failed', log: art.log }), { status: 502 });
+  return new Response(art.bytes, { status: 200, headers: { 'content-type': art.contentType.split(';')[0], 'x-image-provider': art.provider ?? '' } });
+}

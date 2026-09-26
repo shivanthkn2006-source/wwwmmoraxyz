@@ -12,6 +12,7 @@ import {
   getLatencyTarget
 } from "../_shared/ai-telemetry.ts";
 import { clientErrorResponse } from '../_shared/client-error.ts';
+import { cascadeFetch } from '../_shared/image-cascade.ts';
 
 // Pre-fetch API key at module load for faster cold starts
 const SOVEREIGN_AI_KEY = sovereignKey();
@@ -66,7 +67,7 @@ serve(async (req) => {
         const polUrl = `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=1024&model=flux&nologo=true&enhance=true`;
         const controller = new AbortController();
         const polTimeout = setTimeout(() => controller.abort(), 20000);
-        const polResp = await fetch(polUrl, { signal: controller.signal, headers: { 'Accept': 'image/*' } });
+        const polResp = await cascadeFetch(polUrl, { signal: controller.signal, headers: { 'Accept': 'image/*' } });
         clearTimeout(polTimeout);
         if (polResp.ok) {
           const buf = await polResp.arrayBuffer();

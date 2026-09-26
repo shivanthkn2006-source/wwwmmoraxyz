@@ -10,6 +10,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { sovereignFetch, sovereignKey } from "../_shared/sovereign-ai.ts";
 import { clientErrorResponse } from '../_shared/client-error.ts';
+import { cascadeFetch } from '../_shared/image-cascade.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -273,7 +274,7 @@ OUTPUT FORMAT (RESPOND ONLY WITH VALID JSON):
       const pollinationsUrl = `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=576&model=flux&nologo=true&enhance=true`;
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 20000);
-      const polResp = await fetch(pollinationsUrl, { signal: controller.signal, headers: { 'Accept': 'image/*' } });
+      const polResp = await cascadeFetch(pollinationsUrl, { signal: controller.signal, headers: { 'Accept': 'image/*' } });
       clearTimeout(timeout);
       if (polResp.ok) {
         const buf = await polResp.arrayBuffer();

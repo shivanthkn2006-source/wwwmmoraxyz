@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { sovereignFetch, sovereignKey } from "../_shared/sovereign-ai.ts";
+import { cascadeFetch } from '../_shared/image-cascade.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -17,7 +18,7 @@ async function generateViaPollinations(prompt: string): Promise<string | null> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 20000);
     
-    const resp = await fetch(url, {
+    const resp = await cascadeFetch(url, {
       signal: controller.signal,
       headers: { 'Accept': 'image/*' },
     });

@@ -8,6 +8,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { resolveClaims } from '../_shared/auth-claims.ts';
 import { sovereignFetch, sovereignKey } from "../_shared/sovereign-ai.ts";
+import { cascadeFetch } from '../_shared/image-cascade.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -73,7 +74,7 @@ serve(async (req) => {
         const polUrl = `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=1024&model=flux&nologo=true&enhance=true`;
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 20000);
-        const polResp = await fetch(polUrl, { signal: controller.signal, headers: { 'Accept': 'image/*' } });
+        const polResp = await cascadeFetch(polUrl, { signal: controller.signal, headers: { 'Accept': 'image/*' } });
         clearTimeout(timeout);
         if (polResp.ok) {
           const buf = await polResp.arrayBuffer();
@@ -173,7 +174,7 @@ serve(async (req) => {
         const polUrl = `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=1024&model=flux&nologo=true&enhance=true`;
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 20000);
-        const polResp = await fetch(polUrl, { signal: controller.signal, headers: { 'Accept': 'image/*' } });
+        const polResp = await cascadeFetch(polUrl, { signal: controller.signal, headers: { 'Accept': 'image/*' } });
         clearTimeout(timeout);
         if (polResp.ok) {
           const buf = await polResp.arrayBuffer();
