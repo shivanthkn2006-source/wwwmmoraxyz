@@ -193,5 +193,5 @@ export async function cascadeFetch(url: string, _init?: RequestInit): Promise<Re
   const height = Number(u.searchParams.get('height')) || 1024;
   const art = await fetchImageCascade({ prompt, width, height, seed: u.searchParams.get('seed') ?? undefined });
   if (!art.bytes) return new Response(JSON.stringify({ error: 'all image providers failed', log: art.log }), { status: 502 });
-  return new Response(art.bytes, { status: 200, headers: { 'content-type': art.contentType.split(';')[0], 'x-image-provider': art.provider ?? '' } });
+  return new Response(art.bytes as unknown as BodyInit, { status: 200, headers: { 'content-type': art.contentType.split(';')[0], 'x-image-provider': art.provider ?? '' } });
 }
