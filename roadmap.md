@@ -39,3 +39,6 @@
 - [ ] Add humor categories, filtering, recent-engagement trending, and duplicate-safe Global feed placement
 - [ ] Add secure member joke submission with title, text, category, optional image, and feed engagement
 - [ ] Verify Zoe's LOL end to end in signed-in desktop and phone previews
+- [ ] Stabilize authenticated sign-in, landing, and Home loading before feature QA.
+- [ ] Verify one persisted Zoe LOL card across Global, Friends, LOL, calendar, voice, reactions, and comments.
+- [ ] Verify admin/@moksh50 authenticated preview without exposing credentials.
