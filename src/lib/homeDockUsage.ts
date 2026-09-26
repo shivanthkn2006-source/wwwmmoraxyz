@@ -5,7 +5,8 @@
  */
 
 const STORAGE_KEY = 'mmora:home-dock-usage:v1';
-const MAX_ENTRIES = 40;
+// Include the full dock registry, including menus discovered after the first 40.
+const MAX_ENTRIES = 256;
 
 export type DockUsageMap = Record<string, { count: number; last: number }>;
 

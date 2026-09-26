@@ -368,12 +368,11 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
     ));
   }, [gridSlots, searchQuery]);
 
-  // Keep a small, stable set of genuinely used destinations beside Home
-  // while the full panel is closed. The most-used action sits nearest Home.
+  // Every genuinely used destination stays available in the closed rail.
+  // Overflow scrolls toward Home instead of making the dock wider than the screen.
   const frequentSlots = React.useMemo(
     () => slots
-      .filter((item) => (usage[item.id]?.count ?? 0) > 0)
-      .slice(-4),
+      .filter((item) => (usage[item.id]?.count ?? 0) > 0),
     [slots, usage],
   );
 
@@ -412,7 +411,7 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
           role={open ? 'menu' : undefined}
           aria-hidden={open ? false : undefined}
           className={cn(
-            'flex w-fit flex-col items-end gap-[var(--home-dock-gap)] p-[var(--home-dock-pad)]',
+            'flex w-fit max-w-full flex-col items-end gap-[var(--home-dock-gap)] p-[var(--home-dock-pad)]',
             open ? 'pointer-events-auto' : 'pointer-events-none',
             open
               ? 'rounded-[28px] border-0 bg-white/10 backdrop-blur-xl shadow-none'
@@ -421,12 +420,17 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
         >
           {open && renderPackedRows()}
 
-          <div className="flex w-full items-center justify-end gap-[var(--home-dock-gap)]">
-            {!open && frequentSlots.map((item) => (
-              <div key={item.id} className="pointer-events-auto">
-                {renderIconButton(item, false, true)}
+          <div className="flex w-full min-w-0 items-center justify-end gap-[var(--home-dock-gap)]">
+            {!open && frequentSlots.length > 0 && (
+              <div
+                aria-label="Frequently used menus"
+                className="pointer-events-auto flex min-w-0 max-w-[calc(100vw-env(safe-area-inset-left,0px)-env(safe-area-inset-right,0px)-var(--home-dock-cell)-2rem)] items-center gap-[var(--home-dock-gap)] overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              >
+                {frequentSlots.map((item) => (
+                  <div key={item.id} className="shrink-0">{renderIconButton(item, false, true)}</div>
+                ))}
               </div>
-            ))}
+            )}
             {open && (
               <label className="flex min-w-0 flex-1 items-center gap-2 px-1" aria-label="Search home menu">
                 <input

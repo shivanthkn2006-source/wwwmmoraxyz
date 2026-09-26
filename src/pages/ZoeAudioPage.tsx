@@ -454,7 +454,7 @@ export const ZoeAudioPage: React.FC = () => {
             <ul className="text-sm space-y-1.5 text-muted-foreground">
               <li><strong className="text-foreground">"Stop listening"</strong> — Suspends mic buffer</li>
               <li><strong className="text-foreground">"Be quiet" / press stem</strong> — Immediate interrupt</li>
-              <li><strong className="text-foreground">"Speak faster"</strong> — Adjusts Deepgram rate</li>
+              <li><strong className="text-foreground">"Speak faster"</strong> — Adjusts Zoe's speaking pace</li>
             </ul>
           </div>
           <div className="p-4 bg-background border border-border rounded-lg space-y-2">

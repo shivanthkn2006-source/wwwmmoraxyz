@@ -79,7 +79,7 @@ export const QuotaAdminPanel = () => {
     <Card className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold">Supabase Quota — Zoe Infinity</h2>
+          <h2 className="text-lg font-semibold">Cloud usage — Zoe Infinity</h2>
           <p className="text-xs text-muted-foreground">
             Tier: <span className="font-medium uppercase">{q.tier}</span>
             {q.lastCheckedAt && ` · last checked ${new Date(q.lastCheckedAt).toLocaleTimeString()}`}
@@ -113,7 +113,7 @@ export const QuotaAdminPanel = () => {
 
       {q.lastError && (
         <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-xs text-destructive">
-          Supabase monitor warning: {q.lastError}
+          Cloud monitor warning: {q.lastError}
         </div>
       )}
 
