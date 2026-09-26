@@ -37,21 +37,9 @@ async function speak(text: string, model: string, signal: AbortSignal): Promise<
   return res.blob();
 }
 
-const ANNOUNCED_KEY = 'mmora:humor-announced:v1';
-/** A drop is announced once per device, only while fresh (first 2h after its slot). */
-function shouldAnnounce(drop: HumorDrop): boolean {
-  if (Date.now() - new Date(drop.created_at).getTime() > 2 * 3600_000) return false;
-  try {
-    const seen: string[] = JSON.parse(localStorage.getItem(ANNOUNCED_KEY) || '[]');
-    if (seen.includes(drop.id)) return false;
-    localStorage.setItem(ANNOUNCED_KEY, JSON.stringify([...seen.slice(-40), drop.id]));
-    return true;
-  } catch { return false; }
-}
-
 type Comment = { id: string; user_id: string; body: string; created_at: string };
 
-export const HumorDropCard: React.FC<{ drop: HumorDrop; autoAnnounce?: boolean }> = ({ drop, autoAnnounce = false }) => {
+export const HumorDropCard: React.FC<{ drop: HumorDrop }> = ({ drop }) => {
   const { user } = useAuth();
   const [likes, setLikes] = useState(0);
   const [dislikes, setDislikes] = useState(0);
@@ -118,14 +106,6 @@ export const HumorDropCard: React.FC<{ drop: HumorDrop; autoAnnounce?: boolean }
     const unregister = registerVoiceChannel('narration', stop);
     return () => { unregister(); stop(); };
   }, []);
-  // Scheduled announcement: when a fresh drop lands, Zoe reads it once per device
-  // (never over a live search/chat voice; browsers may still require a prior tap).
-  useEffect(() => {
-    if (!autoAnnounce || !shouldAnnounce(drop)) return;
-    const t = setTimeout(() => void play(true), 1500);
-    return () => clearTimeout(t);
-  }, [autoAnnounce, drop.id]);
-
   const play = async (ambient = false) => {
     if (playing) return stop();
     if (!claimVoice('narration', { ambient })) return;
@@ -166,7 +146,7 @@ export const HumorDropCard: React.FC<{ drop: HumorDrop; autoAnnounce?: boolean }
     >
       <header className="mb-3 flex items-center gap-2 text-xs text-white/70">
         <Laugh className="h-4 w-4" aria-hidden />
-        <span>Zoe's LOL · {LABEL[drop.metal]}</span>
+        <span>{drop.origin === 'member' ? 'Member joke' : "Zoe's LOL"} · {drop.category} · {LABEL[drop.metal]}</span>
       </header>
       {drop.image_url && (
         <img src={drop.image_url} alt={drop.headline} loading="lazy" className="mb-4 aspect-square w-full rounded-2xl object-cover" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />

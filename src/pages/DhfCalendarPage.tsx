@@ -19,6 +19,7 @@ const ymd = (y: number, m: number, d: number) => `${y}-${pad(m + 1)}-${pad(d)}`;
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 interface CardRow { post_date: string; slot_time: string; category: string; headline: string }
+interface HumorRow { id: string; drop_date: string; scheduled_for: string; category: string; headline: string }
 
 const DhfCalendarPage: React.FC = () => {
   const { user } = useAuth();
@@ -28,6 +29,7 @@ const DhfCalendarPage: React.FC = () => {
   const [view, setView] = useState({ y: ty, m: tm - 1 });
   const [selected, setSelected] = useState(today);
   const [cards, setCards] = useState<CardRow[]>([]);
+  const [humor, setHumor] = useState<HumorRow[]>([]);
   const [plans, setPlans] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -40,13 +42,16 @@ const DhfCalendarPage: React.FC = () => {
     if (!user) { setLoading(false); return; }
     setLoading(true);
     try {
-      const [cardRes, planRes] = await Promise.all([
+      const [cardRes, planRes, humorRes] = await Promise.all([
         supabase.from('dhf_daily_posts').select('post_date, slot_time, category, headline')
           .eq('user_id', user.id).gte('post_date', monthStart).lte('post_date', monthEnd).limit(400),
         (supabase as any).from('dhf_reading_plans').select('plan_date')
           .eq('user_id', user.id).gte('plan_date', monthStart).lte('plan_date', monthEnd),
+        supabase.from('humor_drops').select('id, drop_date, scheduled_for, category, headline')
+          .eq('is_published', true).gte('drop_date', monthStart).lte('drop_date', monthEnd).order('scheduled_for'),
       ]);
       setCards((cardRes.data ?? []) as CardRow[]);
+      setHumor((humorRes.data ?? []) as HumorRow[]);
       setPlans(new Set(((planRes.data ?? []) as { plan_date: string }[]).map((p) => p.plan_date)));
     } catch {
       setCards([]);
@@ -109,6 +114,7 @@ const DhfCalendarPage: React.FC = () => {
   const monthLabel = new Date(view.y, view.m, 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
 
   const selDelivered = deliveredByDay.get(selected) ?? [];
+  const selectedHumor = humor.filter((drop) => drop.drop_date === selected);
   const isFuture = selected > today;
   const isToday = selected === today;
   const upcomingToday = isToday ? COMPASS_SLOTS.filter((s) => slotMinutes(s.time) > nowMinutes) : [];
@@ -136,6 +142,7 @@ const DhfCalendarPage: React.FC = () => {
             if (!date) return <div key={`e${i}`} />;
             const count = deliveredByDay.get(date)?.length ?? 0;
             const planned = plans.has(date);
+            const hasHumor = humor.some((drop) => drop.drop_date === date);
             const active = date === selected;
             return (
               <button
@@ -150,13 +157,14 @@ const DhfCalendarPage: React.FC = () => {
                 <span>{Number(date.slice(8))}</span>
                 <span className="mt-0.5 flex h-2 items-center gap-0.5">
                   {count > 0 && <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />}
+                  {hasHumor && <span className="h-1.5 w-1.5 rounded-full bg-destructive" />}
                   {planned && <Check className="h-2.5 w-2.5" />}
                 </span>
               </button>
             );
           })}
         </div>
-        <p className="mt-2 text-xs text-muted-foreground">Dot = cards delivered · Tick = planned to read</p>
+        <p className="mt-2 text-xs text-muted-foreground">Dot = cards delivered · Red dot = Zoe’s LOL · Tick = planned to read</p>
 
         <section className="mt-6 rounded-xl bg-card/40 p-4" data-calendar-detail={selected}>
           <div className="mb-3 flex items-center justify-between gap-2">
@@ -181,6 +189,21 @@ const DhfCalendarPage: React.FC = () => {
                 </li>
               ))}
             </ul>
+          )}
+
+          {!loading && selectedHumor.length > 0 && (
+            <div className="mb-3" data-calendar-humor>
+              <p className="mb-2 text-xs text-muted-foreground">Zoe’s LOL</p>
+              <ul className="space-y-2">
+                {selectedHumor.map((drop) => (
+                  <li key={drop.id} className="text-sm">
+                    <span className="text-muted-foreground">{new Date(drop.scheduled_for).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} · {drop.category}</span>
+                    <div>{drop.headline}</div>
+                  </li>
+                ))}
+              </ul>
+              <Link to="/zoe-lol" className="mt-3 inline-block text-sm underline">Open Zoe’s LOL</Link>
+            </div>
           )}
 
           {!loading && (isFuture || upcomingToday.length > 0) && (

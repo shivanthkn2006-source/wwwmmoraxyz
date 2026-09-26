@@ -2528,19 +2528,22 @@ const HomePage = () => {
       timestamp: growthSlotTimestamp(insight.local_date, insight.slot, zone),
       value: growthSlide[index],
     }));
-    const humorItems = feed === 'global' ? humorDrops.map((drop, i) => ({
+    const humorItems = feed === 'global' ? humorDrops.map((drop) => ({
       id: `humor-${drop.id}`,
       timestamp: drop.created_at,
       value: (
         <div key={`humor-${drop.id}`} className="relative flex h-full min-h-full w-full shrink-0 snap-start snap-always items-center overflow-y-auto p-4 pt-24 pb-24" data-humor-slide>
-          <FeedErrorBoundary section="posts"><HumorDropCard drop={drop} autoAnnounce={i === 0} /></FeedErrorBoundary>
+          <FeedErrorBoundary section="posts"><HumorDropCard drop={drop} /></FeedErrorBoundary>
         </div>
       ),
     })) : [];
-    const timelineItems = composeChronologicalFeed([...nativeItems, ...loopItems, ...growthItems, ...humorItems]);
+    const timelineItems = composeChronologicalFeed([...nativeItems, ...loopItems, ...growthItems]);
     // Due DHF guidance leads the social timeline so a newer upload cannot bury
     // Zoe's current-day context. duePosts already keeps these newest-first.
-    return [...dhfSlides, ...timelineItems];
+    if (feed !== 'global' || humorItems.length === 0) return [...dhfSlides, ...timelineItems];
+    const interleaved = [...timelineItems];
+    humorItems.slice(0, 3).forEach((item, index) => interleaved.splice(Math.min(index * 6, interleaved.length), 0, item.value));
+    return [...dhfSlides, ...interleaved];
 
   };
 

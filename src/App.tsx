@@ -10,6 +10,7 @@ import { GlobalMediaProvider } from "@/contexts/GlobalMediaContext"; // ONE EAR 
 import { NavigationBusProvider } from "@/contexts/NavigationBusContext"; // PHASE 2: Search → Globe Bridge
 import { DeferredComponentLoader } from '@/components/DeferredComponentLoader';
 import { MoraZoeGlobalHost } from '@/components/astro/MoraZoeGlobalHost';
+import HumorAnnouncementHost from '@/components/humor/HumorAnnouncementHost';
 import { LightActivityTracker } from '@/components/LightActivityTracker';
 import { MemoryLeakPlumberGlobal } from '@/components/MemoryLeakPlumberGlobal';
 import { AutoFixProvider } from '@/components/AutoFixProvider';
@@ -165,6 +166,7 @@ const GrowthInsightsPage = lazy(() => import("./pages/GrowthInsightsPage")); // 
 const DHFCompassPage = lazy(() => import("./pages/DHFCompassPage")); // ZOE'S DHF ARCHIVE
 const DhfCalendarPage = lazy(() => import("./pages/DhfCalendarPage"));
 const ZoeLolPage = lazy(() => import("./pages/ZoeLolPage")); // ZOE'S DHF CALENDAR
+const SubmitJokePage = lazy(() => import("./pages/SubmitJokePage"));
 const DhfEssayPage = lazy(() => import("./pages/DhfEssayPage")); // ZOE'S DHF LONG-FORM ESSAY READER
 
 const AdminDhfGrowthPage = lazy(() => import("./pages/AdminDhfGrowthPage")); // DHF GROWTH CONSOLE (admin)
@@ -920,6 +922,7 @@ const RouteAwareShell = () => {
                               </ProtectedRoute>
                             }
                           />
+                          <Route path="/zoe-lol/submit" element={<ProtectedRoute><SubmitJokePage /></ProtectedRoute>} />
                           <Route
                             path="/dhf-calendar"
                             element={
@@ -1473,6 +1476,7 @@ const App = () => {
                         <Suspense fallback={null}>
                           <MoraZoeGlobalHost />
                         </Suspense>
+                        <HumorAnnouncementHost />
 
                         <MmoraBrandHomeBridge />
 
