@@ -15,8 +15,8 @@ export default function ZoeLolPage() {
   const drops = useHumorDrops(500, 3650);
   const [category, setCategory] = useState<'all' | HumorCategory>('all');
   const initialMode = searchParams.get('mode');
-  const [mode, setMode] = useState<'latest' | 'trending' | 'top' | 'viewed' | 'commented' | 'following' | 'mine'>(
-    initialMode === 'top' || initialMode === 'viewed' || initialMode === 'commented' ? initialMode : 'latest',
+  const [mode, setMode] = useState<'latest' | 'popular' | 'trending' | 'top' | 'viewed' | 'commented' | 'following' | 'mine'>(
+    initialMode === 'top' || initialMode === 'viewed' || initialMode === 'commented' || initialMode === 'popular' ? initialMode : 'latest',
   );
   const [date, setDate] = useState('all');
   const [engagement, setEngagement] = useState<Record<string, { likes: number; dislikes: number; comments: number; views: number }>>({});
@@ -53,6 +53,10 @@ export default function ZoeLolPage() {
     return [...filtered].sort((a, b) => {
       const sa = engagement[a.id] ?? zero;
       const sb = engagement[b.id] ?? zero;
+      if (mode === 'popular') {
+        const pop = (s: typeof zero) => s.likes * 3 + s.comments * 2 + s.views - s.dislikes * 2;
+        return (pop(sb) - pop(sa)) || (Date.parse(b.scheduled_for) - Date.parse(a.scheduled_for));
+      }
       if (mode === 'top') return (sb.likes - sb.dislikes) - (sa.likes - sa.dislikes);
       if (mode === 'viewed') return sb.views - sa.views;
       if (mode === 'commented') return sb.comments - sa.comments;
@@ -68,6 +72,7 @@ export default function ZoeLolPage() {
       </header>
       <div className="mx-auto mb-4 flex max-w-xl gap-2 overflow-x-auto pb-1">
         <Button size="sm" variant={mode === 'latest' ? 'default' : 'ghost'} onClick={() => setMode('latest')}>Latest</Button>
+        <Button size="sm" variant={mode === 'popular' ? 'default' : 'ghost'} onClick={() => setMode('popular')}>Most popular</Button>
         <Button size="sm" variant={mode === 'trending' ? 'default' : 'ghost'} onClick={() => setMode('trending')}><Flame className="h-4 w-4" />Trending</Button>
         <Button size="sm" variant={mode === 'top' ? 'default' : 'ghost'} onClick={() => setMode('top')}>Top rated</Button>
         <Button size="sm" variant={mode === 'viewed' ? 'default' : 'ghost'} onClick={() => setMode('viewed')}>Most viewed</Button>

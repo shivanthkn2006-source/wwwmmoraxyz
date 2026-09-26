@@ -59,9 +59,26 @@ export function startHomeLoadReport(userId: string | undefined): () => void {
   window.addEventListener('error', onError);
   window.addEventListener('unhandledrejection', onRejection);
 
+  // Per-part load time: ms from Home opening until each part first appears.
+  const seenAt: Record<string, number> = {};
+  const scan = () => {
+    for (const [name, selector] of Object.entries(HOME_SECTIONS)) {
+      if (seenAt[name] === undefined && document.querySelector(selector)) seenAt[name] = Date.now() - startedAt;
+    }
+  };
+  scan();
+  let scheduled = false;
+  const observer = new MutationObserver(() => {
+    if (scheduled) return;
+    scheduled = true;
+    requestAnimationFrame(() => { scheduled = false; scan(); });
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+
   const cleanup = () => {
     window.removeEventListener('error', onError);
     window.removeEventListener('unhandledrejection', onRejection);
+    observer.disconnect();
   };
 
   const timer = window.setTimeout(async () => {
@@ -84,7 +101,10 @@ export function startHomeLoadReport(userId: string | undefined): () => void {
         viewport: `${window.innerWidth}x${window.innerHeight}`,
         connection: conn?.effectiveType ?? null,
         interactive_ms: getInteractiveDelayMs(),
-        marks: getStartupMarks(),
+        marks: [
+          ...getStartupMarks(),
+          ...Object.entries(seenAt).map(([name, at]) => ({ phase: `part:${name}`, at })),
+        ],
         sections,
         failures: failures.slice(0, 50),
         failure_count: failures.length,
