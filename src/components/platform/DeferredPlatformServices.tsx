@@ -20,7 +20,7 @@ import GlobalIncomingCallHost from '@/components/quantum/GlobalIncomingCallHost'
 export default function DeferredPlatformServices({ children }: { children: React.ReactNode }) {
   return (
     <ZoeAgentProvider>
-      <CallEngineProvider>
+      <>
         {children}
         <AppErrorBoundary moduleName="growth:alerts" severity="low" fallback={null}><GrowthCardAlertHost /></AppErrorBoundary>
         <AppErrorBoundary moduleName="platform:notification-alerts" severity="low" fallback={null}><NotificationAlertHost /></AppErrorBoundary>
@@ -35,7 +35,7 @@ export default function DeferredPlatformServices({ children }: { children: React
         <AppErrorBoundary moduleName="platform:zoe-agent" severity="low" fallback={null}><ZoeAgentHost /></AppErrorBoundary>
         <AppErrorBoundary moduleName="platform:permissions" severity="low" fallback={null}><OneTimePermissionsPrompt /></AppErrorBoundary>
         <AppErrorBoundary moduleName="platform:incoming-call" severity="high" fallback={null}><GlobalIncomingCallHost /></AppErrorBoundary>
-      </CallEngineProvider>
+      </>
     </ZoeAgentProvider>
   );
 }
