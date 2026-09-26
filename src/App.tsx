@@ -213,7 +213,7 @@ const ZoePreviewRecoveryGuard = ({ children }: { children: React.ReactNode }) =>
 
     const visibleTimer = window.setTimeout(() => {
       if (isRootVisiblyBlank()) setStalled(true);
-    }, 5_000);
+    }, 12_000);
 
     return () => {
       window.clearTimeout(visibleTimer);
