@@ -25,6 +25,7 @@ import { type FeedSearchItem } from '@/lib/feedSearchItems';
 import { useDhfBrain } from '@/hooks/useDhfBrain';
 import useZoeMotivation from '@/hooks/useZoeMotivation';
 import HomeMotivationSlide from '@/components/home/HomeMotivationSlide';
+import HomeForecastCard from '@/components/home/HomeForecastCard';
 import zoeAvatar from '@/assets/zoe-avatar.png';
 import { isMotivationRevealed } from '@/hooks/useMotivationVote';
 import HomeMusicShelf from '@/components/home/HomeMusicShelf';
@@ -2478,8 +2479,9 @@ const HomePage = () => {
     dailyMotivation && isMotivationRevealed()
       ? [<FeedErrorBoundary key="daily-motivation" section="posts"><HomeMotivationSlide motivation={dailyMotivation} posterUrl={motivationPosterUrl} /></FeedErrorBoundary>]
       : []
+  ).concat([<FeedErrorBoundary key="home-forecast" section="posts"><HomeForecastCard /></FeedErrorBoundary>])
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  ), [dailyMotivation, motivationPosterUrl, motivationTick]);
+  , [dailyMotivation, motivationPosterUrl, motivationTick]);
 
   const supportingSlides = React.useMemo(() => {
     const slides: React.ReactElement[] = [];

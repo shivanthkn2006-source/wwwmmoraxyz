@@ -56,7 +56,7 @@ export default function HomeForecastCard() {
 
   if (hasBirth === null && !shift) return null;
 
-  const ask = (q: string) => navigate(`/zoe?q=${encodeURIComponent(q)}`);
+  const ask = (q: string) => navigate(`/chat?q=${encodeURIComponent(q)}`);
 
   return (
     <article className="relative flex h-full min-h-full w-full shrink-0 snap-start snap-always items-center overflow-y-auto bg-background p-4 text-foreground" data-home-forecast>
