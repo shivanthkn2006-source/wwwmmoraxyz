@@ -404,7 +404,7 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
             'flex w-fit max-w-full flex-col items-end gap-[var(--home-dock-gap)] p-[var(--home-dock-pad)]',
             open ? 'pointer-events-auto' : 'pointer-events-none',
             open
-              ? 'rounded-[28px] border-0 bg-white/10 backdrop-blur-xl shadow-none'
+              ? 'home-dock-stable-glass rounded-[28px] border-0 shadow-none'
               : 'rounded-none border-0 bg-transparent shadow-none',
           )}
         >
