@@ -3124,8 +3124,9 @@ Want me to dive deeper into any aspect?`;
             className={cn(
               'relative overflow-hidden flex flex-col overscroll-contain pointer-events-auto',
               isFullPage ? 'cursor-default' : 'cursor-grab active:cursor-grabbing',
-              // Match the Home menu glass: light, colourless and borderless.
-              'bg-white/10 backdrop-blur-xl',
+              // Stable warm translucent surface: no live backdrop sampling, so
+              // moving Home content cannot bleed through or make this flicker.
+              'zoe-orb-stable-glass',
               'border-0',
               'rounded-[28px]',
               'shadow-none',
@@ -3167,7 +3168,7 @@ Want me to dive deeper into any aspect?`;
           
           {/* Unified Header - responsive design */}
           {/* Unified Header - responsive design with larger touch targets on mobile */}
-          <div className="flex min-h-9 items-center justify-between px-1.5 md:px-2 py-1 bg-transparent border-0">
+          <div className="flex h-9 shrink-0 items-center justify-between px-1.5 md:px-2 bg-transparent border-0">
             <div className="flex items-center gap-1">
               <button
                 type="button"
@@ -3227,11 +3228,11 @@ Want me to dive deeper into any aspect?`;
             
             <div className={cn(
               showFeatureMenu
-                ? 'absolute left-1 top-10 bottom-2 z-[60] flex w-[5.5rem] flex-col items-stretch gap-0 overflow-y-auto overscroll-contain rounded-[28px] bg-white/20 py-2 px-1 backdrop-blur-2xl shadow-none [scrollbar-width:none] [&_*]:!border-0 [&_*]:!ring-0 [&_*]:!outline-none'
+                ? 'zoe-orb-menu-glass absolute left-1 top-10 bottom-2 z-[60] flex w-[4.5rem] flex-col items-stretch gap-0 overflow-y-auto overscroll-contain rounded-[22px] py-1.5 px-0.5 shadow-none [scrollbar-width:none] [&_*]:!border-0 [&_*]:!ring-0 [&_*]:!outline-none'
                 : 'hidden',
               '[&_button]:!bg-transparent [&_button]:!border-0 [&_button]:!shadow-none [&_button]:!text-foreground [&_svg]:!text-foreground',
               '[&_[class*=animate-]]:!animate-none [&_[class*=rounded-full]]:!bg-transparent',
-              '[&_.right-0.top-5]:!left-full [&_.right-0.top-5]:!right-auto [&_.right-0.top-5]:!border-0 [&_.right-0.top-5]:!bg-white/20'
+              '[&_.right-0.top-5]:!left-full [&_.right-0.top-5]:!right-auto [&_.right-0.top-5]:!border-0 [&_.right-0.top-5]:!bg-transparent'
             )}
             onWheelCapture={(e) => e.stopPropagation()}
             onTouchMoveCapture={(e) => e.stopPropagation()}>
@@ -3941,14 +3942,15 @@ Want me to dive deeper into any aspect?`;
             <AnimatePresence>
               {showScrollToBottom && (
                 <motion.button
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 10 }}
+                  initial={false}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
                   onClick={scrollToBottom}
-                  className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 px-2.5 py-1 rounded-full bg-background/70 backdrop-blur-md border border-primary/20 shadow-lg hover:bg-background/90 transition-all"
+                  aria-label="Scroll to latest message"
+                  title="Latest message"
+                  className="absolute bottom-2 left-1/2 -translate-x-1/2 z-20 flex h-7 w-7 items-center justify-center bg-transparent border-0 shadow-none text-foreground hover:bg-transparent"
                 >
-                  <ChevronDown className="h-3.5 w-3.5 text-primary" />
-                  <span className="text-[10px] text-foreground/70 font-medium">Latest</span>
+                  <ChevronDown className="h-5 w-5" />
                 </motion.button>
               )}
             </AnimatePresence>
@@ -4522,7 +4524,7 @@ Want me to dive deeper into any aspect?`;
           )}
 
           {/* Input Area - compact design with attach menu containing all tools */}
-          <div className="px-1 md:px-1.5 lg:px-2 py-0.5 md:py-1 border-0 bg-transparent shrink-0 relative z-10">
+          <div className="px-1 py-0 border-0 bg-transparent shrink-0 relative z-10">
             {/* Hidden file inputs */}
             <input
               ref={fileInputRef}
@@ -4546,14 +4548,14 @@ Want me to dive deeper into any aspect?`;
               className="hidden"
             />
             
-            <div className="flex items-end gap-1">
+            <div className="flex min-h-8 items-end gap-0">
               {/* Left side - Single attach button with floating menu (does not change layout / does not block content) */}
               {!isRecording && (
                 <div ref={attachMenuWrapperRef} className="shrink-0">
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-9 w-9 rounded-full hover:bg-transparent"
+                    className="h-8 w-8 rounded-none border-0 bg-transparent p-0 hover:bg-transparent"
                     title="Menu"
                     aria-expanded={showAttachMenu}
                     aria-haspopup="menu"
@@ -4566,9 +4568,9 @@ Want me to dive deeper into any aspect?`;
                     <div
                       role="menu"
                       className={cn(
-                        "absolute left-1 bottom-full mb-1 w-[5.5rem] rounded-[28px] border-0 bg-white/20 backdrop-blur-2xl py-2 px-1 [&_*]:!border-0 [&_*]:!ring-0 [&_.h-px]:hidden [&_button]:!text-foreground [&_button]:!text-[11px] [&_button]:!font-medium shadow-none overflow-y-auto overscroll-contain z-[10050] [scrollbar-width:none] flex flex-col gap-0",
-                        "[&_svg]:!text-foreground [&_svg]:!h-5 [&_svg]:!w-5 [&_svg]:!mr-0 [&_p]:!hidden",
-                        "[&_button]:!flex-col [&_button]:!h-auto [&_button]:!w-full [&_button]:!justify-center [&_button]:!gap-1 [&_button]:!py-2 [&_button]:!px-0.5 [&_button]:!whitespace-normal [&_button]:!text-center [&_button]:!leading-tight [&_button]:!bg-transparent [&_button]:!border-0 [&_button]:!shadow-none [&_[class*=animate-]]:!animate-none",
+                        "zoe-orb-menu-glass absolute left-1 bottom-full mb-1 w-[4.5rem] rounded-[22px] border-0 py-1.5 px-0.5 [&_*]:!border-0 [&_*]:!ring-0 [&_.h-px]:hidden [&_button]:!text-foreground [&_button]:!text-[9px] [&_button]:!font-medium shadow-none overflow-y-auto overscroll-contain z-[10050] [scrollbar-width:none] flex flex-col gap-0",
+                        "[&_svg]:!text-foreground [&_svg]:!h-4 [&_svg]:!w-4 [&_svg]:!mr-0 [&_p]:!hidden",
+                        "[&_button]:!flex-col [&_button]:!h-auto [&_button]:!w-full [&_button]:!justify-center [&_button]:!gap-0.5 [&_button]:!py-1.5 [&_button]:!px-0 [&_button]:!whitespace-normal [&_button]:!text-center [&_button]:!leading-tight [&_button]:!bg-transparent [&_button]:!border-0 [&_button]:!shadow-none [&_[class*=animate-]]:!animate-none",
                         isFullPage ? "h-[calc(100dvh-9rem)]" : "h-[calc(max(320px,min(56dvh,calc(100dvh-96px)))-5.5rem)]"
                       )}
                       onWheelCapture={(e) => e.stopPropagation()}
@@ -4807,7 +4809,7 @@ Want me to dive deeper into any aspect?`;
                         : "Zoe..."
                 }
                 className={cn(
-                  "flex-1 min-w-0 resize-none overflow-y-auto text-sm leading-5 bg-transparent border-0 shadow-none ring-0 outline-none placeholder:text-foreground/50 focus:outline-none focus-visible:ring-0 caret-foreground px-2 py-2 max-h-40 [scrollbar-width:none]"
+                  "flex-1 min-w-0 resize-none overflow-y-auto text-sm leading-5 bg-transparent border-0 shadow-none ring-0 outline-none placeholder:text-foreground/50 focus:outline-none focus-visible:ring-0 caret-foreground px-1 py-1 max-h-40 [scrollbar-width:none]"
                 )}
                 disabled={isProcessing || isPerceptionProcessing || isSending || (messagingMode === 'user' && !selectedUser)}
               />
@@ -4836,7 +4838,7 @@ Want me to dive deeper into any aspect?`;
                 variant="ghost"
                 aria-label="Send"
                 className={cn(
-                  "h-9 w-9 rounded-full !bg-transparent hover:!bg-transparent border-0 shadow-none flex-shrink-0 disabled:opacity-40",
+                  "h-8 w-8 rounded-none !bg-transparent hover:!bg-transparent border-0 shadow-none flex-shrink-0 p-0 disabled:opacity-40",
                   (input.trim() || pendingMedia) ? 'text-foreground' : 'text-foreground/60'
                 )}
                 onClick={() => sendMessage()}
@@ -4866,7 +4868,7 @@ Want me to dive deeper into any aspect?`;
 function ZoeFeatureRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div
-      className="relative flex flex-col items-center gap-1 px-0.5 py-2 cursor-pointer text-center [&_button]:!h-7 [&_button]:!min-w-7 [&_svg]:!h-5 [&_svg]:!w-5"
+      className="relative flex flex-col items-center gap-0.5 px-0 py-1.5 cursor-pointer text-center [&_button]:!h-6 [&_button]:!min-w-6 [&_svg]:!h-4 [&_svg]:!w-4"
       onClick={(e) => {
         const target = e.target as HTMLElement;
         if (target.closest('button')) return;
@@ -4874,7 +4876,7 @@ function ZoeFeatureRow({ label, children }: { label: string; children: React.Rea
       }}
     >
       {children}
-      <span className="text-[11px] font-medium leading-tight text-foreground select-none">{label}</span>
+      <span className="text-[9px] font-medium leading-tight text-foreground select-none">{label}</span>
     </div>
   );
 }

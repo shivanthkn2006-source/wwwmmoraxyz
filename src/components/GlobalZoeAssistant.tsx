@@ -601,9 +601,10 @@ export const GlobalZoeAssistant = ({ config = DEFAULT_CONFIG }: { config?: Parti
           ny = Math.max(minY, Math.min(maxY, ny));
         }
 
+        // Motion values move the orb without re-rendering the full assistant and
+        // its translucent chat panel on every animation frame.
         x.set(nx);
         y.set(ny);
-        setPosition({ x: nx, y: ny });
       }
 
       raf = requestAnimationFrame(tick);

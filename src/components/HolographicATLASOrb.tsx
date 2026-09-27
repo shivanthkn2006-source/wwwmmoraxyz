@@ -463,7 +463,7 @@ export const HolographicATLASOrb: React.FC<HolographicATLASOrbProps> = ({
     const lightningMaterial = new THREE.LineBasicMaterial({
       color: new THREE.Color(emotionConfig.plasmaColor),
       transparent: true,
-      opacity: 0.8,
+      opacity: 0,
       blending: THREE.AdditiveBlending,
       linewidth: 1,
     });
@@ -512,7 +512,7 @@ export const HolographicATLASOrb: React.FC<HolographicATLASOrbProps> = ({
 
     const lightningMaterial = lightningRef.current.material as THREE.LineBasicMaterial;
     lightningMaterial.color.set(emotionConfig.plasmaColor);
-    lightningMaterial.opacity = emotionConfig.lightningIntensity * 0.7;
+    lightningMaterial.opacity = 0;
 
     // Update plasma particle colors
     const geometry = plasmaRef.current.geometry;
@@ -702,7 +702,7 @@ export const HolographicATLASOrb: React.FC<HolographicATLASOrbProps> = ({
         
         // Update opacity based on state (more erratic for anxiety/anger emotions)
         const baseOpacity = lightningActivity * 0.5;
-        lightningMat.opacity = baseOpacity + Math.sin(time * 2) * 0.06; // smooth, no strobe
+        lightningMat.opacity = 0;
         
         for (let i = 0; i < 300; i++) {
           // Randomly regenerate some lightning bolts each frame
@@ -782,22 +782,22 @@ export const HolographicATLASOrb: React.FC<HolographicATLASOrbProps> = ({
       style={{ width: sizeConfig.width, height: sizeConfig.height, transform: 'translateZ(0)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', isolation: 'isolate' }}
       onClick={onClick}
       onDoubleClick={onDoubleClick}
-      initial={{ scale: 0.8, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
+       initial={false}
+       animate={{ scale: 1, opacity: 1 }}
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
-      transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+       transition={{ duration: 0 }}
     >
       {/* Outer glow effect - Electric Blue Plasma field glow */}
       <div
         className={cn(
           "absolute inset-[-25%] rounded-full pointer-events-none",
-          isActive && "animate-gpu-pulse-scale-slow"
+          isActive && "opacity-40"
         )}
         style={{
           background: `radial-gradient(circle, ${emotionConfig.plasmaColor}50 0%, ${emotionConfig.plasmaColor}20 40%, transparent 70%)`,
           filter: 'blur(20px)',
-          opacity: isActive ? undefined : 0.3,
+          opacity: isActive ? 0.4 : 0.3,
         }}
       />
 
@@ -805,7 +805,7 @@ export const HolographicATLASOrb: React.FC<HolographicATLASOrbProps> = ({
       <div
         className={cn(
           "absolute inset-[-10%] rounded-full pointer-events-none",
-          orbState === 'thinking' ? "animate-gpu-pulse-scale-fast" : "animate-gpu-pulse-scale-slow"
+          "opacity-40"
         )}
         style={{
           background: `radial-gradient(circle, ${emotionConfig.coreColor}40 0%, transparent 60%)`,
@@ -824,14 +824,6 @@ export const HolographicATLASOrb: React.FC<HolographicATLASOrbProps> = ({
         />
       </div>
 
-
-      {/* Subtle floating animation for avatar movement */}
-      <div
-        className={cn(
-          "absolute inset-0 pointer-events-none",
-          isSpeaking ? "animate-gpu-speaking-wobble" : "animate-gpu-float-subtle"
-        )}
-      />
 
       {/* Screen reader label */}
       <span className="sr-only">
