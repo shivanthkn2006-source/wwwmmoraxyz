@@ -706,7 +706,7 @@ export const HolographicATLASOrb: React.FC<HolographicATLASOrbProps> = ({
         
         for (let i = 0; i < 300; i++) {
           // Randomly regenerate some lightning bolts each frame
-          if (Math.random() > 0.85 * (1 - lightningActivity * 0.5)) {
+          if (Math.random() > 0.985 - lightningActivity * 0.02) {
             // Random start point on outer shell
             const theta1 = Math.random() * Math.PI * 2;
             const phi1 = Math.acos(2 * Math.random() - 1);
