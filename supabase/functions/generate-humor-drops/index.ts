@@ -129,11 +129,12 @@ Deno.serve(async (req) => {
     if (missing.length === 0) return json({ ok: true, date, slot, generated: 0, painted: await paintMissing() });
 
     const skits = await Promise.all(missing.map(async (metal) => ({ metal, ...(await writeSkit(metal)) })));
-    const { error } = await db.from('humor_drops').upsert(
-      skits.map((s) => ({ drop_date: date, slot, metal: s.metal, headline: s.headline, lines: s.lines, source: s.source, category: CATEGORY[s.metal], origin: 'zoe', scheduled_for: scheduledFor.toISOString(), is_published: true })),
-      { onConflict: 'drop_date,slot,metal', ignoreDuplicates: true },
-    );
-    if (error) return json({ ok: false, error: error.message }, 500);
+    // The slot key is a partial unique index (origin = 'zoe'), which ON CONFLICT
+    // cannot target, so insert one row at a time and treat duplicates as done.
+    for (const s of skits) {
+      const { error } = await db.from('humor_drops').insert({ drop_date: date, slot, metal: s.metal, headline: s.headline, lines: s.lines, source: s.source, category: CATEGORY[s.metal], origin: 'zoe', scheduled_for: scheduledFor.toISOString(), is_published: true });
+      if (error && error.code !== '23505') return json({ ok: false, error: error.message }, 500);
+    }
     const painted = await paintMissing();
     return json({ ok: true, date, slot, generated: skits.length, painted, sources: skits.map((s) => s.source) });
   } catch (e) {
