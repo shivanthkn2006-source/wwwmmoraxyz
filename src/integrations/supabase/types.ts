@@ -13046,6 +13046,13 @@ export type Database = {
         Returns: number
       }
       prune_platform_telemetry: { Args: never; Returns: Json }
+      recently_active_member_ids: {
+        Args: { p_days?: number }
+        Returns: {
+          last_active: string
+          user_id: string
+        }[]
+      }
       recompute_intimacy_scores: { Args: { _user_id: string }; Returns: number }
       record_dhf_lineage: {
         Args: {
