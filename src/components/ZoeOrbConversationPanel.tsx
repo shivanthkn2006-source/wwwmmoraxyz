@@ -3124,10 +3124,9 @@ Want me to dive deeper into any aspect?`;
             className={cn(
               'relative overflow-hidden flex flex-col overscroll-contain pointer-events-auto',
               isFullPage ? 'cursor-default' : 'cursor-grab active:cursor-grabbing',
-              // Stable translucent surface: no live backdrop sampling, which flickers
-              // over Home's moving layers on Safari/Chrome and lets text pulse through.
-              'bg-muted/85 backdrop-blur-none',
-              'border border-foreground/20',
+              // Match the Home menu glass: light, colourless and borderless.
+              'bg-white/10 backdrop-blur-xl',
+              'border-0',
               'rounded-[28px]',
               'shadow-none',
               // Responsive sizing - 4.1" to 95" 4K displays
@@ -3228,11 +3227,11 @@ Want me to dive deeper into any aspect?`;
             
             <div className={cn(
               showFeatureMenu
-                ? 'absolute left-0 top-10 bottom-2 z-[60] flex w-[6.5rem] flex-col items-stretch gap-0 overflow-y-auto overscroll-contain rounded-r-[28px] rounded-l-none bg-foreground/10 py-2 px-1 backdrop-blur-xl shadow-none [scrollbar-width:none] [&_*]:!border-0 [&_*]:!ring-0 [&_*]:!outline-none'
+                ? 'absolute left-1 top-10 bottom-2 z-[60] flex w-[5.5rem] flex-col items-stretch gap-0 overflow-y-auto overscroll-contain rounded-[28px] bg-white/20 py-2 px-1 backdrop-blur-2xl shadow-none [scrollbar-width:none] [&_*]:!border-0 [&_*]:!ring-0 [&_*]:!outline-none'
                 : 'hidden',
               '[&_button]:!bg-transparent [&_button]:!border-0 [&_button]:!shadow-none [&_button]:!text-foreground [&_svg]:!text-foreground',
               '[&_[class*=animate-]]:!animate-none [&_[class*=rounded-full]]:!bg-transparent',
-              '[&_.right-0.top-5]:!left-0 [&_.right-0.top-5]:!right-auto [&_.right-0.top-5]:!border-0 [&_.right-0.top-5]:!bg-foreground/10'
+              '[&_.right-0.top-5]:!left-full [&_.right-0.top-5]:!right-auto [&_.right-0.top-5]:!border-0 [&_.right-0.top-5]:!bg-white/20'
             )}
             onWheelCapture={(e) => e.stopPropagation()}
             onTouchMoveCapture={(e) => e.stopPropagation()}>
@@ -4567,8 +4566,8 @@ Want me to dive deeper into any aspect?`;
                     <div
                       role="menu"
                       className={cn(
-                        "absolute right-0 bottom-full mb-1 w-[6.5rem] rounded-l-[28px] rounded-r-none border-0 bg-foreground/10 backdrop-blur-xl py-2 px-1 [&_*]:!border-0 [&_*]:!ring-0 [&_.h-px]:hidden [&_button]:!text-foreground [&_button]:!text-[11px] [&_button]:!font-medium shadow-none overflow-y-auto overscroll-contain z-[10050] [scrollbar-width:none] flex flex-col gap-0",
-                        "[&_svg]:!text-foreground/90 [&_svg]:!h-5 [&_svg]:!w-5 [&_svg]:!mr-0 [&_p]:!bg-transparent [&_p.sticky]:!static [&_p]:!text-foreground/60 [&_p]:!text-center [&_p]:!px-0",
+                        "absolute left-1 bottom-full mb-1 w-[5.5rem] rounded-[28px] border-0 bg-white/20 backdrop-blur-2xl py-2 px-1 [&_*]:!border-0 [&_*]:!ring-0 [&_.h-px]:hidden [&_button]:!text-foreground [&_button]:!text-[11px] [&_button]:!font-medium shadow-none overflow-y-auto overscroll-contain z-[10050] [scrollbar-width:none] flex flex-col gap-0",
+                        "[&_svg]:!text-foreground [&_svg]:!h-5 [&_svg]:!w-5 [&_svg]:!mr-0 [&_p]:!hidden",
                         "[&_button]:!flex-col [&_button]:!h-auto [&_button]:!w-full [&_button]:!justify-center [&_button]:!gap-1 [&_button]:!py-2 [&_button]:!px-0.5 [&_button]:!whitespace-normal [&_button]:!text-center [&_button]:!leading-tight [&_button]:!bg-transparent [&_button]:!border-0 [&_button]:!shadow-none [&_[class*=animate-]]:!animate-none",
                         isFullPage ? "h-[calc(100dvh-9rem)]" : "h-[calc(max(320px,min(56dvh,calc(100dvh-96px)))-5.5rem)]"
                       )}
@@ -4867,7 +4866,7 @@ Want me to dive deeper into any aspect?`;
 function ZoeFeatureRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div
-      className="relative flex flex-col items-center gap-1 px-1 py-2 cursor-pointer text-center [&_button]:!h-7 [&_button]:!min-w-7 [&_svg]:!h-5 [&_svg]:!w-5"
+      className="relative flex flex-col items-center gap-1 px-0.5 py-2 cursor-pointer text-center [&_button]:!h-7 [&_button]:!min-w-7 [&_svg]:!h-5 [&_svg]:!w-5"
       onClick={(e) => {
         const target = e.target as HTMLElement;
         if (target.closest('button')) return;
