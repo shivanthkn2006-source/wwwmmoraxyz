@@ -5,6 +5,7 @@ import { claimVoice, registerVoiceChannel, releaseVoice } from '@/lib/zoeVoiceAr
 import { humorText } from '@/lib/humor';
 import { isZoeMuted } from '@/features/zoe-handsfree/muteGate';
 import { speakWithDeepgram, stopDeepgramSpeech } from '@/utils/deepgramTTS';
+import { offerLatestCardAnnouncement, unlockLatestCardAnnouncement } from '@/lib/latestCardAnnouncement';
 
 const KEY = 'mmora:humor-announced:v2';
 const FRESH_MS = 2 * 60 * 60 * 1000;
@@ -30,15 +31,25 @@ export default function HumorAnnouncementHost() {
       const due = new Date(item.scheduled_for).getTime();
       return due <= now && now - due <= FRESH_MS && !seen.has(item.id);
     });
-    if (!drop || !claimVoice('narration', { ambient: true })) return;
-    running.current = true;
-    try {
-      const ok = await speakWithDeepgram(`Zoe's LOL. ${drop.headline}. ${humorText(drop.lines)}`);
-      if (ok) remember(drop.id);
-    } finally {
-      running.current = false;
-      releaseVoice('narration');
-    }
+    if (!drop) return;
+    offerLatestCardAnnouncement({
+      id: `humor:${drop.id}`,
+      generatedAt: new Date(drop.created_at || drop.scheduled_for).getTime(),
+      announce: async () => {
+        if (announced().includes(drop.id)) return true;
+        if (!claimVoice('narration', { ambient: true })) return false;
+        running.current = true;
+        try {
+          const ok = await speakWithDeepgram(`Zoe's LOL. ${drop.headline}. ${humorText(drop.lines)}`);
+          if (ok) remember(drop.id);
+          return ok;
+        } finally {
+          running.current = false;
+          releaseVoice('narration');
+        }
+      },
+    });
+    unlockLatestCardAnnouncement();
   }, [drops]);
 
   useEffect(() => registerVoiceChannel('narration', () => {
