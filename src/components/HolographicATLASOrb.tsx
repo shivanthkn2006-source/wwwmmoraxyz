@@ -575,7 +575,6 @@ export const HolographicATLASOrb: React.FC<HolographicATLASOrbProps> = ({
       let pulseMultiplier = 1;
       let rotationSpeed = 0.3; // Faster base rotation
       let plasmaSpeed = emotionConfig.particleSpeed * 1.2; // Faster plasma
-      let lightningActivity = emotionConfig.lightningIntensity;
 
       // Audio-sync for speaking state (Micro-Kinetics)
       const audioMod = isSpeaking ? 1 + audioLevelRef.current * 0.3 : 1;
@@ -586,21 +585,18 @@ export const HolographicATLASOrb: React.FC<HolographicATLASOrbProps> = ({
           pulseMultiplier = 1.1 + Math.sin(time * 10) * 0.12 * audioMod;
           rotationSpeed = 0.6;
           plasmaSpeed = emotionConfig.particleSpeed * 2.0;
-          lightningActivity = emotionConfig.lightningIntensity * 1.5;
           break;
         case 'thinking':
           // Internal Flaring - slightly faster
           pulseMultiplier = 1.15 + Math.sin(time * 2.2) * 0.18;
           rotationSpeed = 0.12;
           plasmaSpeed = emotionConfig.particleSpeed * 0.5;
-          lightningActivity = emotionConfig.lightningIntensity * 0.6;
           break;
         case 'listening':
           // Gentle pulse - faster
           pulseMultiplier = 1 + Math.sin(time * 4.5) * 0.1;
           rotationSpeed = 0.45;
           plasmaSpeed = emotionConfig.particleSpeed * 1.6;
-          lightningActivity = emotionConfig.lightningIntensity * 1.3;
           break;
         default:
           // Faster idle pulse
