@@ -702,7 +702,7 @@ export const HolographicATLASOrb: React.FC<HolographicATLASOrbProps> = ({
         
         // Update opacity based on state (more erratic for anxiety/anger emotions)
         const baseOpacity = lightningActivity * 0.5;
-        lightningMat.opacity = baseOpacity + Math.sin(time * 15) * 0.2;
+        lightningMat.opacity = baseOpacity + Math.sin(time * 2) * 0.06; // smooth, no strobe
         
         for (let i = 0; i < 300; i++) {
           // Randomly regenerate some lightning bolts each frame
@@ -779,7 +779,7 @@ export const HolographicATLASOrb: React.FC<HolographicATLASOrbProps> = ({
         'relative cursor-pointer select-none',
         className
       )}
-      style={{ width: sizeConfig.width, height: sizeConfig.height }}
+      style={{ width: sizeConfig.width, height: sizeConfig.height, transform: 'translateZ(0)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', isolation: 'isolate' }}
       onClick={onClick}
       onDoubleClick={onDoubleClick}
       initial={{ scale: 0.8, opacity: 0 }}
