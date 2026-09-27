@@ -7077,3 +7077,15 @@ body {
     padding-top: calc(env(safe-area-inset-top, 0px) + 4rem) !important;
   }
 }
+
+/* Home menu panel: fixed warm tan surface (user sample) with no live
+   backdrop blur, so moving Home content can never make it flicker. */
+.home-dock-stable-glass {
+  background-color: hsl(31 27% 52% / 0.96);
+  background-image: linear-gradient(90deg, hsl(0 0% 100% / 0.06), hsl(25 25% 30% / 0.1));
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  transform: translateZ(0);
+  isolation: isolate;
+  contain: paint;
+}
