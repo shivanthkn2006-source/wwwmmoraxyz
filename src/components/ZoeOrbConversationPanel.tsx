@@ -3137,6 +3137,13 @@ Want me to dive deeper into any aspect?`;
             style={{
               // Glassmorphism glow effect
               boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+              // Keep the frosted window on one stable GPU layer so Safari/Chrome
+              // don't repaint (flicker) the blur when the page behind animates.
+              WebkitBackfaceVisibility: 'hidden',
+              backfaceVisibility: 'hidden',
+              isolation: 'isolate',
+              willChange: 'transform',
+              contain: 'paint',
             }}
           >
           {/* QuantumCallUI removed - QuantumCallModal now handles both incoming and active calls */}
