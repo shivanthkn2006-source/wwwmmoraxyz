@@ -3126,8 +3126,8 @@ Want me to dive deeper into any aspect?`;
               isFullPage ? 'cursor-default' : 'cursor-grab active:cursor-grabbing',
               // Glassmorphism design - futuristic translucent panel with scroll isolation
               'bg-background/20 backdrop-blur-xl',
-              'border-0',
-              isFullPage ? 'rounded-2xl' : 'rounded-xl',
+              'border border-foreground/20',
+              'rounded-[28px]',
               'shadow-[0_8px_32px_rgba(0,0,0,0.3)]',
               // Responsive sizing - 4.1" to 95" 4K displays
               isFullPage
@@ -3224,9 +3224,9 @@ Want me to dive deeper into any aspect?`;
             
             <div className={cn(
               showFeatureMenu
-                ? 'absolute left-2 top-10 bottom-2 z-[60] flex w-[5.75rem] flex-col items-stretch gap-1 overflow-y-auto overscroll-contain rounded-[28px] bg-background/80 py-3 px-1 backdrop-blur-3xl [scrollbar-width:none]'
+                ? 'absolute left-2 top-10 bottom-2 z-[60] flex w-[5.75rem] flex-col items-stretch gap-1 overflow-y-auto overscroll-contain rounded-[28px] bg-background/90 py-3 px-1 backdrop-blur-3xl [scrollbar-width:none] [&_*]:!border-0 [&_*]:!ring-0 [&_*]:!outline-none'
                 : 'hidden',
-              '[&_button]:!bg-transparent [&_button]:!border-0 [&_button]:!shadow-none [&_svg]:!text-foreground/85',
+              '[&_button]:!bg-transparent [&_button]:!border-0 [&_button]:!shadow-none [&_button]:!text-foreground [&_svg]:!text-foreground',
               '[&_.right-0.top-5]:!left-0 [&_.right-0.top-5]:!right-auto [&_.right-0.top-5]:!border-0 [&_.right-0.top-5]:!bg-background/60'
             )}
             onWheelCapture={(e) => e.stopPropagation()}
@@ -4022,7 +4022,7 @@ Want me to dive deeper into any aspect?`;
                       'max-w-[85%] rounded-xl px-2.5 py-1.5 md:px-3 md:py-2 lg:px-3.5 lg:py-2.5 text-xs md:text-sm lg:text-base relative',
                       dm.sender_id === user?.id
                         ? 'bg-cyan-500/80 text-white rounded-br-sm backdrop-blur-sm'
-                        : 'bg-foreground/5 text-foreground/90 rounded-bl-sm border border-cyan-500/20'
+                        : 'bg-foreground/5 text-foreground/90 rounded-bl-sm'
                     )}
                   >
                     {/* Media preview for images */}
@@ -4090,7 +4090,7 @@ Want me to dive deeper into any aspect?`;
                         : 'max-w-[85%] rounded-xl px-2.5 py-1.5 md:px-3 md:py-2 lg:px-3.5 lg:py-2.5 text-xs md:text-sm lg:text-base relative',
                       msg.role === 'user'
                         ? 'bg-primary/80 text-primary-foreground rounded-br-sm backdrop-blur-sm'
-                        : 'bg-foreground/5 text-foreground/90 rounded-bl-sm border border-foreground/5 cursor-pointer hover:bg-foreground/10 transition-colors',
+                        : 'bg-foreground/5 text-foreground/90 rounded-bl-sm cursor-pointer hover:bg-foreground/10 transition-colors',
                       msg.role === 'zoe' && !isMuted && 'select-none'
                     )}
                     onDoubleClick={() => handleDoubleClickReplay(msg)}
@@ -4346,7 +4346,7 @@ Want me to dive deeper into any aspect?`;
               ))}
               {(isProcessing || isPerceptionProcessing) && (
                 <div className="flex justify-start">
-                  <div className="bg-foreground/5 rounded-xl rounded-bl-sm px-2.5 py-1.5 md:px-3 md:py-2 border border-foreground/5">
+                  <div className="bg-foreground/5 rounded-xl rounded-bl-sm px-2.5 py-1.5 md:px-3 md:py-2">
                     <div className="flex gap-1 md:gap-1.5 items-center">
                       {isPerceptionProcessing ? (
                         <>
@@ -4370,7 +4370,7 @@ Want me to dive deeper into any aspect?`;
 
           {/* Pending media preview - COMPACT inline design - doesn't overlay input */}
           {pendingMedia && !isRecording && !isVideoRecording && (
-            <div className="px-2 py-1.5 border-t border-primary/20 bg-primary/5 shrink-0">
+            <div className="px-2 py-1.5 bg-transparent shrink-0">
               <div className="flex items-center gap-2">
                 {/* Compact preview icon */}
                 {pendingMedia.type === 'image' && pendingMedia.preview ? (
@@ -4494,7 +4494,7 @@ Want me to dive deeper into any aspect?`;
 
           {/* Reply indicator - shows above input when replying */}
           {replyingTo && (
-            <div className="px-2 py-1.5 border-t border-primary/20 bg-primary/5">
+            <div className="px-2 py-1.5 bg-transparent">
               <div className="flex items-center gap-2">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1 text-[10px] text-primary font-medium">
@@ -4562,8 +4562,8 @@ Want me to dive deeper into any aspect?`;
                     <div
                       role="menu"
                       className={cn(
-                        "absolute right-2 bottom-full mb-1 w-[5.75rem] rounded-[28px] border-0 bg-background/80 backdrop-blur-3xl py-3 px-1 shadow-none overflow-y-auto overscroll-contain z-[10050] [scrollbar-width:none] flex flex-col gap-1",
-                        "[&_svg]:!text-foreground/90 [&_svg]:!h-5 [&_svg]:!w-5 [&_svg]:!mr-0 [&_p]:!bg-transparent [&_p.sticky]:!static [&_p]:!text-center [&_p]:!px-0",
+                        "absolute right-2 bottom-full mb-1 w-[5.75rem] rounded-[28px] border-0 bg-background/90 backdrop-blur-3xl py-3 px-1 [&_*]:!border-0 [&_*]:!ring-0 [&_.h-px]:hidden [&_button]:!text-foreground [&_button]:!text-[11px] [&_button]:!font-medium shadow-none overflow-y-auto overscroll-contain z-[10050] [scrollbar-width:none] flex flex-col gap-1",
+                        "[&_svg]:!text-foreground/90 [&_svg]:!h-5 [&_svg]:!w-5 [&_svg]:!mr-0 [&_p]:!bg-transparent [&_p.sticky]:!static [&_p]:!text-foreground/60 [&_p]:!text-center [&_p]:!px-0",
                         "[&_button]:!flex-col [&_button]:!h-auto [&_button]:!w-full [&_button]:!justify-center [&_button]:!gap-1 [&_button]:!py-2 [&_button]:!px-0.5 [&_button]:!whitespace-normal [&_button]:!text-center [&_button]:!leading-tight [&_button]:!bg-transparent [&_button]:!border-0 [&_button]:!shadow-none",
                         isFullPage ? "h-[calc(100dvh-9rem)]" : "h-[calc(max(320px,min(56dvh,calc(100dvh-96px)))-5.5rem)]"
                       )}
@@ -4862,7 +4862,7 @@ Want me to dive deeper into any aspect?`;
 function ZoeFeatureRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div
-      className="relative flex flex-col items-center gap-1 rounded-2xl px-1 py-2 cursor-pointer text-center [&_button]:!h-7 [&_button]:!min-w-7 [&_svg]:!h-5 [&_svg]:!w-5"
+      className="relative flex flex-col items-center gap-1.5 px-1 py-2.5 cursor-pointer text-center [&_button]:!h-7 [&_button]:!min-w-7 [&_svg]:!h-5 [&_svg]:!w-5"
       onClick={(e) => {
         const target = e.target as HTMLElement;
         if (target.closest('button')) return;
@@ -4870,7 +4870,7 @@ function ZoeFeatureRow({ label, children }: { label: string; children: React.Rea
       }}
     >
       {children}
-      <span className="text-[10px] leading-tight text-foreground/90 select-none">{label}</span>
+      <span className="text-[11px] font-medium leading-tight text-foreground select-none">{label}</span>
     </div>
   );
 }
