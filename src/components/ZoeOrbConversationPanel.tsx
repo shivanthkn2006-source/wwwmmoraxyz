@@ -3117,33 +3117,30 @@ Want me to dive deeper into any aspect?`;
             dragElastic={0.05}
             onDragStart={() => setIsPanelDragging(true)}
             onDragEnd={() => setIsPanelDragging(false)}
-            initial={{ opacity: 0, scale: 0.9, y: 10 }}
+            initial={false}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 10 }}
-            transition={{ type: 'spring', damping: 30, stiffness: 400 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.12, ease: 'linear' }}
             className={cn(
               'relative overflow-hidden flex flex-col overscroll-contain pointer-events-auto',
               isFullPage ? 'cursor-default' : 'cursor-grab active:cursor-grabbing',
-              // Glassmorphism design - futuristic translucent panel with scroll isolation
-              'bg-background/20 backdrop-blur-xl',
+              // Stable translucent surface: no live backdrop sampling, which flickers
+              // over Home's moving layers on Safari/Chrome and lets text pulse through.
+              'bg-muted/85 backdrop-blur-none',
               'border border-foreground/20',
               'rounded-[28px]',
-              'shadow-[0_8px_32px_rgba(0,0,0,0.3)]',
+              'shadow-none',
               // Responsive sizing - 4.1" to 95" 4K displays
               isFullPage
                 ? 'w-full h-full max-w-[1400px] max-h-[calc(100dvh-16px)] sm:max-h-[calc(100dvh-24px)]'
                 : 'w-[calc(100vw-16px)] sm:w-[min(520px,calc(100vw-32px))] lg:w-[min(560px,calc(100vw-48px))] h-[max(320px,min(56dvh,calc(100dvh-96px)))] max-h-[calc(100dvh-48px)]'
             )}
             style={{
-              // Glassmorphism glow effect
-              boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
-              // Keep the frosted window on one stable GPU layer so Safari/Chrome
-              // don't repaint (flicker) the blur when the page behind animates.
+              // Keep the window on one stable layer without a live blur surface.
               WebkitBackfaceVisibility: 'hidden',
               backfaceVisibility: 'hidden',
               isolation: 'isolate',
-              willChange: 'transform',
-              contain: 'paint',
+              contain: 'layout paint style',
             }}
           >
           {/* QuantumCallUI removed - QuantumCallModal now handles both incoming and active calls */}
@@ -3231,10 +3228,11 @@ Want me to dive deeper into any aspect?`;
             
             <div className={cn(
               showFeatureMenu
-                ? 'absolute left-2 top-10 bottom-2 z-[60] flex w-[5.75rem] flex-col items-stretch gap-1 overflow-y-auto overscroll-contain rounded-[28px] bg-background/90 py-3 px-1 backdrop-blur-3xl [scrollbar-width:none] [&_*]:!border-0 [&_*]:!ring-0 [&_*]:!outline-none'
+                ? 'absolute left-2 top-10 bottom-2 z-[60] flex w-[5.75rem] flex-col items-stretch gap-1 overflow-y-auto overscroll-contain rounded-[28px] bg-muted/95 py-3 px-1 backdrop-blur-none shadow-none [scrollbar-width:none] [&_*]:!border-0 [&_*]:!ring-0 [&_*]:!outline-none'
                 : 'hidden',
               '[&_button]:!bg-transparent [&_button]:!border-0 [&_button]:!shadow-none [&_button]:!text-foreground [&_svg]:!text-foreground',
-              '[&_.right-0.top-5]:!left-0 [&_.right-0.top-5]:!right-auto [&_.right-0.top-5]:!border-0 [&_.right-0.top-5]:!bg-background/60'
+              '[&_[class*=animate-]]:!animate-none [&_[class*=rounded-full]]:!bg-transparent',
+              '[&_.right-0.top-5]:!left-0 [&_.right-0.top-5]:!right-auto [&_.right-0.top-5]:!border-0 [&_.right-0.top-5]:!bg-muted'
             )}
             onWheelCapture={(e) => e.stopPropagation()}
             onTouchMoveCapture={(e) => e.stopPropagation()}>
@@ -4569,9 +4567,9 @@ Want me to dive deeper into any aspect?`;
                     <div
                       role="menu"
                       className={cn(
-                        "absolute right-2 bottom-full mb-1 w-[5.75rem] rounded-[28px] border-0 bg-background/90 backdrop-blur-3xl py-3 px-1 [&_*]:!border-0 [&_*]:!ring-0 [&_.h-px]:hidden [&_button]:!text-foreground [&_button]:!text-[11px] [&_button]:!font-medium shadow-none overflow-y-auto overscroll-contain z-[10050] [scrollbar-width:none] flex flex-col gap-1",
+                        "absolute right-2 bottom-full mb-1 w-[5.75rem] rounded-[28px] border-0 bg-muted/95 backdrop-blur-none py-3 px-1 [&_*]:!border-0 [&_*]:!ring-0 [&_.h-px]:hidden [&_button]:!text-foreground [&_button]:!text-[11px] [&_button]:!font-medium shadow-none overflow-y-auto overscroll-contain z-[10050] [scrollbar-width:none] flex flex-col gap-1",
                         "[&_svg]:!text-foreground/90 [&_svg]:!h-5 [&_svg]:!w-5 [&_svg]:!mr-0 [&_p]:!bg-transparent [&_p.sticky]:!static [&_p]:!text-foreground/60 [&_p]:!text-center [&_p]:!px-0",
-                        "[&_button]:!flex-col [&_button]:!h-auto [&_button]:!w-full [&_button]:!justify-center [&_button]:!gap-1 [&_button]:!py-2 [&_button]:!px-0.5 [&_button]:!whitespace-normal [&_button]:!text-center [&_button]:!leading-tight [&_button]:!bg-transparent [&_button]:!border-0 [&_button]:!shadow-none",
+                        "[&_button]:!flex-col [&_button]:!h-auto [&_button]:!w-full [&_button]:!justify-center [&_button]:!gap-1 [&_button]:!py-2 [&_button]:!px-0.5 [&_button]:!whitespace-normal [&_button]:!text-center [&_button]:!leading-tight [&_button]:!bg-transparent [&_button]:!border-0 [&_button]:!shadow-none [&_[class*=animate-]]:!animate-none",
                         isFullPage ? "h-[calc(100dvh-9rem)]" : "h-[calc(max(320px,min(56dvh,calc(100dvh-96px)))-5.5rem)]"
                       )}
                       onWheelCapture={(e) => e.stopPropagation()}
