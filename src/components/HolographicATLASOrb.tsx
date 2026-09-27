@@ -691,43 +691,11 @@ export const HolographicATLASOrb: React.FC<HolographicATLASOrbProps> = ({
         microSparkRef.current.rotation.y -= rotationSpeed * 0.005;
       }
 
-      // Animate lightning (jagged, flickering lines)
+      // Keep the lightning layer disabled. Random per-frame regeneration was
+      // perceived as visible orb flicker, especially on mobile compositors.
       if (lightningRef.current) {
-        const positions = lightningRef.current.geometry.attributes.position;
         const lightningMat = lightningRef.current.material as THREE.LineBasicMaterial;
-        
-        // Update opacity based on state (more erratic for anxiety/anger emotions)
         lightningMat.opacity = 0;
-        
-        for (let i = 0; i < 300; i++) {
-          // Randomly regenerate some lightning bolts each frame
-          if (Math.random() > 0.985 - lightningActivity * 0.02) {
-            // Random start point on outer shell
-            const theta1 = Math.random() * Math.PI * 2;
-            const phi1 = Math.acos(2 * Math.random() - 1);
-            const r1 = 0.75 + Math.random() * 0.35;
-            
-            // Jagged end point nearby
-            const jag = (Math.random() - 0.5) * 0.8;
-            const theta2 = theta1 + jag;
-            const phi2 = phi1 + (Math.random() - 0.5) * 0.4;
-            const r2 = r1 + (Math.random() - 0.5) * 0.3;
-            
-            positions.setXYZ(
-              i * 2,
-              r1 * Math.sin(phi1) * Math.cos(theta1),
-              r1 * Math.sin(phi1) * Math.sin(theta1),
-              r1 * Math.cos(phi1)
-            );
-            positions.setXYZ(
-              i * 2 + 1,
-              r2 * Math.sin(phi2) * Math.cos(theta2),
-              r2 * Math.sin(phi2) * Math.sin(theta2),
-              r2 * Math.cos(phi2)
-            );
-          }
-        }
-        positions.needsUpdate = true;
       }
 
       rendererRef.current!.render(sceneRef.current!, cameraRef.current!);
