@@ -3,6 +3,7 @@ import { useAuth } from '@/lib/auth';
 import { speakAsZoe, stopZoeSpeech, pauseZoeSpeech, resumeZoeSpeech, getZoeSpeechState } from '@/utils/zoeVoice';
 import { claimVoice, registerVoiceChannel, releaseVoice } from '@/lib/zoeVoiceArbiter';
 import { hasNarratedCard, hasStartedDailyNarration, markDailyNarrationStarted, markNarratedCard } from '@/lib/zoeCardNarrationMemory';
+import { offerLatestCardAnnouncement, unlockLatestCardAnnouncement } from '@/lib/latestCardAnnouncement';
 
 export type NarrationKind = 'growth' | 'dhf' | 'social';
 export interface NarrationItem { id: string; text: string; kind: NarrationKind; order: number; }
@@ -91,15 +92,35 @@ export const ZoeCardNarrationProvider: React.FC<{ children: React.ReactNode }> =
         if (queueToken.current !== token) return;
         markDailyNarrationStarted(user.id);
         const welcome: NarrationItem = { id: `welcome:${user.id}`, kind: 'growth', order: -1, text: 'Welcome back. Zoe is ready with your daily focus and DHF compass.' };
-        // Only the newest DHF card is announced automatically; every card keeps
-        // its own play button. DHF order is the card's scheduled timestamp.
+        // Keep the established welcome and growth narration. DHF competes with
+        // LOL through one shared latest-generated selector, so old cards never
+        // become an automatic queue. Every card's manual play button remains.
         const all = Array.from(items.current.values());
         const latestDhf = all
           .filter((item) => item.kind === 'dhf')
           .reduce<NarrationItem | null>((best, item) => (!best || item.order > best.order ? item : best), null);
+        if (latestDhf) {
+          offerLatestCardAnnouncement({
+            id: latestDhf.id,
+            generatedAt: latestDhf.order,
+            announce: async () => {
+              if (hasNarratedCard(user.id, latestDhf.id)) return true;
+              if (!claimVoice('narration', { ambient: true })) return false;
+              markNarratedCard(user.id, latestDhf.id);
+              setState({ activeId: latestDhf.id, paused: false });
+              await new Promise<void>((resolve) => {
+                void speakAsZoe(latestDhf.text, { messageId: `card:${latestDhf.id}` }, undefined, resolve, resolve);
+              });
+              releaseVoice('narration');
+              setState({ activeId: null, paused: false });
+              return true;
+            },
+          });
+        }
+        unlockLatestCardAnnouncement();
         const daily = all
-          .filter((item) => item.kind === 'growth' || item === latestDhf)
-          .sort((a, b) => (a.kind === b.kind ? a.order - b.order : a.kind === 'growth' ? -1 : 1));
+          .filter((item) => item.kind === 'growth')
+          .sort((a, b) => a.order - b.order);
         for (const item of [welcome, ...daily]) {
           if (queueToken.current !== token) return;
           if (hasNarratedCard(user.id, item.id)) continue;

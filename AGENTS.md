@@ -9,3 +9,4 @@
 - Liquid Universe detection stays outside the root boot tree and consumers use its optional fallback, because device enhancement must never be able to blank authentication or Home.- DHF card pictures are copied once into the dhf-compass bucket (Pollinations first, then the shared cascade) and served from storage, because provider outages must not blank cards.
 - Zoe orb drift updates Framer motion values without React state updates, and Zoe glass avoids live backdrop filters, because frame-by-frame tree repaints cause orb/chat flicker over Home.
 - Home menu panel uses a fixed warm surface without backdrop-filter, because live blur over the moving feed flickers.
+- DHF and LOL automatic speech offer candidates to one newest-generated selector, because separate announcers can speak multiple old cards.

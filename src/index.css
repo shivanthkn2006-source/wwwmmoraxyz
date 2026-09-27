@@ -1421,25 +1421,27 @@ html.phantom-mode [class*="animate-"] {
    preserves the Home glass appearance without repaint flicker or text bleed
    while the floating orb and feed continue moving behind it. */
 .zoe-orb-stable-glass {
-  background-color: hsl(var(--liquid-ambient-a) / 0.94);
+  --zoe-warm-surface: 34 25% 52%;
+  background-color: hsl(var(--zoe-warm-surface) / 0.985) !important;
   background-image: linear-gradient(
-    155deg,
-    hsl(var(--liquid-white) / 0.16),
-    hsl(var(--liquid-ambient-c) / 0.12)
-  );
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
+    100deg,
+    hsl(39 28% 56% / 0.2),
+    hsl(27 25% 45% / 0.12)
+  ) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
 .zoe-orb-menu-glass {
-  background-color: hsl(var(--liquid-ambient-d) / 0.98);
+  --zoe-warm-surface: 34 25% 52%;
+  background-color: hsl(var(--zoe-warm-surface) / 0.985) !important;
   background-image: linear-gradient(
-    155deg,
-    hsl(var(--liquid-white) / 0.14),
-    hsl(var(--liquid-ambient-c) / 0.08)
-  );
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
+    100deg,
+    hsl(39 28% 56% / 0.2),
+    hsl(27 25% 45% / 0.12)
+  ) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
 .planning-liquid-section,

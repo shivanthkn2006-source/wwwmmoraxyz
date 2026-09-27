@@ -4820,17 +4820,15 @@ Want me to dive deeper into any aspect?`;
                   size="icon"
                   aria-label="Stop Zoe's voice"
                   title="Stop speaking"
-                  className={cn(
-                    "rounded-full shadow-sm transition-all duration-300 flex-shrink-0 bg-destructive hover:bg-destructive/90 text-destructive-foreground",
-                    isInputFocused ? "h-8 w-8 md:h-9 md:w-9 lg:h-10 lg:w-10" : "h-6 w-6 md:h-7 md:w-7 lg:h-8 lg:w-8"
-                  )}
+                  variant="ghost"
+                  className="h-8 w-8 flex-shrink-0 rounded-none border-0 bg-transparent p-0 text-foreground shadow-none hover:bg-transparent hover:text-foreground"
                   onClick={() => {
                     stopZoeSpeech();
                     setIsSpeechPaused(false);
                     setIsSpeaking(false);
                   }}
                 >
-                  <Square className={cn("transition-all", isInputFocused ? "h-3.5 w-3.5 md:h-4 md:w-4" : "h-3 w-3 md:h-3.5 md:w-3.5")} />
+                  <Square className="h-4 w-4 fill-current" />
                 </Button>
               ) : (
               <Button
