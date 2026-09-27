@@ -120,6 +120,12 @@ Deno.serve(async (req) => {
       }
       return painted;
     };
+    // Jokes are shared by everyone, so generate only while at least one member
+    // was active in the last 5 days; otherwise skip model and image calls.
+    const { data: activeMembers } = await db.rpc('recently_active_member_ids', { p_days: 5 });
+    if (!Array.isArray(activeMembers) || activeMembers.length === 0) {
+      return json({ ok: true, date, slot, generated: 0, painted: 0, skipped: 'no-active-members' });
+    }
     if (missing.length === 0) return json({ ok: true, date, slot, generated: 0, painted: await paintMissing() });
 
     const skits = await Promise.all(missing.map(async (metal) => ({ metal, ...(await writeSkit(metal)) })));

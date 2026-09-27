@@ -112,7 +112,7 @@ export const DHFCompassCard: React.FC<Props> = ({ post, className, onImpression,
             id={`dhf:${post.id}`}
             text={`${post.headline}. ${post.short_summary}${post.full_story_content ? ` ${post.full_story_content}` : ''}`}
             kind="dhf"
-            order={Math.max(0, COMPASS_SLOTS.findIndex((slot) => slot.time === normalizeSlotTime(post.slot_time)))}
+            order={compassSlotTimestamp(post.post_date, post.slot_time, deviceTimeZone())}
           />
           <button
             type="button"

@@ -70,6 +70,8 @@ const corsHeaders = {
 };
 
 const BATCH_SIZE = 12;
+/** Members inactive longer than this get no scheduled DHF generation. */
+const ACTIVE_WINDOW_DAYS = 5;
 /** Hard wall-clock budget so the run always returns before the 150s edge limit. */
 const TIME_BUDGET_MS = 110_000;
 const LEASE_KEY = 'dhf_compass_dispatch';
@@ -125,18 +127,19 @@ async function members(): Promise<Member[]> {
   if (Array.isArray(prefs.data)) {
     for (const p of prefs.data as any[]) if (p?.user_id && p?.timezone) zones.set(p.user_id, p.timezone);
   }
+  // Real activity: sign-ins, token refreshes while the app is open, and app
+  // sessions. Members idle for 5+ days get no new cards, saving model calls;
+  // their cards resume on the next visit (Home calls "ensure" for the day).
   const activity = new Map<string, string>();
-  const sessions = await db('user_sessions?select=user_id,last_activity_at&order=last_activity_at.desc&limit=1000');
-  if (Array.isArray(sessions.data)) {
-    for (const session of sessions.data as any[]) {
-      if (session?.user_id && session?.last_activity_at && !activity.has(session.user_id)) {
-        activity.set(session.user_id, session.last_activity_at);
-      }
-    }
+  const active = await db('rpc/recently_active_member_ids', {
+    method: 'POST',
+    body: JSON.stringify({ p_days: ACTIVE_WINDOW_DAYS }),
+  });
+  if (Array.isArray(active.data)) {
+    for (const row of active.data as any[]) if (row?.user_id) activity.set(row.user_id, row.last_active ?? '');
   }
-  const weeklyCutoff = Date.now() - 7 * 86_400_000;
   return ids
-    .filter((id) => PRIORITY_USER_IDS.has(id) || new Date(activity.get(id) ?? 0).getTime() >= weeklyCutoff)
+    .filter((id) => activity.has(id))
     .map((id) => ({ user_id: id, timezone: zones.get(id) ?? 'UTC', last_active: activity.get(id) ?? '' }))
     .sort((a, b) => {
       const priority = Number(PRIORITY_USER_IDS.has(b.user_id)) - Number(PRIORITY_USER_IDS.has(a.user_id));
