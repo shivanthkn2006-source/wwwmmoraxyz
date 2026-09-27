@@ -1417,6 +1417,31 @@ html.phantom-mode [class*="animate-"] {
   -webkit-backdrop-filter: blur(52px) saturate(125%);
 }
 
+/* Zoe uses a precomposed warm glass color instead of backdrop-filter. This
+   preserves the Home glass appearance without repaint flicker or text bleed
+   while the floating orb and feed continue moving behind it. */
+.zoe-orb-stable-glass {
+  background-color: hsl(var(--liquid-ambient-a) / 0.94);
+  background-image: linear-gradient(
+    155deg,
+    hsl(var(--liquid-white) / 0.16),
+    hsl(var(--liquid-ambient-c) / 0.12)
+  );
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.zoe-orb-menu-glass {
+  background-color: hsl(var(--liquid-ambient-d) / 0.98);
+  background-image: linear-gradient(
+    155deg,
+    hsl(var(--liquid-white) / 0.14),
+    hsl(var(--liquid-ambient-c) / 0.08)
+  );
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
 .planning-liquid-section,
 .admin-liquid-panel,
 .home-liquid-page :is(.bg-card, [class*='bg-card/'], [class*='bg-muted'], [class*='bg-background']):not(img):not(video):not(canvas),

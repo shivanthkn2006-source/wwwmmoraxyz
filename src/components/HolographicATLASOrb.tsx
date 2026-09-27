@@ -463,7 +463,7 @@ export const HolographicATLASOrb: React.FC<HolographicATLASOrbProps> = ({
     const lightningMaterial = new THREE.LineBasicMaterial({
       color: new THREE.Color(emotionConfig.plasmaColor),
       transparent: true,
-      opacity: 0.8,
+      opacity: 0,
       blending: THREE.AdditiveBlending,
       linewidth: 1,
     });
@@ -512,7 +512,7 @@ export const HolographicATLASOrb: React.FC<HolographicATLASOrbProps> = ({
 
     const lightningMaterial = lightningRef.current.material as THREE.LineBasicMaterial;
     lightningMaterial.color.set(emotionConfig.plasmaColor);
-    lightningMaterial.opacity = emotionConfig.lightningIntensity * 0.7;
+    lightningMaterial.opacity = 0;
 
     // Update plasma particle colors
     const geometry = plasmaRef.current.geometry;
@@ -575,7 +575,6 @@ export const HolographicATLASOrb: React.FC<HolographicATLASOrbProps> = ({
       let pulseMultiplier = 1;
       let rotationSpeed = 0.3; // Faster base rotation
       let plasmaSpeed = emotionConfig.particleSpeed * 1.2; // Faster plasma
-      let lightningActivity = emotionConfig.lightningIntensity;
 
       // Audio-sync for speaking state (Micro-Kinetics)
       const audioMod = isSpeaking ? 1 + audioLevelRef.current * 0.3 : 1;
@@ -586,21 +585,18 @@ export const HolographicATLASOrb: React.FC<HolographicATLASOrbProps> = ({
           pulseMultiplier = 1.1 + Math.sin(time * 10) * 0.12 * audioMod;
           rotationSpeed = 0.6;
           plasmaSpeed = emotionConfig.particleSpeed * 2.0;
-          lightningActivity = emotionConfig.lightningIntensity * 1.5;
           break;
         case 'thinking':
           // Internal Flaring - slightly faster
           pulseMultiplier = 1.15 + Math.sin(time * 2.2) * 0.18;
           rotationSpeed = 0.12;
           plasmaSpeed = emotionConfig.particleSpeed * 0.5;
-          lightningActivity = emotionConfig.lightningIntensity * 0.6;
           break;
         case 'listening':
           // Gentle pulse - faster
           pulseMultiplier = 1 + Math.sin(time * 4.5) * 0.1;
           rotationSpeed = 0.45;
           plasmaSpeed = emotionConfig.particleSpeed * 1.6;
-          lightningActivity = emotionConfig.lightningIntensity * 1.3;
           break;
         default:
           // Faster idle pulse
@@ -695,44 +691,11 @@ export const HolographicATLASOrb: React.FC<HolographicATLASOrbProps> = ({
         microSparkRef.current.rotation.y -= rotationSpeed * 0.005;
       }
 
-      // Animate lightning (jagged, flickering lines)
+      // Keep the lightning layer disabled. Random per-frame regeneration was
+      // perceived as visible orb flicker, especially on mobile compositors.
       if (lightningRef.current) {
-        const positions = lightningRef.current.geometry.attributes.position;
         const lightningMat = lightningRef.current.material as THREE.LineBasicMaterial;
-        
-        // Update opacity based on state (more erratic for anxiety/anger emotions)
-        const baseOpacity = lightningActivity * 0.5;
-        lightningMat.opacity = baseOpacity + Math.sin(time * 2) * 0.06; // smooth, no strobe
-        
-        for (let i = 0; i < 300; i++) {
-          // Randomly regenerate some lightning bolts each frame
-          if (Math.random() > 0.985 - lightningActivity * 0.02) {
-            // Random start point on outer shell
-            const theta1 = Math.random() * Math.PI * 2;
-            const phi1 = Math.acos(2 * Math.random() - 1);
-            const r1 = 0.75 + Math.random() * 0.35;
-            
-            // Jagged end point nearby
-            const jag = (Math.random() - 0.5) * 0.8;
-            const theta2 = theta1 + jag;
-            const phi2 = phi1 + (Math.random() - 0.5) * 0.4;
-            const r2 = r1 + (Math.random() - 0.5) * 0.3;
-            
-            positions.setXYZ(
-              i * 2,
-              r1 * Math.sin(phi1) * Math.cos(theta1),
-              r1 * Math.sin(phi1) * Math.sin(theta1),
-              r1 * Math.cos(phi1)
-            );
-            positions.setXYZ(
-              i * 2 + 1,
-              r2 * Math.sin(phi2) * Math.cos(theta2),
-              r2 * Math.sin(phi2) * Math.sin(theta2),
-              r2 * Math.cos(phi2)
-            );
-          }
-        }
-        positions.needsUpdate = true;
+        lightningMat.opacity = 0;
       }
 
       rendererRef.current!.render(sceneRef.current!, cameraRef.current!);
@@ -782,22 +745,22 @@ export const HolographicATLASOrb: React.FC<HolographicATLASOrbProps> = ({
       style={{ width: sizeConfig.width, height: sizeConfig.height, transform: 'translateZ(0)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', isolation: 'isolate' }}
       onClick={onClick}
       onDoubleClick={onDoubleClick}
-      initial={{ scale: 0.8, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
+       initial={false}
+       animate={{ scale: 1, opacity: 1 }}
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
-      transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+       transition={{ duration: 0 }}
     >
       {/* Outer glow effect - Electric Blue Plasma field glow */}
       <div
         className={cn(
           "absolute inset-[-25%] rounded-full pointer-events-none",
-          isActive && "animate-gpu-pulse-scale-slow"
+          isActive && "opacity-40"
         )}
         style={{
           background: `radial-gradient(circle, ${emotionConfig.plasmaColor}50 0%, ${emotionConfig.plasmaColor}20 40%, transparent 70%)`,
           filter: 'blur(20px)',
-          opacity: isActive ? undefined : 0.3,
+          opacity: isActive ? 0.4 : 0.3,
         }}
       />
 
@@ -805,7 +768,7 @@ export const HolographicATLASOrb: React.FC<HolographicATLASOrbProps> = ({
       <div
         className={cn(
           "absolute inset-[-10%] rounded-full pointer-events-none",
-          orbState === 'thinking' ? "animate-gpu-pulse-scale-fast" : "animate-gpu-pulse-scale-slow"
+          "opacity-40"
         )}
         style={{
           background: `radial-gradient(circle, ${emotionConfig.coreColor}40 0%, transparent 60%)`,
@@ -824,14 +787,6 @@ export const HolographicATLASOrb: React.FC<HolographicATLASOrbProps> = ({
         />
       </div>
 
-
-      {/* Subtle floating animation for avatar movement */}
-      <div
-        className={cn(
-          "absolute inset-0 pointer-events-none",
-          isSpeaking ? "animate-gpu-speaking-wobble" : "animate-gpu-float-subtle"
-        )}
-      />
 
       {/* Screen reader label */}
       <span className="sr-only">
