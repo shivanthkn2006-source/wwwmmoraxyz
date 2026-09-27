@@ -701,7 +701,6 @@ export const HolographicATLASOrb: React.FC<HolographicATLASOrbProps> = ({
         const lightningMat = lightningRef.current.material as THREE.LineBasicMaterial;
         
         // Update opacity based on state (more erratic for anxiety/anger emotions)
-        const baseOpacity = lightningActivity * 0.5;
         lightningMat.opacity = 0;
         
         for (let i = 0; i < 300; i++) {
