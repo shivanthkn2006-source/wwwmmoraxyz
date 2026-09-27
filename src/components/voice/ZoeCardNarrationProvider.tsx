@@ -91,8 +91,14 @@ export const ZoeCardNarrationProvider: React.FC<{ children: React.ReactNode }> =
         if (queueToken.current !== token) return;
         markDailyNarrationStarted(user.id);
         const welcome: NarrationItem = { id: `welcome:${user.id}`, kind: 'growth', order: -1, text: 'Welcome back. Zoe is ready with your daily focus and DHF compass.' };
-        const daily = Array.from(items.current.values())
-          .filter((item) => item.kind === 'growth' || item.kind === 'dhf')
+        // Only the newest DHF card is announced automatically; every card keeps
+        // its own play button. DHF order is the card's scheduled timestamp.
+        const all = Array.from(items.current.values());
+        const latestDhf = all
+          .filter((item) => item.kind === 'dhf')
+          .reduce<NarrationItem | null>((best, item) => (!best || item.order > best.order ? item : best), null);
+        const daily = all
+          .filter((item) => item.kind === 'growth' || item === latestDhf)
           .sort((a, b) => (a.kind === b.kind ? a.order - b.order : a.kind === 'growth' ? -1 : 1));
         for (const item of [welcome, ...daily]) {
           if (queueToken.current !== token) return;

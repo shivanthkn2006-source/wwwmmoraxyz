@@ -10,7 +10,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { BookOpen, Compass, ChevronDown, ChevronUp, Flag, ImageOff, Share2 } from 'lucide-react';
 import { slotLabel, type DhfDailyPost } from '@/lib/dhfCompass';
-import { COMPASS_SLOTS, normalizeSlotTime } from '@/lib/dhfCompass';
+import { compassSlotTimestamp } from '@/lib/dhfCompass';
+import { deviceTimeZone } from '@/lib/growthSlot';
 import ZoeCardNarrationControls from '@/components/voice/ZoeCardNarrationControls';
 import ReportContentDialog from '@/components/moderation/ReportContentDialog';
 import DhfShareSheet from '@/components/dhf/DhfShareSheet';
@@ -112,7 +113,7 @@ export const DHFCompassCard: React.FC<Props> = ({ post, className, onImpression,
             id={`dhf:${post.id}`}
             text={`${post.headline}. ${post.short_summary}${post.full_story_content ? ` ${post.full_story_content}` : ''}`}
             kind="dhf"
-            order={Math.max(0, COMPASS_SLOTS.findIndex((slot) => slot.time === normalizeSlotTime(post.slot_time)))}
+            order={compassSlotTimestamp(post.post_date, post.slot_time, deviceTimeZone())}
           />
           <button
             type="button"
