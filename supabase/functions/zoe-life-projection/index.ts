@@ -2,7 +2,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { getPrecisePositions } from '../_shared/ephemeris-precision.ts';
-import { projectLifeTimeline, FORECAST_OPENING, FORECAST_CLOSING } from '../_shared/life-forecast.ts';
+import { projectLifeTimeline, deterministicForecast, FORECAST_OPENING, FORECAST_CLOSING, type LifeArea } from '../_shared/life-forecast.ts';
 import type { AstroBirthProfile } from '../_shared/astro-grounding.ts';
 
 const json = (b: unknown, status = 200) =>
@@ -19,7 +19,8 @@ Deno.serve(async (req) => {
     const user = u?.user;
     if (!user) return json({ error: 'sign in required' }, 401);
     const body = await req.json().catch(() => ({}));
-    const action = body?.action === 'sky-shift' ? 'sky-shift' : 'timeline';
+    const action = body?.action === 'sky-shift' ? 'sky-shift' : body?.action === 'report' ? 'report' : 'timeline';
+    if (action === 'report') return json(await buildReport(admin, user, String(body?.timezone || '')));
     const months = Math.min(60, Math.max(3, Number(body?.months) || 24));
 
     const { data: birth } = await admin.from('astro_profiles')
@@ -72,3 +73,52 @@ Deno.serve(async (req) => {
     return json({ error: e instanceof Error ? e.message : String(e) }, 500);
   }
 });
+
+const DAY = 86_400_000;
+async function geocode(place: string): Promise<{ lat: number; lon: number } | null> {
+  if (!place) return null;
+  try {
+    const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(place)}`,
+      { headers: { 'User-Agent': 'MMora/1.0 (life-report)' }, signal: AbortSignal.timeout(6000) });
+    const j = await r.json();
+    return j?.[0] ? { lat: Number(j[0].lat), lon: Number(j[0].lon) } : null;
+  } catch { return null; }
+}
+
+// Build + save the member's life report from their profile birth details. Zero tokens.
+async function buildReport(admin: any, user: any, tz: string) {
+  const { data: prof } = await admin.from('profiles')
+    .select('display_name, gender, birth_date, date_of_birth, birth_time, birth_place, city').eq('user_id', user.id).maybeSingle();
+  const birthDate = prof?.birth_date || prof?.date_of_birth;
+  if (!birthDate) return { saved: false, reason: 'no_birth_date' };
+  const { data: existing } = await admin.from('astro_profiles').select('*').eq('user_id', user.id).maybeSingle();
+  const zone = tz || existing?.birth_timezone || 'Asia/Kolkata';
+  const geo = (await geocode(prof?.birth_place || '')) ?? (existing ? { lat: existing.birth_latitude, lon: existing.birth_longitude } : { lat: 0, lon: 0 });
+  const birth = {
+    user_id: user.id, birth_date: String(birthDate).slice(0, 10),
+    birth_time: (prof?.birth_time || '12:00').slice(0, 5), birth_timezone: zone,
+    birth_latitude: geo.lat, birth_longitude: geo.lon, display_timezone: zone, is_enabled: true,
+  };
+  await admin.from('astro_profiles').upsert(birth, { onConflict: 'user_id' });
+  const now = new Date();
+  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const win = (kind: any, s: Date, e: Date, label: string) => ({ kind, start: s, end: e, label });
+  const tomorrow = win('date', new Date(start.getTime() + DAY), new Date(start.getTime() + 2 * DAY), 'tomorrow');
+  const nextMonth = win('month', new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1)), new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 2, 1)), 'next month');
+  const nextYear = win('year', new Date(Date.UTC(now.getUTCFullYear() + 1, 0, 1)), new Date(Date.UTC(now.getUTCFullYear() + 2, 0, 1)), 'next year');
+  const year = win('year', start, new Date(start.getTime() + 365 * DAY), 'the next twelve months');
+  const clean = (t: string) => t.replace(/\s*\((stronger|mixed) signal\)/g, '').replace(/Want me to go deeper[^?]*\?/, '').trim();
+  const f = (areas: LifeArea[], w: any) => clean(deterministicForecast(birth as any, { areas, window: w, explicitTime: true } as any, zone));
+  const sections = {
+    tomorrow: f([], tomorrow), next_month: f([], nextMonth), next_year: f([], nextYear),
+    career: f(['career'], year), love: f(['love'], year), personal: f(['personal'], year),
+    family: f(['family'], year), money: f(['money'], year), health: f(['health'], year),
+  };
+  const snapshot = { name: prof?.display_name ?? null, gender: prof?.gender ?? null, ...birth, birth_place: prof?.birth_place ?? null };
+  const { error } = await admin.from('zoe_life_reports').upsert({
+    user_id: user.id, sections, birth_snapshot: snapshot, engine: null, generated_at: now.toISOString(),
+  }, { onConflict: 'user_id' });
+  if (error) return { saved: false, reason: error.message };
+  const { data: role } = await admin.from('user_roles').select('role').eq('user_id', user.id).eq('role', 'admin').maybeSingle();
+  return { saved: true, sections: Object.keys(sections), ...(role ? { engine: 'vimshottari-dasha+swiss-ephemeris', geocoded: geo } : {}) };
+}

@@ -11141,6 +11141,36 @@ export type Database = {
         }
         Relationships: []
       }
+      zoe_life_reports: {
+        Row: {
+          birth_snapshot: Json
+          created_at: string
+          engine: string | null
+          generated_at: string
+          sections: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          birth_snapshot?: Json
+          created_at?: string
+          engine?: string | null
+          generated_at?: string
+          sections?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          birth_snapshot?: Json
+          created_at?: string
+          engine?: string | null
+          generated_at?: string
+          sections?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       zoe_mail_notification_queue: {
         Row: {
           announced_at: string | null

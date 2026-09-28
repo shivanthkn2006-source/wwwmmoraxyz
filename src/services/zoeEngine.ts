@@ -76,6 +76,15 @@ export async function askZoe(options: AskZoeOptions): Promise<AskZoeResult> {
   // A bare "eggs" carries no pattern, so it is stored explicitly.
   void capturePreferenceAnswer(text);
 
+  // Saved life report ("how's my tomorrow / career / love"): answered directly.
+  try {
+    const { lifeReportAnswer } = await import('@/lib/zoeLifeReport');
+    const reportText = await lifeReportAnswer(text, options.userId);
+    if (reportText) {
+      return { text: reportText, sources: [], evolutionEvent: null, memorySource: null, intent: 'astrology', raw: { lifeReport: true } };
+    }
+  } catch { /* fall through to normal chat */ }
+
   let memoryContext = '';
   let memorySource: string | null = null;
   if (!options.skipRecall) {
