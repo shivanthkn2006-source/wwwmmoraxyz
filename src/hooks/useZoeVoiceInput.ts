@@ -9,12 +9,12 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
-import { 
-  requestMicPermission, 
-  createSpeechRecognition, 
-  isSpeechRecognitionSupported,
-  stopSpeechRecognition 
-} from '@/utils/micPermissionManager';
+import { requestMicPermission } from '@/utils/micPermissionManager';
+import {
+  createDeepgramListener,
+  isDeepgramListeningSupported,
+  type DeepgramListener,
+} from '@/services/deepgramListening';
 
 // Voice commands that trigger immediate message submission
 const SUBMIT_COMMANDS = ['enter', 'send', 'submit', 'send it', 'enter it', 'submit it', 'go', 'okay send', 'ok send'];
@@ -50,7 +50,7 @@ export const useZoeVoiceInput = (options: VoiceInputOptions) => {
     silenceCountdown: null,
   });
 
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef<DeepgramListener | null>(null);
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lastSpeechTimeRef = useRef<number>(0);
   const transcriptRef = useRef<string>('');
@@ -130,15 +130,14 @@ export const useZoeVoiceInput = (options: VoiceInputOptions) => {
     // Already active - stop and restart
     if (isActiveRef.current) {
       console.log('[VoiceInput] Already active, stopping first');
-      stopSpeechRecognition(recognitionRef.current);
+      recognitionRef.current?.stop();
       recognitionRef.current = null;
       isActiveRef.current = false;
       await new Promise(resolve => setTimeout(resolve, 100));
     }
 
-    // Check browser support
-    if (!isSpeechRecognitionSupported()) {
-      toast.error('Speech recognition not supported in this browser');
+    if (!isDeepgramListeningSupported()) {
+      toast.error('Deepgram listening is not supported on this device');
       setState(prev => ({ ...prev, error: 'not-supported' }));
       return;
     }
@@ -160,21 +159,9 @@ export const useZoeVoiceInput = (options: VoiceInputOptions) => {
     // Small delay to ensure wake word recognizer has stopped
     await new Promise(resolve => setTimeout(resolve, 150));
 
-    // Create recognition instance using centralized manager
-    const recognition = createSpeechRecognition({
-      continuous: true,
-      interimResults: true,
-      lang: 'en-US'
-    });
-    
-    if (!recognition) {
-      toast.error('Could not initialize voice input');
-      setState(prev => ({ ...prev, error: 'init-failed' }));
-      return;
-    }
-
-    recognition.onstart = () => {
-      console.log('[VoiceInput] Recognition started successfully');
+    const recognition = createDeepgramListener({
+      onStart: () => {
+      console.log('[VoiceInput] Deepgram listening started');
       isActiveRef.current = true;
       transcriptRef.current = '';
       setState({
@@ -189,23 +176,8 @@ export const useZoeVoiceInput = (options: VoiceInputOptions) => {
       } else {
         toast.success('🎤 Listening... Tap mic when done', { duration: 3000 });
       }
-    };
-
-    recognition.onresult = (event: any) => {
-      let finalTranscript = '';
-      let interimTranscript = '';
-
-      for (let i = 0; i < event.results.length; i++) {
-        const result = event.results[i];
-        if (result.isFinal) {
-          finalTranscript += result[0].transcript;
-        } else {
-          interimTranscript += result[0].transcript;
-        }
-      }
-
-      const fullTranscript = finalTranscript || interimTranscript;
-      
+      },
+      onTranscript: (fullTranscript, isFinal) => {
       if (fullTranscript) {
         // Check for voice commands at the end of the transcript
         const lowerTranscript = fullTranscript.toLowerCase().trim();
@@ -247,38 +219,20 @@ export const useZoeVoiceInput = (options: VoiceInputOptions) => {
         transcriptRef.current = fullTranscript;
         messageBufferRef.current = fullTranscript;
         setState(prev => ({ ...prev, transcript: fullTranscript }));
-        onTranscript(fullTranscript, !!finalTranscript);
+        onTranscript(fullTranscript, isFinal);
         
         // Reset silence timer on any speech
         if (handsFreeMode) {
           resetSilenceTimer();
         }
       }
-    };
-
-    recognition.onerror = (event: any) => {
-      // Handle different error types silently for expected errors
-      if (event.error === 'no-speech' || event.error === 'aborted') {
-        // These are expected - no-speech is normal pause, aborted is intentional stop
-        return;
-      }
-
-      console.error('[VoiceInput] Error:', event.error);
-
-      if (event.error === 'not-allowed') {
-        toast.error('Microphone access denied. Please allow in browser settings.');
-        setState(prev => ({ ...prev, error: 'permission-denied' }));
-      } else if (event.error === 'network') {
-        toast.error('Network error. Please check your connection.');
-        setState(prev => ({ ...prev, error: 'network' }));
-      } else {
-        // Only show toast for unexpected errors
-        console.warn('[VoiceInput] Unexpected error:', event.error);
-      }
-    };
-
-    recognition.onend = () => {
-      console.log('[VoiceInput] Recognition ended');
+      },
+      onError: (error) => {
+        console.error('[VoiceInput] Deepgram error:', error.message);
+        setState(prev => ({ ...prev, error: error.message }));
+      },
+      onEnd: () => {
+      console.log('[VoiceInput] Deepgram listening ended');
       const wasActive = isActiveRef.current;
       isActiveRef.current = false;
       clearTimers();
@@ -296,19 +250,15 @@ export const useZoeVoiceInput = (options: VoiceInputOptions) => {
       if (wasActive && transcriptRef.current.trim()) {
         onSilenceDetected?.();
       }
-    };
+      },
+    });
 
     try {
-      console.log('[VoiceInput] Starting speech recognition...');
-      recognition.start();
       recognitionRef.current = recognition;
+      console.log('[VoiceInput] Starting Deepgram listening...');
+      await recognition.start();
     } catch (err: any) {
       console.error('[VoiceInput] Failed to start:', err);
-      // Common error: recognition already started
-      if (err.message?.includes('already started')) {
-        console.log('[VoiceInput] Already started, treating as success');
-        return;
-      }
       toast.error('Could not start voice input. Please try again.');
       isActiveRef.current = false;
       setState(prev => ({ ...prev, error: err.message, isListening: false }));
