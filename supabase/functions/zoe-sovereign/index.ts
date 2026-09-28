@@ -79,7 +79,7 @@ function visionProviders(dataUrl: string, forceFail = false): ProviderTask<any>[
   const vlm = (url: string, key: string, models: string[]) => () =>
     firstModel(url, key, models, (model) => ({ model, temperature: 0.2, max_tokens: 400, messages: [{ role: 'user', content: [{ type: 'text', text: VISION_PROMPT }, { type: 'image_url', image_url: { url: dataUrl } }] }] }));
   return [
-    { name: 'nvidia-vision', execute: async () => { if (forceFail) throw new Error('forced'); if (!env('NVIDIA_API_KEY')) throw new Error('no_key'); const r = await nvidiaVision(dataUrl, VISION_PROMPT, { timeoutMs: 9000, maxTokens: 400 }); return r ? parseVision(r) : null; } },
+    { name: 'nvidia-vision', execute: async () => { if (forceFail) throw new Error('forced'); if (!env('NVIDIA_API_KEY')) throw new Error('no_key'); const r = await nvidiaVision(dataUrl, VISION_PROMPT, { timeoutMs: 14000, maxTokens: 250 }); return r ? parseVision(r) : null; } },
     { name: 'google-vision', execute: async () => {
       const key = env('GOOGLE_API_KEY'); if (!key) throw new Error('no_key');
       const d = await postJson(`https://vision.googleapis.com/v1/images:annotate?key=${key}`, { requests: [{ image: { content: b64 }, features: [{ type: 'OBJECT_LOCALIZATION', maxResults: 10 }, { type: 'LABEL_DETECTION', maxResults: 10 }, { type: 'FACE_DETECTION', maxResults: 1 }] }] });

@@ -364,6 +364,9 @@ export const useZoeChatVision = () => {
           clearTimeout(timeout);
           reject(new Error('Video element error'));
         };
+
+        // play() often resolves after metadata already loaded, so those events never fire again.
+        if (video.readyState >= 1 && video.videoWidth > 0) finalize();
       });
 
       console.log('[ChatVision] ✓ Camera started successfully, beginning analysis loop');
@@ -608,7 +611,8 @@ export const useZoeChatVision = () => {
 
   // Manual frame capture for on-demand analysis
   const captureAndAnalyze = useCallback(async (): Promise<VisionAnalysis | null> => {
-    if (!state.isEnabled) {
+    const liveVideo = videoRef.current && streamRef.current?.active && videoRef.current.videoWidth > 0;
+    if (!state.isEnabled && !liveVideo) {
       console.warn('[ChatVision] Vision not enabled, starting temporarily...');
       await startVision();
       // Wait for camera to initialize

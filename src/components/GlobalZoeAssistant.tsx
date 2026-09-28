@@ -664,8 +664,17 @@ export const GlobalZoeAssistant = ({ config = DEFAULT_CONFIG }: { config?: Parti
   }, [clampToBounds, x, y]);
 
   // Handle drag end - clamp + persist
+  // Only a real drag (moved >8px) suppresses the tap; tiny finger jitter still opens Zoe on one tap.
+  const orbPointerStartRef = useRef<{ x: number; y: number } | null>(null);
+  const orbDragEndedAtRef = useRef(0);
+  const orbTapIsDrag = (e?: React.MouseEvent) => {
+    const s0 = orbPointerStartRef.current;
+    if (!s0 || !e) return false;
+    return Math.hypot(e.clientX - s0.x, e.clientY - s0.y) > 8;
+  };
   const handleDragEnd = useCallback(() => {
     setIsDragging(false);
+    orbDragEndedAtRef.current = Date.now();
     const next = clampToBounds(x.get(), y.get());
     x.set(next.x);
     y.set(next.y);
@@ -966,9 +975,10 @@ export const GlobalZoeAssistant = ({ config = DEFAULT_CONFIG }: { config?: Parti
                 onDragEnd={handleDragEnd}
                 // Wrapper-level tap: the 3D canvas can swallow child clicks while
                 // framer-motion owns the pointer, so the whole orb area opens Zoe.
-                onClick={() => {
+                onPointerDownCapture={(e) => { orbPointerStartRef.current = { x: e.clientX, y: e.clientY }; }}
+                onClick={(e) => {
                   const homeControlActive = Boolean((window as Window & { __mmoraHomeControlDragging?: boolean }).__mmoraHomeControlDragging);
-                  if (isDragging || homeControlActive) return;
+                  if (orbTapIsDrag(e) || homeControlActive) return;
                   setShowConversationPanel(true);
                 }}
                 whileHover={{ scale: 1.05 }}
@@ -996,10 +1006,7 @@ export const GlobalZoeAssistant = ({ config = DEFAULT_CONFIG }: { config?: Parti
                       isThinking={isProcessing || alwaysOnVoice.isProcessing}
                       size="lg"
                       onClick={() => {
-                        // Direct tap opens Zoe's conversation panel.
-                        const homeControlActive = Boolean((window as Window & { __mmoraHomeControlDragging?: boolean }).__mmoraHomeControlDragging);
-                        if (isDragging || homeControlActive) return;
-                        setShowConversationPanel(true);
+                        // Wrapper onClick opens Zoe; kept as a no-op so one tap never double-handles.
                       }}
                       onDoubleClick={() => {
                         // Double tap sends Zoe back to ghost mode.
