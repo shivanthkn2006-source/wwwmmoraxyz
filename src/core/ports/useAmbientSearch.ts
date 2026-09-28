@@ -146,6 +146,12 @@ export const useAmbientSearch = () => {
           resolveGeo(),
           new Promise<null>((resolve) => window.setTimeout(() => resolve(null), 250)),
         ]);
+        // Never send the search before the session has hydrated/refreshed: a
+        // missing or stale token is what produced the "Unauthorized" storms.
+        if (!(await ensureLiveSession())) {
+          await supabase.auth.refreshSession().catch(() => null);
+          if (!(await ensureLiveSession())) throw new Error('Your sign-in expired. Please sign in again to search.');
+        }
         const { data, error: fnError } = await supabase.functions.invoke('zoe-ambient-search', {
           body: {
             queryText: term,
