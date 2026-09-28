@@ -43,6 +43,7 @@ import { useZoeOffline } from '@/hooks/useZoeOffline';
 import { useZoePerception, PerceptionResult } from '@/hooks/useZoePerception';
 import { useZoeProactiveVision } from '@/hooks/useZoeProactiveVision';
 import { useZoeChatVision } from '@/hooks/useZoeChatVision';
+import { parseVisionCommand, isZoeVisionPreferred, setZoeVisionPreference } from '@/lib/zoeVisionPreference';
 import { useZoeVisionGreeting } from '@/hooks/useZoeVisionGreeting';
 import { useZoeVoiceInput } from '@/hooks/useZoeVoiceInput';
 import { useVoiceNoteRecorder } from '@/hooks/useVoiceNoteRecorder';
@@ -153,6 +154,23 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
   
   // Chat Vision - Zoe's continuous camera awareness during chat
   const chatVision = useZoeChatVision();
+
+  // Always-on vision: once the member has granted camera access (asked once
+  // at sign-in), Zoe sees automatically while her window is open — no button.
+  // "Zoe stop your vision" turns it off and is remembered on this device.
+  const autoVisionTried = useRef(false);
+  useEffect(() => {
+    if (autoVisionTried.current || chatVision.isEnabled || !isZoeVisionPreferred()) return;
+    autoVisionTried.current = true;
+    let cancelled = false;
+    (async () => {
+      try {
+        const status = await navigator.permissions?.query({ name: 'camera' as PermissionName });
+        if (!cancelled && status?.state === 'granted') await chatVision.startVision('front');
+      } catch { /* browser can't report camera permission — stay off, never prompt */ }
+    })();
+    return () => { cancelled = true; };
+  }, [chatVision.isEnabled, chatVision.startVision]);
   
   // Vision Greeting - Auto-greet user when God Eye activates
   const visionGreeting = useZoeVisionGreeting({
@@ -1155,6 +1173,25 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
     let turnError: string | null = null;
 
     console.log('[ZoeOrb] Sending message:', textToSend.trim(), 'mode:', messagingMode, 'with media:', hasPendingMedia);
+
+    // ═══ ZOE VISION VOICE/TEXT COMMANDS ("Zoe stop your vision" / "start your vision") ═══
+    if (messagingMode === 'zoe' && !hasPendingMedia) {
+      const visionCmd = parseVisionCommand(textToSend);
+      if (visionCmd) {
+        setZoeVisionPreference(visionCmd === 'start');
+        if (visionCmd === 'stop') chatVision.stopVision();
+        else void chatVision.startVision('front');
+        const reply = visionCmd === 'stop'
+          ? "Okay, my vision is off. Say \"Zoe start your vision\" whenever you want me to see again."
+          : "My vision is on again. I can see you now.";
+        setMessages(prev => [...prev,
+          { id: `u-${Date.now()}`, role: 'user', content: textToSend.trim(), timestamp: new Date() } as any,
+          { id: `z-${Date.now()}`, role: 'assistant', content: reply, timestamp: new Date() } as any,
+        ]);
+        setInput('');
+        return;
+      }
+    }
 
     // ═══ ZOE DECORATOR INTENT (self-contained feature) ═══
     if (messagingMode === 'zoe' && !hasPendingMedia) {
@@ -3600,52 +3637,6 @@ Want me to dive deeper into any aspect?`;
               </TooltipProvider>
               </ZoeFeatureRow>
 
-              {/* God Eye Vision Toggle */}
-              {messagingMode === 'zoe' && (
-              <ZoeFeatureRow label="Zoe vision">
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className={cn(
-                          "h-6 px-1.5 sm:px-2 rounded-full transition-all relative flex items-center gap-1.5 shrink-0",
-                          chatVision.isEnabled
-                            ? "bg-cyan-500/30 hover:bg-cyan-500/40 border border-cyan-400/50"
-                            : "bg-background/50 hover:bg-primary/20 border border-border/50"
-                        )}
-                        onClick={chatVision.toggleVision}
-                      >
-                        {chatVision.isEnabled ? (
-                          <div className="w-3 h-3 rounded-full bg-cyan-400 animate-gpu-glow-primary" />
-                        ) : (
-                          <Camera className="h-3.5 w-3.5 text-foreground/60" />
-                        )}
-                        <span
-                          className={cn(
-                            "text-[10px] font-medium hidden sm:inline",
-                            chatVision.isEnabled ? "text-cyan-300" : "text-foreground/60"
-                          )}
-                        >
-                          {chatVision.isEnabled ? "Eye ON" : "Eye"}
-                        </span>
-                        {chatVision.isAnalyzing && (
-                          <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-cyan-400 rounded-full animate-ping" />
-                        )}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="text-[10px] max-w-[180px]">
-                      {chatVision.isEnabled
-                        ? chatVision.lastAnalysis
-                          ? `👁️ Seeing: ${chatVision.lastAnalysis.scene}`
-                          : '👁️ God Eye active - Zoe can see you'
-                        : 'Enable God Eye - Let Zoe see through camera'}
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </ZoeFeatureRow>
-              )}
 
               {/* OMEGA Portal Button - always visible */}
               <ZoeFeatureRow label="OMEGA World">
@@ -4668,44 +4659,6 @@ Want me to dive deeper into any aspect?`;
 
                       <div className="my-1 h-px bg-primary/10" />
                       
-                      {/* Zoe Vision - God Eye Mode */}
-                      {messagingMode === 'zoe' && (
-                        <>
-                          <p className="text-[8px] text-foreground/40 uppercase tracking-wider px-1.5 mb-0.5 sticky top-0 bg-background/95">
-                            👁️ Zoe Vision
-                          </p>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className={cn(
-                              "w-full justify-start gap-1.5 h-6 text-[10px] px-1.5",
-                              chatVision.isEnabled && "bg-cyan-500/20 text-cyan-400"
-                            )}
-                            onClick={() => {
-                              chatVision.toggleVision();
-                              setShowAttachMenu(false);
-                            }}
-                          >
-                            {chatVision.isEnabled ? (
-                              <>
-                                <div className="h-3 w-3 rounded-full bg-cyan-500 animate-pulse" />
-                                God Eye ON
-                              </>
-                            ) : (
-                              <>
-                                <Camera className="h-3 w-3 text-cyan-400" />
-                                Enable God Eye
-                              </>
-                            )}
-                          </Button>
-                          {chatVision.isEnabled && chatVision.lastAnalysis && (
-                            <div className="px-1.5 py-1 text-[8px] text-cyan-400/70">
-                              Seeing: {chatVision.lastAnalysis.scene}
-                            </div>
-                          )}
-                          <div className="my-1 h-px bg-primary/10" />
-                        </>
-                      )}
 
                       {/* Export options */}
                       {messages.length > 0 && (
