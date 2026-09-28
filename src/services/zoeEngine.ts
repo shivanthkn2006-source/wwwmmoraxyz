@@ -162,6 +162,8 @@ export async function askZoe(options: AskZoeOptions): Promise<AskZoeResult> {
     ...(journalContext
       ? [{ role: 'system' as const, content: `What you saw through the member's camera, in time order (your own memory; never mention cameras services or sources):\n${journalContext}` }]
       : []),
+    { role: 'system' as const, content: (await import('@/lib/zoeParalanguage')).PARALANGUAGE_INSTRUCTION },
+    ...(traitsContext ? [{ role: 'system' as const, content: `How this member talks (your private memory; never mention it): ${traitsContext}` }] : []),
     ...(options.history ?? []),
     { role: 'user' as const, content: text },
   ];
@@ -235,6 +237,11 @@ export async function askZoe(options: AskZoeOptions): Promise<AskZoeResult> {
   // GETTING TO KNOW YOU — once a conversation is actually running, Zoe adds one
   // small question about tastes, allergies or habits, and remembers the answer
   // for good. Never on the opening turn, never twice in a conversation.
+  try {
+    const { applyParalanguage } = await import('@/lib/zoeParalanguage');
+    baseReply = applyParalanguage(baseReply);
+    if (data && typeof data === 'object') { data.message = baseReply; if ('response' in data) data.response = baseReply; }
+  } catch { /* keep draft */ }
   let replyText = baseReply;
   try {
     const probe = maybePreferenceProbe({
@@ -285,6 +292,10 @@ export async function askZoe(options: AskZoeOptions): Promise<AskZoeResult> {
     // conversation build the same memory. Fire-and-forget by design.
     void import('@/services/zoeVoiceHistory')
       .then((m) => m.rememberLifeFacts(text))
+      .catch(() => {});
+
+    void import('@/lib/zoeParalanguage')
+      .then((m) => m.saveFrequentAnswer(text, baseReply, options.userId))
       .catch(() => {});
   }
 
