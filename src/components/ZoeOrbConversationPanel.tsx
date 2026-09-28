@@ -155,6 +155,20 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
   
   // Chat Vision - Zoe's continuous camera awareness during chat
   const chatVision = useZoeChatVision();
+  const chatVisionRef = useRef(chatVision);
+  chatVisionRef.current = chatVision;
+  // Looks questions ("what am I wearing?", "does this suit me?") get a fresh camera look first.
+  const getFreshLook = useCallback(async (text: string): Promise<Record<string, unknown> | null> => {
+    if (!isZoeVisionPreferred() || !/\b(wear|wearing|outfit|look(s|ing)?|see|suit|shirt|t-shirt|cap|hat|dress|hair|face|behind me|in front of me|holding)\b/i.test(text)) return null;
+    const fresh = await Promise.race([
+      chatVisionRef.current.captureAndAnalyze().catch(() => null),
+      new Promise<null>((r) => window.setTimeout(() => r(null), 7000)),
+    ]);
+    console.info('[ZoeVision] fresh look', fresh ? 'ok' : 'none', fresh?.summary?.slice(0, 80));
+    if (!fresh?.summary) return null;
+    return { visionActive: true, cameraEnabled: true, detectedEmotion: fresh.emotional_sentiment || 'neutral',
+      visualContext: { scene: fresh.scene || '', objects: fresh.objects || [], summary: fresh.summary } };
+  }, []);
 
   // Always-on vision: once the member has granted camera access (asked once
   // at sign-in), Zoe sees automatically while her window is open — no button.
@@ -2381,9 +2395,12 @@ Want me to dive deeper into any aspect?`;
         setSendStage('thinking', 'zoe-core-intelligence');
         try {
           console.log('[ZoeOrb] Deep thinking → zoe-core-intelligence');
+          const dtLook = await getFreshLook(userMessage.content);
           const { data: dtData, error: dtError } = await supabase.functions.invoke('zoe-core-intelligence', {
             body: {
-              command: userMessage.content,
+              command: dtLook
+                ? `${userMessage.content}\n\n[What my camera sees right now: ${(dtLook.visualContext as { summary: string }).summary}. Answer from this.]`
+                : userMessage.content,
               userId: user.id,
               mode: 'deep_thinking',
               context: {
@@ -2455,19 +2472,7 @@ Want me to dive deeper into any aspect?`;
           let data: any = null;
           let error: unknown = null;
           try {
-            // Looks questions ("what am I wearing?", "does this suit me?") get a fresh camera look first.
-            let freshVision: Record<string, unknown> | null = null;
-            if (isZoeVisionPreferred() && /\b(wear|wearing|outfit|look(s|ing)?|see|suit|shirt|t-shirt|cap|hat|dress|hair|face|behind me|in front of me|holding)\b/i.test(messageContent)) {
-              const fresh = await Promise.race([
-                chatVision.captureAndAnalyze().catch(() => null),
-                new Promise<null>((r) => window.setTimeout(() => r(null), 7000)),
-              ]);
-              console.info('[ZoeVision] fresh look', fresh ? 'ok' : 'none', fresh?.summary?.slice(0, 80));
-              if (fresh?.summary) {
-                freshVision = { visionActive: true, cameraEnabled: true, detectedEmotion: fresh.emotional_sentiment || 'neutral',
-                  visualContext: { scene: fresh.scene || '', objects: fresh.objects || [], summary: fresh.summary } };
-              }
-            }
+            const freshVision = await getFreshLook(messageContent);
             const result = await askZoe({
               text: freshVision
                 ? `${messageContent}\n\n[What my camera sees right now: ${(freshVision.visualContext as { summary: string }).summary}]`
