@@ -200,9 +200,16 @@ Deno.serve(async (req) => {
       const msg = String(body.message ?? '').slice(0, 2000); const draft = String(body.draft ?? '').slice(0, 4000);
       if (!msg || !draft) return json({ error: 'missing' }, 400);
       const research = String(body.research ?? '').slice(0, 3000);
-      const r = await executeWithFallback(llmProviders(
-        'You privately check Zoe\'s draft reply. If it is accurate, kind and answers the member, reply exactly APPROVED. Otherwise reply ONLY with the corrected reply in the same voice and length, no preamble. Never add facts not in the draft or research.',
-        `MEMBER: ${msg}\n${research ? `RESEARCH:\n${research}\n` : ''}DRAFT: ${draft}`), 9_000);
+      // Race every text provider; the first real answer wins (checking must be fast).
+      const tasks = llmProviders(
+        'You privately check Zoe\'s draft reply. If it is accurate, kind and answers the member, reply exactly APPROVED. Otherwise reply ONLY with the corrected reply in the same language, voice and length, no preamble. Never add facts not in the draft or research.',
+        `MEMBER: ${msg}\n${research ? `RESEARCH:\n${research}\n` : ''}DRAFT: ${draft}`);
+      const trace: any[] = [];
+      const r = await Promise.any(tasks.map(async (t) => {
+        const t0 = Date.now();
+        try { const v = await t.execute(); if (!v) throw new Error('empty'); trace.push({ provider: t.name, status: 'ok', ms: Date.now() - t0 }); return { ok: true, value: v, provider: t.name, trace }; }
+        catch (e) { trace.push({ provider: t.name, status: 'failed', ms: Date.now() - t0, error: String((e as Error).message).slice(0, 120) }); throw e; }
+      }).concat([new Promise((_, j) => setTimeout(() => j(new Error('timeout')), 10_000))])).catch(() => ({ ok: false, value: null, provider: null, trace }));
       const out = String(r.value ?? '').trim();
       if (!r.ok || !out) return json({ success: false, provider: r.provider, trace: r.trace });
       const approved = /^approved\.?$/i.test(out);

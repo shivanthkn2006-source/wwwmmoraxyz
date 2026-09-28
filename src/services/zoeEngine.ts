@@ -176,7 +176,7 @@ export async function askZoe(options: AskZoeOptions): Promise<AskZoeResult> {
     try {
       const r: any = await Promise.race([
         supabase.functions.invoke('zoe-sovereign', { body: { action: 'review', message: text, draft: baseReply, research: researchContext } }),
-        new Promise((res) => window.setTimeout(() => res(null), 7000)),
+        new Promise((res) => window.setTimeout(() => res(null), 11000)),
       ]);
       const checked = r?.data?.success ? stripScratchpad(String(r.data.reply || '')) : '';
       if (checked) {
