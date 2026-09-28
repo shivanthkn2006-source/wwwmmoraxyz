@@ -21,6 +21,12 @@ vi.mock('@/components/home/GlobalHomeDock', () => ({ default: () => null }));
 // fake timers that heavy lazy chunk never settles, so the voice engine never
 // mounted in this test. Pass children straight through: this suite only tests
 // the voice engine, not the other hosts.
+// Voice services only start for signed-in members, so the shell sees a member.
+vi.mock('@/lib/auth', () => ({ useAuth: () => ({ user: { id: 'test-member' }, loading: false }) }));
+vi.mock('@/components/voice/ZoeCardNarrationProvider', () => ({
+  ZoeCardNarrationProvider: ({ children }: { children: React.ReactNode }) => children,
+  default: ({ children }: { children: React.ReactNode }) => children,
+}));
 vi.mock('@/components/platform/DeferredPlatformServices', () => ({
   default: ({ children }: { children: React.ReactNode }) => children,
 }));
@@ -144,6 +150,7 @@ describe('voice activation + agent route switching (e2e)', () => {
 
   it('keeps one recognizer alive across agent routes and never crashes the shell', async () => {
     render(<Shell />);
+    await flush(1600);
     expect(screen.getByTestId('route').textContent).toBe('/agent/moksh');
     expect(screen.getByTestId('active-agent').textContent).toBe('agent_moksh');
 
@@ -207,6 +214,7 @@ describe('voice activation + agent route switching (e2e)', () => {
 
   it('persists Zustand platform state across a full shell unmount and remount', async () => {
     render(<Shell />);
+    await flush(1600);
     await act(async () => setVoiceEngineOptIn(true));
     await flush();
     act(() => {
@@ -220,6 +228,7 @@ describe('voice activation + agent route switching (e2e)', () => {
 
     // Remount the whole shell — persisted slices survive.
     render(<Shell />);
+    await flush(1600);
     await flush();
 
     const state = usePlatformStore.getState();
@@ -234,6 +243,7 @@ describe('voice activation + agent route switching (e2e)', () => {
 
   it('a throwing voice command degrades to an error status without unmounting the app', async () => {
     render(<Shell />);
+    await flush(1600);
     voiceCommandService.register({
       id: 'boom',
       match: /crash now/,
@@ -256,6 +266,7 @@ describe('voice activation + agent route switching (e2e)', () => {
 
   it('thermal safe mode suspends the recognizer without losing agent state', async () => {
     render(<Shell />);
+    await flush(1600);
     await act(async () => setVoiceEngineOptIn(true));
     await flush();
     const recognizer = FakeRecognition.instances[0];
