@@ -1200,7 +1200,7 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
       if (path) {
         setMessages(prev => [...prev,
           { id: `u-${Date.now()}`, role: 'user', content: textToSend.trim(), timestamp: new Date() } as any,
-          { id: `z-${Date.now()}`, role: 'assistant', content: 'Opening it for you now.', timestamp: new Date() } as any,
+          { id: `z-${Date.now()}`, role: 'zoe', content: 'Opening it for you now.', timestamp: new Date() } as any,
         ]);
         setInput('');
         navigate(path);
@@ -4300,6 +4300,24 @@ Want me to dive deeper into any aspect?`;
                       </TooltipProvider>
                     </div>
                   </div>
+
+                  {/* Zoe action chips — tapping opens the page inside M'Mora */}
+                  {msg.role === 'zoe' && ((msg as any).actions?.length > 0) && (
+                    <div className="mt-1 flex flex-wrap gap-1.5">
+                      {((msg as any).actions as { label: string; path: string }[]).map((a) => (
+                        <button
+                          key={a.path}
+                          type="button"
+                          data-zoe-action={a.path}
+                          onClick={(e) => { e.stopPropagation(); navigate(a.path); }}
+                          className="text-[11px] md:text-xs text-foreground/90 underline-offset-2 hover:underline px-1 py-0.5"
+                        >
+                          {a.label} →
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  
                   
                   {/* PHASE 4: Evolution Event UI Card */}
                   {msg.role === 'zoe' && msg.evolutionEvent && (
