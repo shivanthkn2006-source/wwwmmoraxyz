@@ -48,6 +48,9 @@ function calculateAge(birthDate: Date): number {
   return age;
 }
 
+// Per-isolate core-profile cache (tiered memory, 5-minute freshness).
+const PROFILE_CACHE = new Map<string, { at: number; data: any }>();
+
 // User profile context type
 interface UserProfileContext {
   firstName: string | null;
@@ -326,12 +329,25 @@ serve(async (req) => {
           }
         }
 
-        // Fetch complete user profile from database with relationship style
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('display_name, bio, city, profession, hobbies, birth_date, zoe_personality_tone, zoe_conversation_style, dhf_autonomy_tolerance, zoe_relationship_style')
-          .eq('user_id', user.id)
-          .single();
+        // Tiered memory: the core profile is loaded once and reused for 5 minutes
+        // per member on this warm server, instead of re-reading it every turn.
+        const cachedProfile = PROFILE_CACHE.get(user.id);
+        let profile: any = null;
+        let profileError: any = null;
+        if (cachedProfile && Date.now() - cachedProfile.at < 5 * 60_000) {
+          profile = cachedProfile.data;
+        } else {
+          const res = await supabase
+            .from('profiles')
+            .select('display_name, bio, city, profession, hobbies, birth_date, zoe_personality_tone, zoe_conversation_style, dhf_autonomy_tolerance, zoe_relationship_style')
+            .eq('user_id', user.id)
+            .single();
+          profile = res.data; profileError = res.error;
+          if (profile && !profileError) {
+            if (PROFILE_CACHE.size > 500) PROFILE_CACHE.clear();
+            PROFILE_CACHE.set(user.id, { at: Date.now(), data: profile });
+          }
+        }
         
         if (profile && !profileError) {
           const birthDate = profile.birth_date ? new Date(profile.birth_date) : null;

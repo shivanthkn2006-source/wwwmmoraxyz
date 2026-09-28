@@ -110,6 +110,12 @@ export function applyParalanguage(reply: string): string {
   const sound = m[2].charAt(0).toUpperCase() + m[2].slice(1).toLowerCase();
   if (sound.toLowerCase() === lastSound) return rest; // no repeating the same sound twice in a row
   lastSound = sound.toLowerCase();
+  // Emotion signal (LAUGH / SURPRISE / EMPATHY / THINKING) so any orb/avatar can react.
+  const emotion = /^(haha|aha)$/i.test(sound) ? 'LAUGH'
+    : m[1].toUpperCase() === 'PHYSICAL' ? 'EMPATHY'
+    : m[1].toUpperCase() === 'HESITATION' ? 'THINKING'
+    : m[1].toUpperCase() === 'REACTION' ? 'SURPRISE' : 'LISTENING';
+  try { if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('zoe-emotion', { detail: { emotion, sound } })); } catch { /* non-browser */ }
   const joiner = /^(Hmm|Um|Ah|Mm)$/.test(sound) ? '... ' : ', ';
   if (rest) rest = rest.charAt(0).toUpperCase() + rest.slice(1);
   return rest ? `${sound}${joiner}${rest}` : `${sound}.`;
