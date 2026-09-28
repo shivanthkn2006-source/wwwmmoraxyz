@@ -81,7 +81,7 @@ export async function askZoe(options: AskZoeOptions): Promise<AskZoeResult> {
     const { lifeReportAnswer } = await import('@/lib/zoeLifeReport');
     const reportText = await lifeReportAnswer(text, options.userId);
     if (reportText) {
-      return { text: reportText, sources: [], evolutionEvent: null, memorySource: null, intent: classifyZoeIntent(text), raw: { lifeReport: true } };
+      return { text: reportText, sources: [], evolutionEvent: null, memorySource: null, intent: 'astrology', raw: { lifeReport: true } };
     }
   } catch { /* fall through to normal chat */ }
 
