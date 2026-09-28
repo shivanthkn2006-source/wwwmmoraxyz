@@ -160,6 +160,10 @@ export const useAlwaysOnVoice = () => {
       } else if (intent.kind === 'orb-chat') {
         // Explicit "open orb / open chat" — only then does the panel open.
         window.dispatchEvent(new CustomEvent('zoe-open-orb-chat'));
+      } else if (intent.kind === 'device-scan') {
+        const { scanAndSaveDevice, spokenDeviceSummary } = await import('@/services/zoeDeviceScan');
+        const r = await scanAndSaveDevice('voice');
+        spoken = spokenDeviceSummary(r.scan, r.ok);
       } else if (intent.kind === 'god-scan') {
         window.dispatchEvent(new CustomEvent('zoe-navigate', { detail: { path: '/admin' } }));
         // The dashboard mounts, then runs the scan. Non-admins see "Staff only".

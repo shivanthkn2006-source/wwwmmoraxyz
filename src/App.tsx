@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { GlobalRealtimeProvider } from "@/realtime/GlobalRealtimeProvider";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/lib/auth";
+import DeviceScanOnSignIn from "@/components/dhf/DeviceScanOnSignIn";
 import { CorticalStackProvider } from "@/contexts/CorticalStackContext";
 import { GlobalMediaProvider } from "@/contexts/GlobalMediaContext"; // ONE EAR PROTOCOL
 import { NavigationBusProvider } from "@/contexts/NavigationBusContext"; // PHASE 2: Search → Globe Bridge
@@ -1394,6 +1395,7 @@ const SecurityBypassOnAuthRoutes = ({ children }: { children: React.ReactNode })
 
   return (
     <SecurityShell enabled={true} devToolsTrapEnabled={true} voidShellEnabled={true}>
+      <DeviceScanOnSignIn />
       {children}
     </SecurityShell>
   );

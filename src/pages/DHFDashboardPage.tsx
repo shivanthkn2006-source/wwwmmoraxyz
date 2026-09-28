@@ -8,6 +8,7 @@ import NeuralCoreUplink from '@/components/NeuralCoreUplink';
 import ZoeMemoryStatusPanel from '@/components/zoe-infinity/ZoeMemoryStatusPanel';
 import DhfVideoFeed from '@/components/dhf/DhfVideoFeed';
 import DhfSensorPanel from '@/components/dhf/DhfSensorPanel';
+import DeviceScanCard from '@/components/dhf/DeviceScanCard';
 import ZoeVisionSearchPanel from '@/components/dhf/ZoeVisionSearchPanel';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -57,6 +58,7 @@ const DHFDashboardPage: React.FC = () => {
               className="mb-6"
             />
             <DhfSensorPanel />
+            <DeviceScanCard />
           </TabsContent>
 
           <TabsContent value="videos" className="mt-0">
