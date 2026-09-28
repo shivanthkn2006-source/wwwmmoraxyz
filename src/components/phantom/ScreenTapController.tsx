@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 // SCREEN TAP CONTROLLER - Protocol Phantom
 // Invisible layer that detects the deliberate double interaction that shows Zoe.
-// A single interaction outside the orb never changes visibility.
+// One tap outside the orb hides it; a double tap/click shows it again.
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import React, { useRef, useCallback, useEffect, memo } from 'react';
@@ -39,6 +39,7 @@ const ScreenTapController: React.FC<ScreenTapControllerProps> = ({
   const lastInteractionRef = useRef<number>(0);
   const singleActionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isProcessingRef = useRef(false);
+  const downRef = useRef<{ x: number; y: number } | null>(null);
 
   // Check if the event target is excluded
   const isExcludedElement = useCallback((target: EventTarget | null): boolean => {
@@ -72,6 +73,9 @@ const ScreenTapController: React.FC<ScreenTapControllerProps> = ({
     if (isExcludedElement(e.target)) {
       return;
     }
+    // A scroll/drag is not a tap.
+    const start = downRef.current;
+    if (start && Math.hypot(e.clientX - start.x, e.clientY - start.y) > 10) return;
 
     const now = Date.now();
     const timeSinceLastInteraction = now - lastInteractionRef.current;
@@ -85,7 +89,7 @@ const ScreenTapController: React.FC<ScreenTapControllerProps> = ({
       showOrb();
       lastInteractionRef.current = 0;
     } else {
-      // First tap/click — remember it, but intentionally do nothing.
+      // First tap/click — if no second tap follows, a single tap hides a visible orb.
       lastInteractionRef.current = now;
 
       if (singleActionTimeoutRef.current) {
@@ -95,9 +99,13 @@ const ScreenTapController: React.FC<ScreenTapControllerProps> = ({
       singleActionTimeoutRef.current = setTimeout(() => {
         lastInteractionRef.current = 0;
         singleActionTimeoutRef.current = null;
+        if (usePhantomStore.getState().isVisible) {
+          hide();
+          console.log('[ScreenTap] Orb hidden (single tap)');
+        }
       }, 350);
     }
-  }, [isExcludedElement, showOrb]);
+  }, [isExcludedElement, showOrb, hide]);
 
   // Always hide orb on route changes (except VR world where in-world orb guidance is required)
   useEffect(() => {
@@ -109,10 +117,13 @@ const ScreenTapController: React.FC<ScreenTapControllerProps> = ({
   useEffect(() => {
     if (isVRRoute) return;
 
+    const handleDown = (e: PointerEvent) => { downRef.current = { x: e.clientX, y: e.clientY }; };
+    document.addEventListener('pointerdown', handleDown, { passive: true });
     document.addEventListener('pointerup', handleInteraction, { passive: true });
 
     return () => {
       document.removeEventListener('pointerup', handleInteraction);
+      document.removeEventListener('pointerdown', handleDown);
       if (singleActionTimeoutRef.current) {
         clearTimeout(singleActionTimeoutRef.current);
       }
