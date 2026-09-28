@@ -47,13 +47,13 @@ export const ZoeSpeechPauseBar: React.FC = () => {
   return (
     <div
       data-zoe-speech-bar
-      className="pointer-events-none fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] left-3 z-[10000] flex items-center gap-1 rounded-full border border-border bg-card/95 p-1 shadow-lg backdrop-blur-xl"
+      className="pointer-events-none fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] left-3 z-[10000] flex items-center gap-1 p-1"
     >
       <button
         type="button"
         aria-label={paused ? 'Resume Zoe speech' : 'Pause Zoe speech'}
         onClick={() => (paused ? resumeZoeSpeech() : pauseZoeSpeech())}
-        className="pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full text-foreground transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-95"
+        className="pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-95"
       >
         {paused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
       </button>
@@ -61,7 +61,7 @@ export const ZoeSpeechPauseBar: React.FC = () => {
         type="button"
         aria-label="Stop Zoe speech"
         onClick={() => { stopZoeSpeech(); setSpeaking(false); setPaused(false); }}
-        className="pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-95"
+        className="pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-95"
       >
         <Square className="h-3.5 w-3.5" />
       </button>
