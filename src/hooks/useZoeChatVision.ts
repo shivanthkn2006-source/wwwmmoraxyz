@@ -136,15 +136,25 @@ export const useZoeChatVision = () => {
         }
       } catch { /* fall through */ }
       if (!data) {
-        const r = await supabase.functions.invoke('zoe-perception', {
-          body: {
-            media_type: 'image',
-            media_data: frameData,
-            context: 'Live camera chat vision - Zoe is observing through your camera during conversation',
-            cross_reference: false,
-          },
-        });
-        data = r.data; error = r.error;
+        try {
+          const r = await supabase.functions.invoke('zoe-perception', {
+            body: {
+              media_type: 'image',
+              media_data: frameData,
+              context: 'Live camera chat vision - Zoe is observing through your camera during conversation',
+              cross_reference: false,
+            },
+          });
+          if (!r.error && r.data?.success) data = r.data; else error = r.error;
+        } catch (e) { error = e; }
+      }
+      // Last backup: on-device MediaPipe, so Zoe keeps seeing when every cloud service fails.
+      if (!data) {
+        try {
+          const { analyzeFrameOnDevice } = await import('@/lib/onDeviceVision');
+          const a = await analyzeFrameOnDevice(frameData);
+          data = { success: true, analysis: a }; error = null;
+        } catch (e) { console.warn('[ChatVision] on-device backup failed:', e); }
       }
 
       if (error) {

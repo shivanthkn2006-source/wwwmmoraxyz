@@ -45,6 +45,13 @@ const chatContent = (d: any) => { const s = d?.choices?.[0]?.message?.content; r
 const GROQ_TEXT = ['qwen/qwen3-32b', 'moonshotai/kimi-k2-instruct-0905', 'moonshotai/kimi-k2-instruct', 'llama-3.3-70b-versatile'];
 const OR_TEXT = ['deepseek/deepseek-chat-v3.1:free', 'qwen/qwen3-235b-a22b:free', 'z-ai/glm-4.5-air:free', 'moonshotai/kimi-k2:free', 'deepseek/deepseek-r1-0528:free'];
 const GROQ_VISION = ['meta-llama/llama-4-scout-17b-16e-instruct', 'meta-llama/llama-4-maverick-17b-128e-instruct'];
+// Direct Chinese providers (used after NVIDIA/Google/Groq/OpenRouter fail).
+const SF_TEXT = ['Qwen/Qwen2.5-7B-Instruct', 'THUDM/glm-4-9b-chat', 'deepseek-ai/DeepSeek-V3'];
+const SF_VISION = ['Qwen/Qwen2.5-VL-32B-Instruct', 'Qwen/Qwen2-VL-72B-Instruct'];
+const ZP_TEXT = ['glm-4-flash', 'glm-4-flash-250414'];
+const ZP_VISION = ['glm-4v-flash'];
+const SF_URL = 'https://api.siliconflow.cn/v1/chat/completions';
+const ZP_URL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
 const OR_VISION = ['qwen/qwen2.5-vl-72b-instruct:free', 'qwen/qwen2.5-vl-32b-instruct:free', 'moonshotai/kimi-vl-a3b-thinking:free', 'google/gemma-3-27b-it:free'];
 
 // ─── Part 2: vision ─────────────────────────────────────────────────────────
@@ -71,6 +78,8 @@ function visionProviders(dataUrl: string, forceFail = false): ProviderTask<any>[
     } },
     { name: 'groq-vision', execute: async () => { const k = env('GROQ_API_KEY'); if (!k) throw new Error('no_key'); const r = await vlm('https://api.groq.com/openai/v1/chat/completions', k, GROQ_VISION)(); return r ? parseVision(r) : null; } },
     { name: 'openrouter-free-vision', execute: async () => { const k = env('OPENROUTER_API_KEY'); if (!k) throw new Error('no_key'); const r = await vlm('https://openrouter.ai/api/v1/chat/completions', k, OR_VISION)(); return r ? parseVision(r) : null; } },
+    { name: 'siliconflow-qwen-vl', execute: async () => { const k = env('SILICONFLOW_API_KEY'); if (!k) throw new Error('no_key'); const r = await vlm(SF_URL, k, SF_VISION)(); return r ? parseVision(r) : null; } },
+    { name: 'zhipu-glm4v', execute: async () => { const k = env('ZHIPU_API_KEY'); if (!k) throw new Error('no_key'); const r = await vlm(ZP_URL, k, ZP_VISION)(); return r ? parseVision(r) : null; } },
   ];
 }
 
@@ -109,6 +118,8 @@ function llmProviders(system: string, user: string, forceFail = false): Provider
     { name: 'groq', execute: async () => { if (forceFail) throw new Error('forced'); const k = env('GROQ_API_KEY'); if (!k) throw new Error('no_key'); return oai('https://api.groq.com/openai/v1/chat/completions', k, GROQ_TEXT)(); } },
     { name: 'openrouter-free', execute: async () => { const k = env('OPENROUTER_API_KEY'); if (!k) throw new Error('no_key'); return oai('https://openrouter.ai/api/v1/chat/completions', k, OR_TEXT)(); } },
     { name: 'nvidia', execute: async () => (await nvidiaChatByRole('chat', user, { systemPrompt: system, maxTokens: 700, timeoutMs: 15_000 }))?.content ?? null },
+    { name: 'siliconflow', execute: async () => { const k = env('SILICONFLOW_API_KEY'); if (!k) throw new Error('no_key'); return oai(SF_URL, k, SF_TEXT)(); } },
+    { name: 'zhipu', execute: async () => { const k = env('ZHIPU_API_KEY'); if (!k) throw new Error('no_key'); return oai(ZP_URL, k, ZP_TEXT)(); } },
     { name: 'ollama', execute: async () => { const e = env('OLLAMA_ENDPOINT'); if (!e) throw new Error('no_key'); const d = await postJson(`${e.replace(/\/$/, '')}/api/chat`, { model: 'llama3.1', stream: false, messages: [{ role: 'system', content: system }, { role: 'user', content: user }] }, {}, 20_000); return d?.message?.content ?? null; } },
   ];
 }
@@ -118,9 +129,9 @@ const ACTIONS: Record<string, { label: string; path?: string }> = {
   open_home: { label: 'Open Home', path: '/home' },
   open_dhf_calendar: { label: 'Open DHF calendar', path: '/dhf-calendar' },
   open_life_projection: { label: 'Open life projection', path: '/life-projection' },
-  open_notifications: { label: 'Open notifications', path: '/notifications' },
+  open_notifications: { label: 'Open notifications', path: '/notification-history' },
   open_calls: { label: 'Open calls', path: '/calls' },
-  open_lol: { label: "Open Zoe's LOL", path: '/zoes-lol' },
+  open_lol: { label: "Open Zoe's LOL", path: '/zoe-lol' },
   vision_off: { label: 'Turn Zoe vision off' },
   vision_on: { label: 'Turn Zoe vision on' },
   mute_voice: { label: 'Mute Zoe voice' },
@@ -177,6 +188,28 @@ Deno.serve(async (req) => {
       const { inner, spoken } = await think(msg, body.vision ?? null, research, name);
       const suggested = detectAction(msg);
       return json({ success: spoken.ok, reply: spoken.value, provider: spoken.provider, inner_used: inner.ok, research_used: !!research?.length, action: suggested ? { id: suggested, ...ACTIONS[suggested] } : null, trace: { inner: inner.trace, spoken: spoken.trace } });
+    }
+    if (action === 'review') {
+      // Thinking layer: private check of a draft before it is spoken. Never shown.
+      const msg = String(body.message ?? '').slice(0, 2000); const draft = String(body.draft ?? '').slice(0, 4000);
+      if (!msg || !draft) return json({ error: 'missing' }, 400);
+      const research = String(body.research ?? '').slice(0, 3000);
+      const r = await executeWithFallback(llmProviders(
+        'You privately check Zoe\'s draft reply. If it is accurate, kind and answers the member, reply exactly APPROVED. Otherwise reply ONLY with the corrected reply in the same voice and length, no preamble. Never add facts not in the draft or research.',
+        `MEMBER: ${msg}\n${research ? `RESEARCH:\n${research}\n` : ''}DRAFT: ${draft}`), 9_000);
+      const out = String(r.value ?? '').trim();
+      if (!r.ok || !out) return json({ success: false, provider: r.provider, trace: r.trace });
+      const approved = /^approved\.?$/i.test(out);
+      return json({ success: true, changed: !approved, reply: approved ? draft : out, provider: r.provider, trace: r.trace });
+    }
+    if (action === 'keycheck') {
+      const tiny = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+      const out: Record<string, string> = {};
+      for (const t of [...visionProviders(tiny), ...llmProviders('Reply OK.', 'ping')]) {
+        try { const v = await Promise.race([t.execute(), new Promise((_, j) => setTimeout(() => j(new Error('timeout')), 15000))]); out[t.name] = v ? 'ok' : 'empty'; }
+        catch (e) { out[t.name] = String((e as Error).message).slice(0, 160); }
+      }
+      return json(out);
     }
     if (action === 'dispatch') {
       const id = String(body.id ?? ''); const a = ACTIONS[id];
