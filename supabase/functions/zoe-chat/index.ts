@@ -48,6 +48,9 @@ function calculateAge(birthDate: Date): number {
   return age;
 }
 
+// Per-isolate core-profile cache (tiered memory, 5-minute freshness).
+const PROFILE_CACHE = new Map<string, { at: number; data: any }>();
+
 // User profile context type
 interface UserProfileContext {
   firstName: string | null;
