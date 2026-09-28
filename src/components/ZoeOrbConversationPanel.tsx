@@ -3039,8 +3039,11 @@ Want me to dive deeper into any aspect?`;
         let voiceError: unknown = null;
         let data: any = null;
         try {
+          const voiceLook = await getFreshLook(messageText);
           const result = await askZoe({
-            text: messageText,
+            text: voiceLook
+              ? `${messageText}\n\n[What my camera sees right now: ${(voiceLook.visualContext as { summary: string }).summary}]`
+              : messageText,
             sessionKey: zoeMemorySessionKey,
             userId: user?.id,
             history: conversationHistory as any,
