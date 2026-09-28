@@ -364,6 +364,9 @@ export const useZoeChatVision = () => {
           clearTimeout(timeout);
           reject(new Error('Video element error'));
         };
+
+        // play() often resolves after metadata already loaded, so those events never fire again.
+        if (video.readyState >= 1 && video.videoWidth > 0) finalize();
       });
 
       console.log('[ChatVision] ✓ Camera started successfully, beginning analysis loop');
