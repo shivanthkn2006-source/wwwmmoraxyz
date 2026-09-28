@@ -172,11 +172,11 @@ export async function askZoe(options: AskZoeOptions): Promise<AskZoeResult> {
 
   // Thinking layer: Zoe privately checks her draft before it is shown or spoken.
   // Bounded wait; on timeout or failure the original draft is kept.
-  if (baseReply && !options.skipRecall) {
+  if (baseReply && !options.skipRecall && baseReply.length <= 450) {
     try {
       const r: any = await Promise.race([
         supabase.functions.invoke('zoe-sovereign', { body: { action: 'review', message: text, draft: baseReply, research: researchContext } }),
-        new Promise((res) => window.setTimeout(() => res(null), 11000)),
+        new Promise((res) => window.setTimeout(() => res(null), 6000)),
       ]);
       const checked = r?.data?.success ? stripScratchpad(String(r.data.reply || '')) : '';
       if (checked) {
