@@ -7091,3 +7091,8 @@ body {
   isolation: isolate;
   contain: paint;
 }
+
+/* Notifications platform-wide: no background box, white text only */
+[data-sonner-toast] { background: transparent !important; border: 0 !important; box-shadow: none !important; color: #fff !important; }
+[data-sonner-toast] [data-close-button] { background: transparent !important; border: 0 !important; color: #fff !important; }
+[data-sonner-toast] [data-description], [data-sonner-toast] [data-title] { color: #fff !important; }
