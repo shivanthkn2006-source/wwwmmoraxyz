@@ -67,6 +67,7 @@ const ZoeBirthDetailsPage: React.FC = () => {
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         },
       });
+      void import('@/lib/zoeLifeReport').then((m) => m.rebuildLifeReport());
       setMessage('Saved. Your card has been rebuilt with the new details — pull the feed to refresh.');
     } catch {
       setMessage('Saved. Your next scheduled card will use these details.');

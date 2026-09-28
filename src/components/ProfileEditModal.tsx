@@ -249,6 +249,7 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onClose, pr
       }
 
       console.log('Profile updated successfully:', data);
+      if (updateData.birth_date) void import('@/lib/zoeLifeReport').then((m) => m.rebuildLifeReport());
 
       toast({
         title: 'Profile updated',
