@@ -62,6 +62,20 @@ export const GlobalAudioQuickConnect: React.FC = () => {
     void audioRouter.prepareDevices();
   }, []);
 
+  // Hands-free was switched on before: restore it after reload. Browsers only
+  // start speech recognition after a real tap, so re-arm on the first one.
+  useEffect(() => {
+    if (!zoeBackgroundListener.wasEnabledBefore()) return;
+    const events: Array<keyof WindowEventMap> = ['pointerdown', 'touchend', 'keydown'];
+    const restore = () => {
+      events.forEach((evt) => window.removeEventListener(evt, restore));
+      const s = zoeBackgroundListener.getState();
+      if (s === 'off' || s === 'error') void zoeBackgroundListener.enable();
+    };
+    events.forEach((evt) => window.addEventListener(evt, restore, { once: true }));
+    return () => events.forEach((evt) => window.removeEventListener(evt, restore));
+  }, []);
+
   // React immediately when the owner flips the switch on the Zoe Audio page.
   useEffect(() => {
     const onPref = (event: Event) => {
