@@ -63,9 +63,16 @@ const OR_VISION = ['qwen/qwen2.5-vl-72b-instruct:free', 'qwen/qwen2.5-vl-32b-ins
 // ─── Part 2: vision ─────────────────────────────────────────────────────────
 const VISION_PROMPT = 'You are Zoe\'s eyes. Look at this camera frame of the member. Reply ONLY JSON: {"objects":[...],"attire":"what they wear, colours","scene":"short","mood":"neutral|happy|tired|sad|focused","lighting":"optimal|low|harsh","summary":"one friendly sentence"}';
 function parseVision(raw: string) {
+  const txt = (v: any): string => v == null ? '' : typeof v === 'string' ? v : Array.isArray(v) ? v.map(txt).filter(Boolean).join(', ')
+    : typeof v === 'object' ? String(v.name ?? v.label ?? v.item ?? v.description ?? Object.values(v).map(txt).filter(Boolean).join(' ')) : String(v);
   const m = raw.match(/\{[\s\S]*\}/);
-  try { const j = JSON.parse(m ? m[0] : raw); return { objects: Array.isArray(j.objects) ? j.objects.slice(0, 12).map(String) : [], attire: String(j.attire ?? ''), scene: String(j.scene ?? ''), mood: String(j.mood ?? 'neutral'), lighting: String(j.lighting ?? 'optimal'), summary: String(j.summary ?? '') }; }
-  catch { return { objects: [], attire: '', scene: '', mood: 'neutral', lighting: 'optimal', summary: raw.slice(0, 300) }; }
+  try {
+    const j = JSON.parse(m ? m[0] : raw);
+    const objects = (Array.isArray(j.objects) ? j.objects : []).map(txt).filter(Boolean).slice(0, 12);
+    const attire = txt(j.attire ?? j.clothing ?? j.outfit);
+    const summary = txt(j.summary) || [attire && `You're wearing ${attire}.`, objects.length && `I can see ${objects.slice(0, 4).join(', ')}.`].filter(Boolean).join(' ');
+    return { objects, attire, scene: txt(j.scene), mood: txt(j.mood) || 'neutral', lighting: txt(j.lighting) || 'optimal', summary };
+  } catch { return { objects: [], attire: '', scene: '', mood: 'neutral', lighting: 'optimal', summary: raw.replace(/```\w*/g, '').slice(0, 300) }; }
 }
 function visionProviders(dataUrl: string, forceFail = false): ProviderTask<any>[] {
   const b64 = dataUrl.split(',')[1] ?? '';
