@@ -380,7 +380,7 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
       ref={rootRef}
       data-home-dock
       className={cn(
-        'home-dock-root fixed z-[9996] flex flex-col items-end justify-end',
+        'home-dock-root fixed z-[9999] flex flex-col items-end justify-end',
         open ? 'pointer-events-auto' : 'pointer-events-none',
         'bottom-[calc(env(safe-area-inset-bottom,0px)+8px)] right-[max(8px,env(safe-area-inset-right,0px))]',
         className,

@@ -3105,10 +3105,9 @@ Want me to dive deeper into any aspect?`;
           data-orb-conversation-panel="true"
           data-exclude-phantom-tap="true"
           className={cn(
-            'fixed z-[9998] pointer-events-none',
-            isFullPage
-              ? 'inset-0 flex items-stretch justify-center p-2 sm:p-3 md:p-4'
-              : 'left-1/2 bottom-6 -translate-x-1/2'
+            'fixed inset-0 z-[9998] pointer-events-none flex justify-center',
+            'pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(0.5rem,env(safe-area-inset-bottom))] pl-[max(0.5rem,env(safe-area-inset-left))] pr-[max(0.5rem,env(safe-area-inset-right))]',
+            isFullPage ? 'items-stretch' : 'items-center'
           )}
         >
           <motion.div
