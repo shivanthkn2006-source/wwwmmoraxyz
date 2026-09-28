@@ -1593,8 +1593,8 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
         const content = needsReference
           ? 'That reference is not a clear photo of a real person. Please attach a clear front-facing photo of yourself (+ menu → "My photo"), then resend the same request.'
           : quotaExhausted
-            ? 'I have your photo from the vault and I know it\'s you — but every identity-preserving image studio is out of credit right now, so I paused rather than paint a stranger. Ask me again in a little while, or add image credit and I\'ll finish it immediately.'
-            : 'I could not create your identity image just now. Your reference was not replaced with a random person—please try again.';
+            ? 'I\'m out of rendering energy right now, but I\'ve saved your request and your photo is safe in your vault. Just say "try again" later and I\'ll finish it — I won\'t paint a stranger.'
+            : 'I couldn\'t create your picture just now, but I\'ve saved your request. Say "try again" and I\'ll finish it with your own photo.';
         const failureMessage: Message = {
           id: createMessageId(), role: 'zoe', content, timestamp: new Date(),
           reasoningTrace: { classifiedIntent: needsReference ? 'identity_reference_required' : quotaExhausted ? 'identity_provider_quota' : 'identity_image_error', codexInjected: false },
@@ -1815,7 +1815,7 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
           const failureMessage: Message = {
             id: createMessageId(),
             role: 'zoe',
-            content: "I couldn't render the image just now. Please tap send to try again.",
+            content: "I'm out of rendering energy right now, but I've saved your request. Just say \"try again\" later and I'll finish it.",
             timestamp: new Date(),
             reasoningTrace: {
               classifiedIntent: 'image_generation_error',
@@ -1823,6 +1823,9 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
             },
           };
           setMessages(prev => [...prev, failureMessage]);
+          // Saved in chat history so "try again" re-finds the original request later.
+          saveMessageToDb('assistant', failureMessage.content, undefined, undefined, failureMessage.id);
+          if (!isMuted) speakAsZoe(failureMessage.content, { messageId: failureMessage.id }, () => setIsSpeaking(true), () => setIsSpeaking(false));
           setIsProcessing(false);
           setSendStage('error', 'image-generation');
           return;
