@@ -162,7 +162,7 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
     if (!isZoeVisionPreferred() || !/\b(wear|wearing|outfit|look(s|ing)?|see|suit|shirt|t-shirt|cap|hat|dress|hair|face|behind me|in front of me|holding)\b/i.test(text)) return null;
     const fresh = await Promise.race([
       chatVisionRef.current.captureAndAnalyze().catch(() => null),
-      new Promise<null>((r) => window.setTimeout(() => r(null), 12000)),
+      new Promise<null>((r) => window.setTimeout(() => r(null), 16000)),
     ]);
     console.info('[ZoeVision] fresh look', fresh ? 'ok' : 'none', fresh?.summary?.slice(0, 80));
     if (!fresh?.summary) return null;
