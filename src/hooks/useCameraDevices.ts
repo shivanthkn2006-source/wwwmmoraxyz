@@ -331,9 +331,13 @@ export const useCameraDevices = () => {
       enumerateDevices();
     };
     
-    navigator.mediaDevices.addEventListener('devicechange', handleDeviceChange);
+    // Some browsers/in-app webviews (and non-secure pages) have no mediaDevices;
+    // that used to throw here and take the background services down with it.
+    const media = typeof navigator !== 'undefined' ? navigator.mediaDevices : undefined;
+    if (!media?.addEventListener) return;
+    media.addEventListener('devicechange', handleDeviceChange);
     return () => {
-      navigator.mediaDevices.removeEventListener('devicechange', handleDeviceChange);
+      media.removeEventListener?.('devicechange', handleDeviceChange);
     };
   }, [enumerateDevices]);
 
