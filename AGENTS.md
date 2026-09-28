@@ -11,5 +11,5 @@
 - Zoe orb drift updates Framer motion values without React state updates, and Zoe glass avoids live backdrop filters, because frame-by-frame tree repaints cause orb/chat flicker over Home.
 - Home menu panel uses a fixed warm surface without backdrop-filter, because live blur over the moving feed flickers.
 - DHF and LOL automatic speech offer candidates to one newest-generated selector, because separate announcers can speak multiple old cards.
-- Zoe listening uses authenticated Deepgram Nova streaming without browser speech recognition.
+- Zoe listening is free-first: browser recognition first, sticky switch to Deepgram Nova on failure (localStorage zoe-listen-mode=deepgram-first flips order), because it saves Deepgram cost while never losing hearing.
 - Exact repeat questions use each member's private DHF answer cache before AI recall.
