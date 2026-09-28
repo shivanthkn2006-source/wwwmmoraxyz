@@ -22,7 +22,8 @@ describe("Zoe's LOL integration", () => {
   it('never regenerates a stored joke picture', () => {
     const scheduled = read('supabase/functions/generate-humor-drops/index.ts');
     expect(scheduled).toContain(".is('image_url', null)");
-    expect(scheduled).toContain("onConflict");
+    // Duplicates are blocked by the partial unique slot index; the function treats 23505 as "already done".
+    expect(scheduled).toContain("error.code !== '23505'");
   });
 
   it('places Zoe LOL in Global and accepted-friend member jokes in Friends', () => {
