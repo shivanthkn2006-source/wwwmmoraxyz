@@ -11,6 +11,7 @@ import { NavigationBusProvider } from "@/contexts/NavigationBusContext"; // PHAS
 import { DeferredComponentLoader } from '@/components/DeferredComponentLoader';
 import { MoraZoeGlobalHost } from '@/components/astro/MoraZoeGlobalHost';
 import HumorAnnouncementHost from '@/components/humor/HumorAnnouncementHost';
+import ZoeDeviceScanHost from '@/features/zoe-device-scan/ZoeDeviceScanHost';
 import { LightActivityTracker } from '@/components/LightActivityTracker';
 import { MemoryLeakPlumberGlobal } from '@/components/MemoryLeakPlumberGlobal';
 import { AutoFixProvider } from '@/components/AutoFixProvider';
@@ -1479,6 +1480,7 @@ const App = () => {
                           <MoraZoeGlobalHost />
                         </Suspense>
                         <HumorAnnouncementHost />
+                        <ZoeDeviceScanHost />
 
                         <MmoraBrandHomeBridge />
 
