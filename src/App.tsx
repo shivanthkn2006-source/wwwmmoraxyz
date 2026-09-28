@@ -12,6 +12,7 @@ import { DeferredComponentLoader } from '@/components/DeferredComponentLoader';
 import { MoraZoeGlobalHost } from '@/components/astro/MoraZoeGlobalHost';
 import HumorAnnouncementHost from '@/components/humor/HumorAnnouncementHost';
 import ZoeDeviceScanHost from '@/features/zoe-device-scan/ZoeDeviceScanHost';
+import ZoeVisionJournalHost from '@/features/zoe-vision-journal/ZoeVisionJournalHost';
 import { LightActivityTracker } from '@/components/LightActivityTracker';
 import { MemoryLeakPlumberGlobal } from '@/components/MemoryLeakPlumberGlobal';
 import { AutoFixProvider } from '@/components/AutoFixProvider';
@@ -1482,6 +1483,7 @@ const App = () => {
                         </Suspense>
                         <HumorAnnouncementHost />
                         <ZoeDeviceScanHost />
+                        <ZoeVisionJournalHost />
 
                         <MmoraBrandHomeBridge />
 

@@ -12543,6 +12543,36 @@ export type Database = {
         }
         Relationships: []
       }
+      zoe_vision_journal: {
+        Row: {
+          attire: string | null
+          created_at: string
+          id: string
+          mood: string | null
+          provider: string | null
+          summary: string
+          user_id: string
+        }
+        Insert: {
+          attire?: string | null
+          created_at?: string
+          id?: string
+          mood?: string | null
+          provider?: string | null
+          summary: string
+          user_id: string
+        }
+        Update: {
+          attire?: string | null
+          created_at?: string
+          id?: string
+          mood?: string | null
+          provider?: string | null
+          summary?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       zoe_workflow_intelligence: {
         Row: {
           automation_opportunities: Json | null

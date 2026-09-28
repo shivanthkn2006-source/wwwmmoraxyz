@@ -106,6 +106,23 @@ export async function askZoe(options: AskZoeOptions): Promise<AskZoeResult> {
     } catch { /* research must never block a reply */ }
   }
 
+  // Vision journal: "what have I been doing the last couple of hours?"
+  let journalContext = '';
+  if (/\b(what (have|was|were) i (been )?doing|what did i (do|wear)|last (few|couple( of)?|\d+) hours?|earlier today|since morning|how long (have|was) i)\b/i.test(text)) {
+    try {
+      const since = new Date(Date.now() - 12 * 3600_000).toISOString();
+      const { data: auth } = await supabase.auth.getUser();
+      if (auth?.user) {
+        const { data } = await supabase.from('zoe_vision_journal' as any)
+          .select('summary,attire,mood,created_at').eq('user_id', auth.user.id)
+          .gte('created_at', since).order('created_at', { ascending: true }).limit(48);
+        const rows = (data ?? []) as any[];
+        journalContext = rows.map((r) => `- ${new Date(r.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}: ${r.summary}${r.mood ? ` (mood: ${r.mood})` : ''}`).join('\n');
+        if (!journalContext) journalContext = '(no camera looks saved in the last 12 hours — say so honestly)';
+      }
+    } catch { /* journal must never block a reply */ }
+  }
+
   const messages: ZoeEngineMessage[] = [
     ...(memoryContext
       ? [{
@@ -115,6 +132,9 @@ export async function askZoe(options: AskZoeOptions): Promise<AskZoeResult> {
       : []),
     ...(researchContext
       ? [{ role: 'system' as const, content: `Live web results (use them, mention the source briefly):\n${researchContext}` }]
+      : []),
+    ...(journalContext
+      ? [{ role: 'system' as const, content: `What you saw through the member's camera, in time order (your own memory; never mention cameras services or sources):\n${journalContext}` }]
       : []),
     ...(options.history ?? []),
     { role: 'user' as const, content: text },
