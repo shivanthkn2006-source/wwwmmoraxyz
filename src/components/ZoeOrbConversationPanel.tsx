@@ -3163,7 +3163,7 @@ Want me to dive deeper into any aspect?`;
     } finally {
       setIsProcessing(false);
     }
-  }, [isOnline, messages, isMuted, processConversation, saveMessageToDb]);
+  }, [isOnline, messages, isMuted, processConversation, saveMessageToDb, sendMessage, onClose]);
 
   // Use the new robust voice input hook with hands-free mode
   const {
