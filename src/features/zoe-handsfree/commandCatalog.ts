@@ -109,6 +109,7 @@ export const ZOE_COMMAND_CATALOG: ZoeCommandGroup[] = [
   {
     area: 'Admin only',
     commands: [
+      { example: 'Zoe, scan new device', does: 'Checks mic, camera, speaker, memory and CPU and saves it to your DHF — shows — for anything the device hides', kind: 'action' },
       { example: 'Zoe, run god mode scan', does: 'Full platform scan — checked on the server, admins only', kind: 'answer' },
       { example: 'Zoe, open Agasthya Vision', does: 'Opens the vision console', kind: 'action' },
     ],
