@@ -611,7 +611,8 @@ export const useZoeChatVision = () => {
 
   // Manual frame capture for on-demand analysis
   const captureAndAnalyze = useCallback(async (): Promise<VisionAnalysis | null> => {
-    if (!state.isEnabled) {
+    const liveVideo = videoRef.current && streamRef.current?.active && videoRef.current.videoWidth > 0;
+    if (!state.isEnabled && !liveVideo) {
       console.warn('[ChatVision] Vision not enabled, starting temporarily...');
       await startVision();
       // Wait for camera to initialize
