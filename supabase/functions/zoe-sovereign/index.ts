@@ -42,14 +42,14 @@ async function firstModel(url: string, key: string, models: string[], build: (m:
 const chatContent = (d: any) => { const s = d?.choices?.[0]?.message?.content; return typeof s === 'string' && s.trim() ? s : null; };
 
 // Chinese open models lead each list (Qwen, DeepSeek, Kimi, GLM); free tiers only.
-const GROQ_TEXT = ['qwen/qwen3-32b', 'moonshotai/kimi-k2-instruct-0905', 'moonshotai/kimi-k2-instruct', 'llama-3.3-70b-versatile'];
+const GROQ_TEXT = ['qwen/qwen3-32b', 'llama-3.1-8b-instant', 'moonshotai/kimi-k2-instruct-0905', 'moonshotai/kimi-k2-instruct', 'llama-3.3-70b-versatile'];
 const OR_TEXT = ['deepseek/deepseek-chat-v3.1:free', 'qwen/qwen3-235b-a22b:free', 'z-ai/glm-4.5-air:free', 'moonshotai/kimi-k2:free', 'deepseek/deepseek-r1-0528:free'];
 const GROQ_VISION = ['meta-llama/llama-4-scout-17b-16e-instruct', 'meta-llama/llama-4-maverick-17b-128e-instruct'];
 // Direct Chinese providers (used after NVIDIA/Google/Groq/OpenRouter fail).
 const SF_TEXT = ['Qwen/Qwen2.5-7B-Instruct', 'THUDM/glm-4-9b-chat', 'deepseek-ai/DeepSeek-V3'];
-const SF_VISION = ['Qwen/Qwen2.5-VL-32B-Instruct', 'Qwen/Qwen2-VL-72B-Instruct'];
-const ZP_TEXT = ['glm-4-flash', 'glm-4-flash-250414'];
-const ZP_VISION = ['glm-4v-flash'];
+const SF_VISION = ['Qwen/Qwen2.5-VL-72B-Instruct', 'Qwen/Qwen2.5-VL-32B-Instruct', 'Qwen/Qwen2.5-VL-7B-Instruct', 'THUDM/GLM-4.1V-9B-Thinking', 'zai-org/GLM-4.5V'];
+const ZP_TEXT = ['glm-4-flash', 'glm-4.5-flash', 'glm-4.7-flash', 'glm-4-flash-250414'];
+const ZP_VISION = ['glm-4v-flash', 'glm-4.6v-flash', 'glm-4.1v-thinking-flash', 'glm-4.5v'];
 // China and international hosts: a key only works on the site it was made on.
 const SF_HOSTS = ['https://api.siliconflow.cn/v1/chat/completions', 'https://api.siliconflow.com/v1/chat/completions'];
 const ZP_HOSTS = ['https://open.bigmodel.cn/api/paas/v4/chat/completions', 'https://api.z.ai/api/paas/v4/chat/completions'];
