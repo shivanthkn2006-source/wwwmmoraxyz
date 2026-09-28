@@ -94,11 +94,11 @@ export async function askZoe(options: AskZoeOptions): Promise<AskZoeResult> {
     const traits = await pl.loadVoiceTraits(options.userId);
     traitsContext = pl.describeTraits(traits, cues);
     void pl.recordVoiceTraits(text, options.userId).catch(() => {});
-    if (!options.skipRecall) {
-      const saved = await pl.frequentAnswer(text, options.userId);
-      if (saved) {
-        return { text: saved, sources: [], evolutionEvent: null, memorySource: 'frequent-answer', intent: classifyZoeIntent(text).intent, raw: { frequentAnswer: true } };
-      }
+    // Hands-free skips expensive semantic recall for speed, but exact repeat
+    // questions must still use the member's private DHF answer without AI.
+    const saved = await pl.frequentAnswer(text, options.userId);
+    if (saved) {
+      return { text: saved, sources: [], evolutionEvent: null, memorySource: 'frequent-answer', intent: classifyZoeIntent(text).intent, raw: { frequentAnswer: true } };
     }
   } catch { /* traits must never block a reply */ }
 
