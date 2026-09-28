@@ -1,8 +1,8 @@
 /**
  * ZoeBackgroundListener — hands-free wake word for the headset link.
  * ==================================================================
- * Keeps a continuous SpeechRecognition pass running on the microphone that
- * AudioRouterService owns, matches the shared Zoe wake phrases, and fires the
+ * Keeps a continuous Deepgram Nova pass running on the microphone, matches the
+ * shared Zoe wake phrases, and fires the
  * same `zoe-orb-activate` event a headset button press fires — so the whole
  * existing Zoe pipeline (askZoe -> Deepgram -> selected sink) is reused.
  *
@@ -17,13 +17,14 @@ import { audioRouter } from '@/services/AudioRouterService';
 import { HANDS_FREE_WAKE_PHRASES, HANDS_FREE_STOP_PHRASES, findHandsFreePhrase, normalizeVoicePhrase } from '@/features/zoe-handsfree/phrases';
 import { zoeDebugLog, zoeDebugSetState, zoeDebugSpeechError, zoeDebugSpeechStart, zoeDebugSpeechStop } from '@/features/zoe-handsfree/debugBus';
 import { nativeZoeAudioBridge } from '@/services/NativeZoeAudioBridge';
-import { claimSpeechRecognition, releaseSpeechRecognition } from '@/utils/micPermissionManager';
+import { reserveSpeechRecognition, releaseSpeechRecognition } from '@/utils/micPermissionManager';
 import { gateTranscript, isZoeMuted, setZoeMuted } from '@/features/zoe-handsfree/muteGate';
+import { createDeepgramListener, isDeepgramListeningSupported, type DeepgramListener } from '@/services/deepgramListening';
 
 export type WakeWordState = 'off' | 'starting' | 'listening' | 'triggered' | 'suspended' | 'error';
 
 export interface WakeWordCapability {
-  /** SpeechRecognition exists in this browser. */
+  /** Deepgram streaming prerequisites exist in this browser. */
   supported: boolean;
   /** Running inside the Capacitor native shell. */
   isNative: boolean;
@@ -34,28 +35,6 @@ export interface WakeWordCapability {
 
 const STORAGE_KEY = 'mmora.audio.wakeWordEnabled';
 type Listener = (state: WakeWordState) => void;
-
-interface MinimalRecognition {
-  continuous: boolean;
-  interimResults: boolean;
-  lang: string;
-  onstart: (() => void) | null;
-  onresult: ((event: SpeechRecognitionEvent) => void) | null;
-  onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
-  onend: (() => void) | null;
-  start: () => void;
-  stop?: () => void;
-  abort?: () => void;
-}
-
-function speechRecognitionCtor(): (new () => MinimalRecognition) | null {
-  if (typeof window === 'undefined') return null;
-  const w = window as unknown as {
-    SpeechRecognition?: new () => MinimalRecognition;
-    webkitSpeechRecognition?: new () => MinimalRecognition;
-  };
-  return w.SpeechRecognition || w.webkitSpeechRecognition || null;
-}
 
 export function commandAfterWakePhrase(transcript: string, wakePhrase: string): string {
   const normalizedTranscript = normalizeVoicePhrase(transcript);
@@ -97,14 +76,14 @@ export function isAppleWebkitSpeech(): boolean {
 
 export function wakeWordCapability(): WakeWordCapability {
   const isNative = isNativeShell();
-  const supported = isNative || Boolean(speechRecognitionCtor());
+  const supported = isNative || isDeepgramListeningSupported();
   if (!supported) {
     return {
       supported: false,
       isNative,
       backgroundCapable: false,
       reason:
-        'This browser has no on-device speech recognition. Use the headset button, or the orb, to talk to Zoe — everything else still works.',
+        'This device cannot stream microphone audio to Deepgram. Use the headset button or type to Zoe.',
     };
   }
   if (isNative) {
@@ -113,15 +92,6 @@ export function wakeWordCapability(): WakeWordCapability {
       isNative: true,
       backgroundCapable: true,
       reason: 'Native app support is installed for background audio. Locked-screen wake still requires validation on this device.',
-    };
-  }
-  if (isAppleWebkitSpeech()) {
-    return {
-      supported: true,
-      isNative: false,
-      backgroundCapable: false,
-      reason:
-        'On iPhone, iPad and Safari, Zoe listens one phrase at a time and re-arms herself between phrases. Keep this tab in front; the screen must stay awake. Allow the microphone and speech recognition prompts once.',
     };
   }
   return {
@@ -134,7 +104,7 @@ export function wakeWordCapability(): WakeWordCapability {
 }
 
 class ZoeBackgroundListener {
-  private recognition: MinimalRecognition | null = null;
+  private recognition: DeepgramListener | null = null;
   private state: WakeWordState = 'off';
   private enabled = false;
   private restartTimer: ReturnType<typeof setTimeout> | null = null;
@@ -284,18 +254,6 @@ class ZoeBackgroundListener {
     }
     this.permissionRetries = 0;
     this.lastError = null;
-    if (isAppleWebkitSpeech()) {
-      // Safari/iOS: never hold an open capture stream here. WebKit hands the
-      // microphone to its own speech service and refuses to start while the
-      // page owns one. Recognition raises its own permission prompt.
-      try {
-        await audioRouter.releaseMic?.();
-      } catch {
-        /* noop */
-      }
-      await this.startRecognition();
-      return true;
-    }
     const granted = await audioRouter.ensureMicPermission();
     if (!granted) {
       this.enabled = false;
@@ -351,7 +309,7 @@ class ZoeBackgroundListener {
       /* noop */
     }
     if (recognition) {
-      releaseSpeechRecognition('wake-word', recognition);
+      releaseSpeechRecognition('wake-word');
       zoeDebugSpeechStop('wake-word', 'wake listener stopped');
     }
     this.recognition = null;
@@ -367,37 +325,15 @@ class ZoeBackgroundListener {
 
   private async startRecognition(): Promise<void> {
     if (!this.enabled || this.conversationActive || this.recognition) return;
-    const Ctor = speechRecognitionCtor();
-    if (!Ctor) {
+    if (!isDeepgramListeningSupported()) {
       this.setState('error');
       return;
     }
 
     this.setState('starting');
-    const apple = isAppleWebkitSpeech();
-    const rec = new Ctor();
     const generation = ++this.generation;
-    // Apple's engine ignores continuous mode and stops after each phrase; ask
-    // for one phrase at a time and let `onend` re-arm the sentinel instantly.
-    rec.continuous = !apple;
-    rec.interimResults = !apple;
-    rec.lang = 'en-US';
-
-    rec.onstart = () => {
+    const handleTranscript = (transcript: string) => {
       if (generation !== this.generation || this.recognition !== rec) return;
-      this.permissionRetries = 0;
-      this.lastError = null;
-      this.setState('listening');
-      zoeDebugSetState({ hfState: 'awaiting-wake' });
-      zoeDebugSpeechStart('wake-word', 'global hands-free sentinel');
-    };
-
-    rec.onresult = (event: SpeechRecognitionEvent) => {
-      if (generation !== this.generation || this.recognition !== rec) return;
-      let transcript = '';
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        transcript += event.results[i][0]?.transcript ?? '';
-      }
       if (!transcript.trim()) return;
 
       // Privacy boundary: while muted, no transcript can activate Zoe, reach
@@ -465,69 +401,36 @@ class ZoeBackgroundListener {
       }
     };
 
-    rec.onerror = (event: SpeechRecognitionErrorEvent) => {
-      if (generation !== this.generation || this.recognition !== rec) return;
-      const err = event.error;
-      zoeDebugSpeechError('wake-word', err, 'global hands-free sentinel');
-
-      if (err === 'not-allowed' || err === 'service-not-allowed') {
-        // Safari raises `service-not-allowed` transiently when a previous
-        // session has not fully torn down, or while the page still owns the
-        // microphone. Free the mic and retry quickly; if Safari still refuses,
-        // stay switched on and re-arm on the user's very next tap.
+    const rec = createDeepgramListener({
+      onStart: () => {
+        if (generation !== this.generation || this.recognition !== rec) return;
+        this.permissionRetries = 0;
+        this.lastError = null;
+        this.setState('listening');
+        zoeDebugSetState({ hfState: 'awaiting-wake' });
+        zoeDebugSpeechStart('wake-word', 'Deepgram global hands-free sentinel');
+      },
+      onTranscript: (transcript) => handleTranscript(transcript),
+      onError: (error) => {
+        if (generation !== this.generation || this.recognition !== rec) return;
+        this.lastError = error.message;
+        zoeDebugSpeechError('wake-word', error.message, 'Deepgram sentinel');
+      },
+      onEnd: () => {
+        releaseSpeechRecognition('wake-word');
+        if (generation !== this.generation || this.recognition !== rec) return;
         this.recognition = null;
-        if (apple && this.permissionRetries < 6) {
-          this.permissionRetries += 1;
-          void audioRouter.releaseMic?.();
-          this.setState('starting');
-          this.scheduleRestart(300 * this.permissionRetries);
-          return;
-        }
-        if (err === 'service-not-allowed' || apple) {
-          this.lastError =
-            'Safari paused listening. Tap anywhere on this page and Zoe starts listening again — no need to switch anything off.';
-          this.setState('error');
-          this.armGestureRetry();
-          zoeDebugLog('error', `wake word paused by browser: ${err}`);
-          return;
-        }
-        this.enabled = false;
-        this.lastError =
-          'Microphone access is blocked for this site. Allow the microphone in your browser settings, then switch hands-free on again.';
-        this.setState('error');
-        zoeDebugLog('error', `wake word blocked: ${err}`);
-        return;
-      }
-
-
-      if (err === 'audio-capture') {
-        this.recognition = null;
-        this.lastError = 'No microphone was found. Connect or select an input device on this page.';
-        this.scheduleRestart(2000);
-        return;
-      }
-
-      // Everything else (no-speech, network, aborted) is routine on phones.
-      this.recognition = null;
-      this.scheduleRestart(err === 'no-speech' ? 300 : 1200);
-    };
-
-    rec.onend = () => {
-      releaseSpeechRecognition('wake-word', rec);
-      if (generation !== this.generation || this.recognition !== rec) return;
-      this.recognition = null;
-      // Apple ends the session after every phrase — that is normal, not a
-      // failure. Re-arm quickly so "hey Zoe" keeps working on iPhone/iPad.
-      if (this.enabled) this.scheduleRestart(apple ? 500 : 700);
-      else this.setState('off');
-    };
+        if (this.enabled) this.scheduleRestart(700);
+        else this.setState('off');
+      },
+    });
 
     this.recognition = rec;
     try {
-      claimSpeechRecognition('wake-word', rec);
-      rec.start();
+      reserveSpeechRecognition('wake-word');
+      await rec.start();
     } catch (error) {
-      releaseSpeechRecognition('wake-word', rec);
+      releaseSpeechRecognition('wake-word');
       zoeDebugSpeechError('wake-word', error instanceof Error ? error.message : String(error), 'start failed');
       this.recognition = null;
       this.scheduleRestart(1200);
