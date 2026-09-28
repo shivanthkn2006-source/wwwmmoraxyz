@@ -85,6 +85,23 @@ export async function askZoe(options: AskZoeOptions): Promise<AskZoeResult> {
     }
   } catch { /* fall through to normal chat */ }
 
+  // Voice traits: learn "hmm", laughter and topics into the member's DHF, and
+  // answer repeat questions from their saved copy (no AI tokens).
+  let traitsContext = '';
+  try {
+    const pl = await import('@/lib/zoeParalanguage');
+    const cues = pl.detectUserCues(text);
+    const traits = await pl.loadVoiceTraits(options.userId);
+    traitsContext = pl.describeTraits(traits, cues);
+    void pl.recordVoiceTraits(text, options.userId).catch(() => {});
+    if (!options.skipRecall) {
+      const saved = await pl.frequentAnswer(text, options.userId);
+      if (saved) {
+        return { text: saved, sources: [], evolutionEvent: null, memorySource: 'frequent-answer', intent: classifyZoeIntent(text).intent, raw: { frequentAnswer: true } };
+      }
+    }
+  } catch { /* traits must never block a reply */ }
+
   let memoryContext = '';
   let memorySource: string | null = null;
   if (!options.skipRecall) {
