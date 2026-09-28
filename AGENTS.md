@@ -6,7 +6,10 @@
 - Protected routes wait for definitive auth initialization after the UX loading budget, because slow Safari/cellular session hydration must not redirect valid members.
 - Home orders due DHF, growth, social, Loop, and humor cards by their real scheduled timestamps, because fixed source blocks hide timely content.
 - All Zoe's LOL consumers share the global realtime multiplexer, because independent channels race during auth reloads and can take Home offline.
-- Liquid Universe detection stays outside the root boot tree and consumers use its optional fallback, because device enhancement must never be able to blank authentication or Home.- DHF card pictures are copied once into the dhf-compass bucket (Pollinations first, then the shared cascade) and served from storage, because provider outages must not blank cards.
+- Liquid Universe detection stays outside root boot; enhancement must never blank auth/Home.
+- DHF pictures are copied once into dhf-compass and served from storage, preventing provider outages from blanking cards.
 - Zoe orb drift updates Framer motion values without React state updates, and Zoe glass avoids live backdrop filters, because frame-by-frame tree repaints cause orb/chat flicker over Home.
 - Home menu panel uses a fixed warm surface without backdrop-filter, because live blur over the moving feed flickers.
 - DHF and LOL automatic speech offer candidates to one newest-generated selector, because separate announcers can speak multiple old cards.
+- Zoe listening uses authenticated Deepgram Nova streaming without browser speech recognition.
+- Exact repeat questions use each member's private DHF answer cache before AI recall.
