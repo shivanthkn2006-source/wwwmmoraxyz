@@ -23,7 +23,7 @@ async function postJson(url: string, body: unknown, headers: Record<string, stri
   const c = new AbortController(); const t = setTimeout(() => c.abort(), ms);
   try {
     const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify(body), signal: c.signal });
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    if (!r.ok) throw new Error(`HTTP ${r.status} ${(await r.text()).slice(0, 120)}`);
     return await r.json();
   } finally { clearTimeout(t); }
 }
@@ -50,8 +50,14 @@ const SF_TEXT = ['Qwen/Qwen2.5-7B-Instruct', 'THUDM/glm-4-9b-chat', 'deepseek-ai
 const SF_VISION = ['Qwen/Qwen2.5-VL-32B-Instruct', 'Qwen/Qwen2-VL-72B-Instruct'];
 const ZP_TEXT = ['glm-4-flash', 'glm-4-flash-250414'];
 const ZP_VISION = ['glm-4v-flash'];
-const SF_URL = 'https://api.siliconflow.cn/v1/chat/completions';
-const ZP_URL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
+// China and international hosts: a key only works on the site it was made on.
+const SF_HOSTS = ['https://api.siliconflow.cn/v1/chat/completions', 'https://api.siliconflow.com/v1/chat/completions'];
+const ZP_HOSTS = ['https://open.bigmodel.cn/api/paas/v4/chat/completions', 'https://api.z.ai/api/paas/v4/chat/completions'];
+async function tryHosts<T>(hosts: string[], run: (u: string) => Promise<T>): Promise<T> {
+  let last: unknown = null;
+  for (const h of hosts) { try { return await run(h); } catch (e) { last = e; } }
+  throw last ?? new Error('no_host');
+}
 const OR_VISION = ['qwen/qwen2.5-vl-72b-instruct:free', 'qwen/qwen2.5-vl-32b-instruct:free', 'moonshotai/kimi-vl-a3b-thinking:free', 'google/gemma-3-27b-it:free'];
 
 // ─── Part 2: vision ─────────────────────────────────────────────────────────
@@ -78,8 +84,8 @@ function visionProviders(dataUrl: string, forceFail = false): ProviderTask<any>[
     } },
     { name: 'groq-vision', execute: async () => { const k = env('GROQ_API_KEY'); if (!k) throw new Error('no_key'); const r = await vlm('https://api.groq.com/openai/v1/chat/completions', k, GROQ_VISION)(); return r ? parseVision(r) : null; } },
     { name: 'openrouter-free-vision', execute: async () => { const k = env('OPENROUTER_API_KEY'); if (!k) throw new Error('no_key'); const r = await vlm('https://openrouter.ai/api/v1/chat/completions', k, OR_VISION)(); return r ? parseVision(r) : null; } },
-    { name: 'siliconflow-qwen-vl', execute: async () => { const k = env('SILICONFLOW_API_KEY'); if (!k) throw new Error('no_key'); const r = await vlm(SF_URL, k, SF_VISION)(); return r ? parseVision(r) : null; } },
-    { name: 'zhipu-glm4v', execute: async () => { const k = env('ZHIPU_API_KEY'); if (!k) throw new Error('no_key'); const r = await vlm(ZP_URL, k, ZP_VISION)(); return r ? parseVision(r) : null; } },
+    { name: 'siliconflow-qwen-vl', execute: async () => { const k = env('SILICONFLOW_API_KEY'); if (!k) throw new Error('no_key'); const r = await tryHosts(SF_HOSTS, (u) => vlm(u, k, SF_VISION)()); return r ? parseVision(r) : null; } },
+    { name: 'zhipu-glm4v', execute: async () => { const k = env('ZHIPU_API_KEY'); if (!k) throw new Error('no_key'); const r = await tryHosts(ZP_HOSTS, (u) => vlm(u, k, ZP_VISION)()); return r ? parseVision(r) : null; } },
   ];
 }
 
@@ -118,8 +124,8 @@ function llmProviders(system: string, user: string, forceFail = false): Provider
     { name: 'groq', execute: async () => { if (forceFail) throw new Error('forced'); const k = env('GROQ_API_KEY'); if (!k) throw new Error('no_key'); return oai('https://api.groq.com/openai/v1/chat/completions', k, GROQ_TEXT)(); } },
     { name: 'openrouter-free', execute: async () => { const k = env('OPENROUTER_API_KEY'); if (!k) throw new Error('no_key'); return oai('https://openrouter.ai/api/v1/chat/completions', k, OR_TEXT)(); } },
     { name: 'nvidia', execute: async () => (await nvidiaChatByRole('chat', user, { systemPrompt: system, maxTokens: 700, timeoutMs: 15_000 }))?.content ?? null },
-    { name: 'siliconflow', execute: async () => { const k = env('SILICONFLOW_API_KEY'); if (!k) throw new Error('no_key'); return oai(SF_URL, k, SF_TEXT)(); } },
-    { name: 'zhipu', execute: async () => { const k = env('ZHIPU_API_KEY'); if (!k) throw new Error('no_key'); return oai(ZP_URL, k, ZP_TEXT)(); } },
+    { name: 'siliconflow', execute: async () => { const k = env('SILICONFLOW_API_KEY'); if (!k) throw new Error('no_key'); return tryHosts(SF_HOSTS, (u) => oai(u, k, SF_TEXT)()); } },
+    { name: 'zhipu', execute: async () => { const k = env('ZHIPU_API_KEY'); if (!k) throw new Error('no_key'); return tryHosts(ZP_HOSTS, (u) => oai(u, k, ZP_TEXT)()); } },
     { name: 'ollama', execute: async () => { const e = env('OLLAMA_ENDPOINT'); if (!e) throw new Error('no_key'); const d = await postJson(`${e.replace(/\/$/, '')}/api/chat`, { model: 'llama3.1', stream: false, messages: [{ role: 'system', content: system }, { role: 'user', content: user }] }, {}, 20_000); return d?.message?.content ?? null; } },
   ];
 }
