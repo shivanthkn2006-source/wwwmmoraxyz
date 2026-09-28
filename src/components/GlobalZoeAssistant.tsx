@@ -797,6 +797,37 @@ export const GlobalZoeAssistant = ({ config = DEFAULT_CONFIG }: { config?: Parti
     return () => window.removeEventListener('zoe-trigger-briefing', handleBriefingTrigger);
   }, [user?.id]);
 
+  // Sign-in greeting: once per sign-in session, after the first tap (audio
+  // unlock), Zoe reads new notifications, unread messages and the newest DHF
+  // card in one turn. It also starts the card cooldown so the same card is
+  // not announced again right after.
+  useEffect(() => {
+    const uid = user?.id;
+    if (!uid) return;
+    const run = async () => {
+      try {
+        const { buildSignInGreeting, greetingKey } = await import('@/lib/zoeSignInGreeting');
+        if (sessionStorage.getItem(greetingKey(uid))) return;
+        sessionStorage.setItem(greetingKey(uid), String(Date.now()));
+        const { isZoeMuted } = await import('@/features/zoe-handsfree/muteGate');
+        if (isZoeMuted()) return;
+        const text = await buildSignInGreeting(uid);
+        try { localStorage.setItem('mmora:latest-card-announcement:v1:at', String(Date.now())); } catch { /* ignore */ }
+        const { speakAsZoe } = await import('@/utils/zoeVoice');
+        window.dispatchEvent(new CustomEvent('zoe-handsfree-reply', { detail: { text } }));
+        void speakAsZoe(text);
+      } catch (err) {
+        console.warn('[GlobalZoe] sign-in greeting failed', err);
+      }
+    };
+    window.addEventListener('pointerdown', run, { once: true, passive: true });
+    window.addEventListener('keydown', run, { once: true });
+    return () => {
+      window.removeEventListener('pointerdown', run);
+      window.removeEventListener('keydown', run);
+    };
+  }, [user?.id]);
+
   // Track if we've already initialized to prevent loops
   const hasInitializedRef = useRef(false);
   const sessionKeyRef = useRef<string | null>(null);

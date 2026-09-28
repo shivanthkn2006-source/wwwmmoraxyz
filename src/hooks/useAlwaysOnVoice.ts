@@ -150,6 +150,19 @@ export const useAlwaysOnVoice = () => {
     // Deterministic platform actions ("Zoe, open chat", "Zoe, notifications",
     // "Zoe, send a message to Asha"). Anything else falls through to askZoe so
     // the answer stays natural and live-grounded instead of scripted.
+    // Weather / umbrella: answered directly from this device's location.
+    const { WEATHER_QUESTION, localWeatherLine } = await import('@/lib/zoeLocalWeather');
+    if (WEATHER_QUESTION.test(userText)) {
+      const line = await localWeatherLine(userText);
+      window.dispatchEvent(new CustomEvent('zoe-handsfree-reply', { detail: { text: line } }));
+      await recordVoiceTurn('assistant', line, user?.id);
+      setState((prev) => ({ ...prev, isProcessing: false, isSpeaking: true }));
+      await new Promise<void>((resolve) => { speakAsZoe(line, undefined, undefined, () => resolve(), () => resolve()); });
+      setState((prev) => ({ ...prev, isSpeaking: false }));
+      processingRef.current = false;
+      if (isEnabledRef.current) setTimeout(() => startListening(), 600);
+      return;
+    }
     const intent = resolveVoiceIntent(userText);
     if (intent) {
       let spoken = intent.speak;
