@@ -158,14 +158,23 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
   const chatVisionRef = useRef(chatVision);
   chatVisionRef.current = chatVision;
   // Looks questions ("what am I wearing?", "does this suit me?") get a fresh camera look first.
+  const lastLooksAskAt = useRef(0);
   const getFreshLook = useCallback(async (text: string): Promise<Record<string, unknown> | null> => {
-    if (!isZoeVisionPreferred() || !/\b(wear|wearing|outfit|look(s|ing)?|see|suit|shirt|t-shirt|cap|hat|dress|hair|face|behind me|in front of me|holding)\b/i.test(text)) return null;
+    if (!isZoeVisionPreferred()) return null;
+    const asksLooks = /\b(wear|wearing|outfit|look(s|ing)?|see|suit|shirt|t-shirt|cap|hat|dress|hair|face|behind me|in front of me|holding)\b/i.test(text);
+    // Short follow-ups ("no…", "look again", "now?") within 2 minutes of a looks question also get a fresh look.
+    const followUp = !asksLooks && Date.now() - lastLooksAskAt.current < 120_000 && text.trim().split(/\s+/).length <= 6;
+    if (!asksLooks && !followUp) return null;
+    lastLooksAskAt.current = Date.now();
     const fresh = await Promise.race([
       chatVisionRef.current.captureAndAnalyze().catch(() => null),
       new Promise<null>((r) => window.setTimeout(() => r(null), 16000)),
     ]);
     console.info('[ZoeVision] fresh look', fresh ? 'ok' : 'none', fresh?.summary?.slice(0, 80));
-    if (!fresh?.summary) return null;
+    if (!fresh?.summary) {
+      // Tell Zoe the camera really failed so she says so instead of asking for a photo.
+      return { visionActive: false, cameraEnabled: false, visualContext: { summary: 'CAMERA_UNAVAILABLE: my camera could not get a picture just now (permission blocked, camera busy or all vision services failed). Say that plainly and suggest checking camera access; do not ask for a photo.' } };
+    }
     return { visionActive: true, cameraEnabled: true, detectedEmotion: fresh.emotional_sentiment || 'neutral',
       visualContext: { scene: fresh.scene || '', objects: fresh.objects || [], summary: fresh.summary } };
   }, []);
