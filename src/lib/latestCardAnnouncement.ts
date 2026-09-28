@@ -1,4 +1,4 @@
-import { isUserVoiceActive } from '@/lib/zoeVoiceArbiter';
+import { currentVoiceChannel, isUserVoiceActive } from '@/lib/zoeVoiceArbiter';
 
 type LatestCardAnnouncement = {
   id: string;
