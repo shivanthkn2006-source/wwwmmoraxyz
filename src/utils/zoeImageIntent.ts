@@ -31,7 +31,8 @@ export const detectZoeImageIntent = (input: string): ZoeImageIntent => {
   const explicitImageRequest =
     (CREATE_ACTION.test(text) && IMAGE_NOUN.test(text)) ||
     /^\s*(image|imagine|draw|sketch|generate image|create image)\s*:/i.test(text);
-  const directIdentityScene = /\b(draw|sketch|paint|illustrate|render|show)\s+(?:a\s+)?(?:picture\s+of\s+)?(?:me|myself)\b/i.test(text);
+  const directIdentityScene = /\b(draw|sketch|paint|illustrate|render|show)\s+(?:a\s+)?(?:picture\s+of\s+)?(?:me|myself)\b/i.test(text)
+    || /\bshow\s+(?:me\s+)?(?:what|how)\s+i(?:'d|’d| would)?\s+look(?:s)?\s+(?:like\s+)?(?:in|as|at|on|with|inside)\b/i.test(text);
   const styledIdentityRequest = CREATE_ACTION.test(text) && (IDENTITY_STYLE.test(text) || directIdentityScene);
   const isUserIdentityRequest = USER_IDENTITY.test(text) && (explicitImageRequest || styledIdentityRequest);
   // "Zoe, what am I wearing?" / "does this look good on me?" is a camera question, never a Zoe portrait.
