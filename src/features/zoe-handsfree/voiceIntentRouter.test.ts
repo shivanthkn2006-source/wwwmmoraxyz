@@ -96,3 +96,13 @@ describe('assistant actions', () => {
     expect(resolveVoiceIntent('Zoe how is my week looking')).toBeNull();
   });
 });
+
+describe('device scan', () => {
+  it('routes "Zoe scan new device"', () => {
+    expect(resolveVoiceIntent('Zoe scan new device')?.kind).toBe('device-scan');
+    expect(resolveVoiceIntent('Zoe check my phone')?.kind).toBe('device-scan');
+  });
+  it('keeps god mode scan separate', () => {
+    expect(resolveVoiceIntent('Zoe run god mode scan')?.kind).toBe('god-scan');
+  });
+});
