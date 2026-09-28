@@ -26,12 +26,12 @@ function pcm16(input: Float32Array): ArrayBuffer {
   return output.buffer;
 }
 
-export function isDeepgramListeningSupported(): boolean {
+function isDeepgramStreamSupported(): boolean {
   return typeof window !== 'undefined' && typeof WebSocket !== 'undefined'
     && Boolean(navigator.mediaDevices?.getUserMedia) && typeof AudioContext !== 'undefined';
 }
 
-export function createDeepgramListener(options: DeepgramListeningOptions): DeepgramListener {
+function createDeepgramStream(options: DeepgramListeningOptions): DeepgramListener {
   let socket: WebSocket | null = null;
   let stream: MediaStream | null = null;
   let context: AudioContext | null = null;
@@ -80,7 +80,7 @@ export function createDeepgramListener(options: DeepgramListeningOptions): Deepg
 
   const start = async () => {
     if (active || socket) return;
-    if (!isDeepgramListeningSupported()) throw new Error('Deepgram listening is not supported on this device.');
+    if (!isDeepgramStreamSupported()) throw new Error('Deepgram listening is not supported on this device.');
     intentional = false;
     committed = '';
     delivered = '';
@@ -147,4 +147,103 @@ export function createDeepgramListener(options: DeepgramListeningOptions): Deepg
   };
 
   return { start, stop, abort: stop, get active() { return active; } };
+}
+/* ─────────────────────────────────────────────────────────────────────────────
+ * Free-first hybrid: the browser's built-in listening runs first (free).
+ * If it is missing or fails, Zoe switches to Deepgram for the rest of the
+ * session. Set localStorage 'zoe-listen-mode' = 'deepgram-first' to flip order.
+ * ──────────────────────────────────────────────────────────────────────────── */
+let browserBroken = false;
+const FATAL = new Set(['not-allowed', 'service-not-allowed', 'network', 'audio-capture', 'language-not-supported']);
+
+function browserRecognitionCtor(): any {
+  if (typeof window === 'undefined') return null;
+  return (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition || null;
+}
+
+function preferDeepgram(): boolean {
+  try { return localStorage.getItem('zoe-listen-mode') === 'deepgram-first'; } catch { return false; }
+}
+
+export function isDeepgramListeningSupported(): boolean {
+  return Boolean(browserRecognitionCtor()) || isDeepgramStreamSupported();
+}
+
+export function createDeepgramListener(options: DeepgramListeningOptions): DeepgramListener {
+  let inner: DeepgramListener | null = null;
+  let rec: any = null;
+  let active = false;
+  let intentional = false;
+  let switched = false;
+
+  const startDeepgram = async () => {
+    rec = null;
+    inner = createDeepgramStream(options);
+    await inner.start();
+    active = true;
+  };
+
+  const fallBack = async (reason: string) => {
+    if (switched || intentional) return;
+    switched = true;
+    browserBroken = true;
+    console.info('[ZoeListening] browser failed (' + reason + ') → Deepgram');
+    try { rec?.abort(); } catch { /* noop */ }
+    try { await startDeepgram(); } catch (e) { options.onError?.(e as Error); active = false; options.onEnd?.(); }
+  };
+
+  const startBrowser = (Ctor: any) => new Promise<void>((resolve, reject) => {
+    const r = new Ctor();
+    rec = r;
+    r.lang = 'en-US';
+    r.continuous = true;
+    r.interimResults = true;
+    let opened = false;
+    r.onstart = () => { opened = true; active = true; options.onStart?.(); resolve(); };
+    r.onresult = (event: any) => {
+      for (let i = event.resultIndex; i < event.results.length; i += 1) {
+        const text = String(event.results[i][0]?.transcript ?? '').trim();
+        if (text) options.onTranscript(text, Boolean(event.results[i].isFinal));
+      }
+    };
+    r.onerror = (event: any) => {
+      const code = String(event?.error ?? 'unknown');
+      if (FATAL.has(code) || !opened) {
+        if (!opened) reject(new Error(code)); else void fallBack(code);
+      }
+    };
+    r.onend = () => {
+      if (switched) return;
+      active = false;
+      if (!intentional) options.onEnd?.();
+    };
+    try { r.start(); } catch (e) { reject(e); }
+  });
+
+  const start = async () => {
+    if (active) return;
+    intentional = false;
+    switched = false;
+    const Ctor = browserRecognitionCtor();
+    if (!Ctor || browserBroken || preferDeepgram()) { switched = true; return startDeepgram(); }
+    try {
+      await startBrowser(Ctor);
+    } catch (e) {
+      switched = true;
+      browserBroken = true;
+      console.info('[ZoeListening] browser unavailable → Deepgram', e);
+      await startDeepgram();
+    }
+  };
+
+  const stop = () => {
+    intentional = true;
+    active = false;
+    try { rec?.stop(); } catch { /* noop */ }
+    rec = null;
+    inner?.stop();
+    inner = null;
+  };
+
+  return { start, stop, abort: stop, get active() { return inner ? inner.active : active; } };
 }
