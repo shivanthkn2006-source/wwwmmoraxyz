@@ -10533,6 +10533,39 @@ export type Database = {
         }
         Relationships: []
       }
+      zoe_frequent_answers: {
+        Row: {
+          answer: string
+          created_at: string
+          hits: number
+          id: string
+          last_used_at: string
+          question: string
+          question_key: string
+          user_id: string
+        }
+        Insert: {
+          answer: string
+          created_at?: string
+          hits?: number
+          id?: string
+          last_used_at?: string
+          question: string
+          question_key: string
+          user_id: string
+        }
+        Update: {
+          answer?: string
+          created_at?: string
+          hits?: number
+          id?: string
+          last_used_at?: string
+          question?: string
+          question_key?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       zoe_genesis_memory: {
         Row: {
           age: number | null
@@ -12599,6 +12632,27 @@ export type Database = {
           mood?: string | null
           provider?: string | null
           summary?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      zoe_voice_traits: {
+        Row: {
+          cues: Json
+          topics: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cues?: Json
+          topics?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cues?: Json
+          topics?: Json
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
