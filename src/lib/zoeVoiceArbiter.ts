@@ -16,15 +16,19 @@ export type VoiceChannel = 'search' | 'chat' | 'narration' | 'notification' | 'a
 /** Channels driven by a direct user action — they always win the floor. */
 const USER_CHANNELS: ReadonlySet<VoiceChannel> = new Set<VoiceChannel>(['search', 'chat', 'assistant']);
 
-const stoppers = new Map<VoiceChannel, () => void>();
+const stoppers = new Map<VoiceChannel, Set<() => void>>();
 let holder: VoiceChannel | null = null;
 
 /** Register how a channel silences itself when another channel takes over. */
 export function registerVoiceChannel(channel: VoiceChannel, stop: () => void): () => void {
-  stoppers.set(channel, stop);
+  // Several surfaces share a channel (DHF + LOL both narrate), so every
+  // registered stopper must run — a single slot silently dropped one.
+  const set = stoppers.get(channel) ?? new Set<() => void>();
+  set.add(stop);
+  stoppers.set(channel, set);
   return () => {
-    if (stoppers.get(channel) === stop) stoppers.delete(channel);
-    if (holder === channel) holder = null;
+    set.delete(stop);
+    if (!set.size) stoppers.delete(channel);
   };
 }
 
@@ -49,12 +53,14 @@ export function isUserVoiceActive(): boolean {
 export function claimVoice(channel: VoiceChannel, options?: { ambient?: boolean }): boolean {
   if (options?.ambient && holder && holder !== channel && USER_CHANNELS.has(holder)) return false;
 
-  for (const [other, stop] of stoppers) {
+  for (const [other, set] of stoppers) {
     if (other === channel) continue;
-    try {
-      stop();
-    } catch {
-      /* a broken stopper must never block the new speaker */
+    for (const stop of set) {
+      try {
+        stop();
+      } catch {
+        /* a broken stopper must never block the new speaker */
+      }
     }
   }
   holder = channel;
@@ -68,11 +74,13 @@ export function releaseVoice(channel: VoiceChannel): void {
 
 /** Silence every channel (e.g. the user starts typing a new query). */
 export function silenceAllVoices(): void {
-  for (const stop of stoppers.values()) {
-    try {
-      stop();
-    } catch {
-      /* ignore */
+  for (const set of stoppers.values()) {
+    for (const stop of set) {
+      try {
+        stop();
+      } catch {
+        /* ignore */
+      }
     }
   }
   holder = null;

@@ -233,6 +233,14 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
   // Location is never requested merely because Home/search rendered. Location-
   // aware features must be activated by their own explicit user control.
   const coordsRef = React.useRef<{ lat: number; lon: number } | null>(null);
+  React.useEffect(() => {
+    if (!searchOpen) return;
+    // Only reuse a location the member already granted — never prompt here.
+    void import('@/utils/sharedGeolocation').then(async ({ getGrantedCoords }) => {
+      const c = await getGrantedCoords();
+      if (c) coordsRef.current = { lat: c.lat, lon: c.lng };
+    });
+  }, [searchOpen]);
 
   React.useEffect(() => {
     const term = query.trim();
