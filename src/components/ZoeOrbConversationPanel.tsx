@@ -33,6 +33,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { recallZoeMemory, rememberZoeRound, rememberZoeQuestion } from '@/services/zoeMemoryBridge';
 import { askZoe } from '@/services/zoeEngine';
+import { suggestZoeActions } from '@/lib/zoeActions';
 
 import { speakAsZoe, stopZoeSpeech, isZoeSpeaking, initializeZoeVoices, replayAsZoe, pauseZoeSpeech, resumeZoeSpeech } from '@/utils/zoeVoice';
 import { isZoeInfinityMessage, stripZoeInfinityMarker } from '@/utils/conversationNamespaces';
@@ -4302,9 +4303,9 @@ Want me to dive deeper into any aspect?`;
                   </div>
 
                   {/* Zoe action chips — tapping opens the page inside M'Mora */}
-                  {msg.role === 'zoe' && ((msg as any).actions?.length > 0) && (
+                  {msg.role === 'zoe' && messages[index - 1]?.role === 'user' && suggestZoeActions(messages[index - 1].content).length > 0 && (
                     <div className="mt-1 flex flex-wrap gap-1.5">
-                      {((msg as any).actions as { label: string; path: string }[]).map((a) => (
+                      {suggestZoeActions(messages[index - 1].content).map((a) => (
                         <button
                           key={a.path}
                           type="button"
