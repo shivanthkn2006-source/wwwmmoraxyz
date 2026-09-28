@@ -116,7 +116,7 @@ async function buildReport(admin: any, user: any, tz: string) {
   };
   const snapshot = { name: prof?.display_name ?? null, gender: prof?.gender ?? null, ...birth, birth_place: prof?.birth_place ?? null };
   const { error } = await admin.from('zoe_life_reports').upsert({
-    user_id: user.id, sections, birth_snapshot: snapshot, engine: 'vimshottari-dasha+swiss-ephemeris', generated_at: now.toISOString(),
+    user_id: user.id, sections, birth_snapshot: snapshot, engine: null, generated_at: now.toISOString(),
   }, { onConflict: 'user_id' });
   if (error) return { saved: false, reason: error.message };
   const { data: role } = await admin.from('user_roles').select('role').eq('user_id', user.id).eq('role', 'admin').maybeSingle();
