@@ -34,7 +34,7 @@ export const detectZoeImageIntent = (input: string): ZoeImageIntent => {
   const directIdentityScene = /\b(draw|sketch|paint|illustrate|render|show)\s+(?:a\s+)?(?:picture\s+of\s+)?(?:me|myself)\b/i.test(text)
     || /\bshow\s+(?:me\s+)?(?:what|how)\s+i(?:'d|’d| would)?\s+look(?:s)?\s+(?:like\s+)?(?:in|as|at|on|with|inside)\b/i.test(text);
   const styledIdentityRequest = CREATE_ACTION.test(text) && (IDENTITY_STYLE.test(text) || directIdentityScene);
-  const isUserIdentityRequest = USER_IDENTITY.test(text) && (explicitImageRequest || styledIdentityRequest);
+  const isUserIdentityRequest = (USER_IDENTITY.test(text) && (explicitImageRequest || styledIdentityRequest)) || directIdentityScene;
   // "Zoe, what am I wearing?" / "does this look good on me?" is a camera question, never a Zoe portrait.
   const asksAboutMember = /\b(am i|i am|i'm|me|my|mine|myself)\b/i.test(text) || (/^\s*(zoe[,\s]+)?(what|how|does|do|is|can you see)\b/i.test(text) && !CREATE_ACTION.test(text));
   const zoeAppearanceRequest = ZOE_IDENTITY.test(text) && ZOE_APPEARANCE_CHANGE.test(text) && !asksAboutMember;
