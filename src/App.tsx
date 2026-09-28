@@ -1467,7 +1467,8 @@ const App = () => {
                       <Sonner />
                       <InstallPrompt />
                       <GuardianInterventionOverlay />
-                      <CameraActiveIndicator position="top-right" minimal={false} />
+                      {/* Tucked behind the M'Mora logo (top-left, below its layer) so it never covers the profile photo. */}
+                      <CameraActiveIndicator position="top-left" minimal className="!z-0 opacity-0" />
                       <Suspense fallback={null}>
                         <OfflineModeOverlay />
                       </Suspense>
