@@ -1,8 +1,5 @@
 project_id = "qwufiqkeoyvqasimcmbd"
 
-[functions.edge-tts]
-verify_jwt = false
-
 [functions.analyze-youtube]
 verify_jwt = true
 
@@ -290,9 +287,6 @@ verify_jwt = true
 
 [functions.zoe-infinity-vision]
 verify_jwt = true
-
-[functions.zoe-voice]
-verify_jwt = false
 
 [functions.zoe-auto-mail-generator]
 verify_jwt = false
