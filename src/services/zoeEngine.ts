@@ -168,7 +168,23 @@ export async function askZoe(options: AskZoeOptions): Promise<AskZoeResult> {
   if (error) throw new Error(error.message || 'Zoe backend failed');
 
   // Second net: scratchpad tags and raw metacognition envelopes never reach a bubble or Deepgram.
-  const baseReply = stripScratchpad(String(data?.message || data?.response || ''));
+  let baseReply = stripScratchpad(String(data?.message || data?.response || ''));
+
+  // Thinking layer: Zoe privately checks her draft before it is shown or spoken.
+  // Bounded wait; on timeout or failure the original draft is kept.
+  if (baseReply && !options.skipRecall) {
+    try {
+      const r: any = await Promise.race([
+        supabase.functions.invoke('zoe-sovereign', { body: { action: 'review', message: text, draft: baseReply, research: researchContext } }),
+        new Promise((res) => window.setTimeout(() => res(null), 7000)),
+      ]);
+      const checked = r?.data?.success ? stripScratchpad(String(r.data.reply || '')) : '';
+      if (checked) {
+        baseReply = checked;
+        if (data && typeof data === 'object') { data.message = checked; if ('response' in data) data.response = checked; data.zoeReviewed = r.data.changed ? 'revised' : 'approved'; }
+      }
+    } catch { /* never block a reply */ }
+  }
 
   // GETTING TO KNOW YOU — once a conversation is actually running, Zoe adds one
   // small question about tastes, allergies or habits, and remembers the answer
