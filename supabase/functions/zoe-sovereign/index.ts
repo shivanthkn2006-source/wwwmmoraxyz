@@ -11,6 +11,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import { executeWithFallback, breakerState, type ProviderTask } from '../_shared/circuit-breaker.ts';
 import { nvidiaVision, nvidiaChatByRole } from '../_shared/nvidia-provider.ts';
+import { publicGuard } from '../_shared/public-guard.ts';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -174,6 +175,8 @@ async function think(message: string, vision: any, research: Hit[] | null, name:
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
+  const guard = await publicGuard(req, { name: 'zoe-sovereign', limit: 30, windowSeconds: 60 });
+  if (guard.response) return guard.response;
   try {
     const auth = req.headers.get('Authorization') ?? '';
     const sb = createClient(env('SUPABASE_URL'), env('SUPABASE_ANON_KEY'), { global: { headers: { Authorization: auth } } });
