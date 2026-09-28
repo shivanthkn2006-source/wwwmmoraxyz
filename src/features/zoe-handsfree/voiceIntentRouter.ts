@@ -18,7 +18,6 @@ export type VoiceIntent =
   | { kind: 'orb-chat'; speak: string }
   | { kind: 'message'; recipient: string; body?: string; speak: string }
   | { kind: 'god-scan'; speak: string }
-  | { kind: 'device-scan'; speak: string }
   | { kind: 'search'; query: string; speak: string }
   | { kind: 'resume'; speak: string }
   | { kind: 'asset-3d'; prompt: string; speak: string }
@@ -139,11 +138,6 @@ export function resolveVoiceIntent(rawText: string): VoiceIntent | null {
   // source-attributed weather/news while Zoe speaks the resulting synthesis.
   if (/\b(weather|forecast|temperature|rain|humidity|headlines?|breaking news|latest news|news today|current news)\b/.test(text)) {
     return { kind: 'search', query: text, speak: 'Checking live sources now.' };
-  }
-
-  // "Zoe scan new device" / "scan my device" / "check my device"
-  if (!/\bgod\b/.test(text) && /\b(scan|check)\b/.test(text) && /\b(device|phone|laptop|computer|hardware|tablet)\b/.test(text)) {
-    return { kind: 'device-scan', speak: 'Scanning this device now.' };
   }
 
   // "run god mode scan" — staff only. The page and the edge function both
