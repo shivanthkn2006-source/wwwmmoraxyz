@@ -109,7 +109,7 @@ export const ZoeCardNarrationProvider: React.FC<{ children: React.ReactNode }> =
               markNarratedCard(user.id, latestDhf.id);
               setState({ activeId: latestDhf.id, paused: false });
               await new Promise<void>((resolve) => {
-                void speakAsZoe(latestDhf.text, { messageId: `card:${latestDhf.id}` }, undefined, resolve, resolve);
+                void speakAsZoe(latestDhf.text, { messageId: `card:${latestDhf.id}`, channel: 'narration' }, undefined, resolve, resolve);
               });
               releaseVoice('narration');
               setState({ activeId: null, paused: false });
@@ -118,20 +118,9 @@ export const ZoeCardNarrationProvider: React.FC<{ children: React.ReactNode }> =
           });
         }
         unlockLatestCardAnnouncement();
-        const daily = all
-          .filter((item) => item.kind === 'growth')
-          .sort((a, b) => a.order - b.order);
-        for (const item of [welcome, ...daily]) {
-          if (queueToken.current !== token) return;
-          if (hasNarratedCard(user.id, item.id)) continue;
-          // Stop the daily queue the moment the user starts talking to Zoe
-          // somewhere else (search, chat) — one voice at a time.
-          if (!claimVoice('narration', { ambient: true })) return;
-          markNarratedCard(user.id, item.id);
-          setState({ activeId: item.id, paused: false });
-          await new Promise<void>((resolve) => { void speakAsZoe(item.text, { messageId: `card:${item.id}` }, undefined, resolve, resolve); });
-          releaseVoice('narration');
-        }
+        // Only the newest generated card is ever spoken automatically. The old
+        // welcome + growth queue read every card and collided with chats.
+        void welcome;
         if (queueToken.current === token) setState({ activeId: null, paused: false });
 
       };

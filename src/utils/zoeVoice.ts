@@ -322,6 +322,8 @@ const cleanText = (text: string): string => {
 export interface ZoeSpeakOptions {
   /** Message id used to sync the teleprompter highlight in the chat UI. */
   messageId?: string;
+  /** Voice channel; ambient card narration passes 'narration'. Default 'chat'. */
+  channel?: 'chat' | 'narration';
 }
 
 /**
@@ -345,12 +347,19 @@ export const speakAsZoe = async (
     return;
   }
   
+  const channel: 'chat' | 'narration' = options?.channel === 'narration' ? 'narration' : 'chat';
+  // Ambient narration never interrupts Zoe talking with the member.
+  if (channel === 'narration' && !claimVoice('narration', { ambient: true })) {
+    onEnd?.();
+    return;
+  }
+
   // Stop any current speech
   stopZoeSpeech();
 
   // One voice at a time: Zoe's chat/orb reply is user-driven, so it takes the
   // floor and silences ambient growth/card narration instantly.
-  claimVoice('chat');
+  if (channel === 'chat') claimVoice('chat');
 
   const messageId: string | undefined = options?.messageId;
   const handleStart = () => {
@@ -359,12 +368,12 @@ export const speakAsZoe = async (
   };
   const handleEnd = () => {
     if (messageId) endSpokenSession(messageId);
-    releaseVoice('chat');
+    releaseVoice(channel);
     onEnd?.();
   };
   const handleError = (err?: any) => {
     if (messageId) endSpokenSession(messageId);
-    releaseVoice('chat');
+    releaseVoice(channel);
     onError?.(err);
   };
   

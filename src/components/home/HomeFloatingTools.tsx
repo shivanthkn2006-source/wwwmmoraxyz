@@ -135,7 +135,34 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
       if (term === lastTerm && Date.now() - lastAt < 15_000) return;
       lastTerm = term;
       lastAt = Date.now();
-      spokenSearchRef.current = speak ? term : null;
+      const isWeather = /\b(weather|temperature|forecast|rain|humid|sunny|cloudy)\b/i.test(term);
+      spokenSearchRef.current = speak && !isWeather ? term : null;
+      if (speak && isWeather) {
+        // Answer weather from the member's own device location, never the
+        // server's region, and always say it out loud (Deepgram).
+        void (async () => {
+          const [{ getGrantedCoords, getSharedCoords }, { getWeatherInfo }, { speakAsZoe }] = await Promise.all([
+            import('@/utils/sharedGeolocation'),
+            import('@/utils/weatherHelpers'),
+            import('@/utils/zoeVoice'),
+          ]);
+          let coords = await getGrantedCoords();
+          if (!coords) {
+            const fix = await getSharedCoords();
+            coords = (await getGrantedCoords()) ?? null;
+            if (!coords && fix) coords = null;
+          }
+          if (!coords) {
+            void speakAsZoe("I can't reach your location yet. Please allow location for M'Mora and ask me again.");
+            return;
+          }
+          coordsRef.current = { lat: coords.lat, lon: coords.lng };
+          const weather = await getWeatherInfo(coords.lat, coords.lng);
+          void speakAsZoe(weather
+            ? `Right now in ${weather.location} it's ${weather.temperature} degrees with ${weather.condition}.`
+            : "I couldn't fetch the weather just now. Please try again in a moment.");
+        })();
+      }
       onQueryChange(term);
       // Query state first triggers the normal reset effect. Start retrieval on
       // the next task so that reset cannot invalidate this voice-request run.
@@ -206,6 +233,14 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
   // Location is never requested merely because Home/search rendered. Location-
   // aware features must be activated by their own explicit user control.
   const coordsRef = React.useRef<{ lat: number; lon: number } | null>(null);
+  React.useEffect(() => {
+    if (!searchOpen) return;
+    // Only reuse a location the member already granted — never prompt here.
+    void import('@/utils/sharedGeolocation').then(async ({ getGrantedCoords }) => {
+      const c = await getGrantedCoords();
+      if (c) coordsRef.current = { lat: c.lat, lon: c.lng };
+    });
+  }, [searchOpen]);
 
   React.useEffect(() => {
     const term = query.trim();
@@ -415,9 +450,8 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
   const dropdownMaxHeight = Math.max(180, viewport.h - dropdownTop - 16);
 
 
-  /** Cyber-Night glass: real transparency + blur, never a solid panel. */
-  const glassSurface =
-    'border border-white/15 bg-white/[0.06] shadow-[0_8px_40px_-12px_rgba(0,0,0,0.8)] backdrop-blur-2xl backdrop-saturate-150 supports-[backdrop-filter]:bg-white/[0.06]';
+  /** Same steady warm tan surface as Zoe's window — no live blur (flicker). */
+  const glassSurface = 'zoe-orb-stable-glass border-0 shadow-[0_8px_40px_-12px_rgba(0,0,0,0.6)]';
 
   return (
     <>

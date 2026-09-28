@@ -1,3 +1,5 @@
+import { isUserVoiceActive } from '@/lib/zoeVoiceArbiter';
+
 type LatestCardAnnouncement = {
   id: string;
   generatedAt: number;
@@ -30,9 +32,17 @@ function schedule() {
       null,
     );
     if (!latest || latest.id === lastAnnouncedId()) return;
+    // Never start while the member is talking with Zoe, and at most one
+    // automatic card per 10 minutes so cards can't chain into a queue.
+    let lastAt = 0;
+    try { lastAt = Number(window.localStorage.getItem(STORAGE_KEY + ':at') || 0); } catch { /* ignore */ }
+    if (isUserVoiceActive() || Date.now() - lastAt < 10 * 60_000) return;
     running = true;
     try {
-      if (await latest.announce()) remember(latest.id);
+      if (await latest.announce()) {
+        remember(latest.id);
+        try { window.localStorage.setItem(STORAGE_KEY + ':at', String(Date.now())); } catch { /* ignore */ }
+      }
     } finally {
       running = false;
     }
