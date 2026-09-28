@@ -167,7 +167,7 @@ Deno.serve(async (req) => {
     const { data: u } = await sb.auth.getUser();
     const body = await req.json().catch(() => ({}));
     const action = String(body.action ?? '');
-    if (!u?.user && action !== 'selftest' && action !== 'keycheck') return json({ error: 'unauthorized' }, 401);
+    if (!u?.user && action !== 'selftest') return json({ error: 'unauthorized' }, 401);
     const name = String(body.name ?? u?.user?.user_metadata?.full_name ?? 'friend').split(' ')[0];
 
     if (action === 'vision') {
