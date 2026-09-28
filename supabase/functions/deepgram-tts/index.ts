@@ -79,8 +79,10 @@ serve(async (req) => {
     }
 
     // ─── MODEL ALLOWLIST: prevent arbitrary model strings ───
-    const ALLOWED_MODELS = new Set(['aura-2-janus-en', 'aura-2-orion-en']);
+    const ALLOWED_MODELS = new Set(['aura-2-janus-en', 'aura-2-orion-en', 'aura-asteria-en']);
     const safeModel = ALLOWED_MODELS.has(model) ? model : 'aura-2-janus-en';
+    // Priority 2: if Aura 2 fails, Deepgram's Aura 1 voice keeps Zoe speaking.
+    const FALLBACK_MODEL = 'aura-asteria-en';
 
     // Sanitize: strip emoji, lone surrogates, and control chars that Deepgram rejects.
     // Deepgram's JSON parser fails on non-BMP / pictographic characters in some cases.
@@ -102,8 +104,17 @@ serve(async (req) => {
 
     console.log(`[Deepgram TTS] Synthesizing with model=${safeModel}, text length=${text.length}`);
 
-    const audioBuffer = await callDeepgramWithRetry(text, safeModel, DEEPGRAM_API_KEY);
-    console.log(`[Deepgram TTS] Success: ${audioBuffer.byteLength} bytes`);
+    let audioBuffer: ArrayBuffer;
+    let usedModel = safeModel;
+    try {
+      audioBuffer = await callDeepgramWithRetry(text, safeModel, DEEPGRAM_API_KEY);
+    } catch (primaryErr) {
+      if (safeModel === FALLBACK_MODEL) throw primaryErr;
+      console.warn(`[Deepgram TTS] ${safeModel} failed, falling back to ${FALLBACK_MODEL}:`, primaryErr);
+      usedModel = FALLBACK_MODEL;
+      audioBuffer = await callDeepgramWithRetry(text, FALLBACK_MODEL, DEEPGRAM_API_KEY);
+    }
+    console.log(`[Deepgram TTS] Success (${usedModel}): ${audioBuffer.byteLength} bytes`);
 
     return new Response(audioBuffer, {
       status: 200,
