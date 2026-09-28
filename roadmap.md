@@ -82,3 +82,5 @@
 - [ ] SiliconFlow: account balance empty; Zhipu vision: no free balance
 - [ ] Groq/OpenRouter model list outdated (404s)
 - [ ] Answer check often exceeds its 11s wait on long replies
+
+- [ ] Profile page: one form for name, gender, birth date/time/place, location, email; on save build + store ephemeris-based life report (tomorrow/month/year, love, career) answered by Zoe via Deepgram; hide data sources from everyone except @moksh50
