@@ -2457,11 +2457,12 @@ Want me to dive deeper into any aspect?`;
           try {
             // Looks questions ("what am I wearing?", "does this suit me?") get a fresh camera look first.
             let freshVision: Record<string, unknown> | null = null;
-            if (chatVision.isEnabled && /\b(wear|wearing|outfit|look(s|ing)?|see|suit|shirt|t-shirt|cap|hat|dress|hair|face|behind me|in front of me|holding)\b/i.test(messageContent)) {
+            if (isZoeVisionPreferred() && /\b(wear|wearing|outfit|look(s|ing)?|see|suit|shirt|t-shirt|cap|hat|dress|hair|face|behind me|in front of me|holding)\b/i.test(messageContent)) {
               const fresh = await Promise.race([
                 chatVision.captureAndAnalyze().catch(() => null),
                 new Promise<null>((r) => window.setTimeout(() => r(null), 7000)),
               ]);
+              console.info('[ZoeVision] fresh look', fresh ? 'ok' : 'none', fresh?.summary?.slice(0, 80));
               if (fresh?.summary) {
                 freshVision = { visionActive: true, cameraEnabled: true, detectedEmotion: fresh.emotional_sentiment || 'neutral',
                   visualContext: { scene: fresh.scene || '', objects: fresh.objects || [], summary: fresh.summary } };
