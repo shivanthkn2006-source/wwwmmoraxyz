@@ -84,3 +84,6 @@
 - [ ] Answer check often exceeds its 11s wait on long replies
 
 - [ ] Profile page: one form for name, gender, birth date/time/place, location, email; on save build + store ephemeris-based life report (tomorrow/month/year, love, career) answered by Zoe via Deepgram; hide data sources from everyone except @moksh50
+- [x] Sign-in greeting (notifications, messages, newest DHF card) — built, not heard signed-in
+- [x] Voice weather/umbrella from device location — verified with Mumbai test location
+- [ ] Vision journal: periodic camera looks saved to DHF so Zoe can answer "what was I doing" (not started)
