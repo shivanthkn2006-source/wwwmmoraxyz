@@ -1193,6 +1193,21 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
       }
     }
 
+    // ═══ ZOE ACTIONS ("Zoe open my DHF calendar") — spoken or typed ═══
+    if (messagingMode === 'zoe' && !hasPendingMedia) {
+      const { detectZoeAction } = await import('@/lib/zoeActions');
+      const path = detectZoeAction(textToSend);
+      if (path) {
+        setMessages(prev => [...prev,
+          { id: `u-${Date.now()}`, role: 'user', content: textToSend.trim(), timestamp: new Date() } as any,
+          { id: `z-${Date.now()}`, role: 'assistant', content: 'Opening it for you now.', timestamp: new Date() } as any,
+        ]);
+        setInput('');
+        navigate(path);
+        return;
+      }
+    }
+
     // ═══ ZOE DECORATOR INTENT (self-contained feature) ═══
     if (messagingMode === 'zoe' && !hasPendingMedia) {
       try {

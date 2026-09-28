@@ -32,7 +32,20 @@ async function getJson(url: string, ms = 8_000) {
   try { const r = await fetch(url, { signal: c.signal }); if (!r.ok) throw new Error(`HTTP ${r.status}`); return await r.json(); }
   finally { clearTimeout(t); }
 }
+async function firstModel(url: string, key: string, models: string[], build: (m: string) => unknown, ms = 15_000) {
+  let last = 'no_model';
+  for (const m of models) {
+    try { const c = chatContent(await postJson(url, build(m), { Authorization: `Bearer ${key}` }, ms)); if (c) return c; } catch (e) { last = String((e as Error).message); }
+  }
+  throw new Error(last);
+}
 const chatContent = (d: any) => { const s = d?.choices?.[0]?.message?.content; return typeof s === 'string' && s.trim() ? s : null; };
+
+// Chinese open models lead each list (Qwen, DeepSeek, Kimi, GLM); free tiers only.
+const GROQ_TEXT = ['qwen/qwen3-32b', 'moonshotai/kimi-k2-instruct-0905', 'moonshotai/kimi-k2-instruct', 'llama-3.3-70b-versatile'];
+const OR_TEXT = ['deepseek/deepseek-chat-v3.1:free', 'qwen/qwen3-235b-a22b:free', 'z-ai/glm-4.5-air:free', 'moonshotai/kimi-k2:free', 'deepseek/deepseek-r1-0528:free'];
+const GROQ_VISION = ['meta-llama/llama-4-scout-17b-16e-instruct', 'meta-llama/llama-4-maverick-17b-128e-instruct'];
+const OR_VISION = ['qwen/qwen2.5-vl-72b-instruct:free', 'qwen/qwen2.5-vl-32b-instruct:free', 'moonshotai/kimi-vl-a3b-thinking:free', 'google/gemma-3-27b-it:free'];
 
 // ─── Part 2: vision ─────────────────────────────────────────────────────────
 const VISION_PROMPT = 'You are Zoe\'s eyes. Look at this camera frame of the member. Reply ONLY JSON: {"objects":[...],"attire":"what they wear, colours","scene":"short","mood":"neutral|happy|tired|sad|focused","lighting":"optimal|low|harsh","summary":"one friendly sentence"}';
@@ -43,8 +56,8 @@ function parseVision(raw: string) {
 }
 function visionProviders(dataUrl: string, forceFail = false): ProviderTask<any>[] {
   const b64 = dataUrl.split(',')[1] ?? '';
-  const vlm = (url: string, key: string, model: string) => async () =>
-    chatContent(await postJson(url, { model, temperature: 0.2, max_tokens: 400, messages: [{ role: 'user', content: [{ type: 'text', text: VISION_PROMPT }, { type: 'image_url', image_url: { url: dataUrl } }] }] }, { Authorization: `Bearer ${key}` }));
+  const vlm = (url: string, key: string, models: string[]) => () =>
+    firstModel(url, key, models, (model) => ({ model, temperature: 0.2, max_tokens: 400, messages: [{ role: 'user', content: [{ type: 'text', text: VISION_PROMPT }, { type: 'image_url', image_url: { url: dataUrl } }] }] }));
   return [
     { name: 'nvidia-vision', execute: async () => { if (forceFail) throw new Error('forced'); if (!env('NVIDIA_API_KEY')) throw new Error('no_key'); const r = await nvidiaVision(dataUrl, VISION_PROMPT, { timeoutMs: 9000, maxTokens: 400 }); return r ? parseVision(r) : null; } },
     { name: 'google-vision', execute: async () => {
@@ -56,8 +69,8 @@ function visionProviders(dataUrl: string, forceFail = false): ProviderTask<any>[
       const mood = f ? (lk(f.joyLikelihood) ? 'happy' : lk(f.sorrowLikelihood) ? 'sad' : 'neutral') : 'neutral';
       return { objects, attire: objects.filter((o: string) => /shirt|cap|hat|jacket|dress|glasses|top|sleeve|collar|hood/i.test(o)).join(', '), scene: objects.slice(0, 3).join(', '), mood, lighting: f && lk(f.underExposedLikelihood) ? 'low' : 'optimal', summary: `I can see ${objects.slice(0, 4).join(', ')}.` };
     } },
-    { name: 'groq-vision', execute: async () => { const k = env('GROQ_API_KEY'); if (!k) throw new Error('no_key'); const r = await vlm('https://api.groq.com/openai/v1/chat/completions', k, 'meta-llama/llama-4-scout-17b-16e-instruct')(); return r ? parseVision(r) : null; } },
-    { name: 'openrouter-free-vision', execute: async () => { const k = env('OPENROUTER_API_KEY'); if (!k) throw new Error('no_key'); const r = await vlm('https://openrouter.ai/api/v1/chat/completions', k, 'google/gemma-3-27b-it:free')(); return r ? parseVision(r) : null; } },
+    { name: 'groq-vision', execute: async () => { const k = env('GROQ_API_KEY'); if (!k) throw new Error('no_key'); const r = await vlm('https://api.groq.com/openai/v1/chat/completions', k, GROQ_VISION)(); return r ? parseVision(r) : null; } },
+    { name: 'openrouter-free-vision', execute: async () => { const k = env('OPENROUTER_API_KEY'); if (!k) throw new Error('no_key'); const r = await vlm('https://openrouter.ai/api/v1/chat/completions', k, OR_VISION)(); return r ? parseVision(r) : null; } },
   ];
 }
 
@@ -91,10 +104,10 @@ function researchProviders(q: string, forceFail = false): ProviderTask<Hit[]>[] 
 
 // ─── Part 4: dual-track brain ───────────────────────────────────────────────
 function llmProviders(system: string, user: string, forceFail = false): ProviderTask<string>[] {
-  const oai = (url: string, key: string, model: string) => async () => chatContent(await postJson(url, { model, temperature: 0.4, max_tokens: 700, messages: [{ role: 'system', content: system }, { role: 'user', content: user }] }, { Authorization: `Bearer ${key}` }, 15_000));
+  const oai = (url: string, key: string, models: string[]) => () => firstModel(url, key, models, (model) => ({ model, temperature: 0.4, max_tokens: 700, messages: [{ role: 'system', content: system }, { role: 'user', content: user }] }));
   return [
-    { name: 'groq', execute: async () => { if (forceFail) throw new Error('forced'); const k = env('GROQ_API_KEY'); if (!k) throw new Error('no_key'); return oai('https://api.groq.com/openai/v1/chat/completions', k, 'llama-3.3-70b-versatile')(); } },
-    { name: 'openrouter-free', execute: async () => { const k = env('OPENROUTER_API_KEY'); if (!k) throw new Error('no_key'); return oai('https://openrouter.ai/api/v1/chat/completions', k, 'deepseek/deepseek-chat-v3-0324:free')(); } },
+    { name: 'groq', execute: async () => { if (forceFail) throw new Error('forced'); const k = env('GROQ_API_KEY'); if (!k) throw new Error('no_key'); return oai('https://api.groq.com/openai/v1/chat/completions', k, GROQ_TEXT)(); } },
+    { name: 'openrouter-free', execute: async () => { const k = env('OPENROUTER_API_KEY'); if (!k) throw new Error('no_key'); return oai('https://openrouter.ai/api/v1/chat/completions', k, OR_TEXT)(); } },
     { name: 'nvidia', execute: async () => (await nvidiaChatByRole('chat', user, { systemPrompt: system, maxTokens: 700, timeoutMs: 15_000 }))?.content ?? null },
     { name: 'ollama', execute: async () => { const e = env('OLLAMA_ENDPOINT'); if (!e) throw new Error('no_key'); const d = await postJson(`${e.replace(/\/$/, '')}/api/chat`, { model: 'llama3.1', stream: false, messages: [{ role: 'system', content: system }, { role: 'user', content: user }] }, {}, 20_000); return d?.message?.content ?? null; } },
   ];
@@ -178,8 +191,10 @@ Deno.serve(async (req) => {
         executeWithFallback(researchProviders('Deepgram text to speech', true), 9_000),
         executeWithFallback(llmProviders('Reply with the single word OK.', 'ping', true), 15_000),
       ]);
+      const realQ = String(body.query ?? '');
+      const real = realQ ? await executeWithFallback(researchProviders(realQ), 9_000) : null;
       const pass = (x: any) => x.trace[0]?.status === 'failed' && x.ok;
-      return json({ vision: { pass: pass(v), provider: v.provider, trace: v.trace }, research: { pass: pass(r), provider: r.provider, trace: r.trace }, brain: { pass: pass(l), provider: l.provider, trace: l.trace }, dispatch: { pass: detectAction('open my dhf calendar') === 'open_dhf_calendar' && !ACTIONS['delete_account'] }, breaker: breakerState() });
+      return json({ vision: { pass: pass(v), provider: v.provider, trace: v.trace }, research: { pass: pass(r), provider: r.provider, trace: r.trace }, brain: { pass: pass(l), provider: l.provider, trace: l.trace }, real_question: real ? { query: realQ, provider: real.provider, top: (real.value ?? []).slice(0, 3) } : null, dispatch: { pass: detectAction('open my dhf calendar') === 'open_dhf_calendar' && !ACTIONS['delete_account'] }, breaker: breakerState() });
     }
     return json({ error: 'unknown_action' }, 400);
   } catch (e) {

@@ -92,12 +92,29 @@ export async function askZoe(options: AskZoeOptions): Promise<AskZoeResult> {
     }
   }
 
+  // Live research (Poe): questions about current facts get web results first.
+  // Shared by voice and typed chat because both go through askZoe.
+  let researchContext = '';
+  if (/\b(latest|today|news|current|who is|who's|what is|what's|price|score|weather|when is|when did|how much|search|look up)\b/i.test(text)) {
+    try {
+      const r: any = await Promise.race([
+        supabase.functions.invoke('zoe-sovereign', { body: { action: 'research', query: text } }),
+        new Promise((res) => window.setTimeout(() => res(null), 6000)),
+      ]);
+      const rows = r?.data?.results ?? [];
+      if (rows.length) researchContext = rows.slice(0, 5).map((h: any) => `- ${h.title}: ${h.snippet} (${h.url})`).join('\n');
+    } catch { /* research must never block a reply */ }
+  }
+
   const messages: ZoeEngineMessage[] = [
     ...(memoryContext
       ? [{
           role: 'system' as const,
           content: `Long-term memory about this user (${memorySource ?? 'memory'}):\n${memoryContext}`,
         }]
+      : []),
+    ...(researchContext
+      ? [{ role: 'system' as const, content: `Live web results (use them, mention the source briefly):\n${researchContext}` }]
       : []),
     ...(options.history ?? []),
     { role: 'user' as const, content: text },
