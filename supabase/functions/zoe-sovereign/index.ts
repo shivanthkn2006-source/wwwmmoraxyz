@@ -23,7 +23,7 @@ async function postJson(url: string, body: unknown, headers: Record<string, stri
   const c = new AbortController(); const t = setTimeout(() => c.abort(), ms);
   try {
     const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify(body), signal: c.signal });
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    if (!r.ok) throw new Error(`HTTP ${r.status} ${(await r.text()).slice(0, 120)}`);
     return await r.json();
   } finally { clearTimeout(t); }
 }
@@ -42,24 +42,37 @@ async function firstModel(url: string, key: string, models: string[], build: (m:
 const chatContent = (d: any) => { const s = d?.choices?.[0]?.message?.content; return typeof s === 'string' && s.trim() ? s : null; };
 
 // Chinese open models lead each list (Qwen, DeepSeek, Kimi, GLM); free tiers only.
-const GROQ_TEXT = ['qwen/qwen3-32b', 'moonshotai/kimi-k2-instruct-0905', 'moonshotai/kimi-k2-instruct', 'llama-3.3-70b-versatile'];
+const GROQ_TEXT = ['qwen/qwen3-32b', 'llama-3.1-8b-instant', 'moonshotai/kimi-k2-instruct-0905', 'moonshotai/kimi-k2-instruct', 'llama-3.3-70b-versatile'];
 const OR_TEXT = ['deepseek/deepseek-chat-v3.1:free', 'qwen/qwen3-235b-a22b:free', 'z-ai/glm-4.5-air:free', 'moonshotai/kimi-k2:free', 'deepseek/deepseek-r1-0528:free'];
 const GROQ_VISION = ['meta-llama/llama-4-scout-17b-16e-instruct', 'meta-llama/llama-4-maverick-17b-128e-instruct'];
 // Direct Chinese providers (used after NVIDIA/Google/Groq/OpenRouter fail).
 const SF_TEXT = ['Qwen/Qwen2.5-7B-Instruct', 'THUDM/glm-4-9b-chat', 'deepseek-ai/DeepSeek-V3'];
-const SF_VISION = ['Qwen/Qwen2.5-VL-32B-Instruct', 'Qwen/Qwen2-VL-72B-Instruct'];
-const ZP_TEXT = ['glm-4-flash', 'glm-4-flash-250414'];
-const ZP_VISION = ['glm-4v-flash'];
-const SF_URL = 'https://api.siliconflow.cn/v1/chat/completions';
-const ZP_URL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
+const SF_VISION = ['Qwen/Qwen2.5-VL-72B-Instruct', 'Qwen/Qwen2.5-VL-32B-Instruct', 'Qwen/Qwen2.5-VL-7B-Instruct', 'THUDM/GLM-4.1V-9B-Thinking', 'zai-org/GLM-4.5V'];
+const ZP_TEXT = ['glm-4-flash', 'glm-4.5-flash', 'glm-4.7-flash', 'glm-4-flash-250414'];
+const ZP_VISION = ['glm-4v-flash', 'glm-4.6v-flash', 'glm-4.1v-thinking-flash', 'glm-4.5v'];
+// China and international hosts: a key only works on the site it was made on.
+const SF_HOSTS = ['https://api.siliconflow.cn/v1/chat/completions', 'https://api.siliconflow.com/v1/chat/completions'];
+const ZP_HOSTS = ['https://open.bigmodel.cn/api/paas/v4/chat/completions', 'https://api.z.ai/api/paas/v4/chat/completions'];
+async function tryHosts<T>(hosts: string[], run: (u: string) => Promise<T>): Promise<T> {
+  let last: unknown = null;
+  for (const h of hosts) { try { return await run(h); } catch (e) { last = e; } }
+  throw last ?? new Error('no_host');
+}
 const OR_VISION = ['qwen/qwen2.5-vl-72b-instruct:free', 'qwen/qwen2.5-vl-32b-instruct:free', 'moonshotai/kimi-vl-a3b-thinking:free', 'google/gemma-3-27b-it:free'];
 
 // ─── Part 2: vision ─────────────────────────────────────────────────────────
 const VISION_PROMPT = 'You are Zoe\'s eyes. Look at this camera frame of the member. Reply ONLY JSON: {"objects":[...],"attire":"what they wear, colours","scene":"short","mood":"neutral|happy|tired|sad|focused","lighting":"optimal|low|harsh","summary":"one friendly sentence"}';
 function parseVision(raw: string) {
+  const txt = (v: any): string => v == null ? '' : typeof v === 'string' ? v : Array.isArray(v) ? v.map(txt).filter(Boolean).join(', ')
+    : typeof v === 'object' ? String(v.name ?? v.label ?? v.item ?? v.description ?? Object.values(v).map(txt).filter(Boolean).join(' ')) : String(v);
   const m = raw.match(/\{[\s\S]*\}/);
-  try { const j = JSON.parse(m ? m[0] : raw); return { objects: Array.isArray(j.objects) ? j.objects.slice(0, 12).map(String) : [], attire: String(j.attire ?? ''), scene: String(j.scene ?? ''), mood: String(j.mood ?? 'neutral'), lighting: String(j.lighting ?? 'optimal'), summary: String(j.summary ?? '') }; }
-  catch { return { objects: [], attire: '', scene: '', mood: 'neutral', lighting: 'optimal', summary: raw.slice(0, 300) }; }
+  try {
+    const j = JSON.parse(m ? m[0] : raw);
+    const objects = (Array.isArray(j.objects) ? j.objects : []).map(txt).filter(Boolean).slice(0, 12);
+    const attire = txt(j.attire ?? j.clothing ?? j.outfit);
+    const summary = txt(j.summary) || [attire && `You're wearing ${attire}.`, objects.length && `I can see ${objects.slice(0, 4).join(', ')}.`].filter(Boolean).join(' ');
+    return { objects, attire, scene: txt(j.scene), mood: txt(j.mood) || 'neutral', lighting: txt(j.lighting) || 'optimal', summary };
+  } catch { return { objects: [], attire: '', scene: '', mood: 'neutral', lighting: 'optimal', summary: raw.replace(/```\w*/g, '').slice(0, 300) }; }
 }
 function visionProviders(dataUrl: string, forceFail = false): ProviderTask<any>[] {
   const b64 = dataUrl.split(',')[1] ?? '';
@@ -78,8 +91,8 @@ function visionProviders(dataUrl: string, forceFail = false): ProviderTask<any>[
     } },
     { name: 'groq-vision', execute: async () => { const k = env('GROQ_API_KEY'); if (!k) throw new Error('no_key'); const r = await vlm('https://api.groq.com/openai/v1/chat/completions', k, GROQ_VISION)(); return r ? parseVision(r) : null; } },
     { name: 'openrouter-free-vision', execute: async () => { const k = env('OPENROUTER_API_KEY'); if (!k) throw new Error('no_key'); const r = await vlm('https://openrouter.ai/api/v1/chat/completions', k, OR_VISION)(); return r ? parseVision(r) : null; } },
-    { name: 'siliconflow-qwen-vl', execute: async () => { const k = env('SILICONFLOW_API_KEY'); if (!k) throw new Error('no_key'); const r = await vlm(SF_URL, k, SF_VISION)(); return r ? parseVision(r) : null; } },
-    { name: 'zhipu-glm4v', execute: async () => { const k = env('ZHIPU_API_KEY'); if (!k) throw new Error('no_key'); const r = await vlm(ZP_URL, k, ZP_VISION)(); return r ? parseVision(r) : null; } },
+    { name: 'siliconflow-qwen-vl', execute: async () => { const k = env('SILICONFLOW_API_KEY'); if (!k) throw new Error('no_key'); const r = await tryHosts(SF_HOSTS, (u) => vlm(u, k, SF_VISION)()); return r ? parseVision(r) : null; } },
+    { name: 'zhipu-glm4v', execute: async () => { const k = env('ZHIPU_API_KEY'); if (!k) throw new Error('no_key'); const r = await tryHosts(ZP_HOSTS, (u) => vlm(u, k, ZP_VISION)()); return r ? parseVision(r) : null; } },
   ];
 }
 
@@ -118,8 +131,8 @@ function llmProviders(system: string, user: string, forceFail = false): Provider
     { name: 'groq', execute: async () => { if (forceFail) throw new Error('forced'); const k = env('GROQ_API_KEY'); if (!k) throw new Error('no_key'); return oai('https://api.groq.com/openai/v1/chat/completions', k, GROQ_TEXT)(); } },
     { name: 'openrouter-free', execute: async () => { const k = env('OPENROUTER_API_KEY'); if (!k) throw new Error('no_key'); return oai('https://openrouter.ai/api/v1/chat/completions', k, OR_TEXT)(); } },
     { name: 'nvidia', execute: async () => (await nvidiaChatByRole('chat', user, { systemPrompt: system, maxTokens: 700, timeoutMs: 15_000 }))?.content ?? null },
-    { name: 'siliconflow', execute: async () => { const k = env('SILICONFLOW_API_KEY'); if (!k) throw new Error('no_key'); return oai(SF_URL, k, SF_TEXT)(); } },
-    { name: 'zhipu', execute: async () => { const k = env('ZHIPU_API_KEY'); if (!k) throw new Error('no_key'); return oai(ZP_URL, k, ZP_TEXT)(); } },
+    { name: 'siliconflow', execute: async () => { const k = env('SILICONFLOW_API_KEY'); if (!k) throw new Error('no_key'); return tryHosts(SF_HOSTS, (u) => oai(u, k, SF_TEXT)()); } },
+    { name: 'zhipu', execute: async () => { const k = env('ZHIPU_API_KEY'); if (!k) throw new Error('no_key'); return tryHosts(ZP_HOSTS, (u) => oai(u, k, ZP_TEXT)()); } },
     { name: 'ollama', execute: async () => { const e = env('OLLAMA_ENDPOINT'); if (!e) throw new Error('no_key'); const d = await postJson(`${e.replace(/\/$/, '')}/api/chat`, { model: 'llama3.1', stream: false, messages: [{ role: 'system', content: system }, { role: 'user', content: user }] }, {}, 20_000); return d?.message?.content ?? null; } },
   ];
 }
@@ -194,9 +207,16 @@ Deno.serve(async (req) => {
       const msg = String(body.message ?? '').slice(0, 2000); const draft = String(body.draft ?? '').slice(0, 4000);
       if (!msg || !draft) return json({ error: 'missing' }, 400);
       const research = String(body.research ?? '').slice(0, 3000);
-      const r = await executeWithFallback(llmProviders(
-        'You privately check Zoe\'s draft reply. If it is accurate, kind and answers the member, reply exactly APPROVED. Otherwise reply ONLY with the corrected reply in the same voice and length, no preamble. Never add facts not in the draft or research.',
-        `MEMBER: ${msg}\n${research ? `RESEARCH:\n${research}\n` : ''}DRAFT: ${draft}`), 9_000);
+      // Race every text provider; the first real answer wins (checking must be fast).
+      const tasks = llmProviders(
+        'You privately check Zoe\'s draft reply. If it is accurate, kind and answers the member, reply exactly APPROVED. Otherwise reply ONLY with the corrected reply in the same language, voice and length, no preamble. Never add facts not in the draft or research.',
+        `MEMBER: ${msg}\n${research ? `RESEARCH:\n${research}\n` : ''}DRAFT: ${draft}`);
+      const trace: any[] = [];
+      const r = await Promise.any(tasks.map(async (t) => {
+        const t0 = Date.now();
+        try { const v = await t.execute(); if (!v) throw new Error('empty'); trace.push({ provider: t.name, status: 'ok', ms: Date.now() - t0 }); return { ok: true, value: v, provider: t.name, trace }; }
+        catch (e) { trace.push({ provider: t.name, status: 'failed', ms: Date.now() - t0, error: String((e as Error).message).slice(0, 120) }); throw e; }
+      }).concat([new Promise((_, j) => setTimeout(() => j(new Error('timeout')), 10_000))])).catch(() => ({ ok: false, value: null, provider: null, trace }));
       const out = String(r.value ?? '').trim();
       if (!r.ok || !out) return json({ success: false, provider: r.provider, trace: r.trace });
       const approved = /^approved\.?$/i.test(out);
