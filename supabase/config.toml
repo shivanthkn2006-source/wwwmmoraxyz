@@ -378,3 +378,6 @@ verify_jwt = false
 
 [functions.generate-humor-drops]
 verify_jwt = false
+
+[functions.zoe-sovereign]
+verify_jwt = false

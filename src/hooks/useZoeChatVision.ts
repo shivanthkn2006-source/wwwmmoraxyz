@@ -125,14 +125,27 @@ export const useZoeChatVision = () => {
       console.log('[ChatVision] Analyzing frame with zoe-perception...');
       setState(prev => ({ ...prev, isAnalyzing: true }));
 
-      const { data, error } = await supabase.functions.invoke('zoe-perception', {
-        body: {
-          media_type: 'image',
-          media_data: frameData,
-          context: 'Live camera chat vision - Zoe is observing through your camera during conversation',
-          cross_reference: false,
-        },
-      });
+      // Sovereign cascade first (NVIDIA → Google Vision → Groq → OpenRouter free);
+      // the older perception service stays as the last backup.
+      let data: any = null; let error: any = null;
+      try {
+        const sv = await supabase.functions.invoke('zoe-sovereign', { body: { action: 'vision', frame: frameData } });
+        if (!sv.error && sv.data?.success && sv.data.analysis) {
+          const a = sv.data.analysis;
+          data = { success: true, analysis: { objects: a.objects, scene: a.scene || a.attire, emotional_sentiment: a.mood, summary: [a.summary, a.attire && `Wearing: ${a.attire}`].filter(Boolean).join(' ') } };
+        }
+      } catch { /* fall through */ }
+      if (!data) {
+        const r = await supabase.functions.invoke('zoe-perception', {
+          body: {
+            media_type: 'image',
+            media_data: frameData,
+            context: 'Live camera chat vision - Zoe is observing through your camera during conversation',
+            cross_reference: false,
+          },
+        });
+        data = r.data; error = r.error;
+      }
 
       if (error) {
         console.error('[ChatVision] Analysis error:', error);
