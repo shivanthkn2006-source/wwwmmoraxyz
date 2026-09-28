@@ -72,3 +72,13 @@
 - [ ] Cloudflare picture service (blocked: user's Account ID + Workers AI key)
 - [ ] 8 older backend setup warnings
 - [ ] Real-phone check over mobile data (needs the user's phone)
+
+## Zoe spec follow-up (Sep 28)
+- [x] Action chips under Zoe replies open M'Mora pages
+- [x] On-device MediaPipe camera backup
+- [x] SiliconFlow + Zhipu added to text/vision backups
+- [x] Private answer check (review) wired into askZoe
+- [ ] Google Vision: needs billing enabled on the Google Cloud project
+- [ ] SiliconFlow: account balance empty; Zhipu vision: no free balance
+- [ ] Groq/OpenRouter model list outdated (404s)
+- [ ] Answer check often exceeds its 11s wait on long replies
