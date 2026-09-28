@@ -60,17 +60,18 @@ async function describeWithGemini(payload: MediaPayload): Promise<string> {
   return data?.candidates?.[0]?.content?.parts?.map((part: { text?: string }) => part.text).filter(Boolean).join('').trim() || '';
 }
 
-/** Understand an image or a complete short video. Image analysis falls back to NVIDIA vision. */
+/** Understand an image or a short video. Images: NVIDIA vision first (llama-3.2-11b, tested), Gemini as backup. Video: Gemini only. */
 export async function describeSearchMedia(mediaRef: string | null | undefined): Promise<string> {
   if (!mediaRef) return '';
   try {
     const payload = await loadMedia(mediaRef);
     if (!payload) return '';
+    if (payload.mimeType.startsWith('image/')) {
+      const nvidia = (await nvidiaVision(payload.dataUrl, MEDIA_PROMPT, { maxTokens: 700, timeoutMs: 25_000 }))?.trim();
+      if (nvidia) return nvidia;
+    }
     const gemini = await describeWithGemini(payload);
     if (gemini) return gemini;
-    if (payload.mimeType.startsWith('image/')) {
-      return (await nvidiaVision(payload.dataUrl, MEDIA_PROMPT, { maxTokens: 700 }))?.trim() || '';
-    }
   } catch (error) {
     console.warn('[zoe-media-understanding] analysis failed', error);
   }
