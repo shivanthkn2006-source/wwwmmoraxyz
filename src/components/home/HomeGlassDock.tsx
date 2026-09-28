@@ -420,7 +420,7 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
                   onChange={(event) => setSearchQuery(event.target.value)}
                   placeholder=""
                   aria-label="Search home menu icons"
-                  className="h-8 min-w-0 flex-1 appearance-none border-0 bg-transparent p-0 text-xs text-white caret-white outline-none ring-0 placeholder:text-transparent focus:border-0 focus:outline-none focus:ring-0 [&::-webkit-search-cancel-button]:hidden"
+                  className="h-8 min-w-0 flex-1 appearance-none border-0 bg-transparent p-0 text-xs text-white caret-white outline-none ring-0 placeholder:text-transparent focus:border-0 focus:outline-none focus:ring-0 [@media(pointer:coarse)]:text-[16px] [&::-webkit-search-cancel-button]:hidden"
                 />
                 <Search aria-hidden="true" className="h-4 w-4 shrink-0 text-white/70" />
               </label>
