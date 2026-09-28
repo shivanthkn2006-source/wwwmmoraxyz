@@ -15,6 +15,18 @@ const ROUTES: [RegExp, string, string][] = [
 const ALLOWED = new Set(ROUTES.map((r) => r[1]));
 export const isAllowedZoePath = (p: string) => ALLOWED.has(p);
 
+/**
+ * Splits a spoken orb command into a UI action and the remaining request, e.g.
+ * "close the window and show me in a glass office" → { close: true, rest: "show me in a glass office" }.
+ */
+export function parseOrbCommand(text: string): { close: boolean; rest: string } {
+  const t = (text || '').trim();
+  const re = /^(?:zoe[, ]+)?(?:please\s+)?(?:close|hide|dismiss|minimi[sz]e)\s+(?:the\s+|this\s+|your\s+)?(?:orb\s+)?(?:chat\s+)?(?:window|chat|orb|panel)\b[\s,.]*(?:(?:and|then)\s+)?/i;
+  const m = t.match(re);
+  if (!m) return { close: false, rest: t };
+  return { close: true, rest: t.slice(m[0].length).trim() };
+}
+
 export function detectZoeAction(text: string): string | null {
   const t = text.toLowerCase();
   if (!/\b(open|show me|go to|take me to)\b/.test(t) || t.split(/\s+/).length > 10) return null;

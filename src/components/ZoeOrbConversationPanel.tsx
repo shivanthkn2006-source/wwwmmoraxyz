@@ -3012,6 +3012,26 @@ Want me to dive deeper into any aspect?`;
 
     console.log('[ZoeOrb] Processing voice message:', messageText);
 
+    // Spoken orb commands: "close the window (and …)" closes the orb; any remaining
+    // request keeps running so its answer/picture lands in chat history.
+    const { parseOrbCommand } = await import('@/lib/zoeActions');
+    const orbCmd = parseOrbCommand(messageText);
+    if (orbCmd.close) {
+      if (orbCmd.rest) void sendMessage(orbCmd.rest);
+      onClose();
+      return;
+    }
+
+    // Picture requests ("show me in a glass office", "make an image of me") and
+    // page actions must use the full typed pipeline, which owns the private
+    // identity vault, image generation and action routing. The voice-only path
+    // below used to answer them with text only.
+    const spokenImage = resolveZoeImageTurn(messageText, null, messages.map((m) => ({ role: m.role, content: m.content })));
+    if (spokenImage.intent.isImageRequest || isForcedImageRoutingKeyword(messageText)) {
+      await sendMessage(messageText);
+      return;
+    }
+
     // Add user message
     const userMessage: Message = {
       id: createMessageId(),
