@@ -37,6 +37,9 @@ function schedule() {
     let lastAt = 0;
     try { lastAt = Number(window.localStorage.getItem(STORAGE_KEY + ':at') || 0); } catch { /* ignore */ }
     if (isUserVoiceActive() || Date.now() - lastAt < 10 * 60_000) return;
+    // If Zoe is already speaking anything (welcome, chat, joke), wait and retry
+    // instead of cutting her off mid-sentence.
+    if (currentVoiceChannel() !== null) { window.setTimeout(schedule, 4_000); return; }
     running = true;
     try {
       if (await latest.announce()) {
