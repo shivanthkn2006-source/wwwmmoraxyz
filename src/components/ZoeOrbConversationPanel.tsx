@@ -3997,11 +3997,11 @@ Want me to dive deeper into any aspect?`;
             <ScrollArea 
               ref={scrollAreaRef}
               className="h-full px-3 py-2"
-              viewportClassName="overscroll-contain"
+              viewportClassName="overscroll-contain [&>div]:!block [&>div]:!min-w-0 [&>div]:w-full"
               onWheel={(e) => e.stopPropagation()}
               onTouchMove={(e) => e.stopPropagation()}
             >
-              <div ref={scrollRef} className="space-y-2">
+              <div ref={scrollRef} className="space-y-2 min-w-0 w-full overflow-x-hidden [&_*]:[overflow-wrap:anywhere]">
               {/* Zoe mode empty state */}
               {messagingMode === 'zoe' && messages.length === 0 && !showConversationList && (
                 <div className="text-center py-6">
@@ -4124,12 +4124,13 @@ Want me to dive deeper into any aspect?`;
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3 }}
                   className={cn(
-                    'flex flex-col group',
+                    'flex flex-col group min-w-0 max-w-full',
                     msg.role === 'user' ? 'items-end' : 'items-start'
                   )}
                 >
                   <div
                     className={cn(
+                      'min-w-0 break-words [overflow-wrap:anywhere]',
                       msg.mediaPreview && msg.mediaType === 'image' && msg.role === 'zoe'
                         ? 'max-w-[min(85%,560px)] rounded-xl px-2.5 py-1.5 md:px-3 md:py-2 lg:px-3.5 lg:py-2.5 text-xs md:text-sm lg:text-base relative'
                         : 'max-w-[85%] rounded-xl px-2.5 py-1.5 md:px-3 md:py-2 lg:px-3.5 lg:py-2.5 text-xs md:text-sm lg:text-base relative',
