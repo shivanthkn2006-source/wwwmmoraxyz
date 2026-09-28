@@ -12,12 +12,10 @@ import { useAuth } from '@/lib/auth';
 import { speakAsZoe, stopZoeSpeech, pauseZoeSpeech, resumeZoeSpeech, initializeZoeVoices, isZoeSpeaking } from '@/utils/zoeVoice';
 import { 
   requestMicPermission, 
-  isSpeechRecognitionSupported, 
-  createSpeechRecognition,
-  stopSpeechRecognition,
-  claimSpeechRecognition,
+  reserveSpeechRecognition,
   releaseSpeechRecognition,
 } from '@/utils/micPermissionManager';
+import { createDeepgramListener, isDeepgramListeningSupported, type DeepgramListener } from '@/services/deepgramListening';
 import { zoeDebugLog, zoeDebugSetState } from '@/features/zoe-handsfree/debugBus';
 import { resolveVoiceIntent } from '@/features/zoe-handsfree/voiceIntentRouter';
 import { recordVoiceTurn } from '@/services/zoeVoiceHistory';
@@ -42,7 +40,7 @@ export const useAlwaysOnVoice = () => {
     error: null,
   });
   
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef<DeepgramListener | null>(null);
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isEnabledRef = useRef(true);
   const processingRef = useRef(false);
@@ -369,48 +367,25 @@ export const useAlwaysOnVoice = () => {
       return;
     }
     
-    if (!isSpeechRecognitionSupported()) {
-      console.warn('[AlwaysOn] Speech recognition not supported');
+    if (!isDeepgramListeningSupported()) {
+      console.warn('[AlwaysOn] Deepgram listening not supported');
       return;
     }
 
-    // Stop existing recognition
-    stopSpeechRecognition(recognitionRef.current);
+    recognitionRef.current?.stop();
     recognitionRef.current = null;
 
-    const recognition = createSpeechRecognition({
-      continuous: true,
-      interimResults: true,
-      lang: 'en-US',
-      // This hook owns restart timing. Letting the shared manager restart the
-      // same object too created overlapping sessions on Chrome and Safari.
-      keepAlive: false
-    });
-    
-    if (!recognition) return;
-
-    recognition.onstart = () => {
-      console.log('[AlwaysOn] Listening...');
+    reserveSpeechRecognition('voice-input');
+    const recognition = createDeepgramListener({
+      onStart: () => {
+      console.log('[AlwaysOn] Deepgram listening...');
       lastTranscriptRef.current = '';
       lastActivityRef.current = Date.now();
       restartCountRef.current = 0; // Reset restart count on successful start
       setState(prev => ({ ...prev, isListening: true, error: null }));
-    };
-
-    recognition.onresult = (event: any) => {
+      },
+      onTranscript: (transcript, isFinal) => {
       lastActivityRef.current = Date.now(); // Update activity timestamp
-      let finalTranscript = '';
-      let interimTranscript = '';
-
-      for (let i = 0; i < event.results.length; i++) {
-        if (event.results[i].isFinal) {
-          finalTranscript += event.results[i][0].transcript;
-        } else {
-          interimTranscript += event.results[i][0].transcript;
-        }
-      }
-
-      const transcript = (finalTranscript || interimTranscript).trim();
       if (transcript) {
         const control = transcript.toLowerCase().replace(/[^a-z\s]/g, ' ').replace(/\s+/g, ' ').trim();
         if (/^(?:zoe\s+)?(?:stop|be quiet|quiet|cancel)$/.test(control)) {
@@ -441,22 +416,16 @@ export const useAlwaysOnVoice = () => {
             try { recognition.stop(); } catch(e) {}
             getZoeResponse(text);
           }
-        }, finalTranscript ? 180 : 450);
+        }, isFinal ? 180 : 450);
       }
-    };
-
-    recognition.onerror = (event: any) => {
-      if (recognitionRef.current !== recognition) return;
-      // Ignore common non-critical errors
-      if (['no-speech', 'aborted'].includes(event.error)) {
-        console.log('[AlwaysOn] Expected event:', event.error);
-        return;
-      }
-      console.error('[AlwaysOn] Error:', event.error);
-    };
-
-    recognition.onend = () => {
-      releaseSpeechRecognition('voice-input', recognition);
+      },
+      onError: (error) => {
+        if (recognitionRef.current !== recognition) return;
+        console.error('[AlwaysOn] Deepgram error:', error.message);
+        zoeDebugSetState({ hfState: 'error', lastError: error.message });
+      },
+      onEnd: () => {
+      releaseSpeechRecognition('voice-input');
       if (recognitionRef.current !== recognition) return;
       recognitionRef.current = null;
       setState(prev => ({ ...prev, isListening: false }));
@@ -479,27 +448,22 @@ export const useAlwaysOnVoice = () => {
           return;
         }
         
-        // WebKit needs time to release its speech service before a new start.
-        // A zero/50ms loop is treated as contention and becomes
-        // service-not-allowed on Safari and iOS Chrome.
-        const restartDelay = 350;
+        const restartDelay = 500;
         console.log(`[AlwaysOn] Auto-restarting in ${restartDelay}ms (restart #${restartCountRef.current})`);
         setTimeout(() => startListening(), restartDelay);
       }
-    };
+      },
+    });
 
-    try {
-      claimSpeechRecognition('voice-input', recognition);
-      recognitionRef.current = recognition;
-      recognition.start();
-      console.log('[AlwaysOn] Recognition started');
-    } catch (err) {
-      releaseSpeechRecognition('voice-input', recognition);
+    recognitionRef.current = recognition;
+    void recognition.start().then(() => {
+      console.log('[AlwaysOn] Deepgram listening started');
+    }).catch((err) => {
+      releaseSpeechRecognition('voice-input');
       if (recognitionRef.current === recognition) recognitionRef.current = null;
       console.error('[AlwaysOn] Start error:', err);
-      // Try again after a brief delay
       setTimeout(() => startListening(), 500);
-    }
+    });
   }, [clearSilenceTimer, getZoeResponse]);
 
   // Enable always-on voice
@@ -527,7 +491,7 @@ export const useAlwaysOnVoice = () => {
     restartCountRef.current = 0;
 
     if (recognitionRef.current) {
-      releaseSpeechRecognition('voice-input', recognitionRef.current);
+      releaseSpeechRecognition('voice-input');
       try { recognitionRef.current.stop(); } catch(e) {}
       recognitionRef.current = null;
     }
@@ -554,7 +518,7 @@ export const useAlwaysOnVoice = () => {
       isEnabledRef.current = false;
       clearSilenceTimer();
       if (recognitionRef.current) {
-        releaseSpeechRecognition('voice-input', recognitionRef.current);
+        releaseSpeechRecognition('voice-input');
         try { recognitionRef.current.stop(); } catch(e) {}
       }
     };
