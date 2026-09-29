@@ -78,6 +78,12 @@ const decoyBeginAuth = async (email: string, requestId: string, rpId: unknown) =
   });
 };
 
+const hashRecovery = async (userId: string, code: string) => {
+  const pepper = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+  const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${pepper}:${userId}:${code}`));
+  return base64URLEncode(new Uint8Array(d));
+};
+
 const getClientIp = (req: Request) =>
   req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
   req.headers.get("x-real-ip") ||
@@ -178,7 +184,54 @@ serve(async (req) => {
       rpId: body.diagnostics?.rpId,
     });
 
+    // ── Optional account recovery code (member can switch it off) ──
+    if (operation === "recovery_setup" || operation === "recovery_toggle") {
+      const jwt = (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
+      const { data: authData } = await supabase.auth.getUser(jwt);
+      const me = authData?.user;
+      if (!me) return response({ success: false, error: "Please sign in first", requestId }, 401);
+      if (operation === "recovery_toggle") {
+        const { error } = await supabase.from("account_recovery_codes").update({ enabled: body.enabled === true }).eq("user_id", me.id);
+        if (error) throw error;
+        return response({ success: true, requestId, enabled: body.enabled === true });
+      }
+      const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      const bytes = new Uint8Array(20);
+      crypto.getRandomValues(bytes);
+      const code = Array.from(bytes, (b) => alphabet[b % alphabet.length]).join("").match(/.{5}/g)!.join("-");
+      const { error } = await supabase.from("account_recovery_codes").upsert({
+        user_id: me.id, code_hash: await hashRecovery(me.id, code), enabled: true, failed_attempts: 0, locked_until: null,
+      });
+      if (error) throw error;
+      return response({ success: true, requestId, code });
+    }
+
     if (!email || !email.includes("@")) return response({ success: false, error: "A valid email is required", requestId }, 400);
+
+    if (operation === "recovery_reset") {
+      // Code + new password: resets the member's password so they can sign in normally.
+      const generic = () => response({ success: false, error: "That recovery code didn't work.", requestId }, 401);
+      const code = String(body.code || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "").match(/.{1,5}/g)?.join("-") || "";
+      const newPassword = String(body.newPassword || "");
+      if (newPassword.length < 8) return response({ success: false, error: "New password needs at least 8 characters", requestId }, 400);
+      const user = await findUserByEmail(supabase, email);
+      if (!user || code.length !== 23) return generic();
+      const { data: row } = await supabase.from("account_recovery_codes").select("code_hash, enabled, failed_attempts, locked_until").eq("user_id", user.id).maybeSingle();
+      if (!row || !row.enabled) return generic();
+      if (row.locked_until && new Date(row.locked_until).getTime() > Date.now()) return generic();
+      if (row.code_hash !== await hashRecovery(user.id, code)) {
+        const fails = (row.failed_attempts || 0) + 1;
+        await supabase.from("account_recovery_codes").update({
+          failed_attempts: fails,
+          locked_until: fails >= 5 ? new Date(Date.now() + 30 * 60_000).toISOString() : null,
+        }).eq("user_id", user.id);
+        return generic();
+      }
+      const { error: pwError } = await supabase.auth.admin.updateUserById(user.id, { password: newPassword });
+      if (pwError) throw pwError;
+      await supabase.from("account_recovery_codes").update({ failed_attempts: 0, locked_until: null, last_used_at: new Date().toISOString() }).eq("user_id", user.id);
+      return response({ success: true, requestId });
+    }
 
     if (operation === "begin_auth") {
       const user = await findUserByEmail(supabase, email);
