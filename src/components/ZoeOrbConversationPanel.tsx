@@ -4858,6 +4858,25 @@ Want me to dive deeper into any aspect?`;
                 )}
                 disabled={isProcessing || isPerceptionProcessing || isSending || (messagingMode === 'user' && !selectedUser)}
               />
+
+              {/* Live speech input: free browser recognition first, Deepgram fallback. */}
+              {!isSpeaking && (
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  type="button"
+                  aria-label={isVoiceInputActive ? 'Stop listening' : 'Speak to Zoe'}
+                  title={isVoiceInputActive ? 'Stop listening' : 'Speak to Zoe'}
+                  className={cn(
+                    'h-8 w-8 flex-shrink-0 rounded-none border-0 bg-transparent p-0 shadow-none hover:bg-transparent',
+                    isVoiceInputActive ? 'text-destructive' : 'text-foreground/70'
+                  )}
+                  onClick={toggleVoiceInput}
+                  disabled={isProcessing || isPerceptionProcessing || isSending}
+                >
+                  {isVoiceInputActive ? <Square className="h-3.5 w-3.5 fill-current" /> : <Mic className="h-4 w-4" />}
+                </Button>
+              )}
               
               {/* Right side - Stop (while Zoe speaks) or send button */}
               {isSpeaking ? (
