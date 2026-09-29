@@ -97,7 +97,7 @@ const InstallPrompt = () => {
             
             <div className="flex-1">
               <h3 className="font-bold text-lg bg-gradient-to-r from-primary to-pink-500 bg-clip-text text-transparent">
-                Install Zoe Infinity
+                Install M'Mora
               </h3>
               <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
                 {isIOS 

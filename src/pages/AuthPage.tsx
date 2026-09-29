@@ -485,7 +485,7 @@ const AuthPage = () => {
                       "w-4 h-4 xxs:w-4 xxs:h-4 xs:w-5 xs:h-5 sm:w-5 sm:h-5",
                       "md:w-6 md:h-6 lg:w-5 lg:h-5 xl:w-6 xl:h-6"
                     )} />
-                    Sign in with Face ID
+                    Sign in with camera face scan
                   </Button>
 
                   <Button
