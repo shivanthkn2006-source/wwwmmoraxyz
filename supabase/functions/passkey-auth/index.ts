@@ -115,7 +115,14 @@ const verifySignature = async (publicKeyBase64: string, signedData: Uint8Array, 
   return await crypto.subtle.verify("RSASSA-PKCS1-v1_5", rsaKey, signatureBytes, signedData);
 };
 
+const ALLOWED_HOST = /(^|\.)(mmora\.xyz|myzoe\.xyz|lovable\.app|lovableproject\.com)$|^localhost$/;
 const verifyClientOrigin = (clientOrigin: string, expectedOrigin?: string) => {
+  try {
+    const host = new URL(clientOrigin).hostname;
+    if (!ALLOWED_HOST.test(host)) return false;
+  } catch {
+    return false;
+  }
   if (!expectedOrigin) return true;
   try {
     return new URL(clientOrigin).origin === new URL(expectedOrigin).origin;
@@ -255,7 +262,9 @@ serve(async (req) => {
 
       const authenticatorData = base64URLDecode(String(body.authenticatorData || ""));
       const clientDataJSON = base64URLDecode(String(body.clientDataJSON || ""));
-      const clientData = JSON.parse(new TextDecoder().decode(clientDataJSON));
+      let clientData: Record<string, unknown>;
+      try { clientData = JSON.parse(new TextDecoder().decode(clientDataJSON)); } catch { return response({ success: false, error: "Invalid biometric response", requestId }, 400); }
+      if (authenticatorData.length < 37) return response({ success: false, error: "Invalid biometric response", requestId }, 400);
 
       const userPresent = (authenticatorData[32] & 0x01) === 0x01;
       const userVerified = (authenticatorData[32] & 0x04) === 0x04;
@@ -274,7 +283,7 @@ serve(async (req) => {
         return response({ success: false, error: "Biometric origin mismatch", requestId }, 401);
       }
 
-      if (!(await verifyRpIdHash(authenticatorData, body.diagnostics?.rpId))) {
+      if (!(await verifyRpIdHash(authenticatorData, new URL(String(clientData.origin)).hostname))) {
         await supabase.from("passkey_auth_challenges").update({ failure_reason: "rp_id_mismatch" }).eq("id", challengeId);
         return response({ success: false, error: "Biometric device origin mismatch", requestId }, 401);
       }
@@ -305,7 +314,8 @@ serve(async (req) => {
         return response({ success: false, error: "Biometric signature verification failed", requestId }, 401);
       }
 
-      await supabase.from("passkey_auth_challenges").update({ consumed_at: new Date().toISOString(), credential_id: credentialId }).eq("id", challengeId);
+      const { data: consumedRow } = await supabase.from("passkey_auth_challenges").update({ consumed_at: new Date().toISOString(), credential_id: credentialId }).eq("id", challengeId).is("consumed_at", null).select("id").maybeSingle();
+      if (!consumedRow) return response({ success: false, error: "The biometric challenge was already used. Try again.", requestId }, 400);
       await supabase.from("webauthn_credentials").update({ last_used_at: new Date().toISOString(), counter: (credential.counter || 0) + 1 }).eq("credential_id", credentialId);
 
       const { data: userData, error: userError } = await supabase.auth.admin.getUserById(challengeRow.user_id);
