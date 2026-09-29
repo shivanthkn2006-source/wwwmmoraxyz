@@ -1,6 +1,5 @@
 import { getZoeAgentToken } from '@/lib/zoeAgentToken';
 /** Deepgram-only live transcription for Zoe. The API key never reaches the browser. */
-import { supabase } from '@/integrations/supabase/client';
 
 const LISTEN_URL = 'wss://api.deepgram.com/v1/listen?model=nova-3&language=en-US&encoding=linear16&sample_rate=16000&channels=1&interim_results=true&smart_format=true&punctuate=true&endpointing=300&utterance_end_ms=1000&vad_events=true';
 
