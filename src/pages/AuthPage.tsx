@@ -15,6 +15,7 @@ import PageSeo from '@/components/seo/PageSeo';
 import { ROUTE_SEO } from '@/config/routeSeo';
 import TurnstileSignup, { verifyTurnstileToken } from '@/components/security/TurnstileSignup';
 import { supabase } from '@/integrations/supabase/client';
+import { RecoveryCodeSignIn } from '@/components/auth/RecoveryCodeSignIn';
 import { captureReferralFromUrl, redeemStoredReferral } from '@/lib/referral';
 import { markTourPending } from '@/components/onboarding/GuidedTour';
 
@@ -128,6 +129,7 @@ const AuthPage = () => {
     }
   };
 
+  const [showRecovery, setShowRecovery] = useState(false);
   const passkeyLabel = deviceType === 'faceid'
     ? 'Sign in with Face ID / Passkey'
     : deviceType === 'touchid'
@@ -509,7 +511,7 @@ const AuthPage = () => {
                         "md:w-6 md:h-6 lg:w-5 lg:h-5 xl:w-6 xl:h-6"
                       )} />
                     )}
-                    {passkeySupported ? passkeyLabel : 'Passkeys unavailable in this browser'}
+                    {passkeySupported ? `${passkeyLabel} (recommended)` : 'Passkeys unavailable in this browser'}
                   </Button>
                   
                   <Button
@@ -551,6 +553,14 @@ const AuthPage = () => {
                 >
                   Forgot password?
                 </button>
+              )}
+              {!isSignUp && (
+                <div>
+                  <button type="button" onClick={() => setShowRecovery(true)} className="text-white/70 hover:text-white text-xs xs:text-sm md:text-base">
+                    Use a recovery code
+                  </button>
+                  <RecoveryCodeSignIn open={showRecovery} onOpenChange={setShowRecovery} defaultEmail={formData.email} />
+                </div>
               )}
               <div>
                 <button
