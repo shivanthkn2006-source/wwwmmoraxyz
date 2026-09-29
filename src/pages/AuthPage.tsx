@@ -161,6 +161,15 @@ const AuthPage = () => {
     }
   };
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search + '&' + window.location.hash.replace(/^#/, ''));
+    const oauthError = params.get('error_description') || params.get('error');
+    if (oauthError) {
+      toast({ title: 'Google sign-in failed', description: oauthError.replace(/\+/g, ' '), variant: 'destructive' });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const [showRecovery, setShowRecovery] = useState(false);
   const passkeyLabel = deviceType === 'faceid'
     ? 'Sign in with Face ID / Passkey'
