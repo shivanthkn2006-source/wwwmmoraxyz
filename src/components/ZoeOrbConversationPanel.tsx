@@ -3190,9 +3190,9 @@ Want me to dive deeper into any aspect?`;
       clearTranscript();
       processVoiceMessage(messageText);
     },
-    onSilenceDetected: () => {
+    onSilenceDetected: (spokenText) => {
       // Auto-process when silence detected in hands-free mode
-      const currentTranscript = input.trim();
+      const currentTranscript = spokenText.trim();
       if (currentTranscript) {
         console.log('[ZoeOrb] Silence detected, processing:', currentTranscript);
         setInput('');

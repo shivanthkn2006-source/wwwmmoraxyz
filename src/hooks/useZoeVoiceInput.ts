@@ -21,7 +21,7 @@ const SUBMIT_COMMANDS = ['enter', 'send', 'submit', 'send it', 'enter it', 'subm
 
 interface VoiceInputOptions {
   onTranscript: (transcript: string, isFinal: boolean) => void;
-  onSilenceDetected?: () => void;
+  onSilenceDetected?: (transcript: string) => void;
   onVoiceCommand?: (command: string, messageText: string) => void;
   silenceTimeout?: number;
   handsFreeMode?: boolean;
@@ -95,7 +95,7 @@ export const useZoeVoiceInput = (options: VoiceInputOptions) => {
         clearTimers();
         if (transcriptRef.current.trim() && isActiveRef.current) {
           console.log('[VoiceInput] Silence detected, processing transcript');
-          onSilenceDetected?.();
+          onSilenceDetected?.(transcriptRef.current.trim());
         }
       }, silenceTimeout);
     }
@@ -206,7 +206,7 @@ export const useZoeVoiceInput = (options: VoiceInputOptions) => {
               } else {
                 // Fallback: trigger silence detected with cleaned message
                 transcriptRef.current = messageText;
-                onSilenceDetected?.();
+                onSilenceDetected?.(messageText);
               }
               
               toast.success(`📨 Sending: "${messageText.slice(0, 30)}${messageText.length > 30 ? '...' : ''}"`, { duration: 2000 });
@@ -248,7 +248,7 @@ export const useZoeVoiceInput = (options: VoiceInputOptions) => {
 
       // If we have a transcript and were actively listening, trigger callback
       if (wasActive && transcriptRef.current.trim()) {
-        onSilenceDetected?.();
+        onSilenceDetected?.(transcriptRef.current.trim());
       }
       },
     });
@@ -264,7 +264,7 @@ export const useZoeVoiceInput = (options: VoiceInputOptions) => {
       setState(prev => ({ ...prev, error: err.message, isListening: false }));
       window.dispatchEvent(new CustomEvent('zoe-voice-input-end'));
     }
-  }, [handsFreeMode, onTranscript, onSilenceDetected, resetSilenceTimer, clearTimers]);
+  }, [handsFreeMode, onTranscript, onSilenceDetected, onVoiceCommand, resetSilenceTimer, clearTimers]);
 
   // Toggle listening
   const toggleListening = useCallback(() => {

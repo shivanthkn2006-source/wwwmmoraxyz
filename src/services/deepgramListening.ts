@@ -174,6 +174,7 @@ export function createDeepgramListener(options: DeepgramListeningOptions): Deepg
   let active = false;
   let intentional = false;
   let switched = false;
+  let browserCommitted = '';
 
   const startDeepgram = async () => {
     rec = null;
@@ -200,10 +201,15 @@ export function createDeepgramListener(options: DeepgramListeningOptions): Deepg
     let opened = false;
     r.onstart = () => { opened = true; active = true; options.onStart?.(); resolve(); };
     r.onresult = (event: any) => {
+      let interim = '';
       for (let i = event.resultIndex; i < event.results.length; i += 1) {
         const text = String(event.results[i][0]?.transcript ?? '').trim();
-        if (text) options.onTranscript(text, Boolean(event.results[i].isFinal));
+        if (!text) continue;
+        if (event.results[i].isFinal) browserCommitted = `${browserCommitted} ${text}`.trim();
+        else interim = `${interim} ${text}`.trim();
       }
+      const full = `${browserCommitted} ${interim}`.trim();
+      if (full) options.onTranscript(full, !interim);
     };
     r.onerror = (event: any) => {
       const code = String(event?.error ?? 'unknown');
@@ -223,6 +229,7 @@ export function createDeepgramListener(options: DeepgramListeningOptions): Deepg
     if (active) return;
     intentional = false;
     switched = false;
+    browserCommitted = '';
     const Ctor = browserRecognitionCtor();
     if (!Ctor || browserBroken || preferDeepgram()) { switched = true; return startDeepgram(); }
     try {

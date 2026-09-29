@@ -15,6 +15,15 @@ interface FaceLoginModalProps {
 
 type Step = 'email' | 'camera' | 'verifying' | 'success' | 'error';
 
+const edgeErrorMessage = async (error: any, fallback: string): Promise<string> => {
+  try {
+    const body = await error?.context?.json?.();
+    return body?.error || body?.message || error?.message || fallback;
+  } catch {
+    return error?.message || fallback;
+  }
+};
+
 /**
  * Face ID should not interrogate returning members for their email: the
  * account is remembered from the last successful sign-in on this device and
@@ -74,7 +83,7 @@ const FaceLoginModal: React.FC<FaceLoginModalProps> = ({ open, onClose, onSucces
         body: { operation: 'check_face_enrolled', email: address }
       });
 
-      if (error) throw error;
+      if (error) throw new Error(await edgeErrorMessage(error, 'Could not check face enrollment.'));
       return data?.enrolled === true;
     } catch (err) {
       console.error('Check face enrolled error:', err);
@@ -126,21 +135,20 @@ const FaceLoginModal: React.FC<FaceLoginModalProps> = ({ open, onClose, onSucces
     try {
       const canvas = canvasRef.current;
       const video = videoRef.current;
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
+      if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA || !video.videoWidth || !video.videoHeight) {
+        throw new Error('Camera is still starting. Hold still and try again.');
+      }
+      const maxDimension = 960;
+      const scale = Math.min(1, maxDimension / Math.max(video.videoWidth, video.videoHeight));
+      canvas.width = Math.max(1, Math.round(video.videoWidth * scale));
+      canvas.height = Math.max(1, Math.round(video.videoHeight * scale));
       const ctx = canvas.getContext('2d');
       if (!ctx) throw new Error('Canvas context not available');
 
-      ctx.drawImage(video, 0, 0);
-      const imageData = canvas.toDataURL('image/jpeg', 0.95);
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const imageData = canvas.toDataURL('image/jpeg', 0.82);
       if (!canvas.width || !canvas.height || !imageData.startsWith('data:image/')) {
         throw new Error('Camera is still starting. Hold still and try again.');
-      }
-
-      // Stop camera
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-        setStream(null);
       }
 
       // Send to face verification edge function
@@ -152,9 +160,11 @@ const FaceLoginModal: React.FC<FaceLoginModalProps> = ({ open, onClose, onSucces
         }
       });
 
-      if (error) throw error;
+      if (error) throw new Error(await edgeErrorMessage(error, 'Face verification failed. Please try again.'));
 
       if (data?.success && data?.verified) {
+        if (stream) stream.getTracks().forEach(track => track.stop());
+        setStream(null);
         setStep('success');
         toast.success('Face verified! Signing you in...');
         
@@ -218,8 +228,9 @@ const FaceLoginModal: React.FC<FaceLoginModalProps> = ({ open, onClose, onSucces
   };
 
   const retry = () => {
-    setStep('email');
     setErrorMessage('');
+    if (stream?.active) setStep('camera');
+    else setStep('email');
   };
 
   return (
