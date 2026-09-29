@@ -716,6 +716,23 @@ export async function sovereignFetch(url: string, init?: RequestInit): Promise<R
     if (extractImageParts(messages).images.length <= 1) {
       const nv = await callNvidia(payload, 'vision');
       if (nv) return nv;
+    } else {
+      // Last resort for multi-image requests (e.g. shared photo + saved face):
+      // NIM takes one image, so analyse the FIRST (shared) image alone rather
+      // than failing the whole feature. Identity comparison is skipped.
+      let kept = false;
+      const single = messages.map((m) => Array.isArray(m.content)
+        ? { ...m, content: m.content.filter((part: any) => {
+            if (!part?.image_url?.url) return true;
+            if (kept) return false;
+            kept = true;
+            return true;
+          }).map((part: any) => part?.type === 'text' && /SECOND image/i.test(part.text || '')
+            ? { type: 'text', text: 'No reference photo is available for comparison; do not claim an identity match.' }
+            : part) }
+        : m);
+      const nv = await callNvidia({ ...payload, messages: single }, 'vision');
+      if (nv) return nv;
     }
     return json(
       { error: { message: 'No sovereign vision provider available', code: 'VISION_UNAVAILABLE' } },

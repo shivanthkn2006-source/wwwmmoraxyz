@@ -28,9 +28,19 @@ export function parseOrbCommand(text: string): { close: boolean; rest: string } 
 }
 
 export function detectZoeAction(text: string): string | null {
-  const t = text.toLowerCase();
-  if (!/\b(open|show me|go to|take me to)\b/.test(t) || t.split(/\s+/).length > 10) return null;
-  for (const [re, path] of ROUTES) if (re.test(t)) return path;
+  const t = text.toLowerCase().trim().replace(/[.!?]+$/, '');
+  if (t.split(/\s+/).length > 8) return null;
+  // Picture / "what I look like" / content requests are never page navigation.
+  if (/\b(picture|photo|image|pic|selfie|draw|render|look like|me at|me in|me as|me with)\b/.test(t)) return null;
+  // Must be a direct page command: "(zoe) (please) open/go to/take me to/show me (the/my) <page> (page/screen)".
+  const m = t.match(/^(?:zoe[, ]+)?(?:please\s+)?(?:can you\s+)?(?:open|go to|take me to|show me)\s+(?:the\s+|my\s+)?(.+?)(?:\s+(?:page|screen|tab|section))?$/);
+  if (!m) return null;
+  const target = m[1];
+  for (const [re, path] of ROUTES) {
+    const rm = target.match(re);
+    // The page name must be (almost) the whole target, not a word buried inside a longer request.
+    if (rm && target.replace(rm[0], '').trim().split(/\s+/).filter(Boolean).length <= 1) return path;
+  }
   return null;
 }
 

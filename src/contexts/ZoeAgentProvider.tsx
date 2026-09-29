@@ -14,6 +14,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { getZoeAgentToken } from '@/lib/zoeAgentToken';
 import { audioRouter } from '@/services/AudioRouterService';
 import { recordVoiceTurn } from '@/services/zoeVoiceHistory';
 import { resolvePageTitle } from '@/config/siteMap';
@@ -234,12 +235,7 @@ export const ZoeAgentProvider = ({
       // MediaStream so it cannot overlap the wake sentinel or conversation STT.
       reserveSpeechRecognition('realtime-agent');
       window.dispatchEvent(new CustomEvent('zoe-handsfree-start'));
-      const { data: tokenData, error: tokenError } = await supabase.functions.invoke('zoe-agent-token', {
-        body: {},
-      });
-      if (tokenError || !tokenData?.token) {
-        throw new Error(tokenError?.message || tokenData?.error || 'Zoe could not get a voice session.');
-      }
+      const tokenData = await getZoeAgentToken();
       emailRef.current = tokenData.email ?? emailRef.current ?? currentUserEmail ?? null;
 
       const stream = await audioRouter.setInputDevice(audioRouter.getActiveInputDeviceId?.() || 'default');
