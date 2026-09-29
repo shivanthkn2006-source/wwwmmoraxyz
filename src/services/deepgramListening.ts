@@ -1,3 +1,4 @@
+import { getZoeAgentToken } from '@/lib/zoeAgentToken';
 /** Deepgram-only live transcription for Zoe. The API key never reaches the browser. */
 import { supabase } from '@/integrations/supabase/client';
 
@@ -85,8 +86,7 @@ function createDeepgramStream(options: DeepgramListeningOptions): DeepgramListen
     committed = '';
     delivered = '';
 
-    const { data, error } = await supabase.functions.invoke('zoe-agent-token', { body: {} });
-    if (error || !data?.token) throw new Error(error?.message || data?.error || 'Zoe could not start Deepgram listening.');
+    const data = await getZoeAgentToken();
     stream = await navigator.mediaDevices.getUserMedia({
       audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 },
     });
