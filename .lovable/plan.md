@@ -6,7 +6,7 @@
 - Inside the Lovable editor preview there is a second problem. Google also refuses to open inside a frame.
 
 ## Fix order
-1. Your Client ID and Secret are saved as app secrets. Google sign-in reads them only from the backend Google sign-in settings, so you paste the same values there (Users → Authentication Settings → Sign In Methods → Google). The ID must end in `.apps.googleusercontent.com`.
+1. Done: your Client ID and Secret are saved in the backend Google sign-in settings.
 2. You confirm these settings in Google Cloud:
    - JavaScript origins include https://mmora.xyz, https://www.mmora.xyz, https://myzoe.xyz and https://www.myzoe.xyz.
    - The redirect URI matches the callback address shown in your backend Google settings.
