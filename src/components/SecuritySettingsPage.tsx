@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import FaceVerificationSetup from './FaceVerificationSetup';
 import { useWebAuthn } from '@/hooks/useWebAuthn';
+import { RecoveryCodeCard } from '@/components/auth/RecoveryCodeCard';
 
 interface SecuritySettings {
   two_factor_enabled: boolean;
@@ -251,6 +252,8 @@ const SecuritySettingsPage = () => {
         </Card>
 
         {/* Face Verification */}
+        <RecoveryCodeCard />
+
         <Card className="bg-card/40 backdrop-blur-xl border-border/50">
           <CardHeader>
             <div className="flex items-center justify-between">

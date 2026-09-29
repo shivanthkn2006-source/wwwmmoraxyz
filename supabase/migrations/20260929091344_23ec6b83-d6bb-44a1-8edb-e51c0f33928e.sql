@@ -1,0 +1,1 @@
+ALTER TABLE public.account_recovery_codes ADD COLUMN IF NOT EXISTS failed_attempts integer NOT NULL DEFAULT 0, ADD COLUMN IF NOT EXISTS locked_until timestamptz;

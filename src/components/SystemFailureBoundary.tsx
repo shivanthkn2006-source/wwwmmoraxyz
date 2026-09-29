@@ -230,12 +230,12 @@ export default class SystemFailureBoundary extends React.Component<
                 <Button variant="outline" onClick={this.handleReload}>
                   Reload
                 </Button>
-                <Button variant="secondary" onClick={this.handleHardRefresh}>
+                {import.meta.env.DEV && <Button variant="secondary" onClick={this.handleHardRefresh}>
                   Hard refresh
-                </Button>
-                <Button variant="destructive" onClick={this.handleClearLogs}>
+                </Button>}
+                {import.meta.env.DEV && <Button variant="destructive" onClick={this.handleClearLogs}>
                   Clear logs
-                </Button>
+                </Button>}
               </div>
             </div>
           </header>
@@ -245,7 +245,7 @@ export default class SystemFailureBoundary extends React.Component<
               CRITICAL ERROR: {error?.message || "Unknown error"}
             </p>
 
-            {(error?.stack || this.state.componentStack) && (
+            {import.meta.env.DEV && (error?.stack || this.state.componentStack) && (
               <div className="mt-4 grid gap-3">
                 {error?.stack && (
                   <article>
