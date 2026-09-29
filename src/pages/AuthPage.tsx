@@ -18,6 +18,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { RecoveryCodeSignIn } from '@/components/auth/RecoveryCodeSignIn';
 import { captureReferralFromUrl, redeemStoredReferral } from '@/lib/referral';
 import { markTourPending } from '@/components/onboarding/GuidedTour';
+import { lovable } from '@/integrations/lovable';
 
 
 
@@ -61,6 +62,7 @@ const AuthPage = () => {
   const [captchaReset, setCaptchaReset] = useState(0);
   const [pendingEmail, setPendingEmail] = useState<string | null>(null);
   const [resending, setResending] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   // Home is the destination for every successful sign-in. Fetch its route
   // while the member is entering credentials so navigation does not replace
@@ -126,6 +128,29 @@ const AuthPage = () => {
         description: 'Signed in with your device passkey.',
       });
       navigate('/home');
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setGoogleLoading(true);
+    try {
+      const result = await lovable.auth.signInWithOAuth('google', {
+        redirect_uri: window.location.origin,
+        extraParams: { prompt: 'select_account' },
+      });
+      if (result.error) {
+        toast({ title: 'Google sign-in failed', description: result.error.message || 'Please try again.', variant: 'destructive' });
+        return;
+      }
+      if (!result.redirected) navigate('/home');
+    } catch (error) {
+      toast({
+        title: 'Google sign-in failed',
+        description: error instanceof Error ? error.message : 'Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setGoogleLoading(false);
     }
   };
 
@@ -467,6 +492,23 @@ const AuthPage = () => {
                 disabled={loading}
               >
                 {loading ? 'Please wait...' : (isSignUp ? 'Create Account' : 'Sign In')}
+              </Button>
+
+              <Button
+                type="button"
+                variant="outline"
+                className={cn(
+                  "w-full gap-2 border-primary/30 hover:bg-primary/10",
+                  "h-10 xxs:h-10 xs:h-11 sm:h-12 md:h-14",
+                  "lg:h-12 xl:h-14 2xl:h-16 4k:h-20",
+                  "text-sm xxs:text-sm xs:text-base sm:text-base md:text-lg",
+                  "lg:text-base xl:text-lg 2xl:text-xl 4k:text-2xl"
+                )}
+                onClick={handleGoogleLogin}
+                disabled={googleLoading}
+              >
+                {googleLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <span aria-hidden="true" className="inline-flex size-5 items-center justify-center font-semibold">G</span>}
+                Continue with Google
               </Button>
 
               {!isSignUp && (

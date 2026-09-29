@@ -202,19 +202,22 @@ const FaceVerificationSetup: React.FC<FaceVerificationSetupProps> = ({ onComplet
     try {
       const canvas = canvasRef.current;
       const video = videoRef.current;
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
+      if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA || !video.videoWidth || !video.videoHeight) {
+        throw new Error('Camera is still starting. Hold still and try again.');
+      }
+      const maxDimension = 960;
+      const scale = Math.min(1, maxDimension / Math.max(video.videoWidth, video.videoHeight));
+      canvas.width = Math.max(1, Math.round(video.videoWidth * scale));
+      canvas.height = Math.max(1, Math.round(video.videoHeight * scale));
       const ctx = canvas.getContext('2d');
       if (!ctx) throw new Error('Canvas context not available');
 
-      ctx.drawImage(video, 0, 0);
-      const imageData = canvas.toDataURL('image/jpeg', 0.95);
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const imageData = canvas.toDataURL('image/jpeg', 0.82);
       if (!canvas.width || !canvas.height || !imageData.startsWith('data:image/')) {
         throw new Error('Camera is still starting. Hold still and try again.');
       }
       log('info', 'capture', 'Frame captured', { w: canvas.width, h: canvas.height, bytes: imageData.length });
-
-      if (stream) stream.getTracks().forEach(track => track.stop());
 
       setProcessing(true);
       const { data, error } = await supabase.functions.invoke('face-verification', {
@@ -233,8 +236,10 @@ const FaceVerificationSetup: React.FC<FaceVerificationSetupProps> = ({ onComplet
       log('info', 'enroll', 'edge function response', data);
 
       if (data?.success) {
+        if (stream) stream.getTracks().forEach(track => track.stop());
+        setStream(null);
         setStep('success');
-        toast.success('Face enrolled successfully with 99.1% accuracy!');
+        toast.success('Face enrolled successfully.');
         setTimeout(() => { onComplete(); }, 2000);
       } else {
         setSuggestion('Enrollment returned no success flag. Retry in better lighting, or check face-verification function logs.');
@@ -242,8 +247,11 @@ const FaceVerificationSetup: React.FC<FaceVerificationSetupProps> = ({ onComplet
         throw new Error(data?.error || 'Enrollment did not succeed');
       }
     } catch (error: any) {
-      log('error', 'enroll', error?.message || 'Unknown enrollment error', error);
-      toast.error('Face enrollment failed. Please try again.');
+      const message = error?.message || 'Face enrollment failed. Please try again.';
+      log('error', 'enroll', message, error);
+      setSuggestion(message);
+      setDiagOpen(true);
+      toast.error(message);
       setStep('camera');
     } finally {
       setCapturing(false);
@@ -447,7 +455,7 @@ const FaceVerificationSetup: React.FC<FaceVerificationSetupProps> = ({ onComplet
               Face Enrolled Successfully!
             </h3>
             <p className="text-sm text-muted-foreground">
-              99.1% accuracy • Advanced AI verification enabled
+              Your alternate camera face check is ready
             </p>
           </div>
         </motion.div>
