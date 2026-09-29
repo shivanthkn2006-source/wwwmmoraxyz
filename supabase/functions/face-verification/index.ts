@@ -33,6 +33,23 @@ const requestSchema = z.object({
   imageData: imageDataSchema.optional()
 });
 
+function parseFaceMatch(raw: string | null): { matchScore: number; isMatch: boolean; livenessDetected: boolean } | null {
+  if (!raw) return null;
+  try {
+    const json = raw.match(/\{[\s\S]*\}/)?.[0];
+    if (!json) return null;
+    const parsed = JSON.parse(json);
+    const matchScore = Math.max(0, Math.min(100, Number(parsed.match_score) || 0));
+    return {
+      matchScore,
+      isMatch: parsed.is_match === true && matchScore >= 85,
+      livenessDetected: parsed.liveness_detected === true,
+    };
+  } catch {
+    return null;
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -266,6 +283,10 @@ serve(async (req) => {
       }
 
       case 'verify_face': {
+        if (!imageData) {
+          return new Response(JSON.stringify({ error: 'A camera image is required for face verification.' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
         // Retrieve stored face data using verified user ID
         const { data: settings, error: fetchError } = await supabase
           .from('user_security_settings')
@@ -277,60 +298,14 @@ serve(async (req) => {
           throw new Error('No face enrollment found');
         }
 
-        // Use Gemini 2.5 Pro Vision to verify face match
-        const aiResponse = await sovereignFetch(GEMINI_URL, {
-          method: 'POST',
-          headers: {
-            ...geminiHeaders,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: GEMINI_MODEL,
-            messages: [
-              {
-                role: 'system',
-                content: 'You are a biometric facial verification AI. Compare the provided face image with enrolled facial data and determine if they match. Consider facial landmarks, unique features, and liveness detection. Return a JSON with match_score (0-100), is_match (boolean), confidence_level, and liveness_detected.'
-              },
-              {
-                role: 'user',
-                content: [
-                  {
-                    type: 'text',
-                    text: `Verify if this face matches the enrolled data:\n\nEnrolled Analysis: ${JSON.stringify(settings.face_verification_data.analysis)}\n\nProvide match score (0-100), is_match decision, confidence level, and liveness check.`
-                  },
-                  {
-                    type: 'image_url',
-                    image_url: {
-                      url: imageData
-                    }
-                  }
-                ]
-              }
-            ],
-            temperature: 0.1,
-          }),
-        });
-
-        if (!aiResponse.ok) {
-          const errBody = await aiResponse.text().catch(()=>""); throw new Error(`Gemini API error ${aiResponse.status}: ${errBody.slice(0,300)}`);
+        const comparisonPrompt = `Compare the live face in this image against this enrolled facial description: ${JSON.stringify(settings.face_verification_data.analysis)}. Ignore hair, clothes, glasses and aging differences. Return ONLY JSON: {"match_score":0-100,"is_match":boolean,"liveness_detected":boolean}. Be strict; do not match from skin tone or age alone.`;
+        const verificationResult = await nvidiaVision(imageData, comparisonPrompt, { maxTokens: 220, timeoutMs: 30_000 });
+        const parsedMatch = parseFaceMatch(verificationResult);
+        if (!parsedMatch) {
+          return new Response(JSON.stringify({ error: 'Face check service is busy. Please try again in a minute.' }),
+            { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
-
-        const aiResult = await aiResponse.json();
-        const verificationResult = aiResult.choices[0].message.content;
-
-        // Parse verification result
-        let matchScore = 0;
-        let isMatch = false;
-        
-        try {
-          const resultJson = JSON.parse(verificationResult);
-          matchScore = resultJson.match_score || 0;
-          isMatch = resultJson.is_match || false;
-        } catch {
-          // Fallback parsing
-          matchScore = verificationResult.includes('match') ? 95 : 30;
-          isMatch = matchScore > 85;
-        }
+        const { matchScore, isMatch } = parsedMatch;
 
         // Log verification attempt with verified user ID
         await supabase.from('security_audit_log').insert({
@@ -339,7 +314,7 @@ serve(async (req) => {
           event_status: isMatch ? 'success' : 'failed',
           metadata: { 
             match_score: matchScore,
-            ai_model: 'gemini-3.1-pro-preview'
+            ai_model: 'nvidia-vision'
           }
         });
 
@@ -356,6 +331,10 @@ serve(async (req) => {
       }
 
       case 'login_with_face': {
+        if (!imageData) {
+          return new Response(JSON.stringify({ error: 'A camera image is required for face login.' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
         // Retrieve stored face data for the user found by email
         const { data: settings, error: fetchError } = await supabase
           .from('user_security_settings')
@@ -370,64 +349,14 @@ serve(async (req) => {
           );
         }
 
-        // Use Gemini 2.5 Pro Vision to verify face match
-        const aiResponse = await sovereignFetch(GEMINI_URL, {
-          method: 'POST',
-          headers: {
-            ...geminiHeaders,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: GEMINI_MODEL,
-            messages: [
-              {
-                role: 'system',
-                content: 'You are a biometric facial verification AI for secure login. Compare the provided face image with enrolled facial data and determine if they match. Be strict - require high confidence for authentication. Return ONLY a JSON object with: match_score (0-100), is_match (boolean), confidence_level (high/medium/low), liveness_detected (boolean).'
-              },
-              {
-                role: 'user',
-                content: [
-                  {
-                    type: 'text',
-                    text: `Verify if this face matches the enrolled data for login authentication:\n\nEnrolled Analysis: ${JSON.stringify(settings.face_verification_data.analysis)}\n\nThis is for login - require high confidence (85%+) for match.`
-                  },
-                  {
-                    type: 'image_url',
-                    image_url: {
-                      url: imageData
-                    }
-                  }
-                ]
-              }
-            ],
-            temperature: 0.1,
-          }),
-        });
-
-        if (!aiResponse.ok) {
-          const errBody = await aiResponse.text().catch(()=>""); throw new Error(`Gemini API error ${aiResponse.status}: ${errBody.slice(0,300)}`);
+        const loginPrompt = `Secure face login. Compare the live face in this image against this enrolled facial description: ${JSON.stringify(settings.face_verification_data.analysis)}. Ignore hair, clothes, glasses and aging differences. Return ONLY JSON: {"match_score":0-100,"is_match":boolean,"liveness_detected":boolean}. Be strict; do not match from skin tone or age alone.`;
+        const verificationResult = await nvidiaVision(imageData, loginPrompt, { maxTokens: 220, timeoutMs: 30_000 });
+        const parsedMatch = parseFaceMatch(verificationResult);
+        if (!parsedMatch) {
+          return new Response(JSON.stringify({ error: 'Face check service is busy. Please try again in a minute.' }),
+            { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
-
-        const aiResult = await aiResponse.json();
-        const verificationResult = aiResult.choices[0].message.content;
-
-        // Parse verification result
-        let matchScore = 0;
-        let isMatch = false;
-        
-        try {
-          // Extract JSON from response
-          const jsonMatch = verificationResult.match(/\{[\s\S]*\}/);
-          if (jsonMatch) {
-            const resultJson = JSON.parse(jsonMatch[0]);
-            matchScore = resultJson.match_score || 0;
-            isMatch = resultJson.is_match === true && matchScore >= 85;
-          }
-        } catch {
-          // Fallback parsing - be strict for login
-          matchScore = 0;
-          isMatch = false;
-        }
+        const { matchScore, isMatch } = parsedMatch;
         // Get client IP for rate limiting logging
         const clientIP = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
                          req.headers.get('x-real-ip') || 
@@ -448,7 +377,7 @@ serve(async (req) => {
           event_status: isMatch ? 'success' : 'failed',
           metadata: { 
             match_score: matchScore,
-            ai_model: 'gemini-3.1-pro-preview'
+            ai_model: 'nvidia-vision'
           }
         });
 

@@ -106,7 +106,7 @@ export default defineConfig(({ mode }) => ({
         
         // OFFLINE FALLBACK: Show offline.html when no network and no cache
         navigateFallback: 'index.html',
-        navigateFallbackDenylist: [/^\/api/, /^\/supabase/],
+        navigateFallbackDenylist: [/^\/api/, /^\/supabase/, /^\/~oauth/],
         
         // Increase limit to 5MB for WASM Engine (Executors) - NOT the 1GB model
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5MB for WASM, not brain model

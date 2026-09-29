@@ -1,6 +1,13 @@
 
 @tailwind base;
 
+/* Make global single/double-tap controls deterministic on touch browsers. */
+html,
+body,
+#root {
+  touch-action: manipulation;
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════════
    PROTOCOL ZERO-G: GPU-ACCELERATED ANIMATION LIBRARY
    Purpose: Replace ALL framer-motion repeat:Infinity with CSS GPU animations
