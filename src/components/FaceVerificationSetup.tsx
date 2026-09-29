@@ -222,8 +222,13 @@ const FaceVerificationSetup: React.FC<FaceVerificationSetupProps> = ({ onComplet
       });
 
       if (error) {
-        log('error', 'enroll', 'edge function error', { message: error.message, context: (error as any).context });
-        throw error;
+        let serverMsg = error.message;
+        try {
+          const body = await (error as any).context?.json?.();
+          if (body?.error) serverMsg = body.error;
+        } catch { /* keep default */ }
+        log('error', 'enroll', 'edge function error', { message: serverMsg });
+        throw new Error(serverMsg);
       }
       log('info', 'enroll', 'edge function response', data);
 

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { sovereignFetch, sovereignKey } from '../_shared/sovereign-ai.ts';
+import { nvidiaVision } from '../_shared/nvidia-provider.ts';
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
@@ -192,47 +193,37 @@ serve(async (req) => {
     switch (operation) {
       case 'enroll_face': {
         // Store face enrollment data using Gemini 2.5 Pro Vision for analysis
-        const aiResponse = await sovereignFetch(GEMINI_URL, {
-          method: 'POST',
-          headers: {
-            ...geminiHeaders,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: GEMINI_MODEL,
-            messages: [
-              {
-                role: 'system',
-                content: 'You are a biometric facial analysis AI. Analyze the face image and extract detailed facial features for secure enrollment. Return a JSON object with facial landmarks, unique identifiers, and verification hash.'
-              },
-              {
-                role: 'user',
-                content: [
-                  {
-                    type: 'text',
-                    text: 'Analyze this face image for biometric enrollment. Extract facial landmarks, unique features, and generate a secure verification hash. Ensure data is suitable for future verification.'
-                  },
-                  {
-                    type: 'image_url',
-                    image_url: {
-                      url: imageData
-                    }
-                  }
-                ]
-              }
-            ],
-            temperature: 0.1,
-          }),
-        });
-
-        if (!aiResponse.ok) {
-          const errorText = await aiResponse.text();
-          console.error('Gemini API error:', aiResponse.status, errorText);
-          throw new Error(`Gemini API error ${aiResponse.status}: ${errorText.slice(0,300)}`);
+        // NVIDIA vision first (Gemini quota is exhausted), sovereign chain as backup.
+        const enrollPrompt = 'Biometric enrollment. Describe this face for future identity matching: face shape, eye, nose, mouth, eyebrow, skin tone, distinctive marks, approximate age range. Ignore hair style, clothing and accessories (they change). If no clear single human face is visible, reply exactly NO_FACE.';
+        let analysis: string | null = await nvidiaVision(imageData!, enrollPrompt, { maxTokens: 400, timeoutMs: 30_000 });
+        if (!analysis) {
+          const aiResponse = await sovereignFetch(GEMINI_URL, {
+            method: 'POST',
+            headers: geminiHeaders,
+            body: JSON.stringify({
+              model: GEMINI_MODEL,
+              messages: [{ role: 'user', content: [
+                { type: 'text', text: enrollPrompt },
+                { type: 'image_url', image_url: { url: imageData } },
+              ] }],
+              temperature: 0.1,
+            }),
+          });
+          if (aiResponse.ok) {
+            const aiResult = await aiResponse.json();
+            analysis = aiResult?.choices?.[0]?.message?.content ?? null;
+          } else {
+            console.error('Vision fallback error:', aiResponse.status, (await aiResponse.text()).slice(0, 200));
+          }
         }
-
-        const aiResult = await aiResponse.json();
-        const analysis = aiResult.choices[0].message.content;
+        if (!analysis) {
+          return new Response(JSON.stringify({ error: 'Face check service is busy. Please try again in a minute.' }),
+            { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+        if (analysis.trim().toUpperCase().startsWith('NO_FACE')) {
+          return new Response(JSON.stringify({ error: 'No clear face found. Face the camera in good light and try again.' }),
+            { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
 
         // Store face verification data using verified user ID from JWT
         const { error } = await supabase
