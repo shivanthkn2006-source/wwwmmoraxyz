@@ -702,7 +702,7 @@ export const HolographicATLASOrb: React.FC<HolographicATLASOrbProps> = ({
         
         // Update opacity based on state (more erratic for anxiety/anger emotions)
         const baseOpacity = lightningActivity * 0.5;
-        lightningMat.opacity = baseOpacity + Math.sin(time * 2) * 0.06; // smooth shimmer, no strobe (mobile flicker);
+        lightningMat.opacity = baseOpacity + Math.sin(time * 2) * 0.06; // smooth shimmer, no strobe (mobile flicker)
         
         for (let i = 0; i < 300; i++) {
           // Randomly regenerate some lightning bolts each frame
