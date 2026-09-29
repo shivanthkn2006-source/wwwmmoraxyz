@@ -246,7 +246,7 @@ serve(async (req) => {
               version: '1.0',
             },
             updated_at: new Date().toISOString()
-          });
+          }, { onConflict: 'user_id' });
 
         if (error) throw error;
 
