@@ -209,6 +209,9 @@ const FaceVerificationSetup: React.FC<FaceVerificationSetupProps> = ({ onComplet
 
       ctx.drawImage(video, 0, 0);
       const imageData = canvas.toDataURL('image/jpeg', 0.95);
+      if (!canvas.width || !canvas.height || !imageData.startsWith('data:image/')) {
+        throw new Error('Camera is still starting. Hold still and try again.');
+      }
       log('info', 'capture', 'Frame captured', { w: canvas.width, h: canvas.height, bytes: imageData.length });
 
       if (stream) stream.getTracks().forEach(track => track.stop());
