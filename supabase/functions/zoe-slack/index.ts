@@ -67,7 +67,7 @@ Deno.serve(async (req: Request) => {
   if (guard.response) return guard.response;
 
   try {
-    const { action = 'channels', channel, query, text, limit = 20 } = await req.json().catch(() => ({}));
+    const { action = 'channels', channel, query, text, limit = 20 } = (guard.body ?? {}) as any;
 
     if (action === 'channels') {
       const r = await slack('conversations.list', { limit: Math.min(limit, 200), types: 'public_channel' });
