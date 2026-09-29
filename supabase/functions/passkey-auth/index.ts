@@ -63,6 +63,21 @@ const response = (body: Json, status = 200) =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
+const decoyBeginAuth = async (email: string, requestId: string, rpId: unknown) => {
+  // Anti-enumeration: unknown emails get the same shaped answer as real ones.
+  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`mmora-decoy:${email}`)));
+  const challengeBytes = new Uint8Array(32);
+  crypto.getRandomValues(challengeBytes);
+  return response({
+    success: true,
+    requestId,
+    challengeId: crypto.randomUUID(),
+    challenge: base64URLEncode(challengeBytes),
+    rpId,
+    allowCredentials: [{ id: base64URLEncode(digest), type: "public-key", transports: ["internal", "hybrid"], deviceName: "Passkey" }],
+  });
+};
+
 const getClientIp = (req: Request) =>
   req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
   req.headers.get("x-real-ip") ||
@@ -169,7 +184,7 @@ serve(async (req) => {
       const user = await findUserByEmail(supabase, email);
       if (!user) {
         console.warn("[passkey-auth] user not found", { requestId });
-        return response({ success: false, error: "No biometric passkey is registered for this email", requestId }, 404);
+        return decoyBeginAuth(email, requestId, body.diagnostics?.rpId);
       }
 
       const { data: credentials, error: credentialError } = await supabase
@@ -180,7 +195,7 @@ serve(async (req) => {
       if (credentialError) throw credentialError;
       if (!credentials?.length) {
         console.warn("[passkey-auth] no credentials", { requestId, userId: user.id });
-        return response({ success: false, error: "No biometric passkey is registered for this email", requestId }, 404);
+        return decoyBeginAuth(email, requestId, body.diagnostics?.rpId);
       }
 
       const challengeBytes = new Uint8Array(32);
@@ -257,7 +272,7 @@ serve(async (req) => {
       if (credentialError) throw credentialError;
       if (!credential) {
         await supabase.from("passkey_auth_challenges").update({ failure_reason: "credential_not_found" }).eq("id", challengeId);
-        return response({ success: false, error: "Biometric credential not found", requestId }, 404);
+        return response({ success: false, error: "Passkey sign-in didn't work. Try again or use your password.", requestId }, 401);
       }
 
       const authenticatorData = base64URLDecode(String(body.authenticatorData || ""));
