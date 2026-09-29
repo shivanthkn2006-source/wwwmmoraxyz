@@ -134,17 +134,22 @@ const AuthPage = () => {
     setGoogleLoading(true);
     try {
       safeSession().set('mmora_oauth_return_to', '/home');
-      const { error } = await supabase.auth.signInWithOAuth({
+      let framed = false;
+      try { framed = window.self !== window.top; } catch { framed = true; }
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/auth`,
           queryParams: { prompt: 'select_account' },
+          skipBrowserRedirect: framed,
         },
       });
       if (error) {
         toast({ title: 'Google sign-in failed', description: error.message || 'Please try again.', variant: 'destructive' });
         return;
       }
+      // Google refuses to render inside frames (editor preview) — open a real tab instead.
+      if (framed && data?.url) window.open(data.url, '_blank');
     } catch (error) {
       toast({
         title: 'Google sign-in failed',
@@ -155,6 +160,15 @@ const AuthPage = () => {
       setGoogleLoading(false);
     }
   };
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search + '&' + window.location.hash.replace(/^#/, ''));
+    const oauthError = params.get('error_description') || params.get('error');
+    if (oauthError) {
+      toast({ title: 'Google sign-in failed', description: oauthError.replace(/\+/g, ' '), variant: 'destructive' });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const [showRecovery, setShowRecovery] = useState(false);
   const passkeyLabel = deviceType === 'faceid'
