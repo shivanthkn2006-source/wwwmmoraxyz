@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { sovereignFetch, sovereignKey } from '../_shared/sovereign-ai.ts';
-import { nvidiaVision } from '../_shared/nvidia-provider.ts';
+import { nvidiaKey, nvidiaVision } from '../_shared/nvidia-provider.ts';
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
@@ -43,7 +43,7 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     // Vision runs 100% through the project's own provider keys (sovereign shim).
     // No Lovable AI credits are ever consumed.
-    if (!sovereignKey()) {
+    if (!sovereignKey() && !nvidiaKey()) {
       console.error('[face-verification] no vision provider configured');
       return new Response(
         JSON.stringify({ error: 'Face verification service is not configured. Ask an admin to add an AI provider key in backend settings.' }),
@@ -192,10 +192,16 @@ serve(async (req) => {
 
     switch (operation) {
       case 'enroll_face': {
+        if (!imageData) {
+          return new Response(
+            JSON.stringify({ error: 'A camera image is required for face enrollment.' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+          );
+        }
         // Store face enrollment data using Gemini 2.5 Pro Vision for analysis
         // NVIDIA vision first (Gemini quota is exhausted), sovereign chain as backup.
         const enrollPrompt = 'Biometric enrollment. Describe this face for future identity matching: face shape, eye, nose, mouth, eyebrow, skin tone, distinctive marks, approximate age range. Ignore hair style, clothing and accessories (they change). If no clear single human face is visible, reply exactly NO_FACE.';
-        let analysis: string | null = await nvidiaVision(imageData!, enrollPrompt, { maxTokens: 400, timeoutMs: 30_000 });
+        let analysis: string | null = await nvidiaVision(imageData, enrollPrompt, { maxTokens: 400, timeoutMs: 30_000 });
         if (!analysis) {
           const aiResponse = await sovereignFetch(GEMINI_URL, {
             method: 'POST',
@@ -246,7 +252,7 @@ serve(async (req) => {
           user_id: verifiedUserId,
           event_type: 'face_verification_enrolled',
           event_status: 'success',
-          metadata: { ai_model: 'gemini-3.1-pro-preview' }
+            metadata: { ai_model: 'nvidia-vision-with-sovereign-fallback' }
         });
 
         return new Response(
