@@ -161,9 +161,11 @@ export const ZoeOrbConversationPanel: React.FC<ZoeOrbConversationPanelProps> = (
   const lastLooksAskAt = useRef(0);
   const getFreshLook = useCallback(async (text: string): Promise<Record<string, unknown> | null> => {
     if (!isZoeVisionPreferred()) return null;
-    const asksLooks = /\b(wear|wearing|outfit|look(s|ing)?|see|suit|shirt|t-shirt|cap|hat|dress|hair|face|behind me|in front of me|holding)\b/i.test(text);
-    // Short follow-ups ("no…", "look again", "now?") within 2 minutes of a looks question also get a fresh look.
-    const followUp = !asksLooks && Date.now() - lastLooksAskAt.current < 120_000 && text.trim().split(/\s+/).length <= 6;
+    // Only questions about the member themselves / their surroundings — never everyday "looks good", "see you".
+    const asksLooks = /\b(what am i (wearing|holding|doing)|what('?s| is) (behind|in front of) me|how do i look|do i look|can you see (me|this|what)|do you see (me|this|what)|look at (me|this|my)|see what i|does (this|it) (suit|fit) me|am i wearing|my (outfit|shirt|t-shirt|dress|hair|face|cap|hat) (look|looks|okay|ok|good))\b/i.test(text);
+    // Short follow-ups ("look again", "now?", "see now") within 2 minutes of a looks question also get a fresh look.
+    const followUp = !asksLooks && Date.now() - lastLooksAskAt.current < 120_000
+      && text.trim().split(/\s+/).length <= 5 && /\b(again|now|look|see|this one|how about)\b/i.test(text);
     if (!asksLooks && !followUp) return null;
     lastLooksAskAt.current = Date.now();
     const fresh = await Promise.race([
