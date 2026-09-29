@@ -15,6 +15,7 @@ import PageSeo from '@/components/seo/PageSeo';
 import { ROUTE_SEO } from '@/config/routeSeo';
 import TurnstileSignup, { verifyTurnstileToken } from '@/components/security/TurnstileSignup';
 import { supabase } from '@/integrations/supabase/client';
+import { lovable } from '@/integrations/lovable/index';
 import { RecoveryCodeSignIn } from '@/components/auth/RecoveryCodeSignIn';
 import { captureReferralFromUrl, redeemStoredReferral } from '@/lib/referral';
 import { markTourPending } from '@/components/onboarding/GuidedTour';
@@ -134,22 +135,17 @@ const AuthPage = () => {
     setGoogleLoading(true);
     try {
       safeSession().set('mmora_oauth_return_to', '/home');
-      let framed = false;
-      try { framed = window.self !== window.top; } catch { framed = true; }
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/auth`,
-          queryParams: { prompt: 'select_account' },
-          skipBrowserRedirect: framed,
-        },
+      // Returns through /~oauth/callback on this domain (matches Google's saved redirect URIs).
+      const result = await lovable.auth.signInWithOAuth('google', {
+        redirect_uri: `${window.location.origin}/auth`,
+        extraParams: { prompt: 'select_account' },
       });
-      if (error) {
-        toast({ title: 'Google sign-in failed', description: error.message || 'Please try again.', variant: 'destructive' });
+      if (result.error) {
+        toast({ title: 'Google sign-in failed', description: result.error.message || 'Please try again.', variant: 'destructive' });
         return;
       }
-      // Google refuses to render inside frames (editor preview) — open a real tab instead.
-      if (framed && data?.url) window.open(data.url, '_blank');
+      if (result.redirected) return;
+      navigate('/home', { replace: true });
     } catch (error) {
       toast({
         title: 'Google sign-in failed',
