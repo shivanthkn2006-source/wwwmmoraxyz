@@ -181,7 +181,8 @@ Deno.serve(async (req) => {
     const auth = req.headers.get('Authorization') ?? '';
     const sb = createClient(env('SUPABASE_URL'), env('SUPABASE_ANON_KEY'), { global: { headers: { Authorization: auth } } });
     const { data: u } = await sb.auth.getUser();
-    const body = await req.json().catch(() => ({}));
+    // publicGuard already read the POST body (a request body can only be read once).
+    const body: any = guard.body ?? {};
     const action = String(body.action ?? '');
     if (!u?.user && action !== 'selftest') return json({ error: 'unauthorized' }, 401);
     const name = String(body.name ?? u?.user?.user_metadata?.full_name ?? 'friend').split(' ')[0];
