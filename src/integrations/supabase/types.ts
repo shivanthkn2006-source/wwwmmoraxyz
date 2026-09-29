@@ -19,21 +19,27 @@ export type Database = {
           code_hash: string
           created_at: string
           enabled: boolean
+          failed_attempts: number
           last_used_at: string | null
+          locked_until: string | null
           user_id: string
         }
         Insert: {
           code_hash: string
           created_at?: string
           enabled?: boolean
+          failed_attempts?: number
           last_used_at?: string | null
+          locked_until?: string | null
           user_id: string
         }
         Update: {
           code_hash?: string
           created_at?: string
           enabled?: boolean
+          failed_attempts?: number
           last_used_at?: string | null
+          locked_until?: string | null
           user_id?: string
         }
         Relationships: []
