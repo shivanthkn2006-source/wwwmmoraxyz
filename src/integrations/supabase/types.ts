@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_recovery_codes: {
+        Row: {
+          code_hash: string
+          created_at: string
+          enabled: boolean
+          last_used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          code_hash: string
+          created_at?: string
+          enabled?: boolean
+          last_used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          code_hash?: string
+          created_at?: string
+          enabled?: boolean
+          last_used_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       achievement_milestones: {
         Row: {
           created_at: string | null
@@ -4660,6 +4684,33 @@ export type Database = {
           embedding?: string | null
           id?: string
           metadata?: Json | null
+        }
+        Relationships: []
+      }
+      memory_tamper_log: {
+        Row: {
+          action: string
+          attempted_by: string | null
+          created_at: string
+          id: string
+          row_owner: string | null
+          table_name: string
+        }
+        Insert: {
+          action: string
+          attempted_by?: string | null
+          created_at?: string
+          id?: string
+          row_owner?: string | null
+          table_name: string
+        }
+        Update: {
+          action?: string
+          attempted_by?: string | null
+          created_at?: string
+          id?: string
+          row_owner?: string | null
+          table_name?: string
         }
         Relationships: []
       }
