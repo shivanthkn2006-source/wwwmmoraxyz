@@ -1,9 +1,16 @@
 # Fix Google "403 That's an error" screen
 
 ## What is happening
-- The Google button no longer uses Lovable's Google plugin. It already sends you straight to Google with your own backend Google settings.
-- The 403 screen appears because you tapped it inside the Lovable editor preview (address bar shows lovable.dev/projects/...). The preview runs the app inside a frame, and Google refuses to show its sign-in page inside a frame. That is the 403.
-- Separately, the Client ID saved in your backend is still incomplete (too short), so even outside the editor Google will reject it until the full ID ending `.apps.googleusercontent.com` and its secret are saved.
+- The Google button no longer uses Lovable's Google plugin. It goes straight to Google using the Google key saved in your backend.
+- The 403 also shows up on mmora.xyz, so the main cause is that key. It is incomplete: only 20 characters, not a full Web Application ID. Google rejects unknown IDs with this bare "403, that's all we know" page.
+- Inside the Lovable editor preview there is a second problem. Google also refuses to open inside a frame.
+
+## Fix order
+1. You give me your Google Client ID and Secret through a secure form. I save them to the backend Google sign-in settings. The ID must end in `.apps.googleusercontent.com`.
+2. You confirm these settings in Google Cloud:
+   - JavaScript origins include https://mmora.xyz, https://www.mmora.xyz, https://myzoe.xyz and https://www.myzoe.xyz.
+   - The redirect URI matches the callback address shown in your backend Google settings.
+3. I apply the code changes below and test on mmora.xyz.
 
 ## Changes
 1. On the sign-in page, detect when the app is running inside a frame (editor preview). In that case open Google sign-in in a new tab/window instead of inside the frame, so Google's page loads normally.
