@@ -13010,6 +13010,7 @@ export type Database = {
           new_tone: string
         }[]
       }
+      are_friends: { Args: { _a: string; _b: string }; Returns: boolean }
       auth_user_id_by_email: { Args: { _email: string }; Returns: string }
       award_resonance_points: {
         Args: { p_player_id: string; p_points: number; p_reason?: string }
@@ -13050,6 +13051,10 @@ export type Database = {
       check_user_activity_freshness: {
         Args: { p_days?: number; p_user_id: string }
         Returns: Json
+      }
+      claim_challenge_reward: {
+        Args: { p_user_challenge_id: string }
+        Returns: number
       }
       cleanup_expired_call_signals: { Args: never; Returns: undefined }
       cleanup_expired_notifications: { Args: never; Returns: undefined }
