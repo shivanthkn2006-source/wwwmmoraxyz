@@ -456,8 +456,8 @@
               method: 'POST', keepalive: true,
               headers: { 'Content-Type': 'application/json', apikey: rk, Authorization: 'Bearer ' + rk },
               body: JSON.stringify({ events: failures.slice(-5).map(function (f) {
-                return { error_type: 'startup_' + f.type, message: String(f.message || '').slice(0, 2000), stack: f.stack || null,
-                  url: location.href, user_agent: navigator.userAgent, severity: 'critical', source: 'boot_shell' };
+                return { errorType: 'startup_' + f.type, message: String(f.message || '').slice(0, 2000), stack: f.stack || undefined,
+                  url: location.href, userAgent: navigator.userAgent, severity: 'critical', source: 'boot_shell' };
               }) })
             }).catch(function () {});
           } catch (e) {}
