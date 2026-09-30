@@ -1,3 +1,4 @@
+import { requireCronOrAdmin } from '../_shared/caller-guard.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.0";
 import { clientErrorResponse } from '../_shared/client-error.ts';
@@ -14,6 +15,7 @@ serve(async (req) => {
   }
   const __guard = await publicGuard(req, { name: 'check-reminders', limit: 30, windowSeconds: 60 });
   if (__guard.response) return __guard.response;
+  { const __a = await requireCronOrAdmin(req, 'check-reminders'); if (__a instanceof Response) return __a; }
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
