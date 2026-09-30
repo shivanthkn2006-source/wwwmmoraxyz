@@ -1,3 +1,4 @@
+import { safeCsvCell } from "@/lib/csvSafe";
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, RefreshCw, PlayCircle, AlertTriangle, Clock, CheckCircle2, ShieldCheck, Download, GitCompare, Radio } from 'lucide-react';
@@ -29,7 +30,7 @@ const downloadFile = (name: string, mime: string, body: string) => {
 const toCsv = <T extends object>(rows: T[]) => {
   if (!rows.length) return '';
   const headers = Object.keys(rows[0]);
-  const cell = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const cell = safeCsvCell;
   return [headers.join(','), ...rows.map((r) => headers.map((h) => cell((r as Record<string, unknown>)[h])).join(','))].join('\n');
 
 };

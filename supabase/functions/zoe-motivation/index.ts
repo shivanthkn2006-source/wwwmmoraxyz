@@ -1,3 +1,4 @@
+import { requireCronOrAdmin } from '../_shared/caller-guard.ts';
 /**
  * ZOE DAILY MOTIVATION — isolated engine, separate from the astrology engine.
  *
@@ -197,6 +198,8 @@ Deno.serve(async (req) => {
 
   try {
     if (action === 'run') {
+      const __cron = await requireCronOrAdmin(req, 'zoe-motivation');
+      if (__cron instanceof Response) return __cron;
       // Every account gets a profile row first — nobody is skipped because a
       // profile was never provisioned for them.
       await fetch(`${SUPABASE_URL}/rest/v1/rpc/ensure_profiles_for_all_users`, {

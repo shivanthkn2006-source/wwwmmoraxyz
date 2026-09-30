@@ -180,11 +180,17 @@ export const useMultiplayerPresence = ({
           });
         });
       })
-      .on('broadcast', { event: 'world_event' }, (payload) => {
-        // Handle global world events from admins
-        console.log('[Multiplayer] World event:', payload);
-        window.dispatchEvent(new CustomEvent('multiplayer-world-event', { detail: payload.payload }));
-      })
+      .on(
+        'postgres_changes' as any,
+        { event: 'INSERT', schema: 'public', table: 'vr_world_events', filter: `room_id=eq.${roomId}` },
+        (payload: any) => {
+          // Only admin-authored rows can exist (enforced by database rules).
+          const row = payload.new ?? {};
+          window.dispatchEvent(new CustomEvent('multiplayer-world-event', {
+            detail: { event: row.event, data: row.data, from: row.created_by },
+          }));
+        },
+      )
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
           setIsConnected(true);
@@ -261,17 +267,14 @@ export const useMultiplayerPresence = ({
   }, []);
 
   // Broadcast world event (admin only)
+  // Stored server-side; the database only accepts rows from the admin role,
+  // so no other member can forge a world event.
   const broadcastWorldEvent = useCallback(async (event: string, data?: any) => {
-    if (!channelRef.current) return;
-    
-    await channelRef.current.send({
-      type: 'broadcast',
-      event: 'world_event',
-      payload: { event, data, from: user?.id },
-    });
-    
-    console.log('[Multiplayer] Broadcast world event:', event);
-  }, [user?.id]);
+    const { error } = await (supabase as any)
+      .from('vr_world_events')
+      .insert({ room_id: roomId, event, data: data ?? {} });
+    if (error) console.warn('[Multiplayer] World event refused:', error.message);
+  }, [roomId]);
 
   // Get other players as array
   const otherPlayers = Array.from(players.values());

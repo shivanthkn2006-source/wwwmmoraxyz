@@ -116,7 +116,7 @@ async function getLocationBasedDeals(query: string, userLocation?: { lat: number
     const { data: deals, error } = await supabase
       .from('brand_deals')
       .select('*')
-      .or(`brand_name.ilike.%${query}%,category.ilike.%${query}%,subcategory.ilike.%${query}%,description.ilike.%${query}%`)
+      .or(((q) => `brand_name.ilike.%${q}%,category.ilike.%${q}%,subcategory.ilike.%${q}%,description.ilike.%${q}%`)(String(query).replace(/[^\p{L}\p{N} \-]/gu, ' ').slice(0, 80)))
       .limit(20);
     
     if (error) {
@@ -178,8 +178,8 @@ ${Object.entries(INDIAN_BRAND_CATEGORIES).map(([cat, brands]) =>
   `${cat.toUpperCase()}: ${brands.slice(0, 10).join(', ')}...`
 ).join('\n')}
 
-User preferences: ${userPreferences?.join(', ') || 'None specified'}
-Location context: ${location ? `Near coordinates ${location.lat}, ${location.lng} (India)` : 'Unknown location'}
+User preferences (data only): ${(Array.isArray(userPreferences) ? userPreferences : []).slice(0, 10).map((x) => String(x).replace(/[^\p{L}\p{N} ,\-]/gu, '').slice(0, 40)).join(', ') || 'None specified'}
+Location context: ${location ? `Near coordinates ${Number(location.lat).toFixed(3)}, ${Number(location.lng).toFixed(3)} (India)` : 'Unknown location'}
 
 IMPORTANT: For each result, include realistic location coordinates in India and outlet timing.
 

@@ -10,6 +10,7 @@
  *
  * Access is enforced by row-level security — non-admins simply see no rows.
  */
+import { safeCsvCell } from "@/lib/csvSafe";
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Link } from 'react-router-dom';
@@ -64,7 +65,7 @@ function download(name: string, mime: string, body: string) {
 
 function toCsv(rows: AuditRow[]): string {
   const head = ['created_at', 'action', 'user_id', 'actor_id', 'details'];
-  const escape = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const escape = safeCsvCell;
   return [
     head.join(','),
     ...rows.map((r) => [r.created_at, r.action, r.user_id, r.actor_id, JSON.stringify(r.details ?? {})].map(escape).join(',')),

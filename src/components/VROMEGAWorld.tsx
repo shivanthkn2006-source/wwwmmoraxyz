@@ -71,6 +71,7 @@ import { VirtualJoystick, RotationButtons, LookButtons } from './vr/features/VRC
 import { useMultiplayerPresence } from '@/hooks/useMultiplayerPresence';
 import { MultiplayerAvatars } from './vr/features/GlassPyramidAvatar';
 import EnterpriseControlDeck from './vr/features/EnterpriseControlDeck';
+import { useIsAdmin } from '@/hooks/useIsAdmin';
 import WorldBroadcastNotification from './vr/features/WorldBroadcastNotification';
 // Universal VR Controller System (PS5/Quest/Vision Pro)
 import { useVRUniversalController } from '@/hooks/useVRUniversalController';
@@ -1508,7 +1509,7 @@ const VRLiveClock: React.FC = () => {
   }, [isActive, setDisplayName, showInteractiveSystems, user]);
 
   // Admin check (simple role detection - extend with proper RLS in production)
-  const isAdmin = user?.email?.includes('admin') || false;
+  const isAdmin = useIsAdmin() === true; // server-verified admin role (has_role), never email text
 
   // ═══════════════════════════════════════════════════════════════════════════
   // BUILDING STATE - Managed at component level for proper React Three Fiber integration
