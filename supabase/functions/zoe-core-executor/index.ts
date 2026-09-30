@@ -1,4 +1,4 @@
-import { requireCaller } from '../_shared/caller-guard.ts';
+import { requireCaller, bindOwner } from '../_shared/caller-guard.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
@@ -628,7 +628,8 @@ serve(async (req) => {
 
     const body = await req.json();
     const validatedInput = requestSchema.parse(body);
-    const { command, userId, intent, context, options } = validatedInput;
+    const { command, intent, context, options } = validatedInput;
+    const userId = bindOwner(caller, validatedInput.userId) as string;
 
     const supabase = getSupabaseClient();
     if (!supabase) {
@@ -2174,7 +2175,7 @@ async function executeDHFOperation(
     status: 'dhf_operation_complete',
     operation_id: requestId,
     action: args.action,
-    user_id: args.user_id,
+    user_id: userContext.user_id,
     timestamp: new Date().toISOString()
   };
 

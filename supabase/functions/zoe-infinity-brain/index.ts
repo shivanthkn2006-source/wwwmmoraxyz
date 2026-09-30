@@ -1,3 +1,4 @@
+import { safeChatMessages } from '../_shared/safe-messages.ts';
 // ═══════════════════════════════════════════════════════════════════════════════
 // ZOE INFINITY BRAIN - Edge Function
 // Smart Task-Aware Auto-Routing + Soul Codex + DEEP GROUNDING + EMOTION + MEMORY
@@ -622,7 +623,7 @@ serve(async (req: Request) => {
   }
 
   try {
-    const { messages, mode, soulCodex, memoryContext, enableGrounding = true, emotionContext, intimacyLevel, clientTime, personalityMatrix, currentRoute } = await req.json() as {
+    const { messages: __rawMessages, mode, soulCodex, memoryContext, enableGrounding = true, emotionContext, intimacyLevel, clientTime, personalityMatrix, currentRoute } = await req.json() as {
       messages: Message[];
       mode: IntelligenceMode;
       soulCodex?: string;
@@ -634,6 +635,7 @@ serve(async (req: Request) => {
       personalityMatrix?: PersonalityMatrixInput;
       currentRoute?: string;
     };
+    const messages = safeChatMessages(__rawMessages) as Message[];
 
     const lastUserMessage = [...messages].reverse().find(m => m.role === 'user')?.content || '';
     

@@ -566,7 +566,7 @@ Deno.serve(async (req) => {
     // Keep each invocation inside the edge runtime budget; callers repeatedly
     const enqueued = body?.backfill === true && user
       ? await enqueueBackfill(db, user.id)
-      : body?.visionBackfill === true
+      : body?.visionBackfill === true && isSystemDrain
         ? await enqueueVisionBackfill(db, body?.force === true)
         : 0;
 

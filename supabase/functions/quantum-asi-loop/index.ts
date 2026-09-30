@@ -1,4 +1,4 @@
-import { requireCaller } from '../_shared/caller-guard.ts';
+import { requireCaller, bindOwner } from '../_shared/caller-guard.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -45,7 +45,7 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
-  { const __c = await requireCaller(req, 'member'); if (__c instanceof Response) return __c; }
+  const __c = await requireCaller(req, 'member'); if (__c instanceof Response) return __c;
 
   const startTime = performance.now();
   
@@ -55,7 +55,8 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
     
     const request: QuantumLoopRequest = await req.json();
-    const { mode, userId, triggeredBy, payload } = request;
+    const { mode, triggeredBy, payload } = request;
+    const userId = bindOwner(__c, request.userId) as string;
     
     console.log(`[QuantumASI-Loop] Starting in ${mode} mode${userId ? ` for user ${userId.substring(0, 8)}...` : ''}`);
     

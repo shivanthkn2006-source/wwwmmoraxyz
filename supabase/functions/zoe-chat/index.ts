@@ -1,3 +1,4 @@
+import { safeChatMessages } from '../_shared/safe-messages.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -195,7 +196,8 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { messages, soulMetrics, timezone, localTime, replyContext, platformContext, behavioralTelemetry, enableASI, asiMode, realtimeContext, postContext, platformPages } = requestSchema.parse(body);
+    const { messages: __rawMessages, soulMetrics, timezone, localTime, replyContext, platformContext, behavioralTelemetry, enableASI, asiMode, realtimeContext, postContext, platformPages } = requestSchema.parse(body);
+    const messages = safeChatMessages(__rawMessages) as any;
 
     // ═══════════════════════════════════════════════════════════════════════════════
     // ASI 7.5x PROCESSING - Pentarchy + Truth Engine + Quantum Loop

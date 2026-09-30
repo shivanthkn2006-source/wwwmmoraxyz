@@ -1,3 +1,4 @@
+import { safeChatMessages } from '../_shared/safe-messages.ts';
 import { requireCaller } from '../_shared/caller-guard.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
@@ -207,10 +208,7 @@ serve(async (req) => {
 
     // Add context if provided
     if (context.previousMessages && Array.isArray(context.previousMessages)) {
-      const contextMessages = context.previousMessages.map((msg: any) => ({
-        role: msg.role,
-        content: msg.content,
-      }));
+      const contextMessages = safeChatMessages(context.previousMessages);
       messages.splice(1, 0, ...contextMessages);
     }
 

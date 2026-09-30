@@ -1,3 +1,4 @@
+import { safeChatMessages } from '../_shared/safe-messages.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { sovereignFetch, sovereignKey } from "../_shared/sovereign-ai.ts";
@@ -156,7 +157,8 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { messages, businessName, businessContext, industryType } = requestSchema.parse(body);
+    const { messages: __rawMessages, businessName, businessContext, industryType } = requestSchema.parse(body);
+    const messages = safeChatMessages(__rawMessages) as any;
 
     const SOVEREIGN_AI_KEY = sovereignKey();
     if (!SOVEREIGN_AI_KEY) {

@@ -1,3 +1,4 @@
+import { safeChatMessages } from '../_shared/safe-messages.ts';
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.58.0';
@@ -28,7 +29,8 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { messages, includeHistory } = requestSchema.parse(body);
+    const { messages: __rawMessages, includeHistory } = requestSchema.parse(body);
+    const messages = safeChatMessages(__rawMessages) as any;
     // API keys checked per-provider in cascade
 
     // Get comprehensive user profile for personalization

@@ -1,3 +1,4 @@
+import { safeChatMessages } from '../_shared/safe-messages.ts';
 import { requireCaller } from '../_shared/caller-guard.ts';
 // ═══════════════════════════════════════════════════════════════════════════════
 // REALTIME VOICE - Migrated to Lovable AI (No OpenAI Key Required)
@@ -165,7 +166,7 @@ Keep responses concise (1-3 sentences) for natural voice conversation.
 Be friendly, supportive, and conversational.
 ${context?.user_context || ''}`
       },
-      ...(context?.conversation_history?.slice(-6) || []),
+      ...safeChatMessages(context?.conversation_history?.slice(-6) || []),
       { role: 'user', content: text }
     ];
 

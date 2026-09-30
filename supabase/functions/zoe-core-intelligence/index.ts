@@ -1,4 +1,4 @@
-import { requireCaller } from '../_shared/caller-guard.ts';
+import { requireCaller, bindOwner } from '../_shared/caller-guard.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { 
@@ -231,11 +231,13 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
-  { const __c = await requireCaller(req, 'member'); if (__c instanceof Response) return __c; }
+  const __c = await requireCaller(req, 'member'); if (__c instanceof Response) return __c;
 
   try {
     const body = await req.json();
-    const { command, userId, mode = 'standard', context, options, sessionId, messageId } = requestSchema.parse(body);
+    const __parsed = requestSchema.parse(body);
+    const { command, mode = 'standard', context, options, sessionId, messageId } = __parsed;
+    const userId = bindOwner(__c, __parsed.userId) as string;
     const startedAt = Date.now();
 
     // API keys checked per-provider in cascade

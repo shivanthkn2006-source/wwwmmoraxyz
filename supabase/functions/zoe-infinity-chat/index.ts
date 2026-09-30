@@ -1,3 +1,4 @@
+import { safeChatMessages } from '../_shared/safe-messages.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getDailyArchetype, dayLordPromptLine } from '../_shared/day-lord.ts';
@@ -126,7 +127,8 @@ serve(async (req) => {
       });
     }
 
-    const { messages, soulMetrics, timezone, localTime, platformContext } = await req.json();
+    const { messages: __rawMessages, soulMetrics, timezone, localTime, platformContext } = await req.json();
+    const messages = safeChatMessages(__rawMessages) as any;
     // Lovable Gateway removed — using sovereign cascade below.
 
 
