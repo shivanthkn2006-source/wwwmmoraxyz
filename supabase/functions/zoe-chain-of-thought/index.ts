@@ -1,3 +1,4 @@
+import { requireCaller, bindOwner } from '../_shared/caller-guard.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { 
@@ -1133,22 +1134,10 @@ serve(async (req) => {
     }
 
     // Extract userId from auth header if not provided
-    let resolvedUserId = userId;
-    if (!resolvedUserId) {
-      const authHeader = req.headers.get('authorization');
-      if (authHeader) {
-        try {
-          const token = authHeader.replace('Bearer ', '');
-          const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-          const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-          const supabase = createClient(supabaseUrl, supabaseKey);
-          const { data: { user } } = await supabase.auth.getUser(token);
-          resolvedUserId = user?.id || null;
-        } catch {
-          // Ignore auth errors
-        }
-      }
-    }
+    // Owner comes only from the verified sign-in, never the request body.
+    const __caller = await requireCaller(req, 'member');
+    if (__caller instanceof Response) return __caller;
+    const resolvedUserId = bindOwner(__caller, userId) ?? null;
 
     const result = await runChainOfThought(
       message,
