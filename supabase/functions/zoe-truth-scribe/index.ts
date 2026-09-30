@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sovereignFetch, sovereignKey } from "../_shared/sovereign-ai.ts";
-import { requireCaller } from '../_shared/caller-guard.ts';
+import { requireCaller, bindOwner } from '../_shared/caller-guard.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -102,7 +102,8 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { userId, messages, forceRun = false } = await req.json();
+    let { userId, messages, forceRun = false } = await req.json();
+    userId = bindOwner(__caller, userId) as typeof userId;
 
     if (!userId) {
       return new Response(

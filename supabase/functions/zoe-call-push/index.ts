@@ -47,6 +47,15 @@ Deno.serve(async req => {
     webpush.setVapidDetails(subject, publicKey, privateKey);
 
     const admin = createClient(supabaseUrl, serviceKey);
+    // Only ring people you are friends with.
+    const me = userData.user.id;
+    const { data: friend } = await admin
+      .from('friendships')
+      .select('user1_id')
+      .or(`and(user1_id.eq.${me},user2_id.eq.${receiverId}),and(user1_id.eq.${receiverId},user2_id.eq.${me})`)
+      .limit(1)
+      .maybeSingle();
+    if (!friend) return json({ error: 'not_friends' }, 403);
     const { data: devices, error: devicesError } = await admin
       .from('push_subscriptions')
       .select('id, endpoint, p256dh, auth')

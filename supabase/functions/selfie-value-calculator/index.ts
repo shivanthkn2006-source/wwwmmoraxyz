@@ -1,4 +1,4 @@
-import { requireCaller } from '../_shared/caller-guard.ts';
+import { requireCaller, bindOwner } from '../_shared/caller-guard.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { sovereignFetch, sovereignKey } from "../_shared/sovereign-ai.ts";
@@ -36,7 +36,7 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
-  { const __c = await requireCaller(req, 'member'); if (__c instanceof Response) return __c; }
+  const __caller = await requireCaller(req, 'member'); if (__caller instanceof Response) return __caller;
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -45,7 +45,8 @@ serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { pinId, imageUrl, userId, location } = await req.json();
+    let { pinId, imageUrl, userId, location } = await req.json();
+    userId = bindOwner(__caller, userId) as typeof userId;
 
     if (!pinId || !imageUrl) {
       return new Response(JSON.stringify({ error: 'Missing pinId or imageUrl' }), {

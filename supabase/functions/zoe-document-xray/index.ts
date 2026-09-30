@@ -43,7 +43,7 @@ serve(async (req) => {
 
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
-    const userId = formData.get("userId") as string | null;
+    const userId: string | null = authUser.id; // never trust a client-supplied owner
     const analysisType = formData.get("analysisType") as string || "full";
 
     if (!file) {
