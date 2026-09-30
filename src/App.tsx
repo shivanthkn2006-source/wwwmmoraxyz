@@ -1,3 +1,4 @@
+import React, { useState, useEffect, useCallback, lazy, Suspense, memo } from "react";
 import AdminRoute from "@/components/AdminRoute";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -41,7 +42,6 @@ import CameraActiveIndicator from "./components/CameraActiveIndicator"; // CAMER
 const DHFHeartbeatPulse = lazy(() => import("./components/DHFHeartbeatPulse"));
 import GenesisCinematicIntro from "./components/GenesisCinematicIntro";
 import { useGenesisIntro } from "./hooks/useGenesisIntro";
-import React, { useState, useEffect, useCallback, lazy, Suspense, memo } from "react";
 import { useLocation } from "react-router-dom";
 import { checkAppVersion } from "@/lib/versionCheck";
 import { AppErrorBoundary } from "@/components/core/ErrorBoundary";

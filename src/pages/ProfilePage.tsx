@@ -11,6 +11,7 @@ import IdentityVaultSection from '@/components/profile/IdentityVaultSection';
 import ConversationEmailSection from '@/components/profile/ConversationEmailSection';
 import FaithSection from '@/components/profile/FaithSection';
 import AccountSessionsSection from '@/components/profile/AccountSessionsSection';
+import KarmaSwapSection from '@/components/profile/KarmaSwapSection';
 import VoiceCommandsSettings from '@/components/VoiceCommandsSettings';
 import FeedbackCollectionPanel from '@/components/FeedbackCollectionPanel';
 import { supabase } from '@/integrations/supabase/client';
@@ -256,6 +257,7 @@ const ProfilePage = () => {
         <FaithSection />
         <IdentityVaultSection />
         <ConversationEmailSection />
+        <KarmaSwapSection />
         <AccountSessionsSection />
       </div>
     </div>
