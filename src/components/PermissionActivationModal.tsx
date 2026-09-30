@@ -170,14 +170,14 @@ export const PermissionActivationModal: React.FC<PermissionActivationModalProps>
                       isGranted 
                         ? "bg-green-500/20 ring-2 ring-green-500" 
                         : isCurrent 
-                          ? "bg-primary/20 ring-2 ring-primary animate-pulse"
-                          : "bg-muted"
+                          ? "tan-circle ring-2 ring-primary animate-pulse"
+                          : "tan-circle"
                     )}
                   >
                     {isGranted ? (
                       <CheckCircle2 className="w-6 h-6 text-green-500" />
                     ) : (
-                      <Icon className={cn("w-6 h-6", isCurrent ? "text-primary" : "text-muted-foreground")} />
+                      <Icon className={cn("w-6 h-6", "tan-circle-icon")} />
                     )}
                   </div>
                   <span className={cn(
@@ -234,7 +234,8 @@ export const PermissionActivationModal: React.FC<PermissionActivationModalProps>
               <Button
                 onClick={handleActivate}
                 disabled={isActivating}
-                className="w-full h-12 bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90"
+                variant="ghost"
+                className="w-full h-12 bg-transparent hover:bg-transparent border border-foreground/30 text-foreground"
               >
                 {isActivating ? (
                   <>
@@ -253,7 +254,7 @@ export const PermissionActivationModal: React.FC<PermissionActivationModalProps>
                 <Button
                   variant="ghost"
                   onClick={handleSkip}
-                  className="text-muted-foreground hover:text-foreground"
+                  className="bg-transparent hover:bg-transparent text-muted-foreground hover:text-foreground"
                 >
                   Skip for now
                   <ChevronRight className="w-4 h-4 ml-1" />
