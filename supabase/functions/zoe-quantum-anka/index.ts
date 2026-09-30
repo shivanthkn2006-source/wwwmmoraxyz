@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { sovereignFetch, sovereignKey } from "../_shared/sovereign-ai.ts";
-import { requireCaller } from '../_shared/caller-guard.ts';
+import { requireCaller, bindOwner } from '../_shared/caller-guard.ts';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ZOE QUANTUM LEVEL: UNIFIED ANKA-VASTU PROTOCOL
@@ -336,6 +336,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
+    body.userId = bindOwner(__caller, body.userId);
     const { 
       command, 
       userId, 
