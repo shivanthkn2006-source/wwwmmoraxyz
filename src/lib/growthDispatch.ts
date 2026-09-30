@@ -16,9 +16,33 @@ export interface GrowthDispatchResult<T = any> {
   signedOut: boolean;
 }
 
-function is401(error: any): boolean {
-  const status = error?.context?.status ?? error?.status;
-  return status === 401;
+function authMessage(value: unknown): string {
+  if (!value) return '';
+  if (typeof value === 'string') return value.toLowerCase();
+  if (value instanceof Error) return value.message.toLowerCase();
+  if (typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    return [record.error, record.message, record.error_description]
+      .filter((entry): entry is string => typeof entry === 'string')
+      .join(' ')
+      .toLowerCase();
+  }
+  return '';
+}
+
+function isAuthDenied(error: unknown, data?: unknown): boolean {
+  const candidate = error as { context?: { status?: number }; status?: number } | null;
+  const status = candidate?.context?.status ?? candidate?.status;
+  const message = `${authMessage(error)} ${authMessage(data)}`;
+  return status === 401
+    || message.includes('sign in required')
+    || message.includes('invalid session')
+    || message.includes('invalid jwt')
+    || message.includes('jwt expired');
+}
+
+function isSignedOutPayload(data: unknown): boolean {
+  return Boolean(data && typeof data === 'object' && (data as { signedOut?: boolean }).signedOut === true);
 }
 
 async function callOnce<T>(body: Record<string, unknown>, token: string) {
@@ -38,16 +62,17 @@ export async function invokeGrowthDispatch<T = any>(
 
   try {
     let res = await callOnce<T>(body, token);
-    if (res.error && is401(res.error)) {
+    if (isSignedOutPayload(res.data)) return signedOut;
+    if (isAuthDenied(res.error, res.data)) {
       const { data: refreshed } = await supabase.auth.refreshSession().catch(() => ({ data: { session: null } } as any));
       const fresh = refreshed?.session?.access_token;
       if (!fresh) return signedOut;
       res = await callOnce<T>(body, fresh);
-      if (res.error && is401(res.error)) return signedOut;
+      if (isSignedOutPayload(res.data) || isAuthDenied(res.error, res.data)) return signedOut;
     }
     return { ...res, signedOut: false };
   } catch (e) {
-    if (is401(e)) return signedOut;
+    if (isAuthDenied(e)) return signedOut;
     return { data: null, error: e as Error, signedOut: false };
   }
 }

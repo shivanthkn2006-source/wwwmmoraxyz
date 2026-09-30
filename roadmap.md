@@ -1,5 +1,6 @@
 # Current fixes
 
+- [x] Prevent growth-dispatch session expiry/sign-out races from becoming 401 runtime blank screens.
 - [x] Restore the fixed warm Zoe window/menu surfaces, simplify the voice stop control, and select one newest DHF-or-LOL auto announcement.
 - [x] Stabilize Zoe orb/chat rendering, remove the dark Latest pill and inner borders, and reduce both icon rails and typing area without changing actions or history.
 - [x] Disable every automatic reload from global and module failure boundaries; recovery is user-controlled only.

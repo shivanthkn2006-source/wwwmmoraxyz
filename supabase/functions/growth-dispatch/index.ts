@@ -31,14 +31,11 @@ import {
   FIGURE_HISTORY_WINDOW,
   TITLE_HISTORY_WINDOW,
 } from '../_shared/growth-content.ts';
-
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { createClient } from 'npm:@supabase/supabase-js@2';
+import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 const MAX_USERS_PER_RUN = 25;
@@ -785,12 +782,15 @@ async function authUser(req: Request): Promise<{ id: string } | null> {
   const auth = req.headers.get('Authorization') ?? '';
   if (!auth.startsWith('Bearer ')) return null;
   try {
-    const r = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-      headers: { apikey: SERVICE_KEY, Authorization: auth },
+    const client = createClient(SUPABASE_URL, ANON_KEY, {
+      global: { headers: { Authorization: auth } },
+      auth: { persistSession: false, autoRefreshToken: false },
     });
-    if (!r.ok) return null;
-    const user = await r.json();
-    return user?.id ? { id: String(user.id) } : null;
+    const token = auth.slice('Bearer '.length).trim();
+    if (!token) return null;
+    const { data, error } = await client.auth.getClaims(token);
+    if (error || !data?.claims?.sub) return null;
+    return { id: String(data.claims.sub) };
   } catch {
     return null;
   }
@@ -985,13 +985,13 @@ Deno.serve(async (req) => {
 
     if (action === 'me-status') {
       const user = await authUser(req);
-      if (!user) return json({ ok: false, error: 'sign in required' }, 401);
+      if (!user) return json({ ok: false, signedOut: true, error: 'sign in required' });
       return json({ ok: true, status: await meStatus(user.id), version: WORKER_VERSION });
     }
 
     if (action === 'regenerate') {
       const user = await authUser(req);
-      if (!user) return json({ ok: false, error: 'sign in required' }, 401);
+      if (!user) return json({ ok: false, signedOut: true, error: 'sign in required' });
       const started = Date.now();
       const runId = crypto.randomUUID();
       const res = await regenerate(user.id);
@@ -1082,7 +1082,7 @@ Deno.serve(async (req) => {
 
     if (action === 'catchup-me') {
       const user = await authUser(req);
-      if (!user) return json({ ok: false, error: 'sign in required' }, 401);
+      if (!user) return json({ ok: false, signedOut: true, error: 'sign in required' });
       const owner = crypto.randomUUID();
       if (!(await acquireLease(owner))) {
         return json({ ok: true, skipped: 'another run holds the lease', version: WORKER_VERSION });

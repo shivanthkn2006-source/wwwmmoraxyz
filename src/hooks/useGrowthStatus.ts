@@ -61,7 +61,12 @@ export function useGrowthStatus(enabled = true) {
     if (!user || !enabled) { setLoading(false); return; }
     setLoading(true);
     try {
-      const { data, error: fnError } = await invokeGrowthDispatch({ action: 'me-status' });
+      const { data, error: fnError, signedOut } = await invokeGrowthDispatch({ action: 'me-status' });
+      if (signedOut) {
+        setStatus(null);
+        setError(null);
+        return;
+      }
       if (fnError) throw fnError;
       if (!data?.ok) throw new Error(String(data?.error ?? 'status unavailable'));
       setStatus(data.status as GrowthStatus);
@@ -80,7 +85,8 @@ export function useGrowthStatus(enabled = true) {
     if (!user) return { ok: false, error: 'sign in required' };
     setRegenerating(true);
     try {
-      const { data, error: fnError } = await invokeGrowthDispatch({ action: 'regenerate' });
+      const { data, error: fnError, signedOut } = await invokeGrowthDispatch({ action: 'regenerate' });
+      if (signedOut) return { ok: false, error: 'Sign in required' };
       if (fnError) throw fnError;
       if (!data?.ok) return { ok: false, error: String(data?.error ?? 'could not regenerate') };
       await load();

@@ -138,7 +138,7 @@ export function useBirthDetailsGate() {
     // Growth cards are personalised from the same birth data, so build the
     // first one now rather than making the member wait for the next window.
     try {
-      await invokeGrowthDispatch({ targetUserId: userId });
+      await invokeGrowthDispatch({ action: 'catchup-me' });
     } catch { /* the scheduled run will pick it up anyway */ }
 
     setNeedsDetails(false);
