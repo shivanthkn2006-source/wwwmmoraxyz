@@ -16,7 +16,7 @@ Deno.serve(async (req) => {
   if (cache?.day === day) return new Response(cache.body, { headers: { ...cors, 'Content-Type': 'application/json' } });
   try {
     const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), 6000);
+    const t = setTimeout(() => ctrl.abort(), 4000);
     const res = await fetch('https://zenquotes.io/api/today', { signal: ctrl.signal });
     clearTimeout(t);
     const data = await res.json();
@@ -26,6 +26,6 @@ Deno.serve(async (req) => {
     cache = { day, body };
     return new Response(body, { headers: { ...cors, 'Content-Type': 'application/json' } });
   } catch (e) {
-    return new Response(JSON.stringify({ error: String(e) }), { status: 502, headers: { ...cors, 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ quote: null, fallback: true, reason: String(e).slice(0, 120) }), { status: 200, headers: { ...cors, 'Content-Type': 'application/json' } });
   }
 });
