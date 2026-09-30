@@ -1,4 +1,5 @@
 // Conversation export utilities - Full support for text, images, videos, and documents
+import { escapeHtmlText, safeHtmlUrl } from "@/lib/csvSafe";
 
 interface ExportMessage {
   role: string;
@@ -157,7 +158,7 @@ export const exportToPDF = async (
       <div class="header">
         <h1>Zoe AI Conversation</h1>
         <div class="meta">
-          <p>User: ${userName}</p>
+          <p>User: ${escapeHtmlText(userName)}</p>
           <p>Exported: ${new Date().toLocaleString()}</p>
           <p>Total Messages: ${messages.length}</p>
         </div>
@@ -174,7 +175,7 @@ export const exportToPDF = async (
     html += `
       <div class="message ${messageClass}">
         <div class="message-header">
-          <span class="speaker">${speaker}</span>
+          <span class="speaker">${escapeHtmlText(speaker)}</span>
           <span class="timestamp">${timestamp}</span>
         </div>
         <div class="content">${escapeHtml(msg.content)}</div>
@@ -184,11 +185,11 @@ export const exportToPDF = async (
     if (mediaUrl) {
       html += `<div class="media-container">`;
       if (mediaType === 'image' || mediaUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
-        html += `<img src="${mediaUrl}" alt="Shared image" />`;
+        html += `<img src="${safeHtmlUrl(mediaUrl)}" alt="Shared image" />`;
       } else if (mediaType === 'video' || mediaUrl.match(/\.(mp4|webm|mov)$/i)) {
-        html += `<video controls><source src="${mediaUrl}" /></video>`;
+        html += `<video controls><source src="${safeHtmlUrl(mediaUrl)}" /></video>`;
       }
-      html += `<a href="${mediaUrl}" class="media-link" target="_blank">Open media in new tab</a>`;
+      html += `<a href="${safeHtmlUrl(mediaUrl)}" class="media-link" target="_blank" rel="noopener noreferrer">Open media in new tab</a>`;
       html += `</div>`;
     }
     

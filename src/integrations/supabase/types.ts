@@ -9205,6 +9205,57 @@ export type Database = {
         }
         Relationships: []
       }
+      vr_world_events: {
+        Row: {
+          created_at: string
+          created_by: string
+          data: Json
+          event: string
+          id: string
+          room_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string
+          data?: Json
+          event: string
+          id?: string
+          room_id?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          data?: Json
+          event?: string
+          id?: string
+          room_id?: string
+        }
+        Relationships: []
+      }
+      vr_world_settings: {
+        Row: {
+          created_at: string
+          room_id: string
+          settings: Json
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          room_id: string
+          settings?: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          room_id?: string
+          settings?: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       webauthn_credentials: {
         Row: {
           counter: number | null
@@ -12985,6 +13036,7 @@ export type Database = {
         Args: { request_id: string }
         Returns: undefined
       }
+      admin_security_overview: { Args: never; Returns: Json }
       append_merged_mind_entity: {
         Args: {
           p_skill_id: string

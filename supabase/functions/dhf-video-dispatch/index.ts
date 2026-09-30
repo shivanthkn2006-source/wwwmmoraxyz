@@ -1,3 +1,4 @@
+import { requireCronOrAdmin } from '../_shared/caller-guard.ts';
 /**
  * DHF VIDEO DISPATCH — the daily ingestion that keeps the DHF video feed full.
  *
@@ -82,8 +83,8 @@ const tagFor = (name: string) => name.toLowerCase().replace(/[^a-z0-9]/g, '').sl
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
-  const __guard = await publicGuard(req, { name: 'dhf-video-dispatch', limit: 30, windowSeconds: 60 });
-  if (__guard.response) return __guard.response;
+  const __cron = await requireCronOrAdmin(req, 'dhf-video-dispatch');
+  if (__cron instanceof Response) return __cron;
 
   const admin = createClient(
     Deno.env.get('SUPABASE_URL') ?? '',

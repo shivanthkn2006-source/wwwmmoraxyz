@@ -523,6 +523,7 @@ Deno.serve(async (req) => {
   // anyone else → 401.
   const caller = await resolveCaller(req);
   if (caller.kind === 'none') return json({ ok: false, error: 'Unauthorized' }, 401);
+  if (body.userId !== undefined && !/^[0-9a-f-]{36}$/i.test(String(body.userId))) return json({ ok: false, error: 'Invalid userId' }, 400);
   if (caller.kind === 'member') {
     if (action === 'run') {
       if (body.userId && body.userId !== caller.userId) return json({ ok: false, error: 'Forbidden' }, 403);

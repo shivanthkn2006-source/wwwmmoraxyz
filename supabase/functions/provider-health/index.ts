@@ -72,8 +72,9 @@ Deno.serve(async (req: Request) => {
   }
 
   // POST → live ping
-  const ping: boolean = body?.ping !== false;
-  const prompt: string = (body?.prompt ?? 'Reply with the single word: pong').slice(0, 200);
+  // Live pings spend provider budget: admin only. Members get key presence.
+  const ping: boolean = body?.ping !== false && __caller.kind !== 'member';
+  const prompt = 'Reply with the single word: pong';
 
   if (!ping) {
     return new Response(JSON.stringify({ ok: true, keys, tiers: tierDescriptors }), {

@@ -8,6 +8,7 @@
  *
  * All reads are row-level-security gated: non-admins see nothing.
  */
+import { safeCsv } from "@/lib/csvSafe";
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Link } from 'react-router-dom';
@@ -157,9 +158,9 @@ export default function AdminDhfGrowthPage() {
   const exportCsv = () => {
     const header = ['user_id', 'username', 'joined', 'dhf_posts', 'memories', 'sensor_events', 'lineage_entries', 'shadow_recommendations', 'last_activity'];
     const body = filtered.map((r) =>
-      [r.userId, r.username, r.createdAt ?? '', r.dhfPosts, r.memories, r.sensorEvents, r.lineageEntries, r.shadowRecs, r.lastActivity ?? ''].join(','),
+      [r.userId, r.username, r.createdAt ?? '', r.dhfPosts, r.memories, r.sensorEvents, r.lineageEntries, r.shadowRecs, r.lastActivity ?? ''],
     );
-    const blob = new Blob([[header.join(','), ...body].join('\n')], { type: 'text/csv' });
+    const blob = new Blob([safeCsv(header, body)], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;

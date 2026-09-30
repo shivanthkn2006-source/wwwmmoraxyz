@@ -1,3 +1,4 @@
+import { safeCsvCell as csvCell } from "./csvSafe";
 /**
  * BUG REPORT EXPORTS
  *
@@ -31,10 +32,6 @@ const COLUMNS: Array<[keyof ExportableReport, string]> = [
   ['autofix_summary', 'Auto-triage summary'],
 ];
 
-function csvCell(value: unknown): string {
-  const text = value === null || value === undefined ? '' : String(value);
-  return `"${text.replace(/"/g, '""').replace(/\r?\n/g, ' ')}"`;
-}
 
 /** RFC4180-ish CSV, header row first. */
 export function buildBugReportCsv(rows: ExportableReport[]): string {

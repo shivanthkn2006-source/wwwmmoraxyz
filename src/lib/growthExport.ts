@@ -7,6 +7,7 @@
  * built in the browser and downloaded through a blob URL — no server round trip
  * and no temporary public link.
  */
+import { safeCsvCell } from './csvSafe';
 import { supabase } from '@/integrations/supabase/client';
 
 export type GrowthExportFormat = 'json' | 'csv';
@@ -51,12 +52,11 @@ export async function collectGrowthExport(userId: string): Promise<GrowthExportB
   };
 }
 
-/** RFC 4180 quoting, with a leading apostrophe guard against formula injection. */
+
+/** RFC 4180 quoting with formula-injection guard (shared safe parser). */
 export function csvCell(value: unknown): string {
   if (value === null || value === undefined) return '';
-  let text = Array.isArray(value) ? value.join('; ') : String(value);
-  if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`;
-  return `"${text.replace(/"/g, '""')}"`;
+  return safeCsvCell(Array.isArray(value) ? value.join('; ') : value);
 }
 
 export function toCsv(rows: Array<Record<string, unknown>>, columns?: string[]): string {

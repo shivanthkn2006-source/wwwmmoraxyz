@@ -1,3 +1,4 @@
+import AdminRoute from "@/components/AdminRoute";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -181,6 +182,8 @@ const AdminGrowthDeliveryPage = lazy(() => import("./pages/AdminGrowthDeliveryPa
 const AdminDhfGenerationPage = lazy(() => import("./pages/AdminDhfGenerationPage")); // DHF GENERATION STATUS (admin, RLS-gated)
 const AdminControlPanelPage = lazy(() => import("./pages/AdminControlPanelPage"));
 const AdminSentinelPage = lazy(() => import("./pages/AdminSentinelPage")); // SENTINEL (operator-only live monitoring)
+const AdminSecurityLivePage = lazy(() => import("./pages/AdminSecurityLivePage"));
+const AdminVRWorldPage = lazy(() => import("./pages/AdminVRWorldPage"));
 const ZoeBirthDetailsPage = lazy(() => import("./pages/ZoeBirthDetailsPage"));
 const ZoeDispatchDashboardPage = lazy(() => import("./pages/ZoeDispatchDashboardPage"));
 const ZoeAstroLogPage = lazy(() => import("./pages/ZoeAstroLogPage"));
@@ -900,6 +903,8 @@ const RouteAwareShell = () => {
                               </ProtectedRoute>
                             }
                           />
+                          <Route path="/admin/security-live" element={<AdminRoute featureName="Live security"><AdminSecurityLivePage /></AdminRoute>} />
+                          <Route path="/admin/vr-world" element={<AdminRoute featureName="VR world controls"><AdminVRWorldPage /></AdminRoute>} />
                           <Route
                             path="/admin/sentinel"
                             element={

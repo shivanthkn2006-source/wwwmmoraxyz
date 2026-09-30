@@ -9,6 +9,7 @@
  *   • dry run is the default, so an admin always previews before writing
  *   • date range, item cap and per-item throttle are all bounded
  */
+import { safeCsv } from "@/lib/csvSafe";
 import React, { useCallback, useEffect, useState } from 'react';
 import { Loader2, PlayCircle, History, AlertTriangle, Download } from 'lucide-react';
 import { toast } from 'sonner';
@@ -80,10 +81,10 @@ function download(filename: string, body: string, mime: string) {
 }
 
 function planToCsv(result: RunResult): string {
-  const header = 'user_id,local_date,slot,decision,reason';
-  const rows = result.plan.map((p) =>
-    [p.userId, p.localDate, p.slot, p.decision, `"${p.reason.replace(/"/g, '""')}"`].join(','));
-  return [header, ...rows].join('\n');
+  return safeCsv(
+    ['user_id', 'local_date', 'slot', 'decision', 'reason'],
+    result.plan.map((p) => [p.userId, p.localDate, p.slot, p.decision, p.reason]),
+  );
 }
 
 export default function GrowthBackfillPanel() {
