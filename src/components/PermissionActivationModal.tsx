@@ -123,7 +123,7 @@ export const PermissionActivationModal: React.FC<PermissionActivationModalProps>
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="sm:max-w-md surface-warm-tan border">
+      <DialogContent className="sm:max-w-md surface-warm-tan surface-frameless">
         <DialogHeader className="text-center">
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}

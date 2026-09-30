@@ -7116,3 +7116,13 @@ body {
 }
 .surface-warm-tan .tan-circle { background: hsl(40 30% 97%); box-shadow: 0 2px 8px hsl(30 30% 12% / 0.2); }
 .surface-warm-tan .tan-circle-icon { color: hsl(30 35% 18%); }
+/* Frameless permission window: no panel, border or shadow — only icons and text */
+.surface-warm-tan.surface-frameless {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  color: hsl(40 30% 97%);
+  --foreground: 40 30% 97%;
+  --muted-foreground: 35 20% 85%;
+  --primary: 33 45% 70%;
+}
