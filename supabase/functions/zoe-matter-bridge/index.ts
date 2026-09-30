@@ -1,4 +1,4 @@
-import { requireCaller } from '../_shared/caller-guard.ts';
+import { requireCaller, bindOwner } from '../_shared/caller-guard.ts';
 // ═══════════════════════════════════════════════════════════════════════════════
 // ZOE MATTER BRIDGE - THE EXECUTIVE ACTION ENGINE
 // Module 2 of 3: "The Hands" - Real World Action Executor with Sovereignty Leash
@@ -1147,7 +1147,7 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
-  { const __c = await requireCaller(req, 'member'); if (__c instanceof Response) return __c; }
+  const __caller = await requireCaller(req, 'member'); if (__caller instanceof Response) return __caller;
 
   const startTime = performance.now();
 
@@ -1157,7 +1157,9 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const request: MatterBridgeRequest = await req.json();
-    const { userId, actionType, parameters, forceApproval, approved, context } = request;
+    let { userId, actionType, parameters, forceApproval, approved, context } = request;
+    userId = bindOwner(__caller, userId) as typeof userId;
+    if (context && typeof context === 'object') (context as any).userId = userId;
 
     console.log(`[Matter-Bridge] 🎯 Action: ${actionType} | User: ${userId?.substring(0, 8)}...`);
 

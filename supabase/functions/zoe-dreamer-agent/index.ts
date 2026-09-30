@@ -1,4 +1,4 @@
-import { requireCaller } from '../_shared/caller-guard.ts';
+import { requireCaller, bindOwner } from '../_shared/caller-guard.ts';
 // ═══════════════════════════════════════════════════════════════════════════════
 // ZOE DREAMER AGENT - "THE SUBCONSCIOUS" (Module 3)
 // Deep Sleep Protocol - Runs at 3 AM to process the user's day
@@ -649,7 +649,7 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
-  { const __c = await requireCaller(req, 'member'); if (__c instanceof Response) return __c; }
+  const __caller = await requireCaller(req, 'member'); if (__caller instanceof Response) return __caller;
 
   const guard = await publicGuard(req, { name: 'zoe-dreamer-agent', limit: 20, windowSeconds: 60, maxBodyBytes: 512 * 1024, allowRichText: true });
   if (guard.response) return guard.response;
@@ -663,7 +663,10 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const request: DreamerRequest = (guard.body as any);
-    const { userId, processAll, mode, dreamDepth = 'deep' } = request;
+    let { userId, processAll, mode, dreamDepth = 'deep' } = request;
+    userId = bindOwner(__caller, userId) as typeof userId;
+    // Only the scheduler or admin may process every member at once.
+    if (processAll && !(__caller.kind === 'service' || __caller.isAdmin)) processAll = false;
 
     console.log(`[Dreamer-Agent] Starting | Mode: ${mode} | Depth: ${dreamDepth}`);
 

@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
-import { requireCaller } from '../_shared/caller-guard.ts';
+import { requireCaller, bindOwner } from '../_shared/caller-guard.ts';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ZOE SECURITY VALIDATOR - EMP CIRCUIT BREAKER
@@ -381,7 +381,8 @@ serve(async (req) => {
     }
     
     const body = await req.json();
-    const { input, userId, source } = body;
+    let { input, userId, source } = body;
+    userId = bindOwner(__caller, userId) as typeof userId;
     
     if (!input || !userId) {
       return new Response(
