@@ -500,7 +500,7 @@ const WebdropPage = () => {
           setGeneratedContent({ type: 'image', content: result.imageUrl });
           setImageCaption('');
           updateUsage('images');
-          toast.success(`Image generated via ${result.provider}!`);
+          toast.success("Image created by Zoe!");
         } catch (imgError: any) {
           // Fallback to edge function directly
           const { data, error } = await supabase.functions.invoke('generate-image', {
