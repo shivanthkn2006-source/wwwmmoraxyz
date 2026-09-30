@@ -264,12 +264,25 @@ const GlobeScene: React.FC<GlobeSceneProps> = ({
     registerScene(scene);
   }, [gl, scene, registerRenderer, registerScene]);
   
-  // Set initial camera position
-  useMemo(() => {
-    camera.position.set(0, 0, 2.5);
-  }, [camera]);
+  // Fit the whole globe inside the screen on any aspect ratio.
+  const size = useThree((s) => s.size);
+  const fitted = useRef<string>('');
+  useEffect(() => {
+    const cam = camera as THREE.PerspectiveCamera;
+    if (!size.width || !size.height) return;
+    const key = `${size.width}x${size.height}`;
+    if (fitted.current === key) return;
+    fitted.current = key;
+    const vHalf = THREE.MathUtils.degToRad((cam.fov ?? 45) / 2);
+    const hHalf = Math.atan(Math.tan(vHalf) * (size.width / size.height));
+    const dist = (GLOBE_RADIUS * 1.12) / Math.sin(Math.min(vHalf, hHalf));
+    const dir = cam.position.lengthSq() > 0 ? cam.position.clone().normalize() : new THREE.Vector3(0, 0, 1);
+    cam.position.copy(dir.multiplyScalar(dist));
+    cam.updateProjectionMatrix();
+  }, [camera, size.width, size.height]);
 
   const { config, textureUrls, tier, particleMultiplier } = textureSettings;
+  const isPhone = size.width < 768;
 
   return (
     <>
