@@ -423,7 +423,8 @@ serve(async (req) => {
   const startTime = performance.now();
   
   try {
-    const { query, context = {}, userId, mode = 'full' } = await req.json();
+    let { query, context = {}, userId, mode = 'full' } = await req.json();
+    userId = bindOwner(__caller, userId) as typeof userId;
 
     if (!query) {
       return new Response(

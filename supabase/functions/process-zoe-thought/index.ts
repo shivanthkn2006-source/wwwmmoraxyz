@@ -97,7 +97,8 @@ serve(async (req) => {
   const startTime = Date.now();
 
   try {
-    const { message, userId, memories = [], context = {}, assistantName = 'ZOE' } = await req.json();
+    let { message, userId, memories = [], context = {}, assistantName = 'ZOE' } = await req.json();
+    userId = bindOwner(__caller, userId) as typeof userId;
 
     if (!message) {
       return new Response(
