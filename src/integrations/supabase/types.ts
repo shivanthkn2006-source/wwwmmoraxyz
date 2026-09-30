@@ -4759,6 +4759,30 @@ export type Database = {
         }
         Relationships: []
       }
+      member_live_locations: {
+        Row: {
+          lat: number
+          lng: number
+          place: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          lat: number
+          lng: number
+          place?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          lat?: number
+          lng?: number
+          place?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       memory_tamper_log: {
         Row: {
           action: string

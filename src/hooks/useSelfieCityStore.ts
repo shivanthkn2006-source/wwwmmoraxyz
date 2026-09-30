@@ -62,8 +62,18 @@ export function useSelfieCityStore() {
         (err) => console.warn('[SelfieCityStore] Location error:', err),
         { enableHighAccuracy: true }
       );
+      watchId = navigator.geolocation.watchPosition(
+        (pos) => setUserLocation((prev) => {
+          const next = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          // Only update after ~500 m movement to avoid constant writes
+          return prev && Math.abs(prev.lat - next.lat) < 0.005 && Math.abs(prev.lng - next.lng) < 0.005 ? prev : next;
+        }),
+        () => undefined, { enableHighAccuracy: false, maximumAge: 60_000 }
+      );
     };
+    let watchId: number | null = null;
     void loadGrantedLocation();
+    return () => { if (watchId !== null) navigator.geolocation.clearWatch(watchId); };
   }, []);
 
   // Load real pins: Selfie City pins + located posts, friends' activity first.
@@ -129,51 +139,47 @@ export function useSelfieCityStore() {
     return () => ctrl.abort();
   }, [userLocation]);
 
+  // Share own rounded location (from the permission granted at start) and
+  // show every member who shared theirs in the last 30 minutes, live.
+  const [liveMembers, setLiveMembers] = useState<SelfieCityPin[]>([]);
+  useEffect(() => {
+    if (!user || !userLocation) return;
+    void supabase.from('member_live_locations' as any)
+      .upsert({ user_id: user.id, lat: userLocation.lat, lng: userLocation.lng, place: localPlace } as any);
+  }, [user, userLocation, localPlace]);
+
+  const loadLive = useCallback(async () => {
+    if (!user) return;
+    const { data } = await supabase.from('member_live_locations' as any)
+      .select('user_id,lat,lng,place,updated_at')
+      .gt('updated_at', new Date(Date.now() - 30 * 60_000).toISOString()).limit(500);
+    const rows = await attachDirectoryProfiles(((data ?? []) as any[]), 'user_id', 'profiles');
+    setLiveMembers((rows || []).map((r: any) => ({
+      id: `live-${r.user_id}`, userId: r.user_id,
+      imageUrl: r.profiles?.profile_photo_url || '/placeholder.svg',
+      caption: r.user_id === user.id ? 'You are here' : 'Live now',
+      location: { lat: Number(r.lat), lng: Number(r.lng), name: r.place || undefined },
+      detectedProducts: [], userName: r.profiles?.display_name || r.profiles?.username || 'Member',
+      avatarUrl: r.profiles?.profile_photo_url, createdAt: r.updated_at,
+    })));
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    void loadLive();
+    const ch = supabase.channel('selfie-city-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'member_live_locations' }, () => void loadLive())
+      .subscribe();
+    const t = window.setInterval(() => void loadLive(), 60_000);
+    return () => { window.clearInterval(t); void supabase.removeChannel(ch); };
+  }, [user, loadLive]);
+
   // Load nearby deals based on user location
   const loadNearbyDeals = useCallback(async () => {
     if (!userLocation) return;
 
-    // Indian brand deals organized by category
-    const brandDeals: NearbyDeal[] = [
-      // Cafes & Food
-      { id: 'd1', storeName: 'Chai Point', brandName: 'Chai Point', category: 'Cafes', discount: '30% OFF', description: 'Masala Chai Special', location: { lat: userLocation.lat + 0.002, lng: userLocation.lng + 0.001 }, hasProducts: true, isPremium: false },
-      { id: 'd2', storeName: 'Haldiram\'s', brandName: 'Haldiram\'s', category: 'Food', discount: '20% OFF', description: 'Festival Sweets Box', location: { lat: userLocation.lat - 0.001, lng: userLocation.lng + 0.003 }, hasProducts: true, isPremium: false },
-      { id: 'd3', storeName: 'Saravana Bhavan', brandName: 'Saravana Bhavan', category: 'Food', discount: '15% OFF', description: 'Lunch Thali', location: { lat: userLocation.lat + 0.003, lng: userLocation.lng - 0.002 }, hasProducts: true, isPremium: false },
-      
-      // Fashion - Day to Day
-      { id: 'd4', storeName: 'Fabindia', brandName: 'Fabindia', category: 'Fashion', discount: '40% OFF', description: 'Ethnic Collection', location: { lat: userLocation.lat - 0.002, lng: userLocation.lng - 0.001 }, hasProducts: true, isPremium: false },
-      { id: 'd5', storeName: 'Biba', brandName: 'Biba', category: 'Fashion', discount: '50% OFF', description: 'Kurta Sets', location: { lat: userLocation.lat + 0.001, lng: userLocation.lng + 0.002 }, hasProducts: true, isPremium: false },
-      { id: 'd6', storeName: 'W', brandName: 'W', category: 'Fashion', discount: '35% OFF', description: 'Fusion Wear', location: { lat: userLocation.lat - 0.003, lng: userLocation.lng + 0.001 }, hasProducts: true, isPremium: false },
-      { id: 'd7', storeName: 'Allen Solly', brandName: 'Allen Solly', category: 'Fashion', discount: '45% OFF', description: 'Formal Shirts', location: { lat: userLocation.lat + 0.002, lng: userLocation.lng - 0.003 }, hasProducts: true, isPremium: false },
-      
-      // Beauty
-      { id: 'd8', storeName: 'Lakmé Salon', brandName: 'Lakmé', category: 'Beauty', discount: '25% OFF', description: 'Hair Treatment', location: { lat: userLocation.lat - 0.001, lng: userLocation.lng - 0.002 }, hasProducts: true, isPremium: false },
-      { id: 'd9', storeName: 'Forest Essentials', brandName: 'Forest Essentials', category: 'Beauty', discount: '20% OFF', description: 'Ayurvedic Skincare', location: { lat: userLocation.lat + 0.003, lng: userLocation.lng + 0.003 }, hasProducts: true, isPremium: true },
-      { id: 'd10', storeName: 'Nykaa Store', brandName: 'Nykaa', category: 'Beauty', discount: '30% OFF', description: 'Makeup Essentials', location: { lat: userLocation.lat - 0.002, lng: userLocation.lng + 0.002 }, hasProducts: true, isPremium: false },
-      
-      // Electronics
-      { id: 'd11', storeName: 'Croma', brandName: 'Croma', category: 'Electronics', discount: '15% OFF', description: 'Smart TVs', location: { lat: userLocation.lat + 0.001, lng: userLocation.lng - 0.001 }, hasProducts: true, isPremium: false },
-      { id: 'd12', storeName: 'Vijay Sales', brandName: 'Vijay Sales', category: 'Electronics', discount: '10% OFF', description: 'Mobile Phones', location: { lat: userLocation.lat - 0.003, lng: userLocation.lng - 0.003 }, hasProducts: true, isPremium: false },
-      
-      // Jewelry
-      { id: 'd13', storeName: 'Tanishq', brandName: 'Tanishq', category: 'Jewelry', discount: '10% OFF', description: 'Gold Collection', location: { lat: userLocation.lat + 0.002, lng: userLocation.lng + 0.002 }, hasProducts: true, isPremium: true },
-      { id: 'd14', storeName: 'Kalyan Jewellers', brandName: 'Kalyan Jewellers', category: 'Jewelry', discount: '12% OFF', description: 'Diamond Rings', location: { lat: userLocation.lat - 0.001, lng: userLocation.lng + 0.001 }, hasProducts: true, isPremium: true },
-      
-      // PREMIUM Section - Luxury Brands
-      { id: 'p1', storeName: 'Louis Vuitton', brandName: 'Louis Vuitton', category: 'Premium', discount: 'Exclusive Access', description: 'New Collection Preview', location: { lat: userLocation.lat + 0.004, lng: userLocation.lng + 0.001 }, hasProducts: true, isPremium: true },
-      { id: 'p2', storeName: 'Gucci', brandName: 'Gucci', category: 'Premium', discount: 'VIP Event', description: 'Members Only Sale', location: { lat: userLocation.lat - 0.004, lng: userLocation.lng - 0.001 }, hasProducts: true, isPremium: true },
-      { id: 'p3', storeName: 'Rolex', brandName: 'Rolex', category: 'Premium', discount: 'Private Viewing', description: 'Oyster Perpetual', location: { lat: userLocation.lat + 0.001, lng: userLocation.lng + 0.004 }, hasProducts: true, isPremium: true },
-      { id: 'p4', storeName: 'Mercedes-Benz', brandName: 'Mercedes-Benz', category: 'Premium', discount: 'Test Drive', description: 'EQS Launch', location: { lat: userLocation.lat - 0.002, lng: userLocation.lng + 0.004 }, hasProducts: true, isPremium: true },
-      { id: 'p5', storeName: 'Apple Store', brandName: 'Apple', category: 'Premium', discount: 'Today at Apple', description: 'Free Workshop', location: { lat: userLocation.lat + 0.003, lng: userLocation.lng - 0.001 }, hasProducts: true, isPremium: true },
-    ];
-
-    // Calculate distances
-    const dealsWithDistance = brandDeals.map(deal => ({
-      ...deal,
-      distance: calculateDistance(userLocation, deal.location)
-    })).sort((a, b) => (a.distance || 0) - (b.distance || 0));
-
-    setNearbyDeals(dealsWithDistance);
+    // No invented store deals: only real partner data may appear here.
+    setNearbyDeals([]);
   }, [userLocation]);
 
   // Add a new selfie to the map
@@ -214,6 +220,7 @@ export function useSelfieCityStore() {
     nearbyDeals, 
     userLocation, 
     localPlace,
+    liveMembers,
     isLoading, 
     loadSelfies, 
     loadNearbyDeals,
