@@ -34,6 +34,7 @@ export default function VRKarmaShop({ onClose }: { onClose: () => void }) {
     setBusy(it.id);
     const r = await spendKarmaVR(it.id);
     setBusy(null);
+    if (r.ok) window.dispatchEvent(new CustomEvent("vr-item-purchased", { detail: { id: it.id, name: it.name, category: it.category } }));
     if (r.ok) toast.success(`${it.name} unlocked`, { description: `${r.balance} karma left` });
     else toast.error(r.error?.includes("not enough") ? "Not enough karma yet" : "Couldn't complete that");
   };
@@ -41,8 +42,12 @@ export default function VRKarmaShop({ onClose }: { onClose: () => void }) {
   const tracker = useTrackedActivity();
   const earn = async (kind: ActivityKind, label: string) => {
     if (tracker.active) {
-      const n = await tracker.stop();
-      toast[n > 0 ? "success" : "info"](n > 0 ? `+${n} karma earned` : "Not enough real movement yet, or today's limit reached");
+      const r = await tracker.stop();
+      if (!r) return;
+      const km = (r.distanceM / 1000).toFixed(2);
+      const pace = r.paceMinPerKm ? ` · ${r.paceMinPerKm} min/km` : "";
+      const summary = kind === "workout" ? `${Math.round(r.minutes)} min` : `${km} km · ${r.steps} steps${pace}`;
+      toast[r.karma > 0 ? "success" : "info"](r.karma > 0 ? `+${r.karma} karma earned` : "Saved — not enough real movement for karma yet", { description: `${summary} · saved to your activity` });
       return;
     }
     const err = await tracker.start(kind);

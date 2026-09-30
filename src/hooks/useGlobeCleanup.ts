@@ -202,17 +202,16 @@ export const useCanvasCleanup = (
     cleanupRef.current = cleanup;
   }, []);
   
-  // Perform cleanup on unmount
+  // Perform cleanup on real unmount only. Keeping the latest callback in a ref
+  // stops a changing callback identity from disposing the live WebGL context.
+  const onCleanupRef = useRef(onCleanup);
+  onCleanupRef.current = onCleanup;
   useEffect(() => {
     return () => {
-      if (cleanupRef.current) {
-        cleanupRef.current();
-      }
-      if (onCleanup) {
-        onCleanup();
-      }
+      cleanupRef.current?.();
+      onCleanupRef.current?.();
     };
-  }, [onCleanup]);
+  }, []);
   
   return { setCleanup };
 };

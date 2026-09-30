@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { earnKarma, type ActivityKind } from "@/lib/karma";
+import { supabase } from "@/integrations/supabase/client";
+import { type ActivityKind } from "@/lib/karma";
+
+export type ActivityResult = { karma: number; distanceM: number; steps: number; paceMinPerKm: number | null; minutes: number };
 
 /** Metres of real GPS movement per karma unit; workout uses phone motion minutes instead. */
 const METRES_PER_UNIT: Partial<Record<ActivityKind, number>> = {
@@ -47,6 +50,7 @@ export function useTrackedActivity() {
   const motionTick = useRef<number | null>(null);
   const moving = useRef(false);
   const stepState = useRef({ above: false, lastStep: 0 });
+  const startedAt = useRef<Date | null>(null);
 
   const cleanup = useCallback(() => {
     if (watchId.current !== null) navigator.geolocation.clearWatch(watchId.current);
@@ -102,18 +106,30 @@ export function useTrackedActivity() {
         setProgress((p) => p + d);
       }, undefined, { enableHighAccuracy: true, maximumAge: 0 });
     }
+    startedAt.current = new Date();
     setActive(kind);
     return null;
   }, [cleanup]);
 
-  const stop = useCallback(async (): Promise<number> => {
+  const stop = useCallback(async (): Promise<ActivityResult | null> => {
     const kind = active; cleanup(); setActive(null);
-    if (!kind) return 0;
+    const started = startedAt.current; startedAt.current = null;
+    if (!kind || !started) return null;
     let units = kind === "workout" ? progress : Math.floor(progress / (METRES_PER_UNIT[kind] ?? 100));
     const spu = STEPS_PER_UNIT[kind];
     if (spu) units = Math.min(units, Math.floor(steps / spu)); // distance AND steps must both be real
+    const distanceM = kind === "workout" ? 0 : progress;
+    const finished = new Date();
+    const minutes = (finished.getTime() - started.getTime()) / 60000;
     setProgress(0); setSteps(0);
-    return units > 0 ? earnKarma(kind, units) : 0;
+    if (minutes < 0.05) return { karma: 0, distanceM, steps, paceMinPerKm: null, minutes };
+    const { data, error } = await supabase.rpc("record_activity_session" as never, {
+      p_kind: kind, p_started: started.toISOString(), p_finished: finished.toISOString(),
+      p_distance_m: Math.round(distanceM), p_steps: steps, p_units: Math.max(0, units),
+    } as never);
+    const r = (data ?? {}) as { karma?: number; pace?: number | null };
+    if (!error && (r.karma ?? 0) > 0) window.dispatchEvent(new CustomEvent("karma-changed"));
+    return { karma: error ? 0 : Number(r.karma) || 0, distanceM, steps, paceMinPerKm: r.pace ?? null, minutes };
   }, [active, progress, steps, cleanup]);
 
   return { active, progress, steps, start, stop };

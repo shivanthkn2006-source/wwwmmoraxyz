@@ -23,6 +23,7 @@ export interface SelfieCityPin {
   userName?: string;
   avatarUrl?: string;
   createdAt: string;
+  isFriend?: boolean;
 }
 
 export interface NearbyDeal {
@@ -65,66 +66,67 @@ export function useSelfieCityStore() {
     void loadGrantedLocation();
   }, []);
 
-  // Load selfies from database
+  // Load real pins: Selfie City pins + located posts, friends' activity first.
   const loadSelfies = useCallback(async () => {
     setIsLoading(true);
     try {
-      const { data: posts, error } = await supabase
-        .from('posts')
-        .select(`
-          id,
-          user_id,
-          content,
-          media_url,
-          location_lat,
-          location_lng,
-          location_name,
-          metadata,
-          created_at
-        `)
-        .not('location_lat', 'is', null)
-        .not('location_lng', 'is', null)
-        .order('created_at', { ascending: false })
-        .limit(100);
+      const [postsRes, pinsRes, friendsRes] = await Promise.all([
+        supabase.from('posts')
+          .select('id,user_id,content,media_url,location_lat,location_lng,location_name,metadata,created_at')
+          .not('location_lat', 'is', null).not('location_lng', 'is', null)
+          .order('created_at', { ascending: false }).limit(100),
+        supabase.from('selfie_city_pins')
+          .select('id,user_id,image_url,caption,location_lat,location_lng,location_name,detected_products,is_premium,created_at')
+          .order('created_at', { ascending: false }).limit(200),
+        user
+          ? supabase.from('friendships').select('user1_id,user2_id').or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
+          : Promise.resolve({ data: [] as { user1_id: string; user2_id: string }[] }),
+      ]);
+      const friendIds = new Set(((friendsRes.data ?? []) as { user1_id: string; user2_id: string }[])
+        .map((f) => (f.user1_id === user?.id ? f.user2_id : f.user1_id)));
 
-      if (error) throw error;
+      const rows = [
+        ...((postsRes.data ?? []) as any[]).map((p) => ({
+          id: p.id, user_id: p.user_id, image_url: p.media_url, caption: p.content,
+          lat: Number(p.location_lat), lng: Number(p.location_lng), name: p.location_name,
+          products: p.metadata?.detected_products || [], premium: !!p.metadata?.is_premium, created_at: p.created_at,
+        })),
+        ...((pinsRes.data ?? []) as any[]).map((p) => ({
+          id: p.id, user_id: p.user_id, image_url: p.image_url, caption: p.caption,
+          lat: Number(p.location_lat), lng: Number(p.location_lng), name: p.location_name,
+          products: Array.isArray(p.detected_products) ? p.detected_products : [], premium: !!p.is_premium, created_at: p.created_at,
+        })),
+      ].filter((r) => Number.isFinite(r.lat) && Number.isFinite(r.lng));
 
-      const postsWithAuthors = await attachDirectoryProfiles(posts as any[], 'user_id', 'profiles');
-
-      const mappedSelfies: SelfieCityPin[] = (postsWithAuthors || []).map((post: any) => ({
-        id: post.id,
-        userId: post.user_id,
-        imageUrl: post.media_url || '/placeholder.svg',
-        caption: post.content,
-        location: { 
-          lat: post.location_lat, 
-          lng: post.location_lng,
-          name: post.location_name 
-        },
-        detectedProducts: (post.metadata as any)?.detected_products || [],
-        isPremium: (post.metadata as any)?.is_premium || false,
-        userName: post.profiles?.display_name || post.profiles?.username || 'Anonymous',
-        avatarUrl: post.profiles?.profile_photo_url,
-        createdAt: post.created_at
+      const withAuthors = await attachDirectoryProfiles(rows as any[], 'user_id', 'profiles');
+      const mapped: SelfieCityPin[] = (withAuthors || []).map((r: any) => ({
+        id: r.id, userId: r.user_id, imageUrl: r.image_url || '/placeholder.svg', caption: r.caption,
+        location: { lat: r.lat, lng: r.lng, name: r.name },
+        detectedProducts: r.products, isPremium: r.premium,
+        userName: r.profiles?.display_name || r.profiles?.username || 'Member',
+        avatarUrl: r.profiles?.profile_photo_url, createdAt: r.created_at,
+        isFriend: friendIds.has(r.user_id),
       }));
-
-      setSelfies(mappedSelfies);
-      console.log('[SelfieCityStore] Loaded selfies:', mappedSelfies.length);
+      mapped.sort((a, b) => Number(!!b.isFriend) - Number(!!a.isFriend) || b.createdAt.localeCompare(a.createdAt));
+      setSelfies(mapped);
     } catch (error) {
       console.error('[SelfieCityStore] Error loading selfies:', error);
-      // Fallback demo data
-      setSelfies([
-        {
-          id: '1', userId: 'demo1', imageUrl: '/placeholder.svg',
-          caption: 'Weekend vibes ✨', userName: 'Priya',
-          location: { lat: (userLocation?.lat || 8.556) + Math.random() * 0.01, lng: (userLocation?.lng || 76.956) + Math.random() * 0.01 },
-          detectedProducts: [{ name: 'Kurta', brand: 'Fabindia', category: 'Fashion', confidence: 0.9, isPremium: false }], 
-          isPremium: false, createdAt: new Date().toISOString()
-        }
-      ]);
+      setSelfies([]);
     } finally {
       setIsLoading(false);
     }
+  }, [user]);
+
+  // Local place name for the member's location via OpenStreetMap (free, no key).
+  const [localPlace, setLocalPlace] = useState<string | null>(null);
+  useEffect(() => {
+    if (!userLocation) return;
+    const ctrl = new AbortController();
+    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&zoom=10&lat=${userLocation.lat}&lon=${userLocation.lng}`, { signal: ctrl.signal, headers: { Accept: 'application/json' } })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => { const a = j?.address; setLocalPlace(a?.city || a?.town || a?.state_district || a?.state || null); })
+      .catch(() => undefined);
+    return () => ctrl.abort();
   }, [userLocation]);
 
   // Load nearby deals based on user location
@@ -211,6 +213,7 @@ export function useSelfieCityStore() {
     selfies, 
     nearbyDeals, 
     userLocation, 
+    localPlace,
     isLoading, 
     loadSelfies, 
     loadNearbyDeals,
