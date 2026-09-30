@@ -104,6 +104,45 @@ export type Database = {
         }
         Relationships: []
       }
+      activity_sessions: {
+        Row: {
+          created_at: string
+          distance_m: number
+          finished_at: string
+          id: string
+          karma_earned: number
+          kind: string
+          pace_min_per_km: number | null
+          started_at: string
+          steps: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          distance_m?: number
+          finished_at: string
+          id?: string
+          karma_earned?: number
+          kind: string
+          pace_min_per_km?: number | null
+          started_at: string
+          steps?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          distance_m?: number
+          finished_at?: string
+          id?: string
+          karma_earned?: number
+          kind?: string
+          pace_min_per_km?: number | null
+          started_at?: string
+          steps?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       agasthya_scan_sessions: {
         Row: {
           created_at: string | null
@@ -13384,6 +13423,17 @@ export type Database = {
         }[]
       }
       recompute_intimacy_scores: { Args: { _user_id: string }; Returns: number }
+      record_activity_session: {
+        Args: {
+          p_distance_m: number
+          p_finished: string
+          p_kind: string
+          p_started: string
+          p_steps: number
+          p_units: number
+        }
+        Returns: Json
+      }
       record_dhf_lineage: {
         Args: {
           _action?: string

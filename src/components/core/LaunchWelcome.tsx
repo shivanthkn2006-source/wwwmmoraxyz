@@ -27,7 +27,11 @@ export default function LaunchWelcome() {
       if (!u) return;
       setUid(u.id); setEmail(u.email ?? "");
       setMethods(Array.from(new Set((u.identities ?? []).map((i) => i.provider === "email" ? "Email & password" : i.provider === "google" ? "Google" : i.provider))));
-      if (!localStorage.getItem(`mmora-welcome-seen-${u.id}`)) setOpen(true);
+      if (localStorage.getItem(`mmora-welcome-seen-${u.id}`)) return;
+      // Wait until the permissions window has closed so two windows never stack.
+      const tryOpen = () => { if (!(window as unknown as { __mmoraPermOpen?: boolean }).__mmoraPermOpen) setOpen(true); };
+      window.setTimeout(tryOpen, 1500);
+      window.addEventListener("mmora-perm-modal", (e) => { if ((e as CustomEvent<boolean>).detail) setOpen(false); else window.setTimeout(tryOpen, 600); });
     });
   }, []);
 

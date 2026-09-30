@@ -74,6 +74,7 @@ import EnterpriseControlDeck from './vr/features/EnterpriseControlDeck';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import WorldBroadcastNotification from './vr/features/WorldBroadcastNotification';
 import VRKarmaShop from '@/components/vr/VRKarmaShop';
+import VRInventoryHUD from '@/components/vr/VRInventoryHUD';
 // Universal VR Controller System (PS5/Quest/Vision Pro)
 import { useVRUniversalController } from '@/hooks/useVRUniversalController';
 import VRHiddenItemsManagerAuto from './vr/features/VRHiddenOverlays';
@@ -3295,6 +3296,7 @@ const VRLiveClock: React.FC = () => {
         {/* World Broadcast Notifications */}
         <WorldBroadcastNotification />
 
+        <VRInventoryHUD />
         {showWallet && <VRKarmaShop onClose={() => setShowWallet(false)} />}
 
         {/* Multiplayer Connection Indicator */}

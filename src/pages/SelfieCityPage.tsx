@@ -82,7 +82,8 @@ const SelfieCityPage: React.FC = () => {
     nearbyDeals, 
     loadSelfies, 
     loadNearbyDeals,
-    userLocation 
+    userLocation,
+    localPlace
   } = useSelfieCityStore();
   
   const { 
@@ -379,6 +380,11 @@ const SelfieCityPage: React.FC = () => {
           onSelfieSelect={handleGlobeSelfieSelect}
           onLocationSelect={() => {}}
         />
+      </div>
+
+      {/* Local + friends' activity (OpenStreetMap place name) */}
+      <div className="pointer-events-none absolute left-1/2 top-20 z-20 -translate-x-1/2 rounded-full surface-warm-tan px-3 py-1 text-xs shadow-md max-w-[90vw] truncate">
+        {selfies.length} pins{localPlace ? ` · near ${localPlace}` : ''} · {selfies.filter((p) => p.isFriend).length} from friends
       </div>
 
       {/* Search Bar - Bottom Center */}

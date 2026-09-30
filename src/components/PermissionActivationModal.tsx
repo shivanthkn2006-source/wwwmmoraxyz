@@ -57,6 +57,10 @@ export const PermissionActivationModal: React.FC<PermissionActivationModalProps>
 
   const isOpen = controlledOpen !== undefined ? controlledOpen : internalOpen;
   const setIsOpen = onOpenChange || setInternalOpen;
+  useEffect(() => {
+    (window as unknown as { __mmoraPermOpen?: boolean }).__mmoraPermOpen = !!isOpen;
+    window.dispatchEvent(new CustomEvent("mmora-perm-modal", { detail: !!isOpen }));
+  }, [isOpen]);
 
   // Auto-show on mount if not already activated
   useEffect(() => {
@@ -235,7 +239,7 @@ export const PermissionActivationModal: React.FC<PermissionActivationModalProps>
                 onClick={handleActivate}
                 disabled={isActivating}
                 variant="ghost"
-                className="w-full h-12 bg-transparent hover:bg-transparent border-0 text-foreground"
+                className="w-full h-12 bg-transparent hover:bg-transparent border-0 text-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
               >
                 {isActivating ? (
                   <>
