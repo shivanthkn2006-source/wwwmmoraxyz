@@ -1,3 +1,4 @@
+import { requireCaller } from '../_shared/caller-guard.ts';
 /**
  * zoe-slack — Zoe's read/write window into the connected Slack workspace.
  *
@@ -65,6 +66,7 @@ Deno.serve(async (req: Request) => {
 
   const guard = await publicGuard(req, { name: 'zoe-slack', limit: 30, windowSeconds: 60 });
   if (guard.response) return guard.response;
+  { const __a = await requireCaller(req, 'admin'); if (__a instanceof Response) return __a; }
 
   try {
     const { action = 'channels', channel, query, text, limit = 20 } = (guard.body ?? {}) as any;

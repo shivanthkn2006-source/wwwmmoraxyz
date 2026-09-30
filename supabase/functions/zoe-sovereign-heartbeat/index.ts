@@ -1,3 +1,4 @@
+import { requireCaller } from '../_shared/caller-guard.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { publicGuard } from '../_shared/public-guard.ts';
@@ -73,6 +74,7 @@ serve(async (req) => {
 
   const guard = await publicGuard(req, { name: 'zoe-sovereign-heartbeat', limit: 120, windowSeconds: 60, maxBodyBytes: 512 * 1024, allowRichText: true });
   if (guard.response) return guard.response;
+  { const __a = await requireCaller(req, 'admin'); if (__a instanceof Response) return __a; }
 
   const startTime = performance.now();
   const heartbeatId = crypto.randomUUID();

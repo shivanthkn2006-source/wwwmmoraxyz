@@ -1,3 +1,4 @@
+import { requireCaller } from '../_shared/caller-guard.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sovereignKey, sovereignFetch } from "../_shared/sovereign-ai.ts";
@@ -77,6 +78,7 @@ serve(async (req) => {
 
   const guard = await publicGuard(req, { name: 'mail-sentinel', limit: 30, windowSeconds: 60, maxBodyBytes: 512 * 1024, allowRichText: true });
   if (guard.response) return guard.response;
+  const __caller = await requireCaller(req, 'member'); if (__caller instanceof Response) return __caller;
 
   const startTime = performance.now();
 

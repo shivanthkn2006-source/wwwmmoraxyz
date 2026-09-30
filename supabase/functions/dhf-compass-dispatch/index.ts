@@ -1,3 +1,4 @@
+import { requireCronOrAdmin } from '../_shared/caller-guard.ts';
 /**
  * ═══════════════════════════════════════════════════════════════════════════
  * ZOE'S DHF DISPATCH — backend pre-warm, no login required.
@@ -168,6 +169,7 @@ function inPrewarmWindow(tz: string): boolean {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+  { const __a = await requireCronOrAdmin(req, 'dhf-compass-dispatch'); if (__a instanceof Response) return __a; }
 
   const json = (body: unknown, status = 200) =>
     new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });

@@ -1,3 +1,4 @@
+import { requireCaller } from '../_shared/caller-guard.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sovereignFetch, sovereignKey } from "../_shared/sovereign-ai.ts";
@@ -21,6 +22,7 @@ serve(async (req) => {
 
   const guard = await publicGuard(req, { name: 'evolution-sandbox', limit: 20, windowSeconds: 60, maxBodyBytes: 512 * 1024, allowRichText: true });
   if (guard.response) return guard.response;
+  { const __a = await requireCaller(req, 'admin'); if (__a instanceof Response) return __a; }
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
   const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
