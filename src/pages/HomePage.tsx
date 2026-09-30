@@ -101,7 +101,6 @@ const NotificationMenu = React.lazy(() => import('@/components/NotificationMenu'
 const OnboardingTour = React.lazy(() => import('@/components/OnboardingTour').then((m) => ({ default: m.OnboardingTour })));
 const PersonalGrowthOnboarding = React.lazy(() => import('@/components/growth/PersonalGrowthOnboarding'));
 const PrivateTimelinesSheet = React.lazy(() => import('@/components/PrivateTimelinesSheet'));
-const SelfieCityFeed = React.lazy(() => import('@/components/selfiecity/SelfieCityFeed'));
 const SelfieCityGlobePanel = React.lazy(() => import('@/components/selfiecity/SelfieCityGlobePanel'));
 // Hoisted: declaring React.lazy() inside render creates a new component type
 // every render, causing endless unmount/remount + chunk re-download.
@@ -2796,15 +2795,8 @@ const HomePage = () => {
               </div>
             </TabsContent>
 
-            <TabsContent value="selfiecity" className="mt-0 h-full w-full ">
-              <div className="space-y-3 p-3 pt-24">
-                <div className="flex items-center gap-2">
-                  <Camera className="w-5 h-5 text-pink-400" />
-                  <h2 className="text-lg font-semibold">Selfie City Feed</h2>
-                </div>
-                <React.Suspense fallback={<div className="h-[55vh] min-h-[320px] rounded-2xl bg-muted/20" />}><SelfieCityGlobePanel /></React.Suspense>
-                <React.Suspense fallback={null}><SelfieCityFeed /></React.Suspense>
-              </div>
+            <TabsContent value="selfiecity" className="absolute inset-0 m-0 h-full w-full overflow-hidden p-0" data-feed-tab="selfiecity">
+              <React.Suspense fallback={null}><SelfieCityGlobePanel /></React.Suspense>
             </TabsContent>
 
         </Tabs>

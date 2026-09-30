@@ -320,7 +320,7 @@ const GlobeScene: React.FC<GlobeSceneProps> = ({
         zoomSpeed={0.6}
         rotateSpeed={0.4}
         minDistance={1.5}
-        maxDistance={10}
+        maxDistance={40}
         autoRotate={true}
         autoRotateSpeed={0.3}
         enableDamping={true}
@@ -446,17 +446,6 @@ const SelfieGlobe: React.FC<SelfieGlobeProps> = ({
         </div>
       )}
       
-      {/* Tier indicator (dev mode only - remove in production) */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/50 rounded text-[10px] font-mono text-primary/70">
-          Tier {tier} • {textureSettings.config.resolution} • {textureSettings.config.sphereSegments}seg
-        </div>
-      )}
-      
-      {/* Control hint */}
-      <div className="absolute bottom-2 right-2 px-2 py-1 bg-black/30 rounded text-[9px] font-mono text-muted-foreground/50 pointer-events-none">
-        ↑↓←→ or WASD to rotate • +/- to zoom
-      </div>
     </div>
   );
 };
