@@ -290,20 +290,11 @@ export const useCDSPPaymentRails = () => {
     setState(prev => ({ ...prev, isProcessing: true }));
 
     try {
-      // Deduct karma
-      const newKarma = state.wallet.karmaPoints - karmaAmount;
-      await supabase
-        .from('exodus_players')
-        .update({ resonance_points: newKarma })
-        .eq('user_id', user.id);
-
-      // Add credits
-      const newCredits = state.wallet.credits + creditsToReceive;
-      const newTotalPoints = newCredits * 1000;
-      await supabase
-        .from('profiles')
-        .update({ total_points: newTotalPoints })
-        .eq('user_id', user.id);
+      // Server takes the karma and adds the credits in one safe step.
+      const { error: swapError } = await (supabase.rpc as any)('exchange_karma_for_credits', {
+        p_karma: karmaAmount,
+      });
+      if (swapError) throw swapError;
 
       // Log exchange
       await supabase.from('behavioral_events').insert({
