@@ -22,6 +22,7 @@ import { AdaptiveLearningProvider } from '@/components/AdaptiveLearningProvider'
 import { SecurityShell, ShadowSentinelProvider, QuantumGatekeeper, DevModeProvider, AccessDeniedScreen } from '@/components/security';
 const AdminToolbar = lazy(() => import('@/components/security/AdminToolbar'));
 import { AfterAuthIdle } from '@/components/core/AfterAuthIdle';
+import KarmaTimeTracker from "@/components/core/KarmaTimeTracker";
 import { HarvestIntegration } from '@/components/harvest/HarvestIntegration'; // PROTOCOL ICEBERG
 import { VelvetRopeProvider } from '@/contexts/VelvetRopeContext'; // VELVET ROPE PROTOCOL
 import PlanetaryIntentSelector from '@/components/velvet-rope/PlanetaryIntentSelector';

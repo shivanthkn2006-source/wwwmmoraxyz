@@ -73,6 +73,7 @@ import { MultiplayerAvatars } from './vr/features/GlassPyramidAvatar';
 import EnterpriseControlDeck from './vr/features/EnterpriseControlDeck';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import WorldBroadcastNotification from './vr/features/WorldBroadcastNotification';
+import VRKarmaShop from '@/components/vr/VRKarmaShop';
 // Universal VR Controller System (PS5/Quest/Vision Pro)
 import { useVRUniversalController } from '@/hooks/useVRUniversalController';
 import VRHiddenItemsManagerAuto from './vr/features/VRHiddenOverlays';
