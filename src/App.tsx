@@ -550,6 +550,7 @@ const RouteAwareShell = () => {
 
             <AfterAuthIdle delayMs={4000}>
               <LightActivityTracker />
+              <KarmaTimeTracker />
               <DHFHeartbeatPulse />
               <MemoryLeakPlumberGlobal />
             </AfterAuthIdle>

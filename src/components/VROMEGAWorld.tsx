@@ -3294,6 +3294,8 @@ const VRLiveClock: React.FC = () => {
         {/* World Broadcast Notifications */}
         <WorldBroadcastNotification />
 
+        {showWallet && <VRKarmaShop onClose={() => setShowWallet(false)} />}
+
         {/* Multiplayer Connection Indicator */}
         {isActive && (
           <div className="absolute bottom-2 left-2 z-50 flex items-center gap-1.5 bg-black/70 backdrop-blur-md rounded-full px-2 py-1 border border-white/10">
