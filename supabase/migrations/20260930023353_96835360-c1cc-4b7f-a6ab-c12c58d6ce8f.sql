@@ -1,0 +1,1 @@
+DELETE FROM public.edge_cron_tokens WHERE name = 'qa-test-accounts';
