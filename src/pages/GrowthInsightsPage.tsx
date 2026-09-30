@@ -176,7 +176,8 @@ export default function GrowthInsightsPage() {
       );
       if (error) throw error;
       // Best-effort first card — the scheduled worker also fills any gap.
-      await invokeGrowthDispatch({ action: 'regenerate' });
+      const generation = await invokeGrowthDispatch({ action: 'regenerate' });
+      if (generation.signedOut) return;
       toast.success('Daily insights are on — generating your first card');
       await load();
     } catch {

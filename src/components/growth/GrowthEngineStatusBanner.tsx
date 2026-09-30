@@ -143,6 +143,12 @@ export const GrowthEngineStatusBanner: React.FC<{ onChanged?: () => void }> = ({
           .limit(1)
           .maybeSingle(),
       ]);
+      if (statusRes.signedOut) {
+        setStatus(null);
+        setUnreachable(false);
+        setLastCardAt(null);
+        return;
+      }
       const payload = statusRes.data as { ok?: boolean; status?: MeStatus; version?: string } | null;
       setWorkerVersion(payload?.version ?? null);
       if (payload?.ok && payload.status) {

@@ -90,7 +90,12 @@ export function useGrowthDelivery(enabled = true) {
       }
       setRunning(true);
       try {
-        const { data, error: fnError } = await invokeGrowthDispatch({ action: 'catchup-me', reason });
+        const { data, error: fnError, signedOut } = await invokeGrowthDispatch({ action: 'catchup-me', reason });
+        if (signedOut) {
+          const denied = { ok: false, message: 'Sign in required.', written: 0, at: new Date().toISOString() };
+          setResult(denied);
+          return denied;
+        }
         if (fnError) throw fnError;
         const written = Number(data?.summary?.written ?? 0);
         const skipped = String(data?.skipped ?? '');

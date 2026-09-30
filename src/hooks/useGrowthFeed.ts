@@ -225,7 +225,8 @@ export function useGrowthFeed() {
       sessionStorage.setItem(key, 'pending');
     } catch { /* session storage unavailable; server idempotency still protects us */ }
     void invokeGrowthDispatch({ action: 'catchup-me' })
-      .then(({ data, error }) => {
+      .then(({ data, error, signedOut }) => {
+        if (signedOut) return;
         if (error || !(data as { ok?: boolean } | null)?.ok) {
           try { sessionStorage.removeItem(key); } catch { /* retry next mount */ }
           return;
