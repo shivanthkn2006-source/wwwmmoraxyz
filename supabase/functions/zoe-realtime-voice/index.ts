@@ -1,3 +1,4 @@
+import { safeChatMessages } from '../_shared/safe-messages.ts';
 // ═══════════════════════════════════════════════════════════════════════════════
 // ZOE REALTIME VOICE ENGINE - Gemini Native Multimodal Voice
 // Uses Lovable AI (no OpenAI key required) for voice-to-voice conversation
@@ -156,7 +157,7 @@ IMPORTANT: Keep responses concise for natural voice flow. Don't be verbose.`;
 
     const messages = [
       { role: 'system', content: systemPrompt },
-      ...(context?.conversation_history || []).slice(-6),
+      ...safeChatMessages((context?.conversation_history || []).slice(-6)),
       { role: 'user', content: userMessage }
     ];
 

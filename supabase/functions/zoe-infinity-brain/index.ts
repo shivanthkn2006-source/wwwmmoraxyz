@@ -635,6 +635,7 @@ serve(async (req: Request) => {
       personalityMatrix?: PersonalityMatrixInput;
       currentRoute?: string;
     };
+    const messages = safeChatMessages(__rawMessages) as Message[];
 
     const lastUserMessage = [...messages].reverse().find(m => m.role === 'user')?.content || '';
     
