@@ -1,3 +1,4 @@
+import { safeChatMessages } from '../_shared/safe-messages.ts';
 // ═══════════════════════════════════════════════════════════════════════════════
 // ZOE INFINITY — DEEP RESEARCH MODE
 // 3-step Gemini 2.5 Pro reasoning loop:
@@ -65,7 +66,7 @@ serve(async (req) => {
     }
 
     const body = await req.json().catch(() => ({}));
-    const messages: Msg[] = Array.isArray(body.messages) ? body.messages : [];
+    const messages: Msg[] = safeChatMessages(body.messages) as any;
     const soulCodex: string = typeof body.soulCodex === "string" ? body.soulCodex : "";
     const memoryContext: string = typeof body.memoryContext === "string" ? body.memoryContext : "";
     const intimacy: number = typeof body.intimacyLevel === "number" ? body.intimacyLevel : 60;
