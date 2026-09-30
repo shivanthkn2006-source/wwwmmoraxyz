@@ -264,12 +264,25 @@ const GlobeScene: React.FC<GlobeSceneProps> = ({
     registerScene(scene);
   }, [gl, scene, registerRenderer, registerScene]);
   
-  // Set initial camera position
-  useMemo(() => {
-    camera.position.set(0, 0, 2.5);
-  }, [camera]);
+  // Fit the whole globe inside the screen on any aspect ratio.
+  const size = useThree((s) => s.size);
+  const fitted = useRef<string>('');
+  useEffect(() => {
+    const cam = camera as THREE.PerspectiveCamera;
+    if (!size.width || !size.height) return;
+    const key = `${size.width}x${size.height}`;
+    if (fitted.current === key) return;
+    fitted.current = key;
+    const vHalf = THREE.MathUtils.degToRad((cam.fov ?? 45) / 2);
+    const hHalf = Math.atan(Math.tan(vHalf) * (size.width / size.height));
+    const dist = (GLOBE_RADIUS * 1.12) / Math.sin(Math.min(vHalf, hHalf));
+    const dir = cam.position.lengthSq() > 0 ? cam.position.clone().normalize() : new THREE.Vector3(0, 0, 1);
+    cam.position.copy(dir.multiplyScalar(dist));
+    cam.updateProjectionMatrix();
+  }, [camera, size.width, size.height]);
 
   const { config, textureUrls, tier, particleMultiplier } = textureSettings;
+  const isPhone = size.width < 768;
 
   return (
     <>
@@ -277,7 +290,7 @@ const GlobeScene: React.FC<GlobeSceneProps> = ({
       <Stars
         radius={100}
         depth={50}
-        count={tier === 'C' ? 2000 : tier === 'B' ? 3500 : 5000}
+        count={isPhone ? 800 : tier === 'C' ? 2000 : tier === 'B' ? 3500 : 5000}
         factor={4}
         saturation={0}
         fade
@@ -291,7 +304,7 @@ const GlobeScene: React.FC<GlobeSceneProps> = ({
       <Earth 
         sphereSegments={config.sphereSegments}
         cloudSegments={config.cloudSegments}
-        enableClouds={config.enableClouds}
+        enableClouds={config.enableClouds && !isPhone}
         enableBump={config.enableBump}
         enableSpecular={config.enableSpecular}
         enableAtmosphere={config.enableAtmosphere}
@@ -301,7 +314,7 @@ const GlobeScene: React.FC<GlobeSceneProps> = ({
       
       {/* Dynamic Weather System - Particle count adjusted by tier */}
       <WeatherSystem 
-        enabled={weatherEnabled} 
+        enabled={weatherEnabled && !isPhone} 
         particleMultiplier={particleMultiplier}
         tier={tier}
       />
@@ -320,7 +333,7 @@ const GlobeScene: React.FC<GlobeSceneProps> = ({
         zoomSpeed={0.6}
         rotateSpeed={0.4}
         minDistance={1.5}
-        maxDistance={40}
+        maxDistance={12}
         autoRotate={true}
         autoRotateSpeed={0.3}
         enableDamping={true}
