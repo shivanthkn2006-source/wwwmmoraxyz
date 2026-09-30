@@ -7103,3 +7103,14 @@ body {
 [data-sonner-toast] { background: transparent !important; border: 0 !important; box-shadow: none !important; color: #fff !important; }
 [data-sonner-toast] [data-close-button] { background: transparent !important; border: 0 !important; color: #fff !important; }
 [data-sonner-toast] [data-description], [data-sonner-toast] [data-title] { color: #fff !important; }
+
+/* Warm tan permission surface (platform default tan) */
+.surface-warm-tan {
+  background: linear-gradient(90deg, hsl(33 30% 55%), hsl(27 28% 50%));
+  color: hsl(30 30% 12%);
+  border-color: hsl(30 25% 40% / 0.5);
+  --muted-foreground: 30 20% 22%;
+  --foreground: 30 30% 12%;
+  --primary: 30 35% 18%;
+  --card: 33 30% 55%;
+}
