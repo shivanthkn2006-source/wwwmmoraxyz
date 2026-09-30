@@ -4534,6 +4534,33 @@ export type Database = {
         }
         Relationships: []
       }
+      karma_ledger: {
+        Row: {
+          created_at: string
+          delta: number
+          id: string
+          reason: string
+          ref: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          delta: number
+          id?: string
+          reason: string
+          ref?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          delta?: number
+          id?: string
+          reason?: string
+          ref?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       latency_benchmarks: {
         Row: {
           cache_hit: boolean | null
@@ -9205,6 +9232,65 @@ export type Database = {
         }
         Relationships: []
       }
+      vr_catalog: {
+        Row: {
+          active: boolean
+          category: string
+          created_at: string
+          id: string
+          name: string
+          price: number
+        }
+        Insert: {
+          active?: boolean
+          category: string
+          created_at?: string
+          id: string
+          name: string
+          price: number
+        }
+        Update: {
+          active?: boolean
+          category?: string
+          created_at?: string
+          id?: string
+          name?: string
+          price?: number
+        }
+        Relationships: []
+      }
+      vr_purchases: {
+        Row: {
+          created_at: string
+          id: string
+          item_id: string
+          price: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_id: string
+          price: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_id?: string
+          price?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vr_purchases_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "vr_catalog"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vr_world_events: {
         Row: {
           created_at: string
@@ -13136,6 +13222,10 @@ export type Database = {
       deliver_due_dhf_essays: { Args: never; Returns: number }
       detect_behavioral_anomaly: { Args: { p_user_id: string }; Returns: Json }
       detect_relationship_style: { Args: { p_user_id: string }; Returns: Json }
+      earn_activity_karma: {
+        Args: { p_kind: string; p_units?: number }
+        Returns: number
+      }
       enqueue_zoe_search_entity: {
         Args: { p_entity_id: string; p_entity_type: string; p_owner_id: string }
         Returns: undefined
@@ -13203,6 +13293,7 @@ export type Database = {
       get_zoe_adaptive_prompt: { Args: { p_user_id: string }; Returns: string }
       get_zoe_sovereign_state: { Args: { p_user_id: string }; Returns: Json }
       get_zoe_stability_score: { Args: { p_user_id: string }; Returns: number }
+      gift_karma: { Args: { p_amount: number; p_to: string }; Returns: number }
       has_premium_access: { Args: { user_username: string }; Returns: boolean }
       has_role: {
         Args: {
@@ -13234,6 +13325,16 @@ export type Database = {
         Returns: boolean
       }
       is_user_shadow_banned: { Args: { p_user_id: string }; Returns: boolean }
+      karma_award_internal: {
+        Args: {
+          _daily_cap: number
+          _delta: number
+          _reason: string
+          _ref: string
+          _uid: string
+        }
+        Returns: number
+      }
       list_owned_tables: {
         Args: never
         Returns: {
@@ -13350,6 +13451,7 @@ export type Database = {
         Returns: boolean
       }
       sovereign_admin_id: { Args: never; Returns: string }
+      spend_karma_vr: { Args: { p_item: string }; Returns: number }
       track_viral_share: {
         Args: {
           p_content_id: string
