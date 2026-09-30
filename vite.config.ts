@@ -322,33 +322,13 @@ export default defineConfig(({ mode }) => ({
           // index.html references deleted per-component chunks after a
           // deploy. One chunk = one filename to invalidate.
           // ════════════════════════════════════════════════════════════════
+          // Only Zoe Infinity pages/components are grouped. Shared hooks used
+          // to live here too, which dragged this 2.2 MB bundle into startup
+          // for every M'Mora visitor. Heavy libraries (3D, PDF, charts) are
+          // left to Rollup's natural lazy chunks for the same reason.
           if (
             id.includes('/pages/ZoeInfinity') ||
-            id.includes('/components/zoe-infinity/') ||
-            id.includes('/hooks/useZoeInfinity') ||
-            id.includes('/hooks/useNanoStreamVoice') ||
-            id.includes('/hooks/useNanoReflexArt') ||
-            id.includes('/hooks/useAtmanArchive') ||
-            id.includes('/hooks/useDestinyCompanion') ||
-            id.includes('/hooks/useVedicEngine') ||
-            id.includes('/hooks/useCircadianRhythm') ||
-            id.includes('/hooks/useKarmicMemory') ||
-            id.includes('/hooks/useZoeBioKernel') ||
-            id.includes('/hooks/useEmotionalVoice') ||
-            id.includes('/hooks/useOfflineWisdom') ||
-            id.includes('/hooks/useZoeNickname') ||
-            id.includes('/hooks/useZoeLanguage') ||
-            id.includes('/hooks/useZoeInitiative') ||
-            id.includes('/hooks/useGenesisConversation') ||
-            id.includes('/hooks/useGenesisEffects') ||
-            id.includes('/hooks/usePhantomMode') ||
-            id.includes('/hooks/useHybridVoice') ||
-            id.includes('/hooks/useWakeWord') ||
-            id.includes('/hooks/useDocumentXray') ||
-            id.includes('/hooks/useArtifactGenerator') ||
-            id.includes('/hooks/useAutoProfiler') ||
-            id.includes('/hooks/useZoeLocalContext') ||
-            id.includes('/hooks/useConversationalOnboarding')
+            id.includes('/components/zoe-infinity/')
           ) {
             return 'zoe-infinity-sovereign';
           }
@@ -370,15 +350,8 @@ export default defineConfig(({ mode }) => ({
             }
 
             if (id.includes('@radix-ui')) return 'ui-vendor';
-            // Keep date helpers separate from Recharts. The previous shared
-            // chart-vendor chunk loaded Recharts on every page that used
-            // date-fns, and Recharts can trip a production circular-init crash
-            // before React mounts, causing the live black screen.
             if (id.includes('date-fns')) return 'date-vendor';
-            if (id.includes('recharts')) return 'recharts-vendor';
             if (id.includes('@supabase')) return 'supabase';
-            if (id.includes('jspdf') || id.includes('html2canvas')) return 'pdf-vendor';
-            if (id.includes('three') || id.includes('@react-three')) return 'three-vendor';
           }
         },
       },
