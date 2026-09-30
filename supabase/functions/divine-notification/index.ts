@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { requireCaller } from '../_shared/caller-guard.ts';
+import { requireCaller, bindOwner } from '../_shared/caller-guard.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -68,7 +68,8 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { user_id, lat, lng } = await req.json() as UserLocation;
+    let { user_id, lat, lng } = await req.json() as UserLocation;
+    user_id = bindOwner(__caller, user_id) as typeof user_id;
 
     if (!user_id || lat === undefined || lng === undefined) {
       return new Response(

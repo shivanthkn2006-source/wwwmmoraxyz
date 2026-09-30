@@ -42,3 +42,14 @@ export async function requireCaller(
   if (level === 'admin' && !isAdmin) return deny(403, 'Admin only');
   return { kind: 'member', userId, isAdmin: !!isAdmin };
 }
+
+/**
+ * Ownership binding: a signed-in member may only act on their own records.
+ * Server calls and the admin keep the requested id; everyone else is forced
+ * to their own id, whatever the request body says.
+ */
+export function bindOwner<T extends string | undefined | null>(caller: Caller, requested: T): string | T {
+  if (caller.kind === 'service') return requested;
+  if (caller.isAdmin && requested) return requested;
+  return caller.userId;
+}

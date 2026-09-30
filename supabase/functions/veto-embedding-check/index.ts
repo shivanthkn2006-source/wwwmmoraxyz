@@ -1,4 +1,4 @@
-import { requireCaller } from '../_shared/caller-guard.ts';
+import { requireCaller, bindOwner } from '../_shared/caller-guard.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { clientErrorResponse } from '../_shared/client-error.ts';
@@ -136,7 +136,7 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
-  { const __c = await requireCaller(req, 'member'); if (__c instanceof Response) return __c; }
+  const __caller = await requireCaller(req, 'member'); if (__caller instanceof Response) return __caller;
 
   const startTime = performance.now();
   const requestId = crypto.randomUUID();
@@ -152,7 +152,8 @@ serve(async (req) => {
     }
 
     const body: VetoRequest = await req.json();
-    const { command, veto_keywords, user_id, include_reasoning } = body;
+    let { command, veto_keywords, user_id, include_reasoning } = body;
+    user_id = bindOwner(__caller, user_id) as typeof user_id;
 
     console.log(`[${requestId}] SEMANTIC VETO CHECK initiated`);
     console.log(`Command: ${command.substring(0, 100)}...`);

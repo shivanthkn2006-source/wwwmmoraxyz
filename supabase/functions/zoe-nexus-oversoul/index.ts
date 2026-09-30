@@ -16,7 +16,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { clientErrorResponse } from '../_shared/client-error.ts';
-import { requireCaller } from '../_shared/caller-guard.ts';
+import { requireCaller, bindOwner } from '../_shared/caller-guard.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -299,7 +299,8 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const request: NexusRequest = await req.json();
-    const { message, userId, conversationHistory, currentPage, enableASI, matterBridgeActions } = request;
+    let { message, userId, conversationHistory, currentPage, enableASI, matterBridgeActions } = request;
+    userId = bindOwner(__caller, userId) as typeof userId;
 
     console.log(`[Nexus-Oversoul] Processing message for user ${userId?.substring(0, 8)}...`);
 

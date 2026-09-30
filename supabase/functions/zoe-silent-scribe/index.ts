@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sovereignFetch, sovereignKey } from "../_shared/sovereign-ai.ts";
-import { requireCaller } from '../_shared/caller-guard.ts';
+import { requireCaller, bindOwner } from '../_shared/caller-guard.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -25,7 +25,8 @@ serve(async (req) => {
   if (__caller instanceof Response) return __caller;
 
   try {
-    const { message, userId, localEntities } = await req.json();
+    let { message, userId, localEntities } = await req.json();
+    userId = bindOwner(__caller, userId) as typeof userId;
     
     if (!message || !userId) {
       return new Response(
