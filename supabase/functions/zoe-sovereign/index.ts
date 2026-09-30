@@ -175,7 +175,7 @@ async function think(message: string, vision: any, research: Hit[] | null, name:
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
-  const guard = await publicGuard(req, { name: 'zoe-sovereign', limit: 30, windowSeconds: 60 });
+  const guard = await publicGuard(req, { name: 'zoe-sovereign', limit: 30, windowSeconds: 60, maxBodyBytes: 6 * 1024 * 1024, allowRichText: true });
   if (guard.response) return guard.response;
   try {
     const auth = req.headers.get('Authorization') ?? '';
