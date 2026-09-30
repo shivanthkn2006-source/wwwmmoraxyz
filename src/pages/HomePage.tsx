@@ -102,6 +102,7 @@ const OnboardingTour = React.lazy(() => import('@/components/OnboardingTour').th
 const PersonalGrowthOnboarding = React.lazy(() => import('@/components/growth/PersonalGrowthOnboarding'));
 const PrivateTimelinesSheet = React.lazy(() => import('@/components/PrivateTimelinesSheet'));
 const SelfieCityFeed = React.lazy(() => import('@/components/selfiecity/SelfieCityFeed'));
+const SelfieCityGlobePanel = React.lazy(() => import('@/components/selfiecity/SelfieCityGlobePanel'));
 // Hoisted: declaring React.lazy() inside render creates a new component type
 // every render, causing endless unmount/remount + chunk re-download.
 const AutoScrollDebugOverlay = React.lazy(() => import('@/components/dev/AutoScrollDebugOverlay'));
@@ -2796,24 +2797,17 @@ const HomePage = () => {
             </TabsContent>
 
             <TabsContent value="selfiecity" className="mt-0 h-full w-full ">
-              <div className="space-y-2 p-3">
-                {/* Selfie City Feed Header */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Camera className="w-5 h-5 text-pink-400" />
-                    <h2 className="text-lg font-semibold">Selfie City Feed</h2>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => navigate('/selfie-city')}
-                    className="text-xs"
-                  >
-                    Open Map
-                  </Button>
+              <div className="space-y-3 p-3 pt-24">
+                <div className="flex items-center gap-2">
+                  <Camera className="w-5 h-5 text-pink-400" />
+                  <h2 className="text-lg font-semibold">Selfie City Feed</h2>
                 </div>
-                
-                {/* Selfie City Posts Grid */}
+                <React.Suspense fallback={<div className="h-[55vh] min-h-[320px] rounded-2xl bg-muted/20" />}><SelfieCityGlobePanel /></React.Suspense>
+                <div className="flex justify-end">
+                  <button type="button" onClick={() => navigate('/selfie-city')} className="text-xs underline-offset-4 hover:underline">
+                    Open full map
+                  </button>
+                </div>
                 <React.Suspense fallback={null}><SelfieCityFeed /></React.Suspense>
               </div>
             </TabsContent>
