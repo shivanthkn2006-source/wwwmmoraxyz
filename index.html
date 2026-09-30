@@ -448,6 +448,19 @@
           failures.push({ type: 'timeout', message: 'App did not mount within ' + BOOT_TIMEOUT_MS + 'ms' });
           if (!autoRetried && attemptAutoRetry('timeout')) return;
           renderError();
+          // Send the startup failure to the backend so it reaches the admin, not just this phone.
+          try {
+            var ru = 'https://qwufiqkeoyvqasimcmbd.supabase.co';
+            var rk = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF3dWZpcWtlb3l2cWFzaW1jbWJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA2NjU3MDQsImV4cCI6MjA4NjI0MTcwNH0.NEdVnsGHar8SmxQt1jofMFd9r65kkDuadYPXRQjtHow';
+            fetch(ru + '/functions/v1/log-platform-error', {
+              method: 'POST', keepalive: true,
+              headers: { 'Content-Type': 'application/json', apikey: rk, Authorization: 'Bearer ' + rk },
+              body: JSON.stringify({ events: failures.slice(-5).map(function (f) {
+                return { error_type: 'startup_' + f.type, message: String(f.message || '').slice(0, 2000), stack: f.stack || null,
+                  url: location.href, user_agent: navigator.userAgent, severity: 'critical', source: 'boot_shell' };
+              }) })
+            }).catch(function () {});
+          } catch (e) {}
           // Late-mount rescue: poll for up to LATE_MOUNT_POLL_MS more; if React renders, hide error.
           var lateStart = Date.now();
           var lateIv = setInterval(function () {
