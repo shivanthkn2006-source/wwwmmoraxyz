@@ -7114,3 +7114,5 @@ body {
   --primary: 30 35% 18%;
   --card: 33 30% 55%;
 }
+.surface-warm-tan .tan-circle { background: hsl(40 30% 97%); box-shadow: 0 2px 8px hsl(30 30% 12% / 0.2); }
+.surface-warm-tan .tan-circle-icon { color: hsl(30 35% 18%); }
