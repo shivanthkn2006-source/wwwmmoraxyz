@@ -13089,6 +13089,7 @@ export type Database = {
         Returns: undefined
       }
       ensure_profiles_for_all_users: { Args: never; Returns: number }
+      exchange_karma_for_credits: { Args: { p_karma: number }; Returns: number }
       get_daily_notification_count: {
         Args: { p_user_id: string }
         Returns: number
