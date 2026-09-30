@@ -101,7 +101,6 @@ const NotificationMenu = React.lazy(() => import('@/components/NotificationMenu'
 const OnboardingTour = React.lazy(() => import('@/components/OnboardingTour').then((m) => ({ default: m.OnboardingTour })));
 const PersonalGrowthOnboarding = React.lazy(() => import('@/components/growth/PersonalGrowthOnboarding'));
 const PrivateTimelinesSheet = React.lazy(() => import('@/components/PrivateTimelinesSheet'));
-const SelfieCityFeed = React.lazy(() => import('@/components/selfiecity/SelfieCityFeed'));
 const SelfieCityGlobePanel = React.lazy(() => import('@/components/selfiecity/SelfieCityGlobePanel'));
 // Hoisted: declaring React.lazy() inside render creates a new component type
 // every render, causing endless unmount/remount + chunk re-download.
