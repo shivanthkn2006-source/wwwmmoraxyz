@@ -193,6 +193,9 @@ serve(async (req) => {
     
     console.log(`[SENTINEL] Action: ${action}`);
 
+    if (['lockdown','release_lockdown','night_watch','dashboard'].includes(String(action)) && !(__caller.kind === 'service' || __caller.isAdmin)) {
+      return new Response(JSON.stringify({ ok: false, error: 'Admin only' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
     switch (action) {
       // ==========================================
       // SHADOW AI DETECTION
