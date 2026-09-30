@@ -198,7 +198,7 @@ export const PermissionActivationModal: React.FC<PermissionActivationModalProps>
               animate={{ opacity: 1 }}
               className="space-y-2"
             >
-              <Progress value={progress} className="h-2" />
+              <Progress value={progress} className="h-2 permission-progress" />
               <p className="text-xs text-center text-muted-foreground">
                 Requesting {currentStep}...
               </p>
