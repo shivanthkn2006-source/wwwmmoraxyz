@@ -10,19 +10,21 @@ import { GlobalMediaProvider } from "@/contexts/GlobalMediaContext"; // ONE EAR 
 import { NavigationBusProvider } from "@/contexts/NavigationBusContext"; // PHASE 2: Search → Globe Bridge
 import { DeferredComponentLoader } from '@/components/DeferredComponentLoader';
 import { MoraZoeGlobalHost } from '@/components/astro/MoraZoeGlobalHost';
-import HumorAnnouncementHost from '@/components/humor/HumorAnnouncementHost';
-import ZoeDeviceScanHost from '@/features/zoe-device-scan/ZoeDeviceScanHost';
-import ZoeVisionJournalHost from '@/features/zoe-vision-journal/ZoeVisionJournalHost';
-import { LightActivityTracker } from '@/components/LightActivityTracker';
-import { MemoryLeakPlumberGlobal } from '@/components/MemoryLeakPlumberGlobal';
+const HumorAnnouncementHost = lazy(() => import('@/components/humor/HumorAnnouncementHost'));
+const ZoeDeviceScanHost = lazy(() => import('@/features/zoe-device-scan/ZoeDeviceScanHost'));
+const ZoeVisionJournalHost = lazy(() => import('@/features/zoe-vision-journal/ZoeVisionJournalHost'));
+const LightActivityTracker = lazy(() => import('@/components/LightActivityTracker'));
+const MemoryLeakPlumberGlobal = lazy(() => import('@/components/MemoryLeakPlumberGlobal'));
 import { AutoFixProvider } from '@/components/AutoFixProvider';
 import { AdaptiveLearningProvider } from '@/components/AdaptiveLearningProvider';
-import { SecurityShell, ShadowSentinelProvider, QuantumGatekeeper, DevModeProvider, AdminToolbar, AccessDeniedScreen } from '@/components/security';
+import { SecurityShell, ShadowSentinelProvider, QuantumGatekeeper, DevModeProvider, AccessDeniedScreen } from '@/components/security';
+const AdminToolbar = lazy(() => import('@/components/security/AdminToolbar'));
+import { AfterAuthIdle } from '@/components/core/AfterAuthIdle';
 import { HarvestIntegration } from '@/components/harvest/HarvestIntegration'; // PROTOCOL ICEBERG
 import { VelvetRopeProvider } from '@/contexts/VelvetRopeContext'; // VELVET ROPE PROTOCOL
 import PlanetaryIntentSelector from '@/components/velvet-rope/PlanetaryIntentSelector';
-import DevTestButton from '@/components/velvet-rope/DevTestButton';
-import ScreenTapController from '@/components/phantom/ScreenTapController'; // PROTOCOL PHANTOM
+const DevTestButton = lazy(() => import('@/components/velvet-rope/DevTestButton'));
+const ScreenTapController = lazy(() => import('@/components/phantom/ScreenTapController'));
 import AutoPhantomProvider from '@/components/phantom/AutoPhantomProvider'; // WAVE 3: Auto-Ghost
 import { ZoeUnifiedSelfHealerProvider } from '@/components/ZoeUnifiedSelfHealerProvider';
 import { AdaptiveProviderShell } from '@/components/AdaptiveProviderShell'; // ADAPTIVE DEVICE INJECTION
@@ -30,12 +32,12 @@ import { ZoeMonitorProvider } from '@/components/ZoeMonitorProvider';
 // DeviceTierProvider moved to main.tsx for earliest possible detection
 import ProtectedRoute from "./components/ProtectedRoute";
 // BottomNavigation removed - now using HUD navigation
-import InstallPrompt from "./components/InstallPrompt";
-import GuardianInterventionOverlay from "./components/vitruvian/GuardianInterventionOverlay";
+const InstallPrompt = lazy(() => import("./components/InstallPrompt"));
+const GuardianInterventionOverlay = lazy(() => import("./components/vitruvian/GuardianInterventionOverlay"));
 import MmoraBrandHomeBridge from "./components/brand/MmoraBrandHomeBridge";
 import VoiceSystemActivator from "./components/VoiceSystemActivator";
 import CameraActiveIndicator from "./components/CameraActiveIndicator"; // CAMERA EYE INDICATOR
-import { DHFHeartbeatPulse } from "./components/DHFHeartbeatPulse"; // PHASE 3: 24h Kill Switch
+const DHFHeartbeatPulse = lazy(() => import("./components/DHFHeartbeatPulse"));
 import GenesisCinematicIntro from "./components/GenesisCinematicIntro";
 import { useGenesisIntro } from "./hooks/useGenesisIntro";
 import React, { useState, useEffect, useCallback, lazy, Suspense, memo } from "react";
@@ -543,18 +545,22 @@ const RouteAwareShell = () => {
               <VoiceSystemActivator />
             </VoiceRuntimeGate>
 
-            <LightActivityTracker />
-            <DHFHeartbeatPulse />
-            <MemoryLeakPlumberGlobal />
+            <AfterAuthIdle delayMs={4000}>
+              <LightActivityTracker />
+              <DHFHeartbeatPulse />
+              <MemoryLeakPlumberGlobal />
+            </AfterAuthIdle>
             <AutoFixProvider />
             <DeferredComponentLoader />
             <HarvestIntegration />
 
             <VelvetRopeProvider>
               <PlanetaryIntentSelector />
-              <DevTestButton />
-              <ScreenTapController />
-              <AdminToolbar />
+              <AfterAuthIdle delayMs={3000}>
+                <DevTestButton />
+                <ScreenTapController />
+                <AdminToolbar />
+              </AfterAuthIdle>
               <Suspense fallback={null}><ZoeSkyShiftMount /></Suspense>
 
               <GenesisIntroWrapper>
@@ -1466,8 +1472,10 @@ const App = () => {
                     <TooltipProvider>
                       <Toaster />
                       <Sonner />
-                      <InstallPrompt />
-                      <GuardianInterventionOverlay />
+                      <AfterAuthIdle delayMs={8000}>
+                        <InstallPrompt />
+                        <GuardianInterventionOverlay />
+                      </AfterAuthIdle>
                       {/* Tucked behind the M'Mora logo (top-left, below its layer) so it never covers the profile photo. */}
                       <CameraActiveIndicator position="top-left" minimal className="!z-0 opacity-0" />
                       <Suspense fallback={null}>
@@ -1481,9 +1489,13 @@ const App = () => {
                         <Suspense fallback={null}>
                           <MoraZoeGlobalHost />
                         </Suspense>
-                        <HumorAnnouncementHost />
-                        <ZoeDeviceScanHost />
-                        <ZoeVisionJournalHost />
+                        <AfterAuthIdle delayMs={2500}>
+                          <HumorAnnouncementHost />
+                        </AfterAuthIdle>
+                        <AfterAuthIdle delayMs={10000}>
+                          <ZoeDeviceScanHost />
+                          <ZoeVisionJournalHost />
+                        </AfterAuthIdle>
 
                         <MmoraBrandHomeBridge />
 
