@@ -104,7 +104,7 @@ const GlobeCameraController: React.FC = () => {
         camera.position.multiplyScalar(1.2);
         // Clamp zoom
         const distOut = camera.position.length();
-        if (distOut > 40) camera.position.normalize().multiplyScalar(40);
+        if (distOut > 12) camera.position.normalize().multiplyScalar(12);
         break;
       case 'reset':
         animationRef.current = {

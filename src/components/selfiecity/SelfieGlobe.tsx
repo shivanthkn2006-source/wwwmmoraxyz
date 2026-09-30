@@ -290,7 +290,7 @@ const GlobeScene: React.FC<GlobeSceneProps> = ({
       <Stars
         radius={100}
         depth={50}
-        count={tier === 'C' ? 2000 : tier === 'B' ? 3500 : 5000}
+        count={isPhone ? 800 : tier === 'C' ? 2000 : tier === 'B' ? 3500 : 5000}
         factor={4}
         saturation={0}
         fade
@@ -304,7 +304,7 @@ const GlobeScene: React.FC<GlobeSceneProps> = ({
       <Earth 
         sphereSegments={config.sphereSegments}
         cloudSegments={config.cloudSegments}
-        enableClouds={config.enableClouds}
+        enableClouds={config.enableClouds && !isPhone}
         enableBump={config.enableBump}
         enableSpecular={config.enableSpecular}
         enableAtmosphere={config.enableAtmosphere}
@@ -314,7 +314,7 @@ const GlobeScene: React.FC<GlobeSceneProps> = ({
       
       {/* Dynamic Weather System - Particle count adjusted by tier */}
       <WeatherSystem 
-        enabled={weatherEnabled} 
+        enabled={weatherEnabled && !isPhone} 
         particleMultiplier={particleMultiplier}
         tier={tier}
       />
@@ -333,7 +333,7 @@ const GlobeScene: React.FC<GlobeSceneProps> = ({
         zoomSpeed={0.6}
         rotateSpeed={0.4}
         minDistance={1.5}
-        maxDistance={40}
+        maxDistance={12}
         autoRotate={true}
         autoRotateSpeed={0.3}
         enableDamping={true}
