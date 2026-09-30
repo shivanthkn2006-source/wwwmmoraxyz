@@ -235,7 +235,7 @@ export const PermissionActivationModal: React.FC<PermissionActivationModalProps>
                 onClick={handleActivate}
                 disabled={isActivating}
                 variant="ghost"
-                className="w-full h-12 bg-transparent hover:bg-transparent border border-foreground/30 text-foreground"
+                className="w-full h-12 bg-transparent hover:bg-transparent border-0 text-foreground"
               >
                 {isActivating ? (
                   <>
