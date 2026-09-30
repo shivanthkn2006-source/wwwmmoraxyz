@@ -5,6 +5,8 @@ import { earnKarma, type ActivityKind } from "@/lib/karma";
 const METRES_PER_UNIT: Partial<Record<ActivityKind, number>> = {
   walking: 100, running: 200, cycling: 400, riding: 800,
 };
+/** Real steps per karma unit (walking/running must match both GPS distance and steps). */
+const STEPS_PER_UNIT: Partial<Record<ActivityKind, number>> = { walking: 130, running: 220 };
 const MAX_SPEED: Partial<Record<ActivityKind, number>> = { walking: 3, running: 7, cycling: 15, riding: 45 }; // m/s
 
 function haversine(a: GeolocationCoordinates, b: GeolocationCoordinates) {
@@ -14,16 +16,37 @@ function haversine(a: GeolocationCoordinates, b: GeolocationCoordinates) {
   return 2 * R * Math.asin(Math.sqrt(h));
 }
 
-/** Tracks a real activity with GPS (or phone motion for workouts) and pays karma on stop. */
+async function askMotion() {
+  const req = (globalThis.DeviceMotionEvent as unknown as { requestPermission?: () => Promise<string> } | undefined)?.requestPermission;
+  if (!req) return true;
+  try { return (await req()) === "granted"; } catch { return false; }
+}
+
+function askGps(): Promise<string | null> {
+  return new Promise((resolve) => {
+    if (!("geolocation" in navigator)) return resolve("Location isn't available on this device");
+    navigator.geolocation.getCurrentPosition(
+      () => resolve(null),
+      (e) => resolve(e.code === e.PERMISSION_DENIED
+        ? "Location permission is off. Turn it on in your browser settings to earn from real movement."
+        : "Couldn't get your location. Try outdoors."),
+      { enableHighAccuracy: true, timeout: 15000 },
+    );
+  });
+}
+
+/** Tracks a real activity with GPS + step counting (or phone motion for workouts) and pays karma on stop. */
 export function useTrackedActivity() {
   const [active, setActive] = useState<ActivityKind | null>(null);
   const [progress, setProgress] = useState(0); // metres or motion-minutes
+  const [steps, setSteps] = useState(0);
   const watchId = useRef<number | null>(null);
   const last = useRef<GeolocationPosition | null>(null);
   const motionSecs = useRef(0);
   const motionHandler = useRef<((e: DeviceMotionEvent) => void) | null>(null);
   const motionTick = useRef<number | null>(null);
   const moving = useRef(false);
+  const stepState = useRef({ above: false, lastStep: 0 });
 
   const cleanup = useCallback(() => {
     if (watchId.current !== null) navigator.geolocation.clearWatch(watchId.current);
@@ -36,12 +59,15 @@ export function useTrackedActivity() {
 
   useEffect(() => cleanup, [cleanup]);
 
-  const start = useCallback((kind: ActivityKind): string | null => {
-    cleanup(); setProgress(0); motionSecs.current = 0;
+  const start = useCallback(async (kind: ActivityKind): Promise<string | null> => {
+    cleanup(); setProgress(0); setSteps(0); motionSecs.current = 0;
+    if (typeof DeviceMotionEvent === "undefined" && (kind === "workout" || STEPS_PER_UNIT[kind])) {
+      return "This device has no motion sensor for step counting";
+    }
+    if (kind === "workout" || STEPS_PER_UNIT[kind]) {
+      if (!(await askMotion())) return "Motion permission is off. Allow it to count your steps.";
+    }
     if (kind === "workout") {
-      if (typeof DeviceMotionEvent === "undefined") return "This device has no motion sensor";
-      const req = (DeviceMotionEvent as unknown as { requestPermission?: () => Promise<string> }).requestPermission;
-      if (req) void req().catch(() => undefined);
       motionHandler.current = (e) => {
         const a = e.acceleration;
         if (a && Math.hypot(a.x ?? 0, a.y ?? 0, a.z ?? 0) > 2.5) moving.current = true;
@@ -52,7 +78,20 @@ export function useTrackedActivity() {
         moving.current = false;
       }, 5000);
     } else {
-      if (!("geolocation" in navigator)) return "Location isn't available on this device";
+      const gpsErr = await askGps();
+      if (gpsErr) return gpsErr;
+      if (STEPS_PER_UNIT[kind]) {
+        // Simple pedometer: count peaks of total acceleration, at most ~4 steps/second.
+        motionHandler.current = (e) => {
+          const a = e.accelerationIncludingGravity;
+          if (!a) return;
+          const mag = Math.hypot(a.x ?? 0, a.y ?? 0, a.z ?? 0);
+          const s = stepState.current, now = performance.now();
+          if (!s.above && mag > 11.5 && now - s.lastStep > 250) { s.above = true; s.lastStep = now; setSteps((n) => n + 1); }
+          else if (s.above && mag < 9.5) s.above = false;
+        };
+        window.addEventListener("devicemotion", motionHandler.current);
+      }
       watchId.current = navigator.geolocation.watchPosition((pos) => {
         if (pos.coords.accuracy > 50) return;
         const prev = last.current; last.current = pos;
@@ -70,10 +109,12 @@ export function useTrackedActivity() {
   const stop = useCallback(async (): Promise<number> => {
     const kind = active; cleanup(); setActive(null);
     if (!kind) return 0;
-    const units = kind === "workout" ? progress : Math.floor(progress / (METRES_PER_UNIT[kind] ?? 100));
-    setProgress(0);
+    let units = kind === "workout" ? progress : Math.floor(progress / (METRES_PER_UNIT[kind] ?? 100));
+    const spu = STEPS_PER_UNIT[kind];
+    if (spu) units = Math.min(units, Math.floor(steps / spu)); // distance AND steps must both be real
+    setProgress(0); setSteps(0);
     return units > 0 ? earnKarma(kind, units) : 0;
-  }, [active, progress, cleanup]);
+  }, [active, progress, steps, cleanup]);
 
-  return { active, progress, start, stop };
+  return { active, progress, steps, start, stop };
 }

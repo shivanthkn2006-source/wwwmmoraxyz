@@ -45,20 +45,20 @@ export default function VRKarmaShop({ onClose }: { onClose: () => void }) {
       toast[n > 0 ? "success" : "info"](n > 0 ? `+${n} karma earned` : "Not enough real movement yet, or today's limit reached");
       return;
     }
-    const err = tracker.start(kind);
+    const err = await tracker.start(kind);
     if (err) toast.error(err); else toast.info(`${label} started`, { description: "Move for real — tap again to finish and collect karma" });
   };
 
   return (
-    <div className="absolute right-3 top-16 z-50 w-80 max-h-[70vh] overflow-y-auto rounded-2xl border border-border bg-card/95 p-4 text-card-foreground shadow-xl">
+    <div className="absolute right-3 top-16 z-50 w-80 max-h-[70vh] overflow-y-auto rounded-2xl surface-warm-tan p-4 shadow-xl">
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2 font-semibold"><Coins className="h-4 w-4 text-primary" /> {balance} karma</div>
         <button aria-label="Close wallet" onClick={onClose}><X className="h-4 w-4" /></button>
       </div>
       <p className="mb-2 text-xs text-muted-foreground">
         {tracker.active
-          ? tracker.active === "workout" ? `Workout: ${tracker.progress} active min` : `${Math.round(tracker.progress)} m tracked`
-          : "Earn by really moving (uses your phone's location or motion)"}
+          ? tracker.active === "workout" ? `Workout: ${tracker.progress} active min` : `${Math.round(tracker.progress)} m · ${tracker.steps} steps`
+          : "Earn by really moving (asks for location and motion to count steps)"}
       </p>
       <div className="mb-4 flex flex-wrap gap-1.5">
         {EARN.map((e) => (

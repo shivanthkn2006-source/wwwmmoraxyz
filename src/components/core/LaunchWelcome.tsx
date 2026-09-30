@@ -1,54 +1,128 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { getKarmaBalance } from "@/lib/karma";
+import { CheckCircle2 } from "lucide-react";
 
-const STEPS = [
-  { title: "Signing in", body: "Next time, use Google, your email and password, or your device passkey on the sign-in page. They all open this same account." },
-  { title: "Claim a challenge", body: "Open your profile and find Challenges. Finish one, then tap Claim to collect your points." },
-  { title: "Swap karma for credits", body: "Likes, star ratings, chats, time spent and real walks earn karma. On your profile, Karma swap turns every 100 karma into 1 credit, or you can spend it in the VR world." },
-];
+type Challenge = { id: string; is_completed: boolean | null; reward_claimed: boolean | null };
 
-/** One-time welcome for first-time members, remembered per account. */
+/** One-time, hands-on welcome for first-time members: confirm sign-in, claim a challenge, swap karma. */
 export default function LaunchWelcome() {
   const [uid, setUid] = useState<string | null>(null);
+  const [email, setEmail] = useState("");
+  const [methods, setMethods] = useState<string[]>([]);
   const [step, setStep] = useState(0);
   const [open, setOpen] = useState(false);
-  const navigate = useNavigate();
+  const [challenges, setChallenges] = useState<Challenge[]>([]);
+  const [karma, setKarma] = useState(0);
+  const [points, setPoints] = useState<number | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
+  const [done, setDone] = useState<boolean[]>([false, false, false]);
 
   useEffect(() => {
     void supabase.auth.getUser().then(({ data }) => {
-      const id = data.user?.id;
-      if (!id) return;
-      setUid(id);
-      if (!localStorage.getItem(`mmora-welcome-seen-${id}`)) setOpen(true);
+      const u = data.user;
+      if (!u) return;
+      setUid(u.id); setEmail(u.email ?? "");
+      setMethods(Array.from(new Set((u.identities ?? []).map((i) => i.provider === "email" ? "Email & password" : i.provider === "google" ? "Google" : i.provider))));
+      if (!localStorage.getItem(`mmora-welcome-seen-${u.id}`)) setOpen(true);
     });
   }, []);
 
-  const close = (to?: string) => {
-    if (uid) localStorage.setItem(`mmora-welcome-seen-${uid}`, "1");
-    setOpen(false);
-    if (to) navigate(to);
+  const refresh = useCallback(async () => {
+    if (!uid) return;
+    const [{ data: ch }, bal, { data: prof }] = await Promise.all([
+      supabase.from("user_challenges").select("id,is_completed,reward_claimed").eq("user_id", uid).eq("reward_claimed", false).limit(5),
+      getKarmaBalance(),
+      supabase.from("profiles").select("total_points").eq("user_id", uid).maybeSingle(),
+    ]);
+    setChallenges((ch as Challenge[]) ?? []);
+    setKarma(bal);
+    setPoints(Number(prof?.total_points ?? 0));
+  }, [uid]);
+
+  useEffect(() => { if (open) void refresh(); }, [open, refresh]);
+
+  const mark = (i: number) => setDone((d) => d.map((v, j) => (j === i ? true : v)));
+
+  const claim = async (id: string) => {
+    setBusy(true); setNote(null);
+    const { data, error } = await supabase.rpc("claim_challenge_reward", { p_user_challenge_id: id });
+    setBusy(false);
+    if (error) { setNote("Couldn't claim that one yet."); return; }
+    setNote(`Claimed. +${Number(data) || 0} points saved to your account.`);
+    mark(1); void refresh();
   };
 
-  const s = STEPS[step];
-  const last = step === STEPS.length - 1;
+  const swap = async () => {
+    const amount = Math.floor(karma / 100) * 100;
+    if (amount < 100) return;
+    setBusy(true); setNote(null);
+    const { error } = await supabase.rpc("exchange_karma_for_credits", { p_karma: amount });
+    setBusy(false);
+    if (error) { setNote("Couldn't swap right now."); return; }
+    window.dispatchEvent(new CustomEvent("karma-changed"));
+    setNote(`Swapped ${amount} karma for ${amount / 100} credit${amount > 100 ? "s" : ""}. Saved.`);
+    mark(2); void refresh();
+  };
+
+  const close = () => {
+    if (uid) localStorage.setItem(`mmora-welcome-seen-${uid}`, "1");
+    setOpen(false);
+  };
+
+  const next = () => { setNote(null); if (step === 0) mark(0); setStep(step + 1); };
+  const last = step === 2;
+
   return (
     <Dialog open={open} onOpenChange={(o) => !o && close()}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="max-w-sm surface-warm-tan border-0">
         <DialogHeader>
-          <DialogTitle>Welcome to M'Mora — {step + 1}/{STEPS.length}</DialogTitle>
-          <DialogDescription className="pt-1 text-base">
-            <span className="block font-semibold text-foreground">{s.title}</span>
-            {s.body}
+          <DialogTitle className="flex items-center gap-2">
+            Welcome to M'Mora — {step + 1}/3
+            {done[step] && <CheckCircle2 className="h-5 w-5 text-green-600" />}
+          </DialogTitle>
+          <DialogDescription asChild>
+            <div className="space-y-3 pt-1 text-base text-muted-foreground">
+              {step === 0 && (
+                <>
+                  <p className="font-semibold text-foreground">You're signed in</p>
+                  <p>{email || "Your account"} is saved. Next time use: {methods.join(", ") || "Google or email"}, or your device passkey. They all open this same account.</p>
+                </>
+              )}
+              {step === 1 && (
+                <>
+                  <p className="font-semibold text-foreground">Claim a challenge</p>
+                  {challenges.length === 0
+                    ? <p>No challenge to claim yet. Start one from your profile, then come back.</p>
+                    : challenges.map((c, i) => (
+                      <div key={c.id} className="flex items-center justify-between">
+                        <span>Challenge {i + 1}</span>
+                        <Button size="sm" variant="ghost" disabled={busy} onClick={() => claim(c.id)}>Claim</Button>
+                      </div>
+                    ))}
+                  {points !== null && <p className="text-sm">Your points: {points}</p>}
+                </>
+              )}
+              {step === 2 && (
+                <>
+                  <p className="font-semibold text-foreground">Swap karma for credits</p>
+                  <p>Likes, ratings, chats, time spent and real walks earn karma. Every 100 karma = 1 credit.</p>
+                  <p className="text-sm">Your karma: {karma}</p>
+                  <Button variant="ghost" disabled={busy || karma < 100} onClick={swap}>
+                    {karma < 100 ? "Need 100 karma to swap" : `Swap ${Math.floor(karma / 100) * 100} karma`}
+                  </Button>
+                </>
+              )}
+              {note && <p className="text-sm font-medium text-foreground">{note}</p>}
+            </div>
           </DialogDescription>
         </DialogHeader>
         <div className="flex justify-between gap-2 pt-2">
-          <Button variant="ghost" onClick={() => close()}>Skip</Button>
-          {last
-            ? <Button onClick={() => close("/profile")}>Open my profile</Button>
-            : <Button onClick={() => setStep(step + 1)}>Next</Button>}
+          <Button variant="ghost" onClick={close}>Skip</Button>
+          {last ? <Button variant="ghost" onClick={close}>Done</Button> : <Button variant="ghost" onClick={next}>Next</Button>}
         </div>
       </DialogContent>
     </Dialog>
