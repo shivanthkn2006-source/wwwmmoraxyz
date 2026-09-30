@@ -81,21 +81,9 @@ serve(async (req) => {
       }
     }
 
-    // For sendBeacon requests (no auth), try to find user from session token
-    if (!userId && sessionData?.sessionToken) {
-      const { data: existingSession } = await supabase
-        .from('user_sessions')
-        .select('user_id')
-        .eq('session_token', sessionData.sessionToken)
-        .single();
-      
-      if (existingSession) {
-        userId = existingSession.user_id;
-      }
-    }
-
-    // If still no user ID for session_start, skip (requires auth)
-    if (!userId && activityType === 'session_start') {
+    // Every action needs a verified sign-in: a session token alone never
+    // identifies a member, so nobody can end or write into someone else's session.
+    if (!userId) {
       return new Response(JSON.stringify({ success: true, skipped: true, reason: 'no_user' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,

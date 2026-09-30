@@ -206,28 +206,39 @@ export const useActivityTracking = () => {
     }
   }, [user]);
 
-  // Use sendBeacon for reliable exit tracking
+  // Exit tracking: keepalive fetch carries the member's sign-in so the server
+  // only ever touches the caller's own session (never by token alone).
+  const accessTokenRef = useRef<string | null>(null);
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => { accessTokenRef.current = data.session?.access_token ?? null; });
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => { accessTokenRef.current = s?.access_token ?? null; });
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
+  const sendExit = useCallback((payload: string) => {
+    const token = accessTokenRef.current;
+    if (!token) return;
+    const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/track-activity`;
+    fetch(url, {
+      method: 'POST',
+      keepalive: true,
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        Authorization: `Bearer ${token}`,
+      },
+      body: payload,
+    }).catch(() => {});
+  }, []);
+
   const trackExitWithBeacon = useCallback((sessionToken: string, pagePath: string, durationSeconds: number) => {
     if (!sessionToken) return;
-    
-    const payload = JSON.stringify({
+    sendExit(JSON.stringify({
       activityType: 'page_exit',
       sessionData: { sessionToken },
-      pageData: {
-        sessionId: sessionIdRef.current,
-        pagePath,
-        durationSeconds,
-      },
-    });
-    
-    // sendBeacon is more reliable for unload events
-    const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/track-activity`;
-    const blob = new Blob([payload], { type: 'application/json' });
-    
-    // Note: sendBeacon doesn't support custom headers, so this is best-effort
-    // The edge function handles missing auth gracefully
-    navigator.sendBeacon(url, blob);
-  }, []);
+      pageData: { sessionId: sessionIdRef.current, pagePath, durationSeconds },
+    }));
+  }, [sendExit]);
 
   const startSession = useCallback(async () => {
     if (!user) return;
@@ -369,14 +380,10 @@ export const useActivityTracking = () => {
       trackExitWithBeacon(sessionTokenRef.current, currentPageRef.current, durationSeconds);
       
       // Also try to end session
-      const sessionPayload = JSON.stringify({
+      sendExit(JSON.stringify({
         activityType: 'session_end',
         sessionData: { sessionToken: sessionTokenRef.current },
-      });
-      
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/track-activity`;
-      const blob = new Blob([sessionPayload], { type: 'application/json' });
-      navigator.sendBeacon(url, blob);
+      }));
       
       // Clear session storage
       sessionStorage.removeItem(SESSION_STORAGE_KEY);
