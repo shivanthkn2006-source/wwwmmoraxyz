@@ -32,8 +32,15 @@ interface InviteRow {
   metadata: Record<string, unknown> | null;
 }
 
-const randomCode = () =>
-  `MMORA-${Math.random().toString(36).slice(2, 6).toUpperCase()}${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+// Cryptographically random, 12 characters from a 32-symbol alphabet (~60 bits),
+// so invite codes cannot be predicted or brute-forced.
+const randomCode = () => {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const bytes = new Uint8Array(12);
+  crypto.getRandomValues(bytes);
+  const raw = Array.from(bytes, (b) => alphabet[b % alphabet.length]).join('');
+  return `MMORA-${raw.slice(0, 4)}-${raw.slice(4, 8)}-${raw.slice(8, 12)}`;
+};
 
 export default function AdminInvitesPage() {
   const isAdmin = useIsAdmin();
