@@ -139,30 +139,12 @@ export const useBadgeChallenges = () => {
       if (!challenge) return;
 
       // Mark challenge as completed
-      const { error: updateError } = await supabase
-        .from('user_challenges')
-        .update({
-          is_completed: true,
-          completed_at: new Date().toISOString(),
-          reward_claimed: true,
-        })
-        .eq('id', userChallengeId);
+      // Server marks it complete and pays the reward once (points can't be set from the browser).
+      const { error: updateError } = await (supabase.rpc as any)('claim_challenge_reward', {
+        p_user_challenge_id: userChallengeId,
+      });
 
       if (updateError) throw updateError;
-
-      // Update user points
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('total_points')
-        .eq('user_id', user.id)
-        .single();
-
-      const newPoints = (profile?.total_points || 0) + challenge.reward_points;
-
-      await supabase
-        .from('profiles')
-        .update({ total_points: newPoints })
-        .eq('user_id', user.id);
 
       toast({
         title: '🎉 Challenge Completed!',
