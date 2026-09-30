@@ -1,0 +1,14 @@
+DROP POLICY IF EXISTS "Anyone can read high value zones" ON public.high_value_zones;
+CREATE POLICY "Members read high value zones" ON public.high_value_zones FOR SELECT TO authenticated USING (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "Anyone can view badge collections" ON public.badge_collections;
+CREATE POLICY "Members view badge collections" ON public.badge_collections FOR SELECT TO authenticated USING (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "Anyone can view seasonal challenges" ON public.seasonal_challenges;
+CREATE POLICY "Members view seasonal challenges" ON public.seasonal_challenges FOR SELECT TO authenticated USING (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "Legal knowledge is publicly readable" ON public.legal_knowledge_base;
+CREATE POLICY "Members read legal knowledge" ON public.legal_knowledge_base FOR SELECT TO authenticated USING (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "Anyone can read resolved social links" ON public.dhf_social_links;
+CREATE POLICY "Members read resolved social links" ON public.dhf_social_links FOR SELECT TO authenticated USING (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "Avatars are publicly readable" ON storage.objects;
+CREATE POLICY "Owners list own avatars" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'avatars' AND owner_id = (select auth.uid()::text));
+DROP POLICY IF EXISTS "Posts media is publicly readable" ON storage.objects;
+CREATE POLICY "Owners list own post media" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'posts' AND owner_id = (select auth.uid()::text));
