@@ -2803,11 +2803,6 @@ const HomePage = () => {
                   <h2 className="text-lg font-semibold">Selfie City Feed</h2>
                 </div>
                 <React.Suspense fallback={<div className="h-[55vh] min-h-[320px] rounded-2xl bg-muted/20" />}><SelfieCityGlobePanel /></React.Suspense>
-                <div className="flex justify-end">
-                  <button type="button" onClick={() => navigate('/selfie-city')} className="text-xs underline-offset-4 hover:underline">
-                    Open full map
-                  </button>
-                </div>
                 <React.Suspense fallback={null}><SelfieCityFeed /></React.Suspense>
               </div>
             </TabsContent>
