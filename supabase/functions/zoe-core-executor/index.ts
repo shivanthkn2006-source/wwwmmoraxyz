@@ -2175,7 +2175,7 @@ async function executeDHFOperation(
     status: 'dhf_operation_complete',
     operation_id: requestId,
     action: args.action,
-    user_id: userId,
+    user_id: userContext.user_id,
     timestamp: new Date().toISOString()
   };
 
