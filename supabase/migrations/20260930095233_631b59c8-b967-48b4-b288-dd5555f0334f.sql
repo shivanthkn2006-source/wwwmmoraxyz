@@ -1,0 +1,11 @@
+DROP POLICY IF EXISTS "Users can view all badge shares" ON public.badge_shares;
+CREATE POLICY "Members view own badge shares" ON public.badge_shares FOR SELECT TO authenticated USING (auth.uid() = user_id OR public.has_role(auth.uid(),'admin'));
+DROP POLICY IF EXISTS "Authenticated users can read feature_flags" ON public.feature_flags;
+DROP POLICY IF EXISTS "feature_flags_authenticated" ON public.feature_flags;
+CREATE POLICY "Admins read feature_flags" ON public.feature_flags FOR SELECT TO authenticated USING (public.has_role(auth.uid(),'admin'));
+DROP POLICY IF EXISTS "Signed-in users read routes" ON public.platform_routes;
+DROP POLICY IF EXISTS "Authenticated users can view adapters" ON public.zoe_adapter_registry;
+DROP POLICY IF EXISTS "Signed-in users can read scenarios" ON public.zoe_synthetic_scenarios;
+CREATE POLICY "Admins read scenarios" ON public.zoe_synthetic_scenarios FOR SELECT TO authenticated USING (public.has_role(auth.uid(),'admin'));
+DROP POLICY IF EXISTS "Authenticated users can view ontology connections" ON public.external_ontology_connections;
+CREATE POLICY "Admins read ontology connections" ON public.external_ontology_connections FOR SELECT TO authenticated USING (public.has_role(auth.uid(),'admin'));
