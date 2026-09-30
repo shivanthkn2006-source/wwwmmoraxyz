@@ -8,6 +8,7 @@ import {
   createSuccessResponse,
   createErrorResponse
 } from "../_shared/ai-telemetry.ts";
+import { requireCaller } from '../_shared/caller-guard.ts';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ZOE PENTARCHY CORE - 5-AGENT SWARM INTELLIGENCE
@@ -323,6 +324,9 @@ serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+  // Signed-in members only: this spends paid AI/provider budget.
+  const __caller = await requireCaller(req, 'member');
+  if (__caller instanceof Response) return __caller;
 
   try {
     const { query, context = {}, userId } = await req.json();

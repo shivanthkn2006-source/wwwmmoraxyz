@@ -11,6 +11,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { sovereignFetch, sovereignKey } from "../_shared/sovereign-ai.ts";
 import { clientErrorResponse } from '../_shared/client-error.ts';
+import { requireCaller } from '../_shared/caller-guard.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -46,6 +47,9 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+  // Signed-in members only: this spends paid AI/provider budget.
+  const __caller = await requireCaller(req, 'member');
+  if (__caller instanceof Response) return __caller;
 
   const startTime = Date.now();
 

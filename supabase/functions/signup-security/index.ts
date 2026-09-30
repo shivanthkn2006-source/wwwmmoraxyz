@@ -11,6 +11,7 @@
  */
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { guardRequest, wafCorsHeaders, consumeRateLimit } from '../_shared/waf.ts';
+import { requireCaller } from '../_shared/caller-guard.ts';
 
 const corsHeaders = wafCorsHeaders;
 
@@ -31,6 +32,9 @@ const burn = (token: string): boolean => {
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+  // Signed-in members only: this spends paid AI/provider budget.
+  const __caller = await requireCaller(req, 'member');
+  if (__caller instanceof Response) return __caller;
 
   // 30 calls / 10 min per IP covers a human retrying; it stops a farm cold.
   const guard = await guardRequest(req, {

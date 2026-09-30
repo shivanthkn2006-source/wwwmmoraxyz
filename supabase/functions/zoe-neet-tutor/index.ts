@@ -1,4 +1,5 @@
 import { sovereignFetch, sovereignKey } from "../_shared/sovereign-ai.ts";
+import { requireCaller } from '../_shared/caller-guard.ts';
 // ═══════════════════════════════════════════════════════════════════════════════
 // ZOE NEET TUTOR — Trial Mode
 // Lightweight NEET (India medical entrance) tutor for Zoe Infinity chat.
@@ -40,6 +41,9 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+  // Signed-in members only: this spends paid AI/provider budget.
+  const __caller = await requireCaller(req, 'member');
+  if (__caller instanceof Response) return __caller;
 
   try {
     const { message, history = [] } = await req.json();

@@ -6,6 +6,7 @@ import {
   createErrorResponse,
 } from "../_shared/ai-telemetry.ts";
 import { clientErrorResponse } from '../_shared/client-error.ts';
+import { requireCaller } from '../_shared/caller-guard.ts';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ZOE SYSTEM 2 CORTEX - THE REASONING WRAPPER
@@ -524,6 +525,9 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+  // Signed-in members only: this spends paid AI/provider budget.
+  const __caller = await requireCaller(req, 'member');
+  if (__caller instanceof Response) return __caller;
 
   const startTime = performance.now();
   const modelsUsed: string[] = [];

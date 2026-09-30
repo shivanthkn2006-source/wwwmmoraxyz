@@ -1,3 +1,4 @@
+import { requireCaller } from '../_shared/caller-guard.ts';
 // Temporary diagnostic: pings candidate model IDs with the configured provider keys.
 // deno-lint-ignore no-explicit-any
 declare const Deno: any;
@@ -15,6 +16,9 @@ const NVIDIA_EMBED_CANDIDATES = ['nvidia/nemotron-3-embed-1b'];
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+  // Signed-in members only: this spends paid AI/provider budget.
+  const __caller = await requireCaller(req, 'member');
+  if (__caller instanceof Response) return __caller;
 
   const results: Record<string, unknown> = {};
   const groqKey = Deno.env.get('GROQ_API_KEY');
