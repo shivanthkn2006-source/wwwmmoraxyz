@@ -3,7 +3,8 @@ import { X, Coins } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { earnKarma, getKarmaBalance, spendKarmaVR, type ActivityKind } from "@/lib/karma";
+import { getKarmaBalance, spendKarmaVR, type ActivityKind } from "@/lib/karma";
+import { useTrackedActivity } from "@/hooks/useTrackedActivity";
 
 interface Item { id: string; name: string; category: string; price: number }
 
@@ -37,11 +38,15 @@ export default function VRKarmaShop({ onClose }: { onClose: () => void }) {
     else toast.error(r.error?.includes("not enough") ? "Not enough karma yet" : "Couldn't complete that");
   };
 
+  const tracker = useTrackedActivity();
   const earn = async (kind: ActivityKind, label: string) => {
-    setBusy(kind);
-    const n = await earnKarma(kind, 10);
-    setBusy(null);
-    toast[n > 0 ? "success" : "info"](n > 0 ? `+${n} karma for ${label.toLowerCase()}ing` : "Today's limit reached for this activity");
+    if (tracker.active) {
+      const n = await tracker.stop();
+      toast[n > 0 ? "success" : "info"](n > 0 ? `+${n} karma earned` : "Not enough real movement yet, or today's limit reached");
+      return;
+    }
+    const err = tracker.start(kind);
+    if (err) toast.error(err); else toast.info(`${label} started`, { description: "Move for real — tap again to finish and collect karma" });
   };
 
   return (
@@ -50,10 +55,14 @@ export default function VRKarmaShop({ onClose }: { onClose: () => void }) {
         <div className="flex items-center gap-2 font-semibold"><Coins className="h-4 w-4 text-primary" /> {balance} karma</div>
         <button aria-label="Close wallet" onClick={onClose}><X className="h-4 w-4" /></button>
       </div>
-      <p className="mb-2 text-xs text-muted-foreground">Earn in the world (10 min session)</p>
+      <p className="mb-2 text-xs text-muted-foreground">
+        {tracker.active
+          ? tracker.active === "workout" ? `Workout: ${tracker.progress} active min` : `${Math.round(tracker.progress)} m tracked`
+          : "Earn by really moving (uses your phone's location or motion)"}
+      </p>
       <div className="mb-4 flex flex-wrap gap-1.5">
         {EARN.map((e) => (
-          <Button key={e.kind} size="sm" variant="secondary" disabled={busy === e.kind} onClick={() => earn(e.kind, e.label)}>{e.label}</Button>
+          <Button key={e.kind} size="sm" variant={tracker.active === e.kind ? "default" : "secondary"} disabled={!!tracker.active && tracker.active !== e.kind} onClick={() => earn(e.kind, e.label)}>{tracker.active === e.kind ? "Finish" : e.label}</Button>
         ))}
       </div>
       <p className="mb-2 text-xs text-muted-foreground">Spend</p>
