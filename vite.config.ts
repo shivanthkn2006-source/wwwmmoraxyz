@@ -326,12 +326,6 @@ export default defineConfig(({ mode }) => ({
           // to live here too, which dragged this 2.2 MB bundle into startup
           // for every M'Mora visitor. Heavy libraries (3D, PDF, charts) are
           // left to Rollup's natural lazy chunks for the same reason.
-          if (
-            id.includes('/pages/ZoeInfinity') ||
-            id.includes('/components/zoe-infinity/')
-          ) {
-            return 'zoe-infinity-sovereign';
-          }
           // Vendor chunks
           if (id.includes('node_modules')) {
             // React core + everything that touches React hooks at module scope
