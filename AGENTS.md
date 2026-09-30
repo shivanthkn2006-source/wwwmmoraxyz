@@ -6,7 +6,7 @@
 - Auth hydrates first; Google BYOK returns via /~oauth/callback to public `/auth`; authenticated growth calls verify claims and degrade session races to signed-out results, never runtime failures.
 - Home orders due DHF, growth, social, Loop, and humor cards by their real scheduled timestamps, because fixed source blocks hide timely content.
 - All Zoe's LOL consumers share the global realtime multiplexer, because independent channels race during auth reloads and can take Home offline.
-- Liquid Universe detection stays outside root boot; enhancement must never blank auth/Home.
+- Boot stays light: no heavy manual chunks; hosts mount via AfterAuthIdle.
 - DHF pictures are copied once into dhf-compass and served from storage, preventing provider outages from blanking cards.
 - Zoe orb drift updates Framer motion values without React state updates, and Zoe glass avoids live backdrop filters, because frame-by-frame tree repaints cause orb/chat flicker over Home.
 - Home menu panel uses a fixed warm surface without backdrop-filter, because live blur over the moving feed flickers.
