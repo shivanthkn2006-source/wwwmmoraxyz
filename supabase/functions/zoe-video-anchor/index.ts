@@ -1,4 +1,5 @@
 import { sovereignFetch, sovereignKey } from "../_shared/sovereign-ai.ts";
+import { requireCaller } from '../_shared/caller-guard.ts';
 // ═══════════════════════════════════════════════════════════════════════════════
 // ZOE VIDEO ANCHOR — Anti-Hallucination Layer 4
 // Locks video generation to a verified first-frame reference image
@@ -74,6 +75,9 @@ async function verifyFrame(imageUrl: string, prompt: string, apiKey: string): Pr
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+  // Signed-in members only: this spends paid AI/provider budget.
+  const __caller = await requireCaller(req, 'member');
+  if (__caller instanceof Response) return __caller;
 
   try {
     const { prompt, referenceImageUrl, duration = 5 }: AnchorBody = await req.json();

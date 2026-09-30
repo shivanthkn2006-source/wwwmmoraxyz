@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { publicGuard } from '../_shared/public-guard.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,6 +14,8 @@ serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+  const __guard = await publicGuard(req, { name: 'opensky-proxy', limit: 30, windowSeconds: 60 });
+  if (__guard.response) return __guard.response;
 
   const degraded = (reason: string, status: number) =>
     new Response(

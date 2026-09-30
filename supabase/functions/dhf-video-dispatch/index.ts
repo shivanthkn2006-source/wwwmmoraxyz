@@ -15,6 +15,7 @@
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.58.0';
 import { GROWTH_FIGURES } from '../_shared/growth-figures.ts';
+import { publicGuard } from '../_shared/public-guard.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -81,6 +82,8 @@ const tagFor = (name: string) => name.toLowerCase().replace(/[^a-z0-9]/g, '').sl
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+  const __guard = await publicGuard(req, { name: 'dhf-video-dispatch', limit: 30, windowSeconds: 60 });
+  if (__guard.response) return __guard.response;
 
   const admin = createClient(
     Deno.env.get('SUPABASE_URL') ?? '',
