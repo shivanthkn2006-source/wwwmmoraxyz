@@ -94,5 +94,6 @@
 - [x] Diagnostics feature locked to admin (security finding closed)
 - [ ] Home: top + first cards first, lower cards/pictures after (needs signed-in timing)
 - [ ] Audit every menu/page opens and works when tapped (load-on-tap)
-- [ ] 391 open security findings remain — critical ones first (paid search/transcription/AI summarizer open to anyone, other members' private data, mail as someone else)
+- [x] 29 unprotected backend features locked (26 members-only, 7 public/scheduled rate-limited); stranger calls verified refused
+- [ ] ~360 security findings remain (need per-feature data-ownership fixes) — critical ones first (paid search/transcription/AI summarizer open to anyone, other members' private data, mail as someone else)
 - [ ] Health report: providers working / out of credit / missing
