@@ -241,7 +241,7 @@ Deno.serve(async (req: Request) => {
     const m = model || 'flux';
     const s = seed ?? Math.floor(Math.random() * 999999);
     const enh = enhance !== false;
-    const nl = nologo !== false;
+    const nl = true; // provider logo always hidden — M'Mora/Zoe branding only
 
     // Build Pollinations URL
     const encodedPrompt = encodeURIComponent(prompt.trim());
