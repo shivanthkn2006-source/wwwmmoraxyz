@@ -88,3 +88,11 @@
 - [x] Sign-in greeting (notifications, messages, newest DHF card) — built, not heard signed-in
 - [x] Voice weather/umbrella from device location — verified with Mumbai test location
 - [x] Vision journal built (15-min looks while app open, saved per member; Zoe uses them for "what was I doing"). Needs signed-in phone test.
+
+## Launch speed + security (Sep 30)
+- [x] Startup download cut 2.0 MB -> 0.44 MB; background helpers wait for sign-in + idle
+- [x] Diagnostics feature locked to admin (security finding closed)
+- [ ] Home: top + first cards first, lower cards/pictures after (needs signed-in timing)
+- [ ] Audit every menu/page opens and works when tapped (load-on-tap)
+- [ ] 391 open security findings remain — critical ones first (paid search/transcription/AI summarizer open to anyone, other members' private data, mail as someone else)
+- [ ] Health report: providers working / out of credit / missing
