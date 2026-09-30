@@ -20,12 +20,33 @@ import type { TTSAudioMetadata } from './zoeTTSAudioBus';
  */
 let cachedToken: { value: string | null; expiresAt: number } | null = null;
 
+// A sign-out / account switch revokes the old token; never reuse it.
+try {
+  supabase.auth.onAuthStateChange(() => { cachedToken = null; });
+} catch { /* noop */ }
+
 async function getActiveAccessToken(): Promise<string | null> {
-  if (cachedToken && cachedToken.expiresAt > Date.now()) return cachedToken.value;
+  if (cachedToken && cachedToken.value && cachedToken.expiresAt > Date.now()) return cachedToken.value;
   try {
     const { data } = await supabase.auth.getSession();
+    const session = data.session;
+    const token = session?.access_token ?? null;
+    const sessionExp = (session?.expires_at ?? 0) * 1000;
+    const ttl = sessionExp ? Math.min(60_000, sessionExp - Date.now() - 30_000) : 60_000;
+    if (token && ttl > 0) cachedToken = { value: token, expiresAt: Date.now() + ttl };
+    else cachedToken = null;
+    return ttl > 0 ? token : null;
+  } catch {
+    return null;
+  }
+}
+
+async function refreshedAccessToken(): Promise<string | null> {
+  cachedToken = null;
+  try {
+    const { data } = await supabase.auth.refreshSession();
     const token = data.session?.access_token ?? null;
-    cachedToken = { value: token, expiresAt: Date.now() + 60_000 };
+    if (token) cachedToken = { value: token, expiresAt: Date.now() + 60_000 };
     return token;
   } catch {
     return null;
@@ -189,17 +210,27 @@ async function fetchChunk(text: string, model?: string): Promise<Blob> {
   const url = `https://${projectId}.supabase.co/functions/v1/deepgram-tts`;
 
   window.dispatchEvent(new CustomEvent('zoe-deepgram-status', { detail: { state: 'requesting', model: model || getActiveModel() } }));
-  const response = await fetch(url, {
+  // TTS requires a real member token; the publishable key is always rejected,
+  // so skip the doomed request when signed out, and retry once after refresh.
+  let token = (await getActiveAccessToken()) || (await refreshedAccessToken());
+  if (!token) {
+    window.dispatchEvent(new CustomEvent('zoe-deepgram-status', { detail: { state: 'error', status: 401, error: 'signed out' } }));
+    throw new Error('Deepgram TTS skipped: signed out');
+  }
+  const send = (bearer: string) => fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || '',
-      // Auth gate (added Apr 2026): TTS now requires a Bearer token to prevent
-      // uncapped Deepgram billing if the publishable key is scraped.
-      Authorization: `Bearer ${(await getActiveAccessToken()) || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || ''}`,
+      Authorization: `Bearer ${bearer}`,
     },
     body: JSON.stringify({ text, model: model || getActiveModel() }),
   });
+  let response = await send(token);
+  if (response.status === 401) {
+    token = await refreshedAccessToken();
+    if (token) response = await send(token);
+  }
 
   if (!response.ok) {
     const errorData = await response.text();
