@@ -11,7 +11,7 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
   // Signed-in members only: this spends paid AI/provider budget.
-  const __caller = await requireCaller(req, 'member');
+  const __caller = await requireCaller(req, 'admin');
   if (__caller instanceof Response) return __caller;
 
   try {

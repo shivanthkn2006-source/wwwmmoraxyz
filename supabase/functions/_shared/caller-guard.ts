@@ -53,3 +53,18 @@ export function bindOwner<T extends string | undefined | null>(caller: Caller, r
   if (caller.isAdmin && requested) return requested;
   return caller.userId;
 }
+
+/**
+ * Scheduled-job gate: accepts the service key, the root admin, or an
+ * `x-cron-token` header matching `edge_cron_tokens.name = <name>`.
+ */
+export async function requireCronOrAdmin(req: Request, name: string): Promise<Caller | Response> {
+  const token = req.headers.get('x-cron-token');
+  if (token) {
+    const admin = createClient(URL, SERVICE, { auth: { persistSession: false } });
+    const { data } = await admin.from('edge_cron_tokens').select('token').eq('name', name).maybeSingle();
+    if (data?.token && data.token === token) return { kind: 'service' };
+    return deny(401, 'Invalid scheduler token');
+  }
+  return requireCaller(req, 'admin');
+}

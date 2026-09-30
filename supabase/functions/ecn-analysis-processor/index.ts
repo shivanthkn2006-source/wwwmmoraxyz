@@ -161,7 +161,7 @@ serve(async (req) => {
               events_analyzed: 0,
             },
           })
-          .eq('id', queue_id)
+          .eq('id', queue_id).eq('user_id', user.id)
           .eq('user_id', user.id);
       }
 
@@ -326,7 +326,7 @@ Respond in JSON format only.`;
           processed_at: new Date().toISOString(),
           analysis_result: analysisResult,
         })
-        .eq('id', queue_id)
+        .eq('id', queue_id).eq('user_id', user.id)
           .eq('user_id', user.id);
     }
 

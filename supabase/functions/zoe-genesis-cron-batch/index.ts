@@ -1,3 +1,4 @@
+import { requireCaller } from '../_shared/caller-guard.ts';
 /**
  * ═══════════════════════════════════════════════════════════════════════════════
  * ZOE GENESIS CRON - BATCH PROCESSOR (500 SPARTANS PROTOCOL)
@@ -282,6 +283,7 @@ Deno.serve(async (req) => {
 
   const guard = await publicGuard(req, { name: 'zoe-genesis-cron-batch', limit: 10, windowSeconds: 300, maxBodyBytes: 512 * 1024, allowRichText: true });
   if (guard.response) return guard.response;
+  { const __a = await requireCaller(req, 'admin'); if (__a instanceof Response) return __a; }
 
   const startTime = Date.now();
   

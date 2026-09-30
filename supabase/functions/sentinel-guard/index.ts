@@ -138,8 +138,8 @@ async function handle(req: Request): Promise<Response> {
   try {
     const body = guard.body as Record<string, unknown>;
     const action = String(body.action ?? '');
-    const sessionToken = typeof body.sessionToken === 'string' ? body.sessionToken.slice(0, 128) : '';
-    const fingerprint = typeof body.fingerprint === 'string' ? body.fingerprint.slice(0, 128) : null;
+    let sessionToken = typeof body.sessionToken === 'string' ? body.sessionToken.slice(0, 128) : '';
+    let fingerprint = typeof body.fingerprint === 'string' ? body.fingerprint.slice(0, 128) : null;
 
 
     // Resolve the caller from their JWT — anonymous callers stay anonymous.
@@ -158,6 +158,9 @@ async function handle(req: Request): Promise<Response> {
         userId = null;
       }
     }
+    // Anonymous reports can't target a device or session they name themselves:
+    // without a verified sign-in, events are logged by IP only and never block others.
+    if (!userId) { fingerprint = null; sessionToken = ''; }
 
     // Already blocked? Say so and do no further work.
     const { data: existingBlock } = await admin

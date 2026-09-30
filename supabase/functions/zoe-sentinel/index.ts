@@ -1,3 +1,4 @@
+import { requireCaller } from '../_shared/caller-guard.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { publicGuard } from '../_shared/public-guard.ts';
@@ -184,6 +185,7 @@ serve(async (req) => {
 
   const guard = await publicGuard(req, { name: 'zoe-sentinel', limit: 60, windowSeconds: 60, maxBodyBytes: 512 * 1024, allowRichText: true });
   if (guard.response) return guard.response;
+  const __caller = await requireCaller(req, 'member'); if (__caller instanceof Response) return __caller;
 
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -191,6 +193,9 @@ serve(async (req) => {
     
     console.log(`[SENTINEL] Action: ${action}`);
 
+    if (['lockdown','release_lockdown','night_watch','dashboard'].includes(String(action)) && !(__caller.kind === 'service' || __caller.isAdmin)) {
+      return new Response(JSON.stringify({ ok: false, error: 'Admin only' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
     switch (action) {
       // ==========================================
       // SHADOW AI DETECTION

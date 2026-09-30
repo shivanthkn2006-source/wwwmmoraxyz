@@ -1,3 +1,4 @@
+import { isSafePublicUrl } from '../_shared/safe-url.ts';
 import { requireCaller } from '../_shared/caller-guard.ts';
 /**
  * WEB READER — server-side reader so every external source Zoe cites opens
@@ -97,7 +98,7 @@ Deno.serve(async (req) => {
       return json({ error: 'Invalid url' }, 400);
     }
     if (!/^https?:$/.test(target.protocol)) return json({ error: 'Unsupported protocol' }, 400);
-    if (/^(localhost|127\.|0\.|10\.|192\.168\.|169\.254\.)/i.test(target.hostname)) {
+    if (!isSafePublicUrl(target.toString())) {
       return json({ error: 'Blocked host' }, 400);
     }
 
@@ -107,7 +108,7 @@ Deno.serve(async (req) => {
     try {
       res = await fetch(target.toString(), {
         signal: controller.signal,
-        redirect: 'follow',
+        redirect: 'manual',
         headers: { 'User-Agent': UA, Accept: 'text/html,application/xhtml+xml' },
       });
     } finally {

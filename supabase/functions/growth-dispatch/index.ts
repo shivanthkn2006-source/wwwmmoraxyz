@@ -1,3 +1,4 @@
+import { requireCronOrAdmin } from '../_shared/caller-guard.ts';
 /**
  * ═══════════════════════════════════════════════════════════════════════════
  * GROWTH DISPATCH — isolated personal-growth habit & content engine.
@@ -976,6 +977,12 @@ Deno.serve(async (req) => {
     bodyJson = await req.json();
     action = String(bodyJson?.action ?? 'run');
   } catch { /* default action */ }
+
+  // Batch jobs over every member: scheduler token or admin only.
+  if (['run', 'reconcile', 'preview', 'status'].includes(action)) {
+    const gate = await requireCronOrAdmin(req, 'growth-dispatch');
+    if (gate instanceof Response) return gate;
+  }
 
   try {
     if (action === 'status') {

@@ -1,3 +1,4 @@
+import { requireCaller } from '../_shared/caller-guard.ts';
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { clientErrorResponse } from '../_shared/client-error.ts';
@@ -42,6 +43,7 @@ serve(async (req) => {
 
   const guard = await publicGuard(req, { name: 'ironclad-relay', limit: 60, windowSeconds: 60, maxBodyBytes: 512 * 1024, allowRichText: true });
   if (guard.response) return guard.response;
+  const __caller = await requireCaller(req, 'member'); if (__caller instanceof Response) return __caller;
 
   const startTime = Date.now();
   
