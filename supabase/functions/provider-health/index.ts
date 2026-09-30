@@ -11,6 +11,7 @@
  * No JWT required — same diagnostics surface the in-app settings panel needs.
  */
 import { getDefaultTiers, type AttemptLog, type CascadeMode } from "../_shared/cascading-provider.ts";
+import { requireCaller } from '../_shared/caller-guard.ts';
 
 // deno-lint-ignore no-explicit-any
 declare const Deno: any;
@@ -37,6 +38,9 @@ function keyPresenceMap() {
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+  // Signed-in members only: this spends paid AI/provider budget.
+  const __caller = await requireCaller(req, 'member');
+  if (__caller instanceof Response) return __caller;
 
   // Parse body early so GET and POST can both read mode.
   let body: any = {};

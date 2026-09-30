@@ -1,4 +1,5 @@
 import { sovereignFetch, sovereignKey } from '../_shared/sovereign-ai.ts';
+import { requireCaller } from '../_shared/caller-guard.ts';
 /**
  * Growth card content-to-image validation.
  *
@@ -144,6 +145,9 @@ const handle = async (req: Request): Promise<Response> => {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+  // Signed-in members only: this spends paid AI/provider budget.
+  const __caller = await requireCaller(req, 'member');
+  if (__caller instanceof Response) return __caller;
 
   // Never let a hung provider hold the request open until the platform's 150s
   // idle timeout: an unfinished check is inconclusive, so keep the image.

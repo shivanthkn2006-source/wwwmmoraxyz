@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.0";
 import { clientErrorResponse } from '../_shared/client-error.ts';
+import { publicGuard } from '../_shared/public-guard.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,6 +12,8 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
+  const __guard = await publicGuard(req, { name: 'check-reminders', limit: 30, windowSeconds: 60 });
+  if (__guard.response) return __guard.response;
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;

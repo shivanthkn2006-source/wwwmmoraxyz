@@ -3,6 +3,7 @@
 // through signed URLs gated by Storage RLS.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { publicGuard } from '../_shared/public-guard.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -39,6 +40,8 @@ const isDuplicateUpload = (error: { message?: string; statusCode?: string | numb
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const __guard = await publicGuard(req, { name: 'auto-generate-video-posters', limit: 30, windowSeconds: 60 });
+  if (__guard.response) return __guard.response;
 
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
 
