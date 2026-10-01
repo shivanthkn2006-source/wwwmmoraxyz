@@ -189,7 +189,7 @@ async function handle(req: Request): Promise<Response> {
     const device = (body.device ?? {}) as Record<string, unknown>;
 
     if (action === 'heartbeat') {
-      if (!sessionToken) return json({ ok: false }, 400);
+      if (!sessionToken) return json({ ok: true, skipped: 'signed_out' });
       const geo = await resolveGeo(ip, req.headers.get('cf-ipcountry'));
       const now = new Date().toISOString();
       await admin.from('sentinel_sessions').upsert(
