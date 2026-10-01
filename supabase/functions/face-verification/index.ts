@@ -24,7 +24,8 @@ const operationSchema = z.enum([
   'verify_face', 
   'login_with_face',
   'check_face_enrolled',
-  'disable_face_verification'
+  'disable_face_verification',
+  'refresh_face',
 ]);
 
 const requestSchema = z.object({
@@ -493,6 +494,26 @@ serve(async (req) => {
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
+      }
+
+      case 'refresh_face': {
+        // Quietly refresh the saved fingerprint, only when it is clearly the same person.
+        if (!descriptor) return new Response(JSON.stringify({ error: 'descriptor required' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        const { data: cur } = await supabase.from('user_security_settings').select('face_verification_data, face_verification_enabled').eq('user_id', verifiedUserId).maybeSingle();
+        const fv = (cur?.face_verification_data ?? {}) as Record<string, any>;
+        if (!cur?.face_verification_enabled || !Array.isArray(fv.scan_descriptor)) {
+          return new Response(JSON.stringify({ refreshed: false, reason: 'not_enrolled' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+        const d = dist(descriptor, fv.scan_descriptor);
+        if (d > SCAN_MATCH) {
+          return new Response(JSON.stringify({ refreshed: false, reason: 'different_face' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+        const blended = fv.scan_descriptor.map((v: number, i: number) => Math.round((v * 0.8 + descriptor[i] * 0.2) * 1e5) / 1e5);
+        await supabase.from('user_security_settings').update({
+          face_verification_data: { ...fv, scan_descriptor: blended, refreshed_at: new Date().toISOString() },
+          updated_at: new Date().toISOString(),
+        }).eq('user_id', verifiedUserId);
+        return new Response(JSON.stringify({ refreshed: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
       case 'check_face_enrolled': {
