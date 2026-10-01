@@ -299,7 +299,7 @@ serve(async (req) => {
         }
 
         const comparisonPrompt = `Compare the live face in this image against this enrolled facial description: ${JSON.stringify(settings.face_verification_data.analysis)}. Ignore hair, clothes, glasses and aging differences. Return ONLY JSON: {"match_score":0-100,"is_match":boolean,"liveness_detected":boolean}. Be strict; do not match from skin tone or age alone.`;
-        const verificationResult = await nvidiaVision(imageData, comparisonPrompt, { maxTokens: 220, timeoutMs: 30_000 });
+        const verificationResult = await visionWithFallback(imageData, comparisonPrompt, 220);
         const parsedMatch = parseFaceMatch(verificationResult);
         if (!parsedMatch) {
           return new Response(JSON.stringify({ error: 'Face check service is busy. Please try again in a minute.' }),
@@ -350,7 +350,7 @@ serve(async (req) => {
         }
 
         const loginPrompt = `Secure face login. Compare the live face in this image against this enrolled facial description: ${JSON.stringify(settings.face_verification_data.analysis)}. Ignore hair, clothes, glasses and aging differences. Return ONLY JSON: {"match_score":0-100,"is_match":boolean,"liveness_detected":boolean}. Be strict; do not match from skin tone or age alone.`;
-        const verificationResult = await nvidiaVision(imageData, loginPrompt, { maxTokens: 220, timeoutMs: 30_000 });
+        const verificationResult = await visionWithFallback(imageData, loginPrompt, 220);
         const parsedMatch = parseFaceMatch(verificationResult);
         if (!parsedMatch) {
           return new Response(JSON.stringify({ error: 'Face check service is busy. Please try again in a minute.' }),

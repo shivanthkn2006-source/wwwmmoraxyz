@@ -2584,7 +2584,7 @@ const ZoeAssistant: React.FC<ZoeAssistantProps> = ({ onNavigate }) => {
       const byteArray = new Uint8Array(byteNumbers);
       const blob = new Blob([byteArray], { type: 'image/png' });
 
-      const fileName = `${user.id}-${Date.now()}.png`;
+      const fileName = `${user.id}/${Date.now()}.png`;
       const { error: uploadError } = await supabase.storage
         .from('avatars')
         .upload(fileName, blob, { upsert: true });

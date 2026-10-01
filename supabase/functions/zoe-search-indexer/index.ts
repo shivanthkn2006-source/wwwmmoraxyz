@@ -581,7 +581,10 @@ Deno.serve(async (req) => {
 
     let completed = 0;
     let failed = 0;
+    const runStarted = Date.now();
     for (const job of (jobs || []) as QueueRow[]) {
+      // Leave headroom under the gateway timeout; remaining jobs stay pending for the next run.
+      if (Date.now() - runStarted > 90_000) break;
       const { data: claimed } = await db.from('zoe_search_index_queue')
         .update({ status: 'processing', attempts: job.attempts + 1, updated_at: new Date().toISOString() })
         .eq('id', job.id).in('status', ['pending', 'failed']).select('id').maybeSingle();
