@@ -55,12 +55,10 @@ const UserSearchModal: React.FC<UserSearchModalProps> = ({ isOpen, onClose }) =>
     );
 
     // Then fetch profiles
-    const { data: profiles, error } = await supabase
-      .from('public_profiles')
-      .select('user_id, display_name, username, profile_photo_url, bio, profession, field_of_study, hobbies, status, event_date, event_recurring')
-      .or(`username.ilike.%${searchQuery}%,display_name.ilike.%${searchQuery}%`)
-      .neq('user_id', user?.id || '')
-      .limit(10);
+    // Member directory search: safe columns only, public profiles, signed-in callers.
+    const { data: profiles, error } = await (supabase.rpc as any)('search_member_directory', {
+      p_query: searchQuery.replace(/^@/, ''),
+    });
 
     if (!error && profiles) {
       const profilesWithFriendStatus = profiles.map(profile => ({
