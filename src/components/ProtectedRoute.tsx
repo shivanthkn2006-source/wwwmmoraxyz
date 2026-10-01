@@ -1,3 +1,4 @@
+import IconOrbitLoader from '@/components/core/IconOrbitLoader';
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
@@ -14,7 +15,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   if (loading || !initialized) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent"></div>
+        <IconOrbitLoader />
       </div>
     );
   }
