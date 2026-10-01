@@ -7129,3 +7129,5 @@ body {
 /* Permission progress bar: white track, green fill */
 .permission-progress { background: hsl(40 30% 97%) !important; }
 .permission-progress > div { background: hsl(142 70% 45%) !important; }
+/* Messages / chat: platform warm tan end to end */
+.chat-warm-surface { background: linear-gradient(90deg, hsl(33 30% 55%), hsl(27 28% 50%)) fixed; }
