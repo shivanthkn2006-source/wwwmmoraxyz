@@ -1,0 +1,125 @@
+// Platform visit + sign-in/out tracker. Writes with the service role; only the sole admin can read.
+import { createClient } from "npm:@supabase/supabase-js@2";
+import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { z } from "npm:zod@3.23.8";
+
+const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+const json = (b: unknown, s = 200) =>
+  new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+const str = (n: number) => z.string().max(n).optional().nullable();
+const Start = z.object({
+  action: z.literal("start"),
+  visitor_id: z.string().min(8).max(64),
+  path: z.string().min(1).max(300),
+  referrer: str(500),
+  device_type: str(20), os: str(40), browser: str(40),
+  screen: str(30), language: str(20), timezone: str(60),
+  hardware: z.record(z.union([z.string().max(200), z.number(), z.boolean(), z.null()])).optional(),
+});
+const Ping = z.object({
+  action: z.literal("ping"),
+  id: z.string().uuid(),
+  visitor_id: z.string().min(8).max(64),
+  duration_seconds: z.number().int().min(0).max(86400),
+});
+const Auth = z.object({
+  action: z.literal("auth"),
+  event: z.enum(["login", "logout"]),
+  device_type: str(20), os: str(40), browser: str(40),
+});
+const Body = z.discriminatedUnion("action", [Start, Ping, Auth]);
+
+type Geo = {
+  country?: string; country_code?: string; region?: string; city?: string; district?: string;
+  isp?: string; is_vpn?: boolean; is_hosting?: boolean; is_mobile_network?: boolean;
+};
+const geoCache = new Map<string, { at: number; geo: Geo }>();
+
+function clientIp(req: Request): string | null {
+  const h = req.headers;
+  const ip = h.get("cf-connecting-ip") || h.get("x-real-ip") || h.get("x-forwarded-for")?.split(",")[0];
+  return ip?.trim() || null;
+}
+
+async function lookupGeo(ip: string | null): Promise<Geo> {
+  if (!ip) return {};
+  const hit = geoCache.get(ip);
+  if (hit && Date.now() - hit.at < 6 * 3600_000) return hit.geo;
+  // Reuse a lookup stored in the last day for the same address.
+  const { data: prev } = await admin.from("platform_visits")
+    .select("country,country_code,region,city,district,isp,is_vpn,is_hosting,is_mobile_network")
+    .eq("ip_address", ip).not("country", "is", null)
+    .gte("entered_at", new Date(Date.now() - 86400_000).toISOString())
+    .limit(1).maybeSingle();
+  if (prev) { geoCache.set(ip, { at: Date.now(), geo: prev as Geo }); return prev as Geo; }
+  try {
+    const r = await fetch(
+      `http://ip-api.com/json/${encodeURIComponent(ip)}?fields=status,country,countryCode,regionName,city,district,isp,proxy,hosting,mobile`,
+      { signal: AbortSignal.timeout(2500) },
+    );
+    const d = await r.json();
+    if (d.status !== "success") return {};
+    const geo: Geo = {
+      country: d.country, country_code: d.countryCode, region: d.regionName, city: d.city,
+      district: d.district || null, isp: d.isp, is_vpn: !!d.proxy, is_hosting: !!d.hosting,
+      is_mobile_network: !!d.mobile,
+    };
+    geoCache.set(ip, { at: Date.now(), geo });
+    return geo;
+  } catch {
+    return {};
+  }
+}
+
+async function userFrom(req: Request): Promise<{ id: string; name: string | null } | null> {
+  const token = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "");
+  if (!token) return null;
+  const { data } = await admin.auth.getUser(token);
+  if (!data?.user) return null;
+  const m = data.user.user_metadata || {};
+  return { id: data.user.id, name: (m.full_name || m.name || m.display_name || data.user.email || null) as string | null };
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method !== "POST") return json({ error: "POST only" }, 405);
+  const parsed = Body.safeParse(await req.json().catch(() => null));
+  if (!parsed.success) return json({ error: parsed.error.flatten().fieldErrors }, 400);
+  const b = parsed.data;
+
+  try {
+    if (b.action === "ping") {
+      await admin.from("platform_visits")
+        .update({ last_seen_at: new Date().toISOString(), duration_seconds: b.duration_seconds })
+        .eq("id", b.id).eq("visitor_id", b.visitor_id);
+      return json({ ok: true });
+    }
+
+    const ip = clientIp(req);
+    const [user, geo] = await Promise.all([userFrom(req), lookupGeo(ip)]);
+
+    if (b.action === "auth") {
+      if (!user) return json({ ok: true, skipped: "signed_out" });
+      await admin.from("platform_auth_events").insert({
+        user_id: user.id, event: b.event, display_name: user.name,
+        device_type: b.device_type, os: b.os, browser: b.browser,
+        ip_address: ip, country: geo.country ?? null, city: geo.city ?? null, is_vpn: geo.is_vpn ?? null,
+      });
+      return json({ ok: true });
+    }
+
+    let referrer_host: string | null = null;
+    try { if (b.referrer) referrer_host = new URL(b.referrer).hostname || null; } catch { /* ignore */ }
+    const { data, error } = await admin.from("platform_visits").insert({
+      visitor_id: b.visitor_id, user_id: user?.id ?? null, path: b.path, referrer_host,
+      device_type: b.device_type, os: b.os, browser: b.browser, screen: b.screen,
+      language: b.language, timezone: b.timezone, hardware: b.hardware ?? {},
+      ip_address: ip, ...geo,
+    }).select("id").single();
+    if (error) return json({ error: error.message }, 500);
+    return json({ id: data.id });
+  } catch (e) {
+    return json({ error: String(e) }, 500);
+  }
+});
