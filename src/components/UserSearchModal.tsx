@@ -61,7 +61,7 @@ const UserSearchModal: React.FC<UserSearchModalProps> = ({ isOpen, onClose }) =>
     });
 
     if (!error && profiles) {
-      const profilesWithFriendStatus = profiles.map(profile => ({
+      const profilesWithFriendStatus = (profiles as any[]).filter((p: any) => p.user_id !== user?.id).map((profile: any) => ({
         ...profile,
         is_friend: friendIds.has(profile.user_id)
       }));
