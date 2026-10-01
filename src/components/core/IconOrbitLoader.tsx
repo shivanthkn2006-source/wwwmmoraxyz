@@ -30,8 +30,8 @@ function pickSet(): LucideIcon[] {
 
 let cached: LucideIcon[] | null = null;
 
-export default function IconOrbitLoader() {
-  const [icons] = useState(() => (cached ??= pickSet()));
+export default function IconOrbitLoader({ fresh = false }: { fresh?: boolean } = {}) {
+  const [icons] = useState(() => (fresh ? (cached = pickSet()) : (cached ??= pickSet())));
   return (
     <div className="relative h-32 w-32" aria-hidden="true">
       <div className="absolute inset-0 animate-[spin_24s_linear_infinite]">
