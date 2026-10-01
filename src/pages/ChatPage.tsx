@@ -16,6 +16,8 @@ import { FeatureAnnouncementWrapper } from '@/components/FeatureAnnouncementWrap
 import TypingIndicator from '@/components/TypingIndicator';
 import StatusIconBadge from '@/components/StatusIconBadge';
 import { CircleOff } from 'lucide-react';
+import { useActivityStatuses } from '@/features/calls/useActivityStatuses';
+const NO_PEERS: string[] = [];
 import { getCallActivityStatus } from '@/features/calls/callActivityStatuses';
 import {
   ContextMenu,
@@ -376,6 +378,15 @@ const ChatPage = () => {
     }
   };
 
+  const { ownMessage, setOwnMessage } = useActivityStatuses(user?.id ?? null, NO_PEERS);
+  const [customDraft, setCustomDraft] = useState('');
+  useEffect(() => { setCustomDraft(ownMessage ?? ''); }, [ownMessage]);
+  const saveCustomStatus = async () => {
+    const ok = await setOwnMessage(customDraft);
+    if (ok) { toast.success(customDraft.trim() ? 'Custom status saved' : 'Custom status cleared'); setShowStatusModal(false); }
+    else toast.error('Failed to save custom status');
+  };
+
   const handleStatusChange = async (newStatus: string) => {
     if (!user) return;
 
@@ -496,8 +507,8 @@ const ChatPage = () => {
                 onClick={() => selectedUser?.profile_photo_url && setShowProfileViewer(true)}
               >
                 <AvatarImage src={selectedUser?.profile_photo_url} />
-                <AvatarFallback className="bg-primary/10 text-primary">
-                  {selectedUser?.display_name?.charAt(0)}
+                <AvatarFallback className="bg-transparent text-white text-[9px] font-medium">
+                  M'Mora
                 </AvatarFallback>
               </Avatar>
               <StatusIconBadge status={selectedUser?.status} size="sm" />
@@ -550,6 +561,16 @@ const ChatPage = () => {
               <PopoverContent className="w-56 max-h-[400px] overflow-y-auto bg-transparent border-0 shadow-none p-2">
                 <div className="space-y-2">
                   <h4 className="font-semibold text-sm mb-3">Change Status</h4>
+                  <input
+                    value={customDraft}
+                    onChange={(e) => setCustomDraft(e.target.value.slice(0, 80))}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void saveCustomStatus(); } }}
+                    onBlur={() => { if ((customDraft.trim() || null) !== (ownMessage ?? null)) void saveCustomStatus(); }}
+                    placeholder="Custom status message…"
+                    maxLength={80}
+                    aria-label="Custom status message"
+                    className="w-full bg-transparent border-0 outline-none text-sm text-white placeholder:text-white/60 px-3 py-2"
+                  />
                   {[
                     'away', 'cooking', 'dining', 'driving', 'family_time', 'farming', 
                     'fitness', 'gaming', 'library', 'meditation', 'movie', 'online', 
@@ -931,6 +952,8 @@ const ChatPage = () => {
                   }
                 }}
                 placeholder="Type a message..."
+                key={selectedUserId}
+                autoFocus
                 className="border-0 bg-transparent pr-12 shadow-none outline-none ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
               />
               <button

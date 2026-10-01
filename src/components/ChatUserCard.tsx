@@ -57,8 +57,8 @@ const ChatUserCard: React.FC<ChatUserCardProps> = ({ user, onClick }) => {
                 src={user.profile_photo_url || ''}
                 alt={user.display_name}
               />
-              <AvatarFallback className="bg-[hsl(var(--oni-purple))]/20 text-[hsl(var(--oni-cyan))]">
-                {user.display_name.charAt(0)}
+              <AvatarFallback className="bg-transparent text-white text-[10px] font-medium">
+                M'Mora
               </AvatarFallback>
             </Avatar>
             <StatusIconBadge status={user.status} size="sm" />
