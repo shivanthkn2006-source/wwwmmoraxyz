@@ -1,3 +1,4 @@
+import IconOrbitLoader from "@/components/core/IconOrbitLoader";
 import React, { useState, useEffect, useCallback, lazy, Suspense, memo } from "react";
 import AdminRoute from "@/components/AdminRoute";
 import { Toaster } from "@/components/ui/toaster";
