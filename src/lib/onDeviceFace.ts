@@ -12,6 +12,11 @@ function getApi() {
   if (!apiPromise) {
     apiPromise = (async () => {
       const faceapi = await import('@vladmandic/face-api');
+      const tf = faceapi.tf as any;
+      let ok = false;
+      try { ok = await tf.setBackend('webgl'); } catch { ok = false; }
+      if (!ok) await tf.setBackend('cpu');
+      await tf.ready();
       await Promise.all([
         faceapi.nets.ssdMobilenetv1.loadFromUri(MODELS),
         faceapi.nets.faceLandmark68Net.loadFromUri(MODELS),
