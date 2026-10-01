@@ -40,7 +40,7 @@ const ChatUserCard: React.FC<ChatUserCardProps> = ({ user, onClick }) => {
 
   return (
     <Card
-      className="p-3 md:p-4 oni-glass-float oni-data-strip border-[hsl(var(--oni-cyan))]/20 hover:border-[hsl(var(--oni-cyan))]/50 hover:shadow-[0_0_15px_hsl(var(--oni-cyan)/0.3)] cursor-pointer transition-all"
+      className="p-3 md:p-4 bg-transparent shadow-none oni-glass-float oni-data-strip border-[hsl(var(--oni-cyan))]/20 hover:border-[hsl(var(--oni-cyan))]/50 hover:shadow-[0_0_15px_hsl(var(--oni-cyan)/0.3)] cursor-pointer transition-all"
       onClick={() => onClick(user.user_id)}
     >
       <div className="flex items-center justify-between">

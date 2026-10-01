@@ -15,6 +15,8 @@ import { toast } from 'sonner';
 import { FeatureAnnouncementWrapper } from '@/components/FeatureAnnouncementWrapper';
 import TypingIndicator from '@/components/TypingIndicator';
 import StatusIconBadge from '@/components/StatusIconBadge';
+import { CircleOff } from 'lucide-react';
+import { getCallActivityStatus } from '@/features/calls/callActivityStatuses';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -423,7 +425,7 @@ const ChatPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center pb-20">
+      <div className="min-h-screen chat-warm-surface flex items-center justify-center pb-20">
         <p className="text-muted-foreground">Loading chats...</p>
       </div>
     );
@@ -431,10 +433,10 @@ const ChatPage = () => {
 
   if (!selectedUserId) {
     return (
-      <div className="min-h-screen bg-background pb-20">
+      <div className="min-h-screen chat-warm-surface pb-20">
         <div className="max-w-2xl mx-auto">
           {/* Header */}
-          <div className="fixed top-0 left-0 right-0 z-50 bg-background border-b border-border">
+          <div className="fixed top-0 left-0 right-0 z-50 chat-warm-surface border-b border-border">
             <div className="max-w-2xl mx-auto">
               <div className="p-4">
                 <h1 className="text-xl md:text-2xl font-bold text-foreground">
@@ -468,9 +470,9 @@ const ChatPage = () => {
 
   return (
     <FeatureAnnouncementWrapper featureId="direct-messages">
-      <div className="min-h-screen bg-background flex flex-col pb-20">
+      <div className="min-h-screen chat-warm-surface flex flex-col pb-20">
         {/* Chat Header with Back Button */}
-        <div className="sticky top-0 bg-background border-b border-border p-4 flex items-center space-x-3 z-50">
+        <div className="sticky top-0 chat-warm-surface border-b border-border p-4 flex items-center space-x-3 z-50">
           <Button
             variant="ghost"
             size="sm"
@@ -545,7 +547,7 @@ const ChatPage = () => {
                   <UserCog className="w-5 h-5" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-56 max-h-[400px] overflow-y-auto">
+              <PopoverContent className="w-56 max-h-[400px] overflow-y-auto bg-transparent border-0 shadow-none p-2">
                 <div className="space-y-2">
                   <h4 className="font-semibold text-sm mb-3">Change Status</h4>
                   {[
@@ -560,7 +562,7 @@ const ChatPage = () => {
                       className="w-full justify-start"
                       onClick={() => handleStatusChange(status)}
                     >
-                      <div className={`w-3 h-3 rounded-full ${getStatusColor(status)} mr-2`} />
+                      {(() => { const S = status === 'offline' ? CircleOff : getCallActivityStatus(status).Icon; return <S className="w-4 h-4 mr-2" aria-hidden />; })()}
                       {status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
                     </Button>
                   ))}
