@@ -24,7 +24,7 @@ describe('startup and reconnect stability', () => {
   });
 
   it('shows accurate startup copy and disables automatic failure reloads', () => {
-    expect(read('src/App.tsx')).toContain("Loading M'Mora");
+    expect(read('src/App.tsx')).toContain("IconOrbitLoader");
     expect(read('src/App.tsx')).not.toContain('Zoe is reconnecting');
     expect(read('src/main.tsx')).not.toContain('then(({ recoverFromChunkError })');
     expect(read('src/components/core/ErrorBoundary.tsx')).not.toContain('recoverFromChunkError');
