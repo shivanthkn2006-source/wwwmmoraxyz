@@ -595,9 +595,9 @@ const AuthPage = () => {
                   type="button"
                   onClick={() => setIsSignUp(!isSignUp)}
                   className={cn(
-                    "text-white hover:text-white/80 font-medium",
-                    "text-xs xxs:text-xs xs:text-sm sm:text-sm md:text-base",
-                    "lg:text-sm xl:text-base 2xl:text-lg 4k:text-xl"
+                    "text-white hover:text-white/80 font-bold !min-h-0 leading-tight",
+                    "text-xl xxs:text-xl xs:text-2xl sm:text-2xl md:text-3xl",
+                    "lg:text-2xl xl:text-3xl 2xl:text-4xl 4k:text-5xl"
                   )}
                 >
                   {isSignUp
@@ -608,8 +608,8 @@ const AuthPage = () => {
               </div>
 
             <div className={cn(
-              "mt-2 xxs:mt-2 xs:mt-2.5 sm:mt-3 md:mt-4",
-              "space-y-1 xxs:space-y-1 xs:space-y-1.5 sm:space-y-1.5",
+              "mt-4 xxs:mt-4 xs:mt-5 sm:mt-5 md:mt-6",
+              "flex flex-col items-center gap-0",
               "text-center"
             )}>
               {!isSignUp && (
@@ -617,7 +617,7 @@ const AuthPage = () => {
                   type="button"
                   onClick={() => navigate('/password-recovery')}
                   className={cn(
-                    "text-white hover:text-white/80 inline-flex items-center gap-1 !min-h-0 py-1",
+                    "text-white hover:text-white/80 inline-flex items-center gap-1 !min-h-0 py-0",
                     "text-xs xxs:text-xs xs:text-sm sm:text-sm md:text-base",
                     "lg:text-sm xl:text-base 2xl:text-lg 4k:text-xl"
                   )}
@@ -627,7 +627,7 @@ const AuthPage = () => {
               )}
               {!isSignUp && (
                 <div>
-                  <button type="button" onClick={() => setShowRecovery(true)} className="text-white hover:text-white/80 text-xs xs:text-sm md:text-base !min-h-0 py-1">
+                  <button type="button" onClick={() => setShowRecovery(true)} className="text-white hover:text-white/80 text-xs xs:text-sm md:text-base !min-h-0 py-0">
                     Use a recovery code
                   </button>
                   <RecoveryCodeSignIn open={showRecovery} onOpenChange={setShowRecovery} defaultEmail={formData.email} />
