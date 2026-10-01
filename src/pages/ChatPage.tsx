@@ -559,7 +559,7 @@ const ChatPage = () => {
                     <Button
                       key={status}
                       variant="ghost"
-                      className="w-full justify-start"
+                      className="w-full justify-start bg-transparent text-white hover:bg-transparent hover:text-white focus-visible:ring-0"
                       onClick={() => handleStatusChange(status)}
                     >
                       {(() => { const S = status === 'offline' ? CircleOff : getCallActivityStatus(status).Icon; return <S className="w-4 h-4 mr-2" aria-hidden />; })()}
@@ -667,7 +667,7 @@ const ChatPage = () => {
                       className="w-5 h-5 rounded border-2 border-border cursor-pointer"
                     />
                   )}
-                  <div className={`max-w-[75%] ${isOwn ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'} ${isSelected ? 'ring-2 ring-blue-500' : ''} ${message.is_pinned ? 'ring-2 ring-yellow-500/50 shadow-lg' : ''} rounded-2xl px-4 py-2 break-words transition-all relative group`}>
+                  <div className={`max-w-[75%] bg-transparent text-white ${isSelected ? 'ring-2 ring-blue-500' : ''} ${message.is_pinned ? 'ring-2 ring-yellow-500/50 shadow-lg' : ''} rounded-2xl px-4 py-2 break-words transition-all relative group`}>
                     {message.is_pinned && (
                       <Pin className="w-3 h-3 absolute -top-1 -right-1 text-yellow-500 drop-shadow-lg" />
                     )}
@@ -734,7 +734,7 @@ const ChatPage = () => {
                     )}
                     
                     <div className="flex items-center gap-1 mt-1">
-                      <p className={`text-xs ${isOwn ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
+                      <p className={`text-xs text-white/70`}>
                         {formatDistanceToNow(new Date(message.created_at), { addSuffix: true })}
                       </p>
                       {isOwn && (
