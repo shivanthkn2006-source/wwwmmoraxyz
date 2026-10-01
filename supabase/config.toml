@@ -375,6 +375,3 @@ verify_jwt = false
 
 [functions.zoe-sovereign]
 verify_jwt = false
-
-[functions.qa-friends-temp]
-verify_jwt = false
