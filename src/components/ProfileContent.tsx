@@ -9,6 +9,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { attachDirectoryProfiles } from '@/lib/friendDirectory';
 import { useAuth } from '@/lib/auth';
 import FriendCard from '@/components/FriendCard';
+import FriendRequestCard from '@/components/FriendRequestCard';
+import { useFriendRequests } from '@/hooks/useFriendRequests';
 import PostsGrid from '@/components/PostsGrid';
 import PostModal from '@/components/PostModal';
 import ProfileEditModal from '@/components/ProfileEditModal';
@@ -83,6 +85,7 @@ const ProfileContent = () => {
   const [userPosts, setUserPosts] = useState<any[]>([]);
   const [taggedPosts, setTaggedPosts] = useState<any[]>([]);
   const [friends, setFriends] = useState<any[]>([]);
+  const { receivedRequests, sentRequests, acceptFriendRequest, rejectFriendRequest } = useFriendRequests();
   const [loading, setLoading] = useState(true);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
@@ -770,7 +773,24 @@ const ProfileContent = () => {
                       <UserPlus className="w-4 h-4 mr-2" />
                       Find Friends
                     </Button>
+                    <p className="mt-2 text-center text-xs text-muted-foreground">
+                      Search a name or @username, then tap the add-friend button to send a request.
+                      {sentRequests.length > 0 && ` ${sentRequests.length} request${sentRequests.length === 1 ? '' : 's'} waiting for a reply.`}
+                    </p>
                   </div>
+                  {receivedRequests.length > 0 && (
+                    <div className="mb-4 space-y-2" data-friend-requests>
+                      <p className="text-sm font-semibold text-foreground">Friend requests ({receivedRequests.length})</p>
+                      {receivedRequests.map((req) => (
+                        <FriendRequestCard
+                          key={req.id}
+                          request={req}
+                          onAccept={async (id) => { await acceptFriendRequest(id); void fetchFriends(); }}
+                          onReject={(id) => void rejectFriendRequest(id)}
+                        />
+                      ))}
+                    </div>
+                  )}
                   {friends.length === 0 ? (
                     <p className="text-center text-muted-foreground py-8">No friends yet</p>
                   ) : (

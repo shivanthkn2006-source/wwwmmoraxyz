@@ -1,69 +1,83 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Circle } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { CircleOff } from 'lucide-react';
+import { toast } from 'sonner';
+import { useAuth } from '@/lib/auth';
+import { getCallActivityStatus } from '@/features/calls/callActivityStatuses';
+import { useActivityStatuses } from '@/features/calls/useActivityStatuses';
 
 interface StatusSelectorProps {
   currentStatus: string;
   onStatusChange: (status: string) => void;
 }
 
-const StatusSelector: React.FC<StatusSelectorProps> = ({ currentStatus, onStatusChange }) => {
-  // Statuses in alphabetical order
-  const statuses = [
-    { value: 'away', label: 'Away', color: 'hsl(45, 93%, 47%)' },
-    { value: 'cooking', label: 'Cooking', color: 'hsl(30, 100%, 50%)' },
-    { value: 'dining', label: 'Dining', color: 'hsl(15, 85%, 55%)' },
-    { value: 'driving', label: 'Driving', color: 'hsl(210, 90%, 55%)' },
-    { value: 'family_time', label: 'Family Time', color: 'hsl(280, 65%, 60%)' },
-    { value: 'farming', label: 'Farming', color: 'hsl(100, 60%, 45%)' },
-    { value: 'fitness', label: 'Fitness', color: 'hsl(5, 80%, 55%)' },
-    { value: 'gaming', label: 'Gaming', color: 'hsl(260, 80%, 60%)' },
-    { value: 'library', label: 'Library', color: 'hsl(200, 60%, 50%)' },
-    { value: 'meditation', label: 'Meditation', color: 'hsl(270, 70%, 60%)' },
-    { value: 'movie', label: 'Movie', color: 'hsl(340, 75%, 55%)' },
-    { value: 'online', label: 'Online', color: 'hsl(142, 76%, 36%)' },
-    { value: 'party', label: 'Party', color: 'hsl(320, 85%, 60%)' },
-    { value: 'play', label: 'Play', color: 'hsl(180, 70%, 50%)' },
-    { value: 'sleep', label: 'Sleep', color: 'hsl(190, 80%, 50%)' },
-    { value: 'sports', label: 'Sports', color: 'hsl(10, 90%, 55%)' },
-    { value: 'studying', label: 'Studying', color: 'hsl(217, 91%, 60%)' },
-    { value: 'transit', label: 'In Transit', color: 'hsl(25, 95%, 53%)' },
-    { value: 'traveling', label: 'Traveling', color: 'hsl(195, 85%, 50%)' },
-    { value: 'tv', label: 'Watching TV', color: 'hsl(240, 70%, 60%)' },
-    { value: 'vacation', label: 'Vacation', color: 'hsl(170, 80%, 50%)' },
-    { value: 'work', label: 'Work', color: 'hsl(0, 84%, 60%)' },
-    { value: 'yoga', label: 'Yoga', color: 'hsl(290, 70%, 60%)' },
-  ];
+const STATUSES = [
+  'away', 'cooking', 'dining', 'driving', 'family_time', 'farming',
+  'fitness', 'gaming', 'library', 'meditation', 'movie', 'online',
+  'party', 'play', 'sleep', 'sports', 'studying', 'transit',
+  'traveling', 'tv', 'vacation', 'work', 'yoga', 'offline',
+];
+const NO_PEERS: string[] = [];
 
-  const currentStatusData = statuses.find(s => s.value === currentStatus) || statuses.find(s => s.value === 'online')!;
+const labelOf = (s: string) => s.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+const iconOf = (s: string) => (s === 'offline' ? CircleOff : getCallActivityStatus(s).Icon);
+
+/** Same universal status symbols + custom status message as Messages and Calls. */
+const StatusSelector: React.FC<StatusSelectorProps> = ({ currentStatus, onStatusChange }) => {
+  const { user } = useAuth();
+  const { ownMessage, setOwnMessage } = useActivityStatuses(user?.id ?? null, NO_PEERS);
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState('');
+  useEffect(() => { setDraft(ownMessage ?? ''); }, [ownMessage]);
+
+  const current = currentStatus && currentStatus !== 'none' ? currentStatus : 'online';
+  const CurrentIcon = iconOf(current);
+
+  const saveMessage = async () => {
+    if ((draft.trim() || null) === (ownMessage ?? null)) return;
+    const ok = await setOwnMessage(draft);
+    if (ok) toast.success(draft.trim() ? 'Custom status saved' : 'Custom status cleared');
+    else toast.error('Failed to save custom status');
+  };
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="gap-2">
-          <Circle className="w-3 h-3" fill={currentStatusData.color} />
-          {currentStatusData.label}
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="ghost" className="gap-2 max-w-[11rem]" aria-label="Change your status">
+          <CurrentIcon className="w-4 h-4 shrink-0" aria-hidden />
+          <span className="truncate">{ownMessage?.trim() || labelOf(current)}</span>
         </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="bg-card/95 backdrop-blur-xl border-border max-h-[400px] overflow-y-auto">
-        {statuses.map((status) => (
-          <DropdownMenuItem
-            key={status.value}
-            onClick={() => onStatusChange(status.value)}
-            className="gap-2 hover:bg-accent"
-          >
-            <Circle className="w-3 h-3" fill={status.color} />
-            {status.label}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+      </PopoverTrigger>
+      <PopoverContent className="surface-warm-tan w-56 max-h-[400px] overflow-y-auto border-0 shadow-none p-2">
+        <div className="space-y-1">
+          <input
+            value={draft}
+            onChange={(e) => setDraft(e.target.value.slice(0, 80))}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void saveMessage(); setOpen(false); } }}
+            onBlur={() => void saveMessage()}
+            placeholder="Custom status message…"
+            maxLength={80}
+            aria-label="Custom status message"
+            className="w-full bg-transparent border-0 outline-none text-sm text-white placeholder:text-white/60 px-3 py-2"
+          />
+          {STATUSES.map((s) => {
+            const Icon = iconOf(s);
+            return (
+              <Button
+                key={s}
+                variant="ghost"
+                className="w-full justify-start bg-transparent text-white hover:bg-transparent hover:text-white focus-visible:ring-0"
+                onClick={() => { onStatusChange(s); setOpen(false); }}
+              >
+                <Icon className="w-4 h-4 mr-2" aria-hidden />
+                {labelOf(s)}
+              </Button>
+            );
+          })}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 };
 
