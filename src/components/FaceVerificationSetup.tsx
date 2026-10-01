@@ -223,8 +223,8 @@ const FaceVerificationSetup: React.FC<FaceVerificationSetupProps> = ({ onComplet
       // On-device fingerprint of the live scan + the member's identity photo (no AI tokens).
       const { faceDescriptor } = await import('@/lib/onDeviceFace');
       const live = await faceDescriptor(canvas);
-      if (!live.ok && live.reason !== 'unavailable') {
-        throw new Error(live.reason === 'many_faces' ? 'Only one face should be in view. Try again.' : 'No clear face found. Face the camera in good light and try again.');
+      if (live.ok === false && live.reason !== 'unavailable') {
+        throw new Error((live as { reason: string }).reason === 'many_faces' ? 'Only one face should be in view. Try again.' : 'No clear face found. Face the camera in good light and try again.');
       }
       let identityDescriptor: number[] | undefined;
       if (live.ok) {

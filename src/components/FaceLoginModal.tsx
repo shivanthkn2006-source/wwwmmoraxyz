@@ -154,8 +154,8 @@ const FaceLoginModal: React.FC<FaceLoginModalProps> = ({ open, onClose, onSucces
       // Match on the device first (no AI tokens); fall back to the photo check.
       const { faceDescriptor } = await import('@/lib/onDeviceFace');
       const live = await faceDescriptor(canvas);
-      if (!live.ok && live.reason !== 'unavailable') {
-        throw new Error(live.reason === 'many_faces' ? 'Only one face should be in view. Try again.' : 'No clear face found. Face the camera in good light and try again.');
+      if (live.ok === false && live.reason !== 'unavailable') {
+        throw new Error((live as { reason: string }).reason === 'many_faces' ? 'Only one face should be in view. Try again.' : 'No clear face found. Face the camera in good light and try again.');
       }
       const { data, error } = await supabase.functions.invoke('face-verification', {
         body: live.ok
