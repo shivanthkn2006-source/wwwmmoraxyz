@@ -220,8 +220,28 @@ const FaceVerificationSetup: React.FC<FaceVerificationSetupProps> = ({ onComplet
       log('info', 'capture', 'Frame captured', { w: canvas.width, h: canvas.height, bytes: imageData.length });
 
       setProcessing(true);
+      // On-device fingerprint of the live scan + the member's identity photo (no AI tokens).
+      const { faceDescriptor } = await import('@/lib/onDeviceFace');
+      const live = await faceDescriptor(canvas);
+      if (live.ok === false && live.reason !== 'unavailable') {
+        throw new Error((live as { reason: string }).reason === 'many_faces' ? 'Only one face should be in view. Try again.' : 'No clear face found. Face the camera in good light and try again.');
+      }
+      let identityDescriptor: number[] | undefined;
+      if (live.ok) {
+        const { data: { user } } = await supabase.auth.getUser();
+        const { getVaultStatus, refreshIdentitySignedUrl } = await import('@/services/zoeIdentityVault');
+        const status = user ? await getVaultStatus(user.id) : null;
+        const idUrl = status?.hasVaultPhoto && user ? await refreshIdentitySignedUrl(user.id) : null;
+        if (idUrl) {
+          const id = await faceDescriptor(idUrl);
+          if (id.ok) identityDescriptor = id.descriptor;
+          else log('warn', 'identity', 'Identity photo has no single clear face', id);
+        }
+      }
       const { data, error } = await supabase.functions.invoke('face-verification', {
-        body: { operation: 'enroll_face', imageData }
+        body: live.ok
+          ? { operation: 'enroll_face', descriptor: live.descriptor, identityDescriptor }
+          : { operation: 'enroll_face', imageData },
       });
 
       if (error) {

@@ -151,13 +151,16 @@ const FaceLoginModal: React.FC<FaceLoginModalProps> = ({ open, onClose, onSucces
         throw new Error('Camera is still starting. Hold still and try again.');
       }
 
-      // Send to face verification edge function
+      // Match on the device first (no AI tokens); fall back to the photo check.
+      const { faceDescriptor } = await import('@/lib/onDeviceFace');
+      const live = await faceDescriptor(canvas);
+      if (live.ok === false && live.reason !== 'unavailable') {
+        throw new Error((live as { reason: string }).reason === 'many_faces' ? 'Only one face should be in view. Try again.' : 'No clear face found. Face the camera in good light and try again.');
+      }
       const { data, error } = await supabase.functions.invoke('face-verification', {
-        body: {
-          operation: 'login_with_face',
-          email,
-          imageData
-        }
+        body: live.ok
+          ? { operation: 'login_with_face', email, descriptor: live.descriptor }
+          : { operation: 'login_with_face', email, imageData },
       });
 
       if (error) throw new Error(await edgeErrorMessage(error, 'Face verification failed. Please try again.'));
