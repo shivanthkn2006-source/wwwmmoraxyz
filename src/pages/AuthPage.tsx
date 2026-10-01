@@ -404,7 +404,7 @@ const AuthPage = () => {
                     autoComplete="name"
                     required={isSignUp}
                     className={cn(
-                      "bg-transparent border-0 shadow-none rounded-none px-1 text-white placeholder:text-white/80 caret-white focus-visible:ring-0 focus-visible:ring-offset-0",
+                      "bg-transparent border-0 shadow-none rounded-none px-10 text-center text-white placeholder:text-white/80 caret-white focus-visible:ring-0 focus-visible:ring-offset-0",
                       "h-10 xxs:h-10 xs:h-11 sm:h-12 md:h-14",
                       "lg:h-12 xl:h-14 2xl:h-16 4k:h-20",
                       "text-sm xxs:text-sm xs:text-base sm:text-base md:text-lg",
@@ -420,7 +420,7 @@ const AuthPage = () => {
                     autoComplete="username"
                     required={isSignUp}
                     className={cn(
-                      "bg-transparent border-0 shadow-none rounded-none px-1 text-white placeholder:text-white/80 caret-white focus-visible:ring-0 focus-visible:ring-offset-0",
+                      "bg-transparent border-0 shadow-none rounded-none px-10 text-center text-white placeholder:text-white/80 caret-white focus-visible:ring-0 focus-visible:ring-offset-0",
                       "h-10 xxs:h-10 xs:h-11 sm:h-12 md:h-14",
                       "lg:h-12 xl:h-14 2xl:h-16 4k:h-20",
                       "text-sm xxs:text-sm xs:text-base sm:text-base md:text-lg",
@@ -440,7 +440,7 @@ const AuthPage = () => {
                 autoFocus
                 required
                 className={cn(
-                  "bg-transparent border-0 shadow-none rounded-none px-1 text-white placeholder:text-white/80 caret-white focus-visible:ring-0 focus-visible:ring-offset-0",
+                  "bg-transparent border-0 shadow-none rounded-none px-10 text-center text-white placeholder:text-white/80 caret-white focus-visible:ring-0 focus-visible:ring-offset-0",
                   "h-10 xxs:h-10 xs:h-11 sm:h-12 md:h-14",
                   "lg:h-12 xl:h-14 2xl:h-16 4k:h-20",
                   "text-sm xxs:text-sm xs:text-base sm:text-base md:text-lg",
@@ -458,7 +458,7 @@ const AuthPage = () => {
                   autoComplete={isSignUp ? 'new-password' : 'current-password'}
                   required
                   className={cn(
-                    "bg-transparent border-0 shadow-none rounded-none px-1 text-white placeholder:text-white/80 caret-white focus-visible:ring-0 focus-visible:ring-offset-0 pr-10",
+                    "bg-transparent border-0 shadow-none rounded-none px-10 text-center text-white placeholder:text-white/80 caret-white focus-visible:ring-0 focus-visible:ring-offset-0 pr-10",
                     "h-10 xxs:h-10 xs:h-11 sm:h-12 md:h-14",
                     "lg:h-12 xl:h-14 2xl:h-16 4k:h-20",
                     "text-sm xxs:text-sm xs:text-base sm:text-base md:text-lg",
