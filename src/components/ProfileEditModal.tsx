@@ -194,7 +194,7 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onClose, pr
         if (!compressionResult.success || !compressionResult.file) {
           throw new Error('Failed to compress photo');
         }
-        const fileName = `${user.id}.jpg`;
+        const fileName = `${user.id}/avatar.jpg`;
         const { error: uploadError } = await supabase.storage
           .from('avatars')
           .upload(fileName, compressionResult.file, { 

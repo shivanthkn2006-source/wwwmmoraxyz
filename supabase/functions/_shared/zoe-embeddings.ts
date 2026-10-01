@@ -10,6 +10,8 @@ import { nvidiaEmbed } from './nvidia-provider.ts';
 
 const GOOGLE_EMBED_MODEL = 'gemini-embedding-001';
 export const ZOE_VECTOR_DIMS = 1536;
+// Skip OpenRouter for the rest of this isolate once it reports no credit (402).
+let openRouterDeadUntil = 0;
 
 /** Embed a single text chunk. Returns null when every provider is unavailable. */
 export async function embedText(text: string): Promise<number[] | null> {
@@ -25,6 +27,7 @@ export async function embedText(text: string): Promise<number[] | null> {
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          signal: AbortSignal.timeout(10_000),
           body: JSON.stringify({
             model: `models/${GOOGLE_EMBED_MODEL}`,
             content: { parts: [{ text: clean }] },
@@ -47,10 +50,11 @@ export async function embedText(text: string): Promise<number[] | null> {
 
   // Fallback: OpenRouter-hosted embedding endpoint (OpenAI-compatible).
   const orKey = Deno.env.get('OPENROUTER_API_KEY');
-  if (orKey) {
+  if (orKey && Date.now() > openRouterDeadUntil) {
     try {
       const resp = await fetch('https://openrouter.ai/api/v1/embeddings', {
         method: 'POST',
+        signal: AbortSignal.timeout(10_000),
         headers: {
           Authorization: `Bearer ${orKey}`,
           'Content-Type': 'application/json',
@@ -68,6 +72,7 @@ export async function embedText(text: string): Promise<number[] | null> {
         const values = data?.data?.[0]?.embedding;
         if (Array.isArray(values) && values.length === ZOE_VECTOR_DIMS) return values;
       } else {
+        if (resp.status === 402 || resp.status === 401) openRouterDeadUntil = Date.now() + 30 * 60_000;
         console.warn('[zoe-embeddings] openrouter failed', resp.status);
       }
     } catch (e) {
