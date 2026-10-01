@@ -15,6 +15,7 @@ import ZoeAgentHost from '@/components/zoe/ZoeAgentHost';
 import GlobalMusicToggle from '@/components/music/GlobalMusicToggle';
 import { CallEngineProvider } from '@/contexts/CallEngineContext';
 import OneTimePermissionsPrompt from '@/components/platform/OneTimePermissionsPrompt';
+import FaceIdOptIn from '@/components/security/FaceIdOptIn';
 import GlobalIncomingCallHost from '@/components/quantum/GlobalIncomingCallHost';
 
 export default function DeferredPlatformServices({ children }: { children: React.ReactNode }) {
@@ -34,6 +35,7 @@ export default function DeferredPlatformServices({ children }: { children: React
         <AppErrorBoundary moduleName="platform:zoe-greeting-film" severity="low" fallback={null}><ZoeGreetingFilm /></AppErrorBoundary>
         <AppErrorBoundary moduleName="platform:zoe-agent" severity="low" fallback={null}><ZoeAgentHost /></AppErrorBoundary>
         <AppErrorBoundary moduleName="platform:permissions" severity="low" fallback={null}><OneTimePermissionsPrompt /></AppErrorBoundary>
+        <AppErrorBoundary moduleName="platform:face-id-optin" severity="low" fallback={null}><FaceIdOptIn /></AppErrorBoundary>
         <AppErrorBoundary moduleName="platform:incoming-call" severity="high" fallback={null}><GlobalIncomingCallHost /></AppErrorBoundary>
       </>
     </ZoeAgentProvider>
