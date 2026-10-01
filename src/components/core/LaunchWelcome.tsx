@@ -27,7 +27,11 @@ export default function LaunchWelcome() {
       if (!u) return;
       setUid(u.id); setEmail(u.email ?? "");
       setMethods(Array.from(new Set((u.identities ?? []).map((i) => i.provider === "email" ? "Email & password" : i.provider === "google" ? "Google" : i.provider))));
-      if (localStorage.getItem(`mmora-welcome-seen-${u.id}`)) return;
+      // Seen once per account (saved on the account, so every device knows), not per device.
+      if (localStorage.getItem(`mmora-welcome-seen-${u.id}`) || u.user_metadata?.welcome_seen) {
+        try { localStorage.setItem(`mmora-welcome-seen-${u.id}`, "1"); } catch { /* ignore */ }
+        return;
+      }
       // Wait until the permissions window has closed so two windows never stack.
       const tryOpen = () => { if (!(window as unknown as { __mmoraPermOpen?: boolean }).__mmoraPermOpen) setOpen(true); };
       window.setTimeout(tryOpen, 1500);
@@ -48,6 +52,13 @@ export default function LaunchWelcome() {
   }, [uid]);
 
   useEffect(() => { if (open) void refresh(); }, [open, refresh]);
+
+  // Mark as seen the moment it is shown, so a reload or crash never shows it again.
+  useEffect(() => {
+    if (!open || !uid) return;
+    try { localStorage.setItem(`mmora-welcome-seen-${uid}`, "1"); } catch { /* ignore */ }
+    void supabase.auth.updateUser({ data: { welcome_seen: true } });
+  }, [open, uid]);
 
   const mark = (i: number) => setDone((d) => d.map((v, j) => (j === i ? true : v)));
 
