@@ -617,7 +617,7 @@ const AuthPage = () => {
                   type="button"
                   onClick={() => navigate('/password-recovery')}
                   className={cn(
-                    "text-white hover:text-white/80 inline-flex items-center gap-1",
+                    "text-white hover:text-white/80 inline-flex items-center gap-1 !min-h-0 py-1",
                     "text-xs xxs:text-xs xs:text-sm sm:text-sm md:text-base",
                     "lg:text-sm xl:text-base 2xl:text-lg 4k:text-xl"
                   )}
@@ -627,7 +627,7 @@ const AuthPage = () => {
               )}
               {!isSignUp && (
                 <div>
-                  <button type="button" onClick={() => setShowRecovery(true)} className="text-white hover:text-white/80 text-xs xs:text-sm md:text-base">
+                  <button type="button" onClick={() => setShowRecovery(true)} className="text-white hover:text-white/80 text-xs xs:text-sm md:text-base !min-h-0 py-1">
                     Use a recovery code
                   </button>
                   <RecoveryCodeSignIn open={showRecovery} onOpenChange={setShowRecovery} defaultEmail={formData.email} />
