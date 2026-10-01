@@ -234,8 +234,25 @@ const FaceVerificationSetup: React.FC<FaceVerificationSetupProps> = ({ onComplet
         const idUrl = status?.hasVaultPhoto && user ? await refreshIdentitySignedUrl(user.id) : null;
         if (idUrl) {
           const id = await faceDescriptor(idUrl);
-          if (id.ok) identityDescriptor = id.descriptor;
-          else log('warn', 'identity', 'Identity photo has no single clear face', id);
+          if (id.ok) {
+            const { faceDistance } = await import('@/lib/onDeviceFace');
+            const d = faceDistance(live.descriptor, id.descriptor);
+            log('info', 'identity', 'Scan vs identity photo', { distance: Number(d.toFixed(3)) });
+            if (d > 0.6) {
+              const msg = "Your face scan doesn't match your saved identity photo. Upload a clear passport-style photo of yourself, or try the scan again in good light.";
+              toast.error(msg);
+              setSuggestion(msg);
+              setStep('camera');
+              return;
+            }
+            identityDescriptor = id.descriptor;
+            toast.success('Face scan matches your identity photo.');
+          } else {
+            log('warn', 'identity', 'Identity photo has no single clear face', id);
+            toast.warning('Your identity photo has no single clear face. Upload a passport-style photo so it can be matched too.');
+          }
+        } else {
+          toast.warning('No identity photo saved yet. Add a passport-style photo so face sign-in can match against it too.');
         }
       }
       const { data, error } = await supabase.functions.invoke('face-verification', {
