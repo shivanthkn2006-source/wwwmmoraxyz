@@ -30,8 +30,19 @@ const operationSchema = z.enum([
 const requestSchema = z.object({
   operation: operationSchema,
   email: emailSchema.optional(),
-  imageData: imageDataSchema.optional()
+  imageData: imageDataSchema.optional(),
+  descriptor: z.array(z.number().finite()).length(128).optional(),
+  identityDescriptor: z.array(z.number().finite()).length(128).optional(),
 });
+
+// On-device face fingerprints (128 numbers). Same person < ~0.5 apart.
+const SCAN_MATCH = 0.45;
+const IDENTITY_MATCH = 0.55;
+const ENROLL_IDENTITY_MATCH = 0.6;
+function dist(a: number[], b: number[]) {
+  let s = 0; for (let i = 0; i < a.length; i++) s += (a[i] - b[i]) ** 2; return Math.sqrt(s);
+}
+const toScore = (d: number) => Math.round(Math.max(0, Math.min(100, (1 - d) * 100)));
 
 function parseFaceMatch(raw: string | null): { matchScore: number; isMatch: boolean; livenessDetected: boolean } | null {
   if (!raw) return null;
@@ -60,7 +71,9 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     // Vision runs 100% through the project's own provider keys (sovereign shim).
     // No Lovable AI credits are ever consumed.
-    if (!sovereignKey() && !nvidiaKey()) {
+    const preParsed = await req.clone().json().catch(() => ({}));
+    const hasDescriptor = Array.isArray(preParsed?.descriptor);
+    if (!hasDescriptor && !sovereignKey() && !nvidiaKey()) {
       console.error('[face-verification] no vision provider configured');
       return new Response(
         JSON.stringify({ error: 'Face verification service is not configured. Ask an admin to add an AI provider key in backend settings.' }),
@@ -87,7 +100,7 @@ serve(async (req) => {
       );
     }
     
-    const { operation, imageData, email } = parseResult.data;
+    const { operation, imageData, email, descriptor, identityDescriptor } = parseResult.data;
 
     console.log('Face verification operation:', operation);
 
@@ -209,6 +222,37 @@ serve(async (req) => {
 
     switch (operation) {
       case 'enroll_face': {
+        if (descriptor) {
+          let identityMatch: number | null = null;
+          if (identityDescriptor) {
+            const d = dist(descriptor, identityDescriptor);
+            identityMatch = toScore(d);
+            if (d > ENROLL_IDENTITY_MATCH) {
+              return new Response(JSON.stringify({ error: "Your face scan doesn't match your identity photo. Upload a clear passport-style photo of yourself, then try again." }),
+                { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+            }
+          }
+          const { data: prev } = await supabase.from('user_security_settings').select('face_verification_data').eq('user_id', verifiedUserId).maybeSingle();
+          const { error } = await supabase.from('user_security_settings').upsert({
+            user_id: verifiedUserId,
+            face_verification_enabled: true,
+            face_verification_data: {
+              ...(prev?.face_verification_data ?? {}),
+              enrolled_at: new Date().toISOString(),
+              version: '2.0-on-device',
+              scan_descriptor: descriptor,
+              identity_descriptor: identityDescriptor ?? null,
+            },
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'user_id' });
+          if (error) throw error;
+          await supabase.from('security_audit_log').insert({
+            user_id: verifiedUserId, event_type: 'face_verification_enrolled', event_status: 'success',
+            metadata: { method: 'on-device', identity_photo: Boolean(identityDescriptor), identity_match: identityMatch },
+          });
+          return new Response(JSON.stringify({ success: true, message: 'Face enrolled successfully', method: 'on-device', identityLinked: Boolean(identityDescriptor) }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
         if (!imageData) {
           return new Response(
             JSON.stringify({ error: 'A camera image is required for face enrollment.' }),
@@ -349,6 +393,31 @@ serve(async (req) => {
           );
         }
 
+        const fv = settings.face_verification_data as Record<string, any>;
+        if (descriptor && Array.isArray(fv.scan_descriptor)) {
+          const dScan = dist(descriptor, fv.scan_descriptor);
+          const dId = Array.isArray(fv.identity_descriptor) ? dist(descriptor, fv.identity_descriptor) : null;
+          const ok = dScan <= SCAN_MATCH && (dId === null || dId <= IDENTITY_MATCH);
+          const matchScore = toScore(dId === null ? dScan : Math.max(dScan, dId));
+          const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || req.headers.get('x-real-ip') || 'unknown';
+          await supabase.from('face_login_attempts').insert({ email: email!.toLowerCase(), ip_address: ip, success: ok, failure_reason: ok ? null : 'face_mismatch' });
+          await supabase.from('security_audit_log').insert({
+            user_id: verifiedUserId, event_type: 'face_login_attempt', event_status: ok ? 'success' : 'failed',
+            metadata: { method: 'on-device', scan_distance: Number(dScan.toFixed(3)), identity_distance: dId === null ? null : Number(dId.toFixed(3)) },
+          });
+          if (!ok) {
+            return new Response(JSON.stringify({ success: false, verified: false, matchScore, error: 'Face verification failed' }),
+              { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+          }
+          const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({ type: 'magiclink', email: email! });
+          if (linkError) throw new Error('Failed to generate authentication token');
+          return new Response(JSON.stringify({ success: true, verified: true, matchScore, method: 'on-device', token: linkData.properties?.hashed_token, userId: verifiedUserId }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+        if (!sovereignKey() && !nvidiaKey()) {
+          return new Response(JSON.stringify({ error: 'Please set up face sign-in again to use the new on-device check.' }),
+            { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
         const loginPrompt = `Secure face login. Compare the live face in this image against this enrolled facial description: ${JSON.stringify(settings.face_verification_data.analysis)}. Ignore hair, clothes, glasses and aging differences. Return ONLY JSON: {"match_score":0-100,"is_match":boolean,"liveness_detected":boolean}. Be strict; do not match from skin tone or age alone.`;
         const verificationResult = await visionWithFallback(imageData, loginPrompt, 220);
         const parsedMatch = parseFaceMatch(verificationResult);
