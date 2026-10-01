@@ -602,7 +602,7 @@ const AuthPage = () => {
                 >
                   {isSignUp
                     ? 'Already have an account? Sign in'
-                    : 'Explore M\'Mora — sign up now'
+                    : 'Explore M\'Mora — sign up now..'
                   }
                 </button>
               </div>
