@@ -48,7 +48,16 @@ export async function enrollWithIdentity(uid: string, descriptor: number[]): Pro
     const { getVaultStatus, refreshIdentitySignedUrl } = await import('@/services/zoeIdentityVault');
     const status = await getVaultStatus(uid);
     const url = status.hasVaultPhoto ? await refreshIdentitySignedUrl(uid) : null;
-    if (url) { const r = await faceDescriptor(url); if (r.ok) identityDescriptor = r.descriptor; }
+    if (url) {
+      const r = await faceDescriptor(url);
+      if (r.ok) {
+        const { faceDistance } = await import('@/lib/onDeviceFace');
+        if (faceDistance(descriptor, r.descriptor) > 0.6) {
+          return { ok: false, message: "Your face scan doesn't match your saved identity photo. Upload a clear passport-style photo of yourself, or scan again in good light." };
+        }
+        identityDescriptor = r.descriptor;
+      }
+    }
   } catch { /* identity photo optional */ }
   const { data, error } = await supabase.functions.invoke('face-verification', {
     body: { operation: 'enroll_face', descriptor, identityDescriptor },
