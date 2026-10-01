@@ -482,7 +482,7 @@ const ChatPage = () => {
 
   return (
     <FeatureAnnouncementWrapper featureId="direct-messages">
-      <div className="min-h-screen chat-warm-surface flex flex-col pb-20">
+      <div className="min-h-screen chat-warm-surface flex flex-col pb-20 pt-[60px]">
         {/* Chat Header with Back Button */}
         <div className="fixed top-0 left-0 right-0 chat-warm-surface border-b border-border px-3 py-1.5 flex items-center space-x-3 z-50">
           <Button
