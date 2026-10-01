@@ -47,13 +47,18 @@ export const PersonalGrowthOnboarding: React.FC<Props> = ({
   const [frequency, setFrequency] = useState(5);
   const [saving, setSaving] = useState(false);
 
+  // Reset only when the window opens. Depending on the default-array props
+  // re-ran this on every render, wiping each tap so nothing could be selected.
+  const initialRef = React.useRef({ initialTopics, initialStyles, initialFrequency });
+  initialRef.current = { initialTopics, initialStyles, initialFrequency };
   useEffect(() => {
     if (!open) return;
+    const init = initialRef.current;
     setStep(1);
-    setTopics([...initialTopics]);
-    setStyles(sanitizeStyles(initialStyles));
-    setFrequency(Math.max(1, Math.min(5, initialFrequency)));
-  }, [open, initialTopics, initialStyles, initialFrequency]);
+    setTopics([...init.initialTopics]);
+    setStyles(sanitizeStyles(init.initialStyles));
+    setFrequency(Math.max(1, Math.min(5, init.initialFrequency)));
+  }, [open]);
 
   const toggleStyle = (id: ReflectionStyle) =>
     setStyles((prev) => (prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]));
@@ -121,6 +126,8 @@ export const PersonalGrowthOnboarding: React.FC<Props> = ({
    * permanently empty. Snooze for this session instead and ask again later.
    */
   const dismiss = () => {
+    // Closing the onboarding window counts as a decision: never ask again.
+    if (mode === 'onboarding') { void skip(); return; }
     try { sessionStorage.setItem(SNOOZE_KEY, '1'); } catch { /* private mode */ }
     void logGrowthAudit('onboarding_dismissed', { step, paused: false, snoozed: true });
     onOpenChange(false);
