@@ -347,7 +347,7 @@ const AuthPage = () => {
         className="w-full max-w-md xxs:max-w-[calc(100%-1rem)] xs:max-w-sm sm:max-w-md md:max-w-lg lg:max-w-md xl:max-w-lg 2xl:max-w-xl 4k:max-w-2xl"
       >
         {/* Logo and Header - Responsive */}
-        <div className="text-center mb-6 xxs:mb-4 xs:mb-6 sm:mb-8 md:mb-10">
+        <div className="text-center mb-3 xxs:mb-2 xs:mb-3 sm:mb-4 md:mb-5">
           <div className={cn(
             "mx-auto flex items-center justify-center",
             "w-12 h-12 xxs:w-12 xxs:h-12 xs:w-14 xs:h-14 sm:w-16 sm:h-16 md:w-20 md:h-20",
@@ -390,8 +390,8 @@ const AuthPage = () => {
             "lg:p-6 xl:p-8 2xl:p-10 4k:p-12"
           )}>
             <form onSubmit={handleSubmit} className={cn(
-              "space-y-3 xxs:space-y-3 xs:space-y-4 sm:space-y-4 md:space-y-5",
-              "lg:space-y-4 xl:space-y-5 2xl:space-y-6 4k:space-y-8"
+              "space-y-1.5 xxs:space-y-1.5 xs:space-y-2 sm:space-y-2 md:space-y-2.5",
+              "lg:space-y-2 xl:space-y-2.5 2xl:space-y-3 4k:space-y-4"
             )}>
               {isSignUp && (
                 <>
@@ -405,8 +405,8 @@ const AuthPage = () => {
                     required={isSignUp}
                     className={cn(
                       "bg-transparent border-0 shadow-none rounded-none px-10 text-center text-white placeholder:text-white/80 caret-white focus-visible:ring-0 focus-visible:ring-offset-0",
-                      "h-10 xxs:h-10 xs:h-11 sm:h-12 md:h-14",
-                      "lg:h-12 xl:h-14 2xl:h-16 4k:h-20",
+                      "h-9 xxs:h-9 xs:h-9 sm:h-10 md:h-10",
+                      "lg:h-10 xl:h-10 2xl:h-12 4k:h-14",
                       "text-sm xxs:text-sm xs:text-base sm:text-base md:text-lg",
                       "lg:text-base xl:text-lg 2xl:text-xl 4k:text-2xl"
                     )}
@@ -421,8 +421,8 @@ const AuthPage = () => {
                     required={isSignUp}
                     className={cn(
                       "bg-transparent border-0 shadow-none rounded-none px-10 text-center text-white placeholder:text-white/80 caret-white focus-visible:ring-0 focus-visible:ring-offset-0",
-                      "h-10 xxs:h-10 xs:h-11 sm:h-12 md:h-14",
-                      "lg:h-12 xl:h-14 2xl:h-16 4k:h-20",
+                      "h-9 xxs:h-9 xs:h-9 sm:h-10 md:h-10",
+                      "lg:h-10 xl:h-10 2xl:h-12 4k:h-14",
                       "text-sm xxs:text-sm xs:text-base sm:text-base md:text-lg",
                       "lg:text-base xl:text-lg 2xl:text-xl 4k:text-2xl"
                     )}
@@ -441,8 +441,8 @@ const AuthPage = () => {
                 required
                 className={cn(
                   "bg-transparent border-0 shadow-none rounded-none px-10 text-center text-white placeholder:text-white/80 caret-white focus-visible:ring-0 focus-visible:ring-offset-0",
-                  "h-10 xxs:h-10 xs:h-11 sm:h-12 md:h-14",
-                  "lg:h-12 xl:h-14 2xl:h-16 4k:h-20",
+                  "h-9 xxs:h-9 xs:h-9 sm:h-10 md:h-10",
+                  "lg:h-10 xl:h-10 2xl:h-12 4k:h-14",
                   "text-sm xxs:text-sm xs:text-base sm:text-base md:text-lg",
                   "lg:text-base xl:text-lg 2xl:text-xl 4k:text-2xl"
                 )}
@@ -459,8 +459,8 @@ const AuthPage = () => {
                   required
                   className={cn(
                     "bg-transparent border-0 shadow-none rounded-none px-10 text-center text-white placeholder:text-white/80 caret-white focus-visible:ring-0 focus-visible:ring-offset-0 pr-10",
-                    "h-10 xxs:h-10 xs:h-11 sm:h-12 md:h-14",
-                    "lg:h-12 xl:h-14 2xl:h-16 4k:h-20",
+                    "h-9 xxs:h-9 xs:h-9 sm:h-10 md:h-10",
+                    "lg:h-10 xl:h-10 2xl:h-12 4k:h-14",
                     "text-sm xxs:text-sm xs:text-base sm:text-base md:text-lg",
                     "lg:text-base xl:text-lg 2xl:text-xl 4k:text-2xl"
                   )}
@@ -497,8 +497,8 @@ const AuthPage = () => {
                 type="submit"
                 className={cn(
                   "w-full gap-2 bg-transparent border-0 shadow-none text-white hover:bg-transparent hover:text-white/80 whitespace-normal text-center",
-                  "h-10 xxs:h-10 xs:h-11 sm:h-12 md:h-14",
-                  "lg:h-12 xl:h-14 2xl:h-16 4k:h-20",
+                  "h-9 xxs:h-9 xs:h-9 sm:h-10 md:h-10",
+                  "lg:h-10 xl:h-10 2xl:h-12 4k:h-14",
                   "text-sm xxs:text-sm xs:text-base sm:text-base md:text-lg",
                   "lg:text-base xl:text-lg 2xl:text-xl 4k:text-2xl"
                 )}
@@ -511,9 +511,9 @@ const AuthPage = () => {
                 type="button"
                 variant="ghost"
                 className={cn(
-                  "w-full gap-2 rounded-full border-0 bg-[#ffffff] text-[#1f1f1f] hover:bg-[#f2f2f2] hover:text-[#1f1f1f] font-medium",
-                  "h-10 xxs:h-10 xs:h-11 sm:h-12 md:h-14",
-                  "lg:h-12 xl:h-14 2xl:h-16 4k:h-20",
+                  "w-3/4 mx-auto flex gap-2 rounded-full border-0 bg-[#ffffff] text-[#1f1f1f] hover:bg-[#f2f2f2] hover:text-[#1f1f1f] font-medium",
+                  "h-9 xxs:h-9 xs:h-9 sm:h-10 md:h-10",
+                  "lg:h-10 xl:h-10 2xl:h-12 4k:h-14",
                   "text-sm xxs:text-sm xs:text-base sm:text-base md:text-lg",
                   "lg:text-base xl:text-lg 2xl:text-xl 4k:text-2xl"
                 )}
@@ -531,8 +531,8 @@ const AuthPage = () => {
                     variant="ghost"
                     className={cn(
                       "w-full gap-2 bg-transparent border-0 shadow-none text-white hover:bg-transparent hover:text-white/80 whitespace-normal text-center",
-                      "h-10 xxs:h-10 xs:h-11 sm:h-12 md:h-14",
-                      "lg:h-12 xl:h-14 2xl:h-16 4k:h-20",
+                      "h-9 xxs:h-9 xs:h-9 sm:h-10 md:h-10",
+                      "lg:h-10 xl:h-10 2xl:h-12 4k:h-14",
                       "text-sm xxs:text-sm xs:text-base sm:text-base md:text-lg",
                       "lg:text-base xl:text-lg 2xl:text-xl 4k:text-2xl"
                     )}
@@ -550,8 +550,8 @@ const AuthPage = () => {
                     variant="ghost"
                     className={cn(
                       "w-full gap-2 bg-transparent border-0 shadow-none text-white hover:bg-transparent hover:text-white/80 whitespace-normal text-center",
-                      "h-10 xxs:h-10 xs:h-11 sm:h-12 md:h-14",
-                      "lg:h-12 xl:h-14 2xl:h-16 4k:h-20",
+                      "h-9 xxs:h-9 xs:h-9 sm:h-10 md:h-10",
+                      "lg:h-10 xl:h-10 2xl:h-12 4k:h-14",
                       "text-sm xxs:text-sm xs:text-base sm:text-base md:text-lg",
                       "lg:text-base xl:text-lg 2xl:text-xl 4k:text-2xl"
                     )}
@@ -574,8 +574,8 @@ const AuthPage = () => {
                     variant="ghost"
                     className={cn(
                       "w-full gap-2 bg-transparent border-0 shadow-none text-white hover:bg-transparent hover:text-white/80 whitespace-normal text-center",
-                      "h-10 xxs:h-10 xs:h-11 sm:h-12 md:h-14",
-                      "lg:h-12 xl:h-14 2xl:h-16 4k:h-20",
+                      "h-9 xxs:h-9 xs:h-9 sm:h-10 md:h-10",
+                      "lg:h-10 xl:h-10 2xl:h-12 4k:h-14",
                       "text-sm xxs:text-sm xs:text-base sm:text-base md:text-lg",
                       "lg:text-base xl:text-lg 2xl:text-xl 4k:text-2xl"
                     )}
@@ -592,7 +592,7 @@ const AuthPage = () => {
             </form>
 
             <div className={cn(
-              "mt-4 xxs:mt-4 xs:mt-5 sm:mt-6 md:mt-8",
+              "mt-2 xxs:mt-2 xs:mt-2.5 sm:mt-3 md:mt-4",
               "space-y-2 xxs:space-y-2 xs:space-y-3 sm:space-y-3",
               "text-center"
             )}>
