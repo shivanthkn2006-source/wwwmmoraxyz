@@ -6,9 +6,11 @@ interface ImageViewerProps {
   imageUrl: string;
   onClose: () => void;
   alt?: string;
+  /** Plain white icons, no button fill (chat). */
+  plainButtons?: boolean;
 }
 
-const ImageViewer: React.FC<ImageViewerProps> = ({ imageUrl, onClose, alt = 'Full-size image' }) => {
+const ImageViewer: React.FC<ImageViewerProps> = ({ imageUrl, onClose, alt = 'Full-size image', plainButtons = false }) => {
   const downloadImage = async () => {
     try {
       const response = await fetch(imageUrl);
@@ -35,10 +37,10 @@ const ImageViewer: React.FC<ImageViewerProps> = ({ imageUrl, onClose, alt = 'Ful
       onClick={onClose}
     >
       <div className="absolute top-4 right-4 z-10 flex gap-2">
-        <Button variant="secondary" size="icon" onClick={(event) => { event.stopPropagation(); void downloadImage(); }} aria-label="Download full-size image">
+        <Button variant={plainButtons ? "ghost" : "secondary"} size="icon" className={plainButtons ? "bg-transparent hover:bg-transparent text-white hover:text-white border-0 shadow-none" : undefined} onClick={(event) => { event.stopPropagation(); void downloadImage(); }} aria-label="Download full-size image">
           <Download className="w-5 h-5" />
         </Button>
-        <Button variant="secondary" size="icon" onClick={onClose} aria-label="Close full-size image">
+        <Button variant={plainButtons ? "ghost" : "secondary"} size="icon" className={plainButtons ? "bg-transparent hover:bg-transparent text-white hover:text-white border-0 shadow-none" : undefined} onClick={onClose} aria-label="Close full-size image">
           <X className="w-5 h-5" />
         </Button>
       </div>
