@@ -340,7 +340,7 @@ const AuthPage = () => {
   return (
     <>
       <PageSeo title={ROUTE_SEO['/auth'].title} description={ROUTE_SEO['/auth'].description} path="/auth" />
-      <div className="min-h-screen bg-background flex items-center justify-center p-responsive safe-area-pb safe-area-pt">
+      <div className="min-h-screen surface-warm-tan text-white flex items-center justify-center p-responsive safe-area-pb safe-area-pt">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -349,19 +349,19 @@ const AuthPage = () => {
         {/* Logo and Header - Responsive */}
         <div className="text-center mb-6 xxs:mb-4 xs:mb-6 sm:mb-8 md:mb-10">
           <div className={cn(
-            "mx-auto bg-primary rounded-2xl flex items-center justify-center shadow-lg",
+            "mx-auto flex items-center justify-center",
             "w-12 h-12 xxs:w-12 xxs:h-12 xs:w-14 xs:h-14 sm:w-16 sm:h-16 md:w-20 md:h-20",
             "lg:w-16 lg:h-16 xl:w-20 xl:h-20 2xl:w-24 2xl:h-24 4k:w-32 4k:h-32",
             "mb-3 xxs:mb-3 xs:mb-4 sm:mb-4"
           )}>
             <span className={cn(
-              "font-bold text-primary-foreground",
+              "font-bold text-white",
               "text-lg xxs:text-lg xs:text-xl sm:text-2xl md:text-3xl",
               "lg:text-2xl xl:text-3xl 2xl:text-4xl 4k:text-5xl"
             )}>M</span>
           </div>
           <h1 className={cn(
-            "font-bold text-foreground",
+            "font-bold text-white",
             "text-xl xxs:text-xl xs:text-2xl sm:text-2xl md:text-3xl",
             "lg:text-2xl xl:text-3xl 2xl:text-4xl 4k:text-5xl",
             "mb-1 xxs:mb-1 xs:mb-2 sm:mb-2"
@@ -369,14 +369,14 @@ const AuthPage = () => {
             {isSignUp ? 'Join M\'Mora' : 'Welcome Back'}
           </h1>
           <p className={cn(
-            "text-muted-foreground",
+            "text-white",
             "text-xs xxs:text-xs xs:text-sm sm:text-base md:text-lg",
             "lg:text-base xl:text-lg 2xl:text-xl 4k:text-2xl"
           )}>
             {isSignUp ? 'Create your account to get started' : 'Sign in to continue'}
           </p>
           {referralCode && (
-            <p className="mt-2 text-xs text-muted-foreground">
+            <p className="mt-2 text-xs text-white">
               Invite code <span className="font-mono">{referralCode}</span> will be applied to your account.
             </p>
           )}
@@ -384,8 +384,8 @@ const AuthPage = () => {
 
 
         {/* Auth Card - Responsive */}
-        <Card className="bg-card border-border responsive-card">
-          <CardContent className={cn(
+        <div className="bg-transparent border-0 shadow-none">
+          <div className={cn(
             "p-4 xxs:p-4 xs:p-5 sm:p-6 md:p-8",
             "lg:p-6 xl:p-8 2xl:p-10 4k:p-12"
           )}>
@@ -404,7 +404,7 @@ const AuthPage = () => {
                     autoComplete="name"
                     required={isSignUp}
                     className={cn(
-                      "bg-input border-border",
+                      "bg-transparent border-0 shadow-none rounded-none px-1 text-white placeholder:text-white/80 caret-white focus-visible:ring-0 focus-visible:ring-offset-0",
                       "h-10 xxs:h-10 xs:h-11 sm:h-12 md:h-14",
                       "lg:h-12 xl:h-14 2xl:h-16 4k:h-20",
                       "text-sm xxs:text-sm xs:text-base sm:text-base md:text-lg",
@@ -420,7 +420,7 @@ const AuthPage = () => {
                     autoComplete="username"
                     required={isSignUp}
                     className={cn(
-                      "bg-input border-border",
+                      "bg-transparent border-0 shadow-none rounded-none px-1 text-white placeholder:text-white/80 caret-white focus-visible:ring-0 focus-visible:ring-offset-0",
                       "h-10 xxs:h-10 xs:h-11 sm:h-12 md:h-14",
                       "lg:h-12 xl:h-14 2xl:h-16 4k:h-20",
                       "text-sm xxs:text-sm xs:text-base sm:text-base md:text-lg",
@@ -437,9 +437,10 @@ const AuthPage = () => {
                 value={formData.email}
                 onChange={handleInputChange}
                 autoComplete="email"
+                autoFocus
                 required
                 className={cn(
-                  "bg-input border-border",
+                  "bg-transparent border-0 shadow-none rounded-none px-1 text-white placeholder:text-white/80 caret-white focus-visible:ring-0 focus-visible:ring-offset-0",
                   "h-10 xxs:h-10 xs:h-11 sm:h-12 md:h-14",
                   "lg:h-12 xl:h-14 2xl:h-16 4k:h-20",
                   "text-sm xxs:text-sm xs:text-base sm:text-base md:text-lg",
@@ -457,7 +458,7 @@ const AuthPage = () => {
                   autoComplete={isSignUp ? 'new-password' : 'current-password'}
                   required
                   className={cn(
-                    "bg-input border-border pr-10",
+                    "bg-transparent border-0 shadow-none rounded-none px-1 text-white placeholder:text-white/80 caret-white focus-visible:ring-0 focus-visible:ring-offset-0 pr-10",
                     "h-10 xxs:h-10 xs:h-11 sm:h-12 md:h-14",
                     "lg:h-12 xl:h-14 2xl:h-16 4k:h-20",
                     "text-sm xxs:text-sm xs:text-base sm:text-base md:text-lg",
@@ -474,13 +475,13 @@ const AuthPage = () => {
                 >
                   {showPassword ? (
                     <EyeOff className={cn(
-                      "text-muted-foreground",
+                      "text-white",
                       "h-4 w-4 xxs:h-4 xxs:w-4 xs:h-5 xs:w-5 sm:h-5 sm:w-5 md:h-6 md:w-6",
                       "lg:h-5 lg:w-5 xl:h-6 xl:w-6 2xl:h-7 2xl:w-7 4k:h-8 4k:w-8"
                     )} />
                   ) : (
                     <Eye className={cn(
-                      "text-muted-foreground",
+                      "text-white",
                       "h-4 w-4 xxs:h-4 xxs:w-4 xs:h-5 xs:w-5 sm:h-5 sm:w-5 md:h-6 md:w-6",
                       "lg:h-5 lg:w-5 xl:h-6 xl:w-6 2xl:h-7 2xl:w-7 4k:h-8 4k:w-8"
                     )} />
@@ -495,7 +496,7 @@ const AuthPage = () => {
               <Button
                 type="submit"
                 className={cn(
-                  "w-full bg-primary text-primary-foreground hover:bg-primary/90",
+                  "w-full gap-2 bg-transparent border-0 shadow-none text-white hover:bg-transparent hover:text-white/80 whitespace-normal text-center",
                   "h-10 xxs:h-10 xs:h-11 sm:h-12 md:h-14",
                   "lg:h-12 xl:h-14 2xl:h-16 4k:h-20",
                   "text-sm xxs:text-sm xs:text-base sm:text-base md:text-lg",
@@ -508,9 +509,9 @@ const AuthPage = () => {
 
               <Button
                 type="button"
-                variant="outline"
+                variant="ghost"
                 className={cn(
-                  "w-full gap-2 border-primary/30 hover:bg-primary/10",
+                  "w-full gap-2 rounded-full border-0 bg-[#ffffff] text-[#1f1f1f] hover:bg-[#f2f2f2] hover:text-[#1f1f1f] font-medium",
                   "h-10 xxs:h-10 xs:h-11 sm:h-12 md:h-14",
                   "lg:h-12 xl:h-14 2xl:h-16 4k:h-20",
                   "text-sm xxs:text-sm xs:text-base sm:text-base md:text-lg",
@@ -527,9 +528,9 @@ const AuthPage = () => {
                 <>
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="ghost"
                     className={cn(
-                      "w-full gap-2 border-primary/30 hover:bg-primary/10",
+                      "w-full gap-2 bg-transparent border-0 shadow-none text-white hover:bg-transparent hover:text-white/80 whitespace-normal text-center",
                       "h-10 xxs:h-10 xs:h-11 sm:h-12 md:h-14",
                       "lg:h-12 xl:h-14 2xl:h-16 4k:h-20",
                       "text-sm xxs:text-sm xs:text-base sm:text-base md:text-lg",
@@ -546,9 +547,9 @@ const AuthPage = () => {
 
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="ghost"
                     className={cn(
-                      "w-full gap-2 border-primary/30 hover:bg-primary/10",
+                      "w-full gap-2 bg-transparent border-0 shadow-none text-white hover:bg-transparent hover:text-white/80 whitespace-normal text-center",
                       "h-10 xxs:h-10 xs:h-11 sm:h-12 md:h-14",
                       "lg:h-12 xl:h-14 2xl:h-16 4k:h-20",
                       "text-sm xxs:text-sm xs:text-base sm:text-base md:text-lg",
@@ -565,14 +566,14 @@ const AuthPage = () => {
                         "md:w-6 md:h-6 lg:w-5 lg:h-5 xl:w-6 xl:h-6"
                       )} />
                     )}
-                    {passkeySupported ? `${passkeyLabel} (recommended)` : 'Passkeys unavailable in this browser'}
+                    {passkeySupported ? `${passkeyLabel}` : 'Passkeys unavailable in this browser'}
                   </Button>
                   
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="ghost"
                     className={cn(
-                      "w-full gap-2 border-primary/30 hover:bg-primary/10 text-primary",
+                      "w-full gap-2 bg-transparent border-0 shadow-none text-white hover:bg-transparent hover:text-white/80 whitespace-normal text-center",
                       "h-10 xxs:h-10 xs:h-11 sm:h-12 md:h-14",
                       "lg:h-12 xl:h-14 2xl:h-16 4k:h-20",
                       "text-sm xxs:text-sm xs:text-base sm:text-base md:text-lg",
@@ -600,7 +601,7 @@ const AuthPage = () => {
                   type="button"
                   onClick={() => navigate('/password-recovery')}
                   className={cn(
-                    "text-white/70 hover:text-white inline-flex items-center gap-1",
+                    "text-white hover:text-white/80 inline-flex items-center gap-1",
                     "text-xs xxs:text-xs xs:text-sm sm:text-sm md:text-base",
                     "lg:text-sm xl:text-base 2xl:text-lg 4k:text-xl"
                   )}
@@ -610,7 +611,7 @@ const AuthPage = () => {
               )}
               {!isSignUp && (
                 <div>
-                  <button type="button" onClick={() => setShowRecovery(true)} className="text-white/70 hover:text-white text-xs xs:text-sm md:text-base">
+                  <button type="button" onClick={() => setShowRecovery(true)} className="text-white hover:text-white/80 text-xs xs:text-sm md:text-base">
                     Use a recovery code
                   </button>
                   <RecoveryCodeSignIn open={showRecovery} onOpenChange={setShowRecovery} defaultEmail={formData.email} />
@@ -633,8 +634,8 @@ const AuthPage = () => {
                 </button>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </motion.div>
 
       <FaceLoginModal
