@@ -370,7 +370,6 @@ export const useZoeChatVision = () => {
       });
 
       console.log('[ChatVision] ✓ Camera started successfully, beginning analysis loop');
-      toast.success('👁️ God Eye activated - Zoe can see you now');
       
       // Log to Zoe core that God Eye is now active
       window.dispatchEvent(new CustomEvent('zoe-god-eye-activated', {

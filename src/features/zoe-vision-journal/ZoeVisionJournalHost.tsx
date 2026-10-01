@@ -58,6 +58,7 @@ export async function captureVisionJournalEntry(userId: string): Promise<boolean
   if (!(await cameraGranted())) return false;
   const frame = await grabFrame();
   if (!frame) return false;
+  void import('@/lib/faceIdAuto').then((m) => m.maybeRefreshFace(userId, frame)).catch(() => {});
   const { data } = await supabase.functions.invoke('zoe-sovereign', { body: { action: 'vision', frame } });
   const a = data?.success ? data.analysis : null;
   const summary = String(a?.summary ?? '').trim();
