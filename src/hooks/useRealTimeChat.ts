@@ -125,6 +125,10 @@ export const useRealTimeChat = () => {
     }
 
     setChatUsers(friends);
+    // Opening the app/chat list counts as delivery for anything waiting.
+    friends.filter(f => (f.unread_count ?? 0) > 0).forEach(f => {
+      void supabase.rpc('mark_messages_delivered', { p_user_id: user.id, p_sender_id: f.user_id });
+    });
     setLoading(false);
   }, [user]);
 
@@ -437,6 +441,8 @@ export const useRealTimeChat = () => {
               [chatId]: [...(prev[chatId] || []), newMessage]
             };
           });
+          // Message reached this device: mark it delivered (sender sees green ticks).
+          void supabase.rpc('mark_messages_delivered', { p_user_id: user.id, p_sender_id: newMessage.sender_id });
           fetchChatUsers(); // Refresh to update last message and unread count
           
           // Trigger voice notification for new message
