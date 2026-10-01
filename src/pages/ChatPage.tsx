@@ -757,11 +757,11 @@ const ChatPage = () => {
                       {isOwn && (
                         <>
                           {message.read ? (
-                            <CheckCheck className="w-3 h-3 text-blue-500" />
+                            <CheckCheck className="w-3.5 h-3.5" style={{ color: 'hsl(205 100% 55%)' }} aria-label="Read" />
                           ) : message.delivered ? (
-                            <CheckCheck className="w-3 h-3 opacity-50" />
+                            <CheckCheck className="w-3.5 h-3.5" style={{ color: 'hsl(142 76% 45%)' }} aria-label="Delivered" />
                           ) : (
-                            <Check className="w-3 h-3 opacity-50" />
+                            <Check className="w-3.5 h-3.5 text-white" aria-label="Sent, not delivered" />
                           )}
                         </>
                       )}
