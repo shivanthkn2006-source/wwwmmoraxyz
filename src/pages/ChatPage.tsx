@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { compressImage } from '@/utils/mediaCompression';
 import ImageViewer from '@/components/ImageViewer';
+import { ChatSignedImage } from '@/components/chat/ChatSignedImage';
 import { toast } from 'sonner';
 import { FeatureAnnouncementWrapper } from '@/components/FeatureAnnouncementWrapper';
 import TypingIndicator from '@/components/TypingIndicator';
@@ -483,7 +484,7 @@ const ChatPage = () => {
     <FeatureAnnouncementWrapper featureId="direct-messages">
       <div className="min-h-screen chat-warm-surface flex flex-col pb-20">
         {/* Chat Header with Back Button */}
-        <div className="sticky top-0 chat-warm-surface border-b border-border p-4 flex items-center space-x-3 z-50">
+        <div className="fixed top-0 left-0 right-0 chat-warm-surface border-b border-border px-3 py-1.5 flex items-center space-x-3 z-50">
           <Button
             variant="ghost"
             size="sm"
@@ -514,13 +515,13 @@ const ChatPage = () => {
               <StatusIconBadge status={selectedUser?.status} size="sm" />
             </div>
 
-            <div className="flex-1">
-              <p className="font-semibold text-foreground">{selectedUser?.display_name}</p>
-              <p className="text-xs text-muted-foreground">
+            <div className="flex-1 min-w-0 leading-tight">
+              <p className="font-semibold text-sm text-foreground truncate">{selectedUser?.display_name}</p>
+              <p className="text-xs text-muted-foreground truncate">
                 @{selectedUser?.username}
               </p>
               {selectedUser?.status && selectedUser.status !== 'offline' && (
-                <p className="text-[10px] text-primary/80 capitalize">
+                <p className="text-[10px] text-primary/80 capitalize truncate">
                   {selectedUser.status === 'online' && '🟢 Online'}
                   {selectedUser.status === 'away' && '⏰ Away'}
                   {selectedUser.status === 'cooking' && '🍳 Cooking'}
@@ -724,12 +725,7 @@ const ChatPage = () => {
                       </div>
                     )}
                     {message.media_type === 'image' && message.media_url && (
-                      <img
-                        src={message.media_url}
-                        alt="Message attachment"
-                        className="rounded-lg mb-2 max-w-full cursor-pointer hover:opacity-90 transition-opacity"
-                        onClick={() => setViewerImage(message.media_url)}
-                      />
+                      <ChatSignedImage url={message.media_url} onOpen={setViewerImage} />
                     )}
                     {message.content && (
                       <p className="text-sm break-words whitespace-pre-wrap">{message.content}</p>
@@ -849,7 +845,7 @@ const ChatPage = () => {
       {showScrollButton && (
         <Button
           onClick={scrollToBottom}
-          className="fixed bottom-20 right-5 rounded-full w-10 h-10 shadow-lg bg-black/80 hover:bg-black/90 hover:scale-110 transition-all duration-300 text-white z-30"
+          className="fixed bottom-20 right-5 w-10 h-10 bg-transparent hover:bg-transparent border-0 shadow-none text-white z-30"
           size="icon"
         >
           <ArrowDown className="w-5 h-5" />
@@ -974,6 +970,7 @@ const ChatPage = () => {
         <ImageViewer
           imageUrl={viewerImage}
           onClose={() => setViewerImage(null)}
+          plainButtons
         />
       )}
 
@@ -981,6 +978,7 @@ const ChatPage = () => {
         <ImageViewer
           imageUrl={selectedUser.profile_photo_url}
           onClose={() => setShowProfileViewer(false)}
+          plainButtons
         />
       )}
     </div>
