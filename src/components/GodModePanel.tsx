@@ -352,7 +352,7 @@ export const GodModePanel: React.FC<{ isOpen: boolean; onClose: () => void }> = 
                   Last scan: {new Date(health.lastScan).toLocaleString()}
                 </div>
                 <Button 
-                  onClick={scanPlatform} 
+                  onClick={() => void scanPlatform(true)} 
                   disabled={isScanning}
                   className="gap-2"
                 >

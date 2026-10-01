@@ -34,7 +34,7 @@ describe('M’Mora profile transparent presentation', () => {
   it('keeps the Profile white-only and transparent without affecting Music Profile', () => {
     expect(css).toContain('.profile-liquid-page');
     expect(css).toContain('.profile-liquid-surface {\n  position: fixed');
-    expect(content).toContain('h-[28rem]');
+    expect(content).toContain('h-[36rem]');
     expect(content).toContain('data-profile-edit');
     expect(css).toContain('--profile-white: 0 0% 100%');
     expect(css).toContain('background: transparent');
