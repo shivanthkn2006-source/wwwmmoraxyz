@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { toast } from 'sonner';
@@ -221,8 +221,14 @@ export const usePlatformHealthMonitor = () => {
   };
 
   // Run full platform scan
-  const scanPlatform = useCallback(async () => {
-    if (isScanning) return;
+  // A ref (not state) guards re-entry: depending on isScanning recreated this
+  // callback after every scan, which re-ran the auto-scan effect in a loop and
+  // stacked "Found N issue(s)" toasts.
+  const scanningRef = useRef(false);
+  const scanPlatform = useCallback(async (manual: unknown = false) => {
+    if (scanningRef.current) return;
+    scanningRef.current = true;
+    const showToast = manual === true;
 
     setIsScanning(true);
     try {
@@ -255,17 +261,18 @@ export const usePlatformHealthMonitor = () => {
         });
       }
 
-      if (issues.length > 0) {
+      if (showToast && issues.length > 0) {
         toast.warning(`Found ${issues.length} issue(s). Health Score: ${score}/100`);
       }
 
     } catch (error) {
       console.error('Platform scan failed:', error);
-      toast.error('Platform scan failed');
+      if (showToast) toast.error('Platform scan failed');
     } finally {
       setIsScanning(false);
+      scanningRef.current = false;
     }
-  }, [isScanning, runDiagnostics, user?.id]);
+  }, [runDiagnostics, user?.id]);
 
   // Generate intelligent suggestions
   const generateSuggestions = (issues: HealthIssue[]): string[] => {
@@ -301,7 +308,7 @@ export const usePlatformHealthMonitor = () => {
     scanPlatform();
 
     // Scan every 5 minutes for continuous monitoring
-    const interval = setInterval(scanPlatform, 5 * 60 * 1000);
+    const interval = setInterval(() => void scanPlatform(), 5 * 60 * 1000);
 
     return () => clearInterval(interval);
   }, [autoScanEnabled, scanPlatform]);
@@ -312,7 +319,7 @@ export const usePlatformHealthMonitor = () => {
     
     if (criticalIssues.length > 0 && autoScanEnabled) {
       // Trigger more frequent scans when critical issues are present
-      const criticalInterval = setInterval(scanPlatform, 2 * 60 * 1000); // Every 2 minutes
+      const criticalInterval = setInterval(() => void scanPlatform(), 2 * 60 * 1000); // Every 2 minutes
       return () => clearInterval(criticalInterval);
     }
   }, [health.issues, autoScanEnabled, scanPlatform]);

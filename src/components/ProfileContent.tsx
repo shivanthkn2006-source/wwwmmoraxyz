@@ -398,7 +398,7 @@ const ProfileContent = () => {
     <>
       {/* Header with Background Wallpaper */}
       <div
-        className="relative h-[28rem] overflow-hidden sm:h-[32rem]"
+        className="relative h-[36rem] overflow-hidden sm:h-[40rem]"
         data-profile-photo
       >
         {profilePhotoUrl && (
