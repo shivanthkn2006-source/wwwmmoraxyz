@@ -12,6 +12,7 @@ import { useAuth } from '@/lib/auth';
 import { compressImage } from '@/utils/mediaCompression';
 import ImageViewer from '@/components/ImageViewer';
 import { ChatSignedImage } from '@/components/chat/ChatSignedImage';
+import { VoiceRecorderButton, VoiceMessagePlayer } from '@/components/chat/ChatVoice';
 import { toast } from 'sonner';
 import { FeatureAnnouncementWrapper } from '@/components/FeatureAnnouncementWrapper';
 import TypingIndicator from '@/components/TypingIndicator';
@@ -261,6 +262,10 @@ const ChatPage = () => {
   const handleDeleteForEveryone = async (messageId: string, message: Message) => {
     if (message.sender_id !== user?.id) {
       toast.error('You can only remove your own messages');
+      return;
+    }
+    if (message.media_type === 'audio' && Date.now() - new Date(message.created_at).getTime() > 5 * 60_000) {
+      toast.error('Voice messages can only be removed for everyone within 5 minutes');
       return;
     }
     const success = await deleteForEveryone(messageId);
@@ -706,23 +711,7 @@ const ChatPage = () => {
                       </div>
                     )}
                     {message.media_type === 'audio' && message.media_url && (
-                      <div className="flex items-center gap-2 min-w-[200px]">
-                        <Button
-                          size="sm"
-                          variant={isOwn ? "secondary" : "ghost"}
-                          className="rounded-full w-8 h-8 p-0"
-                          onClick={() => toggleAudioPlayback(message.media_url!)}
-                        >
-                          {playingAudio === message.media_url ? (
-                            <Pause className="w-4 h-4" />
-                          ) : (
-                            <Play className="w-4 h-4" />
-                          )}
-                        </Button>
-                        <div className="flex-1 h-1 bg-background/20 rounded-full">
-                          <div className="h-full bg-background/40 rounded-full w-1/3" />
-                        </div>
-                      </div>
+                      <VoiceMessagePlayer url={message.media_url} />
                     )}
                     {message.media_type === 'image' && message.media_url && (
                       <ChatSignedImage url={message.media_url} onOpen={setViewerImage} />
@@ -814,7 +803,7 @@ const ChatPage = () => {
                   <Trash2 className="w-4 h-4" />
                   <span>Delete</span>
                 </ContextMenuItem>
-                {isOwn && (
+                {isOwn && (message.media_type !== 'audio' || Date.now() - new Date(message.created_at).getTime() <= 5 * 60_000) && (
                   <ContextMenuItem onClick={() => handleDeleteForEveryone(message.id, message)} className="gap-2 cursor-pointer">
                     <Ban className="w-4 h-4" />
                     <span>Remove for Everyone</span>
@@ -937,6 +926,10 @@ const ChatPage = () => {
                 </span>
               </Button>
             </label>
+            <VoiceRecorderButton
+              userId={user?.id}
+              onSend={async (url) => !!selectedUserId && !!(await sendMessage(selectedUserId, null, url, 'audio'))}
+            />
             <div className="relative flex-1 min-w-0">
               <Input
                 value={messageText}
