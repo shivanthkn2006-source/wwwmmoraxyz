@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS public.search_member_directory(text);

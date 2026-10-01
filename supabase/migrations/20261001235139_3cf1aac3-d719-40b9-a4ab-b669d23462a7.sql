@@ -1,0 +1,1 @@
+GRANT EXECUTE ON FUNCTION public.search_member_directory(text, integer) TO authenticated;
