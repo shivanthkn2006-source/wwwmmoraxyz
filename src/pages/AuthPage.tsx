@@ -590,34 +590,7 @@ const AuthPage = () => {
                 </>
               )}
             </form>
-
-            <div className={cn(
-              "mt-2 xxs:mt-2 xs:mt-2.5 sm:mt-3 md:mt-4",
-              "space-y-2 xxs:space-y-2 xs:space-y-3 sm:space-y-3",
-              "text-center"
-            )}>
-              {!isSignUp && (
-                <button
-                  type="button"
-                  onClick={() => navigate('/password-recovery')}
-                  className={cn(
-                    "text-white hover:text-white/80 inline-flex items-center gap-1",
-                    "text-xs xxs:text-xs xs:text-sm sm:text-sm md:text-base",
-                    "lg:text-sm xl:text-base 2xl:text-lg 4k:text-xl"
-                  )}
-                >
-                  Forgot password?
-                </button>
-              )}
-              {!isSignUp && (
-                <div>
-                  <button type="button" onClick={() => setShowRecovery(true)} className="text-white hover:text-white/80 text-xs xs:text-sm md:text-base">
-                    Use a recovery code
-                  </button>
-                  <RecoveryCodeSignIn open={showRecovery} onOpenChange={setShowRecovery} defaultEmail={formData.email} />
-                </div>
-              )}
-              <div>
+              <div className="mt-1 text-center">
                 <button
                   type="button"
                   onClick={() => setIsSignUp(!isSignUp)}
@@ -629,10 +602,37 @@ const AuthPage = () => {
                 >
                   {isSignUp
                     ? 'Already have an account? Sign in'
-                    : 'Need an account? Sign up'
+                    : 'Explore M\'Mora — sign up now'
                   }
                 </button>
               </div>
+
+            <div className={cn(
+              "mt-2 xxs:mt-2 xs:mt-2.5 sm:mt-3 md:mt-4",
+              "space-y-1 xxs:space-y-1 xs:space-y-1.5 sm:space-y-1.5",
+              "text-center"
+            )}>
+              {!isSignUp && (
+                <button
+                  type="button"
+                  onClick={() => navigate('/password-recovery')}
+                  className={cn(
+                    "text-white hover:text-white/80 inline-flex items-center gap-1 !min-h-0 py-1",
+                    "text-xs xxs:text-xs xs:text-sm sm:text-sm md:text-base",
+                    "lg:text-sm xl:text-base 2xl:text-lg 4k:text-xl"
+                  )}
+                >
+                  Forgot password?
+                </button>
+              )}
+              {!isSignUp && (
+                <div>
+                  <button type="button" onClick={() => setShowRecovery(true)} className="text-white hover:text-white/80 text-xs xs:text-sm md:text-base !min-h-0 py-1">
+                    Use a recovery code
+                  </button>
+                  <RecoveryCodeSignIn open={showRecovery} onOpenChange={setShowRecovery} defaultEmail={formData.email} />
+                </div>
+              )}
             </div>
           </div>
         </div>
