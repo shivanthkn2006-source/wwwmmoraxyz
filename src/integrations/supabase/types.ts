@@ -3424,6 +3424,39 @@ export type Database = {
         }
         Relationships: []
       }
+      face_liveness_challenges: {
+        Row: {
+          consumed_at: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          ip_address: string | null
+          nonce: string
+          purpose: string
+          steps: string[]
+        }
+        Insert: {
+          consumed_at?: string | null
+          created_at?: string
+          expires_at: string
+          id?: string
+          ip_address?: string | null
+          nonce: string
+          purpose: string
+          steps: string[]
+        }
+        Update: {
+          consumed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          ip_address?: string | null
+          nonce?: string
+          purpose?: string
+          steps?: string[]
+        }
+        Relationships: []
+      }
       face_login_attempts: {
         Row: {
           attempted_at: string | null
