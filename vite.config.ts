@@ -58,6 +58,7 @@ export default defineConfig(({ mode }) => ({
       'tailwind-merge',
       'framer-motion',
       'sonner',
+      'recharts',
     ],
   },
   plugins: [
