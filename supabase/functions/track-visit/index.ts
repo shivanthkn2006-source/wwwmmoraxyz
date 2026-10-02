@@ -170,6 +170,10 @@ Deno.serve(async (req) => {
       ip_address: ip, ref_code: b.ref_code ?? null, load_ms: b.load_ms ?? null, ...geo,
     }).select("id").single();
     if (error) return json({ error: error.message }, 500);
+    // Backfill map position on earlier visits from the same address that were stored before positions existed.
+    if (ip && geo.lat != null) {
+      await admin.from("platform_visits").update({ lat: geo.lat, lon: geo.lon }).eq("ip_address", ip).is("lat", null);
+    }
     return json({ id: data.id });
   } catch (e) {
     return json({ error: String(e) }, 500);
