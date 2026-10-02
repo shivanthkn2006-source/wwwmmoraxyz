@@ -50,6 +50,8 @@ const rememberEmail = (value: string) => {
 
 const FaceLoginModal: React.FC<FaceLoginModalProps> = ({ open, onClose, onSuccess }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [livePrompt, setLivePrompt] = useState('');
+  const [liveBusy, setLiveBusy] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [step, setStep] = useState<Step>('email');
@@ -130,6 +132,20 @@ const FaceLoginModal: React.FC<FaceLoginModalProps> = ({ open, onClose, onSucces
   const captureAndVerify = async () => {
     if (!videoRef.current || !canvasRef.current) return;
 
+    // Live-person check first (blink / head turn in a random order).
+    let proof: import('@/lib/faceLiveness').LivenessProof | null = null;
+    try {
+      const { beginLiveness, runLiveness } = await import('@/lib/faceLiveness');
+      setLiveBusy(true);
+      const challenge = await beginLiveness('login', email);
+      proof = await runLiveness(videoRef.current, challenge, (text) => setLivePrompt(text));
+    } catch (e) {
+      setLivePrompt(''); setLiveBusy(false);
+      const msg = e instanceof Error ? e.message : '';
+      // Model unavailable on this device: older photo check path below.
+      if (!/unavailable|load|fetch|backend/i.test(msg)) { setErrorMessage(msg || 'Live check failed. Try again.'); setStep('error'); return; }
+    }
+    setLivePrompt(''); setLiveBusy(false);
     setStep('verifying');
 
     try {
@@ -152,14 +168,9 @@ const FaceLoginModal: React.FC<FaceLoginModalProps> = ({ open, onClose, onSucces
       }
 
       // Match on the device first (no AI tokens); fall back to the photo check.
-      const { faceDescriptor } = await import('@/lib/onDeviceFace');
-      const live = await faceDescriptor(canvas);
-      if (live.ok === false && live.reason !== 'unavailable') {
-        throw new Error((live as { reason: string }).reason === 'many_faces' ? 'Only one face should be in view. Try again.' : 'No clear face found. Face the camera in good light and try again.');
-      }
       const { data, error } = await supabase.functions.invoke('face-verification', {
-        body: live.ok
-          ? { operation: 'login_with_face', email, descriptor: live.descriptor }
+        body: proof
+          ? { operation: 'login_with_face', email, liveness: proof, imageData }
           : { operation: 'login_with_face', email, imageData },
       });
 
@@ -301,7 +312,7 @@ const FaceLoginModal: React.FC<FaceLoginModalProps> = ({ open, onClose, onSucces
               <canvas ref={canvasRef} className="hidden" />
               
               <p className="text-sm text-muted-foreground text-center">
-                Position your face in the oval and click verify
+                {livePrompt || 'Position your face in the oval and click verify'}
               </p>
               {email && (
                 <button
@@ -314,7 +325,7 @@ const FaceLoginModal: React.FC<FaceLoginModalProps> = ({ open, onClose, onSucces
               )}
               
               <div className="flex gap-2">
-                <Button onClick={captureAndVerify} className="flex-1 gap-2">
+                <Button onClick={captureAndVerify} disabled={liveBusy} className="flex-1 gap-2">
                   <ScanFace className="w-4 h-4" />
                   Verify & Sign In
                 </Button>

@@ -26,6 +26,7 @@ const operationSchema = z.enum([
   'check_face_enrolled',
   'disable_face_verification',
   'refresh_face',
+  'begin_liveness',
 ]);
 
 const requestSchema = z.object({
@@ -34,7 +35,77 @@ const requestSchema = z.object({
   imageData: imageDataSchema.optional(),
   descriptor: z.array(z.number().finite()).length(128).optional(),
   identityDescriptor: z.array(z.number().finite()).length(128).optional(),
+  purpose: z.enum(['login', 'enroll']).optional(),
+  liveness: z.object({
+    nonce: z.string().min(16).max(128),
+    descriptors: z.array(z.array(z.number().finite()).length(128)).min(3).max(12),
+    trace: z.array(z.object({
+      step: z.enum(['blink', 'turn_left', 'turn_right']),
+      ear: z.array(z.number().finite()).max(200),
+      yaw: z.array(z.number().finite()).max(200),
+    })).min(1).max(4),
+  }).optional(),
 });
+
+type Liveness = NonNullable<z.infer<typeof requestSchema>['liveness']>;
+const LIVENESS_STEPS = ['blink', 'turn_left', 'turn_right'] as const;
+
+/** Finds an account by email across every page of members (listUsers is paged). */
+async function findUserByEmail(supabase: any, email: string) {
+  const target = email.toLowerCase();
+  for (let page = 1; page <= 50; page++) {
+    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: 1000 });
+    if (error) throw error;
+    const hit = data.users.find((u: any) => u.email?.toLowerCase() === target);
+    if (hit) return hit;
+    if (data.users.length < 1000) return null;
+  }
+  return null;
+}
+
+/**
+ * Checks the live-person proof: one-time challenge from this service, not
+ * expired, steps done in the order asked (blink = eyes closed then open,
+ * turns = head moved the right way), and the fingerprints collected during the
+ * check belong to one person and are not one frozen picture.
+ * Returns the averaged fingerprint, or a reason it failed.
+ */
+async function checkLiveness(supabase: any, proof: Liveness, purpose: 'login' | 'enroll'):
+  Promise<{ ok: true; descriptor: number[] } | { ok: false; reason: string }> {
+  const { data: ch } = await supabase.from('face_liveness_challenges')
+    .update({ consumed_at: new Date().toISOString() })
+    .eq('nonce', proof.nonce).eq('purpose', purpose).is('consumed_at', null)
+    .gt('expires_at', new Date().toISOString())
+    .select('steps').maybeSingle();
+  if (!ch) return { ok: false, reason: 'challenge_invalid' };
+  const steps: string[] = ch.steps;
+  if (proof.trace.length !== steps.length || proof.trace.some((t, i) => t.step !== steps[i])) {
+    return { ok: false, reason: 'steps_mismatch' };
+  }
+  for (const t of proof.trace) {
+    if (t.ear.length < 3) return { ok: false, reason: 'too_few_frames' };
+    if (t.step === 'blink') {
+      const max = Math.max(...t.ear); const min = Math.min(...t.ear);
+      const minAt = t.ear.indexOf(min);
+      const reopened = t.ear.slice(minAt).some((e) => e > max * 0.8);
+      if (!(max > 0.22 && min < max * 0.72 && minAt > 0 && reopened)) return { ok: false, reason: 'no_blink' };
+    } else {
+      const want = t.step === 'turn_left' ? 1 : -1;
+      const peak = Math.max(...t.yaw.map((y) => y * want));
+      const startY = t.yaw[0] * want;
+      if (!(peak > 0.18 && peak - startY > 0.1)) return { ok: false, reason: 'no_turn' };
+    }
+  }
+  const ds = proof.descriptors;
+  let maxGap = 0; let minGap = Infinity;
+  for (let i = 0; i < ds.length; i++) for (let j = i + 1; j < ds.length; j++) {
+    const g = dist(ds[i], ds[j]); maxGap = Math.max(maxGap, g); minGap = Math.min(minGap, g);
+  }
+  if (maxGap > 0.55) return { ok: false, reason: 'multiple_people' };
+  if (minGap === 0) return { ok: false, reason: 'frozen_frames' };
+  const avg = ds[0].map((_, i) => Math.round((ds.reduce((s, x) => s + x[i], 0) / ds.length) * 1e5) / 1e5);
+  return { ok: true, descriptor: avg };
+}
 
 // On-device face fingerprints (128 numbers). Same person < ~0.5 apart.
 const SCAN_MATCH = 0.45;
@@ -73,7 +144,7 @@ serve(async (req) => {
     // Vision runs 100% through the project's own provider keys (sovereign shim).
     // No Lovable AI credits are ever consumed.
     const preParsed = await req.clone().json().catch(() => ({}));
-    const hasDescriptor = Array.isArray(preParsed?.descriptor);
+    const hasDescriptor = Array.isArray(preParsed?.descriptor) || !!preParsed?.liveness || preParsed?.operation === 'begin_liveness';
     if (!hasDescriptor && !sovereignKey() && !nvidiaKey()) {
       console.error('[face-verification] no vision provider configured');
       return new Response(
@@ -101,7 +172,48 @@ serve(async (req) => {
       );
     }
     
-    const { operation, imageData, email, descriptor, identityDescriptor } = parseResult.data;
+    const { operation, imageData, email, identityDescriptor, liveness, purpose } = parseResult.data;
+    let descriptor = parseResult.data.descriptor;
+    const clientIPAll = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || req.headers.get('x-real-ip') || 'unknown';
+
+    // One-time live-person challenge (public: needed on the sign-in page).
+    if (operation === 'begin_liveness') {
+      const since = new Date(Date.now() - 10 * 60_000).toISOString();
+      const { count } = await supabase.from('face_liveness_challenges')
+        .select('id', { count: 'exact', head: true }).eq('ip_address', clientIPAll).gte('created_at', since);
+      if ((count ?? 0) >= 20) {
+        return new Response(JSON.stringify({ error: 'Too many face checks. Please wait a few minutes.' }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+      const pool = [...LIVENESS_STEPS];
+      const rnd = new Uint32Array(3); crypto.getRandomValues(rnd);
+      const turn = rnd[0] % 2 === 0 ? 'turn_left' : 'turn_right';
+      const steps = rnd[1] % 2 === 0 ? ['blink', turn] : [turn, 'blink'];
+      if (rnd[2] % 3 === 0) steps.push(pool.find((p) => !steps.includes(p))!);
+      const bytes = new Uint8Array(24); crypto.getRandomValues(bytes);
+      const nonce = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+      const expiresAt = new Date(Date.now() + 90_000).toISOString();
+      await supabase.from('face_liveness_challenges').insert({ nonce, steps, purpose: purpose ?? 'login', ip_address: clientIPAll, expires_at: expiresAt });
+      return new Response(JSON.stringify({ nonce, steps, expiresAt }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    // Setup and sign-in with a face fingerprint must carry a passed live check.
+    if ((operation === 'enroll_face' || operation === 'login_with_face') && (descriptor || liveness)) {
+      if (!liveness) {
+        return new Response(JSON.stringify({ error: 'Please update the app and try again — a live face check is now required.' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+      const live = await checkLiveness(supabase, liveness, operation === 'enroll_face' ? 'enroll' : 'login');
+      if (!live.ok) {
+        console.warn('[face-verification] liveness failed', live.reason);
+        if (operation === 'login_with_face' && email) {
+          await supabase.from('face_login_attempts').insert({ email: email.toLowerCase(), ip_address: clientIPAll, success: false, failure_reason: `liveness_${live.reason}` });
+        }
+        return new Response(JSON.stringify({ success: false, verified: false, error: "We couldn't confirm a live face. Follow the steps on screen and try again." }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+      descriptor = live.descriptor;
+    }
 
     console.log('Face verification operation:', operation);
 
@@ -156,10 +268,7 @@ serve(async (req) => {
         }
 
         // Find user by email - use generic error to prevent user enumeration
-        const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
-        if (authError) throw authError;
-
-        const user = authData.users.find(u => u.email?.toLowerCase() === email.toLowerCase());
+        const user = await findUserByEmail(supabase, email);
         if (!user) {
           // Log failed attempt (user not found)
           await supabase.from('face_login_attempts').insert({
@@ -182,10 +291,7 @@ serve(async (req) => {
         const checkEmail = email?.toLowerCase().trim();
 
         if (checkEmail) {
-          const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
-          if (authError) throw authError;
-
-          const user = authData.users.find(u => u.email?.toLowerCase() === checkEmail);
+          const user = await findUserByEmail(supabase, checkEmail);
           verifiedUserId = user?.id ?? null;
         } else {
           const authHeader = req.headers.get('Authorization');
@@ -350,7 +456,8 @@ serve(async (req) => {
           return new Response(JSON.stringify({ error: 'Face check service is busy. Please try again in a minute.' }),
             { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
-        const { matchScore, isMatch } = parsedMatch;
+        const { matchScore } = parsedMatch;
+        const isMatch = parsedMatch.isMatch && parsedMatch.livenessDetected;
 
         // Log verification attempt with verified user ID
         await supabase.from('security_audit_log').insert({
@@ -505,7 +612,8 @@ serve(async (req) => {
           return new Response(JSON.stringify({ refreshed: false, reason: 'not_enrolled' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
         const d = dist(descriptor, fv.scan_descriptor);
-        if (d > SCAN_MATCH) {
+        const dIdentity = Array.isArray(fv.identity_descriptor) ? dist(descriptor, fv.identity_descriptor) : 0;
+        if (d > SCAN_MATCH || dIdentity > IDENTITY_MATCH) {
           return new Response(JSON.stringify({ refreshed: false, reason: 'different_face' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
         const blended = fv.scan_descriptor.map((v: number, i: number) => Math.round((v * 0.8 + descriptor[i] * 0.2) * 1e5) / 1e5);
@@ -520,8 +628,7 @@ serve(async (req) => {
         const checkEmail = email?.toLowerCase().trim();
 
         if (checkEmail) {
-          const { data: authData } = await supabase.auth.admin.listUsers();
-          const user = authData?.users.find(u => u.email?.toLowerCase() === checkEmail);
+          const user = await findUserByEmail(supabase, checkEmail);
 
           if (!user) {
             return new Response(

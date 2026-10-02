@@ -40,6 +40,7 @@ const suggestFix = (errName: string, errMsg: string, inIframe: boolean, secure: 
 const FaceVerificationSetup: React.FC<FaceVerificationSetupProps> = ({ onComplete, onCancel }) => {
   const { user } = useAuth();
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [livePrompt, setLivePrompt] = useState('');
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [capturing, setCapturing] = useState(false);
@@ -196,7 +197,22 @@ const FaceVerificationSetup: React.FC<FaceVerificationSetupProps> = ({ onComplet
   const captureAndEnroll = async () => {
     if (!videoRef.current || !canvasRef.current) return;
 
-    setCapturing(true);
+    // Live-person check first (blink / head turn in a random order).
+    let proof: import('@/lib/faceLiveness').LivenessProof;
+    try {
+      const { beginLiveness, runLiveness } = await import('@/lib/faceLiveness');
+      setCapturing(true);
+      const challenge = await beginLiveness('enroll');
+      proof = await runLiveness(videoRef.current, challenge, (text) => setLivePrompt(text));
+    } catch (e) {
+      setLivePrompt('');
+      setCapturing(false);
+      const msg = e instanceof Error ? e.message : 'Live check failed. Try again.';
+      toast.error(msg);
+      setSuggestion(msg);
+      return;
+    }
+    setLivePrompt('');
     setStep('processing');
 
     try {
@@ -222,7 +238,8 @@ const FaceVerificationSetup: React.FC<FaceVerificationSetupProps> = ({ onComplet
       setProcessing(true);
       // On-device fingerprint of the live scan + the member's identity photo (no AI tokens).
       const { faceDescriptor } = await import('@/lib/onDeviceFace');
-      const live = await faceDescriptor(canvas);
+      const { averageDescriptor } = await import('@/lib/faceLiveness');
+      const live = { ok: true as const, descriptor: averageDescriptor(proof.descriptors) } as { ok: true; descriptor: number[] } | { ok: false; reason: string };
       if (live.ok === false && live.reason !== 'unavailable') {
         throw new Error((live as { reason: string }).reason === 'many_faces' ? 'Only one face should be in view. Try again.' : 'No clear face found. Face the camera in good light and try again.');
       }
@@ -257,7 +274,7 @@ const FaceVerificationSetup: React.FC<FaceVerificationSetupProps> = ({ onComplet
       }
       const { data, error } = await supabase.functions.invoke('face-verification', {
         body: live.ok
-          ? { operation: 'enroll_face', descriptor: live.descriptor, identityDescriptor }
+          ? { operation: 'enroll_face', liveness: proof, identityDescriptor }
           : { operation: 'enroll_face', imageData },
       });
 
@@ -426,6 +443,7 @@ const FaceVerificationSetup: React.FC<FaceVerificationSetupProps> = ({ onComplet
           </div>
 
           <canvas ref={canvasRef} className="hidden" />
+          {livePrompt && <p className="text-center text-base font-medium text-foreground">{livePrompt}</p>}
 
           <div className="flex gap-2">
             {cameraError ? (
