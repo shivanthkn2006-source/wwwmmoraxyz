@@ -1,3 +1,4 @@
+import { liveAccessToken } from '@/lib/edgeSession';
 /**
  * Content-to-image validation for Growth cards.
  *
@@ -95,13 +96,11 @@ export const useValidatedGrowthImage = ({ key, title, content, category, validat
     let cancelled = false;
     (async () => {
       try {
-        // Validation is advisory: skip while signed out or mid session refresh
-        // instead of sending a stale token that the server rejects with 401.
-        const { data: sessionData } = await supabase.auth.getSession();
-        const session = sessionData.session;
-        if (cancelled || !session?.access_token) return;
-        if (session.expires_at && session.expires_at * 1000 < Date.now() + 30_000) return;
+        // Use a freshly refreshed sign-in so a token mid-refresh is never rejected.
+        const token = await liveAccessToken();
+        if (cancelled || !token) return;
         const { data, error } = await supabase.functions.invoke('growth-image-validate', {
+          headers: { Authorization: `Bearer ${token}` },
           body: {
             imageUrl: src,
             person: subject.person,

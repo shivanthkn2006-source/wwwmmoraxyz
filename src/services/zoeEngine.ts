@@ -1,3 +1,4 @@
+import { liveAccessToken } from '@/lib/edgeSession';
 /**
  * ZOE ENGINE — the single canonical conversational path.
  *
@@ -124,7 +125,7 @@ export async function askZoe(options: AskZoeOptions): Promise<AskZoeResult> {
   if (/\b(latest|today|news|current|who is|who's|what is|what's|price|score|weather|when is|when did|how much|search|look up)\b/i.test(text)) {
     try {
       const r: any = await Promise.race([
-        supabase.functions.invoke('zoe-sovereign', { body: { action: 'research', query: text } }),
+        invokeSovereign({ action: 'research', query: text }),
         new Promise((res) => window.setTimeout(() => res(null), 6000)),
       ]);
       const rows = r?.data?.results ?? [];
@@ -223,7 +224,7 @@ export async function askZoe(options: AskZoeOptions): Promise<AskZoeResult> {
   if (baseReply && !options.skipRecall && baseReply.length <= 450) {
     try {
       const r: any = await Promise.race([
-        supabase.functions.invoke('zoe-sovereign', { body: { action: 'review', message: text, draft: baseReply, research: researchContext } }),
+        invokeSovereign({ action: 'review', message: text, draft: baseReply, research: researchContext }),
         new Promise((res) => window.setTimeout(() => res(null), 6000)),
       ]);
       const checked = r?.data?.success ? stripScratchpad(String(r.data.reply || '')) : '';
@@ -303,3 +304,12 @@ export async function askZoe(options: AskZoeOptions): Promise<AskZoeResult> {
 }
 
 export default askZoe;
+
+/** Calls zoe-sovereign with a freshly refreshed sign-in so session races never get rejected. */
+async function invokeSovereign(body: Record<string, unknown>) {
+  const token = await liveAccessToken();
+  return supabase.functions.invoke('zoe-sovereign', {
+    body,
+    ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
+  });
+}
