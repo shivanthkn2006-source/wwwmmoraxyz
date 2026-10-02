@@ -144,7 +144,7 @@ serve(async (req) => {
     // Vision runs 100% through the project's own provider keys (sovereign shim).
     // No Lovable AI credits are ever consumed.
     const preParsed = await req.clone().json().catch(() => ({}));
-    const hasDescriptor = Array.isArray(preParsed?.descriptor);
+    const hasDescriptor = Array.isArray(preParsed?.descriptor) || !!preParsed?.liveness || preParsed?.operation === 'begin_liveness';
     if (!hasDescriptor && !sovereignKey() && !nvidiaKey()) {
       console.error('[face-verification] no vision provider configured');
       return new Response(
