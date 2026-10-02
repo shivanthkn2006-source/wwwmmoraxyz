@@ -65,13 +65,15 @@ function Controls({ points, full, setFull }: { points: MapPoint[]; full: boolean
   );
 }
 
-/** Groups pins that overlap on screen and lays each group out as a column below its real position. */
+/** Groups pins that overlap on screen. A group shows one pin with a count; tap it to open the list of
+ *  people as a column below, tap again to fold it back. Single visitors always show their own pin. */
 function SpreadPins({ points }: { points: MapPoint[] }) {
   const map = useMap();
   const [zoom, setZoom] = useState(map.getZoom());
+  const [open, setOpen] = useState<Set<string>>(new Set());
   useMapEvents({ zoomend: () => setZoom(map.getZoom()) });
 
-  const groups = useMemo<Group[]>(() => {
+  const groups = useMemo<(Group & { id: string })[]>(() => {
     const sorted = [...points].sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status] || a.name.localeCompare(b.name));
     const raw: { px: { x: number; y: number }; anchor: [number, number]; pts: MapPoint[] }[] = [];
     for (const p of sorted) {
@@ -80,21 +82,47 @@ function SpreadPins({ points }: { points: MapPoint[] }) {
       if (g) g.pts.push(p);
       else raw.push({ px, anchor: [p.lat, p.lon], pts: [p] });
     }
-    return raw.map((r) => ({
-      anchor: r.anchor,
-      items: r.pts.map((p, i) => {
-        if (i === 0) return { p, pos: r.anchor };
-        const ll = map.unproject([r.px.x, r.px.y + i * ROW_PX], zoom);
-        return { p, pos: [ll.lat, ll.lng] as [number, number] };
-      }),
-    }));
+    return raw.map((r) => {
+      const single = r.pts.length === 1;
+      return {
+        id: r.pts.map((p) => p.key).sort().join('|'),
+        anchor: r.anchor,
+        items: r.pts.map((p, i) => {
+          if (single) return { p, pos: r.anchor };
+          const ll = map.unproject([r.px.x, r.px.y + (i + 1) * ROW_PX], zoom);
+          return { p, pos: [ll.lat, ll.lng] as [number, number] };
+        }),
+      };
+    });
   }, [points, zoom, map]);
+
+  const toggle = (id: string) => setOpen((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
 
   return (
     <>
-      {groups.map((g) => (
-        <GroupPins key={g.items[0].p.key} group={g} />
-      ))}
+      {groups.map((g) => g.items.length === 1
+        ? <GroupPins key={g.id} group={g} />
+        : <ClusterPin key={g.id} group={g} expanded={open.has(g.id)} onToggle={() => toggle(g.id)} />)}
+    </>
+  );
+}
+
+function ClusterPin({ group, expanded, onToggle }: { group: Group; expanded: boolean; onToggle: () => void }) {
+  const n = group.items.length;
+  const on = group.items.filter((x) => x.p.status === 'online').length;
+  const idle = group.items.filter((x) => x.p.status === 'idle').length;
+  const c = COLORS[on ? 'online' : idle ? 'idle' : 'offline'];
+  const label = `${n} visitors${on ? ` · ${on} online` : ''}${idle ? ` · ${idle} idle` : ''} ${expanded ? '▾ hide' : '▸ show'}`;
+  return (
+    <>
+      <CircleMarker center={group.anchor} radius={11} eventHandlers={{ click: onToggle }}
+        pathOptions={{ color: 'hsl(0 0% 12%)', fillColor: c.fill, fillOpacity: 0.95, weight: 3 }}>
+        <Tooltip permanent interactive direction="right" offset={[12, 0]} className="mmora-pin-label mmora-pin-cluster"
+        >
+          <span role="button" onClick={(e) => { e.stopPropagation(); onToggle(); }}>{label}</span>
+        </Tooltip>
+      </CircleMarker>
+      {expanded && <GroupPins group={group} />}
     </>
   );
 }
@@ -137,7 +165,8 @@ function GroupPins({ group }: { group: Group }) {
 // White text with a solid dark outline: readable over white land, blue sea and dark map areas alike. No box.
 const LABEL_CSS = `.mmora-pin-label{background:transparent;border:0;box-shadow:none;padding:0 2px;font-weight:700;font-size:12px;line-height:14px;color:#fff;white-space:nowrap;
 text-shadow:-1px -1px 0 #111,1px -1px 0 #111,-1px 1px 0 #111,1px 1px 0 #111,0 0 3px #000,0 0 5px #000;}
-.mmora-pin-label::before{display:none}`;
+.mmora-pin-label::before{display:none}
+.mmora-pin-cluster{cursor:pointer;pointer-events:auto;font-size:13px}`;
 
 export default function AdminVisitorMap({ points }: { points: MapPoint[] }) {
   const [full, setFull] = useState(false);
