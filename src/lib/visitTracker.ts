@@ -123,9 +123,9 @@ function startVisit(path: string) {
   const v = { id: null as string | null, path, enteredAt: Date.now(), activeMs: 0, visibleSince: visible ? Date.now() : null };
   current = v;
   const { device_type, os, browser } = deviceInfo();
-  const wasFirst = firstVisit; firstVisit = false; void wasFirst;
+  const wasFirst = firstVisit; firstVisit = false;
   post({
-    action: 'start', visitor_id: visitorId(), path, referrer: document.referrer || null, ref_code: refCode(), load_ms: firstVisit ? loadMs() : null,
+    action: 'start', visitor_id: visitorId(), path, referrer: document.referrer || null, ref_code: refCode(), load_ms: wasFirst ? loadMs() : null,
     device_type, os, browser, screen: `${screen.width}x${screen.height}`,
     language: navigator.language, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, hardware: hardware(),
   }).then((r) => r.json()).then((d) => { if (d?.id) v.id = d.id; }).catch(() => {});
