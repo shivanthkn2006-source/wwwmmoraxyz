@@ -187,6 +187,7 @@ const AdminControlPanelPage = lazy(() => import("./pages/AdminControlPanelPage")
 const AdminSentinelPage = lazy(() => import("./pages/AdminSentinelPage")); // SENTINEL (operator-only live monitoring)
 const AdminSecurityLivePage = lazy(() => import("./pages/AdminSecurityLivePage"));
 const AdminPlatformAnalyticsPage = lazy(() => import("./pages/AdminPlatformAnalyticsPage"));
+const ReferralsPage = lazy(() => import("./pages/ReferralsPage"));
 const AdminAuthEventsHost = lazy(() => import("./components/admin/AdminAuthEventsHost"));
 const AdminCrashReportsPage = lazy(() => import("./pages/AdminCrashReportsPage"));
 const LaunchWelcome = lazy(() => import("./components/core/LaunchWelcome"));
@@ -686,6 +687,7 @@ const RouteAwareShell = () => {
 
 
 
+                          <Route path="/referrals" element={<ProtectedRoute><ReferralsPage /></ProtectedRoute>} />
                           <Route
                             path="/profile"
                             element={
