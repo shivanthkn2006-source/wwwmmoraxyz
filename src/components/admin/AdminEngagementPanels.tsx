@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
+import AdminVisitorMap, { type MapPoint } from './AdminVisitorMap';
 
 type V = {
   id: string; visitor_id: string; user_id: string | null; path: string; entered_at: string; last_seen_at: string;
@@ -108,6 +109,16 @@ export default function AdminEngagementPanels({ visits, names, now, sinceIso }: 
       medianLoad: median(loads.map((v) => v.load_ms!)),
       errors: [...errPages.entries()].sort((a, b) => b[1] - a[1]), errorCount: errors.length,
       dots: online.filter((o) => o.v.lat != null && o.v.lon != null),
+      mapPoints: (() => {
+        const onlineIds = new Set(online.map((o) => o.v.visitor_id));
+        const last = new Map<string, V>();
+        visits.forEach((v) => { if (v.lat == null || v.lon == null) return; const k = v.user_id || v.visitor_id; const p = last.get(k); if (!p || p.last_seen_at < v.last_seen_at) last.set(k, v); });
+        return [...last.entries()].map(([k, v]): MapPoint => ({
+          key: k, lat: v.lat as number, lon: v.lon as number, name: who(v), userId: v.user_id,
+          place: [v.city, v.country].filter(Boolean).join(', ') || 'Unknown place', path: v.path,
+          online: onlineIds.has(v.visitor_id), device: [v.device_type, v.os].filter(Boolean).join(' · ') || null,
+        }));
+      })(),
     };
   }, [visits, events, history, names, now]);
 
@@ -141,18 +152,11 @@ export default function AdminEngagementPanels({ visits, names, now, sinceIso }: 
       </Card>
 
       <Card className="p-4">
-        <p className="mb-2 text-sm font-semibold">Live map</p>
-        <svg viewBox="0 0 360 180" className="h-auto w-full rounded-md bg-primary/5" role="img" aria-label="Map of visitors online now">
-          {[-60, -30, 0, 30, 60].map((lat) => <line key={lat} x1={0} x2={360} y1={90 - lat} y2={90 - lat} stroke="hsl(var(--border))" strokeWidth={0.3} />)}
-          {[-120, -60, 0, 60, 120].map((lon) => <line key={lon} y1={0} y2={180} x1={180 + lon} x2={180 + lon} stroke="hsl(var(--border))" strokeWidth={0.3} />)}
-          {d.dots.map((o) => (
-            <g key={o.v.visitor_id}>
-              <circle cx={180 + (o.v.lon as number)} cy={90 - (o.v.lat as number)} r={5} fill="hsl(var(--primary) / 0.25)" />
-              <circle cx={180 + (o.v.lon as number)} cy={90 - (o.v.lat as number)} r={2} fill="hsl(var(--primary))"><title>{`${o.name} · ${o.v.city ?? ''} ${o.v.country ?? ''}`}</title></circle>
-            </g>
-          ))}
-        </svg>
-        <p className="mt-1 text-xs text-muted-foreground">{d.dots.length ? `${d.dots.length} online with a known city` : 'Dots appear here for visitors online now (positions are recorded from this update on).'}</p>
+        <p className="mb-2 text-sm font-semibold">Live world map</p>
+        <AdminVisitorMap points={d.mapPoints} />
+        <p className="mt-1 text-xs text-muted-foreground">
+          {d.dots.length} online now (green, named) · {d.mapPoints.length - d.dots.length} other visitors this period (tan). Tap a dot for name, user ID, city and page.
+        </p>
       </Card>
 
       <div className="grid gap-3 md:grid-cols-2">
