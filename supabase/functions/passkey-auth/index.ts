@@ -351,7 +351,10 @@ serve(async (req) => {
         return response({ success: false, error: "Biometric origin mismatch", requestId }, 401);
       }
 
-      if (!(await verifyRpIdHash(authenticatorData, new URL(String(clientData.origin)).hostname))) {
+      const originHost = new URL(String(clientData.origin)).hostname;
+      const rpOk = (await verifyRpIdHash(authenticatorData, originHost)) ||
+        (originHost.startsWith('www.') && await verifyRpIdHash(authenticatorData, originHost.slice(4)));
+      if (!rpOk) {
         await supabase.from("passkey_auth_challenges").update({ failure_reason: "rp_id_mismatch" }).eq("id", challengeId);
         return response({ success: false, error: "Biometric device origin mismatch", requestId }, 401);
       }
