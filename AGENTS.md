@@ -14,6 +14,7 @@
 - Zoe listening is free-first: browser recognition first, sticky switch to Deepgram Nova on failure (localStorage zoe-listen-mode=deepgram-first flips order), because it saves Deepgram cost while never losing hearing.
 - Exact repeat questions use each member's private DHF answer cache before AI recall.
 - Face sign-in matches on-device face fingerprints (live scan + identity photo) on the server before any AI vision fallback, because it costs no tokens and survives provider outages.
+- Face sign-in and setup require a server-issued one-time liveness challenge (random blink/head-turn order, checked server-side) before on-device fingerprints are matched, because a static photo or replayed video must not unlock an account.
 - Platform visit analytics are written only by the `track-visit` function (service role, IP/geo resolved server-side) into admin-read-only tables, because visitors' network details must never be readable by members.
 - Member referral links use ?r=<code derived from user id>, recorded first-touch by visitTracker and credited server-side in track-visit on a new member's first sign-in, because referral credit must not be client-forgeable.
 - Home menu icons for admin, vault, nexus, omega and platform-internals pages are built only when the server-verified admin role check passes (isAdminOnlyRoute in dockExtraActions), because members must never see admin entry points.
