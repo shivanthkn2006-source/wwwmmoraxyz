@@ -30,15 +30,35 @@ type Group = { anchor: [number, number]; items: Placed[] };
 
 function Controls({ points, full, setFull }: { points: MapPoint[]; full: boolean; setFull: (f: boolean) => void }) {
   const map = useMap();
-  useEffect(() => { const t = setTimeout(() => map.invalidateSize(), 150); return () => clearTimeout(t); }, [full, map]);
+  // Smallest zoom at which the world still fills the whole box (no grey bands on tall or wide screens).
+  const fillZoom = () => {
+    const { x, y } = map.getSize();
+    return Math.max(DEFAULT_ZOOM, Math.ceil(Math.log2(Math.max(x, y) / 256)));
+  };
+  useEffect(() => {
+    const fit = () => {
+      map.invalidateSize();
+      const z = fillZoom();
+      map.setMinZoom(z);
+      if (map.getZoom() < z) map.setView(DEFAULT_CENTER, z);
+    };
+    const t = setTimeout(fit, 150);
+    window.addEventListener('resize', fit);
+    return () => { clearTimeout(t); window.removeEventListener('resize', fit); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [full, map]);
   const fitAll = () => { if (points.length) map.fitBounds(points.map((p) => [p.lat, p.lon] as [number, number]), { padding: [40, 40], maxZoom: 11 }); };
+  const cityLevel = () => {
+    const target = [...points].sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status])[0];
+    if (target) map.setView([target.lat, target.lon], 11); else map.setZoom(11);
+  };
   const btn = 'rounded bg-background/95 px-2.5 py-1.5 text-xs font-semibold text-foreground shadow';
   return (
     <div className="leaflet-top leaflet-right" style={{ pointerEvents: 'auto' }}>
       <div className="leaflet-control m-2 flex flex-col gap-1">
-        <button type="button" className={btn} onClick={() => map.setView(DEFAULT_CENTER, DEFAULT_ZOOM)}>⟲ Default view</button>
+        <button type="button" className={btn} onClick={() => map.setView(DEFAULT_CENTER, fillZoom())}>⟲ Default view</button>
         <button type="button" className={btn} onClick={fitAll}>All pins</button>
-        <button type="button" className={btn} onClick={() => map.setZoom(11)}>City level</button>
+        <button type="button" className={btn} onClick={cityLevel}>City level</button>
         <button type="button" className={btn} onClick={() => setFull(!full)}>{full ? '✕ Exit full screen' : '⛶ Full screen'}</button>
       </div>
     </div>
