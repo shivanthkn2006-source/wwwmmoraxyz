@@ -95,6 +95,12 @@ export const useValidatedGrowthImage = ({ key, title, content, category, validat
     let cancelled = false;
     (async () => {
       try {
+        // Validation is advisory: skip while signed out or mid session refresh
+        // instead of sending a stale token that the server rejects with 401.
+        const { data: sessionData } = await supabase.auth.getSession();
+        const session = sessionData.session;
+        if (cancelled || !session?.access_token) return;
+        if (session.expires_at && session.expires_at * 1000 < Date.now() + 30_000) return;
         const { data, error } = await supabase.functions.invoke('growth-image-validate', {
           body: {
             imageUrl: src,
