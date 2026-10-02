@@ -87,6 +87,10 @@ const ADMIN_ONLY_ROUTES = new Set([
   '/sentinel',
   '/zoe-astro/dispatch',
   '/zoe-astro/log',
+  // Admin-only engineering pages found by the menu scan.
+  '/zoe/brain',
+  '/blueprint-download',
+  '/ear-link-blueprint',
 ]);
 const ADMIN_ONLY_KEYWORDS = ['nexus', 'omega', 'vault', 'god-mode', 'sovereign'];
 
