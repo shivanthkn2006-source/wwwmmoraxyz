@@ -106,6 +106,7 @@ export const CANONICAL_ROUTES: CanonicalRoute[] = [
   { path: "/profile", label: "Profile", dynamic: false },
   { path: "/profile/:userId", label: "Profile", dynamic: true },
   { path: "/quantum-camera", label: "Quantum camera", dynamic: false },
+  { path: "/referrals", label: "Referrals", dynamic: false },
   { path: "/resleeve", label: "Resleeve", dynamic: false },
   { path: "/root-scan", label: "Root scan", dynamic: false },
   { path: "/search-preview", label: "Search preview", dynamic: false },
