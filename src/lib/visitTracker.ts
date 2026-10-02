@@ -18,6 +18,22 @@ function visitorId(): string {
   return v;
 }
 
+const REF_KEY = 'mmora-member-ref';
+/** First-touch member referral code from ?r=, kept 30 days. */
+function refCode(): string | null {
+  try {
+    const fromUrl = new URLSearchParams(location.search).get('r')?.trim().toUpperCase();
+    if (fromUrl && /^M[0-9A-F]{8}$/.test(fromUrl) && !localStorage.getItem(REF_KEY)) {
+      localStorage.setItem(REF_KEY, JSON.stringify({ code: fromUrl, at: Date.now() }));
+    }
+    const raw = localStorage.getItem(REF_KEY);
+    if (!raw) return null;
+    const { code, at } = JSON.parse(raw);
+    if (Date.now() - at > 30 * 86400_000) { localStorage.removeItem(REF_KEY); return null; }
+    return code;
+  } catch { return null; }
+}
+
 function deviceInfo() {
   const ua = navigator.userAgent;
   const device_type = /iPad|Tablet/i.test(ua) ? 'tablet' : /Mobi|Android|iPhone/i.test(ua) ? 'mobile' : 'desktop';
@@ -76,7 +92,7 @@ function startVisit(path: string) {
   current = v;
   const { device_type, os, browser } = deviceInfo();
   post({
-    action: 'start', visitor_id: visitorId(), path, referrer: document.referrer || null,
+    action: 'start', visitor_id: visitorId(), path, referrer: document.referrer || null, ref_code: refCode(),
     device_type, os, browser, screen: `${screen.width}x${screen.height}`,
     language: navigator.language, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, hardware: hardware(),
   }).then((r) => r.json()).then((d) => { if (d?.id) v.id = d.id; }).catch(() => {});
@@ -98,7 +114,7 @@ function sendAuth(event: 'login' | 'logout', token: string | null) {
   void fetch(FN_URL, {
     method: 'POST', keepalive: true,
     headers: { 'Content-Type': 'application/json', apikey: ANON, Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ action: 'auth', event, device_type, os, browser }),
+    body: JSON.stringify({ action: 'auth', event, device_type, os, browser, ref_code: refCode() }),
   }).catch(() => {});
 }
 
@@ -141,4 +157,14 @@ export function startVisitTracker() {
 
 export function stopVisitTracker() {
   if (heartbeat) window.clearInterval(heartbeat);
+}
+
+/** Shareable member referral link + stats (signed-in only). */
+export const memberRefCode = (userId: string) => 'M' + userId.replace(/-/g, '').slice(0, 8).toUpperCase();
+export async function fetchMyReferrals(): Promise<{ code: string; visits: number; visitors: number; signups: number; recent: string[] } | null> {
+  const { data } = await supabase.auth.getSession();
+  const t = data.session?.access_token;
+  if (!t) return null;
+  const r = await fetch(FN_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: ANON, Authorization: `Bearer ${t}` }, body: JSON.stringify({ action: 'my_referrals' }) });
+  return r.ok ? r.json() : null;
 }
