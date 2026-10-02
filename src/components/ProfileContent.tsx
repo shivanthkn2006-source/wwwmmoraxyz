@@ -734,12 +734,12 @@ const ProfileContent = () => {
 
       {/* Stats Section Content with macOS Animation */}
       {showStatsSection && (
-        <div className="fixed inset-0 z-50 bg-black/50 animate-fade-in" onClick={() => setShowStatsSection(null)}>
+        <div className="fixed inset-0 z-[80] bg-black/60 animate-fade-in" onClick={() => setShowStatsSection(null)}>
           <div 
-            className="absolute bottom-0 left-0 right-0 bg-background rounded-t-3xl max-h-[80vh] overflow-y-auto animate-slide-in-bottom"
+            className="surface-warm-tan absolute bottom-0 left-0 right-0 rounded-t-3xl max-h-[80vh] overflow-y-auto animate-slide-in-bottom"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="sticky top-0 bg-background border-b border-border p-4 flex items-center justify-between">
+            <div className="surface-warm-tan sticky top-0 z-10 p-4 flex items-center justify-between">
               <h3 className="text-xl font-bold text-foreground">
                 {showStatsSection === 'posts' && 'My Posts'}
                 {showStatsSection === 'friends' && 'Friends'}

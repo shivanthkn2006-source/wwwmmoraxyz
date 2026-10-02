@@ -5863,6 +5863,51 @@ export type Database = {
           },
         ]
       }
+      platform_auth_events: {
+        Row: {
+          browser: string | null
+          city: string | null
+          country: string | null
+          created_at: string
+          device_type: string | null
+          display_name: string | null
+          event: string
+          id: string
+          ip_address: string | null
+          is_vpn: boolean | null
+          os: string | null
+          user_id: string
+        }
+        Insert: {
+          browser?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          device_type?: string | null
+          display_name?: string | null
+          event: string
+          id?: string
+          ip_address?: string | null
+          is_vpn?: boolean | null
+          os?: string | null
+          user_id: string
+        }
+        Update: {
+          browser?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          device_type?: string | null
+          display_name?: string | null
+          event?: string
+          id?: string
+          ip_address?: string | null
+          is_vpn?: boolean | null
+          os?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       platform_error_events: {
         Row: {
           component_stack: string | null
@@ -6067,6 +6112,93 @@ export type Database = {
           path?: string
           route_group?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      platform_visits: {
+        Row: {
+          browser: string | null
+          city: string | null
+          country: string | null
+          country_code: string | null
+          created_at: string
+          device_type: string | null
+          district: string | null
+          duration_seconds: number
+          entered_at: string
+          hardware: Json
+          id: string
+          ip_address: string | null
+          is_hosting: boolean | null
+          is_mobile_network: boolean | null
+          is_vpn: boolean | null
+          isp: string | null
+          language: string | null
+          last_seen_at: string
+          os: string | null
+          path: string
+          referrer_host: string | null
+          region: string | null
+          screen: string | null
+          timezone: string | null
+          user_id: string | null
+          visitor_id: string
+        }
+        Insert: {
+          browser?: string | null
+          city?: string | null
+          country?: string | null
+          country_code?: string | null
+          created_at?: string
+          device_type?: string | null
+          district?: string | null
+          duration_seconds?: number
+          entered_at?: string
+          hardware?: Json
+          id?: string
+          ip_address?: string | null
+          is_hosting?: boolean | null
+          is_mobile_network?: boolean | null
+          is_vpn?: boolean | null
+          isp?: string | null
+          language?: string | null
+          last_seen_at?: string
+          os?: string | null
+          path: string
+          referrer_host?: string | null
+          region?: string | null
+          screen?: string | null
+          timezone?: string | null
+          user_id?: string | null
+          visitor_id: string
+        }
+        Update: {
+          browser?: string | null
+          city?: string | null
+          country?: string | null
+          country_code?: string | null
+          created_at?: string
+          device_type?: string | null
+          district?: string | null
+          duration_seconds?: number
+          entered_at?: string
+          hardware?: Json
+          id?: string
+          ip_address?: string | null
+          is_hosting?: boolean | null
+          is_mobile_network?: boolean | null
+          is_vpn?: boolean | null
+          isp?: string | null
+          language?: string | null
+          last_seen_at?: string
+          os?: string | null
+          path?: string
+          referrer_host?: string | null
+          region?: string | null
+          screen?: string | null
+          timezone?: string | null
+          user_id?: string | null
+          visitor_id?: string
         }
         Relationships: []
       }

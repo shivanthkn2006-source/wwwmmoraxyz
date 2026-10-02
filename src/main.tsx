@@ -130,3 +130,8 @@ if ('requestIdleCallback' in window) {
 } else {
   setTimeout(deferredInit, 1500);
 }
+
+// Admin-only platform analytics: start after first paint, off the boot path.
+window.setTimeout(() => {
+  void import('@/lib/visitTracker').then((m) => m.startVisitTracker()).catch(() => {});
+}, 1500);
