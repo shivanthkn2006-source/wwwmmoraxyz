@@ -14,3 +14,4 @@
 - Zoe listening is free-first: browser recognition first, sticky switch to Deepgram Nova on failure (localStorage zoe-listen-mode=deepgram-first flips order), because it saves Deepgram cost while never losing hearing.
 - Exact repeat questions use each member's private DHF answer cache before AI recall.
 - Face sign-in matches on-device face fingerprints (live scan + identity photo) on the server before any AI vision fallback, because it costs no tokens and survives provider outages.
+- Platform visit analytics are written only by the `track-visit` function (service role, IP/geo resolved server-side) into admin-read-only tables, because visitors' network details must never be readable by members.

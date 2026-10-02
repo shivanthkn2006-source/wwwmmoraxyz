@@ -23,7 +23,7 @@
 - [x] Chat history page exists at /zoe/history
 - [ ] Physical-phone walkthrough (needs the user's own device)
 - [ ] Remaining scanner findings: continue next turns
-- Declined: IP / hardware-ID tracking (surveillance)
+- Admin-only visit analytics with IP/geo/VPN now requested by owner (Oct 2) — built at /admin/analytics
 
 # Sep 26 requests
 - [x] Location setup page after sign-up (/setup/location) saving timezone + offset + city
@@ -97,3 +97,8 @@
 - [x] 29 unprotected backend features locked (26 members-only, 7 public/scheduled rate-limited); stranger calls verified refused
 - [ ] ~360 security findings remain (need per-feature data-ownership fixes) — critical ones first (paid search/transcription/AI summarizer open to anyone, other members' private data, mail as someone else)
 - [ ] Health report: providers working / out of credit / missing
+
+# Oct 2 requests
+- [x] Friends sheet covers profile panels (solid warm tan, above Zoe alert)
+- [x] Admin-only realtime analytics /admin/analytics (+ /admin/@moksh50): visits, pages, sources, devices, hardware, time spent, IP, country/region/city, ISP, VPN, graph, live sign-in/out toasts
+- [ ] Sign-up end to end: blocked in test browser by the human check — needs owner's phone
