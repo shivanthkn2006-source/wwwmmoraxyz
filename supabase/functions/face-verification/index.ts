@@ -628,8 +628,7 @@ serve(async (req) => {
         const checkEmail = email?.toLowerCase().trim();
 
         if (checkEmail) {
-          const { data: authData } = await supabase.auth.admin.listUsers();
-          const user = authData?.users.find(u => u.email?.toLowerCase() === checkEmail);
+          const user = await findUserByEmail(supabase, checkEmail);
 
           if (!user) {
             return new Response(
