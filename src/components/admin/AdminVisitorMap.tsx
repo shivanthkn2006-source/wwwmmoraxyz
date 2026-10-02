@@ -118,7 +118,9 @@ function ClusterPin({ group, expanded, onToggle }: { group: Group; expanded: boo
       <CircleMarker center={group.anchor} radius={11} eventHandlers={{ click: onToggle }}
         pathOptions={{ color: 'hsl(0 0% 12%)', fillColor: c.fill, fillOpacity: 0.95, weight: 3 }}>
         <Tooltip permanent interactive direction="right" offset={[12, 0]} className="mmora-pin-label mmora-pin-cluster"
-          eventHandlers={{ click: onToggle } as any}>{label}</Tooltip>
+        >
+          <span role="button" onClick={(e) => { e.stopPropagation(); onToggle(); }}>{label}</span>
+        </Tooltip>
       </CircleMarker>
       {expanded && <GroupPins group={group} />}
     </>
