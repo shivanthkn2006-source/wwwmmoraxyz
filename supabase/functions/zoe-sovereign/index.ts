@@ -184,7 +184,9 @@ Deno.serve(async (req) => {
     // publicGuard already read the POST body (a request body can only be read once).
     const body: any = guard.body ?? {};
     const action = String(body.action ?? '');
-    if (!u?.user && action !== 'selftest') return json({ error: 'unauthorized' }, 401);
+    // Session races (signed out / token refreshing) degrade to a quiet
+    // signed-out result; every caller already treats success:false as "skip".
+    if (!u?.user && action !== 'selftest') return json({ success: false, skipped: 'signed_out' });
     const name = String(body.name ?? u?.user?.user_metadata?.full_name ?? 'friend').split(' ')[0];
 
     if (action === 'vision') {
