@@ -1,4 +1,4 @@
-import { liveAccessToken } from '@/lib/edgeSession';
+import { invokeWithFreshSession } from '@/lib/edgeSession';
 /**
  * Zoe vision journal — while M'Mora is open on screen (active or idle), Zoe
  * takes a short camera look every 15 minutes and saves what she saw, so she
@@ -60,7 +60,7 @@ export async function captureVisionJournalEntry(userId: string): Promise<boolean
   const frame = await grabFrame();
   if (!frame) return false;
   void import('@/lib/faceIdAuto').then((m) => m.maybeRefreshFace(userId, frame)).catch(() => {});
-  const { data } = await invokeSovereign({ action: 'vision', frame });
+  const { data } = await invokeWithFreshSession('zoe-sovereign', { action: 'vision', frame });
   const a = data?.success ? data.analysis : null;
   const summary = String(a?.summary ?? '').trim();
   if (!summary) return false;
@@ -105,11 +105,3 @@ export default function ZoeVisionJournalHost() {
   return null;
 }
 
-/** Calls zoe-sovereign with a freshly refreshed sign-in so session races never get rejected. */
-async function invokeSovereign(body: Record<string, unknown>) {
-  const token = await liveAccessToken();
-  return supabase.functions.invoke('zoe-sovereign', {
-    body,
-    ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
-  });
-}
