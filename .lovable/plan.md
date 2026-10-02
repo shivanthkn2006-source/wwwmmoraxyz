@@ -6,7 +6,8 @@ It's the first-time intro film (the "Genesis" intro) that plays before Home. It 
 ## Changes (look only, all 5 screens)
 - Background: the warm tan of Home and chat, instead of black.
 - Text: the platform's normal font in cream and dark brown, instead of neon cyan and the sci-fi font. Words stay the same.
-- Avatar cards: no boxes or outlines. White icon circles with dark symbols, the same as the permissions window. The chosen card gets a soft highlight and a check mark.
+- Warm liquid glass, the same as on Home and Zoe chat: the avatar cards, headline area and button sit on soft frosted panels with a gentle warm sheen.
+- Avatar cards: warm glass panels with no hard outlines. White icon circles with dark symbols, the same as the permissions window. The chosen card glows a little brighter and gets a check mark.
 - "Enter the Omega" button: plain text button with no fill or outline, matching the platform buttons.
 - Step dots, sound and skip controls: cream and brown instead of cyan.
 - Opening, glitch, city and warp effects stay, recoloured to soft warm light instead of neon.
@@ -17,4 +18,5 @@ It's the first-time intro film (the "Genesis" intro) that plays before Home. It 
 
 ## Technical details
 - File: `src/components/GenesisCinematicIntro.tsx`. Replace `bg-black`, cyan/purple/pink gradients and `font-orbitron` with `surface-warm-tan`, semantic tokens and `.tan-circle` / `.tan-circle-icon`.
+- Glass reuses the existing warm liquid-glass classes from Home and chat. These classes fake the frosted look with layered gradients and highlights instead of a live blur, following the no-live-backdrop-filter rule, so the panels won't flicker over the moving intro effects.
 - Check with Playwright screenshots of each scene at phone and desktop size.
