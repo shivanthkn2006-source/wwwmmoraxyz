@@ -10,6 +10,38 @@ let started = false;
 let accessToken: string | null = null;
 let current: { id: string | null; path: string; enteredAt: number; activeMs: number; visibleSince: number | null } | null = null;
 let heartbeat: number | undefined;
+let firstVisit = true;
+const queue: { kind: 'tap' | 'error'; name: string; path: string }[] = [];
+
+function enqueue(kind: 'tap' | 'error', name: string) {
+  const n = name.replace(/\s+/g, ' ').trim().slice(0, 80);
+  if (!n || queue.length >= 50) return;
+  queue.push({ kind, name: n, path: location.pathname.slice(0, 300) });
+}
+
+function flush(final = false) {
+  if (!queue.length) return;
+  const events = queue.splice(0, 50);
+  void post({ action: 'events', visitor_id: visitorId(), device_type: deviceInfo().device_type, events }, final).catch(() => {});
+}
+
+/** Feature label for a tap: explicit data-track, else the button's aria-label/short text, prefixed by the page area. */
+function onTap(e: Event) {
+  const el = (e.target as Element | null)?.closest?.('[data-track],button,a,[role="button"]') as HTMLElement | null;
+  if (!el || el.closest('input,textarea,[contenteditable="true"]')) return;
+  const label = el.dataset.track || el.getAttribute('aria-label') || el.getAttribute('title') || (el.textContent || '').trim().slice(0, 40);
+  if (!label) return;
+  const area = location.pathname.split('/')[1] || 'home';
+  enqueue('tap', `${area} · ${label}`);
+}
+
+function loadMs(): number | null {
+  try {
+    const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
+    const v = nav ? (nav.loadEventEnd || nav.domContentLoadedEventEnd) : 0;
+    return v > 0 ? Math.round(v) : Math.round(performance.now());
+  } catch { return null; }
+}
 
 function visitorId(): string {
   const k = 'mmora-visitor-id';
@@ -91,8 +123,9 @@ function startVisit(path: string) {
   const v = { id: null as string | null, path, enteredAt: Date.now(), activeMs: 0, visibleSince: visible ? Date.now() : null };
   current = v;
   const { device_type, os, browser } = deviceInfo();
+  const wasFirst = firstVisit; firstVisit = false; void wasFirst;
   post({
-    action: 'start', visitor_id: visitorId(), path, referrer: document.referrer || null, ref_code: refCode(),
+    action: 'start', visitor_id: visitorId(), path, referrer: document.referrer || null, ref_code: refCode(), load_ms: firstVisit ? loadMs() : null,
     device_type, os, browser, screen: `${screen.width}x${screen.height}`,
     language: navigator.language, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, hardware: hardware(),
   }).then((r) => r.json()).then((d) => { if (d?.id) v.id = d.id; }).catch(() => {});
@@ -146,7 +179,11 @@ export function startVisitTracker() {
   wrap('replaceState');
   window.addEventListener('popstate', () => startVisit(location.pathname));
   document.addEventListener('visibilitychange', onVisibility);
-  window.addEventListener('pagehide', () => ping(true));
+  window.addEventListener('pagehide', () => { ping(true); flush(true); });
+  document.addEventListener('click', onTap, { capture: true, passive: true });
+  window.addEventListener('error', (e) => enqueue('error', String(e.message || 'Script error')));
+  window.addEventListener('unhandledrejection', (e) => enqueue('error', String((e.reason && (e.reason.message || e.reason)) || 'Unhandled rejection')));
+  window.setInterval(() => flush(), 10_000);
   heartbeat = window.setInterval(() => { if (document.visibilityState === 'visible') ping(); }, HEARTBEAT_MS);
 
   void supabase.auth.getSession().then(({ data }) => {
