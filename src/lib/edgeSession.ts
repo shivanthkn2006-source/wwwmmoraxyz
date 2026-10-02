@@ -35,3 +35,26 @@ export async function hasLiveSession(): Promise<boolean> {
 }
 
 export default hasLiveSession;
+
+/**
+ * Invoke an edge function with a live token; if the server still says the
+ * session is invalid (token rotated mid-flight in another tab), force one
+ * refresh and retry once so signed-in members never see a 401.
+ */
+export async function invokeWithFreshSession<T = any>(
+  name: string,
+  body: Record<string, unknown>,
+): Promise<{ data: T | null; error: any }> {
+  const call = (token: string) =>
+    supabase.functions.invoke(name, { body, headers: { Authorization: `Bearer ${token}` } });
+  const token = await liveAccessToken();
+  if (!token) return { data: null, error: null };
+  let res = await call(token);
+  const status = (res.error as any)?.context?.status;
+  if (res.error && status === 401) {
+    const { data: refreshed } = await supabase.auth.refreshSession();
+    const next = refreshed?.session?.access_token;
+    if (next) res = await call(next);
+  }
+  return res as { data: T | null; error: any };
+}

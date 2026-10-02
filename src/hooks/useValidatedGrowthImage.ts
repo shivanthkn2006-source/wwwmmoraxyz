@@ -1,4 +1,4 @@
-import { liveAccessToken } from '@/lib/edgeSession';
+import { invokeWithFreshSession } from '@/lib/edgeSession';
 /**
  * Content-to-image validation for Growth cards.
  *
@@ -96,18 +96,12 @@ export const useValidatedGrowthImage = ({ key, title, content, category, validat
     let cancelled = false;
     (async () => {
       try {
-        // Use a freshly refreshed sign-in so a token mid-refresh is never rejected.
-        const token = await liveAccessToken();
-        if (cancelled || !token) return;
-        const { data, error } = await supabase.functions.invoke('growth-image-validate', {
-          headers: { Authorization: `Bearer ${token}` },
-          body: {
-            imageUrl: src,
-            person: subject.person,
-            subject: subject.subject,
-            category,
-            strictness: config.strictness,
-          },
+        const { data, error } = await invokeWithFreshSession<any>('growth-image-validate', {
+          imageUrl: src,
+          person: subject.person,
+          subject: subject.subject,
+          category,
+          strictness: config.strictness,
         });
         if (cancelled) return;
         if (error || !data) {

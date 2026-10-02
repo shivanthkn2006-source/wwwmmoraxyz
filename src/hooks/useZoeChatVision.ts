@@ -1,4 +1,4 @@
-import { liveAccessToken } from '@/lib/edgeSession';
+import { invokeWithFreshSession } from '@/lib/edgeSession';
 // ═══════════════════════════════════════════════════════════════════════════════
 // ZOE CHAT VISION - Continuous Camera Analysis for Chat
 // "God Eye" for regular chat - Zoe can see through your camera while chatting
@@ -130,7 +130,7 @@ export const useZoeChatVision = () => {
       // the older perception service stays as the last backup.
       let data: any = null; let error: any = null;
       try {
-        const sv = await invokeSovereign({ action: 'vision', frame: frameData });
+        const sv = await invokeWithFreshSession('zoe-sovereign', { action: 'vision', frame: frameData });
         if (!sv.error && sv.data?.success && sv.data.analysis) {
           const a = sv.data.analysis;
           data = { success: true, analysis: { objects: a.objects, scene: a.scene || a.attire, emotional_sentiment: a.mood, summary: [a.summary, a.attire && `Wearing: ${a.attire}`].filter(Boolean).join(' ') } };
@@ -668,11 +668,3 @@ export const useZoeChatVision = () => {
   };
 };
 
-/** Calls zoe-sovereign with a freshly refreshed sign-in so session races never get rejected. */
-async function invokeSovereign(body: Record<string, unknown>) {
-  const token = await liveAccessToken();
-  return supabase.functions.invoke('zoe-sovereign', {
-    body,
-    ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
-  });
-}
