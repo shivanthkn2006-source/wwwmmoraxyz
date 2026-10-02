@@ -537,7 +537,7 @@ const GenesisCinematicIntro: React.FC<GenesisCinematicIntroProps> = ({
               onClick={handleProceed}
               className={cn(
                 "px-8 py-3 text-lg tracking-wider",
-                "intro-warm-glass rounded-full text-foreground border-0 hover:intro-warm-glass-selected",
+                "intro-warm-glass rounded-full text-foreground border-0",
                 "transition-all duration-300"
               )}
             >
