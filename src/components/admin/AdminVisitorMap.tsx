@@ -16,7 +16,7 @@ export default function AdminVisitorMap({ points }: { points: MapPoint[] }) {
             <Popup>
               <div className="text-xs">
                 <b>{p.name}</b>{p.online ? ' · online now' : ''}<br />
-                {p.userId ? <>User ID: <code>{p.userId}</code><br /></> : 'Not signed in<br />'}
+                {p.userId ? <>User ID: <code>{p.userId}</code><br /></> : <>Not signed in<br /></>}
                 {p.place}<br />Page: {p.path}{p.device ? <><br />Device: {p.device}</> : null}
               </div>
             </Popup>
