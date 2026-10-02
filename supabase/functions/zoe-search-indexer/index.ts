@@ -1,3 +1,4 @@
+import { publicGuard } from '../_shared/public-guard.ts';
 /** Durable queue processor and bounded historical backfill for Zoe universal search. */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.58.0';
 import { embedText } from '../_shared/zoe-embeddings.ts';
@@ -496,6 +497,7 @@ async function coverageSnapshot(db: ReturnType<typeof createClient>) {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+  { const guard = await publicGuard(req.clone(), { name: 'zoe-search-indexer', limit: 60, windowSeconds: 60 }); if (guard.response) return guard.response; }
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
   const requestId = crypto.randomUUID();
   const startedAt = performance.now();

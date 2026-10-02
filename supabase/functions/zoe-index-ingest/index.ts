@@ -1,3 +1,4 @@
+import { publicGuard } from '../_shared/public-guard.ts';
 import { requireCaller } from '../_shared/caller-guard.ts';
 /**
  * ZOE INDEX INGEST — multimodal async indexing pipeline.
@@ -53,6 +54,7 @@ async function canonicalOwner(
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+  { const guard = await publicGuard(req.clone(), { name: 'zoe-index-ingest', limit: 60, windowSeconds: 60 }); if (guard.response) return guard.response; }
   { const __c = await requireCaller(req, 'admin'); if (__c instanceof Response) return __c; }
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 

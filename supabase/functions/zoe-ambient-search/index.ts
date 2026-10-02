@@ -1,3 +1,4 @@
+import { publicGuard } from '../_shared/public-guard.ts';
 import { requireCaller } from '../_shared/caller-guard.ts';
 /**
  * ZOE AMBIENT SEARCH — Decoupled Headless Retrieval Orchestrator.
@@ -189,6 +190,7 @@ async function synthesize(systemPrompt: string, queryText: string): Promise<stri
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+  { const guard = await publicGuard(req.clone(), { name: 'zoe-ambient-search', limit: 60, windowSeconds: 60 }); if (guard.response) return guard.response; }
   { const __c = await requireCaller(req, 'member'); if (__c instanceof Response) return __c; }
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
