@@ -74,7 +74,7 @@ async function lookupGeo(ip: string | null): Promise<Geo> {
   // Reuse a lookup stored in the last day for the same address.
   const { data: prev } = await admin.from("platform_visits")
     .select("country,country_code,region,city,district,isp,lat,lon,is_vpn,is_hosting,is_mobile_network")
-    .eq("ip_address", ip).not("country", "is", null)
+    .eq("ip_address", ip).not("country", "is", null).not("lat", "is", null)
     .gte("entered_at", new Date(Date.now() - 86400_000).toISOString())
     .limit(1).maybeSingle();
   if (prev) { geoCache.set(ip, { at: Date.now(), geo: prev as Geo }); return prev as Geo; }
