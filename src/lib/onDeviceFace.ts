@@ -8,7 +8,7 @@ const MODELS = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.15/model';
 type FaceApi = typeof import('@vladmandic/face-api');
 let apiPromise: Promise<FaceApi> | null = null;
 
-function getApi() {
+export function getApi() {
   if (!apiPromise) {
     apiPromise = (async () => {
       const faceapi = await import('@vladmandic/face-api');
