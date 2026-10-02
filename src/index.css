@@ -7139,3 +7139,13 @@ body {
 .permission-progress > div { background: hsl(142 70% 45%) !important; }
 /* Messages / chat: platform warm tan end to end */
 .chat-warm-surface { background: linear-gradient(90deg, hsl(33 30% 55%), hsl(27 28% 50%)) fixed; }
+
+/* Warm liquid glass for the first-time intro (no live blur, so no flicker) */
+.intro-warm-glass {
+  background: linear-gradient(145deg, hsl(40 40% 96% / 0.32), hsl(33 30% 70% / 0.14) 55%, hsl(40 40% 96% / 0.22));
+  box-shadow: inset 0 1px 0 hsl(40 50% 98% / 0.55), inset 0 -1px 0 hsl(30 30% 20% / 0.12), 0 10px 30px -12px hsl(30 30% 12% / 0.35);
+}
+.intro-warm-glass-selected {
+  background: linear-gradient(145deg, hsl(40 45% 98% / 0.5), hsl(36 35% 80% / 0.28) 55%, hsl(40 45% 98% / 0.38));
+  box-shadow: inset 0 1px 0 hsl(40 50% 99% / 0.8), 0 0 0 1px hsl(40 50% 98% / 0.5), 0 14px 36px -12px hsl(30 30% 12% / 0.45);
+}
