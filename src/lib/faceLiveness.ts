@@ -48,22 +48,33 @@ export async function runLiveness(
   onPrompt: (text: string, stepIndex: number, total: number) => void,
 ): Promise<LivenessProof> {
   const faceapi = await getApi();
-  const opts = new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 });
+  // Fast detector for the many movement frames (catches quick blinks on
+  // slower phones); the full fingerprint is taken on every third frame.
+  const fast = new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.45 });
   const canvas = document.createElement('canvas');
   const descriptors: number[][] = [];
   const trace: LivenessProof['trace'] = [];
 
+  if (Date.parse(challenge.expiresAt) < Date.now()) throw new Error('The live check timed out. Try again.');
   for (let i = 0; i < challenge.steps.length; i++) {
+    if (video.paused) { try { await video.play(); } catch { /* iOS may need a tap */ } }
     const step = challenge.steps[i];
     onPrompt(STEP_PROMPT[step], i, challenge.steps.length);
     const t = { step, ear: [] as number[], yaw: [] as number[] };
     let baseEar = 0; let closed = false; let done = false;
     const start = Date.now();
-    while (Date.now() - start < 7000 && !done) {
-      if (!video.videoWidth) { await new Promise((r) => setTimeout(r, 100)); continue; }
-      canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-      canvas.getContext('2d')?.drawImage(video, 0, 0);
-      const all = await faceapi.detectAllFaces(canvas, opts).withFaceLandmarks().withFaceDescriptors();
+    let frame = 0;
+    while (Date.now() - start < 9000 && !done) {
+      if (!video.videoWidth || video.readyState < 2) { await new Promise((r) => setTimeout(r, 100)); continue; }
+      // Downscale large cameras (desktop 1080p/4K webcams) so every frame stays quick.
+      const scale = Math.min(1, 480 / Math.max(video.videoWidth, video.videoHeight));
+      canvas.width = Math.round(video.videoWidth * scale); canvas.height = Math.round(video.videoHeight * scale);
+      canvas.getContext('2d')?.drawImage(video, 0, 0, canvas.width, canvas.height);
+      frame++;
+      const wantDescriptor = descriptors.length < 8 && frame % 3 === 1;
+      const all = wantDescriptor
+        ? await faceapi.detectAllFaces(canvas, fast).withFaceLandmarks().withFaceDescriptors()
+        : await faceapi.detectAllFaces(canvas, fast).withFaceLandmarks();
       if (all.length > 1) throw new Error('Only one face should be in view. Try again.');
       if (all.length === 1) {
         const lm = all[0].landmarks;
@@ -73,9 +84,8 @@ export async function runLiveness(
         // Camera image is mirrored to the member: their left = nose moves to image right.
         const yaw = (nose.x - mid) / width;
         t.ear.push(Math.round(e * 1000) / 1000); t.yaw.push(Math.round(yaw * 1000) / 1000);
-        if (descriptors.length < 8 && (t.ear.length % 2 === 1)) {
-          descriptors.push(Array.from(all[0].descriptor).map((n) => Math.round(n * 1e5) / 1e5));
-        }
+        const desc = (all[0] as { descriptor?: Float32Array }).descriptor;
+        if (wantDescriptor && desc) descriptors.push(Array.from(desc).map((n) => Math.round(n * 1e5) / 1e5));
         if (step === 'blink') {
           if (!baseEar && e > 0.24) baseEar = e;
           if (baseEar && e < baseEar * 0.7) closed = true;

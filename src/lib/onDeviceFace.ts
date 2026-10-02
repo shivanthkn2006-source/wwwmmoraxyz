@@ -3,7 +3,11 @@
  * Produces a 128-number face "fingerprint" from a picture using face-api
  * models downloaded once from a public CDN and cached by the browser.
  */
-const MODELS = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.15/model';
+// Two public mirrors: if one is blocked (school/office networks, outages) the other is used.
+const MODEL_MIRRORS = [
+  'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.15/model',
+  'https://unpkg.com/@vladmandic/face-api@1.7.15/model',
+];
 
 type FaceApi = typeof import('@vladmandic/face-api');
 let apiPromise: Promise<FaceApi> | null = null;
@@ -17,11 +21,20 @@ export function getApi() {
       try { ok = await tf.setBackend('webgl'); } catch { ok = false; }
       if (!ok) await tf.setBackend('cpu');
       await tf.ready();
-      await Promise.all([
-        faceapi.nets.ssdMobilenetv1.loadFromUri(MODELS),
-        faceapi.nets.faceLandmark68Net.loadFromUri(MODELS),
-        faceapi.nets.faceRecognitionNet.loadFromUri(MODELS),
-      ]);
+      let lastErr: unknown = null;
+      for (const base of MODEL_MIRRORS) {
+        try {
+          await Promise.all([
+            faceapi.nets.ssdMobilenetv1.isLoaded ? null : faceapi.nets.ssdMobilenetv1.loadFromUri(base),
+            faceapi.nets.tinyFaceDetector.isLoaded ? null : faceapi.nets.tinyFaceDetector.loadFromUri(base),
+            faceapi.nets.faceLandmark68Net.isLoaded ? null : faceapi.nets.faceLandmark68Net.loadFromUri(base),
+            faceapi.nets.faceRecognitionNet.isLoaded ? null : faceapi.nets.faceRecognitionNet.loadFromUri(base),
+          ]);
+          lastErr = null;
+          break;
+        } catch (e) { lastErr = e; }
+      }
+      if (lastErr) throw lastErr;
       return faceapi;
     })().catch((e) => { apiPromise = null; throw e; });
   }
