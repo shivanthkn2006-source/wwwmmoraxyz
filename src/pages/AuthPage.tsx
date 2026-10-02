@@ -633,9 +633,14 @@ const AuthPage = () => {
                   <RecoveryCodeSignIn open={showRecovery} onOpenChange={setShowRecovery} defaultEmail={formData.email} />
                 </div>
               )}
-              <p className="text-white/70 text-[10px] xs:text-xs leading-snug pt-1">
-                We record pages visited, device type and approximate location to improve M'Mora. Internet addresses are deleted after 90 days.
-              </p>
+              <nav aria-label="About M'Mora" className="flex flex-wrap justify-center gap-x-1.5 pt-1 text-[11px] xs:text-xs text-white/75">
+                {[['About', '/about'], ['Policies', '/terms'], ['Help', '/help'], ['Privacy', '/data-policy'], ['Site map', '/map']].map(([label, to], i) => (
+                  <span key={to} className="flex items-center gap-x-1.5">
+                    {i > 0 && <span aria-hidden>/</span>}
+                    <a href={to} className="!min-h-0 py-0 hover:text-white">{label}</a>
+                  </span>
+                ))}
+              </nav>
             </div>
           </div>
         </div>
