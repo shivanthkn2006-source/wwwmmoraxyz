@@ -70,7 +70,7 @@ export default function AdminPresenceHistory({ visits, names, now, sinceIso }: {
     });
     auth.forEach((e) => out.push({
       key: `a-${e.id}`, at: new Date(e.created_at).getTime(), kind: 'auth', who: e.display_name || names[e.user_id] || `Member ${e.user_id.slice(0, 6)}`, userId: e.user_id,
-      status: e.event === 'sign_in' ? 'Signed in' : e.event === 'sign_out' ? 'Signed out' : e.event,
+      status: e.event === 'login' ? 'Signed in' : e.event === 'logout' ? 'Signed out' : e.event,
       start: time(e.created_at), end: '', duration: '', pages: '',
       device: [e.device_type, e.os, e.browser].filter(Boolean).join(' · '), place: [e.city, e.country].filter(Boolean).join(', '),
       ip: e.ip_address ?? '', network: e.is_vpn ? 'VPN/proxy' : '', site: '',
