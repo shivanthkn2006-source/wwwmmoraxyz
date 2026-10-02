@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
 import AdminVisitorMap, { type MapPoint } from './AdminVisitorMap';
+import AdminPresenceHistory from './AdminPresenceHistory';
 
 type V = {
   id: string; visitor_id: string; user_id: string | null; path: string; entered_at: string; last_seen_at: string;
@@ -208,6 +209,8 @@ export default function AdminEngagementPanels({ visits, names, now, sinceIso }: 
           Green = online now · Yellow = idle (seen in the last 15 min) · Red = signed out / left. {d.mapPoints.length} visitors this period. Tap a pin for full details.
         </p>
       </Card>
+
+      <AdminPresenceHistory visits={visits as any} names={names} now={now} sinceIso={sinceIso} />
 
       <div className="grid gap-3 md:grid-cols-2">
         <Card className="p-4">
