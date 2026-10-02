@@ -1,0 +1,144 @@
+// Records page visits, time spent and sign-in/out events for the admin-only analytics page.
+// Runs once per tab, off the boot path; every call is fire-and-forget.
+import { supabase } from '@/integrations/supabase/client';
+
+const FN_URL = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/track-visit`;
+const ANON = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
+const HEARTBEAT_MS = 30_000;
+
+let started = false;
+let accessToken: string | null = null;
+let current: { id: string | null; path: string; enteredAt: number; activeMs: number; visibleSince: number | null } | null = null;
+let heartbeat: number | undefined;
+
+function visitorId(): string {
+  const k = 'mmora-visitor-id';
+  let v = localStorage.getItem(k);
+  if (!v) { v = crypto.randomUUID(); localStorage.setItem(k, v); }
+  return v;
+}
+
+function deviceInfo() {
+  const ua = navigator.userAgent;
+  const device_type = /iPad|Tablet/i.test(ua) ? 'tablet' : /Mobi|Android|iPhone/i.test(ua) ? 'mobile' : 'desktop';
+  const os = /iPhone|iPad|iPod/.test(ua) ? 'iOS' : /Android/.test(ua) ? 'Android' : /Mac OS X/.test(ua) ? 'macOS'
+    : /Windows/.test(ua) ? 'Windows' : /CrOS/.test(ua) ? 'ChromeOS' : /Linux/.test(ua) ? 'Linux' : 'Other';
+  const browser = /Edg\//.test(ua) ? 'Edge' : /OPR\//.test(ua) ? 'Opera' : /SamsungBrowser/.test(ua) ? 'Samsung'
+    : /CriOS|Chrome\//.test(ua) ? 'Chrome' : /FxiOS|Firefox\//.test(ua) ? 'Firefox' : /Safari\//.test(ua) ? 'Safari' : 'Other';
+  return { device_type, os, browser };
+}
+
+function hardware() {
+  const n = navigator as any;
+  let gpu: string | null = null;
+  try {
+    const gl = document.createElement('canvas').getContext('webgl') as WebGLRenderingContext | null;
+    const ext = gl?.getExtension('WEBGL_debug_renderer_info');
+    if (gl && ext) gpu = String(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL)).slice(0, 200);
+  } catch { /* ignore */ }
+  return {
+    cpu_cores: n.hardwareConcurrency ?? null,
+    memory_gb: n.deviceMemory ?? null,
+    gpu,
+    touch_points: n.maxTouchPoints ?? 0,
+    connection: n.connection?.effectiveType ?? null,
+    pixel_ratio: Math.round((window.devicePixelRatio || 1) * 100) / 100,
+    platform: n.userAgentData?.platform ?? n.platform ?? null,
+    model: null,
+  };
+}
+
+function post(body: unknown, keepalive = false) {
+  return fetch(FN_URL, {
+    method: 'POST',
+    keepalive,
+    headers: { 'Content-Type': 'application/json', apikey: ANON, Authorization: `Bearer ${accessToken || ANON}` },
+    body: JSON.stringify(body),
+  });
+}
+
+function activeSeconds(): number {
+  if (!current) return 0;
+  const live = current.visibleSince ? Date.now() - current.visibleSince : 0;
+  return Math.round((current.activeMs + live) / 1000);
+}
+
+function ping(final = false) {
+  if (!current?.id) return;
+  void post({ action: 'ping', id: current.id, visitor_id: visitorId(), duration_seconds: Math.min(activeSeconds(), 86400) }, final).catch(() => {});
+}
+
+function startVisit(path: string) {
+  if (current?.path === path) return;
+  ping(true);
+  const visible = document.visibilityState === 'visible';
+  const v = { id: null as string | null, path, enteredAt: Date.now(), activeMs: 0, visibleSince: visible ? Date.now() : null };
+  current = v;
+  const { device_type, os, browser } = deviceInfo();
+  post({
+    action: 'start', visitor_id: visitorId(), path, referrer: document.referrer || null,
+    device_type, os, browser, screen: `${screen.width}x${screen.height}`,
+    language: navigator.language, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, hardware: hardware(),
+  }).then((r) => r.json()).then((d) => { if (d?.id) v.id = d.id; }).catch(() => {});
+}
+
+function onVisibility() {
+  if (!current) return;
+  if (document.visibilityState === 'visible') current.visibleSince = Date.now();
+  else {
+    if (current.visibleSince) current.activeMs += Date.now() - current.visibleSince;
+    current.visibleSince = null;
+    ping(true);
+  }
+}
+
+function sendAuth(event: 'login' | 'logout', token: string | null) {
+  if (!token) return;
+  const { device_type, os, browser } = deviceInfo();
+  void fetch(FN_URL, {
+    method: 'POST', keepalive: true,
+    headers: { 'Content-Type': 'application/json', apikey: ANON, Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ action: 'auth', event, device_type, os, browser }),
+  }).catch(() => {});
+}
+
+export function startVisitTracker() {
+  if (started || typeof window === 'undefined') return;
+  started = true;
+
+  supabase.auth.onAuthStateChange((event, session) => {
+    const prevToken = accessToken;
+    accessToken = session?.access_token ?? null;
+    if (event === 'SIGNED_IN' && session) {
+      const k = `mmora-login-logged-${session.user.id}`;
+      if (!sessionStorage.getItem(k)) { sessionStorage.setItem(k, '1'); sendAuth('login', session.access_token); }
+    } else if (event === 'SIGNED_OUT') {
+      Object.keys(sessionStorage).filter((k) => k.startsWith('mmora-login-logged-')).forEach((k) => sessionStorage.removeItem(k));
+      sendAuth('logout', prevToken);
+    }
+  });
+
+  const wrap = (fn: 'pushState' | 'replaceState') => {
+    const orig = history[fn].bind(history);
+    history[fn] = ((...args: Parameters<History['pushState']>) => {
+      const r = orig(...args);
+      queueMicrotask(() => startVisit(location.pathname));
+      return r;
+    }) as History['pushState'];
+  };
+  wrap('pushState');
+  wrap('replaceState');
+  window.addEventListener('popstate', () => startVisit(location.pathname));
+  document.addEventListener('visibilitychange', onVisibility);
+  window.addEventListener('pagehide', () => ping(true));
+  heartbeat = window.setInterval(() => { if (document.visibilityState === 'visible') ping(); }, HEARTBEAT_MS);
+
+  void supabase.auth.getSession().then(({ data }) => {
+    accessToken = data.session?.access_token ?? null;
+    startVisit(location.pathname);
+  });
+}
+
+export function stopVisitTracker() {
+  if (heartbeat) window.clearInterval(heartbeat);
+}
