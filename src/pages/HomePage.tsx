@@ -37,6 +37,7 @@ import HomeMusicRecommendations from '@/components/home/HomeMusicRecommendations
 import HomeGlassDock from '@/components/home/HomeGlassDock';
 import HomeFeedSwitcher from '@/components/home/HomeFeedSwitcher';
 import { buildExtraDockItems, DOCK_RESERVED_ROUTES } from '@/components/home/dockExtraActions';
+import { useIsAdmin } from '@/hooks/useIsAdmin';
 import ZoeCallsIcon from '@/components/icons/ZoeCallsIcon';
 import { useNotificationFeatureBadges } from '@/hooks/useNotificationFeatureBadges';
 import DockBadgeBoundary from '@/components/home/DockBadgeBoundary';
@@ -893,6 +894,7 @@ const HomePage = () => {
   const [uploadFileName, setUploadFileName] = useState<string>('');
   const [uploadError, setUploadError] = useState<string>('');
   const [lastUploadFile, setLastUploadFile] = useState<File | null>(null);
+  const isPlatformAdmin = useIsAdmin() === true;
   const isAdminUser = !!user && ['moksh50','justmkbhd','john','shivanth_kn'].includes(((userProfile?.username||'') as string).toLowerCase());
   const pushDebug = (e: Omit<import('@/components/AdminFeedDebugger').FeedDebugEntry,'timestamp'>) =>
     setDebugEntries(prev => [{...e, timestamp: new Date().toISOString()}, ...prev].slice(0, 50));
@@ -3048,7 +3050,7 @@ const HomePage = () => {
             icon: <Settings className="h-[22px] w-[22px]" />,
             onSelect: runHomeIconAction('settings', () => navigate('/profile?settings=1')),
           },
-          ...buildExtraDockItems(navigate, DOCK_RESERVED_ROUTES),
+          ...buildExtraDockItems(navigate, DOCK_RESERVED_ROUTES, Infinity, { isAdmin: isPlatformAdmin }),
 
         ]}
 
