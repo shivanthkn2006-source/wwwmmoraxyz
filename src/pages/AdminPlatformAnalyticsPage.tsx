@@ -12,7 +12,7 @@ import { RefreshCw, Radio, LogIn, LogOut } from 'lucide-react';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
 type Visit = {
-  id: string; visitor_id: string; user_id: string | null; path: string; referrer_host: string | null;
+  id: string; visitor_id: string; user_id: string | null; path: string; referrer_host: string | null; site_host?: string | null;
   entered_at: string; last_seen_at: string; duration_seconds: number;
   device_type: string | null; os: string | null; browser: string | null; screen: string | null;
   language: string | null; timezone: string | null; hardware: Record<string, unknown>;
@@ -206,6 +206,7 @@ export default function AdminPlatformAnalyticsPage() {
               {s.pageTime.length === 0 && <p className="text-muted-foreground">No data yet</p>}
             </div>
           </Card>
+          <BarList title="Website address" rows={tally(visits, (v) => v.site_host || 'Unknown')} total={s.views} />
           <BarList title="Source" rows={tally(visits, (v) => v.referrer_host || 'Direct')} total={s.views} />
           <BarList title="Device" rows={tally(visits, (v) => v.device_type)} total={s.views} />
           <BarList title="Operating system" rows={tally(visits, (v) => v.os)} total={s.views} />

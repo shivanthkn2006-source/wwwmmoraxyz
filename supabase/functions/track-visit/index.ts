@@ -111,8 +111,10 @@ Deno.serve(async (req) => {
 
     let referrer_host: string | null = null;
     try { if (b.referrer) referrer_host = new URL(b.referrer).hostname || null; } catch { /* ignore */ }
+    let site_host: string | null = null;
+    try { const o = req.headers.get("origin") || req.headers.get("referer"); if (o) site_host = new URL(o).hostname.slice(0, 120) || null; } catch { /* ignore */ }
     const { data, error } = await admin.from("platform_visits").insert({
-      visitor_id: b.visitor_id, user_id: user?.id ?? null, path: b.path, referrer_host,
+      visitor_id: b.visitor_id, user_id: user?.id ?? null, path: b.path, referrer_host, site_host,
       device_type: b.device_type, os: b.os, browser: b.browser, screen: b.screen,
       language: b.language, timezone: b.timezone, hardware: b.hardware ?? {},
       ip_address: ip, ...geo,
