@@ -22,6 +22,12 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>M'Mora uses your camera for face sign-in, video calls and photos you choose to take.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>M'Mora uses Face ID so you can sign in quickly and securely.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>M'Mora uses your location for local weather, astrology and activity tracking.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>M'Mora uses your headset microphone so you can speak with Zoe.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>

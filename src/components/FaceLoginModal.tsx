@@ -108,26 +108,45 @@ const FaceLoginModal: React.FC<FaceLoginModalProps> = ({ open, onClose, onSucces
       return;
     }
 
+    if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+      toast.error(window.isSecureContext ? 'This browser has no camera access. Try Safari, Chrome or Edge.' : 'The camera needs a secure (https) address.');
+      return;
+    }
     try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          facingMode: 'user'
-        }
-      });
-      
+      let mediaStream: MediaStream;
+      try {
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
+          audio: false,
+        });
+      } catch (first: any) {
+        // Some desktop webcams (Windows/Mac) reject the size or front-camera hint.
+        if (first?.name !== 'OverconstrainedError' && first?.name !== 'NotReadableError') throw first;
+        mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      }
       rememberEmail(address);
       setStream(mediaStream);
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-      }
       setStep('camera');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error accessing camera:', error);
-      toast.error('Failed to access camera. Please check permissions.');
+      const msg = error?.name === 'NotAllowedError'
+        ? 'Camera access is blocked. Allow the camera for this site in your browser settings, then try again.'
+        : error?.name === 'NotFoundError'
+          ? 'No camera was found on this device.'
+          : error?.name === 'NotReadableError'
+            ? 'Another app is using the camera. Close it and try again.'
+            : 'Failed to access camera. Please check permissions.';
+      toast.error(msg);
     }
   };
+
+  // The video only appears once the camera step shows, so connect it then.
+  useEffect(() => {
+    const v = videoRef.current;
+    if (step !== 'camera' || !stream || !v || v.srcObject === stream) return;
+    v.srcObject = stream;
+    v.play?.().catch(() => { /* autoplay muted+playsInline normally succeeds */ });
+  }, [step, stream]);
 
   const captureAndVerify = async () => {
     if (!videoRef.current || !canvasRef.current) return;

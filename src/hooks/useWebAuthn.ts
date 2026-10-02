@@ -15,6 +15,27 @@ type WebAuthnStep =
   | 'auth_session'
   | 'error';
 
+/**
+ * One passkey for www and non-www: the passkey belongs to the main web address
+ * (mmora.xyz), which browsers allow on www.mmora.xyz too.
+ */
+export const passkeyRpId = () => {
+  if (typeof window === 'undefined') return 'localhost';
+  return window.location.hostname.replace(/^www\./, '');
+};
+
+/** Asks with the main address first, then the exact address (older passkeys). */
+const getAssertion = async (publicKey: PublicKeyCredentialRequestOptions) => {
+  const main = passkeyRpId();
+  const exact = typeof window !== 'undefined' ? window.location.hostname : main;
+  try {
+    return await navigator.credentials.get({ publicKey: { ...publicKey, rpId: main } }) as PublicKeyCredential | null;
+  } catch (e: any) {
+    if (main === exact || !['NotAllowedError', 'SecurityError', 'InvalidStateError'].includes(e?.name)) throw e;
+    return await navigator.credentials.get({ publicKey: { ...publicKey, rpId: exact } }) as PublicKeyCredential | null;
+  }
+};
+
 const redactEmail = (email?: string) => {
   if (!email) return undefined;
   const [name, domain] = email.split('@');
@@ -29,7 +50,7 @@ const getWebAuthnDiagnostics = () => ({
   platform: typeof navigator !== 'undefined' ? navigator.platform : 'unknown',
   userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
   origin: typeof window !== 'undefined' ? window.location.origin : 'unknown',
-  rpId: typeof window !== 'undefined' ? window.location.hostname : 'unknown',
+  rpId: typeof window !== 'undefined' ? window.location.hostname.replace(/^www\./, '') : 'unknown',
 });
 
 const logWebAuthn = (step: WebAuthnStep, details: Record<string, unknown> = {}) => {
@@ -156,7 +177,7 @@ export const useWebAuthn = (): UseWebAuthnReturn => {
       const credential = await navigator.credentials.create({
         publicKey: {
           challenge,
-          rp: { name: "M'Mora", id: window.location.hostname },
+          rp: { name: "M'Mora", id: passkeyRpId() },
           user: {
             id: new TextEncoder().encode(user.id),
             name: user.email || 'user@mmora.app',
@@ -234,15 +255,12 @@ export const useWebAuthn = (): UseWebAuthnReturn => {
       const challenge = new Uint8Array(32);
       crypto.getRandomValues(challenge);
       logWebAuthn('auth_prompt', { allowCredentialCount: credentials.length });
-      const assertion = await navigator.credentials.get({
-        publicKey: {
+      const assertion = await getAssertion({
           challenge,
           allowCredentials: credentials.map((c) => ({ type: 'public-key', id: base64URLDecode(c.credential_id), transports: ['internal'] })),
           timeout: 60000,
           userVerification: 'required',
-          rpId: window.location.hostname,
-        },
-      }) as PublicKeyCredential | null;
+          });
 
       if (!assertion) throw new Error('Biometric verification failed');
       await supabase.from('webauthn_credentials').update({ last_used_at: new Date().toISOString() }).eq('credential_id', base64URLEncode(assertion.rawId));
@@ -289,15 +307,12 @@ export const useWebAuthn = (): UseWebAuthnReturn => {
         challengeId: beginData.challengeId,
         allowCredentialCount: beginData.allowCredentials?.length || 0,
       });
-      const assertion = await navigator.credentials.get({
-        publicKey: {
+      const assertion = await getAssertion({
           challenge: base64URLDecode(beginData.challenge),
           allowCredentials: (beginData.allowCredentials || []).map((c: any) => ({ type: 'public-key', id: base64URLDecode(c.id), transports: c.transports || ['internal'] })),
           timeout: 60000,
           userVerification: 'required',
-          rpId: window.location.hostname,
-        },
-      }) as PublicKeyCredential | null;
+          });
       if (!assertion) throw new Error('Biometric verification failed');
 
       const response = assertion.response as AuthenticatorAssertionResponse;
