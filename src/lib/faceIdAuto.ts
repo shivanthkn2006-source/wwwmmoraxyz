@@ -6,6 +6,7 @@
  */
 import { supabase } from '@/integrations/supabase/client';
 import { faceDescriptor } from '@/lib/onDeviceFace';
+import { averageDescriptor, type LivenessProof } from '@/lib/faceLiveness';
 
 const CONSENT = (uid: string) => `mmora-faceid-consent-${uid}`;
 const LAST_REFRESH = (uid: string) => `mmora-faceid-refresh-${uid}`;
@@ -42,7 +43,8 @@ export async function scanFiveSeconds(video: HTMLVideoElement, onProgress?: (p: 
 }
 
 /** Enrolls Face ID with the scan, linked to the identity photo when one is saved. */
-export async function enrollWithIdentity(uid: string, descriptor: number[]): Promise<{ ok: boolean; message: string }> {
+export async function enrollWithIdentity(uid: string, liveness: LivenessProof): Promise<{ ok: boolean; message: string }> {
+  const descriptor = averageDescriptor(liveness.descriptors);
   let identityDescriptor: number[] | undefined;
   try {
     const { getVaultStatus, refreshIdentitySignedUrl } = await import('@/services/zoeIdentityVault');
@@ -60,7 +62,7 @@ export async function enrollWithIdentity(uid: string, descriptor: number[]): Pro
     }
   } catch { /* identity photo optional */ }
   const { data, error } = await supabase.functions.invoke('face-verification', {
-    body: { operation: 'enroll_face', descriptor, identityDescriptor },
+    body: { operation: 'enroll_face', liveness, identityDescriptor },
   });
   if (error || !data?.success) {
     let msg = 'Face ID setup failed. Try again in good light.';

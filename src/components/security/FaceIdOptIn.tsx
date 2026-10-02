@@ -4,7 +4,8 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/compone
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
-import { enrollWithIdentity, getFaceConsent, scanFiveSeconds, setFaceConsent } from '@/lib/faceIdAuto';
+import { enrollWithIdentity, getFaceConsent, setFaceConsent } from '@/lib/faceIdAuto';
+import { beginLiveness, runLiveness } from '@/lib/faceLiveness';
 
 /** One-time first sign-in offer: a 5-second face scan to turn on Face ID. */
 export default function FaceIdOptIn() {
@@ -45,10 +46,16 @@ export default function FaceIdOptIn() {
       streamRef.current = stream;
       const v = videoRef.current!;
       v.srcObject = stream; await v.play();
-      const descriptor = await scanFiveSeconds(v, setProgress);
+      const challenge = await beginLiveness('enroll');
+      let proof;
+      try {
+        proof = await runLiveness(v, challenge, (text, i, total) => { setNote(text); setProgress((i + 0.5) / total); });
+      } catch (e) {
+        stop(); setPhase('ask'); setNote(e instanceof Error ? e.message : 'No clear face found. Try again in good light.'); return;
+      }
+      setProgress(1);
       stop();
-      if (!descriptor) { setPhase('ask'); setNote('No clear face found. Try again in good light.'); return; }
-      const r = await enrollWithIdentity(user.id, descriptor);
+      const r = await enrollWithIdentity(user.id, proof);
       setNote(r.message);
       if (r.ok) { setFaceConsent(user.id, 'yes'); setPhase('done'); } else setPhase('ask');
     } catch {
@@ -62,7 +69,7 @@ export default function FaceIdOptIn() {
         <ScanFace className="mx-auto h-10 w-10 text-foreground" strokeWidth={1.6} />
         <DialogTitle className="text-center">Secure your account with Face ID</DialogTitle>
         <DialogDescription className="text-center">
-          A 5-second face scan lets you sign in with your face and confirms it's you in security checks. Your face is kept as private numbers, never shared. You can turn it off any time in your profile.
+          A quick live face scan (blink and a small head turn) lets you sign in with your face and confirms it's you in security checks. Your face is kept as private numbers, never shared. You can turn it off any time in your profile.
         </DialogDescription>
         <video ref={videoRef} muted playsInline className={phase === 'scan' ? 'mx-auto h-40 w-40 rounded-full object-cover' : 'hidden'} />
         {phase === 'scan' && (
