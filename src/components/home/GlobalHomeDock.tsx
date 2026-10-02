@@ -18,6 +18,7 @@ import { useAuth } from '@/lib/auth';
 import { useGrowthUnread } from '@/hooks/useGrowthUnread';
 import { useNotificationFeatureBadges } from '@/hooks/useNotificationFeatureBadges';
 import { buildExtraDockItems, DOCK_RESERVED_ROUTES } from '@/components/home/dockExtraActions';
+import { useIsAdmin } from '@/hooks/useIsAdmin';
 import ZoeCallsIcon from '@/components/icons/ZoeCallsIcon';
 
 /** Routes that own their dock, or must stay chrome-free. */
@@ -39,6 +40,7 @@ export const GlobalHomeDock: React.FC = () => {
   const unread = useGrowthUnread();
   const { counts, total } = useNotificationFeatureBadges();
   const [alertsOpen, setAlertsOpen] = useState(false);
+  const isPlatformAdmin = useIsAdmin() === true;
 
   const confirmedSignedOut = !loading && !user && !session;
   const hidden = confirmedSignedOut ||
@@ -142,7 +144,7 @@ export const GlobalHomeDock: React.FC = () => {
             active: pathname.startsWith('/zoe-audio'),
             onSelect: () => navigate('/zoe-audio'),
           },
-          ...buildExtraDockItems(navigate, DOCK_RESERVED_ROUTES),
+          ...buildExtraDockItems(navigate, DOCK_RESERVED_ROUTES, Infinity, { isAdmin: isPlatformAdmin }),
         ]}
 
       />

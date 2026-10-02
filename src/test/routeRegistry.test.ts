@@ -5,7 +5,7 @@ import { extractRoutes, buildRegistrySource } from '../../scripts/generate-route
 import { CANONICAL_ROUTES } from '@/config/routeRegistry.generated';
 import { NAVIGABLE_ROUTES, routeRegistryAsPrompt, findRoute } from '@/config/routeRegistry';
 import { getZoePlatformPageContext } from '@/lib/zoePlatformContext';
-import { buildExtraDockItems, DOCK_EXTRA_DEFS, DOCK_RESERVED_ROUTES } from '@/components/home/dockExtraActions';
+import { buildExtraDockItems, DOCK_EXTRA_DEFS, DOCK_RESERVED_ROUTES, isAdminOnlyRoute } from '@/components/home/dockExtraActions';
 
 const read = (p: string) => readFileSync(resolve(process.cwd(), p), 'utf8');
 
@@ -48,8 +48,18 @@ describe('dock ↔ registry consistency', () => {
     }
   });
 
-  it('automatically gives every static page a Home-menu action', () => {
+  it('hides admin, nexus, omega and vault pages from members', () => {
     const items = buildExtraDockItems(() => {}, DOCK_RESERVED_ROUTES);
+    const labels = new Set(items.map((item) => item.label));
+    for (const route of NAVIGABLE_ROUTES) {
+      if (isAdminOnlyRoute(route.path)) expect(labels.has(route.label), `${route.path} visible to members`).toBe(false);
+    }
+    expect(labels.has('Admin vault')).toBe(false);
+    expect(buildExtraDockItems(() => {}, DOCK_RESERVED_ROUTES, Infinity, { isAdmin: true }).some((i) => i.label === 'Admin vault')).toBe(true);
+  });
+
+  it('automatically gives every static page a Home-menu action', () => {
+    const items = buildExtraDockItems(() => {}, DOCK_RESERVED_ROUTES, Infinity, { isAdmin: true });
     const itemLabels = new Set(items.map((item) => item.label));
     const authoredPaths = new Set(DOCK_EXTRA_DEFS.map((item) => item.route));
     const excludedPrefixes = ['/zoe-infinity', '/admin'];
