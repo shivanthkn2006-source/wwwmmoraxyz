@@ -6140,6 +6140,7 @@ export type Database = {
           referrer_host: string | null
           region: string | null
           screen: string | null
+          site_host: string | null
           timezone: string | null
           user_id: string | null
           visitor_id: string
@@ -6168,6 +6169,7 @@ export type Database = {
           referrer_host?: string | null
           region?: string | null
           screen?: string | null
+          site_host?: string | null
           timezone?: string | null
           user_id?: string | null
           visitor_id: string
@@ -6196,6 +6198,7 @@ export type Database = {
           referrer_host?: string | null
           region?: string | null
           screen?: string | null
+          site_host?: string | null
           timezone?: string | null
           user_id?: string | null
           visitor_id?: string
