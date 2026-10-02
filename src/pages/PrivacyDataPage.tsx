@@ -67,6 +67,14 @@ const PrivacyDataPage: React.FC = () => {
           </p>
         </header>
 
+        <section className="space-y-2 rounded-lg border border-border p-5">
+          <h2 className="text-base font-medium">Visit records</h2>
+          <p className="text-sm text-muted-foreground">
+            To keep M'Mora working well we record which pages you open, how long you stay, your device type, and your approximate
+            city and internet address. Only the platform owner can see this. Internet addresses and map positions are deleted
+            automatically after 90 days, and tap and error records after 180 days.
+          </p>
+        </section>
         <section className="space-y-3 rounded-lg border border-border p-5">
           <h2 className="text-base font-medium">Download my data</h2>
           <p className="text-sm text-muted-foreground">
