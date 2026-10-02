@@ -74,7 +74,7 @@ const IntroScene: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
 
   return (
     <motion.div 
-      className="absolute inset-0 flex items-center justify-center bg-background"
+      className="absolute inset-0 flex items-center justify-center"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -85,14 +85,14 @@ const IntroScene: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
         transition={{ delay: 0.5, duration: 1.5 }}
         className="text-center px-8"
       >
-        <p className="text-2xl md:text-4xl font-orbitron text-foreground/90 tracking-[0.3em] mb-4 animate-gpu-status-primary">
+        <p className="text-2xl md:text-4xl text-foreground/90 tracking-[0.3em] mb-4 animate-gpu-status-primary">
           THE YEAR IS 2120
         </p>
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 2, duration: 1 }}
-          className="text-lg md:text-2xl text-red-500/80 font-mono tracking-widest"
+          className="text-lg md:text-2xl text-foreground/70  tracking-widest"
         >
           REALITY IS BROKEN
         </motion.p>
@@ -100,7 +100,7 @@ const IntroScene: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
       
       {/* Subtle scan lines */}
       <div className="absolute inset-0 pointer-events-none opacity-20">
-        <div className="absolute inset-0 bg-[repeating-linear-gradient(0deg,transparent,transparent_2px,rgba(0,255,255,0.03)_2px,rgba(0,255,255,0.03)_4px)]" />
+        <div className="absolute inset-0 bg-[repeating-linear-gradient(0deg,transparent,transparent_2px,rgba(255,240,220,0.05)_2px,rgba(255,240,220,0.05)_4px)]" />
       </div>
     </motion.div>
   );
@@ -115,7 +115,7 @@ const CityScene: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
 
   return (
     <motion.div 
-      className="absolute inset-0 overflow-hidden bg-black"
+      className="absolute inset-0 overflow-hidden"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -128,9 +128,9 @@ const CityScene: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
         transition={{ duration: 3, ease: "easeOut" }}
         style={{
           background: `
-            linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.8) 100%),
-            linear-gradient(90deg, rgba(0,255,255,0.1) 1px, transparent 1px),
-            linear-gradient(180deg, rgba(0,255,255,0.1) 1px, transparent 1px)
+            linear-gradient(to bottom, transparent 0%, rgba(90,60,40,0.35) 100%),
+            linear-gradient(90deg, rgba(255,245,230,0.18) 1px, transparent 1px),
+            linear-gradient(180deg, rgba(255,245,230,0.18) 1px, transparent 1px)
           `,
           backgroundSize: '100% 100%, 50px 50px, 50px 50px',
           transform: 'perspective(500px) rotateX(60deg)',
@@ -149,8 +149,8 @@ const CityScene: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
         <svg className="w-full h-full" viewBox="0 0 1200 300" preserveAspectRatio="xMidYMax slice">
           <defs>
             <linearGradient id="buildingGlow" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor="#00ffff" stopOpacity="0.8" />
-              <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.3" />
+              <stop offset="0%" stopColor="#fbf3e6" stopOpacity="0.8" />
+              <stop offset="100%" stopColor="#8a6a4d" stopOpacity="0.3" />
             </linearGradient>
           </defs>
           {/* Building silhouettes */}
@@ -176,16 +176,16 @@ const CityScene: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
         transition={{ delay: 2, duration: 1 }}
       >
         <div className="text-center">
-          <h1 className="text-4xl md:text-6xl font-orbitron text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 tracking-[0.2em] animate-pulse">
+          <h1 className="text-4xl md:text-6xl text-foreground/80 tracking-[0.2em]">
             WELCOME TO
           </h1>
           <motion.h2
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 2.5, duration: 0.8 }}
-            className="text-5xl md:text-7xl font-orbitron text-foreground mt-4 tracking-[0.1em]"
+            className="text-5xl md:text-7xl text-foreground mt-4 tracking-[0.1em]"
             style={{
-              textShadow: '0 0 20px rgba(0,255,255,0.8), 0 0 40px rgba(139,92,246,0.6)',
+              textShadow: '0 2px 14px rgba(255,245,230,0.55)',
             }}
           >
             THE OMEGA STACKS
@@ -198,7 +198,7 @@ const CityScene: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
         {Array.from({ length: 30 }).map((_, i) => (
           <div
             key={i}
-            className={`absolute w-1 h-1 bg-cyan-400 rounded-full ${
+            className={`absolute w-1 h-1 bg-background/70 rounded-full ${
               i < 6 ? 'animate-gpu-float-particle-1' :
               i < 12 ? 'animate-gpu-float-particle-2' :
               i < 18 ? 'animate-gpu-float-particle-3' :
@@ -222,25 +222,25 @@ const AvatarScene: React.FC<{
 }> = ({ onSelect, selectedAvatar }) => {
   return (
     <motion.div 
-      className="absolute inset-0 flex flex-col items-center justify-center bg-background px-4"
+      className="absolute inset-0 flex flex-col items-center justify-center px-4"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
     >
       {/* Background grid */}
-      <div className="absolute inset-0 opacity-10 oni-hex-mesh" />
+      
       
       {/* Title */}
       <motion.div
         initial={{ y: -30, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.3 }}
-        className="mb-12 text-center"
+        className="mb-12 text-center intro-warm-glass rounded-3xl px-8 py-5"
       >
-        <h2 className="text-2xl md:text-4xl font-orbitron text-foreground tracking-[0.2em] mb-2">
+        <h2 className="text-2xl md:text-4xl text-foreground tracking-[0.2em] mb-2">
           CHOOSE YOUR VESSEL
         </h2>
-        <p className="text-sm md:text-base text-cyan-400/70 font-mono">
+        <p className="text-sm md:text-base text-foreground/70 ">
           Select your neural interface avatar
         </p>
       </motion.div>
@@ -266,11 +266,7 @@ const AvatarScene: React.FC<{
               onClick={() => onSelect(avatar.id)}
               className={cn(
                 "relative p-6 rounded-2xl cursor-pointer transition-all duration-300",
-                "bg-gradient-to-br from-card/80 to-background/80",
-                "border-2 backdrop-blur-sm",
-                isSelected 
-                  ? "border-primary shadow-[0_0_30px_hsl(var(--primary)/0.3)]" 
-                  : "border-foreground/10 hover:border-foreground/30"
+                isSelected ? "intro-warm-glass-selected" : "intro-warm-glass"
               )}
             >
               {/* Glow effect */}
@@ -280,7 +276,7 @@ const AvatarScene: React.FC<{
                   className="absolute inset-0 rounded-2xl"
                   style={{
                     background: `radial-gradient(ellipse at center, ${avatar.glowColor} 0%, transparent 70%)`,
-                    opacity: 0.3,
+                    opacity: 0.12,
                   }}
                 />
               )}
@@ -289,21 +285,21 @@ const AvatarScene: React.FC<{
               <div
                 className={cn(
                   "w-20 h-20 mx-auto mb-4 rounded-full flex items-center justify-center",
-                  `bg-gradient-to-br ${avatar.color}`,
+                  "tan-circle",
                   isSelected && "animate-gpu-spin-2s"
                 )}
                 style={{
-                  boxShadow: isSelected ? `0 0 30px ${avatar.glowColor}` : 'none',
+                  boxShadow: isSelected ? '0 0 24px rgba(255,245,230,0.8)' : undefined,
                 }}
               >
-                <Icon className="w-10 h-10 text-foreground" />
+                <Icon className="w-10 h-10 tan-circle-icon" />
               </div>
 
               {/* Info */}
               <div className="text-center">
-                <h3 className="text-xl font-orbitron text-foreground mb-1">{avatar.name}</h3>
-                <p className="text-sm text-primary font-mono mb-2">{avatar.title}</p>
-                <p className="text-xs text-foreground/60">{avatar.description}</p>
+                <h3 className="text-xl text-foreground mb-1">{avatar.name}</h3>
+                <p className="text-sm text-foreground/80 font-medium mb-2">{avatar.title}</p>
+                <p className="text-xs text-foreground/70">{avatar.description}</p>
               </div>
 
               {/* Selection indicator */}
@@ -311,9 +307,9 @@ const AvatarScene: React.FC<{
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  className="absolute -top-2 -right-2 w-8 h-8 bg-primary rounded-full flex items-center justify-center"
+                  className="absolute -top-2 -right-2 w-8 h-8 tan-circle rounded-full flex items-center justify-center"
                 >
-                  <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 tan-circle-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                   </svg>
                 </motion.div>
@@ -332,7 +328,7 @@ const AvatarScene: React.FC<{
             exit={{ opacity: 0, y: 20 }}
             className="mt-10"
           >
-            <p className="text-center text-cyan-400/70 text-sm mb-4 font-mono">
+            <p className="text-center text-foreground/70 text-sm mb-4 ">
               Press ENTER or click below to initialize
             </p>
           </motion.div>
@@ -351,7 +347,7 @@ const WarpScene: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
 
   return (
     <motion.div 
-      className="absolute inset-0 overflow-hidden bg-black"
+      className="absolute inset-0 overflow-hidden"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -365,7 +361,7 @@ const WarpScene: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
           return (
             <motion.div
               key={i}
-              className="absolute w-1 bg-gradient-to-r from-cyan-400 to-transparent"
+              className="absolute w-1 bg-gradient-to-r from-background/80 to-transparent"
               style={{
                 height: 2,
                 transformOrigin: 'left center',
@@ -388,7 +384,7 @@ const WarpScene: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
 
       {/* Center flash */}
       <motion.div
-        className="absolute inset-0 bg-white"
+        className="absolute inset-0 bg-background"
         initial={{ opacity: 0 }}
         animate={{ opacity: [0, 1, 0] }}
         transition={{ duration: 0.5, delay: 1.5 }}
@@ -401,7 +397,7 @@ const WarpScene: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
         animate={{ opacity: 0 }}
         transition={{ delay: 1, duration: 0.5 }}
       >
-        <p className="text-4xl font-orbitron text-cyan-400 tracking-[0.5em]">
+        <p className="text-4xl text-foreground tracking-[0.5em]">
           INITIALIZING...
         </p>
       </motion.div>
@@ -465,7 +461,7 @@ const GenesisCinematicIntro: React.FC<GenesisCinematicIntroProps> = ({
 
   return (
     <motion.div 
-      className="fixed inset-0 z-[9999] bg-black"
+      className="fixed inset-0 z-[9999] surface-warm-tan"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -540,11 +536,8 @@ const GenesisCinematicIntro: React.FC<GenesisCinematicIntroProps> = ({
             <Button
               onClick={handleProceed}
               className={cn(
-                "px-8 py-3 text-lg font-orbitron tracking-wider",
-                "bg-gradient-to-r from-cyan-500 to-purple-600",
-                "hover:from-cyan-400 hover:to-purple-500",
-                "border border-cyan-400/50",
-                "shadow-[0_0_20px_rgba(0,255,255,0.3)]",
+                "px-8 py-3 text-lg tracking-wider",
+                "intro-warm-glass rounded-full text-foreground border-0 hover:intro-warm-glass-selected",
                 "transition-all duration-300"
               )}
             >
@@ -561,7 +554,7 @@ const GenesisCinematicIntro: React.FC<GenesisCinematicIntroProps> = ({
             key={scene}
             className={cn(
               "w-2 h-2 rounded-full transition-colors duration-300",
-              currentScene === scene ? "bg-cyan-400" : "bg-white/20"
+              currentScene === scene ? "bg-background" : "bg-foreground/25"
             )}
             animate={{
               scale: currentScene === scene ? [1, 1.3, 1] : 1,
