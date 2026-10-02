@@ -154,6 +154,7 @@ const AstrologyPage = lazy(() => import("./pages/AstrologyPage")); // MEMBER AST
 const PrivacyDataPage = lazy(() => import("./pages/PrivacyDataPage")); // EXPORT / DELETE MY DATA
 const TermsPage = lazy(() => import("./pages/TermsPage"));
 const DataPolicyPage = lazy(() => import("./pages/DataPolicyPage"));
+const VaultGate = lazy(() => import("./components/admin/VaultGate"));
 const SiteMapPage = lazy(() => import("./pages/SiteMapPage"));
 const HelpPage = lazy(() => import("./pages/HelpPage"));
 const LandingPage = lazy(() => import("./pages/LandingPage"));
@@ -915,8 +916,8 @@ const RouteAwareShell = () => {
                             }
                           />
                           <Route path="/admin/crashes" element={<AdminRoute featureName="Crash reports"><AdminCrashReportsPage /></AdminRoute>} />
-                          <Route path="/admin/analytics" element={<AdminRoute featureName="Platform analytics"><AdminPlatformAnalyticsPage /></AdminRoute>} />
-                          <Route path="/admin/@moksh50" element={<AdminRoute featureName="Platform analytics"><AdminPlatformAnalyticsPage /></AdminRoute>} />
+                          <Route path="/admin/analytics" element={<AdminRoute featureName="Platform analytics"><VaultGate><AdminPlatformAnalyticsPage /></VaultGate></AdminRoute>} />
+                          <Route path="/admin/@moksh50" element={<AdminRoute featureName="Platform analytics"><VaultGate><AdminPlatformAnalyticsPage /></VaultGate></AdminRoute>} />
                           <Route path="/admin/security-live" element={<AdminRoute featureName="Live security"><AdminSecurityLivePage /></AdminRoute>} />
                           <Route path="/admin/vr-world" element={<AdminRoute featureName="VR world controls"><AdminVRWorldPage /></AdminRoute>} />
                           <Route

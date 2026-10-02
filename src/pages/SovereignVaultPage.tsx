@@ -28,6 +28,7 @@ import {
   digestFingerprint,
   logVaultAccess,
   openVaultTunnel,
+  loadVaultTunnel,
   resolveVaultVerdict,
   tunnelRemainingMs,
   type VaultTunnel,
@@ -47,6 +48,7 @@ const CAPABILITIES: { group: string; items: { label: string; to: string; note: s
     group: 'Command',
     items: [
       { label: 'Admin overview', to: '/admin/overview', note: 'Counts, roles, surfaces' },
+      { label: 'Platform analytics', to: '/admin/@moksh50', note: 'Live map, visitors, taps, sign-ups' },
       { label: 'Control panel', to: '/admin/control-panel', note: 'Moderation queue' },
       { label: 'Platform health', to: '/admin/health', note: 'Cron + provider health' },
       { label: 'Sentinel', to: '/admin/sentinel', note: 'Threats, blocks, hardware' },
@@ -77,7 +79,7 @@ const CAPABILITIES: { group: string; items: { label: string; to: string; note: s
 
 export default function SovereignVaultPage() {
   const { isSovereign, userId } = useSovereignAdmin();
-  const [tunnel, setTunnel] = useState<VaultTunnel | null>(null);
+  const [tunnel, setTunnel] = useState<VaultTunnel | null>(() => loadVaultTunnel());
   const [opening, setOpening] = useState(false);
   const [device, setDevice] = useState<string>('');
   const [log, setLog] = useState<AccessRow[]>([]);

@@ -126,12 +126,24 @@ export async function openVaultTunnel(userId: string): Promise<VaultTunnel> {
     sessionId = null;
   }
 
-  return { fingerprint, cipher: 'AES-256-GCM', openedAt, expiresAt, sessionId };
+  const tunnel = { fingerprint, cipher: 'AES-256-GCM', openedAt, expiresAt, sessionId };
+  try { sessionStorage.setItem(TUNNEL_KEY, JSON.stringify(tunnel)); } catch { /* private mode */ }
+  return tunnel;
+}
+
+const TUNNEL_KEY = 'mmora-vault-tunnel';
+/** Tunnel for this browser tab only (closing the tab closes the black box). */
+export function loadVaultTunnel(): VaultTunnel | null {
+  try {
+    const t = JSON.parse(sessionStorage.getItem(TUNNEL_KEY) || 'null') as VaultTunnel | null;
+    return isTunnelLive(t) ? t : null;
+  } catch { return null; }
 }
 
 /** Tears the tunnel down and revokes the server-side handshake record. */
 export async function closeVaultTunnel(tunnel: VaultTunnel | null): Promise<void> {
   destroyIroncladSession();
+  try { sessionStorage.removeItem(TUNNEL_KEY); } catch { /* ignore */ }
   if (!tunnel?.sessionId) return;
   try {
     await supabase
