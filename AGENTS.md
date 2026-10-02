@@ -16,3 +16,4 @@
 - Face sign-in matches on-device face fingerprints (live scan + identity photo) on the server before any AI vision fallback, because it costs no tokens and survives provider outages.
 - Platform visit analytics are written only by the `track-visit` function (service role, IP/geo resolved server-side) into admin-read-only tables, because visitors' network details must never be readable by members.
 - Member referral links use ?r=<code derived from user id>, recorded first-touch by visitTracker and credited server-side in track-visit on a new member's first sign-in, because referral credit must not be client-forgeable.
+- Home menu icons for admin, vault, nexus, omega and platform-internals pages are built only when the server-verified admin role check passes (isAdminOnlyRoute in dockExtraActions), because members must never see admin entry points.
