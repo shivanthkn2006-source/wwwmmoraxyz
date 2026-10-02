@@ -55,6 +55,29 @@ export default function AdminEngagementPanels({ visits, names, now, sinceIso }: 
       .then(({ data }: any) => setHistory(data ?? []));
   }, []);
 
+  // City-centre positions (OpenStreetMap search) for visits recorded before exact positions existed; cached on this device.
+  const [cityGeo, setCityGeo] = useState<Record<string, [number, number]>>(() => { try { return JSON.parse(localStorage.getItem('mmora-admin-citygeo') || '{}'); } catch { return {}; } });
+  useEffect(() => {
+    const known = new Set(visits.filter((v) => v.lat != null).map((v) => `${v.city}|${v.country}`));
+    const need = [...new Set(visits.filter((v) => v.lat == null && v.city).map((v) => `${v.city}|${v.country}`))].filter((k) => !known.has(k) && !cityGeo[k]).slice(0, 5);
+    if (!need.length) return;
+    let alive = true;
+    (async () => {
+      const add: Record<string, [number, number]> = {};
+      for (const k of need) {
+        const [city, country] = k.split('|');
+        try {
+          const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&city=${encodeURIComponent(city)}&country=${encodeURIComponent(country)}`);
+          const j = await r.json(); if (j[0]) add[k] = [Number(j[0].lat), Number(j[0].lon)];
+        } catch { /* skip */ }
+        await new Promise((res) => setTimeout(res, 1100)); // OSM fair-use: 1 request/second
+      }
+      if (!alive || !Object.keys(add).length) return;
+      setCityGeo((c) => { const n = { ...c, ...add }; localStorage.setItem('mmora-admin-citygeo', JSON.stringify(n)); return n; });
+    })();
+    return () => { alive = false; };
+  }, [visits, cityGeo]);
+
   const d = useMemo(() => {
     const who = (v: { user_id: string | null; visitor_id: string }) => (v.user_id ? names[v.user_id] || `Member ${v.user_id.slice(0, 6)}` : `Guest ${v.visitor_id.slice(0, 6)}`);
 
@@ -111,16 +134,43 @@ export default function AdminEngagementPanels({ visits, names, now, sinceIso }: 
       dots: online.filter((o) => o.v.lat != null && o.v.lon != null),
       mapPoints: (() => {
         const onlineIds = new Set(online.map((o) => o.v.visitor_id));
+        const cityPos = new Map<string, [number, number]>(Object.entries(cityGeo));
+        visits.forEach((v) => { if (v.lat != null && v.lon != null && v.city) cityPos.set(`${v.city}|${v.country}`, [v.lat, v.lon]); });
         const last = new Map<string, V>();
-        visits.forEach((v) => { if (v.lat == null || v.lon == null) return; const k = v.user_id || v.visitor_id; const p = last.get(k); if (!p || p.last_seen_at < v.last_seen_at) last.set(k, v); });
-        return [...last.entries()].map(([k, v]): MapPoint => ({
-          key: k, lat: v.lat as number, lon: v.lon as number, name: who(v), userId: v.user_id,
-          place: [v.city, v.country].filter(Boolean).join(', ') || 'Unknown place', path: v.path,
-          online: onlineIds.has(v.visitor_id), device: [v.device_type, v.os].filter(Boolean).join(' · ') || null,
-        }));
+        visits.forEach((v) => { const k = v.user_id || v.visitor_id; const p = last.get(k); if (!p || p.last_seen_at < v.last_seen_at) last.set(k, v); });
+        const pts: MapPoint[] = [];
+        last.forEach((v, k) => {
+          const a = v as any;
+          const exact = v.lat != null && v.lon != null;
+          const pos = exact ? [v.lat as number, v.lon as number] : cityPos.get(`${v.city}|${v.country}`);
+          if (!pos) return;
+          const mine = visits.filter((x) => (x.user_id || x.visitor_id) === k);
+          const hw = a.hardware && typeof a.hardware === 'object' ? Object.entries(a.hardware).map(([hk, hv]) => `${hk}: ${hv}`).join(', ') : '';
+          const net = [a.is_vpn && 'VPN/proxy', a.is_hosting && 'Data centre', a.is_mobile_network && 'Mobile data'].filter(Boolean).join(', ') || 'Home / office';
+          const details: [string, string][] = ([
+            ['User ID', v.user_id ?? 'Guest (not signed in)'],
+            ['Visitor ID', v.visitor_id],
+            ['Place', [a.district, v.city, a.region, v.country].filter(Boolean).join(', ')],
+            ['IP address', a.ip_address ?? ''],
+            ['Provider', a.isp ?? ''],
+            ['Network', net],
+            ['Device', [v.device_type, v.os, a.browser].filter(Boolean).join(' · ')],
+            ['Screen', a.screen ?? ''], ['Language', a.language ?? ''], ['Timezone', a.timezone ?? ''],
+            ['Hardware', hw],
+            ['Current page', v.path],
+            ['Pages this period', String(new Set(mine.map((x) => x.path)).size)],
+            ['Time this period', fmt(mine.reduce((s, x) => s + (x.duration_seconds || 0), 0))],
+            ['Taps this period', String(events.filter((e) => e.visitor_id === v.visitor_id && e.kind === 'tap').length)],
+            ['Came from', a.referrer_host ?? 'Direct'], ['Website address', a.site_host ?? ''], ['Invite code', a.ref_code ?? ''],
+            ['Load time', v.load_ms ? `${(v.load_ms / 1000).toFixed(1)}s` : ''],
+            ['Last seen', new Date(v.last_seen_at).toLocaleString()],
+          ] as [string, string][]).filter(([, val]) => val);
+          pts.push({ key: k, lat: pos[0], lon: pos[1], name: who(v), userId: v.user_id, online: onlineIds.has(v.visitor_id), approx: !exact, details });
+        });
+        return pts;
       })(),
     };
-  }, [visits, events, history, names, now]);
+  }, [visits, events, history, names, now, cityGeo]);
 
   const ms = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}s` : `${n}ms`);
 
