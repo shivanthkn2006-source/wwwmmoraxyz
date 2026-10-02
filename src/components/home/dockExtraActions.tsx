@@ -68,6 +68,32 @@ const NON_MENU_ROUTES = new Set([
 
 const NON_MENU_PREFIXES = ['/zoe-infinity', '/admin'];
 
+/**
+ * Admin, vault, nexus, omega and platform-internals pages. They appear in the
+ * Home menu only for the platform admin; members never see these icons.
+ * (The VR World primary icon is a member feature and is not built here.)
+ */
+const ADMIN_ONLY_ROUTES = new Set([
+  '/analytics-dashboard',
+  '/home-load-report',
+  '/attack-response',
+  '/platform-architecture',
+  '/platform-overview',
+  '/zoe-architecture',
+  '/orbital-command',
+  '/phoenix-core',
+  '/source',
+  '/agent-memory',
+  '/sentinel',
+  '/zoe-astro/dispatch',
+  '/zoe-astro/log',
+]);
+const ADMIN_ONLY_KEYWORDS = ['nexus', 'omega', 'vault', 'god-mode', 'sovereign'];
+
+export function isAdminOnlyRoute(route: string): boolean {
+  return ADMIN_ONLY_ROUTES.has(route) || ADMIN_ONLY_KEYWORDS.some((k) => route.includes(k));
+}
+
 interface ExtraDef {
   id: string;
   label: string;
@@ -143,8 +169,11 @@ export function buildExtraDockItems(
   navigate: (path: string) => void,
   usedRoutes: string[] = [],
   limit = Number.POSITIVE_INFINITY,
+  opts: { isAdmin?: boolean } = {},
 ): GlassDockItem[] {
+  const isAdmin = opts.isAdmin === true;
   const taken = new Set(usedRoutes);
+  if (!isAdmin) DOCK_EXTRA_DEFS.forEach((def) => { if (isAdminOnlyRoute(def.route)) taken.add(def.route); });
   const authored = DOCK_EXTRA_DEFS.filter((def) => !taken.has(def.route));
   authored.forEach((def) => taken.add(def.route));
 
@@ -155,6 +184,7 @@ export function buildExtraDockItems(
     .filter(({ path }) => (
       !taken.has(path) &&
       !NON_MENU_ROUTES.has(path) &&
+      (isAdmin || !isAdminOnlyRoute(path)) &&
       !NON_MENU_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`))
     ))
     .map(({ path, label }) => ({
@@ -164,7 +194,13 @@ export function buildExtraDockItems(
       Icon: iconForRoute(path),
     }));
 
-  return [...authored, ...automatic]
+  // The admin gets one entry into the black box: the vault (the analytics and
+  // other admin pages open from inside it).
+  const adminEntry: ExtraDef[] = isAdmin
+    ? [{ id: 'dock-admin-vault', label: 'Admin vault', route: '/admin/vault', Icon: LayoutDashboard }]
+    : [];
+
+  return [...adminEntry, ...authored, ...automatic]
     .slice(0, limit)
     .map(({ id, label, route, Icon }) => ({
       id,
