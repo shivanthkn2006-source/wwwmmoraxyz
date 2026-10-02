@@ -6137,6 +6137,7 @@ export type Database = {
           last_seen_at: string
           os: string | null
           path: string
+          ref_code: string | null
           referrer_host: string | null
           region: string | null
           screen: string | null
@@ -6166,6 +6167,7 @@ export type Database = {
           last_seen_at?: string
           os?: string | null
           path: string
+          ref_code?: string | null
           referrer_host?: string | null
           region?: string | null
           screen?: string | null
@@ -6195,6 +6197,7 @@ export type Database = {
           last_seen_at?: string
           os?: string | null
           path?: string
+          ref_code?: string | null
           referrer_host?: string | null
           region?: string | null
           screen?: string | null

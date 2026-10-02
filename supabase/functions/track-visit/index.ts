@@ -15,6 +15,7 @@ const Start = z.object({
   referrer: str(500),
   device_type: str(20), os: str(40), browser: str(40),
   screen: str(30), language: str(20), timezone: str(60),
+  ref_code: z.string().regex(/^M[0-9A-F]{8}$/).optional().nullable(),
   hardware: z.record(z.union([z.string().max(200), z.number(), z.boolean(), z.null()])).optional(),
 });
 const Ping = z.object({
@@ -27,8 +28,25 @@ const Auth = z.object({
   action: z.literal("auth"),
   event: z.enum(["login", "logout"]),
   device_type: str(20), os: str(40), browser: str(40),
+  ref_code: z.string().regex(/^M[0-9A-F]{8}$/).optional().nullable(),
 });
-const Body = z.discriminatedUnion("action", [Start, Ping, Auth]);
+const Mine = z.object({ action: z.literal("my_referrals") });
+const Body = z.discriminatedUnion("action", [Start, Ping, Auth, Mine]);
+
+const codeFor = (id: string) => "M" + id.replace(/-/g, "").slice(0, 8).toUpperCase();
+
+async function creditReferral(code: string, user: { id: string; createdAt: string }) {
+  if (Date.now() - new Date(user.createdAt).getTime() > 2 * 86400_000) return; // only genuine new sign-ups
+  if (codeFor(user.id) === code) return;
+  const prefix = code.slice(1).toLowerCase();
+  const { data: refs } = await admin.from("profiles").select("user_id")
+    .gte("user_id", `${prefix}-0000-0000-0000-000000000000`).lte("user_id", `${prefix}-ffff-ffff-ffff-ffffffffffff`).limit(2);
+  if (!refs || refs.length !== 1) return;
+  await admin.from("dhf_referrals").upsert(
+    { referrer_id: refs[0].user_id, referred_id: user.id, code, source: "member_link" },
+    { onConflict: "referred_id", ignoreDuplicates: true },
+  );
+}
 
 type Geo = {
   country?: string; country_code?: string; region?: string; city?: string; district?: string;
@@ -72,13 +90,13 @@ async function lookupGeo(ip: string | null): Promise<Geo> {
   }
 }
 
-async function userFrom(req: Request): Promise<{ id: string; name: string | null } | null> {
+async function userFrom(req: Request): Promise<{ id: string; name: string | null; createdAt: string } | null> {
   const token = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "");
   if (!token) return null;
   const { data } = await admin.auth.getUser(token);
   if (!data?.user) return null;
   const m = data.user.user_metadata || {};
-  return { id: data.user.id, name: (m.full_name || m.name || m.display_name || data.user.email || null) as string | null };
+  return { id: data.user.id, name: (m.full_name || m.name || m.display_name || data.user.email || null) as string | null, createdAt: data.user.created_at };
 }
 
 Deno.serve(async (req) => {
@@ -96,11 +114,24 @@ Deno.serve(async (req) => {
       return json({ ok: true });
     }
 
+    if (b.action === "my_referrals") {
+      const user = await userFrom(req);
+      if (!user) return json({ error: "sign in required" }, 401);
+      const code = codeFor(user.id);
+      const [{ data: v }, { data: r }] = await Promise.all([
+        admin.from("platform_visits").select("visitor_id,entered_at").eq("ref_code", code).limit(10000),
+        admin.from("dhf_referrals").select("referred_id,created_at").eq("referrer_id", user.id).order("created_at", { ascending: false }),
+      ]);
+      const visitors = new Set((v || []).map((x) => x.visitor_id)).size;
+      return json({ code, visits: (v || []).length, visitors, signups: (r || []).length, recent: (r || []).slice(0, 20).map((x) => x.created_at) });
+    }
+
     const ip = clientIp(req);
     const [user, geo] = await Promise.all([userFrom(req), lookupGeo(ip)]);
 
     if (b.action === "auth") {
       if (!user) return json({ ok: true, skipped: "signed_out" });
+      if (b.event === "login" && b.ref_code) await creditReferral(b.ref_code, user).catch(() => {});
       await admin.from("platform_auth_events").insert({
         user_id: user.id, event: b.event, display_name: user.name,
         device_type: b.device_type, os: b.os, browser: b.browser,
@@ -117,7 +148,7 @@ Deno.serve(async (req) => {
       visitor_id: b.visitor_id, user_id: user?.id ?? null, path: b.path, referrer_host, site_host,
       device_type: b.device_type, os: b.os, browser: b.browser, screen: b.screen,
       language: b.language, timezone: b.timezone, hardware: b.hardware ?? {},
-      ip_address: ip, ...geo,
+      ip_address: ip, ref_code: b.ref_code ?? null, ...geo,
     }).select("id").single();
     if (error) return json({ error: error.message }, 500);
     return json({ id: data.id });
