@@ -170,7 +170,7 @@ export default function AdminEngagementPanels({ visits, names, now, sinceIso }: 
         return pts;
       })(),
     };
-  }, [visits, events, history, names, now]);
+  }, [visits, events, history, names, now, cityGeo]);
 
   const ms = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}s` : `${n}ms`);
 
