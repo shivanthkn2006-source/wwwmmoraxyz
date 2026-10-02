@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Camera, CheckCircle2, Loader2, AlertCircle, X, ScanFace } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useWebAuthn } from '@/hooks/useWebAuthn';
 
 interface FaceLoginModalProps {
   open: boolean;
@@ -52,6 +53,22 @@ const FaceLoginModal: React.FC<FaceLoginModalProps> = ({ open, onClose, onSucces
   const videoRef = useRef<HTMLVideoElement>(null);
   const [livePrompt, setLivePrompt] = useState('');
   const [liveBusy, setLiveBusy] = useState(false);
+  const { authenticateWithEmail, isSupported: passkeySupported, isLoading: passkeyBusy } = useWebAuthn();
+
+  // Backup when the camera can't be used: the device's own Face ID / fingerprint.
+  const usePasskeyInstead = async () => {
+    if (!email) { setStep('email'); return; }
+    const ok = await authenticateWithEmail(email);
+    if (ok) { stream?.getTracks().forEach((t) => t.stop()); setStream(null); onSuccess(); }
+  };
+
+  const cameraFailed = (msg: string) => {
+    stream?.getTracks().forEach((t) => t.stop());
+    setStream(null);
+    setLivePrompt(''); setLiveBusy(false);
+    setErrorMessage(msg);
+    setStep('error');
+  };
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [step, setStep] = useState<Step>('email');
@@ -109,7 +126,7 @@ const FaceLoginModal: React.FC<FaceLoginModalProps> = ({ open, onClose, onSucces
     }
 
     if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
-      toast.error(window.isSecureContext ? 'This browser has no camera access. Try Safari, Chrome or Edge.' : 'The camera needs a secure (https) address.');
+      cameraFailed(window.isSecureContext ? 'This browser has no camera access. Try Safari, Chrome or Edge.' : 'The camera needs a secure (https) address.');
       return;
     }
     try {
@@ -136,9 +153,20 @@ const FaceLoginModal: React.FC<FaceLoginModalProps> = ({ open, onClose, onSucces
           : error?.name === 'NotReadableError'
             ? 'Another app is using the camera. Close it and try again.'
             : 'Failed to access camera. Please check permissions.';
-      toast.error(msg);
+      cameraFailed(msg);
     }
   };
+
+  // Camera crashed, was unplugged or taken by another app mid-scan.
+  useEffect(() => {
+    if (!stream) return;
+    const track = stream.getVideoTracks()[0];
+    if (!track) return;
+    const onEnded = () => cameraFailed('The camera stopped working. Use your device Face ID or fingerprint instead, or try again.');
+    track.addEventListener('ended', onEnded);
+    return () => track.removeEventListener('ended', onEnded);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stream]);
 
   // The video only appears once the camera step shows, so connect it then.
   useEffect(() => {
@@ -418,7 +446,13 @@ const FaceLoginModal: React.FC<FaceLoginModalProps> = ({ open, onClose, onSucces
                   {errorMessage}
                 </p>
               </div>
-              <div className="flex gap-2 justify-center">
+              <div className="flex flex-wrap gap-2 justify-center">
+                {passkeySupported && email && (
+                  <Button onClick={usePasskeyInstead} disabled={passkeyBusy} variant="outline" className="gap-2">
+                    <ScanFace className="w-4 h-4" />
+                    Use device Face ID
+                  </Button>
+                )}
                 <Button onClick={retry} variant="outline">
                   Try Again
                 </Button>
