@@ -170,7 +170,7 @@ const FaceLoginModal: React.FC<FaceLoginModalProps> = ({ open, onClose, onSucces
       // Match on the device first (no AI tokens); fall back to the photo check.
       const { data, error } = await supabase.functions.invoke('face-verification', {
         body: proof
-          ? { operation: 'login_with_face', email, liveness: proof }
+          ? { operation: 'login_with_face', email, liveness: proof, imageData }
           : { operation: 'login_with_face', email, imageData },
       });
 

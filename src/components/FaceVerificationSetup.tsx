@@ -443,6 +443,7 @@ const FaceVerificationSetup: React.FC<FaceVerificationSetupProps> = ({ onComplet
           </div>
 
           <canvas ref={canvasRef} className="hidden" />
+          {livePrompt && <p className="text-center text-base font-medium text-foreground">{livePrompt}</p>}
 
           <div className="flex gap-2">
             {cameraError ? (
