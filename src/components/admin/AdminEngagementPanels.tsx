@@ -165,7 +165,7 @@ export default function AdminEngagementPanels({ visits, names, now, sinceIso }: 
             ['Load time', v.load_ms ? `${(v.load_ms / 1000).toFixed(1)}s` : ''],
             ['Last seen', new Date(v.last_seen_at).toLocaleString()],
           ] as [string, string][]).filter(([, val]) => val);
-          pts.push({ key: k, lat: pos[0], lon: pos[1], name: who(v), userId: v.user_id, online: onlineIds.has(v.visitor_id), approx: !exact, details });
+          pts.push({ key: k, lat: pos[0], lon: pos[1], name: who(v), userId: v.user_id, online: onlineIds.has(v.visitor_id), status: onlineIds.has(v.visitor_id) ? "online" : now - new Date(v.last_seen_at).getTime() < 15 * 60_000 ? "idle" : "offline", approx: !exact, details });
         });
         return pts;
       })(),
@@ -205,7 +205,7 @@ export default function AdminEngagementPanels({ visits, names, now, sinceIso }: 
         <p className="mb-2 text-sm font-semibold">Live world map</p>
         <AdminVisitorMap points={d.mapPoints} />
         <p className="mt-1 text-xs text-muted-foreground">
-          {d.dots.length} online now (green, named) · {d.mapPoints.length - d.dots.length} other visitors this period (tan). Tap a dot for name, user ID, city and page.
+          Green = online now · Yellow = idle (seen in the last 15 min) · Red = signed out / left. {d.mapPoints.length} visitors this period. Tap a pin for full details.
         </p>
       </Card>
 
