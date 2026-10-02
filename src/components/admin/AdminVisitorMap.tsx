@@ -1,6 +1,10 @@
 // OpenStreetMap world map of visitors. Pin colour = status (green online, yellow idle, red left); pins carry every recorded detail.
-import { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, CircleMarker, Tooltip, Popup, useMap } from 'react-leaflet';
+// Pins that would sit on top of each other (same city, or close at the current zoom) are fanned out into a
+// readable column, each with its own name label to the right of the dot.
+import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { MapContainer, TileLayer, CircleMarker, Tooltip, Popup, Polyline, useMap, useMapEvents } from 'react-leaflet';
+import type { LatLngExpression } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
 export type MapPoint = {
@@ -13,8 +17,16 @@ const COLORS = {
   idle: { stroke: 'hsl(45 90% 35%)', fill: 'hsl(48 95% 52%)', label: 'Idle' },
   offline: { stroke: 'hsl(0 70% 35%)', fill: 'hsl(0 75% 55%)', label: 'Signed out / left' },
 } as const;
+const STATUS_ORDER = { online: 0, idle: 1, offline: 2 } as const;
 const DEFAULT_CENTER: [number, number] = [20, 10];
 const DEFAULT_ZOOM = 2;
+/** Pins closer than this many screen pixels are grouped and fanned out. */
+const GROUP_PX = 22;
+/** Vertical spacing between fanned-out pins in a group. */
+const ROW_PX = 22;
+
+type Placed = { p: MapPoint; pos: [number, number] };
+type Group = { anchor: [number, number]; items: Placed[] };
 
 function Controls({ points, full, setFull }: { points: MapPoint[]; full: boolean; setFull: (f: boolean) => void }) {
   const map = useMap();
@@ -27,48 +39,113 @@ function Controls({ points, full, setFull }: { points: MapPoint[]; full: boolean
         <button type="button" className={btn} onClick={() => map.setView(DEFAULT_CENTER, DEFAULT_ZOOM)}>⟲ Default view</button>
         <button type="button" className={btn} onClick={fitAll}>All pins</button>
         <button type="button" className={btn} onClick={() => map.setZoom(11)}>City level</button>
-        <button type="button" className={btn} onClick={() => setFull(!full)}>{full ? '✕ Close full screen' : '⛶ Full screen'}</button>
+        <button type="button" className={btn} onClick={() => setFull(!full)}>{full ? '✕ Exit full screen' : '⛶ Full screen'}</button>
       </div>
     </div>
   );
 }
+
+/** Groups pins that overlap on screen and lays each group out as a column below its real position. */
+function SpreadPins({ points }: { points: MapPoint[] }) {
+  const map = useMap();
+  const [zoom, setZoom] = useState(map.getZoom());
+  useMapEvents({ zoomend: () => setZoom(map.getZoom()) });
+
+  const groups = useMemo<Group[]>(() => {
+    const sorted = [...points].sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status] || a.name.localeCompare(b.name));
+    const raw: { px: { x: number; y: number }; anchor: [number, number]; pts: MapPoint[] }[] = [];
+    for (const p of sorted) {
+      const px = map.project([p.lat, p.lon], zoom);
+      const g = raw.find((r) => Math.hypot(r.px.x - px.x, r.px.y - px.y) < GROUP_PX);
+      if (g) g.pts.push(p);
+      else raw.push({ px, anchor: [p.lat, p.lon], pts: [p] });
+    }
+    return raw.map((r) => ({
+      anchor: r.anchor,
+      items: r.pts.map((p, i) => {
+        if (i === 0) return { p, pos: r.anchor };
+        const ll = map.unproject([r.px.x, r.px.y + i * ROW_PX], zoom);
+        return { p, pos: [ll.lat, ll.lng] as [number, number] };
+      }),
+    }));
+  }, [points, zoom, map]);
+
+  return (
+    <>
+      {groups.map((g) => (
+        <GroupPins key={g.items[0].p.key} group={g} />
+      ))}
+    </>
+  );
+}
+
+function GroupPins({ group }: { group: Group }) {
+  const last = group.items[group.items.length - 1].pos;
+  return (
+    <>
+      {group.items.length > 1 && (
+        <Polyline positions={[group.anchor, last] as LatLngExpression[]}
+          pathOptions={{ color: 'hsl(0 0% 15%)', weight: 1.5, opacity: 0.6, dashArray: '2 3' }} interactive={false} />
+      )}
+      {group.items.map(({ p, pos }) => {
+        const c = COLORS[p.status];
+        return (
+          <CircleMarker key={p.key} center={pos} radius={p.status === 'online' ? 8 : 7}
+            eventHandlers={{ click: (e) => e.target._map.setView([p.lat, p.lon], Math.max(e.target._map.getZoom(), 11)) }}
+            pathOptions={{ color: c.stroke, fillColor: c.fill, fillOpacity: 0.95, weight: 2, dashArray: p.approx ? '3 3' : undefined }}>
+            <Tooltip permanent direction="right" offset={[9, 0]} className="mmora-pin-label">
+              {p.name}{p.userId ? ` · ${p.userId.slice(0, 8)}` : ''}
+            </Tooltip>
+            <Popup maxWidth={320}>
+              <div className="text-xs leading-5">
+                <b>{p.name}</b> · {c.label}
+                <table className="mt-1"><tbody>
+                  {p.details.map(([k, v]) => (
+                    <tr key={k}><td className="pr-2 align-top opacity-70">{k}</td><td className="break-all">{v}</td></tr>
+                  ))}
+                </tbody></table>
+                {p.approx && <p className="mt-1 opacity-70">Position is the city centre (exact point not recorded for this visit).</p>}
+              </div>
+            </Popup>
+          </CircleMarker>
+        );
+      })}
+    </>
+  );
+}
+
+// White text with a solid dark outline: readable over white land, blue sea and dark map areas alike. No box.
+const LABEL_CSS = `.mmora-pin-label{background:transparent;border:0;box-shadow:none;padding:0 2px;font-weight:700;font-size:12px;line-height:14px;color:#fff;white-space:nowrap;
+text-shadow:-1px -1px 0 #111,1px -1px 0 #111,-1px 1px 0 #111,1px 1px 0 #111,0 0 3px #000,0 0 5px #000;}
+.mmora-pin-label::before{display:none}`;
 
 export default function AdminVisitorMap({ points }: { points: MapPoint[] }) {
   const [full, setFull] = useState(false);
   useEffect(() => {
     if (!full) return;
     const k = (e: KeyboardEvent) => { if (e.key === 'Escape') setFull(false); };
-    window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k);
+    window.addEventListener('keydown', k);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { window.removeEventListener('keydown', k); document.body.style.overflow = prev; };
   }, [full]);
+
+  const map = (
+    <MapContainer key={full ? 'full' : 'inline'} center={DEFAULT_CENTER} zoom={DEFAULT_ZOOM} minZoom={2} maxZoom={18} zoomControl scrollWheelZoom
+      maxBounds={[[-85, -200], [85, 200]]} maxBoundsViscosity={1} style={{ height: '100%', width: '100%' }}>
+      <TileLayer noWrap attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+      <Controls points={points} full={full} setFull={setFull} />
+      <SpreadPins points={points} />
+    </MapContainer>
+  );
+
   return (
-    <div className={full ? 'fixed inset-0 z-[100] bg-background' : 'h-[24rem] w-full overflow-hidden rounded-md sm:h-[30rem]'}>
-      <style>{`.mmora-pin-label{background:transparent;border:0;box-shadow:none;padding:0;font-weight:700;font-size:12px;color:hsl(var(--foreground));text-shadow:0 0 3px hsl(var(--background)),0 0 3px hsl(var(--background));}.mmora-pin-label::before{display:none}`}</style>
-      <MapContainer center={DEFAULT_CENTER} zoom={DEFAULT_ZOOM} minZoom={2} maxZoom={18} zoomControl scrollWheelZoom
-        maxBounds={[[-85, -200], [85, 200]]} maxBoundsViscosity={1} style={{ height: '100%', width: '100%' }}>
-        <TileLayer noWrap attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-        <Controls points={points} full={full} setFull={setFull} />
-        {points.map((p) => {
-          const c = COLORS[p.status];
-          return (
-            <CircleMarker key={p.key} center={[p.lat, p.lon]} radius={p.status === 'online' ? 9 : 7}
-              eventHandlers={{ click: (e) => e.target._map.setView([p.lat, p.lon], Math.max(e.target._map.getZoom(), 11)) }}
-              pathOptions={{ color: c.stroke, fillColor: c.fill, fillOpacity: 0.9, weight: 2, dashArray: p.approx ? '3 3' : undefined }}>
-              <Tooltip permanent direction="top" offset={[0, -8]} className="mmora-pin-label">{p.name}{p.userId ? ` · ${p.userId.slice(0, 8)}` : ''}</Tooltip>
-              <Popup maxWidth={320}>
-                <div className="text-xs leading-5">
-                  <b>{p.name}</b> · {c.label}
-                  <table className="mt-1"><tbody>
-                    {p.details.map(([k, v]) => (
-                      <tr key={k}><td className="pr-2 align-top opacity-70">{k}</td><td className="break-all">{v}</td></tr>
-                    ))}
-                  </tbody></table>
-                  {p.approx && <p className="mt-1 opacity-70">Position is the city centre (exact point not recorded for this visit).</p>}
-                </div>
-              </Popup>
-            </CircleMarker>
-          );
-        })}
-      </MapContainer>
-    </div>
+    <>
+      <style>{LABEL_CSS}</style>
+      {full
+        // Rendered on the page body so no parent card can shrink it: the map fills the whole screen.
+        ? createPortal(<div className="fixed inset-0 z-[1000] bg-background" style={{ height: '100dvh', width: '100vw' }}>{map}</div>, document.body)
+        : <div className="h-[24rem] w-full overflow-hidden rounded-md sm:h-[30rem]">{map}</div>}
+    </>
   );
 }
