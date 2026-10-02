@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { RefreshCw, Radio, LogIn, LogOut } from 'lucide-react';
+import AdminEngagementPanels from '@/components/admin/AdminEngagementPanels';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
 type Visit = {
@@ -18,7 +19,7 @@ type Visit = {
   language: string | null; timezone: string | null; hardware: Record<string, unknown>;
   ip_address: string | null; country: string | null; country_code: string | null; region: string | null;
   city: string | null; district: string | null; isp: string | null;
-  is_vpn: boolean | null; is_hosting: boolean | null; is_mobile_network: boolean | null;
+  is_vpn: boolean | null; is_hosting: boolean | null; is_mobile_network: boolean | null; lat?: number | null; lon?: number | null; load_ms?: number | null;
 };
 type AuthEvent = {
   id: string; user_id: string; event: string; display_name: string | null; device_type: string | null;
@@ -153,6 +154,7 @@ export default function AdminPlatformAnalyticsPage() {
     };
   }, [visits, events, now, range]);
 
+  const sinceIso = useMemo(() => new Date(Date.now() - RANGES[range] * 86400_000).toISOString().slice(0, 16), [range]);
   const hw = (v: Visit, k: string) => (v.hardware?.[k] ?? null) as string | number | null;
 
   return (
@@ -194,6 +196,8 @@ export default function AdminPlatformAnalyticsPage() {
             </ResponsiveContainer>
           </div>
         </Card>
+
+        <AdminEngagementPanels visits={visits as any} names={names} now={now} sinceIso={sinceIso} />
 
         <div className="grid gap-3 md:grid-cols-2">
           <BarList title="Page" rows={tally(visits, (v) => v.path)} total={s.views} />

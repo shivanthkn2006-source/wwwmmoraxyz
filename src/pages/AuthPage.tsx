@@ -633,6 +633,9 @@ const AuthPage = () => {
                   <RecoveryCodeSignIn open={showRecovery} onOpenChange={setShowRecovery} defaultEmail={formData.email} />
                 </div>
               )}
+              <p className="text-white/70 text-[10px] xs:text-xs leading-snug pt-1">
+                We record pages visited, device type and approximate location to improve M'Mora. Internet addresses are deleted after 90 days.
+              </p>
             </div>
           </div>
         </div>

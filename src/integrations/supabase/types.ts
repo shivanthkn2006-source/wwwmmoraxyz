@@ -6007,6 +6007,39 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_events: {
+        Row: {
+          created_at: string
+          device_type: string | null
+          id: string
+          kind: string
+          name: string
+          path: string | null
+          user_id: string | null
+          visitor_id: string
+        }
+        Insert: {
+          created_at?: string
+          device_type?: string | null
+          id?: string
+          kind: string
+          name: string
+          path?: string | null
+          user_id?: string | null
+          visitor_id: string
+        }
+        Update: {
+          created_at?: string
+          device_type?: string | null
+          id?: string
+          kind?: string
+          name?: string
+          path?: string | null
+          user_id?: string | null
+          visitor_id?: string
+        }
+        Relationships: []
+      }
       platform_health_logs: {
         Row: {
           created_at: string
@@ -6135,6 +6168,9 @@ export type Database = {
           isp: string | null
           language: string | null
           last_seen_at: string
+          lat: number | null
+          load_ms: number | null
+          lon: number | null
           os: string | null
           path: string
           ref_code: string | null
@@ -6165,6 +6201,9 @@ export type Database = {
           isp?: string | null
           language?: string | null
           last_seen_at?: string
+          lat?: number | null
+          load_ms?: number | null
+          lon?: number | null
           os?: string | null
           path: string
           ref_code?: string | null
@@ -6195,6 +6234,9 @@ export type Database = {
           isp?: string | null
           language?: string | null
           last_seen_at?: string
+          lat?: number | null
+          load_ms?: number | null
+          lon?: number | null
           os?: string | null
           path?: string
           ref_code?: string | null
@@ -13578,6 +13620,7 @@ export type Database = {
         Returns: number
       }
       prune_platform_telemetry: { Args: never; Returns: Json }
+      prune_visitor_network_data: { Args: never; Returns: undefined }
       recently_active_member_ids: {
         Args: { p_days?: number }
         Returns: {
