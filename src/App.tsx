@@ -186,6 +186,8 @@ const AdminDhfGenerationPage = lazy(() => import("./pages/AdminDhfGenerationPage
 const AdminControlPanelPage = lazy(() => import("./pages/AdminControlPanelPage"));
 const AdminSentinelPage = lazy(() => import("./pages/AdminSentinelPage")); // SENTINEL (operator-only live monitoring)
 const AdminSecurityLivePage = lazy(() => import("./pages/AdminSecurityLivePage"));
+const AdminPlatformAnalyticsPage = lazy(() => import("./pages/AdminPlatformAnalyticsPage"));
+const AdminAuthEventsHost = lazy(() => import("./components/admin/AdminAuthEventsHost"));
 const AdminCrashReportsPage = lazy(() => import("./pages/AdminCrashReportsPage"));
 const LaunchWelcome = lazy(() => import("./components/core/LaunchWelcome"));
 const AdminVRWorldPage = lazy(() => import("./pages/AdminVRWorldPage"));
@@ -569,6 +571,7 @@ const RouteAwareShell = () => {
                 <DevTestButton />
                 <ScreenTapController />
                 <AdminToolbar />
+                <Suspense fallback={null}><AdminAuthEventsHost /></Suspense>
               </AfterAuthIdle>
               <Suspense fallback={null}><ZoeSkyShiftMount /></Suspense>
 
@@ -910,6 +913,8 @@ const RouteAwareShell = () => {
                             }
                           />
                           <Route path="/admin/crashes" element={<AdminRoute featureName="Crash reports"><AdminCrashReportsPage /></AdminRoute>} />
+                          <Route path="/admin/analytics" element={<AdminRoute featureName="Platform analytics"><AdminPlatformAnalyticsPage /></AdminRoute>} />
+                          <Route path="/admin/@moksh50" element={<AdminRoute featureName="Platform analytics"><AdminPlatformAnalyticsPage /></AdminRoute>} />
                           <Route path="/admin/security-live" element={<AdminRoute featureName="Live security"><AdminSecurityLivePage /></AdminRoute>} />
                           <Route path="/admin/vr-world" element={<AdminRoute featureName="VR world controls"><AdminVRWorldPage /></AdminRoute>} />
                           <Route
