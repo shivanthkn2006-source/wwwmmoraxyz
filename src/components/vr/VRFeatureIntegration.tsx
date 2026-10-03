@@ -1078,14 +1078,17 @@ export const VRFeatureIntegration: React.FC<VRFeatureIntegrationProps> = ({
       
       {/* Phase 2: Yellow Stone National Park - EAST of city within 500m (staggered) */}
       {showTerrain && hasEnteredWorld && mountainsReady && (
-        <group position={[450, 0, 0]}>
-          <EverestMountainRange season={currentSeason} quality="medium" />
-          <MountainRockFormations season={currentSeason} />
-        </group>
+        <ProximityGate center={[450, 0, 0]} radius={380} preload={preloadMountainArea}>
+          <group position={[450, 0, 0]}>
+            <EverestMountainRange season={currentSeason} quality="medium" />
+            <MountainRockFormations season={currentSeason} />
+          </group>
+        </ProximityGate>
       )}
 
       {/* Highway from city to mountains (east) - only after mountains ready */}
       {showTerrain && hasEnteredWorld && mountainsReady && (
+        <ProximityGate center={[225, 0, 0]} radius={330}>
         <group>
           {/* Highway road surface - runs east from city center to mountains */}
           <mesh rotation={[-Math.PI / 2, 0, 0]} position={[225, 0.16, 0]}>
@@ -1146,6 +1149,7 @@ export const VRFeatureIntegration: React.FC<VRFeatureIntegrationProps> = ({
             </Text>
           </group>
         </group>
+        </ProximityGate>
       )}
       
       {/* Base interactive gate: don't mount interactive subsystems until heavy systems are ready */}
@@ -1156,9 +1160,11 @@ export const VRFeatureIntegration: React.FC<VRFeatureIntegrationProps> = ({
           <>
             {/* Phase 3: Cycling trails - between city and mountains (east side) */}
             {interactiveBaseReady && (
-              <group position={[300, 0, -50]}>
-                <CyclingTrailTerrain season={currentSeason} />
-              </group>
+              <ProximityGate center={[300, 0, -50]} radius={300} preload={loadCycling}>
+                <group position={[300, 0, -50]}>
+                  <CyclingTrailTerrain season={currentSeason} />
+                </group>
+              </ProximityGate>
             )}
             
             {/* Rotation is controlled by VROMEGAWorld after satellite entry to avoid camera-controller conflicts */}
@@ -1210,18 +1216,18 @@ export const VRFeatureIntegration: React.FC<VRFeatureIntegrationProps> = ({
             {/* METRO TRAIN SYSTEM - delayed + guarded fallback unlock */}
             {interactiveBaseReady && showMetroSystem && metroReady && (
               <group position={[CITY_OFFSET_X, 0, CITY_OFFSET_Z]}>
-                <MetroTrainSystem isNight={isNight} />
+                <LazyZone><MetroTrainSystem isNight={isNight} /></LazyZone>
               </group>
             )}
             
             {/* METRO FLYOVER TRACK - East-West elevated railway (staggered) */}
             {showTerrain && hasEnteredWorld && flyoverReady && (
-              <MetroFlyoverTrack />
+              <LazyZone><MetroFlyoverTrack /></LazyZone>
             )}
             
             {/* CITY SKYLINE BACKDROP - 360° building ring behind flyover (staggered last) */}
             {showTerrain && hasEnteredWorld && skylineReady && (
-              <CitySkylineBackdrop isNight={isNight} />
+              <LazyZone><CitySkylineBackdrop isNight={isNight} /></LazyZone>
             )}
 
             {/* STREET LIGHTS - Road-side lamps with day/night cycle */}
@@ -1231,17 +1237,19 @@ export const VRFeatureIntegration: React.FC<VRFeatureIntegrationProps> = ({
 
             {/* CITY MARKET DISTRICT - Stalls, shops, housing, construction, buses, banks, medical */}
             {showTerrain && hasEnteredWorld && skylineReady && (
-              <CityMarketDistrict />
+              <LazyZone><CityMarketDistrict /></LazyZone>
             )}
 
             {/* SCENIC HERITAGE TRAIN - ground-level narrow-gauge trains alongside roads */}
             {interactiveBaseReady && (
-              <ScenicHeritageTrain />
+              <ProximityGate center={[180, 0, 110]} radius={280} preload={loadHeritage}>
+                <ScenicHeritageTrain />
+              </ProximityGate>
             )}
 
             {/* CITY BUS SYSTEM - 5 buses on roads with engine + arrival sounds */}
             {interactiveBaseReady && (
-              <CityBusSystem />
+              <LazyZone><CityBusSystem /></LazyZone>
             )}
 
             {/* YELLOWSTONE ROAD SIGNS - highway directional signs (proximity-gated) */}
@@ -1260,7 +1268,7 @@ export const VRFeatureIntegration: React.FC<VRFeatureIntegrationProps> = ({
             )}
             
             {/* F1 OMEGA CIRCUIT - delayed + proximity gated */}
-            {interactiveBaseReady && showF1System && f1Ready && <F1CircuitSystem />}
+            {interactiveBaseReady && showF1System && f1Ready && <LazyZone><F1CircuitSystem /></LazyZone>}
 
             {/* Generated buildings - only when city zoom */}
             {cityReady && buildings.map(building => (
