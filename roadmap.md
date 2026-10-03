@@ -102,3 +102,6 @@
 - [x] Friends sheet covers profile panels (solid warm tan, above Zoe alert)
 - [x] Admin-only realtime analytics /admin/analytics (+ /admin/@moksh50): visits, pages, sources, devices, hardware, time spent, IP, country/region/city, ISP, VPN, graph, live sign-in/out toasts
 - [ ] Sign-up end to end: blocked in test browser by the human check — needs owner's phone
+
+- [ ] Later (after remaining platform menus/features): Capacitor iOS/Android store build (Path A) — bundle dist/, Apple Team ID, Android signing fingerprint, icons, store forms, device tests
+- [ ] Now: fix VR World heavy loading issues (waiting on details from owner)
