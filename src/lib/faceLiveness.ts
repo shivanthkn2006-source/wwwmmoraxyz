@@ -86,11 +86,20 @@ export async function runLiveness(
         t.ear.push(Math.round(e * 1000) / 1000); t.yaw.push(Math.round(yaw * 1000) / 1000);
         const desc = (all[0] as { descriptor?: Float32Array }).descriptor;
         if (wantDescriptor && desc) descriptors.push(Array.from(desc).map((n) => Math.round(n * 1e5) / 1e5));
+        // Keep the trace under the server's 200-frame cap (drop oldest frames,
+        // always keeping the first so the turn's starting position survives).
+        if (t.ear.length > 190) { t.ear.splice(1, 1); t.yaw.splice(1, 1); }
+        // Same rules the server re-checks, so a passed step never gets rejected.
         if (step === 'blink') {
-          if (!baseEar && e > 0.24) baseEar = e;
-          if (baseEar && e < baseEar * 0.7) closed = true;
-          if (closed && e > baseEar * 0.85) done = true;
-        } else if (step === 'turn_left' ? yaw > 0.18 : yaw < -0.18) done = true;
+          const max = Math.max(...t.ear); const min = Math.min(...t.ear);
+          const minAt = t.ear.indexOf(min);
+          done = max > 0.22 && min < max * 0.72 && minAt > 0
+            && t.ear.slice(minAt).some((v) => v > max * 0.8);
+        } else {
+          const want = step === 'turn_left' ? 1 : -1;
+          const peak = Math.max(...t.yaw.map((y) => y * want));
+          done = peak > 0.18 && peak - t.yaw[0] * want > 0.1;
+        }
       }
     }
     trace.push(t);
