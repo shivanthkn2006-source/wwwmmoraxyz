@@ -25,21 +25,39 @@ import CityBenches from './features/CityBenches';
 import { SeasonalBuildingsGroup } from './features/SeasonalBuildings';
 import { SeasonalVehiclesGroup } from './features/SeasonalVehicles';
 import { ReadyPlayerOneTerrain, SatelliteEntryController } from './features/ReadyPlayerOneTerrain';
-import { EverestMountainRange } from './features/EverestMountainRange';
-import { CyclingTrailTerrain } from './features/CyclingTrailTerrain';
-import { MountainRockFormations } from './features/MountainRockFormations';
 import { ExpandedCityGrid, getCityPOIs } from './features/ExpandedCityGrid';
-import { MetroTrainSystem } from './features/MetroTrainSystem';
-import { F1CircuitSystem } from './features/F1CircuitSystem';
-import { MetroFlyoverTrack } from './features/MetroFlyoverTrack';
 import { YellowstoneSignBoard } from './features/YellowstoneSignBoard';
 import { MetroDirectionSigns } from './features/MetroDirectionSigns';
 import { PlatformCommuters } from './features/PlatformCommuters';
-import { CitySkylineBackdrop } from './features/CitySkylineBackdrop';
-import CityMarketDistrict from './features/CityMarketDistrict';
 import CrowdAvatarSystem from './features/CrowdAvatarSystem';
-import ScenicHeritageTrain from './features/ScenicHeritageTrain';
-import CityBusSystem from './features/CityBusSystem';
+import { ProximityGate } from './features/ProximityGate';
+
+// Distant / heavy areas stream in as separate downloads, only when the member
+// walks near them (ProximityGate). Nothing here changes how they look or work.
+const loadMountains = () => import('./features/EverestMountainRange');
+const loadRocks = () => import('./features/MountainRockFormations');
+const loadCycling = () => import('./features/CyclingTrailTerrain');
+const loadMetro = () => import('./features/MetroTrainSystem');
+const loadF1 = () => import('./features/F1CircuitSystem');
+const loadFlyover = () => import('./features/MetroFlyoverTrack');
+const loadSkyline = () => import('./features/CitySkylineBackdrop');
+const loadMarket = () => import('./features/CityMarketDistrict');
+const loadHeritage = () => import('./features/ScenicHeritageTrain');
+const loadBuses = () => import('./features/CityBusSystem');
+const EverestMountainRange = React.lazy(() => loadMountains().then(m => ({ default: m.EverestMountainRange })));
+const MountainRockFormations = React.lazy(() => loadRocks().then(m => ({ default: m.MountainRockFormations })));
+const CyclingTrailTerrain = React.lazy(() => loadCycling().then(m => ({ default: m.CyclingTrailTerrain })));
+const MetroTrainSystem = React.lazy(() => loadMetro().then(m => ({ default: m.MetroTrainSystem })));
+const F1CircuitSystem = React.lazy(() => loadF1().then(m => ({ default: m.F1CircuitSystem })));
+const MetroFlyoverTrack = React.lazy(() => loadFlyover().then(m => ({ default: m.MetroFlyoverTrack })));
+const CitySkylineBackdrop = React.lazy(() => loadSkyline().then(m => ({ default: m.CitySkylineBackdrop })));
+const CityMarketDistrict = React.lazy(loadMarket);
+const ScenicHeritageTrain = React.lazy(loadHeritage);
+const CityBusSystem = React.lazy(loadBuses);
+const preloadMountainArea = () => Promise.all([loadMountains(), loadRocks()]);
+const LazyZone: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <React.Suspense fallback={null}>{children}</React.Suspense>
+);
 import StreetLightSystem from './features/StreetLightSystem';
 import { MotorcycleController } from './features/MotorcycleSystem';
 const CITY_OFFSET_X = 60;
@@ -1060,14 +1078,17 @@ export const VRFeatureIntegration: React.FC<VRFeatureIntegrationProps> = ({
       
       {/* Phase 2: Yellow Stone National Park - EAST of city within 500m (staggered) */}
       {showTerrain && hasEnteredWorld && mountainsReady && (
-        <group position={[450, 0, 0]}>
-          <EverestMountainRange season={currentSeason} quality="medium" />
-          <MountainRockFormations season={currentSeason} />
-        </group>
+        <ProximityGate center={[450, 0, 0]} radius={380} preload={preloadMountainArea}>
+          <group position={[450, 0, 0]}>
+            <EverestMountainRange season={currentSeason} quality="medium" />
+            <MountainRockFormations season={currentSeason} />
+          </group>
+        </ProximityGate>
       )}
 
       {/* Highway from city to mountains (east) - only after mountains ready */}
       {showTerrain && hasEnteredWorld && mountainsReady && (
+        <ProximityGate center={[225, 0, 0]} radius={330}>
         <group>
           {/* Highway road surface - runs east from city center to mountains */}
           <mesh rotation={[-Math.PI / 2, 0, 0]} position={[225, 0.16, 0]}>
@@ -1128,6 +1149,7 @@ export const VRFeatureIntegration: React.FC<VRFeatureIntegrationProps> = ({
             </Text>
           </group>
         </group>
+        </ProximityGate>
       )}
       
       {/* Base interactive gate: don't mount interactive subsystems until heavy systems are ready */}
@@ -1138,9 +1160,11 @@ export const VRFeatureIntegration: React.FC<VRFeatureIntegrationProps> = ({
           <>
             {/* Phase 3: Cycling trails - between city and mountains (east side) */}
             {interactiveBaseReady && (
-              <group position={[300, 0, -50]}>
-                <CyclingTrailTerrain season={currentSeason} />
-              </group>
+              <ProximityGate center={[300, 0, -50]} radius={300} preload={loadCycling}>
+                <group position={[300, 0, -50]}>
+                  <CyclingTrailTerrain season={currentSeason} />
+                </group>
+              </ProximityGate>
             )}
             
             {/* Rotation is controlled by VROMEGAWorld after satellite entry to avoid camera-controller conflicts */}
@@ -1192,18 +1216,18 @@ export const VRFeatureIntegration: React.FC<VRFeatureIntegrationProps> = ({
             {/* METRO TRAIN SYSTEM - delayed + guarded fallback unlock */}
             {interactiveBaseReady && showMetroSystem && metroReady && (
               <group position={[CITY_OFFSET_X, 0, CITY_OFFSET_Z]}>
-                <MetroTrainSystem isNight={isNight} />
+                <LazyZone><MetroTrainSystem isNight={isNight} /></LazyZone>
               </group>
             )}
             
             {/* METRO FLYOVER TRACK - East-West elevated railway (staggered) */}
             {showTerrain && hasEnteredWorld && flyoverReady && (
-              <MetroFlyoverTrack />
+              <LazyZone><MetroFlyoverTrack /></LazyZone>
             )}
             
             {/* CITY SKYLINE BACKDROP - 360° building ring behind flyover (staggered last) */}
             {showTerrain && hasEnteredWorld && skylineReady && (
-              <CitySkylineBackdrop isNight={isNight} />
+              <LazyZone><CitySkylineBackdrop isNight={isNight} /></LazyZone>
             )}
 
             {/* STREET LIGHTS - Road-side lamps with day/night cycle */}
@@ -1213,17 +1237,19 @@ export const VRFeatureIntegration: React.FC<VRFeatureIntegrationProps> = ({
 
             {/* CITY MARKET DISTRICT - Stalls, shops, housing, construction, buses, banks, medical */}
             {showTerrain && hasEnteredWorld && skylineReady && (
-              <CityMarketDistrict />
+              <LazyZone><CityMarketDistrict /></LazyZone>
             )}
 
             {/* SCENIC HERITAGE TRAIN - ground-level narrow-gauge trains alongside roads */}
             {interactiveBaseReady && (
-              <ScenicHeritageTrain />
+              <ProximityGate center={[180, 0, 110]} radius={280} preload={loadHeritage}>
+                <ScenicHeritageTrain />
+              </ProximityGate>
             )}
 
             {/* CITY BUS SYSTEM - 5 buses on roads with engine + arrival sounds */}
             {interactiveBaseReady && (
-              <CityBusSystem />
+              <LazyZone><CityBusSystem /></LazyZone>
             )}
 
             {/* YELLOWSTONE ROAD SIGNS - highway directional signs (proximity-gated) */}
@@ -1242,7 +1268,7 @@ export const VRFeatureIntegration: React.FC<VRFeatureIntegrationProps> = ({
             )}
             
             {/* F1 OMEGA CIRCUIT - delayed + proximity gated */}
-            {interactiveBaseReady && showF1System && f1Ready && <F1CircuitSystem />}
+            {interactiveBaseReady && showF1System && f1Ready && <LazyZone><F1CircuitSystem /></LazyZone>}
 
             {/* Generated buildings - only when city zoom */}
             {cityReady && buildings.map(building => (

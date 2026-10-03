@@ -104,4 +104,4 @@
 - [ ] Sign-up end to end: blocked in test browser by the human check — needs owner's phone
 
 - [ ] Later (after remaining platform menus/features): Capacitor iOS/Android store build (Path A) — bundle dist/, Apple Team ID, Android signing fingerprint, icons, store forms, device tests
-- [ ] Now: fix VR World heavy loading issues (waiting on details from owner)
+- [x] VR World: stream distant areas by distance + split heavy parts into on-demand downloads
