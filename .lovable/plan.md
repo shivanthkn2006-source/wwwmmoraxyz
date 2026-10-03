@@ -1,43 +1,38 @@
-# Why mmora.xyz and the preview show a white screen on your Android phone
+# Notifications repair, admin notification health page, VR chunks, store build
 
-## What the evidence shows
+## What I found (real data, last 14 days)
+- Only 5 kinds of alerts have ever reached members (likes, friend requests, DHF essays, uptime, comments) — about 41 in total.
+- The alerts list only accepts a fixed set of kinds. Growth card alerts, comment replies and missed calls are not on it, so they are thrown away without any visible error. 664 growth alerts failed this way, all with the same "notification queue rejected" error.
+- Direct messages never create an alert: likes, comments, tags, friend requests, badges and music each have an automatic sender, but messages don't. The bell only lights up while the chat is open.
+- Email and Slack delivery are not set up (2 failures each).
+- The bell, menu badges, panel and pop-up alerts each open their own live connection. The project rule says they should share one, otherwise they drop each other during sign-in reloads.
 
-**Your live site is up and serving the current version.**
-- mmora.xyz, www.mmora.xyz, myzoe.xyz and wwwmmoraxyz.lovable.app all answer within half a second and send the same latest version.
-- In phone-sized test browsers (Android Chrome and iPhone Safari), signed in and signed out, mmora.xyz opens the sign-in page and Home within 2–3 seconds.
+## 1. Permanent notification fixes
+- Replace the fixed list with a single shared catalogue of alert kinds. Every sender (growth, LOL, DHF, calls, messages, replies, music, badges, admin) must use a kind from it, and a test fails the build if code uses a kind that isn't there.
+- Add an automatic alert for new direct messages, plus missed calls and comment replies.
+- Move the bell, menu badges, panel and pop-ups onto the one shared live connection, with catch-up on reconnect so nothing is missed while offline.
+- Log every failed alert with a clear reason, and retry the ones that can be retried.
 
-**Your own Android phone is the one failing.**
-- Your app's visit log identifies your phone by its graphics chip and screen size.
-- In the last 3 hours, it has recorded no successful visit to mmora.xyz from that phone. The app never got far enough to log one.
-- The only visits from that phone are to the editor preview, and they took about 25 seconds to load.
-- The startup monitor sent two reports from that phone, at 12:11 and 12:47 UTC: "App did not mount within 30 seconds".
-- Your iPhone did open mmora.xyz today (10:23 and 12:25 UTC), but slowly: 2 seconds and then 18 seconds.
+## 2. Admin page: Notification Health (admin only, inside the private vault)
+- One row per feature (messages, likes, comments, replies, tags, friends, badges, music, calls, growth, DHF, LOL, admin notices, push, email). Each row shows whether it's connected, how many it sent in 24h/7d, how many failed and the last error, so you can see at a glance what works and what doesn't.
+- A "Run end-to-end test" button sends one test alert per feature to your own account and reports pass/fail for each.
+- Members online/offline now, how many devices have push turned on, and how many alerts are unread.
 
-**About the 2:32 change.** That request (VR World loading) only changed how VR World loads its distant areas. It didn't touch the startup files that every page uses. The white screen is very unlikely to come from that change itself. It most likely shows up because each new publish forces your phone to download the whole app again (see cause 1).
+## 3. VR World chunks
+- VR World already loads in ~200 m blocks as you walk, with lighter graphics on phones with 4 GB or less. I'll make the blocks smaller (city-block size), generate them in the background and unload blocks behind you, so memory stays flat. The look stays the same.
 
-## The most likely causes (in order)
-
-1. **The app's offline copy is far too big.** Each time you publish, your phone is told to download and store 638 files, including VR World, the music player, admin pages and 3D models, before the new version can run. On mobile data the old copy is swapped out while the new one is only half downloaded, so the page has nothing to show. This fits "it was fine, then after an update it went white" and only some devices being affected.
-2. **Two outside font files block the very first paint.** The page waits for Google Fonts to download before it draws anything, even the dark loading screen. On a slow or filtered mobile network, the browser shows plain white with its loading bar stuck halfway. That's exactly what your screenshot shows.
-3. **A broken leftover file.** The live page asks for a file named `main-….tsx`, which the server sends as the wrong type. The browser rejects it on every load. It's harmless but wasted work, and it shows up as an error every time.
-
-Not yet confirmed on your actual phone: which of causes 1 or 2 is doing it on your network. Step 4 below makes the next white screen report itself so this is no longer a guess.
-
-## Fixes
-
-1. **Make the offline copy small and safe.**
-   - Store only the startup essentials offline, not all 638 files.
-   - Pages like VR World and Music download only when you open them.
-   - Always fetch the newest page first when online, and fall back to the saved copy only when offline.
-2. **Self-repair on a stuck start.** If the app hasn't started after about 12 seconds, the loading screen throws away the saved offline copy and reloads once by itself. A "Still loading — tap to retry" button stays as a backup.
-3. **Draw the dark loading screen before anything else.** Put the dark background and circling dots at the very top of the page. Fonts load in the background and never block the first paint. Remove the broken leftover file request.
-4. **Startup tracking from your phone.** The loading screen sends small notes to your admin error log: page arrived, styles loaded, app code loaded, app started. The next time a phone stalls, the log shows the exact step where it stopped and on which address.
-5. **Verify.** In phone-sized test browsers, check mmora.xyz-style builds with slow mobile data simulated and Google Fonts blocked. Confirm the dark screen appears immediately and the app opens. Confirm an old offline copy is replaced cleanly after a new version.
-
-After this ships you need to **publish once**. On your Android phone, open mmora.xyz in Chrome. If it's still white, clear the site's stored data once (Chrome menu, Site settings, mmora.xyz, Clear and reset), or remove and re-add the home-screen app. From then on the self-repair handles it.
+## 4. Store app (iPhone / Android)
+- The phone-app settings currently point at the live editor preview, which app stores reject. Switch them to load the built app, use the warm brand colours for the splash screen and status bar, and set a proper app name.
+- The actual store build has to happen on your computer (Xcode on a Mac for iPhone, Android Studio for Android). I'll give you the exact steps.
 
 ## Technical details
-- `vite.config.ts` VitePWA: narrow `globPatterns` to `index.html`, entry and vendor chunks, CSS, icons and offline.html. Drop the `**/*.js` precache. Add a NetworkFirst navigation route (3s timeout) and StaleWhileRevalidate for `/assets/*.js` at runtime. Keep `push-handler.js` and `cleanupOutdatedCaches`.
-- `index.html`: move `#__startup_shell__` styles and the inline dark background into `<head>` before any `<link rel=stylesheet>`. Load the Google Fonts as `rel=preload as=style` with an onload swap to stylesheet, plus a `<noscript>` fallback in `<head>`. Remove `<link rel="modulepreload" href="/src/main.tsx">` and the `/src/index.css` preload.
-- Boot script: a 12s stall handler that runs once per session. It unregisters service workers and deletes caches, then calls `location.reload()`, guarded by a sessionStorage flag. Stage beacons go to the existing `log-platform-error` function with `source: 'boot_stage'`, sent only when the boot stalls or fails, to avoid noise.
-- No change to the VR World work, page designs, or any member-facing feature.
+- Migration: drop `notifications_type_check`; add a `notification_kinds` table plus a validation trigger. Add an `AFTER INSERT` trigger on `messages`, and senders for `missed_call`/`comment_reply`.
+- Shared `src/lib/notificationKinds.ts` and a vitest check over `type:` literals.
+- Consumers move to the global realtime multiplexer.
+- `admin-notification-health` edge function (has_role admin check), plus a `/admin/vault/notifications` page.
+- VR: change the ProximityGate chunk size and add disposal on exit.
+- Capacitor: remove `server.url` for production builds and set `appName` "M'Mora".
+
+## Not possible from here
+- Signing and submitting to the App Store / Play Store (needs your developer accounts and computer).
+- Email/Slack delivery stays off until you choose to connect them.
