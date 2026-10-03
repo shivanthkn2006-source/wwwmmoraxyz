@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" style="background:#0a0a0a">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
@@ -106,7 +106,7 @@
   <meta data-rh="true" name="twitter:description" content="Next-generation AI platform powered by Zoe - available at mmora.xyz">
 </head>
 
-  <body>
+  <body style="background:#0a0a0a;margin:0">
     <style>
       #__startup_shell__{position:fixed;inset:0;z-index:2147483646;display:flex;flex-direction:column;align-items:center;justify-content:center;background:hsl(var(--background,0 0% 4%));color:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;gap:14px;padding:24px;text-align:center;transition:opacity .25s ease}
       #__startup_shell__ .ss-spin{width:34px;height:34px;border:3px solid rgba(255,255,255,.18);border-top-color:#10b981;border-radius:50%;animation:ss-spin .9s linear infinite}
@@ -128,12 +128,21 @@
       #__integration_checks__ .ic-fail{background:#450a0a;color:#fca5a5}
       #__integration_checks__ .ic-pending{background:#1f2937;color:#9ca3af}
       #__integration_checks__ .ic-err{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#fca5a5;font-size:11px;white-space:pre-wrap;margin:4px 0 0;opacity:.85}
+      #__startup_shell__ .ss-orbit{position:relative;width:112px;height:112px;animation:ss-turn 24s linear infinite !important}
+      #__startup_shell__ .ss-dot{position:absolute;left:50%;top:50%;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;background:#d8c3a5;opacity:.85}
+      #__startup_shell__ .ss-retry{display:none;margin-top:18px;background:none;border:0;color:#d8c3a5;font-size:14px;text-decoration:underline;cursor:pointer}
+      @keyframes ss-turn{to{transform:rotate(360deg)}}
       @keyframes ss-spin{to{transform:rotate(360deg)}}
     </style>
     <div id="root"></div>
     <div id="__startup_shell__" role="status" aria-live="polite">
+      <div class="ss-orbit" aria-hidden="true"><span class="ss-dot" style="transform:translate(46.0px,0.0px)"></span><span class="ss-dot" style="transform:translate(14.2px,43.7px)"></span><span class="ss-dot" style="transform:translate(-37.2px,27.0px)"></span><span class="ss-dot" style="transform:translate(-37.2px,-27.0px)"></span><span class="ss-dot" style="transform:translate(14.2px,-43.7px)"></span></div>
       <div class="ss-sub" id="__startup_shell_sub__"></div>
+      <button type="button" class="ss-retry" id="__startup_retry__" onclick="location.reload()">Still loading — tap to retry</button>
     </div>
+    <script>
+      setTimeout(function(){var s=document.getElementById('__startup_shell__');var b=document.getElementById('__startup_retry__');if(s&&s.parentNode&&s.style.opacity!=='0'&&b)b.style.display='block';},20000);
+    </script>
     <div id="__startup_error__" role="alert" aria-live="assertive">
       <h2>Startup failed</h2>
       <div class="se-sub">A required script or asset failed to load. Details below — share these with support if it persists.</div>
