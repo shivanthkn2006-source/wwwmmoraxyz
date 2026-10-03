@@ -13,6 +13,9 @@ import { Text } from '@react-three/drei';
 // 1 mile ≈ 1609m, we use 1600 for clean grid
 const CITY_RADIUS = 800; // 1600m diameter
 const ROAD_SPACING = 400;
+const CHUNK_SIZE = 200;
+const LOW_END = typeof navigator !== 'undefined' && ((((navigator as any).deviceMemory ?? 8) <= 4) || (navigator.hardwareConcurrency ?? 8) <= 4 || /iPhone|iPad/.test(navigator.userAgent));
+const CHUNK_VIEW = LOW_END ? 320 : 520;
 const ROAD_CLEARANCE = 54;
 
 const pushOffRoadAxis = (value: number, clearance: number = ROAD_CLEARANCE): number => {
@@ -264,7 +267,7 @@ const CameraTracker: React.FC<{ onUpdate: (pos: THREE.Vector3) => void }> = ({ o
     const now = performance.now();
     if (now - lastReportAt.current > 500) { // Update every 500ms, not every frame
       lastReportAt.current = now;
-      onUpdate(camera.position);
+      onUpdate(camera.position.clone());
     }
   });
   return null;
@@ -273,6 +276,19 @@ const CameraTracker: React.FC<{ onUpdate: (pos: THREE.Vector3) => void }> = ({ o
 // Main expanded city component
 export const ExpandedCityGrid: React.FC<{ showLabels?: boolean }> = ({ showLabels = true }) => {
   const pois = useMemo(() => generateCityPOIs(), []);
+  // Block-sized chunks: buildings are bucketed into CHUNK_SIZE blocks and only
+  // blocks near the member mount, so the city generates as they walk.
+  const chunks = useMemo(() => {
+    const map = new Map<string, { cx: number; cz: number; pois: CityPOI[] }>();
+    for (const poi of pois) {
+      const cx = Math.floor(poi.position[0] / CHUNK_SIZE);
+      const cz = Math.floor(poi.position[2] / CHUNK_SIZE);
+      const key = `${cx}:${cz}`;
+      if (!map.has(key)) map.set(key, { cx, cz, pois: [] });
+      map.get(key)!.pois.push(poi);
+    }
+    return Array.from(map.entries());
+  }, [pois]);
   const [cameraPos, setCameraPos] = React.useState<THREE.Vector3>(new THREE.Vector3(0, 250, 0));
 
   // Road grid across the city
@@ -337,9 +353,18 @@ export const ExpandedCityGrid: React.FC<{ showLabels?: boolean }> = ({ showLabel
       ))}
 
       {/* All city buildings - with distance-based labels */}
-      {pois.map(poi => (
-        <CityBuilding key={poi.id} poi={poi} showLabel={showLabels} cameraPos={cameraPos} />
-      ))}
+      {chunks.map(([key, chunk]) => {
+        const midX = (chunk.cx + 0.5) * CHUNK_SIZE;
+        const midZ = (chunk.cz + 0.5) * CHUNK_SIZE;
+        if (Math.hypot(cameraPos.x - midX, cameraPos.z - midZ) > CHUNK_VIEW) return null;
+        return (
+          <group key={key}>
+            {chunk.pois.map(poi => (
+              <CityBuilding key={poi.id} poi={poi} showLabel={showLabels} cameraPos={cameraPos} />
+            ))}
+          </group>
+        );
+      })}
     </group>
   );
 };

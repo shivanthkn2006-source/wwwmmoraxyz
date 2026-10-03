@@ -17,6 +17,7 @@ import { playActivationChime } from '@/utils/zoeActivationSound';
 import { isSoundSuppressed } from '@/lib/platformPurge';
 import { EconomyWallet } from '@/components/EconomyWallet';
 import ReturnToRealityButton from '@/components/vr/ReturnToRealityButton';
+import VRTopDock, { VRFeature } from '@/components/vr/VRTopDock';
 // Hidden VR panels load on demand so entering the VR world stays fast on phones/iPads.
 const GenesisOmniBox = lazy(() => import('@/components/GenesisOmniBox').then(m => ({ default: m.GenesisOmniBox })));
 const BiCameralHUD = lazy(() => import('@/components/vr/BiCameralHUD'));
@@ -1051,6 +1052,7 @@ const ZoeOmegaPage: React.FC = () => {
                 </VRLoadingWrapper>
               </VRErrorBoundary>
 
+              <VRFeature id="session">
               {/* VR Mode Floating Controls - draggable + tap to drop down */}
               {vrPanels.identity && (
                 <VRDraggablePanel
@@ -1161,6 +1163,7 @@ const ZoeOmegaPage: React.FC = () => {
                 />
                 </Suspense>
               )}
+              </VRFeature>
 
             </motion.div>
             )
@@ -1390,8 +1393,9 @@ const ZoeOmegaPage: React.FC = () => {
         </AnimatePresence>
 
         {/* Economy Wallet - Top Right */}
-        <EconomyWallet />
+        <VRFeature id="wallet"><EconomyWallet /></VRFeature>
 
+        <VRFeature id="panels">
         {/* VR Test Suite - Debug Panel (draggable + tap to drop down) */}
         {isVRMode && vrPanels.diagnostics && (
           <VRDraggablePanel
@@ -1532,9 +1536,11 @@ const ZoeOmegaPage: React.FC = () => {
             <Suspense fallback={null}><VRDhfCardPanel /></Suspense>
           </VRDraggablePanel>
         )}
+        </VRFeature>
 
         {/* Return to Reality button - Draggable & Compact */}
-        <ReturnToRealityButton onReturn={handleReturnToReality} />
+        <VRFeature id="exit"><ReturnToRealityButton onReturn={handleReturnToReality} /></VRFeature>
+        {isVRMode && !vrStasisActive && <VRTopDock />}
 
       </motion.div>
     </>

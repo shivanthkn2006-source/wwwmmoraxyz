@@ -94,6 +94,7 @@ import CrowdAvatarSystem from './vr/features/CrowdAvatarSystem';
 import VRLookJoystick, { VRTouchControlBar } from './vr/features/VRLookJoystick';
 import { BikeOnScreenControls } from './vr/features/MotorcycleSystem';
 import { VRManualDownloadButton } from './vr/VRManualDownloadButton';
+import { VRFeature } from './vr/VRTopDock';
 import { useSkyPhase } from '@/hooks/useSkyPhase';
 
 // Types
@@ -1266,6 +1267,15 @@ const MemoryPalace: React.FC<{
 // ═══════════════════════════════════════════════════════════════════════════════
 // Main VR OMEGA World Component
 // ═══════════════════════════════════════════════════════════════════════════════
+// iPhones/iPads (Safari kills tabs past ~1.5 GB GPU+JS memory) and 4 GB phones
+// run without shadows, post effects, crowds and at 1x pixels to stay alive.
+const VR_LOW_MEMORY = typeof navigator !== 'undefined' && (
+  /iPhone|iPad|iPod/.test(navigator.userAgent) ||
+  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ||
+  (((navigator as any).deviceMemory ?? 8) <= 4) ||
+  (navigator.hardwareConcurrency ?? 8) <= 4
+);
+
 const VROMEGAWorld: React.FC<VROMEGAWorldProps> = ({ 
   integrityLevel, 
   onIntegrityRestore,
@@ -1409,7 +1419,7 @@ const VRLiveClock: React.FC = () => {
   // Keep crowd active across metro ring too (user-visible roads at the city edge)
   const inCrowdActivationZone = cityCoreDistance <= 1200;
   const isPerformanceCritical = fps > 0 && fps < 22;
-  const maxDpr = isPerformanceCritical
+  const maxDpr = isPerformanceCritical || VR_LOW_MEMORY
     ? 1
     : isMobile
       ? 1.1
@@ -1447,13 +1457,15 @@ const VRLiveClock: React.FC = () => {
   const showCrowdSystems =
     showInteractiveSystems &&
     inCrowdActivationZone &&
-    vrLoader.phase >= 4;
+    vrLoader.phase >= 4 &&
+    !VR_LOW_MEMORY;
   const showCinematicEffects =
     vrLoader.showEffects &&
     hasSatelliteEntryCompleted &&
     inCityActivationZone &&
     !isPerformanceCritical &&
     !isBootStabilizing &&
+    !VR_LOW_MEMORY &&
     fps >= 28;
   
   // Pre-check WebGL support and show graceful fallback if not available
@@ -2797,7 +2809,7 @@ const VRLiveClock: React.FC = () => {
             preserveDrawingBuffer: false,
           }}
           dpr={[1, Math.min(graphicsConfig?.pixelRatio ?? 1, maxDpr)]}
-          shadows="soft"
+          shadows={VR_LOW_MEMORY ? false : "soft"}
           fallback={<div className="w-full h-full bg-background flex items-center justify-center text-muted-foreground">Loading 3D...</div>}
           onCreated={({ gl }) => {
             // Configure renderer after creation for Safari compatibility
@@ -2805,7 +2817,7 @@ const VRLiveClock: React.FC = () => {
               gl.toneMapping = THREE.ACESFilmicToneMapping;
               gl.toneMappingExposure = 1.2;
               gl.outputColorSpace = THREE.SRGBColorSpace;
-              gl.shadowMap.enabled = true;
+              gl.shadowMap.enabled = !VR_LOW_MEMORY;
               gl.shadowMap.type = THREE.PCFSoftShadowMap;
             } catch (e) {
               console.warn('[VR OMEGA] Renderer configuration failed:', e);
@@ -2890,6 +2902,7 @@ const VRLiveClock: React.FC = () => {
           <VRZoomLens />
           </Canvas>
 
+<VRFeature id="status">
           {/* VR Loading Progress Overlay */}
           {!vrLoader.isFullyLoaded && isActive && (
             <div className="absolute top-14 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
@@ -2917,6 +2930,7 @@ const VRLiveClock: React.FC = () => {
             </div>
           )}
 
+</VRFeature>
           {/* On-screen controls (touch + mouse) */}
           {isActive && controlsUnlocked && (
             <>
@@ -2935,6 +2949,7 @@ const VRLiveClock: React.FC = () => {
                 }}
               />
 
+              <VRFeature id="extras">
               <VRLookJoystick
                 onLook={(dx, dy) => {
                   if (Math.abs(dx) > 0.15 || Math.abs(dy) > 0.15) {
@@ -2944,7 +2959,9 @@ const VRLiveClock: React.FC = () => {
               />
 
               <RotationButtons />
+              </VRFeature>
               <LookButtons />
+              <VRFeature id="extras">
 
               <VRTouchControlBar
                 is5xZoom={is5xZoom}
@@ -2957,9 +2974,11 @@ const VRLiveClock: React.FC = () => {
                 onSpawnCar={() => window.dispatchEvent(new CustomEvent('vr-spawn', { detail: { type: 'car' } }))}
               />
               <BikeOnScreenControls />
+              </VRFeature>
             </>
           )}
 
+<VRFeature id="zoom5x">
           {/* Desktop 5X Zoom Button (non-touch devices) */}
           {typeof window !== 'undefined' && !('ontouchstart' in window) && controlsUnlocked && (
             <button
@@ -2978,6 +2997,7 @@ const VRLiveClock: React.FC = () => {
             </button>
           )}
           
+</VRFeature><VRFeature id="graphics">
           {/* Graphics Tier & RPO Features Indicator */}
           <div className="absolute bottom-2 right-2 z-50 bg-black/70 backdrop-blur-md rounded-lg px-2 py-1.5 border border-cyan-500/30">
           <div className="flex items-center gap-2 text-[9px] mb-1">
@@ -3017,6 +3037,7 @@ const VRLiveClock: React.FC = () => {
           </div>
         </div>
 
+</VRFeature>
         {/* Vision Pro-Style HUD Overlays */}
         {hasSatelliteEntryCompleted && (
           <>
@@ -3030,13 +3051,14 @@ const VRLiveClock: React.FC = () => {
                 <div className="flex items-center gap-1.5 text-[10px] font-mono text-white/60">
                   <span className={cameraHeading >= 315 || cameraHeading < 45 ? 'text-cyan-400 font-bold' : ''}>N</span>
                   <span className={cameraHeading >= 45 && cameraHeading < 135 ? 'text-cyan-400 font-bold' : ''}>E</span>
-                  <span className={cameraHeading >= 135 && cameraHeading < 225 ? 'text-cyan-400 font-bold' : ''}>S</span>
                   <span className={cameraHeading >= 225 && cameraHeading < 315 ? 'text-cyan-400 font-bold' : ''}>W</span>
+                  <span className={cameraHeading >= 135 && cameraHeading < 225 ? 'text-cyan-400 font-bold' : ''}>S</span>
                 </div>
                 <span className="text-white/40 text-[9px] font-mono">{Math.round(cameraHeading)}°</span>
               </div>
             </div>
             
+<VRFeature id="altitude">
             {/* Altitude/Zoom HUD */}
             <div className="fixed right-4 top-1/2 -translate-y-1/2 z-40 pointer-events-none">
               <div className="bg-black/40 backdrop-blur-xl rounded-2xl p-4 border border-white/10 space-y-4">
@@ -3062,10 +3084,10 @@ const VRLiveClock: React.FC = () => {
                 </div>
               </div>
             </div>
-          </>
+          </VRFeature></>
         )}
 
-        {/* Quick Navigation Dock - discoverability for satellite/aerial/mountains */}
+        <VRFeature id="nav">{/* Quick Navigation Dock - discoverability for satellite/aerial/mountains */}
         {hasSatelliteEntryCompleted && (
           <div className="fixed right-4 top-28 z-50 bg-black/65 backdrop-blur-md rounded-xl border border-white/15 p-2 space-y-1.5 max-w-[180px]">
             <div className="text-[9px] uppercase tracking-wide text-cyan-300/80">Quick Nav</div>
@@ -3141,6 +3163,7 @@ const VRLiveClock: React.FC = () => {
           </div>
         )}
 
+</VRFeature><VRFeature id="voice">
         {/* VR Voice Commands Panel - Glassmorphic Dropdown - positioned below integrity */}
         {showVoicePanel && (
           <VRVoiceCommandsPanel 
@@ -3150,6 +3173,7 @@ const VRLiveClock: React.FC = () => {
           />
         )}
 
+</VRFeature><VRFeature id="controls">
         {/* Compact Draggable VR Controls Panel - bottom left */}
         {showControlsPanel && (
           <VRControlsPanel 
@@ -3171,9 +3195,11 @@ const VRLiveClock: React.FC = () => {
           </div>
         </div>
 
+</VRFeature><VRFeature id="debug">
         {/* VR Debug Panel (Ctrl+Shift+D) */}
         <VRDebugPanel />
 
+</VRFeature>
         {/* Selected engram detail - DRAGGABLE */}
         <AnimatePresence>
           {selectedEngram && (
@@ -3275,6 +3301,7 @@ const VRLiveClock: React.FC = () => {
           )}
         </AnimatePresence>
 
+<VRFeature id="admin">
         {/* Enterprise Control Deck - Admin Only */}
         <EnterpriseControlDeck
           isAdmin={isAdmin}
@@ -3293,12 +3320,14 @@ const VRLiveClock: React.FC = () => {
           isConnected={isMultiplayerConnected}
         />
 
+</VRFeature>
         {/* World Broadcast Notifications */}
         <WorldBroadcastNotification />
 
-        <VRInventoryHUD />
+        <VRFeature id="inventory"><VRInventoryHUD /></VRFeature>
         {showWallet && <VRKarmaShop onClose={() => setShowWallet(false)} />}
 
+<VRFeature id="online">
         {/* Multiplayer Connection Indicator */}
         {isActive && (
           <div className="absolute bottom-2 left-2 z-50 flex items-center gap-1.5 bg-black/70 backdrop-blur-md rounded-full px-2 py-1 border border-white/10">
@@ -3311,6 +3340,7 @@ const VRLiveClock: React.FC = () => {
             </span>
           </div>
         )}
+        </VRFeature>
       </div>
     </KeyboardControls>
   );
