@@ -29,7 +29,6 @@ import { ExpandedCityGrid, getCityPOIs } from './features/ExpandedCityGrid';
 import { YellowstoneSignBoard } from './features/YellowstoneSignBoard';
 import { MetroDirectionSigns } from './features/MetroDirectionSigns';
 import { PlatformCommuters } from './features/PlatformCommuters';
-import CrowdAvatarSystem from './features/CrowdAvatarSystem';
 import { ProximityGate } from './features/ProximityGate';
 
 // Distant / heavy areas stream in as separate downloads, only when the member
@@ -1337,9 +1336,7 @@ export const VRFeatureIntegration: React.FC<VRFeatureIntegrationProps> = ({
             )}
 
             {/* CROWD AVATAR SYSTEM - 500 walking avatars + 80 vehicles on roads */}
-            {interactiveBaseReady && (
-              <CrowdAvatarSystem />
-            )}
+            {/* Crowd is rendered once by VROMEGAWorld (FPS/memory gated); a second copy here doubled 500 avatars + 80 cars and crashed Safari. */}
 
             {/* MOTORCYCLE SYSTEM — standalone, separate wiring */}
             {interactiveBaseReady && (
