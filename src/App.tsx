@@ -538,6 +538,8 @@ const RouteAwareShell = () => {
               />
 
               <Route path="/" element={<RootRedirect />} />
+              <Route path="/index" element={<Navigate to="/home" replace />} />
+              <Route path="/index.html" element={<Navigate to="/home" replace />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
@@ -1385,6 +1387,8 @@ const RouteAwareShell = () => {
                             path="/sentinel"
                             element={<SentinelPage />}
                           />
+                          <Route path="/index" element={<Navigate to="/home" replace />} />
+                          <Route path="/index.html" element={<Navigate to="/home" replace />} />
                           <Route path="*" element={<NotFound />} />
                         </Routes>
                       </Suspense>
