@@ -34,7 +34,7 @@ export default function IconOrbitLoader({ fresh = false }: { fresh?: boolean } =
   const [icons] = useState(() => (fresh ? (cached = pickSet()) : (cached ??= pickSet())));
   return (
     <div className="relative h-32 w-32" aria-hidden="true">
-      <div className="absolute inset-0 animate-[spin_24s_linear_infinite]">
+      <div className="absolute inset-0 mm-orbit-ring">
         {icons.map((Icon, i) => {
           const a = (i / icons.length) * 2 * Math.PI;
           return (
@@ -43,7 +43,7 @@ export default function IconOrbitLoader({ fresh = false }: { fresh?: boolean } =
               className="absolute left-1/2 top-1/2 text-foreground"
               style={{ transform: `translate(-50%, -50%) translate(${Math.cos(a) * 52}px, ${Math.sin(a) * 52}px)` }}
             >
-              <span className="block animate-[spin_24s_linear_infinite_reverse]">
+              <span className="block mm-orbit-glyph">
                 <Icon className="h-6 w-6" strokeWidth={1.8} />
               </span>
             </span>

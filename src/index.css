@@ -7150,3 +7150,20 @@ body {
   box-shadow: inset 0 1px 0 hsl(40 50% 99% / 0.8), 0 0 0 1px hsl(40 50% 98% / 0.5), 0 14px 36px -12px hsl(30 30% 12% / 0.45);
 }
 body[data-vr-clean] [data-vr-feature]{display:none !important}
+
+/* Loading symbols: one fixed slow speed on every device (overrides lite/tier-c/reduced-motion speed-ups). */
+@keyframes mm-orbit-turn { to { transform: rotate(360deg); } }
+html body .mm-orbit-ring,
+html body .tier-c .mm-orbit-ring,
+html body .lite-mode .mm-orbit-ring {
+  animation: mm-orbit-turn 24s linear infinite !important;
+  animation-duration: 24s !important;
+  animation-iteration-count: infinite !important;
+}
+html body .mm-orbit-glyph,
+html body .tier-c .mm-orbit-glyph,
+html body .lite-mode .mm-orbit-glyph {
+  animation: mm-orbit-turn 24s linear infinite reverse !important;
+  animation-duration: 24s !important;
+  animation-iteration-count: infinite !important;
+}
