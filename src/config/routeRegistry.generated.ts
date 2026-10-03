@@ -73,6 +73,8 @@ export const CANONICAL_ROUTES: CanonicalRoute[] = [
   { path: "/home-load-report", label: "Home load report", dynamic: false },
   { path: "/huddle", label: "Huddle", dynamic: false },
   { path: "/import/x", label: "Import · x", dynamic: false },
+  { path: "/index", label: "Index", dynamic: false },
+  { path: "/index.html", label: "Index.html", dynamic: false },
   { path: "/install", label: "Install", dynamic: false },
   { path: "/integration-test", label: "Integration test", dynamic: false },
   { path: "/invite-friends", label: "Invite friends", dynamic: false },
