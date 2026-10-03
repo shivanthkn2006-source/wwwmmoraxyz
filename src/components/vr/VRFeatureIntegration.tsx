@@ -25,21 +25,39 @@ import CityBenches from './features/CityBenches';
 import { SeasonalBuildingsGroup } from './features/SeasonalBuildings';
 import { SeasonalVehiclesGroup } from './features/SeasonalVehicles';
 import { ReadyPlayerOneTerrain, SatelliteEntryController } from './features/ReadyPlayerOneTerrain';
-import { EverestMountainRange } from './features/EverestMountainRange';
-import { CyclingTrailTerrain } from './features/CyclingTrailTerrain';
-import { MountainRockFormations } from './features/MountainRockFormations';
 import { ExpandedCityGrid, getCityPOIs } from './features/ExpandedCityGrid';
-import { MetroTrainSystem } from './features/MetroTrainSystem';
-import { F1CircuitSystem } from './features/F1CircuitSystem';
-import { MetroFlyoverTrack } from './features/MetroFlyoverTrack';
 import { YellowstoneSignBoard } from './features/YellowstoneSignBoard';
 import { MetroDirectionSigns } from './features/MetroDirectionSigns';
 import { PlatformCommuters } from './features/PlatformCommuters';
-import { CitySkylineBackdrop } from './features/CitySkylineBackdrop';
-import CityMarketDistrict from './features/CityMarketDistrict';
 import CrowdAvatarSystem from './features/CrowdAvatarSystem';
-import ScenicHeritageTrain from './features/ScenicHeritageTrain';
-import CityBusSystem from './features/CityBusSystem';
+import { ProximityGate } from './features/ProximityGate';
+
+// Distant / heavy areas stream in as separate downloads, only when the member
+// walks near them (ProximityGate). Nothing here changes how they look or work.
+const loadMountains = () => import('./features/EverestMountainRange');
+const loadRocks = () => import('./features/MountainRockFormations');
+const loadCycling = () => import('./features/CyclingTrailTerrain');
+const loadMetro = () => import('./features/MetroTrainSystem');
+const loadF1 = () => import('./features/F1CircuitSystem');
+const loadFlyover = () => import('./features/MetroFlyoverTrack');
+const loadSkyline = () => import('./features/CitySkylineBackdrop');
+const loadMarket = () => import('./features/CityMarketDistrict');
+const loadHeritage = () => import('./features/ScenicHeritageTrain');
+const loadBuses = () => import('./features/CityBusSystem');
+const EverestMountainRange = React.lazy(() => loadMountains().then(m => ({ default: m.EverestMountainRange })));
+const MountainRockFormations = React.lazy(() => loadRocks().then(m => ({ default: m.MountainRockFormations })));
+const CyclingTrailTerrain = React.lazy(() => loadCycling().then(m => ({ default: m.CyclingTrailTerrain })));
+const MetroTrainSystem = React.lazy(() => loadMetro().then(m => ({ default: m.MetroTrainSystem })));
+const F1CircuitSystem = React.lazy(() => loadF1().then(m => ({ default: m.F1CircuitSystem })));
+const MetroFlyoverTrack = React.lazy(() => loadFlyover().then(m => ({ default: m.MetroFlyoverTrack })));
+const CitySkylineBackdrop = React.lazy(() => loadSkyline().then(m => ({ default: m.CitySkylineBackdrop })));
+const CityMarketDistrict = React.lazy(loadMarket);
+const ScenicHeritageTrain = React.lazy(loadHeritage);
+const CityBusSystem = React.lazy(loadBuses);
+const preloadMountainArea = () => Promise.all([loadMountains(), loadRocks()]);
+const LazyZone: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <React.Suspense fallback={null}>{children}</React.Suspense>
+);
 import StreetLightSystem from './features/StreetLightSystem';
 import { MotorcycleController } from './features/MotorcycleSystem';
 const CITY_OFFSET_X = 60;
