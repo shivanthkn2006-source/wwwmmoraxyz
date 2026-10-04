@@ -17,3 +17,4 @@
 - VR voice chat is peer-to-peer WebRTC between voice-on members in the same meet room, with signalling on the meet channel (src/worlds/meet/vrVoice.ts) and the mic opened only by the mic button, because a media server is not available.
 - Portal invites go only through the notify-user function as type vr_invite (friends only, wording fixed on the server), because members cannot write alerts for each other.
 - VR World search (src/worlds/search) only searches VR World sources (meet room, friends, mapIndex, relics, M'Mora landmarks), because results from the rest of the platform would mislead inside the world.
+- Real Map buildings/roads are drawn by src/worlds/realmap/streetLook.ts (merged walls with one shared window texture, roofs, road edge/centre lines) and names by MapLabels.tsx (nearest few only, count set by the thermal governor), because per-building meshes or labels would overload phones.
