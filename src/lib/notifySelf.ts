@@ -7,7 +7,7 @@ export async function notifySelf(type: string, title: string, message: string, e
     const uid = data.session?.user?.id;
     if (!uid) return;
     await supabase.from("notifications").insert({
-      user_id: uid, from_user_id: uid, type, priority: "normal",
+      user_id: uid, from_user_id: uid, type,
       context_data: { title, message, ...extra } as never,
     } as never);
   } catch { /* alerts must never break gameplay */ }
