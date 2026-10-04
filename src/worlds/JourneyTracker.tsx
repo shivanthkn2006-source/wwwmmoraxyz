@@ -22,7 +22,9 @@ export const JourneyTracker: React.FC = () => {
   useFrame(() => {
     const p = camera.position;
     if (mode === 'real' && j.step === 'walk') {
-      if (last.current) acc.current += Math.hypot(p.x - last.current.x, p.z - last.current.z);
+      // Only count walking at street level; a single jump > 10 m is a teleport/aerial move.
+      const step = last.current ? Math.hypot(p.x - last.current.x, p.z - last.current.z) : 0;
+      if (p.y < 6 && step < 10) acc.current += step;
       last.current = { x: p.x, z: p.z };
       if (acc.current >= 1) { journeyEvent({ type: 'walked', meters: acc.current }); acc.current = 0; }
     }
