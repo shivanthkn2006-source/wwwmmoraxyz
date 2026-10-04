@@ -20,6 +20,7 @@ const FEATURE_LABELS: Record<string, string> = {
   messages: 'Messages', likes: 'Likes', comments: 'Comments', replies: 'Comment replies', tags: 'Tags & mentions',
   friends: 'Friends', posts: 'Posts & timelines', badges: 'Badges & challenges', music: 'Music', calls: 'Calls',
   growth: 'Growth cards', dhf: "Zoe's DHF", lol: "Zoe's LOL", zoe: 'Zoe suggestions', admin: 'Admin notices', system: 'General',
+  analytics: 'Platform analytics (admin only)',
 };
 
 export default function AdminNotificationsPage() {

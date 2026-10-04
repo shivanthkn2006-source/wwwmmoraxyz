@@ -48,11 +48,23 @@ async function creditReferral(code: string, user: { id: string; createdAt: strin
   const prefix = code.slice(1).toLowerCase();
   const { data: refs } = await admin.from("profiles").select("user_id")
     .gte("user_id", `${prefix}-0000-0000-0000-000000000000`).lte("user_id", `${prefix}-ffff-ffff-ffff-ffffffffffff`).limit(2);
-  if (!refs || refs.length !== 1) return;
-  await admin.from("dhf_referrals").upsert(
+  if (!refs || refs.length !== 1) return false;
+  const { data } = await admin.from("dhf_referrals").upsert(
     { referrer_id: refs[0].user_id, referred_id: user.id, code, source: "member_link" },
     { onConflict: "referred_id", ignoreDuplicates: true },
-  );
+  ).select("referred_id");
+  return (data?.length ?? 0) > 0;
+}
+
+// Admin-only analytics alerts; the notification_kinds switch (admin page) gates delivery in the DB.
+async function notifyAdmins(type: string, fromUser: string, ctx: Record<string, unknown>) {
+  try {
+    const { data: admins } = await admin.from("user_roles").select("user_id").eq("role", "admin");
+    if (!admins?.length) return;
+    await admin.from("notifications").insert(admins.map((a: { user_id: string }) => ({
+      user_id: a.user_id, from_user_id: fromUser, type, priority: "normal", context_data: { ...ctx, feature: "analytics" },
+    })));
+  } catch { /* never block tracking */ }
 }
 
 type Geo = {
@@ -148,9 +160,18 @@ Deno.serve(async (req) => {
       if (!user) return json({ ok: true, skipped: "signed_out" });
       if (b.event === "login" && Date.now() - new Date(user.createdAt).getTime() < 2 * 86400_000) {
         const { count } = await admin.from("platform_events").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("kind", "signup");
-        if (!count) await admin.from("platform_events").insert({ visitor_id: "server", user_id: user.id, kind: "signup", name: "account_created", device_type: b.device_type ?? null });
+        if (!count) {
+          await admin.from("platform_events").insert({ visitor_id: "server", user_id: user.id, kind: "signup", name: "account_created", device_type: b.device_type ?? null });
+          await notifyAdmins("analytics_new_member", user.id, { title: "New member", message: `${user.name ?? "Someone"} just joined${geo.country ? ` from ${geo.country}` : ""}` });
+        }
       }
-      if (b.event === "login" && b.ref_code) await creditReferral(b.ref_code, user).catch(() => {});
+      if (b.event === "login" && b.ref_code) {
+        const credited = await creditReferral(b.ref_code, user).catch(() => false);
+        if (credited) await notifyAdmins("analytics_referral", user.id, { title: "Referral credited", message: `${user.name ?? "A new member"} joined via referral ${b.ref_code}` });
+      }
+      if (b.event === "login" && (geo.is_vpn || geo.is_hosting)) {
+        await notifyAdmins("analytics_vpn_signin", user.id, { title: "VPN sign-in", message: `${user.name ?? "A member"} signed in through a VPN/hosting network${geo.country ? ` (${geo.country})` : ""}` });
+      }
       await admin.from("platform_auth_events").insert({
         user_id: user.id, event: b.event, display_name: user.name,
         device_type: b.device_type, os: b.os, browser: b.browser,

@@ -164,6 +164,7 @@ export default function AdminPlatformAnalyticsPage() {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h1 className="text-2xl font-bold">M'Mora platform analytics</h1>
           <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" onClick={() => { window.location.href = '/admin/notifications'; }}>Notifications</Button>
             <span className="flex items-center gap-1 text-sm"><Radio className="h-4 w-4 text-primary animate-pulse" />{s.liveVisitors} on now</span>
             {(Object.keys(RANGES) as Range[]).map((r) => (
               <Button key={r} size="sm" variant={r === range ? 'default' : 'ghost'} onClick={() => setRange(r)}>{r}</Button>
