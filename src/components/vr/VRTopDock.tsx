@@ -9,16 +9,128 @@
  * because hidden features with `display:none` are still cheap DOM and the
  * heavy panels are already lazy behind their own toggles).
  */
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import {
   ChevronDown, ChevronUp, Gauge, Mountain, Mic, Gamepad2, Bug, Shield, Backpack,
-  Users, Cpu, ZoomIn, LayoutGrid, Wallet, LogOut, Move3d, Navigation, HelpCircle, MapPin,
+  Users, Cpu, ZoomIn, LayoutGrid, Wallet, LogOut, Move3d, Navigation, HelpCircle, MapPin, GripHorizontal,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export const VRFeature: React.FC<{ id: string; children: React.ReactNode }> = ({ id, children }) => (
-  <div data-vr-feature={id} style={{ display: 'contents' }}>{children}</div>
-);
+// ── Which features the dock has opened (shared with every <VRFeature>) ──
+let shownIds = new Set<string>();
+const listeners = new Set<() => void>();
+const setShownIds = (next: Set<string>) => { shownIds = next; listeners.forEach(l => l()); };
+const subscribe = (l: () => void) => { listeners.add(l); return () => { listeners.delete(l); }; };
+const useFeatureShown = (id: string) => useSyncExternalStore(subscribe, () => shownIds.has(id), () => false);
+
+type Offset = { x: number; y: number };
+const posKey = (id: string) => `vr-feature-pos:${id}`;
+/** "More moves" sits on the right where the main pad already is, so it opens shifted left by default. */
+const defaultOffset = (id: string): Offset =>
+  id === 'extras' && typeof window !== 'undefined' ? { x: -Math.round(Math.min(300, window.innerWidth * 0.38)), y: 0 } : { x: 0, y: 0 };
+const clampOffset = (o: Offset): Offset => {
+  const w = typeof window !== 'undefined' ? window.innerWidth : 1000;
+  const h = typeof window !== 'undefined' ? window.innerHeight : 1000;
+  return { x: Math.max(-w + 60, Math.min(w - 60, o.x)), y: Math.max(-h + 60, Math.min(h - 60, o.y)) };
+};
+const readOffset = (id: string): Offset => {
+  try {
+    const raw = window.localStorage.getItem(posKey(id));
+    if (raw) { const p = JSON.parse(raw); if (typeof p?.x === 'number' && typeof p?.y === 'number') return clampOffset(p); }
+  } catch { /* ignore */ }
+  return defaultOffset(id);
+};
+
+/**
+ * Wraps a VR World overlay. Hidden while the dock is mounted; once opened from the
+ * menu it floats above the base controls and gets a grip handle so it can be dragged
+ * anywhere (mouse, touch and pen), with the position remembered per feature.
+ */
+export const VRFeature: React.FC<{ id: string; children: React.ReactNode }> = ({ id, children }) => {
+  const shown = useFeatureShown(id);
+  const ref = useRef<HTMLDivElement>(null);
+  const [offset, setOffset] = useState<Offset>(() => (typeof window !== 'undefined' ? readOffset(id) : { x: 0, y: 0 }));
+  const [handle, setHandle] = useState<Offset | null>(null);
+  const drag = useRef<{ px: number; py: number; ox: number; oy: number } | null>(null);
+  const offsetRef = useRef(offset);
+  offsetRef.current = offset;
+
+  // Place the grip at the top-left corner of whatever this feature draws.
+  const measure = useCallback(() => {
+    const root = ref.current;
+    if (!root || drag.current) return;
+    const vw = window.innerWidth, vh = window.innerHeight;
+    let minX = Infinity, minY = Infinity;
+    const els = root.querySelectorAll<HTMLElement>('*');
+    for (let i = 0; i < els.length && i < 400; i++) {
+      const el = els[i];
+      if (el.dataset.vrGrip) continue;
+      const r = el.getBoundingClientRect();
+      if (r.width < 4 || r.height < 4 || r.width > vw * 0.95 || r.height > vh * 0.95) continue;
+      if (r.left < minX) minX = r.left;
+      if (r.top < minY) minY = r.top;
+    }
+    if (!Number.isFinite(minX)) { setHandle(null); return; }
+    const o = offsetRef.current;
+    setHandle({ x: Math.max(4, Math.min(vw - 40, minX)) - o.x, y: Math.max(4, minY - 30) - o.y });
+  }, []);
+
+  useEffect(() => {
+    if (!shown) { setHandle(null); return; }
+    const t0 = window.setTimeout(measure, 60);
+    const iv = window.setInterval(measure, 1200);
+    window.addEventListener('resize', measure);
+    return () => { window.clearTimeout(t0); window.clearInterval(iv); window.removeEventListener('resize', measure); };
+  }, [shown, measure]);
+
+  const onDown = (e: React.PointerEvent) => {
+    e.preventDefault(); e.stopPropagation();
+    (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+    drag.current = { px: e.clientX, py: e.clientY, ox: offsetRef.current.x, oy: offsetRef.current.y };
+  };
+  const onMove = (e: React.PointerEvent) => {
+    const d = drag.current;
+    if (!d) return;
+    e.preventDefault(); e.stopPropagation();
+    setOffset(clampOffset({ x: d.ox + e.clientX - d.px, y: d.oy + e.clientY - d.py }));
+  };
+  const onUp = (e: React.PointerEvent) => {
+    if (!drag.current) return;
+    e.stopPropagation();
+    drag.current = null;
+    try { window.localStorage.setItem(posKey(id), JSON.stringify(offsetRef.current)); } catch { /* ignore */ }
+  };
+
+  return (
+    <div
+      ref={ref}
+      data-vr-feature={id}
+      data-vr-float={shown ? '' : undefined}
+      style={shown
+        ? { position: 'fixed', inset: 0, zIndex: 9990, pointerEvents: 'none', transform: `translate3d(${offset.x}px, ${offset.y}px, 0)` }
+        : { display: 'contents' }}
+    >
+      {children}
+      {shown && handle && (
+        <button
+          type="button"
+          data-vr-grip="1"
+          data-exclude-phantom-tap
+          aria-label="Drag to move"
+          onPointerDown={onDown}
+          onPointerMove={onMove}
+          onPointerUp={onUp}
+          onPointerCancel={onUp}
+          onDoubleClick={() => { const o = defaultOffset(id); setOffset(o); try { window.localStorage.removeItem(posKey(id)); } catch { /* ignore */ } }}
+          className="absolute h-7 w-11 rounded-full surface-warm-tan flex items-center justify-center text-white/90 cursor-grab active:cursor-grabbing"
+          style={{ left: handle.x, top: handle.y, touchAction: 'none', pointerEvents: 'auto' }}
+        >
+          <GripHorizontal className="h-4 w-4" />
+        </button>
+      )}
+    </div>
+  );
+};
 
 type Item = { id: string; label: string; icon: React.ElementType; how: string };
 
@@ -65,12 +177,12 @@ export const VRTopDock: React.FC = () => {
       return next;
     });
 
-  const reveal = Array.from(shown).filter(id => id !== 'guide')
-    .map(id => `body[data-vr-clean] [data-vr-feature="${id}"]{display:contents !important}`).join('');
+  // Share the open set with every <VRFeature>; closing the dock's page resets it.
+  useEffect(() => { setShownIds(new Set(Array.from(shown).filter(id => id !== 'guide'))); }, [shown]);
+  useEffect(() => () => setShownIds(new Set()), []);
 
   return (
     <>
-      {reveal && <style>{reveal}</style>}
       <button
         type="button"
         aria-label={open ? 'Hide VR menu' : 'Show VR menu'}
