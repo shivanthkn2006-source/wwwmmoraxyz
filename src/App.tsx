@@ -56,7 +56,7 @@ import { markStartupPhase } from "@/lib/startupTiming";
 
 // Lazy load pages for code splitting and faster initial load
 const AuthPage = lazy(() => import("./pages/AuthPage"));
-const VRHarnessPage = import.meta.env.DEV ? lazy(() => import("./pages/VRHarnessPage")) : null;
+const VRHarnessPage = lazy(() => import("./pages/VRHarnessPage"));
 const PasswordRecoveryPage = lazy(() => import("./pages/PasswordRecoveryPage"));
 const SecuritySettingsPage = lazy(() => import("./components/SecuritySettingsPage"));
 const CameraPage = lazy(() => import("./pages/CameraPage"));
@@ -471,7 +471,7 @@ const RouteAwareShell = () => {
     pathname.startsWith('/password-recovery') ||
     pathname.startsWith('/demo') ||
     pathname.startsWith('/zoe-omega') ||
-    (import.meta.env.DEV && pathname.startsWith('/__vr-harness')) ||
+    pathname.startsWith('/__vr-harness') ||
 
     pathname.startsWith('/zoe-infinity') ||
     pathname.startsWith('/genesis-imprint') ||
@@ -503,7 +503,7 @@ const RouteAwareShell = () => {
               <Route path="/signup" element={<AuthPage />} />
               <Route path="/welcome" element={<LandingPage />} />
               <Route path="/demo" element={<DemoPage />} />
-              {VRHarnessPage && <Route path="/__vr-harness" element={<VRHarnessPage />} />}
+              <Route path="/__vr-harness" element={<VRHarnessPage />} />
 
               <Route path="/voice-auth" element={<VoiceAuthPage />} />
               <Route path="/password-recovery" element={<PasswordRecoveryPage />} />
