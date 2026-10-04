@@ -23,6 +23,8 @@ const STATION_COUNT = 14;
 const TRAIN_SPEED = 40;
 const COMPARTMENT_COUNT = 5;
 const COMPARTMENT_LENGTH = 11;
+const TRAIN_DETAIL_ENTER = 140; // metres: full carriages within this distance
+const TRAIN_DETAIL_EXIT = 190;
 const COMPARTMENT_GAP = 0.6;
 const BODY_WIDTH = 3.6;
 const BODY_HEIGHT = 3.2;
@@ -703,6 +705,11 @@ const MetroTrain: React.FC<{
   const connectorRefs = useRef<Array<THREE.Mesh | null>>([]);
   const progressRef = useRef(offset);
   const { camera } = useThree();
+  // Level of detail: a train far from the player draws as plain carriages (≈9 objects
+  // instead of ≈537). Hysteresis keeps it from flickering at the edge.
+  const [detailed, setDetailed] = React.useState(false);
+  const detailedRef = useRef(false);
+  const lodSampleRef = useRef(0);
 
   // Station halt state
   const haltTimerRef = useRef(0); // seconds remaining at station
@@ -776,8 +783,17 @@ const MetroTrain: React.FC<{
     };
   }, [trainIndex]);
 
-  useFrame((_, delta) => {
+  useFrame((state, delta) => {
     if (!leadCarRef.current) return;
+
+    if (state.clock.elapsedTime - lodSampleRef.current > 0.5) {
+      lodSampleRef.current = state.clock.elapsedTime;
+      const p = leadCarRef.current.position;
+      // Trains live inside the city-offset group (60, 0, 45).
+      const d = Math.hypot(camera.position.x - 60 - p.x, camera.position.y - p.y, camera.position.z - 45 - p.z);
+      const want = detailedRef.current ? d < TRAIN_DETAIL_EXIT : d < TRAIN_DETAIL_ENTER;
+      if (want !== detailedRef.current) { detailedRef.current = want; setDetailed(want); }
+    }
 
     const applyTrainPose = (baseProgress: number) => {
       for (let i = 0; i < COMPARTMENT_COUNT; i++) {
@@ -970,15 +986,22 @@ const MetroTrain: React.FC<{
             }}
           >
             <group scale={[TRAIN_GROUP_SCALE, TRAIN_GROUP_SCALE, TRAIN_GROUP_SCALE]}>
-              <TrainCompartment
-                zOffset={0}
-                isFront={i === 0}
-                isRear={i === COMPARTMENT_COUNT - 1}
-                isNight={isNight}
-                adIndex={(trainIndex * COMPARTMENT_COUNT + i) % BRAND_ADS.length}
-                doorOpenAmount={doorOpenRef.current}
-              />
-              {i === 0 && (
+              {detailed ? (
+                <TrainCompartment
+                  zOffset={0}
+                  isFront={i === 0}
+                  isRear={i === COMPARTMENT_COUNT - 1}
+                  isNight={isNight}
+                  adIndex={(trainIndex * COMPARTMENT_COUNT + i) % BRAND_ADS.length}
+                  doorOpenAmount={doorOpenRef.current}
+                />
+              ) : (
+                <mesh position={[0, 1.5, 0]}>
+                  <boxGeometry args={[BODY_WIDTH, 2.6, COMPARTMENT_LENGTH]} />
+                  <meshStandardMaterial color="#cfe9fb" metalness={0.5} roughness={0.3} />
+                </mesh>
+              )}
+              {i === 0 && detailed && (
                 <Text position={[0, 3.6, -20]} fontSize={0.8} color="white" anchorX="center" outlineWidth={0.05} outlineColor="#0ea5e9">
                   🚇 METRO LINE {trainIndex + 1}
                 </Text>
