@@ -175,7 +175,6 @@ export function setChunkKeyFn(fn: (lat: number, lng: number) => string) { keyOfF
 async function flushBatch() {
   const items = batch; batch = []; batchTimer = null;
   if (!items.length) return;
-  console.info('[RealMap] map request for', items.length, 'blocks');
   const union: BBox = {
     south: Math.min(...items.map((i) => i.bbox.south)), west: Math.min(...items.map((i) => i.bbox.west)),
     north: Math.max(...items.map((i) => i.bbox.north)), east: Math.max(...items.map((i) => i.bbox.east)),
