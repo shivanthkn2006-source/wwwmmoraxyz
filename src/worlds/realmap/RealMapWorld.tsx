@@ -11,7 +11,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { chebyshev, chunkBBox, chunkOf, neighborhood, toLatLng, toLocal, type LatLng, type ChunkId } from './geo';
 import { loadChunk, setChunkKeyFn, type OsmChunk } from './osm';
-import { setChunkStats, useWorldState, resolveOrigin, PORTAL_OFFSET, enterMMora, startAerialEntry } from '../worldMode';
+import { setChunkStats, useWorldState, resolveOrigin, PORTAL_OFFSET, enterMMora, startAerialEntry, getWorldState, AERIAL_HEIGHT_M } from '../worldMode';
 import { PortalDoorway } from '../portal/PortalDoorway';
 import { DemoExplorer } from './DemoExplorer';
 
@@ -176,6 +176,21 @@ const Ground: React.FC = () => {
   );
 };
 
+/** The player controller may reset the camera while it mounts; hold the aerial view for its first 6 s. */
+const AerialHold: React.FC = () => {
+  const { camera } = useThree();
+  const since = useRef<number | null>(null);
+  useFrame(() => {
+    if (!getWorldState().aerial) { since.current = null; return; }
+    const now = performance.now();
+    if (since.current === null) since.current = now;
+    if (now - since.current < 6000 && camera.position.y < AERIAL_HEIGHT_M - 50) {
+      window.dispatchEvent(new CustomEvent('vr-view-transition', { detail: { mode: 'aerial_real' } }));
+    }
+  });
+  return null;
+};
+
 export const RealMapWorld: React.FC = () => {
   const { origin } = useWorldState();
   useEffect(() => { resolveOrigin(); }, []);
@@ -191,6 +206,7 @@ export const RealMapWorld: React.FC = () => {
       <directionalLight position={[120, 200, 60]} intensity={1.1} />
       <RealSky />
       <Ground />
+      <AerialHold />
       {origin.status === 'ready' && <ChunkStreamer origin={origin.origin} />}
       <PortalDoorway position={PORTAL_OFFSET} label="M'Mora World" onEnter={enterMMora} />
       <DemoExplorer />
