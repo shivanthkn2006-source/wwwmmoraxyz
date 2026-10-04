@@ -5,6 +5,7 @@
 // UPGRADED: Ready Player One Cinematic Pipeline + CyberCity + Gaussian Splatting
 // ═══════════════════════════════════════════════════════════════════════════════
 
+import { setVRWorldActive } from '@/lib/vrSession';
 import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { 
@@ -1320,6 +1321,12 @@ const VROMEGAWorld: React.FC<VROMEGAWorldProps> = ({
   const { user } = useAuth();
   // Live admin monitoring: one "entered VR World" event per visit (server throttles repeats).
   useEffect(() => { if (isActive !== false) trackActivity('vr_enter', 'Entered VR World'); }, [isActive]);
+  // Inside the world, background hosts outside it (joke/scan/journal/install helpers) unmount.
+  useEffect(() => {
+    if (isActive === false) return;
+    setVRWorldActive(true);
+    return () => setVRWorldActive(false);
+  }, [isActive]);
   const [engrams, setEngrams] = useState<MemoryEngram[]>([]);
   const [ecnData, setEcnData] = useState<ECNDataPoint[]>([]);
   const [coherenceScore, setCoherenceScore] = useState(0.85);
