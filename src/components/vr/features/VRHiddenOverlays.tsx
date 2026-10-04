@@ -466,6 +466,23 @@ export const VRHiddenItemsManagerAuto: React.FC<{
     onItemCollected?.(id);
   };
 
+  // Interact button / gamepad A: pick up the nearest revealed item within reach.
+  const collectRef = useRef(handleCollect); collectRef.current = handleCollect;
+  const itemsRef = useRef(items); itemsRef.current = items;
+  useEffect(() => {
+    const onInteract = () => {
+      let best: string | null = null; let bestD = 6;
+      for (const it of itemsRef.current) {
+        const d = new THREE.Vector3(...it.position).distanceTo(camera.position);
+        if (d < bestD) { bestD = d; best = it.id; }
+      }
+      window.dispatchEvent(new CustomEvent('vr-interact-result', { detail: { collected: !!best } }));
+      if (best) collectRef.current(best);
+    };
+    window.addEventListener('vr-interact', onInteract);
+    return () => window.removeEventListener('vr-interact', onInteract);
+  }, [camera]);
+
   if (!enabled || items.length === 0) return null;
 
   return (
