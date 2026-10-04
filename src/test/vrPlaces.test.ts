@@ -46,3 +46,12 @@ describe('follow my GPS', () => {
     expect(friendsToPing(me, ps, 1e9 + 60_000, seen)).toHaveLength(0);
   });
 });
+import { prefillPlan, SOUTH_INDIA_CITIES } from '@/worlds/realmap/prefillCities';
+describe('south india prefill', () => {
+  it('plans 25 blocks around each of the 8 city centres', () => {
+    const p = prefillPlan();
+    expect(SOUTH_INDIA_CITIES).toHaveLength(8);
+    expect(p).toHaveLength(8 * 25);
+    expect(new Set(p.map((s) => s.id.key)).size).toBe(200);
+  });
+});
