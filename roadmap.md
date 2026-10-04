@@ -111,5 +111,7 @@
 - [x] Admin notification health + end-to-end test on /admin/@moksh50
 - [x] VR: smaller streaming bubble (0.55× on ≤4GB phones)
 - [x] Capacitor store config (bundled app, M'Mora name, warm splash)
-- [ ] Move bell/badges/panel/pop-ups onto shared realtime multiplexer (next turn)
+- [x] Bell/badges/panel/pop-ups on shared realtime multiplexer with auto-rejoin + catch-up
+- [x] VR city: 100m blocks streamed nearest-first, few per tick, unload behind
+- [ ] Face ID on the owner's real phone (needs the user's device)
 - [ ] Native store build/signing (needs user's Mac/Android Studio + developer accounts)
