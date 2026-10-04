@@ -24,8 +24,9 @@ export const RealMapStatus: React.FC = () => {
   };
 
   const where = w.origin.status === 'locating' ? 'Finding your location…'
+    : w.origin.status === 'pick' ? 'Location is off — pick a city to start'
     : w.origin.real ? `${w.origin.origin.lat.toFixed(4)}, ${w.origin.origin.lng.toFixed(4)}`
-    : 'Location is off — showing Bengaluru instead';
+    : `Starting city: ${w.origin.label ?? 'chosen city'}`;
 
   return (
     <div className="fixed top-14 left-3 z-[9997] w-60 surface-warm-tan rounded-2xl p-3 text-[11px] text-white space-y-1" data-exclude-phantom-tap>

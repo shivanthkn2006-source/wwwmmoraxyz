@@ -100,7 +100,7 @@ import VRGamepadHUD from './vr/VRGamepadHUD';
 import { RealMapWorld } from '@/worlds/realmap/RealMapWorld';
 import { JourneyTracker } from '@/worlds/JourneyTracker';
 import { PortalDoorway } from '@/worlds/portal/PortalDoorway';
-import { useWorldState, returnToReal, RETURN_PORTAL_POS } from '@/worlds/worldMode';
+import { useWorldState, returnToReal, RETURN_PORTAL_POS, getWorldState, entryHeight } from '@/worlds/worldMode';
 import { LandscapeViewportGuard } from './vr/LandscapeViewportGuard';
 import { RealMapStatus } from './vr/RealMapStatus';
 import { RealAerialLand } from './vr/RealAerialLand';
@@ -737,9 +737,10 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
       const { mode } = e.detail || {};
 
       if (mode === 'aerial_real') {
-        // Real Map entry: 500 m above the player's real spot, looking down at it.
-        camera.position.set(0, 500, 260);
-        camera.lookAt(0, 0, 0);
+        // Real Map entry: the entry flight glides from here down to ~100 m (or roof height).
+        const h = entryHeight();
+        camera.position.set(0, h + 320, 0.01);
+        camera.rotation.set(-1.45, 0, 0);
         isGroundLocked.current = false;
         velocity.current.set(0, 0, 0);
         verticalVelocity.current = 0;
@@ -939,10 +940,12 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
     window.addEventListener('touchend', handleTouchEnd);
 
     // Root-cause guard: force deterministic ground spawn and re-assert after mount spikes.
-    moveToGroundSpawn();
+    // The Real Map entry flight deliberately starts high, so it is left alone.
+    if (!getWorldState().aerial) moveToGroundSpawn();
 
     const spawnStabilizers = [900, 2200].map((delay) =>
       window.setTimeout(() => {
+        if (getWorldState().aerial) return;
         if (camera.position.y > 30 || Math.abs(camera.position.x) > 1400 || Math.abs(camera.position.z) > 1400) {
           moveToGroundSpawn();
         }
