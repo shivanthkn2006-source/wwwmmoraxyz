@@ -38,7 +38,24 @@ const Events = z.object({
   device_type: str(20),
   events: z.array(z.object({ kind: z.enum(["tap", "error"]), name: z.string().min(1).max(80), path: z.string().max(300).optional().nullable() })).min(1).max(50),
 });
-const Body = z.discriminatedUnion("action", [Start, Ping, Auth, Mine, Events]);
+const Activity = z.object({
+  action: z.literal("activity"),
+  visitor_id: z.string().min(8).max(64),
+  kind: z.enum(["page_not_found", "admin_probe", "vr_enter", "vr_collect", "vr_purchase"]),
+  name: z.string().min(1).max(120),
+  path: z.string().max(300).optional().nullable(),
+  device_type: str(20),
+});
+const Body = z.discriminatedUnion("action", [Start, Ping, Auth, Mine, Events, Activity]);
+
+// Live-monitoring alert per activity kind, plus how long to wait before repeating the same alert for one visitor.
+const ACTIVITY: Record<string, { type: string; title: string; quietMs: number }> = {
+  page_not_found: { type: "analytics_page_not_found", title: "Address not found", quietMs: 10 * 60_000 },
+  admin_probe: { type: "analytics_admin_probe", title: "Admin address tried", quietMs: 10 * 60_000 },
+  vr_enter: { type: "analytics_vr_enter", title: "VR World opened", quietMs: 30 * 60_000 },
+  vr_collect: { type: "analytics_vr_collect", title: "VR item collected", quietMs: 20_000 },
+  vr_purchase: { type: "analytics_vr_purchase", title: "VR shop unlock", quietMs: 0 },
+};
 
 const codeFor = (id: string) => "M" + id.replace(/-/g, "").slice(0, 8).toUpperCase();
 
@@ -57,14 +74,20 @@ async function creditReferral(code: string, user: { id: string; createdAt: strin
 }
 
 // Admin-only analytics alerts; the notification_kinds switch (admin page) gates delivery in the DB.
-async function notifyAdmins(type: string, fromUser: string, ctx: Record<string, unknown>) {
+async function notifyAdmins(type: string, fromUser: string | null, ctx: Record<string, unknown>) {
   try {
     const { data: admins } = await admin.from("user_roles").select("user_id").eq("role", "admin");
     if (!admins?.length) return;
     await admin.from("notifications").insert(admins.map((a: { user_id: string }) => ({
-      user_id: a.user_id, from_user_id: fromUser, type, context_data: { ...ctx, feature: "analytics" },
+      user_id: a.user_id, from_user_id: fromUser ?? a.user_id, type, context_data: { ...ctx, feature: "analytics" },
     })));
   } catch { /* never block tracking */ }
+}
+
+async function isAdminUser(id: string | undefined | null): Promise<boolean> {
+  if (!id) return false;
+  const { data } = await admin.from("user_roles").select("user_id").eq("user_id", id).eq("role", "admin").limit(1);
+  return !!data?.length;
 }
 
 type Geo = {
@@ -141,6 +164,26 @@ Deno.serve(async (req) => {
       return json({ ok: true });
     }
 
+    if (b.action === "activity") {
+      const user = await userFrom(req);
+      const cfg = ACTIVITY[b.kind];
+      if (await isAdminUser(user?.id)) return json({ ok: true, skipped: "admin" });
+      const name = b.name.replace(/\s+/g, " ").trim().slice(0, 120);
+      if (cfg.quietMs > 0) {
+        const { count } = await admin.from("platform_events").select("id", { count: "exact", head: true })
+          .eq("visitor_id", b.visitor_id).eq("kind", b.kind).eq("name", name)
+          .gte("created_at", new Date(Date.now() - cfg.quietMs).toISOString());
+        if (count) return json({ ok: true, throttled: true });
+      }
+      await admin.from("platform_events").insert({ visitor_id: b.visitor_id, user_id: user?.id ?? null, kind: b.kind, name, path: b.path ?? null, device_type: b.device_type ?? null });
+      const ip = clientIp(req);
+      const geo = b.kind === "page_not_found" || b.kind === "admin_probe" ? await lookupGeo(ip) : {};
+      const who = user?.name ?? "A visitor";
+      const where = geo.country ? ` from ${[geo.city, geo.country].filter(Boolean).join(", ")}` : "";
+      await notifyAdmins(cfg.type, user?.id ?? null, { title: cfg.title, message: `${who}${where}: ${name}`, path: b.path ?? null, live: true });
+      return json({ ok: true });
+    }
+
     if (b.action === "my_referrals") {
       const user = await userFrom(req);
       if (!user) return json({ error: "sign in required" }, 401);
@@ -184,6 +227,18 @@ Deno.serve(async (req) => {
     try { if (b.referrer) referrer_host = new URL(b.referrer).hostname || null; } catch { /* ignore */ }
     let site_host: string | null = null;
     try { const o = req.headers.get("origin") || req.headers.get("referer"); if (o) site_host = new URL(o).hostname.slice(0, 120) || null; } catch { /* ignore */ }
+    // First visit of this browser to a web address in 6 hours → one live "domain visit" alert.
+    if (site_host) {
+      const { count } = await admin.from("platform_visits").select("id", { count: "exact", head: true })
+        .eq("visitor_id", b.visitor_id).eq("site_host", site_host)
+        .gte("entered_at", new Date(Date.now() - 6 * 3600_000).toISOString());
+      if (!count && !(await isAdminUser(user?.id))) {
+        const where = geo.country ? ` from ${[geo.city, geo.country].filter(Boolean).join(", ")}` : "";
+        await notifyAdmins("analytics_domain_visit", user?.id ?? null, {
+          title: `Visit to ${site_host}`, message: `${user?.name ?? "A visitor"}${where} opened ${site_host}${b.path}`, path: b.path, live: true,
+        });
+      }
+    }
     const { data, error } = await admin.from("platform_visits").insert({
       visitor_id: b.visitor_id, user_id: user?.id ?? null, path: b.path, referrer_host, site_host,
       device_type: b.device_type, os: b.os, browser: b.browser, screen: b.screen,

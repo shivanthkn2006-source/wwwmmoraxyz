@@ -1,21 +1,21 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 // ADMIN ROUTE COMPONENT
-// Restricts access to admin users only (verified server-side)
+// Restricts access to admin users only (verified server-side). Anyone else sees the
+// ordinary "page isn't available" screen, so typed admin addresses reveal nothing,
+// and the attempt is reported to live monitoring.
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import React, { useEffect, useState } from 'react';
-import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
 import { checkRootAdminStatusServerSide } from '@/components/security/securityConfig';
-import { motion } from 'framer-motion';
-import { Shield, Lock, AlertTriangle } from 'lucide-react';
+import NotFound from '@/pages/NotFound';
 
 interface AdminRouteProps {
   children: React.ReactNode;
   featureName?: string;
 }
 
-const AdminRoute: React.FC<AdminRouteProps> = ({ children, featureName = 'this feature' }) => {
+const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
   const { user, loading: authLoading } = useAuth();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [isChecking, setIsChecking] = useState(true);
@@ -27,9 +27,7 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children, featureName = 'this f
         setIsChecking(false);
         return;
       }
-
       try {
-        // Server-side admin verification via edge function
         const { isAdmin: hasAccess } = await checkRootAdminStatusServerSide();
         setIsAdmin(hasAccess);
       } catch (error) {
@@ -39,88 +37,15 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children, featureName = 'this f
         setIsChecking(false);
       }
     };
-
-    if (!authLoading) {
-      checkAdminAccess();
-    }
+    if (!authLoading) checkAdminAccess();
   }, [user, authLoading]);
 
-  // Loading state - CSS animation for Safari performance
   if (authLoading || isChecking) {
-    return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div
-          className="w-16 h-16 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-gpu-spin-2s"
-        />
-      </div>
-    );
+    return <div className="min-h-screen bg-background" aria-busy="true" />;
   }
 
-  // Not authenticated
-  if (!user) {
-    return <Navigate to="/auth" replace />;
-  }
+  if (!user || !isAdmin) return <NotFound adminProbe />;
 
-  // Not admin - show access denied
-  if (!isAdmin) {
-    return (
-      <div className="min-h-screen bg-black flex items-center justify-center p-4">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="max-w-md w-full"
-        >
-          <div className="relative overflow-hidden rounded-2xl border border-red-500/30 bg-black/80 backdrop-blur-xl p-8">
-            {/* Background effects */}
-            <div className="absolute inset-0 bg-gradient-to-br from-red-900/20 via-transparent to-purple-900/20" />
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-32 bg-red-500/20 rounded-full blur-3xl" />
-            
-            <div className="relative z-10 text-center">
-              {/* Lock icon with pulse - CSS animation */}
-              <div
-                className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-red-500/20 border border-red-500/50 mb-6 animate-gpu-pulse-scale"
-              >
-                <Lock className="w-10 h-10 text-red-400" />
-              </div>
-              
-              <h1 className="text-2xl font-bold text-red-400 mb-2">
-                ACCESS RESTRICTED
-              </h1>
-              
-              <div className="flex items-center justify-center gap-2 text-red-300/60 text-sm mb-6">
-                <Shield className="w-4 h-4" />
-                <span>QUANTUM LEVEL PROTOCOL</span>
-              </div>
-              
-              <p className="text-gray-400 mb-6">
-                <span className="text-purple-400 font-semibold">{featureName}</span> is exclusively available to Admin @moksh50.
-              </p>
-              
-              <div className="p-4 rounded-lg bg-red-900/20 border border-red-500/20">
-                <div className="flex items-start gap-3">
-                  <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
-                  <p className="text-left text-sm text-amber-300/80">
-                    This feature contains proprietary Vedic algorithms and quantum-level DHF integration restricted to authorized personnel only.
-                  </p>
-                </div>
-              </div>
-              
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => window.history.back()}
-                className="mt-6 px-6 py-3 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold hover:from-purple-500 hover:to-indigo-500 transition-all"
-              >
-                Go Back
-              </motion.button>
-            </div>
-          </div>
-        </motion.div>
-      </div>
-    );
-  }
-
-  // Admin - render children
   return <>{children}</>;
 };
 

@@ -96,6 +96,7 @@ import { BikeOnScreenControls } from './vr/features/MotorcycleSystem';
 import { VRManualDownloadButton } from './vr/VRManualDownloadButton';
 import { VRFeature } from './vr/VRTopDock';
 import { useSkyPhase } from '@/hooks/useSkyPhase';
+import { trackActivity } from '@/lib/visitTracker';
 
 // Types
 interface MemoryEngram {
@@ -1282,6 +1283,8 @@ const VROMEGAWorld: React.FC<VROMEGAWorldProps> = ({
   isActive 
 }) => {
   const { user } = useAuth();
+  // Live admin monitoring: one "entered VR World" event per visit (server throttles repeats).
+  useEffect(() => { if (isActive !== false) trackActivity('vr_enter', 'Entered VR World'); }, [isActive]);
   const [engrams, setEngrams] = useState<MemoryEngram[]>([]);
   const [ecnData, setEcnData] = useState<ECNDataPoint[]>([]);
   const [coherenceScore, setCoherenceScore] = useState(0.85);

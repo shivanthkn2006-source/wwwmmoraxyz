@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
+import { trackActivity } from "@/lib/visitTracker";
 
 type Owned = { item_id: string; name: string; category: string; count: number };
 
@@ -38,6 +39,7 @@ export default function VRInventoryHUD() {
     const onBuy = (e: Event) => {
       const d = (e as CustomEvent<{ id: string; name: string; category: string }>).detail;
       setPickup({ name: d.name, icon: iconFor(d.id, d.category) });
+      trackActivity("vr_purchase", `Unlocked ${d.name}`);
       window.setTimeout(() => setPickup(null), 2600);
       void load();
     };

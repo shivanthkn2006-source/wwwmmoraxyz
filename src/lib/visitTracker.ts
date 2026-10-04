@@ -205,3 +205,18 @@ export async function fetchMyReferrals(): Promise<{ code: string; visits: number
   const r = await fetch(FN_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: ANON, Authorization: `Bearer ${t}` }, body: JSON.stringify({ action: 'my_referrals' }) });
   return r.ok ? r.json() : null;
 }
+
+export type LiveActivityKind = 'page_not_found' | 'admin_probe' | 'vr_enter' | 'vr_collect' | 'vr_purchase';
+/** Live admin-monitoring event (server throttles repeats, skips the admin, and gates delivery by the notification switches). */
+export function trackActivity(kind: LiveActivityKind, name: string): void {
+  try {
+    void supabase.auth.getSession().then(({ data }) => {
+      const token = data.session?.access_token ?? accessToken ?? ANON;
+      return fetch(FN_URL, {
+        method: 'POST', keepalive: true,
+        headers: { 'Content-Type': 'application/json', apikey: ANON, Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ action: 'activity', visitor_id: visitorId(), kind, name: name.slice(0, 120), path: location.pathname.slice(0, 300), device_type: deviceInfo().device_type }),
+      });
+    }).catch(() => {});
+  } catch { /* monitoring must never break the page */ }
+}
