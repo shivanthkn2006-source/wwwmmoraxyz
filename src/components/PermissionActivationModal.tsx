@@ -213,7 +213,6 @@ export const PermissionActivationModal: React.FC<PermissionActivationModalProps>
             <div className="space-y-2">
               {[
                 { icon: Mic, text: 'Talk to Zoe hands-free' },
-                { icon: Camera, text: 'Face ID & AR experiences' },
                 { icon: MapPin, text: 'Location-based features' },
                 { icon: Bell, text: 'Smart notifications' },
               ].map((feature, index) => (
