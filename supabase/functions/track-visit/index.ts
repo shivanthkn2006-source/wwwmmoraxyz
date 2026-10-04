@@ -62,7 +62,7 @@ async function notifyAdmins(type: string, fromUser: string, ctx: Record<string, 
     const { data: admins } = await admin.from("user_roles").select("user_id").eq("role", "admin");
     if (!admins?.length) return;
     await admin.from("notifications").insert(admins.map((a: { user_id: string }) => ({
-      user_id: a.user_id, from_user_id: fromUser, type, priority: "normal", context_data: { ...ctx, feature: "analytics" },
+      user_id: a.user_id, from_user_id: fromUser, type, context_data: { ...ctx, feature: "analytics" },
     })));
   } catch { /* never block tracking */ }
 }
