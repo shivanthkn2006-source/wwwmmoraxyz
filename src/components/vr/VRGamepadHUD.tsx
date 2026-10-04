@@ -96,7 +96,7 @@ export const VRGamepadHUD: React.FC = () => {
 
       {/* Face buttons (diamond) above the look stick */}
       <div className="pointer-events-auto absolute bottom-52 right-4 h-36 w-36" style={{ transform: `scale(${s})`, transformOrigin: 'bottom right' }}>
-        <Btn action="jump" label="Jump" aria="Jump" className="absolute left-1/2 top-0 h-12 w-12 -translate-x-1/2 rounded-full text-[10px]" />
+        <Btn action="jump" label="Jump" hold aria="Jump" className="absolute left-1/2 top-0 h-12 w-12 -translate-x-1/2 rounded-full text-[10px]" />
         <Btn action="zoe" label="Zoe" aria="Ask Zoe" className="absolute left-0 top-1/2 h-12 w-12 -translate-y-1/2 rounded-full text-[10px]" />
         <Btn action="run" label="Run" hold aria="Run (hold)" className="absolute right-0 top-1/2 h-12 w-12 -translate-y-1/2 rounded-full text-[10px]" />
         <Btn action="interact" label="Use" aria="Pick up or interact" className="absolute bottom-0 left-1/2 h-12 w-12 -translate-x-1/2 rounded-full text-[10px]" />
