@@ -89,3 +89,17 @@ import { WALK_MPS as W, RUN_MPS as R } from '@/lib/vrWalk';
 describe('movement speed', () => {
   it('matches the earlier VR explore speed', () => { expect(W).toBe(5); expect(R).toBe(9); });
 });
+
+import { walkStep as ws } from '@/lib/vrWalk';
+describe('down arrow', () => {
+  it('walks backwards immediately while the camera turns round', () => {
+    const i = { forward: false, backward: true, left: false, right: false };
+    let s = ws(i, 0.016, 0, false);
+    expect(s.move).toBe(true);
+    // walk heading = camera yaw so far + remaining turn = original yaw + π
+    expect(s.yawDelta + s.moveYawOffset).toBeCloseTo(Math.PI, 5);
+    let yaw = s.yawDelta;
+    for (let k = 0; k < 120; k++) { s = ws(i, 0.016, s.backTurnLeft, true); yaw += s.yawDelta; expect(yaw + s.moveYawOffset).toBeCloseTo(Math.PI, 5); }
+    expect(yaw).toBeCloseTo(Math.PI, 5);
+  });
+});
