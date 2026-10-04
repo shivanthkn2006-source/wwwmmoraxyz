@@ -1149,7 +1149,8 @@ const RenderStatsProbe: React.FC = () => {
       const describe = (root: THREE.Object3D) => {
         let n = 0; const kinds: Record<string, number> = {};
         root.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh) { n++; const k = (m.geometry as any)?.type ?? '?'; kinds[k] = (kinds[k] ?? 0) + 1; } });
-        return { n, kinds, pos: root.position.toArray().map((v) => Math.round(v)), kids: root.children.length };
+        let sample: any = null; root.traverse((o) => { const m = o as THREE.Mesh; if (!sample && m.isMesh) sample = { g: (m.geometry as any).parameters, c: ((m.material as any)?.color as THREE.Color | undefined)?.getHexString?.(), p: m.position.toArray().map((v) => Math.round(v)) }; });
+        return { n, kinds, sample, pos: root.position.toArray().map((v) => Math.round(v)), kids: root.children.length };
       };
       const walk = (root: THREE.Object3D, depth: number, path: string): any[] => root.children.flatMap((c, i) => {
         const d = describe(c); const here = `${path}/${i}`;
