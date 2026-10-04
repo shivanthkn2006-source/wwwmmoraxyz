@@ -43,8 +43,8 @@ describe('VR controller layer', () => {
 
   it('interact result shows feedback', async () => {
     render(<VRGamepadHUD />);
-    window.dispatchEvent(new CustomEvent('vr-interact-result', { detail: { collected: false } }));
-    expect(await screen.findByText(/nothing to pick up/i)).toBeInTheDocument();
+    window.dispatchEvent(new CustomEvent('vr-use-result', { detail: { ok: false, text: 'Nothing to use here' } }));
+    expect(await screen.findByText(/nothing to use here/i)).toBeInTheDocument();
   });
 
   it('zoom fires once per tap, not on release', () => {

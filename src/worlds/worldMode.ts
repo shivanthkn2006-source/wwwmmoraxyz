@@ -101,6 +101,7 @@ export function enterMMora(fromPos: [number, number, number]) {
   if (state.mode === 'mmora') return;
   set({ mode: 'mmora', savedRealPos: fromPos, portalTrips: state.portalTrips + 1 });
   teleport(MMORA_SPAWN);
+  void import('@/lib/notifySelf').then(({ notifySelf }) => notifySelf('vr_doorway', "Entered M'Mora World", "You walked through the doorway from your real street into M'Mora World.", { link: '/vr-world' })).catch(() => {});
 }
 
 export function returnToReal() {

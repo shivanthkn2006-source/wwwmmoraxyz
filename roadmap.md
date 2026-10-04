@@ -25,3 +25,12 @@
 - [ ] Thermal governor: live frame-time/memory watch that lowers pixel ratio and car/people count on hot or slow phones
 - [ ] Controls: every control on screen at once in its own slot, no overlap, each draggable (phones, tablets, desktop, app)
 - [ ] Other members: real location per member (no Bengaluru fallback for everyone), nearby members shown only with privacy opt-in
+
+## VR Stage 2 (2026-10-04)
+- [x] Human walking: arrows/stick turn camera then walk; human speed; Run uses a stamina meter
+- [x] Use button: nearest relic / member (one shared resolver)
+- [x] Street relics on real roads + bell alert; doorway bell alert; "met a member" alert
+- [x] Members see each other (default on, hide switch in chat), friend/follower/new tags, see-through chat
+- [x] Glass "M'Mora world" loading screen; camera no longer asked at start
+- [ ] Cars/people on real roads (traffic file), building detail/labels, thermal governor
+- [ ] Real iPhone + real controller check (needs the user's phone)

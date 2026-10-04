@@ -78,9 +78,9 @@ export const PlatformPermissionsInitializer: React.FC = () => {
         /* private mode — best effort */
       }
 
-      const [mic, cam] = await Promise.all([queryState('microphone'), queryState('camera')]);
+      // Camera is asked only when a feature needs it (not at start).
+      const mic = await queryState('microphone');
       if (mic === 'prompt' || mic === 'unsupported') await requestMedia({ audio: true });
-      if (cam === 'prompt' || cam === 'unsupported') await requestMedia({ video: true });
       const geo = await queryState('geolocation');
       if (geo === 'prompt' || geo === 'unsupported') await requestLocation();
 

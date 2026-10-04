@@ -11,6 +11,17 @@ import {
   padFamily, pickActivePad, pressKey, radial, rumble, saveLayout, stickToKeys, type PadFamily, type PadLayout, type VRAction,
 } from '@/lib/vrInput';
 import { VRBagPanel } from '@/components/vr/VRBagPanel';
+import { useStamina } from '@/lib/vrWalk';
+
+/** Stamina for running: drains while Run is held and you move, refills when you walk or stop. */
+const StaminaMeter: React.FC = () => {
+  const { stamina, exhausted, running } = useStamina();
+  return (
+    <div className="absolute -top-4 left-1/2 h-1.5 w-24 -translate-x-1/2 overflow-hidden rounded-full bg-background/30" role="meter" aria-label="Stamina" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(stamina * 100)} data-running={running || undefined}>
+      <div className={`h-full rounded-full transition-[width] duration-100 ${exhausted ? 'bg-destructive' : 'bg-primary'}`} style={{ width: `${Math.round(stamina * 100)}%` }} />
+    </div>
+  );
+};
 
 const ring = 'flex items-center justify-center border border-foreground/60 text-foreground bg-background/10 select-none touch-none active:bg-foreground/25';
 
@@ -52,15 +63,15 @@ export const VRGamepadHUD: React.FC = () => {
 
   useEffect(() => saveLayout(layout), [layout]);
 
-  // Feedback when Interact finds nothing nearby.
+  // Feedback from the Use button: what it did, or that nothing is in reach.
   useEffect(() => {
     const on = (e: Event) => {
-      const ok = (e as CustomEvent).detail?.collected;
-      say(ok ? 'Picked up — added to your bag' : 'Nothing to pick up here', 1200);
-      if (ok) rumble('pickup');
+      const d = (e as CustomEvent).detail ?? {};
+      say(d.text ?? (d.ok ? 'Done' : 'Nothing to use here'), 1500);
+      if (d.ok) rumble('pickup');
     };
-    window.addEventListener('vr-interact-result', on);
-    return () => window.removeEventListener('vr-interact-result', on);
+    window.addEventListener('vr-use-result', on);
+    return () => window.removeEventListener('vr-use-result', on);
   }, []);
 
   // Physical controllers (Xbox, PlayStation, Bluetooth pads).
@@ -155,6 +166,7 @@ export const VRGamepadHUD: React.FC = () => {
         <Btn action="zoe" label="Zoe" aria="Ask Zoe" glyph={pad ? FACE_GLYPHS[pad].zoe : undefined} className="absolute left-0 top-1/2 h-12 w-12 -translate-y-1/2 rounded-full text-[10px]" />
         <Btn action="run" label="Run" hold aria="Run (hold)" glyph={pad ? FACE_GLYPHS[pad].run : undefined} className="absolute right-0 top-1/2 h-12 w-12 -translate-y-1/2 rounded-full text-[10px]" />
         <Btn action="interact" label="Use" aria="Pick up or interact" glyph={pad ? FACE_GLYPHS[pad].interact : undefined} className="absolute bottom-0 left-1/2 h-12 w-12 -translate-x-1/2 rounded-full text-[10px]" />
+        <StaminaMeter />
       </div>
 
       {toast && <div className="absolute bottom-40 left-1/2 -translate-x-1/2 rounded-full surface-warm-tan px-3 py-1 text-xs text-foreground">{toast}</div>}

@@ -4,6 +4,7 @@
 // Simulated Biological Intelligence (SBI) + Bi-Cameral Mind + VR OMEGA World
 // ═══════════════════════════════════════════════════════════════════════════════
 
+import { MMoraWorldLoader } from '@/worlds/MMoraWorldLoader';
 import React, { useState, useEffect, useCallback, useRef, lazy, Suspense, Component, ErrorInfo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -1032,14 +1033,7 @@ const ZoeOmegaPage: React.FC = () => {
                       </div>
                     }
                   >
-                    <Suspense fallback={
-                      <div className="w-full h-full flex items-center justify-center bg-black/80">
-                        <div className="animate-gpu-spin-2s">
-                          <Box className="w-12 h-12 text-purple-400" />
-                        </div>
-                        <span className="ml-4 text-purple-300">Loading your street...</span>
-                      </div>
-                    }>
+                    <Suspense fallback={<MMoraWorldLoader />}>
                       <VROMEGAWorld
                         integrityLevel={integrityLevel}
                         onIntegrityRestore={() => {

@@ -122,7 +122,7 @@ describe('simulated controllers driving VR World', () => {
     expect(k.log).not.toContain('keyup:ShiftLeft');
     act(() => { press(pad, 10); frame(); release(pad, 10); frame(); });
     expect(k.log).toContain('keyup:ShiftLeft');
-    act(() => { window.dispatchEvent(new CustomEvent('vr-interact-result', { detail: { collected: true } })); });
+    act(() => { window.dispatchEvent(new CustomEvent('vr-use-result', { detail: { ok: true, text: 'Picked up' } })); });
     expect(pad.vibrationActuator.playEffect).toHaveBeenCalledWith('dual-rumble', expect.objectContaining({ duration: 140 }));
     k.off();
   });
