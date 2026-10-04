@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.notify_vr_karma() FROM PUBLIC, anon, authenticated;
