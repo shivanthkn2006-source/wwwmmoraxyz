@@ -144,7 +144,12 @@ const ChunkStreamer: React.FC<{ origin: LatLng }> = ({ origin }) => {
 
 /** Daytime sky for the Real Map (night is handled by the existing night sky). */
 const RealSky: React.FC = () => {
-  const { scene } = useThree();
+  const { scene, camera } = useThree();
+  // Fog follows height so the 500 m aerial view still sees the ground.
+  useFrame(() => {
+    const f = scene.fog as THREE.Fog | null;
+    if (f && 'far' in f) { const y = Math.max(0, camera.position.y); f.near = 140 + y; f.far = 560 + y * 2.2; }
+  });
   useEffect(() => {
     const apply = () => {
       const h = new Date().getHours();
@@ -174,6 +179,12 @@ const Ground: React.FC = () => {
 export const RealMapWorld: React.FC = () => {
   const { origin } = useWorldState();
   useEffect(() => { resolveOrigin(); }, []);
+  // Wait for the player controller to mount, then lift to the aerial view once.
+  useEffect(() => {
+    if (origin.status !== 'ready') return;
+    const t = window.setTimeout(() => startAerialEntry(), 600);
+    return () => window.clearTimeout(t);
+  }, [origin.status]);
   return (
     <>
       <hemisphereLight args={['#ffffff', '#8a7a62', 0.9]} />
