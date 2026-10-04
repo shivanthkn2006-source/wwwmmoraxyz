@@ -1041,7 +1041,7 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
 
     direction.current.set(0, 0, step.move ? -1 : 0);
 
-    const euler = new THREE.Euler(0, camera.rotation.y, 0, 'YXZ');
+    const euler = new THREE.Euler(0, camera.rotation.y + step.moveYawOffset, 0, 'YXZ');
     direction.current.applyEuler(euler);
 
     velocity.current.lerp(direction.current.multiplyScalar(speed), dt * 7);

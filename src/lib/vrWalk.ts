@@ -11,7 +11,8 @@ export const TURN_RAD_PS = 2.4;   // ~140° per second
 export const BACK_TURN_RAD_PS = 3.4;
 
 export interface WalkInput { forward: boolean; backward: boolean; left: boolean; right: boolean }
-export interface WalkStep { yawDelta: number; move: boolean; backTurnLeft: number }
+/** `moveYawOffset`: extra yaw for the walk direction, so Down walks backwards at once while the camera is still turning round. */
+export interface WalkStep { yawDelta: number; move: boolean; backTurnLeft: number; moveYawOffset: number }
 
 /**
  * One frame of walking. `backTurnLeft` is how much of the about-turn is still
@@ -29,8 +30,8 @@ export function walkStep(i: WalkInput, dt: number, backTurnLeft: number, backWas
   }
   const turn = (i.left ? 1 : 0) - (i.right ? 1 : 0);
   yawDelta += turn * TURN_RAD_PS * dt;
-  const move = i.forward || i.left || i.right || (i.backward && left < 0.35);
-  return { yawDelta, move, backTurnLeft: left };
+  const move = i.forward || i.left || i.right || i.backward;
+  return { yawDelta, move, backTurnLeft: left, moveYawOffset: i.backward ? left : 0 };
 }
 
 // ── Stamina ───────────────────────────────────────────────────────────────

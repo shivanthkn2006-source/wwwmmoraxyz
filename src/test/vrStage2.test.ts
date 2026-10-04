@@ -17,16 +17,16 @@ describe('human walking', () => {
   it('left arrow turns left', () => {
     expect(walkStep({ ...none, left: true }, 0.1, 0, false).yawDelta).toBeGreaterThan(0);
   });
-  it('down arrow turns around first, then walks', () => {
+  it('down arrow turns around and walks backwards from the first frame', () => {
     let s = walkStep({ ...none, backward: true }, 0.1, 0, false);
-    expect(s.move).toBe(false);
+    expect(s.move).toBe(true);
     let total = s.yawDelta;
     for (let k = 0; k < 20; k++) { s = walkStep({ ...none, backward: true }, 0.1, s.backTurnLeft, true); total += s.yawDelta; }
     expect(total).toBeCloseTo(Math.PI, 3);
     expect(s.move).toBe(true);
   });
   it('no input: no turn, no movement', () => {
-    expect(walkStep(none, 0.1, 0, false)).toEqual({ yawDelta: 0, move: false, backTurnLeft: 0 });
+    expect(walkStep(none, 0.1, 0, false)).toEqual({ yawDelta: 0, move: false, backTurnLeft: 0, moveYawOffset: 0 });
   });
 });
 
@@ -88,4 +88,18 @@ describe('meet tags and rooms', () => {
 import { WALK_MPS as W, RUN_MPS as R } from '@/lib/vrWalk';
 describe('movement speed', () => {
   it('matches the earlier VR explore speed', () => { expect(W).toBe(5); expect(R).toBe(9); });
+});
+
+import { walkStep as ws } from '@/lib/vrWalk';
+describe('down arrow', () => {
+  it('walks backwards immediately while the camera turns round', () => {
+    const i = { forward: false, backward: true, left: false, right: false };
+    let s = ws(i, 0.016, 0, false);
+    expect(s.move).toBe(true);
+    // walk heading = camera yaw so far + remaining turn = original yaw + π
+    expect(s.yawDelta + s.moveYawOffset).toBeCloseTo(Math.PI, 5);
+    let yaw = s.yawDelta;
+    for (let k = 0; k < 120; k++) { s = ws(i, 0.016, s.backTurnLeft, true); yaw += s.yawDelta; expect(yaw + s.moveYawOffset).toBeCloseTo(Math.PI, 5); }
+    expect(yaw).toBeCloseTo(Math.PI, 5);
+  });
 });
