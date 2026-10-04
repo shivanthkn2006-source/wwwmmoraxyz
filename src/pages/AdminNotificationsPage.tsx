@@ -12,6 +12,7 @@ import { RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import IOSSwitch from '@/components/admin/IOSSwitch';
 import NotificationHealthPanel from '@/components/admin/NotificationHealthPanel';
+import { notifySelf } from '@/lib/notifySelf';
 
 interface Kind { kind: string; feature: string; label: string; enabled: boolean }
 interface ChannelRow { channel: string; label: string; enabled: boolean }
@@ -21,6 +22,7 @@ const FEATURE_LABELS: Record<string, string> = {
   friends: 'Friends', posts: 'Posts & timelines', badges: 'Badges & challenges', music: 'Music', calls: 'Calls',
   growth: 'Growth cards', dhf: "Zoe's DHF", lol: "Zoe's LOL", zoe: 'Zoe suggestions', admin: 'Admin notices', system: 'General',
   analytics: 'Platform analytics (admin only)', vr: 'VR World',
+  monitoring: 'Live platform monitoring (admin only)', vr_live: 'VR World live activity (admin only)',
 };
 
 export default function AdminNotificationsPage() {
@@ -54,6 +56,7 @@ export default function AdminNotificationsPage() {
     setSaving(null);
     if (e || !data?.length) { setKinds(prev); toast.error('Could not save. Try again.'); return; }
     toast.success(`${FEATURE_LABELS[feature] ?? feature} alerts ${enabled ? 'on' : 'off'}`);
+    void notifySelf('analytics_setting_changed', 'Notification switch changed', `${FEATURE_LABELS[feature] ?? feature} turned ${enabled ? 'on' : 'off'}`, { feature: 'monitoring' });
   };
 
   const setChannel = async (channel: string, enabled: boolean) => {
@@ -62,7 +65,9 @@ export default function AdminNotificationsPage() {
     setChannels((cs) => cs.map((c) => (c.channel === channel ? { ...c, enabled } : c)));
     const { data, error: e } = await db.from('notification_channel_settings').update({ enabled, updated_at: new Date().toISOString() }).eq('channel', channel).select('channel');
     setSaving(null);
-    if (e || !data?.length) { setChannels(prev); toast.error('Could not save. Try again.'); }
+    if (e || !data?.length) { setChannels(prev); toast.error('Could not save. Try again.'); return; }
+    const name = channel === 'all' ? 'All platform notifications' : (channels.find((c) => c.channel === channel)?.label ?? channel);
+    void notifySelf('analytics_setting_changed', 'Notification switch changed', `${name} turned ${enabled ? 'on' : 'off'}`, { feature: 'monitoring' });
   };
 
   // Master switch is its own setting: sub-switches never flip it.
