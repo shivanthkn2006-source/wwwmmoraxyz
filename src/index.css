@@ -7150,6 +7150,9 @@ body {
   box-shadow: inset 0 1px 0 hsl(40 50% 99% / 0.8), 0 0 0 1px hsl(40 50% 98% / 0.5), 0 14px 36px -12px hsl(30 30% 12% / 0.45);
 }
 body[data-vr-clean] [data-vr-feature]{display:none !important}
+/* A feature opened from the VR top menu floats above the base controls; the layer itself lets taps through. */
+body[data-vr-clean] [data-vr-feature][data-vr-float]{display:block !important}
+:where([data-vr-float]) > :where(*){pointer-events:auto}
 
 /* Loading symbols: one fixed slow speed on every device (overrides lite/tier-c/reduced-motion speed-ups). */
 @keyframes mm-orbit-turn { to { transform: rotate(360deg); } }
