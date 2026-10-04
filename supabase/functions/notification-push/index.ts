@@ -51,9 +51,9 @@ Deno.serve(async (req) => {
   const off = (ch ?? []).some((c: { enabled: boolean }) => !c.enabled);
 
   if ("action" in parsed.data) {
-    if (caller.kind !== "user") return json({ error: "admin only" }, 403);
+    if (caller.kind !== "member") return json({ error: "admin only" }, 403);
     if (off) return json({ delivered: 0, reason: "push_switched_off" });
-    const r = await pushTo((caller as { userId: string }).userId, { title: "M'Mora test alert", body: "Phone push is working.", url: "/admin/notifications", tag: "mmora-test" });
+    const r = await pushTo(caller.userId, { title: "M'Mora test alert", body: "Phone push is working.", url: "/admin/notifications", tag: "mmora-test" });
     return json(r);
   }
 

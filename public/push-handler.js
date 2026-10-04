@@ -19,10 +19,10 @@ self.addEventListener('push', event => {
       body,
       tag: payload.tag || 'mmora-call',
       renotify: true,
-      requireInteraction: true,
+      requireInteraction: !payload.tag || payload.tag === 'mmora-call',
       icon: '/icon-192.png',
       badge: '/icon-192.png',
-      vibrate: [400, 200, 400, 200, 400],
+      vibrate: !payload.tag || payload.tag === 'mmora-call' ? [400, 200, 400, 200, 400] : [200, 100, 200],
       data: { url },
     }),
   );
