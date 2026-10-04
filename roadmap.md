@@ -39,3 +39,7 @@
 - [ ] Real-device bell check for a street relic (needs member to sign in on phone)
 - [ ] South India region rollout (awaiting user approval of plan)
 - [ ] Real iPhone + real controller check (needs the user's phone)
+- [ ] Places: malls, KFC/McDonald's, shops, fuel pumps on the real map (incl. Times Square)
+- [x] VR voice uses the call relay for strict networks
+- [ ] GPS travel mode ("Follow my GPS": avatar follows phone, roadside friends alert, pauses at driving speed)
+- [ ] Pre-fill shared map store for Bengaluru, Chennai, Kochi, Thiruvananthapuram, Coimbatore, Madurai, Mysuru, Mangaluru
