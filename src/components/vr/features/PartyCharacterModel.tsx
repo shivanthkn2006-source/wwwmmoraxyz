@@ -114,6 +114,6 @@ export const PartyCharacterModel: React.FC<PartyCharacterModelProps> = ({
   );
 };
 
-useFBX.preload(partyMaleModelUrl);
+// No import-time preload: loads only when this character is actually shown.
 
 export default PartyCharacterModel;
