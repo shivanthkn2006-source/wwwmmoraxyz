@@ -19,7 +19,7 @@ export const VRMeetChat: React.FC = () => {
   const inputRef = useRef<HTMLInputElement>(null);
   useEffect(() => { const id = window.setInterval(() => tick((n) => n + 1), 5000); return () => window.clearInterval(id); }, []);
   useEffect(() => { listRef.current?.scrollTo({ top: 1e6 }); }, [m.messages.length, m.chatOpen]);
-  useEffect(() => { if (m.chatOpen) inputRef.current?.focus(); }, [m.chatOpen]);
+  useEffect(() => { if (m.chatOpen && m.chatFocus) inputRef.current?.focus(); }, [m.chatFocus]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const now = Date.now();
   const shown = m.chatOpen ? m.messages.slice(-30) : m.messages.filter((x) => now - x.at < FADE_MS).slice(-5);
@@ -27,10 +27,9 @@ export const VRMeetChat: React.FC = () => {
   const others = m.players.length;
 
   return (
-    <div className="vr-meet-chat fixed left-3 z-[9990] flex w-[min(340px,46vw)] flex-col gap-1.5" data-exclude-phantom-tap data-testid="vr-meet-chat"
-      onKeyDown={(e) => e.stopPropagation()} onKeyUp={(e) => e.stopPropagation()}>
+    <div className="vr-meet-chat fixed left-3 z-[9990] flex w-[min(340px,46vw)] flex-col gap-1.5" data-exclude-phantom-tap data-testid="vr-meet-chat">
       {m.nearest && m.nearest.dist < 2.5 && !m.chatOpen && (
-        <button type="button" onClick={() => setChatOpen(true)} className="vr-chat-chip self-start">@{m.nearest.username} is next to you — tap or press Use to chat</button>
+        <button type="button" onClick={() => setChatOpen(true, true)} className="vr-chat-chip self-start">@{m.nearest.username} is next to you — tap or press Use to chat</button>
       )}
       <div ref={listRef} className={`flex flex-col gap-1 overflow-y-auto ${m.chatOpen ? 'max-h-[34vh] pointer-events-auto' : 'max-h-[24vh] pointer-events-none'}`} aria-live="polite">
         {shown.map((x) => (
@@ -47,8 +46,8 @@ export const VRMeetChat: React.FC = () => {
       {m.chatOpen ? (
         <div className="pointer-events-auto flex flex-col gap-1">
           {emoji && <div className="vr-chat-input flex gap-1 self-start px-2 py-1">{EMOJI.map((e) => <button key={e} type="button" className="text-lg" onClick={() => setText((t) => t + e)}>{e}</button>)}</div>}
-          <form className="vr-chat-input flex items-center gap-1 px-2" onSubmit={(e) => { e.preventDefault(); submit(); }}>
-            <input ref={inputRef} value={text} onChange={(e) => setText(e.target.value)} maxLength={240} placeholder="Chat…" aria-label="Chat message" className="vr-chat-text min-w-0 flex-1 bg-transparent py-2 outline-none placeholder:opacity-70" />
+          <form className="vr-chat-input flex items-center gap-1 px-2" onSubmit={(e) => { e.preventDefault(); submit(); inputRef.current?.blur(); }}>
+            <input ref={inputRef} onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Escape') inputRef.current?.blur(); }} onKeyUp={(e) => e.stopPropagation()} value={text} onChange={(e) => setText(e.target.value)} maxLength={240} placeholder="Chat…" aria-label="Chat message" className="vr-chat-text min-w-0 flex-1 bg-transparent py-2 outline-none placeholder:opacity-70" />
             <button type="button" aria-label="Emoji" onClick={() => setEmoji((v) => !v)} className="vr-chat-icon"><Smile className="h-4 w-4" /></button>
             <button type="submit" aria-label="Send" className="vr-chat-icon"><Send className="h-4 w-4" /></button>
             <button type="button" aria-label="Close chat" onClick={() => setChatOpen(false)} className="vr-chat-icon"><X className="h-4 w-4" /></button>
@@ -59,7 +58,7 @@ export const VRMeetChat: React.FC = () => {
           </button>
         </div>
       ) : (
-        <button type="button" onClick={() => setChatOpen(true)} className="vr-chat-chip pointer-events-auto self-start" aria-label="Open chat">
+        <button type="button" onClick={() => setChatOpen(true, true)} className="vr-chat-chip pointer-events-auto self-start" aria-label="Open chat">
           <MessageCircle className="mr-1 inline h-3 w-3" />Chat · {others} nearby{!m.visible && ' · hidden'}
         </button>
       )}

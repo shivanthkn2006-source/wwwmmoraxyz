@@ -15,12 +15,12 @@ export type Remote = MeetPose & { id: string; name: string; username: string; ph
 export type ChatMsg = { id: string; from: string; name: string; username: string; photo?: string | null; tag: MeetTag | 'me'; text: string; at: number; system?: boolean };
 
 type Me = { id: string; name: string; username: string; photo?: string | null };
-type State = { connected: boolean; room: string | null; visible: boolean; players: Remote[]; messages: ChatMsg[]; chatOpen: boolean; nearest: { id: string; username: string; dist: number } | null };
+type State = { connected: boolean; room: string | null; visible: boolean; players: Remote[]; messages: ChatMsg[]; chatOpen: boolean; chatFocus: number; nearest: { id: string; username: string; dist: number } | null };
 
 const VIS_KEY = 'vr-meet-visible';
 const readVisible = () => { try { return localStorage.getItem(VIS_KEY) !== '0'; } catch { return true; } };
 
-let state: State = { connected: false, room: null, visible: typeof localStorage === 'undefined' ? true : readVisible(), players: [], messages: [], chatOpen: false, nearest: null };
+let state: State = { connected: false, room: null, visible: typeof localStorage === 'undefined' ? true : readVisible(), players: [], messages: [], chatOpen: false, chatFocus: 0, nearest: null };
 const ls = new Set<() => void>();
 const set = (p: Partial<State>) => { state = { ...state, ...p }; ls.forEach((l) => l()); };
 export const getMeet = () => state;
@@ -157,7 +157,8 @@ export function sendWave(to: string) {
   void channel.send({ type: 'broadcast', event: 'wave', payload: { to, from: me.id, username: me.username } });
 }
 
-export const setChatOpen = (v: boolean) => set({ chatOpen: v });
+/** `focus` puts the cursor in the chat box (explicit opens only, so walking keys keep working). */
+export const setChatOpen = (v: boolean, focus = false) => set({ chatOpen: v, chatFocus: focus ? Date.now() : state.chatFocus });
 export const setNearest = (n: State['nearest']) => {
   const a = state.nearest, same = a?.id === n?.id && Math.abs((a?.dist ?? 0) - (n?.dist ?? 0)) < 0.3;
   if (!same) set({ nearest: n });
@@ -166,5 +167,5 @@ export const setNearest = (n: State['nearest']) => {
 export function __resetMeetForTests() {
   if (channel) void supabase.removeChannel(channel);
   channel = null; me = null; tags.clear(); lastTracked = null;
-  state = { connected: false, room: null, visible: true, players: [], messages: [], chatOpen: false, nearest: null };
+  state = { connected: false, room: null, visible: true, players: [], messages: [], chatOpen: false, chatFocus: 0, nearest: null };
 }

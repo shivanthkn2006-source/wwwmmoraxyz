@@ -83,7 +83,7 @@ export const MeetPresence: React.FC = () => {
   useEffect(() => registerUse(() => {
     const n = getMeet().nearest;
     if (!n) return null;
-    return { dist: n.dist, reach: 2.5, label: `Chat with @${n.username}`, run: () => setChatOpen(true) };
+    return { dist: n.dist, reach: 2.5, label: `Chat with @${n.username}`, run: () => setChatOpen(true, true) };
   }), []);
 
   useFrame((_, dt) => {
