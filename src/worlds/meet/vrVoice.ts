@@ -7,7 +7,17 @@ import { useSyncExternalStore } from 'react';
 import { getMeet, onSignal, sendSignal, myMeetId, setVoiceFlag } from './vrMeet';
 
 export const MAX_PEERS = 4;
-const ICE: RTCConfiguration = { iceServers: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }] };
+import { supabase } from '@/integrations/supabase/client';
+import { normalizeIceServers, FALLBACK_ICE_SERVERS } from '@/features/calls/callTransport';
+/** Same relay as calls, so voice also connects on strict phone/office networks. */
+const ICE: RTCConfiguration = { iceServers: FALLBACK_ICE_SERVERS };
+async function loadRelay() {
+  try {
+    const { data } = await supabase.functions.invoke('zoe-call-turn-credentials');
+    const servers = normalizeIceServers((data as { iceServers?: unknown } | null)?.iceServers);
+    if (servers.length) ICE.iceServers = servers;
+  } catch { /* keep public servers */ }
+}
 
 type VState = { on: boolean; error: string | null; talkingWith: string[] };
 let st: VState = { on: false, error: null, talkingWith: [] };
@@ -84,6 +94,7 @@ async function reconcile() {
 
 export async function startVoice(): Promise<boolean> {
   if (st.on) return true;
+  const relay = loadRelay();
   try {
     mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false });
   } catch {
