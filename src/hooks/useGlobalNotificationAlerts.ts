@@ -187,6 +187,7 @@ export function useGlobalNotificationAlerts() {
     const onVisible = () => { if (document.visibilityState === 'visible') void poll(); };
     document.addEventListener('visibilitychange', onVisible);
     void poll();
+    const offR = onRealtimeReconnect(() => void poll());
 
     return () => {
       disposed = true;
@@ -194,7 +195,7 @@ export function useGlobalNotificationAlerts() {
       pending.current.forEach((t) => window.clearTimeout(t));
       pending.current.clear();
       document.removeEventListener('visibilitychange', onVisible);
-      supabase.removeChannel(channel);
+      offN(); offR();
     };
 
   }, [user?.id]);
