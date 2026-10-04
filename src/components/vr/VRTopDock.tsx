@@ -12,7 +12,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   ChevronDown, ChevronUp, Gauge, Mountain, Mic, Gamepad2, Bug, Shield, Backpack,
-  Users, Cpu, ZoomIn, LayoutGrid, Wallet, LogOut, Move3d, Navigation, HelpCircle,
+  Users, Cpu, ZoomIn, LayoutGrid, Wallet, LogOut, Move3d, Navigation, HelpCircle, MapPin,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -24,6 +24,7 @@ type Item = { id: string; label: string; icon: React.ElementType; how: string };
 
 const ITEMS: Item[] = [
   { id: 'guide', label: 'How to', icon: HelpCircle, how: 'This chart. Tap any icon to show or hide that part of VR World.' },
+  { id: 'map', label: 'Map', icon: MapPin, how: 'Your real street: location, map blocks loaded, which world you are in, and a world check.' },
   { id: 'nav', label: 'Travel', icon: Navigation, how: 'Satellite, aerial, ground, mountains, summit, city core and the VR catalog.' },
   { id: 'session', label: 'Session', icon: Move3d, how: 'Zoe Omega badge, sound, Exit VR, dreamscape and the time bar.' },
   { id: 'panels', label: 'Panels', icon: LayoutGrid, how: 'Music, Ask Zoe, friends, uploads, planetary mood, Zoe cards, mind HUD, diagnostics.' },
