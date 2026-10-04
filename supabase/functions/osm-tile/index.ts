@@ -1,72 +1,58 @@
-// Shared real-map tile cache. One ~200 m OpenStreetMap block per request:
-// database cache first (shared by every member), then Overpass mirrors
-// server-side with retry. Only public map data is stored.
+// Shared real-map tile cache (public OpenStreetMap data only).
+// Map servers block cloud servers, so members' phones download each block
+// from OpenStreetMap and signed-in members share the parsed result here;
+// everyone after them gets the block instantly from this cache.
+//   { action: 'get', key }                -> { data } | 404
+//   { action: 'put', key, data }          -> signed-in members only
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
-const MIRRORS = [
-  'https://overpass-api.de/api/interpreter',
-  'https://overpass.private.coffee/api/interpreter',
-  'https://overpass.kumi.systems/api/interpreter',
-  'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
-];
 const TTL_MS = 30 * 24 * 3600 * 1000;
+const MAX_BYTES = 400_000;
 const json = (b: unknown, status = 200) =>
   new Response(JSON.stringify(b), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
 
-function query(s: number, w: number, n: number, e: number) {
-  const box = `${s},${w},${n},${e}`;
-  return `[out:json][timeout:20];(way["building"](${box});way["highway"](${box});` +
-    `node["shop"]["name"](${box});` +
-    `node["amenity"~"restaurant|cafe|fast_food|bank|hospital|pharmacy|school|cinema|marketplace|place_of_worship"]["name"](${box});` +
-    `);out geom tags;`;
+type Pt = [number, number];
+function validChunk(d: unknown): boolean {
+  if (!d || typeof d !== 'object') return false;
+  const c = d as { buildings?: unknown; roads?: unknown; pois?: unknown };
+  const arr = (a: unknown, max: number) => Array.isArray(a) && a.length <= max;
+  if (!arr(c.buildings, 400) || !arr(c.roads, 250) || !arr(c.pois, 30)) return false;
+  const pts = (p: unknown) => Array.isArray(p) && p.length <= 400 &&
+    p.every((q) => Array.isArray(q) && q.length === 2 && q.every((n) => typeof n === 'number' && Number.isFinite(n)));
+  return (c.buildings as { pts: Pt[]; h: number }[]).every((b) => pts(b.pts) && typeof b.h === 'number' && b.h > 0 && b.h <= 300) &&
+    (c.roads as { pts: Pt[]; w: number }[]).every((r) => pts(r.pts) && typeof r.w === 'number' && r.w > 0 && r.w <= 20) &&
+    (c.pois as { lat: number; lng: number; name: string }[]).every((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng) && typeof p.name === 'string' && p.name.length <= 40);
 }
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
   if (req.method !== 'POST') return json({ error: 'POST only' }, 405);
-  let body: { key?: string; bbox?: { south: number; west: number; north: number; east: number } };
-  try { body = await req.json(); } catch { return json({ error: 'bad json' }, 400); }
-  const { key, bbox } = body;
-  if (!key || !/^-?\d{1,6}_-?\d{1,7}$/.test(key) || !bbox) return json({ error: 'bad key' }, 400);
-  const { south, west, north, east } = bbox;
-  const nums = [south, west, north, east];
-  if (!nums.every((v) => typeof v === 'number' && Number.isFinite(v)) ||
-      north - south <= 0 || north - south > 0.003 || east - west <= 0 || east - west > 0.06 ||
-      Math.abs(south) > 85 || Math.abs(west) > 180) return json({ error: 'bad bbox' }, 400);
-
+  const text = await req.text();
+  if (text.length > MAX_BYTES) return json({ error: 'too large' }, 413);
+  let body: { action?: string; key?: string; data?: unknown };
+  try { body = JSON.parse(text); } catch { return json({ error: 'bad json' }, 400); }
+  const { action, key } = body;
+  if (!key || !/^-?\d{1,6}_-?\d{1,7}$/.test(key)) return json({ error: 'bad key' }, 400);
   const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
-  const { data: hit } = await db.from('spatial_tile_cache').select('data, fetched_at').eq('tile_key', key).maybeSingle();
-  if (hit && Date.now() - new Date(hit.fetched_at).getTime() < TTL_MS) return json({ source: 'shared', data: hit.data });
 
-  const q = query(south, west, north, east);
-  // Race mirrors in pairs, 9 s each, ~20 s total budget.
-  const tryOne = async (url: string) => {
-    const ctl = new AbortController();
-    const t = setTimeout(() => ctl.abort(), 9_000);
-    try {
-      const r = await fetch(url, {
-        method: 'POST', signal: ctl.signal,
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'MMora-VRWorld/1.0 (mmora.xyz)' },
-        body: 'data=' + encodeURIComponent(q),
-      });
-      if (!r.ok) { await r.text(); throw new Error(`${url} ${r.status}`); }
-      return await r.json();
-    } finally { clearTimeout(t); }
-  };
-  for (const pair of [MIRRORS.slice(0, 2), MIRRORS.slice(2)]) {
-    try {
-      const raw = await Promise.any(pair.map(tryOne));
-      await db.from('spatial_tile_cache').upsert({ tile_key: key, data: raw, fetched_at: new Date().toISOString() });
-      console.log('osm-tile fetched', key);
-      return json({ source: 'osm', data: raw });
-    } catch (e) {
-      console.error('osm-tile mirrors failed', key, String((e as AggregateError).errors ?? e));
-    }
+  if (action === 'get') {
+    const { data: hit } = await db.from('spatial_tile_cache').select('data, fetched_at').eq('tile_key', key).maybeSingle();
+    if (!hit || Date.now() - new Date(hit.fetched_at).getTime() > TTL_MS) return json({ error: 'miss' }, 404);
+    return json({ data: hit.data });
   }
-  if (hit) return json({ source: 'stale', data: hit.data });
-  return json({ error: 'map servers busy' }, 503);
+
+  if (action === 'put') {
+    const token = (req.headers.get('Authorization') ?? '').replace('Bearer ', '');
+    const { data: u } = await db.auth.getUser(token);
+    if (!u?.user) return json({ error: 'sign in to share map blocks' }, 401);
+    if (!validChunk(body.data)) return json({ error: 'bad data' }, 400);
+    const { error } = await db.from('spatial_tile_cache').upsert({ tile_key: key, data: body.data, fetched_at: new Date().toISOString() });
+    if (error) { console.error('osm-tile put', error.message); return json({ error: 'save failed' }, 500); }
+    return json({ ok: true });
+  }
+  return json({ error: 'bad action' }, 400);
 });

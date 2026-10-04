@@ -17,6 +17,7 @@ export const MAX_POIS = 30;
 
 const MIRRORS = [
   'https://overpass-api.de/api/interpreter',
+  'https://overpass.private.coffee/api/interpreter',
   'https://overpass.kumi.systems/api/interpreter',
   'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
 ];
@@ -124,17 +125,22 @@ const waiting: (() => void)[] = [];
 const slot = () => new Promise<void>((r) => { if (running < 2) { running++; r(); } else waiting.push(() => { running++; r(); }); });
 const release = () => { running--; waiting.shift()?.(); };
 
-/** Shared backend cache (every member's downloads help everyone). */
-async function fetchShared(key: string, bbox: BBox): Promise<OsmChunk | null> {
+/** Shared backend cache: blocks other members already downloaded. */
+async function sharedGet(key: string): Promise<OsmChunk | null> {
   try {
-    const { data, error } = await supabase.functions.invoke('osm-tile', { body: { key, bbox } });
+    const { data, error } = await supabase.functions.invoke('osm-tile', { body: { action: 'get', key } });
     if (error || !data?.data) return null;
-    if (data.source === 'shared') loaderStats.shared++;
-    return parseOverpass(data.data);
+    loaderStats.shared++;
+    return { ...(data.data as OsmChunk), fetchedAt: Date.now() };
   } catch { return null; }
+}
+function sharedPut(key: string, c: OsmChunk) {
+  void supabase.functions.invoke('osm-tile', { body: { action: 'put', key, data: { buildings: c.buildings, roads: c.roads, pois: c.pois } } }).catch(() => {});
 }
 
 async function fetchMirrors(query: string): Promise<OsmChunk | null> {
+  for (let pass = 0; pass < 2; pass++) {
+  if (pass) await new Promise((r) => setTimeout(r, 1500));
   for (const url of MIRRORS) {
     const ctl = new AbortController();
     const t = setTimeout(() => ctl.abort(), 15_000);
@@ -142,6 +148,7 @@ async function fetchMirrors(query: string): Promise<OsmChunk | null> {
       const res = await fetch(url, { method: 'POST', body: 'data=' + encodeURIComponent(query), headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, signal: ctl.signal });
       if (res.ok) return parseOverpass(await res.json());
     } catch { /* next mirror */ } finally { clearTimeout(t); }
+  }
   }
   return null;
 }
@@ -155,8 +162,10 @@ export function loadChunk(key: string, bbox: BBox): Promise<OsmChunk | null> {
     if (cached) { loaderStats.cacheHits++; return cached; }
     await slot();
     try {
-      const data = (await fetchShared(key, bbox)) ?? (await fetchMirrors(buildQuery(bbox)));
-      if (data) { loaderStats.network++; void cachePut(key, data); }
+      const shared = await sharedGet(key);
+      if (shared) { void cachePut(key, shared); return shared; }
+      const data = await fetchMirrors(buildQuery(bbox));
+      if (data) { loaderStats.network++; void cachePut(key, data); sharedPut(key, data); }
       else loaderStats.failures++;
       return data;
     } finally { release(); }
