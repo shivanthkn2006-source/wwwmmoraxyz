@@ -86,6 +86,7 @@ export function alertCopy(row: AlertableNotification, actorName?: string | null)
 export function shouldAlert(row: AlertableNotification | null | undefined, seen: Set<string>) {
   if (!row?.id) return false;
   if (seen.has(row.id)) return false;
+  if ((row.context_data as Record<string, unknown> | null)?.e2e_test) return false;
   return true;
 }
 
