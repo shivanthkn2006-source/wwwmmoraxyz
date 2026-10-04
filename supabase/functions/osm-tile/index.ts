@@ -43,25 +43,29 @@ Deno.serve(async (req) => {
   if (hit && Date.now() - new Date(hit.fetched_at).getTime() < TTL_MS) return json({ source: 'shared', data: hit.data });
 
   const q = query(south, west, north, east);
-  for (let attempt = 0; attempt < 2; attempt++) {
-    for (const url of MIRRORS) {
-      const ctl = new AbortController();
-      const t = setTimeout(() => ctl.abort(), 12_000);
-      try {
-        const r = await fetch(url, {
-          method: 'POST', signal: ctl.signal,
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'MMora-VRWorld/1.0 (mmora.xyz)' },
-          body: 'data=' + encodeURIComponent(q),
-        });
-        if (r.ok) {
-          const raw = await r.json();
-          await db.from('spatial_tile_cache').upsert({ tile_key: key, data: raw, fetched_at: new Date().toISOString() });
-          return json({ source: 'osm', data: raw });
-        }
-        await r.text();
-      } catch { /* next mirror */ } finally { clearTimeout(t); }
+  // Race mirrors in pairs, 9 s each, ~20 s total budget.
+  const tryOne = async (url: string) => {
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), 9_000);
+    try {
+      const r = await fetch(url, {
+        method: 'POST', signal: ctl.signal,
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'MMora-VRWorld/1.0 (mmora.xyz)' },
+        body: 'data=' + encodeURIComponent(q),
+      });
+      if (!r.ok) { await r.text(); throw new Error(`${url} ${r.status}`); }
+      return await r.json();
+    } finally { clearTimeout(t); }
+  };
+  for (const pair of [MIRRORS.slice(0, 2), MIRRORS.slice(2)]) {
+    try {
+      const raw = await Promise.any(pair.map(tryOne));
+      await db.from('spatial_tile_cache').upsert({ tile_key: key, data: raw, fetched_at: new Date().toISOString() });
+      console.log('osm-tile fetched', key);
+      return json({ source: 'osm', data: raw });
+    } catch (e) {
+      console.error('osm-tile mirrors failed', key, String((e as AggregateError).errors ?? e));
     }
-    await new Promise((res) => setTimeout(res, 800));
   }
   if (hit) return json({ source: 'stale', data: hit.data });
   return json({ error: 'map servers busy' }, 503);
