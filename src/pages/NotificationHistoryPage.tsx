@@ -102,9 +102,9 @@ const NotificationHistoryPage = () => {
     switch (type) {
       case 'friend_request': return <UserPlus className="w-4 h-4 text-primary" />;
       case 'friend_request_accepted': return <UserPlus className="w-4 h-4 text-green-500" />;
-      case 'post_like': return <Heart className="w-4 h-4 text-red-500 fill-red-500" />;
+      case 'post_like': return <Heart className="w-4 h-4 text-[hsl(var(--ios-switch-on))] fill-[hsl(var(--ios-switch-on))]" />;
       case 'post_comment': return <MessageCircle className="w-4 h-4 text-blue-500" />;
-      case 'comment_like': return <Heart className="w-4 h-4 text-red-500 fill-red-500" />;
+      case 'comment_like': return <Heart className="w-4 h-4 text-[hsl(var(--ios-switch-on))] fill-[hsl(var(--ios-switch-on))]" />;
       case 'comment_reply': return <MessageCircle className="w-4 h-4 text-blue-500" />;
       case 'tier_upgrade': return <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />;
       case 'user_online': return <MapPin className="w-4 h-4 text-green-500" />;
@@ -114,9 +114,9 @@ const NotificationHistoryPage = () => {
 
   const getPriorityBadge = (priority?: number) => {
     if (!priority) return null;
-    if (priority >= 9) return <Badge variant="destructive" className="text-xs">Urgent</Badge>;
-    if (priority >= 7) return <Badge variant="default" className="text-xs">High</Badge>;
-    if (priority >= 5) return <Badge variant="secondary" className="text-xs">Medium</Badge>;
+    if (priority >= 9) return <Badge className="text-xs bg-[hsl(var(--ios-switch-knob-off))] text-[hsl(var(--ios-switch-on))] border-transparent hover:bg-[hsl(var(--ios-switch-knob-off))]">Urgent</Badge>;
+    if (priority >= 7) return <Badge className="text-xs bg-[hsl(var(--ios-switch-on))] text-[hsl(var(--ios-switch-knob-off))] border-transparent hover:bg-[hsl(var(--ios-switch-on))]">High</Badge>;
+    if (priority >= 5) return <Badge className="text-xs bg-[hsl(var(--ios-switch-on))] text-[hsl(var(--ios-switch-knob-off))] border-transparent hover:bg-[hsl(var(--ios-switch-on))]">Medium</Badge>;
     return <Badge variant="outline" className="text-xs">Low</Badge>;
   };
 
@@ -150,7 +150,7 @@ const NotificationHistoryPage = () => {
             <h1 className="text-3xl font-bold">Notification History</h1>
             <p className="text-muted-foreground">View and manage all your notifications</p>
           </div>
-          <Button variant="destructive" size="sm" onClick={clearAllNotifications}>
+          <Button size="sm" className="bg-[hsl(var(--ios-switch-on))] text-[hsl(var(--ios-switch-knob-off))] border-transparent hover:bg-[hsl(var(--ios-switch-on))]" onClick={clearAllNotifications}>
             <Trash2 className="w-4 h-4 mr-2" />
             Clear All
           </Button>
