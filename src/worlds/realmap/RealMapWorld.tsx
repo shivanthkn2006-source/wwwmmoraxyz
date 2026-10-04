@@ -216,9 +216,15 @@ const EntryFlight: React.FC = () => {
       const pose = entryPose(elapsed / ENTRY_FLIGHT_MS, h);
       camera.position.set(0, pose.y, pose.z);
       camera.rotation.set(pose.pitch, 0, 0);
-    } else if (elapsed < ENTRY_FLIGHT_MS + 6000 && camera.position.y < h - 40) {
+    } else {
       const pose = entryPose(1, h);
-      camera.position.set(camera.position.x, pose.y, camera.position.z);
+      if (elapsed < ENTRY_FLIGHT_MS + 6000 && camera.position.y < h - 40) {
+        // The controller snapped the camera to the ground while mounting: put it back.
+        camera.position.set(camera.position.x, pose.y, camera.position.z);
+      } else if (Math.abs(camera.position.y - pose.y) > 0.5 && Math.hypot(camera.position.x, camera.position.z - pose.z) < 8) {
+        // Taller roofs reported after the flight: rise smoothly while the player hasn't moved off.
+        camera.position.y += (pose.y - camera.position.y) * 0.05;
+      }
     }
   });
   return null;
