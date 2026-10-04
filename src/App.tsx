@@ -471,6 +471,7 @@ const RouteAwareShell = () => {
     pathname.startsWith('/password-recovery') ||
     pathname.startsWith('/demo') ||
     pathname.startsWith('/zoe-omega') ||
+    (import.meta.env.DEV && pathname.startsWith('/__vr-harness')) ||
 
     pathname.startsWith('/zoe-infinity') ||
     pathname.startsWith('/genesis-imprint') ||
