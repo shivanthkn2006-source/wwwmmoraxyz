@@ -35,5 +35,7 @@
 - [x] Cars, motorbikes and people on real roads (traffic file) + slow-phone protection
 - [x] VR World search (top-left), portal invites, voice chat, M'Mora World opens beside its doorway
 - [x] Camera never switches on by itself (Zoe vision is opt-in)
-- [ ] Building window/roof detail and labels
+- [x] Building window/roof detail, building + street names, highlighted roads
+- [ ] Real-device bell check for a street relic (needs member to sign in on phone)
+- [ ] South India region rollout (awaiting user approval of plan)
 - [ ] Real iPhone + real controller check (needs the user's phone)
