@@ -10,12 +10,19 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { Text } from '@react-three/drei';
 
+function LOW_END_EARLY() {
+  if (typeof navigator === 'undefined') return false;
+  return (((navigator as any).deviceMemory ?? 8) <= 4) || (navigator.hardwareConcurrency ?? 8) <= 4 || /iPhone|iPad/.test(navigator.userAgent);
+}
+
 // 1 mile ≈ 1609m, we use 1600 for clean grid
 const CITY_RADIUS = 800; // 1600m diameter
 const ROAD_SPACING = 400;
-const CHUNK_SIZE = 200;
+const CHUNK_SIZE = 100; // one city block
+// Blocks generated per 120 ms tick (Minecraft-style trickle, never all at once).
+const BLOCKS_PER_TICK = LOW_END_EARLY() ? 1 : 3;
 const LOW_END = typeof navigator !== 'undefined' && ((((navigator as any).deviceMemory ?? 8) <= 4) || (navigator.hardwareConcurrency ?? 8) <= 4 || /iPhone|iPad/.test(navigator.userAgent));
-const CHUNK_VIEW = LOW_END ? 320 : 520;
+const CHUNK_VIEW = LOW_END ? 260 : 480;
 const ROAD_CLEARANCE = 54;
 
 const pushOffRoadAxis = (value: number, clearance: number = ROAD_CLEARANCE): number => {
@@ -273,6 +280,34 @@ const CameraTracker: React.FC<{ onUpdate: (pos: THREE.Vector3) => void }> = ({ o
   return null;
 };
 
+type ChunkList = Array<[string, { cx: number; cz: number; pois: CityPOI[] }]>;
+/**
+ * Minecraft-style block streaming: blocks inside view are generated nearest
+ * first, a few per tick, so walking never builds the whole city in one frame.
+ * Blocks past view * 1.2 (behind/away from the member) are unloaded at once.
+ */
+const BlockStreamer: React.FC<{ chunks: ChunkList; onChange: (s: Set<string>) => void }> = ({ chunks, onChange }) => {
+  const live = useRef<Set<string>>(new Set());
+  const acc = useRef(0);
+  useFrame(({ camera }, delta) => {
+    acc.current += delta;
+    if (acc.current < 0.12) return;
+    acc.current = 0;
+    const next = new Set(live.current);
+    let changed = false;
+    const want: Array<[number, string]> = [];
+    for (const [key, c] of chunks) {
+      const d = Math.hypot(camera.position.x - (c.cx + 0.5) * CHUNK_SIZE, camera.position.z - (c.cz + 0.5) * CHUNK_SIZE);
+      if (next.has(key)) { if (d > CHUNK_VIEW * 1.2) { next.delete(key); changed = true; } }
+      else if (d <= CHUNK_VIEW) want.push([d, key]);
+    }
+    want.sort((a, b) => a[0] - b[0]);
+    for (const [, key] of want.slice(0, BLOCKS_PER_TICK)) { next.add(key); changed = true; }
+    if (changed) { live.current = next; onChange(next); }
+  });
+  return null;
+};
+
 // Main expanded city component
 export const ExpandedCityGrid: React.FC<{ showLabels?: boolean }> = ({ showLabels = true }) => {
   const pois = useMemo(() => generateCityPOIs(), []);
@@ -290,6 +325,7 @@ export const ExpandedCityGrid: React.FC<{ showLabels?: boolean }> = ({ showLabel
     return Array.from(map.entries());
   }, [pois]);
   const [cameraPos, setCameraPos] = React.useState<THREE.Vector3>(new THREE.Vector3(0, 250, 0));
+  const [live, setLive] = React.useState<Set<string>>(() => new Set());
 
   // Road grid across the city
   const roads = useMemo(() => {
@@ -353,10 +389,9 @@ export const ExpandedCityGrid: React.FC<{ showLabels?: boolean }> = ({ showLabel
       ))}
 
       {/* All city buildings - with distance-based labels */}
+      <BlockStreamer chunks={chunks} onChange={setLive} />
       {chunks.map(([key, chunk]) => {
-        const midX = (chunk.cx + 0.5) * CHUNK_SIZE;
-        const midZ = (chunk.cz + 0.5) * CHUNK_SIZE;
-        if (Math.hypot(cameraPos.x - midX, cameraPos.z - midZ) > CHUNK_VIEW) return null;
+        if (!live.has(key)) return null;
         return (
           <group key={key}>
             {chunk.pois.map(poi => (
