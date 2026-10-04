@@ -47,10 +47,12 @@ let state: QuestState = { progress: {}, done: {} };
 let bag: BagItem[] = [];
 let loadedFor: string | null = null;
 const listeners = new Set<() => void>();
-const emit = () => listeners.forEach((l) => l());
+let snapshot = { state, bag };
+const emit = () => { snapshot = { state, bag }; listeners.forEach((l) => l()); };
 
 export function subscribeVRQuests(l: () => void) { listeners.add(l); return () => { listeners.delete(l); }; }
-export function getVRQuestSnapshot() { return { state, bag }; }
+/** Stable between changes (required by useSyncExternalStore). */
+export function getVRQuestSnapshot() { return snapshot; }
 
 async function currentUserId() {
   const { data } = await supabase.auth.getSession();

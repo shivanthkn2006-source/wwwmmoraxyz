@@ -89,8 +89,10 @@ export function hatToDpad(v: number | undefined) {
 
 export type PadFamily = 'xbox' | 'playstation' | 'generic';
 export function padFamily(id: string): PadFamily {
-  if (/054c|playstation|dualsense|dualshock|wireless controller/i.test(id)) return 'playstation';
+  // Xbox first: Xbox Series pads report "Xbox Wireless Controller", which would
+  // otherwise match the PlayStation "Wireless Controller" name.
   if (/045e|xbox|xinput/i.test(id)) return 'xbox';
+  if (/054c|playstation|dualsense|dualshock|wireless controller/i.test(id)) return 'playstation';
   return 'generic';
 }
 export const FACE_GLYPHS: Record<PadFamily, Record<'interact' | 'run' | 'zoe' | 'jump', string>> = {
