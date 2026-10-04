@@ -6,10 +6,11 @@
 import type { BBox } from './geo';
 import { supabase } from '@/integrations/supabase/client';
 
-export type OsmBuilding = { pts: [number, number][]; h: number };
-export type OsmRoad = { pts: [number, number][]; w: number };
+export type OsmBuilding = { pts: [number, number][]; h: number; name?: string };
+export type OsmRoad = { pts: [number, number][]; w: number; name?: string };
 export type OsmPoi = { lat: number; lng: number; name: string; kind: string };
-export type OsmChunk = { buildings: OsmBuilding[]; roads: OsmRoad[]; pois: OsmPoi[]; fetchedAt: number };
+/** `v: 2` = street and building names included (older saved blocks are refreshed quietly). */
+export type OsmChunk = { buildings: OsmBuilding[]; roads: OsmRoad[]; pois: OsmPoi[]; fetchedAt: number; v?: 2 };
 
 export const MAX_BUILDINGS = 400;
 export const MAX_ROADS = 250;
@@ -64,9 +65,9 @@ export function parseOverpass(json: { elements?: RawEl[] }, cap = MAX_BUILDINGS)
         .filter((g) => Number.isFinite(g.lat) && Number.isFinite(g.lon))
         .map((g) => [g.lat, g.lon] as [number, number]);
       if (tags.building && pts.length >= 4 && buildings.length < cap) {
-        buildings.push({ pts, h: buildingHeight(tags) });
+        buildings.push({ pts, h: buildingHeight(tags), ...(tags.name ? { name: tags.name.slice(0, 50) } : {}) });
       } else if (tags.highway && !SKIP_ROADS.has(tags.highway) && roads.length < MAX_ROADS * scale) {
-        roads.push({ pts, w: ROAD_WIDTH[tags.highway] ?? 4 });
+        roads.push({ pts, w: ROAD_WIDTH[tags.highway] ?? 4, ...(tags.name ? { name: tags.name.slice(0, 50) } : {}) });
       }
     } else if (el.type === 'node' && tags.name && Number.isFinite(el.lat) && Number.isFinite(el.lon)) {
       if (pois.length < MAX_POIS * scale) {
@@ -74,7 +75,7 @@ export function parseOverpass(json: { elements?: RawEl[] }, cap = MAX_BUILDINGS)
       }
     }
   }
-  return { buildings, roads, pois, fetchedAt: Date.now() };
+  return { buildings, roads, pois, fetchedAt: Date.now(), v: 2 };
 }
 
 // ---------- IndexedDB cache ----------
@@ -136,7 +137,7 @@ async function sharedGet(key: string): Promise<OsmChunk | null> {
   } catch { return null; }
 }
 function sharedPut(key: string, c: OsmChunk) {
-  void supabase.functions.invoke('osm-tile', { body: { action: 'put', key, data: { buildings: c.buildings, roads: c.roads, pois: c.pois } } }).catch(() => {});
+  void supabase.functions.invoke('osm-tile', { body: { action: 'put', key, data: { buildings: c.buildings, roads: c.roads, pois: c.pois, v: c.v } } }).catch(() => {});
 }
 
 async function fetchMirrors(query: string, cap = MAX_BUILDINGS): Promise<OsmChunk | null> {
@@ -157,7 +158,7 @@ async function fetchMirrors(query: string, cap = MAX_BUILDINGS): Promise<OsmChun
 /** Put each parsed feature in the chunk that holds its first point. */
 export function splitByChunk(all: OsmChunk, keyOf: (lat: number, lng: number) => string): Map<string, OsmChunk> {
   const out = new Map<string, OsmChunk>();
-  const get = (k: string) => { let c = out.get(k); if (!c) { c = { buildings: [], roads: [], pois: [], fetchedAt: all.fetchedAt }; out.set(k, c); } return c; };
+  const get = (k: string) => { let c = out.get(k); if (!c) { c = { buildings: [], roads: [], pois: [], fetchedAt: all.fetchedAt, v: all.v }; out.set(k, c); } return c; };
   all.buildings.forEach((b) => get(keyOf(b.pts[0][0], b.pts[0][1])).buildings.push(b));
   all.roads.forEach((r) => get(keyOf(r.pts[0][0], r.pts[0][1])).roads.push(r));
   all.pois.forEach((p) => get(keyOf(p.lat, p.lng)).pois.push(p));
@@ -186,11 +187,22 @@ async function flushBatch() {
     loaderStats.network++;
     const parts = splitByChunk(all, keyOfFn);
     for (const i of items) {
-      const c = parts.get(i.key) ?? { buildings: [], roads: [], pois: [], fetchedAt: all.fetchedAt };
+      const c = parts.get(i.key) ?? { buildings: [], roads: [], pois: [], fetchedAt: all.fetchedAt, v: 2 as const };
       void cachePut(i.key, c); sharedPut(i.key, c); i.resolve(c);
     }
   } finally { release(); }
 }
+
+/** Older saved blocks have no street/building names: fetch once more in the background (caches update, the search index picks them up). */
+const refreshed = new Set<string>();
+function refreshNames(key: string, bbox: BBox) {
+  if (refreshed.has(key)) return;
+  refreshed.add(key);
+  batch.push({ key, bbox, resolve: (c) => { if (c) namesListeners.forEach((l) => l(key, c)); } });
+  if (!batchTimer) batchTimer = setTimeout(() => void flushBatch(), 1200);
+}
+const namesListeners = new Set<(key: string, c: OsmChunk) => void>();
+export function onNamesRefreshed(fn: (key: string, c: OsmChunk) => void) { namesListeners.add(fn); return () => { namesListeners.delete(fn); }; }
 
 /** Never throws. Resolves null when every map server failed. */
 export function loadChunk(key: string, bbox: BBox): Promise<OsmChunk | null> {
@@ -198,9 +210,9 @@ export function loadChunk(key: string, bbox: BBox): Promise<OsmChunk | null> {
   if (existing) return existing;
   const p = (async () => {
     const cached = await cacheGet(key);
-    if (cached) { loaderStats.cacheHits++; return cached; }
+    if (cached) { loaderStats.cacheHits++; if (cached.v !== 2) refreshNames(key, bbox); return cached; }
     const shared = await sharedGet(key);
-    if (shared) { void cachePut(key, shared); return shared; }
+    if (shared) { void cachePut(key, shared); if (shared.v !== 2) refreshNames(key, bbox); return shared; }
     return new Promise<OsmChunk | null>((resolve) => {
       batch.push({ key, bbox, resolve });
       if (!batchTimer) batchTimer = setTimeout(() => void flushBatch(), 1200);

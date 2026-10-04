@@ -32,5 +32,8 @@
 - [x] Street relics on real roads + bell alert; doorway bell alert; "met a member" alert
 - [x] Members see each other (default on, hide switch in chat), friend/follower/new tags, see-through chat
 - [x] Glass "M'Mora world" loading screen; camera no longer asked at start
-- [ ] Cars/people on real roads (traffic file), building detail/labels, thermal governor
+- [x] Cars, motorbikes and people on real roads (traffic file) + slow-phone protection
+- [x] VR World search (top-left), portal invites, voice chat, M'Mora World opens beside its doorway
+- [x] Camera never switches on by itself (Zoe vision is opt-in)
+- [ ] Building window/roof detail and labels
 - [ ] Real iPhone + real controller check (needs the user's phone)

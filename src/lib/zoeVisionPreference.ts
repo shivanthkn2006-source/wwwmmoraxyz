@@ -1,12 +1,16 @@
-/** Zoe always-on vision preference (per device) and spoken/typed commands. */
-const KEY = 'mmora_zoe_vision_off_v1';
+/**
+ * Zoe vision preference (per device). OFF by default: the camera is only used
+ * after the member turns vision on ("Zoe start your vision") or opens a camera
+ * feature, so the camera light never comes on by itself.
+ */
+const KEY = 'mmora_zoe_vision_on_v2';
 
 export const isZoeVisionPreferred = (): boolean => {
-  try { return localStorage.getItem(KEY) !== '1'; } catch { return true; }
+  try { return localStorage.getItem(KEY) === '1'; } catch { return false; }
 };
 
 export const setZoeVisionPreference = (on: boolean) => {
-  try { on ? localStorage.removeItem(KEY) : localStorage.setItem(KEY, '1'); } catch { /* ignore */ }
+  try { on ? localStorage.setItem(KEY, '1') : localStorage.removeItem(KEY); } catch { /* ignore */ }
 };
 
 export function parseVisionCommand(text: string): 'stop' | 'start' | null {
