@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
 
   if (action === 'get') {
     const { data: hit } = await db.from('spatial_tile_cache').select('data, fetched_at').eq('tile_key', key).maybeSingle();
-    if (!hit || Date.now() - new Date(hit.fetched_at).getTime() > TTL_MS) return json({ error: 'miss' }, 404);
+    if (!hit || Date.now() - new Date(hit.fetched_at).getTime() > TTL_MS) return json({ data: null, miss: true });
     return json({ data: hit.data });
   }
 
