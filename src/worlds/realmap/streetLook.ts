@@ -121,6 +121,14 @@ export function buildRoadParts(data: OsmChunk, origin: LatLng) {
       if (r.w >= 7) strip(centre, a, b, 0.08, 0, 0.05);
     }
   }
-  const up = (p: number[]) => { const g = geo(p); return g; };
+  const up = (p: number[]) => {
+    if (!p.length) return null;
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(p, 3));
+    const n = new Float32Array(p.length);
+    for (let k = 1; k < n.length; k += 3) n[k] = 1;
+    g.setAttribute('normal', new THREE.BufferAttribute(n, 3));
+    return g;
+  };
   return { road: up(road), path: up(path), lines: up(lines), centre: up(centre) };
 }
