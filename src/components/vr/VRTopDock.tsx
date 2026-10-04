@@ -14,6 +14,7 @@ import {
   ChevronDown, ChevronUp, Gauge, Mountain, Mic, Gamepad2, Bug, Shield, Backpack,
   Users, Cpu, ZoomIn, LayoutGrid, Wallet, LogOut, Move3d, Navigation, HelpCircle, MapPin, GripHorizontal,
 } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import { cn } from '@/lib/utils';
 
 // ── Which features the dock has opened (shared with every <VRFeature>) ──
@@ -25,9 +26,7 @@ const useFeatureShown = (id: string) => useSyncExternalStore(subscribe, () => sh
 
 type Offset = { x: number; y: number };
 const posKey = (id: string) => `vr-feature-pos:${id}`;
-/** "More moves" sits on the right where the main pad already is, so it opens shifted left by default. */
-const defaultOffset = (id: string): Offset =>
-  id.startsWith('extras') && typeof window !== 'undefined' ? { x: -Math.round(Math.min(300, window.innerWidth * 0.38)), y: 0 } : { x: 0, y: 0 };
+const defaultOffset = (_id: string): Offset => ({ x: 0, y: 0 });
 const clampOffset = (o: Offset): Offset => {
   const w = typeof window !== 'undefined' ? window.innerWidth : 1000;
   const h = typeof window !== 'undefined' ? window.innerHeight : 1000;
@@ -41,25 +40,87 @@ const readOffset = (id: string): Offset => {
   return defaultOffset(id);
 };
 
-/**
- * Wraps a VR World overlay. Hidden while the dock is mounted; once opened from the
- * menu it floats above the base controls and gets a grip handle so it can be dragged
- * anywhere (mouse, touch and pen), with the position remembered per feature.
- */
-export const VRFeature: React.FC<{ id: string; part?: string; children: React.ReactNode }> = ({ id, part, children }) => {
-  const shown = useFeatureShown(id);
-  const key = part ? `${id}:${part}` : id;
-  const ref = useRef<HTMLDivElement>(null);
+/** Pointer drag that moves an element by an offset, saved per key. */
+function useDragOffset(key: string, onEnd?: () => void) {
   const [offset, setOffset] = useState<Offset>(() => (typeof window !== 'undefined' ? readOffset(key) : { x: 0, y: 0 }));
-  const [handle, setHandle] = useState<Offset | null>(null);
   const drag = useRef<{ px: number; py: number; ox: number; oy: number } | null>(null);
   const offsetRef = useRef(offset);
   offsetRef.current = offset;
+  const handlers = {
+    onPointerDown: (e: React.PointerEvent) => {
+      e.preventDefault(); e.stopPropagation();
+      (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+      drag.current = { px: e.clientX, py: e.clientY, ox: offsetRef.current.x, oy: offsetRef.current.y };
+    },
+    onPointerMove: (e: React.PointerEvent) => {
+      const d = drag.current;
+      if (!d) return;
+      e.preventDefault(); e.stopPropagation();
+      setOffset(clampOffset({ x: d.ox + e.clientX - d.px, y: d.oy + e.clientY - d.py }));
+    },
+    onPointerUp: (e: React.PointerEvent) => {
+      if (!drag.current) return;
+      e.stopPropagation();
+      drag.current = null;
+      try { window.localStorage.setItem(posKey(key), JSON.stringify(offsetRef.current)); } catch { /* ignore */ }
+      onEnd?.();
+    },
+    onDoubleClick: () => {
+      setOffset(defaultOffset(key));
+      try { window.localStorage.removeItem(posKey(key)); } catch { /* ignore */ }
+    },
+  };
+  return { offset, offsetRef, dragging: () => !!drag.current, handlers: { ...handlers, onPointerCancel: handlers.onPointerUp } };
+}
+
+const GRIP_CLASS = 'h-7 w-11 rounded-full surface-warm-tan flex items-center justify-center text-white/90 cursor-grab active:cursor-grabbing';
+
+// ── The controls tray: every on-screen control opened from the menu sits here, side by side ──
+let trayEl: HTMLElement | null = null;
+const trayListeners = new Set<() => void>();
+const setTrayEl = (el: HTMLElement | null) => { if (trayEl !== el) { trayEl = el; trayListeners.forEach(l => l()); } };
+const useTrayEl = () => useSyncExternalStore(
+  (l) => { trayListeners.add(l); return () => { trayListeners.delete(l); }; }, () => trayEl, () => null);
+
+/** One tray for all extra controls, beside the main pad; the whole tray drags as one. */
+const VRControlTray: React.FC = () => {
+  const { offset, handlers } = useDragOffset('tray');
+  const ref = useCallback((el: HTMLDivElement | null) => setTrayEl(el), []);
+  useEffect(() => () => setTrayEl(null), []);
+  return (
+    <div
+      className="vr-control-tray fixed z-[9991] surface-warm-tan rounded-2xl p-2 pt-1 flex flex-col items-center gap-1"
+      style={{ transform: `translate(calc(var(--vr-tray-shift, -50%) + ${offset.x}px), ${offset.y}px)` }}
+      data-exclude-phantom-tap
+    >
+      <button type="button" data-vr-grip="1" aria-label="Drag controls tray" className={GRIP_CLASS} style={{ touchAction: 'none' }} {...handlers}>
+        <GripHorizontal className="h-4 w-4" />
+      </button>
+      <div ref={ref} data-vr-tray-items className="flex flex-wrap items-end justify-center gap-2" />
+    </div>
+  );
+};
+
+/**
+ * Wraps a VR World overlay. Hidden while the dock is mounted; once opened from the menu:
+ *  - `tray` features (controls) move into the shared controls tray, side by side, so they
+ *    never land on top of the main pads;
+ *  - other features (panels) float above the scene with their own drag grip.
+ * Positions are remembered per device.
+ */
+export const VRFeature: React.FC<{ id: string; part?: string; tray?: boolean; children: React.ReactNode }> = ({ id, part, tray, children }) => {
+  const shown = useFeatureShown(id);
+  const tray$ = useTrayEl();
+  const key = part ? `${id}:${part}` : id;
+  const ref = useRef<HTMLDivElement>(null);
+  const [handle, setHandle] = useState<Offset | null>(null);
+  const measureRef = useRef<() => void>(() => {});
+  const { offset, offsetRef, dragging, handlers } = useDragOffset(key, () => measureRef.current());
 
   // Place the grip at the top-left corner of whatever this feature draws.
   const measure = useCallback(() => {
     const root = ref.current;
-    if (!root || drag.current) return;
+    if (!root || dragging()) return;
     const vw = window.innerWidth, vh = window.innerHeight;
     let minX = Infinity, minY = Infinity;
     const els = root.querySelectorAll<HTMLElement>('*');
@@ -74,56 +135,41 @@ export const VRFeature: React.FC<{ id: string; part?: string; children: React.Re
     if (!Number.isFinite(minX)) { setHandle(null); return; }
     const o = offsetRef.current;
     setHandle({ x: Math.max(4, Math.min(vw - 40, minX)) - o.x, y: Math.max(4, minY - 30) - o.y });
-  }, []);
+  }, [dragging, offsetRef]);
+  measureRef.current = measure;
 
+  const floating = shown && !(tray && tray$);
   useEffect(() => {
-    if (!shown) { setHandle(null); return; }
+    if (!floating) { setHandle(null); return; }
     const t0 = window.setTimeout(measure, 60);
     const iv = window.setInterval(measure, 1200);
     window.addEventListener('resize', measure);
     return () => { window.clearTimeout(t0); window.clearInterval(iv); window.removeEventListener('resize', measure); };
-  }, [shown, measure]);
+  }, [floating, measure]);
 
-  const onDown = (e: React.PointerEvent) => {
-    e.preventDefault(); e.stopPropagation();
-    (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
-    drag.current = { px: e.clientX, py: e.clientY, ox: offsetRef.current.x, oy: offsetRef.current.y };
-  };
-  const onMove = (e: React.PointerEvent) => {
-    const d = drag.current;
-    if (!d) return;
-    e.preventDefault(); e.stopPropagation();
-    setOffset(clampOffset({ x: d.ox + e.clientX - d.px, y: d.oy + e.clientY - d.py }));
-  };
-  const onUp = (e: React.PointerEvent) => {
-    if (!drag.current) return;
-    e.stopPropagation();
-    drag.current = null;
-    try { window.localStorage.setItem(posKey(key), JSON.stringify(offsetRef.current)); } catch { /* ignore */ }
-  };
+  if (tray && tray$) {
+    // Dock is mounted: controls render only while opened, inside the tray.
+    return shown ? createPortal(<div data-vr-tray-item={id} className="contents">{children}</div>, tray$) : null;
+  }
 
   return (
     <div
       ref={ref}
       data-vr-feature={id}
-      data-vr-float={shown ? '' : undefined}
-      style={shown
+      data-vr-float={floating ? '' : undefined}
+      style={floating
         ? { position: 'fixed', inset: 0, zIndex: 9990, pointerEvents: 'none', transform: `translate3d(${offset.x}px, ${offset.y}px, 0)` }
         : { display: 'contents' }}
     >
       {children}
-      {shown && handle && (
+      {floating && handle && (
         <button
           type="button"
           data-vr-grip="1"
           data-exclude-phantom-tap
           aria-label="Drag to move"
-          onPointerDown={onDown}
-          onPointerMove={onMove}
-          onPointerUp={onUp}
-          onPointerCancel={onUp}
-          onDoubleClick={() => { const o = defaultOffset(key); setOffset(o); try { window.localStorage.removeItem(posKey(key)); } catch { /* ignore */ } }}
-          className="absolute h-7 w-11 rounded-full surface-warm-tan flex items-center justify-center text-white/90 cursor-grab active:cursor-grabbing"
+          {...handlers}
+          className={cn('absolute', GRIP_CLASS)}
           style={{ left: handle.x, top: handle.y, touchAction: 'none', pointerEvents: 'auto' }}
         >
           <GripHorizontal className="h-4 w-4" />
@@ -184,6 +230,7 @@ export const VRTopDock: React.FC = () => {
 
   return (
     <>
+      <VRControlTray />
       <button
         type="button"
         aria-label={open ? 'Hide VR menu' : 'Show VR menu'}

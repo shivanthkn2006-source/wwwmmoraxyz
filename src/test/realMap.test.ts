@@ -132,10 +132,11 @@ describe('area split', () => {
   });
 });
 
-import { startAerialEntry, landOnStreet } from '@/worlds/worldMode';
+import { startAerialEntry, landOnStreet, entryHeightFor, reportNearbyHeight, entryHeight, chooseStartCity } from '@/worlds/worldMode';
+import { entryPose } from '@/worlds/realmap/RealMapWorld';
 describe('aerial entry', () => {
   beforeEach(() => __resetWorldForTests());
-  it('opens 500 m up once per session, then lands on the street', () => {
+  it('opens above the street once per session, then lands on the street', () => {
     const modes: string[] = [];
     const on = (e: Event) => modes.push((e as CustomEvent).detail.mode);
     window.addEventListener('vr-view-transition', on);
@@ -146,5 +147,33 @@ describe('aerial entry', () => {
     expect(getWorldState().aerial).toBe(false);
     expect(modes).toEqual(['aerial_real', 'ground']);
     window.removeEventListener('vr-view-transition', on);
+  });
+});
+
+describe('entry height', () => {
+  beforeEach(() => __resetWorldForTests());
+  it('is 100 m, or 20 m above the tallest nearby roof', () => {
+    expect(entryHeightFor(0)).toBe(100);
+    expect(entryHeightFor(60)).toBe(100);
+    expect(entryHeightFor(250)).toBe(270);
+    expect(entryHeightFor(2000)).toBe(650);
+    reportNearbyHeight(40); expect(entryHeight()).toBe(100);
+    reportNearbyHeight(180); expect(entryHeight()).toBe(200);
+    reportNearbyHeight(90); expect(entryHeight()).toBe(200);
+  });
+  it('flight starts flat looking down and ends tilted at entry height', () => {
+    const a = entryPose(0, 100), b = entryPose(1, 100);
+    expect(a.y).toBe(420); expect(a.pitch).toBeCloseTo(-1.45);
+    expect(b.y).toBe(100); expect(b.pitch).toBeCloseTo(-0.75); expect(b.z).toBeCloseTo(90.01);
+  });
+});
+
+describe('no location', () => {
+  beforeEach(() => __resetWorldForTests());
+  it('a picked city becomes the start point (not a silent fallback)', () => {
+    chooseStartCity({ name: 'New York', lat: 40.758, lng: -73.9855 });
+    const o = getWorldState().origin;
+    expect(o.status).toBe('ready');
+    if (o.status === 'ready') { expect(o.real).toBe(false); expect(o.label).toBe('New York'); expect(o.origin.lat).toBe(40.758); }
   });
 });

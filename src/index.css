@@ -7212,3 +7212,23 @@ html body .ios26-switch[data-on='true'] > .ios26-switch-knob { background: hsl(v
 .vr-gem-core-b { animation-delay: -2s; opacity: 0.55; }
 @keyframes vr-gem-spin { from { transform: rotateY(0deg); } to { transform: rotateY(360deg); } }
 html body .vr-gem-core { animation-duration: 4s !important; }
+
+/* VR controls tray: extra controls opened from the VR menu sit side by side here, never on top of the main pads. */
+.vr-control-tray { left: 50%; bottom: 12px; max-width: min(560px, calc(100vw - 440px)); min-width: 120px; }
+@media (max-width: 760px) { .vr-control-tray { bottom: 42vh; max-width: calc(100vw - 24px); } }
+.vr-control-tray:not(:has([data-vr-tray-item])) { display: none; }
+[data-vr-tray-items] > [data-vr-tray-item] > * {
+  position: relative !important; inset: auto !important; transform: none !important;
+  translate: none !important; margin: 0 !important; z-index: auto !important;
+}
+/* Short (sideways phone) screens: face buttons sit left of the look pad instead of above it, and the tray fills the gap between the sticks. */
+@media (max-height: 520px) {
+  .vr-face-diamond { bottom: 8px !important; right: 236px !important; }
+  .vr-look-pad { bottom: 22px !important; }
+  .vr-control-tray { left: 200px; bottom: 8px; --vr-tray-shift: 0%; max-width: calc(100vw - 200px - 390px); min-width: 0; }
+  .vr-control-tray [data-vr-tray-items] { zoom: 0.72; }
+  .vr-aerial-land { top: 6rem; }
+  .vr-aerial-land > div { display: none; }
+  .vr-aerial-land button { white-space: nowrap; }
+  .vr-aerial-land button { padding-top: 0.35rem; padding-bottom: 0.35rem; }
+}

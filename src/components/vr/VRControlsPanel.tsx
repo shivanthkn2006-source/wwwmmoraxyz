@@ -33,7 +33,7 @@ const VRControlsPanel: React.FC<VRControlsPanelProps> = ({
   const [isExpanded, setIsExpanded] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [isPinned, setIsPinned] = useState(false);
-  const [position, setPosition] = useState({ x: 12, y: typeof window !== 'undefined' ? window.innerHeight - 200 : 400 });
+  const [position, setPosition] = useState(() => typeof window === 'undefined' ? { x: 12, y: 400 } : window.innerHeight < 520 ? { x: 92, y: 100 } : { x: 12, y: window.innerHeight - 260 });
   const [zIndex, setZIndex] = useState(9998);
 
   useEffect(() => {

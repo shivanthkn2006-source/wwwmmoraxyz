@@ -11,7 +11,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { chebyshev, chunkBBox, chunkOf, neighborhood, toLatLng, toLocal, type LatLng, type ChunkId } from './geo';
 import { loadChunk, setChunkKeyFn, type OsmChunk } from './osm';
-import { setChunkStats, useWorldState, resolveOrigin, PORTAL_OFFSET, enterMMora, startAerialEntry, getWorldState, AERIAL_HEIGHT_M } from '../worldMode';
+import { setChunkStats, useWorldState, resolveOrigin, PORTAL_OFFSET, enterMMora, startAerialEntry, getWorldState, entryHeight, reportNearbyHeight } from '../worldMode';
 import { PortalDoorway } from '../portal/PortalDoorway';
 import { DemoExplorer } from './DemoExplorer';
 
@@ -73,7 +73,19 @@ const Chunk: React.FC<{ id: ChunkId; origin: LatLng; onReady: (key: string) => v
     let timer = 0;
     const attempt = () => loadChunk(id.key, chunkBBox(id.i, id.j, origin.lat)).then((d) => {
       if (!alive) return;
-      if (d) { setData(d); onReady(id.key); return; }
+      if (d) {
+        setData(d); onReady(id.key);
+        // Tallest building near the start point decides the entry height (roof-top view).
+        let tallest = 0;
+        for (const b of d.buildings) {
+          const p0 = b.pts[0];
+          if (!p0) continue;
+          const { x, z } = toLocal({ lat: p0[0], lng: p0[1] }, origin);
+          if (Math.hypot(x, z) < 260 && b.h > tallest) tallest = b.h;
+        }
+        if (tallest) reportNearbyHeight(tallest);
+        return;
+      }
       // Map servers busy: try this block again later instead of leaving a hole.
       if (++tries < 4) timer = window.setTimeout(attempt, 8000 * tries);
     });
@@ -145,7 +157,7 @@ const ChunkStreamer: React.FC<{ origin: LatLng }> = ({ origin }) => {
 /** Daytime sky for the Real Map (night is handled by the existing night sky). */
 const RealSky: React.FC = () => {
   const { scene, camera } = useThree();
-  // Fog follows height so the 500 m aerial view still sees the ground.
+  // Fog follows height so the entry view from above still sees the ground.
   useFrame(() => {
     const f = scene.fog as THREE.Fog | null;
     if (f && 'far' in f) { const y = Math.max(0, camera.position.y); f.near = 140 + y; f.far = 560 + y * 2.2; }
@@ -176,16 +188,43 @@ const Ground: React.FC = () => {
   );
 };
 
-/** The player controller may reset the camera while it mounts; hold the aerial view for its first 6 s. */
-const AerialHold: React.FC = () => {
+/**
+ * Entry flight: starts looking straight down like a flat 2D map, then glides down
+ * and tilts into 3D until it rests ~100 m above the street (or just over the
+ * tallest nearby roof). Afterwards it only re-asserts that pose if the player
+ * controller snaps the camera to the ground while it is still mounting.
+ */
+export const ENTRY_FLIGHT_MS = 3800;
+const FLIGHT_EXTRA_M = 320;
+const END_PITCH = -0.75;
+const START_PITCH = -1.45;
+export function entryPose(progress: number, h: number) {
+  const p = Math.min(1, Math.max(0, progress));
+  const e = p * p * (3 - 2 * p);
+  return { y: h + FLIGHT_EXTRA_M * (1 - e), z: 0.01 + h * 0.9 * e, pitch: START_PITCH + (END_PITCH - START_PITCH) * e };
+}
+const EntryFlight: React.FC = () => {
   const { camera } = useThree();
-  const since = useRef<number | null>(null);
+  const t0 = useRef<number | null>(null);
   useFrame(() => {
-    if (!getWorldState().aerial) { since.current = null; return; }
+    if (!getWorldState().aerial) { t0.current = null; return; }
     const now = performance.now();
-    if (since.current === null) since.current = now;
-    if (now - since.current < 6000 && camera.position.y < AERIAL_HEIGHT_M - 50) {
-      window.dispatchEvent(new CustomEvent('vr-view-transition', { detail: { mode: 'aerial_real' } }));
+    if (t0.current === null) t0.current = now;
+    const elapsed = now - t0.current;
+    const h = entryHeight();
+    if (elapsed <= ENTRY_FLIGHT_MS) {
+      const pose = entryPose(elapsed / ENTRY_FLIGHT_MS, h);
+      camera.position.set(0, pose.y, pose.z);
+      camera.rotation.set(pose.pitch, 0, 0);
+    } else {
+      const pose = entryPose(1, h);
+      if (elapsed < ENTRY_FLIGHT_MS + 6000 && camera.position.y < h - 40) {
+        // The controller snapped the camera to the ground while mounting: put it back.
+        camera.position.set(camera.position.x, pose.y, camera.position.z);
+      } else if (Math.abs(camera.position.y - pose.y) > 0.5 && Math.hypot(camera.position.x, camera.position.z - pose.z) < 8) {
+        // Taller roofs reported after the flight: rise smoothly while the player hasn't moved off.
+        camera.position.y += (pose.y - camera.position.y) * 0.05;
+      }
     }
   });
   return null;
@@ -194,11 +233,19 @@ const AerialHold: React.FC = () => {
 export const RealMapWorld: React.FC = () => {
   const { origin } = useWorldState();
   useEffect(() => { resolveOrigin(); }, []);
-  // Wait for the player controller to mount, then lift to the aerial view once.
+  // Start the entry flight once the first street blocks are in (or after 4 s), so
+  // the roof-top height is known and the player doesn't fly over an empty map.
   useEffect(() => {
     if (origin.status !== 'ready') return;
-    const t = window.setTimeout(() => startAerialEntry(), 600);
-    return () => window.clearTimeout(t);
+    const started = performance.now();
+    const id = window.setInterval(() => {
+      const w = getWorldState();
+      if (w.chunksLoaded >= 1 || performance.now() - started > 4000) {
+        startAerialEntry();
+        window.clearInterval(id);
+      }
+    }, 250);
+    return () => window.clearInterval(id);
   }, [origin.status]);
   return (
     <>
@@ -206,7 +253,7 @@ export const RealMapWorld: React.FC = () => {
       <directionalLight position={[120, 200, 60]} intensity={1.1} />
       <RealSky />
       <Ground />
-      <AerialHold />
+      <EntryFlight />
       {origin.status === 'ready' && <ChunkStreamer origin={origin.origin} />}
       <PortalDoorway position={PORTAL_OFFSET} label="M'Mora World" onEnter={enterMMora} />
       <DemoExplorer />
