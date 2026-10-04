@@ -11,6 +11,7 @@ export interface CanonicalRoute {
 
 export const CANONICAL_ROUTES: CanonicalRoute[] = [
   { path: "/", label: "Root", dynamic: false },
+  { path: "/__vr-harness", label: "__vr harness", dynamic: false },
   { path: "/about", label: "About", dynamic: false },
   { path: "/access-denied", label: "Access denied", dynamic: false },
   { path: "/activity-export", label: "Activity export", dynamic: false },
