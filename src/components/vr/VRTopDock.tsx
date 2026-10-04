@@ -27,7 +27,7 @@ type Offset = { x: number; y: number };
 const posKey = (id: string) => `vr-feature-pos:${id}`;
 /** "More moves" sits on the right where the main pad already is, so it opens shifted left by default. */
 const defaultOffset = (id: string): Offset =>
-  id === 'extras' && typeof window !== 'undefined' ? { x: -Math.round(Math.min(300, window.innerWidth * 0.38)), y: 0 } : { x: 0, y: 0 };
+  id.startsWith('extras') && typeof window !== 'undefined' ? { x: -Math.round(Math.min(300, window.innerWidth * 0.38)), y: 0 } : { x: 0, y: 0 };
 const clampOffset = (o: Offset): Offset => {
   const w = typeof window !== 'undefined' ? window.innerWidth : 1000;
   const h = typeof window !== 'undefined' ? window.innerHeight : 1000;
@@ -46,10 +46,11 @@ const readOffset = (id: string): Offset => {
  * menu it floats above the base controls and gets a grip handle so it can be dragged
  * anywhere (mouse, touch and pen), with the position remembered per feature.
  */
-export const VRFeature: React.FC<{ id: string; children: React.ReactNode }> = ({ id, children }) => {
+export const VRFeature: React.FC<{ id: string; part?: string; children: React.ReactNode }> = ({ id, part, children }) => {
   const shown = useFeatureShown(id);
+  const key = part ? `${id}:${part}` : id;
   const ref = useRef<HTMLDivElement>(null);
-  const [offset, setOffset] = useState<Offset>(() => (typeof window !== 'undefined' ? readOffset(id) : { x: 0, y: 0 }));
+  const [offset, setOffset] = useState<Offset>(() => (typeof window !== 'undefined' ? readOffset(key) : { x: 0, y: 0 }));
   const [handle, setHandle] = useState<Offset | null>(null);
   const drag = useRef<{ px: number; py: number; ox: number; oy: number } | null>(null);
   const offsetRef = useRef(offset);
@@ -98,7 +99,7 @@ export const VRFeature: React.FC<{ id: string; children: React.ReactNode }> = ({
     if (!drag.current) return;
     e.stopPropagation();
     drag.current = null;
-    try { window.localStorage.setItem(posKey(id), JSON.stringify(offsetRef.current)); } catch { /* ignore */ }
+    try { window.localStorage.setItem(posKey(key), JSON.stringify(offsetRef.current)); } catch { /* ignore */ }
   };
 
   return (
@@ -121,7 +122,7 @@ export const VRFeature: React.FC<{ id: string; children: React.ReactNode }> = ({
           onPointerMove={onMove}
           onPointerUp={onUp}
           onPointerCancel={onUp}
-          onDoubleClick={() => { const o = defaultOffset(id); setOffset(o); try { window.localStorage.removeItem(posKey(id)); } catch { /* ignore */ } }}
+          onDoubleClick={() => { const o = defaultOffset(key); setOffset(o); try { window.localStorage.removeItem(posKey(key)); } catch { /* ignore */ } }}
           className="absolute h-7 w-11 rounded-full surface-warm-tan flex items-center justify-center text-white/90 cursor-grab active:cursor-grabbing"
           style={{ left: handle.x, top: handle.y, touchAction: 'none', pointerEvents: 'auto' }}
         >

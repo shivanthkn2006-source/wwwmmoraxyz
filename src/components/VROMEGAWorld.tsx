@@ -3043,7 +3043,7 @@ const VRLiveClock: React.FC = () => {
               <LandscapeViewportGuard />
               <VRFeature id="map"><RealMapStatus /></VRFeature>
               <RealAerialLand />
-              <VRFeature id="extras">
+              <VRFeature id="extras" part="bar">
 
               <VRTouchControlBar
                 is5xZoom={is5xZoom}
