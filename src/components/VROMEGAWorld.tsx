@@ -98,6 +98,7 @@ import { VRManualDownloadButton } from './vr/VRManualDownloadButton';
 import { VRFeature } from './vr/VRTopDock';
 import VRGamepadHUD from './vr/VRGamepadHUD';
 import { RealMapWorld } from '@/worlds/realmap/RealMapWorld';
+import { JourneyTracker } from '@/worlds/JourneyTracker';
 import { PortalDoorway } from '@/worlds/portal/PortalDoorway';
 import { useWorldState, returnToReal, RETURN_PORTAL_POS } from '@/worlds/worldMode';
 import { LandscapeViewportGuard } from './vr/LandscapeViewportGuard';
@@ -1236,6 +1237,7 @@ const MemoryPalace: React.FC<{
       
       {/* Real Map (default) vs M'Mora World behind the doorway — only one world is ever mounted. */}
       {!inMMora && <RealMapWorld />}
+      <JourneyTracker />
       {inMMora && <PortalDoorway position={RETURN_PORTAL_POS} label="Back to your street" onEnter={returnToReal} />}
       {inMMora && (<>
       {/* VR Feature Integration - PROGRESSIVE: passes zone-aware visibility */}

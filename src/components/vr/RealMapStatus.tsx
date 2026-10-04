@@ -5,11 +5,13 @@
 import React, { useState } from 'react';
 import { useWorldState } from '@/worlds/worldMode';
 import { loaderStats } from '@/worlds/realmap/osm';
+import { useJourney, journeyLabel } from '@/worlds/journeyQuest';
 
 type Report = { geometries: number; textures: number; calls: number; heapMB: number | null };
 
 export const RealMapStatus: React.FC = () => {
   const w = useWorldState();
+  const journey = useJourney();
   const [report, setReport] = useState<Report | null>(null);
 
   const runCheck = () => {
@@ -31,6 +33,7 @@ export const RealMapStatus: React.FC = () => {
       <div>📍 {where}</div>
       {w.mode === 'real' && <div>Map blocks: {w.chunksLoaded} / {w.chunksWanted}</div>}
       <div>Saved on phone: {loaderStats.cacheHits} · Shared: {loaderStats.shared} · Downloaded: {loaderStats.network} · Failed: {loaderStats.failures}</div>
+      <div>🧭 {journeyLabel(journey)}</div>
       <div>Doorway trips: {w.portalTrips}</div>
       <button type="button" onClick={runCheck} className="underline">Run world check</button>
       {report && (

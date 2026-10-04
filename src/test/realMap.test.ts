@@ -104,3 +104,17 @@ describe('portal + worlds', () => {
     expect(Math.hypot(x, z)).toBeCloseTo(DEMO_RADIUS);
   });
 });
+
+import { journeyReduce, WALK_GOAL_M } from '@/worlds/journeyQuest';
+describe('journey quest', () => {
+  it('walk → doorway → beacon → done, ignoring teleport jumps and out-of-order events', () => {
+    let s = { step: 'walk' as const, walked: 0 } as ReturnType<typeof journeyReduce>;
+    s = journeyReduce(s, { type: 'entered-mmora' }); expect(s.step).toBe('walk');
+    s = journeyReduce(s, { type: 'walked', meters: 500 }); expect(s.walked).toBe(20);
+    for (let k = 0; k < 3; k++) s = journeyReduce(s, { type: 'walked', meters: 15 });
+    expect(s.walked).toBeGreaterThanOrEqual(WALK_GOAL_M); expect(s.step).toBe('doorway');
+    s = journeyReduce(s, { type: 'near-beacon' }); expect(s.step).toBe('doorway');
+    s = journeyReduce(s, { type: 'entered-mmora' }); expect(s.step).toBe('beacon');
+    s = journeyReduce(s, { type: 'near-beacon' }); expect(s.step).toBe('done');
+  });
+});
