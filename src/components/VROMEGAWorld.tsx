@@ -95,6 +95,7 @@ import VRLookJoystick, { VRTouchControlBar } from './vr/features/VRLookJoystick'
 import { BikeOnScreenControls } from './vr/features/MotorcycleSystem';
 import { VRManualDownloadButton } from './vr/VRManualDownloadButton';
 import { VRFeature } from './vr/VRTopDock';
+import VRGamepadHUD from './vr/VRGamepadHUD';
 import { useSkyPhase } from '@/hooks/useSkyPhase';
 import { trackActivity } from '@/lib/visitTracker';
 
@@ -2964,6 +2965,7 @@ const VRLiveClock: React.FC = () => {
               <RotationButtons />
               </VRFeature>
               <LookButtons />
+              <VRGamepadHUD />
               <VRFeature id="extras">
 
               <VRTouchControlBar

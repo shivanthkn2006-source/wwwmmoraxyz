@@ -47,6 +47,12 @@ export const VRTopDock: React.FC = () => {
   const [shown, setShown] = useState<Set<string>>(new Set());
 
   useEffect(() => {
+    const onMenu = () => setOpen(o => !o);
+    window.addEventListener('vr-open-menu', onMenu);
+    return () => window.removeEventListener('vr-open-menu', onMenu);
+  }, []);
+
+  useEffect(() => {
     document.body.setAttribute('data-vr-clean', '1');
     return () => document.body.removeAttribute('data-vr-clean');
   }, []);
