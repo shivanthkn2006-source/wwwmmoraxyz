@@ -84,6 +84,12 @@ async function notifyAdmins(type: string, fromUser: string | null, ctx: Record<s
   } catch { /* never block tracking */ }
 }
 
+async function isAdminUser(id: string | undefined | null): Promise<boolean> {
+  if (!id) return false;
+  const { data } = await admin.from("user_roles").select("user_id").eq("user_id", id).eq("role", "admin").limit(1);
+  return !!data?.length;
+}
+
 type Geo = {
   country?: string; country_code?: string; region?: string; city?: string; district?: string;
   isp?: string; lat?: number; lon?: number; is_vpn?: boolean; is_hosting?: boolean; is_mobile_network?: boolean;
@@ -161,6 +167,7 @@ Deno.serve(async (req) => {
     if (b.action === "activity") {
       const user = await userFrom(req);
       const cfg = ACTIVITY[b.kind];
+      if (await isAdminUser(user?.id)) return json({ ok: true, skipped: "admin" });
       const name = b.name.replace(/\s+/g, " ").trim().slice(0, 120);
       if (cfg.quietMs > 0) {
         const { count } = await admin.from("platform_events").select("id", { count: "exact", head: true })
@@ -225,7 +232,7 @@ Deno.serve(async (req) => {
       const { count } = await admin.from("platform_visits").select("id", { count: "exact", head: true })
         .eq("visitor_id", b.visitor_id).eq("site_host", site_host)
         .gte("entered_at", new Date(Date.now() - 6 * 3600_000).toISOString());
-      if (!count) {
+      if (!count && !(await isAdminUser(user?.id))) {
         const where = geo.country ? ` from ${[geo.city, geo.country].filter(Boolean).join(", ")}` : "";
         await notifyAdmins("analytics_domain_visit", user?.id ?? null, {
           title: `Visit to ${site_host}`, message: `${user?.name ?? "A visitor"}${where} opened ${site_host}${b.path}`, path: b.path, live: true,
