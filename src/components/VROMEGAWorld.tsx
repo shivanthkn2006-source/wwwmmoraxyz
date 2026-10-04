@@ -70,6 +70,8 @@ import { useGraphicsOptimizer, type GPUTier } from '@/hooks/useGraphicsOptimizer
 import { VirtualJoystick, RotationButtons, LookButtons } from './vr/features/VRControlSystem';
 // Enterprise Multiplayer Layer
 import { useMultiplayerPresence } from '@/hooks/useMultiplayerPresence';
+import { MeetPresence } from '@/worlds/meet/MeetPresence';
+import { VRMeetChat } from '@/worlds/meet/VRMeetChat';
 import { walkStep, staminaTick, WALK_MPS, RUN_MPS } from '@/lib/vrWalk';
 import { MultiplayerAvatars } from './vr/features/GlassPyramidAvatar';
 import EnterpriseControlDeck from './vr/features/EnterpriseControlDeck';
@@ -1249,6 +1251,7 @@ const MemoryPalace: React.FC<{
       
       {/* Real Map (default) vs M'Mora World behind the doorway — only one world is ever mounted. */}
       {!inMMora && <RealMapWorld />}
+      <MeetPresence />
       <JourneyTracker />
       {inMMora && <PortalDoorway position={RETURN_PORTAL_POS} label="Back to your street" onEnter={returnToReal} />}
       {inMMora && (<>
@@ -1564,7 +1567,7 @@ const VRLiveClock: React.FC = () => {
     setIsSpeaking,
     broadcastWorldEvent,
     myUserId,
-  } = useMultiplayerPresence({ enabled: isActive && showInteractiveSystems });
+  } = useMultiplayerPresence({ enabled: false /* replaced by src/worlds/meet (lighter, works in both worlds) */ });
 
   // Wire multiplayer position broadcasting from player controller events
   useEffect(() => {
@@ -3051,6 +3054,7 @@ const VRLiveClock: React.FC = () => {
               <VRFeature id="map"><RealMapStatus /></VRFeature>
               <RealAerialLand />
               <RealStartCityPicker />
+              <VRMeetChat />
               <VRFeature id="extras" part="bike">
               <BikeOnScreenControls />
               </VRFeature>
