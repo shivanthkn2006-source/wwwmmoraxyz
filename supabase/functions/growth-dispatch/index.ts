@@ -296,6 +296,12 @@ async function deliverWithRetry(
 ): Promise<DeliveryResult> {
   const auditRunId = crypto.randomUUID();
   let last: DeliveryResult = { sent: false, error: 'not attempted' };
+  // Admin platform switch: a disabled channel is skipped, not counted as a failure.
+  try {
+    const sw = await db(`notification_channel_settings?channel=eq.${channel}&select=enabled`);
+    const rows = sw.ok ? await sw.json() : [];
+    if (rows?.[0]?.enabled === false) return { sent: false, error: 'channel switched off by admin' };
+  } catch { /* switch unreadable: keep delivering */ }
   for (let index = 0; index < NOTIFICATION_RETRY_DELAYS.length; index++) {
     if (NOTIFICATION_RETRY_DELAYS[index] > 0) {
       await new Promise((resolve) => setTimeout(resolve, NOTIFICATION_RETRY_DELAYS[index]));

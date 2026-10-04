@@ -188,6 +188,7 @@ const AdminControlPanelPage = lazy(() => import("./pages/AdminControlPanelPage")
 const AdminSentinelPage = lazy(() => import("./pages/AdminSentinelPage")); // SENTINEL (operator-only live monitoring)
 const AdminSecurityLivePage = lazy(() => import("./pages/AdminSecurityLivePage"));
 const AdminPlatformAnalyticsPage = lazy(() => import("./pages/AdminPlatformAnalyticsPage"));
+const AdminNotificationsPage = lazy(() => import("./pages/AdminNotificationsPage"));
 const ReferralsPage = lazy(() => import("./pages/ReferralsPage"));
 const AdminAuthEventsHost = lazy(() => import("./components/admin/AdminAuthEventsHost"));
 const AdminCrashReportsPage = lazy(() => import("./pages/AdminCrashReportsPage"));
@@ -920,6 +921,7 @@ const RouteAwareShell = () => {
                           <Route path="/admin/crashes" element={<AdminRoute featureName="Crash reports"><AdminCrashReportsPage /></AdminRoute>} />
                           <Route path="/admin/analytics" element={<AdminRoute featureName="Platform analytics"><VaultGate><AdminPlatformAnalyticsPage /></VaultGate></AdminRoute>} />
                           <Route path="/admin/@moksh50" element={<AdminRoute featureName="Platform analytics"><VaultGate><AdminPlatformAnalyticsPage /></VaultGate></AdminRoute>} />
+                          <Route path="/admin/notifications" element={<AdminRoute featureName="Platform notifications"><VaultGate><AdminNotificationsPage /></VaultGate></AdminRoute>} />
                           <Route path="/admin/security-live" element={<AdminRoute featureName="Live security"><AdminSecurityLivePage /></AdminRoute>} />
                           <Route path="/admin/vr-world" element={<AdminRoute featureName="VR world controls"><AdminVRWorldPage /></AdminRoute>} />
                           <Route
