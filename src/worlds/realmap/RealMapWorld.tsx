@@ -3,7 +3,7 @@ import { StreetRelics } from './StreetRelics';
 import { indexBlock, dropBlock } from './mapIndex';
 import { StreetTraffic } from './StreetTraffic';
 import { ThermalGovernor, useGovLevel } from './thermalGovernor';
-import { buildBuildingParts, buildRoadParts, makeWallMaterial, PLAIN_WALL_MAT, ROOF_MAT, ROAD_HI_MAT, PATH_MAT, LINE_MAT, CENTER_MAT } from './streetLook';
+import { buildBuildingParts, buildRoadParts, makeWallMaterial, ROOF_MAT, ROAD_HI_MAT, PATH_MAT, LINE_MAT, CENTER_MAT } from './streetLook';
 import { MapLabels } from './MapLabels';
 /**
  * Real Map layer — the player's actual neighbourhood from OpenStreetMap.
@@ -115,9 +115,9 @@ const Chunk: React.FC<{ id: ChunkId; origin: LatLng; onReady: (key: string) => v
     <group>
       {geo.r.road && <mesh geometry={geo.r.road} material={ROAD_HI_MAT} receiveShadow />}
       {geo.r.path && <mesh geometry={geo.r.path} material={PATH_MAT} />}
-      {geo.r.lines && level < 2 && <mesh geometry={geo.r.lines} material={LINE_MAT} />}
+      {geo.r.lines && <mesh geometry={geo.r.lines} material={LINE_MAT} />}
       {geo.r.centre && level < 2 && <mesh geometry={geo.r.centre} material={CENTER_MAT} />}
-      {geo.b.walls && <mesh geometry={geo.b.walls} material={level < 2 ? WALL_MAT : PLAIN_WALL_MAT} />}
+      {geo.b.walls && <mesh geometry={geo.b.walls} material={WALL_MAT} />}
       {geo.b.roofs && <mesh geometry={geo.b.roofs} material={ROOF_MAT} />}
       {geo.pois.slice(0, 8).map((p, k) => (
         <group key={k} position={[p.x, 0, p.z]}>

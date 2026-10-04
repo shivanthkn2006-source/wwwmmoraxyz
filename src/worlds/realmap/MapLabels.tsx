@@ -12,7 +12,7 @@ import { useGovLevel } from './thermalGovernor';
 
 type Label = { id: string; text: string; x: number; y: number; z: number; kind: 'building' | 'street' };
 export const LABEL_RANGE_M = 160;
-export const MAX_LABELS: Record<number, number> = { 0: 8, 1: 5, 2: 0 };
+export const MAX_LABELS: Record<number, number> = { 0: 8, 1: 5, 2: 3 };
 
 export function collectLabels(origin: LatLng): Label[] {
   const out: Label[] = [];
