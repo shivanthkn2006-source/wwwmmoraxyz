@@ -5,9 +5,9 @@
  */
 import { useSyncExternalStore } from 'react';
 
-export const WALK_MPS = 1.4;      // normal human walk
-export const RUN_MPS = 3.8;       // jog / run
-export const TURN_RAD_PS = 2.0;   // ~115° per second
+export const WALK_MPS = 5;        // brisk explore pace (matches the earlier VR speed)
+export const RUN_MPS = 9;         // sprint
+export const TURN_RAD_PS = 2.4;   // ~140° per second
 export const BACK_TURN_RAD_PS = 3.4;
 
 export interface WalkInput { forward: boolean; backward: boolean; left: boolean; right: boolean }

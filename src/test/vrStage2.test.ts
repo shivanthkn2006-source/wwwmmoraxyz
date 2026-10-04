@@ -84,3 +84,8 @@ describe('meet tags and rooms', () => {
     expect(realRoom({ lat: 40.7581, lng: -73.9855 })).toBe(realRoom({ lat: 40.7585, lng: -73.9858 }));
   });
 });
+
+import { WALK_MPS as W, RUN_MPS as R } from '@/lib/vrWalk';
+describe('movement speed', () => {
+  it('matches the earlier VR explore speed', () => { expect(W).toBe(5); expect(R).toBe(9); });
+});
