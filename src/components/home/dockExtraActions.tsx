@@ -40,6 +40,7 @@ import {
   Music2,
   Users,
   Activity,
+  BellRing,
 } from 'lucide-react';
 import type { GlassDockItem } from '@/components/home/HomeGlassDock';
 import { NAVIGABLE_ROUTES } from '@/config/routeRegistry';
@@ -201,7 +202,10 @@ export function buildExtraDockItems(
   // The admin gets one entry into the black box: the vault (the analytics and
   // other admin pages open from inside it).
   const adminEntry: ExtraDef[] = isAdmin
-    ? [{ id: 'dock-admin-vault', label: 'Admin vault', route: '/admin/vault', Icon: LayoutDashboard }]
+    ? [
+        { id: 'dock-admin-vault', label: 'Admin vault', route: '/admin/vault', Icon: LayoutDashboard },
+        { id: 'dock-admin-notifications', label: 'Platform notifications', route: '/admin/notifications', Icon: BellRing },
+      ]
     : [];
 
   return [...adminEntry, ...authored, ...automatic]
