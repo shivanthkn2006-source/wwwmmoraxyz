@@ -234,7 +234,7 @@ const NotificationHistoryPage = () => {
 
           <div className="flex gap-2 mt-4">
             <Badge variant="outline">{filteredNotifications.length} notifications</Badge>
-            <Badge variant="secondary">{filteredNotifications.filter(n => !n.read).length} unread</Badge>
+            <Badge className="bg-[hsl(var(--ios-switch-on))] text-[hsl(var(--ios-switch-knob-off))] border-transparent hover:bg-[hsl(var(--ios-switch-on))]">{filteredNotifications.filter(n => !n.read).length} unread</Badge>
           </div>
         </Card>
 
