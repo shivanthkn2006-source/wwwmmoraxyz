@@ -5,6 +5,7 @@
  */
 import React, { useEffect, useRef, useState } from 'react';
 import { MessageCircle, Send, Smile, Eye, EyeOff, X, Mic, MicOff, UserPlus } from 'lucide-react';
+import { useGpsFollow, startGpsFollow, stopGpsFollow } from '../realmap/gpsFollow';
 import { useMeet, sendChat, setChatOpen, setMeetVisible, TAG_LABEL } from './vrMeet';
 import { useVoice, startVoice, stopVoice } from './vrVoice';
 import { loadFriends, sendPortalInvite, arriveFromInvite, type Friend } from './vrInvite';
@@ -14,6 +15,7 @@ const EMOJI = ['👋', '😀', '❤️', '🔥', '👍', '🎉'];
 
 export const VRMeetChat: React.FC = () => {
   const m = useMeet();
+  const gps = useGpsFollow();
   const [text, setText] = useState('');
   const [emoji, setEmoji] = useState(false);
   const [, tick] = useState(0);
@@ -80,6 +82,9 @@ export const VRMeetChat: React.FC = () => {
             <button type="submit" aria-label="Send" className="vr-chat-icon"><Send className="h-4 w-4" /></button>
             <button type="button" aria-label="Close chat" onClick={() => setChatOpen(false)} className="vr-chat-icon"><X className="h-4 w-4" /></button>
           </form>
+          <button type="button" aria-pressed={gps.on} aria-label="Follow my GPS" onClick={() => (gps.on ? stopGpsFollow() : startGpsFollow())} className="vr-chat-chip self-start">
+            📍 {gps.on ? (gps.paused === 'driving' ? 'GPS paused — moving too fast' : gps.error ?? 'Following my GPS') : 'Follow my GPS'}
+          </button>
           <button type="button" aria-pressed={m.visible} onClick={() => void setMeetVisible(!m.visible)} className="vr-chat-chip self-start">
             {m.visible ? <Eye className="mr-1 inline h-3 w-3" /> : <EyeOff className="mr-1 inline h-3 w-3" />}
             {m.visible ? 'Visible to others' : 'Hidden from others'}

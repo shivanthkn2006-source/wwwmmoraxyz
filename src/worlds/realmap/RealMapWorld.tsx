@@ -13,7 +13,6 @@ import { MapLabels } from './MapLabels';
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { chebyshev, chunkBBox, chunkOf, neighborhood, toLatLng, toLocal, type LatLng, type ChunkId } from './geo';
@@ -119,14 +118,11 @@ const Chunk: React.FC<{ id: ChunkId; origin: LatLng; onReady: (key: string) => v
       {geo.r.centre && level < 2 && <mesh geometry={geo.r.centre} material={CENTER_MAT} />}
       {geo.b.walls && <mesh geometry={geo.b.walls} material={WALL_MAT} />}
       {geo.b.roofs && <mesh geometry={geo.b.roofs} material={ROOF_MAT} />}
-      {geo.pois.slice(0, 8).map((p, k) => (
+      {geo.pois.slice(0, 16).map((p, k) => (
         <group key={k} position={[p.x, 0, p.z]}>
           <mesh position={[0, 4, 0]} material={POI_MAT}>
             <octahedronGeometry args={[0.6, 0]} />
           </mesh>
-          <Html position={[0, 5.4, 0]} center distanceFactor={18} style={{ pointerEvents: 'none' }}>
-            <div className="surface-warm-tan rounded-full px-2 py-0.5 text-[10px] whitespace-nowrap text-white">{p.name}</div>
-          </Html>
         </group>
       ))}
     </group>

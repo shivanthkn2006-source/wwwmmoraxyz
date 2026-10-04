@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import IOSSwitch from '@/components/admin/IOSSwitch';
 import NotificationHealthPanel from '@/components/admin/NotificationHealthPanel';
 import { notifySelf } from '@/lib/notifySelf';
+import { usePrefill, runPrefill, stopPrefill, SOUTH_INDIA_CITIES } from '@/worlds/realmap/prefillCities';
 
 interface Kind { kind: string; feature: string; label: string; enabled: boolean }
 interface ChannelRow { channel: string; label: string; enabled: boolean }
@@ -26,6 +27,7 @@ const FEATURE_LABELS: Record<string, string> = {
 };
 
 export default function AdminNotificationsPage() {
+  const prefill = usePrefill();
   const [kinds, setKinds] = useState<Kind[]>([]);
   const [channels, setChannels] = useState<ChannelRow[]>([]);
   const [saving, setSaving] = useState<string | null>(null);
@@ -114,6 +116,20 @@ export default function AdminNotificationsPage() {
             <p className="text-xs text-muted-foreground">{allOn ? 'Main switch. Feature switches below turn single alerts off without touching this.' : 'All alerts are paused for every member. Feature switches keep their own settings.'}</p>
           </div>
           <IOSSwitch label="All notifications" checked={allOn} disabled={saving === 'all' || !master} onChange={(v) => void setAll(v)} />
+        </Card>
+
+        <Card className="p-4 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold">Prepare South India maps</p>
+            <p className="text-xs text-muted-foreground">
+              {prefill.running
+                ? `${prefill.city} · ${prefill.done}/${prefill.total} blocks (${prefill.ok} saved). Keep this page open.`
+                : prefill.total
+                  ? `Done: ${prefill.ok} of ${prefill.total} blocks saved for all members.`
+                  : `Loads the centres of ${SOUTH_INDIA_CITIES.map((c) => c.name).join(', ')} into VR World for everyone (about 15 minutes).`}
+            </p>
+          </div>
+          <Button variant="ghost" onClick={() => (prefill.running ? stopPrefill() : void runPrefill())}>{prefill.running ? 'Stop' : 'Start'}</Button>
         </Card>
 
         <div className="grid gap-3 sm:grid-cols-2">

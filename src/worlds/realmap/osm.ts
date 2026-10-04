@@ -9,12 +9,13 @@ import { supabase } from '@/integrations/supabase/client';
 export type OsmBuilding = { pts: [number, number][]; h: number; name?: string };
 export type OsmRoad = { pts: [number, number][]; w: number; name?: string };
 export type OsmPoi = { lat: number; lng: number; name: string; kind: string };
-/** `v: 2` = street and building names included (older saved blocks are refreshed quietly). */
-export type OsmChunk = { buildings: OsmBuilding[]; roads: OsmRoad[]; pois: OsmPoi[]; fetchedAt: number; v?: 2 };
+/** CHUNK_V: 2 = street/building names, 3 = malls, brands and fuel pumps (older saved blocks are refreshed quietly). */
+export const CHUNK_V = 3;
+export type OsmChunk = { buildings: OsmBuilding[]; roads: OsmRoad[]; pois: OsmPoi[]; fetchedAt: number; v?: number };
 
 export const MAX_BUILDINGS = 400;
 export const MAX_ROADS = 250;
-export const MAX_POIS = 30;
+export const MAX_POIS = 60;
 
 const MIRRORS = [
   'https://overpass-api.de/api/interpreter',
@@ -34,8 +35,10 @@ export function buildQuery(b: BBox): string {
   return `[out:json][timeout:25];(` +
     `way["building"](${box});` +
     `way["highway"](${box});` +
-    `node["shop"]["name"](${box});` +
-    `node["amenity"~"restaurant|cafe|fast_food|bank|hospital|pharmacy|school|cinema|marketplace|place_of_worship"]["name"](${box});` +
+    `nwr["shop"]["name"](${box});` +
+    `nwr["amenity"~"^(restaurant|cafe|fast_food|fuel|bank|atm|hospital|pharmacy|school|college|cinema|theatre|marketplace|place_of_worship|food_court|bar|pub)$"]["name"](${box});` +
+    `nwr["tourism"~"^(hotel|attraction|museum)$"]["name"](${box});` +
+    `nwr["office"]["name"](${box});` +
     `);out geom tags;`;
 }
 
@@ -45,6 +48,18 @@ export function buildingHeight(tags: Record<string, string> = {}): number {
   const lv = parseFloat(tags['building:levels'] ?? '');
   if (Number.isFinite(lv) && lv > 0) return Math.min(lv * 3.2, 300);
   return 7;
+}
+
+/** Simple place kinds shown on the map: fuel, mall, fast food, food, shop, hotel, office, place. */
+export function poiKind(t: Record<string, string>): string {
+  if (t.amenity === 'fuel') return 'fuel';
+  if (t.shop === 'mall' || t.shop === 'department_store') return 'mall';
+  if (t.amenity === 'fast_food' || t.amenity === 'food_court') return 'fast_food';
+  if (t.amenity === 'restaurant' || t.amenity === 'cafe' || t.amenity === 'bar' || t.amenity === 'pub') return 'food';
+  if (t.shop) return t.shop === 'supermarket' ? 'supermarket' : 'shop';
+  if (t.tourism) return 'hotel';
+  if (t.office) return 'office';
+  return t.amenity ?? 'place';
 }
 
 type RawEl = {
@@ -60,6 +75,12 @@ export function parseOverpass(json: { elements?: RawEl[] }, cap = MAX_BUILDINGS)
   const pois: OsmPoi[] = [];
   for (const el of json.elements ?? []) {
     const tags = el.tags ?? {};
+    const placeName = (tags.brand && !tags.name ? tags.brand : tags.name) as string | undefined;
+    const isPlace = !!placeName && !!(tags.shop || tags.amenity || tags.tourism || tags.office);
+    if (isPlace && el.type !== 'node' && el.geometry?.length && pois.length < MAX_POIS * scale) {
+      const g = el.geometry.filter((q) => Number.isFinite(q.lat) && Number.isFinite(q.lon));
+      if (g.length) pois.push({ lat: g.reduce((a, q) => a + q.lat, 0) / g.length, lng: g.reduce((a, q) => a + q.lon, 0) / g.length, name: placeName!.slice(0, 40), kind: poiKind(tags) });
+    }
     if (el.type === 'way' && el.geometry && el.geometry.length >= 2) {
       const pts = el.geometry
         .filter((g) => Number.isFinite(g.lat) && Number.isFinite(g.lon))
@@ -71,11 +92,11 @@ export function parseOverpass(json: { elements?: RawEl[] }, cap = MAX_BUILDINGS)
       }
     } else if (el.type === 'node' && tags.name && Number.isFinite(el.lat) && Number.isFinite(el.lon)) {
       if (pois.length < MAX_POIS * scale) {
-        pois.push({ lat: el.lat!, lng: el.lon!, name: tags.name.slice(0, 40), kind: tags.shop ? 'shop' : tags.amenity ?? 'place' });
+        pois.push({ lat: el.lat!, lng: el.lon!, name: tags.name.slice(0, 40), kind: poiKind(tags) });
       }
     }
   }
-  return { buildings, roads, pois, fetchedAt: Date.now(), v: 2 };
+  return { buildings, roads, pois, fetchedAt: Date.now(), v: CHUNK_V };
 }
 
 // ---------- IndexedDB cache ----------
@@ -187,7 +208,7 @@ async function flushBatch() {
     loaderStats.network++;
     const parts = splitByChunk(all, keyOfFn);
     for (const i of items) {
-      const c = parts.get(i.key) ?? { buildings: [], roads: [], pois: [], fetchedAt: all.fetchedAt, v: 2 as const };
+      const c = parts.get(i.key) ?? { buildings: [], roads: [], pois: [], fetchedAt: all.fetchedAt, v: CHUNK_V };
       void cachePut(i.key, c); sharedPut(i.key, c); i.resolve(c);
     }
   } finally { release(); }
@@ -210,9 +231,9 @@ export function loadChunk(key: string, bbox: BBox): Promise<OsmChunk | null> {
   if (existing) return existing;
   const p = (async () => {
     const cached = await cacheGet(key);
-    if (cached) { loaderStats.cacheHits++; if (cached.v !== 2) refreshNames(key, bbox); return cached; }
+    if (cached) { loaderStats.cacheHits++; if (cached.v !== CHUNK_V) refreshNames(key, bbox); return cached; }
     const shared = await sharedGet(key);
-    if (shared) { void cachePut(key, shared); if (shared.v !== 2) refreshNames(key, bbox); return shared; }
+    if (shared) { void cachePut(key, shared); if (shared.v !== CHUNK_V) refreshNames(key, bbox); return shared; }
     return new Promise<OsmChunk | null>((resolve) => {
       batch.push({ key, bbox, resolve });
       if (!batchTimer) batchTimer = setTimeout(() => void flushBatch(), 1200);
