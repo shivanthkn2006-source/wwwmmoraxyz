@@ -20,7 +20,7 @@ const FEATURE_LABELS: Record<string, string> = {
   messages: 'Messages', likes: 'Likes', comments: 'Comments', replies: 'Comment replies', tags: 'Tags & mentions',
   friends: 'Friends', posts: 'Posts & timelines', badges: 'Badges & challenges', music: 'Music', calls: 'Calls',
   growth: 'Growth cards', dhf: "Zoe's DHF", lol: "Zoe's LOL", zoe: 'Zoe suggestions', admin: 'Admin notices', system: 'General',
-  analytics: 'Platform analytics (admin only)',
+  analytics: 'Platform analytics (admin only)', vr: 'VR World',
 };
 
 export default function AdminNotificationsPage() {
@@ -65,14 +65,11 @@ export default function AdminNotificationsPage() {
     if (e || !data?.length) { setChannels(prev); toast.error('Could not save. Try again.'); }
   };
 
-  const allOn = kinds.length > 0 && kinds.every((k) => k.enabled);
-  const setAll = async (enabled: boolean) => {
-    setSaving('all');
-    const { error: e } = await db.from('notification_kinds').update({ enabled }).neq('kind', '');
-    setSaving(null);
-    if (e) { toast.error('Could not save. Try again.'); return; }
-    void load();
-  };
+  // Master switch is its own setting: sub-switches never flip it.
+  const master = channels.find((c) => c.channel === 'all');
+  const allOn = master ? master.enabled : true;
+  const deliveryChannels = channels.filter((c) => c.channel !== 'all');
+  const setAll = (enabled: boolean) => setChannel('all', enabled);
 
   return (
     <div className="min-h-screen p-4 pb-24 text-foreground">
@@ -86,9 +83,9 @@ export default function AdminNotificationsPage() {
         <Card className="p-4 flex items-center justify-between gap-3">
           <div>
             <p className="text-sm font-semibold">All platform notifications</p>
-            <p className="text-xs text-muted-foreground">Turning a switch off stops that alert for every member, everywhere.</p>
+            <p className="text-xs text-muted-foreground">{allOn ? 'Main switch. Feature switches below turn single alerts off without touching this.' : 'All alerts are paused for every member. Feature switches keep their own settings.'}</p>
           </div>
-          <IOSSwitch label="All notifications" checked={allOn} disabled={saving === 'all'} onChange={(v) => void setAll(v)} />
+          <IOSSwitch label="All notifications" checked={allOn} disabled={saving === 'all' || !master} onChange={(v) => void setAll(v)} />
         </Card>
 
         <div className="grid gap-3 sm:grid-cols-2">
@@ -113,7 +110,7 @@ export default function AdminNotificationsPage() {
             <p className="mb-2 text-sm font-semibold">Delivery</p>
             <div className="divide-y divide-border/40">
               <div className="flex items-center justify-between py-2.5"><p className="text-sm">In-app bell, badges & pop-ups</p><span className="text-xs text-muted-foreground">Follows feature switches</span></div>
-              {channels.map((c) => (
+              {deliveryChannels.map((c) => (
                 <div key={c.channel} className="flex items-center justify-between py-2.5">
                   <p className="text-sm">{c.label}</p>
                   <IOSSwitch label={c.label} checked={c.enabled} disabled={saving === c.channel} onChange={(v) => void setChannel(c.channel, v)} />

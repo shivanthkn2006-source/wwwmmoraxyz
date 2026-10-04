@@ -1,6 +1,6 @@
 /**
  * iOS 26-style switch measured from the reference: 54×24 pill track, 32×20 pill knob, 2px inset. On = solid white track (default),
- * off = solid platform warm tan. Inline styles so global button resets can't override.
+ * off = solid platform warm tan. Colours live in index.css (.ios26-switch) with !important so admin liquid button resets can't override.
  */
 export default function IOSSwitch({ checked, onChange, label, disabled }: { checked: boolean; onChange: (v: boolean) => void; label: string; disabled?: boolean }) {
   return (
@@ -11,15 +11,16 @@ export default function IOSSwitch({ checked, onChange, label, disabled }: { chec
       aria-label={label}
       disabled={disabled}
       onClick={() => onChange(!checked)}
+      className="ios26-switch"
+      data-on={checked ? 'true' : 'false'}
       style={{
         position: 'relative', display: 'inline-flex', alignItems: 'center', flexShrink: 0,
         width: 54, height: 24, padding: 0, borderRadius: 9999, border: 'none', outline: 'none',
-        background: checked ? 'hsl(0 0% 100%)' : 'hsl(33 32% 56%)',
-        boxShadow: checked ? 'inset 0 0 0 1px hsl(30 20% 70% / 0.6)' : 'none',
         transition: 'background 200ms ease', opacity: disabled ? 0.5 : 1, cursor: disabled ? 'default' : 'pointer',
       }}
     >
       <span
+        className="ios26-switch-knob"
         style={{
           position: 'absolute', top: 2, left: 2, width: 32, height: 20, borderRadius: 9999,
           background: checked ? 'hsl(36 30% 92%)' : 'hsl(0 0% 100%)',
