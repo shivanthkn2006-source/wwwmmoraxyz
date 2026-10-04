@@ -155,8 +155,6 @@ export const RealMapWorld: React.FC = () => {
   useEffect(() => { resolveOrigin(); }, []);
   return (
     <>
-      <color attach="background" args={['#cfe3f2']} />
-      <fog attach="fog" args={['#cfe3f2', 120, 520]} />
       <hemisphereLight args={['#ffffff', '#8a7a62', 0.9]} />
       <directionalLight position={[120, 200, 60]} intensity={1.1} />
       <Ground />
