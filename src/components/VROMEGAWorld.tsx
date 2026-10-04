@@ -97,6 +97,11 @@ import { BikeOnScreenControls } from './vr/features/MotorcycleSystem';
 import { VRManualDownloadButton } from './vr/VRManualDownloadButton';
 import { VRFeature } from './vr/VRTopDock';
 import VRGamepadHUD from './vr/VRGamepadHUD';
+import { RealMapWorld } from '@/worlds/realmap/RealMapWorld';
+import { PortalDoorway } from '@/worlds/portal/PortalDoorway';
+import { useWorldState, returnToReal, RETURN_PORTAL_POS } from '@/worlds/worldMode';
+import { LandscapeViewportGuard } from './vr/LandscapeViewportGuard';
+import { RealMapStatus } from './vr/RealMapStatus';
 import { useSkyPhase } from '@/hooks/useSkyPhase';
 import { trackActivity } from '@/lib/visitTracker';
 
@@ -1183,6 +1188,9 @@ const MemoryPalace: React.FC<{
   showInteractives?: boolean;
 }> = ({ engrams, ecnData, coherenceScore, integrityLevel, onEngramSelect, disabled, buildings, onBuildingClick, hasSatelliteEntryCompleted, controlsUnlocked, blockHighAltitudeTransitions = false, onSatelliteEntryComplete, showTerrain = true, showCity = true, showInteractives = true }) => {
   const [externalCameraLocked, setExternalCameraLocked] = useState(false);
+  const inMMora = useWorldState().mode === 'mmora';
+  // The Real Map has no satellite-entry sequence; unlock controls right away.
+  useEffect(() => { if (!inMMora && !hasSatelliteEntryCompleted) onSatelliteEntryComplete(); }, [inMMora, hasSatelliteEntryCompleted, onSatelliteEntryComplete]);
 
   useEffect(() => {
     const onExternalCameraLock = (event: Event) => {
@@ -1226,6 +1234,10 @@ const MemoryPalace: React.FC<{
       {/* NOTE: ProceduralBuildings removed here - ExpandedCityGrid already renders
          all 32+ city buildings. Rendering both caused triple-city GPU overload (4 FPS). */}
       
+      {/* Real Map (default) vs M'Mora World behind the doorway — only one world is ever mounted. */}
+      {!inMMora && <RealMapWorld />}
+      {inMMora && <PortalDoorway position={RETURN_PORTAL_POS} label="Back to your street" onEnter={returnToReal} />}
+      {inMMora && (<>
       {/* VR Feature Integration - PROGRESSIVE: passes zone-aware visibility */}
       <VRFeatureIntegration 
         enableSatelliteEntry={false}
@@ -1277,6 +1289,8 @@ const MemoryPalace: React.FC<{
         ))}
       </group>
       
+      </>)}
+
       {/* Player controller unlocks via entry complete OR watchdog fallback to prevent gate deadlocks */}
       {useLegacyController && (
         <PlayerController disabled={disabled} blockHighAltitudeTransitions={blockHighAltitudeTransitions} />
@@ -1288,7 +1302,7 @@ const MemoryPalace: React.FC<{
       {/* UniversalCameraController removed here to prevent camera-controller conflicts with PlayerController */}
       
       {/* Hidden Items - only when interactives are loaded */}
-      {showInteractives && controlsUnlocked && (
+      {inMMora && showInteractives && controlsUnlocked && (
         <VRHiddenItemsManagerAuto 
           enabled={true}
           onItemDiscovered={(id) => console.log(`[VR OMEGA] Discovered: ${id}`)}
@@ -1319,6 +1333,7 @@ const VROMEGAWorld: React.FC<VROMEGAWorldProps> = ({
   isActive 
 }) => {
   const { user } = useAuth();
+  const worldMode = useWorldState().mode;
   // Live admin monitoring: one "entered VR World" event per visit (server throttles repeats).
   useEffect(() => { if (isActive !== false) trackActivity('vr_enter', 'Entered VR World'); }, [isActive]);
   // Inside the world, background hosts outside it (joke/scan/journal/install helpers) unmount.
@@ -2898,12 +2913,12 @@ const VRLiveClock: React.FC = () => {
           )}
           
           {/* Phase 3: Procedural Cyber City - only when zoomed to city level */}
-          {showCitySystems && showCyberCity && !isPerformanceCritical && currentTier !== 'low' && (
+          {worldMode === 'mmora' && showCitySystems && showCyberCity && !isPerformanceCritical && currentTier !== 'low' && (
             <ProceduralCyberCity config={graphicsConfig} seed={42} cityRadius={150} />
           )}
           
           {/* Phase 5: Gaussian Splat Viewer - heavy, only at ground level */}
-          {showCinematicEffects && showGaussianSplat && (
+          {worldMode === 'mmora' && showCinematicEffects && showGaussianSplat && (
             <GaussianSplatViewer position={[0, 5, -20]} scale={2} />
           )}
           
@@ -2939,7 +2954,7 @@ const VRLiveClock: React.FC = () => {
               />
               
               {/* Crowd Avatar System - automatically disabled under critical FPS */}
-              {showCrowdSystems && <CrowdAvatarSystem />}
+              {worldMode === 'mmora' && showCrowdSystems && <CrowdAvatarSystem />}
             </>
           )}
           
@@ -3008,6 +3023,8 @@ const VRLiveClock: React.FC = () => {
               </VRFeature>
               <LookButtons />
               <VRGamepadHUD />
+              <LandscapeViewportGuard />
+              <VRFeature id="map"><RealMapStatus /></VRFeature>
               <VRFeature id="extras">
 
               <VRTouchControlBar
