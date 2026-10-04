@@ -118,3 +118,16 @@ describe('journey quest', () => {
     s = journeyReduce(s, { type: 'near-beacon' }); expect(s.step).toBe('done');
   });
 });
+
+import { splitByChunk } from '@/worlds/realmap/osm';
+describe('area split', () => {
+  it('puts every feature in the chunk of its first point', () => {
+    const all = parseOverpass(SAMPLE);
+    const far = { ...all, pois: [...all.pois, { lat: O.lat + 0.01, lng: O.lng, name: 'Far', kind: 'shop' }] };
+    const parts = splitByChunk(far, (lat, lng) => chunkOf({ lat, lng }, O.lat).key);
+    const home = parts.get(chunkOf(O).key)!;
+    expect(home.buildings).toHaveLength(1);
+    expect(home.pois.map((p) => p.name)).toEqual(['Corner Bakery']);
+    expect(parts.size).toBe(2);
+  });
+});

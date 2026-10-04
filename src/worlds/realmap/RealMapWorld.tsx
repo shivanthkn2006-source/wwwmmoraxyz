@@ -10,7 +10,7 @@ import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { chebyshev, chunkBBox, chunkOf, neighborhood, toLatLng, toLocal, type LatLng, type ChunkId } from './geo';
-import { loadChunk, type OsmChunk } from './osm';
+import { loadChunk, setChunkKeyFn, type OsmChunk } from './osm';
 import { setChunkStats, useWorldState, resolveOrigin, PORTAL_OFFSET, enterMMora } from '../worldMode';
 import { PortalDoorway } from '../portal/PortalDoorway';
 import { DemoExplorer } from './DemoExplorer';
@@ -118,6 +118,7 @@ const ChunkStreamer: React.FC<{ origin: LatLng }> = ({ origin }) => {
   const last = useRef('');
   const timer = useRef(0);
   const onReady = React.useCallback((key: string) => { ready.current.add(key); }, []);
+  useEffect(() => { setChunkKeyFn((lat, lng) => chunkOf({ lat, lng }, origin.lat).key); }, [origin.lat]);
 
   useFrame((_, dt) => {
     timer.current += dt;

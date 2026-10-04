@@ -30,7 +30,7 @@ const SKIP_ROADS = new Set(['footway', 'path', 'steps', 'cycleway', 'bridleway',
 
 export function buildQuery(b: BBox): string {
   const box = `${b.south},${b.west},${b.north},${b.east}`;
-  return `[out:json][timeout:20];(` +
+  return `[out:json][timeout:25];(` +
     `way["building"](${box});` +
     `way["highway"](${box});` +
     `node["shop"]["name"](${box});` +
@@ -52,7 +52,8 @@ type RawEl = {
   geometry?: { lat: number; lon: number }[];
 };
 
-export function parseOverpass(json: { elements?: RawEl[] }): OsmChunk {
+export function parseOverpass(json: { elements?: RawEl[] }, cap = MAX_BUILDINGS): OsmChunk {
+  const scale = cap / MAX_BUILDINGS;
   const buildings: OsmBuilding[] = [];
   const roads: OsmRoad[] = [];
   const pois: OsmPoi[] = [];
@@ -62,13 +63,13 @@ export function parseOverpass(json: { elements?: RawEl[] }): OsmChunk {
       const pts = el.geometry
         .filter((g) => Number.isFinite(g.lat) && Number.isFinite(g.lon))
         .map((g) => [g.lat, g.lon] as [number, number]);
-      if (tags.building && pts.length >= 4 && buildings.length < MAX_BUILDINGS) {
+      if (tags.building && pts.length >= 4 && buildings.length < cap) {
         buildings.push({ pts, h: buildingHeight(tags) });
-      } else if (tags.highway && !SKIP_ROADS.has(tags.highway) && roads.length < MAX_ROADS) {
+      } else if (tags.highway && !SKIP_ROADS.has(tags.highway) && roads.length < MAX_ROADS * scale) {
         roads.push({ pts, w: ROAD_WIDTH[tags.highway] ?? 4 });
       }
     } else if (el.type === 'node' && tags.name && Number.isFinite(el.lat) && Number.isFinite(el.lon)) {
-      if (pois.length < MAX_POIS) {
+      if (pois.length < MAX_POIS * scale) {
         pois.push({ lat: el.lat!, lng: el.lon!, name: tags.name.slice(0, 40), kind: tags.shop ? 'shop' : tags.amenity ?? 'place' });
       }
     }
@@ -138,7 +139,7 @@ function sharedPut(key: string, c: OsmChunk) {
   void supabase.functions.invoke('osm-tile', { body: { action: 'put', key, data: { buildings: c.buildings, roads: c.roads, pois: c.pois } } }).catch(() => {});
 }
 
-async function fetchMirrors(query: string): Promise<OsmChunk | null> {
+async function fetchMirrors(query: string, cap = MAX_BUILDINGS): Promise<OsmChunk | null> {
   for (let pass = 0; pass < 2; pass++) {
   if (pass) await new Promise((r) => setTimeout(r, 1500));
   for (const url of MIRRORS) {
@@ -146,11 +147,49 @@ async function fetchMirrors(query: string): Promise<OsmChunk | null> {
     const t = setTimeout(() => ctl.abort(), 15_000);
     try {
       const res = await fetch(url, { method: 'POST', body: 'data=' + encodeURIComponent(query), headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, signal: ctl.signal });
-      if (res.ok) return parseOverpass(await res.json());
+      if (res.ok) return parseOverpass(await res.json(), cap);
     } catch { /* next mirror */ } finally { clearTimeout(t); }
   }
   }
   return null;
+}
+
+/** Put each parsed feature in the chunk that holds its first point. */
+export function splitByChunk(all: OsmChunk, keyOf: (lat: number, lng: number) => string): Map<string, OsmChunk> {
+  const out = new Map<string, OsmChunk>();
+  const get = (k: string) => { let c = out.get(k); if (!c) { c = { buildings: [], roads: [], pois: [], fetchedAt: all.fetchedAt }; out.set(k, c); } return c; };
+  all.buildings.forEach((b) => get(keyOf(b.pts[0][0], b.pts[0][1])).buildings.push(b));
+  all.roads.forEach((r) => get(keyOf(r.pts[0][0], r.pts[0][1])).roads.push(r));
+  all.pois.forEach((p) => get(keyOf(p.lat, p.lng)).pois.push(p));
+  return out;
+}
+
+// Missing blocks requested within 60 ms are fetched in ONE map request
+// (public map servers rate-limit many small requests with 429/504).
+type Pending = { key: string; bbox: BBox; resolve: (c: OsmChunk | null) => void };
+let batch: Pending[] = [];
+let batchTimer: ReturnType<typeof setTimeout> | null = null;
+let keyOfFn: ((lat: number, lng: number) => string) | null = null;
+export function setChunkKeyFn(fn: (lat: number, lng: number) => string) { keyOfFn = fn; }
+
+async function flushBatch() {
+  const items = batch; batch = []; batchTimer = null;
+  if (!items.length) return;
+  const union: BBox = {
+    south: Math.min(...items.map((i) => i.bbox.south)), west: Math.min(...items.map((i) => i.bbox.west)),
+    north: Math.max(...items.map((i) => i.bbox.north)), east: Math.max(...items.map((i) => i.bbox.east)),
+  };
+  await slot();
+  try {
+    const all = await fetchMirrors(buildQuery(union), items.length * 400);
+    if (!all || !keyOfFn) { loaderStats.failures += items.length; items.forEach((i) => i.resolve(null)); return; }
+    loaderStats.network++;
+    const parts = splitByChunk(all, keyOfFn);
+    for (const i of items) {
+      const c = parts.get(i.key) ?? { buildings: [], roads: [], pois: [], fetchedAt: all.fetchedAt };
+      void cachePut(i.key, c); sharedPut(i.key, c); i.resolve(c);
+    }
+  } finally { release(); }
 }
 
 /** Never throws. Resolves null when every map server failed. */
@@ -160,15 +199,12 @@ export function loadChunk(key: string, bbox: BBox): Promise<OsmChunk | null> {
   const p = (async () => {
     const cached = await cacheGet(key);
     if (cached) { loaderStats.cacheHits++; return cached; }
-    await slot();
-    try {
-      const shared = await sharedGet(key);
-      if (shared) { void cachePut(key, shared); return shared; }
-      const data = await fetchMirrors(buildQuery(bbox));
-      if (data) { loaderStats.network++; void cachePut(key, data); sharedPut(key, data); }
-      else loaderStats.failures++;
-      return data;
-    } finally { release(); }
+    const shared = await sharedGet(key);
+    if (shared) { void cachePut(key, shared); return shared; }
+    return new Promise<OsmChunk | null>((resolve) => {
+      batch.push({ key, bbox, resolve });
+      if (!batchTimer) batchTimer = setTimeout(() => void flushBatch(), 60);
+    });
   })();
   inflight.set(key, p);
   p.finally(() => setTimeout(() => inflight.delete(key), 0));
