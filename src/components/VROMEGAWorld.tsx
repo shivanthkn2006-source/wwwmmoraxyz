@@ -1333,6 +1333,7 @@ const VROMEGAWorld: React.FC<VROMEGAWorldProps> = ({
   isActive 
 }) => {
   const { user } = useAuth();
+  const worldMode = useWorldState().mode;
   // Live admin monitoring: one "entered VR World" event per visit (server throttles repeats).
   useEffect(() => { if (isActive !== false) trackActivity('vr_enter', 'Entered VR World'); }, [isActive]);
   // Inside the world, background hosts outside it (joke/scan/journal/install helpers) unmount.
