@@ -14,7 +14,14 @@
 - [x] VR map privacy switch on the notification settings page (off by default)
 - [x] Journey quest: walk your street → doorway → beacon in M'Mora World → Quest complete alert
 - [x] Real map opens with a 500 m aerial view + "Land on my street"; memory bubbles/purple lights only inside M'Mora World
-- [ ] Photo-real buildings (Google photorealistic 3D map tiles) — waiting on user's cost OK
+- [~] Photo-real buildings (Google tiles) — parked by user: no paid components for now
 - [ ] Bell alerts: doorway entry, relic found on the real map (needs Stage 2 relics)
 - [ ] Stage 2 next: road traffic on real streets (uploaded OSMRoadTrafficController), street relics, Zoe street hints, live nearby players (respecting the privacy switch)
 - [ ] Stage 3: city pre-warming, players split by area for scale
+
+## Real Map rework (2026-10-04, awaiting user's OK on understanding)
+- [ ] Entry: 100 m above the player's street (or just above the tallest nearby building), smooth 2D→3D drop-in, replaces the 500 m view
+- [ ] Street life: cars on real roads, walking people, street objects, building detail/labels (free sources only)
+- [ ] Thermal governor: live frame-time/memory watch that lowers pixel ratio and car/people count on hot or slow phones
+- [ ] Controls: every control on screen at once in its own slot, no overlap, each draggable (phones, tablets, desktop, app)
+- [ ] Other members: real location per member (no Bengaluru fallback for everyone), nearby members shown only with privacy opt-in
