@@ -18,6 +18,7 @@ type State = {
   chunksLoaded: number;
   chunksWanted: number;
   portalTrips: number;
+  aerial: boolean;
 };
 
 /** Used only when the phone gives no location; the UI says so plainly. */
@@ -26,7 +27,7 @@ export const PORTAL_OFFSET: [number, number, number] = [0, 0, -8];
 export const RETURN_PORTAL_POS: [number, number, number] = [4, 0, 8];
 export const MMORA_SPAWN: [number, number, number] = [0, 1.6, 3];
 
-let state: State = { mode: 'real', origin: { status: 'locating' }, savedRealPos: null, chunksLoaded: 0, chunksWanted: 0, portalTrips: 0 };
+let state: State = { mode: 'real', origin: { status: 'locating' }, savedRealPos: null, chunksLoaded: 0, chunksWanted: 0, portalTrips: 0, aerial: false };
 const listeners = new Set<() => void>();
 const set = (patch: Partial<State>) => { state = { ...state, ...patch }; listeners.forEach((l) => l()); };
 
@@ -37,6 +38,21 @@ export function useWorldState() {
 
 export function setChunkStats(loaded: number, wanted: number) {
   if (loaded !== state.chunksLoaded || wanted !== state.chunksWanted) set({ chunksLoaded: loaded, chunksWanted: wanted });
+}
+
+export const AERIAL_HEIGHT_M = 500;
+let aerialShown = false;
+/** Once per session, the Real Map opens 500 m above the player's real spot. */
+export function startAerialEntry(): boolean {
+  if (aerialShown || state.mode !== 'real') return false;
+  aerialShown = true;
+  set({ aerial: true });
+  window.dispatchEvent(new CustomEvent('vr-view-transition', { detail: { mode: 'aerial_real' } }));
+  return true;
+}
+export function landOnStreet() {
+  set({ aerial: false });
+  window.dispatchEvent(new CustomEvent('vr-view-transition', { detail: { mode: 'ground' } }));
 }
 
 let locating = false;
@@ -77,6 +93,7 @@ export function portalStep(armed: boolean, dist: number, hit = 1.4, armDist = 4)
 }
 
 export function __resetWorldForTests() {
-  state = { mode: 'real', origin: { status: 'locating' }, savedRealPos: null, chunksLoaded: 0, chunksWanted: 0, portalTrips: 0 };
+  state = { mode: 'real', origin: { status: 'locating' }, savedRealPos: null, chunksLoaded: 0, chunksWanted: 0, portalTrips: 0, aerial: false };
   locating = false;
+  aerialShown = false;
 }

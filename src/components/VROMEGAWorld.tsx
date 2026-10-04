@@ -103,6 +103,7 @@ import { PortalDoorway } from '@/worlds/portal/PortalDoorway';
 import { useWorldState, returnToReal, RETURN_PORTAL_POS } from '@/worlds/worldMode';
 import { LandscapeViewportGuard } from './vr/LandscapeViewportGuard';
 import { RealMapStatus } from './vr/RealMapStatus';
+import { RealAerialLand } from './vr/RealAerialLand';
 import { useSkyPhase } from '@/hooks/useSkyPhase';
 import { trackActivity } from '@/lib/visitTracker';
 
@@ -735,6 +736,15 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
     const handleViewTransition = (e: CustomEvent) => {
       const { mode } = e.detail || {};
 
+      if (mode === 'aerial_real') {
+        // Real Map entry: 500 m above the player's real spot, looking down at it.
+        camera.position.set(0, 500, 260);
+        camera.lookAt(0, 0, 0);
+        isGroundLocked.current = false;
+        velocity.current.set(0, 0, 0);
+        verticalVelocity.current = 0;
+        return;
+      }
       if (blockHighAltitudeTransitions && (mode === 'satellite' || mode === 'aerial')) {
         camera.position.set(0, 4.2, 0);
         camera.lookAt(450, 1.6, 0);
@@ -1210,16 +1220,17 @@ const MemoryPalace: React.FC<{
     <>
       {/* Basic lighting - always present */}
       <ambientLight intensity={0.3} />
-      <pointLight position={[10, 10, 10]} intensity={0.5} color="#a855f7" />
-      <pointLight position={[-10, 5, -10]} intensity={0.3} color="#ec4899" />
-      <directionalLight position={[50, 50, 25]} intensity={0.4} color="#ffffff" castShadow />
+      {inMMora && <pointLight position={[10, 10, 10]} intensity={0.5} color="#a855f7" />}
+      {inMMora && <pointLight position={[-10, 5, -10]} intensity={0.3} color="#ec4899" />}
+      {inMMora && <directionalLight position={[50, 50, 25]} intensity={0.4} color="#ffffff" castShadow />}
       
       {/* NOTE: ExpandedCityGrid provides the main ground planes (lush green terrain).
          The old MemoryPalace 300x300 floor + gridHelper have been removed to prevent
          z-fighting and duplicate ground rendering that was tanking FPS. */}
       
       {/* Memory Engrams - only when provided (gated by parent) */}
-      {engrams.map((engram) => (
+      {/* Memory palace pieces (memory bubbles, holo wall) exist only inside M'Mora World. */}
+      {inMMora && engrams.map((engram) => (
         <MemoryEngram 
           key={engram.id} 
           engram={engram} 
@@ -1228,7 +1239,7 @@ const MemoryPalace: React.FC<{
       ))}
       
       {/* Holo-Wall - only when ECN data provided */}
-      {ecnData.length > 0 && (
+      {inMMora && ecnData.length > 0 && (
         <HoloWall ecnData={ecnData} coherenceScore={coherenceScore} />
       )}
       
@@ -3027,6 +3038,7 @@ const VRLiveClock: React.FC = () => {
               <VRGamepadHUD />
               <LandscapeViewportGuard />
               <VRFeature id="map"><RealMapStatus /></VRFeature>
+              <RealAerialLand />
               <VRFeature id="extras">
 
               <VRTouchControlBar

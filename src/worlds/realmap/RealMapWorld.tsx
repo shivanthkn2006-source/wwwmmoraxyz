@@ -11,7 +11,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { chebyshev, chunkBBox, chunkOf, neighborhood, toLatLng, toLocal, type LatLng, type ChunkId } from './geo';
 import { loadChunk, setChunkKeyFn, type OsmChunk } from './osm';
-import { setChunkStats, useWorldState, resolveOrigin, PORTAL_OFFSET, enterMMora } from '../worldMode';
+import { setChunkStats, useWorldState, resolveOrigin, PORTAL_OFFSET, enterMMora, startAerialEntry, getWorldState, AERIAL_HEIGHT_M } from '../worldMode';
 import { PortalDoorway } from '../portal/PortalDoorway';
 import { DemoExplorer } from './DemoExplorer';
 
@@ -144,7 +144,12 @@ const ChunkStreamer: React.FC<{ origin: LatLng }> = ({ origin }) => {
 
 /** Daytime sky for the Real Map (night is handled by the existing night sky). */
 const RealSky: React.FC = () => {
-  const { scene } = useThree();
+  const { scene, camera } = useThree();
+  // Fog follows height so the 500 m aerial view still sees the ground.
+  useFrame(() => {
+    const f = scene.fog as THREE.Fog | null;
+    if (f && 'far' in f) { const y = Math.max(0, camera.position.y); f.near = 140 + y; f.far = 560 + y * 2.2; }
+  });
   useEffect(() => {
     const apply = () => {
       const h = new Date().getHours();
@@ -171,15 +176,37 @@ const Ground: React.FC = () => {
   );
 };
 
+/** The player controller may reset the camera while it mounts; hold the aerial view for its first 6 s. */
+const AerialHold: React.FC = () => {
+  const { camera } = useThree();
+  const since = useRef<number | null>(null);
+  useFrame(() => {
+    if (!getWorldState().aerial) { since.current = null; return; }
+    const now = performance.now();
+    if (since.current === null) since.current = now;
+    if (now - since.current < 6000 && camera.position.y < AERIAL_HEIGHT_M - 50) {
+      window.dispatchEvent(new CustomEvent('vr-view-transition', { detail: { mode: 'aerial_real' } }));
+    }
+  });
+  return null;
+};
+
 export const RealMapWorld: React.FC = () => {
   const { origin } = useWorldState();
   useEffect(() => { resolveOrigin(); }, []);
+  // Wait for the player controller to mount, then lift to the aerial view once.
+  useEffect(() => {
+    if (origin.status !== 'ready') return;
+    const t = window.setTimeout(() => startAerialEntry(), 600);
+    return () => window.clearTimeout(t);
+  }, [origin.status]);
   return (
     <>
       <hemisphereLight args={['#ffffff', '#8a7a62', 0.9]} />
       <directionalLight position={[120, 200, 60]} intensity={1.1} />
       <RealSky />
       <Ground />
+      <AerialHold />
       {origin.status === 'ready' && <ChunkStreamer origin={origin.origin} />}
       <PortalDoorway position={PORTAL_OFFSET} label="M'Mora World" onEnter={enterMMora} />
       <DemoExplorer />

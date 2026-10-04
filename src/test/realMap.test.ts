@@ -131,3 +131,20 @@ describe('area split', () => {
     expect(parts.size).toBe(2);
   });
 });
+
+import { startAerialEntry, landOnStreet } from '@/worlds/worldMode';
+describe('aerial entry', () => {
+  beforeEach(() => __resetWorldForTests());
+  it('opens 500 m up once per session, then lands on the street', () => {
+    const modes: string[] = [];
+    const on = (e: Event) => modes.push((e as CustomEvent).detail.mode);
+    window.addEventListener('vr-view-transition', on);
+    expect(startAerialEntry()).toBe(true);
+    expect(getWorldState().aerial).toBe(true);
+    expect(startAerialEntry()).toBe(false);
+    landOnStreet();
+    expect(getWorldState().aerial).toBe(false);
+    expect(modes).toEqual(['aerial_real', 'ground']);
+    window.removeEventListener('vr-view-transition', on);
+  });
+});

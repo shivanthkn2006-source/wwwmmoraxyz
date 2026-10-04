@@ -13,5 +13,8 @@
 - [x] Fix: empty map/black sky — one map request per 3×3 area, auto-retry, shared backend block cache, daytime sky; "Memory Palace" loading labels removed
 - [x] VR map privacy switch on the notification settings page (off by default)
 - [x] Journey quest: walk your street → doorway → beacon in M'Mora World → Quest complete alert
+- [x] Real map opens with a 500 m aerial view + "Land on my street"; memory bubbles/purple lights only inside M'Mora World
+- [ ] Photo-real buildings (Google photorealistic 3D map tiles) — waiting on user's cost OK
+- [ ] Bell alerts: doorway entry, relic found on the real map (needs Stage 2 relics)
 - [ ] Stage 2 next: road traffic on real streets (uploaded OSMRoadTrafficController), street relics, Zoe street hints, live nearby players (respecting the privacy switch)
 - [ ] Stage 3: city pre-warming, players split by area for scale
