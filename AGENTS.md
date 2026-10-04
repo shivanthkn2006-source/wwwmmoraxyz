@@ -28,3 +28,7 @@
 - Live admin monitoring alerts (domain visits, missing pages, admin probes, VR activity) are created only server-side in track-visit, because clients cannot insert alerts for the admin.
 - Every saved notification is forwarded to the member's phones by a database trigger → notification-push function (x-cron-token), which re-checks the main, push and per-alert switches, because one delivery path keeps phone alerts consistent with the in-app bell.
 - VR World buttons and physical game controllers go through src/lib/vrInput.ts, which reuses the world's existing key/event wiring, because a second movement system would drift out of sync.
+- Heavy VR models (>5 MB) are never preloaded at import time and load only when used (e.g. the detailed bike only while riding, never on ≤4GB phones) behind an error boundary with a procedural fallback, because a 57 MB preload stalled and crashed VR World start.
+- Repeated VR scenery (rails, sleepers, gravel) uses instanced meshes and moving fleets (metro trains) use distance LOD, because thousands of separate meshes exhausted phone memory.
+- While VR World is active (src/lib/vrSession.ts), AfterAuthIdle hosts marked pauseInVR unmount, because background helpers outside the world compete with the 3D scene on phones.
+- VR relic quests and the item bag live in src/lib/vrQuests.ts (vr_bag_items, vr_quest_progress; own-row RLS), and quest completion alerts go through notifySelf as vr_quest_complete, because one store keeps the world, bag panel and bell in sync.
