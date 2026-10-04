@@ -112,6 +112,7 @@ export async function joinMeet(room: string | null) {
       window.dispatchEvent(new CustomEvent('vr-meet-wave', { detail: p }));
     })
     .subscribe((status) => {
+      if (channel !== ch) return;
       if (status === 'SUBSCRIBED') set({ connected: true });
       if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') set({ connected: false });
     });
