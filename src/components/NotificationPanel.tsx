@@ -5,6 +5,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
+import { subscribeRealtime, onRealtimeReconnect } from '@/realtime/globalRealtime';
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
@@ -31,26 +32,16 @@ const NotificationPanel = () => {
 
   useEffect(() => {
     fetchNotifications();
-    const subscription = setupRealtimeSubscription();
-    return () => {
-      subscription?.unsubscribe();
-    };
+    let off: (() => void) | null = null;
+    let disposed = false;
+    const offReconnect = onRealtimeReconnect(() => fetchNotifications());
+    void supabase.auth.getSession().then(({ data }) => {
+      const uid = data.session?.user?.id;
+      if (!uid || disposed) return;
+      off = subscribeRealtime({ table: 'notifications', filter: `user_id=eq.${uid}` }, () => fetchNotifications());
+    });
+    return () => { disposed = true; off?.(); offReconnect(); };
   }, []);
-
-  const setupRealtimeSubscription = () => {
-    return supabase
-      .channel(`notifications-panel:${Math.random().toString(36).slice(2, 8)}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'notifications',
-        },
-        () => fetchNotifications()
-      )
-      .subscribe();
-  };
 
   const fetchNotifications = async () => {
     const { data: { user } } = await supabase.auth.getUser();

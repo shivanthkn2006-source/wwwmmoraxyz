@@ -8,6 +8,7 @@
  */
 import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { subscribeRealtime, onRealtimeReconnect } from '@/realtime/globalRealtime';
 import { useAuth } from '@/lib/auth';
 import { toast } from 'sonner';
 import {
@@ -85,6 +86,7 @@ export function alertCopy(row: AlertableNotification, actorName?: string | null)
 export function shouldAlert(row: AlertableNotification | null | undefined, seen: Set<string>) {
   if (!row?.id) return false;
   if (seen.has(row.id)) return false;
+  if ((row.context_data as Record<string, unknown> | null)?.e2e_test) return false;
   return true;
 }
 
@@ -157,14 +159,9 @@ export function useGlobalNotificationAlerts() {
 
 
     // Fast path: realtime.
-    const channel = supabase
-      .channel(`global-notification-alerts:${user.id}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
-        (payload) => raise(payload.new as AlertableNotification)
-      )
-      .subscribe();
+    const offN = subscribeRealtime({ table: 'notifications', filter: `user_id=eq.${user.id}` }, (p) => {
+      if (p.eventType === 'INSERT' && p.new) raise(p.new as unknown as AlertableNotification);
+    });
 
     // Durable path: realtime channels can time out (socket limits, sleeping
     // tabs, flaky networks). A cheap indexed poll guarantees the user still
@@ -191,6 +188,7 @@ export function useGlobalNotificationAlerts() {
     const onVisible = () => { if (document.visibilityState === 'visible') void poll(); };
     document.addEventListener('visibilitychange', onVisible);
     void poll();
+    const offR = onRealtimeReconnect(() => void poll());
 
     return () => {
       disposed = true;
@@ -198,7 +196,7 @@ export function useGlobalNotificationAlerts() {
       pending.current.forEach((t) => window.clearTimeout(t));
       pending.current.clear();
       document.removeEventListener('visibilitychange', onVisible);
-      supabase.removeChannel(channel);
+      offN(); offR();
     };
 
   }, [user?.id]);

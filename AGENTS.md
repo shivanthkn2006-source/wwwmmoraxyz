@@ -21,3 +21,6 @@
 - Passkeys use the www-stripped hostname as rpId (assertions retry the exact hostname for older passkeys), because one passkey must work on both www and bare domains.
 - VR world distant/heavy areas (mountains, highway, cycling trail, heritage train) mount via ProximityGate (camera-distance with hysteresis, smaller radius on low-memory phones) and city systems are lazy chunks, because loading the whole world at once froze basic phones.
 - VR World on-screen panels are wrapped in <VRFeature id> and hidden while VRTopDock is mounted (body[data-vr-clean]); the dock's icon strip reveals them one by one, because the always-on HUD made VR unusable on phones.
+
+- Notification kinds live in the notification_kinds table; unknown kinds are coerced to system by trigger, because a fixed CHECK list silently dropped alerts.
+- Notification UI consumers subscribe via globalRealtime (auto-rejoin, onRealtimeReconnect catch-up), because separate channels dropped during auth reloads.

@@ -42,12 +42,20 @@ interface Entry {
 }
 
 const entries = new Map<string, Entry>();
+const reconnectListeners = new Set<() => void>();
+
+/** Called after any shared channel re-joins, so consumers can fetch what they missed. */
+export function onRealtimeReconnect(fn: () => void): () => void {
+  reconnectListeners.add(fn);
+  return () => { reconnectListeners.delete(fn); };
+}
 
 export function subscriptionKey(spec: RealtimeSubscriptionSpec): string {
   return [spec.schema ?? 'public', spec.table, spec.event ?? '*', spec.filter ?? ''].join('|');
 }
 
 function teardown(entry: Entry) {
+  entries.delete(entry.key);
   if (entry.channel) {
     try {
       supabase.removeChannel(entry.channel);
@@ -78,6 +86,9 @@ export function subscribeRealtime(spec: RealtimeSubscriptionSpec, listener: List
     };
     if (spec.filter) config.filter = spec.filter;
 
+    let attempt = 0;
+    let everJoined = false;
+    const join = () => {
     bound.status = 'joining';
     try {
       bound.channel = supabase
@@ -101,12 +112,28 @@ export function subscribeRealtime(spec: RealtimeSubscriptionSpec, listener: List
           });
         })
         .subscribe((status: string) => {
-          bound.status = status === 'SUBSCRIBED' ? 'joined' : status === 'CHANNEL_ERROR' ? 'errored' : bound.status;
+          if (status === 'SUBSCRIBED') {
+            bound.status = 'joined';
+            if (everJoined) reconnectListeners.forEach((fn) => { try { fn(); } catch { /* isolated */ } });
+            everJoined = true; attempt = 0;
+            return;
+          }
+          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+            bound.status = 'errored';
+            // Rejoin with backoff while anyone is still listening.
+            if (entries.get(key) !== bound || bound.listeners.size === 0) return;
+            const old = bound.channel; bound.channel = null;
+            try { if (old) supabase.removeChannel(old); } catch { /* gone */ }
+            const wait = Math.min(30_000, 1000 * 2 ** attempt++);
+            setTimeout(() => { if (entries.get(key) === bound && bound.listeners.size > 0 && !bound.channel) join(); }, wait);
+          }
         });
     } catch (error) {
       bound.status = 'errored';
       console.warn('[globalRealtime] channel setup failed', key, error);
     }
+    };
+    join();
   }
 
   entry.listeners.add(listener);

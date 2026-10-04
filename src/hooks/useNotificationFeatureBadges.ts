@@ -10,6 +10,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { subscribeRealtime, onRealtimeReconnect } from '@/realtime/globalRealtime';
 import { useAuth } from '@/lib/auth';
 import {
   EMPTY_FEATURE_COUNTS,
@@ -67,19 +68,9 @@ export function useNotificationFeatureBadges(): NotificationFeatureBadges {
     void refresh();
     if (!user?.id) return;
 
-    const channel = supabase
-      .channel(`dock-feature-badges:${user.id}:${Math.random().toString(36).slice(2, 8)}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
-        () => void refresh(),
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'messages', filter: `receiver_id=eq.${user.id}` },
-        () => void refresh(),
-      )
-      .subscribe();
+    const offN = subscribeRealtime({ table: 'notifications', filter: `user_id=eq.${user.id}` }, () => void refresh());
+    const offM = subscribeRealtime({ table: 'messages', filter: `receiver_id=eq.${user.id}` }, () => void refresh());
+    const offR = onRealtimeReconnect(() => void refresh());
 
     const timer = window.setInterval(() => void refresh(), POLL_MS);
     const onWake = () => {
@@ -94,7 +85,7 @@ export function useNotificationFeatureBadges(): NotificationFeatureBadges {
       window.removeEventListener('focus', onWake);
       window.removeEventListener('online', onWake);
       document.removeEventListener('visibilitychange', onWake);
-      supabase.removeChannel(channel);
+      offN(); offM(); offR();
     };
   }, [user?.id, refresh]);
 

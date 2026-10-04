@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { subscribeRealtime, onRealtimeReconnect } from '@/realtime/globalRealtime';
 import { useAuth } from '@/lib/auth';
 
 interface MenuNotifications {
@@ -112,19 +113,11 @@ export const useMenuNotifications = () => {
     fetchNotifications();
 
     // Subscribe to realtime changes
-    const channel = supabase
-      .channel(`menu-notifications:${user.id}:${Math.random().toString(36).slice(2, 8)}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, () => {
-        fetchNotifications();
-      })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `receiver_id=eq.${user.id}` }, () => {
-        fetchNotifications();
-      })
-      .subscribe();
+    const offN = subscribeRealtime({ table: 'notifications', filter: `user_id=eq.${user.id}` }, (p) => { if (p.eventType === 'INSERT') fetchNotifications(); });
+    const offM = subscribeRealtime({ table: 'messages', filter: `receiver_id=eq.${user.id}` }, (p) => { if (p.eventType === 'INSERT') fetchNotifications(); });
+    const offR = onRealtimeReconnect(() => fetchNotifications());
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => { offN(); offM(); offR(); };
   }, [user?.id]);
 
   const markFeatureSeen = (feature: string) => {
