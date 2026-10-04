@@ -24,6 +24,7 @@ let state: State = { connected: false, room: null, visible: typeof localStorage 
 const ls = new Set<() => void>();
 const set = (p: Partial<State>) => { state = { ...state, ...p }; ls.forEach((l) => l()); };
 export const getMeet = () => state;
+if (typeof window !== 'undefined') (window as unknown as { __vrMeet: () => State }).__vrMeet = () => state;
 export const useMeet = () => useSyncExternalStore((l) => { ls.add(l); return () => ls.delete(l); }, () => state, () => state);
 
 let me: Me | null = null;
@@ -42,7 +43,16 @@ async function ensureMe(): Promise<Me | null> {
   if (me) return me;
   const { data } = await supabase.auth.getUser();
   const u = data.user;
-  if (!u) return null;
+  if (!u) {
+    // Dev test harness only: a throwaway guest so two test browsers can meet.
+    if (import.meta.env.DEV && typeof location !== 'undefined' && location.pathname === '/__vr-harness') {
+      const id = sessionStorage.getItem('vr-guest') ?? crypto.randomUUID();
+      sessionStorage.setItem('vr-guest', id);
+      me = { id, name: `Guest ${id.slice(0, 4)}`, username: `guest_${id.slice(0, 4)}`, photo: null };
+      return me;
+    }
+    return null;
+  }
   const { data: p } = await supabase.from('public_profiles').select('display_name, username, profile_photo_url').eq('user_id', u.id).maybeSingle();
   me = { id: u.id, name: p?.display_name || u.email?.split('@')[0] || 'Member', username: p?.username || u.email?.split('@')[0] || 'member', photo: p?.profile_photo_url ?? null };
   return me;
