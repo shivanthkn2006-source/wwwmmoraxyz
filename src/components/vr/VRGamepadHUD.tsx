@@ -17,7 +17,7 @@ import { useStamina } from '@/lib/vrWalk';
 const StaminaMeter: React.FC = () => {
   const { stamina, exhausted, running } = useStamina();
   return (
-    <div className="absolute -bottom-4 left-1/2 h-1.5 w-24 -translate-x-1/2 overflow-hidden rounded-full bg-background/30" role="meter" aria-label="Stamina" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(stamina * 100)} data-running={running || undefined}>
+    <div className="absolute -top-4 left-1/2 h-1.5 w-24 -translate-x-1/2 overflow-hidden rounded-full bg-background/30" role="meter" aria-label="Stamina" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(stamina * 100)} data-running={running || undefined}>
       <div className={`h-full rounded-full transition-[width] duration-100 ${exhausted ? 'bg-destructive' : 'bg-primary'}`} style={{ width: `${Math.round(stamina * 100)}%` }} />
     </div>
   );

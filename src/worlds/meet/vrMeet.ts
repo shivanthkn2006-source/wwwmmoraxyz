@@ -30,6 +30,7 @@ export const useMeet = () => useSyncExternalStore((l) => { ls.add(l); return () 
 let me: Me | null = null;
 let channel: RealtimeChannel | null = null;
 const tags = new Map<string, MeetTag>();
+const waves = new Map<string, number>();
 let lastTracked: { pose: MeetPose; at: number } | null = null;
 
 export const TAG_LABEL: Record<MeetTag, string> = { friend: 'Friend', follower: 'Follower', unknown: 'New' };
@@ -108,6 +109,9 @@ export async function joinMeet(room: string | null) {
     .on('broadcast', { event: 'wave' }, ({ payload }) => {
       const p = payload as { to: string; from: string; username: string };
       if (p?.to !== self.id) return;
+      const last = waves.get(p.from) ?? 0;
+      if (Date.now() - last < 30_000) return;
+      waves.set(p.from, Date.now());
       pushMsg({ id: `w${Date.now()}`, from: p.from, name: p.username, username: p.username, tag: tags.get(p.from) ?? 'unknown', text: 'stopped next to you and said hi 👋', at: Date.now(), system: true });
       window.dispatchEvent(new CustomEvent('vr-meet-wave', { detail: p }));
     })
