@@ -70,6 +70,7 @@ import { useGraphicsOptimizer, type GPUTier } from '@/hooks/useGraphicsOptimizer
 import { VirtualJoystick, RotationButtons, LookButtons } from './vr/features/VRControlSystem';
 // Enterprise Multiplayer Layer
 import { useMultiplayerPresence } from '@/hooks/useMultiplayerPresence';
+import { walkStep, staminaTick, WALK_MPS, RUN_MPS } from '@/lib/vrWalk';
 import { MultiplayerAvatars } from './vr/features/GlassPyramidAvatar';
 import EnterpriseControlDeck from './vr/features/EnterpriseControlDeck';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
@@ -544,6 +545,8 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
   const keyboardForwardStartedAt = useRef<number | null>(null);
   const eventForwardStartedAt = useRef<number | null>(null);
   const keyStateRef = useRef({ forward: false, backward: false, left: false, right: false, run: false, jump: false });
+  const backTurnLeft = useRef(0);
+  const backWasDown = useRef(false);
 
   const [, getKeys] = useKeyboardControls();
 
@@ -1002,36 +1005,16 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
       eventForwardStartedAt.current = null;
     }
 
-    const keyboardAutoRun = Boolean(keyboardForwardStartedAt.current && now - keyboardForwardStartedAt.current > 450);
-    const touchAutoRun = Boolean(eventHold.current && eventForwardStartedAt.current && now - eventForwardStartedAt.current > 450);
-    const baseSpeed = run || keyboardAutoRun || touchAutoRun ? 9 : 5;
-    const speed = baseSpeed * eventSpeed.current;
-
-    direction.current.set(0, 0, 0);
-
-    if (forward) direction.current.z -= 1;
-    if (backward) direction.current.z += 1;
-    if (left) direction.current.x -= 1;
-    if (right) direction.current.x += 1;
-
+    let evF = false, evB = false, evL = false, evR = false;
     const hasActiveEventDirection = eventDirection.current && (eventHold.current || now <= eventExpiresAt.current);
 
     if (hasActiveEventDirection) {
       switch (eventDirection.current) {
-        case 'forward':
-          direction.current.z -= 1;
-          break;
-        case 'backward':
-          direction.current.z += 1;
-          break;
-        case 'left':
-          direction.current.x -= 1;
-          break;
-        case 'right':
-          direction.current.x += 1;
-          break;
+        case 'forward': evF = true; break;
+        case 'backward': evB = true; break;
+        case 'left': evL = true; break;
+        case 'right': evR = true; break;
         case 'stop':
-          direction.current.set(0, 0, 0);
           eventDirection.current = null;
           eventHold.current = false;
           break;
@@ -1044,7 +1027,17 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
       eventForwardStartedAt.current = null;
     }
 
-    direction.current.normalize();
+    // Human-style walking: left/right/down turn the camera first, then you walk where you face.
+    const input = { forward: forward || evF, backward: backward || evB, left: left || evL, right: right || evR };
+    const step = walkStep(input, dt, backTurnLeft.current, backWasDown.current);
+    backTurnLeft.current = step.backTurnLeft;
+    backWasDown.current = input.backward;
+    camera.rotation.y += step.yawDelta;
+
+    const isRunning = staminaTick(dt, run || eventSpeed.current > 1, step.move);
+    const speed = isRunning ? RUN_MPS : WALK_MPS;
+
+    direction.current.set(0, 0, step.move ? -1 : 0);
 
     const euler = new THREE.Euler(0, camera.rotation.y, 0, 'YXZ');
     direction.current.applyEuler(euler);

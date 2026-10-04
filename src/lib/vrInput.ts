@@ -10,6 +10,8 @@
  *   8 View/Share  9 Menu/Options  10 L3  11 R3  12–15 D-pad ↑↓←→  16 Xbox/PS
  *   axes 0/1 left stick, 2/3 right stick (−1..1, up = −1)
  */
+import { resolveUse } from './vrUse';
+
 export type VRAction = 'interact' | 'jump' | 'run' | 'zoe' | 'zoom' | 'camera' | 'menu' | 'bag';
 
 const KEY_FOR: Partial<Record<VRAction, string>> = { jump: 'Space', run: 'ShiftLeft', zoom: 'KeyZ', camera: 'KeyV' };
@@ -27,7 +29,7 @@ export function fireAction(action: VRAction, down = true) {
     return;
   }
   if (!down) return;
-  if (action === 'interact') window.dispatchEvent(new CustomEvent('vr-interact'));
+  if (action === 'interact') { window.dispatchEvent(new CustomEvent('vr-interact')); resolveUse(); }
   else if (action === 'menu') window.dispatchEvent(new CustomEvent('vr-open-menu'));
   else if (action === 'bag') window.dispatchEvent(new CustomEvent('vr-open-bag'));
   else if (action === 'zoe') window.dispatchEvent(new CustomEvent('zoe-show-orb'));

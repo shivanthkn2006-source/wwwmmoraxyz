@@ -3,6 +3,7 @@
 // Apple Vision Pro-inspired spatial UI elements
 // ═══════════════════════════════════════════════════════════════════════════════
 
+import { registerUse } from '@/lib/vrUse';
 import React, { useRef, useState, useMemo, useEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Html, Float, Sphere, Box } from '@react-three/drei';
@@ -468,22 +469,19 @@ export const VRHiddenItemsManagerAuto: React.FC<{
     onItemCollected?.(id);
   };
 
-  // Interact button / gamepad A: pick up the nearest revealed item within reach.
+  // Use button / gamepad A: pick up the nearest item within reach (shared Use resolver).
   const collectRef = useRef(handleCollect); collectRef.current = handleCollect;
   const itemsRef = useRef(items); itemsRef.current = items;
-  useEffect(() => {
-    const onInteract = () => {
-      let best: string | null = null; let bestD = 6;
-      for (const it of itemsRef.current) {
-        const d = new THREE.Vector3(...it.position).distanceTo(camera.position);
-        if (d < bestD) { bestD = d; best = it.id; }
-      }
-      window.dispatchEvent(new CustomEvent('vr-interact-result', { detail: { collected: !!best } }));
-      if (best) collectRef.current(best);
-    };
-    window.addEventListener('vr-interact', onInteract);
-    return () => window.removeEventListener('vr-interact', onInteract);
-  }, [camera]);
+  useEffect(() => registerUse(() => {
+    let best: (typeof itemsRef.current)[number] | null = null; let bestD = Infinity;
+    for (const it of itemsRef.current) {
+      const d = new THREE.Vector3(...it.position).distanceTo(camera.position);
+      if (d < bestD) { bestD = d; best = it; }
+    }
+    if (!best) return null;
+    const id = best.id;
+    return { dist: bestD, reach: 6, label: `Picked up ${best.type.replace(/_/g, ' ')} — added to your bag`, run: () => collectRef.current(id) };
+  }), [camera]);
 
   if (!enabled || items.length === 0) return null;
 
