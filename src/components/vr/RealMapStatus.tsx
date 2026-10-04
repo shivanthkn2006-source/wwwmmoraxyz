@@ -30,7 +30,7 @@ export const RealMapStatus: React.FC = () => {
       <div className="font-semibold">{w.mode === 'real' ? 'Your street' : "M'Mora World"}</div>
       <div>📍 {where}</div>
       {w.mode === 'real' && <div>Map blocks: {w.chunksLoaded} / {w.chunksWanted}</div>}
-      <div>Saved on phone: {loaderStats.cacheHits} · Downloaded: {loaderStats.network} · Failed: {loaderStats.failures}</div>
+      <div>Saved on phone: {loaderStats.cacheHits} · Shared: {loaderStats.shared} · Downloaded: {loaderStats.network} · Failed: {loaderStats.failures}</div>
       <div>Doorway trips: {w.portalTrips}</div>
       <button type="button" onClick={runCheck} className="underline">Run world check</button>
       {report && (

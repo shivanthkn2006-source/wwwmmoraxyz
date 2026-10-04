@@ -4,6 +4,7 @@
  * their neighbourhood with zero network requests.
  */
 import type { BBox } from './geo';
+import { supabase } from '@/integrations/supabase/client';
 
 export type OsmBuilding = { pts: [number, number][]; h: number };
 export type OsmRoad = { pts: [number, number][]; w: number };
@@ -116,12 +117,22 @@ async function cachePut(key: string, v: OsmChunk) {
 }
 
 // ---------- fetch queue (Overpass fair use: max 2 at once) ----------
-export const loaderStats = { cacheHits: 0, network: 0, failures: 0 };
+export const loaderStats = { cacheHits: 0, network: 0, shared: 0, failures: 0 };
 const inflight = new Map<string, Promise<OsmChunk | null>>();
 let running = 0;
 const waiting: (() => void)[] = [];
 const slot = () => new Promise<void>((r) => { if (running < 2) { running++; r(); } else waiting.push(() => { running++; r(); }); });
 const release = () => { running--; waiting.shift()?.(); };
+
+/** Shared backend cache (every member's downloads help everyone). */
+async function fetchShared(key: string, bbox: BBox): Promise<OsmChunk | null> {
+  try {
+    const { data, error } = await supabase.functions.invoke('osm-tile', { body: { key, bbox } });
+    if (error || !data?.data) return null;
+    if (data.source === 'shared') loaderStats.shared++;
+    return parseOverpass(data.data);
+  } catch { return null; }
+}
 
 async function fetchMirrors(query: string): Promise<OsmChunk | null> {
   for (const url of MIRRORS) {
@@ -144,7 +155,7 @@ export function loadChunk(key: string, bbox: BBox): Promise<OsmChunk | null> {
     if (cached) { loaderStats.cacheHits++; return cached; }
     await slot();
     try {
-      const data = await fetchMirrors(buildQuery(bbox));
+      const data = (await fetchShared(key, bbox)) ?? (await fetchMirrors(buildQuery(bbox)));
       if (data) { loaderStats.network++; void cachePut(key, data); }
       else loaderStats.failures++;
       return data;

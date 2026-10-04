@@ -981,7 +981,7 @@ const ZoeOmegaPage: React.FC = () => {
               >
                 <VRStasisPlaceholder
                   variant="omega"
-                  title="OMEGA Memory Palace"
+                  title="VR World"
                   description="Enter Immersive Mode to explore your subconscious memory structures in 3D"
                   onEnterImmersive={() => {
                     setVrStasisActive(false);
@@ -1037,7 +1037,7 @@ const ZoeOmegaPage: React.FC = () => {
                         <div className="animate-gpu-spin-2s">
                           <Box className="w-12 h-12 text-purple-400" />
                         </div>
-                        <span className="ml-4 text-purple-300">Loading Memory Palace...</span>
+                        <span className="ml-4 text-purple-300">Loading your street...</span>
                       </div>
                     }>
                       <VROMEGAWorld

@@ -137,6 +137,22 @@ const ChunkStreamer: React.FC<{ origin: LatLng }> = ({ origin }) => {
   return <>{active.map((c) => <Chunk key={c.key} id={c} origin={origin} onReady={onReady} />)}</>;
 };
 
+/** Daytime sky for the Real Map (night is handled by the existing night sky). */
+const RealSky: React.FC = () => {
+  const { scene } = useThree();
+  useEffect(() => {
+    const apply = () => {
+      const h = new Date().getHours();
+      if (h >= 7 && h < 16) scene.background = new THREE.Color('#a9cdea');
+      if (!scene.fog) scene.fog = new THREE.Fog('#cfe0ee', 140, 560);
+    };
+    apply();
+    const id = window.setInterval(apply, 60_000);
+    return () => { window.clearInterval(id); scene.fog = null; };
+  }, [scene]);
+  return null;
+};
+
 const Ground: React.FC = () => {
   const ref = useRef<THREE.Mesh>(null);
   const { camera } = useThree();
@@ -157,6 +173,7 @@ export const RealMapWorld: React.FC = () => {
     <>
       <hemisphereLight args={['#ffffff', '#8a7a62', 0.9]} />
       <directionalLight position={[120, 200, 60]} intensity={1.1} />
+      <RealSky />
       <Ground />
       {origin.status === 'ready' && <ChunkStreamer origin={origin.origin} />}
       <PortalDoorway position={PORTAL_OFFSET} label="M'Mora World" onEnter={enterMMora} />
