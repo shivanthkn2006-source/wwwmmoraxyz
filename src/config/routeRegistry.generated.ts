@@ -27,6 +27,7 @@ export const CANONICAL_ROUTES: CanonicalRoute[] = [
   { path: "/admin/health", label: "Admin · health", dynamic: false },
   { path: "/admin/invites", label: "Admin · invites", dynamic: false },
   { path: "/admin/memory", label: "Admin · memory", dynamic: false },
+  { path: "/admin/notifications", label: "Admin · notifications", dynamic: false },
   { path: "/admin/overview", label: "Admin · overview", dynamic: false },
   { path: "/admin/search-index", label: "Admin · search index", dynamic: false },
   { path: "/admin/security-live", label: "Admin · security live", dynamic: false },
