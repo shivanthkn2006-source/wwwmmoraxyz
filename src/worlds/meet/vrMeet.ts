@@ -114,7 +114,14 @@ export async function joinMeet(room: string | null) {
     .subscribe((status) => {
       if (channel !== ch) return;
       if (status === 'SUBSCRIBED') set({ connected: true });
-      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') set({ connected: false });
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+        set({ connected: false });
+        // Busy phones can miss the heartbeat: rejoin the same room shortly.
+        window.setTimeout(() => {
+          if (channel !== ch || state.connected) return;
+          const r = state.room; state = { ...state, room: null }; void joinMeet(r);
+        }, 3000);
+      }
     });
 }
 
