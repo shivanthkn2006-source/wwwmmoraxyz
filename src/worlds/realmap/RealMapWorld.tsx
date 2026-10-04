@@ -10,7 +10,7 @@ import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { chebyshev, chunkBBox, chunkOf, neighborhood, toLatLng, toLocal, type LatLng, type ChunkId } from './geo';
-import { loadChunk, type OsmChunk } from './osm';
+import { loadChunk, setChunkKeyFn, type OsmChunk } from './osm';
 import { setChunkStats, useWorldState, resolveOrigin, PORTAL_OFFSET, enterMMora } from '../worldMode';
 import { PortalDoorway } from '../portal/PortalDoorway';
 import { DemoExplorer } from './DemoExplorer';
@@ -69,12 +69,16 @@ const Chunk: React.FC<{ id: ChunkId; origin: LatLng; onReady: (key: string) => v
   const [data, setData] = useState<OsmChunk | null>(null);
   useEffect(() => {
     let alive = true;
-    loadChunk(id.key, chunkBBox(id.i, id.j, origin.lat)).then((d) => {
+    let tries = 0;
+    let timer = 0;
+    const attempt = () => loadChunk(id.key, chunkBBox(id.i, id.j, origin.lat)).then((d) => {
       if (!alive) return;
-      setData(d);
-      onReady(id.key);
+      if (d) { setData(d); onReady(id.key); return; }
+      // Map servers busy: try this block again later instead of leaving a hole.
+      if (++tries < 4) timer = window.setTimeout(attempt, 8000 * tries);
     });
-    return () => { alive = false; };
+    void attempt();
+    return () => { alive = false; window.clearTimeout(timer); };
   }, [id.key, id.i, id.j, origin.lat, onReady]);
 
   const geo = useMemo(() => data ? {
@@ -114,6 +118,7 @@ const ChunkStreamer: React.FC<{ origin: LatLng }> = ({ origin }) => {
   const last = useRef('');
   const timer = useRef(0);
   const onReady = React.useCallback((key: string) => { ready.current.add(key); }, []);
+  useEffect(() => { setChunkKeyFn((lat, lng) => chunkOf({ lat, lng }, origin.lat).key); }, [origin.lat]);
 
   useFrame((_, dt) => {
     timer.current += dt;
@@ -137,6 +142,22 @@ const ChunkStreamer: React.FC<{ origin: LatLng }> = ({ origin }) => {
   return <>{active.map((c) => <Chunk key={c.key} id={c} origin={origin} onReady={onReady} />)}</>;
 };
 
+/** Daytime sky for the Real Map (night is handled by the existing night sky). */
+const RealSky: React.FC = () => {
+  const { scene } = useThree();
+  useEffect(() => {
+    const apply = () => {
+      const h = new Date().getHours();
+      if (h >= 7 && h < 16) scene.background = new THREE.Color('#a9cdea');
+      if (!scene.fog) scene.fog = new THREE.Fog('#cfe0ee', 140, 560);
+    };
+    apply();
+    const id = window.setInterval(apply, 60_000);
+    return () => { window.clearInterval(id); scene.fog = null; };
+  }, [scene]);
+  return null;
+};
+
 const Ground: React.FC = () => {
   const ref = useRef<THREE.Mesh>(null);
   const { camera } = useThree();
@@ -157,6 +178,7 @@ export const RealMapWorld: React.FC = () => {
     <>
       <hemisphereLight args={['#ffffff', '#8a7a62', 0.9]} />
       <directionalLight position={[120, 200, 60]} intensity={1.1} />
+      <RealSky />
       <Ground />
       {origin.status === 'ready' && <ChunkStreamer origin={origin.origin} />}
       <PortalDoorway position={PORTAL_OFFSET} label="M'Mora World" onEnter={enterMMora} />
