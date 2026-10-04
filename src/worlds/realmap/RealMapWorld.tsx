@@ -69,12 +69,16 @@ const Chunk: React.FC<{ id: ChunkId; origin: LatLng; onReady: (key: string) => v
   const [data, setData] = useState<OsmChunk | null>(null);
   useEffect(() => {
     let alive = true;
-    loadChunk(id.key, chunkBBox(id.i, id.j, origin.lat)).then((d) => {
+    let tries = 0;
+    let timer = 0;
+    const attempt = () => loadChunk(id.key, chunkBBox(id.i, id.j, origin.lat)).then((d) => {
       if (!alive) return;
-      setData(d);
-      onReady(id.key);
+      if (d) { setData(d); onReady(id.key); return; }
+      // Map servers busy: try this block again later instead of leaving a hole.
+      if (++tries < 4) timer = window.setTimeout(attempt, 8000 * tries);
     });
-    return () => { alive = false; };
+    void attempt();
+    return () => { alive = false; window.clearTimeout(timer); };
   }, [id.key, id.i, id.j, origin.lat, onReady]);
 
   const geo = useMemo(() => data ? {
