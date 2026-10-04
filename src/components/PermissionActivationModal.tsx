@@ -37,7 +37,6 @@ interface PermissionActivationModalProps {
 
 const PERMISSION_ITEMS = [
   { type: 'microphone' as PermissionType, icon: Mic, label: 'Voice', color: 'text-green-500' },
-  { type: 'camera' as PermissionType, icon: Camera, label: 'Camera', color: 'text-blue-500' },
   { type: 'location' as PermissionType, icon: MapPin, label: 'Location', color: 'text-orange-500' },
   { type: 'notifications' as PermissionType, icon: Bell, label: 'Alerts', color: 'text-purple-500' },
 ];

@@ -366,7 +366,8 @@ export const requestAllPermissions = async (
   onProgress?.('microphone', results.microphone);
 
   // 2. Camera (for Zoe vision)
-  results.camera = await requestCameraAccess();
+  // Camera is not asked at start — features that need it ask at that moment.
+  results.camera = await checkPermissionSafe('camera');
   onProgress?.('camera', results.camera);
 
   // 3. Location (for Selfie City, weather, etc.)
