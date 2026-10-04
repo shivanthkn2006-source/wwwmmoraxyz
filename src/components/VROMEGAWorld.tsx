@@ -1214,7 +1214,10 @@ const MemoryPalace: React.FC<{
     };
   }, []);
 
-  const useLegacyController = controlsUnlocked && !showInteractives && !externalCameraLocked;
+  // The avatar controller lives inside M'Mora World's feature layer; the Real Map has none,
+  // so it always needs this controller (otherwise sticks, buttons and arrow keys move nothing).
+  useEffect(() => { if (!inMMora) setExternalCameraLocked(false); }, [inMMora]);
+  const useLegacyController = controlsUnlocked && (!inMMora || (!showInteractives && !externalCameraLocked));
 
   return (
     <>
