@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from 'vitest';
 import { walkStep, staminaTick, getStamina, __resetStamina, TURN_RAD_PS, STAMINA_RESUME } from '@/lib/vrWalk';
 import { pickUse } from '@/lib/vrUse';
