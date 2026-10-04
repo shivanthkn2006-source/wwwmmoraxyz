@@ -103,6 +103,7 @@ import { PortalDoorway } from '@/worlds/portal/PortalDoorway';
 import { useWorldState, returnToReal, RETURN_PORTAL_POS, getWorldState, entryHeight } from '@/worlds/worldMode';
 import { LandscapeViewportGuard } from './vr/LandscapeViewportGuard';
 import { RealMapStatus } from './vr/RealMapStatus';
+import { RealStartCityPicker } from './vr/RealStartCityPicker';
 import { RealAerialLand } from './vr/RealAerialLand';
 import { useSkyPhase } from '@/hooks/useSkyPhase';
 import { trackActivity } from '@/lib/visitTracker';
@@ -3030,7 +3031,7 @@ const VRLiveClock: React.FC = () => {
                 }}
               />
 
-              <VRFeature id="extras">
+              <VRFeature id="extras" tray>
               <VRLookJoystick
                 onLook={(dx, dy) => {
                   if (Math.abs(dx) > 0.15 || Math.abs(dy) > 0.15) {
@@ -3040,14 +3041,6 @@ const VRLiveClock: React.FC = () => {
               />
 
               <RotationButtons />
-              </VRFeature>
-              <LookButtons />
-              <VRGamepadHUD />
-              <LandscapeViewportGuard />
-              <VRFeature id="map"><RealMapStatus /></VRFeature>
-              <RealAerialLand />
-              <VRFeature id="extras" part="bar">
-
               <VRTouchControlBar
                 is5xZoom={is5xZoom}
                 onToggleZoom={() => {
@@ -3058,12 +3051,20 @@ const VRLiveClock: React.FC = () => {
                 }}
                 onSpawnCar={() => window.dispatchEvent(new CustomEvent('vr-spawn', { detail: { type: 'car' } }))}
               />
+              </VRFeature>
+              <LookButtons />
+              <VRGamepadHUD />
+              <LandscapeViewportGuard />
+              <VRFeature id="map"><RealMapStatus /></VRFeature>
+              <RealAerialLand />
+              <RealStartCityPicker />
+              <VRFeature id="extras" part="bike">
               <BikeOnScreenControls />
               </VRFeature>
             </>
           )}
 
-<VRFeature id="zoom5x">
+<VRFeature id="zoom5x" tray>
           {/* Desktop 5X Zoom Button (non-touch devices) */}
           {typeof window !== 'undefined' && !('ontouchstart' in window) && controlsUnlocked && (
             <button
