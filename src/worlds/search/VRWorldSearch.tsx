@@ -89,7 +89,7 @@ export const VRWorldSearch: React.FC = () => {
             <li key={r.id}>
               <button type="button" role="option" aria-selected={false} onClick={() => void go(r)} className="vr-search-result">
                 <span className="vr-search-title">{r.title}</span>
-                <span className="vr-search-detail">{KIND_LABEL[r.kind]} · {r.detail}</span>
+                <span className="vr-search-detail">{KIND_LABEL[r.kind]}{r.detail ? ` · ${r.detail}` : ''}</span>
               </button>
             </li>
           ))}

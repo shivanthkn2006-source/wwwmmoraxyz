@@ -59,19 +59,19 @@ export function searchWorld(q: string, src: SearchSources, limit = 12): WorldRes
     for (const r of b.roads) if (r.name && !seen.has(`s:${r.name}`)) {
       seen.add(`s:${r.name}`);
       const p = r.pts[Math.floor(r.pts.length / 2)];
-      add({ id: `s:${r.name}`, kind: 'street', title: r.name, detail: 'Street', at: { lat: p[0], lng: p[1] } }, r.name);
+      add({ id: `s:${r.name}`, kind: 'street', title: r.name, detail: '', at: { lat: p[0], lng: p[1] } }, r.name);
     }
     for (const bd of b.buildings) if (bd.name && !seen.has(`b:${bd.name}`)) {
       seen.add(`b:${bd.name}`);
       const p = bd.pts[0];
-      add({ id: `b:${bd.name}`, kind: 'building', title: bd.name, detail: `Building · ${Math.round(bd.h)} m`, at: { lat: p[0], lng: p[1] } }, bd.name);
+      add({ id: `b:${bd.name}`, kind: 'building', title: bd.name, detail: `${Math.round(bd.h)} m tall`, at: { lat: p[0], lng: p[1] } }, bd.name);
     }
     for (const p of b.pois) if (!seen.has(`p:${p.name}`)) {
       seen.add(`p:${p.name}`);
       add({ id: `p:${p.name}`, kind: 'place', title: p.name, detail: p.kind.replace(/_/g, ' '), at: { lat: p.lat, lng: p.lng } }, p.name, p.kind);
     }
   }
-  for (const r of src.relics) add({ id: `r:${r.id}`, kind: 'relic', title: `${r.rarity} ${r.type}`, detail: 'Relic on your street', at: { lat: r.lat, lng: r.lng } }, r.type, r.rarity, 'relic');
-  for (const l of src.landmarks) add({ id: `l:${l.id}`, kind: 'landmark', title: l.title, detail: "M'Mora World", at: { x: l.x, z: l.z } }, l.title);
+  for (const r of src.relics) add({ id: `r:${r.id}`, kind: 'relic', title: `${r.rarity} ${r.type}`, detail: 'on your street', at: { lat: r.lat, lng: r.lng } }, r.type, r.rarity, 'relic');
+  for (const l of src.landmarks) add({ id: `l:${l.id}`, kind: 'landmark', title: l.title, detail: '', at: { x: l.x, z: l.z } }, l.title);
   return out.sort((a, b) => b.s - a.s).slice(0, limit).map(({ s: _s, ...r }) => r);
 }
