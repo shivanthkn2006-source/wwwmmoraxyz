@@ -11,7 +11,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { chebyshev, chunkBBox, chunkOf, neighborhood, toLatLng, toLocal, type LatLng, type ChunkId } from './geo';
 import { loadChunk, setChunkKeyFn, type OsmChunk } from './osm';
-import { setChunkStats, useWorldState, resolveOrigin, PORTAL_OFFSET, enterMMora } from '../worldMode';
+import { setChunkStats, useWorldState, resolveOrigin, PORTAL_OFFSET, enterMMora, startAerialEntry } from '../worldMode';
 import { PortalDoorway } from '../portal/PortalDoorway';
 import { DemoExplorer } from './DemoExplorer';
 
