@@ -263,9 +263,6 @@ export default function SovereignVaultPage() {
           </section>
         ) : (
           <>
-            <VaultUserDirectory />
-            <BetaInvitePanel />
-
             {CAPABILITIES.map((group) => (
               <section key={group.group} className="space-y-3">
                 <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
@@ -291,6 +288,9 @@ export default function SovereignVaultPage() {
                 </div>
               </section>
             ))}
+
+            <VaultUserDirectory />
+            <BetaInvitePanel />
 
             <section className="rounded-xl border border-border bg-card p-5">
               <div className="flex items-center justify-between">
