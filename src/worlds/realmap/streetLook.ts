@@ -21,7 +21,8 @@ function getWindowTexture(): THREE.Texture {
   if (windowTex) return windowTex;
   const c = document.createElement('canvas');
   c.width = 64; c.height = 64;
-  const g = c.getContext('2d')!;
+  const g = c.getContext('2d');
+  if (!g) { windowTex = new THREE.Texture(); return windowTex; }
   g.fillStyle = '#ffffff'; g.fillRect(0, 0, 64, 64);
   // Floor band
   g.fillStyle = '#d8d2c8'; g.fillRect(0, 58, 64, 6);
