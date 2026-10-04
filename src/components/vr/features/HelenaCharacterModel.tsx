@@ -64,6 +64,6 @@ export const HelenaCharacterModel: React.FC<HelenaCharacterModelProps> = ({
   return <primitive object={model} />;
 };
 
-useGLTF.preload(helenaModelUrl);
+// No import-time preload: loads only when this character is actually shown.
 
 export default HelenaCharacterModel;

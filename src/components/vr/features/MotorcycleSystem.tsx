@@ -38,6 +38,18 @@ const PLAYER_MOUNT_DISTANCE = 3.0;
 const BIKE_WORLD_SCALE = 1;
 const BIKE_GROUND_Y = 0.15;
 const USE_UPLOADED_BIKE_MODEL = true;
+const LOW_MEMORY_DEVICE = typeof navigator !== 'undefined' && (
+  /iPhone|iPad|iPod/.test(navigator.userAgent) ||
+  ((navigator as any).deviceMemory ?? 8) <= 4 || (navigator.hardwareConcurrency ?? 8) <= 4
+);
+
+/** If the detailed bike fails to download or parse, keep the simple bike instead of crashing the whole world. */
+class BikeModelBoundary extends React.Component<{ fallback: React.ReactNode; children: React.ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() { return { failed: true }; }
+  componentDidCatch(e: unknown) { console.warn('[VR bike] detailed model unavailable, using simple bike', e); }
+  render() { return this.state.failed ? this.props.fallback : this.props.children; }
+}
 
 // ─── Engine Audio ────────────────────────────────────────────────────────────
 class BikeAudioEngine {
@@ -939,7 +951,8 @@ export const MotorcycleController: React.FC<MotorcycleControllerProps> = ({
         rotation={[0, bikeYaw.current, lean.current]}
         scale={[BIKE_WORLD_SCALE, BIKE_WORLD_SCALE, BIKE_WORLD_SCALE]}
       >
-        {USE_UPLOADED_BIKE_MODEL ? (
+        {USE_UPLOADED_BIKE_MODEL && isMounted && !LOW_MEMORY_DEVICE ? (
+          <BikeModelBoundary fallback={<SportBikeModel steerRef={steerAngle} spinRef={wheelSpin} />}>
           <Suspense fallback={<SportBikeModel steerRef={steerAngle} spinRef={wheelSpin} />}>
             <UploadedBikeModel>
               {isNight && (
@@ -962,10 +975,11 @@ export const MotorcycleController: React.FC<MotorcycleControllerProps> = ({
               )}
             </UploadedBikeModel>
           </Suspense>
+          </BikeModelBoundary>
         ) : (
           <SportBikeModel steerRef={steerAngle} spinRef={wheelSpin} />
         )}
-        {isNight && !USE_UPLOADED_BIKE_MODEL && (
+        {isNight && !(USE_UPLOADED_BIKE_MODEL && isMounted && !LOW_MEMORY_DEVICE) && (
           <>
             <mesh position={[0, 0.78, 1.62]}>
               <sphereGeometry args={[0.055, 10, 10]} />
@@ -1095,7 +1109,5 @@ export const BikeOnScreenControls: React.FC = () => {
 
 export default MotorcycleController;
 
-// Only preload when using the uploaded model to avoid 57MB unnecessary download
-if (USE_UPLOADED_BIKE_MODEL) {
-  useGLTF.preload(uploadedBikeModelUrl);
-}
+// No preload: the detailed bike is 57 MB, so it downloads only when a rider gets on
+// (never on low-memory phones). Preloading it at import time stalled VR World start.

@@ -1130,6 +1130,39 @@ const CameraTelemetryTracker: React.FC<{ onTelemetry: (telemetry: CameraTelemetr
   return null;
 };
 
+/** Writes renderer load (draw calls, triangles, geometries, textures) to window.__vrStats once a second for the load monitor and tests. */
+const RenderStatsProbe: React.FC = () => {
+  const { gl, scene } = useThree();
+  const last = useRef(0);
+  useFrame(({ clock }) => {
+    const t = clock.elapsedTime;
+    if (t - last.current < 1) return;
+    last.current = t;
+    let meshes = 0; scene.traverse((o) => { if ((o as THREE.Mesh).isMesh) meshes++; });
+    (window as any).__vrStats = {
+      t: Math.round(t), calls: gl.info.render.calls, triangles: gl.info.render.triangles,
+      geometries: gl.info.memory.geometries, textures: gl.info.memory.textures, meshes,
+      heapMB: Math.round(((performance as any).memory?.usedJSHeapSize ?? 0) / 1048576),
+    };
+    // Dev diagnostics: which branches of the scene hold the most meshes.
+    if (import.meta.env.DEV) {
+      const describe = (root: THREE.Object3D) => {
+        let n = 0; const kinds: Record<string, number> = {};
+        root.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh) { n++; const k = (m.geometry as any)?.type ?? '?'; kinds[k] = (kinds[k] ?? 0) + 1; } });
+        return { n, kinds, pos: root.position.toArray().map((v) => Math.round(v)), kids: root.children.length };
+      };
+      const walk = (root: THREE.Object3D, depth: number, path: string): any[] => root.children.flatMap((c, i) => {
+        const d = describe(c); const here = `${path}/${i}`;
+        if (d.n < 200) return [];
+        const deeper = depth < 4 ? walk(c, depth + 1, here) : [];
+        return [{ path: here, ...d }, ...deeper];
+      });
+      (window as any).__vrTree = walk(scene, 0, '');
+    }
+  });
+  return null;
+};
+
 const MemoryPalace: React.FC<{
   engrams: MemoryEngram[];
   ecnData: ECNDataPoint[];
@@ -2902,6 +2935,7 @@ const VRLiveClock: React.FC = () => {
             </>
           )}
           
+          <RenderStatsProbe />
           {/* 5X Zoom Lens - always active inside Canvas */}
           <VRZoomLens />
           </Canvas>
