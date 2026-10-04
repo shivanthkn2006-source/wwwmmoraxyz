@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { RefreshCw, Radio, LogIn, LogOut } from 'lucide-react';
 import AdminEngagementPanels from '@/components/admin/AdminEngagementPanels';
+import NotificationHealthPanel from '@/components/admin/NotificationHealthPanel';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
 type Visit = {
@@ -273,6 +274,7 @@ export default function AdminPlatformAnalyticsPage() {
             </table>
           </div>
         </Card>
+        <NotificationHealthPanel />
         <p className="text-xs text-muted-foreground">Location comes from the visitor's public internet address, so it's usually accurate to the city, not the street. Browsers never reveal a device's local network address.</p>
       </div>
     </div>

@@ -2,23 +2,23 @@ import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'app.lovable.p5e9c1fcbad3b434fa9d89d7d3fb4a4b4',
-  appName: 'wwwmmoraxyz',
+  appName: "M'Mora",
   webDir: 'dist',
-  server: {
-    url: 'https://5e9c1fcb-ad3b-434f-a9d8-9d7d3fb4a4b4.lovableproject.com?forceHideBadge=true',
-    cleartext: true,
-  },
+  // Store builds load the bundled app. Set CAP_DEV=1 for live-reload from the preview.
+  ...(process.env.CAP_DEV === '1'
+    ? { server: { url: 'https://5e9c1fcb-ad3b-434f-a9d8-9d7d3fb4a4b4.lovableproject.com?forceHideBadge=true', cleartext: true } }
+    : {}),
   plugins: {
     SplashScreen: {
       launchShowDuration: 2000,
-      backgroundColor: '#000000',
+      backgroundColor: '#E8D9C0',
       showSpinner: false,
       androidSplashResourceName: 'splash',
       androidScaleType: 'CENTER_CROP',
     },
     StatusBar: {
-      style: 'DARK',
-      backgroundColor: '#000000',
+      style: 'LIGHT',
+      backgroundColor: '#E8D9C0',
     },
     Keyboard: {
       resize: 'body',
