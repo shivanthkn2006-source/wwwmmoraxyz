@@ -164,7 +164,7 @@ export function splitByChunk(all: OsmChunk, keyOf: (lat: number, lng: number) =>
   return out;
 }
 
-// Missing blocks requested within 60 ms are fetched in ONE map request
+// Missing blocks requested within 1.2 s are fetched in ONE map request
 // (public map servers rate-limit many small requests with 429/504).
 type Pending = { key: string; bbox: BBox; resolve: (c: OsmChunk | null) => void };
 let batch: Pending[] = [];
@@ -203,7 +203,7 @@ export function loadChunk(key: string, bbox: BBox): Promise<OsmChunk | null> {
     if (shared) { void cachePut(key, shared); return shared; }
     return new Promise<OsmChunk | null>((resolve) => {
       batch.push({ key, bbox, resolve });
-      if (!batchTimer) batchTimer = setTimeout(() => void flushBatch(), 60);
+      if (!batchTimer) batchTimer = setTimeout(() => void flushBatch(), 1200);
     });
   })();
   inflight.set(key, p);
