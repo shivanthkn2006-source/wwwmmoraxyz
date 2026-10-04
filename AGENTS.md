@@ -24,3 +24,5 @@
 
 - Notification kinds live in the notification_kinds table; unknown kinds are coerced to system by trigger, because a fixed CHECK list silently dropped alerts.
 - Notification UI consumers subscribe via globalRealtime (auto-rejoin, onRealtimeReconnect catch-up), because separate channels dropped during auth reloads.
+- Admin-only routes render the ordinary NotFound page to non-admins and report it via track-visit `activity` (server throttles, skips the admin), because guessed URLs must never reveal what exists.
+- Live admin monitoring alerts (domain visits, missing pages, admin probes, VR activity) are created only server-side in track-visit, because clients cannot insert alerts for the admin.
