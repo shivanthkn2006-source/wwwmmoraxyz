@@ -8,6 +8,7 @@
  */
 import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { subscribeRealtime, onRealtimeReconnect } from '@/realtime/globalRealtime';
 import { useAuth } from '@/lib/auth';
 import { toast } from 'sonner';
 import {
@@ -157,14 +158,9 @@ export function useGlobalNotificationAlerts() {
 
 
     // Fast path: realtime.
-    const channel = supabase
-      .channel(`global-notification-alerts:${user.id}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
-        (payload) => raise(payload.new as AlertableNotification)
-      )
-      .subscribe();
+    const offN = subscribeRealtime({ table: 'notifications', filter: `user_id=eq.${user.id}` }, (p) => {
+      if (p.eventType === 'INSERT' && p.new) raise(p.new as unknown as AlertableNotification);
+    });
 
     // Durable path: realtime channels can time out (socket limits, sleeping
     // tabs, flaky networks). A cheap indexed poll guarantees the user still
