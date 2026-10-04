@@ -20,7 +20,7 @@ function validChunk(d: unknown): boolean {
   if (!d || typeof d !== 'object') return false;
   const c = d as { buildings?: unknown; roads?: unknown; pois?: unknown };
   const arr = (a: unknown, max: number) => Array.isArray(a) && a.length <= max;
-  if (!arr(c.buildings, 400) || !arr(c.roads, 250) || !arr(c.pois, 30)) return false;
+  if (!arr(c.buildings, 400) || !arr(c.roads, 250) || !arr(c.pois, 60)) return false;
   const pts = (p: unknown) => Array.isArray(p) && p.length <= 400 &&
     p.every((q) => Array.isArray(q) && q.length === 2 && q.every((n) => typeof n === 'number' && Number.isFinite(n)));
   return (c.buildings as { pts: Pt[]; h: number }[]).every((b) => pts(b.pts) && typeof b.h === 'number' && b.h > 0 && b.h <= 300) &&
