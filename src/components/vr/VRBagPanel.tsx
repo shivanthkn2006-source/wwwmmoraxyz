@@ -41,7 +41,7 @@ export const VRBagPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
               </div>
               <p className="text-[11px] text-foreground/70">{q.description}</p>
               <div className="mt-1 h-1.5 rounded-full bg-background/80">
-                <div className="h-full rounded-full bg-[hsl(142_71%_45%)]" style={{ width: `${(p / q.goal) * 100}%` }} />
+                <div className="vr-quest-bar h-full rounded-full" style={{ width: `${(p / q.goal) * 100}%` }} />
               </div>
             </li>
           );

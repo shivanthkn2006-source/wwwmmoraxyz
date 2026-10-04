@@ -8,6 +8,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { Html, Float, Sphere, Box } from '@react-three/drei';
 import * as THREE from 'three';
 import { notifySelf } from '@/lib/notifySelf';
+import { recordVRCollect } from '@/lib/vrQuests';
 import { trackActivity } from '@/lib/visitTracker';
 
 // Hidden item types
@@ -461,6 +462,7 @@ export const VRHiddenItemsManagerAuto: React.FC<{
   const handleCollect = (id: string) => {
     const found = items.find((i) => i.id === id);
     if (found) void notifySelf('vr_collectible', 'Found in VR World', `You collected a ${found.rarity} ${found.type.replace(/_/g, ' ')}`, { link: '/vr-world', rarity: found.rarity });
+    if (found) void recordVRCollect({ type: found.type, rarity: found.rarity });
     if (found) trackActivity('vr_collect', `Collected a ${found.rarity} ${found.type.replace(/_/g, ' ')}`);
     setItems(prev => prev.filter(item => item.id !== id));
     onItemCollected?.(id);
