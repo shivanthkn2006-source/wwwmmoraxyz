@@ -255,52 +255,66 @@ const TrackRenderer: React.FC<{ path: THREE.CatmullRomCurve3 }> = ({ path }) => 
     return { sleepers: sleeperData, railLeftPts: leftPts, railRightPts: rightPts, gravelPts: gravelData };
   }, [path]);
 
+  const railSegments = (pts: [number, number, number][]) => pts.slice(0, -1).map((p, i) => {
+    const n = pts[i + 1];
+    const dx = n[0] - p[0], dz = n[2] - p[2];
+    return { x: (p[0] + n[0]) / 2, y: (p[1] + n[1]) / 2, z: (p[2] + n[2]) / 2, angle: Math.atan2(dx, dz), sz: Math.sqrt(dx * dx + dz * dz) + 0.01 };
+  });
+
+  // Same look as before, drawn as 5 instanced batches instead of ~3,000 separate objects.
   return (
     <group>
       {/* Gravel bed - dark grey stones */}
-      {gravelPts.map((g, i) => (
-        <mesh key={`g${i}`} position={[g.pos.x, g.pos.y - 0.02, g.pos.z]} rotation={[0, g.angle, 0]}>
-          <boxGeometry args={[SLEEPER_WIDTH + 0.6, 0.05, SLEEPER_SPACING * 3.2]} />
-          <meshStandardMaterial color="#5a5045" roughness={1} />
-        </mesh>
-      ))}
+      <InstancedBoxes
+        size={[SLEEPER_WIDTH + 0.6, 0.05, SLEEPER_SPACING * 3.2]}
+        items={gravelPts.map((g) => ({ x: g.pos.x, y: g.pos.y - 0.02, z: g.pos.z, angle: g.angle }))}
+        color="#5a5045" roughness={1}
+      />
       {/* Wooden sleepers - brown timber with realistic weathered look */}
-      {sleepers.map((s, i) => (
-        <mesh key={`s${i}`} position={[s.pos.x, s.pos.y + 0.02, s.pos.z]} rotation={[0, s.angle, 0]}>
-          <boxGeometry args={[SLEEPER_WIDTH, 0.06, 0.14]} />
-          <meshStandardMaterial color={i % 3 === 0 ? '#6b4226' : '#7a5433'} roughness={0.95} metalness={0.05} />
-        </mesh>
-      ))}
+      <InstancedBoxes
+        size={[SLEEPER_WIDTH, 0.06, 0.14]}
+        items={sleepers.filter((_, i) => i % 3 === 0).map((s) => ({ x: s.pos.x, y: s.pos.y + 0.02, z: s.pos.z, angle: s.angle }))}
+        color="#6b4226" roughness={0.95} metalness={0.05}
+      />
+      <InstancedBoxes
+        size={[SLEEPER_WIDTH, 0.06, 0.14]}
+        items={sleepers.filter((_, i) => i % 3 !== 0).map((s) => ({ x: s.pos.x, y: s.pos.y + 0.02, z: s.pos.z, angle: s.angle }))}
+        color="#7a5433" roughness={0.95} metalness={0.05}
+      />
       {/* Steel rails */}
-      {railLeftPts.map((p, i) => {
-        if (i >= railLeftPts.length - 1) return null;
-        const n = railLeftPts[i + 1];
-        const mx = (p[0] + n[0]) / 2, my = (p[1] + n[1]) / 2, mz = (p[2] + n[2]) / 2;
-        const dx = n[0] - p[0], dz = n[2] - p[2];
-        const len = Math.sqrt(dx * dx + dz * dz);
-        const angle = Math.atan2(dx, dz);
-        return (
-          <mesh key={`rl${i}`} position={[mx, my, mz]} rotation={[0, angle, 0]}>
-            <boxGeometry args={[0.05, 0.04, len + 0.01]} />
-            <meshStandardMaterial color="#777" metalness={0.7} roughness={0.3} />
-          </mesh>
-        );
-      })}
-      {railRightPts.map((p, i) => {
-        if (i >= railRightPts.length - 1) return null;
-        const n = railRightPts[i + 1];
-        const mx = (p[0] + n[0]) / 2, my = (p[1] + n[1]) / 2, mz = (p[2] + n[2]) / 2;
-        const dx = n[0] - p[0], dz = n[2] - p[2];
-        const len = Math.sqrt(dx * dx + dz * dz);
-        const angle = Math.atan2(dx, dz);
-        return (
-          <mesh key={`rr${i}`} position={[mx, my, mz]} rotation={[0, angle, 0]}>
-            <boxGeometry args={[0.05, 0.04, len + 0.01]} />
-            <meshStandardMaterial color="#777" metalness={0.7} roughness={0.3} />
-          </mesh>
-        );
-      })}
+      <InstancedBoxes size={[0.05, 0.04, 1]} items={railSegments(railLeftPts)} color="#777" metalness={0.7} roughness={0.3} />
+      <InstancedBoxes size={[0.05, 0.04, 1]} items={railSegments(railRightPts)} color="#777" metalness={0.7} roughness={0.3} />
     </group>
+  );
+};
+
+/** Many identical boxes in one draw call. Each item: position, Y rotation, optional Z length. */
+const InstancedBoxes: React.FC<{
+  size: [number, number, number];
+  items: Array<{ x: number; y: number; z: number; angle: number; sz?: number }>;
+  color: string; roughness?: number; metalness?: number;
+}> = ({ size, items, color, roughness = 0.9, metalness = 0 }) => {
+  const ref = useRef<THREE.InstancedMesh>(null);
+  React.useLayoutEffect(() => {
+    const mesh = ref.current;
+    if (!mesh) return;
+    const m = new THREE.Object3D();
+    items.forEach((it, i) => {
+      m.position.set(it.x, it.y, it.z);
+      m.rotation.set(0, it.angle, 0);
+      m.scale.set(1, 1, it.sz ?? 1);
+      m.updateMatrix();
+      mesh.setMatrixAt(i, m.matrix);
+    });
+    mesh.instanceMatrix.needsUpdate = true;
+    mesh.computeBoundingSphere();
+  }, [items]);
+  if (items.length === 0) return null;
+  return (
+    <instancedMesh ref={ref} args={[undefined, undefined, items.length]} frustumCulled={false}>
+      <boxGeometry args={size} />
+      <meshStandardMaterial color={color} roughness={roughness} metalness={metalness} />
+    </instancedMesh>
   );
 };
 
