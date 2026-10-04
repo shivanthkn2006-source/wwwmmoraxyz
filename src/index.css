@@ -7232,3 +7232,40 @@ html body .vr-gem-core { animation-duration: 4s !important; }
   .vr-aerial-land button { white-space: nowrap; }
   .vr-aerial-land button { padding-top: 0.35rem; padding-bottom: 0.35rem; }
 }
+
+/* ── M'Mora world loading (frosted glass) ── */
+.mmw-loader { position: absolute; inset: 0; display: grid; place-items: center; overflow: hidden; color: hsl(195 100% 85%);
+  background: radial-gradient(120% 90% at 30% 20%, hsl(205 30% 32%), hsl(210 35% 14%) 60%, hsl(212 40% 8%)); }
+.mmw-glass { background: linear-gradient(160deg, hsl(0 0% 100% / 0.16), hsl(200 40% 90% / 0.06)); border: 1px solid hsl(0 0% 100% / 0.35);
+  box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.45), 0 20px 50px hsl(212 50% 5% / 0.45); backdrop-filter: blur(14px) saturate(1.2); -webkit-backdrop-filter: blur(14px) saturate(1.2); }
+.mmw-main { position: relative; width: min(440px, 84vw); height: min(560px, 74vh); border-radius: 28px; display: flex; flex-direction: column; align-items: center; padding: clamp(24px, 6vh, 56px) 20px 0; overflow: hidden; }
+.mmw-title { font-size: clamp(30px, 6vw, 46px); font-weight: 300; letter-spacing: .01em; color: hsl(190 100% 90%); text-shadow: 0 0 18px hsl(190 100% 70% / .55); }
+.mmw-sub { margin-top: 8px; max-width: 280px; text-align: center; font-size: clamp(13px, 2.2vw, 17px); color: hsl(0 0% 100% / .9); }
+.mmw-ring { width: clamp(110px, 22vh, 150px); margin-top: clamp(20px, 6vh, 60px); }
+.mmw-ring-track { fill: none; stroke: hsl(0 0% 100% / .22); stroke-width: 6; }
+.mmw-ring-fill { fill: none; stroke: hsl(0 0% 100% / .92); stroke-width: 6; stroke-linecap: round; transform: rotate(-90deg); transform-origin: 50% 50%; transition: stroke-dashoffset .3s ease; filter: drop-shadow(0 0 6px hsl(190 100% 80% / .7)); }
+.mmw-ring-text { fill: hsl(0 0% 100%); font-size: 15px; }
+.mmw-skyline { position: absolute; bottom: 0; left: 0; width: 100%; height: 34%; color: hsl(195 100% 62%); filter: drop-shadow(0 0 6px hsl(195 100% 60% / .7)); }
+.mmw-connect { position: absolute; left: max(4vw, calc(50% - min(440px, 84vw) / 2 - 60px)); top: 34%; width: 150px; padding: 12px 14px; border-radius: 14px; font-size: 10px; letter-spacing: .12em; color: hsl(0 0% 100% / .85); }
+.mmw-bar { margin-top: 8px; height: 8px; border-radius: 999px; background: hsl(0 0% 100% / .18); overflow: hidden; }
+.mmw-bar > div { height: 100%; border-radius: 999px; background: hsl(0 0% 100% / .75); transition: width .3s ease; }
+.mmw-badge { position: absolute; right: max(4vw, calc(50% - min(440px, 84vw) / 2 - 50px)); top: 44%; width: 104px; height: 104px; border-radius: 18px; display: grid; place-items: center; }
+.mmw-headset { width: 56px; color: hsl(0 0% 100%); }
+@media (max-width: 560px) { .mmw-connect { top: 30%; width: 120px; } .mmw-badge { width: 80px; height: 80px; top: 40%; } }
+
+/* ── VR World: meet + chat ── */
+.vr-meet-label { display: flex; align-items: center; gap: 4px; white-space: nowrap; font-size: 11px; font-weight: 600; color: hsl(0 0% 100%); text-shadow: 0 1px 3px hsl(0 0% 0% / .7); }
+.vr-meet-tag { display: inline-block; border-radius: 999px; padding: 0 6px; font-size: 10px; font-weight: 700; line-height: 16px; color: hsl(0 0% 100%); }
+.vr-meet-tag-friend { background: #387BF6; }
+.vr-meet-tag-follower { background: #F5C518; color: hsl(30 40% 12%); }
+.vr-meet-tag-unknown { background: #34C759; }
+.vr-meet-chat { bottom: 46vh; }
+@media (max-height: 520px) { .vr-meet-chat { bottom: auto; top: 9.5rem; width: min(300px, 30vw); } }
+.vr-chat-line { display: flex; align-items: flex-start; gap: 8px; transition: opacity .6s; }
+.vr-chat-avatar { flex: none; width: 28px; height: 28px; border-radius: 999px; object-fit: cover; display: grid; place-items: center; font-size: 13px; font-weight: 700; color: hsl(0 0% 100%); background: #34C759; }
+.vr-chat-avatar-friend { background: #387BF6; } .vr-chat-avatar-follower { background: #F5C518; } .vr-chat-avatar-me { background: hsl(30 25% 45%); }
+.vr-chat-name { font-weight: 700; color: hsl(0 0% 100% / .85); text-shadow: 0 1px 3px hsl(0 0% 0% / .8); font-size: 13px; }
+.vr-chat-text { color: hsl(0 0% 100%); font-weight: 600; font-size: 13px; text-shadow: 0 1px 3px hsl(0 0% 0% / .8); }
+.vr-chat-input { border-radius: 999px; background: hsl(0 0% 0% / .28); border: 1px solid hsl(0 0% 100% / .25); }
+.vr-chat-icon { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 999px; color: hsl(0 0% 100%); background: hsl(0 0% 100% / .14); }
+.vr-chat-chip { border-radius: 999px; padding: 4px 10px; font-size: 11px; font-weight: 600; color: hsl(0 0% 100%); background: hsl(0 0% 0% / .3); border: 1px solid hsl(0 0% 100% / .25); text-shadow: 0 1px 2px hsl(0 0% 0% / .6); }
