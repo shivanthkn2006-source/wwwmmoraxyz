@@ -101,6 +101,7 @@ export async function startVoice(): Promise<boolean> {
     set({ error: 'Microphone not allowed' });
     return false;
   }
+  await relay;
   set({ on: true, error: null });
   setVoiceFlag(true);
   offSignal = onSignal((s) => void onSig(s));
