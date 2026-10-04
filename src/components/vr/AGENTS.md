@@ -7,3 +7,4 @@
 - Repeated VR scenery (rails, sleepers, gravel) uses instanced meshes and moving fleets (metro trains) use distance LOD, because thousands of separate meshes exhausted phone memory.
 - While VR World is active (src/lib/vrSession.ts), AfterAuthIdle hosts marked pauseInVR unmount, because background helpers outside the world compete with the 3D scene on phones.
 - VR relic quests and the item bag live in src/lib/vrQuests.ts (vr_bag_items, vr_quest_progress; own-row RLS), and quest completion alerts go through notifySelf as vr_quest_complete, because one store keeps the world, bag panel and bell in sync.
+- VR World spawns on the Real Map (src/worlds/realmap, OpenStreetMap chunks keyed in lat/lng, cached in IndexedDB) and the existing city is "M'Mora World" behind a doorway; src/worlds/worldMode.ts mounts only one world at a time, because both worlds together would exceed phone memory.
