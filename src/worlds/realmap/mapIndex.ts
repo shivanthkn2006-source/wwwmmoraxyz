@@ -4,7 +4,7 @@
  * read from here, so nothing is fetched twice.
  */
 import { useSyncExternalStore } from 'react';
-import type { OsmChunk } from './osm';
+import { onNamesRefreshed, type OsmChunk } from './osm';
 
 const blocks = new Map<string, OsmChunk>();
 let version = 0;
@@ -16,3 +16,6 @@ export function dropBlock(key: string) { if (blocks.delete(key)) emit(); }
 export const mapBlocks = () => blocks;
 export const useMapVersion = () => useSyncExternalStore((l) => { ls.add(l); return () => ls.delete(l); }, () => version, () => version);
 export function __resetMapIndex() { blocks.clear(); emit(); }
+
+// Names arriving later for a block that is still loaded.
+onNamesRefreshed((key, c) => { if (blocks.has(key)) indexBlock(key, c); });
