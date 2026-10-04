@@ -18,6 +18,7 @@ import {
 import { useNotificationSettings } from '@/hooks/useNotificationSettings';
 import { CustomSoundUploader } from '@/components/CustomSoundUploader';
 import { useNavigate } from 'react-router-dom';
+import { VRLocationPrivacyCard } from '@/components/vr/VRLocationPrivacyCard';
 import { NotificationThemes } from '@/utils/notificationThemes';
 
 interface NotificationPreferences {
@@ -154,6 +155,7 @@ const NotificationPreferencesPage = () => {
               </h2>
               {/* Keep existing switches */}
             </Card>
+            <VRLocationPrivacyCard />
           </TabsContent>
 
           {/* Sounds Tab */}
