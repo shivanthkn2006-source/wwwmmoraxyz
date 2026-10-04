@@ -1,13 +1,15 @@
 import { ReactNode, Suspense, useEffect, useState } from 'react';
 import { useAuth } from '@/lib/auth';
+import { useVRWorldActive } from '@/lib/vrSession';
 
 /**
  * Staged loading: background helpers mount only after sign-in has settled
  * and the browser is idle, so /auth and first Home paint stay light and
  * no helper fires backend calls with a half-switched session.
  */
-export function AfterAuthIdle({ children, delayMs = 0 }: { children: ReactNode; delayMs?: number }) {
+export function AfterAuthIdle({ children, delayMs = 0, pauseInVR = false }: { children: ReactNode; delayMs?: number; /** Unmount while the member is inside VR World. */ pauseInVR?: boolean }) {
   const { user, loading } = useAuth();
+  const inVR = useVRWorldActive();
   const [ready, setReady] = useState(false);
   const userId = user?.id;
 
@@ -29,6 +31,6 @@ export function AfterAuthIdle({ children, delayMs = 0 }: { children: ReactNode; 
     };
   }, [loading, userId, delayMs]);
 
-  if (!ready) return null;
+  if (!ready || (pauseInVR && inVR)) return null;
   return <Suspense fallback={null}>{children}</Suspense>;
 }

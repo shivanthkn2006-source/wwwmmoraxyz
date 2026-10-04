@@ -7200,3 +7200,12 @@ html body .ios26-switch > .ios26-switch-knob {
   transform: translateX(0) !important; transition: transform 200ms cubic-bezier(.3,.7,.4,1), background-color 200ms ease !important;
 }
 html body .ios26-switch[data-on='true'] > .ios26-switch-knob { background: hsl(var(--ios-switch-knob-on)) !important; transform: translateX(18px) !important; }
+
+/* VR World item bag: spinning CSS 3D relic gems + quest progress (no second WebGL canvas). */
+:root { --vr-quest-progress: 142 71% 45%; }
+.vr-quest-bar { background: hsl(var(--vr-quest-progress)); }
+.vr-gem { width: 26px; height: 26px; perspective: 120px; position: relative; }
+.vr-gem-core { position: absolute; inset: 3px; clip-path: polygon(50% 0, 100% 40%, 50% 100%, 0 40%); animation: vr-gem-spin 4s linear infinite; box-shadow: inset 0 0 6px hsl(0 0% 100% / 0.6); }
+.vr-gem-core-b { animation-delay: -2s; opacity: 0.55; }
+@keyframes vr-gem-spin { from { transform: rotateY(0deg); } to { transform: rotateY(360deg); } }
+html body .vr-gem-core { animation-duration: 4s !important; }

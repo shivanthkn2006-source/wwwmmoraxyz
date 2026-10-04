@@ -5,6 +5,7 @@
 // UPGRADED: Ready Player One Cinematic Pipeline + CyberCity + Gaussian Splatting
 // ═══════════════════════════════════════════════════════════════════════════════
 
+import { setVRWorldActive } from '@/lib/vrSession';
 import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { 
@@ -1149,7 +1150,8 @@ const RenderStatsProbe: React.FC = () => {
       const describe = (root: THREE.Object3D) => {
         let n = 0; const kinds: Record<string, number> = {};
         root.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh) { n++; const k = (m.geometry as any)?.type ?? '?'; kinds[k] = (kinds[k] ?? 0) + 1; } });
-        return { n, kinds, pos: root.position.toArray().map((v) => Math.round(v)), kids: root.children.length };
+        let sample: any = null; root.traverse((o) => { const m = o as THREE.Mesh; if (!sample && m.isMesh) sample = { g: (m.geometry as any).parameters, c: ((m.material as any)?.color as THREE.Color | undefined)?.getHexString?.(), p: m.position.toArray().map((v) => Math.round(v)) }; });
+        return { n, kinds, sample, pos: root.position.toArray().map((v) => Math.round(v)), kids: root.children.length };
       };
       const walk = (root: THREE.Object3D, depth: number, path: string): any[] => root.children.flatMap((c, i) => {
         const d = describe(c); const here = `${path}/${i}`;
@@ -1319,6 +1321,12 @@ const VROMEGAWorld: React.FC<VROMEGAWorldProps> = ({
   const { user } = useAuth();
   // Live admin monitoring: one "entered VR World" event per visit (server throttles repeats).
   useEffect(() => { if (isActive !== false) trackActivity('vr_enter', 'Entered VR World'); }, [isActive]);
+  // Inside the world, background hosts outside it (joke/scan/journal/install helpers) unmount.
+  useEffect(() => {
+    if (isActive === false) return;
+    setVRWorldActive(true);
+    return () => setVRWorldActive(false);
+  }, [isActive]);
   const [engrams, setEngrams] = useState<MemoryEngram[]>([]);
   const [ecnData, setEcnData] = useState<ECNDataPoint[]>([]);
   const [coherenceScore, setCoherenceScore] = useState(0.85);

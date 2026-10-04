@@ -1502,7 +1502,7 @@ const App = () => {
                       <Toaster />
                       <Sonner />
                       <MandatoryLoaderGate />
-                      <AfterAuthIdle delayMs={8000}>
+                      <AfterAuthIdle delayMs={8000} pauseInVR>
                         <InstallPrompt />
                         <GuardianInterventionOverlay />
                       </AfterAuthIdle>
@@ -1519,10 +1519,10 @@ const App = () => {
                         <Suspense fallback={null}>
                           <MoraZoeGlobalHost />
                         </Suspense>
-                        <AfterAuthIdle delayMs={2500}>
+                        <AfterAuthIdle delayMs={2500} pauseInVR>
                           <HumorAnnouncementHost />
                         </AfterAuthIdle>
-                        <AfterAuthIdle delayMs={10000}>
+                        <AfterAuthIdle delayMs={10000} pauseInVR>
                           <ZoeDeviceScanHost />
                           <ZoeVisionJournalHost />
                         </AfterAuthIdle>

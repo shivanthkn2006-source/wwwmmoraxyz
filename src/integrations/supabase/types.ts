@@ -9556,6 +9556,30 @@ export type Database = {
         }
         Relationships: []
       }
+      vr_bag_items: {
+        Row: {
+          collected_at: string
+          id: string
+          item_type: string
+          rarity: string
+          user_id: string
+        }
+        Insert: {
+          collected_at?: string
+          id?: string
+          item_type: string
+          rarity: string
+          user_id: string
+        }
+        Update: {
+          collected_at?: string
+          id?: string
+          item_type?: string
+          rarity?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       vr_catalog: {
         Row: {
           active: boolean
@@ -9614,6 +9638,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      vr_quest_progress: {
+        Row: {
+          completed_at: string | null
+          progress: number
+          quest_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          progress?: number
+          quest_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          progress?: number
+          quest_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       vr_world_events: {
         Row: {

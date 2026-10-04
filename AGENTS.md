@@ -6,7 +6,8 @@
 - Auth hydrates first; Google BYOK returns via /~oauth/callback to public `/auth`; authenticated growth calls verify claims and degrade session races to signed-out results, never runtime failures.
 - Home orders due DHF, growth, social, Loop, and humor cards by their real scheduled timestamps, because fixed source blocks hide timely content.
 - All Zoe's LOL consumers share the global realtime multiplexer, because independent channels race during auth reloads and can take Home offline.
-- Boot stays light: no heavy manual chunks; hosts mount via AfterAuthIdle.
+- Boot stays light: no heavy manual chunks; hosts mount via AfterAuthIdle (pauseInVR hosts unmount while VR World is active).
+- VR World rules live in src/components/vr/AGENTS.md.
 - DHF pictures are copied once into dhf-compass and served from storage, preventing provider outages from blanking cards.
 - Zoe orb drift updates Framer motion values without React state updates, and Zoe glass avoids live backdrop filters, because frame-by-frame tree repaints cause orb/chat flicker over Home.
 - Home menu panel uses a fixed warm surface without backdrop-filter, because live blur over the moving feed flickers.
@@ -19,12 +20,9 @@
 - Member referral links use ?r=<code derived from user id>, recorded first-touch by visitTracker and credited server-side in track-visit on a new member's first sign-in, because referral credit must not be client-forgeable.
 - Home menu icons for admin, vault, nexus, omega and platform-internals pages are built only when the server-verified admin role check passes (isAdminOnlyRoute in dockExtraActions), because members must never see admin entry points.
 - Passkeys use the www-stripped hostname as rpId (assertions retry the exact hostname for older passkeys), because one passkey must work on both www and bare domains.
-- VR world distant/heavy areas (mountains, highway, cycling trail, heritage train) mount via ProximityGate (camera-distance with hysteresis, smaller radius on low-memory phones) and city systems are lazy chunks, because loading the whole world at once froze basic phones.
-- VR World on-screen panels are wrapped in <VRFeature id> and hidden while VRTopDock is mounted (body[data-vr-clean]); the dock's icon strip reveals them one by one, because the always-on HUD made VR unusable on phones.
 
 - Notification kinds live in the notification_kinds table; unknown kinds are coerced to system by trigger, because a fixed CHECK list silently dropped alerts.
 - Notification UI consumers subscribe via globalRealtime (auto-rejoin, onRealtimeReconnect catch-up), because separate channels dropped during auth reloads.
 - Admin-only routes render the ordinary NotFound page to non-admins and report it via track-visit `activity` (server throttles, skips the admin), because guessed URLs must never reveal what exists.
 - Live admin monitoring alerts (domain visits, missing pages, admin probes, VR activity) are created only server-side in track-visit, because clients cannot insert alerts for the admin.
 - Every saved notification is forwarded to the member's phones by a database trigger → notification-push function (x-cron-token), which re-checks the main, push and per-alert switches, because one delivery path keeps phone alerts consistent with the in-app bell.
-- VR World buttons and physical game controllers go through src/lib/vrInput.ts, which reuses the world's existing key/event wiring, because a second movement system would drift out of sync.
