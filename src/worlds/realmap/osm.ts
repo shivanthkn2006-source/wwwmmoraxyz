@@ -6,8 +6,8 @@
 import type { BBox } from './geo';
 import { supabase } from '@/integrations/supabase/client';
 
-export type OsmBuilding = { pts: [number, number][]; h: number };
-export type OsmRoad = { pts: [number, number][]; w: number };
+export type OsmBuilding = { pts: [number, number][]; h: number; name?: string };
+export type OsmRoad = { pts: [number, number][]; w: number; name?: string };
 export type OsmPoi = { lat: number; lng: number; name: string; kind: string };
 export type OsmChunk = { buildings: OsmBuilding[]; roads: OsmRoad[]; pois: OsmPoi[]; fetchedAt: number };
 
@@ -64,9 +64,9 @@ export function parseOverpass(json: { elements?: RawEl[] }, cap = MAX_BUILDINGS)
         .filter((g) => Number.isFinite(g.lat) && Number.isFinite(g.lon))
         .map((g) => [g.lat, g.lon] as [number, number]);
       if (tags.building && pts.length >= 4 && buildings.length < cap) {
-        buildings.push({ pts, h: buildingHeight(tags) });
+        buildings.push({ pts, h: buildingHeight(tags), ...(tags.name ? { name: tags.name.slice(0, 50) } : {}) });
       } else if (tags.highway && !SKIP_ROADS.has(tags.highway) && roads.length < MAX_ROADS * scale) {
-        roads.push({ pts, w: ROAD_WIDTH[tags.highway] ?? 4 });
+        roads.push({ pts, w: ROAD_WIDTH[tags.highway] ?? 4, ...(tags.name ? { name: tags.name.slice(0, 50) } : {}) });
       }
     } else if (el.type === 'node' && tags.name && Number.isFinite(el.lat) && Number.isFinite(el.lon)) {
       if (pois.length < MAX_POIS * scale) {

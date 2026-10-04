@@ -26,7 +26,7 @@ const admin = () =>
     { auth: { persistSession: false } },
   );
 
-const ALLOWED_TYPES = new Set(['message', 'warning', 'moderation_alert']);
+const ALLOWED_TYPES = new Set(['message', 'warning', 'moderation_alert', 'vr_invite']);
 const HOURLY_LIMIT = 10;
 
 serve(async (req) => {
@@ -57,6 +57,22 @@ serve(async (req) => {
       if (!isAdmin) return json({ ok: false, error: 'administrators only' }, 403);
     }
 
+    // VR World portal invites: friends only, fixed wording (never free text from the client).
+    let inviteContext: Record<string, unknown> | null = null;
+    if (type === 'vr_invite') {
+      const { data: friends } = await db.rpc('are_friends', { _a: senderId, _b: recipientId });
+      if (!friends) return json({ ok: false, error: 'friends only' }, 403);
+      const { data: p } = await db.from('public_profiles').select('username, display_name').eq('user_id', senderId).maybeSingle();
+      const who = p?.username ? `@${p.username}` : (p?.display_name || 'A friend');
+      const world = guard.body.world === 'mmora' ? 'mmora' : 'real';
+      inviteContext = {
+        title: 'Meet me at the portal',
+        message: `${who} invited you to meet at the doorway in ${world === 'mmora' ? "M'Mora World" : 'VR World'}.`,
+        link: '/zoe-omega?vr=1&meet=portal',
+        world,
+      };
+    }
+
     const since = new Date(Date.now() - 3_600_000).toISOString();
     const { count } = await db
       .from('notifications')
@@ -76,7 +92,7 @@ serve(async (req) => {
       type,
       priority: Number(guard.body.priority ?? 3) || 3,
       post_id: guard.body.postId ? String(guard.body.postId) : null,
-      context_data: context,
+      context_data: inviteContext ?? context,
     });
     if (error) return json({ ok: false, error: 'send failed' }, 500);
 

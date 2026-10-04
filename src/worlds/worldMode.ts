@@ -29,7 +29,8 @@ type State = {
 export const FALLBACK_ORIGIN: LatLng = { lat: 12.9716, lng: 77.5946 };
 export const PORTAL_OFFSET: [number, number, number] = [0, 0, -8];
 export const RETURN_PORTAL_POS: [number, number, number] = [4, 0, 8];
-export const MMORA_SPAWN: [number, number, number] = [0, 1.6, 3];
+/** M'Mora World opens right next to the return doorway (4.5 m away, so it is armed but you don't fall back through). */
+export const MMORA_SPAWN: [number, number, number] = [4, 1.6, 3.5];
 
 let state: State = { mode: 'real', origin: { status: 'locating' }, savedRealPos: null, chunksLoaded: 0, chunksWanted: 0, portalTrips: 0, aerial: false, tallestNear: 0 };
 const listeners = new Set<() => void>();

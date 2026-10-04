@@ -11,7 +11,7 @@ import { setShareRealLocation } from '@/lib/vrPrivacy';
 
 export type MeetTag = 'friend' | 'follower' | 'unknown';
 export type MeetPose = { mode: 'real' | 'mmora'; x?: number; z?: number; lat?: number; lng?: number; yaw: number };
-export type Remote = MeetPose & { id: string; name: string; username: string; photo?: string | null; at: number; tag: MeetTag };
+export type Remote = MeetPose & { id: string; name: string; username: string; photo?: string | null; at: number; tag: MeetTag; voice?: boolean };
 export type ChatMsg = { id: string; from: string; name: string; username: string; photo?: string | null; tag: MeetTag | 'me'; text: string; at: number; system?: boolean };
 
 type Me = { id: string; name: string; username: string; photo?: string | null };
@@ -32,6 +32,18 @@ let channel: RealtimeChannel | null = null;
 const tags = new Map<string, MeetTag>();
 const waves = new Map<string, number>();
 let lastTracked: { pose: MeetPose; at: number } | null = null;
+let voiceFlag = false;
+type Signal = { from: string; to: string; kind: 'offer' | 'answer' | 'ice' | 'bye'; data?: unknown };
+const signalLs = new Set<(s: Signal) => void>();
+/** Voice chat signalling rides on the same room (WebRTC offers/answers/ICE). */
+export function onSignal(fn: (s: Signal) => void) { signalLs.add(fn); return () => { signalLs.delete(fn); }; }
+export function sendSignal(to: string, kind: Signal['kind'], data?: unknown) {
+  if (!channel || !me || !state.connected) return;
+  void channel.send({ type: 'broadcast', event: 'rtc', payload: { from: me.id, to, kind, data } });
+}
+export const myMeetId = () => me?.id ?? null;
+/** Tell the room my mic is on/off (shown as a speaker badge; only voice-on members connect). */
+export function setVoiceFlag(on: boolean) { voiceFlag = on; lastTracked = null; }
 
 export const TAG_LABEL: Record<MeetTag, string> = { friend: 'Friend', follower: 'Follower', unknown: 'New' };
 
@@ -106,6 +118,11 @@ export async function joinMeet(room: string | null) {
       if (!m?.text || typeof m.text !== 'string') return;
       pushMsg({ ...m, text: m.text.slice(0, 240), tag: tags.get(m.from) ?? 'unknown' });
     })
+    .on('broadcast', { event: 'rtc' }, ({ payload }) => {
+      const sg = payload as Signal;
+      if (sg?.to !== self.id || typeof sg.from !== 'string') return;
+      signalLs.forEach((l) => l(sg));
+    })
     .on('broadcast', { event: 'wave' }, ({ payload }) => {
       const p = payload as { to: string; from: string; username: string };
       if (p?.to !== self.id) return;
@@ -140,7 +157,7 @@ export function updateMyPose(pose: MeetPose) {
     || Math.abs(pose.yaw - prev.pose.yaw) > 0.3;
   if (!moved && prev && now - prev.at < 5000) return;
   lastTracked = { pose, at: now };
-  void channel.track({ ...pose, id: me.id, name: me.name, username: me.username, photo: me.photo, at: now });
+  void channel.track({ ...pose, id: me.id, name: me.name, username: me.username, photo: me.photo, at: now, voice: voiceFlag });
 }
 
 export async function setMeetVisible(v: boolean) {

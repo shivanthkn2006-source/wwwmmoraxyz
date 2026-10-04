@@ -1,5 +1,8 @@
 import { addBlockRelics, dropBlockRelics } from './streetRelics';
 import { StreetRelics } from './StreetRelics';
+import { indexBlock, dropBlock } from './mapIndex';
+import { StreetTraffic } from './StreetTraffic';
+import { ThermalGovernor } from './thermalGovernor';
 /**
  * Real Map layer — the player's actual neighbourhood from OpenStreetMap.
  * Streams a 3×3 grid of ~200 m chunks around the camera (unloads at
@@ -76,7 +79,7 @@ const Chunk: React.FC<{ id: ChunkId; origin: LatLng; onReady: (key: string) => v
     const attempt = () => loadChunk(id.key, chunkBBox(id.i, id.j, origin.lat)).then((d) => {
       if (!alive) return;
       if (d) {
-        setData(d); onReady(id.key); addBlockRelics(id.key, d);
+        setData(d); onReady(id.key); addBlockRelics(id.key, d); indexBlock(id.key, d);
         // Tallest building near the start point decides the entry height (roof-top view).
         let tallest = 0;
         for (const b of d.buildings) {
@@ -92,7 +95,7 @@ const Chunk: React.FC<{ id: ChunkId; origin: LatLng; onReady: (key: string) => v
       if (++tries < 4) timer = window.setTimeout(attempt, 8000 * tries);
     });
     void attempt();
-    return () => { alive = false; window.clearTimeout(timer); dropBlockRelics(id.key); };
+    return () => { alive = false; window.clearTimeout(timer); dropBlockRelics(id.key); dropBlock(id.key); };
   }, [id.key, id.i, id.j, origin.lat, onReady]);
 
   const geo = useMemo(() => data ? {
@@ -258,6 +261,8 @@ export const RealMapWorld: React.FC = () => {
       <EntryFlight />
       {origin.status === 'ready' && <ChunkStreamer origin={origin.origin} />}
       {origin.status === 'ready' && <StreetRelics origin={origin.origin} />}
+      {origin.status === 'ready' && <StreetTraffic origin={origin.origin} />}
+      <ThermalGovernor />
       <PortalDoorway position={PORTAL_OFFSET} label="M'Mora World" onEnter={enterMMora} />
       <DemoExplorer />
     </>

@@ -72,6 +72,7 @@ import { VirtualJoystick, RotationButtons, LookButtons } from './vr/features/VRC
 import { useMultiplayerPresence } from '@/hooks/useMultiplayerPresence';
 import { MeetPresence } from '@/worlds/meet/MeetPresence';
 import { VRMeetChat } from '@/worlds/meet/VRMeetChat';
+import { VRWorldSearch } from '@/worlds/search/VRWorldSearch';
 import { walkStep, staminaTick, WALK_MPS, RUN_MPS } from '@/lib/vrWalk';
 import { MultiplayerAvatars } from './vr/features/GlassPyramidAvatar';
 import EnterpriseControlDeck from './vr/features/EnterpriseControlDeck';
@@ -3055,6 +3056,7 @@ const VRLiveClock: React.FC = () => {
               <RealAerialLand />
               <RealStartCityPicker />
               <VRMeetChat />
+              <VRWorldSearch />
               <VRFeature id="extras" part="bike">
               <BikeOnScreenControls />
               </VRFeature>

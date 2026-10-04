@@ -7269,3 +7269,16 @@ html body .vr-gem-core { animation-duration: 4s !important; }
 .vr-chat-input { border-radius: 999px; background: hsl(0 0% 0% / .28); border: 1px solid hsl(0 0% 100% / .25); }
 .vr-chat-icon { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 999px; color: hsl(0 0% 100%); background: hsl(0 0% 100% / .14); }
 .vr-chat-chip { border-radius: 999px; padding: 4px 10px; font-size: 11px; font-weight: 600; color: hsl(0 0% 100%); background: hsl(0 0% 0% / .3); border: 1px solid hsl(0 0% 100% / .25); text-shadow: 0 1px 2px hsl(0 0% 0% / .6); }
+
+/* VR World search — plain icon, glass type bar opens to the right, plain white results below */
+.vr-world-search{top:calc(env(safe-area-inset-top,0px) + 56px);max-width:min(360px,calc(100vw - 24px))}
+.vr-search-icon{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;color:hsl(0 0% 100%);background:transparent;border:0;filter:drop-shadow(0 1px 2px hsl(0 0% 0% / .55));flex-shrink:0}
+.vr-search-bar{border-radius:999px;background:hsl(0 0% 100% / .14);border:1px solid hsl(0 0% 100% / .28);box-shadow:inset 0 1px 0 hsl(0 0% 100% / .35),0 6px 20px hsl(220 30% 10% / .18);animation:vr-search-open .22s ease-out;transform-origin:left center}
+.vr-search-input{width:min(260px,calc(100vw - 110px));background:transparent;border:0;outline:0;color:hsl(0 0% 100%);font-size:14px;padding:6px 2px;text-shadow:0 1px 2px hsl(0 0% 0% / .5)}
+.vr-search-input::placeholder{color:hsl(0 0% 100% / .7)}
+@keyframes vr-search-open{from{clip-path:inset(0 100% 0 0 round 999px);opacity:.4}to{clip-path:inset(0 0 0 0 round 999px);opacity:1}}
+.vr-search-results{margin-top:6px;padding-left:10px;display:flex;flex-direction:column;gap:2px;max-height:46vh;overflow-y:auto}
+.vr-search-result{display:flex;flex-direction:column;align-items:flex-start;text-align:left;padding:4px 0;background:transparent;border:0;color:hsl(0 0% 100%);text-shadow:0 1px 3px hsl(0 0% 0% / .7)}
+.vr-search-title{font-size:14px;font-weight:600;line-height:1.2}
+.vr-search-detail{font-size:11px;opacity:.82;text-transform:none}
+.vr-search-note{font-size:12px;color:hsl(0 0% 100%);text-shadow:0 1px 3px hsl(0 0% 0% / .7);padding:2px 0}
