@@ -5374,24 +5374,51 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_channel_settings: {
+        Row: {
+          channel: string
+          enabled: boolean
+          label: string
+          updated_at: string
+        }
+        Insert: {
+          channel: string
+          enabled?: boolean
+          label: string
+          updated_at?: string
+        }
+        Update: {
+          channel?: string
+          enabled?: boolean
+          label?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       notification_kinds: {
         Row: {
           created_at: string
+          enabled: boolean
           feature: string
           kind: string
           label: string
+          updated_at: string
         }
         Insert: {
           created_at?: string
+          enabled?: boolean
           feature: string
           kind: string
           label: string
+          updated_at?: string
         }
         Update: {
           created_at?: string
+          enabled?: boolean
           feature?: string
           kind?: string
           label?: string
+          updated_at?: string
         }
         Relationships: []
       }
