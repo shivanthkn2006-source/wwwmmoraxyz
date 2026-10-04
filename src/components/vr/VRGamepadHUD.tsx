@@ -5,26 +5,50 @@
  * The existing move and look sticks stay as they are.
  */
 import React, { useEffect, useRef, useState } from 'react';
-import { Menu, SlidersHorizontal } from 'lucide-react';
-import { fireAction, GAMEPAD_BUTTONS, loadLayout, pressKey, saveLayout, stickToKeys, type VRAction, type PadLayout } from '@/lib/vrInput';
+import { Backpack, Menu, SlidersHorizontal } from 'lucide-react';
+import {
+  buttonDown, DPAD, FACE_GLYPHS, fireAction, GAMEPAD_BUTTONS, hatToDpad, HELD_ACTIONS, L3_SPRINT_TOGGLE, loadLayout,
+  padFamily, pickActivePad, pressKey, radial, rumble, saveLayout, stickToKeys, type PadFamily, type PadLayout, type VRAction,
+} from '@/lib/vrInput';
+import { VRBagPanel } from '@/components/vr/VRBagPanel';
 
 const ring = 'flex items-center justify-center border border-foreground/60 text-foreground bg-background/10 select-none touch-none active:bg-foreground/25';
 
-const Btn: React.FC<{ action: VRAction; label: string; className: string; hold?: boolean; aria: string }> = ({ action, label, className, hold, aria }) => (
+const Btn: React.FC<{ action: VRAction; label: string; className: string; hold?: boolean; aria: string; glyph?: string }> = ({ action, label, className, hold, aria, glyph }) => (
   <button
     type="button" aria-label={aria} data-exclude-phantom-tap
     className={`${ring} ${className}`}
     onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); fireAction(action, true); }}
     onPointerUp={(e) => { e.stopPropagation(); if (hold) fireAction(action, false); }}
     onPointerLeave={() => { if (hold) fireAction(action, false); }}
-  >{label}</button>
+  >{glyph ? <span className="flex flex-col items-center leading-none"><span className="text-[11px] font-semibold">{glyph}</span><span>{label}</span></span> : label}</button>
 );
 
 export const VRGamepadHUD: React.FC = () => {
   const [layout, setLayout] = useState<PadLayout>(() => loadLayout());
   const [editing, setEditing] = useState(false);
-  const [pad, setPad] = useState<string | null>(null);
+  const [pad, setPad] = useState<PadFamily | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [bagOpen, setBagOpen] = useState(false);
+  const toastTimer = useRef<number>();
+  const say = (msg: string, ms = 1400) => {
+    setToast(msg); window.clearTimeout(toastTimer.current);
+    toastTimer.current = window.setTimeout(() => setToast(null), ms);
+  };
+
+  // Bag: ≡-style button, View/Share on a controller, or the 'vr-open-bag' event.
+  useEffect(() => {
+    const on = () => setBagOpen((v) => !v);
+    window.addEventListener('vr-open-bag', on);
+    return () => window.removeEventListener('vr-open-bag', on);
+  }, []);
+
+  // Quest finished: toast + strong rumble (the bell alert is sent by the quest store).
+  useEffect(() => {
+    const on = (e: Event) => { say(`Quest complete: ${(e as CustomEvent).detail?.title ?? ''}`, 2600); rumble('quest'); try { navigator.vibrate?.([30, 60, 30]); } catch { /* */ } };
+    window.addEventListener('vr-quest-complete', on);
+    return () => window.removeEventListener('vr-quest-complete', on);
+  }, []);
 
   useEffect(() => saveLayout(layout), [layout]);
 
@@ -32,8 +56,8 @@ export const VRGamepadHUD: React.FC = () => {
   useEffect(() => {
     const on = (e: Event) => {
       const ok = (e as CustomEvent).detail?.collected;
-      setToast(ok ? 'Picked up' : 'Nothing to pick up here');
-      window.setTimeout(() => setToast(null), 1200);
+      say(ok ? 'Picked up — added to your bag' : 'Nothing to pick up here', 1200);
+      if (ok) rumble('pickup');
     };
     window.addEventListener('vr-interact-result', on);
     return () => window.removeEventListener('vr-interact-result', on);
@@ -44,26 +68,54 @@ export const VRGamepadHUD: React.FC = () => {
   const held = useRef<Record<string, boolean>>({});
   useEffect(() => {
     let raf = 0;
-    const onConn = (e: GamepadEvent) => setPad(e.gamepad.id);
-    const onDisc = () => setPad(null);
+    let last = performance.now();
+    let sprintLatched = false;
+    const onConn = (e: GamepadEvent) => {
+      const fam = padFamily(e.gamepad.id); setPad(fam);
+      say(`${fam === 'playstation' ? 'PlayStation' : fam === 'xbox' ? 'Xbox' : 'Game'} controller connected`);
+    };
+    const onDisc = () => {
+      const still = pickActivePad(Array.from(navigator.getGamepads?.() ?? []));
+      setPad(still ? padFamily(still.id) : null);
+      if (!still) {
+        say('Controller disconnected');
+        for (const k of Object.keys(held.current)) if (held.current[k]) { held.current[k] = false; pressKey(k, false); }
+        if (sprintLatched) { sprintLatched = false; fireAction('run', false); }
+        prevBtn.current = [];
+      }
+    };
     window.addEventListener('gamepadconnected', onConn);
     window.addEventListener('gamepaddisconnected', onDisc);
-    const loop = () => {
-      const gp = Array.from(navigator.getGamepads?.() ?? []).find(Boolean);
+    // Pads already connected before VR World opened (browsers only fire gamepadconnected once).
+    const early = pickActivePad(Array.from(navigator.getGamepads?.() ?? []));
+    if (early) setPad(padFamily(early.id));
+    const loop = (now: number) => {
+      const dt = Math.min(0.05, (now - last) / 1000); last = now;
+      const gp = pickActivePad(Array.from(navigator.getGamepads?.() ?? []));
       if (gp) {
-        const keys = stickToKeys(gp.axes[0] ?? 0, gp.axes[1] ?? 0);
+        const b = gp.buttons;
+        const dpad = gp.mapping === 'standard'
+          ? { up: buttonDown(b[DPAD.up], DPAD.up), down: buttonDown(b[DPAD.down], DPAD.down), left: buttonDown(b[DPAD.left], DPAD.left), right: buttonDown(b[DPAD.right], DPAD.right) }
+          : hatToDpad(gp.axes[9]);
+        const keys = stickToKeys(gp.axes[0] ?? 0, gp.axes[1] ?? 0, dpad);
         for (const [k, v] of Object.entries(keys)) {
           if (!!held.current[k] !== v) { held.current[k] = v; pressKey(k, v); }
         }
-        const rx = gp.axes[2] ?? 0, ry = gp.axes[3] ?? 0;
-        if (Math.abs(rx) > 0.2 || Math.abs(ry) > 0.2) {
-          window.dispatchEvent(new CustomEvent('vr-camera-look', { detail: { dx: rx * 0.03, dy: ry * 0.02 } }));
+        const [rx, ry] = radial(gp.axes[2] ?? 0, gp.axes[3] ?? 0, 0.18);
+        if (rx || ry) {
+          // Same feel as the on-screen look stick at 60 fps, but frame-rate independent.
+          window.dispatchEvent(new CustomEvent('vr-camera-look', { detail: { dx: rx * 1.8 * dt, dy: ry * 1.2 * dt } }));
         }
-        gp.buttons.forEach((b, i) => {
+        b.forEach((btn, i) => {
+          const down = buttonDown(btn, i);
           const was = prevBtn.current[i] ?? false;
+          prevBtn.current[i] = down;
+          if (down === was) return;
+          if (i === L3_SPRINT_TOGGLE) { if (down) { sprintLatched = !sprintLatched; fireAction('run', sprintLatched); } return; }
           const action = GAMEPAD_BUTTONS[i];
-          if (action && b.pressed !== was) fireAction(action, b.pressed);
-          prevBtn.current[i] = b.pressed;
+          if (!action) return;
+          if (HELD_ACTIONS.has(action)) fireAction(action, down);
+          else if (down) fireAction(action, true);
         });
       }
       raf = requestAnimationFrame(loop);
@@ -74,6 +126,8 @@ export const VRGamepadHUD: React.FC = () => {
       window.removeEventListener('gamepadconnected', onConn);
       window.removeEventListener('gamepaddisconnected', onDisc);
       for (const k of Object.keys(held.current)) if (held.current[k]) pressKey(k, false);
+      if (sprintLatched) fireAction('run', false);
+      window.clearTimeout(toastTimer.current);
     };
   }, []);
 
@@ -90,20 +144,21 @@ export const VRGamepadHUD: React.FC = () => {
 
       {/* Menu + layout */}
       <div className="pointer-events-auto absolute right-24 top-24 flex gap-2" style={{ transform: `scale(${s})`, transformOrigin: 'top right' }}>
+        <button type="button" aria-label="Open item bag" data-exclude-phantom-tap className={`${ring} h-10 w-10 rounded-full`} onClick={() => setBagOpen(v => !v)}><Backpack className="h-4 w-4" /></button>
         <button type="button" aria-label="Open VR menu" data-exclude-phantom-tap className={`${ring} h-10 w-10 rounded-full`} onClick={() => fireAction('menu')}><Menu className="h-4 w-4" /></button>
         <button type="button" aria-label="Edit control layout" data-exclude-phantom-tap className={`${ring} h-10 w-10 rounded-full`} onClick={() => setEditing(v => !v)}><SlidersHorizontal className="h-4 w-4" /></button>
       </div>
 
       {/* Face buttons (diamond) above the look stick */}
       <div className="pointer-events-auto absolute bottom-52 right-4 h-36 w-36" style={{ transform: `scale(${s})`, transformOrigin: 'bottom right' }}>
-        <Btn action="jump" label="Jump" hold aria="Jump" className="absolute left-1/2 top-0 h-12 w-12 -translate-x-1/2 rounded-full text-[10px]" />
-        <Btn action="zoe" label="Zoe" aria="Ask Zoe" className="absolute left-0 top-1/2 h-12 w-12 -translate-y-1/2 rounded-full text-[10px]" />
-        <Btn action="run" label="Run" hold aria="Run (hold)" className="absolute right-0 top-1/2 h-12 w-12 -translate-y-1/2 rounded-full text-[10px]" />
-        <Btn action="interact" label="Use" aria="Pick up or interact" className="absolute bottom-0 left-1/2 h-12 w-12 -translate-x-1/2 rounded-full text-[10px]" />
+        <Btn action="jump" label="Jump" hold aria="Jump" glyph={pad ? FACE_GLYPHS[pad].jump : undefined} className="absolute left-1/2 top-0 h-12 w-12 -translate-x-1/2 rounded-full text-[10px]" />
+        <Btn action="zoe" label="Zoe" aria="Ask Zoe" glyph={pad ? FACE_GLYPHS[pad].zoe : undefined} className="absolute left-0 top-1/2 h-12 w-12 -translate-y-1/2 rounded-full text-[10px]" />
+        <Btn action="run" label="Run" hold aria="Run (hold)" glyph={pad ? FACE_GLYPHS[pad].run : undefined} className="absolute right-0 top-1/2 h-12 w-12 -translate-y-1/2 rounded-full text-[10px]" />
+        <Btn action="interact" label="Use" aria="Pick up or interact" glyph={pad ? FACE_GLYPHS[pad].interact : undefined} className="absolute bottom-0 left-1/2 h-12 w-12 -translate-x-1/2 rounded-full text-[10px]" />
       </div>
 
       {toast && <div className="absolute bottom-40 left-1/2 -translate-x-1/2 rounded-full surface-warm-tan px-3 py-1 text-xs text-foreground">{toast}</div>}
-      {pad && <div className="absolute left-1/2 top-12 -translate-x-1/2 text-[10px] text-foreground/80">Controller connected</div>}
+      {bagOpen && <VRBagPanel onClose={() => setBagOpen(false)} />}
 
       {editing && (
         <div className="pointer-events-auto absolute left-1/2 top-1/3 w-64 -translate-x-1/2 rounded-2xl surface-warm-tan p-4 text-sm text-foreground" style={{ opacity: 1 / layout.opacity }}>
