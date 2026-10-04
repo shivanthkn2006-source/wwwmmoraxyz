@@ -105,3 +105,11 @@
 
 - [ ] Later (after remaining platform menus/features): Capacitor iOS/Android store build (Path A) — bundle dist/, Apple Team ID, Android signing fingerprint, icons, store forms, device tests
 - [x] VR World: stream distant areas by distance + split heavy parts into on-demand downloads
+
+# Oct 4 requests
+- [x] Notifications: alerts of unknown kinds are kept instead of rejected; comment replies, growth alerts and missed calls fixed; direct-message alerts added
+- [x] Admin notification health + end-to-end test on /admin/@moksh50
+- [x] VR: smaller streaming bubble (0.55× on ≤4GB phones)
+- [x] Capacitor store config (bundled app, M'Mora name, warm splash)
+- [ ] Move bell/badges/panel/pop-ups onto shared realtime multiplexer (next turn)
+- [ ] Native store build/signing (needs user's Mac/Android Studio + developer accounts)

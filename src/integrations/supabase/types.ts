@@ -5374,6 +5374,27 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_kinds: {
+        Row: {
+          created_at: string
+          feature: string
+          kind: string
+          label: string
+        }
+        Insert: {
+          created_at?: string
+          feature: string
+          kind: string
+          label: string
+        }
+        Update: {
+          created_at?: string
+          feature?: string
+          kind?: string
+          label?: string
+        }
+        Relationships: []
+      }
       notification_settings: {
         Row: {
           adaptive_volume_enabled: boolean | null

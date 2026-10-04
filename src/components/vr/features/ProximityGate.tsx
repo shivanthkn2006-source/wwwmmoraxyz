@@ -22,7 +22,7 @@ const isLowEndDevice = (() => {
 })();
 
 /** Radius multiplier for the current device (smaller world bubble on 4 GB phones). */
-export const PROXIMITY_SCALE = isLowEndDevice ? 0.7 : 1;
+export const PROXIMITY_SCALE = isLowEndDevice ? 0.55 : 0.85;
 
 interface ProximityGateProps {
   center: [number, number, number];
