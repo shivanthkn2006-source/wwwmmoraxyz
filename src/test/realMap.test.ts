@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from 'vitest';
 import { toLocal, toLatLng, chunkOf, chunkBBox, neighborhood } from '@/worlds/realmap/geo';
 import { parseOverpass, buildingHeight, buildQuery } from '@/worlds/realmap/osm';
