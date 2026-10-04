@@ -17,16 +17,16 @@ describe('human walking', () => {
   it('left arrow turns left', () => {
     expect(walkStep({ ...none, left: true }, 0.1, 0, false).yawDelta).toBeGreaterThan(0);
   });
-  it('down arrow turns around first, then walks', () => {
+  it('down arrow turns around and walks backwards from the first frame', () => {
     let s = walkStep({ ...none, backward: true }, 0.1, 0, false);
-    expect(s.move).toBe(false);
+    expect(s.move).toBe(true);
     let total = s.yawDelta;
     for (let k = 0; k < 20; k++) { s = walkStep({ ...none, backward: true }, 0.1, s.backTurnLeft, true); total += s.yawDelta; }
     expect(total).toBeCloseTo(Math.PI, 3);
     expect(s.move).toBe(true);
   });
   it('no input: no turn, no movement', () => {
-    expect(walkStep(none, 0.1, 0, false)).toEqual({ yawDelta: 0, move: false, backTurnLeft: 0 });
+    expect(walkStep(none, 0.1, 0, false)).toEqual({ yawDelta: 0, move: false, backTurnLeft: 0, moveYawOffset: 0 });
   });
 });
 
