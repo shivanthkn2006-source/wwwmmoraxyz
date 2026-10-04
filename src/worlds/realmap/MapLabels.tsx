@@ -10,9 +10,11 @@ import { toLocal, type LatLng } from './geo';
 import { mapBlocks, useMapVersion } from './mapIndex';
 import { useGovLevel } from './thermalGovernor';
 
-type Label = { id: string; text: string; x: number; y: number; z: number; kind: 'building' | 'street' };
+type Label = { id: string; text: string; x: number; y: number; z: number; kind: 'building' | 'street' | 'place'; icon?: string };
+/** Little sign for each kind of place. */
+export const PLACE_ICON: Record<string, string> = { fuel: '⛽', mall: '🛍️', fast_food: '🍔', food: '🍽️', supermarket: '🛒', shop: '🏪', hotel: '🏨', office: '🏢', bank: '🏦', atm: '🏧', hospital: '🏥', pharmacy: '💊', cinema: '🎬', school: '🏫', college: '🎓', place_of_worship: '🛕' };
 export const LABEL_RANGE_M = 160;
-export const MAX_LABELS: Record<number, number> = { 0: 8, 1: 5, 2: 3 };
+export const MAX_LABELS: Record<number, number> = { 0: 14, 1: 9, 2: 5 };
 
 export function collectLabels(origin: LatLng): Label[] {
   const out: Label[] = [];
@@ -23,6 +25,10 @@ export function collectLabels(origin: LatLng): Label[] {
       let x = 0, z = 0;
       for (const [lat, lng] of b.pts) { const p = toLocal({ lat, lng }, origin); x += p.x; z += p.z; }
       out.push({ id: `${key}b${k}`, text: b.name, x: x / b.pts.length, y: Math.max(3, b.h) + 2, z: z / b.pts.length, kind: 'building' });
+    });
+    d.pois.forEach((p, k) => {
+      const q = toLocal(p, origin);
+      out.push({ id: `${key}p${k}`, text: p.name, x: q.x, y: 6, z: q.z, kind: 'place', icon: PLACE_ICON[p.kind] ?? '📍' });
     });
     d.roads.forEach((r, k) => {
       if (!r.name || r.pts.length < 2) return;
@@ -63,8 +69,8 @@ export const MapLabels: React.FC<{ origin: LatLng }> = ({ origin }) => {
   return (
     <>
       {shown.map((l) => (
-        <Html key={l.id} position={[l.x, l.y, l.z]} center distanceFactor={l.kind === 'street' ? 14 : 22} zIndexRange={[5, 0]} style={{ pointerEvents: 'none' }}>
-          <div className={l.kind === 'street' ? 'vr-map-label vr-map-label-street' : 'vr-map-label'}>{l.text}</div>
+        <Html key={l.id} position={[l.x, l.y, l.z]} center distanceFactor={l.kind === 'street' ? 14 : l.kind === 'place' ? 18 : 22} zIndexRange={[5, 0]} style={{ pointerEvents: 'none' }}>
+          <div className={l.kind === 'street' ? 'vr-map-label vr-map-label-street' : l.kind === 'place' ? 'vr-map-label vr-map-label-place' : 'vr-map-label'}>{l.icon ? `${l.icon} ` : ''}{l.text}</div>
         </Html>
       ))}
     </>
