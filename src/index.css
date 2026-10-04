@@ -7221,3 +7221,8 @@ html body .vr-gem-core { animation-duration: 4s !important; }
   position: relative !important; inset: auto !important; transform: none !important;
   translate: none !important; margin: 0 !important; z-index: auto !important;
 }
+/* Short (sideways phone) screens: face buttons sit left of the look pad instead of above it, and the tray fills the gap between the sticks. */
+@media (max-height: 520px) {
+  .vr-face-diamond { bottom: 8px !important; right: 150px !important; }
+  .vr-control-tray { left: 200px; bottom: 8px; --vr-tray-shift: 0%; max-width: calc(100vw - 200px - 310px); }
+}

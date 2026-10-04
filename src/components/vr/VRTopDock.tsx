@@ -90,7 +90,7 @@ const VRControlTray: React.FC = () => {
   return (
     <div
       className="vr-control-tray fixed z-[9991] surface-warm-tan rounded-2xl p-2 pt-1 flex flex-col items-center gap-1"
-      style={{ transform: `translate(calc(-50% + ${offset.x}px), ${offset.y}px)` }}
+      style={{ transform: `translate(calc(var(--vr-tray-shift, -50%) + ${offset.x}px), ${offset.y}px)` }}
       data-exclude-phantom-tap
     >
       <button type="button" data-vr-grip="1" aria-label="Drag controls tray" className={GRIP_CLASS} style={{ touchAction: 'none' }} {...handlers}>
