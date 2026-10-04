@@ -1149,7 +1149,7 @@ const CameraTelemetryTracker: React.FC<{ onTelemetry: (telemetry: CameraTelemetr
 
 /** Writes renderer load (draw calls, triangles, geometries, textures) to window.__vrStats once a second for the load monitor and tests. */
 const RenderStatsProbe: React.FC = () => {
-  const { gl, scene } = useThree();
+  const { gl, scene, camera } = useThree();
   const last = useRef(0);
   useFrame(({ clock }) => {
     const t = clock.elapsedTime;
@@ -1160,6 +1160,7 @@ const RenderStatsProbe: React.FC = () => {
       t: Math.round(t), calls: gl.info.render.calls, triangles: gl.info.render.triangles,
       geometries: gl.info.memory.geometries, textures: gl.info.memory.textures, meshes,
       heapMB: Math.round(((performance as any).memory?.usedJSHeapSize ?? 0) / 1048576),
+      cam: camera.position.toArray().map((v) => Math.round(v * 10) / 10),
     };
     // Dev diagnostics: which branches of the scene hold the most meshes.
     if (import.meta.env.DEV) {
