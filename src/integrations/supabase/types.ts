@@ -5439,6 +5439,7 @@ export type Database = {
           quiet_hours_enabled: boolean | null
           quiet_hours_end: string | null
           quiet_hours_start: string | null
+          share_real_location: boolean
           sound_theme: string | null
           updated_at: string | null
           user_id: string
@@ -5461,6 +5462,7 @@ export type Database = {
           quiet_hours_enabled?: boolean | null
           quiet_hours_end?: string | null
           quiet_hours_start?: string | null
+          share_real_location?: boolean
           sound_theme?: string | null
           updated_at?: string | null
           user_id: string
@@ -5483,6 +5485,7 @@ export type Database = {
           quiet_hours_enabled?: boolean | null
           quiet_hours_end?: string | null
           quiet_hours_start?: string | null
+          share_real_location?: boolean
           sound_theme?: string | null
           updated_at?: string | null
           user_id?: string
@@ -8148,6 +8151,24 @@ export type Database = {
           updated_at?: string
           user_agent?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      spatial_tile_cache: {
+        Row: {
+          data: Json
+          fetched_at: string
+          tile_key: string
+        }
+        Insert: {
+          data: Json
+          fetched_at?: string
+          tile_key: string
+        }
+        Update: {
+          data?: Json
+          fetched_at?: string
+          tile_key?: string
         }
         Relationships: []
       }
