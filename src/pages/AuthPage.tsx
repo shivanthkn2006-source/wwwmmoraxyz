@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -337,11 +337,33 @@ const AuthPage = () => {
     );
   }
 
+  // Fit the whole page on one screen (large phone text sizes included) by
+  // scaling everything evenly, so spacing stays proportional, never squeezed.
+  const fitRef = useRef<HTMLDivElement>(null);
+  const [fitScale, setFitScale] = useState(1);
+  useEffect(() => {
+    const el = fitRef.current;
+    if (!el) return;
+    const fit = () => {
+      const a = document.activeElement;
+      if (a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA')) return; // keyboard open
+      const avail = window.innerHeight - 24;
+      setFitScale(Math.min(1, avail / Math.max(1, el.offsetHeight)));
+    };
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(el);
+    window.addEventListener('resize', fit);
+    return () => { ro.disconnect(); window.removeEventListener('resize', fit); };
+  }, []);
+
   return (
     <>
       <PageSeo title={ROUTE_SEO['/auth'].title} description={ROUTE_SEO['/auth'].description} path="/auth" />
-      <div className="min-h-screen surface-warm-tan text-white flex items-center justify-center p-responsive safe-area-pb safe-area-pt">
+      <div className="h-[100dvh] overflow-hidden surface-warm-tan text-white flex items-center justify-center p-responsive safe-area-pb safe-area-pt">
       <motion.div
+        ref={fitRef}
+        style={{ scale: fitScale }}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-md xxs:max-w-[calc(100%-1rem)] xs:max-w-sm sm:max-w-md md:max-w-lg lg:max-w-md xl:max-w-lg 2xl:max-w-xl 4k:max-w-2xl"
