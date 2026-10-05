@@ -57,11 +57,12 @@
 - [x] Doors, keys, notes, locked archive in M'Mora World + fuller bag (Items / Keys / Files / Quests, item close-up)
 - [x] Night mode (local 18:00–06:00): fog, flashlight (Light / F), wind + cricket sounds
 - [x] Admin's VR World auto-prepares the 8 South India cities in the background (once per device)
-- [ ] From the architecture document, not built: off-main-thread map worker, offline telemetry outbox, in-world admin command console, landscape-locked PWA + spatial service worker, end-to-end chaos test button, traffic braking for players crossing
+- [x] Doc: telemetry outbox, admin console, check button, traffic braking, landscape guard, on-phone map cache
+- [ ] Doc: off-main-thread map worker; app-wide offline start (needs user OK)
 - [ ] Save point at the doorway; health bar and rivals
 - [x] Alerts panel scrolls on phones; tapping an alert opens its content (VR links, messages → chat)
-- [ ] Save point at doorway + health bar/respawn
-- [ ] Run end-to-end check button (relic bell, city jump, GPS)
+- [x] Save point at doorway + health bar/respawn
+- [x] Run end-to-end check button (relic bell, city jump, GPS)
 - [ ] Landscape-locked install + offline map storage
 - [ ] VR scoreboard / top players wired to Zoe/DHF
 - [ ] (needs admin phone) confirm South India cities load
