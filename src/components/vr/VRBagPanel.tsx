@@ -39,7 +39,7 @@ export const VRBagPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 <span className="font-medium">{done ? '✓ ' : ''}{q.title}</span>
                 <span className="tabular-nums">{p}/{q.goal}</span>
               </div>
-              <p className="text-[11px] text-foreground/70">{q.description}</p>
+              <p className="text-[11px] text-foreground/70">{q.description}{q.reward ? ` · Reward ${q.reward} karma` : ''}</p>
               <div className="mt-1 h-1.5 rounded-full bg-background/80">
                 <div className="vr-quest-bar h-full rounded-full" style={{ width: `${(p / q.goal) * 100}%` }} />
               </div>
