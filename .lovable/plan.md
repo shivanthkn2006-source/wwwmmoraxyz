@@ -1,15 +1,15 @@
-# Next: search and visit other cities from VR World
+# Sign-in page: new wording and everything on one screen
 
-Streets and buildings now load. This is stage 1 of the order suggested earlier.
-
-## What you'll get
-- The top-left search in VR World gets a "Cities and places" section. Type "Kochi", "Times Square" or "California" and pick a result.
-- VR World then jumps you there: your starting spot moves to that place, its streets and buildings load (your own block first), and you land just above the rooftops as you do now.
-- A "Back to my location" result takes you home again.
-- Nothing else changes: look, controls and layout stay the same.
+## Changes
+1. Change "Sign in to continue" to **"Sign in/Sign up"**.
+2. Change "Sign in with camera face scan" to **"Face Scan"**.
+3. Change "Sign in with Fingerprint / Passkey" to **"Fingerprint/Passkey"**.
+4. Fit the whole page on one phone screen with no scrolling. That includes the copyright line and the links below "Explore M'Mora — sign up now..".
+   - Colours, fonts, the order of items and the button styles stay exactly the same.
+   - Only the empty space between items gets smaller, and it adjusts to the screen height so even short phones show everything.
+5. Check it on short and tall phone sizes (about 360×640 up to 430×930) and on desktop, and confirm the copyright line is visible without scrolling.
 
 ## Technical details
-- Use the free OpenStreetMap place search (Nominatim), called from the member's phone. Wait 400 ms after the last keystroke, require at least 3 letters, show at most 5 results, and send a clear app name with each request.
-- Add a `cities` source in `src/worlds/search/worldSearch.ts`, results of kind `city`.
-- Choosing one calls `chooseStartCity()` in `worldMode.ts`, which resets the origin. The loaded map blocks are dropped and reload around the new spot. "Back to my location" calls `resolveOrigin()` again.
-- Tests: debounce, result mapping and the origin reset.
+- `src/pages/AuthPage.tsx`: update the subtitle text, line 545 (face scan) and line 175 (passkey label).
+- Make the outer container `min-h-[100dvh]` with a flex column. Swap the fixed vertical gaps and margins for height-based values (`clamp()` or `max-h` media queries) so the footer sits inside the visible screen. Don't change sizes, colours or element order.
+- Verify with Playwright screenshots at several phone sizes.
