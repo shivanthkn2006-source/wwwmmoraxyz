@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -168,12 +168,10 @@ const AuthPage = () => {
 
   const [showRecovery, setShowRecovery] = useState(false);
   const passkeyLabel = deviceType === 'faceid'
-    ? 'Sign in with Face ID / Passkey'
+    ? 'Face ID/Passkey'
     : deviceType === 'touchid'
-      ? 'Sign in with Touch ID / Passkey'
-      : deviceType === 'fingerprint'
-        ? 'Sign in with Fingerprint / Passkey'
-        : 'Sign in with Passkey';
+      ? 'Touch ID/Passkey'
+      : 'Fingerprint/Passkey';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -305,6 +303,29 @@ const AuthPage = () => {
     );
   };
 
+  // Fit the whole page on one screen (large phone text sizes included) by
+  // scaling everything evenly, so spacing stays proportional, never squeezed.
+  const fitRef = useRef<HTMLDivElement>(null);
+  const [fitScale, setFitScale] = useState(1);
+  useEffect(() => {
+    const el = fitRef.current;
+    if (!el) return;
+    let tallest = 0; // phone keyboard shrinks the window: keep the full-screen height
+    let lastW = window.innerWidth;
+    const fit = () => {
+      if (window.innerWidth !== lastW) { lastW = window.innerWidth; tallest = 0; } // rotated
+      tallest = Math.max(tallest, window.innerHeight);
+      if (window.innerHeight < tallest * 0.8) return; // keyboard open: keep the current size
+      const avail = tallest - 24;
+      setFitScale(Math.min(1, avail / Math.max(1, el.offsetHeight)));
+    };
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(el);
+    window.addEventListener('resize', fit);
+    return () => { ro.disconnect(); window.removeEventListener('resize', fit); };
+  }, [pendingEmail]);
+
   if (pendingEmail) {
     return (
       <>
@@ -340,8 +361,10 @@ const AuthPage = () => {
   return (
     <>
       <PageSeo title={ROUTE_SEO['/auth'].title} description={ROUTE_SEO['/auth'].description} path="/auth" />
-      <div className="min-h-screen surface-warm-tan text-white flex items-center justify-center p-responsive safe-area-pb safe-area-pt">
+      <div className="h-[100dvh] overflow-hidden surface-warm-tan text-white flex items-center justify-center p-responsive safe-area-pb safe-area-pt">
       <motion.div
+        ref={fitRef}
+        style={{ scale: fitScale }}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-md xxs:max-w-[calc(100%-1rem)] xs:max-w-sm sm:max-w-md md:max-w-lg lg:max-w-md xl:max-w-lg 2xl:max-w-xl 4k:max-w-2xl"
@@ -373,7 +396,7 @@ const AuthPage = () => {
             "text-xs xxs:text-xs xs:text-sm sm:text-base md:text-lg",
             "lg:text-base xl:text-lg 2xl:text-xl 4k:text-2xl"
           )}>
-            {isSignUp ? 'Create your account to get started' : 'Sign in to continue'}
+            {isSignUp ? 'Create your account to get started' : 'Sign in/Sign up'}
           </p>
           {referralCode && (
             <p className="mt-2 text-xs text-white">
@@ -542,7 +565,7 @@ const AuthPage = () => {
                       "w-4 h-4 xxs:w-4 xxs:h-4 xs:w-5 xs:h-5 sm:w-5 sm:h-5",
                       "md:w-6 md:h-6 lg:w-5 lg:h-5 xl:w-6 xl:h-6"
                     )} />
-                    Sign in with camera face scan
+                    Face Scan
                   </Button>
 
                   <Button
