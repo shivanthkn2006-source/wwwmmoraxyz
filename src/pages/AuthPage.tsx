@@ -172,7 +172,7 @@ const AuthPage = () => {
     : deviceType === 'touchid'
       ? 'Sign in with Touch ID / Passkey'
       : deviceType === 'fingerprint'
-        ? 'Sign in with Fingerprint / Passkey'
+        ? 'Fingerprint/Passkey'
         : 'Sign in with Passkey';
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -373,7 +373,7 @@ const AuthPage = () => {
             "text-xs xxs:text-xs xs:text-sm sm:text-base md:text-lg",
             "lg:text-base xl:text-lg 2xl:text-xl 4k:text-2xl"
           )}>
-            {isSignUp ? 'Create your account to get started' : 'Sign in to continue'}
+            {isSignUp ? 'Create your account to get started' : 'Sign in/Sign up'}
           </p>
           {referralCode && (
             <p className="mt-2 text-xs text-white">
@@ -542,7 +542,7 @@ const AuthPage = () => {
                       "w-4 h-4 xxs:w-4 xxs:h-4 xs:w-5 xs:h-5 sm:w-5 sm:h-5",
                       "md:w-6 md:h-6 lg:w-5 lg:h-5 xl:w-6 xl:h-6"
                     )} />
-                    Sign in with camera face scan
+                    Face Scan
                   </Button>
 
                   <Button
