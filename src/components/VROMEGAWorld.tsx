@@ -77,6 +77,10 @@ import { walkStep, staminaTick, WALK_MPS, RUN_MPS } from '@/lib/vrWalk';
 import { getVRView, CROUCH_SPEED } from '@/lib/vrView';
 import { ThirdPersonAvatar } from './vr/ThirdPersonAvatar';
 import { ItemCloseUp } from './vr/ItemCloseUp';
+import { NightMode, NightAmbience } from './vr/NightMode';
+import { AdminAutoPrefill } from './vr/AdminAutoPrefill';
+import { StoryNoteReader } from './vr/StoryNoteReader';
+import { ArchiveHouse } from '@/worlds/mmora/ArchiveHouse';
 import { MultiplayerAvatars } from './vr/features/GlassPyramidAvatar';
 import EnterpriseControlDeck from './vr/features/EnterpriseControlDeck';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
@@ -1259,6 +1263,8 @@ const MemoryPalace: React.FC<{
       <MeetPresence />
       <JourneyTracker />
       {inMMora && <PortalDoorway position={RETURN_PORTAL_POS} label="Back to your street" onEnter={returnToReal} />}
+      {inMMora && <ArchiveHouse />}
+      <NightMode />
       {inMMora && (<>
       {/* VR Feature Integration - PROGRESSIVE: passes zone-aware visibility */}
       <VRFeatureIntegration 
@@ -3062,6 +3068,9 @@ const VRLiveClock: React.FC = () => {
               <RealStartCityPicker />
               <RealMapLoadingNote />
               <ItemCloseUp />
+              <StoryNoteReader />
+              <NightAmbience />
+              <AdminAutoPrefill />
               <VRMeetChat />
               <VRWorldSearch />
               <VRFeature id="extras" part="bike">

@@ -1,4 +1,5 @@
 import { useVRView, toggleCrouch } from '@/lib/vrView';
+import { useNight, toggleFlashlight } from './NightMode';
 /**
  * Console-style controls for VR World (Resident Evil mobile layout, trimmed):
  * shoulder buttons, a menu button, four face buttons, a layout editor
@@ -25,6 +26,12 @@ const StaminaMeter: React.FC = () => {
 };
 
 const ring = 'flex items-center justify-center border border-foreground/60 text-foreground bg-background/10 select-none touch-none active:bg-foreground/25';
+
+const LightBtn: React.FC = () => {
+  const { night, flashlight } = useNight();
+  if (!night) return null;
+  return <button type="button" aria-label="Flashlight" aria-pressed={flashlight} data-exclude-phantom-tap onClick={toggleFlashlight} className={`${ring} mt-2 block h-9 w-14 rounded-lg text-[10px]`}>{flashlight ? 'Light off' : 'Light'}</button>;
+};
 
 const CrouchBtn: React.FC = () => {
   const { crouch } = useVRView();
@@ -155,6 +162,7 @@ export const VRGamepadHUD: React.FC = () => {
       <div className="pointer-events-auto absolute left-4 top-24" style={{ transform: `scale(${s})`, transformOrigin: 'top left' }}>
         <Btn action="camera" label="L" aria="Switch camera" className="h-11 w-14 rounded-t-2xl rounded-b-lg text-sm font-semibold" />
         <CrouchBtn />
+        <LightBtn />
       </div>
       <div className="pointer-events-auto absolute right-4 top-24" style={{ transform: `scale(${s})`, transformOrigin: 'top right' }}>
         <Btn action="zoom" label="R" aria="Zoom lens" className="h-11 w-14 rounded-t-2xl rounded-b-lg text-sm font-semibold" />
