@@ -83,6 +83,7 @@ export async function loadVRQuests(): Promise<void> {
 export async function recordVRCollect(item: CollectedItem): Promise<Quest[]> {
   const local: BagItem = { ...item, id: `local-${Date.now()}`, collected_at: new Date().toISOString() };
   bag = [local, ...bag].slice(0, 200);
+  if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('vr-item-pickup', { detail: item }));
   const { next, completed } = applyCollect(state, item);
   const changed = QUESTS.filter((q) => next.progress[q.id] !== state.progress[q.id]);
   state = next;

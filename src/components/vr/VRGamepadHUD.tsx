@@ -1,3 +1,4 @@
+import { useVRView, toggleCrouch } from '@/lib/vrView';
 /**
  * Console-style controls for VR World (Resident Evil mobile layout, trimmed):
  * shoulder buttons, a menu button, four face buttons, a layout editor
@@ -24,6 +25,11 @@ const StaminaMeter: React.FC = () => {
 };
 
 const ring = 'flex items-center justify-center border border-foreground/60 text-foreground bg-background/10 select-none touch-none active:bg-foreground/25';
+
+const CrouchBtn: React.FC = () => {
+  const { crouch } = useVRView();
+  return <button type="button" aria-label="Crouch" aria-pressed={crouch} data-exclude-phantom-tap onClick={toggleCrouch} className={`${ring} mt-2 block h-9 w-14 rounded-lg text-[10px] ${crouch ? 'opacity-100' : 'opacity-80'}`}>{crouch ? 'Stand' : 'Crouch'}</button>;
+};
 
 const Btn: React.FC<{ action: VRAction; label: string; className: string; hold?: boolean; aria: string; glyph?: string }> = ({ action, label, className, hold, aria, glyph }) => (
   <button
@@ -148,6 +154,7 @@ export const VRGamepadHUD: React.FC = () => {
       {/* Shoulder buttons */}
       <div className="pointer-events-auto absolute left-4 top-24" style={{ transform: `scale(${s})`, transformOrigin: 'top left' }}>
         <Btn action="camera" label="L" aria="Switch camera" className="h-11 w-14 rounded-t-2xl rounded-b-lg text-sm font-semibold" />
+        <CrouchBtn />
       </div>
       <div className="pointer-events-auto absolute right-4 top-24" style={{ transform: `scale(${s})`, transformOrigin: 'top right' }}>
         <Btn action="zoom" label="R" aria="Zoom lens" className="h-11 w-14 rounded-t-2xl rounded-b-lg text-sm font-semibold" />

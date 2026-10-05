@@ -74,6 +74,9 @@ import { MeetPresence } from '@/worlds/meet/MeetPresence';
 import { VRMeetChat } from '@/worlds/meet/VRMeetChat';
 import { VRWorldSearch } from '@/worlds/search/VRWorldSearch';
 import { walkStep, staminaTick, WALK_MPS, RUN_MPS } from '@/lib/vrWalk';
+import { getVRView, CROUCH_SPEED } from '@/lib/vrView';
+import { ThirdPersonAvatar } from './vr/ThirdPersonAvatar';
+import { ItemCloseUp } from './vr/ItemCloseUp';
 import { MultiplayerAvatars } from './vr/features/GlassPyramidAvatar';
 import EnterpriseControlDeck from './vr/features/EnterpriseControlDeck';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
@@ -1039,7 +1042,7 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
     camera.rotation.y += step.yawDelta;
 
     const isRunning = staminaTick(dt, run || eventSpeed.current > 1, step.move);
-    const speed = isRunning ? RUN_MPS : WALK_MPS;
+    const speed = getVRView().crouch ? WALK_MPS * CROUCH_SPEED : isRunning ? RUN_MPS : WALK_MPS;
 
     direction.current.set(0, 0, step.move ? -1 : 0);
 
@@ -1313,6 +1316,7 @@ const MemoryPalace: React.FC<{
       {/* Player controller unlocks via entry complete OR watchdog fallback to prevent gate deadlocks */}
       {useLegacyController && (
         <PlayerController disabled={disabled} blockHighAltitudeTransitions={blockHighAltitudeTransitions} />
+        <ThirdPersonAvatar />
       )}
 
       {/* Dedicated rotate handler for button/voice 360 commands */}
@@ -3057,6 +3061,7 @@ const VRLiveClock: React.FC = () => {
               <RealAerialLand />
               <RealStartCityPicker />
               <RealMapLoadingNote />
+              <ItemCloseUp />
               <VRMeetChat />
               <VRWorldSearch />
               <VRFeature id="extras" part="bike">
