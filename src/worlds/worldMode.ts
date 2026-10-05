@@ -95,6 +95,19 @@ export function chooseStartCity(city: StartCity) {
   set({ origin: { status: 'ready', origin: { lat: city.lat, lng: city.lng }, real: false, label: city.name } });
 }
 
+/** City search: move the Real Map to another place (its streets load around you). */
+export function travelTo(place: StartCity) {
+  set({ mode: 'real', origin: { status: 'ready', origin: { lat: place.lat, lng: place.lng }, real: false, label: place.name }, tallestNear: 0 });
+  window.dispatchEvent(new CustomEvent('vr-teleport', { detail: { position: [0, 1.6, 0], lockGround: true } }));
+}
+/** Back to where the phone really is. */
+export function travelHome() {
+  locating = false;
+  set({ mode: 'real', origin: { status: 'locating' }, tallestNear: 0 });
+  resolveOrigin();
+  window.dispatchEvent(new CustomEvent('vr-teleport', { detail: { position: [0, 1.6, 0], lockGround: true } }));
+}
+
 const teleport = (position: [number, number, number]) =>
   window.dispatchEvent(new CustomEvent('vr-teleport', { detail: { position, lockGround: true } }));
 
