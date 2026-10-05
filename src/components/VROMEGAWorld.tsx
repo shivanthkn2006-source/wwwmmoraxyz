@@ -118,6 +118,7 @@ import { RealStartCityPicker } from './vr/RealStartCityPicker';
 import { RealMapLoadingNote } from './vr/RealMapLoadingNote';
 import { SavePoint, HealthBar } from './vr/SavePoint';
 import { VREndToEndCheck } from './vr/VREndToEndCheck';
+import { VRAdminConsole } from './vr/VRAdminConsole';
 import { RealAerialLand } from './vr/RealAerialLand';
 import { useSkyPhase } from '@/hooks/useSkyPhase';
 import { trackActivity } from '@/lib/visitTracker';
@@ -3076,6 +3077,7 @@ const VRLiveClock: React.FC = () => {
               <NightAmbience />
               <AdminAutoPrefill />
               <VREndToEndCheck />
+              <VRAdminConsole />
               <VRMeetChat />
               <VRWorldSearch />
               <VRFeature id="extras" part="bike">

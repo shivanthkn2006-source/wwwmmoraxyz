@@ -1,0 +1,55 @@
+/**
+ * In-world admin command console (admin only, server-verified role).
+ * Commands: go <city>, home, prefill, stop, outbox.
+ */
+import React, { useEffect, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { searchPlaces } from '@/worlds/search/placeSearch';
+import { travelTo, travelHome } from '@/worlds/worldMode';
+import { runPrefill, stopPrefill } from '@/worlds/realmap/prefillCities';
+import { flushVrOutbox } from '@/lib/vrOutbox';
+
+export const VRAdminConsole: React.FC = () => {
+  const [admin, setAdmin] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [cmd, setCmd] = useState('');
+  const [log, setLog] = useState<string[]>([]);
+  useEffect(() => {
+    void (async () => {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) return;
+      const { data } = await supabase.rpc('has_role', { _user_id: u.user.id, _role: 'admin' });
+      if (data === true) setAdmin(true);
+    })().catch(() => {});
+  }, []);
+  if (!admin) return null;
+  const say = (s: string) => setLog((l) => [...l.slice(-5), s]);
+  const run = async () => {
+    const [c, ...rest] = cmd.trim().split(/\s+/); const arg = rest.join(' ');
+    setCmd('');
+    if (c === 'go' && arg) {
+      const hit = (await searchPlaces(arg).catch(() => []))[0];
+      if (!hit) return say(`No place "${arg}"`);
+      travelTo({ name: hit.name, lat: hit.lat, lng: hit.lng } as never); say(`Going to ${hit.name}`);
+    } else if (c === 'home') { travelHome(); say('Back to your location'); }
+    else if (c === 'prefill') { void runPrefill(); say('South India prefill started'); }
+    else if (c === 'stop') { stopPrefill(); say('Prefill stopping'); }
+    else if (c === 'outbox') { await flushVrOutbox(); say('Outbox sent'); }
+    else say('Commands: go <city>, home, prefill, stop, outbox');
+  };
+  return (
+    <div className="fixed left-3 bottom-24 z-30" data-exclude-phantom-tap>
+      <button type="button" onClick={() => setOpen(!open)} className="rounded-full px-3 py-1 text-[11px] text-white surface-warm-tan">Admin</button>
+      {open && (
+        <div className="mt-2 w-64 rounded-2xl p-3 text-xs text-white surface-warm-tan space-y-1">
+          {log.map((l, i) => <p key={i}>{l}</p>)}
+          <form onSubmit={(e) => { e.preventDefault(); void run(); }}>
+            <input value={cmd} onChange={(e) => setCmd(e.target.value)} placeholder="go Chennai · home · prefill"
+              className="w-full rounded-full bg-background/30 px-3 py-1 text-white placeholder:text-white/60 outline-none" />
+          </form>
+        </div>
+      )}
+    </div>
+  );
+};
+export default VRAdminConsole;
