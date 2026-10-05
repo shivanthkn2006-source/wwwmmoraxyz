@@ -21,3 +21,4 @@
 - Real Map places (shops, brands, malls, fuel, food, hotels, offices) come from the same per-block map request (CHUNK_V bumps refresh old saved blocks) and are shown only through MapLabels, because one label per place per block overloaded phones.
 - "Follow my GPS" (src/worlds/realmap/gpsFollow.ts) is off by default, moves the avatar at most every few seconds and pauses above driving speed, because moving with every GPS fix is jittery and unsafe while driving.
 - South India city blocks are pre-filled from the admin's own device (src/worlds/realmap/prefillCities.ts), because map servers block cloud servers.
+- VR third-person view and crouch live in src/lib/vrView.ts (L button / V key, Crouch / C); the avatar is a procedural jointed figure drawn ahead of the camera (no model download), because heavy models crash basic phones.

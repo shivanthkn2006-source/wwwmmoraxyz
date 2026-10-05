@@ -47,8 +47,8 @@
 ## VR game + cities (2026-10-05)
 - [x] VR search "Cities and places" (free OSM place search from the phone) + "Back to my location"
 - [x] Relics already count toward quests with bell alerts (relic hunter, memory keeper, rare eye, treasure seeker)
-- [ ] Quest rewards (karma) on completion
-- [ ] Third-person avatar: walk / run / crouch animations, item pickup close-up
+- [x] Quest rewards (karma, server-granted once per quest) on completion
+- [x] Third-person avatar: walk / run / crouch animations, item pickup close-up (L / V switches view, Crouch button / C)
 - [ ] Doors, notes, keys, locked rooms in M'Mora World + save point at the doorway; fuller bag screen
 - [ ] Night mode: flashlight, fog, sound
 - [ ] Health + stamina bars, optional rivals
