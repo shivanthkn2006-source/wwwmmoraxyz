@@ -3,6 +3,7 @@
  * signal is down and sent to track-visit once the phone is back online.
  */
 import { supabase } from '@/integrations/supabase/client';
+import { visitorId } from '@/lib/visitTracker';
 
 const KEY = 'vr-outbox-v1';
 const MAX = 200;
@@ -22,7 +23,7 @@ export async function flushVrOutbox() {
   const q = read(); if (!q.length) return;
   flushing = true;
   try {
-    const { error } = await supabase.functions.invoke('track-visit', { body: { activity: 'vr_outbox', events: q.slice(0, 50) } });
+    const { error } = await supabase.functions.invoke('track-visit', { body: { action: 'events', visitor_id: visitorId(), events: q.slice(0, 50).map((e) => ({ kind: 'tap', name: `vr:${e.kind}`.slice(0, 80), path: '/vr-world' })) } });
     if (!error) write(read().slice(Math.min(50, q.length)));
   } catch { /* stay queued */ } finally { flushing = false; }
 }
