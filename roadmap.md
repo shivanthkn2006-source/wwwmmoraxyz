@@ -65,3 +65,8 @@
 - [ ] Landscape-locked install + offline map storage
 - [ ] VR scoreboard / top players wired to Zoe/DHF
 - [ ] (needs admin phone) confirm South India cities load
+
+## Future: location-based offers (architecture note, not built)
+- Merchants place offers on Real Map places (POIs from OSM); members see them only as they pass nearby (walk/vehicle/train), opt-in, using the existing privacy switch.
+- Members redeem platform points with merchants; matching uses interests/likes the member chose, never hidden tracking.
+- Alerts go through notifications (new kind), rate-limited, admin switch on /admin/notifications.
