@@ -37,9 +37,9 @@
 - [x] Camera never switches on by itself (Zoe vision is opt-in)
 - [x] Building window/roof detail, building + street names, highlighted roads
 - [ ] Real-device bell check for a street relic (needs member to sign in on phone)
-- [ ] South India region rollout (awaiting user approval of plan)
+- [x] South India region rollout plan approved
 - [ ] Real iPhone + real controller check (needs the user's phone)
-- [ ] Places: malls, KFC/McDonald's, shops, fuel pumps on the real map (incl. Times Square)
+- [x] Places: malls, KFC/McDonald's, shops, fuel pumps on the real map (incl. Times Square)
 - [x] VR voice uses the call relay for strict networks
-- [ ] GPS travel mode ("Follow my GPS": avatar follows phone, roadside friends alert, pauses at driving speed)
-- [ ] Pre-fill shared map store for Bengaluru, Chennai, Kochi, Thiruvananthapuram, Coimbatore, Madurai, Mysuru, Mangaluru
+- [x] GPS travel mode ("Follow my GPS": avatar follows phone, roadside friends alert, pauses at driving speed)
+- [ ] (admin presses Start on notifications page) Pre-fill shared map store for Bengaluru, Chennai, Kochi, Thiruvananthapuram, Coimbatore, Madurai, Mysuru, Mangaluru

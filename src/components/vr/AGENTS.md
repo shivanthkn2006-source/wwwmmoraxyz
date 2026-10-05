@@ -18,3 +18,6 @@
 - Portal invites go only through the notify-user function as type vr_invite (friends only, wording fixed on the server), because members cannot write alerts for each other.
 - VR World search (src/worlds/search) only searches VR World sources (meet room, friends, mapIndex, relics, M'Mora landmarks), because results from the rest of the platform would mislead inside the world.
 - Real Map buildings/roads are drawn by src/worlds/realmap/streetLook.ts (merged walls with one shared window texture, roofs, road edge/centre lines) and names by MapLabels.tsx (nearest few only, count set by the thermal governor), because per-building meshes or labels would overload phones.
+- Real Map places (shops, brands, malls, fuel, food, hotels, offices) come from the same per-block map request (CHUNK_V bumps refresh old saved blocks) and are shown only through MapLabels, because one label per place per block overloaded phones.
+- "Follow my GPS" (src/worlds/realmap/gpsFollow.ts) is off by default, moves the avatar at most every few seconds and pauses above driving speed, because moving with every GPS fix is jittery and unsafe while driving.
+- South India city blocks are pre-filled from the admin's own device (src/worlds/realmap/prefillCities.ts), because map servers block cloud servers.
