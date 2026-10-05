@@ -117,6 +117,7 @@ import { RealMapStatus } from './vr/RealMapStatus';
 import { RealStartCityPicker } from './vr/RealStartCityPicker';
 import { RealMapLoadingNote } from './vr/RealMapLoadingNote';
 import { SavePoint, HealthBar } from './vr/SavePoint';
+import { AvatarWatchdog } from './vr/AvatarWatchdog';
 import { VREndToEndCheck } from './vr/VREndToEndCheck';
 import { VRAdminConsole } from './vr/VRAdminConsole';
 import { RealAerialLand } from './vr/RealAerialLand';
@@ -1269,6 +1270,7 @@ const MemoryPalace: React.FC<{
       {inMMora && <ArchiveHouse />}
       {inMMora && <SavePoint />}
       <NightMode />
+      <AvatarWatchdog />
       {inMMora && (<>
       {/* VR Feature Integration - PROGRESSIVE: passes zone-aware visibility */}
       <VRFeatureIntegration 

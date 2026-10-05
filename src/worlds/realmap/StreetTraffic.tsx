@@ -12,6 +12,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { toLocal, type LatLng } from './geo';
 import { mapBlocks, useMapVersion } from './mapIndex';
 import { useGovLevel, TRAFFIC_SCALE } from './thermalGovernor';
+import { getMeet } from '@/worlds/meet/vrMeet';
 
 export type Lane = { pts: [number, number][]; cum: number[]; len: number; w: number };
 export type Agent = { lane: number; s: number; dir: 1 | -1; speed: number; base: number; off: number; kind: 0 | 1 | 2; phase: number };
@@ -19,7 +20,7 @@ export type Agent = { lane: number; s: number; dir: 1 | -1; speed: number; base:
 const LOW_MEM = typeof navigator !== 'undefined' && (((navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 8) <= 4);
 export const MAX = LOW_MEM ? { car: 12, bike: 6, ped: 16 } : { car: 24, bike: 12, ped: 40 };
 export const NEAR_M = 320;
-const BRAKE_AHEAD_M = 7;
+export const BRAKE_AHEAD_M = 7.5;
 
 /** Pure: polyline (local x/z) → lane with cumulative lengths; null for degenerate roads. */
 export function makeLane(pts: [number, number][], w: number): Lane | null {
@@ -129,6 +130,9 @@ export const StreetTraffic: React.FC<{ origin: LatLng }> = ({ origin }) => {
     const have = [0, 0, 0];
     const cx = camera.position.x, cz = camera.position.z;
     const next: Agent[] = [];
+    // You plus other members on the Real Map (they arrive as lat/lng).
+    const walkers: [number, number][] = [[cx, cz]];
+    for (const r of getMeet().players) if (r.mode === 'real' && r.lat != null && r.lng != null) { const q = toLocal({ lat: r.lat, lng: r.lng }, origin); walkers.push([q.x, q.z]); }
     for (const a of agents.current) {
       if (have[a.kind] >= want[a.kind]) continue;
       const l = (a.kind === 2 ? roads.current.walk : roads.current.car)[a.lane];
@@ -138,9 +142,8 @@ export const StreetTraffic: React.FC<{ origin: LatLng }> = ({ origin }) => {
       // Brake for you when you stand in the road just ahead.
       let blocked = false;
       if (a.kind !== 2) {
-        const fx = Math.sin(p.yaw), fz = Math.cos(p.yaw), rx = cx - p.x, rz = cz - p.z;
-        const ahead = rx * fx + rz * fz, side = Math.abs(rx * fz - rz * fx);
-        blocked = ahead > 0 && ahead < BRAKE_AHEAD_M && side < 2.2;
+        const fx = Math.sin(p.yaw), fz = Math.cos(p.yaw);
+        blocked = walkers.some(([wx, wz]) => { const rx = wx - p.x, rz = wz - p.z; const ahead = rx * fx + rz * fz; return ahead > 0 && ahead < BRAKE_AHEAD_M && Math.abs(rx * fz - rz * fx) < 2.2; });
       }
       next.push(stepAgent(a, l, dt, blocked)); have[a.kind]++;
     }
