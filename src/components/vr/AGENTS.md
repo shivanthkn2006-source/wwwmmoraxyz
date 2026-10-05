@@ -22,3 +22,4 @@
 - "Follow my GPS" (src/worlds/realmap/gpsFollow.ts) is off by default, moves the avatar at most every few seconds and pauses above driving speed, because moving with every GPS fix is jittery and unsafe while driving.
 - South India city blocks are pre-filled from the admin's own device (src/worlds/realmap/prefillCities.ts), because map servers block cloud servers.
 - VR third-person view and crouch live in src/lib/vrView.ts (L button / V key, Crouch / C); the avatar is a procedural jointed figure drawn ahead of the camera (no model download), because heavy models crash basic phones.
+- M'Mora World story items (keys, notes, locked doors) live in src/lib/vrStory.ts (device-saved, pure doorAction), night mode in src/components/vr/NightMode.tsx (local clock), and the admin's VR session auto-prepares South India city blocks via AdminAutoPrefill with a per-request chunk key, because a global key function would mix the background cities into the live street.

@@ -41,7 +41,7 @@ export function doorAction(doorId: string, s: Pick<S, 'keys' | 'open'>): { resul
 export function takeKey(id: string) {
   if (st.keys.includes(id)) return;
   set({ keys: [...st.keys, id] });
-  window.dispatchEvent(new CustomEvent('vr-item-pickup', { detail: { type: id, rarity: 'key item' } }));
+  if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('vr-item-pickup', { detail: { type: id, rarity: 'key item' } }));
 }
 export function readNote(id: string) { set({ notes: st.notes.includes(id) ? st.notes : [...st.notes, id], reading: id }); }
 export function closeNote() { set({ reading: null }); }
