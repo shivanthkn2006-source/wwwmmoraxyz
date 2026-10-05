@@ -5,7 +5,7 @@
  */
 import type { OsmChunk } from '../realmap/osm';
 
-export type ResultKind = 'member' | 'friend' | 'street' | 'building' | 'place' | 'relic' | 'landmark';
+export type ResultKind = 'member' | 'friend' | 'street' | 'building' | 'place' | 'relic' | 'landmark' | 'city' | 'home';
 export type WorldResult = {
   id: string; kind: ResultKind; title: string; detail: string;
   /** where to go: local x/z (M'Mora World) or lat/lng (Real Map) */
@@ -14,7 +14,7 @@ export type WorldResult = {
 };
 
 export const KIND_LABEL: Record<ResultKind, string> = {
-  member: 'Here now', friend: 'Friend', street: 'Street', building: 'Building', place: 'Place', relic: 'Relic', landmark: "M'Mora World",
+  member: 'Here now', friend: 'Friend', street: 'Street', building: 'Building', place: 'Place', relic: 'Relic', landmark: "M'Mora World", city: 'City or place', home: 'Your location',
 };
 
 const norm = (s: string) => s.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').trim();
