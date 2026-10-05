@@ -43,3 +43,14 @@
 - [x] VR voice uses the call relay for strict networks
 - [x] GPS travel mode ("Follow my GPS": avatar follows phone, roadside friends alert, pauses at driving speed)
 - [ ] (admin presses Start on notifications page) Pre-fill shared map store for Bengaluru, Chennai, Kochi, Thiruvananthapuram, Coimbatore, Madurai, Mysuru, Mangaluru
+
+## VR game + cities (2026-10-05)
+- [x] VR search "Cities and places" (free OSM place search from the phone) + "Back to my location"
+- [x] Relics already count toward quests with bell alerts (relic hunter, memory keeper, rare eye, treasure seeker)
+- [ ] Quest rewards (karma) on completion
+- [ ] Third-person avatar: walk / run / crouch animations, item pickup close-up
+- [ ] Doors, notes, keys, locked rooms in M'Mora World + save point at the doorway; fuller bag screen
+- [ ] Night mode: flashlight, fog, sound
+- [ ] Health + stamina bars, optional rivals
+- [ ] (needs admin's phone) Run "Prepare South India maps" and check the 8 cities
+- [ ] Friends' tags while GPS-following at driving speed — blocked: following pauses above ~29 km/h for safety (user decision needed)
