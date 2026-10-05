@@ -115,7 +115,7 @@ const NotificationPanel = () => {
     } else if (notification.type === 'friend_request') {
       navigate('/huddle');
     } else if (notification.type === 'message' || notification.type === 'direct_message') {
-      navigate(notification.from_user_id ? `/messages?user=${notification.from_user_id}` : '/messages');
+      navigate(notification.from_user_id ? `/chat?user=${notification.from_user_id}` : '/chat');
     }
     setIsOpen(false);
   };
