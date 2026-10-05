@@ -69,7 +69,7 @@ export const MapLabels: React.FC<{ origin: LatLng }> = ({ origin }) => {
   return (
     <>
       {shown.map((l) => (
-        <Html key={l.id} position={[l.x, l.y, l.z]} center distanceFactor={l.kind === 'street' ? 14 : l.kind === 'place' ? 18 : 22} zIndexRange={[5, 0]} style={{ pointerEvents: 'none' }}>
+        <Html key={l.id} position={[l.x, l.y, l.z]} center distanceFactor={l.kind === 'street' ? 14 : undefined} zIndexRange={[5, 0]} style={{ pointerEvents: 'none' }}>
           <div className={l.kind === 'street' ? 'vr-map-label vr-map-label-street' : l.kind === 'place' ? 'vr-map-label vr-map-label-place' : 'vr-map-label'}>{l.icon ? `${l.icon} ` : ''}{l.text}</div>
         </Html>
       ))}
