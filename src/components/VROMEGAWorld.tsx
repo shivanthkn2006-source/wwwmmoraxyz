@@ -116,6 +116,7 @@ import { LandscapeViewportGuard } from './vr/LandscapeViewportGuard';
 import { RealMapStatus } from './vr/RealMapStatus';
 import { RealStartCityPicker } from './vr/RealStartCityPicker';
 import { RealMapLoadingNote } from './vr/RealMapLoadingNote';
+import { SavePoint, HealthBar } from './vr/SavePoint';
 import { RealAerialLand } from './vr/RealAerialLand';
 import { useSkyPhase } from '@/hooks/useSkyPhase';
 import { trackActivity } from '@/lib/visitTracker';
@@ -1264,6 +1265,7 @@ const MemoryPalace: React.FC<{
       <JourneyTracker />
       {inMMora && <PortalDoorway position={RETURN_PORTAL_POS} label="Back to your street" onEnter={returnToReal} />}
       {inMMora && <ArchiveHouse />}
+      {inMMora && <SavePoint />}
       <NightMode />
       {inMMora && (<>
       {/* VR Feature Integration - PROGRESSIVE: passes zone-aware visibility */}
@@ -3067,6 +3069,7 @@ const VRLiveClock: React.FC = () => {
               <RealAerialLand />
               <RealStartCityPicker />
               <RealMapLoadingNote />
+              {worldMode === 'mmora' && <HealthBar />}
               <ItemCloseUp />
               <StoryNoteReader />
               <NightAmbience />
