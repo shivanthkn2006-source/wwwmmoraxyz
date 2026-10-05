@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Bell, Check, X, Filter, UserPlus, Heart, MessageCircle, Star, UserCheck, MapPin, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
@@ -106,7 +105,8 @@ const NotificationPanel = () => {
 
     // Audit fix (SEP03): DHF essay + growth notifications carry their target in
     // context_data.route (post_id is null), so clicking them used to do nothing.
-    const route = (notification.context_data as { route?: string } | null)?.route;
+    const ctx = (notification.context_data ?? {}) as { route?: string; link?: string; url?: string };
+    const route = ctx.route ?? ctx.link ?? ctx.url;
 
     if (notification.post_id) {
       navigate(`/profile?post=${notification.post_id}`);
@@ -114,6 +114,8 @@ const NotificationPanel = () => {
       navigate(route);
     } else if (notification.type === 'friend_request') {
       navigate('/huddle');
+    } else if (notification.type === 'message' || notification.type === 'direct_message') {
+      navigate(notification.from_user_id ? `/chat?user=${notification.from_user_id}` : '/chat');
     }
     setIsOpen(false);
   };
@@ -195,8 +197,8 @@ const NotificationPanel = () => {
             <TabsTrigger value="user_online" className="text-xs">Online</TabsTrigger>
           </TabsList>
 
-          <ScrollArea className="h-[400px]">
-            <div className="min-h-[400px]">
+          <div className="max-h-[min(400px,70vh)] overflow-y-auto overscroll-contain touch-pan-y" data-testid="notification-scroll" style={{ WebkitOverflowScrolling: 'touch' }}>
+            <div>
               {filteredNotifications.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center p-8">
                   <Bell className="w-12 h-12 text-muted-foreground mb-4" />
@@ -250,7 +252,7 @@ const NotificationPanel = () => {
                 </div>
               )}
             </div>
-          </ScrollArea>
+          </div>
         </Tabs>
       </PopoverContent>
     </Popover>
