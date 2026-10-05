@@ -166,7 +166,8 @@ async function fetchMirrors(query: string, cap = MAX_BUILDINGS): Promise<OsmChun
   if (pass) await new Promise((r) => setTimeout(r, 1500));
   for (const url of MIRRORS) {
     const ctl = new AbortController();
-    const t = setTimeout(() => ctl.abort(), 15_000);
+    // Wait a bit longer than the map service's own 25 s limit so slow-but-valid answers are kept.
+    const t = setTimeout(() => ctl.abort(), 30_000);
     try {
       const res = await fetch(url, { method: 'POST', body: 'data=' + encodeURIComponent(query), headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, signal: ctl.signal });
       if (res.ok) return parseOverpass(await res.json(), cap);
@@ -194,9 +195,43 @@ let batchTimer: ReturnType<typeof setTimeout> | null = null;
 let keyOfFn: ((lat: number, lng: number) => string) | null = null;
 export function setChunkKeyFn(fn: (lat: number, lng: number) => string) { keyOfFn = fn; }
 
-async function flushBatch() {
-  const items = batch; batch = []; batchTimer = null;
-  if (!items.length) return;
+/** First request = your own block + neighbours; then small groups (busy map servers reject big areas). */
+export const FIRST_GROUP = 9;
+export const GROUP = 6;
+export const RETRY_MS = [5_000, 15_000, 45_000];
+export function groupBatch<T>(items: T[]): T[][] {
+  const out: T[][] = [];
+  for (let k = 0; k < items.length;) { const n = out.length ? GROUP : FIRST_GROUP; out.push(items.slice(k, k + n)); k += n; }
+  return out;
+}
+
+type MapLoadStatus = { pending: number; retrying: number };
+let loadStatus: MapLoadStatus = { pending: 0, retrying: 0 };
+const statusLs = new Set<() => void>();
+const setStatus = (p: Partial<MapLoadStatus>) => { loadStatus = { ...loadStatus, ...p }; statusLs.forEach((l) => l()); };
+export const getMapLoadStatus = () => loadStatus;
+export function onMapLoadStatus(l: () => void) { statusLs.add(l); return () => { statusLs.delete(l); }; }
+
+const attempts = new Map<string, number>();
+function retryLater(items: Pending[]) {
+  const ready: Pending[] = [];
+  for (const i of items) {
+    const n = attempts.get(i.key) ?? 0;
+    if (n >= RETRY_MS.length) { attempts.delete(i.key); loaderStats.failures++; i.resolve(null); continue; }
+    attempts.set(i.key, n + 1);
+    ready.push(i);
+  }
+  if (!ready.length) { setStatus({ retrying: Math.max(0, loadStatus.retrying) }); return; }
+  setStatus({ retrying: loadStatus.retrying + ready.length });
+  const wait = RETRY_MS[(attempts.get(ready[0].key) ?? 1) - 1];
+  setTimeout(() => {
+    setStatus({ retrying: Math.max(0, loadStatus.retrying - ready.length) });
+    batch.push(...ready);
+    if (!batchTimer) batchTimer = setTimeout(() => void flushBatch(), 200);
+  }, wait);
+}
+
+async function fetchGroup(items: Pending[]) {
   const union: BBox = {
     south: Math.min(...items.map((i) => i.bbox.south)), west: Math.min(...items.map((i) => i.bbox.west)),
     north: Math.max(...items.map((i) => i.bbox.north)), east: Math.max(...items.map((i) => i.bbox.east)),
@@ -204,14 +239,25 @@ async function flushBatch() {
   await slot();
   try {
     const all = await fetchMirrors(buildQuery(union), items.length * 400);
-    if (!all || !keyOfFn) { loaderStats.failures += items.length; items.forEach((i) => i.resolve(null)); return; }
+    if (!all || !keyOfFn) { retryLater(items); return; }
     loaderStats.network++;
     const parts = splitByChunk(all, keyOfFn);
     for (const i of items) {
+      attempts.delete(i.key);
       const c = parts.get(i.key) ?? { buildings: [], roads: [], pois: [], fetchedAt: all.fetchedAt, v: CHUNK_V };
       void cachePut(i.key, c); sharedPut(i.key, c); i.resolve(c);
     }
   } finally { release(); }
+}
+
+async function flushBatch() {
+  const items = batch; batch = []; batchTimer = null;
+  if (!items.length) return;
+  setStatus({ pending: loadStatus.pending + items.length });
+  for (const g of groupBatch(items)) {
+    await fetchGroup(g);
+    setStatus({ pending: Math.max(0, loadStatus.pending - g.length) });
+  }
 }
 
 /** Older saved blocks have no street/building names: fetch once more in the background (caches update, the search index picks them up). */
