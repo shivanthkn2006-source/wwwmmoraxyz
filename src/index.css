@@ -7287,3 +7287,4 @@ html body .vr-gem-core { animation-duration: 4s !important; }
 .vr-map-label { white-space: nowrap; font-size: 11px; line-height: 1; padding: 3px 8px; border-radius: 999px; color: hsl(0 0% 100%); background: hsl(30 25% 20% / 0.55); border: 1px solid hsl(0 0% 100% / 0.35); letter-spacing: 0.01em; }
 .vr-map-label-street { font-size: 10px; background: hsl(215 90% 59% / 0.75); border-color: hsl(0 0% 100% / 0.5); font-weight: 600; }
 .vr-map-label-place { background: hsl(0 0% 100% / 0.85); color: hsl(30 25% 15%); border-color: hsl(215 90% 59% / 0.6); font-weight: 600; }
+.vr-item-spin{animation:vr-item-spin 2.4s ease-in-out}@keyframes vr-item-spin{0%{transform:scale(.4) rotateY(0)}30%{transform:scale(1.15) rotateY(180deg)}100%{transform:scale(1) rotateY(360deg)}}
