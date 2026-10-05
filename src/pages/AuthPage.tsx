@@ -305,6 +305,26 @@ const AuthPage = () => {
     );
   };
 
+  // Fit the whole page on one screen (large phone text sizes included) by
+  // scaling everything evenly, so spacing stays proportional, never squeezed.
+  const fitRef = useRef<HTMLDivElement>(null);
+  const [fitScale, setFitScale] = useState(1);
+  useEffect(() => {
+    const el = fitRef.current;
+    if (!el) return;
+    const fit = () => {
+      const a = document.activeElement;
+      if (a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA')) return; // keyboard open
+      const avail = window.innerHeight - 24;
+      setFitScale(Math.min(1, avail / Math.max(1, el.offsetHeight)));
+    };
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(el);
+    window.addEventListener('resize', fit);
+    return () => { ro.disconnect(); window.removeEventListener('resize', fit); };
+  }, [pendingEmail]);
+
   if (pendingEmail) {
     return (
       <>
@@ -336,26 +356,6 @@ const AuthPage = () => {
       </>
     );
   }
-
-  // Fit the whole page on one screen (large phone text sizes included) by
-  // scaling everything evenly, so spacing stays proportional, never squeezed.
-  const fitRef = useRef<HTMLDivElement>(null);
-  const [fitScale, setFitScale] = useState(1);
-  useEffect(() => {
-    const el = fitRef.current;
-    if (!el) return;
-    const fit = () => {
-      const a = document.activeElement;
-      if (a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA')) return; // keyboard open
-      const avail = window.innerHeight - 24;
-      setFitScale(Math.min(1, avail / Math.max(1, el.offsetHeight)));
-    };
-    fit();
-    const ro = new ResizeObserver(fit);
-    ro.observe(el);
-    window.addEventListener('resize', fit);
-    return () => { ro.disconnect(); window.removeEventListener('resize', fit); };
-  }, []);
 
   return (
     <>
