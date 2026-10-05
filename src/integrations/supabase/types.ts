@@ -13588,6 +13588,7 @@ export type Database = {
         Args: { p_user_challenge_id: string }
         Returns: number
       }
+      claim_vr_quest_reward: { Args: { p_quest_id: string }; Returns: number }
       cleanup_expired_call_signals: { Args: never; Returns: undefined }
       cleanup_expired_notifications: { Args: never; Returns: undefined }
       cleanup_old_activity_logs: { Args: never; Returns: undefined }
