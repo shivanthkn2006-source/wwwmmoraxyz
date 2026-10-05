@@ -168,12 +168,10 @@ const AuthPage = () => {
 
   const [showRecovery, setShowRecovery] = useState(false);
   const passkeyLabel = deviceType === 'faceid'
-    ? 'Sign in with Face ID / Passkey'
+    ? 'Face ID/Passkey'
     : deviceType === 'touchid'
-      ? 'Sign in with Touch ID / Passkey'
-      : deviceType === 'fingerprint'
-        ? 'Fingerprint/Passkey'
-        : 'Sign in with Passkey';
+      ? 'Touch ID/Passkey'
+      : 'Fingerprint/Passkey';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
