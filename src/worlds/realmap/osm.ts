@@ -189,7 +189,9 @@ export function splitByChunk(all: OsmChunk, keyOf: (lat: number, lng: number) =>
 
 // Missing blocks requested within 1.2 s are fetched in ONE map request
 // (public map servers rate-limit many small requests with 429/504).
-type Pending = { key: string; bbox: BBox; resolve: (c: OsmChunk | null) => void };
+type KeyFn = (lat: number, lng: number) => string;
+/** keyOf: how this block's features are split (captured per request, so background city preparation never mixes with the live street). */
+type Pending = { key: string; bbox: BBox; resolve: (c: OsmChunk | null) => void; keyOf?: KeyFn };
 let batch: Pending[] = [];
 let batchTimer: ReturnType<typeof setTimeout> | null = null;
 let keyOfFn: ((lat: number, lng: number) => string) | null = null;
@@ -239,9 +241,10 @@ async function fetchGroup(items: Pending[]) {
   await slot();
   try {
     const all = await fetchMirrors(buildQuery(union), items.length * 400);
-    if (!all || !keyOfFn) { retryLater(items); return; }
+    const keyOf = items[0].keyOf ?? keyOfFn;
+    if (!all || !keyOf) { retryLater(items); return; }
     loaderStats.network++;
-    const parts = splitByChunk(all, keyOfFn);
+    const parts = splitByChunk(all, keyOf);
     for (const i of items) {
       attempts.delete(i.key);
       const c = parts.get(i.key) ?? { buildings: [], roads: [], pois: [], fetchedAt: all.fetchedAt, v: CHUNK_V };
@@ -254,7 +257,9 @@ async function flushBatch() {
   const items = batch; batch = []; batchTimer = null;
   if (!items.length) return;
   setStatus({ pending: loadStatus.pending + items.length });
-  for (const g of groupBatch(items)) {
+  const byKeyFn = new Map<KeyFn | undefined, Pending[]>();
+  for (const i of items) { const l = byKeyFn.get(i.keyOf) ?? []; l.push(i); byKeyFn.set(i.keyOf, l); }
+  for (const g of [...byKeyFn.values()].flatMap((l) => groupBatch(l))) {
     await fetchGroup(g);
     setStatus({ pending: Math.max(0, loadStatus.pending - g.length) });
   }
@@ -272,7 +277,7 @@ const namesListeners = new Set<(key: string, c: OsmChunk) => void>();
 export function onNamesRefreshed(fn: (key: string, c: OsmChunk) => void) { namesListeners.add(fn); return () => { namesListeners.delete(fn); }; }
 
 /** Never throws. Resolves null when every map server failed. */
-export function loadChunk(key: string, bbox: BBox): Promise<OsmChunk | null> {
+export function loadChunk(key: string, bbox: BBox, keyOf?: KeyFn): Promise<OsmChunk | null> {
   const existing = inflight.get(key);
   if (existing) return existing;
   const p = (async () => {
@@ -281,7 +286,7 @@ export function loadChunk(key: string, bbox: BBox): Promise<OsmChunk | null> {
     const shared = await sharedGet(key);
     if (shared) { void cachePut(key, shared); if (shared.v !== CHUNK_V) refreshNames(key, bbox); return shared; }
     return new Promise<OsmChunk | null>((resolve) => {
-      batch.push({ key, bbox, resolve });
+      batch.push({ key, bbox, resolve, keyOf });
       if (!batchTimer) batchTimer = setTimeout(() => void flushBatch(), 1200);
     });
   })();

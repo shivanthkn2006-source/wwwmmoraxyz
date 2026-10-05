@@ -6,7 +6,7 @@
  */
 import { useSyncExternalStore } from 'react';
 import { chunkBBox, chunkOf, neighborhood } from './geo';
-import { loadChunk, setChunkKeyFn } from './osm';
+import { loadChunk } from './osm';
 
 export const SOUTH_INDIA_CITIES = [
   { name: 'Bengaluru', lat: 12.9716, lng: 77.5946 },
@@ -44,11 +44,14 @@ export async function runPrefill() {
   for (const step of plan) {
     if (stop) break;
     set({ city: step.city });
-    setChunkKeyFn((lat, lng) => chunkOf({ lat, lng }, step.lat).key);
-    const d = await loadChunk(step.id.key, chunkBBox(step.id.i, step.id.j, step.lat)).catch(() => null);
+    const band = step.lat;
+    const d = await loadChunk(step.id.key, chunkBBox(step.id.i, step.id.j, band), (lat, lng) => chunkOf({ lat, lng }, band).key).catch(() => null);
     set({ done: st.done + 1, ok: st.ok + (d ? 1 : 0) });
     await new Promise((r) => setTimeout(r, PAUSE_MS));
   }
   set({ running: false, city: null });
+  if (!stop && st.ok >= Math.floor(st.total * 0.9)) { try { localStorage.setItem(DONE_KEY, new Date().toISOString()); } catch { /* private */ } }
 }
+const DONE_KEY = 'vr-prefill-south-india-done';
+export const prefillDone = () => { try { return !!localStorage.getItem(DONE_KEY); } catch { return false; } };
 export function stopPrefill() { stop = true; }
