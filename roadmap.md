@@ -54,3 +54,8 @@
 - [ ] Health + stamina bars, optional rivals
 - [ ] (needs admin's phone) Run "Prepare South India maps" and check the 8 cities
 - [ ] Friends' tags while GPS-following at driving speed — blocked: following pauses above ~29 km/h for safety (user decision needed)
+- [x] Doors, keys, notes, locked archive in M'Mora World + fuller bag (Items / Keys / Files / Quests, item close-up)
+- [x] Night mode (local 18:00–06:00): fog, flashlight (Light / F), wind + cricket sounds
+- [x] Admin's VR World auto-prepares the 8 South India cities in the background (once per device)
+- [ ] From the architecture document, not built: off-main-thread map worker, offline telemetry outbox, in-world admin command console, landscape-locked PWA + spatial service worker, end-to-end chaos test button, traffic braking for players crossing
+- [ ] Save point at the doorway; health bar and rivals
