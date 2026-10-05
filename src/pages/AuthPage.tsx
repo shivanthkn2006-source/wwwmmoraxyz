@@ -315,6 +315,7 @@ const AuthPage = () => {
     const fit = () => {
       if (window.innerWidth !== lastW) { lastW = window.innerWidth; tallest = 0; } // rotated
       tallest = Math.max(tallest, window.innerHeight);
+      if (window.innerHeight < tallest * 0.8) return; // keyboard open: keep the current size
       const avail = tallest - 24;
       setFitScale(Math.min(1, avail / Math.max(1, el.offsetHeight)));
     };
