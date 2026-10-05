@@ -108,6 +108,7 @@ import { useWorldState, returnToReal, RETURN_PORTAL_POS, getWorldState, entryHei
 import { LandscapeViewportGuard } from './vr/LandscapeViewportGuard';
 import { RealMapStatus } from './vr/RealMapStatus';
 import { RealStartCityPicker } from './vr/RealStartCityPicker';
+import { RealMapLoadingNote } from './vr/RealMapLoadingNote';
 import { RealAerialLand } from './vr/RealAerialLand';
 import { useSkyPhase } from '@/hooks/useSkyPhase';
 import { trackActivity } from '@/lib/visitTracker';
@@ -3055,6 +3056,7 @@ const VRLiveClock: React.FC = () => {
               <VRFeature id="map"><RealMapStatus /></VRFeature>
               <RealAerialLand />
               <RealStartCityPicker />
+              <RealMapLoadingNote />
               <VRMeetChat />
               <VRWorldSearch />
               <VRFeature id="extras" part="bike">
