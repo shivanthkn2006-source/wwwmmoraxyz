@@ -6,7 +6,7 @@
 3. Change "Sign in with Fingerprint / Passkey" to **"Fingerprint/Passkey"**.
 4. Fit the whole page on one phone screen with no scrolling. That includes the copyright line and the links below "Explore M'Mora — sign up now..".
    - Colours, fonts, the order of items and the button styles stay exactly the same.
-   - Only the empty space between items gets smaller, and it adjusts to the screen height so even short phones show everything.
+   - The space between items gets a little smaller but stays even and comfortable, so the page still looks neat and not squeezed. It adjusts to the screen height, with a firm minimum gap that is never crossed, so even short phones show everything.
 5. Check it on short and tall phone sizes (about 360×640 up to 430×930) and on desktop, and confirm the copyright line is visible without scrolling.
 
 ## Technical details
