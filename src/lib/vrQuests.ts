@@ -110,6 +110,7 @@ export async function recordVRCollect(item: CollectedItem): Promise<Quest[]> {
       const karma = typeof got === 'number' ? got : 0;
       if (karma > 0) window.dispatchEvent(new CustomEvent('vr-quest-reward', { detail: { id: q.id, karma } }));
       await notifySelf('vr_quest_complete', 'Quest complete', `${q.title}: ${q.description}${karma > 0 ? ` · +${karma} karma` : ''}`, { link: '/vr-world', quest: q.id, karma });
+      void import('@/lib/vrOutbox').then((m) => m.queueVrEvent('quest_complete', { quest: q.id }));
     }
   } catch { /* offline: progress stays on screen and syncs on the next pickup */ }
   return completed;
