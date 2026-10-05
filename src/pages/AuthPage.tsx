@@ -312,10 +312,12 @@ const AuthPage = () => {
   useEffect(() => {
     const el = fitRef.current;
     if (!el) return;
+    let tallest = 0; // phone keyboard shrinks the window: keep the full-screen height
+    let lastW = window.innerWidth;
     const fit = () => {
-      const a = document.activeElement;
-      if (a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA')) return; // keyboard open
-      const avail = window.innerHeight - 24;
+      if (window.innerWidth !== lastW) { lastW = window.innerWidth; tallest = 0; } // rotated
+      tallest = Math.max(tallest, window.innerHeight);
+      const avail = tallest - 24;
       setFitScale(Math.min(1, avail / Math.max(1, el.offsetHeight)));
     };
     fit();
