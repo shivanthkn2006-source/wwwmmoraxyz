@@ -43,7 +43,7 @@ function loadMs(): number | null {
   } catch { return null; }
 }
 
-function visitorId(): string {
+export function visitorId(): string {
   const k = 'mmora-visitor-id';
   let v = localStorage.getItem(k);
   if (!v) { v = crypto.randomUUID(); localStorage.setItem(k, v); }
