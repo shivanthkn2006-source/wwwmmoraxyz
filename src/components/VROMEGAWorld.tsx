@@ -1314,10 +1314,10 @@ const MemoryPalace: React.FC<{
       </>)}
 
       {/* Player controller unlocks via entry complete OR watchdog fallback to prevent gate deadlocks */}
-      {useLegacyController && (
+      {useLegacyController && (<>
         <PlayerController disabled={disabled} blockHighAltitudeTransitions={blockHighAltitudeTransitions} />
         <ThirdPersonAvatar />
-      )}
+      </>)}
 
       {/* Dedicated rotate handler for button/voice 360 commands */}
       {useLegacyController && <RotationController />}
