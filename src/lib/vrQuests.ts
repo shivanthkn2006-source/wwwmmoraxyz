@@ -12,6 +12,8 @@ export interface CollectedItem { type: string; rarity: Rarity }
 export interface BagItem extends CollectedItem { id: string; collected_at: string }
 
 export interface Quest {
+  /** karma given once when finished (granted by the server) */
+  reward?: number;
   id: string;
   title: string;
   description: string;
@@ -20,10 +22,10 @@ export interface Quest {
 }
 
 export const QUESTS: Quest[] = [
-  { id: 'relic_hunter', title: 'Relic hunter', description: 'Pick up any 3 relics', goal: 3, counts: () => true },
-  { id: 'memory_keeper', title: 'Memory keeper', description: 'Find 2 memory shards', goal: 2, counts: (i) => i.type === 'memory_shard' },
-  { id: 'rare_eye', title: 'Rare eye', description: 'Find a rare, epic or legendary relic', goal: 1, counts: (i) => ['rare', 'epic', 'legendary'].includes(i.rarity) },
-  { id: 'treasure_seeker', title: 'Treasure seeker', description: 'Open a treasure chest', goal: 1, counts: (i) => i.type === 'treasure_chest' },
+  { id: 'relic_hunter', reward: 50, title: 'Relic hunter', description: 'Pick up any 3 relics', goal: 3, counts: () => true },
+  { id: 'memory_keeper', reward: 75, title: 'Memory keeper', description: 'Find 2 memory shards', goal: 2, counts: (i) => i.type === 'memory_shard' },
+  { id: 'rare_eye', reward: 100, title: 'Rare eye', description: 'Find a rare, epic or legendary relic', goal: 1, counts: (i) => ['rare', 'epic', 'legendary'].includes(i.rarity) },
+  { id: 'treasure_seeker', reward: 100, title: 'Treasure seeker', description: 'Open a treasure chest', goal: 1, counts: (i) => i.type === 'treasure_chest' },
 ];
 
 export interface QuestState { progress: Record<string, number>; done: Record<string, boolean> }
@@ -102,7 +104,11 @@ export async function recordVRCollect(item: CollectedItem): Promise<Quest[]> {
       );
     }
     for (const q of completed) {
-      await notifySelf('vr_quest_complete', 'Quest complete', `${q.title}: ${q.description}`, { link: '/vr-world', quest: q.id });
+      // Reward is granted on the server, once per quest, only after the completion is saved.
+      const { data: got } = await supabase.rpc('claim_vr_quest_reward' as never, { p_quest_id: q.id } as never);
+      const karma = typeof got === 'number' ? got : 0;
+      if (karma > 0) window.dispatchEvent(new CustomEvent('vr-quest-reward', { detail: { id: q.id, karma } }));
+      await notifySelf('vr_quest_complete', 'Quest complete', `${q.title}: ${q.description}${karma > 0 ? ` · +${karma} karma` : ''}`, { link: '/vr-world', quest: q.id, karma });
     }
   } catch { /* offline: progress stays on screen and syncs on the next pickup */ }
   return completed;
