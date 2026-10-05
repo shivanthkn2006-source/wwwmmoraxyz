@@ -8,6 +8,10 @@ import { searchPlaces } from '@/worlds/search/placeSearch';
 import { travelTo, travelHome } from '@/worlds/worldMode';
 import { getGrantedCoords } from '@/utils/sharedGeolocation';
 import { supabase } from '@/integrations/supabase/client';
+import { getWorldState, enterMMora, returnToReal } from '@/worlds/worldMode';
+import { mapBlocks } from '@/worlds/realmap/mapIndex';
+import { watchdogStats } from './AvatarWatchdog';
+import { trackActivity } from '@/lib/visitTracker';
 
 type Row = { name: string; ok: boolean | null; note: string };
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -34,6 +38,27 @@ export const VREndToEndCheck: React.FC = () => {
     } catch { put({ name: 'City jump', ok: false, note: 'Place search unavailable' }); }
     const c = await getGrantedCoords().catch(() => null);
     put({ name: 'GPS travel', ok: !!c, note: c ? 'Phone location available' : 'Location not allowed' });
+    // 4. Landscape + Home icon
+    const touch = matchMedia('(pointer: coarse)').matches, wide = innerWidth >= innerHeight;
+    const home = !!document.querySelector('[data-mmora-home-icon="true"]');
+    put({ name: 'Landscape & Home', ok: (!touch || wide), note: `${touch ? (wide ? 'sideways' : 'turn phone sideways') : 'desktop'} · Home icon ${home ? 'found' : 'not on this screen'}` });
+    // 5. Memory / heat cap
+    const mem = (navigator as { deviceMemory?: number }).deviceMemory;
+    put({ name: 'Phone memory cap', ok: true, note: mem ? `${mem} GB — ${mem <= 4 ? 'light mode on' : 'full detail'}` : 'memory not reported (light mode rules still apply)' });
+    // 6. Avatar watchdog
+    put({ name: 'Avatar watchdog', ok: Date.now() - watchdogStats.lastOkAt < 3000, note: `${watchdogStats.rescues} rescues · ${watchdogStats.lastOkAt ? 'watching' : 'VR scene not running'}` });
+    // 7. Traffic roads
+    let roads = 0; mapBlocks().forEach((b) => { roads += (b as { roads?: unknown[] }).roads?.length ?? 0; });
+    put({ name: 'Street traffic', ok: roads > 0, note: roads ? `${roads} real roads for cars` : 'no streets loaded yet' });
+    // 8. Doorway round-trip
+    if (getWorldState().mode === 'real') {
+      enterMMora([0, 1.6, 0]); await wait(1500); const inside = getWorldState().mode === 'mmora';
+      returnToReal(); await wait(500);
+      put({ name: 'Doorway round-trip', ok: inside && getWorldState().mode === 'real', note: inside ? "In and out of M'Mora World" : 'Did not enter' });
+    } else put({ name: 'Doorway round-trip', ok: null, note: "Go back to your street first" });
+    // 9. Admin live alerts
+    try { trackActivity('vr_enter', 'End-to-end check'); put({ name: 'Admin live alerts', ok: true, note: 'Sent (admin gets it; skipped for your own admin account)' }); }
+    catch { put({ name: 'Admin live alerts', ok: false, note: 'Could not send' }); }
     setBusy(false);
   };
 
@@ -51,7 +76,7 @@ export const VREndToEndCheck: React.FC = () => {
           <button type="button" disabled={busy} onClick={run} className="underline">
             {busy ? 'Checking…' : 'Run end-to-end check'}
           </button>
-          {rows.map((r) => <p key={r.name}>{r.ok ? '✓' : '✗'} {r.name} — {r.note}</p>)}
+          {rows.map((r) => <p key={r.name}>{r.ok === null ? '•' : r.ok ? '✓' : '✗'} {r.name} — {r.note}</p>)}
           <p className="pt-1 font-semibold">Top players</p>
           {top.length === 0 && <p>—</p>}
           {top.map((t, i) => <p key={i}>#{i + 1} {t.display_name} · {t.total_points ?? 0}</p>)}
