@@ -22,6 +22,7 @@ import { setChunkStats, useWorldState, resolveOrigin, PORTAL_OFFSET, enterMMora,
 import { PortalDoorway } from '../portal/PortalDoorway';
 import { DemoExplorer } from './DemoExplorer';
 import { useDemoExplorerOn } from './demoExplorerSwitch';
+import { AdminRealmapSync } from './AdminRealmapSync';
 
 const WALL_MAT = makeWallMaterial();
 const BUILDING_MAT = new THREE.MeshStandardMaterial({ color: '#e9dfcf', roughness: 0.75, metalness: 0.05 });
@@ -273,6 +274,7 @@ export const RealMapWorld: React.FC = () => {
       {origin.status === 'ready' && <StreetTraffic origin={origin.origin} />}
       {origin.status === 'ready' && <ZoeStreetAwareness origin={origin.origin} />}
       <ThermalGovernor />
+      <AdminRealmapSync />
       <PortalDoorway position={PORTAL_OFFSET} label="M'Mora World" onEnter={enterMMora} />
       {demoOn && <DemoExplorer />}
     </>

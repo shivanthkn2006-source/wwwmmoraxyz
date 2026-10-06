@@ -57,10 +57,13 @@ export function takeRelic(id: string) {
   try { localStorage.setItem(KEY(), JSON.stringify([...taken])); } catch { /* private mode */ }
   emit();
 }
-/** Admin: drop relics at named shops/places in loaded blocks (same day, this device). */
+/** Drop relics at named shops (admin drops are shared via realmapAdminSettings; same ids for every member). */
 export function dropRelicsAtPlaces(pois: { lat: number; lng: number; name: string }[], rarity: Rarity = 'rare'): number {
-  const list = pois.slice(0, 10).map((p, i) => ({ id: `admin-${today()}-${hashStr(p.name + i)}`, lat: p.lat, lng: p.lng, rarity, type: 'shop_relic' }) as StreetRelic);
-  blocks.set('admin-drops', [...(blocks.get('admin-drops') ?? []), ...list]); emit();
+  const have = blocks.get('admin-drops') ?? [];
+  const list = pois.slice(0, 10).map((p) => ({ id: `admin-${today()}-${hashStr(`${p.name}|${p.lat.toFixed(5)}|${p.lng.toFixed(5)}`)}`, lat: p.lat, lng: p.lng, rarity, type: 'shop_relic' }) as StreetRelic)
+    .filter((r) => !have.some((h) => h.id === r.id));
+  if (!list.length) return 0;
+  blocks.set('admin-drops', [...have, ...list]); emit();
   return list.length;
 }
 export const getStreetRelics = () => snap;
