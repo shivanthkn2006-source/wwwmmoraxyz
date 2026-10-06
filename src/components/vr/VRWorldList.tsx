@@ -37,7 +37,7 @@ export const VRWorldList: React.FC = () => {
     water += ((d as { areas?: unknown[] }).areas?.length ?? 0) + ((d as { waterways?: unknown[] }).waterways?.length ?? 0);
     relics += relicsForBlock(key, d, day).length;
   });
-  const bag = quests.bag.reduce((s: number, b: { quantity?: number }) => s + (b.quantity ?? 1), 0);
+  const bag = quests.bag.length;
   const city = w.origin.status === 'ready' ? (w.origin.label || 'your city') : 'your city';
   const rows: [string, Row[]][] = [
     ["M'Mora World", [

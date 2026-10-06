@@ -1,5 +1,5 @@
-import { ListChecks, getMapPrefs, setMapPrefs } from '@/lib/vrMapPrefs';
-import { Menu as MenuIcon, SlidersHorizontal } from 'lucide-react';
+import { getMapPrefs, setMapPrefs } from '@/lib/vrMapPrefs';
+import { ListChecks, Menu as MenuIcon, SlidersHorizontal } from 'lucide-react';
 import { fireAction } from '@/lib/vrInput';
 /**
  * VRTopDock — the single, decluttered entry point for every VR World panel.
