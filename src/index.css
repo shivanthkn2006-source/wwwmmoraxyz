@@ -7223,8 +7223,6 @@ html body .vr-gem-core { animation-duration: 4s !important; }
 }
 /* Short (sideways phone) screens: face buttons sit left of the look pad instead of above it, and the tray fills the gap between the sticks. */
 @media (max-height: 520px) {
-  .vr-face-diamond { bottom: 8px !important; right: 236px !important; }
-  .vr-look-pad { bottom: 22px !important; }
   .vr-control-tray { left: 200px; bottom: 8px; --vr-tray-shift: 0%; max-width: calc(100vw - 200px - 390px); min-width: 0; }
   .vr-control-tray [data-vr-tray-items] { zoom: 0.72; }
   .vr-aerial-land { top: 6rem; }
@@ -7292,3 +7290,7 @@ html body .vr-gem-core { animation-duration: 4s !important; }
 
 /* Real Map street sign: black board, white reading-size name */
 .vr-street-sign{background:hsl(0 0% 7%);color:hsl(0 0% 100%);font-weight:700;font-size:15px;line-height:1.2;padding:3px 10px;border-radius:3px;white-space:nowrap;letter-spacing:.02em;border:1px solid hsl(0 0% 100% / .35)}
+
+/* VR shoulder rows: L (left) and R (right) at exactly the same height. */
+.vr-shoulder-row { top: 52%; }
+@media (max-height: 520px) { .vr-shoulder-row { top: 58%; } }

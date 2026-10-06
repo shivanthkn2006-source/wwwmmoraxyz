@@ -41,7 +41,7 @@ const RunToggle: React.FC<{ glyph?: string }> = ({ glyph }) => {
   const flip = (e: React.PointerEvent) => { e.preventDefault(); e.stopPropagation(); onRef.current = !onRef.current; fireAction('run', onRef.current); setOn(onRef.current); };
   return (
     <button type="button" aria-label={on ? 'Run on (tap to walk)' : 'Run (tap to toggle)'} aria-pressed={on} data-exclude-phantom-tap onPointerDown={flip}
-      className={`${faceText} absolute right-1 top-1/2 h-10 w-10 -translate-y-1/2 text-[11px] ${on ? 'underline underline-offset-4' : ''}`}>
+      className={`${faceText} h-10 w-12 text-[11px] ${on ? 'underline underline-offset-4' : ''}`}>
       {glyph ? <span className="flex flex-col items-center leading-none"><span className="text-[11px] font-semibold">{glyph}</span><span>{on ? 'Run on' : 'Run'}</span></span> : (on ? 'Run on' : 'Run')}
     </button>
   );
@@ -58,7 +58,7 @@ const UseHint: React.FC = () => {
     return () => window.clearInterval(t);
   }, []);
   if (!label) return null;
-  return <div className="absolute bottom-[19rem] right-4 max-w-[12rem] text-right text-xs font-semibold text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.7)]" data-testid="vr-use-hint">Use → {label}</div>;
+  return <div className="absolute right-3 top-[calc(52%+2.25rem)] max-w-[12rem] text-right text-xs font-semibold text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.7)]" data-testid="vr-use-hint">Use → {label}</div>;
 };
 
 const Btn: React.FC<{ action: VRAction; label: string; className: string; hold?: boolean; aria: string; glyph?: string; plain?: boolean; round?: boolean }> = ({ action, label, className, hold, aria, glyph, plain, round }) => (
@@ -77,7 +77,8 @@ export const VRGamepadHUD: React.FC = () => {
   const [pad, setPad] = useState<PadFamily | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [bagOpen, setBagOpen] = useState(false);
-  const [faceOpen, setFaceOpen] = useState(true);
+  const [faceOpen, setFaceOpen] = useState(false);
+  const [leftOpen, setLeftOpen] = useState(false);
   useEffect(() => { void pullCloud(); }, []);
   const toastTimer = useRef<number>();
   const say = (msg: string, ms = 1400) => {
@@ -185,26 +186,26 @@ export const VRGamepadHUD: React.FC = () => {
   const s = layout.scale;
   return (
     <div className="pointer-events-none fixed inset-0 z-[60]" style={{ opacity: layout.opacity }} data-testid="vr-gamepad-hud">
-      {/* Shoulder: L / Crouch / Light top-left; R sits above the 360 pad (bottom-left) */}
-      <div className="pointer-events-auto absolute left-4 top-24" style={{ transform: `scale(${s})`, transformOrigin: 'top left' }}>
+      {/* Left: L then a small dropdown (Crouch / Light). Right: dropdown (Jump / Zoe / Run / Use) then R.
+          Both rows share the same height and edge distance so L and R mirror each other. */}
+      <div className="vr-shoulder-row pointer-events-auto absolute left-3 flex items-center gap-2" style={{ transform: `translateY(-50%) scale(${s})`, transformOrigin: 'left center' }}>
         <Btn round action="camera" label="L" aria="Switch camera" className="h-11 w-11 text-base" />
-        <CrouchBtn />
-        <LightBtn />
+        <button type="button" aria-label={leftOpen ? 'Hide crouch and light' : 'Show crouch and light'} aria-expanded={leftOpen} data-exclude-phantom-tap onClick={() => { setLeftOpen((v) => !v); setFaceOpen(false); }}
+          className={`${ball} h-9 w-9 text-sm`}>{leftOpen ? '◂' : '▸'}</button>
+        {leftOpen && <div className="flex items-center gap-2 [&>button]:mt-0" data-testid="vr-left-menu"><CrouchBtn /><LightBtn /></div>}
       </div>
-      <div className="pointer-events-auto absolute bottom-[14rem] left-[2.25rem]" style={{ transform: `scale(${s})`, transformOrigin: 'bottom left' }}>
-        <Btn round action="zoom" label="R" aria="Zoom lens (5X)" className="h-12 w-12 text-lg" />
-      </div>
-
-      {/* Face buttons: small centre circle with Jump / Zoe / Run / Use close around it (bottom-right) */}
-      <div className="vr-face-diamond pointer-events-auto absolute bottom-[90px] right-2 h-32 w-32 rounded-full border-2 border-white/30 bg-black/30 backdrop-blur-sm" style={{ transform: `scale(${s})`, transformOrigin: 'bottom right' }}>
-        <button type="button" aria-label={faceOpen ? 'Hide action buttons' : 'Show action buttons'} aria-expanded={faceOpen} data-exclude-phantom-tap onClick={() => setFaceOpen((v) => !v)}
-          className="absolute left-1/2 top-1/2 h-9 w-9 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white/60 bg-white/30" />
-        <div className={`transition-opacity duration-200 ${faceOpen ? 'opacity-100' : 'pointer-events-none opacity-0'}`} aria-hidden={!faceOpen}>
-          <Btn plain action="jump" label="Jump" hold aria="Jump" glyph={pad ? FACE_GLYPHS[pad].jump : undefined} className="absolute left-1/2 top-1 h-10 w-12 -translate-x-1/2 text-[11px]" />
-          <Btn plain action="zoe" label="Zoe" aria="Ask Zoe" glyph={pad ? FACE_GLYPHS[pad].zoe : undefined} className="absolute left-1 top-1/2 h-10 w-10 -translate-y-1/2 text-[11px]" />
-          <RunToggle glyph={pad ? FACE_GLYPHS[pad].run : undefined} />
-          <Btn plain action="interact" label="Use" aria="Pick up or interact" glyph={pad ? FACE_GLYPHS[pad].interact : undefined} className="absolute bottom-1 left-1/2 h-10 w-12 -translate-x-1/2 text-[11px]" />
-        </div>
+      <div className="vr-shoulder-row pointer-events-auto absolute right-3 flex flex-row-reverse items-center gap-2" style={{ transform: `translateY(-50%) scale(${s})`, transformOrigin: 'right center' }}>
+        <Btn round action="zoom" label="R" aria="Zoom lens (5X)" className="h-11 w-11 text-base" />
+        <button type="button" aria-label={faceOpen ? 'Hide action buttons' : 'Show action buttons'} aria-expanded={faceOpen} data-exclude-phantom-tap onClick={() => { setFaceOpen((v) => !v); setLeftOpen(false); }}
+          className={`${ball} h-9 w-9 text-sm`}>{faceOpen ? '▸' : '◂'}</button>
+        {faceOpen && (
+          <div className="flex flex-row-reverse items-center gap-1 rounded-full bg-black/30 px-1 backdrop-blur-sm" data-testid="vr-face-menu">
+            <Btn plain action="jump" label="Jump" hold aria="Jump" glyph={pad ? FACE_GLYPHS[pad].jump : undefined} className="h-10 w-12 text-[11px]" />
+            <Btn plain action="zoe" label="Zoe" aria="Ask Zoe" glyph={pad ? FACE_GLYPHS[pad].zoe : undefined} className="h-10 w-10 text-[11px]" />
+            <RunToggle glyph={pad ? FACE_GLYPHS[pad].run : undefined} />
+            <Btn plain action="interact" label="Use" aria="Pick up or interact" glyph={pad ? FACE_GLYPHS[pad].interact : undefined} className="h-10 w-12 text-[11px]" />
+          </div>
+        )}
       </div>
 
       <VRMiniMap onToast={(m) => say(m, 1800)} />

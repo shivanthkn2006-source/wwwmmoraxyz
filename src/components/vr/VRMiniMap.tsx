@@ -178,7 +178,7 @@ export const VRMiniMap: React.FC<{ onToast?: (s: string) => void }> = ({ onToast
     <>
     <div className={`pointer-events-auto absolute right-2 top-2 z-[9997] flex flex-col items-center gap-1 ${prefs.big ? 'invisible' : ''}`} aria-hidden={prefs.big} data-exclude-phantom-tap data-testid="vr-minimap">
       <button type="button" aria-label="Open big map" onClick={() => setMapPrefs({ big: true })} className="rounded-full">
-        <MapCanvas SIZE={prefs.size === 'large' ? 168 : 136} RANGE={130} explored={exploredRef} opacity={prefs.opacity} />
+        <MapCanvas SIZE={Math.min(prefs.size === 'large' ? 168 : 136, typeof window !== 'undefined' && window.innerHeight < 520 ? Math.round(window.innerHeight * 0.2) : 999)} RANGE={130} explored={exploredRef} opacity={prefs.opacity} />
       </button>
       {street && <div className="max-w-[9rem] truncate text-center text-[11px] font-semibold text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.8)]" data-testid="vr-minimap-street">{street}</div>}
       <div className="text-[10px] font-semibold text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.8)]" aria-label="Explored">{Math.min(100, Math.round((explored / GOAL) * 100))}% explored · goal {GOAL}</div>
@@ -193,18 +193,22 @@ export const VRMiniMap: React.FC<{ onToast?: (s: string) => void }> = ({ onToast
       </div>
     </div>
     {prefs.big && (
+      <>
+      <div className="pointer-events-auto fixed inset-0 z-[9998]" aria-hidden onClick={() => setMapPrefs({ big: false })} />
       <div className="pointer-events-auto fixed right-2 top-2 z-[9999]" data-exclude-phantom-tap data-testid="vr-big-map">
+        <button type="button" aria-label="Close big map" onClick={() => setMapPrefs({ big: false })}
+          className="absolute right-1 top-1 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-base font-bold text-white">✕</button>
         <div className="flex flex-col items-center gap-2">
-          <MapCanvas rect SIZE={Math.min((prefs.size === 'large' ? 168 : 136) * 2, Math.round(Math.min(window.innerWidth, window.innerHeight) * 0.9))} RANGE={300} names explored={exploredRef} opacity={prefs.bigOpacity} />
+          <MapCanvas rect SIZE={Math.min((prefs.size === 'large' ? 168 : 136) * 2, Math.round(Math.min(window.innerWidth * 0.9, window.innerHeight - 70)))} RANGE={300} names explored={exploredRef} opacity={prefs.bigOpacity} />
           <label className="flex items-center gap-2 text-[11px] font-semibold text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.8)]">Opacity
             <input type="range" min={30} max={100} step={5} value={Math.round(prefs.bigOpacity * 100)} onChange={(e) => setMapPrefs({ bigOpacity: +e.target.value / 100 })} aria-label="Big map opacity" />
           </label>
           <div className="flex gap-3 text-[11px] font-semibold text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.8)]">
             <span style={{ color: '#5fb04a' }}>● herbs</span><span style={{ color: '#e3c15a' }}>● coins</span><span style={{ color: '#c58bff' }}>● relics</span><span style={{ color: '#5096dc' }}>● water</span><span style={{ color: '#387BF6' }}>▲ you</span>
-            <button type="button" onClick={() => setMapPrefs({ big: false })} className="underline">Close</button>
           </div>
         </div>
       </div>
+      </>
     )}
     </>
   );
