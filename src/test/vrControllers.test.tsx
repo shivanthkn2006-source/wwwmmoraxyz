@@ -180,6 +180,7 @@ describe('relic quests + bag', () => {
   it('bag button opens the bag with quests listed', () => {
     render(<VRGamepadHUD />);
     fireEvent.click(screen.getByRole('button', { name: /open item bag/i }));
+    fireEvent.click(screen.getByRole('tab', { name: /quests/i }));
     expect(screen.getByTestId('quest-relic_hunter')).toBeInTheDocument();
   });
 });
