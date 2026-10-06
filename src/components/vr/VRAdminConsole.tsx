@@ -10,7 +10,8 @@ import { runPrefill, stopPrefill } from '@/worlds/realmap/prefillCities';
 import { flushVrOutbox } from '@/lib/vrOutbox';
 import { getMeet } from '@/worlds/meet/vrMeet';
 import { setDemoExplorer, demoExplorerOn } from '@/worlds/realmap/demoExplorerSwitch';
-import { dropRelicsAtPlaces } from '@/worlds/realmap/streetRelics';
+import { dropRelicsAtPlaces, today } from '@/worlds/realmap/streetRelics';
+import { loadRealmapSettings, saveRealmapSettings } from '@/worlds/realmap/realmapAdminSettings';
 import { mapBlocks } from '@/worlds/realmap/mapIndex';
 
 export const VRAdminConsole: React.FC = () => {
@@ -43,19 +44,30 @@ export const VRAdminConsole: React.FC = () => {
       else say(`@${p.username} is inside M'Mora World`);
     } else if (c === 'bot') {
       const v = arg === 'on' ? true : arg === 'off' ? false : !demoExplorerOn();
-      setDemoExplorer(v); say(`Demo explorer ${v ? 'on' : 'off'}`);
+      setDemoExplorer(v);
+      const err = await saveRealmapSettings({ demo_bot: v });
+      say(err ? `Demo explorer ${v ? 'on' : 'off'} here only (not saved: ${err})` : `Demo explorer ${v ? 'on' : 'off'} for everyone`);
     } else if (c === 'relics') {
       const pois: { lat: number; lng: number; name: string }[] = [];
       mapBlocks().forEach((b) => b.pois.forEach((p) => { if (!arg || p.name.toLowerCase().includes(arg.toLowerCase()) || p.kind === arg) pois.push(p); }));
       const n = dropRelicsAtPlaces(pois);
-      say(n ? `Dropped ${n} relics at ${pois.slice(0, 3).map((p) => p.name).join(', ')}${n > 3 ? '…' : ''}` : 'No shops loaded nearby');
+      if (!n) return say(pois.length ? 'Relics already dropped at those shops today' : 'No shops loaded nearby');
+      const cur = await loadRealmapSettings();
+      const day = today();
+      const keep = (cur.relic_drops ?? []).filter((d) => d.day === day);
+      const add = pois.slice(0, 10).map((p) => ({ lat: p.lat, lng: p.lng, name: p.name, day }));
+      const err = await saveRealmapSettings({ relic_drops: [...keep, ...add].slice(-60) });
+      say(`Dropped ${n} relics at ${pois.slice(0, 3).map((p) => p.name).join(', ')}${n > 3 ? '…' : ''}${err ? ' (this phone only: ' + err + ')' : ' for everyone today'}`);
+    } else if (c === 'clearrelics') {
+      const err = await saveRealmapSettings({ relic_drops: [] });
+      say(err ? `Not cleared: ${err}` : 'Shop relics cleared for everyone (gone after reload)');
     } else if (c === 'players') {
       const ps = getMeet().players; say(ps.length ? ps.map((r) => `@${r.username}`).join(', ') : 'No members nearby');
     } else if (c === 'home') { travelHome(); say('Back to your location'); }
     else if (c === 'prefill') { void runPrefill(); say('South India prefill started'); }
     else if (c === 'stop') { stopPrefill(); say('Prefill stopping'); }
     else if (c === 'outbox') { await flushVrOutbox(); say('Outbox sent'); }
-    else say('Commands: go <city>, to @user, players, bot on|off, relics [shop|kind], home, prefill, stop, outbox');
+    else say('Commands: go <city>, to @user, players, bot on|off, relics [shop|kind], clearrelics, home, prefill, stop, outbox');
   };
   return (
     <div className="fixed left-3 bottom-24 z-30" data-exclude-phantom-tap>
