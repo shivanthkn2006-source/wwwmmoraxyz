@@ -5,7 +5,7 @@
  */
 import { useEffect } from 'react';
 import { useThree } from '@react-three/fiber';
-import { setAmbientExtra, setAmbientContext } from '@/services/zoe-agent/ambientContext';
+import { setAmbientExtra, setAmbientContext, getAmbientContext } from '@/services/zoe-agent/ambientContext';
 import { mapBlocks } from './mapIndex';
 import { toLocal, type LatLng } from './geo';
 import { getMeet } from '@/worlds/meet/vrMeet';
@@ -53,6 +53,12 @@ export const ZoeStreetAwareness: React.FC<{ origin: LatLng }> = ({ origin }) => 
         const q = toLocal({ lat: f.lat!, lng: f.lng! }, origin);
         return `${f.name} ~${Math.round(Math.sqrt(d2(x, z, q.x, q.z)))} m away, trail: ${(trails.get(f.username) ?? []).join(' → ') || 'unknown'}`;
       }).join('; ') || null);
+      // Snapshot for the Zoe and DHF dashboards (read when VR World isn't open).
+      try {
+        const ex = getAmbientContext().extras;
+        localStorage.setItem('vr-live-snapshot', JSON.stringify({ at: Date.now(), location: street ? `Real Map, on ${street}` : 'Real Map',
+          extras: Object.fromEntries(Object.entries(ex).filter(([k]) => k.startsWith('VR '))) }));
+      } catch { /* private mode */ }
     };
     tick();
     void refreshTopPlayersForZoe().catch(() => {});
