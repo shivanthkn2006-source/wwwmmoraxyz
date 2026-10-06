@@ -174,7 +174,7 @@ export const VRMiniMap: React.FC<{ onToast?: (s: string) => void }> = ({ onToast
 
   return (
     <>
-    <div className={`pointer-events-auto absolute right-2 top-2 z-[9997] flex ${prefs.big ? 'invisible' : ''}`} style={{}} data-x="" aria-hidden={prefs.big} data-y="" data-z="" data-w="" data-v="" data-u="" data-t="" data-s="" data-r="" data-q="" data-p="" data-o="" data-n="" data-m="" data-l="" data-k="" data-j="" data-i="" data-h="" data-g="" data-f="" data-e="" data-d="" data-c="" data-b="" data-a="" data-flex="1" data-col="1" data-items="1" data-gap="1" data-ex="1" data-test="1" data-tid="1" data-id="1" data-mm="1" data-zz="1" data-yy="1" data-xx="1" data-ww="1" data-vv="1" data-uu="1" data-tt="1" data-ss="1" data-rr="1" data-qq="1" data-pp="1" data-oo="1" data-nn="1" data-ll="1" data-kk="1" data-jj="1" data-ii="1" data-hh="1" data-gg="1" data-ff="1" data-ee="1" data-dd="1" data-cc="1" data-bb="1" data-aa="1" data-flexx="1 flex-col items-center gap-1" data-exclude-phantom-tap data-testid="vr-minimap">
+    <div className={`pointer-events-auto absolute right-2 top-2 z-[9997] flex flex-col items-center gap-1 ${prefs.big ? 'invisible' : ''}`} aria-hidden={prefs.big} data-exclude-phantom-tap data-testid="vr-minimap">
       <button type="button" aria-label="Open big map" onClick={() => setMapPrefs({ big: true })} className="rounded-full">
         <MapCanvas SIZE={prefs.size === 'large' ? 168 : 136} RANGE={130} explored={exploredRef} opacity={prefs.opacity} />
       </button>
