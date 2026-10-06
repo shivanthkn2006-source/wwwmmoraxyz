@@ -3,6 +3,7 @@
  * default) or M'Mora World (the existing VR city behind the doorway).
  * Also holds the session's real GPS origin and live map stats.
  */
+import { readSave, type VRSave } from '@/lib/vrSaveGame';
 import { useSyncExternalStore } from 'react';
 import type { LatLng } from './realmap/geo';
 
@@ -72,6 +73,16 @@ export function landOnStreet() {
 }
 
 let locating = false;
+let resumeChecked = false;
+let resume: VRSave | null = null;
+/** The pending resume save (once), used by the Real Map instead of the aerial entry. */
+export function takeResume(): VRSave | null { const r = resume; resume = null; return r; }
+export const hasResume = () => resume !== null;
+/** Applies a resume: back into M'Mora World if that's where they stopped, at the saved spot. */
+export function applyResume(sv: VRSave) {
+  if (sv.mode === 'mmora') set({ mode: 'mmora', savedRealPos: sv.realPos ?? [0, 1.6, 0] });
+  teleport([sv.pos[0], Math.max(1.6, sv.pos[1]), sv.pos[2]]);
+}
 const CITY_KEY = 'vr-start-city';
 export type StartCity = { name: string; lat: number; lng: number };
 export function savedStartCity(): StartCity | null {
@@ -80,6 +91,16 @@ export function savedStartCity(): StartCity | null {
 /** Asks the phone for its location; if it can't or won't, the member is asked to pick a city. */
 export function resolveOrigin(): void {
   if (locating || state.origin.status === 'ready') return;
+  // Resume where the member stopped last time (device save).
+  if (!resumeChecked) {
+    resumeChecked = true;
+    const sv = readSave();
+    if (sv) {
+      resume = sv;
+      set({ origin: { status: 'ready', origin: { lat: sv.origin.lat, lng: sv.origin.lng }, real: false, label: sv.origin.label ?? 'Where you stopped' } });
+      return;
+    }
+  }
   locating = true;
   if (state.origin.status !== 'locating') set({ origin: { status: 'locating' } });
   const ask = (reason: 'denied' | 'unavailable') => { locating = false; set({ origin: { status: 'pick', reason } }); };
@@ -137,4 +158,6 @@ export function __resetWorldForTests() {
   state = { mode: 'real', origin: { status: 'locating' }, savedRealPos: null, chunksLoaded: 0, chunksWanted: 0, portalTrips: 0, aerial: false, tallestNear: 0 };
   locating = false;
   aerialShown = false;
+  resumeChecked = false;
+  resume = null;
 }

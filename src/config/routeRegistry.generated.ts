@@ -129,6 +129,7 @@ export const CANONICAL_ROUTES: CanonicalRoute[] = [
   { path: "/voice-command-test", label: "Voice command test", dynamic: false },
   { path: "/voice-commands", label: "Voice commands", dynamic: false },
   { path: "/vr-audit", label: "VR audit", dynamic: false },
+  { path: "/vr-world", label: "VR world", dynamic: false },
   { path: "/webdrop", label: "Webdrop", dynamic: false },
   { path: "/welcome", label: "Welcome", dynamic: false },
   { path: "/zoe-ai", label: "Zoe AI", dynamic: false },

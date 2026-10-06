@@ -18,7 +18,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { chebyshev, chunkBBox, chunkOf, neighborhood, toLatLng, toLocal, type LatLng, type ChunkId } from './geo';
 import { loadChunk, setChunkKeyFn, type OsmChunk } from './osm';
-import { setChunkStats, useWorldState, resolveOrigin, PORTAL_OFFSET, enterMMora, startAerialEntry, getWorldState, entryHeight, reportNearbyHeight } from '../worldMode';
+import { setChunkStats, useWorldState, resolveOrigin, PORTAL_OFFSET, enterMMora, startAerialEntry, takeResume, applyResume, getWorldState, entryHeight, reportNearbyHeight } from '../worldMode';
 import { PortalDoorway } from '../portal/PortalDoorway';
 import { DemoExplorer } from './DemoExplorer';
 import { useDemoExplorerOn } from './demoExplorerSwitch';
@@ -253,7 +253,8 @@ export const RealMapWorld: React.FC = () => {
     const id = window.setInterval(() => {
       const w = getWorldState();
       if (w.chunksLoaded >= 1 || performance.now() - started > 4000) {
-        startAerialEntry();
+        const sv = takeResume();
+        if (sv) applyResume(sv); else startAerialEntry();
         window.clearInterval(id);
       }
     }, 250);

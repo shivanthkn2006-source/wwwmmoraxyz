@@ -508,6 +508,7 @@ const RouteAwareShell = () => {
 
               <Route path="/voice-auth" element={<VoiceAuthPage />} />
               <Route path="/password-recovery" element={<PasswordRecoveryPage />} />
+              <Route path="/vr-world" element={<Navigate to="/zoe-omega" replace />} />
               <Route
                 path="/zoe-omega"
                 element={

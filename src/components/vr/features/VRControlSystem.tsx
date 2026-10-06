@@ -316,7 +316,7 @@ export const LookButtons: React.FC = () => {
       <div />
       <button
         onClick={() => dispatchLook('look_up')}
-        className="w-9 h-9 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white text-xs"
+        className="w-9 h-9 rounded-full bg-transparent text-white text-xs"
         title="Look Up"
       >
         ▲
@@ -325,7 +325,7 @@ export const LookButtons: React.FC = () => {
 
       <button
         onClick={() => dispatchLook('look_left')}
-        className="w-9 h-9 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white text-xs"
+        className="w-9 h-9 rounded-full bg-transparent text-white text-xs"
         title="Look Left"
       >
         ◄
@@ -339,7 +339,7 @@ export const LookButtons: React.FC = () => {
       </button>
       <button
         onClick={() => dispatchLook('look_right')}
-        className="w-9 h-9 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white text-xs"
+        className="w-9 h-9 rounded-full bg-transparent text-white text-xs"
         title="Look Right"
       >
         ►
@@ -348,7 +348,7 @@ export const LookButtons: React.FC = () => {
       <div />
       <button
         onClick={() => dispatchLook('look_down')}
-        className="w-9 h-9 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white text-xs"
+        className="w-9 h-9 rounded-full bg-transparent text-white text-xs"
         title="Look Down"
       >
         ▼
