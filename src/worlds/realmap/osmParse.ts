@@ -4,7 +4,7 @@ export type OsmBuilding = { pts: [number, number][]; h: number; name?: string };
 export type OsmRoad = { pts: [number, number][]; w: number; name?: string };
 export type OsmPoi = { lat: number; lng: number; name: string; kind: string };
 /** CHUNK_V: 2 = street/building names, 3 = malls, brands and fuel pumps (older saved blocks are refreshed quietly). */
-export const CHUNK_V = 3;
+export const CHUNK_V = 4; // 4 = apartment/house names (addr:housename) on buildings
 export type OsmChunk = { buildings: OsmBuilding[]; roads: OsmRoad[]; pois: OsmPoi[]; fetchedAt: number; v?: number };
 
 export const MAX_BUILDINGS = 400;
@@ -75,7 +75,7 @@ export function parseOverpass(json: { elements?: RawEl[] }, cap = MAX_BUILDINGS)
         .filter((g) => Number.isFinite(g.lat) && Number.isFinite(g.lon))
         .map((g) => [g.lat, g.lon] as [number, number]);
       if (tags.building && pts.length >= 4 && buildings.length < cap) {
-        buildings.push({ pts, h: buildingHeight(tags), ...(tags.name ? { name: tags.name.slice(0, 50) } : {}) });
+        buildings.push({ pts, h: buildingHeight(tags), ...((tags.name || tags['addr:housename']) ? { name: (tags.name || tags['addr:housename']).slice(0, 50) } : {}) });
       } else if (tags.highway && !SKIP_ROADS.has(tags.highway) && roads.length < MAX_ROADS * scale) {
         roads.push({ pts, w: ROAD_WIDTH[tags.highway] ?? 4, ...(tags.name ? { name: tags.name.slice(0, 50) } : {}) });
       }

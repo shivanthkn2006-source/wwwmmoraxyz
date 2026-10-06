@@ -88,7 +88,7 @@ describe('simulated controllers driving VR World', () => {
     const k = keyLog(); const ev: string[] = [];
     for (const n of ['vr-interact', 'vr-open-menu', 'vr-show-feature', 'vr-camera-look']) window.addEventListener(n, () => ev.push(n));
     const pad = mkPad(XBOX); pads = [pad];
-    render(<VRGamepadHUD />); fireEvent.click(screen.getByRole('button', { name: /show action buttons/i }));
+    render(<VRGamepadHUD />);
     act(() => { window.dispatchEvent(Object.assign(new Event('gamepadconnected'), { gamepad: pad })); });
     expect(screen.getByText(/xbox controller connected/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /pick up/i })).toHaveTextContent('A');
@@ -114,7 +114,7 @@ describe('simulated controllers driving VR World', () => {
   it('DualSense: L3 toggles sprint, glyphs switch to ✕○□△, rumble on pickup', () => {
     const k = keyLog();
     const pad = mkPad(DUALSENSE); pads = [pad];
-    render(<VRGamepadHUD />); fireEvent.click(screen.getByRole('button', { name: /show action buttons/i }));
+    render(<VRGamepadHUD />);
     act(() => { window.dispatchEvent(Object.assign(new Event('gamepadconnected'), { gamepad: pad })); });
     expect(screen.getByRole('button', { name: /pick up/i })).toHaveTextContent('✕');
     act(() => { press(pad, 10); frame(); release(pad, 10); frame(); });
@@ -130,7 +130,7 @@ describe('simulated controllers driving VR World', () => {
   it('old PlayStation mapping: hat-axis D-pad moves the player', () => {
     const k = keyLog();
     const pad = mkPad(PS4_OLD, ''); pads = [pad];
-    render(<VRGamepadHUD />); fireEvent.click(screen.getByRole('button', { name: /show action buttons/i }));
+    render(<VRGamepadHUD />);
     act(() => { pad.axes[9] = -1; frame(); });
     act(() => { pad.axes[9] = 3.28; frame(); });
     expect(k.log).toEqual(expect.arrayContaining(['keydown:KeyW', 'keyup:KeyW']));
@@ -140,7 +140,7 @@ describe('simulated controllers driving VR World', () => {
   it('unplugging mid-move releases held keys so the player never runs away', () => {
     const k = keyLog();
     const pad = mkPad(XBOX); pads = [pad];
-    render(<VRGamepadHUD />); fireEvent.click(screen.getByRole('button', { name: /show action buttons/i }));
+    render(<VRGamepadHUD />);
     act(() => { pad.axes[0] = 0.9; frame(); });
     expect(k.log).toContain('keydown:KeyD');
     act(() => { pads = []; window.dispatchEvent(new Event('gamepaddisconnected')); });
@@ -178,8 +178,8 @@ describe('relic quests + bag', () => {
   });
 
   it('bag button opens the bag with quests listed', () => {
-    render(<VRGamepadHUD />); fireEvent.click(screen.getByRole('button', { name: /show action buttons/i }));
-    fireEvent.click(screen.getByRole('button', { name: /open item bag/i }));
+    render(<VRGamepadHUD />);
+    act(() => { window.dispatchEvent(new Event('vr-open-bag')); });
     fireEvent.click(screen.getByRole('tab', { name: /quests/i }));
     expect(screen.getByTestId('quest-relic_hunter')).toBeInTheDocument();
   });

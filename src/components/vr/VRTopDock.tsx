@@ -1,3 +1,5 @@
+import { Menu as MenuIcon, SlidersHorizontal } from 'lucide-react';
+import { fireAction } from '@/lib/vrInput';
 /**
  * VRTopDock — the single, decluttered entry point for every VR World panel.
  *
@@ -259,6 +261,10 @@ export const VRTopDock: React.FC = () => {
           data-exclude-phantom-tap
         >
           <div className="h-full flex items-center gap-1 px-2 overflow-x-auto overscroll-contain [scrollbar-width:none]">
+            {([['Bag', Backpack, () => window.dispatchEvent(new Event('vr-open-bag'))], ['Menu', MenuIcon, () => fireAction('menu')], ['Layout', SlidersHorizontal, () => window.dispatchEvent(new Event('vr-edit-layout'))]] as const).map(([label, Icon, run]) => (
+              <button key={label} type="button" aria-label={label === 'Bag' ? 'Open item bag' : label === 'Menu' ? 'Open VR menu' : 'Edit control layout'} onClick={run}
+                className="shrink-0 h-[30px] px-2 rounded-full flex items-center gap-1 text-[11px] whitespace-nowrap text-white/90"><Icon className="h-4 w-4" />{label}</button>
+            ))}
             {ITEMS.map(({ id, label, icon: Icon }) => (
               <button
                 key={id}

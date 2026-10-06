@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, act } from '@testing-library/react';
 import VRGamepadHUD from '@/components/vr/VRGamepadHUD';
 import { stickToKeys, fireAction, loadLayout } from '@/lib/vrInput';
 
@@ -24,25 +24,25 @@ describe('VR controller layer', () => {
     const k = keyLog();
     const events: string[] = [];
     for (const n of ['vr-interact', 'vr-open-menu', 'vr-show-feature']) window.addEventListener(n, () => events.push(n));
-    render(<VRGamepadHUD />); fireEvent.click(screen.getByRole('button', { name: /show action buttons/i }));
+    render(<VRGamepadHUD />);
     const tap = (name: RegExp) => { const b = screen.getByRole('button', { name }); fireEvent.pointerDown(b); fireEvent.pointerUp(b); };
     tap(/^jump$/i); tap(/run/i); tap(/run/i); tap(/zoom lens/i); tap(/switch camera/i); tap(/pick up/i); tap(/ask zoe/i);
-    fireEvent.click(screen.getByRole('button', { name: /open vr menu/i }));
+    fireAction('menu', true);
     expect(k.log).toEqual(expect.arrayContaining(['keydown:Space', 'keyup:Space', 'keydown:ShiftLeft', 'keyup:ShiftLeft', 'keydown:KeyZ', 'keydown:KeyV']));
     expect(events).toEqual(expect.arrayContaining(['vr-interact', 'vr-open-menu', 'vr-show-feature']));
     k.off();
   });
 
   it('layout editor saves opacity and size on the device', () => {
-    render(<VRGamepadHUD />); fireEvent.click(screen.getByRole('button', { name: /show action buttons/i }));
-    fireEvent.click(screen.getByRole('button', { name: /edit control layout/i }));
+    render(<VRGamepadHUD />);
+    act(() => { window.dispatchEvent(new Event('vr-edit-layout')); });
     fireEvent.click(screen.getByRole('button', { name: /more size/i }));
     fireEvent.click(screen.getByRole('button', { name: /less opacity/i }));
     expect(loadLayout()).toEqual({ opacity: 0.6, scale: 1.1 });
   });
 
   it('interact result shows feedback', async () => {
-    render(<VRGamepadHUD />); fireEvent.click(screen.getByRole('button', { name: /show action buttons/i }));
+    render(<VRGamepadHUD />);
     window.dispatchEvent(new CustomEvent('vr-use-result', { detail: { ok: false, text: 'Nothing to use here' } }));
     expect(await screen.findByText(/nothing to use here/i)).toBeInTheDocument();
   });
