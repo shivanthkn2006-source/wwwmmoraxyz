@@ -26,7 +26,7 @@ describe('VR controller layer', () => {
     for (const n of ['vr-interact', 'vr-open-menu', 'vr-show-feature']) window.addEventListener(n, () => events.push(n));
     render(<VRGamepadHUD />);
     const tap = (name: RegExp) => { const b = screen.getByRole('button', { name }); fireEvent.pointerDown(b); fireEvent.pointerUp(b); };
-    tap(/^jump$/i); tap(/run/i); tap(/zoom lens/i); tap(/switch camera/i); tap(/pick up/i); tap(/ask zoe/i);
+    tap(/^jump$/i); tap(/run/i); tap(/run/i); tap(/zoom lens/i); tap(/switch camera/i); tap(/pick up/i); tap(/ask zoe/i);
     fireEvent.click(screen.getByRole('button', { name: /open vr menu/i }));
     expect(k.log).toEqual(expect.arrayContaining(['keydown:Space', 'keyup:Space', 'keydown:ShiftLeft', 'keyup:ShiftLeft', 'keydown:KeyZ', 'keydown:KeyV']));
     expect(events).toEqual(expect.arrayContaining(['vr-interact', 'vr-open-menu', 'vr-show-feature']));

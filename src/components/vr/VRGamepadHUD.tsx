@@ -44,7 +44,8 @@ const CrouchBtn: React.FC = () => {
 const RunToggle: React.FC<{ glyph?: string }> = ({ glyph }) => {
   const [on, setOn] = React.useState(false);
   React.useEffect(() => () => { fireAction('run', false); }, []);
-  const flip = (e: React.PointerEvent) => { e.preventDefault(); e.stopPropagation(); setOn((v) => { fireAction('run', !v); return !v; }); };
+  const onRef = React.useRef(false);
+  const flip = (e: React.PointerEvent) => { e.preventDefault(); e.stopPropagation(); onRef.current = !onRef.current; fireAction('run', onRef.current); setOn(onRef.current); };
   return (
     <button type="button" aria-label={on ? 'Run on (tap to walk)' : 'Run (tap to toggle)'} aria-pressed={on} data-exclude-phantom-tap onPointerDown={flip}
       className={`${faceText} absolute right-0 top-1/2 h-12 w-12 -translate-y-1/2 rounded-full text-[10px] ${on ? 'underline underline-offset-4' : ''}`}>
