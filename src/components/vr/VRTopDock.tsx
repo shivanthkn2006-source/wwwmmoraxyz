@@ -23,6 +23,8 @@ const listeners = new Set<() => void>();
 const setShownIds = (next: Set<string>) => { shownIds = next; listeners.forEach(l => l()); };
 const subscribe = (l: () => void) => { listeners.add(l); return () => { listeners.delete(l); }; };
 const useFeatureShown = (id: string) => useSyncExternalStore(subscribe, () => shownIds.has(id), () => false);
+let dockMounted = false;
+const setDockMounted = (v: boolean) => { dockMounted = v; listeners.forEach(l => l()); };
 
 type Offset = { x: number; y: number };
 const posKey = (id: string) => `vr-feature-pos:${id}`;
@@ -110,6 +112,7 @@ const VRControlTray: React.FC = () => {
  */
 export const VRFeature: React.FC<{ id: string; part?: string; tray?: boolean; children: React.ReactNode }> = ({ id, part, tray, children }) => {
   const shown = useFeatureShown(id);
+  const dockOn = useSyncExternalStore(subscribe, () => dockMounted, () => false);
   const tray$ = useTrayEl();
   const key = part ? `${id}:${part}` : id;
   const ref = useRef<HTMLDivElement>(null);
@@ -151,6 +154,9 @@ export const VRFeature: React.FC<{ id: string; part?: string; tray?: boolean; ch
     // Dock is mounted: controls render only while opened, inside the tray.
     return shown ? createPortal(<div data-vr-tray-item={id} className="contents">{children}</div>, tray$) : null;
   }
+  // Dock is mounted and this feature isn't opened: render nothing, so panels that
+  // portal to <body> (VR Voice, Controls) can't escape the hidden wrapper.
+  if (dockOn && !shown) return null;
 
   return (
     <div
@@ -215,7 +221,8 @@ export const VRTopDock: React.FC = () => {
 
   useEffect(() => {
     document.body.setAttribute('data-vr-clean', '1');
-    return () => document.body.removeAttribute('data-vr-clean');
+    setDockMounted(true);
+    return () => { document.body.removeAttribute('data-vr-clean'); setDockMounted(false); };
   }, []);
 
   const toggle = (id: string) =>
