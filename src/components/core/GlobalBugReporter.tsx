@@ -8,7 +8,7 @@
  * Nothing here can crash a route: every failure path degrades to a toast.
  */
 import React, { useEffect, useRef, useState } from 'react';
-import { Bug, Loader2 } from 'lucide-react';
+import { ArrowLeft, Bug, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
