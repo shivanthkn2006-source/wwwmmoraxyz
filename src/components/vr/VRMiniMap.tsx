@@ -36,7 +36,7 @@ export const VRMiniMap: React.FC<{ onToast?: (s: string) => void }> = ({ onToast
     const cv = ref.current; if (!cv) return;
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     cv.width = SIZE * dpr; cv.height = SIZE * dpr;
-    const g = cv.getContext('2d')!;
+    const g = cv.getContext('2d'); if (!g) return;
     const k = R / RANGE;
     const draw = () => {
       const w = getWorldState();
