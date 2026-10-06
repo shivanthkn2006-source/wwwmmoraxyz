@@ -1,3 +1,4 @@
+import { notificationTarget } from '@/lib/notificationTarget';
 import React, { useState, useEffect } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -228,17 +229,7 @@ const NotificationMenu: React.FC<NotificationMenuProps> = ({ open, onOpenChange 
   };
 
   const handleNotificationClick = (notif: Notification) => {
-    const ctx = (notif.context_data ?? {}) as { route?: string; link?: string; url?: string };
-    const route = ctx.route ?? ctx.link ?? ctx.url;
-    let to: string | null = null;
-    if (typeof route === 'string' && route.startsWith('/')) to = route;
-    else if (notif.post_id) to = `/?post=${notif.post_id}`;
-    else if (notif.suggestion_type === 'interest_match' || notif.type === 'message' || notif.type === 'direct_message') to = notif.from_user_id ? `/chat?userId=${notif.from_user_id}` : '/chat';
-    else if (notif.type === 'friend_request') to = '/huddle';
-    else if (notif.type?.startsWith('vr_')) to = '/zoe-omega';
-    else if (notif.from_user_id) to = `/profile/${notif.from_user_id}`;
-    else to = '/notification-history';
-    navigate(to);
+    navigate(notificationTarget(notif as never));
     onOpenChange(false);
   };
 

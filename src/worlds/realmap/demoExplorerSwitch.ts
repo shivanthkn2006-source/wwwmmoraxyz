@@ -1,4 +1,4 @@
-/** Admin switch for the demo explorer walker on the Real Map (saved on this device, on by default). */
+/** Demo explorer walker switch: set platform-wide by the admin (realmapAdminSettings), cached on this device. */
 import { useSyncExternalStore } from 'react';
 const KEY = 'vr-demo-explorer';
 let on = (() => { try { return localStorage.getItem(KEY) !== '0'; } catch { return true; } })();

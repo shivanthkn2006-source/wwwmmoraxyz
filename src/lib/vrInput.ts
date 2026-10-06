@@ -32,7 +32,11 @@ export function fireAction(action: VRAction, down = true) {
   if (action === 'interact') { window.dispatchEvent(new CustomEvent('vr-interact')); resolveUse(); }
   else if (action === 'menu') window.dispatchEvent(new CustomEvent('vr-open-menu'));
   else if (action === 'bag') window.dispatchEvent(new CustomEvent('vr-open-bag'));
-  else if (action === 'zoe') window.dispatchEvent(new CustomEvent('zoe-show-orb'));
+  else if (action === 'zoe') {
+    // Opens Zoe's VR voice window (talk to Zoe inside VR World) and her chat where it exists.
+    window.dispatchEvent(new CustomEvent('vr-show-feature', { detail: { id: 'voice' } }));
+    window.dispatchEvent(new CustomEvent('zoe-open-orb-chat'));
+  }
   try { navigator.vibrate?.(12); } catch { /* not supported */ }
 }
 

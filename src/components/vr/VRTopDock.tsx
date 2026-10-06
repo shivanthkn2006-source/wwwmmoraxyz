@@ -215,8 +215,10 @@ export const VRTopDock: React.FC = () => {
 
   useEffect(() => {
     const onMenu = () => setOpen(o => !o);
+    const onShow = (e: Event) => { const id = (e as CustomEvent).detail?.id; if (typeof id === 'string') setShown(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; }); };
     window.addEventListener('vr-open-menu', onMenu);
-    return () => window.removeEventListener('vr-open-menu', onMenu);
+    window.addEventListener('vr-show-feature', onShow);
+    return () => { window.removeEventListener('vr-open-menu', onMenu); window.removeEventListener('vr-show-feature', onShow); };
   }, []);
 
   useEffect(() => {

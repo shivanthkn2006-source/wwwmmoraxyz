@@ -1,0 +1,1 @@
+create policy "Members read Real Map admin settings" on public.vr_world_settings for select to authenticated using (room_id = 'realmap');

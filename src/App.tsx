@@ -65,6 +65,7 @@ const HomePage = lazy(() => import("./pages/HomePage"));
 const ChatPage = lazy(() => import("./pages/ChatPage"));
 const ZoeChatHistoryPage = lazy(() => import("./pages/ZoeChatHistoryPage"));
 const ProfilePage = lazy(() => import("./pages/ProfilePage"));
+const PostViewPage = lazy(() => import("./pages/PostViewPage"));
 const HuddlePage = lazy(() => import("./pages/HuddlePage"));
 const CallsPage = lazy(() => import("./pages/CallsPage"));
 const CallHistoryPage = lazy(() => import("./pages/CallHistoryPage"));
@@ -698,6 +699,7 @@ const RouteAwareShell = () => {
 
 
                           <Route path="/referrals" element={<ProtectedRoute><ReferralsPage /></ProtectedRoute>} />
+                          <Route path="/post/:postId" element={<ProtectedRoute><PostViewPage /></ProtectedRoute>} />
                           <Route
                             path="/profile"
                             element={

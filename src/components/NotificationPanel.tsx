@@ -1,3 +1,4 @@
+import { notificationTarget } from '@/lib/notificationTarget';
 import { useState, useEffect } from 'react';
 import { Bell, Check, X, Filter, UserPlus, Heart, MessageCircle, Star, UserCheck, MapPin, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -103,20 +104,7 @@ const NotificationPanel = () => {
   const handleNotificationClick = (notification: Notification) => {
     markAsRead(notification.id);
 
-    // Audit fix (SEP03): DHF essay + growth notifications carry their target in
-    // context_data.route (post_id is null), so clicking them used to do nothing.
-    const ctx = (notification.context_data ?? {}) as { route?: string; link?: string; url?: string };
-    const route = ctx.route ?? ctx.link ?? ctx.url;
-
-    if (notification.post_id) {
-      navigate(`/profile?post=${notification.post_id}`);
-    } else if (typeof route === 'string' && route.startsWith('/')) {
-      navigate(route);
-    } else if (notification.type === 'friend_request') {
-      navigate('/huddle');
-    } else if (notification.type === 'message' || notification.type === 'direct_message') {
-      navigate(notification.from_user_id ? `/chat?user=${notification.from_user_id}` : '/chat');
-    }
+    navigate(notificationTarget(notification as never));
     setIsOpen(false);
   };
 
