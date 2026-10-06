@@ -1,3 +1,4 @@
+import { invokeWithFreshSession } from '@/lib/edgeSession';
 /**
  * Voice chat inside VR World: when you turn your mic on, you talk live with
  * the nearest members in the same room who also have their mic on (up to 4),
@@ -13,7 +14,7 @@ import { normalizeIceServers, FALLBACK_ICE_SERVERS } from '@/features/calls/call
 const ICE: RTCConfiguration = { iceServers: FALLBACK_ICE_SERVERS };
 async function loadRelay() {
   try {
-    const { data } = await supabase.functions.invoke('zoe-call-turn-credentials');
+    const { data } = await invokeWithFreshSession('zoe-call-turn-credentials', {});
     const servers = normalizeIceServers((data as { iceServers?: unknown } | null)?.iceServers);
     if (servers.length) ICE.iceServers = servers;
   } catch { /* keep public servers */ }
