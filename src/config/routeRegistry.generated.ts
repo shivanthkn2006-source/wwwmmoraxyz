@@ -106,6 +106,7 @@ export const CANONICAL_ROUTES: CanonicalRoute[] = [
   { path: "/platform-architecture", label: "Platform architecture", dynamic: false },
   { path: "/platform-audit", label: "Platform audit", dynamic: false },
   { path: "/platform-overview", label: "Platform overview", dynamic: false },
+  { path: "/post/:postId", label: "Post", dynamic: true },
   { path: "/privacy", label: "Privacy", dynamic: false },
   { path: "/profile", label: "Profile", dynamic: false },
   { path: "/profile/:userId", label: "Profile", dynamic: true },
