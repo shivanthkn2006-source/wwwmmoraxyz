@@ -39,6 +39,33 @@ const CrouchBtn: React.FC = () => {
   return <button type="button" aria-label="Crouch" aria-pressed={crouch} data-exclude-phantom-tap onClick={toggleCrouch} className={`${ring} mt-2 block h-9 w-14 rounded-lg text-[10px] ${crouch ? 'opacity-100' : 'opacity-80'}`}>{crouch ? 'Stand' : 'Crouch'}</button>;
 };
 
+/** Run is a tap toggle (on = run whenever you move), so it works with one thumb on phones. */
+const RunToggle: React.FC<{ glyph?: string }> = ({ glyph }) => {
+  const [on, setOn] = React.useState(false);
+  React.useEffect(() => () => { fireAction('run', false); }, []);
+  const flip = (e: React.PointerEvent) => { e.preventDefault(); e.stopPropagation(); setOn((v) => { fireAction('run', !v); return !v; }); };
+  return (
+    <button type="button" aria-label={on ? 'Run on (tap to walk)' : 'Run (tap to toggle)'} aria-pressed={on} data-exclude-phantom-tap onPointerDown={flip}
+      className={`${faceText} absolute right-0 top-1/2 h-12 w-12 -translate-y-1/2 rounded-full text-[10px] ${on ? 'underline underline-offset-4' : ''}`}>
+      {glyph ? <span className="flex flex-col items-center leading-none"><span className="text-[11px] font-semibold">{glyph}</span><span>{on ? 'Run on' : 'Run'}</span></span> : (on ? 'Run on' : 'Run')}
+    </button>
+  );
+};
+
+/** Shows what Use would do when something usable (door, key, note, relic, player) is within reach. */
+const UseHint: React.FC = () => {
+  const [label, setLabel] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    const t = window.setInterval(() => {
+      const u = peekUse();
+      setLabel(u ? u.label.replace(/^Picked up (the )?/, 'Pick up ').replace(/^Reading: /, 'Read: ') : null);
+    }, 500);
+    return () => window.clearInterval(t);
+  }, []);
+  if (!label) return null;
+  return <div className="absolute bottom-[19rem] right-4 max-w-[12rem] text-right text-xs font-semibold text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.7)]" data-testid="vr-use-hint">Use → {label}</div>;
+};
+
 const Btn: React.FC<{ action: VRAction; label: string; className: string; hold?: boolean; aria: string; glyph?: string; plain?: boolean }> = ({ action, label, className, hold, aria, glyph, plain }) => (
   <button
     type="button" aria-label={aria} data-exclude-phantom-tap
@@ -180,11 +207,12 @@ export const VRGamepadHUD: React.FC = () => {
       <div className="vr-face-diamond pointer-events-auto absolute bottom-52 right-4 h-36 w-36" style={{ transform: `scale(${s})`, transformOrigin: 'bottom right' }}>
         <Btn plain action="jump" label="Jump" hold aria="Jump" glyph={pad ? FACE_GLYPHS[pad].jump : undefined} className="absolute left-1/2 top-0 h-12 w-12 -translate-x-1/2 rounded-full text-[10px]" />
         <Btn plain action="zoe" label="Zoe" aria="Ask Zoe" glyph={pad ? FACE_GLYPHS[pad].zoe : undefined} className="absolute left-0 top-1/2 h-12 w-12 -translate-y-1/2 rounded-full text-[10px]" />
-        <Btn plain action="run" label="Run" hold aria="Run (hold)" glyph={pad ? FACE_GLYPHS[pad].run : undefined} className="absolute right-0 top-1/2 h-12 w-12 -translate-y-1/2 rounded-full text-[10px]" />
+        <RunToggle glyph={pad ? FACE_GLYPHS[pad].run : undefined} />
         <Btn plain action="interact" label="Use" aria="Pick up or interact" glyph={pad ? FACE_GLYPHS[pad].interact : undefined} className="absolute bottom-0 left-1/2 h-12 w-12 -translate-x-1/2 rounded-full text-[10px]" />
         <StaminaMeter />
       </div>
 
+      <UseHint />
       {toast && <div className="absolute bottom-40 left-1/2 -translate-x-1/2 rounded-full surface-warm-tan px-3 py-1 text-xs text-foreground">{toast}</div>}
       {bagOpen && <VRBagPanel onClose={() => setBagOpen(false)} />}
 
