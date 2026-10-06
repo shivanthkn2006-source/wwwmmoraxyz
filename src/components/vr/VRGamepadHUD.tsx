@@ -12,21 +12,10 @@ import {
   padFamily, pickActivePad, pressKey, radial, rumble, saveLayout, stickToKeys, type PadFamily, type PadLayout, type VRAction,
 } from '@/lib/vrInput';
 import { VRBagPanel } from '@/components/vr/VRBagPanel';
-import { useStamina } from '@/lib/vrWalk';
 import { peekUse } from '@/lib/vrUse';
 import { VRMiniMap } from '@/components/vr/VRMiniMap';
 import { VRRoomInterior } from '@/components/vr/VRRoomInterior';
 import { pullCloud } from '@/lib/vrPickups';
-
-/** Stamina for running: drains while Run is held and you move, refills when you walk or stop. */
-const StaminaMeter: React.FC = () => {
-  const { stamina, exhausted, running } = useStamina();
-  return (
-    <div className="absolute -top-4 left-1/2 h-1.5 w-24 -translate-x-1/2 overflow-hidden rounded-full bg-background/30" role="meter" aria-label="Stamina" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(stamina * 100)} data-running={running || undefined}>
-      <div className={`h-full rounded-full transition-[width] duration-100 ${exhausted ? 'bg-destructive' : 'bg-primary'}`} style={{ width: `${Math.round(stamina * 100)}%` }} />
-    </div>
-  );
-};
 
 const ring = 'flex items-center justify-center border border-foreground/60 text-foreground bg-background/10 select-none touch-none active:bg-foreground/25';
 /** Same look as the move pad's knob: soft see-through white ball, readable on light and dark scenes. */
