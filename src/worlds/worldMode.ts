@@ -135,6 +135,14 @@ const teleport = (position: [number, number, number]) =>
 export function enterMMora(fromPos: [number, number, number]) {
   if (state.mode === 'mmora') return;
   set({ mode: 'mmora', savedRealPos: fromPos, portalTrips: state.portalTrips + 1 });
+  try {
+    const o = state.origin as { status: string; label?: string; origin?: { lat: number; lng: number } };
+    const city = o.status === 'ready' ? (o.label || (o.origin ? `${o.origin.lat.toFixed(2)},${o.origin.lng.toFixed(2)}` : 'Your city')) : 'Your city';
+    const v = JSON.parse(localStorage.getItem('vr-portal-visits') || '{}') as Record<string, number>;
+    v[city] = (v[city] || 0) + 1;
+    localStorage.setItem('vr-portal-visits', JSON.stringify(v));
+    window.dispatchEvent(new Event('vr-explore-changed'));
+  } catch { /* */ }
   teleport(MMORA_SPAWN);
   void import('@/lib/notifySelf').then(({ notifySelf }) => notifySelf('vr_doorway', "Entered M'Mora World", "You walked through the doorway from your real street into M'Mora World.", { link: '/vr-world' })).catch(() => {});
 }

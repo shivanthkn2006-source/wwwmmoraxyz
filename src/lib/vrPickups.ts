@@ -53,24 +53,56 @@ export function autoHerbIfDry() {
 }
 
 // ── Account sync (one row per member) ──────────────────────────────────────
+/** Explored 50 m squares per city and portal visits, saved on this device. */
+function readExplore(): { cells: Record<string, string[]>; portals: Record<string, number> } {
+  const cells: Record<string, string[]> = {};
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k?.startsWith('vr-explored:')) cells[k.slice(12)] = JSON.parse(localStorage.getItem(k) || '[]');
+    }
+  } catch { /* */ }
+  let portals: Record<string, number> = {};
+  try { portals = JSON.parse(localStorage.getItem('vr-portal-visits') || '{}'); } catch { /* */ }
+  return { cells, portals };
+}
+/** Merge the account copy into this device (union of squares, highest visit count). */
+function mergeExplore(e?: { cells?: Record<string, string[]>; portals?: Record<string, number> }) {
+  if (!e) return;
+  try {
+    for (const [city, list] of Object.entries(e.cells || {})) {
+      const k = `vr-explored:${city}`;
+      const cur = new Set<string>(JSON.parse(localStorage.getItem(k) || '[]'));
+      list.forEach((c) => cur.add(c));
+      localStorage.setItem(k, JSON.stringify([...cur].slice(-5000)));
+    }
+    const p = JSON.parse(localStorage.getItem('vr-portal-visits') || '{}') as Record<string, number>;
+    for (const [c, n] of Object.entries(e.portals || {})) p[c] = Math.max(p[c] || 0, n);
+    localStorage.setItem('vr-portal-visits', JSON.stringify(p));
+    window.dispatchEvent(new Event('vr-explore-changed'));
+  } catch { /* */ }
+}
+if (typeof window !== 'undefined') window.addEventListener('vr-explore-changed', () => scheduleCloud());
+
 let timer: ReturnType<typeof setTimeout> | undefined;
 function scheduleCloud() { clearTimeout(timer); timer = setTimeout(() => void pushCloud(), 3000); }
 export async function pushCloud() {
   try {
     const { data } = await supabase.auth.getSession();
     const uid = data.session?.user?.id; if (!uid) return;
-    await supabase.from('vr_save_games' as never).upsert({ user_id: uid, data: { pickups: st, save: readSave() }, updated_at: new Date().toISOString() } as never);
+    await supabase.from('vr_save_games' as never).upsert({ user_id: uid, data: { pickups: st, save: readSave(), explore: readExplore() }, updated_at: new Date().toISOString() } as never);
   } catch { /* offline: next save retries */ }
 }
 let pulled = false;
 /** On VR start: take the newer of device and account saves. */
-export async function pullCloud() {
-  if (pulled) return; pulled = true;
+export async function pullCloud(force = false) {
+  if (pulled && !force) return; pulled = true;
   try {
     const { data } = await supabase.auth.getSession();
     const uid = data.session?.user?.id; if (!uid) return;
     const { data: row } = await supabase.from('vr_save_games' as never).select('data').eq('user_id', uid).maybeSingle();
-    const d = (row as { data?: { pickups?: State; save?: VRSave } } | null)?.data;
+    const d = (row as { data?: { pickups?: State; save?: VRSave; explore?: { cells?: Record<string, string[]>; portals?: Record<string, number> } } } | null)?.data;
+    mergeExplore(d?.explore);
     if (d?.pickups && d.pickups.taken.length > st.taken.length) { st = d.pickups; emit(); }
     const local = readSave();
     if (d?.save && (!local || d.save.at > local.at)) { const { at: _a, ...rest } = d.save; writeSave(rest); }
