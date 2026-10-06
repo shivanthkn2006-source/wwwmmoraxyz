@@ -27,3 +27,8 @@ export function resolveUse(): UseTarget | null {
   }
   return best;
 }
+
+/** What Use would do right now (no action), for the on-screen hint. */
+export function peekUse(): UseTarget | null {
+  return pickUse(Array.from(providers, (p) => { try { return p(); } catch { return null; } }));
+}
