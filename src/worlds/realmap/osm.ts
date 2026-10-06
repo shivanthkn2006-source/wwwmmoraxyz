@@ -74,8 +74,19 @@ async function sharedGet(key: string): Promise<OsmChunk | null> {
     return { ...(data.data as OsmChunk), fetchedAt: Date.now() };
   } catch { return null; }
 }
+/** Shared-cache limits (osm-tile rejects anything bigger, which silently kept dense city blocks like Chennai unshared). */
+export function trimForShare(c: Pick<OsmChunk, 'buildings' | 'roads' | 'pois' | 'v'>) {
+  const pts = <T,>(p: T[]) => (p.length <= 400 ? p : p.filter((_, i) => i % Math.ceil(p.length / 400) === 0).slice(0, 400));
+  const named = <T extends { name?: string }>(a: T[], max: number) => (a.length <= max ? a : [...a.filter((x) => x.name), ...a.filter((x) => !x.name)].slice(0, max));
+  return {
+    buildings: named(c.buildings, 400).map((b) => ({ ...b, pts: pts(b.pts), h: Math.min(300, Math.max(1, b.h || 3)) })),
+    roads: named(c.roads, 250).map((r) => ({ ...r, pts: pts(r.pts), w: Math.min(20, Math.max(1, r.w || 4)) })),
+    pois: c.pois.slice(0, 60).map((p) => ({ ...p, name: p.name.slice(0, 40) })),
+    v: c.v,
+  };
+}
 function sharedPut(key: string, c: OsmChunk) {
-  void supabase.functions.invoke('osm-tile', { body: { action: 'put', key, data: { buildings: c.buildings, roads: c.roads, pois: c.pois, v: c.v } } }).catch(() => {});
+  void supabase.functions.invoke('osm-tile', { body: { action: 'put', key, data: trimForShare(c) } }).catch(() => {});
 }
 
 async function fetchMirrors(query: string, cap = MAX_BUILDINGS): Promise<OsmChunk | null> {
