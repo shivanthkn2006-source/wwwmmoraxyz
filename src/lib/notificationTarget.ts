@@ -20,7 +20,7 @@ export function notificationTarget(n: NotifLike): string {
     return (ALIASES[path] ?? path) + (q ? `?${q}` : '');
   }
   const t = n.type ?? '';
-  if (n.post_id) return `/?post=${n.post_id}`;
+  if (n.post_id) return `/post/${n.post_id}`;
   if (n.suggestion_type === 'interest_match' || t === 'interest_match' || t === 'message' || t === 'direct_message' || t === 'missed_call')
     return n.from_user_id ? `/chat?userId=${n.from_user_id}` : '/chat';
   if (t === 'friend_request' || t === 'friend_accepted') return '/huddle';
