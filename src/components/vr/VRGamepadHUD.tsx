@@ -41,7 +41,7 @@ const RunToggle: React.FC<{ glyph?: string }> = ({ glyph }) => {
   const flip = (e: React.PointerEvent) => { e.preventDefault(); e.stopPropagation(); onRef.current = !onRef.current; fireAction('run', onRef.current); setOn(onRef.current); };
   return (
     <button type="button" aria-label={on ? 'Run on (tap to walk)' : 'Run (tap to toggle)'} aria-pressed={on} data-exclude-phantom-tap onPointerDown={flip}
-      className={`${faceText} absolute inset-0 h-10 w-12 text-[11px] ${on ? 'underline underline-offset-4' : ''}`}>
+      className={`${faceText} h-10 w-12 text-[11px] ${on ? 'underline underline-offset-4' : ''}`}>
       {glyph ? <span className="flex flex-col items-center leading-none"><span className="text-[11px] font-semibold">{glyph}</span><span>{on ? 'Run on' : 'Run'}</span></span> : (on ? 'Run on' : 'Run')}
     </button>
   );
@@ -190,19 +190,19 @@ export const VRGamepadHUD: React.FC = () => {
           Both rows share the same height and edge distance so L and R mirror each other. */}
       <div className="vr-shoulder-row pointer-events-auto absolute left-3 flex items-center gap-2" style={{ transform: `translateY(-50%) scale(${s})`, transformOrigin: 'left center' }}>
         <Btn round action="camera" label="L" aria="Switch camera" className="h-11 w-11 text-base" />
-        <button type="button" aria-label={leftOpen ? 'Hide crouch and light' : 'Show crouch and light'} aria-expanded={leftOpen} data-exclude-phantom-tap onClick={() => setLeftOpen((v) => !v)}
+        <button type="button" aria-label={leftOpen ? 'Hide crouch and light' : 'Show crouch and light'} aria-expanded={leftOpen} data-exclude-phantom-tap onClick={() => { setLeftOpen((v) => !v); setFaceOpen(false); }}
           className={`${ball} h-9 w-9 text-sm`}>{leftOpen ? '◂' : '▸'}</button>
         {leftOpen && <div className="flex items-center gap-2 [&>button]:mt-0" data-testid="vr-left-menu"><CrouchBtn /><LightBtn /></div>}
       </div>
       <div className="vr-shoulder-row pointer-events-auto absolute right-3 flex flex-row-reverse items-center gap-2" style={{ transform: `translateY(-50%) scale(${s})`, transformOrigin: 'right center' }}>
         <Btn round action="zoom" label="R" aria="Zoom lens (5X)" className="h-11 w-11 text-base" />
-        <button type="button" aria-label={faceOpen ? 'Hide action buttons' : 'Show action buttons'} aria-expanded={faceOpen} data-exclude-phantom-tap onClick={() => setFaceOpen((v) => !v)}
+        <button type="button" aria-label={faceOpen ? 'Hide action buttons' : 'Show action buttons'} aria-expanded={faceOpen} data-exclude-phantom-tap onClick={() => { setFaceOpen((v) => !v); setLeftOpen(false); }}
           className={`${ball} h-9 w-9 text-sm`}>{faceOpen ? '▸' : '◂'}</button>
         {faceOpen && (
           <div className="flex flex-row-reverse items-center gap-1 rounded-full bg-black/30 px-1 backdrop-blur-sm" data-testid="vr-face-menu">
             <Btn plain action="jump" label="Jump" hold aria="Jump" glyph={pad ? FACE_GLYPHS[pad].jump : undefined} className="h-10 w-12 text-[11px]" />
             <Btn plain action="zoe" label="Zoe" aria="Ask Zoe" glyph={pad ? FACE_GLYPHS[pad].zoe : undefined} className="h-10 w-10 text-[11px]" />
-            <div className="relative h-10 w-12"><RunToggle glyph={pad ? FACE_GLYPHS[pad].run : undefined} /></div>
+            <RunToggle glyph={pad ? FACE_GLYPHS[pad].run : undefined} />
             <Btn plain action="interact" label="Use" aria="Pick up or interact" glyph={pad ? FACE_GLYPHS[pad].interact : undefined} className="h-10 w-12 text-[11px]" />
           </div>
         )}
