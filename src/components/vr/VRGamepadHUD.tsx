@@ -15,6 +15,7 @@ import { VRBagPanel } from '@/components/vr/VRBagPanel';
 import { useStamina } from '@/lib/vrWalk';
 import { peekUse } from '@/lib/vrUse';
 import { VRMiniMap } from '@/components/vr/VRMiniMap';
+import { VRRoomInterior } from '@/components/vr/VRRoomInterior';
 import { pullCloud } from '@/lib/vrPickups';
 
 /** Stamina for running: drains while Run is held and you move, refills when you walk or stop. */
@@ -219,6 +220,7 @@ export const VRGamepadHUD: React.FC = () => {
 
       <VRMiniMap onToast={(m) => say(m, 1800)} />
       <UseHint />
+      <VRRoomInterior />
       {toast && <div className="absolute bottom-40 left-1/2 -translate-x-1/2 rounded-full surface-warm-tan px-3 py-1 text-xs text-foreground">{toast}</div>}
       {bagOpen && <VRBagPanel onClose={() => setBagOpen(false)} />}
 

@@ -16,6 +16,7 @@ import { setAmbientExtra } from '@/services/zoe-agent/ambientContext';
 import { getStreetHouses } from '@/worlds/realmap/StreetHouses';
 import { getStreetRelics } from '@/worlds/realmap/streetRelics';
 import { useMapPrefs, setMapPrefs } from '@/lib/vrMapPrefs';
+import { useStamina } from '@/lib/vrWalk';
 import { usePickups, getPickups, useHerb, autoHerbIfDry } from '@/lib/vrPickups';
 
 const pose = { x: 0, z: 0, yaw: 0 };
@@ -152,6 +153,7 @@ const MapCanvas: React.FC<{ SIZE: number; RANGE: number; names?: boolean; explor
 export const VRMiniMap: React.FC<{ onToast?: (s: string) => void }> = ({ onToast }) => {
   const p = usePickups();
   const prefs = useMapPrefs();
+  const sta = useStamina();
   const [street, setStreet] = React.useState<string | null>(null);
   const [explored, setExplored] = React.useState(0);
   useEffect(() => {
@@ -180,6 +182,9 @@ export const VRMiniMap: React.FC<{ onToast?: (s: string) => void }> = ({ onToast
       </button>
       {street && <div className="max-w-[9rem] truncate text-center text-[11px] font-semibold text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.8)]" data-testid="vr-minimap-street">{street}</div>}
       <div className="text-[10px] font-semibold text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.8)]" aria-label="Explored">{Math.min(100, Math.round((explored / GOAL) * 100))}% explored · goal {GOAL}</div>
+      <div className="flex items-center gap-1 text-[10px] font-semibold text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.8)]" role="meter" aria-label="Stamina" aria-valuenow={Math.round(sta.stamina * 100)}>
+        Stamina <span className="h-1.5 w-16 overflow-hidden rounded-full bg-white/25"><span className="block h-full rounded-full" style={{ width: `${Math.round(sta.stamina * 100)}%`, background: sta.exhausted ? '#e5534b' : '#5fb04a' }} /></span>
+      </div>
       <div className="flex gap-2 text-[11px] font-semibold text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.8)]">
         <button type="button" aria-label="Use a green herb" onClick={() => onToast?.(useHerb())} className="flex items-center gap-1">
           <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: '#5fb04a' }} />×{p.herbs}
