@@ -8,6 +8,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { registerUse } from '@/lib/vrUse';
 import { MMoraSigns } from './MMoraSigns';
+import { setStaticSolids, boxPoly } from '@/lib/vrSolids';
 import { usePickups, takePickup, isTaken, type Pickup } from '@/lib/vrPickups';
 
 const HOUSE_W = 5, HOUSE_D = 5, HOUSE_H = 3;
@@ -17,6 +18,8 @@ export const HOUSES: [number, number, number][] = [
   [6, -34, 0], [44, -6, Math.PI / 2], [-42, 4, 0], [12, 40, Math.PI],
 ];
 const COIN_AMOUNTS = [1, 3, 5, 1, 3, 1, 5, 3];
+// Houses are solid: you stop at the walls and open the door with Use.
+setStaticSolids(HOUSES.map(([x, z, r]) => boxPoly(x, z, HOUSE_W, HOUSE_D, r)));
 const OUTDOOR_HERBS: [number, number][] = [[4, 10], [-8, -14], [22, 6], [-30, -2], [10, -22], [-14, 18], [36, 30], [-36, -30], [26, -28], [0, 26]];
 
 const M = {
@@ -29,8 +32,8 @@ const M = {
   pot: new THREE.MeshStandardMaterial({ color: '#5a2e24', roughness: 0.8 }),
   soil: new THREE.MeshStandardMaterial({ color: '#2b1f16', roughness: 1 }),
   stem: new THREE.MeshStandardMaterial({ color: '#9fc28a', roughness: 0.7 }),
-  leaf: new THREE.MeshStandardMaterial({ color: '#4f8a3a', roughness: 0.65, side: THREE.DoubleSide, emissive: '#16300f', emissiveIntensity: 0.35 }),
-  coin: new THREE.MeshStandardMaterial({ color: '#d8b456', metalness: 0.9, roughness: 0.28, emissive: '#5a4210', emissiveIntensity: 0.35 }),
+  leaf: new THREE.MeshStandardMaterial({ color: '#4f8a3a', roughness: 0.65, side: THREE.DoubleSide, emissive: '#3fae2a', emissiveIntensity: 0.7 }),
+  coin: new THREE.MeshStandardMaterial({ color: '#ffd24a', metalness: 0.85, roughness: 0.22, emissive: '#c8901a', emissiveIntensity: 1.1 }),
 };
 const GLOW_G = new THREE.MeshBasicMaterial({ color: '#5fb04a', transparent: true, opacity: 0.45, depthWrite: false });
 const GLOW_C = new THREE.MeshBasicMaterial({ color: '#e3c15a', transparent: true, opacity: 0.45, depthWrite: false });

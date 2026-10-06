@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { toLocal, type LatLng } from './geo';
 import { useStreetRelics, getStreetRelics, takeRelic, type StreetRelic } from './streetRelics';
 import { registerUse } from '@/lib/vrUse';
+import { playPickup } from '@/lib/vrSfx';
 import { recordVRCollect } from '@/lib/vrQuests';
 import { notifySelf } from '@/lib/notifySelf';
 import { trackActivity } from '@/lib/visitTracker';
@@ -17,6 +18,7 @@ const label = (r: StreetRelic) => r.type.replace(/_/g, ' ');
 
 export function collectStreetRelic(r: StreetRelic) {
   takeRelic(r.id);
+  playPickup('relic');
   void recordVRCollect({ type: r.type, rarity: r.rarity });
   void notifySelf('vr_relic_found', 'Street relic found', `You found a ${r.rarity} ${label(r)} on your real street.`, { link: '/vr-world', rarity: r.rarity, relic: r.id }).catch(() => {});
   try { trackActivity('vr_collect', `Found a ${r.rarity} ${label(r)} on the real map`); } catch { /* optional */ }
