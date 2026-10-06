@@ -217,8 +217,8 @@ export const VRGamepadHUD: React.FC = () => {
         <Btn plain action="zoe" label="Zoe" aria="Ask Zoe" glyph={pad ? FACE_GLYPHS[pad].zoe : undefined} className="absolute left-0 top-1/2 h-12 w-12 -translate-y-1/2 rounded-full text-[10px]" />
         <RunToggle glyph={pad ? FACE_GLYPHS[pad].run : undefined} />
         <Btn plain action="interact" label="Use" aria="Pick up or interact" glyph={pad ? FACE_GLYPHS[pad].interact : undefined} className="absolute bottom-0 left-1/2 h-12 w-12 -translate-x-1/2 rounded-full text-[10px]" />
-        <StaminaMeter />
       </div>
+      <div className="absolute bottom-[13.5rem] right-16 h-4 w-36"><StaminaMeter /></div>
 
       <VRMiniMap onToast={(m) => say(m, 1800)} />
       <UseHint />
