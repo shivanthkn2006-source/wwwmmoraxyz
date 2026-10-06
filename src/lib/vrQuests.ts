@@ -106,7 +106,7 @@ export async function recordVRCollect(item: CollectedItem): Promise<Quest[]> {
     }
     for (const q of completed) {
       // Reward is granted on the server, once per quest, only after the completion is saved.
-      const { data: got } = await supabase.rpc('claim_vr_quest_reward' as never, { p_quest_id: q.id } as never);
+      const got = await Promise.resolve(supabase.rpc('claim_vr_quest_reward' as never, { p_quest_id: q.id } as never)).then((r) => r.data, () => 0);
       const karma = typeof got === 'number' ? got : 0;
       if (karma > 0) window.dispatchEvent(new CustomEvent('vr-quest-reward', { detail: { id: q.id, karma } }));
       await notifySelf('vr_quest_complete', 'Quest complete', `${q.title}: ${q.description}${karma > 0 ? ` · +${karma} karma` : ''}`, { link: '/vr-world', quest: q.id, karma });
