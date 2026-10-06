@@ -26,7 +26,7 @@ export function notificationTarget(n: NotifLike): string {
   if (t === 'friend_request' || t === 'friend_accepted') return '/huddle';
   if (t.startsWith('vr_')) return '/zoe-omega';
   if (t.startsWith('growth')) return '/growth-insights';
-  if (t.startsWith('dhf')) return '/dhf';
+  if (t.startsWith('dhf')) return '/dhf-dashboard';
   if (t.startsWith('analytics_')) return '/analytics-dashboard';
   if (t === 'uptime_alert' || t.startsWith('system')) return '/admin/health';
   if (t === 'tier_upgrade' || t.includes('badge') || t.includes('challenge')) return '/profile';
