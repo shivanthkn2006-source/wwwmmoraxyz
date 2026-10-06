@@ -14,6 +14,7 @@ import {
 } from '@/lib/vrInput';
 import { VRBagPanel } from '@/components/vr/VRBagPanel';
 import { useStamina } from '@/lib/vrWalk';
+import { peekUse } from '@/lib/vrUse';
 
 /** Stamina for running: drains while Run is held and you move, refills when you walk or stop. */
 const StaminaMeter: React.FC = () => {
