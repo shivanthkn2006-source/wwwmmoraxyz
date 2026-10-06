@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
+import { loadRealmapSettings, saveRealmapSettings, type RealmapSettings } from '@/worlds/realmap/realmapAdminSettings';
 
 const ROOM = 'global';
 type Settings = { maintenance?: boolean; voice_chat?: boolean; max_players?: number; motd?: string };
@@ -18,6 +19,15 @@ export default function AdminVRWorldPage() {
   const [settings, setSettings] = useState<Settings>({ voice_chat: true, max_players: 50 });
   const [message, setMessage] = useState('');
   const [events, setEvents] = useState<any[]>([]);
+  const [rm, setRm] = useState<RealmapSettings>({});
+  useEffect(() => { void loadRealmapSettings().then(setRm).catch(() => {}); }, []);
+  const saveRm = async (patch: Partial<RealmapSettings>) => {
+    const err = await saveRealmapSettings(patch);
+    if (err) return toast.error(`Not saved: ${err}`);
+    setRm((r) => ({ ...r, ...patch })); toast.success('Saved for every member');
+  };
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const drops = (rm.relic_drops ?? []).filter((d) => d.day === todayStr);
 
   const loadEvents = async () => {
     const { data } = await db.from('vr_world_events').select('*').eq('room_id', ROOM).order('created_at', { ascending: false }).limit(15);
@@ -59,6 +69,17 @@ export default function AdminVRWorldPage() {
         <label className="block text-sm">Welcome message
           <Input maxLength={200} value={settings.motd ?? ''} onChange={(e) => setSettings({ ...settings, motd: e.target.value })} /></label>
         <Button onClick={save}>Save settings</Button>
+      </Card>
+      <Card className="p-4 space-y-3">
+        <h2 className="font-medium">Real Map (everyone)</h2>
+        <div className="flex items-center justify-between"><span>Demo explorer walker</span>
+          <Switch checked={rm.demo_bot !== false} onCheckedChange={(v) => void saveRm({ demo_bot: v })} /></div>
+        <div className="text-sm">
+          <p>Shop relics dropped today: {drops.length}</p>
+          {drops.slice(0, 8).map((d, i) => <p key={i} className="text-muted-foreground">{d.name}</p>)}
+          <p className="text-muted-foreground mt-1">Drop new ones inside VR World: Admin box → <span className="font-mono">relics</span> or <span className="font-mono">relics KFC</span>.</p>
+        </div>
+        <Button variant="outline" disabled={!drops.length} onClick={() => void saveRm({ relic_drops: [] })}>Clear shop relics</Button>
       </Card>
       <Card className="p-4 space-y-3">
         <Input maxLength={280} placeholder="Announcement to everyone in the world" value={message} onChange={(e) => setMessage(e.target.value)} />
