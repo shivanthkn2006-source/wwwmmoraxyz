@@ -242,6 +242,7 @@ const EntryFlight: React.FC = () => {
 };
 
 export const RealMapWorld: React.FC = () => {
+  const demoOn = useDemoExplorerOn();
   const { origin } = useWorldState();
   useEffect(() => { resolveOrigin(); }, []);
   // Start the entry flight once the first street blocks are in (or after 4 s), so

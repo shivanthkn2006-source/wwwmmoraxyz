@@ -9,6 +9,9 @@ import { travelTo, travelHome } from '@/worlds/worldMode';
 import { runPrefill, stopPrefill } from '@/worlds/realmap/prefillCities';
 import { flushVrOutbox } from '@/lib/vrOutbox';
 import { getMeet } from '@/worlds/meet/vrMeet';
+import { setDemoExplorer, demoExplorerOn } from '@/worlds/realmap/demoExplorerSwitch';
+import { dropRelicsAtPlaces } from '@/worlds/realmap/streetRelics';
+import { mapBlocks } from '@/worlds/realmap/mapIndex';
 
 export const VRAdminConsole: React.FC = () => {
   const [admin, setAdmin] = useState(false);
@@ -38,13 +41,21 @@ export const VRAdminConsole: React.FC = () => {
       if (!p) return say(`@${u} isn't in VR World (or is hidden)`);
       if (p.mode === 'real' && p.lat != null && p.lng != null) { travelTo({ name: `@${p.username}`, lat: p.lat, lng: p.lng } as never); say(`Teleported to @${p.username}`); }
       else say(`@${p.username} is inside M'Mora World`);
+    } else if (c === 'bot') {
+      const v = arg === 'on' ? true : arg === 'off' ? false : !demoExplorerOn();
+      setDemoExplorer(v); say(`Demo explorer ${v ? 'on' : 'off'}`);
+    } else if (c === 'relics') {
+      const pois: { lat: number; lng: number; name: string }[] = [];
+      mapBlocks().forEach((b) => b.pois.forEach((p) => { if (!arg || p.name.toLowerCase().includes(arg.toLowerCase()) || p.kind === arg) pois.push(p); }));
+      const n = dropRelicsAtPlaces(pois);
+      say(n ? `Dropped ${n} relics at ${pois.slice(0, 3).map((p) => p.name).join(', ')}${n > 3 ? '…' : ''}` : 'No shops loaded nearby');
     } else if (c === 'players') {
       const ps = getMeet().players; say(ps.length ? ps.map((r) => `@${r.username}`).join(', ') : 'No members nearby');
     } else if (c === 'home') { travelHome(); say('Back to your location'); }
     else if (c === 'prefill') { void runPrefill(); say('South India prefill started'); }
     else if (c === 'stop') { stopPrefill(); say('Prefill stopping'); }
     else if (c === 'outbox') { await flushVrOutbox(); say('Outbox sent'); }
-    else say('Commands: go <city>, to @user, players, home, prefill, stop, outbox');
+    else say('Commands: go <city>, to @user, players, bot on|off, relics [shop|kind], home, prefill, stop, outbox');
   };
   return (
     <div className="fixed left-3 bottom-24 z-30" data-exclude-phantom-tap>
