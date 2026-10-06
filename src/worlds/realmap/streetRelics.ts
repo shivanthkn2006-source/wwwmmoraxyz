@@ -57,6 +57,12 @@ export function takeRelic(id: string) {
   try { localStorage.setItem(KEY(), JSON.stringify([...taken])); } catch { /* private mode */ }
   emit();
 }
+/** Admin: drop relics at named shops/places in loaded blocks (same day, this device). */
+export function dropRelicsAtPlaces(pois: { lat: number; lng: number; name: string }[], rarity: Rarity = 'rare'): number {
+  const list = pois.slice(0, 10).map((p, i) => ({ id: `admin-${today()}-${hashStr(p.name + i)}`, lat: p.lat, lng: p.lng, rarity, type: 'shop_relic' }) as StreetRelic);
+  blocks.set('admin-drops', [...(blocks.get('admin-drops') ?? []), ...list]); emit();
+  return list.length;
+}
 export const getStreetRelics = () => snap;
 export const useStreetRelics = () => useSyncExternalStore((l) => { ls.add(l); return () => ls.delete(l); }, () => snap, () => snap);
 export function __resetStreetRelics() { blocks = new Map(); taken = new Set(); snap = []; }
