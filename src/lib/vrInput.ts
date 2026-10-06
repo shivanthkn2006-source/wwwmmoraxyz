@@ -131,7 +131,9 @@ export const LAYOUT_KEY = 'vr-pad-layout';
 export function loadLayout(): PadLayout {
   try {
     const v = JSON.parse(localStorage.getItem(LAYOUT_KEY) || '{}');
-    return { opacity: clamp(v.opacity ?? 0.7, 0.2, 1), scale: clamp(v.scale ?? 1, 0.7, 1.4) };
+    // Default is full strength (100 %). Layouts saved under the old 70 % default are reset once.
+    if (!localStorage.getItem(LAYOUT_KEY + ':v2')) { localStorage.setItem(LAYOUT_KEY + ':v2', '1'); if (v.opacity === 0.7) v.opacity = 1; }
+    return { opacity: clamp(v.opacity ?? 1, 0.2, 1), scale: clamp(v.scale ?? 1, 0.7, 1.4) };
   } catch { return { opacity: 1, scale: 1 }; }
 }
 export function saveLayout(l: PadLayout) { try { localStorage.setItem(LAYOUT_KEY, JSON.stringify(l)); } catch { /* private mode */ } }

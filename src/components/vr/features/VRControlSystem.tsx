@@ -1,3 +1,4 @@
+import { RotateCw } from 'lucide-react';
 // ═══════════════════════════════════════════════════════════════════════════════
 // VR CONTROL SYSTEM - 360° Controls + Hardware Optimization
 // Joystick, Rotation, Adaptive Graphics
@@ -312,7 +313,7 @@ export const LookButtons: React.FC = () => {
   };
 
   return (
-    <div className="vr-look-pad absolute bottom-[7.5rem] left-3 z-50 grid w-24 grid-cols-3 gap-0 place-items-center" data-exclude-phantom-tap>
+    <div className="vr-look-pad absolute bottom-[7.5rem] left-3 z-50 grid h-24 w-24 grid-cols-3 grid-rows-3 place-items-center rounded-full border-2 border-white/20 bg-black/40 backdrop-blur-sm" data-exclude-phantom-tap>
       <div />
       <button
         onClick={() => dispatchLook('look_up')}
@@ -332,10 +333,11 @@ export const LookButtons: React.FC = () => {
       </button>
       <button
         onClick={() => dispatchLook('look_around')}
-        className="w-8 h-8 rounded-full bg-cyan-600/70 backdrop-blur-md border border-cyan-400/50 text-white text-[10px]"
-        title="Scan 360"
+        className="w-9 h-9 rounded-full bg-white/30 border-2 border-white/50 text-white flex items-center justify-center"
+        title="Look all around (360°)"
+        aria-label="Look all around"
       >
-        360
+        <RotateCw className="h-4 w-4" />
       </button>
       <button
         onClick={() => dispatchLook('look_right')}

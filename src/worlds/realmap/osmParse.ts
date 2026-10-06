@@ -1,11 +1,17 @@
 /** Pure OpenStreetMap decoding (no app imports), shared by the main thread and the background map worker. */
 import type { BBox } from './geo';
 export type OsmBuilding = { pts: [number, number][]; h: number; name?: string };
-export type OsmRoad = { pts: [number, number][]; w: number; name?: string };
+export type OsmRoad = { pts: [number, number][]; w: number; name?: string; br?: 1 };
+/** Lakes, ponds, rivers, canals and parks. */
+export type OsmArea = { pts: [number, number][]; kind: 'water' | 'park'; name?: string };
+export type OsmWaterway = { pts: [number, number][]; w: number; name?: string };
 export type OsmPoi = { lat: number; lng: number; name: string; kind: string };
 /** CHUNK_V: 2 = street/building names, 3 = malls, brands and fuel pumps (older saved blocks are refreshed quietly). */
-export const CHUNK_V = 4; // 4 = apartment/house names (addr:housename) on buildings
-export type OsmChunk = { buildings: OsmBuilding[]; roads: OsmRoad[]; pois: OsmPoi[]; fetchedAt: number; v?: number };
+export const CHUNK_V = 5; // 5 = water, rivers, parks and bridges // 4 = apartment/house names (addr:housename) on buildings
+export type OsmChunk = { buildings: OsmBuilding[]; roads: OsmRoad[]; pois: OsmPoi[]; areas?: OsmArea[]; waterways?: OsmWaterway[]; fetchedAt: number; v?: number };
+export const MAX_AREAS = 40;
+export const MAX_WATERWAYS = 30;
+const WATERWAY_W: Record<string, number> = { river: 18, canal: 10, stream: 3, drain: 2 };
 
 export const MAX_BUILDINGS = 400;
 export const MAX_ROADS = 250;
@@ -28,6 +34,7 @@ export function buildQuery(b: BBox): string {
     `nwr["amenity"~"^(restaurant|cafe|fast_food|fuel|bank|atm|hospital|pharmacy|school|college|cinema|theatre|marketplace|place_of_worship|food_court|bar|pub)$"]["name"](${box});` +
     `nwr["tourism"~"^(hotel|attraction|museum)$"]["name"](${box});` +
     `nwr["office"]["name"](${box});` +
+    `way["natural"="water"](${box});way["landuse"~"^(reservoir|basin)$"](${box});way["leisure"~"^(park|garden)$"](${box});way["waterway"~"^(river|canal|stream)$"](${box});` +
     `);out geom tags;`;
 }
 
@@ -62,6 +69,8 @@ export function parseOverpass(json: { elements?: RawEl[] }, cap = MAX_BUILDINGS)
   const buildings: OsmBuilding[] = [];
   const roads: OsmRoad[] = [];
   const pois: OsmPoi[] = [];
+  const areas: OsmArea[] = [];
+  const waterways: OsmWaterway[] = [];
   for (const el of json.elements ?? []) {
     const tags = el.tags ?? {};
     const placeName = (tags.brand && !tags.name ? tags.brand : tags.name) as string | undefined;
@@ -74,10 +83,15 @@ export function parseOverpass(json: { elements?: RawEl[] }, cap = MAX_BUILDINGS)
       const pts = el.geometry
         .filter((g) => Number.isFinite(g.lat) && Number.isFinite(g.lon))
         .map((g) => [g.lat, g.lon] as [number, number]);
-      if (tags.building && pts.length >= 4 && buildings.length < cap) {
+      const isWater = tags.natural === 'water' || tags.landuse === 'reservoir' || tags.landuse === 'basin';
+      if ((isWater || tags.leisure === 'park' || tags.leisure === 'garden') && !tags.building && pts.length >= 4) {
+        if (areas.length < MAX_AREAS) areas.push({ pts, kind: isWater ? 'water' : 'park', ...(tags.name ? { name: tags.name.slice(0, 50) } : {}) });
+      } else if (tags.waterway && WATERWAY_W[tags.waterway]) {
+        if (waterways.length < MAX_WATERWAYS) waterways.push({ pts, w: WATERWAY_W[tags.waterway], ...(tags.name ? { name: tags.name.slice(0, 50) } : {}) });
+      } else if (tags.building && pts.length >= 4 && buildings.length < cap) {
         buildings.push({ pts, h: buildingHeight(tags), ...((tags.name || tags['addr:housename']) ? { name: (tags.name || tags['addr:housename']).slice(0, 50) } : {}) });
       } else if (tags.highway && !SKIP_ROADS.has(tags.highway) && roads.length < MAX_ROADS * scale) {
-        roads.push({ pts, w: ROAD_WIDTH[tags.highway] ?? 4, ...(tags.name ? { name: tags.name.slice(0, 50) } : {}) });
+        roads.push({ pts, w: ROAD_WIDTH[tags.highway] ?? 4, ...(tags.name ? { name: tags.name.slice(0, 50) } : {}), ...(tags.bridge && tags.bridge !== 'no' ? { br: 1 as const } : {}) });
       }
     } else if (el.type === 'node' && tags.name && Number.isFinite(el.lat) && Number.isFinite(el.lon)) {
       if (pois.length < MAX_POIS * scale) {
@@ -85,5 +99,5 @@ export function parseOverpass(json: { elements?: RawEl[] }, cap = MAX_BUILDINGS)
       }
     }
   }
-  return { buildings, roads, pois, fetchedAt: Date.now(), v: CHUNK_V };
+  return { buildings, roads, pois, areas, waterways, fetchedAt: Date.now(), v: CHUNK_V };
 }

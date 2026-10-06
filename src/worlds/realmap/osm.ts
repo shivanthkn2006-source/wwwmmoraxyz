@@ -75,13 +75,15 @@ async function sharedGet(key: string): Promise<OsmChunk | null> {
   } catch { return null; }
 }
 /** Shared-cache limits (osm-tile rejects anything bigger, which silently kept dense city blocks like Chennai unshared). */
-export function trimForShare(c: Pick<OsmChunk, 'buildings' | 'roads' | 'pois' | 'v'>) {
+export function trimForShare(c: Pick<OsmChunk, 'buildings' | 'roads' | 'pois' | 'v' | 'areas' | 'waterways'>) {
   const pts = <T,>(p: T[]) => (p.length <= 400 ? p : p.filter((_, i) => i % Math.ceil(p.length / 400) === 0).slice(0, 400));
   const named = <T extends { name?: string }>(a: T[], max: number) => (a.length <= max ? a : [...a.filter((x) => x.name), ...a.filter((x) => !x.name)].slice(0, max));
   return {
     buildings: named(c.buildings, 400).map((b) => ({ ...b, pts: pts(b.pts), h: Math.min(300, Math.max(1, b.h || 3)) })),
     roads: named(c.roads, 250).map((r) => ({ ...r, pts: pts(r.pts), w: Math.min(20, Math.max(1, r.w || 4)) })),
     pois: c.pois.slice(0, 60).map((p) => ({ ...p, name: p.name.slice(0, 40) })),
+    areas: (c.areas ?? []).slice(0, 40).map((a) => ({ ...a, pts: pts(a.pts) })),
+    waterways: (c.waterways ?? []).slice(0, 30).map((w) => ({ ...w, pts: pts(w.pts) })),
     v: c.v,
   };
 }

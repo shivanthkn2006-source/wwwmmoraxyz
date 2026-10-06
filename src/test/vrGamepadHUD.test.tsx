@@ -38,7 +38,7 @@ describe('VR controller layer', () => {
     act(() => { window.dispatchEvent(new Event('vr-edit-layout')); });
     fireEvent.click(screen.getByRole('button', { name: /more size/i }));
     fireEvent.click(screen.getByRole('button', { name: /less opacity/i }));
-    expect(loadLayout()).toEqual({ opacity: 0.6, scale: 1.1 });
+    expect(loadLayout()).toEqual({ opacity: 0.9, scale: 1.1 });
   });
 
   it('interact result shows feedback', async () => {

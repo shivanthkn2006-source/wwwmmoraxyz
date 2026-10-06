@@ -8,7 +8,7 @@
  * Nothing here can crash a route: every failure path degrades to a toast.
  */
 import React, { useEffect, useRef, useState } from 'react';
-import { Bug, Loader2 } from 'lucide-react';
+import { ArrowLeft, Bug, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -130,6 +130,16 @@ export const GlobalBugReporter: React.FC = () => {
 
   return (
     <>
+      <button
+        type="button"
+        aria-label="Go back"
+        title="Go back to the previous page"
+        onClick={() => { if (window.history.length > 1) window.history.back(); else window.location.assign('/home'); }}
+        className="fixed left-3 top-[calc(50%-2.25rem)] z-40 -translate-y-1/2 bg-transparent p-2 text-muted-foreground transition hover:text-foreground"
+        data-exclude-phantom-tap
+      >
+        <ArrowLeft className="h-4 w-4" />
+      </button>
       <button
         type="button"
         aria-label="Report a problem"

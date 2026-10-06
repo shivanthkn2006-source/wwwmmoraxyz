@@ -18,6 +18,7 @@ type Label = { id: string; text: string; x: number; y: number; z: number; kind: 
 export const PLACE_ICON: Record<string, string> = { fuel: '⛽', mall: '🛍️', fast_food: '🍔', food: '🍽️', supermarket: '🛒', shop: '🏪', hotel: '🏨', office: '🏢', bank: '🏦', atm: '🏧', hospital: '🏥', pharmacy: '💊', cinema: '🎬', school: '🏫', college: '🎓', place_of_worship: '🛕' };
 export const LABEL_RANGE_M = 160;
 export const MAX_LABELS: Record<number, number> = { 0: 14, 1: 9, 2: 5 };
+export const STREET_SIGNS: Record<number, number> = { 0: 8, 1: 6, 2: 4 };
 
 export function collectLabels(origin: LatLng): Label[] {
   const out: Label[] = [];
@@ -41,7 +42,7 @@ export function collectLabels(origin: LatLng): Label[] {
       // Sign stands on the roadside, beside the road, not in the lane.
       const p = { x: a.x - (dz / len) * off, z: a.z + (dx / len) * off };
       const rot = Math.atan2(dx, dz);
-      const id = `${r.name}|${Math.round(p.x / 120)}|${Math.round(p.z / 120)}`;
+      const id = `${r.name}|${Math.round(p.x / 70)}|${Math.round(p.z / 70)}`;
       if (seenStreet.has(id)) return;
       seenStreet.add(id);
       out.push({ id: `${key}r${k}`, text: r.name, x: p.x, y: 3.2, z: p.z, kind: 'street', rot });
@@ -70,7 +71,10 @@ export const MapLabels: React.FC<{ origin: LatLng }> = ({ origin }) => {
     t.current += dt;
     if (t.current < 1) return;
     t.current = 0;
-    const next = nearestLabels(all, camera.position.x, camera.position.z, MAX_LABELS[level] ?? 0);
+    // Street signs get their own share so shop names never crowd them out.
+    const cx = camera.position.x, cz = camera.position.z;
+    const streets = nearestLabels(all.filter((l) => l.kind === 'street'), cx, cz, STREET_SIGNS[level] ?? 3);
+    const next = [...streets, ...nearestLabels(all.filter((l) => l.kind !== 'street'), cx, cz, MAX_LABELS[level] ?? 0)];
     setShown((prev) => (prev.length === next.length && prev.every((p, i) => p.id === next[i].id) ? prev : next));
   });
   return (
@@ -78,9 +82,9 @@ export const MapLabels: React.FC<{ origin: LatLng }> = ({ origin }) => {
       {shown.map((l) => l.kind === 'street' ? (
         <group key={l.id} position={[l.x, 0, l.z]} rotation={[0, l.rot ?? 0, 0]}>
           {/* T-shaped street sign: pole + black board with white name */}
-          <mesh position={[0, 1.5, 0]} material={POLE}><cylinderGeometry args={[0.06, 0.06, 3, 6]} /></mesh>
-          <mesh position={[0, 3.05, 0]} material={BOARD}><boxGeometry args={[2.6, 0.55, 0.06]} /></mesh>
-          <Html position={[0, 3.05, 0.05]} center distanceFactor={12} zIndexRange={[5, 0]} style={{ pointerEvents: 'none' }}>
+          <mesh position={[0, 1.75, 0]} material={POLE}><cylinderGeometry args={[0.08, 0.08, 3.5, 6]} /></mesh>
+          <mesh position={[0, 3.6, 0]} material={BOARD}><boxGeometry args={[3.4, 0.7, 0.08]} /></mesh>
+          <Html position={[0, 3.6, 0.06]} center zIndexRange={[5, 0]} style={{ pointerEvents: 'none' }}>
             <div className="vr-street-sign">{l.text}</div>
           </Html>
         </group>

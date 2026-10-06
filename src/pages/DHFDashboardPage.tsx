@@ -10,6 +10,7 @@ import DhfVideoFeed from '@/components/dhf/DhfVideoFeed';
 import DhfSensorPanel from '@/components/dhf/DhfSensorPanel';
 import ZoeVisionSearchPanel from '@/components/dhf/ZoeVisionSearchPanel';
 import VRLiveCard from '@/components/vr/VRLiveCard';
+import VRCityGoals from '@/components/vr/VRCityGoals';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Brain, Upload, Database, Video } from 'lucide-react';
@@ -59,6 +60,7 @@ const DHFDashboardPage: React.FC = () => {
             />
             <DhfSensorPanel />
             <div className="mt-6"><VRLiveCard /></div>
+            <div className="mt-6"><VRCityGoals /></div>
           </TabsContent>
 
           <TabsContent value="videos" className="mt-0">
