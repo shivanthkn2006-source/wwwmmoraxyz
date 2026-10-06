@@ -313,7 +313,7 @@ export const LookButtons: React.FC = () => {
   };
 
   return (
-    <div className="vr-look-pad absolute bottom-5 right-5 z-[61] grid h-24 w-24 grid-cols-3 grid-rows-3 place-items-center rounded-full border-2 border-white/20 bg-black/40 backdrop-blur-sm" data-exclude-phantom-tap>
+    <div className="vr-look-pad absolute bottom-5 right-[5.5rem] z-[61] grid h-24 w-24 grid-cols-3 grid-rows-3 place-items-center rounded-full border-2 border-white/20 bg-black/40 backdrop-blur-sm" data-exclude-phantom-tap>
       <div />
       <button
         onClick={() => dispatchLook('look_up')}
