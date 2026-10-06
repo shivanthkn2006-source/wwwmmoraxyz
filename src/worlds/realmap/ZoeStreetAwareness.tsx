@@ -9,6 +9,16 @@ import { setAmbientExtra, setAmbientContext } from '@/services/zoe-agent/ambient
 import { mapBlocks } from './mapIndex';
 import { toLocal, type LatLng } from './geo';
 import { getMeet } from '@/worlds/meet/vrMeet';
+import { supabase } from '@/integrations/supabase/client';
+
+/** Top players + my rank for Zoe (same list as VR World's Check panel). */
+export async function refreshTopPlayersForZoe() {
+  const [{ data }, { data: u }] = await Promise.all([supabase.rpc('get_leaderboard', { limit_count: 50 }), supabase.auth.getUser()]);
+  const rows = (data as { user_id: string; display_name: string; total_points: number }[] | null) ?? [];
+  setAmbientExtra('VR top players', rows.slice(0, 5).map((r, i) => `#${i + 1} ${r.display_name} (${r.total_points ?? 0} pts)`).join(', ') || null);
+  const me = u.user ? rows.findIndex((r) => r.user_id === u.user!.id) : -1;
+  setAmbientExtra('VR my rank', me >= 0 ? `#${me + 1} with ${rows[me].total_points ?? 0} pts` : (u.user ? 'outside the top 50' : null));
+}
 
 const trails = new Map<string, string[]>(); // friend → recent street names
 const d2 = (ax: number, az: number, bx: number, bz: number) => (ax - bx) ** 2 + (az - bz) ** 2;
@@ -45,8 +55,10 @@ export const ZoeStreetAwareness: React.FC<{ origin: LatLng }> = ({ origin }) => 
       }).join('; ') || null);
     };
     tick();
+    void refreshTopPlayersForZoe().catch(() => {});
     const t = setInterval(tick, 5000);
-    return () => { clearInterval(t); setAmbientContext({ activeVRLocation: null }); setAmbientExtra('VR nearby places', null); setAmbientExtra('VR friends nearby', null); };
+    const lt = setInterval(() => void refreshTopPlayersForZoe().catch(() => {}), 60_000);
+    return () => { clearInterval(t); clearInterval(lt); setAmbientContext({ activeVRLocation: null }); setAmbientExtra('VR nearby places', null); setAmbientExtra('VR friends nearby', null); };
   }, [camera, origin]);
   return null;
 };
