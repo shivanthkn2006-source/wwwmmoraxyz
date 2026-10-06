@@ -10,6 +10,7 @@ import { restoreStamina, getStamina } from '@/lib/vrWalk';
 import { readSave, writeSave, type VRSave } from '@/lib/vrSaveGame';
 import { setAmbientExtra } from '@/services/zoe-agent/ambientContext';
 import { recordVRCollect } from '@/lib/vrQuests';
+import { playPickup } from '@/lib/vrSfx';
 
 export type PickupKind = 'herb' | 'coin';
 export type Pickup = { id: string; kind: PickupKind; amount: number; pos: [number, number, number] };
@@ -33,6 +34,7 @@ export function takePickup(p: Pickup) {
   if (isTaken(p.id)) return;
   st = { ...st, taken: [...st.taken, p.id].slice(-2000), herbs: st.herbs + (p.kind === 'herb' ? p.amount : 0), coins: st.coins + (p.kind === 'coin' ? p.amount : 0) };
   emit();
+  playPickup(p.kind);
   void recordVRCollect({ type: p.kind === 'herb' ? 'green_herb' : 'antique_coin', rarity: p.kind === 'coin' && p.amount >= 5 ? 'rare' : 'common' });
   if (p.kind === 'coin') void supabase.rpc('earn_activity_karma' as never, { p_kind: 'vr_coin', p_units: p.amount } as never).then(() => {}, () => {});
 }

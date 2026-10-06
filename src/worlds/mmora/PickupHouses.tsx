@@ -8,6 +8,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { registerUse } from '@/lib/vrUse';
 import { MMoraSigns } from './MMoraSigns';
+import { setStaticSolids, boxPoly } from '@/lib/vrSolids';
 import { usePickups, takePickup, isTaken, type Pickup } from '@/lib/vrPickups';
 
 const HOUSE_W = 5, HOUSE_D = 5, HOUSE_H = 3;
@@ -29,8 +30,8 @@ const M = {
   pot: new THREE.MeshStandardMaterial({ color: '#5a2e24', roughness: 0.8 }),
   soil: new THREE.MeshStandardMaterial({ color: '#2b1f16', roughness: 1 }),
   stem: new THREE.MeshStandardMaterial({ color: '#9fc28a', roughness: 0.7 }),
-  leaf: new THREE.MeshStandardMaterial({ color: '#4f8a3a', roughness: 0.65, side: THREE.DoubleSide, emissive: '#16300f', emissiveIntensity: 0.35 }),
-  coin: new THREE.MeshStandardMaterial({ color: '#d8b456', metalness: 0.9, roughness: 0.28, emissive: '#5a4210', emissiveIntensity: 0.35 }),
+  leaf: new THREE.MeshStandardMaterial({ color: '#4f8a3a', roughness: 0.65, side: THREE.DoubleSide, emissive: '#3fae2a', emissiveIntensity: 0.7 }),
+  coin: new THREE.MeshStandardMaterial({ color: '#ffd24a', metalness: 0.85, roughness: 0.22, emissive: '#c8901a', emissiveIntensity: 1.1 }),
 };
 const GLOW_G = new THREE.MeshBasicMaterial({ color: '#5fb04a', transparent: true, opacity: 0.45, depthWrite: false });
 const GLOW_C = new THREE.MeshBasicMaterial({ color: '#e3c15a', transparent: true, opacity: 0.45, depthWrite: false });
@@ -115,6 +116,11 @@ export const PickupHouses: React.FC = () => {
   const p = usePickups();
   const [doors, setDoors] = React.useState<string[]>(readDoors);
   useEffect(() => { try { localStorage.setItem(DOORS_KEY, JSON.stringify(doors)); } catch { /* */ } }, [doors]);
+  // Closed houses are solid: you stop at the walls; open the door with Use to walk in.
+  useEffect(() => {
+    setStaticSolids(HOUSES.map(([x, z, r], i) => (doors.includes(`h${i}`) ? null : boxPoly(x, z, HOUSE_W, HOUSE_D, r))).filter(Boolean) as ReturnType<typeof boxPoly>[]);
+    return () => setStaticSolids([]);
+  }, [doors]);
 
   useEffect(() => registerUse(() => {
     const c = camera.position;

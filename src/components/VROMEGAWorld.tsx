@@ -114,6 +114,7 @@ import VRGamepadHUD from './vr/VRGamepadHUD';
 import { RealMapWorld } from '@/worlds/realmap/RealMapWorld';
 import { JourneyTracker } from '@/worlds/JourneyTracker';
 import { PortalDoorway } from '@/worlds/portal/PortalDoorway';
+import { resolveMove } from '@/lib/vrSolids';
 import { VRWorldList } from '@/components/vr/VRWorldList';
 import { useWorldState, returnToReal, RETURN_PORTAL_POS, getWorldState, entryHeight } from '@/worlds/worldMode';
 import { LandscapeViewportGuard } from './vr/LandscapeViewportGuard';
@@ -1061,7 +1062,13 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
     direction.current.applyEuler(euler);
 
     velocity.current.lerp(direction.current.multiplyScalar(speed), dt * 7);
-    camera.position.add(velocity.current.clone().multiplyScalar(dt));
+    {
+      const px = camera.position.x, pz = camera.position.z;
+      camera.position.add(velocity.current.clone().multiplyScalar(dt));
+      // Walls and buildings stop you, like the real world.
+      const [rx, rz] = resolveMove(px, pz, camera.position.x, camera.position.z, camera.position.y);
+      camera.position.x = rx; camera.position.z = rz;
+    }
 
     if (isGroundLocked.current) {
       if (jump && camera.position.y <= 1.62) {
