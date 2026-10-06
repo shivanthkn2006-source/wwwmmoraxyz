@@ -30,12 +30,13 @@ export const AIAuditPanel = () => {
       }
 
       const response = await fetch(
-        `https://gpxuuydvlnuajqkroobp.supabase.co/functions/v1/request-ai-audit`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/request-ai-audit`,
         {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${session.access_token}`,
             'Content-Type': 'application/json',
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
           },
           body: JSON.stringify({ analyze })
         }
@@ -71,7 +72,7 @@ export const AIAuditPanel = () => {
   };
 
   const pollJobStatus = async (id: string) => {
-    const maxAttempts = 60;
+    const maxAttempts = 120;
     let attempts = 0;
 
     const poll = setInterval(async () => {
@@ -115,7 +116,7 @@ export const AIAuditPanel = () => {
       } catch (error) {
         console.error('Polling error:', error);
       }
-    }, 1000);
+    }, 2000);
   };
 
   const fetchJobReport = async (id: string) => {

@@ -15,14 +15,17 @@ Deno.serve(async (req) => {
   const caller = await requireCaller(req, 'admin');
   if (caller instanceof Response) return caller;
 
+  let failJobId: string | undefined;
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const payload = await req.json();
+    const payload = await req.json().catch(() => ({}));
     const { admin_user_id, job_id, analyze } = payload.record || payload;
 
+    failJobId = job_id;
+    if (!job_id) throw new Error('job_id required');
     console.log(`[Worker] Starting audit job ${job_id} for admin ${admin_user_id}`);
 
     // Update job status to RUNNING
@@ -105,48 +108,71 @@ Deno.serve(async (req) => {
     if (analyze) {
       console.log('[Worker] Running AI analysis...');
       
-      const lovableApiKey = sovereignKey();
+      const lovableApiKey = Deno.env.get('LOVABLE_API_KEY') || sovereignKey();
       if (!lovableApiKey) {
-        throw new Error('SOVEREIGN_AI_KEY not configured');
+        throw new Error('AI key not configured');
       }
 
       const systemPrompt = `You are an expert platform architect analyzing the "Universe of Life" platform. 
 Provide comprehensive analysis focusing on: architecture quality, security posture, revenue readiness, scalability, and technical debt.
 Format your response as structured analysis with clear sections and actionable recommendations.`;
 
-      const userPrompt = `Analyze this platform audit data and provide detailed insights:\n\n${JSON.stringify(auditData, null, 2)}`;
+      const userPrompt = `Analyze this platform audit data and provide detailed insights:\n\n${JSON.stringify(auditData).slice(0, 60000)}`;
 
-      const aiResponse = await fetch('https://api.lovable.app/v1/ai-gateway', {
+      const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/responses', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${lovableApiKey}`,
+          'Lovable-API-Key': lovableApiKey,
+          'X-Lovable-AIG-SDK': 'fetch',
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'google/gemini-3-pro-preview',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt }
-          ],
-          temperature: 0.7,
-          max_tokens: 4000
+          model: 'openai/gpt-6-astra',
+          stream: true,
+          store: false,
+          reasoning: { effort: 'low' },
+          instructions: systemPrompt + ' Keep the answer under about 1500 words.',
+          input: userPrompt,
         }),
       });
 
-      if (!aiResponse.ok) {
-        throw new Error(`AI Gateway failed: ${aiResponse.statusText}`);
+      if (!aiResponse.ok || !aiResponse.body) {
+        throw new Error(`AI Gateway failed [${aiResponse.status}]: ${(await aiResponse.text()).slice(0, 300)}`);
       }
 
-      const aiResult = await aiResponse.json();
-      const aiAnalysis = aiResult.choices?.[0]?.message?.content || 'Analysis unavailable';
+      // Read the streamed answer.
+      let aiAnalysis = '';
+      let tokensUsed: number | undefined;
+      const reader = aiResponse.body.getReader();
+      const dec = new TextDecoder();
+      let buf = '';
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        let i;
+        while ((i = buf.indexOf('\n')) >= 0) {
+          const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
+          if (!line.startsWith('data:')) continue;
+          const d = line.slice(5).trim();
+          if (!d || d === '[DONE]') continue;
+          try {
+            const ev = JSON.parse(d);
+            if (ev.type === 'response.output_text.delta') aiAnalysis += ev.delta ?? '';
+            if (ev.type === 'response.completed') tokensUsed = ev.response?.usage?.total_tokens;
+            if (ev.type === 'response.failed' || ev.type === 'error') throw new Error('AI analysis failed');
+          } catch (e) { if (e instanceof Error && e.message === 'AI analysis failed') throw e; }
+        }
+      }
+      if (!aiAnalysis) aiAnalysis = 'Analysis unavailable';
 
       reportData = {
         auditData,
         aiAnalysis,
         analysisMetadata: {
-          model: 'google/gemini-3-pro-preview',
+          model: 'openai/gpt-6-astra',
           completedAt: new Date().toISOString(),
-          tokensUsed: aiResult.usage?.total_tokens
+          tokensUsed
         }
       };
     }
@@ -177,6 +203,10 @@ Format your response as structured analysis with clear sections and actionable r
 
   } catch (error) {
     console.error('[Worker] Error:', error);
+    if (failJobId) {
+      const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+      await sb.from('job_queue').update({ status: 'FAILED', updated_at: new Date().toISOString() }).eq('id', failJobId);
+    }
     
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 

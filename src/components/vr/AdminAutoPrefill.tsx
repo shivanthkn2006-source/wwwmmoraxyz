@@ -41,16 +41,8 @@ export const AdminAutoPrefill: React.FC = () => {
     const t = setTimeout(() => setSummary(null), 30_000);
     return () => clearTimeout(t);
   }, [p.running, p.total, p.perCity]);
-  if (!admin) return null;
-  if (!p.running) return summary ? (
-    <div role="status" className="pointer-events-none fixed bottom-3 left-1/2 z-[9994] -translate-x-1/2 surface-warm-tan rounded-2xl px-3 py-2 text-[10px] text-white whitespace-pre-line">
-      South India maps ready{'\n'}{summary}
-    </div>
-  ) : null;
-  return (
-    <div role="status" className="pointer-events-none fixed bottom-3 left-1/2 z-[9994] -translate-x-1/2 surface-warm-tan rounded-full px-3 py-1 text-[10px] text-white">
-      Preparing South India maps · {p.city} · {p.done}/{p.total}
-    </div>
-  );
+  // Runs silently in the background — never shown on screen.
+  void summary;
+  return null;
 };
 export default AdminAutoPrefill;
