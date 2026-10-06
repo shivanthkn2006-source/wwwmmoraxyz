@@ -132,7 +132,7 @@ export function loadLayout(): PadLayout {
   try {
     const v = JSON.parse(localStorage.getItem(LAYOUT_KEY) || '{}');
     return { opacity: clamp(v.opacity ?? 0.7, 0.2, 1), scale: clamp(v.scale ?? 1, 0.7, 1.4) };
-  } catch { return { opacity: 0.7, scale: 1 }; }
+  } catch { return { opacity: 1, scale: 1 }; }
 }
 export function saveLayout(l: PadLayout) { try { localStorage.setItem(LAYOUT_KEY, JSON.stringify(l)); } catch { /* private mode */ } }
 const clamp = (n: number, a: number, b: number) => Math.min(b, Math.max(a, Number(n) || a));

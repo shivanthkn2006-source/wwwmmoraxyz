@@ -7,7 +7,6 @@ import { useNight, toggleFlashlight } from './NightMode';
  * The existing move and look sticks stay as they are.
  */
 import React, { useEffect, useRef, useState } from 'react';
-import { Backpack, Menu, SlidersHorizontal } from 'lucide-react';
 import {
   buttonDown, DPAD, FACE_GLYPHS, fireAction, GAMEPAD_BUTTONS, hatToDpad, HELD_ACTIONS, L3_SPRINT_TOGGLE, loadLayout,
   padFamily, pickActivePad, pressKey, radial, rumble, saveLayout, stickToKeys, type PadFamily, type PadLayout, type VRAction,
@@ -50,7 +49,7 @@ const RunToggle: React.FC<{ glyph?: string }> = ({ glyph }) => {
   const flip = (e: React.PointerEvent) => { e.preventDefault(); e.stopPropagation(); onRef.current = !onRef.current; fireAction('run', onRef.current); setOn(onRef.current); };
   return (
     <button type="button" aria-label={on ? 'Run on (tap to walk)' : 'Run (tap to toggle)'} aria-pressed={on} data-exclude-phantom-tap onPointerDown={flip}
-      className={`${faceText} absolute right-0 top-1/2 h-12 w-12 -translate-y-1/2 rounded-full text-[10px] ${on ? 'underline underline-offset-4' : ''}`}>
+      className={`${faceText} absolute right-1 top-1/2 h-10 w-10 -translate-y-1/2 text-[11px] ${on ? 'underline underline-offset-4' : ''}`}>
       {glyph ? <span className="flex flex-col items-center leading-none"><span className="text-[11px] font-semibold">{glyph}</span><span>{on ? 'Run on' : 'Run'}</span></span> : (on ? 'Run on' : 'Run')}
     </button>
   );
@@ -86,7 +85,7 @@ export const VRGamepadHUD: React.FC = () => {
   const [pad, setPad] = useState<PadFamily | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [bagOpen, setBagOpen] = useState(false);
-  const [faceOpen, setFaceOpen] = useState(false);
+  const [faceOpen, setFaceOpen] = useState(true);
   useEffect(() => { void pullCloud(); }, []);
   const toastTimer = useRef<number>();
   const say = (msg: string, ms = 1400) => {
@@ -97,8 +96,10 @@ export const VRGamepadHUD: React.FC = () => {
   // Bag: ≡-style button, View/Share on a controller, or the 'vr-open-bag' event.
   useEffect(() => {
     const on = () => setBagOpen((v) => !v);
+    const ed = () => setEditing((v) => !v);
     window.addEventListener('vr-open-bag', on);
-    return () => window.removeEventListener('vr-open-bag', on);
+    window.addEventListener('vr-edit-layout', ed);
+    return () => { window.removeEventListener('vr-open-bag', on); window.removeEventListener('vr-edit-layout', ed); };
   }, []);
 
   // Quest finished: toast + strong rumble (the bell alert is sent by the quest store).
@@ -192,35 +193,29 @@ export const VRGamepadHUD: React.FC = () => {
   const s = layout.scale;
   return (
     <div className="pointer-events-none fixed inset-0 z-[60]" style={{ opacity: layout.opacity }} data-testid="vr-gamepad-hud">
-      {/* Shoulder buttons */}
+      {/* Shoulder: L / Crouch / Light top-left; R sits above the 360 pad (bottom-left) */}
       <div className="pointer-events-auto absolute left-4 top-24" style={{ transform: `scale(${s})`, transformOrigin: 'top left' }}>
         <Btn action="camera" label="L" aria="Switch camera" className="h-11 w-14 rounded-t-2xl rounded-b-lg text-sm font-semibold" />
         <CrouchBtn />
         <LightBtn />
       </div>
-      <div className="pointer-events-auto absolute right-4 top-24" style={{ transform: `scale(${s})`, transformOrigin: 'top right' }}>
-        <Btn action="zoom" label="R" aria="Zoom lens" className="h-11 w-14 rounded-t-2xl rounded-b-lg text-sm font-semibold" />
+      <div className="pointer-events-auto absolute bottom-[15.5rem] left-[3.25rem]" style={{ transform: `scale(${s})`, transformOrigin: 'bottom left' }}>
+        <Btn plain action="zoom" label="R" aria="Zoom lens" className="h-9 w-9 text-base" />
       </div>
 
-      {/* Menu + layout */}
-      <div className="pointer-events-auto absolute right-24 top-24 flex gap-2" style={{ transform: `scale(${s})`, transformOrigin: 'top right' }}>
-        <button type="button" aria-label="Open item bag" data-exclude-phantom-tap className={`${ring} h-10 w-10 rounded-full`} onClick={() => setBagOpen(v => !v)}><Backpack className="h-4 w-4" /></button>
-        <button type="button" aria-label="Open VR menu" data-exclude-phantom-tap className={`${ring} h-10 w-10 rounded-full`} onClick={() => fireAction('menu')}><Menu className="h-4 w-4" /></button>
-        <button type="button" aria-label="Edit control layout" data-exclude-phantom-tap className={`${ring} h-10 w-10 rounded-full`} onClick={() => setEditing(v => !v)}><SlidersHorizontal className="h-4 w-4" /></button>
+      {/* Face buttons: small centre circle with Jump / Zoe / Run / Use close around it (bottom-right) */}
+      <div className="vr-face-diamond pointer-events-auto absolute bottom-[90px] right-2 h-32 w-32" style={{ transform: `scale(${s})`, transformOrigin: 'bottom right' }}>
+        <button type="button" aria-label={faceOpen ? 'Hide action buttons' : 'Show action buttons'} aria-expanded={faceOpen} data-exclude-phantom-tap onClick={() => setFaceOpen((v) => !v)}
+          className="absolute left-1/2 top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/90 bg-transparent" />
+        <div className={`transition-opacity duration-200 ${faceOpen ? 'opacity-100' : 'pointer-events-none opacity-0'}`} aria-hidden={!faceOpen}>
+          <Btn plain action="jump" label="Jump" hold aria="Jump" glyph={pad ? FACE_GLYPHS[pad].jump : undefined} className="absolute left-1/2 top-1 h-10 w-12 -translate-x-1/2 text-[11px]" />
+          <Btn plain action="zoe" label="Zoe" aria="Ask Zoe" glyph={pad ? FACE_GLYPHS[pad].zoe : undefined} className="absolute left-1 top-1/2 h-10 w-10 -translate-y-1/2 text-[11px]" />
+          <RunToggle glyph={pad ? FACE_GLYPHS[pad].run : undefined} />
+          <Btn plain action="interact" label="Use" aria="Pick up or interact" glyph={pad ? FACE_GLYPHS[pad].interact : undefined} className="absolute bottom-1 left-1/2 h-10 w-12 -translate-x-1/2 text-[11px]" />
+        </div>
       </div>
+      <div className="absolute bottom-[13rem] right-2 h-4 w-32"><StaminaMeter /></div>
 
-      {/* Face buttons (diamond) above the look stick */}
-      <button type="button" aria-label={faceOpen ? 'Hide action buttons' : 'Show action buttons'} aria-expanded={faceOpen} data-exclude-phantom-tap onClick={() => setFaceOpen((v) => !v)}
-        className={`${faceText} pointer-events-auto absolute bottom-[14.5rem] right-4 h-10 w-10 text-xl`}>{faceOpen ? '›' : '◇'}</button>
-      <div className={`vr-face-diamond pointer-events-auto absolute bottom-52 right-16 h-36 w-36 transition-all duration-200 ${faceOpen ? 'opacity-100 translate-x-0' : 'pointer-events-none opacity-0 translate-x-8'}`} style={{ transform: `scale(${s})`, transformOrigin: 'bottom right' }} aria-hidden={!faceOpen}>
-        <Btn plain action="jump" label="Jump" hold aria="Jump" glyph={pad ? FACE_GLYPHS[pad].jump : undefined} className="absolute left-1/2 top-0 h-12 w-12 -translate-x-1/2 rounded-full text-[10px]" />
-        <Btn plain action="zoe" label="Zoe" aria="Ask Zoe" glyph={pad ? FACE_GLYPHS[pad].zoe : undefined} className="absolute left-0 top-1/2 h-12 w-12 -translate-y-1/2 rounded-full text-[10px]" />
-        <RunToggle glyph={pad ? FACE_GLYPHS[pad].run : undefined} />
-        <Btn plain action="interact" label="Use" aria="Pick up or interact" glyph={pad ? FACE_GLYPHS[pad].interact : undefined} className="absolute bottom-0 left-1/2 h-12 w-12 -translate-x-1/2 rounded-full text-[10px]" />
-      </div>
-      <div className="absolute bottom-[13.5rem] right-16 h-4 w-36"><StaminaMeter /></div>
-
-      <VRMiniMap onToast={(m) => say(m, 1800)} />
       <UseHint />
       {toast && <div className="absolute bottom-40 left-1/2 -translate-x-1/2 rounded-full surface-warm-tan px-3 py-1 text-xs text-foreground">{toast}</div>}
       {bagOpen && <VRBagPanel onClose={() => setBagOpen(false)} />}
@@ -239,7 +234,7 @@ export const VRGamepadHUD: React.FC = () => {
             </div>
           ))}
           <div className="flex justify-between">
-            <button type="button" className="text-xs underline" onClick={() => setLayout({ opacity: 0.7, scale: 1 })}>Reset</button>
+            <button type="button" className="text-xs underline" onClick={() => setLayout({ opacity: 1, scale: 1 })}>Reset</button>
             <button type="button" className="text-xs underline" onClick={() => setEditing(false)}>Done</button>
           </div>
         </div>
