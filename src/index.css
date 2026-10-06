@@ -7293,3 +7293,4 @@ html body .vr-gem-core { animation-duration: 4s !important; }
 
 /* VR shoulder rows: L (left) and R (right) at exactly the same height. */
 .vr-shoulder-row { top: 52%; }
+@media (max-height: 520px) { .vr-shoulder-row { top: 58%; } }
