@@ -86,7 +86,7 @@ describe('controller spec helpers', () => {
 describe('simulated controllers driving VR World', () => {
   it('Xbox pad: sticks, D-pad, face buttons, triggers and View reach the world', () => {
     const k = keyLog(); const ev: string[] = [];
-    for (const n of ['vr-interact', 'vr-open-menu', 'zoe-show-orb', 'vr-camera-look']) window.addEventListener(n, () => ev.push(n));
+    for (const n of ['vr-interact', 'vr-open-menu', 'vr-show-feature', 'vr-camera-look']) window.addEventListener(n, () => ev.push(n));
     const pad = mkPad(XBOX); pads = [pad];
     render(<VRGamepadHUD />);
     act(() => { window.dispatchEvent(Object.assign(new Event('gamepadconnected'), { gamepad: pad })); });
@@ -104,7 +104,7 @@ describe('simulated controllers driving VR World', () => {
     act(() => { press(pad, 2); frame(); release(pad, 2); frame(); });      // X → Zoe
     act(() => { press(pad, 8); frame(); release(pad, 8); frame(); });      // View → bag
     expect(k.log).toEqual(expect.arrayContaining(['keydown:KeyW', 'keyup:KeyW', 'keydown:KeyD', 'keyup:KeyD', 'keydown:Space', 'keyup:Space', 'keydown:KeyZ']));
-    expect(ev).toEqual(expect.arrayContaining(['vr-camera-look', 'vr-interact', 'vr-open-menu', 'zoe-show-orb']));
+    expect(ev).toEqual(expect.arrayContaining(['vr-camera-look', 'vr-interact', 'vr-open-menu', 'vr-show-feature']));
     expect(screen.getByRole('dialog', { name: /item bag/i })).toBeInTheDocument();
     // Interact fired exactly once for one press (no repeat while held).
     expect(ev.filter((e) => e === 'vr-interact')).toHaveLength(1);
