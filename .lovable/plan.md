@@ -1,46 +1,39 @@
-# Clean VR World controls for phones (landscape and portrait)
+# Clean VR World controls for phones (your exact layout)
 
 ## What's wrong today (seen in your screenshot)
-- The left side stacks R, Chat, the move stick, Crouch and Light on top of each other, so touching the stick often hits another button and the avatar doesn't move.
-- The right side puts Jump / Zoe / Run / Use under the round map, so they overlap.
-- The big map's Close button sits below the screen edge in landscape, so the big map can't be closed.
-- There's no on-screen guide showing which button is where.
+- On the left, R, Chat, the move stick, Crouch and Light are stacked on top of each other. Touches land on the wrong button, so the avatar doesn't move.
+- On the right, Jump / Zoe / Run / Use sit under the round map.
+- The big map's Close button is below the screen edge in landscape, so the big map can't be closed.
 
-## New layout (one fixed layout, nothing overlapping)
+## New layout
 
 ```text
- [Search] [Chat]            [time | compass] [v strip]          [round map]
-                                                                 (tap = big map)
- [L] [Crouch] [Light]                                         
+ [Search] [Chat]          [time | compass] [v strip]            [round map]
 
-                                                                   [R]
-   ( MOVE STICK )                                    [Jump]
-   bottom-left, big,                          [Zoe] (  o  ) [Run]
-   nothing else near it                              [Use]
-                                         [ 360 ]  bottom-right,
-                                                  under the map, not over it
+ [L] [▾ Crouch/Light]                               [▾ Jump/Zoe/Run/Use] [R]
+      (L and R are at exactly the same height, mirrored on each side)
+
+   ( MOVE STICK )                                              ( 360 PAD )
+   medium size, clear area around it                          bottom-right
 ```
 
-- **Left half, bottom:** only the move stick, larger, with a clear zone around it. Drag anywhere in the bottom-left quarter to move, so a slightly off touch still works.
-- **Left, top (under Search/Chat):** L, Crouch and Light in one small row.
-- **Right, bottom:** Jump / Zoe / Run / Use diamond, with the 360 turn pad just to its left and R just above it.
-- **Right, top:** the round map shrinks a little in landscape so it always ends above the buttons.
-- **Arrow keys** on laptops keep working as now; on phones the arrows sit on the 360 pad.
-- **Big map:** the Close (X) button moves to the top corner of the big map, inside the screen. Tapping outside the big map or pressing Back also closes it.
-
-## Control guide
-- A new "Controls" button in the top strip opens a one-screen picture of the layout, with every button labelled ("Move", "Turn", "Jump", "Use = open doors, pick up items", and so on).
-- It shows automatically the first time someone enters VR World, then only when tapped.
+- **Left bottom:** the move stick at medium size, with nothing else near it.
+- **Left top:** L, then just to its right a small dropdown button. Tapping it opens Crouch and Light; tapping again closes it.
+- **Right bottom:** the 360 turn pad on its own.
+- **Right, above the 360 pad:** a small dropdown button with Jump, Zoe, Run and Use inside. R sits just to its right, at exactly the same height and edge distance as L on the left, so the two sides mirror each other.
+- **Right top:** stays as it is, with the round map kept clear of the buttons below.
+- **Big map:** the Close (X) button moves to its top corner, inside the screen. Tapping outside the map also closes it.
+- Nothing else changes, and every button still does what it does now.
 
 ## How it will be checked
-- Open VR World in a test browser at phone sizes (landscape 852x393 and portrait 393x852) and take screenshots. Confirm no buttons overlap, and that dragging the move stick actually moves the avatar.
-- Open the big map, close it with X, and confirm it's gone.
-- Open the Controls guide and confirm it matches the real layout.
+- Open VR World in a test browser at phone sizes (landscape 852x393 and portrait 393x852) and take screenshots.
+- Confirm L and R are at the same height, no buttons overlap, and the move stick area is clear.
+- Drag the move stick and confirm the avatar actually moves.
+- Open each dropdown and use a button from it.
+- Open the big map and close it with X.
 - Send you the screenshots.
 
 ## Technical details
-- `VRGamepadHUD.tsx`: reposition the groups with safe-area-aware anchors, plus a landscape media query (short screen height) that tightens spacing. The move stick gets its own exclusive bottom-left zone, with no other buttons inside it.
-- `VRMiniMap.tsx`: in landscape, cap the size to about 40% of screen height. Put the big map's close button in its top-right corner, close on outside tap or Escape, and cap the big map at 85% of the screen height including its controls.
-- Use the existing `/vr-harness` test page for the checks; it needs no sign-in.
-- New `VRControlsGuide.tsx`, opened from the top strip, with a seen-once flag saved on the device.
-- No change to what any button does, only where it sits.
+- `VRGamepadHUD.tsx`: reposition the groups with shared top offsets and matching left/right edge offsets, so L and R mirror exactly. Two small dropdown groups hold Crouch/Light and Jump/Zoe/Run/Use, and the move stick gets its own clear zone.
+- `VRMiniMap.tsx`: put the big map's close button in its top corner, close on outside tap or Escape, and keep the big map's height within the screen in landscape.
+- Checks run on the existing `/vr-harness` test page, which needs no sign-in.
