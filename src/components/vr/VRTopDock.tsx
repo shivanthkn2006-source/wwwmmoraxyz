@@ -197,6 +197,7 @@ const ITEMS: Item[] = [
   { id: 'inventory', label: 'Inventory', icon: Backpack, how: 'Items you own in VR World.' },
   { id: 'wallet', label: 'Wallet', icon: Wallet, how: 'Karma and credits.' },
   { id: 'online', label: 'Online', icon: Users, how: 'How many people are in the world with you.' },
+  { id: 'check', label: 'Check', icon: Gauge, how: 'Run end-to-end check and see top players.' },
   { id: 'admin', label: 'Admin', icon: Shield, how: 'Enterprise control deck (admin only).' },
   { id: 'debug', label: 'Debug', icon: Bug, how: 'Debug panel (Ctrl+Shift+D).' },
   { id: 'exit', label: 'Exit', icon: LogOut, how: 'Return to reality.' },

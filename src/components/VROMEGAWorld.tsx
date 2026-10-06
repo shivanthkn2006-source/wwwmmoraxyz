@@ -3077,8 +3077,8 @@ const VRLiveClock: React.FC = () => {
               <ItemCloseUp />
               <StoryNoteReader />
               <NightAmbience />
-              <VREndToEndCheck />
-              <VRAdminConsole />
+              <VRFeature id="check"><VREndToEndCheck /></VRFeature>
+              <VRFeature id="admin"><VRAdminConsole /></VRFeature>
               <VRMeetChat />
               <VRWorldSearch />
               <VRFeature id="extras" part="bike">
