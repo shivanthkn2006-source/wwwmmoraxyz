@@ -7,6 +7,7 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { registerUse } from '@/lib/vrUse';
+import { MMoraSigns } from './MMoraSigns';
 import { usePickups, takePickup, isTaken, type Pickup } from '@/lib/vrPickups';
 
 const HOUSE_W = 5, HOUSE_D = 5, HOUSE_H = 3;
@@ -144,6 +145,10 @@ export const PickupHouses: React.FC = () => {
           {coin && <mesh position={[x + 0.6, HOUSE_H + 3, z]} material={GLOW_C}><cylinderGeometry args={[0.35, 0.35, 6, 8, 1, true]} /></mesh>}
         </React.Fragment>;
       })}
+      <MMoraSigns />
+      {left.filter((k) => k.id.startsWith('path-herb')).map((k) => (
+        <mesh key={`gl-${k.id}`} position={[k.pos[0], 2.5, k.pos[2]]} material={GLOW_G}><cylinderGeometry args={[0.2, 0.2, 4, 6, 1, true]} /></mesh>
+      ))}
       {left.map((k) => (
         <group key={k.id} position={k.pos}>
           {k.kind === 'herb' ? <GreenHerb potted={k.id.startsWith('house')} /> : <CoinStack n={k.amount} />}

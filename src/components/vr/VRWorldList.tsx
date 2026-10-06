@@ -6,6 +6,7 @@ import React, { useEffect, useState, useSyncExternalStore } from 'react';
 import { Leaf, Coins, Gem, Home, DoorOpen, Signpost, Store, Droplets, MapPin, X } from 'lucide-react';
 import { usePickups } from '@/lib/vrPickups';
 import { ALL_PICKUPS, HOUSES } from '@/worlds/mmora/PickupHouses';
+import { MMORA_SIGNS } from '@/worlds/mmora/MMoraSigns';
 import { mapBlocks, useMapVersion } from '@/worlds/realmap/mapIndex';
 import { relicsForBlock, today } from '@/worlds/realmap/streetRelics';
 import { getStreetHouses } from '@/worlds/realmap/StreetHouses';
@@ -42,9 +43,10 @@ export const VRWorldList: React.FC = () => {
   const rows: [string, Row[]][] = [
     ["M'Mora World", [
       { icon: Home, name: 'Houses to enter', total: HOUSES.length, used: '—', left: HOUSES.length, where: "Walk through the doorway from any city" },
-      { icon: Leaf, name: 'Green herbs', total: mHerbs.length, used: usedH, left: mHerbs.length - usedH, where: 'Tables inside houses + along paths' },
-      { icon: Coins, name: 'Antique coin piles', total: mCoins.length, used: usedC, left: mCoins.length - usedC, where: 'Tables inside houses' },
-      { icon: DoorOpen, name: 'Portal back home', total: 1, used: '—', left: 1, where: 'Next to where you arrive' },
+      { icon: Leaf, name: 'Green herbs', total: mHerbs.length, used: usedH, left: mHerbs.length - usedH, where: 'Green glow: inside houses + along paths' },
+      { icon: Coins, name: 'Antique coin piles', total: mCoins.length, used: usedC, left: mCoins.length - usedC, where: 'Gold glow above houses' },
+      { icon: Signpost, name: 'Street signs (7 ft)', total: MMORA_SIGNS.length, used: '—', left: MMORA_SIGNS.length, where: 'At the crossings between houses' },
+      { icon: DoorOpen, name: 'Portal back home', total: 1, used: '—', left: 1, where: 'Blue beam next to where you arrive' },
     ]],
     [`Real Map · ${city}`, [
       { icon: DoorOpen, name: "Portal to M'Mora World", total: 1, used: w.portalTrips, left: 1, where: 'Beside you when you arrive in any city' },
