@@ -7,7 +7,7 @@ import type { BBox } from './geo';
 import { supabase } from '@/integrations/supabase/client';
 
 export * from './osmParse';
-import { parseOverpass, MAX_BUILDINGS, type OsmChunk, type OsmBuilding, type OsmRoad, type OsmPoi } from './osmParse';
+import { parseOverpass, buildQuery, CHUNK_V, MAX_BUILDINGS, type OsmChunk, type OsmBuilding, type OsmRoad, type OsmPoi } from './osmParse';
 import { parseInWorker } from './osmWorkerBridge';
 const MIRRORS = [
   'https://overpass-api.de/api/interpreter',
