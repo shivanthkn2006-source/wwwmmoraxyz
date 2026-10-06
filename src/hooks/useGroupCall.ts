@@ -1,3 +1,4 @@
+import { invokeWithFreshSession } from '@/lib/edgeSession';
 /**
  * Group calling on top of the existing peer-to-peer engine: one peer connection per
  * other participant (a mesh), the same private signalling table, and the same
@@ -160,7 +161,7 @@ export const useGroupCall = (currentUserId: string | null) => {
 
   const refreshIceServers = useCallback(async () => {
     try {
-      const { data } = await supabase.functions.invoke('zoe-call-turn-credentials');
+      const { data } = await invokeWithFreshSession('zoe-call-turn-credentials', {});
       const servers = normalizeIceServers((data as { iceServers?: RTCIceServer[] } | null)?.iceServers);
       if (servers.length > 0) iceServersRef.current = servers;
     } catch {

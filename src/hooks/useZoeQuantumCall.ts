@@ -1,3 +1,4 @@
+import { invokeWithFreshSession } from '@/lib/edgeSession';
 // ═══════════════════════════════════════════════════════════════════════════════
 // ZOE QUANTUM CALL - PROJECT CLAIRVOYANCE
 // Ultra-low latency P2P voice + video calls secured by WebRTC DTLS-SRTP
@@ -374,7 +375,7 @@ export const useZoeQuantumCall = (currentUserId?: string) => {
   const refreshIceServers = useCallback(async (): Promise<void> => {
     if (!currentUserId) return;
     try {
-      const { data, error } = await supabase.functions.invoke('zoe-call-turn-credentials', { body: {} });
+      const { data, error } = await invokeWithFreshSession('zoe-call-turn-credentials', {});
       if (error) throw error;
       const relayServers = normalizeIceServers(data?.iceServers);
       iceServersRef.current = relayServers === FALLBACK_ICE_SERVERS
