@@ -119,37 +119,60 @@ Format your response as structured analysis with clear sections and actionable r
 
       const userPrompt = `Analyze this platform audit data and provide detailed insights:\n\n${JSON.stringify(auditData).slice(0, 60000)}`;
 
-      const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/responses', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${lovableApiKey}`,
+          'Lovable-API-Key': lovableApiKey,
+          'X-Lovable-AIG-SDK': 'fetch',
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'google/gemini-2.5-flash',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt }
-          ],
-          temperature: 0.7,
-          max_tokens: 4000
+          model: 'openai/gpt-6-astra',
+          stream: true,
+          store: false,
+          reasoning: { effort: 'low' },
+          instructions: systemPrompt + ' Keep the answer under about 1500 words.',
+          input: userPrompt,
         }),
       });
 
-      if (!aiResponse.ok) {
+      if (!aiResponse.ok || !aiResponse.body) {
         throw new Error(`AI Gateway failed [${aiResponse.status}]: ${(await aiResponse.text()).slice(0, 300)}`);
       }
 
-      const aiResult = await aiResponse.json();
-      const aiAnalysis = aiResult.choices?.[0]?.message?.content || 'Analysis unavailable';
+      // Read the streamed answer.
+      let aiAnalysis = '';
+      let tokensUsed: number | undefined;
+      const reader = aiResponse.body.getReader();
+      const dec = new TextDecoder();
+      let buf = '';
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        let i;
+        while ((i = buf.indexOf('\n')) >= 0) {
+          const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
+          if (!line.startsWith('data:')) continue;
+          const d = line.slice(5).trim();
+          if (!d || d === '[DONE]') continue;
+          try {
+            const ev = JSON.parse(d);
+            if (ev.type === 'response.output_text.delta') aiAnalysis += ev.delta ?? '';
+            if (ev.type === 'response.completed') tokensUsed = ev.response?.usage?.total_tokens;
+            if (ev.type === 'response.failed' || ev.type === 'error') throw new Error('AI analysis failed');
+          } catch (e) { if (e instanceof Error && e.message === 'AI analysis failed') throw e; }
+        }
+      }
+      if (!aiAnalysis) aiAnalysis = 'Analysis unavailable';
 
       reportData = {
         auditData,
         aiAnalysis,
         analysisMetadata: {
-          model: 'google/gemini-2.5-flash',
+          model: 'openai/gpt-6-astra',
           completedAt: new Date().toISOString(),
-          tokensUsed: aiResult.usage?.total_tokens
+          tokensUsed
         }
       };
     }
