@@ -58,7 +58,7 @@ const UseHint: React.FC = () => {
     return () => window.clearInterval(t);
   }, []);
   if (!label) return null;
-  return <div className="absolute bottom-[19rem] right-4 max-w-[12rem] text-right text-xs font-semibold text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.7)]" data-testid="vr-use-hint">Use → {label}</div>;
+  return <div className="absolute right-3 top-[calc(52%+2.25rem)] max-w-[12rem] text-right text-xs font-semibold text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.7)]" data-testid="vr-use-hint">Use → {label}</div>;
 };
 
 const Btn: React.FC<{ action: VRAction; label: string; className: string; hold?: boolean; aria: string; glyph?: string; plain?: boolean; round?: boolean }> = ({ action, label, className, hold, aria, glyph, plain, round }) => (
@@ -77,7 +77,8 @@ export const VRGamepadHUD: React.FC = () => {
   const [pad, setPad] = useState<PadFamily | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [bagOpen, setBagOpen] = useState(false);
-  const [faceOpen, setFaceOpen] = useState(true);
+  const [faceOpen, setFaceOpen] = useState(false);
+  const [leftOpen, setLeftOpen] = useState(false);
   useEffect(() => { void pullCloud(); }, []);
   const toastTimer = useRef<number>();
   const say = (msg: string, ms = 1400) => {
