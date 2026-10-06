@@ -18,8 +18,6 @@ export const HOUSES: [number, number, number][] = [
   [6, -34, 0], [44, -6, Math.PI / 2], [-42, 4, 0], [12, 40, Math.PI],
 ];
 const COIN_AMOUNTS = [1, 3, 5, 1, 3, 1, 5, 3];
-// Houses are solid: you stop at the walls and open the door with Use.
-setStaticSolids(HOUSES.map(([x, z, r]) => boxPoly(x, z, HOUSE_W, HOUSE_D, r)));
 const OUTDOOR_HERBS: [number, number][] = [[4, 10], [-8, -14], [22, 6], [-30, -2], [10, -22], [-14, 18], [36, 30], [-36, -30], [26, -28], [0, 26]];
 
 const M = {
@@ -118,6 +116,11 @@ export const PickupHouses: React.FC = () => {
   const p = usePickups();
   const [doors, setDoors] = React.useState<string[]>(readDoors);
   useEffect(() => { try { localStorage.setItem(DOORS_KEY, JSON.stringify(doors)); } catch { /* */ } }, [doors]);
+  // Closed houses are solid: you stop at the walls; open the door with Use to walk in.
+  useEffect(() => {
+    setStaticSolids(HOUSES.map(([x, z, r], i) => (doors.includes(`h${i}`) ? null : boxPoly(x, z, HOUSE_W, HOUSE_D, r))).filter(Boolean) as ReturnType<typeof boxPoly>[]);
+    return () => setStaticSolids([]);
+  }, [doors]);
 
   useEffect(() => registerUse(() => {
     const c = camera.position;
