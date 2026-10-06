@@ -14,11 +14,11 @@ const wood = new THREE.MeshStandardMaterial({ color: '#8a5a32', roughness: 0.55 
 const woodDark = new THREE.MeshStandardMaterial({ color: '#5b3a20', roughness: 0.6 });
 const inside = new THREE.MeshStandardMaterial({ color: '#c79a62', roughness: 0.8 });
 const knob = new THREE.MeshStandardMaterial({ color: '#b08a4a', metalness: 0.7, roughness: 0.35 });
-const coinMat = new THREE.MeshStandardMaterial({ color: '#ffd24a', metalness: 0.85, roughness: 0.2, emissive: '#7a5410', emissiveIntensity: 0.45 });
+const coinMat = new THREE.MeshStandardMaterial({ color: '#ffcf3a', metalness: 0.6, roughness: 0.3, emissive: '#c08a12', emissiveIntensity: 0.85 });
 // Rooms you walk between: [camera x, camera z, look x, look z, name]
 // Spots you walk between: [camera x, camera z, look x, look z, name]
 const ROOMS: [number, number, number, number, string][] = [
-  [1.6, 3.6, 1.6, 0, 'Doorway'], [0, 1.25, 0, 0, 'Hall table'], [3.2, 1.25, 3.2, 0, 'Back room drawer'],
+  [1.6, 3.6, 1.6, 0, 'Doorway'], [0, 1.7, 0, 0, 'Hall table'], [3.2, 1.25, 3.2, 0, 'Back room drawer'],
 ];
 const wall = new THREE.MeshStandardMaterial({ color: '#3b3128', roughness: 1 });
 const floor = new THREE.MeshStandardMaterial({ color: '#4a3424', roughness: 0.9 });
@@ -62,7 +62,7 @@ const CamRig: React.FC<{ at: number }> = ({ at }) => {
     const [cx, cz, lx, lz] = ROOMS[at];
     camera.position.x = THREE.MathUtils.damp(camera.position.x, cx, 2.5, dt);
     camera.position.z = THREE.MathUtils.damp(camera.position.z, cz, 2.5, dt);
-    camera.position.y = 1.4 + Math.sin(performance.now() / 180) * 0.008 * Math.min(1, Math.abs(camera.position.x - cx));
+    camera.position.y = 1.55 + Math.sin(performance.now() / 180) * 0.008 * Math.min(1, Math.abs(camera.position.x - cx));
     look.current.x = THREE.MathUtils.damp(look.current.x, lx, 2.5, dt);
     look.current.z = THREE.MathUtils.damp(look.current.z, lz, 2.5, dt);
     camera.lookAt(look.current);
