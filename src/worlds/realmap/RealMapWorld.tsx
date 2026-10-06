@@ -6,6 +6,8 @@ import { StreetTraffic } from './StreetTraffic';
 import { ThermalGovernor, useGovLevel } from './thermalGovernor';
 import { buildBuildingParts, buildRoadParts, makeWallMaterial, ROOF_MAT, ROAD_HI_MAT, PATH_MAT, LINE_MAT, CENTER_MAT } from './streetLook';
 import { MapLabels } from './MapLabels';
+import { buildWaterParts, WATER_MAT, PARK_MAT, BRIDGE_MAT } from './waterLook';
+import { StreetHouses } from './StreetHouses';
 /**
  * Real Map layer — the player's actual neighbourhood from OpenStreetMap.
  * Streams a 3×3 grid of ~200 m chunks around the camera (unloads at
@@ -106,15 +108,19 @@ const Chunk: React.FC<{ id: ChunkId; origin: LatLng; onReady: (key: string) => v
   const geo = useMemo(() => data ? {
     b: buildBuildingParts(data, origin),
     r: buildRoadParts(data, origin),
+    w: buildWaterParts(data, origin),
     pois: data.pois.map((p) => ({ ...p, ...toLocal(p, origin) })),
   } : null, [data, origin]);
 
-  useEffect(() => () => { if (!geo) return; [geo.b.walls, geo.b.roofs, geo.r.road, geo.r.path, geo.r.lines, geo.r.centre].forEach((g) => g?.dispose()); }, [geo]);
+  useEffect(() => () => { if (!geo) return; [geo.b.walls, geo.b.roofs, geo.r.road, geo.r.path, geo.r.lines, geo.r.centre, geo.w.water, geo.w.park, geo.w.deck, geo.w.rails].forEach((g) => g?.dispose()); }, [geo]);
   const level = useGovLevel();
 
   if (!geo) return null;
   return (
     <group>
+      {geo.w.park && <mesh geometry={geo.w.park} material={PARK_MAT} />}
+      {geo.w.water && <mesh geometry={geo.w.water} material={WATER_MAT} />}
+      {geo.w.deck && <mesh geometry={geo.w.deck} material={BRIDGE_MAT} />}
       {geo.r.road && <mesh geometry={geo.r.road} material={ROAD_HI_MAT} receiveShadow />}
       {geo.r.path && <mesh geometry={geo.r.path} material={PATH_MAT} />}
       {geo.r.lines && <mesh geometry={geo.r.lines} material={LINE_MAT} />}
@@ -271,6 +277,7 @@ export const RealMapWorld: React.FC = () => {
       {origin.status === 'ready' && <ChunkStreamer origin={origin.origin} />}
       {origin.status === 'ready' && <StreetRelics origin={origin.origin} />}
       {origin.status === 'ready' && <MapLabels origin={origin.origin} />}
+      {origin.status === 'ready' && <StreetHouses origin={origin.origin} />}
       {origin.status === 'ready' && <StreetTraffic origin={origin.origin} />}
       {origin.status === 'ready' && <ZoeStreetAwareness origin={origin.origin} />}
       <ThermalGovernor />
