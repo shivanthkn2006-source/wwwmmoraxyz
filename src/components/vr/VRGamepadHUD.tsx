@@ -216,6 +216,7 @@ export const VRGamepadHUD: React.FC = () => {
       </div>
       <div className="absolute bottom-[13rem] right-2 h-4 w-32"><StaminaMeter /></div>
 
+      <VRMiniMap onToast={(m) => say(m, 1800)} />
       <UseHint />
       {toast && <div className="absolute bottom-40 left-1/2 -translate-x-1/2 rounded-full surface-warm-tan px-3 py-1 text-xs text-foreground">{toast}</div>}
       {bagOpen && <VRBagPanel onClose={() => setBagOpen(false)} />}
