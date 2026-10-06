@@ -162,9 +162,9 @@ export const VRMiniMap: React.FC<{ onToast?: (s: string) => void }> = ({ onToast
       const w = getWorldState();
       if (w.origin.status !== 'ready') return;
       const l = w.mode === 'real' ? (w.origin.label || `${w.origin.origin.lat.toFixed(2)},${w.origin.origin.lng.toFixed(2)}`) : "M'Mora World";
-      if (l !== label) { label = l; cells = readEx(l); }
+      if (l !== label || cells.size === 0) { label = l; cells = readEx(l); }
       const id = `${Math.round(pose.x / CELL)},${Math.round(pose.z / CELL)}`;
-      if (!cells.has(id)) { cells.add(id); try { localStorage.setItem(exKey(l), JSON.stringify([...cells].slice(-5000))); } catch { /* */ } }
+      if (!cells.has(id)) { cells.add(id); try { localStorage.setItem(exKey(l), JSON.stringify([...cells].slice(-5000))); window.dispatchEvent(new Event('vr-explore-changed')); } catch { /* */ } }
       setExplored(cells.size);
       const st = w.mode === 'real' ? nearestStreet(pose.x, pose.z, w.origin.origin) : null;
       setStreet(st);

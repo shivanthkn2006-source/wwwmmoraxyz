@@ -82,9 +82,10 @@ export const MapLabels: React.FC<{ origin: LatLng }> = ({ origin }) => {
       {shown.map((l) => l.kind === 'street' ? (
         <group key={l.id} position={[l.x, 0, l.z]} rotation={[0, l.rot ?? 0, 0]}>
           {/* T-shaped street sign: pole + black board with white name */}
-          <mesh position={[0, 1.75, 0]} material={POLE}><cylinderGeometry args={[0.08, 0.08, 3.5, 6]} /></mesh>
-          <mesh position={[0, 3.6, 0]} material={BOARD}><boxGeometry args={[3.4, 0.7, 0.08]} /></mesh>
-          <Html position={[0, 3.6, 0.06]} center zIndexRange={[5, 0]} style={{ pointerEvents: 'none' }}>
+          {/* Standard 7 ft (2.13 m) street sign: board top at 7 ft */}
+          <mesh position={[0, 1.065, 0]} material={POLE}><cylinderGeometry args={[0.06, 0.06, 2.13, 6]} /></mesh>
+          <mesh position={[0, 1.88, 0]} material={BOARD}><boxGeometry args={[2.6, 0.5, 0.06]} /></mesh>
+          <Html position={[0, 1.88, 0.05]} center zIndexRange={[5, 0]} style={{ pointerEvents: 'none' }}>
             <div className="vr-street-sign">{l.text}</div>
           </Html>
         </group>
