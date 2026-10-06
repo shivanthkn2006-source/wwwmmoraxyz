@@ -245,7 +245,7 @@ export const VirtualJoystick: React.FC<{
   return (
     <div
       ref={joystickRef}
-      className={`absolute bottom-24 ${position === 'left' ? 'left-6' : 'right-6'} w-24 h-24 rounded-full bg-black/40 backdrop-blur-sm border-2 border-white/20 touch-none`}
+      className={`absolute bottom-4 ${position === 'left' ? 'left-3' : 'right-3'} w-24 h-24 rounded-full bg-black/40 backdrop-blur-sm border-2 border-white/20 touch-none`}
       onTouchStart={handleStart}
       onMouseDown={handleStart}
     >
@@ -312,7 +312,7 @@ export const LookButtons: React.FC = () => {
   };
 
   return (
-    <div className="vr-look-pad absolute bottom-[90px] right-2 sm:right-4 z-50 grid grid-cols-3 gap-1.5" data-exclude-phantom-tap>
+    <div className="vr-look-pad absolute bottom-[7.5rem] left-3 z-50 grid grid-cols-3 gap-1.5" data-exclude-phantom-tap>
       <div />
       <button
         onClick={() => dispatchLook('look_up')}

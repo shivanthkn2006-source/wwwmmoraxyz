@@ -65,3 +65,8 @@ export function useStamina() {
   return useSyncExternalStore((l) => { ls.add(l); return () => ls.delete(l); }, () => snap, () => snap);
 }
 export function __resetStamina() { stamina = 1; exhausted = false; snap = { stamina: 1, exhausted: false, running: false }; }
+/** Green herb: refills stamina (amount 0..1) and clears exhaustion. */
+export function restoreStamina(amount = 1) {
+  stamina = Math.min(1, stamina + amount); exhausted = false;
+  snap = { stamina, exhausted, running: snap.running }; ls.forEach((l) => l());
+}

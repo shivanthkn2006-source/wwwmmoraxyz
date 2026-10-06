@@ -9684,6 +9684,24 @@ export type Database = {
         }
         Relationships: []
       }
+      vr_save_games: {
+        Row: {
+          data: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          data?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          data?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       vr_world_events: {
         Row: {
           created_at: string

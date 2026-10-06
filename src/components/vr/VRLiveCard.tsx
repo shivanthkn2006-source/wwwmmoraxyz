@@ -27,9 +27,14 @@ export const VRLiveCard: React.FC = () => {
       if (s) { setSnap((p) => ({ ...p, ...s, extras: { ...(p?.extras ?? {}), ...s.extras } })); try { localStorage.setItem(SNAP, JSON.stringify(s)); } catch { /* */ } }
     });
     const t = setInterval(() => void refreshTopPlayersForZoe().catch(() => {}), 60_000);
-    return () => { off(); clearInterval(t); };
+    // Live updates from VR World open in another tab, or this tab, every 3 s.
+    const pull = () => { const r = read(); if (r) setSnap((p) => (!p || r.at > p.at ? r : p)); };
+    const onStorage = (e: StorageEvent) => { if (e.key === SNAP) pull(); };
+    window.addEventListener('storage', onStorage);
+    const p = setInterval(pull, 3000);
+    return () => { off(); clearInterval(t); clearInterval(p); window.removeEventListener('storage', onStorage); };
   }, []);
-  const live = !!getAmbientContext().activeVRLocation;
+  const live = !!getAmbientContext().activeVRLocation || (!!snap && Date.now() - snap.at < 15_000);
   const row = (label: string, v?: string | null) => (
     <div className="text-sm"><span className="text-muted-foreground">{label}: </span><span className="text-foreground">{v || '—'}</span></div>
   );
@@ -44,6 +49,7 @@ export const VRLiveCard: React.FC = () => {
       {row('Friends & trails', snap?.extras['VR friends nearby'])}
       {row('Top players', snap?.extras['VR top players'])}
       {row('My rank', snap?.extras['VR my rank'])}
+      {row('Herbs & coins', snap?.extras['VR herbs and coins'])}
     </Card>
   );
 };

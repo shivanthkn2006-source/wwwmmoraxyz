@@ -24,7 +24,7 @@ describe('VR controller layer', () => {
     const k = keyLog();
     const events: string[] = [];
     for (const n of ['vr-interact', 'vr-open-menu', 'vr-show-feature']) window.addEventListener(n, () => events.push(n));
-    render(<VRGamepadHUD />);
+    render(<VRGamepadHUD />); fireEvent.click(screen.getByRole('button', { name: /show action buttons/i }));
     const tap = (name: RegExp) => { const b = screen.getByRole('button', { name }); fireEvent.pointerDown(b); fireEvent.pointerUp(b); };
     tap(/^jump$/i); tap(/run/i); tap(/run/i); tap(/zoom lens/i); tap(/switch camera/i); tap(/pick up/i); tap(/ask zoe/i);
     fireEvent.click(screen.getByRole('button', { name: /open vr menu/i }));
@@ -34,7 +34,7 @@ describe('VR controller layer', () => {
   });
 
   it('layout editor saves opacity and size on the device', () => {
-    render(<VRGamepadHUD />);
+    render(<VRGamepadHUD />); fireEvent.click(screen.getByRole('button', { name: /show action buttons/i }));
     fireEvent.click(screen.getByRole('button', { name: /edit control layout/i }));
     fireEvent.click(screen.getByRole('button', { name: /more size/i }));
     fireEvent.click(screen.getByRole('button', { name: /less opacity/i }));
@@ -42,7 +42,7 @@ describe('VR controller layer', () => {
   });
 
   it('interact result shows feedback', async () => {
-    render(<VRGamepadHUD />);
+    render(<VRGamepadHUD />); fireEvent.click(screen.getByRole('button', { name: /show action buttons/i }));
     window.dispatchEvent(new CustomEvent('vr-use-result', { detail: { ok: false, text: 'Nothing to use here' } }));
     expect(await screen.findByText(/nothing to use here/i)).toBeInTheDocument();
   });
