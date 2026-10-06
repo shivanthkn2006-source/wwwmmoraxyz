@@ -115,7 +115,6 @@ import { useWorldState, returnToReal, RETURN_PORTAL_POS, getWorldState, entryHei
 import { LandscapeViewportGuard } from './vr/LandscapeViewportGuard';
 import { RealMapStatus } from './vr/RealMapStatus';
 import { RealStartCityPicker } from './vr/RealStartCityPicker';
-import { RealMapLoadingNote } from './vr/RealMapLoadingNote';
 import { SavePoint, HealthBar } from './vr/SavePoint';
 import { AvatarWatchdog } from './vr/AvatarWatchdog';
 import { VREndToEndCheck } from './vr/VREndToEndCheck';
@@ -3072,7 +3071,6 @@ const VRLiveClock: React.FC = () => {
               <VRFeature id="map"><RealMapStatus /></VRFeature>
               <RealAerialLand />
               <RealStartCityPicker />
-              <RealMapLoadingNote />
               {worldMode === 'mmora' && <HealthBar />}
               <ItemCloseUp />
               <StoryNoteReader />
