@@ -199,7 +199,7 @@ export const VRGamepadHUD: React.FC = () => {
         <CrouchBtn />
         <LightBtn />
       </div>
-      <div className="pointer-events-auto absolute bottom-[15.5rem] left-[3.25rem]" style={{ transform: `scale(${s})`, transformOrigin: 'bottom left' }}>
+      <div className="pointer-events-auto absolute bottom-[14rem] left-[2.625rem]" style={{ transform: `scale(${s})`, transformOrigin: 'bottom left' }}>
         <Btn plain action="zoom" label="R" aria="Zoom lens" className="h-9 w-9 text-base" />
       </div>
 
