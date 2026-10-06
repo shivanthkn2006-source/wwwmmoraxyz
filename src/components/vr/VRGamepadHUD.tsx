@@ -15,6 +15,8 @@ import {
 import { VRBagPanel } from '@/components/vr/VRBagPanel';
 import { useStamina } from '@/lib/vrWalk';
 import { peekUse } from '@/lib/vrUse';
+import { VRMiniMap } from '@/components/vr/VRMiniMap';
+import { pullCloud } from '@/lib/vrPickups';
 
 /** Stamina for running: drains while Run is held and you move, refills when you walk or stop. */
 const StaminaMeter: React.FC = () => {
@@ -84,6 +86,8 @@ export const VRGamepadHUD: React.FC = () => {
   const [pad, setPad] = useState<PadFamily | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [bagOpen, setBagOpen] = useState(false);
+  const [faceOpen, setFaceOpen] = useState(false);
+  useEffect(() => { void pullCloud(); }, []);
   const toastTimer = useRef<number>();
   const say = (msg: string, ms = 1400) => {
     setToast(msg); window.clearTimeout(toastTimer.current);
@@ -206,7 +210,9 @@ export const VRGamepadHUD: React.FC = () => {
       </div>
 
       {/* Face buttons (diamond) above the look stick */}
-      <div className="vr-face-diamond pointer-events-auto absolute bottom-52 right-4 h-36 w-36" style={{ transform: `scale(${s})`, transformOrigin: 'bottom right' }}>
+      <button type="button" aria-label={faceOpen ? 'Hide action buttons' : 'Show action buttons'} aria-expanded={faceOpen} data-exclude-phantom-tap onClick={() => setFaceOpen((v) => !v)}
+        className={`${faceText} pointer-events-auto absolute bottom-[14.5rem] right-4 h-10 w-10 text-xl`}>{faceOpen ? '›' : '◇'}</button>
+      <div className={`vr-face-diamond pointer-events-auto absolute bottom-52 right-16 h-36 w-36 transition-all duration-200 ${faceOpen ? 'opacity-100 translate-x-0' : 'pointer-events-none opacity-0 translate-x-8'}`} style={{ transform: `scale(${s})`, transformOrigin: 'bottom right' }} aria-hidden={!faceOpen}>
         <Btn plain action="jump" label="Jump" hold aria="Jump" glyph={pad ? FACE_GLYPHS[pad].jump : undefined} className="absolute left-1/2 top-0 h-12 w-12 -translate-x-1/2 rounded-full text-[10px]" />
         <Btn plain action="zoe" label="Zoe" aria="Ask Zoe" glyph={pad ? FACE_GLYPHS[pad].zoe : undefined} className="absolute left-0 top-1/2 h-12 w-12 -translate-y-1/2 rounded-full text-[10px]" />
         <RunToggle glyph={pad ? FACE_GLYPHS[pad].run : undefined} />
@@ -214,6 +220,7 @@ export const VRGamepadHUD: React.FC = () => {
         <StaminaMeter />
       </div>
 
+      <VRMiniMap onToast={(m) => say(m, 1800)} />
       <UseHint />
       {toast && <div className="absolute bottom-40 left-1/2 -translate-x-1/2 rounded-full surface-warm-tan px-3 py-1 text-xs text-foreground">{toast}</div>}
       {bagOpen && <VRBagPanel onClose={() => setBagOpen(false)} />}

@@ -82,6 +82,8 @@ import { NightMode, NightAmbience } from './vr/NightMode';
 import { AdminAutoPrefill } from './vr/AdminAutoPrefill';
 import { StoryNoteReader } from './vr/StoryNoteReader';
 import { ArchiveHouse } from '@/worlds/mmora/ArchiveHouse';
+import { PickupHouses } from '@/worlds/mmora/PickupHouses';
+import { VRPoseTicker } from './vr/VRMiniMap';
 import { MultiplayerAvatars } from './vr/features/GlassPyramidAvatar';
 import EnterpriseControlDeck from './vr/features/EnterpriseControlDeck';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
@@ -1268,6 +1270,8 @@ const MemoryPalace: React.FC<{
       <JourneyTracker />
       {inMMora && <PortalDoorway position={RETURN_PORTAL_POS} label="Back to your street" onEnter={returnToReal} />}
       {inMMora && <ArchiveHouse />}
+      {inMMora && <PickupHouses />}
+      <VRPoseTicker />
       {inMMora && <SavePoint />}
       <NightMode />
       <AvatarWatchdog />
