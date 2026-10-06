@@ -178,7 +178,7 @@ export const VRMiniMap: React.FC<{ onToast?: (s: string) => void }> = ({ onToast
     <>
     <div className={`pointer-events-auto absolute right-2 top-2 z-[9997] flex flex-col items-center gap-1 ${prefs.big ? 'invisible' : ''}`} aria-hidden={prefs.big} data-exclude-phantom-tap data-testid="vr-minimap">
       <button type="button" aria-label="Open big map" onClick={() => setMapPrefs({ big: true })} className="rounded-full">
-        <MapCanvas SIZE={Math.min(prefs.size === 'large' ? 168 : 136, typeof window !== 'undefined' && window.innerHeight < 520 ? Math.round(window.innerHeight * 0.26) : 999)} RANGE={130} explored={exploredRef} opacity={prefs.opacity} />
+        <MapCanvas SIZE={Math.min(prefs.size === 'large' ? 168 : 136, typeof window !== 'undefined' && window.innerHeight < 520 ? Math.round(window.innerHeight * 0.2) : 999)} RANGE={130} explored={exploredRef} opacity={prefs.opacity} />
       </button>
       {street && <div className="max-w-[9rem] truncate text-center text-[11px] font-semibold text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.8)]" data-testid="vr-minimap-street">{street}</div>}
       <div className="text-[10px] font-semibold text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.8)]" aria-label="Explored">{Math.min(100, Math.round((explored / GOAL) * 100))}% explored · goal {GOAL}</div>
