@@ -24,6 +24,7 @@ import { AdaptiveLearningProvider } from '@/components/AdaptiveLearningProvider'
 import { SecurityShell, ShadowSentinelProvider, QuantumGatekeeper, DevModeProvider, AccessDeniedScreen } from '@/components/security';
 const AdminToolbar = lazy(() => import('@/components/security/AdminToolbar'));
 import { AfterAuthIdle } from '@/components/core/AfterAuthIdle';
+const AdminAutoPrefillLazy = React.lazy(() => import('@/components/vr/AdminAutoPrefill'));
 import KarmaTimeTracker from "@/components/core/KarmaTimeTracker";
 import { HarvestIntegration } from '@/components/harvest/HarvestIntegration'; // PROTOCOL ICEBERG
 import { VelvetRopeProvider } from '@/contexts/VelvetRopeContext'; // VELVET ROPE PROTOCOL
@@ -568,6 +569,7 @@ const RouteAwareShell = () => {
               <Suspense fallback={null}><LaunchWelcome /></Suspense>
               <DHFHeartbeatPulse />
               <MemoryLeakPlumberGlobal />
+              <Suspense fallback={null}><AdminAutoPrefillLazy /></Suspense>
             </AfterAuthIdle>
             <AutoFixProvider />
             <DeferredComponentLoader />

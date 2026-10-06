@@ -25,13 +25,28 @@ export const AdminAutoPrefill: React.FC = () => {
   }, []);
   useEffect(() => {
     if (!admin || prefillDone()) return;
+    const started = Date.now();
+    // Starts by default: right after your own street loads in VR World, or after 20 s anywhere in the app.
     const t = setInterval(() => {
       const w = getWorldState();
-      if (w.chunksLoaded > 0 && getMapLoadStatus().pending === 0) { clearInterval(t); void runPrefill(); }
+      const streetReady = w.chunksLoaded > 0 && getMapLoadStatus().pending === 0;
+      if (streetReady || Date.now() - started > 20_000) { clearInterval(t); void runPrefill(); }
     }, 3000);
     return () => clearInterval(t);
   }, [admin]);
-  if (!admin || !p.running) return null;
+  const [summary, setSummary] = useState<string | null>(null);
+  useEffect(() => {
+    if (p.running || !p.total) return;
+    setSummary(Object.entries(p.perCity).map(([c, v]) => `${c} ${v.ok}/25 · ${v.shops} shops · ${v.roads} roads`).join('\n'));
+    const t = setTimeout(() => setSummary(null), 30_000);
+    return () => clearTimeout(t);
+  }, [p.running, p.total, p.perCity]);
+  if (!admin) return null;
+  if (!p.running) return summary ? (
+    <div role="status" className="pointer-events-none fixed bottom-3 left-1/2 z-[9994] -translate-x-1/2 surface-warm-tan rounded-2xl px-3 py-2 text-[10px] text-white whitespace-pre-line">
+      South India maps ready{'\n'}{summary}
+    </div>
+  ) : null;
   return (
     <div role="status" className="pointer-events-none fixed bottom-3 left-1/2 z-[9994] -translate-x-1/2 surface-warm-tan rounded-full px-3 py-1 text-[10px] text-white">
       Preparing South India maps · {p.city} · {p.done}/{p.total}
