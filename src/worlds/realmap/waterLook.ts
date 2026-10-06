@@ -7,7 +7,6 @@ import type { OsmChunk } from './osmParse';
 export const WATER_MAT = new THREE.MeshStandardMaterial({ color: '#3f7fb8', roughness: 0.15, metalness: 0.2, emissive: '#0d2a44', emissiveIntensity: 0.25 });
 export const PARK_MAT = new THREE.MeshStandardMaterial({ color: '#5e8f4a', roughness: 0.95 });
 export const BRIDGE_MAT = new THREE.MeshStandardMaterial({ color: '#8d8a84', roughness: 0.8 });
-export const RAIL_MAT = new THREE.MeshStandardMaterial({ color: '#d9d6cf', roughness: 0.6 });
 
 function polygon(pts: [number, number][], origin: LatLng, y: number): THREE.BufferGeometry | null {
   if (pts.length < 4) return null;
@@ -51,10 +50,5 @@ export function buildWaterParts(d: OsmChunk, origin: LatLng) {
   const park = merge((d.areas ?? []).filter((a) => a.kind === 'park').map((a) => polygon(a.pts, origin, 0.02)));
   const bridges = d.roads.filter((r) => r.br);
   const deck = merge(bridges.map((r) => ribbon(r.pts, origin, r.w + 1, 0.7)));
-  const rails = merge(bridges.flatMap((r) => {
-    const L = r.pts; if (L.length < 2) return [];
-    // two thin rails at the deck edges
-    return [ribbon(L, origin, 0.25, 1.4)].map((g) => { if (!g) return null; const a = g.clone(); a.translate(0, 0, 0); return a; });
-  }));
-  return { water, park, deck, rails };
+  return { water, park, deck, rails: null as THREE.BufferGeometry | null };
 }
