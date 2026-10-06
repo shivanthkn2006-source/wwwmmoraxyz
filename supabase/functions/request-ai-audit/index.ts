@@ -70,6 +70,14 @@ Deno.serve(async (req) => {
       throw new Error('Failed to create audit job');
     }
 
+    // Start the worker in the background with the admin's own credentials.
+    const work = fetch(`${supabaseUrl}/functions/v1/run-ai-audit-job`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, apikey: supabaseAnonKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ job_id: job.id, admin_user_id: user.id, analyze }),
+    }).then((r) => r.text()).catch((e) => console.error('[Interface] worker start failed', e));
+    // @ts-ignore EdgeRuntime exists on the edge runtime
+    if (typeof EdgeRuntime !== 'undefined') EdgeRuntime.waitUntil(work);
     console.log(`[Interface] Created job ${job.id} for admin ${user.id}`);
 
     // Return immediate 202 Accepted response
