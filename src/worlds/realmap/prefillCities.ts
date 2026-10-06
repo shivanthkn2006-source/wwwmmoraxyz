@@ -22,8 +22,8 @@ export const SOUTH_INDIA_CITIES = [
 export const PREFILL_RADIUS = 2;
 const PAUSE_MS = 4000;
 
-type P = { running: boolean; done: number; total: number; ok: number; city: string | null };
-let st: P = { running: false, done: 0, total: 0, ok: 0, city: null };
+type P = { running: boolean; done: number; total: number; ok: number; city: string | null; perCity: Record<string, { ok: number; shops: number; roads: number }> };
+let st: P = { running: false, done: 0, total: 0, ok: 0, city: null, perCity: {} };
 const ls = new Set<() => void>();
 const set = (p: Partial<P>) => { st = { ...st, ...p }; ls.forEach((l) => l()); };
 export const usePrefill = () => useSyncExternalStore((l) => { ls.add(l); return () => ls.delete(l); }, () => st, () => st);
@@ -40,13 +40,14 @@ export async function runPrefill() {
   if (st.running) return;
   const plan = prefillPlan();
   stop = false;
-  set({ running: true, done: 0, total: plan.length, ok: 0 });
+  set({ running: true, done: 0, total: plan.length, ok: 0, perCity: {} });
   for (const step of plan) {
     if (stop) break;
     set({ city: step.city });
     const band = step.lat;
     const d = await loadChunk(step.id.key, chunkBBox(step.id.i, step.id.j, band), (lat, lng) => chunkOf({ lat, lng }, band).key).catch(() => null);
-    set({ done: st.done + 1, ok: st.ok + (d ? 1 : 0) });
+    const pc = st.perCity[step.city] ?? { ok: 0, shops: 0, roads: 0 };
+    set({ done: st.done + 1, ok: st.ok + (d ? 1 : 0), perCity: { ...st.perCity, [step.city]: d ? { ok: pc.ok + 1, shops: pc.shops + d.pois.length, roads: pc.roads + d.roads.length } : pc } });
     await new Promise((r) => setTimeout(r, PAUSE_MS));
   }
   set({ running: false, city: null });
