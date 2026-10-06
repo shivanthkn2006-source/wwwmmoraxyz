@@ -29,7 +29,7 @@ describe('Real Map buildings are solid', () => {
     __resetWorldForTests(); __resetMapIndex();
     const o = { lat: 13.0827, lng: 80.2707 };
     chooseStartCity({ name: 'Chennai', ...o });
-    const ll = (x: number, z: number) => { const p = toLatLng({ x, z }, o); return [p.lat, p.lng] as [number, number]; };
+    const ll = (x: number, z: number) => { const p = toLatLng(x, z, o); return [p.lat, p.lng] as [number, number]; };
     indexBlock('t', { buildings: [{ pts: [ll(10, -5), ll(20, -5), ll(20, 5), ll(10, 5), ll(10, -5)], h: 10 }], roads: [], pois: [], fetchedAt: 0, v: 1 } as never);
     expect(resolveMove(8, 0, 10.5, 0)).toEqual([8, 0]);
     expect(resolveMove(0, 0, 1, 0)).toEqual([1, 0]);
