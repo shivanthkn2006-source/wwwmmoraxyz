@@ -8,6 +8,7 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
+import { getWorldState } from '@/worlds/worldMode';
 import { useVRView, wireVRViewKeys } from '@/lib/vrView';
 
 const AHEAD = 2.8;
@@ -47,6 +48,11 @@ export const ThirdPersonAvatar: React.FC = () => {
     const yaw = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ').y;
     const fx = -Math.sin(yaw), fz = -Math.cos(yaw);
     const ground = Math.max(0, camera.position.y - 1.6);
+    // Only stand on a real street: hidden during the aerial view, before the
+    // first street block has loaded, or while the camera is high above ground.
+    const w = getWorldState();
+    g.visible = !(w.mode === 'real' && (w.aerial || w.chunksLoaded === 0 || ground > 8));
+    if (!g.visible) return;
     g.position.set(camera.position.x + fx * AHEAD, ground, camera.position.z + fz * AHEAD);
     g.rotation.y = yaw + Math.PI;
     // Real speed from how far the camera moved.

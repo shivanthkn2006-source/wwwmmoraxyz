@@ -228,29 +228,28 @@ const NotificationMenu: React.FC<NotificationMenuProps> = ({ open, onOpenChange 
   };
 
   const handleNotificationClick = (notif: Notification) => {
-    const route = notif.context_data?.route;
-    if (route && route.startsWith('/')) {
-      // Notifications that carry their own destination (DHF essays, growth cards).
-      navigate(route);
-      onOpenChange(false);
-    } else if (notif.suggestion_type === 'interest_match') {
-      // Navigate to chat with friend for interest match suggestions
-      navigate(`/chat?userId=${notif.from_user_id}`);
-      onOpenChange(false);
-    } else if (notif.post_id) {
-      navigate(`/?post=${notif.post_id}`);
-      onOpenChange(false);
-    }
+    const ctx = (notif.context_data ?? {}) as { route?: string; link?: string; url?: string };
+    const route = ctx.route ?? ctx.link ?? ctx.url;
+    let to: string | null = null;
+    if (typeof route === 'string' && route.startsWith('/')) to = route;
+    else if (notif.post_id) to = `/?post=${notif.post_id}`;
+    else if (notif.suggestion_type === 'interest_match' || notif.type === 'message' || notif.type === 'direct_message') to = notif.from_user_id ? `/chat?userId=${notif.from_user_id}` : '/chat';
+    else if (notif.type === 'friend_request') to = '/huddle';
+    else if (notif.type?.startsWith('vr_')) to = '/zoe-omega';
+    else if (notif.from_user_id) to = `/profile/${notif.from_user_id}`;
+    else to = '/notification-history';
+    navigate(to);
+    onOpenChange(false);
   };
 
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-[400px] sm:w-[540px]">
+      <SheetContent side="right" className="w-[400px] sm:w-[540px] flex flex-col h-full">
         <SheetHeader>
           <SheetTitle>Notifications</SheetTitle>
         </SheetHeader>
-        <div className="mt-6 space-y-2">
+        <div className="mt-6 space-y-2 flex-1 min-h-0 overflow-y-auto overscroll-contain touch-pan-y pb-6" data-testid="notification-menu-scroll" style={{ WebkitOverflowScrolling: 'touch' }}>
           {notifications.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">No notifications yet</p>
           ) : (

@@ -471,7 +471,7 @@ const RouteAwareShell = () => {
     pathname.startsWith('/welcome') ||
     pathname.startsWith('/password-recovery') ||
     pathname.startsWith('/demo') ||
-    pathname.startsWith('/zoe-omega') ||
+    pathname.startsWith('/zoe-omega') || pathname === '/vr-world' ||
     pathname.startsWith('/__vr-harness') ||
 
     pathname.startsWith('/zoe-infinity') ||
@@ -508,6 +508,7 @@ const RouteAwareShell = () => {
 
               <Route path="/voice-auth" element={<VoiceAuthPage />} />
               <Route path="/password-recovery" element={<PasswordRecoveryPage />} />
+              <Route path="/vr-world" element={<Navigate to="/zoe-omega" replace />} />
               <Route
                 path="/zoe-omega"
                 element={
