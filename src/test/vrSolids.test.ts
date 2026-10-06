@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, it, expect } from 'vitest';
 import { boxPoly, inside, setStaticSolids, resolveMove } from '@/lib/vrSolids';
 import { enterMMora, __resetWorldForTests } from '@/worlds/worldMode';
