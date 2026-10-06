@@ -28,17 +28,19 @@ const StaminaMeter: React.FC = () => {
 };
 
 const ring = 'flex items-center justify-center border border-foreground/60 text-foreground bg-background/10 select-none touch-none active:bg-foreground/25';
+/** Same look as the move pad's knob: soft see-through white ball, readable on light and dark scenes. */
+const ball = 'flex items-center justify-center rounded-full bg-white/30 border-2 border-white/60 text-white font-semibold [text-shadow:0_1px_3px_rgba(0,0,0,0.7)] backdrop-blur-sm select-none touch-none active:bg-white/50';
 const faceText = 'flex items-center justify-center bg-transparent border-0 text-white font-semibold [text-shadow:0_1px_3px_rgba(0,0,0,0.6)] select-none touch-none active:opacity-70';
 
 const LightBtn: React.FC = () => {
   const { night, flashlight } = useNight();
   if (!night) return null;
-  return <button type="button" aria-label="Flashlight" aria-pressed={flashlight} data-exclude-phantom-tap onClick={toggleFlashlight} className={`${ring} mt-2 block h-9 w-14 rounded-lg text-[10px]`}>{flashlight ? 'Light off' : 'Light'}</button>;
+  return <button type="button" aria-label="Flashlight" aria-pressed={flashlight} data-exclude-phantom-tap onClick={toggleFlashlight} className={`${ball} mt-2 h-10 w-10 text-[10px]`}>{flashlight ? 'Light off' : 'Light'}</button>;
 };
 
 const CrouchBtn: React.FC = () => {
   const { crouch } = useVRView();
-  return <button type="button" aria-label="Crouch" aria-pressed={crouch} data-exclude-phantom-tap onClick={toggleCrouch} className={`${ring} mt-2 block h-9 w-14 rounded-lg text-[10px] ${crouch ? 'opacity-100' : 'opacity-80'}`}>{crouch ? 'Stand' : 'Crouch'}</button>;
+  return <button type="button" aria-label="Crouch" aria-pressed={crouch} data-exclude-phantom-tap onClick={toggleCrouch} className={`${ball} mt-2 h-10 w-10 text-[10px] ${crouch ? 'bg-white/50' : ''}`}>{crouch ? 'Stand' : 'Crouch'}</button>;
 };
 
 /** Run is a tap toggle (on = run whenever you move), so it works with one thumb on phones. */
@@ -69,10 +71,10 @@ const UseHint: React.FC = () => {
   return <div className="absolute bottom-[19rem] right-4 max-w-[12rem] text-right text-xs font-semibold text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.7)]" data-testid="vr-use-hint">Use → {label}</div>;
 };
 
-const Btn: React.FC<{ action: VRAction; label: string; className: string; hold?: boolean; aria: string; glyph?: string; plain?: boolean }> = ({ action, label, className, hold, aria, glyph, plain }) => (
+const Btn: React.FC<{ action: VRAction; label: string; className: string; hold?: boolean; aria: string; glyph?: string; plain?: boolean; round?: boolean }> = ({ action, label, className, hold, aria, glyph, plain, round }) => (
   <button
     type="button" aria-label={aria} data-exclude-phantom-tap
-    className={`${plain ? faceText : ring} ${className}`}
+    className={`${round ? ball : plain ? faceText : ring} ${className}`}
     onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); fireAction(action, true); }}
     onPointerUp={(e) => { e.stopPropagation(); if (hold) fireAction(action, false); }}
     onPointerLeave={() => { if (hold) fireAction(action, false); }}
@@ -195,18 +197,18 @@ export const VRGamepadHUD: React.FC = () => {
     <div className="pointer-events-none fixed inset-0 z-[60]" style={{ opacity: layout.opacity }} data-testid="vr-gamepad-hud">
       {/* Shoulder: L / Crouch / Light top-left; R sits above the 360 pad (bottom-left) */}
       <div className="pointer-events-auto absolute left-4 top-24" style={{ transform: `scale(${s})`, transformOrigin: 'top left' }}>
-        <Btn action="camera" label="L" aria="Switch camera" className="h-11 w-14 rounded-t-2xl rounded-b-lg text-sm font-semibold" />
+        <Btn round action="camera" label="L" aria="Switch camera" className="h-11 w-11 text-base" />
         <CrouchBtn />
         <LightBtn />
       </div>
-      <div className="pointer-events-auto absolute bottom-[14rem] left-[2.625rem]" style={{ transform: `scale(${s})`, transformOrigin: 'bottom left' }}>
-        <Btn plain action="zoom" label="R" aria="Zoom lens" className="h-9 w-9 text-base" />
+      <div className="pointer-events-auto absolute bottom-[14rem] left-[2.25rem]" style={{ transform: `scale(${s})`, transformOrigin: 'bottom left' }}>
+        <Btn round action="zoom" label="R" aria="Zoom lens (5X)" className="h-12 w-12 text-lg" />
       </div>
 
       {/* Face buttons: small centre circle with Jump / Zoe / Run / Use close around it (bottom-right) */}
-      <div className="vr-face-diamond pointer-events-auto absolute bottom-[90px] right-2 h-32 w-32" style={{ transform: `scale(${s})`, transformOrigin: 'bottom right' }}>
+      <div className="vr-face-diamond pointer-events-auto absolute bottom-[90px] right-2 h-32 w-32 rounded-full border-2 border-white/30 bg-black/30 backdrop-blur-sm" style={{ transform: `scale(${s})`, transformOrigin: 'bottom right' }}>
         <button type="button" aria-label={faceOpen ? 'Hide action buttons' : 'Show action buttons'} aria-expanded={faceOpen} data-exclude-phantom-tap onClick={() => setFaceOpen((v) => !v)}
-          className="absolute left-1/2 top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/90 bg-transparent" />
+          className="absolute left-1/2 top-1/2 h-9 w-9 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white/60 bg-white/30" />
         <div className={`transition-opacity duration-200 ${faceOpen ? 'opacity-100' : 'pointer-events-none opacity-0'}`} aria-hidden={!faceOpen}>
           <Btn plain action="jump" label="Jump" hold aria="Jump" glyph={pad ? FACE_GLYPHS[pad].jump : undefined} className="absolute left-1/2 top-1 h-10 w-12 -translate-x-1/2 text-[11px]" />
           <Btn plain action="zoe" label="Zoe" aria="Ask Zoe" glyph={pad ? FACE_GLYPHS[pad].zoe : undefined} className="absolute left-1 top-1/2 h-10 w-10 -translate-y-1/2 text-[11px]" />
@@ -214,7 +216,6 @@ export const VRGamepadHUD: React.FC = () => {
           <Btn plain action="interact" label="Use" aria="Pick up or interact" glyph={pad ? FACE_GLYPHS[pad].interact : undefined} className="absolute bottom-1 left-1/2 h-10 w-12 -translate-x-1/2 text-[11px]" />
         </div>
       </div>
-      <div className="absolute bottom-[13rem] right-2 h-4 w-32"><StaminaMeter /></div>
 
       <VRMiniMap onToast={(m) => say(m, 1800)} />
       <UseHint />
