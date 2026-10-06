@@ -8,6 +8,7 @@ import { searchPlaces } from '@/worlds/search/placeSearch';
 import { travelTo, travelHome } from '@/worlds/worldMode';
 import { runPrefill, stopPrefill } from '@/worlds/realmap/prefillCities';
 import { flushVrOutbox } from '@/lib/vrOutbox';
+import { getMeet } from '@/worlds/meet/vrMeet';
 
 export const VRAdminConsole: React.FC = () => {
   const [admin, setAdmin] = useState(false);
@@ -31,11 +32,19 @@ export const VRAdminConsole: React.FC = () => {
       const hit = (await searchPlaces(arg).catch(() => []))[0];
       if (!hit) return say(`No place "${arg}"`);
       travelTo({ name: hit.name, lat: hit.lat, lng: hit.lng } as never); say(`Going to ${hit.name}`);
+    } else if (c === 'to' && arg) {
+      const u = arg.replace(/^@/, '').toLowerCase();
+      const p = getMeet().players.find((r) => r.username?.toLowerCase() === u);
+      if (!p) return say(`@${u} isn't in VR World (or is hidden)`);
+      if (p.mode === 'real' && p.lat != null && p.lng != null) { travelTo({ name: `@${p.username}`, lat: p.lat, lng: p.lng } as never); say(`Teleported to @${p.username}`); }
+      else say(`@${p.username} is inside M'Mora World`);
+    } else if (c === 'players') {
+      const ps = getMeet().players; say(ps.length ? ps.map((r) => `@${r.username}`).join(', ') : 'No members nearby');
     } else if (c === 'home') { travelHome(); say('Back to your location'); }
     else if (c === 'prefill') { void runPrefill(); say('South India prefill started'); }
     else if (c === 'stop') { stopPrefill(); say('Prefill stopping'); }
     else if (c === 'outbox') { await flushVrOutbox(); say('Outbox sent'); }
-    else say('Commands: go <city>, home, prefill, stop, outbox');
+    else say('Commands: go <city>, to @user, players, home, prefill, stop, outbox');
   };
   return (
     <div className="fixed left-3 bottom-24 z-30" data-exclude-phantom-tap>
