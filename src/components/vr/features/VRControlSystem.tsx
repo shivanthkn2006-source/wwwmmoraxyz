@@ -312,11 +312,11 @@ export const LookButtons: React.FC = () => {
   };
 
   return (
-    <div className="vr-look-pad absolute bottom-[7.5rem] left-3 z-50 grid grid-cols-3 gap-1.5" data-exclude-phantom-tap>
+    <div className="vr-look-pad absolute bottom-[7.5rem] left-3 z-50 grid w-24 grid-cols-3 gap-0 place-items-center" data-exclude-phantom-tap>
       <div />
       <button
         onClick={() => dispatchLook('look_up')}
-        className="w-9 h-9 rounded-full bg-transparent text-white text-xs"
+        className="w-8 h-8 rounded-full bg-transparent text-white text-xs"
         title="Look Up"
       >
         ▲
@@ -325,21 +325,21 @@ export const LookButtons: React.FC = () => {
 
       <button
         onClick={() => dispatchLook('look_left')}
-        className="w-9 h-9 rounded-full bg-transparent text-white text-xs"
+        className="w-8 h-8 rounded-full bg-transparent text-white text-xs"
         title="Look Left"
       >
         ◄
       </button>
       <button
         onClick={() => dispatchLook('look_around')}
-        className="w-9 h-9 rounded-full bg-cyan-600/70 backdrop-blur-md border border-cyan-400/50 text-white text-[10px]"
+        className="w-8 h-8 rounded-full bg-cyan-600/70 backdrop-blur-md border border-cyan-400/50 text-white text-[10px]"
         title="Scan 360"
       >
         360
       </button>
       <button
         onClick={() => dispatchLook('look_right')}
-        className="w-9 h-9 rounded-full bg-transparent text-white text-xs"
+        className="w-8 h-8 rounded-full bg-transparent text-white text-xs"
         title="Look Right"
       >
         ►
@@ -348,7 +348,7 @@ export const LookButtons: React.FC = () => {
       <div />
       <button
         onClick={() => dispatchLook('look_down')}
-        className="w-9 h-9 rounded-full bg-transparent text-white text-xs"
+        className="w-8 h-8 rounded-full bg-transparent text-white text-xs"
         title="Look Down"
       >
         ▼

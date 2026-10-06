@@ -31,6 +31,8 @@ const M = {
   leaf: new THREE.MeshStandardMaterial({ color: '#4f8a3a', roughness: 0.65, side: THREE.DoubleSide, emissive: '#16300f', emissiveIntensity: 0.35 }),
   coin: new THREE.MeshStandardMaterial({ color: '#d8b456', metalness: 0.9, roughness: 0.28, emissive: '#5a4210', emissiveIntensity: 0.35 }),
 };
+const GLOW_G = new THREE.MeshBasicMaterial({ color: '#5fb04a', transparent: true, opacity: 0.45, depthWrite: false });
+const GLOW_C = new THREE.MeshBasicMaterial({ color: '#e3c15a', transparent: true, opacity: 0.45, depthWrite: false });
 const leafGeo = (() => { const s = new THREE.Shape(); s.moveTo(0, 0); s.quadraticCurveTo(0.09, 0.12, 0, 0.3); s.quadraticCurveTo(-0.09, 0.12, 0, 0); return new THREE.ShapeGeometry(s, 6); })();
 
 /** Potted Green Herb: thin pale stem with broad leaves, like the classic one. */
@@ -135,6 +137,13 @@ export const PickupHouses: React.FC = () => {
   return (
     <group>
       {HOUSES.map((_, i) => <House key={i} i={i} open={doors.includes(`h${i}`)} />)}
+      {HOUSES.map(([x, z], i) => {
+        const herb = !p.taken.includes(`house${i}-herb`), coin = !p.taken.includes(`house${i}-coin`);
+        return <React.Fragment key={`g${i}`}>
+          {herb && <mesh position={[x - 0.6, HOUSE_H + 3, z]} material={GLOW_G}><cylinderGeometry args={[0.35, 0.35, 6, 8, 1, true]} /></mesh>}
+          {coin && <mesh position={[x + 0.6, HOUSE_H + 3, z]} material={GLOW_C}><cylinderGeometry args={[0.35, 0.35, 6, 8, 1, true]} /></mesh>}
+        </React.Fragment>;
+      })}
       {left.map((k) => (
         <group key={k.id} position={k.pos}>
           {k.kind === 'herb' ? <GreenHerb potted={k.id.startsWith('house')} /> : <CoinStack n={k.amount} />}

@@ -13,6 +13,8 @@ import { toLocal } from '@/worlds/realmap/geo';
 import { HOUSES, ALL_PICKUPS } from '@/worlds/mmora/PickupHouses';
 import { nearestStreet } from '@/worlds/realmap/ZoeStreetAwareness';
 import { setAmbientExtra } from '@/services/zoe-agent/ambientContext';
+import { getStreetRelics } from '@/worlds/realmap/streetRelics';
+import { useMapPrefs, setMapPrefs } from '@/lib/vrMapPrefs';
 import { usePickups, getPickups, useHerb, autoHerbIfDry } from '@/lib/vrPickups';
 
 const pose = { x: 0, z: 0, yaw: 0 };
@@ -34,30 +36,13 @@ const CELL = 50, GOAL = 150;
 const exKey = (label: string) => `vr-explored:${label}`;
 const readEx = (label: string): Set<string> => { try { return new Set(JSON.parse(localStorage.getItem(exKey(label)) || '[]')); } catch { return new Set(); } };
 
-const SIZE = 112, R = SIZE / 2, RANGE = 120; // metres from centre to edge
 
-export const VRMiniMap: React.FC<{ onToast?: (s: string) => void }> = ({ onToast }) => {
+const RELIC_COLORS: Record<string, string> = { common: '#9fd8ff', uncommon: '#7ee0a8', rare: '#5aa2ff', epic: '#c58bff', legendary: '#ffd166' };
+
+/** The drawn map itself; used for the small rotating map and the big half-screen map. */
+const MapCanvas: React.FC<{ SIZE: number; RANGE: number; names?: boolean; explored: React.MutableRefObject<number>; opacity: number }> = ({ SIZE, RANGE, names = false, explored, opacity }) => {
   const ref = useRef<HTMLCanvasElement>(null);
-  const p = usePickups();
-  const [street, setStreet] = React.useState<string | null>(null);
-  const [explored, setExplored] = React.useState(0);
-  useEffect(() => {
-    let label = '', cells = new Set<string>();
-    const t = window.setInterval(() => {
-      const w = getWorldState();
-      if (w.origin.status !== 'ready') return;
-      const l = w.mode === 'real' ? (w.origin.label || `${w.origin.origin.lat.toFixed(2)},${w.origin.origin.lng.toFixed(2)}`) : "M'Mora World";
-      if (l !== label) { label = l; cells = readEx(l); }
-      const id = `${Math.round(pose.x / CELL)},${Math.round(pose.z / CELL)}`;
-      if (!cells.has(id)) { cells.add(id); try { localStorage.setItem(exKey(l), JSON.stringify([...cells].slice(-5000))); } catch { /* */ } }
-      setExplored(cells.size);
-      const st = w.mode === 'real' ? nearestStreet(pose.x, pose.z, w.origin.origin) : null;
-      setStreet(st);
-      setAmbientExtra('VR explored', `${Math.min(100, Math.round((cells.size / GOAL) * 100))}% of ${l} (${cells.size}/${GOAL} areas)`);
-    }, 1000);
-    return () => window.clearInterval(t);
-  }, []);
-  const exploredRef = useRef(0); exploredRef.current = explored;
+  const R = SIZE / 2;
   useEffect(() => {
     const cv = ref.current; if (!cv) return;
     const dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -89,12 +74,28 @@ export const VRMiniMap: React.FC<{ onToast?: (s: string) => void }> = ({ onToast
           r.pts.forEach(([la, ln], i) => { const q = toLocal({ lat: la, lng: ln }, o); const [sx, sy] = P(q.x, q.z); if (i) g.lineTo(sx, sy); else g.moveTo(sx, sy); });
           g.stroke();
         }));
+        getStreetRelics().forEach((r) => { const l = toLocal(r, o); const [sx, sy] = P(l.x, l.z); g.fillStyle = RELIC_COLORS[r.rarity] ?? '#c58bff'; g.shadowColor = g.fillStyle; g.shadowBlur = 8; g.beginPath(); g.arc(sx, sy, 3.2, 0, 7); g.fill(); });
+        g.shadowBlur = 0;
+        if (names) {
+          g.save(); g.font = '600 10px system-ui'; g.textAlign = 'center'; g.fillStyle = '#ffffff';
+          const seen = new Set<string>();
+          mapBlocks().forEach((b) => b.roads.forEach((r) => {
+            if (!r.name || seen.has(r.name)) return; const m = r.pts[Math.floor(r.pts.length / 2)]; const q = toLocal({ lat: m[0], lng: m[1] }, o); const [sx, sy] = P(q.x, q.z);
+            if (Math.hypot(sx, sy) > R - 14) return; seen.add(r.name);
+            g.save(); g.translate(sx, sy); g.rotate(-pose.yaw); g.fillStyle = 'rgba(0,0,0,0.75)'; const tw = g.measureText(r.name).width + 6; g.fillRect(-tw / 2, -7, tw, 12); g.fillStyle = '#ffffff'; g.fillText(r.name, 0, 3); g.restore();
+          }));
+          g.restore();
+        }
         g.fillStyle = '#e0a84a';
         mapBlocks().forEach((b) => b.pois.forEach((q) => { const l = toLocal(q, o); const [sx, sy] = P(l.x, l.z); if (Math.hypot(sx, sy) < R) { g.beginPath(); g.arc(sx, sy, 2, 0, 7); g.fill(); } }));
       } else {
-        g.fillStyle = 'rgba(160,150,135,0.9)';
-        HOUSES.forEach(([x, z]) => { const [sx, sy] = P(x, z); g.fillRect(sx - 5 * k * 1.2, sy - 5 * k * 1.2, 10 * k * 1.2, 10 * k * 1.2); });
         const taken = getPickups().taken;
+        HOUSES.forEach(([x, z], i) => {
+          const [sx, sy] = P(x, z); const hw = 5 * k * 1.2;
+          const herb = !taken.includes(`house${i}-herb`), coin = !taken.includes(`house${i}-coin`);
+          g.shadowBlur = herb || coin ? 10 : 0; g.shadowColor = herb ? '#5fb04a' : '#e3c15a';
+          g.fillStyle = 'rgba(210,200,185,0.9)'; g.fillRect(sx - hw, sy - hw, hw * 2, hw * 2); g.shadowBlur = 0;
+        });
         ALL_PICKUPS.forEach((q) => { if (taken.includes(q.id)) return; const [sx, sy] = P(q.pos[0], q.pos[2]); g.fillStyle = q.kind === 'herb' ? '#5fb04a' : '#e3c15a'; g.beginPath(); g.arc(sx, sy, 2.4, 0, 7); g.fill(); });
       }
       g.restore();
@@ -111,7 +112,7 @@ export const VRMiniMap: React.FC<{ onToast?: (s: string) => void }> = ({ onToast
       }
       // Ring + compass letters (rotate with the map)
       g.strokeStyle = 'rgba(240,236,225,0.9)'; g.lineWidth = 3; g.beginPath(); g.arc(R, R, R - 2, 0, 7); g.stroke();
-      const frac = Math.min(1, exploredRef.current / GOAL);
+      const frac = Math.min(1, explored.current / GOAL);
       g.strokeStyle = '#5fb04a'; g.lineWidth = 3; g.lineCap = 'round';
       if (frac > 0) { g.beginPath(); g.arc(R, R, R - 2, -Math.PI / 2, -Math.PI / 2 + frac * Math.PI * 2); g.stroke(); }
       g.font = 'bold 10px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle';
@@ -127,11 +128,39 @@ export const VRMiniMap: React.FC<{ onToast?: (s: string) => void }> = ({ onToast
     const t = window.setInterval(draw, 100);
     draw();
     return () => window.clearInterval(t);
+  }, [SIZE, RANGE, names]);
+  return <canvas ref={ref} style={{ width: SIZE, height: SIZE, opacity }} className="rounded-full border border-white/50 shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_6px_20px_rgba(0,0,0,0.25)]" aria-label="Mini map" />;
+};
+
+export const VRMiniMap: React.FC<{ onToast?: (s: string) => void }> = ({ onToast }) => {
+  const p = usePickups();
+  const prefs = useMapPrefs();
+  const [street, setStreet] = React.useState<string | null>(null);
+  const [explored, setExplored] = React.useState(0);
+  useEffect(() => {
+    let label = '', cells = new Set<string>();
+    const t = window.setInterval(() => {
+      const w = getWorldState();
+      if (w.origin.status !== 'ready') return;
+      const l = w.mode === 'real' ? (w.origin.label || `${w.origin.origin.lat.toFixed(2)},${w.origin.origin.lng.toFixed(2)}`) : "M'Mora World";
+      if (l !== label) { label = l; cells = readEx(l); }
+      const id = `${Math.round(pose.x / CELL)},${Math.round(pose.z / CELL)}`;
+      if (!cells.has(id)) { cells.add(id); try { localStorage.setItem(exKey(l), JSON.stringify([...cells].slice(-5000))); } catch { /* */ } }
+      setExplored(cells.size);
+      const st = w.mode === 'real' ? nearestStreet(pose.x, pose.z, w.origin.origin) : null;
+      setStreet(st);
+      setAmbientExtra('VR explored', `${Math.min(100, Math.round((cells.size / GOAL) * 100))}% of ${l} (${cells.size}/${GOAL} areas)`);
+    }, 1000);
+    return () => window.clearInterval(t);
   }, []);
+  const exploredRef = useRef(0); exploredRef.current = explored;
 
   return (
-    <div className="pointer-events-auto absolute right-3 top-40 flex flex-col items-center gap-1" data-exclude-phantom-tap data-testid="vr-minimap">
-      <canvas ref={ref} style={{ width: SIZE, height: SIZE }} className="rounded-full border border-white/40 shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_6px_20px_rgba(0,0,0,0.25)]" aria-label="Mini map" />
+    <>
+    <div className="pointer-events-auto absolute right-2 top-2 z-[9997] flex flex-col items-center gap-1" data-exclude-phantom-tap data-testid="vr-minimap">
+      <button type="button" aria-label="Open big map" onClick={() => setMapPrefs({ big: true })} className="rounded-full">
+        <MapCanvas SIZE={prefs.size === 'large' ? 168 : 136} RANGE={130} explored={exploredRef} opacity={prefs.opacity} />
+      </button>
       {street && <div className="max-w-[9rem] truncate text-center text-[11px] font-semibold text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.8)]" data-testid="vr-minimap-street">{street}</div>}
       <div className="text-[10px] font-semibold text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.8)]" aria-label="Explored">{Math.min(100, Math.round((explored / GOAL) * 100))}% explored · goal {GOAL}</div>
       <div className="flex gap-2 text-[11px] font-semibold text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.8)]">
@@ -141,6 +170,18 @@ export const VRMiniMap: React.FC<{ onToast?: (s: string) => void }> = ({ onToast
         <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: '#e3c15a' }} />×{p.coins}</span>
       </div>
     </div>
+    {prefs.big && (
+      <div className="pointer-events-auto fixed inset-0 z-[9999] flex items-center justify-center" data-exclude-phantom-tap data-testid="vr-big-map" onClick={() => setMapPrefs({ big: false })}>
+        <div className="flex flex-col items-center gap-2" onClick={(e) => e.stopPropagation()}>
+          <MapCanvas SIZE={Math.round(Math.min(window.innerWidth, window.innerHeight) * 0.5)} RANGE={320} names explored={exploredRef} opacity={1} />
+          <div className="flex gap-3 text-[11px] font-semibold text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.8)]">
+            <span>● herbs</span><span>● coins</span><span>● relics</span>
+            <button type="button" onClick={() => setMapPrefs({ big: false })} className="underline">Close</button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 };
 export default VRMiniMap;
