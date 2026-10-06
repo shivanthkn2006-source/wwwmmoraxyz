@@ -77,6 +77,8 @@ export const VRMiniMap: React.FC<{ onToast?: (s: string) => void }> = ({ onToast
         const o = w.origin.origin;
         g.fillStyle = 'rgba(255,255,255,0.22)';
         mapBlocks().forEach((b) => b.buildings.forEach((bd) => {
+          const q0 = toLocal({ lat: bd.pts[0][0], lng: bd.pts[0][1] }, o);
+          if (Math.abs(q0.x - pose.x) > RANGE * 1.5 || Math.abs(q0.z - pose.z) > RANGE * 1.5) return;
           g.beginPath();
           bd.pts.forEach(([la, ln], i) => { const q = toLocal({ lat: la, lng: ln }, o); const [sx, sy] = P(q.x, q.z); if (i) g.lineTo(sx, sy); else g.moveTo(sx, sy); });
           g.fill();
