@@ -1,3 +1,4 @@
+import { ZoeStreetAwareness } from './ZoeStreetAwareness';
 import { addBlockRelics, dropBlockRelics } from './streetRelics';
 import { StreetRelics } from './StreetRelics';
 import { indexBlock, dropBlock } from './mapIndex';
@@ -267,6 +268,7 @@ export const RealMapWorld: React.FC = () => {
       {origin.status === 'ready' && <StreetRelics origin={origin.origin} />}
       {origin.status === 'ready' && <MapLabels origin={origin.origin} />}
       {origin.status === 'ready' && <StreetTraffic origin={origin.origin} />}
+      {origin.status === 'ready' && <ZoeStreetAwareness origin={origin.origin} />}
       <ThermalGovernor />
       <PortalDoorway position={PORTAL_OFFSET} label="M'Mora World" onEnter={enterMMora} />
       <DemoExplorer />
