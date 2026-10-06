@@ -72,7 +72,7 @@ export const ThirdPersonAvatar: React.FC = () => {
 
   if (!thirdPerson) return null;
   return (
-    <group ref={root} data-testid="third-person-avatar">
+    <group ref={root}>
       <group ref={hips} position={[0, 0.95, 0]}>
         <mesh position={[0, 0.32, 0]} material={mats.shirt}><boxGeometry args={[0.42, 0.6, 0.24]} /></mesh>
         <mesh position={[0, 0.78, 0]} material={mats.skin}><sphereGeometry args={[0.15, 14, 12]} /></mesh>

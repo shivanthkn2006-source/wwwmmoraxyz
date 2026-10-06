@@ -21,6 +21,7 @@ import { loadChunk, setChunkKeyFn, type OsmChunk } from './osm';
 import { setChunkStats, useWorldState, resolveOrigin, PORTAL_OFFSET, enterMMora, startAerialEntry, getWorldState, entryHeight, reportNearbyHeight } from '../worldMode';
 import { PortalDoorway } from '../portal/PortalDoorway';
 import { DemoExplorer } from './DemoExplorer';
+import { useDemoExplorerOn } from './demoExplorerSwitch';
 
 const WALL_MAT = makeWallMaterial();
 const BUILDING_MAT = new THREE.MeshStandardMaterial({ color: '#e9dfcf', roughness: 0.75, metalness: 0.05 });
@@ -241,6 +242,7 @@ const EntryFlight: React.FC = () => {
 };
 
 export const RealMapWorld: React.FC = () => {
+  const demoOn = useDemoExplorerOn();
   const { origin } = useWorldState();
   useEffect(() => { resolveOrigin(); }, []);
   // Start the entry flight once the first street blocks are in (or after 4 s), so
@@ -271,7 +273,7 @@ export const RealMapWorld: React.FC = () => {
       {origin.status === 'ready' && <ZoeStreetAwareness origin={origin.origin} />}
       <ThermalGovernor />
       <PortalDoorway position={PORTAL_OFFSET} label="M'Mora World" onEnter={enterMMora} />
-      <DemoExplorer />
+      {demoOn && <DemoExplorer />}
     </>
   );
 };
