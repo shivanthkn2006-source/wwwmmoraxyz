@@ -44,12 +44,12 @@ export const VRMiniMap: React.FC<{ onToast?: (s: string) => void }> = ({ onToast
       g.clearRect(0, 0, SIZE, SIZE);
       g.save();
       g.beginPath(); g.arc(R, R, R - 3, 0, Math.PI * 2); g.clip();
-      g.fillStyle = 'rgba(28,32,30,0.82)'; g.fillRect(0, 0, SIZE, SIZE);
+      const bg = g.createRadialGradient(R, R * 0.6, 4, R, R, R); bg.addColorStop(0, 'rgba(255,255,255,0.28)'); bg.addColorStop(1, 'rgba(255,255,255,0.10)'); g.fillStyle = bg; g.fillRect(0, 0, SIZE, SIZE);
       g.translate(R, R); g.rotate(pose.yaw);
       const P = (x: number, z: number) => [(x - pose.x) * k, (z - pose.z) * k] as const;
       if (w.mode === 'real' && w.origin.status === 'ready') {
         const o = w.origin.origin;
-        g.strokeStyle = 'rgba(225,225,215,0.75)'; g.lineCap = 'round';
+        g.strokeStyle = 'rgba(255,255,255,0.95)'; g.shadowColor = 'rgba(0,0,0,0.5)'; g.shadowBlur = 2; g.lineCap = 'round';
         mapBlocks().forEach((b) => b.roads.forEach((r) => {
           g.lineWidth = Math.max(1, r.w * k * 0.9); g.beginPath();
           r.pts.forEach(([la, ln], i) => { const q = toLocal({ lat: la, lng: ln }, o); const [sx, sy] = P(q.x, q.z); if (i) g.lineTo(sx, sy); else g.moveTo(sx, sy); });
@@ -94,7 +94,7 @@ export const VRMiniMap: React.FC<{ onToast?: (s: string) => void }> = ({ onToast
 
   return (
     <div className="pointer-events-auto absolute right-3 top-40 flex flex-col items-center gap-1" data-exclude-phantom-tap data-testid="vr-minimap">
-      <canvas ref={ref} style={{ width: SIZE, height: SIZE }} className="rounded-full" aria-label="Mini map" />
+      <canvas ref={ref} style={{ width: SIZE, height: SIZE }} className="rounded-full border border-white/40 shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_6px_20px_rgba(0,0,0,0.25)]" aria-label="Mini map" />
       <div className="flex gap-2 text-[11px] font-semibold text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.8)]">
         <button type="button" aria-label="Use a green herb" onClick={() => onToast?.(useHerb())} className="flex items-center gap-1">
           <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: '#5fb04a' }} />×{p.herbs}
