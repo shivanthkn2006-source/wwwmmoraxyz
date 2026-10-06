@@ -114,6 +114,7 @@ import VRGamepadHUD from './vr/VRGamepadHUD';
 import { RealMapWorld } from '@/worlds/realmap/RealMapWorld';
 import { JourneyTracker } from '@/worlds/JourneyTracker';
 import { PortalDoorway } from '@/worlds/portal/PortalDoorway';
+import { VRWorldList } from '@/components/vr/VRWorldList';
 import { useWorldState, returnToReal, RETURN_PORTAL_POS, getWorldState, entryHeight } from '@/worlds/worldMode';
 import { LandscapeViewportGuard } from './vr/LandscapeViewportGuard';
 import { RealMapStatus } from './vr/RealMapStatus';
@@ -3438,6 +3439,7 @@ const VRLiveClock: React.FC = () => {
         <WorldBroadcastNotification />
 
         <VRFeature id="inventory"><VRInventoryHUD /></VRFeature>
+        <VRWorldList />
         {showWallet && <VRKarmaShop onClose={() => setShowWallet(false)} />}
 
 <VRFeature id="online">
