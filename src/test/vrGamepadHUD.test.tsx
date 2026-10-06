@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, act } from '@testing-library/react';
 import VRGamepadHUD from '@/components/vr/VRGamepadHUD';
 import { stickToKeys, fireAction, loadLayout } from '@/lib/vrInput';
 
@@ -27,7 +27,7 @@ describe('VR controller layer', () => {
     render(<VRGamepadHUD />);
     const tap = (name: RegExp) => { const b = screen.getByRole('button', { name }); fireEvent.pointerDown(b); fireEvent.pointerUp(b); };
     tap(/^jump$/i); tap(/run/i); tap(/run/i); tap(/zoom lens/i); tap(/switch camera/i); tap(/pick up/i); tap(/ask zoe/i);
-    act(() => { window.dispatchEvent(new CustomEvent('vr-action', { detail: { action: 'menu' } })); }); fireAction('menu', true);
+    fireAction('menu', true);
     expect(k.log).toEqual(expect.arrayContaining(['keydown:Space', 'keyup:Space', 'keydown:ShiftLeft', 'keyup:ShiftLeft', 'keydown:KeyZ', 'keydown:KeyV']));
     expect(events).toEqual(expect.arrayContaining(['vr-interact', 'vr-open-menu', 'vr-show-feature']));
     k.off();
