@@ -132,6 +132,16 @@ export const GlobalBugReporter: React.FC = () => {
     <>
       <button
         type="button"
+        aria-label="Go back"
+        title="Go back to the previous page"
+        onClick={() => { if (window.history.length > 1) window.history.back(); else window.location.assign('/home'); }}
+        className="fixed left-3 top-[calc(50%-2.25rem)] z-40 -translate-y-1/2 bg-transparent p-2 text-muted-foreground transition hover:text-foreground"
+        data-exclude-phantom-tap
+      >
+        <ArrowLeft className="h-4 w-4" />
+      </button>
+      <button
+        type="button"
         aria-label="Report a problem"
         title="Report a problem"
         onClick={() => setOpen(true)}
