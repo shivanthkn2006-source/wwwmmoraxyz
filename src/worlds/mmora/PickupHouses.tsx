@@ -30,8 +30,8 @@ const M = {
   pot: new THREE.MeshStandardMaterial({ color: '#5a2e24', roughness: 0.8 }),
   soil: new THREE.MeshStandardMaterial({ color: '#2b1f16', roughness: 1 }),
   stem: new THREE.MeshStandardMaterial({ color: '#9fc28a', roughness: 0.7 }),
-  leaf: new THREE.MeshStandardMaterial({ color: '#4f8a3a', roughness: 0.65, side: THREE.DoubleSide, emissive: '#3fae2a', emissiveIntensity: 0.7 }),
-  coin: new THREE.MeshStandardMaterial({ color: '#ffd24a', metalness: 0.85, roughness: 0.22, emissive: '#c8901a', emissiveIntensity: 1.1 }),
+  leaf: new THREE.MeshStandardMaterial({ color: '#4f8a3a', roughness: 0.65, side: THREE.DoubleSide, emissive: '#1f5a14', emissiveIntensity: 0.4 }),
+  coin: new THREE.MeshStandardMaterial({ color: '#ffd24a', metalness: 0.85, roughness: 0.22, emissive: '#7a5410', emissiveIntensity: 0.45 }),
 };
 const GLOW_G = new THREE.MeshBasicMaterial({ color: '#5fb04a', transparent: true, opacity: 0.45, depthWrite: false });
 const GLOW_C = new THREE.MeshBasicMaterial({ color: '#e3c15a', transparent: true, opacity: 0.45, depthWrite: false });
