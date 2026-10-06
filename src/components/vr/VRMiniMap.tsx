@@ -11,6 +11,8 @@ import { getWorldState } from '@/worlds/worldMode';
 import { mapBlocks } from '@/worlds/realmap/mapIndex';
 import { toLocal } from '@/worlds/realmap/geo';
 import { HOUSES, ALL_PICKUPS } from '@/worlds/mmora/PickupHouses';
+import { nearestStreet } from '@/worlds/realmap/ZoeStreetAwareness';
+import { setAmbientExtra } from '@/services/zoe-agent/ambientContext';
 import { usePickups, getPickups, useHerb, autoHerbIfDry } from '@/lib/vrPickups';
 
 const pose = { x: 0, z: 0, yaw: 0 };
@@ -27,11 +29,35 @@ export const VRPoseTicker: React.FC = () => {
   return null;
 };
 
+// Exploration: 50 m squares you have walked through, per city/place, saved on this device.
+const CELL = 50, GOAL = 150;
+const exKey = (label: string) => `vr-explored:${label}`;
+const readEx = (label: string): Set<string> => { try { return new Set(JSON.parse(localStorage.getItem(exKey(label)) || '[]')); } catch { return new Set(); } };
+
 const SIZE = 112, R = SIZE / 2, RANGE = 120; // metres from centre to edge
 
 export const VRMiniMap: React.FC<{ onToast?: (s: string) => void }> = ({ onToast }) => {
   const ref = useRef<HTMLCanvasElement>(null);
   const p = usePickups();
+  const [street, setStreet] = React.useState<string | null>(null);
+  const [explored, setExplored] = React.useState(0);
+  useEffect(() => {
+    let label = '', cells = new Set<string>();
+    const t = window.setInterval(() => {
+      const w = getWorldState();
+      if (w.origin.status !== 'ready') return;
+      const l = w.mode === 'real' ? (w.origin.label || `${w.origin.origin.lat.toFixed(2)},${w.origin.origin.lng.toFixed(2)}`) : "M'Mora World";
+      if (l !== label) { label = l; cells = readEx(l); }
+      const id = `${Math.round(pose.x / CELL)},${Math.round(pose.z / CELL)}`;
+      if (!cells.has(id)) { cells.add(id); try { localStorage.setItem(exKey(l), JSON.stringify([...cells].slice(-5000))); } catch { /* */ } }
+      setExplored(cells.size);
+      const st = w.mode === 'real' ? nearestStreet(pose.x, pose.z, w.origin.origin) : null;
+      setStreet(st);
+      setAmbientExtra('VR explored', `${Math.min(100, Math.round((cells.size / GOAL) * 100))}% of ${l} (${cells.size}/${GOAL} areas)`);
+    }, 1000);
+    return () => window.clearInterval(t);
+  }, []);
+  const exploredRef = useRef(0); exploredRef.current = explored;
   useEffect(() => {
     const cv = ref.current; if (!cv) return;
     const dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -49,6 +75,14 @@ export const VRMiniMap: React.FC<{ onToast?: (s: string) => void }> = ({ onToast
       const P = (x: number, z: number) => [(x - pose.x) * k, (z - pose.z) * k] as const;
       if (w.mode === 'real' && w.origin.status === 'ready') {
         const o = w.origin.origin;
+        g.fillStyle = 'rgba(255,255,255,0.22)';
+        mapBlocks().forEach((b) => b.buildings.forEach((bd) => {
+          const q0 = toLocal({ lat: bd.pts[0][0], lng: bd.pts[0][1] }, o);
+          if (Math.abs(q0.x - pose.x) > RANGE * 1.5 || Math.abs(q0.z - pose.z) > RANGE * 1.5) return;
+          g.beginPath();
+          bd.pts.forEach(([la, ln], i) => { const q = toLocal({ lat: la, lng: ln }, o); const [sx, sy] = P(q.x, q.z); if (i) g.lineTo(sx, sy); else g.moveTo(sx, sy); });
+          g.fill();
+        }));
         g.strokeStyle = 'rgba(255,255,255,0.95)'; g.shadowColor = 'rgba(0,0,0,0.5)'; g.shadowBlur = 2; g.lineCap = 'round';
         mapBlocks().forEach((b) => b.roads.forEach((r) => {
           g.lineWidth = Math.max(1, r.w * k * 0.9); g.beginPath();
@@ -77,6 +111,9 @@ export const VRMiniMap: React.FC<{ onToast?: (s: string) => void }> = ({ onToast
       }
       // Ring + compass letters (rotate with the map)
       g.strokeStyle = 'rgba(240,236,225,0.9)'; g.lineWidth = 3; g.beginPath(); g.arc(R, R, R - 2, 0, 7); g.stroke();
+      const frac = Math.min(1, exploredRef.current / GOAL);
+      g.strokeStyle = '#5fb04a'; g.lineWidth = 3; g.lineCap = 'round';
+      if (frac > 0) { g.beginPath(); g.arc(R, R, R - 2, -Math.PI / 2, -Math.PI / 2 + frac * Math.PI * 2); g.stroke(); }
       g.font = 'bold 10px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle';
       ([['N', 0], ['E', Math.PI / 2], ['S', Math.PI], ['W', -Math.PI / 2]] as const).forEach(([l, a]) => {
         const ang = a + pose.yaw - Math.PI / 2;
@@ -95,6 +132,8 @@ export const VRMiniMap: React.FC<{ onToast?: (s: string) => void }> = ({ onToast
   return (
     <div className="pointer-events-auto absolute right-3 top-40 flex flex-col items-center gap-1" data-exclude-phantom-tap data-testid="vr-minimap">
       <canvas ref={ref} style={{ width: SIZE, height: SIZE }} className="rounded-full border border-white/40 shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_6px_20px_rgba(0,0,0,0.25)]" aria-label="Mini map" />
+      {street && <div className="max-w-[9rem] truncate text-center text-[11px] font-semibold text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.8)]" data-testid="vr-minimap-street">{street}</div>}
+      <div className="text-[10px] font-semibold text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.8)]" aria-label="Explored">{Math.min(100, Math.round((explored / GOAL) * 100))}% explored · goal {GOAL}</div>
       <div className="flex gap-2 text-[11px] font-semibold text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.8)]">
         <button type="button" aria-label="Use a green herb" onClick={() => onToast?.(useHerb())} className="flex items-center gap-1">
           <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: '#5fb04a' }} />×{p.herbs}
