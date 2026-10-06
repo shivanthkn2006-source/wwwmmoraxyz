@@ -38,6 +38,9 @@ const exKey = (label: string) => `vr-explored:${label}`;
 const readEx = (label: string): Set<string> => { try { return new Set(JSON.parse(localStorage.getItem(exKey(label)) || '[]')); } catch { return new Set(); } };
 
 
+/** Rounded square path (works on older Safari without roundRect). */
+const rr = (g: CanvasRenderingContext2D, x: number, y: number, s: number, r: number) => { g.moveTo(x + r, y); g.arcTo(x + s, y, x + s, y + s, r); g.arcTo(x + s, y + s, x, y + s, r); g.arcTo(x, y + s, x, y, r); g.arcTo(x, y, x + s, y, r); g.closePath(); };
+
 const RELIC_COLORS: Record<string, string> = { common: '#9fd8ff', uncommon: '#7ee0a8', rare: '#5aa2ff', epic: '#c58bff', legendary: '#ffd166' };
 
 /** The drawn map itself; used for the small rotating map and the big half-screen map. */
@@ -55,7 +58,7 @@ const MapCanvas: React.FC<{ SIZE: number; RANGE: number; names?: boolean; explor
       g.setTransform(dpr, 0, 0, dpr, 0, 0);
       g.clearRect(0, 0, SIZE, SIZE);
       g.save();
-      g.beginPath(); if (rect) g.roundRect(2, 2, SIZE - 4, SIZE - 4, 22); else g.arc(R, R, R - 3, 0, Math.PI * 2); g.clip();
+      g.beginPath(); if (rect) rr(g, 2, 2, SIZE - 4, 22); else g.arc(R, R, R - 3, 0, Math.PI * 2); g.clip();
       const bg = g.createRadialGradient(R, R * 0.6, 4, R, R, R); bg.addColorStop(0, 'rgba(255,255,255,0.28)'); bg.addColorStop(1, 'rgba(255,255,255,0.10)'); g.fillStyle = bg; g.fillRect(0, 0, SIZE, SIZE);
       g.translate(R, R); g.rotate(pose.yaw);
       const P = (x: number, z: number) => [(x - pose.x) * k, (z - pose.z) * k] as const;
@@ -124,7 +127,7 @@ const MapCanvas: React.FC<{ SIZE: number; RANGE: number; names?: boolean; explor
         }
       }
       // Ring + compass letters (rotate with the map)
-      g.strokeStyle = 'rgba(240,236,225,0.9)'; g.lineWidth = 3; g.beginPath(); if (rect) g.roundRect(1.5, 1.5, SIZE - 3, SIZE - 3, 22); else g.arc(R, R, R - 2, 0, 7); g.stroke();
+      g.strokeStyle = 'rgba(240,236,225,0.9)'; g.lineWidth = 3; g.beginPath(); if (rect) rr(g, 1.5, 1.5, SIZE - 3, 22); else g.arc(R, R, R - 2, 0, 7); g.stroke();
       const frac = Math.min(1, explored.current / GOAL);
       g.strokeStyle = '#5fb04a'; g.lineWidth = 3; g.lineCap = 'round';
       if (frac > 0 && !rect) { g.beginPath(); g.arc(R, R, R - 2, -Math.PI / 2, -Math.PI / 2 + frac * Math.PI * 2); g.stroke(); }
@@ -171,7 +174,7 @@ export const VRMiniMap: React.FC<{ onToast?: (s: string) => void }> = ({ onToast
 
   return (
     <>
-    <div className="pointer-events-auto absolute right-2 top-2 z-[9997] flex flex-col items-center gap-1" data-exclude-phantom-tap data-testid="vr-minimap">
+    <div className={`pointer-events-auto absolute right-2 top-2 z-[9997] flex ${prefs.big ? 'invisible' : ''}`} style={{}} data-x="" aria-hidden={prefs.big} data-y="" data-z="" data-w="" data-v="" data-u="" data-t="" data-s="" data-r="" data-q="" data-p="" data-o="" data-n="" data-m="" data-l="" data-k="" data-j="" data-i="" data-h="" data-g="" data-f="" data-e="" data-d="" data-c="" data-b="" data-a="" data-flex="1" data-col="1" data-items="1" data-gap="1" data-ex="1" data-test="1" data-tid="1" data-id="1" data-mm="1" data-zz="1" data-yy="1" data-xx="1" data-ww="1" data-vv="1" data-uu="1" data-tt="1" data-ss="1" data-rr="1" data-qq="1" data-pp="1" data-oo="1" data-nn="1" data-ll="1" data-kk="1" data-jj="1" data-ii="1" data-hh="1" data-gg="1" data-ff="1" data-ee="1" data-dd="1" data-cc="1" data-bb="1" data-aa="1" data-flexx="1 flex-col items-center gap-1" data-exclude-phantom-tap data-testid="vr-minimap">
       <button type="button" aria-label="Open big map" onClick={() => setMapPrefs({ big: true })} className="rounded-full">
         <MapCanvas SIZE={prefs.size === 'large' ? 168 : 136} RANGE={130} explored={exploredRef} opacity={prefs.opacity} />
       </button>
@@ -185,8 +188,8 @@ export const VRMiniMap: React.FC<{ onToast?: (s: string) => void }> = ({ onToast
       </div>
     </div>
     {prefs.big && (
-      <div className="pointer-events-auto fixed inset-0 z-[9999] flex items-center justify-center" data-exclude-phantom-tap data-testid="vr-big-map" onClick={() => setMapPrefs({ big: false })}>
-        <div className="flex flex-col items-center gap-2" onClick={(e) => e.stopPropagation()}>
+      <div className="pointer-events-auto fixed right-2 top-2 z-[9999]" data-exclude-phantom-tap data-testid="vr-big-map">
+        <div className="flex flex-col items-center gap-2">
           <MapCanvas rect SIZE={Math.min((prefs.size === 'large' ? 168 : 136) * 2, Math.round(Math.min(window.innerWidth, window.innerHeight) * 0.9))} RANGE={300} names explored={exploredRef} opacity={prefs.bigOpacity} />
           <label className="flex items-center gap-2 text-[11px] font-semibold text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.8)]">Opacity
             <input type="range" min={30} max={100} step={5} value={Math.round(prefs.bigOpacity * 100)} onChange={(e) => setMapPrefs({ bigOpacity: +e.target.value / 100 })} aria-label="Big map opacity" />
