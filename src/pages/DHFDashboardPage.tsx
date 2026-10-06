@@ -9,6 +9,7 @@ import ZoeMemoryStatusPanel from '@/components/zoe-infinity/ZoeMemoryStatusPanel
 import DhfVideoFeed from '@/components/dhf/DhfVideoFeed';
 import DhfSensorPanel from '@/components/dhf/DhfSensorPanel';
 import ZoeVisionSearchPanel from '@/components/dhf/ZoeVisionSearchPanel';
+import VRLiveCard from '@/components/vr/VRLiveCard';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Brain, Upload, Database, Video } from 'lucide-react';
@@ -57,6 +58,7 @@ const DHFDashboardPage: React.FC = () => {
               className="mb-6"
             />
             <DhfSensorPanel />
+            <div className="mt-6"><VRLiveCard /></div>
           </TabsContent>
 
           <TabsContent value="videos" className="mt-0">
