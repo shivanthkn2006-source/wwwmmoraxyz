@@ -25,7 +25,7 @@ export const StreetLamps: React.FC<{ spots: [number, number][] }> = ({ spots }) 
     im.frustumCulled = spots.length > 0;
     return im;
   }), [spots]);
-  useEffect(() => () => meshes.forEach((m) => m.dispose()), [meshes]);
+  useEffect(() => () => { meshes.forEach((m) => m.dispose()); }, [meshes]);
   if (!spots.length) return null;
   return <>{meshes.map((m, i) => <primitive key={i} object={m} />)}</>;
 };

@@ -67,7 +67,7 @@ const Parts: React.FC<{ benches: Bench[]; parts: number[][]; mat: THREE.Material
     m.computeBoundingSphere();
     return m;
   }, [benches, parts, mat]);
-  useEffect(() => () => mesh.dispose(), [mesh]);
+  useEffect(() => () => { mesh.dispose(); }, [mesh]);
   return <primitive object={mesh} />;
 };
 
