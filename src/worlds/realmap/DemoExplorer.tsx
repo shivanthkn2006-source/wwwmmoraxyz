@@ -8,9 +8,8 @@ import React, { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import * as THREE from 'three';
-import { humanGeometry, HUMAN_MATERIAL } from '@/lib/vrHumanLook';
+import { JointedHuman } from '@/worlds/meet/JointedHuman';
 
-const PERSON = humanGeometry();
 
 export const DEMO_RADIUS = 25;
 
@@ -31,7 +30,7 @@ export const DemoExplorer: React.FC = () => {
   });
   return (
     <group ref={ref}>
-      <mesh geometry={PERSON} material={HUMAN_MATERIAL} />
+      <JointedHuman />
       <Html position={[0, 2.4, 0]} center distanceFactor={12} style={{ pointerEvents: 'none' }}>
         <div className="surface-warm-tan rounded-full px-2 py-0.5 text-[10px] whitespace-nowrap text-white">@demo_explorer · demo</div>
       </Html>
