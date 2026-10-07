@@ -12,6 +12,9 @@ import { registerUse } from '@/lib/vrUse';
 import { addCoins, spendCoins, getPickups } from '@/lib/vrPickups';
 import { mmoraCityKey } from '@/worlds/worldMode';
 import { StreetLamps } from '../StreetLamps';
+import { getMeet, setChatOpen } from '@/worlds/meet/vrMeet';
+
+export const TALK_SECONDS = 5 * 60;
 
 export const BENCH_COST = 10;
 export const SIT_COIN_SECONDS = 30;
@@ -22,6 +25,8 @@ type Bench = [number, number, number]; // x, z, rotY
 const BASE: Bench[] = [
   [-6, 0, 0], [10, 2, Math.PI], [0, -12, 0], [-12, -10, Math.PI / 2],
   [12, -14, -Math.PI / 2], [-4, 14, Math.PI], [8, 16, Math.PI], [-16, 6, Math.PI / 2],
+  // Beach benches facing the sea (and the full moon at night)
+  ...[-30, -20, -10, 0, 10, 20, 30].map((x): Bench => [x, -70, Math.PI]),
 ];
 
 const key = () => `vr-mmora-benches:${mmoraCityKey()}`;
@@ -81,7 +86,7 @@ export const MMoraBenches: React.FC = () => {
   const lamps = useMemo(() => benches.map(([x, z, r]) => [x + Math.cos(r) * 1.3, z - Math.sin(r) * 1.3] as [number, number]), [benches]);
   const { camera } = useThree();
   const armBuild = useRef(0);
-  const sit = useRef<{ seat: [number, number]; t: number; earned: number } | null>(null);
+  const sit = useRef<{ seat: [number, number]; t: number; earned: number; talk: number } | null>(null);
 
   useEffect(() => registerUse(() => {
     const c = camera.position;
@@ -93,8 +98,10 @@ export const MMoraBenches: React.FC = () => {
         if (sit.current) return;
         const seat = seatOf(b);
         window.dispatchEvent(new CustomEvent('vr-teleport', { detail: { position: [seat[0], 1.15, seat[1]], lockGround: true } }));
-        sit.current = { seat, t: 0, earned: 0 };
-        toast('Sitting — you earn a coin every 30 seconds');
+        sit.current = { seat, t: 0, earned: 0, talk: 0 };
+        const n = getMeet().nearest;
+        if (n && n.dist < 4) { sit.current.talk = TALK_SECONDS; setChatOpen(true, true); toast(`Sitting with @${n.username} — chat for 5 minutes`); }
+        else toast('Sitting — you earn a coin every 30 seconds');
       } };
     }
     if (best && best.d < 3.5) return null;
@@ -114,6 +121,7 @@ export const MMoraBenches: React.FC = () => {
     const s = sit.current; if (!s) return;
     if (Math.hypot(camera.position.x - s.seat[0], camera.position.z - s.seat[1]) > 1.2) { sit.current = null; return; }
     s.t += Math.min(dt, 0.1);
+    if (s.talk > 0) { s.talk -= Math.min(dt, 0.1); if (s.talk <= 0) toast('5 minutes together — stay or get up any time'); }
     if (s.t >= SIT_COIN_SECONDS && s.earned < SIT_COIN_CAP) { s.t = 0; s.earned += 1; addCoins(1); toast(`+1 coin for resting (${s.earned})`); }
   });
 

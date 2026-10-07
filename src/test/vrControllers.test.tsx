@@ -91,6 +91,7 @@ describe('simulated controllers driving VR World', () => {
     render(<VRGamepadHUD />);
     act(() => { window.dispatchEvent(Object.assign(new Event('gamepadconnected'), { gamepad: pad })); });
     expect(screen.getByText(/xbox controller connected/i)).toBeInTheDocument();
+    act(() => { screen.getByRole('button', { name: /show action buttons/i }).click(); });
     expect(screen.getByRole('button', { name: /pick up/i })).toHaveTextContent('A');
 
     act(() => { pad.axes[1] = -0.9; frame(); });               // left stick up → W
@@ -116,6 +117,7 @@ describe('simulated controllers driving VR World', () => {
     const pad = mkPad(DUALSENSE); pads = [pad];
     render(<VRGamepadHUD />);
     act(() => { window.dispatchEvent(Object.assign(new Event('gamepadconnected'), { gamepad: pad })); });
+    act(() => { screen.getByRole('button', { name: /show action buttons/i }).click(); });
     expect(screen.getByRole('button', { name: /pick up/i })).toHaveTextContent('✕');
     act(() => { press(pad, 10); frame(); release(pad, 10); frame(); });
     expect(k.log).toContain('keydown:ShiftLeft');
