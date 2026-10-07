@@ -1,3 +1,4 @@
+import { RealMapLamps } from './RealMapLamps';
 import { ZoeStreetAwareness } from './ZoeStreetAwareness';
 import { addBlockRelics, dropBlockRelics } from './streetRelics';
 import { StreetRelics } from './StreetRelics';
@@ -281,6 +282,7 @@ export const RealMapWorld: React.FC = () => {
       {origin.status === 'ready' && <MapLabels origin={origin.origin} />}
       {origin.status === 'ready' && <StreetHouses origin={origin.origin} />}
       {origin.status === 'ready' && <StreetTraffic origin={origin.origin} />}
+      {origin.status === 'ready' && <RealMapLamps origin={origin.origin} />}
       {origin.status === 'ready' && <ZoeStreetAwareness origin={origin.origin} />}
       <ThermalGovernor />
       <AdminRealmapSync />

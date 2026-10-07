@@ -80,6 +80,7 @@ export const MMoraBenches: React.FC = () => {
   const benchesRef = useRef(benches); benchesRef.current = benches;
   const lamps = useMemo(() => benches.map(([x, z, r]) => [x + Math.cos(r) * 1.3, z - Math.sin(r) * 1.3] as [number, number]), [benches]);
   const { camera } = useThree();
+  const armBuild = useRef(0);
   const sit = useRef<{ seat: [number, number]; t: number; earned: number } | null>(null);
 
   useEffect(() => registerUse(() => {
@@ -100,6 +101,8 @@ export const MMoraBenches: React.FC = () => {
     // Open spot: offer to build (low priority so real targets win).
     const yaw = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ').y;
     return { dist: 2.9, reach: 3, label: `Build a bench here (${BENCH_COST} coins)`, run: () => {
+      if (performance.now() - armBuild.current > 4000) { armBuild.current = performance.now(); toast(`Press Use again to build a bench (${BENCH_COST} coins)`); return; }
+      armBuild.current = 0;
       if (getPickups().coins < BENCH_COST || !spendCoins(BENCH_COST)) { toast(`You need ${BENCH_COST} coins — sit on a bench to earn them`); return; }
       const fx = -Math.sin(yaw) * 2, fz = -Math.cos(yaw) * 2;
       addBuilt([+(c.x + fx).toFixed(2), +(c.z + fz).toFixed(2), yaw]);
