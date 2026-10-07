@@ -1,40 +1,55 @@
 /**
- * Building lights for every VR world (Real Map + M'Mora World): windows glow
- * from 17:54 until 22:00 on the member's local clock. Materials register once
- * and a single 30 s ticker switches them, so no per-frame cost.
+ * Lights for every VR world (Real Map + M'Mora World), on the member's local
+ * clock: building windows glow 17:54–22:00, street lamps 17:00–05:50.
+ * Materials register once and a single 30 s ticker switches them.
  */
 import * as THREE from 'three';
 
 export const LIGHTS_ON_MIN = 17 * 60 + 54;
 export const LIGHTS_OFF_MIN = 22 * 60;
+export const STREET_ON_MIN = 17 * 60;
+export const STREET_OFF_MIN = 5 * 60 + 50;
 
-export const lightsOnAt = (d: Date = new Date()) => {
-  const m = d.getHours() * 60 + d.getMinutes();
-  return m >= LIGHTS_ON_MIN && m < LIGHTS_OFF_MIN;
-};
+const mins = (d: Date) => d.getHours() * 60 + d.getMinutes();
+export const lightsOnAt = (d: Date = new Date()) => { const m = mins(d); return m >= LIGHTS_ON_MIN && m < LIGHTS_OFF_MIN; };
+export const streetLightsOnAt = (d: Date = new Date()) => { const m = mins(d); return m >= STREET_ON_MIN || m < STREET_OFF_MIN; };
 
-const lit = new Map<THREE.MeshStandardMaterial, number>();
-let on = lightsOnAt();
+export type LightSchedule = 'building' | 'street';
+const check = (s: LightSchedule) => (s === 'street' ? streetLightsOnAt() : lightsOnAt());
+
+type Entry = { intensity: number; schedule: LightSchedule };
+const lit = new Map<THREE.MeshStandardMaterial, Entry>();
+const toggles = new Map<THREE.Material, LightSchedule>();
+const on: Record<LightSchedule, boolean> = { building: lightsOnAt(), street: streetLightsOnAt() };
 let timer: ReturnType<typeof setInterval> | undefined;
 
-function apply(m: THREE.MeshStandardMaterial, intensity: number) {
-  m.emissiveIntensity = on ? intensity : 0;
+function startTicker() {
+  if (timer || typeof window === 'undefined') return;
+  timer = setInterval(() => {
+    let changed = false;
+    (['building', 'street'] as const).forEach((s) => { const n = check(s); if (n !== on[s]) { on[s] = n; changed = true; } });
+    if (!changed) return;
+    lit.forEach((e, m) => { m.emissiveIntensity = on[e.schedule] ? e.intensity : 0; });
+    toggles.forEach((s, m) => { m.visible = on[s]; });
+  }, 30_000);
 }
 
-/** Make a material glow (at `intensity`) only during lights-on hours. */
-export function registerLit<M extends THREE.MeshStandardMaterial>(m: M, intensity = 1): M {
-  lit.set(m, intensity);
-  apply(m, intensity);
+/** Make a material glow (at `intensity`) only during its schedule's hours. */
+export function registerLit<M extends THREE.MeshStandardMaterial>(m: M, intensity = 1, schedule: LightSchedule = 'building'): M {
+  lit.set(m, { intensity, schedule });
+  m.emissiveIntensity = on[schedule] ? intensity : 0;
   m.addEventListener('dispose', () => lit.delete(m));
-  if (!timer && typeof window !== 'undefined') {
-    timer = setInterval(() => {
-      const n = lightsOnAt();
-      if (n === on) return;
-      on = n;
-      lit.forEach((i, mat) => apply(mat, i));
-    }, 30_000);
-  }
+  startTicker();
   return m;
 }
 
-export const buildingLightsOn = () => on;
+/** Show a material (e.g. a light pool on the ground) only during its schedule's hours. */
+export function registerToggle<M extends THREE.Material>(m: M, schedule: LightSchedule = 'street'): M {
+  toggles.set(m, schedule);
+  m.visible = on[schedule];
+  m.addEventListener('dispose', () => toggles.delete(m));
+  startTicker();
+  return m;
+}
+
+export const buildingLightsOn = () => on.building;
