@@ -35,6 +35,7 @@ export function takePickup(p: Pickup) {
   st = { ...st, taken: [...st.taken, p.id].slice(-2000), herbs: st.herbs + (p.kind === 'herb' ? p.amount : 0), coins: st.coins + (p.kind === 'coin' ? p.amount : 0) };
   emit();
   playPickup(p.kind);
+  if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('vr-hand-reach'));
   void recordVRCollect({ type: p.kind === 'herb' ? 'green_herb' : 'antique_coin', rarity: p.kind === 'coin' && p.amount >= 5 ? 'rare' : 'common' });
   if (p.kind === 'coin') void supabase.rpc('earn_activity_karma' as never, { p_kind: 'vr_coin', p_units: p.amount } as never).then(() => {}, () => {});
 }
@@ -111,3 +112,19 @@ export async function pullCloud(force = false) {
   } catch { /* */ }
 }
 setInterval(() => { if (typeof document !== 'undefined' && document.visibilityState === 'visible') scheduleCloud(); }, 60_000);
+
+/** Coins earned without a pickup (e.g. sitting on a bench). */
+export function addCoins(n: number) {
+  if (n <= 0) return;
+  st = { ...st, coins: st.coins + n };
+  emit();
+  playPickup('coin');
+}
+
+/** Spend coins (e.g. to build a bench). Returns false when there aren't enough. */
+export function spendCoins(n: number): boolean {
+  if (st.coins < n) return false;
+  st = { ...st, coins: st.coins - n };
+  emit();
+  return true;
+}

@@ -146,6 +146,17 @@ export function travelHome() {
 const teleport = (position: [number, number, number]) =>
   window.dispatchEvent(new CustomEvent('vr-teleport', { detail: { position, lockGround: true } }));
 
+/** Which city's M'Mora World you are in: every city (≈11 km cell) gets its own, so Chennai portals open Chennai's world. */
+export function mmoraCityKey(): string {
+  const o = state.origin;
+  if (o.status !== 'ready') return 'home';
+  return `${Math.round(o.origin.lat * 10)}_${Math.round(o.origin.lng * 10)}`;
+}
+export function mmoraCityName(): string {
+  const o = state.origin;
+  return o.status === 'ready' && o.label ? o.label : 'your city';
+}
+
 export function enterMMora(fromPos: [number, number, number]) {
   if (state.mode === 'mmora') return;
   set({ mode: 'mmora', savedRealPos: fromPos, portalTrips: state.portalTrips + 1 });
