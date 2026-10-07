@@ -52,11 +52,42 @@ export function sampleLane(l: Lane, s: number, dir: 1 | -1, off: number): { x: n
 }
 
 /** Pure: advance one agent; at a dead end it turns round (never freezes). */
-export function stepAgent(a: Agent, l: Lane, dt: number, blocked: boolean): Agent {
+/** At a road's end, which connected road to continue on (null = dead end). */
+export type LaneLink = (lane: number, atEnd: boolean) => { lane: number; s: number; dir: 1 | -1 } | null;
+
+const JOIN_M = 4;
+/** Joins roads whose ends meet (OSM roads share junction points), so traffic drives on from road to road. */
+export function buildLaneLinks(lanes: Lane[]): LaneLink {
+  const cell = (x: number, z: number) => `${Math.floor(x / JOIN_M)},${Math.floor(z / JOIN_M)}`;
+  const grid = new Map<string, { lane: number; start: boolean; x: number; z: number }[]>();
+  lanes.forEach((l, i) => {
+    for (const start of [true, false]) {
+      const [x, z] = start ? l.pts[0] : l.pts[l.pts.length - 1];
+      const k = cell(x, z); (grid.get(k) ?? grid.set(k, []).get(k)!).push({ lane: i, start, x, z });
+    }
+  });
+  return (lane, atEnd) => {
+    const l = lanes[lane]; if (!l) return null;
+    const [x, z] = atEnd ? l.pts[l.pts.length - 1] : l.pts[0];
+    const cx = Math.floor(x / JOIN_M), cz = Math.floor(z / JOIN_M);
+    const opts: { lane: number; start: boolean }[] = [];
+    for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) for (const e of grid.get(`${cx + i},${cz + j}`) ?? [])
+      if (e.lane !== lane && Math.hypot(e.x - x, e.z - z) <= JOIN_M) opts.push(e);
+    if (!opts.length) return null;
+    const pick = opts[Math.floor(Math.random() * opts.length)];
+    return pick.start ? { lane: pick.lane, s: 0, dir: 1 } : { lane: pick.lane, s: lanes[pick.lane].len, dir: -1 };
+  };
+}
+
+export function stepAgent(a: Agent, l: Lane, dt: number, blocked: boolean, link?: LaneLink): Agent {
   const target = blocked ? 0 : a.base;
   const speed = a.speed + (target - a.speed) * Math.min(1, dt * (blocked ? 6 : 1.5));
   let s = a.s + a.dir * speed * dt, dir = a.dir;
-  if (s >= l.len) { s = l.len; dir = -1; } else if (s <= 0) { s = 0; dir = 1; }
+  if (s >= l.len || s <= 0) {
+    const n = link?.(a.lane, s >= l.len);
+    if (n) return { ...a, lane: n.lane, s: n.s, dir: n.dir, speed, phase: a.phase + speed * dt };
+    if (s >= l.len) { s = l.len; dir = -1; } else { s = 0; dir = 1; } // real dead end: turn round
+  }
   return { ...a, s, dir, speed, phase: a.phase + speed * dt };
 }
 
@@ -93,6 +124,7 @@ export const StreetTraffic: React.FC<{ origin: LatLng }> = ({ origin }) => {
   const carRef = useRef<THREE.InstancedMesh>(null), bikeRef = useRef<THREE.InstancedMesh>(null), pedRef = useRef<THREE.InstancedMesh>(null);
   const roads = useRef<{ car: Lane[]; walk: Lane[] }>({ car: [], walk: [] });
   const agents = useRef<Agent[]>([]);
+  const links = useRef<{ car: LaneLink; walk: LaneLink }>({ car: () => null, walk: () => null });
   const dummy = useMemo(() => new THREE.Object3D(), []);
 
   // Rebuild lanes from the loaded blocks.
@@ -105,6 +137,7 @@ export const StreetTraffic: React.FC<{ origin: LatLng }> = ({ origin }) => {
       walk.push(lane);
     }
     roads.current = { car, walk };
+    links.current = { car: buildLaneLinks(car), walk: buildLaneLinks(walk) };
     agents.current = []; // respawn on the new street set
   }, [version, origin]);
 
@@ -145,7 +178,7 @@ export const StreetTraffic: React.FC<{ origin: LatLng }> = ({ origin }) => {
         const fx = Math.sin(p.yaw), fz = Math.cos(p.yaw);
         blocked = walkers.some(([wx, wz]) => { const rx = wx - p.x, rz = wz - p.z; const ahead = rx * fx + rz * fz; return ahead > 0 && ahead < BRAKE_AHEAD_M && Math.abs(rx * fz - rz * fx) < 2.2; });
       }
-      next.push(stepAgent(a, l, dt, blocked)); have[a.kind]++;
+      next.push(stepAgent(a, l, dt, blocked, a.kind === 2 ? links.current.walk : links.current.car)); have[a.kind]++;
     }
     for (const k of [0, 1, 2] as const) while (have[k] < want[k]) { const a = spawn(k); if (!a) break; next.push(a); have[k]++; }
     agents.current = next;
