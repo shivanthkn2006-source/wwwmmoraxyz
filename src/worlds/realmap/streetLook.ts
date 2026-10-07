@@ -37,7 +37,27 @@ function getWindowTexture(): THREE.Texture {
   return windowTex;
 }
 
-export const makeWallMaterial = () => new THREE.MeshStandardMaterial({ map: getWindowTexture(), vertexColors: true, roughness: 0.8, metalness: 0.05 });
+let glowTex: THREE.Texture | null = null;
+/** Same layout as the window texture: only the glass is bright (lit rooms). */
+function getWindowGlowTexture(): THREE.Texture {
+  if (glowTex) return glowTex;
+  const c = document.createElement('canvas');
+  c.width = 64; c.height = 64;
+  const g = c.getContext('2d');
+  if (!g) { glowTex = new THREE.Texture(); return glowTex; }
+  g.fillStyle = '#000000'; g.fillRect(0, 0, 64, 64);
+  g.fillStyle = '#ffc56a'; g.fillRect(14, 14, 36, 32);
+  g.fillStyle = '#000000'; g.fillRect(31, 14, 2, 32);
+  glowTex = new THREE.CanvasTexture(c);
+  glowTex.wrapS = glowTex.wrapT = THREE.RepeatWrapping;
+  glowTex.colorSpace = THREE.SRGBColorSpace;
+  return glowTex;
+}
+
+export const makeWallMaterial = () => registerLit(new THREE.MeshStandardMaterial({
+  map: getWindowTexture(), emissiveMap: getWindowGlowTexture(), emissive: '#ffd28a',
+  vertexColors: true, roughness: 0.8, metalness: 0.05,
+}), 1.6);
 export const ROOF_MAT = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9 });
 export const PLAIN_WALL_MAT = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8 });
 export const ROAD_HI_MAT = new THREE.MeshStandardMaterial({ color: '#3f444b', roughness: 0.9 });
