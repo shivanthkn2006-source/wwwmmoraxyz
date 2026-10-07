@@ -73,12 +73,12 @@
 - Alerts go through notifications (new kind), rate-limited, admin switch on /admin/notifications.
 
 ## VR World requests (2026-10-07)
-- [ ] Clarify: which world is "the newly built M'Mora World" vs "the old VR Omega world" (portal target)
+- [x] Portals open only the new M'Mora World; old VR Omega city disconnected everywhere
 - [ ] Portals: explain why a city's portal doesn't lead to other cities (portals only go to M'Mora World and back)
-- [ ] Old VR Omega world: transform to Real Map tech (merged meshes, load only nearby)
+- [ ] Old VR Omega world: parked by owner (stays disconnected)
 - [ ] Merge distant houses/trees/signs into single meshes, nearby-only loading
-- [ ] Trees and metro ring, then market stalls: fewer batches
-- [ ] M'Mora World: stick/drag must move the avatar, not just rotate
+- [~] Trees/metro/market stalls belong to the old city — parked with it
+- [x] M'Mora World: stick/keys move the avatar (shared walking controller) — phone touch check pending
 - [ ] Bench economy: sit to earn coins, build more benches
 - [ ] PWA: VR World opens without stalling on "Finding your location" (12 s fallback added 2026-10-07; needs phone check)
 - [ ] Two-device Chennai portal + herbs/coins/explored % match, then another city (needs user's two phones)
