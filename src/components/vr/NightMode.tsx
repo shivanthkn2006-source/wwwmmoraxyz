@@ -39,6 +39,11 @@ export const NightMode: React.FC = () => {
     return () => { scene.fog = prev; scene.remove(target.current); };
   }, [night, scene]);
   useFrame(() => {
+    // From the sky (aerial view) thin the night fog so lit windows show across the city.
+    if (night && scene.fog instanceof THREE.FogExp2) {
+      const want = camera.position.y > 30 ? 0.0025 : 0.028;
+      scene.fog.density += (want - scene.fog.density) * 0.1;
+    }
     const l = light.current;
     if (!l) return;
     l.position.copy(camera.position);

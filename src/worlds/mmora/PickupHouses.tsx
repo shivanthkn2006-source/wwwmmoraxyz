@@ -10,6 +10,9 @@ import { registerUse } from '@/lib/vrUse';
 import { MMoraSigns } from './MMoraSigns';
 import { setStaticSolids, boxPoly } from '@/lib/vrSolids';
 import { usePickups, takePickup, isTaken, type Pickup } from '@/lib/vrPickups';
+import { registerLit } from '@/lib/vrLights';
+
+const WINDOW = registerLit(new THREE.MeshStandardMaterial({ color: '#4a5866', emissive: '#ffc56a', roughness: 0.4 }), 2.2);
 
 const HOUSE_W = 5, HOUSE_D = 5, HOUSE_H = 3;
 // [x, z, rotationY]
@@ -100,6 +103,13 @@ const House: React.FC<{ i: number; open: boolean }> = ({ i, open }) => {
       <mesh material={M.wall} position={[-(1.1 / 2 + side / 2), HOUSE_H / 2, HOUSE_D / 2]}><boxGeometry args={[side, HOUSE_H, 0.2]} /></mesh>
       <mesh material={M.wall} position={[1.1 / 2 + side / 2, HOUSE_H / 2, HOUSE_D / 2]}><boxGeometry args={[side, HOUSE_H, 0.2]} /></mesh>
       <mesh material={M.wall} position={[0, HOUSE_H - 0.4, HOUSE_D / 2]}><boxGeometry args={[1.1, 0.8, 0.2]} /></mesh>
+      {/* Windows: glow 17:54–22:00 */}
+      {([[-HOUSE_W / 2 - 0.11, -Math.PI / 2], [HOUSE_W / 2 + 0.11, Math.PI / 2]] as const).map(([wx, ry], k) => (
+        <mesh key={k} material={WINDOW} position={[wx, 1.6, 0]} rotation={[0, ry, 0]}><planeGeometry args={[1.4, 0.9]} /></mesh>
+      ))}
+      <mesh material={WINDOW} position={[-1.6, 1.6, HOUSE_D / 2 + 0.11]}><planeGeometry args={[0.9, 0.8]} /></mesh>
+      <mesh material={WINDOW} position={[1.6, 1.6, HOUSE_D / 2 + 0.11]}><planeGeometry args={[0.9, 0.8]} /></mesh>
+      <mesh material={WINDOW} position={[0, HOUSE_H + 0.21, 0]} rotation={[-Math.PI / 2, 0, 0]}><planeGeometry args={[1.2, 1.2]} /></mesh>
       <mesh material={M.roof} position={[0, HOUSE_H + 0.1, 0]}><boxGeometry args={[HOUSE_W + 0.4, 0.2, HOUSE_D + 0.4]} /></mesh>
       <group ref={door} position={[-0.55, 0, HOUSE_D / 2]}>
         <mesh material={M.door} position={[0.55, 1.1, 0]}><boxGeometry args={[1.1, 2.2, 0.08]} /></mesh>
