@@ -2923,12 +2923,12 @@ const VRLiveClock: React.FC = () => {
           )}
           
           {/* Phase 3: Procedural Cyber City - only when zoomed to city level */}
-          {worldMode === 'mmora' && showCitySystems && showCyberCity && !isPerformanceCritical && currentTier !== 'low' && (
+          {false && showCitySystems && showCyberCity && !isPerformanceCritical && currentTier !== 'low' && (
             <ProceduralCyberCity config={graphicsConfig} seed={42} cityRadius={150} />
           )}
           
           {/* Phase 5: Gaussian Splat Viewer - heavy, only at ground level */}
-          {worldMode === 'mmora' && showCinematicEffects && showGaussianSplat && (
+          {false && showCinematicEffects && showGaussianSplat && (
             <GaussianSplatViewer position={[0, 5, -20]} scale={2} />
           )}
           
