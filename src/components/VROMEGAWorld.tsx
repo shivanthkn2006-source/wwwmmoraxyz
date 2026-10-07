@@ -2964,7 +2964,7 @@ const VRLiveClock: React.FC = () => {
               />
               
               {/* Crowd Avatar System - automatically disabled under critical FPS */}
-              {worldMode === 'mmora' && showCrowdSystems && <CrowdAvatarSystem />}
+              {false && <CrowdAvatarSystem />}
             </>
           )}
           
