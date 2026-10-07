@@ -50,8 +50,8 @@ export interface SeasonalAvatarProps {
 const SEASONAL_COLORS = {
   winter: {
     coat: ['#1e3a5f', '#2c3e50', '#34495e', '#6c3461'],
-    scarf: ['#e74c3c', '#f39c12', '#27ae60', '#9b59b6'],
-    hat: ['#34495e', '#2c3e50', '#8e44ad'],
+    scarf: ['#e74c3c', '#f39c12', '#27ae60', '#d4a24c'],
+    hat: ['#34495e', '#2c3e50', '#c8923e'],
   },
   spring: {
     jacket: ['#3498db', '#2ecc71', '#f1c40f', '#e91e63'],
@@ -62,7 +62,7 @@ const SEASONAL_COLORS = {
     shorts: ['#2c3e50', '#34495e', '#7f8c8d', '#3498db'],
   },
   fall: {
-    sweater: ['#d35400', '#c0392b', '#8e44ad', '#27ae60', '#f39c12'],
+    sweater: ['#d35400', '#c0392b', '#c8923e', '#27ae60', '#f39c12'],
     scarf: ['#c0392b', '#d35400', '#8b4513'],
   },
 };

@@ -214,7 +214,7 @@ const SecretPortal: React.FC<{
         <circleGeometry args={[1.9, 32]} />
         <meshStandardMaterial
           color="#1a1a2e"
-          emissive="#4c1d95"
+          emissive="#7a5426"
           emissiveIntensity={0.3}
           transparent
           opacity={0.8}

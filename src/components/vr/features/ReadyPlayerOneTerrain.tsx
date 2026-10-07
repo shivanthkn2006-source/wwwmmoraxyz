@@ -196,8 +196,8 @@ const CentralPeak: React.FC<{ season: Season }> = ({ season }) => {
       <mesh ref={glowRef} position={[0, 130, 0]}>
         <sphereGeometry args={[8, 16, 16]} />
         <meshStandardMaterial 
-          color="#ff00ff" 
-          emissive="#ff00ff" 
+          color="#f0c27a" 
+          emissive="#f0c27a" 
           emissiveIntensity={0.5}
           transparent
           opacity={0.9}

@@ -498,7 +498,7 @@ const HoloWall: React.FC<{
           color="#1e1b4b"
           transparent
           opacity={0.6}
-          emissive="#4c1d95"
+          emissive="#7a5426"
           emissiveIntensity={0.2}
         />
       </Box>

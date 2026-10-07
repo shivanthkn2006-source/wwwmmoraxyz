@@ -420,7 +420,7 @@ export const generateSeasonalVehicles = (season: Season, count: number = 5): Sea
     fall: ['tractor', 'hayride', 'pickup_truck', 'atv'],
   };
 
-  const colors = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6'];
+  const colors = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#d4a24c'];
   const types = vehicleTypes[season];
 
   return Array.from({ length: count }, (_, i) => ({

@@ -32,7 +32,7 @@ export const GlassPyramidAvatar: React.FC<GlassPyramidAvatarProps> = ({
   // Role-based colors
   const roleColor = useMemo(() => {
     switch (player.role) {
-      case 'admin': return '#ff00ff'; // Magenta for admins
+      case 'admin': return '#f0c27a'; // Magenta for admins
       case 'moderator': return '#00ffff'; // Cyan for moderators
       default: return '#00ff88'; // Green for users
     }

@@ -41,7 +41,7 @@ const SUFFIXES = ['_2120', '_X', '_Prime', '_Zero', '_One', '_Max', '_Ultra', '_
 const SKIN_TONES = ['#ffe0bd', '#ffcd94', '#e0ac69', '#c68642', '#8d5524', '#6b4423'];
 const HAIR_COLORS = ['#090806', '#4a3728', '#b7a69e', '#da680f', '#3b82f6', '#e0ad5c', '#f2c48d', '#22c55e'];
 const SHIRT_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#e0ad5c', '#f2c48d', '#06b6d4'];
-const PANTS_COLORS = ['#1f2937', '#374151', '#4b5563', '#1e3a5f', '#312e81', '#4c1d95'];
+const PANTS_COLORS = ['#1f2937', '#374151', '#4b5563', '#1e3a5f', '#312e81', '#7a5426'];
 
 // Generate random NPC
 const generateRandomNPC = (index: number): NPCAvatar => {

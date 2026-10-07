@@ -40,7 +40,7 @@ const generateBuildingData = (
   
   const neonColors = [
     new THREE.Color('#00ffff'), // Cyan
-    new THREE.Color('#ff00ff'), // Magenta
+    new THREE.Color('#f0c27a'), // Magenta
     new THREE.Color('#ff6600'), // Orange
     new THREE.Color('#00ff00'), // Green
     new THREE.Color('#ff0066'), // Pink
@@ -380,8 +380,8 @@ const ProceduralCyberCity: React.FC<ProceduralCyberCityProps> = ({
           <mesh key={i} position={[0, y, 0]} rotation={[Math.PI / 2, 0, 0]}>
             <torusGeometry args={[15 - i * 2, 0.5, 16, 64]} />
             <meshStandardMaterial
-              color="#ff00ff"
-              emissive="#ff00ff"
+              color="#f0c27a"
+              emissive="#f0c27a"
               emissiveIntensity={2}
               toneMapped={false}
             />
@@ -404,7 +404,7 @@ const ProceduralCyberCity: React.FC<ProceduralCyberCityProps> = ({
       />
       <pointLight
         position={[-100, 50, -100]}
-        color="#ff00ff"
+        color="#f0c27a"
         intensity={500}
         distance={200}
       />
