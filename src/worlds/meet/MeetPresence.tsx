@@ -115,7 +115,7 @@ export const MeetPresence: React.FC = () => {
       holdUntil.current = performance.now() + 5000;
       const at = performance.now();
       setShake((m) => ({ ...m, [best!.p.id]: at }));
-      window.dispatchEvent(new CustomEvent('vr-item-pickup')); // my hand reaches out for the handshake
+      window.dispatchEvent(new CustomEvent('vr-hand-reach')); // my hand reaches out for the handshake
       setChatOpen(true);
       void notifySelf('vr_player_met', 'Met in VR World', `You met @${best.p.username} (${TAG_LABEL[best.p.tag]}) in ${st.mode === 'mmora' ? "M'Mora World" : 'your street'}.`, { link: '/vr-world', member: best.p.id }).catch(() => {});
     }

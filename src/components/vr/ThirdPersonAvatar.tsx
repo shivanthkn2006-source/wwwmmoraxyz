@@ -43,7 +43,8 @@ export const ThirdPersonAvatar: React.FC = () => {
   useEffect(() => {
     const onPick = () => { reach.current = 1; };
     window.addEventListener('vr-item-pickup', onPick);
-    return () => window.removeEventListener('vr-item-pickup', onPick);
+    window.addEventListener('vr-hand-reach', onPick);
+    return () => { window.removeEventListener('vr-item-pickup', onPick); window.removeEventListener('vr-hand-reach', onPick); };
   }, []);
 
   useFrame((_, dt) => {
