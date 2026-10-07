@@ -82,3 +82,7 @@
 - [ ] Bench economy: sit to earn coins, build more benches
 - [ ] PWA: VR World opens without stalling on "Finding your location" (12 s fallback added 2026-10-07; needs phone check)
 - [ ] Two-device Chennai portal + herbs/coins/explored % match, then another city (needs user's two phones)
+- [x] Roads joined at junctions: cars/people drive on road to road (turn round only at dead ends)
+- [x] One avatar look for everyone: hair, blue top, yellow trim, white trousers
+- [x] M'Mora World: MOVE stick drag walks the avatar (tested: 15 m); screen drag turns the camera
+- [ ] Portal network: which city should a Chennai portal open? (waiting on user)
