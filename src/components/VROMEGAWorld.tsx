@@ -1204,6 +1204,18 @@ const RenderStatsProbe: React.FC = () => {
   return null;
 };
 
+/** Ground + sky for the new M'Mora World (houses, herbs, coins, signs, save point). */
+const MMoraGround: React.FC = () => (
+  <>
+    <color attach="background" args={['#cfe3f2']} />
+    <hemisphereLight args={['#ffffff', '#8a7a62', 0.9]} />
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
+      <planeGeometry args={[400, 400]} />
+      <meshStandardMaterial color="#9bb57a" roughness={0.95} />
+    </mesh>
+  </>
+);
+
 const MemoryPalace: React.FC<{
   engrams: MemoryEngram[];
   ecnData: ECNDataPoint[];
@@ -1224,7 +1236,7 @@ const MemoryPalace: React.FC<{
   const [externalCameraLocked, setExternalCameraLocked] = useState(false);
   const inMMora = useWorldState().mode === 'mmora';
   // The Real Map has no satellite-entry sequence; unlock controls right away.
-  useEffect(() => { if (!inMMora && !hasSatelliteEntryCompleted) onSatelliteEntryComplete(); }, [inMMora, hasSatelliteEntryCompleted, onSatelliteEntryComplete]);
+  useEffect(() => { if (!hasSatelliteEntryCompleted) onSatelliteEntryComplete(); }, [ hasSatelliteEntryCompleted, onSatelliteEntryComplete]);
 
   useEffect(() => {
     const onExternalCameraLock = (event: Event) => {
@@ -1240,7 +1252,7 @@ const MemoryPalace: React.FC<{
   // The avatar controller lives inside M'Mora World's feature layer; the Real Map has none,
   // so it always needs this controller (otherwise sticks, buttons and arrow keys move nothing).
   useEffect(() => { if (!inMMora) setExternalCameraLocked(false); }, [inMMora]);
-  const useLegacyController = controlsUnlocked && (!inMMora || (!showInteractives && !externalCameraLocked));
+  const useLegacyController = controlsUnlocked && !externalCameraLocked;
 
   return (
     <>
@@ -1256,7 +1268,7 @@ const MemoryPalace: React.FC<{
       
       {/* Memory Engrams - only when provided (gated by parent) */}
       {/* Memory palace pieces (memory bubbles, holo wall) exist only inside M'Mora World. */}
-      {inMMora && engrams.map((engram) => (
+      {false && engrams.map((engram) => (
         <MemoryEngram 
           key={engram.id} 
           engram={engram} 
@@ -1265,7 +1277,7 @@ const MemoryPalace: React.FC<{
       ))}
       
       {/* Holo-Wall - only when ECN data provided */}
-      {inMMora && ecnData.length > 0 && (
+      {false && ecnData.length > 0 && (
         <HoloWall ecnData={ecnData} coherenceScore={coherenceScore} />
       )}
       
@@ -1283,59 +1295,9 @@ const MemoryPalace: React.FC<{
       {inMMora && <SavePoint />}
       <NightMode />
       <AvatarWatchdog />
-      {inMMora && (<>
-      {/* VR Feature Integration - PROGRESSIVE: passes zone-aware visibility */}
-      <VRFeatureIntegration 
-        enableSatelliteEntry={false}
-        showTerrain={showTerrain}
-        showCity={showCity}
-        showInteractives={showInteractives}
-        showMetroSystem={showInteractives}
-        showF1System={showInteractives}
-        showNPCSystems={false}
-        showAnimalSystems={false}
-        showPOILabels={showInteractives}
-        onFeatureEvent={(feature, action) => {
-          if (feature === 'world' && action === 'entered') {
-            onSatelliteEntryComplete();
-          }
-        }}
-      />
-      
-      {/* Central pillar of consciousness - lightweight, always visible */}
-      <group position={[0, 0, 0]}>
-        <mesh>
-          <cylinderGeometry args={[0.3, 0.5, 8, 32]} />
-          <meshStandardMaterial
-            color="#d4a24c"
-            emissive="#e8b65a"
-            emissiveIntensity={0.3 + (1 - integrityLevel / 100) * 0.5}
-            transparent
-            opacity={0.6}
-          />
-        </mesh>
-        
-        {/* Object Tag for Consciousness Pillar */}
-        <Html position={[0, 4.5, 0]} center distanceFactor={10} style={{ pointerEvents: 'none' }}>
-          <div className="surface-warm-tan px-2 py-1 rounded text-[10px] font-semibold text-white whitespace-nowrap">
-            ✦ M'Mora World
-          </div>
-        </Html>
-        
-        {/* Energy rings */}
-        {[1, 2, 3, 4, 5].map((i) => (
-          <mesh key={i} position={[0, i * 1.5, 0]} rotation={[Math.PI / 2, 0, 0]}>
-            <torusGeometry args={[0.8 + i * 0.1, 0.02, 16, 100]} />
-            <meshBasicMaterial 
-              color={integrityLevel > 50 ? '#f0c27a' : '#ef4444'} 
-              transparent 
-              opacity={0.5} 
-            />
-          </mesh>
-        ))}
-      </group>
-      
-      </>)}
+      {/* M'Mora World (behind every city portal) is the new houses world only; the old
+          VR Omega city (VRFeatureIntegration, pillar, metro, race track) is no longer mounted. */}
+      {inMMora && <MMoraGround />}
 
       {/* Player controller unlocks via entry complete OR watchdog fallback to prevent gate deadlocks */}
       {useLegacyController && (<>
@@ -1350,7 +1312,7 @@ const MemoryPalace: React.FC<{
       {/* UniversalCameraController removed here to prevent camera-controller conflicts with PlayerController */}
       
       {/* Hidden Items - only when interactives are loaded */}
-      {inMMora && showInteractives && controlsUnlocked && (
+      {false && (
         <VRHiddenItemsManagerAuto 
           enabled={true}
           onItemDiscovered={(id) => console.log(`[VR OMEGA] Discovered: ${id}`)}
