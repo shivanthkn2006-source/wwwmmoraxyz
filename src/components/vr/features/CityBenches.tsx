@@ -54,69 +54,50 @@ const generateBenchPositions = (): Array<{ pos: [number, number, number]; rot: n
   return positions.slice(0, 50);
 };
 
-const SingleBench: React.FC<{ position: [number, number, number]; rotation: number }> = ({ position, rotation }) => {
-  const handleClick = () => {
-    window.dispatchEvent(new CustomEvent('vr-avatar-sit'));
-  };
+// Every bench part as [x, y, z, w, h, d, tiltX] in bench space, by material.
+const LIGHT: number[][] = [], DARK: number[][] = [], METAL: number[][] = [];
+[0, 1, 2, 3, 4].forEach((i) => (i % 2 === 0 ? LIGHT : DARK).push([0, 0.42, -0.18 + i * 0.09, 1.4, 0.035, 0.07, 0]));
+[0, 1, 2].forEach((i) => (i % 2 === 0 ? LIGHT : DARK).push([0, 0.58 + i * 0.1, -0.25, 1.4, 0.035, 0.06, 0.15]));
+[-0.55, 0.55].forEach((x) => {
+  METAL.push([x, 0.21, 0.15, 0.04, 0.42, 0.04, 0], [x, 0.35, -0.22, 0.04, 0.7, 0.04, 0], [x, 0.1, -0.04, 0.04, 0.04, 0.42, 0]);
+});
+[-0.6, 0.6].forEach((x) => METAL.push([x, 0.56, -0.04, 0.04, 0.04, 0.45, 0]));
 
-  return (
-    <group position={position} rotation={[0, rotation, 0]} onClick={handleClick}>
-      {/* Seat planks (5 wooden slats) */}
-      {[0, 1, 2, 3, 4].map(i => (
-        <mesh key={`seat-${i}`} position={[0, 0.42, -0.18 + i * 0.09]}>
-          <boxGeometry args={[1.4, 0.035, 0.07]} />
-          <meshStandardMaterial color={i % 2 === 0 ? BENCH_COLOR : BENCH_DARK} roughness={0.85} />
-        </mesh>
-      ))}
+const BOX = new THREE.BoxGeometry(1, 1, 1);
+const MATS = {
+  light: new THREE.MeshStandardMaterial({ color: BENCH_COLOR, roughness: 0.85 }),
+  dark: new THREE.MeshStandardMaterial({ color: BENCH_DARK, roughness: 0.85 }),
+  metal: new THREE.MeshStandardMaterial({ color: METAL_COLOR, metalness: 0.7, roughness: 0.3 }),
+};
 
-      {/* Backrest planks (3 slats) */}
-      {[0, 1, 2].map(i => (
-        <mesh key={`back-${i}`} position={[0, 0.58 + i * 0.1, -0.25]} rotation={[0.15, 0, 0]}>
-          <boxGeometry args={[1.4, 0.035, 0.06]} />
-          <meshStandardMaterial color={i % 2 === 0 ? BENCH_COLOR : BENCH_DARK} roughness={0.85} />
-        </mesh>
-      ))}
-
-      {/* Metal legs (2 sides) */}
-      {[-0.55, 0.55].map(x => (
-        <group key={`leg-${x}`} position={[x, 0, 0]}>
-          {/* Front leg */}
-          <mesh position={[0, 0.21, 0.15]}>
-            <boxGeometry args={[0.04, 0.42, 0.04]} />
-            <meshStandardMaterial color={METAL_COLOR} metalness={0.7} roughness={0.3} />
-          </mesh>
-          {/* Back leg */}
-          <mesh position={[0, 0.35, -0.22]}>
-            <boxGeometry args={[0.04, 0.7, 0.04]} />
-            <meshStandardMaterial color={METAL_COLOR} metalness={0.7} roughness={0.3} />
-          </mesh>
-          {/* Support bar */}
-          <mesh position={[0, 0.1, -0.04]}>
-            <boxGeometry args={[0.04, 0.04, 0.42]} />
-            <meshStandardMaterial color={METAL_COLOR} metalness={0.7} roughness={0.3} />
-          </mesh>
-        </group>
-      ))}
-
-      {/* Armrests */}
-      {[-0.6, 0.6].map(x => (
-        <mesh key={`arm-${x}`} position={[x, 0.56, -0.04]}>
-          <boxGeometry args={[0.04, 0.04, 0.45]} />
-          <meshStandardMaterial color={METAL_COLOR} metalness={0.7} roughness={0.3} />
-        </mesh>
-      ))}
-    </group>
-  );
+/** One instanced mesh per material: ~46 benches × 16 parts drawn in 3 batches instead of 736. */
+const BenchParts: React.FC<{ benches: Array<{ pos: [number, number, number]; rot: number }>; parts: number[][]; mat: THREE.Material }> = ({ benches, parts, mat }) => {
+  const mesh = useMemo(() => {
+    const m = new THREE.InstancedMesh(BOX, mat, benches.length * parts.length);
+    const bench = new THREE.Matrix4(), part = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler();
+    let k = 0;
+    for (const b of benches) {
+      bench.makeRotationY(b.rot).setPosition(b.pos[0], b.pos[1], b.pos[2]);
+      for (const [x, y, z, w, h, d, tilt] of parts) {
+        part.compose(new THREE.Vector3(x, y, z), q.setFromEuler(e.set(tilt, 0, 0)), new THREE.Vector3(w, h, d));
+        m.setMatrixAt(k++, new THREE.Matrix4().multiplyMatrices(bench, part));
+      }
+    }
+    m.instanceMatrix.needsUpdate = true;
+    m.computeBoundingSphere();
+    return m;
+  }, [benches, parts, mat]);
+  React.useEffect(() => () => { mesh.dispose(); }, [mesh]);
+  return <primitive object={mesh} onClick={() => window.dispatchEvent(new CustomEvent('vr-avatar-sit'))} />;
 };
 
 export const CityBenches: React.FC = () => {
   const benchData = useMemo(generateBenchPositions, []);
-
   return (
     <group>
-      {benchData.map((b, i) => (
-        <SingleBench key={i} position={b.pos} rotation={b.rot} />
-      ))}
+      <BenchParts benches={benchData} parts={LIGHT} mat={MATS.light} />
+      <BenchParts benches={benchData} parts={DARK} mat={MATS.dark} />
+      <BenchParts benches={benchData} parts={METAL} mat={MATS.metal} />
     </group>
   );
 };
