@@ -6,6 +6,7 @@
  * light on 4 GB phones.
  */
 import * as THREE from 'three';
+import { registerLit } from '@/lib/vrLights';
 import { toLocal, type LatLng } from './geo';
 import type { OsmChunk } from './osm';
 
