@@ -111,3 +111,19 @@ export async function pullCloud(force = false) {
   } catch { /* */ }
 }
 setInterval(() => { if (typeof document !== 'undefined' && document.visibilityState === 'visible') scheduleCloud(); }, 60_000);
+
+/** Coins earned without a pickup (e.g. sitting on a bench). */
+export function addCoins(n: number) {
+  if (n <= 0) return;
+  st = { ...st, coins: st.coins + n };
+  emit();
+  playPickup('coin');
+}
+
+/** Spend coins (e.g. to build a bench). Returns false when there aren't enough. */
+export function spendCoins(n: number): boolean {
+  if (st.coins < n) return false;
+  st = { ...st, coins: st.coins - n };
+  emit();
+  return true;
+}

@@ -10,7 +10,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 import { JointedHuman } from './JointedHuman';
-import { useWorldState, getWorldState } from '@/worlds/worldMode';
+import { useWorldState, getWorldState, mmoraCityKey } from '@/worlds/worldMode';
 import { toLatLng, toLocal, type LatLng } from '@/worlds/realmap/geo';
 import { canShareRealLocation } from '@/lib/vrPrivacy';
 import { registerUse } from '@/lib/vrUse';
@@ -29,7 +29,7 @@ function localOf(p: Remote, origin: LatLng | null): { x: number; z: number } | n
   return toLocal({ lat: p.lat, lng: p.lng }, origin);
 }
 
-const Avatar: React.FC<{ p: Remote; target: { x: number; z: number } }> = ({ p, target }) => {
+const Avatar: React.FC<{ p: Remote; target: { x: number; z: number }; reachAt?: number }> = ({ p, target, reachAt }) => {
   const g = useRef<THREE.Group>(null);
   const mat = useMemo(() => new THREE.MeshStandardMaterial({ color: TAG_COLOR[p.tag], roughness: 0.55 }), [p.tag]);
   const skin = useMemo(() => new THREE.MeshStandardMaterial({ color: '#e8c6a4', roughness: 0.7 }), []);
@@ -45,7 +45,7 @@ const Avatar: React.FC<{ p: Remote; target: { x: number; z: number } }> = ({ p, 
   });
   return (
     <group ref={g} position={[target.x, 0, target.z]}>
-      <JointedHuman />
+      <JointedHuman reachAt={reachAt} />
       <Html position={[0, 2.05, 0]} center distanceFactor={10} style={{ pointerEvents: 'none' }}>
         <div className="vr-meet-label">
           <span>@{p.username}</span>
@@ -61,10 +61,12 @@ export const MeetPresence: React.FC = () => {
   const w = useWorldState();
   const meet = useMeet();
   const origin = w.origin.status === 'ready' ? w.origin.origin : null;
-  const room = w.mode === 'mmora' ? 'mmora' : origin ? realRoom(origin) : null;
+  const room = w.mode === 'mmora' ? `mmora:${mmoraCityKey()}` : origin ? realRoom(origin) : null;
   const met = useRef(new Set<string>());
   const timer = useRef(0);
   const shareOk = useRef(true);
+  const holdUntil = useRef(0);
+  const [shake, setShake] = React.useState<Record<string, number>>({});
 
   useEffect(() => { void joinMeet(room); }, [room]);
   useEffect(() => () => { void joinMeet(null); }, []);
@@ -88,6 +90,8 @@ export const MeetPresence: React.FC = () => {
     timer.current += dt;
     if (timer.current < 0.25) return;
     timer.current = 0;
+    // Greeting: stay put for 5 s after meeting someone.
+    if (performance.now() < holdUntil.current) window.dispatchEvent(new CustomEvent('vr-move', { detail: { direction: 'stop' } }));
     const st = getWorldState();
     const onGround = !st.aerial && camera.position.y < 12;
     // Share my spot (Real Map: as lat/lng, so members with other start points line up).
@@ -108,12 +112,16 @@ export const MeetPresence: React.FC = () => {
       met.current.add(best.p.id);
       window.dispatchEvent(new CustomEvent('vr-move', { detail: { direction: 'stop' } }));
       sendWave(best.p.id);
+      holdUntil.current = performance.now() + 5000;
+      const at = performance.now();
+      setShake((m) => ({ ...m, [best!.p.id]: at }));
+      window.dispatchEvent(new CustomEvent('vr-item-pickup')); // my hand reaches out for the handshake
       setChatOpen(true);
       void notifySelf('vr_player_met', 'Met in VR World', `You met @${best.p.username} (${TAG_LABEL[best.p.tag]}) in ${st.mode === 'mmora' ? "M'Mora World" : 'your street'}.`, { link: '/vr-world', member: best.p.id }).catch(() => {});
     }
     if (best && best.d > 4) met.current.delete(best.p.id);
   });
 
-  return <>{targets.map(({ p, t }) => <Avatar key={p.id} p={p} target={t} />)}</>;
+  return <>{targets.map(({ p, t }) => <Avatar key={p.id} p={p} target={t} reachAt={shake[p.id]} />)}</>;
 };
 export default MeetPresence;
