@@ -65,9 +65,9 @@ export const WaypointRenderer: React.FC<WaypointRendererProps> = ({
 
   const colorClasses = {
     fuchsia: {
-      stroke: '#d946ef',
+      stroke: '#f0c27a',
       glow: 'drop-shadow-[0_0_10px_rgba(217,70,239,0.8)]',
-      particle: 'bg-fuchsia-400'
+      particle: 'bg-amber-400'
     },
     cyan: {
       stroke: '#22d3ee',
@@ -163,18 +163,18 @@ export const WaypointRenderer: React.FC<WaypointRendererProps> = ({
         }}
       >
         {/* Outer ring - CSS animation */}
-        <div className="absolute inset-0 w-12 h-12 -m-6 border-2 border-fuchsia-400 rounded-full animate-gpu-ring-pulse" />
+        <div className="absolute inset-0 w-12 h-12 -m-6 border-2 border-amber-400 rounded-full animate-gpu-ring-pulse" />
         
         {/* Inner ring - CSS animation */}
         <div
-          className="w-8 h-8 -m-4 border-2 border-fuchsia-400 rounded-full bg-fuchsia-400/20 animate-gpu-spin-3s"
+          className="w-8 h-8 -m-4 border-2 border-amber-400 rounded-full bg-amber-400/20 animate-gpu-spin-3s"
           style={{
             boxShadow: '0 0 20px rgba(217,70,239,0.5)'
           }}
         />
         
         {/* Center dot - CSS animation */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 bg-fuchsia-400 rounded-full animate-gpu-pulse-scale" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 bg-amber-400 rounded-full animate-gpu-pulse-scale" />
       </motion.div>
 
       {/* Distance indicator */}
@@ -188,7 +188,7 @@ export const WaypointRenderer: React.FC<WaypointRendererProps> = ({
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
       >
-        <span className="text-xs font-bold text-fuchsia-400">
+        <span className="text-xs font-bold text-amber-400">
           {pathData.distance > 1000 
             ? `${(pathData.distance / 1000).toFixed(1)} km`
             : `${pathData.distance.toFixed(0)} m`

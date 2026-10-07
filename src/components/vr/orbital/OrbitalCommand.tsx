@@ -171,7 +171,7 @@ export const OrbitalCommand: React.FC<OrbitalCommandProps> = ({
                 whileHover={{ scale: 1.5 }}
                 onClick={() => onStructureSelect?.(structure)}
               >
-                <div className="w-full h-full bg-fuchsia-500 rounded-sm shadow-lg shadow-fuchsia-500/50" />
+                <div className="w-full h-full bg-amber-500 rounded-sm shadow-lg shadow-amber-500/50" />
                 {!config.compactMode && (
                   <span className="absolute -bottom-4 left-1/2 -translate-x-1/2 text-[8px] text-white whitespace-nowrap">
                     {structure.name}
@@ -308,7 +308,7 @@ export const OrbitalCommand: React.FC<OrbitalCommandProps> = ({
                   
                   <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden min-w-[40px]">
                     <motion.div
-                      className="h-full bg-gradient-to-r from-cyan-500 to-fuchsia-500"
+                      className="h-full bg-gradient-to-r from-cyan-500 to-amber-500"
                       style={{ width: `${100 - (orbital.altitude / 500)}%` }}
                     />
                   </div>
@@ -334,7 +334,7 @@ export const OrbitalCommand: React.FC<OrbitalCommandProps> = ({
                     "w-full flex items-center justify-center rounded-lg font-medium transition-all",
                     buttonSize, gap,
                     orbital.storyModeActive
-                      ? "bg-fuchsia-500/20 border border-fuchsia-500/50 text-fuchsia-400"
+                      ? "bg-amber-500/20 border border-amber-500/50 text-amber-400"
                       : "bg-white/5 border border-white/10 text-white/60 hover:bg-white/10"
                   )}
                   style={{ minHeight: config.minTouchTarget }}
@@ -423,7 +423,7 @@ export const OrbitalCommand: React.FC<OrbitalCommandProps> = ({
             animate={{ opacity: 0.3 }}
             exit={{ opacity: 0 }}
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 via-transparent to-fuchsia-500/20" />
+            <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 via-transparent to-amber-500/20" />
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
               <div
                 className={cn(

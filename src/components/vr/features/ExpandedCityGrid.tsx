@@ -86,7 +86,7 @@ const generateCityPOIs = (): CityPOI[] => {
     { name: 'Central Park', type: 'park', color: '#22c55e', height: 0.3, width: 40, depth: 40 },
     { name: 'Fire Station #1', type: 'fire_station', color: '#dc2626', height: 6, width: 10, depth: 8 },
     { name: 'Police HQ', type: 'police_station', color: '#1e40af', height: 8, width: 12, depth: 10 },
-    { name: 'City Stadium', type: 'stadium', color: '#7c3aed', height: 22, width: 35, depth: 35 },
+    { name: 'City Stadium', type: 'stadium', color: '#d4a24c', height: 22, width: 35, depth: 35 },
   ];
 
   // Build city-block centers between roads so we never place POIs directly on road axes

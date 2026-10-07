@@ -238,7 +238,7 @@ const CentralPeak: React.FC<{ season: Season }> = ({ season }) => {
       ))}
       
       <Html position={[0, 160, 0]} center distanceFactor={100}>
-        <div className="bg-purple-900/80 px-4 py-2 rounded-lg text-white border border-purple-400/50 text-center">
+        <div className="bg-amber-900/80 px-4 py-2 rounded-lg text-white border border-amber-400/50 text-center">
           <div className="text-2xl font-bold">⛰️ THE PEAK</div>
           <div className="text-sm opacity-70">OMEGA World Landmark</div>
         </div>
@@ -332,7 +332,7 @@ export const SatelliteEntryController: React.FC<{
             <div className="text-cyan-400 text-lg font-bold mb-2">ENTERING OMEGA WORLD</div>
             <div className="w-64 h-2 bg-gray-800 rounded-full overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-cyan-500 to-purple-500 transition-all duration-100"
+                className="h-full bg-gradient-to-r from-cyan-500 to-amber-500 transition-all duration-100"
                 style={{ width: `${progress * 100}%` }}
               />
             </div>

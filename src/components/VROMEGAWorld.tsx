@@ -423,8 +423,8 @@ const MemoryEngram: React.FC<{
             distanceFactor={6}
             style={{ pointerEvents: 'none' }}
           >
-            <div className="bg-black/80 backdrop-blur-md px-3 py-2 rounded-lg max-w-[200px] border border-purple-500/30">
-              <div className="text-purple-300 text-[10px] font-bold mb-1">{emotionLabel}</div>
+            <div className="bg-black/80 backdrop-blur-md px-3 py-2 rounded-lg max-w-[200px] border border-amber-500/30">
+              <div className="text-amber-300 text-[10px] font-bold mb-1">{emotionLabel}</div>
               <div className="text-white/90 text-xs leading-tight">
                 {engram.content.slice(0, 50)}...
               </div>
@@ -504,7 +504,7 @@ const HoloWall: React.FC<{
       </Box>
       
       {/* ECN Stress Timeline */}
-      <Text position={[-3, 1.5, 0.1]} fontSize={0.2} color="#a855f7">
+      <Text position={[-3, 1.5, 0.1]} fontSize={0.2} color="#e8b65a">
         ECN STRESS TIMELINE
       </Text>
       
@@ -1652,7 +1652,7 @@ const VRLiveClock: React.FC = () => {
       office: { floorRange: [5, 20], widthRange: [15, 30], depthRange: [15, 25], colors: ['#4a5568', '#2d3748'], accentColors: ['#00bcd4'], roofTypes: ['flat'] },
       hospital: { floorRange: [3, 8], widthRange: [20, 40], depthRange: [15, 30], colors: ['#ffffff'], accentColors: ['#ef4444'], roofTypes: ['flat'] },
       school: { floorRange: [2, 4], widthRange: [25, 50], depthRange: [15, 25], colors: ['#fef3c7'], accentColors: ['#f59e0b'], roofTypes: ['flat'] },
-      shop: { floorRange: [1, 3], widthRange: [8, 15], depthRange: [8, 12], colors: ['#e5e5e5'], accentColors: ['#8b5cf6'], roofTypes: ['flat'] },
+      shop: { floorRange: [1, 3], widthRange: [8, 15], depthRange: [8, 12], colors: ['#e5e5e5'], accentColors: ['#e0ad5c'], roofTypes: ['flat'] },
       park: { floorRange: [0, 0], widthRange: [30, 60], depthRange: [30, 60], colors: ['#22c55e'], accentColors: ['#16a34a'], roofTypes: ['flat'] },
       factory: { floorRange: [2, 5], widthRange: [30, 60], depthRange: [20, 40], colors: ['#6b7280'], accentColors: ['#f59e0b'], roofTypes: ['flat'] },
       restaurant: { floorRange: [1, 2], widthRange: [10, 20], depthRange: [10, 15], colors: ['#fef3c7'], accentColors: ['#ef4444'], roofTypes: ['flat'] },
@@ -1661,7 +1661,7 @@ const VRLiveClock: React.FC = () => {
       police_station: { floorRange: [2, 4], widthRange: [15, 25], depthRange: [15, 25], colors: ['#e5e5e5'], accentColors: ['#1e3a8a'], roofTypes: ['flat'] },
       gym: { floorRange: [1, 3], widthRange: [20, 35], depthRange: [20, 35], colors: ['#374151'], accentColors: ['#f59e0b'], roofTypes: ['flat'] },
       religious: { floorRange: [2, 4], widthRange: [15, 30], depthRange: [25, 45], colors: ['#faf5eb'], accentColors: ['#d4af37'], roofTypes: ['dome'] },
-      cultural: { floorRange: [2, 5], widthRange: [25, 50], depthRange: [20, 40], colors: ['#f8f8f8'], accentColors: ['#8b5cf6'], roofTypes: ['dome'] },
+      cultural: { floorRange: [2, 5], widthRange: [25, 50], depthRange: [20, 40], colors: ['#f8f8f8'], accentColors: ['#e0ad5c'], roofTypes: ['dome'] },
     };
     const cfg = config[type as keyof typeof config] || config.house;
     const floors = Math.floor(Math.random() * (cfg.floorRange[1] - cfg.floorRange[0] + 1)) + cfg.floorRange[0];
@@ -3135,7 +3135,7 @@ const VRLiveClock: React.FC = () => {
               onClick={() => setShowCyberCity(prev => !prev)}
               className={cn(
                 "px-1.5 py-0.5 rounded transition-colors",
-                showCyberCity ? "bg-purple-600 text-white" : "bg-gray-700 text-gray-400"
+                showCyberCity ? "bg-amber-600 text-white" : "bg-gray-700 text-gray-400"
               )}
             >
               City
@@ -3332,7 +3332,7 @@ const VRLiveClock: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 5 }}
               whileDrag={{ scale: 1.02, cursor: 'grabbing' }}
-              className="absolute bottom-16 left-1/2 -translate-x-1/2 z-50 bg-black/85 backdrop-blur-xl rounded-lg p-2 xs:p-2.5 sm:p-3 w-[200px] xs:w-[240px] sm:w-[280px] border border-purple-500/30 cursor-grab active:cursor-grabbing shadow-xl"
+              className="absolute bottom-16 left-1/2 -translate-x-1/2 z-50 bg-black/85 backdrop-blur-xl rounded-lg p-2 xs:p-2.5 sm:p-3 w-[200px] xs:w-[240px] sm:w-[280px] border border-amber-500/30 cursor-grab active:cursor-grabbing shadow-xl"
             >
               {/* Drag handle */}
               <div className="flex items-center justify-between mb-1.5" onPointerDown={(e) => e.stopPropagation()}>
@@ -3342,7 +3342,7 @@ const VRLiveClock: React.FC = () => {
                     className="w-2 h-2 rounded-full"
                     style={{ backgroundColor: selectedEngram.emotion === 'joy' ? '#FFD700' : '#9370DB' }}
                   />
-                  <span className="text-purple-300 text-[9px] xs:text-[10px] uppercase font-semibold">{selectedEngram.emotion}</span>
+                  <span className="text-amber-300 text-[9px] xs:text-[10px] uppercase font-semibold">{selectedEngram.emotion}</span>
                 </div>
                 <button
                   onClick={() => setSelectedEngram(null)}

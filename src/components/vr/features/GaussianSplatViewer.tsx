@@ -286,11 +286,11 @@ const GaussianSplatViewer: React.FC<GaussianSplatViewerProps> = ({
       
       {/* Info label */}
       <Html position={[0, 8, 0]} center distanceFactor={15}>
-        <div className="bg-purple-900/80 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-purple-500/30">
-          <div className="text-purple-300 text-xs font-bold">
+        <div className="bg-amber-900/80 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-amber-500/30">
+          <div className="text-amber-300 text-xs font-bold">
             ✨ Gaussian Splat Viewer
           </div>
-          <div className="text-purple-400/70 text-[10px]">
+          <div className="text-amber-400/70 text-[10px]">
             {splatData?.count.toLocaleString()} splats | {url ? 'Custom' : 'Demo Mode'}
           </div>
           {error && (
@@ -311,8 +311,8 @@ export const GaussianSplatLoader: React.FC<{
   const [url, setUrl] = useState('');
   
   return (
-    <div className="bg-black/80 backdrop-blur-md p-4 rounded-lg border border-purple-500/30">
-      <h3 className="text-purple-300 font-bold mb-2">Load 3D Gaussian Splat</h3>
+    <div className="bg-black/80 backdrop-blur-md p-4 rounded-lg border border-amber-500/30">
+      <h3 className="text-amber-300 font-bold mb-2">Load 3D Gaussian Splat</h3>
       <p className="text-gray-400 text-xs mb-3">
         Load a .splat file for hyper-realistic environment rendering
       </p>
@@ -326,7 +326,7 @@ export const GaussianSplatLoader: React.FC<{
         />
         <button
           onClick={() => url && onSplatLoaded(url)}
-          className="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded text-sm"
+          className="bg-amber-600 hover:bg-amber-500 text-white px-4 py-2 rounded text-sm"
         >
           Load
         </button>

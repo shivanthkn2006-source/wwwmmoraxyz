@@ -155,9 +155,9 @@ export const WebXRButton: React.FC<{ onEnterVR?: () => void }> = ({ onEnterVR })
         transition-all duration-300
         ${isSessionActive 
           ? 'bg-green-600 text-white' 
-          : 'bg-purple-600 hover:bg-purple-700 text-white'
+          : 'bg-amber-600 hover:bg-amber-700 text-white'
         }
-        shadow-lg shadow-purple-500/30
+        shadow-lg shadow-amber-500/30
         flex items-center gap-2
       `}
     >

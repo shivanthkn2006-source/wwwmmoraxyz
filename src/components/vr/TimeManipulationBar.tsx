@@ -45,9 +45,9 @@ export const TimeManipulationBar: React.FC<TimeManipulationBarProps> = ({
     switch (type) {
       case 'user_spoke': return 'bg-cyan-400';
       case 'item_dropped': return 'bg-amber-400';
-      case 'emotion_shift': return 'bg-fuchsia-400';
+      case 'emotion_shift': return 'bg-amber-400';
       case 'vr_action': return 'bg-emerald-400';
-      case 'system_event': return 'bg-purple-400';
+      case 'system_event': return 'bg-amber-400';
       default: return 'bg-white';
     }
   };
@@ -174,7 +174,7 @@ export const TimeManipulationBar: React.FC<TimeManipulationBarProps> = ({
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-1.5">
                 <GripVertical className="w-3.5 h-3.5 text-white/50" />
-                <span className="text-[9px] sm:text-[10px] text-fuchsia-400/80 font-mono">CHRONO-ECHO</span>
+                <span className="text-[9px] sm:text-[10px] text-amber-400/80 font-mono">CHRONO-ECHO</span>
               </div>
               <button
                 onClick={(e) => { e.stopPropagation(); setIsExpanded(false); }}
@@ -189,7 +189,7 @@ export const TimeManipulationBar: React.FC<TimeManipulationBarProps> = ({
               <motion.button
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.95 }}
-                className="p-1.5 rounded-full bg-gradient-to-r from-cyan-500/20 to-fuchsia-500/20 border border-cyan-400/30 text-cyan-400 hover:text-white transition-colors touch-manipulation"
+                className="p-1.5 rounded-full bg-gradient-to-r from-cyan-500/20 to-amber-500/20 border border-cyan-400/30 text-cyan-400 hover:text-white transition-colors touch-manipulation"
                 onClick={(e) => { e.stopPropagation(); setScrubberPosition(0); }}
               >
                 <SkipBack className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -198,7 +198,7 @@ export const TimeManipulationBar: React.FC<TimeManipulationBarProps> = ({
               <motion.button
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.95 }}
-                className="p-1.5 rounded-full bg-gradient-to-r from-cyan-500/20 to-fuchsia-500/20 border border-cyan-400/30 text-cyan-400 hover:text-white transition-colors touch-manipulation"
+                className="p-1.5 rounded-full bg-gradient-to-r from-cyan-500/20 to-amber-500/20 border border-cyan-400/30 text-cyan-400 hover:text-white transition-colors touch-manipulation"
                 onClick={(e) => { e.stopPropagation(); setScrubberPosition(Math.max(0, scrubberPosition - 10)); }}
               >
                 <Rewind className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -207,7 +207,7 @@ export const TimeManipulationBar: React.FC<TimeManipulationBarProps> = ({
               <motion.button
                 whileHover={{ scale: 1.15 }}
                 whileTap={{ scale: 0.9 }}
-                className="p-2 rounded-full bg-gradient-to-r from-cyan-500 to-fuchsia-500 text-white shadow-lg shadow-cyan-500/30 touch-manipulation"
+                className="p-2 rounded-full bg-gradient-to-r from-cyan-500 to-amber-500 text-white shadow-lg shadow-cyan-500/30 touch-manipulation"
                 onClick={(e) => { e.stopPropagation(); onPlayPause?.(!isPlaying); }}
               >
                 {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
@@ -216,7 +216,7 @@ export const TimeManipulationBar: React.FC<TimeManipulationBarProps> = ({
               <motion.button
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.95 }}
-                className="p-1.5 rounded-full bg-gradient-to-r from-cyan-500/20 to-fuchsia-500/20 border border-cyan-400/30 text-cyan-400 hover:text-white transition-colors touch-manipulation"
+                className="p-1.5 rounded-full bg-gradient-to-r from-cyan-500/20 to-amber-500/20 border border-cyan-400/30 text-cyan-400 hover:text-white transition-colors touch-manipulation"
                 onClick={(e) => { e.stopPropagation(); setScrubberPosition(Math.min(100, scrubberPosition + 10)); }}
               >
                 <SkipForward className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -225,7 +225,7 @@ export const TimeManipulationBar: React.FC<TimeManipulationBarProps> = ({
               <motion.button
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.95 }}
-                className="p-1.5 rounded-full bg-gradient-to-r from-cyan-500/20 to-fuchsia-500/20 border border-cyan-400/30 text-cyan-400 hover:text-white transition-colors touch-manipulation"
+                className="p-1.5 rounded-full bg-gradient-to-r from-cyan-500/20 to-amber-500/20 border border-cyan-400/30 text-cyan-400 hover:text-white transition-colors touch-manipulation"
                 onClick={(e) => { e.stopPropagation(); setScrubberPosition(100); }}
               >
                 <SkipForward className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -242,13 +242,13 @@ export const TimeManipulationBar: React.FC<TimeManipulationBarProps> = ({
               onTouchEnd={handleDragEnd}
             >
               {/* Glow base */}
-              <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/50 via-fuchsia-500/50 to-cyan-500/50 rounded-full blur-md opacity-50" />
+              <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/50 via-amber-500/50 to-cyan-500/50 rounded-full blur-md opacity-50" />
               
               {/* Track */}
-              <div className="relative h-full bg-gradient-to-r from-cyan-900/80 via-fuchsia-900/80 to-cyan-900/80 rounded-full overflow-hidden">
+              <div className="relative h-full bg-gradient-to-r from-cyan-900/80 via-amber-900/80 to-cyan-900/80 rounded-full overflow-hidden">
                 {/* Progress */}
                 <motion.div
-                  className="absolute inset-y-0 left-0 bg-gradient-to-r from-cyan-400 via-fuchsia-400 to-cyan-400 rounded-full"
+                  className="absolute inset-y-0 left-0 bg-gradient-to-r from-cyan-400 via-amber-400 to-cyan-400 rounded-full"
                   style={{ width: `${scrubberPosition}%` }}
                   animate={{ width: `${scrubberPosition}%` }}
                 />
@@ -284,7 +284,7 @@ export const TimeManipulationBar: React.FC<TimeManipulationBarProps> = ({
                 <div className="relative">
                   {/* Crystal scrubber */}
                   <div
-                    className="w-4 h-4 sm:w-5 sm:h-5 bg-gradient-to-br from-cyan-300 via-white to-fuchsia-300 rotate-45 rounded-sm shadow-lg animate-gpu-glow-cyan"
+                    className="w-4 h-4 sm:w-5 sm:h-5 bg-gradient-to-br from-cyan-300 via-white to-amber-300 rotate-45 rounded-sm shadow-lg animate-gpu-glow-cyan"
                   />
                   
                   {/* Inner crystal glow */}

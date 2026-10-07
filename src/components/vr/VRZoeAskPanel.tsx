@@ -45,7 +45,7 @@ const VRZoeAskPanel: React.FC = () => {
   return (
     <div className="w-64 sm:w-72 rounded-2xl bg-black/50 p-3 text-white backdrop-blur-xl">
       <form className="flex items-center gap-2" onSubmit={(event) => { event.preventDefault(); void ask(); }}>
-        <Sparkles className="h-4 w-4 shrink-0 text-purple-300" aria-hidden="true" />
+        <Sparkles className="h-4 w-4 shrink-0 text-amber-300" aria-hidden="true" />
         <input
           value={question}
           onChange={(event) => setQuestion(event.target.value)}

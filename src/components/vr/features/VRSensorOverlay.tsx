@@ -88,7 +88,7 @@ const VRSensorOverlay: React.FC<VRSensorOverlayProps> = ({ onShake, className })
             className="fixed inset-x-4 bottom-20 z-50 bg-black/90 backdrop-blur-xl rounded-xl border border-white/20 p-4"
           >
             <div className="flex items-center gap-3 mb-3">
-              <Smartphone className="w-6 h-6 text-purple-400" />
+              <Smartphone className="w-6 h-6 text-amber-400" />
               <div>
                 <p className="text-white font-semibold text-sm">Enable Motion Sensors</p>
                 <p className="text-white/60 text-xs">For immersive VR head tracking</p>
@@ -103,7 +103,7 @@ const VRSensorOverlay: React.FC<VRSensorOverlayProps> = ({ onShake, className })
               </button>
               <button
                 onClick={handleRequestPermission}
-                className="flex-1 py-2 px-3 bg-gradient-to-r from-purple-600 to-cyan-600 rounded-lg text-white text-sm font-semibold hover:from-purple-500 hover:to-cyan-500"
+                className="flex-1 py-2 px-3 bg-gradient-to-r from-amber-600 to-cyan-600 rounded-lg text-white text-sm font-semibold hover:from-amber-500 hover:to-cyan-500"
               >
                 Enable
               </button>
@@ -150,7 +150,7 @@ const VRSensorOverlay: React.FC<VRSensorOverlayProps> = ({ onShake, className })
                       <span className="text-[9px] text-white/50 block">{orientation.alpha?.toFixed(0) ?? '--'}°</span>
                     </div>
                     <div className="bg-white/5 rounded-lg p-2 text-center">
-                      <Vibrate className={cn('w-4 h-4 mx-auto mb-1', hasHaptics ? 'text-purple-400' : 'text-white/30')} />
+                      <Vibrate className={cn('w-4 h-4 mx-auto mb-1', hasHaptics ? 'text-amber-400' : 'text-white/30')} />
                       <span className="text-[9px] text-white/50 block">Haptic</span>
                     </div>
                   </div>
@@ -180,7 +180,7 @@ const VRSensorOverlay: React.FC<VRSensorOverlayProps> = ({ onShake, className })
                       </div>
                       <div className="relative h-4 bg-white/10 rounded overflow-hidden">
                         <motion.div
-                          className="absolute inset-y-0 w-2 bg-gradient-to-r from-purple-500 to-cyan-500 rounded"
+                          className="absolute inset-y-0 w-2 bg-gradient-to-r from-amber-500 to-cyan-500 rounded"
                           animate={{ left: `${50 + (orientation.gamma ?? 0) / 2}%` }}
                           transition={{ type: 'spring', damping: 15 }}
                         />
@@ -195,7 +195,7 @@ const VRSensorOverlay: React.FC<VRSensorOverlayProps> = ({ onShake, className })
                         initial={{ scale: 0.8, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
                         exit={{ scale: 0.8, opacity: 0 }}
-                        className="bg-gradient-to-r from-purple-600/30 to-cyan-600/30 rounded-lg p-2 flex items-center gap-2"
+                        className="bg-gradient-to-r from-amber-600/30 to-cyan-600/30 rounded-lg p-2 flex items-center gap-2"
                       >
                         <RotateCcw className="w-4 h-4 text-white animate-spin" />
                         <span className="text-xs text-white font-medium">Shake Detected!</span>

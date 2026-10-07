@@ -27,11 +27,11 @@ export const ReturnToRealityButton: React.FC<ReturnToRealityButtonProps> = ({ on
           onClick={() => setIsExpanded(true)}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          className="flex items-center gap-2 px-3 py-2 bg-black/80 backdrop-blur-xl border border-purple-400/30 
-                     rounded-full text-purple-300 hover:bg-black/90 hover:border-purple-400/50 transition-all shadow-lg"
+          className="flex items-center gap-2 px-3 py-2 bg-black/80 backdrop-blur-xl border border-amber-400/30 
+                     rounded-full text-amber-300 hover:bg-black/90 hover:border-amber-400/50 transition-all shadow-lg"
         >
           <GripVertical className="w-3 h-3 text-white/40" />
-          <LogOut className="w-4 h-4 text-purple-400" />
+          <LogOut className="w-4 h-4 text-amber-400" />
           <span className="text-[10px] sm:text-xs font-semibold">Exit</span>
           <ChevronUp className="w-3 h-3 text-white/60" />
         </motion.button>
@@ -40,7 +40,7 @@ export const ReturnToRealityButton: React.FC<ReturnToRealityButtonProps> = ({ on
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="flex items-center gap-2 bg-black/80 backdrop-blur-xl border border-purple-500/30 
+          className="flex items-center gap-2 bg-black/80 backdrop-blur-xl border border-amber-500/30 
                      rounded-xl p-2 shadow-lg"
         >
           <GripVertical className="w-3.5 h-3.5 text-white/40" />
@@ -48,8 +48,8 @@ export const ReturnToRealityButton: React.FC<ReturnToRealityButtonProps> = ({ on
           <Button
             onClick={(e) => { e.stopPropagation(); onReturn(); }}
             variant="outline"
-            className="bg-black/60 backdrop-blur-xl border-purple-500/30 text-purple-300 
-                       hover:bg-purple-900/30 hover:border-purple-400/50 px-4 py-1.5 rounded-full text-xs sm:text-sm"
+            className="bg-black/60 backdrop-blur-xl border-amber-500/30 text-amber-300 
+                       hover:bg-amber-900/30 hover:border-amber-400/50 px-4 py-1.5 rounded-full text-xs sm:text-sm"
           >
             <ArrowLeft className="w-3.5 h-3.5 mr-1.5" />
             Return to Reality

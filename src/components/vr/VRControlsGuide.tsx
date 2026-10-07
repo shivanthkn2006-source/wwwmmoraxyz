@@ -133,7 +133,7 @@ export const VRControlsGuide: React.FC<VRControlsGuideProps> = ({
               animate={{ rotate: [0, 90, 90, 0] }}
               transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
             >
-              <RotateCcw className="w-12 h-12 text-purple-300" />
+              <RotateCcw className="w-12 h-12 text-amber-300" />
             </motion.div>
             <p className="text-white/90 text-sm font-semibold">Turn your device sideways</p>
             <p className="text-white/60 text-xs max-w-xs">
@@ -143,8 +143,8 @@ export const VRControlsGuide: React.FC<VRControlsGuideProps> = ({
               <button
                 type="button"
                 onClick={onRequestLandscape}
-                className="min-h-[44px] px-5 py-2.5 rounded-full bg-purple-600/40 border border-purple-400/40 text-purple-100 text-xs font-mono
-                           focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-200/80"
+                className="min-h-[44px] px-5 py-2.5 rounded-full bg-amber-600/40 border border-amber-400/40 text-amber-100 text-xs font-mono
+                           focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-200/80"
               >
                 Go landscape
               </button>

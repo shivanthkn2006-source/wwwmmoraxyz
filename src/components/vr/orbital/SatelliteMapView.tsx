@@ -37,7 +37,7 @@ const STRUCTURE_ICONS: Record<string, React.ReactNode> = {
 const STRUCTURE_COLORS: Record<string, string> = {
   castle: 'text-amber-400 shadow-amber-400/50',
   tower: 'text-cyan-400 shadow-cyan-400/50',
-  portal: 'text-fuchsia-400 shadow-fuchsia-400/50',
+  portal: 'text-amber-400 shadow-amber-400/50',
   beacon: 'text-emerald-400 shadow-emerald-400/50',
   zone: 'text-blue-400 shadow-blue-400/50',
   custom: 'text-white shadow-white/50'
@@ -228,7 +228,7 @@ export const SatelliteMapView: React.FC<SatelliteMapViewProps> = ({
           >
             <div
               className={cn(
-                "border-2 border-fuchsia-400 rounded-full animate-gpu-ring-scale-pulse",
+                "border-2 border-amber-400 rounded-full animate-gpu-ring-scale-pulse",
                 isCompact ? "w-3 h-3" : "w-4 h-4"
               )}
             />

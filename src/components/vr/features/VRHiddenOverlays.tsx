@@ -40,7 +40,7 @@ const RARITY_COLORS: Record<string, string> = {
   common: '#9ca3af',
   uncommon: '#22c55e',
   rare: '#3b82f6',
-  epic: '#a855f7',
+  epic: '#e8b65a',
   legendary: '#f59e0b',
 };
 
@@ -305,7 +305,7 @@ export const AltitudeZoomHUD: React.FC<{
         {/* Vertical bar indicator */}
         <div className="h-24 w-2 bg-white/10 rounded-full mx-auto relative overflow-hidden">
           <div 
-            className="absolute bottom-0 w-full bg-gradient-to-t from-cyan-500 to-purple-500 rounded-full transition-all duration-300"
+            className="absolute bottom-0 w-full bg-gradient-to-t from-cyan-500 to-amber-500 rounded-full transition-all duration-300"
             style={{ height: `${Math.min(100, altitude / 5)}%` }}
           />
         </div>
