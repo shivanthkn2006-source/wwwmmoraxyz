@@ -9,6 +9,7 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import * as THREE from 'three';
+import { humanGeometry, HUMAN_MATERIAL } from '@/lib/vrHumanLook';
 import { useWorldState, getWorldState } from '@/worlds/worldMode';
 import { toLatLng, toLocal, type LatLng } from '@/worlds/realmap/geo';
 import { canShareRealLocation } from '@/lib/vrPrivacy';
@@ -21,8 +22,7 @@ const AREA_DEG = 0.02;
 export const realRoom = (o: LatLng) => `real:${Math.floor(o.lat / AREA_DEG)}_${Math.floor(o.lng / AREA_DEG)}`;
 
 const TAG_COLOR = { friend: '#387BF6', follower: '#F5C518', unknown: '#34C759' } as const;
-const BODY = new THREE.CapsuleGeometry(0.28, 0.9, 4, 10);
-const HEAD = new THREE.SphereGeometry(0.2, 14, 12);
+const PERSON = humanGeometry();
 
 function localOf(p: Remote, origin: LatLng | null): { x: number; z: number } | null {
   if (p.mode === 'mmora') return p.x !== undefined && p.z !== undefined ? { x: p.x, z: p.z } : null;
@@ -46,8 +46,7 @@ const Avatar: React.FC<{ p: Remote; target: { x: number; z: number } }> = ({ p, 
   });
   return (
     <group ref={g} position={[target.x, 0, target.z]}>
-      <mesh geometry={BODY} material={mat} position={[0, 0.75, 0]} />
-      <mesh geometry={HEAD} material={skin} position={[0, 1.55, 0]} />
+      <mesh geometry={PERSON} material={HUMAN_MATERIAL} />
       <Html position={[0, 2.05, 0]} center distanceFactor={10} style={{ pointerEvents: 'none' }}>
         <div className="vr-meet-label">
           <span>@{p.username}</span>
