@@ -1246,8 +1246,8 @@ const MemoryPalace: React.FC<{
     <>
       {/* Basic lighting - always present */}
       <ambientLight intensity={0.3} />
-      {inMMora && <pointLight position={[10, 10, 10]} intensity={0.5} color="#a855f7" />}
-      {inMMora && <pointLight position={[-10, 5, -10]} intensity={0.3} color="#ec4899" />}
+      {inMMora && <pointLight position={[10, 10, 10]} intensity={0.5} color="#ffd9a0" />}
+      {inMMora && <pointLight position={[-10, 5, -10]} intensity={0.3} color="#f2c48d" />}
       {inMMora && <directionalLight position={[50, 50, 25]} intensity={0.4} color="#ffffff" castShadow />}
       
       {/* NOTE: ExpandedCityGrid provides the main ground planes (lush green terrain).
@@ -1307,8 +1307,8 @@ const MemoryPalace: React.FC<{
         <mesh>
           <cylinderGeometry args={[0.3, 0.5, 8, 32]} />
           <meshStandardMaterial
-            color="#7c3aed"
-            emissive="#7c3aed"
+            color="#d4a24c"
+            emissive="#e8b65a"
             emissiveIntensity={0.3 + (1 - integrityLevel / 100) * 0.5}
             transparent
             opacity={0.6}
@@ -1317,8 +1317,8 @@ const MemoryPalace: React.FC<{
         
         {/* Object Tag for Consciousness Pillar */}
         <Html position={[0, 4.5, 0]} center distanceFactor={10} style={{ pointerEvents: 'none' }}>
-          <div className="bg-purple-900/60 backdrop-blur-sm px-2 py-1 rounded text-[9px] text-purple-200 whitespace-nowrap border border-purple-500/30">
-            🔮 Consciousness Core
+          <div className="surface-warm-tan px-2 py-1 rounded text-[10px] font-semibold text-white whitespace-nowrap">
+            ✦ M'Mora World
           </div>
         </Html>
         
@@ -1327,7 +1327,7 @@ const MemoryPalace: React.FC<{
           <mesh key={i} position={[0, i * 1.5, 0]} rotation={[Math.PI / 2, 0, 0]}>
             <torusGeometry args={[0.8 + i * 0.1, 0.02, 16, 100]} />
             <meshBasicMaterial 
-              color={integrityLevel > 50 ? '#a855f7' : '#ef4444'} 
+              color={integrityLevel > 50 ? '#f0c27a' : '#ef4444'} 
               transparent 
               opacity={0.5} 
             />
