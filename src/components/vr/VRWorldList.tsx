@@ -10,7 +10,8 @@ import { MMORA_SIGNS } from '@/worlds/mmora/MMoraSigns';
 import { mapBlocks, useMapVersion } from '@/worlds/realmap/mapIndex';
 import { relicsForBlock, today } from '@/worlds/realmap/streetRelics';
 import { getStreetHouses } from '@/worlds/realmap/StreetHouses';
-import { useWorldState } from '@/worlds/worldMode';
+import { useWorldState, travelTo } from '@/worlds/worldMode';
+import { SOUTH_INDIA_CITIES } from '@/worlds/realmap/prefillCities';
 import { subscribeVRQuests, getVRQuestSnapshot } from '@/lib/vrQuests';
 
 type Row = { icon: React.ElementType; name: string; total: number | string; used: number | string; left: number | string; where: string };
@@ -49,7 +50,7 @@ export const VRWorldList: React.FC = () => {
       { icon: DoorOpen, name: 'Portal back home', total: 1, used: '—', left: 1, where: 'Blue beam next to where you arrive' },
     ]],
     [`Real Map · ${city}`, [
-      { icon: DoorOpen, name: "Portal to M'Mora World", total: 1, used: w.portalTrips, left: 1, where: 'Beside you when you arrive in any city' },
+      { icon: DoorOpen, name: "Portal to M'Mora World", total: 1, used: w.portalTrips, left: 1, where: 'Blue beam beside you on arrival + one every ~1 km' },
       { icon: Home, name: 'Homes to enter', total: homes.length, used: '—', left: homes.length, where: 'Doors with a glow, loaded streets nearby' },
       { icon: Leaf, name: 'Green herbs', total: rHerbs.length, used: rUsedH, left: rHerbs.length - rUsedH, where: 'Green glow above homes' },
       { icon: Coins, name: 'Coin piles', total: rCoins.length, used: rUsedC, left: rCoins.length - rUsedC, where: 'Gold glow above homes' },
@@ -88,6 +89,16 @@ export const VRWorldList: React.FC = () => {
           </table>
         </div>
       ))}
+      <div className="mb-1 text-[11px] font-semibold text-white/90">South India cities · {SOUTH_INDIA_CITIES.length}</div>
+      <p className="mb-1 text-[10px] text-white/80">Each city has real streets with 7 ft signs, shops, homes, herbs, coins and an M'Mora World portal (blue beam) about every 1 km.</p>
+      <div className="flex flex-wrap gap-1.5">
+        {SOUTH_INDIA_CITIES.map((c) => (
+          <button key={c.name} type="button" onClick={() => { travelTo({ name: c.name, lat: c.lat, lng: c.lng }); setOpen(false); }}
+            className={`rounded-full px-2.5 py-1 text-[11px] ${city === c.name ? 'bg-white/35' : 'bg-white/15'}`}>
+            <MapPin className="mr-1 inline h-3 w-3" />{c.name}
+          </button>
+        ))}
+      </div>
     </div>
   );
 };
