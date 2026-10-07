@@ -13,6 +13,7 @@ import { toLocal, type LatLng } from './geo';
 import { mapBlocks, useMapVersion } from './mapIndex';
 import { useGovLevel, TRAFFIC_SCALE } from './thermalGovernor';
 import { getMeet } from '@/worlds/meet/vrMeet';
+import { humanGeometry } from '@/lib/vrHumanLook';
 
 export type Lane = { pts: [number, number][]; cum: number[]; len: number; w: number };
 export type Agent = { lane: number; s: number; dir: 1 | -1; speed: number; base: number; off: number; kind: 0 | 1 | 2; phase: number };
@@ -101,7 +102,7 @@ function bikeGeometry() {
   const rider = new THREE.CapsuleGeometry(0.25, 0.6, 2, 6); rider.translate(0, 1.55, -0.2);
   return mergeGeometries([g.toNonIndexed(), rider.toNonIndexed()])!;
 }
-function pedGeometry() { const g = new THREE.CapsuleGeometry(0.24, 1.15, 2, 8); g.translate(0, 0.82, 0); return g; }
+function pedGeometry() { return humanGeometry(); }
 
 const CAR_COLORS = ['#e5e7eb', '#1f2937', '#387BF6', '#b91c1c', '#9ca3af', '#f8fafc', '#0f766e', '#ca8a04'];
 const PED_COLORS = ['#7c3f22', '#1e3a8a', '#f5f5f4', '#475569', '#15803d', '#be185d', '#a16207'];
@@ -117,7 +118,7 @@ export const StreetTraffic: React.FC<{ origin: LatLng }> = ({ origin }) => {
   const mats = useMemo(() => ({
     car: new THREE.MeshStandardMaterial({ roughness: 0.3, metalness: 0.6 }),
     bike: new THREE.MeshStandardMaterial({ roughness: 0.35, metalness: 0.5 }),
-    ped: new THREE.MeshStandardMaterial({ roughness: 0.85 }),
+    ped: new THREE.MeshStandardMaterial({ roughness: 0.75, vertexColors: true }),
   }), []);
   useEffect(() => () => { Object.values(geos).forEach((g) => g.dispose()); Object.values(mats).forEach((m) => m.dispose()); }, [geos, mats]);
 
@@ -194,8 +195,8 @@ export const StreetTraffic: React.FC<{ origin: LatLng }> = ({ origin }) => {
       dummy.position.set(p.x, bob, p.z); dummy.rotation.set(0, p.yaw, 0); dummy.updateMatrix();
       const i = idx[a.kind]++;
       m.setMatrixAt(i, dummy.matrix);
-      const palette = a.kind === 2 ? PED_COLORS : CAR_COLORS;
-      m.setColorAt(i, col.set(palette[(a.lane + Math.floor(a.base * 10)) % palette.length]));
+      if (a.kind === 2) m.setColorAt(i, col.set('#ffffff')); // same dress for everyone (colours live in the model)
+      else m.setColorAt(i, col.set(CAR_COLORS[(a.lane + Math.floor(a.base * 10)) % CAR_COLORS.length]));
     }
     meshes.forEach((m, k) => {
       if (!m) return;
