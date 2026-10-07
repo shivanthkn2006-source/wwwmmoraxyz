@@ -10,7 +10,9 @@ import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { getWorldState } from '@/worlds/worldMode';
 import { useVRView, wireVRViewKeys } from '@/lib/vrView';
-import { HUMAN_COLORS as HC } from '@/lib/vrHumanLook';
+import { HUMAN_COLORS as HC, HUMAN_MATERIAL, headGeometry } from '@/lib/vrHumanLook';
+
+const HEAD = headGeometry();
 
 const AHEAD = 2.8;
 const SKIN = HC.skin, SHIRT = HC.top, PANTS = HC.trousers, SHOE = HC.shoe;
@@ -84,8 +86,7 @@ export const ThirdPersonAvatar: React.FC = () => {
     <group ref={root}>
       <group ref={hips} position={[0, 0.95, 0]}>
         <mesh position={[0, 0.32, 0]} material={mats.shirt}><boxGeometry args={[0.42, 0.6, 0.24]} /></mesh>
-        <mesh position={[0, 0.78, 0]} material={mats.skin}><sphereGeometry args={[0.15, 14, 12]} /></mesh>
-        <mesh position={[0, 0.8, -0.01]} material={mats.hair}><sphereGeometry args={[0.165, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.55]} /></mesh>
+        <mesh position={[0, 0.78, 0]} geometry={HEAD} material={HUMAN_MATERIAL} />
         <mesh position={[0, 0.6, 0]} material={mats.trim}><boxGeometry args={[0.2, 0.05, 0.25]} /></mesh>
         <mesh position={[0, 0.03, 0]} material={mats.trim}><boxGeometry args={[0.43, 0.07, 0.25]} /></mesh>
         {([[armL, -0.27], [armR, 0.27]] as const).map(([ref, x], i) => (
