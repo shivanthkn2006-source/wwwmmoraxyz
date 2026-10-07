@@ -8,6 +8,7 @@ import { buildBuildingParts, buildRoadParts, makeWallMaterial, ROOF_MAT, ROAD_HI
 import { MapLabels } from './MapLabels';
 import { buildWaterParts, WATER_MAT, PARK_MAT, BRIDGE_MAT } from './waterLook';
 import { StreetHouses } from './StreetHouses';
+import { CityPortals } from './CityPortals';
 /**
  * Real Map layer — the player's actual neighbourhood from OpenStreetMap.
  * Streams a 3×3 grid of ~200 m chunks around the camera (unloads at
@@ -283,6 +284,7 @@ export const RealMapWorld: React.FC = () => {
       <ThermalGovernor />
       <AdminRealmapSync />
       <PortalDoorway position={PORTAL_OFFSET} label="M'Mora World" onEnter={enterMMora} />
+      <CityPortals />
       {demoOn && <DemoExplorer />}
     </>
   );
