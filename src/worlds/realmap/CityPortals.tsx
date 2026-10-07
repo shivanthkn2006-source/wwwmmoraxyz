@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { PortalDoorway } from '../portal/PortalDoorway';
 import { enterMMora } from '../worldMode';
+import { PortalBeam } from './PortalBeam';
 
 export const PORTAL_GRID_M = 1000;
 
@@ -24,5 +25,11 @@ export const CityPortals: React.FC = () => {
     if (c?.[0] !== cell?.[0] || c?.[1] !== cell?.[1]) setCell(c);
   });
   if (!cell) return null;
-  return <PortalDoorway key={cell.join(',')} position={[cell[0], 0, cell[1]]} label="M'Mora World" onEnter={enterMMora} />;
+  const pos: [number, number, number] = [cell[0], 0, cell[1]];
+  return (
+    <group key={cell.join(',')}>
+      <PortalDoorway position={pos} label="M'Mora World" onEnter={enterMMora} />
+      <PortalBeam position={pos} />
+    </group>
+  );
 };
