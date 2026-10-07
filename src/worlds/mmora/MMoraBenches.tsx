@@ -22,6 +22,8 @@ type Bench = [number, number, number]; // x, z, rotY
 const BASE: Bench[] = [
   [-6, 0, 0], [10, 2, Math.PI], [0, -12, 0], [-12, -10, Math.PI / 2],
   [12, -14, -Math.PI / 2], [-4, 14, Math.PI], [8, 16, Math.PI], [-16, 6, Math.PI / 2],
+  // Beach benches facing the sea (and the full moon at night)
+  ...[-30, -20, -10, 0, 10, 20, 30].map((x): Bench => [x, -70, Math.PI]),
 ];
 
 const key = () => `vr-mmora-benches:${mmoraCityKey()}`;

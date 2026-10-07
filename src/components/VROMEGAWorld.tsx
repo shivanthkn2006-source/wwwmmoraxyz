@@ -84,6 +84,7 @@ import { StoryNoteReader } from './vr/StoryNoteReader';
 import { ArchiveHouse } from '@/worlds/mmora/ArchiveHouse';
 import { PickupHouses } from '@/worlds/mmora/PickupHouses';
 import { MMoraBenches } from '@/worlds/mmora/MMoraBenches';
+import { MMoraBeach } from '@/worlds/mmora/MMoraBeach';
 import { VRPoseTicker } from './vr/VRMiniMap';
 import { MultiplayerAvatars } from './vr/features/GlassPyramidAvatar';
 import EnterpriseControlDeck from './vr/features/EnterpriseControlDeck';
@@ -1293,6 +1294,7 @@ const MemoryPalace: React.FC<{
       {inMMora && <ArchiveHouse />}
       {inMMora && <PickupHouses />}
       {inMMora && <MMoraBenches />}
+      {inMMora && <MMoraBeach />}
       <VRPoseTicker />
       {inMMora && <SavePoint />}
       <NightMode />
