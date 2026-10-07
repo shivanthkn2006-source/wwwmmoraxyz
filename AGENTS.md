@@ -27,3 +27,4 @@
 - Live admin monitoring alerts (domain visits, missing pages, admin probes, VR activity) are created only server-side in track-visit, because clients cannot insert alerts for the admin.
 - Every saved notification is forwarded to the member's phones by a database trigger → notification-push function (x-cron-token), which re-checks the main, push and per-alert switches, because one delivery path keeps phone alerts consistent with the in-app bell.
 - Notification taps resolve through src/lib/notificationTarget.ts for every notification surface, because separate per-panel rules left most alert kinds going nowhere.
+- src/lib/domRemoveGuard.ts (imported first in main.tsx) ignores removeChild of already-detached nodes, because drei <Html> labels unmounting with a whole world crashed VR World on portal trips.
