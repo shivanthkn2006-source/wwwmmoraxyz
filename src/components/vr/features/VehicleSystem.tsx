@@ -212,8 +212,8 @@ const VehicleModel: React.FC<VehicleProps> = ({
       {/* Interaction prompt */}
       {hovered && !isPlayerInside && (
         <Html position={[0, 2, 0]} center>
-          <div className="bg-black/80 px-3 py-2 rounded-lg text-white text-sm border border-purple-500/50">
-            <div className="text-purple-400 font-bold">🚗 {vehicle.type.toUpperCase()}</div>
+          <div className="bg-black/80 px-3 py-2 rounded-lg text-white text-sm border border-amber-500/50">
+            <div className="text-amber-400 font-bold">🚗 {vehicle.type.toUpperCase()}</div>
             <div className="text-xs text-white/60 mt-1">Click or say "Enter vehicle"</div>
           </div>
         </Html>
@@ -248,7 +248,7 @@ export const useVehicleSystem = () => {
       (Math.random() - 0.5) * 30
     ];
     
-    const colors = ['#ef4444', '#3b82f6', '#22c55e', '#f59e0b', '#8b5cf6', '#06b6d4'];
+    const colors = ['#ef4444', '#3b82f6', '#22c55e', '#f59e0b', '#e0ad5c', '#06b6d4'];
     
     const newVehicle: Vehicle = {
       id: `vehicle_${Date.now()}`,

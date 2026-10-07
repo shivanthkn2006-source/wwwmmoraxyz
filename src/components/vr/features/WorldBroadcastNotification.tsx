@@ -92,7 +92,7 @@ export const WorldBroadcastNotification: React.FC<WorldBroadcastNotificationProp
           className="fixed top-4 left-1/2 -translate-x-1/2 z-[200] w-[90%] max-w-lg"
         >
           <div 
-            className="relative bg-gradient-to-r from-cyan-900/90 via-purple-900/90 to-cyan-900/90 backdrop-blur-xl rounded-lg border border-cyan-500/50 shadow-2xl shadow-cyan-500/30 overflow-hidden"
+            className="relative bg-gradient-to-r from-cyan-900/90 via-amber-900/90 to-cyan-900/90 backdrop-blur-xl rounded-lg border border-cyan-500/50 shadow-2xl shadow-cyan-500/30 overflow-hidden"
             style={{
               fontFamily: "'Orbitron', 'Space Grotesk', sans-serif",
             }}

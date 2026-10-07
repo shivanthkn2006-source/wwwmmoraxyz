@@ -254,7 +254,7 @@ const Avatar: React.FC<AvatarProps> = ({
         <Html position={[0, 2.2, 0]} center distanceFactor={15}>
           <div className={`
             px-2 py-1 rounded text-xs whitespace-nowrap
-            ${isPlayer ? 'bg-purple-600/80 border border-purple-400/50' : 'bg-black/60'}
+            ${isPlayer ? 'bg-amber-600/80 border border-amber-400/50' : 'bg-black/60'}
             text-white
           `}>
             {isPlayer ? '👤 YOU' : name}
@@ -281,7 +281,7 @@ export const useAvatarCustomization = () => {
     const hairStyles: AvatarCustomization['hairStyle'][] = ['short', 'medium', 'long', 'bald'];
     const accessories: AvatarCustomization['accessory'][] = ['none', 'glasses', 'hat', 'headphones'];
     const bodyTypes: AvatarCustomization['bodyType'][] = ['slim', 'average', 'athletic'];
-    const colors = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899'];
+    const colors = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#e0ad5c', '#f2c48d'];
     
     setCustomization({
       skinTone: SKIN_TONES[Math.floor(Math.random() * SKIN_TONES.length)],
@@ -322,7 +322,7 @@ export const AvatarCustomizationPanel: React.FC<{
   onClose: () => void;
 }> = ({ customization, onUpdate, onRandomize, onClose }) => {
   return (
-    <div className="fixed right-4 top-20 w-72 bg-black/90 border border-purple-500/30 rounded-lg p-4 z-50">
+    <div className="fixed right-4 top-20 w-72 bg-black/90 border border-amber-500/30 rounded-lg p-4 z-50">
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-white font-bold">Avatar Customization</h3>
         <button onClick={onClose} className="text-white/60 hover:text-white">✕</button>
@@ -336,7 +336,7 @@ export const AvatarCustomizationPanel: React.FC<{
             <button
               key={tone}
               onClick={() => onUpdate('skinTone', tone)}
-              className={`w-6 h-6 rounded-full border-2 ${customization.skinTone === tone ? 'border-purple-500' : 'border-transparent'}`}
+              className={`w-6 h-6 rounded-full border-2 ${customization.skinTone === tone ? 'border-amber-500' : 'border-transparent'}`}
               style={{ backgroundColor: tone }}
             />
           ))}
@@ -351,7 +351,7 @@ export const AvatarCustomizationPanel: React.FC<{
             <button
               key={color}
               onClick={() => onUpdate('hairColor', color)}
-              className={`w-6 h-6 rounded-full border-2 ${customization.hairColor === color ? 'border-purple-500' : 'border-transparent'}`}
+              className={`w-6 h-6 rounded-full border-2 ${customization.hairColor === color ? 'border-amber-500' : 'border-transparent'}`}
               style={{ backgroundColor: color }}
             />
           ))}
@@ -366,7 +366,7 @@ export const AvatarCustomizationPanel: React.FC<{
             <button
               key={style}
               onClick={() => onUpdate('hairStyle', style)}
-              className={`px-2 py-1 text-xs rounded ${customization.hairStyle === style ? 'bg-purple-600 text-white' : 'bg-gray-700 text-gray-300'}`}
+              className={`px-2 py-1 text-xs rounded ${customization.hairStyle === style ? 'bg-amber-600 text-white' : 'bg-gray-700 text-gray-300'}`}
             >
               {style}
             </button>
@@ -382,7 +382,7 @@ export const AvatarCustomizationPanel: React.FC<{
             <button
               key={acc}
               onClick={() => onUpdate('accessory', acc)}
-              className={`px-2 py-1 text-xs rounded ${customization.accessory === acc ? 'bg-purple-600 text-white' : 'bg-gray-700 text-gray-300'}`}
+              className={`px-2 py-1 text-xs rounded ${customization.accessory === acc ? 'bg-amber-600 text-white' : 'bg-gray-700 text-gray-300'}`}
             >
               {acc}
             </button>
@@ -394,7 +394,7 @@ export const AvatarCustomizationPanel: React.FC<{
       <div className="flex gap-2 mt-4">
         <button
           onClick={onRandomize}
-          className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white py-2 rounded text-sm"
+          className="flex-1 bg-gradient-to-r from-amber-600 to-pink-600 text-white py-2 rounded text-sm"
         >
           🎲 Randomize
         </button>

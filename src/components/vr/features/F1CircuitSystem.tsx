@@ -23,7 +23,7 @@ const TEAMS = [
   { name: 'Team Zenith', color: '#2563eb', flag: '🇬🇧' },
   { name: 'Team Aurora', color: '#f59e0b', flag: '🇩🇪' },
   { name: 'Team Vortex', color: '#10b981', flag: '🇧🇷' },
-  { name: 'Team Nova', color: '#8b5cf6', flag: '🇯🇵' },
+  { name: 'Team Nova', color: '#e0ad5c', flag: '🇯🇵' },
 ];
 
 // ── TRACK GEOMETRY ──
@@ -275,7 +275,7 @@ EntrancePortal.displayName = 'EntrancePortal';
 const CrowdAvatars: React.FC<{ trackPath: THREE.Vector3[] }> = React.memo(({ trackPath }) => {
   const avatars = useMemo(() => {
     const list: Array<{ pos: [number, number, number]; color: string }> = [];
-    const colors = ['#ef4444', '#3b82f6', '#22c55e', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'];
+    const colors = ['#ef4444', '#3b82f6', '#22c55e', '#f59e0b', '#e0ad5c', '#f2c48d', '#06b6d4', '#f97316'];
 
     for (let i = 0; i < CROWD_COUNT; i++) {
       // Distribute around the track perimeter, offset outward

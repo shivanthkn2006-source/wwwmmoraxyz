@@ -287,7 +287,7 @@ export const RotationButtons: React.FC = () => {
 
       <button
         onClick={() => handleRotate('around', 180)}
-        className="w-12 h-12 rounded-full bg-purple-600/80 backdrop-blur-md border border-purple-400/50 text-white flex flex-col items-center justify-center hover:bg-purple-500 transition-colors"
+        className="w-12 h-12 rounded-full bg-amber-600/80 backdrop-blur-md border border-amber-400/50 text-white flex flex-col items-center justify-center hover:bg-amber-500 transition-colors"
         title="Turn Around 180°"
       >
         <span className="text-lg leading-none">↩</span>

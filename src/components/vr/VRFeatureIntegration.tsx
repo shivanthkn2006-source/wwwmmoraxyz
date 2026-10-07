@@ -150,7 +150,7 @@ const ProceduralBuilding: React.FC<{
       police_station: { color: '#1e40af', height: 6, width: 8 },
       gym: { color: '#f97316', height: 4, width: 10 },
       restaurant: { color: '#84cc16', height: 3, width: 5 },
-      stadium: { color: '#7c3aed', height: 20, width: 30 },
+      stadium: { color: '#d4a24c', height: 20, width: 30 },
     };
     return configs[type] || configs.residential;
   }, [type]);

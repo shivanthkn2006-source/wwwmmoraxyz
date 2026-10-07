@@ -76,7 +76,7 @@ const VRControlsPanel: React.FC<VRControlsPanelProps> = ({
           !isPinned && 'cursor-grab active:cursor-grabbing'
         )}
       >
-        <Eye className="w-3 h-3 text-purple-400" />
+        <Eye className="w-3 h-3 text-amber-400" />
         <span className="text-[9px] font-mono text-white/70">VR</span>
         <Maximize2 className="w-2.5 h-2.5 text-white/40" />
       </motion.button>,
@@ -101,7 +101,7 @@ const VRControlsPanel: React.FC<VRControlsPanelProps> = ({
           )}
         >
           <GripVertical className="w-3 h-3 text-white/40" />
-          <Eye className="w-3 h-3 text-purple-400" />
+          <Eye className="w-3 h-3 text-amber-400" />
           <span className="text-[9px] font-mono text-white/70">Controls</span>
           <ChevronUp className="w-2.5 h-2.5 text-white/40" />
         </motion.button>
@@ -130,7 +130,7 @@ const VRControlsPanel: React.FC<VRControlsPanelProps> = ({
               <div className="flex items-center justify-between px-3 py-2 border-b border-white/10 bg-black/40" onPointerDown={(e) => e.stopPropagation()}>
                 <div className="flex items-center gap-2">
                   <GripVertical className="w-3.5 h-3.5 text-white/40" />
-                  <Eye className="w-4 h-4 text-purple-400" />
+                  <Eye className="w-4 h-4 text-amber-400" />
                   <span className="text-xs font-semibold text-white">VR Controls</span>
                 </div>
                 <div className="flex items-center gap-1">
@@ -159,7 +159,7 @@ const VRControlsPanel: React.FC<VRControlsPanelProps> = ({
                   </div>
                 </div>
                 <div className="bg-white/5 rounded-lg p-2 border border-white/10">
-                  <div className="flex items-center gap-1.5 mb-1.5"><Mouse className="w-3 h-3 text-purple-400" /><span className="text-[10px] font-semibold text-white">Mouse</span></div>
+                  <div className="flex items-center gap-1.5 mb-1.5"><Mouse className="w-3 h-3 text-amber-400" /><span className="text-[10px] font-semibold text-white">Mouse</span></div>
                   <div className="grid grid-cols-2 gap-1 text-[8px] text-white/50"><div>Drag → Look</div><div>Scroll → Zoom</div><div>Click → Select</div><div>Hover → Info</div></div>
                 </div>
                 <div className="bg-white/5 rounded-lg p-2 border border-white/10">
@@ -170,8 +170,8 @@ const VRControlsPanel: React.FC<VRControlsPanelProps> = ({
                   <div className="flex items-center gap-1.5 mb-1.5"><Target className="w-3 h-3 text-amber-400" /><span className="text-[10px] font-semibold text-white">Objects</span></div>
                   <div className="grid grid-cols-2 gap-1 text-[8px]">
                     <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-amber-400"/><span className="text-white/50">Memory</span></div>
-                    <div className="flex items-center gap-1"><div className="w-2 h-2 rounded bg-purple-500"/><span className="text-white/50">Holo-Wall</span></div>
-                    <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-violet-400"/><span className="text-white/50">Core</span></div>
+                    <div className="flex items-center gap-1"><div className="w-2 h-2 rounded bg-amber-500"/><span className="text-white/50">Holo-Wall</span></div>
+                    <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-amber-400"/><span className="text-white/50">Core</span></div>
                     <div className="flex items-center gap-1"><div className="w-2 h-2 rounded bg-cyan-400"/><span className="text-white/50">Bio-Sync</span></div>
                   </div>
                 </div>
@@ -188,7 +188,7 @@ const VRControlsPanel: React.FC<VRControlsPanelProps> = ({
               </div>
 
               <div className="p-2 border-t border-white/10">
-                <button onClick={handleDismiss} onPointerDown={(e) => e.stopPropagation()} className="w-full py-1.5 bg-gradient-to-r from-purple-600 to-cyan-600 rounded-lg text-white font-semibold text-xs hover:from-purple-500 hover:to-cyan-500 transition-all">
+                <button onClick={handleDismiss} onPointerDown={(e) => e.stopPropagation()} className="w-full py-1.5 bg-gradient-to-r from-amber-600 to-cyan-600 rounded-lg text-white font-semibold text-xs hover:from-amber-500 hover:to-cyan-500 transition-all">
                   {!hasSeenTutorial ? 'Enter Memory Palace' : 'Close'}
                 </button>
               </div>

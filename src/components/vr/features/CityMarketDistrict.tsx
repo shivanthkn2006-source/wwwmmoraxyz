@@ -55,7 +55,7 @@ const MarketStall: React.FC<{ position: [number, number, number]; type: 'fruit' 
       {[...Array(6)].map((_, i) => (
         <mesh key={i} position={[-1 + i * 0.4, 1.15, -0.3 + (i % 2) * 0.6]}>
           <boxGeometry args={[0.35, 0.25, 0.35]} />
-          <meshStandardMaterial color={type === 'fruit' ? ['#e74c3c', '#f39c12', '#27ae60', '#8e44ad', '#e67e22', '#2ecc71'][i] : type === 'meat' ? '#c0392b' : type === 'fish' ? '#5dade2' : '#3498db'} />
+          <meshStandardMaterial color={type === 'fruit' ? ['#e74c3c', '#f39c12', '#27ae60', '#c8923e', '#e67e22', '#2ecc71'][i] : type === 'meat' ? '#c0392b' : type === 'fish' ? '#5dade2' : '#3498db'} />
         </mesh>
       ))}
       {/* Canopy poles */}
@@ -239,13 +239,13 @@ const AnimalCare: React.FC<{ position: [number, number, number] }> = ({ position
   <group position={position}>
     <mesh position={[0, 2.5, 0]}><boxGeometry args={[6, 5, 5]} /><meshStandardMaterial color="#f5e6ca" /></mesh>
     {/* Roof */}
-    <mesh position={[0, 5.2, 0]}><boxGeometry args={[6.5, 0.4, 5.5]} /><meshStandardMaterial color="#8e44ad" /></mesh>
+    <mesh position={[0, 5.2, 0]}><boxGeometry args={[6.5, 0.4, 5.5]} /><meshStandardMaterial color="#c8923e" /></mesh>
     {/* Door */}
     <mesh position={[0, 1.2, 2.51]}><boxGeometry args={[1.2, 2.4, 0.05]} /><meshStandardMaterial color={C.wood} /></mesh>
     {/* Window */}
     <mesh position={[-1.8, 2.8, 2.51]}><boxGeometry args={[1, 1, 0.05]} /><meshStandardMaterial color={C.glass} /></mesh>
     <mesh position={[1.8, 2.8, 2.51]}><boxGeometry args={[1, 1, 0.05]} /><meshStandardMaterial color={C.glass} /></mesh>
-    <Text position={[0, 5.8, 2.5]} fontSize={0.35} color="#8e44ad" anchorX="center" outlineWidth={0.02} outlineColor="#fff">🐾 VET CLINIC</Text>
+    <Text position={[0, 5.8, 2.5]} fontSize={0.35} color="#c8923e" anchorX="center" outlineWidth={0.02} outlineColor="#fff">🐾 VET CLINIC</Text>
   </group>
 );
 

@@ -180,7 +180,7 @@ export const EnterpriseControlDeck: React.FC<EnterpriseControlDeckProps> = ({
                   onClick={handleSummonAll}
                   variant="outline"
                   size="sm"
-                  className="bg-purple-500/20 border-purple-500/40 text-purple-300 hover:bg-purple-500/30 h-auto py-2 flex-col gap-1"
+                  className="bg-amber-500/20 border-amber-500/40 text-amber-300 hover:bg-amber-500/30 h-auto py-2 flex-col gap-1"
                 >
                   <MapPin className="w-4 h-4" />
                   <span className="text-[9px] uppercase tracking-wide">Summon All</span>

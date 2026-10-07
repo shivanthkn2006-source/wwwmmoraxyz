@@ -131,7 +131,7 @@ export const StoryModeHUD: React.FC<StoryModeHUDProps> = ({
       <div className="relative">
         {/* Holographic glow effect - reduced on mobile */}
         {!device.isMobile && (
-          <div className="absolute -inset-2 bg-gradient-to-r from-cyan-500/20 via-fuchsia-500/20 to-cyan-500/20 
+          <div className="absolute -inset-2 bg-gradient-to-r from-cyan-500/20 via-amber-500/20 to-cyan-500/20 
                           rounded-2xl blur-xl animate-pulse" />
         )}
         
@@ -189,17 +189,17 @@ export const StoryModeHUD: React.FC<StoryModeHUDProps> = ({
           {waypoint && waypointInfo && (
             <motion.div 
               className={cn(
-                "flex items-center bg-fuchsia-500/10 border-b border-fuchsia-500/20",
+                "flex items-center bg-amber-500/10 border-b border-amber-500/20",
                 isCompact ? "px-2 py-1.5 gap-2" : "px-4 py-2 gap-3"
               )}
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
             >
               <motion.div style={{ rotate: waypointInfo.bearing - camera.yaw }}>
-                <Navigation className={cn(iconSize, "text-fuchsia-400")} />
+                <Navigation className={cn(iconSize, "text-amber-400")} />
               </motion.div>
               <div className="flex-1">
-                <div className={cn("text-fuchsia-400/80 uppercase", textSize)}>Waypoint</div>
+                <div className={cn("text-amber-400/80 uppercase", textSize)}>Waypoint</div>
                 <div className={cn("font-bold text-white", titleSize)}>
                   {waypointInfo.distance > 1000 
                     ? `${(waypointInfo.distance / 1000).toFixed(1)}km`
@@ -209,7 +209,7 @@ export const StoryModeHUD: React.FC<StoryModeHUDProps> = ({
               </div>
               <div
                 className={cn(
-                  "rounded-full border-2 border-fuchsia-400/50 flex items-center justify-center animate-gpu-border-color-pulse",
+                  "rounded-full border-2 border-amber-400/50 flex items-center justify-center animate-gpu-border-color-pulse",
                   isCompact ? "w-6 h-6" : "w-8 h-8"
                 )}
               >
@@ -273,7 +273,7 @@ export const StoryModeHUD: React.FC<StoryModeHUDProps> = ({
                               <div className={cn("mt-1 flex items-center", gap)}>
                                 <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
                                   <motion.div
-                                    className="h-full bg-gradient-to-r from-cyan-500 to-fuchsia-500"
+                                    className="h-full bg-gradient-to-r from-cyan-500 to-amber-500"
                                     initial={{ width: 0 }}
                                     animate={{ width: `${(obj.progress.current / obj.progress.total) * 100}%` }}
                                   />

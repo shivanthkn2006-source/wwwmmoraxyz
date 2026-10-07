@@ -47,7 +47,7 @@ const BUILDING_CONFIGS: Record<BuildingType, {
   office: { floorRange: [5, 20], widthRange: [15, 30], depthRange: [15, 25], colors: ['#4a5568', '#2d3748', '#1a202c'], accentColors: ['#00bcd4', '#3b82f6'], roofTypes: ['flat'] },
   hospital: { floorRange: [3, 8], widthRange: [20, 40], depthRange: [15, 30], colors: ['#ffffff', '#f0f0f0'], accentColors: ['#ef4444', '#dc2626'], roofTypes: ['flat'] },
   school: { floorRange: [2, 4], widthRange: [25, 50], depthRange: [15, 25], colors: ['#fef3c7', '#fed7aa'], accentColors: ['#f59e0b', '#d97706'], roofTypes: ['flat', 'gabled'] },
-  shop: { floorRange: [1, 3], widthRange: [8, 15], depthRange: [8, 12], colors: ['#e5e5e5', '#d4d4d4'], accentColors: ['#8b5cf6', '#ec4899'], roofTypes: ['flat'] },
+  shop: { floorRange: [1, 3], widthRange: [8, 15], depthRange: [8, 12], colors: ['#e5e5e5', '#d4d4d4'], accentColors: ['#e0ad5c', '#f2c48d'], roofTypes: ['flat'] },
   park: { floorRange: [0, 0], widthRange: [30, 60], depthRange: [30, 60], colors: ['#22c55e'], accentColors: ['#16a34a'], roofTypes: ['flat'] },
   factory: { floorRange: [2, 5], widthRange: [30, 60], depthRange: [20, 40], colors: ['#6b7280', '#4b5563'], accentColors: ['#f59e0b', '#ef4444'], roofTypes: ['flat', 'gabled'] },
   restaurant: { floorRange: [1, 2], widthRange: [10, 20], depthRange: [10, 15], colors: ['#fef3c7', '#fde68a'], accentColors: ['#ef4444', '#f97316'], roofTypes: ['flat', 'gabled'] },
@@ -56,7 +56,7 @@ const BUILDING_CONFIGS: Record<BuildingType, {
   police_station: { floorRange: [2, 4], widthRange: [15, 25], depthRange: [15, 25], colors: ['#e5e5e5'], accentColors: ['#1e3a8a', '#1e40af'], roofTypes: ['flat'] },
   gym: { floorRange: [1, 3], widthRange: [20, 35], depthRange: [20, 35], colors: ['#374151', '#1f2937'], accentColors: ['#f59e0b', '#10b981'], roofTypes: ['flat', 'dome'] },
   religious: { floorRange: [2, 4], widthRange: [15, 30], depthRange: [25, 45], colors: ['#faf5eb', '#f5f5dc'], accentColors: ['#d4af37', '#b8860b'], roofTypes: ['dome', 'gabled'] },
-  cultural: { floorRange: [2, 5], widthRange: [25, 50], depthRange: [20, 40], colors: ['#f8f8f8', '#eeeeee'], accentColors: ['#8b5cf6', '#d946ef'], roofTypes: ['flat', 'dome'] },
+  cultural: { floorRange: [2, 5], widthRange: [25, 50], depthRange: [20, 40], colors: ['#f8f8f8', '#eeeeee'], accentColors: ['#e0ad5c', '#f0c27a'], roofTypes: ['flat', 'dome'] },
 };
 
 // Single Building Component with procedural generation
@@ -197,7 +197,7 @@ const ProceduralBuilding: React.FC<{
       <Html position={[0, totalHeight + 2, 0]} center distanceFactor={20}>
         <div className={`
           px-2 py-1 rounded text-xs whitespace-nowrap
-          ${hovered ? 'bg-purple-600/80' : 'bg-black/60'}
+          ${hovered ? 'bg-amber-600/80' : 'bg-black/60'}
           text-white border border-white/20
         `}>
           {typeIcons[building.type]} {building.type.replace('_', ' ').toUpperCase()}

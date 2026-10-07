@@ -110,11 +110,11 @@ const Locomotive: React.FC<{ color: string }> = ({ color }) => (
 // ── Passenger Compartment ────────────────────────────────────────────────────
 const PassengerCompartment: React.FC<{ color: string; compIndex: number }> = ({ color, compIndex }) => {
   const avatarColors = useMemo(() => {
-    const p = ['#e74c3c', '#3498db', '#f39c12', '#2ecc71', '#9b59b6', '#e67e22', '#1abc9c'];
+    const p = ['#e74c3c', '#3498db', '#f39c12', '#2ecc71', '#d4a24c', '#e67e22', '#1abc9c'];
     return Array.from({ length: 4 }, (_, i) => p[(compIndex * 4 + i) % p.length]);
   }, [compIndex]);
   const hatColors = useMemo(() => {
-    const h = ['#c0392b', '#2980b9', '#f1c40f', '#27ae60', '#8e44ad', '#d35400'];
+    const h = ['#c0392b', '#2980b9', '#f1c40f', '#27ae60', '#c8923e', '#d35400'];
     return Array.from({ length: 4 }, (_, i) => h[(compIndex * 4 + i + 2) % h.length]);
   }, [compIndex]);
 

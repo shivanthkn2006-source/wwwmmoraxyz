@@ -117,7 +117,7 @@ const NodeCard: React.FC<{
         <div className="flex items-center gap-2">
           <Icon className={cn(
             "w-4 h-4",
-            node.status === 'error' ? 'text-red-400' : 'text-purple-400'
+            node.status === 'error' ? 'text-red-400' : 'text-amber-400'
           )} />
           <span className="text-white text-xs font-medium truncate max-w-[100px]">
             {node.name}
@@ -195,7 +195,7 @@ export const VRSystemHealthMonitor: React.FC<VRSystemHealthMonitorProps> = ({
         exit={{ opacity: 0, y: -20 }}
         className="fixed top-16 left-4 z-[80] w-80 max-h-[70vh] overflow-hidden"
       >
-        <div className="bg-black/80 backdrop-blur-xl rounded-xl border border-purple-500/30 shadow-2xl">
+        <div className="bg-black/80 backdrop-blur-xl rounded-xl border border-amber-500/30 shadow-2xl">
           {/* Header */}
           <div className={cn(
             "p-3 rounded-t-xl border-b",
@@ -267,7 +267,7 @@ export const VRSystemHealthMonitor: React.FC<VRSystemHealthMonitorProps> = ({
               <button
                 onClick={onForceSync}
                 disabled={syncStatus === 'syncing'}
-                className="flex items-center gap-1 px-2 py-1 bg-purple-600/30 hover:bg-purple-600/50 disabled:opacity-50 rounded text-purple-300 text-[10px] transition-colors"
+                className="flex items-center gap-1 px-2 py-1 bg-amber-600/30 hover:bg-amber-600/50 disabled:opacity-50 rounded text-amber-300 text-[10px] transition-colors"
               >
                 <RefreshCw className={cn("w-3 h-3", syncStatus === 'syncing' && 'animate-spin')} />
                 Sync
@@ -328,7 +328,7 @@ export const VRSystemHealthMonitor: React.FC<VRSystemHealthMonitorProps> = ({
           {/* Diagnostics toggle */}
           <button
             onClick={() => setShowDiagnostics(!showDiagnostics)}
-            className="w-full p-2 flex items-center justify-center gap-2 text-purple-400 hover:text-purple-300 hover:bg-purple-900/20 transition-colors text-xs border-t border-white/10"
+            className="w-full p-2 flex items-center justify-center gap-2 text-amber-400 hover:text-amber-300 hover:bg-amber-900/20 transition-colors text-xs border-t border-white/10"
           >
             <Activity className="w-4 h-4" />
             {showDiagnostics ? 'Hide Diagnostics' : 'Show Diagnostics'}
@@ -343,8 +343,8 @@ export const VRSystemHealthMonitor: React.FC<VRSystemHealthMonitorProps> = ({
                 exit={{ height: 0, opacity: 0 }}
                 className="overflow-hidden"
               >
-                <div className="p-3 bg-purple-900/20 border-t border-purple-500/30">
-                  <pre className="text-[9px] text-purple-300/80 font-mono overflow-x-auto">
+                <div className="p-3 bg-amber-900/20 border-t border-amber-500/30">
+                  <pre className="text-[9px] text-amber-300/80 font-mono overflow-x-auto">
                     {JSON.stringify(diagnosticReport, null, 2)}
                   </pre>
                 </div>

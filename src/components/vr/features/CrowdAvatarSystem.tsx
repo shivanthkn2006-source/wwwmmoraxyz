@@ -32,10 +32,10 @@ const SKIN_TONES = [
 const SHIRT_COLORS = [
   '#f5f5f5', '#e8e8e8', '#add8e6', '#87ceeb', '#b0c4de',
   '#fffacd', '#ffd700', '#f0e68c', '#2b2b2b', '#1a1a1a',
-  '#3b82f6', '#ef4444', '#22c55e', '#a855f7', '#ec4899',
-  '#06b6d4', '#f97316', '#14b8a6', '#8b5cf6', '#f43f5e',
-  '#6366f1', '#0ea5e9', '#84cc16', '#d946ef', '#fb923c',
-  '#fbbf24', '#34d399', '#c084fc', '#f472b6', '#38bdf8',
+  '#3b82f6', '#ef4444', '#22c55e', '#e8b65a', '#f2c48d',
+  '#06b6d4', '#f97316', '#14b8a6', '#e0ad5c', '#f43f5e',
+  '#6366f1', '#0ea5e9', '#84cc16', '#f0c27a', '#fb923c',
+  '#fbbf24', '#34d399', '#f2cf94', '#f472b6', '#38bdf8',
 ];
 
 const PANTS_COLORS = [
@@ -45,12 +45,12 @@ const PANTS_COLORS = [
 ];
 
 const BIKE_BODY_COLORS = [
-  '#dc2626', '#2563eb', '#16a34a', '#ca8a04', '#7c3aed',
+  '#dc2626', '#2563eb', '#16a34a', '#ca8a04', '#d4a24c',
   '#0891b2', '#1f2937', '#f5f5f5', '#ea580c', '#db2777',
 ];
 
 const CAR_COLORS = [
-  '#1e40af', '#dc2626', '#16a34a', '#ca8a04', '#7c3aed',
+  '#1e40af', '#dc2626', '#16a34a', '#ca8a04', '#d4a24c',
   '#0891b2', '#1f2937', '#f5f5f5',
 ];
 

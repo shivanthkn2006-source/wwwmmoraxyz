@@ -254,13 +254,13 @@ const BiCameralHUD = ({
                 transition={{ delay: 0.2 }}
               >
                 <div className="text-right">
-                  <h3 className="text-purple-400 font-serif font-bold text-xs sm:text-sm md:text-lg tracking-wider">
+                  <h3 className="text-amber-400 font-serif font-bold text-xs sm:text-sm md:text-lg tracking-wider">
                     ABSTRACT CORE
                   </h3>
-                  <p className="text-purple-600 text-[8px] sm:text-[10px] md:text-xs italic">Right Hemisphere</p>
+                  <p className="text-amber-600 text-[8px] sm:text-[10px] md:text-xs italic">Right Hemisphere</p>
                 </div>
-                <div className="p-1.5 sm:p-2 rounded-full bg-purple-500/20 border border-purple-500/50">
-                  <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-purple-400" />
+                <div className="p-1.5 sm:p-2 rounded-full bg-amber-500/20 border border-amber-500/50">
+                  <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-amber-400" />
                 </div>
               </motion.div>
 
@@ -277,11 +277,11 @@ const BiCameralHUD = ({
                   transition={{ duration: 0.4, ease: 'easeInOut' }}
                 >
                   {/* Outer Glow */}
-                  <div className="absolute inset-0 rounded-full bg-gradient-to-br from-purple-500/30 to-pink-500/30 blur-xl" />
+                  <div className="absolute inset-0 rounded-full bg-gradient-to-br from-amber-500/30 to-pink-500/30 blur-xl" />
                   
                   {/* Orb Core */}
                   <div
-                    className="absolute inset-2 sm:inset-3 md:inset-4 rounded-full bg-gradient-to-br from-purple-600 via-pink-500 to-purple-800 animate-gpu-glow-purple"
+                    className="absolute inset-2 sm:inset-3 md:inset-4 rounded-full bg-gradient-to-br from-amber-600 via-pink-500 to-amber-800 animate-gpu-glow-purple"
                   />
 
                   {/* Heartbeat Icon */}
@@ -290,26 +290,26 @@ const BiCameralHUD = ({
                   </div>
 
                   {/* Orbital Ring - CSS */}
-                  <div className="absolute inset-0 rounded-full border border-purple-400/30 animate-spin-slow" />
+                  <div className="absolute inset-0 rounded-full border border-amber-400/30 animate-spin-slow" />
                 </motion.div>
               </motion.div>
 
               {/* Dream Stream - responsive */}
               <motion.div
-                className="relative bg-black/30 border border-purple-500/30 rounded-lg sm:rounded-xl md:rounded-2xl p-2 sm:p-3 md:p-4 backdrop-blur-sm"
+                className="relative bg-black/30 border border-amber-500/30 rounded-lg sm:rounded-xl md:rounded-2xl p-2 sm:p-3 md:p-4 backdrop-blur-sm"
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.6 }}
               >
-                <h4 className="text-purple-400 font-serif text-[10px] sm:text-xs md:text-sm mb-1.5 sm:mb-2 md:mb-3 flex items-center justify-end gap-2">
+                <h4 className="text-amber-400 font-serif text-[10px] sm:text-xs md:text-sm mb-1.5 sm:mb-2 md:mb-3 flex items-center justify-end gap-2">
                   DREAM STREAM
-                  <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-purple-400 rounded-full animate-pulse" />
+                  <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-amber-400 rounded-full animate-pulse" />
                 </h4>
                 <div className="space-y-1 sm:space-y-2 text-right max-h-20 sm:max-h-28 md:max-h-36 overflow-y-auto scrollbar-thin">
                   {displayDream.map((line, i) => (
                     <motion.p
                       key={i}
-                      className="text-purple-300/80 italic text-[8px] sm:text-[10px] md:text-sm"
+                      className="text-amber-300/80 italic text-[8px] sm:text-[10px] md:text-sm"
                       initial={{ opacity: 0, x: 10 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.7 + i * 0.1 }}
@@ -321,8 +321,8 @@ const BiCameralHUD = ({
               </motion.div>
 
               {/* Corner Accents */}
-              <div className="absolute top-4 right-4 w-8 h-8 border-r-2 border-t-2 border-purple-500/50 rounded-tr-lg" />
-              <div className="absolute bottom-4 right-4 w-8 h-8 border-r-2 border-b-2 border-purple-500/50 rounded-br-lg" />
+              <div className="absolute top-4 right-4 w-8 h-8 border-r-2 border-t-2 border-amber-500/50 rounded-tr-lg" />
+              <div className="absolute bottom-4 right-4 w-8 h-8 border-r-2 border-b-2 border-amber-500/50 rounded-br-lg" />
             </div>
           </motion.div>
         ) : (
@@ -418,7 +418,7 @@ const BiCameralHUD = ({
             onCheckedChange={setIsSynced}
             className="data-[state=checked]:bg-amber-500"
           />
-          <span className={`text-xs font-mono ${isSynced ? 'text-amber-400' : 'text-purple-400'}`}>
+          <span className={`text-xs font-mono ${isSynced ? 'text-amber-400' : 'text-amber-400'}`}>
             R
           </span>
         </div>
@@ -451,18 +451,18 @@ const MetricCard = ({
       p-3 rounded-lg border backdrop-blur-sm
       ${color === 'cyan' 
         ? 'bg-cyan-500/10 border-cyan-500/30' 
-        : 'bg-purple-500/10 border-purple-500/30'}
+        : 'bg-amber-500/10 border-amber-500/30'}
     `}
     whileHover={{ scale: 1.05 }}
     transition={{ type: 'spring', stiffness: 400 }}
   >
     <div className="flex items-center gap-2">
-      <Icon className={`w-4 h-4 ${color === 'cyan' ? 'text-cyan-400' : 'text-purple-400'}`} />
-      <span className={`text-xs font-mono ${color === 'cyan' ? 'text-cyan-500' : 'text-purple-500'}`}>
+      <Icon className={`w-4 h-4 ${color === 'cyan' ? 'text-cyan-400' : 'text-amber-400'}`} />
+      <span className={`text-xs font-mono ${color === 'cyan' ? 'text-cyan-500' : 'text-amber-500'}`}>
         {label}
       </span>
     </div>
-    <p className={`text-lg font-bold font-mono mt-1 ${color === 'cyan' ? 'text-cyan-300' : 'text-purple-300'}`}>
+    <p className={`text-lg font-bold font-mono mt-1 ${color === 'cyan' ? 'text-cyan-300' : 'text-amber-300'}`}>
       {value}
     </p>
   </motion.div>
