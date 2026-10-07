@@ -22,7 +22,7 @@ export function notificationTarget(n: NotifLike): string {
   const t = n.type ?? '';
   if (n.post_id) return `/post/${n.post_id}`;
   if (n.suggestion_type === 'interest_match' || t === 'interest_match' || t === 'message' || t === 'direct_message' || t === 'missed_call')
-    return n.from_user_id ? `/chat?userId=${n.from_user_id}` : '/chat';
+    return n.from_user_id ? `/chat?user=${n.from_user_id}` : '/chat';
   if (t === 'friend_request' || t === 'friend_accepted') return '/huddle';
   if (t.startsWith('vr_')) return '/zoe-omega';
   if (t.startsWith('growth')) return '/growth-insights';
