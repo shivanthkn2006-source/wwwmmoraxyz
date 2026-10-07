@@ -105,11 +105,25 @@ export function resolveOrigin(): void {
   if (state.origin.status !== 'locating') set({ origin: { status: 'locating' } });
   const ask = (reason: 'denied' | 'unavailable') => { locating = false; set({ origin: { status: 'pick', reason } }); };
   if (typeof navigator === 'undefined' || !navigator.geolocation) return ask('unavailable');
-  navigator.geolocation.getCurrentPosition(
-    (p) => { locating = false; set({ origin: { status: 'ready', origin: { lat: p.coords.latitude, lng: p.coords.longitude }, real: true } }); },
-    (err) => ask(err && err.code === 1 ? 'denied' : 'unavailable'),
-    { enableHighAccuracy: true, timeout: 10_000, maximumAge: 120_000 },
-  );
+  // Some phones / installed apps never answer the location request at all, which
+  // left VR World stuck on "Finding your location". A watchdog falls back to the
+  // last chosen city (or the city picker) so the world always opens.
+  let settled = false;
+  const fallback = (reason: 'denied' | 'unavailable') => {
+    if (settled) return; settled = true;
+    const c = savedStartCity();
+    if (c) { locating = false; set({ origin: { status: 'ready', origin: { lat: c.lat, lng: c.lng }, real: false, label: c.name } }); }
+    else ask(reason);
+  };
+  const watchdog = setTimeout(() => fallback('unavailable'), 12_000);
+  try {
+    navigator.geolocation.getCurrentPosition(
+      (p) => { if (settled) return; settled = true; clearTimeout(watchdog); locating = false; set({ origin: { status: 'ready', origin: { lat: p.coords.latitude, lng: p.coords.longitude }, real: true } }); },
+      (err) => { clearTimeout(watchdog); fallback(err && err.code === 1 ? 'denied' : 'unavailable'); },
+      // Street-level accuracy is enough; high-accuracy GPS stalls indoors on many phones.
+      { enableHighAccuracy: false, timeout: 10_000, maximumAge: 300_000 },
+    );
+  } catch { clearTimeout(watchdog); fallback('unavailable'); }
 }
 export function chooseStartCity(city: StartCity) {
   try { localStorage.setItem(CITY_KEY, JSON.stringify(city)); } catch { /* private mode */ }

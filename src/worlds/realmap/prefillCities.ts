@@ -17,6 +17,16 @@ export const SOUTH_INDIA_CITIES = [
   { name: 'Madurai', lat: 9.9252, lng: 78.1198 },
   { name: 'Mysuru', lat: 12.2958, lng: 76.6394 },
   { name: 'Mangaluru', lat: 12.9141, lng: 74.856 },
+  { name: 'Hyderabad', lat: 17.385, lng: 78.4867 },
+  { name: 'Visakhapatnam', lat: 17.6868, lng: 83.2185 },
+  { name: 'Vijayawada', lat: 16.5062, lng: 80.648 },
+  { name: 'Kozhikode', lat: 11.2588, lng: 75.7804 },
+  { name: 'Thrissur', lat: 10.5276, lng: 76.2144 },
+  { name: 'Kollam', lat: 8.8932, lng: 76.6141 },
+  { name: 'Tiruchirappalli', lat: 10.7905, lng: 78.7047 },
+  { name: 'Salem', lat: 11.6643, lng: 78.146 },
+  { name: 'Puducherry', lat: 11.9416, lng: 79.8083 },
+  { name: 'Hubballi', lat: 15.3647, lng: 75.124 },
 ] as const;
 /** 5×5 blocks ≈ 1 km × 1 km around each centre. */
 export const PREFILL_RADIUS = 2;
