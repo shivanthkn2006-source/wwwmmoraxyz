@@ -17,7 +17,10 @@ const HEAD = headGeometry();
 const HEAD_F = headGeometry(true);
 
 const AHEAD = 2.8;
-const SKIN = HC.skin, SHIRT = HC.top, PANTS = HC.trousers, SHOE = HC.shoe;
+// Your own avatar matches the item-case portrait (other people keep the shared look):
+// navy shirt with sleeves rolled, yellow-edged collar, brown leather shoulder
+// holster and thigh holster, tan belt with steel buckle, off-white trousers, brown boots.
+const SKIN = HC.skin, SHIRT = '#22305a', PANTS = '#e4dfd3', SHOE = '#3a2618';
 
 export const ThirdPersonAvatar: React.FC = () => {
   const { thirdPerson, crouch } = useVRView();
@@ -38,7 +41,10 @@ export const ThirdPersonAvatar: React.FC = () => {
     shirt: new THREE.MeshStandardMaterial({ color: SHIRT, roughness: 0.6 }),
     pants: new THREE.MeshStandardMaterial({ color: PANTS, roughness: 0.8 }),
     shoe: new THREE.MeshStandardMaterial({ color: SHOE, roughness: 0.9 }),
-    trim: new THREE.MeshStandardMaterial({ color: HC.trim, roughness: 0.6 }),
+    trim: new THREE.MeshStandardMaterial({ color: '#c9a227', roughness: 0.6 }),
+    leather: new THREE.MeshStandardMaterial({ color: '#5a3520', roughness: 0.55 }),
+    belt: new THREE.MeshStandardMaterial({ color: '#a8823c', roughness: 0.5 }),
+    steel: new THREE.MeshStandardMaterial({ color: '#b8bcc0', metalness: 0.8, roughness: 0.3 }),
     hair: new THREE.MeshStandardMaterial({ color: HC.hair, roughness: 0.9 }),
   }), []);
 
@@ -89,22 +95,39 @@ export const ThirdPersonAvatar: React.FC = () => {
   return (
     <group ref={root}>
       <group ref={hips} position={[0, 0.95, 0]}>
-        <mesh position={[0, 0.32, 0]} material={mats.shirt}><boxGeometry args={[0.42, 0.6, 0.24]} /></mesh>
+        <mesh position={[0, 0.32, 0]} material={mats.shirt}><boxGeometry args={[0.44, 0.6, 0.25]} /></mesh>
         <mesh position={[0, 0.78, 0]} geometry={female ? HEAD_F : HEAD} material={HUMAN_MATERIAL} />
-        <mesh position={[0, 0.6, 0]} material={mats.trim}><boxGeometry args={[0.2, 0.05, 0.25]} /></mesh>
-        <mesh position={[0, 0.03, 0]} material={mats.trim}><boxGeometry args={[0.43, 0.07, 0.25]} /></mesh>
-        {([[armL, -0.27], [armR, 0.27]] as const).map(([ref, x], i) => (
+        {/* stand-up collar with yellow edge */}
+        <mesh position={[0, 0.63, 0]} material={mats.shirt}><cylinderGeometry args={[0.085, 0.1, 0.07, 10]} /></mesh>
+        <mesh position={[0, 0.665, 0]} material={mats.trim}><torusGeometry args={[0.087, 0.008, 4, 14]} /></mesh>
+        {/* shoulder holster: straps over both shoulders, cross on the back, pouches under the arms */}
+        {[-1, 1].map((sx) => <mesh key={`st${sx}`} position={[sx * 0.11, 0.38, 0.13]} rotation={[0, 0, sx * 0.12]} material={mats.leather}><boxGeometry args={[0.05, 0.5, 0.012]} /></mesh>)}
+        {[-1, 1].map((sx) => <mesh key={`sb${sx}`} position={[0, 0.36, -0.13]} rotation={[0, 0, sx * 0.75]} material={mats.leather}><boxGeometry args={[0.05, 0.55, 0.012]} /></mesh>)}
+        <mesh position={[0, 0.36, -0.137]} material={mats.steel}><cylinderGeometry args={[0.03, 0.03, 0.01, 10]} /></mesh>
+        {[-1, 1].map((sx) => <mesh key={`pp${sx}`} position={[sx * 0.23, 0.26, 0]} material={mats.leather}><boxGeometry args={[0.06, 0.18, 0.12]} /></mesh>)}
+        {/* tan belt with steel buckle */}
+        <mesh position={[0, 0.03, 0]} material={mats.belt}><boxGeometry args={[0.45, 0.07, 0.26]} /></mesh>
+        <mesh position={[0, 0.03, 0.132]} material={mats.steel}><boxGeometry args={[0.07, 0.05, 0.01]} /></mesh>
+        {([[armL, -0.28], [armR, 0.28]] as const).map(([ref, x], i) => (
           <group key={i} ref={ref} position={[x, 0.58, 0]}>
-            <mesh position={[0, -0.27, 0]} material={mats.shirt}><capsuleGeometry args={[0.065, 0.42, 4, 8]} /></mesh>
-            <mesh position={[0, -0.56, 0]} material={mats.skin}><sphereGeometry args={[0.06, 8, 8]} /></mesh>
+            <mesh position={[0, -0.17, 0]} material={mats.shirt}><capsuleGeometry args={[0.068, 0.26, 4, 8]} /></mesh>
+            <mesh position={[0, -0.33, 0]} material={mats.shirt}><cylinderGeometry args={[0.074, 0.074, 0.06, 8]} /></mesh>
+            <mesh position={[0, -0.44, 0]} material={mats.skin}><capsuleGeometry args={[0.052, 0.16, 4, 8]} /></mesh>
+            <mesh position={[0, -0.58, 0]} material={mats.skin}><sphereGeometry args={[0.058, 8, 8]} /></mesh>
           </group>
         ))}
         {([[legL, shinL, -0.11], [legR, shinR, 0.11]] as const).map(([leg, shin, x], i) => (
           <group key={i} ref={leg} position={[x, 0, 0]}>
             <mesh position={[0, -0.22, 0]} material={mats.pants}><capsuleGeometry args={[0.08, 0.34, 4, 8]} /></mesh>
+            {i === 1 && <>
+              {/* thigh holster on the right leg with two straps */}
+              <mesh position={[0.07, -0.2, 0.02]} material={mats.leather}><boxGeometry args={[0.07, 0.24, 0.14]} /></mesh>
+              {[-0.12, -0.28].map((y) => <mesh key={y} position={[0, y, 0]} material={mats.leather}><cylinderGeometry args={[0.088, 0.088, 0.035, 10]} /></mesh>)}
+            </>}
             <group ref={shin} position={[0, -0.45, 0]}>
               <mesh position={[0, -0.2, 0]} material={mats.pants}><capsuleGeometry args={[0.07, 0.32, 4, 8]} /></mesh>
-              <mesh position={[0, -0.44, 0.05]} material={mats.shoe}><boxGeometry args={[0.12, 0.08, 0.26]} /></mesh>
+              <mesh position={[0, -0.36, 0]} material={mats.shoe}><cylinderGeometry args={[0.075, 0.08, 0.12, 8]} /></mesh>
+              <mesh position={[0, -0.44, 0.05]} material={mats.shoe}><boxGeometry args={[0.13, 0.08, 0.27]} /></mesh>
             </group>
           </group>
         ))}
