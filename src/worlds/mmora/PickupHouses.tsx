@@ -12,6 +12,7 @@ import { setStaticSolids, boxPoly } from '@/lib/vrSolids';
 import { usePickups, takePickup, isTaken, type Pickup } from '@/lib/vrPickups';
 import { registerLit } from '@/lib/vrLights';
 import { coinMaterial } from '@/lib/vrCoinLook';
+import { ManorFurniture, CarvedMantel } from './ManorFurniture';
 
 const WINDOW = registerLit(new THREE.MeshStandardMaterial({ color: '#4a5866', emissive: '#ffc56a', roughness: 0.4 }), 2.2);
 
@@ -143,17 +144,13 @@ const House: React.FC<{ i: number; open: boolean }> = ({ i, open }) => {
       <mesh material={M.beam} position={[0, HOUSE_H - 0.05, HOUSE_D / 2 + 0.12]}><boxGeometry args={[HOUSE_W + 0.2, 0.2, 0.08]} /></mesh>
       {/* Interior: wood panelling, patterned rug, stone fireplace with fire, chair */}
       <mesh material={M.panel} position={[0, 0.6, -HOUSE_D / 2 + 0.12]}><boxGeometry args={[HOUSE_W - 0.3, 1.2, 0.04]} /></mesh>
-      <mesh material={M.rug} position={[0, 0.02, 0.2]} rotation={[-Math.PI / 2, 0, 0]}><planeGeometry args={[2.6, 1.8]} /></mesh>
       <group position={[HOUSE_W / 2 - 0.45, 0, -0.6]} rotation={[0, -Math.PI / 2, 0]}>
         <mesh material={M.hearth} position={[0, 0.9, 0]}><boxGeometry args={[1.6, 1.8, 0.5]} /></mesh>
         <mesh material={M.beam} position={[0, 1.4, 0.28]}><boxGeometry args={[1.8, 0.12, 0.2]} /></mesh>
         <mesh material={M.fire} position={[0, 0.45, 0.26]}><coneGeometry args={[0.25, 0.5, 6]} /></mesh>
+        <CarvedMantel />
       </group>
-      <group position={[-1.3, 0, 0.6]} rotation={[0, 0.6, 0]}>
-        <mesh material={M.wood} position={[0, 0.45, 0]}><boxGeometry args={[0.5, 0.06, 0.5]} /></mesh>
-        <mesh material={M.wood} position={[0, 0.8, -0.23]}><boxGeometry args={[0.5, 0.7, 0.05]} /></mesh>
-        {([[-0.2, -0.2], [0.2, -0.2], [-0.2, 0.2], [0.2, 0.2]] as const).map(([a, b], k) => <mesh key={k} material={M.woodDark} position={[a, 0.22, b]}><boxGeometry args={[0.05, 0.45, 0.05]} /></mesh>)}
-      </group>
+      <ManorFurniture />
       <group ref={door} position={[-0.55, 0, HOUSE_D / 2]}>
         <mesh material={M.door} position={[0.55, 1.1, 0]}><boxGeometry args={[1.1, 2.2, 0.08]} /></mesh>
         <mesh material={M.knob} position={[0.95, 1.05, 0.06]}><sphereGeometry args={[0.04, 8, 8]} /></mesh>
