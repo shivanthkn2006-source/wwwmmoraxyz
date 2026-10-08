@@ -119,9 +119,9 @@ export const ThirdPersonAvatar: React.FC = () => {
         {([[legL, shinL, -0.11], [legR, shinR, 0.11]] as const).map(([leg, shin, x], i) => (
           <group key={i} ref={leg} position={[x, 0, 0]}>
             <mesh position={[0, -0.22, 0]} material={mats.pants}><capsuleGeometry args={[0.08, 0.34, 4, 8]} /></mesh>
-            {i === 1 && <>
+            {i === 0 && <>
               {/* thigh holster on the right leg with two straps */}
-              <mesh position={[0.07, -0.2, 0.02]} material={mats.leather}><boxGeometry args={[0.07, 0.24, 0.14]} /></mesh>
+              <mesh position={[-0.07, -0.2, 0.02]} material={mats.leather}><boxGeometry args={[0.07, 0.24, 0.14]} /></mesh>
               {[-0.12, -0.28].map((y) => <mesh key={y} position={[0, y, 0]} material={mats.leather}><cylinderGeometry args={[0.088, 0.088, 0.035, 10]} /></mesh>)}
             </>}
             <group ref={shin} position={[0, -0.45, 0]}>
