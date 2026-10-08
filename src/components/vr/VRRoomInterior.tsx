@@ -6,6 +6,7 @@
 import React, { useRef, useState } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { coinMaterial } from '@/lib/vrCoinLook';
 import { useRoom, leaveRoom } from '@/lib/vrInterior';
 import { usePickups, takePickup } from '@/lib/vrPickups';
 import { GreenHerb } from '@/worlds/mmora/PickupHouses';
@@ -14,7 +15,7 @@ const wood = new THREE.MeshStandardMaterial({ color: '#8a5a32', roughness: 0.55 
 const woodDark = new THREE.MeshStandardMaterial({ color: '#5b3a20', roughness: 0.6 });
 const inside = new THREE.MeshStandardMaterial({ color: '#c79a62', roughness: 0.8 });
 const knob = new THREE.MeshStandardMaterial({ color: '#b08a4a', metalness: 0.7, roughness: 0.35 });
-const coinMat = new THREE.MeshStandardMaterial({ color: '#ffcf3a', metalness: 0.6, roughness: 0.3, emissive: '#c08a12', emissiveIntensity: 0.85 });
+const coinMat = coinMaterial();
 // Rooms you walk between: [camera x, camera z, look x, look z, name]
 // Spots you walk between: [camera x, camera z, look x, look z, name]
 const ROOMS: [number, number, number, number, string][] = [
@@ -41,7 +42,7 @@ const Table: React.FC<{ open: boolean; onDrawer: () => void; coins: number; herb
         <mesh material={wood} position={[0, 0.55, 0.245]}><boxGeometry args={[0.64, 0.2, 0.025]} /></mesh>
         <mesh material={knob} position={[0, 0.55, 0.27]}><sphereGeometry args={[0.03, 10, 10]} /></mesh>
         {open && coins > 0 && (
-          <group position={[0, 0.52, 0.04]} onClick={(e) => tap(e, () => onAsk({ what: 'coin', text: `Take the Antique Coin${coins > 1 ? 's' : ''} (${coins})?` }))}>
+          <group position={[0, 0.52, 0.04]} onClick={(e) => tap(e, () => onAsk({ what: 'coin', text: `Take the M'Mora Coin${coins > 1 ? 's' : ''} (${coins})?` }))}>
             {Array.from({ length: coins }, (_, i) => (
               <mesh key={i} material={coinMat} position={[(i % 3) * 0.07 - 0.07, 0.008 + Math.floor(i / 3) * 0.014, (i % 2) * 0.06 - 0.03]}><cylinderGeometry args={[0.04, 0.04, 0.012, 20]} /></mesh>
             ))}
@@ -82,7 +83,7 @@ export const VRRoomInterior: React.FC = () => {
   const coins = room.coinId && !p.taken.includes(room.coinId) ? room.coinAmt ?? 1 : 0;
   const yes = () => {
     if (ask?.what === 'herb' && room.herbId) { takePickup({ id: room.herbId, kind: 'herb', amount: 1, pos: [0, 0, 0] }); setNote('Green Herb added to your bag'); }
-    if (ask?.what === 'coin' && room.coinId) { takePickup({ id: room.coinId, kind: 'coin', amount: room.coinAmt ?? 1, pos: [0, 0, 0] }); setNote(`${room.coinAmt ?? 1} Antique Coin${(room.coinAmt ?? 1) > 1 ? 's' : ''} added`); }
+    if (ask?.what === 'coin' && room.coinId) { takePickup({ id: room.coinId, kind: 'coin', amount: room.coinAmt ?? 1, pos: [0, 0, 0] }); setNote(`${room.coinAmt ?? 1} M'Mora Coin${(room.coinAmt ?? 1) > 1 ? 's' : ''} added`); }
     setAsk(null);
   };
   const leave = () => { setAt(0); setOpen(false); setAsk(null); setNote(null); leaveRoom(); };

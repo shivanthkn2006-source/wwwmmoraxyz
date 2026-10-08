@@ -1,7 +1,7 @@
 /**
  * Round, rotating mini-map (GTA style): your arrow always points forward and
  * the map turns as you turn, with N/E/S/W on the ring. Real Map shows the real
- * roads around you; M'Mora World shows houses, herbs and coins, and the edge
+ * roads around you; M'Mora Village shows houses, herbs and coins, and the edge
  * marker points to the nearest thing to pick up. Herb and coin counts sit below.
  */
 import React, { useEffect, useRef } from 'react';
@@ -116,7 +116,7 @@ const MapCanvas: React.FC<{ SIZE: number; RANGE: number; names?: boolean; explor
         ALL_PICKUPS.forEach((q) => { if (taken.includes(q.id)) return; const [sx, sy] = P(q.pos[0], q.pos[2]); g.fillStyle = q.kind === 'herb' ? '#5fb04a' : '#e3c15a'; g.beginPath(); g.arc(sx, sy, 2.4, 0, 7); g.fill(); });
       }
       g.restore();
-      // Guide marker to nearest pickup (M'Mora World)
+      // Guide marker to nearest pickup (M'Mora Village)
       if (w.mode === 'mmora') {
         const taken = getPickups().taken; let best: [number, number] | null = null, bd = Infinity;
         ALL_PICKUPS.forEach((q) => { if (taken.includes(q.id)) return; const d = Math.hypot(q.pos[0] - pose.x, q.pos[2] - pose.z); if (d < bd) { bd = d; best = [q.pos[0] - pose.x, q.pos[2] - pose.z]; } });
@@ -161,7 +161,7 @@ export const VRMiniMap: React.FC<{ onToast?: (s: string) => void }> = ({ onToast
     const t = window.setInterval(() => {
       const w = getWorldState();
       if (w.origin.status !== 'ready') return;
-      const l = w.mode === 'real' ? (w.origin.label || `${w.origin.origin.lat.toFixed(2)},${w.origin.origin.lng.toFixed(2)}`) : "M'Mora World";
+      const l = w.mode === 'real' ? (w.origin.label || `${w.origin.origin.lat.toFixed(2)},${w.origin.origin.lng.toFixed(2)}`) : "M'Mora Village";
       if (l !== label || cells.size === 0) { label = l; cells = readEx(l); }
       const id = `${Math.round(pose.x / CELL)},${Math.round(pose.z / CELL)}`;
       if (!cells.has(id)) { cells.add(id); try { localStorage.setItem(exKey(l), JSON.stringify([...cells].slice(-5000))); window.dispatchEvent(new Event('vr-explore-changed')); } catch { /* */ } }

@@ -11,6 +11,7 @@ import { MMoraSigns } from './MMoraSigns';
 import { setStaticSolids, boxPoly } from '@/lib/vrSolids';
 import { usePickups, takePickup, isTaken, type Pickup } from '@/lib/vrPickups';
 import { registerLit } from '@/lib/vrLights';
+import { coinMaterial } from '@/lib/vrCoinLook';
 
 const WINDOW = registerLit(new THREE.MeshStandardMaterial({ color: '#4a5866', emissive: '#ffc56a', roughness: 0.4 }), 2.2);
 
@@ -34,7 +35,7 @@ const M = {
   soil: new THREE.MeshStandardMaterial({ color: '#2b1f16', roughness: 1 }),
   stem: new THREE.MeshStandardMaterial({ color: '#9fc28a', roughness: 0.7 }),
   leaf: new THREE.MeshStandardMaterial({ color: '#4f8a3a', roughness: 0.65, side: THREE.DoubleSide, emissive: '#1f5a14', emissiveIntensity: 0.4 }),
-  coin: new THREE.MeshStandardMaterial({ color: '#ffd24a', metalness: 0.85, roughness: 0.22, emissive: '#7a5410', emissiveIntensity: 0.45 }),
+  coin: coinMaterial(),
 };
 const GLOW_G = new THREE.MeshBasicMaterial({ color: '#5fb04a', transparent: true, opacity: 0.45, depthWrite: false });
 const GLOW_C = new THREE.MeshBasicMaterial({ color: '#e3c15a', transparent: true, opacity: 0.45, depthWrite: false });

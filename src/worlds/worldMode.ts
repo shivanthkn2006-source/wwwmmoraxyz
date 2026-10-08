@@ -1,6 +1,6 @@
 /**
  * Which world the player is in: the Real Map (their actual neighbourhood,
- * default) or M'Mora World (the existing VR city behind the doorway).
+ * default) or M'Mora Village (the existing VR city behind the doorway).
  * Also holds the session's real GPS origin and live map stats.
  */
 import { readSave, type VRSave } from '@/lib/vrSaveGame';
@@ -30,7 +30,7 @@ type State = {
 export const FALLBACK_ORIGIN: LatLng = { lat: 12.9716, lng: 77.5946 };
 export const PORTAL_OFFSET: [number, number, number] = [0, 0, -8];
 export const RETURN_PORTAL_POS: [number, number, number] = [4, 0, 8];
-/** M'Mora World opens right next to the return doorway (4.5 m away, so it is armed but you don't fall back through). */
+/** M'Mora Village opens right next to the return doorway (4.5 m away, so it is armed but you don't fall back through). */
 export const MMORA_SPAWN: [number, number, number] = [4, 1.6, 3.5];
 
 let state: State = { mode: 'real', origin: { status: 'locating' }, savedRealPos: null, chunksLoaded: 0, chunksWanted: 0, portalTrips: 0, aerial: false, tallestNear: 0 };
@@ -78,7 +78,7 @@ let resume: VRSave | null = null;
 /** The pending resume save (once), used by the Real Map instead of the aerial entry. */
 export function takeResume(): VRSave | null { const r = resume; resume = null; return r; }
 export const hasResume = () => resume !== null;
-/** Applies a resume: back into M'Mora World if that's where they stopped, at the saved spot. */
+/** Applies a resume: back into M'Mora Village if that's where they stopped, at the saved spot. */
 export function applyResume(sv: VRSave) {
   if (sv.mode === 'mmora') set({ mode: 'mmora', savedRealPos: sv.realPos ?? [0, 1.6, 0] });
   teleport([sv.pos[0], Math.max(1.6, sv.pos[1]), sv.pos[2]]);
@@ -146,7 +146,7 @@ export function travelHome() {
 const teleport = (position: [number, number, number]) =>
   window.dispatchEvent(new CustomEvent('vr-teleport', { detail: { position, lockGround: true } }));
 
-/** Which city's M'Mora World you are in: every city (≈11 km cell) gets its own, so Chennai portals open Chennai's world. */
+/** Which city's M'Mora Village you are in: every city (≈11 km cell) gets its own, so Chennai portals open Chennai's world. */
 export function mmoraCityKey(): string {
   const o = state.origin;
   if (o.status !== 'ready') return 'home';
@@ -169,7 +169,7 @@ export function enterMMora(fromPos: [number, number, number]) {
     window.dispatchEvent(new Event('vr-explore-changed'));
   } catch { /* */ }
   teleport(MMORA_SPAWN);
-  void import('@/lib/notifySelf').then(({ notifySelf }) => notifySelf('vr_doorway', "Entered M'Mora World", "You walked through the doorway from your real street into M'Mora World.", { link: '/vr-world' })).catch(() => {});
+  void import('@/lib/notifySelf').then(({ notifySelf }) => notifySelf('vr_doorway', "Entered M'Mora Village", "You walked through the doorway from your real street into M'Mora Village.", { link: '/vr-world' })).catch(() => {});
 }
 
 export function returnToReal() {

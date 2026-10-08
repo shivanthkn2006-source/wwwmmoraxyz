@@ -41,7 +41,7 @@ export const VRAdminConsole: React.FC = () => {
       const p = getMeet().players.find((r) => r.username?.toLowerCase() === u);
       if (!p) return say(`@${u} isn't in VR World (or is hidden)`);
       if (p.mode === 'real' && p.lat != null && p.lng != null) { travelTo({ name: `@${p.username}`, lat: p.lat, lng: p.lng } as never); say(`Teleported to @${p.username}`); }
-      else say(`@${p.username} is inside M'Mora World`);
+      else say(`@${p.username} is inside M'Mora Village`);
     } else if (c === 'bot') {
       const v = arg === 'on' ? true : arg === 'off' ? false : !demoExplorerOn();
       setDemoExplorer(v);

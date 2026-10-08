@@ -1,5 +1,5 @@
 /**
- * M'Mora World story pieces: keys, notes and locked doors (Resident Evil
+ * M'Mora Village story pieces: keys, notes and locked doors (Resident Evil
  * style). Found keys and read notes are remembered on the device and keys
  * also go into the bag. Door logic is pure so it can be tested.
  */
@@ -49,7 +49,7 @@ export function useDoor(id: string) {
   const r = doorAction(id, st);
   if (r.result === 'open') {
     set({ open: [...st.open, id] });
-    void import('@/lib/notifySelf').then(({ notifySelf }) => notifySelf('vr_door_unlocked', 'Door unlocked', `${DOORS[id].name} in M'Mora World is open.`, { link: '/vr-world' })).catch(() => {});
+    void import('@/lib/notifySelf').then(({ notifySelf }) => notifySelf('vr_door_unlocked', 'Door unlocked', `${DOORS[id].name} in M'Mora Village is open.`, { link: '/vr-world' })).catch(() => {});
   }
   return r;
 }

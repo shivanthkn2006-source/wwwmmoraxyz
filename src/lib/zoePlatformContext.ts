@@ -42,7 +42,7 @@ export const ZOE_PLATFORM_PRODUCTS = [
   'Growth and DHF: daily cards with oil-painting artwork, narration and personal insight.',
   'Astrology: real ephemeris birth charts and hourly planetary mood tracking.',
   "VR World (Real Map): opens on the member's real street from free OpenStreetMap data — real buildings, named roads, shops, malls, restaurants (KFC, McDonald's), fuel pumps, hotels and offices, with cars, bikes and people on real roads. Search (top-left) jumps to any city or place. Follow my GPS moves the avatar with the phone (pauses at driving speed). Friends show with tags; meet within ~1 m, in-world chat and voice, portal invites. Relics on real streets, four quests with karma rewards, a 3D bag, top players.",
-  "M'Mora World: the VR city behind the doorway on your street — Archive house with keys, notes and a locked door, save point with health bar and respawn, night mode with flashlight, third-person view (L/V) and crouch (C).",
+  "M'Mora Village: the VR city behind the doorway on your street — Archive house with keys, notes and a locked door, save point with health bar and respawn, night mode with flashlight, third-person view (L/V) and crouch (C).",
   'Distances and travel: you may estimate straight-line distance and typical road travel time between cities from general knowledge (e.g. Thiruvananthapuram to Chennai is roughly 770 km by road, about 13-15 hours by car or about 15-17 hours by train). Say it is an estimate; there is no live traffic or live discount data.',
 ].join('\n- ');
 

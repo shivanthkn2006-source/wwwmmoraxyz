@@ -1,5 +1,5 @@
 /**
- * "What's here" window: every collectable / place in M'Mora World and the Real Map,
+ * "What's here" window: every collectable / place in M'Mora Village and the Real Map,
  * with how many exist, how many you used and how many remain, and where to find them.
  */
 import React, { useEffect, useState, useSyncExternalStore } from 'react';
@@ -42,7 +42,7 @@ export const VRWorldList: React.FC = () => {
   const bag = quests.bag.length;
   const city = w.origin.status === 'ready' ? (w.origin.label || 'your city') : 'your city';
   const rows: [string, Row[]][] = [
-    ["M'Mora World", [
+    ["M'Mora Village", [
       { icon: Home, name: 'Houses to enter', total: HOUSES.length, used: '—', left: HOUSES.length, where: "Walk through the doorway from any city" },
       { icon: Leaf, name: 'Green herbs', total: mHerbs.length, used: usedH, left: mHerbs.length - usedH, where: 'Green glow: inside houses + along paths' },
       { icon: Coins, name: 'Antique coin piles', total: mCoins.length, used: usedC, left: mCoins.length - usedC, where: 'Gold glow above houses' },
@@ -50,7 +50,7 @@ export const VRWorldList: React.FC = () => {
       { icon: DoorOpen, name: 'Portal back home', total: 1, used: '—', left: 1, where: 'Blue beam next to where you arrive' },
     ]],
     [`Real Map · ${city}`, [
-      { icon: DoorOpen, name: "Portal to M'Mora World", total: 1, used: w.portalTrips, left: 1, where: 'Blue beam beside you on arrival + one every ~1 km' },
+      { icon: DoorOpen, name: "Portal to M'Mora Village", total: 1, used: w.portalTrips, left: 1, where: 'Blue beam beside you on arrival + one every ~1 km' },
       { icon: Home, name: 'Homes to enter', total: homes.length, used: '—', left: homes.length, where: 'Doors with a glow, loaded streets nearby' },
       { icon: Leaf, name: 'Green herbs', total: rHerbs.length, used: rUsedH, left: rHerbs.length - rUsedH, where: 'Green glow above homes' },
       { icon: Coins, name: 'Coin piles', total: rCoins.length, used: rUsedC, left: rCoins.length - rUsedC, where: 'Gold glow above homes' },
@@ -90,7 +90,7 @@ export const VRWorldList: React.FC = () => {
         </div>
       ))}
       <div className="mb-1 text-[11px] font-semibold text-white/90">South India cities · {SOUTH_INDIA_CITIES.length}</div>
-      <p className="mb-1 text-[10px] text-white/80">Each city has real streets with 7 ft signs, shops, homes, herbs, coins and an M'Mora World portal (blue beam) about every 1 km.</p>
+      <p className="mb-1 text-[10px] text-white/80">Each city has real streets with 7 ft signs, shops, homes, herbs, coins and an M'Mora Village portal (blue beam) about every 1 km.</p>
       <div className="flex flex-wrap gap-1.5">
         {SOUTH_INDIA_CITIES.map((c) => (
           <button key={c.name} type="button" onClick={() => { travelTo({ name: c.name, lat: c.lat, lng: c.lng }); setOpen(false); }}

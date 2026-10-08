@@ -10,6 +10,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 import { JointedHuman } from './JointedHuman';
+import { useVRSelf } from '@/lib/vrSelf';
 import { useWorldState, getWorldState, mmoraCityKey } from '@/worlds/worldMode';
 import { toLatLng, toLocal, type LatLng } from '@/worlds/realmap/geo';
 import { canShareRealLocation } from '@/lib/vrPrivacy';
@@ -45,7 +46,7 @@ const Avatar: React.FC<{ p: Remote; target: { x: number; z: number }; reachAt?: 
   });
   return (
     <group ref={g} position={[target.x, 0, target.z]}>
-      <JointedHuman reachAt={reachAt} />
+      <JointedHuman reachAt={reachAt} female={!!p.f} />
       <Html position={[0, 2.05, 0]} center distanceFactor={10} style={{ pointerEvents: 'none' }}>
         <div className="vr-meet-label">
           <span>@{p.username}</span>
@@ -65,6 +66,8 @@ export const MeetPresence: React.FC = () => {
   const met = useRef(new Set<string>());
   const timer = useRef(0);
   const shareOk = useRef(true);
+  const self = useVRSelf();
+  const femaleRef = useRef(false); femaleRef.current = self.female;
   const holdUntil = useRef(0);
   const [shake, setShake] = React.useState<Record<string, number>>({});
 
@@ -98,8 +101,8 @@ export const MeetPresence: React.FC = () => {
     if (onGround && (st.mode === 'mmora' || (origin && shareOk.current))) {
       const yaw = camera.rotation.y;
       updateMyPose(st.mode === 'mmora'
-        ? { mode: 'mmora', x: +camera.position.x.toFixed(2), z: +camera.position.z.toFixed(2), yaw }
-        : { mode: 'real', ...toLatLng(camera.position.x, camera.position.z, origin as LatLng), yaw });
+        ? { mode: 'mmora', x: +camera.position.x.toFixed(2), z: +camera.position.z.toFixed(2), yaw, f: femaleRef.current || undefined }
+        : { mode: 'real', ...toLatLng(camera.position.x, camera.position.z, origin as LatLng), yaw, f: femaleRef.current || undefined });
     }
     // Nearest member + first meeting.
     let best: { p: Remote; d: number } | null = null;
@@ -117,7 +120,7 @@ export const MeetPresence: React.FC = () => {
       setShake((m) => ({ ...m, [best!.p.id]: at }));
       window.dispatchEvent(new CustomEvent('vr-hand-reach')); // my hand reaches out for the handshake
       setChatOpen(true);
-      void notifySelf('vr_player_met', 'Met in VR World', `You met @${best.p.username} (${TAG_LABEL[best.p.tag]}) in ${st.mode === 'mmora' ? "M'Mora World" : 'your street'}.`, { link: '/vr-world', member: best.p.id }).catch(() => {});
+      void notifySelf('vr_player_met', 'Met in VR World', `You met @${best.p.username} (${TAG_LABEL[best.p.tag]}) in ${st.mode === 'mmora' ? "M'Mora Village" : 'your street'}.`, { link: '/vr-world', member: best.p.id }).catch(() => {});
     }
     if (best && best.d > 4) met.current.delete(best.p.id);
   });
