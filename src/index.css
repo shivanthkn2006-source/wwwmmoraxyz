@@ -7326,3 +7326,7 @@ html body .vr-gem-core { animation-duration: 4s !important; }
 .re-case-ring small { font-size: 9px; font-weight: 500; opacity: .8; }
 .re-case-namebar { padding: 6px 12px; border-radius: 4px; font-size: clamp(12px, 2.4vmin, 16px); background: linear-gradient(hsl(60 4% 26%), hsl(60 5% 14%)); border: 1px solid hsl(60 4% 40%); }
 .re-case-btn { padding: 6px 12px; border-radius: 9999px; font-size: 12px; font-style: italic; color: hsl(var(--re-ink)); border: 1px solid hsl(60 4% 45%); background: hsl(60 4% 16%); }
+.re-case-screen button { min-height: 0; min-width: 0; line-height: 1.1; }
+.re-case-cell, .re-case-item { padding: 0; overflow: hidden; width: auto; height: auto; }
+.re-case-screen .re-case-btn { font-size: 12px; padding: 6px 12px; }
+.re-case-screen .re-case-tab { font-size: clamp(11px, 2.4vmin, 16px); }
