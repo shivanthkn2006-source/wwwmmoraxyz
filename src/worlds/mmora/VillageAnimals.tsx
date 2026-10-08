@@ -5,10 +5,25 @@
  * own voice when you come close (cows moo and turn, dogs trot up and bark,
  * cats slip away and meow, crows caw and take off).
  */
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { playAnimal, type AnimalKind } from '@/lib/vrAnimalSfx';
+import { registerUse } from '@/lib/vrUse';
+import { HOUSES } from './PickupHouses';
+
+const HEALED_KEY = 'vr-animals-healed';
+const readHealed = (): string[] => { try { return JSON.parse(localStorage.getItem(HEALED_KEY) || '[]'); } catch { return []; } };
+const say = (text: string) => window.dispatchEvent(new CustomEvent('vr-use-result', { detail: { ok: true, text } }));
+/** Doorstep (just outside the door) of the house nearest to (x,z). */
+function nearestDoor(x: number, z: number): { x: number; z: number } {
+  let best = { x: 0, z: 0 }, bd = Infinity;
+  for (const [hx, hz, r] of HOUSES) {
+    const dx = hx + Math.sin(r) * 3.4, dz = hz + Math.cos(r) * 3.4, d = Math.hypot(dx - x, dz - z);
+    if (d < bd && d > 6) { bd = d; best = { x: dx, z: dz }; }
+  }
+  return best;
+}
 
 type Spec = { speed: number; s: number; body: string; spot?: string; legH: number; len: number; w: number; h: number };
 const SPECS: Record<Exclude<AnimalKind, 'crow'>, Spec> = {
@@ -35,21 +50,42 @@ const HERDS: Herd[] = [
 ];
 const MOUNT_R = 70, ACTIVE_R = 35;
 
-const Animal: React.FC<{ kind: Exclude<AnimalKind, 'crow'>; home: [number, number]; r: number; seed: number }> = ({ kind, home, r, seed }) => {
+const Animal: React.FC<{ kind: Exclude<AnimalKind, 'crow'>; home: [number, number]; r: number; seed: number; id: string; injured?: boolean }> = ({ kind, home, r, seed, id, injured = false }) => {
   const sp = SPECS[kind];
   const { camera } = useThree();
   const g = useRef<THREE.Group>(null), head = useRef<THREE.Group>(null), tail = useRef<THREE.Group>(null);
   const legs = [useRef<THREE.Group>(null), useRef<THREE.Group>(null), useRef<THREE.Group>(null), useRef<THREE.Group>(null)];
-  const st = useRef({ x: home[0] + Math.cos(seed) * r * 0.5, z: home[1] + Math.sin(seed) * r * 0.5, yaw: seed, tx: home[0], tz: home[1], wait: 1 + (seed % 3), phase: 0, call: 4 + (seed % 5), near: false });
+  const st = useRef({ x: home[0] + Math.cos(seed) * r * 0.5, z: home[1] + Math.sin(seed) * r * 0.5, yaw: seed, tx: home[0], tz: home[1], wait: 1 + (seed % 3), phase: 0, call: 4 + (seed % 5), near: false, lead: null as null | { x: number; z: number }, follow: 0, hurt: injured && !readHealed().includes(id), wag: 0 });
+  const bandage = useRef<THREE.Mesh>(null);
+  const name = kind;
+  useEffect(() => registerUse(() => {
+    const s = st.current, dp = Math.hypot(camera.position.x - s.x, camera.position.z - s.z);
+    if (s.hurt) return { dist: dp, reach: 2.5, label: `Help the injured ${name}`, run: () => {
+      s.hurt = false; try { localStorage.setItem(HEALED_KEY, JSON.stringify([...readHealed(), id])); } catch { /* */ }
+      playAnimal(kind, 1); say(`You bandaged the ${name} — it can walk again`);
+    } };
+    if (kind === 'dog') return { dist: dp, reach: 2.5, label: s.lead ? 'Pet the dog' : 'Pet the dog — it will lead you to a house', run: () => {
+      s.wag = 3; playAnimal('dog', 1);
+      if (!s.lead) { s.lead = nearestDoor(s.x, s.z); say('The dog wags its tail — follow it'); }
+    } };
+    if (kind === 'cow') return { dist: dp, reach: 3, label: 'Call the cow', run: () => { s.follow = 20; playAnimal('cow', 1); say('The cow moos and follows you'); } };
+    return { dist: dp, reach: 2, label: 'Pet the cat', run: () => { s.wait = 5; s.tx = s.x; s.tz = s.z; playAnimal('cat', 1); say('The cat purrs'); } };
+  }), [camera, kind, id, name]);
   useFrame((_, raw) => {
     const dt = Math.min(raw, 0.05), s = st.current, o = g.current; if (!o) return;
     const px = camera.position.x, pz = camera.position.z, dp = Math.hypot(px - s.x, pz - s.z);
     let moving = false;
     if (dp < ACTIVE_R) {
-      let speed = sp.speed;
+      let speed = sp.speed * (s.hurt ? 0.35 : 1);
+      if (s.lead) {
+        // Lead the player to a house door, waiting whenever they fall behind.
+        if (Math.hypot(px - s.lead.x, pz - s.lead.z) < 3) { s.lead = null; playAnimal('dog', 2); say('The dog found a house — open the door'); }
+        else { s.tx = s.lead.x; s.tz = s.lead.z; s.wait = 0; speed = dp > 7 ? 0 : 2.2; }
+      }
+      if (s.follow > 0) { s.follow -= dt; if (dp > 2.5) { s.tx = px; s.tz = pz; s.wait = 0; } }
       // Reactions to the player
-      if (kind === 'dog' && dp < 9 && dp > 1.8) { s.tx = px; s.tz = pz; s.wait = 0; speed = 2.6; }
-      if (kind === 'cat' && dp < 3.5) { s.tx = s.x + (s.x - px) * 2; s.tz = s.z + (s.z - pz) * 2; s.wait = 0; speed = 3; }
+      if (kind === 'dog' && !s.lead && dp < 9 && dp > 1.8) { s.tx = px; s.tz = pz; s.wait = 0; speed = 2.6; }
+      if (kind === 'cat' && dp < 3.5 && s.wait <= 0) { s.tx = s.x + (s.x - px) * 2; s.tz = s.z + (s.z - pz) * 2; s.wait = 0; speed = 3; }
       if (kind === 'cow' && dp < 5) { s.wait = Math.max(s.wait, 1); }
       if (dp < 6 && !s.near) { s.near = true; playAnimal(kind, dp); s.call = 6 + Math.random() * 6; }
       if (dp > 9) s.near = false;
@@ -59,7 +95,7 @@ const Animal: React.FC<{ kind: Exclude<AnimalKind, 'crow'>; home: [number, numbe
         if (s.wait <= 0) { const a = Math.random() * Math.PI * 2, d = Math.random() * r; s.tx = home[0] + Math.cos(a) * d; s.tz = home[1] + Math.sin(a) * d; }
       } else {
         const dx = s.tx - s.x, dz = s.tz - s.z, d = Math.hypot(dx, dz);
-        if (d < 0.3 || (kind === 'dog' && dp < 1.8)) s.wait = 2 + Math.random() * 5;
+        if (d < 0.3 || (kind === 'dog' && !s.lead && dp < 1.8) || (s.follow > 0 && dp < 2.5)) s.wait = 2 + Math.random() * 5;
         else {
           const want = Math.atan2(dx, dz); let dy = want - s.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
           s.yaw += dy * Math.min(1, dt * 3);
@@ -76,7 +112,10 @@ const Animal: React.FC<{ kind: Exclude<AnimalKind, 'crow'>; home: [number, numbe
     o.position.set(s.x, 0, s.z); o.rotation.y = s.yaw;
     const sw = moving ? Math.sin(s.phase) * 0.55 : 0;
     legs.forEach((l, i) => { if (l.current) l.current.rotation.x = THREE.MathUtils.damp(l.current.rotation.x, (i === 0 || i === 3 ? sw : -sw), 10, dt); });
-    if (tail.current) tail.current.rotation.y = Math.sin(performance.now() / (kind === 'dog' ? 120 : 600) + seed) * (kind === 'dog' ? 0.6 : 0.25);
+    if (s.wag > 0) s.wag -= dt;
+    if (tail.current) tail.current.rotation.y = Math.sin(performance.now() / (kind === 'dog' ? (s.wag > 0 ? 60 : 120) : 600) + seed) * (kind === 'dog' ? (s.wag > 0 ? 0.9 : 0.6) : 0.25);
+    if (bandage.current) bandage.current.visible = s.hurt;
+    if (s.hurt && moving) o.rotation.z = Math.sin(s.phase) * 0.06; else o.rotation.z = 0;
   });
   const { len, w, h, legH, body, spot } = sp, B = mat(body), S = mat(spot ?? body), dark = mat('#1a1614'), pink = mat('#d8a8a0');
   const bodyY = legH + h / 2;
@@ -96,6 +135,7 @@ const Animal: React.FC<{ kind: Exclude<AnimalKind, 'crow'>; home: [number, numbe
       <group ref={tail} position={[0, bodyY + h * 0.3, -len / 2]}>
         <mesh material={B} position={[0, kind === 'cat' ? h * 0.8 : -h * 0.1, -0.05]} rotation={[kind === 'cat' ? 0.25 : kind === 'dog' ? -0.7 : 0.15, 0, 0]}><boxGeometry args={[w * 0.12, kind === 'cat' ? h * 2 : h * 1.2, w * 0.12]} /></mesh>
       </group>
+      {injured && <mesh ref={bandage} material={mat('#e8e2d6')} position={[w * 0.32, legH * 0.55, len * 0.38]}><boxGeometry args={[w * 0.3, legH * 0.25, w * 0.3]} /></mesh>}
       {([[-1, 1], [1, 1], [-1, -1], [1, -1]] as const).map(([sx, sz], i) => (
         <group key={i} ref={legs[i]} position={[sx * w * 0.32, legH, sz * len * 0.38]}>
           <mesh material={B} position={[0, -legH / 2, 0]}><boxGeometry args={[w * 0.22, legH, w * 0.22]} /></mesh>
@@ -156,7 +196,7 @@ export const VillageAnimals: React.FC = () => {
     <group>
       {list.map(({ h, i, k }) => !near[i] ? null : h.kind === 'crow'
         ? <Crow key={`${i}-${k}`} home={h.home} seed={i * 7 + k * 1.7} />
-        : <Animal key={`${i}-${k}`} kind={h.kind} home={h.home} r={h.r} seed={i * 3 + k * 2.3} />)}
+        : <Animal key={`${i}-${k}`} id={`${i}-${k}`} injured={(i === 4 && k === 0) || (i === 1 && k === 0)} kind={h.kind} home={h.home} r={h.r} seed={i * 3 + k * 2.3} />)}
     </group>
   );
 };

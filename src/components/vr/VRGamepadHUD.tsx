@@ -50,14 +50,14 @@ const RunToggle: React.FC<{ glyph?: string }> = ({ glyph }) => {
 type HintKind = 'door' | 'hand' | 'talk' | 'read' | 'sit' | 'build' | 'paw' | 'enter';
 export function hintKind(label: string): HintKind {
   const l = label.toLowerCase();
+  if (/pet|feed|help the injured|call the|cow|dog|cat|crow|animal/.test(l)) return 'paw';
   if (/chat|talk|say hi|greet/.test(l)) return 'talk';
   if (/door|unlock|open/.test(l)) return 'door';
   if (/enter|go in|portal/.test(l)) return 'enter';
   if (/read|note/.test(l)) return 'read';
   if (/build/.test(l)) return 'build';
   if (/sit|bench/.test(l)) return 'sit';
-  if (/pet|feed|cow|dog|cat|crow|animal/.test(l)) return 'paw';
-  return 'hand';
+    return 'hand';
 }
 const HINT_PATH: Record<HintKind, string> = {
   door: 'M6 21V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17M4 21h16M14.5 12.5h.01',
@@ -89,7 +89,7 @@ const UseHint: React.FC = () => {
   return (
     <button type="button" data-exclude-phantom-tap data-testid="vr-use-hint" aria-label={`Use: ${label}`} title={label}
       onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); fireAction('interact', true); }}
-      className="absolute left-1/2 top-[30%] z-10 flex -translate-x-1/2 flex-col items-center gap-1 text-white [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.75))]">
+      className="pointer-events-auto absolute left-1/2 top-[30%] z-10 flex -translate-x-1/2 flex-col items-center gap-1 text-white [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.75))]">
       <span className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-white/90">
         <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={HINT_PATH[k]} /></svg>
       </span>
