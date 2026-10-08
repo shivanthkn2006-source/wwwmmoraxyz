@@ -14,6 +14,7 @@ import avatarImg from '@/assets/vr-case-avatar.png';
 import avatarFemaleImg from '@/assets/vr-case-avatar-female.png';
 import { COIN_FACES, splitCoins } from '@/lib/vrCoinLook';
 import { useVRSelf } from '@/lib/vrSelf';
+import { VRWorldList } from './VRWorldList';
 
 export const CASE_COLS = 10;
 const MIN_ROWS = 6;
@@ -143,12 +144,12 @@ export const VRBagPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       </div>
 
       {/* Case + avatar */}
-      <div className="flex min-h-0 flex-1 items-end justify-center gap-1 px-1 pt-1">
-        <div className="re-case-plate flex max-h-full min-h-0 flex-col overflow-hidden" style={{ width: tab === 'items' ? 'max-content' : `min(${CASE_COLS * cell + 40}px, 72vw)`, alignSelf: 'center' }}>
+      <div className="flex shrink-0 items-end justify-center gap-1 px-1 pt-1">
+        <div className="re-case-plate flex flex-col overflow-hidden" style={{ height: `${rows * cell + 56}px`,  width: tab === 'items' ? 'max-content' : `min(${CASE_COLS * cell + 40}px, 72vw)`, alignSelf: 'center' }}>
           {tab === 'items' && (
             <>
               <div className="re-case-lid" aria-hidden><span className="re-case-hinge" /><span className="re-case-hinge" /></div>
-              <div className="re-case-body min-h-0 flex-1 overflow-auto">
+              <div className="re-case-body overflow-auto" style={{ height: `${rows * cell + 18}px` }}>
                 <div className="re-case-grid" style={{ gridTemplateColumns: `repeat(${CASE_COLS}, var(--re-cell))`, gridTemplateRows: `repeat(${rows}, var(--re-cell))` }} aria-label="Relics">
                   {Array.from({ length: rows * CASE_COLS }, (_, k) => {
                     const x = k % CASE_COLS, y = Math.floor(k / CASE_COLS);
@@ -170,7 +171,7 @@ export const VRBagPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             </>
           )}
           {tab === 'keys' && <div className="re-case-list">{story.keys.length ? story.keys.map((k) => <div key={k} className="re-case-row">🗝️ {KEYS[k]?.name ?? k}<span className="block text-[10px] opacity-70">Opens: {KEYS[k]?.opens.replace(/_/g, ' ')}{story.open.includes(KEYS[k]?.opens) ? ' · used' : ''}</span></div>) : <p>No keys yet. Look around M'Mora Village.</p>}</div>}
-          {tab === 'files' && <div className="re-case-list">{story.notes.length ? story.notes.map((n) => <button key={n} type="button" onClick={() => readNote(n)} className="re-case-row w-full text-left">📜 {NOTES[n]?.title ?? n}</button>) : <p>No files read yet.</p>}</div>}
+          {tab === 'files' && <div className="re-case-list overflow-y-auto">{story.notes.map((n) => <button key={n} type="button" onClick={() => readNote(n)} className="re-case-row w-full text-left">📜 {NOTES[n]?.title ?? n}</button>)}<VRWorldList embedded /></div>}
           {tab === 'quests' && <ul className="re-case-list" aria-label="Quests">
             {QUESTS.map((q) => { const p = state.progress[q.id] ?? 0; const done = !!state.done[q.id]; return (
               <li key={q.id} data-testid={`quest-${q.id}`} className="re-case-row">
@@ -181,7 +182,7 @@ export const VRBagPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           </ul>}
         </div>
         <div className="re-case-portrait flex max-w-[220px] shrink-0 flex-col items-center justify-end" style={{ width: 'min(22vw, 220px)', height: `${rows * cell + 56}px` }}>
-          <img src={self.female ? avatarFemaleImg : avatarImg} alt="Your avatar" className="min-h-0 w-full flex-1 object-contain object-bottom" />
+          <img src={self.female ? avatarFemaleImg : avatarImg} alt="Your avatar" className="w-auto object-contain object-bottom" style={{ height: `${rows * cell + 20}px` }} />
           <div className="re-case-player">{self.name || 'You'}</div>
           <div className="re-case-ring"><span>{pick.herbs}</span><small>herbs</small></div>
         </div>
