@@ -24,8 +24,14 @@ function part(g: THREE.BufferGeometry, color: string, x: number, y: number, z: n
 }
 
 /** Head with face and hair, centred on the head (face looks along +z). */
-export function headGeometry(): THREE.BufferGeometry {
+export function headGeometry(female = false): THREE.BufferGeometry {
   const C = HUMAN_COLORS;
+  const tail = new THREE.CapsuleGeometry(0.045, 0.26, 3, 8); tail.rotateX(0.35);
+  const extra = female ? [
+    part(new THREE.SphereGeometry(0.05, 8, 6), C.hair, 0, 0.06, -0.16),   // hair tie knot
+    part(tail, C.hair, 0, -0.1, -0.2),                                   // ponytail
+    part(new THREE.SphereGeometry(0.166, 12, 8, Math.PI * 0.85, Math.PI * 1.3, 0, Math.PI * 0.7), C.hair, 0, 0, 0), // longer sides
+  ] : [];
   const nose = new THREE.ConeGeometry(0.022, 0.05, 6); nose.rotateX(Math.PI / 2);
   return mergeGeometries([
     part(new THREE.SphereGeometry(0.15, 14, 12), C.skin, 0, 0, 0),
@@ -41,6 +47,7 @@ export function headGeometry(): THREE.BufferGeometry {
     part(new THREE.BoxGeometry(0.06, 0.013, 0.012), C.lips, 0, -0.068, 0.136),
     part(new THREE.SphereGeometry(0.035, 8, 6), C.skin, -0.148, 0, 0),
     part(new THREE.SphereGeometry(0.035, 8, 6), C.skin, 0.148, 0, 0),
+    ...extra,
   ])!;
 }
 
