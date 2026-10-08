@@ -44,7 +44,7 @@ const OUTDOOR_HERBS: [number, number][] = [[4, 10], [-8, -14], [22, 6], [-30, -2
 
 const M = {
   wall: new THREE.MeshStandardMaterial({ map: stoneTexture(), roughness: 0.95 }),
-  roof: new THREE.MeshStandardMaterial({ color: '#2c2a2a', roughness: 0.85 }),
+  roof: new THREE.MeshStandardMaterial({ color: '#4d4a47', roughness: 0.85 }),
   beam: new THREE.MeshStandardMaterial({ color: '#2f2218', roughness: 0.9 }),
   panel: new THREE.MeshStandardMaterial({ color: '#4a3020', roughness: 0.7 }),
   rug: new THREE.MeshStandardMaterial({ map: rugTexture(), roughness: 1 }),
