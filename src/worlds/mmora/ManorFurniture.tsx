@@ -167,6 +167,15 @@ export const ManorFurniture: React.FC = () => (
     {/* green damask wallpaper above the panelling on back and left walls */}
     <mesh material={M.wallpaper} position={[0, 1.9, -2.37]}><planeGeometry args={[4.7, 1.4]} /></mesh>
     <mesh material={M.wallpaper} position={[-2.37, 1.6, 0]} rotation={[0, Math.PI / 2, 0]}><planeGeometry args={[4.7, 2.6]} /></mesh>
+    <mesh material={M.wallpaper} position={[2.37, 1.6, 0]} rotation={[0, -Math.PI / 2, 0]}><planeGeometry args={[4.7, 2.6]} /></mesh>
+    {/* dark wood panelling, lower walls on all sides */}
+    <B m={M.carved} p={[-2.36, 0.6, 0]} s={[0.03, 1.2, 4.7]} />
+    <B m={M.carved} p={[2.36, 0.6, 0]} s={[0.03, 1.2, 4.7]} />
+    <B m={M.wood} p={[-2.34, 1.22, 0]} s={[0.05, 0.06, 4.7]} />
+    <B m={M.wood} p={[2.34, 1.22, 0]} s={[0.05, 0.06, 4.7]} />
+    <B m={M.wood} p={[0, 1.22, -2.34]} s={[4.7, 0.06, 0.05]} />
+    {/* ceiling beams */}
+    {[-1.2, 0, 1.2].map((x) => <B key={x} m={M.wood} p={[x, 2.88, 0]} s={[0.16, 0.18, 4.8]} />)}
     <mesh material={M.rug} position={[0.1, 0.025, -0.1]} rotation={[-Math.PI / 2, 0, 0]}><planeGeometry args={[3.2, 2.4]} /></mesh>
     <group position={[-1.9, 0, -0.3]} rotation={[0, Math.PI / 2, 0]}><Sofa /></group>
     <group position={[0.7, 0, 1.05]} rotation={[0, Math.PI * 0.85, 0]}><Armchair /></group>
