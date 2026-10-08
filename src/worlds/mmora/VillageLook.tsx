@@ -11,6 +11,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { HOUSES } from './PickupHouses';
 import { VillageAnimals } from './VillageAnimals';
+import { VillageVillagers } from './VillageVillagers';
 
 const SIZE = 400;
 const rand = (s: number) => { const x = Math.sin(s * 127.1) * 43758.5453; return x - Math.floor(x); };
@@ -164,6 +165,7 @@ export const VillageLook: React.FC = () => {
       <Church />
       <Crows />
       <VillageAnimals />
+      <VillageVillagers />
     </>
   );
 };
