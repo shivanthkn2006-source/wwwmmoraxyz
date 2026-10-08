@@ -8,6 +8,15 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { PortalDoorway } from '../portal/PortalDoorway';
 import { enterMMora } from '../worldMode';
 import { PortalBeam } from './PortalBeam';
+import { useOpenPortalSpot } from './portalSpot';
+
+export const OpenPortal: React.FC<{ base: [number, number, number] }> = ({ base }) => {
+  const pos = useOpenPortalSpot(base);
+  return (<>
+    <PortalDoorway position={pos} label="M'Mora Village" onEnter={enterMMora} />
+    <PortalBeam position={pos} />
+  </>);
+};
 
 export const PORTAL_GRID_M = 1000;
 
@@ -28,8 +37,7 @@ export const CityPortals: React.FC = () => {
   const pos: [number, number, number] = [cell[0], 0, cell[1]];
   return (
     <group key={cell.join(',')}>
-      <PortalDoorway position={pos} label="M'Mora Village" onEnter={enterMMora} />
-      <PortalBeam position={pos} />
+      <OpenPortal base={pos} />
     </group>
   );
 };

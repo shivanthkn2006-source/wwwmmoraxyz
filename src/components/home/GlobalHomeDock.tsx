@@ -1,3 +1,5 @@
+import vrAvatarIcon from '@/assets/vr-case-avatar.png';
+import vrCoinIcon from '@/assets/mmora-coin-gold.png';
 /**
  * GLOBAL HOME DOCK
  *
@@ -102,8 +104,13 @@ export const GlobalHomeDock: React.FC = () => {
           },
           {
             id: 'global-vr-world',
-            label: 'VR World',
-            icon: <Glasses className="h-[22px] w-[22px]" />,
+            label: "M'Mora World",
+            icon: (
+              <span className="relative inline-block h-[24px] w-[24px]" aria-hidden>
+                <img src={vrAvatarIcon} alt="" className="h-full w-full rounded-full object-cover object-top" />
+                <img src={vrCoinIcon} alt="" className="absolute -bottom-1 -right-1 h-[12px] w-[12px]" />
+              </span>
+            ),
             active: pathname.startsWith('/zoe-omega'),
             onSelect: () => navigate('/zoe-omega?vr=1'),
           },

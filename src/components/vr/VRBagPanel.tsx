@@ -180,7 +180,7 @@ export const VRBagPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
               </li>); })}
           </ul>}
         </div>
-        <div className="re-case-portrait flex h-full max-w-[220px] shrink-0 flex-col items-center justify-end" style={{ width: 'min(22vw, 220px)' }}>
+        <div className="re-case-portrait flex max-w-[220px] shrink-0 flex-col items-center justify-end" style={{ width: 'min(22vw, 220px)', height: `${rows * cell + 56}px` }}>
           <img src={self.female ? avatarFemaleImg : avatarImg} alt="Your avatar" className="min-h-0 w-full flex-1 object-contain object-bottom" />
           <div className="re-case-player">{self.name || 'You'}</div>
           <div className="re-case-ring"><span>{pick.herbs}</span><small>herbs</small></div>

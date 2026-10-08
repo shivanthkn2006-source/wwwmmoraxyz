@@ -69,3 +69,24 @@ export function resolveMove(px: number, pz: number, nx: number, nz: number, y = 
   if (!blocked(px, nz, near)) return [px, nz];
   return [px, pz];
 }
+
+/** Nearest open ground to (x,z) with no building within `clear` metres (Real Map), searching outward up to `maxR`. */
+export function findOpenSpot(x: number, z: number, clear = 8, maxR = 150): [number, number] {
+  const list = realPolys();
+  const free = (px: number, pz: number) => {
+    for (let a = 0; a < 8; a++) {
+      const ang = (a / 8) * Math.PI * 2;
+      if (blocked(px + Math.cos(ang) * clear, pz + Math.sin(ang) * clear, list)) return false;
+    }
+    return !blocked(px, pz, list);
+  };
+  if (free(x, z)) return [x, z];
+  for (let r = 6; r <= maxR; r += 6) {
+    const steps = Math.max(8, Math.round(r / 3));
+    for (let i = 0; i < steps; i++) {
+      const ang = (i / steps) * Math.PI * 2, px = x + Math.cos(ang) * r, pz = z + Math.sin(ang) * r;
+      if (free(px, pz)) return [px, pz];
+    }
+  }
+  return [x, z];
+}
