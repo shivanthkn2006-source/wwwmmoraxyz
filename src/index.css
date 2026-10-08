@@ -7337,3 +7337,4 @@ html body .vr-gem-core { animation-duration: 4s !important; }
 .re-case-item[data-kind="relic"] .re-case-art { filter: drop-shadow(0 0 5px hsl(200 90% 70% / .6)); }
 .re-case-player { margin-top: 2px; font-style: italic; font-size: clamp(14px, 3vmin, 22px); color: hsl(var(--re-ink)); text-shadow: 0 1px 3px hsl(0 0% 0%); letter-spacing: .02em; }
 .re-case-screen .re-case-topbar { min-height: 0; }
+.re-case-topbar button, .re-case-topbar span { white-space: nowrap; }

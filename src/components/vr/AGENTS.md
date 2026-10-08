@@ -35,3 +35,4 @@
 - Each city gets its own M'Mora World: the meet room and saved benches are keyed by mmoraCityKey() (src/worlds/worldMode.ts), so a Chennai portal opens Chennai's world.
 - M'Mora World bench economy lives in src/worlds/mmora/MMoraBenches.tsx (sit earns coins, coins build benches via the shared Use button, built benches saved per city on the device).
 - The VR item bag (src/components/vr/VRBagPanel.tsx) is one attaché-case grid portalled to the page body (herbs 1×2, coins/relics 1×1, tap-to-move layout and extra rows saved on the device), because panels inside the HUD sat under other controls.
+- M'Mora coins share one look from src/lib/vrCoinLook.ts (gold 50 / blue 10 / yellow 1 faces, coin bag at 100+), and the member's VR name and female look come from src/lib/vrSelf.ts (profile gender) and travel to others as the pose `f` flag, because separate coin art or per-screen profile reads would drift apart.
