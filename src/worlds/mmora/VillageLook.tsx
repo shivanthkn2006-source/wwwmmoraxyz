@@ -11,6 +11,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { HOUSES } from './PickupHouses';
 import { VillageAnimals } from './VillageAnimals';
+import { VillageChurch } from './VillageChurch';
 import { VillageVillagers } from './VillageVillagers';
 
 const SIZE = 400;
@@ -102,19 +103,6 @@ const STONE = new THREE.MeshStandardMaterial({ color: '#77736c', roughness: 0.95
 const SLATE = new THREE.MeshStandardMaterial({ color: '#4a4d52', roughness: 0.85 });
 const GLASS = new THREE.MeshStandardMaterial({ color: '#2a2418', emissive: '#d89a48', emissiveIntensity: 0.6 });
 
-/** Stone church with a square bell tower and spire, north of the square. */
-const Church: React.FC = () => (
-  <group position={[0, 0, -86]}>
-    <mesh material={STONE} position={[0, 4, 0]}><boxGeometry args={[10, 8, 18]} /></mesh>
-    <mesh material={SLATE} position={[0, 10, 0]} rotation={[0, 0, Math.PI / 4]}><boxGeometry args={[5.4, 5.4, 18.6]} /></mesh>
-    <mesh material={STONE} position={[0, 9, 10.5]}><boxGeometry args={[5, 18, 5]} /></mesh>
-    <mesh material={SLATE} position={[0, 22, 10.5]} rotation={[0, Math.PI / 4, 0]}><coneGeometry args={[3.9, 8, 4]} /></mesh>
-    <mesh material={GLASS} position={[0, 13, 13.02]}><planeGeometry args={[1.4, 2.4]} /></mesh>
-    <mesh material={GLASS} position={[0, 3.2, 13.02]}><planeGeometry args={[1.8, 3.2]} /></mesh>
-    {[-5, 0, 5].map((z) => <mesh key={z} material={GLASS} position={[5.02, 4.5, z]} rotation={[0, Math.PI / 2, 0]}><planeGeometry args={[1.2, 2.6]} /></mesh>)}
-  </group>
-);
-
 const Crows: React.FC = () => {
   const ref = useRef<THREE.InstancedMesh>(null);
   const geo = useMemo(crow, []);
@@ -162,7 +150,7 @@ export const VillageLook: React.FC = () => {
       </mesh>
       <Instances geo={geos.tree} items={lay.trees} />
       <Instances geo={geos.wall} items={lay.walls} />
-      <Church />
+      <VillageChurch />
       <Crows />
       <VillageAnimals />
       <VillageVillagers />

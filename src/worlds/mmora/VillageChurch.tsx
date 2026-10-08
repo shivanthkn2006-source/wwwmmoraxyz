@@ -60,7 +60,7 @@ export const VillageChurch: React.FC = () => {
   const { camera } = useThree();
   const [open, setOpen] = useState(false);
   const door = useRef<THREE.Group>(null);
-  const doorPos = useMemo(() => new THREE.Vector3(0, 0, CZ + L / 2 + 5 + 2.6), []); // in front of the tower door
+  const doorPos = useMemo(() => new THREE.Vector3(0, 0, CZ + L / 2 + 2.5 + 3), []); // in front of the tower door
   useFrame((_, dt) => { if (door.current) door.current.rotation.y = THREE.MathUtils.damp(door.current.rotation.y, open ? -1.7 : 0, 4, dt); });
   useEffect(() => registerUse(() => {
     const d = Math.hypot(camera.position.x - doorPos.x, camera.position.z - doorPos.z);
