@@ -47,18 +47,55 @@ const RunToggle: React.FC<{ glyph?: string }> = ({ glyph }) => {
   );
 };
 
-/** Shows what Use would do when something usable (door, key, note, relic, player) is within reach. */
+type HintKind = 'door' | 'hand' | 'talk' | 'read' | 'sit' | 'build' | 'paw' | 'enter';
+export function hintKind(label: string): HintKind {
+  const l = label.toLowerCase();
+  if (/chat|talk|say hi|greet/.test(l)) return 'talk';
+  if (/door|unlock|open/.test(l)) return 'door';
+  if (/enter|go in|portal/.test(l)) return 'enter';
+  if (/read|note/.test(l)) return 'read';
+  if (/build/.test(l)) return 'build';
+  if (/sit|bench/.test(l)) return 'sit';
+  if (/pet|feed|cow|dog|cat|crow|animal/.test(l)) return 'paw';
+  return 'hand';
+}
+const HINT_PATH: Record<HintKind, string> = {
+  door: 'M6 21V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17M4 21h16M14.5 12.5h.01',
+  enter: 'M10 17l5-5-5-5M15 12H3M14 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5',
+  hand: 'M8 13V5.5a1.5 1.5 0 0 1 3 0V11m0-1.5V4a1.5 1.5 0 0 1 3 0v6m0-4.5a1.5 1.5 0 0 1 3 0V12m-9 1a2 2 0 0 0-3 2.5l3.5 5A3 3 0 0 0 10 22h5a4 4 0 0 0 4-4v-6.5a1.5 1.5 0 0 0-3 0',
+  talk: 'M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z',
+  read: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5v14zM20 17v4H6.5',
+  sit: 'M5 11V7a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v4M3 11h18v4H3zM5 15v5M19 15v5',
+  build: 'M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z',
+  paw: 'M12 14c-3 0-5 2.5-5 4.5S9 21 12 21s5-.5 5-2.5S15 14 12 14zM6 11a1.8 2.3 0 1 0 0-.01M18 11a1.8 2.3 0 1 0 0-.01M9.5 7a1.8 2.3 0 1 0 0-.01M14.5 7a1.8 2.3 0 1 0 0-.01',
+};
+
+/**
+ * Icon prompt when something usable (door, house, coin, herb, note, bench,
+ * member, animal) is within reach: a symbol of what will happen plus the
+ * Use button / E key. Tapping it does the action.
+ */
 const UseHint: React.FC = () => {
   const [label, setLabel] = React.useState<string | null>(null);
   React.useEffect(() => {
     const t = window.setInterval(() => {
       const u = peekUse();
-      setLabel(u ? u.label.replace(/^Picked up (the )?/, 'Pick up ').replace(/^Reading: /, 'Read: ') : null);
-    }, 500);
+      setLabel(u ? u.label.replace(/^Picked up (the )?/, 'Pick up ').replace(/^Reading: /, 'Read: ').replace(/^Opened the door$/, 'Open the door') : null);
+    }, 400);
     return () => window.clearInterval(t);
   }, []);
   if (!label) return null;
-  return <div className="absolute right-3 top-[calc(52%+2.25rem)] max-w-[12rem] text-right text-xs font-semibold text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.7)]" data-testid="vr-use-hint">Use → {label}</div>;
+  const k = hintKind(label);
+  return (
+    <button type="button" data-exclude-phantom-tap data-testid="vr-use-hint" aria-label={`Use: ${label}`} title={label}
+      onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); fireAction('use', true); }}
+      className="absolute left-1/2 top-[58%] flex -translate-x-1/2 flex-col items-center gap-1 text-white [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.75))]">
+      <span className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-white/90">
+        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={HINT_PATH[k]} /></svg>
+      </span>
+      <span className="flex items-center gap-1 text-[10px] font-semibold"><span className="rounded border border-white/80 px-1 leading-4">Use</span><span className="hidden sm:inline rounded border border-white/80 px-1 leading-4">E</span></span>
+    </button>
+  );
 };
 
 const Btn: React.FC<{ action: VRAction; label: string; className: string; hold?: boolean; aria: string; glyph?: string; plain?: boolean; round?: boolean }> = ({ action, label, className, hold, aria, glyph, plain, round }) => (
