@@ -6,12 +6,14 @@
 import React, { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { humanParts, HUMAN_MATERIAL, HIP_X, HIP_Y, SHOULDER_X, SHOULDER_Y } from '@/lib/vrHumanLook';
+import { headGeometry, humanParts, HUMAN_MATERIAL, HIP_X, HIP_Y, SHOULDER_X, SHOULDER_Y } from '@/lib/vrHumanLook';
 
 const P = humanParts();
+// Female look: same body, head with ponytail swapped in on top of the default head.
+const HEAD_F = (() => { const g = headGeometry(true); g.translate(0, 1.68, 0); return g; })();
 const tmp = new THREE.Vector3();
 
-export const JointedHuman: React.FC<{ reachAt?: number }> = ({ reachAt = 0 }) => {
+export const JointedHuman: React.FC<{ reachAt?: number; female?: boolean }> = ({ reachAt = 0, female = false }) => {
   const root = useRef<THREE.Group>(null);
   const legL = useRef<THREE.Mesh>(null), legR = useRef<THREE.Mesh>(null);
   const armL = useRef<THREE.Mesh>(null), armR = useRef<THREE.Mesh>(null);
@@ -39,6 +41,7 @@ export const JointedHuman: React.FC<{ reachAt?: number }> = ({ reachAt = 0 }) =>
   return (
     <group ref={root}>
       <mesh geometry={P.body} material={HUMAN_MATERIAL} />
+      {female && <mesh geometry={HEAD_F} material={HUMAN_MATERIAL} scale={1.01} />}
       <mesh ref={legL} geometry={P.leg} material={HUMAN_MATERIAL} position={[-HIP_X, HIP_Y, 0]} />
       <mesh ref={legR} geometry={P.leg} material={HUMAN_MATERIAL} position={[HIP_X, HIP_Y, 0]} />
       <mesh ref={armL} geometry={P.arm} material={HUMAN_MATERIAL} position={[-SHOULDER_X, SHOULDER_Y, 0]} />

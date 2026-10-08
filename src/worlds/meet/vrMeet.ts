@@ -10,7 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { setShareRealLocation } from '@/lib/vrPrivacy';
 
 export type MeetTag = 'friend' | 'follower' | 'unknown';
-export type MeetPose = { mode: 'real' | 'mmora'; x?: number; z?: number; lat?: number; lng?: number; yaw: number };
+export type MeetPose = { mode: 'real' | 'mmora'; x?: number; z?: number; lat?: number; lng?: number; yaw: number; f?: boolean };
 export type Remote = MeetPose & { id: string; name: string; username: string; photo?: string | null; at: number; tag: MeetTag; voice?: boolean };
 export type ChatMsg = { id: string; from: string; name: string; username: string; photo?: string | null; tag: MeetTag | 'me'; text: string; at: number; system?: boolean };
 
