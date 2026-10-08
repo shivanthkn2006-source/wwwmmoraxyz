@@ -7,6 +7,7 @@ import React, { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useNight } from '@/components/vr/NightMode';
+import { SeaLife } from './SeaLife';
 
 export const BEACH_Z = -62;   // where the sand starts
 export const SHORE_Z = -82;   // where the water starts
@@ -36,6 +37,7 @@ export const MMoraBeach: React.FC = () => {
       <mesh ref={sea} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, SHORE_Z - 100]} material={SEA}>
         <planeGeometry args={[400, 200]} />
       </mesh>
+      <SeaLife />
       {night && (
         <>
           {/* Full moon over the sea */}
