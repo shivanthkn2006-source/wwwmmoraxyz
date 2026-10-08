@@ -31,8 +31,8 @@ function groundTexture(): THREE.CanvasTexture {
   const toPx = (x: number) => (x / SIZE + 0.5) * S;
   g.lineCap = 'round';
   const path = (x1: number, z1: number, x2: number, z2: number) => {
-    g.strokeStyle = 'rgba(92,78,62,0.9)'; g.lineWidth = 14; g.beginPath(); g.moveTo(toPx(x1), toPx(z1)); g.lineTo(toPx(x2), toPx(z2)); g.stroke();
-    g.strokeStyle = 'rgba(70,58,46,0.6)'; g.lineWidth = 6; g.stroke();
+    g.strokeStyle = 'rgba(120,104,86,0.85)'; g.lineWidth = 7; g.beginPath(); g.moveTo(toPx(x1), toPx(z1)); g.lineTo(toPx(x2), toPx(z2)); g.stroke();
+    g.strokeStyle = 'rgba(70,58,46,0.6)'; g.lineWidth = 3; g.stroke();
   };
   for (const [x, z] of HOUSES) path(0, 0, x, z);
   path(0, 0, 0, -78); // to the church
@@ -97,7 +97,7 @@ const Instances: React.FC<{ geo: THREE.BufferGeometry; items: [number, number, n
 };
 
 const STONE = new THREE.MeshStandardMaterial({ color: '#77736c', roughness: 0.95 });
-const SLATE = new THREE.MeshStandardMaterial({ color: '#2b2e33', roughness: 0.85 });
+const SLATE = new THREE.MeshStandardMaterial({ color: '#4a4d52', roughness: 0.85 });
 const GLASS = new THREE.MeshStandardMaterial({ color: '#2a2418', emissive: '#d89a48', emissiveIntensity: 0.6 });
 
 /** Stone church with a square bell tower and spire, north of the square. */
