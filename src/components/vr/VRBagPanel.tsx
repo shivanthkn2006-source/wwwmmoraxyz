@@ -108,7 +108,7 @@ export const VRBagPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const cells = items.reduce((n, it) => n + it.w * it.h, 0);
   const rows = Math.max(MIN_ROWS, Math.ceil(cells / CASE_COLS) + 2) + extra;
   // Squares shrink to keep the whole case on screen as it grows.
-  const cell = Math.round(Math.max(20, Math.min(46, (vp.h - 120) / (rows + 0.6), (vp.w * 0.72 - 24) / CASE_COLS)));
+  const cell = Math.round(Math.max(20, Math.min(60, (vp.h - 130) / (rows + 0.6), (vp.w * 0.66 - 40) / CASE_COLS)));
   const layout = useMemo(() => packCase(items, saved, CASE_COLS, rows), [items, saved, rows]);
   const selItem = items.find((i) => i.id === sel) ?? null;
   const say = (m: string) => { setMsg(m); window.setTimeout(() => setMsg(null), 1800); };
@@ -144,7 +144,7 @@ export const VRBagPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       </div>
 
       {/* Case + avatar */}
-      <div className="flex shrink-0 items-end justify-center gap-1 px-1 pt-1">
+      <div className="flex min-h-0 flex-1 items-center justify-center gap-3 px-3 pt-2">
         <div className="re-case-plate flex flex-col overflow-hidden" style={{ height: `${rows * cell + 56}px`,  width: tab === 'items' ? 'max-content' : `min(${CASE_COLS * cell + 40}px, 72vw)`, alignSelf: 'center' }}>
           {tab === 'items' && (
             <>
@@ -181,8 +181,8 @@ export const VRBagPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
               </li>); })}
           </ul>}
         </div>
-        <div className="re-case-portrait flex max-w-[220px] shrink-0 flex-col items-center justify-end" style={{ width: 'min(22vw, 220px)', height: `${rows * cell + 56}px` }}>
-          <img src={self.female ? avatarFemaleImg : avatarImg} alt="Your avatar" className="w-auto object-contain object-bottom" style={{ height: `${rows * cell + 20}px` }} />
+        <div className="re-case-portrait flex max-w-[220px] shrink-0 flex-col items-center justify-end" style={{ width: 'min(22vw, 220px)', height: `${rows * cell + 76}px` }}>
+          <img src={self.female ? avatarFemaleImg : avatarImg} alt="Your avatar" className="w-auto object-contain object-bottom" style={{ height: `${rows * cell + 40}px` }} />
           <div className="re-case-player">{self.name || 'You'}</div>
           <div className="re-case-ring"><span>{pick.herbs}</span><small>herbs</small></div>
         </div>
