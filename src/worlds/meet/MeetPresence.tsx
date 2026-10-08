@@ -117,7 +117,7 @@ export const MeetPresence: React.FC = () => {
       setShake((m) => ({ ...m, [best!.p.id]: at }));
       window.dispatchEvent(new CustomEvent('vr-hand-reach')); // my hand reaches out for the handshake
       setChatOpen(true);
-      void notifySelf('vr_player_met', 'Met in VR World', `You met @${best.p.username} (${TAG_LABEL[best.p.tag]}) in ${st.mode === 'mmora' ? "M'Mora World" : 'your street'}.`, { link: '/vr-world', member: best.p.id }).catch(() => {});
+      void notifySelf('vr_player_met', 'Met in VR World', `You met @${best.p.username} (${TAG_LABEL[best.p.tag]}) in ${st.mode === 'mmora' ? "M'Mora Village" : 'your street'}.`, { link: '/vr-world', member: best.p.id }).catch(() => {});
     }
     if (best && best.d > 4) met.current.delete(best.p.id);
   });

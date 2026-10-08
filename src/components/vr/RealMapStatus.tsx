@@ -30,7 +30,7 @@ export const RealMapStatus: React.FC = () => {
 
   return (
     <div className="fixed top-14 left-3 z-[9997] w-60 surface-warm-tan rounded-2xl p-3 text-[11px] text-white space-y-1" data-exclude-phantom-tap>
-      <div className="font-semibold">{w.mode === 'real' ? 'Your street' : "M'Mora World"}</div>
+      <div className="font-semibold">{w.mode === 'real' ? 'Your street' : "M'Mora Village"}</div>
       <div>📍 {where}</div>
       {w.mode === 'real' && <div>Map blocks: {w.chunksLoaded} / {w.chunksWanted}</div>}
       <div>Saved on phone: {loaderStats.cacheHits} · Shared: {loaderStats.shared} · Downloaded: {loaderStats.network} · Failed: {loaderStats.failures}</div>

@@ -286,7 +286,7 @@ export const RealMapWorld: React.FC = () => {
       {origin.status === 'ready' && <ZoeStreetAwareness origin={origin.origin} />}
       <ThermalGovernor />
       <AdminRealmapSync />
-      <PortalDoorway position={PORTAL_OFFSET} label="M'Mora World" onEnter={enterMMora} />
+      <PortalDoorway position={PORTAL_OFFSET} label="M'Mora Village" onEnter={enterMMora} />
       <PortalBeam position={PORTAL_OFFSET} />
       <CityPortals />
       {demoOn && <DemoExplorer />}

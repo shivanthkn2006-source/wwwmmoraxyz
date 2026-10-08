@@ -43,7 +43,7 @@ export const VRWorldSearch: React.FC = () => {
     members: meet.players, friends,
     blocks: world.mode === 'real' ? mapBlocks().values() : [],
     relics: world.mode === 'real' ? relics : [],
-    landmarks: world.mode === 'mmora' ? LANDMARKS : [{ id: 'door', title: "Doorway to M'Mora World", x: PORTAL_OFFSET[0], z: PORTAL_OFFSET[2] }],
+    landmarks: world.mode === 'mmora' ? LANDMARKS : [{ id: 'door', title: "Doorway to M'Mora Village", x: PORTAL_OFFSET[0], z: PORTAL_OFFSET[2] }],
   }), [q, meet.players, friends, version, relics, world.mode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [places, setPlaces] = useState<PlaceHit[]>([]);

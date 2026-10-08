@@ -1,5 +1,5 @@
 /**
- * Extra M'Mora World portals across the Real Map: one per ~1 km grid cell,
+ * Extra M'Mora Village portals across the Real Map: one per ~1 km grid cell,
  * only the cell the player is in is mounted, so every city and neighbourhood
  * has a portal within ~500 m while just one extra doorway is ever drawn.
  */
@@ -28,7 +28,7 @@ export const CityPortals: React.FC = () => {
   const pos: [number, number, number] = [cell[0], 0, cell[1]];
   return (
     <group key={cell.join(',')}>
-      <PortalDoorway position={pos} label="M'Mora World" onEnter={enterMMora} />
+      <PortalDoorway position={pos} label="M'Mora Village" onEnter={enterMMora} />
       <PortalBeam position={pos} />
     </group>
   );

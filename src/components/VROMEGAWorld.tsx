@@ -1290,7 +1290,7 @@ const MemoryPalace: React.FC<{
       {!inMMora && <RealMapWorld />}
       <MeetPresence />
       <JourneyTracker />
-      {inMMora && <PortalDoorway position={RETURN_PORTAL_POS} label="Back to your street" onEnter={returnToReal} />}
+      {inMMora && <PortalDoorway position={RETURN_PORTAL_POS} label="M'Mora World" onEnter={returnToReal} />}
       {inMMora && <ArchiveHouse />}
       {inMMora && <PickupHouses />}
       {inMMora && <MMoraBenches />}

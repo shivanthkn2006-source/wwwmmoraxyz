@@ -157,7 +157,7 @@ export const VRBagPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
               <div className="re-case-handle" aria-hidden />
             </>
           )}
-          {tab === 'keys' && <div className="re-case-list">{story.keys.length ? story.keys.map((k) => <div key={k} className="re-case-row">🗝️ {KEYS[k]?.name ?? k}<span className="block text-[10px] opacity-70">Opens: {KEYS[k]?.opens.replace(/_/g, ' ')}{story.open.includes(KEYS[k]?.opens) ? ' · used' : ''}</span></div>) : <p>No keys yet. Look around M'Mora World.</p>}</div>}
+          {tab === 'keys' && <div className="re-case-list">{story.keys.length ? story.keys.map((k) => <div key={k} className="re-case-row">🗝️ {KEYS[k]?.name ?? k}<span className="block text-[10px] opacity-70">Opens: {KEYS[k]?.opens.replace(/_/g, ' ')}{story.open.includes(KEYS[k]?.opens) ? ' · used' : ''}</span></div>) : <p>No keys yet. Look around M'Mora Village.</p>}</div>}
           {tab === 'files' && <div className="re-case-list">{story.notes.length ? story.notes.map((n) => <button key={n} type="button" onClick={() => readNote(n)} className="re-case-row w-full text-left">📜 {NOTES[n]?.title ?? n}</button>) : <p>No files read yet.</p>}</div>}
           {tab === 'quests' && <ul className="re-case-list" aria-label="Quests">
             {QUESTS.map((q) => { const p = state.progress[q.id] ?? 0; const done = !!state.done[q.id]; return (

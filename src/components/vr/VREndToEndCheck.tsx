@@ -54,7 +54,7 @@ export const VREndToEndCheck: React.FC = () => {
     if (getWorldState().mode === 'real') {
       enterMMora([0, 1.6, 0]); await wait(1500); const inside = getWorldState().mode === 'mmora';
       returnToReal(); await wait(500);
-      put({ name: 'Doorway round-trip', ok: inside && getWorldState().mode === 'real', note: inside ? "In and out of M'Mora World" : 'Did not enter' });
+      put({ name: 'Doorway round-trip', ok: inside && getWorldState().mode === 'real', note: inside ? "In and out of M'Mora Village" : 'Did not enter' });
     } else put({ name: 'Doorway round-trip', ok: null, note: "Go back to your street first" });
     // 9. Admin live alerts
     try { trackActivity('vr_enter', 'End-to-end check'); put({ name: 'Admin live alerts', ok: true, note: 'Sent (admin gets it; skipped for your own admin account)' }); }

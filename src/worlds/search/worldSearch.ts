@@ -1,20 +1,20 @@
 /**
  * In-world search: only things inside VR World — members here now (friends,
  * followers, new), your friends, real streets, named buildings, places and
- * shops from the loaded map, street relics, and M'Mora World landmarks.
+ * shops from the loaded map, street relics, and M'Mora Village landmarks.
  */
 import type { OsmChunk } from '../realmap/osm';
 
 export type ResultKind = 'member' | 'friend' | 'street' | 'building' | 'place' | 'relic' | 'landmark' | 'city' | 'home';
 export type WorldResult = {
   id: string; kind: ResultKind; title: string; detail: string;
-  /** where to go: local x/z (M'Mora World) or lat/lng (Real Map) */
+  /** where to go: local x/z (M'Mora Village) or lat/lng (Real Map) */
   at?: { x: number; z: number } | { lat: number; lng: number };
   userId?: string;
 };
 
 export const KIND_LABEL: Record<ResultKind, string> = {
-  member: 'Here now', friend: 'Friend', street: 'Street', building: 'Building', place: 'Place', relic: 'Relic', landmark: "M'Mora World", city: 'City or place', home: 'Your location',
+  member: 'Here now', friend: 'Friend', street: 'Street', building: 'Building', place: 'Place', relic: 'Relic', landmark: "M'Mora Village", city: 'City or place', home: 'Your location',
 };
 
 const norm = (s: string) => s.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').trim();

@@ -1,6 +1,6 @@
 /**
  * "Street to M'Mora" journey quest: walk 50 m on your real street, step
- * through the doorway, then reach the journey beacon inside M'Mora World.
+ * through the doorway, then reach the journey beacon inside M'Mora Village.
  * Progress is kept on the device; finishing sends a Quest complete alert.
  */
 import { useSyncExternalStore } from 'react';
@@ -49,13 +49,13 @@ export function journeyEvent(ev: Parameters<typeof journeyReduce>[1]) {
   set(next);
   if (finished) {
     window.dispatchEvent(new CustomEvent('vr-quest-complete', { detail: { id: 'street_to_mmora', title: "Street to M'Mora" } }));
-    void notifySelf('vr_quest_complete', 'Quest complete', "Street to M'Mora: you travelled from your real street into M'Mora World.", { link: '/vr-world', quest: 'street_to_mmora' }).catch(() => {});
+    void notifySelf('vr_quest_complete', 'Quest complete', "Street to M'Mora: you travelled from your real street into M'Mora Village.", { link: '/vr-world', quest: 'street_to_mmora' }).catch(() => {});
   }
 }
 
 export const journeyLabel = (s: JourneyState) =>
   s.step === 'walk' ? `Walk your street: ${Math.floor(s.walked)} / ${WALK_GOAL_M} m`
-  : s.step === 'doorway' ? "Go through the doorway to M'Mora World"
+  : s.step === 'doorway' ? "Go through the doorway to M'Mora Village"
   : s.step === 'beacon' ? 'Reach the blue journey beacon'
   : "Street to M'Mora: complete";
 
