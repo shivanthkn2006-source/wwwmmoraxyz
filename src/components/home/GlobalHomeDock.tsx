@@ -1,5 +1,5 @@
-import vrAvatarIcon from '@/assets/vr-case-avatar.png';
-import vrCoinIcon from '@/assets/mmora-coin-gold.png';
+import vrAvatarIcon from '@/assets/mmora-world-icon.png';
+import vrCoinIcon from '@/assets/mmora-coin-icon.png';
 /**
  * GLOBAL HOME DOCK
  *
@@ -13,7 +13,7 @@ import vrCoinIcon from '@/assets/mmora-coin-gold.png';
  */
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Lightbulb, Sparkles, MessageCircle, Bell, User, Compass, Headphones, Music, Camera, ScanFace, Glasses } from 'lucide-react';
+import { Lightbulb, Sparkles, MessageCircle, Bell, User, Compass, Headphones, Music, Camera, ScanFace } from 'lucide-react';
 import HomeGlassDock from '@/components/home/HomeGlassDock';
 import GrowthAlertsPanel from '@/components/growth/GrowthAlertsPanel';
 import { useAuth } from '@/lib/auth';
