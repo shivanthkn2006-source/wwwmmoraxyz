@@ -11,6 +11,9 @@ import { useStory, readNote, KEYS, NOTES } from '@/lib/vrStory';
 import { QUESTS, getVRQuestSnapshot, itemLabel, loadVRQuests, subscribeVRQuests, type Rarity } from '@/lib/vrQuests';
 import { usePickups, useHerb } from '@/lib/vrPickups';
 import avatarImg from '@/assets/vr-case-avatar.png';
+import avatarFemaleImg from '@/assets/vr-case-avatar-female.png';
+import { COIN_FACES, splitCoins } from '@/lib/vrCoinLook';
+import { useVRSelf } from '@/lib/vrSelf';
 
 export const CASE_COLS = 10;
 const MIN_ROWS = 6;
@@ -22,7 +25,7 @@ const RARITY_HSL: Record<Rarity, string> = {
   epic: 'hsl(219 95% 78%)', legendary: 'hsl(43 96% 56%)',
 };
 
-type CaseItem = { id: string; w: number; h: number; name: string; kind: 'herb' | 'coin' | 'relic'; count?: number; rarity?: Rarity; detail?: string };
+type CaseItem = { id: string; w: number; h: number; name: string; kind: 'herb' | 'coin' | 'relic' | 'bag'; face?: 'gold' | 'blue' | 'yellow'; count?: number; rarity?: Rarity; detail?: string };
 type Pos = { x: number; y: number };
 
 /** First-fit packing that keeps saved spots when they still fit. */
@@ -78,6 +81,9 @@ export const VRBagPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const { state, bag } = snap;
   const story = useStory();
   const pick = usePickups();
+  const self = useVRSelf();
+  const [vp, setVp] = useState(() => ({ w: window.innerWidth, h: window.innerHeight }));
+  useEffect(() => { const r = () => setVp({ w: window.innerWidth, h: window.innerHeight }); window.addEventListener('resize', r); return () => window.removeEventListener('resize', r); }, []);
   const [tab, setTab] = useState<Tab>('items');
   const [sel, setSel] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
@@ -87,7 +93,11 @@ export const VRBagPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const items = useMemo<CaseItem[]>(() => {
     const out: CaseItem[] = [];
     for (let i = 0; i < Math.min(pick.herbs, 60); i++) out.push({ id: `herb-${i}`, w: 1, h: 2, kind: 'herb', name: 'Green Herb', detail: 'Restores stamina' });
-    if (pick.coins > 0) out.push({ id: 'coins', w: 1, h: 1, kind: 'coin', name: 'Antique Coins', count: pick.coins, detail: 'Spend them to build benches' });
+    const c = splitCoins(pick.coins);
+    if (pick.coins >= 100) out.push({ id: 'coin-bag', w: 2, h: 2, kind: 'bag', name: "M'Mora coin bag", count: pick.coins, detail: `${pick.coins} M'Mora coins in total` });
+    if (c.gold) out.push({ id: 'coin-gold', w: 1, h: 1, kind: 'coin', face: 'gold', name: "Gold M'Mora coin (50)", count: c.gold, detail: 'Worth 50 each' });
+    if (c.blue) out.push({ id: 'coin-blue', w: 1, h: 1, kind: 'coin', face: 'blue', name: "Blue M'Mora coin (10)", count: c.blue, detail: 'Worth 10 each' });
+    if (c.yellow) out.push({ id: 'coin-yellow', w: 1, h: 1, kind: 'coin', face: 'yellow', name: "Yellow M'Mora coin (1)", count: c.yellow, detail: 'Worth 1 each' });
     for (const b of bag.filter((b) => b.type !== 'green_herb' && b.type !== 'antique_coin').slice(0, 120)) {
       out.push({ id: `relic-${b.id}`, w: 1, h: 1, kind: 'relic', rarity: b.rarity, name: itemLabel(b.type), detail: `${b.rarity} · found ${new Date(b.collected_at).toLocaleDateString()}` });
     }
@@ -96,6 +106,8 @@ export const VRBagPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
   const cells = items.reduce((n, it) => n + it.w * it.h, 0);
   const rows = Math.max(MIN_ROWS, Math.ceil(cells / CASE_COLS) + 2) + extra;
+  // Squares shrink to keep the whole case on screen as it grows.
+  const cell = Math.round(Math.max(20, Math.min(46, (vp.h - 120) / (rows + 0.6), (vp.w * 0.72 - 24) / CASE_COLS)));
   const layout = useMemo(() => packCase(items, saved, CASE_COLS, rows), [items, saved, rows]);
   const selItem = items.find((i) => i.id === sel) ?? null;
   const say = (m: string) => { setMsg(m); window.setTimeout(() => setMsg(null), 1800); };
@@ -113,9 +125,9 @@ export const VRBagPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const TABS: [Tab, string][] = [['keys', 'Keys\nTreasures'], ['items', 'Items'], ['files', 'Files'], ['quests', 'Quests']];
 
   return createPortal(
-    <div role="dialog" aria-label="Item bag" className="re-case-screen pointer-events-auto fixed inset-0 flex flex-col">
+    <div role="dialog" aria-label="Item bag" className="re-case-screen pointer-events-auto fixed inset-0 flex flex-col" style={{ ['--re-cell' as string]: `${cell}px` }}>
       {/* Top menu */}
-      <div className="re-case-topbar flex items-center gap-1 px-2 py-1.5 sm:gap-3 sm:px-4">
+      <div className="re-case-topbar flex items-center gap-1 px-2 py-0.5 sm:gap-3 sm:px-3">
         <div role="tablist" className="flex flex-1 items-center gap-2 overflow-x-auto sm:gap-4">
           {TABS.map(([id, l]) => (
             <button key={id} type="button" role="tab" aria-selected={tab === id} onClick={() => setTab(id)} className="re-case-tab flex shrink-0 items-center gap-1.5">
@@ -131,8 +143,8 @@ export const VRBagPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       </div>
 
       {/* Case + avatar */}
-      <div className="flex min-h-0 flex-1 items-stretch gap-2 px-2 pt-2 sm:px-4">
-        <div className="re-case-plate flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div className="flex min-h-0 flex-1 items-end justify-center gap-1 px-1 pt-1">
+        <div className="re-case-plate flex max-h-full min-h-0 flex-col overflow-hidden" style={{ width: tab === 'items' ? 'max-content' : `min(${CASE_COLS * cell + 40}px, 72vw)`, alignSelf: 'center' }}>
           {tab === 'items' && (
             <>
               <div className="re-case-lid" aria-hidden><span className="re-case-hinge" /><span className="re-case-hinge" /></div>
@@ -147,7 +159,7 @@ export const VRBagPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                     return (
                       <button key={it.id} type="button" aria-pressed={sel === it.id} title={it.name} onClick={() => setSel(sel === it.id ? null : it.id)}
                         className="re-case-item" data-kind={it.kind} style={{ gridColumn: `${p.x + 1} / span ${it.w}`, gridRow: `${p.y + 1} / span ${it.h}` }}>
-                        <span className="re-case-art">{it.kind === 'herb' ? <Herb /> : it.kind === 'coin' ? <Coins /> : <Gem rarity={it.rarity!} />}</span>
+                        <span className="re-case-art">{it.kind === 'herb' ? <Herb /> : it.kind === 'coin' ? <img src={COIN_FACES[it.face ?? 'gold']} alt="" className="h-full w-full object-contain" draggable={false} /> : it.kind === 'bag' ? <img src={COIN_FACES.bag} alt="" className="h-full w-full object-contain" draggable={false} /> : <Gem rarity={it.rarity!} />}</span>
                         {it.count !== undefined && <span className="re-case-count">{it.count}</span>}
                       </button>
                     );
@@ -168,14 +180,15 @@ export const VRBagPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
               </li>); })}
           </ul>}
         </div>
-        <div className="re-case-portrait flex w-[26%] max-w-[240px] shrink-0 flex-col items-center justify-end">
-          <img src={avatarImg} alt="Your avatar" width={768} height={1152} className="max-h-full w-full object-contain object-bottom" />
+        <div className="re-case-portrait flex h-full max-w-[220px] shrink-0 flex-col items-center justify-end" style={{ width: 'min(22vw, 220px)' }}>
+          <img src={self.female ? avatarFemaleImg : avatarImg} alt="Your avatar" className="min-h-0 w-full flex-1 object-contain object-bottom" />
+          <div className="re-case-player">{self.name || 'You'}</div>
           <div className="re-case-ring"><span>{pick.herbs}</span><small>herbs</small></div>
         </div>
       </div>
 
       {/* Name bar + actions */}
-      <div className="flex items-center gap-2 px-2 pb-2 pt-2 sm:px-4">
+      <div className="mx-auto flex w-full max-w-[min(100%,980px)] items-center gap-2 px-2 pb-1 pt-1">
         <div className="re-case-namebar flex-1 truncate" data-testid="bag-closeup">
           {msg ?? (selItem ? `${selItem.name}${selItem.count !== undefined ? ` ×${selItem.count}` : ''} — ${selItem.detail ?? ''}` : items.length ? 'Tap an item, then tap a square to move it' : 'Walk up to a glowing item and tap Use to pick it up.')}
         </div>
