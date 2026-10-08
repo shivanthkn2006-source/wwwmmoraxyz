@@ -118,6 +118,7 @@ import { JourneyTracker } from '@/worlds/JourneyTracker';
 import { PortalDoorway } from '@/worlds/portal/PortalDoorway';
 import { resolveMove } from '@/lib/vrSolids';
 import { VRWorldList } from '@/components/vr/VRWorldList';
+import { VillageLook } from '@/worlds/mmora/VillageLook';
 import { useWorldState, returnToReal, RETURN_PORTAL_POS, getWorldState, entryHeight } from '@/worlds/worldMode';
 import { LandscapeViewportGuard } from './vr/LandscapeViewportGuard';
 import { RealMapStatus } from './vr/RealMapStatus';
@@ -1301,7 +1302,7 @@ const MemoryPalace: React.FC<{
       <AvatarWatchdog />
       {/* M'Mora World (behind every city portal) is the new houses world only; the old
           VR Omega city (VRFeatureIntegration, pillar, metro, race track) is no longer mounted. */}
-      {inMMora && <MMoraGround />}
+      {inMMora && <VillageLook />}
 
       {/* Player controller unlocks via entry complete OR watchdog fallback to prevent gate deadlocks */}
       {useLegacyController && (<>
