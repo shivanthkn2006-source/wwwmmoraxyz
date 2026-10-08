@@ -40,6 +40,14 @@ export const HOUSES: [number, number, number][] = [
   [18, -10, 0], [-26, -18, Math.PI / 2], [30, 22, Math.PI], [-20, 28, -Math.PI / 2],
   [6, -34, 0], [44, -6, Math.PI / 2], [-42, 4, 0], [12, 40, Math.PI],
 ];
+// Gable roof: a triangular prism that sits wholly on top of the walls.
+const ROOF_RISE = 1.9;
+const GABLE = (() => {
+  const w = (HOUSE_W + 0.6) / 2, sh = new THREE.Shape();
+  sh.moveTo(-w, 0); sh.lineTo(w, 0); sh.lineTo(0, ROOF_RISE); sh.closePath();
+  const g = new THREE.ExtrudeGeometry(sh, { depth: HOUSE_D + 0.6, bevelEnabled: false });
+  g.translate(0, 0, -(HOUSE_D + 0.6) / 2); return g;
+})();
 const COIN_AMOUNTS = [1, 3, 5, 1, 3, 1, 5, 3];
 const OUTDOOR_HERBS: [number, number][] = [[4, 10], [-8, -14], [22, 6], [-30, -2], [10, -22], [-14, 18], [36, 30], [-36, -30], [26, -28], [0, 26]];
 
@@ -138,8 +146,8 @@ const House: React.FC<{ i: number; open: boolean }> = ({ i, open }) => {
       <mesh material={WINDOW} position={[0, HOUSE_H + 0.21, 0]} rotation={[-Math.PI / 2, 0, 0]}><planeGeometry args={[1.2, 1.2]} /></mesh>
       <mesh material={M.roof} position={[0, HOUSE_H + 0.1, 0]}><boxGeometry args={[HOUSE_W + 0.4, 0.2, HOUSE_D + 0.4]} /></mesh>
       {/* Steep gabled roof with snow on the ridge, timber beams on the corners */}
-      <mesh material={M.roof} position={[0, HOUSE_H + 1.4, 0]} rotation={[0, 0, Math.PI / 4]} scale={[1, 1, 1]}><boxGeometry args={[3.9, 3.9, HOUSE_D + 0.6]} /></mesh>
-      <mesh material={M.snow} position={[0, HOUSE_H + 4.1, 0]}><boxGeometry args={[0.5, 0.15, HOUSE_D + 0.6]} /></mesh>
+      <mesh material={M.roof} geometry={GABLE} position={[0, HOUSE_H + 0.2, 0]} />
+      <mesh material={M.snow} position={[0, HOUSE_H + 0.2 + ROOF_RISE, 0]}><boxGeometry args={[0.35, 0.12, HOUSE_D + 0.6]} /></mesh>
       {([[-1, -1], [1, -1], [-1, 1], [1, 1]] as const).map(([a, b], k) => <mesh key={`b${k}`} material={M.beam} position={[a * (HOUSE_W / 2 + 0.06), HOUSE_H / 2, b * (HOUSE_D / 2 + 0.06)]}><boxGeometry args={[0.22, HOUSE_H, 0.22]} /></mesh>)}
       <mesh material={M.beam} position={[0, HOUSE_H - 0.05, HOUSE_D / 2 + 0.12]}><boxGeometry args={[HOUSE_W + 0.2, 0.2, 0.08]} /></mesh>
       {/* Interior: wood panelling, patterned rug, stone fireplace with fire, chair */}
