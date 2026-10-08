@@ -34,3 +34,4 @@
 - VR lights (building windows, street lamps) switch through src/lib/vrLights.ts schedules (one 30 s ticker over registered materials) and lamps are instanced (src/worlds/StreetLamps.tsx), because per-lamp lights or per-frame checks overheat phones.
 - Each city gets its own M'Mora World: the meet room and saved benches are keyed by mmoraCityKey() (src/worlds/worldMode.ts), so a Chennai portal opens Chennai's world.
 - M'Mora World bench economy lives in src/worlds/mmora/MMoraBenches.tsx (sit earns coins, coins build benches via the shared Use button, built benches saved per city on the device).
+- The VR item bag (src/components/vr/VRBagPanel.tsx) is one attaché-case grid portalled to the page body (herbs 1×2, coins/relics 1×1, tap-to-move layout and extra rows saved on the device), because panels inside the HUD sat under other controls.
