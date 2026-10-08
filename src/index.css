@@ -7338,3 +7338,18 @@ html body .vr-gem-core { animation-duration: 4s !important; }
 .re-case-player { margin-top: 2px; font-style: italic; font-size: clamp(14px, 3vmin, 22px); color: hsl(var(--re-ink)); text-shadow: 0 1px 3px hsl(0 0% 0%); letter-spacing: .02em; }
 .re-case-screen .re-case-topbar { min-height: 0; }
 .re-case-topbar button, .re-case-topbar span { white-space: nowrap; }
+/* Case v3: only header + case + avatar — panel hugs its content, no empty side space */
+.re-case-screen.re-case-screen { inset: 0; margin: auto; width: max-content; max-width: 100vw; height: fit-content; max-height: 100dvh; border-radius: 12px; overflow: hidden; box-shadow: 0 20px 60px hsl(0 0% 0% / .7); }
+.re-case-screen .re-case-portrait { width: auto !important; }
+.re-case-screen .re-case-portrait img { height: 100%; width: auto; }
+
+/* Inside VR worlds only: every warm-tan window takes the item-case look (black steel, italic serif) */
+body[data-vr-world] .surface-warm-tan {
+  background: radial-gradient(ellipse at 40% 30%, hsl(60 4% 16% / .96), hsl(60 5% 6% / .96) 80%);
+  color: hsl(48 20% 86%); border: 1px solid hsl(60 4% 34%);
+  box-shadow: inset 0 1px 0 hsl(60 6% 40% / .5), 0 10px 30px hsl(0 0% 0% / .55);
+  font-family: Georgia, 'Times New Roman', serif; font-style: italic;
+  --foreground: 48 20% 86%; --muted-foreground: 48 10% 66%; --primary: 48 60% 92%; --card: 60 5% 10%; --border: 60 4% 30%;
+}
+body[data-vr-world] .surface-warm-tan .tan-circle { background: hsl(60 4% 22%); box-shadow: 0 0 0 1px hsl(60 4% 40%); }
+body[data-vr-world] .surface-warm-tan .tan-circle-icon { color: hsl(48 20% 86%); }

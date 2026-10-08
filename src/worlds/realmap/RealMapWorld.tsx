@@ -9,7 +9,7 @@ import { buildBuildingParts, buildRoadParts, makeWallMaterial, ROOF_MAT, ROAD_HI
 import { MapLabels } from './MapLabels';
 import { buildWaterParts, WATER_MAT, PARK_MAT, BRIDGE_MAT } from './waterLook';
 import { StreetHouses } from './StreetHouses';
-import { CityPortals } from './CityPortals';
+import { CityPortals, OpenPortal } from './CityPortals';
 import { PortalBeam } from './PortalBeam';
 /**
  * Real Map layer — the player's actual neighbourhood from OpenStreetMap.
@@ -286,8 +286,7 @@ export const RealMapWorld: React.FC = () => {
       {origin.status === 'ready' && <ZoeStreetAwareness origin={origin.origin} />}
       <ThermalGovernor />
       <AdminRealmapSync />
-      <PortalDoorway position={PORTAL_OFFSET} label="M'Mora Village" onEnter={enterMMora} />
-      <PortalBeam position={PORTAL_OFFSET} />
+      <OpenPortal base={PORTAL_OFFSET as [number, number, number]} />
       <CityPortals />
       {demoOn && <DemoExplorer />}
     </>
