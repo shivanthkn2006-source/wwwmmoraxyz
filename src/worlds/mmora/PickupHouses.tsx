@@ -15,6 +15,24 @@ import { coinMaterial } from '@/lib/vrCoinLook';
 
 const WINDOW = registerLit(new THREE.MeshStandardMaterial({ color: '#4a5866', emissive: '#ffc56a', roughness: 0.4 }), 2.2);
 
+function stoneTexture(): THREE.Texture | null {
+  if (typeof document === 'undefined') return null;
+  const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d')!;
+  g.fillStyle = '#4c4842'; g.fillRect(0, 0, 256, 256);
+  for (let y = 0, r = 0; y < 256; y += 28, r++) for (let x = (r % 2) * -24; x < 256; x += 48) {
+    const v = 95 + ((x * 7 + y * 13) % 40); g.fillStyle = `rgb(${v},${v - 4},${v - 10})`; g.fillRect(x + 2, y + 2, 44, 24);
+  }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(2, 1.2); return t;
+}
+function rugTexture(): THREE.Texture | null {
+  if (typeof document === 'undefined') return null;
+  const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d')!;
+  g.fillStyle = '#5a1e1a'; g.fillRect(0, 0, 128, 128); g.strokeStyle = '#c49a52'; g.lineWidth = 6; g.strokeRect(8, 8, 112, 112);
+  g.strokeStyle = '#2a1c3a'; g.lineWidth = 3; g.strokeRect(20, 20, 88, 88);
+  g.fillStyle = '#c49a52'; g.beginPath(); g.moveTo(64, 34); g.lineTo(94, 64); g.lineTo(64, 94); g.lineTo(34, 64); g.closePath(); g.fill();
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+
 const HOUSE_W = 5, HOUSE_D = 5, HOUSE_H = 3;
 // [x, z, rotationY]
 export const HOUSES: [number, number, number][] = [
@@ -25,8 +43,14 @@ const COIN_AMOUNTS = [1, 3, 5, 1, 3, 1, 5, 3];
 const OUTDOOR_HERBS: [number, number][] = [[4, 10], [-8, -14], [22, 6], [-30, -2], [10, -22], [-14, 18], [36, 30], [-36, -30], [26, -28], [0, 26]];
 
 const M = {
-  wall: new THREE.MeshStandardMaterial({ color: '#6f675d', roughness: 0.95 }),
-  roof: new THREE.MeshStandardMaterial({ color: '#3a2f28', roughness: 0.9 }),
+  wall: new THREE.MeshStandardMaterial({ map: stoneTexture(), roughness: 0.95 }),
+  roof: new THREE.MeshStandardMaterial({ color: '#2c2a2a', roughness: 0.85 }),
+  beam: new THREE.MeshStandardMaterial({ color: '#2f2218', roughness: 0.9 }),
+  panel: new THREE.MeshStandardMaterial({ color: '#4a3020', roughness: 0.7 }),
+  rug: new THREE.MeshStandardMaterial({ map: rugTexture(), roughness: 1 }),
+  hearth: new THREE.MeshStandardMaterial({ color: '#4b4741', roughness: 1 }),
+  fire: new THREE.MeshBasicMaterial({ color: '#ff9a3c' }),
+  snow: new THREE.MeshStandardMaterial({ color: '#e6e9ea', roughness: 1 }),
   door: new THREE.MeshStandardMaterial({ color: '#4a3020', roughness: 0.8 }),
   wood: new THREE.MeshStandardMaterial({ color: '#8a5a32', roughness: 0.55, metalness: 0.05 }),
   woodDark: new THREE.MeshStandardMaterial({ color: '#5b3a20', roughness: 0.6 }),
@@ -112,6 +136,24 @@ const House: React.FC<{ i: number; open: boolean }> = ({ i, open }) => {
       <mesh material={WINDOW} position={[1.6, 1.6, HOUSE_D / 2 + 0.11]}><planeGeometry args={[0.9, 0.8]} /></mesh>
       <mesh material={WINDOW} position={[0, HOUSE_H + 0.21, 0]} rotation={[-Math.PI / 2, 0, 0]}><planeGeometry args={[1.2, 1.2]} /></mesh>
       <mesh material={M.roof} position={[0, HOUSE_H + 0.1, 0]}><boxGeometry args={[HOUSE_W + 0.4, 0.2, HOUSE_D + 0.4]} /></mesh>
+      {/* Steep gabled roof with snow on the ridge, timber beams on the corners */}
+      <mesh material={M.roof} position={[0, HOUSE_H + 1.4, 0]} rotation={[0, 0, Math.PI / 4]} scale={[1, 1, 1]}><boxGeometry args={[3.9, 3.9, HOUSE_D + 0.6]} /></mesh>
+      <mesh material={M.snow} position={[0, HOUSE_H + 4.1, 0]}><boxGeometry args={[0.5, 0.15, HOUSE_D + 0.6]} /></mesh>
+      {([[-1, -1], [1, -1], [-1, 1], [1, 1]] as const).map(([a, b], k) => <mesh key={`b${k}`} material={M.beam} position={[a * (HOUSE_W / 2 + 0.06), HOUSE_H / 2, b * (HOUSE_D / 2 + 0.06)]}><boxGeometry args={[0.22, HOUSE_H, 0.22]} /></mesh>)}
+      <mesh material={M.beam} position={[0, HOUSE_H - 0.05, HOUSE_D / 2 + 0.12]}><boxGeometry args={[HOUSE_W + 0.2, 0.2, 0.08]} /></mesh>
+      {/* Interior: wood panelling, patterned rug, stone fireplace with fire, chair */}
+      <mesh material={M.panel} position={[0, 0.6, -HOUSE_D / 2 + 0.12]}><boxGeometry args={[HOUSE_W - 0.3, 1.2, 0.04]} /></mesh>
+      <mesh material={M.rug} position={[0, 0.02, 0.2]} rotation={[-Math.PI / 2, 0, 0]}><planeGeometry args={[2.6, 1.8]} /></mesh>
+      <group position={[HOUSE_W / 2 - 0.45, 0, -0.6]} rotation={[0, -Math.PI / 2, 0]}>
+        <mesh material={M.hearth} position={[0, 0.9, 0]}><boxGeometry args={[1.6, 1.8, 0.5]} /></mesh>
+        <mesh material={M.beam} position={[0, 1.4, 0.28]}><boxGeometry args={[1.8, 0.12, 0.2]} /></mesh>
+        <mesh material={M.fire} position={[0, 0.45, 0.26]}><coneGeometry args={[0.25, 0.5, 6]} /></mesh>
+      </group>
+      <group position={[-1.3, 0, 0.6]} rotation={[0, 0.6, 0]}>
+        <mesh material={M.wood} position={[0, 0.45, 0]}><boxGeometry args={[0.5, 0.06, 0.5]} /></mesh>
+        <mesh material={M.wood} position={[0, 0.8, -0.23]}><boxGeometry args={[0.5, 0.7, 0.05]} /></mesh>
+        {([[-0.2, -0.2], [0.2, -0.2], [-0.2, 0.2], [0.2, 0.2]] as const).map(([a, b], k) => <mesh key={k} material={M.woodDark} position={[a, 0.22, b]}><boxGeometry args={[0.05, 0.45, 0.05]} /></mesh>)}
+      </group>
       <group ref={door} position={[-0.55, 0, HOUSE_D / 2]}>
         <mesh material={M.door} position={[0.55, 1.1, 0]}><boxGeometry args={[1.1, 2.2, 0.08]} /></mesh>
         <mesh material={M.knob} position={[0.95, 1.05, 0.06]}><sphereGeometry args={[0.04, 8, 8]} /></mesh>
@@ -145,7 +187,7 @@ export const PickupHouses: React.FC = () => {
     for (const k of ALL_PICKUPS) {
       if (isTaken(k.id)) continue;
       const d = Math.hypot(c.x - k.pos[0], c.z - k.pos[2]);
-      const label = k.kind === 'herb' ? 'Picked up a Green Herb' : `Picked up ${k.amount} Antique Coin${k.amount > 1 ? 's' : ''}`;
+      const label = k.kind === 'herb' ? 'Picked up a Green Herb' : `Picked up ${k.amount} M'Mora Coin${k.amount > 1 ? 's' : ''}`;
       if (!best || d < best.dist) best = { dist: d, label, run: () => takePickup(k) };
     }
     return best;
