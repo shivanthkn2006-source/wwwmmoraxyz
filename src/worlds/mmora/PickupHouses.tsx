@@ -12,6 +12,7 @@ import { setStaticSolids, boxPoly } from '@/lib/vrSolids';
 import { usePickups, takePickup, isTaken, type Pickup } from '@/lib/vrPickups';
 import { registerLit } from '@/lib/vrLights';
 import { coinMaterial } from '@/lib/vrCoinLook';
+import { ManorFurniture, CarvedMantel } from './ManorFurniture';
 
 const WINDOW = registerLit(new THREE.MeshStandardMaterial({ color: '#4a5866', emissive: '#ffc56a', roughness: 0.4 }), 2.2);
 
@@ -114,8 +115,6 @@ export const ALL_PICKUPS: Pickup[] = [
   }),
   ...OUTDOOR_HERBS.map(([x, z], i): Pickup => ({ id: `path-herb${i}`, kind: 'herb', amount: 1, pos: [x, 0, z] })),
 ];
-
-import { ManorFurniture, CarvedMantel } from './ManorFurniture';
 
 const House: React.FC<{ i: number; open: boolean }> = ({ i, open }) => {
   const [x, z, r] = HOUSES[i];
