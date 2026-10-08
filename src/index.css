@@ -7341,7 +7341,7 @@ html body .vr-gem-core { animation-duration: 4s !important; }
 /* Case v3: only header + case + avatar — panel hugs its content, no empty side space */
 .re-case-screen.re-case-screen { inset: 0; margin: auto; width: max-content; max-width: 100vw; height: fit-content; max-height: 100dvh; border-radius: 12px; overflow: hidden; box-shadow: 0 20px 60px hsl(0 0% 0% / .7); }
 .re-case-screen .re-case-portrait { width: auto !important; }
-.re-case-screen .re-case-portrait img { height: 100%; width: auto; }
+
 
 /* Inside VR worlds only: every warm-tan window takes the item-case look (black steel, italic serif) */
 body[data-vr-world] .surface-warm-tan {

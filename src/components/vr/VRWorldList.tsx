@@ -16,14 +16,14 @@ import { subscribeVRQuests, getVRQuestSnapshot } from '@/lib/vrQuests';
 
 type Row = { icon: React.ElementType; name: string; total: number | string; used: number | string; left: number | string; where: string };
 
-export const VRWorldList: React.FC = () => {
-  const [open, setOpen] = useState(false);
+export const VRWorldList: React.FC<{ embedded?: boolean }> = ({ embedded = false }) => {
+  const [open, setOpen] = useState(embedded);
   useEffect(() => { const on = () => setOpen((o) => !o); window.addEventListener('vr-open-world-list', on); return () => window.removeEventListener('vr-open-world-list', on); }, []);
   const pk = usePickups();
   useMapVersion();
   const w = useWorldState();
   const quests = useSyncExternalStore(subscribeVRQuests, getVRQuestSnapshot, getVRQuestSnapshot);
-  if (!open) return null;
+  if (!open && !embedded) return null;
 
   const taken = new Set(pk.taken);
   const mHerbs = ALL_PICKUPS.filter((p) => p.kind === 'herb'), mCoins = ALL_PICKUPS.filter((p) => p.kind === 'coin');
@@ -66,10 +66,10 @@ export const VRWorldList: React.FC = () => {
     ]],
   ];
   return (
-    <div role="dialog" aria-label="What's in VR World" className="fixed left-1/2 top-14 z-[9990] w-[min(94vw,520px)] max-h-[70vh] -translate-x-1/2 overflow-y-auto rounded-2xl surface-warm-tan p-3 text-white">
+    <div role={embedded ? undefined : "dialog"} aria-label="What's here" className={embedded ? "re-case-list text-[hsl(var(--re-ink))]" : "fixed left-1/2 top-14 z-[9990] w-[min(94vw,520px)] max-h-[70vh] -translate-x-1/2 overflow-y-auto rounded-2xl surface-warm-tan p-3 text-white"}>
       <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-sm font-semibold">What's in VR World</h2>
-        <button type="button" aria-label="Close list" onClick={() => setOpen(false)} className="p-1"><X className="h-4 w-4" /></button>
+        <h2 className="text-sm font-semibold">What's here</h2>
+        {!embedded && <button type="button" aria-label="Close list" onClick={() => setOpen(false)} className="p-1"><X className="h-4 w-4" /></button>}
       </div>
       <p className="mb-2 text-[10px] text-white/80">Real Map counts cover the streets loaded around you; walk further to load more.</p>
       {rows.map(([title, list]) => (
