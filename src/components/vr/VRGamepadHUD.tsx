@@ -89,7 +89,7 @@ const UseHint: React.FC = () => {
   return (
     <button type="button" data-exclude-phantom-tap data-testid="vr-use-hint" aria-label={`Use: ${label}`} title={label}
       onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); fireAction('interact', true); }}
-      className="absolute left-1/2 top-[58%] flex -translate-x-1/2 flex-col items-center gap-1 text-white [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.75))]">
+      className="absolute left-1/2 top-[30%] z-10 flex -translate-x-1/2 flex-col items-center gap-1 text-white [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.75))]">
       <span className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-white/90">
         <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={HINT_PATH[k]} /></svg>
       </span>
