@@ -5,6 +5,7 @@
  * grows as items are added, and "Bigger case" adds rows. The member's
  * avatar stands beside the case. Same panel in every VR world.
  */
+import { createPortal } from 'react-dom';
 import React, { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { useStory, readNote, KEYS, NOTES } from '@/lib/vrStory';
 import { QUESTS, getVRQuestSnapshot, itemLabel, loadVRQuests, subscribeVRQuests, type Rarity } from '@/lib/vrQuests';
@@ -111,8 +112,8 @@ export const VRBagPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
   const TABS: [Tab, string][] = [['keys', 'Keys\nTreasures'], ['items', 'Items'], ['files', 'Files'], ['quests', 'Quests']];
 
-  return (
-    <div role="dialog" aria-label="Item bag" className="re-case-screen pointer-events-auto fixed inset-0 z-[70] flex flex-col">
+  return createPortal(
+    <div role="dialog" aria-label="Item bag" className="re-case-screen pointer-events-auto fixed inset-0 flex flex-col">
       {/* Top menu */}
       <div className="re-case-topbar flex items-center gap-1 px-2 py-1.5 sm:gap-3 sm:px-4">
         <div role="tablist" className="flex flex-1 items-center gap-2 overflow-x-auto sm:gap-4">
@@ -167,7 +168,7 @@ export const VRBagPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
               </li>); })}
           </ul>}
         </div>
-        <div className="re-case-portrait hidden w-[28%] max-w-[240px] shrink-0 flex-col items-center justify-end min-[480px]:flex">
+        <div className="re-case-portrait flex w-[26%] max-w-[240px] shrink-0 flex-col items-center justify-end">
           <img src={avatarImg} alt="Your avatar" width={768} height={1152} className="max-h-full w-full object-contain object-bottom" />
           <div className="re-case-ring"><span>{pick.herbs}</span><small>herbs</small></div>
         </div>
@@ -181,7 +182,8 @@ export const VRBagPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         {selItem?.kind === 'herb' && <button type="button" className="re-case-btn" onClick={() => { say(useHerb()); setSel(null); }}>Use</button>}
         {tab === 'items' && <button type="button" className="re-case-btn" onClick={grow}>Bigger case</button>}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 };
 

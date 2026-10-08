@@ -7296,7 +7296,7 @@ html body .vr-gem-core { animation-duration: 4s !important; }
 @media (max-height: 520px) { .vr-shoulder-row { top: 58%; } }
 
 /* ── VR inventory: attaché case (same panel in every VR world) ── */
-.re-case-screen { --re-cell: clamp(26px, 6.4vmin, 46px); --re-steel: 60 3% 22%; --re-line: 70 8% 38%; --re-ink: 48 20% 86%;
+.re-case-screen { z-index: 2147483000; --re-cell: clamp(26px, 6.4vmin, 46px); --re-steel: 60 3% 22%; --re-line: 70 8% 38%; --re-ink: 48 20% 86%;
   background: radial-gradient(ellipse at 40% 45%, hsl(60 4% 16%), hsl(60 5% 6%) 75%); color: hsl(var(--re-ink)); font-family: Georgia, 'Times New Roman', serif; }
 .re-case-topbar { background: linear-gradient(hsl(60 4% 30%), hsl(60 5% 16%)); border-bottom: 2px solid hsl(60 4% 40%); box-shadow: inset 0 1px 0 hsl(60 6% 50%); }
 .re-case-tab { font-style: italic; font-size: clamp(11px, 2.4vmin, 16px); color: hsl(var(--re-ink)); text-shadow: 0 1px 2px hsl(0 0% 0%); }
