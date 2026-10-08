@@ -10,6 +10,7 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { HOUSES } from './PickupHouses';
+import { VillageAnimals } from './VillageAnimals';
 
 const SIZE = 400;
 const rand = (s: number) => { const x = Math.sin(s * 127.1) * 43758.5453; return x - Math.floor(x); };
@@ -117,7 +118,7 @@ const Crows: React.FC = () => {
   const ref = useRef<THREE.InstancedMesh>(null);
   const geo = useMemo(crow, []);
   const o = useMemo(() => new THREE.Object3D(), []);
-  const N = 14;
+  const N = 5; // a few distant crows high above; the near ones live in VillageAnimals
   useFrame(({ clock }) => {
     const m = ref.current; if (!m) return; const t = clock.elapsedTime;
     for (let i = 0; i < N; i++) {
@@ -160,11 +161,9 @@ export const VillageLook: React.FC = () => {
       </mesh>
       <Instances geo={geos.tree} items={lay.trees} />
       <Instances geo={geos.wall} items={lay.walls} />
-      <Instances geo={geos.dog} items={lay.dogs} />
-      <Instances geo={geos.cat} items={lay.cats} />
-      <Instances geo={geos.cow} items={lay.cows} />
       <Church />
       <Crows />
+      <VillageAnimals />
     </>
   );
 };
