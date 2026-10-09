@@ -38,7 +38,7 @@ export const VRMeetChat: React.FC = () => {
 
   const now = Date.now();
   const shown = m.chatOpen ? m.messages.slice(-30) : m.messages.filter((x) => now - x.at < FADE_MS).slice(-5);
-  const submit = () => { if (sendChat(text)) setText(''); };
+  const submit = () => { if (sendChat(text)) { setText(''); window.dispatchEvent(new Event('vr-chat-sent')); } };
   const others = m.players.length;
 
   return (
