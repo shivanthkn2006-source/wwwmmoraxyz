@@ -8,8 +8,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { registerUse } from '@/lib/vrUse';
+import { registerFloor } from '@/lib/vrFloor';
 
-const CX = -70, CZ = 10, S = 24, H = 7, T = 0.8;
+const CX = -70, CZ = 10, S = 24, H = 7, T = 0.8, UP = 4.65;
 const M = {
   stone: new THREE.MeshStandardMaterial({ color: '#5f5b55', roughness: 0.95 }),
   dark: new THREE.MeshStandardMaterial({ color: '#2e2f33', roughness: 0.8 }),
@@ -30,15 +31,16 @@ const Merlons: React.FC<{ len: number; y: number; p: [number, number]; along: 'x
   })}</>
 );
 
-function useDoor(pos: [number, number], label: string) {
+function useDoor(pos: [number, number], label: string, up = false) {
   const { camera } = useThree();
   const [open, setOpen] = useState(false);
   const ref = useRef<THREE.Group>(null);
   useFrame((_, dt) => { if (ref.current) ref.current.rotation.y = THREE.MathUtils.damp(ref.current.rotation.y, open ? -1.6 : 0, 4, dt); });
   useEffect(() => registerUse(() => {
+    if ((camera.position.y > 4) !== up) return null;
     const d = Math.hypot(camera.position.x - pos[0], camera.position.z - pos[1]);
     return { dist: d * 0.6, reach: 2.4, label: `${open ? 'Close' : 'Open'} the ${label}`, run: () => setOpen((v) => !v) };
-  }), [camera, open, pos, label]);
+  }), [camera, open, pos, label, up]);
   return ref;
 }
 
@@ -55,6 +57,14 @@ export const VillageCastle: React.FC = () => {
   const keep = useDoor([CX, CZ + 2 + 1.5], 'keep door');
   const hall = useDoor([CX, CZ - 2.5], 'great hall door');
   const study = useDoor([CX + 0.6, CZ - 4], 'study door');
+  const bed = useDoor([CX, CZ - 3.5], 'bedchamber door', true);
+  // Keep floors: stairs in the entrance hall (right side) rise to the upper storey.
+  useEffect(() => registerFloor((x, z, eyeY) => {
+    const lx = x - CX, lz = z - (CZ - 2);
+    if (Math.abs(lx) > 3.9 || Math.abs(lz) > 3.9) return 0;
+    if (lx > 2.7 && lz > 0.3) return Math.max(0, Math.min(UP, (UP * (3.9 - lz)) / 3.6));
+    return eyeY > 4 ? UP : 0;
+  }), []);
   const h = S / 2;
   return (
     <group position={[CX, 0, CZ]}>
@@ -82,7 +92,21 @@ export const VillageCastle: React.FC = () => {
         <B m={M.stone} p={[-2.6, 6, 4]} s={[2.8, 12, T]} />
         <B m={M.stone} p={[2.6, 6, 4]} s={[2.8, 12, T]} />
         <B m={M.stone} p={[0, 8.25, 4]} s={[2.4, 7.5, T]} />
-        <B m={M.stone} p={[0, 4.5, 0]} s={[8, 0.3, 8]} />
+        {/* upper floor (hole above the stairs) and the stair ramp */}
+        <B m={M.floor} p={[-0.7, 4.5, 0]} s={[6.6, 0.3, 8]} />
+        <B m={M.floor} p={[3.3, 4.5, -2]} s={[1.4, 0.3, 4]} />
+        <mesh material={M.oak} position={[3.3, 2.3, 2.1]} rotation={[0.906, 0, 0]}><boxGeometry args={[1.2, 0.15, 5.84]} /></mesh>
+        {Array.from({ length: 12 }, (_, i) => <B key={i} m={M.stone} p={[3.3, (i + 0.5) * 0.385, 3.75 - i * 0.3]} s={[1.2, 0.08, 0.3]} />)}
+        {/* upper storey: landing / bedchamber with its own door */}
+        <B m={M.stone} p={[-2.5, 6.9, -1.5]} s={[3, 4.5, 0.3]} />
+        <B m={M.stone} p={[2.5, 6.9, -1.5]} s={[3, 4.5, 0.3]} />
+        <group ref={bed} position={[-1, 4.65, -1.5]}><B m={M.oak} p={[1, 1.5, 0]} s={[2, 3, 0.12]} /></group>
+        <B m={M.rug} p={[0, 4.95, -2.8]} s={[2.2, 0.5, 2]} />
+        <B m={M.oak} p={[0, 5.4, -3.8]} s={[2.2, 1.2, 0.15]} />
+        <B m={M.oak} p={[-3, 5.05, -3]} s={[1, 0.8, 0.7]} />
+        <B m={M.rug} p={[-1, 4.67, 1.5]} s={[3, 0.02, 2.5]} />
+        {[-2, 2].map((x) => <B key={`u${x}`} m={M.win} p={[x, 9.5, -3.58]} s={[0.5, 1.2, 0.05]} />)}
+        <pointLight position={[0, 8, 0]} intensity={0.9} distance={9} color="#ffcf8a" />
         <mesh material={M.dark} position={[0, 15.5, 0]} rotation={[0, Math.PI / 4, 0]}><coneGeometry args={[6, 7, 4]} /></mesh>
         <B m={M.rug} p={[0, 0.12, 0]} s={[2, 0.02, 6]} />
         <B m={M.oak} p={[-2, 0.9, -3.2]} s={[2.4, 1.8, 0.8]} />
