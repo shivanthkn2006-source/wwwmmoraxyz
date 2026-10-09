@@ -23,7 +23,7 @@ export function walkStep(i: WalkInput, dt: number, _backTurnLeft: number, _backW
   // no circling). Left/right turn on the spot.
   const turn = (i.left ? 1 : 0) - (i.right ? 1 : 0);
   const yawDelta = turn * TURN_RAD_PS * dt;
-  const move = i.forward || i.backward;
+  const move = i.forward || i.backward || i.left || i.right;
   return { yawDelta, move, backTurnLeft: 0, moveYawOffset: i.backward && !i.forward ? Math.PI : 0 };
 }
 
