@@ -61,7 +61,7 @@ const MapCanvas: React.FC<{ SIZE: number; RANGE: number; names?: boolean; explor
       g.save();
       g.beginPath(); if (rect) rr(g, 2, 2, SIZE - 4, 22); else g.arc(R, R, R - 3, 0, Math.PI * 2); g.clip();
       const bg = g.createRadialGradient(R, R * 0.6, 4, R, R, R); bg.addColorStop(0, 'rgba(255,255,255,0.28)'); bg.addColorStop(1, 'rgba(255,255,255,0.10)'); g.fillStyle = bg; g.fillRect(0, 0, SIZE, SIZE);
-      g.translate(R, R); // north-up map: the arrow turns with you
+      g.translate(R, R); g.rotate(pose.yaw); // heading-up: where you face is always at the top
       const P = (x: number, z: number) => [(x - pose.x) * k, (z - pose.z) * k] as const;
       if (w.mode === 'real' && w.origin.status === 'ready') {
         const o = w.origin.origin;
@@ -99,7 +99,7 @@ const MapCanvas: React.FC<{ SIZE: number; RANGE: number; names?: boolean; explor
           mapBlocks().forEach((b) => b.roads.forEach((r) => {
             if (!r.name || seen.has(r.name)) return; const m = r.pts[Math.floor(r.pts.length / 2)]; const q = toLocal({ lat: m[0], lng: m[1] }, o); const [sx, sy] = P(q.x, q.z);
             if (Math.hypot(sx, sy) > R - 14) return; seen.add(r.name);
-            g.save(); g.translate(sx, sy); g.fillStyle = 'rgba(0,0,0,0.75)'; const tw = g.measureText(r.name).width + 6; g.fillRect(-tw / 2, -7, tw, 12); g.fillStyle = '#ffffff'; g.fillText(r.name, 0, 3); g.restore();
+            g.save(); g.translate(sx, sy); g.rotate(-pose.yaw); g.fillStyle = 'rgba(0,0,0,0.75)'; const tw = g.measureText(r.name).width + 6; g.fillRect(-tw / 2, -7, tw, 12); g.fillStyle = '#ffffff'; g.fillText(r.name, 0, 3); g.restore();
           }));
           g.restore();
         }
@@ -122,25 +122,26 @@ const MapCanvas: React.FC<{ SIZE: number; RANGE: number; names?: boolean; explor
         ALL_PICKUPS.forEach((q) => { if (taken.includes(q.id)) return; const d = Math.hypot(q.pos[0] - pose.x, q.pos[2] - pose.z); if (d < bd) { bd = d; best = [q.pos[0] - pose.x, q.pos[2] - pose.z]; } });
         if (best && bd * k > R - 10) {
           const [dx, dz] = best as [number, number];
-          const a = Math.atan2(dz, dx);
+          const c = Math.cos(pose.yaw), s = Math.sin(pose.yaw);
+          const a = Math.atan2(dx * s + dz * c, dx * c - dz * s);
           g.fillStyle = '#5fb04a'; g.beginPath(); g.arc(R + Math.cos(a) * (R - 9), R + Math.sin(a) * (R - 9), 4, 0, 7); g.fill();
         }
       }
-      // Ring + compass letters (north up)
+      // Ring + compass letters (your heading on top)
       g.strokeStyle = 'rgba(240,236,225,0.9)'; g.lineWidth = 3; g.beginPath(); if (rect) rr(g, 1.5, 1.5, SIZE - 3, 22); else g.arc(R, R, R - 2, 0, 7); g.stroke();
       const frac = Math.min(1, explored.current / GOAL);
       g.strokeStyle = '#5fb04a'; g.lineWidth = 3; g.lineCap = 'round';
       if (frac > 0 && !rect) { g.beginPath(); g.arc(R, R, R - 2, -Math.PI / 2, -Math.PI / 2 + frac * Math.PI * 2); g.stroke(); }
       g.font = 'bold 10px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle';
       ([['N', 0], ['E', Math.PI / 2], ['S', Math.PI], ['W', -Math.PI / 2]] as const).forEach(([l, a]) => {
-        const ang = a - Math.PI / 2;
+        const ang = a + pose.yaw - Math.PI / 2;
         const x = R + Math.cos(ang) * (R - 10), y = R + Math.sin(ang) * (R - 10);
         g.fillStyle = l === 'N' ? '#e3c15a' : '#f0ece1'; g.fillText(l, x, y);
       });
-      // Player arrow turns the same way you turn
+      // Player arrow always points up: the map turns so your heading is on top
       const A = rect ? 1.6 : 1.25;
       g.fillStyle = '#387BF6'; g.strokeStyle = '#ffffff'; g.lineWidth = 1.5; g.shadowColor = 'rgba(56,123,246,0.8)'; g.shadowBlur = 6;
-      g.save(); g.translate(R, R); g.rotate(-pose.yaw); g.beginPath(); g.moveTo(0, -9 * A); g.lineTo(7 * A, 7 * A); g.lineTo(0, 2.5 * A); g.lineTo(-7 * A, 7 * A); g.closePath(); g.fill(); g.stroke(); g.restore(); g.shadowBlur = 0;
+      g.save(); g.translate(R, R); g.beginPath(); g.moveTo(0, -9 * A); g.lineTo(7 * A, 7 * A); g.lineTo(0, 2.5 * A); g.lineTo(-7 * A, 7 * A); g.closePath(); g.fill(); g.stroke(); g.restore(); g.shadowBlur = 0;
     };
     const t = window.setInterval(draw, 100);
     draw();
