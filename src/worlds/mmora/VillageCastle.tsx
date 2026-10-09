@@ -94,7 +94,7 @@ export const VillageCastle: React.FC = () => {
         <group ref={hall} position={[-1, 0, 0]}><B m={M.oak} p={[1, 1.5, 0]} s={[2, 3, 0.12]} /></group>
         <B m={M.stone} p={[0, 2.25, -3.2]} s={[0.3, 4.5, 1.6]} />
         <B m={M.stone} p={[0, 3.75, -1.6]} s={[0.3, 1.5, 1.6]} />
-        <group ref={study} position={[0, 0, -0.8]} rotation={[0, Math.PI / 2, 0]}><B m={M.oak} p={[-0.8, 1.5, 0]} s={[1.6, 3, 0.1]} /></group>
+        <group ref={study} position={[0, 0, -0.8]} rotation={[0, Math.PI / 2, 0]}><B m={M.oak} p={[0.8, 1.5, 0]} s={[1.6, 3, 0.1]} /></group>
         <B m={M.oak} p={[2, 0.8, -3.4]} s={[1.6, 1.6, 0.5]} />
         <B m={M.rug} p={[-2, 0.12, -2]} s={[2.6, 0.02, 3]} />
         <pointLight position={[-2, 3.5, -2]} intensity={0.7} distance={6} color="#ffcf8a" />
