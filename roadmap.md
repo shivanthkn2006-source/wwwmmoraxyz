@@ -1,12 +1,12 @@
 # M'Mora Village / World fixes (Marc, Oct 9)
-- [x] Minimap: north-up, your arrow turns the same way you turn; top compass shows the real facing
-- [x] Look up = camera up, look down = camera down
-- [x] Backward key/button walks straight backwards (no circling)
-- [x] Chat: icon only (no "Chat" text / "0 nearby")
-- [x] Church moved onto dry land (no sea inside), solid walls, medallion on the altar
-- [x] Solid walls: all village houses (door gap only when open), church, castle (incl. upstairs)
-- [ ] Real-time night sky: stars, shooting stars, real moon phase
-- [ ] Location-based weather: rain, thunder sounds, other events
-- [ ] Street-facing front doors with knobs, tap to open
-- [ ] Realistic human walking speed and leg use for everyone
-- [ ] Face camera view + blinking, talking mouth, hand use
+- [x] Mini-map heading-up: your heading on top (East at start), arrow always up
+- [x] Look up/down, straight backward walking, chat icon only
+- [x] MOVE stick and look pad swapped (MOVE right, look pad left)
+- [x] Church on dry land, solid walls everywhere, church collectible
+- [x] Permission window: "Grant permission to enter M'Mora" (no mic/camera/location shown; same requests)
+- [x] Night sky: stars, shooting stars, real moon phase (village)
+- [x] Local weather: rain/drizzle, snow, fog, storms with lightning + thunder and rain sound
+- [x] Brass door knobs + plates on both sides of house doors
+- [x] Human walking/running speed (2.2 / 6 m/s)
+- [x] Face button (left menu): see your own face, blinking, mouth moves when chatting
+- [ ] Checked on a real phone (owner)
