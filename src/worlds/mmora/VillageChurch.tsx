@@ -14,7 +14,7 @@ const W = 10, L = 18, H = 8, T = 0.35;
 
 function glassTex(seed: number) {
   if (typeof document === 'undefined') return null;
-  const c = document.createElement('canvas'); c.width = 64; c.height = 128; const g = c.getContext('2d')!;
+  const c = document.createElement('canvas'); c.width = 64; c.height = 128; const g = c.getContext('2d'); if (!g) return null;
   const cols = ['#b3202a', '#1f4fa8', '#e0b23a', '#2e8a4a', '#7a3aa0'];
   for (let y = 0; y < 128; y += 16) for (let x = 0; x < 64; x += 16) { g.fillStyle = cols[(x / 16 + y / 16 + seed) % 5]; g.fillRect(x, y, 16, 16); }
   g.strokeStyle = '#151515'; g.lineWidth = 2;
