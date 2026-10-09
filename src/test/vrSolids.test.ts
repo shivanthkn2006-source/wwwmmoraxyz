@@ -35,3 +35,16 @@ describe('Real Map buildings are solid', () => {
     expect(resolveMove(0, 0, 1, 0)).toEqual([1, 0]);
   });
 });
+
+import { setSolidGroup, wallPieces } from '@/lib/vrSolids';
+describe('building wall pieces', () => {
+  it('a thin wall stops you, the doorway lets you through, upper-floor walls only block upstairs', () => {
+    __resetWorldForTests(); enterMMora([0, 1.6, 0]); setStaticSolids([]);
+    setSolidGroup('t', [...wallPieces(0, 0, 0, [[-2, 0, 3, 0.4], [2, 0, 3, 0.4]]), ...wallPieces(0, 5, 0, [[0, 0, 6, 0.4]], 4.5)]);
+    expect(resolveMove(-2, 1, -2, -0.1)).toEqual([-2, 1]);       // blocked by wall
+    expect(resolveMove(0, 1, 0, -1)).toEqual([0, -1]);            // through the gap
+    expect(resolveMove(0, 6, 0, 4.5)).toEqual([0, 4.5]);          // ground floor: upstairs wall ignored
+    expect(resolveMove(0, 6, 0, 4.9, 6.2)).toEqual([0, 6]);        // upstairs: blocked
+    setSolidGroup('t', null);
+  });
+});

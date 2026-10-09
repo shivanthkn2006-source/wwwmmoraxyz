@@ -1,10 +1,10 @@
 # M'Mora Village / World fixes (Marc, Oct 9)
-- [ ] Minimap rotates same direction as the avatar turns
-- [ ] Look up arrow = camera up, look down = camera down
-- [ ] Backward key/button walks backwards (no circling)
-- [ ] Remove "Chat" text and "0" count next to chat icon (World + Village)
-- [ ] Church: no sea inside, solid walls, collectible inside
-- [ ] All M'Mora World/Village building walls solid
+- [x] Minimap: north-up, your arrow turns the same way you turn; top compass shows the real facing
+- [x] Look up = camera up, look down = camera down
+- [x] Backward key/button walks straight backwards (no circling)
+- [x] Chat: icon only (no "Chat" text / "0 nearby")
+- [x] Church moved onto dry land (no sea inside), solid walls, medallion on the altar
+- [x] Solid walls: all village houses (door gap only when open), church, castle (incl. upstairs)
 - [ ] Real-time night sky: stars, shooting stars, real moon phase
 - [ ] Location-based weather: rain, thunder sounds, other events
 - [ ] Street-facing front doors with knobs, tap to open
