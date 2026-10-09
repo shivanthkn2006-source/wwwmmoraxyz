@@ -1190,6 +1190,7 @@ const RenderStatsProbe: React.FC = () => {
       geometries: gl.info.memory.geometries, textures: gl.info.memory.textures, meshes,
       heapMB: Math.round(((performance as any).memory?.usedJSHeapSize ?? 0) / 1048576),
       cam: camera.position.toArray().map((v) => Math.round(v * 10) / 10),
+      look: (() => { const e = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ'); return { pitch: Math.round(e.x * 100) / 100, yaw: Math.round(e.y * 100) / 100 }; })(),
     };
     // Dev diagnostics: which branches of the scene hold the most meshes.
     if (import.meta.env.DEV) {
