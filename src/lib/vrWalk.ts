@@ -18,20 +18,13 @@ export interface WalkStep { yawDelta: number; move: boolean; backTurnLeft: numbe
  * One frame of walking. `backTurnLeft` is how much of the about-turn is still
  * owed after Down / S was pressed (π on the first frame of a press).
  */
-export function walkStep(i: WalkInput, dt: number, backTurnLeft: number, backWasDown: boolean): WalkStep {
-  let yawDelta = 0;
-  let left = backTurnLeft;
-  if (i.backward && !backWasDown && !i.forward) left = Math.PI;
-  if (!i.backward) left = 0;
-  if (left > 0) {
-    const s = Math.min(left, BACK_TURN_RAD_PS * dt);
-    yawDelta += s;
-    left -= s;
-  }
+export function walkStep(i: WalkInput, dt: number, _backTurnLeft: number, _backWasDown: boolean): WalkStep {
+  // Down / S steps straight backwards, still facing forward (no about-turn,
+  // no circling). Left/right turn on the spot.
   const turn = (i.left ? 1 : 0) - (i.right ? 1 : 0);
-  yawDelta += turn * TURN_RAD_PS * dt;
-  const move = i.forward || i.left || i.right || i.backward;
-  return { yawDelta, move, backTurnLeft: left, moveYawOffset: i.backward ? left : 0 };
+  const yawDelta = turn * TURN_RAD_PS * dt;
+  const move = i.forward || i.backward;
+  return { yawDelta, move, backTurnLeft: 0, moveYawOffset: i.backward && !i.forward ? Math.PI : 0 };
 }
 
 // ── Stamina ───────────────────────────────────────────────────────────────
