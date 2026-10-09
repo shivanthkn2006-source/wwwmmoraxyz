@@ -1161,7 +1161,7 @@ const CameraTelemetryTracker: React.FC<{ onTelemetry: (telemetry: CameraTelemetr
     frameRef.current += 1;
     if (frameRef.current % 8 !== 0) return;
 
-    const heading = ((THREE.MathUtils.radToDeg(camera.rotation.y) % 360) + 360) % 360;
+    const heading = ((THREE.MathUtils.radToDeg(-camera.rotation.y) % 360) + 360) % 360;
     onTelemetry({
       heading,
       altitude: camera.position.y,
