@@ -40,15 +40,6 @@ export const MMoraBeach: React.FC = () => {
       <SeaLife />
       {night && (
         <>
-          {/* Full moon over the sea */}
-          <mesh position={[0, 70, SHORE_Z - 180]}>
-            <sphereGeometry args={[12, 24, 16]} />
-            <meshBasicMaterial color="#fbf6e4" fog={false} />
-          </mesh>
-          <mesh position={[0, 70, SHORE_Z - 181]}>
-            <sphereGeometry args={[20, 16, 12]} />
-            <meshBasicMaterial color="#f4ecc8" transparent opacity={0.12} depthWrite={false} fog={false} />
-          </mesh>
           {/* Moonlight path spreading across the water */}
           <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.08, SHORE_Z - 90]}>
             <planeGeometry args={[14, 180]} />

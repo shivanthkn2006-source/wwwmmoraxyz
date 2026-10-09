@@ -23,7 +23,9 @@ const AHEAD = 2.8;
 const SKIN = HC.skin, SHIRT = '#22305a', PANTS = '#e4dfd3', SHOE = '#3a2618';
 
 export const ThirdPersonAvatar: React.FC = () => {
-  const { thirdPerson, crouch } = useVRView();
+  const { thirdPerson, crouch, face } = useVRView();
+  const lids = useRef<THREE.Group>(null), mouth = useRef<THREE.Mesh>(null);
+  const blinkAt = useRef(2), talk = useRef(0);
   const { female } = useVRSelf();
   const { camera } = useThree();
   const root = useRef<THREE.Group>(null);
@@ -53,6 +55,8 @@ export const ThirdPersonAvatar: React.FC = () => {
     const onPick = () => { reach.current = 1; };
     window.addEventListener('vr-item-pickup', onPick);
     window.addEventListener('vr-hand-reach', onPick);
+    const onTalk = () => { talk.current = 2.5; };
+    for (const n of ['vr-chat-sent', 'zoe-speaking', 'vr-voice-talking']) window.addEventListener(n, onTalk);
     return () => { window.removeEventListener('vr-item-pickup', onPick); window.removeEventListener('vr-hand-reach', onPick); };
   }, []);
 
@@ -69,7 +73,15 @@ export const ThirdPersonAvatar: React.FC = () => {
     g.visible = !(w.mode === 'real' && (w.aerial || w.chunksLoaded === 0 || ground > 8));
     if (!g.visible) return;
     g.position.set(camera.position.x + fx * AHEAD, ground, camera.position.z + fz * AHEAD);
-    g.rotation.y = yaw + Math.PI;
+    // Face view: turn round to face the camera; normal view: back to the camera.
+    g.rotation.y = face ? yaw : yaw + Math.PI;
+    // Blink every few seconds; mouth moves while you or Zoe talk.
+    blinkAt.current -= d;
+    const closed = blinkAt.current < 0.12;
+    if (blinkAt.current < 0) blinkAt.current = 2 + Math.random() * 3;
+    if (lids.current) lids.current.scale.y = closed ? 1 : 0.05;
+    talk.current = Math.max(0, talk.current - d);
+    if (mouth.current) mouth.current.scale.y = talk.current > 0 ? 1 + Math.abs(Math.sin(performance.now() / 70)) * 3 : 1;
     // Real speed from how far the camera moved.
     const moved = Math.hypot(camera.position.x - last.current.x, camera.position.z - last.current.z) / Math.max(d, 1e-3);
     last.current.copy(camera.position);
@@ -97,6 +109,9 @@ export const ThirdPersonAvatar: React.FC = () => {
       <group ref={hips} position={[0, 0.95, 0]}>
         <mesh position={[0, 0.32, 0]} material={mats.shirt}><boxGeometry args={[0.44, 0.6, 0.25]} /></mesh>
         <mesh position={[0, 0.78, 0]} geometry={female ? HEAD_F : HEAD} material={HUMAN_MATERIAL} />
+        {/* eyelids (blink) and a mouth that opens while talking */}
+        <group ref={lids} position={[0, 0.795, 0.15]}>{[-0.052, 0.052].map((x) => <mesh key={x} position={[x, 0, 0]} material={mats.skin}><boxGeometry args={[0.058, 0.05, 0.012]} /></mesh>)}</group>
+        <mesh ref={mouth} position={[0, 0.712, 0.142]}><boxGeometry args={[0.045, 0.008, 0.01]} /><meshStandardMaterial color="#3a1414" /></mesh>
         {/* stand-up collar with yellow edge */}
         <mesh position={[0, 0.63, 0]} material={mats.shirt}><cylinderGeometry args={[0.085, 0.1, 0.07, 10]} /></mesh>
         <mesh position={[0, 0.665, 0]} material={mats.trim}><torusGeometry args={[0.087, 0.008, 4, 14]} /></mesh>

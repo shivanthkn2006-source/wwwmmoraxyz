@@ -83,7 +83,7 @@ describe('meet tags and rooms', () => {
 
 import { WALK_MPS as W, RUN_MPS as R } from '@/lib/vrWalk';
 describe('movement speed', () => {
-  it('matches the earlier VR explore speed', () => { expect(W).toBe(5); expect(R).toBe(9); });
+  it('walks and runs at human speeds', () => { expect(W).toBe(2.2); expect(R).toBe(6); });
 });
 
 import { walkStep as ws } from '@/lib/vrWalk';

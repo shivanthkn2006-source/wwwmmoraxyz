@@ -14,6 +14,7 @@ import { VillageAnimals } from './VillageAnimals';
 import { VillageChurch } from './VillageChurch';
 import { VillageCastle } from './VillageCastle';
 import { VillageGear } from './VillageGear';
+import { VillageSky } from './VillageSky';
 import { VillageVillagers } from './VillageVillagers';
 
 const SIZE = 400;
@@ -155,6 +156,7 @@ export const VillageLook: React.FC = () => {
       <VillageChurch />
       <VillageCastle />
       <VillageGear />
+      <VillageSky />
       <Crows />
       <VillageAnimals />
       <VillageVillagers />

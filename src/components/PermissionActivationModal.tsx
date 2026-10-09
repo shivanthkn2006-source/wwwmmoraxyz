@@ -141,19 +141,19 @@ export const PermissionActivationModal: React.FC<PermissionActivationModalProps>
           </motion.div>
           
           <DialogTitle className="text-xl">
-            {isComplete ? 'All Set!' : 'Enable MMora Features'}
+            {isComplete ? 'All Set!' : "Grant permission to enter M'Mora"}
           </DialogTitle>
           <DialogDescription className="text-muted-foreground">
             {isComplete 
               ? 'Your permissions are now active'
-              : 'Grant permissions to unlock the full experience'
+              : ''
             }
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6 py-4">
           {/* Permission Icons Grid */}
-          <div className="flex justify-center gap-4">
+          <div className="hidden" aria-hidden>
             {PERMISSION_ITEMS.map((item, index) => {
               const Icon = item.icon;
               const isGranted = grantedPermissions.includes(item.type);
@@ -203,13 +203,13 @@ export const PermissionActivationModal: React.FC<PermissionActivationModalProps>
             >
               <Progress value={progress} className="h-2 permission-progress" />
               <p className="text-xs text-center text-muted-foreground">
-                Requesting {currentStep}...
+                Getting things ready…
               </p>
             </motion.div>
           )}
 
           {/* Features List */}
-          {!isActivating && !isComplete && (
+          {false && (
             <div className="space-y-2">
               {[
                 { icon: Mic, text: 'Talk to Zoe hands-free' },
@@ -247,7 +247,7 @@ export const PermissionActivationModal: React.FC<PermissionActivationModalProps>
                 ) : (
                   <>
                     <Zap className="w-5 h-5 mr-2" />
-                    Enable All Features
+                    Grant permission
                   </>
                 )}
               </Button>

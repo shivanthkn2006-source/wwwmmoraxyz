@@ -1,4 +1,4 @@
-import { useVRView, toggleCrouch } from '@/lib/vrView';
+import { useVRView, toggleCrouch, toggleFaceView } from '@/lib/vrView';
 import { useNight, toggleFlashlight } from './NightMode';
 /**
  * Console-style controls for VR World (Resident Evil mobile layout, trimmed):
@@ -229,7 +229,7 @@ export const VRGamepadHUD: React.FC = () => {
         <Btn round action="camera" label="L" aria="Switch camera" className="h-11 w-11 text-base" />
         <button type="button" aria-label={leftOpen ? 'Hide crouch and light' : 'Show crouch and light'} aria-expanded={leftOpen} data-exclude-phantom-tap onClick={() => { setLeftOpen((v) => !v); setFaceOpen(false); }}
           className={`${ball} h-9 w-9 text-sm`}>{leftOpen ? '◂' : '▸'}</button>
-        {leftOpen && <div className="flex items-center gap-2 [&>button]:mt-0" data-testid="vr-left-menu"><CrouchBtn /><LightBtn /></div>}
+        {leftOpen && <div className="flex items-center gap-2 [&>button]:mt-0" data-testid="vr-left-menu"><CrouchBtn /><LightBtn /><FaceBtn /></div>}
       </div>
       <div className="vr-shoulder-row pointer-events-auto absolute right-3 flex flex-row-reverse items-center gap-2" style={{ transform: `translateY(-50%) scale(${s})`, transformOrigin: 'right center' }}>
         <Btn round action="zoom" label="R" aria="Zoom lens (5X)" className="h-11 w-11 text-base" />
@@ -275,3 +275,10 @@ export const VRGamepadHUD: React.FC = () => {
 };
 
 export default VRGamepadHUD;
+
+/** Face view: your avatar turns round so you see your own face (press again to go back). */
+function FaceBtn() {
+  const v = useVRView();
+  return <button type="button" aria-pressed={v.face} aria-label="Face view" data-exclude-phantom-tap onClick={toggleFaceView}
+    className="pointer-events-auto flex h-9 min-w-9 items-center justify-center rounded-full border border-white/40 px-2 text-xs text-white">{v.face ? 'Back' : 'Face'}</button>;
+}
