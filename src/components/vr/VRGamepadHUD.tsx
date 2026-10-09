@@ -1,5 +1,4 @@
-import { useVRView, toggleFaceView } from '@/lib/vrView';
-import { useVRView, toggleCrouch } from '@/lib/vrView';
+import { useVRView, toggleCrouch, toggleFaceView } from '@/lib/vrView';
 import { useNight, toggleFlashlight } from './NightMode';
 /**
  * Console-style controls for VR World (Resident Evil mobile layout, trimmed):
