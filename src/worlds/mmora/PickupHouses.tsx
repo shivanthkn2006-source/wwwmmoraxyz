@@ -161,7 +161,10 @@ const House: React.FC<{ i: number; open: boolean }> = ({ i, open }) => {
       <ManorFurniture />
       <group ref={door} position={[-0.55, 0, HOUSE_D / 2]}>
         <mesh material={M.door} position={[0.55, 1.1, 0]}><boxGeometry args={[1.1, 2.2, 0.08]} /></mesh>
-        <mesh material={M.knob} position={[0.95, 1.05, 0.06]}><sphereGeometry args={[0.04, 8, 8]} /></mesh>
+        {[0.06, -0.06].map((zz) => <group key={zz} position={[0.92, 1.05, zz]}>
+          <mesh material={M.knob} position={[0, 0, 0]}><boxGeometry args={[0.07, 0.2, 0.012]} /></mesh>
+          <mesh material={M.knob} position={[0, 0, zz > 0 ? 0.035 : -0.035]}><sphereGeometry args={[0.045, 10, 8]} /></mesh>
+        </group>)}
       </group>
       <pointLight position={[0, 2.4, -1]} intensity={0.6} distance={5} color="#ffcf8a" />
       <group position={[0, 0, -1.6]}><SideTable /></group>
