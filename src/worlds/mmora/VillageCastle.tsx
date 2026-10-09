@@ -84,7 +84,7 @@ export const VillageCastle: React.FC = () => {
         ...shut(keep.open, [0, k + 4.45, 2.4, t]),
       ]),
       ...wallPieces(CX, CZ, 0, [
-        [-2.5, k, 3, 0.4], [1.85, k, 1.7, 0.4], ...shut(hall.open, [0, k, 2, 0.4]),
+        [-2.5, k, 3, 0.4], [2.5, k, 3, 0.4], ...shut(hall.open, [0, k, 2, 0.4]),
         [0, k - 3.2, 0.4, 1.6], ...shut(study.open, [0, k - 1.6, 0.4, 1.6]),
       ], 0, G),
       ...wallPieces(CX, CZ, 0, [[-2.5, k - 1.5, 3, 0.4], [2.5, k - 1.5, 3, 0.4], ...shut(bed.open, [0, k - 1.5, 2, 0.4])], UPY),
