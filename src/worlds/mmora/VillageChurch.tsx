@@ -64,7 +64,7 @@ export const VillageChurch: React.FC = () => {
   useFrame((_, dt) => { if (door.current) door.current.rotation.y = THREE.MathUtils.damp(door.current.rotation.y, open ? -1.7 : 0, 4, dt); });
   useEffect(() => registerUse(() => {
     const d = Math.hypot(camera.position.x - doorPos.x, camera.position.z - doorPos.z);
-    return { dist: d, reach: 3.5, label: open ? 'Close the church door' : 'Open the church door', run: () => setOpen((v) => !v) };
+    return { dist: d * 0.6, reach: 2.1, label: open ? 'Close the church door' : 'Open the church door', run: () => setOpen((v) => !v) };
   }), [camera, doorPos, open]);
 
   return (
@@ -78,7 +78,7 @@ export const VillageChurch: React.FC = () => {
       <B m={M.stone} p={[-3.25, H / 2, L / 2]} s={[3.5, H, T]} />
       <B m={M.stone} p={[3.25, H / 2, L / 2]} s={[3.5, H, T]} />
       <B m={M.stone} p={[0, H - 2.25, L / 2]} s={[3, 4.5, T]} />
-      <B m={M.slate} p={[0, H + 2, 0]} s={[5.4, 5.4, L + 0.6]} r={[0, 0, Math.PI / 4]} />
+      <B m={M.slate} p={[0, H + 3.9, 0]} s={[5.4, 5.4, L + 0.6]} r={[0, 0, Math.PI / 4]} />
       <B m={M.stone} p={[0, H - 0.1, 0]} s={[W, 0.2, L]} />
       {/* Bell tower (hollow at the bottom) with spire */}
       <group position={[0, 0, L / 2 + 2.5]}>
