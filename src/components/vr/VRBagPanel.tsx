@@ -15,6 +15,7 @@ import avatarFemaleImg from '@/assets/vr-case-avatar-female.png';
 import { COIN_FACES, splitCoins } from '@/lib/vrCoinLook';
 import { useVRSelf } from '@/lib/vrSelf';
 import { VRWorldList } from './VRWorldList';
+import { GEAR, useGear } from '@/lib/vrGear';
 
 export const CASE_COLS = 10;
 const MIN_ROWS = 6;
@@ -86,6 +87,7 @@ export const VRBagPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [vp, setVp] = useState(() => ({ w: window.innerWidth, h: window.innerHeight }));
   useEffect(() => { const r = () => setVp({ w: window.innerWidth, h: window.innerHeight }); window.addEventListener('resize', r); return () => window.removeEventListener('resize', r); }, []);
   const [tab, setTab] = useState<Tab>('items');
+  const gear = useGear();
   const [sel, setSel] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [saved, setSaved] = useState<Record<string, Pos>>(() => loadJSON(LAYOUT_KEY, {}));
@@ -113,13 +115,35 @@ export const VRBagPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const selItem = items.find((i) => i.id === sel) ?? null;
   const say = (m: string) => { setMsg(m); window.setTimeout(() => setMsg(null), 1800); };
 
-  const moveTo = (x: number, y: number) => {
-    if (!selItem) return;
-    const others = items.filter((i) => i.id !== selItem.id);
-    const want = { ...layout, [selItem.id]: { x, y } };
-    const next = packCase([selItem, ...others], want, CASE_COLS, rows);
-    if (next[selItem.id]?.x !== x || next[selItem.id]?.y !== y) { say("It doesn't fit there"); return; }
+  const moveItem = (it: CaseItem | null, x: number, y: number) => {
+    if (!it) return;
+    const others = items.filter((i) => i.id !== it.id);
+    const want = { ...layout, [it.id]: { x, y } };
+    const next = packCase([it, ...others], want, CASE_COLS, rows);
+    if (next[it.id]?.x !== x || next[it.id]?.y !== y) { say("It doesn't fit there"); return; }
     setSaved(next); localStorage.setItem(LAYOUT_KEY, JSON.stringify(next)); setSel(null);
+  };
+  const moveTo = (x: number, y: number) => moveItem(selItem, x, y);
+  // Press-and-drag: the item follows the finger, then drops on the square under it.
+  const gridRef = React.useRef<HTMLDivElement>(null);
+  const drag = React.useRef<{ it: CaseItem; el: HTMLElement; sx: number; sy: number; moved: boolean } | null>(null);
+  const onDown = (it: CaseItem) => (e: React.PointerEvent<HTMLButtonElement>) => {
+    drag.current = { it, el: e.currentTarget, sx: e.clientX, sy: e.clientY, moved: false };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+  const onMove = (e: React.PointerEvent) => {
+    const d = drag.current; if (!d) return;
+    const dx = e.clientX - d.sx, dy = e.clientY - d.sy;
+    if (!d.moved && Math.hypot(dx, dy) < 6) return;
+    d.moved = true; d.el.style.transform = `translate(${dx}px, ${dy}px)`; d.el.style.zIndex = '5';
+  };
+  const onUp = (e: React.PointerEvent) => {
+    const d = drag.current; drag.current = null; if (!d) return;
+    d.el.style.transform = ''; d.el.style.zIndex = '';
+    if (!d.moved) { setSel((s) => (s === d.it.id ? null : d.it.id)); return; }
+    const r = gridRef.current?.getBoundingClientRect(); if (!r) return;
+    const x = Math.floor((e.clientX - r.left) / cell), y = Math.floor((e.clientY - r.top) / cell);
+    if (x >= 0 && y >= 0 && x < CASE_COLS && y < rows) moveItem(d.it, Math.min(x, CASE_COLS - d.it.w), Math.min(y, rows - d.it.h));
   };
   const grow = () => { const n = Math.min(extra + 2, 20); setExtra(n); localStorage.setItem(EXTRA_KEY, JSON.stringify(n)); };
 
@@ -150,7 +174,7 @@ export const VRBagPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             <>
               <div className="re-case-lid" aria-hidden><span className="re-case-hinge" /><span className="re-case-hinge" /></div>
               <div className="re-case-body overflow-auto" style={{ height: `${rows * cell + 18}px` }}>
-                <div className="re-case-grid" style={{ gridTemplateColumns: `repeat(${CASE_COLS}, var(--re-cell))`, gridTemplateRows: `repeat(${rows}, var(--re-cell))` }} aria-label="Relics">
+                <div ref={gridRef} className="re-case-grid" style={{ gridTemplateColumns: `repeat(${CASE_COLS}, var(--re-cell))`, gridTemplateRows: `repeat(${rows}, var(--re-cell))` }} aria-label="Relics">
                   {Array.from({ length: rows * CASE_COLS }, (_, k) => {
                     const x = k % CASE_COLS, y = Math.floor(k / CASE_COLS);
                     return <button key={`c${k}`} type="button" aria-label={`Square ${x + 1},${y + 1}`} className="re-case-cell" style={{ gridColumn: x + 1, gridRow: y + 1 }} onClick={() => moveTo(x, y)} tabIndex={selItem ? 0 : -1} />;
@@ -158,8 +182,8 @@ export const VRBagPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                   {items.map((it) => {
                     const p = layout[it.id]; if (!p) return null;
                     return (
-                      <button key={it.id} type="button" aria-pressed={sel === it.id} title={it.name} onClick={() => setSel(sel === it.id ? null : it.id)}
-                        className="re-case-item" data-kind={it.kind} style={{ gridColumn: `${p.x + 1} / span ${it.w}`, gridRow: `${p.y + 1} / span ${it.h}` }}>
+                      <button key={it.id} type="button" aria-pressed={sel === it.id} title={it.name} onPointerDown={onDown(it)} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} style={{ touchAction: 'none', gridColumn: `${p.x + 1} / span ${it.w}`, gridRow: `${p.y + 1} / span ${it.h}` }}
+                        className="re-case-item" data-kind={it.kind}>
                         <span className="re-case-art">{it.kind === 'herb' ? <Herb /> : it.kind === 'coin' ? <img src={COIN_FACES[it.face ?? 'gold']} alt="" className="h-full w-full object-contain" draggable={false} /> : it.kind === 'bag' ? <img src={COIN_FACES.bag} alt="" className="h-full w-full object-contain" draggable={false} /> : <Gem rarity={it.rarity!} />}</span>
                         {it.count !== undefined && <span className="re-case-count">{it.count}</span>}
                       </button>
@@ -171,7 +195,7 @@ export const VRBagPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             </>
           )}
           {tab === 'keys' && <div className="re-case-list">{story.keys.length ? story.keys.map((k) => <div key={k} className="re-case-row">🗝️ {KEYS[k]?.name ?? k}<span className="block text-[10px] opacity-70">Opens: {KEYS[k]?.opens.replace(/_/g, ' ')}{story.open.includes(KEYS[k]?.opens) ? ' · used' : ''}</span></div>) : <p>No keys yet. Look around M'Mora Village.</p>}</div>}
-          {tab === 'files' && <div className="re-case-list overflow-y-auto">{story.notes.map((n) => <button key={n} type="button" onClick={() => readNote(n)} className="re-case-row w-full text-left">📜 {NOTES[n]?.title ?? n}</button>)}<VRWorldList embedded /></div>}
+          {tab === 'files' && <div className="re-case-list overflow-y-auto">{(['weapon','armour','quest'] as const).map((k) => <div key={k}><div className="re-case-row font-semibold">{k === 'weapon' ? 'Weapons' : k === 'armour' ? 'Armour' : 'Quest items'}</div>{GEAR.filter((g) => g.kind === k).map((g) => <div key={g.id} className="re-case-row" style={{ opacity: gear.includes(g.id) ? 1 : 0.45 }}>{g.icon} {gear.includes(g.id) ? g.name : '???'}<span className="block text-[10px] opacity-70">{gear.includes(g.id) ? g.detail : 'Not found yet — somewhere in M\'Mora Village'}</span></div>)}</div>)}{story.notes.map((n) => <button key={n} type="button" onClick={() => readNote(n)} className="re-case-row w-full text-left">📜 {NOTES[n]?.title ?? n}</button>)}<VRWorldList embedded /></div>}
           {tab === 'quests' && <ul className="re-case-list" aria-label="Quests">
             {QUESTS.map((q) => { const p = state.progress[q.id] ?? 0; const done = !!state.done[q.id]; return (
               <li key={q.id} data-testid={`quest-${q.id}`} className="re-case-row">
@@ -191,7 +215,7 @@ export const VRBagPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       {/* Name bar + actions */}
       <div className="mx-auto flex w-full max-w-[min(100%,980px)] items-center gap-2 px-2 pb-1 pt-1">
         <div className="re-case-namebar flex-1 truncate" data-testid="bag-closeup">
-          {msg ?? (selItem ? `${selItem.name}${selItem.count !== undefined ? ` ×${selItem.count}` : ''} — ${selItem.detail ?? ''}` : items.length ? 'Tap an item, then tap a square to move it' : 'Walk up to a glowing item and tap Use to pick it up.')}
+          {msg ?? (selItem ? `${selItem.name}${selItem.count !== undefined ? ` ×${selItem.count}` : ''} — ${selItem.detail ?? ''}` : items.length ? 'Drag an item to a square, or tap it then tap a square' : 'Walk up to a glowing item and tap Use to pick it up.')}
         </div>
         {selItem?.kind === 'herb' && <button type="button" className="re-case-btn" onClick={() => { say(useHerb()); setSel(null); }}>Use</button>}
         {tab === 'items' && <button type="button" className="re-case-btn" onClick={grow}>Bigger case</button>}
