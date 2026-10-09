@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import { setVRWorldActive } from '@/lib/vrSession';
+import { floorAt } from '@/lib/vrFloor';
 import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { 
@@ -1074,15 +1075,17 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
     }
 
     if (isGroundLocked.current) {
-      if (jump && camera.position.y <= 1.62) {
+      // Floor under the player: 0 outside, stairs/upper storeys inside buildings.
+      const eye = 1.6 + floorAt(camera.position.x, camera.position.z, camera.position.y);
+      if (jump && camera.position.y <= eye + 0.02) {
         verticalVelocity.current = 5.8;
       }
 
       verticalVelocity.current -= 12 * dt;
       camera.position.y += verticalVelocity.current * dt;
 
-      if (camera.position.y <= 1.6) {
-        camera.position.y = 1.6;
+      if (camera.position.y <= eye) {
+        camera.position.y = eye;
         verticalVelocity.current = 0;
       }
     }
