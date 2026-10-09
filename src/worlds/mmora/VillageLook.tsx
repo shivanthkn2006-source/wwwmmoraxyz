@@ -13,6 +13,7 @@ import { HOUSES } from './PickupHouses';
 import { VillageAnimals } from './VillageAnimals';
 import { VillageChurch } from './VillageChurch';
 import { VillageCastle } from './VillageCastle';
+import { VillageGear } from './VillageGear';
 import { VillageVillagers } from './VillageVillagers';
 
 const SIZE = 400;
@@ -153,6 +154,7 @@ export const VillageLook: React.FC = () => {
       <Instances geo={geos.wall} items={lay.walls} />
       <VillageChurch />
       <VillageCastle />
+      <VillageGear />
       <Crows />
       <VillageAnimals />
       <VillageVillagers />
