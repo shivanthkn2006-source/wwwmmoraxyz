@@ -275,3 +275,10 @@ export const VRGamepadHUD: React.FC = () => {
 };
 
 export default VRGamepadHUD;
+
+/** Face view: your avatar turns round so you see your own face (press again to go back). */
+function FaceBtn() {
+  const v = useVRView();
+  return <button type="button" aria-pressed={v.face} aria-label="Face view" data-exclude-phantom-tap onClick={toggleFaceView}
+    className="pointer-events-auto flex h-9 min-w-9 items-center justify-center rounded-full border border-white/40 px-2 text-xs text-white">{v.face ? 'Back' : 'Face'}</button>;
+}
