@@ -8,8 +8,9 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { registerUse } from '@/lib/vrUse';
+import { setSolidGroup, wallPieces } from '@/lib/vrSolids';
 
-const CZ = -86; // church centre (world z)
+export const CX = -14, CZ = -52; // church centre, on dry land north of the houses (clear of the sea)
 const W = 10, L = 18, H = 8, T = 0.35;
 
 function glassTex(seed: number) {
@@ -60,15 +61,26 @@ export const VillageChurch: React.FC = () => {
   const { camera } = useThree();
   const [open, setOpen] = useState(false);
   const door = useRef<THREE.Group>(null);
-  const doorPos = useMemo(() => new THREE.Vector3(0, 0, CZ + L / 2 + 2.5 + 3), []); // in front of the tower door
+  const doorPos = useMemo(() => new THREE.Vector3(CX, 0, CZ + L / 2 + 2.5 + 3), []); // in front of the tower door
   useFrame((_, dt) => { if (door.current) door.current.rotation.y = THREE.MathUtils.damp(door.current.rotation.y, open ? -1.7 : 0, 4, dt); });
   useEffect(() => registerUse(() => {
     const d = Math.hypot(camera.position.x - doorPos.x, camera.position.z - doorPos.z);
     return { dist: d * 0.6, reach: 2.1, label: open ? 'Close the church door' : 'Open the church door', run: () => setOpen((v) => !v) };
   }), [camera, doorPos, open]);
+  // Solid stone: nave, front wall, tower; the oak door blocks while shut.
+  useEffect(() => {
+    const t = 0.5, tz = L / 2 + 2.5;
+    setSolidGroup('church', wallPieces(CX, CZ, 0, [
+      [-W / 2, 0, t, L], [W / 2, 0, t, L], [0, -L / 2, W, t],
+      [-3.25, L / 2, 3.5, t], [3.25, L / 2, 3.5, t],
+      [-2.35, tz, t, 5], [2.35, tz, t, 5], [-1.75, tz + 2.35, 1.5, t], [1.75, tz + 2.35, 1.5, t],
+      ...(open ? [] : [[0, tz + 2.4, 2, t] as [number, number, number, number]]),
+    ]));
+    return () => setSolidGroup('church', null);
+  }, [open]);
 
   return (
-    <group position={[0, 0, CZ]}>
+    <group position={[CX, 0, CZ]}>
       {/* Nave: hollow stone walls, roof, floor */}
       <B m={M.floor} p={[0, 0.03, 0]} s={[W, 0.06, L]} />
       <B m={M.stone} p={[-W / 2, H / 2, 0]} s={[T, H, L]} />

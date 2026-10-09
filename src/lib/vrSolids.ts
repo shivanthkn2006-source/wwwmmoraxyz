@@ -7,7 +7,8 @@ import { mapBlocks } from '@/worlds/realmap/mapIndex';
 import { toLocal } from '@/worlds/realmap/geo';
 import { getWorldState } from '@/worlds/worldMode';
 
-type Poly = { pts: [number, number][]; minX: number; maxX: number; minZ: number; maxZ: number };
+/** y0/y1: eye heights the wall blocks (default: always). */
+type Poly = { pts: [number, number][]; minX: number; maxX: number; minZ: number; maxZ: number; y0?: number; y1?: number };
 const R = 0.35; // body radius
 let cacheKey = '';
 let polys: Poly[] = [];
@@ -23,8 +24,20 @@ function withBox(pts: [number, number][]): Poly {
   for (const [x, z] of pts) { minX = Math.min(minX, x); maxX = Math.max(maxX, x); minZ = Math.min(minZ, z); maxZ = Math.max(maxZ, z); }
   return { pts, minX, maxX, minZ, maxZ };
 }
+const groups = new Map<string, Poly[]>();
+function rebuild() { extra.length = 0; groups.forEach((l) => extra.push(...l)); }
 /** M'Mora World (or any fixed) solids. */
-export function setStaticSolids(list: Poly[]) { extra.length = 0; extra.push(...list); }
+export function setStaticSolids(list: Poly[]) { setSolidGroup('default', list); }
+/** Each building owns a named group of wall pieces; null removes it. */
+export function setSolidGroup(key: string, list: Poly[] | null) { if (list) groups.set(key, list); else groups.delete(key); rebuild(); }
+/**
+ * Wall pieces for a building at (cx,cz) turned by rot: each [lx, lz, w, d] is a
+ * thin box in the building's own frame; y0/y1 limit which floor it blocks.
+ */
+export function wallPieces(cx: number, cz: number, rot: number, pieces: [number, number, number, number][], y0?: number, y1?: number): Poly[] {
+  const c = Math.cos(rot), s = Math.sin(rot);
+  return pieces.map(([lx, lz, w, d]) => ({ ...boxPoly(cx + lx * c + lz * s, cz - lx * s + lz * c, w, d, rot), y0, y1 }));
+}
 
 function realPolys(): Poly[] {
   const w = getWorldState();
@@ -62,7 +75,7 @@ export function resolveMove(px: number, pz: number, nx: number, nz: number, y = 
   if (y > 8) return [nx, nz]; // flying / aerial view
   const list = getWorldState().mode === 'real' ? realPolys() : extra;
   if (!list.length) return [nx, nz];
-  const near = list.filter((p) => nx > p.minX - 3 && nx < p.maxX + 3 && nz > p.minZ - 3 && nz < p.maxZ + 3);
+  const near = list.filter((p) => (p.y0 === undefined || y >= p.y0) && (p.y1 === undefined || y < p.y1) && nx > p.minX - 3 && nx < p.maxX + 3 && nz > p.minZ - 3 && nz < p.maxZ + 3);
   if (!near.length || !blocked(nx, nz, near)) return [nx, nz];
   if (blocked(px, pz, near)) return [nx, nz]; // already inside (spawned in) — let them walk out
   if (!blocked(nx, pz, near)) return [nx, pz];

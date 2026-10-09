@@ -14,10 +14,10 @@ export const GEAR: Gear[] = [
   { id: 'pistol', kind: 'weapon', name: 'Handgun', icon: '🔫', detail: 'A worn 9mm handgun.', pos: [6, 0.9, 6] },
   { id: 'knife', kind: 'weapon', name: 'Combat Knife', icon: '🔪', detail: 'Short, sharp and reliable.', pos: [-14, 0.9, -8] },
   { id: 'shotgun', kind: 'weapon', name: 'Shotgun', icon: '🪓', detail: 'Hunting shotgun from the castle armoury.', pos: [-70, 0.9, 4] },
-  { id: 'vest', kind: 'armour', name: 'Leather Vest', icon: '🦺', detail: 'Takes the edge off a hit.', pos: [-3, 0.9, -78] },
+  { id: 'vest', kind: 'armour', name: 'Leather Vest', icon: '🦺', detail: 'Takes the edge off a hit.', pos: [-9, 0.9, -34] },
   { id: 'helmet', kind: 'armour', name: 'Iron Helmet', icon: '⛑️', detail: 'Old castle guard helmet.', pos: [-62, 0.9, 14] },
   { id: 'crest', kind: 'quest', name: "Lord's Crest", icon: '🛡️', detail: 'Found in the castle keep. Bears the M\'Mora mark.', pos: [-70, 0.9, 1] },
-  { id: 'medallion', kind: 'quest', name: 'Church Medallion', icon: '🏅', detail: 'Left on the church altar.', pos: [0, 1.7, -93] },
+  { id: 'medallion', kind: 'quest', name: 'Church Medallion', icon: '🏅', detail: 'Left on the church altar.', pos: [-14, 1.7, -59.2] },
   { id: 'map', kind: 'quest', name: 'Old Village Map', icon: '🗺️', detail: 'Marks the church, the castle and the shore.', pos: [16, 0.9, -20] },
 ];
 

@@ -126,7 +126,7 @@ export const VillageLook: React.FC = () => {
   const tex = useMemo(groundTexture, []);
   const geos = useMemo(() => ({ tree: bareTree(), wall: stoneWall(), dog: animal('dog'), cat: animal('cat'), cow: animal('cow') }), []);
   const lay = useMemo(() => {
-    const free = (x: number, z: number) => Math.hypot(x, z) > 12 && HOUSES.every(([hx, hz]) => Math.hypot(x - hx, z - hz) > 7) && !(Math.abs(x) < 10 && z < -70 && z > -102);
+    const free = (x: number, z: number) => Math.hypot(x, z) > 12 && HOUSES.every(([hx, hz]) => Math.hypot(x - hx, z - hz) > 7) && !(x > -22 && x < -6 && z < -34 && z > -64) && Math.hypot(x + 70, z - 10) > 22;
     const trees: [number, number, number, number][] = [];
     for (let i = 0; trees.length < 90 && i < 600; i++) {
       const a = rand(i) * Math.PI * 2, r = 20 + rand(i + 50) * 150, x = Math.cos(a) * r, z = Math.sin(a) * r;

@@ -47,7 +47,7 @@ function villagerGeo(female: boolean, v: number) {
 // Closed loops on open lanes between the houses.
 const ROUTES: [number, number][][] = [
   [[-12, -12], [12, -12], [12, 12], [-12, 12]],
-  [[-52, -50], [52, -50], [52, 50], [-52, 50]],
+  [[-52, -28], [52, -28], [52, 50], [-52, 50]],
   [[0, -26], [24, 0], [0, 32], [-30, 0]],
 ];
 const PEOPLE = [
