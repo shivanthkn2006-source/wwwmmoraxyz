@@ -8,7 +8,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { registerUse } from '@/lib/vrUse';
 import { MMoraSigns } from './MMoraSigns';
-import { setStaticSolids, boxPoly } from '@/lib/vrSolids';
+import { setSolidGroup, wallPieces } from '@/lib/vrSolids';
 import { usePickups, takePickup, isTaken, type Pickup } from '@/lib/vrPickups';
 import { registerLit } from '@/lib/vrLights';
 import { coinMaterial } from '@/lib/vrCoinLook';
@@ -18,7 +18,7 @@ const WINDOW = registerLit(new THREE.MeshStandardMaterial({ color: '#4a5866', em
 
 function stoneTexture(): THREE.Texture | null {
   if (typeof document === 'undefined') return null;
-  const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d')!;
+  const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d'); if (!g) return null;
   g.fillStyle = '#4c4842'; g.fillRect(0, 0, 256, 256);
   for (let y = 0, r = 0; y < 256; y += 28, r++) for (let x = (r % 2) * -24; x < 256; x += 48) {
     const v = 95 + ((x * 7 + y * 13) % 40); g.fillStyle = `rgb(${v},${v - 4},${v - 10})`; g.fillRect(x + 2, y + 2, 44, 24);
@@ -27,7 +27,7 @@ function stoneTexture(): THREE.Texture | null {
 }
 function rugTexture(): THREE.Texture | null {
   if (typeof document === 'undefined') return null;
-  const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d')!;
+  const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'); if (!g) return null;
   g.fillStyle = '#5a1e1a'; g.fillRect(0, 0, 128, 128); g.strokeStyle = '#c49a52'; g.lineWidth = 6; g.strokeRect(8, 8, 112, 112);
   g.strokeStyle = '#2a1c3a'; g.lineWidth = 3; g.strokeRect(20, 20, 88, 88);
   g.fillStyle = '#c49a52'; g.beginPath(); g.moveTo(64, 34); g.lineTo(94, 64); g.lineTo(64, 94); g.lineTo(34, 64); g.closePath(); g.fill();
@@ -176,8 +176,14 @@ export const PickupHouses: React.FC = () => {
   useEffect(() => { try { localStorage.setItem(DOORS_KEY, JSON.stringify(doors)); } catch { /* */ } }, [doors]);
   // Closed houses are solid: you stop at the walls; open the door with Use to walk in.
   useEffect(() => {
-    setStaticSolids(HOUSES.map(([x, z, r], i) => (doors.includes(`h${i}`) ? null : boxPoly(x, z, HOUSE_W, HOUSE_D, r))).filter(Boolean) as ReturnType<typeof boxPoly>[]);
-    return () => setStaticSolids([]);
+    // Every wall is solid; the doorway is only open while the door is open.
+    const side = (HOUSE_W - 1.1) / 2, t = 0.3;
+    setSolidGroup('houses', HOUSES.flatMap(([x, z, r], i) => wallPieces(x, z, r, [
+      [0, -HOUSE_D / 2, HOUSE_W, t], [-HOUSE_W / 2, 0, t, HOUSE_D], [HOUSE_W / 2, 0, t, HOUSE_D],
+      [-(1.1 / 2 + side / 2), HOUSE_D / 2, side, t], [1.1 / 2 + side / 2, HOUSE_D / 2, side, t],
+      ...(doors.includes(`h${i}`) ? [] : [[0, HOUSE_D / 2, 1.1, t] as [number, number, number, number]]),
+    ])));
+    return () => setSolidGroup('houses', null);
   }, [doors]);
 
   useEffect(() => registerUse(() => {

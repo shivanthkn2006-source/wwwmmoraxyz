@@ -17,13 +17,9 @@ describe('human walking', () => {
   it('left arrow turns left', () => {
     expect(walkStep({ ...none, left: true }, 0.1, 0, false).yawDelta).toBeGreaterThan(0);
   });
-  it('down arrow turns around and walks backwards from the first frame', () => {
-    let s = walkStep({ ...none, backward: true }, 0.1, 0, false);
-    expect(s.move).toBe(true);
-    let total = s.yawDelta;
-    for (let k = 0; k < 20; k++) { s = walkStep({ ...none, backward: true }, 0.1, s.backTurnLeft, true); total += s.yawDelta; }
-    expect(total).toBeCloseTo(Math.PI, 3);
-    expect(s.move).toBe(true);
+  it('down arrow walks straight backwards without turning', () => {
+    const s = walkStep({ ...none, backward: true }, 0.1, 0, false);
+    expect(s.move).toBe(true); expect(s.yawDelta).toBe(0); expect(s.moveYawOffset).toBeCloseTo(Math.PI, 5);
   });
   it('no input: no turn, no movement', () => {
     expect(walkStep(none, 0.1, 0, false)).toEqual({ yawDelta: 0, move: false, backTurnLeft: 0, moveYawOffset: 0 });
@@ -92,14 +88,10 @@ describe('movement speed', () => {
 
 import { walkStep as ws } from '@/lib/vrWalk';
 describe('down arrow', () => {
-  it('walks backwards immediately while the camera turns round', () => {
+  it('never circles: camera yaw stays put while held', () => {
     const i = { forward: false, backward: true, left: false, right: false };
-    let s = ws(i, 0.016, 0, false);
-    expect(s.move).toBe(true);
-    // walk heading = camera yaw so far + remaining turn = original yaw + π
-    expect(s.yawDelta + s.moveYawOffset).toBeCloseTo(Math.PI, 5);
-    let yaw = s.yawDelta;
-    for (let k = 0; k < 120; k++) { s = ws(i, 0.016, s.backTurnLeft, true); yaw += s.yawDelta; expect(yaw + s.moveYawOffset).toBeCloseTo(Math.PI, 5); }
-    expect(yaw).toBeCloseTo(Math.PI, 5);
+    let yaw = 0;
+    for (let k = 0; k < 120; k++) { const s = ws(i, 0.016, 0, k > 0); yaw += s.yawDelta; expect(s.moveYawOffset).toBeCloseTo(Math.PI, 5); }
+    expect(yaw).toBe(0);
   });
 });

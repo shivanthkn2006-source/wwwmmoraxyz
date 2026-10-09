@@ -10,7 +10,7 @@ import * as THREE from 'three';
 
 function canvasTex(w: number, h: number, draw: (g: CanvasRenderingContext2D) => void): THREE.Texture | null {
   if (typeof document === 'undefined') return null;
-  const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d')!);
+  const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); if (g) draw(g);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
 }
 

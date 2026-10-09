@@ -718,9 +718,10 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
         camera.position.y = Math.max(camera.position.y - 10, 1.6);
         if (camera.position.y <= 2) isGroundLocked.current = true;
       } else if (action === 'look_up') {
-        camera.rotation.x = Math.max(camera.rotation.x - 0.22, -1.45);
-      } else if (action === 'look_down') {
+        // +x pitch tilts the view up in three.js
         camera.rotation.x = Math.min(camera.rotation.x + 0.22, 1.45);
+      } else if (action === 'look_down') {
+        camera.rotation.x = Math.max(camera.rotation.x - 0.22, -1.45);
       } else if (action === 'look_left') {
         camera.rotation.y += 0.35;
       } else if (action === 'look_right') {
@@ -1189,6 +1190,7 @@ const RenderStatsProbe: React.FC = () => {
       geometries: gl.info.memory.geometries, textures: gl.info.memory.textures, meshes,
       heapMB: Math.round(((performance as any).memory?.usedJSHeapSize ?? 0) / 1048576),
       cam: camera.position.toArray().map((v) => Math.round(v * 10) / 10),
+      look: (() => { const e = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ'); return { pitch: Math.round(e.x * 100) / 100, yaw: Math.round(e.y * 100) / 100 }; })(),
     };
     // Dev diagnostics: which branches of the scene hold the most meshes.
     if (import.meta.env.DEV) {

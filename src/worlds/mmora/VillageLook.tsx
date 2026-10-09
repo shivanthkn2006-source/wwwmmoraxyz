@@ -30,7 +30,7 @@ const VC = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95 
 /** Snow with muddy footpaths from the centre to every house. */
 function groundTexture(): THREE.CanvasTexture {
   const S = 1024, c = document.createElement('canvas'); c.width = c.height = S;
-  const g = c.getContext('2d')!;
+  const g = c.getContext('2d'); if (!g) return null;
   g.fillStyle = '#d9dcdc'; g.fillRect(0, 0, S, S);
   for (let i = 0; i < 9000; i++) { const v = 200 + Math.floor(rand(i) * 45); g.fillStyle = `rgba(${v - 8},${v - 4},${v},0.35)`; g.fillRect(rand(i + 1) * S, rand(i + 2) * S, 2 + rand(i + 3) * 5, 2 + rand(i + 4) * 5); }
   const toPx = (x: number) => (x / SIZE + 0.5) * S;
@@ -126,7 +126,7 @@ export const VillageLook: React.FC = () => {
   const tex = useMemo(groundTexture, []);
   const geos = useMemo(() => ({ tree: bareTree(), wall: stoneWall(), dog: animal('dog'), cat: animal('cat'), cow: animal('cow') }), []);
   const lay = useMemo(() => {
-    const free = (x: number, z: number) => Math.hypot(x, z) > 12 && HOUSES.every(([hx, hz]) => Math.hypot(x - hx, z - hz) > 7) && !(Math.abs(x) < 10 && z < -70 && z > -102);
+    const free = (x: number, z: number) => Math.hypot(x, z) > 12 && HOUSES.every(([hx, hz]) => Math.hypot(x - hx, z - hz) > 7) && !(x > -22 && x < -6 && z < -34 && z > -64) && Math.hypot(x + 70, z - 10) > 22;
     const trees: [number, number, number, number][] = [];
     for (let i = 0; trees.length < 90 && i < 600; i++) {
       const a = rand(i) * Math.PI * 2, r = 20 + rand(i + 50) * 150, x = Math.cos(a) * r, z = Math.sin(a) * r;
