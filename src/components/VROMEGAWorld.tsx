@@ -718,9 +718,10 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
         camera.position.y = Math.max(camera.position.y - 10, 1.6);
         if (camera.position.y <= 2) isGroundLocked.current = true;
       } else if (action === 'look_up') {
-        camera.rotation.x = Math.max(camera.rotation.x - 0.22, -1.45);
-      } else if (action === 'look_down') {
+        // +x pitch tilts the view up in three.js
         camera.rotation.x = Math.min(camera.rotation.x + 0.22, 1.45);
+      } else if (action === 'look_down') {
+        camera.rotation.x = Math.max(camera.rotation.x - 0.22, -1.45);
       } else if (action === 'look_left') {
         camera.rotation.y += 0.35;
       } else if (action === 'look_right') {

@@ -93,7 +93,7 @@ export const VRMeetChat: React.FC = () => {
         </div>
       ) : (
         <button type="button" onClick={() => setChatOpen(true, true)} className="vr-chat-chip pointer-events-auto self-start" aria-label="Open chat">
-          <MessageCircle className="mr-1 inline h-3 w-3" />Chat · {others} nearby{!m.visible && ' · hidden'}{voice.on && ' · 🎙'}
+          <MessageCircle className="inline h-4 w-4" />
         </button>
       )}
     </div>
