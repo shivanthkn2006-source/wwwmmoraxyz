@@ -1,0 +1,93 @@
+/**
+ * M'Mora Village gothic castle: rocky hill skirt, curtain walls with
+ * battlements, four corner towers with spires, a central keep, and a gate
+ * door plus a keep door that open with the Use / door symbol. Box/cone shapes
+ * only, shared materials — cheap on phones.
+ */
+import React, { useEffect, useRef, useState } from 'react';
+import { useFrame, useThree } from '@react-three/fiber';
+import * as THREE from 'three';
+import { registerUse } from '@/lib/vrUse';
+
+const CX = -70, CZ = 10, S = 24, H = 7, T = 0.8;
+const M = {
+  stone: new THREE.MeshStandardMaterial({ color: '#5f5b55', roughness: 0.95 }),
+  dark: new THREE.MeshStandardMaterial({ color: '#2e2f33', roughness: 0.8 }),
+  rock: new THREE.MeshStandardMaterial({ color: '#4a4640', roughness: 1 }),
+  oak: new THREE.MeshStandardMaterial({ color: '#3b2614', roughness: 0.7 }),
+  floor: new THREE.MeshStandardMaterial({ color: '#4d4740', roughness: 0.9 }),
+  rug: new THREE.MeshStandardMaterial({ color: '#5a1414', roughness: 1 }),
+  win: new THREE.MeshBasicMaterial({ color: '#ffcf7a' }),
+};
+const B: React.FC<{ m: THREE.Material; p: [number, number, number]; s: [number, number, number] }> = ({ m, p, s }) => (
+  <mesh material={m} position={p}><boxGeometry args={s} /></mesh>
+);
+
+const Merlons: React.FC<{ len: number; y: number; p: [number, number]; along: 'x' | 'z' }> = ({ len, y, p, along }) => (
+  <>{Array.from({ length: Math.floor(len / 1.6) }, (_, i) => {
+    const o = -len / 2 + 0.8 + i * 1.6;
+    return <B key={i} m={M.stone} p={along === 'x' ? [p[0] + o, y, p[1]] : [p[0], y, p[1] + o]} s={[0.8, 0.9, 0.8]} />;
+  })}</>
+);
+
+function useDoor(pos: [number, number], label: string) {
+  const { camera } = useThree();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<THREE.Group>(null);
+  useFrame((_, dt) => { if (ref.current) ref.current.rotation.y = THREE.MathUtils.damp(ref.current.rotation.y, open ? -1.6 : 0, 4, dt); });
+  useEffect(() => registerUse(() => {
+    const d = Math.hypot(camera.position.x - pos[0], camera.position.z - pos[1]);
+    return { dist: d * 0.6, reach: 2.4, label: `${open ? 'Close' : 'Open'} the ${label}`, run: () => setOpen((v) => !v) };
+  }), [camera, open, pos, label]);
+  return ref;
+}
+
+const Tower: React.FC<{ x: number; z: number }> = ({ x, z }) => (
+  <group position={[x, 0, z]}>
+    <mesh material={M.stone} position={[0, 6, 0]}><cylinderGeometry args={[2, 2.2, 12, 10]} /></mesh>
+    <mesh material={M.dark} position={[0, 15, 0]}><coneGeometry args={[2.4, 6, 10]} /></mesh>
+    <B m={M.win} p={[0, 9, 2.05]} s={[0.4, 0.9, 0.05]} />
+  </group>
+);
+
+export const VillageCastle: React.FC = () => {
+  const gate = useDoor([CX, CZ + S / 2 + 1.5], 'castle gate');
+  const keep = useDoor([CX, CZ + 2 + 1.5], 'keep door');
+  const h = S / 2;
+  return (
+    <group position={[CX, 0, CZ]}>
+      {/* rocky hill skirt */}
+      <mesh material={M.rock} position={[0, -1.5, 0]}><cylinderGeometry args={[S * 0.75, S * 0.95, 4, 14]} /></mesh>
+      <B m={M.floor} p={[0, 0.05, 0]} s={[S, 0.1, S]} />
+      {/* curtain walls (front has a gate gap) */}
+      <B m={M.stone} p={[0, H / 2, -h]} s={[S, H, T]} />
+      <B m={M.stone} p={[-h, H / 2, 0]} s={[T, H, S]} />
+      <B m={M.stone} p={[h, H / 2, 0]} s={[T, H, S]} />
+      <B m={M.stone} p={[-(h + 2) / 2 - 0.5, H / 2, h]} s={[h - 2, H, T]} />
+      <B m={M.stone} p={[(h + 2) / 2 + 0.5, H / 2, h]} s={[h - 2, H, T]} />
+      <B m={M.stone} p={[0, H - 1.25, h]} s={[4, 2.5, T]} />
+      <Merlons len={S} y={H + 0.45} p={[0, -h]} along="x" />
+      <Merlons len={S} y={H + 0.45} p={[0, h]} along="x" />
+      <Merlons len={S} y={H + 0.45} p={[-h, 0]} along="z" />
+      <Merlons len={S} y={H + 0.45} p={[h, 0]} along="z" />
+      {[-h, h].map((x) => [-h, h].map((z) => <Tower key={`${x}${z}`} x={x} z={z} />))}
+      <group ref={gate} position={[-2, 0, h + 0.45]}><B m={M.oak} p={[2, 2.25, 0]} s={[4, 4.5, 0.2]} /></group>
+      {/* central keep with a room inside */}
+      <group position={[0, 0, -2]}>
+        <B m={M.stone} p={[0, 6, -4]} s={[8, 12, T]} />
+        <B m={M.stone} p={[-4, 6, 0]} s={[T, 12, 8]} />
+        <B m={M.stone} p={[4, 6, 0]} s={[T, 12, 8]} />
+        <B m={M.stone} p={[-2.6, 6, 4]} s={[2.8, 12, T]} />
+        <B m={M.stone} p={[2.6, 6, 4]} s={[2.8, 12, T]} />
+        <B m={M.stone} p={[0, 8.25, 4]} s={[2.4, 7.5, T]} />
+        <B m={M.stone} p={[0, 4.5, 0]} s={[8, 0.3, 8]} />
+        <mesh material={M.dark} position={[0, 15.5, 0]} rotation={[0, Math.PI / 4, 0]}><coneGeometry args={[6, 7, 4]} /></mesh>
+        <B m={M.rug} p={[0, 0.12, 0]} s={[2, 0.02, 6]} />
+        <B m={M.oak} p={[0, 0.9, -2.8]} s={[2.4, 1.8, 0.8]} />
+        {[-2, 2].map((x) => <B key={x} m={M.win} p={[x, 7, 4.42]} s={[0.5, 1.2, 0.05]} />)}
+        <pointLight position={[0, 3.5, 0]} intensity={1} distance={10} color="#ffcf8a" />
+        <group ref={keep} position={[-1.2, 0, 4.45]}><B m={M.oak} p={[1.2, 1.5, 0]} s={[2.4, 3, 0.15]} /></group>
+      </group>
+    </group>
+  );
+};

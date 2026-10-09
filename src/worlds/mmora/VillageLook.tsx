@@ -12,6 +12,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { HOUSES } from './PickupHouses';
 import { VillageAnimals } from './VillageAnimals';
 import { VillageChurch } from './VillageChurch';
+import { VillageCastle } from './VillageCastle';
 import { VillageVillagers } from './VillageVillagers';
 
 const SIZE = 400;
@@ -151,6 +152,7 @@ export const VillageLook: React.FC = () => {
       <Instances geo={geos.tree} items={lay.trees} />
       <Instances geo={geos.wall} items={lay.walls} />
       <VillageChurch />
+      <VillageCastle />
       <Crows />
       <VillageAnimals />
       <VillageVillagers />
