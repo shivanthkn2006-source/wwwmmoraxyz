@@ -26,6 +26,9 @@ export const QUESTS: Quest[] = [
   { id: 'memory_keeper', reward: 75, title: 'Memory keeper', description: 'Find 2 memory shards', goal: 2, counts: (i) => i.type === 'memory_shard' },
   { id: 'rare_eye', reward: 100, title: 'Rare eye', description: 'Find a rare, epic or legendary relic', goal: 1, counts: (i) => ['rare', 'epic', 'legendary'].includes(i.rarity) },
   { id: 'treasure_seeker', reward: 100, title: 'Treasure seeker', description: 'Open a treasure chest', goal: 1, counts: (i) => i.type === 'treasure_chest' },
+  { id: 'village_map', reward: 50, title: 'Lost map', description: 'Find the Old Village Map near the lanes', goal: 1, counts: (i) => i.type === 'quest_map' },
+  { id: 'church_medallion', reward: 100, title: 'Altar secret', description: 'Take the Church Medallion from the altar', goal: 1, counts: (i) => i.type === 'quest_medallion' },
+  { id: 'lords_crest', reward: 150, title: "The Lord's crest", description: 'Use the map and medallion to reach the castle keep and take the crest', goal: 1, counts: (i) => i.type === 'quest_crest' },
 ];
 
 export interface QuestState { progress: Record<string, number>; done: Record<string, boolean> }
