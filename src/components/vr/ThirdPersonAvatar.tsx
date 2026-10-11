@@ -11,6 +11,7 @@ import * as THREE from 'three';
 import { getWorldState } from '@/worlds/worldMode';
 import { useVRView, wireVRViewKeys } from '@/lib/vrView';
 import { useVRSelf } from '@/lib/vrSelf';
+import { useEquipped } from '@/lib/vrGear';
 import { HUMAN_COLORS as HC, HUMAN_MATERIAL, headGeometry } from '@/lib/vrHumanLook';
 
 const HEAD = headGeometry();
@@ -103,6 +104,7 @@ export const ThirdPersonAvatar: React.FC = () => {
     if (armR.current) armR.current.rotation.x = s * 0.8 - r * 1.4;
   });
 
+  const eq = useEquipped();
   if (!thirdPerson) return null;
   return (
     <group ref={root}>
@@ -123,12 +125,17 @@ export const ThirdPersonAvatar: React.FC = () => {
         {/* tan belt with steel buckle */}
         <mesh position={[0, 0.03, 0]} material={mats.belt}><boxGeometry args={[0.45, 0.07, 0.26]} /></mesh>
         <mesh position={[0, 0.03, 0.132]} material={mats.steel}><boxGeometry args={[0.07, 0.05, 0.01]} /></mesh>
+        {eq.includes('helmet') && <mesh position={[0, 0.88, 0]}><sphereGeometry args={[0.16, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.55]} /><meshStandardMaterial color="#6b6f74" metalness={0.8} roughness={0.35} /></mesh>}
+        {eq.includes('vest') && <mesh position={[0, 0.34, 0]}><boxGeometry args={[0.47, 0.5, 0.28]} /><meshStandardMaterial color="#5a3a22" roughness={0.8} /></mesh>}
         {([[armL, -0.28], [armR, 0.28]] as const).map(([ref, x], i) => (
           <group key={i} ref={ref} position={[x, 0.58, 0]}>
             <mesh position={[0, -0.17, 0]} material={mats.shirt}><capsuleGeometry args={[0.068, 0.26, 4, 8]} /></mesh>
             <mesh position={[0, -0.33, 0]} material={mats.shirt}><cylinderGeometry args={[0.074, 0.074, 0.06, 8]} /></mesh>
             <mesh position={[0, -0.44, 0]} material={mats.skin}><capsuleGeometry args={[0.052, 0.16, 4, 8]} /></mesh>
             <mesh position={[0, -0.58, 0]} material={mats.skin}><sphereGeometry args={[0.058, 8, 8]} /></mesh>
+            {i === 1 && (eq.includes('shotgun') ? <mesh position={[0, -0.6, 0.3]}><boxGeometry args={[0.05, 0.07, 0.75]} /><meshStandardMaterial color="#3b2a1c" /></mesh>
+              : eq.includes('pistol') ? <mesh position={[0, -0.62, 0.1]}><boxGeometry args={[0.04, 0.09, 0.2]} /><meshStandardMaterial color="#222" metalness={0.7} /></mesh>
+              : eq.includes('knife') ? <mesh position={[0, -0.62, 0.1]}><boxGeometry args={[0.015, 0.03, 0.22]} /><meshStandardMaterial color="#c9d3df" metalness={0.9} /></mesh> : null)}
           </group>
         ))}
         {([[legL, shinL, -0.11], [legR, shinR, 0.11]] as const).map(([leg, shin, x], i) => (

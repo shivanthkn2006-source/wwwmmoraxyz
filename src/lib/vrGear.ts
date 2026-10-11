@@ -35,3 +35,27 @@ export function takeGear(g: Gear) {
   if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('vr-hand-reach'));
   void recordVRCollect({ type: `${g.kind}_${g.id}`, rarity: g.kind === 'quest' ? 'epic' : 'rare' });
 }
+
+// ── Equipping: one weapon, any armour. Changes stats and the avatar's look. ──
+const EKEY = 'vr-gear-equipped';
+let equipped: string[] = (() => { try { return JSON.parse(localStorage.getItem(EKEY) || '[]'); } catch { return []; } })();
+const els = new Set<() => void>();
+export const useEquipped = () => useSyncExternalStore((l) => { els.add(l); return () => els.delete(l); }, () => equipped, () => equipped);
+export const isEquipped = (id: string) => equipped.includes(id);
+export function toggleEquip(id: string) {
+  const g = GEAR.find((x) => x.id === id);
+  if (!g || g.kind === 'quest' || !hasGear(id)) return;
+  equipped = isEquipped(id) ? equipped.filter((x) => x !== id)
+    : [...equipped.filter((x) => !(g.kind === 'weapon' && GEAR.find((y) => y.id === x)?.kind === 'weapon')), id];
+  try { localStorage.setItem(EKEY, JSON.stringify(equipped)); } catch { /* */ }
+  els.forEach((l) => l());
+}
+const STAT: Record<string, { attack?: number; defence?: number }> = {
+  pistol: { attack: 12 }, knife: { attack: 6 }, shotgun: { attack: 25 }, vest: { defence: 15 }, helmet: { defence: 10 },
+};
+/** Base 5 attack / 0 defence plus whatever is equipped. */
+export function gearStats(ids: string[]) {
+  let attack = 5, defence = 0;
+  for (const id of ids) { attack += STAT[id]?.attack ?? 0; defence += STAT[id]?.defence ?? 0; }
+  return { attack, defence };
+}

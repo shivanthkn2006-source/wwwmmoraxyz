@@ -7,6 +7,7 @@ import React, { useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { WALK_MPS } from '@/lib/vrWalk';
 import { headGeometry, HIP_Y, SHOULDER_Y, HIP_X, SHOULDER_X, HUMAN_MATERIAL } from '@/lib/vrHumanLook';
 
 function part(g: THREE.BufferGeometry, color: string, x: number, y: number, z: number) {
@@ -69,14 +70,14 @@ function loopPoint(route: [number, number][], t: number, out: THREE.Vector3) {
 const Villager: React.FC<{ route: [number, number][]; female: boolean; offset: number; v: number }> = ({ route, female, offset, v }) => {
   const g = useMemo(() => villagerGeo(female, v), [female, v]);
   const root = useRef<THREE.Group>(null), l1 = useRef<THREE.Mesh>(null), l2 = useRef<THREE.Mesh>(null), a1 = useRef<THREE.Mesh>(null), a2 = useRef<THREE.Mesh>(null);
-  const st = useRef({ t: offset, pause: 0 });
+  const st = useRef({ t: offset, pause: 0, phase: offset * 9, sw: 0 });
   const p = useMemo(() => new THREE.Vector3(), []), n = useMemo(() => new THREE.Vector3(), []);
   const { camera } = useThree();
   useFrame((s, raw) => {
     const dt = Math.min(raw, 0.05); if (!root.current) return;
     const near = root.current.position.distanceTo(camera.position);
     if (near > 45) return;
-    const speed = female ? 1.1 : 1.25; // m/s, a slow village walk
+    const speed = WALK_MPS * (female ? 0.95 : 1); // same human pace as you
     const total = loopPoint(route, st.current.t, p);
     // Stop and look at you when you come close.
     const stop = near < 3;
@@ -85,7 +86,11 @@ const Villager: React.FC<{ route: [number, number][]; female: boolean; offset: n
     root.current.position.copy(p);
     if (stop) root.current.rotation.y = Math.atan2(camera.position.x - p.x, camera.position.z - p.z);
     else root.current.rotation.y = Math.atan2(n.x - p.x, n.z - p.z);
-    const sw = stop ? 0 : Math.sin(s.clock.elapsedTime * speed * 4.2 + offset * 9) * 0.45;
+    // Stride follows distance walked (about 1.4 m per full step cycle), easing in/out when stopping.
+    if (!stop) st.current.phase += (speed * dt / 1.4) * Math.PI * 2;
+    const target = stop ? 0 : Math.sin(st.current.phase) * 0.5;
+    st.current.sw += (target - st.current.sw) * (1 - Math.exp(-dt * 18));
+    const sw = st.current.sw;
     if (l1.current) l1.current.rotation.x = sw; if (l2.current) l2.current.rotation.x = -sw;
     if (a1.current) a1.current.rotation.x = -sw * 0.7; if (a2.current) a2.current.rotation.x = sw * 0.7;
   });
