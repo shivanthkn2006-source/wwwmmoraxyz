@@ -1185,6 +1185,7 @@ const RenderStatsProbe: React.FC = () => {
     if (t - last.current < 1) return;
     last.current = t;
     let meshes = 0; scene.traverse((o) => { if ((o as THREE.Mesh).isMesh) meshes++; });
+    if (import.meta.env.DEV) (window as any).__vrScene = scene;
     (window as any).__vrStats = {
       t: Math.round(t), calls: gl.info.render.calls, triangles: gl.info.render.triangles,
       geometries: gl.info.memory.geometries, textures: gl.info.memory.textures, meshes,
@@ -1207,7 +1208,6 @@ const RenderStatsProbe: React.FC = () => {
         return [{ path: here, ...d }, ...deeper];
       });
       (window as any).__vrTree = walk(scene, 0, '');
-      (window as any).__vrScene = scene;
     }
   });
   return null;
