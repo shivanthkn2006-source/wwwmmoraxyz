@@ -134,7 +134,7 @@ export const VRGamepadHUD: React.FC = () => {
 
   // Quest finished: toast + strong rumble (the bell alert is sent by the quest store).
   useEffect(() => {
-    const on = (e: Event) => { say(`Quest complete: ${(e as CustomEvent).detail?.title ?? ''}`, 2600); rumble('quest'); try { navigator.vibrate?.([30, 60, 30]); } catch { /* */ } };
+    const on = (e: Event) => { { const d = (e as CustomEvent).detail ?? {}; say(`Quest complete: ${d.title ?? ''}${d.reward ? ` · ${d.reward}` : ''}`, 3400); }; rumble('quest'); try { navigator.vibrate?.([30, 60, 30]); } catch { /* */ } };
     window.addEventListener('vr-quest-complete', on);
     return () => window.removeEventListener('vr-quest-complete', on);
   }, []);
