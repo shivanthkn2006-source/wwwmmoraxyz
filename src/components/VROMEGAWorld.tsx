@@ -1180,11 +1180,16 @@ const CameraTelemetryTracker: React.FC<{ onTelemetry: (telemetry: CameraTelemetr
 const RenderStatsProbe: React.FC = () => {
   const { gl, scene, camera } = useThree();
   const last = useRef(0);
+  const meshCount = useRef(-1);
   useFrame(({ clock }) => {
     const t = clock.elapsedTime;
     if (t - last.current < 1) return;
     last.current = t;
-    let meshes = 0; scene.traverse((o) => { if ((o as THREE.Mesh).isMesh) meshes++; });
+    // Walking the whole scene is costly (thousands of objects), so count only every 5 s.
+    const tick = Math.round(t);
+    if (tick % 5 === 0 || meshCount.current < 0) { let n = 0; scene.traverse((o) => { if ((o as THREE.Mesh).isMesh) n++; }); meshCount.current = n; }
+    const meshes = meshCount.current;
+    if (import.meta.env.DEV) (window as any).__vrScene = scene;
     (window as any).__vrStats = {
       t: Math.round(t), calls: gl.info.render.calls, triangles: gl.info.render.triangles,
       geometries: gl.info.memory.geometries, textures: gl.info.memory.textures, meshes,
@@ -1193,7 +1198,7 @@ const RenderStatsProbe: React.FC = () => {
       look: (() => { const e = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ'); return { pitch: Math.round(e.x * 100) / 100, yaw: Math.round(e.y * 100) / 100 }; })(),
     };
     // Dev diagnostics: which branches of the scene hold the most meshes.
-    if (import.meta.env.DEV) {
+    if (import.meta.env.DEV && Math.round(t) % 10 === 0) {
       const describe = (root: THREE.Object3D) => {
         let n = 0; const kinds: Record<string, number> = {};
         root.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh) { n++; const k = (m.geometry as any)?.type ?? '?'; kinds[k] = (kinds[k] ?? 0) + 1; } });

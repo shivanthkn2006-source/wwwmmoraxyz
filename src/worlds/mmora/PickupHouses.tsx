@@ -124,6 +124,43 @@ export const ALL_PICKUPS: Pickup[] = [
   ...OUTDOOR_HERBS.map(([x, z], i): Pickup => ({ id: `path-herb${i}`, kind: 'herb', amount: 1, pos: [x, 0, z] })),
 ];
 
+/**
+ * Rooms inside a house are drawn only while you are within ~16 m of it
+ * (hidden again past 20 m). Eight furnished rooms drawn at once were most of
+ * the village's draw calls and made walking stutter on phones.
+ */
+const NearOnly: React.FC<{ x: number; z: number; children: React.ReactNode }> = ({ x, z, children }) => {
+  const { camera } = useThree();
+  const [on, setOn] = React.useState(false);
+  const onRef = useRef(false);
+  useFrame(() => {
+    const d = Math.hypot(camera.position.x - x, camera.position.z - z);
+    if (!onRef.current && d < 16) { onRef.current = true; setOn(true); }
+    else if (onRef.current && d > 20) { onRef.current = false; setOn(false); }
+  });
+  return on ? <>{children}</> : null;
+};
+
+/**
+ * One warm room light that sits in whichever house you are nearest. Eight
+ * always-on point lights made every surface in the village compute eight
+ * extra lights per pixel; a single moving light keeps the look indoors.
+ */
+const RoomLight: React.FC = () => {
+  const { camera } = useThree();
+  const ref = useRef<THREE.PointLight>(null);
+  const v = React.useMemo(() => new THREE.Vector3(), []);
+  useFrame(() => {
+    let best = Infinity, bi = 0;
+    HOUSES.forEach(([x, z], i) => { const d = Math.hypot(camera.position.x - x, camera.position.z - z); if (d < best) { best = d; bi = i; } });
+    const [x, z, r] = HOUSES[bi];
+    // local (0, 2.4, -1) rotated by the house's turn
+    v.set(x + Math.sin(r) * -1, 2.4, z + Math.cos(r) * -1);
+    if (ref.current) { ref.current.position.copy(v); ref.current.intensity = best < 20 ? 0.6 : 0; }
+  });
+  return <pointLight ref={ref} intensity={0} distance={5} color="#ffcf8a" />;
+};
+
 const House: React.FC<{ i: number; open: boolean }> = ({ i, open }) => {
   const [x, z, r] = HOUSES[i];
   const door = useRef<THREE.Group>(null);
@@ -150,6 +187,7 @@ const House: React.FC<{ i: number; open: boolean }> = ({ i, open }) => {
       <mesh material={M.snow} position={[0, HOUSE_H + 0.2 + ROOF_RISE, 0]}><boxGeometry args={[0.35, 0.12, HOUSE_D + 0.6]} /></mesh>
       {([[-1, -1], [1, -1], [-1, 1], [1, 1]] as const).map(([a, b], k) => <mesh key={`b${k}`} material={M.beam} position={[a * (HOUSE_W / 2 + 0.06), HOUSE_H / 2, b * (HOUSE_D / 2 + 0.06)]}><boxGeometry args={[0.22, HOUSE_H, 0.22]} /></mesh>)}
       <mesh material={M.beam} position={[0, HOUSE_H - 0.05, HOUSE_D / 2 + 0.12]}><boxGeometry args={[HOUSE_W + 0.2, 0.2, 0.08]} /></mesh>
+      <NearOnly x={x} z={z}>
       {/* Interior: wood panelling, patterned rug, stone fireplace with fire, chair */}
       <mesh material={M.panel} position={[0, 0.6, -HOUSE_D / 2 + 0.12]}><boxGeometry args={[HOUSE_W - 0.3, 1.2, 0.04]} /></mesh>
       <group position={[HOUSE_W / 2 - 0.45, 0, -0.6]} rotation={[0, -Math.PI / 2, 0]}>
@@ -159,6 +197,8 @@ const House: React.FC<{ i: number; open: boolean }> = ({ i, open }) => {
         <CarvedMantel />
       </group>
       <ManorFurniture />
+        <group position={[0, 0, -1.6]}><SideTable /></group>
+      </NearOnly>
       <group ref={door} position={[-0.55, 0, HOUSE_D / 2]}>
         <mesh material={M.door} position={[0.55, 1.1, 0]}><boxGeometry args={[1.1, 2.2, 0.08]} /></mesh>
         {[0.06, -0.06].map((zz) => <group key={zz} position={[0.92, 1.05, zz]}>
@@ -166,8 +206,6 @@ const House: React.FC<{ i: number; open: boolean }> = ({ i, open }) => {
           <mesh material={M.knob} position={[0, 0, zz > 0 ? 0.035 : -0.035]}><sphereGeometry args={[0.045, 10, 8]} /></mesh>
         </group>)}
       </group>
-      <pointLight position={[0, 2.4, -1]} intensity={0.6} distance={5} color="#ffcf8a" />
-      <group position={[0, 0, -1.6]}><SideTable /></group>
     </group>
   );
 };
@@ -211,6 +249,7 @@ export const PickupHouses: React.FC = () => {
   return (
     <group>
       {HOUSES.map((_, i) => <House key={i} i={i} open={doors.includes(`h${i}`)} />)}
+      <RoomLight />
       {HOUSES.map(([x, z], i) => {
         const herb = !p.taken.includes(`house${i}-herb`), coin = !p.taken.includes(`house${i}-coin`);
         return <React.Fragment key={`g${i}`}>

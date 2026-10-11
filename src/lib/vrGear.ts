@@ -71,3 +71,41 @@ export function gearStats(ids: string[], lvl = level) {
   for (const id of ids) { attack += STAT[id]?.attack ?? 0; defence += STAT[id]?.defence ?? 0; }
   return { attack, defence };
 }
+
+// ── Account copy: level, found items and equipped items follow the member to any device. ──
+let syncTimer: number | undefined;
+let loadedFor: string | null = null;
+async function uid() {
+  const { supabase } = await import('@/integrations/supabase/client');
+  const { data } = await supabase.auth.getSession();
+  return { supabase, id: data.session?.user?.id ?? null };
+}
+function pushSoon() {
+  if (typeof window === 'undefined') return;
+  window.clearTimeout(syncTimer);
+  syncTimer = window.setTimeout(async () => {
+    try {
+      const { supabase, id } = await uid(); if (!id) return;
+      await supabase.from('vr_player_progress' as never).upsert({ user_id: id, level, gear: owned, equipped, updated_at: new Date().toISOString() } as never, { onConflict: 'user_id' });
+    } catch { /* offline: retried on the next change */ }
+  }, 1500);
+}
+/** Merge the account copy with this device (keeps the higher level and every item found anywhere). */
+export async function loadGearProgress() {
+  try {
+    const { supabase, id } = await uid(); if (!id || loadedFor === id) return;
+    loadedFor = id;
+    const { data } = await supabase.from('vr_player_progress' as never).select('level,gear,equipped').eq('user_id', id).maybeSingle();
+    const row = data as { level: number; gear: string[]; equipped: string[] } | null;
+    if (row) {
+      owned = [...new Set([...owned, ...row.gear])];
+      if (!equipped.length) equipped = row.equipped.filter((x) => owned.includes(x));
+      level = Math.max(level, row.level);
+      try { localStorage.setItem(KEY, JSON.stringify(owned)); localStorage.setItem(EKEY, JSON.stringify(equipped)); localStorage.setItem(LKEY, String(level)); } catch { /* */ }
+      ls.forEach((l) => l()); els.forEach((l) => l()); lls.forEach((l) => l());
+    }
+    pushSoon();
+  } catch { /* offline */ }
+}
+// Any change on this device is copied to the account.
+ls.add(pushSoon); els.add(pushSoon); lls.add(pushSoon);
