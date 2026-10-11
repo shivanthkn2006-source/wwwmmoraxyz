@@ -79,7 +79,7 @@ type Tab = 'items' | 'keys' | 'files' | 'quests';
 
 export const VRBagPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const snap = useSyncExternalStore(subscribeVRQuests, getVRQuestSnapshot, getVRQuestSnapshot);
-  useEffect(() => { void loadVRQuests(); }, []);
+  useEffect(() => { void loadVRQuests(); void import('@/lib/vrGear').then((m) => m.loadGearProgress()); }, []);
   const { state, bag } = snap;
   const story = useStory();
   const pick = usePickups();
