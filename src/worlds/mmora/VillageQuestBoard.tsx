@@ -15,6 +15,7 @@ const CHAIN = [
 ];
 
 export const VillageQuestBoard: React.FC = () => {
+  React.useEffect(() => { void import('@/lib/vrGear').then((m) => m.loadGearProgress()); void import('@/lib/vrQuests').then((m) => m.loadVRQuests()); }, []);
   const owned = useGear();
   const { state } = useSyncExternalStore(subscribeVRQuests, getVRQuestSnapshot, getVRQuestSnapshot);
   const rows = CHAIN.map((c) => ({ q: QUESTS.find((x) => x.id === c.quest)!, g: GEAR.find((x) => x.id === c.gear)!, done: owned.includes(c.gear) || !!state.done[c.quest] }));
