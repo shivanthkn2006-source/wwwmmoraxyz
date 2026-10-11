@@ -66,13 +66,23 @@ const slot = () => new Promise<void>((r) => { if (running < 2) { running++; r();
 const release = () => { running--; waiting.shift()?.(); };
 
 /** Shared backend cache: blocks other members already downloaded. */
+// When the backend is busy (503 etc.) skip the shared cache for a while and
+// go straight to the map servers, instead of hammering it on every block.
+let sharedDownUntil = 0;
+export const sharedCacheDown = () => Date.now() < sharedDownUntil;
+function noteSharedError(error: unknown) {
+  const status = (error as { context?: { status?: number } } | null)?.context?.status;
+  if (!status || status >= 500) sharedDownUntil = Date.now() + 60_000;
+}
 async function sharedGet(key: string): Promise<OsmChunk | null> {
+  if (sharedCacheDown()) return null;
   try {
     const { data, error } = await supabase.functions.invoke('osm-tile', { body: { action: 'get', key } });
-    if (error || !data?.data) return null;
+    if (error) { noteSharedError(error); return null; }
+    if (!data?.data) return null;
     loaderStats.shared++;
     return { ...(data.data as OsmChunk), fetchedAt: Date.now() };
-  } catch { return null; }
+  } catch (e) { noteSharedError(e); return null; }
 }
 /** Shared-cache limits (osm-tile rejects anything bigger, which silently kept dense city blocks like Chennai unshared). */
 export function trimForShare(c: Pick<OsmChunk, 'buildings' | 'roads' | 'pois' | 'v' | 'areas' | 'waterways'>) {
@@ -88,7 +98,9 @@ export function trimForShare(c: Pick<OsmChunk, 'buildings' | 'roads' | 'pois' | 
   };
 }
 function sharedPut(key: string, c: OsmChunk) {
-  void supabase.functions.invoke('osm-tile', { body: { action: 'put', key, data: trimForShare(c) } }).catch(() => {});
+  if (sharedCacheDown()) return;
+  void supabase.functions.invoke('osm-tile', { body: { action: 'put', key, data: trimForShare(c) } })
+    .then(({ error }) => { if (error) noteSharedError(error); }).catch(noteSharedError);
 }
 
 async function fetchMirrors(query: string, cap = MAX_BUILDINGS): Promise<OsmChunk | null> {
