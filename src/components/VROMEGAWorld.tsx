@@ -1207,6 +1207,7 @@ const RenderStatsProbe: React.FC = () => {
         return [{ path: here, ...d }, ...deeper];
       });
       (window as any).__vrTree = walk(scene, 0, '');
+      (window as any).__vrScene = scene;
     }
   });
   return null;
