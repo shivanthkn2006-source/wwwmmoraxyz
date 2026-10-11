@@ -31,6 +31,27 @@ export const QUESTS: Quest[] = [
   { id: 'lords_crest', reward: 150, title: "The Lord's crest", description: 'Use the map and medallion to reach the castle keep and take the crest', goal: 1, counts: (i) => i.type === 'quest_crest' },
 ];
 
+/** Extra in-game reward per quest: coins, a level-up, and/or the next quest it opens. */
+export const QUEST_REWARDS: Record<string, { coins?: number; levelUp?: boolean; unlocks?: string }> = {
+  village_map: { coins: 20, unlocks: 'church_medallion' },
+  church_medallion: { coins: 50, unlocks: 'lords_crest' },
+  lords_crest: { coins: 100, levelUp: true },
+  relic_hunter: { coins: 10 }, memory_keeper: { coins: 15 }, rare_eye: { levelUp: true }, treasure_seeker: { coins: 25 },
+};
+export function rewardText(id: string) {
+  const r = QUEST_REWARDS[id]; if (!r) return '';
+  const nextTitle = r.unlocks ? QUESTS.find((q) => q.id === r.unlocks)?.title : '';
+  return [r.coins ? `+${r.coins} coins` : '', r.levelUp ? 'Level up' : '', nextTitle ? `Opens "${nextTitle}"` : ''].filter(Boolean).join(' · ');
+}
+async function grantReward(id: string) {
+  const r = QUEST_REWARDS[id]; if (!r) return;
+  try {
+    if (r.coins) (await import('@/lib/vrPickups')).addCoins(r.coins);
+    if (r.levelUp) (await import('@/lib/vrGear')).levelUp();
+  } catch { /* reward is best-effort; never break the game */ }
+  window.dispatchEvent(new CustomEvent('vr-quest-reward-local', { detail: { id, text: rewardText(id) } }));
+}
+
 export interface QuestState { progress: Record<string, number>; done: Record<string, boolean> }
 
 /** Pure: apply one pickup; returns the new state and quests that just finished. */
@@ -92,7 +113,8 @@ export async function recordVRCollect(item: CollectedItem): Promise<Quest[]> {
   state = next;
   emit();
   for (const q of completed) {
-    window.dispatchEvent(new CustomEvent('vr-quest-complete', { detail: { id: q.id, title: q.title } }));
+    window.dispatchEvent(new CustomEvent('vr-quest-complete', { detail: { id: q.id, title: q.title, reward: rewardText(q.id) } }));
+    void grantReward(q.id);
   }
   try {
     const uid = await currentUserId();
