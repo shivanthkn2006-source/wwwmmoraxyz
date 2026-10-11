@@ -7,7 +7,13 @@ import React, { useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { WALK_MPS } from '@/lib/vrWalk';
+import { WALK_MPS, RUN_MPS } from '@/lib/vrWalk';
+import { registerUse } from '@/lib/vrUse';
+import { GEAR, getEquipped, gearStats } from '@/lib/vrGear';
+import { playPickup } from '@/lib/vrSfx';
+
+const VILLAGER_HP = 60;
+const RESPAWN_S = 60;
 import { headGeometry, HIP_Y, SHOULDER_Y, HIP_X, SHOULDER_X, HUMAN_MATERIAL } from '@/lib/vrHumanLook';
 
 function part(g: THREE.BufferGeometry, color: string, x: number, y: number, z: number) {
@@ -70,13 +76,40 @@ function loopPoint(route: [number, number][], t: number, out: THREE.Vector3) {
 const Villager: React.FC<{ route: [number, number][]; female: boolean; offset: number; v: number }> = ({ route, female, offset, v }) => {
   const g = useMemo(() => villagerGeo(female, v), [female, v]);
   const root = useRef<THREE.Group>(null), l1 = useRef<THREE.Mesh>(null), l2 = useRef<THREE.Mesh>(null), a1 = useRef<THREE.Mesh>(null), a2 = useRef<THREE.Mesh>(null);
-  const st = useRef({ t: offset, pause: 0, phase: offset * 9, sw: 0 });
+  const st = useRef({ t: offset, pause: 0, phase: offset * 9, sw: 0, hp: VILLAGER_HP, hostile: false, down: 0, hitCd: 0, flash: 0 });
+  const hpBar = useRef<THREE.Mesh>(null);
   const p = useMemo(() => new THREE.Vector3(), []), n = useMemo(() => new THREE.Vector3(), []);
   const { camera } = useThree();
   useFrame((s, raw) => {
     const dt = Math.min(raw, 0.05); if (!root.current) return;
+    const c = st.current;
+    if (c.down > 0) {
+      // knocked down: lie on the ground, get up later with full health
+      c.down -= dt; root.current.rotation.x = -Math.PI / 2; root.current.position.y = 0.2;
+      if (c.down <= 0) { c.hp = VILLAGER_HP; root.current.rotation.x = 0; root.current.position.y = 0; }
+      if (hpBar.current) hpBar.current.visible = false;
+      return;
+    }
+    if (hpBar.current) { hpBar.current.visible = c.hp < VILLAGER_HP; hpBar.current.scale.x = Math.max(0.01, c.hp / VILLAGER_HP); }
     const near = root.current.position.distanceTo(camera.position);
-    if (near > 45) return;
+    if (near > 45) { c.hostile = false; return; }
+    if (c.hostile) {
+      // chase you and swing; Defence softens each hit
+      const dx = camera.position.x - root.current.position.x, dz = camera.position.z - root.current.position.z, dd = Math.hypot(dx, dz) || 1;
+      root.current.rotation.y = Math.atan2(dx, dz);
+      if (dd > 1.3) { root.current.position.x += (dx / dd) * RUN_MPS * 0.7 * dt; root.current.position.z += (dz / dd) * RUN_MPS * 0.7 * dt; c.phase += dt * 11; }
+      c.hitCd -= dt;
+      if (dd <= 1.6 && c.hitCd <= 0) {
+        c.hitCd = 1.4;
+        const { defence } = gearStats(getEquipped());
+        window.dispatchEvent(new CustomEvent('vr-damage', { detail: { amount: Math.max(2, Math.round(12 * (1 - defence / 60))) } }));
+      }
+      if (dd > 25) c.hostile = false;
+      const sw = Math.sin(c.phase) * 0.6;
+      if (l1.current) l1.current.rotation.x = sw; if (l2.current) l2.current.rotation.x = -sw;
+      if (a1.current) a1.current.rotation.x = -sw; if (a2.current) a2.current.rotation.x = c.hitCd > 1.1 ? -1.6 : sw;
+      return;
+    }
     const speed = WALK_MPS * (female ? 0.95 : 1); // same human pace as you
     const total = loopPoint(route, st.current.t, p);
     // Stop and look at you when you come close.
@@ -94,6 +127,23 @@ const Villager: React.FC<{ route: [number, number][]; female: boolean; offset: n
     if (l1.current) l1.current.rotation.x = sw; if (l2.current) l2.current.rotation.x = -sw;
     if (a1.current) a1.current.rotation.x = -sw * 0.7; if (a2.current) a2.current.rotation.x = sw * 0.7;
   });
+  React.useEffect(() => registerUse(() => {
+    const r = root.current; if (!r || st.current.down > 0) return null;
+    const weapon = getEquipped().find((id) => GEAR.find((g) => g.id === id)?.kind === 'weapon');
+    if (!weapon) return null;
+    const d = Math.hypot(camera.position.x - r.position.x, camera.position.z - r.position.z);
+    if (d > 2.6) return null;
+    return { dist: d, reach: 2.6, label: 'Attack', run: () => {
+      const { attack } = gearStats(getEquipped());
+      const c = st.current; c.hostile = true; c.flash = 0.25;
+      c.hp = Math.max(0, c.hp - attack);
+      window.dispatchEvent(new CustomEvent('vr-hand-reach'));
+      if (c.hp <= 0) {
+        c.down = RESPAWN_S; c.hostile = false;
+        void import('@/lib/vrPickups').then((m) => m.addCoins(5)); playPickup('coin');
+      }
+    } };
+  }), [camera]);
   useMemo(() => loopPoint(route, offset, p), [route, offset, p]);
   return (
     <group ref={root} position={p.toArray()}>
@@ -101,6 +151,7 @@ const Villager: React.FC<{ route: [number, number][]; female: boolean; offset: n
       <mesh ref={l1} geometry={g.leg} material={HUMAN_MATERIAL} position={[-HIP_X, HIP_Y, 0]} />
       <mesh ref={l2} geometry={g.leg} material={HUMAN_MATERIAL} position={[HIP_X, HIP_Y, 0]} />
       <mesh ref={a1} geometry={g.arm} material={HUMAN_MATERIAL} position={[-SHOULDER_X - (female ? 0 : 0.02), SHOULDER_Y, 0]} />
+      <mesh ref={hpBar} position={[0, 2.15, 0]} visible={false}><planeGeometry args={[0.6, 0.06]} /><meshBasicMaterial color="#c0392b" side={THREE.DoubleSide} /></mesh>
       <mesh ref={a2} geometry={g.arm} material={HUMAN_MATERIAL} position={[SHOULDER_X + (female ? 0 : 0.02), SHOULDER_Y, 0]} />
     </group>
   );

@@ -6,7 +6,7 @@
 import React, { useSyncExternalStore } from 'react';
 import { Html } from '@react-three/drei';
 import { GEAR, useGear } from '@/lib/vrGear';
-import { QUESTS, getVRQuestSnapshot, subscribeVRQuests } from '@/lib/vrQuests';
+import { QUESTS, getVRQuestSnapshot, subscribeVRQuests, rewardText } from '@/lib/vrQuests';
 
 const CHAIN = [
   { quest: 'village_map', gear: 'map' },
@@ -28,7 +28,7 @@ export const VillageQuestBoard: React.FC = () => {
             <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>Quest board</div>
             {rows.map((r) => (
               <div key={r.q.id} style={{ opacity: r.done ? 0.5 : 1, textDecoration: r.done ? 'line-through' : 'none' }}>
-                {r.done ? '✓' : '•'} {r.q.title}: {r.q.description}
+                {r.done ? '✓' : '•'} {r.q.title}: {r.q.description}<span style={{ display: 'block', fontSize: 11, color: '#ffd25a' }}>Reward: {rewardText(r.q.id)}</span>
               </div>
             ))}
           </div>

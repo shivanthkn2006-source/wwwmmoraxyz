@@ -54,8 +54,20 @@ const STAT: Record<string, { attack?: number; defence?: number }> = {
   pistol: { attack: 12 }, knife: { attack: 6 }, shotgun: { attack: 25 }, vest: { defence: 15 }, helmet: { defence: 10 },
 };
 /** Base 5 attack / 0 defence plus whatever is equipped. */
-export function gearStats(ids: string[]) {
-  let attack = 5, defence = 0;
+// ── Level: earned from quest rewards; each level adds +3 attack, +2 defence. ──
+const LKEY = 'vr-level';
+let level = (() => { try { return Math.max(1, Number(localStorage.getItem(LKEY)) || 1); } catch { return 1; } })();
+const lls = new Set<() => void>();
+export const useLevel = () => useSyncExternalStore((l) => { lls.add(l); return () => lls.delete(l); }, () => level, () => level);
+export const getLevel = () => level;
+export function levelUp() {
+  level += 1;
+  try { localStorage.setItem(LKEY, String(level)); } catch { /* */ }
+  lls.forEach((l) => l());
+}
+export const getEquipped = () => equipped;
+export function gearStats(ids: string[], lvl = level) {
+  let attack = 5 + (lvl - 1) * 3, defence = (lvl - 1) * 2;
   for (const id of ids) { attack += STAT[id]?.attack ?? 0; defence += STAT[id]?.defence ?? 0; }
   return { attack, defence };
 }
