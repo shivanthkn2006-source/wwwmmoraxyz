@@ -16,6 +16,7 @@ import { VillageCastle } from './VillageCastle';
 import { VillageGear } from './VillageGear';
 import { VillageSky } from './VillageSky';
 import { VillageVillagers } from './VillageVillagers';
+import { VillageQuestBoard } from './VillageQuestBoard';
 
 const SIZE = 400;
 const rand = (s: number) => { const x = Math.sin(s * 127.1) * 43758.5453; return x - Math.floor(x); };
@@ -160,6 +161,7 @@ export const VillageLook: React.FC = () => {
       <Crows />
       <VillageAnimals />
       <VillageVillagers />
+      <VillageQuestBoard />
     </>
   );
 };
