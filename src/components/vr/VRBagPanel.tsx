@@ -15,7 +15,7 @@ import avatarFemaleImg from '@/assets/vr-case-avatar-female.png';
 import { COIN_FACES, splitCoins } from '@/lib/vrCoinLook';
 import { useVRSelf } from '@/lib/vrSelf';
 import { VRWorldList } from './VRWorldList';
-import { GEAR, useGear } from '@/lib/vrGear';
+import { GEAR, useGear, useEquipped, toggleEquip, gearStats } from '@/lib/vrGear';
 
 export const CASE_COLS = 10;
 const MIN_ROWS = 6;
@@ -88,6 +88,8 @@ export const VRBagPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   useEffect(() => { const r = () => setVp({ w: window.innerWidth, h: window.innerHeight }); window.addEventListener('resize', r); return () => window.removeEventListener('resize', r); }, []);
   const [tab, setTab] = useState<Tab>('items');
   const gear = useGear();
+  const equipped = useEquipped();
+  const stats = gearStats(equipped);
   const [sel, setSel] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [saved, setSaved] = useState<Record<string, Pos>>(() => loadJSON(LAYOUT_KEY, {}));
@@ -195,7 +197,7 @@ export const VRBagPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             </>
           )}
           {tab === 'keys' && <div className="re-case-list">{story.keys.length ? story.keys.map((k) => <div key={k} className="re-case-row">🗝️ {KEYS[k]?.name ?? k}<span className="block text-[10px] opacity-70">Opens: {KEYS[k]?.opens.replace(/_/g, ' ')}{story.open.includes(KEYS[k]?.opens) ? ' · used' : ''}</span></div>) : <p>No keys yet. Look around M'Mora Village.</p>}</div>}
-          {tab === 'files' && <div className="re-case-list overflow-y-auto">{(['weapon','armour','quest'] as const).map((k) => <div key={k}><div className="re-case-row font-semibold">{k === 'weapon' ? 'Weapons' : k === 'armour' ? 'Armour' : 'Quest items'}</div>{GEAR.filter((g) => g.kind === k).map((g) => <div key={g.id} className="re-case-row" style={{ opacity: gear.includes(g.id) ? 1 : 0.45 }}>{g.icon} {gear.includes(g.id) ? g.name : '???'}<span className="block text-[10px] opacity-70">{gear.includes(g.id) ? g.detail : 'Not found yet — somewhere in M\'Mora Village'}</span></div>)}</div>)}{story.notes.map((n) => <button key={n} type="button" onClick={() => readNote(n)} className="re-case-row w-full text-left">📜 {NOTES[n]?.title ?? n}</button>)}<VRWorldList embedded /></div>}
+          {tab === 'files' && <div className="re-case-list overflow-y-auto"><div className="re-case-row font-semibold">Attack {stats.attack} · Defence {stats.defence}</div>{(['weapon','armour','quest'] as const).map((k) => <div key={k}><div className="re-case-row font-semibold">{k === 'weapon' ? 'Weapons' : k === 'armour' ? 'Armour' : 'Quest items'}</div>{GEAR.filter((g) => g.kind === k).map((g) => <div key={g.id} className="re-case-row" style={{ opacity: gear.includes(g.id) ? 1 : 0.45 }}>{g.icon} {gear.includes(g.id) ? g.name : '???'}<span className="block text-[10px] opacity-70">{gear.includes(g.id) ? g.detail : 'Not found yet — somewhere in M\'Mora Village'}</span>{gear.includes(g.id) && g.kind !== 'quest' && <button type="button" onClick={() => toggleEquip(g.id)} className="mt-1 text-[11px] underline">{equipped.includes(g.id) ? 'Unequip' : 'Equip'}</button>}</div>)}</div>)}{story.notes.map((n) => <button key={n} type="button" onClick={() => readNote(n)} className="re-case-row w-full text-left">📜 {NOTES[n]?.title ?? n}</button>)}<VRWorldList embedded /></div>}
           {tab === 'quests' && <ul className="re-case-list" aria-label="Quests">
             {QUESTS.map((q) => { const p = state.progress[q.id] ?? 0; const done = !!state.done[q.id]; return (
               <li key={q.id} data-testid={`quest-${q.id}`} className="re-case-row">
