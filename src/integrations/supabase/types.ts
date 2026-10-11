@@ -9628,6 +9628,30 @@ export type Database = {
         }
         Relationships: []
       }
+      vr_player_progress: {
+        Row: {
+          equipped: string[]
+          gear: string[]
+          level: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          equipped?: string[]
+          gear?: string[]
+          level?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          equipped?: string[]
+          gear?: string[]
+          level?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       vr_purchases: {
         Row: {
           created_at: string
