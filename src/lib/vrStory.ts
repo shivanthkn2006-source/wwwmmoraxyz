@@ -43,7 +43,11 @@ export function takeKey(id: string) {
   set({ keys: [...st.keys, id] });
   if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('vr-item-pickup', { detail: { type: id, rarity: 'key item' } }));
 }
-export function readNote(id: string) { set({ notes: st.notes.includes(id) ? st.notes : [...st.notes, id], reading: id }); }
+export function readNote(id: string) {
+  set({ notes: st.notes.includes(id) ? st.notes : [...st.notes, id], reading: id });
+  const n = NOTES[id];
+  if (n) void import('@/utils/deepgramTTS').then((m) => m.speakWithDeepgram(`${n.title}. ${n.text}`)).catch(() => {});
+}
 export function closeNote() { set({ reading: null }); }
 export function useDoor(id: string) {
   const r = doorAction(id, st);
