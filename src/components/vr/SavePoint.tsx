@@ -22,7 +22,7 @@ export const SavePoint: React.FC<{ position?: [number, number, number] }> = ({ p
 
   useEffect(() => {
     const onDamage = (e: Event) => {
-      hp = Math.max(0, hp - ((e as CustomEvent).detail?.amount ?? 10)); emit();
+      hp = Math.min(MAX_HP, Math.max(0, hp - ((e as CustomEvent).detail?.amount ?? 10))); emit();
       if (hp <= 0) setTimeout(respawn, 800);
     };
     window.addEventListener('vr-damage', onDamage);

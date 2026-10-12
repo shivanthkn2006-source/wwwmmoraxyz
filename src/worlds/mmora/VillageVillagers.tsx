@@ -129,15 +129,20 @@ const Villager: React.FC<{ route: [number, number][]; female: boolean; offset: n
   });
   React.useEffect(() => registerUse(() => {
     const r = root.current; if (!r || st.current.down > 0) return null;
-    const weapon = getEquipped().find((id) => GEAR.find((g) => g.id === id)?.kind === 'weapon');
+    const weapon = equippedWeapon();
     if (!weapon) return null;
+    const wf = WEAPON_FIGHT[weapon];
     const d = Math.hypot(camera.position.x - r.position.x, camera.position.z - r.position.z);
-    if (d > 2.6) return null;
-    return { dist: d, reach: 2.6, label: 'Attack', run: () => {
+    if (d > wf.reach) return null;
+    return { dist: d, reach: wf.reach, label: wf.label, run: () => {
+      const now = performance.now() / 1000;
+      if (now < lastSwing.v + wf.cooldown) return;
+      lastSwing.v = now;
       const { attack } = gearStats(getEquipped());
       const c = st.current; c.hostile = true; c.flash = 0.25;
       c.hp = Math.max(0, c.hp - attack);
       window.dispatchEvent(new CustomEvent('vr-hand-reach'));
+      if (weapon !== 'knife') playPickup('coin');
       if (c.hp <= 0) {
         c.down = RESPAWN_S; c.hostile = false;
         void import('@/lib/vrPickups').then((m) => m.addCoins(5)); playPickup('coin');

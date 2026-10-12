@@ -69,8 +69,16 @@ export const getEquipped = () => equipped;
 export function gearStats(ids: string[], lvl = level) {
   let attack = 5 + (lvl - 1) * 3, defence = (lvl - 1) * 2;
   for (const id of ids) { attack += STAT[id]?.attack ?? 0; defence += STAT[id]?.defence ?? 0; }
+  if (hasGear('crest')) attack += 5; // carried Lord's Crest
   return { attack, defence };
 }
+/** How each weapon fights: reach in metres and seconds between hits. */
+export const WEAPON_FIGHT: Record<string, { reach: number; cooldown: number; label: string }> = {
+  knife: { reach: 2.2, cooldown: 0.45, label: 'Slash' },
+  pistol: { reach: 6, cooldown: 0.8, label: 'Shoot' },
+  shotgun: { reach: 4, cooldown: 1.6, label: 'Blast' },
+};
+export const equippedWeapon = () => equipped.find((id) => WEAPON_FIGHT[id]) ?? null;
 
 // ── Account copy: level, found items and equipped items follow the member to any device. ──
 let syncTimer: number | undefined;
