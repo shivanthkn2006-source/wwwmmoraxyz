@@ -31,6 +31,10 @@ export const VillageGear: React.FC = () => {
     }
     if (!best) return null;
     const g = best.g;
+    // Quest items unlock in order: map → medallion → crest.
+    const needs: Record<string, [string, string]> = { medallion: ['map', 'Old Village Map'], crest: ['medallion', 'Church Medallion'] };
+    const req = needs[g.id];
+    if (req && !owned.includes(req[0])) return { dist: best.d * 0.5, reach: 1.4, label: `Find the ${req[1]} first`, run: () => {} };
     return { dist: best.d * 0.5, reach: 1.4, label: `Pick up ${g.name}`, run: () => takeGear(g) };
   }), [camera, owned]);
   return <>{GEAR.filter((g) => !owned.includes(g.id)).map((g) => <Item key={g.id} g={g} />)}</>;

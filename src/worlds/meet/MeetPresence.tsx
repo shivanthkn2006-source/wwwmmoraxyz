@@ -30,7 +30,7 @@ function localOf(p: Remote, origin: LatLng | null): { x: number; z: number } | n
   return toLocal({ lat: p.lat, lng: p.lng }, origin);
 }
 
-const Avatar: React.FC<{ p: Remote; target: { x: number; z: number }; reachAt?: number }> = ({ p, target, reachAt }) => {
+const Avatar: React.FC<{ p: Remote; target: { x: number; z: number }; reachAt?: number; say?: string }> = ({ p, target, reachAt, say }) => {
   const g = useRef<THREE.Group>(null);
   const mat = useMemo(() => new THREE.MeshStandardMaterial({ color: TAG_COLOR[p.tag], roughness: 0.55 }), [p.tag]);
   const skin = useMemo(() => new THREE.MeshStandardMaterial({ color: '#e8c6a4', roughness: 0.7 }), []);
@@ -48,6 +48,7 @@ const Avatar: React.FC<{ p: Remote; target: { x: number; z: number }; reachAt?: 
     <group ref={g} position={[target.x, 0, target.z]}>
       <JointedHuman reachAt={reachAt} female={!!p.f} />
       <Html position={[0, 2.05, 0]} center distanceFactor={10} style={{ pointerEvents: 'none' }}>
+        {say && <div style={{ marginBottom: 4, maxWidth: 'min(220px, 60vw)', width: 'max-content', background: '#fff', color: '#000', fontFamily: 'Georgia, serif', fontSize: 'clamp(11px, 2.6vw, 14px)', lineHeight: 1.3, padding: '4px 9px', borderRadius: 12, boxShadow: '0 2px 6px rgba(0,0,0,.35)', wordBreak: 'break-word' }}>{say}</div>}
         <div className="vr-meet-label">
           <span>@{p.username}</span>
           <span className={`vr-meet-tag vr-meet-tag-${p.tag}`}>{TAG_LABEL[p.tag]}</span>
@@ -125,6 +126,14 @@ export const MeetPresence: React.FC = () => {
     if (best && best.d > 4) met.current.delete(best.p.id);
   });
 
-  return <>{targets.map(({ p, t }) => <Avatar key={p.id} p={p} target={t} reachAt={shake[p.id]} />)}</>;
+  // Live chat bubble: each member's latest message shows over their head for 8 s.
+  const [now, setNow] = React.useState(Date.now());
+  useEffect(() => { const id = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(id); }, []);
+  const said = useMemo(() => {
+    const m: Record<string, string> = {};
+    for (const msg of meet.messages) if (!msg.system && now - msg.at < 8000) m[msg.from] = msg.text.slice(0, 140);
+    return m;
+  }, [meet.messages, now]);
+  return <>{targets.map(({ p, t }) => <Avatar key={p.id} p={p} target={t} reachAt={shake[p.id]} say={said[p.id]} />)}</>;
 };
 export default MeetPresence;
