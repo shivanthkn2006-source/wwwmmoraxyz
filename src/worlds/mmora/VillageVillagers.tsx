@@ -11,6 +11,8 @@ import { WALK_MPS, RUN_MPS } from '@/lib/vrWalk';
 import { registerUse } from '@/lib/vrUse';
 import { getEquipped, gearStats, equippedWeapon, WEAPON_FIGHT } from '@/lib/vrGear';
 const lastSwing = { v: 0 };
+import { Html } from '@react-three/drei';
+const LINES = ['Stranger… the church bell rang at midnight again.', 'Mind the castle on the hill. Nobody comes back the same.', 'Lost the old village map near the lanes, I did.', 'The altar holds a medallion. Pray before you take it.', 'Wolves came down from the hills last winter.', 'Warm yourself by the fire, traveller.', 'Have you seen the Lord\'s crest? It belongs in the keep.', 'Sit on a bench a while — it pays to rest here.'];
 import { playPickup } from '@/lib/vrSfx';
 
 const VILLAGER_HP = 60;
@@ -75,6 +77,8 @@ function loopPoint(route: [number, number][], t: number, out: THREE.Vector3) {
 }
 
 const Villager: React.FC<{ route: [number, number][]; female: boolean; offset: number; v: number }> = ({ route, female, offset, v }) => {
+  const bubble = useRef<HTMLDivElement>(null);
+  const talkT = useRef(0), lineI = useRef(v);
   const g = useMemo(() => villagerGeo(female, v), [female, v]);
   const root = useRef<THREE.Group>(null), l1 = useRef<THREE.Mesh>(null), l2 = useRef<THREE.Mesh>(null), a1 = useRef<THREE.Mesh>(null), a2 = useRef<THREE.Mesh>(null);
   const st = useRef({ t: offset, pause: 0, phase: offset * 9, sw: 0, hp: VILLAGER_HP, hostile: false, down: 0, hitCd: 0, flash: 0 });
@@ -93,6 +97,12 @@ const Villager: React.FC<{ route: [number, number][]; female: boolean; offset: n
     }
     if (hpBar.current) { hpBar.current.visible = c.hp < VILLAGER_HP; hpBar.current.scale.x = Math.max(0.01, c.hp / VILLAGER_HP); }
     const near = root.current.position.distanceTo(camera.position);
+    if (bubble.current) {
+      const show = near < 6 && st.current.down <= 0;
+      bubble.current.style.display = show ? 'block' : 'none';
+      if (show) { talkT.current -= dt; if (talkT.current <= 0) { talkT.current = 6; lineI.current = (lineI.current + 1) % LINES.length; bubble.current.textContent = st.current.hostile ? 'Get away from me!' : LINES[lineI.current]; } }
+      else talkT.current = 0;
+    }
     if (near > 45) { c.hostile = false; return; }
     if (c.hostile) {
       // chase you and swing; Defence softens each hit
@@ -158,6 +168,9 @@ const Villager: React.FC<{ route: [number, number][]; female: boolean; offset: n
       <mesh ref={l1} geometry={g.leg} material={HUMAN_MATERIAL} position={[-HIP_X, HIP_Y, 0]} />
       <mesh ref={l2} geometry={g.leg} material={HUMAN_MATERIAL} position={[HIP_X, HIP_Y, 0]} />
       <mesh ref={a1} geometry={g.arm} material={HUMAN_MATERIAL} position={[-SHOULDER_X - (female ? 0 : 0.02), SHOULDER_Y, 0]} />
+      <Html position={[0, 2.35, 0]} center occlude={false} zIndexRange={[8, 0]} style={{ pointerEvents: 'none' }}>
+        <div ref={bubble} style={{ display: 'none', maxWidth: 180, background: '#fff', color: '#000', fontFamily: 'Georgia, serif', fontSize: 12, lineHeight: 1.3, padding: '5px 9px', borderRadius: 12, boxShadow: '0 2px 6px rgba(0,0,0,.35)' }} />
+      </Html>
       <mesh ref={hpBar} position={[0, 2.15, 0]} visible={false}><planeGeometry args={[0.6, 0.06]} /><meshBasicMaterial color="#c0392b" side={THREE.DoubleSide} /></mesh>
       <mesh ref={a2} geometry={g.arm} material={HUMAN_MATERIAL} position={[SHOULDER_X + (female ? 0 : 0.02), SHOULDER_Y, 0]} />
     </group>

@@ -90,6 +90,12 @@ export const VillageQuestBoard: React.FC = () => {
   const rows = CHAIN.map((c) => ({ q: QUESTS.find((x) => x.id === c.quest)!, g: GEAR.find((x) => x.id === c.gear)!, done: owned.includes(c.gear) || !!state.done[c.quest] }));
   const activeId = rows.find((r) => !r.done)?.g.id;
   const longSight = owned.includes('map');
+  // Tap the board (within 8 m) and Zoe reads it aloud (Deepgram voice).
+  const readBoard = () => {
+    if (Math.hypot(camera.position.x - 4, camera.position.z + 4) > 8) return;
+    const text = 'Quest board. ' + rows.map((r) => `${r.q.title}: ${r.done ? 'done' : r.q.description}. Reward: ${rewardText(r.q.id)}.`).join(' ');
+    void import('@/utils/deepgramTTS').then((m) => m.speakWithDeepgram(text)).catch(() => {});
+  };
   const activeItem = rows.find((r) => !r.done)?.g.pos ?? null;
   return (
     <>
@@ -97,8 +103,8 @@ export const VillageQuestBoard: React.FC = () => {
       <group position={[4, 0, -4]} rotation={[0, -Math.PI / 4, 0]}>
         {[-1.2, 1.2].map((x) => <mesh key={x} position={[x, 1, 0]}><boxGeometry args={[0.1, 2, 0.1]} /><meshStandardMaterial color="#3b2a1c" /></mesh>)}
         <mesh position={[0, 1.6, 0]}><boxGeometry args={[2.6, 1.4, 0.06]} /><meshStandardMaterial color="#5a4128" roughness={0.9} /></mesh>
-        <Html position={[0, 1.6, 0.05]} transform distanceFactor={2.2} occlude={false} style={{ pointerEvents: 'none' }}>
-          <div style={{ display: 'flex', gap: 10, fontFamily: 'Georgia, serif', fontStyle: 'italic', color: '#f3e6c8', fontSize: 12, lineHeight: 1.3 }}>
+        <Html position={[0, 1.6, 0.05]} transform distanceFactor={2.2} occlude={false} style={{ pointerEvents: 'auto' }}>
+          <div title="Tap to hear Zoe read the board" onClick={readBoard} style={{ cursor: 'pointer', display: 'flex', gap: 10, fontFamily: 'Georgia, serif', fontStyle: 'italic', color: '#f3e6c8', fontSize: 12, lineHeight: 1.3 }}>
             <div style={{ position: 'relative', width: 220, height: 170, background: '#d9c49a', borderRadius: 4, boxShadow: 'inset 0 0 18px #7a5a2e', color: '#3b2a1c' }}>
               {LANDMARKS.map((l) => <span key={l.name} style={{ position: 'absolute', left: mx(l.x), top: mz(l.z), transform: 'translate(-50%,-50%)', fontSize: 10 }}>{l.name}</span>)}
               {rows.map((r) => <span key={r.g.id} style={{ position: 'absolute', left: mx(r.g.pos[0]), top: mz(r.g.pos[2]), transform: 'translate(-50%,-100%)', fontSize: 14, opacity: r.done ? 0.35 : 1, color: r.g.id === activeId ? '#a3120f' : '#3b2a1c' }}>📍</span>)}

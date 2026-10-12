@@ -16,6 +16,8 @@ const CITIES: StartCity[] = [
   { name: 'Mumbai', lat: 18.922, lng: 72.8347 },
   { name: 'Delhi', lat: 28.6315, lng: 77.2167 },
   { name: 'Bengaluru', lat: 12.9716, lng: 77.5946 },
+  { name: 'Chennai', lat: 13.0827, lng: 80.2707 },
+  { name: 'Trivandrum', lat: 8.5241, lng: 76.9366 },
   { name: 'Sydney', lat: -33.8688, lng: 151.2093 },
   { name: 'San Francisco', lat: 37.7879, lng: -122.4075 },
   { name: 'Los Angeles', lat: 34.0522, lng: -118.2437 },
