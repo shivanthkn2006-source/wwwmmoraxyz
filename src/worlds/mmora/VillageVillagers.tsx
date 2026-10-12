@@ -104,6 +104,7 @@ const Villager: React.FC<{ route: [number, number][]; female: boolean; offset: n
         c.hitCd = 1.4;
         const { defence } = gearStats(getEquipped());
         window.dispatchEvent(new CustomEvent('vr-damage', { detail: { amount: Math.max(2, Math.round(12 * (1 - defence / 60))) } }));
+        if (defence > 0) window.dispatchEvent(new CustomEvent('vr-shield'));
       }
       if (dd > 25) c.hostile = false;
       const sw = Math.sin(c.phase) * 0.6;
