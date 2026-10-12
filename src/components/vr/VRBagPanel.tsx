@@ -28,7 +28,7 @@ const RARITY_HSL: Record<Rarity, string> = {
   epic: 'hsl(219 95% 78%)', legendary: 'hsl(43 96% 56%)',
 };
 
-type CaseItem = { id: string; w: number; h: number; name: string; kind: 'herb' | 'coin' | 'relic' | 'bag'; face?: 'gold' | 'blue' | 'yellow'; count?: number; rarity?: Rarity; detail?: string };
+type CaseItem = { id: string; w: number; h: number; name: string; kind: 'herb' | 'coin' | 'relic' | 'bag' | 'gear'; icon?: string; face?: 'gold' | 'blue' | 'yellow'; count?: number; rarity?: Rarity; detail?: string };
 type Pos = { x: number; y: number };
 
 /** First-fit packing that keeps saved spots when they still fit. */
@@ -99,17 +99,24 @@ export const VRBagPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
   const items = useMemo<CaseItem[]>(() => {
     const out: CaseItem[] = [];
-    for (let i = 0; i < Math.min(pick.herbs, 60); i++) out.push({ id: `herb-${i}`, w: 1, h: 2, kind: 'herb', name: 'Green Herb', detail: 'Restores stamina' });
+    // Same kinds stack in one square (herbs, each coin face, each relic type) to save space.
+    if (pick.herbs > 0) out.push({ id: 'herb-stack', w: 1, h: 2, kind: 'herb', name: 'Green Herb', count: pick.herbs, detail: 'Restores stamina' });
     const c = splitCoins(pick.coins);
     if (pick.coins >= 100) out.push({ id: 'coin-bag', w: 2, h: 2, kind: 'bag', name: "M'Mora coin bag", count: pick.coins, detail: `${pick.coins} M'Mora coins in total` });
     if (c.gold) out.push({ id: 'coin-gold', w: 1, h: 1, kind: 'coin', face: 'gold', name: "Gold M'Mora coin (50)", count: c.gold, detail: 'Worth 50 each' });
     if (c.blue) out.push({ id: 'coin-blue', w: 1, h: 1, kind: 'coin', face: 'blue', name: "Blue M'Mora coin (10)", count: c.blue, detail: 'Worth 10 each' });
     if (c.yellow) out.push({ id: 'coin-yellow', w: 1, h: 1, kind: 'coin', face: 'yellow', name: "Yellow M'Mora coin (1)", count: c.yellow, detail: 'Worth 1 each' });
-    for (const b of bag.filter((b) => b.type !== 'green_herb' && b.type !== 'antique_coin').slice(0, 120)) {
-      out.push({ id: `relic-${b.id}`, w: 1, h: 1, kind: 'relic', rarity: b.rarity, name: itemLabel(b.type), detail: `${b.rarity} · found ${new Date(b.collected_at).toLocaleDateString()}` });
+    for (const g of GEAR.filter((x) => gear.includes(x.id))) out.push({ id: `gear-${g.id}`, w: 1, h: 1, kind: 'gear', icon: g.icon, name: g.name, detail: g.detail });
+    const relicTypes = new Map<string, { b: (typeof bag)[number]; n: number }>();
+    for (const b of bag) {
+      if (b.type === 'green_herb' || b.type === 'antique_coin' || /^(weapon|armour|quest)_/.test(b.type)) continue;
+      const e = relicTypes.get(b.type); if (e) e.n += 1; else relicTypes.set(b.type, { b, n: 1 });
+    }
+    for (const { b, n } of [...relicTypes.values()].slice(0, 120)) {
+      out.push({ id: `relic-${b.type}`, count: n > 1 ? n : undefined, w: 1, h: 1, kind: 'relic', rarity: b.rarity, name: itemLabel(b.type), detail: `${b.rarity} · found ${new Date(b.collected_at).toLocaleDateString()}` });
     }
     return out;
-  }, [pick.herbs, pick.coins, bag]);
+  }, [pick.herbs, pick.coins, bag, gear]);
 
   const cells = items.reduce((n, it) => n + it.w * it.h, 0);
   const rows = Math.max(MIN_ROWS, Math.ceil(cells / CASE_COLS) + 2) + extra;
@@ -188,7 +195,7 @@ export const VRBagPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                     return (
                       <button key={it.id} type="button" aria-pressed={sel === it.id} title={it.name} onPointerDown={onDown(it)} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} style={{ touchAction: 'none', gridColumn: `${p.x + 1} / span ${it.w}`, gridRow: `${p.y + 1} / span ${it.h}` }}
                         className="re-case-item" data-kind={it.kind}>
-                        <span className="re-case-art">{it.kind === 'herb' ? <Herb /> : it.kind === 'coin' ? <img src={COIN_FACES[it.face ?? 'gold']} alt="" className="h-full w-full object-contain" draggable={false} /> : it.kind === 'bag' ? <img src={COIN_FACES.bag} alt="" className="h-full w-full object-contain" draggable={false} /> : <Gem rarity={it.rarity!} />}</span>
+                        <span className="re-case-art">{it.kind === 'herb' ? <Herb /> : it.kind === 'coin' ? <img src={COIN_FACES[it.face ?? 'gold']} alt="" className="h-full w-full object-contain" draggable={false} /> : it.kind === 'bag' ? <img src={COIN_FACES.bag} alt="" className="h-full w-full object-contain" draggable={false} /> : it.kind === 'gear' ? <span className="text-2xl leading-none">{it.icon}</span> : <Gem rarity={it.rarity!} />}</span>
                         {it.count !== undefined && <span className="re-case-count">{it.count}</span>}
                       </button>
                     );
