@@ -7,6 +7,7 @@
 import React, { useRef, useSyncExternalStore } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
+import * as THREE from 'three';
 import { GEAR, useGear, hasGear } from '@/lib/vrGear';
 import { QUESTS, getVRQuestSnapshot, subscribeVRQuests, rewardText } from '@/lib/vrQuests';
 
@@ -36,6 +37,42 @@ const DistLabel: React.FC<{ x: number; z: number; name: string; active: boolean;
   );
 };
 
+/** Follows the camera: edge arrow toward the active quest item + shield flash when armour blocks. */
+const CameraHud: React.FC<{ target: [number, number, number] | null }> = ({ target }) => {
+  const { camera } = useThree();
+  const g = useRef<THREE.Group>(null);
+  const arrow = useRef<HTMLDivElement>(null), shield = useRef<HTMLDivElement>(null);
+  const fwd = useRef(new THREE.Vector3());
+  React.useEffect(() => {
+    let t: number | undefined;
+    const on = () => { if (!shield.current) return; shield.current.style.opacity = '1'; window.clearTimeout(t); t = window.setTimeout(() => { if (shield.current) shield.current.style.opacity = '0'; }, 280); };
+    window.addEventListener('vr-shield', on); return () => window.removeEventListener('vr-shield', on);
+  }, []);
+  useFrame(() => {
+    if (!g.current) return;
+    camera.getWorldDirection(fwd.current);
+    g.current.position.copy(camera.position).addScaledVector(fwd.current, 1);
+    const a = arrow.current; if (!a) return;
+    if (!target) { a.style.display = 'none'; return; }
+    const dx = target[0] - camera.position.x, dz = target[2] - camera.position.z;
+    const ang = Math.atan2(dx, dz) - Math.atan2(fwd.current.x, fwd.current.z); // + = to the left
+    const rel = Math.atan2(Math.sin(ang), Math.cos(ang));
+    const show = Math.abs(rel) > 0.5 && Math.hypot(dx, dz) > 4;
+    a.style.display = show ? 'block' : 'none';
+    a.style.transform = `translate(${-Math.sin(rel) * 40}vw, ${-Math.cos(rel) * 38}vh) rotate(${-rel}rad)`;
+  });
+  return (
+    <group ref={g}>
+      <Html center occlude={false} zIndexRange={[5, 0]} style={{ pointerEvents: 'none' }}>
+        <div style={{ position: 'relative', width: 0, height: 0 }}>
+          <div ref={arrow} style={{ position: 'absolute', left: -12, top: -14, display: 'none', color: '#ffd25a', fontSize: 26, lineHeight: 1, textShadow: '0 1px 4px #000' }}>▲</div>
+          <div ref={shield} style={{ position: 'fixed', inset: 0, width: '100vw', height: '100vh', transform: 'translate(-50vw,-50vh)', opacity: 0, transition: 'opacity 0.2s', boxShadow: 'inset 0 0 80px 20px rgba(56,123,246,0.55)' }} />
+        </div>
+      </Html>
+    </group>
+  );
+};
+
 export const VillageQuestBoard: React.FC = () => {
   React.useEffect(() => { void import('@/lib/vrGear').then((m) => m.loadGearProgress()); void import('@/lib/vrQuests').then((m) => m.loadVRQuests()); }, []);
   // Carried Church Medallion slowly restores health.
@@ -53,8 +90,10 @@ export const VillageQuestBoard: React.FC = () => {
   const rows = CHAIN.map((c) => ({ q: QUESTS.find((x) => x.id === c.quest)!, g: GEAR.find((x) => x.id === c.gear)!, done: owned.includes(c.gear) || !!state.done[c.quest] }));
   const activeId = rows.find((r) => !r.done)?.g.id;
   const longSight = owned.includes('map');
+  const activeItem = rows.find((r) => !r.done)?.g.pos ?? null;
   return (
     <>
+      <CameraHud target={activeItem} />
       <group position={[4, 0, -4]} rotation={[0, -Math.PI / 4, 0]}>
         {[-1.2, 1.2].map((x) => <mesh key={x} position={[x, 1, 0]}><boxGeometry args={[0.1, 2, 0.1]} /><meshStandardMaterial color="#3b2a1c" /></mesh>)}
         <mesh position={[0, 1.6, 0]}><boxGeometry args={[2.6, 1.4, 0.06]} /><meshStandardMaterial color="#5a4128" roughness={0.9} /></mesh>
