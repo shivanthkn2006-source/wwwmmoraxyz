@@ -12,6 +12,7 @@ import { getWorldState } from '@/worlds/worldMode';
 import { useVRView, wireVRViewKeys } from '@/lib/vrView';
 import { useVRSelf } from '@/lib/vrSelf';
 import { useEquipped } from '@/lib/vrGear';
+import { useLook, loadLook } from '@/lib/vrLook';
 import { HUMAN_COLORS as HC, HUMAN_MATERIAL, headGeometry } from '@/lib/vrHumanLook';
 
 const HEAD = headGeometry();
@@ -50,6 +51,12 @@ export const ThirdPersonAvatar: React.FC = () => {
     steel: new THREE.MeshStandardMaterial({ color: '#b8bcc0', metalness: 0.8, roughness: 0.3 }),
     hair: new THREE.MeshStandardMaterial({ color: HC.hair, roughness: 0.9 }),
   }), []);
+  const look = useLook();
+  useEffect(() => { void loadLook(); }, []);
+  useEffect(() => {
+    mats.skin.color.set(look.skin); mats.hair.color.set(look.hair_color);
+    mats.shirt.color.set(look.shirt); mats.pants.color.set(look.trousers);
+  }, [look, mats]);
 
   useEffect(() => { wireVRViewKeys(); }, []);
   useEffect(() => {
