@@ -8,6 +8,13 @@
       "when": 1791706225989,
       "tag": "0000_vr_player_progress",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791779700617,
+      "tag": "0001_vr_player_look",
+      "breakpoints": true
     }
   ]
 }

@@ -9628,6 +9628,33 @@ export type Database = {
         }
         Relationships: []
       }
+      vr_player_look: {
+        Row: {
+          hair_color: string
+          shirt: string
+          skin: string
+          trousers: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          hair_color?: string
+          shirt?: string
+          skin?: string
+          trousers?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          hair_color?: string
+          shirt?: string
+          skin?: string
+          trousers?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       vr_player_progress: {
         Row: {
           equipped: string[]
