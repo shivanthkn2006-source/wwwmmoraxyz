@@ -9,7 +9,8 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { WALK_MPS, RUN_MPS } from '@/lib/vrWalk';
 import { registerUse } from '@/lib/vrUse';
-import { GEAR, getEquipped, gearStats } from '@/lib/vrGear';
+import { getEquipped, gearStats, equippedWeapon, WEAPON_FIGHT } from '@/lib/vrGear';
+const lastSwing = { v: 0 };
 import { playPickup } from '@/lib/vrSfx';
 
 const VILLAGER_HP = 60;
