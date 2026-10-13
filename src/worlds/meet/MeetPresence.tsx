@@ -134,6 +134,25 @@ export const MeetPresence: React.FC = () => {
     for (const msg of meet.messages) if (!msg.system && now - msg.at < 8000) m[msg.from] = msg.text.slice(0, 140);
     return m;
   }, [meet.messages, now]);
+
+  // Village talking mode: a nearby member's new message is read aloud once —
+  // female members in Zoe's voice, male members in the male voice.
+  const spoken = useRef(new Set<string>());
+  const lastSpoke = useRef(0);
+  useEffect(() => {
+    if (w.mode !== 'mmora') return;
+    for (const msg of meet.messages) {
+      if (msg.system || msg.tag === 'me' || spoken.current.has(msg.id)) continue;
+      spoken.current.add(msg.id);
+      if (Date.now() - msg.at > 4000 || Date.now() - lastSpoke.current < 2500) continue;
+      const hit = targets.find(({ p }) => p.id === msg.from);
+      if (!hit || Math.hypot(hit.t.x - camera.position.x, hit.t.z - camera.position.z) > 12) continue;
+      lastSpoke.current = Date.now();
+      void import('@/utils/deepgramTTS').then((m) => m.speakWithDeepgramVoice(msg.text.slice(0, 140), hit.p.f ? 'female' : 'male')).catch(() => {});
+    }
+    if (spoken.current.size > 200) spoken.current = new Set([...spoken.current].slice(-100));
+  }, [meet.messages, targets, w.mode, camera]);
+
   return <>{targets.map(({ p, t }) => <Avatar key={p.id} p={p} target={t} reachAt={shake[p.id]} say={said[p.id]} />)}</>;
 };
 export default MeetPresence;
