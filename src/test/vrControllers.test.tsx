@@ -164,7 +164,7 @@ describe('relic quests + bag', () => {
     expect(r3.next.done.memory_keeper).toBe(true);
     const r4 = applyCollect(r3.next, { type: 'treasure_chest', rarity: 'legendary' });
     expect(r4.completed).toHaveLength(0);
-    expect(QUESTS.every((q) => r4.next.done[q.id])).toBe(true);
+    expect(QUESTS.filter((q) => !q.id.match(/^(village_map|church_medallion|lords_crest)$/)).every((q) => r4.next.done[q.id])).toBe(true);
   });
 
   it('a finished quest saves the bag, the progress and sends a bell alert', async () => {

@@ -8,6 +8,6 @@ describe('VR view + quest rewards', () => {
     expect(CROUCH_SPEED).toBeLessThan(1);
   });
   it('every quest has a reward matching the server amounts', () => {
-    expect(Object.fromEntries(QUESTS.map((q) => [q.id, q.reward]))).toEqual({ relic_hunter: 50, memory_keeper: 75, rare_eye: 100, treasure_seeker: 100 });
+    expect(Object.fromEntries(QUESTS.map((q) => [q.id, q.reward]))).toEqual({ relic_hunter: 50, memory_keeper: 75, rare_eye: 100, treasure_seeker: 100, village_map: 50, church_medallion: 100, lords_crest: 150 });
   });
 });
