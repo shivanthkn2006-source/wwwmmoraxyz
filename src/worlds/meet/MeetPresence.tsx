@@ -22,6 +22,19 @@ export const MEET_RADIUS_M = 1.2;
 const AREA_DEG = 0.02;
 export const realRoom = (o: LatLng) => `real:${Math.floor(o.lat / AREA_DEG)}_${Math.floor(o.lng / AREA_DEG)}`;
 
+/** Personal space: members standing on the same spot are nudged apart so bodies never overlap. */
+export const PERSONAL_SPACE_M = 1.1;
+export function spaced(t: { x: number; z: number }, others: { x: number; z: number }[], gap = PERSONAL_SPACE_M) {
+  let { x, z } = t;
+  for (let pass = 0; pass < 3; pass++) for (const o of others) {
+    const dx = x - o.x, dz = z - o.z, d = Math.hypot(dx, dz);
+    if (d >= gap) continue;
+    const a = d > 1e-3 ? Math.atan2(dz, dx) : (others.indexOf(o) + 1) * 2.4;
+    x = o.x + Math.cos(a) * gap; z = o.z + Math.sin(a) * gap;
+  }
+  return { x, z };
+}
+
 const TAG_COLOR = { friend: '#387BF6', follower: '#F5C518', unknown: '#34C759' } as const;
 
 function localOf(p: Remote, origin: LatLng | null): { x: number; z: number } | null {
@@ -81,7 +94,8 @@ export const MeetPresence: React.FC = () => {
     .map((p) => ({ p, t: localOf(p, origin) }))
     .filter((x): x is { p: Remote; t: { x: number; z: number } } => !!x.t)
     .sort((a, b) => Math.hypot(a.t.x - camera.position.x, a.t.z - camera.position.z) - Math.hypot(b.t.x - camera.position.x, b.t.z - camera.position.z))
-    .slice(0, 20), [meet.players, w.mode, origin, camera]);
+    .slice(0, 20)
+    .map((x, i, arr) => ({ ...x, t: spaced(x.t, arr.slice(0, i).map((y) => y.t)) })), [meet.players, w.mode, origin, camera]);
   const targetsRef = useRef(targets); targetsRef.current = targets;
 
   useEffect(() => registerUse(() => {

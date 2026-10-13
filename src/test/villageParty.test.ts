@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, it, expect } from 'vitest';
 import { admitted, shardRoom, isVillageRoom, VILLAGE_CAP } from '@/worlds/meet/villageParty';
 
@@ -23,5 +24,19 @@ describe('village party', () => {
     expect(shardRoom('mmora:chennai', 3)).toBe('mmora:chennai#3');
     expect(isVillageRoom('mmora:x#2')).toBe(true);
     expect(isVillageRoom('real:1_2')).toBe(false);
+  });
+});
+
+import { spaced, PERSONAL_SPACE_M } from '@/worlds/meet/MeetPresence';
+describe('personal space', () => {
+  it('pushes stacked members apart', () => {
+    const a = { x: 0, z: 0 };
+    const b = spaced({ x: 0, z: 0 }, [a]);
+    expect(Math.hypot(b.x, b.z)).toBeGreaterThanOrEqual(PERSONAL_SPACE_M - 1e-6);
+    const c = spaced({ x: 0.2, z: 0 }, [a, b]);
+    expect(Math.hypot(c.x, c.z)).toBeGreaterThanOrEqual(PERSONAL_SPACE_M - 1e-6);
+  });
+  it('leaves spread-out members alone', () => {
+    expect(spaced({ x: 5, z: 0 }, [{ x: 0, z: 0 }])).toEqual({ x: 5, z: 0 });
   });
 });
