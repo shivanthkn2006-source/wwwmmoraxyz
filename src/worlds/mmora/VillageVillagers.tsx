@@ -10,6 +10,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { WALK_MPS, RUN_MPS } from '@/lib/vrWalk';
 import { registerUse } from '@/lib/vrUse';
 import { getEquipped, gearStats, equippedWeapon, WEAPON_FIGHT } from '@/lib/vrGear';
+import { fire, reload, canReload, usesAmmo, getAmmo, dropAmmo } from '@/lib/vrAmmo';
 const lastSwing = { v: 0 };
 import { getVRView } from '@/lib/vrView';
 /** Where the player's body stands: the camera in first person, 2.8 m ahead of it in third person (matches ThirdPersonAvatar). */
@@ -169,9 +170,12 @@ const Villager: React.FC<{ route: [number, number][]; female: boolean; offset: n
     const wf = WEAPON_FIGHT[weapon];
     const ps = playerSpot(camera); const d = Math.hypot(ps.x - r.position.x, ps.z - r.position.z);
     if (d > wf.reach) return null;
+    const empty = usesAmmo(weapon) && (getAmmo()[weapon]?.inMag ?? 0) <= 0;
+    if (empty) return { dist: d, reach: wf.reach, label: canReload(weapon) ? 'Reload' : 'No ammo', run: () => { reload(weapon); } };
     return { dist: d, reach: wf.reach, label: wf.label, run: () => {
       const now = performance.now() / 1000;
       if (now < lastSwing.v + wf.cooldown) return;
+      if (!fire(weapon)) return;
       lastSwing.v = now;
       const { attack } = gearStats(getEquipped());
       const c = st.current; c.hostile = true; c.flash = 0.25;
@@ -180,7 +184,7 @@ const Villager: React.FC<{ route: [number, number][]; female: boolean; offset: n
       if (weapon !== 'knife') playPickup('coin');
       if (c.hp <= 0) {
         c.down = RESPAWN_S; c.hostile = false;
-        void import('@/lib/vrPickups').then((m) => m.addCoins(5)); playPickup('coin');
+        void import('@/lib/vrPickups').then((m) => m.addCoins(5)); dropAmmo(); playPickup('coin');
       }
     } };
   }), [camera]);

@@ -1,3 +1,5 @@
+import { useAmmo, usesAmmo, isReloading, condition } from '@/lib/vrAmmo';
+import { useEquipped } from '@/lib/vrGear';
 import React, { useEffect, useRef, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 
@@ -73,6 +75,20 @@ export const HealthBar: React.FC = () => {
       <div className="h-1.5 overflow-hidden rounded-full bg-background/40">
         <div className="h-full rounded-full bg-primary transition-[width]" style={{ width: `${v}%` }} />
       </div>
+      <SurvivalLine hp={v} />
+    </div>
+  );
+};
+
+/** Condition (Fine / Caution / Danger) and the equipped gun's rounds, under the health bar. */
+const SurvivalLine: React.FC<{ hp: number }> = ({ hp }) => {
+  const ammo = useAmmo(); const eq = useEquipped();
+  const gun = eq.find((id) => usesAmmo(id));
+  const a = gun ? ammo[gun] : null;
+  return (
+    <div className="mt-0.5 flex justify-between text-[10px] italic leading-none text-foreground" style={{ textShadow: '0 1px 2px hsl(0 0% 0% / .7)' }}>
+      <span data-testid="vr-condition">{condition(hp)}</span>
+      {a && <span data-testid="vr-ammo">{isReloading() ? 'Reloading…' : `${a.inMag} / ${a.reserve}`}</span>}
     </div>
   );
 };
