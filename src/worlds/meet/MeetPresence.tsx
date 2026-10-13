@@ -49,7 +49,7 @@ const Avatar: React.FC<{ p: Remote; target: { x: number; z: number }; reachAt?: 
       <JointedHuman reachAt={reachAt} female={!!p.f} />
       <Html position={[0, 2.05, 0]} center distanceFactor={10} style={{ pointerEvents: 'none' }}>
         {say && <div style={{ marginBottom: 4, maxWidth: 'min(220px, 60vw)', width: 'max-content', background: '#fff', color: '#000', fontFamily: 'Georgia, serif', fontSize: 'clamp(11px, 2.6vw, 14px)', lineHeight: 1.3, padding: '4px 9px', borderRadius: 12, boxShadow: '0 2px 6px rgba(0,0,0,.35)', wordBreak: 'break-word' }}>{say}</div>}
-        <div className="vr-meet-label">
+        <div className={`vr-meet-label${p.mode === 'mmora' ? ' vr-meet-label-village' : ''}`}>
           <span>@{p.username}</span>
           <span className={`vr-meet-tag vr-meet-tag-${p.tag}`}>{TAG_LABEL[p.tag]}</span>
         </div>

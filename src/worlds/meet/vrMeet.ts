@@ -8,19 +8,20 @@ import { useSyncExternalStore } from 'react';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { setShareRealLocation } from '@/lib/vrPrivacy';
+import { admitted, isVillageRoom, shardRoom, MAX_SHARDS, VILLAGE_CAP } from './villageParty';
 
 export type MeetTag = 'friend' | 'follower' | 'unknown';
 export type MeetPose = { mode: 'real' | 'mmora'; x?: number; z?: number; lat?: number; lng?: number; yaw: number; f?: boolean };
-export type Remote = MeetPose & { id: string; name: string; username: string; photo?: string | null; at: number; tag: MeetTag; voice?: boolean };
+export type Remote = MeetPose & { id: string; name: string; username: string; photo?: string | null; at: number; tag: MeetTag; voice?: boolean; since?: number };
 export type ChatMsg = { id: string; from: string; name: string; username: string; photo?: string | null; tag: MeetTag | 'me'; text: string; at: number; system?: boolean };
 
 type Me = { id: string; name: string; username: string; photo?: string | null };
-type State = { connected: boolean; room: string | null; visible: boolean; players: Remote[]; messages: ChatMsg[]; chatOpen: boolean; chatFocus: number; nearest: { id: string; username: string; dist: number } | null };
+type State = { connected: boolean; room: string | null; visible: boolean; players: Remote[]; messages: ChatMsg[]; chatOpen: boolean; chatFocus: number; nearest: { id: string; username: string; dist: number } | null; base: string | null; party: { count: number; cap: number; shard: number } | null };
 
 const VIS_KEY = 'vr-meet-visible';
 const readVisible = () => { try { return localStorage.getItem(VIS_KEY) !== '0'; } catch { return true; } };
 
-let state: State = { connected: false, room: null, visible: typeof localStorage === 'undefined' ? true : readVisible(), players: [], messages: [], chatOpen: false, chatFocus: 0, nearest: null };
+let state: State = { connected: false, room: null, visible: typeof localStorage === 'undefined' ? true : readVisible(), players: [], messages: [], chatOpen: false, chatFocus: 0, nearest: null, base: null, party: null };
 const ls = new Set<() => void>();
 const set = (p: Partial<State>) => { state = { ...state, ...p }; ls.forEach((l) => l()); };
 export const getMeet = () => state;
@@ -92,11 +93,21 @@ function pushMsg(m: ChatMsg) {
 }
 
 /** Join (or switch to) a live room. Pass null to leave. */
-export async function joinMeet(room: string | null) {
-  if (room === state.room) return;
+let since = 0;
+let shard = 1;
+
+/** Join (or switch to) a live room. Village rooms hold at most VILLAGE_CAP members; extras go to the next copy. */
+export async function joinMeet(base: string | null) {
+  if (base === state.base) return;
+  shard = 1;
+  await openRoom(base, base ? shardRoom(base, 1) : null);
+}
+
+async function openRoom(base: string | null, room: string | null) {
   if (channel) { void supabase.removeChannel(channel); channel = null; }
   lastTracked = null;
-  set({ room, connected: false, players: [], nearest: null });
+  since = Date.now();
+  set({ base, room, connected: false, players: [], nearest: null, party: isVillageRoom(room) ? { count: 1, cap: VILLAGE_CAP, shard } : null });
   if (!room) return;
   const self = await ensureMe();
   if (!self || state.room !== room) return;
@@ -104,13 +115,22 @@ export async function joinMeet(room: string | null) {
   channel = ch;
   ch.on('presence', { event: 'sync' }, () => {
     const st = ch.presenceState<Remote>();
-    const players: Remote[] = [];
+    let players: Remote[] = [];
     for (const [key, metas] of Object.entries(st)) {
       if (key === self.id) continue;
       const m = metas[metas.length - 1] as unknown as Remote | undefined;
       if (m) players.push({ ...m, id: key, tag: tags.get(key) ?? 'unknown' });
     }
-    set({ players });
+    if (isVillageRoom(room)) {
+      const inSet = admitted([{ id: self.id, since }, ...players.map((p) => ({ id: p.id, since: p.since ?? p.at }))]);
+      if (!inSet.has(self.id) && shard < MAX_SHARDS && channel === ch) {
+        shard += 1;
+        void openRoom(state.base, shardRoom(state.base ?? room, shard));
+        return;
+      }
+      players = players.filter((p) => inSet.has(p.id));
+      set({ players, party: { count: players.length + 1, cap: VILLAGE_CAP, shard } });
+    } else set({ players });
     void loadTags(players.map((p) => p.id));
   })
     .on('broadcast', { event: 'chat' }, ({ payload }) => {
@@ -140,7 +160,7 @@ export async function joinMeet(room: string | null) {
         // Busy phones can miss the heartbeat: rejoin the same room shortly.
         window.setTimeout(() => {
           if (channel !== ch || state.connected) return;
-          const r = state.room; state = { ...state, room: null }; void joinMeet(r);
+          const b = state.base, r = state.room; void openRoom(b, r);
         }, 3000);
       }
     });
@@ -157,7 +177,7 @@ export function updateMyPose(pose: MeetPose) {
     || Math.abs(pose.yaw - prev.pose.yaw) > 0.3;
   if (!moved && prev && now - prev.at < 5000) return;
   lastTracked = { pose, at: now };
-  void channel.track({ ...pose, id: me.id, name: me.name, username: me.username, photo: me.photo, at: now, voice: voiceFlag });
+  void channel.track({ ...pose, id: me.id, name: me.name, username: me.username, photo: me.photo, at: now, since, voice: voiceFlag });
 }
 
 export async function setMeetVisible(v: boolean) {
@@ -195,5 +215,5 @@ export const setNearest = (n: State['nearest']) => {
 export function __resetMeetForTests() {
   if (channel) void supabase.removeChannel(channel);
   channel = null; me = null; tags.clear(); lastTracked = null;
-  state = { connected: false, room: null, visible: true, players: [], messages: [], chatOpen: false, chatFocus: 0, nearest: null };
+  state = { connected: false, room: null, visible: true, players: [], messages: [], chatOpen: false, chatFocus: 0, nearest: null, base: null, party: null };
 }

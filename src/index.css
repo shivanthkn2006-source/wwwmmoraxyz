@@ -7253,6 +7253,7 @@ html body .vr-gem-core { animation-duration: 4s !important; }
 
 /* ── VR World: meet + chat ── */
 .vr-meet-label { display: flex; align-items: center; gap: 4px; white-space: nowrap; font-size: 11px; font-weight: 600; color: hsl(0 0% 100%); text-shadow: 0 1px 3px hsl(0 0% 0% / .7); }
+.vr-meet-label-village > span:first-child { font-style: italic; font-family: Georgia, 'Times New Roman', serif; font-size: clamp(13px, 3.4vw, 16px); font-weight: 600; letter-spacing: .2px; }
 .vr-meet-tag { display: inline-block; border-radius: 999px; padding: 0 6px; font-size: 10px; font-weight: 700; line-height: 16px; color: hsl(0 0% 100%); }
 .vr-meet-tag-friend { background: #387BF6; }
 .vr-meet-tag-follower { background: #F5C518; color: hsl(30 40% 12%); }
