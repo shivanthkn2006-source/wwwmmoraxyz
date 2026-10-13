@@ -29,6 +29,13 @@
       "when": 1791871440694,
       "tag": "0003_village_quest_karma",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791872270011,
+      "tag": "0004_admin_only_alert_settings_read",
+      "breakpoints": true
     }
   ]
 }
