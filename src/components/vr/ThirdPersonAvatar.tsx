@@ -13,6 +13,18 @@ import { useVRView, wireVRViewKeys } from '@/lib/vrView';
 import { useVRSelf } from '@/lib/vrSelf';
 import { useEquipped } from '@/lib/vrGear';
 import { useLook, loadLook } from '@/lib/vrLook';
+import { Html } from '@react-three/drei';
+import { useMeet, myMeetId } from '@/worlds/meet/vrMeet';
+/** My own latest chat message over my head for 8 s (others see theirs over mine via MeetPresence). */
+const MyBubble: React.FC = () => {
+  const { messages } = useMeet();
+  const [now, setNow] = React.useState(Date.now());
+  React.useEffect(() => { const id = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(id); }, []);
+  const me = myMeetId();
+  const m = [...messages].reverse().find((x) => !x.system && (x.tag === 'me' || x.from === me));
+  if (!m || now - m.at > 8000) return null;
+  return <Html position={[0, 2.3, 0]} center occlude={false} style={{ pointerEvents: 'none' }}><div style={{ maxWidth: 'min(220px, 60vw)', width: 'max-content', background: '#fff', color: '#000', fontFamily: 'Georgia, serif', fontSize: 'clamp(11px, 2.6vw, 14px)', lineHeight: 1.3, padding: '4px 9px', borderRadius: 12, boxShadow: '0 2px 6px rgba(0,0,0,.35)', wordBreak: 'break-word' }}>{m.text.slice(0, 140)}</div></Html>;
+};
 import { HUMAN_COLORS as HC, HUMAN_MATERIAL, headGeometry } from '@/lib/vrHumanLook';
 
 const HEAD = headGeometry();
@@ -115,6 +127,7 @@ export const ThirdPersonAvatar: React.FC = () => {
   if (!thirdPerson) return null;
   return (
     <group ref={root}>
+      <MyBubble />
       <group ref={hips} position={[0, 0.95, 0]}>
         <mesh position={[0, 0.32, 0]} material={mats.shirt}><boxGeometry args={[0.44, 0.6, 0.25]} /></mesh>
         <mesh position={[0, 0.78, 0]} geometry={female ? HEAD_F : HEAD} material={HUMAN_MATERIAL} />

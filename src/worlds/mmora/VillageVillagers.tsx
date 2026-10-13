@@ -20,6 +20,16 @@ function playerSpot(cam: THREE.Camera): { x: number; z: number } {
   return { x: cam.position.x - Math.sin(yaw) * 2.8, z: cam.position.z - Math.cos(yaw) * 2.8 };
 }
 import { Html } from '@react-three/drei';
+import { hasGear } from '@/lib/vrGear';
+/** Story lines follow the quest board: what villagers say changes as missions are done. */
+const STORY: Record<string, string[]> = {
+  map: ['Lost the old village map near the lanes, I did. Find it, stranger.', 'Without the map you will never find the church secret.'],
+  medallion: ['You have the map! The altar in the church hides a medallion.', 'Go to the church. Pray before you take the medallion.'],
+  crest: ['The medallion… then the castle keep is next. The Lord\'s crest waits there.', 'Climb to the castle. Bring back the Lord\'s crest.'],
+  done: ['You found the crest! The village is in your debt.', 'They say you are the new lord of M\'Mora now.'],
+};
+const storyStage = () => !hasGear('map') ? 'map' : !hasGear('medallion') ? 'medallion' : !hasGear('crest') ? 'crest' : 'done';
+let lastSpoken = 0;
 const LINES = ['Stranger… the church bell rang at midnight again.', 'Mind the castle on the hill. Nobody comes back the same.', 'Lost the old village map near the lanes, I did.', 'The altar holds a medallion. Pray before you take it.', 'Wolves came down from the hills last winter.', 'Warm yourself by the fire, traveller.', 'Have you seen the Lord\'s crest? It belongs in the keep.', 'Sit on a bench a while — it pays to rest here.'];
 import { playPickup } from '@/lib/vrSfx';
 
@@ -108,7 +118,12 @@ const Villager: React.FC<{ route: [number, number][]; female: boolean; offset: n
     if (bubble.current) {
       const show = near < 6 && st.current.down <= 0;
       bubble.current.style.display = show ? 'block' : 'none';
-      if (show) { talkT.current -= dt; if (talkT.current <= 0) { talkT.current = 6; lineI.current = (lineI.current + 1) % LINES.length; bubble.current.textContent = st.current.hostile ? 'Get away from me!' : LINES[lineI.current]; } }
+      if (show) { talkT.current -= dt; if (talkT.current <= 0) { talkT.current = 6; lineI.current = (lineI.current + 1) % LINES.length; const story = STORY[storyStage()];
+        const line = st.current.hostile ? 'Get away from me!' : lineI.current % 2 === 0 ? story[(lineI.current / 2) % story.length] : LINES[lineI.current];
+        bubble.current.textContent = line;
+        // Zoe reads the story line aloud when you stand close (one villager every 12 s at most).
+        const nowS = performance.now();
+        if (near < 4 && !st.current.hostile && nowS - lastSpoken > 12000) { lastSpoken = nowS; void import('@/utils/deepgramTTS').then((m) => m.speakWithDeepgram(line)).catch(() => {}); } } }
       else talkT.current = 0;
     }
     if (near > 45) { c.hostile = false; return; }
