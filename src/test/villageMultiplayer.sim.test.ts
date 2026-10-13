@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * Six separate signed-in clients in one simulated live room service:
  * five share the village, the sixth lands in the next copy, reconnects keep
