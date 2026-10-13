@@ -88,6 +88,9 @@ function getActiveModel(): string {
   return DEEPGRAM_MODEL_FEMALE;
 }
 const FIRST_CHUNK_MAX_CHARS = 120;
+let voiceOverride: 'male' | 'female' | null = null;
+/** Speak once in a specific voice (e.g. male villagers), without changing Zoe's own setting. */
+export const speakWithDeepgramVoice = (text: string, voice: 'male' | 'female') => { voiceOverride = voice; return speakWithDeepgram(text); };
 
 let currentAudio: HTMLAudioElement | null = null;
 let isDeepgramSpeaking = false;
@@ -353,7 +356,8 @@ export const speakWithDeepgram = async (
     const chunkMetadata = buildChunkMetadata(spoken, sentences);
 
     const startedAt = performance.now();
-    const activeModel = getActiveModel();
+    const activeModel = voiceOverride ? (voiceOverride === 'male' ? DEEPGRAM_MODEL_MALE : DEEPGRAM_MODEL_FEMALE) : getActiveModel();
+    voiceOverride = null;
     console.log(`[DeepgramTTS] 🎙️ Fast-start synthesis: ${sentences.length} chunks (${activeModel})`);
 
     const [firstText, ...remainingText] = sentences;
