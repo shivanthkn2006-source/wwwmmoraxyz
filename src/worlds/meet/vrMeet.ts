@@ -116,7 +116,7 @@ export async function joinMeet(room: string | null) {
     .on('broadcast', { event: 'chat' }, ({ payload }) => {
       const m = payload as ChatMsg;
       if (!m?.text || typeof m.text !== 'string') return;
-      pushMsg({ ...m, text: m.text.slice(0, 240), tag: tags.get(m.from) ?? 'unknown' });
+      pushMsg({ ...m, at: Date.now(), text: m.text.slice(0, 240), tag: tags.get(m.from) ?? 'unknown' });
     })
     .on('broadcast', { event: 'rtc' }, ({ payload }) => {
       const sg = payload as Signal;
