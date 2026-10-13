@@ -108,6 +108,7 @@ serve(async (req) => {
     
     // Forward the request through clean channel
     const response = await fetch(targetUrl, {
+      redirect: 'manual', // never follow a redirect into an internal address
       method,
       headers: cleanHeaders,
       body: payload ? JSON.stringify(payload) : undefined,
