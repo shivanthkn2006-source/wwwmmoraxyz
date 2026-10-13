@@ -11,6 +11,14 @@ import { WALK_MPS, RUN_MPS } from '@/lib/vrWalk';
 import { registerUse } from '@/lib/vrUse';
 import { getEquipped, gearStats, equippedWeapon, WEAPON_FIGHT } from '@/lib/vrGear';
 const lastSwing = { v: 0 };
+import { getVRView } from '@/lib/vrView';
+/** Where the player's body stands: the camera in first person, 2.8 m ahead of it in third person (matches ThirdPersonAvatar). */
+const _e = new THREE.Euler();
+function playerSpot(cam: THREE.Camera): { x: number; z: number } {
+  if (!getVRView().thirdPerson) return { x: cam.position.x, z: cam.position.z };
+  const yaw = _e.setFromQuaternion(cam.quaternion, 'YXZ').y;
+  return { x: cam.position.x - Math.sin(yaw) * 2.8, z: cam.position.z - Math.cos(yaw) * 2.8 };
+}
 import { Html } from '@react-three/drei';
 const LINES = ['Stranger… the church bell rang at midnight again.', 'Mind the castle on the hill. Nobody comes back the same.', 'Lost the old village map near the lanes, I did.', 'The altar holds a medallion. Pray before you take it.', 'Wolves came down from the hills last winter.', 'Warm yourself by the fire, traveller.', 'Have you seen the Lord\'s crest? It belongs in the keep.', 'Sit on a bench a while — it pays to rest here.'];
 import { playPickup } from '@/lib/vrSfx';
@@ -106,7 +114,7 @@ const Villager: React.FC<{ route: [number, number][]; female: boolean; offset: n
     if (near > 45) { c.hostile = false; return; }
     if (c.hostile) {
       // chase you and swing; Defence softens each hit
-      const dx = camera.position.x - root.current.position.x, dz = camera.position.z - root.current.position.z, dd = Math.hypot(dx, dz) || 1;
+      const ps = playerSpot(camera); const dx = ps.x - root.current.position.x, dz = ps.z - root.current.position.z, dd = Math.hypot(dx, dz) || 1;
       root.current.rotation.y = Math.atan2(dx, dz);
       if (dd > 1.3) { root.current.position.x += (dx / dd) * RUN_MPS * 0.7 * dt; root.current.position.z += (dz / dd) * RUN_MPS * 0.7 * dt; c.phase += dt * 11; }
       c.hitCd -= dt;
@@ -144,7 +152,7 @@ const Villager: React.FC<{ route: [number, number][]; female: boolean; offset: n
     const weapon = equippedWeapon();
     if (!weapon) return null;
     const wf = WEAPON_FIGHT[weapon];
-    const d = Math.hypot(camera.position.x - r.position.x, camera.position.z - r.position.z);
+    const ps = playerSpot(camera); const d = Math.hypot(ps.x - r.position.x, ps.z - r.position.z);
     if (d > wf.reach) return null;
     return { dist: d, reach: wf.reach, label: wf.label, run: () => {
       const now = performance.now() / 1000;
