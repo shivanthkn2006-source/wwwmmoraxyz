@@ -13928,6 +13928,7 @@ export type Database = {
       }
       sovereign_admin_id: { Args: never; Returns: string }
       spend_karma_vr: { Args: { p_item: string }; Returns: number }
+      spend_resonance_points: { Args: { p_points: number }; Returns: number }
       track_viral_share: {
         Args: {
           p_content_id: string
