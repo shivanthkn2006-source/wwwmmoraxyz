@@ -1,3 +1,4 @@
+import { requireCaller } from '../_shared/caller-guard.ts';
 import { safeChatMessages } from '../_shared/safe-messages.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
@@ -190,6 +191,9 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+
+  // Zoe's chat runs paid AI: signed-in members (or server calls) only.
+  const __caller = await requireCaller(req, 'member'); if (__caller instanceof Response) return __caller;
 
   const startTime = performance.now();
   let userId: string | null = null;

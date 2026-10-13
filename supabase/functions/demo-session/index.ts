@@ -50,15 +50,9 @@ Deno.serve(async (req) => {
         console.error('demo-session create failed:', createError.message);
         return json({ ok: false, error: 'Could not open the demo account.' }, 500);
       }
-    } else {
-      const { error: updateError } = await admin.auth.admin.updateUserById(String(existingId), {
-        password,
-        email_confirm: true,
-      });
-      if (updateError) {
-        console.error('demo-session refresh failed:', updateError.message);
-      }
     }
+    // The demo password is never reset from a public request; rotate it only
+    // through the DEMO_ACCOUNT_PASSWORD secret and an admin password change.
 
     // 2. Sign in as that member and hand the session to the browser.
     const publicClient = createClient(url, anonKey, { auth: { persistSession: false } });

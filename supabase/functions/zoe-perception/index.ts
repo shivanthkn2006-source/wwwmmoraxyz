@@ -70,7 +70,14 @@ serve(async (req) => {
     if (token) {
       const { data: { user }, error: userError } = await supabase.auth.getUser(token);
       if (user) userId = user.id;
-      else console.warn('[Zoe Perception] Guest mode (no valid session):', userError?.message);
+      else console.warn('[Zoe Perception] Rejected (no valid session):', userError?.message);
+    }
+    // The vision service is paid: signed-in members only.
+    if (!userId) {
+      return new Response(JSON.stringify({ error: 'Authentication required' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const { media_type, media_data, file_name, context, cross_reference, debug, scan_purpose }: PerceptionRequest = await req.json();

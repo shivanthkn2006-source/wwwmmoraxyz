@@ -35,6 +35,27 @@ const STRIPPED_HEADERS = [
   'x-cluster-client-ip',
 ];
 
+const PRIVATE_V4 = [/^0\./, /^10\./, /^127\./, /^169\.254\./, /^172\.(1[6-9]|2\d|3[01])\./, /^192\.168\./, /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./, /^22[4-9]\./, /^2[3-5]\d\./];
+const isPrivateIp = (ip: string) => ip.includes(':')
+  ? /^(::1?$|f[cd]|fe[89ab]|::ffff:)/i.test(ip)
+  : PRIVATE_V4.some((r) => r.test(ip));
+/** Returns a reason when the destination is not a public https web address. */
+async function unsafeTarget(raw: string): Promise<string | null> {
+  let u: URL; try { u = new URL(raw); } catch { return 'invalid URL'; }
+  if (u.protocol !== 'https:') return 'https only';
+  if (u.username || u.password) return 'credentials in URL';
+  if (u.port && u.port !== '443') return 'non-standard port';
+  const host = u.hostname.replace(/^\[|\]$/g, '').toLowerCase();
+  if (/^[\d.]+$/.test(host) || host.includes(':')) return 'IP addresses not allowed';
+  if (host === 'localhost' || /\.(local|internal|localhost|lan|home|corp)$/.test(host) || !host.includes('.')) return 'internal host';
+  try {
+    const ips = [...await Deno.resolveDns(host, 'A').catch(() => [] as string[]), ...await Deno.resolveDns(host, 'AAAA').catch(() => [] as string[])];
+    if (!ips.length) return 'host does not resolve';
+    if (ips.some(isPrivateIp)) return 'private network';
+  } catch { return 'host lookup failed'; }
+  return null;
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -53,6 +74,13 @@ serve(async (req) => {
     
     if (!targetUrl) {
       throw new Error('Missing targetUrl in request body');
+    }
+    const unsafe = await unsafeTarget(String(targetUrl));
+    if (unsafe) {
+      return new Response(JSON.stringify({ error: `Blocked destination: ${unsafe}` }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
     
     console.log(`[Ironclad Relay] Processing request to: ${targetUrl.substring(0, 50)}...`);

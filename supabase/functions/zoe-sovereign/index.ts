@@ -186,7 +186,12 @@ Deno.serve(async (req) => {
     const action = String(body.action ?? '');
     // Session races (signed out / token refreshing) degrade to a quiet
     // signed-out result; every caller already treats success:false as "skip".
-    if (!u?.user && action !== 'selftest') return json({ success: false, skipped: 'signed_out' });
+    if (!u?.user) return json({ success: false, skipped: 'signed_out' });
+    if (action === 'selftest') {
+      // Selftest runs paid providers: admin only.
+      const { data: isAdmin } = await sb.rpc('has_role', { _user_id: u.user.id, _role: 'admin' });
+      if (!isAdmin) return json({ success: false, error: 'Admin only' }, 403);
+    }
     const name = String(body.name ?? u?.user?.user_metadata?.full_name ?? 'friend').split(' ')[0];
 
     if (action === 'vision') {
