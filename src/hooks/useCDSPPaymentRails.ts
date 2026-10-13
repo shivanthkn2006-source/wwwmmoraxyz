@@ -194,12 +194,9 @@ export const useCDSPPaymentRails = () => {
           .update({ total_points: newTotalPoints })
           .eq('user_id', user.id);
       } else if (paymentMethod === 'karma_points') {
-        const newKarma = (state.wallet?.karmaPoints || 0) - pricing.karmaEquivalent;
-        
-        await supabase
-          .from('exodus_players')
-          .update({ resonance_points: newKarma })
-          .eq('user_id', user.id);
+        // Server checks and deducts the real balance; the client never sets it.
+        const { error: spendErr } = await supabase.rpc('spend_resonance_points', { p_points: pricing.karmaEquivalent });
+        if (spendErr) throw spendErr;
       }
 
       // Log transaction to behavioral events

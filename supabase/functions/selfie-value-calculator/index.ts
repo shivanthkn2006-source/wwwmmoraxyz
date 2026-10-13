@@ -55,6 +55,15 @@ serve(async (req) => {
       });
     }
 
+    // Only the pin's owner may have it valued (the write below uses the service role).
+    const { data: ownPin } = await supabase.from('selfie_city_pins').select('user_id').eq('id', pinId).maybeSingle();
+    if (!ownPin || !userId || ownPin.user_id !== userId) {
+      return new Response(JSON.stringify({ error: 'Not your pin' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     console.log('[Project Midas] Calculating value for pin:', pinId);
 
     // Step 1: Use Gemini Vision to detect brands in the image

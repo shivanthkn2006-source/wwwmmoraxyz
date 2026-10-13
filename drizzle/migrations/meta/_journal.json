@@ -15,6 +15,20 @@
       "when": 1791779700617,
       "tag": "0001_vr_player_look",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791871364326,
+      "tag": "0002_lock_resonance_points",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791871440694,
+      "tag": "0003_village_quest_karma",
+      "breakpoints": true
     }
   ]
 }
