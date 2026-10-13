@@ -103,10 +103,10 @@ export async function joinMeet(base: string | null) {
   await openRoom(base, base ? shardRoom(base, 1) : null);
 }
 
-async function openRoom(base: string | null, room: string | null) {
+async function openRoom(base: string | null, room: string | null, keepSince = false) {
   if (channel) { void supabase.removeChannel(channel); channel = null; }
   lastTracked = null;
-  since = Date.now();
+  if (!keepSince || !since) since = Date.now();
   set({ base, room, connected: false, players: [], nearest: null, party: isVillageRoom(room) ? { count: 1, cap: VILLAGE_CAP, shard } : null });
   if (!room) return;
   const self = await ensureMe();
@@ -160,7 +160,7 @@ async function openRoom(base: string | null, room: string | null) {
         // Busy phones can miss the heartbeat: rejoin the same room shortly.
         window.setTimeout(() => {
           if (channel !== ch || state.connected) return;
-          const b = state.base, r = state.room; void openRoom(b, r);
+          const b = state.base, r = state.room; void openRoom(b, r, true);
         }, 3000);
       }
     });
