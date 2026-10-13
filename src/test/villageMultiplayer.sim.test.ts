@@ -74,7 +74,7 @@ describe('M\u2019Mora Village multiplayer (6 sessions)', () => {
     expect(cs[5].getMeet().messages.some((m) => m.text === 'hello village')).toBe(false);
 
     // reconnect: u2 drops and rejoins; keeps its earlier place, sixth stays out
-    const ch = [...rooms.get('mmora:chennai')!].find((c) => c.key === 'u2')!;
+    const ch = [...rooms.get('vr-meet:mmora:chennai')!].find((c) => c.key === 'u2')!;
     ch.status!('CHANNEL_ERROR');
     await tick(3200);
     m_check: {
