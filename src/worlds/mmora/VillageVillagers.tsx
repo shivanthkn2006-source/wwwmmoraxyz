@@ -123,7 +123,7 @@ const Villager: React.FC<{ route: [number, number][]; female: boolean; offset: n
         bubble.current.textContent = line;
         // Zoe reads the story line aloud when you stand close (one villager every 12 s at most).
         const nowS = performance.now();
-        if (near < 4 && !st.current.hostile && nowS - lastSpoken > 12000) { lastSpoken = nowS; void import('@/utils/deepgramTTS').then((m) => m.speakWithDeepgram(line)).catch(() => {}); } } }
+        if (near < 4 && !st.current.hostile && nowS - lastSpoken > 12000) { lastSpoken = nowS; void import('@/utils/deepgramTTS').then((m) => m.speakWithDeepgramVoice(line, female ? 'female' : 'male')).catch(() => {}); } } }
       else talkT.current = 0;
     }
     if (near > 45) { c.hostile = false; return; }
