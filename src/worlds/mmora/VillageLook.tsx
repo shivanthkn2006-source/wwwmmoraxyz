@@ -12,6 +12,8 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { HOUSES } from './PickupHouses';
 import { VillageAnimals } from './VillageAnimals';
 import { VillageChurch } from './VillageChurch';
+import { VillageBells } from './VillageBells';
+import { VillageMerchant } from './VillageMerchant';
 import { VillageCastle } from './VillageCastle';
 import { VillageGear } from './VillageGear';
 import { VillageSky } from './VillageSky';
@@ -162,6 +164,8 @@ export const VillageLook: React.FC = () => {
       <VillageAnimals />
       <VillageVillagers />
       <VillageQuestBoard />
+      <VillageBells />
+      <VillageMerchant />
     </>
   );
 };

@@ -9,7 +9,9 @@ import { createPortal } from 'react-dom';
 import React, { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { useStory, readNote, KEYS, NOTES } from '@/lib/vrStory';
 import { QUESTS, getVRQuestSnapshot, itemLabel, loadVRQuests, subscribeVRQuests, type Rarity } from '@/lib/vrQuests';
-import { usePickups, useHerb } from '@/lib/vrPickups';
+import { usePickups, useHerb, useGoldHerbs, useGoldHerb } from '@/lib/vrPickups';
+import { GearArt, GoldHerbArt } from './VRGearArt';
+import { playSfx } from '@/lib/vrSfx';
 import avatarImg from '@/assets/vr-case-avatar.png';
 import avatarFemaleImg from '@/assets/vr-case-avatar-female.png';
 import { COIN_FACES, splitCoins } from '@/lib/vrCoinLook';
@@ -20,7 +22,7 @@ import { FilesChat } from './VRFilesChat';
 import { GEAR, useGear, useEquipped, toggleEquip, gearStats, useLevel } from '@/lib/vrGear';
 
 export const CASE_COLS = 10;
-const MIN_ROWS = 6;
+const MIN_ROWS = 10;
 const LAYOUT_KEY = 'vr-case-layout';
 const EXTRA_KEY = 'vr-case-extra-rows';
 
@@ -29,7 +31,7 @@ const RARITY_HSL: Record<Rarity, string> = {
   epic: 'hsl(219 95% 78%)', legendary: 'hsl(43 96% 56%)',
 };
 
-type CaseItem = { id: string; w: number; h: number; name: string; kind: 'herb' | 'coin' | 'relic' | 'bag' | 'gear'; icon?: string; face?: 'gold' | 'blue' | 'yellow'; count?: number; rarity?: Rarity; detail?: string };
+type CaseItem = { id: string; w: number; h: number; name: string; kind: 'herb' | 'gold' | 'coin' | 'relic' | 'bag' | 'gear'; icon?: string; gid?: string; face?: 'gold' | 'blue' | 'yellow'; count?: number; rarity?: Rarity; detail?: string };
 type Pos = { x: number; y: number };
 
 /** First-fit packing that keeps saved spots when they still fit. */
@@ -85,6 +87,7 @@ export const VRBagPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const { state, bag } = snap;
   const story = useStory();
   const pick = usePickups();
+  const goldHerbs = useGoldHerbs();
   const self = useVRSelf();
   const [vp, setVp] = useState(() => ({ w: window.innerWidth, h: window.innerHeight }));
   useEffect(() => { const r = () => setVp({ w: window.innerWidth, h: window.innerHeight }); window.addEventListener('resize', r); return () => window.removeEventListener('resize', r); }, []);
@@ -101,13 +104,14 @@ export const VRBagPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const items = useMemo<CaseItem[]>(() => {
     const out: CaseItem[] = [];
     // Same kinds stack in one square (herbs, each coin face, each relic type) to save space.
-    if (pick.herbs > 0) out.push({ id: 'herb-stack', w: 1, h: 2, kind: 'herb', name: 'Green Herb', count: pick.herbs, detail: 'Restores stamina' });
+    if (pick.herbs > 0) out.push({ id: 'herb-stack', w: 1, h: 2, kind: 'herb', name: 'Green Herb', count: pick.herbs, detail: 'Restores 20 health (5 = full) and stamina' });
+    if (goldHerbs > 0) out.push({ id: 'gold-herb-stack', w: 1, h: 2, kind: 'gold', name: 'Golden Herb', count: goldHerbs, detail: 'Restores full health' });
     const c = splitCoins(pick.coins);
     if (pick.coins >= 100) out.push({ id: 'coin-bag', w: 2, h: 2, kind: 'bag', name: "M'Mora coin bag", count: pick.coins, detail: `${pick.coins} M'Mora coins in total` });
     if (c.gold) out.push({ id: 'coin-gold', w: 1, h: 1, kind: 'coin', face: 'gold', name: "Gold M'Mora coin (50)", count: c.gold, detail: 'Worth 50 each' });
     if (c.blue) out.push({ id: 'coin-blue', w: 1, h: 1, kind: 'coin', face: 'blue', name: "Blue M'Mora coin (10)", count: c.blue, detail: 'Worth 10 each' });
     if (c.yellow) out.push({ id: 'coin-yellow', w: 1, h: 1, kind: 'coin', face: 'yellow', name: "Yellow M'Mora coin (1)", count: c.yellow, detail: 'Worth 1 each' });
-    for (const g of GEAR.filter((x) => gear.includes(x.id))) out.push({ id: `gear-${g.id}`, w: 1, h: 1, kind: 'gear', icon: g.icon, name: g.name, detail: g.detail });
+    for (const g of GEAR.filter((x) => gear.includes(x.id))) out.push({ id: `gear-${g.id}`, w: g.id === 'shotgun' || g.id === 'rocket' ? 2 : 1, h: 1, kind: 'gear', gid: g.id, icon: g.icon, name: g.name, detail: g.detail });
     const relicTypes = new Map<string, { b: (typeof bag)[number]; n: number }>();
     for (const b of bag) {
       if (b.type === 'green_herb' || b.type === 'antique_coin' || /^(weapon|armour|quest)_/.test(b.type)) continue;
@@ -117,12 +121,13 @@ export const VRBagPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       out.push({ id: `relic-${b.type}`, count: n > 1 ? n : undefined, w: 1, h: 1, kind: 'relic', rarity: b.rarity, name: itemLabel(b.type), detail: `${b.rarity} · found ${new Date(b.collected_at).toLocaleDateString()}` });
     }
     return out;
-  }, [pick.herbs, pick.coins, bag, gear]);
+  }, [pick.herbs, pick.coins, bag, gear, goldHerbs]);
 
   const cells = items.reduce((n, it) => n + it.w * it.h, 0);
-  const rows = Math.max(MIN_ROWS, Math.ceil(cells / CASE_COLS) + 2) + extra;
-  // Squares shrink to keep the whole case on screen as it grows.
-  const cell = Math.round(Math.max(20, Math.min(60, (vp.h - 130) / (rows + 0.6), (vp.w * 0.66 - 40) / CASE_COLS)));
+  // Square size follows the screen width; the case fills the screen height and scrolls inside for more rows.
+  const cell = Math.round(Math.max(26, Math.min(60, (vp.w * 0.66 - 40) / CASE_COLS)));
+  const visRows = Math.max(3, Math.floor((vp.h - 96 - 56) / cell));
+  const rows = Math.max(MIN_ROWS, visRows, Math.ceil(cells / CASE_COLS) + 4) + extra;
   const layout = useMemo(() => packCase(items, saved, CASE_COLS, rows), [items, saved, rows]);
   const selItem = items.find((i) => i.id === sel) ?? null;
   const say = (m: string) => { setMsg(m); window.setTimeout(() => setMsg(null), 1800); };
@@ -180,12 +185,12 @@ export const VRBagPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       </div>
 
       {/* Case + avatar */}
-      <div className="flex min-h-0 flex-1 items-center justify-center gap-3 px-3 pt-2">
-        <div className="re-case-plate flex flex-col overflow-hidden" style={{ height: `${rows * cell + 56}px`,  width: tab === 'items' ? 'max-content' : `min(${CASE_COLS * cell + 40}px, 72vw)`, alignSelf: 'center' }}>
+      <div className="flex min-h-0 flex-1 items-center justify-center gap-3 px-3 pt-1">
+        <div className="re-case-plate flex flex-col overflow-hidden" style={{ height: `${visRows * cell + 56}px`,  width: tab === 'items' ? 'max-content' : `min(${CASE_COLS * cell + 40}px, 72vw)`, alignSelf: 'center' }}>
           {tab === 'items' && (
             <>
               <div className="re-case-lid" aria-hidden><span className="re-case-hinge" /><span className="re-case-hinge" /></div>
-              <div className="re-case-body overflow-auto" style={{ height: `${rows * cell + 18}px` }}>
+              <div className="re-case-body overflow-y-auto overflow-x-hidden" data-testid="case-scroll" style={{ height: `${visRows * cell + 18}px`, overscrollBehavior: 'contain' }}>
                 <div ref={gridRef} className="re-case-grid" style={{ gridTemplateColumns: `repeat(${CASE_COLS}, var(--re-cell))`, gridTemplateRows: `repeat(${rows}, var(--re-cell))` }} aria-label="Relics">
                   {Array.from({ length: rows * CASE_COLS }, (_, k) => {
                     const x = k % CASE_COLS, y = Math.floor(k / CASE_COLS);
@@ -196,7 +201,7 @@ export const VRBagPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                     return (
                       <button key={it.id} type="button" aria-pressed={sel === it.id} title={it.name} onPointerDown={onDown(it)} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} style={{ touchAction: 'none', gridColumn: `${p.x + 1} / span ${it.w}`, gridRow: `${p.y + 1} / span ${it.h}` }}
                         className="re-case-item" data-kind={it.kind}>
-                        <span className="re-case-art">{it.kind === 'herb' ? <Herb /> : it.kind === 'coin' ? <img src={COIN_FACES[it.face ?? 'gold']} alt="" className="h-full w-full object-contain" draggable={false} /> : it.kind === 'bag' ? <img src={COIN_FACES.bag} alt="" className="h-full w-full object-contain" draggable={false} /> : it.kind === 'gear' ? <span className="text-2xl leading-none">{it.icon}</span> : <Gem rarity={it.rarity!} />}</span>
+                        <span className="re-case-art">{it.kind === 'herb' ? <Herb /> : it.kind === 'coin' ? <img src={COIN_FACES[it.face ?? 'gold']} alt="" className="h-full w-full object-contain" draggable={false} /> : it.kind === 'bag' ? <img src={COIN_FACES.bag} alt="" className="h-full w-full object-contain" draggable={false} /> : it.kind === 'gear' ? <GearArt id={it.gid!} /> : it.kind === 'gold' ? <GoldHerbArt /> : <Gem rarity={it.rarity!} />}</span>
                         {it.count !== undefined && <span className="re-case-count">{it.count}</span>}
                       </button>
                     );
@@ -217,8 +222,8 @@ export const VRBagPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
               </li>); })}
           </ul>}
         </div>
-        <div className="re-case-portrait flex max-w-[220px] shrink-0 flex-col items-center justify-end" style={{ width: 'min(22vw, 220px)', height: `${rows * cell + 76}px` }}>
-          <img src={self.female ? avatarFemaleImg : avatarImg} alt="Your avatar" className="w-auto object-contain object-bottom" style={{ height: `${rows * cell + 40}px` }} />
+        <div className="re-case-portrait flex max-w-[220px] shrink-0 flex-col items-center justify-end" style={{ width: 'min(22vw, 220px)', height: `${visRows * cell + 76}px` }}>
+          <img src={self.female ? avatarFemaleImg : avatarImg} alt="Your avatar" className="w-auto object-contain object-bottom" style={{ height: `${visRows * cell + 40}px` }} />
           <div className="re-case-player">{self.name || 'You'}</div>
           <div className="re-case-ring"><span>{pick.herbs}</span><small>herbs</small></div>
         </div>
@@ -230,6 +235,11 @@ export const VRBagPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           {msg ?? (selItem ? `${selItem.name}${selItem.count !== undefined ? ` ×${selItem.count}` : ''} — ${selItem.detail ?? ''}` : items.length ? 'Drag an item to a square, or tap it then tap a square' : 'Walk up to a glowing item and tap Use to pick it up.')}
         </div>
         {selItem?.kind === 'herb' && <button type="button" className="re-case-btn" onClick={() => { say(useHerb()); setSel(null); }}>Use</button>}
+        {selItem?.kind === 'gold' && <button type="button" className="re-case-btn" onClick={() => { say(useGoldHerb()); setSel(null); }}>Use</button>}
+        {selItem?.kind === 'gear' && GEAR.find((g) => g.id === selItem.gid)?.kind !== 'quest' && <button type="button" className="re-case-btn" onClick={() => { toggleEquip(selItem.gid!); say(`${equipped.includes(selItem.gid!) ? 'Unequipped' : 'Equipped'} ${selItem.name}`); }}>{equipped.includes(selItem.gid!) ? 'Unequip' : 'Equip'}</button>}
+        {selItem?.kind === 'gear' && GEAR.find((g) => g.id === selItem.gid)?.kind === 'quest' && <button type="button" className="re-case-btn" onClick={() => { playSfx(selItem.gid === 'map' ? 'paper' : 'medallion'); say(selItem.detail ?? selItem.name); }}>Examine</button>}
+        {(selItem?.kind === 'coin' || selItem?.kind === 'bag') && <button type="button" className="re-case-btn" onClick={() => { playSfx('coins'); say('Spend coins at the hidden merchant in the village'); }}>Use</button>}
+        {selItem?.kind === 'relic' && <button type="button" className="re-case-btn" onClick={() => { playSfx('medallion'); say(`${selItem.name} — ${selItem.detail ?? ''}`); }}>Examine</button>}
         {tab === 'items' && <button type="button" className="re-case-btn" onClick={grow}>Bigger case</button>}
       </div>
     </div>,
