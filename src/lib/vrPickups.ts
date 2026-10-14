@@ -61,12 +61,16 @@ export function healPlayer(amount: number, sfx: 'heal' | 'goldheal') {
 const GKEY = 'vr-gold-herbs';
 let gold = (() => { try { return Math.max(0, Number(localStorage.getItem(GKEY)) || 0); } catch { return 0; } })();
 const gls = new Set<() => void>();
-const gemit = () => { try { localStorage.setItem(GKEY, String(gold)); } catch { /* */ } gls.forEach((l) => l()); };
+const gemit = () => { try { localStorage.setItem(GKEY, String(gold)); localStorage.setItem(GKEY + '-at', String(Date.now())); } catch { /* */ } gls.forEach((l) => l()); };
 export const useGoldHerbs = () => useSyncExternalStore((l) => { gls.add(l); return () => gls.delete(l); }, () => gold, () => gold);
 export function addGoldHerbs(n: number) { gold += n; gemit(); }
 export const getGoldHerbs = () => gold;
 export const subscribeGoldHerbs = (l: () => void) => { gls.add(l); return () => { gls.delete(l); }; };
-export function mergeGoldHerbs(n: number) { if (n > gold) { gold = n; gemit(); } }
+export function mergeGoldHerbs(n: number, remoteAt = 0) {
+  let localAt = 0; try { localAt = Number(localStorage.getItem(GKEY + '-at')) || 0; } catch { /* */ }
+  if (remoteAt <= localAt) return; // newest copy wins, so used herbs never come back
+  gold = Math.max(0, n | 0); try { localStorage.setItem(GKEY, String(gold)); localStorage.setItem(GKEY + '-at', String(remoteAt)); } catch { /* */ } gls.forEach((l) => l());
+}
 /** Herb combining (survival-horror style): 3 Green Herbs → 1 Golden Herb (full health). */
 export function combineHerbs(): string {
   if (st.herbs < 3) return 'Combine needs 3 Green Herbs';
