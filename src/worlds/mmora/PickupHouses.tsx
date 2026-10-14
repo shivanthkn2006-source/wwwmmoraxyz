@@ -245,7 +245,7 @@ export const PickupHouses: React.FC = () => {
     for (const k of ALL_PICKUPS) {
       if (isTaken(k.id)) continue;
       const d = Math.hypot(c.x - k.pos[0], c.z - k.pos[2]);
-      const label = k.kind === 'herb' ? 'Picked up a Green Herb' : `Picked up ${k.amount} M'Mora Coin${k.amount > 1 ? 's' : ''}`;
+      const label = k.id.startsWith('gold-') ? 'Picked up a Golden Herb' : k.kind === 'herb' ? 'Picked up a Green Herb' : `Picked up ${k.amount} M'Mora Coin${k.amount > 1 ? 's' : ''}`;
       if (!best || d < best.dist) best = { dist: d, label, run: () => takePickup(k) };
     }
     return best;
