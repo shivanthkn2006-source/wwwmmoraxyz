@@ -35,6 +35,7 @@ export function takeGear(g: Gear) {
   try { localStorage.setItem(KEY, JSON.stringify(owned)); } catch { /* */ }
   ls.forEach((l) => l());
   if (g.kind === 'quest') void import('@/lib/vrStoryline').then(async (sl) => { const r = sl.FIELD_REPORTS[g.id]; if (r) (await import('@/lib/vrStory')).readNote(r.id); });
+  if (g.kind === 'quest') { try { localStorage.setItem('mmora-autosave-at', String(Date.now())); } catch { /* */ } window.setTimeout(() => saveProgressNow(), 0); window.dispatchEvent(new CustomEvent('vr-toast', { detail: 'Chapter auto-saved' })); }
   if (g.kind === 'quest') playSfx(g.id === 'map' ? 'paper' : 'medallion'); else playPickup('coin');
   if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('vr-hand-reach'));
   void recordVRCollect({ type: `${g.kind}_${g.id}`, rarity: g.kind === 'quest' ? 'epic' : 'rare' });
