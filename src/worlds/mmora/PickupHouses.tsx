@@ -75,7 +75,8 @@ const GLOW_C = new THREE.MeshBasicMaterial({ color: '#e3c15a', transparent: true
 const leafGeo = (() => { const s = new THREE.Shape(); s.moveTo(0, 0); s.quadraticCurveTo(0.09, 0.12, 0, 0.3); s.quadraticCurveTo(-0.09, 0.12, 0, 0); return new THREE.ShapeGeometry(s, 6); })();
 
 /** Potted Green Herb: thin pale stem with broad leaves, like the classic one. */
-export const GreenHerb: React.FC<{ potted?: boolean }> = ({ potted = true }) => (
+const GOLD_LEAF = new THREE.MeshStandardMaterial({ color: '#d8a92a', roughness: 0.4, metalness: 0.3, emissive: '#7a5410', emissiveIntensity: 0.6, side: THREE.DoubleSide });
+export const GreenHerb: React.FC<{ potted?: boolean; golden?: boolean }> = ({ potted = true, golden = false }) => (
   <group>
     {potted && <>
       <mesh material={M.pot} position={[0, 0.09, 0]}><cylinderGeometry args={[0.11, 0.08, 0.18, 8]} /></mesh>
@@ -84,7 +85,7 @@ export const GreenHerb: React.FC<{ potted?: boolean }> = ({ potted = true }) => 
     <mesh material={M.stem} position={[0, 0.45, 0]}><cylinderGeometry args={[0.012, 0.018, 0.55, 5]} /></mesh>
     {Array.from({ length: 9 }, (_, i) => {
       const a = i * 2.4, y = 0.25 + i * 0.05;
-      return <mesh key={i} geometry={leafGeo} material={M.leaf} position={[0, y, 0]} rotation={[-0.9 + (i % 3) * 0.15, a, 0]} scale={1 - i * 0.04} />;
+      return <mesh key={i} geometry={leafGeo} material={golden ? GOLD_LEAF : M.leaf} position={[0, y, 0]} rotation={[-0.9 + (i % 3) * 0.15, a, 0]} scale={1 - i * 0.04} />;
     })}
   </group>
 );
@@ -122,8 +123,8 @@ export const ALL_PICKUPS: Pickup[] = [
     ];
   }),
   // Extra supplies scattered along the lanes: green herbs, golden herbs (id gold-*) and coins.
-  ...Array.from({ length: 32 }, (_, i): Pickup => {
-    const a = i * 2.39996, r = 14 + (i % 8) * 5.5, x = Math.cos(a) * r, z = Math.sin(a) * r;
+  ...Array.from({ length: 64 }, (_, i): Pickup => {
+    const a = i * 2.39996, r = 12 + (i % 12) * 4.2, x = Math.cos(a) * r, z = Math.sin(a) * r;
     const kind = i % 5 === 0 ? 'gold' : i % 3 === 0 ? 'coin' : 'herb';
     return kind === 'coin' ? { id: `lane-coin${i}`, kind: 'coin', amount: 3, pos: [x, 0, z] } : { id: kind === 'gold' ? `gold-herb${i}` : `lane-herb${i}`, kind: 'herb', amount: 1, pos: [x, 0, z] };
   }),
@@ -264,12 +265,12 @@ export const PickupHouses: React.FC = () => {
         </React.Fragment>;
       })}
       <MMoraSigns />
-      {left.filter((k) => k.id.startsWith('path-herb')).map((k) => (
-        <mesh key={`gl-${k.id}`} position={[k.pos[0], 2.5, k.pos[2]]} material={GLOW_G}><cylinderGeometry args={[0.2, 0.2, 4, 6, 1, true]} /></mesh>
+      {left.filter((k) => k.id.startsWith('path-herb') || k.id.startsWith('gold-')).map((k) => (
+        <mesh key={`gl-${k.id}`} position={[k.pos[0], 2.5, k.pos[2]]} material={k.id.startsWith('gold-') ? GLOW_C : GLOW_G}><cylinderGeometry args={[0.2, 0.2, 4, 6, 1, true]} /></mesh>
       ))}
       {left.map((k) => (
         <group key={k.id} position={k.pos}>
-          {k.kind === 'herb' ? <GreenHerb potted={k.id.startsWith('house')} /> : <CoinStack n={k.amount} />}
+          {k.kind === 'herb' ? <GreenHerb potted={k.id.startsWith('house')} golden={k.id.startsWith('gold-')} /> : <CoinStack n={k.amount} />}
         </group>
       ))}
     </group>
