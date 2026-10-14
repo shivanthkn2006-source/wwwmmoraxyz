@@ -9759,6 +9759,33 @@ export type Database = {
         }
         Relationships: []
       }
+      vr_story_events: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          platform: string | null
+          ref: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind: string
+          platform?: string | null
+          ref: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          platform?: string | null
+          ref?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       vr_world_events: {
         Row: {
           created_at: string

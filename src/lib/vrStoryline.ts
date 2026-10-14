@@ -65,3 +65,26 @@ export const RADIO: Record<Chapter, string> = {
   crest: 'The keep is next. The Lord\'s crest seals whatever is under that castle. Bring it back.',
   done: 'Core is quiet. Rest at the typewriter, operative. This isn\'t over.',
 };
+
+/** Briefings: each must be read (opens in the note reader, read aloud, kept in Files) before its chapter's item can be taken. */
+export const BRIEFINGS: Record<'intro' | Chapter, { id: string; title: string; text: string }> = {
+  intro: { id: 'brief_intro', title: 'Briefing 0 · Welcome to M\'Mora Village',
+    text: 'The year is 2050. M\'Mora Village went silent three nights ago under a green fog. You are an operative of the M\'Mora Watch. Commander Varga guides you by radio. Basics: move with the stick, turn with the arrows, tap Use near anything that glows. Open the case to use herbs — one Green Herb heals 20, three combine into a Golden Herb that heals fully. Guns need ammo and reloading. Save at the typewriter beside the blue ring. The hidden merchant trades coins for weapons. If the bell tower rings, danger is near. Read each briefing to unlock the next chapter.' },
+  map: { id: 'brief_map', title: `Briefing 1 · ${CHAPTER_TITLE.map}`, text: `${RADIO.map} Villagers turn hostile if you attack them. Ammo is scarce — the knife costs nothing.` },
+  medallion: { id: 'brief_medallion', title: `Briefing 2 · ${CHAPTER_TITLE.medallion}`, text: `${RADIO.medallion} The Hollow Warden hunts by sound. Walk inside the church; running draws attention.` },
+  crest: { id: 'brief_crest', title: `Briefing 3 · ${CHAPTER_TITLE.crest}`, text: `${RADIO.crest} Equip armour before the keep. Stock herbs from the merchant.` },
+  done: { id: 'brief_done', title: `Briefing 4 · ${CHAPTER_TITLE.done}`, text: RADIO.done },
+};
+
+/** Anonymous-safe engagement log (admin-only to read): which chapters, characters and items members engage with. */
+export function logStory(kind: string, ref: string) {
+  void (async () => {
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data } = await supabase.auth.getSession(); const id = data.session?.user?.id; if (!id) return;
+      const standalone = window.matchMedia?.('(display-mode: standalone)').matches;
+      const platform = `${standalone ? 'pwa' : 'web'}-${window.innerWidth < 768 ? 'mobile' : window.innerWidth < 1100 ? 'tablet' : 'desktop'}`;
+      await supabase.from('vr_story_events').insert({ user_id: id, kind: kind.slice(0, 40), ref: ref.slice(0, 80), platform });
+    } catch { /* offline */ }
+  })();
+}
