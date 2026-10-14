@@ -178,10 +178,10 @@ const Villager: React.FC<{ route: [number, number][]; female: boolean; offset: n
       if (!fire(weapon)) return;
       lastSwing.v = now;
       const { attack } = gearStats(getEquipped());
-      const c = st.current; c.hostile = true; c.flash = 0.25;
+      const c = st.current; if (!c.hostile) window.dispatchEvent(new CustomEvent('vr-danger')); c.hostile = true; c.flash = 0.25;
       c.hp = Math.max(0, c.hp - attack);
       window.dispatchEvent(new CustomEvent('vr-hand-reach'));
-      if (weapon !== 'knife') playPickup('coin');
+      void import('@/lib/vrSfx').then((m) => m.playSfx(weapon === 'knife' ? 'knife' : weapon === 'rocket' ? 'rocket' : weapon === 'shotgun' ? 'shotgun' : 'gun'));
       if (c.hp <= 0) {
         c.down = RESPAWN_S; c.hostile = false;
         void import('@/lib/vrPickups').then((m) => m.addCoins(5)); dropAmmo(); playPickup('coin');
