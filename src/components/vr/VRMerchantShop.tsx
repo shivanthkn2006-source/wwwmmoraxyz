@@ -5,6 +5,7 @@ import { usePickups, spendCoins, addHerbs, addGoldHerbs } from '@/lib/vrPickups'
 import { GEAR, takeGear, useGear } from '@/lib/vrGear';
 import { addAmmo } from '@/lib/vrAmmo';
 import { playSfx } from '@/lib/vrSfx';
+import { logStory } from '@/lib/vrStoryline';
 import { GearArt, GoldHerbArt } from './VRGearArt';
 
 type Ware = { id: string; name: string; price: number; detail: string; art: React.ReactNode; gear?: string; give: () => void };
@@ -29,7 +30,7 @@ export const MerchantShop: React.FC = () => {
   const buy = (w: Ware) => {
     if (w.gear && owned.includes(w.gear)) { playSfx('deny'); setMsg('You already have that one.'); return; }
     if (!spendCoins(w.price)) { playSfx('deny'); setMsg('“Not enough coins, stranger!”'); return; }
-    playSfx('coins'); w.give(); setMsg(`“Heh heh, thank you!” · bought ${w.name}`);
+    playSfx('coins'); w.give(); logStory('merchant', w.id); setMsg(`“Heh heh, thank you!” · bought ${w.name}`);
   };
   return createPortal(
     <div role="dialog" aria-label="Merchant" className="re-case-screen pointer-events-auto fixed inset-0 flex flex-col">

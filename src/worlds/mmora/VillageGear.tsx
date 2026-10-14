@@ -3,6 +3,8 @@ import React, { useEffect, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { registerUse } from '@/lib/vrUse';
+import { BRIEFINGS, logStory } from '@/lib/vrStoryline';
+import { getStory, readNote } from '@/lib/vrStory';
 import { GEAR, takeGear, useGear, type Gear } from '@/lib/vrGear';
 
 const COL = { weapon: '#c9d3df', armour: '#b07a3c', quest: '#ffd25a' };
@@ -22,6 +24,8 @@ const Item: React.FC<{ g: Gear }> = ({ g }) => {
 export const VillageGear: React.FC = () => {
   const { camera } = useThree();
   const owned = useGear();
+  // First visit: the opening briefing appears by itself once.
+  useEffect(() => { const t = window.setTimeout(() => { if (!getStory().notes.includes(BRIEFINGS.intro.id)) readNote(BRIEFINGS.intro.id); }, 4000); return () => window.clearTimeout(t); }, []);
   useEffect(() => registerUse(() => {
     let best: { d: number; g: Gear } | null = null;
     for (const g of GEAR) { if (g.shop) continue;
@@ -34,8 +38,14 @@ export const VillageGear: React.FC = () => {
     // Quest items unlock in order: map → medallion → crest.
     const needs: Record<string, [string, string]> = { medallion: ['map', 'Old Village Map'], crest: ['medallion', 'Church Medallion'] };
     const req = needs[g.id];
+    const brief = BRIEFINGS[g.id as 'map'];
+    if (g.kind === 'quest' && brief) {
+      const read = getStory().notes;
+      const need = !read.includes(BRIEFINGS.intro.id) ? BRIEFINGS.intro : !read.includes(brief.id) ? brief : null;
+      if (need) return { dist: best.d * 0.5, reach: 1.4, label: `Read ${need.title.split(' · ')[0]} first`, run: () => readNote(need.id) };
+    }
     if (req && !owned.includes(req[0])) return { dist: best.d * 0.5, reach: 1.4, label: `Find the ${req[1]} first`, run: () => {} };
-    return { dist: best.d * 0.5, reach: 1.4, label: `Pick up ${g.name}`, run: () => takeGear(g) };
+    return { dist: best.d * 0.5, reach: 1.4, label: `Pick up ${g.name}`, run: () => { takeGear(g); logStory('item', g.id); } };
   }), [camera, owned]);
   return <>{GEAR.filter((g) => !g.shop && !owned.includes(g.id)).map((g) => <Item key={g.id} g={g} />)}</>;
 };

@@ -49,6 +49,7 @@ export function takeKey(id: string) {
 export function readNote(id: string) {
   set({ notes: st.notes.includes(id) ? st.notes : [...st.notes, id], reading: id });
   const n = NOTES[id];
+  logStory('note', id);
   if (n) void import('@/utils/deepgramTTS').then((m) => m.speakWithDeepgram(`${n.title}. ${n.text}`)).catch(() => {});
 }
 export function closeNote() { set({ reading: null }); }

@@ -12,6 +12,7 @@ import * as THREE from 'three';
 import { playBell } from '@/lib/vrSfx';
 import { boxPoly, setSolidGroup } from '@/lib/vrSolids';
 import { registerUse } from '@/lib/vrUse';
+import { logStory } from '@/lib/vrStoryline';
 
 export const CLOCK_POS: [number, number, number] = [34, 0, -30];
 export const BELL_POS: [number, number, number] = [-40, 0, -40];
@@ -90,6 +91,7 @@ const BellTower: React.FC<{ M: ReturnType<typeof mats> }> = ({ M }) => {
     return { dist: d, reach: 3, label: 'Talk to the bell-ringer', run: () => {
       const line = 'For five hundred years this bell has warned M\'Mora. When the villagers turn, I ring it. Find the map, the medallion and the Lord\'s crest… before the castle wakes.';
       if (bubble.current) { bubble.current.textContent = line; bubble.current.style.display = 'block'; window.setTimeout(() => { if (bubble.current) bubble.current.style.display = 'none'; }, 9000); }
+      logStory('character', 'bell-ringer');
       void import('@/utils/deepgramTTS').then((m) => m.speakWithDeepgramVoice(line, 'male')).catch(() => {});
     } };
   }), [camera]);
