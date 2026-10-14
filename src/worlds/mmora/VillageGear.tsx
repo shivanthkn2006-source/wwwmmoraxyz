@@ -26,6 +26,18 @@ export const VillageGear: React.FC = () => {
   const owned = useGear();
   // First visit: the opening briefing appears by itself once.
   useEffect(() => { const t = window.setTimeout(() => { if (!getStory().notes.includes(BRIEFINGS.intro.id)) readNote(BRIEFINGS.intro.id); }, 4000); return () => window.clearTimeout(t); }, []);
+  // Commander Varga's radio plays by itself once per chapter (after the intro briefing).
+  const chapter = !owned.includes('map') ? 'map' : !owned.includes('medallion') ? 'medallion' : !owned.includes('crest') ? 'crest' : 'done';
+  useEffect(() => {
+    const key = `mmora-radio-${chapter}`;
+    if (localStorage.getItem(key)) return;
+    const t = window.setTimeout(() => {
+      if (!getStory().notes.includes(BRIEFINGS.intro.id)) return;
+      localStorage.setItem(key, '1'); logStory('radio', chapter);
+      void import('@/lib/vrStoryline').then((sl) => import('@/utils/deepgramTTS').then((m) => m.speakWithDeepgramVoice(sl.RADIO[chapter], 'female'))).catch(() => {});
+    }, 9000);
+    return () => window.clearTimeout(t);
+  }, [chapter]);
   useEffect(() => registerUse(() => {
     let best: { d: number; g: Gear } | null = null;
     for (const g of GEAR) { if (g.shop) continue;
