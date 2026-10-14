@@ -9,9 +9,11 @@
 - [x] Stage 4 core defence + Verdant Colossus boss
 - [x] Stage 5 merchant weapon upgrades + bigger case purchase
 
+- [x] Clock tower: hands on all 4 faces, real local time
+
 ## Open
 - [ ] Stage 6 team play
-- [ ] Stage 7 timed bonus mode
+- [x] Stage 7 Watch Drill timed bonus mode
 - [ ] Multiplayer gaps: own-avatar spacing, hidden-member slot counting, moving between groups
 - [ ] Chapter 5+ storyline
 - [ ] Sync puzzle progress + upgrades to account (device-only now)
