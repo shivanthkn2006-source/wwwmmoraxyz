@@ -1,4 +1,4 @@
-import { FIELD_REPORTS } from '@/lib/vrStoryline';
+import { FIELD_REPORTS, BRIEFINGS, logStory } from '@/lib/vrStoryline';
 /**
  * M'Mora Village story pieces: keys, notes and locked doors (Resident Evil
  * style). Found keys and read notes are remembered on the device and keys
@@ -13,6 +13,7 @@ export const KEYS: Record<string, StoryKey> = {
   archive_key: { id: 'archive_key', name: 'Brass archive key', opens: 'archive_door' },
 };
 export const NOTES: Record<string, StoryNote> = {
+  ...Object.fromEntries(Object.values(BRIEFINGS).map((r) => [r.id, r])),
   ...Object.fromEntries(Object.values(FIELD_REPORTS).map((r) => [r.id, r])),
   note_gate: { id: 'note_gate', title: 'Torn page by the doorway', text: 'The keeper locked the old archive and hid the brass key under the lamp by the fountain path. Whatever is inside, he said, belongs to whoever remembers.' },
   note_archive: { id: 'note_archive', title: "Keeper's last note", text: 'If you are reading this, the archive is yours now. The shard on the shelf holds a memory of this city. Keep it safe.' },
