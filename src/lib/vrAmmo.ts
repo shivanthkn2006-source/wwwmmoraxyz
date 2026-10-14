@@ -62,3 +62,15 @@ export function dropAmmo() {
 
 /** Resident Evil-style condition from health (0–100). */
 export const condition = (hp: number) => (hp > 66 ? 'Fine' : hp > 33 ? 'Caution' : 'Danger');
+
+/** Account merge: per gun keep whichever copy has more rounds in total. */
+export function mergeAmmo(remote: AmmoState | null | undefined) {
+  if (!remote) return;
+  const next = { ...st };
+  for (const [k, r] of Object.entries(remote)) {
+    const l = next[k]; if (!AMMO_SPEC[k] || !r) continue;
+    if (!l || r.inMag + r.reserve > l.inMag + l.reserve) next[k] = { inMag: Math.min(AMMO_SPEC[k].mag, r.inMag | 0), reserve: Math.min(99, r.reserve | 0) };
+  }
+  st = next; save();
+}
+export const subscribeAmmo = (l: () => void) => { ls.add(l); return () => { ls.delete(l); }; };

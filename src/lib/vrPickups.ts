@@ -64,6 +64,16 @@ const gls = new Set<() => void>();
 const gemit = () => { try { localStorage.setItem(GKEY, String(gold)); } catch { /* */ } gls.forEach((l) => l()); };
 export const useGoldHerbs = () => useSyncExternalStore((l) => { gls.add(l); return () => gls.delete(l); }, () => gold, () => gold);
 export function addGoldHerbs(n: number) { gold += n; gemit(); }
+export const getGoldHerbs = () => gold;
+export const subscribeGoldHerbs = (l: () => void) => { gls.add(l); return () => { gls.delete(l); }; };
+export function mergeGoldHerbs(n: number) { if (n > gold) { gold = n; gemit(); } }
+/** Herb combining (survival-horror style): 3 Green Herbs → 1 Golden Herb (full health). */
+export function combineHerbs(): string {
+  if (st.herbs < 3) return 'Combine needs 3 Green Herbs';
+  st = { ...st, herbs: st.herbs - 3 }; emit(); gold += 1; gemit();
+  void import('@/lib/vrSfx').then((m) => m.playSfx('heal'));
+  return 'Combined 3 Green Herbs → 1 Golden Herb';
+}
 export function addHerbs(n: number) { st = { ...st, herbs: st.herbs + n }; emit(); }
 export function useGoldHerb(): string {
   if (gold <= 0) return 'No golden herbs — the merchant sells them';
