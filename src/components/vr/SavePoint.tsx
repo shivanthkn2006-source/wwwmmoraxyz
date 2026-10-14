@@ -1,3 +1,4 @@
+import { MerchantShop } from './VRMerchantShop';
 import { Euler } from 'three';
 import { getVRView } from '@/lib/vrView';
 import { useAmmo, usesAmmo, isReloading, condition } from '@/lib/vrAmmo';
@@ -82,6 +83,7 @@ export const HealthBar: React.FC = () => {
       </div>
       <SurvivalLine hp={v} />
       <HealVignette />
+      <MerchantShop />
     </div>
   );
 };

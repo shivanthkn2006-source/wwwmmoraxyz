@@ -89,15 +89,15 @@ const ART: Record<string, React.ReactNode> = {
 export const GearArt: React.FC<{ id: string }> = ({ id }) => <>{ART[id] ?? <span className="text-2xl">?</span>}</>;
 
 /** Golden herb: same sprig as the green herb, in gold. */
-export const GoldHerbArt: React.FC = () => (
+export const GoldHerbArt: React.FC<{ green?: boolean }> = ({ green }) => (
   <S vb="0 0 40 80">
-    <path d="M20 78 L20 30" stroke="hsl(40 60% 35%)" strokeWidth="2" />
+    <path d="M20 78 L20 30" stroke={green ? "hsl(95 45% 35%)" : "hsl(40 60% 35%)"} strokeWidth="2" />
     {[0, 1, 2, 3, 4, 5].map((i) => (
       <g key={i} transform={`translate(20 ${66 - i * 9})`}>
-        <path d={`M0 0 Q${-12 + i} -6 ${-15 + i * 1.5} -14 Q-4 -10 0 0`} fill="hsl(45 95% 58%)" />
-        <path d={`M0 0 Q${12 - i} -6 ${15 - i * 1.5} -14 Q4 -10 0 0`} fill="hsl(40 90% 48%)" />
+        <path d={`M0 0 Q${-12 + i} -6 ${-15 + i * 1.5} -14 Q-4 -10 0 0`} fill={green ? "hsl(100 75% 52%)" : "hsl(45 95% 58%)"} />
+        <path d={`M0 0 Q${12 - i} -6 ${15 - i * 1.5} -14 Q4 -10 0 0`} fill={green ? "hsl(105 70% 46%)" : "hsl(40 90% 48%)"} />
       </g>
     ))}
-    <path d="M20 14 Q14 4 20 2 Q26 4 20 14" fill="hsl(48 100% 65%)" />
+    <path d="M20 14 Q14 4 20 2 Q26 4 20 14" fill={green ? "hsl(100 80% 58%)" : "hsl(48 100% 65%)"} />
   </S>
 );

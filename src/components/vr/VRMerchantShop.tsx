@@ -10,7 +10,7 @@ import { GearArt, GoldHerbArt } from './VRGearArt';
 type Ware = { id: string; name: string; price: number; detail: string; art: React.ReactNode; gear?: string; give: () => void };
 const gear = (id: string) => GEAR.find((g) => g.id === id)!;
 export const WARES: Ware[] = [
-  { id: 'green', name: 'Green Herb', price: 10, detail: '+20 health. Five restore full health.', art: <GoldHerbArt />, give: () => addHerbs(1) },
+  { id: 'green', name: 'Green Herb', price: 10, detail: '+20 health. Five restore full health.', art: <GoldHerbArt green />, give: () => addHerbs(1) },
   { id: 'gold', name: 'Golden Herb', price: 60, detail: 'Restores full health at once.', art: <GoldHerbArt />, give: () => addGoldHerbs(1) },
   { id: 'pistol', name: 'Handgun', price: 80, detail: '9mm handgun. Attack +12.', art: <GearArt id="pistol" />, gear: 'pistol', give: () => takeGear(gear('pistol')) },
   { id: 'shotgun', name: 'Shotgun', price: 150, detail: 'Pump shotgun. Attack +25.', art: <GearArt id="shotgun" />, gear: 'shotgun', give: () => takeGear(gear('shotgun')) },
