@@ -121,6 +121,12 @@ export const ALL_PICKUPS: Pickup[] = [
       { id: `house${i}-coin`, kind: 'coin', amount: COIN_AMOUNTS[i], pos: [cx, 0.75, cz] },
     ];
   }),
+  // Extra supplies scattered along the lanes: green herbs, golden herbs (id gold-*) and coins.
+  ...Array.from({ length: 32 }, (_, i): Pickup => {
+    const a = i * 2.39996, r = 14 + (i % 8) * 5.5, x = Math.cos(a) * r, z = Math.sin(a) * r;
+    const kind = i % 5 === 0 ? 'gold' : i % 3 === 0 ? 'coin' : 'herb';
+    return kind === 'coin' ? { id: `lane-coin${i}`, kind: 'coin', amount: 3, pos: [x, 0, z] } : { id: kind === 'gold' ? `gold-herb${i}` : `lane-herb${i}`, kind: 'herb', amount: 1, pos: [x, 0, z] };
+  }),
   ...OUTDOOR_HERBS.map(([x, z], i): Pickup => ({ id: `path-herb${i}`, kind: 'herb', amount: 1, pos: [x, 0, z] })),
 ];
 
