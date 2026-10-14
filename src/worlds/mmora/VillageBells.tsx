@@ -60,7 +60,7 @@ const ClockTower: React.FC<{ M: ReturnType<typeof mats> }> = ({ M }) => {
             <mesh material={M.face} position={[0, 0, 0.01]}><circleGeometry args={[1.25, 32]} /></mesh>
             {Array.from({ length: 12 }, (_, i) => <mesh key={i} material={M.iron} position={[Math.sin(i / 12 * Math.PI * 2) * 1.08, Math.cos(i / 12 * Math.PI * 2) * 1.08, 0.02]}><boxGeometry args={[0.07, 0.18, 0.01]} /></mesh>)}
             {r === 0 && <>
-              <mesh ref={hour} material={M.iron} position={[0, 0, 0.04]}><boxGeometry args={[0.09, 0.01, 0.01]} /></mesh>
+              
               <mesh ref={hour} material={M.iron} position={[0, 0, 0.04]}><planeGeometry args={[0.1, 1.3]} /></mesh>
               <mesh ref={min} material={M.iron} position={[0, 0, 0.05]}><planeGeometry args={[0.06, 2]} /></mesh>
             </>}
