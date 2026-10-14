@@ -7,6 +7,7 @@
  */
 import { HollowWarden } from './HollowWarden';
 import { VillageFusePuzzle } from './VillageFusePuzzle';
+import { VillageBonusMode } from './VillageBonusMode';
 import React, { useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
@@ -169,6 +170,7 @@ export const VillageLook: React.FC = () => {
       <VillageBells />
       <HollowWarden />
       <VillageFusePuzzle />
+      <VillageBonusMode />
       <VillageMerchant />
     </>
   );
