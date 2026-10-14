@@ -1,6 +1,7 @@
 /** The hidden village merchant's shop (opens from the merchant's Use prompt). Coins only. */
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { upgradeGear } from '@/lib/vrGear';
 import { usePickups, spendCoins, addHerbs, addGoldHerbs } from '@/lib/vrPickups';
 import { GEAR, takeGear, useGear } from '@/lib/vrGear';
 import { addAmmo } from '@/lib/vrAmmo';
@@ -18,6 +19,10 @@ export const WARES: Ware[] = [
   { id: 'rocket', name: 'Rocket Launcher', price: 400, detail: 'Mercenary launcher. Attack +80, 1 rocket per load.', art: <GearArt id="rocket" />, gear: 'rocket', give: () => takeGear(gear('rocket')) },
   { id: 'ammo9', name: 'Handgun ammo ×10', price: 15, detail: 'Ten 9mm rounds.', art: <GearArt id="pistol" />, give: () => addAmmo('pistol', 10) },
   { id: 'shells', name: 'Shotgun shells ×5', price: 25, detail: 'Five shells.', art: <GearArt id="shotgun" />, give: () => addAmmo('shotgun', 5) },
+  { id: 'up-pistol', name: 'Handgun upgrade', price: 60, detail: 'Attack +6 per level (max 5).', art: <GearArt id="pistol" />, give: () => upgradeGear('pistol') },
+  { id: 'up-shotgun', name: 'Shotgun upgrade', price: 100, detail: 'Attack +6 per level (max 5).', art: <GearArt id="shotgun" />, give: () => upgradeGear('shotgun') },
+  { id: 'up-knife', name: 'Knife upgrade', price: 30, detail: 'Attack +6 per level (max 5).', art: <GearArt id="knife" />, give: () => upgradeGear('knife') },
+  { id: 'case', name: 'Bigger case', price: 80, detail: 'Two more rows in your case (up to 20).', art: <GoldHerbArt green />, give: () => { const k = 'vr-case-extra-rows'; const n = Math.min((Number(localStorage.getItem(k)) || 0) + 2, 20); localStorage.setItem(k, String(n)); } },
   { id: 'rockets', name: 'Rocket ×1', price: 120, detail: 'One rocket.', art: <GearArt id="rocket" />, give: () => addAmmo('rocket', 1) },
 ];
 

@@ -1,12 +1,20 @@
-# M'Mora Village / World fixes (Marc, Oct 9)
-- [x] Mini-map heading-up: your heading on top (East at start), arrow always up
-- [x] Look up/down, straight backward walking, chat icon only
-- [x] MOVE stick and look pad swapped (MOVE right, look pad left)
-- [x] Church on dry land, solid walls everywhere, church collectible
-- [x] Permission window: "Grant permission to enter M'Mora" (no mic/camera/location shown; same requests)
-- [x] Night sky: stars, shooting stars, real moon phase (village)
-- [x] Local weather: rain/drizzle, snow, fog, storms with lightning + thunder and rain sound
-- [x] Brass door knobs + plates on both sides of house doors
-- [x] Human walking/running speed (2.2 / 6 m/s)
-- [x] Face button (left menu): see your own face, blinking, mouth moves when chatting
-- [ ] Checked on a real phone (owner)
+# M'Mora Village roadmap
+
+## Done (automated build checks only)
+- [x] Stage 1 survival basics, herbs, ammo, typewriter save
+- [x] Varga radio auto-play per chapter
+- [x] 64 lane supplies, golden-looking Golden Herbs, chapter auto-save
+- [x] Stage 2 Hollow Warden (idle/stalk/lunge, noise-based)
+- [x] Stage 3 fuse puzzle (shell + fluid → mixer → fuse → gate → antigen)
+- [x] Stage 4 core defence + Verdant Colossus boss
+- [x] Stage 5 merchant weapon upgrades + bigger case purchase
+
+## Open
+- [ ] Stage 6 team play
+- [ ] Stage 7 timed bonus mode
+- [ ] Multiplayer gaps: own-avatar spacing, hidden-member slot counting, moving between groups
+- [ ] Chapter 5+ storyline
+- [ ] Sync puzzle progress + upgrades to account (device-only now)
+- [ ] Coin logo (blocked: no file uploaded)
+- [ ] Signed-in browser tests (blocked: preview signed out; needs member sign-in)
+- [ ] Real phone / installed app tests (blocked: needs user's device)

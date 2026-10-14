@@ -8,7 +8,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { registerUse } from '@/lib/vrUse';
-import { useGear } from '@/lib/vrGear';
+import { useGear, gearStats, getEquipped } from '@/lib/vrGear';
 import { logStory } from '@/lib/vrStoryline';
 import { playerSpot } from './VillageVillagers';
 
@@ -31,7 +31,7 @@ export const VillageFusePuzzle: React.FC = () => {
 const Puzzle: React.FC = () => {
   const { camera } = useThree();
   const [done, setDone] = useState<Step[]>(() => { try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch { return []; } });
-  const defendT = useRef(0); const pulse = useRef(0);
+  const defendT = useRef(0); const pulse = useRef(0); const bossHp = useRef(0); const [boss, setBoss] = useState(0);
   const mark = (s: Step) => setDone((d) => { const n = d.includes(s) ? d : [...d, s]; localStorage.setItem(KEY, JSON.stringify(n)); logStory('puzzle', s); void import('@/lib/vrGear').then((m) => m.saveProgressNow()); return n; });
   const next = ORDER.find((s) => !done.includes(s));
 
@@ -46,7 +46,10 @@ const Puzzle: React.FC = () => {
     if (next === 'mixed') return opt('mixer', 'Use Chemical Mixer', () => { sfx('typewriter'); mark('mixed'); say('Created a Charged Fuse.'); });
     if (next === 'gate') return opt('gate', 'Insert Charged Fuse', () => { sfx('metal'); mark('gate'); say('Varga: Gate is live. The Verdant Antigen is inside. Take it.'); });
     if (next === 'antigen') return opt('gate', 'Take Verdant Antigen', () => { sfx('medallion'); mark('antigen'); say('Picked up the Verdant Antigen. Insert it into the core terminal.'); });
-    if (next === 'defend' && defendT.current <= 0) return opt('terminal', 'Insert Antigen into Core', () => { defendT.current = 45; window.dispatchEvent(new CustomEvent('vr-danger')); say('Varga: Hold the core for forty-five seconds!'); });
+    if (next === 'defend' && bossHp.current > 0) return { dist: near('terminal'), reach: 5, label: 'Strike the Verdant Colossus', run: () => {
+      bossHp.current = Math.max(0, bossHp.current - gearStats(getEquipped()).attack); setBoss(bossHp.current); sfx('metal');
+      if (bossHp.current <= 0) { logStory('boss', 'colossus:defeated'); say('The Verdant Colossus falls!'); } } };
+    if (next === 'defend' && defendT.current <= 0) return opt('terminal', 'Insert Antigen into Core', () => { defendT.current = 45; bossHp.current = 300; setBoss(300); logStory('boss', 'colossus:start'); window.dispatchEvent(new CustomEvent('vr-danger')); say('Varga: Hold the core for forty-five seconds!'); });
     return null;
   }), [camera, next]);
 
@@ -55,8 +58,9 @@ const Puzzle: React.FC = () => {
     defendT.current -= dt; pulse.current -= dt;
     const ps = playerSpot(camera);
     const atCore = Math.hypot(ps.x - SPOTS.terminal[0], ps.z - SPOTS.terminal[1]) < 12;
-    if (pulse.current <= 0) { pulse.current = 5; if (atCore) window.dispatchEvent(new CustomEvent('vr-damage', { detail: { amount: 6 } })); }
-    if (!atCore) { defendT.current = 0; say('You left the core. Return and insert the Antigen again.'); return; }
+    if (pulse.current <= 0) { pulse.current = 5; if (atCore) window.dispatchEvent(new CustomEvent('vr-damage', { detail: { amount: bossHp.current > 0 ? Math.max(4, Math.round(14 * (1 - gearStats(getEquipped()).defence / 60))) : 6 } })); }
+    if (!atCore) { defendT.current = 0; bossHp.current = 0; setBoss(0); say('You left the core. Return and insert the Antigen again.'); return; }
+    if (defendT.current <= 0 && bossHp.current > 0) { defendT.current = 1; return; }
     if (defendT.current <= 0) { mark('defend'); mark('cleared'); void import('@/lib/vrPickups').then((m) => m.addCoins(50)); say('Varga: The core is sealed. Fifty coins credited. Chapter five begins soon, operative.'); }
   });
 
@@ -73,6 +77,11 @@ const Puzzle: React.FC = () => {
       <group position={[SPOTS.terminal[0], 0, SPOTS.terminal[1]]}>
         <mesh material={CORE} position={[0, 1, 0]}><dodecahedronGeometry args={[1.2]} /></mesh>
         {next === 'defend' && <Beam />}
+        {boss > 0 && <group position={[0, 0, 4]}>
+          <mesh material={CORE} position={[0, 2.2, 0]}><capsuleGeometry args={[1, 2.4, 4, 8]} /></mesh>
+          <mesh material={GLOW} position={[0, 4.4, 0]}><sphereGeometry args={[0.6, 8, 6]} /></mesh>
+          <mesh position={[0, 5.6, 0]}><boxGeometry args={[3 * boss / 300, 0.15, 0.05]} /><meshBasicMaterial color="#c0392b" /></mesh>
+        </group>}
       </group>
     </group>
   );
