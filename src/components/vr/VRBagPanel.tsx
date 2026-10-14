@@ -104,8 +104,8 @@ export const VRBagPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const items = useMemo<CaseItem[]>(() => {
     const out: CaseItem[] = [];
     // Same kinds stack in one square (herbs, each coin face, each relic type) to save space.
-    if (pick.herbs > 0) out.push({ id: 'herb-stack', w: 1, h: 2, kind: 'herb', name: 'Green Herb', count: pick.herbs, detail: 'Restores 20 health (5 = full) and stamina' });
-    if (goldHerbs > 0) out.push({ id: 'gold-herb-stack', w: 1, h: 2, kind: 'gold', name: 'Golden Herb', count: goldHerbs, detail: 'Restores full health' });
+    out.push({ id: 'herb-stack', w: 1, h: 2, kind: 'herb', name: 'Green Herb', count: pick.herbs, detail: 'Restores 20 health (5 = full) and stamina' });
+    out.push({ id: 'gold-herb-stack', w: 1, h: 2, kind: 'gold', name: 'Golden Herb', count: goldHerbs, detail: 'Restores full health' });
     const c = splitCoins(pick.coins);
     if (pick.coins >= 100) out.push({ id: 'coin-bag', w: 2, h: 2, kind: 'bag', name: "M'Mora coin bag", count: pick.coins, detail: `${pick.coins} M'Mora coins in total` });
     if (c.gold) out.push({ id: 'coin-gold', w: 1, h: 1, kind: 'coin', face: 'gold', name: "Gold M'Mora coin (50)", count: c.gold, detail: 'Worth 50 each' });

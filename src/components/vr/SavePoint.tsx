@@ -102,6 +102,7 @@ export const HealthBar: React.FC = () => {
       <SurvivalLine hp={v} />
       <HealVignette />
       <MerchantShop />
+      <FirstTimeHints />
     </div>
   );
 };
@@ -156,4 +157,25 @@ const SavedNote: React.FC = () => {
   const [on, setOn] = useState(false);
   useEffect(() => { let t = 0; const f = () => { setOn(true); window.clearTimeout(t); t = window.setTimeout(() => setOn(false), 2500); }; window.addEventListener('vr-saved', f); return () => window.removeEventListener('vr-saved', f); }, []);
   return on ? <span data-testid="vr-saved">Game saved</span> : null;
+};
+
+/** First-time tips: each shows once per device for 5 s, then fades (how to play, where things are). */
+const TIPS = [
+  '↑ Health and Fine / Caution / Danger are shown here',
+  '← Move with the stick · turn with the arrows',
+  '→ Tap Use near anything that glows',
+  '🎒 Open the case: tap a herb → Use or Combine',
+  '🔵 Typewriter beside the blue ring saves your game',
+  '🏮 A hooded merchant hides at the west edge of the village',
+  '🔔 If the bell tower rings, danger is near',
+];
+const FirstTimeHints: React.FC = () => {
+  const [i, setI] = useState(() => { try { return Number(localStorage.getItem('vr-tips-seen')) || 0; } catch { return 0; } });
+  useEffect(() => {
+    if (i >= TIPS.length) return;
+    const t = window.setTimeout(() => { const n = i + 1; try { localStorage.setItem('vr-tips-seen', String(n)); } catch { /* */ } setI(n); }, 5000);
+    return () => window.clearTimeout(t);
+  }, [i]);
+  if (i >= TIPS.length) return null;
+  return <div data-testid="vr-tip" className="pointer-events-none fixed left-1/2 top-12 w-max max-w-[90vw] -translate-x-1/2 rounded-full bg-background/70 px-3 py-1 text-xs italic text-foreground animate-fade-in">{TIPS[i]}</div>;
 };
