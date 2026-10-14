@@ -24,7 +24,7 @@ export const HollowWarden: React.FC = () => {
 const Warden: React.FC = () => {
   const { camera } = useThree();
   const root = useRef<THREE.Group>(null);
-  const st = useRef({ hp: 3, stagger: 0, hitCd: 0, warned: false, last: new THREE.Vector3(), speed: 0, phase: 0 });
+  const st = useRef({ hp: 3, stagger: 0, state: 'idle' as 'idle' | 'stalk' | 'lunge', lost: 0, hitCd: 0, warned: false, last: new THREE.Vector3(), speed: 0, phase: 0 });
 
   useEffect(() => {
     const p = root.current; if (!p) return;
@@ -54,7 +54,11 @@ const Warden: React.FC = () => {
     const ps = playerSpot(camera); const dx = ps.x - p.position.x, dz = ps.z - p.position.z, dd = Math.hypot(dx, dz) || 1;
     if (dd > 80) { p.position.set(ps.x + 40, 0, ps.z + 40); return; }
     const loud = c.speed > WALK_MPS * 1.3;
-    const v = loud ? RUN_MPS * 0.85 : WALK_MPS * 0.55;
+    // Blueprint state machine: IDLE → (noise) STALK → (sees you < 12 m) LUNGE → (lost > 5 s) STALK.
+    if (c.state === 'idle') { if (loud || dd < 10) c.state = 'stalk'; else return; }
+    if (c.state === 'stalk' && dd < 12) { c.state = 'lunge'; c.lost = 0; }
+    if (c.state === 'lunge') { if (dd > 12) { c.lost += dt; if (c.lost > 5) c.state = 'stalk'; } else c.lost = 0; }
+    const v = c.state === 'lunge' ? RUN_MPS * (loud ? 0.9 : 0.75) : loud ? RUN_MPS * 0.6 : WALK_MPS * 0.55;
     p.rotation.y = Math.atan2(dx, dz);
     if (dd > 1.4) { p.position.x += (dx / dd) * v * dt; p.position.z += (dz / dd) * v * dt; c.phase += dt * (loud ? 9 : 4); }
     p.position.y = Math.abs(Math.sin(c.phase)) * 0.05;
