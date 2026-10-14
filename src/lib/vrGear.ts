@@ -72,9 +72,14 @@ export function levelUp() {
   lls.forEach((l) => l());
 }
 export const getEquipped = () => equipped;
+/** Stage 5 merchant upgrades: +6 attack per weapon level, +4 defence per armour level. */
+const UKEY = 'mmora-upgrades';
+export const getUpgrades = (): Record<string, number> => { try { return JSON.parse(localStorage.getItem(UKEY) || '{}'); } catch { return {}; } };
+export function upgradeGear(id: string) { const u = getUpgrades(); if ((u[id] ?? 0) >= 5) return false; u[id] = (u[id] ?? 0) + 1; localStorage.setItem(UKEY, JSON.stringify(u)); lls.forEach((l) => l()); return true; }
 export function gearStats(ids: string[], lvl = level) {
   let attack = 5 + (lvl - 1) * 3, defence = (lvl - 1) * 2;
-  for (const id of ids) { attack += STAT[id]?.attack ?? 0; defence += STAT[id]?.defence ?? 0; }
+  const up = getUpgrades();
+  for (const id of ids) { attack += (STAT[id]?.attack ?? 0) + (STAT[id]?.attack ? (up[id] ?? 0) * 6 : 0); defence += (STAT[id]?.defence ?? 0) + (STAT[id]?.defence ? (up[id] ?? 0) * 4 : 0); }
   if (hasGear('crest')) attack += 5; // carried Lord's Crest
   return { attack, defence };
 }
