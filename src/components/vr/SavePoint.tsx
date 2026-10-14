@@ -1,3 +1,4 @@
+import { Euler } from 'three';
 import { useAmmo, usesAmmo, isReloading, condition } from '@/lib/vrAmmo';
 import { useEquipped } from '@/lib/vrGear';
 import React, { useEffect, useRef, useState } from 'react';
@@ -110,6 +111,7 @@ const SurvivalLine: React.FC<{ hp: number }> = ({ hp }) => {
 };
 
 /** Outline glow around the player's body (third person: the avatar 2.8 m ahead). */
+const _eu = new Euler();
 const HealShell: React.FC = () => {
   const { camera } = useThree();
   const ref = useRef<any>(null);
@@ -119,7 +121,7 @@ const HealShell: React.FC = () => {
     const m = ref.current; if (!m) return;
     const left = until.current - performance.now();
     m.visible = left > 0; if (!m.visible) return;
-    const yaw = Math.atan2(-2 * (camera.quaternion.y * camera.quaternion.w + camera.quaternion.x * camera.quaternion.z) * -1, 1 - 2 * (camera.quaternion.y ** 2 + camera.quaternion.x ** 2));
+    const yaw = _eu.setFromQuaternion(camera.quaternion, 'YXZ').y;
     const parent = m.parent; const px = parent?.position.x ?? 0, pz = parent?.position.z ?? 0;
     m.position.set(camera.position.x - Math.sin(yaw) * 2.8 - px, 0.9, camera.position.z - Math.cos(yaw) * 2.8 - pz);
     m.material.color.set(gold.current ? '#ffd24a' : '#3dff5a');
