@@ -13,6 +13,7 @@ import { playBell } from '@/lib/vrSfx';
 import { boxPoly, setSolidGroup } from '@/lib/vrSolids';
 import { registerUse } from '@/lib/vrUse';
 import { logStory } from '@/lib/vrStoryline';
+import { registerLit, registerToggle } from '@/lib/vrLights';
 
 export const CLOCK_POS: [number, number, number] = [34, 0, -30];
 export const BELL_POS: [number, number, number] = [-40, 0, -40];
@@ -23,7 +24,9 @@ const mats = () => ({
   ancientStone: new THREE.MeshStandardMaterial({ color: '#6c665c', roughness: 1 }),
   moss: new THREE.MeshStandardMaterial({ color: '#4f5a3a', roughness: 1 }),
   roof: new THREE.MeshStandardMaterial({ color: '#3c3f44', roughness: 0.9 }),
-  face: new THREE.MeshStandardMaterial({ color: '#e9e0c8', roughness: 0.7, emissive: '#3a3320', emissiveIntensity: 0.4 }),
+  face: registerLit(new THREE.MeshStandardMaterial({ color: '#e9e0c8', roughness: 0.7, emissive: '#ffd98a', emissiveIntensity: 0 }), 1.2, 'street'),
+  lantern: registerLit(new THREE.MeshStandardMaterial({ color: '#ffcf7a', emissive: '#ffb347', emissiveIntensity: 0 }), 2, 'street'),
+  glow: registerToggle(new THREE.MeshBasicMaterial({ color: '#ffcf7a', transparent: true, opacity: 0.18, depthWrite: false }), 'street'),
   iron: new THREE.MeshStandardMaterial({ color: '#141414', metalness: 0.7, roughness: 0.45 }),
   wood: new THREE.MeshStandardMaterial({ color: '#4a3220', roughness: 0.95 }),
   rope: new THREE.MeshStandardMaterial({ color: '#7a5434', roughness: 1 }),
@@ -53,6 +56,7 @@ const ClockTower: React.FC<{ M: ReturnType<typeof mats> }> = ({ M }) => {
       <mesh material={M.moss} position={[0, 0.4, 0]}><boxGeometry args={[4.4, 0.8, 4.4]} /></mesh>
       {[3.5, 7, 10.5].map((y) => <mesh key={y} material={M.ancientStone} position={[0, y, 0]}><boxGeometry args={[4.2, 0.25, 4.2]} /></mesh>)}
       <mesh material={M.roof} position={[0, 16, 0]} rotation={[0, Math.PI / 4, 0]}><coneGeometry args={[3.4, 4, 4]} /></mesh>
+      {[[2.3, 2.6, 2.3], [-2.3, 2.6, 2.3]].map((q) => <group key={q[0]} position={q as [number, number, number]}><mesh material={M.lantern}><boxGeometry args={[0.25, 0.35, 0.25]} /></mesh><mesh material={M.glow}><sphereGeometry args={[0.9, 10, 8]} /></mesh></group>)}
       <mesh material={M.wood} position={[0, 1.3, 2.02]}><boxGeometry args={[1.2, 2.4, 0.06]} /></mesh>
       {[0, Math.PI / 2, Math.PI, -Math.PI / 2].map((r) => (
         <group key={r} rotation={[0, r, 0]}>
@@ -115,6 +119,9 @@ const BellTower: React.FC<{ M: ReturnType<typeof mats> }> = ({ M }) => {
       <mesh material={M.moss} position={[0, 5, 0]}><boxGeometry args={[4.6, 0.35, 4.6]} /></mesh>
       <mesh material={M.ancientStone} position={[0, 11.2, 0]}><boxGeometry args={[4.8, 0.5, 4.8]} /></mesh>
       <mesh material={M.roof} position={[0, 13.4, 0]} rotation={[0, Math.PI / 4, 0]}><coneGeometry args={[3.6, 4, 4]} /></mesh>
+      <mesh material={M.lantern} position={[0, 5.6, 2.4]}><boxGeometry args={[0.25, 0.35, 0.25]} /></mesh>
+      <mesh material={M.glow} position={[0, 5.6, 2.4]}><sphereGeometry args={[1.1, 10, 8]} /></mesh>
+      <mesh material={M.lantern} position={[0, 11.6, 0]}><sphereGeometry args={[0.18, 8, 6]} /></mesh>
       <mesh material={M.wood} position={[0, 10.4, 0]}><boxGeometry args={[4, 0.3, 0.3]} /></mesh>
       <group ref={bell} position={[0, 10.3, 0]}>
         <mesh material={M.iron} position={[0, -1.1, 0]}><cylinderGeometry args={[0.55, 1.35, 2, 24, 1, true]} /></mesh>

@@ -31,8 +31,9 @@ export const usePickups = () => useSyncExternalStore((l) => { ls.add(l); return 
 export const isTaken = (id: string) => st.taken.includes(id);
 
 export function takePickup(p: Pickup) {
+  if (p.id.startsWith('gold-') && !st.taken.includes(p.id)) window.setTimeout(() => addGoldHerbs(p.amount), 0);
   if (isTaken(p.id)) return;
-  st = { ...st, taken: [...st.taken, p.id].slice(-2000), herbs: st.herbs + (p.kind === 'herb' ? p.amount : 0), coins: st.coins + (p.kind === 'coin' ? p.amount : 0) };
+  st = { ...st, taken: [...st.taken, p.id].slice(-2000), herbs: st.herbs + (p.kind === 'herb' && !p.id.startsWith('gold-') ? p.amount : 0), coins: st.coins + (p.kind === 'coin' ? p.amount : 0) };
   emit();
   playPickup(p.kind);
   if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('vr-hand-reach'));

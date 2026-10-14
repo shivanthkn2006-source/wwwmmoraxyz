@@ -121,6 +121,12 @@ export const ALL_PICKUPS: Pickup[] = [
       { id: `house${i}-coin`, kind: 'coin', amount: COIN_AMOUNTS[i], pos: [cx, 0.75, cz] },
     ];
   }),
+  // Extra supplies scattered along the lanes: green herbs, golden herbs (id gold-*) and coins.
+  ...Array.from({ length: 32 }, (_, i): Pickup => {
+    const a = i * 2.39996, r = 14 + (i % 8) * 5.5, x = Math.cos(a) * r, z = Math.sin(a) * r;
+    const kind = i % 5 === 0 ? 'gold' : i % 3 === 0 ? 'coin' : 'herb';
+    return kind === 'coin' ? { id: `lane-coin${i}`, kind: 'coin', amount: 3, pos: [x, 0, z] } : { id: kind === 'gold' ? `gold-herb${i}` : `lane-herb${i}`, kind: 'herb', amount: 1, pos: [x, 0, z] };
+  }),
   ...OUTDOOR_HERBS.map(([x, z], i): Pickup => ({ id: `path-herb${i}`, kind: 'herb', amount: 1, pos: [x, 0, z] })),
 ];
 
@@ -239,7 +245,7 @@ export const PickupHouses: React.FC = () => {
     for (const k of ALL_PICKUPS) {
       if (isTaken(k.id)) continue;
       const d = Math.hypot(c.x - k.pos[0], c.z - k.pos[2]);
-      const label = k.kind === 'herb' ? 'Picked up a Green Herb' : `Picked up ${k.amount} M'Mora Coin${k.amount > 1 ? 's' : ''}`;
+      const label = k.id.startsWith('gold-') ? 'Picked up a Golden Herb' : k.kind === 'herb' ? 'Picked up a Green Herb' : `Picked up ${k.amount} M'Mora Coin${k.amount > 1 ? 's' : ''}`;
       if (!best || d < best.dist) best = { dist: d, label, run: () => takePickup(k) };
     }
     return best;
