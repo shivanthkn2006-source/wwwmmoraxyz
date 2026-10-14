@@ -43,10 +43,32 @@ export function takePickup(p: Pickup) {
 /** Use one herb: refills stamina. Returns a message for the toast. */
 export function useHerb(): string {
   if (st.herbs <= 0) return 'No green herbs — find one in a house';
-  if (getStamina().stamina > 0.85) return 'Stamina is already full';
   st = { ...st, herbs: st.herbs - 1 }; emit();
   restoreStamina(1);
-  return 'Used a Green Herb · stamina restored';
+  healPlayer(20, 'heal');
+  return 'Used a Green Herb · health +20 (5 herbs = full health)';
+}
+
+/** Heal the player (0–100), play the herb sound and the green outline glow. */
+export function healPlayer(amount: number, sfx: 'heal' | 'goldheal') {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent('vr-heal', { detail: { amount } }));
+  window.dispatchEvent(new CustomEvent('vr-heal-glow', { detail: { gold: sfx === 'goldheal' } }));
+  void import('@/lib/vrSfx').then((m) => m.playSfx(sfx));
+}
+
+// ── Golden herbs (bought from the merchant): one restores full health. Device-saved. ──
+const GKEY = 'vr-gold-herbs';
+let gold = (() => { try { return Math.max(0, Number(localStorage.getItem(GKEY)) || 0); } catch { return 0; } })();
+const gls = new Set<() => void>();
+const gemit = () => { try { localStorage.setItem(GKEY, String(gold)); } catch { /* */ } gls.forEach((l) => l()); };
+export const useGoldHerbs = () => useSyncExternalStore((l) => { gls.add(l); return () => gls.delete(l); }, () => gold, () => gold);
+export function addGoldHerbs(n: number) { gold += n; gemit(); }
+export function addHerbs(n: number) { st = { ...st, herbs: st.herbs + n }; emit(); }
+export function useGoldHerb(): string {
+  if (gold <= 0) return 'No golden herbs — the merchant sells them';
+  gold -= 1; gemit(); restoreStamina(1); healPlayer(100, 'goldheal');
+  return 'Used a Golden Herb · full health restored';
 }
 
 /** Auto-use a herb when stamina runs dry (Resident Evil style safety net). */
