@@ -1,3 +1,4 @@
+import { VILLAGER_STORY } from '@/lib/vrStoryline';
 /**
  * M'Mora Village people: men in long dark coats and caps, women in dark
  * shawls/headscarves and long skirts, walking slow loops on the village lanes
@@ -23,12 +24,7 @@ function playerSpot(cam: THREE.Camera): { x: number; z: number } {
 import { Html } from '@react-three/drei';
 import { hasGear } from '@/lib/vrGear';
 /** Story lines follow the quest board: what villagers say changes as missions are done. */
-const STORY: Record<string, string[]> = {
-  map: ['Lost the old village map near the lanes, I did. Find it, stranger.', 'Without the map you will never find the church secret.'],
-  medallion: ['You have the map! The altar in the church hides a medallion.', 'Go to the church. Pray before you take the medallion.'],
-  crest: ['The medallion… then the castle keep is next. The Lord\'s crest waits there.', 'Climb to the castle. Bring back the Lord\'s crest.'],
-  done: ['You found the crest! The village is in your debt.', 'They say you are the new lord of M\'Mora now.'],
-};
+const STORY: Record<string, string[]> = VILLAGER_STORY;
 const storyStage = () => !hasGear('map') ? 'map' : !hasGear('medallion') ? 'medallion' : !hasGear('crest') ? 'crest' : 'done';
 let lastSpoken = 0;
 const LINES = ['Stranger… the church bell rang at midnight again.', 'Mind the castle on the hill. Nobody comes back the same.', 'Lost the old village map near the lanes, I did.', 'The altar holds a medallion. Pray before you take it.', 'Wolves came down from the hills last winter.', 'Warm yourself by the fire, traveller.', 'Have you seen the Lord\'s crest? It belongs in the keep.', 'Sit on a bench a while — it pays to rest here.'];

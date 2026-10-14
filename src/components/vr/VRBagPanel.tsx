@@ -9,7 +9,7 @@ import { createPortal } from 'react-dom';
 import React, { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { useStory, readNote, KEYS, NOTES } from '@/lib/vrStory';
 import { QUESTS, getVRQuestSnapshot, itemLabel, loadVRQuests, subscribeVRQuests, type Rarity } from '@/lib/vrQuests';
-import { usePickups, useHerb, useGoldHerbs, useGoldHerb } from '@/lib/vrPickups';
+import { usePickups, useHerb, useGoldHerbs, useGoldHerb, combineHerbs } from '@/lib/vrPickups';
 import { GearArt, GoldHerbArt } from './VRGearArt';
 import { playSfx } from '@/lib/vrSfx';
 import avatarImg from '@/assets/vr-case-avatar.png';
@@ -235,6 +235,7 @@ export const VRBagPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           {msg ?? (selItem ? `${selItem.name}${selItem.count !== undefined ? ` ×${selItem.count}` : ''} — ${selItem.detail ?? ''}` : items.length ? 'Drag an item to a square, or tap it then tap a square' : 'Walk up to a glowing item and tap Use to pick it up.')}
         </div>
         {selItem?.kind === 'herb' && <button type="button" className="re-case-btn" onClick={() => { say(useHerb()); setSel(null); }}>Use</button>}
+        {selItem?.kind === 'herb' && pick.herbs >= 3 && <button type="button" className="re-case-btn" onClick={() => { say(combineHerbs()); setSel(null); }}>Combine</button>}
         {selItem?.kind === 'gold' && <button type="button" className="re-case-btn" onClick={() => { say(useGoldHerb()); setSel(null); }}>Use</button>}
         {selItem?.kind === 'gear' && GEAR.find((g) => g.id === selItem.gid)?.kind !== 'quest' && <button type="button" className="re-case-btn" onClick={() => { toggleEquip(selItem.gid!); say(`${equipped.includes(selItem.gid!) ? 'Unequipped' : 'Equipped'} ${selItem.name}`); }}>{equipped.includes(selItem.gid!) ? 'Unequip' : 'Equip'}</button>}
         {selItem?.kind === 'gear' && GEAR.find((g) => g.id === selItem.gid)?.kind === 'quest' && <button type="button" className="re-case-btn" onClick={() => { playSfx(selItem.gid === 'map' ? 'paper' : 'medallion'); say(selItem.detail ?? selItem.name); }}>Examine</button>}

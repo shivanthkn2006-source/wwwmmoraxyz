@@ -34,7 +34,7 @@ export function playPickup(kind: 'coin' | 'herb' | 'relic') {
   if (kind === 'relic') tone(c, 2637, t + 0.3, 1.2, 0.05);
 }
 
-export type Sfx = 'coins' | 'heal' | 'goldheal' | 'gun' | 'shotgun' | 'rocket' | 'knife' | 'leather' | 'metal' | 'paper' | 'medallion' | 'deny';
+export type Sfx = 'coins' | 'heal' | 'goldheal' | 'gun' | 'shotgun' | 'rocket' | 'knife' | 'leather' | 'metal' | 'paper' | 'medallion' | 'deny' | 'typewriter';
 /** Using an item: each has its own real-world-like sound. */
 export function playSfx(kind: Sfx) {
   const c = ac(); if (!c) return;
@@ -53,6 +53,7 @@ export function playSfx(kind: Sfx) {
     case 'metal': tone(c, 620, t, 0.9, 0.12, 'triangle'); tone(c, 1530, t, 0.6, 0.06); noise(c, t, 0.05, 4000, 0.2); break;
     case 'paper': noise(c, t, 0.18, 6000, 0.12, 'highpass'); noise(c, t + 0.2, 0.25, 5000, 0.1, 'highpass'); break;
     case 'medallion': tone(c, 1320, t, 1.6, 0.08); tone(c, 1980, t + 0.05, 1.2, 0.05); clink(c, t); break;
+    case 'typewriter': for (let i = 0; i < 9; i++) { noise(c, t + i * 0.11, 0.04, 2500, 0.3, 'highpass'); tone(c, 180, t + i * 0.11, 0.05, 0.08, 'square'); } tone(c, 2100, t + 1.1, 0.6, 0.1); break;
     case 'deny': tone(c, 160, t, 0.25, 0.15, 'square'); tone(c, 120, t + 0.12, 0.3, 0.12, 'square'); break;
   }
 }
