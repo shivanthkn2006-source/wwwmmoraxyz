@@ -1,3 +1,5 @@
+import { registerUse } from '@/lib/vrUse';
+import { playSfx } from '@/lib/vrSfx';
 import { MerchantShop } from './VRMerchantShop';
 import { Euler } from 'three';
 import { getVRView } from '@/lib/vrView';
@@ -38,6 +40,17 @@ export const SavePoint: React.FC<{ position?: [number, number, number] }> = ({ p
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Typewriter save (survival-horror style) at the save point.
+  useEffect(() => registerUse(() => {
+    const d = Math.hypot(camera.position.x - position[0], camera.position.z - position[2]);
+    if (d > 2.5) return null;
+    return { dist: d, reach: 2.5, label: 'Save at the typewriter', run: () => {
+      playSfx('typewriter');
+      window.dispatchEvent(new CustomEvent('vr-save-now'));
+      window.dispatchEvent(new CustomEvent('vr-saved'));
+    } };
+  }), [camera, position]);
+
   useFrame((_, raw) => {
     const dt = Math.min(raw, 0.05);
     if (ring.current) ring.current.rotation.z += dt;
@@ -60,6 +73,11 @@ export const SavePoint: React.FC<{ position?: [number, number, number] }> = ({ p
   return (
     <group position={position}>
       <HealShell />
+      {/* Typewriter on a small wooden table */}
+      <mesh position={[1.6, 0.4, 0]}><boxGeometry args={[0.8, 0.8, 0.5]} /><meshStandardMaterial color="#4a3220" roughness={0.9} /></mesh>
+      <mesh position={[1.6, 0.88, 0]}><boxGeometry args={[0.42, 0.16, 0.3]} /><meshStandardMaterial color="#1c1c1c" metalness={0.5} roughness={0.4} /></mesh>
+      <mesh position={[1.6, 1.0, -0.08]} rotation={[0, 0, Math.PI / 2]}><cylinderGeometry args={[0.035, 0.035, 0.48, 10]} /><meshStandardMaterial color="#333" /></mesh>
+      <mesh position={[1.6, 1.06, -0.1]} rotation={[-0.3, 0, 0]}><planeGeometry args={[0.24, 0.16]} /><meshStandardMaterial color="#eee6d0" side={2} /></mesh>
       <mesh ref={ring} position={[0, 0.05, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[0.9, 1.3, 32]} />
         <meshBasicMaterial color="#387BF6" transparent opacity={0.7} />
@@ -108,6 +126,7 @@ const SurvivalLine: React.FC<{ hp: number }> = ({ hp }) => {
   return (
     <div className="mt-0.5 flex justify-between text-[10px] italic leading-none text-foreground" style={{ textShadow: '0 1px 2px hsl(0 0% 0% / .7)' }}>
       <span data-testid="vr-condition">{condition(hp)}</span>
+      <SavedNote />
       {a && <span data-testid="vr-ammo">{isReloading() ? 'Reloading…' : `${a.inMag} / ${a.reserve}`}</span>}
     </div>
   );
@@ -131,4 +150,10 @@ const HealShell: React.FC = () => {
     m.material.opacity = 0.35 * Math.min(1, left / 600);
   });
   return <mesh ref={ref} visible={false}><capsuleGeometry args={[0.42, 1.1, 4, 12]} /><meshBasicMaterial transparent side={2} depthWrite={false} opacity={0.35} /></mesh>;
+};
+
+const SavedNote: React.FC = () => {
+  const [on, setOn] = useState(false);
+  useEffect(() => { let t = 0; const f = () => { setOn(true); window.clearTimeout(t); t = window.setTimeout(() => setOn(false), 2500); }; window.addEventListener('vr-saved', f); return () => window.removeEventListener('vr-saved', f); }, []);
+  return on ? <span data-testid="vr-saved">Game saved</span> : null;
 };

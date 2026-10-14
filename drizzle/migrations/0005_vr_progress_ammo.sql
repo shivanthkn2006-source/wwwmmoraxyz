@@ -1,0 +1,2 @@
+ALTER TABLE public.vr_player_progress ADD COLUMN IF NOT EXISTS ammo jsonb NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE public.vr_player_progress ADD COLUMN IF NOT EXISTS gold_herbs integer NOT NULL DEFAULT 0;

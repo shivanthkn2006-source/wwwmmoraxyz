@@ -6,6 +6,8 @@
 import { useSyncExternalStore } from 'react';
 import { recordVRCollect } from '@/lib/vrQuests';
 import { playPickup, playSfx } from '@/lib/vrSfx';
+import { getAmmo, mergeAmmo, subscribeAmmo } from '@/lib/vrAmmo';
+import { getGoldHerbs, mergeGoldHerbs, subscribeGoldHerbs } from '@/lib/vrPickups';
 
 export type GearKind = 'weapon' | 'armour' | 'quest';
 export type Gear = { id: string; kind: GearKind; name: string; icon: string; detail: string; pos: [number, number, number]; shop?: boolean };
@@ -32,6 +34,7 @@ export function takeGear(g: Gear) {
   owned = [...owned, g.id];
   try { localStorage.setItem(KEY, JSON.stringify(owned)); } catch { /* */ }
   ls.forEach((l) => l());
+  if (g.kind === 'quest') void import('@/lib/vrStoryline').then(async (sl) => { const r = sl.FIELD_REPORTS[g.id]; if (r) (await import('@/lib/vrStory')).readNote(r.id); });
   if (g.kind === 'quest') playSfx(g.id === 'map' ? 'paper' : 'medallion'); else playPickup('coin');
   if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('vr-hand-reach'));
   void recordVRCollect({ type: `${g.kind}_${g.id}`, rarity: g.kind === 'quest' ? 'epic' : 'rare' });
@@ -97,7 +100,7 @@ function pushSoon() {
   syncTimer = window.setTimeout(async () => {
     try {
       const { supabase, id } = await uid(); if (!id) return;
-      await supabase.from('vr_player_progress' as never).upsert({ user_id: id, level, gear: owned, equipped, updated_at: new Date().toISOString() } as never, { onConflict: 'user_id' });
+      await supabase.from('vr_player_progress' as never).upsert({ user_id: id, level, gear: owned, equipped, ammo: getAmmo(), gold_herbs: getGoldHerbs(), updated_at: new Date().toISOString() } as never, { onConflict: 'user_id' });
     } catch { /* offline: retried on the next change */ }
   }, 1500);
 }
@@ -106,12 +109,13 @@ export async function loadGearProgress() {
   try {
     const { supabase, id } = await uid(); if (!id || loadedFor === id) return;
     loadedFor = id;
-    const { data } = await supabase.from('vr_player_progress' as never).select('level,gear,equipped').eq('user_id', id).maybeSingle();
-    const row = data as { level: number; gear: string[]; equipped: string[] } | null;
+    const { data } = await supabase.from('vr_player_progress' as never).select('level,gear,equipped,ammo,gold_herbs').eq('user_id', id).maybeSingle();
+    const row = data as { level: number; gear: string[]; equipped: string[]; ammo?: Record<string, { inMag: number; reserve: number }>; gold_herbs?: number } | null;
     if (row) {
       owned = [...new Set([...owned, ...row.gear])];
       if (!equipped.length) equipped = row.equipped.filter((x) => owned.includes(x));
       level = Math.max(level, row.level);
+      mergeAmmo(row.ammo); mergeGoldHerbs(row.gold_herbs ?? 0);
       try { localStorage.setItem(KEY, JSON.stringify(owned)); localStorage.setItem(EKEY, JSON.stringify(equipped)); localStorage.setItem(LKEY, String(level)); } catch { /* */ }
       ls.forEach((l) => l()); els.forEach((l) => l()); lls.forEach((l) => l());
     }
@@ -119,4 +123,6 @@ export async function loadGearProgress() {
   } catch { /* offline */ }
 }
 // Any change on this device is copied to the account.
-ls.add(pushSoon); els.add(pushSoon); lls.add(pushSoon);
+ls.add(pushSoon); els.add(pushSoon); lls.add(pushSoon); subscribeAmmo(pushSoon); subscribeGoldHerbs(pushSoon);
+/** Typewriter save: copy progress to the account right away. */
+export const saveProgressNow = () => pushSoon();

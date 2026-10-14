@@ -20,7 +20,9 @@ export const VRSaveGameTicker: React.FC = () => {
     const onHide = () => { if (document.visibilityState === 'hidden') save(); };
     document.addEventListener('visibilitychange', onHide);
     window.addEventListener('pagehide', save);
-    return () => { save(); clearInterval(t); document.removeEventListener('visibilitychange', onHide); window.removeEventListener('pagehide', save); };
+    const now = () => { save(); void import('@/lib/vrPickups').then((m) => m.pushCloud()); void import('@/lib/vrGear').then((m) => m.saveProgressNow()); };
+    window.addEventListener('vr-save-now', now);
+    return () => { save(); clearInterval(t); document.removeEventListener('visibilitychange', onHide); window.removeEventListener('pagehide', save); window.removeEventListener('vr-save-now', now); };
   }, [camera]);
   return null;
 };

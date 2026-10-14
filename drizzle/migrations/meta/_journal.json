@@ -36,6 +36,13 @@
       "when": 1791872270011,
       "tag": "0004_admin_only_alert_settings_read",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791968253052,
+      "tag": "0005_vr_progress_ammo",
+      "breakpoints": true
     }
   ]
 }

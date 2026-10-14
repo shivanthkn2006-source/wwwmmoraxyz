@@ -9657,22 +9657,28 @@ export type Database = {
       }
       vr_player_progress: {
         Row: {
+          ammo: Json
           equipped: string[]
           gear: string[]
+          gold_herbs: number
           level: number
           updated_at: string
           user_id: string
         }
         Insert: {
+          ammo?: Json
           equipped?: string[]
           gear?: string[]
+          gold_herbs?: number
           level?: number
           updated_at?: string
           user_id: string
         }
         Update: {
+          ammo?: Json
           equipped?: string[]
           gear?: string[]
+          gold_herbs?: number
           level?: number
           updated_at?: string
           user_id?: string
