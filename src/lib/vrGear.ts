@@ -109,13 +109,13 @@ export async function loadGearProgress() {
   try {
     const { supabase, id } = await uid(); if (!id || loadedFor === id) return;
     loadedFor = id;
-    const { data } = await supabase.from('vr_player_progress' as never).select('level,gear,equipped,ammo,gold_herbs').eq('user_id', id).maybeSingle();
-    const row = data as { level: number; gear: string[]; equipped: string[]; ammo?: Record<string, { inMag: number; reserve: number }>; gold_herbs?: number } | null;
+    const { data } = await supabase.from('vr_player_progress' as never).select('level,gear,equipped,ammo,gold_herbs,updated_at').eq('user_id', id).maybeSingle();
+    const row = data as { level: number; gear: string[]; equipped: string[]; ammo?: Record<string, { inMag: number; reserve: number }>; gold_herbs?: number; updated_at?: string } | null;
     if (row) {
       owned = [...new Set([...owned, ...row.gear])];
       if (!equipped.length) equipped = row.equipped.filter((x) => owned.includes(x));
       level = Math.max(level, row.level);
-      mergeAmmo(row.ammo); mergeGoldHerbs(row.gold_herbs ?? 0);
+      const at = row.updated_at ? Date.parse(row.updated_at) : 0; mergeAmmo(row.ammo, at); mergeGoldHerbs(row.gold_herbs ?? 0, at);
       try { localStorage.setItem(KEY, JSON.stringify(owned)); localStorage.setItem(EKEY, JSON.stringify(equipped)); localStorage.setItem(LKEY, String(level)); } catch { /* */ }
       ls.forEach((l) => l()); els.forEach((l) => l()); lls.forEach((l) => l());
     }

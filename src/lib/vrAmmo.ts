@@ -23,7 +23,7 @@ const fresh = (): AmmoState => Object.fromEntries(Object.entries(AMMO_SPEC).map(
 let st: AmmoState = (() => { try { return { ...fresh(), ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch { return fresh(); } })();
 let reloadingUntil = 0;
 const ls = new Set<() => void>();
-const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch { /* */ } ls.forEach((l) => l()); };
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); localStorage.setItem(KEY + '-at', String(Date.now())); } catch { /* */ } ls.forEach((l) => l()); };
 export const useAmmo = () => useSyncExternalStore((l) => { ls.add(l); return () => ls.delete(l); }, () => st, () => st);
 export const getAmmo = () => st;
 export const usesAmmo = (w: string | null) => !!w && !!AMMO_SPEC[w];
@@ -63,14 +63,12 @@ export function dropAmmo() {
 /** Resident Evil-style condition from health (0–100). */
 export const condition = (hp: number) => (hp > 66 ? 'Fine' : hp > 33 ? 'Caution' : 'Danger');
 
-/** Account merge: per gun keep whichever copy has more rounds in total. */
-export function mergeAmmo(remote: AmmoState | null | undefined) {
-  if (!remote) return;
-  const next = { ...st };
-  for (const [k, r] of Object.entries(remote)) {
-    const l = next[k]; if (!AMMO_SPEC[k] || !r) continue;
-    if (!l || r.inMag + r.reserve > l.inMag + l.reserve) next[k] = { inMag: Math.min(AMMO_SPEC[k].mag, r.inMag | 0), reserve: Math.min(99, r.reserve | 0) };
-  }
-  st = next; save();
+/** Account merge: the newest copy wins as a whole (never per-gun maximum), so switching devices can't restore spent rounds. */
+export const ammoSavedAt = () => { try { return Number(localStorage.getItem(KEY + '-at')) || 0; } catch { return 0; } };
+export function mergeAmmo(remote: AmmoState | null | undefined, remoteAt = 0) {
+  if (!remote || !Object.keys(remote).length || remoteAt <= ammoSavedAt()) return;
+  const next = fresh();
+  for (const [k, r] of Object.entries(remote)) if (AMMO_SPEC[k] && r) next[k] = { inMag: Math.max(0, Math.min(AMMO_SPEC[k].mag, r.inMag | 0)), reserve: Math.max(0, Math.min(99, r.reserve | 0)) };
+  st = next; try { localStorage.setItem(KEY, JSON.stringify(st)); localStorage.setItem(KEY + '-at', String(remoteAt)); } catch { /* */ } ls.forEach((l) => l());
 }
 export const subscribeAmmo = (l: () => void) => { ls.add(l); return () => { ls.delete(l); }; };
