@@ -38,12 +38,13 @@ const volAt = (cam: THREE.Camera, p: [number, number, number]) => { const d = Ma
 
 const ClockTower: React.FC<{ M: ReturnType<typeof mats> }> = ({ M }) => {
   const { camera } = useThree();
-  const hour = useRef<THREE.Mesh>(null), min = useRef<THREE.Mesh>(null);
+  const hours = useRef<(THREE.Group | null)[]>([]), mins = useRef<(THREE.Group | null)[]>([]);
   const lastHour = useRef(new Date().getHours());
   useFrame(() => {
     const d = new Date(), h = d.getHours(), m = d.getMinutes() + d.getSeconds() / 60;
-    if (hour.current) hour.current.rotation.z = -((h % 12) + m / 60) / 12 * Math.PI * 2;
-    if (min.current) min.current.rotation.z = -m / 60 * Math.PI * 2;
+    // Every face shows the member's real local time; hands pivot at the centre.
+    const hr = -((h % 12) + m / 60) / 12 * Math.PI * 2, mr = -m / 60 * Math.PI * 2;
+    hours.current.forEach((g) => { if (g) g.rotation.z = hr; }); mins.current.forEach((g) => { if (g) g.rotation.z = mr; });
     if (h !== lastHour.current) {
       lastHour.current = h;
       const strikes = h % 12 || 12, v = volAt(camera, CLOCK_POS);
@@ -58,17 +59,15 @@ const ClockTower: React.FC<{ M: ReturnType<typeof mats> }> = ({ M }) => {
       <mesh material={M.roof} position={[0, 16, 0]} rotation={[0, Math.PI / 4, 0]}><coneGeometry args={[3.4, 4, 4]} /></mesh>
       {[[2.3, 2.6, 2.3], [-2.3, 2.6, 2.3]].map((q) => <group key={q[0]} position={q as [number, number, number]}><mesh material={M.lantern}><boxGeometry args={[0.25, 0.35, 0.25]} /></mesh><mesh material={M.glow}><sphereGeometry args={[0.9, 10, 8]} /></mesh></group>)}
       <mesh material={M.wood} position={[0, 1.3, 2.02]}><boxGeometry args={[1.2, 2.4, 0.06]} /></mesh>
-      {[0, Math.PI / 2, Math.PI, -Math.PI / 2].map((r) => (
+      {[0, Math.PI / 2, Math.PI, -Math.PI / 2].map((r, fi) => (
         <group key={r} rotation={[0, r, 0]}>
           <group position={[0, 12, 2.03]}>
             <mesh material={M.ancientStone}><circleGeometry args={[1.45, 32]} /></mesh>
             <mesh material={M.face} position={[0, 0, 0.01]}><circleGeometry args={[1.25, 32]} /></mesh>
-            {Array.from({ length: 12 }, (_, i) => <mesh key={i} material={M.iron} position={[Math.sin(i / 12 * Math.PI * 2) * 1.08, Math.cos(i / 12 * Math.PI * 2) * 1.08, 0.02]}><boxGeometry args={[0.07, 0.18, 0.01]} /></mesh>)}
-            {r === 0 && <>
-              
-              <mesh ref={hour} material={M.iron} position={[0, 0, 0.04]}><planeGeometry args={[0.1, 1.3]} /></mesh>
-              <mesh ref={min} material={M.iron} position={[0, 0, 0.05]}><planeGeometry args={[0.06, 2]} /></mesh>
-            </>}
+            {Array.from({ length: 12 }, (_, i) => <mesh key={i} material={M.iron} position={[Math.sin(i / 12 * Math.PI * 2) * 1.08, Math.cos(i / 12 * Math.PI * 2) * 1.08, 0.02]} rotation={[0, 0, -i / 12 * Math.PI * 2]}><boxGeometry args={[0.07, 0.18, 0.01]} /></mesh>)}
+            <group ref={(g) => { hours.current[fi] = g; }} position={[0, 0, 0.04]}><mesh material={M.iron} position={[0, 0.32, 0]}><planeGeometry args={[0.12, 0.7]} /></mesh></group>
+            <group ref={(g) => { mins.current[fi] = g; }} position={[0, 0, 0.05]}><mesh material={M.iron} position={[0, 0.48, 0]}><planeGeometry args={[0.07, 1.05]} /></mesh></group>
+            <mesh material={M.iron} position={[0, 0, 0.06]}><circleGeometry args={[0.08, 12]} /></mesh>
           </group>
         </group>
       ))}
