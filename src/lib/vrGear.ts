@@ -5,10 +5,10 @@
  */
 import { useSyncExternalStore } from 'react';
 import { recordVRCollect } from '@/lib/vrQuests';
-import { playPickup } from '@/lib/vrSfx';
+import { playPickup, playSfx } from '@/lib/vrSfx';
 
 export type GearKind = 'weapon' | 'armour' | 'quest';
-export type Gear = { id: string; kind: GearKind; name: string; icon: string; detail: string; pos: [number, number, number] };
+export type Gear = { id: string; kind: GearKind; name: string; icon: string; detail: string; pos: [number, number, number]; shop?: boolean };
 
 export const GEAR: Gear[] = [
   { id: 'pistol', kind: 'weapon', name: 'Handgun', icon: '🔫', detail: 'A worn 9mm handgun.', pos: [6, 0.9, 6] },
@@ -18,6 +18,7 @@ export const GEAR: Gear[] = [
   { id: 'helmet', kind: 'armour', name: 'Iron Helmet', icon: '⛑️', detail: 'Old castle guard helmet.', pos: [-62, 0.9, 14] },
   { id: 'crest', kind: 'quest', name: "Lord's Crest", icon: '🛡️', detail: 'Found in the castle keep. Bears the M\'Mora mark.', pos: [-70, 0.9, 1] },
   { id: 'medallion', kind: 'quest', name: 'Church Medallion', icon: '🏅', detail: 'Left on the church altar.', pos: [-14, 1.7, -59.2] },
+  { id: 'rocket', kind: 'weapon', name: 'Rocket Launcher', icon: '🚀', detail: 'Mercenary rocket launcher. Sold only by the merchant.', pos: [0, -50, 0], shop: true },
   { id: 'map', kind: 'quest', name: 'Old Village Map', icon: '🗺️', detail: 'Marks the church, the castle and the shore.', pos: [16, 0.9, -20] },
 ];
 
@@ -31,7 +32,7 @@ export function takeGear(g: Gear) {
   owned = [...owned, g.id];
   try { localStorage.setItem(KEY, JSON.stringify(owned)); } catch { /* */ }
   ls.forEach((l) => l());
-  playPickup('coin');
+  if (g.kind === 'quest') playSfx(g.id === 'map' ? 'paper' : 'medallion'); else playPickup('coin');
   if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('vr-hand-reach'));
   void recordVRCollect({ type: `${g.kind}_${g.id}`, rarity: g.kind === 'quest' ? 'epic' : 'rare' });
 }
@@ -49,9 +50,10 @@ export function toggleEquip(id: string) {
     : [...equipped.filter((x) => !(g.kind === 'weapon' && GEAR.find((y) => y.id === x)?.kind === 'weapon')), id];
   try { localStorage.setItem(EKEY, JSON.stringify(equipped)); } catch { /* */ }
   els.forEach((l) => l());
+  playSfx(({ pistol: 'gun', shotgun: 'shotgun', rocket: 'rocket', knife: 'knife', vest: 'leather', helmet: 'metal' } as const)[id as 'pistol'] ?? 'metal');
 }
 const STAT: Record<string, { attack?: number; defence?: number }> = {
-  pistol: { attack: 12 }, knife: { attack: 6 }, shotgun: { attack: 25 }, vest: { defence: 15 }, helmet: { defence: 10 },
+  pistol: { attack: 12 }, knife: { attack: 6 }, shotgun: { attack: 25 }, rocket: { attack: 80 }, vest: { defence: 15 }, helmet: { defence: 10 },
 };
 /** Base 5 attack / 0 defence plus whatever is equipped. */
 // ── Level: earned from quest rewards; each level adds +3 attack, +2 defence. ──
@@ -77,6 +79,7 @@ export const WEAPON_FIGHT: Record<string, { reach: number; cooldown: number; lab
   knife: { reach: 2.2, cooldown: 0.45, label: 'Slash' },
   pistol: { reach: 6, cooldown: 0.8, label: 'Shoot' },
   shotgun: { reach: 4, cooldown: 1.6, label: 'Blast' },
+  rocket: { reach: 10, cooldown: 3, label: 'Fire' },
 };
 export const equippedWeapon = () => equipped.find((id) => WEAPON_FIGHT[id]) ?? null;
 

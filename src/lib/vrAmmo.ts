@@ -9,7 +9,13 @@ import { useSyncExternalStore } from 'react';
 export const AMMO_SPEC: Record<string, { mag: number; reload: number; drop: number; start: number; label: string }> = {
   pistol: { mag: 10, reload: 1.4, drop: 5, start: 20, label: 'Handgun ammo' },
   shotgun: { mag: 4, reload: 2.2, drop: 2, start: 6, label: 'Shotgun shells' },
+  rocket: { mag: 1, reload: 3, drop: 0, start: 2, label: 'Rockets' },
 };
+/** Bought rounds (merchant). */
+export function addAmmo(w: string, n: number) {
+  const a = st[w]; if (!a) return;
+  st = { ...st, [w]: { ...a, reserve: Math.min(99, a.reserve + n) } }; save();
+}
 export type AmmoState = Record<string, { inMag: number; reserve: number }>;
 
 const KEY = 'vr-ammo';

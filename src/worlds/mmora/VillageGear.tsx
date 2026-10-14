@@ -24,7 +24,7 @@ export const VillageGear: React.FC = () => {
   const owned = useGear();
   useEffect(() => registerUse(() => {
     let best: { d: number; g: Gear } | null = null;
-    for (const g of GEAR) {
+    for (const g of GEAR) { if (g.shop) continue;
       if (owned.includes(g.id)) continue;
       const d = Math.hypot(camera.position.x - g.pos[0], camera.position.z - g.pos[2]);
       if (!best || d < best.d) best = { d, g };
@@ -37,5 +37,5 @@ export const VillageGear: React.FC = () => {
     if (req && !owned.includes(req[0])) return { dist: best.d * 0.5, reach: 1.4, label: `Find the ${req[1]} first`, run: () => {} };
     return { dist: best.d * 0.5, reach: 1.4, label: `Pick up ${g.name}`, run: () => takeGear(g) };
   }), [camera, owned]);
-  return <>{GEAR.filter((g) => !owned.includes(g.id)).map((g) => <Item key={g.id} g={g} />)}</>;
+  return <>{GEAR.filter((g) => !g.shop && !owned.includes(g.id)).map((g) => <Item key={g.id} g={g} />)}</>;
 };
