@@ -5,6 +5,7 @@
  * (dogs, cats, cows, crows). Everything repeated is one instanced mesh, so
  * the whole village stays a handful of draw calls on phones.
  */
+import { HollowWarden } from './HollowWarden';
 import React, { useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
@@ -165,6 +166,7 @@ export const VillageLook: React.FC = () => {
       <VillageVillagers />
       <VillageQuestBoard />
       <VillageBells />
+      <HollowWarden />
       <VillageMerchant />
     </>
   );

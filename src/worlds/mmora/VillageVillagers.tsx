@@ -16,7 +16,7 @@ const lastSwing = { v: 0 };
 import { getVRView } from '@/lib/vrView';
 /** Where the player's body stands: the camera in first person, 2.8 m ahead of it in third person (matches ThirdPersonAvatar). */
 const _e = new THREE.Euler();
-function playerSpot(cam: THREE.Camera): { x: number; z: number } {
+export function playerSpot(cam: THREE.Camera): { x: number; z: number } {
   if (!getVRView().thirdPerson) return { x: cam.position.x, z: cam.position.z };
   const yaw = _e.setFromQuaternion(cam.quaternion, 'YXZ').y;
   return { x: cam.position.x - Math.sin(yaw) * 2.8, z: cam.position.z - Math.cos(yaw) * 2.8 };
