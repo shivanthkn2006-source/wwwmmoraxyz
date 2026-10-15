@@ -96,6 +96,7 @@ export const equippedWeapon = () => equipped.find((id) => WEAPON_FIGHT[id]) ?? n
 // ── Account copy: level, found items and equipped items follow the member to any device. ──
 let syncTimer: number | undefined;
 let loadedFor: string | null = null;
+let readyFor: string | null = null; // set only after the account copy was actually read
 async function uid() {
   const { supabase } = await import('@/integrations/supabase/client');
   const { data } = await supabase.auth.getSession();
@@ -107,6 +108,8 @@ function pushSoon() {
   syncTimer = window.setTimeout(async () => {
     try {
       const { supabase, id } = await uid(); if (!id) return;
+      // Upload only after merging with the account copy, so a fresh/cleared device can't wipe gear (e.g. the rifle).
+      if (readyFor !== id) { loadedFor = null; await loadGearProgress(); if (readyFor !== id) return; }
       await supabase.from('vr_player_progress' as never).upsert({ user_id: id, level, gear: owned, equipped, ammo: getAmmo(), gold_herbs: getGoldHerbs(), village: readVillage(), updated_at: new Date().toISOString() } as never, { onConflict: 'user_id' });
     } catch { /* offline: retried on the next change */ }
   }, 1500);
@@ -116,7 +119,9 @@ export async function loadGearProgress() {
   try {
     const { supabase, id } = await uid(); if (!id || loadedFor === id) return;
     loadedFor = id;
-    const { data } = await supabase.from('vr_player_progress' as never).select('level,gear,equipped,ammo,gold_herbs,village,updated_at').eq('user_id', id).maybeSingle();
+    const { data, error } = await supabase.from('vr_player_progress' as never).select('level,gear,equipped,ammo,gold_herbs,village,updated_at').eq('user_id', id).maybeSingle();
+    if (error) { loadedFor = null; return; }
+    readyFor = id;
     const row = data as { level: number; gear: string[]; equipped: string[]; ammo?: Record<string, { inMag: number; reserve: number }>; gold_herbs?: number; village?: Partial<VillageProgress>; updated_at?: string } | null;
     if (row) {
       owned = [...new Set([...owned, ...row.gear])];
@@ -128,7 +133,7 @@ export async function loadGearProgress() {
       ls.forEach((l) => l()); els.forEach((l) => l()); lls.forEach((l) => l());
     }
     pushSoon();
-  } catch { /* offline */ }
+  } catch { loadedFor = null; /* offline: retried on next save */ }
 }
 // Any change on this device is copied to the account.
 ls.add(pushSoon); els.add(pushSoon); lls.add(pushSoon); subscribeAmmo(pushSoon); subscribeGoldHerbs(pushSoon);
