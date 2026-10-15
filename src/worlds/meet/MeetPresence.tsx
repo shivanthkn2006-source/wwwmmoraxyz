@@ -95,7 +95,8 @@ export const MeetPresence: React.FC = () => {
     .filter((x): x is { p: Remote; t: { x: number; z: number } } => !!x.t)
     .sort((a, b) => Math.hypot(a.t.x - camera.position.x, a.t.z - camera.position.z) - Math.hypot(b.t.x - camera.position.x, b.t.z - camera.position.z))
     .slice(0, 20)
-    .map((x, i, arr) => ({ ...x, t: spaced(x.t, arr.slice(0, i).map((y) => y.t)) })), [meet.players, w.mode, origin, camera]);
+    // Index 0 holds my own avatar's spot, so nobody stands inside me either.
+    .map((x, i, arr) => ({ ...x, t: spaced(x.t, [{ x: camera.position.x, z: camera.position.z }, ...arr.slice(0, i).map((y) => y.t)]) })), [meet.players, w.mode, origin, camera]);
   const targetsRef = useRef(targets); targetsRef.current = targets;
 
   useEffect(() => registerUse(() => {
