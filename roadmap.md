@@ -34,10 +34,17 @@
 - [x] Coins/rifle loss: device no longer uploads before reading account copy (code + tests)
 - [x] Village lights on until 05:54 local (code + tests)
 - [x] Villagers indoors/asleep 22:00–06:00 local (code only)
-- [ ] Clear roads/paths of props; move houses off roads (incl. castle road)
-- [ ] Villagers follow roads/forest paths; daily chores (milking cows, household)
-- [ ] Wet reflective ground + lamp glow + colour grading
+- [x] Clear roads/paths of props; move houses off roads (incl. castle road) (code + road test + preview screenshots; not walked signed-in)
+- [x] Villagers walk only on lanes/roads (code + test)
+- [ ] Villager daily chores (milking cows, household)
+- [ ] Wet reflective ground + lamp glow + colour grading (partial: ground goes shinier while raining)
 - [ ] Detailed house fronts (carved stone, ivy, chimneys, balconies)
 - [ ] Detailed people; forest + rock detail on mountains
-- [ ] Rain visible in screenshots (only real rainy weather now)
+- [x] Real local rain/thunder: device location, any precipitation = rain, storm codes, visible rain + lightning bolt (tests + preview screenshots with test switch; not seen at user's real location)
 - [ ] Trailer video (last)
+
+## Oct 15 request (2) (Marc)
+- [x] Village hanging: fixed light count via light pool (preview: 4 real lights before/after walking)
+- [x] More lit windows: houses (back + attic), archive, church (outer face, tower), castle (towers, keep, walls)
+- [x] Clock tower + bell tower top lanterns and spire light (preview screenshots)
+- [ ] Signed-in walk of routes, coins/inventory across reloads and sign-outs (blocked: no safe signed-in session)
