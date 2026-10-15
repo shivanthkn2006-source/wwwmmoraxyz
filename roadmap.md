@@ -23,7 +23,7 @@
 - [x] Stage 7 Watch Drill timed bonus mode
 - [ ] Multiplayer gaps: own-avatar spacing, hidden-member slot counting, moving between groups
 - [ ] Chapter 5+ storyline
-- [ ] Sync puzzle progress + upgrades to account (device-only now)
+- [x] Sync puzzle progress, upgrades, case rows to account (code + tests only)
 - [ ] Coin logo (blocked: no file uploaded)
 - [ ] Signed-in browser tests (blocked: preview signed out; needs member sign-in)
 - [ ] Real phone / installed app tests (blocked: needs user's device)
