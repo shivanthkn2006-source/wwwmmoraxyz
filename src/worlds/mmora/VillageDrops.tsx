@@ -30,7 +30,7 @@ export const VillageDrops: React.FC = () => {
     for (const d of drops) { const k = Math.hypot(ps.x - d.x, ps.z - d.z); if (!best || k < best.d) best = { d: k, id: d.id }; }
     if (!best) return null;
     const id = best.id;
-    return { dist: best.d * 0.45, reach: 2.2, label: 'Take dropped ammo', run: () => { dropAmmo(); void import('@/lib/vrSfx').then((m) => m.playSfx('metal' as never)).catch(() => {}); setDrops((l) => l.filter((d) => d.id !== id)); } };
+    return { dist: best.d * 0.45, reach: 2.2, label: 'Take dropped ammo', run: () => { dropAmmo(); void import('@/lib/vrSfx').then((m) => m.playSfx('metal')).catch(() => {}); setDrops((l) => l.filter((d) => d.id !== id)); } };
   }), [camera, drops]);
   return <>{drops.map((d) => (
     <group key={d.id} position={[d.x, 0.12, d.z]}>
