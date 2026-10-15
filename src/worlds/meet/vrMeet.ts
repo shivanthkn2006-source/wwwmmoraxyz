@@ -103,6 +103,15 @@ export async function joinMeet(base: string | null) {
   await openRoom(base, base ? shardRoom(base, 1) : null);
 }
 
+/** Move to another copy of this village (group 1, 2, …). A full group passes me on to the next open one. */
+export async function moveVillageGroup(n: number) {
+  if (!state.base || !isVillageRoom(state.base)) return;
+  const target = Math.max(1, Math.min(MAX_SHARDS, Math.floor(n)));
+  if (target === shard) return;
+  shard = target;
+  await openRoom(state.base, shardRoom(state.base, target));
+}
+
 async function openRoom(base: string | null, room: string | null, keepSince = false) {
   if (channel) { void supabase.removeChannel(channel); channel = null; }
   lastTracked = null;
@@ -122,14 +131,18 @@ async function openRoom(base: string | null, room: string | null, keepSince = fa
       if (m) players.push({ ...m, id: key, tag: tags.get(key) ?? 'unknown' });
     }
     if (isVillageRoom(room)) {
-      const inSet = admitted([{ id: self.id, since }, ...players.map((p) => ({ id: p.id, since: p.since ?? p.at }))]);
-      if (!inSet.has(self.id) && shard < MAX_SHARDS && channel === ch) {
+      // Hidden members are not in presence, so they never take one of the 5 places;
+      // while I am hidden I don't take one either, and I just see the first 5 visible.
+      const meCounts = state.visible;
+      const entries = players.map((p) => ({ id: p.id, since: p.since ?? p.at }));
+      const inSet = admitted(meCounts ? [{ id: self.id, since }, ...entries] : entries);
+      if (meCounts && !inSet.has(self.id) && shard < MAX_SHARDS && channel === ch) {
         shard += 1;
         void openRoom(state.base, shardRoom(state.base ?? room, shard));
         return;
       }
       players = players.filter((p) => inSet.has(p.id));
-      set({ players, party: { count: players.length + 1, cap: VILLAGE_CAP, shard } });
+      set({ players, party: { count: players.length + (meCounts ? 1 : 0), cap: VILLAGE_CAP, shard } });
     } else set({ players });
     void loadTags(players.map((p) => p.id));
   })
