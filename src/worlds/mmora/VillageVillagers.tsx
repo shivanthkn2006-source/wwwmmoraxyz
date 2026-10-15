@@ -180,7 +180,8 @@ const Villager: React.FC<{ route: [number, number][]; female: boolean; offset: n
       void import('@/lib/vrSfx').then((m) => m.playSfx(weapon === 'knife' ? 'knife' : weapon === 'rocket' ? 'rocket' : weapon === 'shotgun' ? 'shotgun' : 'gun'));
       if (c.hp <= 0) {
         c.down = RESPAWN_S; c.hostile = false; window.dispatchEvent(new CustomEvent('vr-kill'));
-        void import('@/lib/vrPickups').then((m) => m.addCoins(5)); dropAmmo(); playPickup('coin');
+        void import('@/lib/vrPickups').then((m) => m.addCoins(5)); playPickup('coin');
+        const wp = root.current?.getWorldPosition(new THREE.Vector3()); if (wp) window.dispatchEvent(new CustomEvent('vr-drop', { detail: { x: wp.x, z: wp.z } })); else dropAmmo();
       }
     } };
   }), [camera]);
