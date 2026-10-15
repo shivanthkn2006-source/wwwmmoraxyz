@@ -1,5 +1,5 @@
-/**
 import { readVillage, applyVillage, villageChanged, type VillageProgress } from '@/lib/vrVillageProgress';
+/**
  * Weapons, armour and quest items found in M'Mora Village. Each has one
  * pickup spot in the village; once taken it lists under Files in the case.
  * Saved on the device and recorded to the member's bag (vrQuests).
