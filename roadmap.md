@@ -18,7 +18,7 @@
 - [x] Dropped-item pouches, cleared per chapter (code check only)
 - [x] Spore fog + auto flashlight (code check only)
 - [x] The Drowned at the shore (code check only)
-- [ ] Doc: glove powers
+- [x] Glove powers (code check only)
 - [ ] Stage 6 team play
 - [x] Stage 7 Watch Drill timed bonus mode
 - [ ] Multiplayer gaps: own-avatar spacing, hidden-member slot counting, moving between groups

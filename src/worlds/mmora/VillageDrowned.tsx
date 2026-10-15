@@ -1,7 +1,7 @@
 /**
  * The Drowned: waterlogged husks that rise from the surf once the Church
- * Medallion is taken. They only stir when the operative comes near the
- * shoreline, shamble slowly (1.1 m/s), hit hard up close and drop an ammo
+ * Medallion is taken. They stir near the shoreline, and (per the design doc)
+ * every glove-power shockwave is a beacon that draws them in anywhere. They shamble slowly (1.1 m/s), hit hard up close and drop an ammo
  * pouch when beaten. Leaving the shore lets them sink back.
  */
 import React, { useEffect, useRef, useState } from 'react';
@@ -22,6 +22,13 @@ export const VillageDrowned: React.FC = () => (useGear().includes('medallion') ?
 const Drowned: React.FC = () => {
   const { camera } = useThree();
   const list = useRef<D[]>([]); const [, tick] = useState(0); const spawn = useRef(0);
+  const beacon = useRef(0);
+  useEffect(() => { const on = (e: Event) => { const d = (e as CustomEvent).detail as { x: number; z: number };
+    // Shockwave hurts any Drowned within 5 m; then more are drawn to the noise.
+    for (const w of list.current) if (Math.hypot(w.x - d.x, w.z - d.z) < 5) w.hp -= 40;
+    list.current = list.current.filter((w) => { if (w.hp > 0) return true; window.dispatchEvent(new CustomEvent('vr-drop', { detail: { x: w.x, z: w.z } })); return false; });
+    beacon.current = 20; spawn.current = 0; tick((n) => n + 1); };
+    window.addEventListener('vr-glove', on); return () => window.removeEventListener('vr-glove', on); }, []);
   useEffect(() => registerUse(() => {
     const ps = playerSpot(camera); let b: D | null = null, bd = 1e9;
     for (const d of list.current) { const k = Math.hypot(ps.x - d.x, ps.z - d.z); if (k < bd) { bd = k; b = d; } }
@@ -34,10 +41,11 @@ const Drowned: React.FC = () => {
   }), [camera]);
   useFrame((_, raw) => {
     const dt = Math.min(raw, 0.05); const ps = playerSpot(camera);
-    const nearShore = ps.z < SHORE_Z + 14;
+    beacon.current = Math.max(0, beacon.current - dt);
+    const nearShore = ps.z < SHORE_Z + 14 || beacon.current > 0;
     if (!nearShore) { if (list.current.length) { list.current = []; tick((n) => n + 1); } return; }
     spawn.current -= dt;
-    if (spawn.current <= 0 && list.current.length < 3) { spawn.current = 7; list.current.push({ id: Math.random(), x: ps.x + (Math.random() - 0.5) * 16, z: SHORE_Z - 2, hp: 60, rise: 0 }); logStory('enemy', 'drowned:rise'); tick((n) => n + 1); }
+    if (spawn.current <= 0 && list.current.length < 3) { spawn.current = 7; list.current.push({ id: Math.random(), x: ps.x + (Math.random() - 0.5) * 16, z: beacon.current > 0 && ps.z >= SHORE_Z + 14 ? ps.z + (Math.random() < 0.5 ? -12 : 12) : SHORE_Z - 2, hp: 60, rise: 0 }); void import('@/lib/vrSfx').then((m) => m.playSfx('leather')); logStory('enemy', 'drowned:rise'); tick((n) => n + 1); }
     for (const d of list.current) {
       d.rise = Math.min(1, d.rise + dt / 2); if (d.rise < 1) continue;
       const dx = ps.x - d.x, dz = ps.z - d.z, k = Math.hypot(dx, dz);
