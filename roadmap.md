@@ -14,7 +14,8 @@
 - [x] Generator fluid line step in fuse puzzle (code check only, not played)
 
 ## Open
-- [ ] Doc: enemy wave at core, dropped-item clearing, spore fog + flashlight, the Drowned, glove powers
+- [x] Enemy wave at core (code check only)
+- [ ] Doc: dropped-item clearing, spore fog + flashlight, the Drowned, glove powers
 - [ ] Stage 6 team play
 - [x] Stage 7 Watch Drill timed bonus mode
 - [ ] Multiplayer gaps: own-avatar spacing, hidden-member slot counting, moving between groups
