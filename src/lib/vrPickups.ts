@@ -145,7 +145,8 @@ export async function pullCloud(force = false) {
   try {
     const { data } = await supabase.auth.getSession();
     const uid = data.session?.user?.id; if (!uid) return;
-    const { data: row } = await supabase.from('vr_save_games' as never).select('data').eq('user_id', uid).maybeSingle();
+    const { data: row, error } = await supabase.from('vr_save_games' as never).select('data').eq('user_id', uid).maybeSingle();
+    if (error) { pulled = false; return; }
     const d = (row as { data?: { pickups?: State; save?: VRSave; explore?: { cells?: Record<string, string[]>; portals?: Record<string, number> } } } | null)?.data;
     mergeExplore(d?.explore);
     if (d?.pickups && Array.isArray(d.pickups.taken)) {
