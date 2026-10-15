@@ -44,11 +44,11 @@ const HouseFront: React.FC<{ i: number; ivy: THREE.Material }> = ({ i, ivy }) =>
           <mesh material={CARVED} position={[dx, 2.28, fz + 0.02]}><boxGeometry args={[0.34, 0.1, 0.22]} /></mesh>
         </group>
       ))}
-      <mesh material={CARVED} position={[0, 2.38, fz]} rotation={[0, 0, Math.PI / 2]}><torusGeometry args={[0.72, 0.12, 6, 14, Math.PI]} /></mesh>
-      <mesh material={CARVED} position={[0, 3.08, fz + 0.03]}><boxGeometry args={[0.2, 0.26, 0.14]} /></mesh>
+      <mesh material={CARVED} position={[0, 2.28, fz]}><torusGeometry args={[0.72, 0.12, 6, 14, Math.PI]} /></mesh>
+      <mesh material={CARVED} position={[0, 2.98, fz + 0.03]}><boxGeometry args={[0.2, 0.26, 0.14]} /></mesh>
       {/* chimney on the roof, with a cap */}
-      <mesh material={CHIM} position={[side * 1.4, HOUSE_H + 1.5, -1]}><boxGeometry args={[0.6, 2.2, 0.6]} /></mesh>
-      <mesh material={CARVED} position={[side * 1.4, HOUSE_H + 2.65, -1]}><boxGeometry args={[0.75, 0.12, 0.75]} /></mesh>
+      <mesh material={CHIM} position={[side * 1.4, HOUSE_H + 2, -1]}><boxGeometry args={[0.6, 3.2, 0.6]} /></mesh>
+      <mesh material={CARVED} position={[side * 1.4, HOUSE_H + 3.65, -1]}><boxGeometry args={[0.75, 0.12, 0.75]} /></mesh>
       {/* ivy climbing the front corner */}
       <mesh material={ivy} position={[-side * (HOUSE_W / 2 - 0.35), 1.5, fz + 0.14]}><planeGeometry args={[0.75, 3]} /></mesh>
       {i % 3 === 0 && <mesh material={ivy} position={[HOUSE_W / 2 + 0.03, 1.3, 0.6]} rotation={[0, Math.PI / 2, 0]}><planeGeometry args={[1.8, 2.6]} /></mesh>}
