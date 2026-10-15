@@ -10,6 +10,7 @@ import { VillageFusePuzzle } from './VillageFusePuzzle';
 import { VillageDrops } from './VillageDrops';
 import { VillageSporeFog } from './VillageSporeFog';
 import { VillageDrowned } from './VillageDrowned';
+import { VillageGlove } from './VillageGlove';
 import { VillageBonusMode } from './VillageBonusMode';
 import React, { useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
@@ -176,6 +177,7 @@ export const VillageLook: React.FC = () => {
       <VillageDrops />
       <VillageSporeFog />
       <VillageDrowned />
+      <VillageGlove />
       <VillageBonusMode />
       <VillageMerchant />
     </>
