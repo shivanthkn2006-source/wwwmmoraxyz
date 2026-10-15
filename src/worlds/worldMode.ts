@@ -69,6 +69,7 @@ export function startAerialEntry(): boolean {
 }
 export function landOnStreet() {
   set({ aerial: false });
+  markStartSettled();
   window.dispatchEvent(new CustomEvent('vr-view-transition', { detail: { mode: 'ground' } }));
 }
 
@@ -81,8 +82,20 @@ export const hasResume = () => resume !== null;
 /** Applies a resume: back into M'Mora Village if that's where they stopped, at the saved spot. */
 export function applyResume(sv: VRSave) {
   if (sv.mode === 'mmora') set({ mode: 'mmora', savedRealPos: sv.realPos ?? [0, 1.6, 0] });
-  teleport([sv.pos[0], Math.max(1.6, sv.pos[1]), sv.pos[2]]);
+  const pos: [number, number, number] = [sv.pos[0], Math.max(1.6, sv.pos[1]), sv.pos[2]];
+  const yaw = Number.isFinite(sv.yaw) ? sv.yaw : 0;
+  // Same facing as when they stopped (camera forward = -Z rotated by yaw).
+  const lookAt = [pos[0] - Math.sin(yaw) * 10, pos[1], pos[2] - Math.cos(yaw) * 10];
+  const go = () => window.dispatchEvent(new CustomEvent('vr-teleport', { detail: { position: pos, lookAt, lockGround: true } }));
+  go();
+  // Re-apply once after other start-up placements (ground spawn, view resets) have run.
+  window.setTimeout(() => { go(); markStartSettled(); }, 600);
 }
+/** Saving is held until the start-up placement (resume or entry flight) has finished,
+ *  so the default spawn spot can never overwrite the member's real save. */
+let startSettled = false;
+export const isStartSettled = () => startSettled;
+export function markStartSettled() { startSettled = true; }
 const CITY_KEY = 'vr-start-city';
 export type StartCity = { name: string; lat: number; lng: number };
 export function savedStartCity(): StartCity | null {
@@ -94,12 +107,21 @@ export function resolveOrigin(): void {
   // Resume where the member stopped last time (device save).
   if (!resumeChecked) {
     resumeChecked = true;
-    const sv = readSave();
-    if (sv) {
-      resume = sv;
-      set({ origin: { status: 'ready', origin: { lat: sv.origin.lat, lng: sv.origin.lng }, real: false, label: sv.origin.label ?? 'Where you stopped' } });
-      return;
-    }
+    locating = true;
+    if (state.origin.status !== 'locating') set({ origin: { status: 'locating' } });
+    // Account save first (other devices), newest wins, max 3 s wait; then the device save.
+    void Promise.race([
+      import('@/lib/vrPickups').then((m) => m.pullCloud()).catch(() => {}),
+      new Promise((r) => setTimeout(r, 3000)),
+    ]).then(() => {
+      locating = false;
+      const sv = readSave();
+      if (sv) {
+        resume = sv;
+        set({ origin: { status: 'ready', origin: { lat: sv.origin.lat, lng: sv.origin.lng }, real: false, label: sv.origin.label ?? 'Where you stopped' } });
+      } else resolveOrigin();
+    });
+    return;
   }
   locating = true;
   if (state.origin.status !== 'locating') set({ origin: { status: 'locating' } });
@@ -193,4 +215,5 @@ export function __resetWorldForTests() {
   aerialShown = false;
   resumeChecked = false;
   resume = null;
+  startSettled = false;
 }

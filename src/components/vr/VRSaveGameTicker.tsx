@@ -2,7 +2,7 @@
 import { useEffect } from 'react';
 import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import { getWorldState } from '@/worlds/worldMode';
+import { getWorldState, isStartSettled } from '@/worlds/worldMode';
 import { writeSave } from '@/lib/vrSaveGame';
 
 export const VRSaveGameTicker: React.FC = () => {
@@ -10,7 +10,7 @@ export const VRSaveGameTicker: React.FC = () => {
   useEffect(() => {
     const save = () => {
       const w = getWorldState();
-      if (w.origin.status !== 'ready' || w.aerial) return;
+      if (!isStartSettled() || w.origin.status !== 'ready' || w.aerial) return;
       const p = camera.position;
       if (!Number.isFinite(p.x) || p.y > 20) return; // never save mid-air
       const yaw = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ').y;
