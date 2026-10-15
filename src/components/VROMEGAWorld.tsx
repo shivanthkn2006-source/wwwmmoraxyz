@@ -1312,7 +1312,7 @@ const MemoryPalace: React.FC<{
       <AvatarWatchdog />
       {/* M'Mora World (behind every city portal) is the new houses world only; the old
           VR Omega city (VRFeatureIntegration, pillar, metro, race track) is no longer mounted. */}
-      {inMMora && <VillageLook />}
+      {inMMora ? <VillageLook /> : <VillageSky />}
 
       {/* Player controller unlocks via entry complete OR watchdog fallback to prevent gate deadlocks */}
       {useLegacyController && (<>

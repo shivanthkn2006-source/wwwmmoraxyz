@@ -3,7 +3,7 @@
  * Night (local clock): stars, an occasional shooting star, and the moon in
  * today's real phase (new → full → new, from the 29.53-day lunar cycle).
  * Weather comes from the member's real place (Open-Meteo, free, no key):
- * rain / drizzle, snow, fog, and thunderstorms with lightning and thunder.
+ * shown in both M'Mora Village and M'Mora World: rain / drizzle, snow, fog, and thunderstorms with lightning and thunder.
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
@@ -62,43 +62,56 @@ function useLocalWeather(): Wx {
   const [wx, setWx] = useState<Wx>({ kind: 'clear', heavy: false });
   useEffect(() => {
     let dead = false;
+    let t: number | undefined;
+    // Wait for the member's real place, then refresh every 15 minutes.
     const load = async () => {
       const w = getWorldState();
       const o = w.origin.status === 'ready' ? w.origin.origin : null;
-      if (!o) return;
+      if (!o) { t = window.setTimeout(load, 4000); return; }
       try {
-        const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${o.lat}&longitude=${o.lng}&current_weather=true`);
+        const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${o.lat.toFixed(3)}&longitude=${o.lng.toFixed(3)}&current_weather=true`);
         const j = await r.json();
         if (!dead && typeof j?.current_weather?.weathercode === 'number') setWx(codeToWx(j.current_weather.weathercode));
-      } catch { /* offline: keep clear sky */ }
+      } catch { /* offline: keep the last sky */ }
+      if (!dead) t = window.setTimeout(load, 15 * 60_000);
     };
     void load();
-    const t = window.setInterval(load, 15 * 60_000);
-    return () => { dead = true; window.clearInterval(t); };
+    return () => { dead = true; window.clearTimeout(t); };
   }, []);
   return wx;
 }
 
-/** Falling rain or snow around the player (one Points object). */
+/** Falling rain (slanted streaks) or snow (drifting flakes) around the player. */
 const Precip: React.FC<{ snow: boolean; heavy: boolean }> = ({ snow, heavy }) => {
   const { camera } = useThree();
-  const N = heavy ? 1800 : 900;
+  const N = snow ? (heavy ? 1800 : 900) : (heavy ? 2200 : 1100);
+  const L = 0.55; // streak length in metres
   const geo = useMemo(() => {
-    const g = new THREE.BufferGeometry(); const a = new Float32Array(N * 3);
-    for (let i = 0; i < N; i++) { a[i * 3] = (Math.random() - 0.5) * 50; a[i * 3 + 1] = Math.random() * 25; a[i * 3 + 2] = (Math.random() - 0.5) * 50; }
-    g.setAttribute('position', new THREE.BufferAttribute(a, 3)); return g;
-  }, [N]);
-  const pts = useRef<THREE.Points>(null);
-  useFrame((_, dt) => {
-    const d = Math.min(dt, 0.05); const a = geo.attributes.position.array as Float32Array; const v = snow ? 1.4 : 16;
+    const g = new THREE.BufferGeometry(); const per = snow ? 1 : 2; const a = new Float32Array(N * 3 * per);
     for (let i = 0; i < N; i++) {
-      a[i * 3 + 1] -= v * d; if (snow) a[i * 3] += Math.sin((a[i * 3 + 1] + i) * 0.7) * d * 0.4;
-      if (a[i * 3 + 1] < 0) a[i * 3 + 1] += 25;
+      const x = (Math.random() - 0.5) * 50, y = Math.random() * 25, z = (Math.random() - 0.5) * 50;
+      a.set([x, y, z], i * 3 * per); if (!snow) a.set([x + 0.08, y + L, z], i * 6 + 3);
+    }
+    g.setAttribute('position', new THREE.BufferAttribute(a, 3)); return g;
+  }, [N, snow]);
+  const obj = useRef<THREE.Object3D>(null);
+  useFrame((_, dt) => {
+    const d = Math.min(dt, 0.05); const a = geo.attributes.position.array as Float32Array;
+    if (snow) {
+      for (let i = 0; i < N; i++) { a[i * 3 + 1] -= 1.4 * d; a[i * 3] += Math.sin((a[i * 3 + 1] + i) * 0.7) * d * 0.4; if (a[i * 3 + 1] < 0) a[i * 3 + 1] += 25; }
+    } else {
+      const v = heavy ? 18 : 14, dx = 1.2 * d;
+      for (let i = 0; i < N; i++) {
+        const k = i * 6; a[k + 1] -= v * d; a[k + 4] -= v * d; a[k] -= dx; a[k + 3] -= dx;
+        if (a[k + 1] < 0) { a[k + 1] += 25; a[k + 4] += 25; a[k] += dx * 25 / v / d * d; a[k + 3] = a[k] + 0.08; }
+      }
     }
     geo.attributes.position.needsUpdate = true;
-    pts.current?.position.set(camera.position.x, 0, camera.position.z);
+    obj.current?.position.set(camera.position.x, 0, camera.position.z);
   });
-  return <points ref={pts} geometry={geo}><pointsMaterial color={snow ? '#ffffff' : '#a9c2d8'} size={snow ? 0.12 : 0.06} transparent opacity={snow ? 0.9 : 0.6} depthWrite={false} /></points>;
+  return snow
+    ? <points ref={obj as React.Ref<THREE.Points>} geometry={geo}><pointsMaterial color="#ffffff" size={0.12} transparent opacity={0.9} depthWrite={false} /></points>
+    : <lineSegments ref={obj as React.Ref<THREE.LineSegments>} geometry={geo}><lineBasicMaterial color="#b9cde0" transparent opacity={heavy ? 0.55 : 0.4} depthWrite={false} /></lineSegments>;
 };
 
 let actx: AudioContext | null = null;
@@ -123,7 +136,7 @@ function rainLoop(on: boolean) {
     for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
     const s = actx.createBufferSource(); s.buffer = b; s.loop = true;
     const f = actx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 1200;
-    const g = actx.createGain(); g.gain.value = 0.05;
+    const g = actx.createGain(); g.gain.value = 0.09;
     s.connect(f).connect(g).connect(actx.destination); s.start(); w.__vrRain = s;
   } catch { /* */ }
 }
