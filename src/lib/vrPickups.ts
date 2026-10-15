@@ -14,13 +14,14 @@ import { playPickup } from '@/lib/vrSfx';
 
 export type PickupKind = 'herb' | 'coin';
 export type Pickup = { id: string; kind: PickupKind; amount: number; pos: [number, number, number] };
-type State = { herbs: number; coins: number; taken: string[] };
+type State = { herbs: number; coins: number; taken: string[]; at?: number };
 
 const KEY = 'vr-pickups';
 const load = (): State => { try { const s = JSON.parse(localStorage.getItem(KEY) || 'null'); if (s && Array.isArray(s.taken)) return s; } catch { /* */ } return { herbs: 0, coins: 0, taken: [] }; };
 let st: State = typeof localStorage !== 'undefined' ? load() : { herbs: 0, coins: 0, taken: [] };
 const ls = new Set<() => void>();
 const emit = () => {
+  st = { ...st, at: Date.now() };
   try { localStorage.setItem(KEY, JSON.stringify(st)); } catch { /* */ }
   setAmbientExtra('VR herbs and coins', `${st.herbs} green herbs, ${st.coins} antique coins`);
   ls.forEach((l) => l());
@@ -130,23 +131,37 @@ export async function pushCloud() {
   try {
     const { data } = await supabase.auth.getSession();
     const uid = data.session?.user?.id; if (!uid) return;
+    // Never upload before this device has read the account copy: an empty or
+    // stale device must not overwrite coins/pickups saved from another session.
+    if (pulledFor !== uid) { await pullCloud(true); if (pulledFor !== uid) return; }
     await supabase.from('vr_save_games' as never).upsert({ user_id: uid, data: { pickups: st, save: readSave(), explore: readExplore() }, updated_at: new Date().toISOString() } as never);
   } catch { /* offline: next save retries */ }
 }
 let pulled = false;
+let pulledFor: string | null = null;
 /** On VR start: take the newer of device and account saves. */
 export async function pullCloud(force = false) {
   if (pulled && !force) return; pulled = true;
   try {
     const { data } = await supabase.auth.getSession();
     const uid = data.session?.user?.id; if (!uid) return;
-    const { data: row } = await supabase.from('vr_save_games' as never).select('data').eq('user_id', uid).maybeSingle();
+    const { data: row, error } = await supabase.from('vr_save_games' as never).select('data').eq('user_id', uid).maybeSingle();
+    if (error) { pulled = false; return; }
     const d = (row as { data?: { pickups?: State; save?: VRSave; explore?: { cells?: Record<string, string[]>; portals?: Record<string, number> } } } | null)?.data;
     mergeExplore(d?.explore);
-    if (d?.pickups && d.pickups.taken.length > st.taken.length) { st = d.pickups; emit(); }
+    if (d?.pickups && Array.isArray(d.pickups.taken)) {
+      // Newest save wins for counts (spent coins stay spent); pickups taken anywhere stay taken.
+      const r = d.pickups, rAt = r.at ?? 0, lAt = st.at ?? 0;
+      const remoteNewer = rAt && lAt ? rAt > lAt : (r.coins + r.herbs + r.taken.length) > (st.coins + st.herbs + st.taken.length);
+      const base = remoteNewer ? r : st;
+      const taken = [...new Set([...st.taken, ...r.taken])].slice(-2000);
+      const next = { herbs: base.herbs, coins: base.coins, taken, at: Math.max(rAt, lAt) };
+      if (JSON.stringify(next) !== JSON.stringify(st)) { st = next; try { localStorage.setItem(KEY, JSON.stringify(st)); } catch { /* */ } ls.forEach((l) => l()); }
+    }
     const local = readSave();
     if (d?.save && (!local || d.save.at > local.at)) { const { at, ...rest } = d.save; writeSave(rest, at); }
-  } catch { /* */ }
+    pulledFor = uid;
+  } catch { pulled = false; }
 }
 setInterval(() => { if (typeof document !== 'undefined' && document.visibilityState === 'visible') scheduleCloud(); }, 60_000);
 

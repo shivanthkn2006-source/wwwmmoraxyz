@@ -1,17 +1,17 @@
 /**
  * Lights for every VR world (Real Map + M'Mora World), on the member's local
- * clock: building windows glow 17:54–22:00, street lamps 17:00–05:50.
+ * clock: building windows glow 17:54–05:54, street lamps 17:00–05:54.
  * Materials register once and a single 30 s ticker switches them.
  */
 import * as THREE from 'three';
 
 export const LIGHTS_ON_MIN = 17 * 60 + 54;
-export const LIGHTS_OFF_MIN = 22 * 60;
+export const LIGHTS_OFF_MIN = 5 * 60 + 54;
 export const STREET_ON_MIN = 17 * 60;
-export const STREET_OFF_MIN = 5 * 60 + 50;
+export const STREET_OFF_MIN = 5 * 60 + 54;
 
 const mins = (d: Date) => d.getHours() * 60 + d.getMinutes();
-export const lightsOnAt = (d: Date = new Date()) => { const m = mins(d); return m >= LIGHTS_ON_MIN && m < LIGHTS_OFF_MIN; };
+export const lightsOnAt = (d: Date = new Date()) => { const m = mins(d); return m >= LIGHTS_ON_MIN || m < LIGHTS_OFF_MIN; };
 export const streetLightsOnAt = (d: Date = new Date()) => { const m = mins(d); return m >= STREET_ON_MIN || m < STREET_OFF_MIN; };
 
 export type LightSchedule = 'building' | 'street';

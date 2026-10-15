@@ -29,3 +29,15 @@
 - [ ] Coin logo (blocked: no file uploaded)
 - [ ] Signed-in browser tests (blocked: preview signed out; needs member sign-in)
 - [ ] Real phone / installed app tests (blocked: needs user's device)
+
+## Oct 15 request (Marc)
+- [x] Coins/rifle loss: device no longer uploads before reading account copy (code + tests)
+- [x] Village lights on until 05:54 local (code + tests)
+- [x] Villagers indoors/asleep 22:00–06:00 local (code only)
+- [ ] Clear roads/paths of props; move houses off roads (incl. castle road)
+- [ ] Villagers follow roads/forest paths; daily chores (milking cows, household)
+- [ ] Wet reflective ground + lamp glow + colour grading
+- [ ] Detailed house fronts (carved stone, ivy, chimneys, balconies)
+- [ ] Detailed people; forest + rock detail on mountains
+- [ ] Rain visible in screenshots (only real rainy weather now)
+- [ ] Trailer video (last)

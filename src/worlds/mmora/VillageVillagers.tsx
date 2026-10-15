@@ -103,6 +103,11 @@ const Villager: React.FC<{ route: [number, number][]; female: boolean; offset: n
   useFrame((s, raw) => {
     const dt = Math.min(raw, 0.05); if (!root.current) return;
     const c = st.current;
+    // Like real villagers: indoors asleep 22:00–06:00 local time (unless already chasing you).
+    const hr = new Date().getHours();
+    const asleep = (hr >= 22 || hr < 6) && !c.hostile && c.down <= 0;
+    root.current.visible = !asleep;
+    if (asleep) { if (bubble.current) bubble.current.style.display = 'none'; return; }
     if (c.down > 0) {
       // knocked down: lie on the ground, get up later with full health
       c.down -= dt; root.current.rotation.x = -Math.PI / 2; root.current.position.y = 0.2;
