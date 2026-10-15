@@ -34,6 +34,7 @@ import { VILLAGER_ROUTES } from './villageMap';
 const VILLAGER_HP = 60;
 const RESPAWN_S = 60;
 import { headGeometry, HIP_Y, SHOULDER_Y, HIP_X, SHOULDER_X, HUMAN_MATERIAL } from '@/lib/vrHumanLook';
+import { choreFor, MILK_SPOTS } from './villageChores';
 
 function part(g: THREE.BufferGeometry, color: string, x: number, y: number, z: number) {
   const ng = g.index ? g.toNonIndexed() : g;
@@ -95,6 +96,7 @@ const Villager: React.FC<{ route: [number, number][]; female: boolean; offset: n
   const root = useRef<THREE.Group>(null), l1 = useRef<THREE.Mesh>(null), l2 = useRef<THREE.Mesh>(null), a1 = useRef<THREE.Mesh>(null), a2 = useRef<THREE.Mesh>(null);
   const st = useRef({ t: offset, pause: 0, phase: offset * 9, sw: 0, hp: VILLAGER_HP, hostile: false, down: 0, hitCd: 0, flash: 0 });
   const hpBar = useRef<THREE.Mesh>(null);
+  const pail = useRef<THREE.Group>(null), broom = useRef<THREE.Group>(null), logs = useRef<THREE.Group>(null);
   const p = useMemo(() => new THREE.Vector3(), []), n = useMemo(() => new THREE.Vector3(), []);
   const { camera } = useThree();
   useFrame((s, raw) => {
@@ -144,7 +146,31 @@ const Villager: React.FC<{ route: [number, number][]; female: boolean; offset: n
       if (a1.current) a1.current.rotation.x = -sw; if (a2.current) a2.current.rotation.x = c.hitCd > 1.1 ? -1.6 : sw;
       return;
     }
-    const speed = WALK_MPS * (female ? 0.95 : 1); // same human pace as you
+    // Daily chores by local hour (villageChores): milking, sweeping, carrying firewood.
+    const chore = choreFor(v, hr);
+    if (pail.current) pail.current.visible = chore === 'milk';
+    if (broom.current) broom.current.visible = chore === 'sweep';
+    if (logs.current) logs.current.visible = chore === 'wood';
+    const tt = s.clock.elapsedTime;
+    if (chore === 'milk' || chore === 'sweep') {
+      if (chore === 'milk') {
+        const spot = MILK_SPOTS[v === 1 ? 0 : 1];
+        root.current.position.set(spot[0], -0.32, spot[1]);
+        root.current.rotation.y = v === 1 ? Math.PI / 2 : -Math.PI / 2; // facing the cow
+        if (l1.current) l1.current.rotation.x = -1.3; if (l2.current) l2.current.rotation.x = -1.3; // crouched on a stool
+        if (a1.current) a1.current.rotation.x = -1.0 + Math.sin(tt * 5) * 0.18;
+        if (a2.current) a2.current.rotation.x = -1.0 - Math.sin(tt * 5) * 0.18;
+      } else {
+        loopPoint(route, st.current.t, p); root.current.position.copy(p);
+        root.current.rotation.y = Math.sin(tt * 0.3) * 0.6; // sweeping the doorstep, turning slowly
+        if (l1.current) l1.current.rotation.x = 0; if (l2.current) l2.current.rotation.x = 0;
+        if (a1.current) a1.current.rotation.x = -0.6 + Math.sin(tt * 2.6) * 0.35;
+        if (a2.current) a2.current.rotation.x = -0.6 + Math.sin(tt * 2.6) * 0.35;
+      }
+      return;
+    }
+    root.current.position.y = 0;
+    const speed = WALK_MPS * (female ? 0.95 : 1) * (chore === 'wood' ? 0.8 : 1); // same human pace as you
     const total = loopPoint(route, st.current.t, p);
     // Stop and look at you when you come close.
     const stop = near < 3;
@@ -159,7 +185,8 @@ const Villager: React.FC<{ route: [number, number][]; female: boolean; offset: n
     st.current.sw += (target - st.current.sw) * (1 - Math.exp(-dt * 18));
     const sw = st.current.sw;
     if (l1.current) l1.current.rotation.x = sw; if (l2.current) l2.current.rotation.x = -sw;
-    if (a1.current) a1.current.rotation.x = -sw * 0.7; if (a2.current) a2.current.rotation.x = sw * 0.7;
+    if (chore === 'wood') { if (a1.current) a1.current.rotation.x = -1.1; if (a2.current) a2.current.rotation.x = -1.1; }
+    else { if (a1.current) a1.current.rotation.x = -sw * 0.7; if (a2.current) a2.current.rotation.x = sw * 0.7; }
   });
   React.useEffect(() => registerUse(() => {
     const r = root.current; if (!r || st.current.down > 0) return null;
@@ -199,6 +226,19 @@ const Villager: React.FC<{ route: [number, number][]; female: boolean; offset: n
       </Html>
       <mesh ref={hpBar} position={[0, 2.15, 0]} visible={false}><planeGeometry args={[0.6, 0.06]} /><meshBasicMaterial color="#c0392b" side={THREE.DoubleSide} /></mesh>
       <mesh ref={a2} geometry={g.arm} material={HUMAN_MATERIAL} position={[SHOULDER_X + (female ? 0 : 0.02), SHOULDER_Y, 0]} />
+      {/* chore props: milk pail + stool, broom, firewood bundle */}
+      <group ref={pail} visible={false}>
+        <mesh position={[0, 0.45, 0.45]}><cylinderGeometry args={[0.14, 0.11, 0.26, 12, 1, true]} /><meshStandardMaterial color="#8a8f94" metalness={0.6} roughness={0.4} side={THREE.DoubleSide} /></mesh>
+        <mesh position={[0, 0.5, 0.45]} rotation={[-Math.PI / 2, 0, 0]}><circleGeometry args={[0.12, 12]} /><meshStandardMaterial color="#efeae0" roughness={0.3} /></mesh>
+        <mesh position={[0, 0.42, -0.1]}><cylinderGeometry args={[0.16, 0.16, 0.06, 10]} /><meshStandardMaterial color="#4a3526" roughness={0.9} /></mesh>
+      </group>
+      <group ref={broom} visible={false} position={[0.15, 0.55, 0.35]} rotation={[0.5, 0, 0]}>
+        <mesh><cylinderGeometry args={[0.02, 0.02, 1.3, 6]} /><meshStandardMaterial color="#5a4330" roughness={0.9} /></mesh>
+        <mesh position={[0, -0.7, 0]}><coneGeometry args={[0.13, 0.3, 8]} /><meshStandardMaterial color="#a88a4f" roughness={1} /></mesh>
+      </group>
+      <group ref={logs} visible={false} position={[0, 1.15, 0.42]}>
+        {[-0.08, 0, 0.08].map((y, i) => <mesh key={i} position={[0, y, i * 0.02]} rotation={[0, 0, Math.PI / 2]}><cylinderGeometry args={[0.06, 0.06, 0.55, 7]} /><meshStandardMaterial color={i === 1 ? '#5b412c' : '#4a3424'} roughness={1} /></mesh>)}
+      </group>
     </group>
   );
 };
