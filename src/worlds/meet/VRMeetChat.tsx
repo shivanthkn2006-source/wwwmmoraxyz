@@ -6,7 +6,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { MessageCircle, Send, Smile, Eye, EyeOff, X, Mic, MicOff, UserPlus } from 'lucide-react';
 import { useGpsFollow, startGpsFollow, stopGpsFollow } from '../realmap/gpsFollow';
-import { useMeet, sendChat, setChatOpen, setMeetVisible, TAG_LABEL } from './vrMeet';
+import { useMeet, sendChat, setChatOpen, setMeetVisible, moveVillageGroup, TAG_LABEL } from './vrMeet';
 import { useVoice, startVoice, stopVoice } from './vrVoice';
 import { loadFriends, sendPortalInvite, arriveFromInvite, type Friend } from './vrInvite';
 
@@ -89,6 +89,13 @@ export const VRMeetChat: React.FC = () => {
             {m.visible ? <Eye className="mr-1 inline h-3 w-3" /> : <EyeOff className="mr-1 inline h-3 w-3" />}
             {m.visible ? 'Visible to others' : 'Hidden from others'}
           </button>
+          {m.party && (
+            <div className="flex flex-wrap gap-1 self-start" data-testid="vr-village-group">
+              <span className="vr-chat-chip">Group {m.party.shard} · {m.party.count}/{m.party.cap}</span>
+              {m.party.shard > 1 && <button type="button" onClick={() => void moveVillageGroup(m.party!.shard - 1)} className="vr-chat-chip">Move to group {m.party.shard - 1}</button>}
+              <button type="button" onClick={() => void moveVillageGroup(m.party!.shard + 1)} className="vr-chat-chip">Move to group {m.party.shard + 1}</button>
+            </div>
+          )}
           {(voice.on || voice.error) && <p className="vr-chat-text px-1 text-xs" aria-live="polite">{voice.error ?? (voice.talkingWith.length ? `🎙 Talking with ${voice.talkingWith.length}` : '🎙 Voice on — waiting for others with voice on')}</p>}
         </div>
       ) : (
