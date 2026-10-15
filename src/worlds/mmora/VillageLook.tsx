@@ -27,6 +27,7 @@ import { VillageGear } from './VillageGear';
 import { VillageSky } from './VillageSky';
 import { VillageVillagers } from './VillageVillagers';
 import { VillageQuestBoard } from './VillageQuestBoard';
+import { VillageScenery } from './VillageScenery';
 
 const SIZE = 400;
 const rand = (s: number) => { const x = Math.sin(s * 127.1) * 43758.5453; return x - Math.floor(x); };
@@ -220,6 +221,7 @@ export const VillageLook: React.FC = () => {
       <Instances geo={geos.fence} items={lay.fences} />
       <LaneLamps spots={lay.lamps} />
       <GroundMist />
+      <VillageScenery />
       <Instances geo={geos.tree} items={lay.trees} />
       <Instances geo={geos.wall} items={lay.walls} />
       <VillageChurch />
