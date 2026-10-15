@@ -145,7 +145,7 @@ export async function pullCloud(force = false) {
     mergeExplore(d?.explore);
     if (d?.pickups && d.pickups.taken.length > st.taken.length) { st = d.pickups; emit(); }
     const local = readSave();
-    if (d?.save && (!local || d.save.at > local.at)) { const { at: _a, ...rest } = d.save; writeSave(rest); }
+    if (d?.save && (!local || d.save.at > local.at)) { const { at, ...rest } = d.save; writeSave(rest, at); }
   } catch { /* */ }
 }
 setInterval(() => { if (typeof document !== 'undefined' && document.visibilityState === 'visible') scheduleCloud(); }, 60_000);

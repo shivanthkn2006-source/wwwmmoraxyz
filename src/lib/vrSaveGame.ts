@@ -23,7 +23,7 @@ export function readSave(): VRSave | null {
     return s;
   } catch { return null; }
 }
-export function writeSave(s: Omit<VRSave, 'at'>) {
-  try { localStorage.setItem(KEY, JSON.stringify({ ...s, at: Date.now() })); } catch { /* private mode */ }
+export function writeSave(s: Omit<VRSave, 'at'>, at = Date.now()) {
+  try { localStorage.setItem(KEY, JSON.stringify({ ...s, at })); } catch { /* private mode */ }
 }
 export function clearSave() { try { localStorage.removeItem(KEY); } catch { /* */ } }

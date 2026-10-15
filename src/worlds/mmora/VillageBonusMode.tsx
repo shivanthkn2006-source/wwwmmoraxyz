@@ -50,7 +50,7 @@ export const VillageBonusMode: React.FC = () => {
   return (
     <group position={[SPOT[0], 0, SPOT[1]]}>
       <mesh material={STONE} position={[0, 0.6, 0]}><boxGeometry args={[0.9, 1.2, 0.5]} /></mesh>
-      {hud && <Html position={[0, 0, 0]} calculatePosition={() => [window.innerWidth / 2, 70]} zIndexRange={[40, 0]}>
+      {hud && <Html position={[0, 0, 0]} calculatePosition={() => [window.innerWidth / 2, 104]} zIndexRange={[40, 0]}>
         <div style={{ transform: 'translateX(-50%)', fontStyle: 'italic', color: 'hsl(0 0% 100%)', textShadow: '0 1px 3px hsl(0 0% 0%)', fontSize: 18, whiteSpace: 'nowrap' }}>
           Watch Drill · {hud.t}s · {hud.s} pts
         </div>
