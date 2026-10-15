@@ -11,6 +11,7 @@ import * as THREE from 'three';
 import { playAnimal, type AnimalKind } from '@/lib/vrAnimalSfx';
 import { registerUse } from '@/lib/vrUse';
 import { HOUSES } from './PickupHouses';
+import { milkCows, MILK_PLANS, isMilkHour } from './villageChores';
 
 const HEALED_KEY = 'vr-animals-healed';
 const readHealed = (): string[] => { try { return JSON.parse(localStorage.getItem(HEALED_KEY) || '[]'); } catch { return []; } };
@@ -48,6 +49,7 @@ const HERDS: Herd[] = [
   { kind: 'crow', home: [4, -64], n: 6, r: 6 },
   { kind: 'crow', home: [-30, 30], n: 4, r: 5 },
 ];
+const MILK_COW_IDS = new Set(MILK_PLANS.map((p) => p.cow));
 const MOUNT_R = 70, ACTIVE_R = 35;
 
 const Animal: React.FC<{ kind: Exclude<AnimalKind, 'crow'>; home: [number, number]; r: number; seed: number; id: string; injured?: boolean }> = ({ kind, home, r, seed, id, injured = false }) => {
@@ -75,6 +77,9 @@ const Animal: React.FC<{ kind: Exclude<AnimalKind, 'crow'>; home: [number, numbe
     const dt = Math.min(raw, 0.05), s = st.current, o = g.current; if (!o) return;
     const px = camera.position.x, pz = camera.position.z, dp = Math.hypot(px - s.x, pz - s.z);
     let moving = false;
+    const mc = milkCows.get(id);
+    if (MILK_COW_IDS.has(id)) milkCows.set(id, { x: s.x, z: s.z, yaw: s.yaw, held: mc?.held ?? false });
+    if (mc?.held && isMilkHour(new Date().getHours())) { s.wait = Math.max(s.wait, 0.5); s.follow = 0; }
     if (dp < ACTIVE_R) {
       let speed = sp.speed * (s.hurt ? 0.35 : 1);
       if (s.lead) {

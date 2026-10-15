@@ -34,7 +34,7 @@ import { VILLAGER_ROUTES } from './villageMap';
 const VILLAGER_HP = 60;
 const RESPAWN_S = 60;
 import { headGeometry, HIP_Y, SHOULDER_Y, HIP_X, SHOULDER_X, HUMAN_MATERIAL } from '@/lib/vrHumanLook';
-import { choreFor, MILK_SPOTS } from './villageChores';
+import { choreFor, milkPlanFor, cowSpot, milkSeat, milkCows, milkerState, routeT } from './villageChores';
 
 function part(g: THREE.BufferGeometry, color: string, x: number, y: number, z: number) {
   const ng = g.index ? g.toNonIndexed() : g;
@@ -105,18 +105,20 @@ const Villager: React.FC<{ route: [number, number][]; female: boolean; offset: n
   const g = useMemo(() => villagerGeo(female, v), [female, v]);
   const root = useRef<THREE.Group>(null), l1 = useRef<THREE.Mesh>(null), l2 = useRef<THREE.Mesh>(null), a1 = useRef<THREE.Mesh>(null), a2 = useRef<THREE.Mesh>(null);
   const st = useRef({ t: offset, pause: 0, phase: offset * 9, sw: 0, hp: VILLAGER_HP, hostile: false, down: 0, hitCd: 0, flash: 0 });
+  const tripRef = useRef<{ leg: 'road' | 'out' | 'milk' | 'back'; i: number }>({ leg: 'road', i: 0 });
   const hpBar = useRef<THREE.Mesh>(null);
   const pail = useRef<THREE.Group>(null), broom = useRef<THREE.Group>(null), logs = useRef<THREE.Group>(null);
   const p = useMemo(() => new THREE.Vector3(), []), n = useMemo(() => new THREE.Vector3(), []);
   const { camera } = useThree();
   useFrame((s, raw) => {
-    const dt = Math.min(raw, 0.05); if (!root.current) return;
+    const dt = Math.max(0, Math.min(raw, 0.05)); if (!root.current) return;
     const c = st.current;
     // Like real villagers: indoors asleep 22:00–06:00 local time (unless already chasing you).
     const hr = new Date().getHours();
     const asleep = (hr >= 22 || hr < 6) && !c.hostile && c.down <= 0;
     root.current.visible = !asleep;
     if (asleep) { if (bubble.current) bubble.current.style.display = 'none'; return; }
+    if (milkPlanFor(v)) milkerState.set(v, { leg: tripRef.current.leg, x: root.current.position.x, z: root.current.position.z });
     if (c.down > 0) {
       // knocked down: lie on the ground, get up later with full health
       c.down -= dt; root.current.rotation.x = -Math.PI / 2; root.current.position.y = 0.2;
@@ -158,25 +160,55 @@ const Villager: React.FC<{ route: [number, number][]; female: boolean; offset: n
     }
     // Daily chores by local hour (villageChores): milking, sweeping, carrying firewood.
     const chore = choreFor(v, hr);
-    if (pail.current) pail.current.visible = chore === 'milk';
+    const tt = s.clock.elapsedTime;
+    const plan = milkPlanFor(v), trip = tripRef.current;
+    if (pail.current) pail.current.visible = chore === 'milk' || trip.leg !== 'road';
     if (broom.current) broom.current.visible = chore === 'sweep';
     if (logs.current) logs.current.visible = chore === 'wood';
-    const tt = s.clock.elapsedTime;
-    if (chore === 'milk' || chore === 'sweep') {
-      if (chore === 'milk') {
-        const spot = MILK_SPOTS[v === 1 ? 0 : 1];
-        root.current.position.set(spot[0], -0.32, spot[1]);
-        root.current.rotation.y = v === 1 ? Math.PI / 2 : -Math.PI / 2; // facing the cow
+    if (plan) {
+      const cow = cowSpot(plan), seat = milkSeat(cow);
+      const path: [number, number][] = [route[plan.gate], ...plan.track, seat];
+      const walkTo = (tx: number, tz: number) => {
+        const r = root.current!, dx = tx - r.position.x, dz = tz - r.position.z, d = Math.hypot(dx, dz);
+        const step = Math.min(d, WALK_MPS * (female ? 0.95 : 1) * dt);
+        if (d > 1e-3) { r.position.x += (dx / d) * step; r.position.z += (dz / d) * step; r.rotation.y = Math.atan2(dx, dz); }
+        r.position.y = 0; r.rotation.x = 0;
+        c.phase += (step / 1.4) * Math.PI * 2; const sw = Math.sin(c.phase) * 0.5;
+        if (l1.current) l1.current.rotation.x = sw; if (l2.current) l2.current.rotation.x = -sw;
+        if (a1.current) a1.current.rotation.x = -sw * 0.7; if (a2.current) a2.current.rotation.x = -0.5; // pail in hand
+        return d < 0.25;
+      };
+      const held = milkCows.get(plan.cow);
+      if (trip.leg === 'road' && chore === 'milk') {
+        const g = route[plan.gate];
+        if (Math.hypot(root.current.position.x - g[0], root.current.position.z - g[1]) < 1.2) { trip.leg = 'out'; trip.i = 1; }
+      }
+      if (trip.leg === 'out') {
+        if (chore !== 'milk') { trip.leg = 'back'; trip.i = Math.max(0, trip.i - 1); }
+        else if (walkTo(...((trip.i >= path.length - 1 ? seat : path[trip.i]) as [number, number]))) { if (trip.i >= path.length - 1) trip.leg = 'milk'; else trip.i++; }
+        return;
+      }
+      if (trip.leg === 'milk') {
+        if (chore !== 'milk') { if (held) held.held = false; trip.leg = 'back'; trip.i = path.length - 2; return; }
+        if (held) held.held = true;
+        root.current.position.set(seat[0], -0.32, seat[1]);
+        root.current.rotation.y = Math.atan2(cow.x - seat[0], cow.z - seat[1]); // facing the cow's flank
         if (l1.current) l1.current.rotation.x = -1.3; if (l2.current) l2.current.rotation.x = -1.3; // crouched on a stool
         if (a1.current) a1.current.rotation.x = -1.0 + Math.sin(tt * 5) * 0.18;
         if (a2.current) a2.current.rotation.x = -1.0 - Math.sin(tt * 5) * 0.18;
-      } else {
-        loopPoint(route, st.current.t, p); root.current.position.copy(p);
-        root.current.rotation.y = Math.sin(tt * 0.3) * 0.6; // sweeping the doorstep, turning slowly
-        if (l1.current) l1.current.rotation.x = 0; if (l2.current) l2.current.rotation.x = 0;
-        if (a1.current) a1.current.rotation.x = -0.6 + Math.sin(tt * 2.6) * 0.35;
-        if (a2.current) a2.current.rotation.x = -0.6 + Math.sin(tt * 2.6) * 0.35;
+        return;
       }
+      if (trip.leg === 'back') {
+        if (walkTo(...path[trip.i])) { if (trip.i <= 0) { trip.leg = 'road'; c.t = routeT(route, plan.gate); } else trip.i--; }
+        return;
+      }
+    }
+    if (chore === 'sweep') {
+      loopPoint(route, st.current.t, p); root.current.position.copy(p);
+      root.current.rotation.y = Math.sin(tt * 0.3) * 0.6; // sweeping the doorstep, turning slowly
+      if (l1.current) l1.current.rotation.x = 0; if (l2.current) l2.current.rotation.x = 0;
+      if (a1.current) a1.current.rotation.x = -0.6 + Math.sin(tt * 2.6) * 0.35;
+      if (a2.current) a2.current.rotation.x = -0.6 + Math.sin(tt * 2.6) * 0.35;
       return;
     }
     root.current.position.y = 0;

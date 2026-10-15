@@ -4,6 +4,8 @@ import { createRoot } from 'react-dom/client';
 import { Canvas } from '@react-three/fiber';
 import { VillageLook } from '@/worlds/mmora/VillageLook';
 import { PickupHouses } from '@/worlds/mmora/PickupHouses';
+import { milkerState, milkCows } from '@/worlds/mmora/villageChores';
+(window as unknown as Record<string, unknown>).__chores = { milkerState, milkCows };
 const q = new URLSearchParams(location.search);
 const pos = (q.get('cam') || '0,1.7,20').split(',').map(Number) as [number, number, number];
 const look = (q.get('look') || '0,2,-60').split(',').map(Number) as [number, number, number];
