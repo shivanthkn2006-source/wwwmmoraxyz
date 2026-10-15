@@ -212,8 +212,8 @@ export const VillageLook: React.FC = () => {
       {/* Rainy-night horror mood (reference screenshots): dark teal-green fog, cold moonlit fill, warm lanterns. */}
       <color attach="background" args={['#161c1e']} />
       <fog attach="fog" args={['#1f2a26', 10, 115]} />
-      <hemisphereLight args={['#7c8e96', '#2a2620', 0.8]} />
-      <directionalLight position={[-40, 60, -30]} intensity={0.35} color="#9fb4c8" />
+      <hemisphereLight args={['#8a9ca4', '#3a3428', 1.35]} />
+      <directionalLight position={[-40, 60, -30]} intensity={0.7} color="#a9bdd0" />
       <mesh rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[SIZE, SIZE]} />
         <meshStandardMaterial map={tex} roughness={0.55} metalness={0.15} />
