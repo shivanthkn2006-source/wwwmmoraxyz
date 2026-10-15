@@ -187,13 +187,28 @@ const Crows: React.FC = () => {
 };
 
 /** Mud ground that turns shiny and dark while it is really raining at the member's place. */
+/** Reflection map for the wet ground only: cold night sky with a warm lamp-lit band at the horizon. */
+function wetEnv(gl: THREE.WebGLRenderer) {
+  const c = document.createElement('canvas'); c.width = 256; c.height = 128; const g = c.getContext('2d')!;
+  const gr = g.createLinearGradient(0, 0, 0, 128);
+  gr.addColorStop(0, '#1b2428'); gr.addColorStop(0.42, '#2f3b3c'); gr.addColorStop(0.5, '#6b5434'); gr.addColorStop(0.56, '#20262a'); gr.addColorStop(1, '#0c0f10');
+  g.fillStyle = gr; g.fillRect(0, 0, 256, 128);
+  for (let i = 0; i < 18; i++) { g.fillStyle = 'rgba(255,190,110,0.55)'; g.beginPath(); g.arc((i * 37) % 256, 60 + (i % 3), 3 + (i % 4), 0, Math.PI * 2); g.fill(); }
+  const t = new THREE.CanvasTexture(c); t.mapping = THREE.EquirectangularReflectionMapping; t.colorSpace = THREE.SRGBColorSpace;
+  const pm = new THREE.PMREMGenerator(gl); const env = pm.fromEquirectangular(t).texture; pm.dispose(); t.dispose();
+  return env;
+}
+
 const WetGround: React.FC<{ tex: THREE.Texture | null }> = ({ tex }) => {
   const wx = useVillageWeather();
   const wet = wx.kind === 'rain' || wx.kind === 'storm';
+  const gl = useThree((s) => s.gl);
+  const env = useMemo(() => (wet ? wetEnv(gl) : null), [wet, gl]);
+  useEffect(() => () => env?.dispose(), [env]);
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]}>
       <planeGeometry args={[SIZE, SIZE]} />
-      <meshStandardMaterial map={tex} roughness={wet ? 0.3 : 0.55} metalness={wet ? 0.05 : 0.15} color={wet ? '#e2e5ea' : '#ffffff'} />
+      <meshStandardMaterial key={wet ? 'wet' : 'dry'} map={tex} envMap={env} envMapIntensity={wet ? 0.9 : 0} roughness={wet ? 0.18 : 0.55} metalness={wet ? 0.35 : 0.15} color={wet ? '#c9ced4' : '#ffffff'} />
     </mesh>
   );
 };
