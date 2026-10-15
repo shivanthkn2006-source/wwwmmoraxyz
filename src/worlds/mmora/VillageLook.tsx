@@ -9,6 +9,7 @@ import { HollowWarden } from './HollowWarden';
 import { VillageFusePuzzle } from './VillageFusePuzzle';
 import { VillageDrops } from './VillageDrops';
 import { VillageSporeFog } from './VillageSporeFog';
+import { VillageDrowned } from './VillageDrowned';
 import { VillageBonusMode } from './VillageBonusMode';
 import React, { useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
@@ -174,6 +175,7 @@ export const VillageLook: React.FC = () => {
       <VillageFusePuzzle />
       <VillageDrops />
       <VillageSporeFog />
+      <VillageDrowned />
       <VillageBonusMode />
       <VillageMerchant />
     </>
