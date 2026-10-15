@@ -12,10 +12,10 @@ import { useGear, gearStats, getEquipped } from '@/lib/vrGear';
 import { logStory } from '@/lib/vrStoryline';
 import { playerSpot } from './VillageVillagers';
 
-type Step = 'shell' | 'fluid' | 'mixed' | 'gate' | 'antigen' | 'defend' | 'cleared';
+type Step = 'shell' | 'fluid' | 'mixed' | 'gate' | 'keycard' | 'lab' | 'antigen' | 'bypass' | 'defend' | 'cleared';
 const KEY = 'mmora-fuse-puzzle';
-const ORDER: Step[] = ['shell', 'fluid', 'mixed', 'gate', 'antigen', 'defend', 'cleared'];
-const SPOTS: Record<string, [number, number]> = { shell: [20, -18], fluid: [-22, 16], mixer: [6, 24], gate: [-8, -30], terminal: [-8, -36] };
+const ORDER: Step[] = ['shell', 'fluid', 'mixed', 'gate', 'keycard', 'lab', 'antigen', 'bypass', 'defend', 'cleared'];
+const SPOTS: Record<string, [number, number]> = { shell: [20, -18], fluid: [-22, 16], mixer: [6, 24], gate: [-8, -30], terminal: [-8, -36], keycard: [14, -30], lab: [-14, -30], bypass: [-8, -33] };
 const say = (t: string) => { window.dispatchEvent(new CustomEvent('vr-toast', { detail: t })); void import('@/utils/deepgramTTS').then((m) => m.speakWithDeepgramVoice(t, 'female')).catch(() => {}); };
 const sfx = (s: string) => void import('@/lib/vrSfx').then((m) => m.playSfx(s as never)).catch(() => {});
 
@@ -44,8 +44,11 @@ const Puzzle: React.FC = () => {
     if (next === 'shell') return opt('shell', 'Take Empty Fuse Shell', () => { sfx('metal'); mark('shell'); say('Picked up an Empty Fuse Shell.'); });
     if (next === 'fluid') return opt('fluid', 'Take Chemical Fluid', () => { sfx('paper'); mark('fluid'); say('Picked up Chemical Fluid from the researcher.'); });
     if (next === 'mixed') return opt('mixer', 'Use Chemical Mixer', () => { sfx('typewriter'); mark('mixed'); say('Created a Charged Fuse.'); });
-    if (next === 'gate') return opt('gate', 'Insert Charged Fuse', () => { sfx('metal'); mark('gate'); say('Varga: Gate is live. The Verdant Antigen is inside. Take it.'); });
-    if (next === 'antigen') return opt('gate', 'Take Verdant Antigen', () => { sfx('medallion'); mark('antigen'); say('Picked up the Verdant Antigen. Insert it into the core terminal.'); });
+    if (next === 'gate') return opt('gate', 'Insert Charged Fuse', () => { sfx('metal'); mark('gate'); say('Varga: Gate is live. The lab inside is mag-locked. Find the researcher keycard.'); });
+    if (next === 'keycard') return opt('keycard', 'Take Lab Keycard', () => { sfx('paper'); mark('keycard'); say('Picked up the Lab Keycard.'); });
+    if (next === 'lab') return opt('lab', 'Open Secure Lab', () => { sfx('metal'); mark('lab'); say('Varga: Lab open. The Verdant Antigen is on the bench. Take it.'); });
+    if (next === 'antigen') return opt('lab', 'Take Verdant Antigen', () => { sfx('medallion'); mark('antigen'); say('Picked up the Verdant Antigen. The core ward is sealed. Pull the manual bypass.'); });
+    if (next === 'bypass') return opt('bypass', 'Pull Manual Bypass', () => { sfx('metal'); mark('bypass'); say('Varga: Bypass thrown, no powers used. Good. Insert the Antigen into the core terminal.'); });
     if (next === 'defend' && bossHp.current > 0) return { dist: near('terminal'), reach: 5, label: 'Strike the Verdant Colossus', run: () => {
       bossHp.current = Math.max(0, bossHp.current - gearStats(getEquipped()).attack); setBoss(bossHp.current); sfx('metal');
       if (bossHp.current <= 0) { logStory('boss', 'colossus:defeated'); say('The Verdant Colossus falls!'); } } };
@@ -72,8 +75,11 @@ const Puzzle: React.FC = () => {
       <group position={[SPOTS.mixer[0], 0, SPOTS.mixer[1]]}><mesh material={METAL} position={[0, 0.5, 0]}><boxGeometry args={[0.9, 1, 0.6]} /></mesh>{next === 'mixed' && <Beam />}</group>
       <group position={[SPOTS.gate[0], 0, SPOTS.gate[1]]}>
         {!done.includes('gate') && <mesh material={METAL} position={[0, 1.5, 0]}><boxGeometry args={[4, 3, 0.2]} /></mesh>}
-        {(next === 'gate' || next === 'antigen') && <Beam />}
+        {next === 'gate' && <Beam />}
       </group>
+      {next === 'keycard' && <Marker at={SPOTS.keycard}><mesh material={GLOW} position={[0, 0.2, 0]}><boxGeometry args={[0.2, 0.02, 0.13]} /></mesh></Marker>}
+      <group position={[SPOTS.lab[0], 0, SPOTS.lab[1]]}>{!done.includes('lab') && <mesh material={METAL} position={[0, 1.2, 0]}><boxGeometry args={[1.4, 2.4, 0.15]} /></mesh>}{(next === 'lab' || next === 'antigen') && <Beam />}</group>
+      <group position={[SPOTS.bypass[0], 0, SPOTS.bypass[1]]}><mesh material={METAL} position={[1.6, 1, 0]}><boxGeometry args={[0.3, 0.8, 0.2]} /></mesh>{next === 'bypass' && <Beam />}</group>
       <group position={[SPOTS.terminal[0], 0, SPOTS.terminal[1]]}>
         <mesh material={CORE} position={[0, 1, 0]}><dodecahedronGeometry args={[1.2]} /></mesh>
         {next === 'defend' && <Beam />}
