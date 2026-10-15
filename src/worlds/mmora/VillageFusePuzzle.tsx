@@ -1,5 +1,6 @@
 /**
  * Stages 3–4 (from the uploaded blueprint, adapted to M'Mora Village):
+ * Empty Fuse Shell + Auxiliary Fluid Line → diesel generator powered;
  * Empty Fuse Shell + Chemical Fluid → mixer → Charged Fuse → powers the core gate,
  * the Verdant Antigen sits behind it, and inserting it into the core terminal
  * starts a 45-second defence. Unlocks after the Lord's Crest chapter.
@@ -12,10 +13,10 @@ import { useGear, gearStats, getEquipped } from '@/lib/vrGear';
 import { logStory } from '@/lib/vrStoryline';
 import { playerSpot } from './VillageVillagers';
 
-type Step = 'shell' | 'fluid' | 'mixed' | 'gate' | 'keycard' | 'lab' | 'antigen' | 'bypass' | 'defend' | 'cleared';
+type Step = 'shell' | 'fluid' | 'mixed' | 'hose' | 'generator' | 'gate' | 'keycard' | 'lab' | 'antigen' | 'bypass' | 'defend' | 'cleared';
 const KEY = 'mmora-fuse-puzzle';
-const ORDER: Step[] = ['shell', 'fluid', 'mixed', 'gate', 'keycard', 'lab', 'antigen', 'bypass', 'defend', 'cleared'];
-const SPOTS: Record<string, [number, number]> = { shell: [20, -18], fluid: [-22, 16], mixer: [6, 24], gate: [-8, -30], terminal: [-8, -36], keycard: [14, -30], lab: [-14, -30], bypass: [-8, -33] };
+const ORDER: Step[] = ['shell', 'fluid', 'mixed', 'hose', 'generator', 'gate', 'keycard', 'lab', 'antigen', 'bypass', 'defend', 'cleared'];
+const SPOTS: Record<string, [number, number]> = { shell: [20, -18], fluid: [-22, 16], mixer: [6, 24], gate: [-8, -30], terminal: [-8, -36], keycard: [14, -30], lab: [-14, -30], bypass: [-8, -33], hose: [24, 6], generator: [-3, -29] };
 const say = (t: string) => { window.dispatchEvent(new CustomEvent('vr-toast', { detail: t })); void import('@/utils/deepgramTTS').then((m) => m.speakWithDeepgramVoice(t, 'female')).catch(() => {}); };
 const sfx = (s: string) => void import('@/lib/vrSfx').then((m) => m.playSfx(s as never)).catch(() => {});
 
@@ -43,7 +44,9 @@ const Puzzle: React.FC = () => {
     const opt = (k: string, label: string, run: () => void) => ({ dist: near(k), reach: 2.6, label, run });
     if (next === 'shell') return opt('shell', 'Take Empty Fuse Shell', () => { sfx('metal'); mark('shell'); say('Picked up an Empty Fuse Shell.'); });
     if (next === 'fluid') return opt('fluid', 'Take Chemical Fluid', () => { sfx('paper'); mark('fluid'); say('Picked up Chemical Fluid from the researcher.'); });
-    if (next === 'mixed') return opt('mixer', 'Use Chemical Mixer', () => { sfx('typewriter'); mark('mixed'); say('Created a Charged Fuse.'); });
+    if (next === 'mixed') return opt('mixer', 'Use Chemical Mixer', () => { sfx('typewriter'); mark('mixed'); say('Created a Charged Fuse. Varga: The gate runs off the old diesel generator, and its auxiliary fluid line is missing. Find a replacement line.'); });
+    if (next === 'hose') return opt('hose', 'Take Auxiliary Fluid Line', () => { sfx('metal'); mark('hose'); say('Picked up an Auxiliary Fluid Line.'); });
+    if (next === 'generator') return opt('generator', 'Fit Fluid Line to Generator', () => { sfx('metal'); mark('generator'); say('The diesel generator coughs to life. Varga: Power is back. Insert the Charged Fuse into the gate.'); });
     if (next === 'gate') return opt('gate', 'Insert Charged Fuse', () => { sfx('metal'); mark('gate'); say('Varga: Gate is live. The lab inside is mag-locked. Find the researcher keycard.'); });
     if (next === 'keycard') return opt('keycard', 'Take Lab Keycard', () => { sfx('paper'); mark('keycard'); say('Picked up the Lab Keycard.'); });
     if (next === 'lab') return opt('lab', 'Open Secure Lab', () => { sfx('metal'); mark('lab'); say('Varga: Lab open. The Verdant Antigen is on the bench. Take it.'); });
@@ -73,6 +76,8 @@ const Puzzle: React.FC = () => {
       {show('shell', 'shell') && <Marker at={SPOTS.shell}><mesh material={METAL} position={[0, 0.3, 0]}><cylinderGeometry args={[0.08, 0.08, 0.3, 8]} /></mesh></Marker>}
       {show('fluid', 'fluid') && <Marker at={SPOTS.fluid}><mesh material={GLOW} position={[0, 0.3, 0]}><boxGeometry args={[0.15, 0.3, 0.15]} /></mesh></Marker>}
       <group position={[SPOTS.mixer[0], 0, SPOTS.mixer[1]]}><mesh material={METAL} position={[0, 0.5, 0]}><boxGeometry args={[0.9, 1, 0.6]} /></mesh>{next === 'mixed' && <Beam />}</group>
+      {next === 'hose' && <Marker at={SPOTS.hose}><mesh material={METAL} position={[0, 0.1, 0]} rotation={[Math.PI / 2, 0, 0]}><torusGeometry args={[0.18, 0.04, 6, 12]} /></mesh></Marker>}
+      <group position={[SPOTS.generator[0], 0, SPOTS.generator[1]]}><mesh material={METAL} position={[0, 0.45, 0]}><boxGeometry args={[1.2, 0.9, 0.7]} /></mesh><mesh material={done.includes('generator') ? GLOW : METAL} position={[0.4, 1, 0]}><cylinderGeometry args={[0.06, 0.06, 0.3, 6]} /></mesh>{next === 'generator' && <Beam />}</group>
       <group position={[SPOTS.gate[0], 0, SPOTS.gate[1]]}>
         {!done.includes('gate') && <mesh material={METAL} position={[0, 1.5, 0]}><boxGeometry args={[4, 3, 0.2]} /></mesh>}
         {next === 'gate' && <Beam />}
