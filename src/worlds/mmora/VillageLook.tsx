@@ -5,6 +5,8 @@
  * (dogs, cats, cows, crows). Everything repeated is one instanced mesh, so
  * the whole village stays a handful of draw calls on phones.
  */
+import { VillageDetail } from './VillageDetail';
+import { VillageAmbience } from './VillageAmbience';
 import { VillageGrade } from './VillageGrade';
 import { HollowWarden } from './HollowWarden';
 import { VillageFusePuzzle } from './VillageFusePuzzle';
@@ -229,6 +231,8 @@ export const VillageLook: React.FC = () => {
       <VillageGear />
       <VillageSky />
       <VillageGrade />
+      <VillageDetail />
+      <VillageAmbience />
       <Crows />
       <VillageAnimals />
       <VillageVillagers />
