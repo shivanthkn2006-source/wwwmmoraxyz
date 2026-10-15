@@ -36,8 +36,8 @@
 - [x] Villagers indoors/asleep 22:00–06:00 local (code only)
 - [x] Clear roads/paths of props; move houses off roads (incl. castle road) (code + road test + preview screenshots; not walked signed-in)
 - [x] Villagers walk only on lanes/roads (code + test)
-- [ ] Villager daily chores (milking cows, household)
-- [ ] Wet reflective ground + lamp glow + colour grading (partial: ground goes shinier while raining)
+- [x] Villager daily chores: milking 06–08/17–19, sweeping, firewood (code check only, not seen)
+- [ ] Wet reflective ground + lamp glow (partial: shinier when raining); film colour grading added (code only)
 - [ ] Detailed house fronts (carved stone, ivy, chimneys, balconies)
 - [ ] Detailed people; forest + rock detail on mountains
 - [x] Real local rain/thunder: device location, any precipitation = rain, storm codes, visible rain + lightning bolt (tests + preview screenshots with test switch; not seen at user's real location)
