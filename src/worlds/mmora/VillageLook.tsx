@@ -227,6 +227,7 @@ export const VillageLook: React.FC = () => {
       <VillageCastle />
       <VillageGear />
       <VillageSky />
+      <VillageGrade />
       <Crows />
       <VillageAnimals />
       <VillageVillagers />
