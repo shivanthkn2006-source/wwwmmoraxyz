@@ -190,7 +190,7 @@ const WetGround: React.FC<{ tex: THREE.Texture | null }> = ({ tex }) => {
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]}>
       <planeGeometry args={[SIZE, SIZE]} />
-      <meshStandardMaterial map={tex} roughness={wet ? 0.22 : 0.55} metalness={wet ? 0.35 : 0.15} color={wet ? '#c9ccd0' : '#ffffff'} />
+      <meshStandardMaterial map={tex} roughness={wet ? 0.3 : 0.55} metalness={wet ? 0.05 : 0.15} color={wet ? '#e2e5ea' : '#ffffff'} />
     </mesh>
   );
 };
