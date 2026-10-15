@@ -16,7 +16,8 @@
 ## Open
 - [x] Enemy wave at core (code check only)
 - [x] Dropped-item pouches, cleared per chapter (code check only)
-- [ ] Doc: spore fog + flashlight, the Drowned, glove powers
+- [x] Spore fog + auto flashlight (code check only)
+- [ ] Doc: the Drowned, glove powers
 - [ ] Stage 6 team play
 - [x] Stage 7 Watch Drill timed bonus mode
 - [ ] Multiplayer gaps: own-avatar spacing, hidden-member slot counting, moving between groups
