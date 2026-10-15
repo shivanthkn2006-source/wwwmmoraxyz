@@ -151,6 +151,11 @@ async function openRoom(base: string | null, room: string | null, keepSince = fa
       if (!m?.text || typeof m.text !== 'string') return;
       pushMsg({ ...m, at: Date.now(), text: m.text.slice(0, 240), tag: tags.get(m.from) ?? 'unknown' });
     })
+    .on('broadcast', { event: 'team' }, ({ payload }) => {
+      const t = payload as TeamMsg;
+      if (!t || typeof t.from !== 'string' || typeof t.kind !== 'string' || !state.players.some((p) => p.id === t.from)) return;
+      teamLs.forEach((l) => l({ ...t, at: Date.now() }));
+    })
     .on('broadcast', { event: 'rtc' }, ({ payload }) => {
       const sg = payload as Signal;
       if (sg?.to !== self.id || typeof sg.from !== 'string') return;
@@ -212,6 +217,16 @@ export function sendChat(text: string, system = false): boolean {
 
 /** A short line others nearby see, e.g. "found a rare relic". Silent when hidden. */
 export function sayInWorld(text: string) { if (state.visible) sendChat(text, true); }
+
+/** Stage 6 team play: small co-op events shared only with my village group. */
+export type TeamMsg = { from: string; kind: string; data?: string; at: number };
+const teamLs = new Set<(t: TeamMsg) => void>();
+export function onTeam(fn: (t: TeamMsg) => void) { teamLs.add(fn); return () => { teamLs.delete(fn); }; }
+export function sendTeam(kind: string, data?: string): boolean {
+  if (!channel || !me || !state.connected || !isVillageRoom(state.room)) return false;
+  void channel.send({ type: 'broadcast', event: 'team', payload: { from: me.id, kind, data, at: Date.now() } });
+  return true;
+}
 
 export function sendWave(to: string) {
   if (!channel || !me || !state.connected) return;
