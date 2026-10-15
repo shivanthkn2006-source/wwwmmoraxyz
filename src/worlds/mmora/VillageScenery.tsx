@@ -30,10 +30,10 @@ export const STATUE_POS: [number, number] = [-9, 14];
 /** Stone bridge with two arches over the river, deck along z. */
 function bridge(): THREE.BufferGeometry {
   const p: THREE.BufferGeometry[] = [];
-  const deck = new THREE.BoxGeometry(5, 0.6, 16); deck.translate(0, 3.2, 0); p.push(col(deck, '#4c4a44'));
-  for (const s of [-1, 1]) { const w = new THREE.BoxGeometry(0.4, 0.9, 16); w.translate(s * 2.3, 3.9, 0); p.push(col(w, '#3e3c37')); }
-  for (const z of [-7.5, 0, 7.5]) { const pier = new THREE.BoxGeometry(5, 3, 1.4); pier.translate(0, 1.5, z); p.push(col(pier, '#45433d')); }
-  for (const z of [-3.75, 3.75]) { const arch = new THREE.TorusGeometry(3.1, 0.45, 6, 14, Math.PI); arch.rotateY(Math.PI / 2); arch.scale(5 / 0.9, 1, 1); arch.translate(0, 0, z); p.push(col(arch, '#3a3833')); }
+  const deck = new THREE.BoxGeometry(5, 0.6, 16); deck.translate(0, 3.2, 0); p.push(col(deck, '#6e6a60'));
+  for (const s of [-1, 1]) { const w = new THREE.BoxGeometry(0.4, 0.9, 16); w.translate(s * 2.3, 3.9, 0); p.push(col(w, '#5e5a51')); }
+  for (const z of [-7.5, 0, 7.5]) { const pier = new THREE.BoxGeometry(5, 3, 1.4); pier.translate(0, 1.5, z); p.push(col(pier, '#635f56')); }
+  for (const z of [-3.75, 3.75]) { const arch = new THREE.TorusGeometry(3.1, 0.45, 6, 14, Math.PI); arch.rotateY(Math.PI / 2); arch.scale(5 / 0.9, 1, 1); arch.translate(0, 0, z); p.push(col(arch, '#5a564d')); }
   for (let i = 0; i < 16; i++) { const st = new THREE.BoxGeometry(0.5, 0.35, 0.9); st.translate(i % 2 ? 2.35 : -2.35, 4.45, -7.2 + i * 0.95); p.push(col(st, '#56534b')); }
   return mergeGeometries(p)!;
 }
@@ -94,8 +94,8 @@ const Mountains: React.FC = () => {
       {peaks.map((p, i) => <mesh key={i} position={[p.x, p.h / 2 - 4, p.z]} rotation={[0, rand(i) * 3, 0]} material={i % 2 ? FAR : FAR2}><coneGeometry args={[p.r, p.h, 9]} /></mesh>)}
       {ridge.map((p, i) => <mesh key={`r${i}`} position={[p.x, p.h / 2 - 3, p.z]} rotation={[0, rand(i) * 3, 0]} scale={[1, 1, 0.6]} material={NEAR_RIDGE}><coneGeometry args={[p.r, p.h, 8]} /></mesh>)}
       <mesh position={[-30, 30, -232]} material={NEAR_RIDGE}><coneGeometry args={[40, 64, 8]} /></mesh>
-      <mesh position={[-30, 22, -214]} rotation={[-0.35, 0, 0]}><planeGeometry args={[4, 40]} /><meshBasicMaterial ref={fall} map={tex} transparent opacity={0.55} fog={false} depthWrite={false} /></mesh>
-      <mesh position={[-30, 0.5, -206]} rotation={[-Math.PI / 2, 0, 0]}><circleGeometry args={[9, 16]} /><meshBasicMaterial color="#7f9396" transparent opacity={0.25} fog={false} depthWrite={false} /></mesh>
+      <mesh position={[-30, 22, -199]} rotation={[-0.2, 0, 0]}><planeGeometry args={[4, 40]} /><meshBasicMaterial ref={fall} map={tex} transparent opacity={0.55} fog={false} depthWrite={false} /></mesh>
+      <mesh position={[-30, 0.5, -196]} rotation={[-Math.PI / 2, 0, 0]}><circleGeometry args={[9, 16]} /><meshBasicMaterial color="#7f9396" transparent opacity={0.25} fog={false} depthWrite={false} /></mesh>
     </group>
   );
 };
