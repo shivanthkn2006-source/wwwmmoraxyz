@@ -59,7 +59,17 @@ function villagerGeo(female: boolean, v: number) {
        part(new THREE.BoxGeometry(0.48, 0.08, 0.29), '#120f0c', 0, 0.98, 0), // belt
        part(new THREE.CylinderGeometry(0.17, 0.17, 0.06, 12), '#151310', 0, 1.82, 0), // flat cap
        part(new THREE.BoxGeometry(0.2, 0.02, 0.14), '#151310', 0, 1.8, 0.14)];
-  const body = mergeGeometries([...torso, part(new THREE.CylinderGeometry(0.06, 0.06, 0.08, 8), '#e1c3a4', 0, 1.55, 0), head])!;
+  // finer clothing detail: collar, buttons, satchel strap/bag (men) or apron + waist tie (women), sleeve-less vest edge
+  const extra = female
+    ? [part(new THREE.BoxGeometry(0.34, 0.62, 0.02), '#6b5e4c', 0, 0.78, 0.2), // apron
+       part(new THREE.BoxGeometry(0.42, 0.04, 0.26), '#4e3f30', 0, 1.06, 0.01), // waist tie
+       part(new THREE.TorusGeometry(0.1, 0.025, 6, 12), '#3a2a22', 0, 1.52, 0)] // shawl knot
+    : [part(new THREE.BoxGeometry(0.3, 0.08, 0.06), '#141210', 0, 1.5, 0.12), // collar
+       ...[1.4, 1.27, 1.14].map((y) => part(new THREE.SphereGeometry(0.018, 6, 4), '#8c7a55', 0, y, 0.14)), // buttons
+       part(new THREE.BoxGeometry(0.05, 0.8, 0.02), '#3b2a1c', 0.05, 1.1, 0.145), // satchel strap
+       part(new THREE.BoxGeometry(0.22, 0.2, 0.08), '#4a3424', 0.26, 0.84, 0.06)]; // satchel
+  if (v % 3 === 1 && !female) extra.push(part(new THREE.BoxGeometry(0.16, 0.08, 0.1), '#5a5048', 0, 1.6, 0.12)); // grey beard
+  const body = mergeGeometries([...torso, ...extra, part(new THREE.CylinderGeometry(0.06, 0.06, 0.08, 8), '#e1c3a4', 0, 1.55, 0), head])!;
   const leg = mergeGeometries([
     part(new THREE.CapsuleGeometry(0.07, 0.72, 3, 8), female ? '#1a1612' : '#2e2a26', 0, -0.42, 0),
     part(new THREE.BoxGeometry(0.13, 0.08, 0.26), '#14110e', 0, -0.86, 0.04),
