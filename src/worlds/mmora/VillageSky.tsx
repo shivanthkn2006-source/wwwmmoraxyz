@@ -103,7 +103,7 @@ const Precip: React.FC<{ snow: boolean; heavy: boolean }> = ({ snow, heavy }) =>
       const v = heavy ? 18 : 14, dx = 1.2 * d;
       for (let i = 0; i < N; i++) {
         const k = i * 6; a[k + 1] -= v * d; a[k + 4] -= v * d; a[k] -= dx; a[k + 3] -= dx;
-        if (a[k + 1] < 0) { a[k + 1] += 25; a[k + 4] += 25; a[k] += dx * 25 / v / d * d; a[k + 3] = a[k] + 0.08; }
+        if (a[k + 1] < 0) { a[k + 1] += 25; a[k + 4] += 25; a[k] = (Math.random() - 0.5) * 50; a[k + 3] = a[k] + 0.08; }
       }
     }
     geo.attributes.position.needsUpdate = true;
