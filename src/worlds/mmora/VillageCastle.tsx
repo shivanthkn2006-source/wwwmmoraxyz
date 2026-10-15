@@ -10,8 +10,11 @@ import * as THREE from 'three';
 import { registerUse } from '@/lib/vrUse';
 import { registerFloor } from '@/lib/vrFloor';
 import { setSolidGroup, wallPieces } from '@/lib/vrSolids';
+import { registerLit } from '@/lib/vrLights';
+import { PooledLight } from '../LightPool';
+import { CASTLE } from './villageMap';
 
-const CX = -70, CZ = 10, S = 24, H = 7, T = 0.8, UP = 4.65;
+const CX = CASTLE.cx, CZ = CASTLE.cz, S = CASTLE.s, H = 7, T = 0.8, UP = 4.65;
 const M = {
   stone: new THREE.MeshStandardMaterial({ color: '#5f5b55', roughness: 0.95 }),
   dark: new THREE.MeshStandardMaterial({ color: '#2e2f33', roughness: 0.8 }),
@@ -19,7 +22,8 @@ const M = {
   oak: new THREE.MeshStandardMaterial({ color: '#3b2614', roughness: 0.7 }),
   floor: new THREE.MeshStandardMaterial({ color: '#4d4740', roughness: 0.9 }),
   rug: new THREE.MeshStandardMaterial({ color: '#5a1414', roughness: 1 }),
-  win: new THREE.MeshBasicMaterial({ color: '#ffcf7a' }),
+  // castle windows follow the same evening light rule as the houses (on 17:54, off 05:54)
+  win: registerLit(new THREE.MeshStandardMaterial({ color: '#3a3f46', emissive: '#ffcf7a', roughness: 0.5 }), 2),
 };
 const B: React.FC<{ m: THREE.Material; p: [number, number, number]; s: [number, number, number] }> = ({ m, p, s }) => (
   <mesh material={m} position={p}><boxGeometry args={s} /></mesh>
@@ -52,7 +56,10 @@ const Tower: React.FC<{ x: number; z: number }> = ({ x, z }) => (
   <group position={[x, 0, z]}>
     <mesh material={M.stone} position={[0, 6, 0]}><cylinderGeometry args={[2, 2.2, 12, 10]} /></mesh>
     <mesh material={M.dark} position={[0, 15, 0]}><coneGeometry args={[2.4, 6, 10]} /></mesh>
-    <B m={M.win} p={[0, 9, 2.05]} s={[0.4, 0.9, 0.05]} />
+    {[0, Math.PI / 2, Math.PI, -Math.PI / 2].map((r) => <group key={r} rotation={[0, r, 0]}>
+      <B m={M.win} p={[0, 9, 2.05]} s={[0.4, 0.9, 0.05]} />
+      <B m={M.win} p={[0, 5, 2.12]} s={[0.3, 0.7, 0.05]} />
+    </group>)}
   </group>
 );
 
@@ -108,6 +115,12 @@ export const VillageCastle: React.FC = () => {
       <Merlons len={S} y={H + 0.45} p={[-h, 0]} along="z" />
       <Merlons len={S} y={H + 0.45} p={[h, 0]} along="z" />
       {[-h, h].map((x) => [-h, h].map((z) => <Tower key={`${x}${z}`} x={x} z={z} />))}
+      {[-7, -3.5, 3.5, 7].map((o) => <React.Fragment key={`cw${o}`}>
+        <B m={M.win} p={[o, 4.6, -h - 0.42]} s={[0.25, 0.9, 0.05]} />
+        <B m={M.win} p={[-h - 0.42, 4.6, o]} s={[0.05, 0.9, 0.25]} />
+        <B m={M.win} p={[h + 0.42, 4.6, o]} s={[0.05, 0.9, 0.25]} />
+        {Math.abs(o) > 4 && <B m={M.win} p={[o, 4.6, h + 0.42]} s={[0.25, 0.9, 0.05]} />}
+      </React.Fragment>)}
       <group ref={gate.ref} position={[-2, 0, h + 0.45]}><B m={M.oak} p={[2, 2.25, 0]} s={[4, 4.5, 0.2]} /></group>
       {/* central keep with a room inside */}
       <group position={[0, 0, -2]}>
@@ -131,7 +144,7 @@ export const VillageCastle: React.FC = () => {
         <B m={M.oak} p={[-3, 5.05, -3]} s={[1, 0.8, 0.7]} />
         <B m={M.rug} p={[-1, 4.67, 1.5]} s={[3, 0.02, 2.5]} />
         {[-2, 2].map((x) => <B key={`u${x}`} m={M.win} p={[x, 9.5, -3.58]} s={[0.5, 1.2, 0.05]} />)}
-        <pointLight position={[0, 8, 0]} intensity={0.9} distance={9} color="#ffcf8a" />
+        <PooledLight position={[0, 8, 0]} intensity={0.9} distance={9} color="#ffcf8a" />
         <mesh material={M.dark} position={[0, 15.5, 0]} rotation={[0, Math.PI / 4, 0]}><coneGeometry args={[6, 7, 4]} /></mesh>
         <B m={M.rug} p={[0, 0.12, 0]} s={[2, 0.02, 6]} />
         <B m={M.oak} p={[-2, 0.9, -3.2]} s={[2.4, 1.8, 0.8]} />
@@ -146,8 +159,10 @@ export const VillageCastle: React.FC = () => {
         <group ref={study.ref} position={[0, 0, -0.8]} rotation={[0, Math.PI / 2, 0]}><B m={M.oak} p={[0.8, 1.5, 0]} s={[1.6, 3, 0.1]} /></group>
         <B m={M.oak} p={[2, 0.8, -3.4]} s={[1.6, 1.6, 0.5]} />
         <B m={M.rug} p={[-2, 0.12, -2]} s={[2.6, 0.02, 3]} />
-        <pointLight position={[-2, 3.5, -2]} intensity={0.7} distance={6} color="#ffcf8a" />
-        <pointLight position={[0, 3.5, 0]} intensity={1} distance={10} color="#ffcf8a" />
+        <PooledLight position={[-2, 3.5, -2]} intensity={0.7} distance={6} color="#ffcf8a" />
+        <PooledLight position={[0, 3.5, 0]} intensity={1} distance={10} color="#ffcf8a" />
+        {/* keep side windows, both storeys */}
+        {[-1, 1].map((s) => [-2, 2].map((z) => [2.6, 7].map((y) => <B key={`k${s}${z}${y}`} m={M.win} p={[s * 4.42, y, z]} s={[0.05, 1.1, 0.5]} />)))}
         <group ref={keep.ref} position={[-1.2, 0, 4.45]}><B m={M.oak} p={[1.2, 1.5, 0]} s={[2.4, 3, 0.15]} /></group>
       </group>
     </group>

@@ -53,3 +53,6 @@ export function registerToggle<M extends THREE.Material>(m: M, schedule: LightSc
 }
 
 export const buildingLightsOn = () => on.building;
+
+/** Whether a schedule's lights are on right now (starts the shared ticker). */
+export function scheduleOn(s: LightSchedule): boolean { startTicker(); return on[s]; }

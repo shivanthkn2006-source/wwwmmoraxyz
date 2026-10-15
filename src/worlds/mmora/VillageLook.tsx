@@ -17,7 +17,10 @@ import React, { useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { HOUSES } from './PickupHouses';
+import { ROADS, SQUARE_R, villageLayout } from './villageMap';
+import { LightPool, PooledLight } from '../LightPool';
+import { registerLit } from '@/lib/vrLights';
+import { useVillageWeather } from './VillageSky';
 import { VillageAnimals } from './VillageAnimals';
 import { VillageChurch } from './VillageChurch';
 import { VillageBells } from './VillageBells';
@@ -54,8 +57,9 @@ function groundTexture(): THREE.CanvasTexture {
     // rain puddles along the lane that catch lamp light
     for (let k = 0; k < 6; k++) { const f = rand(x1 + x2 * 3 + z2 + k) ; g.fillStyle = 'rgba(150,140,110,0.22)'; g.beginPath(); g.ellipse(toPx(x1 + (x2 - x1) * f), toPx(z1 + (z2 - z1) * f), 3 + k % 3 * 2, 1.5 + k % 2, rand(k) * 3, 0, 7); g.fill(); }
   };
-  for (const [x, z] of HOUSES) path(0, 0, x, z);
-  path(0, 0, 0, -78); // to the church
+  // every lane and road from the street plan, plus the village square
+  for (const r of ROADS) for (let j = 0; j < r.pts.length - 1; j++) path(r.pts[j][0], r.pts[j][1], r.pts[j + 1][0], r.pts[j + 1][1]);
+  g.fillStyle = "rgba(58,52,44,0.95)"; g.beginPath(); g.arc(toPx(0), toPx(0), (SQUARE_R / SIZE) * S, 0, 7); g.fill();
   for (let i = 0; i < 400; i++) { g.fillStyle = `rgba(14,16,12,${0.05 + rand(i + 9) * 0.1})`; g.beginPath(); g.arc(rand(i + 5) * S, rand(i + 6) * S, 4 + rand(i + 7) * 14, 0, 7); g.fill(); }
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
 }
@@ -136,12 +140,12 @@ const STONE = new THREE.MeshStandardMaterial({ color: '#77736c', roughness: 0.95
 const SLATE = new THREE.MeshStandardMaterial({ color: '#4a4d52', roughness: 0.85 });
 const GLASS = new THREE.MeshStandardMaterial({ color: '#2a2418', emissive: '#d89a48', emissiveIntensity: 0.6 });
 
-const LAMP_GLOW = new THREE.MeshBasicMaterial({ color: '#ffc06a' });
+// lantern glass glows on the street-lamp schedule (17:00–05:54 local)
+const LAMP_GLOW = registerLit(new THREE.MeshStandardMaterial({ color: '#3a3226', emissive: '#ffc06a' }), 2.4, 'street');
 const MIST = new THREE.MeshBasicMaterial({ color: '#5f8f62', transparent: true, opacity: 0.1, depthWrite: false });
-/** Lamp posts along the lanes with warm lanterns; only the nearest few hold real lights (phone budget). */
+/** Lamp posts along the lanes with warm lanterns; every lamp registers a pooled light (the nearest few are real). */
 const LaneLamps: React.FC<{ spots: [number, number, number, number][] }> = ({ spots }) => {
   const geo = useMemo(lampPost, []);
-  const lit = spots.slice(0, 6);
   return (
     <>
       <Instances geo={geo} items={spots} />
@@ -149,7 +153,7 @@ const LaneLamps: React.FC<{ spots: [number, number, number, number][] }> = ({ sp
         const lx = x + Math.cos(-r) * 0.45, lz = z + Math.sin(-r) * 0.45;
         return <mesh key={i} position={[lx, 2.85, lz]} material={LAMP_GLOW}><boxGeometry args={[0.16, 0.24, 0.16]} /></mesh>;
       })}
-      {lit.map(([x, z], i) => <pointLight key={i} position={[x, 2.9, z]} color="#ffb257" intensity={2.2} distance={13} decay={1.6} />)}
+      {spots.map(([x, z, r], i) => <PooledLight key={i} position={[x + Math.cos(-r) * 0.45, 2.9, z + Math.sin(-r) * 0.45]} color="#ffb257" intensity={2.2} distance={13} decay={1.6} schedule="street" />)}
     </>
   );
 };
@@ -179,29 +183,26 @@ const Crows: React.FC = () => {
   return <instancedMesh ref={ref} args={[geo, VC, N]} frustumCulled={false} />;
 };
 
+/** Mud ground that turns shiny and dark while it is really raining at the member's place. */
+const WetGround: React.FC<{ tex: THREE.Texture | null }> = ({ tex }) => {
+  const wx = useVillageWeather();
+  const wet = wx.kind === 'rain' || wx.kind === 'storm';
+  return (
+    <mesh rotation={[-Math.PI / 2, 0, 0]}>
+      <planeGeometry args={[SIZE, SIZE]} />
+      <meshStandardMaterial map={tex} roughness={wet ? 0.22 : 0.55} metalness={wet ? 0.35 : 0.15} color={wet ? '#c9ccd0' : '#ffffff'} />
+    </mesh>
+  );
+};
+
 export const VillageLook: React.FC = () => {
   const tex = useMemo(groundTexture, []);
   const geos = useMemo(() => ({ fence: fence(), tree: bareTree(), wall: stoneWall(), dog: animal('dog'), cat: animal('cat'), cow: animal('cow') }), []);
   const lay = useMemo(() => {
-    const free = (x: number, z: number) => Math.hypot(x, z) > 12 && HOUSES.every(([hx, hz]) => Math.hypot(x - hx, z - hz) > 7) && !(x > -22 && x < -6 && z < -34 && z > -64) && Math.hypot(x + 70, z - 10) > 22;
-    const trees: [number, number, number, number][] = [];
-    for (let i = 0; trees.length < 90 && i < 600; i++) {
-      const a = rand(i) * Math.PI * 2, r = 20 + rand(i + 50) * 150, x = Math.cos(a) * r, z = Math.sin(a) * r;
-      if (free(x, z)) trees.push([x, z, rand(i + 7) * 6, 0.8 + rand(i + 9) * 0.7]);
-    }
-    const walls: [number, number, number, number][] = [];
-    HOUSES.forEach(([x, z, r]) => { walls.push([x + Math.cos(r) * 5, z - Math.sin(r) * 5, r + Math.PI / 2, 1]); walls.push([x - Math.cos(r) * 5, z + Math.sin(r) * 5, r + Math.PI / 2, 1]); });
-    // fences line the lanes half-way to each house; lamps stand at lane starts and by every door
-    const fences: [number, number, number, number][] = [], lamps: [number, number, number, number][] = [];
-    HOUSES.forEach(([x, z], i) => {
-      const a = Math.atan2(z, x), d = Math.hypot(x, z) * 0.55, nx = -Math.sin(a), nz = Math.cos(a);
-      fences.push([Math.cos(a) * d + nx * 2.6, Math.sin(a) * d + nz * 2.6, -a, 1]);
-      if (i % 2) fences.push([Math.cos(a) * d - nx * 2.6, Math.sin(a) * d - nz * 2.6, -a + 0.08, 1]);
-      lamps.push([Math.cos(a) * 9 + nx * 1.8, Math.sin(a) * 9 + nz * 1.8, -a, 1]);
-    });
-    lamps.push([2, -40, 0, 1], [-2, -60, Math.PI, 1]);
+    // Walls, fences, lamps and trees come from the street plan, already nudged off every lane and road.
+    const L = villageLayout();
     return {
-      fences, lamps, trees, walls,
+      fences: L.fences, lamps: L.lamps, trees: L.trees, walls: L.walls,
       dogs: [[8, 4, 1, 1], [-14, -6, 2.5, 1], [26, 14, 4, 1]] as [number, number, number, number][],
       cats: [[16, -6, 0.5, 1], [-24, -14, 3, 1], [4, -30, 1.2, 1], [-40, 8, 5, 1]] as [number, number, number, number][],
       cows: [[60, 40, 1, 1], [66, 46, 2.2, 1], [56, 50, 4, 1], [-60, -46, 0.3, 1]] as [number, number, number, number][],
@@ -214,10 +215,8 @@ export const VillageLook: React.FC = () => {
       <fog attach="fog" args={['#1f2a26', 10, 115]} />
       <hemisphereLight args={['#8a9ca4', '#3a3428', 1.35]} />
       <directionalLight position={[-40, 60, -30]} intensity={0.7} color="#a9bdd0" />
-      <mesh rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[SIZE, SIZE]} />
-        <meshStandardMaterial map={tex} roughness={0.55} metalness={0.15} />
-      </mesh>
+      <WetGround tex={tex} />
+      <LightPool />
       <Instances geo={geos.fence} items={lay.fences} />
       <LaneLamps spots={lay.lamps} />
       <GroundMist />

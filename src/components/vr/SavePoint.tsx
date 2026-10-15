@@ -9,7 +9,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 
 /** M'Mora World save point beside the return doorway, health and respawn. */
-const SAVE_POS: [number, number, number] = [3, 0, 6];
+import { SAVE_POS } from '@/worlds/mmora/villageMap';
+import { PooledLight } from '@/worlds/LightPool';
 const MAX_HP = 100;
 let hp = MAX_HP;
 const emit = () => window.dispatchEvent(new CustomEvent('vr-health', { detail: { hp } }));
@@ -82,7 +83,7 @@ export const SavePoint: React.FC<{ position?: [number, number, number] }> = ({ p
         <ringGeometry args={[0.9, 1.3, 32]} />
         <meshBasicMaterial color="#387BF6" transparent opacity={0.7} />
       </mesh>
-      <pointLight position={[0, 1.5, 0]} color="#9cc0ff" intensity={1.2} distance={6} />
+      <PooledLight position={[0, 1.5, 0]} color="#9cc0ff" intensity={1.2} distance={6} />
     </group>
   );
 };

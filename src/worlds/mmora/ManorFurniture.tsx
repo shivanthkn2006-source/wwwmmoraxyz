@@ -7,6 +7,7 @@
  */
 import React from 'react';
 import * as THREE from 'three';
+import { PooledLight } from '../LightPool';
 
 function canvasTex(w: number, h: number, draw: (g: CanvasRenderingContext2D) => void): THREE.Texture | null {
   if (typeof document === 'undefined') return null;
@@ -186,6 +187,6 @@ export const ManorFurniture: React.FC = () => (
     <group position={[1.2, 1.95, -2.34]}><Painting i={0} /></group>
     <group position={[-0.1, 2.0, -2.34]}><Painting i={1} w={0.5} h={0.6} /></group>
     <group position={[-2.34, 1.9, 0.2]} rotation={[0, Math.PI / 2, 0]}><Painting i={1} w={0.8} h={0.6} /></group>
-    <pointLight position={[0, 2.1, -0.2]} intensity={0.7} distance={5} color="#ffd08a" />
+    <PooledLight position={[0, 2.1, -0.2]} intensity={0.7} distance={5} color="#ffd08a" />
   </group>
 );

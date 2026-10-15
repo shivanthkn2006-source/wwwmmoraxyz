@@ -7,7 +7,10 @@ const q = new URLSearchParams(location.search);
 const pos = (q.get('cam') || '0,1.7,20').split(',').map(Number) as [number, number, number];
 const look = (q.get('look') || '0,2,-60').split(',').map(Number) as [number, number, number];
 createRoot(document.getElementById('r')!).render(
-  <Canvas camera={{ position: pos, fov: 70, far: 600 }} onCreated={({ camera }) => camera.lookAt(...look)}>
+  <Canvas camera={{ position: pos, fov: 70, far: 600 }} onCreated={({ camera, gl, scene }) => {
+    camera.lookAt(...look);
+    (window as unknown as Record<string, unknown>).__vp = { gl, scene, camera };
+  }}>
     <Suspense fallback={null}><VillageLook /></Suspense>
   </Canvas>,
 );

@@ -11,7 +11,11 @@ import { registerUse } from '@/lib/vrUse';
 import { useStory, getStory, takeKey, readNote, useDoor as openDoor, KEYS, NOTES } from '@/lib/vrStory';
 import { recordVRCollect } from '@/lib/vrQuests';
 
-export const ARCHIVE_POS: [number, number, number] = [-12, 0, 4];
+import { ARCHIVE_POS } from './villageMap';
+import { PooledLight } from '../LightPool';
+import { registerLit } from '@/lib/vrLights';
+export { ARCHIVE_POS };
+const WIN = registerLit(new THREE.MeshStandardMaterial({ color: '#4a5866', emissive: '#ffc56a', roughness: 0.4 }), 2.2);
 const W = 6, H = 3.2, T = 0.25;
 const KEY_POS: [number, number, number] = [-3, 0.15, -6];
 const NOTE_GATE_POS: [number, number, number] = [0, 0.9, 6];
@@ -91,13 +95,16 @@ export const ArchiveHouse: React.FC = () => {
         <mesh position={[SHARD_LOCAL[0], 0.5, SHARD_LOCAL[2]]} material={wood}><boxGeometry args={[1.2, 1, 0.6]} /></mesh>
         <mesh ref={shard} position={SHARD_LOCAL}><octahedronGeometry args={[0.25]} /><meshStandardMaterial color="#f2c14e" emissive="#f2c14e" emissiveIntensity={0.8} /></mesh>
         <mesh position={NOTE_IN_LOCAL} rotation={[-Math.PI / 2, 0, 0.3]} material={paper}><planeGeometry args={[0.4, 0.3]} /></mesh>
-        <pointLight position={[0, 2.6, 0]} intensity={0.6} distance={7} color="#ffd9a0" />
+        <PooledLight position={[0, 2.6, 0]} intensity={0.6} distance={7} color="#ffd9a0" />
+        {/* windows (same evening light rule as every house): two in each side wall, one in the back */}
+        {[-1.5, 1.5].map((x) => [-1, 1].map((s) => <mesh key={`${x}${s}`} material={WIN} position={[x, 1.7, s * (W / 2 + T / 2 + 0.02)]} rotation={[0, s > 0 ? 0 : Math.PI, 0]}><planeGeometry args={[1, 0.8]} /></mesh>))}
+        <mesh material={WIN} position={[-W / 2 - T / 2 - 0.02, 1.7, 0]} rotation={[0, -Math.PI / 2, 0]}><planeGeometry args={[1.2, 0.8]} /></mesh>
       </group>
       {/* note at the path and lamp with the key */}
       <mesh position={NOTE_GATE_POS} rotation={[-0.6, 0, 0]} material={paper}><planeGeometry args={[0.45, 0.32]} /></mesh>
       <mesh position={[NOTE_GATE_POS[0], 0.45, NOTE_GATE_POS[2] - 0.05]} material={wood}><boxGeometry args={[0.08, 0.9, 0.08]} /></mesh>
       <mesh position={[KEY_POS[0] + 0.5, 1.2, KEY_POS[2]]} material={wood}><cylinderGeometry args={[0.06, 0.08, 2.4, 8]} /></mesh>
-      <pointLight position={[KEY_POS[0] + 0.5, 2.5, KEY_POS[2]]} intensity={0.8} distance={5} color="#ffcc88" />
+      <PooledLight position={[KEY_POS[0] + 0.5, 2.5, KEY_POS[2]]} intensity={0.8} distance={5} color="#ffcc88" />
       {!hasKey && <mesh position={KEY_POS} rotation={[0, 0.4, Math.PI / 2]} material={brass}><torusGeometry args={[0.09, 0.03, 8, 16]} /></mesh>}
     </group>
   );
