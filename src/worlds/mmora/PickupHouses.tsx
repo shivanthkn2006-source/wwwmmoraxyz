@@ -35,11 +35,9 @@ function rugTexture(): THREE.Texture | null {
 }
 
 const HOUSE_W = 5, HOUSE_D = 5, HOUSE_H = 3;
-// [x, z, rotationY]
-export const HOUSES: [number, number, number][] = [
-  [18, -10, 0], [-26, -18, Math.PI / 2], [30, 22, Math.PI], [-20, 28, -Math.PI / 2],
-  [6, -34, 0], [44, -6, Math.PI / 2], [-42, 4, 0], [12, 40, Math.PI],
-];
+// [x, z, rotationY] — the street plan lives in villageMap.
+import { HOUSES } from './villageMap';
+export { HOUSES };
 // Gable roof: a triangular prism that sits wholly on top of the walls.
 const ROOF_RISE = 1.9;
 const GABLE = (() => {
@@ -188,6 +186,9 @@ const House: React.FC<{ i: number; open: boolean }> = ({ i, open }) => {
       <mesh material={WINDOW} position={[-1.6, 1.6, HOUSE_D / 2 + 0.11]}><planeGeometry args={[0.9, 0.8]} /></mesh>
       <mesh material={WINDOW} position={[1.6, 1.6, HOUSE_D / 2 + 0.11]}><planeGeometry args={[0.9, 0.8]} /></mesh>
       <mesh material={WINDOW} position={[0, HOUSE_H + 0.21, 0]} rotation={[-Math.PI / 2, 0, 0]}><planeGeometry args={[1.2, 1.2]} /></mesh>
+      {/* more windows on the same evening rule: two in the back wall and an attic window in each gable */}
+      {[-1.4, 1.4].map((wx) => <mesh key={`bk${wx}`} material={WINDOW} position={[wx, 1.6, -HOUSE_D / 2 - 0.11]} rotation={[0, Math.PI, 0]}><planeGeometry args={[0.9, 0.8]} /></mesh>)}
+      {[1, -1].map((s) => <mesh key={`at${s}`} material={WINDOW} position={[0, HOUSE_H + 0.85, s * ((HOUSE_D + 0.6) / 2 + 0.01)]} rotation={[0, s > 0 ? 0 : Math.PI, 0]}><planeGeometry args={[0.6, 0.55]} /></mesh>)}
       <mesh material={M.roof} position={[0, HOUSE_H + 0.1, 0]}><boxGeometry args={[HOUSE_W + 0.4, 0.2, HOUSE_D + 0.4]} /></mesh>
       {/* Steep gabled roof with snow on the ridge, timber beams on the corners */}
       <mesh material={M.roof} geometry={GABLE} position={[0, HOUSE_H + 0.2, 0]} />

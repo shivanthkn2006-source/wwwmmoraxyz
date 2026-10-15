@@ -4,12 +4,12 @@ import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { registerUse } from '@/lib/vrUse';
 import { boxPoly, setSolidGroup } from '@/lib/vrSolids';
-
-export const MERCHANT_POS: [number, number, number] = [-52, 0, 30];
+import { PooledLight } from '../LightPool';
+import { MERCHANT_POS } from './villageMap';
+export { MERCHANT_POS };
 
 export const VillageMerchant: React.FC = () => {
   const { camera } = useThree();
-  const lamp = useRef<THREE.PointLight>(null);
   const M = useMemo(() => ({
     coat: new THREE.MeshStandardMaterial({ color: '#2a2a33', roughness: 1 }),
     hood: new THREE.MeshStandardMaterial({ color: '#1b1b20', roughness: 1 }),
@@ -26,7 +26,6 @@ export const VillageMerchant: React.FC = () => {
     if (d > 3) return null;
     return { dist: d, reach: 3, label: 'Trade with the merchant', run: () => window.dispatchEvent(new CustomEvent('vr-merchant-open')) };
   }), [camera]);
-  useFrame(({ clock }) => { if (lamp.current) lamp.current.intensity = 1.4 + Math.sin(clock.elapsedTime * 7) * 0.2; });
   return (
     <group position={MERCHANT_POS} rotation={[0, Math.PI / 2, 0]}>
       <mesh material={M.coat} position={[0, 0.8, 0]}><coneGeometry args={[0.45, 1.6, 12]} /></mesh>
@@ -35,7 +34,7 @@ export const VillageMerchant: React.FC = () => {
       <mesh material={M.eye} position={[0.07, 1.74, 0.21]}><sphereGeometry args={[0.025, 6, 6]} /></mesh>
       <mesh material={M.crate} position={[0, 0.4, -1.2]}><boxGeometry args={[1.4, 0.8, 0.9]} /></mesh>
       <mesh material={M.glass} position={[0.5, 0.95, -1.2]}><sphereGeometry args={[0.12, 10, 8]} /></mesh>
-      <pointLight ref={lamp} position={[0.5, 1.1, -1.2]} color="#ffb347" distance={7} intensity={1.4} />
+      <PooledLight position={[0.5, 1.1, -1.2]} color="#ffb347" distance={7} intensity={1.4} flicker />
     </group>
   );
 };

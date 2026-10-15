@@ -49,7 +49,7 @@ const ShootingStar: React.FC = () => {
   return <mesh ref={ref} rotation={[0, 0, -0.42]} visible={false}><planeGeometry args={[9, 0.25]} /><meshBasicMaterial color="#ffffff" transparent opacity={0} fog={false} depthWrite={false} /></mesh>;
 };
 
-type Wx = { kind: 'clear' | 'rain' | 'snow' | 'storm' | 'fog'; heavy: boolean };
+export type Wx = { kind: 'clear' | 'rain' | 'snow' | 'storm' | 'fog'; heavy: boolean };
 function codeToWx(c: number): Wx {
   if (c >= 95) return { kind: 'storm', heavy: true };
   if ((c >= 71 && c <= 77) || c === 85 || c === 86) return { kind: 'snow', heavy: c === 75 || c === 86 };
@@ -58,34 +58,85 @@ function codeToWx(c: number): Wx {
   return { kind: 'clear', heavy: false };
 }
 
+/**
+ * Turn an Open-Meteo reply into the village sky. Rain shows whenever the
+ * station grid reports any precipitation now (even when the weather code is
+ * only "overcast"), and thunder shows when the current hour or the hours
+ * either side carry a thunderstorm code (95–99).
+ */
+export function readWeather(j: {
+  current?: { weather_code?: number; precipitation?: number; rain?: number; showers?: number; snowfall?: number };
+  hourly?: { weather_code?: (number | null)[] };
+}): Wx | null {
+  const c = j?.current; if (!c || typeof c.weather_code !== 'number') return null;
+  const base = codeToWx(c.weather_code);
+  const precip = Math.max(c.precipitation ?? 0, (c.rain ?? 0) + (c.showers ?? 0));
+  const storm = c.weather_code >= 95 || (j.hourly?.weather_code ?? []).some((h) => typeof h === 'number' && h >= 95);
+  if (storm) return { kind: 'storm', heavy: true };
+  if ((c.snowfall ?? 0) > 0 && base.kind !== 'rain') return { kind: 'snow', heavy: (c.snowfall ?? 0) >= 1 };
+  if (base.kind === 'rain' || precip > 0) return { kind: 'rain', heavy: base.heavy || precip >= 1 };
+  return base;
+}
+
+/** One shared weather reading for the whole VR world (sky, rain, wet ground). */
+let wxNow: Wx = { kind: 'clear', heavy: false };
+const wxLs = new Set<() => void>();
+const setWxNow = (w: Wx) => { if (w.kind === wxNow.kind && w.heavy === wxNow.heavy) return; wxNow = w; (window as unknown as { __vrWeather?: Wx }).__vrWeather = w; wxLs.forEach((l) => l()); };
+export const getVillageWeather = () => wxNow;
+export function useVillageWeather(): Wx {
+  return React.useSyncExternalStore((l) => { wxLs.add(l); return () => { wxLs.delete(l); }; }, () => wxNow, () => wxNow);
+}
+
+/** Where to read the weather: the member's real device location first, then the map place they are playing at. */
+async function weatherCoords(): Promise<{ lat: number; lng: number } | null> {
+  try {
+    const { getGrantedCoords } = await import('@/utils/sharedGeolocation');
+    const real = await getGrantedCoords();
+    if (real) return real;
+  } catch { /* fall through */ }
+  const w = getWorldState();
+  return w.origin.status === 'ready' ? w.origin.origin : null;
+}
+
+let loaderUsers = 0;
+let loaderTimer: number | undefined;
+function startWeatherLoader() {
+  loaderUsers++;
+  if (loaderUsers > 1) return;
+  // Preview-only test switch (?wx=rain|storm|snow) so the effects can be checked without waiting for real rain.
+  if (import.meta.env.DEV) {
+    const force = new URLSearchParams(location.search).get('wx');
+    if (force === 'rain' || force === 'storm' || force === 'snow') { setWxNow({ kind: force, heavy: force === 'storm' }); return; }
+  }
+  const load = async () => {
+    const o = await weatherCoords();
+    if (!o) { loaderTimer = window.setTimeout(load, 4000); return; }
+    try {
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${o.lat.toFixed(3)}&longitude=${o.lng.toFixed(3)}`
+        + '&current=weather_code,precipitation,rain,showers,snowfall&hourly=weather_code&past_hours=1&forecast_hours=2&timezone=auto';
+      const r = await fetch(url);
+      const w = r.ok ? readWeather(await r.json()) : null;
+      if (w) setWxNow(w);
+    } catch { /* offline: keep the last sky */ }
+    if (loaderUsers > 0) loaderTimer = window.setTimeout(load, 5 * 60_000);
+  };
+  void load();
+}
+function stopWeatherLoader() {
+  loaderUsers = Math.max(0, loaderUsers - 1);
+  if (!loaderUsers) window.clearTimeout(loaderTimer);
+}
+
 function useLocalWeather(): Wx {
-  const [wx, setWx] = useState<Wx>({ kind: 'clear', heavy: false });
-  useEffect(() => {
-    let dead = false;
-    let t: number | undefined;
-    // Wait for the member's real place, then refresh every 15 minutes.
-    const load = async () => {
-      const w = getWorldState();
-      const o = w.origin.status === 'ready' ? w.origin.origin : null;
-      if (!o) { t = window.setTimeout(load, 4000); return; }
-      try {
-        const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${o.lat.toFixed(3)}&longitude=${o.lng.toFixed(3)}&current_weather=true`);
-        const j = await r.json();
-        if (!dead && typeof j?.current_weather?.weathercode === 'number') setWx(codeToWx(j.current_weather.weathercode));
-      } catch { /* offline: keep the last sky */ }
-      if (!dead) t = window.setTimeout(load, 15 * 60_000);
-    };
-    void load();
-    return () => { dead = true; window.clearTimeout(t); };
-  }, []);
-  return wx;
+  useEffect(() => { startWeatherLoader(); return stopWeatherLoader; }, []);
+  return useVillageWeather();
 }
 
 /** Falling rain (slanted streaks) or snow (drifting flakes) around the player. */
 const Precip: React.FC<{ snow: boolean; heavy: boolean }> = ({ snow, heavy }) => {
   const { camera } = useThree();
-  const N = snow ? (heavy ? 1800 : 900) : (heavy ? 2200 : 1100);
-  const L = 0.55; // streak length in metres
+  const N = snow ? (heavy ? 1800 : 900) : (heavy ? 2600 : 1600);
+  const L = 0.9; // streak length in metres
   const geo = useMemo(() => {
     const g = new THREE.BufferGeometry(); const per = snow ? 1 : 2; const a = new Float32Array(N * 3 * per);
     for (let i = 0; i < N; i++) {
@@ -110,11 +161,17 @@ const Precip: React.FC<{ snow: boolean; heavy: boolean }> = ({ snow, heavy }) =>
     obj.current?.position.set(camera.position.x, 0, camera.position.z);
   });
   return snow
-    ? <points ref={obj as React.Ref<THREE.Points>} geometry={geo}><pointsMaterial color="#ffffff" size={0.12} transparent opacity={0.9} depthWrite={false} /></points>
-    : <lineSegments ref={obj as React.Ref<THREE.LineSegments>} geometry={geo}><lineBasicMaterial color="#b9cde0" transparent opacity={heavy ? 0.55 : 0.4} depthWrite={false} /></lineSegments>;
+    ? <points ref={obj as React.Ref<THREE.Points>} geometry={geo} frustumCulled={false}><pointsMaterial color="#ffffff" size={0.12} transparent opacity={0.9} depthWrite={false} /></points>
+    : <lineSegments ref={obj as React.Ref<THREE.LineSegments>} geometry={geo} frustumCulled={false}><lineBasicMaterial color="#d6e2ee" transparent opacity={heavy ? 0.85 : 0.7} depthWrite={false} /></lineSegments>;
 };
 
 let actx: AudioContext | null = null;
+/** Browsers start audio paused until the member taps or presses a key; resume then so rain and thunder are heard. */
+function wakeAudio() {
+  const go = () => { try { actx = actx ?? new AudioContext(); void actx.resume(); } catch { /* */ } };
+  if (typeof window === 'undefined') return;
+  window.addEventListener('pointerdown', go, { once: true }); window.addEventListener('keydown', go, { once: true }); window.addEventListener('touchstart', go, { once: true });
+}
 function thunder(near: boolean) {
   try {
     actx = actx ?? new AudioContext();
@@ -123,6 +180,7 @@ function thunder(near: boolean) {
     const s = actx.createBufferSource(); s.buffer = b;
     const f = actx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = near ? 400 : 180;
     const g = actx.createGain(); g.gain.value = near ? 0.7 : 0.35;
+    if (actx.state === 'suspended') void actx.resume().catch(() => {});
     s.connect(f).connect(g).connect(actx.destination); s.start();
   } catch { /* audio blocked until a tap */ }
 }
@@ -141,24 +199,50 @@ function rainLoop(on: boolean) {
   } catch { /* */ }
 }
 
+/** Jagged bolt from the clouds to the hills, drawn only during a flash. */
+function boltGeometry(): THREE.BufferGeometry {
+  const pts: number[] = []; let x = 0, y = 0;
+  for (let i = 0; i < 14; i++) { const nx = x + (Math.random() - 0.5) * 8, ny = y - 5 - Math.random() * 3; pts.push(x, y, 0, nx, ny, 0); x = nx; y = ny;
+    if (i === 5 || i === 9) { let bx = x, by = y; for (let k = 0; k < 4; k++) { const cx = bx + (Math.random() - 0.3) * 7, cy = by - 4; pts.push(bx, by, 0, cx, cy, 0); bx = cx; by = cy; } } }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3)); return g;
+}
 const Lightning: React.FC = () => {
+  const { camera } = useThree();
   const light = useRef<THREE.AmbientLight>(null);
-  const s = useRef({ next: 5, flash: 0 });
+  const bolt = useRef<THREE.LineSegments>(null);
+  const s = useRef({ next: 3, flash: 0 });
   useFrame((_, dt) => {
     const st = s.current; st.next -= dt;
-    if (st.next <= 0) { st.flash = 0.35; st.next = 8 + Math.random() * 14; const near = Math.random() < 0.4; window.setTimeout(() => thunder(near), near ? 300 : 1800); }
+    if (st.next <= 0) {
+      st.flash = 0.35; st.next = 7 + Math.random() * 12; const near = Math.random() < 0.4;
+      window.setTimeout(() => thunder(near), near ? 300 : 1800);
+      const b = bolt.current;
+      if (b) {
+        b.geometry.dispose(); b.geometry = boltGeometry();
+        const a = Math.random() * Math.PI * 2, d = near ? 70 : 150;
+        b.position.set(camera.position.x + Math.cos(a) * d, 95, camera.position.z + Math.sin(a) * d);
+        b.lookAt(camera.position.x, 95, camera.position.z);
+      }
+    }
     st.flash = Math.max(0, st.flash - dt);
-    if (light.current) light.current.intensity = st.flash > 0 ? 2.5 * (Math.sin(st.flash * 60) > 0 ? 1 : 0.3) : 0;
+    const on = st.flash > 0 && Math.sin(st.flash * 60) > 0;
+    if (light.current) light.current.intensity = st.flash > 0 ? 2.5 * (on ? 1 : 0.3) : 0;
+    if (bolt.current) bolt.current.visible = st.flash > 0.12 || on;
   });
-  return <ambientLight ref={light} intensity={0} color="#dfe8ff" />;
+  return (
+    <>
+      <ambientLight ref={light} intensity={0} color="#dfe8ff" />
+      <lineSegments ref={bolt} visible={false} frustumCulled={false}><bufferGeometry /><lineBasicMaterial color="#f4f7ff" fog={false} /></lineSegments>
+    </>
+  );
 };
 
 export const VillageSky: React.FC = () => {
   const { night } = useNight();
   const wx = useLocalWeather();
   const wet = wx.kind === 'rain' || wx.kind === 'storm';
+  useEffect(() => { wakeAudio(); }, []);
   useEffect(() => { rainLoop(wet); return () => rainLoop(false); }, [wet]);
-  useEffect(() => { (window as unknown as { __vrWeather?: Wx }).__vrWeather = wx; }, [wx]);
   const cloudy = wx.kind !== 'clear';
   return (
     <>

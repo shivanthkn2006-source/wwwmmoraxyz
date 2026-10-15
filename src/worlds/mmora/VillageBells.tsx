@@ -15,8 +15,23 @@ import { registerUse } from '@/lib/vrUse';
 import { logStory } from '@/lib/vrStoryline';
 import { registerLit, registerToggle } from '@/lib/vrLights';
 
-export const CLOCK_POS: [number, number, number] = [34, 0, -30];
-export const BELL_POS: [number, number, number] = [-40, 0, -40];
+import { CLOCK_POS, BELL_POS } from './villageMap';
+import { PooledLight } from '../LightPool';
+export { CLOCK_POS, BELL_POS };
+
+/** Lanterns at the four top corners under the roof, a beacon on the spire tip and one real (pooled) light — on the street-lamp schedule. */
+const TopLights: React.FC<{ M: ReturnType<typeof mats>; y: number; c: number; tip: number }> = ({ M, y, c, tip }) => (
+  <>
+    {[[c, c], [-c, c], [c, -c], [-c, -c]].map(([x, z]) => <group key={`${x}${z}`} position={[x, y, z]}>
+      <mesh material={M.iron} position={[0, 0.26, 0]}><boxGeometry args={[0.32, 0.06, 0.32]} /></mesh>
+      <mesh material={M.lantern}><boxGeometry args={[0.22, 0.4, 0.22]} /></mesh>
+      <mesh material={M.glow}><sphereGeometry args={[0.85, 10, 8]} /></mesh>
+    </group>)}
+    <mesh material={M.lantern} position={[0, tip, 0]}><sphereGeometry args={[0.22, 10, 8]} /></mesh>
+    <mesh material={M.glow} position={[0, tip, 0]}><sphereGeometry args={[1.2, 10, 8]} /></mesh>
+    <PooledLight position={[0, y, 0]} color="#ffb257" intensity={1.6} distance={16} schedule="street" />
+  </>
+);
 const HEAR_M = 260;
 
 const mats = () => ({
@@ -57,6 +72,7 @@ const ClockTower: React.FC<{ M: ReturnType<typeof mats> }> = ({ M }) => {
       <mesh material={M.moss} position={[0, 0.4, 0]}><boxGeometry args={[4.4, 0.8, 4.4]} /></mesh>
       {[3.5, 7, 10.5].map((y) => <mesh key={y} material={M.ancientStone} position={[0, y, 0]}><boxGeometry args={[4.2, 0.25, 4.2]} /></mesh>)}
       <mesh material={M.roof} position={[0, 16, 0]} rotation={[0, Math.PI / 4, 0]}><coneGeometry args={[3.4, 4, 4]} /></mesh>
+      <TopLights M={M} y={13.75} c={2.25} tip={18.3} />
       {[[2.3, 2.6, 2.3], [-2.3, 2.6, 2.3]].map((q) => <group key={q[0]} position={q as [number, number, number]}><mesh material={M.lantern}><boxGeometry args={[0.25, 0.35, 0.25]} /></mesh><mesh material={M.glow}><sphereGeometry args={[0.9, 10, 8]} /></mesh></group>)}
       <mesh material={M.wood} position={[0, 1.3, 2.02]}><boxGeometry args={[1.2, 2.4, 0.06]} /></mesh>
       {[0, Math.PI / 2, Math.PI, -Math.PI / 2].map((r, fi) => (
@@ -118,6 +134,7 @@ const BellTower: React.FC<{ M: ReturnType<typeof mats> }> = ({ M }) => {
       <mesh material={M.moss} position={[0, 5, 0]}><boxGeometry args={[4.6, 0.35, 4.6]} /></mesh>
       <mesh material={M.ancientStone} position={[0, 11.2, 0]}><boxGeometry args={[4.8, 0.5, 4.8]} /></mesh>
       <mesh material={M.roof} position={[0, 13.4, 0]} rotation={[0, Math.PI / 4, 0]}><coneGeometry args={[3.6, 4, 4]} /></mesh>
+      <TopLights M={M} y={10.8} c={2.55} tip={15.7} />
       <mesh material={M.lantern} position={[0, 5.6, 2.4]}><boxGeometry args={[0.25, 0.35, 0.25]} /></mesh>
       <mesh material={M.glow} position={[0, 5.6, 2.4]}><sphereGeometry args={[1.1, 10, 8]} /></mesh>
       <mesh material={M.lantern} position={[0, 11.6, 0]}><sphereGeometry args={[0.18, 8, 6]} /></mesh>

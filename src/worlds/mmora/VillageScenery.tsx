@@ -9,7 +9,8 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { HOUSES } from './PickupHouses';
+import { villageLayout, STATUE_POS } from './villageMap';
+import { PooledLight } from '../LightPool';
 import { boxPoly, setSolidGroup } from '@/lib/vrSolids';
 
 const rand = (s: number) => { const x = Math.sin(s * 127.1) * 43758.5453; return x - Math.floor(x); };
@@ -25,7 +26,7 @@ const FAR2 = new THREE.MeshBasicMaterial({ color: '#253034', fog: false });
 const NEAR_RIDGE = new THREE.MeshBasicMaterial({ color: '#141b1c', fog: false });
 
 export const RIVER_Z = -104;
-export const STATUE_POS: [number, number] = [-9, 14];
+export { STATUE_POS };
 
 /** Stone bridge with two arches over the river, deck along z. */
 function bridge(): THREE.BufferGeometry {
@@ -133,16 +134,8 @@ const Static: React.FC<{ geo: THREE.BufferGeometry; items: [number, number, numb
 
 export const VillageScenery: React.FC = () => {
   const G = useMemo(() => ({ bridge: bridge(), statue: statue(), cart: cart(), barrel: barrel(), cross: graveCross() }), []);
-  const lay = useMemo(() => {
-    // Carts and barrels sit beside (not in front of) every other house, along its side wall.
-    const carts: [number, number, number][] = [], barrels: [number, number, number][] = [];
-    HOUSES.forEach(([x, z, r], i) => {
-      const sx = Math.cos(r), sz = -Math.sin(r);
-      if (i % 2 === 0) carts.push([x + sx * 6.5, z + sz * 6.5, r + 0.3]);
-      barrels.push([x - sx * 4.6 + 0.5, z - sz * 4.6, 0], [x - sx * 4.6 - 0.4, z - sz * 4.6 + 0.6, 1]);
-    });
-    return { carts, barrels };
-  }, []);
+  // Carts and barrels sit beside every other house, nudged off the lanes (villageMap).
+  const lay = villageLayout();
   const crosses: [number, number, number][] = [[14, -62, 0.3], [18, -66, -0.2], [11, -68, 0.6]];
   useEffect(() => {
     setSolidGroup('scenery', [boxPoly(STATUE_POS[0], STATUE_POS[1], 1.6, 1.6)]);
@@ -153,7 +146,7 @@ export const VillageScenery: React.FC = () => {
       <Mountains />
       <River />
       <mesh geometry={G.bridge} material={VC} position={[0, 0, RIVER_Z]} />
-      <pointLight position={[2.6, 5, RIVER_Z - 8]} color="#ffb257" intensity={1.6} distance={12} />
+      <PooledLight position={[2.6, 5, RIVER_Z - 8]} color="#ffb257" intensity={1.6} distance={12} />
       <mesh position={[2.6, 4.9, RIVER_Z - 8]}><boxGeometry args={[0.18, 0.26, 0.18]} /><meshBasicMaterial color="#ffc06a" /></mesh>
       <mesh geometry={G.statue} material={VC} position={[STATUE_POS[0], 0, STATUE_POS[1]]} rotation={[0, 2.4, 0]} />
       <Static geo={G.cart} items={lay.carts} />

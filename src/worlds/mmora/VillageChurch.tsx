@@ -10,8 +10,11 @@ import * as THREE from 'three';
 import { registerUse } from '@/lib/vrUse';
 import { setSolidGroup, wallPieces } from '@/lib/vrSolids';
 
-export const CX = -14, CZ = -52; // church centre, on dry land north of the houses (clear of the sea)
-const W = 10, L = 18, H = 8, T = 0.35;
+import { CHURCH } from './villageMap';
+import { registerLit } from '@/lib/vrLights';
+import { PooledLight } from '../LightPool';
+export const CX = CHURCH.cx, CZ = CHURCH.cz; // church centre, on dry land north of the houses (clear of the sea)
+const W = CHURCH.w, L = CHURCH.l, H = 8, T = 0.35;
 
 function glassTex(seed: number) {
   if (typeof document === 'undefined') return null;
@@ -35,7 +38,8 @@ const M = {
   cloth: new THREE.MeshStandardMaterial({ color: '#efe9dc', roughness: 0.9 }),
   flame: new THREE.MeshBasicMaterial({ color: '#ffd27a' }),
 };
-const GLASS = [0, 1, 2].map((s) => new THREE.MeshStandardMaterial({ map: glassTex(s), emissive: '#ffffff', emissiveMap: glassTex(s), emissiveIntensity: 0.55, side: THREE.DoubleSide }));
+// Stained glass glows from inside on the same evening rule as the houses (17:54–05:54).
+const GLASS = [0, 1, 2].map((s) => registerLit(new THREE.MeshStandardMaterial({ map: glassTex(s), emissive: '#ffffff', emissiveMap: glassTex(s), side: THREE.DoubleSide }), 1.1));
 
 const B: React.FC<{ m: THREE.Material; p: [number, number, number]; s: [number, number, number]; r?: [number, number, number] }> = ({ m, p, s, r }) => (
   <mesh material={m} position={p} rotation={r}><boxGeometry args={s} /></mesh>
@@ -109,9 +113,13 @@ export const VillageChurch: React.FC = () => {
         </group>
       </group>
       {/* Stained-glass windows along both sides and a rose window over the altar */}
-      {[-5, 0, 5].map((z, i) => [-1, 1].map((sx) => (
-        <mesh key={`${z}${sx}`} material={GLASS[(i + (sx > 0 ? 1 : 0)) % 3]} position={[sx * (W / 2 + 0.01 * sx), 4.5, z]} rotation={[0, Math.PI / 2, 0]}><planeGeometry args={[1.3, 2.8]} /></mesh>
+      {/* on the outer face of each side wall (they used to sit inside the stone and could not be seen) */}
+      {[-7, -3.5, 0, 3.5, 7].map((z, i) => [-1, 1].map((sx) => (
+        <mesh key={`${z}${sx}`} material={GLASS[(i + (sx > 0 ? 1 : 0)) % 3]} position={[sx * (W / 2 + T / 2 + 0.02), 4.5, z]} rotation={[0, Math.PI / 2, 0]}><planeGeometry args={[1.3, 2.8]} /></mesh>
       )))}
+      {/* the back wall gets the rose window outside too, and the tower has a window on each side */}
+      <mesh material={GLASS[2]} position={[0, 5.6, -L / 2 - T / 2 - 0.02]} rotation={[0, Math.PI, 0]}><circleGeometry args={[1.3, 20]} /></mesh>
+      {[-1, 1].map((sx) => <mesh key={`tw${sx}`} material={GLASS[0]} position={[sx * 2.55, 13, L / 2 + 2.5]} rotation={[0, sx * Math.PI / 2, 0]}><planeGeometry args={[1.1, 2.2]} /></mesh>)}
       <mesh material={GLASS[2]} position={[0, 5.6, -L / 2 + 0.2]}><circleGeometry args={[1.3, 20]} /></mesh>
       {/* Aisle runner and pews (two rows of six) */}
       <B m={M.runner} p={[0, 0.07, 1]} s={[1.6, 0.02, 14]} />
@@ -125,7 +133,7 @@ export const VillageChurch: React.FC = () => {
       <B m={M.gold} p={[0, 2.6, -8.4]} s={[0.12, 1.6, 0.08]} />
       <B m={M.gold} p={[0, 2.95, -8.4]} s={[0.8, 0.12, 0.08]} />
       <Candle p={[-0.9, 1.54, -7.2]} /><Candle p={[0.9, 1.54, -7.2]} />
-      <pointLight position={[0, 5, -3]} intensity={1.1} distance={16} color="#ffd9a0" />
+      <PooledLight position={[0, 5, -3]} intensity={1.1} distance={16} color="#ffd9a0" />
     </group>
   );
 };

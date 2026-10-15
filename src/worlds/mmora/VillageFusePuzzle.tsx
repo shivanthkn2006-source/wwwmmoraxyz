@@ -13,11 +13,12 @@ import { registerUse } from '@/lib/vrUse';
 import { useGear, gearStats, getEquipped } from '@/lib/vrGear';
 import { logStory } from '@/lib/vrStoryline';
 import { playerSpot } from './VillageVillagers';
+import { PUZZLE_SPOTS } from './villageMap';
 
 type Step = 'shell' | 'fluid' | 'mixed' | 'hose' | 'generator' | 'gate' | 'keycard' | 'lab' | 'antigen' | 'bypass' | 'defend' | 'cleared';
 const KEY = 'mmora-fuse-puzzle';
 const ORDER: Step[] = ['shell', 'fluid', 'mixed', 'hose', 'generator', 'gate', 'keycard', 'lab', 'antigen', 'bypass', 'defend', 'cleared'];
-export const SPOTS: Record<string, [number, number]> = { shell: [20, -18], fluid: [-22, 16], mixer: [6, 24], gate: [-8, -30], terminal: [-8, -36], keycard: [14, -30], lab: [-14, -30], bypass: [-8, -33], hose: [24, 6], generator: [-3, -29] };
+export const SPOTS: Record<string, [number, number]> = PUZZLE_SPOTS;
 const say = (t: string) => { window.dispatchEvent(new CustomEvent('vr-toast', { detail: t })); void import('@/utils/deepgramTTS').then((m) => m.speakWithDeepgramVoice(t, 'female')).catch(() => {}); };
 const sfx = (s: string) => void import('@/lib/vrSfx').then((m) => m.playSfx(s as never)).catch(() => {});
 

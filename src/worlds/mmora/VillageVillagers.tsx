@@ -29,6 +29,7 @@ const storyStage = () => !hasGear('map') ? 'map' : !hasGear('medallion') ? 'meda
 let lastSpoken = 0;
 const LINES = ['Stranger… the church bell rang at midnight again.', 'Mind the castle on the hill. Nobody comes back the same.', 'Lost the old village map near the lanes, I did.', 'The altar holds a medallion. Pray before you take it.', 'Wolves came down from the hills last winter.', 'Warm yourself by the fire, traveller.', 'Have you seen the Lord\'s crest? It belongs in the keep.', 'Sit on a bench a while — it pays to rest here.'];
 import { playPickup } from '@/lib/vrSfx';
+import { VILLAGER_ROUTES } from './villageMap';
 
 const VILLAGER_HP = 60;
 const RESPAWN_S = 60;
@@ -69,12 +70,8 @@ function villagerGeo(female: boolean, v: number) {
   return { body, leg, arm };
 }
 
-// Closed loops on open lanes between the houses.
-const ROUTES: [number, number][][] = [
-  [[-12, -12], [12, -12], [12, 12], [-12, 12]],
-  [[-52, -28], [52, -28], [52, 50], [-52, 50]],
-  [[0, -26], [24, 0], [0, 32], [-30, 0]],
-];
+// Walking loops that follow the village lanes and roads (villageMap), never through houses or gardens.
+const ROUTES: [number, number][][] = VILLAGER_ROUTES;
 const PEOPLE = [
   { r: 0, f: false, o: 0 }, { r: 0, f: true, o: 0.5 }, { r: 1, f: true, o: 0.1 },
   { r: 1, f: false, o: 0.6 }, { r: 2, f: false, o: 0.3 }, { r: 2, f: true, o: 0.8 },

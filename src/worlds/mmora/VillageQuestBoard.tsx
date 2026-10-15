@@ -4,6 +4,7 @@
  * Map → Church Medallion → Lord's Crest) and a gold beam with distance over
  * each item still to be found.
  */
+import { QUEST_BOARD } from './villageMap';
 import React, { useRef, useSyncExternalStore } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
@@ -92,7 +93,7 @@ export const VillageQuestBoard: React.FC = () => {
   const longSight = owned.includes('map');
   // Tap the board (within 8 m) and Zoe reads it aloud (Deepgram voice).
   const readBoard = () => {
-    if (Math.hypot(camera.position.x - 4, camera.position.z + 4) > 8) return;
+    if (Math.hypot(camera.position.x - QUEST_BOARD[0], camera.position.z - QUEST_BOARD[1]) > 8) return;
     const text = 'Quest board. ' + rows.map((r) => `${r.q.title}: ${r.done ? 'done' : r.q.description}. Reward: ${rewardText(r.q.id)}.`).join(' ');
     void import('@/utils/deepgramTTS').then((m) => m.speakWithDeepgram(text)).catch(() => {});
   };
@@ -100,7 +101,7 @@ export const VillageQuestBoard: React.FC = () => {
   return (
     <>
       <CameraHud target={activeItem} />
-      <group position={[4, 0, -4]} rotation={[0, -Math.PI / 4, 0]}>
+      <group position={[QUEST_BOARD[0], 0, QUEST_BOARD[1]]} rotation={[0, QUEST_BOARD[2], 0]}>
         {[-1.2, 1.2].map((x) => <mesh key={x} position={[x, 1, 0]}><boxGeometry args={[0.1, 2, 0.1]} /><meshStandardMaterial color="#3b2a1c" /></mesh>)}
         <mesh position={[0, 1.6, 0]}><boxGeometry args={[2.6, 1.4, 0.06]} /><meshStandardMaterial color="#5a4128" roughness={0.9} /></mesh>
         <Html position={[0, 1.6, 0.05]} transform distanceFactor={2.2} occlude={false} style={{ pointerEvents: 'auto' }}>

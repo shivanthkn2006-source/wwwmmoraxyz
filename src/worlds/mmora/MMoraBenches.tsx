@@ -12,6 +12,7 @@ import { registerUse } from '@/lib/vrUse';
 import { addCoins, spendCoins, getPickups } from '@/lib/vrPickups';
 import { mmoraCityKey } from '@/worlds/worldMode';
 import { StreetLamps } from '../StreetLamps';
+import { VILLAGE_BENCHES } from './villageMap';
 import { getMeet, setChatOpen } from '@/worlds/meet/vrMeet';
 
 export const TALK_SECONDS = 5 * 60;
@@ -22,12 +23,8 @@ export const SIT_COIN_CAP = 20;
 const MAX_BUILT = 30;
 
 type Bench = [number, number, number]; // x, z, rotY
-const BASE: Bench[] = [
-  [-6, 0, 0], [10, 2, Math.PI], [0, -12, 0], [-12, -10, Math.PI / 2],
-  [12, -14, -Math.PI / 2], [-4, 14, Math.PI], [8, 16, Math.PI], [-16, 6, Math.PI / 2],
-  // Beach benches facing the sea (and the full moon at night)
-  ...[-30, -20, -10, 0, 10, 20, 30].map((x): Bench => [x, -70, Math.PI]),
-];
+// Village benches beside the lanes (kept off the roads) + beach benches facing the sea.
+const BASE: Bench[] = VILLAGE_BENCHES as Bench[];
 
 const key = () => `vr-mmora-benches:${mmoraCityKey()}`;
 let built: Bench[] = [];
