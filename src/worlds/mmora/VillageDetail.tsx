@@ -50,10 +50,10 @@ const HouseFront: React.FC<{ i: number; ivy: THREE.Material }> = ({ i, ivy }) =>
       <mesh material={CHIM} position={[side * 1.4, HOUSE_H + 1.5, -1]}><boxGeometry args={[0.6, 2.2, 0.6]} /></mesh>
       <mesh material={CARVED} position={[side * 1.4, HOUSE_H + 2.65, -1]}><boxGeometry args={[0.75, 0.12, 0.75]} /></mesh>
       {/* ivy climbing the front corner */}
-      <mesh material={ivy} position={[-side * (HOUSE_W / 2 - 0.75), 1.5, fz + 0.03]}><planeGeometry args={[1.4, 3]} /></mesh>
+      <mesh material={ivy} position={[-side * (HOUSE_W / 2 - 0.35), 1.5, fz + 0.14]}><planeGeometry args={[0.75, 3]} /></mesh>
       {i % 3 === 0 && <mesh material={ivy} position={[HOUSE_W / 2 + 0.03, 1.3, 0.6]} rotation={[0, Math.PI / 2, 0]}><planeGeometry args={[1.8, 2.6]} /></mesh>}
       {/* small wooden balcony with a flower box under the front window */}
-      <group position={[side * 1.55, 1.7, fz]}>
+      <group position={[side * 1.6, 1.1, fz + 0.05]}>
         <mesh material={WOOD} position={[0, 0, 0.22]}><boxGeometry args={[1.2, 0.06, 0.44]} /></mesh>
         {[-0.55, -0.27, 0, 0.27, 0.55].map((bx) => <mesh key={bx} material={WOOD} position={[bx, 0.25, 0.42]}><boxGeometry args={[0.04, 0.5, 0.04]} /></mesh>)}
         <mesh material={WOOD} position={[0, 0.5, 0.42]}><boxGeometry args={[1.2, 0.05, 0.06]} /></mesh>
