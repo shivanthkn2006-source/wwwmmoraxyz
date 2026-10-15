@@ -13,6 +13,8 @@
 
 - [x] Generator fluid line step in fuse puzzle (code check only, not played)
 
+- [x] Real-weather rain in M'Mora World + village (code check only)
+
 ## Open
 - [x] Enemy wave at core (code check only)
 - [x] Dropped-item pouches, cleared per chapter (code check only)
