@@ -1,3 +1,4 @@
+import { villageChanged } from '@/lib/vrVillageProgress';
 /** The hidden village merchant's shop (opens from the merchant's Use prompt). Coins only. */
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -22,7 +23,7 @@ export const WARES: Ware[] = [
   { id: 'up-pistol', name: 'Handgun upgrade', price: 60, detail: 'Attack +6 per level (max 5).', art: <GearArt id="pistol" />, give: () => upgradeGear('pistol') },
   { id: 'up-shotgun', name: 'Shotgun upgrade', price: 100, detail: 'Attack +6 per level (max 5).', art: <GearArt id="shotgun" />, give: () => upgradeGear('shotgun') },
   { id: 'up-knife', name: 'Knife upgrade', price: 30, detail: 'Attack +6 per level (max 5).', art: <GearArt id="knife" />, give: () => upgradeGear('knife') },
-  { id: 'case', name: 'Bigger case', price: 80, detail: 'Two more rows in your case (up to 20).', art: <GoldHerbArt green />, give: () => { const k = 'vr-case-extra-rows'; const n = Math.min((Number(localStorage.getItem(k)) || 0) + 2, 20); localStorage.setItem(k, String(n)); } },
+  { id: 'case', name: 'Bigger case', price: 80, detail: 'Two more rows in your case (up to 20).', art: <GoldHerbArt green />, give: () => { const k = 'vr-case-extra-rows'; const n = Math.min((Number(localStorage.getItem(k)) || 0) + 2, 20); localStorage.setItem(k, String(n)); villageChanged(); } },
   { id: 'rockets', name: 'Rocket ×1', price: 120, detail: 'One rocket.', art: <GearArt id="rocket" />, give: () => addAmmo('rocket', 1) },
 ];
 

@@ -1,3 +1,4 @@
+import { readVillage, villageChanged, VILLAGE_EVENT } from '@/lib/vrVillageProgress';
 /**
  * Stages 3–4 (from the uploaded blueprint, adapted to M'Mora Village):
  * Empty Fuse Shell + Auxiliary Fluid Line → diesel generator powered;
@@ -34,7 +35,8 @@ const Puzzle: React.FC = () => {
   const [done, setDone] = useState<Step[]>(() => { try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch { return []; } });
   const defendT = useRef(0); const pulse = useRef(0); const bossHp = useRef(0); const [boss, setBoss] = useState(0);
   const wave = useRef<{ x: number; z: number; hp: number }[]>([]); const [, tick] = useState(0); const waveT = useRef(0);
-  const mark = (s: Step) => setDone((d) => { const n = d.includes(s) ? d : [...d, s]; localStorage.setItem(KEY, JSON.stringify(n)); logStory('puzzle', s); void import('@/lib/vrGear').then((m) => m.saveProgressNow()); return n; });
+  const mark = (s: Step) => setDone((d) => { const n = d.includes(s) ? d : [...d, s]; localStorage.setItem(KEY, JSON.stringify(n)); logStory('puzzle', s); villageChanged(); return n; });
+  useEffect(() => { const on = () => setDone((d) => { const n = readVillage().steps as Step[]; return n.length > d.length ? n : d; }); window.addEventListener(VILLAGE_EVENT, on); return () => window.removeEventListener(VILLAGE_EVENT, on); }, []);
   const next = ORDER.find((s) => !done.includes(s));
 
   useEffect(() => { if (!done.length) say('Varga: Operative, the core gate under the keep needs a charged fuse. Find an empty fuse shell and chemical fluid.'); }, []); // eslint-disable-line

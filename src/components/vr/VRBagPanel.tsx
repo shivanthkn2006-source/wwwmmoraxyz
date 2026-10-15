@@ -1,3 +1,4 @@
+import { readVillage, villageChanged, VILLAGE_EVENT } from '@/lib/vrVillageProgress';
 /**
  * VR World inventory in the attaché-case style: a dark gridded case where
  * herbs (1×2), coins and relics (1×1) sit in squares to save space. Tap an
@@ -162,7 +163,8 @@ export const VRBagPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     const x = Math.floor((e.clientX - r.left) / cell), y = Math.floor((e.clientY - r.top) / cell);
     if (x >= 0 && y >= 0 && x < CASE_COLS && y < rows) moveItem(d.it, Math.min(x, CASE_COLS - d.it.w), Math.min(y, rows - d.it.h));
   };
-  const grow = () => { const n = Math.min(extra + 2, 20); setExtra(n); localStorage.setItem(EXTRA_KEY, JSON.stringify(n)); };
+  const grow = () => { const n = Math.min(extra + 2, 20); setExtra(n); localStorage.setItem(EXTRA_KEY, JSON.stringify(n)); villageChanged(); };
+  useEffect(() => { const on = () => setExtra((e) => Math.max(e, readVillage().caseRows)); window.addEventListener(VILLAGE_EVENT, on); return () => window.removeEventListener(VILLAGE_EVENT, on); }, []);
 
   const TABS: [Tab, string][] = [['keys', 'Keys\nTreasures'], ['items', 'Items'], ['files', 'Files'], ['quests', 'Quests']];
 
