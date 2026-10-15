@@ -77,7 +77,7 @@ export const VillageAmbience: React.FC = () => {
     const m = mix.current; if (!m || m.c.state !== 'running') return;
     const dt = Math.min(raw, 0.1), s = st.current, t = clock.elapsedTime, now = m.c.currentTime;
     const x = camera.position.x, z = camera.position.z;
-    const rain = !!getVillageWeather()?.rain;
+    const k = getVillageWeather()?.kind; const rain = k === 'rain' || k === 'storm';
     // wind gusts
     const gust = 0.05 + 0.04 * Math.max(0, Math.sin(t * 0.13) + Math.sin(t * 0.31) * 0.5) + (rain ? 0.03 : 0);
     m.wind.g.gain.setTargetAtTime(gust, now, 0.8); m.wind.fl.frequency.setTargetAtTime(300 + gust * 2500, now, 1);
