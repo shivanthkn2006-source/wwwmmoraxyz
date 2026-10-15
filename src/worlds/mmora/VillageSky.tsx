@@ -167,7 +167,7 @@ export const VillageSky: React.FC = () => {
       {night && !wet && <Moon />}
       {(wet || wx.kind === 'snow') && <Precip snow={wx.kind === 'snow'} heavy={wx.heavy} />}
       {wx.kind === 'storm' && <Lightning />}
-      {wx.kind === 'fog' && <fog attach="fog" args={['#b7bcc0', 6, 60]} />}
+      {wx.kind === 'fog' && <fog attach="fog" args={['#1f2a26', 6, 60]} />}
     </>
   );
 };

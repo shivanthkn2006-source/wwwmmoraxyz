@@ -43,17 +43,19 @@ const VC = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95 
 function groundTexture(): THREE.CanvasTexture {
   const S = 1024, c = document.createElement('canvas'); c.width = c.height = S;
   const g = c.getContext('2d'); if (!g) return null;
-  g.fillStyle = '#d9dcdc'; g.fillRect(0, 0, S, S);
-  for (let i = 0; i < 9000; i++) { const v = 200 + Math.floor(rand(i) * 45); g.fillStyle = `rgba(${v - 8},${v - 4},${v},0.35)`; g.fillRect(rand(i + 1) * S, rand(i + 2) * S, 2 + rand(i + 3) * 5, 2 + rand(i + 4) * 5); }
+  g.fillStyle = '#2b2a24'; g.fillRect(0, 0, S, S); // wet dark mud and moss (rainy-night village)
+  for (let i = 0; i < 9000; i++) { const v = 30 + Math.floor(rand(i) * 40); g.fillStyle = rand(i + 11) > 0.7 ? `rgba(${v - 6},${v + 8},${v - 10},0.45)` : `rgba(${v + 6},${v},${v - 6},0.4)`; g.fillRect(rand(i + 1) * S, rand(i + 2) * S, 2 + rand(i + 3) * 5, 2 + rand(i + 4) * 5); }
   const toPx = (x: number) => (x / SIZE + 0.5) * S;
   g.lineCap = 'round';
   const path = (x1: number, z1: number, x2: number, z2: number) => {
-    g.strokeStyle = 'rgba(120,104,86,0.85)'; g.lineWidth = 7; g.beginPath(); g.moveTo(toPx(x1), toPx(z1)); g.lineTo(toPx(x2), toPx(z2)); g.stroke();
-    g.strokeStyle = 'rgba(70,58,46,0.6)'; g.lineWidth = 3; g.stroke();
+    g.strokeStyle = 'rgba(58,52,44,0.95)'; g.lineWidth = 7; g.beginPath(); g.moveTo(toPx(x1), toPx(z1)); g.lineTo(toPx(x2), toPx(z2)); g.stroke();
+    g.strokeStyle = 'rgba(24,22,20,0.7)'; g.lineWidth = 3; g.stroke();
+    // rain puddles along the lane that catch lamp light
+    for (let k = 0; k < 6; k++) { const f = rand(x1 + x2 * 3 + z2 + k) ; g.fillStyle = 'rgba(150,140,110,0.22)'; g.beginPath(); g.ellipse(toPx(x1 + (x2 - x1) * f), toPx(z1 + (z2 - z1) * f), 3 + k % 3 * 2, 1.5 + k % 2, rand(k) * 3, 0, 7); g.fill(); }
   };
   for (const [x, z] of HOUSES) path(0, 0, x, z);
   path(0, 0, 0, -78); // to the church
-  for (let i = 0; i < 400; i++) { g.fillStyle = `rgba(80,70,60,${0.05 + rand(i + 9) * 0.1})`; g.beginPath(); g.arc(rand(i + 5) * S, rand(i + 6) * S, 4 + rand(i + 7) * 14, 0, 7); g.fill(); }
+  for (let i = 0; i < 400; i++) { g.fillStyle = `rgba(14,16,12,${0.05 + rand(i + 9) * 0.1})`; g.beginPath(); g.arc(rand(i + 5) * S, rand(i + 6) * S, 4 + rand(i + 7) * 14, 0, 7); g.fill(); }
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
 }
 
@@ -77,8 +79,24 @@ function stoneWall(): THREE.BufferGeometry {
     const s2 = new THREE.BoxGeometry(0.6, 0.3, 0.45); s2.translate(-2.1 + i * 0.6, 0.5, 0);
     parts.push(col(s, i % 3 ? '#6d6a64' : '#5e5b55'), col(s2, i % 2 ? '#77736b' : '#66625b'));
   }
-  const cap = new THREE.BoxGeometry(5.2, 0.08, 0.5); cap.translate(0, 0.68, 0); parts.push(col(cap, '#e4e7e8')); // snow on top
+  const cap = new THREE.BoxGeometry(5.2, 0.08, 0.5); cap.translate(0, 0.68, 0); parts.push(col(cap, '#3d4a2c')); // moss on top
   return mergeGeometries(parts)!;
+}
+
+/** Broken wooden fence section (posts + two rails), feet at y=0. */
+function fence(): THREE.BufferGeometry {
+  const parts: THREE.BufferGeometry[] = [];
+  for (let i = 0; i < 4; i++) { const h = 1.1 + rand(i + 40) * 0.5, p = new THREE.BoxGeometry(0.12, h, 0.12); p.rotateZ((rand(i + 41) - 0.5) * 0.25); p.translate(-1.8 + i * 1.2, h / 2, 0); parts.push(col(p, i % 2 ? '#2e2620' : '#3a3026')); }
+  for (const y of [0.45, 0.9]) { const r = new THREE.BoxGeometry(3.8, 0.1, 0.06); r.rotateZ((rand(y * 9) - 0.5) * 0.12); r.translate(0, y, 0.07); parts.push(col(r, '#40352a')); }
+  return mergeGeometries(parts)!;
+}
+
+/** Iron street lamp post; lantern head at y≈3. */
+function lampPost(): THREE.BufferGeometry {
+  const pole = new THREE.CylinderGeometry(0.05, 0.08, 3, 6); pole.translate(0, 1.5, 0);
+  const arm = new THREE.BoxGeometry(0.5, 0.05, 0.05); arm.translate(0.22, 3, 0);
+  const cap = new THREE.ConeGeometry(0.2, 0.22, 4); cap.translate(0.45, 3.05, 0);
+  return mergeGeometries([col(pole, '#15161a'), col(arm, '#15161a'), col(cap, '#15161a')])!;
 }
 
 /** Quadruped animals; feet at y=0, facing +z. */
@@ -117,6 +135,32 @@ const STONE = new THREE.MeshStandardMaterial({ color: '#77736c', roughness: 0.95
 const SLATE = new THREE.MeshStandardMaterial({ color: '#4a4d52', roughness: 0.85 });
 const GLASS = new THREE.MeshStandardMaterial({ color: '#2a2418', emissive: '#d89a48', emissiveIntensity: 0.6 });
 
+const LAMP_GLOW = new THREE.MeshBasicMaterial({ color: '#ffc06a' });
+const MIST = new THREE.MeshBasicMaterial({ color: '#5f8f62', transparent: true, opacity: 0.1, depthWrite: false });
+/** Lamp posts along the lanes with warm lanterns; only the nearest few hold real lights (phone budget). */
+const LaneLamps: React.FC<{ spots: [number, number, number, number][] }> = ({ spots }) => {
+  const geo = useMemo(lampPost, []);
+  const lit = spots.slice(0, 6);
+  return (
+    <>
+      <Instances geo={geo} items={spots} />
+      {spots.map(([x, z, r], i) => {
+        const lx = x + Math.cos(-r) * 0.45, lz = z + Math.sin(-r) * 0.45;
+        return <mesh key={i} position={[lx, 2.85, lz]} material={LAMP_GLOW}><boxGeometry args={[0.16, 0.24, 0.16]} /></mesh>;
+      })}
+      {lit.map(([x, z], i) => <pointLight key={i} position={[x, 2.9, z]} color="#ffb257" intensity={2.2} distance={13} decay={1.6} />)}
+    </>
+  );
+};
+
+/** Low green mist sheets drifting over the lanes (cheap layered planes, no shaders). */
+const GroundMist: React.FC = () => {
+  const ref = useRef<THREE.Group>(null);
+  useFrame(({ clock }) => { const g = ref.current; if (g) g.children.forEach((c, i) => { c.position.x += Math.sin(clock.elapsedTime * 0.1 + i) * 0.004; }); });
+  const sheets = useMemo(() => Array.from({ length: 14 }, (_, i) => [Math.cos(i * 2.4) * (14 + i * 4), 0.4 + (i % 3) * 0.35, Math.sin(i * 2.4) * (14 + i * 4), 18 + rand(i) * 16] as const), []);
+  return <group ref={ref}>{sheets.map(([x, y, z, s], i) => <mesh key={i} position={[x, y, z]} rotation={[-Math.PI / 2, 0, i]} material={MIST}><planeGeometry args={[s, s * 0.6]} /></mesh>)}</group>;
+};
+
 const Crows: React.FC = () => {
   const ref = useRef<THREE.InstancedMesh>(null);
   const geo = useMemo(crow, []);
@@ -136,7 +180,7 @@ const Crows: React.FC = () => {
 
 export const VillageLook: React.FC = () => {
   const tex = useMemo(groundTexture, []);
-  const geos = useMemo(() => ({ tree: bareTree(), wall: stoneWall(), dog: animal('dog'), cat: animal('cat'), cow: animal('cow') }), []);
+  const geos = useMemo(() => ({ fence: fence(), tree: bareTree(), wall: stoneWall(), dog: animal('dog'), cat: animal('cat'), cow: animal('cow') }), []);
   const lay = useMemo(() => {
     const free = (x: number, z: number) => Math.hypot(x, z) > 12 && HOUSES.every(([hx, hz]) => Math.hypot(x - hx, z - hz) > 7) && !(x > -22 && x < -6 && z < -34 && z > -64) && Math.hypot(x + 70, z - 10) > 22;
     const trees: [number, number, number, number][] = [];
@@ -146,8 +190,17 @@ export const VillageLook: React.FC = () => {
     }
     const walls: [number, number, number, number][] = [];
     HOUSES.forEach(([x, z, r]) => { walls.push([x + Math.cos(r) * 5, z - Math.sin(r) * 5, r + Math.PI / 2, 1]); walls.push([x - Math.cos(r) * 5, z + Math.sin(r) * 5, r + Math.PI / 2, 1]); });
+    // fences line the lanes half-way to each house; lamps stand at lane starts and by every door
+    const fences: [number, number, number, number][] = [], lamps: [number, number, number, number][] = [];
+    HOUSES.forEach(([x, z], i) => {
+      const a = Math.atan2(z, x), d = Math.hypot(x, z) * 0.55, nx = -Math.sin(a), nz = Math.cos(a);
+      fences.push([Math.cos(a) * d + nx * 2.6, Math.sin(a) * d + nz * 2.6, -a, 1]);
+      if (i % 2) fences.push([Math.cos(a) * d - nx * 2.6, Math.sin(a) * d - nz * 2.6, -a + 0.08, 1]);
+      lamps.push([Math.cos(a) * 9 + nx * 1.8, Math.sin(a) * 9 + nz * 1.8, -a, 1]);
+    });
+    lamps.push([2, -40, 0, 1], [-2, -60, Math.PI, 1]);
     return {
-      trees, walls,
+      fences, lamps, trees, walls,
       dogs: [[8, 4, 1, 1], [-14, -6, 2.5, 1], [26, 14, 4, 1]] as [number, number, number, number][],
       cats: [[16, -6, 0.5, 1], [-24, -14, 3, 1], [4, -30, 1.2, 1], [-40, 8, 5, 1]] as [number, number, number, number][],
       cows: [[60, 40, 1, 1], [66, 46, 2.2, 1], [56, 50, 4, 1], [-60, -46, 0.3, 1]] as [number, number, number, number][],
@@ -155,13 +208,18 @@ export const VillageLook: React.FC = () => {
   }, []);
   return (
     <>
-      <color attach="background" args={['#9aa3ab']} />
-      <fog attach="fog" args={['#a3abb2', 18, 140]} />
-      <hemisphereLight args={['#c9d2da', '#5a5048', 0.85]} />
+      {/* Rainy-night horror mood (reference screenshots): dark teal-green fog, cold moonlit fill, warm lanterns. */}
+      <color attach="background" args={['#161c1e']} />
+      <fog attach="fog" args={['#1f2a26', 10, 115]} />
+      <hemisphereLight args={['#7c8e96', '#2a2620', 0.8]} />
+      <directionalLight position={[-40, 60, -30]} intensity={0.35} color="#9fb4c8" />
       <mesh rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[SIZE, SIZE]} />
-        <meshStandardMaterial map={tex} roughness={1} />
+        <meshStandardMaterial map={tex} roughness={0.55} metalness={0.15} />
       </mesh>
+      <Instances geo={geos.fence} items={lay.fences} />
+      <LaneLamps spots={lay.lamps} />
+      <GroundMist />
       <Instances geo={geos.tree} items={lay.trees} />
       <Instances geo={geos.wall} items={lay.walls} />
       <VillageChurch />
