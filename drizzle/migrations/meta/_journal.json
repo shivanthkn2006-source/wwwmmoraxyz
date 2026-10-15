@@ -50,6 +50,13 @@
       "when": 1791969309066,
       "tag": "0006_vr_story_events",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792055746609,
+      "tag": "0007_village_progress_merge",
+      "breakpoints": true
     }
   ]
 }

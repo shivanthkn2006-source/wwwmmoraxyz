@@ -9664,6 +9664,7 @@ export type Database = {
           level: number
           updated_at: string
           user_id: string
+          village: Json
         }
         Insert: {
           ammo?: Json
@@ -9673,6 +9674,7 @@ export type Database = {
           level?: number
           updated_at?: string
           user_id: string
+          village?: Json
         }
         Update: {
           ammo?: Json
@@ -9682,6 +9684,7 @@ export type Database = {
           level?: number
           updated_at?: string
           user_id?: string
+          village?: Json
         }
         Relationships: []
       }
