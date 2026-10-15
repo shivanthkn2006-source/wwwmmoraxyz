@@ -75,7 +75,7 @@ export const getEquipped = () => equipped;
 /** Stage 5 merchant upgrades: +6 attack per weapon level, +4 defence per armour level. */
 const UKEY = 'mmora-upgrades';
 export const getUpgrades = (): Record<string, number> => { try { return JSON.parse(localStorage.getItem(UKEY) || '{}'); } catch { return {}; } };
-export function upgradeGear(id: string) { const u = getUpgrades(); if ((u[id] ?? 0) >= 5) return false; u[id] = (u[id] ?? 0) + 1; localStorage.setItem(UKEY, JSON.stringify(u)); lls.forEach((l) => l()); return true; }
+export function upgradeGear(id: string) { const u = getUpgrades(); if ((u[id] ?? 0) >= 5) return false; u[id] = (u[id] ?? 0) + 1; localStorage.setItem(UKEY, JSON.stringify(u)); lls.forEach((l) => l()); villageChanged(); return true; }
 export function gearStats(ids: string[], lvl = level) {
   let attack = 5 + (lvl - 1) * 3, defence = (lvl - 1) * 2;
   const up = getUpgrades();
@@ -106,7 +106,7 @@ function pushSoon() {
   syncTimer = window.setTimeout(async () => {
     try {
       const { supabase, id } = await uid(); if (!id) return;
-      await supabase.from('vr_player_progress' as never).upsert({ user_id: id, level, gear: owned, equipped, ammo: getAmmo(), gold_herbs: getGoldHerbs(), updated_at: new Date().toISOString() } as never, { onConflict: 'user_id' });
+      await supabase.from('vr_player_progress' as never).upsert({ user_id: id, level, gear: owned, equipped, ammo: getAmmo(), gold_herbs: getGoldHerbs(), village: readVillage(), updated_at: new Date().toISOString() } as never, { onConflict: 'user_id' });
     } catch { /* offline: retried on the next change */ }
   }, 1500);
 }
@@ -115,13 +115,14 @@ export async function loadGearProgress() {
   try {
     const { supabase, id } = await uid(); if (!id || loadedFor === id) return;
     loadedFor = id;
-    const { data } = await supabase.from('vr_player_progress' as never).select('level,gear,equipped,ammo,gold_herbs,updated_at').eq('user_id', id).maybeSingle();
-    const row = data as { level: number; gear: string[]; equipped: string[]; ammo?: Record<string, { inMag: number; reserve: number }>; gold_herbs?: number; updated_at?: string } | null;
+    const { data } = await supabase.from('vr_player_progress' as never).select('level,gear,equipped,ammo,gold_herbs,village,updated_at').eq('user_id', id).maybeSingle();
+    const row = data as { level: number; gear: string[]; equipped: string[]; ammo?: Record<string, { inMag: number; reserve: number }>; gold_herbs?: number; village?: Partial<VillageProgress>; updated_at?: string } | null;
     if (row) {
       owned = [...new Set([...owned, ...row.gear])];
       if (!equipped.length) equipped = row.equipped.filter((x) => owned.includes(x));
       level = Math.max(level, row.level);
       const at = row.updated_at ? Date.parse(row.updated_at) : 0; mergeAmmo(row.ammo, at); mergeGoldHerbs(row.gold_herbs ?? 0, at);
+      applyVillage(row.village);
       try { localStorage.setItem(KEY, JSON.stringify(owned)); localStorage.setItem(EKEY, JSON.stringify(equipped)); localStorage.setItem(LKEY, String(level)); } catch { /* */ }
       ls.forEach((l) => l()); els.forEach((l) => l()); lls.forEach((l) => l());
     }
