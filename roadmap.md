@@ -37,9 +37,10 @@
 - [x] Clear roads/paths of props; move houses off roads (incl. castle road) (code + road test + preview screenshots; not walked signed-in)
 - [x] Villagers walk only on lanes/roads (code + test)
 - [x] Villager daily chores: milking 06–08/17–19, sweeping, firewood (code check only, not seen)
-- [ ] Wet reflective ground + lamp glow (partial: shinier when raining); film colour grading added (code only)
-- [ ] Detailed house fronts (carved stone, ivy, chimneys, balconies)
-- [ ] Detailed people; forest + rock detail on mountains
+- [x] Lamp glow halos + film colour grading (code + preview; wet reflections still partial)
+- [x] Detailed house fronts: carved door arch, chimney, ivy, balcony flower box (preview screenshot)
+- [x] More detailed people (code only) + pine forest and boulders on mountains (preview screenshot)
+- [x] Village sounds: wind, river, waterfall, wet footsteps, crickets, creaks, crows/dogs (code only, not heard)
 - [x] Real local rain/thunder: device location, any precipitation = rain, storm codes, visible rain + lightning bolt (tests + preview screenshots with test switch; not seen at user's real location)
 - [ ] Trailer video (last)
 
