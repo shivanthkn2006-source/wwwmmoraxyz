@@ -696,7 +696,7 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
 
       previousYaw.current = camera.rotation.y;
       if (getWorldState().mode === 'mmora' && getVRView().thirdPerson) {
-        camera.rotation.x = -Math.atan2(villageEyeHeight() - 1.6, AVATAR_AHEAD);
+        camera.rotation.x = -Math.atan2(Math.max(0, villageEyeHeight() - 1.6), AVATAR_AHEAD); // level at shoulder height
       }
 
       clampOrientation();
