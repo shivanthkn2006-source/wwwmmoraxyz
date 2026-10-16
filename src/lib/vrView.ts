@@ -6,6 +6,11 @@
 import { useSyncExternalStore } from 'react';
 
 export const CROUCH_SPEED = 0.45;
+export const AVATAR_AHEAD = 2.8;
+export const AVATAR_HEAD_Y = 1.8;
+export const ABOVE_HEAD_M = 1.524;
+/** Only the village chase view is raised; first person and Real Map stay unchanged. */
+export function villageEyeHeight() { return st.thirdPerson ? AVATAR_HEAD_Y + ABOVE_HEAD_M : 1.6; }
 type S = { thirdPerson: boolean; crouch: boolean; face: boolean };
 const KEY = 'vr-third-person';
 let st: S = { thirdPerson: (() => { try { return localStorage.getItem(KEY) !== '0'; } catch { return true; } })(), crouch: false, face: false };

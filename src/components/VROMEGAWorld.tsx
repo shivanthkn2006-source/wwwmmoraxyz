@@ -117,7 +117,8 @@ import VRGamepadHUD from './vr/VRGamepadHUD';
 import { RealMapWorld } from '@/worlds/realmap/RealMapWorld';
 import { JourneyTracker } from '@/worlds/JourneyTracker';
 import { PortalDoorway } from '@/worlds/portal/PortalDoorway';
-import { resolveMove } from '@/lib/vrSolids';
+import { resolveMove, resolveAvatarMove } from '@/lib/vrSolids';
+import { AVATAR_AHEAD, villageEyeHeight } from '@/lib/vrView';
 import { VRWorldList } from '@/components/vr/VRWorldList';
 import { VillageLook } from '@/worlds/mmora/VillageLook';
 import { VillageSky } from '@/worlds/mmora/VillageSky';
@@ -558,6 +559,7 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
   const { camera } = useThree();
   const velocity = useRef(new THREE.Vector3());
   const direction = useRef(new THREE.Vector3());
+  const previousYaw = useRef<number | null>(null);
   const eventDirection = useRef<string | null>(null);
   const eventSpeed = useRef(1);
   const eventExpiresAt = useRef(0);
@@ -1072,13 +1074,21 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
       const px = camera.position.x, pz = camera.position.z;
       camera.position.add(velocity.current.clone().multiplyScalar(dt));
       // Walls and buildings stop you, like the real world.
-      const [rx, rz] = resolveMove(px, pz, camera.position.x, camera.position.z, camera.position.y);
+      const village = getWorldState().mode === 'mmora';
+      const bodyY = camera.position.y - (village ? villageEyeHeight() - 1.6 : 0);
+      const yaw = camera.rotation.y;
+      const [rx, rz] = village && getVRView().thirdPerson
+        ? resolveAvatarMove(px, pz, camera.position.x, camera.position.z, previousYaw.current ?? yaw, yaw, AVATAR_AHEAD, bodyY)
+        : resolveMove(px, pz, camera.position.x, camera.position.z, bodyY);
+      previousYaw.current = yaw;
       camera.position.x = rx; camera.position.z = rz;
     }
 
     if (isGroundLocked.current) {
       // Floor under the player: 0 outside, stairs/upper storeys inside buildings.
-      const eye = 1.6 + floorAt(camera.position.x, camera.position.z, camera.position.y);
+      const village = getWorldState().mode === 'mmora', eyeHeight = village ? villageEyeHeight() : 1.6;
+      const yaw = camera.rotation.y, ahead = village && getVRView().thirdPerson ? AVATAR_AHEAD : 0;
+      const eye = eyeHeight + floorAt(camera.position.x - Math.sin(yaw) * ahead, camera.position.z - Math.cos(yaw) * ahead, camera.position.y - (eyeHeight - 1.6));
       if (jump && camera.position.y <= eye + 0.02) {
         verticalVelocity.current = 5.8;
       }

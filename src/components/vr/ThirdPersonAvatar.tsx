@@ -9,7 +9,7 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { getWorldState } from '@/worlds/worldMode';
-import { useVRView, wireVRViewKeys } from '@/lib/vrView';
+import { useVRView, wireVRViewKeys, AVATAR_AHEAD, villageEyeHeight } from '@/lib/vrView';
 import { useVRSelf } from '@/lib/vrSelf';
 import { useEquipped } from '@/lib/vrGear';
 import { useLook, loadLook } from '@/lib/vrLook';
@@ -30,7 +30,7 @@ import { HUMAN_COLORS as HC, HUMAN_MATERIAL, headGeometry } from '@/lib/vrHumanL
 const HEAD = headGeometry();
 const HEAD_F = headGeometry(true);
 
-const AHEAD = 2.8;
+const AHEAD = AVATAR_AHEAD;
 // Your own avatar matches the item-case portrait (other people keep the shared look):
 // navy shirt with sleeves rolled, yellow-edged collar, brown leather shoulder
 // holster and thigh holster, tan belt with steel buckle, off-white trousers, brown boots.
@@ -86,7 +86,7 @@ export const ThirdPersonAvatar: React.FC = () => {
     const d = Math.min(dt, 0.1);
     const yaw = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ').y;
     const fx = -Math.sin(yaw), fz = -Math.cos(yaw);
-    const ground = Math.max(0, camera.position.y - 1.6);
+    const ground = Math.max(0, camera.position.y - (getWorldState().mode === 'mmora' ? villageEyeHeight() : 1.6));
     // Only stand on a real street: hidden during the aerial view, before the
     // first street block has loaded, or while the camera is high above ground.
     const w = getWorldState();

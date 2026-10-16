@@ -1,9 +1,17 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest';
-import { boxPoly, inside, setStaticSolids, resolveMove } from '@/lib/vrSolids';
+import { boxPoly, inside, setStaticSolids, resolveMove, resolveAvatarMove, setBodySolid } from '@/lib/vrSolids';
 import { enterMMora, __resetWorldForTests } from '@/worlds/worldMode';
 
 describe('vrSolids', () => {
+  it('stops the avatar ahead of the camera at a closed door and another person', () => {
+    __resetWorldForTests(); enterMMora([0, 1.6, 0]);
+    setStaticSolids([boxPoly(0, -4, 4, 0.3)]);
+    expect(resolveAvatarMove(0, 0, 0, -1, 0, 0, 2.8)).toEqual([0, 0]);
+    setStaticSolids([]); setBodySolid('test-person', { x: 0, z: -4, radius: 0.35 });
+    expect(resolveAvatarMove(0, 0, 0, -1, 0, 0, 2.8)).toEqual([0, 0]);
+    setBodySolid('test-person', null);
+  });
   it('detects a point inside a house box', () => {
     const p = boxPoly(0, 0, 5, 5);
     expect(inside(0, 0, p)).toBe(true);

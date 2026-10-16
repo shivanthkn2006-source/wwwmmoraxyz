@@ -13,6 +13,9 @@ const R = 0.35; // body radius
 let cacheKey = '';
 let polys: Poly[] = [];
 const extra: Poly[] = [];
+type Body = { x: number; z: number; radius: number };
+const bodies = new Map<string, Body>();
+export function setBodySolid(id: string, body: Body | null) { if (body) bodies.set(id, body); else bodies.delete(id); }
 
 export function boxPoly(cx: number, cz: number, w: number, d: number, rot = 0): Poly {
   const c = Math.cos(rot), s = Math.sin(rot);
@@ -73,7 +76,7 @@ const blocked = (x: number, z: number, list: Poly[]) => {
 /** Pure-ish: returns the allowed position after trying to move from (px,pz) to (nx,nz). */
 export function resolveMove(px: number, pz: number, nx: number, nz: number, y = 1.6): [number, number] {
   if (y > 8) return [nx, nz]; // flying / aerial view
-  const list = getWorldState().mode === 'real' ? realPolys() : extra;
+  const list = getWorldState().mode === 'real' ? realPolys() : [...extra, ...Array.from(bodies.values(), (b) => boxPoly(b.x, b.z, b.radius * 2, b.radius * 2))];
   if (!list.length) return [nx, nz];
   const near = list.filter((p) => (p.y0 === undefined || y >= p.y0) && (p.y1 === undefined || y < p.y1) && nx > p.minX - 3 && nx < p.maxX + 3 && nz > p.minZ - 3 && nz < p.maxZ + 3);
   if (!near.length || !blocked(nx, nz, near)) return [nx, nz];
@@ -81,6 +84,14 @@ export function resolveMove(px: number, pz: number, nx: number, nz: number, y = 
   if (!blocked(nx, pz, near)) return [nx, pz];
   if (!blocked(px, nz, near)) return [px, nz];
   return [px, pz];
+}
+
+/** Resolve the body ahead of the chase camera, including turns in place. */
+export function resolveAvatarMove(px: number, pz: number, nx: number, nz: number, oldYaw: number, yaw: number, ahead: number, eyeY = 1.6): [number, number] {
+  const ox = -Math.sin(oldYaw) * ahead, oz = -Math.cos(oldYaw) * ahead;
+  const fx = -Math.sin(yaw) * ahead, fz = -Math.cos(yaw) * ahead;
+  const [x, z] = resolveMove(px + ox, pz + oz, nx + fx, nz + fz, eyeY);
+  return [x - fx, z - fz];
 }
 
 /** Nearest open ground to (x,z) with no building within `clear` metres (Real Map), searching outward up to `maxR`. */
