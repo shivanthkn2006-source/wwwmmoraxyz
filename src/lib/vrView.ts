@@ -8,10 +8,10 @@ import { useSyncExternalStore } from 'react';
 export const CROUCH_SPEED = 0.45;
 export const AVATAR_AHEAD = 2.8;
 export const AVATAR_HEAD_Y = 1.8;
-/** Village chase camera sits at the avatar's shoulder (~1.45 m), like classic survival-horror over-the-shoulder view. */
-export const SHOULDER_EYE_M = 1.45;
+/** Village chase camera: about 0.6 m above the avatar's head (eye 2.4 m), looking slightly down at the avatar. */
+export const CHASE_EYE_M = 2.4;
 /** Only the village chase view is adjusted; first person and Real Map stay unchanged. */
-export function villageEyeHeight() { return st.thirdPerson ? SHOULDER_EYE_M : 1.6; }
+export function villageEyeHeight() { return st.thirdPerson ? CHASE_EYE_M : 1.6; }
 /** Turn by d radians around the avatar standing `ahead` m in front of the camera; returns the new camera [x, z, yaw]. */
 export function orbitAvatar(x: number, z: number, yaw: number, d: number, ahead = AVATAR_AHEAD): [number, number, number] {
   const ax = x - Math.sin(yaw) * ahead, az = z - Math.cos(yaw) * ahead, ny = yaw + d;

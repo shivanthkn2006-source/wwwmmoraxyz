@@ -12,7 +12,7 @@ describe('VR view + quest rewards', () => {
   });
 });
 
-import { orbitAvatar, villageEyeHeight, AVATAR_AHEAD, SHOULDER_EYE_M } from '@/lib/vrView';
+import { orbitAvatar, villageEyeHeight, AVATAR_AHEAD, CHASE_EYE_M } from '@/lib/vrView';
 describe('village chase camera', () => {
   it('turning keeps the avatar on the same spot', () => {
     const avatar = (x: number, z: number, y: number) => [x - Math.sin(y) * AVATAR_AHEAD, z - Math.cos(y) * AVATAR_AHEAD];
@@ -21,9 +21,9 @@ describe('village chase camera', () => {
     const [a0, b0] = avatar(3, -10, 2.1), [a1, b1] = avatar(x, z, y);
     expect(a1).toBeCloseTo(a0, 6); expect(b1).toBeCloseTo(b0, 6);
   });
-  it('third-person camera sits at shoulder height (1.45 m)', () => {
+  it('third-person camera sits about 0.6 m above the head (2.4 m)', () => {
     if (!getVRView().thirdPerson) toggleThirdPerson();
-    expect(villageEyeHeight()).toBe(SHOULDER_EYE_M);
-    expect(SHOULDER_EYE_M).toBe(1.45);
+    expect(villageEyeHeight()).toBe(CHASE_EYE_M);
+    expect(CHASE_EYE_M).toBe(2.4);
   });
 });
