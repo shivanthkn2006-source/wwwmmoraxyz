@@ -750,11 +750,11 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
       } else if (action === 'look_down') {
         camera.rotation.x = Math.max(camera.rotation.x - 0.22, -1.45);
       } else if (action === 'look_left') {
-        camera.rotation.y += 0.35;
+        turnYaw(camera, 0.35);
       } else if (action === 'look_right') {
-        camera.rotation.y -= 0.35;
+        turnYaw(camera, -0.35);
       } else if (action === 'look_around') {
-        camera.rotation.y += Math.PI;
+        turnYaw(camera, Math.PI);
       } else if (action === 'zoom_in') {
         camera.position.z -= 5;
       } else if (action === 'zoom_out') {
