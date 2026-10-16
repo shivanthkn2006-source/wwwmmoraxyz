@@ -123,7 +123,7 @@ import { readSave } from '@/lib/vrSaveGame';
 import { VRWorldList } from '@/components/vr/VRWorldList';
 import { VillageLook } from '@/worlds/mmora/VillageLook';
 import { VillageSky } from '@/worlds/mmora/VillageSky';
-import { useWorldState, returnToReal, RETURN_PORTAL_POS, getWorldState, entryHeight, isStartSettled, hasResume } from '@/worlds/worldMode';
+import { useWorldState, returnToReal, RETURN_PORTAL_POS, getWorldState, entryHeight, isStartSettled, hasResume, consumeCameraResume } from '@/worlds/worldMode';
 import { LandscapeViewportGuard } from './vr/LandscapeViewportGuard';
 import { RealMapStatus } from './vr/RealMapStatus';
 import { RealStartCityPicker } from './vr/RealStartCityPicker';
