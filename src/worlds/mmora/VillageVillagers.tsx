@@ -233,7 +233,20 @@ const Villager: React.FC<{ route: [number, number][]; female: boolean; offset: n
   React.useEffect(() => registerUse(() => {
     const r = root.current; if (!r || st.current.down > 0) return null;
     const weapon = equippedWeapon();
-    if (!weapon) return null;
+    if (!weapon || !st.current.hostile) {
+      // Any calm villager sells a headlamp for night walks.
+      const ps0 = playerSpot(camera); const d0 = Math.hypot(ps0.x - r.position.x, ps0.z - r.position.z);
+      if (!hasGear('headlamp') && !st.current.hostile && r.visible && d0 < 2.5) return { dist: d0 * 0.6, reach: 2.5, label: 'Buy Headlamp · 15 coins', run: () => {
+        void import('@/lib/vrPickups').then(async (m) => {
+          const gm = await import('@/lib/vrGear');
+          if (gm.hasGear('headlamp')) return;
+          if (!m.spendCoins(15)) { window.dispatchEvent(new CustomEvent('vr-toast', { detail: 'Not enough coins (15 needed)' })); return; }
+          gm.takeGear(gm.GEAR.find((g) => g.id === 'headlamp')!); if (!gm.isEquipped('headlamp')) gm.toggleEquip('headlamp');
+          window.dispatchEvent(new CustomEvent('vr-toast', { detail: 'Headlamp bought and worn · L to switch' }));
+        });
+      } };
+      if (!weapon) return null;
+    }
     const wf = WEAPON_FIGHT[weapon];
     const ps = playerSpot(camera); const d = Math.hypot(ps.x - r.position.x, ps.z - r.position.z);
     if (d > wf.reach) return null;

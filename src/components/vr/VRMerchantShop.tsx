@@ -18,6 +18,7 @@ export const WARES: Ware[] = [
   { id: 'pistol', name: 'Handgun', price: 80, detail: '9mm handgun. Attack +12.', art: <GearArt id="pistol" />, gear: 'pistol', give: () => takeGear(gear('pistol')) },
   { id: 'shotgun', name: 'Shotgun', price: 150, detail: 'Pump shotgun. Attack +25.', art: <GearArt id="shotgun" />, gear: 'shotgun', give: () => takeGear(gear('shotgun')) },
   { id: 'rocket', name: 'Rocket Launcher', price: 400, detail: 'Mercenary launcher. Attack +80, 1 rocket per load.', art: <GearArt id="rocket" />, gear: 'rocket', give: () => takeGear(gear('rocket')) },
+  { id: 'headlamp', name: "Miner's Headlamp", price: 15, detail: 'Forehead lamp for night walks (L to switch).', art: <GearArt id="headlamp" />, gear: 'headlamp', give: () => takeGear(gear('headlamp')) },
   { id: 'ammo9', name: 'Handgun ammo ×10', price: 15, detail: 'Ten 9mm rounds.', art: <GearArt id="pistol" />, give: () => addAmmo('pistol', 10) },
   { id: 'shells', name: 'Shotgun shells ×5', price: 25, detail: 'Five shells.', art: <GearArt id="shotgun" />, give: () => addAmmo('shotgun', 5) },
   { id: 'up-pistol', name: 'Handgun upgrade', price: 60, detail: 'Attack +6 per level (max 5).', art: <GearArt id="pistol" />, give: () => upgradeGear('pistol') },

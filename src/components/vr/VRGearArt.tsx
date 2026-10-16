@@ -55,6 +55,12 @@ const ART: Record<string, React.ReactNode> = {
     {[24, 32, 40].map((y) => <g key={y}><rect x="14" y={y} width="20" height="2.4" fill="#4a2c15" /><rect x="22" y={y - 0.8} width="4" height="4" fill="none" stroke="#b9a37a" /></g>)}
     <path d="M8 16 L14 20 M40 16 L34 20" stroke="#8a5a36" />
   </S>,
+  // Headlamp: elastic band with a round lamp and lens.
+  headlamp: <S vb="0 0 52 40">
+    <path d="M4 22 Q26 10 48 22" stroke="#2b2b2b" strokeWidth="5" fill="none" />
+    <rect x="17" y="10" width="18" height="14" rx="3" fill="#3a3d40" stroke="#1d1f21" />
+    <circle cx="26" cy="17" r="5" fill="#fff1c8" stroke="#a9a28a" />
+  </S>,
   // Iron helmet: dark grey steel dome, rivets, brim.
   helmet: <S vb="0 0 52 40">
     <path d="M6 30 Q6 6 26 6 Q46 6 46 30 Z" fill="#6d737a" stroke="#33383d" />
