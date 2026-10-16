@@ -118,7 +118,7 @@ import { RealMapWorld } from '@/worlds/realmap/RealMapWorld';
 import { JourneyTracker } from '@/worlds/JourneyTracker';
 import { PortalDoorway } from '@/worlds/portal/PortalDoorway';
 import { resolveMove, resolveAvatarMove } from '@/lib/vrSolids';
-import { AVATAR_AHEAD, villageEyeHeight } from '@/lib/vrView';
+import { AVATAR_AHEAD, villageEyeHeight, orbitAvatar } from '@/lib/vrView';
 import { readSave } from '@/lib/vrSaveGame';
 import { VRWorldList } from '@/components/vr/VRWorldList';
 import { VillageLook } from '@/worlds/mmora/VillageLook';
@@ -556,6 +556,19 @@ const HoloWall: React.FC<{
 // ═══════════════════════════════════════════════════════════════════════════════
 // Player Controller - WASD Movement with Mouse Look
 // ═══════════════════════════════════════════════════════════════════════════════
+/**
+ * Turn the view. In the village chase view the avatar stands AVATAR_AHEAD in
+ * front of the camera, so the camera swings round the avatar and the avatar
+ * turns on the spot (instead of the avatar circling round the camera).
+ */
+function turnYaw(camera: THREE.Camera, d: number) {
+  if (!d) return;
+  const v = getVRView();
+  if (getWorldState().mode !== 'mmora' || !v.thirdPerson || v.face) { camera.rotation.y += d; return; }
+  const [x, z, yaw] = orbitAvatar(camera.position.x, camera.position.z, camera.rotation.y, d);
+  camera.position.x = x; camera.position.z = z; camera.rotation.y = yaw;
+}
+
 const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitions?: boolean }> = ({ disabled, blockHighAltitudeTransitions = false }) => {
   const { camera } = useThree();
   const velocity = useRef(new THREE.Vector3());
@@ -580,6 +593,7 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
 
   useEffect(() => {
     camera.rotation.order = 'YXZ';
+    if (import.meta.env.DEV) (window as unknown as Record<string, unknown>).__vrCam = camera;
 
     const clampOrientation = () => {
       camera.rotation.x = THREE.MathUtils.clamp(camera.rotation.x, -1.45, 1.45);
@@ -679,7 +693,7 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
 
       previousYaw.current = camera.rotation.y;
       if (getWorldState().mode === 'mmora' && getVRView().thirdPerson) {
-        camera.rotation.x = -Math.atan2(villageEyeHeight() - 1.6, AVATAR_AHEAD);
+        camera.rotation.x = -Math.atan2(Math.max(0, villageEyeHeight() - 1.6), AVATAR_AHEAD); // level at shoulder height
       }
 
       clampOrientation();
@@ -700,16 +714,16 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
 
       switch (rotateDirection) {
         case 'left':
-          camera.rotation.y += radians;
+          turnYaw(camera, radians);
           break;
         case 'right':
-          camera.rotation.y -= radians;
+          turnYaw(camera, -radians);
           break;
         case 'around':
-          camera.rotation.y += Math.PI;
+          turnYaw(camera, Math.PI);
           break;
         case 'full':
-          camera.rotation.y += Math.PI * 2;
+          turnYaw(camera, Math.PI * 2);
           break;
         default:
           break;
@@ -733,11 +747,11 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
       } else if (action === 'look_down') {
         camera.rotation.x = Math.max(camera.rotation.x - 0.22, -1.45);
       } else if (action === 'look_left') {
-        camera.rotation.y += 0.35;
+        turnYaw(camera, 0.35);
       } else if (action === 'look_right') {
-        camera.rotation.y -= 0.35;
+        turnYaw(camera, -0.35);
       } else if (action === 'look_around') {
-        camera.rotation.y += Math.PI;
+        turnYaw(camera, Math.PI);
       } else if (action === 'zoom_in') {
         camera.position.z -= 5;
       } else if (action === 'zoom_out') {
@@ -841,7 +855,7 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
     const handleMouseMove = (event: MouseEvent) => {
       if (!isDraggingLook.current || disabled) return;
 
-      camera.rotation.y -= event.movementX * 0.0024;
+      turnYaw(camera, -event.movementX * 0.0024);
       camera.rotation.x -= event.movementY * 0.0018;
       clampOrientation();
     };
@@ -864,7 +878,7 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
       const dx = touch.clientX - touchLookRef.current.x;
       const dy = touch.clientY - touchLookRef.current.y;
 
-      camera.rotation.y -= dx * 0.004;
+      turnYaw(camera, -dx * 0.004);
       camera.rotation.x -= dy * 0.003;
       clampOrientation();
 
@@ -880,7 +894,7 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
     const handleCameraLook = (e: CustomEvent) => {
       if (disabled) return;
       const { dx, dy } = e.detail || {};
-      if (typeof dx === 'number') camera.rotation.y -= dx;
+      if (typeof dx === 'number') turnYaw(camera, -dx);
       if (typeof dy === 'number') camera.rotation.x -= dy;
       clampOrientation();
     };
@@ -1083,7 +1097,7 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
     const step = walkStep(input, dt, backTurnLeft.current, backWasDown.current);
     backTurnLeft.current = step.backTurnLeft;
     backWasDown.current = input.backward;
-    camera.rotation.y += step.yawDelta;
+    turnYaw(camera, step.yawDelta);
 
     const isRunning = staminaTick(dt, run || eventSpeed.current > 1, step.move);
     const speed = getVRView().crouch ? WALK_MPS * CROUCH_SPEED : isRunning ? RUN_MPS : WALK_MPS;
@@ -1102,7 +1116,7 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
       const bodyY = camera.position.y - (village ? villageEyeHeight() - 1.6 : 0);
       const yaw = camera.rotation.y;
       const [rx, rz] = village && getVRView().thirdPerson
-        ? resolveAvatarMove(px, pz, camera.position.x, camera.position.z, previousYaw.current ?? yaw, yaw, AVATAR_AHEAD, bodyY)
+        ? resolveAvatarMove(px, pz, camera.position.x, camera.position.z, getVRView().face ? (previousYaw.current ?? yaw) : yaw, yaw, AVATAR_AHEAD, bodyY)
         : resolveMove(px, pz, camera.position.x, camera.position.z, bodyY);
       previousYaw.current = yaw;
       camera.position.x = rx; camera.position.z = rz;
@@ -1171,10 +1185,10 @@ const RotationController: React.FC = () => {
     if (isAnimating.current) {
       const diff = targetRotation.current - camera.rotation.y;
       if (Math.abs(diff) < 0.01) {
-        camera.rotation.y = targetRotation.current;
+        turnYaw(camera, diff);
         isAnimating.current = false;
       } else {
-        camera.rotation.y += diff * delta * 3;
+        turnYaw(camera, diff * delta * 3);
       }
     }
   });
