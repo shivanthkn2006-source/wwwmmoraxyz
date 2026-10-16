@@ -19,11 +19,11 @@ export interface WalkStep { yawDelta: number; move: boolean; backTurnLeft: numbe
  * owed after Down / S was pressed (π on the first frame of a press).
  */
 export function walkStep(i: WalkInput, dt: number, _backTurnLeft: number, _backWasDown: boolean): WalkStep {
-  // Down / S steps straight backwards, still facing forward (no about-turn,
-  // no circling). Left/right turn on the spot.
+  // Survival-horror style: Left/Right turn the avatar on the spot (no walking),
+  // Down / S steps straight backwards, still facing forward. Only Up/Down walk.
   const turn = (i.left ? 1 : 0) - (i.right ? 1 : 0);
   const yawDelta = turn * TURN_RAD_PS * dt;
-  const move = i.forward || i.backward || i.left || i.right;
+  const move = i.forward || i.backward;
   return { yawDelta, move, backTurnLeft: 0, moveYawOffset: i.backward && !i.forward ? Math.PI : 0 };
 }
 
