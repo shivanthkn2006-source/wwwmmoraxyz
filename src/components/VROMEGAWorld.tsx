@@ -1119,7 +1119,7 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
       const bodyY = camera.position.y - (village ? villageEyeHeight() - 1.6 : 0);
       const yaw = camera.rotation.y;
       const [rx, rz] = village && getVRView().thirdPerson
-        ? resolveAvatarMove(px, pz, camera.position.x, camera.position.z, previousYaw.current ?? yaw, yaw, AVATAR_AHEAD, bodyY)
+        ? resolveAvatarMove(px, pz, camera.position.x, camera.position.z, getVRView().face ? (previousYaw.current ?? yaw) : yaw, yaw, AVATAR_AHEAD, bodyY)
         : resolveMove(px, pz, camera.position.x, camera.position.z, bodyY);
       previousYaw.current = yaw;
       camera.position.x = rx; camera.position.z = rz;
