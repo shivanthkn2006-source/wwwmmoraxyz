@@ -7,6 +7,7 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { registerUse } from '@/lib/vrUse';
+import { getVRView, AVATAR_AHEAD } from '@/lib/vrView';
 import { MMoraSigns } from './MMoraSigns';
 import { setSolidGroup, wallPieces } from '@/lib/vrSolids';
 import { usePickups, takePickup, isTaken, type Pickup } from '@/lib/vrPickups';
@@ -236,7 +237,9 @@ export const PickupHouses: React.FC = () => {
   }, [doors]);
 
   useEffect(() => registerUse(() => {
-    const c = camera.position;
+    const yaw = camera.rotation.y;
+    const ahead = getVRView().thirdPerson ? AVATAR_AHEAD : 0;
+    const c = { x: camera.position.x - Math.sin(yaw) * ahead, z: camera.position.z - Math.cos(yaw) * ahead };
     let best: { dist: number; label: string; run: () => void } | null = null;
     HOUSES.forEach(([x, z, r], i) => {
       if (doors.includes(`h${i}`)) return;

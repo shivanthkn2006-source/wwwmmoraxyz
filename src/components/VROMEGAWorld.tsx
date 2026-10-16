@@ -119,10 +119,11 @@ import { JourneyTracker } from '@/worlds/JourneyTracker';
 import { PortalDoorway } from '@/worlds/portal/PortalDoorway';
 import { resolveMove, resolveAvatarMove } from '@/lib/vrSolids';
 import { AVATAR_AHEAD, villageEyeHeight } from '@/lib/vrView';
+import { readSave } from '@/lib/vrSaveGame';
 import { VRWorldList } from '@/components/vr/VRWorldList';
 import { VillageLook } from '@/worlds/mmora/VillageLook';
 import { VillageSky } from '@/worlds/mmora/VillageSky';
-import { useWorldState, returnToReal, RETURN_PORTAL_POS, getWorldState, entryHeight } from '@/worlds/worldMode';
+import { useWorldState, returnToReal, RETURN_PORTAL_POS, getWorldState, entryHeight, isStartSettled, hasResume } from '@/worlds/worldMode';
 import { LandscapeViewportGuard } from './vr/LandscapeViewportGuard';
 import { RealMapStatus } from './vr/RealMapStatus';
 import { RealStartCityPicker } from './vr/RealStartCityPicker';
@@ -560,6 +561,7 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
   const velocity = useRef(new THREE.Vector3());
   const direction = useRef(new THREE.Vector3());
   const previousYaw = useRef<number | null>(null);
+  const chaseHeight = useRef(0);
   const eventDirection = useRef<string | null>(null);
   const eventSpeed = useRef(1);
   const eventExpiresAt = useRef(0);
@@ -673,6 +675,11 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
         camera.lookAt(lookAt[0], lookAt[1], lookAt[2]);
       } else if (destination === 'f1_circuit') {
         camera.lookAt(1100, 1.6, -560);
+      }
+
+      previousYaw.current = camera.rotation.y;
+      if (getWorldState().mode === 'mmora' && getVRView().thirdPerson) {
+        camera.rotation.x = -Math.atan2(villageEyeHeight() - 1.6, AVATAR_AHEAD);
       }
 
       clampOrientation();
@@ -972,7 +979,17 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
 
     // Root-cause guard: force deterministic ground spawn and re-assert after mount spikes.
     // The Real Map entry flight deliberately starts high, so it is left alone.
-    if (!getWorldState().aerial) moveToGroundSpawn();
+    if (!getWorldState().aerial && !isStartSettled() && !hasResume() && getWorldState().mode === 'real') moveToGroundSpawn();
+    // Switching from Real Map remounts this controller; resume events may have
+    // fired against the outgoing controller while the village chunk loaded.
+    if (getWorldState().mode === 'mmora') {
+      const saved = readSave();
+      if (saved?.mode === 'mmora') handleTeleport(new CustomEvent('vr-teleport', { detail: {
+        position: saved.pos,
+        lookAt: [saved.pos[0] - Math.sin(saved.yaw) * 10, saved.pos[1], saved.pos[2] - Math.cos(saved.yaw) * 10],
+        lockGround: true,
+      } }));
+    }
 
     const spawnStabilizers = [900, 2200].map((delay) =>
       window.setTimeout(() => {
@@ -1009,6 +1026,13 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
 
   useFrame((_, delta) => {
     if (disabled) return;
+
+    const wantedHeight = getWorldState().mode === 'mmora' ? villageEyeHeight() - 1.6 : 0;
+    if (wantedHeight !== chaseHeight.current) {
+      camera.position.y += wantedHeight - chaseHeight.current;
+      camera.rotation.x = wantedHeight > 0 ? -Math.atan2(wantedHeight, AVATAR_AHEAD) : 0;
+      chaseHeight.current = wantedHeight;
+    }
 
     const keys = getKeys();
     const forward = Boolean(keys.forward || keyStateRef.current.forward);
@@ -1425,7 +1449,7 @@ const VROMEGAWorld: React.FC<VROMEGAWorldProps> = ({
 
   // Ensure camera reliably exits satellite mode even under low-FPS conditions
   useEffect(() => {
-    if (!isActive || !hasSatelliteEntryCompleted) return;
+    if (!isActive || !hasSatelliteEntryCompleted || getWorldState().mode === 'mmora' || hasResume() || isStartSettled()) return;
 
     const timers = [0, 220, 900].map((delay) =>
       window.setTimeout(() => {

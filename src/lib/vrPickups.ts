@@ -134,7 +134,9 @@ export async function pushCloud() {
     // Never upload before this device has read the account copy: an empty or
     // stale device must not overwrite coins/pickups saved from another session.
     if (pulledFor !== uid) { await pullCloud(true); if (pulledFor !== uid) return; }
-    await supabase.from('vr_save_games' as never).upsert({ user_id: uid, data: { pickups: st, save: readSave(), explore: readExplore() }, updated_at: new Date().toISOString() } as never);
+    const { error } = await supabase.from('vr_save_games' as never).upsert({ user_id: uid, data: { pickups: st, save: readSave(), explore: readExplore() }, updated_at: new Date().toISOString() } as never);
+    if (error) { window.dispatchEvent(new CustomEvent('vr-save-status', { detail: { account: false } })); return; }
+    window.dispatchEvent(new CustomEvent('vr-save-status', { detail: { account: true } }));
   } catch { /* offline: next save retries */ }
 }
 let pulled = false;
@@ -144,7 +146,7 @@ export async function pullCloud(force = false) {
   if (pulled && !force) return; pulled = true;
   try {
     const { data } = await supabase.auth.getSession();
-    const uid = data.session?.user?.id; if (!uid) return;
+    const uid = data.session?.user?.id; if (!uid) { pulled = false; return; }
     const { data: row, error } = await supabase.from('vr_save_games' as never).select('data').eq('user_id', uid).maybeSingle();
     if (error) { pulled = false; return; }
     const d = (row as { data?: { pickups?: State; save?: VRSave; explore?: { cells?: Record<string, string[]>; portals?: Record<string, number> } } } | null)?.data;
