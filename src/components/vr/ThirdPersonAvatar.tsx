@@ -145,6 +145,11 @@ export const ThirdPersonAvatar: React.FC = () => {
         {/* tan belt with steel buckle */}
         <mesh position={[0, 0.03, 0]} material={mats.belt}><boxGeometry args={[0.45, 0.07, 0.26]} /></mesh>
         <mesh position={[0, 0.03, 0.132]} material={mats.steel}><boxGeometry args={[0.07, 0.05, 0.01]} /></mesh>
+        {eq.includes('headlamp') && <group position={[0, 0.86, 0]}>
+          <mesh rotation={[Math.PI / 2, 0, 0]}><torusGeometry args={[0.135, 0.012, 6, 20]} /><meshStandardMaterial color="#1e1e1e" roughness={0.9} /></mesh>
+          <mesh position={[0, 0, 0.14]}><boxGeometry args={[0.07, 0.05, 0.04]} /><meshStandardMaterial color="#383b3e" metalness={0.5} roughness={0.4} /></mesh>
+          <mesh position={[0, 0, 0.162]} rotation={[Math.PI / 2, 0, 0]}><cylinderGeometry args={[0.018, 0.018, 0.006, 12]} /><meshBasicMaterial color="#fff2c8" /></mesh>
+        </group>}
         {eq.includes('helmet') && <mesh position={[0, 0.88, 0]}><sphereGeometry args={[0.16, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.55]} /><meshStandardMaterial color="#6b6f74" metalness={0.8} roughness={0.35} /></mesh>}
         {eq.includes('vest') && <mesh position={[0, 0.34, 0]}><boxGeometry args={[0.47, 0.5, 0.28]} /><meshStandardMaterial color="#5a3a22" roughness={0.8} /></mesh>}
         {([[armL, -0.28], [armR, 0.28]] as const).map(([ref, x], i) => (

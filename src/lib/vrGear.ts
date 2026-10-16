@@ -22,6 +22,7 @@ export const GEAR: Gear[] = [
   { id: 'crest', kind: 'quest', name: "Lord's Crest", icon: '🛡️', detail: 'Found in the castle keep. Bears the M\'Mora mark.', pos: [-70, 0.9, 1] },
   { id: 'medallion', kind: 'quest', name: 'Church Medallion', icon: '🏅', detail: 'Left on the church altar.', pos: [-14, 1.7, -59.2] },
   { id: 'rocket', kind: 'weapon', name: 'Rocket Launcher', icon: '🚀', detail: 'Mercenary rocket launcher. Sold only by the merchant.', pos: [0, -50, 0], shop: true },
+  { id: 'headlamp', kind: 'armour', name: "Miner's Headlamp", icon: '🔦', detail: 'Strap-on forehead lamp for night walks. Press L to switch on/off. Sold by villagers for 15 coins.', pos: [0, -50, 0], shop: true },
   { id: 'map', kind: 'quest', name: 'Old Village Map', icon: '🗺️', detail: 'Marks the church, the castle and the shore.', pos: [16, 0.9, -20] },
 ];
 

@@ -21,9 +21,9 @@ function col(g: THREE.BufferGeometry, c: string) {
   ng.setAttribute('color', new THREE.BufferAttribute(a, 3)); return ng;
 }
 const VC = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9 });
-const FAR = new THREE.MeshBasicMaterial({ color: '#1d2528', fog: false });
-const FAR2 = new THREE.MeshBasicMaterial({ color: '#253034', fog: false });
-const NEAR_RIDGE = new THREE.MeshBasicMaterial({ color: '#141b1c', fog: false });
+const FAR = new THREE.MeshBasicMaterial({ color: '#34434a', fog: false });
+const FAR2 = new THREE.MeshBasicMaterial({ color: '#3d4e55', fog: false });
+const NEAR_RIDGE = new THREE.MeshBasicMaterial({ color: '#25302f', fog: false });
 
 export const RIVER_Z = -104;
 export { STATUE_POS };
