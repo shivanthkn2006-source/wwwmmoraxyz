@@ -9,10 +9,10 @@ import { realRoom } from '@/worlds/meet/MeetPresence';
 const none = { forward: false, backward: false, left: false, right: false };
 
 describe('human walking', () => {
-  it('right arrow turns the camera right and walks', () => {
+  it('right arrow turns on the spot without walking', () => {
     const s = walkStep({ ...none, right: true }, 0.5, 0, false);
     expect(s.yawDelta).toBeCloseTo(-TURN_RAD_PS * 0.5);
-    expect(s.move).toBe(true);
+    expect(s.move).toBe(false);
   });
   it('left arrow turns left', () => {
     expect(walkStep({ ...none, left: true }, 0.1, 0, false).yawDelta).toBeGreaterThan(0);
