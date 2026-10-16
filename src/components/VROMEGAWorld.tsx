@@ -556,6 +556,22 @@ const HoloWall: React.FC<{
 // ═══════════════════════════════════════════════════════════════════════════════
 // Player Controller - WASD Movement with Mouse Look
 // ═══════════════════════════════════════════════════════════════════════════════
+/**
+ * Turn the view. In the village chase view the avatar stands AVATAR_AHEAD in
+ * front of the camera, so the camera swings round the avatar and the avatar
+ * turns on the spot (instead of the avatar circling round the camera).
+ */
+function turnYaw(camera: THREE.Camera, d: number) {
+  if (!d) return;
+  const v = getVRView();
+  if (getWorldState().mode !== 'mmora' || !v.thirdPerson || v.face) { camera.rotation.y += d; return; }
+  const y0 = camera.rotation.y;
+  const ax = camera.position.x - Math.sin(y0) * AVATAR_AHEAD, az = camera.position.z - Math.cos(y0) * AVATAR_AHEAD;
+  camera.rotation.y = y0 + d;
+  camera.position.x = ax + Math.sin(camera.rotation.y) * AVATAR_AHEAD;
+  camera.position.z = az + Math.cos(camera.rotation.y) * AVATAR_AHEAD;
+}
+
 const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitions?: boolean }> = ({ disabled, blockHighAltitudeTransitions = false }) => {
   const { camera } = useThree();
   const velocity = useRef(new THREE.Vector3());
