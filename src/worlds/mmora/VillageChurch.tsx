@@ -13,6 +13,7 @@ import { setSolidGroup, wallPieces } from '@/lib/vrSolids';
 import { CHURCH } from './villageMap';
 import { registerLit } from '@/lib/vrLights';
 import { PooledLight } from '../LightPool';
+import { playerSpot } from './VillageVillagers';
 export const CX = CHURCH.cx, CZ = CHURCH.cz; // church centre, on dry land north of the houses (clear of the sea)
 const W = CHURCH.w, L = CHURCH.l, H = 8, T = 0.35;
 
@@ -68,7 +69,8 @@ export const VillageChurch: React.FC = () => {
   const doorPos = useMemo(() => new THREE.Vector3(CX, 0, CZ + L / 2 + 2.5 + 3), []); // in front of the tower door
   useFrame((_, dt) => { if (door.current) door.current.rotation.y = THREE.MathUtils.damp(door.current.rotation.y, open ? -1.7 : 0, 4, dt); });
   useEffect(() => registerUse(() => {
-    const d = Math.hypot(camera.position.x - doorPos.x, camera.position.z - doorPos.z);
+    const ps = playerSpot(camera);
+    const d = Math.hypot(ps.x - doorPos.x, ps.z - doorPos.z);
     return { dist: d * 0.6, reach: 2.1, label: open ? 'Close the church door' : 'Open the church door', run: () => setOpen((v) => !v) };
   }), [camera, doorPos, open]);
   // Solid stone: nave, front wall, tower; the oak door blocks while shut.

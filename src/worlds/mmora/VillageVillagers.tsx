@@ -10,6 +10,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { WALK_MPS, RUN_MPS } from '@/lib/vrWalk';
 import { registerUse } from '@/lib/vrUse';
+import { setBodySolid } from '@/lib/vrSolids';
 import { getEquipped, gearStats, equippedWeapon, WEAPON_FIGHT } from '@/lib/vrGear';
 import { fire, reload, canReload, usesAmmo, getAmmo, dropAmmo } from '@/lib/vrAmmo';
 const lastSwing = { v: 0 };
@@ -110,6 +111,8 @@ const Villager: React.FC<{ route: [number, number][]; female: boolean; offset: n
   const pail = useRef<THREE.Group>(null), broom = useRef<THREE.Group>(null), logs = useRef<THREE.Group>(null);
   const p = useMemo(() => new THREE.Vector3(), []), n = useMemo(() => new THREE.Vector3(), []);
   const { camera } = useThree();
+  React.useEffect(() => () => setBodySolid(`villager:${v}`, null), [v]);
+  useFrame(() => { const r = root.current; setBodySolid(`villager:${v}`, r?.visible && st.current.down <= 0 ? { x: r.position.x, z: r.position.z, radius: 0.35 } : null); });
   useFrame((s, raw) => {
     const dt = Math.max(0, Math.min(raw, 0.05)); if (!root.current) return;
     const c = st.current;

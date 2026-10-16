@@ -13,6 +13,8 @@ import { setSolidGroup, wallPieces } from '@/lib/vrSolids';
 import { registerLit } from '@/lib/vrLights';
 import { PooledLight } from '../LightPool';
 import { CASTLE } from './villageMap';
+import { playerSpot } from './VillageVillagers';
+import { villageEyeHeight } from '@/lib/vrView';
 
 const CX = CASTLE.cx, CZ = CASTLE.cz, S = CASTLE.s, H = 7, T = 0.8, UP = 4.65;
 const M = {
@@ -45,8 +47,9 @@ function useDoorState(pos: [number, number], label: string, up: boolean, open: b
   const ref = useRef<THREE.Group>(null);
   useFrame((_, dt) => { if (ref.current) ref.current.rotation.y = THREE.MathUtils.damp(ref.current.rotation.y, open ? -1.6 : 0, 4, dt); });
   useEffect(() => registerUse(() => {
-    if ((camera.position.y > 4) !== up) return null;
-    const d = Math.hypot(camera.position.x - pos[0], camera.position.z - pos[1]);
+    if ((camera.position.y - (villageEyeHeight() - 1.6) > 4) !== up) return null;
+    const ps = playerSpot(camera);
+    const d = Math.hypot(ps.x - pos[0], ps.z - pos[1]);
     return { dist: d * 0.6, reach: 2.4, label: `${open ? 'Close' : 'Open'} the ${label}`, run: () => setOpen((v) => !v) };
   }), [camera, open, pos, label, up]);
   return { ref, open };

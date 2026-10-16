@@ -6,6 +6,7 @@ import { registerUse } from '@/lib/vrUse';
 import { BRIEFINGS, logStory } from '@/lib/vrStoryline';
 import { getStory, readNote } from '@/lib/vrStory';
 import { GEAR, takeGear, useGear, type Gear } from '@/lib/vrGear';
+import { playerSpot } from './VillageVillagers';
 
 const COL = { weapon: '#c9d3df', armour: '#b07a3c', quest: '#ffd25a' };
 
@@ -39,10 +40,11 @@ export const VillageGear: React.FC = () => {
     return () => window.clearTimeout(t);
   }, [chapter]);
   useEffect(() => registerUse(() => {
+    const ps = playerSpot(camera);
     let best: { d: number; g: Gear } | null = null;
     for (const g of GEAR) { if (g.shop) continue;
       if (owned.includes(g.id)) continue;
-      const d = Math.hypot(camera.position.x - g.pos[0], camera.position.z - g.pos[2]);
+      const d = Math.hypot(ps.x - g.pos[0], ps.z - g.pos[2]);
       if (!best || d < best.d) best = { d, g };
     }
     if (!best) return null;

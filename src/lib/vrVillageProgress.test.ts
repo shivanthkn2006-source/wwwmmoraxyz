@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from 'vitest';
-import { mergeVillage, applyVillage, readVillage } from './vrVillageProgress';
+import { mergeVillage, applyVillage, readVillage, completeVillageEncounter, WARDEN_DONE } from './vrVillageProgress';
 describe('village progress sync', () => {
   beforeEach(() => localStorage.clear());
   it('older account copy cannot undo newer device progress', () => {
@@ -15,5 +15,11 @@ describe('village progress sync', () => {
   });
   it('caps upgrades at 5 and rows at 20', () => {
     expect(mergeVillage({ upgrades: { a: 9 }, caseRows: 40 }, null)).toEqual({ steps: [], upgrades: { a: 5 }, caseRows: 20 });
+  });
+  it('Warden completion survives a stale progress merge and completes only once', () => {
+    expect(completeVillageEncounter(WARDEN_DONE)).toBe(true);
+    applyVillage({ steps: ['shell'] });
+    expect(readVillage().steps).toContain(WARDEN_DONE);
+    expect(completeVillageEncounter(WARDEN_DONE)).toBe(false);
   });
 });
