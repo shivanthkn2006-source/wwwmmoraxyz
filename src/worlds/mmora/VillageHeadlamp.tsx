@@ -40,8 +40,8 @@ export const VillageHeadlamp: React.FC = () => {
     camera.getWorldDirection(dir); dir.y = Math.max(-0.35, Math.min(0.25, dir.y)); dir.normalize();
     const p = playerSpot(camera);
     l.position.set(p.x + dir.x * 0.25, camera.position.y > 1 ? Math.min(camera.position.y, 1.75) : 1.7, p.z + dir.z * 0.25);
-    l.target.position.set(l.position.x + dir.x * 20, l.position.y + dir.y * 20 - 1.2, l.position.z + dir.z * 20);
-    const target = headlampLit(worn, headlampSwitchOn(), scheduleOn('street')) ? 9 : 0;
+    l.target.position.set(l.position.x + dir.x * 20, l.position.y + dir.y * 20 - 3, l.position.z + dir.z * 20);
+    const target = headlampLit(worn, headlampSwitchOn(), scheduleOn('street')) ? 24 : 0;
     l.intensity = THREE.MathUtils.damp(l.intensity, target, 8, dt);
   });
   return <spotLight ref={light} angle={0.5} penumbra={0.55} distance={32} decay={1.5} intensity={0} color="#fff1d8" />;
