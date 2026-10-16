@@ -118,7 +118,7 @@ import { RealMapWorld } from '@/worlds/realmap/RealMapWorld';
 import { JourneyTracker } from '@/worlds/JourneyTracker';
 import { PortalDoorway } from '@/worlds/portal/PortalDoorway';
 import { resolveMove, resolveAvatarMove } from '@/lib/vrSolids';
-import { AVATAR_AHEAD, villageEyeHeight } from '@/lib/vrView';
+import { AVATAR_AHEAD, villageEyeHeight, orbitAvatar } from '@/lib/vrView';
 import { readSave } from '@/lib/vrSaveGame';
 import { VRWorldList } from '@/components/vr/VRWorldList';
 import { VillageLook } from '@/worlds/mmora/VillageLook';
@@ -565,11 +565,8 @@ function turnYaw(camera: THREE.Camera, d: number) {
   if (!d) return;
   const v = getVRView();
   if (getWorldState().mode !== 'mmora' || !v.thirdPerson || v.face) { camera.rotation.y += d; return; }
-  const y0 = camera.rotation.y;
-  const ax = camera.position.x - Math.sin(y0) * AVATAR_AHEAD, az = camera.position.z - Math.cos(y0) * AVATAR_AHEAD;
-  camera.rotation.y = y0 + d;
-  camera.position.x = ax + Math.sin(camera.rotation.y) * AVATAR_AHEAD;
-  camera.position.z = az + Math.cos(camera.rotation.y) * AVATAR_AHEAD;
+  const [x, z, yaw] = orbitAvatar(camera.position.x, camera.position.z, camera.rotation.y, d);
+  camera.position.x = x; camera.position.z = z; camera.rotation.y = yaw;
 }
 
 const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitions?: boolean }> = ({ disabled, blockHighAltitudeTransitions = false }) => {
