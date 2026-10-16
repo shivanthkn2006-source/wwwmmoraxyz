@@ -11,14 +11,16 @@ export const VRSaveGameTicker: React.FC = () => {
   useEffect(() => {
     const save = () => {
       const w = getWorldState();
-      if (!isStartSettled() || w.origin.status !== 'ready' || w.aerial) return;
+      if (!isStartSettled() || w.origin.status !== 'ready' || w.aerial) return false;
       const p = camera.position;
-      if (!Number.isFinite(p.x) || p.y > 20) return; // never save mid-air
+      if (![p.x, p.y, p.z].every(Number.isFinite) || p.y > 20) return false; // never save mid-air
       const yaw = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ').y;
       writeSave({ mode: w.mode, origin: { ...w.origin.origin, label: w.origin.label }, pos: [p.x, p.y, p.z], yaw, realPos: w.savedRealPos });
+      return true;
     };
-    const flush = () => { save(); void pushCloud(); void import('@/lib/vrGear').then((m) => m.saveProgressNow()); };
-    const t = setInterval(flush, 4000);
+    const tick = () => { if (save()) void pushCloud(); };
+    const flush = () => { tick(); void import('@/lib/vrGear').then((m) => m.saveProgressNow()); };
+    const t = setInterval(tick, 4000);
     const onHide = () => { if (document.visibilityState === 'hidden') flush(); };
     document.addEventListener('visibilitychange', onHide);
     window.addEventListener('pagehide', flush);

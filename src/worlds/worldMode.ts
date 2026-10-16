@@ -79,8 +79,15 @@ let resume: VRSave | null = null;
 /** The pending resume save (once), used by the Real Map instead of the aerial entry. */
 export function takeResume(): VRSave | null { const r = resume; resume = null; return r; }
 export const hasResume = () => resume !== null;
+let pendingCameraResume: VRSave | null = null;
+export function consumeCameraResume(): VRSave | null {
+  const saved = pendingCameraResume;
+  pendingCameraResume = null;
+  return saved;
+}
 /** Applies a resume: back into M'Mora Village if that's where they stopped, at the saved spot. */
 export function applyResume(sv: VRSave) {
+  pendingCameraResume = sv;
   if (sv.mode === 'mmora') set({ mode: 'mmora', savedRealPos: sv.realPos ?? [0, 1.6, 0] });
   const pos: [number, number, number] = [sv.pos[0], Math.max(1.6, sv.pos[1]), sv.pos[2]];
   const yaw = Number.isFinite(sv.yaw) ? sv.yaw : 0;

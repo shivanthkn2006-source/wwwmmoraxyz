@@ -5,7 +5,8 @@
  * each item still to be found.
  */
 import { QUEST_BOARD } from './villageMap';
-import React, { useRef, useSyncExternalStore } from 'react';
+import React, { useEffect, useRef, useSyncExternalStore } from 'react';
+import { setSolidGroup, wallPieces } from '@/lib/vrSolids';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import * as THREE from 'three';
@@ -75,6 +76,7 @@ const CameraHud: React.FC<{ target: [number, number, number] | null }> = ({ targ
 };
 
 export const VillageQuestBoard: React.FC = () => {
+  useEffect(() => { setSolidGroup('quest-board', wallPieces(QUEST_BOARD[0], QUEST_BOARD[1], QUEST_BOARD[2], [[-1.2, 0, 0.14, 0.14], [1.2, 0, 0.14, 0.14], [0, 0, 2.6, 0.12]])); return () => setSolidGroup('quest-board', null); }, []);
   React.useEffect(() => { void import('@/lib/vrGear').then((m) => m.loadGearProgress()); void import('@/lib/vrQuests').then((m) => m.loadVRQuests()); }, []);
   // Carried Church Medallion slowly restores health.
   React.useEffect(() => { const id = window.setInterval(() => { if (hasGear('medallion')) window.dispatchEvent(new CustomEvent('vr-damage', { detail: { amount: -1 } })); }, 4000); return () => window.clearInterval(id); }, []);
