@@ -57,6 +57,13 @@
       "when": 1792055746609,
       "tag": "0007_village_progress_merge",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792165145144,
+      "tag": "0008_vr_save_newest_wins",
+      "breakpoints": true
     }
   ]
 }
