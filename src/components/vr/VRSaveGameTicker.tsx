@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { getWorldState, isStartSettled } from '@/worlds/worldMode';
-import { writeSave } from '@/lib/vrSaveGame';
+import { readSave, saveMoved, writeSave } from '@/lib/vrSaveGame';
 import { pushCloud } from '@/lib/vrPickups';
 
 export const VRSaveGameTicker: React.FC = () => {
@@ -15,6 +15,9 @@ export const VRSaveGameTicker: React.FC = () => {
       const p = camera.position;
       if (![p.x, p.y, p.z].every(Number.isFinite) || p.y > 20) return false; // never save mid-air
       const yaw = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ').y;
+      // Keep the old timestamp while standing still, so an idle tab or device can
+      // never outrank the place where the member actually played last.
+      if (!saveMoved(readSave(), w.mode, [p.x, p.y, p.z], yaw)) return true;
       writeSave({ mode: w.mode, origin: { ...w.origin.origin, label: w.origin.label }, pos: [p.x, p.y, p.z], yaw, realPos: w.savedRealPos });
       return true;
     };
