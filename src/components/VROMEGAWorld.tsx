@@ -717,16 +717,16 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
 
       switch (rotateDirection) {
         case 'left':
-          camera.rotation.y += radians;
+          turnYaw(camera, radians);
           break;
         case 'right':
-          camera.rotation.y -= radians;
+          turnYaw(camera, -radians);
           break;
         case 'around':
-          camera.rotation.y += Math.PI;
+          turnYaw(camera, Math.PI);
           break;
         case 'full':
-          camera.rotation.y += Math.PI * 2;
+          turnYaw(camera, Math.PI * 2);
           break;
         default:
           break;
@@ -858,7 +858,7 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
     const handleMouseMove = (event: MouseEvent) => {
       if (!isDraggingLook.current || disabled) return;
 
-      camera.rotation.y -= event.movementX * 0.0024;
+      turnYaw(camera, -event.movementX * 0.0024);
       camera.rotation.x -= event.movementY * 0.0018;
       clampOrientation();
     };
@@ -881,7 +881,7 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
       const dx = touch.clientX - touchLookRef.current.x;
       const dy = touch.clientY - touchLookRef.current.y;
 
-      camera.rotation.y -= dx * 0.004;
+      turnYaw(camera, -dx * 0.004);
       camera.rotation.x -= dy * 0.003;
       clampOrientation();
 
@@ -897,7 +897,7 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
     const handleCameraLook = (e: CustomEvent) => {
       if (disabled) return;
       const { dx, dy } = e.detail || {};
-      if (typeof dx === 'number') camera.rotation.y -= dx;
+      if (typeof dx === 'number') turnYaw(camera, -dx);
       if (typeof dy === 'number') camera.rotation.x -= dy;
       clampOrientation();
     };
@@ -1100,7 +1100,7 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
     const step = walkStep(input, dt, backTurnLeft.current, backWasDown.current);
     backTurnLeft.current = step.backTurnLeft;
     backWasDown.current = input.backward;
-    camera.rotation.y += step.yawDelta;
+    turnYaw(camera, step.yawDelta);
 
     const isRunning = staminaTick(dt, run || eventSpeed.current > 1, step.move);
     const speed = getVRView().crouch ? WALK_MPS * CROUCH_SPEED : isRunning ? RUN_MPS : WALK_MPS;
@@ -1188,10 +1188,10 @@ const RotationController: React.FC = () => {
     if (isAnimating.current) {
       const diff = targetRotation.current - camera.rotation.y;
       if (Math.abs(diff) < 0.01) {
-        camera.rotation.y = targetRotation.current;
+        turnYaw(camera, diff);
         isAnimating.current = false;
       } else {
-        camera.rotation.y += diff * delta * 3;
+        turnYaw(camera, diff * delta * 3);
       }
     }
   });
