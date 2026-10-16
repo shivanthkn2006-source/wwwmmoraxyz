@@ -580,6 +580,7 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
 
   useEffect(() => {
     camera.rotation.order = 'YXZ';
+    if (import.meta.env.DEV) (window as unknown as Record<string, unknown>).__vrCam = camera;
 
     const clampOrientation = () => {
       camera.rotation.x = THREE.MathUtils.clamp(camera.rotation.x, -1.45, 1.45);
