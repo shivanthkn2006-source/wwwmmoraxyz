@@ -53,3 +53,13 @@ export function villageChanged() {
   if (typeof window !== 'undefined') window.dispatchEvent(new Event(VILLAGE_EVENT));
   void import('@/lib/vrGear').then((m) => m.saveProgressNow());
 }
+
+/** Permanent encounters share the monotonic puzzle-step account merge. */
+export const WARDEN_DONE = 'encounter:hollow-warden:defeated';
+export function completeVillageEncounter(step: string): boolean {
+  if (readVillage().steps.includes(step)) return false;
+  applyVillage({ steps: [step] });
+  villageChanged();
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('vr-save-now'));
+  return true;
+}

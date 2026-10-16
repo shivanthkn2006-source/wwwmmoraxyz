@@ -1,13 +1,15 @@
 /**
  * Stage 2 — the Hollow Warden: a tall stalker that hunts by sound during the
  * Medallion and Crest chapters. Walking keeps it slow; running makes it fast.
- * It cannot die — enough hits stagger it and it retreats into the fog.
+ * Enough hits end this encounter permanently and save the next objective.
  */
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { registerUse } from '@/lib/vrUse';
-import { gearStats, getEquipped, useGear } from '@/lib/vrGear';
+import { gearStats, getEquipped, useGear, equippedWeapon, WEAPON_FIGHT } from '@/lib/vrGear';
+import { fire } from '@/lib/vrAmmo';
+import { readVillage, WARDEN_DONE, VILLAGE_EVENT, completeVillageEncounter } from '@/lib/vrVillageProgress';
 import { WALK_MPS, RUN_MPS } from '@/lib/vrWalk';
 import { logStory } from '@/lib/vrStoryline';
 import { playerSpot } from './VillageVillagers';
@@ -17,13 +19,16 @@ const EYE = new THREE.MeshBasicMaterial({ color: '#9cff6a' });
 
 export const HollowWarden: React.FC = () => {
   const owned = useGear();
-  const active = owned.includes('map') && !owned.includes('crest');
+  const [done, setDone] = useState(() => readVillage().steps.includes(WARDEN_DONE));
+  useEffect(() => { const refresh = () => setDone(readVillage().steps.includes(WARDEN_DONE)); window.addEventListener(VILLAGE_EVENT, refresh); return () => window.removeEventListener(VILLAGE_EVENT, refresh); }, []);
+  const active = owned.includes('map') && !owned.includes('crest') && !done;
   return active ? <Warden /> : null;
 };
 
 const Warden: React.FC = () => {
   const { camera } = useThree();
   const root = useRef<THREE.Group>(null);
+  const lastStrike = useRef(-Infinity);
   const st = useRef({ hp: 3, stagger: 0, state: 'idle' as 'idle' | 'stalk' | 'lunge', lost: 0, hitCd: 0, warned: false, last: new THREE.Vector3(), speed: 0, phase: 0 });
 
   useEffect(() => {
@@ -36,11 +41,17 @@ const Warden: React.FC = () => {
   useEffect(() => registerUse(() => {
     const p = root.current; if (!p || st.current.stagger > 0) return null;
     const ps = playerSpot(camera); const d = Math.hypot(ps.x - p.position.x, ps.z - p.position.z);
-    return { dist: d, reach: 3, label: 'Strike the Warden', run: () => {
+    const weapon = equippedWeapon(), fight = weapon ? WEAPON_FIGHT[weapon] : null;
+    return { dist: d, reach: fight?.reach ?? 2.2, label: `${fight?.label ?? 'Strike'} the Warden`, run: () => {
+      const now = performance.now();
+      if (now - lastStrike.current < (fight?.cooldown ?? 0.7) * 1000) return;
+      if (weapon && !fire(weapon)) { window.dispatchEvent(new CustomEvent('vr-toast', { detail: 'Reload or equip another weapon' })); return; }
+      lastStrike.current = now;
       const c = st.current; c.hp -= Math.max(1, Math.round(gearStats(getEquipped()).attack / 15));
-      void import('@/lib/vrSfx').then((m) => m.playSfx('metal'));
-      if (c.hp <= 0) { c.hp = 3; c.stagger = 20; logStory('enemy', 'hollow-warden:stagger');
-        window.dispatchEvent(new CustomEvent('vr-toast', { detail: 'The Hollow Warden retreats into the fog…' })); }
+      window.dispatchEvent(new Event('vr-hand-reach'));
+      void import('@/lib/vrSfx').then((m) => m.playSfx(weapon === 'pistol' ? 'gun' : weapon === 'shotgun' ? 'shotgun' : weapon === 'rocket' ? 'rocket' : weapon === 'knife' ? 'knife' : 'metal'));
+      if (c.hp <= 0) { c.stagger = Infinity; completeVillageEncounter(WARDEN_DONE); logStory('enemy', 'hollow-warden:defeated');
+        window.dispatchEvent(new CustomEvent('vr-toast', { detail: 'Warden defeated · continue to the church altar, then the Lord’s Keep' })); }
     } };
   }), [camera]);
 
@@ -48,7 +59,7 @@ const Warden: React.FC = () => {
     const p = root.current; if (!p) return; const dt = Math.min(dtRaw, 0.1); const c = st.current;
     // Player noise = how fast you move.
     const moved = camera.position.distanceTo(c.last) / Math.max(dt, 1e-3); c.last.copy(camera.position);
-    c.speed = c.speed * 0.9 + moved * 0.1;
+    c.speed += (moved - c.speed) * (1 - Math.exp(-6 * dt));
     if (c.stagger > 0) { c.stagger -= dt; p.visible = c.stagger < 1; if (c.stagger <= 0) p.position.set(camera.position.x - 35, 0, camera.position.z - 35); return; }
     p.visible = true;
     const ps = playerSpot(camera); const dx = ps.x - p.position.x, dz = ps.z - p.position.z, dd = Math.hypot(dx, dz) || 1;

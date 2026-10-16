@@ -103,7 +103,7 @@ async function uid() {
   const { data } = await supabase.auth.getSession();
   return { supabase, id: data.session?.user?.id ?? null };
 }
-function pushSoon() {
+function pushSoon(delay = 1500) {
   if (typeof window === 'undefined') return;
   window.clearTimeout(syncTimer);
   syncTimer = window.setTimeout(async () => {
@@ -113,7 +113,7 @@ function pushSoon() {
       if (readyFor !== id) { loadedFor = null; await loadGearProgress(); if (readyFor !== id) return; }
       await supabase.from('vr_player_progress' as never).upsert({ user_id: id, level, gear: owned, equipped, ammo: getAmmo(), gold_herbs: getGoldHerbs(), village: readVillage(), updated_at: new Date().toISOString() } as never, { onConflict: 'user_id' });
     } catch { /* offline: retried on the next change */ }
-  }, 1500);
+  }, delay);
 }
 /** Merge the account copy with this device (keeps the higher level and every item found anywhere). */
 export async function loadGearProgress() {
@@ -139,4 +139,4 @@ export async function loadGearProgress() {
 // Any change on this device is copied to the account.
 ls.add(pushSoon); els.add(pushSoon); lls.add(pushSoon); subscribeAmmo(pushSoon); subscribeGoldHerbs(pushSoon);
 /** Typewriter save: copy progress to the account right away. */
-export const saveProgressNow = () => pushSoon();
+export const saveProgressNow = () => pushSoon(0);
