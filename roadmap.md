@@ -1,5 +1,13 @@
 # M'Mora Village roadmap
 
+## Oct 16 progression and collision request
+- [ ] End Warden encounter permanently after defeat; auto-save completion and position.
+- [ ] Diagnose save failures and verify signed-in restore without altering existing account items.
+- [ ] Verify church medallion route and reachable pickup.
+- [ ] Stop avatar at doors, signs and villagers; preserve camera distance, improve height.
+- [ ] Realistic original enemy/weapon/ammo visuals and effects (not console-game parity).
+- [ ] Evidence-separated audit and safe signed-in preview checks; no video.
+
 ## Done (automated build checks only)
 - [x] Stage 1 survival basics, herbs, ammo, typewriter save
 - [x] Varga radio auto-play per chapter
