@@ -61,6 +61,17 @@ const MoldPulse: React.FC = () => {
   return null;
 };
 
+/** Loose planks floating in the shallows, bobbing with the swell (visual hazard for the dock crossing). */
+const FloatingPlanks: React.FC = () => {
+  const ref = useRef<THREE.Group>(null);
+  const spots = useMemo(() => Array.from({ length: 8 }, (_, i) => ({ x: -24 + rand(i) * 14, z: SHORE_Z - 8 - rand(i + 4) * 10, r: rand(i + 9) * 3, p: rand(i + 2) * 6 })), []);
+  useFrame(({ clock }) => {
+    const g = ref.current; if (!g) return;
+    g.children.forEach((c, i) => { const s = spots[i]; c.position.y = 0.06 + Math.sin(clock.elapsedTime * 0.9 + s.p) * 0.09; c.rotation.z = Math.sin(clock.elapsedTime * 0.6 + s.p) * 0.12; });
+  });
+  return <group ref={ref}>{spots.map((s, i) => <mesh key={i} material={i % 2 ? WOOD : WOOD_DARK} position={[s.x, 0.06, s.z]} rotation={[0, s.r, 0]}><boxGeometry args={[1.5, 0.07, 0.5]} /></mesh>)}</group>;
+};
+
 export const VillageDocks: React.FC = () => {
   const z0 = SHORE_Z - 2;
   return (
@@ -72,6 +83,8 @@ export const VillageDocks: React.FC = () => {
       <Dock x={-9} z={z0 - 4} len={9} rot={-0.4} />
       <Hull x={-32} z={z0 - 14} rot={0.8} />
       <Hull x={6} z={z0 - 22} rot={-1.9} />
+      {/* Part 13: shifting floating planks between the pier and the hulls — they bob and drift underfoot */}
+      <FloatingPlanks />
       {/* scattered barrels and crates on the main pier */}
       {[[-18.5, z0 - 3], [-17.4, z0 - 8], [-18.2, z0 - 12]].map(([x, z], i) => (
         <mesh key={i} material={i % 2 ? RUST : WOOD_DARK} position={[x, 0.85, z]}><cylinderGeometry args={[0.32, 0.36, 0.7, 8]} /></mesh>

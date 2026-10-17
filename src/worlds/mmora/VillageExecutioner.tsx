@@ -42,6 +42,8 @@ const Exec: React.FC = () => {
         window.dispatchEvent(new CustomEvent('vr-drop', { detail: { x: s.x + 1, z: s.z + 1 } }));
         logStory('enemy', 'executioner:down');
         toast('The Executioner collapses — the anchor rings once on the stone');
+        // Part 13: felling the Executioner draws Dr. Vance's broadcast (read aloud, kept in Files).
+        window.setTimeout(() => void import('@/lib/vrStory').then((s) => s.readNote('log_vance')), 2500);
       }
       tick((n) => n + 1);
     } };

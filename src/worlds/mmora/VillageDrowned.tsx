@@ -12,6 +12,7 @@ import { useGear, gearStats, getEquipped } from '@/lib/vrGear';
 import { logStory } from '@/lib/vrStoryline';
 import { SHORE_Z } from './MMoraBeach';
 import { playerSpot } from './VillageVillagers';
+import { gloveDrained } from './VillageGlove';
 
 type D = { id: number; x: number; z: number; hp: number; rise: number };
 const BODY = new THREE.MeshStandardMaterial({ color: '#3e5550', roughness: 0.95, emissive: '#0d2a24', emissiveIntensity: 0.4 });
@@ -33,6 +34,7 @@ const Drowned: React.FC = () => {
     const ps = playerSpot(camera); let b: D | null = null, bd = 1e9;
     for (const d of list.current) { const k = Math.hypot(ps.x - d.x, ps.z - d.z); if (k < bd) { bd = k; b = d; } }
     if (!b || bd > 3) return null; const t = b;
+    if (gloveDrained()) return { dist: bd * 0.4, reach: 3, label: 'Drained — catch your breath', run: () => { window.dispatchEvent(new CustomEvent('vr-toast', { detail: 'Stamina drained — you cannot strike yet' })); } };
     return { dist: bd * 0.4, reach: 3, label: 'Strike the Drowned', run: () => {
       t.hp -= gearStats(getEquipped()).attack; void import('@/lib/vrSfx').then((m) => m.playSfx('knife'));
       if (t.hp <= 0) { list.current = list.current.filter((d) => d !== t); window.dispatchEvent(new CustomEvent('vr-drop', { detail: { x: t.x, z: t.z } })); logStory('enemy', 'drowned:down'); }

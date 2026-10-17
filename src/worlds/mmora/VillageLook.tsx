@@ -38,6 +38,8 @@ import { VillageHeadlamp } from './VillageHeadlamp';
 import { VillageDocks } from './VillageDocks';
 import { VillageSanatorium } from './VillageSanatorium';
 import { VillageExecutioner } from './VillageExecutioner';
+import { VillageKendo } from './VillageKendo';
+import { VillageGlowsticks } from './VillageGlowsticks';
 
 const SIZE = 400;
 const rand = (s: number) => { const x = Math.sin(s * 127.1) * 43758.5453; return x - Math.floor(x); };
@@ -269,6 +271,8 @@ export const VillageLook: React.FC = () => {
       <VillageDocks />
       <VillageSanatorium />
       <VillageExecutioner />
+      <VillageKendo />
+      <VillageGlowsticks />
       <VillageMerchant />
     </>
   );
