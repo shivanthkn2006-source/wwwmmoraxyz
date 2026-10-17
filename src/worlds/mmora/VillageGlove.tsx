@@ -9,7 +9,7 @@ import React, { useEffect, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { registerUse } from '@/lib/vrUse';
-import { useGear } from '@/lib/vrGear';
+import { useGear, hasGear } from '@/lib/vrGear';
 import { logStory } from '@/lib/vrStoryline';
 import { playerSpot } from './VillageVillagers';
 
@@ -22,7 +22,7 @@ const Glove: React.FC = () => {
   const heat = useRef(0); const lock = useRef(0); const ring = useRef<THREE.Mesh>(null); const wave = useRef(0);
   const fire = () => {
     if (lock.current > 0) { toast('Glove overheated — wait'); return; }
-    const ps = playerSpot(camera); heat.current += 40; wave.current = 1;
+    const ps = playerSpot(camera); heat.current += hasGear('styli') ? 20 : 40; wave.current = 1; // Suppressant Styli steady the glove
     if (ring.current) ring.current.position.set(ps.x, 0.2, ps.z);
     window.dispatchEvent(new CustomEvent('vr-glove', { detail: { x: ps.x, z: ps.z } }));
     void import('@/lib/vrSfx').then((m) => m.playSfx('rocket')); logStory('power', 'glove');
