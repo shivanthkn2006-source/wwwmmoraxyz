@@ -81,6 +81,14 @@ export function combineHerbs(): string {
   return 'Combined 3 Green Herbs → 1 Golden Herb';
 }
 export function addHerbs(n: number) { st = { ...st, herbs: st.herbs + n }; emit(); }
+/** Part 14 reagent crafting: 2 Green Herbs + a Chemical Reagent → Antiviral Serum (full health, used at once). */
+export function craftSerum(hasReagent: boolean): string {
+  if (!hasReagent) return 'Crafting a serum needs a Chemical Reagent — one is kept at the outpost';
+  if (st.herbs < 2) return 'Crafting a serum needs 2 Green Herbs';
+  st = { ...st, herbs: st.herbs - 2 }; emit();
+  restoreStamina(1); healPlayer(100, 'goldheal');
+  return 'Crafted an Antiviral Serum · full health restored';
+}
 export function useGoldHerb(): string {
   if (gold <= 0) return 'No golden herbs — the merchant sells them';
   gold -= 1; gemit(); restoreStamina(1); healPlayer(100, 'goldheal');

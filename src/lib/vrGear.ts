@@ -33,6 +33,7 @@ export const GEAR: Gear[] = [
   // Part 13 attachments: screwed onto the equipped gun via the merchant's quick-crafting bench
   { id: 'extmag', kind: 'armour', name: 'Extended Magazine', icon: '🔩', detail: 'Screwed onto your gun at the merchant bench: +4 attack. Merchant only.', pos: [0, -50, 0], shop: true },
   { id: 'lasersight', kind: 'armour', name: 'Laser Sight', icon: '🔴', detail: 'Screwed onto your gun at the merchant bench: +2 attack, faster follow-up shots. Merchant only.', pos: [0, -50, 0], shop: true },
+  { id: 'reagent', kind: 'quest', name: 'Chemical Reagent', icon: '🧪', detail: 'A sealed vial from the outpost cleanroom. With 2 Green Herbs it crafts an Antiviral Serum (full health).', pos: [-122, 0.9, -24] },
 ];
 
 const KEY = 'vr-gear';
