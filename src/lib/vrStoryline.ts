@@ -76,6 +76,14 @@ export const BRIEFINGS: Record<'intro' | Chapter, { id: string; title: string; t
   done: { id: 'brief_done', title: `Briefing 4 · ${CHAPTER_TITLE.done}`, text: RADIO.done },
 };
 
+/** Part 13 (Nexus) story pieces: Dr. Silas Vance of the Paradigm Group and the scout Kendo. */
+export const NEXUS_NOTES: Record<string, { id: string; title: string; text: string }> = {
+  vance: { id: 'log_vance', title: 'Intercepted broadcast · Dr. Silas Vance',
+    text: 'They burned Raccoon City before it could bloom. A missed window. The Paradigm Group will not miss again — the Chimera-Strain takes root in this village tonight, and from here, the world.' },
+  kendo: { id: 'log_kendo', title: 'Field note · Kendo, Watch scout',
+    text: 'Docks are rotting through — watch your footing past the shoreline. The Drowned spit saltwater bile from a few metres out, so keep moving. And if you hear metal dragging on stone near the old sanatorium, run. Something up there fused its arm to an anchor.' },
+};
+
 /** Anonymous-safe engagement log (admin-only to read): which chapters, characters and items members engage with. */
 export function logStory(kind: string, ref: string) {
   void (async () => {
