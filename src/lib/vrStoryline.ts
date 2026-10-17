@@ -84,6 +84,14 @@ export const NEXUS_NOTES: Record<string, { id: string; title: string; text: stri
     text: 'Docks are rotting through — watch your footing past the shoreline. The Drowned spit saltwater bile from a few metres out, so keep moving. And if you hear metal dragging on stone near the old sanatorium, run. Something up there fused its arm to an anchor.' },
 };
 
+/** Part 14 (Rebirth) story pieces: the Curator of the Genesis Network and bio-security specialist Valerie Wright. */
+export const REBIRTH_NOTES: Record<string, { id: string; title: string; text: string }> = {
+  curator: { id: 'log_curator', title: 'Distorted transmission · The Curator',
+    text: 'Beautiful. The old strain still remembers this ground. The Genesis Network does not destroy, operative — it curates. This village is my gallery now, and you have just become part of the exhibit.' },
+  valerie: { id: 'log_valerie', title: 'Field log · Valerie Wright, bio-security',
+    text: 'Quarantine fences are rusted through — the perimeter is a suggestion, not a wall. The Feral drop from the tree line, so watch the branches, not the ground. Something pale is living in the old outpost cavern. It makes no sound. None.' },
+};
+
 /** Anonymous-safe engagement log (admin-only to read): which chapters, characters and items members engage with. */
 export function logStory(kind: string, ref: string) {
   void (async () => {
