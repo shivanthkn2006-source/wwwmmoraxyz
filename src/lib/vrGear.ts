@@ -43,6 +43,9 @@ export function takeGear(g: Gear) {
   try { localStorage.setItem(KEY, JSON.stringify(owned)); } catch { /* */ }
   ls.forEach((l) => l());
   if (g.kind === 'quest') void import('@/lib/vrStoryline').then(async (sl) => { const r = sl.FIELD_REPORTS[g.id]; if (r) (await import('@/lib/vrStory')).readNote(r.id); });
+  // Part 13: the pier rifle and the styli each carry a story note (Kendo / Vance).
+  if (g.id === 'sentinel9') void import('@/lib/vrStory').then((s) => s.readNote('log_kendo'));
+  if (g.id === 'styli') void import('@/lib/vrStory').then((s) => s.readNote('log_vance'));
   if (g.kind === 'quest') { try { localStorage.setItem('mmora-autosave-at', String(Date.now())); } catch { /* */ } window.setTimeout(() => saveProgressNow(), 0); window.dispatchEvent(new CustomEvent('vr-toast', { detail: 'Chapter auto-saved' })); }
   if (g.kind === 'quest') playSfx(g.id === 'map' ? 'paper' : 'medallion'); else playPickup('coin');
   if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('vr-hand-reach'));
