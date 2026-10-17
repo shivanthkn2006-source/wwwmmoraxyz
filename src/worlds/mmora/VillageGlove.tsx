@@ -15,6 +15,10 @@ import { playerSpot } from './VillageVillagers';
 
 const toast = (t: string) => window.dispatchEvent(new CustomEvent('vr-toast', { detail: t }));
 
+/** Part 13 stamina rule: after a shockwave the operative is drained and cannot strike until the heart rate settles. */
+let drainedUntil = 0;
+export const gloveDrained = () => Date.now() < drainedUntil;
+
 export const VillageGlove: React.FC = () => (useGear().includes('medallion') ? <Glove /> : null);
 
 const Glove: React.FC = () => {
@@ -23,6 +27,7 @@ const Glove: React.FC = () => {
   const fire = () => {
     if (lock.current > 0) { toast('Glove overheated — wait'); return; }
     const ps = playerSpot(camera); heat.current += hasGear('styli') ? 20 : 40; wave.current = 1; // Suppressant Styli steady the glove
+    drainedUntil = Date.now() + 4000; // stamina drained: defenseless for 4 s
     if (ring.current) ring.current.position.set(ps.x, 0.2, ps.z);
     window.dispatchEvent(new CustomEvent('vr-glove', { detail: { x: ps.x, z: ps.z } }));
     void import('@/lib/vrSfx').then((m) => m.playSfx('rocket')); logStory('power', 'glove');
