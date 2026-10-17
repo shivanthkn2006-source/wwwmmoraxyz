@@ -30,6 +30,9 @@ export const GEAR: Gear[] = [
   { id: 'boltrifle', kind: 'weapon', name: 'Long-Barrel Bolt Rifle', icon: '🎯', detail: 'Custom bolt rifle left on the sanatorium roof line.', pos: [-104, 0.9, -6] },
   { id: 'shockgrenade', kind: 'weapon', name: 'Shock Grenade', icon: '💥', detail: 'Stuns everything within 6 m. Sold only by the merchant.', pos: [0, -50, 0], shop: true },
   { id: 'styli', kind: 'armour', name: 'Suppressant Styli', icon: '💉', detail: 'Disposable syringes that steady the glove — heat builds half as fast while carried.', pos: [-88, 0.9, -14] },
+  // Part 13 attachments: screwed onto the equipped gun via the merchant's quick-crafting bench
+  { id: 'extmag', kind: 'armour', name: 'Extended Magazine', icon: '🔩', detail: 'Screwed onto your gun at the merchant bench: +4 attack. Merchant only.', pos: [0, -50, 0], shop: true },
+  { id: 'lasersight', kind: 'armour', name: 'Laser Sight', icon: '🔴', detail: 'Screwed onto your gun at the merchant bench: +2 attack, faster follow-up shots. Merchant only.', pos: [0, -50, 0], shop: true },
 ];
 
 const KEY = 'vr-gear';
@@ -70,6 +73,7 @@ export function toggleEquip(id: string) {
 const STAT: Record<string, { attack?: number; defence?: number }> = {
   pistol: { attack: 12 }, knife: { attack: 6 }, shotgun: { attack: 25 }, rocket: { attack: 80 }, vest: { defence: 15 }, helmet: { defence: 10 },
   sentinel9: { attack: 18 }, w870: { attack: 34 }, boltrifle: { attack: 55 }, shockgrenade: { attack: 40 }, styli: { defence: 5 },
+  extmag: { attack: 4 }, lasersight: { attack: 2 },
 };
 /** Base 5 attack / 0 defence plus whatever is equipped. */
 // ── Level: earned from quest rewards; each level adds +3 attack, +2 defence. ──
@@ -93,7 +97,16 @@ export function gearStats(ids: string[], lvl = level) {
   const up = getUpgrades();
   for (const id of ids) { attack += (STAT[id]?.attack ?? 0) + (STAT[id]?.attack ? (up[id] ?? 0) * 6 : 0); defence += (STAT[id]?.defence ?? 0) + (STAT[id]?.defence ? (up[id] ?? 0) * 4 : 0); }
   if (hasGear('crest')) attack += 5; // carried Lord's Crest
+  // Part 13 attachments help only while a gun is equipped.
+  const gun = ids.some((id) => ['pistol', 'sentinel9', 'w870', 'boltrifle', 'shotgun'].includes(id));
+  if (gun && hasGear('extmag')) attack += 4;
+  if (gun && hasGear('lasersight')) attack += 2;
   return { attack, defence };
+}
+/** Laser sight shortens the equipped gun's cooldown by 15%. */
+export function weaponCooldown(id: string) {
+  const base = WEAPON_FIGHT[id]?.cooldown ?? 1;
+  return hasGear('lasersight') ? base * 0.85 : base;
 }
 /** How each weapon fights: reach in metres and seconds between hits. */
 export const WEAPON_FIGHT: Record<string, { reach: number; cooldown: number; label: string }> = {
