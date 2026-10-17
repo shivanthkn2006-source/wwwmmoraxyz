@@ -51,6 +51,11 @@ const Drowned: React.FC = () => {
       const dx = ps.x - d.x, dz = ps.z - d.z, k = Math.hypot(dx, dz);
       if (k > 1.1) { d.x += dx / k * 1.1 * dt; d.z += dz / k * 1.1 * dt; }
       else if (Math.random() < dt * 0.6) window.dispatchEvent(new CustomEvent('vr-damage', { detail: { amount: Math.max(3, Math.round(10 * (1 - gearStats(getEquipped()).defence / 60))) } }));
+      // Part 13: corrosive saltwater bile spit at mid range (3–8 m), jerky and telegraphed
+      else if (k < 8 && Math.random() < dt * 0.25) {
+        window.dispatchEvent(new CustomEvent('vr-damage', { detail: { amount: Math.max(2, Math.round(6 * (1 - gearStats(getEquipped()).defence / 60))) } }));
+        void import('@/lib/vrSfx').then((m) => m.playSfx('leather'));
+      }
     }
   });
   return <>{list.current.map((d) => <Body key={d.id} d={d} />)}</>;

@@ -24,6 +24,12 @@ export const GEAR: Gear[] = [
   { id: 'rocket', kind: 'weapon', name: 'Rocket Launcher', icon: '🚀', detail: 'Mercenary rocket launcher. Sold only by the merchant.', pos: [0, -50, 0], shop: true },
   { id: 'headlamp', kind: 'armour', name: "Miner's Headlamp", icon: '🔦', detail: 'Strap-on forehead lamp for night walks. Press L to switch on/off. Sold by villagers for 15 coins.', pos: [0, -50, 0], shop: true },
   { id: 'map', kind: 'quest', name: 'Old Village Map', icon: '🗺️', detail: 'Marks the church, the castle and the shore.', pos: [16, 0.9, -20] },
+  // Part 13 loadout (M'Mora originals named after the design doc)
+  { id: 'sentinel9', kind: 'weapon', name: 'Sentinel Nine', icon: '🔫', detail: 'Operative-issue 9mm with a tritium front sight. Found on the sunken pier.', pos: [-18, 0.9, -92] },
+  { id: 'w870', kind: 'weapon', name: 'W-870 Tactical', icon: '🧨', detail: 'Pump tactical shotgun from the sanatorium armoury.', pos: [-96, 0.9, -20] },
+  { id: 'boltrifle', kind: 'weapon', name: 'Long-Barrel Bolt Rifle', icon: '🎯', detail: 'Custom bolt rifle left on the sanatorium roof line.', pos: [-104, 0.9, -6] },
+  { id: 'shockgrenade', kind: 'weapon', name: 'Shock Grenade', icon: '💥', detail: 'Stuns everything within 6 m. Sold only by the merchant.', pos: [0, -50, 0], shop: true },
+  { id: 'styli', kind: 'armour', name: 'Suppressant Styli', icon: '💉', detail: 'Disposable syringes that steady the glove — heat builds half as fast while carried.', pos: [-88, 0.9, -14] },
 ];
 
 const KEY = 'vr-gear';
@@ -60,6 +66,7 @@ export function toggleEquip(id: string) {
 }
 const STAT: Record<string, { attack?: number; defence?: number }> = {
   pistol: { attack: 12 }, knife: { attack: 6 }, shotgun: { attack: 25 }, rocket: { attack: 80 }, vest: { defence: 15 }, helmet: { defence: 10 },
+  sentinel9: { attack: 18 }, w870: { attack: 34 }, boltrifle: { attack: 55 }, shockgrenade: { attack: 40 }, styli: { defence: 5 },
 };
 /** Base 5 attack / 0 defence plus whatever is equipped. */
 // ── Level: earned from quest rewards; each level adds +3 attack, +2 defence. ──
@@ -91,6 +98,10 @@ export const WEAPON_FIGHT: Record<string, { reach: number; cooldown: number; lab
   pistol: { reach: 6, cooldown: 0.8, label: 'Shoot' },
   shotgun: { reach: 4, cooldown: 1.6, label: 'Blast' },
   rocket: { reach: 10, cooldown: 3, label: 'Fire' },
+  sentinel9: { reach: 7, cooldown: 0.6, label: 'Shoot' },
+  w870: { reach: 4.5, cooldown: 1.4, label: 'Blast' },
+  boltrifle: { reach: 14, cooldown: 2.4, label: 'Snipe' },
+  shockgrenade: { reach: 8, cooldown: 4, label: 'Throw' },
 };
 export const equippedWeapon = () => equipped.find((id) => WEAPON_FIGHT[id]) ?? null;
 
