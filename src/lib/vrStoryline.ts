@@ -90,6 +90,8 @@ export const REBIRTH_NOTES: Record<string, { id: string; title: string; text: st
     text: 'Beautiful. The old strain still remembers this ground. The Genesis Network does not destroy, operative — it curates. This village is my gallery now, and you have just become part of the exhibit.' },
   valerie: { id: 'log_valerie', title: 'Field log · Valerie Wright, bio-security',
     text: 'Quarantine fences are rusted through — the perimeter is a suggestion, not a wall. The Feral drop from the tree line, so watch the branches, not the ground. Something pale is living in the old outpost cavern. It makes no sound. None.' },
+  leon: { id: 'log_leon', title: 'Veteran\'s memo · L. S. K., DSO consultant',
+    text: 'I have seen this pattern since \'98. Fences, a quiet village, a corporation with a clean name. My advice stands: conserve ammunition, aim for the head, and never trust a room with no exits. The outpost flooded for a reason — what is in that water was meant to stay there.' },
 };
 
 /** Anonymous-safe engagement log (admin-only to read): which chapters, characters and items members engage with. */

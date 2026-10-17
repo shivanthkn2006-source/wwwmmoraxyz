@@ -22,6 +22,8 @@ export function toggleHeadlamp() {
 export const headlampLit = (worn: boolean, switchOn: boolean, dark: boolean) => worn && switchOn && dark;
 
 const dir = new THREE.Vector3();
+const WARM = new THREE.Color('#fff1d8');
+const RED = new THREE.Color('#ff4a3c');
 export const VillageHeadlamp: React.FC = () => {
   const { camera, scene } = useThree();
   const eq = useEquipped();
@@ -43,6 +45,9 @@ export const VillageHeadlamp: React.FC = () => {
     l.target.position.set(l.position.x + dir.x * 20, l.position.y + dir.y * 20 - 3, l.position.z + dir.z * 20);
     const target = headlampLit(worn, headlampSwitchOn(), scheduleOn('street')) ? 24 : 0;
     l.intensity = THREE.MathUtils.damp(l.intensity, target, 8, dt);
+    // Part 14: near the outpost cavern the beam runs through the red filter so it draws less attention.
+    const nearOutpost = Math.hypot(p.x + 116, p.z + 30) < 30;
+    l.color.lerp(nearOutpost ? RED : WARM, Math.min(1, dt * 3));
   });
   return <spotLight ref={light} angle={0.5} penumbra={0.55} distance={32} decay={1.5} intensity={0} color="#fff1d8" />;
 };
