@@ -11,6 +11,7 @@ import React, { useEffect, useMemo, useState, useSyncExternalStore } from 'react
 import { useStory, readNote, KEYS, NOTES } from '@/lib/vrStory';
 import { QUESTS, getVRQuestSnapshot, itemLabel, loadVRQuests, subscribeVRQuests, type Rarity } from '@/lib/vrQuests';
 import { usePickups, useHerb, useGoldHerbs, useGoldHerb, combineHerbs, craftSerum } from '@/lib/vrPickups';
+import { hasGear } from '@/lib/vrGear';
 import { GearArt, GoldHerbArt } from './VRGearArt';
 import { playSfx } from '@/lib/vrSfx';
 import avatarImg from '@/assets/vr-case-avatar.png';

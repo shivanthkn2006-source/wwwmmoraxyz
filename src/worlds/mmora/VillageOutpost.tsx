@@ -45,6 +45,16 @@ export const VillageOutpost: React.FC = () => {
       ))}
       {/* cleanroom shell: half-buried office block */}
       <mesh material={DUST} position={[-122, 1.2, -24]} rotation={[0, 0.7, 0]}><boxGeometry args={[5, 2.4, 4]} /></mesh>
+      {/* flooded lower server room: hip-deep black water and dead server racks */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-122, 0.35, -24]}>
+        <planeGeometry args={[4.4, 3.4]} />
+        <meshStandardMaterial color="#0a1414" roughness={0.15} metalness={0.4} transparent opacity={0.9} />
+      </mesh>
+      {[[-123.2, -25], [-120.8, -25], [-123.2, -23], [-120.8, -23]].map(([x, z], i) => (
+        <mesh key={i} material={RUST_METAL} position={[x, 0.9, z]} rotation={[0, rand(i) * 0.4, (rand(i + 3) - 0.5) * 0.15]}>
+          <boxGeometry args={[0.6, 1.8, 0.4]} />
+        </mesh>
+      ))}
     </group>
   );
 };

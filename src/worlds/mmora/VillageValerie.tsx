@@ -35,6 +35,7 @@ const Val: React.FC = () => {
     if (d > 3) return null;
     return { dist: d * 0.4, reach: 3, label: 'Talk to Valerie', run: () => {
       if (said.current === 0) void import('@/lib/vrStory').then((s) => s.readNote('log_valerie'));
+      if (said.current === 1) void import('@/lib/vrStory').then((s) => s.readNote('log_leon')); // the veteran's memo, passed on second talk
       const line = LINES[Math.min(said.current, LINES.length - 1)];
       said.current += 1;
       window.dispatchEvent(new CustomEvent('vr-toast', { detail: line }));

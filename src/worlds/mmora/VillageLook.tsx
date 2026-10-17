@@ -44,6 +44,7 @@ import { VillageQuarantine } from './VillageQuarantine';
 import { VillageOutpost } from './VillageOutpost';
 import { VillageFeral } from './VillageFeral';
 import { VillageProtoHunter } from './VillageProtoHunter';
+import { VillageValerie } from './VillageValerie';
 
 const SIZE = 400;
 const rand = (s: number) => { const x = Math.sin(s * 127.1) * 43758.5453; return x - Math.floor(x); };
@@ -281,6 +282,7 @@ export const VillageLook: React.FC = () => {
       <VillageOutpost />
       <VillageFeral />
       <VillageProtoHunter />
+      <VillageValerie />
       <VillageMerchant />
     </>
   );
