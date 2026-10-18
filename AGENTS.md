@@ -7,7 +7,7 @@
 - Home orders due DHF, growth, social, Loop, and humor cards by their real scheduled timestamps, because fixed source blocks hide timely content.
 - All Zoe's LOL consumers share the global realtime multiplexer, because independent channels race during auth reloads and can take Home offline.
 - Boot stays light: no heavy manual chunks; hosts mount via AfterAuthIdle (pauseInVR hosts unmount while VR World is active).
-- VR rules: src/components/vr/AGENTS.md. W-870 shares one pickup/held mesh; local review fixtures never save progress.
+- VR rules: src/components/vr/AGENTS.md. W-870 shares a grip-centred mesh; review fixtures never save, to protect progress.
 - Village encounter completion uses the existing monotonic village-step account merge; movement resolves the shared ahead-of-camera body offset, because volatile enemy state and camera-only collisions lost progress and let avatars cross doors.
 - DHF pictures are copied once into dhf-compass and served from storage, preventing provider outages from blanking cards.
 - Zoe orb drift updates Framer motion values without React state updates, and Zoe glass avoids live backdrop filters, because frame-by-frame tree repaints cause orb/chat flicker over Home.

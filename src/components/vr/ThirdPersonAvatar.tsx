@@ -53,6 +53,8 @@ export const ThirdPersonAvatar: React.FC = () => {
   const speed = useRef(0);
   const reach = useRef(0);
   const crouchAmt = useRef(0);
+  const eq = useEquipped();
+  const holdingW870 = eq.includes('w870');
   const mats = useMemo(() => ({
     skin: new THREE.MeshStandardMaterial({ color: SKIN, roughness: 0.7 }),
     shirt: new THREE.MeshStandardMaterial({ color: SHIRT, roughness: 0.6 }),
@@ -121,10 +123,13 @@ export const ThirdPersonAvatar: React.FC = () => {
     reach.current = Math.max(0, reach.current - d * 1.6);
     const r = Math.sin(reach.current * Math.PI);
     if (armL.current) armL.current.rotation.x = -s * 0.8;
-    if (armR.current) armR.current.rotation.x = s * 0.8 - r * 1.4;
+    if (armR.current) {
+      // Keep the low-carried shotgun outside the holster and walking thigh.
+      armR.current.rotation.x = holdingW870 ? -0.08 : s * 0.8 - r * 1.4;
+      armR.current.rotation.z = holdingW870 ? 0.1 : 0;
+    }
   });
 
-  const eq = useEquipped();
   if (!thirdPerson) return null;
   return (
     <group ref={root}>
@@ -159,7 +164,10 @@ export const ThirdPersonAvatar: React.FC = () => {
             <mesh position={[0, -0.33, 0]} material={mats.shirt}><cylinderGeometry args={[0.074, 0.074, 0.06, 8]} /></mesh>
             <mesh position={[0, -0.44, 0]} material={mats.skin}><capsuleGeometry args={[0.052, 0.16, 4, 8]} /></mesh>
             <mesh position={[0, -0.58, 0]} material={mats.skin}><sphereGeometry args={[0.058, 8, 8]} /></mesh>
-            {i === 1 && (eq.includes('w870') ? <group position={[0, -0.58, 0.2]} rotation={[0, -Math.PI / 2, 0]}><W870Model /></group>
+            {i === 1 && (holdingW870 ? <group position={[0, -0.58, 0]} rotation={[0, -Math.PI / 2, 0]}>
+              {/* Grip (-.22,-.08,0) becomes the hand pivot; muzzle down 60°. */}
+              <group rotation={[0, 0, -Math.PI / 3]}><group position={[0.22, 0.08, 0]}><W870Model /></group></group>
+            </group>
               : eq.includes('shotgun') ? <mesh position={[0, -0.6, 0.3]}><boxGeometry args={[0.05, 0.07, 0.75]} /><meshStandardMaterial color="#3b2a1c" /></mesh>
               : eq.includes('pistol') ? <mesh position={[0, -0.62, 0.1]}><boxGeometry args={[0.04, 0.09, 0.2]} /><meshStandardMaterial color="#222" metalness={0.7} /></mesh>
               : eq.includes('knife') ? <mesh position={[0, -0.62, 0.1]}><boxGeometry args={[0.015, 0.03, 0.22]} /><meshStandardMaterial color="#c9d3df" metalness={0.9} /></mesh> : null)}
