@@ -5,6 +5,25 @@ import { Canvas } from '@react-three/fiber';
 import { ThirdPersonAvatar } from '@/components/vr/ThirdPersonAvatar';
 import { enterMMora } from '@/worlds/worldMode';
 import LeonCharacterModel from '@/components/vr/features/LeonCharacterModel';
+import { useGLTF } from '@react-three/drei';
+import * as THREE from 'three';
+
+/** Load a GLB, auto-fit to ~1.78 m and ground at y=0. */
+const GlbProbe: React.FC<{ url: string }> = ({ url }) => {
+  const { scene } = useGLTF(url);
+  const model = React.useMemo(() => {
+    const c = scene.clone(true);
+    c.traverse((o) => { if ((o as THREE.Mesh).isMesh) { o.castShadow = true; o.frustumCulled = false; } });
+    const box = new THREE.Box3().setFromObject(c);
+    const size = new THREE.Vector3(); box.getSize(size);
+    const s = 1.78 / Math.max(size.y, 0.0001);
+    const ctr = new THREE.Vector3(); box.getCenter(ctr);
+    c.scale.setScalar(s);
+    c.position.set(-ctr.x * s, -box.min.y * s, -ctr.z * s);
+    return c;
+  }, [scene]);
+  return <primitive object={model} />;
+};
 
 // The avatar only shows inside the village world.
 enterMMora([0, 1.6, 6]);
