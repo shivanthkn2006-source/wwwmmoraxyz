@@ -56,6 +56,8 @@ export const ThirdPersonAvatar: React.FC = () => {
   const crouchAmt = useRef(0);
   const eq = useEquipped();
   const holdingW870 = eq.includes('w870');
+  const aimingRef = useRef(false);
+  aimingRef.current = eq.some((id) => ['w870', 'shotgun', 'boltrifle', 'pistol', 'sentinel9'].includes(id));
   const mats = useMemo(() => ({
     steel: new THREE.MeshStandardMaterial({ color: '#b8bcc0', metalness: 0.8, roughness: 0.3 }),
   }), []);
