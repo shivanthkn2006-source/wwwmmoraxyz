@@ -1,9 +1,10 @@
 # M'Mora Village roadmap
 
 ## Oct 18 weapon visual review
-- [ ] Upgrade only W-870 mesh/materials/proportions; preserve gameplay and saves.
-- [ ] Isolated demo before/after evidence and honest visual gap report.
-- [ ] Sentinel Nine and Bolt Rifle held until W-870 evidence review.
+- [x] Upgrade only W-870 mesh/materials/proportions; preserve gameplay and saves.
+- [x] Isolated authenticated fixture before/after evidence and honest visual gap report.
+- [ ] W-870 held grip/clipping/village lighting and hosted CDN delivery: unverified; follow-up live scene review required.
+- [ ] Sentinel Nine and Bolt Rifle: unchanged, pending W-870 review.
 
 ## Oct 16 progression and collision request
 - [ ] End Warden encounter permanently after defeat; auto-save completion and position.
