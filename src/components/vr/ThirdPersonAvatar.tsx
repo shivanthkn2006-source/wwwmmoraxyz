@@ -85,7 +85,9 @@ export const ThirdPersonAvatar: React.FC = () => {
     const seated = avatarMotion.seated;
     if (seated && w.mode === 'mmora') g.position.set(seated.x, 0.44, seated.z);
     // Face view: turn round to face the camera; normal view: back to the camera.
-    g.rotation.y = face ? yaw : yaw + Math.PI;
+    // Village chase view: body faces where it walks; with a weapon out it faces where you aim.
+    const chaseView = w.mode === 'mmora' && !face;
+    g.rotation.y = face ? yaw : (chaseView && !aimingRef.current ? avatarMotion.bodyYaw : yaw) + Math.PI;
     if (seated) g.rotation.y = seated.yaw;
     // Real speed from how far the camera moved.
     const moved = Math.hypot(camera.position.x - last.current.x, camera.position.z - last.current.z) / Math.max(d, 1e-3);
