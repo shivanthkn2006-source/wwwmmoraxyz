@@ -171,13 +171,13 @@ export const SkirtFemaleAvatar: React.FC<SkirtFemaleAvatarProps> = ({
     if (holdingW870 && weapon.current && armSolver) {
       // Both hands and the gun use one calibrated avatar-local grip frame.
       const kick = Math.max(0, 1 - (performance.now() - avatarMotion.attackAt) / 180);
-      weapon.current.position.set(-0.13, 1.29 + kick * 0.015, 0.04 - kick * 0.035);
+      weapon.current.position.set(-0.18, 1.2 + kick * 0.015, -0.04 - kick * 0.035);
       weapon.current.rotation.set(0, -Math.PI / 2, 0.06 + kick * 0.045);
-      rightTarget.set(-0.13, weapon.current.position.y - 0.025, weapon.current.position.z - 0.055);
-      leftTarget.set(-0.13, weapon.current.position.y - 0.02, weapon.current.position.z + 0.29);
+      rightTarget.set(-0.16, weapon.current.position.y + 0.065, weapon.current.position.z - 0.02);
+      leftTarget.set(-0.12, weapon.current.position.y + 0.09, weapon.current.position.z + 0.36);
       armSolver.solve(g, rightTarget, leftTarget);
       for (const side of ['L', 'R']) for (const finger of ['Mid', 'Ring', 'Pinky', 'Index']) {
-        for (let joint = 1; joint <= 3; joint++) set(`CC_Base_${side}_${finger}${joint}`, joint === 1 ? -0.35 : -0.8);
+        for (let joint = 1; joint <= 3; joint++) set(`CC_Base_${side}_${finger}${joint}`, joint === 1 ? 0.45 : 0.75);
       }
     }
   });
