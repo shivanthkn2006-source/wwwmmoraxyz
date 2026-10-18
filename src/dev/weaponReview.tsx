@@ -16,11 +16,11 @@ async function start() {
   const gear = GEAR.find((g) => g.id === 'w870');
   if (!el || !gear) return;
   createRoot(el).render(<main>
-    <Canvas style={{ height: '80vh' }} dpr={1} camera={{ position: [-95.6, 1.28, -18.4], fov: 38 }}>
+    <Canvas style={{ height: '80vh' }} dpr={1} camera={{ position: [-95.8, 1.4, -17.4], fov: 38 }}>
       <color attach="background" args={['#777d82']} />
       <ambientLight intensity={0.65} />
       <directionalLight position={[-94, 4, -18]} intensity={3} />
-      <Environment><Lightformer intensity={2} position={[-96, 4, -20]} scale={4} /><Lightformer intensity={1} position={[-97, 1, -20]} rotation-y={Math.PI / 2} scale={3} /></Environment>
+      <Environment><Lightformer intensity={3} position={[0, 2, 2]} scale={4} /><Lightformer intensity={2} position={[-2, 1, 0]} rotation-y={Math.PI / 2} scale={3} /></Environment>
       <group position={gear.pos}><W870Model /></group>
       <OrbitControls target={[-96, 0.9, -20]} enablePan={false} />
     </Canvas>

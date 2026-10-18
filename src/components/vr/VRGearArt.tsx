@@ -92,7 +92,16 @@ const ART: Record<string, React.ReactNode> = {
   </S>,
 };
 
-export const GearArt: React.FC<{ id: string }> = ({ id }) => <>{ART[id] ?? <span className="text-2xl">?</span>}</>;
+export const GearArt: React.FC<{ id: string }> = ({ id }) => <>{id === 'w870' ? <S vb="0 0 120 40">
+  <path d="M2 17 L24 13 L34 10 L49 11 L49 23 L32 22 L25 27 L22 35 L3 35 Z" fill="#333b40" stroke="#12171a" />
+  <rect x="49" y="12" width="68" height="4" rx="1" fill="#626b73" />
+  <rect x="49" y="19" width="42" height="3" rx="1" fill="#414a50" />
+  <rect x="55" y="18" width="30" height="9" rx="2" fill="#30393f" stroke="#151b1f" />
+  {[0,1,2,3,4,5,6].map((i) => <path key={i} d={`M${58+i*3.5} 20 v5`} stroke="#56616a" />)}
+  <path d="M34 23 Q34 31 43 28 L45 23" fill="none" stroke="#30383e" strokeWidth="2" />
+  <path d="M51 10 H116 M112 9 v3" stroke="#7d8790" />
+  <rect x="2" y="18" width="3" height="17" rx="1" fill="#1a2125" />
+</S> : ART[id] ?? <span className="text-2xl">?</span>}</>;
 
 /** Golden herb: same sprig as the green herb, in gold. */
 export const GoldHerbArt: React.FC<{ green?: boolean }> = ({ green }) => (
