@@ -5,8 +5,26 @@ import { Canvas } from '@react-three/fiber';
 import { ThirdPersonAvatar } from '@/components/vr/ThirdPersonAvatar';
 import { enterMMora } from '@/worlds/worldMode';
 import LeonCharacterModel from '@/components/vr/features/LeonCharacterModel';
+import SkirtFemaleAvatar from '@/components/vr/features/SkirtFemaleAvatar';
 import { useGLTF } from '@react-three/drei';
+import { useLoader } from '@react-three/fiber';
+import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
+import ani10Url from '@/assets/models/ani10.fbx';
 import * as THREE from 'three';
+
+/** Dump the FBX's animation clips + rig info to window.__anims. */
+const AnimProbe: React.FC = () => {
+  const fbx = useLoader(FBXLoader, ani10Url) as THREE.Group;
+  React.useEffect(() => {
+    let skins = 0, bones = 0; const meshNames: string[] = []; const boneNames: string[] = [];
+    fbx.traverse((o) => { if ((o as THREE.SkinnedMesh).isSkinnedMesh) { skins++; meshNames.push(o.name); } if ((o as THREE.Bone).isBone) { bones++; boneNames.push(o.name); } });
+    (window as unknown as Record<string, unknown>).__anims = {
+      clips: fbx.animations.map((a) => ({ n: a.name, d: +a.duration.toFixed(2), t: a.tracks.length })),
+      skins, bones, meshNames, boneNames,
+    };
+  }, [fbx]);
+  return null;
+};
 
 /** Load a GLB, auto-fit to ~1.78 m and ground at y=0. */
 const GlbProbe: React.FC<{ url: string }> = ({ url }) => {
@@ -45,7 +63,11 @@ createRoot(document.getElementById('r')!).render(
       <meshStandardMaterial color="#3a3f36" roughness={1} />
     </mesh>
     <Suspense fallback={null}>
-      {q.get('raw') === '1' ? <LeonCharacterModel pose="standing" targetHeight={1.78} />
+      {q.get('anims') === '1' ? <AnimProbe />
+        : q.get('skirt') ? <SkirtFemaleAvatar
+            animState={(q.get('skirt') as 'idle' | 'walking' | 'running' | 'jumping' | 'climbing') || 'idle'}
+            aiming={q.get('aim') === '1'} headYaw={Number(q.get('head') || 0)} {...(q.get('legfix') ? { legFix: q.get('legfix')!.split(',').map(Number) as [number, number, number] } : {})} />
+        : q.get('raw') === '1' ? <LeonCharacterModel pose="standing" targetHeight={1.78} />
         : q.get('glb') ? <GlbProbe url={q.get('glb')!.includes('://') ? q.get('glb')! : `/src/assets/models/${q.get('glb')}`} />
         : <ThirdPersonAvatar />}
     </Suspense>
