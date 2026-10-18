@@ -23,7 +23,7 @@ interface SkirtFemaleAvatarProps {
   /** Extra head turn (radians, + = look left). */
   headYaw?: number;
   targetHeight?: number;
-  /** Dev probe: corrective base rotation for the thigh bones. */
+  /** Corrective base rotation for the thigh bones (bind pose ships legs-up). */
   legFix?: [number, number, number];
 }
 
@@ -42,7 +42,7 @@ export const SkirtFemaleAvatar: React.FC<SkirtFemaleAvatarProps> = ({
   aiming = false,
   headYaw = 0,
   targetHeight = 1.72,
-  legFix = [0, 0, 0],
+  legFix = [0, 0, Math.PI],
 }) => {
   const fbx = useLoader(FBXLoader, ani10Url) as THREE.Group;
   const root = useRef<THREE.Group>(null);
