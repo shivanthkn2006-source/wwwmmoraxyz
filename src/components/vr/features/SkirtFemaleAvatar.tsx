@@ -16,7 +16,7 @@ import ani10Url from '@/assets/models/ani10.fbx';
 import { avatarMotion } from '@/lib/vrAvatarMotion';
 import { createWeaponArmSolver, gripFrame, isLongGun, W870_GRIP_OFFSET, type GripFrame, type HeldWeapon } from '@/lib/vrWeaponGrip';
 
-/** Forward lean (rad, split over waist/spine) while a gun is held. */
+/** Upright correction (rad, split over waist/spine); +X bends this rig forward, so camera-down pitch is negated for the head. */
 const STANCE_LEAN = 0.32;
 /** Bladed stance: torso turns so the support shoulder comes forward. */
 const STANCE_TWIST = -0.5;
@@ -175,9 +175,11 @@ export const SkirtFemaleAvatar: React.FC<SkirtFemaleAvatarProps> = ({
     }
 
     // ── Torso lean + head turn.
-    set('CC_Base_Waist', run ? 0.14 : moving ? 0.06 : Math.sin(t * 1.4) * 0.015, 0, 0);
+    // The source bind pose arches backward (head ~17 cm behind hips); stand her upright.
+    set('CC_Base_Waist', (run ? 0.14 : moving ? 0.06 : Math.sin(t * 1.4) * 0.015) + STANCE_LEAN * 0.5, 0, 0);
+    set('CC_Base_Spine02', STANCE_LEAN * 0.5, 0, 0);
     set('CC_Base_NeckTwist01', 0, THREE.MathUtils.clamp(headYaw, -1.1, 1.1) * 0.5, 0);
-    set('CC_Base_Head', liveMotion ? avatarMotion.headPitch : 0, THREE.MathUtils.clamp(headYaw, -1.1, 1.1) * 0.5, 0);
+    set('CC_Base_Head', (liveMotion ? -avatarMotion.headPitch : 0) + STANCE_LEAN * 0.4, THREE.MathUtils.clamp(headYaw, -1.1, 1.1) * 0.5, 0);
     if (held && weapon.current && armSolver && bones.CC_Base_R_Upperarm) {
       // Lean into the gun (source bind pose arches backward), then build the
       // hold frame from the live shoulder so the stock rests on it.
@@ -188,7 +190,7 @@ export const SkirtFemaleAvatar: React.FC<SkirtFemaleAvatarProps> = ({
       set('CC_Base_Spine02', lean * 0.5, twist * 0.5, 0);
       // Neck/head turn back so she still looks down the barrel.
       set('CC_Base_NeckTwist01', 0, look - twist * 0.6, 0);
-      set('CC_Base_Head', (liveMotion ? avatarMotion.headPitch : 0) + lean * 0.4, look - twist * 0.4, 0);
+      set('CC_Base_Head', (liveMotion ? -avatarMotion.headPitch : 0) + lean * 0.4, look - twist * 0.4, 0);
       g.updateWorldMatrix(true, true);
       g.worldToLocal(bones.CC_Base_R_Upperarm.getWorldPosition(shoulder));
       const kick = Math.max(0, 1 - (performance.now() - avatarMotion.attackAt) / 180);
