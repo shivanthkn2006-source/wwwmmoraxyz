@@ -7,7 +7,9 @@ import { Environment, Lightformer } from '@react-three/drei';
 async function start() {
   if (!import.meta.env.DEV || !['localhost', '127.0.0.1'].includes(location.hostname)) return;
   // Seed only this disposable browser's device state before importing stores.
-  localStorage.setItem('vr-gear-equipped', '["w870"]');
+  const gun = new URLSearchParams(location.search).get('gun') || 'w870';
+  localStorage.setItem('vr-gear-equipped', JSON.stringify([gun]));
+  localStorage.setItem('mmora-avatar-choice', 'skirt');
   localStorage.setItem('vr-third-person', '1');
   const { ThirdPersonAvatar } = await import('@/components/vr/ThirdPersonAvatar');
   const { setChunkStats } = await import('@/worlds/worldMode');
@@ -33,7 +35,7 @@ async function start() {
     <ambientLight intensity={0.65} />
     <directionalLight position={[3, 5, -1]} intensity={3} />
     <Environment><Lightformer intensity={3} position={[0, 3, 2]} scale={4} /><Lightformer intensity={2} position={[-2, 1, 0]} rotation-y={Math.PI / 2} scale={3} /></Environment>
-     {view === 'side' ? <group position={[0, 0, -2.8]} rotation-y={Math.PI / 2}><SkirtFemaleAvatar aiming holdingW870 liveMotion /></group> : <Review />}
+     {view === 'side' ? <group position={[0, 0, -2.8]} rotation-y={Math.PI / 2}><SkirtFemaleAvatar aiming heldWeapon={gun as 'w870'} liveMotion /></group> : <Review />}
   </Canvas>);
 }
 void start();
