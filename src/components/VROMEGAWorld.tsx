@@ -8,6 +8,7 @@
 import { setVRWorldActive } from '@/lib/vrSession';
 import { floorAt } from '@/lib/vrFloor';
 import { avatarMotion, movementPose } from '@/lib/vrAvatarMotion';
+import { chase, approachAngle, chaseMoveDir, yawOf, CAM_YAW_DAMP, BODY_TURN_DAMP } from '@/lib/vrChaseCam';
 import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { 
@@ -562,13 +563,14 @@ const HoloWall: React.FC<{
  * front of the camera, so the camera swings round the avatar and the avatar
  * turns on the spot (instead of the avatar circling round the camera).
  */
+const isChase = () => { const v = getVRView(); return getWorldState().mode === 'mmora' && v.thirdPerson && !v.face; };
 function turnYaw(camera: THREE.Camera, d: number) {
   if (!d) return;
-  const v = getVRView();
-  if (getWorldState().mode !== 'mmora' || !v.thirdPerson || v.face) { camera.rotation.y += d; return; }
-  const [x, z, yaw] = orbitAvatar(camera.position.x, camera.position.z, camera.rotation.y, d);
-  camera.position.x = x; camera.position.z = z; camera.rotation.y = yaw;
+  if (!isChase()) { camera.rotation.y += d; return; }
+  // Chase view: looking only swings the camera target; the frame loop eases the camera round the body.
+  chase.targetYaw = (chase.targetYaw ?? camera.rotation.y) + d;
 }
+void orbitAvatar;
 
 const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitions?: boolean }> = ({ disabled, blockHighAltitudeTransitions = false }) => {
   const { camera } = useThree();
@@ -590,6 +592,8 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
   const backTurnLeft = useRef(0);
   const backWasDown = useRef(false);
   const lastFloor = useRef(0);
+  const chaseRun = useRef(false);
+  const chaseMove = useRef(false);
 
   const [, getKeys] = useKeyboardControls();
 
@@ -694,6 +698,7 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
       }
 
       previousYaw.current = camera.rotation.y;
+      chase.targetYaw = null; avatarMotion.bodyYaw = camera.rotation.y;
       if (getWorldState().mode === 'mmora' && getVRView().thirdPerson) {
         camera.rotation.x = -Math.atan2(Math.max(0, villageEyeHeight() - 1.6), AVATAR_AHEAD); // level at shoulder height
       }
@@ -1094,8 +1099,27 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
       eventForwardStartedAt.current = null;
     }
 
-    // Human-style walking: left/right/down turn the camera first, then you walk where you face.
     const input = { forward: forward || evF, backward: backward || evB, left: left || evL, right: right || evR };
+    if (isChase()) {
+      // Modern third-person: the body is the player, the camera trails on its arm.
+      const camYaw0 = camera.rotation.y;
+      const bx = camera.position.x - Math.sin(camYaw0) * AVATAR_AHEAD, bz = camera.position.z - Math.cos(camYaw0) * AVATAR_AHEAD;
+      if (chase.targetYaw === null) chase.targetYaw = camYaw0;
+      const camYaw = approachAngle(camYaw0, chase.targetYaw, CAM_YAW_DAMP, dt);
+      const dir = chaseMoveDir(chase.targetYaw, input);
+      const isRunning = staminaTick(dt, run || eventSpeed.current > 1, !!dir);
+      const speed = getVRView().crouch ? WALK_MPS * CROUCH_SPEED : isRunning ? RUN_MPS : WALK_MPS;
+      direction.current.set(dir ? dir[0] : 0, 0, dir ? dir[1] : 0).multiplyScalar(speed);
+      velocity.current.lerp(direction.current, 1 - Math.exp(-7 * dt));
+      const bodyY = camera.position.y - (villageEyeHeight() - 1.6);
+      const [nx, nz] = resolveMove(bx, bz, bx + velocity.current.x * dt, bz + velocity.current.z * dt, bodyY);
+      if (dir) avatarMotion.bodyYaw = approachAngle(avatarMotion.bodyYaw, yawOf(dir[0], dir[1]), BODY_TURN_DAMP, dt);
+      camera.rotation.y = camYaw;
+      camera.position.x = nx + Math.sin(camYaw) * AVATAR_AHEAD; camera.position.z = nz + Math.cos(camYaw) * AVATAR_AHEAD;
+      previousYaw.current = camYaw;
+      chaseRun.current = isRunning; chaseMove.current = !!dir;
+    } else {
+    // Human-style walking: left/right/down turn the camera first, then you walk where you face.
     const step = walkStep(input, dt, backTurnLeft.current, backWasDown.current);
     backTurnLeft.current = step.backTurnLeft;
     backWasDown.current = input.backward;
@@ -1123,6 +1147,9 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
       previousYaw.current = yaw;
       camera.position.x = rx; camera.position.z = rz;
     }
+    avatarMotion.bodyYaw = camera.rotation.y;
+    chaseRun.current = isRunning; chaseMove.current = step.move;
+    }
 
     if (isGroundLocked.current) {
       // Floor under the player: 0 outside, stairs/upper storeys inside buildings.
@@ -1142,8 +1169,8 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
       }
       const floor = eye - eyeHeight;
       const moved = Math.hypot(velocity.current.x, velocity.current.z);
-      if (step.move) avatarMotion.seated = null;
-      avatarMotion.pose = avatarMotion.seated ? 'sitting' : movementPose(moved, isRunning, camera.position.y > eye + 0.03, floor > lastFloor.current + 0.005);
+      if (chaseMove.current) avatarMotion.seated = null;
+      avatarMotion.pose = avatarMotion.seated ? 'sitting' : movementPose(moved, chaseRun.current, camera.position.y > eye + 0.03, floor > lastFloor.current + 0.005);
       lastFloor.current = floor;
     }
 
