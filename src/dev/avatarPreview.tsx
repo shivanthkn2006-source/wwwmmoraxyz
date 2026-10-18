@@ -26,7 +26,9 @@ createRoot(document.getElementById('r')!).render(
       <meshStandardMaterial color="#3a3f36" roughness={1} />
     </mesh>
     <Suspense fallback={null}>
-      {q.get('raw') === '1' ? <LeonCharacterModel pose="standing" targetHeight={1.78} /> : <ThirdPersonAvatar />}
+      {q.get('raw') === '1' ? <LeonCharacterModel pose="standing" targetHeight={1.78} />
+        : q.get('glb') ? <GlbProbe url={`/src/assets/models/${q.get('glb')}`} />
+        : <ThirdPersonAvatar />}
     </Suspense>
   </Canvas>,
 );
