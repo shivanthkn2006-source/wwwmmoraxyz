@@ -13,6 +13,7 @@ import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
 import { clone as skeletonClone } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import * as THREE from 'three';
 import ani10Url from '@/assets/models/ani10.fbx';
+import { avatarMotion } from '@/lib/vrAvatarMotion';
 
 export type SkirtAnimState = 'idle' | 'walking' | 'running' | 'jumping' | 'climbing' | 'sitting';
 
@@ -26,6 +27,7 @@ interface SkirtFemaleAvatarProps {
   /** Corrective base rotation for the thigh bones (bind pose ships legs-up). */
   legFix?: [number, number, number];
   armProbe?: [number, number, number];
+  liveMotion?: boolean;
 }
 
 type Bones = Record<string, THREE.Bone>;
@@ -45,6 +47,7 @@ export const SkirtFemaleAvatar: React.FC<SkirtFemaleAvatarProps> = ({
   targetHeight = 1.72,
   legFix = [0, 0, Math.PI],
   armProbe,
+  liveMotion = false,
 }) => {
   const fbx = useLoader(FBXLoader, ani10Url) as THREE.Group;
   const root = useRef<THREE.Group>(null);
@@ -86,10 +89,11 @@ export const SkirtFemaleAvatar: React.FC<SkirtFemaleAvatarProps> = ({
     last.current.copy(tmp.current);
     speed.current += (Math.min(v, 12) - speed.current) * Math.min(1, d * 6);
 
-    const run = animState === 'running' || speed.current > 6.5;
-    const moving = animState === 'walking' || animState === 'running' || speed.current > 0.3;
-    const climbing = animState === 'climbing';
-    const jumping = animState === 'jumping';
+    const pose = liveMotion ? avatarMotion.pose : animState;
+    const run = pose === 'running' || (!liveMotion && speed.current > 6.5);
+    const moving = pose === 'walking' || pose === 'running' || (!liveMotion && speed.current > 0.3);
+    const climbing = pose === 'climbing';
+    const jumping = pose === 'jumping';
     phase.current += d * (run ? 11 : 7) * Math.min(1, Math.max(speed.current, moving ? 1.5 : 0) / 1.5);
     const swing = Math.sin(phase.current);
     const amp = !moving && !climbing ? 0 : run ? 0.65 : 0.45;
@@ -116,6 +120,11 @@ export const SkirtFemaleAvatar: React.FC<SkirtFemaleAvatarProps> = ({
       lArmZ += Math.sin(t * 1.4) * 0.02; rArmZ -= Math.sin(t * 1.4) * 0.02;
     }
 
+    if (liveMotion) {
+      const attack = Math.max(0, 1 - (performance.now() - avatarMotion.attackAt) / 350);
+      if (attack > 0) { rArmX -= attack * 0.35; lArmX -= aiming ? attack * 0.2 : 0; }
+    }
+
     if (armProbe) set('CC_Base_L_Upperarm', armProbe[0], armProbe[1], armProbe[2]);
     else set('CC_Base_L_Upperarm', lArmX, lArmTwist, lArmZ);
     set('CC_Base_R_Upperarm', rArmX, rArmTwist, rArmZ);
@@ -134,7 +143,7 @@ export const SkirtFemaleAvatar: React.FC<SkirtFemaleAvatarProps> = ({
       set('CC_Base_R_Thigh', legFix[0] - Math.abs(Math.sin(phase.current + Math.PI)) * 1.0, legFix[1], legFix[2]);
       set('CC_Base_L_Calf', Math.abs(swing) * 1.1);
       set('CC_Base_R_Calf', Math.abs(Math.sin(phase.current + Math.PI)) * 1.1);
-    } else if (animState === 'sitting') {
+    } else if (pose === 'sitting') {
       set('CC_Base_L_Thigh', legFix[0] - 1.5, legFix[1], legFix[2]); set('CC_Base_R_Thigh', legFix[0] - 1.5, legFix[1], legFix[2]);
       set('CC_Base_L_Calf', 1.4); set('CC_Base_R_Calf', 1.4);
     } else if (moving) {

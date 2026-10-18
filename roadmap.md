@@ -1,5 +1,11 @@
 # M'Mora Village roadmap
 
+## Oct 18 avatar options and inventory repair
+- [ ] Diagnose and repair inventory equipment interaction without resetting items or changing herb identities.
+- [ ] Inspect all six uploaded GLBs; offer only validated movement-capable options, keep skirt female default.
+- [ ] Connect avatar poses to existing village walking/running/jump/sit/attack signals; preserve camera/stats/story/saves.
+- [ ] Verify isolated village render and inventory interactions; separate authenticated evidence and blockers.
+
 ## Oct 18 weapon visual review
 - [x] W-870 grip-pivot carry adjustment + signed-out fixture before/after evidence; 12 regression tests passed, no account writes.
 - [ ] W-870 remaining stock/forearm, fingers, walking/aiming and village-clearance checks: isolated-account sign-in blocked by permission.

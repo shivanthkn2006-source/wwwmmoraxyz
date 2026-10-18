@@ -20,6 +20,8 @@ import { COIN_FACES, splitCoins } from '@/lib/vrCoinLook';
 import { useVRSelf } from '@/lib/vrSelf';
 import { VRWorldList } from './VRWorldList';
 import { LookPicker } from './VRLookPicker';
+import { VRAvatarPicker } from './VRAvatarPicker';
+import { Button } from '@/components/ui/button';
 import { FilesChat } from './VRFilesChat';
 import { GEAR, useGear, useEquipped, toggleEquip, gearStats, useLevel } from '@/lib/vrGear';
 
@@ -145,21 +147,23 @@ export const VRBagPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const moveTo = (x: number, y: number) => moveItem(selItem, x, y);
   // Press-and-drag: the item follows the finger, then drops on the square under it.
   const gridRef = React.useRef<HTMLDivElement>(null);
+  const dragMoved = React.useRef(false);
   const drag = React.useRef<{ it: CaseItem; el: HTMLElement; sx: number; sy: number; moved: boolean } | null>(null);
   const onDown = (it: CaseItem) => (e: React.PointerEvent<HTMLButtonElement>) => {
     drag.current = { it, el: e.currentTarget, sx: e.clientX, sy: e.clientY, moved: false };
+    dragMoved.current = false;
     e.currentTarget.setPointerCapture(e.pointerId);
   };
   const onMove = (e: React.PointerEvent) => {
     const d = drag.current; if (!d) return;
     const dx = e.clientX - d.sx, dy = e.clientY - d.sy;
     if (!d.moved && Math.hypot(dx, dy) < 6) return;
-    d.moved = true; d.el.style.transform = `translate(${dx}px, ${dy}px)`; d.el.style.zIndex = '5';
+    d.moved = true; d.el.style.transform = `translate(${dx}px, ${dy}px)`; d.el.style.zIndex = '5'; dragMoved.current = true;
   };
   const onUp = (e: React.PointerEvent) => {
     const d = drag.current; drag.current = null; if (!d) return;
     d.el.style.transform = ''; d.el.style.zIndex = '';
-    if (!d.moved) { setSel((s) => (s === d.it.id ? null : d.it.id)); return; }
+    if (!d.moved) return; // Selection belongs to click, including keyboard and assistive input.
     const r = gridRef.current?.getBoundingClientRect(); if (!r) return;
     const x = Math.floor((e.clientX - r.left) / cell), y = Math.floor((e.clientY - r.top) / cell);
     if (x >= 0 && y >= 0 && x < CASE_COLS && y < rows) moveItem(d.it, Math.min(x, CASE_COLS - d.it.w), Math.min(y, rows - d.it.h));
@@ -203,8 +207,9 @@ export const VRBagPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                     const p = layout[it.id]; if (!p) return null;
                     return (
                       <button key={it.id} type="button" aria-pressed={sel === it.id} title={it.name} onPointerDown={onDown(it)} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} style={{ touchAction: 'none', gridColumn: `${p.x + 1} / span ${it.w}`, gridRow: `${p.y + 1} / span ${it.h}` }}
+                        aria-label={it.name} onClick={(e) => { if (e.detail === 0 || !dragMoved.current) setSel((s) => s === it.id ? null : it.id); dragMoved.current = false; }}
                         className="re-case-item" data-kind={it.kind}>
-                        <span className="re-case-art">{it.kind === 'herb' ? <Herb /> : it.kind === 'coin' ? <img src={COIN_FACES[it.face ?? 'gold']} alt="" className="h-full w-full object-contain" draggable={false} /> : it.kind === 'bag' ? <img src={COIN_FACES.bag} alt="" className="h-full w-full object-contain" draggable={false} /> : it.kind === 'gear' ? <GearArt id={it.gid!} /> : it.kind === 'gold' ? <GoldHerbArt /> : <Gem rarity={it.rarity!} />}</span>
+                        <span className="re-case-art">{it.kind === 'herb' ? <Herb /> : it.kind === 'coin' ? <img src={COIN_FACES[it.face ?? 'gold']} alt="" className="h-full w-full object-contain" draggable={false} /> : it.kind === 'bag' ? <img src={COIN_FACES.bag} alt="" className="h-full w-full object-contain" draggable={false} /> : it.kind === 'gear' && it.gid ? <GearArt id={it.gid} /> : it.kind === 'gold' ? <GoldHerbArt /> : it.rarity ? <Gem rarity={it.rarity} /> : null}</span>
                         {it.count !== undefined && <span className="re-case-count">{it.count}</span>}
                       </button>
                     );
@@ -214,6 +219,7 @@ export const VRBagPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
               <div className="re-case-handle" aria-hidden />
             </>
           )}
+          {tab === 'files' && <VRAvatarPicker />}
           {tab === 'keys' && <div className="re-case-list">{story.keys.length ? story.keys.map((k) => <div key={k} className="re-case-row">🗝️ {KEYS[k]?.name ?? k}<span className="block text-[10px] opacity-70">Opens: {KEYS[k]?.opens.replace(/_/g, ' ')}{story.open.includes(KEYS[k]?.opens) ? ' · used' : ''}</span></div>) : <p>No keys yet. Look around M'Mora Village.</p>}</div>}
           {tab === 'files' && <div className="re-case-list overflow-y-auto"><div className="re-case-row font-semibold">Level {level} · Attack {stats.attack} · Defence {stats.defence}</div><LookPicker /><FilesChat />{(['weapon','armour','quest'] as const).map((k) => <div key={k}><div className="re-case-row font-semibold">{k === 'weapon' ? 'Weapons' : k === 'armour' ? 'Armour' : 'Quest items'}</div>{GEAR.filter((g) => g.kind === k).map((g) => <div key={g.id} className="re-case-row" style={{ opacity: gear.includes(g.id) ? 1 : 0.45 }}>{g.icon} {gear.includes(g.id) ? g.name : '???'}<span className="block text-[10px] opacity-70">{gear.includes(g.id) ? g.detail : 'Not found yet — somewhere in M\'Mora Village'}</span>{gear.includes(g.id) && g.kind !== 'quest' && <button type="button" onClick={() => toggleEquip(g.id)} className="mt-1 text-[11px] underline">{equipped.includes(g.id) ? 'Unequip' : 'Equip'}</button>}</div>)}</div>)}{story.notes.map((n) => <button key={n} type="button" onClick={() => readNote(n)} className="re-case-row w-full text-left">📜 {NOTES[n]?.title ?? n}</button>)}<VRWorldList embedded /></div>}
           {tab === 'quests' && <ul className="re-case-list" aria-label="Quests">
@@ -233,15 +239,15 @@ export const VRBagPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       </div>
 
       {/* Name bar + actions */}
-      <div className="mx-auto flex w-full max-w-[min(100%,980px)] items-center gap-2 px-2 pb-1 pt-1">
-        <div className="re-case-namebar flex-1 truncate" data-testid="bag-closeup">
+      <div className="mx-auto flex w-full shrink-0 flex-wrap max-w-[min(100%,980px)] items-center gap-2 px-2 pb-1 pt-1">
+        <div className="re-case-namebar min-w-0 flex-1 truncate" data-testid="bag-closeup">
           {msg ?? (selItem ? `${selItem.name}${selItem.count !== undefined ? ` ×${selItem.count}` : ''} — ${selItem.detail ?? ''}` : items.length ? 'Drag an item to a square, or tap it then tap a square' : 'Walk up to a glowing item and tap Use to pick it up.')}
         </div>
         {selItem?.kind === 'herb' && <button type="button" className="re-case-btn" onClick={() => { say(useHerb()); setSel(null); }}>Use</button>}
         {selItem?.kind === 'herb' && pick.herbs >= 3 && <button type="button" className="re-case-btn" onClick={() => { say(combineHerbs()); setSel(null); }}>Combine</button>}
         {selItem?.kind === 'herb' && pick.herbs >= 2 && hasGear('reagent') && <button type="button" className="re-case-btn" onClick={() => { say(craftSerum(true)); setSel(null); }}>Craft Serum</button>}
         {selItem?.kind === 'gold' && <button type="button" className="re-case-btn" onClick={() => { say(useGoldHerb()); setSel(null); }}>Use</button>}
-        {selItem?.kind === 'gear' && GEAR.find((g) => g.id === selItem.gid)?.kind !== 'quest' && <button type="button" className="re-case-btn" onClick={() => { toggleEquip(selItem.gid!); say(`${equipped.includes(selItem.gid!) ? 'Unequipped' : 'Equipped'} ${selItem.name}`); }}>{equipped.includes(selItem.gid!) ? 'Unequip' : 'Equip'}</button>}
+        {selItem?.kind === 'gear' && selItem.gid && GEAR.find((g) => g.id === selItem.gid)?.kind !== 'quest' && <Button variant="ghost" className="re-case-btn shrink-0" onClick={() => { const id = selItem.gid; if (!id) return; const wasEquipped = equipped.includes(id); toggleEquip(id); say(`${wasEquipped ? 'Unequipped' : 'Equipped'} ${selItem.name}`); }}>{equipped.includes(selItem.gid) ? 'Unequip' : 'Equip'}</Button>}
         {selItem?.kind === 'gear' && GEAR.find((g) => g.id === selItem.gid)?.kind === 'quest' && <button type="button" className="re-case-btn" onClick={() => { playSfx(selItem.gid === 'map' ? 'paper' : 'medallion'); say(selItem.detail ?? selItem.name); }}>Examine</button>}
         {(selItem?.kind === 'coin' || selItem?.kind === 'bag') && <button type="button" className="re-case-btn" onClick={() => { playSfx('coins'); say('Spend coins at the hidden merchant in the village'); }}>Use</button>}
         {selItem?.kind === 'relic' && <button type="button" className="re-case-btn" onClick={() => { playSfx('medallion'); say(`${selItem.name} — ${selItem.detail ?? ''}`); }}>Examine</button>}

@@ -6,15 +6,15 @@
 - Auth hydrates first; Google BYOK returns via /~oauth/callback to public `/auth`; authenticated growth calls verify claims and degrade session races to signed-out results, never runtime failures.
 - Home orders due DHF, growth, social, Loop, and humor cards by their real scheduled timestamps, because fixed source blocks hide timely content.
 - All Zoe's LOL consumers share the global realtime multiplexer, because independent channels race during auth reloads and can take Home offline.
-- Boot stays light: no heavy manual chunks; hosts mount via AfterAuthIdle (pauseInVR hosts unmount while VR World is active).
-- VR rules: src/components/vr/AGENTS.md. W-870 shares a grip-centred mesh; review fixtures never save, to protect progress.
+- Boot: no heavy chunks; AfterAuthIdle hosts marked pauseInVR unmount in VR.
+- VR rules: src/components/vr/AGENTS.md. W-870 shares a grip-centred mesh; fixtures never save. Avatar choices load on selection; vrAvatarMotion reads controller poses without moving/saving players.
 - Village encounter completion uses the existing monotonic village-step account merge; movement resolves the shared ahead-of-camera body offset, because volatile enemy state and camera-only collisions lost progress and let avatars cross doors.
 - DHF pictures are copied once into dhf-compass and served from storage, preventing provider outages from blanking cards.
 - Zoe orb drift updates Framer motion values without React state updates, and Zoe glass avoids live backdrop filters, because frame-by-frame tree repaints cause orb/chat flicker over Home.
 - Home menu panel uses a fixed warm surface without backdrop-filter, because live blur over the moving feed flickers.
 - DHF and LOL automatic speech offer candidates to one newest-generated selector, because separate announcers can speak multiple old cards.
 - Zoe listening is free-first: browser recognition first, sticky switch to Deepgram Nova on failure (localStorage zoe-listen-mode=deepgram-first flips order), because it saves Deepgram cost while never losing hearing.
-- Exact repeat questions use each member's private DHF answer cache before AI recall.
+- Repeat questions use private DHF cache before AI recall.
 - Face sign-in matches on-device face fingerprints (live scan + identity photo) on the server before any AI vision fallback, because it costs no tokens and survives provider outages.
 - Face sign-in and setup require a server-issued one-time liveness challenge (random blink/head-turn order, checked server-side) before on-device fingerprints are matched, because a static photo or replayed video must not unlock an account.
 - Platform visit analytics are written only by the `track-visit` function (service role, IP/geo resolved server-side) into admin-read-only tables, because visitors' network details must never be readable by members.
