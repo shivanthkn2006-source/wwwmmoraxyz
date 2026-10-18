@@ -17,7 +17,7 @@ import { Html } from '@react-three/drei';
 import { useMeet, myMeetId } from '@/worlds/meet/vrMeet';
 import { W870Model } from './features/W870Model';
 import LeonCharacterModel from './features/LeonCharacterModel';
-import HelenaCharacterModel from './features/HelenaCharacterModel';
+import SkirtFemaleAvatar from './features/SkirtFemaleAvatar';
 
 /** My own latest chat message over my head for 8 s (others see theirs over mine via MeetPresence). */
 const MyBubble: React.FC = () => {
@@ -47,7 +47,6 @@ const ModelFallback: React.FC = () => (
 
 export const ThirdPersonAvatar: React.FC = () => {
   const { thirdPerson, crouch, face } = useVRView();
-  const { female } = useVRSelf();
   const { camera } = useThree();
   const root = useRef<THREE.Group>(null);
   const body = useRef<THREE.Group>(null);
