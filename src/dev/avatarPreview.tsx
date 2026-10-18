@@ -13,7 +13,10 @@ const pos = (q.get('cam') || '0,1.7,4').split(',').map(Number) as [number, numbe
 const look = (q.get('look') || '0,1.2,-2.8').split(',').map(Number) as [number, number, number];
 
 createRoot(document.getElementById('r')!).render(
-  <Canvas camera={{ position: pos, fov: 60, far: 600 }} onCreated={({ camera }) => camera.lookAt(...look)}>
+  <Canvas camera={{ position: pos, fov: 60, far: 600 }} onCreated={({ camera, gl, scene }) => {
+    camera.lookAt(...look);
+    (window as unknown as Record<string, unknown>).__vp = { gl, scene, camera };
+  }}>
     <ambientLight intensity={0.9} />
     <directionalLight position={[3, 6, 4]} intensity={1.4} />
     <directionalLight position={[-4, 3, -3]} intensity={0.5} color="#bcd" />
