@@ -7,6 +7,7 @@
 
 import { setVRWorldActive } from '@/lib/vrSession';
 import { floorAt } from '@/lib/vrFloor';
+import { avatarMotion, movementPose } from '@/lib/vrAvatarMotion';
 import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { 
@@ -588,6 +589,7 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
   const keyStateRef = useRef({ forward: false, backward: false, left: false, right: false, run: false, jump: false });
   const backTurnLeft = useRef(0);
   const backWasDown = useRef(false);
+  const lastFloor = useRef(0);
 
   const [, getKeys] = useKeyboardControls();
 
@@ -1138,6 +1140,11 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
         camera.position.y = eye;
         verticalVelocity.current = 0;
       }
+      const floor = eye - eyeHeight;
+      const moved = Math.hypot(velocity.current.x, velocity.current.z);
+      if (step.move) avatarMotion.seated = null;
+      avatarMotion.pose = avatarMotion.seated ? 'sitting' : movementPose(moved, isRunning, camera.position.y > eye + 0.03, floor > lastFloor.current + 0.005);
+      lastFloor.current = floor;
     }
 
     camera.rotation.x = THREE.MathUtils.clamp(camera.rotation.x, -1.45, 1.45);

@@ -1,5 +1,5 @@
 /**
- * Third-person avatar: the realistic Leon / Helena character model drawn just
+ * Third-person avatar: the selected village character model drawn just
  * ahead of the camera, so you see yourself from behind. A gentle bob plays
  * with real movement speed (walk / run), crouch lowers the body, and your
  * latest chat message floats over your head. The W-870 rides in the right
@@ -16,8 +16,8 @@ import { loadLook } from '@/lib/vrLook';
 import { Html } from '@react-three/drei';
 import { useMeet, myMeetId } from '@/worlds/meet/vrMeet';
 import { W870Model } from './features/W870Model';
-import LeonCharacterModel from './features/LeonCharacterModel';
-import SkirtFemaleAvatar from './features/SkirtFemaleAvatar';
+import { VillageAvatar } from './features/VillageAvatar';
+import { avatarMotion } from '@/lib/vrAvatarMotion';
 
 /** My own latest chat message over my head for 8 s (others see theirs over mine via MeetPresence). */
 const MyBubble: React.FC = () => {
@@ -62,12 +62,18 @@ export const ThirdPersonAvatar: React.FC = () => {
   useEffect(() => { void loadLook(); }, []);
 
   useEffect(() => { wireVRViewKeys(); }, []);
+  useEffect(() => {
+    const attack = () => { avatarMotion.attackAt = performance.now(); };
+    window.addEventListener('vr-hand-reach', attack);
+    return () => window.removeEventListener('vr-hand-reach', attack);
+  }, []);
 
   useFrame((_, dt) => {
     const g = root.current;
     if (!g || !thirdPerson) return;
     const d = Math.min(dt, 0.1);
     const yaw = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ').y;
+    avatarMotion.headPitch = THREE.MathUtils.clamp(new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ').x, -0.4, 0.4);
     const fx = -Math.sin(yaw), fz = -Math.cos(yaw);
     const ground = Math.max(0, camera.position.y - (getWorldState().mode === 'mmora' ? villageEyeHeight() : 1.6));
     // Only stand on a real street: hidden during the aerial view, before the
@@ -76,13 +82,16 @@ export const ThirdPersonAvatar: React.FC = () => {
     g.visible = !(w.mode === 'real' && (w.aerial || w.chunksLoaded === 0 || ground > 8));
     if (!g.visible) return;
     g.position.set(camera.position.x + fx * AHEAD, ground, camera.position.z + fz * AHEAD);
+    const seated = avatarMotion.seated;
+    if (seated && w.mode === 'mmora') g.position.set(seated.x, 0.44, seated.z);
     // Face view: turn round to face the camera; normal view: back to the camera.
     g.rotation.y = face ? yaw : yaw + Math.PI;
+    if (seated) g.rotation.y = seated.yaw;
     // Real speed from how far the camera moved.
     const moved = Math.hypot(camera.position.x - last.current.x, camera.position.z - last.current.z) / Math.max(d, 1e-3);
     last.current.copy(camera.position);
     speed.current += (Math.min(moved, 12) - speed.current) * Math.min(1, d * 8);
-    const run = speed.current > 6.5;
+    const run = avatarMotion.pose === 'running';
     phase.current += d * (run ? 11 : 7) * Math.min(1, speed.current / 2);
     const amp = speed.current < 0.3 ? 0 : run ? 0.035 : 0.02;
     crouchAmt.current += ((crouch ? 1 : 0) - crouchAmt.current) * Math.min(1, d * 8);
@@ -103,7 +112,7 @@ export const ThirdPersonAvatar: React.FC = () => {
               the village avatar for ALL profiles while a real male model is
               sourced. It drives its own walk/run/jump/aim poses from real
               movement speed. */}
-          <SkirtFemaleAvatar animState="idle" aiming={holdingW870} targetHeight={1.72} />
+          <VillageAvatar aiming={eq.some((id) => ['w870', 'shotgun', 'boltrifle', 'pistol', 'sentinel9'].includes(id))} />
         </Suspense>
         {/* equipment overlays (roughly placed on the realistic body) */}
         {eq.includes('headlamp') && <group position={[0, 1.72, 0]}>

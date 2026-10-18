@@ -1,5 +1,13 @@
 # M'Mora Village roadmap
 
+## Oct 18 avatar options and inventory repair
+- [x] Repair inventory selection/equip interaction; isolated click→equip→unequip verified, 3 gear preservation tests; no item resets or herb colour changes.
+- [x] Inspect all six GLBs; optional Zoe and Ready Player rigs (~4.6–4.9 MB) render in isolated poses; skirt remains default. None contains movement clips.
+- [x] Wire visual walk/run/jump/stairs/sit/hand-reach telemetry to existing controller; camera/stats/story/saves unchanged. These are procedural poses, not motion capture.
+- [x] Isolated inventory + avatar switch verified; render screenshots and evidence-separated report saved. Build OK, 8 focused tests passed.
+- [ ] Authenticated village movement, weapon grip/finger contact and avatar-switch readback: blocked by localhost asset proxy returning HTML; isolated renders substitute exact uploaded GLB bytes.
+- [ ] Motion-captured fighting, shooting/reload and stair animations: blocked by missing animation clips in uploads; optional rigs currently use basic procedural poses.
+
 ## Oct 18 weapon visual review
 - [x] W-870 grip-pivot carry adjustment + signed-out fixture before/after evidence; 12 regression tests passed, no account writes.
 - [ ] W-870 remaining stock/forearm, fingers, walking/aiming and village-clearance checks: isolated-account sign-in blocked by permission.

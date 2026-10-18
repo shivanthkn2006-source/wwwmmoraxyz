@@ -14,6 +14,7 @@ import { mmoraCityKey } from '@/worlds/worldMode';
 import { StreetLamps } from '../StreetLamps';
 import { VILLAGE_BENCHES } from './villageMap';
 import { getMeet, setChatOpen } from '@/worlds/meet/vrMeet';
+import { avatarMotion } from '@/lib/vrAvatarMotion';
 
 export const TALK_SECONDS = 5 * 60;
 
@@ -96,6 +97,8 @@ export const MMoraBenches: React.FC = () => {
         const seat = seatOf(b);
         window.dispatchEvent(new CustomEvent('vr-teleport', { detail: { position: [seat[0], 1.15, seat[1]], lockGround: true } }));
         sit.current = { seat, t: 0, earned: 0, talk: 0 };
+        avatarMotion.seated = { x: seat[0], z: seat[1], yaw: b[2] };
+        avatarMotion.pose = 'sitting';
         const n = getMeet().nearest;
         if (n && n.dist < 4) { sit.current.talk = TALK_SECONDS; setChatOpen(true, true); toast(`Sitting with @${n.username} — chat for 5 minutes`); }
         else toast('Sitting — you earn a coin every 30 seconds');
@@ -116,7 +119,7 @@ export const MMoraBenches: React.FC = () => {
 
   useFrame((_, dt) => {
     const s = sit.current; if (!s) return;
-    if (Math.hypot(camera.position.x - s.seat[0], camera.position.z - s.seat[1]) > 1.2) { sit.current = null; return; }
+    if (Math.hypot(camera.position.x - s.seat[0], camera.position.z - s.seat[1]) > 1.2) { sit.current = null; avatarMotion.seated = null; return; }
     s.t += Math.min(dt, 0.1);
     if (s.talk > 0) { s.talk -= Math.min(dt, 0.1); if (s.talk <= 0) toast('5 minutes together — stay or get up any time'); }
     if (s.t >= SIT_COIN_SECONDS && s.earned < SIT_COIN_CAP) { s.t = 0; s.earned += 1; addCoins(1); toast(`+1 coin for resting (${s.earned})`); }
