@@ -1,21 +1,24 @@
 /**
- * Light third-person avatar: a jointed figure drawn just ahead of the camera,
- * so you see yourself from behind. Legs and arms swing with real movement
- * speed (walk / run), crouch bends the knees and lowers the body, and a
- * short reach plays when you pick something up. ~12 simple meshes, no model
- * download, so it costs almost nothing on basic phones.
+ * Third-person avatar: the realistic Leon / Helena character model drawn just
+ * ahead of the camera, so you see yourself from behind. A gentle bob plays
+ * with real movement speed (walk / run), crouch lowers the body, and your
+ * latest chat message floats over your head. The W-870 rides in the right
+ * hand when equipped. Equipment (headlamp, helmet, vest) still shows.
  */
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { Suspense, useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { getWorldState } from '@/worlds/worldMode';
 import { useVRView, wireVRViewKeys, AVATAR_AHEAD, villageEyeHeight } from '@/lib/vrView';
 import { useVRSelf } from '@/lib/vrSelf';
 import { useEquipped } from '@/lib/vrGear';
-import { useLook, loadLook } from '@/lib/vrLook';
+import { loadLook } from '@/lib/vrLook';
 import { Html } from '@react-three/drei';
 import { useMeet, myMeetId } from '@/worlds/meet/vrMeet';
 import { W870Model } from './features/W870Model';
+import LeonCharacterModel from './features/LeonCharacterModel';
+import HelenaCharacterModel from './features/HelenaCharacterModel';
+
 /** My own latest chat message over my head for 8 s (others see theirs over mine via MeetPresence). */
 const MyBubble: React.FC = () => {
   const { messages } = useMeet();
@@ -26,62 +29,40 @@ const MyBubble: React.FC = () => {
   if (!m || now - m.at > 8000) return null;
   return <Html position={[0, 2.3, 0]} center occlude={false} style={{ pointerEvents: 'none' }}><div style={{ maxWidth: 'min(220px, 60vw)', width: 'max-content', background: '#fff', color: '#000', fontFamily: 'Georgia, serif', fontSize: 'clamp(11px, 2.6vw, 14px)', lineHeight: 1.3, padding: '4px 9px', borderRadius: 12, boxShadow: '0 2px 6px rgba(0,0,0,.35)', wordBreak: 'break-word' }}>{m.text.slice(0, 140)}</div></Html>;
 };
-import { HUMAN_COLORS as HC, HUMAN_MATERIAL, headGeometry } from '@/lib/vrHumanLook';
-
-const HEAD = headGeometry();
-const HEAD_F = headGeometry(true);
 
 const AHEAD = AVATAR_AHEAD;
-// Your own avatar matches the item-case portrait (other people keep the shared look):
-// navy shirt with sleeves rolled, yellow-edged collar, brown leather shoulder
-// holster and thigh holster, tan belt with steel buckle, off-white trousers, brown boots.
-const SKIN = HC.skin, SHIRT = '#22305a', PANTS = '#e4dfd3', SHOE = '#3a2618';
+
+const ModelFallback: React.FC = () => (
+  <group>
+    <mesh position={[0, 0.95, 0]}>
+      <capsuleGeometry args={[0.24, 1.15, 6, 10]} />
+      <meshStandardMaterial color="#59606e" roughness={0.75} metalness={0.15} />
+    </mesh>
+    <mesh position={[0, 1.78, 0]}>
+      <sphereGeometry args={[0.18, 14, 14]} />
+      <meshStandardMaterial color="#c7a080" roughness={0.7} />
+    </mesh>
+  </group>
+);
 
 export const ThirdPersonAvatar: React.FC = () => {
   const { thirdPerson, crouch, face } = useVRView();
-  const lids = useRef<THREE.Group>(null), mouth = useRef<THREE.Mesh>(null);
-  const blinkAt = useRef(2), talk = useRef(0);
   const { female } = useVRSelf();
   const { camera } = useThree();
   const root = useRef<THREE.Group>(null);
-  const hips = useRef<THREE.Group>(null);
-  const legL = useRef<THREE.Group>(null), legR = useRef<THREE.Group>(null);
-  const shinL = useRef<THREE.Group>(null), shinR = useRef<THREE.Group>(null);
-  const armL = useRef<THREE.Group>(null), armR = useRef<THREE.Group>(null);
+  const body = useRef<THREE.Group>(null);
   const last = useRef(new THREE.Vector3());
   const phase = useRef(0);
   const speed = useRef(0);
-  const reach = useRef(0);
   const crouchAmt = useRef(0);
   const eq = useEquipped();
   const holdingW870 = eq.includes('w870');
   const mats = useMemo(() => ({
-    skin: new THREE.MeshStandardMaterial({ color: SKIN, roughness: 0.7 }),
-    shirt: new THREE.MeshStandardMaterial({ color: SHIRT, roughness: 0.6 }),
-    pants: new THREE.MeshStandardMaterial({ color: PANTS, roughness: 0.8 }),
-    shoe: new THREE.MeshStandardMaterial({ color: SHOE, roughness: 0.9 }),
-    trim: new THREE.MeshStandardMaterial({ color: '#c9a227', roughness: 0.6 }),
-    leather: new THREE.MeshStandardMaterial({ color: '#5a3520', roughness: 0.55 }),
-    belt: new THREE.MeshStandardMaterial({ color: '#a8823c', roughness: 0.5 }),
     steel: new THREE.MeshStandardMaterial({ color: '#b8bcc0', metalness: 0.8, roughness: 0.3 }),
-    hair: new THREE.MeshStandardMaterial({ color: HC.hair, roughness: 0.9 }),
   }), []);
-  const look = useLook();
   useEffect(() => { void loadLook(); }, []);
-  useEffect(() => {
-    mats.skin.color.set(look.skin); mats.hair.color.set(look.hair_color);
-    mats.shirt.color.set(look.shirt); mats.pants.color.set(look.trousers);
-  }, [look, mats]);
 
   useEffect(() => { wireVRViewKeys(); }, []);
-  useEffect(() => {
-    const onPick = () => { reach.current = 1; };
-    window.addEventListener('vr-item-pickup', onPick);
-    window.addEventListener('vr-hand-reach', onPick);
-    const onTalk = () => { talk.current = 2.5; };
-    for (const n of ['vr-chat-sent', 'zoe-speaking', 'vr-voice-talking']) window.addEventListener(n, onTalk);
-    return () => { window.removeEventListener('vr-item-pickup', onPick); window.removeEventListener('vr-hand-reach', onPick); };
-  }, []);
 
   useFrame((_, dt) => {
     const g = root.current;
@@ -98,35 +79,18 @@ export const ThirdPersonAvatar: React.FC = () => {
     g.position.set(camera.position.x + fx * AHEAD, ground, camera.position.z + fz * AHEAD);
     // Face view: turn round to face the camera; normal view: back to the camera.
     g.rotation.y = face ? yaw : yaw + Math.PI;
-    // Blink every few seconds; mouth moves while you or Zoe talk.
-    blinkAt.current -= d;
-    const closed = blinkAt.current < 0.12;
-    if (blinkAt.current < 0) blinkAt.current = 2 + Math.random() * 3;
-    if (lids.current) lids.current.scale.y = closed ? 1 : 0.05;
-    talk.current = Math.max(0, talk.current - d);
-    if (mouth.current) mouth.current.scale.y = talk.current > 0 ? 1 + Math.abs(Math.sin(performance.now() / 70)) * 3 : 1;
     // Real speed from how far the camera moved.
     const moved = Math.hypot(camera.position.x - last.current.x, camera.position.z - last.current.z) / Math.max(d, 1e-3);
     last.current.copy(camera.position);
     speed.current += (Math.min(moved, 12) - speed.current) * Math.min(1, d * 8);
     const run = speed.current > 6.5;
     phase.current += d * (run ? 11 : 7) * Math.min(1, speed.current / 2);
-    const amp = speed.current < 0.3 ? 0 : run ? 0.9 : 0.55;
+    const amp = speed.current < 0.3 ? 0 : run ? 0.035 : 0.02;
     crouchAmt.current += ((crouch ? 1 : 0) - crouchAmt.current) * Math.min(1, d * 8);
     const c = crouchAmt.current;
-    const s = Math.sin(phase.current) * amp;
-    if (hips.current) { hips.current.position.y = 0.95 - c * 0.38 + Math.abs(Math.cos(phase.current)) * amp * 0.05; hips.current.rotation.x = run ? 0.18 : c * 0.35; }
-    if (legL.current) legL.current.rotation.x = s - c * 1.1;
-    if (legR.current) legR.current.rotation.x = -s - c * 1.1;
-    if (shinL.current) shinL.current.rotation.x = Math.max(0, -s) * 0.9 + c * 1.9;
-    if (shinR.current) shinR.current.rotation.x = Math.max(0, s) * 0.9 + c * 1.9;
-    reach.current = Math.max(0, reach.current - d * 1.6);
-    const r = Math.sin(reach.current * Math.PI);
-    if (armL.current) armL.current.rotation.x = -s * 0.8;
-    if (armR.current) {
-      // Keep the low-carried shotgun outside the holster and walking thigh.
-      armR.current.rotation.x = holdingW870 ? -0.08 : s * 0.8 - r * 1.4;
-      armR.current.rotation.z = holdingW870 ? 0.1 : 0;
+    if (body.current) {
+      body.current.position.y = -c * 0.38 + Math.abs(Math.cos(phase.current)) * amp;
+      body.current.rotation.x = run ? 0.12 : c * 0.3;
     }
   });
 
@@ -134,64 +98,36 @@ export const ThirdPersonAvatar: React.FC = () => {
   return (
     <group ref={root}>
       <MyBubble />
-      <group ref={hips} position={[0, 0.95, 0]}>
-        <mesh position={[0, 0.32, 0]} material={mats.shirt}><boxGeometry args={[0.44, 0.6, 0.25]} /></mesh>
-        <mesh position={[0, 0.78, 0]} geometry={female ? HEAD_F : HEAD} material={HUMAN_MATERIAL} />
-        {/* eyelids (blink) and a mouth that opens while talking */}
-        <group ref={lids} position={[0, 0.795, 0.15]}>{[-0.052, 0.052].map((x) => <mesh key={x} position={[x, 0, 0]} material={mats.skin}><boxGeometry args={[0.058, 0.05, 0.012]} /></mesh>)}</group>
-        <mesh ref={mouth} position={[0, 0.712, 0.142]}><boxGeometry args={[0.045, 0.008, 0.01]} /><meshStandardMaterial color="#3a1414" /></mesh>
-        {/* stand-up collar with yellow edge */}
-        <mesh position={[0, 0.63, 0]} material={mats.shirt}><cylinderGeometry args={[0.085, 0.1, 0.07, 10]} /></mesh>
-        <mesh position={[0, 0.665, 0]} material={mats.trim}><torusGeometry args={[0.087, 0.008, 4, 14]} /></mesh>
-        {/* shoulder holster: straps over both shoulders, cross on the back, pouches under the arms */}
-        {[-1, 1].map((sx) => <mesh key={`st${sx}`} position={[sx * 0.11, 0.38, 0.13]} rotation={[0, 0, sx * 0.12]} material={mats.leather}><boxGeometry args={[0.05, 0.5, 0.012]} /></mesh>)}
-        {[-1, 1].map((sx) => <mesh key={`sb${sx}`} position={[0, 0.36, -0.13]} rotation={[0, 0, sx * 0.75]} material={mats.leather}><boxGeometry args={[0.05, 0.55, 0.012]} /></mesh>)}
-        <mesh position={[0, 0.36, -0.137]} material={mats.steel}><cylinderGeometry args={[0.03, 0.03, 0.01, 10]} /></mesh>
-        {[-1, 1].map((sx) => <mesh key={`pp${sx}`} position={[sx * 0.23, 0.26, 0]} material={mats.leather}><boxGeometry args={[0.06, 0.18, 0.12]} /></mesh>)}
-        {/* tan belt with steel buckle */}
-        <mesh position={[0, 0.03, 0]} material={mats.belt}><boxGeometry args={[0.45, 0.07, 0.26]} /></mesh>
-        <mesh position={[0, 0.03, 0.132]} material={mats.steel}><boxGeometry args={[0.07, 0.05, 0.01]} /></mesh>
-        {eq.includes('headlamp') && <group position={[0, 0.86, 0]}>
+      <group ref={body}>
+        <Suspense fallback={<ModelFallback />}>
+          {female ? (
+            <HelenaCharacterModel pose="standing" targetHeight={1.72} />
+          ) : (
+            <LeonCharacterModel pose="standing" targetHeight={1.78} />
+          )}
+        </Suspense>
+        {/* equipment overlays (roughly placed on the realistic body) */}
+        {eq.includes('headlamp') && <group position={[0, 1.72, 0]}>
           <mesh rotation={[Math.PI / 2, 0, 0]}><torusGeometry args={[0.135, 0.012, 6, 20]} /><meshStandardMaterial color="#1e1e1e" roughness={0.9} /></mesh>
           <mesh position={[0, 0, 0.14]}><boxGeometry args={[0.07, 0.05, 0.04]} /><meshStandardMaterial color="#383b3e" metalness={0.5} roughness={0.4} /></mesh>
           <mesh position={[0, 0, 0.162]} rotation={[Math.PI / 2, 0, 0]}><cylinderGeometry args={[0.018, 0.018, 0.006, 12]} /><meshBasicMaterial color="#fff2c8" /></mesh>
         </group>}
-        {eq.includes('helmet') && <mesh position={[0, 0.88, 0]}><sphereGeometry args={[0.16, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.55]} /><meshStandardMaterial color="#6b6f74" metalness={0.8} roughness={0.35} /></mesh>}
-        {eq.includes('vest') && <mesh position={[0, 0.34, 0]}><boxGeometry args={[0.47, 0.5, 0.28]} /><meshStandardMaterial color="#5a3a22" roughness={0.8} /></mesh>}
-        {([[armL, -0.28], [armR, 0.28]] as const).map(([ref, x], i) => (
-          <group key={i} ref={ref} position={[x, 0.58, 0]}>
-            <mesh position={[0, -0.17, 0]} material={mats.shirt}><capsuleGeometry args={[0.068, 0.26, 4, 8]} /></mesh>
-            <mesh position={[0, -0.33, 0]} material={mats.shirt}><cylinderGeometry args={[0.074, 0.074, 0.06, 8]} /></mesh>
-            <mesh position={[0, -0.44, 0]} material={mats.skin}><capsuleGeometry args={[0.052, 0.16, 4, 8]} /></mesh>
-            <mesh position={[0, -0.58, 0]} material={mats.skin}><sphereGeometry args={[0.058, 8, 8]} /></mesh>
-            {i === 1 && (holdingW870 ? <group position={[0, -0.58, 0]} rotation={[0, -Math.PI / 2, 0]}>
-              {/* Grip (-.22,-.08,0) becomes the hand pivot; a 35° carry
-                  keeps the stock behind the elbow and muzzle above ground. */}
-              <group rotation={[0, 0, -Math.PI * 35 / 180]}><group position={[0.22, 0.08, 0]}><W870Model /></group></group>
-            </group>
-              : eq.includes('shotgun') ? <mesh position={[0, -0.6, 0.3]}><boxGeometry args={[0.05, 0.07, 0.75]} /><meshStandardMaterial color="#3b2a1c" /></mesh>
-              : eq.includes('pistol') ? <mesh position={[0, -0.62, 0.1]}><boxGeometry args={[0.04, 0.09, 0.2]} /><meshStandardMaterial color="#222" metalness={0.7} /></mesh>
-              : eq.includes('knife') ? <mesh position={[0, -0.62, 0.1]}><boxGeometry args={[0.015, 0.03, 0.22]} /><meshStandardMaterial color="#c9d3df" metalness={0.9} /></mesh> : null)}
-          </group>
-        ))}
-        {([[legL, shinL, -0.11], [legR, shinR, 0.11]] as const).map(([leg, shin, x], i) => (
-          <group key={i} ref={leg} position={[x, 0, 0]}>
-            <mesh position={[0, -0.22, 0]} material={mats.pants}><capsuleGeometry args={[0.08, 0.34, 4, 8]} /></mesh>
-            {i === 0 && <>
-              {/* thigh holster on the right leg with two straps */}
-              <mesh position={[-0.07, -0.2, 0.02]} material={mats.leather}><boxGeometry args={[0.07, 0.24, 0.14]} /></mesh>
-              {[-0.12, -0.28].map((y) => <mesh key={y} position={[0, y, 0]} material={mats.leather}><cylinderGeometry args={[0.088, 0.088, 0.035, 10]} /></mesh>)}
-            </>}
-            <group ref={shin} position={[0, -0.45, 0]}>
-              <mesh position={[0, -0.2, 0]} material={mats.pants}><capsuleGeometry args={[0.07, 0.32, 4, 8]} /></mesh>
-              <mesh position={[0, -0.36, 0]} material={mats.shoe}><cylinderGeometry args={[0.075, 0.08, 0.12, 8]} /></mesh>
-              <mesh position={[0, -0.44, 0.05]} material={mats.shoe}><boxGeometry args={[0.13, 0.08, 0.27]} /></mesh>
+        {eq.includes('helmet') && <mesh position={[0, 1.74, 0]}><sphereGeometry args={[0.16, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.55]} /><meshStandardMaterial color="#6b6f74" metalness={0.8} roughness={0.35} /></mesh>}
+        {eq.includes('vest') && <mesh position={[0, 1.25, 0]}><boxGeometry args={[0.47, 0.5, 0.28]} /><meshStandardMaterial color="#5a3a22" roughness={0.8} /></mesh>}
+        {/* W-870 carried low in the right hand, muzzle forward */}
+        {holdingW870 && (
+          <group position={[0.3, 0.85, 0.1]} rotation={[0, -Math.PI / 2, 0]}>
+            <group rotation={[0, 0, -Math.PI * 35 / 180]}>
+              <group position={[0.22, 0.08, 0]}><W870Model /></group>
             </group>
           </group>
-        ))}
+        )}
+        {/* legacy simple held items for the older gear */}
+        {!holdingW870 && eq.includes('shotgun') && <mesh position={[0.3, 0.8, 0.3]}><boxGeometry args={[0.05, 0.07, 0.75]} /><meshStandardMaterial color="#3b2a1c" /></mesh>}
+        {!holdingW870 && eq.includes('pistol') && <mesh position={[0.3, 0.78, 0.1]}><boxGeometry args={[0.04, 0.09, 0.2]} /><meshStandardMaterial color="#222" metalness={0.7} /></mesh>}
+        {!holdingW870 && eq.includes('knife') && <mesh position={[0.3, 0.78, 0.1]}><boxGeometry args={[0.015, 0.03, 0.22]} /><meshStandardMaterial color="#c9d3df" metalness={0.9} /></mesh>}
       </group>
     </group>
   );
 };
 export default ThirdPersonAvatar;
-
