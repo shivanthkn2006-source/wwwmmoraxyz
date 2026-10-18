@@ -103,7 +103,11 @@ export const ThirdPersonAvatar: React.FC = () => {
           {female ? (
             <HelenaCharacterModel pose="standing" targetHeight={1.72} />
           ) : (
-            <LeonCharacterModel pose="standing" targetHeight={1.78} />
+            /* No working realistic male model exists yet: the Leon FBX's
+               textures are missing and its rig renders broken, so the male
+               avatar keeps the previous built-in body until a textured male
+               model is uploaded. */
+            <ModelFallback />
           )}
         </Suspense>
         {/* equipment overlays (roughly placed on the realistic body) */}
