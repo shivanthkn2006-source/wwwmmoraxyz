@@ -25,7 +25,7 @@ createRoot(document.getElementById('r')!).render(
       <meshStandardMaterial color="#3a3f36" roughness={1} />
     </mesh>
     <Suspense fallback={null}>
-      <ThirdPersonAvatar />
+      {q.get('raw') === '1' ? <LeonCharacterModel pose="standing" targetHeight={1.78} /> : <ThirdPersonAvatar />}
     </Suspense>
   </Canvas>,
 );
