@@ -29,3 +29,23 @@ describe('weapon presentation preserves existing source coordinates', () => {
     }
   });
 });
+describe('equipped gun goes into the skirt avatar hands', () => {
+  it('the castle Shotgun item is held, not drawn as a loose box beside her', async () => {
+    const { pickHeldWeapon } = await import('@/lib/vrWeaponGrip');
+    expect(pickHeldWeapon(['shotgun'])).toBe('shotgun');
+    expect(pickHeldWeapon(['vest', 'w870', 'shotgun'])).toBe('w870');
+    expect(pickHeldWeapon(['pistol'])).toBe('pistol');
+    expect(pickHeldWeapon(['vest', 'helmet', 'knife'])).toBeNull();
+  });
+  it('long-gun stock rests in front of the shoulder, never behind it (no chest/back clipping)', async () => {
+    const { gripFrame, BUTT_TO_GRIP } = await import('@/lib/vrWeaponGrip');
+    const shoulder = new THREE.Vector3(-0.06, 1.39, -0.12);
+    const f = gripFrame('w870', shoulder, 0, { weapon: new THREE.Vector3(), right: new THREE.Vector3(), left: new THREE.Vector3() });
+    const buttZ = f.weapon.z - BUTT_TO_GRIP;
+    expect(buttZ).toBeGreaterThan(shoulder.z);
+    expect(buttZ - shoulder.z).toBeLessThan(0.12);
+    expect(Math.abs(f.weapon.y - shoulder.y)).toBeLessThan(0.1);
+    // Support hand is ahead of the firing hand on the same gun.
+    expect(f.left.z).toBeGreaterThan(f.right.z + 0.15);
+  });
+});

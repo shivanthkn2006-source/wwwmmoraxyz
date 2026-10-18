@@ -14,7 +14,12 @@ import { clone as skeletonClone } from 'three/examples/jsm/utils/SkeletonUtils.j
 import * as THREE from 'three';
 import ani10Url from '@/assets/models/ani10.fbx';
 import { avatarMotion } from '@/lib/vrAvatarMotion';
-import { createWeaponArmSolver, W870_GRIP_OFFSET } from '@/lib/vrWeaponGrip';
+import { createWeaponArmSolver, gripFrame, isLongGun, W870_GRIP_OFFSET, type GripFrame, type HeldWeapon } from '@/lib/vrWeaponGrip';
+
+/** Forward lean (rad, split over waist/spine) while a gun is held. */
+const STANCE_LEAN = 0.32;
+/** Bladed stance: torso turns so the support shoulder comes forward. */
+const STANCE_TWIST = -0.5;
 import { W870Model } from './W870Model';
 
 export type SkirtAnimState = 'idle' | 'walking' | 'running' | 'jumping' | 'climbing' | 'sitting';
@@ -31,6 +36,8 @@ interface SkirtFemaleAvatarProps {
   armProbe?: [number, number, number];
   liveMotion?: boolean;
   holdingW870?: boolean;
+  /** Gun drawn in the hands (overrides holdingW870). */
+  heldWeapon?: HeldWeapon | null;
 }
 
 type Bones = Record<string, THREE.Bone>;
@@ -52,7 +59,9 @@ export const SkirtFemaleAvatar: React.FC<SkirtFemaleAvatarProps> = ({
   armProbe,
   liveMotion = false,
   holdingW870 = false,
+  heldWeapon,
 }) => {
+  const held: HeldWeapon | null = heldWeapon !== undefined ? heldWeapon : holdingW870 ? 'w870' : null;
   const fbx = useLoader(FBXLoader, ani10Url) as THREE.Group;
   const root = useRef<THREE.Group>(null);
   const phase = useRef(0);
@@ -60,8 +69,9 @@ export const SkirtFemaleAvatar: React.FC<SkirtFemaleAvatarProps> = ({
   const speed = useRef(0);
   const tmp = useRef(new THREE.Vector3());
   const weapon = useRef<THREE.Group>(null);
-  const rightTarget = useMemo(() => new THREE.Vector3(), []);
-  const leftTarget = useMemo(() => new THREE.Vector3(), []);
+  const shoulder = useMemo(() => new THREE.Vector3(), []);
+  const heldBefore = useRef(false);
+  const frame = useMemo<GripFrame>(() => ({ weapon: new THREE.Vector3(), right: new THREE.Vector3(), left: new THREE.Vector3() }), []);
 
   const { model, bones } = useMemo(() => {
     const c = skeletonClone(fbx) as THREE.Group;
@@ -117,7 +127,7 @@ export const SkirtFemaleAvatar: React.FC<SkirtFemaleAvatarProps> = ({
     let lArmX = 0, rArmX = 0, lArmZ = -1.15, rArmZ = 1.15, lElbow = 0, rElbow = 0;
     let lArmTwist = 0, rArmTwist = 0;
 
-    if (aiming) {
+    if (aiming && !held) {
       // Two-hand weapon hold: both arms forward, right hand at the grip.
       lArmX = 1.3; rArmX = 1.3; lArmZ = -0.3; rArmZ = 0.3; lElbow = 0.45; rElbow = 0.45;
     } else if (moving || climbing) {
@@ -168,25 +178,36 @@ export const SkirtFemaleAvatar: React.FC<SkirtFemaleAvatarProps> = ({
     set('CC_Base_Waist', run ? 0.14 : moving ? 0.06 : Math.sin(t * 1.4) * 0.015, 0, 0);
     set('CC_Base_NeckTwist01', 0, THREE.MathUtils.clamp(headYaw, -1.1, 1.1) * 0.5, 0);
     set('CC_Base_Head', liveMotion ? avatarMotion.headPitch : 0, THREE.MathUtils.clamp(headYaw, -1.1, 1.1) * 0.5, 0);
-    if (holdingW870 && weapon.current && armSolver) {
-      // Both hands and the gun use one calibrated avatar-local grip frame.
+    if (held && weapon.current && armSolver && bones.CC_Base_R_Upperarm) {
+      // Lean into the gun (source bind pose arches backward), then build the
+      // hold frame from the live shoulder so the stock rests on it.
+      const lean = isLongGun(held) ? STANCE_LEAN : STANCE_LEAN * 0.6;
+      const twist = isLongGun(held) ? STANCE_TWIST : STANCE_TWIST * 0.3;
+      const look = THREE.MathUtils.clamp(headYaw, -1.1, 1.1) * 0.5;
+      set('CC_Base_Waist', (run ? 0.14 : moving ? 0.06 : 0) + lean * 0.5, twist * 0.5, 0);
+      set('CC_Base_Spine02', lean * 0.5, twist * 0.5, 0);
+      // Neck/head turn back so she still looks down the barrel.
+      set('CC_Base_NeckTwist01', 0, look - twist * 0.6, 0);
+      set('CC_Base_Head', (liveMotion ? avatarMotion.headPitch : 0) + lean * 0.4, look - twist * 0.4, 0);
+      g.updateWorldMatrix(true, true);
+      g.worldToLocal(bones.CC_Base_R_Upperarm.getWorldPosition(shoulder));
       const kick = Math.max(0, 1 - (performance.now() - avatarMotion.attackAt) / 180);
-      weapon.current.position.set(-0.18, 1.2 + kick * 0.015, -0.04 - kick * 0.035);
-      weapon.current.rotation.set(0, -Math.PI / 2, 0.06 + kick * 0.045);
-      rightTarget.set(-0.16, weapon.current.position.y + 0.065, weapon.current.position.z - 0.02);
-      leftTarget.set(-0.12, weapon.current.position.y + 0.09, weapon.current.position.z + 0.36);
-      armSolver.solve(g, rightTarget, leftTarget);
-      for (const side of ['L', 'R']) for (const finger of ['Mid', 'Ring', 'Pinky', 'Index']) {
-        for (let joint = 1; joint <= 3; joint++) set(`CC_Base_${side}_${finger}${joint}`, joint === 1 ? 0.45 : 0.75);
-      }
-    }
+      gripFrame(held, shoulder, kick, frame);
+      weapon.current.position.copy(frame.weapon);
+      weapon.current.rotation.set(0, -Math.PI / 2, (isLongGun(held) ? 0.03 : 0.02) + kick * 0.045);
+      armSolver.solve(g, frame.right, frame.left);
+    } else if (heldBefore.current) armSolver?.relax();
+    heldBefore.current = !!held;
   });
 
   return (
     <group ref={root}>
       <primitive object={model} />
-      {holdingW870 && <group ref={weapon} name="w870-held-grip">
-        <group position={W870_GRIP_OFFSET}><W870Model /></group>
+      {held && <group ref={weapon} name="w870-held-grip">
+        {held === 'w870' ? <group position={W870_GRIP_OFFSET}><W870Model /></group>
+          : held === 'shotgun' ? <mesh position={[0.058, 0.075, 0]}><boxGeometry args={[0.75, 0.07, 0.05]} /><meshStandardMaterial color="#3b2a1c" /></mesh>
+          : held === 'pistol' ? <mesh position={[0.07, 0.02, 0]}><boxGeometry args={[0.2, 0.09, 0.04]} /><meshStandardMaterial color="#222" metalness={0.7} /></mesh>
+          : null}
       </group>}
     </group>
   );

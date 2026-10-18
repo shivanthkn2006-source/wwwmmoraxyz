@@ -17,6 +17,8 @@ import { Html } from '@react-three/drei';
 import { useMeet, myMeetId } from '@/worlds/meet/vrMeet';
 import { VillageAvatar } from './features/VillageAvatar';
 import { avatarMotion } from '@/lib/vrAvatarMotion';
+import { pickHeldWeapon } from '@/lib/vrWeaponGrip';
+import { useAvatarChoice } from '@/lib/vrAvatarChoice';
 
 /** My own latest chat message over my head for 8 s (others see theirs over mine via MeetPresence). */
 const MyBubble: React.FC = () => {
@@ -54,7 +56,9 @@ export const ThirdPersonAvatar: React.FC = () => {
   const speed = useRef(0);
   const crouchAmt = useRef(0);
   const eq = useEquipped();
-  const holdingW870 = eq.includes('w870');
+  // The skirt rig holds the equipped gun itself; uploaded rigs keep the old overlays.
+  const skirt = useAvatarChoice() === 'skirt';
+  const held = skirt ? pickHeldWeapon(eq) : null;
   const aimingRef = useRef(false);
   aimingRef.current = eq.some((id) => ['w870', 'shotgun', 'boltrifle', 'pistol', 'sentinel9'].includes(id));
   const mats = useMemo(() => ({
@@ -115,7 +119,7 @@ export const ThirdPersonAvatar: React.FC = () => {
               the village avatar for ALL profiles while a real male model is
               sourced. It drives its own walk/run/jump/aim poses from real
               movement speed. */}
-          <VillageAvatar aiming={eq.some((id) => ['w870', 'shotgun', 'boltrifle', 'pistol', 'sentinel9'].includes(id))} holdingW870={holdingW870} />
+          <VillageAvatar aiming={eq.some((id) => ['w870', 'shotgun', 'boltrifle', 'pistol', 'sentinel9'].includes(id))} heldWeapon={held} />
         </Suspense>
         {/* equipment overlays (roughly placed on the realistic body) */}
         {eq.includes('headlamp') && <group position={[0, 1.72, 0]}>
@@ -127,9 +131,9 @@ export const ThirdPersonAvatar: React.FC = () => {
         {eq.includes('vest') && <mesh position={[0, 1.25, 0]}><boxGeometry args={[0.47, 0.5, 0.28]} /><meshStandardMaterial color="#5a3a22" roughness={0.8} /></mesh>}
         {/* W-870 hand constraints live with the skirt rig, not beside it. */}
         {/* legacy simple held items for the older gear */}
-        {!holdingW870 && eq.includes('shotgun') && <mesh position={[0.3, 0.8, 0.3]}><boxGeometry args={[0.05, 0.07, 0.75]} /><meshStandardMaterial color="#3b2a1c" /></mesh>}
-        {!holdingW870 && eq.includes('pistol') && <mesh position={[0.3, 0.78, 0.1]}><boxGeometry args={[0.04, 0.09, 0.2]} /><meshStandardMaterial color="#222" metalness={0.7} /></mesh>}
-        {!holdingW870 && eq.includes('knife') && <mesh position={[0.3, 0.78, 0.1]}><boxGeometry args={[0.015, 0.03, 0.22]} /><meshStandardMaterial color="#c9d3df" metalness={0.9} /></mesh>}
+        {!held && eq.includes('shotgun') && <mesh position={[0.3, 0.8, 0.3]}><boxGeometry args={[0.05, 0.07, 0.75]} /><meshStandardMaterial color="#3b2a1c" /></mesh>}
+        {!held && eq.includes('pistol') && <mesh position={[0.3, 0.78, 0.1]}><boxGeometry args={[0.04, 0.09, 0.2]} /><meshStandardMaterial color="#222" metalness={0.7} /></mesh>}
+        {!held && eq.includes('knife') && <mesh position={[0.3, 0.78, 0.1]}><boxGeometry args={[0.015, 0.03, 0.22]} /><meshStandardMaterial color="#c9d3df" metalness={0.9} /></mesh>}
       </group>
     </group>
   );
