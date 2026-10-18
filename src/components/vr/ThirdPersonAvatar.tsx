@@ -15,6 +15,7 @@ import { useEquipped } from '@/lib/vrGear';
 import { useLook, loadLook } from '@/lib/vrLook';
 import { Html } from '@react-three/drei';
 import { useMeet, myMeetId } from '@/worlds/meet/vrMeet';
+import { W870Model } from './features/W870Model';
 /** My own latest chat message over my head for 8 s (others see theirs over mine via MeetPresence). */
 const MyBubble: React.FC = () => {
   const { messages } = useMeet();
@@ -158,7 +159,8 @@ export const ThirdPersonAvatar: React.FC = () => {
             <mesh position={[0, -0.33, 0]} material={mats.shirt}><cylinderGeometry args={[0.074, 0.074, 0.06, 8]} /></mesh>
             <mesh position={[0, -0.44, 0]} material={mats.skin}><capsuleGeometry args={[0.052, 0.16, 4, 8]} /></mesh>
             <mesh position={[0, -0.58, 0]} material={mats.skin}><sphereGeometry args={[0.058, 8, 8]} /></mesh>
-            {i === 1 && (eq.includes('shotgun') ? <mesh position={[0, -0.6, 0.3]}><boxGeometry args={[0.05, 0.07, 0.75]} /><meshStandardMaterial color="#3b2a1c" /></mesh>
+            {i === 1 && (eq.includes('w870') ? <group position={[0, -0.58, 0.2]} rotation={[0, -Math.PI / 2, 0]}><W870Model /></group>
+              : eq.includes('shotgun') ? <mesh position={[0, -0.6, 0.3]}><boxGeometry args={[0.05, 0.07, 0.75]} /><meshStandardMaterial color="#3b2a1c" /></mesh>
               : eq.includes('pistol') ? <mesh position={[0, -0.62, 0.1]}><boxGeometry args={[0.04, 0.09, 0.2]} /><meshStandardMaterial color="#222" metalness={0.7} /></mesh>
               : eq.includes('knife') ? <mesh position={[0, -0.62, 0.1]}><boxGeometry args={[0.015, 0.03, 0.22]} /><meshStandardMaterial color="#c9d3df" metalness={0.9} /></mesh> : null)}
           </group>
