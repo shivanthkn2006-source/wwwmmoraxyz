@@ -18,7 +18,6 @@ import { useMeet, myMeetId } from '@/worlds/meet/vrMeet';
 import { VillageAvatar } from './features/VillageAvatar';
 import { avatarMotion } from '@/lib/vrAvatarMotion';
 import { pickHeldWeapon } from '@/lib/vrWeaponGrip';
-import { useAvatarChoice } from '@/lib/vrAvatarChoice';
 
 /** My own latest chat message over my head for 8 s (others see theirs over mine via MeetPresence). */
 const MyBubble: React.FC = () => {
