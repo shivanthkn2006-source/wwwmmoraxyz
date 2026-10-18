@@ -32,6 +32,7 @@ export function UploadedVillageAvatar({ url, zoe = false, aiming = false }: { ur
     phase.current += Math.min(rawDelta, 0.05) * (pose === 'running' ? 11 : 7);
     const swing = moving ? Math.sin(phase.current) * (pose === 'running' ? 0.55 : 0.32) : 0;
     const bent = pose === 'jumping' ? 0.7 : pose === 'sitting' ? 1.3 : 0;
+    const attack = Math.max(0, 1 - (performance.now() - avatarMotion.attackAt) / 350);
     const set = (mixamo: string, cc: string, x: number, y = 0, z = 0) => {
       const entry = bones.get(zoe ? cc : mixamo); if (!entry) return;
       rotation.setFromEuler(euler.set(x, y, z)); entry.bone.quaternion.copy(entry.rest).multiply(rotation);
@@ -41,9 +42,10 @@ export function UploadedVillageAvatar({ url, zoe = false, aiming = false }: { ur
     set('LeftLeg', 'L_Calf', bent || Math.max(0, -swing));
     set('RightLeg', 'R_Calf', bent || Math.max(0, swing));
     set('LeftArm', 'L_Upperarm', aiming ? -1.1 : swing * 0.6, 0, zoe ? 0 : -0.3);
-    set('RightArm', 'R_Upperarm', aiming ? -1.1 : -swing * 0.6, 0, zoe ? 0 : 0.3);
+    set('RightArm', 'R_Upperarm', (aiming ? -1.1 : -swing * 0.6) - attack * 0.35, 0, zoe ? 0 : 0.3);
     set('LeftForeArm', 'L_Forearm', aiming ? -0.4 : 0);
     set('RightForeArm', 'R_Forearm', aiming ? -0.4 : 0);
+    set('Head', 'Head', avatarMotion.headPitch);
   });
   return <group rotation-y={zoe ? -Math.PI / 2 : 0}><primitive object={model} /></group>;
 }
