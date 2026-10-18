@@ -14,6 +14,8 @@ import { clone as skeletonClone } from 'three/examples/jsm/utils/SkeletonUtils.j
 import * as THREE from 'three';
 import ani10Url from '@/assets/models/ani10.fbx';
 import { avatarMotion } from '@/lib/vrAvatarMotion';
+import { createWeaponArmSolver, W870_GRIP_OFFSET } from '@/lib/vrWeaponGrip';
+import { W870Model } from './W870Model';
 
 export type SkirtAnimState = 'idle' | 'walking' | 'running' | 'jumping' | 'climbing' | 'sitting';
 
@@ -28,6 +30,7 @@ interface SkirtFemaleAvatarProps {
   legFix?: [number, number, number];
   armProbe?: [number, number, number];
   liveMotion?: boolean;
+  holdingW870?: boolean;
 }
 
 type Bones = Record<string, THREE.Bone>;
@@ -48,6 +51,7 @@ export const SkirtFemaleAvatar: React.FC<SkirtFemaleAvatarProps> = ({
   legFix = [0, 0, Math.PI],
   armProbe,
   liveMotion = false,
+  holdingW870 = false,
 }) => {
   const fbx = useLoader(FBXLoader, ani10Url) as THREE.Group;
   const root = useRef<THREE.Group>(null);
@@ -55,12 +59,15 @@ export const SkirtFemaleAvatar: React.FC<SkirtFemaleAvatarProps> = ({
   const last = useRef<THREE.Vector3 | null>(null);
   const speed = useRef(0);
   const tmp = useRef(new THREE.Vector3());
+  const weapon = useRef<THREE.Group>(null);
+  const rightTarget = useMemo(() => new THREE.Vector3(), []);
+  const leftTarget = useMemo(() => new THREE.Vector3(), []);
 
   const { model, bones } = useMemo(() => {
     const c = skeletonClone(fbx) as THREE.Group;
     const found: Bones = {};
     c.traverse((o) => {
-      if ((o as THREE.Bone).isBone && WANT.includes(o.name)) found[o.name] = o as THREE.Bone;
+      if ((o as THREE.Bone).isBone) found[o.name] = o as THREE.Bone;
       if ((o as THREE.Mesh).isMesh) {
         o.castShadow = true;
         o.frustumCulled = false; // skinned bounds are unreliable on this FBX
@@ -76,6 +83,7 @@ export const SkirtFemaleAvatar: React.FC<SkirtFemaleAvatarProps> = ({
     c.position.set(-ctr.x * s, -box.min.y * s, -ctr.z * s);
     return { model: c, bones: found };
   }, [fbx, targetHeight]);
+  const armSolver = useMemo(() => createWeaponArmSolver(model), [model]);
 
   useFrame((state, dt) => {
     const g = root.current;
@@ -111,7 +119,7 @@ export const SkirtFemaleAvatar: React.FC<SkirtFemaleAvatarProps> = ({
 
     if (aiming) {
       // Two-hand weapon hold: both arms forward, right hand at the grip.
-      lArmX = -1.3; rArmX = -1.3; lArmZ = -0.3; rArmZ = 0.3; lElbow = -0.45; rElbow = -0.45;
+      lArmX = 1.3; rArmX = 1.3; lArmZ = -0.3; rArmZ = 0.3; lElbow = 0.45; rElbow = 0.45;
     } else if (moving || climbing) {
       lArmX = swing * amp * 0.7; rArmX = -swing * amp * 0.7;
       lElbow = -0.25; rElbow = -0.25;
@@ -160,11 +168,26 @@ export const SkirtFemaleAvatar: React.FC<SkirtFemaleAvatarProps> = ({
     set('CC_Base_Waist', run ? 0.14 : moving ? 0.06 : Math.sin(t * 1.4) * 0.015, 0, 0);
     set('CC_Base_NeckTwist01', 0, THREE.MathUtils.clamp(headYaw, -1.1, 1.1) * 0.5, 0);
     set('CC_Base_Head', liveMotion ? avatarMotion.headPitch : 0, THREE.MathUtils.clamp(headYaw, -1.1, 1.1) * 0.5, 0);
+    if (holdingW870 && weapon.current && armSolver) {
+      // Both hands and the gun use one calibrated avatar-local grip frame.
+      const kick = Math.max(0, 1 - (performance.now() - avatarMotion.attackAt) / 180);
+      weapon.current.position.set(-0.13, 1.29 + kick * 0.015, 0.30 - kick * 0.035);
+      weapon.current.rotation.set(0, -Math.PI / 2, 0.06 + kick * 0.045);
+      rightTarget.set(-0.13, weapon.current.position.y - 0.025, weapon.current.position.z - 0.055);
+      leftTarget.set(-0.13, weapon.current.position.y - 0.02, weapon.current.position.z + 0.29);
+      armSolver.solve(g, rightTarget, leftTarget);
+      for (const side of ['L', 'R']) for (const finger of ['Mid', 'Ring', 'Pinky', 'Index']) {
+        for (let joint = 1; joint <= 3; joint++) set(`CC_Base_${side}_${finger}${joint}`, joint === 1 ? -0.35 : -0.8);
+      }
+    }
   });
 
   return (
     <group ref={root}>
       <primitive object={model} />
+      {holdingW870 && <group ref={weapon} name="w870-held-grip">
+        <group position={W870_GRIP_OFFSET}><W870Model /></group>
+      </group>}
     </group>
   );
 };

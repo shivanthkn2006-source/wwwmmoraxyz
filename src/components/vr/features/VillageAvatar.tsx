@@ -8,10 +8,10 @@ class AvatarBoundary extends React.Component<{ children: React.ReactNode }, { fa
   static getDerivedStateFromError() { return { failed: true }; }
   render() { return this.state.failed ? <SkirtFemaleAvatar liveMotion /> : this.props.children; }
 }
-export function VillageAvatar({ aiming = false, headYaw = 0 }: { aiming?: boolean; headYaw?: number }) {
+export function VillageAvatar({ aiming = false, headYaw = 0, holdingW870 = false }: { aiming?: boolean; headYaw?: number; holdingW870?: boolean }) {
   const choice = useAvatarChoice();
   const selected = AVATAR_CHOICES.find((a) => a.id === choice);
-  const fallback = <SkirtFemaleAvatar liveMotion aiming={aiming} headYaw={headYaw} />;
+  const fallback = <SkirtFemaleAvatar liveMotion aiming={aiming} headYaw={headYaw} holdingW870={holdingW870} />;
   if (!selected?.url) return fallback;
   return <AvatarBoundary key={choice}><Suspense fallback={fallback}>
     <UploadedVillageAvatar url={selected.url} zoe={choice === 'zoe-upload'} aiming={aiming} />
