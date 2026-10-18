@@ -185,3 +185,4 @@ export const ThirdPersonAvatar: React.FC = () => {
   );
 };
 export default ThirdPersonAvatar;
+

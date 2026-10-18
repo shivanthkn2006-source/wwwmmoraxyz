@@ -66,3 +66,4 @@ export const VillageGear: React.FC = () => {
   }), [camera, owned]);
   return <>{GEAR.filter((g) => !g.shop && !owned.includes(g.id)).map((g) => <VillageGearItem key={g.id} g={g} />)}</>;
 };
+
