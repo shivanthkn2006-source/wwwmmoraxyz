@@ -66,7 +66,7 @@ createRoot(document.getElementById('r')!).render(
       {q.get('anims') === '1' ? <AnimProbe />
         : q.get('skirt') ? <SkirtFemaleAvatar
             animState={(q.get('skirt') as 'idle' | 'walking' | 'running' | 'jumping' | 'climbing') || 'idle'}
-            aiming={q.get('aim') === '1'} headYaw={Number(q.get('head') || 0)} legFix={(q.get('legfix') || '0,0,0').split(',').map(Number) as [number, number, number]} />
+            aiming={q.get('aim') === '1'} headYaw={Number(q.get('head') || 0)} {...(q.get('legfix') ? { legFix: q.get('legfix')!.split(',').map(Number) as [number, number, number] } : {})} />
         : q.get('raw') === '1' ? <LeonCharacterModel pose="standing" targetHeight={1.78} />
         : q.get('glb') ? <GlbProbe url={q.get('glb')!.includes('://') ? q.get('glb')! : `/src/assets/models/${q.get('glb')}`} />
         : <ThirdPersonAvatar />}
