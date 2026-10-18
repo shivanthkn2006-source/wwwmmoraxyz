@@ -1,11 +1,12 @@
 # M'Mora Village roadmap
 
 ## Oct 18 weapon visual review
-- [ ] Current W-870 held review: grip/alignment/clipping before-after; isolated-account sign-in blocked by permission, no member saves touched.
+- [x] W-870 grip-pivot carry adjustment + signed-out fixture before/after evidence; 12 regression tests passed, no account writes.
+- [ ] W-870 remaining stock/forearm, fingers, walking/aiming and village-clearance checks: isolated-account sign-in blocked by permission.
 - [ ] Drowned 3–8 m spit bug confirmed: approach branch suppresses ranged attack; deferred outside W-870-only scope.
 - [x] Upgrade only W-870 mesh/materials/proportions; preserve gameplay and saves.
 - [x] Isolated authenticated fixture before/after evidence and honest visual gap report.
-- [ ] W-870 held grip/clipping/village lighting and hosted CDN delivery: unverified; follow-up live scene review required.
+- [ ] W-870 authenticated grip/clipping/village lighting and hosted CDN delivery: unverified; fixture used exact GLB interception.
 - [ ] Sentinel Nine and Bolt Rifle: unchanged, pending W-870 review.
 
 ## Oct 16 progression and collision request
