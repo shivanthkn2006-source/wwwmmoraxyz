@@ -1,6 +1,8 @@
 # M'Mora Village roadmap
 
 ## Oct 18 weapon visual review
+- [ ] Current W-870 held review: grip/alignment/clipping before-after; isolated-account sign-in blocked by permission, no member saves touched.
+- [ ] Drowned 3–8 m spit bug confirmed: approach branch suppresses ranged attack; deferred outside W-870-only scope.
 - [x] Upgrade only W-870 mesh/materials/proportions; preserve gameplay and saves.
 - [x] Isolated authenticated fixture before/after evidence and honest visual gap report.
 - [ ] W-870 held grip/clipping/village lighting and hosted CDN delivery: unverified; follow-up live scene review required.
