@@ -17,7 +17,7 @@ import { Html } from '@react-three/drei';
 import { useMeet, myMeetId } from '@/worlds/meet/vrMeet';
 import { W870Model } from './features/W870Model';
 import LeonCharacterModel from './features/LeonCharacterModel';
-import HelenaCharacterModel from './features/HelenaCharacterModel';
+import SkirtFemaleAvatar from './features/SkirtFemaleAvatar';
 
 /** My own latest chat message over my head for 8 s (others see theirs over mine via MeetPresence). */
 const MyBubble: React.FC = () => {
@@ -47,7 +47,6 @@ const ModelFallback: React.FC = () => (
 
 export const ThirdPersonAvatar: React.FC = () => {
   const { thirdPerson, crouch, face } = useVRView();
-  const { female } = useVRSelf();
   const { camera } = useThree();
   const root = useRef<THREE.Group>(null);
   const body = useRef<THREE.Group>(null);
@@ -100,15 +99,11 @@ export const ThirdPersonAvatar: React.FC = () => {
       <MyBubble />
       <group ref={body}>
         <Suspense fallback={<ModelFallback />}>
-          {female ? (
-            <HelenaCharacterModel pose="standing" targetHeight={1.72} />
-          ) : (
-            /* No working realistic male model exists yet: the Leon FBX's
-               textures are missing and its rig renders broken, so the male
-               avatar keeps the previous built-in body until a textured male
-               model is uploaded. */
-            <ModelFallback />
-          )}
+          {/* Temporary (per Marc): the rigged skirt-female model stands in as
+              the village avatar for ALL profiles while a real male model is
+              sourced. It drives its own walk/run/jump/aim poses from real
+              movement speed. */}
+          <SkirtFemaleAvatar animState="idle" aiming={holdingW870} targetHeight={1.72} />
         </Suspense>
         {/* equipment overlays (roughly placed on the realistic body) */}
         {eq.includes('headlamp') && <group position={[0, 1.72, 0]}>

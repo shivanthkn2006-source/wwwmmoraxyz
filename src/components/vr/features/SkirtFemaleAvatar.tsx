@@ -25,6 +25,7 @@ interface SkirtFemaleAvatarProps {
   targetHeight?: number;
   /** Corrective base rotation for the thigh bones (bind pose ships legs-up). */
   legFix?: [number, number, number];
+  armProbe?: [number, number, number];
 }
 
 type Bones = Record<string, THREE.Bone>;
@@ -43,6 +44,7 @@ export const SkirtFemaleAvatar: React.FC<SkirtFemaleAvatarProps> = ({
   headYaw = 0,
   targetHeight = 1.72,
   legFix = [0, 0, Math.PI],
+  armProbe,
 }) => {
   const fbx = useLoader(FBXLoader, ani10Url) as THREE.Group;
   const root = useRef<THREE.Group>(null);
@@ -92,6 +94,7 @@ export const SkirtFemaleAvatar: React.FC<SkirtFemaleAvatarProps> = ({
     const swing = Math.sin(phase.current);
     const amp = !moving && !climbing ? 0 : run ? 0.65 : 0.45;
     const t = state.clock.elapsedTime;
+    let lArmY = 0, rArmY = 0;
 
     const set = (name: string, x: number, y = 0, z = 0) => {
       const b = bones[name];
@@ -100,10 +103,11 @@ export const SkirtFemaleAvatar: React.FC<SkirtFemaleAvatarProps> = ({
 
     // ── Base standing pose: arms relaxed at the sides (source is a T-pose).
     let lArmX = 0, rArmX = 0, lArmZ = -1.15, rArmZ = 1.15, lElbow = 0, rElbow = 0;
+    let lArmTwist = 0, rArmTwist = 0;
 
     if (aiming) {
       // Two-hand weapon hold: both arms forward, right hand at the grip.
-      lArmX = -1.15; rArmX = -1.25; lArmZ = -0.5; rArmZ = 0.35; lElbow = -0.5; rElbow = -0.35;
+      lArmX = -1.3; rArmX = -1.3; lArmZ = -0.3; rArmZ = 0.3; lElbow = -0.45; rElbow = -0.45;
     } else if (moving || climbing) {
       lArmX = swing * amp * 0.7; rArmX = -swing * amp * 0.7;
       lElbow = -0.25; rElbow = -0.25;
@@ -112,21 +116,22 @@ export const SkirtFemaleAvatar: React.FC<SkirtFemaleAvatarProps> = ({
       lArmZ += Math.sin(t * 1.4) * 0.02; rArmZ -= Math.sin(t * 1.4) * 0.02;
     }
 
-    set('CC_Base_L_Upperarm', lArmX, 0, lArmZ);
-    set('CC_Base_R_Upperarm', rArmX, 0, rArmZ);
+    if (armProbe) set('CC_Base_L_Upperarm', armProbe[0], armProbe[1], armProbe[2]);
+    else set('CC_Base_L_Upperarm', lArmX, lArmTwist, lArmZ);
+    set('CC_Base_R_Upperarm', rArmX, rArmTwist, rArmZ);
     set('CC_Base_L_Forearm', lElbow, 0, 0);
     set('CC_Base_R_Forearm', rElbow, 0, 0);
 
     // ── Legs. Bind pose on this FBX has the legs flipped; legFix corrects it.
-    set('CC_Base_L_Thigh', legFix[0], legFix[1], legFix[2], legFix[1], legFix[2]);
-    set('CC_Base_R_Thigh', legFix[0], legFix[1], legFix[2], legFix[1], legFix[2]);
+    set('CC_Base_L_Thigh', legFix[0], legFix[1], legFix[2]);
+    set('CC_Base_R_Thigh', legFix[0], legFix[1], legFix[2]);
     if (jumping) {
       set('CC_Base_L_Thigh', legFix[0] - 0.9, legFix[1], legFix[2]); set('CC_Base_R_Thigh', legFix[0] - 0.9, legFix[1], legFix[2]);
       set('CC_Base_L_Calf', 1.3); set('CC_Base_R_Calf', 1.3);
     } else if (climbing) {
       // Exaggerated alternating high steps.
-      set('CC_Base_L_Thigh', legFix[0] - Math.abs(swing) * 1.0);
-      set('CC_Base_R_Thigh', legFix[0] - Math.abs(Math.sin(phase.current + Math.PI)) * 1.0);
+      set('CC_Base_L_Thigh', legFix[0] - Math.abs(swing) * 1.0, legFix[1], legFix[2]);
+      set('CC_Base_R_Thigh', legFix[0] - Math.abs(Math.sin(phase.current + Math.PI)) * 1.0, legFix[1], legFix[2]);
       set('CC_Base_L_Calf', Math.abs(swing) * 1.1);
       set('CC_Base_R_Calf', Math.abs(Math.sin(phase.current + Math.PI)) * 1.1);
     } else if (animState === 'sitting') {
@@ -138,7 +143,7 @@ export const SkirtFemaleAvatar: React.FC<SkirtFemaleAvatarProps> = ({
       set('CC_Base_L_Calf', Math.max(0, -swing) * amp * 0.9);
       set('CC_Base_R_Calf', Math.max(0, swing) * amp * 0.9);
     } else {
-      set('CC_Base_L_Thigh', legFix[0], legFix[1], legFix[2], legFix[1], legFix[2]); set('CC_Base_R_Thigh', legFix[0], legFix[1], legFix[2], legFix[1], legFix[2]);
+      set('CC_Base_L_Thigh', legFix[0], legFix[1], legFix[2]); set('CC_Base_R_Thigh', legFix[0], legFix[1], legFix[2]);
       set('CC_Base_L_Calf', 0); set('CC_Base_R_Calf', 0);
     }
 

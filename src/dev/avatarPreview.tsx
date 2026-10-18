@@ -64,6 +64,15 @@ createRoot(document.getElementById('r')!).render(
     </mesh>
     <Suspense fallback={null}>
       {q.get('anims') === '1' ? <AnimProbe />
+        : q.get('armprobe') === '1' ? (
+          <group>
+            {([[2, 0, 0], [0, 2, 0], [0, 0, 2], [-2, 0, 0]] as [number, number, number][]).map((r, i) => (
+              <group key={i} position={[(i - 1.5) * 1.2, 0, 0]}>
+                <SkirtFemaleAvatar animState="idle" armProbe={r} />
+              </group>
+            ))}
+          </group>
+        )
         : q.get('skirt') ? <SkirtFemaleAvatar
             animState={(q.get('skirt') as 'idle' | 'walking' | 'running' | 'jumping' | 'climbing') || 'idle'}
             aiming={q.get('aim') === '1'} headYaw={Number(q.get('head') || 0)} {...(q.get('legfix') ? { legFix: q.get('legfix')!.split(',').map(Number) as [number, number, number] } : {})} />
