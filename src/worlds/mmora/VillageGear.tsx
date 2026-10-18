@@ -10,7 +10,7 @@ import { playerSpot } from './VillageVillagers';
 
 const COL = { weapon: '#c9d3df', armour: '#b07a3c', quest: '#ffd25a' };
 
-const Item: React.FC<{ g: Gear }> = ({ g }) => {
+export const VillageGearItem: React.FC<{ g: Gear }> = ({ g }) => {
   const ref = useRef<THREE.Group>(null);
   useFrame(({ clock }) => { if (ref.current) { ref.current.rotation.y = clock.elapsedTime; ref.current.position.y = g.pos[1] + Math.sin(clock.elapsedTime * 2) * 0.08; } });
   return (
@@ -61,5 +61,5 @@ export const VillageGear: React.FC = () => {
     if (req && !owned.includes(req[0])) return { dist: best.d * 0.5, reach: 1.4, label: `Find the ${req[1]} first`, run: () => {} };
     return { dist: best.d * 0.5, reach: 1.4, label: `Pick up ${g.name}`, run: () => { takeGear(g); logStory('item', g.id); } };
   }), [camera, owned]);
-  return <>{GEAR.filter((g) => !g.shop && !owned.includes(g.id)).map((g) => <Item key={g.id} g={g} />)}</>;
+  return <>{GEAR.filter((g) => !g.shop && !owned.includes(g.id)).map((g) => <VillageGearItem key={g.id} g={g} />)}</>;
 };
