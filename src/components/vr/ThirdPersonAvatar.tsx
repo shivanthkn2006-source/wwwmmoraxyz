@@ -56,9 +56,9 @@ export const ThirdPersonAvatar: React.FC = () => {
   const speed = useRef(0);
   const crouchAmt = useRef(0);
   const eq = useEquipped();
-  // The skirt rig holds the equipped gun itself; uploaded rigs keep the old overlays.
-  const skirt = useAvatarChoice() === 'skirt';
-  const held = skirt ? pickHeldWeapon(eq) : null;
+  // The skirt rig (also the fallback whenever an uploaded avatar can't load)
+  // holds the equipped gun itself, so the gun always goes to it.
+  const held = pickHeldWeapon(eq);
   const aimingRef = useRef(false);
   aimingRef.current = eq.some((id) => ['w870', 'shotgun', 'boltrifle', 'pistol', 'sentinel9'].includes(id));
   const mats = useMemo(() => ({
@@ -131,8 +131,8 @@ export const ThirdPersonAvatar: React.FC = () => {
         {eq.includes('vest') && <mesh position={[0, 1.25, 0]}><boxGeometry args={[0.47, 0.5, 0.28]} /><meshStandardMaterial color="#5a3a22" roughness={0.8} /></mesh>}
         {/* W-870 hand constraints live with the skirt rig, not beside it. */}
         {/* legacy simple held items for the older gear */}
-        {!held && eq.includes('shotgun') && <mesh position={[0.3, 0.8, 0.3]}><boxGeometry args={[0.05, 0.07, 0.75]} /><meshStandardMaterial color="#3b2a1c" /></mesh>}
-        {!held && eq.includes('pistol') && <mesh position={[0.3, 0.78, 0.1]}><boxGeometry args={[0.04, 0.09, 0.2]} /><meshStandardMaterial color="#222" metalness={0.7} /></mesh>}
+        {false && eq.includes('shotgun') && <mesh position={[0.3, 0.8, 0.3]}><boxGeometry args={[0.05, 0.07, 0.75]} /><meshStandardMaterial color="#3b2a1c" /></mesh>}
+        {false && eq.includes('pistol') && <mesh position={[0.3, 0.78, 0.1]}><boxGeometry args={[0.04, 0.09, 0.2]} /><meshStandardMaterial color="#222" metalness={0.7} /></mesh>}
         {!held && eq.includes('knife') && <mesh position={[0.3, 0.78, 0.1]}><boxGeometry args={[0.015, 0.03, 0.22]} /><meshStandardMaterial color="#c9d3df" metalness={0.9} /></mesh>}
       </group>
     </group>

@@ -127,10 +127,9 @@ export const SkirtFemaleAvatar: React.FC<SkirtFemaleAvatarProps> = ({
     let lArmX = 0, rArmX = 0, lArmZ = -1.15, rArmZ = 1.15, lElbow = 0, rElbow = 0;
     let lArmTwist = 0, rArmTwist = 0;
 
-    if (aiming && !held) {
-      // Two-hand weapon hold: both arms forward, right hand at the grip.
-      lArmX = 1.3; rArmX = 1.3; lArmZ = -0.3; rArmZ = 0.3; lElbow = 0.45; rElbow = 0.45;
-    } else if (moving || climbing) {
+    // (No separate "aiming" arm pose: on this rig it threw both hands up/back.
+    // Equipped guns are held by the grip solver below.)
+    if (moving || climbing) {
       lArmX = swing * amp * 0.7; rArmX = -swing * amp * 0.7;
       lElbow = -0.25; rElbow = -0.25;
     } else {
