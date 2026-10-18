@@ -103,13 +103,8 @@ export const ThirdPersonAvatar: React.FC = () => {
           {/* Temporary (per Marc): the rigged skirt-female model stands in as
               the village avatar for ALL profiles while a real male model is
               sourced. It drives its own walk/run/jump/aim poses from real
-              movement speed. Helena stays available for female profiles via
-              the `helena=1` look flag. */}
-          {female && loadLook().helena ? (
-            <HelenaCharacterModel pose="standing" targetHeight={1.72} />
-          ) : (
-            <SkirtFemaleAvatar animState="idle" aiming={holdingW870} targetHeight={1.72} />
-          )}
+              movement speed. */}
+          <SkirtFemaleAvatar animState="idle" aiming={holdingW870} targetHeight={1.72} />
         </Suspense>
         {/* equipment overlays (roughly placed on the realistic body) */}
         {eq.includes('headlamp') && <group position={[0, 1.72, 0]}>
