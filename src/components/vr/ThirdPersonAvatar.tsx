@@ -165,8 +165,9 @@ export const ThirdPersonAvatar: React.FC = () => {
             <mesh position={[0, -0.44, 0]} material={mats.skin}><capsuleGeometry args={[0.052, 0.16, 4, 8]} /></mesh>
             <mesh position={[0, -0.58, 0]} material={mats.skin}><sphereGeometry args={[0.058, 8, 8]} /></mesh>
             {i === 1 && (holdingW870 ? <group position={[0, -0.58, 0]} rotation={[0, -Math.PI / 2, 0]}>
-              {/* Grip (-.22,-.08,0) becomes the hand pivot; muzzle down 60°. */}
-              <group rotation={[0, 0, -Math.PI / 3]}><group position={[0.22, 0.08, 0]}><W870Model /></group></group>
+              {/* Grip (-.22,-.08,0) becomes the hand pivot; a 35° carry
+                  keeps the stock behind the elbow and muzzle above ground. */}
+              <group rotation={[0, 0, -Math.PI * 35 / 180]}><group position={[0.22, 0.08, 0]}><W870Model /></group></group>
             </group>
               : eq.includes('shotgun') ? <mesh position={[0, -0.6, 0.3]}><boxGeometry args={[0.05, 0.07, 0.75]} /><meshStandardMaterial color="#3b2a1c" /></mesh>
               : eq.includes('pistol') ? <mesh position={[0, -0.62, 0.1]}><boxGeometry args={[0.04, 0.09, 0.2]} /><meshStandardMaterial color="#222" metalness={0.7} /></mesh>
