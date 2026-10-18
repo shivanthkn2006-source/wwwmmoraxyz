@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { Canvas } from '@react-three/fiber';
 import { ThirdPersonAvatar } from '@/components/vr/ThirdPersonAvatar';
 import { enterMMora } from '@/worlds/worldMode';
+import LeonCharacterModel from '@/components/vr/features/LeonCharacterModel';
 
 // The avatar only shows inside the village world.
 enterMMora([0, 1.6, 6]);
