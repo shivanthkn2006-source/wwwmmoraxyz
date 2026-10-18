@@ -100,14 +100,15 @@ export const ThirdPersonAvatar: React.FC = () => {
       <MyBubble />
       <group ref={body}>
         <Suspense fallback={<ModelFallback />}>
-          {female ? (
+          {/* Temporary (per Marc): the rigged skirt-female model stands in as
+              the village avatar for ALL profiles while a real male model is
+              sourced. It drives its own walk/run/jump/aim poses from real
+              movement speed. Helena stays available for female profiles via
+              the `helena=1` look flag. */}
+          {female && loadLook().helena ? (
             <HelenaCharacterModel pose="standing" targetHeight={1.72} />
           ) : (
-            /* No working realistic male model exists yet: the Leon FBX's
-               textures are missing and its rig renders broken, so the male
-               avatar keeps the previous built-in body until a textured male
-               model is uploaded. */
-            <ModelFallback />
+            <SkirtFemaleAvatar animState="idle" aiming={holdingW870} targetHeight={1.72} />
           )}
         </Suspense>
         {/* equipment overlays (roughly placed on the realistic body) */}
