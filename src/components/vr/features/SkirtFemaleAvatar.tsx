@@ -118,10 +118,10 @@ export const SkirtFemaleAvatar: React.FC<SkirtFemaleAvatarProps> = ({
     set('CC_Base_R_Forearm', rElbow, 0, 0);
 
     // ── Legs. Bind pose on this FBX has the legs flipped; legFix corrects it.
-    set('CC_Base_L_Thigh', legFix[0], legFix[1], legFix[2]);
-    set('CC_Base_R_Thigh', legFix[0], legFix[1], legFix[2]);
+    set('CC_Base_L_Thigh', legFix[0], legFix[1], legFix[2], legFix[1], legFix[2]);
+    set('CC_Base_R_Thigh', legFix[0], legFix[1], legFix[2], legFix[1], legFix[2]);
     if (jumping) {
-      set('CC_Base_L_Thigh', legFix[0] - 0.9); set('CC_Base_R_Thigh', legFix[0] - 0.9);
+      set('CC_Base_L_Thigh', legFix[0] - 0.9, legFix[1], legFix[2]); set('CC_Base_R_Thigh', legFix[0] - 0.9, legFix[1], legFix[2]);
       set('CC_Base_L_Calf', 1.3); set('CC_Base_R_Calf', 1.3);
     } else if (climbing) {
       // Exaggerated alternating high steps.
@@ -130,15 +130,15 @@ export const SkirtFemaleAvatar: React.FC<SkirtFemaleAvatarProps> = ({
       set('CC_Base_L_Calf', Math.abs(swing) * 1.1);
       set('CC_Base_R_Calf', Math.abs(Math.sin(phase.current + Math.PI)) * 1.1);
     } else if (animState === 'sitting') {
-      set('CC_Base_L_Thigh', legFix[0] - 1.5); set('CC_Base_R_Thigh', legFix[0] - 1.5);
+      set('CC_Base_L_Thigh', legFix[0] - 1.5, legFix[1], legFix[2]); set('CC_Base_R_Thigh', legFix[0] - 1.5, legFix[1], legFix[2]);
       set('CC_Base_L_Calf', 1.4); set('CC_Base_R_Calf', 1.4);
     } else if (moving) {
-      set('CC_Base_L_Thigh', legFix[0] + swing * amp);
-      set('CC_Base_R_Thigh', legFix[0] - swing * amp);
+      set('CC_Base_L_Thigh', legFix[0] + swing * amp, legFix[1], legFix[2]);
+      set('CC_Base_R_Thigh', legFix[0] - swing * amp, legFix[1], legFix[2]);
       set('CC_Base_L_Calf', Math.max(0, -swing) * amp * 0.9);
       set('CC_Base_R_Calf', Math.max(0, swing) * amp * 0.9);
     } else {
-      set('CC_Base_L_Thigh', legFix[0], legFix[1], legFix[2]); set('CC_Base_R_Thigh', legFix[0], legFix[1], legFix[2]);
+      set('CC_Base_L_Thigh', legFix[0], legFix[1], legFix[2], legFix[1], legFix[2]); set('CC_Base_R_Thigh', legFix[0], legFix[1], legFix[2], legFix[1], legFix[2]);
       set('CC_Base_L_Calf', 0); set('CC_Base_R_Calf', 0);
     }
 
