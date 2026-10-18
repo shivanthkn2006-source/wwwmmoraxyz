@@ -171,7 +171,7 @@ export const SkirtFemaleAvatar: React.FC<SkirtFemaleAvatarProps> = ({
     if (holdingW870 && weapon.current && armSolver) {
       // Both hands and the gun use one calibrated avatar-local grip frame.
       const kick = Math.max(0, 1 - (performance.now() - avatarMotion.attackAt) / 180);
-      weapon.current.position.set(-0.13, 1.29 + kick * 0.015, 0.30 - kick * 0.035);
+      weapon.current.position.set(-0.13, 1.29 + kick * 0.015, 0.04 - kick * 0.035);
       weapon.current.rotation.set(0, -Math.PI / 2, 0.06 + kick * 0.045);
       rightTarget.set(-0.13, weapon.current.position.y - 0.025, weapon.current.position.z - 0.055);
       leftTarget.set(-0.13, weapon.current.position.y - 0.02, weapon.current.position.z + 0.29);
