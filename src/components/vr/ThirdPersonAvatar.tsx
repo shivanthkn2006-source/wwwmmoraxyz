@@ -15,7 +15,6 @@ import { useEquipped } from '@/lib/vrGear';
 import { loadLook } from '@/lib/vrLook';
 import { Html } from '@react-three/drei';
 import { useMeet, myMeetId } from '@/worlds/meet/vrMeet';
-import { W870Model } from './features/W870Model';
 import { VillageAvatar } from './features/VillageAvatar';
 import { avatarMotion } from '@/lib/vrAvatarMotion';
 
@@ -116,7 +115,7 @@ export const ThirdPersonAvatar: React.FC = () => {
               the village avatar for ALL profiles while a real male model is
               sourced. It drives its own walk/run/jump/aim poses from real
               movement speed. */}
-          <VillageAvatar aiming={eq.some((id) => ['w870', 'shotgun', 'boltrifle', 'pistol', 'sentinel9'].includes(id))} />
+          <VillageAvatar aiming={eq.some((id) => ['w870', 'shotgun', 'boltrifle', 'pistol', 'sentinel9'].includes(id))} holdingW870={holdingW870} />
         </Suspense>
         {/* equipment overlays (roughly placed on the realistic body) */}
         {eq.includes('headlamp') && <group position={[0, 1.72, 0]}>
@@ -126,14 +125,7 @@ export const ThirdPersonAvatar: React.FC = () => {
         </group>}
         {eq.includes('helmet') && <mesh position={[0, 1.74, 0]}><sphereGeometry args={[0.16, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.55]} /><meshStandardMaterial color="#6b6f74" metalness={0.8} roughness={0.35} /></mesh>}
         {eq.includes('vest') && <mesh position={[0, 1.25, 0]}><boxGeometry args={[0.47, 0.5, 0.28]} /><meshStandardMaterial color="#5a3a22" roughness={0.8} /></mesh>}
-        {/* W-870 carried low in the right hand, muzzle forward */}
-        {holdingW870 && (
-          <group position={[0.3, 0.85, 0.1]} rotation={[0, -Math.PI / 2, 0]}>
-            <group rotation={[0, 0, -Math.PI * 35 / 180]}>
-              <group position={[0.22, 0.08, 0]}><W870Model /></group>
-            </group>
-          </group>
-        )}
+        {/* W-870 hand constraints live with the skirt rig, not beside it. */}
         {/* legacy simple held items for the older gear */}
         {!holdingW870 && eq.includes('shotgun') && <mesh position={[0.3, 0.8, 0.3]}><boxGeometry args={[0.05, 0.07, 0.75]} /><meshStandardMaterial color="#3b2a1c" /></mesh>}
         {!holdingW870 && eq.includes('pistol') && <mesh position={[0.3, 0.78, 0.1]}><boxGeometry args={[0.04, 0.09, 0.2]} /><meshStandardMaterial color="#222" metalness={0.7} /></mesh>}

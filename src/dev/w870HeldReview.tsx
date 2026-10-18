@@ -15,6 +15,9 @@ async function start() {
   const el = document.getElementById('r');
   if (!el) return;
   const view = new URLSearchParams(location.search).get('view');
+  const { avatarMotion } = await import('@/lib/vrAvatarMotion');
+  const { SkirtFemaleAvatar } = await import('@/components/vr/features/SkirtFemaleAvatar');
+  avatarMotion.pose = view === 'walk' ? 'walking' : 'idle';
   function Review() {
     useFrame(({ camera, clock }) => {
       // The production camera remains untouched. Move only fixture camera to check walking pose.
@@ -22,12 +25,15 @@ async function start() {
     });
     return <ThirdPersonAvatar />;
   }
-  createRoot(el).render(<Canvas style={{ height: '100vh' }} dpr={1} camera={{ position: [0, 2.4, 0], fov: 48 }} onCreated={({ camera }) => { camera.rotation.x = -0.2; }}>
+  createRoot(el).render(<Canvas style={{ height: '100vh' }} dpr={1} camera={{ position: [0, 2.4, 0], fov: 48 }} onCreated={({ camera, scene }) => {
+    camera.rotation.x = -0.2;
+    (window as unknown as Record<string, unknown>).__held = { camera, scene };
+  }}>
     <color attach="background" args={['#777d82']} />
     <ambientLight intensity={0.65} />
     <directionalLight position={[3, 5, -1]} intensity={3} />
     <Environment><Lightformer intensity={3} position={[0, 3, 2]} scale={4} /><Lightformer intensity={2} position={[-2, 1, 0]} rotation-y={Math.PI / 2} scale={3} /></Environment>
-    <Review />
+     {view === 'side' ? <group position={[0, 0, -2.8]} rotation-y={Math.PI / 2}><SkirtFemaleAvatar aiming holdingW870 liveMotion /></group> : <Review />}
   </Canvas>);
 }
 void start();

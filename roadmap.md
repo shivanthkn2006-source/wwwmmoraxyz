@@ -1,5 +1,10 @@
 # M'Mora Village roadmap
 
+## Oct 18 equipped gun hold correction
+- [x] Replace detached W-870 overlay with rig-connected grip and support-hand solve; keep skirt default and gameplay unchanged.
+- [ ] Isolated rear/side before-after done; walking, firing and authenticated village checks remain; distinguish isolated evidence from authenticated gameplay.
+- [ ] Report other weapon models, reload animation and enemy/combat gaps without claiming completion.
+
 ## Oct 18 avatar options and inventory repair
 - [x] Repair inventory selection/equip interaction; isolated click→equip→unequip verified, 3 gear preservation tests; no item resets or herb colour changes.
 - [x] Inspect all six GLBs; optional Zoe and Ready Player rigs (~4.6–4.9 MB) render in isolated poses; skirt remains default. None contains movement clips.
