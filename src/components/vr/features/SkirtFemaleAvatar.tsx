@@ -159,7 +159,7 @@ export const SkirtFemaleAvatar: React.FC<SkirtFemaleAvatarProps> = ({
     // ── Torso lean + head turn.
     set('CC_Base_Waist', run ? 0.14 : moving ? 0.06 : Math.sin(t * 1.4) * 0.015, 0, 0);
     set('CC_Base_NeckTwist01', 0, THREE.MathUtils.clamp(headYaw, -1.1, 1.1) * 0.5, 0);
-    set('CC_Base_Head', 0, THREE.MathUtils.clamp(headYaw, -1.1, 1.1) * 0.5, 0);
+    set('CC_Base_Head', liveMotion ? avatarMotion.headPitch : 0, THREE.MathUtils.clamp(headYaw, -1.1, 1.1) * 0.5, 0);
   });
 
   return (
