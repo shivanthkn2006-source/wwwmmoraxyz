@@ -3,6 +3,10 @@ import React, { Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Canvas } from '@react-three/fiber';
 import { ThirdPersonAvatar } from '@/components/vr/ThirdPersonAvatar';
+import { enterMMora } from '@/worlds/worldMode';
+
+// The avatar only shows inside the village world.
+enterMMora([0, 1.6, 6]);
 
 const q = new URLSearchParams(location.search);
 const pos = (q.get('cam') || '0,1.7,4').split(',').map(Number) as [number, number, number];
