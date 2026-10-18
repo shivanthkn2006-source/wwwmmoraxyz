@@ -3,7 +3,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { Canvas } from '@react-three/fiber';
 import { Environment, Lightformer, OrbitControls } from '@react-three/drei';
-import { VillageGearItem } from '@/worlds/mmora/VillageGear';
+import { W870Model } from '@/components/vr/features/W870Model';
 import { GEAR } from '@/lib/vrGear';
 import { GearArt } from '@/components/vr/VRGearArt';
 import { supabase } from '@/integrations/supabase/client';
@@ -21,7 +21,7 @@ async function start() {
       <ambientLight intensity={0.65} />
       <directionalLight position={[-94, 4, -18]} intensity={3} />
       <Environment><Lightformer intensity={2} position={[-96, 4, -20]} scale={4} /><Lightformer intensity={1} position={[-97, 1, -20]} rotation-y={Math.PI / 2} scale={3} /></Environment>
-      <VillageGearItem g={gear} />
+      <group position={gear.pos}><W870Model /></group>
       <OrbitControls target={[-96, 0.9, -20]} enablePan={false} />
     </Canvas>
     <div aria-label="W-870 inventory artwork" style={{ width: 260, height: 100, margin: '20px auto' }}><GearArt id="w870" /></div>
