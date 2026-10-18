@@ -46,7 +46,7 @@ createRoot(document.getElementById('r')!).render(
     </mesh>
     <Suspense fallback={null}>
       {q.get('raw') === '1' ? <LeonCharacterModel pose="standing" targetHeight={1.78} />
-        : q.get('glb') ? <GlbProbe url={`/src/assets/models/${q.get('glb')}`} />
+        : q.get('glb') ? <GlbProbe url={q.get('glb')!.startsWith('http') ? q.get('glb')! : `/src/assets/models/${q.get('glb')}`} />
         : <ThirdPersonAvatar />}
     </Suspense>
   </Canvas>,
