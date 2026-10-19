@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { searchFeatures } from '@/data/appFeatures';
+import { searchPlatformFeatures } from '@/lib/platformFeatureSearch';
 import { routeForEntity } from '@/lib/ambientDispatch';
 
 export type SearchFilter = 'all' | 'profiles' | 'chats' | 'images' | 'loops' | 'videos' | 'other';
@@ -123,6 +123,11 @@ export function useHomeSearch(query: string, enabled = true) {
 
     let cancelled = false;
     const controller = new AbortController();
+    const features: HomeSearchResult[] = searchPlatformFeatures(term).map((f) => ({
+      type: 'feature', filter: 'other', signals: ['text'], id: f.id,
+      title: f.name, subtitle: f.description, route: f.location,
+    }));
+    setResults(features);
     setLoading(true);
     setError(null);
 
@@ -130,7 +135,7 @@ export function useHomeSearch(query: string, enabled = true) {
       try {
         const safe = term.replace(/[%,()]/g, ' ').toLowerCase();
 
-        const [indexRes, usersRes] = await Promise.all([
+        const [indexSettled, usersSettled] = await Promise.allSettled([
           supabase.rpc('zoe_prefix_search', { query_text: safe, match_count: 20 }),
           supabase
             .from('public_profiles')
@@ -140,13 +145,15 @@ export function useHomeSearch(query: string, enabled = true) {
             .abortSignal(controller.signal),
         ]);
 
+        const indexRes = indexSettled.status === 'fulfilled' ? indexSettled.value : { data: null, error: { message: 'Index unavailable' } };
+        const usersRes = usersSettled.status === 'fulfilled' ? usersSettled.value : { data: null, error: { message: 'Profiles unavailable' } };
         if (cancelled) return;
         if (indexRes.error && usersRes.error) {
           setError('Search is temporarily unavailable');
         }
         if (indexRes.error) console.warn('[useHomeSearch] index', indexRes.error.message);
 
-        const next: HomeSearchResult[] = [];
+        const next: HomeSearchResult[] = [...features];
         const seen = new Set<string>();
 
         (indexRes.data ?? []).forEach((row: any) => {
@@ -185,7 +192,7 @@ export function useHomeSearch(query: string, enabled = true) {
           const key = `profile:${u.user_id}`;
           if (seen.has(key)) return;
           seen.add(key);
-          next.unshift({
+          next.push({
             type: 'user',
             filter: 'profiles',
             signals: ['text'],
@@ -197,27 +204,12 @@ export function useHomeSearch(query: string, enabled = true) {
           });
         });
 
-        searchFeatures(safe)
-          .slice(0, 4)
-          .forEach((f: any) => {
-            next.push({
-              type: 'feature',
-              filter: 'other',
-              signals: ['text'],
-              id: f.id,
-              title: f.name,
-              subtitle: f.description,
-              route: f.location || '/',
-            });
-          });
-
-
         setResults(next);
       } catch (err) {
         if (!cancelled && !controller.signal.aborted) {
           console.error('[useHomeSearch]', err);
           setError('Search failed');
-          setResults([]);
+          setResults(features);
         }
       } finally {
         if (!cancelled) setLoading(false);

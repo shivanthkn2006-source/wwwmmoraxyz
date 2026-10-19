@@ -19,7 +19,8 @@
 - Face sign-in and setup require a server-issued one-time liveness challenge (random blink/head-turn order, checked server-side) before on-device fingerprints are matched, because a static photo or replayed video must not unlock an account.
 - Platform visit analytics are written only by the `track-visit` function (service role, IP/geo resolved server-side) into admin-read-only tables, because visitors' network details must never be readable by members.
 - Member referral links use ?r=<code derived from user id>, recorded first-touch by visitTracker and credited server-side in track-visit on a new member's first sign-in, because referral credit must not be client-forgeable.
-- Home menu icons for admin, vault, nexus, omega and platform-internals pages are built only when the server-verified admin role check passes (isAdminOnlyRoute in dockExtraActions), because members must never see admin entry points.
+- Home menus gate privileged entries with server-verified admin checks (isAdminOnlyRoute), because members must not see admin entry points.
+- Home/Zoe search merges member routes and dock definitions via platformFeatureSearch before cloud retrieval, because the legacy list missed new menus.
 - Passkeys use the www-stripped hostname as rpId (assertions retry the exact hostname for older passkeys), because one passkey must work on both www and bare domains.
 
 - Notification kinds live in the notification_kinds table; unknown kinds are coerced to system by trigger, because a fixed CHECK list silently dropped alerts.

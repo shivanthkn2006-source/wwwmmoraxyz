@@ -1,4 +1,5 @@
 import React from 'react';
+import PlatformResultIcon from '@/components/search/PlatformResultIcon';
 import { Camera, ListVideo, Loader2, Search, Trash2, Volume2, VolumeX, X } from 'lucide-react';
 
 import { useNavigate } from 'react-router-dom';
@@ -693,6 +694,7 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
               aria-selected={index === activeIndex}
               className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-white/10 ${index === activeIndex ? 'bg-white/10' : ''}`}
             >
+              {result.type === 'feature' && <PlatformResultIcon route={result.route} />}
               {result.avatarUrl && (
                 <img
                   src={result.avatarUrl}
