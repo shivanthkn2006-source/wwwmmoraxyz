@@ -108,6 +108,7 @@ interface ExtraDef {
 
 /** Ordered by usefulness — the dock trims from the end when space runs out. */
 export const DOCK_EXTRA_DEFS: ExtraDef[] = [
+  { id: 'dock-village', label: "M'Mora Village", route: '/vr-world', Icon: Home },
   { id: 'dock-music', label: 'Music', route: '/music', Icon: Music2 },
   { id: 'dock-calls', label: 'Audio & video calls', route: '/calls', Icon: ZoeCallsIcon },
   { id: 'dock-home-load-report', label: 'Home loading report', route: '/home-load-report', Icon: Activity },
