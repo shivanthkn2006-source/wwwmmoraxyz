@@ -21,3 +21,14 @@ describe('village chase camera', () => {
     expect(yawOf(-Math.sin(0.7), -Math.cos(0.7))).toBeCloseTo(0.7);
   });
 });
+
+import { addOrbitLift, orbit, clampZoomFov, ORBIT_LIFT_MIN, ORBIT_LIFT_MAX } from '@/lib/vrView';
+describe('village camera orbit + zoom limits', () => {
+  it('up/down orbit stays between the floor and overhead limits', () => {
+    expect(addOrbitLift(-10)).toBe(ORBIT_LIFT_MIN); expect(addOrbitLift(10)).toBe(ORBIT_LIFT_MAX);
+    orbit.lift = 0;
+  });
+  it('zoom stays between 50° and 75° lens', () => {
+    expect(clampZoomFov(10)).toBe(50); expect(clampZoomFov(120)).toBe(75);
+  });
+});
