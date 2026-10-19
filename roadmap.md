@@ -1,5 +1,10 @@
 # M'Mora Village roadmap
 
+## Oct 19 search integration and camera follow-up
+- [ ] Connect existing member menu destinations to Home/Zoe platform search, including Village and matching symbols; preserve admin hiding.
+- [ ] Correct vertical Village drag direction without changing default height, distance, gear or saves.
+- [ ] Verify signed-in search → World navigation, reload and camera direction; document remaining weapon/assets and live spit blockers.
+
 ## Oct 19 live verification request
 - [x] Signed-in Home and village reload: no startup failure; earlier failed module URL was not logged, so cause unconfirmed.
 - [x] Signed-in village orbit: body stayed at the same spot while camera yaw moved; wheel zoom 75→50; vertical drag measured.
