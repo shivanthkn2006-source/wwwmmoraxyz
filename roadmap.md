@@ -1,5 +1,14 @@
 # M'Mora Village roadmap
 
+## Oct 19 platform audit continuation
+- [x] Re-run full tests: 1,080 assertions passed, 6 skipped; run exits unsuccessfully with one unhandled WebSocket/Event error. Not a clean suite.
+- [x] Re-check signed-in Home reload: no visible startup failure or page errors; greeting dismissed and Home visible behind permission prompt.
+- [x] Re-check W-870 delivery: localhost returns HTTP 200 text/html, not GLB. Live grip and ranged-spit proof remain blocked/unperformed.
+- [x] Review current security and integration code; publish revised evidence-separated report with stale-scan caveat and missing functionality.
+- [ ] Verify/fix AI auth gate, cross-account findings, arbitrary fetches and private logging individually; current scanner findings date Oct 3 and require revalidation.
+- [ ] Resolve unhandled test WebSocket/Event error and remaining AI gateway guard failures before claiming clean checks.
+- [ ] Complete authenticated Zoe-modal/DHF retrieval, village equip/spit, saves/multiplayer and device-only audio checks; blockers and missing proof listed in revised report.
+
 ## Oct 19 search integration and camera follow-up
 - [x] Connect existing member menu destinations to Home/Zoe platform search, including Village and matching symbols; preserve existing admin hiding. 21 focused tests pass.
 - [x] Correct vertical Village drag direction without changing default height, distance, gear or saves.
