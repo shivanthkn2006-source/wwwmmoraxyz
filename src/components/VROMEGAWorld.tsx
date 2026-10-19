@@ -120,7 +120,8 @@ import { RealMapWorld } from '@/worlds/realmap/RealMapWorld';
 import { JourneyTracker } from '@/worlds/JourneyTracker';
 import { PortalDoorway } from '@/worlds/portal/PortalDoorway';
 import { resolveMove, resolveAvatarMove } from '@/lib/vrSolids';
-import { AVATAR_AHEAD, villageEyeHeight, orbitAvatar } from '@/lib/vrView';
+import { AVATAR_AHEAD, villageEyeHeight, orbitAvatar, addOrbitLift } from '@/lib/vrView';
+import { VRChaseZoom } from '@/components/vr/VRChaseZoom';
 import { readSave } from '@/lib/vrSaveGame';
 import { VRWorldList } from '@/components/vr/VRWorldList';
 import { VillageLook } from '@/worlds/mmora/VillageLook';
@@ -571,6 +572,12 @@ function turnYaw(camera: THREE.Camera, d: number) {
   chase.targetYaw = (chase.targetYaw ?? camera.rotation.y) + d;
 }
 void orbitAvatar;
+/** Tilt the view by d radians (+ = look up). In the village chase view this swings the camera over/under the avatar instead. */
+function tiltView(camera: THREE.Camera, d: number) {
+  if (!d) return;
+  if (isChase()) { addOrbitLift(-d * AVATAR_AHEAD); return; }
+  camera.rotation.x += d;
+}
 
 const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitions?: boolean }> = ({ disabled, blockHighAltitudeTransitions = false }) => {
   const { camera } = useThree();
@@ -864,7 +871,7 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
       if (!isDraggingLook.current || disabled) return;
 
       turnYaw(camera, -event.movementX * 0.0024);
-      camera.rotation.x -= event.movementY * 0.0018;
+      tiltView(camera, -event.movementY * 0.0018);
       clampOrientation();
     };
 
@@ -887,7 +894,7 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
       const dy = touch.clientY - touchLookRef.current.y;
 
       turnYaw(camera, -dx * 0.004);
-      camera.rotation.x -= dy * 0.003;
+      tiltView(camera, -dy * 0.003);
       clampOrientation();
 
       touchLookRef.current.x = touch.clientX;
@@ -903,7 +910,7 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
       if (disabled) return;
       const { dx, dy } = e.detail || {};
       if (typeof dx === 'number') turnYaw(camera, -dx);
-      if (typeof dy === 'number') camera.rotation.x -= dy;
+      if (typeof dy === 'number') tiltView(camera, -dy);
       clampOrientation();
     };
 
@@ -3073,6 +3080,7 @@ const VRLiveClock: React.FC = () => {
           <RenderStatsProbe />
           {/* 5X Zoom Lens - always active inside Canvas */}
           <VRZoomLens />
+          <VRChaseZoom />
           </Canvas>
 
 <VRFeature id="status">
