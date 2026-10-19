@@ -7,6 +7,7 @@
  * ═══════════════════════════════════════════════════════════════════════════
  */
 import React from 'react';
+import PlatformResultIcon from '@/components/search/PlatformResultIcon';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   Globe,
@@ -348,6 +349,7 @@ export const ZoeSearchModal: React.FC<ZoeSearchModalProps> = ({
                               onClick={() => onOpenPlatform?.(result)}
                               className={`w-56 shrink-0 rounded-2xl p-3 text-left transition hover:bg-white/10 ${glass}`}
                             >
+                              {result.type === 'feature' && <PlatformResultIcon route={result.route} />}
                               {result.avatarUrl && (
                                 <img
                                   src={result.avatarUrl}

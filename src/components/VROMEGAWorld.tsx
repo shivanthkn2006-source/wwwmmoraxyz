@@ -120,7 +120,7 @@ import { RealMapWorld } from '@/worlds/realmap/RealMapWorld';
 import { JourneyTracker } from '@/worlds/JourneyTracker';
 import { PortalDoorway } from '@/worlds/portal/PortalDoorway';
 import { resolveMove, resolveAvatarMove } from '@/lib/vrSolids';
-import { AVATAR_AHEAD, villageEyeHeight, orbitAvatar, addOrbitLift } from '@/lib/vrView';
+import { AVATAR_AHEAD, villageEyeHeight, orbitAvatar, orbitLookUp } from '@/lib/vrView';
 import { VRChaseZoom } from '@/components/vr/VRChaseZoom';
 import { readSave } from '@/lib/vrSaveGame';
 import { VRWorldList } from '@/components/vr/VRWorldList';
@@ -575,7 +575,7 @@ void orbitAvatar;
 /** Tilt the view by d radians (+ = look up). In the village chase view this swings the camera over/under the avatar instead. */
 function tiltView(camera: THREE.Camera, d: number) {
   if (!d) return;
-  if (isChase()) { addOrbitLift(-d * AVATAR_AHEAD); return; }
+  if (isChase()) { orbitLookUp(d); return; }
   camera.rotation.x += d;
 }
 

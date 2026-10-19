@@ -99,6 +99,12 @@ export function isAdminOnlyRoute(route: string): boolean {
   return ADMIN_ONLY_ROUTES.has(route) || ADMIN_ONLY_KEYWORDS.some((k) => route.includes(k));
 }
 
+/** Discovery shares member exclusions; privileged and fixture routes stay hidden. */
+export function isMemberMenuRoute(route: string): boolean {
+  return !NON_MENU_ROUTES.has(route) && !isAdminOnlyRoute(route) &&
+    !NON_MENU_PREFIXES.some((prefix) => route === prefix || route.startsWith(`${prefix}/`)) && !route.startsWith('/__');
+}
+
 interface ExtraDef {
   id: string;
   label: string;
@@ -220,7 +226,7 @@ export function buildExtraDockItems(
 }
 
 /** Stable route-aware fallback icon for automatically discovered pages. */
-function iconForRoute(route: string): ExtraDef['Icon'] {
+export function iconForRoute(route: string): ExtraDef['Icon'] {
   if (route.includes('music')) return Music2;
   if (route.includes('camera') || route.includes('vision')) return Aperture;
   if (route.includes('call') || route.includes('chat') || route.includes('huddle')) return ZoeCallsIcon;

@@ -20,6 +20,8 @@ export function villageEyeHeight() { return st.thirdPerson ? CHASE_EYE_M + orbit
 export const ORBIT_LIFT_MIN = -0.6, ORBIT_LIFT_MAX = 2.0;
 export const orbit = { lift: 0 };
 export function addOrbitLift(d: number) { orbit.lift = Math.min(ORBIT_LIFT_MAX, Math.max(ORBIT_LIFT_MIN, orbit.lift + d)); return orbit.lift; }
+/** Positive look radians raise the village orbit camera. */
+export function orbitLookUp(radians: number) { return addOrbitLift(radians * AVATAR_AHEAD); }
 /** Zoom by narrowing the lens only (the arm length never changes, so doors and pickups still find her). */
 export const ZOOM_FOV_MIN = 50, ZOOM_FOV_MAX = 75;
 export const clampZoomFov = (f: number) => Math.min(ZOOM_FOV_MAX, Math.max(ZOOM_FOV_MIN, f));
