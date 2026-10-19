@@ -851,7 +851,8 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
     };
 
     const handleMouseDown = (event: MouseEvent) => {
-      if (event.button !== 0 || isInteractiveTarget(event.target)) return;
+      // Left or right mouse button + drag orbits the camera (standard PC third-person).
+      if ((event.button !== 0 && event.button !== 2) || isInteractiveTarget(event.target)) return;
       isDraggingLook.current = true;
     };
 
@@ -991,6 +992,8 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
     window.addEventListener('keyup', handleKeyUp, { capture: true });
     window.addEventListener('blur', handleWindowBlur);
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    const noMenu = (e: MouseEvent) => { if (e.target instanceof HTMLCanvasElement) e.preventDefault(); };
+    window.addEventListener('contextmenu', noMenu);
     window.addEventListener('mousedown', handleMouseDown);
     window.addEventListener('mouseup', handleMouseUp);
     window.addEventListener('mousemove', handleMouseMove);
@@ -1030,6 +1033,7 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
       window.removeEventListener('vr-teleport', handleTeleport as EventListener);
       window.removeEventListener('vr-rotate-360', handleRotate360 as EventListener);
       window.removeEventListener('vr-camera-look', handleCameraLook as EventListener);
+      window.removeEventListener('contextmenu', noMenu);
       window.removeEventListener('vr-interact', handleInteract as EventListener);
 
       window.removeEventListener('keydown', handleKeyDown, true);
