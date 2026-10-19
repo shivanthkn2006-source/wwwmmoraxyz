@@ -1,9 +1,10 @@
 # M'Mora Village roadmap
 
 ## Oct 19 live verification request
-- [ ] Test signed-in startup and reload; diagnose recurring module failure from current logs.
-- [ ] Enter actual village, equip owned W-870 through inventory and measure stationary orbit; capture evidence.
-- [ ] Verify Drowned ranged spit in gameplay, separating any controlled fixture from ordinary play; report blockers.
+- [x] Signed-in Home and village reload: no startup failure; earlier failed module URL was not logged, so cause unconfirmed.
+- [x] Signed-in village orbit: body stayed at the same spot while camera yaw moved; wheel zoom 75→50; vertical drag measured.
+- [ ] W-870 signed-in equip: blocked — account doesn't own it; preview model URL returns a page, not the 3D file.
+- [ ] Drowned live 3–8 m spit: not observed in gameplay; covered by range test only.
 
 ## Oct 18 equipped gun hold correction
 - [x] Root cause found: Shotgun item (not W-870) drew a loose box + crossed-hands aim pose; W-870 stock frame sat 0.2 m behind shoulder; torso arched back; wrists/fingers used guessed axes. Fixed; isolated evidence grip_fix_before_after_v3.jpg.
