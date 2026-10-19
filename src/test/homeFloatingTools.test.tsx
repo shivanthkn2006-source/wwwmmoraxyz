@@ -95,10 +95,9 @@ vi.mock('@/integrations/supabase/client', () => ({
   },
 }));
 
-vi.mock('@/data/appFeatures', () => ({
-  APP_FEATURES: [],
-  searchFeatures: vi.fn(() => [
-    { id: 'zoe', name: 'Zoe AI Assistant', description: 'Talk to Zoe', location: '/zoe-infinity' },
+vi.mock('@/lib/platformFeatureSearch', () => ({
+  searchPlatformFeatures: vi.fn(() => [
+    { id: 'zoe', name: 'Zoe AI Assistant', description: 'Talk to Zoe', location: '/zoe-infinity', keywords: [], category: 'ai' },
   ]),
 }));
 
