@@ -163,7 +163,7 @@ describe('HomeFloatingTools sideways search', () => {
     expect(screen.getByText('Zoe AI Assistant')).toBeTruthy();
   });
 
-  it('navigates with arrow keys + Enter', async () => {
+  it('navigates with arrow keys + Enter (menu matches are listed first)', async () => {
     render(<Harness />);
     toggleSearch();
     const input = screen.getByRole('searchbox');
@@ -172,8 +172,7 @@ describe('HomeFloatingTools sideways search', () => {
 
     fireEvent.keyDown(input, { key: 'ArrowDown' });
     fireEvent.submit(input.closest('form')!);
-    await waitFor(() => expect(navigateSpy).toHaveBeenCalled());
-    console.log('NAV', JSON.stringify(navigateSpy.mock.calls));
+    await waitFor(() => expect(navigateSpy).toHaveBeenCalledWith('/zoe-infinity'));
   });
 
   it('debounces rapid typing into a single backend round trip', async () => {
