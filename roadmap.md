@@ -1,5 +1,10 @@
 # M'Mora Village roadmap
 
+## Oct 19 live verification request
+- [ ] Test signed-in startup and reload; diagnose recurring module failure from current logs.
+- [ ] Enter actual village, equip owned W-870 through inventory and measure stationary orbit; capture evidence.
+- [ ] Verify Drowned ranged spit in gameplay, separating any controlled fixture from ordinary play; report blockers.
+
 ## Oct 18 equipped gun hold correction
 - [x] Root cause found: Shotgun item (not W-870) drew a loose box + crossed-hands aim pose; W-870 stock frame sat 0.2 m behind shoulder; torso arched back; wrists/fingers used guessed axes. Fixed; isolated evidence grip_fix_before_after_v3.jpg.
 - [ ] Signed-in village check of Shotgun/W-870 hold: blocked (no minted session; hosted 3D files return a page instead of the file on localhost).
