@@ -31,4 +31,4 @@
 - Paid inference requires verified member claims before retrieval; triage/audit use sovereignFetch, because Bearer syntax is not identity.
 - The dev server proxies /__l5e to the published site, because the local dev server has no CDN asset route and returned the app page for 3D files.
 - Automatic introductory panels claim a unique welcome-prefixed feature_announcements row before display; explicit help and story briefings remain separate, because per-day/device flags and leaked listeners replayed overlays across routes and devices.
-- Quick Unlock (5-digit) only covers an already signed-in device: codes, wrong-try counts and waits live in a server-only table via the quick-unlock function (identity from the session), and the lock overlays the app without unmounting it, because a client-side or primary-sign-in PIN would weaken every account and closing the app would end calls/music.
+- Quick Unlock codes, counts and waits live server-only (quick-unlock fn, session identity); the lock overlays without unmounting, because client PINs are forgeable and unmounting ends calls.
