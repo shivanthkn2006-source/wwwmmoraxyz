@@ -19,11 +19,11 @@
 - Platform visit analytics are written only by the `track-visit` function (service role, IP/geo resolved server-side) into admin-read-only tables, because visitors' network details must never be readable by members.
 - Member referral links use ?r=<code derived from user id>, recorded first-touch by visitTracker and credited server-side in track-visit on a new member's first sign-in, because referral credit must not be client-forgeable.
 - Home menus gate privileged entries with server-verified admin checks (isAdminOnlyRoute), because members must not see admin entry points.
-- Home/Zoe search merges member routes and dock definitions via platformFeatureSearch before cloud retrieval, because the legacy list missed new menus.
+- Home/Zoe search merges routes + dock via platformFeatureSearch first, because the legacy list missed menus.
 - Passkeys use the www-stripped hostname as rpId (assertions retry the exact hostname for older passkeys), because one passkey must work on both www and bare domains.
 
 - Notification kinds live in the notification_kinds table; unknown kinds are coerced to system by trigger, because a fixed CHECK list silently dropped alerts.
-- Notification UI consumers subscribe via globalRealtime (auto-rejoin, onRealtimeReconnect catch-up), because separate channels dropped during auth reloads.
+- Notification UI uses globalRealtime (auto-rejoin, catch-up), because separate channels dropped.
 - Admin-only routes render the ordinary NotFound page to non-admins and report it via track-visit `activity` (server throttles, skips the admin), because guessed URLs must never reveal what exists.
 - Live admin monitoring alerts (domain visits, missing pages, admin probes, VR activity) are created only server-side in track-visit, because clients cannot insert alerts for the admin.
 - Every saved notification is forwarded to the member's phones by a database trigger → notification-push function (x-cron-token), which re-checks the main, push and per-alert switches, because one delivery path keeps phone alerts consistent with the in-app bell.
