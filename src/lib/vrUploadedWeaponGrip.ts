@@ -103,3 +103,18 @@ export function createUploadedWeaponSolver(model: THREE.Object3D, zoe: boolean) 
     },
   };
 }
+/** Uploaded rigs: stock moves this far toward the collarbone (avatar +X = her left). */
+export const UPLOADED_STOCK_INWARD = 0.04;
+/**
+ * Support-hand contact along the underside of the gun: as far forward as
+ * `maxForward`, but never past what the left arm can reach (95% of its
+ * measured length), so the hand closes on the fore-end instead of hanging short.
+ */
+export function supportPoint(grip: THREE.Vector3, leftShoulder: THREE.Vector3, reach: number, maxForward: number) {
+  const p = new THREE.Vector3();
+  for (let s = maxForward; s >= 0.02; s -= 0.01) {
+    p.set(grip.x, grip.y + 0.01, grip.z + s);
+    if (p.distanceTo(leftShoulder) <= reach * 0.95) return p;
+  }
+  return p.set(grip.x, grip.y + 0.01, grip.z + 0.02);
+}

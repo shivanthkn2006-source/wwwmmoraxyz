@@ -14,7 +14,7 @@ export function UploadedVillageAvatar({ url, zoe = false, aiming = false, heldWe
   const root = useRef<THREE.Group>(null);
   const weapon = useRef<THREE.Group>(null);
   const shoulder = useMemo(() => new THREE.Vector3(), []);
-  const supportOffset = useMemo(() => new THREE.Vector3(), []);
+  const leftShoulder = useMemo(() => new THREE.Vector3(), []);
   const frame = useMemo<GripFrame>(() => ({ weapon: new THREE.Vector3(), right: new THREE.Vector3(), left: new THREE.Vector3() }), []);
   const phase = useRef(0);
   const { model, bones } = useMemo(() => {
