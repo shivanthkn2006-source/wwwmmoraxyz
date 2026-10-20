@@ -92,7 +92,7 @@ export default function QuickUnlockGate() {
       role="dialog"
       aria-modal="true"
       aria-label="Quick Unlock"
-      className="surface-warm-tan fixed inset-0 z-[9998] flex flex-col items-center justify-center gap-6 p-6"
+      className="quick-unlock-gate surface-warm-tan fixed inset-0 z-[9998] flex flex-col items-center justify-center gap-6 p-6"
     >
       <QuickUnlockPad title="Enter your Quick Unlock code" hint="M'Mora is locked on this device." error={error} busy={busy} onComplete={submit} />
       <button type="button" onClick={forgot} className="text-sm text-foreground underline underline-offset-4">
