@@ -20,6 +20,12 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    // Dev only: the local dev server has no CDN asset route, so asset
+    // pointers (/__l5e/assets-v1/...) returned the app page instead of the
+    // 3D file. Forward them to the published site, which serves them.
+    proxy: {
+      '/__l5e': { target: 'https://www.mmora.xyz', changeOrigin: true, secure: true },
+    },
     // Warm critical entry modules so the dev dep-optimizer settles BEFORE the
     // iframe starts requesting chunks. This prevents the "chunk-XXXX.js"
     // 404/import failures that happen when Vite re-bundles mid-session.
