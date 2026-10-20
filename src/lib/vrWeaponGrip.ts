@@ -5,11 +5,13 @@ export const W870_GRIP_OFFSET = new THREE.Vector3(0.22, 0.08, 0);
 /** Measured on the W-870 source: butt plate sits 0.317 m behind the grip. */
 export const BUTT_TO_GRIP = 0.317;
 
-/** Guns the skirt avatar holds; long guns shoulder, handguns use a close two-hand hold. */
-export type HeldWeapon = 'w870' | 'shotgun' | 'boltrifle' | 'sentinel9' | 'pistol';
-const HELD_ORDER: HeldWeapon[] = ['w870', 'shotgun', 'boltrifle', 'sentinel9', 'pistol'];
+/** Items every avatar holds; long guns shoulder, handguns use a close two-hand hold, knife/grenades one hand. */
+export type HeldWeapon = 'w870' | 'shotgun' | 'boltrifle' | 'sentinel9' | 'pistol' | 'knife'
+  | 'fraggrenade' | 'flashgrenade' | 'incgrenade' | 'smokegrenade' | 'shockgrenade';
+const HELD_ORDER: HeldWeapon[] = ['w870', 'shotgun', 'boltrifle', 'sentinel9', 'pistol', 'knife', 'fraggrenade', 'flashgrenade', 'incgrenade', 'smokegrenade', 'shockgrenade'];
 export const isLongGun = (w: HeldWeapon | null) => w === 'w870' || w === 'shotgun' || w === 'boltrifle';
-/** One gun is drawn in the hands even if several are equipped. */
+export const isOneHanded = (w: HeldWeapon | null) => w === 'knife' || (!!w && w.endsWith('grenade'));
+/** One item is drawn in the hands even if several are equipped. */
 export function pickHeldWeapon(equipped: readonly string[]): HeldWeapon | null {
   return HELD_ORDER.find((id) => equipped.includes(id)) ?? null;
 }
