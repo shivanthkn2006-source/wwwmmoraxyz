@@ -1,5 +1,10 @@
 # M'Mora Village roadmap
 
+## Oct 20 yellow/blue/red testing default
+- [ ] Set uploaded Zoe as the temporary testing default in both shared worlds, preserving manual avatar switches and all saves.
+- [ ] Correct uploaded-rig palm alignment using measured hand geometry/joints; preserve textures, camera and gameplay.
+- [ ] Run focused tests and visual checks; deliver an audit separating real-world integration from isolated pose checks.
+
 ## Oct 20 requested repairs
 - [x] Alternate avatars receive existing weapon art and mapped CCD arms; six isolated renders inspected. Shotgun/pistol remain blocks; finger fit is incomplete. Default/camera/stats/saves unchanged.
 - [x] Brain verifies authenticated claims before parsing/retrieval; six handler tests pass. Triage/audit retain caller gates and use sovereign cascade; both production guards pass.
