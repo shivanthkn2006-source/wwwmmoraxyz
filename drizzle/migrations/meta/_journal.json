@@ -64,6 +64,13 @@
       "when": 1792165145144,
       "tag": "0008_vr_save_newest_wins",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792495570792,
+      "tag": "0009_member_quick_unlock",
+      "breakpoints": true
     }
   ]
 }
