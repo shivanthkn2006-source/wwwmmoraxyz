@@ -1,5 +1,11 @@
 # M'Mora Village roadmap
 
+## Oct 20 whole-platform read-only enterprise audit
+- [ ] Measure repository, live database, search/menu/route chains and outside-provider call sites with explicit count definitions.
+- [ ] Revalidate available security signals and automated tests; inspect actual public/authenticated routes without changing member data.
+- [ ] Research ISO 27001 and related privacy/security requirements from authoritative sources; distinguish readiness assessment from accredited certification.
+- [ ] Deliver evidence-based inventory, strengths, root weaknesses, immediate build priorities and unresolved verification limits; preserve all application components.
+
 ## Oct 20 support-hand and grenade follow-up
 - [x] Identify rendering sources before grip changes: only Shotgun initially equipped; knife/grenades are intentional one-handed low-ready poses. Thin rear waist accessory belongs to monolithic Zoe mesh; exact accessory identity unconfirmed, preserved.
 - [x] Repair alternate-avatar reachable support contacts and one-handed arm relaxation; preserve textures/camera. 27 focused grip/grenade/camera tests pass; Zoe finger closure remains impossible without authored finger joints.
