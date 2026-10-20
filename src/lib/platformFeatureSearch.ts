@@ -50,6 +50,12 @@ const PROFILE_SETTINGS: AppFeature[] = [
     keywords: ['faith', 'religion', 'planetary', 'mood', 'devotional'],
     category: 'settings', location: '/profile#faith', icon: 'Sparkles',
   },
+  {
+    id: 'settings:voice', name: 'Zoe Voice Settings',
+    description: 'Zoe voice, commands and behaviour',
+    keywords: ['voice', 'voice settings', 'zoe voice', 'voice commands', 'speech'],
+    category: 'settings', location: '/profile#voice-settings', icon: 'Mic',
+  },
 ];
 const menuByRoute = new Map(DOCK_EXTRA_DEFS.map((entry) => [entry.route, entry]));
 const destinations: AppFeature[] = NAVIGABLE_ROUTES.filter((entry) => isMemberMenuRoute(entry.path)).map(({ path, label }) => {
