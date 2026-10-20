@@ -30,3 +30,4 @@
 - Notification taps resolve through src/lib/notificationTarget.ts for every notification surface, because separate per-panel rules left most alert kinds going nowhere.
 - Paid inference requires verified member claims before retrieval; triage/audit use sovereignFetch, because Bearer syntax is not identity.
 - The dev server proxies /__l5e to the published site, because the local dev server has no CDN asset route and returned the app page for 3D files.
+- Automatic introductory panels claim a unique welcome-prefixed feature_announcements row before display; explicit help and story briefings remain separate, because per-day/device flags and leaked listeners replayed overlays across routes and devices.

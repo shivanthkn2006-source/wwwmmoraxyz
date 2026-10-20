@@ -9,6 +9,8 @@ import { setVRWorldActive } from '@/lib/vrSession';
 import { floorAt } from '@/lib/vrFloor';
 import { avatarMotion, movementPose } from '@/lib/vrAvatarMotion';
 import { chase, approachAngle, chaseMoveDir, yawOf, CAM_YAW_DAMP, BODY_TURN_DAMP } from '@/lib/vrChaseCam';
+import { inspectionActive, returnInspectionLift } from '@/lib/vrInspection';
+import { VRInspectionToggle } from '@/components/vr/VRInspectionToggle';
 import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { 
@@ -31,6 +33,7 @@ import { AltitudeTracker } from './vr/AltitudeTracker';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
+import { useFirstTimePanel } from '@/hooks/useFirstTimePanel';
 import { cn } from '@/lib/utils';
 import { 
   HelpCircle, 
@@ -1060,6 +1063,7 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
   useFrame((_, delta) => {
     if (disabled) return;
 
+    if (isChase()) returnInspectionLift(delta);
     const wantedHeight = getWorldState().mode === 'mmora' ? villageEyeHeight() - 1.6 : 0;
     if (wantedHeight !== chaseHeight.current) {
       camera.position.y += wantedHeight - chaseHeight.current;
@@ -1111,7 +1115,8 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
       eventForwardStartedAt.current = null;
     }
 
-    const input = { forward: forward || evF, backward: backward || evB, left: left || evL, right: right || evR };
+    const inspecting = isChase() && inspectionActive();
+    const input = inspecting ? { forward: false, backward: false, left: false, right: false } : { forward: forward || evF, backward: backward || evB, left: left || evL, right: right || evR };
     if (isChase()) {
       // Modern third-person: the body is the player, the camera trails on its arm.
       const camYaw0 = camera.rotation.y;
@@ -1122,6 +1127,7 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
       const isRunning = staminaTick(dt, run || eventSpeed.current > 1, !!dir);
       const speed = getVRView().crouch ? WALK_MPS * CROUCH_SPEED : isRunning ? RUN_MPS : WALK_MPS;
       direction.current.set(dir ? dir[0] : 0, 0, dir ? dir[1] : 0).multiplyScalar(speed);
+      if (inspecting) velocity.current.set(0, 0, 0);
       velocity.current.lerp(direction.current, 1 - Math.exp(-7 * dt));
       const bodyY = camera.position.y - (villageEyeHeight() - 1.6);
       const [nx, nz] = resolveMove(bx, bz, bx + velocity.current.x * dt, bz + velocity.current.z * dt, bodyY);
@@ -1168,7 +1174,7 @@ const PlayerController: React.FC<{ disabled: boolean; blockHighAltitudeTransitio
       const village = getWorldState().mode === 'mmora', eyeHeight = village ? villageEyeHeight() : 1.6;
       const yaw = camera.rotation.y, ahead = village && getVRView().thirdPerson ? AVATAR_AHEAD : 0;
       const eye = eyeHeight + floorAt(camera.position.x - Math.sin(yaw) * ahead, camera.position.z - Math.cos(yaw) * ahead, camera.position.y - (eyeHeight - 1.6));
-      if (jump && camera.position.y <= eye + 0.02) {
+      if (jump && !inspecting && camera.position.y <= eye + 0.02) {
         verticalVelocity.current = 5.8;
       }
 
@@ -1472,6 +1478,7 @@ const VROMEGAWorld: React.FC<VROMEGAWorldProps> = ({
   const [isBioSyncing, setIsBioSyncing] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
   const [hasSeenTutorial, setHasSeenTutorial] = useState(false);
+  const firstTutorial = useFirstTimePanel('world-controls', !!isActive);
   const bioSyncRef = useRef<NodeJS.Timeout | null>(null);
   
   // Panel visibility states for voice control
@@ -2810,20 +2817,19 @@ const VRLiveClock: React.FC = () => {
 
   // Check if first-time user and show tutorial
   useEffect(() => {
-    const tutorialSeen = localStorage.getItem('vr_omega_tutorial_seen');
-    if (!tutorialSeen && isActive) {
+    if (firstTutorial && isActive) {
       setShowTutorial(true);
       setHasSeenTutorial(false);
     } else {
       setHasSeenTutorial(true);
     }
-  }, [isActive]);
+  }, [isActive, firstTutorial]);
 
   // Handle tutorial dismissal
   const handleDismissTutorial = useCallback(() => {
     setShowTutorial(false);
     setHasSeenTutorial(true);
-    localStorage.setItem('vr_omega_tutorial_seen', 'true');
+    try { localStorage.setItem('vr_omega_tutorial_seen', 'true'); } catch { /* legacy cache */ }
   }, []);
 
   // Handle keyboard H key for help toggle + Z key for 5X zoom
@@ -3155,6 +3161,7 @@ const VRLiveClock: React.FC = () => {
               </VRFeature>
               <LookButtons />
               <VRGamepadHUD />
+              <VRInspectionToggle />
               <LandscapeViewportGuard />
               <VRFeature id="map"><RealMapStatus /></VRFeature>
               <RealAerialLand />

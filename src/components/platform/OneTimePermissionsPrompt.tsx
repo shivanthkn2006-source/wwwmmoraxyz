@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import PermissionActivationModal from '@/components/PermissionActivationModal';
+import { useFirstTimePanel } from '@/hooks/useFirstTimePanel';
 
 /**
  * Single universal permission request, shown once per device after sign-in.
@@ -11,14 +12,17 @@ const KEY = 'mmora_universal_permissions_asked_v1';
 
 export default function OneTimePermissionsPrompt() {
   const [open, setOpen] = useState(false);
+  let previouslySeen = false;
+  try { previouslySeen = localStorage.getItem(KEY) === '1'; } catch { /* optional legacy cache */ }
+  const firstVisit = useFirstTimePanel('permissions-introduction', true, previouslySeen);
 
   useEffect(() => {
     let asked = false;
     try { asked = localStorage.getItem(KEY) === '1'; } catch { /* ignore */ }
-    if (asked) return;
+    if (asked || !firstVisit) return;
     const t = window.setTimeout(() => setOpen(true), 2500);
     return () => window.clearTimeout(t);
-  }, []);
+  }, [firstVisit]);
 
   const markAsked = () => { try { localStorage.setItem(KEY, '1'); } catch { /* ignore */ } };
 
