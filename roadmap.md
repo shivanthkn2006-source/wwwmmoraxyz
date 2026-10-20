@@ -1,5 +1,12 @@
 # M'Mora Village roadmap
 
+## Oct 20 support-hand and grenade follow-up
+- [x] Identify rendering sources before grip changes: only Shotgun initially equipped; knife/grenades are intentional one-handed low-ready poses. Thin rear waist accessory belongs to monolithic Zoe mesh; exact accessory identity unconfirmed, preserved.
+- [x] Repair alternate-avatar reachable support contacts and one-handed arm relaxation; preserve textures/camera. 27 focused grip/grenade/camera tests pass; Zoe finger closure remains impossible without authored finger joints.
+- [x] Correct villager bounded 3D game falloff and independent flash stun; game values unchanged, not real-world injury calculations. Live grenade-villager combat remains blocked by no owned grenades; Drowned/boss listeners still absent.
+- [x] Save v4 weapon audit with inspected actual-world Zoe/Ready Player Shotgun and Ready Player pistol evidence; protected browser-local equip/readback, direct scene-only side rotation and cache-bypassed updated modules explicitly distinguished from normal deployment/full gameplay proof.
+- [ ] Full remaining avatar/weapon gameplay matrix: rifle/W-870/grenades not owned; Zoe fingers not rigged; normal preview transform stale; combat/throw/movement and physical controller/touch checks not established.
+
 ## Oct 20 continuation: first-time panels and focused root scan
 - [x] Add unique account claims to launch, film, home message, birth introduction, Genesis, world tutorial and permission introduction; manual news/story remain available. Unit checks pass; full live/cross-device verification still open.
 - [x] Review uploaded camera proposal; preserve existing controller, 2.8 m arm, 2.4 m default and damping. Add optional O/icon inspection movement gate; 35 focused tests pass.

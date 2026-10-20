@@ -19,14 +19,16 @@ import { playSfx } from '@/lib/vrSfx';
 import { HeldWeaponModel } from './features/HeldWeaponModel';
 
 type Proj = { id: number; kind: GrenadeKind; o: THREE.Vector3; d: { x: number; z: number }; t: number; landed: THREE.Vector3 | null };
-type Fx = { id: number; kind: GrenadeKind; x: number; z: number };
+type Fx = { id: number; kind: GrenadeKind; x: number; z: number; y: number };
 let seq = 0;
 
 let puffTex: THREE.Texture | null = null;
 function puff() {
   if (puffTex) return puffTex;
   const c = document.createElement('canvas'); c.width = c.height = 64;
-  const g = c.getContext('2d')!; const r = g.createRadialGradient(32, 32, 2, 32, 32, 32);
+  const g = c.getContext('2d');
+  if (!g) return new THREE.Texture();
+  const r = g.createRadialGradient(32, 32, 2, 32, 32, 32);
   r.addColorStop(0, 'rgba(255,255,255,1)'); r.addColorStop(0.5, 'rgba(255,255,255,0.45)'); r.addColorStop(1, 'rgba(255,255,255,0)');
   g.fillStyle = r; g.fillRect(0, 0, 64, 64);
   puffTex = new THREE.CanvasTexture(c); return puffTex;
@@ -85,7 +87,7 @@ const Effect: React.FC<{ fx: Fx; onDone: (id: number) => void }> = ({ fx, onDone
       const burning = a < spec.burn;
       flames.current.visible = burning;
       flames.current.children.forEach((f, i) => { const s = (0.7 + Math.sin(a * 13 + i * 1.7) * 0.25 + Math.random() * 0.1) * Math.min(1, a * 4); f.scale.set(s, s * (1 + Math.sin(a * 9 + i) * 0.2), s); });
-      if (burning) { tick.current -= dt; if (tick.current <= 0) { tick.current = 1; emitBlast({ kind: fx.kind, x: fx.x, z: fx.z, radius: spec.radius, damage: spec.damage, stun: 0 }); } }
+      if (burning) { tick.current -= dt; if (tick.current <= 0) { tick.current = 1; emitBlast({ kind: fx.kind, x: fx.x, y: fx.y, z: fx.z, radius: spec.radius, damage: spec.damage, stun: 0 }); } }
     }
     if (smoke.current) {
       smoke.current.children.forEach((s, i) => {
@@ -99,7 +101,7 @@ const Effect: React.FC<{ fx: Fx; onDone: (id: number) => void }> = ({ fx, onDone
   });
   const smokeColor = fx.kind === 'incgrenade' ? '#2a2420' : fx.kind === 'fraggrenade' ? '#4a4540' : '#c9c9c4';
   return (
-    <group position={[fx.x, 0, fx.z]} name={`grenade-fx-${fx.kind}`}>
+    <group position={[fx.x, fx.y, fx.z]} name={`grenade-fx-${fx.kind}`}>
       <pointLight ref={light} position={[0, 1, 0]} color={fx.kind === 'flashgrenade' ? '#ffffff' : '#ff8a3a'} distance={fx.kind === 'flashgrenade' ? 30 : 18} decay={1.6} />
       {fx.kind !== 'smokegrenade' && <mesh ref={ball} position={[0, 0.6, 0]}><sphereGeometry args={[1, 18, 12]} /><meshBasicMaterial color={fx.kind === 'flashgrenade' ? '#ffffff' : '#ffb347'} transparent blending={THREE.AdditiveBlending} depthWrite={false} toneMapped={false} /></mesh>}
       {fx.kind === 'fraggrenade' && <mesh ref={ring} rotation-x={-Math.PI / 2} position={[0, 0.05, 0]}><ringGeometry args={[0.85, 1, 40]} /><meshBasicMaterial color="#d9cbb0" transparent depthWrite={false} side={THREE.DoubleSide} /></mesh>}
@@ -168,16 +170,17 @@ export const GrenadeSystem: React.FC = () => {
     for (const p of [...projs.current]) {
       p.t += dt;
       const spec = GRENADE_SPEC[p.kind];
-      if (!p.landed) { const a = throwArc(p.o, p.d, p.t); if (a.y <= 0.06) p.landed = new THREE.Vector3(a.x, 0.06, a.z); }
+      const groundY = p.o.y - 1.55;
+      if (!p.landed) { const a = throwArc(p.o, p.d, p.t); if (a.y <= groundY + 0.06) p.landed = new THREE.Vector3(a.x, groundY + 0.06, a.z); }
       if ((spec.fuse === 0 && p.landed) || (spec.fuse > 0 && p.t >= spec.fuse) || p.t > 6) {
         const air = throwArc(p.o, p.d, p.t);
-        const at = p.landed ?? new THREE.Vector3(air.x, Math.max(0.06, air.y), air.z);
+        const at = p.landed ?? new THREE.Vector3(air.x, Math.max(groundY + 0.06, air.y), air.z);
         projs.current = projs.current.filter((x) => x !== p); changed = true;
-        emitBlast({ kind: p.kind, x: at.x, z: at.z, radius: spec.radius, damage: p.kind === 'incgrenade' ? 0 : spec.damage, stun: spec.stun });
+        emitBlast({ kind: p.kind, x: at.x, y: at.y, z: at.z, radius: spec.radius, damage: p.kind === 'incgrenade' ? 0 : spec.damage, stun: spec.stun });
         playSfx(p.kind === 'fraggrenade' ? 'explosion' : p.kind === 'flashgrenade' ? 'flashbang' : p.kind === 'incgrenade' ? 'fire' : 'smoke');
         if (p.kind === 'flashgrenade') { const dist = Math.hypot(camera.position.x - at.x, camera.position.z - at.z); if (dist < 20) whiteout(Math.max(0.35, 1 - dist / 20)); }
         if (p.kind === 'fraggrenade') window.dispatchEvent(new CustomEvent('vr-shake', { detail: { strength: 0.6 } }));
-        setFx((f) => [...f.slice(-3), { id: p.id, kind: p.kind, x: at.x, z: at.z }]);
+        setFx((f) => [...f.slice(-3), { id: p.id, kind: p.kind, x: at.x, y: at.y, z: at.z }]);
       }
     }
     if (changed) setN((n) => n + 1);

@@ -7,7 +7,7 @@ import { VILLAGER_STORY, logStory } from '@/lib/vrStoryline';
 import React, { useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import { onBlast } from '@/lib/vrGrenades';
+import { onBlast, blastEffectAt } from '@/lib/vrGrenades';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { WALK_MPS, RUN_MPS } from '@/lib/vrWalk';
 import { registerUse } from '@/lib/vrUse';
@@ -278,9 +278,9 @@ const Villager: React.FC<{ route: [number, number][]; female: boolean; offset: n
   // Grenades: frag/fire damage falls off with distance; flash stuns.
   React.useEffect(() => onBlast((b) => {
     const r = root.current, c = st.current; if (!r || c.down > 0 || !r.visible) return;
-    const d = Math.hypot(b.x - r.position.x, b.z - r.position.z); if (d > b.radius) return;
-    if (b.stun > 0) c.stun = Math.max(c.stun, b.stun);
-    const dmg = Math.round(b.damage * (1 - d / b.radius)); if (dmg <= 0) return;
+    const effect = blastEffectAt(b, r.position);
+    if (effect.stun > 0) c.stun = Math.max(c.stun, effect.stun);
+    const dmg = effect.damage; if (dmg <= 0) return;
     if (!c.hostile) window.dispatchEvent(new CustomEvent('vr-danger'));
     c.hostile = true; c.flash = 0.25; c.hp = Math.max(0, c.hp - dmg);
     if (c.hp <= 0) {
