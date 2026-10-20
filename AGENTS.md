@@ -31,3 +31,4 @@
 - Notification taps resolve through src/lib/notificationTarget.ts for every notification surface, because separate per-panel rules left most alert kinds going nowhere.
 - src/lib/domRemoveGuard.ts (imported first in main.tsx) ignores removeChild of already-detached nodes, because drei <Html> labels unmounting with a whole world crashed VR World on portal trips.
 - Paid inference requires verified member claims before retrieval; triage/audit use sovereignFetch, because Bearer syntax is not identity.
+- The dev server proxies /__l5e to the published site, because the local dev server has no CDN asset route and returned the app page for 3D files.

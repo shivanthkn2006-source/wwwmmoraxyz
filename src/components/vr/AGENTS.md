@@ -49,3 +49,5 @@
 - Village chase camera: up/down look raises/lowers the camera on the fixed 2.8 m arm (orbit.lift in src/lib/vrView.ts, folded into villageEyeHeight) and zoom only narrows the lens (VRChaseZoom), because changing the arm length would break systems that find the avatar at camera + forward × AVATAR_AHEAD.
 
 - Alternate-avatar guns reuse HeldWeaponModel and GLB-mapped CCD arms outside rig orientation correction; palm contacts use skin-weighted bind geometry and wrist world scale, because skirt wrist offsets left uploaded palms detached. Never invent finger joints for rigs without them.
+- Every held item (guns, knife, grenades) is drawn by HeldWeaponModel from real CC0 GLBs (+X forward, origin = palm grip, loaded only when equipped), never placeholder boxes, because boxes read as sticks in the hands.
+- Grenades live in src/lib/vrGrenades.ts (device counts, specs, onBlast bus) and are thrown/rendered by the single GrenadeSystem beside the avatar; enemies react via onBlast, because one bus keeps damage/stun consistent across enemy types.
