@@ -386,7 +386,7 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
 
   const handleAmbientRecord = React.useCallback((record: AmbientSearchRecord) => {
     setSearchOpen(false);
-    navigate(routeForEntity(record.entity_type, record.entity_id));
+    navigate(routeForEntity(record.entity_type, record.entity_id, (record as { metadata?: unknown }).metadata));
   }, [navigate]);
 
 

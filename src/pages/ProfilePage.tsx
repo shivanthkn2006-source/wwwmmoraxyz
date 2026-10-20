@@ -30,6 +30,7 @@ const ProfilePage = () => {
   useEffect(() => {
     const anchor = location.hash.slice(1);
     if (!anchor) return;
+    if (anchor === 'voice-settings') { setShowSettings(true); return; }
     const timer = window.setTimeout(() => {
       document.getElementById(anchor)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 300);

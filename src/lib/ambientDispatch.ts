@@ -5,8 +5,15 @@
  */
 import type { AmbientSearchRecord, ZoeDispatchAction } from '@/core/ports/useAmbientSearch';
 
-export function routeForEntity(entityType: string, entityId: string): string {
+export function routeForEntity(entityType: string, entityId: string, metadata?: unknown): string {
+  // The indexer stores a route for messages/comments; trust only internal paths.
+  const stored = (metadata as { route?: unknown } | null | undefined)?.route;
+  if (typeof stored === 'string' && /^\/[^/\\]/.test(stored)) return stored;
   switch (entityType) {
+    case 'growth_card':
+      return '/growth-insights';
+    case 'direct_message':
+      return '/chat';
     case 'post':
     case 'loop_video':
     case 'image':

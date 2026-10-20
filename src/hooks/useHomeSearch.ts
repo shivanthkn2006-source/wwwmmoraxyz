@@ -184,7 +184,7 @@ export function useHomeSearch(query: string, enabled = true) {
             title: body.slice(0, 90) || ENTITY_LABEL[row.entity_type] || row.entity_type,
             subtitle: ENTITY_LABEL[row.entity_type] || row.entity_type,
             avatarUrl: preview,
-            route: routeForEntity(row.entity_type, row.entity_id),
+            route: routeForEntity(row.entity_type, row.entity_id, row.metadata),
           });
         });
 
