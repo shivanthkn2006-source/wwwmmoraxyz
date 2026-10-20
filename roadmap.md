@@ -1,5 +1,11 @@
 # M'Mora Village roadmap
 
+## Oct 20 support-hand and grenade follow-up
+- [ ] Identify hip objects by source and unobstructed actual-world views before changing grip placement.
+- [ ] Repair alternate-avatar support contacts within measured rig reach; preserve textures, camera, gear and saves.
+- [ ] Correct villager grenade radius/effect handling using clearly labelled game values, not real-world injury calculations; run regression tests.
+- [ ] Verify equipped weapons in both actual worlds and save a versioned audit with screenshots and explicit limitations.
+
 ## Oct 20 continuation: first-time panels and focused root scan
 - [x] Add unique account claims to launch, film, home message, birth introduction, Genesis, world tutorial and permission introduction; manual news/story remain available. Unit checks pass; full live/cross-device verification still open.
 - [x] Review uploaded camera proposal; preserve existing controller, 2.8 m arm, 2.4 m default and damping. Add optional O/icon inspection movement gate; 35 focused tests pass.

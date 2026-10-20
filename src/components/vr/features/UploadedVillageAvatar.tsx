@@ -6,7 +6,7 @@ import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import * as THREE from 'three';
 import { avatarMotion } from '@/lib/vrAvatarMotion';
 import { gripFrame, isLongGun, isOneHanded, type GripFrame, type HeldWeapon } from '@/lib/vrWeaponGrip';
-import { createUploadedWeaponSolver, normalizeUploadedJoint, supportPoint, UPLOADED_STOCK_INWARD } from '@/lib/vrUploadedWeaponGrip';
+import { createUploadedWeaponSolver, normalizeUploadedJoint, UPLOADED_STOCK_INWARD } from '@/lib/vrUploadedWeaponGrip';
 import { HeldWeaponModel } from './HeldWeaponModel';
 
 export function UploadedVillageAvatar({ url, zoe = false, aiming = false, heldWeapon = null }: { url: string; zoe?: boolean; aiming?: boolean; heldWeapon?: HeldWeapon | null }) {
@@ -14,7 +14,6 @@ export function UploadedVillageAvatar({ url, zoe = false, aiming = false, heldWe
   const root = useRef<THREE.Group>(null);
   const weapon = useRef<THREE.Group>(null);
   const shoulder = useMemo(() => new THREE.Vector3(), []);
-  const leftShoulder = useMemo(() => new THREE.Vector3(), []);
   const frame = useMemo<GripFrame>(() => ({ weapon: new THREE.Vector3(), right: new THREE.Vector3(), left: new THREE.Vector3() }), []);
   const phase = useRef(0);
   const { model, bones } = useMemo(() => {
@@ -71,11 +70,11 @@ export function UploadedVillageAvatar({ url, zoe = false, aiming = false, heldWe
       // offsets were calibrated for a different rig and must not be reused.
       frame.right.copy(frame.weapon);
       // Knife and grenades are one-handed: keep gripFrame's relaxed left-hand spot.
-      if (!isOneHanded(heldWeapon)) {
-        avatar.worldToLocal(armSolver.leftShoulder.getWorldPosition(leftShoulder));
-        frame.left.copy(supportPoint(frame.weapon, leftShoulder, armSolver.leftReach, isLongGun(heldWeapon) ? 0.3 : 0.025));
-      }
-      armSolver.solve(avatar, frame.right, frame.left);
+      const support = !isOneHanded(heldWeapon)
+        ? armSolver.supportContact(avatar, gun, isLongGun(heldWeapon) ? 0.3 : 0.025)
+        : null;
+      if (support) frame.left.copy(support);
+      armSolver.solve(avatar, frame.right, frame.left, !!support);
     } else {
       armSolver?.relax();
     }
@@ -84,6 +83,6 @@ export function UploadedVillageAvatar({ url, zoe = false, aiming = false, heldWe
   // corrective rotation. Both hands solve into that same coordinate system.
   return <group ref={root}>
     <group rotation-y={zoe ? -Math.PI / 2 : 0}><primitive object={model} /></group>
-    {heldWeapon && <group ref={weapon} name="uploaded-held-grip"><HeldWeaponModel weapon={heldWeapon} /></group>}
+    {heldWeapon && armSolver && <group ref={weapon} name="uploaded-held-grip"><HeldWeaponModel weapon={heldWeapon} /></group>}
   </group>;
 }

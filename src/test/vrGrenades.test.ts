@@ -1,10 +1,36 @@
 import { describe, expect, it, beforeEach, vi } from 'vitest';
-import { blastDamage, GRENADE_SPEC, throwArc } from '@/lib/vrGrenades';
+import { blastDamage, blastEffectAt, GRENADE_SPEC, throwArc, emitBlast, onBlast, type Blast } from '@/lib/vrGrenades';
 import { isOneHanded, pickHeldWeapon } from '@/lib/vrWeaponGrip';
 import * as THREE from 'three';
 import { supportPoint } from '@/lib/vrUploadedWeaponGrip';
 
 describe('grenades', () => {
+  it('uses bounded 3D game falloff instead of damaging another floor through horizontal proximity', () => {
+    const b: Blast = { kind: 'fraggrenade', x: 0, y: 0, z: 0, radius: 6, damage: 120, stun: 0 };
+    expect(blastEffectAt(b, { x: 0, y: 3, z: 0 }).damage).toBe(60);
+    expect(blastEffectAt(b, { x: 0, y: 6, z: 0 }).damage).toBe(0);
+    expect(blastEffectAt({ ...b, radius: 0 }, { x: 0, z: 0 })).toEqual({ damage: 0, stun: 0 });
+    expect(blastDamage('fraggrenade', -1)).toBe(0);
+  });
+  it('flash stuns inside 9 game metres without HP damage, but not at or outside the edge', () => {
+    const b: Blast = { kind: 'flashgrenade', x: 0, z: 0, radius: 9, damage: 0, stun: 5 };
+    expect(blastEffectAt(b, { x: 8.9, z: 0 })).toEqual({ damage: 0, stun: 5 });
+    expect(blastEffectAt(b, { x: 9, z: 0 })).toEqual({ damage: 0, stun: 0 });
+  });
+  it('smoke never damages or stuns villagers even with accidental event fields', () => {
+    expect(blastEffectAt({ kind: 'smokegrenade', x: 0, z: 0, radius: 5, damage: 120, stun: 5 }, { x: 0, z: 0 })).toEqual({ damage: 0, stun: 0 });
+  });
+  it('incendiary impact deals no initial damage; fire ticks have distance falloff', () => {
+    const b: Blast = { kind: 'incgrenade', x: 0, z: 0, radius: 3.5, damage: 0, stun: 0 };
+    expect(blastEffectAt(b, { x: 0, z: 0 }).damage).toBe(0);
+    expect(blastEffectAt({ ...b, damage: 18 }, { x: 1.75, z: 0 }).damage).toBe(9);
+  });
+  it('delivers each event once and stops delivery after world unmount cleanup', () => {
+    const fn = vi.fn(), off = onBlast(fn);
+    const b: Blast = { kind: 'fraggrenade', x: 0, z: 0, radius: 6, damage: 120, stun: 0 };
+    emitBlast(b); expect(fn).toHaveBeenCalledTimes(1);
+    off(); emitBlast(b); expect(fn).toHaveBeenCalledTimes(1);
+  });
   it('frag hurts most at the centre and nothing past 6 m', () => {
     expect(blastDamage('fraggrenade', 0)).toBe(120);
     expect(blastDamage('fraggrenade', 3)).toBe(60);

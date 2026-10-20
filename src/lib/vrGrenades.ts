@@ -9,6 +9,7 @@ import { useSyncExternalStore } from 'react';
 
 export type GrenadeKind = 'fraggrenade' | 'flashgrenade' | 'incgrenade' | 'smokegrenade';
 export const GRENADE_SPEC: Record<GrenadeKind, { name: string; fuse: number; radius: number; damage: number; stun: number; burn: number; smoke: number; start: number }> = {
+  // Fictional game metres/HP/seconds, NOT real-world lethal or injury radii.
   // fuse s after the throw; impact grenades use 0 (burst on first ground contact)
   fraggrenade: { name: 'Hand Grenade', fuse: 2.0, radius: 6, damage: 120, stun: 0, burn: 0, smoke: 5, start: 3 },
   flashgrenade: { name: 'Flash Grenade', fuse: 1.4, radius: 9, damage: 0, stun: 5, burn: 0, smoke: 2, start: 3 },
@@ -20,7 +21,7 @@ export const isGrenade = (id: string | null | undefined): id is GrenadeKind => !
 /** Frag damage falls off linearly to nothing at the blast edge. */
 export function blastDamage(kind: GrenadeKind, dist: number) {
   const s = GRENADE_SPEC[kind];
-  if (dist > s.radius) return 0;
+  if (!Number.isFinite(dist) || dist < 0 || dist >= s.radius) return 0;
   return Math.round(s.damage * (1 - dist / s.radius));
 }
 /** Pure ballistic arc for a throw (y up, ground bounces handled by the caller). */
@@ -42,7 +43,15 @@ export function spendGrenade(k: GrenadeKind) {
   counts = { ...counts, [k]: grenadeCount(k) - 1 }; save(); return true;
 }
 
-export type Blast = { kind: GrenadeKind; x: number; z: number; radius: number; damage: number; stun: number };
+export type Blast = { kind: GrenadeKind; x: number; z: number; y?: number; radius: number; damage: number; stun: number };
+/** Shared bounded game effect. Flash is independent of HP damage; smoke is visual only. */
+export function blastEffectAt(b: Blast, target: { x: number; z: number; y?: number }) {
+  const d = Math.hypot(b.x - target.x, b.z - target.z, (b.y ?? 0) - (target.y ?? 0));
+  if (!Number.isFinite(d) || !Number.isFinite(b.radius) || b.radius <= 0 || d >= b.radius) return { damage: 0, stun: 0 };
+  const damage = b.kind === 'fraggrenade' || b.kind === 'incgrenade'
+    ? Math.round(Math.max(0, Number.isFinite(b.damage) ? b.damage : 0) * (1 - d / b.radius)) : 0;
+  return { damage, stun: b.kind === 'flashgrenade' ? Math.max(0, Number.isFinite(b.stun) ? b.stun : 0) : 0 };
+}
 const blastLs = new Set<(b: Blast) => void>();
 export function onBlast(fn: (b: Blast) => void) { blastLs.add(fn); return () => { blastLs.delete(fn); }; }
 export function emitBlast(b: Blast) { blastLs.forEach((f) => { try { f(b); } catch { /* one listener can't stop the rest */ } }); }
