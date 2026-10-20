@@ -2,10 +2,10 @@
 
 ## Oct 20 whole-platform read-only enterprise audit
 - [x] Measure repository, live database, search/menu/route chains and outside-provider call sites with explicit count definitions; runtime counts are not inferred from file counts.
-- [ ] Revalidate available security signals and automated tests; inspect actual public/authenticated routes without changing member data.
-- [ ] Research ISO 27001 and related privacy/security requirements from authoritative sources; distinguish readiness assessment from accredited certification.
-- [ ] Research Singapore private-company incorporation, foreign-founder eligibility, investor due diligence and applicable privacy obligations using official sources; tie them to immediate platform readiness priorities.
-- [ ] Deliver evidence-based inventory, strengths, root weaknesses, immediate build priorities and unresolved verification limits; preserve all application components.
+- [x] Revalidate available security signals and automated tests (1,110 passed, 6 skipped); inspect published auth and filtered authenticated Home. Full deployed endpoint/provider and unfiltered flow verification remain explicit limitations.
+- [x] Research ISO 27001 and related privacy/security requirements from authoritative sources; distinguish readiness assessment from accredited certification.
+- [x] Research Singapore Pte. Ltd. incorporation, foreign-founder eligibility, investor due diligence and PDPA obligations using official sources; visa/grant eligibility and legal/tax filings require founder details and professional review.
+- [x] Deliver evidence-based inventory, strengths, root weaknesses, immediate build priorities and unresolved verification limits; preserve all application components. No certified status or precise failed-service total claimed.
 
 ## Oct 20 support-hand and grenade follow-up
 - [x] Identify rendering sources before grip changes: only Shotgun initially equipped; knife/grenades are intentional one-handed low-ready poses. Thin rear waist accessory belongs to monolithic Zoe mesh; exact accessory identity unconfirmed, preserved.
