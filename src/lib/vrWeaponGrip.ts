@@ -5,11 +5,13 @@ export const W870_GRIP_OFFSET = new THREE.Vector3(0.22, 0.08, 0);
 /** Measured on the W-870 source: butt plate sits 0.317 m behind the grip. */
 export const BUTT_TO_GRIP = 0.317;
 
-/** Guns the skirt avatar holds; long guns shoulder, handguns use a close two-hand hold. */
-export type HeldWeapon = 'w870' | 'shotgun' | 'boltrifle' | 'sentinel9' | 'pistol';
-const HELD_ORDER: HeldWeapon[] = ['w870', 'shotgun', 'boltrifle', 'sentinel9', 'pistol'];
+/** Items every avatar holds; long guns shoulder, handguns use a close two-hand hold, knife/grenades one hand. */
+export type HeldWeapon = 'w870' | 'shotgun' | 'boltrifle' | 'sentinel9' | 'pistol' | 'knife'
+  | 'fraggrenade' | 'flashgrenade' | 'incgrenade' | 'smokegrenade' | 'shockgrenade';
+const HELD_ORDER: HeldWeapon[] = ['w870', 'shotgun', 'boltrifle', 'sentinel9', 'pistol', 'knife', 'fraggrenade', 'flashgrenade', 'incgrenade', 'smokegrenade', 'shockgrenade'];
 export const isLongGun = (w: HeldWeapon | null) => w === 'w870' || w === 'shotgun' || w === 'boltrifle';
-/** One gun is drawn in the hands even if several are equipped. */
+export const isOneHanded = (w: HeldWeapon | null) => w === 'knife' || (!!w && w.endsWith('grenade'));
+/** One item is drawn in the hands even if several are equipped. */
 export function pickHeldWeapon(equipped: readonly string[]): HeldWeapon | null {
   return HELD_ORDER.find((id) => equipped.includes(id)) ?? null;
 }
@@ -28,6 +30,12 @@ export function gripFrame(weapon: HeldWeapon, shoulder: THREE.Vector3, kick: num
     // Wrists sit behind/below the contact points so palms, not wrists, touch.
     out.right.set(out.weapon.x - 0.03, out.weapon.y + 0.1, out.weapon.z - 0.075);
     out.left.set(out.weapon.x + 0.06, out.weapon.y + 0.03, out.weapon.z + 0.19);
+  } else if (isOneHanded(weapon)) {
+    // One-hand low ready in front of the right hip; the left arm hangs at her side.
+    const grenade = weapon !== 'knife';
+    out.weapon.set(shoulder.x - 0.04, shoulder.y - (grenade ? 0.3 : 0.38) + kick * 0.1, shoulder.z + 0.3 + kick * 0.08);
+    out.right.copy(out.weapon);
+    out.left.set(-shoulder.x + 0.06, shoulder.y - 0.52, shoulder.z + 0.06);
   } else {
     // Close two-hand handgun hold at chest centre, arms bent (not locked out).
     out.weapon.set(shoulder.x + 0.11, shoulder.y - 0.08 + kick * 0.02, shoulder.z + 0.42 - kick * 0.03);

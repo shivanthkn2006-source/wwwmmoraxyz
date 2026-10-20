@@ -53,8 +53,14 @@ export function createUploadedWeaponSolver(model: THREE.Object3D, zoe: boolean) 
   const fingerRests = bones.filter((bone) => /Hand(Thumb|Index|Middle|Ring|Pinky)[123]$/.test(normalizeUploadedJoint(bone.name))).map((bone) => ({ bone, rest: bone.quaternion.clone() }));
   const wristTargets = [new THREE.Vector3(), new THREE.Vector3()];
   const shoulder = bones[index(names.right[0])];
+  const leftShoulder = bones[index(names.left[0])];
+  // Left arm reach (shoulder→elbow→wrist + wrist→palm), measured on this rig.
+  const lj = names.left.map((n) => bones[index(n)].getWorldPosition(new THREE.Vector3()));
+  const leftReach = lj[0].distanceTo(lj[1]) + lj[1].distanceTo(lj[2]) + palms[1].clone().multiply(handScales[1]).length();
   return {
     shoulder,
+    leftShoulder,
+    leftReach,
     relax() {
       hands.forEach((hand, i) => hand.quaternion.copy(handRests[i]));
       fingerRests.forEach(({ bone, rest }) => bone.quaternion.copy(rest));
@@ -96,4 +102,19 @@ export function createUploadedWeaponSolver(model: THREE.Object3D, zoe: boolean) 
       });
     },
   };
+}
+/** Uploaded rigs: stock moves this far toward the collarbone (avatar +X = her left). */
+export const UPLOADED_STOCK_INWARD = 0.04;
+/**
+ * Support-hand contact along the underside of the gun: as far forward as
+ * `maxForward`, but never past what the left arm can reach (95% of its
+ * measured length), so the hand closes on the fore-end instead of hanging short.
+ */
+export function supportPoint(grip: THREE.Vector3, leftShoulder: THREE.Vector3, reach: number, maxForward: number) {
+  const p = new THREE.Vector3();
+  for (let s = maxForward; s >= 0.02; s -= 0.01) {
+    p.set(grip.x, grip.y + 0.01, grip.z + s);
+    if (p.distanceTo(leftShoulder) <= reach * 0.95) return p;
+  }
+  return p.set(grip.x, grip.y + 0.01, grip.z + 0.02);
 }

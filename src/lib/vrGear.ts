@@ -9,6 +9,7 @@ import { recordVRCollect } from '@/lib/vrQuests';
 import { playPickup, playSfx } from '@/lib/vrSfx';
 import { getAmmo, mergeAmmo, subscribeAmmo } from '@/lib/vrAmmo';
 import { getGoldHerbs, mergeGoldHerbs, subscribeGoldHerbs } from '@/lib/vrPickups';
+import { addGrenades, GRENADE_SPEC, isGrenade } from '@/lib/vrGrenades';
 
 export type GearKind = 'weapon' | 'armour' | 'quest';
 export type Gear = { id: string; kind: GearKind; name: string; icon: string; detail: string; pos: [number, number, number]; shop?: boolean };
@@ -33,6 +34,11 @@ export const GEAR: Gear[] = [
   // Part 13 attachments: screwed onto the equipped gun via the merchant's quick-crafting bench
   { id: 'extmag', kind: 'armour', name: 'Extended Magazine', icon: '🔩', detail: 'Screwed onto your gun at the merchant bench: +4 attack. Merchant only.', pos: [0, -50, 0], shop: true },
   { id: 'lasersight', kind: 'armour', name: 'Laser Sight', icon: '🔴', detail: 'Screwed onto your gun at the merchant bench: +2 attack, faster follow-up shots. Merchant only.', pos: [0, -50, 0], shop: true },
+  // Throwables: found by the first handgun; each pickup gives 3. Equip, then Use / G to throw.
+  { id: 'fraggrenade', kind: 'weapon', name: 'Hand Grenade', icon: '💣', detail: 'Fragmentation grenade: 2 s fuse, heavy damage within 6 m.', pos: [8, 0.9, 6] },
+  { id: 'flashgrenade', kind: 'weapon', name: 'Flash Grenade', icon: '⚡', detail: 'Blinding flash and bang: stuns everything within 9 m for 5 s.', pos: [9.5, 0.9, 6] },
+  { id: 'incgrenade', kind: 'weapon', name: 'Incendiary Grenade', icon: '🔥', detail: 'Crimson shell: bursts on impact into a burning patch for 7 s.', pos: [11, 0.9, 6] },
+  { id: 'smokegrenade', kind: 'weapon', name: 'Smoke Grenade', icon: '🌫️', detail: 'Thick smoke screen for 14 s.', pos: [12.5, 0.9, 6] },
   { id: 'reagent', kind: 'quest', name: 'Chemical Reagent', icon: '🧪', detail: 'A sealed vial from the outpost cleanroom. With 2 Green Herbs it crafts an Antiviral Serum (full health).', pos: [-122, 0.9, -24] },
 ];
 
@@ -44,6 +50,7 @@ export const hasGear = (id: string) => owned.includes(id);
 export function takeGear(g: Gear) {
   if (hasGear(g.id)) return;
   owned = [...owned, g.id];
+  if (isGrenade(g.id)) addGrenades(g.id, GRENADE_SPEC[g.id].start);
   try { localStorage.setItem(KEY, JSON.stringify(owned)); } catch { /* */ }
   ls.forEach((l) => l());
   if (g.kind === 'quest') void import('@/lib/vrStoryline').then(async (sl) => { const r = sl.FIELD_REPORTS[g.id]; if (r) (await import('@/lib/vrStory')).readNote(r.id); });

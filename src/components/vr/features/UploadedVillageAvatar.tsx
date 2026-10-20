@@ -5,8 +5,8 @@ import { useFrame } from '@react-three/fiber';
 import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import * as THREE from 'three';
 import { avatarMotion } from '@/lib/vrAvatarMotion';
-import { gripFrame, isLongGun, type GripFrame, type HeldWeapon } from '@/lib/vrWeaponGrip';
-import { createUploadedWeaponSolver, normalizeUploadedJoint } from '@/lib/vrUploadedWeaponGrip';
+import { gripFrame, isLongGun, isOneHanded, type GripFrame, type HeldWeapon } from '@/lib/vrWeaponGrip';
+import { createUploadedWeaponSolver, normalizeUploadedJoint, supportPoint, UPLOADED_STOCK_INWARD } from '@/lib/vrUploadedWeaponGrip';
 import { HeldWeaponModel } from './HeldWeaponModel';
 
 export function UploadedVillageAvatar({ url, zoe = false, aiming = false, heldWeapon = null }: { url: string; zoe?: boolean; aiming?: boolean; heldWeapon?: HeldWeapon | null }) {
@@ -14,7 +14,7 @@ export function UploadedVillageAvatar({ url, zoe = false, aiming = false, heldWe
   const root = useRef<THREE.Group>(null);
   const weapon = useRef<THREE.Group>(null);
   const shoulder = useMemo(() => new THREE.Vector3(), []);
-  const supportOffset = useMemo(() => new THREE.Vector3(), []);
+  const leftShoulder = useMemo(() => new THREE.Vector3(), []);
   const frame = useMemo<GripFrame>(() => ({ weapon: new THREE.Vector3(), right: new THREE.Vector3(), left: new THREE.Vector3() }), []);
   const phase = useRef(0);
   const { model, bones } = useMemo(() => {
@@ -62,12 +62,19 @@ export function UploadedVillageAvatar({ url, zoe = false, aiming = false, heldWe
       avatar.worldToLocal(armSolver.shoulder.getWorldPosition(shoulder));
       const kick = Math.max(0, 1 - (performance.now() - avatarMotion.attackAt) / 180);
       gripFrame(heldWeapon, shoulder, kick, frame);
+      // Uploaded rigs have shorter arms: the stock sits in the shoulder pocket
+      // nearer the collarbone so the support hand can reach the fore-end.
+      if (isLongGun(heldWeapon)) frame.weapon.x += UPLOADED_STOCK_INWARD;
       gun.position.copy(frame.weapon);
       gun.rotation.set(0, -Math.PI / 2, (isLongGun(heldWeapon) ? 0.03 : 0.02) + kick * 0.045);
       // Uploaded palms touch the grip and underside of the pump; skirt wrist
       // offsets were calibrated for a different rig and must not be reused.
       frame.right.copy(frame.weapon);
-      frame.left.copy(frame.weapon).add(supportOffset.set(0, 0.01, isLongGun(heldWeapon) ? 0.26 : 0.025));
+      // Knife and grenades are one-handed: keep gripFrame's relaxed left-hand spot.
+      if (!isOneHanded(heldWeapon)) {
+        avatar.worldToLocal(armSolver.leftShoulder.getWorldPosition(leftShoulder));
+        frame.left.copy(supportPoint(frame.weapon, leftShoulder, armSolver.leftReach, isLongGun(heldWeapon) ? 0.3 : 0.025));
+      }
       armSolver.solve(avatar, frame.right, frame.left);
     } else {
       armSolver?.relax();
