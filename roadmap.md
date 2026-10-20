@@ -1,7 +1,7 @@
 # M'Mora Village roadmap
 
 ## Oct 20 whole-platform read-only enterprise audit
-- [ ] Measure repository, live database, search/menu/route chains and outside-provider call sites with explicit count definitions.
+- [x] Measure repository, live database, search/menu/route chains and outside-provider call sites with explicit count definitions; runtime counts are not inferred from file counts.
 - [ ] Revalidate available security signals and automated tests; inspect actual public/authenticated routes without changing member data.
 - [ ] Research ISO 27001 and related privacy/security requirements from authoritative sources; distinguish readiness assessment from accredited certification.
 - [ ] Research Singapore private-company incorporation, foreign-founder eligibility, investor due diligence and applicable privacy obligations using official sources; tie them to immediate platform readiness priorities.
