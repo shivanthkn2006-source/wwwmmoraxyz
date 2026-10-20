@@ -30,6 +30,12 @@ export function gripFrame(weapon: HeldWeapon, shoulder: THREE.Vector3, kick: num
     // Wrists sit behind/below the contact points so palms, not wrists, touch.
     out.right.set(out.weapon.x - 0.03, out.weapon.y + 0.1, out.weapon.z - 0.075);
     out.left.set(out.weapon.x + 0.06, out.weapon.y + 0.03, out.weapon.z + 0.19);
+  } else if (isOneHanded(weapon)) {
+    // One-hand low ready in front of the right hip; the left arm hangs at her side.
+    const grenade = weapon !== 'knife';
+    out.weapon.set(shoulder.x - 0.04, shoulder.y - (grenade ? 0.3 : 0.38) + kick * 0.1, shoulder.z + 0.3 + kick * 0.08);
+    out.right.copy(out.weapon);
+    out.left.set(-shoulder.x + 0.06, shoulder.y - 0.52, shoulder.z + 0.06);
   } else {
     // Close two-hand handgun hold at chest centre, arms bent (not locked out).
     out.weapon.set(shoulder.x + 0.11, shoulder.y - 0.08 + kick * 0.02, shoulder.z + 0.42 - kick * 0.03);
