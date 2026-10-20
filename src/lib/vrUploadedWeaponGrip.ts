@@ -53,8 +53,14 @@ export function createUploadedWeaponSolver(model: THREE.Object3D, zoe: boolean) 
   const fingerRests = bones.filter((bone) => /Hand(Thumb|Index|Middle|Ring|Pinky)[123]$/.test(normalizeUploadedJoint(bone.name))).map((bone) => ({ bone, rest: bone.quaternion.clone() }));
   const wristTargets = [new THREE.Vector3(), new THREE.Vector3()];
   const shoulder = bones[index(names.right[0])];
+  const leftShoulder = bones[index(names.left[0])];
+  // Left arm reach (shoulder→elbow→wrist + wrist→palm), measured on this rig.
+  const lj = names.left.map((n) => bones[index(n)].getWorldPosition(new THREE.Vector3()));
+  const leftReach = lj[0].distanceTo(lj[1]) + lj[1].distanceTo(lj[2]) + palms[1].clone().multiply(handScales[1]).length();
   return {
     shoulder,
+    leftShoulder,
+    leftReach,
     relax() {
       hands.forEach((hand, i) => hand.quaternion.copy(handRests[i]));
       fingerRests.forEach(({ bone, rest }) => bone.quaternion.copy(rest));
