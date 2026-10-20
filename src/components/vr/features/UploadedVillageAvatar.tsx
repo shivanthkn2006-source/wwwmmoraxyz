@@ -5,7 +5,7 @@ import { useFrame } from '@react-three/fiber';
 import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import * as THREE from 'three';
 import { avatarMotion } from '@/lib/vrAvatarMotion';
-import { gripFrame, isLongGun, type GripFrame, type HeldWeapon } from '@/lib/vrWeaponGrip';
+import { gripFrame, isLongGun, isOneHanded, type GripFrame, type HeldWeapon } from '@/lib/vrWeaponGrip';
 import { createUploadedWeaponSolver, normalizeUploadedJoint } from '@/lib/vrUploadedWeaponGrip';
 import { HeldWeaponModel } from './HeldWeaponModel';
 
@@ -67,7 +67,8 @@ export function UploadedVillageAvatar({ url, zoe = false, aiming = false, heldWe
       // Uploaded palms touch the grip and underside of the pump; skirt wrist
       // offsets were calibrated for a different rig and must not be reused.
       frame.right.copy(frame.weapon);
-      frame.left.copy(frame.weapon).add(supportOffset.set(0, 0.01, isLongGun(heldWeapon) ? 0.26 : 0.025));
+      // Knife and grenades are one-handed: keep gripFrame's relaxed left-hand spot.
+      if (!isOneHanded(heldWeapon)) frame.left.copy(frame.weapon).add(supportOffset.set(0, 0.01, isLongGun(heldWeapon) ? 0.26 : 0.025));
       armSolver.solve(avatar, frame.right, frame.left);
     } else {
       armSolver?.relax();
