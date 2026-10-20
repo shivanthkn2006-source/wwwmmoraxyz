@@ -349,7 +349,12 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
       return;
     }
     const term = query.trim();
-    if (!term || indexEmpty) return;
+    if (!term) return;
+    // While the index rebuilds, Enter still opens the top local feature result.
+    if (indexEmpty) {
+      if (results[0]) handleSelect(results[0]);
+      return;
+    }
     void recordHomeSearch(term);
 
     const musicQuery = parsePlatformMusicSearch(term);
