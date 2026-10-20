@@ -1,6 +1,6 @@
 import { requireCaller } from '../_shared/caller-guard.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2';
-import { sovereignKey } from "../_shared/sovereign-ai.ts";
+import { sovereignFetch } from "../_shared/sovereign-ai.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -108,69 +108,33 @@ Deno.serve(async (req) => {
     if (analyze) {
       console.log('[Worker] Running AI analysis...');
       
-      const lovableApiKey = Deno.env.get('LOVABLE_API_KEY') || sovereignKey();
-      if (!lovableApiKey) {
-        throw new Error('AI key not configured');
-      }
-
       const systemPrompt = `You are an expert platform architect analyzing the "Universe of Life" platform. 
 Provide comprehensive analysis focusing on: architecture quality, security posture, revenue readiness, scalability, and technical debt.
 Format your response as structured analysis with clear sections and actionable recommendations.`;
 
       const userPrompt = `Analyze this platform audit data and provide detailed insights:\n\n${JSON.stringify(auditData).slice(0, 60000)}`;
 
-      const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/responses', {
-        method: 'POST',
-        headers: {
-          'Lovable-API-Key': lovableApiKey,
-          'X-Lovable-AIG-SDK': 'fetch',
-          'Content-Type': 'application/json',
-        },
+      const aiResponse = await sovereignFetch('sovereign://chat/completions', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: 'openai/gpt-6-astra',
-          stream: true,
-          store: false,
-          reasoning: { effort: 'low' },
-          instructions: systemPrompt + ' Keep the answer under about 1500 words.',
-          input: userPrompt,
+          model: 'google/gemini-2.5-flash', max_tokens: 2400,
+          messages: [
+            { role: 'system', content: systemPrompt + ' Keep the answer under about 1500 words.' },
+            { role: 'user', content: userPrompt },
+          ],
         }),
       });
-
-      if (!aiResponse.ok || !aiResponse.body) {
-        throw new Error(`AI Gateway failed [${aiResponse.status}]: ${(await aiResponse.text()).slice(0, 300)}`);
-      }
-
-      // Read the streamed answer.
-      let aiAnalysis = '';
-      let tokensUsed: number | undefined;
-      const reader = aiResponse.body.getReader();
-      const dec = new TextDecoder();
-      let buf = '';
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buf += dec.decode(value, { stream: true });
-        let i;
-        while ((i = buf.indexOf('\n')) >= 0) {
-          const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
-          if (!line.startsWith('data:')) continue;
-          const d = line.slice(5).trim();
-          if (!d || d === '[DONE]') continue;
-          try {
-            const ev = JSON.parse(d);
-            if (ev.type === 'response.output_text.delta') aiAnalysis += ev.delta ?? '';
-            if (ev.type === 'response.completed') tokensUsed = ev.response?.usage?.total_tokens;
-            if (ev.type === 'response.failed' || ev.type === 'error') throw new Error('AI analysis failed');
-          } catch (e) { if (e instanceof Error && e.message === 'AI analysis failed') throw e; }
-        }
-      }
-      if (!aiAnalysis) aiAnalysis = 'Analysis unavailable';
+      if (!aiResponse.ok) throw new Error(`AI analysis failed [${aiResponse.status}]`);
+      const analysis = await aiResponse.json();
+      const aiAnalysis = analysis?.choices?.[0]?.message?.content;
+      if (!aiAnalysis) throw new Error('AI analysis unavailable');
+      const tokensUsed = analysis?.usage?.total_tokens;
 
       reportData = {
         auditData,
         aiAnalysis,
         analysisMetadata: {
-          model: 'openai/gpt-6-astra',
+          model: analysis.model ?? 'sovereign-cascade',
           completedAt: new Date().toISOString(),
           tokensUsed
         }

@@ -47,3 +47,5 @@
 - Village third-person uses src/lib/vrChaseCam.ts: the avatar body is the player and the camera stays exactly AVATAR_AHEAD behind it, because other systems locate the avatar as camera + forward × AVATAR_AHEAD.
 - Skirt-avatar guns (pickHeldWeapon) are held via vrWeaponGrip: hold frame from the live shoulder joint + Three CCD arms + rig-measured wrist/finger axes, because fixed avatar-space offsets clipped the stock and fixed Euler wrists/curls bent hands sideways.
 - Village chase camera: up/down look raises/lowers the camera on the fixed 2.8 m arm (orbit.lift in src/lib/vrView.ts, folded into villageEyeHeight) and zoom only narrows the lens (VRChaseZoom), because changing the arm length would break systems that find the avatar at camera + forward × AVATAR_AHEAD.
+
+- Alternate-avatar guns reuse HeldWeaponModel and GLB-mapped CCD arms outside rig orientation correction, because skirt-only rendering left uploaded avatars with empty hands.

@@ -7,7 +7,7 @@ export const uploadedJointNames = (zoe: boolean) => zoe
   : { right: ['RightArm', 'RightForeArm', 'RightHand'], left: ['LeftArm', 'LeftForeArm', 'LeftHand'] };
 export const normalizeUploadedJoint = (name: string) => name.replace(/^mixamorig:/, '').replace(/_\d+$/, '');
 
-export function createUploadedWeaponSolver(model: THREE.Group, zoe: boolean) {
+export function createUploadedWeaponSolver(model: THREE.Object3D, zoe: boolean) {
   const bones: THREE.Bone[] = [];
   model.traverse((node) => { if (node instanceof THREE.Bone) bones.push(node); });
   const names = uploadedJointNames(zoe);
