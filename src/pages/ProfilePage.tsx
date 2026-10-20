@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { LogOut, Settings, Download, Loader2, MessageSquare, Mic, ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { toast } from 'sonner';
@@ -23,7 +23,18 @@ import { useSovereignAdmin } from '@/hooks/useSovereignAdmin';
 const ProfilePage = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { isSovereign } = useSovereignAdmin();
+
+  // Home/Zoe search links to /profile#<section>; scroll the section into view.
+  useEffect(() => {
+    const anchor = location.hash.slice(1);
+    if (!anchor) return;
+    const timer = window.setTimeout(() => {
+      document.getElementById(anchor)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [location.hash]);
 
   const [showSettings, setShowSettings] = useState(false);
   const [showDocs, setShowDocs] = useState(false);
@@ -255,12 +266,12 @@ const ProfilePage = () => {
           </div>
         </div>
         <ProfileContent />
-        <FaithSection />
-        <IdentityVaultSection />
-        <ConversationEmailSection />
-        <KarmaSwapSection />
-        <AccountSessionsSection />
-        <QuickUnlockSection />
+        <div id="faith"><FaithSection /></div>
+        <div id="identity-photo"><IdentityVaultSection /></div>
+        <div id="zoe-email"><ConversationEmailSection /></div>
+        <div id="karma-swap"><KarmaSwapSection /></div>
+        <div id="account"><AccountSessionsSection /></div>
+        <div id="quick-unlock"><QuickUnlockSection /></div>
       </div>
     </div>
   );
