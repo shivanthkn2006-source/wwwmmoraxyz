@@ -14,6 +14,7 @@ export function UploadedVillageAvatar({ url, zoe = false, aiming = false, heldWe
   const root = useRef<THREE.Group>(null);
   const weapon = useRef<THREE.Group>(null);
   const shoulder = useMemo(() => new THREE.Vector3(), []);
+  const supportOffset = useMemo(() => new THREE.Vector3(), []);
   const frame = useMemo<GripFrame>(() => ({ weapon: new THREE.Vector3(), right: new THREE.Vector3(), left: new THREE.Vector3() }), []);
   const phase = useRef(0);
   const { model, bones } = useMemo(() => {
@@ -66,7 +67,7 @@ export function UploadedVillageAvatar({ url, zoe = false, aiming = false, heldWe
       // Uploaded palms touch the grip and underside of the pump; skirt wrist
       // offsets were calibrated for a different rig and must not be reused.
       frame.right.copy(frame.weapon);
-      frame.left.copy(frame.weapon).add(new THREE.Vector3(0, 0.01, isLongGun(heldWeapon) ? 0.26 : 0.025));
+      frame.left.copy(frame.weapon).add(supportOffset.set(0, 0.01, isLongGun(heldWeapon) ? 0.26 : 0.025));
       armSolver.solve(avatar, frame.right, frame.left);
     } else {
       armSolver?.relax();

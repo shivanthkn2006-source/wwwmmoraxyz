@@ -47,25 +47,29 @@ export function createUploadedWeaponSolver(model: THREE.Object3D, zoe: boolean) 
     return total ? sum.divideScalar(total) : new THREE.Vector3();
   });
   const parentQ = new THREE.Quaternion(), rootQ = new THREE.Quaternion(), worldQ = new THREE.Quaternion();
+  const handScales = hands.map((hand) => hand.getWorldScale(new THREE.Vector3()));
+  const handRests = hands.map((hand) => hand.quaternion.clone());
   const forwards = [new THREE.Vector3(0, -0.8, 0.6), new THREE.Vector3(-0.25, 0, 0.97)];
   const fingerRests = bones.filter((bone) => /Hand(Thumb|Index|Middle|Ring|Pinky)[123]$/.test(normalizeUploadedJoint(bone.name))).map((bone) => ({ bone, rest: bone.quaternion.clone() }));
   const wristTargets = [new THREE.Vector3(), new THREE.Vector3()];
   const shoulder = bones[index(names.right[0])];
   return {
     shoulder,
-    relax() { fingerRests.forEach(({ bone, rest }) => bone.quaternion.copy(rest)); },
+    relax() {
+      hands.forEach((hand, i) => hand.quaternion.copy(handRests[i]));
+      fingerRests.forEach(({ bone, rest }) => bone.quaternion.copy(rest));
+    },
     solve(root: THREE.Group, right: THREE.Vector3, left: THREE.Vector3) {
       root.updateWorldMatrix(true, true);
       root.getWorldQuaternion(rootQ);
       [right, left].forEach((target, i) => {
         // Place the palm on the contact, not the wrist. Orient the measured
         // wrist→palm vector after CCD (whose parent rotations change each frame).
-        worldQ.setFromUnitVectors(palms[i].clone().normalize(), forwards[i]).premultiply(rootQ);
-        wristTargets[i].copy(palms[i]).applyQuaternion(worldQ);
-        root.worldToLocal(wristTargets[i].add(root.localToWorld(target.clone())));
-        point.copy(wristTargets[i]); root.localToWorld(point); model.worldToLocal(point);
-        // Offset must be subtracted, not added, from the palm contact.
-        point.copy(target).multiplyScalar(2).sub(wristTargets[i]); root.localToWorld(point); model.worldToLocal(point);
+        if (palms[i].lengthSq() > 1e-10) {
+          worldQ.setFromUnitVectors(palms[i].clone().normalize(), forwards[i]).premultiply(rootQ);
+          wristTargets[i].copy(palms[i]).multiply(handScales[i]).applyQuaternion(worldQ);
+        } else wristTargets[i].set(0, 0, 0);
+        point.copy(target); root.localToWorld(point); point.sub(wristTargets[i]); model.worldToLocal(point);
         targets[i].position.copy(point);
       });
       model.updateWorldMatrix(true, true);
