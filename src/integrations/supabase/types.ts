@@ -4816,6 +4816,60 @@ export type Database = {
         }
         Relationships: []
       }
+      member_quick_unlock: {
+        Row: {
+          code_hash: string
+          created_at: string
+          failed_attempts: number
+          iterations: number
+          locked_until: string | null
+          salt: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          code_hash: string
+          created_at?: string
+          failed_attempts?: number
+          iterations?: number
+          locked_until?: string | null
+          salt: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          code_hash?: string
+          created_at?: string
+          failed_attempts?: number
+          iterations?: number
+          locked_until?: string | null
+          salt?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      member_quick_unlock_events: {
+        Row: {
+          created_at: string
+          event: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       memory_tamper_log: {
         Row: {
           action: string
@@ -13877,6 +13931,7 @@ export type Database = {
       }
       prune_platform_telemetry: { Args: never; Returns: Json }
       prune_visitor_network_data: { Args: never; Returns: undefined }
+      quick_unlock_record_failure: { Args: { _uid: string }; Returns: Json }
       recently_active_member_ids: {
         Args: { p_days?: number }
         Returns: {

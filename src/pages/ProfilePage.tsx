@@ -11,6 +11,7 @@ import IdentityVaultSection from '@/components/profile/IdentityVaultSection';
 import ConversationEmailSection from '@/components/profile/ConversationEmailSection';
 import FaithSection from '@/components/profile/FaithSection';
 import AccountSessionsSection from '@/components/profile/AccountSessionsSection';
+import QuickUnlockSection from '@/components/profile/QuickUnlockSection';
 import KarmaSwapSection from '@/components/profile/KarmaSwapSection';
 import VoiceCommandsSettings from '@/components/VoiceCommandsSettings';
 import FeedbackCollectionPanel from '@/components/FeedbackCollectionPanel';
@@ -259,6 +260,7 @@ const ProfilePage = () => {
         <ConversationEmailSection />
         <KarmaSwapSection />
         <AccountSessionsSection />
+        <QuickUnlockSection />
       </div>
     </div>
   );

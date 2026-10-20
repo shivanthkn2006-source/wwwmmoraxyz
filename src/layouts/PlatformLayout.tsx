@@ -15,6 +15,7 @@ import { ZoeCardNarrationProvider } from '@/components/voice/ZoeCardNarrationPro
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
 import { CallEngineProvider } from '@/contexts/CallEngineContext';
+import QuickUnlockGate from '@/components/security/QuickUnlockGate';
 
 const DeferredPlatformServices = lazy(() => import('@/components/platform/DeferredPlatformServices'));
 
@@ -93,6 +94,9 @@ export const PlatformLayout = ({ children }: { children: React.ReactNode }) => {
     <ZoeCardNarrationProvider>{children}</ZoeCardNarrationProvider>
     <AppErrorBoundary moduleName="platform:dock" severity="low" fallback={null}>
       <GlobalHomeDock />
+    </AppErrorBoundary>
+    <AppErrorBoundary moduleName="platform:quick-unlock" severity="low" fallback={null}>
+      <QuickUnlockGate />
     </AppErrorBoundary>
     {extrasReady && (
       <Suspense fallback={null}>
