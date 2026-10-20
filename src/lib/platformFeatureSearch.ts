@@ -29,7 +29,7 @@ const PROFILE_SETTINGS: AppFeature[] = [
   {
     id: 'settings:identity-photo', name: 'Locked Identity Photo',
     description: 'Private reference photo Zoe uses for images that look like you',
-    keywords: ['identity photo', 'face', 'face photo', 'reference photo', 'vault photo', 'verify photo'],
+    keywords: ['identity photo', 'face', 'face photo', 'reference photo', 'locked photo', 'verify photo'],
     category: 'settings', location: '/profile#identity-photo', icon: 'ScanFace',
   },
   {
