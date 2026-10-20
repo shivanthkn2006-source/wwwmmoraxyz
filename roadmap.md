@@ -1,5 +1,14 @@
 # M'Mora Village roadmap
 
+## Oct 20 real weapon models + grenades
+- [x] Preview 3D-file delivery: dev server forwards /__l5e asset files to the published site; GLBs return model/gltf-binary, signed-in Village renders.
+- [x] Real CC0 models in hands for all avatars: shotgun→W-870, pistol/Sentinel Nine→Poly Haven service pistol, Bolt Rifle→Poly Haven rifle, knife→Poly Haven dagger, grenades→CC0 Flat Grenades. Brown/black boxes gone; pickups show the same models.
+- [x] Knife/grenades one-handed; uploaded rigs' support hand capped at measured arm reach.
+- [x] Hand, Flash, Incendiary, Smoke grenades: pickups near the handgun (3 each), equip, Use/G throw on an arc, frag blast/sparks/smoke + villager damage, flash whiteout + 5 s stun, fire patch 7 s, smoke screen 14 s. Isolated screenshots inspected.
+- [x] Signed-in Village: Zoe default + equipped Shotgun seen held at the shoulder; orbit keeps her still; reload clean.
+- [ ] Not seen in signed-in play: W-870/pistol/knife/grenade equip (account doesn't own them; not added to avoid changing the account), Drowned spit, grenades vs Drowned/bosses (only villagers react).
+- [ ] Support hand still short of the pump on uploaded rigs (short arms); Zoe has no finger joints.
+
 ## Oct 20 yellow/blue/red testing default
 - [x] Uploaded Zoe is the temporary default through shared VillageAvatar in both worlds; one-time migration preserves subsequent manual switches. Two migration/save-preservation tests pass.
 - [x] Fix uploaded palm versus wrist contact using bind geometry/world scale; Ready Player fingers curl on its own axes. Textures/camera/gameplay untouched.
