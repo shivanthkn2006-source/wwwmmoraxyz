@@ -63,7 +63,13 @@ export function UploadedVillageAvatar({ url, zoe = false, aiming = false, heldWe
       gripFrame(heldWeapon, shoulder, kick, frame);
       gun.position.copy(frame.weapon);
       gun.rotation.set(0, -Math.PI / 2, (isLongGun(heldWeapon) ? 0.03 : 0.02) + kick * 0.045);
+      // Uploaded palms touch the grip and underside of the pump; skirt wrist
+      // offsets were calibrated for a different rig and must not be reused.
+      frame.right.copy(frame.weapon);
+      frame.left.copy(frame.weapon).add(new THREE.Vector3(0, 0.01, isLongGun(heldWeapon) ? 0.26 : 0.025));
       armSolver.solve(avatar, frame.right, frame.left);
+    } else {
+      armSolver?.relax();
     }
   });
   // Weapon frame is in village-facing coordinates, outside the uploaded rig's

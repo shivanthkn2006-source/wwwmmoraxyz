@@ -24,19 +24,72 @@ export function createUploadedWeaponSolver(model: THREE.Object3D, zoe: boolean) 
   proxy.skeleton = new THREE.Skeleton([...bones, ...targets]);
   const solver = new CCDIKSolver(proxy, chains);
   const point = new THREE.Vector3();
+  model.updateWorldMatrix(true, true);
+  // Skin-weighted palm centres are measured from the original mesh in each
+  // hand's bind coordinates. Zoe has no finger bones: do not invent them.
+  const hands = [names.right, names.left].map((arm) => bones[index(arm[2])]);
+  const palms = hands.map((hand) => {
+    const sum = new THREE.Vector3(); let total = 0;
+    model.traverse((node) => {
+      if (!(node instanceof THREE.SkinnedMesh)) return;
+      const hi = node.skeleton.bones.indexOf(hand);
+      if (hi < 0) return;
+      const pos = node.geometry.attributes.position, ids = node.geometry.attributes.skinIndex, weights = node.geometry.attributes.skinWeight;
+      if (!ids || !weights) return;
+      for (let v = 0; v < pos.count; v++) {
+        let weight = 0;
+        for (let c = 0; c < 4; c++) if (ids.getComponent(v, c) === hi) weight += weights.getComponent(v, c);
+        if (weight < 0.5) continue;
+        point.fromBufferAttribute(pos, v); node.localToWorld(point); hand.worldToLocal(point);
+        sum.addScaledVector(point, weight); total += weight;
+      }
+    });
+    return total ? sum.divideScalar(total) : new THREE.Vector3();
+  });
+  const parentQ = new THREE.Quaternion(), rootQ = new THREE.Quaternion(), worldQ = new THREE.Quaternion();
+  const forwards = [new THREE.Vector3(0, -0.8, 0.6), new THREE.Vector3(-0.25, 0, 0.97)];
+  const fingerRests = bones.filter((bone) => /Hand(Thumb|Index|Middle|Ring|Pinky)[123]$/.test(normalizeUploadedJoint(bone.name))).map((bone) => ({ bone, rest: bone.quaternion.clone() }));
+  const wristTargets = [new THREE.Vector3(), new THREE.Vector3()];
   const shoulder = bones[index(names.right[0])];
   return {
     shoulder,
+    relax() { fingerRests.forEach(({ bone, rest }) => bone.quaternion.copy(rest)); },
     solve(root: THREE.Group, right: THREE.Vector3, left: THREE.Vector3) {
       root.updateWorldMatrix(true, true);
+      root.getWorldQuaternion(rootQ);
       [right, left].forEach((target, i) => {
-        point.copy(target); root.localToWorld(point); model.worldToLocal(point);
+        // Place the palm on the contact, not the wrist. Orient the measured
+        // wrist→palm vector after CCD (whose parent rotations change each frame).
+        worldQ.setFromUnitVectors(palms[i].clone().normalize(), forwards[i]).premultiply(rootQ);
+        wristTargets[i].copy(palms[i]).applyQuaternion(worldQ);
+        root.worldToLocal(wristTargets[i].add(root.localToWorld(target.clone())));
+        point.copy(wristTargets[i]); root.localToWorld(point); model.worldToLocal(point);
+        // Offset must be subtracted, not added, from the palm contact.
+        point.copy(target).multiplyScalar(2).sub(wristTargets[i]); root.localToWorld(point); model.worldToLocal(point);
         targets[i].position.copy(point);
       });
       model.updateWorldMatrix(true, true);
       solver.update();
-      // Keep uploaded wrist bind rotations; skirt-specific finger axes do not
-      // apply here (Zoe has no finger joints in the uploaded skeleton).
+      hands.forEach((hand, i) => {
+        if (palms[i].lengthSq() < 1e-10 || !hand.parent) return;
+        hand.parent.getWorldQuaternion(parentQ);
+        worldQ.setFromUnitVectors(palms[i].clone().normalize(), forwards[i]).premultiply(rootQ);
+        hand.quaternion.copy(parentQ.invert().multiply(worldQ));
+      });
+      // Only the Ready Player rig has articulated fingers. Its finger bend
+      // axis is derived from actual knuckle positions, not CC/skirt axes.
+      fingerRests.forEach(({ bone, rest }) => {
+        const side = normalizeUploadedJoint(bone.name).startsWith('Right') ? 'Right' : 'Left';
+        const hand = hands[side === 'Right' ? 0 : 1];
+        const a = bones.find((b) => normalizeUploadedJoint(b.name) === `${side}HandIndex1`);
+        const b = bones.find((b) => normalizeUploadedJoint(b.name) === `${side}HandPinky1`);
+        if (!a || !b || !bone.parent) return;
+        model.updateWorldMatrix(true, true);
+        const axis = b.getWorldPosition(new THREE.Vector3()).sub(a.getWorldPosition(new THREE.Vector3())).normalize();
+        bone.parent.getWorldQuaternion(parentQ); axis.applyQuaternion(parentQ.invert());
+        bone.quaternion.copy(rest).premultiply(new THREE.Quaternion().setFromAxisAngle(axis, side === 'Right' ? -0.85 : 0.85));
+        hand.updateWorldMatrix(true, true);
+      });
     },
   };
 }
