@@ -170,7 +170,8 @@ export const GrenadeSystem: React.FC = () => {
       const spec = GRENADE_SPEC[p.kind];
       if (!p.landed) { const a = throwArc(p.o, p.d, p.t); if (a.y <= 0.06) p.landed = new THREE.Vector3(a.x, 0.06, a.z); }
       if ((spec.fuse === 0 && p.landed) || (spec.fuse > 0 && p.t >= spec.fuse) || p.t > 6) {
-        const at = p.landed ?? new THREE.Vector3().copy(throwArc(p.o, p.d, p.t) as THREE.Vector3);
+        const air = throwArc(p.o, p.d, p.t);
+        const at = p.landed ?? new THREE.Vector3(air.x, Math.max(0.06, air.y), air.z);
         projs.current = projs.current.filter((x) => x !== p); changed = true;
         emitBlast({ kind: p.kind, x: at.x, z: at.z, radius: spec.radius, damage: p.kind === 'incgrenade' ? 0 : spec.damage, stun: spec.stun });
         playSfx(p.kind === 'fraggrenade' ? 'explosion' : p.kind === 'flashgrenade' ? 'flashbang' : p.kind === 'incgrenade' ? 'fire' : 'smoke');
