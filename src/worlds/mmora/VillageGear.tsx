@@ -8,6 +8,7 @@ import { getStory, readNote } from '@/lib/vrStory';
 import { GEAR, takeGear, useGear, type Gear } from '@/lib/vrGear';
 import { playerSpot } from './VillageVillagers';
 import { W870Model } from '@/components/vr/features/W870Model';
+import { HeldWeaponModel, hasHeldModel } from '@/components/vr/features/HeldWeaponModel';
 
 const COL = { weapon: '#c9d3df', armour: '#b07a3c', quest: '#ffd25a' };
 
@@ -16,7 +17,11 @@ export const VillageGearItem: React.FC<{ g: Gear }> = ({ g }) => {
   useFrame(({ clock }) => { if (ref.current) { ref.current.rotation.y = clock.elapsedTime; ref.current.position.y = g.pos[1] + Math.sin(clock.elapsedTime * 2) * 0.08; } });
   return (
     <group ref={ref} position={g.pos}>
-      {g.id === 'w870' ? <W870Model /> : <>
+      {g.id === 'w870' ? <W870Model /> : g.kind === 'weapon' && hasHeldModel(g.id) ? <>
+        {/* Real model of the item (shown larger so it reads from the walk camera). */}
+        <group scale={g.id.endsWith('grenade') ? 4 : 2}><HeldWeaponModel weapon={g.id} /></group>
+        <mesh><sphereGeometry args={[0.55, 12, 8]} /><meshBasicMaterial color="#ffe08a" transparent opacity={0.15} depthWrite={false} /></mesh>
+      </> : <>
         <mesh><boxGeometry args={g.kind === 'weapon' ? [0.6, 0.12, 0.12] : g.kind === 'armour' ? [0.4, 0.45, 0.15] : [0.3, 0.3, 0.06]} />
           <meshStandardMaterial color={COL[g.kind]} emissive={COL[g.kind]} emissiveIntensity={0.7} metalness={0.6} roughness={0.35} /></mesh>
         <mesh><sphereGeometry args={[0.55, 12, 8]} /><meshBasicMaterial color="#ffe08a" transparent opacity={0.15} depthWrite={false} /></mesh>
