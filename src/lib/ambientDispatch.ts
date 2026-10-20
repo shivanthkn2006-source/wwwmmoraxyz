@@ -8,7 +8,11 @@ import type { AmbientSearchRecord, ZoeDispatchAction } from '@/core/ports/useAmb
 export function routeForEntity(entityType: string, entityId: string, metadata?: unknown): string {
   // The indexer stores a route for messages/comments; trust only internal paths.
   const stored = (metadata as { route?: unknown } | null | undefined)?.route;
-  if (typeof stored === 'string' && /^\/[^/\\]/.test(stored)) return stored;
+  if (typeof stored === 'string' && /^\/[^/\\]/.test(stored)) {
+    // Older index rows store /chat?peer=<id>; the conversation page is /chat/<id>.
+    const peer = stored.match(/^\/chat\?peer=([\w-]+)$/);
+    return peer ? `/chat/${peer[1]}` : stored;
+  }
   switch (entityType) {
     case 'growth_card':
       return '/growth-insights';
