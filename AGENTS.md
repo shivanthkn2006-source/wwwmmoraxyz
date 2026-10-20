@@ -13,7 +13,7 @@
 - Home menu uses a fixed warm surface, no live blur, to prevent feed flicker.
 - DHF and LOL automatic speech offer candidates to one newest-generated selector, because separate announcers can speak multiple old cards.
 - Zoe listening is free-first: browser recognition first, sticky switch to Deepgram Nova on failure (localStorage zoe-listen-mode=deepgram-first flips order), because it saves Deepgram cost while never losing hearing.
-- Repeat questions use private DHF cache before AI recall.
+- Repeat questions hit private DHF cache first.
 - Face sign-in matches on-device face fingerprints (live scan + identity photo) on the server before any AI vision fallback, because it costs no tokens and survives provider outages.
 - Face sign-in and setup require a server-issued one-time liveness challenge (random blink/head-turn order, checked server-side) before on-device fingerprints are matched, because a static photo or replayed video must not unlock an account.
 - Platform visit analytics are written only by the `track-visit` function (service role, IP/geo resolved server-side) into admin-read-only tables, because visitors' network details must never be readable by members.
@@ -29,6 +29,6 @@
 - Every saved notification is forwarded to the member's phones by a database trigger → notification-push function (x-cron-token), which re-checks the main, push and per-alert switches, because one delivery path keeps phone alerts consistent with the in-app bell.
 - Notification taps resolve through src/lib/notificationTarget.ts for every notification surface, because separate per-panel rules left most alert kinds going nowhere.
 - Paid inference requires verified member claims before retrieval; triage/audit use sovereignFetch, because Bearer syntax is not identity.
-- The dev server proxies /__l5e to the published site, because the local dev server has no CDN asset route and returned the app page for 3D files.
+- The dev server proxies /__l5e to the published site, because dev has no CDN route for 3D files.
 - Automatic introductory panels claim a unique welcome-prefixed feature_announcements row before display; explicit help and story briefings remain separate, because per-day/device flags and leaked listeners replayed overlays across routes and devices.
 - Quick Unlock codes, counts and waits live server-only (quick-unlock fn, session identity); the lock overlays without unmounting, because client PINs are forgeable and unmounting ends calls.
