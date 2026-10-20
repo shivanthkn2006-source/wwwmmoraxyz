@@ -4,6 +4,7 @@
 - [ ] Measure repository, live database, search/menu/route chains and outside-provider call sites with explicit count definitions.
 - [ ] Revalidate available security signals and automated tests; inspect actual public/authenticated routes without changing member data.
 - [ ] Research ISO 27001 and related privacy/security requirements from authoritative sources; distinguish readiness assessment from accredited certification.
+- [ ] Research Singapore private-company incorporation, foreign-founder eligibility, investor due diligence and applicable privacy obligations using official sources; tie them to immediate platform readiness priorities.
 - [ ] Deliver evidence-based inventory, strengths, root weaknesses, immediate build priorities and unresolved verification limits; preserve all application components.
 
 ## Oct 20 support-hand and grenade follow-up
