@@ -1,9 +1,11 @@
 # M'Mora Village roadmap
 
 ## Oct 20 yellow/blue/red testing default
-- [ ] Set uploaded Zoe as the temporary testing default in both shared worlds, preserving manual avatar switches and all saves.
-- [ ] Correct uploaded-rig palm alignment using measured hand geometry/joints; preserve textures, camera and gameplay.
-- [ ] Run focused tests and visual checks; deliver an audit separating real-world integration from isolated pose checks.
+- [x] Uploaded Zoe is the temporary default through shared VillageAvatar in both worlds; one-time migration preserves subsequent manual switches. Two migration/save-preservation tests pass.
+- [x] Fix uploaded palm versus wrist contact using bind geometry/world scale; Ready Player fingers curl on its own axes. Textures/camera/gameplay untouched.
+- [ ] Fully human grip remains incomplete: Zoe has no finger joints; observed open fingers/clearance need original-rig authoring, not fabricated animation.
+- [x] Full suite: 1,091 passed, six skipped; six isolated views inspected; audit saved with actual-world asset delivery blocker.
+- [ ] Actual-world default/equip/walk/orbit verification blocked: normal localhost GLB returns HTML; authenticated route falls back. Reported to platform team.
 
 ## Oct 20 requested repairs
 - [x] Alternate avatars receive existing weapon art and mapped CCD arms; six isolated renders inspected. Shotgun/pistol remain blocks; finger fit is incomplete. Default/camera/stats/saves unchanged.
