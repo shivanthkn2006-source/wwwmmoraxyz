@@ -1,10 +1,10 @@
 # M'Mora Village roadmap
 
 ## Oct 20 continuation: first-time panels and focused root scan
-- [ ] Persist automatic welcome/introduction completion per member; preserve manually opened news and story briefings.
-- [ ] Review uploaded camera proposal against existing controller without replacing working camera/input components.
-- [ ] Re-check signed-in Home and both worlds, reload, default-avatar assets and visual evidence.
-- [ ] Audit pending integration defects with concrete source evidence and publish a versioned report separating verified results from blockers.
+- [x] Add unique account claims to launch, film, home message, birth introduction, Genesis, world tutorial and permission introduction; manual news/story remain available. Unit checks pass; full live/cross-device verification still open.
+- [x] Review uploaded camera proposal; preserve existing controller, 2.8 m arm, 2.4 m default and damping. Add optional O/icon inspection movement gate; 35 focused tests pass.
+- [ ] Re-check both worlds and full live inspection: signed-in Village renders Zoe default with saved Shotgun; Home reload has no startup failure. Story note obstructs held pose; subsequent input test hangs. Real Map and live return remain unverified.
+- [x] Save versioned focused integration audit with screenshots and explicit missing proof; counts are source inventory, not a claimed whole-platform failure total.
 
 ## Oct 20 real weapon models + grenades
 - [x] Preview 3D-file delivery: dev server forwards /__l5e asset files to the published site; GLBs return model/gltf-binary, signed-in Village renders.
