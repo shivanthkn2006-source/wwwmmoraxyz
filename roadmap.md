@@ -1,5 +1,11 @@
 # M'Mora Village roadmap
 
+## Oct 20 requested repairs
+- [ ] Restore visible equipped W-870/Shotgun/pistol on both alternate avatars without changing default avatar, camera, stats or saves; test and disclose visual blockers.
+- [ ] Fail-close remaining audited paid-AI authentication paths; test rejected credentials and verify deployment separately.
+- [ ] Diagnose and eliminate the unhandled test exception; re-run affected tests and full suite.
+- [ ] Continue feasible pending checks and publish evidence-separated follow-up report; keep device/gameplay blockers explicit.
+
 ## Oct 19 platform audit continuation
 - [x] Re-run full tests: 1,080 assertions passed, 6 skipped; run exits unsuccessfully with one unhandled WebSocket/Event error. Not a clean suite.
 - [x] Re-check signed-in Home reload: no visible startup failure or page errors; greeting dismissed and Home visible behind permission prompt.
