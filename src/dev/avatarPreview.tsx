@@ -14,6 +14,7 @@ import * as THREE from 'three';
 import { UploadedVillageAvatar } from '@/components/vr/features/UploadedVillageAvatar';
 import { avatarMotion, type VillagePose } from '@/lib/vrAvatarMotion';
 import { pickHeldWeapon } from '@/lib/vrWeaponGrip';
+import { GrenadeSystem } from '@/components/vr/GrenadeSystem';
 
 /** Dump the FBX's animation clips + rig info to window.__anims. */
 const AnimProbe: React.FC = () => {
@@ -84,6 +85,7 @@ createRoot(document.getElementById('r')!).render(
         : q.get('raw') === '1' ? <LeonCharacterModel pose="standing" targetHeight={1.78} />
         : q.get('glb') ? <GlbProbe url={q.get('glb')!.includes('://') ? q.get('glb')! : `/src/assets/models/${q.get('glb')}`} />
         : <ThirdPersonAvatar />}
+      {q.get('fx') && <GrenadeSystem />}
     </Suspense>
   </Canvas>,
 );

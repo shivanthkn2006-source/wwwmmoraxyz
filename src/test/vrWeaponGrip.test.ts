@@ -35,7 +35,8 @@ describe('equipped gun goes into the skirt avatar hands', () => {
     expect(pickHeldWeapon(['shotgun'])).toBe('shotgun');
     expect(pickHeldWeapon(['vest', 'w870', 'shotgun'])).toBe('w870');
     expect(pickHeldWeapon(['pistol'])).toBe('pistol');
-    expect(pickHeldWeapon(['vest', 'helmet', 'knife'])).toBeNull();
+    expect(pickHeldWeapon(['vest', 'helmet', 'knife'])).toBe('knife'); // knife is now held (one hand)
+    expect(pickHeldWeapon(['vest', 'helmet'])).toBeNull();
   });
   it('long-gun stock rests in front of the shoulder, never behind it (no chest/back clipping)', async () => {
     const { gripFrame, BUTT_TO_GRIP } = await import('@/lib/vrWeaponGrip');

@@ -7,6 +7,7 @@ import { VILLAGER_STORY, logStory } from '@/lib/vrStoryline';
 import React, { useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
+import { onBlast } from '@/lib/vrGrenades';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { WALK_MPS, RUN_MPS } from '@/lib/vrWalk';
 import { registerUse } from '@/lib/vrUse';
@@ -105,7 +106,7 @@ const Villager: React.FC<{ route: [number, number][]; female: boolean; offset: n
   const talkT = useRef(0), lineI = useRef(v);
   const g = useMemo(() => villagerGeo(female, v), [female, v]);
   const root = useRef<THREE.Group>(null), l1 = useRef<THREE.Mesh>(null), l2 = useRef<THREE.Mesh>(null), a1 = useRef<THREE.Mesh>(null), a2 = useRef<THREE.Mesh>(null);
-  const st = useRef({ t: offset, pause: 0, phase: offset * 9, sw: 0, hp: VILLAGER_HP, hostile: false, down: 0, hitCd: 0, flash: 0 });
+  const st = useRef({ t: offset, pause: 0, phase: offset * 9, sw: 0, hp: VILLAGER_HP, hostile: false, down: 0, hitCd: 0, flash: 0, stun: 0 });
   const tripRef = useRef<{ leg: 'road' | 'out' | 'milk' | 'back'; i: number }>({ leg: 'road', i: 0 });
   const hpBar = useRef<THREE.Mesh>(null);
   const pail = useRef<THREE.Group>(null), broom = useRef<THREE.Group>(null), logs = useRef<THREE.Group>(null);
@@ -129,6 +130,8 @@ const Villager: React.FC<{ route: [number, number][]; female: boolean; offset: n
       if (hpBar.current) hpBar.current.visible = false;
       return;
     }
+    // Flash grenade: stunned villagers stand frozen.
+    if (c.stun > 0) { c.stun -= dt; return; }
     if (hpBar.current) { hpBar.current.visible = c.hp < VILLAGER_HP; hpBar.current.scale.x = Math.max(0.01, c.hp / VILLAGER_HP); }
     const near = root.current.position.distanceTo(camera.position);
     if (bubble.current) {
@@ -272,6 +275,20 @@ const Villager: React.FC<{ route: [number, number][]; female: boolean; offset: n
       }
     } };
   }), [camera]);
+  // Grenades: frag/fire damage falls off with distance; flash stuns.
+  React.useEffect(() => onBlast((b) => {
+    const r = root.current, c = st.current; if (!r || c.down > 0 || !r.visible) return;
+    const d = Math.hypot(b.x - r.position.x, b.z - r.position.z); if (d > b.radius) return;
+    if (b.stun > 0) c.stun = Math.max(c.stun, b.stun);
+    const dmg = Math.round(b.damage * (1 - d / b.radius)); if (dmg <= 0) return;
+    if (!c.hostile) window.dispatchEvent(new CustomEvent('vr-danger'));
+    c.hostile = true; c.flash = 0.25; c.hp = Math.max(0, c.hp - dmg);
+    if (c.hp <= 0) {
+      c.down = RESPAWN_S; c.hostile = false; window.dispatchEvent(new CustomEvent('vr-kill'));
+      void import('@/lib/vrPickups').then((m) => m.addCoins(5)); playPickup('coin');
+      window.dispatchEvent(new CustomEvent('vr-drop', { detail: { x: r.position.x, z: r.position.z } }));
+    }
+  }), []);
   useMemo(() => loopPoint(route, offset, p), [route, offset, p]);
   return (
     <group ref={root} position={p.toArray()}>

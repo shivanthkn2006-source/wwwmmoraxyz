@@ -79,6 +79,7 @@ import { VRWorldSearch } from '@/worlds/search/VRWorldSearch';
 import { walkStep, staminaTick, WALK_MPS, RUN_MPS } from '@/lib/vrWalk';
 import { getVRView, CROUCH_SPEED } from '@/lib/vrView';
 import { ThirdPersonAvatar } from './vr/ThirdPersonAvatar';
+import { GrenadeSystem } from '@/components/vr/GrenadeSystem';
 import { VRSaveGameTicker } from './vr/VRSaveGameTicker';
 import { ItemCloseUp } from './vr/ItemCloseUp';
 import { NightMode, NightAmbience } from './vr/NightMode';
@@ -1412,6 +1413,7 @@ const MemoryPalace: React.FC<{
       {useLegacyController && (<>
         <PlayerController disabled={disabled} blockHighAltitudeTransitions={blockHighAltitudeTransitions} />
         <ThirdPersonAvatar />
+        <GrenadeSystem />
         <VRSaveGameTicker />
       </>)}
 
