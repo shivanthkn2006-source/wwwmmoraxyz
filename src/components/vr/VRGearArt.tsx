@@ -101,7 +101,7 @@ export const GearArt: React.FC<{ id: string }> = ({ id }) => <>{id === 'w870' ? 
   <path d="M34 23 Q34 31 43 28 L45 23" fill="none" stroke="#30383e" strokeWidth="2" />
   <path d="M51 10 H116 M112 9 v3" stroke="#7d8790" />
   <rect x="2" y="18" width="3" height="17" rx="1" fill="#1a2125" />
-</S> : ART[id] ?? <span className="text-2xl">{({ sentinel9: '🔫', boltrifle: '🎯', shockgrenade: '💥', styli: '💉', extmag: '🔩', lasersight: '🔴', reagent: '🧪' } as Record<string, string>)[id] ?? '🎒'}</span>}</>;
+</S> : ART[id] ?? <span className="text-2xl">{({ sentinel9: '🔫', boltrifle: '🎯', shockgrenade: '💥', styli: '💉', extmag: '🔩', lasersight: '🔴', reagent: '🧪', fraggrenade: '💣', flashgrenade: '⚡', incgrenade: '🔥', smokegrenade: '🌫️', knife: '🔪' } as Record<string, string>)[id] ?? '🎒'}</span>}</>;
 
 /** Golden herb: same sprig as the green herb, in gold. */
 export const GoldHerbArt: React.FC<{ green?: boolean }> = ({ green }) => (
