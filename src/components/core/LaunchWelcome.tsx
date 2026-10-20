@@ -4,11 +4,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { getKarmaBalance } from "@/lib/karma";
 import { CheckCircle2 } from "lucide-react";
+import { useAuth } from '@/lib/auth';
+import { claimFirstTimePanel } from '@/lib/firstTimePanel';
 
 type Challenge = { id: string; is_completed: boolean | null; reward_claimed: boolean | null };
 
 /** One-time, hands-on welcome for first-time members: confirm sign-in, claim a challenge, swap karma. */
 export default function LaunchWelcome() {
+  const { user, loading } = useAuth();
   const [uid, setUid] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [methods, setMethods] = useState<string[]>([]);
@@ -22,22 +25,32 @@ export default function LaunchWelcome() {
   const [done, setDone] = useState<boolean[]>([false, false, false]);
 
   useEffect(() => {
-    void supabase.auth.getUser().then(({ data }) => {
-      const u = data.user;
-      if (!u) return;
+      const u = user;
+      setOpen(false);
+      if (loading || !u) return;
+      let cancelled = false;
+      let timer: number | undefined;
+      let attempted = false;
       setUid(u.id); setEmail(u.email ?? "");
       setMethods(Array.from(new Set((u.identities ?? []).map((i) => i.provider === "email" ? "Email & password" : i.provider === "google" ? "Google" : i.provider))));
       // Seen once per account (saved on the account, so every device knows), not per device.
-      if (localStorage.getItem(`mmora-welcome-seen-${u.id}`) || u.user_metadata?.welcome_seen) {
-        try { localStorage.setItem(`mmora-welcome-seen-${u.id}`, "1"); } catch { /* ignore */ }
-        return;
-      }
+      let seen = !!u.user_metadata?.welcome_seen;
+      try { seen ||= !!localStorage.getItem(`mmora-welcome-seen-${u.id}`); } catch { /* optional legacy cache */ }
       // Wait until the permissions window has closed so two windows never stack.
-      const tryOpen = () => { if (!(window as unknown as { __mmoraPermOpen?: boolean }).__mmoraPermOpen) setOpen(true); };
-      window.setTimeout(tryOpen, 1500);
-      window.addEventListener("mmora-perm-modal", (e) => { if ((e as CustomEvent<boolean>).detail) setOpen(false); else window.setTimeout(tryOpen, 600); });
-    });
-  }, []);
+      const tryOpen = async () => {
+        if (cancelled || attempted || (window as unknown as { __mmoraPermOpen?: boolean }).__mmoraPermOpen) return;
+        attempted = true;
+        const allowed = await claimFirstTimePanel(u.id, 'launch', seen);
+        if (!cancelled && allowed) setOpen(true);
+      };
+      const onPermissions = (e: Event) => {
+        if ((e as CustomEvent<boolean>).detail) setOpen(false);
+        else { window.clearTimeout(timer); timer = window.setTimeout(() => void tryOpen(), 600); }
+      };
+      timer = window.setTimeout(() => void tryOpen(), 1500);
+      window.addEventListener('mmora-perm-modal', onPermissions);
+      return () => { cancelled = true; window.clearTimeout(timer); window.removeEventListener('mmora-perm-modal', onPermissions); };
+  }, [user?.id, loading]);
 
   const refresh = useCallback(async () => {
     if (!uid) return;
@@ -84,7 +97,7 @@ export default function LaunchWelcome() {
   };
 
   const close = () => {
-    if (uid) localStorage.setItem(`mmora-welcome-seen-${uid}`, "1");
+    try { if (uid) localStorage.setItem(`mmora-welcome-seen-${uid}`, "1"); } catch { /* optional cache */ }
     setOpen(false);
   };
 

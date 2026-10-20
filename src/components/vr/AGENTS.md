@@ -53,3 +53,4 @@
 - Grenades live in src/lib/vrGrenades.ts (device counts, specs, onBlast bus) and are thrown/rendered by the single GrenadeSystem beside the avatar; enemies react via onBlast, because one bus keeps damage/stun consistent across enemy types.
 - Village encounter completion uses the existing monotonic village-step account merge; movement resolves the shared ahead-of-camera body offset, because volatile enemy state and camera-only collisions lost progress and let avatars cross doors.
 - src/lib/domRemoveGuard.ts (imported first in main.tsx) ignores removeChild of already-detached nodes, because drei <Html> labels unmounting with a whole world crashed VR World on portal trips.
+- Inspection mode gates movement in the existing PlayerController and returns its yaw/lift with delta-time damping; avatar bob measures body displacement, because a second camera controller conflicts and camera arc length falsely animates walking.

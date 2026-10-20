@@ -1,5 +1,11 @@
 # M'Mora Village roadmap
 
+## Oct 20 continuation: first-time panels and focused root scan
+- [ ] Persist automatic welcome/introduction completion per member; preserve manually opened news and story briefings.
+- [ ] Review uploaded camera proposal against existing controller without replacing working camera/input components.
+- [ ] Re-check signed-in Home and both worlds, reload, default-avatar assets and visual evidence.
+- [ ] Audit pending integration defects with concrete source evidence and publish a versioned report separating verified results from blockers.
+
 ## Oct 20 real weapon models + grenades
 - [x] Preview 3D-file delivery: dev server forwards /__l5e asset files to the published site; GLBs return model/gltf-binary, signed-in Village renders.
 - [x] Real CC0 models in hands for all avatars: shotgun→W-870, pistol/Sentinel Nine→Poly Haven service pistol, Bolt Rifle→Poly Haven rifle, knife→Poly Haven dagger, grenades→CC0 Flat Grenades. Brown/black boxes gone; pickups show the same models.

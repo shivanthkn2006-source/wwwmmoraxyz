@@ -15,6 +15,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/lib/auth';
 import { useLocation } from 'react-router-dom';
+import { useFirstTimePanel } from '@/hooks/useFirstTimePanel';
 import {
   ZOE_GREETING_MAX_MS,
   ZOE_GREETING_SOURCES,
@@ -33,6 +34,7 @@ export const ZoeGreetingFilm: React.FC = () => {
   const [sourceIndex, setSourceIndex] = useState(0);
 
   const excluded = EXCLUDED_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+  const firstShowing = useFirstTimePanel('zoe-film', !excluded, hasSeenZoeGreeting(user?.id));
 
   const close = useCallback(
     (seen: boolean) => {
@@ -54,11 +56,10 @@ export const ZoeGreetingFilm: React.FC = () => {
 
   // Decide once per session whether the film should run at all.
   useEffect(() => {
-    if (!user?.id || excluded) return;
-    if (hasSeenZoeGreeting(user.id)) return;
+    if (!user?.id || excluded || !firstShowing) return;
     const t = setTimeout(() => setOpen(true), 400);
     return () => clearTimeout(t);
-  }, [user?.id, excluded]);
+  }, [user?.id, excluded, firstShowing]);
 
   // Watchdog: the overlay always goes away.
   useEffect(() => {

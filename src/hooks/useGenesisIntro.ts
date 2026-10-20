@@ -6,6 +6,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
+import { claimFirstTimePanel } from '@/lib/firstTimePanel';
 
 interface GenesisIntroState {
   showGenesis: boolean;
@@ -93,7 +94,7 @@ export const useGenesisIntro = (): UseGenesisIntroReturn => {
         // 2. Onboarding not completed AND not skipped, AND
         // 3. This is their first/second session
         const shouldShowGenesis = (
-          !onboarding || 
+          (!onboarding && isVeryFirstSession) || 
           (!onboarding.completed && !onboarding.skipped && isVeryFirstSession)
         );
 
@@ -102,8 +103,9 @@ export const useGenesisIntro = (): UseGenesisIntroReturn => {
           Array.isArray(onboarding.completed_steps) && 
           onboarding.completed_steps.includes('genesis_intro');
 
+        const firstShowing = await claimFirstTimePanel(user.id, 'genesis', !shouldShowGenesis || !!genesisCompleted);
         setState({
-          showGenesis: shouldShowGenesis && !genesisCompleted,
+          showGenesis: firstShowing,
           isLoading: false,
           isFirstTimeUser: !onboarding,
           selectedAvatar: avatarProfile?.avatar_type || localAvatar,

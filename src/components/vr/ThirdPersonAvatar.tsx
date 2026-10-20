@@ -94,9 +94,9 @@ export const ThirdPersonAvatar: React.FC = () => {
     // Village: the avatar stands still (gun or not) while the camera orbits round her; she only turns to walk.
     g.rotation.y = face ? yaw : (chaseView ? avatarMotion.bodyYaw : yaw) + Math.PI;
     if (seated) g.rotation.y = seated.yaw;
-    // Real speed from how far the camera moved.
-    const moved = Math.hypot(camera.position.x - last.current.x, camera.position.z - last.current.z) / Math.max(d, 1e-3);
-    last.current.copy(camera.position);
+    // Orbiting is not walking: use body displacement, never camera arc length.
+    const moved = Math.hypot(g.position.x - last.current.x, g.position.z - last.current.z) / Math.max(d, 1e-3);
+    last.current.copy(g.position);
     speed.current += (Math.min(moved, 12) - speed.current) * Math.min(1, d * 8);
     const run = avatarMotion.pose === 'running';
     phase.current += d * (run ? 11 : 7) * Math.min(1, speed.current / 2);

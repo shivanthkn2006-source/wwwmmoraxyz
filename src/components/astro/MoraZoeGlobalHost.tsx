@@ -12,6 +12,7 @@ import { resolvePosterUrl } from '@/lib/astroPoster';
 import { MoraZoeMorningTakeover } from './MoraZoeMorningTakeover';
 import { MoraZoeLoginGreeting } from './MoraZoeLoginGreeting';
 import { MoraZoeBirthDetailsPrompt } from './MoraZoeBirthDetailsPrompt';
+import { useFirstTimePanel } from '@/hooks/useFirstTimePanel';
 
 /**
  * Single plug-and-play overlay host. Fully sandboxed: renders nothing when a
@@ -65,17 +66,19 @@ export const MoraZoeGlobalHost: React.FC = () => {
 
   const canShowAstro = !!diagnostics?.passed && !!todayPrediction;
   const canShowMotivation = !motivationLoading && !!motivation;
+  const firstGreeting = useFirstTimePanel('home-message', onHome && (canShowAstro || canShowMotivation), !!user?.user_metadata?.welcome_seen);
+  const firstBirthPrompt = useFirstTimePanel('birth-introduction', onHome && !birthLoading && needsDetails);
 
   // The astrology takeover needs birth-derived data. Members without it still
   // get their full-screen motivation instead, so nobody sees a blank morning.
-  const showAstroTakeover = onHome && showMorningTakeover && canShowAstro;
+  const showAstroTakeover = firstGreeting && onHome && showMorningTakeover && canShowAstro;
   const showMotivationCard =
-    onHome && canShowMotivation && !showAstroTakeover && (showLoginGreeting || showMorningTakeover);
+    firstGreeting && onHome && canShowMotivation && !showAstroTakeover && (showLoginGreeting || showMorningTakeover);
 
   // Only members with missing birth date/time/place ever see this, and only
   // once nothing else is on screen, so overlays never stack.
   const showBirthPrompt =
-    onHome && !birthLoading && needsDetails && !showAstroTakeover && !showMotivationCard;
+    firstBirthPrompt && onHome && !birthLoading && needsDetails && !showAstroTakeover && !showMotivationCard;
 
 
   // Open-rate tracking (fire-and-forget; never blocks the overlays).
