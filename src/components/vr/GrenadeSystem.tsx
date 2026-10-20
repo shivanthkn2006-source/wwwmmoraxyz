@@ -62,7 +62,7 @@ const Effect: React.FC<{ fx: Fx; onDone: (id: number) => void }> = ({ fx, onDone
     if (a > life) { onDone(fx.id); return; }
     if (ball.current) {
       const peak = fx.kind === 'flashgrenade' ? 0.12 : 0.35;
-      const k = Math.min(1, a / peak), fade = Math.max(0, 1 - (a - peak) / (fx.kind === 'flashgrenade' ? 0.25 : 0.6));
+      const k = Math.min(1, a / peak), fade = Math.max(0, 1 - (a - peak) / (fx.kind === 'flashgrenade' ? 0.25 : 1.0));
       ball.current.scale.setScalar(0.2 + k * (fx.kind === 'flashgrenade' ? 3.5 : 2.6));
       const m = ball.current.material as THREE.MeshBasicMaterial; m.opacity = a < peak ? 1 : fade;
       if (fx.kind === 'fraggrenade') m.color.setRGB(1, 0.55 * fade + 0.15, 0.1 * fade);
