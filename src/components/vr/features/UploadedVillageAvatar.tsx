@@ -5,15 +5,22 @@ import { useFrame } from '@react-three/fiber';
 import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import * as THREE from 'three';
 import { avatarMotion } from '@/lib/vrAvatarMotion';
+import { gripFrame, isLongGun, type GripFrame, type HeldWeapon } from '@/lib/vrWeaponGrip';
+import { createUploadedWeaponSolver, normalizeUploadedJoint } from '@/lib/vrUploadedWeaponGrip';
+import { HeldWeaponModel } from './HeldWeaponModel';
 
-export function UploadedVillageAvatar({ url, zoe = false, aiming = false }: { url: string; zoe?: boolean; aiming?: boolean }) {
+export function UploadedVillageAvatar({ url, zoe = false, aiming = false, heldWeapon = null }: { url: string; zoe?: boolean; aiming?: boolean; heldWeapon?: HeldWeapon | null }) {
   const { scene } = useGLTF(url);
+  const root = useRef<THREE.Group>(null);
+  const weapon = useRef<THREE.Group>(null);
+  const shoulder = useMemo(() => new THREE.Vector3(), []);
+  const frame = useMemo<GripFrame>(() => ({ weapon: new THREE.Vector3(), right: new THREE.Vector3(), left: new THREE.Vector3() }), []);
   const phase = useRef(0);
   const { model, bones } = useMemo(() => {
     const model = clone(scene);
     const bones = new Map<string, { bone: THREE.Bone; rest: THREE.Quaternion }>();
     model.traverse((o) => {
-      if (o instanceof THREE.Bone) bones.set(o.name.replace(/^mixamorig:/, '').replace(/_\d+$/, ''), { bone: o, rest: o.quaternion.clone() });
+      if (o instanceof THREE.Bone) bones.set(normalizeUploadedJoint(o.name), { bone: o, rest: o.quaternion.clone() });
       if (o instanceof THREE.Mesh) { o.castShadow = true; o.frustumCulled = false; }
     });
     const box = new THREE.Box3().setFromObject(model);
@@ -24,6 +31,7 @@ export function UploadedVillageAvatar({ url, zoe = false, aiming = false }: { ur
     model.position.set(-center.x * scale, -box.min.y * scale, -center.z * scale);
     return { model, bones };
   }, [scene]);
+  const armSolver = useMemo(() => createUploadedWeaponSolver(model, zoe), [model, zoe]);
   const rotation = useMemo(() => new THREE.Quaternion(), []);
   const euler = useMemo(() => new THREE.Euler(), []);
   useFrame((_, rawDelta) => {
@@ -46,6 +54,22 @@ export function UploadedVillageAvatar({ url, zoe = false, aiming = false }: { ur
     set('LeftForeArm', 'L_Forearm', aiming ? -0.4 : 0);
     set('RightForeArm', 'R_Forearm', aiming ? -0.4 : 0);
     set('Head', 'Head', avatarMotion.headPitch);
+    const avatar = root.current;
+    const gun = weapon.current;
+    if (heldWeapon && avatar && gun && armSolver?.shoulder) {
+      avatar.updateWorldMatrix(true, true);
+      avatar.worldToLocal(armSolver.shoulder.getWorldPosition(shoulder));
+      const kick = Math.max(0, 1 - (performance.now() - avatarMotion.attackAt) / 180);
+      gripFrame(heldWeapon, shoulder, kick, frame);
+      gun.position.copy(frame.weapon);
+      gun.rotation.set(0, -Math.PI / 2, (isLongGun(heldWeapon) ? 0.03 : 0.02) + kick * 0.045);
+      armSolver.solve(avatar, frame.right, frame.left);
+    }
   });
-  return <group rotation-y={zoe ? -Math.PI / 2 : 0}><primitive object={model} /></group>;
+  // Weapon frame is in village-facing coordinates, outside the uploaded rig's
+  // corrective rotation. Both hands solve into that same coordinate system.
+  return <group ref={root}>
+    <group rotation-y={zoe ? -Math.PI / 2 : 0}><primitive object={model} /></group>
+    {heldWeapon && <group ref={weapon} name="uploaded-held-grip"><HeldWeaponModel weapon={heldWeapon} /></group>}
+  </group>;
 }

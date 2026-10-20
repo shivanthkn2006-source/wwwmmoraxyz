@@ -15,6 +15,6 @@ export function VillageAvatar({ aiming = false, headYaw = 0, heldWeapon = null }
   const fallback = <SkirtFemaleAvatar liveMotion aiming={aiming} headYaw={headYaw} heldWeapon={heldWeapon} />;
   if (!selected?.url) return fallback;
   return <AvatarBoundary key={choice} fallback={fallback}><Suspense fallback={fallback}>
-    <UploadedVillageAvatar url={selected.url} zoe={choice === 'zoe-upload'} aiming={aiming} />
+    <UploadedVillageAvatar url={selected.url} zoe={choice === 'zoe-upload'} aiming={aiming} heldWeapon={heldWeapon} />
   </Suspense></AvatarBoundary>;
 }
