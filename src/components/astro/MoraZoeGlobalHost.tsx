@@ -66,7 +66,7 @@ export const MoraZoeGlobalHost: React.FC = () => {
 
   const canShowAstro = !!diagnostics?.passed && !!todayPrediction;
   const canShowMotivation = !motivationLoading && !!motivation;
-  const firstGreeting = useFirstTimePanel('home-message', onHome && (canShowAstro || canShowMotivation), !!user?.user_metadata?.welcome_seen);
+  const firstGreeting = useFirstTimePanel('home-message', onHome && (showLoginGreeting || showMorningTakeover) && (canShowAstro || canShowMotivation), !!user?.user_metadata?.welcome_seen);
   const firstBirthPrompt = useFirstTimePanel('birth-introduction', onHome && !birthLoading && needsDetails);
 
   // The astrology takeover needs birth-derived data. Members without it still

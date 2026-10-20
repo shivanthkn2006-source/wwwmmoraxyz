@@ -33,7 +33,7 @@ export default function LaunchWelcome() {
       let attempted = false;
       setUid(u.id); setEmail(u.email ?? "");
       setMethods(Array.from(new Set((u.identities ?? []).map((i) => i.provider === "email" ? "Email & password" : i.provider === "google" ? "Google" : i.provider))));
-      // Seen once per account (saved on the account, so every device knows), not per device.
+      // The unique account claim prevents replay on another device or tab.
       let seen = !!u.user_metadata?.welcome_seen;
       try { seen ||= !!localStorage.getItem(`mmora-welcome-seen-${u.id}`); } catch { /* optional legacy cache */ }
       // Wait until the permissions window has closed so two windows never stack.
