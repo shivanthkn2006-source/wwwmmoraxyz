@@ -1,10 +1,12 @@
 # M'Mora Village roadmap
 
 ## Oct 20 requested repairs
-- [ ] Restore visible equipped W-870/Shotgun/pistol on both alternate avatars without changing default avatar, camera, stats or saves; test and disclose visual blockers.
-- [ ] Fail-close remaining audited paid-AI authentication paths; test rejected credentials and verify deployment separately.
-- [ ] Diagnose and eliminate the unhandled test exception; re-run affected tests and full suite.
-- [ ] Continue feasible pending checks and publish evidence-separated follow-up report; keep device/gameplay blockers explicit.
+- [x] Alternate avatars receive existing weapon art and mapped CCD arms; six isolated renders inspected. Shotgun/pistol remain blocks; finger fit is incomplete. Default/camera/stats/saves unchanged.
+- [x] Brain verifies authenticated claims before parsing/retrieval; six handler tests pass. Triage/audit retain caller gates and use sovereign cascade; both production guards pass.
+- [ ] Hosted valid-session brain/provider and triage/audit checks: deployment/runtime not proved by gateway-level fake-token 401.
+- [x] Isolate unrelated call signalling in voice/router fixture; 1,089 tests pass, six skip, no unhandled exception. Historical emitting service is not established.
+- [x] Publish Oct 20 follow-up report and six isolated screenshots with gameplay blockers explicit.
+- [ ] Full signed-in Village equip/spit and Home-ready reload: asset proxy returns HTML; current Home capture still shows loading, not a completed startup.
 
 ## Oct 19 platform audit continuation
 - [x] Re-run full tests: 1,080 assertions passed, 6 skipped; run exits unsuccessfully with one unhandled WebSocket/Event error. Not a clean suite.
@@ -12,7 +14,7 @@
 - [x] Re-check W-870 delivery: localhost returns HTTP 200 text/html, not GLB. Live grip and ranged-spit proof remain blocked/unperformed.
 - [x] Review current security and integration code; publish revised evidence-separated report with stale-scan caveat and missing functionality.
 - [ ] Verify/fix AI auth gate, cross-account findings, arbitrary fetches and private logging individually; current scanner findings date Oct 3 and require revalidation.
-- [ ] Resolve unhandled test WebSocket/Event error and remaining AI gateway guard failures before claiming clean checks.
+- [x] Oct 20 suite exits cleanly (1,089 passed, six skipped), paid-AI and public-auth guards pass; historical WebSocket source remains uncertain.
 - [ ] Complete authenticated Zoe-modal/DHF retrieval, village equip/spit, saves/multiplayer and device-only audio checks; blockers and missing proof listed in revised report.
 
 ## Oct 19 search integration and camera follow-up
