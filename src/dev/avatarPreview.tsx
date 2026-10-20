@@ -13,6 +13,7 @@ import ani10Url from '@/assets/models/ani10.fbx';
 import * as THREE from 'three';
 import { UploadedVillageAvatar } from '@/components/vr/features/UploadedVillageAvatar';
 import { avatarMotion, type VillagePose } from '@/lib/vrAvatarMotion';
+import { pickHeldWeapon } from '@/lib/vrWeaponGrip';
 
 /** Dump the FBX's animation clips + rig info to window.__anims. */
 const AnimProbe: React.FC = () => {
@@ -79,7 +80,7 @@ createRoot(document.getElementById('r')!).render(
         : q.get('skirt') ? <SkirtFemaleAvatar
             animState={(q.get('skirt') as 'idle' | 'walking' | 'running' | 'jumping' | 'climbing') || 'idle'}
             aiming={q.get('aim') === '1'} headYaw={Number(q.get('head') || 0)} {...(q.get('legfix') ? { legFix: q.get('legfix')!.split(',').map(Number) as [number, number, number] } : {})} />
-        : q.get('uploaded') ? <UploadedVillageAvatar url={q.get('uploaded') || ''} zoe={q.get('zoe') === '1'} aiming={q.get('aim') === '1'} />
+        : q.get('uploaded') ? <UploadedVillageAvatar url={q.get('uploaded') || ''} zoe={q.get('zoe') === '1'} aiming={q.get('aim') === '1'} heldWeapon={pickHeldWeapon([q.get('gun') || ''])} />
         : q.get('raw') === '1' ? <LeonCharacterModel pose="standing" targetHeight={1.78} />
         : q.get('glb') ? <GlbProbe url={q.get('glb')!.includes('://') ? q.get('glb')! : `/src/assets/models/${q.get('glb')}`} />
         : <ThirdPersonAvatar />}

@@ -5,13 +5,13 @@
 - Ambient joke speech is owned by one global Deepgram announcement host, because card mounts must not duplicate or prematurely mark announcements.
 - Auth hydrates first; Google BYOK returns via /~oauth/callback to public `/auth`; authenticated growth calls verify claims and degrade session races to signed-out results, never runtime failures.
 - Home orders due DHF, growth, social, Loop, and humor cards by their real scheduled timestamps, because fixed source blocks hide timely content.
-- All Zoe's LOL consumers share the global realtime multiplexer, because independent channels race during auth reloads and can take Home offline.
+- LOL consumers share globalRealtime; independent channels race on auth reloads.
 - Boot: no heavy chunks; AfterAuthIdle hosts marked pauseInVR unmount in VR.
 - VR: src/components/vr/AGENTS.md. Fixtures never save; avatar choices load on selection; motion is visual only.
 - Village encounter completion uses the existing monotonic village-step account merge; movement resolves the shared ahead-of-camera body offset, because volatile enemy state and camera-only collisions lost progress and let avatars cross doors.
 - DHF pictures are copied once into dhf-compass and served from storage, preventing provider outages from blanking cards.
 - Zoe orb drift updates Framer motion values without React state updates, and Zoe glass avoids live backdrop filters, because frame-by-frame tree repaints cause orb/chat flicker over Home.
-- Home menu panel uses a fixed warm surface without backdrop-filter, because live blur over the moving feed flickers.
+- Home menu uses a fixed warm surface, no live blur, to prevent feed flicker.
 - DHF and LOL automatic speech offer candidates to one newest-generated selector, because separate announcers can speak multiple old cards.
 - Zoe listening is free-first: browser recognition first, sticky switch to Deepgram Nova on failure (localStorage zoe-listen-mode=deepgram-first flips order), because it saves Deepgram cost while never losing hearing.
 - Repeat questions use private DHF cache before AI recall.
@@ -30,3 +30,4 @@
 - Every saved notification is forwarded to the member's phones by a database trigger → notification-push function (x-cron-token), which re-checks the main, push and per-alert switches, because one delivery path keeps phone alerts consistent with the in-app bell.
 - Notification taps resolve through src/lib/notificationTarget.ts for every notification surface, because separate per-panel rules left most alert kinds going nowhere.
 - src/lib/domRemoveGuard.ts (imported first in main.tsx) ignores removeChild of already-detached nodes, because drei <Html> labels unmounting with a whole world crashed VR World on portal trips.
+- Paid inference requires verified member claims before retrieval; triage/audit use sovereignFetch, because Bearer syntax is not identity.

@@ -1,3 +1,4 @@
+import { sovereignFetch } from '../_shared/sovereign-ai.ts';
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4';
 
@@ -8,7 +9,7 @@ const corsHeaders = {
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+
 
 interface ReportRow {
   id: string;
@@ -22,9 +23,9 @@ interface ReportRow {
   device_info: Record<string, unknown> | null;
 }
 
-/** Ask the Lovable AI gateway for a root-cause diagnosis + concrete fix plan. */
+/** Ask the existing provider cascade for a root-cause diagnosis + concrete fix plan. */
 async function analyse(report: ReportRow): Promise<{ summary: string; suggestion: string }> {
-  if (!LOVABLE_API_KEY) throw new Error('LOVABLE_API_KEY is not configured');
+
 
   const prompt = [
     'You are the automated triage engine for a React + Vite + Supabase platform.',
@@ -37,9 +38,9 @@ async function analyse(report: ReportRow): Promise<{ summary: string; suggestion
     `Report: ${report.user_message ?? '(no description)'}`,
   ].join('\n');
 
-  const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+  const res = await sovereignFetch('sovereign://chat/completions', {
     method: 'POST',
-    headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model: 'google/gemini-2.5-flash',
       messages: [{ role: 'user', content: prompt }],

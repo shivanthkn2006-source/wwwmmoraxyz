@@ -14,13 +14,13 @@ import { clone as skeletonClone } from 'three/examples/jsm/utils/SkeletonUtils.j
 import * as THREE from 'three';
 import ani10Url from '@/assets/models/ani10.fbx';
 import { avatarMotion } from '@/lib/vrAvatarMotion';
-import { createWeaponArmSolver, gripFrame, isLongGun, W870_GRIP_OFFSET, type GripFrame, type HeldWeapon } from '@/lib/vrWeaponGrip';
+import { createWeaponArmSolver, gripFrame, isLongGun, type GripFrame, type HeldWeapon } from '@/lib/vrWeaponGrip';
 
 /** Upright correction (rad, split over waist/spine); +X bends this rig forward, so camera-down pitch is negated for the head. */
 const STANCE_LEAN = 0.32;
 /** Bladed stance: torso turns so the support shoulder comes forward. */
 const STANCE_TWIST = -0.5;
-import { W870Model } from './W870Model';
+import { HeldWeaponModel } from './HeldWeaponModel';
 
 export type SkirtAnimState = 'idle' | 'walking' | 'running' | 'jumping' | 'climbing' | 'sitting';
 
@@ -205,10 +205,7 @@ export const SkirtFemaleAvatar: React.FC<SkirtFemaleAvatarProps> = ({
     <group ref={root}>
       <primitive object={model} />
       {held && <group ref={weapon} name="w870-held-grip">
-        {held === 'w870' ? <group position={W870_GRIP_OFFSET}><W870Model /></group>
-          : held === 'shotgun' ? <mesh position={[0.058, 0.075, 0]}><boxGeometry args={[0.75, 0.07, 0.05]} /><meshStandardMaterial color="#3b2a1c" /></mesh>
-          : held === 'pistol' ? <mesh position={[0.07, 0.02, 0]}><boxGeometry args={[0.2, 0.09, 0.04]} /><meshStandardMaterial color="#222" metalness={0.7} /></mesh>
-          : null}
+        <HeldWeaponModel weapon={held} />
       </group>}
     </group>
   );

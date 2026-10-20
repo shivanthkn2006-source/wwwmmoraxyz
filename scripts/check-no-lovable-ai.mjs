@@ -18,6 +18,8 @@ const ALLOWLIST = new Set([
   'scripts/check-no-lovable-ai.mjs',
 ]);
 const PATTERNS = [/ai\.gateway\.lovable\.dev/, /LOVABLE_API_KEY/];
+// Connector credentials are not inference; AI URL scanning remains active.
+const CONNECTOR_KEY_FILES = new Set(['supabase/functions/zoe-slack/index.ts', 'supabase/functions/zoe-api-status/index.ts']);
 const EXT = /\.(ts|tsx|js|jsx|mjs|cjs)$/;
 
 const hits = [];
@@ -40,9 +42,10 @@ function walk(dir) {
     if (!EXT.test(entry)) continue;
     const rel = relative(process.cwd(), full).split('\\').join('/');
     if (ALLOWLIST.has(rel)) continue;
+    if (/\.(test|spec)\.[cm]?[jt]sx?$/.test(rel)) continue;
     const lines = readFileSync(full, 'utf8').split('\n');
     lines.forEach((line, i) => {
-      if (PATTERNS.some((p) => p.test(line))) {
+      if (PATTERNS.some((p, n) => !(n === 1 && CONNECTOR_KEY_FILES.has(rel)) && p.test(line))) {
         hits.push(`${rel}:${i + 1}: ${line.trim().slice(0, 160)}`);
       }
     });

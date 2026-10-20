@@ -17,6 +17,12 @@ import { MemoryRouter, Routes, Route, useNavigate, useLocation } from 'react-rou
 // layer and routing, not the growth/dock UI.
 vi.mock('@/components/growth/GrowthCardAlertHost', () => ({ default: () => null }));
 vi.mock('@/components/home/GlobalHomeDock', () => ({ default: () => null }));
+// Keep unrelated live call signalling out of this voice/router fixture.
+// The historical asynchronous Event error has not been independently reproduced;
+// a clean isolated test does not establish which service originally emitted it.
+vi.mock('@/contexts/CallEngineContext', () => ({
+  CallEngineProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
 // The shell now starts background services lazily (after first paint). Under
 // fake timers that heavy lazy chunk never settles, so the voice engine never
 // mounted in this test. Pass children straight through: this suite only tests

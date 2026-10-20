@@ -1,4 +1,5 @@
 import { safeChatMessages } from '../_shared/safe-messages.ts';
+import { resolveClaims } from '../_shared/auth-claims.ts';
 // ═══════════════════════════════════════════════════════════════════════════════
 // ZOE INFINITY BRAIN - Edge Function
 // Smart Task-Aware Auto-Routing + Soul Codex + DEEP GROUNDING + EMOTION + MEMORY
@@ -623,6 +624,21 @@ serve(async (req: Request) => {
   }
 
   try {
+    // Resolve identity before body parsing, grounding, recall or paid inference.
+    // A Bearer prefix alone is not authentication; profile lookup is optional,
+    // but session verification must fail closed.
+    const authClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { auth: { persistSession: false, autoRefreshToken: false } },
+    );
+    const { data: verified, error: verificationError } = await resolveClaims(authClient, authHeader.slice(7).trim());
+    if (verificationError || !verified?.claims?.sub || verified.claims.role !== 'authenticated') {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const { messages: __rawMessages, mode, soulCodex, memoryContext, enableGrounding = true, emotionContext, intimacyLevel, clientTime, personalityMatrix, currentRoute } = await req.json() as {
       messages: Message[];
       mode: IntelligenceMode;
@@ -652,7 +668,7 @@ serve(async (req: Request) => {
     let groundingContext = '';
     
     if (enableGrounding && (task === 'grounding' || needsExternalData(lastUserMessage))) {
-      console.log(`[zoe-brain:${requestId}] 🔍 Grounding: "${lastUserMessage.substring(0, 50)}..."`);
+      console.log(`[zoe-brain:${requestId}] Grounding requested`);
       citations = await searchWeb(lastUserMessage);
       if (citations.length > 0) {
         groundingContext = `\n\n═══ GROUNDED SOURCES (MUST CITE) ═══\n${citations.map(c => `[${c.id}] ${c.title} - ${c.url}\n   "${c.snippet}"`).join('\n\n')}\n═══════════════════════════════════════\nCRITICAL: Include citation markers [1], [2], [3] inline with relevant facts.`;
