@@ -215,6 +215,7 @@ describe('voice activation + agent route switching (e2e)', () => {
       'agent_career',
       'agent_moksh',
     ]);
+    console.log('DEBUG_ERRORS_1', JSON.stringify(errors));
     expect(errors).toHaveLength(0);
   });
 
