@@ -385,8 +385,8 @@ async function loadCanonical(db: ReturnType<typeof createClient>, job: QueueRow)
 
 async function enqueueBackfill(db: ReturnType<typeof createClient>, userId: string) {
   const [profiles, posts, chats, memories, dhfPosts, dhfVideos, growthCards, predictions, goals, dms, comments, visuals, dates, attachments, lifeFacts] = await Promise.all([
-    db.from('profiles').select('user_id'),
-    db.from('posts').select('id,user_id,media_type,content'),
+    db.from('profiles').select('user_id').eq('user_id', userId),
+    db.from('posts').select('id,user_id,media_type,content').eq('user_id', userId),
     db.from('zoe_infinity_messages').select('id,user_id').eq('user_id', userId),
     db.from('mmora_memories').select('id,user_id').eq('user_id', userId),
     db.from('dhf_daily_posts').select('id,user_id').eq('user_id', userId),
@@ -551,6 +551,12 @@ Deno.serve(async (req) => {
         db.from('zoe_universal_index').select('updated_at').order('updated_at', { ascending: false }).limit(1).maybeSingle(),
       ]);
       const coverage = await coverageSnapshot(db);
+      // Failed-job details name other members' items: scheduler/admin only.
+      let canSeeFailures = isSystemDrain;
+      if (!canSeeFailures && user) {
+        const { data: isAdmin } = await db.rpc('has_role', { _user_id: user.id, _role: 'admin' });
+        canSeeFailures = isAdmin === true;
+      }
       return json({
         requestId,
         stats: {
@@ -561,7 +567,7 @@ Deno.serve(async (req) => {
           newestIndexedAt: newest.data?.updated_at ?? null,
         },
         coverage,
-        failures: failedRows.data || [],
+        failures: canSeeFailures ? (failedRows.data || []) : [],
       });
     }
 

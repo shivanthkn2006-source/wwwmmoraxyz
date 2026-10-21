@@ -57,6 +57,10 @@ serve(async (req) => {
     const request: QuantumLoopRequest = await req.json();
     const { mode, triggeredBy, payload } = request;
     const userId = bindOwner(__c, request.userId) as string;
+    // Platform-wide batch and database-event modes are for the scheduler/admin only.
+    if ((mode === 'scheduled' || mode === 'webhook') && !(__c.kind === 'service' || __c.isAdmin)) {
+      return new Response(JSON.stringify({ success: false, error: 'Admin only' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
     
     console.log(`[QuantumASI-Loop] Starting in ${mode} mode${userId ? ` for user ${userId.substring(0, 8)}...` : ''}`);
     

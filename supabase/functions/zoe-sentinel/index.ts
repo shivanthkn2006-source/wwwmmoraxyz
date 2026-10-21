@@ -1,4 +1,4 @@
-import { requireCaller } from '../_shared/caller-guard.ts';
+import { requireCaller, bindOwner } from '../_shared/caller-guard.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { publicGuard } from '../_shared/public-guard.ts';
@@ -369,7 +369,9 @@ serve(async (req) => {
       // DHF LOCKDOWN
       // ==========================================
       case 'lockdown': {
-        const { lockdownType, reason, initiatedBy } = requestData;
+        const { lockdownType, reason } = requestData;
+        // Attribution comes from the verified caller, never the request body.
+        const initiatedBy = __caller.kind === 'member' ? __caller.userId : (requestData?.initiatedBy ?? null);
         
         // Record lockdown event
         const { data: lockdown, error } = await supabase
@@ -488,8 +490,7 @@ serve(async (req) => {
       // RECORD BIOMETRIC AUTH EVENT
       // ==========================================
       case 'biometric_auth': {
-        const { 
-          userId: authUserId, 
+        const {
           authMethod, 
           success, 
           confidenceScore, 
@@ -497,6 +498,8 @@ serve(async (req) => {
           deviceFingerprint,
           ipAddress 
         } = requestData;
+        // Members may only record events for their own account.
+        const authUserId = bindOwner(__caller, requestData?.userId);
         
         const shadowAISuspected = !microJitterDetected && confidenceScore < 70;
         
