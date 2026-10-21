@@ -189,8 +189,14 @@ const FaceLoginModal: React.FC<FaceLoginModalProps> = ({ open, onClose, onSucces
     } catch (e) {
       setLivePrompt(''); setLiveBusy(false);
       const msg = e instanceof Error ? e.message : '';
-      // Model unavailable on this device: older photo check path below.
-      if (!/unavailable|load|fetch|backend/i.test(msg)) { setErrorMessage(msg || 'Live check failed. Try again.'); setStep('error'); return; }
+      // No photo-only fallback: without a passed live check the server rejects
+      // the request, so stop here instead of offering a weaker path.
+      const friendly = /unavailable|load|fetch|backend/i.test(msg)
+        ? 'The live face check could not start on this device. Use your password, Google or passkey instead, or try again on a newer device.'
+        : msg || 'Live check failed. Try again.';
+      setErrorMessage(friendly);
+      setStep('error');
+      return;
     }
     setLivePrompt(''); setLiveBusy(false);
     setStep('verifying');
@@ -214,11 +220,10 @@ const FaceLoginModal: React.FC<FaceLoginModalProps> = ({ open, onClose, onSucces
         throw new Error('Camera is still starting. Hold still and try again.');
       }
 
-      // Match on the device first (no AI tokens); fall back to the photo check.
+      // Match on the device first (no AI tokens); the server may still use the
+      // photo comparison for legacy enrollments, but only after the live check.
       const { data, error } = await supabase.functions.invoke('face-verification', {
-        body: proof
-          ? { operation: 'login_with_face', email, liveness: proof, imageData }
-          : { operation: 'login_with_face', email, imageData },
+        body: { operation: 'login_with_face', email, liveness: proof, imageData },
       });
 
       if (error) throw new Error(await edgeErrorMessage(error, 'Face verification failed. Please try again.'));
