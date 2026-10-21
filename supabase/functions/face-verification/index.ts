@@ -197,8 +197,12 @@ serve(async (req) => {
       return new Response(JSON.stringify({ nonce, steps, expiresAt }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // Setup and sign-in with a face fingerprint must carry a passed live check.
-    if ((operation === 'enroll_face' || operation === 'login_with_face') && (descriptor || liveness)) {
+    // Setup and sign-in with a face must ALWAYS carry a passed live check —
+    // no exemptions. An image-only request (no fingerprint, no live proof)
+    // is rejected here so a static photo can never reach enrollment or token
+    // issuance. The AI photo-comparison fallback below may still run for
+    // legacy enrollments, but only after this challenge has passed.
+    if (operation === 'enroll_face' || operation === 'login_with_face') {
       if (!liveness) {
         return new Response(JSON.stringify({ error: 'Please update the app and try again — a live face check is now required.' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
