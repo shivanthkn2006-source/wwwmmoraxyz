@@ -245,6 +245,7 @@ describe('voice activation + agent route switching (e2e)', () => {
     // Opt-in is remembered, so the engine restarts itself on the new mount.
     expect(state.voiceCommandActive).toBe(true);
     expect(FakeRecognition.instances.at(-1)?.running).toBe(true);
+    console.log('DEBUG_ERRORS_2', JSON.stringify(errors));
     expect(errors).toHaveLength(0);
   });
 
