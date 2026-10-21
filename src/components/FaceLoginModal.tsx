@@ -189,8 +189,14 @@ const FaceLoginModal: React.FC<FaceLoginModalProps> = ({ open, onClose, onSucces
     } catch (e) {
       setLivePrompt(''); setLiveBusy(false);
       const msg = e instanceof Error ? e.message : '';
-      // Model unavailable on this device: older photo check path below.
-      if (!/unavailable|load|fetch|backend/i.test(msg)) { setErrorMessage(msg || 'Live check failed. Try again.'); setStep('error'); return; }
+      // No photo-only fallback: without a passed live check the server rejects
+      // the request, so stop here instead of offering a weaker path.
+      const friendly = /unavailable|load|fetch|backend/i.test(msg)
+        ? 'The live face check could not start on this device. Use your password, Google or passkey instead, or try again on a newer device.'
+        : msg || 'Live check failed. Try again.';
+      setErrorMessage(friendly);
+      setStep('error');
+      return;
     }
     setLivePrompt(''); setLiveBusy(false);
     setStep('verifying');
