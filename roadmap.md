@@ -1,5 +1,10 @@
 # M'Mora Village roadmap
 
+## Oct 21 approved priority #4 and audit reconciliation
+- [ ] Trace growth-image-validate callers and close private/internal URL fetching, including redirects, without changing UI or unrelated endpoints.
+- [ ] Run safe mocked destination/redirect tests and deployed rejection checks; never contact internal services or start paid validation jobs.
+- [ ] Reconcile original audit priorities, skipped tests, and Singapore/US readiness blockers in an evidence-separated follow-up report.
+
 ## Oct 20 whole-platform read-only enterprise audit
 - [x] Measure repository, live database, search/menu/route chains and outside-provider call sites with explicit count definitions; runtime counts are not inferred from file counts.
 - [x] Revalidate available security signals and automated tests (1,110 passed, 6 skipped); inspect published auth and filtered authenticated Home. Full deployed endpoint/provider and unfiltered flow verification remain explicit limitations.

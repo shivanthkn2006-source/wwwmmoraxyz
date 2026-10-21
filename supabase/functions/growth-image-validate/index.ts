@@ -1,5 +1,6 @@
 import { sovereignFetch, sovereignKey } from '../_shared/sovereign-ai.ts';
 import { requireCaller } from '../_shared/caller-guard.ts';
+import { fetchGrowthImage, growthImageUrl, UnsafeGrowthImageUrl } from './image-fetch.ts';
 /**
  * Growth card content-to-image validation.
  *
@@ -30,9 +31,7 @@ const handle = async (req: Request): Promise<Response> => {
   try {
     const { imageUrl, person, subject, category, strictness } = await req.json();
     const mode = strictness === 'strict' || strictness === 'lenient' ? strictness : 'balanced';
-    if (typeof imageUrl !== 'string' || !imageUrl.startsWith('http')) {
-      return json({ error: 'imageUrl is required' }, 400);
-    }
+    const safeImageUrl = growthImageUrl(imageUrl);
 
     if (!sovereignKey()) {
       console.error('[growth-image-validate] no sovereign AI provider key configured');
@@ -52,7 +51,7 @@ const handle = async (req: Request): Promise<Response> => {
     // Providers cannot crawl the image host, so inline the bytes instead.
     let inlineImage: string;
     try {
-      const imgRes = await fetch(imageUrl, { headers: { Accept: 'image/*' }, signal: AbortSignal.timeout(8_000) });
+      const imgRes = await fetchGrowthImage(safeImageUrl);
       if (!imgRes.ok) return json({ match: true, reason: 'image unavailable for validation' });
       const buf = new Uint8Array(await imgRes.arrayBuffer());
       if (buf.byteLength < 1000) return json({ match: true, reason: 'image too small to validate' });
@@ -63,6 +62,7 @@ const handle = async (req: Request): Promise<Response> => {
       const mime = imgRes.headers.get('content-type') ?? 'image/jpeg';
       inlineImage = `data:${mime};base64,${btoa(binary)}`;
     } catch (e) {
+      if (e instanceof UnsafeGrowthImageUrl) return json({ error: e.message }, 400);
       console.warn('[growth-image-validate] image download failed', e);
       return json({ match: true, reason: 'image download failed' });
     }
@@ -138,6 +138,7 @@ const handle = async (req: Request): Promise<Response> => {
     return json({ match: parsed.match === true, reason });
 
   } catch (error) {
+    if (error instanceof UnsafeGrowthImageUrl) return json({ error: error.message }, 400);
     console.error('[growth-image-validate] failed', error);
     return json({ error: 'Validation failed' }, 500);
   }
