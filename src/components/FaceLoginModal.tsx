@@ -220,11 +220,10 @@ const FaceLoginModal: React.FC<FaceLoginModalProps> = ({ open, onClose, onSucces
         throw new Error('Camera is still starting. Hold still and try again.');
       }
 
-      // Match on the device first (no AI tokens); fall back to the photo check.
+      // Match on the device first (no AI tokens); the server may still use the
+      // photo comparison for legacy enrollments, but only after the live check.
       const { data, error } = await supabase.functions.invoke('face-verification', {
-        body: proof
-          ? { operation: 'login_with_face', email, liveness: proof, imageData }
-          : { operation: 'login_with_face', email, imageData },
+        body: { operation: 'login_with_face', email, liveness: proof, imageData },
       });
 
       if (error) throw new Error(await edgeErrorMessage(error, 'Face verification failed. Please try again.'));

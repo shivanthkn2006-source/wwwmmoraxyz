@@ -272,10 +272,10 @@ const FaceVerificationSetup: React.FC<FaceVerificationSetupProps> = ({ onComplet
           toast.warning('No identity photo saved yet. Add a passport-style photo so face sign-in can match against it too.');
         }
       }
+      // Enrollment always carries the passed live check; the server rejects
+      // image-only enrollment outright.
       const { data, error } = await supabase.functions.invoke('face-verification', {
-        body: live.ok
-          ? { operation: 'enroll_face', liveness: proof, identityDescriptor }
-          : { operation: 'enroll_face', imageData },
+        body: { operation: 'enroll_face', liveness: proof, identityDescriptor },
       });
 
       if (error) {
