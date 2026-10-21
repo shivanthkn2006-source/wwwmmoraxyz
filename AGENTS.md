@@ -32,3 +32,4 @@
 - The dev server proxies /__l5e to the published site, because dev has no CDN route for 3D files.
 - Automatic introductory panels claim a unique welcome-prefixed feature_announcements row before display; explicit help and story briefings remain separate, because per-day/device flags and leaked listeners replayed overlays across routes and devices.
 - Quick Unlock codes, counts and waits live server-only (quick-unlock fn, session identity); the lock overlays without unmounting, because client PINs are forgeable and unmounting ends calls.
+- Growth image validation downloads only its caller's exact HTTPS Pollinations prompt origin and never follows redirects, because arbitrary hostnames and redirect targets can expose private services; additional providers require an explicit reviewed origin change.
