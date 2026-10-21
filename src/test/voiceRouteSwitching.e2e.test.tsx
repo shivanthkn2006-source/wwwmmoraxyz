@@ -17,11 +17,16 @@ import { MemoryRouter, Routes, Route, useNavigate, useLocation } from 'react-rou
 // layer and routing, not the growth/dock UI.
 vi.mock('@/components/growth/GrowthCardAlertHost', () => ({ default: () => null }));
 vi.mock('@/components/home/GlobalHomeDock', () => ({ default: () => null }));
+// The Quick Unlock gate is unrelated to voice/routing and would fire a network
+// status call on mount — keep it inert like the other side panels.
+vi.mock('@/components/security/QuickUnlockGate', () => ({ default: () => null }));
 // Keep unrelated live call signalling out of this voice/router fixture.
 // The historical asynchronous Event error has not been independently reproduced;
 // a clean isolated test does not establish which service originally emitted it.
 vi.mock('@/contexts/CallEngineContext', () => ({
   CallEngineProvider: ({ children }: { children: React.ReactNode }) => children,
+  // QuickUnlockGate reads callState to avoid locking during a live call.
+  useCallEngine: () => ({ callState: 'idle' }),
 }));
 // The shell now starts background services lazily (after first paint). Under
 // fake timers that heavy lazy chunk never settles, so the voice engine never
