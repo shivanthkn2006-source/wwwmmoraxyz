@@ -1,5 +1,9 @@
 # M'Mora Village roadmap
 
+## Oct 22 approved backup-image destination repair
+- [ ] Trace provider-returned URLs and cascade importers against reports; select one evidenced bounded fix without changing provider order or unrelated UI.
+- [ ] Controlled destination/redirect tests, regressions and importer deployment; report provider compatibility and remaining audit/privacy blockers separately. No internal requests or paid jobs.
+
 ## Oct 22 approved reader connection-level repair
 - [x] Trace second DNS resolution and unchanged source callers; checked literal native TCP + peer check + original-host TLS, established HTTP parser, no fetch fallback.
 - [x] 22 controlled socket tests + 73 reader regressions pass; full suite 1,320 passed / six skipped / zero failed; native entrypoint check passes, deployed HTTPS/HTTP example.com readable and loopback literal 400. No internal requests, paid edits or other-member content writes. Report separates actual runtime proof from mocked DNS-switch/certificate/redirect boundaries.
