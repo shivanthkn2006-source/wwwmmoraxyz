@@ -1,13 +1,14 @@
 # M'Mora Village roadmap
 
 ## Oct 22 approved reader connection-level repair
-- [ ] Trace second DNS resolution and integrations; bind the reader connection to a checked literal with original-host TLS validation, no unsafe fallback.
-- [ ] Controlled transport/redirect/timeout tests and regression suite; report deployed evidence separately from native-runtime/provider and remaining audit limits. No internal requests, paid edits or other-member writes.
+- [x] Trace second DNS resolution and unchanged source callers; checked literal native TCP + peer check + original-host TLS, established HTTP parser, no fetch fallback.
+- [x] 22 controlled socket tests + 73 reader regressions pass; full suite 1,320 passed / six skipped / zero failed; native entrypoint check passes, deployed HTTPS/HTTP example.com readable and loopback literal 400. No internal requests, paid edits or other-member content writes. Report separates actual runtime proof from mocked DNS-switch/certificate/redirect boundaries.
+- [ ] Remaining broader #4: cascade provider URLs, relay pinning, crawler origin and non-reader budgets; six privacy cases await isolated accounts/backend + safe fixture cleanup. Source DOM reads back but visual capture remains dark; complete citation-click visual proof unverified.
 
 ## Oct 22 approved web-reader destination checks
 - [x] Trace caller/auth and earlier URL audit evidence; tighten only reader URL/DNS checks and redirect disposal. UI and shared URL helper unchanged.
 - [x] 73 mocked reader checks and 153 focused regressions pass; full suite 1,298 passed / zero failed / six skipped. Deployed; three unsafe literal requests return 400, public example.com text reads back through signed-in source DOM. No internal requests or paid jobs.
-- [ ] Connection-bound reader egress remains open: fetch resolves again after preflight; needs verified pinned transport/proxy. Visual capture remained black despite successful DOM readback; full source-click visual proof unverified. Report records remaining #3/#4 and #5–#11 groups and six privacy-test blockers.
+- [x] Former reader second-resolution gap replaced by native literal TCP + original-host TLS in the next stage; broader #4 and full source-click visual proof remain incomplete as recorded above.
 
 ## Oct 22 approved remaining #4 URL fetchers
 - [x] Trace DHF storage/cascade, reader/edit-image, relay and crawler; confirmed DHF unchecked redirects, reader/edit-image DNS checks absent, relay DNS-to-fetch gap and admin/cron crawler origin/redirect gap. Live DHF policy is SELECT-only despite table write grants; ordinary-member URL injection is not established.
