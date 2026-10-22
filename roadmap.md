@@ -1,5 +1,10 @@
 # M'Mora Village roadmap
 
+## Oct 22 approved remaining #3 shared queue boundary
+- [x] Trace foreground search, health recovery, admin batches and cron: live scheduler active every 10 minutes; wrapper not executable by members/anon. Nine of eleven audit groups still need work or closure evidence.
+- [x] Owner-scope member queue selection and atomic claims; retain server-verified admin and existing scheduler shared processing. UI, search and backfill callers unchanged.
+- [x] Ten in-memory handler tests; 23 focused passes; full suite 1,175 passed / 0 failed / 6 skipped. Deployed; authenticated stats 200, invalid-session processed=0. No live queue execution/paid jobs requested. Real non-admin and successful scheduled execution remain unverified; broader #3 is not universally closed.
+
 ## Oct 21 approved priority #4 and audit reconciliation
 - [x] Trace growth-image-validate callers and close private/internal URL fetching using exact caller-origin restriction and rejection of all redirects; UI and unrelated endpoints unchanged.
 - [x] Safe mocked destination/redirect tests: 30 new tests, 46 focused passes; full suite 1,165 passed / 0 failed / 6 skipped. Three authenticated deployed unsafe requests return 400; no internal services/paid jobs called.
