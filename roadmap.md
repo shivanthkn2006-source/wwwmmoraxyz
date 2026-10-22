@@ -1,5 +1,10 @@
 # M'Mora Village roadmap
 
+## Oct 22 approved remaining #4 URL fetchers
+- [ ] Trace remaining audited fetchers and their callers; rank request-controlled destinations separately from trusted provider and admin-only paths.
+- [ ] Apply the smallest fix to the highest-priority unsafe fetcher, preserving UI and unrelated behavior.
+- [ ] Run mocked destination/redirect boundaries without internal requests, paid jobs or member writes; report deployed evidence separately from unverified risks and remaining audit groups.
+
 ## Oct 22 approved remaining #3 shared queue boundary
 - [x] Trace foreground search, health recovery, admin batches and cron: live scheduler active every 10 minutes; wrapper not executable by members/anon. Nine of eleven audit groups still need work or closure evidence.
 - [x] Owner-scope member queue selection and atomic claims; retain server-verified admin and existing scheduler shared processing. UI, search and backfill callers unchanged.
