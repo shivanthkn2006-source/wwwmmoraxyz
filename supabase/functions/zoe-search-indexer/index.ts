@@ -538,6 +538,13 @@ Deno.serve(async (req) => {
     // drain the durable queue in small resumable batches.
     const limit = Math.max(1, Math.min(Number(body?.limit) || 5, 25));
     const db = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { persistSession: false } });
+    // Only the scheduler or a server-verified admin may drain across owners.
+    // Members keep their existing foreground recovery, limited to their own jobs.
+    let canDrainSharedQueue = isSystemDrain;
+    if (!canDrainSharedQueue && user) {
+      const { data: isAdmin, error: roleError } = await db.rpc('has_role', { _user_id: user.id, _role: 'admin' });
+      canDrainSharedQueue = !roleError && isAdmin === true;
+    }
 
     // Health/progress snapshot for the startup guard and the admin view.
     if (body?.stats === true) {
@@ -552,11 +559,7 @@ Deno.serve(async (req) => {
       ]);
       const coverage = await coverageSnapshot(db);
       // Failed-job details name other members' items: scheduler/admin only.
-      let canSeeFailures = isSystemDrain;
-      if (!canSeeFailures && user) {
-        const { data: isAdmin } = await db.rpc('has_role', { _user_id: user.id, _role: 'admin' });
-        canSeeFailures = isAdmin === true;
-      }
+      const canSeeFailures = canDrainSharedQueue;
       return json({
         requestId,
         stats: {
@@ -579,12 +582,17 @@ Deno.serve(async (req) => {
         : 0;
 
 
-    const { data: jobs, error: queueError } = await db.from('zoe_search_index_queue')
+    let jobsQuery = db.from('zoe_search_index_queue')
       .select('id,entity_type,entity_id,owner_id,attempts')
       .in('status', ['pending', 'failed'])
       .lte('available_at', new Date().toISOString())
       .order('created_at', { ascending: true })
       .limit(limit);
+    if (!canDrainSharedQueue) {
+      if (!user) return json({ error: 'Unauthorized' }, 401);
+      jobsQuery = jobsQuery.eq('owner_id', user.id);
+    }
+    const { data: jobs, error: queueError } = await jobsQuery;
     if (queueError) throw queueError;
 
     let completed = 0;
@@ -593,9 +601,12 @@ Deno.serve(async (req) => {
     for (const job of (jobs || []) as QueueRow[]) {
       // Leave headroom under the gateway timeout; remaining jobs stay pending for the next run.
       if (Date.now() - runStarted > 90_000) break;
-      const { data: claimed } = await db.from('zoe_search_index_queue')
+      let claimQuery = db.from('zoe_search_index_queue')
         .update({ status: 'processing', attempts: job.attempts + 1, updated_at: new Date().toISOString() })
-        .eq('id', job.id).in('status', ['pending', 'failed']).select('id').maybeSingle();
+        .eq('id', job.id).in('status', ['pending', 'failed']);
+      // Re-check ownership atomically when claiming, not just when selecting.
+      if (!canDrainSharedQueue && user) claimQuery = claimQuery.eq('owner_id', user.id);
+      const { data: claimed } = await claimQuery.select('id').maybeSingle();
       if (!claimed) continue;
 
       try {
