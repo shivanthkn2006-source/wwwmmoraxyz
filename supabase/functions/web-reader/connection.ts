@@ -1,4 +1,5 @@
 /** HTTP/1 reader adapter: only checked literal IPs reach the TCP dialer. */
+import { Buffer } from 'node:buffer';
 export interface ReaderSocket {
   remoteAddr: { hostname: string };
   read(buffer: Uint8Array): Promise<number | null>;
@@ -107,7 +108,7 @@ export function pinnedReaderTransport(network: ReaderNetwork, HTTPParser: Parser
         }
         wireSize += count;
         if (wireSize > MAX_BYTES + 64 * 1024) throw new Error('Reader response too large');
-        const result = parser.execute(buffer.subarray(0, count));
+        const result = parser.execute(Buffer.from(buffer.subarray(0, count)));
         if (result instanceof Error) throw result;
       }
       const bytes = new Uint8Array(size);
