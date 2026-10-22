@@ -15,6 +15,7 @@
  */
 
 import { decodeHordeImage, hordeJson, hordeJobId } from './horde-inline-image.ts';
+import { deepaiImageUrl } from './deepai-image-destination.ts';
 
 export type CascadeProvider = 'pollinations' | 'placeholdr' | 'horde' | 'cloudflare' | 'deepai' | 'pixazo' | 'kaleido' | 'justapi' | 'imagenow';
 export interface CascadeAttempt { provider: CascadeProvider; ok: boolean; ms: number; reason?: string }
@@ -124,10 +125,11 @@ async function runProvider(p: CascadeProvider, o: Required<Pick<CascadeOptions, 
     case 'deepai': {
       const key = Deno.env.get('DEEPAI_API_KEY'); if (!key) return 'not configured';
       const form = new FormData(); form.append('text', o.prompt.slice(0, 1000));
-      const res = await fetch('https://api.deepai.org/api/text2img', { method: 'POST', headers: { 'api-key': key }, body: form }).catch(() => null);
+      const res = await fetch('https://api.deepai.org/api/text2img', { method: 'POST', headers: { 'api-key': key }, body: form, redirect: 'manual' }).catch(() => null);
       if (!res?.ok) { await res?.body?.cancel(); return `http ${res?.status ?? 'error'}`; }
-      const url = (await res.json().catch(() => null) as { output_url?: string } | null)?.output_url;
-      return url ? getImage(url, {}, 1024, o.redirect) : 'no image';
+      const data = await res.json().catch(() => null) as { output_url?: unknown } | null;
+      const url = deepaiImageUrl(data?.output_url);
+      return url ? getImage(url, {}, 1024, 'manual') : 'unsupported image destination';
     }
     case 'pixazo': {
       const key = Deno.env.get('PIXAZO_API_KEY'); if (!key) return 'not configured';

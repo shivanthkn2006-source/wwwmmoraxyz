@@ -1,5 +1,10 @@
 # M'Mora Village roadmap
 
+## Oct 22 approved next backup-provider boundary
+- [ ] Review DeepAI/Pixazo returned-image contracts and remaining API redirects against audits/callers; select one evidenced bounded repair without guessing CDN origins.
+- [ ] Apply the smallest provider-scoped destination/redirect fix; run controlled download/API/fallback tests and regressions without live generation, internal requests or member writes.
+- [ ] Record observed versus unverified evidence and remaining audit blockers; propagate shared-source repair to affected functions without invoking jobs.
+
 ## Oct 22 approved backup-image destination repair
 - [x] Trace Horde/DeepAI/Pixazo outputs and 84 transitive source entrypoints; remove Horde's URL authority via documented inline WebP mode, validate job IDs and refuse Horde API redirects. Provider order/UI/unrelated providers unchanged.
 - [x] 36 new mocked tests, 116 focused regressions; full suite 1,356 passed / zero failed / six skipped; all 84 source importers deployed. No live generation/internal requests/paid jobs or other-member content writes. Evidence report distinguishes source dependency count from active execution and mock verification from live provider proof.
