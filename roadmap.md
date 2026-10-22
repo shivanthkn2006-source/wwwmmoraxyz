@@ -1,9 +1,9 @@
 # M'Mora Village roadmap
 
 ## Oct 22 approved remaining #3 shared queue boundary
-- [ ] Trace shared queue callers and scheduled authorization; reconcile remaining audit groups without claiming full coverage.
-- [ ] Apply smallest permission boundary preserving scheduled indexing and member search/backfill; no UI changes.
-- [ ] Run mocked handler permission tests without paid jobs/member data changes; deploy and separate observed from unverified evidence.
+- [x] Trace foreground search, health recovery, admin batches and cron: live scheduler active every 10 minutes; wrapper not executable by members/anon. Nine of eleven audit groups still need work or closure evidence.
+- [x] Owner-scope member queue selection and atomic claims; retain server-verified admin and existing scheduler shared processing. UI, search and backfill callers unchanged.
+- [x] Ten in-memory handler tests; 23 focused passes; full suite 1,175 passed / 0 failed / 6 skipped. Deployed; authenticated stats 200, invalid-session processed=0. No live queue execution/paid jobs requested. Real non-admin and successful scheduled execution remain unverified; broader #3 is not universally closed.
 
 ## Oct 21 approved priority #4 and audit reconciliation
 - [x] Trace growth-image-validate callers and close private/internal URL fetching using exact caller-origin restriction and rejection of all redirects; UI and unrelated endpoints unchanged.
