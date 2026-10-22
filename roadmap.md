@@ -1,8 +1,9 @@
 # M'Mora Village roadmap
 
 ## Oct 22 approved backup-image destination repair
-- [ ] Trace provider-returned URLs and cascade importers against reports; select one evidenced bounded fix without changing provider order or unrelated UI.
-- [ ] Controlled destination/redirect tests, regressions and importer deployment; report provider compatibility and remaining audit/privacy blockers separately. No internal requests or paid jobs.
+- [x] Trace Horde/DeepAI/Pixazo outputs and 84 transitive source entrypoints; remove Horde's URL authority via documented inline WebP mode, validate job IDs and refuse Horde API redirects. Provider order/UI/unrelated providers unchanged.
+- [x] 36 new mocked tests, 116 focused regressions; full suite 1,356 passed / zero failed / six skipped; all 84 source importers deployed. No live generation/internal requests/paid jobs or other-member content writes. Evidence report distinguishes source dependency count from active execution and mock verification from live provider proof.
+- [ ] Remaining #4 DeepAI/Pixazo URLs and other provider redirects, relay, crawler and non-reader budgets; real Horde inline generation/rendering unverified (job deliberately not run). Six privacy checks await isolated backend/accounts and safe cleanup; #3 and #5–#11 remain open.
 
 ## Oct 22 approved reader connection-level repair
 - [x] Trace second DNS resolution and unchanged source callers; checked literal native TCP + peer check + original-host TLS, established HTTP parser, no fetch fallback.
