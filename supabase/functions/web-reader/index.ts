@@ -1,4 +1,6 @@
 import { fetchReaderDestination, UnsafeReaderDestination } from './destination.ts';
+import { pinnedReaderTransport } from './connection.ts';
+import { HTTPParser } from 'npm:http-parser-js@0.5.10';
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { requireCaller } from '../_shared/caller-guard.ts';
 /**
@@ -94,7 +96,7 @@ Deno.serve(async (req) => {
           throw error; // A timeout/permission/error is not proof of an empty family.
         }
       },
-      fetch,
+      pinnedReaderTransport({ connect: (options) => Deno.connect(options), startTls: (socket, options) => Deno.startTls(socket as Deno.Conn, options) }, HTTPParser),
       { 'User-Agent': UA, Accept: 'text/html,application/xhtml+xml' },
     );
 

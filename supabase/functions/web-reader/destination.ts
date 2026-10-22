@@ -1,4 +1,5 @@
-/** Reader-only preflight. This does NOT pin fetch's second DNS resolution. */
+/** Reader-only policy: selected checked IP is passed to the connection transport. */
+import type { ReaderTransport } from './connection.ts';
 export class UnsafeReaderDestination extends Error {}
 
 export function publicReaderAddress(address: string): boolean {
@@ -56,24 +57,27 @@ export type ReaderResolver = (host: string, type: 'A' | 'AAAA') => Promise<strin
 export async function fetchReaderDestination(
   raw: unknown,
   resolve: ReaderResolver,
-  fetcher: typeof fetch = fetch,
+  transport: ReaderTransport,
   headers: HeadersInit = {},
 ): Promise<{ target: URL; response: Response }> {
   const target = readerTarget(raw);
   const host = target.hostname.replace(/^\[|\]$/g, '').replace(/\.$/, '');
   const signal = AbortSignal.timeout(9000);
+  let addresses = [host];
   if (!host.includes(':') && !/^[\d.]+$/.test(host)) {
     const answers = await Promise.race([
       Promise.all([resolve(host, 'A'), resolve(host, 'AAAA')]),
       new Promise<never>((_, reject) => signal.addEventListener('abort', () => reject(signal.reason), { once: true })),
     ]);
-    const addresses = answers.flat();
+    addresses = answers.flat();
     if (!addresses.length || addresses.some((address) => !publicReaderAddress(address))) {
       throw new UnsafeReaderDestination('Blocked DNS destination');
     }
   }
-  // No redirect authority: never resolve or contact Location, even if public/relative.
-  const response = await fetcher(target.href, { signal, redirect: 'manual', headers });
+  const address = addresses[0];
+  if (!address || !publicReaderAddress(address)) throw new UnsafeReaderDestination('Blocked address');
+  // Transport must connect to this literal, not re-resolve target.hostname.
+  const response = await transport(target, address, { signal, headers });
   if (response.status >= 300 && response.status < 400) await response.body?.cancel();
   return { target, response };
 }
