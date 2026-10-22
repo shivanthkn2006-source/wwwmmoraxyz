@@ -1,5 +1,9 @@
 # M'Mora Village roadmap
 
+## Oct 22 approved web-reader destination checks
+- [ ] Trace caller/auth and earlier URL audit evidence; tighten only reader URL/DNS checks and redirect disposal.
+- [ ] Run mocked destination/redirect and handler checks without internal connections or paid jobs; deploy and separate observed evidence from DNS-to-connection and live-flow limitations.
+
 ## Oct 22 approved remaining #4 URL fetchers
 - [x] Trace DHF storage/cascade, reader/edit-image, relay and crawler; confirmed DHF unchecked redirects, reader/edit-image DNS checks absent, relay DNS-to-fetch gap and admin/cron crawler origin/redirect gap. Live DHF policy is SELECT-only despite table write grants; ordinary-member URL injection is not established.
 - [x] Fix the audit's first DHF storage path: exact generated HTTPS origin/path before both attempts, reject direct redirects without invoking fallback, opt-in cascade image redirect rejection. Other cascade defaults, UI, schedules, prompts and storage ownership unchanged; deployed all three runner importers.
