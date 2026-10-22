@@ -1,5 +1,10 @@
 # M'Mora Village roadmap
 
+## Oct 22 approved remaining #3 shared queue boundary
+- [ ] Trace shared queue callers and scheduled authorization; reconcile remaining audit groups without claiming full coverage.
+- [ ] Apply smallest permission boundary preserving scheduled indexing and member search/backfill; no UI changes.
+- [ ] Run mocked handler permission tests without paid jobs/member data changes; deploy and separate observed from unverified evidence.
+
 ## Oct 21 approved priority #4 and audit reconciliation
 - [x] Trace growth-image-validate callers and close private/internal URL fetching using exact caller-origin restriction and rejection of all redirects; UI and unrelated endpoints unchanged.
 - [x] Safe mocked destination/redirect tests: 30 new tests, 46 focused passes; full suite 1,165 passed / 0 failed / 6 skipped. Three authenticated deployed unsafe requests return 400; no internal services/paid jobs called.
