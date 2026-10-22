@@ -14,6 +14,8 @@
  * Callers persist the returned bytes once; provider URLs are never stored.
  */
 
+import { decodeHordeImage, hordeJson, hordeJobId } from './horde-inline-image.ts';
+
 export type CascadeProvider = 'pollinations' | 'placeholdr' | 'horde' | 'cloudflare' | 'deepai' | 'pixazo' | 'kaleido' | 'justapi' | 'imagenow';
 export interface CascadeAttempt { provider: CascadeProvider; ok: boolean; ms: number; reason?: string }
 export interface CascadeResult {
@@ -92,21 +94,22 @@ async function runProvider(p: CascadeProvider, o: Required<Pick<CascadeOptions, 
     case 'horde': {
       const key = Deno.env.get('AI_HORDE_API_KEY') || '0000000000';
       const hdr = { apikey: key, 'Content-Type': 'application/json', 'Client-Agent': 'mmora:1:admin@mmora.xyz' };
-      const sub = await fetch('https://aihorde.net/api/v2/generate/async', { method: 'POST', headers: hdr, body: JSON.stringify({ prompt: o.prompt.slice(0, 900), params: { width: 512, height: 512, steps: 20 }, nsfw: false, censor_nsfw: true, r2: true }) }).catch(() => null);
-      if (!sub?.ok) { await sub?.body?.cancel(); return `submit http ${sub?.status ?? 'error'}`; }
-      const { id } = await sub.json() as { id?: string };
+      const sub = await hordeJson<{ id?: unknown }>('https://aihorde.net/api/v2/generate/async', { method: 'POST', headers: hdr, body: JSON.stringify({ prompt: o.prompt.slice(0, 900), params: { width: 512, height: 512, steps: 20 }, nsfw: false, censor_nsfw: true, r2: false }) });
+      if (!sub) return 'submit failed';
+      const id = hordeJobId(sub.id);
       if (!id) return 'no job id';
       for (let i = 0; i < 30; i++) {
         await sleep(4000);
-        const st = await fetch(`https://aihorde.net/api/v2/generate/check/${id}`).then((r) => r.json()).catch(() => null) as { done?: boolean; faulted?: boolean; is_possible?: boolean } | null;
+        const st = await hordeJson<{ done?: boolean; faulted?: boolean; is_possible?: boolean }>(`https://aihorde.net/api/v2/generate/check/${id}`);
+        if (!st) return 'check failed';
         if (st?.faulted || st?.is_possible === false) return 'job faulted';
         if (st?.done) {
-          const res = await fetch(`https://aihorde.net/api/v2/generate/status/${id}`).then((r) => r.json()).catch(() => null) as { generations?: { img: string }[] } | null;
+          const res = await hordeJson<{ generations?: { img?: unknown }[] }>(`https://aihorde.net/api/v2/generate/status/${id}`);
           const img = res?.generations?.[0]?.img;
-          return img ? getImage(img, {}, 1024, o.redirect) : 'no image in result';
+          return decodeHordeImage(img);
         }
       }
-      await fetch(`https://aihorde.net/api/v2/generate/status/${id}`, { method: 'DELETE' }).then((r) => r.body?.cancel()).catch(() => {});
+      await fetch(`https://aihorde.net/api/v2/generate/status/${id}`, { method: 'DELETE', redirect: 'manual' }).then((r) => r.body?.cancel()).catch(() => {});
       return 'queue too slow';
     }
     case 'cloudflare': {
