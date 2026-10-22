@@ -163,3 +163,7 @@
 - [x] More lit windows: houses (back + attic), archive, church (outer face, tower), castle (towers, keep, walls)
 - [x] Clock tower + bell tower top lanterns and spire light (preview screenshots)
 - [ ] Signed-in walk of routes, coins/inventory across reloads and sign-outs (blocked: no safe signed-in session)
+
+## Oct 22 #4 continued — edit-image reference download
+- [x] Restricted member-supplied reference URL to own storage + Google avatars; 18 tests; 1,225 pass / 6 skipped; deployed. Live edit not run (paid).
+- [ ] Remaining #4: web-reader DNS boundary, cascade provider-returned URLs, Ironclad relay pinning, crawler origin, size/time caps.
