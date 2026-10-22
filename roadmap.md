@@ -1,9 +1,9 @@
 # M'Mora Village roadmap
 
 ## Oct 22 approved remaining #4 URL fetchers
-- [ ] Trace remaining audited fetchers and their callers; rank request-controlled destinations separately from trusted provider and admin-only paths.
-- [ ] Apply the smallest fix to the highest-priority unsafe fetcher, preserving UI and unrelated behavior.
-- [ ] Run mocked destination/redirect boundaries without internal requests, paid jobs or member writes; report deployed evidence separately from unverified risks and remaining audit groups.
+- [x] Trace DHF storage/cascade, reader/edit-image, relay and crawler; confirmed DHF unchecked redirects, reader/edit-image DNS checks absent, relay DNS-to-fetch gap and admin/cron crawler origin/redirect gap. Live DHF policy is SELECT-only despite table write grants; ordinary-member URL injection is not established.
+- [x] Fix the audit's first DHF storage path: exact generated HTTPS origin/path before both attempts, reject direct redirects without invoking fallback, opt-in cascade image redirect rejection. Other cascade defaults, UI, schedules, prompts and storage ownership unchanged; deployed all three runner importers.
+- [x] 32 new in-memory tests; 76 focused and 1,207 full-suite passes, zero failures, six isolation cases still skipped. No live storage/generation/cron execution, internal services or paid jobs invoked. Report separates deployed source from runtime/provider/DNS and remaining audit evidence; #4 and nine of eleven ranked groups remain incomplete.
 
 ## Oct 22 approved remaining #3 shared queue boundary
 - [x] Trace foreground search, health recovery, admin batches and cron: live scheduler active every 10 minutes; wrapper not executable by members/anon. Nine of eleven audit groups still need work or closure evidence.
