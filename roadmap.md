@@ -1,5 +1,9 @@
 # M'Mora Village roadmap
 
+## Oct 22 approved reader connection-level repair
+- [ ] Trace second DNS resolution and integrations; bind the reader connection to a checked literal with original-host TLS validation, no unsafe fallback.
+- [ ] Controlled transport/redirect/timeout tests and regression suite; report deployed evidence separately from native-runtime/provider and remaining audit limits. No internal requests, paid edits or other-member writes.
+
 ## Oct 22 approved web-reader destination checks
 - [x] Trace caller/auth and earlier URL audit evidence; tighten only reader URL/DNS checks and redirect disposal. UI and shared URL helper unchanged.
 - [x] 73 mocked reader checks and 153 focused regressions pass; full suite 1,298 passed / zero failed / six skipped. Deployed; three unsafe literal requests return 400, public example.com text reads back through signed-in source DOM. No internal requests or paid jobs.
