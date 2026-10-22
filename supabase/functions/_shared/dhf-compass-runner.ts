@@ -22,6 +22,7 @@ import {
   lifePhaseFor, referralCodeFor, referralCta, seedFrom, vaultContent,
 } from './dhf-compass.ts';
 import { cascadeFetch } from './image-cascade.ts';
+import { dhfImageUrl, fetchDhfImage, UnsafeDhfImageUrl } from './dhf-image-fetch.ts';
 
 export const COMPASS_WORKER_VERSION = '2026-09-18.3';
 export const COMPASS_BUCKET = 'dhf-compass';
@@ -110,18 +111,17 @@ export async function countForDate(userId: string, date: string): Promise<number
  * (the caller then keeps the remote URL — the card still renders).
  */
 export async function storeImage(userId: string, date: string, slotTime: string, remoteUrl: string): Promise<string | null> {
+  // Refuse untrusted row URLs before either direct download or provider fallback.
+  try { remoteUrl = dhfImageUrl(remoteUrl); } catch { return null; }
   const path = `${userId}/${date}/${slotTime.replace(/:/g, '-')}.jpg`;
   // Attempt 1: the card's own Pollinations frame. Attempt 2: the shared
   // cascade (Pollinations → placeholdr → AI Horde → …) so one provider outage
   // never leaves a card without a durable stored picture.
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 45_000);
       const img = attempt === 0
-        ? await fetch(remoteUrl, { signal: controller.signal })
-        : await cascadeFetch(remoteUrl);
-      clearTimeout(timer);
+        ? await fetchDhfImage(remoteUrl)
+        : await cascadeFetch(remoteUrl, { redirect: 'error' });
       if (!img.ok) continue;
       const bytes = new Uint8Array(await img.arrayBuffer());
       if (bytes.byteLength < 1024) continue;
@@ -138,7 +138,8 @@ export async function storeImage(userId: string, date: string, slotTime: string,
         body: bytes,
       });
       if (up.ok) return path;
-    } catch {
+    } catch (error) {
+      if (error instanceof UnsafeDhfImageUrl) return null;
       /* fall through to the cascade, then to the remote URL */
     }
   }
