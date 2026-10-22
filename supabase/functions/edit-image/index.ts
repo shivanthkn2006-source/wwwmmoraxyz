@@ -1,4 +1,5 @@
 import { isSafePublicUrl } from '../_shared/safe-url.ts';
+import { editReferenceUrl } from './reference-url.ts';
 import { requireCaller } from '../_shared/caller-guard.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { clientErrorResponse } from '../_shared/client-error.ts';
@@ -92,8 +93,9 @@ serve(async (req) => {
     let mime = 'image/png';
     let b64 = imageBase64 || '';
     if (imageUrl && !imageBase64) {
-      if (!isSafePublicUrl(String(imageUrl))) throw new Error('Image address not allowed');
-      const imageResponse = await fetch(imageUrl, { redirect: 'error' });
+      const referenceUrl = editReferenceUrl(imageUrl, Deno.env.get('SUPABASE_URL'));
+      if (!referenceUrl || !isSafePublicUrl(referenceUrl)) throw new Error('Image address not allowed');
+      const imageResponse = await fetch(referenceUrl, { redirect: 'error' });
       if (!imageResponse.ok) throw new Error('Reference image could not be loaded');
       mime = imageResponse.headers.get('content-type') || 'image/jpeg';
       const bytes = new Uint8Array(await imageResponse.arrayBuffer());
