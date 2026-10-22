@@ -1,8 +1,9 @@
 # M'Mora Village roadmap
 
 ## Oct 22 approved web-reader destination checks
-- [ ] Trace caller/auth and earlier URL audit evidence; tighten only reader URL/DNS checks and redirect disposal.
-- [ ] Run mocked destination/redirect and handler checks without internal connections or paid jobs; deploy and separate observed evidence from DNS-to-connection and live-flow limitations.
+- [x] Trace caller/auth and earlier URL audit evidence; tighten only reader URL/DNS checks and redirect disposal. UI and shared URL helper unchanged.
+- [x] 73 mocked reader checks and 153 focused regressions pass; full suite 1,298 passed / zero failed / six skipped. Deployed; three unsafe literal requests return 400, public example.com text reads back through signed-in source DOM. No internal requests or paid jobs.
+- [ ] Connection-bound reader egress remains open: fetch resolves again after preflight; needs verified pinned transport/proxy. Visual capture remained black despite successful DOM readback; full source-click visual proof unverified. Report records remaining #3/#4 and #5–#11 groups and six privacy-test blockers.
 
 ## Oct 22 approved remaining #4 URL fetchers
 - [x] Trace DHF storage/cascade, reader/edit-image, relay and crawler; confirmed DHF unchecked redirects, reader/edit-image DNS checks absent, relay DNS-to-fetch gap and admin/cron crawler origin/redirect gap. Live DHF policy is SELECT-only despite table write grants; ordinary-member URL injection is not established.
