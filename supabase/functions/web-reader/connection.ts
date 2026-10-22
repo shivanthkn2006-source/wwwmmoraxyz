@@ -10,7 +10,11 @@ export interface ReaderNetwork {
   connect(options: { hostname: string; port: number }): Promise<ReaderSocket>;
   startTls(socket: ReaderSocket, options: { hostname: string; alpnProtocols: string[] }): Promise<ReaderSocket>;
 }
-interface ParserInfo { statusCode: number; headers: string[]; upgrade: boolean }
+interface ParserInfo {
+  statusCode: number; headers: string[]; upgrade: boolean;
+  versionMajor: number; versionMinor: number; method: number; url: string;
+  statusMessage: string; shouldKeepAlive: boolean;
+}
 interface Parser {
   maxHeaderSize: number;
   2: (info: ParserInfo) => number | void;
