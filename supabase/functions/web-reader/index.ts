@@ -1,4 +1,5 @@
-import { isSafePublicUrl } from '../_shared/safe-url.ts';
+import { fetchReaderDestination, UnsafeReaderDestination } from './destination.ts';
+import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { requireCaller } from '../_shared/caller-guard.ts';
 /**
  * WEB READER — server-side reader so every external source Zoe cites opens
@@ -7,12 +8,6 @@ import { requireCaller } from '../_shared/caller-guard.ts';
  * internal `/source` reader renders.
  */
 import { publicGuard } from '../_shared/public-guard.ts';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers':
-    'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
-};
 
 const UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
@@ -90,30 +85,18 @@ Deno.serve(async (req) => {
   if (guard.response) return guard.response;
 
   try {
-    const rawUrl = String((guard.body as Record<string, unknown>)?.url ?? '').trim();
-    let target: URL;
-    try {
-      target = new URL(rawUrl);
-    } catch {
-      return json({ error: 'Invalid url' }, 400);
-    }
-    if (!/^https?:$/.test(target.protocol)) return json({ error: 'Unsupported protocol' }, 400);
-    if (!isSafePublicUrl(target.toString())) {
-      return json({ error: 'Blocked host' }, 400);
-    }
-
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 9000);
-    let res: Response;
-    try {
-      res = await fetch(target.toString(), {
-        signal: controller.signal,
-        redirect: 'manual',
-        headers: { 'User-Agent': UA, Accept: 'text/html,application/xhtml+xml' },
-      });
-    } finally {
-      clearTimeout(timer);
-    }
+    const { target, response: res } = await fetchReaderDestination(
+      guard.body?.url,
+      async (host, type) => {
+        try { return await Deno.resolveDns(host, type); }
+        catch (error) {
+          if (error instanceof Deno.errors.NotFound) return [];
+          throw error; // A timeout/permission/error is not proof of an empty family.
+        }
+      },
+      fetch,
+      { 'User-Agent': UA, Accept: 'text/html,application/xhtml+xml' },
+    );
 
     if (!res.ok) {
       return json({ url: target.toString(), ok: false, status: res.status, paragraphs: [] });
@@ -147,6 +130,7 @@ Deno.serve(async (req) => {
       paragraphs: readable(html),
     });
   } catch (error) {
+    if (error instanceof UnsafeReaderDestination) return json({ error: error.message }, 400);
     console.error('[web-reader] failed:', error);
     return json({ error: 'Reader failed', paragraphs: [] }, 200);
   }
