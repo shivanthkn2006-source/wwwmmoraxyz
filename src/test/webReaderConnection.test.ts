@@ -126,7 +126,7 @@ describe('web-reader literal connection (all sockets are controlled mocks)', () 
   });
   it('closes a pending read when aborted', async () => {
     const f = fixture();
-    f.socket.read = vi.fn(() => new Promise(() => {}));
+    f.socket.read = vi.fn(() => new Promise<number | null>(() => {}));
     const controller = new AbortController();
     const result = f.transport(target, address, { ...init(), signal: controller.signal });
     await vi.waitFor(() => expect(f.socket.read).toHaveBeenCalled());
@@ -137,7 +137,7 @@ describe('web-reader literal connection (all sockets are controlled mocks)', () 
   it('closes a TCP connection that completes after the deadline', async () => {
     const f = fixture();
     let finish: ((socket: ReaderSocket) => void) | undefined;
-    f.network.connect = vi.fn(() => new Promise(resolve => { finish = resolve; }));
+    f.network.connect = vi.fn(() => new Promise<ReaderSocket>(resolve => { finish = resolve; }));
     const controller = new AbortController();
     const result = f.transport(target, address, { ...init(), signal: controller.signal });
     controller.abort(new Error('fixture deadline'));

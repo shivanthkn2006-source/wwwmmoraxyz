@@ -13,16 +13,18 @@ export interface ReaderNetwork {
 interface ParserInfo { statusCode: number; headers: string[]; upgrade: boolean }
 interface Parser {
   maxHeaderSize: number;
-  [key: number]: (...args: any[]) => unknown;
-  execute(buffer: Uint8Array): number | Error;
+  2: (info: ParserInfo) => number | void;
+  3: (buffer: Buffer, offset: number, length: number) => void;
+  4: () => void;
+  execute(buffer: Buffer): number | Error;
   finish(): void | Error;
 }
 export interface ParserConstructor {
-  new(type: string): Parser;
-  RESPONSE: string;
-  kOnHeadersComplete: number;
-  kOnBody: number;
-  kOnMessageComplete: number;
+  new(type: 'RESPONSE'): Parser;
+  RESPONSE: 'RESPONSE';
+  kOnHeadersComplete: 2;
+  kOnBody: 3;
+  kOnMessageComplete: 4;
 }
 export type ReaderTransport = (target: URL, address: string, init: { signal: AbortSignal; headers: HeadersInit }) => Promise<Response>;
 
@@ -83,14 +85,14 @@ export function pinnedReaderTransport(network: ReaderNetwork, HTTPParser: Parser
       const chunks: Uint8Array[] = [];
       parser[HTTPParser.kOnHeadersComplete] = (info: ParserInfo) => {
         if (info.upgrade || info.statusCode === 101) throw new Error('Reader upgrade refused');
-        if (info.statusCode < 200) return true;
+        if (info.statusCode < 200) return 1;
         status = info.statusCode;
         responseHeaders = new Headers();
         for (let i = 0; i < info.headers.length; i += 2) responseHeaders.append(info.headers[i], info.headers[i + 1]);
         skip = status < 200 || status >= 300 || !/text\/html|application\/xhtml|text\/plain/i.test(responseHeaders.get('content-type') ?? '');
         const length = responseHeaders.get('content-length');
         if (!skip && length && Number(length) > MAX_BYTES) throw new Error('Reader body too large');
-        return skip;
+        return skip ? 1 : 0;
       };
       parser[HTTPParser.kOnBody] = (buffer: Uint8Array, offset: number, length: number) => {
         size += length;

@@ -96,7 +96,7 @@ Deno.serve(async (req) => {
           throw error; // A timeout/permission/error is not proof of an empty family.
         }
       },
-      pinnedReaderTransport({ connect: (options) => Deno.connect(options), startTls: (socket, options) => Deno.startTls(socket as Deno.Conn, options) }, HTTPParser),
+      pinnedReaderTransport({ connect: (options) => Deno.connect(options), startTls: (socket, options) => Deno.startTls(socket as Deno.TcpConn, options) }, HTTPParser),
       { 'User-Agent': UA, Accept: 'text/html,application/xhtml+xml' },
     );
 
