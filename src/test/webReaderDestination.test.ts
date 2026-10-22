@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import ts from 'typescript';
 import { fetchReaderDestination, publicReaderAddress, readerTarget, UnsafeReaderDestination } from '../../supabase/functions/web-reader/destination';
+import type { ReaderTransport } from '../../supabase/functions/web-reader/connection';
 
 const article = 'https://news.publisher.com/story?q=hello';
 const publicDns = async (_host: string, type: 'A' | 'AAAA') => type === 'A' ? ['93.184.216.34'] : ['2606:4700:4700::1111'];
@@ -26,7 +27,7 @@ describe('web-reader destination preflight (no real network)', () => {
     'https://news.publisher.com/' + 'a'.repeat(8192),
   ])('rejects %s before DNS and fetch', async (raw) => {
     const dns = vi.fn(publicDns);
-    const fetcher = vi.fn<typeof fetch>();
+    const fetcher = vi.fn<ReaderTransport>();
     await expect(fetchReaderDestination(raw, dns, fetcher)).rejects.toBeInstanceOf(UnsafeReaderDestination);
     expect(dns).not.toHaveBeenCalled();
     expect(fetcher).not.toHaveBeenCalled();
@@ -35,7 +36,7 @@ describe('web-reader destination preflight (no real network)', () => {
   it.each(['127.0.0.1', '10.0.0.1', '169.254.169.254', '100.64.0.1', '172.31.1.1',
     '192.168.1.1', '0.0.0.0', '198.19.0.1', '224.0.0.1', '::1', 'fd00::1',
     'febf::1', '::ffff:a00:1', '2001:db8::1', 'not-an-ip'])('refuses a hostname resolving to %s', async (address) => {
-    const fetcher = vi.fn<typeof fetch>();
+    const fetcher = vi.fn<ReaderTransport>();
     const dns = vi.fn(async (_host: string, type: string) => type === 'A' ? ['93.184.216.34'] : [address]);
     await expect(fetchReaderDestination(article, dns, fetcher)).rejects.toBeInstanceOf(UnsafeReaderDestination);
     expect(fetcher).not.toHaveBeenCalled();
@@ -43,17 +44,17 @@ describe('web-reader destination preflight (no real network)', () => {
   });
 
   it('checks every answer rather than accepting the first public address', async () => {
-    const fetcher = vi.fn<typeof fetch>();
+    const fetcher = vi.fn<ReaderTransport>();
     await expect(fetchReaderDestination(article, async () => ['93.184.216.34', '10.1.1.1'], fetcher)).rejects.toBeInstanceOf(UnsafeReaderDestination);
     expect(fetcher).not.toHaveBeenCalled();
   });
   it('fails closed on empty DNS answers', async () => {
-    const fetcher = vi.fn<typeof fetch>();
+    const fetcher = vi.fn<ReaderTransport>();
     await expect(fetchReaderDestination(article, async () => [], fetcher)).rejects.toBeInstanceOf(UnsafeReaderDestination);
     expect(fetcher).not.toHaveBeenCalled();
   });
   it('does not treat a resolver error as a safe empty address family', async () => {
-    const fetcher = vi.fn<typeof fetch>();
+    const fetcher = vi.fn<ReaderTransport>();
     await expect(fetchReaderDestination(article, async (_host, type) => {
       if (type === 'AAAA') throw new Error('DNS unavailable');
       return ['93.184.216.34'];
@@ -65,23 +66,23 @@ describe('web-reader destination preflight (no real network)', () => {
     for (const location of ['http://169.254.169.254/latest/meta-data/', 'https://other.publisher.com/a', '/next']) {
       const cancel = vi.fn();
       const response = new Response(new ReadableStream({ cancel }), { status, headers: { Location: location } });
-      const fetcher = vi.fn<typeof fetch>().mockResolvedValue(response);
+      const fetcher = vi.fn<ReaderTransport>().mockResolvedValue(response);
       const dns = vi.fn(publicDns);
       const result = await fetchReaderDestination(article, dns, fetcher);
       expect(result.response.status).toBe(status);
       expect(fetcher).toHaveBeenCalledTimes(1);
-      expect(fetcher).toHaveBeenCalledWith(article, expect.objectContaining({ redirect: 'manual' }));
+      expect(fetcher).toHaveBeenCalledWith(new URL(article), '93.184.216.34', expect.objectContaining({ signal: expect.any(AbortSignal) }));
       expect(dns).toHaveBeenCalledTimes(2);
       expect(cancel).toHaveBeenCalledTimes(1);
     }
   });
   it.each([article, 'http://news.publisher.com/story', 'https://93.184.216.34/story', 'https://[2606:4700:4700::1111]/a'])('keeps ordinary HTTP(S) destination %s', async (raw) => {
     const response = new Response('unchanged article bytes', { headers: { 'Content-Type': 'text/plain' } });
-    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(response);
+    const fetcher = vi.fn<ReaderTransport>().mockResolvedValue(response);
     const result = await fetchReaderDestination(raw, publicDns, fetcher, { Accept: 'text/html' });
     expect(result.target.href).toBe(readerTarget(raw).href);
     expect(await result.response.text()).toBe('unchanged article bytes');
-    expect(fetcher).toHaveBeenCalledWith(result.target.href, expect.objectContaining({ redirect: 'manual', headers: { Accept: 'text/html' } }));
+    expect(fetcher).toHaveBeenCalledWith(result.target, expect.any(String), expect.objectContaining({ headers: { Accept: 'text/html' } }));
   });
   it('accepts public IPv4/IPv6, rejects malformed addresses', () => {
     expect(publicReaderAddress('8.8.8.8')).toBe(true);
@@ -94,7 +95,7 @@ describe('web-reader destination preflight (no real network)', () => {
 /** Actual reader handler; auth, guard, DNS and all HTTP responses are fakes. */
 function handlerFixture(options: { signedOut?: boolean; address?: string; redirect?: boolean } = {}) {
   let handler: ((req: Request) => Promise<Response>) | undefined;
-  const fetcher = vi.fn<typeof fetch>().mockImplementation(async () => options.redirect
+  const fetcher = vi.fn<ReaderTransport>().mockImplementation(async () => options.redirect
     ? new Response('redirect', { status: 302, headers: { Location: 'http://127.0.0.1/' } })
     : new Response('<title>Fixture article</title><p>This is a fixture paragraph long enough to be returned by the unchanged reader.</p>', { headers: { 'Content-Type': 'text/html' } }));
   const source = readFileSync('supabase/functions/web-reader/index.ts', 'utf8').replace(/^import\s[\s\S]*?;\s*$/gm, '');
@@ -103,7 +104,7 @@ function handlerFixture(options: { signedOut?: boolean; address?: string; redire
       resolveDns: async (_host: string, type: string) => type === 'A' ? [options.address ?? '93.184.216.34'] : [] },
     requireCaller: async () => options.signedOut ? new Response('{}', { status: 401 }) : { kind: 'member' },
     publicGuard: async (req: Request) => ({ body: await req.json() }),
-    fetchReaderDestination, UnsafeReaderDestination, fetch: fetcher, Response, URL,
+    fetchReaderDestination, UnsafeReaderDestination, pinnedReaderTransport: () => fetcher, HTTPParser: {}, Response, URL,
     corsHeaders: { 'Access-Control-Allow-Origin': '*' }, console: { error: vi.fn() },
   });
   if (!handler) throw new Error('Handler not registered');
