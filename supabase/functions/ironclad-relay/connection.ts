@@ -68,11 +68,13 @@ export function pinnedRelayTransport(network: RelayNetwork, HTTPParser: ParserCo
         }), signal, close);
       }
       const headers = new Headers(requested);
+      // Caller-nominated hop fields must not survive into the new connection.
+      const hopFields = (headers.get('Connection') ?? '').split(',').map(name => name.trim()).filter(Boolean);
+      for (const name of [...hopFields, 'connection', 'keep-alive', 'te', 'transfer-encoding', 'content-length', 'expect', 'upgrade', 'trailer', 'proxy-authorization', 'proxy-authenticate', 'proxy-connection']) headers.delete(name);
       headers.set('Host', target.host);
       headers.set('Connection', 'close');
       headers.set('Accept-Encoding', 'gzip, deflate');
       // Framing and routing headers belong to this adapter, never the caller.
-      for (const name of ['transfer-encoding', 'content-length', 'expect', 'upgrade', 'trailer', 'proxy-authorization', 'proxy-connection']) headers.delete(name);
       const payload = new TextEncoder().encode(body ?? '');
       if (body !== undefined) headers.set('Content-Length', String(payload.length));
       const head = new TextEncoder().encode(`${method} ${target.pathname}${target.search} HTTP/1.1\r\n${Array.from(headers, ([key, value]) => `${key}: ${value}\r\n`).join('')}\r\n`);
