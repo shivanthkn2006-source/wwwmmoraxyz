@@ -1,5 +1,11 @@
 # M'Mora Village roadmap
 
+## Oct 23 remaining stages and current status
+- [x] Review live source/queue ownership, grants and triggers. Add canonical-owner checks before downstream author/parent/media/inference work and owner-filter missing-source index deletion; admin/scheduler behavior unchanged. Deployed indexer; controlled tests only, no live jobs/member writes.
+- [x] Repair six privacy-test fixture safeguards: explicit isolated non-application backend, predetermined-ID-only cleanup, fail on partial configuration/auth/seed/backend errors. Eleven safeguard cases pass; live six remain skipped without isolated accounts/credentials.
+- [x] Deliver MMora_Remaining_Stages_Status_2026-10-23.md; 54 focused and 1,463 full-suite passes, zero failures, six skipped, build OK. Nine of eleven reconciled groups still incomplete; no certification claim.
+- [ ] Live member/scheduler isolation and privacy proof blocked by isolated backend/accounts; source-owner transfer/trigger and missing-source/race closure require further isolated proof. Pixazo contract, physical-device and organisational evidence remain externally blocked.
+
 ## Oct 23 uploaded priority-list continuation
 - [x] Restrict shared DHF backfill to the existing verified administrator decision; members never query or enqueue shared videos, scheduler drains unchanged. Six new controlled cases; 21 focused passes; full suite 1,430 passed / six skipped / zero failures; build OK; indexer deployed.
 - [x] Deliver MMora_Shared_Enqueue_Stage_2026-10-23.md with observed versus unverified evidence and remaining priorities; no live jobs or other-member writes.

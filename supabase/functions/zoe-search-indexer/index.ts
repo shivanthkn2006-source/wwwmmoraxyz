@@ -60,13 +60,19 @@ async function loadAuthor(db: ReturnType<typeof createClient>, userId: string) {
   };
 }
 
-async function loadCanonical(db: ReturnType<typeof createClient>, job: QueueRow): Promise<CanonicalEntity | null> {
+async function loadCanonical(db: ReturnType<typeof createClient>, job: QueueRow, memberOwner?: string): Promise<CanonicalEntity | null> {
+  // Queue ownership is not canonical authority: a source may have changed owner.
+  // Check before author/parent retrieval, media inference or embedding.
+  const assertOwner = (owner: string | null) => {
+    if (memberOwner && owner !== memberOwner) throw new Error('CANONICAL_OWNER_MISMATCH');
+  };
   if (['post', 'loop_video', 'image', 'quote'].includes(job.entity_type)) {
     const { data, error } = await db.from('posts')
       .select('id,user_id,content,media_url,media_preview_url,media_type,visibility,created_at')
       .eq('id', job.entity_id).maybeSingle();
     if (error) throw error;
     if (!data) return null;
+    assertOwner(data.user_id);
     const privacy = data.visibility === 'global' ? 'public' : data.visibility === 'personal' ? 'friends' : 'private';
     const author = await loadAuthor(db, data.user_id);
     const caption = String(data.content || '').trim();
@@ -101,6 +107,7 @@ async function loadCanonical(db: ReturnType<typeof createClient>, job: QueueRow)
       .eq('user_id', job.entity_id).maybeSingle();
     if (error) throw error;
     if (!data) return null;
+    assertOwner(data.user_id);
     return {
       ownerId: data.user_id,
       content: [data.display_name, data.username ? `@${data.username}` : '', data.bio, data.profession, data.field_of_study, data.city]
@@ -116,6 +123,7 @@ async function loadCanonical(db: ReturnType<typeof createClient>, job: QueueRow)
       .eq('id', job.entity_id).maybeSingle();
     if (error) throw error;
     if (!data) return null;
+    assertOwner(data.user_id);
     return {
       ownerId: data.user_id,
       content: String(data.content || '').trim(),
@@ -130,6 +138,7 @@ async function loadCanonical(db: ReturnType<typeof createClient>, job: QueueRow)
       .eq('id', job.entity_id).maybeSingle();
     if (error) throw error;
     if (!data) return null;
+    assertOwner(data.user_id);
     return {
       ownerId: data.user_id,
       content: String(data.content || '').trim(),
@@ -146,6 +155,7 @@ async function loadCanonical(db: ReturnType<typeof createClient>, job: QueueRow)
       .eq('id', job.entity_id).maybeSingle();
     if (error) throw error;
     if (!data) return null;
+    assertOwner(data.user_id);
     const body = [String(data.value || '').trim(), String(data.context || '').trim()]
       .filter(Boolean).join('\n');
     if (!body) return null;
@@ -169,6 +179,7 @@ async function loadCanonical(db: ReturnType<typeof createClient>, job: QueueRow)
       .eq('id', job.entity_id).maybeSingle();
     if (error) throw error;
     if (!data) return null;
+    assertOwner(data.user_id);
     return {
       ownerId: data.user_id,
       content: [data.headline, data.short_summary, String(data.full_story_content || '').slice(0, 8000)]
@@ -182,6 +193,7 @@ async function loadCanonical(db: ReturnType<typeof createClient>, job: QueueRow)
   }
 
   if (job.entity_type === 'dhf_video') {
+    assertOwner(null);
     const { data, error } = await db.from('dhf_videos')
       .select('id,title,description,figure_name,topic,category,youtube_url,thumbnail_url,published_at,active')
       .eq('id', job.entity_id).maybeSingle();
@@ -204,6 +216,7 @@ async function loadCanonical(db: ReturnType<typeof createClient>, job: QueueRow)
       .eq('id', job.entity_id).maybeSingle();
     if (error) throw error;
     if (!data) return null;
+    assertOwner(data.user_id);
     return {
       ownerId: data.user_id,
       content: [data.title, data.content, data.actionable_step].filter(Boolean).join('\n'),
@@ -218,6 +231,7 @@ async function loadCanonical(db: ReturnType<typeof createClient>, job: QueueRow)
       .eq('id', job.entity_id).maybeSingle();
     if (error) throw error;
     if (!data) return null;
+    assertOwner(data.user_id);
     return {
       ownerId: data.user_id,
       content: [data.prediction_headline, data.prediction_body, data.motivational_quote,
@@ -234,6 +248,7 @@ async function loadCanonical(db: ReturnType<typeof createClient>, job: QueueRow)
       .eq('id', job.entity_id).maybeSingle();
     if (error) throw error;
     if (!data) return null;
+    assertOwner(data.user_id);
     return {
       ownerId: data.user_id,
       content: [data.title, data.purpose, data.domain, `Status: ${data.status}`].filter(Boolean).join('\n'),
@@ -249,6 +264,7 @@ async function loadCanonical(db: ReturnType<typeof createClient>, job: QueueRow)
       .eq('id', job.entity_id).maybeSingle();
     if (error) throw error;
     if (!data) return null;
+    assertOwner(data.sender_id);
     const author = await loadAuthor(db, data.sender_id);
     return {
       ownerId: data.sender_id,
@@ -271,6 +287,7 @@ async function loadCanonical(db: ReturnType<typeof createClient>, job: QueueRow)
       .eq('id', job.entity_id).maybeSingle();
     if (error) throw error;
     if (!data) return null;
+    assertOwner(data.user_id);
     const { data: parent } = await db.from('posts')
       .select('id,visibility,content').eq('id', data.post_id).maybeSingle();
     const author = await loadAuthor(db, data.user_id);
@@ -298,6 +315,7 @@ async function loadCanonical(db: ReturnType<typeof createClient>, job: QueueRow)
       .eq('id', job.entity_id).maybeSingle();
     if (error) throw error;
     if (!data) return null;
+    assertOwner(data.user_id);
     const about = data.friend_user_id ? await loadAuthor(db, data.friend_user_id) : null;
     return {
       ownerId: data.user_id,
@@ -327,6 +345,7 @@ async function loadCanonical(db: ReturnType<typeof createClient>, job: QueueRow)
       .eq('id', job.entity_id).maybeSingle();
     if (error) throw error;
     if (!data) return null;
+    assertOwner(data.user_id);
     const { data: parent } = await db.from('posts')
       .select('id,visibility,content,created_at').eq('id', data.post_id).maybeSingle();
     // Describe the picture so "the photo of the beach" resolves to a real row.
@@ -360,6 +379,7 @@ async function loadCanonical(db: ReturnType<typeof createClient>, job: QueueRow)
       .eq('id', job.entity_id).maybeSingle();
     if (error) throw error;
     if (!data) return null;
+    assertOwner(data.user_id);
     const body = String(data.fact_value || '').trim();
     if (!body) return null;
     return {
@@ -611,9 +631,11 @@ Deno.serve(async (req) => {
       if (!claimed) continue;
 
       try {
-        const entity = await loadCanonical(db, job);
+        const entity = await loadCanonical(db, job, canDrainSharedQueue ? undefined : user?.id);
         if (!entity || !entity.content) {
-          await db.from('zoe_universal_index').delete().eq('entity_type', job.entity_type).eq('entity_id', job.entity_id);
+          let removal = db.from('zoe_universal_index').delete().eq('entity_type', job.entity_type).eq('entity_id', job.entity_id);
+          if (!canDrainSharedQueue && user) removal = removal.eq('owner_id', user.id);
+          await removal;
         } else {
           const embedding = await embedText(entity.content);
           if (!embedding) throw new Error('EMBEDDING_UNAVAILABLE');

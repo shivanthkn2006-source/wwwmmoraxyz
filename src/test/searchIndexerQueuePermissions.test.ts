@@ -7,7 +7,7 @@ type Job = { id: string; entity_type: string; entity_id: string; owner_id: strin
 const job = (id: string, owner_id: string | null): Job => ({ id, owner_id, entity_id: id, entity_type: 'profile', attempts: 0, status: 'pending' });
 
 /** Runs the actual handler; every database/provider operation is in-memory. */
-function fixture(options: { system?: 'service' | 'secret'; admin?: boolean; roleError?: boolean; signedOut?: boolean; race?: boolean; backfill?: boolean; rows?: Job[] } = {}) {
+function fixture(options: { system?: 'service' | 'secret'; admin?: boolean; roleError?: boolean; signedOut?: boolean; race?: boolean; backfill?: boolean; canonicalOwner?: string; rows?: Job[] } = {}) {
   const rows = options.rows ?? [job('foreign', 'member-b'), job('shared', null), job('own', 'member-a')];
   const claims: string[] = [];
   const canonical: string[] = [];
@@ -63,7 +63,7 @@ function fixture(options: { system?: 'service' | 'secret'; admin?: boolean; role
             if (options.backfill && !single) return resolve({ data: [{ user_id: 'member-a' }], error: null });
             const id = String(filters.find(([key]) => key === 'user_id')?.[1]);
             canonical.push(id);
-            return resolve({ data: { user_id: id === 'own' ? 'member-a' : 'member-b', display_name: 'Fixture', profile_visibility: 'private' }, error: null });
+            return resolve({ data: { user_id: options.canonicalOwner ?? (id === 'own' ? 'member-a' : 'member-b'), display_name: 'Fixture', profile_visibility: 'private' }, error: null });
           }
           return resolve({ data: [], error: null });
         },
@@ -92,6 +92,19 @@ function fixture(options: { system?: 'service' | 'secret'; admin?: boolean; role
 }
 
 describe('search indexer shared queue permissions', () => {
+  it('stale member-owned queue cannot authorize a foreign canonical owner', async () => {
+    const f = fixture({ rows: [job('own', 'member-a')], canonicalOwner: 'member-b' });
+    const result = await f.invoke();
+    expect(result.body.failed).toBe(1);
+    expect(result.body.completed).toBe(0);
+    expect(f.embed).not.toHaveBeenCalled();
+    expect(f.media).not.toHaveBeenCalled();
+  });
+  it('verified administrator retains canonical-owner reconciliation', async () => {
+    const f = fixture({ admin: true, rows: [job('own', 'member-a')], canonicalOwner: 'member-b' });
+    expect((await f.invoke()).body.completed).toBe(1);
+    expect(f.embed).toHaveBeenCalledTimes(1);
+  });
   it('member backfill queues owned rows without querying or requeueing shared DHF videos', async () => {
     const f = fixture({ backfill: true, rows: [] });
     const result = await f.invoke({ backfill: true });
