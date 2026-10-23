@@ -1,9 +1,10 @@
 # M'Mora Village roadmap
 
 ## Oct 23 remaining stages and current status
-- [ ] Review live search source/queue ownership, grants and triggers; apply only an evidenced minimal repair and run controlled boundary tests without indexing jobs or member data writes.
-- [ ] Make the six privacy-test fixture checks safe: isolated-backend guard, created-ID-only cleanup and explicit configured-backend failures. Live isolation proof remains blocked without isolated accounts/credentials.
-- [ ] Deliver current observed/unverified status and next stages; preserve UI and unrelated behavior. Provider contracts, real-device checks and legal/certification evidence cannot be forced closed.
+- [x] Review live source/queue ownership, grants and triggers. Add canonical-owner checks before downstream author/parent/media/inference work and owner-filter missing-source index deletion; admin/scheduler behavior unchanged. Deployed indexer; controlled tests only, no live jobs/member writes.
+- [x] Repair six privacy-test fixture safeguards: explicit isolated non-application backend, predetermined-ID-only cleanup, fail on partial configuration/auth/seed/backend errors. Eleven safeguard cases pass; live six remain skipped without isolated accounts/credentials.
+- [x] Deliver MMora_Remaining_Stages_Status_2026-10-23.md; 54 focused and 1,463 full-suite passes, zero failures, six skipped, build OK. Nine of eleven reconciled groups still incomplete; no certification claim.
+- [ ] Live member/scheduler isolation and privacy proof blocked by isolated backend/accounts; source-owner transfer/trigger and missing-source/race closure require further isolated proof. Pixazo contract, physical-device and organisational evidence remain externally blocked.
 
 ## Oct 23 uploaded priority-list continuation
 - [x] Restrict shared DHF backfill to the existing verified administrator decision; members never query or enqueue shared videos, scheduler drains unchanged. Six new controlled cases; 21 focused passes; full suite 1,430 passed / six skipped / zero failures; build OK; indexer deployed.
