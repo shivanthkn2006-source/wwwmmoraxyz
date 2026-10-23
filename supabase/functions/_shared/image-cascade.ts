@@ -133,7 +133,7 @@ async function runProvider(p: CascadeProvider, o: Required<Pick<CascadeOptions, 
     }
     case 'pixazo': {
       const key = Deno.env.get('PIXAZO_API_KEY'); if (!key) return 'not configured';
-      const res = await fetch('https://gateway.pixazo.ai/flux-1-schnell/v1/getData', { method: 'POST', headers: { 'Ocp-Apim-Subscription-Key': key, 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' }, body: JSON.stringify({ prompt: o.prompt.slice(0, 1000), num_steps: 4, seed: n % 100000, height: 1024, width: 1024 }) }).catch(() => null);
+      const res = await fetch('https://gateway.pixazo.ai/flux-1-schnell/v1/getData', { method: 'POST', headers: { 'Ocp-Apim-Subscription-Key': key, 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' }, body: JSON.stringify({ prompt: o.prompt.slice(0, 1000), num_steps: 4, seed: n % 100000, height: 1024, width: 1024 }), redirect: 'manual' }).catch(() => null);
       if (!res?.ok) { await res?.body?.cancel(); return `http ${res?.status ?? 'error'}`; }
       const d = await res.json().catch(() => null) as { output?: string; imageUrl?: string; url?: string } | null;
       const url = d?.output || d?.imageUrl || d?.url;
