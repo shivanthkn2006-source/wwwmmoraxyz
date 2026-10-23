@@ -7,11 +7,13 @@ type Job = { id: string; entity_type: string; entity_id: string; owner_id: strin
 const job = (id: string, owner_id: string | null): Job => ({ id, owner_id, entity_id: id, entity_type: 'profile', attempts: 0, status: 'pending' });
 
 /** Runs the actual handler; every database/provider operation is in-memory. */
-function fixture(options: { system?: 'service' | 'secret'; admin?: boolean; roleError?: boolean; signedOut?: boolean; race?: boolean; rows?: Job[] } = {}) {
+function fixture(options: { system?: 'service' | 'secret'; admin?: boolean; roleError?: boolean; signedOut?: boolean; race?: boolean; backfill?: boolean; rows?: Job[] } = {}) {
   const rows = options.rows ?? [job('foreign', 'member-b'), job('shared', null), job('own', 'member-a')];
   const claims: string[] = [];
   const canonical: string[] = [];
   const writes: string[] = [];
+  const sharedReads: string[] = [];
+  const enqueues: Array<{ entity_type: string; entity_id: string; owner_id: string | null }> = [];
   const embed = vi.fn(async () => [0.1]);
   const media = vi.fn(async () => null);
   const rpc = vi.fn(async () => ({ data: options.admin === true, error: options.roleError ? { message: 'offline' } : null }));
@@ -30,14 +32,18 @@ function fixture(options: { system?: 'service' | 'secret'; admin?: boolean; role
       const query = {
         select() { return query; },
         eq(key: string, value: unknown) { filters.push([key, value]); return query; },
-        in() { return query; }, lte() { return query; }, order() { return query; },
+        in() { return query; }, lte() { return query; }, order() { return query; }, like() { return query; },
         limit(n: number) { cap = n; return query; },
         maybeSingle() { single = true; return query; },
         update(value: Record<string, unknown>) { operation = 'update'; patch = value; return query; },
-        upsert() { operation = 'upsert'; return query; },
+        upsert(value: typeof enqueues) { operation = 'upsert'; if (table === 'zoe_search_index_queue') enqueues.push(...value); return query; },
         insert() { operation = 'insert'; return query; },
         delete() { operation = 'delete'; return query; },
         then(resolve: (value: unknown) => unknown) {
+          if (table === 'dhf_videos') {
+            sharedReads.push(table);
+            return resolve({ data: [{ id: 'shared-video' }], error: null });
+          }
           if (table === 'zoe_search_index_queue') {
             if (operation === 'update' && patch.status === 'processing' && options.race) {
               const own = rows.find(row => row.id === 'own');
@@ -54,6 +60,7 @@ function fixture(options: { system?: 'service' | 'secret'; admin?: boolean; role
             return resolve({ data: single ? (matches[0] ?? null) : matches, error: null });
           }
           if (table === 'profiles') {
+            if (options.backfill && !single) return resolve({ data: [{ user_id: 'member-a' }], error: null });
             const id = String(filters.find(([key]) => key === 'user_id')?.[1]);
             canonical.push(id);
             return resolve({ data: { user_id: id === 'own' ? 'member-a' : 'member-b', display_name: 'Fixture', profile_visibility: 'private' }, error: null });
@@ -74,7 +81,7 @@ function fixture(options: { system?: 'service' | 'secret'; admin?: boolean; role
   if (!handler) throw new Error('Handler not registered');
   const run = handler;
   return {
-    claims, canonical, writes, embed, media, rpc, auth,
+    claims, canonical, writes, embed, media, rpc, auth, sharedReads, enqueues,
     async invoke(body: Record<string, unknown> = {}) {
       const headers: Record<string, string> = { authorization: options.system === 'service' ? 'Bearer fixture-service' : 'Bearer fixture-member' };
       if (options.system === 'secret') headers['x-index-drain-secret'] = 'fixture-secret';
@@ -85,6 +92,39 @@ function fixture(options: { system?: 'service' | 'secret'; admin?: boolean; role
 }
 
 describe('search indexer shared queue permissions', () => {
+  it('member backfill queues owned rows without querying or requeueing shared DHF videos', async () => {
+    const f = fixture({ backfill: true, rows: [] });
+    const result = await f.invoke({ backfill: true });
+    expect(result.body.enqueued).toBe(1);
+    expect(f.enqueues).toEqual([expect.objectContaining({ entity_type: 'profile', entity_id: 'member-a', owner_id: 'member-a' })]);
+    expect(f.sharedReads).toEqual([]);
+    expect(f.embed).not.toHaveBeenCalled();
+  });
+  it('body-supplied privileges cannot authorize shared backfill', async () => {
+    const f = fixture({ backfill: true, rows: [] });
+    await f.invoke({ backfill: true, canEnqueueShared: true, isAdmin: true, owner_id: null, userId: 'member-b' });
+    expect(f.enqueues.map(row => row.owner_id)).toEqual(['member-a']);
+    expect(f.sharedReads).toEqual([]);
+  });
+  it('admin role lookup failure refuses shared backfill', async () => {
+    const f = fixture({ backfill: true, admin: true, roleError: true, rows: [] });
+    await f.invoke({ backfill: true });
+    expect(f.enqueues.map(row => row.entity_type)).toEqual(['profile']);
+    expect(f.sharedReads).toEqual([]);
+  });
+  it('verified administrator backfill retains ownerless public DHF videos', async () => {
+    const f = fixture({ backfill: true, admin: true, rows: [] });
+    expect((await f.invoke({ backfill: true })).body.enqueued).toBe(2);
+    expect(f.sharedReads).toEqual(['dhf_videos']);
+    expect(f.enqueues).toContainEqual(expect.objectContaining({ entity_type: 'dhf_video', entity_id: 'shared-video', owner_id: null }));
+    expect(f.embed).not.toHaveBeenCalled();
+  });
+  it.each(['service', 'secret'] as const)('scheduler %s retains draining without initiating member historical backfill', async system => {
+    const f = fixture({ system, backfill: true, rows: [] });
+    expect((await f.invoke({ backfill: true })).body.enqueued).toBe(0);
+    expect(f.enqueues).toEqual([]);
+    expect(f.auth).not.toHaveBeenCalled();
+  });
   it('members process only their own job, not foreign or ownerless jobs', async () => {
     const f = fixture();
     const result = await f.invoke();

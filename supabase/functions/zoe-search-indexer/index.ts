@@ -383,14 +383,15 @@ async function loadCanonical(db: ReturnType<typeof createClient>, job: QueueRow)
 
 
 
-async function enqueueBackfill(db: ReturnType<typeof createClient>, userId: string) {
+async function enqueueBackfill(db: ReturnType<typeof createClient>, userId: string, canEnqueueShared: boolean) {
   const [profiles, posts, chats, memories, dhfPosts, dhfVideos, growthCards, predictions, goals, dms, comments, visuals, dates, attachments, lifeFacts] = await Promise.all([
     db.from('profiles').select('user_id').eq('user_id', userId),
     db.from('posts').select('id,user_id,media_type,content').eq('user_id', userId),
     db.from('zoe_infinity_messages').select('id,user_id').eq('user_id', userId),
     db.from('mmora_memories').select('id,user_id').eq('user_id', userId),
     db.from('dhf_daily_posts').select('id,user_id').eq('user_id', userId),
-    db.from('dhf_videos').select('id').eq('active', true),
+    // Shared assets have no member owner; only verified privileged callers may requeue them.
+    canEnqueueShared ? db.from('dhf_videos').select('id').eq('active', true) : Promise.resolve({ data: [], error: null }),
     db.from('growth_feed_items').select('id,user_id').eq('user_id', userId),
     db.from('astro_predictions').select('id,user_id').eq('user_id', userId),
     db.from('wisdom_macro_goals').select('id,user_id').eq('user_id', userId),
@@ -576,7 +577,7 @@ Deno.serve(async (req) => {
 
     // Keep each invocation inside the edge runtime budget; callers repeatedly
     const enqueued = body?.backfill === true && user
-      ? await enqueueBackfill(db, user.id)
+      ? await enqueueBackfill(db, user.id, canDrainSharedQueue)
       : body?.visionBackfill === true && isSystemDrain
         ? await enqueueVisionBackfill(db, body?.force === true)
         : 0;
