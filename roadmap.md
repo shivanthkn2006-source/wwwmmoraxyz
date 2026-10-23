@@ -1,5 +1,10 @@
 # M'Mora Village roadmap
 
+## Oct 23 approved Pixazo review and original-audit reconciliation
+- [ ] Verify Pixazo endpoint-specific output/destination/redirect contract and existing callers; if unavailable, report the blocker without inventing a download allowlist.
+- [ ] Apply only a contract-supported smallest repair, or retain production behavior and record the blocked repair; use controlled mocks and existing regressions without internal requests or paid jobs.
+- [ ] Reconcile original report groups, implemented repair stages, open/partial items and six skipped privacy checks; identify the original three documents only from evidence and deliver updated closure ledger.
+
 ## Oct 22 approved next backup-provider boundary
 - [x] Review DeepAI/Pixazo contracts and remaining API redirects against audits/callers; select DeepAI's documented output example as a bounded supported policy, not a guaranteed exclusive provider contract. Pixazo contract still unestablished.
 - [x] DeepAI exact HTTPS origin + nonempty /job-view-file/ path and manual API/download redirects; 44 new tests, 156 focused passes, full suite 1,400 passed / zero failed / six skipped. Runtime compatibility check and preview build OK. No live generation/internal requests/member writes.
