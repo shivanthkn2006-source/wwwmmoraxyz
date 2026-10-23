@@ -1,9 +1,10 @@
 # M'Mora Village roadmap
 
 ## Oct 22 approved next backup-provider boundary
-- [ ] Review DeepAI/Pixazo returned-image contracts and remaining API redirects against audits/callers; select one evidenced bounded repair without guessing CDN origins.
-- [ ] Apply the smallest provider-scoped destination/redirect fix; run controlled download/API/fallback tests and regressions without live generation, internal requests or member writes.
-- [ ] Record observed versus unverified evidence and remaining audit blockers; propagate shared-source repair to affected functions without invoking jobs.
+- [x] Review DeepAI/Pixazo contracts and remaining API redirects against audits/callers; select DeepAI's documented output example as a bounded supported policy, not a guaranteed exclusive provider contract. Pixazo contract still unestablished.
+- [x] DeepAI exact HTTPS origin + nonempty /job-view-file/ path and manual API/download redirects; 44 new tests, 156 focused passes, full suite 1,400 passed / zero failed / six skipped. Runtime compatibility check and preview build OK. No live generation/internal requests/member writes.
+- [x] All 84 transitive source entrypoints deployed without invoking handlers. Files report MMora_Backup_Image_DeepAI_Audit_2026-10-22.md separates controlled proof from unverified live compatibility and remaining groups.
+- [ ] Broader audit closure waits on separately reviewed Pixazo/provider/relay/crawler/budget repairs, authorized live provider tests, isolated privacy backend/accounts, ordinary-member/device checks and organisational/legal evidence; nine of eleven report groups remain incomplete.
 
 ## Oct 22 approved backup-image destination repair
 - [x] Trace Horde/DeepAI/Pixazo outputs and 84 transitive source entrypoints; remove Horde's URL authority via documented inline WebP mode, validate job IDs and refuse Horde API redirects. Provider order/UI/unrelated providers unchanged.
