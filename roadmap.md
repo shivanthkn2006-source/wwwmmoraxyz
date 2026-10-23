@@ -1,5 +1,10 @@
 # M'Mora Village roadmap
 
+## Oct 23 Ironclad recheck and country-wise launch request
+- [x] Re-run relay and reader controlled regressions: 161 cases pass; current relay uses checked-literal TCP and original-host TLS, not a second hostname fetch. No internal requests or paid jobs.
+- [ ] Reconcile remaining Ironclad evidence and section-wise technical release gates; deliver a versioned country/region launch checklist with official references, without claiming universal legal coverage.
+- [ ] External closure evidence remains required: isolated member/privacy accounts, physical devices, authoritative Pixazo contract and organisational/vendor/legal/assurance records. No fresh whole-platform inventory claimed.
+
 ## Oct 23 Ironclad connection and global-launch priorities
 - [x] Trace relay callers/claims against audits; replace relay-only DNS-to-fetch handoff with checked-literal TCP, peer verification and original-host TLS; preserve member gate, request/response envelope and unrelated UI/reader/provider behavior. Exported direct wrapper now truthfully reports no relay hop; no active in-repository relay caller found.
 - [x] 66 new controlled destination/redirect/method/body/header/socket/truthfulness cases; final suite 1,529 passed, zero failed, six skipped; deno check and latest build OK. Relay deployed; no live internal requests or paid jobs.
