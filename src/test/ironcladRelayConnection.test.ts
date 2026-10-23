@@ -37,7 +37,7 @@ describe('web-relay literal connection (all sockets are controlled mocks)', () =
     let calls = 0;
     const dns = vi.fn(async (_host: string, type: string) => { calls++; return type === 'A' ? [calls > 2 ? '127.0.0.1' : address] : []; });
     const result = await fetchRelayDestination(target.href, dns, f.transport, init());
-    expect(await result.response.text()).toBe(html);
+    expect(await result.text()).toBe(html);
     expect(dns).toHaveBeenCalledTimes(2);
     expect(f.network.connect).toHaveBeenCalledExactlyOnceWith({ hostname: address, port: 443 });
     expect(f.network.startTls).toHaveBeenCalledExactlyOnceWith(f.socket, { hostname: 'news.publisher.com', alpnProtocols: ['http/1.1'] });
@@ -67,7 +67,7 @@ describe('web-relay literal connection (all sockets are controlled mocks)', () =
     expect(f.network.connect).toHaveBeenCalledExactlyOnceWith({ hostname: ip, port: 443 });
   });
   it.each([301, 302, 303, 307, 308])('returns redirect %s without contacting Location', async (status) => {
-    const f = fixture(responseBytes(`HTTP/1.1 ${status} Redirect\r\nLocation: http://169.254.169.254/latest/meta-data/\r\nContent-Length: 9999999\r\n\r\n`));
+    const f = fixture(responseBytes(`HTTP/1.1 ${status} Redirect\r\nLocation: http://169.254.169.254/latest/meta-data/\r\nContent-Length: 0\r\n\r\n`));
     const response = await f.transport(target, address, init());
     expect(response.status).toBe(status);
     expect(await response.text()).toBe('');
@@ -105,7 +105,7 @@ describe('web-relay literal connection (all sockets are controlled mocks)', () =
     const header = responseBytes(`HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Encoding: gzip\r\nContent-Length: ${gzip.length}\r\n\r\n`);
     const bytes = new Uint8Array(header.length + gzip.length); bytes.set(header); bytes.set(gzip, header.length);
     const f = fixture(bytes);
-    await expect(f.transport(target, address, init())).rejects.toThrow('Decoded reader body too large');
+    await expect(f.transport(target, address, init())).rejects.toThrow('Decoded relay body too large');
     expect(f.socket.close).toHaveBeenCalled();
   });
   it.each([

@@ -126,11 +126,11 @@ export function pinnedRelayTransport(network: RelayNetwork, HTTPParser: ParserCo
       const bytes = new Uint8Array(size);
       let offset = 0;
       for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length; }
-      let body = bytes;
+      let responseBody = bytes;
       const encoding = responseHeaders.get('content-encoding');
       if (!skip && encoding && encoding !== 'identity') {
         if (encoding !== 'gzip' && encoding !== 'deflate') throw new Error('Unsupported relay encoding');
-        const relay = new Response(bytes).body?.pipeThrough(new DecompressionStream(encoding)).getReader();
+        const reader = new Response(bytes).body?.pipeThrough(new DecompressionStream(encoding)).getReader();
         if (!reader) throw new Error('Missing relay body');
         const decoded: Uint8Array[] = [];
         let total = 0;
@@ -143,14 +143,14 @@ export function pinnedRelayTransport(network: RelayNetwork, HTTPParser: ParserCo
             decoded.push(value);
           }
         } finally { void reader.cancel().catch(() => {}); }
-        body = new Uint8Array(total);
+        responseBody = new Uint8Array(total);
         let at = 0;
-        for (const chunk of decoded) { body.set(chunk, at); at += chunk.length; }
+        for (const chunk of decoded) { responseBody.set(chunk, at); at += chunk.length; }
       }
       responseHeaders.delete('content-encoding');
       responseHeaders.delete('content-length');
       responseHeaders.delete('transfer-encoding');
-      return new Response(skip || [204, 205, 304].includes(status) ? null : body, { status, headers: responseHeaders });
+      return new Response(skip || [204, 205, 304].includes(status) ? null : responseBody, { status, headers: responseHeaders });
     } finally {
       signal.removeEventListener('abort', stop);
       stop();
