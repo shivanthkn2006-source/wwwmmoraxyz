@@ -146,7 +146,8 @@ describe('relay request compatibility and framing', () => {
     const f = fixture(responseBytes('HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 11\r\n\r\n{"ok":true}'));
     const body = JSON.stringify({ message: 'hello ☀' });
     const res = await f.transport(target, address, { ...init(), method, body, headers: {
-      Host: '169.254.169.254', 'Content-Length': '1', 'Transfer-Encoding': 'chunked', Connection: 'upgrade',
+      Host: '169.254.169.254', 'Content-Length': '1', 'Transfer-Encoding': 'chunked', Connection: 'upgrade, X-Hop-Fixture',
+      'X-Hop-Fixture': 'must-not-forward', 'Keep-Alive': 'timeout=5', TE: 'trailers',
       Upgrade: 'websocket', Expect: '100-continue', 'Proxy-Authorization': 'secret-fixture',
       Authorization: 'Bearer fixture-only', 'Content-Type': 'application/json',
     } });
@@ -155,7 +156,7 @@ describe('relay request compatibility and framing', () => {
     expect(f.request()).toContain(`content-length: ${encoder.encode(body).length}\r\n`);
     expect(f.request()).toContain('host: news.publisher.com\r\n');
     expect(f.request()).toContain('authorization: Bearer fixture-only\r\n');
-    expect(f.request()).not.toMatch(/transfer-encoding:|upgrade:|expect:|proxy-authorization:/i);
+    expect(f.request()).not.toMatch(/transfer-encoding:|upgrade:|expect:|proxy-authorization:|x-hop-fixture:|keep-alive:|te:/i);
     expect(f.request().endsWith(body)).toBe(true);
   });
   it('returns error body and status unchanged', async () => {

@@ -1,9 +1,10 @@
 # M'Mora Village roadmap
 
 ## Oct 23 Ironclad connection and global-launch priorities
-- [ ] Trace relay callers/claims against audits; replace relay-only DNS-to-fetch handoff with checked-literal TCP, peer verification and original-host TLS; preserve member gate, request/response envelope and unrelated UI/reader/provider behavior.
-- [ ] Controlled destination, redirect, method/body/header and socket tests; run regressions and report observed versus unverified evidence without live internal requests or paid jobs.
-- [ ] Deliver section-wise pre-launch priorities and Singapore/US/certification evidence requirements; keep isolated-account, provider-contract, device and organisational blockers explicit.
+- [x] Trace relay callers/claims against audits; replace relay-only DNS-to-fetch handoff with checked-literal TCP, peer verification and original-host TLS; preserve member gate, request/response envelope and unrelated UI/reader/provider behavior. Exported direct wrapper now truthfully reports no relay hop; no active in-repository relay caller found.
+- [x] 66 new controlled destination/redirect/method/body/header/socket/truthfulness cases; final suite 1,529 passed, zero failed, six skipped; deno check and latest build OK. Relay deployed; no live internal requests or paid jobs.
+- [x] Deliver MMora_Ironclad_and_Global_Launch_Status_2026-10-23.md with section-wise pre-launch and Singapore/US/certification priorities; nine groups still incomplete.
+- [ ] Hosted relay/member/device proof requires isolated accounts or physical devices; Pixazo contract and organisational records remain external blockers. DNS underlying cancellation, complete address-registry review, pre-existing falsy-payload semantics and broader privacy claims remain explicit follow-up limitations. Next buildable stage: crawler origin/caller review, then provider/download budgets and #5–#11.
 
 ## Oct 23 remaining stages and current status
 - [x] Review live source/queue ownership, grants and triggers. Add canonical-owner checks before downstream author/parent/media/inference work and owner-filter missing-source index deletion; admin/scheduler behavior unchanged. Deployed indexer; controlled tests only, no live jobs/member writes.
