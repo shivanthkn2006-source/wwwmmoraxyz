@@ -1,5 +1,9 @@
 # M'Mora Village roadmap
 
+## Oct 23 uploaded priority-list continuation
+- [ ] Close the remaining #3 member-triggered shared DHF enqueue path with the smallest permission change; preserve administrator backfill and scheduled drains, test only in-memory operations.
+- [ ] Deliver observed versus unverified evidence; ordinary-member live proof and isolated privacy checks remain blocked on suitable test accounts/backend. Continue broader priority work in subsequent stages, without claiming all eleven groups closed.
+
 ## Oct 23 approved Pixazo review and original-audit reconciliation
 - [x] Trace Pixazo outputs/callers/audits; official endpoint-specific image contract unverified. No guessed allowlist or reader-transport reuse; output destination repair explicitly blocked.
 - [x] Independent one-line Pixazo API redirect refusal; existing output parsing/downloads/UI unchanged. 24 new controlled cases, 180 focused passes; full suite 1,424 passed / zero failed / six skipped; runtime check/build OK; 84 affected functions deployed without jobs.
