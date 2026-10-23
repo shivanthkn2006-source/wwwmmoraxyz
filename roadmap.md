@@ -1,5 +1,10 @@
 # M'Mora Village roadmap
 
+## Oct 23 Ironclad connection and global-launch priorities
+- [ ] Trace relay callers/claims against audits; replace relay-only DNS-to-fetch handoff with checked-literal TCP, peer verification and original-host TLS; preserve member gate, request/response envelope and unrelated UI/reader/provider behavior.
+- [ ] Controlled destination, redirect, method/body/header and socket tests; run regressions and report observed versus unverified evidence without live internal requests or paid jobs.
+- [ ] Deliver section-wise pre-launch priorities and Singapore/US/certification evidence requirements; keep isolated-account, provider-contract, device and organisational blockers explicit.
+
 ## Oct 23 remaining stages and current status
 - [x] Review live source/queue ownership, grants and triggers. Add canonical-owner checks before downstream author/parent/media/inference work and owner-filter missing-source index deletion; admin/scheduler behavior unchanged. Deployed indexer; controlled tests only, no live jobs/member writes.
 - [x] Repair six privacy-test fixture safeguards: explicit isolated non-application backend, predetermined-ID-only cleanup, fail on partial configuration/auth/seed/backend errors. Eleven safeguard cases pass; live six remain skipped without isolated accounts/credentials.
