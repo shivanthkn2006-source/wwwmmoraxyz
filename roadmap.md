@@ -1,8 +1,9 @@
 # M'Mora Village roadmap
 
 ## Oct 23 uploaded priority-list continuation
-- [ ] Close the remaining #3 member-triggered shared DHF enqueue path with the smallest permission change; preserve administrator backfill and scheduled drains, test only in-memory operations.
-- [ ] Deliver observed versus unverified evidence; ordinary-member live proof and isolated privacy checks remain blocked on suitable test accounts/backend. Continue broader priority work in subsequent stages, without claiming all eleven groups closed.
+- [x] Restrict shared DHF backfill to the existing verified administrator decision; members never query or enqueue shared videos, scheduler drains unchanged. Six new controlled cases; 21 focused passes; full suite 1,430 passed / six skipped / zero failures; build OK; indexer deployed.
+- [x] Deliver MMora_Shared_Enqueue_Stage_2026-10-23.md with observed versus unverified evidence and remaining priorities; no live jobs or other-member writes.
+- [ ] Ordinary-member live proof and six privacy checks await suitable isolated backend/accounts; device and organisational evidence require external inputs. Wider trigger/owner review and #4–#11 remain subsequent separately scoped stages, not universally closed.
 
 ## Oct 23 approved Pixazo review and original-audit reconciliation
 - [x] Trace Pixazo outputs/callers/audits; official endpoint-specific image contract unverified. No guessed allowlist or reader-transport reuse; output destination repair explicitly blocked.
