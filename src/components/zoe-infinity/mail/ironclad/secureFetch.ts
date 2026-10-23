@@ -228,7 +228,9 @@ export async function secureFetch<T = unknown>(
       // For now, we'll mark for relay processing but not redirect
       // Real implementation would route through edge function
       headers.set('X-Ironclad-Relay', 'requested');
-      relayed = true;
+      // A requested marker is not proof of a relay hop. Keep direct behavior,
+      // but report it truthfully until an actual authenticated relay is wired.
+      relayed = false;
     }
     
     // Execute fetch

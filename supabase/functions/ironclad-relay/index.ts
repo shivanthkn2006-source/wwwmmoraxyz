@@ -3,6 +3,9 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { clientErrorResponse } from '../_shared/client-error.ts';
 import { publicGuard } from '../_shared/public-guard.ts';
+import { fetchRelayDestination, UnsafeRelayDestination } from './destination.ts';
+import { pinnedRelayTransport } from './connection.ts';
+import { HTTPParser } from 'npm:http-parser-js@0.5.10';
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════════
@@ -12,8 +15,8 @@ import { publicGuard } from '../_shared/public-guard.ts';
  * Edge function that acts as an IP-stripping relay for Zoe Mail.
  * All outgoing requests pass through here to:
  * - Strip client IP headers
- * - Add encryption verification
- * - Route through clean exit node
+ * - Forward payloads without verifying application encryption
+ * - Use the edge connection's public address (not a VPN/anonymity guarantee)
  * 
  * Cost: Supabase Edge Function pricing
  */
@@ -35,27 +38,6 @@ const STRIPPED_HEADERS = [
   'x-cluster-client-ip',
 ];
 
-const PRIVATE_V4 = [/^0\./, /^10\./, /^127\./, /^169\.254\./, /^172\.(1[6-9]|2\d|3[01])\./, /^192\.168\./, /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./, /^22[4-9]\./, /^2[3-5]\d\./];
-const isPrivateIp = (ip: string) => ip.includes(':')
-  ? /^(::1?$|f[cd]|fe[89ab]|::ffff:)/i.test(ip)
-  : PRIVATE_V4.some((r) => r.test(ip));
-/** Returns a reason when the destination is not a public https web address. */
-async function unsafeTarget(raw: string): Promise<string | null> {
-  let u: URL; try { u = new URL(raw); } catch { return 'invalid URL'; }
-  if (u.protocol !== 'https:') return 'https only';
-  if (u.username || u.password) return 'credentials in URL';
-  if (u.port && u.port !== '443') return 'non-standard port';
-  const host = u.hostname.replace(/^\[|\]$/g, '').toLowerCase();
-  if (/^[\d.]+$/.test(host) || host.includes(':')) return 'IP addresses not allowed';
-  if (host === 'localhost' || /\.(local|internal|localhost|lan|home|corp)$/.test(host) || !host.includes('.')) return 'internal host';
-  try {
-    const ips = [...await Deno.resolveDns(host, 'A').catch(() => [] as string[]), ...await Deno.resolveDns(host, 'AAAA').catch(() => [] as string[])];
-    if (!ips.length) return 'host does not resolve';
-    if (ips.some(isPrivateIp)) return 'private network';
-  } catch { return 'host lookup failed'; }
-  return null;
-}
-
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -75,15 +57,7 @@ serve(async (req) => {
     if (!targetUrl) {
       throw new Error('Missing targetUrl in request body');
     }
-    const unsafe = await unsafeTarget(String(targetUrl));
-    if (unsafe) {
-      return new Response(JSON.stringify({ error: `Blocked destination: ${unsafe}` }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    
-    console.log(`[Ironclad Relay] Processing request to: ${targetUrl.substring(0, 50)}...`);
+    // Do not log member-supplied URLs: paths/queries may contain private values.
     
     // Build clean headers (strip identifying information)
     const cleanHeaders = new Headers();
@@ -107,10 +81,17 @@ serve(async (req) => {
     }
     
     // Forward the request through clean channel
-    const response = await fetch(targetUrl, {
-      redirect: 'manual', // never follow a redirect into an internal address
-      method,
-      headers: cleanHeaders,
+    const response = await fetchRelayDestination(targetUrl, async (host, type) => {
+      try { return await Deno.resolveDns(host, type); }
+      catch (error) {
+        if (error instanceof Deno.errors.NotFound) return [];
+        throw error; // DNS errors are not evidence of an empty address family.
+      }
+    }, pinnedRelayTransport({
+      connect: (options) => Deno.connect(options),
+      startTls: (socket, options) => Deno.startTls(socket as Deno.TcpConn, options),
+    }, HTTPParser), {
+      signal: AbortSignal.timeout(9000), method, headers: cleanHeaders,
       body: payload ? JSON.stringify(payload) : undefined,
     });
     
@@ -146,6 +127,9 @@ serve(async (req) => {
     );
     
   } catch (error: unknown) {
+    if (error instanceof UnsafeRelayDestination) return new Response(JSON.stringify({ error: `Blocked destination: ${error.message}` }), {
+      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
     const __clientError = clientErrorResponse(error, corsHeaders);
     if (__clientError) return __clientError;
 
