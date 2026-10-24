@@ -12,7 +12,7 @@ describe('shared map outage fallback', () => {
     vi.useFakeTimers();
     invoke.mockReset();
     vi.stubGlobal('indexedDB', undefined);
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('{"elements":[]}')));
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(async () => new Response('{"elements":[]}')));
   });
   afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
 
