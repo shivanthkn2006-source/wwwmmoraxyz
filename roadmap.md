@@ -1,10 +1,12 @@
 # M'Mora Village roadmap
 
 ## Oct 24 crawler and future recommendation launch request
-- [ ] Trace crawler callers/configuration; apply configured-origin and redirect restrictions, run controlled handler/probe regressions and deploy without crawl jobs.
-- [ ] Update versioned launch checklist with observed evidence, unverified results and external blockers; review the entire uploaded priority list.
-- [ ] Research private server-side recommendation protection, Swiss Ephemeris licensing and privacy-safe advertising; document future country-scoped guardrails, not hidden sensitive profiling or unproven life predictions.
-- [ ] Verify unchanged preview where feasible; isolated member/privacy accounts, physical devices, provider contracts and legal/organisational records remain externally blocked.
+- [x] Trace three crawler callers; restrict configured origin/root-relative routes, refuse redirects and cancel bodies. 63 new tests, 224 focused passes; crawler deployed without jobs.
+- [x] Whole suite: 1,592 passed, zero failed, six skipped. Latest build OK. Hosted refusal-only request returned 401 before origin validation; authenticated hosted crawl not run.
+- [x] Review entire uploaded list and deliver MMora_Global_Launch_Checklist_2026-10-24_v3.md with observed evidence, unverified results and external blockers.
+- [x] Research private server-side protection, Swiss Ephemeris dual licensing and privacy-safe advertising; future country-scoped proposal only, no tracking/ads/engine added.
+- [x] Inspect unchanged signed-out /auth preview with background function requests intercepted; controls visible and zero page errors. Not authenticated Home/crawler proof.
+- [ ] Next scoped stage: Cloudflare/Kaleido destination/redirect contracts and callers, then non-reader budgets. Authenticated crawler/configuration, isolated privacy/member resources, physical devices, provider contracts and legal/organisational evidence remain blocked/unverified.
 
 ## Oct 23 Ironclad recheck and country-wise launch request
 - [x] Re-run relay and reader controlled regressions: 161 cases pass; current relay uses checked-literal TCP and original-host TLS, not a second hostname fetch. No internal requests or paid jobs.
