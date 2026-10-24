@@ -1,5 +1,10 @@
 # M'Mora Village roadmap
 
+## Oct 24 Google notice and edit-reference budgets
+- [ ] Explain uploaded Google sharing notice using official guidance; inspect requested sign-in scopes and welcome-mail feasibility without suppressing Google transparency or changing working authentication.
+- [ ] Trace edit-image callers; bound reference URL download bytes and combined header/body wait before inference, preserving origins/redirects/MIME and editing sequence.
+- [ ] Run controlled oversized/stalled/redirect regressions, deploy only edit-image, and update versioned launch evidence with unverified results/blockers distinct.
+
 ## Oct 24 download budgets and proprietary-security review
 - [x] Trace non-reader budgets/callers; replace cascade URL whole-body allocation with stream-counted 6 MiB ceiling and 45-second combined header/body deadline; provider/auth/redirect behavior unchanged.
 - [x] Map selected client/server security boundaries and staged prevention priorities in MMora_Global_Launch_Checklist_2026-10-24_v4.md; no hidden-client-code or exhaustive security guarantee.
