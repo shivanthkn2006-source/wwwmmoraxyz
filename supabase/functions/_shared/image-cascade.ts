@@ -16,6 +16,7 @@
 
 import { decodeHordeImage, hordeJson, hordeJobId } from './horde-inline-image.ts';
 import { deepaiImageUrl } from './deepai-image-destination.ts';
+import { downloadCascadeImage as getImage } from './cascade-image-download.ts';
 
 export type CascadeProvider = 'pollinations' | 'placeholdr' | 'horde' | 'cloudflare' | 'deepai' | 'pixazo' | 'kaleido' | 'justapi' | 'imagenow';
 export interface CascadeAttempt { provider: CascadeProvider; ok: boolean; ms: number; reason?: string }
@@ -55,20 +56,6 @@ export function deriveKeywords(prompt: string, max = 4): string[] {
 
 function hash(s: string): number { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0; return h; }
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-async function getImage(url: string, headers: Record<string, string> = {}, minBytes = 1024, redirect: RequestRedirect = 'follow'): Promise<{ bytes: Uint8Array; type: string } | string> {
-  try {
-    const res = await fetch(url, { headers: { Accept: 'image/*', ...headers }, redirect });
-    const type = res.headers.get('content-type') || '';
-    if (!res.ok) { await res.body?.cancel(); return `http ${res.status}`; }
-    if (!type.startsWith('image/')) { await res.body?.cancel(); return `not an image (${type})`; }
-    if (res.status === 202) { await res.body?.cancel(); return 'pending'; }
-    const bytes = new Uint8Array(await res.arrayBuffer());
-    if (bytes.byteLength < minBytes) return `tiny payload ${bytes.byteLength}b`;
-    if (bytes.byteLength > 6 * 1024 * 1024) return 'too large';
-    return { bytes, type };
-  } catch (e) { return String((e as Error)?.message ?? e); }
-}
 
 async function runProvider(p: CascadeProvider, o: Required<Pick<CascadeOptions, 'prompt' | 'width' | 'height' | 'seed'>> & { keywords: string[]; redirect?: RequestRedirect }) {
   const w = Math.min(2048, Math.max(128, o.width));

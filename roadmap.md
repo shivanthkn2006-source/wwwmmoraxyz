@@ -1,5 +1,10 @@
 # M'Mora Village roadmap
 
+## Oct 24 download budgets and proprietary-security review
+- [ ] Trace non-reader budgets/callers; repair the highest-priority URL image allocation/deadline gap with controlled mocks and unchanged provider/auth/redirect behavior.
+- [ ] Map scoped client/server security boundaries and stage-wise prevention priorities; no claim that shipped client code can be hidden or that all attack paths were proved absent.
+- [ ] Run focused/full regressions, deploy source importers without jobs, and update versioned launch checklist with observed/unverified/blocker separation.
+
 ## Oct 24 crawler and future recommendation launch request
 - [x] Trace three crawler callers; restrict configured origin/root-relative routes, refuse redirects and cancel bodies. 63 new tests, 224 focused passes; crawler deployed without jobs.
 - [x] Whole suite: 1,592 passed, zero failed, six skipped. Latest build OK. Hosted refusal-only request returned 401 before origin validation; authenticated hosted crawl not run.
