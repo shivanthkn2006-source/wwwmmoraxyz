@@ -53,7 +53,7 @@ describe('DeepAI output destination boundary', () => {
     expect(network).toHaveBeenCalledTimes(2);
     expect(network.mock.calls[0]?.[1]?.redirect).toBe('manual');
     expect(network.mock.calls[0]?.[1]?.headers).toEqual({ 'api-key': 'fixture-key' });
-    expect(network.mock.calls[1]?.[1]).toEqual({ headers: { Accept: 'image/*' }, redirect: 'manual' });
+    expect(network.mock.calls[1]?.[1]).toEqual({ headers: { Accept: 'image/*' }, redirect: 'manual', signal: expect.any(AbortSignal) });
   });
   for (const phase of ['api', 'image'] as const) {
     it.each([301, 302, 303, 307, 308])(`refuses ${phase} redirect %s and cancels body without following Location`, async status => {

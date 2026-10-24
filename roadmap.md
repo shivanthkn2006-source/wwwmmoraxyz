@@ -1,5 +1,11 @@
 # M'Mora Village roadmap
 
+## Oct 24 download budgets and proprietary-security review
+- [x] Trace non-reader budgets/callers; replace cascade URL whole-body allocation with stream-counted 6 MiB ceiling and 45-second combined header/body deadline; provider/auth/redirect behavior unchanged.
+- [x] Map selected client/server security boundaries and staged prevention priorities in MMora_Global_Launch_Checklist_2026-10-24_v4.md; no hidden-client-code or exhaustive security guarantee.
+- [x] 19 new tests, 203 focused passes; full suite 1,611 passed, zero failed, six skipped; latest build OK. All 84 transitive source importers deployed, no handlers/internal requests/paid jobs/member writes.
+- [ ] Next scoped repair: edit-image reference byte/deadline limits, then DHF direct image storage. API/inline JSON, legacy passthrough/overall cascade budgets and provider contracts remain separate; hosted image-flow/device/isolation/legal proof remains unavailable.
+
 ## Oct 24 crawler and future recommendation launch request
 - [x] Trace three crawler callers; restrict configured origin/root-relative routes, refuse redirects and cancel bodies. 63 new tests, 224 focused passes; crawler deployed without jobs.
 - [x] Whole suite: 1,592 passed, zero failed, six skipped. Latest build OK. Hosted refusal-only request returned 401 before origin validation; authenticated hosted crawl not run.
