@@ -542,10 +542,14 @@ const AuthPage = () => {
                 )}
                 onClick={handleGoogleLogin}
                 disabled={googleLoading}
+                aria-describedby="google-sign-in-details"
               >
                 {googleLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <span aria-hidden="true" className="inline-flex size-5 items-center justify-center font-semibold">G</span>}
                 Continue with Google
               </Button>
+              <p id="google-sign-in-details" className="mx-auto max-w-sm text-center text-xs leading-relaxed text-foreground">
+                Mmora receives your name, email and profile photo—never your Google password. Google may send its own security notice.
+              </p>
 
               {!isSignUp && (
                 <>
