@@ -1,5 +1,11 @@
 # M'Mora Village roadmap
 
+## Oct 24 Google explanation and controlled VR outage checks
+- [x] Add concise basic-profile/password/Google-notice explanation beside Google sign-in without changing its handler.
+- [x] Reproduce shared map 503 with controlled mocks; three new fallback/cooldown/recovery regressions plus three existing map regressions pass.
+- [x] Open actual VR World via localhost harness; choose New York and land on the street. Nine concurrent initial shared-cache 503s open the cooldown; two controlled Overpass responses populate twelve chunks with roads/buildings, no page exceptions. With both services mocked unavailable, renderer/controls/portal remain visible during retry observation; no whole-screen blank confirmed, no map implementation change warranted.
+- [x] Record observed results and limitations in docs/GOOGLE_NOTE_VR_503_CHECK_2026-10-24.md. Hosted signed-in Home→VR, physical devices, full outage exhaustion and final Google consent remain unverified; no paid jobs, internal destinations or live member writes invoked. Latest build OK.
+
 ## Oct 24 Google notice and edit-reference budgets
 - [x] Explain uploaded Google notice using official guidance; no app-requested Gmail/Drive scopes found. Google notice cannot be rewritten; hosted scopes unverified and separate welcome sender blocked by workspace-admin setup permission. Working authentication unchanged.
 - [x] Bound reference URL download to stream-counted 6 MiB / combined 45-second header/body deadline before inference; reviewed origins/redirects/MIME/provider sequence unchanged. Two image-field caller mismatches separately recorded, not changed.
