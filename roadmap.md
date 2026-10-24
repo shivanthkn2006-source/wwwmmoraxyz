@@ -1,5 +1,11 @@
 # M'Mora Village roadmap
 
+## Oct 24 crawler and future recommendation launch request
+- [ ] Trace crawler callers/configuration; apply configured-origin and redirect restrictions, run controlled handler/probe regressions and deploy without crawl jobs.
+- [ ] Update versioned launch checklist with observed evidence, unverified results and external blockers; review the entire uploaded priority list.
+- [ ] Research private server-side recommendation protection, Swiss Ephemeris licensing and privacy-safe advertising; document future country-scoped guardrails, not hidden sensitive profiling or unproven life predictions.
+- [ ] Verify unchanged preview where feasible; isolated member/privacy accounts, physical devices, provider contracts and legal/organisational records remain externally blocked.
+
 ## Oct 23 Ironclad recheck and country-wise launch request
 - [x] Re-run relay and reader controlled regressions: 161 cases pass; current relay uses checked-literal TCP and original-host TLS, not a second hostname fetch. No internal requests or paid jobs.
 - [x] Reconcile remaining Ironclad evidence and section-wise technical release gates; deliver MMora_Global_Launch_Checklist_2026-10-23_v2.md with country/region starting points and explicit unverified legal coverage. Fresh full suite: 1,529 passed, zero failed, six skipped; no additional relay change warranted. Next code stage remains crawler review.
