@@ -1,10 +1,16 @@
 # M'Mora Village roadmap
 
+## Oct 24 Google notice and edit-reference budgets
+- [x] Explain uploaded Google notice using official guidance; no app-requested Gmail/Drive scopes found. Google notice cannot be rewritten; hosted scopes unverified and separate welcome sender blocked by workspace-admin setup permission. Working authentication unchanged.
+- [x] Bound reference URL download to stream-counted 6 MiB / combined 45-second header/body deadline before inference; reviewed origins/redirects/MIME/provider sequence unchanged. Two image-field caller mismatches separately recorded, not changed.
+- [x] 15 new controlled tests / 52 focused passes; full suite 1,626 passed, zero failed, six skipped; latest build OK. Only edit-image deployed, no internal requests/paid jobs/member writes. Version 5 checklist separates observed proof from unavailable hosted/provider/device/privacy/legal evidence.
+- [ ] Next: DHF direct storage byte limits. Hosted successful editing/error display, inline/API/overall limits and caller mismatches need separate proof/repair; isolated credentials, physical devices, provider contracts and admin sender setup remain blockers.
+
 ## Oct 24 download budgets and proprietary-security review
 - [x] Trace non-reader budgets/callers; replace cascade URL whole-body allocation with stream-counted 6 MiB ceiling and 45-second combined header/body deadline; provider/auth/redirect behavior unchanged.
 - [x] Map selected client/server security boundaries and staged prevention priorities in MMora_Global_Launch_Checklist_2026-10-24_v4.md; no hidden-client-code or exhaustive security guarantee.
 - [x] 19 new tests, 203 focused passes; full suite 1,611 passed, zero failed, six skipped; latest build OK. All 84 transitive source importers deployed, no handlers/internal requests/paid jobs/member writes.
-- [ ] Next scoped repair: edit-image reference byte/deadline limits, then DHF direct image storage. API/inline JSON, legacy passthrough/overall cascade budgets and provider contracts remain separate; hosted image-flow/device/isolation/legal proof remains unavailable.
+- [x] Edit-image URL reference byte/deadline limits repaired in the next stage above; DHF direct storage and API/inline JSON, legacy passthrough/overall budgets remain open with provider/device/isolation/legal evidence unavailable.
 
 ## Oct 24 crawler and future recommendation launch request
 - [x] Trace three crawler callers; restrict configured origin/root-relative routes, refuse redirects and cancel bodies. 63 new tests, 224 focused passes; crawler deployed without jobs.

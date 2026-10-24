@@ -1,5 +1,6 @@
 import { isSafePublicUrl } from '../_shared/safe-url.ts';
 import { editReferenceUrl } from './reference-url.ts';
+import { downloadEditReference, ReferenceDownloadError } from './reference-download.ts';
 import { requireCaller } from '../_shared/caller-guard.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { clientErrorResponse } from '../_shared/client-error.ts';
@@ -95,10 +96,9 @@ serve(async (req) => {
     if (imageUrl && !imageBase64) {
       const referenceUrl = editReferenceUrl(imageUrl, Deno.env.get('SUPABASE_URL'));
       if (!referenceUrl || !isSafePublicUrl(referenceUrl)) throw new Error('Image address not allowed');
-      const imageResponse = await fetch(referenceUrl, { redirect: 'error' });
-      if (!imageResponse.ok) throw new Error('Reference image could not be loaded');
-      mime = imageResponse.headers.get('content-type') || 'image/jpeg';
-      const bytes = new Uint8Array(await imageResponse.arrayBuffer());
+      const reference = await downloadEditReference(referenceUrl);
+      mime = reference.mime;
+      const bytes = reference.bytes;
       const chunks: string[] = [];
       for (let index = 0; index < bytes.length; index += 0x8000) {
         chunks.push(String.fromCharCode(...bytes.subarray(index, index + 0x8000)));
@@ -263,6 +263,11 @@ serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
+    if (error instanceof ReferenceDownloadError) {
+      return new Response(JSON.stringify({ error: error.message, code: error.code }), {
+        status: error.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
     const __clientError = clientErrorResponse(error, corsHeaders);
     if (__clientError) return __clientError;
 
