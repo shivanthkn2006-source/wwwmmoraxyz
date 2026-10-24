@@ -13,6 +13,7 @@
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4';
 import { publicGuard } from '../_shared/public-guard.ts';
+import { crawlerOrigin, probeRoute, type Finding } from './destination.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -22,9 +23,6 @@ const corsHeaders = {
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
-const DEFAULT_ORIGIN = 'https://wwwmmoraxyz.lovable.app';
-const SLOW_MS = 2500;
-const REQUEST_TIMEOUT_MS = 12_000;
 const CONCURRENCY = 6;
 
 /** DHF tables that must never be empty once the platform is live. */
@@ -38,44 +36,6 @@ const DHF_TABLES = [
   'dhf_video_dispatch_runs',
   'dhf_lineage_ledger',
 ];
-
-interface Finding {
-  route: string | null;
-  finding_type: string;
-  severity: string;
-  http_status: number | null;
-  duration_ms: number | null;
-  detail: string;
-}
-
-async function probeRoute(origin: string, path: string): Promise<Finding | null> {
-  const url = `${origin}${path}`;
-  const started = Date.now();
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-  try {
-    const res = await fetch(url, { redirect: 'follow', signal: controller.signal });
-    const duration = Date.now() - started;
-    if (res.status >= 400) {
-      return { route: path, finding_type: 'dead_link', severity: 'critical', http_status: res.status, duration_ms: duration, detail: `HTTP ${res.status} for ${url}` };
-    }
-    if (duration > SLOW_MS) {
-      return { route: path, finding_type: 'slow_route', severity: 'warning', http_status: res.status, duration_ms: duration, detail: `${duration}ms exceeds ${SLOW_MS}ms budget` };
-    }
-    return null;
-  } catch (e) {
-    return {
-      route: path,
-      finding_type: 'dead_link',
-      severity: 'critical',
-      http_status: null,
-      duration_ms: Date.now() - started,
-      detail: `request failed: ${String((e as Error)?.message ?? e).slice(0, 200)}`,
-    };
-  } finally {
-    clearTimeout(timer);
-  }
-}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
@@ -107,9 +67,17 @@ Deno.serve(async (req) => {
       trigger = typeof body.trigger === 'string' ? body.trigger : 'manual';
     }
 
-    const origin = (typeof body.origin === 'string' && body.origin.startsWith('https://')
-      ? body.origin
-      : Deno.env.get('SITE_URL') || DEFAULT_ORIGIN).replace(/\/$/, '');
+    let origin: string;
+    try {
+      origin = crawlerOrigin(Deno.env.get('SITE_URL'), undefined);
+    } catch {
+      return json({ error: 'Crawler site configuration is invalid' }, 500);
+    }
+    try {
+      crawlerOrigin(origin, body.origin);
+    } catch {
+      return json({ error: 'Crawler origin must match the configured site' }, 400);
+    }
 
     const { data: routeRows, error: routeErr } = await service
       .from('platform_routes')
