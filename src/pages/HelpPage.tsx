@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
+import PublicInfoFooter from '@/components/legal/PublicInfoFooter';
 
 interface Guide {
   id: string;
@@ -23,7 +24,7 @@ const GUIDES: Guide[] = [
     id: 'zoe',
     title: 'How Zoe helps',
     steps: [
-      'Zoe is on every page. Tap her once to talk, tap twice to hide her.',
+      'Open Zoe from her control on supported member pages; availability can depend on the page and your device.',
       'Ask anything: about the world, about the news, the weather, or about this platform.',
       'She can search inside M\u2019Mora, out on the web, or both — just say which you want.',
       'She can make pictures for you. Ask for one in plain words.',
@@ -45,7 +46,7 @@ const GUIDES: Guide[] = [
     title: 'Things that open up later',
     steps: [
       'Some pages need to know you before they are useful, so they unlock after real use.',
-      'Your DHF — the picture Zoe builds of your habits and rhythm.',
+      'DHF and the daily Compass offer personalised cards and reflection; availability depends on your account and settings.',
       'Astrology and the daily Compass, which use your birth details.',
       'Growth insights: small lessons chosen from what you actually do.',
       'The Digital Vault, for memories you want kept for a long time.',
@@ -57,15 +58,15 @@ const GUIDES: Guide[] = [
     steps: [
       'Open Legacy from the site map.',
       'Press the dictate button and just talk — your words are saved as a memory.',
-      'Everything in the vault is yours alone. Nobody else can read it.',
+      'Vault memories are intended to be private to your account. Do not assume they are end-to-end encrypted; review the Data Policy before storing sensitive information.',
     ],
   },
   {
     id: 'privacy',
     title: 'Privacy, your data, and leaving',
     steps: [
-      'Go to Privacy to download a copy of everything we hold about you.',
-      'The same page deletes your account and your data permanently.',
+      'Go to Privacy to use your account export controls.',
+      'The same page offers account deletion; review retention information in the Data Policy.',
       'Read the Data Policy if you want the detail of what is stored and why.',
       'If something looks wrong or broken, use Bug report — it reaches us directly.',
     ],
@@ -86,7 +87,7 @@ const FAQ: FaqItem[] = [
   },
   {
     q: 'Who can see my posts?',
-    a: 'Only the audience you pick when you post. Your direct messages, vault memories, Zoe conversations and closeness signals are readable only by you — that is enforced by the database, not just hidden in the app.',
+    a: 'Post visibility depends on the audience you choose. Direct messages are shared with conversation participants; private memories and Zoe conversations have account access controls. Review the Data Policy before sharing sensitive information.',
   },
   {
     q: 'What does Zoe do with what I tell her?',
@@ -102,15 +103,15 @@ const FAQ: FaqItem[] = [
   },
   {
     q: 'How do I sign in?',
-    a: 'With your email and password, with Google, with a passkey or face sign-in you set up, or with a 5-digit Quick Unlock code on a device you already trust. Google sign-in shares only your name, email and profile photo — never your Google password.',
+    a: 'With your email and password, Google, or a passkey or face sign-in you set up. The 5-digit Quick Unlock code only unlocks an existing signed-in session; it does not create an account or replace sign-in. Google sign-in shares only your name, email and profile photo — never your Google password.',
   },
   {
     q: 'Can I download or delete my data?',
-    a: 'Yes. The Your data page lets you download a machine-readable copy of everything tied to your account, or delete the account and all its data permanently.',
+    a: 'The Your data page provides export and account-deletion controls. Full export coverage, deletion timing and legally retained records still need confirmation before global launch.',
   },
   {
     q: 'Is M\u2019Mora available in my country?',
-    a: 'The platform is reachable worldwide in English. Some features (for example age rules and consent prompts) adapt to your region automatically. (A formal country-by-country launch list is still being prepared — confirm before publishing a definitive answer.)',
+    a: 'M'Mora is in early access. Measurement consent adapts to detected region, but this does not establish legal availability in every country. A confirmed country-by-country launch list and eligibility rules are still needed before global launch.',
   },
   {
     q: 'How do I report a problem or a person?',
@@ -150,7 +151,7 @@ export default function HelpPage() {
             <a
               key={g.id}
               href={`#${g.id}`}
-              className="rounded-full border border-border px-3 py-1 text-xs hover:bg-muted"
+              className="inline-flex min-h-11 items-center rounded-md border border-border px-3 py-1 text-xs hover:bg-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring"
             >
               {g.title}
             </a>
@@ -175,7 +176,7 @@ export default function HelpPage() {
           <div className="space-y-3">
             {FAQ.map((item) => (
               <details key={item.q} className="group rounded-xl border border-border px-4 py-3">
-                <summary className="cursor-pointer list-none text-sm font-medium text-foreground marker:hidden">
+                <summary className="cursor-pointer list-none text-sm font-medium text-foreground marker:hidden focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring">
                   {item.q}
                 </summary>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{item.a}</p>
@@ -187,6 +188,7 @@ export default function HelpPage() {
         <footer className="border-t border-border pt-6 text-sm text-muted-foreground">
           Still stuck? Ask Zoe — she can open any of these pages for you.
         </footer>
+        <PublicInfoFooter />
       </div>
     </main>
   );

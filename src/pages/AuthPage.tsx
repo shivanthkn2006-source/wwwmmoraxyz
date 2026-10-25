@@ -330,7 +330,7 @@ const AuthPage = () => {
     return (
       <>
         <PageSeo title={ROUTE_SEO['/auth'].title} description={ROUTE_SEO['/auth'].description} path="/auth" />
-        <div className="min-h-screen bg-background flex items-center justify-center p-6">
+        <main className="min-h-dvh bg-background flex items-center justify-center p-6">
           <Card className="w-full max-w-md bg-card border-border">
             <CardContent className="p-6 space-y-4 text-center">
               <h1 className="text-xl font-semibold text-foreground">Confirm your email</h1>
@@ -353,7 +353,7 @@ const AuthPage = () => {
               </button>
             </CardContent>
           </Card>
-        </div>
+        </main>
       </>
     );
   }
@@ -361,7 +361,7 @@ const AuthPage = () => {
   return (
     <>
       <PageSeo title={ROUTE_SEO['/auth'].title} description={ROUTE_SEO['/auth'].description} path="/auth" />
-      <div className="h-[100dvh] overflow-hidden surface-warm-tan text-white flex items-center justify-center p-responsive safe-area-pb safe-area-pt">
+      <main className="h-[100dvh] overflow-hidden surface-warm-tan text-white flex items-center justify-center p-responsive safe-area-pb safe-area-pt">
       <motion.div
         ref={fitRef}
         style={{ scale: fitScale }}
@@ -420,6 +420,7 @@ const AuthPage = () => {
                 <>
                   <Input
                     name="displayName"
+                    aria-label="Display name"
                     type="text"
                     placeholder="Display Name"
                     value={formData.displayName}
@@ -427,7 +428,7 @@ const AuthPage = () => {
                     autoComplete="name"
                     required={isSignUp}
                     className={cn(
-                      "bg-transparent border-0 shadow-none rounded-none px-10 text-center text-white placeholder:text-white/80 caret-white focus-visible:ring-0 focus-visible:ring-offset-0",
+                      "bg-transparent border-0 shadow-none rounded-none px-10 text-center text-white placeholder:text-white/80 caret-white focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0",
                       "h-9 xxs:h-9 xs:h-9 sm:h-10 md:h-10",
                       "lg:h-10 xl:h-10 2xl:h-12 4k:h-14",
                       "text-sm xxs:text-sm xs:text-base sm:text-base md:text-lg",
@@ -436,6 +437,7 @@ const AuthPage = () => {
                   />
                   <Input
                     name="username"
+                    aria-label="Username"
                     type="text"
                     placeholder="Username"
                     value={formData.username}
@@ -443,7 +445,7 @@ const AuthPage = () => {
                     autoComplete="username"
                     required={isSignUp}
                     className={cn(
-                      "bg-transparent border-0 shadow-none rounded-none px-10 text-center text-white placeholder:text-white/80 caret-white focus-visible:ring-0 focus-visible:ring-offset-0",
+                      "bg-transparent border-0 shadow-none rounded-none px-10 text-center text-white placeholder:text-white/80 caret-white focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0",
                       "h-9 xxs:h-9 xs:h-9 sm:h-10 md:h-10",
                       "lg:h-10 xl:h-10 2xl:h-12 4k:h-14",
                       "text-sm xxs:text-sm xs:text-base sm:text-base md:text-lg",
@@ -455,15 +457,15 @@ const AuthPage = () => {
 
               <Input
                 name="email"
+                aria-label="Email"
                 type="email"
                 placeholder="Email"
                 value={formData.email}
                 onChange={handleInputChange}
                 autoComplete="email"
-                autoFocus
                 required
                 className={cn(
-                  "bg-transparent border-0 shadow-none rounded-none px-10 text-center text-white placeholder:text-white/80 caret-white focus-visible:ring-0 focus-visible:ring-offset-0",
+                  "bg-transparent border-0 shadow-none rounded-none px-10 text-center text-white placeholder:text-white/80 caret-white focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0",
                   "h-9 xxs:h-9 xs:h-9 sm:h-10 md:h-10",
                   "lg:h-10 xl:h-10 2xl:h-12 4k:h-14",
                   "text-sm xxs:text-sm xs:text-base sm:text-base md:text-lg",
@@ -474,6 +476,7 @@ const AuthPage = () => {
               <div className="relative">
                 <Input
                   name="password"
+                  aria-label="Password"
                   type={showPassword ? "text" : "password"}
                   placeholder="Password"
                   value={formData.password}
@@ -481,17 +484,20 @@ const AuthPage = () => {
                   autoComplete={isSignUp ? 'new-password' : 'current-password'}
                   required
                   className={cn(
-                    "bg-transparent border-0 shadow-none rounded-none px-10 text-center text-white placeholder:text-white/80 caret-white focus-visible:ring-0 focus-visible:ring-offset-0 pr-10",
+                    "bg-transparent border-0 shadow-none rounded-none px-10 text-center text-white placeholder:text-white/80 caret-white focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0 pr-10",
                     "h-9 xxs:h-9 xs:h-9 sm:h-10 md:h-10",
                     "lg:h-10 xl:h-10 2xl:h-12 4k:h-14",
                     "text-sm xxs:text-sm xs:text-base sm:text-base md:text-lg",
                     "lg:text-base xl:text-lg 2xl:text-xl 4k:text-2xl"
                   )}
                 />
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-pressed={showPassword}
                   className={cn(
-                    "absolute inset-y-0 right-0 flex items-center",
+                    "absolute inset-y-0 right-0 flex h-full min-w-11 items-center bg-transparent hover:bg-transparent",
                     "pr-3 xxs:pr-3 xs:pr-3 sm:pr-4 md:pr-5"
                   )}
                   onClick={() => setShowPassword(!showPassword)}
@@ -509,7 +515,7 @@ const AuthPage = () => {
                       "lg:h-5 lg:w-5 xl:h-6 xl:w-6 2xl:h-7 2xl:w-7 4k:h-8 4k:w-8"
                     )} />
                   )}
-                </button>
+                </Button>
               </div>
 
               {isSignUp && (
@@ -661,10 +667,10 @@ const AuthPage = () => {
                 </div>
               )}
               <nav aria-label="About M'Mora" className="flex flex-wrap justify-center gap-x-1.5 pt-1 text-[11px] xs:text-xs text-white/75">
-                {[['About', '/about'], ['Policies', '/terms'], ['Help', '/help'], ['Privacy', '/data-policy'], ['Site map', '/map']].map(([label, to], i) => (
+                {[['About', '/about'], ['Terms', '/terms'], ['Help', '/help'], ['Privacy', '/data-policy'], ['Site map', '/map']].map(([label, to], i) => (
                   <span key={to} className="flex items-center gap-x-1.5">
                     {i > 0 && <span aria-hidden>/</span>}
-                    <a href={to} className="!min-h-0 py-0 hover:text-white">{label}</a>
+                    <a href={to} className="min-h-11 inline-flex items-center px-2 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring">{label}</a>
                   </span>
                 ))}
               </nav>
@@ -681,7 +687,7 @@ const AuthPage = () => {
           navigate('/home');
         }}
       />
-      </div>
+      </main>
     </>
   );
 };
