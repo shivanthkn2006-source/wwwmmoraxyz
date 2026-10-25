@@ -1,7 +1,6 @@
 import { cascadeFetch } from '../_shared/image-cascade.ts';
 import { readBytesBounded, CASCADE_IMAGE_MAX_BYTES } from '../_shared/cascade-image-download.ts';
 import { requireCaller } from '../_shared/caller-guard.ts';
-import { sovereignFetch } from "../_shared/sovereign-ai.ts";
 // ═══════════════════════════════════════════════════════════════════════════════
 // ZOE INFINITY IMAGE GENERATION - Pollinations Primary, Gemini Fallback
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -32,21 +31,6 @@ async function responseToDataUrl(resp: Response): Promise<string | null> {
   const ct = resp.headers.get('content-type') || 'image/jpeg';
   const b64 = uint8ToBase64(bytes);
   return `data:${ct};base64,${b64}`;
-}
-
-async function fetchImageAsDataUrl(url: string): Promise<string | null> {
-  try {
-    const resp = await cascadeFetch(url, { headers: { 'Accept': 'image/*' }, signal: AbortSignal.timeout(30_000) });
-    if (!resp.ok) {
-      console.warn(`[zoe-image-gen] Remote image fetch returned ${resp.status}`);
-      return null;
-    }
-
-    return await responseToDataUrl(resp);
-  } catch (error) {
-    console.warn('[zoe-image-gen] Remote image fetch failed:', error);
-    return null;
-  }
 }
 
 /**
@@ -83,59 +67,6 @@ async function tryPollinations(prompt: string, width = 1024, height = 1024): Pro
     return dataUrl;
   } catch (e) {
     console.warn('[zoe-image-gen] Pollinations failed:', e);
-    return null;
-  }
-}
-
-/**
- * Fallback: Lovable AI Gateway (Gemini)
- */
-async function tryGemini(prompt: string, apiKey: string): Promise<string | null> {
-  try {
-    console.log('[zoe-image-gen] Trying Gemini fallback...');
-    const response = await sovereignFetch('sovereign://chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-3.1-flash-image',
-        messages: [{ role: 'user', content: prompt }],
-        modalities: ['image', 'text'],
-      }),
-    });
-
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error(`[zoe-image-gen] Gemini error [${response.status}]: ${errText}`);
-      if (response.status === 429) throw { status: 429 };
-      if (response.status === 402) throw { status: 402 };
-      return null;
-    }
-
-    const data = await response.json();
-    const imageUrl = data?.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-    if (!imageUrl) return null;
-
-    if (imageUrl.startsWith('data:image/')) {
-      console.log('[zoe-image-gen] ✅ Gemini fallback success');
-      return imageUrl;
-    }
-
-    if (/^https?:\/\//i.test(imageUrl)) {
-      const dataUrl = await fetchImageAsDataUrl(imageUrl);
-      if (dataUrl) {
-        console.log('[zoe-image-gen] ✅ Gemini fallback success');
-        return dataUrl;
-      }
-    }
-
-    console.warn('[zoe-image-gen] Gemini returned unsupported image payload');
-    return null;
-  } catch (e: any) {
-    if (e.status) throw e;
-    console.error('[zoe-image-gen] Gemini failed:', e);
     return null;
   }
 }
