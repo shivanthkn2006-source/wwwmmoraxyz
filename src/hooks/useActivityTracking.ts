@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
+import { analyticsAllowed } from '@/lib/consent';
 
 interface SessionData {
   sessionToken: string;
@@ -136,6 +137,7 @@ export const useActivityTracking = () => {
   }, []);
 
   const getLocationInfo = useCallback(async (): Promise<Partial<SessionData>> => {
+    if (!analyticsAllowed()) return {};
     try {
       // Use a more reliable IP geolocation service with timeout
       const controller = new AbortController();
@@ -171,11 +173,11 @@ export const useActivityTracking = () => {
     activityType: 'session_start' | 'session_end' | 'page_view' | 'page_exit' | 'user_action',
     data?: any
   ) => {
-    if (!user) return;
+    if (!user || !analyticsAllowed()) return;
 
     try {
       const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData?.session) {
+      if (!sessionData?.session || !analyticsAllowed()) {
         return;
       }
 
@@ -217,7 +219,7 @@ export const useActivityTracking = () => {
 
   const sendExit = useCallback((payload: string) => {
     const token = accessTokenRef.current;
-    if (!token) return;
+    if (!token || !analyticsAllowed()) return;
     const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/track-activity`;
     fetch(url, {
       method: 'POST',
