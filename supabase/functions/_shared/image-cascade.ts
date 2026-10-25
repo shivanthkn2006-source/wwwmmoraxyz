@@ -16,7 +16,7 @@
 
 import { decodeHordeImage, hordeJson, hordeJobId } from './horde-inline-image.ts';
 import { deepaiImageUrl } from './deepai-image-destination.ts';
-import { downloadCascadeImage as getImage } from './cascade-image-download.ts';
+import { downloadCascadeImage as getImage, readJsonBounded, CASCADE_IMAGE_MAX_BYTES } from './cascade-image-download.ts';
 
 export type CascadeProvider = 'pollinations' | 'placeholdr' | 'horde' | 'cloudflare' | 'deepai' | 'pixazo' | 'kaleido' | 'justapi' | 'imagenow';
 export interface CascadeAttempt { provider: CascadeProvider; ok: boolean; ms: number; reason?: string }
@@ -37,6 +37,15 @@ export interface CascadeOptions {
   only?: CascadeProvider[];
   /** Opt-in strict downloads; existing callers retain their redirect behavior. */
   redirect?: RequestRedirect;
+  /** Caller cancellation/deadline, forwarded into every provider fetch. */
+  signal?: AbortSignal;
+}
+
+/** Root-relative paths only: no protocol-relative, traversal or query smuggling. */
+function kaleidoImagePath(url: unknown): string | null {
+  if (typeof url !== 'string') return null;
+  if (!/^\/(?!\/)[^?#]*$/.test(url) || url.includes('..')) return null;
+  return url;
 }
 
 export const CASCADE_ORDER: CascadeProvider[] = ['pollinations', 'placeholdr', 'horde', 'cloudflare', 'deepai', 'pixazo', 'kaleido', 'justapi', 'imagenow'];
@@ -57,7 +66,7 @@ export function deriveKeywords(prompt: string, max = 4): string[] {
 function hash(s: string): number { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0; return h; }
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-async function runProvider(p: CascadeProvider, o: Required<Pick<CascadeOptions, 'prompt' | 'width' | 'height' | 'seed'>> & { keywords: string[]; redirect?: RequestRedirect }) {
+async function runProvider(p: CascadeProvider, o: Required<Pick<CascadeOptions, 'prompt' | 'width' | 'height' | 'seed'>> & { keywords: string[]; redirect?: RequestRedirect; signal?: AbortSignal }) {
   const w = Math.min(2048, Math.max(128, o.width));
   const h = Math.min(2048, Math.max(128, o.height));
   const n = hash(o.seed);
