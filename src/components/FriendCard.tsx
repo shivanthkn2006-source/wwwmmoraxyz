@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Link } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { useNavigate } from 'react-router-dom';
 import { useEventGlow, getAvatarGlowClass } from '@/hooks/useEventGlow';
 import ImageViewer from '@/components/ImageViewer';
 import StatusIconBadge from '@/components/StatusIconBadge';
@@ -24,7 +25,6 @@ interface FriendCardProps {
 }
 
 const FriendCard = ({ friend }: FriendCardProps) => {
-  const navigate = useNavigate();
   const { user } = useAuth();
   const { isUserOnline } = useOnlinePresence();
   const hasEvent = useEventGlow(friend.event_date, friend.event_recurring);
@@ -65,25 +65,21 @@ const FriendCard = ({ friend }: FriendCardProps) => {
   return (
     <>
       <Card 
-        className="p-4 flex items-center justify-between hover:bg-accent/50 cursor-pointer transition-colors"
-        onClick={() => navigate(`/profile/${friend.user_id}`)}
+        className="relative p-4 flex items-center justify-between hover:bg-accent/50 transition-colors"
       >
-        <div className="flex items-center gap-3">
+        <Button asChild variant="ghost" className="absolute inset-0 h-full w-full"><Link to={`/profile/${friend.user_id}`} aria-label={`View ${friend.display_name}’s profile`} /></Button>
+        <div className="pointer-events-none flex items-center gap-3">
           <div className="relative">
+            <Button variant="ghost" className="pointer-events-auto relative z-10 h-12 w-12 rounded-full p-0" disabled={!friend.profile_photo_url} aria-label={`View ${friend.display_name}’s profile photo`} onClick={() => setShowProfileViewer(true)}>
             <Avatar 
               className={`w-12 h-12 cursor-pointer hover:opacity-90 transition-opacity ${glowClass}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (friend.profile_photo_url) {
-                  setShowProfileViewer(true);
-                }
-              }}
             >
-              <AvatarImage src={friend.profile_photo_url} />
+              <AvatarImage src={friend.profile_photo_url} alt="" />
               <AvatarFallback className="bg-primary/10 text-primary">
                 {friend.display_name.charAt(0)}
               </AvatarFallback>
             </Avatar>
+            </Button>
             {isOnline && (
               <div 
                 className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-background"

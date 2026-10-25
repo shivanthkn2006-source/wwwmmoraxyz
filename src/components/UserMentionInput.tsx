@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -115,6 +116,7 @@ const UserMentionInput: React.FC<UserMentionInputProps> = ({
   return (
     <div className="relative w-full">
       <Input
+        aria-label={placeholder || "Message"}
         ref={inputRef}
         value={value}
         onChange={handleInputChange}
@@ -127,9 +129,11 @@ const UserMentionInput: React.FC<UserMentionInputProps> = ({
       {showSuggestions && suggestions.length > 0 && (
         <Card className="absolute bottom-full left-0 right-0 mb-2 p-2 max-h-48 overflow-y-auto z-50 bg-card">
           {suggestions.map((user, index) => (
-            <div
+            <Button
+              type="button" variant="ghost"
+              aria-label={`Mention ${user.display_name}`}
               key={user.user_id}
-              className={`flex items-center gap-2 p-2 cursor-pointer rounded-md ${
+              className={`flex h-auto min-h-11 w-full items-center justify-start gap-2 p-2 rounded-md ${
                 index === selectedIndex ? 'bg-muted' : 'hover:bg-muted/50'
               }`}
               onClick={() => selectSuggestion(user)}
@@ -148,7 +152,7 @@ const UserMentionInput: React.FC<UserMentionInputProps> = ({
                   @{user.username}
                 </p>
               </div>
-            </div>
+            </Button>
           ))}
         </Card>
       )}

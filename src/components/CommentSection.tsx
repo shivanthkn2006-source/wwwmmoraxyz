@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useId, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Send, Heart, MessageCircle, Sparkles, Image as ImageIcon, X } from 'lucide-react';
@@ -7,7 +7,7 @@ import { attachDirectoryProfiles } from '@/lib/friendDirectory';
 import { useRealtimeTable } from '@/realtime/GlobalRealtimeProvider';
 import { useAuth } from '@/lib/auth';
 import { formatDistanceToNow } from 'date-fns';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useEventGlow, getAvatarGlowClass } from '@/hooks/useEventGlow';
 import UserMentionInput from '@/components/UserMentionInput';
 import ImageViewer from '@/components/ImageViewer';
@@ -43,6 +43,8 @@ interface CommentSectionProps {
 }
 
 const CommentSection: React.FC<CommentSectionProps> = ({ postId, postAuthorId, onUpdate }) => {
+  const uploadId = useId();
+  const uploadRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
   const navigate = useNavigate();
   const [comments, setComments] = useState<Comment[]>([]);
@@ -323,28 +325,17 @@ const CommentSection: React.FC<CommentSectionProps> = ({ postId, postAuthorId, o
 
     return (
       <div className={`flex space-x-2 ${isReply ? 'ml-10' : ''}`}>
-        <Avatar 
-          className={`w-8 h-8 cursor-pointer hover:opacity-90 transition-opacity ${glowClass}`}
-          onClick={(e) => {
-            e.stopPropagation();
-            if (comment.profile?.profile_photo_url) {
-              setProfileViewerUrl(comment.profile.profile_photo_url);
-            }
-          }}
-        >
-          <AvatarImage src={comment.profile?.profile_photo_url || ''} />
-          <AvatarFallback className="bg-primary/10 text-primary text-xs">
-            {comment.profile?.display_name?.charAt(0) || 'U'}
-          </AvatarFallback>
-        </Avatar>
+        <Button variant="ghost" className="h-11 w-11 shrink-0 rounded-full p-0" disabled={!comment.profile?.profile_photo_url} aria-label={`View ${comment.profile?.display_name || 'member'}’s profile photo`} onClick={() => setProfileViewerUrl(comment.profile?.profile_photo_url || null)}>
+          <Avatar className={`w-8 h-8 ${glowClass}`}>
+            <AvatarImage src={comment.profile?.profile_photo_url || ''} alt="" />
+            <AvatarFallback className="bg-primary/10 text-primary text-xs">{comment.profile?.display_name?.charAt(0) || 'U'}</AvatarFallback>
+          </Avatar>
+        </Button>
         <div className="flex-1">
           <div className="bg-background rounded-lg p-2">
-            <p 
-              className="text-sm font-medium text-foreground cursor-pointer hover:underline"
-              onClick={() => navigate(`/profile/${comment.user_id}`)}
-            >
-              {comment.profile?.display_name}
-            </p>
+            <Button asChild variant="link" className="h-auto min-h-11 p-0 text-sm font-medium text-foreground">
+              <Link to={`/profile/${comment.user_id}`}>{comment.profile?.display_name || 'Member'}</Link>
+            </Button>
             <p className="text-sm text-foreground break-words whitespace-pre-wrap">{comment.content}</p>
           </div>
           <div className="flex items-center gap-3 mt-1 ml-2">
@@ -354,7 +345,9 @@ const CommentSection: React.FC<CommentSectionProps> = ({ postId, postAuthorId, o
             <Button
               variant="ghost"
               size="sm"
-              className="h-6 px-2 text-xs gap-1"
+              className="min-h-11 min-w-11 px-2 text-xs gap-1"
+              aria-label={comment.user_liked ? "Unlike comment" : "Like comment"}
+              aria-pressed={comment.user_liked || false}
               onClick={() => handleLike(comment.id, comment.user_liked || false)}
             >
               <Heart className={`w-3 h-3 ${comment.user_liked ? 'fill-red-500 text-red-500' : ''}`} />
@@ -364,7 +357,9 @@ const CommentSection: React.FC<CommentSectionProps> = ({ postId, postAuthorId, o
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-6 px-2 text-xs gap-1"
+                className="min-h-11 min-w-11 px-2 text-xs gap-1"
+                aria-label="Reply to comment"
+                aria-expanded={replyingTo === comment.id}
                 onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
               >
                 <MessageCircle className="w-3 h-3" />
@@ -385,8 +380,9 @@ const CommentSection: React.FC<CommentSectionProps> = ({ postId, postAuthorId, o
                 type="button" 
                 size="sm" 
                 disabled={loading || !replyContent.trim()}
+                aria-label="Send reply"
                 onClick={() => handleReply(comment.id)}
-                className="h-8"
+                className="min-h-11 min-w-11"
               >
                 <Send className="w-3 h-3" />
               </Button>
@@ -420,7 +416,8 @@ const CommentSection: React.FC<CommentSectionProps> = ({ postId, postAuthorId, o
               type="button"
               size="icon"
               variant="ghost"
-              className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-background"
+              aria-label="Remove comment attachment"
+              className="absolute -top-2 -right-2 h-11 w-11 rounded-full bg-background"
               onClick={() => {
                 setCommentImage(null);
                 setCommentImagePreview(null);
@@ -444,7 +441,9 @@ const CommentSection: React.FC<CommentSectionProps> = ({ postId, postAuthorId, o
             type="file"
             accept="image/*"
             className="hidden"
-            id="comment-image-upload"
+            id={uploadId}
+            ref={uploadRef}
+            aria-label="Comment image"
             onChange={(e) => {
               const file = e.target.files?.[0];
               if (file) {
@@ -457,11 +456,13 @@ const CommentSection: React.FC<CommentSectionProps> = ({ postId, postAuthorId, o
             type="button"
             size="sm"
             variant="ghost"
-            onClick={() => document.getElementById('comment-image-upload')?.click()}
+            aria-label="Attach comment image"
+            className="min-h-11 min-w-11"
+            onClick={() => uploadRef.current?.click()}
           >
             <ImageIcon className="w-4 h-4" />
           </Button>
-          <Button type="submit" size="sm" disabled={loading || !newComment.trim()}>
+          <Button aria-label="Send comment" className="min-h-11 min-w-11" type="submit" size="sm" disabled={loading || !newComment.trim()}>
             <Send className="w-4 h-4" />
           </Button>
         </div>
