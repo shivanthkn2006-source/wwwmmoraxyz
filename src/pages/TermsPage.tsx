@@ -1,11 +1,12 @@
 import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
+import PublicInfoFooter from '@/components/legal/PublicInfoFooter';
 
-const UPDATED = 'September 2026';
+const UPDATED = '25 October 2026';
 
 export default function TermsPage() {
   return (
-    <main className="min-h-screen bg-background text-foreground px-5 py-10">
+    <main className="min-h-dvh bg-background text-foreground px-5 py-10">
       <Helmet>
         <title>Terms of Service | M'Mora</title>
         <meta
@@ -24,10 +25,9 @@ export default function TermsPage() {
         <section className="space-y-3">
           <h2 className="text-lg font-medium">1. Who can join</h2>
           <p className="text-sm leading-relaxed text-muted-foreground">
-            M'Mora is invitation-based during early access. You need a valid invitation code and an
-            email address you control. You must be at least 16 years old. Invitation codes are
-            single-use, issued only by the M'Mora team, and are redeemed and retired on our servers —
-            members cannot create, edit or reuse them.
+            M'Mora is in early access. Use an email address you control and follow any access
+            requirements shown when joining. These terms currently state a minimum age of 16;
+            country-specific eligibility and age-verification coverage require confirmation before global launch.
           </p>
         </section>
 
@@ -91,7 +91,7 @@ export default function TermsPage() {
           <p className="text-sm leading-relaxed text-muted-foreground">
             You can export or permanently delete your account and everything in it at any time from{' '}
             <Link className="underline underline-offset-4" to="/privacy">Your data</Link>. Deletion is
-            immediate and cannot be reversed. We may end an account that repeatedly breaks these
+            intended to be permanent; completion times, backups and legally retained records require confirmation. We may end an account that repeatedly breaks these
             terms, and will tell you why unless the law prevents it.
           </p>
         </section>
@@ -105,10 +105,17 @@ export default function TermsPage() {
           </p>
         </section>
 
+        <section className="space-y-3">
+          <h2 className="text-lg font-medium">9. DHF, music, sharing and virtual worlds</h2>
+          <p className="text-sm leading-relaxed text-muted-foreground">DHF and Compass cards, growth lessons and astrology are for reflection, not guaranteed predictions. Share only media and music you have rights to use, respect other members in calls and virtual worlds, and do not publish another person's private information. User content remains its owner's property; generated content may also be subject to provider terms.</p>
+          <p className="text-sm leading-relaxed text-muted-foreground">Legal operator details, public contact, country availability, applicable jurisdiction and any future commercial terms still need confirmation before global launch. These draft disclosures do not certify legal compliance.</p>
+        </section>
+
         <footer className="border-t border-border pt-6 text-sm text-muted-foreground">
           See also the{' '}
           <Link className="underline underline-offset-4" to="/data-policy">Data Policy</Link>.
         </footer>
+        <PublicInfoFooter />
       </article>
     </main>
   );

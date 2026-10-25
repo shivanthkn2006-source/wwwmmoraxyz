@@ -1,11 +1,13 @@
 import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
+import { Button } from '@/components/ui/button';
+import PublicInfoFooter from '@/components/legal/PublicInfoFooter';
 
-const UPDATED = 'September 2026';
+const UPDATED = '25 October 2026';
 
 export default function DataPolicyPage() {
   return (
-    <main className="min-h-screen bg-background text-foreground px-5 py-10">
+    <main className="min-h-dvh bg-background text-foreground px-5 py-10">
       <Helmet>
         <title>Data Policy | M'Mora</title>
         <meta
@@ -46,10 +48,10 @@ export default function DataPolicyPage() {
           <h2 className="text-lg font-medium">Who can see it</h2>
           <p className="text-sm leading-relaxed text-muted-foreground">
             Every table is protected by row-level rules enforced by the database, not by the app.
-            Your vault memories, closeness scores, Zoe cards, Zoe conversations, sensor readings and
-            direct messages are readable only by you. Posts are visible to the audience you pick.
-            Administrators can reach safety logs and moderation reports, and every privileged access
-            is written to an append-only ledger.
+            Private account records have access controls; direct messages are shared with their
+            conversation participants, and posts depend on their chosen audience. Service operators
+            and connected processors may handle records to run the service and address safety issues.
+            This is not a claim that all data is end-to-end encrypted or inaccessible to operators.
           </p>
         </section>
 
@@ -66,9 +68,9 @@ export default function DataPolicyPage() {
         <section className="space-y-3">
           <h2 className="text-lg font-medium">How long we keep it</h2>
           <p className="text-sm leading-relaxed text-muted-foreground">
-            Content and account data stay until you delete them. Closeness signals fade out of the
-            ranking after 90 days. Safety and uptime logs are kept up to 12 months, then pruned.
-            Deleted files are removed from storage immediately.
+            Content and account data are stored to provide the service. The final retention schedule,
+            backup expiry, deletion completion times and legally required exceptions need confirmation
+            before global launch; immediate erasure of every backup is not promised.
           </p>
         </section>
 
@@ -76,10 +78,8 @@ export default function DataPolicyPage() {
           <h2 className="text-lg font-medium">Your controls</h2>
           <p className="text-sm leading-relaxed text-muted-foreground">
             From <Link className="underline underline-offset-4" to="/privacy">Your data</Link> you can
-            download a machine-readable copy of everything tied to your account, or delete the account
-            outright. Deletion removes your profile, posts, media, vault, messages, signals and Zoe
-            memories, and cannot be undone. You can also correct your profile at any time, and turn
-            off any sensor permission from your browser.
+            request an export or account deletion. Full export/deletion coverage and retained security
+            records still require verification. You can correct your profile and revoke device permissions.
           </p>
         </section>
 
@@ -95,13 +95,20 @@ export default function DataPolicyPage() {
             your device with the date and the region it was made in, applies immediately, and
             can be changed at any time.
           </p>
-          <button
+          <Button
+            variant="outline"
             type="button"
             onClick={() => import('@/lib/consent').then((m) => m.openConsentSettings())}
             className="rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
           >
             Cookie settings
-          </button>
+          </Button>
+        </section>
+
+        <section className="space-y-3">
+          <h2 className="text-lg font-medium">DHF, birth details and connected experiences</h2>
+          <p className="text-sm leading-relaxed text-muted-foreground">DHF, Compass and astrology may use the birth date, place and time you provide, along with chosen interests and settings. These are reflection tools, not reliable life or health predictions. Voice, photos, calls, music, maps and virtual worlds may contact external services when used; measurement consent is not permission for sensitive advertising profiling.</p>
+          <p className="text-sm leading-relaxed text-muted-foreground">Before global launch, the final processor list, processing countries, transfer safeguards, biometric consent and retention rules need confirmation. No certified global-compliance status is claimed.</p>
         </section>
 
         <section className="space-y-3">
@@ -115,14 +122,15 @@ export default function DataPolicyPage() {
           <h2 className="text-lg font-medium">Breach and contact</h2>
           <p className="text-sm leading-relaxed text-muted-foreground">
             If member data is ever exposed, affected members are notified inside the app and by email
-            without undue delay. For any data question, use the in-app report option or reply to your
-            invitation email.
+            without undue delay. For data questions, members can use the in-app report option. A public privacy contact
+            and legal operator address still need confirmation for people who cannot sign in.
           </p>
         </section>
 
         <footer className="border-t border-border pt-6 text-sm text-muted-foreground">
           See also the <Link className="underline underline-offset-4" to="/terms">Terms of Service</Link>.
         </footer>
+        <PublicInfoFooter />
       </article>
     </main>
   );
