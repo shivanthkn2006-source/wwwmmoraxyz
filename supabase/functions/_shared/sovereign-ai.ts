@@ -359,12 +359,13 @@ async function callOpenAICompatVision(
         method: 'POST',
         headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', ...extraHeaders },
         body: JSON.stringify(body),
+        signal: AbortSignal.timeout(30_000),
       });
       if (!resp.ok) {
-        console.warn(`[sovereign-ai] ${provider} vision failed`, resp.status, model, (await resp.text()).slice(0, 200));
+        console.warn(`[sovereign-ai] ${provider} vision failed`, resp.status, model, (await readTextBounded(resp, 4096))?.slice(0, 200) ?? '');
         continue;
       }
-      const data = await resp.json();
+      const data = await readJsonBounded<any>(resp, 2 * 1024 * 1024);
       // OpenRouter can return HTTP 200 with an embedded upstream error.
       if (data?.error) {
         console.warn(`[sovereign-ai] ${provider} vision upstream error`, model, JSON.stringify(data.error).slice(0, 200));
