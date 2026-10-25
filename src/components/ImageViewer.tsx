@@ -32,11 +32,17 @@ const ImageViewer: React.FC<ImageViewerProps> = ({ imageUrl, onClose, alt = 'Ful
     }
   };
 
+  // Conditional viewers have no Radix Trigger; remember their actual opener.
+  const opener = React.useRef<HTMLElement | null>(
+    typeof document !== 'undefined' && document.activeElement instanceof HTMLElement
+      ? document.activeElement : null,
+  );
+
   return (
     <Dialog.Root open onOpenChange={(open) => { if (!open) onClose(); }}>
     <Dialog.Portal>
     <Dialog.Overlay className="fixed inset-0 z-[12000] bg-background/95 backdrop-blur-sm" />
-    <Dialog.Content aria-describedby={undefined} className="fixed inset-0 z-[12001] flex items-center justify-center p-4 focus:outline-none" onClick={onClose}>
+    <Dialog.Content aria-describedby={undefined} className="fixed inset-0 z-[12001] flex items-center justify-center p-4 focus:outline-none" onClick={onClose} onCloseAutoFocus={(event) => { event.preventDefault(); if (opener.current?.isConnected) opener.current.focus(); }}>
       <Dialog.Title className="sr-only">{alt}</Dialog.Title>
       <div className="absolute top-4 right-4 z-10 flex gap-2">
         <Button variant={plainButtons ? "ghost" : "secondary"} size="icon" className="min-h-11 min-w-11" onClick={(event) => { event.stopPropagation(); void downloadImage(); }} aria-label="Download full-size image">
