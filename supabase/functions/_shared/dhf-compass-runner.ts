@@ -23,6 +23,7 @@ import {
 } from './dhf-compass.ts';
 import { cascadeFetch } from './image-cascade.ts';
 import { dhfImageUrl, fetchDhfImage, UnsafeDhfImageUrl } from './dhf-image-fetch.ts';
+import { downloadCascadeImage } from './cascade-image-download.ts';
 
 export const COMPASS_WORKER_VERSION = '2026-09-18.3';
 export const COMPASS_BUCKET = 'dhf-compass';
@@ -122,16 +123,17 @@ export async function storeImage(userId: string, date: string, slotTime: string,
       const img = attempt === 0
         ? await fetchDhfImage(remoteUrl)
         : await cascadeFetch(remoteUrl, { redirect: 'error' });
-      if (!img.ok) continue;
-      const bytes = new Uint8Array(await img.arrayBuffer());
-      if (bytes.byteLength < 1024) continue;
+      // Also bound inline/provider fallback bodies before uploading them.
+      const image = await downloadCascadeImage(remoteUrl, {}, 1024, 'error', async () => img);
+      if (typeof image === 'string') continue;
+      const { bytes } = image;
 
       const up = await fetch(`${SUPABASE_URL}/storage/v1/object/${COMPASS_BUCKET}/${path}`, {
         method: 'POST',
         headers: {
           apikey: SERVICE_KEY,
           Authorization: `Bearer ${SERVICE_KEY}`,
-          'Content-Type': img.headers.get('content-type') || 'image/jpeg',
+          'Content-Type': image.type,
           'x-upsert': 'true',
           'Cache-Control': '31536000',
         },

@@ -5,6 +5,7 @@ import ts from 'typescript';
 import { dhfImageUrl, fetchDhfImage, UnsafeDhfImageUrl } from '../../supabase/functions/_shared/dhf-image-fetch';
 import { buildDhfImageBrief } from '../../supabase/functions/_shared/dhf-compass-image';
 import { fetchImageCascade } from '../../supabase/functions/_shared/image-cascade';
+import { downloadCascadeImage } from '../../supabase/functions/_shared/cascade-image-download';
 
 const supported = 'https://image.pollinations.ai/prompt/garden?width=1200&height=800&seed=5';
 
@@ -16,7 +17,7 @@ function storageFixture(download: typeof fetchDhfImage) {
   const start = source.indexOf('export async function storeImage(');
   const end = source.indexOf('export interface RunOptions', start);
   if (start < 0 || end < 0) throw new Error('Storage function missing');
-  const context = { dhfImageUrl, fetchDhfImage: download, UnsafeDhfImageUrl, cascadeFetch: cascade,
+  const context = { dhfImageUrl, fetchDhfImage: download, UnsafeDhfImageUrl, cascadeFetch: cascade, downloadCascadeImage,
     fetch: network, SUPABASE_URL: 'https://storage.fixture.test', SERVICE_KEY: 'fixture', COMPASS_BUCKET: 'dhf-compass',
     Uint8Array, Response, AbortSignal };
   const compiled = ts.transpileModule(source.slice(start, end).replace('export async', 'async'), {
@@ -54,7 +55,7 @@ describe('DHF storage destination boundary', () => {
     const url = buildDhfImageBrief({ category: 'Daily Compass', headline: 'Quiet garden', shortSummary: 'Peace',
       fullStory: 'A person tends flowers in the garden.', astrologicalContext: 'moon', seed: 5 }).url;
     expect(dhfImageUrl(url)).toBe(url);
-    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(new Uint8Array([1, 2, 3])));
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(new Uint8Array([1, 2, 3]), { headers: { 'content-type': 'image/jpeg' } }));
     const response = await fetchDhfImage(url, fetcher);
     expect(Array.from(new Uint8Array(await response.arrayBuffer()))).toEqual([1, 2, 3]);
     expect(fetcher).toHaveBeenCalledWith(url, expect.objectContaining({ redirect: 'manual', signal: expect.any(AbortSignal) }));
@@ -82,6 +83,36 @@ describe('DHF storage destination boundary', () => {
     expect(await f.store('fixture-user', '2026-10-22', '06:00', supported)).toBe('fixture-user/2026-10-22/06-00.jpg');
     expect(f.cascade).not.toHaveBeenCalled();
     expect(f.network.mock.calls[0]?.[1]).toEqual(expect.objectContaining({ method: 'POST', body: expect.any(Uint8Array) }));
+  });
+  it('never uploads oversized direct or inline fallback bodies', async () => {
+    const oversized = () => new Response(new Uint8Array(6 * 1024 * 1024 + 1), { headers: { 'content-type': 'image/png' } });
+    const f = storageFixture(vi.fn().mockResolvedValue(oversized()));
+    f.cascade.mockResolvedValue(oversized());
+    expect(await f.store('fixture-user', '2026-10-25', '06:00', supported)).toBeNull();
+    expect(f.cascade).toHaveBeenCalledTimes(1);
+    expect(f.network).not.toHaveBeenCalled();
+  });
+  it('keeps fallback after oversized direct download', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(null, {
+      headers: { 'content-type': 'image/png', 'content-length': String(6 * 1024 * 1024 + 1) },
+    }));
+    const f = storageFixture(url => fetchDhfImage(url, fetcher));
+    expect(await f.store('fixture-user', '2026-10-25', '06:00', supported)).toBe('fixture-user/2026-10-25/06-00.jpg');
+    expect(f.network).toHaveBeenCalledTimes(1);
+    expect(f.network.mock.calls[0]?.[1]?.body).toHaveLength(1200);
+  });
+  it('never uploads a stalled fallback body after its deadline', async () => {
+    vi.useFakeTimers();
+    try {
+      const cancel = vi.fn();
+      const f = storageFixture(vi.fn().mockResolvedValue(new Response(null, { status: 503 })));
+      f.cascade.mockResolvedValue(new Response(new ReadableStream({ cancel }), { headers: { 'content-type': 'image/png' } }));
+      const stored = f.store('fixture-user', '2026-10-25', '06:00', supported);
+      await vi.advanceTimersByTimeAsync(45_000);
+      expect(await stored).toBeNull();
+      expect(cancel).toHaveBeenCalledTimes(1);
+      expect(f.network).not.toHaveBeenCalled();
+    } finally { vi.useRealTimers(); }
   });
   it.each([undefined, 'error'] as const)('cascade image downloads preserve opt-in redirect setting %s', async redirect => {
     const network = vi.fn<typeof fetch>().mockResolvedValue(new Response(new Uint8Array(1200), { headers: { 'content-type': 'image/png' } }));
