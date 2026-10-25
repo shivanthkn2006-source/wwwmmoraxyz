@@ -10,7 +10,9 @@ describe('DHF direct image budgets with controlled transports', () => {
   it('accepts exactly 6 MiB without changing image bytes', async () => {
     const bytes = new Uint8Array(MAX).fill(7);
     const result = await fetchDhfImage(url, vi.fn<typeof fetch>().mockResolvedValue(image(bytes)));
-    expect(new Uint8Array(await result.arrayBuffer())).toEqual(bytes);
+    const actual = new Uint8Array(await result.arrayBuffer());
+    expect(actual.byteLength).toBe(MAX);
+    expect(actual.every(byte => byte === 7)).toBe(true);
     expect(MAX).toBe(6 * 1024 * 1024);
   });
   it('rejects oversized declared length before body reads', async () => {
