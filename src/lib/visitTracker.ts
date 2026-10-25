@@ -1,6 +1,10 @@
 // Records page visits, time spent and sign-in/out events for the admin-only analytics page.
 // Runs once per tab, off the boot path; every call is fire-and-forget.
+// Visit/page measurement is non-essential: it waits for consent in regions that
+// require it and stops immediately on refusal. Sign-in/out security records are
+// essential and always sent.
 import { supabase } from '@/integrations/supabase/client';
+import { analyticsAllowed, onConsentChange } from '@/lib/consent';
 
 const FN_URL = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/track-visit`;
 const ANON = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
@@ -20,6 +24,7 @@ function enqueue(kind: 'tap' | 'error', name: string) {
 }
 
 function flush(final = false) {
+  if (!analyticsAllowed()) { queue.length = 0; return; }
   if (!queue.length) return;
   const events = queue.splice(0, 50);
   void post({ action: 'events', visitor_id: visitorId(), device_type: deviceInfo().device_type, events }, final).catch(() => {});
@@ -112,11 +117,13 @@ function activeSeconds(): number {
 }
 
 function ping(final = false) {
+  if (!analyticsAllowed()) return;
   if (!current?.id) return;
   void post({ action: 'ping', id: current.id, visitor_id: visitorId(), duration_seconds: Math.min(activeSeconds(), 86400) }, final).catch(() => {});
 }
 
 function startVisit(path: string) {
+  if (!analyticsAllowed()) return; // non-essential measurement waits for consent; dropped visits are never replayed
   if (current?.path === path) return;
   ping(true);
   const visible = document.visibilityState === 'visible';
@@ -190,6 +197,17 @@ export function startVisitTracker() {
     accessToken = data.session?.access_token ?? null;
     startVisit(location.pathname);
   });
+
+  // React to consent changes immediately: start measuring on acceptance,
+  // stop heartbeats and drop the in-flight visit on refusal (no replay).
+  onConsentChange(() => {
+    if (analyticsAllowed()) {
+      startVisit(location.pathname);
+    } else {
+      current = null;
+      queue.length = 0;
+    }
+  });
 }
 
 export function stopVisitTracker() {
@@ -209,6 +227,7 @@ export async function fetchMyReferrals(): Promise<{ code: string; visits: number
 export type LiveActivityKind = 'page_not_found' | 'admin_probe' | 'vr_enter' | 'vr_collect' | 'vr_purchase';
 /** Live admin-monitoring event (server throttles repeats, skips the admin, and gates delivery by the notification switches). */
 export function trackActivity(kind: LiveActivityKind, name: string): void {
+  if (!analyticsAllowed()) return;
   try {
     void supabase.auth.getSession().then(({ data }) => {
       const token = data.session?.access_token ?? accessToken ?? ANON;
