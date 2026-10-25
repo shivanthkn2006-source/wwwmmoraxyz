@@ -68,7 +68,7 @@ const FriendCard = ({ friend }: FriendCardProps) => {
         className="relative p-4 flex items-center justify-between hover:bg-accent/50 transition-colors"
       >
         <Button asChild variant="ghost" className="absolute inset-0 h-full w-full"><Link to={`/profile/${friend.user_id}`} aria-label={`View ${friend.display_name}’s profile`} /></Button>
-        <div className="pointer-events-none flex items-center gap-3">
+        <div className="pointer-events-none relative z-10 flex items-center gap-3">
           <div className="relative">
             <Button variant="ghost" className="pointer-events-auto relative z-10 h-12 w-12 rounded-full p-0" disabled={!friend.profile_photo_url} aria-label={`View ${friend.display_name}’s profile photo`} onClick={() => setShowProfileViewer(true)}>
             <Avatar 
