@@ -72,6 +72,56 @@ const GUIDES: Guide[] = [
   },
 ];
 
+interface FaqItem {
+  q: string;
+  a: string;
+}
+
+// Every answer below is checked against how the platform actually works today.
+// Items that depend on a decision only Marc can confirm are marked as such.
+const FAQ: FaqItem[] = [
+  {
+    q: 'Is M\u2019Mora free?',
+    a: 'Yes. Creating an account and using the platform costs nothing. There is no paid plan today. (If a paid tier is ever added, this answer should be updated — worth confirming before global launch.)',
+  },
+  {
+    q: 'Who can see my posts?',
+    a: 'Only the audience you pick when you post. Your direct messages, vault memories, Zoe conversations and closeness signals are readable only by you — that is enforced by the database, not just hidden in the app.',
+  },
+  {
+    q: 'What does Zoe do with what I tell her?',
+    a: 'She uses your conversations to remember context and answer you better. Your questions may be processed by the AI providers listed in the Data Policy. We do not sell your data or build advertising profiles from it.',
+  },
+  {
+    q: 'Why does M\u2019Mora ask for my birth date, place and time?',
+    a: 'Only if you use astrology or the daily Compass — those features need real birth details to calculate your chart. You can use the rest of the platform without ever providing them.',
+  },
+  {
+    q: 'Does M\u2019Mora track me?',
+    a: 'We keep essential sign-in and security records, and — where your region requires it, only with your consent — first-party measurement of which pages are visited and for how long. You can accept, reject or change this any time from Cookie settings in the Data Policy. There is no third-party advertising tracking.',
+  },
+  {
+    q: 'How do I sign in?',
+    a: 'With your email and password, with Google, with a passkey or face sign-in you set up, or with a 5-digit Quick Unlock code on a device you already trust. Google sign-in shares only your name, email and profile photo — never your Google password.',
+  },
+  {
+    q: 'Can I download or delete my data?',
+    a: 'Yes. The Your data page lets you download a machine-readable copy of everything tied to your account, or delete the account and all its data permanently.',
+  },
+  {
+    q: 'Is M\u2019Mora available in my country?',
+    a: 'The platform is reachable worldwide in English. Some features (for example age rules and consent prompts) adapt to your region automatically. (A formal country-by-country launch list is still being prepared — confirm before publishing a definitive answer.)',
+  },
+  {
+    q: 'How do I report a problem or a person?',
+    a: 'Use Bug report from the site map — it reaches the team directly. Safety and moderation reports go to the administrator, and every privileged access is recorded.',
+  },
+  {
+    q: 'Does M\u2019Mora work on my phone?',
+    a: 'Yes. It runs in any modern mobile browser and can be installed to your home screen. Android and iOS shells exist; (confirm the public app-store links before quoting them here.)',
+  },
+];
+
 export default function HelpPage() {
   return (
     <main className="min-h-screen bg-background text-foreground px-5 py-10">
@@ -119,6 +169,20 @@ export default function HelpPage() {
             </ol>
           </section>
         ))}
+
+        <section id="faq" className="space-y-4 scroll-mt-6 border-t border-border pt-8">
+          <h2 className="text-lg font-medium">Frequently asked questions</h2>
+          <div className="space-y-3">
+            {FAQ.map((item) => (
+              <details key={item.q} className="group rounded-xl border border-border px-4 py-3">
+                <summary className="cursor-pointer list-none text-sm font-medium text-foreground marker:hidden">
+                  {item.q}
+                </summary>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{item.a}</p>
+              </details>
+            ))}
+          </div>
+        </section>
 
         <footer className="border-t border-border pt-6 text-sm text-muted-foreground">
           Still stuck? Ask Zoe — she can open any of these pages for you.
