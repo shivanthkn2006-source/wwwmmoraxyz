@@ -84,6 +84,27 @@ export default function DataPolicyPage() {
         </section>
 
         <section className="space-y-3">
+          <h2 className="text-lg font-medium">Cookies and measurement consent</h2>
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            M'Mora sets no advertising or third-party tracking cookies. Sign-in and security
+            records are essential and always kept. Separately, we run first-party visit
+            measurement — which pages are visited, time spent, and device type — processed only
+            by our own cloud backend, never sold and never used for advertising profiles.
+            In regions whose laws require prior consent, this measurement stays off until you
+            accept; everywhere else it runs unless you turn it off. Your choice is stored on
+            your device with the date and the region it was made in, applies immediately, and
+            can be changed at any time.
+          </p>
+          <button
+            type="button"
+            onClick={() => import('@/lib/consent').then((m) => m.openConsentSettings())}
+            className="rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
+          >
+            Cookie settings
+          </button>
+        </section>
+
+        <section className="space-y-3">
           <h2 className="text-lg font-medium">Children</h2>
           <p className="text-sm leading-relaxed text-muted-foreground">
             M'Mora is not for people under 16. If we learn an account belongs to a child, we delete it.
