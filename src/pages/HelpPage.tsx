@@ -111,7 +111,7 @@ const FAQ: FaqItem[] = [
   },
   {
     q: 'Is M\u2019Mora available in my country?',
-    a: 'M'Mora is in early access. Measurement consent adapts to detected region, but this does not establish legal availability in every country. A confirmed country-by-country launch list and eligibility rules are still needed before global launch.',
+    a: "M'Mora is in early access. Measurement consent adapts to detected region, but this does not establish legal availability in every country. A confirmed country-by-country launch list and eligibility rules are still needed before global launch.",
   },
   {
     q: 'How do I report a problem or a person?',

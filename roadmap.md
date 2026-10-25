@@ -1,6 +1,7 @@
 # M'Mora Village roadmap
 
 ## Oct 25 public launch and accessibility recheck
+- [ ] Complete Marc's additional end-to-end request within the same launch/accessibility pass; do not treat presence as proof.
 - [ ] Reconcile all 20 screenshot items and recover missing version 7 information in a new Files report.
 - [ ] Classify all image descriptions and fix confirmed accessibility issues without altering sign-in handlers.
 - [ ] Verify keyboard/accessibility trees, desktop/mobile public pages and signed-in navigation under controlled failures.
