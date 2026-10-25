@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
 
 const MARKER = '/storage/v1/object/sign/messages/';
 
@@ -24,12 +25,13 @@ export const ChatSignedImage = ({ url, onOpen }: { url: string; onOpen: (fresh: 
   const fresh = useFreshMessageUrl(url);
   if (!fresh) return null;
   return (
+    <Button variant="ghost" className="h-auto max-w-full p-0" aria-label="Open message attachment" onClick={() => onOpen(fresh)}>
     <img
       src={fresh}
       alt="Message attachment"
       loading="lazy"
       className="rounded-lg mb-2 max-w-full cursor-pointer hover:opacity-90 transition-opacity"
-      onClick={() => onOpen(fresh)}
     />
+    </Button>
   );
 };

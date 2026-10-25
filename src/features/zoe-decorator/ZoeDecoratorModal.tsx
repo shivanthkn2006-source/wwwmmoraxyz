@@ -189,7 +189,7 @@ export function ZoeDecoratorModal({ open, initial, onClose }: Props) {
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-72 overflow-y-auto pr-1">
                 {designs.map(d => (
                   <div key={d.id} className="relative group">
-                    <img src={d.generatedImage} alt="" className="w-full aspect-square object-cover rounded-md border border-white/10" />
+                    <img src={d.generatedImage} alt="Generated room design preview" className="w-full aspect-square object-cover rounded-md border border-white/10" />
                     <button onClick={() => setDesigns(deleteDesign(d.id))} className="absolute top-1 right-1 p-1 rounded bg-black/70 opacity-0 group-hover:opacity-100 transition" title="Delete">
                       <Trash2 className="w-3 h-3 text-red-300" />
                     </button>

@@ -238,9 +238,9 @@ export function ZoeHairstyleModal({ open, initialGender = 'any', onClose }: Prop
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-72 overflow-y-auto pr-1">
                 {designs.map(d => (
                   <div key={d.id} className="relative group">
-                    <img src={d.generatedImage} alt="" className="w-full aspect-square object-cover rounded-md border border-white/10" />
-                    <button onClick={() => setDesigns(deleteHairDesign(d.id))} className="absolute top-1 right-1 p-1 rounded bg-black/70 opacity-0 group-hover:opacity-100"><Trash2 className="w-3 h-3 text-red-300" /></button>
-                    <button onClick={() => downloadOne(d)} className="absolute bottom-1 right-1 p-1 rounded bg-black/70 opacity-0 group-hover:opacity-100"><Download className="w-3 h-3 text-white" /></button>
+                    <img src={d.generatedImage} alt="Generated hairstyle preview" className="w-full aspect-square object-cover rounded-md border border-white/10" />
+                    <Button aria-label="Delete hairstyle" variant="ghost" onClick={() => setDesigns(deleteHairDesign(d.id))} className="absolute top-1 right-1 min-h-11 min-w-11 opacity-0 group-hover:opacity-100 focus-visible:opacity-100"><Trash2 /></Button>
+                    <Button aria-label="Download hairstyle" variant="ghost" onClick={() => downloadOne(d)} className="absolute bottom-1 right-1 min-h-11 min-w-11 opacity-0 group-hover:opacity-100 focus-visible:opacity-100"><Download /></Button>
                   </div>
                 ))}
                 {designs.length === 0 && <div className="col-span-full text-white/40 text-xs">No styles yet.</div>}
