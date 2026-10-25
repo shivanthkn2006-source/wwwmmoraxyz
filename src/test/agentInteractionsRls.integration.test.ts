@@ -81,6 +81,9 @@ describe.skipIf(!isolationRequested(process.env))('agent_interactions RLS isolat
     const { data, error } = await clients().a.from(TABLE).select('id,user_id').eq('agent_id', AGENT_A).in('id', [aRowId, bRowId]);
     expect(error).toBeNull();
     expect(data).toEqual([{ id: aRowId, user_id: aUserId }]);
+    const ownB = await clients().b.from(TABLE).select('id,user_id').eq('id', bRowId).single();
+    expect(ownB.error).toBeNull();
+    expect(ownB.data).toEqual({ id: bRowId, user_id: bUserId });
   });
 
   it('partitions a single user rows by agent_id', async () => {
@@ -100,6 +103,19 @@ describe.skipIf(!isolationRequested(process.env))('agent_interactions RLS isolat
     const still = await a.from(TABLE).select('id,context_payload').eq('id', aRowId).single();
     expect(still.error).toBeNull();
     expect(still.data).toEqual({ id: aRowId, context_payload: { owner: 'a', intimacy_level: 4 } });
+    // Verify positive owner operations as well: blanket-deny policies must fail.
+    const ownUpdate = await a.from(TABLE).update({ context_payload: { owner: 'updated-a' } }).eq('id', aRowId).select('id').single();
+    expect(ownUpdate.error).toBeNull();
+    expect(ownUpdate.data).toEqual({ id: aRowId });
+    const readback = await a.from(TABLE).select('context_payload').eq('id', aRowId).single();
+    expect(readback.error).toBeNull();
+    expect(readback.data).toEqual({ context_payload: { owner: 'updated-a' } });
+    const ownDelete = await a.from(TABLE).delete().eq('id', aOtherId).select('id').single();
+    expect(ownDelete.error).toBeNull();
+    expect(ownDelete.data).toEqual({ id: aOtherId });
+    const gone = await a.from(TABLE).select('id').eq('id', aOtherId);
+    expect(gone.error).toBeNull();
+    expect(gone.data).toEqual([]);
   });
 
   it('returns nothing to an anonymous visitor', async () => {

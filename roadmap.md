@@ -1,5 +1,10 @@
 # M'Mora Village roadmap
 
+## Oct 25 isolated privacy continuation
+- [x] Trace six live skips: zero of seven isolation settings present. Nine in-memory PostgreSQL migration/RLS tests pass with mocked identities/no HTTP; positive owner update/delete and B self-read gaps repaired in the still-skipped live fixture. No production policy change.
+- [x] Document local SQL proof separately from hosted Auth/Data API proof in v11; full suite 1,666 passed / six skipped, build OK. Nine inherited audit groups remain incomplete.
+- [ ] Hosted six-case proof still requires isolated non-application backend/two disposable identities; scheduler/source-owner race proof, device/screen-reader/legal/vendor evidence remain outside this local SQL stage.
+
 ## Oct 25 v9 launch continuation
 - [x] Bound DHF direct download headers/body and fallback body consumption; 67 controlled focused passes, full suite 1,657 passed / six skipped, build OK; five runner importers deployed without jobs or writes.
 - [x] Refresh all 20 checklist rows and inherited 11 audit groups in v10; include official-source documentation next steps and eight mocked desktop/mobile public preview states with no blank bodies/page exceptions/overflow.
