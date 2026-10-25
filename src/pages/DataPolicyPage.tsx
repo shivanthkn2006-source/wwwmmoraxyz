@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
-import { Helmet } from 'react-helmet-async';
+import PageSeo from '@/components/seo/PageSeo';
+import { ROUTE_SEO } from '@/config/routeSeo';
 import { Button } from '@/components/ui/button';
 import PublicInfoFooter from '@/components/legal/PublicInfoFooter';
 
@@ -8,14 +9,7 @@ const UPDATED = '25 October 2026';
 export default function DataPolicyPage() {
   return (
     <main className="min-h-dvh bg-background text-foreground px-5 py-10">
-      <Helmet>
-        <title>Data Policy | M'Mora</title>
-        <meta
-          name="description"
-          content="What M'Mora collects, why, who can see it, how long it is kept, and how to export or delete everything."
-        />
-        <link rel="canonical" href="/data-policy" />
-      </Helmet>
+      <PageSeo title={ROUTE_SEO['/data-policy'].title} description={ROUTE_SEO['/data-policy'].description} path="/data-policy" />
 
       <article className="mx-auto w-full max-w-2xl space-y-8">
         <header className="space-y-2 border-b border-border pb-6">
